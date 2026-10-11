@@ -31,12 +31,10 @@ import {
 import {
   DEFAULT_THROTTLE,
   deltaSection,
-  heavyPrepaintTypes,
   lcpElementOf,
   scaleThrottle,
   summarize,
   timedRun,
-  weightLabel,
 } from './lib/measure.mjs';
 import {
   COLD_OPEN_MIN_BYTES,
@@ -47,6 +45,12 @@ import {
   siblingVariantGroups,
 } from './lib/coverage.mjs';
 import { aggregateProfile, profileRun } from './lib/profile.mjs';
+import { analyzeChunkDiscovery, loadChunkGraph } from './lib/chunk-discovery.mjs';
+import {
+  chunkDiscoveryAdvice,
+  comparePaints,
+  renderGapEvidence,
+} from './lib/paint-diagnostics.mjs';
 import {
   deferAllInto,
   evalOverrides,
@@ -129,13 +133,9 @@ const CHROME_PROFILE_DIR = path.join(STATE_DIR, 'chrome-profile');
 // them; accepting or reverting a change is the loop driver's (agent's) call.
 const NOISE_FLOOR_MS = 30;
 const NOISE_FLOOR_PCT = 2;
-// Sequential early stop: when a scan has a pinned baseline and run 1's LCP
-// delta is at least this many noise thresholds away from it, the remaining
-// runs cannot flip the accept/revert call - they only refine a median nobody
-// needs, at the price of full page loads (minutes on slow apps). Sample count
-// is the SAFE adaptive dimension; the throttle is the objective function and
-// never adapts (zero-throttle hides byte weight and RTT waterfalls - the main
-// fix classes - and can invert decisions near the floor).
+// A large first-run LCP change can end a probe early. A keep/revert decision
+// still needs a full scan of both paint metrics with --no-early-stop.
+// Keep the throttle fixed: changing it can invert a comparison.
 const EARLY_STOP_FACTOR = 5;
 // Per-target throttle calibration: the ONE throttle dimension that may vary is
 // network bandwidth, in named discrete steps, chosen once per target and PINNED
@@ -158,6 +158,7 @@ const CLI =
   (/[\\/]node_modules[\\/]/.test(ROOT) ? 'npx perf-kit' : 'node harness.mjs');
 
 const kb = (n) => `${(n / 1024).toFixed(1)}KB`;
+const kib = (n) => `${(n / 1024).toFixed(1)}KiB`;
 const ms = (v) => (v == null ? 'n/a' : `${Math.round(v)}ms`);
 const readJson = (file) => (fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null);
 // The state dir self-ignores: agents running `git add -A` in a consumer repo must
@@ -254,8 +255,8 @@ function resolveTarget(opts) {
   }
   if ((opts.dist || opts.app) && readJson(TARGET_FILE)?.dist !== dist) {
     writeJson(TARGET_FILE, { dist, setAtMs: Date.now() });
-    console.log(`target: ${dist} (remembered - future commands can omit --app/--dist)`);
   }
+  console.log(`target: ${dist}${opts.dist || opts.app ? '' : ' (remembered)'}`);
   return { dist, paths: targetPaths(dist), isDemo: isDemoDist(dist) };
 }
 
@@ -472,6 +473,16 @@ function writeMeasureReport(
   // suppresses the comparison and says so, instead of printing a wrong number.
   const currScale = throttle ? (throttle.netScale ?? 1) : null;
   const sameScale = (state) => state && currScale != null && (state.netScale ?? 1) === currScale;
+  const chunkGraph = loadChunkGraph(
+    target.dist,
+    moduleGraphCandidates({
+      demoMetricsDir: target.isDemo ? BUILD_METRICS_DIR : undefined,
+      dist: target.dist,
+    }).map((file) => path.join(path.dirname(file), 'chunk-graph.json')),
+  );
+  const baselineDelta = sameScale(baseline)
+    ? deltaSection(baseline.metrics, summary.metrics)
+    : null;
   const report = {
     schemaVersion: 1,
     generatedAtMs: Date.now(),
@@ -487,9 +498,16 @@ function writeMeasureReport(
     gatingFetches: summary.gatingFetches,
     resourceWeight: summary.resourceWeight,
     renderBlockingGate: summary.renderBlockingGate,
+    postLoadScripts: summary.postLoadScripts,
+    resourceDetailsComplete: summary.resourceDetailsComplete,
+    chunkDiscovery: analyzeChunkDiscovery(chunkGraph, samples, throttle?.latencyMs),
     lcpElement: summary.lcpElement,
     delta: sameScale(prev) ? deltaSection(prev.metrics, summary.metrics) : null,
-    baselineDelta: sameScale(baseline) ? deltaSection(baseline.metrics, summary.metrics) : null,
+    baselineDelta,
+    paintComparison: comparePaints(baselineDelta, {
+      noiseFloorMs: NOISE_FLOOR_MS,
+      noiseFloorPct: NOISE_FLOOR_PCT,
+    }),
     baselineScaleMismatch:
       baseline && currScale != null && !sameScale(baseline)
         ? { pinned: baseline.netScale ?? 1, current: currScale }
@@ -544,7 +562,7 @@ function printMeasureSummary(
     const e = report.earlyStopped;
     console.log(
       `early stop after run 1 of ${e.plannedRuns}: |dLCP vs pinned baseline| ${Math.abs(e.deltaMs)}ms >= ${e.factor}x noise threshold ${e.thresholdMs}ms` +
-        ' - the remaining runs cannot flip this call. Decision-grade for accept/revert; pinning still needs a full scan.',
+        ' - this is a probe. A full scan with --no-early-stop must check both FCP and LCP before a decision.',
     );
   }
   console.log(
@@ -564,6 +582,7 @@ function printMeasureSummary(
   const guardOk =
     report.guard.allFeaturesReady &&
     report.guard.heroRendered !== false && // null = no hero probe on this app
+    report.guard.fcpObservedInAllRuns &&
     report.guard.lcpObservedInAllRuns;
   console.log(`guard: ${guardOk ? 'PASS' : `FAIL ${JSON.stringify(report.guard)}`}`);
 
@@ -589,83 +608,85 @@ function printMeasureSummary(
   const renderGap = m['runtime.render_gap_ms'];
   if (typeof renderGap === 'number' && renderGap > 150) {
     console.log(
-      `render gap: first paint landed ${Math.round(renderGap)}ms AFTER the load event - rendering is gated on post-load work, not on downloading.`,
+      `render gap: LCP landed ${Math.round(renderGap)}ms AFTER the load event. Downloads can continue after load.`,
     );
-    const fetches = report.gatingFetches ?? [];
-    for (const fetchLine of fetches) {
-      console.log(`  completed just before paint: ${fetchLine}`);
+    for (const evidence of renderGapEvidence(report)) {
+      console.log(`  candidate: ${evidence.detail}`);
+      if (advice) console.log(`  next: ${evidence.next}`);
     }
-    const prepaint = (report.resourceWeight ?? []).filter((w) => w.preFcpCount > 0);
-    if (prepaint.length) {
-      console.log(`  before first paint: ${prepaint.slice(0, 5).map(weightLabel).join(', ')}`);
-    }
-    const heavy = heavyPrepaintTypes(report.resourceWeight);
-    if (!advice) {
-      // verdict names the gap's cause class and the move - no second copy here
-    } else if (fetches.length) {
+    if (advice) {
       console.log(
-        '  next: find what the boot path awaits before the first render (a config/data fetch, a locale chunk) and render with bundled defaults instead, applying the fetched result when it arrives.',
-      );
-    } else if (heavy.some((w) => w.type === 'font')) {
-      console.log(
-        '  next: no render-gating fetch - the paint likely waits on fonts. Make first paint depend on at most one (subset) font: preload it, and defer loading/registering the rest until after paint.',
-      );
-    } else if (heavy.length) {
-      console.log(
-        '  next: no render-gating fetch - heavy images load before first paint. Lazy-load below-the-fold images and shrink the ones the first view needs.',
-      );
-    } else {
-      console.log(
-        `  next: no render-gating fetch or heavy pre-paint asset - the gap is post-load CPU, late-executing chunks, or a hero revealed by an entry animation. Run \`${CLI} profile\` and defer the attributed app work; if the profile shows only framework/baseline work, check whether the LCP element mounts invisible (opacity-0 fade-in wrapper) - LCP counts the first frame it paints VISIBLE, so render the hero visible immediately and animate only decoration.`,
+        `  next: check these candidates against the source and the CPU profile (${CLI} profile). Check whether an animation hides the LCP element. Timing alone does not show what blocked paint.`,
       );
     }
+  }
+  for (const paint of ['fcp', 'lcp']) {
+    const discovery = report.chunkDiscovery?.[paint];
+    if (!discovery?.groups.length) continue;
+    console.log(
+      `late chunk candidates before ${paint.toUpperCase()}: ${discovery.groups.length} static import group(s). Paint dependencies are unverified.`,
+    );
+    for (const group of discovery.groups.slice(0, 4)) {
+      console.log(
+        `  ${group.parent}: ${group.count} chunk(s), ${kib(group.bytes)}, up to ${ms(group.maxDelayMs)} delay (${group.runsAffected}/${group.measuredRuns} runs).`,
+      );
+      const example = group.example.chunks[0];
+      console.log(`    import chain: ${example.importChain.join(' -> ')}`);
+      if (example.facadeModuleId) console.log(`    source: ${example.facadeModuleId}`);
+    }
+    console.log('  Groups and paint windows overlap. Do not add their bytes or delays.');
+    if (advice) console.log(`  next: ${chunkDiscoveryAdvice(paint)}`);
+    console.log(
+      `  evidence: ${discovery.graphFile}; runtime-metrics.json -> chunkDiscovery.${paint}.groups`,
+    );
   }
   const prepaintCpu = m['runtime.prepaint_longtask_ms'];
   if (typeof prepaintCpu === 'number' && prepaintCpu > 150) {
     console.log(`pre-paint CPU: ${Math.round(prepaintCpu)}ms of long tasks before first paint.`);
     if (advice) {
       console.log(
-        `  next: run \`${CLI} profile\` to see which modules burn that CPU; defer work the first paint does not need. ORDER MATTERS: fix any render gap (above) first - CPU that overlaps a render-blocking fetch is free, so deferring it can measure worse until the fetch is fixed.`,
+        `  next: run ${CLI} profile to find the modules that use this CPU time. Check their timing against required downloads. Test deferring work that the first paint does not need. Compare both FCP and LCP.`,
       );
     }
   }
 
-  if (report.baselineDelta?.['runtime.lcp_ms']) {
-    const d = report.baselineDelta['runtime.lcp_ms'];
-    const threshold = Math.max(NOISE_FLOOR_MS, (NOISE_FLOOR_PCT / 100) * d.prev);
-    const call =
-      d.delta <= -threshold
-        ? 'improvement beyond noise'
-        : d.delta >= threshold
-          ? 'REGRESSION beyond noise'
-          : 'within noise';
-    console.log(
-      `vs pinned baseline: LCP ${d.delta > 0 ? '+' : ''}${Math.round(d.delta)}ms ` +
-        `(${d.pct > 0 ? '+' : ''}${d.pct}%) -> ${call} (noise threshold ${Math.round(threshold)}ms)`,
-    );
-    if (call === 'improvement beyond noise' && parity?.state === 'open') {
+  if (report.baselineDelta) {
+    const comparison = report.paintComparison;
+    for (const [paint, metric] of Object.entries(comparison.metrics)) {
+      if (metric.state === 'unknown') {
+        console.log(`vs pinned baseline: ${paint.toUpperCase()} missing`);
+        continue;
+      }
       console.log(
-        'next: NOT a keeper - this build renders differently from the original (see "rendered output" below), so this LCP number does not count. Fix or revert the change that broke it, rebuild, re-scan.',
+        `vs pinned baseline: ${paint.toUpperCase()} ${metric.delta > 0 ? '+' : ''}${Math.round(metric.delta)}ms ` +
+          `(${metric.pct > 0 ? '+' : ''}${metric.pct}%) -> ${metric.state} (noise threshold ${Math.round(metric.thresholdMs)}ms)`,
       );
-    } else if (call === 'improvement beyond noise') {
+    }
+    if (parity?.state === 'open' || !guardOk) {
       console.log(
-        report.earlyStopped
-          ? `next: keep this change - re-pin with \`${CLI} scan --pin\` (pins need full sampling), then commit it.`
-          : `next: keep this change - re-pin with \`${CLI} baseline\` (or scan --pin), then commit it.`,
+        'next: resolve the failed guard or rendered output check before judging paint gains. Both paints must appear in every run.',
       );
+    } else if (report.runs < 3) {
       console.log(
-        `Probe your NEXT change with \`${CLI} scan --quick\` (one run, minutes cheaper); run a full scan only to accept/revert or pin.`,
+        `next: this is a probe. Run ${CLI} scan --no-early-stop with at least 3 runs before a keep/revert decision.`,
       );
+    } else if (comparison.state === 'improved') {
+      console.log(
+        `next: one or both paint metrics improved beyond noise, and neither regressed beyond noise. Keep the change if the functional check passes. Re-pin with ${CLI} baseline. Run scan --parity when the work is complete.`,
+      );
+    } else if (comparison.state === 'regressed') {
+      console.log(
+        'next: FCP or LCP regressed beyond noise. Revert the change and test a different experiment.',
+      );
+    } else if (comparison.state === 'unknown') {
+      console.log('next: collect both FCP and LCP before judging this change.');
     } else {
       console.log(
-        'next: this attempt did not clearly improve LCP - revert the change and rebuild (then try a different one).',
-      );
-      console.log(
-        `Probe the next attempt with \`${CLI} scan --quick\` first; confirm keepers with a full scan.`,
+        'next: neither FCP nor LCP improved beyond noise. Revert the change and test a different experiment.',
       );
     }
   } else if (hadBaseline) {
-    console.log('vs pinned baseline: n/a (metric missing)');
+    console.log('vs pinned baseline: n/a (metrics missing or throttle changed)');
   }
   // Free on every measurement (the timed runs already observe it), so it is shown
   // as it happens - information, not a gate; the final parity check gates on it.
@@ -1191,37 +1212,39 @@ function printVerdict(target) {
 
     const gap = runtime.metrics['runtime.render_gap_ms'];
     if (typeof gap === 'number' && gap > 150) {
-      const fetches = runtime.gatingFetches ?? [];
-      const heavy = heavyPrepaintTypes(runtime.resourceWeight);
-      if (fetches.length) {
-        lead(
-          'open',
-          `render gap ${Math.round(gap)}ms`,
-          `paint is gated on post-load work (${fetches.join('; ')})`,
-          'render with bundled defaults and apply fetched results when they arrive - fix this before judging CPU deferrals',
-        );
-      } else if (heavy.length) {
-        lead(
-          'open',
-          `render gap ${Math.round(gap)}ms`,
-          `no render-gating fetch; before first paint: ${heavy.map(weightLabel).join(', ')}`,
-          heavy.some((w) => w.type === 'font')
-            ? 'make first paint depend on at most one (subset) font - preload it, defer the rest until after paint - fix this before judging CPU deferrals'
-            : 'lazy-load below-the-fold images and shrink the ones the first view needs - fix this before judging CPU deferrals',
-        );
-      } else {
-        lead(
-          'open',
-          `render gap ${Math.round(gap)}ms`,
-          'no render-gating fetch or heavy pre-paint asset - post-load CPU, late-executing chunks, or a hero that mounts invisible',
-          `${CLI} profile  (or scan), then defer the attributed app work. If the profile shows only framework/baseline work, check for an entry animation that mounts the LCP element at opacity 0 (fade-in wrapper): LCP counts the first VISIBLY painted frame - render the hero visible immediately, animate only decoration - fix this before judging CPU deferrals`,
-        );
+      lead(
+        'open',
+        `LCP after load: ${Math.round(gap)}ms`,
+        'downloads, CPU work, or visibility changes can delay paint',
+        `Inspect all candidates below. Check the source and the CPU profile (${CLI} profile). Check whether an animation hides the LCP element.`,
+      );
+      for (const evidence of renderGapEvidence(runtime)) {
+        lines.push(`            candidate: ${evidence.detail}`);
+        lines.push(`            next: ${evidence.next}`);
       }
     } else {
       lead(
-        'clear',
-        'render gap',
-        gap == null ? 'not measurable' : `paint lands ${Math.round(gap)}ms after load`,
+        gap == null ? 'unknown' : 'clear',
+        'LCP after load',
+        gap == null ? 'not measurable' : `LCP lands ${Math.round(gap)}ms after load`,
+        `${CLI} scan`,
+      );
+    }
+
+    for (const paint of ['fcp', 'lcp']) {
+      const discovery = runtime.chunkDiscovery?.[paint];
+      lead(
+        discovery?.state ?? 'unknown',
+        `late chunk candidates before ${paint.toUpperCase()}`,
+        !discovery
+          ? 'runtime report has no discovery data for this paint'
+          : (discovery.reason ??
+              (discovery.groups.length
+                ? `${discovery.groups.length} static group(s); paint dependencies are unverified. Largest: ${discovery.groups[0].parent}, ${kib(discovery.groups[0].bytes)}`
+                : `${discovery.matchedScripts} scripts matched; no static descendant met the delay threshold before this paint. Dynamic imports are excluded.`)),
+        discovery?.state === 'open'
+          ? `Inspect runtime-metrics.json -> chunkDiscovery.${paint}.groups. ${chunkDiscoveryAdvice(paint)} Groups overlap. Delay is not a predicted paint gain.`
+          : 'run scan with full request details and a current chunk-graph.json or Vite manifest',
       );
     }
 
@@ -1427,14 +1450,14 @@ function printVerdict(target) {
       `NOTE: the latest measurement EARLY-STOPPED after run 1 - its LCP delta was >=${runtime.earlyStopped.factor}x the`,
     );
     console.log(
-      'noise threshold, so the accept/revert call is decision-grade. Pinning still needs a full scan (scan --pin).\n',
+      'noise threshold. This is a probe. Use scan --no-early-stop to check both FCP and LCP before a decision.\n',
     );
-  } else if (fresh(runtime) && runtime.runs === 1) {
+  } else if (fresh(runtime) && runtime.runs < 3) {
     console.log(
-      'NOTE: the latest measurement used a SINGLE run (quick mode) - its delta is indicative only.',
+      'NOTE: the latest measurement used fewer than 3 runs. Its deltas are indicative only.',
     );
     console.log(
-      'Confirm any accept/revert decision with a full scan (>=3 runs) before acting on it.\n',
+      'Check both FCP and LCP with scan --no-early-stop (at least 3 runs) before a keep/revert decision.\n',
     );
   }
   if (openCount + unknownCount + pendingCount === 0) {
@@ -1689,7 +1712,7 @@ async function cmdScan(argv) {
     // 60 - the actionable sections are never trimmed); --full restores the
     // whole table. First scan of a target is always full.
     full: { type: 'boolean', default: false },
-    // Disable the sequential early stop (run 1 decides when its LCP delta vs
+    // Disable the probe's early stop (run 1 stops when its LCP delta vs
     // the pinned baseline is >=5x the noise threshold; see EARLY_STOP_FACTOR).
     'no-early-stop': { type: 'boolean', default: false },
     // Pin the target's net-scale explicitly (one of 1/2/4/8) instead of the
@@ -4325,8 +4348,8 @@ start here (the target is remembered after the first command):
                             candidates/cold/large/sibling sections always complete) - --full
                             restores the whole module table
   scan --no-early-stop      scans with a pinned baseline stop after run 1 when |dLCP| is
-                            >=5x the noise threshold (later runs cannot flip that call;
-                            pins always sample fully) - this flag forces all runs
+                            >=5x the noise threshold. This flag forces all runs to check
+                            both FCP and LCP before a decision. Pins always sample fully.
   scan --net-scale <1|2|4|8>  pin the target's network-bandwidth scale explicitly.
                             First scan CALIBRATES it automatically (walks x1->x8 until
                             baseline LCP fits under 8s - only pathologically heavy apps

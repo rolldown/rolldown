@@ -140,6 +140,22 @@ fn assets(a_size: u32, b_size: u32) -> serde_json::Value {
   })
 }
 
+fn output_chunk_graph(a_size: u32, b_size: u32) -> serde_json::Value {
+  json!({
+    "action": "OutputChunkGraphReady",
+    "chunks": [
+      {"file_name": "dist/a.js", "name": "a", "bytes": a_size, "is_entry": true,
+       "facade_module_id": "/app/src/a.ts", "imports": ["dist/shared.js"], "dynamic_imports": []},
+      {"file_name": "dist/b.js", "name": "b", "bytes": b_size, "is_entry": true,
+       "facade_module_id": "/app/src/b.ts", "imports": ["dist/shared.js"], "dynamic_imports": ["dist/lazy.js"]},
+      {"file_name": "dist/shared.js", "name": "shared", "bytes": 3000, "is_entry": false,
+       "facade_module_id": null, "imports": [], "dynamic_imports": []},
+      {"file_name": "dist/lazy.js", "name": "lazy", "bytes": 500, "is_entry": true,
+       "facade_module_id": "/app/src/lazy.ts", "imports": [], "dynamic_imports": []},
+    ],
+  })
+}
+
 /// Fold one complete build (the real event order, including the double `BuildStart` the bundle
 /// emits) spanning `[start_ms, start_ms + 100]`.
 fn fold_build(agg: &mut MetricsAggregator, base: Instant, start_ms: u64, a_size: u32, b_size: u32) {
@@ -212,6 +228,7 @@ fn fold_build(agg: &mut MetricsAggregator, base: Instant, start_ms: u64, a_size:
   agg.fold(&module_rendered(), t(72));
   agg.fold(&package_graph(), t(75));
   agg.fold(&assets(a_size, b_size), t(95));
+  agg.fold(&output_chunk_graph(a_size, b_size), t(96));
   agg.fold(&json!({"action": "BuildEnd"}), t(100));
 }
 
@@ -299,6 +316,64 @@ fn report_json_snapshot() {
   fold_build(&mut agg, base, 0, 1000, 800);
   let report = agg.build_report(None, None);
   insta::assert_snapshot!(serde_json::to_string_pretty(&report).unwrap());
+}
+
+#[test]
+fn chunk_graph_sidecar_keeps_all_final_filenames_and_resets_on_rebuild() {
+  let nonce =
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
+  let dir = std::env::temp_dir().join(format!("rolldown-chunks-{}-{nonce}", std::process::id()));
+  struct Cleanup(std::path::PathBuf);
+  impl Drop for Cleanup {
+    fn drop(&mut self) {
+      let _ = std::fs::remove_dir_all(&self.0);
+    }
+  }
+  let _cleanup = Cleanup(dir.clone());
+  let mut agg = MetricsAggregator::new(MetricsConfig {
+    dir: dir.to_string_lossy().into_owned(),
+    top_n: 1,
+    delta: false,
+  });
+  let base = Instant::now();
+  fold_build(&mut agg, base, 0, 1000, 800);
+  agg.render().unwrap();
+  let file = dir.join("chunk-graph.json");
+  let graph: serde_json::Value = serde_json::from_slice(&std::fs::read(&file).unwrap()).unwrap();
+  let chunks = graph["chunks"].as_array().unwrap();
+  assert_eq!(chunks.len(), 4); // top_n limits reports, never the machine graph.
+  assert_eq!(chunks[0]["fileName"], "dist/a.js");
+  assert_eq!(chunks[0]["facadeModuleId"], "src/a.ts");
+  assert_eq!(chunks[0]["imports"], json!(["dist/shared.js"]));
+  assert_eq!(chunks[1]["dynamicImports"], json!(["dist/lazy.js"]));
+  assert_eq!(chunks[3]["name"], "shared");
+  assert_eq!(chunks[3]["bytes"], 3000);
+
+  // Output hooks can rename and delete chunks, and change their imports and code.
+  agg.fold(
+    &json!({
+      "action": "OutputChunkGraphReady",
+      "chunks": [
+        {"file_name": "renamed.js", "name": "a", "bytes": 42, "is_entry": true,
+         "facade_module_id": "/app/src/a.ts", "imports": ["shared.js"], "dynamic_imports": []},
+        {"file_name": "shared.js", "name": "shared", "bytes": 7, "is_entry": false,
+         "facade_module_id": null, "imports": [], "dynamic_imports": []},
+      ],
+    }),
+    at(base, 110),
+  );
+  agg.render().unwrap();
+  let changed: serde_json::Value = serde_json::from_slice(&std::fs::read(&file).unwrap()).unwrap();
+  assert_eq!(changed["chunks"].as_array().unwrap().len(), 2);
+  assert_eq!(changed["chunks"][0]["fileName"], "renamed.js");
+  assert_eq!(changed["chunks"][0]["bytes"], 42);
+  assert_eq!(changed["chunks"][0]["imports"], json!(["shared.js"]));
+  assert_eq!(changed["chunks"][0]["dynamicImports"], json!([]));
+
+  agg.fold(&json!({"action": "BuildStart"}), at(base, 200));
+  agg.render().unwrap();
+  let next: serde_json::Value = serde_json::from_slice(&std::fs::read(file).unwrap()).unwrap();
+  assert_eq!(next["chunks"], json!([]));
 }
 
 #[test]

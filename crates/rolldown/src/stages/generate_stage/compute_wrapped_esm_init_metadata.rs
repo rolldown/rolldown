@@ -54,9 +54,9 @@ impl<T> Deref for Sealed<T> {
 /// Final post-chunking facts needed to emit wrapped ESM initialization.
 ///
 /// This artifact is deliberately separate from both link-owned [`LinkingMetadata`] and
-/// order-lowering-owned [`OrderWrapState`]. It is computed once after chunk topology and wrapper
-/// selection are final, sealed, then shared read-only by cross-chunk linking and module
-/// finalization.
+/// order-lowering-owned [`OrderWrapState`]. It is sealed for one chunk layout and shared by
+/// cross-chunk linking and module finalization. `finalize_chunk_plan` derives this result after
+/// the runtime sweep and replaces it if facade creation changes the layout.
 #[derive(Debug)]
 pub struct FinalEsmInitMetadata {
   modules: FxHashMap<ModuleIdx, ModuleEsmInitMetadata>,
@@ -82,8 +82,8 @@ struct ModuleEsmInitMetadata {
 }
 
 impl GenerateStage<'_> {
-  /// Compute the immutable no-op and excluded-statement init facts after final chunk assignment.
-  /// This must finish before cross-chunk linking and parallel module finalization.
+  /// Compute the immutable no-op and excluded-statement init facts for a chunk layout.
+  /// Cross-chunk linking and module finalization must use the same layout's result.
   pub(super) fn compute_wrapped_esm_init_metadata(
     &self,
     ast_table: &IndexEcmaAst,

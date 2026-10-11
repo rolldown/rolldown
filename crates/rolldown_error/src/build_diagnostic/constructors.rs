@@ -37,6 +37,7 @@ use super::events::plugin_timings::PluginTimings;
 use super::events::prefer_builtin_feature::PreferBuiltinFeature;
 use super::events::require_tla::RequireTla;
 use super::events::resolve_error::DiagnosableResolveError;
+use super::events::shimmed_export::ShimmedExport;
 use super::events::sourcemap_broken::SourcemapBroken;
 
 use super::events::tsconfig_error::TsConfigError;
@@ -266,6 +267,10 @@ impl BuildDiagnostic {
     stable_importer: String,
   ) -> Self {
     Self::new_inner(ImportIsUndefined { filename, source, span, name, stable_importer })
+  }
+
+  pub fn shimmed_export(exporter: String, binding: String) -> Self {
+    Self::new_inner(ShimmedExport { exporter, binding }).with_severity_warning()
   }
 
   pub fn unsupported_feature(

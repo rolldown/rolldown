@@ -1,0 +1,86 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## SHIMMED_EXPORT
+
+```text
+[SHIMMED_EXPORT] Missing export "a-b" has been shimmed in module "entry.js".
+
+```
+
+## SHIMMED_EXPORT
+
+```text
+[SHIMMED_EXPORT] Missing export "default" has been shimmed in module "entry.js".
+
+```
+
+## SHIMMED_EXPORT
+
+```text
+[SHIMMED_EXPORT] Missing export "unused" has been shimmed in module "entry.js".
+
+```
+
+# Assets
+
+## dynamic.js
+
+```js
+import { __commonJSMin, require_shared } from "./entry2.js";
+//#region dynamic.cjs
+var require_dynamic = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = require_shared();
+}));
+//#endregion
+export default require_dynamic();
+export {};
+
+```
+
+## entry.js
+
+```js
+export { a_b as "a-b", _default as default, load, unused, value } from "./entry2.js";
+
+```
+
+## entry2.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region shared.cjs
+var require_shared = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { value: 42 };
+}));
+//#endregion
+//#region entry.js
+var import_shared = /* @__PURE__ */ __toESM(require_shared());
+const value = import_shared.default.value;
+async function load() {
+	return import_shared.default === (await import("./dynamic.js").then((m) => /* @__PURE__ */ __toESM(m.default))).default;
+}
+var a_b = void 0;
+var _default = void 0;
+var unused = void 0;
+//#endregion
+export { __commonJSMin, _default, a_b, load, require_shared, unused, value };
+
+```
+
+## main.js
+
+```js
+import { _default, a_b, load, value } from "./entry2.js";
+//#region main.js
+const observed = [
+	_default,
+	a_b,
+	value
+];
+//#endregion
+export { load, observed };
+
+```

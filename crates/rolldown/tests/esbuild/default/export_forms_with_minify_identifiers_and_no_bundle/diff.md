@@ -19,7 +19,7 @@ export * as fromB from "./b";
 ```
 ### rolldown
 ```js
-import { t as b_exports } from "./b.js";
+import { n as b_exports } from "./b2.js";
 //#region a.js
 var a_default = 123;
 var varName = 234;
@@ -50,7 +50,7 @@ export { Class, Class as Cls, Class2 as Cls2, Func2 as Fn2, Func, constName, a_d
 -export class Class {}
 -export * from "./a";
 -export * as fromB from "./b";
-+import {t as b_exports} from "./b.js";
++import {n as b_exports} from "./b2.js";
 +var a_default = 123;
 +var varName = 234;
 +var letName = 234;
@@ -70,12 +70,7 @@ export default function() {
 ```
 ### rolldown
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-//#region b.js
-var b_exports = /* @__PURE__ */ __exportAll({ default: () => b_default });
-function b_default() {}
-//#endregion
-export { b_default as default, b_exports as t };
+export { t as default } from "./b2.js";
 
 ```
 ### diff
@@ -83,13 +78,9 @@ export { b_default as default, b_exports as t };
 ===================================================================
 --- esbuild	/out/b.js
 +++ rolldown	b.js
-@@ -1,1 +1,5 @@
+@@ -1,1 +1,1 @@
 -export default function () {}
-+var b_exports = __exportAll({
-+    default: () => b_default
-+});
-+function b_default() {}
-+export {b_default as default, b_exports as t};
++export {t as default} from "./b2.js";
 
 ```
 ## /out/c.js

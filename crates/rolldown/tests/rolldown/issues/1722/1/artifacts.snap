@@ -6,13 +6,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## foo.js
 
 ```js
-import { main, t as import_sub } from "./main.js";
+import { n as main, t as import_sub } from "./main2.js";
 var sub = import_sub.sub;
 export { main, sub };
 
 ```
 
 ## main.js
+
+```js
+import { n as main, t as import_sub } from "./main2.js";
+var sub = import_sub.sub;
+export { main, sub };
+
+```
+
+## main2.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
@@ -24,7 +33,6 @@ var import_sub = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 })))();
 const main = "main";
 //#endregion
-var sub = import_sub.sub;
-export { main, sub, import_sub as t };
+export { main as n, import_sub as t };
 
 ```

@@ -3,17 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## route.js
-
-```js
-//#region route.js
-var route_default = { loadString: () => import("./server.js").then((n) => n.t).then((r) => r.default || r) };
-//#endregion
-export { route_default as default };
-
-```
-
-## server.js
+## 9446.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
@@ -31,6 +21,23 @@ function entry() {
 }
 const routes = { "/": () => import("./route.js") };
 //#endregion
-export { entry as default, routes, client_only_exports as t };
+export { routes as n, client_only_exports as r, entry as t };
+
+```
+
+## route.js
+
+```js
+//#region route.js
+var route_default = { loadString: () => import("./9446.js").then((n) => n.r).then((r) => r.default || r) };
+//#endregion
+export { route_default as default };
+
+```
+
+## server.js
+
+```js
+export { t as default, n as routes } from "./9446.js";
 
 ```

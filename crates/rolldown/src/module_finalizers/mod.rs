@@ -847,7 +847,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       (OutputExports::Default, true) => Expression::new_id_ref_expr(SPAN, require_binding, self),
       // Cases #5, #8, #10, #12, #14: Named + default → require_binding.default
       // Cases #6, #9, #11, #13, #15: Named + named → require_binding.exportName
-      _ => Expression::new_member_access_expr(require_binding, exported_name, self),
+      _ => Expression::new_member_expr_or_ident_ref(
+        Expression::new_id_ref_expr(SPAN, require_binding, self),
+        &[MemberExprProp { name: exported_name.clone(), span: SPAN, optional: false }],
+        SPAN,
+        self,
+      ),
     };
 
     (expr, FinalizedExprProcessHint::empty())

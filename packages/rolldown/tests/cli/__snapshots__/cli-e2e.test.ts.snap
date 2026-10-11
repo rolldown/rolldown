@@ -45,6 +45,7 @@ OPTIONS
   --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
   --checks.pluginTimings      Deprecated alias for bundlerTimings. Rolldown uses bundlerTimings if both options have values.
   --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
+  --checks.shimmedExport      Whether to emit warnings when a missing export is replaced with an undefined binding.
   --checks.sourcemapBroken    Whether to emit warnings when a plugin transforms code without generating a sourcemap.
   --checks.toleratedTransform Whether to emit warnings when detecting tolerated transform.
   --checks.unresolvedEntry    Whether to emit warnings when an entrypoint cannot be resolved.
@@ -197,6 +198,7 @@ OPTIONS
   --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
   --checks.pluginTimings      Deprecated alias for bundlerTimings. Rolldown uses bundlerTimings if both options have values.
   --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
+  --checks.shimmedExport      Whether to emit warnings when a missing export is replaced with an undefined binding.
   --checks.sourcemapBroken    Whether to emit warnings when a plugin transforms code without generating a sourcemap.
   --checks.toleratedTransform Whether to emit warnings when detecting tolerated transform.
   --checks.unresolvedEntry    Whether to emit warnings when an entrypoint cannot be resolved.
@@ -349,6 +351,7 @@ OPTIONS
   --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
   --checks.pluginTimings      Deprecated alias for bundlerTimings. Rolldown uses bundlerTimings if both options have values.
   --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
+  --checks.shimmedExport      Whether to emit warnings when a missing export is replaced with an undefined binding.
   --checks.sourcemapBroken    Whether to emit warnings when a plugin transforms code without generating a sourcemap.
   --checks.toleratedTransform Whether to emit warnings when detecting tolerated transform.
   --checks.unresolvedEntry    Whether to emit warnings when an entrypoint cannot be resolved.
@@ -501,6 +504,7 @@ OPTIONS
   --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
   --checks.pluginTimings      Deprecated alias for bundlerTimings. Rolldown uses bundlerTimings if both options have values.
   --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
+  --checks.shimmedExport      Whether to emit warnings when a missing export is replaced with an undefined binding.
   --checks.sourcemapBroken    Whether to emit warnings when a plugin transforms code without generating a sourcemap.
   --checks.toleratedTransform Whether to emit warnings when detecting tolerated transform.
   --checks.unresolvedEntry    Whether to emit warnings when an entrypoint cannot be resolved.

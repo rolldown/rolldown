@@ -447,6 +447,12 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warnings when multiple star re-exports provide the same name from different modules',
     ),
   ),
+  shimmedExport: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when a missing export is replaced with an undefined binding',
+    ),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof ChecksOptionsSchema, ChecksOptions>>();
 

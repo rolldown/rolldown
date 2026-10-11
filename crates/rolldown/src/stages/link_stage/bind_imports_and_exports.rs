@@ -298,6 +298,7 @@ impl LinkStage<'_> {
           module_id,
           &mut module_stack,
           None,
+          None,
         );
       }
       meta.resolved_exports = resolved_exports;
@@ -372,6 +373,8 @@ impl LinkStage<'_> {
         }
       }
     }
+
+    self.register_shimmed_exports();
 
     self.metas.par_iter_mut().for_each(|meta| {
       let mut sorted_and_non_ambiguous_resolved_exports = vec![];
@@ -563,6 +566,7 @@ impl LinkStage<'_> {
     module_idx: ModuleIdx,
     module_stack: &mut Vec<ModuleIdx>,
     root_record: Option<ImportRecordIdx>,
+    shimmed_exports: Option<&LinkingMetadataVec>,
   ) {
     if module_stack.contains(&module_idx) {
       return;
@@ -599,43 +603,56 @@ impl LinkStage<'_> {
       //   continue;
       // }
 
-      for (exported_name, named_export) in &dep_module.named_exports {
+      let exports = dep_module
+        .named_exports
+        .iter()
+        .filter(|_| shimmed_exports.is_none())
+        .map(|(name, export)| (name, export.referenced, export.came_from_commonjs))
+        .chain(shimmed_exports.into_iter().flat_map(|metas| {
+          metas[dep_id].shimmed_missing_exports.iter().map(|(name, &symbol)| (name, symbol, false))
+        }));
+      for (exported_name, referenced, came_from_commonjs) in exports {
         // ES6 export star statements ignore exports named "default"
-        if exported_name.as_str() == "default" && !named_export.came_from_commonjs {
+        if exported_name.as_str() == "default" && !came_from_commonjs {
           continue;
         }
         // This export star is shadowed if any file in the stack has a matching real named export
-        if module_stack
-          .iter()
-          .filter_map(|id| normal_modules[*id].as_normal())
-          .any(|module| module.named_exports.contains_key(exported_name))
-        {
+        if module_stack.iter().any(|id| {
+          normal_modules[*id].as_normal().is_some_and(|module| {
+            module.named_exports.contains_key(exported_name)
+              || shimmed_exports
+                .is_some_and(|metas| metas[*id].shimmed_missing_exports.contains_key(exported_name))
+          })
+        }) {
           continue;
         }
         // We have filled `resolve_exports` with `named_exports`. If the export is already exists, it means that the importer
         // has a named export with the same name. So the export from dep module is shadowed.
         if let Some(resolved_export) = resolve_exports.get_mut(exported_name) {
-          if named_export.referenced != resolved_export.symbol_ref {
-            if resolved_export.came_from_commonjs || named_export.came_from_commonjs {
+          // Shims are fallbacks: they cannot invalidate a real export or its ambiguity.
+          // See internal-docs/code-splitting/implementation.md.
+          if shimmed_exports.is_some() {
+            continue;
+          }
+          if referenced != resolved_export.symbol_ref {
+            if resolved_export.came_from_commonjs || came_from_commonjs {
               // CJS conflict: at least one side came from CJS (e.g., conditional re-exports
               // mixing ESM and CJS targets). Track these separately — they're expected runtime
               // branches, not static ambiguity errors.
               resolved_export
                 .cjs_conflicting_symbol_refs
                 .get_or_insert(Box::default())
-                .push(named_export.referenced);
+                .push(referenced);
             } else {
               resolved_export
                 .potentially_ambiguous_symbol_refs
                 .get_or_insert(Box::default())
-                .push(named_export.referenced);
+                .push(referenced);
             }
           }
         } else {
-          resolve_exports.insert(
-            exported_name.clone(),
-            ResolvedExport::new(named_export.referenced, named_export.came_from_commonjs),
-          );
+          resolve_exports
+            .insert(exported_name.clone(), ResolvedExport::new(referenced, came_from_commonjs));
           if let Some(root_record) = root_record
             && let Some(map) = star_export_record_by_name.as_deref_mut()
           {
@@ -651,10 +668,55 @@ impl LinkStage<'_> {
         dep_id,
         module_stack,
         root_record,
+        shimmed_exports,
       );
     }
 
     module_stack.pop();
+  }
+
+  fn register_shimmed_exports(&mut self) {
+    let mut has_shims = false;
+    for meta in &mut self.metas {
+      has_shims |= !meta.shimmed_missing_exports.is_empty();
+      meta.resolved_exports.extend(
+        meta
+          .shimmed_missing_exports
+          .iter()
+          .map(|(name, &symbol)| (name.clone(), ResolvedExport::new(symbol, false))),
+      );
+    }
+    if !has_shims {
+      return;
+    }
+    let exports = self
+      .module_table
+      .modules
+      .par_iter()
+      .filter_map(|module| {
+        let module = module.as_normal()?;
+        if !module.has_star_export() {
+          return None;
+        }
+        let meta = &self.metas[module.idx];
+        let mut exports = meta.resolved_exports.clone();
+        let mut records = meta.star_export_record_by_name.clone();
+        Self::add_exports_for_export_star(
+          &self.module_table.modules,
+          &mut exports,
+          self.options.is_strict_execution_order_enabled().then_some(&mut records),
+          module.idx,
+          &mut vec![],
+          None,
+          Some(&self.metas),
+        );
+        Some((module.idx, exports, records))
+      })
+      .collect::<Vec<_>>();
+    for (idx, exports, records) in exports {
+      self.metas[idx].resolved_exports = exports;
+      self.metas[idx].star_export_record_by_name = records;
+    }
   }
 
   /// Strict-execution-order only: record the star re-export paths behind every non-ambiguous
@@ -1804,18 +1866,17 @@ impl BindImportsAndExportsContext<'_> {
         match &tracker.imported {
           Specifier::Star => unreachable!("star should always exist, no need to shim"),
           Specifier::Literal(imported) => {
-            let shimmed_symbol_ref = self.metas[tracker.importee]
-              .shimmed_missing_exports
-              .entry(imported.clone())
-              .or_insert_with(|| {
-                let mut name = legitimize_identifier_name(imported);
-                if !none_preserved_keyword_or_global_object_ext(&name) {
-                  name = Cow::Owned(format!("_{name}"));
-                }
-                self.symbol_db.create_facade_root_symbol_ref(tracker.importee, &name)
-              });
+            let shimmed_symbol_ref = shim_missing_export(
+              importee,
+              imported,
+              &mut self.metas[tracker.importee],
+              self.symbol_db,
+              &mut self.diagnostics,
+              self.options.shim_missing_exports
+                && self.options.checks.contains(EventKindSwitcher::ShimmedExport),
+            );
             return MatchImportKind::Normal(MatchImportKindNormal {
-              symbol: *shimmed_symbol_ref,
+              symbol: shimmed_symbol_ref,
               reexports: vec![],
             });
           }
@@ -1825,6 +1886,27 @@ impl BindImportsAndExportsContext<'_> {
 
     ret
   }
+}
+
+fn shim_missing_export(
+  module: &NormalModule,
+  exported_name: &CompactStr,
+  meta: &mut LinkingMetadata,
+  symbols: &mut SymbolRefDb,
+  diagnostics: &mut Diagnostics,
+  warn: bool,
+) -> SymbolRef {
+  *meta.shimmed_missing_exports.entry(exported_name.clone()).or_insert_with(|| {
+    if warn {
+      diagnostics
+        .push(BuildDiagnostic::shimmed_export(module.id.to_string(), exported_name.to_string()));
+    }
+    let mut name = legitimize_identifier_name(exported_name);
+    if !none_preserved_keyword_or_global_object_ext(&name) {
+      name = Cow::Owned(format!("_{name}"));
+    }
+    symbols.create_facade_root_symbol_ref(module.idx, &name)
+  })
 }
 
 pub(super) fn record_star_reexport_path(

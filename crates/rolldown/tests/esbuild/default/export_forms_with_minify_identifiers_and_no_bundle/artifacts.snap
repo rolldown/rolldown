@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { t as b_exports } from "./b.js";
+import { n as b_exports } from "./b2.js";
 //#region a.js
 var a_default = 123;
 var varName = 234;
@@ -24,12 +24,19 @@ export { Class, Class as Cls, Class2 as Cls2, Func2 as Fn2, Func, constName, a_d
 ## b.js
 
 ```js
+export { t as default } from "./b2.js";
+
+```
+
+## b2.js
+
+```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region b.js
 var b_exports = /* @__PURE__ */ __exportAll({ default: () => b_default });
 function b_default() {}
 //#endregion
-export { b_default as default, b_exports as t };
+export { b_exports as n, b_default as t };
 
 ```
 

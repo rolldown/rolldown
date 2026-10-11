@@ -3,42 +3,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # warnings
 
-## IMPORT_IS_UNDEFINED
+## SHIMMED_EXPORT
 
 ```text
-[IMPORT_IS_UNDEFINED] Import `default` will always be undefined because there is no matching export in 'foo.js'
-   ╭─[ star.js:2:13 ]
-   │
- 2 │ console.log(ns.default(ns.x, ns.y))
-   │             ─────┬────  
-   │                  ╰────── 
-───╯
+[SHIMMED_EXPORT] Missing export "default" has been shimmed in module "foo.js".
 
 ```
 
-## IMPORT_IS_UNDEFINED
+## SHIMMED_EXPORT
 
 ```text
-[IMPORT_IS_UNDEFINED] Import `x` will always be undefined because there is no matching export in 'foo.js'
-   ╭─[ star.js:2:24 ]
-   │
- 2 │ console.log(ns.default(ns.x, ns.y))
-   │                        ──┬─  
-   │                          ╰─── 
-───╯
+[SHIMMED_EXPORT] Missing export "x" has been shimmed in module "foo.js".
 
 ```
 
-## IMPORT_IS_UNDEFINED
+## SHIMMED_EXPORT
 
 ```text
-[IMPORT_IS_UNDEFINED] Import `y` will always be undefined because there is no matching export in 'foo.js'
-   ╭─[ star.js:2:30 ]
-   │
- 2 │ console.log(ns.default(ns.x, ns.y))
-   │                              ──┬─  
-   │                                ╰─── 
-───╯
+[SHIMMED_EXPORT] Missing export "y" has been shimmed in module "foo.js".
 
 ```
 
@@ -59,7 +41,11 @@ init_foo();
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region foo.js
-var foo_exports = /* @__PURE__ */ __exportAll({});
+var foo_exports = /* @__PURE__ */ __exportAll({
+	default: () => _default,
+	x: () => x,
+	y: () => y
+});
 var _default, x, y;
 var init_foo = __esmMin((() => {
 	console.log("no exports here");
@@ -116,10 +102,10 @@ console.log(foo_exports);
 ## star.js
 
 ```js
-import { r as init_foo } from "./foo.js";
+import { a as y, i as x, r as init_foo, t as _default } from "./foo.js";
 //#region star.js
 init_foo();
-console.log((void 0)(void 0, void 0));
+console.log(_default(x, y));
 //#endregion
 
 ```

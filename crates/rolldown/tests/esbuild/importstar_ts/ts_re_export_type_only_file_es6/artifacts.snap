@@ -1,6 +1,15 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## SHIMMED_EXPORT
+
+```text
+[SHIMMED_EXPORT] Missing export "Foo" has been shimmed in module "type.ts".
+
+```
+
 # Assets
 
 ## entry.js

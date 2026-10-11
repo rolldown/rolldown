@@ -41,9 +41,14 @@ pub fn determine_export_mode(
       Ok(OutputExports::None)
     }
     OutputExports::Auto => {
-      if export_names.is_empty() {
+      // An entry-level `export * from '<external>'` merges the external's keys into `exports`.
+      let re_exports_externals = !ctx.chunk.entry_level_externals.is_empty();
+      if export_names.is_empty() && !re_exports_externals {
         Ok(OutputExports::None)
-      } else if export_names.len() == 1 && export_names[0].as_str() == "default" {
+      } else if export_names.len() == 1
+        && export_names[0].as_str() == "default"
+        && !re_exports_externals
+      {
         Ok(OutputExports::Default)
       } else {
         if !ctx.options.format.is_esm()

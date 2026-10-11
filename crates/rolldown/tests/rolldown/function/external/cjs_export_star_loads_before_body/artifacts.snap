@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+let ext = require("ext");
+//#region main.js
+globalThis.order.push("main");
+//#endregion
+Object.keys(ext).forEach(function(k) {
+	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function() {
+			return ext[k];
+		}
+	});
+});
+
+```

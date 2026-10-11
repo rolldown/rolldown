@@ -3,6 +3,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # warnings
 
+## MISSING_GLOBAL_NAME
+
+```text
+[MISSING_GLOBAL_NAME] No name was provided for external module "foo" in "output.globals" – guessing "foo".
+
+```
+
 ## UNRESOLVED_IMPORT
 
 ```text
@@ -21,8 +28,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-(function() {
-	var foo = require("foo");
+var mod = (function(exports, foo) {
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 	Object.keys(foo).forEach(function(k) {
 		if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
 			enumerable: true,
@@ -31,6 +38,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 			}
 		});
 	});
-})();
+	return exports;
+})({}, foo);
 
 ```

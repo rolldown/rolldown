@@ -72,7 +72,7 @@ pub async fn render_iife<'code>(
   let export_mode = ctx.chunk.output_exports;
 
   let export_names = get_chunk_export_names_with_ctx(ctx);
-  let has_exports = !export_names.is_empty();
+  let has_exports = !export_names.is_empty() || !ctx.chunk.entry_level_externals.is_empty();
   let has_default_export = export_names.iter().any(|name| name.as_str() == "default");
 
   let entry_module = ctx

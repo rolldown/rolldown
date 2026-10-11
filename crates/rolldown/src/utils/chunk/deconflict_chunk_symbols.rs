@@ -81,7 +81,6 @@ pub fn deconflict_chunk_symbols(
       .direct_imports_from_external_modules
       .iter()
       .map(|(idx, _)| *idx)
-      .chain(chunk.entry_level_externals.iter().map(|item| item.external_idx))
       .filter_map(|idx| link_output.module_table[idx].as_external())
       .for_each(|external_module| {
         renamer.add_symbol_in_root_scope(external_module.namespace_ref, RootBindingKind::Authored);

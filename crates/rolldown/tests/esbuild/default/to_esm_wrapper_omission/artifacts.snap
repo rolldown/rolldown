@@ -151,9 +151,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
 require("a_nowrap");
 let b_nowrap = require("b_nowrap");
+let c_nowrap = require("c_nowrap");
 let d_WRAP = require("d_WRAP");
 d_WRAP = __toESM(d_WRAP);
 let e_WRAP = require("e_WRAP");
@@ -178,7 +180,6 @@ i_WRAP.x();
 j_WRAP.x``;
 x = import("k_WRAP");
 //#endregion
-var c_nowrap = require("c_nowrap");
 Object.keys(c_nowrap).forEach(function(k) {
 	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
 		enumerable: true,

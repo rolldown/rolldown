@@ -267,8 +267,7 @@ impl GenerateStage<'_> {
     if facts.eval_read_chunks.contains(&chunk_idx) {
       return Some("a module with direct eval references its symbols");
     }
-    if !chunk.entry_level_externals.is_empty()
-      || !facts.link_state.index_chunk_direct_imports_from_external_modules[chunk_idx].is_empty()
+    if !facts.link_state.index_chunk_direct_imports_from_external_modules[chunk_idx].is_empty()
       || !facts.link_state.index_chunk_indirect_imports_from_external_modules[chunk_idx].is_empty()
       || !facts.link_state.index_chunk_dynamic_imports_from_external_modules[chunk_idx].is_empty()
     {

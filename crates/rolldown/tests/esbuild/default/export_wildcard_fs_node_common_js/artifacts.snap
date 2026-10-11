@@ -7,11 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+let fs = require("fs");
+let external = require("./external");
 //#region internal.js
 let foo = 123;
 //#endregion
 exports.foo = foo;
-var fs = require("fs");
 Object.keys(fs).forEach(function(k) {
 	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
 		enumerable: true,
@@ -20,7 +21,6 @@ Object.keys(fs).forEach(function(k) {
 		}
 	});
 });
-var external = require("./external");
 Object.keys(external).forEach(function(k) {
 	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
 		enumerable: true,

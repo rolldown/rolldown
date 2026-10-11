@@ -156,9 +156,9 @@ Object.defineProperty(exports, "x", {
 ```js
 //! Dynamic Entry: [Entry-Module-Id: target.js] [Name: <none>]
 const require_target = require("./target.js");
+let external = require("external");
 require_target.init_target();
 exports.x = require_target.x;
-var external = require("external");
 Object.keys(external).forEach(function(k) {
 	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
 		enumerable: true,

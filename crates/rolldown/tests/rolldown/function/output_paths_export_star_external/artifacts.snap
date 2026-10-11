@@ -28,7 +28,8 @@ export * from "./mapped-ext.js";
 ### main.js
 
 ```js
-var ext_mod = require("./mapped-ext.js");
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+let ext_mod = require("./mapped-ext.js");
 Object.keys(ext_mod).forEach(function(k) {
 	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
 		enumerable: true,

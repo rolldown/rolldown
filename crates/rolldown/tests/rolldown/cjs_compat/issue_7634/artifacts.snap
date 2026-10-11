@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
+let bar = require("bar");
 //#region baz.js
 var baz_exports = /* @__PURE__ */ __exportAll({ baz: () => "baz" });
 //#endregion
@@ -17,7 +18,6 @@ function foo() {
 }
 //#endregion
 exports.foo = foo;
-var bar = require("bar");
 Object.keys(bar).forEach(function(k) {
 	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
 		enumerable: true,

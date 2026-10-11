@@ -1,0 +1,6 @@
+{
+  "_comment": "`export * from 'ext1'` comes before `import 'ext2'`, so `ext1` must load first. The entry-level re-export used to be printed after every import.",
+  "config": {
+    "external": ["ext1", "ext2"]
+  }
+}

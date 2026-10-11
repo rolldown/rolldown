@@ -105,7 +105,9 @@ pub struct Chunk {
   pub chunk_reason_type: Box<ChunkReasonType>,
   pub preserve_entry_signature: Option<PreserveEntrySignatures>,
   pub depended_runtime_helper: RuntimeHelper,
-  /// The externals that this entry chunk re-exports at entry level, sorted by exec order.
+  /// The externals that this entry chunk re-exports at entry level, sorted by exec order. The
+  /// printers upgrade the import of each external to `export * from` (ESM), or to a bound
+  /// `require` plus a key merge (CJS, IIFE, UMD).
   pub entry_level_externals: Vec<EntryLevelExternal>,
   pub insert_map: FxHashMap<ModuleIdx, Vec<(ModuleIdx, ImportRecordIdx)>>,
   pub remove_map: FxHashMap<ModuleIdx, Vec<ImportRecordIdx>>,
@@ -139,6 +141,10 @@ impl Chunk {
       preserve_entry_signature,
       ..Self::default()
     }
+  }
+
+  pub fn entry_level_external(&self, external_idx: ModuleIdx) -> Option<&EntryLevelExternal> {
+    self.entry_level_externals.iter().find(|item| item.external_idx == external_idx)
   }
 
   pub fn has_side_effect(&self, module_table: &ModuleTable) -> bool {

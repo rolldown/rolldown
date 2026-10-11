@@ -657,6 +657,11 @@ impl GenerateStage<'_> {
         dynamic_imports_from_external_modules,
       )| {
         let mut symbol_needs_to_assign = vec![];
+        // An entry-level external is an import of this chunk that the printers upgrade to a
+        // re-export, so it keeps its exec-order place among the chunk's imports.
+        for item in &chunk.entry_level_externals {
+          imports_from_external_modules.entry(item.external_idx).or_default();
+        }
         chunk.modules.iter().copied().for_each(|module_id| {
           let Module::Normal(module) = &self.link_output.module_table[module_id] else {
             return;

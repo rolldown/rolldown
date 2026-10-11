@@ -13,10 +13,10 @@ use oxc_index::{IndexVec, index_vec};
 use oxc_str::CompactStr;
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
-  ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PostChunkOptimizationOperation,
-  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, ResolvedImportRecord, RuntimeHelper, SymbolRef,
-  SymbolRefDb, TaggedSymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder, UsedSymbolRefsView,
-  WrapKind,
+  ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat,
+  PostChunkOptimizationOperation, PreserveEntrySignatures, RUNTIME_HELPER_NAMES,
+  ResolvedImportRecord, RuntimeHelper, SymbolRef, SymbolRefDb, TaggedSymbolRef, UsedSymbolRefs,
+  UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
 };
 use rolldown_utils::index_vec_ext::IndexVecRefExt as _;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
@@ -569,9 +569,12 @@ impl GenerateStage<'_> {
     }
   }
 
+  #[expect(clippy::too_many_arguments)]
   fn collect_external_import(
     &self,
+    chunk_graph: &ChunkGraph,
     importer_idx: ModuleIdx,
+    rec_idx: ImportRecordIdx,
     import_record: &ResolvedImportRecord,
     external_module_idx: ModuleIdx,
     imports_from_external_modules: &mut FxHashMap<ModuleIdx, Vec<(ModuleIdx, NamedImport)>>,
@@ -584,12 +587,33 @@ impl GenerateStage<'_> {
     {
       dynamic_imports_from_external_modules.insert(external_module_idx);
     }
-    // Ensure the external module is imported in case it has side effects.
+    // Ensure the external module is imported in case it has side effects. An `export * from`
+    // record is an ordinary import too, unless the importer's namespace declaration imports the
+    // external itself.
     if matches!(import_record.kind, ImportKind::Import)
-      && !import_record.meta.contains(ImportRecordMeta::IsExportStar)
+      && !self.namespace_renders_external_star(chunk_graph, importer_idx, rec_idx, import_record)
     {
       imports_from_external_modules.entry(external_module_idx).or_default();
     }
+  }
+
+  /// Whether the importer's namespace declaration renders this `export * from '<external>'`
+  /// record, with its own `import * as` (ESM) or `require` (other formats).
+  /// See internal-docs/external-star-exports/implementation.md.
+  fn namespace_renders_external_star(
+    &self,
+    chunk_graph: &ChunkGraph,
+    importer_idx: ModuleIdx,
+    rec_idx: ImportRecordIdx,
+    import_record: &ResolvedImportRecord,
+  ) -> bool {
+    let meta = &self.link_output.metas[importer_idx];
+    import_record.meta.contains(ImportRecordMeta::IsExportStar)
+      && meta.namespace_included
+      && meta.ns_star_external_re_export_emitted(
+        chunk_graph.is_entry_level_star_record(importer_idx, rec_idx),
+        self.options.format,
+      )
   }
 
   fn collect_dynamic_chunk_import(
@@ -668,23 +692,29 @@ impl GenerateStage<'_> {
           };
           module
             .import_records
-            .iter()
-            .filter_map(|rec| rec.resolved_module.map(|module_idx| (rec, module_idx)))
-            .for_each(|(rec, module_idx)| match &self.link_output.module_table[module_idx] {
-              Module::Normal(_) => self.collect_dynamic_chunk_import(
-                chunk_graph,
-                module.idx,
-                rec,
-                module_idx,
-                cross_chunk_dynamic_imports,
-              ),
-              Module::External(_) => self.collect_external_import(
-                module.idx,
-                rec,
-                module_idx,
-                imports_from_external_modules,
-                dynamic_imports_from_external_modules,
-              ),
+            .iter_enumerated()
+            .filter_map(|(rec_idx, rec)| {
+              rec.resolved_module.map(|module_idx| (rec_idx, rec, module_idx))
+            })
+            .for_each(|(rec_idx, rec, module_idx)| {
+              match &self.link_output.module_table[module_idx] {
+                Module::Normal(_) => self.collect_dynamic_chunk_import(
+                  chunk_graph,
+                  module.idx,
+                  rec,
+                  module_idx,
+                  cross_chunk_dynamic_imports,
+                ),
+                Module::External(_) => self.collect_external_import(
+                  chunk_graph,
+                  module.idx,
+                  rec_idx,
+                  rec,
+                  module_idx,
+                  imports_from_external_modules,
+                  dynamic_imports_from_external_modules,
+                ),
+              }
             });
 
           module

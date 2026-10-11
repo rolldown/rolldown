@@ -133,7 +133,7 @@ For each `(importer, stmt_info, rec)` triple this pass dispatches on `rec.kind`,
 
 ### `Module::External` importees
 
-- **`Import`, reexport-all** — rename `rec.namespace_ref` to `import_<identifier_name>`. The `export *` itself is removed by a later pass; only the namespace name needs to be stable for de-conflicting.
+- **`Import`, reexport-all** — rename `rec.namespace_ref` to `import_<identifier_name>`. The `export *` itself is removed by a later pass; only the namespace name needs to be stable for de-conflicting. The record's chunk still imports the external; see `../../external-star-exports/implementation.md`.
 
   ```js
   // index.js: export * from 'lodash';

@@ -22,6 +22,7 @@ export * from "external" with { type: "css" };
 ## shared.js
 
 ```js
+import "external" with { type: "json" };
 //#region setup.js
 globalThis.setupValue = "ready";
 //#endregion
@@ -56,6 +57,7 @@ init_b();
 ### shared.js
 
 ```js
+import "external" with { type: "json" };
 // HIDDEN [\0rolldown/runtime.js]
 //#region setup.js
 function init_setup() {

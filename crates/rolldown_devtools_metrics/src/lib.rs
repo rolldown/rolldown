@@ -144,6 +144,8 @@ pub struct MetricsAggregator {
 
   // chunks (reason histogram is computed at report time over non-empty chunks)
   chunks: FxHashMap<u32, ChunkAgg>,
+  /// Final output chunks after `generateBundle`, independent of internal chunk IDs.
+  output_chunks: Vec<MOutputChunk>,
   /// module id -> chunk ids it is bundled into. Only populated when there is >1 chunk (else no
   /// duplication is possible). For cross-chunk duplication.
   module_chunks: FxHashMap<String, Vec<u32>>,
@@ -199,6 +201,11 @@ impl MetricsAggregator {
       "ChunkGraphReady" => self.fold_chunk_graph(value),
       "PackageGraphReady" => self.fold_package_graph(value),
       "AssetsReady" => self.fold_assets(value),
+      "OutputChunkGraphReady" => {
+        if let Ok(graph) = serde_json::from_value::<MOutputChunkGraph>(value.clone()) {
+          self.output_chunks = graph.chunks;
+        }
+      }
       "HookResolveIdCallStart" => self.hook_start(value, "resolveId", at),
       "HookLoadCallStart" => self.hook_start(value, "load", at),
       "HookTransformCallStart" => self.hook_start(value, "transform", at),
@@ -562,6 +569,22 @@ struct MChunk {
 struct MChunkImport {
   chunk_id: u32,
   kind: String,
+}
+
+#[derive(Deserialize)]
+struct MOutputChunkGraph {
+  chunks: Vec<MOutputChunk>,
+}
+
+#[derive(Deserialize)]
+struct MOutputChunk {
+  file_name: String,
+  name: String,
+  bytes: u64,
+  is_entry: bool,
+  facade_module_id: Option<String>,
+  imports: Vec<String>,
+  dynamic_imports: Vec<String>,
 }
 
 #[derive(Deserialize)]

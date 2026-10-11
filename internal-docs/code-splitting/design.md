@@ -196,8 +196,12 @@ Eligible direct re-export records route initialization from the binding consumer
 module's initializer, while importing a forwarded binding also initializes its defining module.
 The routing decision is per record, so evaluating the local body cannot discharge a later
 consumer's demand for a forwarded binding. The existing module guards preserve one-time execution.
-If on-demand wrapping leaves the mixed module unwrapped, consumers retain the initialization
-obligations that its included statements do not discharge.
+If on-demand wrapping leaves the mixed module unwrapped, a consumer that imports a forwarded
+binding initializes that binding's defining module itself. A non-routed record whose definer is
+order-wrapped but has no binding consumer at startup has no initialization site in that mode: the
+unwrapped mixed module emits no `init_*` call for its excluded re-export, so the definer evaluates
+when a lazy consumer first imports it, later than under wrap-all, where the mixed module's wrapper
+initializes it. `mixed_reexport_sensitive` carries expected-failure variants for this gap.
 
 A routed target must be side-effect-free and have no `ExecutionOrderSensitive` module in its static
 or binding dependency closure, apart from the inert runtime helpers. Side-effect metadata alone is

@@ -1,3 +1,4 @@
+use std::cell::Cell;
 use std::ops::{BitOr, BitOrAssign};
 
 use bitflags::bitflags;
@@ -12,7 +13,7 @@ use oxc::transformer::EngineTargets;
 use oxc_ecmascript::side_effects::{
   MayHaveSideEffects, MayHaveSideEffectsContext, PropertyReadSideEffects,
 };
-use oxc_ecmascript::{GlobalContext, ValueType};
+use oxc_ecmascript::{DetermineValueType, GlobalContext, ValueType};
 use rolldown_common::{
   AstScopes, ConstExportMeta, ConstantValue, FlatOptions, SharedNormalizedBundlerOptions,
   StmtEvalFlags,
@@ -152,6 +153,10 @@ pub struct StmtEvalAnalyzer<'a> {
   namespace_object_symbol_ids: Option<&'a FxHashSet<SymbolId>>,
   /// The constant values of bindings. See [`ConstantSymbolLookup`].
   constant_symbols: Option<&'a dyn ConstantSymbolLookup>,
+  /// Whether the analysis of the current statement read a value from `constant_symbols`.
+  read_constant: Cell<bool>,
+  /// `false` while [`Self::analyze_stmt`] analyzes a statement again without constants.
+  use_constants: Cell<bool>,
 }
 
 impl<'a> StmtEvalAnalyzer<'a> {
@@ -170,10 +175,15 @@ impl<'a> StmtEvalAnalyzer<'a> {
       side_effect_free_call_expr_node_ids,
       namespace_object_symbol_ids,
       constant_symbols,
+      read_constant: Cell::new(false),
+      use_constants: Cell::new(true),
     }
   }
 
   fn constant_value_for_reference_id(&self, reference_id: ReferenceId) -> Option<&ConstantValue> {
+    if !self.use_constants.get() {
+      return None;
+    }
     let symbol_id = self.scope.symbol_id_for(reference_id)?;
     // Only a `const` cannot change behind the static analysis. The lookup checks the canonical
     // declaration of an import.
@@ -181,7 +191,11 @@ impl<'a> StmtEvalAnalyzer<'a> {
     if !(flags.is_const_variable() || flags.is_import()) {
       return None;
     }
-    self.constant_symbols?.constant_value(symbol_id)
+    let value = self.constant_symbols?.constant_value(symbol_id);
+    if value.is_some() {
+      self.read_constant.set(true);
+    }
+    value
   }
 
   /// Check if a call expression has been marked pure by cross-module optimization.
@@ -204,6 +218,17 @@ impl<'a> StmtEvalAnalyzer<'a> {
         Expression::Identifier(ident) => return self.is_unresolved_reference(ident),
         _ => return false,
       }
+    }
+  }
+
+  /// Whether `callee` is a global or a member of one, such as `Uint8Array` or `String.raw`.
+  fn is_global_callee(&self, callee: &Expression) -> bool {
+    match callee.get_inner_expression() {
+      Expression::Identifier(ident) => self.is_unresolved_reference(ident),
+      expr @ match_member_expression!(Expression) => {
+        self.is_member_expr_root_global(expr.to_member_expression())
+      }
+      _ => false,
     }
   }
 
@@ -660,7 +685,27 @@ impl<'a> StmtEvalAnalyzer<'a> {
     }
   }
 
+  /// Collect facts about evaluating `stmt`.
+  ///
+  /// Some oxc rules trust a known type further than a coercion (see [`ConstantTrustFinder`]). If a
+  /// constant made `stmt` side-effect free and `stmt` has such a construct, the facts come from a
+  /// second analysis without constants.
   pub fn analyze_stmt(&self, stmt: &ast::Statement) -> StmtEvalFacts {
+    self.read_constant.set(false);
+    let facts = self.analyze_stmt_inner(stmt);
+    if !self.read_constant.get()
+      || facts.has_side_effect_for_tree_shaking()
+      || !ConstantTrustFinder::find(self, stmt)
+    {
+      return facts;
+    }
+    self.use_constants.set(false);
+    let facts = self.analyze_stmt_inner(stmt);
+    self.use_constants.set(true);
+    facts
+  }
+
+  fn analyze_stmt_inner(&self, stmt: &ast::Statement) -> StmtEvalFacts {
     use oxc::ast::ast::Statement;
     match stmt {
       // Bundler-specific: module declarations
@@ -672,20 +717,20 @@ impl<'a> StmtEvalAnalyzer<'a> {
       Statement::ExpressionStatement(expr) => self.analyze_expr(&expr.expression),
       Statement::BlockStatement(block) => self.analyze_block(block),
       Statement::DoWhileStatement(do_while) => {
-        self.analyze_stmt(&do_while.body) | self.analyze_expr(&do_while.test)
+        self.analyze_stmt_inner(&do_while.body) | self.analyze_expr(&do_while.test)
       }
       Statement::WhileStatement(while_stmt) => {
-        self.analyze_expr(&while_stmt.test) | self.analyze_stmt(&while_stmt.body)
+        self.analyze_expr(&while_stmt.test) | self.analyze_stmt_inner(&while_stmt.body)
       }
       Statement::IfStatement(if_stmt) => {
         self.analyze_expr(&if_stmt.test)
-          | self.analyze_stmt(&if_stmt.consequent)
-          | if_stmt.alternate.as_ref().map(|s| self.analyze_stmt(s)).unwrap_or_default()
+          | self.analyze_stmt_inner(&if_stmt.consequent)
+          | if_stmt.alternate.as_ref().map(|s| self.analyze_stmt_inner(s)).unwrap_or_default()
       }
       Statement::ReturnStatement(ret_stmt) => {
         ret_stmt.argument.as_ref().map(|expr| self.analyze_expr(expr)).unwrap_or_default()
       }
-      Statement::LabeledStatement(labeled_stmt) => self.analyze_stmt(&labeled_stmt.body),
+      Statement::LabeledStatement(labeled_stmt) => self.analyze_stmt_inner(&labeled_stmt.body),
       Statement::TryStatement(try_stmt) => {
         let mut facts = self.analyze_block(&try_stmt.block);
         facts |= try_stmt
@@ -708,7 +753,7 @@ impl<'a> StmtEvalAnalyzer<'a> {
         'outer: for case in &switch_stmt.cases {
           facts |= case.test.as_ref().map(|expr| self.analyze_expr(expr)).unwrap_or_default();
           for stmt in &case.consequent {
-            facts |= self.analyze_stmt(stmt);
+            facts |= self.analyze_stmt_inner(stmt);
             if facts.has_side_effect_for_tree_shaking() {
               break 'outer;
             }
@@ -725,7 +770,7 @@ impl<'a> StmtEvalAnalyzer<'a> {
   fn analyze_block(&self, block: &ast::BlockStatement) -> StmtEvalFacts {
     let mut facts = StmtEvalFacts::default();
     for stmt in &block.body {
-      facts |= self.analyze_stmt(stmt);
+      facts |= self.analyze_stmt_inner(stmt);
       if facts.has_side_effect_for_tree_shaking() {
         break;
       }
@@ -1065,6 +1110,56 @@ fn chain_root_visiting_eager_children<'a>(
   }
 }
 
+/// Finds a construct for which an oxc rule trusts a known operand type further than a coercion.
+///
+/// oxc then ignores the effects of the left operand of `instanceof`, the `RangeError` of a global
+/// function or constructor such as `new Uint8Array(-1)`, and the size of a BigInt shift or power
+/// (#10817). The search also enters function bodies, so it can report a construct that never runs.
+struct ConstantTrustFinder<'s, 'a> {
+  analyzer: &'s StmtEvalAnalyzer<'a>,
+  found: bool,
+}
+
+impl ConstantTrustFinder<'_, '_> {
+  fn find(analyzer: &StmtEvalAnalyzer, stmt: &ast::Statement) -> bool {
+    let mut finder = ConstantTrustFinder { analyzer, found: false };
+    finder.visit_statement(stmt);
+    finder.found
+  }
+}
+
+impl<'ast> VisitJs<'ast> for ConstantTrustFinder<'_, '_> {
+  fn visit_expression(&mut self, it: &Expression<'ast>) {
+    if !self.found {
+      walk_js::walk_expression(self, it);
+    }
+  }
+
+  fn visit_binary_expression(&mut self, it: &ast::BinaryExpression<'ast>) {
+    self.found |= match it.operator {
+      ast::BinaryOperator::Instanceof => true,
+      ast::BinaryOperator::ShiftLeft
+      | ast::BinaryOperator::ShiftRight
+      | ast::BinaryOperator::Exponential => {
+        it.left.value_type(self.analyzer).is_bigint()
+          || it.right.value_type(self.analyzer).is_bigint()
+      }
+      _ => false,
+    };
+    walk_js::walk_binary_expression(self, it);
+  }
+
+  fn visit_call_expression(&mut self, it: &CallExpression<'ast>) {
+    self.found |= self.analyzer.is_global_callee(&it.callee);
+    walk_js::walk_call_expression(self, it);
+  }
+
+  fn visit_new_expression(&mut self, it: &ast::NewExpression<'ast>) {
+    self.found |= self.analyzer.is_global_callee(&it.callee);
+    walk_js::walk_new_expression(self, it);
+  }
+}
+
 /// The leftmost identifier a member-expression-like chain reads from (`a` in `a.b().c[d]`), or
 /// `None` when the chain doesn't bottom out in a plain identifier. Used by
 /// `StmtEvalAnalyzer::is_expr_manual_pure_functions` and `StmtEvalAnalyzer::manual_pure_functions`.
@@ -1395,6 +1490,26 @@ mod test {
     assert_eq!(
       get_stmt_eval_flags_with_constants("const SECOND = 1000; 1n * SECOND;", &second),
       [pure, unknown]
+    );
+
+    // oxc trusts a known type further than a coercion: `instanceof` skips the effects of its left
+    // operand, and a typed array accepts any number. The constant must not make these pure.
+    let length = [("LENGTH", ConstantValue::Number(-1.0))];
+    assert_eq!(
+      get_stmt_eval_flags_with_constants(
+        "const SECOND = 1000; (globalThis.a(), SECOND) instanceof Object;",
+        &second
+      ),
+      [pure, unknown]
+    );
+    assert_eq!(
+      get_stmt_eval_flags_with_constants("const LENGTH = -1; new Uint8Array(LENGTH);", &length),
+      [pure, unknown]
+    );
+    // A number shift cannot throw, so the constant still makes it pure.
+    assert_eq!(
+      get_stmt_eval_flags_with_constants("const SECOND = 1000; 60 << SECOND;", &second),
+      [pure, pure]
     );
   }
 

@@ -1,3 +1,4 @@
+import path from 'node:path';
 import vm from 'node:vm';
 import { rolldown, type InputOptions, type RolldownLog } from 'rolldown';
 import { describe, expect, test } from 'vitest';
@@ -18,6 +19,7 @@ async function build(modules: Record<string, string>, options: InputOptions = {}
 const cases = [
   ['named import', 'import {x} from "dep"; export const value = x;'],
   ['unused named import', 'import {x} from "dep";'],
+  ['namespace member', 'import * as dep from "dep"; export const value = dep.x;'],
   ['named re-export', 'export {x as value} from "dep";'],
 ] as const;
 
@@ -58,6 +60,29 @@ describe.each(['es', 'cjs'] as const)('format: %s', (format) => {
     }
   });
 });
+
+test.each(['ns.x.y = 1', 'ns.x.y++', 'delete ns.x.y', 'ns.x[key] = 1', 'delete ns.x[key]'])(
+  'shims the namespace read in %s',
+  async (expression) => {
+    const { bundle, warnings } = await build({
+      main: `import * as ns from 'dep';
+      export const update = (key) => { ${expression}; };
+      export const keys = Object.keys(ns);`,
+      dep: 'export {};',
+    });
+    try {
+      const [chunk] = getOutputChunk(await bundle.generate({ format: 'es' }));
+      const namespace = await import(`data:text/javascript,${encodeURIComponent(chunk.code)}`);
+      expect(namespace.keys).toEqual(['x']);
+      expect(() => namespace.update('y')).toThrow(TypeError);
+      expect(warnings).toEqual([
+        expect.objectContaining({ code: 'SHIMMED_EXPORT', exporter: 'dep', binding: 'x' }),
+      ]);
+    } finally {
+      await bundle.close();
+    }
+  },
+);
 
 test('reports one warning per shim, including shims removed by tree-shaking', async () => {
   const { bundle, warnings } = await build({
@@ -126,19 +151,93 @@ test('keeps genuine star conflicts ambiguous when another module shims the same 
   }
 });
 
-test('can disable shim warnings while preserving the shimmed interface', async () => {
+describe.each([false, true])('strictExecutionOrder: %s', (strictExecutionOrder) => {
+  test.each([
+    ['named import', 'import {x} from "b";'],
+    ['namespace member', 'import * as b from "b"; const bx = b.x;'],
+  ])('selects the first star shim with a %s request', async (_name, request) => {
+    const { bundle, warnings } = await build(
+      {
+        main: `${request}
+        import * as a from 'a'; const ax = a.x;
+        import * as ns from 'barrel'; export const keys = Object.keys(ns);`,
+        a: 'globalThis.effects.push("a"); export {};',
+        b: 'globalThis.effects.push("b"); export {};',
+        barrel: 'export * from "a"; export * from "b";',
+      },
+      { treeshake: { moduleSideEffects: false } },
+    );
+    try {
+      const chunks = getOutputChunk(await bundle.generate({ format: 'cjs', strictExecutionOrder }));
+      const effects: string[] = [];
+      const cache = new Map<string, { exports: Record<string, unknown> }>();
+      const load = (fileName: string): Record<string, unknown> => {
+        if (cache.has(fileName)) return cache.get(fileName)!.exports;
+        const module = { exports: {} };
+        cache.set(fileName, module);
+        const chunk = chunks.find((chunk) => chunk.fileName === fileName)!;
+        const require = (id: string) => load(path.posix.join(path.posix.dirname(fileName), id));
+        vm.runInNewContext(`(function(exports, require, module) { ${chunk.code}\n })`, { effects })(
+          module.exports,
+          require,
+          module,
+        );
+        return module.exports;
+      };
+      const namespace = load(chunks.find((chunk) => chunk.isEntry)!.fileName);
+      expect(namespace.keys).toEqual(['x']);
+      expect(effects).toEqual(['a']);
+      expect(
+        warnings
+          .map(({ code, exporter, binding }) => ({ code, exporter, binding }))
+          .sort((a, b) => a.exporter!.localeCompare(b.exporter!)),
+      ).toEqual([
+        { code: 'SHIMMED_EXPORT', exporter: 'a', binding: 'x' },
+        { code: 'SHIMMED_EXPORT', exporter: 'b', binding: 'x' },
+      ]);
+    } finally {
+      await bundle.close();
+    }
+  });
+});
+
+test.each([
+  ['named import', 'import {x as value} from "dep"; import * as ns from "dep"; export {value};'],
+  ['namespace member', 'import * as ns from "dep"; export const value = ns.x;'],
+])(
+  'can disable shim warnings after a %s while preserving the interface',
+  async (_name, request) => {
+    const { bundle, warnings } = await build(
+      {
+        main: `${request} export const keys = Object.keys(ns);`,
+        dep: 'export {};',
+      },
+      { checks: { shimmedExport: false } },
+    );
+    try {
+      const [chunk] = getOutputChunk(await bundle.generate({ format: 'es' }));
+      const namespace = await import(`data:text/javascript,${encodeURIComponent(chunk.code)}`);
+      expect(namespace.keys).toEqual(['x']);
+      expect(warnings).toEqual([]);
+    } finally {
+      await bundle.close();
+    }
+  },
+);
+
+test('reports an undefined namespace member when shimming is disabled', async () => {
   const { bundle, warnings } = await build(
     {
-      main: 'import {x as value} from "dep"; import * as ns from "dep"; export {value}; export const keys = Object.keys(ns);',
+      main: 'import * as ns from "dep"; export const value = ns.x; export const keys = Object.keys(ns);',
       dep: 'export {};',
     },
-    { checks: { shimmedExport: false } },
+    { shimMissingExports: false },
   );
   try {
     const [chunk] = getOutputChunk(await bundle.generate({ format: 'es' }));
     const namespace = await import(`data:text/javascript,${encodeURIComponent(chunk.code)}`);
-    expect(namespace.keys).toEqual(['x']);
-    expect(warnings).toEqual([]);
+    expect(namespace.keys).toEqual([]);
+    expect(warnings).toEqual([expect.objectContaining({ code: 'IMPORT_IS_UNDEFINED' })]);
   } finally {
     await bundle.close();
   }
@@ -188,6 +287,22 @@ test('propagates silent implicit empty-module shims', async () => {
     const [chunk] = getOutputChunk(await bundle.generate({ format: 'es' }));
     const namespace = await import(`data:text/javascript,${encodeURIComponent(chunk.code)}`);
     expect(namespace.keys).toEqual([['missing'], ['missing']]);
+    expect(warnings).toEqual([]);
+  } finally {
+    await bundle.close();
+  }
+});
+
+test('leaves dynamic CommonJS namespace properties to runtime', async () => {
+  const { bundle, warnings } = await build({
+    main: 'import * as ns from "dep"; export const value = ns.value; export const missing = ns.missing;',
+    dep: 'module.exports = {value: 42};',
+  });
+  try {
+    const [chunk] = getOutputChunk(await bundle.generate({ format: 'es' }));
+    const namespace = await import(`data:text/javascript,${encodeURIComponent(chunk.code)}`);
+    expect(namespace.value).toBe(42);
+    expect(namespace.missing).toBeUndefined();
     expect(warnings).toEqual([]);
   } finally {
     await bundle.close();

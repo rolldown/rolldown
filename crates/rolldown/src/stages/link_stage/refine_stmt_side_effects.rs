@@ -1,4 +1,8 @@
+use std::sync::OnceLock;
+
 use oxc::semantic::SymbolId;
+use oxc_index::IndexVec;
+use petgraph::graph::{DiGraph, NodeIndex};
 use rolldown_common::{
   ConstExportMeta, ConstantValue, GetLocalDb, IndexModules, ModuleIdx, Specifier, StmtEvalFlags,
   StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
@@ -13,17 +17,57 @@ use crate::{
 
 use super::LinkStage;
 
+/// Static-import components, shared by the link-time analyzer runs. Build them only when a
+/// lookup needs to check an imported constant, and use iterative DFS to handle deep graphs.
+#[derive(Debug, Default)]
+pub(super) struct ImportCycles {
+  components: OnceLock<IndexVec<ModuleIdx, ModuleIdx>>,
+}
+
+impl ImportCycles {
+  fn same_cycle(&self, modules: &IndexModules, importer: ModuleIdx, exporter: ModuleIdx) -> bool {
+    let components = self.components.get_or_init(|| {
+      let mut graph = DiGraph::<(), ()>::with_capacity(modules.len(), 0);
+      for _ in modules {
+        graph.add_node(());
+      }
+      for module in modules {
+        for record in module.import_records().iter().filter(|record| record.kind.is_static()) {
+          if let Some(dependency) = record.resolved_module {
+            graph.add_edge(
+              NodeIndex::new(module.idx().index()),
+              NodeIndex::new(dependency.index()),
+              (),
+            );
+          }
+        }
+      }
+      let mut components = (0..modules.len()).map(ModuleIdx::new).collect::<IndexVec<_, _>>();
+      for component in petgraph::algo::kosaraju_scc(&graph) {
+        let representative = ModuleIdx::new(component[0].index());
+        for node in component {
+          components[ModuleIdx::new(node.index())] = representative;
+        }
+      }
+      components
+    });
+    components[importer] == components[exporter]
+  }
+}
+
 /// Link-time [`ConstantSymbolLookup`] for one module, for analyzer runs after the link stage binds
 /// the imports.
 ///
 /// A binding resolves only when its canonical declaration is a `const` that ran before the analyzed
 /// statement: a local binding when every declaring statement precedes `stmt_idx`, an import when
-/// the exporter runs before this module. That fails inside an import cycle, where the `const` can
-/// be in its TDZ (see `internal-docs/linking/module-execution-order/implementation.md`).
+/// the exporter runs before this module and is outside its import cycle. DFS ordering within a
+/// cycle depends on the entry path, so it cannot rule out TDZ failures.
+/// See `internal-docs/linking/module-execution-order/implementation.md`.
 pub(super) struct LinkedConstantLookup<'a> {
   pub module_idx: ModuleIdx,
   pub stmt_idx: StmtInfoIdx,
   pub modules: &'a IndexModules,
+  pub import_cycles: &'a ImportCycles,
   pub symbols: &'a SymbolRefDb,
   pub stmt_infos: &'a IndexStmtInfos,
   pub constants: &'a FxHashMap<SymbolRef, ConstExportMeta>,
@@ -46,6 +90,7 @@ impl LinkedConstantLookup<'_> {
 
   fn exporter_runs_first(&self, exporter: ModuleIdx) -> bool {
     self.modules[exporter].exec_order() < self.modules[self.module_idx].exec_order()
+      && !self.import_cycles.same_cycle(self.modules, self.module_idx, exporter)
   }
 
   /// Returns whether `symbol_ref` imports a constant whose exporter runs before this module.
@@ -92,6 +137,7 @@ impl LinkStage<'_> {
           module_idx: module.idx,
           stmt_idx,
           modules: &self.module_table.modules,
+          import_cycles: &self.import_cycles,
           symbols: &self.symbols,
           stmt_infos: &self.stmt_infos,
           constants: &self.global_constant_symbol_map,

@@ -138,6 +138,8 @@ pub struct LinkStage<'a> {
   pub scan_time_side_effects: IndexVec<ModuleIdx, ScanTimeSideEffects>,
   /// Modules in which a link pass relaxed statement flags after `determine_side_effects` ran.
   pub relaxed_side_effect_modules: FxHashSet<ModuleIdx>,
+  /// Lazily computed static-import components for entry-independent constant lookups.
+  import_cycles: refine_stmt_side_effects::ImportCycles,
 }
 
 impl<'a> LinkStage<'a> {
@@ -187,6 +189,7 @@ impl<'a> LinkStage<'a> {
       sorted_modules: Vec::new(),
       scan_time_side_effects,
       relaxed_side_effect_modules: FxHashSet::default(),
+      import_cycles: refine_stmt_side_effects::ImportCycles::default(),
       global_constant_symbol_map: constant_symbol_map,
       depended_runtime_helper: scan_stage_output
         .module_table

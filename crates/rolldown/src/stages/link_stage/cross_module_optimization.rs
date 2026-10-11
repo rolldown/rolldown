@@ -27,7 +27,10 @@ use crate::{
   type_alias::IndexStmtInfos,
 };
 
-use super::{LinkStage, refine_stmt_side_effects::LinkedConstantLookup};
+use super::{
+  LinkStage,
+  refine_stmt_side_effects::{ImportCycles, LinkedConstantLookup},
+};
 
 type MutationResult = (
   Option<(ModuleIdx, FxHashMap<StmtInfoIdx, StmtEvalFlags>)>,
@@ -219,6 +222,7 @@ impl LinkStage<'_> {
               module_idx,
               config: &cross_module_inline_const_ctx.config,
               modules: &self.module_table.modules,
+              import_cycles: &self.import_cycles,
               symbols: &self.symbols,
               flat_options: self.flat_options,
               options: self.options,
@@ -291,6 +295,7 @@ struct CrossModuleOptimizationImmutableCtx<'a, 'ast: 'a> {
   module_idx: ModuleIdx,
   config: &'a CrossModuleOptimizationConfig,
   modules: &'a IndexModules,
+  import_cycles: &'a ImportCycles,
   symbols: &'a SymbolRefDb,
   flat_options: FlatOptions,
   options: &'a SharedNormalizedBundlerOptions,
@@ -382,6 +387,7 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
           module_idx: self.immutable_ctx.module_idx,
           stmt_idx: stmt_info_idx,
           modules: self.immutable_ctx.modules,
+          import_cycles: self.immutable_ctx.import_cycles,
           symbols: self.immutable_ctx.symbols,
           stmt_infos: self.immutable_ctx.stmt_infos,
           constants: self.immutable_ctx.constant_symbol_map,

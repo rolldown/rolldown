@@ -1,6 +1,7 @@
 pub mod chunk_debug_info;
 pub mod chunk_reason_type;
 pub mod cross_chunk_import_item;
+pub mod entry_level_external;
 pub mod module_group;
 pub mod preliminary_filename;
 

@@ -2,10 +2,9 @@ use crate::stages::link_stage::{ModuleInclusionVec, ModuleNamespaceReasonVec, St
 use oxc_index::IndexVec;
 use oxc_str::CompactStr;
 use rolldown_common::{
-  ConcatenateWrappedModuleKind, EntryPointKind, ImportRecordIdx, ImportRecordMeta,
-  MemberExprRefResolutionMap, ModuleIdx, ModuleNamespaceIncludedReason, OutputFormat,
-  ResolvedExport, RuntimeHelper, StmtInfoIdx, SymbolRef, WrapKind,
-  dynamic_import_usage::DynamicImportExportsUsage,
+  ConcatenateWrappedModuleKind, EntryPointKind, ImportRecordIdx, MemberExprRefResolutionMap,
+  ModuleIdx, ModuleNamespaceIncludedReason, OutputFormat, ResolvedExport, RuntimeHelper,
+  StmtInfoIdx, SymbolRef, WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_utils::IndexBitSet;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
@@ -143,19 +142,20 @@ impl LinkingMetadata {
   ///
   /// This is the single source of truth for the emission decision: the module finalizer emits
   /// the call through it, and any pass that needs to predict the emission must call it instead
-  /// of re-deriving the condition. In ESM output an entry-level external star
-  /// re-export is flattened to a chunk-level `export * from '<external>'` statement instead, so
-  /// no runtime call is needed — unless the namespace object is genuinely observed
-  /// ([`ModuleNamespaceIncludedReason::Unknown`]), in which case the namespace must still merge
-  /// the external's exports at runtime.
+  /// of re-deriving the condition. In ESM output, the entry chunk prints an entry-level star
+  /// record as a chunk-level `export * from '<external>'` statement. `is_entry_level` is true for
+  /// such a record (see `ChunkGraph::is_entry_level_star_record`). Then the namespace needs no
+  /// runtime call. The exception is a namespace object with the
+  /// [`ModuleNamespaceIncludedReason::Unknown`] reason. Code can observe that object, so it must
+  /// still merge the exports of the external at runtime.
   pub fn ns_star_external_re_export_emitted(
     &self,
-    rec_meta: ImportRecordMeta,
+    is_entry_level: bool,
     format: OutputFormat,
   ) -> bool {
     match format {
       OutputFormat::Esm => {
-        !rec_meta.contains(ImportRecordMeta::EntryLevelExternal)
+        !is_entry_level
           || self.module_namespace_included_reason.contains(ModuleNamespaceIncludedReason::Unknown)
       }
       OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => true,

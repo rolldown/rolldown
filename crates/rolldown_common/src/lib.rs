@@ -114,6 +114,7 @@ pub use crate::{
       chunk_debug_info::{ChunkDebugInfo, FacadeChunkEliminationReason},
       chunk_reason_type::ChunkReasonType,
       cross_chunk_import_item::CrossChunkImportItem,
+      entry_level_external::EntryLevelExternal,
       module_group::ModuleGroup,
       preliminary_filename::PreliminaryFilename,
     },

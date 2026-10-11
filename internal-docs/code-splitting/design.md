@@ -201,7 +201,9 @@ binding initializes that binding's defining module itself. A non-routed record w
 order-wrapped but has no binding consumer at startup has no initialization site in that mode: the
 unwrapped mixed module emits no `init_*` call for its excluded re-export, so the definer evaluates
 when a lazy consumer first imports it, later than under wrap-all, where the mixed module's wrapper
-initializes it. `mixed_reexport_sensitive` carries expected-failure variants for this gap.
+initializes it. Pre-chunk init edges usually place such a definer in the startup chunk, where its
+body runs at load; `mixed_reexport_sensitive` pins the remaining gap under manual chunk groups with
+an expected-failure variant.
 
 A routed target must be side-effect-free and have no `ExecutionOrderSensitive` module in its static
 or binding dependency closure, apart from the inert runtime helpers. Side-effect metadata alone is
@@ -227,6 +229,12 @@ overlays, namespace demand, and transparent-wrapper ownership apply before place
 during final emission. Cycle projection's broader record gate is unsuitable for these loading
 edges: retaining an unused forwarding hop can load and execute a pure initializer too early in
 on-demand mode. Link-owned liveness and interop decisions remain fixed.
+
+The pass runs against the wrap-all probe in both modes. Under on-demand wrapping that plan is a
+superset of the final one: a pure mixed module that ends up unwrapped still receives the bits of
+every consumer that would call its wrapper under wrap-all, so two lazy entries that share only its
+forwarded bindings load one common chunk that also carries its local body (`issues/11033`,
+on-demand variant). Wrap-all placement is exact.
 
 A namespace synthesized only to replace a collapsed dynamic-entry facade is not an opaque namespace
 consumer. Its getters are restricted to the export interface already retained by link-time

@@ -191,9 +191,80 @@ actually move), plus the same `delta` / `baselineDelta` shape the browser side w
 - **Bun is not supported.** It runs JavaScriptCore, whose inspector is the WebKit
   protocol and whose profile/coverage formats are not V8's, so attribution cannot work
   there. Deno is V8 + CDP and rides the same driver via `--exec`.
-- **Edge runtimes cannot be measured this way** — no local process, and cold start is
-  dominated by platform isolate boot. The static half (`graph`, `what-if`, `cut`) still
-  applies to an edge bundle; the measured half does not.
+- **Other edge runtimes cannot be measured this way** — no local process. Cloudflare
+  Workers have one (workerd); see the next section. The static half (`graph`, `what-if`,
+  `cut`) still applies to any edge bundle; the measured half does not.
+
+## Worker startup mode (Cloudflare Workers)
+
+The same question asked of a V8 isolate coming up under workerd: what does the Worker's
+global scope pay for, and what can leave it? Cloudflare's startup limit counts that
+scope, and `wrangler check startup` profiles it; this mode adds the loop around it:
+a floor-corrected number per run, what executed, and what each deferral would free.
+
+```bash
+node harness.mjs worker-config --app <appDir>          # writes perf-kit.vite.config.ts, prints the build commands
+(cd <appDir> && npx vite build --config perf-kit.vite.config.ts)
+node harness.mjs worker-scan --app <appDir> --request / --request /api/health
+node harness.mjs worker-scan                           # target, requests and --tools are remembered
+node harness.mjs worker-scan --pin                     # make this the fixed reference
+```
+
+| Command                            | What it does                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `worker-config`                    | Writes a Vite config that wraps the app's own: the rolldown metrics report on **every** environment (one `reportDir` each), sourcemaps on the worker, a worker-only rebuild (`ROLLDOWN_PERF_KIT_WORKER_ONLY=1`) and the attribution build (`ROLLDOWN_PERF_KIT_ATTRIB=1`, `preserveModules` into `dist-attrib/`).                                                                                                      |
+| `worker-scan`                      | N cold runs, a fresh workerd each: the main module's import timed from the host minus an empty-import floor = **app startup**. Then the first requests on the real entry, a CPU profile of the import attributed through every chunk's sourcemap, precise coverage of the import taken from inside the isolate, and the leads: cold and idle bytes per module and per package, runtime modules loaded, class exports. |
+| `worker-measure`                   | Timing and first requests only.                                                                                                                                                                                                                                                                                                                                                                                       |
+| `worker-attrib`                    | CPU by **evaluating module** from the attribution build, each row with its import chain: the only view that charges a library's top-level work (zod schemas built at import, a YAML parse) to the module whose evaluation runs it.                                                                                                                                                                                    |
+| `why <module>`                     | Direct static importers and one chain from the entry.                                                                                                                                                                                                                                                                                                                                                                 |
+| `cut <module> --root a,b`          | The fewest imports to make dynamic, with the Durable Object / Workflow class modules as roots: their closure stays eager, so the cut lands below them instead of at the entry.                                                                                                                                                                                                                                        |
+| `graph` / `what-if` / `graph-diff` | Unchanged on the Worker's report (`node_modules/.rolldown/report-<worker>`).                                                                                                                                                                                                                                                                                                                                          |
+
+**Why the startup sits inside a request.** workerd evaluates a Worker's main module when
+it loads the worker, before any request or inspector can observe it. The lab therefore
+runs a generated wrapper entry whose fetch handler does `await import('./index.js')`:
+that import compiles and evaluates the main module and its whole static closure. The
+first requests and parity use a plain instance with the real entry instead, because
+Durable Object classes live in the main module. `wrangler check startup` uses the same
+wrapper trick.
+
+**How coverage differs from the other modes.** Browser and node mode arm coverage from
+outside, over the inspector, before any code runs. workerd answers `Profiler.enable`
+itself and never forwards it to V8, so `Profiler.startPreciseCoverage` fails there. The
+coverage run adds two compatibility flags for that run only, `nodejs_compat` and
+`enable_nodejs_inspector_local_dev`, under which a wrapper opens a `node:inspector`
+session inside the isolate, starts coverage, imports the main module and returns the
+result in the response. It needs Wrangler 4.108.0 or later (workerd 1.20260706.1); for an
+app that pins an older one, `--tools <dir>` borrows a newer wrangler for that run only.
+
+**Requirements the scan checks for and names when unmet**
+
+| Need                  | Requirement                                                                                                      |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| the target            | a `@cloudflare/vite-plugin` build: `dist/<worker>/wrangler.json` next to `index.js`                              |
+| the runtime           | `wrangler` as a dev dependency of the app (brings miniflare and workerd)                                         |
+| the report            | the `worker-config` build, or `reportDir` per environment by hand                                                |
+| sourcemaps            | `build.sourcemap: true` on the worker environment (the config shim sets it)                                      |
+| precise coverage      | Wrangler >= 4.108.0, or `--tools <dir>`                                                                          |
+| first-request numbers | the app's variables (a `.dev.vars` next to the config); without them both real apps answered 500                 |
+| the number for a PR   | `wrangler check startup` (Wrangler >= 4.116.0), before and after; its dry-run build runs Docker for `containers` |
+
+Metrics are `worker.startup_ms`, `worker.boot_floor_ms`, `worker.app_startup_ms` (the part a
+bundle change can move), `worker.instance_boot_ms` (reported, never counted) and
+`worker.request_ms:<path>` per pinned request, with the same `delta` / `baselineDelta`
+shape as the other modes. A request's delta against the pinned baseline is the cost a
+deferral **moved** into that route; the summary prints it next to the startup gain.
+
+### What this mode does NOT do
+
+- **No throttle, no production number.** Local CPU differs from Cloudflare's; the ratio
+  before and after on one machine is the claim, and Cloudflare's own number comes from a
+  deploy or version upload.
+- **No isolate boot.** Process start, config load and wasm compilation are outside the
+  window and outside Cloudflare's startup limit too.
+- **No timing from inside the Worker.** Timers in workerd advance only on I/O.
+- **No response parity yet.** The first requests report status and size; a replayed
+  request set against the frozen original is not built.
 
 ## The loop protocol (for an agent)
 

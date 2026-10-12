@@ -35,7 +35,8 @@ sibling routes) show up as combined-exceeds-the-sum; `cut <module>` returns the 
 import statements** to make dynamic to detach a module reached by several paths (the
 last-hop edges nearest it, the exact files to edit — a min edge cut, which dominator
 retained-size can't answer once several paths reach the module; `--keep` edges are
-protected); and `graph-diff [--against <file>]` reports, deterministically and with no
+protected; `--root a,b` keeps class modules eager with their closure so the cut lands
+below them); and `graph-diff [--against <file>]` reports, deterministically and with no
 browser run, what a change did to the initial load (the modules that ENTERED or LEFT the
 eager set with byte deltas) against the pinned baseline graph or any saved sidecar. Rank
 candidates statically with these, then verify the winner's real LCP effect with `scan`.
@@ -74,6 +75,41 @@ accept or revert — with three differences that decide whether your work is wor
 a top-level import and a render-blocking import are the same edge in the module graph.
 Bun is not supported (JavaScriptCore, not V8) and edge runtimes can only be analyzed
 statically; do not report a measured number for either.
+
+## If the target is a Cloudflare Worker
+
+`worker-scan --app <appDir>` measures the time a fresh isolate spends in the Worker's
+global scope, under the app's own workerd, and attributes it to modules. Build the app
+first with the config `worker-config` writes (the report on every environment, sourcemaps
+on the worker). The loop below is unchanged, with these differences:
+
+- **Startup is the global scope.** `worker.app_startup_ms` is the import of the main module
+  and its static closure, timed from the host minus an empty-import floor. Isolate boot
+  sits outside it. Cloudflare's startup limit counts the same scope; the number to quote
+  in a PR comes from `wrangler check startup` on the same build, before and after.
+- **A deferral moves work, it does not delete it.** The first request that needs a deferred
+  module pays its load, once per isolate. Pin the routes that matter with `--request` and
+  read the "cost MOVED here" line next to the startup gain. The lab does not know the
+  route mix; an isolate whose first request needs the module gains nothing.
+- **Durable Object and Workflow classes are roots.** The runtime loads them by name, so their
+  modules stay eager with their whole closure. `cut <module> --root <class modules>` lands
+  the cut below them; without `--root`, every cut points at the entry's class exports,
+  which cannot become dynamic. The scan prints the class names from `wrangler.json`.
+- **Three kinds of edge, three kinds of fix.** `why <module>` names the importers. An importer
+  under `node_modules` is upstream: when the library is only used in async code, a lazy shim
+  behind a Vite alias is the app-side fix. A module reached only from a synchronous
+  constructor or getter cannot be deferred by a dynamic import: say so and move on. A mixed
+  `import { type X } from 'm'` keeps a side-effect import of `m` under `verbatimModuleSyntax`:
+  change it to `import type`, no dynamic import needed.
+- **Library top-level work is charged by the attribution build.** When the profile leaves
+  milliseconds in "(unmapped)" or in zod, run `worker-attrib` on the `ROLLDOWN_PERF_KIT_ATTRIB=1`
+  build: it names the module whose evaluation runs the library code, with the import chain.
+- **Coverage comes from inside the isolate** and needs Wrangler 4.108.0 or later. When the
+  scan reports it unavailable, pass `--tools <dir>` with a newer wrangler for that run, or
+  work from the profile and the static graph; do not add the compatibility flags to the app.
+- **Never upload, never deploy, never edit the app's config, variables or bindings to satisfy
+  the tool.** A 5xx on the first requests usually means the app needs its `.dev.vars`; startup
+  is unaffected, the first-request numbers are not valid until it has them.
 
 ## The rendered output must not change
 

@@ -403,25 +403,12 @@ pub fn render_chunk_exports(
           let rendered_items = export_items
             .into_iter()
             .map(|(exported_name, export_ref)| {
-              let canonical_ref = link_output.symbol_db.canonical_ref_for(export_ref);
-              let symbol = link_output.symbol_db.get(canonical_ref);
-              let canonical_name = link_output
-                .symbol_db
-                .canonical_name_for_or_original(canonical_ref, &chunk.canonical_names);
-
-              match &symbol.namespace_alias {
-                Some(ns_alias) => {
-                  let canonical_ns_name = link_output
-                    .symbol_db
-                    .canonical_name_for_or_original(ns_alias.namespace_ref, &chunk.canonical_names);
-                  let property_name = &ns_alias.property_name;
-                  render_object_define_property(
-                    &exported_name,
-                    &property_access_str(canonical_ns_name, property_name),
-                  )
-                }
-                _ => render_object_define_property(&exported_name, canonical_name),
-              }
+              let exported_value = ctx.finalized_string_pattern_for_symbol_ref(
+                export_ref,
+                ctx.chunk_idx,
+                &chunk.canonical_names,
+              );
+              render_object_define_property(&exported_name, &exported_value)
             })
             .collect::<Vec<_>>();
           s.push_str(&rendered_items.join("\n"));

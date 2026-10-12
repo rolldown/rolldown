@@ -1,0 +1,53 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region ../leaf.js
+var VALUE;
+function init_leaf() {
+	return (init_leaf = __esmMin((() => {
+		VALUE = "leaf";
+	})))();
+}
+//#endregion
+//#region ../mixed.js
+var LOCAL;
+function init_mixed() {
+	return (init_mixed = __esmMin((() => {
+		LOCAL = "local";
+	})))();
+}
+//#endregion
+//#region outer.js
+var outer_exports = /* @__PURE__ */ __exportAll({
+	LOCAL: () => LOCAL,
+	OUTER: () => OUTER,
+	VALUE: () => VALUE
+});
+var OUTER;
+function init_outer() {
+	return (init_outer = __esmMin((() => {
+		init_mixed();
+		init_leaf();
+		OUTER = "outer";
+	})))();
+}
+//#endregion
+//#region main.js
+var entries;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_outer();
+		entries = Object.entries(outer_exports);
+	})))();
+}
+//#endregion
+init_main();
+export { entries };
+
+```

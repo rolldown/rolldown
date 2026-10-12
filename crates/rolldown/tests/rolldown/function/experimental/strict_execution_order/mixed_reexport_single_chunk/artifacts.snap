@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region value.js
+const VALUE = "value";
+//#endregion
+//#region shared.js
+const LOCAL = "local";
+//#endregion
+export { LOCAL, VALUE };
+
+```

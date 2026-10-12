@@ -1,0 +1,37 @@
+{
+  "config": {
+    "strictExecutionOrder": true
+  },
+  "configVariants": [
+    {
+      "_configName": "no-optimization",
+      "chunkOptimization": false
+    },
+    {
+      "_configName": "on-demand",
+      "onDemandWrapping": true,
+      "_expectExecutionFailure": {
+        "reason": "#10294: on-demand wrapping has no startup initialization site for a forwarded order-sensitive definer",
+        "outputContains": ["SNAPSHOT must be read before main calls bump()", "actual: 1"]
+      }
+    },
+    {
+      "_configName": "on-demand-manual-groups",
+      "onDemandWrapping": true,
+      "preserveEntrySignatures": "allow-extension",
+      "codeSplitting": {
+        "includeDependenciesRecursively": false,
+        "groups": [
+          {
+            "name": "snapshot",
+            "test": "[\\\\/]snapshots[\\\\/]value\\.js$"
+          }
+        ]
+      },
+      "_expectExecutionFailure": {
+        "reason": "#10294: on-demand wrapping has no startup initialization site for a forwarded order-sensitive definer",
+        "outputContains": ["SNAPSHOT must be read before main calls bump()", "actual: 1"]
+      }
+    }
+  ]
+}

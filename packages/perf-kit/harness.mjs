@@ -56,7 +56,7 @@ import {
   resolveModule,
   whatIf,
 } from './lib/module-graph.mjs';
-import { minCut } from './lib/min-cut.mjs';
+import { entryIdx, minCut } from './lib/min-cut.mjs';
 import { diffGraphs } from './lib/graph-diff.mjs';
 import {
   POLL_MS,
@@ -78,6 +78,27 @@ import {
   startupProfile,
   summarizeStartup,
 } from './lib/node/measure.mjs';
+import {
+  COVERAGE_MIN_WRANGLER,
+  EMPTY_NAME,
+  classifyModules,
+  createStderrCollector,
+  loadWorkerOptions,
+  resolveWorkerTools,
+} from './lib/worker/launch.mjs';
+import {
+  NOISE_FLOOR_MS as WORKER_NOISE_FLOOR_MS,
+  NOISE_FLOOR_PCT as WORKER_NOISE_FLOOR_PCT,
+  attributeCoverage,
+  attributeProfile,
+  coverageRun as workerCoverageRun,
+  cpuProfileRun,
+  firstRequests,
+  gatherSeries,
+  summarizeWorkerStartup,
+} from './lib/worker/measure.mjs';
+import { evaluatingModules, whyModule } from './lib/worker/attrib.mjs';
+import { ATTRIB_DIR, SHIM_FILE, writeViteConfigShim } from './lib/worker/config.mjs';
 import {
   discoverPages,
   gitState,
@@ -2823,20 +2844,28 @@ function printEagerDiffSummary(target, builtAtMs) {
 }
 
 function requireModuleGraph(opts) {
-  const target = resolveTarget(opts);
-  const graph = loadModuleGraph(
-    moduleGraphCandidates({
+  // A remembered Worker target answers the static queries too (its report sits in a
+  // per-environment directory); a browser target is only resolved when none applies.
+  const workerCandidates = opts.report ? null : workerReportCandidates(opts);
+  let candidates;
+  if (workerCandidates) {
+    candidates = workerCandidates;
+  } else {
+    const target = resolveTarget(opts);
+    candidates = moduleGraphCandidates({
       reportDir: opts.report,
       demoMetricsDir: target.isDemo ? BUILD_METRICS_DIR : null,
       dist: target.dist,
-    }),
-  );
+    });
+  }
+  const graph = loadModuleGraph(candidates);
   if (!graph) {
     throw new Error(
       'no module-graph.json found - it is written by rolldown devtools report builds.\n' +
         'vite >= 8: add `build.rolldownOptions.devtools = { mode: "report" }` to the vite config\n' +
         '(report lands in node_modules/.rolldown/report/<output dir>), rebuild, then re-run.\n' +
-        'Or point at an existing report with --report <dir>.',
+        `For a Cloudflare Worker: \`${CLI} worker-config --app <appDir>\` writes a config that puts the report\n` +
+        'on every environment. Or point at an existing report with --report <dir>.',
     );
   }
   return graph;
@@ -3022,11 +3051,18 @@ function printCombinedWhatIf(graph, targets, keep) {
 async function cmdCut(argv) {
   const { values: opts, positionals } = parseArgs({
     args: argv,
-    options: { ...TARGET_OPTS, report: { type: 'string' }, keep: { type: 'string' } },
+    options: {
+      ...TARGET_OPTS,
+      report: { type: 'string' },
+      keep: { type: 'string' },
+      root: { type: 'string' },
+    },
     allowPositionals: true,
   });
   const query = positionals[0];
-  if (!query) throw new Error(`usage: ${CLI} cut <module> [--keep a,b] [--report <dir>]`);
+  if (!query) {
+    throw new Error(`usage: ${CLI} cut <module> [--keep a,b] [--root a,b] [--report <dir>]`);
+  }
   const graph = requireModuleGraph(opts);
   const resolve = (q) => {
     const hit = resolveModule(graph, q);
@@ -3041,6 +3077,11 @@ async function cmdCut(argv) {
   };
   const target = resolve(query);
   const keep = (opts.keep ?? '').split(',').filter(Boolean).map(resolve);
+  // `--root`: modules whose whole closure must stay eager because the runtime loads them
+  // by name, not by import - a Durable Object or Workflow class the entry exports. They
+  // become extra sources, so the cut lands on the edges BELOW them. `--keep` cannot say
+  // this: protecting a root's in-edges only pushes the cut up to the entry.
+  const roots = (opts.root ?? '').split(',').filter(Boolean).map(resolve);
   const mod = graph.modules[target];
 
   // Trivial cases reuse what-if's flags: a module that costs the initial load nothing
@@ -3054,7 +3095,8 @@ async function cmdCut(argv) {
     );
     return;
   }
-  const cut = minCut(graph, target, keepProtectedEdges(graph, keep));
+  const sources = roots.length ? [...new Set([...entryIdx(graph), ...roots])] : null;
+  const cut = minCut(graph, target, keepProtectedEdges(graph, keep), sources);
   if (cut.hasUncuttableSink) {
     console.log(`min cut for ${mod.id}`);
     console.log(
@@ -3074,10 +3116,11 @@ async function cmdCut(argv) {
     console.log('nothing to cut - it is already detached from the initial load.');
     return;
   }
-  const naive = whatIf(graph, target, keep).cutEdges.length;
+  const naive = whatIf(graph, target, [...keep, ...roots]).cutEdges.length;
   const priced = evalOverrides(
     graph,
     cut.cutEdges.map((e) => ({ ...e, kind: 'defer' })),
+    roots.length ? roots : null,
   );
   console.log(
     `min cut for ${mod.id} - ${cut.flow} import edge(s) to make dynamic (naive what-if would touch ${naive}):`,
@@ -3087,7 +3130,8 @@ async function cmdCut(argv) {
   }
   console.log(
     `make each import dynamic (import()) -> frees ${kb(priced.removedBytes)} / ${priced.removedCount} module(s) from the initial load` +
-      `${keep.length ? ` (keeping ${keep.length} sentry module(s) eager)` : ''}.`,
+      `${keep.length ? ` (keeping ${keep.length} sentry module(s) eager)` : ''}` +
+      `${roots.length ? ` (${roots.length} root module(s) stay eager with their closure)` : ''}.`,
   );
   console.log(
     `\nnext: open those file(s), change the static import to a dynamic import(), rebuild, run the app's functional check, then \`${CLI} scan\` to confirm the LCP effect.`,
@@ -3656,6 +3700,617 @@ function priceDeferral(graph, source) {
 
 const round = (v) => (v == null ? 0 : Math.round(v));
 
+// --- Cloudflare Worker startup mode ----------------------------------------------
+// The question is the server one ("what does startup pay for, and what can leave it?")
+// asked of a V8 isolate coming up under workerd. The target is a Vite-built Worker: the
+// output directory that holds the plugin's `wrangler.json` next to `index.js`. The lab
+// runs the app's own workerd through its miniflare; see lib/worker/launch.mjs for why
+// startup is moved inside a request. Requirements and rules: AGENTS.md.
+
+const WORKER_TARGET_FILE = path.join(STATE_DIR, 'worker-target.json');
+const WORKER_TARGET_OPTS = {
+  app: { type: 'string' },
+  dist: { type: 'string' },
+  worker: { type: 'string' },
+  main: { type: 'string' },
+  request: { type: 'string', multiple: true },
+  tools: { type: 'string' },
+  report: { type: 'string' },
+};
+
+function workerTargetPaths(outDir) {
+  const dir = path.join(STATE_DIR, 'worker', targetSlug(outDir));
+  return {
+    dir,
+    metrics: path.join(dir, 'startup-metrics.json'),
+    state: path.join(dir, '.state.json'),
+    baseline: path.join(dir, 'baseline.json'),
+    history: path.join(dir, 'history.jsonl'),
+    profile: path.join(dir, 'startup.cpuprofile'),
+    coverage: path.join(dir, 'startup-coverage.json'),
+    attribProfile: path.join(dir, 'attrib.cpuprofile'),
+  };
+}
+
+/** Where the Worker's build report lands: one directory per Vite environment. */
+function workerReportDirs(appDir, workerName, report = null, { attrib = false } = {}) {
+  const dirs = [];
+  if (report) dirs.push(path.resolve(report));
+  const base = path.join(appDir, 'node_modules', '.rolldown');
+  dirs.push(path.join(base, `report${attrib ? '-attrib' : ''}-${workerName}`));
+  if (!attrib) dirs.push(path.join(base, 'report'));
+  return dirs.map((d) => path.join(d, 'module-graph.json'));
+}
+
+/** The remembered Worker target's report candidates, when the query is about it. */
+function workerReportCandidates(opts) {
+  const sticky = readJson(WORKER_TARGET_FILE);
+  if (!sticky) return null;
+  if (opts.app && path.resolve(opts.app) !== sticky.app) return null;
+  if (opts.dist) return null;
+  const browser = readJson(TARGET_FILE);
+  if (!opts.app && browser?.dist && fs.existsSync(browser.dist)) return null;
+  return workerReportDirs(sticky.app, sticky.worker);
+}
+
+/**
+ * Resolve (and remember) the Worker target: the app directory, the output directory
+ * that holds `wrangler.json`, the pinned request set and an optional tools directory.
+ * Like the server target, what is pinned is what makes two scans comparable.
+ */
+function resolveWorkerTarget(opts) {
+  const sticky = readJson(WORKER_TARGET_FILE);
+  const appArg = opts.app ?? sticky?.app;
+  if (!appArg) {
+    throw new Error(
+      'no Worker target yet - name the app directory (the one with vite.config and wrangler.jsonc):\n' +
+        `  ${CLI} worker-scan --app <appDir>\n` +
+        `Build it first with the report on: \`${CLI} worker-config --app <appDir>\` prints the build command.`,
+    );
+  }
+  const appDir = path.resolve(appArg);
+  const distRel = opts.dist ?? sticky?.dist ?? 'dist';
+  const distDir = path.resolve(appDir, distRel);
+  let workerName = opts.worker ?? sticky?.worker;
+  if (!workerName || !fs.existsSync(path.join(distDir, workerName, 'wrangler.json'))) {
+    const candidates = fs.existsSync(distDir)
+      ? fs.readdirSync(distDir).filter((d) => fs.existsSync(path.join(distDir, d, 'wrangler.json')))
+      : [];
+    if (candidates.length !== 1) {
+      throw new Error(
+        `expected one ${distRel}/<worker>/wrangler.json under ${appDir}, found ${candidates.length ? candidates.join(', ') : 'none'}.\n` +
+          `Build the app with the Cloudflare Vite plugin first (\`${CLI} worker-config --app <appDir>\` prints the command),\n` +
+          'or pass --worker <name> / --dist <dir>. Never change the build layout to fit this tool.',
+      );
+    }
+    workerName = candidates[0];
+  }
+  const outDir = path.join(distDir, workerName);
+  const requests = opts.request?.length ? opts.request : (sticky?.requests ?? ['/']);
+  const toolsDir = opts.tools ? path.resolve(opts.tools) : (sticky?.tools ?? null);
+  const target = {
+    appDir,
+    distRel,
+    distDir,
+    workerName,
+    outDir,
+    configPath: path.join(outDir, 'wrangler.json'),
+    requests,
+    toolsDir,
+    reportDirs: workerReportDirs(appDir, workerName, opts.report),
+    paths: workerTargetPaths(outDir),
+  };
+  const changed =
+    sticky?.app !== appDir ||
+    sticky?.dist !== distRel ||
+    sticky?.worker !== workerName ||
+    JSON.stringify(sticky?.requests) !== JSON.stringify(requests) ||
+    (sticky?.tools ?? null) !== toolsDir;
+  if (changed) {
+    writeJson(WORKER_TARGET_FILE, {
+      app: appDir,
+      dist: distRel,
+      worker: workerName,
+      requests,
+      tools: toolsDir,
+      setAtMs: Date.now(),
+    });
+    console.log(
+      `target: ${path.relative(process.cwd(), outDir) || outDir} (requests: ${requests.join(' ')}${toolsDir ? `; coverage tools: ${toolsDir}` : ''}) - remembered`,
+    );
+  }
+  return target;
+}
+
+/** Load the runtime and the Worker's options; `outDir` may be an attribution build's. */
+async function loadWorkerContext(target, { outDir = target.outDir, main = null } = {}) {
+  // Miniflare caches the `cf` object under the cwd (.wrangler/cache) unless told where;
+  // the lab's state dir keeps that out of the package and out of the user's project.
+  process.env.MINIFLARE_CACHE_DIR ??= path.join(STATE_DIR, 'worker', 'cache');
+  const tools = await resolveWorkerTools(target.appDir).load();
+  const configPath = path.join(outDir, 'wrangler.json');
+  if (!fs.existsSync(configPath)) throw new Error(`no wrangler.json in ${outDir}`);
+  const { workerOptions, main: configMain, fallback } = loadWorkerOptions(tools, configPath);
+  const mainName = (main ?? path.relative(outDir, path.resolve(outDir, configMain))).replaceAll(
+    '\\',
+    '/',
+  );
+  const { modules, skipped } = classifyModules(outDir, workerOptions.modulesRules);
+  if (!modules.some((m) => m.rel === mainName)) {
+    throw new Error(
+      `main module ${mainName} is not among the output modules of ${outDir} (pass --main <file>)`,
+    );
+  }
+  const borrowed = target.toolsDir ? await resolveWorkerTools(target.toolsDir).load() : null;
+  if (fallback) {
+    console.log(
+      `note: wrangler could not express every binding (${fallback}); running with date, flags and modules only`,
+    );
+  }
+  return {
+    ...target,
+    outDir,
+    tools,
+    borrowed,
+    workerOptions,
+    mainName,
+    modules,
+    skipped,
+    fallback,
+    stderr: createStderrCollector(),
+  };
+}
+
+function printWorkerContext(ctx) {
+  const v = ctx.tools.versions;
+  const flags = ctx.workerOptions.compatibilityFlags ?? [];
+  console.log(
+    `${path.relative(ctx.appDir, ctx.outDir)}/${ctx.mainName} · compat ${ctx.workerOptions.compatibilityDate ?? '?'} [${flags.join(', ')}] · ` +
+      `wrangler ${v.wrangler ?? '?'} / workerd ${v.workerd ?? '?'}${ctx.borrowed ? ` (coverage tools: workerd ${ctx.borrowed.versions.workerd})` : ''} · ` +
+      `${ctx.modules.length} module(s)${ctx.skipped.length ? `, skipped ${ctx.skipped.join(', ')}` : ''}`,
+  );
+}
+
+async function runWorkerTiming(ctx, { runs, warmup }) {
+  process.stderr.write('floor (the wrapper importing an empty module)...\n');
+  const floor = await gatherSeries(ctx, { target: EMPTY_NAME, runs, warmup });
+  process.stderr.write('main module...\n');
+  const main = await gatherSeries(ctx, {
+    target: ctx.mainName,
+    runs,
+    warmup,
+    onSample: (i, run) => process.stderr.write(`run ${i + 1}/${runs}: import ${ms(run.ms)}\n`),
+  });
+  return summarizeWorkerStartup({ floor, main });
+}
+
+function writeWorkerReport(
+  ctx,
+  summary,
+  { label, requests = null, profile = null, coverage = null, notes = [] },
+) {
+  const prev = readJson(ctx.paths.state);
+  const baseline = readJson(ctx.paths.baseline);
+  const metrics = { ...summary.metrics };
+  for (const r of requests ?? []) if (r.status < 500) metrics[`worker.request_ms:${r.path}`] = r.ms;
+  const report = {
+    schemaVersion: 1,
+    generatedAtMs: Date.now(),
+    label: label || null,
+    worker: {
+      app: ctx.appDir,
+      outDir: ctx.outDir,
+      main: ctx.mainName,
+      compatibilityDate: ctx.workerOptions.compatibilityDate ?? null,
+      compatibilityFlags: ctx.workerOptions.compatibilityFlags ?? [],
+      versions: ctx.tools.versions,
+      coverageTools: ctx.borrowed?.versions ?? null,
+    },
+    runs: summary.runs,
+    metrics,
+    guard: summary.guard,
+    requests,
+    profile,
+    coverage,
+    notes,
+    delta: prev ? deltaSection(prev.metrics, metrics) : null,
+    baselineDelta: baseline ? deltaSection(baseline.metrics, metrics) : null,
+    samples: summary.samples,
+    runtimeStderr: [...ctx.stderr.lines.entries()],
+  };
+  writeJson(ctx.paths.metrics, report);
+  writeJson(ctx.paths.state, {
+    schemaVersion: 1,
+    tsMs: report.generatedAtMs,
+    label: report.label,
+    runs: report.runs,
+    metrics,
+  });
+  fs.appendFileSync(
+    ctx.paths.history,
+    `${JSON.stringify({ tsMs: report.generatedAtMs, label: report.label, metrics, guard: report.guard })}\n`,
+  );
+  return { report, hadBaseline: Boolean(baseline) };
+}
+
+function pinWorkerBaseline(ctx) {
+  const state = readJson(ctx.paths.state);
+  if (!state) throw new Error('nothing to pin - run worker-scan first');
+  if (state.runs < 3) {
+    throw new Error(
+      `refusing to pin a ${state.runs}-run measurement - a thin median poisons every later delta. Re-run worker-scan with the default sample count.`,
+    );
+  }
+  writeJson(ctx.paths.baseline, state);
+  console.log(`baseline pinned (app startup ${ms(state.metrics['worker.app_startup_ms'])})`);
+}
+
+function noiseCall(delta, prev, floorMs, floorPct) {
+  const floor = Math.max(floorMs, (floorPct / 100) * prev);
+  if (Math.abs(delta) < floor)
+    return `within noise (floor ${Math.round(floor)}ms) - no effect proven`;
+  return delta < 0 ? 'IMPROVEMENT beyond noise' : 'REGRESSION beyond noise';
+}
+
+function printWorkerSummary(report, hadBaseline) {
+  const m = report.metrics;
+  console.log(
+    `\n${report.label ? `[${report.label}] ` : ''}${report.runs} cold runs (fresh workerd each)`,
+  );
+  console.log(
+    `startup ${ms(m['worker.startup_ms'])} (p75 ${ms(m['worker.startup_p75_ms'])}) | floor ${ms(m['worker.boot_floor_ms'])} | ` +
+      `app ${ms(m['worker.app_startup_ms'])} | instance boot ${ms(m['worker.instance_boot_ms'])} (not counted)`,
+  );
+  const spread = report.guard.spreadPct;
+  console.log(
+    `guard: ${report.guard.allRunsCompleted ? 'PASS' : 'FAIL (a run never imported the main module)'}` +
+      `${spread > 25 ? ` - WARNING spread ${spread}% across runs: something outside the bundle moves this number, deltas are not trustworthy` : ''}`,
+  );
+  const base = report.baselineDelta?.['worker.app_startup_ms'];
+  if (base) {
+    console.log(
+      `vs pinned baseline: app startup ${base.delta >= 0 ? '+' : ''}${Math.round(base.delta)}ms (${base.pct}%) - ` +
+        noiseCall(base.delta, base.prev, WORKER_NOISE_FLOOR_MS, WORKER_NOISE_FLOOR_PCT),
+    );
+  } else if (!hadBaseline) {
+    console.log('no pinned baseline yet - pass --pin to make this the fixed reference');
+  }
+  if (report.requests?.length) {
+    console.log(
+      '\nfirst requests on the real entry (startup already done; a deferred module loads on its first hit):',
+    );
+    for (const r of report.requests) {
+      const d = report.baselineDelta?.[`worker.request_ms:${r.path}`];
+      const moved =
+        d && Math.abs(d.delta) >= WORKER_NOISE_FLOOR_MS
+          ? `  vs baseline ${d.delta >= 0 ? '+' : ''}${Math.round(d.delta)}ms${d.delta > 0 ? ' - cost MOVED here from startup' : ''}`
+          : '';
+      console.log(
+        `  ${r.path.padEnd(28)} ${String(r.status).padStart(3)}  ${ms(r.ms).padStart(7)}  ${r.bytes} bytes${r.error ? `  :: ${r.error}` : ''}${moved}`,
+      );
+    }
+    if (report.requests.some((r) => r.status >= 500)) {
+      console.log(
+        '  a 5xx here usually means the app needs its variables (a .dev.vars next to the config) - startup is unaffected, first-request numbers are not valid',
+      );
+    }
+  }
+}
+
+/**
+ * The leads, in the order a reader should take them: is the Worker's own code the cost,
+ * which modules run at startup for how long, and what is parsed but not executed.
+ */
+function printWorkerLeads(report, cov, prof, graph, top) {
+  if (prof?.rows) {
+    const own = prof.ownership;
+    const sm = prof.summary;
+    console.log(
+      `\nstartup CPU (profile): active ${ms(sm.activeMs)} = app modules ${ms(own.appMs)} (${own.appShare ?? 0}%) + runtime ${ms(own.runtimeMs)} + engine ${ms(own.engineMs)}` +
+        ` + parse/compile "(program)" ${ms(sm.programMs)}; GC ${ms(sm.gcMs)}; ${sm.samples} samples`,
+    );
+    console.log('  top self-time at startup:');
+    for (const row of prof.rows.slice(0, Math.min(top, 10))) {
+      console.log(`    ${String(round(row.ms)).padStart(7)}ms  ${row.bucket}`);
+    }
+    const unmapped = prof.rows.find((r) => r.bucket === '(unmapped)');
+    if (unmapped && unmapped.ms >= 2) {
+      console.log(
+        `  ${ms(unmapped.ms)} sits in chunk top-level code V8 gave no line ticks for - \`${CLI} worker-attrib\` on an attribution build charges it to the evaluating module`,
+      );
+    }
+  } else if (prof?.missingSourcemap) {
+    console.log(
+      `\n(no startup CPU by module: ${report.worker.main}.map is missing - build the worker environment with sourcemaps; \`${CLI} worker-config\` sets that)`,
+    );
+  }
+
+  if (cov?.totals) {
+    const t = cov.totals;
+    console.log(
+      `\nevaluated at startup: ${kb(t.readyBytes)} of ${kb(t.totalBytes)} in the static closure (${t.moduleCount} modules, ${Math.round((t.readyBytes / Math.max(1, t.totalBytes)) * 100)}% executed)` +
+        `${cov.runtimeScripts.length ? `; ${cov.runtimeScripts.length} runtime module(s) loaded (${cov.runtimeScripts.slice(0, 5).join(', ')}${cov.runtimeScripts.length > 5 ? ', ...' : ''})` : ''}`,
+    );
+    if (cov.cold.length) {
+      console.log(
+        `\ncold at startup - in the closure, never executed to start (${cov.cold.length}):`,
+      );
+      for (const mod of cov.cold.slice(0, top)) {
+        const priced = graph ? priceDeferral(graph, mod.source) : null;
+        console.log(
+          `  ${kb(mod.totalBytes).padStart(10)}  ${mod.source}${priced ? `  -> deferring frees ${kb(priced.removedBytes)} / ${priced.removedCount} module(s)` : ''}`,
+        );
+      }
+    }
+    const idle = cov.idle
+      .filter((m) => m.idleBytes >= 16 * 1024 && m.readyRatio > 0.02)
+      .slice(0, top);
+    if (idle.length) {
+      console.log(
+        '\nparsed but mostly not executed at startup (libraries run a slice of themselves at import; the rest is load cost):',
+      );
+      for (const mod of idle) {
+        const priced = graph ? priceDeferral(graph, mod.source) : null;
+        console.log(
+          `  ${kb(mod.idleBytes).padStart(10)} idle of ${kb(mod.totalBytes).padStart(9)}  ${String(Math.round(mod.readyRatio * 100)).padStart(3)}% executed  ${mod.source}${priced ? `  -> deferring frees ${kb(priced.removedBytes)}` : ''}`,
+        );
+      }
+    }
+    console.log('\nby package (bytes in the startup closure, share executed):');
+    for (const p of cov.packages.slice(0, Math.min(top, 12))) {
+      console.log(
+        `  ${kb(p.totalBytes).padStart(10)}  ${String(Math.round((p.readyBytes / Math.max(1, p.totalBytes)) * 100)).padStart(3)}%  ${String(p.modules).padStart(4)} module(s)  ${p.pkg}`,
+      );
+    }
+  }
+
+  if (!graph) {
+    console.log(
+      `\n(no module-graph.json for this worker: \`${CLI} worker-config --app <appDir>\` writes a build config that collects it; then graph / what-if / cut / why price every candidate)`,
+    );
+  } else {
+    console.log(
+      `\nnext: \`${CLI} why <module>\` names the importers and the chain from the entry; \`${CLI} cut <module> --root <class modules>\` the fewest imports to make dynamic.` +
+        ' Durable Object and Workflow classes are loaded by name: pass the modules that define them as --root, or every cut points at the entry.',
+    );
+    const classes = workerClassNames(report.worker.outDir);
+    if (classes.length) console.log(`  class exports in wrangler.json: ${classes.join(', ')}`);
+  }
+}
+
+/** Durable Object and Workflow class names the config binds; their modules are roots. */
+function workerClassNames(outDir) {
+  const config = readJson(path.join(outDir, 'wrangler.json'));
+  if (!config) return [];
+  const names = new Set();
+  for (const b of config.durable_objects?.bindings ?? []) if (b.class_name) names.add(b.class_name);
+  for (const w of config.workflows ?? []) if (w.class_name) names.add(w.class_name);
+  return [...names];
+}
+
+function workerModuleGraph(ctx) {
+  return loadModuleGraph(ctx.reportDirs);
+}
+
+function printRuntimeStderr(ctx) {
+  if (!ctx.stderr.lines.size) return;
+  console.log('\nworkerd stderr (deduplicated):');
+  for (const [line, n] of ctx.stderr.lines) console.log(`  ${n}x ${line}`);
+}
+
+async function cmdWorkerMeasure(argv) {
+  const opts = parse(argv, {
+    ...WORKER_TARGET_OPTS,
+    runs: { type: 'string', default: '5' },
+    warmup: { type: 'string', default: '1' },
+    label: { type: 'string', default: '' },
+    pin: { type: 'boolean', default: false },
+  });
+  const ctx = await loadWorkerContext(resolveWorkerTarget(opts), { main: opts.main });
+  printWorkerContext(ctx);
+  const summary = await runWorkerTiming(ctx, {
+    runs: Number(opts.runs),
+    warmup: Number(opts.warmup),
+  });
+  const requests = await firstRequests(ctx, ctx.requests);
+  const { report, hadBaseline } = writeWorkerReport(ctx, summary, { label: opts.label, requests });
+  printWorkerSummary(report, hadBaseline);
+  if (opts.pin) pinWorkerBaseline(ctx);
+  printRuntimeStderr(ctx);
+  console.log(`\nfull report: ${ctx.paths.metrics}`);
+}
+
+async function cmdWorkerScan(argv) {
+  const opts = parse(argv, {
+    ...WORKER_TARGET_OPTS,
+    runs: { type: 'string', default: '5' },
+    warmup: { type: 'string', default: '1' },
+    label: { type: 'string', default: '' },
+    pin: { type: 'boolean', default: false },
+    top: { type: 'string', default: '10' },
+    interval: { type: 'string', default: '100' },
+    'no-coverage': { type: 'boolean', default: false },
+    'no-profile': { type: 'boolean', default: false },
+  });
+  const ctx = await loadWorkerContext(resolveWorkerTarget(opts), { main: opts.main });
+  printWorkerContext(ctx);
+  const notes = [];
+  const summary = await runWorkerTiming(ctx, {
+    runs: Number(opts.runs),
+    warmup: Number(opts.warmup),
+  });
+  process.stderr.write('first requests on the real entry...\n');
+  const requests = await firstRequests(ctx, ctx.requests);
+
+  let prof = null;
+  if (!opts['no-profile']) {
+    process.stderr.write('profile run (where the startup CPU went)...\n');
+    const { profile, importRan, importText } = await cpuProfileRun(ctx, {
+      intervalUs: Number(opts.interval),
+    });
+    if (!importRan)
+      notes.push(`profile run: the import did not complete: ${importText.slice(0, 200)}`);
+    fs.mkdirSync(ctx.paths.dir, { recursive: true });
+    fs.writeFileSync(ctx.paths.profile, JSON.stringify(profile));
+    prof = attributeProfile(profile, { outDir: ctx.outDir, mainName: ctx.mainName });
+  }
+
+  let cov = null;
+  if (!opts['no-coverage']) {
+    process.stderr.write(
+      'coverage run (what executed at startup; in-process inspector session)...\n',
+    );
+    const run = await workerCoverageRun(ctx, { tools: ctx.borrowed });
+    if (run.unsupported) {
+      notes.push(`precise coverage unavailable: ${run.unsupported}`);
+    } else {
+      if (run.importError)
+        notes.push(`coverage run: the import threw: ${run.importError.slice(0, 200)}`);
+      fs.mkdirSync(ctx.paths.dir, { recursive: true });
+      fs.writeFileSync(ctx.paths.coverage, JSON.stringify(run.result));
+      cov = attributeCoverage(run.result, { outDir: ctx.outDir });
+      cov.source = `precise, workerd ${run.workerd}${run.borrowed ? ' (borrowed through --tools)' : ''}; flags added for that run: ${run.addedFlags.join(', ') || 'none'}`;
+    }
+  }
+
+  const graph = workerModuleGraph(ctx);
+  const { report, hadBaseline } = writeWorkerReport(ctx, summary, {
+    label: opts.label,
+    requests,
+    profile: prof
+      ? {
+          summary: prof.summary,
+          ownership: prof.ownership,
+          totalMs: prof.totalMs,
+          rows: prof.rows?.slice(0, 40) ?? null,
+        }
+      : null,
+    coverage: cov
+      ? {
+          source: cov.source,
+          totals: cov.totals,
+          runtimeScripts: cov.runtimeScripts,
+          modules: cov.modules.slice(0, 60),
+          cold: cov.cold.slice(0, 20),
+          idle: cov.idle.slice(0, 20),
+          packages: cov.packages.slice(0, 30),
+        }
+      : null,
+    notes,
+  });
+  printWorkerSummary(report, hadBaseline);
+  printWorkerLeads(report, cov, prof, graph, Number(opts.top));
+  if (cov?.source) console.log(`\ncoverage: ${cov.source}`);
+  for (const note of notes) console.log(`note: ${note}`);
+  if (opts.pin) pinWorkerBaseline(ctx);
+  printRuntimeStderr(ctx);
+  console.log(`\nfull report: ${ctx.paths.metrics}`);
+}
+
+/**
+ * CPU by EVALUATING module, from the attribution build (every module its own file):
+ * `ROLLDOWN_PERF_KIT_ATTRIB=1 npx vite build --config perf-kit.vite.config.ts`.
+ */
+async function cmdWorkerAttrib(argv) {
+  const opts = parse(argv, {
+    ...WORKER_TARGET_OPTS,
+    'attrib-dir': { type: 'string', default: ATTRIB_DIR },
+    interval: { type: 'string', default: '100' },
+    top: { type: 'string', default: '18' },
+  });
+  const target = resolveWorkerTarget(opts);
+  const outDir = path.join(target.appDir, opts['attrib-dir'], target.workerName);
+  if (!fs.existsSync(path.join(outDir, 'wrangler.json'))) {
+    throw new Error(
+      `no attribution build at ${outDir}.\n` +
+        `Build one: ROLLDOWN_PERF_KIT_ATTRIB=1 npx vite build --config ${SHIM_FILE}   (in ${target.appDir}; \`${CLI} worker-config\` writes that config)`,
+    );
+  }
+  const ctx = await loadWorkerContext(target, { outDir, main: opts.main });
+  printWorkerContext(ctx);
+  process.stderr.write('profile run on the attribution build...\n');
+  const { profile, importRan, importText } = await cpuProfileRun(ctx, {
+    intervalUs: Number(opts.interval),
+  });
+  if (!importRan) console.log(`note: the import did not complete: ${importText.slice(0, 200)}`);
+  fs.mkdirSync(ctx.paths.dir, { recursive: true });
+  fs.writeFileSync(ctx.paths.attribProfile, JSON.stringify(profile));
+  const graph = loadModuleGraph(
+    workerReportDirs(target.appDir, target.workerName, opts.report, { attrib: true }),
+  );
+  const { rows, pairs } = evaluatingModules(profile, { outDir, graph, top: Number(opts.top) });
+  console.log(
+    '\nstartup CPU by evaluating module (its own top level plus the library calls it makes):',
+  );
+  for (const r of rows) {
+    console.log(`  ${String(r.ms).padStart(7)}ms  ${r.module}`);
+    if (r.chain?.length) console.log(`             via ${r.chain.join(' -> ')}`);
+  }
+  console.log('\nevaluating module -> library it spends the time in:');
+  for (const p of pairs.slice(0, 12)) console.log(`  ${String(p.ms).padStart(7)}ms  ${p.pair}`);
+  if (!graph) {
+    console.log(
+      `\n(no report for the attribution build - the chains need node_modules/.rolldown/report-attrib-${target.workerName})`,
+    );
+  }
+  printRuntimeStderr(ctx);
+  console.log(`\nprofile: ${ctx.paths.attribProfile}`);
+}
+
+/** Write the Vite config shim and print the three build commands. */
+async function cmdWorkerConfig(argv) {
+  const opts = parse(argv, { app: { type: 'string' }, force: { type: 'boolean', default: false } });
+  const sticky = readJson(WORKER_TARGET_FILE);
+  const appDir = path.resolve(opts.app ?? sticky?.app ?? '.');
+  const { file, baseConfigFile, existed } = writeViteConfigShim(appDir, { force: opts.force });
+  console.log(
+    `${existed && !opts.force ? 'kept' : 'wrote'} ${file} (wraps ${baseConfigFile}; --force rewrites)`,
+  );
+  console.log(`\nbuild commands (run in ${appDir}):`);
+  console.log(
+    `  npx vite build --config ${SHIM_FILE}                            full build; report per environment, sourcemaps on the worker`,
+  );
+  console.log(
+    `  ROLLDOWN_PERF_KIT_WORKER_ONLY=1 npx vite build --config ${SHIM_FILE}  rebuild the worker environment only (the loop)`,
+  );
+  console.log(
+    `  ROLLDOWN_PERF_KIT_ATTRIB=1 npx vite build --config ${SHIM_FILE}       attribution build into ${ATTRIB_DIR}/ for \`${CLI} worker-attrib\``,
+  );
+  console.log(
+    `\nthen: ${CLI} worker-scan --app ${path.relative(process.cwd(), appDir) || '.'} [--request /path ...] [--tools <dir with wrangler >= ${COVERAGE_MIN_WRANGLER}>]`,
+  );
+}
+
+/** `why <module>`: direct static importers and one chain from the entry. */
+async function cmdWhy(argv) {
+  const { values: opts, positionals } = parseArgs({
+    args: argv,
+    options: { ...TARGET_OPTS, report: { type: 'string' } },
+    allowPositionals: true,
+  });
+  const query = positionals[0];
+  if (!query) throw new Error(`usage: ${CLI} why <module> [--report <dir>]`);
+  const graph = requireModuleGraph(opts);
+  const hit = resolveModule(graph, query);
+  if (!hit)
+    throw new Error(`no module matches '${query}' (ids are project-relative, e.g. src/router.ts)`);
+  if (hit.ambiguous) {
+    throw new Error(
+      `'${query}' is ambiguous:\n  ${hit.ambiguous.join('\n  ')}\nuse a longer suffix.`,
+    );
+  }
+  const why = whyModule(graph, hit.index);
+  console.log(`${why.module} (${kb(why.bytes)}): ${why.importers.length} static importer(s)`);
+  for (const imp of why.importers.slice(0, 12))
+    console.log(`  <- ${imp.module} (${kb(imp.bytes)})`);
+  if (why.importers.length > 12) console.log(`  ... ${why.importers.length - 12} more`);
+  const chain = why.chain.filter((id) => !/^(\\0|\0)/.test(id));
+  console.log(`chain from the entry: ${[...chain, why.module].join(' -> ')}`);
+  console.log(
+    `\nnext: \`${CLI} cut ${why.module}\` lists the fewest imports to make dynamic; add --root <module> for a class the runtime loads by name (Durable Object, Workflow).`,
+  );
+}
+
 async function cmdHelp() {
   console.log(`browser-loading perf harness - measurement + diagnosis; you drive the loop
 
@@ -3717,10 +4372,14 @@ individual commands (same target rules):
                                             stay eager. TWO+ modules = one combined plan, priced
                                             with a single overlay + a vs-summed-individually line
                                             (shared internals can make the combined free exceed the sum)
-  cut <module> [--keep a,b]                 min edge cut: the FEWEST import statements to make dynamic
+  cut <module> [--keep a,b] [--root a,b]    min edge cut: the FEWEST import statements to make dynamic
                                             to detach the module (last-hop edges, the exact files to
                                             edit) + the bytes freed. Beats what-if when one upstream
-                                            cut detaches a multi-path module; --keep edges are protected
+                                            cut detaches a multi-path module; --keep edges are protected;
+                                            --root modules stay eager with their closure (a Durable
+                                            Object class loaded by name) so the cut lands below them
+  why <module>                              the module's direct static importers + one chain from the
+                                            entry: where it enters the initial load, and who to edit
   graph-diff [--against <file>]             what a change did to the initial load (eager set): modules
                                             that entered/left with byte deltas, vs the pinned baseline
                                             graph (or any saved sidecar). Deterministic, no browser run
@@ -3752,6 +4411,35 @@ server startup mode (node/deno - a process coming up, not a page loading):
                             render-blocking import are the same edge in the module graph.
   There is no throttle in this mode: server startup does no network I/O, so a throttle
   would invent a dimension the measurement does not have.
+
+Cloudflare Worker startup mode (a V8 isolate coming up under the app's own workerd):
+  worker-config --app <appDir>    write perf-kit.vite.config.ts next to the app's vite config:
+                            the rolldown metrics report on EVERY environment (one dir each),
+                            sourcemaps on the worker, a worker-only rebuild and an attribution
+                            build behind env vars. Prints the build commands. Build, then:
+  worker-scan --app <appDir> [--request /path ...] [--tools <dir>]
+                            N cold runs (fresh workerd each) of the main module's import minus
+                            an empty-import floor = app startup; first requests on the real
+                            entry; startup CPU by module (profile); what executed at startup
+                            (precise coverage from inside the isolate); the leads. --pin
+                            makes this the baseline. The app dir, the request set and
+                            --tools are remembered; later \`worker-scan\` runs bare.
+  worker-measure            timing + first requests only
+  worker-attrib             startup CPU by EVALUATING module, from the attribution build
+                            (ROLLDOWN_PERF_KIT_ATTRIB=1 ... build): charges library work at
+                            startup to the module whose top level runs it, with the import
+                            chain. The bundled profile cannot (no line ticks for chunk
+                            top-level code; ESM evaluation is not a call stack).
+  --request <path>          a route to hit after startup on the real entry; the first hit
+                            of a route that imports a deferred module pays that load, and
+                            the report prints it next to the startup gain (a deferral MOVES
+                            work, it does not delete it). Repeatable.
+  --tools <dir>             a project whose wrangler is ${COVERAGE_MIN_WRANGLER} or later, used for the
+                            coverage run only (the in-process inspector session landed in
+                            workerd 1.20260706.1). Timing and the profile keep the app's own workerd.
+  graph | what-if | cut --root | why   work on the Worker's report (node_modules/.rolldown/
+                            report-<worker>) once worker-scan remembered the target.
+  Requirements, the coverage difference per mode, and the rules: AGENTS.md.
 
 the loop:
   1. build the app; scan --app <appDir> (first scan pins the baseline)
@@ -3809,6 +4497,11 @@ const commands = {
   target: cmdTarget,
   'node-scan': cmdNodeScan,
   'node-measure': cmdNodeMeasure,
+  'worker-scan': cmdWorkerScan,
+  'worker-measure': cmdWorkerMeasure,
+  'worker-attrib': cmdWorkerAttrib,
+  'worker-config': cmdWorkerConfig,
+  why: cmdWhy,
   defer: (argv) => cmdDefer(argv, 'deferred'),
   undefer: (argv) => cmdDefer(argv, 'baseline'),
   status: cmdStatus,

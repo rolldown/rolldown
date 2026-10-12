@@ -93,6 +93,19 @@ impl NativePluginContextImpl {
       .ok_or_else(|| anyhow::anyhow!("Plugin driver is already dropped."))?;
 
     let normalized_extra_options = extra_options.unwrap_or_default();
+    // If this plugin is already being skipped for the same specifier and importer, it called
+    // itself recursively. Return "not found" so the caller falls back to the default behavior.
+    // This mirrors `resolveIdViaPlugins` in Rollup.
+    if normalized_extra_options.skip_self
+      && self.skipped_resolve_calls.iter().any(|call| {
+        call.plugin_idx == self.plugin_idx
+          && call.specifier == specifier
+          && call.importer.as_deref() == importer
+      })
+    {
+      return Ok(Err(ResolveError::NotFound(specifier.to_string())));
+    }
+
     let skipped_resolve_calls = if normalized_extra_options.skip_self {
       let mut skipped_resolve_calls = Vec::with_capacity(self.skipped_resolve_calls.len() + 1);
       skipped_resolve_calls.extend(self.skipped_resolve_calls.clone());

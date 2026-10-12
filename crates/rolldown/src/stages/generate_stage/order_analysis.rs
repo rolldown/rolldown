@@ -112,10 +112,7 @@ impl GenerateStage<'_> {
     let plan = self.wrap_all_order_analysis().plan;
     let reverse_static_imports =
       reverse_static_import_index(&self.link_output.module_table.modules);
-    let mut state =
-      self.probe_order_state(None, &plan, used_symbol_refs_builder, &reverse_static_imports);
-    self.populate_consumer_local_namespace_targets(&mut state);
-    state
+    self.probe_order_state(None, &plan, used_symbol_refs_builder, &reverse_static_imports)
   }
 
   pub(super) fn analyze_execution_order(

@@ -257,7 +257,8 @@ export { SNAPSHOT as n, bump as r, LOCAL as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_value, t as SNAPSHOT } from "./snapshot.js";
+import { n as init_shared } from "./shared.js";
+import { t as SNAPSHOT } from "./snapshot.js";
 //#region pure.js
 const PURE = "pure";
 //#endregion
@@ -267,7 +268,7 @@ function read() {
 }
 function init_lazy() {
 	return (init_lazy = __esmMin((() => {
-		init_value();
+		init_shared();
 	})))();
 }
 //#endregion
@@ -280,11 +281,13 @@ export { read };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as bump, t as LOCAL } from "./shared.js";
+import { i as init_state, n as init_shared, r as bump, t as LOCAL } from "./shared.js";
 //#region main.js
 var local, load;
 function init_main() {
 	return (init_main = __esmMin((() => {
+		init_shared();
+		init_state();
 		local = LOCAL;
 		bump();
 		load = () => import("./lazy.js").then((module) => module.read());
@@ -307,16 +310,29 @@ export { __esmMin as t };
 ### shared.js
 
 ```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_value } from "./snapshot.js";
 //#region state.js
-let state = 0;
 function bump() {
 	state++;
 }
+var state;
+function init_state() {
+	return (init_state = __esmMin((() => {
+		state = 0;
+	})))();
+}
 //#endregion
 //#region shared.js
-const LOCAL = "local";
+var LOCAL;
+function init_shared() {
+	return (init_shared = __esmMin((() => {
+		init_value();
+		LOCAL = "local";
+	})))();
+}
 //#endregion
-export { bump as n, state as r, LOCAL as t };
+export { state as a, init_state as i, init_shared as n, bump as r, LOCAL as t };
 
 ```
 
@@ -324,11 +340,12 @@ export { bump as n, state as r, LOCAL as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { r as state } from "./shared.js";
+import { a as state, i as init_state } from "./shared.js";
 //#region snapshots/value.js
 var SNAPSHOT;
 function init_value() {
 	return (init_value = __esmMin((() => {
+		init_state();
 		SNAPSHOT = state;
 	})))();
 }

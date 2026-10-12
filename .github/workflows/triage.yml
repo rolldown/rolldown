@@ -1,0 +1,58 @@
+# First triage pass on new issues: https://github.com/IWANABETHATGUY/rolldown-triager
+#
+# Two entry points, because issues arrive two ways:
+#
+#   * Through a template, which applies `needs-triage` itself. That fires
+#     `labeled`. Re-adding the label by hand is also how a maintainer re-runs
+#     the bot, and only people with triage permission can add labels, so that
+#     path needs no extra gate.
+#   * Blank — `blank_issues_enabled: true`, so those arrive with no labels at
+#     all and nothing would ever put them in the triage queue. The `opened` arm
+#     adds the label and triages in the same job, because a label written with
+#     GITHUB_TOKEN does not trigger workflows: splitting this into a separate
+#     labelling workflow would add the label and leave the bot idle.
+#
+# The `opened` arm is guarded on the label being absent, so a templated issue
+# takes the `labeled` path only and is never triaged twice.
+name: Issue Triage
+
+permissions: {}
+
+on:
+  issues:
+    types: [opened, labeled]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  triage:
+    if: >-
+      github.repository == 'rolldown/rolldown' &&
+      ((github.event.action == 'labeled' && github.event.label.name == 'needs-triage') ||
+       (github.event.action == 'opened' &&
+        !contains(github.event.issue.labels.*.name, 'needs-triage')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - if: github.event.action == 'opened'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: gh issue edit "$ISSUE_NUMBER" --add-label needs-triage
+
+      - uses: IWANABETHATGUY/rolldown-triager@0ae1023269a92555b6d7a2acb65dacf689c9ebe4 # v0.9.1
+        with:
+          typesafe-api-key: ${{ secrets.TYPESAFE_API_KEY }}
+          modes: reproduction=apply,priority=apply
+          # `automation-labeled.yml` does not fire on a label this bot writes,
+          # because GITHUB_TOKEN writes do not trigger workflows. The bot
+          # therefore carries the reproduction request itself — otherwise the
+          # reporter would see a bare `needs-reproduction` and
+          # `issue-close-require.yml` would close the issue 14 days later
+          # without ever saying what was missing.
+          comment: when-needed

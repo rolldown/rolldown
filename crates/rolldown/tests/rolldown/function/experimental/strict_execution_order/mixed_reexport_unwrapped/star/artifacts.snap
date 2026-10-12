@@ -7,15 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_value, t as SNAPSHOT } from "./snapshot.js";
 import "./shared.js";
-//#region ../snapshots/value.js
-var SNAPSHOT;
-function init_value() {
-	return (init_value = __esmMin((() => {
-		SNAPSHOT = 0;
-	})))();
-}
-//#endregion
 //#region ../pure.js
 const PURE = "pure";
 //#endregion
@@ -68,6 +61,22 @@ export { LOCAL as t };
 
 ```
 
+## snapshot.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region ../snapshots/value.js
+var SNAPSHOT;
+function init_value() {
+	return (init_value = __esmMin((() => {
+		SNAPSHOT = globalThis.__seed ?? 0;
+	})))();
+}
+//#endregion
+export { init_value as n, SNAPSHOT as t };
+
+```
+
 # Variant: no-optimization: [chunk_optimization: Bool(false)]
 
 ## Assets
@@ -76,15 +85,8 @@ export { LOCAL as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_value, t as SNAPSHOT } from "./snapshot.js";
 import "./shared.js";
-//#region ../snapshots/value.js
-var SNAPSHOT;
-function init_value() {
-	return (init_value = __esmMin((() => {
-		SNAPSHOT = 0;
-	})))();
-}
-//#endregion
 //#region ../pure.js
 const PURE = "pure";
 //#endregion
@@ -134,5 +136,21 @@ export { __esmMin as t };
 const LOCAL = "local";
 //#endregion
 export { LOCAL as t };
+
+```
+
+### snapshot.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region ../snapshots/value.js
+var SNAPSHOT;
+function init_value() {
+	return (init_value = __esmMin((() => {
+		SNAPSHOT = globalThis.__seed ?? 0;
+	})))();
+}
+//#endregion
+export { init_value as n, SNAPSHOT as t };
 
 ```

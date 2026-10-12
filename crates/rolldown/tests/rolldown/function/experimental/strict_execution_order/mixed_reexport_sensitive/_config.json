@@ -9,11 +9,7 @@
     },
     {
       "_configName": "on-demand",
-      "onDemandWrapping": true,
-      "_expectExecutionFailure": {
-        "reason": "#10294: on-demand wrapping has no startup initialization site for a forwarded order-sensitive definer",
-        "outputContains": ["SNAPSHOT must be read before main calls bump()", "actual: 1"]
-      }
+      "onDemandWrapping": true
     },
     {
       "_configName": "on-demand-manual-groups",

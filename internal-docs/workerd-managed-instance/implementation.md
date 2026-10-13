@@ -64,6 +64,28 @@ refuses every `napi_*` call into the destroyed context, so they cannot reach
 any live instance. `build()` releases the result's raw binding wrappers after
 materializing it, so a retained result keeps no instance alive.
 
+What a plugin keeps follows the same rule, because a binding wrapper's methods
+close over its instance's emnapi env and `dropInner()` frees only the Rust
+payload. `PluginContextData` detaches what it releases:
+
+- the `buildStart` / `buildEnd` contexts and the context passed to
+  `output.codeSplitting.groups[].name` drop their wrapper at the build's
+  terminal release (`releaseBinding` on `PluginContextImpl` and
+  `ChunkingContextImpl`); later binding calls throw "already released", while
+  data the context holds or handed out stays readable. A `this.load()` /
+  `this.resolve()` still in flight reads the wrapper once before its first
+  await, so the deferred box drop (`releaseOrDefer`) still runs at its
+  `endNativeCall`;
+- the normalized input and output options drop theirs when their boxes are
+  released (the invalidate callback before `writeBundle`, or the terminal
+  release), after caching every box-backed field, so kept options stay
+  readable.
+
+Both are needed: a kept plugin context reaches the options through its
+`data`. Contexts kept from per-module hooks (`resolveId`, `load`, `transform`,
+...) still hold their wrapper, so each keeps its instance's Memory alive until
+the plugin drops it.
+
 ## Tests
 
 `packages/workerd-tests/suite.mjs` (real workerd via Miniflare) and `memory.mjs`

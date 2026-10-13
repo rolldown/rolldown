@@ -148,12 +148,25 @@ export class NormalizedOutputOptionsImpl
   // original object from the release path.
   #boxReads: Map<string, unknown> | undefined;
 
+  // Undefined after `releaseBinding()`.
+  private inner: BindingNormalizedOptions | undefined;
+
   constructor(
-    private inner: BindingNormalizedOptions,
+    inner: BindingNormalizedOptions,
     private outputOptions: OutputOptions,
     private normalizedOutputPlugins: RolldownPlugin[],
   ) {
     super();
+    this.inner = inner;
+  }
+
+  // `materializeBoxBackedFields()` caches every value read from the box before
+  // the release, so no getter reaches this then.
+  #binding(): BindingNormalizedOptions {
+    if (this.inner === undefined) {
+      throw new Error('These normalized output options have already released their binding object');
+    }
+    return this.inner;
   }
 
   #boxRead<T>(key: string, read: () => T): T {
@@ -177,22 +190,31 @@ export class NormalizedOutputOptionsImpl
       // property access is enough to evaluate and cache the lazy field
       void (this as Record<string, any>)[field];
     }
-    this.#boxRead('entryFilenames', () => this.inner.entryFilenames);
-    this.#boxRead('chunkFilenames', () => this.inner.chunkFilenames);
-    this.#boxRead('assetFilenames', () => this.inner.assetFilenames);
-    this.#boxRead('sourcemapFilenames', () => this.inner.sourcemapFilenames);
-    this.#boxRead('globals', () => this.inner.globals);
+    this.#boxRead('entryFilenames', () => this.#binding().entryFilenames);
+    this.#boxRead('chunkFilenames', () => this.#binding().chunkFilenames);
+    this.#boxRead('assetFilenames', () => this.#binding().assetFilenames);
+    this.#boxRead('sourcemapFilenames', () => this.#binding().sourcemapFilenames);
+    this.#boxRead('globals', () => this.#binding().globals);
+  }
+
+  /**
+   * Drop the binding wrapper once its box is released: the wrapper's methods
+   * keep the binding instance that made it alive, so options a plugin keeps
+   * would keep that instance's memory too.
+   */
+  releaseBinding(): void {
+    this.inner = undefined;
   }
 
   @lazyProp
   get dir(): string | undefined {
-    return this.inner.dir ?? undefined;
+    return this.#binding().dir ?? undefined;
   }
 
   @lazyProp
   get entryFileNames(): string | ChunkFileNamesFunction {
     return (
-      this.#boxRead('entryFilenames', () => this.inner.entryFilenames) ||
+      this.#boxRead('entryFilenames', () => this.#binding().entryFilenames) ||
       this.outputOptions.entryFileNames!
     );
   }
@@ -200,7 +222,7 @@ export class NormalizedOutputOptionsImpl
   @lazyProp
   get chunkFileNames(): string | ChunkFileNamesFunction {
     return (
-      this.#boxRead('chunkFilenames', () => this.inner.chunkFilenames) ||
+      this.#boxRead('chunkFilenames', () => this.#binding().chunkFilenames) ||
       this.outputOptions.chunkFileNames!
     );
   }
@@ -208,56 +230,56 @@ export class NormalizedOutputOptionsImpl
   @lazyProp
   get assetFileNames(): string | AssetFileNamesFunction {
     return (
-      this.#boxRead('assetFilenames', () => this.inner.assetFilenames) ||
+      this.#boxRead('assetFilenames', () => this.#binding().assetFilenames) ||
       this.outputOptions.assetFileNames!
     );
   }
 
   @lazyProp
   get format(): 'es' | 'cjs' | 'iife' | 'umd' {
-    return this.inner.format;
+    return this.#binding().format;
   }
 
   @lazyProp
   get exports(): 'default' | 'named' | 'none' | 'auto' {
-    return this.inner.exports;
+    return this.#binding().exports;
   }
 
   @lazyProp
   get sourcemap(): boolean | 'inline' | 'hidden' {
-    return this.inner.sourcemap;
+    return this.#binding().sourcemap;
   }
 
   @lazyProp
   get sourcemapFileNames(): string | ChunkFileNamesFunction | undefined {
     return (
-      this.#boxRead('sourcemapFilenames', () => this.inner.sourcemapFilenames) ||
+      this.#boxRead('sourcemapFilenames', () => this.#binding().sourcemapFilenames) ||
       this.outputOptions.sourcemapFileNames
     );
   }
   @lazyProp
   get sourcemapBaseUrl(): string | undefined {
-    return this.inner.sourcemapBaseUrl ?? undefined;
+    return this.#binding().sourcemapBaseUrl ?? undefined;
   }
 
   @lazyProp
   get shimMissingExports(): boolean {
-    return this.inner.shimMissingExports;
+    return this.#binding().shimMissingExports;
   }
 
   @lazyProp
   get name(): string | undefined {
-    return this.inner.name ?? undefined;
+    return this.#binding().name ?? undefined;
   }
 
   @lazyProp
   get file(): string | undefined {
-    return this.inner.file ?? undefined;
+    return this.#binding().file ?? undefined;
   }
 
   @lazyProp
   get codeSplitting(): boolean {
-    return this.inner.codeSplitting;
+    return this.#binding().codeSplitting;
   }
 
   /**
@@ -265,17 +287,17 @@ export class NormalizedOutputOptionsImpl
    */
   @lazyProp
   get inlineDynamicImports(): boolean {
-    return !this.inner.codeSplitting;
+    return !this.#binding().codeSplitting;
   }
 
   @lazyProp
   get dynamicImportInCjs(): boolean {
-    return this.inner.dynamicImportInCjs;
+    return this.#binding().dynamicImportInCjs;
   }
 
   @lazyProp
   get externalLiveBindings(): boolean {
-    return this.inner.externalLiveBindings;
+    return this.#binding().externalLiveBindings;
   }
 
   @lazyProp
@@ -310,17 +332,17 @@ export class NormalizedOutputOptionsImpl
 
   @lazyProp
   get esModule(): boolean | 'if-default-prop' {
-    return this.inner.esModule;
+    return this.#binding().esModule;
   }
 
   @lazyProp
   get extend(): boolean {
-    return this.inner.extend;
+    return this.#binding().extend;
   }
 
   @lazyProp
   get globals(): Record<string, string> | GlobalsFunction {
-    return this.#boxRead('globals', () => this.inner.globals) || this.outputOptions.globals!;
+    return this.#boxRead('globals', () => this.#binding().globals) || this.outputOptions.globals!;
   }
 
   @lazyProp
@@ -330,17 +352,17 @@ export class NormalizedOutputOptionsImpl
 
   @lazyProp
   get hashCharacters(): 'base64' | 'base36' | 'hex' {
-    return this.inner.hashCharacters;
+    return this.#binding().hashCharacters;
   }
 
   @lazyProp
   get sourcemapDebugIds(): boolean {
-    return this.inner.sourcemapDebugIds;
+    return this.#binding().sourcemapDebugIds;
   }
 
   @lazyProp
   get sourcemapExcludeSources(): boolean {
-    return this.inner.sourcemapExcludeSources;
+    return this.#binding().sourcemapExcludeSources;
   }
 
   @lazyProp
@@ -355,7 +377,7 @@ export class NormalizedOutputOptionsImpl
 
   @lazyProp
   get minify(): false | MinifyOptions | 'dce-only' {
-    let ret = this.inner.minify;
+    let ret = this.#binding().minify;
     if (typeof ret === 'object' && ret !== null) {
       // Omit some properties that are not needed in the output
       delete ret['codegen'];
@@ -367,12 +389,12 @@ export class NormalizedOutputOptionsImpl
 
   @lazyProp
   get legalComments(): 'none' | 'inline' {
-    return this.inner.legalComments;
+    return this.#binding().legalComments;
   }
 
   @lazyProp
   get comments(): Required<CommentsOptions> {
-    const c = this.inner.comments;
+    const c = this.#binding().comments;
     return {
       legal: c.legal ?? true,
       annotation: c.annotation ?? true,
@@ -382,7 +404,7 @@ export class NormalizedOutputOptionsImpl
 
   @lazyProp
   get polyfillRequire(): boolean {
-    return this.inner.polyfillRequire;
+    return this.#binding().polyfillRequire;
   }
 
   @lazyProp
@@ -392,27 +414,27 @@ export class NormalizedOutputOptionsImpl
 
   @lazyProp
   get preserveModules(): boolean {
-    return this.inner.preserveModules;
+    return this.#binding().preserveModules;
   }
 
   @lazyProp
   get preserveModulesRoot(): string | undefined {
-    return this.inner.preserveModulesRoot;
+    return this.#binding().preserveModulesRoot;
   }
 
   @lazyProp
   get virtualDirname(): string {
-    return this.inner.virtualDirname;
+    return this.#binding().virtualDirname;
   }
 
   @lazyProp
   get topLevelVar(): boolean {
-    return this.inner.topLevelVar ?? false;
+    return this.#binding().topLevelVar ?? false;
   }
 
   @lazyProp
   get minifyInternalExports(): boolean {
-    return this.inner.minifyInternalExports ?? false;
+    return this.#binding().minifyInternalExports ?? false;
   }
 }
 

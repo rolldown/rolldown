@@ -1,7 +1,18 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import v8 from 'node:v8';
+import vm from 'node:vm';
 import { describe, expect, test, vi } from 'vitest';
+import type {
+  ChunkingContext,
+  ModuleInfo,
+  NormalizedInputOptions,
+  NormalizedOutputOptions,
+  OutputOptions,
+  Plugin,
+  PluginContext,
+} from '../src';
 import * as bindingProxy from '../src/binding-workerd-proxy';
 import { RolldownMagicString as stubRolldownMagicString } from '../src/workerd-stubs/binding-magic-string';
 import type * as workerdEntryTypes from '../src/workerd';
@@ -583,6 +594,153 @@ describe('workerd build() against the built dist', () => {
       const status = result.__rolldown_external_memory_handle__();
       expect(status.freed).toBe(false);
       expect(status.reason).toMatch(/Memory has already been freed/);
+    },
+    180_000,
+  );
+});
+
+// Rollup lets a plugin keep the `buildStart` / `buildEnd` context and the
+// normalized options past the build, and a `codeSplitting` classifier may keep
+// its chunking context. Each binding wrapper's methods close over
+// its instance's emnapi env, so what the plugin keeps must hold no wrapper, or
+// the disposed instance's Memory stays reachable.
+describe('workerd build() data a plugin keeps', () => {
+  // Builds once on a fresh instance, disposes it, and reports whether its
+  // Memory was garbage-collected.
+  async function buildAndCollect(plugin: Plugin, output?: OutputOptions): Promise<boolean> {
+    v8.setFlagsFromString('--expose-gc');
+    const gc: () => void = vm.runInNewContext('gc');
+    const { workerd, wasmModule } = await loadDistWorkerd();
+    const instance = await workerd.createInstance(wasmModule);
+    const memory = new WeakRef(instance.memory);
+    try {
+      await workerd.build({
+        instance,
+        input: 'virt:entry.js',
+        plugins: [makeVirtualGraph(3).plugin(), plugin],
+        output: { format: 'esm', ...output },
+      });
+    } finally {
+      await instance.dispose();
+    }
+    for (let i = 0; i < 4; i++) {
+      gc();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    return memory.deref() === undefined;
+  }
+
+  // Guards the probe: without it, a passing case below could mean a Memory
+  // that is never collected at all.
+  distTest(
+    'the disposed instance is collected when the plugin keeps nothing',
+    async () => {
+      expect(await buildAndCollect({ name: 'keeps-nothing' })).toBe(true);
+    },
+    180_000,
+  );
+
+  distTest(
+    'kept buildStart / buildEnd contexts let the disposed instance be collected',
+    async () => {
+      const kept: PluginContext[] = [];
+      let keptGetModuleInfo: PluginContext['getModuleInfo'] | undefined;
+      let entryIdDuringBuild: string | undefined;
+      const collected = await buildAndCollect({
+        name: 'keeps-contexts',
+        buildStart() {
+          kept.push(this);
+          keptGetModuleInfo = this.getModuleInfo;
+        },
+        buildEnd() {
+          kept.push(this);
+          entryIdDuringBuild = this.getModuleInfo('virt:entry.js')?.id;
+        },
+      });
+
+      expect(collected).toBe(true);
+      expect(entryIdDuringBuild).toBe('virt:entry.js');
+      expect(kept).toHaveLength(2);
+      for (const context of kept) {
+        // Data the context holds stays readable; calls into the binding throw.
+        expect(typeof context.meta.rolldownVersion).toBe('string');
+        expect(() => context.getModuleInfo('virt:entry.js')).toThrow(/already released/);
+        expect(() => context.addWatchFile('virt:watched')).toThrow(/already released/);
+        await expect(context.resolve('virt:entry.js')).rejects.toThrow(/already released/);
+      }
+      expect(() => keptGetModuleInfo!('virt:entry.js')).toThrow(/already released/);
+    },
+    180_000,
+  );
+
+  distTest(
+    'kept normalized options stay readable and let the disposed instance be collected',
+    async () => {
+      let buildStartInput: NormalizedInputOptions | undefined;
+      let renderStartInput: NormalizedInputOptions | undefined;
+      let renderStartOutput: NormalizedOutputOptions | undefined;
+      const collected = await buildAndCollect(
+        {
+          name: 'keeps-options',
+          buildStart(inputOptions) {
+            buildStartInput = inputOptions;
+          },
+          renderStart(outputOptions, inputOptions) {
+            renderStartOutput = outputOptions;
+            renderStartInput = inputOptions;
+          },
+        },
+        { banner: '/* kept */' },
+      );
+
+      expect(collected).toBe(true);
+      for (const inputOptions of [buildStartInput!, renderStartInput!]) {
+        expect(inputOptions.input).toEqual(['virt:entry.js']);
+        expect(typeof inputOptions.cwd).toBe('string');
+      }
+      const outputOptions = renderStartOutput!;
+      expect(outputOptions.format).toBe('es');
+      expect(outputOptions.entryFileNames).toBe('[name].js');
+      expect(outputOptions.sourcemap).toBe(false);
+      // A field backed by the caller's own options, not the binding.
+      expect(await outputOptions.banner({} as never)).toBe('/* kept */');
+    },
+    180_000,
+  );
+
+  distTest(
+    'a kept codeSplitting groups[].name context lets the disposed instance be collected',
+    async () => {
+      const kept: ChunkingContext[] = [];
+      const infos: ModuleInfo[] = [];
+      const collected = await buildAndCollect(
+        { name: 'keeps-nothing' },
+        {
+          codeSplitting: {
+            groups: [
+              {
+                name(moduleId, ctx) {
+                  kept.push(ctx);
+                  const info = ctx.getModuleInfo(moduleId);
+                  if (info) infos.push(info);
+                  return null;
+                },
+              },
+            ],
+          },
+        },
+      );
+
+      expect(collected).toBe(true);
+      expect(kept.length).toBeGreaterThan(0);
+      expect(infos.length).toBeGreaterThan(0);
+      // Module infos handed out during the pass stay readable; a binding call
+      // through the kept context throws.
+      for (const info of infos) {
+        expect(info.id).toMatch(/^virt:/);
+        expect(typeof info.code).toBe('string');
+      }
+      expect(() => kept[0].getModuleInfo(infos[0].id)).toThrow(/already released/);
     },
     180_000,
   );

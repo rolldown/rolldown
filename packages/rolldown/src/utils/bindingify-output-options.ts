@@ -532,8 +532,9 @@ function batchName(
     const context = getChunkingContext(bindingContext);
     const results: ReturnType<CodeSplittingNameFunction>[] = [];
     // A classifier may keep the context and read it after its batch ends
-    // (`renderChunk` and `renderError` do), so the box is parked on the
-    // build-scoped registry, which releases it when the build settles.
+    // (`renderChunk` and `renderError` do), so the box and the context are
+    // parked on the build-scoped registry, which releases the box and detaches
+    // the context when the build settles.
     try {
       for (let index = 0; index < ids.length; index++) {
         const result = name(ids[index], context);
@@ -548,7 +549,7 @@ function batchName(
         results.push(result);
       }
     } finally {
-      pluginContextData.retainContextBox(bindingContext);
+      pluginContextData.retainContextBox(bindingContext, context);
     }
     return results;
   };

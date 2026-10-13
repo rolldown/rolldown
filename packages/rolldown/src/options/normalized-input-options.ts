@@ -21,7 +21,8 @@ export interface NormalizedInputOptions {
 }
 
 export class NormalizedInputOptionsImpl extends PlainObjectLike implements NormalizedInputOptions {
-  inner: BindingNormalizedOptions;
+  // Undefined after `releaseBinding()`.
+  private inner: BindingNormalizedOptions | undefined;
 
   constructor(
     inner: BindingNormalizedOptions,
@@ -30,6 +31,15 @@ export class NormalizedInputOptionsImpl extends PlainObjectLike implements Norma
   ) {
     super();
     this.inner = inner;
+  }
+
+  // `materializeBoxBackedFields()` caches every field before the release, so
+  // no getter reaches this then.
+  #binding(): BindingNormalizedOptions {
+    if (this.inner === undefined) {
+      throw new Error('These normalized input options have already released their binding object');
+    }
+    return this.inner;
   }
 
   /**
@@ -44,29 +54,38 @@ export class NormalizedInputOptionsImpl extends PlainObjectLike implements Norma
     }
   }
 
+  /**
+   * Drop the binding wrapper once its box is released: the wrapper's methods
+   * keep the binding instance that made it alive, so options a plugin keeps
+   * would keep that instance's memory too.
+   */
+  releaseBinding(): void {
+    this.inner = undefined;
+  }
+
   @lazyProp
   get shimMissingExports(): boolean {
-    return this.inner.shimMissingExports;
+    return this.#binding().shimMissingExports;
   }
 
   @lazyProp
   get input(): string[] | Record<string, string> {
-    return this.inner.input;
+    return this.#binding().input;
   }
 
   @lazyProp
   get cwd(): string {
-    return this.inner.cwd;
+    return this.#binding().cwd;
   }
 
   @lazyProp
   get platform(): 'browser' | 'node' | 'neutral' {
-    return this.inner.platform;
+    return this.#binding().platform;
   }
 
   @lazyProp
   get context(): string {
-    return this.inner.context;
+    return this.#binding().context;
   }
 
   get plugins(): RolldownPlugin[] {

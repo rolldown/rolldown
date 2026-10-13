@@ -278,9 +278,11 @@ export interface PluginContext extends MinimalPluginContext {
 export class PluginContextImpl extends MinimalPluginContextImpl {
   fs: RolldownFsModule = fsModule;
   getModuleInfo: GetModuleInfo;
+  // Undefined after `releaseBinding()`.
+  private context: BindingPluginContext | undefined;
   constructor(
     private outputOptions: OutputOptions,
-    private context: BindingPluginContext,
+    context: BindingPluginContext,
     plugin: Plugin,
     private data: PluginContextData,
     private onLog: LogHandler,
@@ -289,7 +291,31 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     private currentLoadingModule?: string,
   ) {
     super(onLog, logLevel, plugin.name!, watchMode);
-    this.getModuleInfo = (id: string) => this.data.getModuleInfo(id, context);
+    this.context = context;
+    // Reads the field on each call rather than closing over `context`, so a
+    // copy of `getModuleInfo` the plugin keeps does not keep the wrapper alive.
+    this.getModuleInfo = (id: string) => this.data.getModuleInfo(id, this.binding());
+  }
+
+  // Not a `#private` method: a context reached through a Proxy or a derived
+  // object (`Object.create(this)`) must keep working.
+  private binding(): BindingPluginContext {
+    if (this.context === undefined) {
+      throw new Error('This plugin context has already released its binding object');
+    }
+    return this.context;
+  }
+
+  /**
+   * Drop the binding wrapper at the build's terminal release (see
+   * `PluginContextData.retainContextBox`): the wrapper's methods keep the
+   * binding instance that made it alive, so a context a plugin keeps would keep
+   * that instance's memory too. Data the context copied stays readable; calls
+   * into the binding throw from now on. A `load()` / `resolve()` still in
+   * flight holds its own reference, so its deferred box release still runs.
+   */
+  releaseBinding(): void {
+    this.context = undefined;
   }
 
   public async load(
@@ -301,11 +327,13 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     }
     // A fire-and-forget call may outlive its hook: bracket the native `load`
     // through the `getModuleInfo` continuation so a box release waits for it
-    // (see `releaseOrDefer`).
-    beginNativeCall(this.context);
+    // (see `releaseOrDefer`). Read once: `releaseBinding()` may run during the
+    // await, and the deferred release needs this same box at `endNativeCall`.
+    const context = this.binding();
+    beginNativeCall(context);
     try {
       // resolveDependencies always true at rolldown
-      const moduleInfo = this.data.getModuleInfo(id, this.context);
+      const moduleInfo = this.data.getModuleInfo(id, context);
       if (moduleInfo && moduleInfo.code !== null /* module already parsed */) {
         return moduleInfo;
       }
@@ -318,7 +346,7 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
 
       let loadPromise = this.data.loadModulePromiseMap.get(id);
       if (!loadPromise) {
-        loadPromise = this.context
+        loadPromise = context
           .load(id, options.moduleSideEffects ?? undefined, options.packageJsonPath ?? undefined)
           .catch(() => {
             // avoid reusing the promise if it's an error
@@ -329,9 +357,9 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
       }
 
       await loadPromise;
-      return this.data.getModuleInfo(id, this.context)!;
+      return this.data.getModuleInfo(id, context)!;
     } finally {
-      endNativeCall(this.context);
+      endNativeCall(context);
     }
   }
 
@@ -340,6 +368,8 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     importer?: string,
     options?: PluginContextResolveOptions,
   ): Promise<ResolvedId | null> {
+    // Read once, as in `load` above.
+    const context = this.binding();
     let receipt: number | undefined = undefined;
     if (options != null) {
       receipt = this.data.saveResolveOptions(options);
@@ -356,9 +386,9 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     // Same fire-and-forget contract as `load` above: the native `resolve`
     // holds a napi borrow on the box until it settles, so an eager release
     // requested while this call is in flight must wait for it.
-    beginNativeCall(this.context);
+    beginNativeCall(context);
     try {
-      const res = await this.context.resolve(source, importer, {
+      const res = await context.resolve(source, importer, {
         importKind: options?.kind,
         custom: receipt,
         isEntry: options?.isEntry,
@@ -382,7 +412,7 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
         packageJsonPath: res.packageJsonPath,
       };
     } finally {
-      endNativeCall(this.context);
+      endNativeCall(context);
     }
   }
 
@@ -406,7 +436,7 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
           ),
         );
       }
-      return this.context.emitPrebuiltChunk({
+      return this.binding().emitPrebuiltChunk({
         fileName: file.fileName,
         name: file.name,
         code: file.code,
@@ -427,7 +457,7 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
       );
     }
     if (file.type === 'chunk') {
-      return this.context.emitChunk({
+      return this.binding().emitChunk({
         preserveEntrySignatures: bindingifyPreserveEntrySignatures(file.preserveSignature),
         ...file,
       });
@@ -437,7 +467,7 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
         ? undefined
         : this.outputOptions.sanitizeFileName!(file.name || 'asset');
     const filename = file.fileName ? undefined : this.getAssetFileNames(file);
-    return this.context.emitFile(
+    return this.binding().emitFile(
       {
         ...file,
         originalFileName: file.originalFileName || undefined,
@@ -462,15 +492,15 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
   }
 
   public getFileName(referenceId: string): string {
-    return this.context.getFileName(referenceId);
+    return this.binding().getFileName(referenceId);
   }
 
   public getModuleIds(): IterableIterator<string> {
-    return this.data.getModuleIds(this.context);
+    return this.data.getModuleIds(this.binding());
   }
 
   public addWatchFile(id: string): void {
-    this.context.addWatchFile(id);
+    this.binding().addWatchFile(id);
   }
 
   public parse(input: string, options?: ParserOptions | null): Program {

@@ -31,21 +31,19 @@ import { TransformPluginContextImpl } from './transform-plugin-context';
 // the boxes its hook received once the hook settles; arguments a callback may
 // keep are passed as plain-data snapshots. Exception: Rollup lets a plugin
 // keep the `buildStart`/`buildEnd` context (Vite's `vite:watch-package-data`
-// does), so those boxes go to `pluginContextData.retainContextBox` and drain
-// when the build settles. A context kept from a per-module hook throws after
-// release, on this flavor only.
+// does), so those boxes and their contexts go to
+// `pluginContextData.retainContextBox` and drain when the build settles. A
+// context kept from a per-module hook throws after release, on this flavor only.
 export function bindingifyBuildStart(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['buildStart']> {
   return bindingifyHook(args.plugin.buildStart, ({ handler }) => ({
     plugin: async (ctx, opts) => {
+      const context = createPluginContext(args, ctx);
       try {
-        await handler.call(
-          createPluginContext(args, ctx),
-          args.pluginContextData.getInputOptions(opts),
-        );
+        await handler.call(context, args.pluginContextData.getInputOptions(opts));
       } finally {
-        args.pluginContextData.retainContextBox(ctx);
+        args.pluginContextData.retainContextBox(ctx, context);
       }
     },
   }));
@@ -55,13 +53,11 @@ export function bindingifyBuildEnd(
 ): PluginHookWithBindingExt<BindingPluginOptions['buildEnd']> {
   return bindingifyHook(args.plugin.buildEnd, ({ handler }) => ({
     plugin: async (ctx, err) => {
+      const context = createPluginContext(args, ctx);
       try {
-        await handler.call(
-          createPluginContext(args, ctx),
-          err ? aggregateBindingErrorsIntoJsError(err) : undefined,
-        );
+        await handler.call(context, err ? aggregateBindingErrorsIntoJsError(err) : undefined);
       } finally {
-        args.pluginContextData.retainContextBox(ctx);
+        args.pluginContextData.retainContextBox(ctx, context);
       }
     },
   }));

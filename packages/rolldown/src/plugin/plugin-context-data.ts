@@ -20,6 +20,12 @@ import { snapshotModuleInfo, transformModuleInfo } from '../utils/transform-modu
 import type { RenderedChunkMeta } from '.';
 import type { PluginContextResolveOptions } from './plugin-context';
 
+// A JavaScript context built on a retained box: `PluginContextImpl` or
+// `ChunkingContextImpl`.
+interface BindingContextOwner {
+  releaseBinding(): void;
+}
+
 export class PluginContextData {
   moduleOptionMap: Map<string, ModuleOptions> = new Map();
   resolveOptionsMap: Map<number, PluginContextResolveOptions> = new Map();
@@ -38,6 +44,8 @@ export class PluginContextData {
   // from `resolveId`). Drained only by `releaseRetainedOptionBoxes`, never by
   // `clear()`, which runs before `writeBundle`.
   #retainedContextBoxes: Set<DroppableBox> = new Set();
+  // The JavaScript contexts built on those boxes, detached at the same point.
+  #retainedContexts: Set<BindingContextOwner> = new Set();
 
   constructor(
     private onLog: LogHandler,
@@ -182,10 +190,12 @@ export class PluginContextData {
 
   // ONLY for boxes minted during the build: the registry drains when the
   // `generate()`/`write()` call settles, so an output- or close-side box parked
-  // here would never be released. No-op outside threadless WASI.
-  retainContextBox(box: DroppableBox): void {
+  // here would never be released. Pass the JavaScript context built on the box
+  // so the drain detaches it too. No-op outside threadless WASI.
+  retainContextBox(box: DroppableBox, context: BindingContextOwner): void {
     if (shouldEagerlyFreeOutputs()) {
       this.#retainedContextBoxes.add(box);
+      this.#retainedContexts.add(context);
     }
   }
 
@@ -211,35 +221,52 @@ export class PluginContextData {
   // `releaseOrDefer`, not `dropInner()`: a fire-and-forget `this.load()` /
   // `this.resolve()` may still hold a shared borrow on its context, and an
   // exclusive drop would throw (see `utils/threadless-free.ts`).
+  //
+  // A context a plugin or a `codeSplitting` classifier keeps would otherwise
+  // keep its binding wrapper, whose methods keep the binding instance alive (on
+  // workerd, a disposed instance's whole memory), so the contexts are detached
+  // as well. A call still in flight holds the box itself, so detaching cannot
+  // cut a deferred drop short. See
+  // internal-docs/workerd-managed-instance/implementation.md.
   #releaseContextBoxes(): void {
     if (!shouldEagerlyFreeOutputs()) {
       return;
     }
+    for (const context of this.#retainedContexts) {
+      context.releaseBinding();
+    }
+    this.#retainedContexts.clear();
     for (const box of this.#retainedContextBoxes) {
       releaseOrDefer(box);
     }
     this.#retainedContextBoxes.clear();
   }
 
-  // Copy box-backed values into the cached wrappers, then release the boxes.
-  // Fields backed by the user's `outputOptions` stay lazy: user accessors must
-  // not run, and maybe throw, from a cleanup path.
+  // Copy box-backed values into the cached wrappers, release the boxes, then
+  // detach the wrappers from their binding objects, whose methods keep the
+  // binding instance alive while a plugin keeps the options. Fields backed by
+  // the user's `outputOptions` stay lazy: user accessors must not run, and
+  // maybe throw, from a cleanup path.
   #releaseOptionBoxes(): void {
     if (!shouldEagerlyFreeOutputs() || this.#retainedOptionBoxes.size === 0) {
       return;
     }
-    for (const wrapper of [this.normalizedInputOptions, this.normalizedOutputOptions]) {
+    const wrappers = [this.normalizedInputOptions, this.normalizedOutputOptions];
+    for (const wrapper of wrappers) {
       if (wrapper == null) continue;
       try {
         wrapper.materializeBoxBackedFields();
       } catch {
-        // Later reads of the affected fields then report the documented
-        // "memory has been freed" error; cleanup must not throw or stop.
+        // Later reads of the affected fields then throw the wrapper's
+        // "already released" error; cleanup must not throw or stop.
       }
     }
     for (const box of this.#retainedOptionBoxes) {
       box.dropInner();
     }
     this.#retainedOptionBoxes.clear();
+    for (const wrapper of wrappers) {
+      wrapper?.releaseBinding();
+    }
   }
 }

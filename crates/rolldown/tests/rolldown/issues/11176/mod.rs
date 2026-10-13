@@ -203,3 +203,79 @@ async fn empty_mappings_after_real_map_drops_original_source() {
 async fn empty_mappings_with_sources_drops_original_source() {
   Box::pin(run(false, Replace { with_sources: true })).await;
 }
+
+/// Loads `action.js` with a map that lists a source no token reaches (e.g. from a preprocessor),
+/// then records `this.getCombinedSourcemap()` from the transform hook.
+#[derive(Debug, Default)]
+struct LoadWithUnreachedSource {
+  load_map: Arc<Mutex<Option<SourceMap>>>,
+  combined_sourcemap: Arc<Mutex<Option<SourceMap>>>,
+}
+
+impl Plugin for LoadWithUnreachedSource {
+  fn name(&self) -> Cow<'static, str> {
+    "load-with-unreached-source".into()
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::Load | HookUsage::Transform
+  }
+
+  async fn load(
+    &self,
+    _ctx: rolldown_plugin::SharedLoadPluginContext,
+    args: &rolldown_plugin::HookLoadArgs<'_>,
+  ) -> rolldown_plugin::HookLoadReturn {
+    if !is_action(args.id) {
+      return Ok(None);
+    }
+    let code = std::fs::read_to_string(args.id)?;
+    let mut builder = SourceMapBuilder::default();
+    let source = builder.add_source_and_content(args.id, &code);
+    builder.add_source_and_content("preprocessor-only.js", "unreached();\n");
+    builder.add_token(0, 0, 0, 0, Some(source), None);
+    let map = builder.into_sourcemap().into_owned();
+    *self.load_map.lock().unwrap() = Some(map.clone());
+    Ok(Some(rolldown_plugin::HookLoadOutput {
+      code: code.into(),
+      map: Some(map),
+      ..Default::default()
+    }))
+  }
+
+  async fn transform(
+    &self,
+    ctx: rolldown_plugin::SharedTransformPluginContext,
+    args: &rolldown_plugin::HookTransformArgs<'_>,
+  ) -> rolldown_plugin::HookTransformReturn {
+    if is_action(args.id) {
+      *self.combined_sourcemap.lock().unwrap() = Some(ctx.get_combined_sourcemap());
+    }
+    Ok(None)
+  }
+}
+
+/// Like Rollup, `getCombinedSourcemap` returns a load map that no transform remapped as is, even
+/// when some of its sources are unreached.
+#[tokio::test(flavor = "multi_thread")]
+async fn combined_sourcemap_keeps_untransformed_load_map() {
+  let plugin = LoadWithUnreachedSource::default();
+  let load_map = Arc::clone(&plugin.load_map);
+  let combined_sourcemap = Arc::clone(&plugin.combined_sourcemap);
+  let mut bundler = Bundler::with_plugins(
+    BundlerOptions {
+      input: Some(vec![InputItem { name: Some("entry".into()), import: "./entry.js".into() }]),
+      cwd: Some(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/rolldown/issues/11176").into()),
+      sourcemap: Some(SourceMapType::File),
+      ..Default::default()
+    },
+    vec![Plugin::new_shared(plugin)],
+  )
+  .expect("failed to create bundler");
+  bundler.generate().await.expect("build should succeed");
+
+  let load_map = load_map.lock().unwrap().take().expect("should load action.js");
+  let combined_sourcemap =
+    combined_sourcemap.lock().unwrap().take().expect("should run the transform hook for action.js");
+  assert_eq!(combined_sourcemap.to_json_string(), load_map.to_json_string());
+}

@@ -35,5 +35,6 @@ tokio = { workspace = true, features = ["rt", "macros", "sync", "time"] }
 tracing = { workspace = true }
 
 [dev-dependencies]
+dunce = { workspace = true }
 rolldown_workspace = { workspace = true }
 sugar_path = { workspace = true }

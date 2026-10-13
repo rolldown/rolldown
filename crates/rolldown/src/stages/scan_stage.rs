@@ -208,7 +208,8 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
   fn create_sourcemap_channel(&self) -> SourcemapChannel {
     // Gated on the target, not the scheduler flavor: the drainer is an OS
     // thread, so it cannot starve the executor that feeds it, even on
-    // `CurrentThread`. Wasm generates maps inline.
+    // `CurrentThread`. Both wasm builds generate maps inline; see
+    // `can_spawn_os_threads` for why the threaded one does too.
     if !rolldown_utils::futures::can_spawn_os_threads() {
       return (None, None);
     }

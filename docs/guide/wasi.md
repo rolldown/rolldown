@@ -65,11 +65,11 @@ Threadless hosts, workerd above all, rarely run garbage-collection finalizers.
 So on this build only, Rolldown frees native data early, and reading freed data
 throws:
 
-| What a plugin keeps                                                                                                   | Readable until                          |
-| --------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| `this` in any hook except `buildStart` / `buildEnd`, and native objects a hook receives, such as `meta.magicString`   | That hook call settles                  |
-| `this` in `buildStart` / `buildEnd`, and the context passed to `output.codeSplitting.groups[].name`                   | `generate()` / `write()` settles        |
-| Normalized options, the `moduleParsed` module info, the chunk passed to `renderChunk`, `this.getModuleInfo()` results | Always: they are copied into JavaScript |
+| What a plugin keeps                                                                                                   | Readable until                                      |
+| --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| `this` in any hook except `buildStart` / `buildEnd`, and native objects a hook receives, such as `meta.magicString`   | That hook call settles (see the workerd note below) |
+| `this` in `buildStart` / `buildEnd`, and the context passed to `output.codeSplitting.groups[].name`                   | `generate()` / `write()` settles                    |
+| Normalized options, the `moduleParsed` module info, the chunk passed to `renderChunk`, `this.getModuleInfo()` results | Always: they are copied into JavaScript             |
 
 So a `buildStart`-bound `this.addWatchFile` still works in `writeBundle`, but
 throws in `closeBundle`, which runs at `bundle.close()`. Copy what you need
@@ -108,6 +108,9 @@ export default {
 - To release an instance, wait for its builds to settle, then
   `await instance.dispose()`. It rejects while a build is running; if cleanup
   itself rejects, call it again.
+- `meta.magicString` is not available on this build. Reading it in `transform`,
+  or in `renderChunk` with `experimental.nativeMagicString`, throws. Return
+  `{ code }` from the hook instead.
 
 Configure Wrangler to import the Wasm file as a precompiled module. The loader
 rejects byte buffers, URLs and `Response` objects, because workerd does not

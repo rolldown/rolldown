@@ -2092,6 +2092,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             }
           } else {
             // "export * from 'path'"
+            if self.ctx.order_wrap_state.is_consumer_local_reexport_route(self.ctx.idx) {
+              return;
+            }
             let rec = &self.ctx.module.import_records[rec_idx];
             let Some(module_idx) = rec.resolved_module else { return };
             match &self.ctx.modules[module_idx] {

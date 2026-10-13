@@ -174,6 +174,25 @@ test.each<Mode>(['wrap-all', 'on-demand'])(
 );
 
 test.each<Mode>(['wrap-all', 'on-demand'])(
+  'routes nested star re-exports to their consumers (%s)',
+  async (mode) => {
+    for (const output of [
+      {},
+      { format: 'cjs', entryFileNames: '[name].cjs', chunkFileNames: '[name]-[hash].cjs' },
+    ] satisfies OutputOptions[]) {
+      await check(mode, {
+        modules: {
+          './barrel.js': "export * from './forward.js'; export { bar } from './bar.js';",
+          './forward.js': "export * from './foo.js';",
+        },
+        output,
+        loadsFoo: false,
+      });
+    }
+  },
+);
+
+test.each<Mode>(['wrap-all', 'on-demand'])(
   'retains nested namespace objects referenced by opaque consumers (%s)',
   async (mode) => {
     await check(mode, {

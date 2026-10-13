@@ -48,7 +48,7 @@ impl TransformPluginContext {
         .collect();
       match chain.as_slice() {
         [] => self.create_sourcemap(),
-        [single] => (*single).clone(),
+        [single] => drop_unreached_sources_and_names((*single).clone()),
         // TODO Here could be cache result for pervious sourcemap_chain, only remapping new sourcemap chain
         _ => drop_unreached_sources_and_names(collapse_sourcemaps(&chain)),
       }

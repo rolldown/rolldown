@@ -72,9 +72,12 @@ impl Plugin for Earlier {
 }
 
 /// Replaces the module with code that has no relation to the original and returns
-/// `map: { mappings: '' }`.
+/// `map: { mappings: '' }`. With `with_sources`, the map still lists the original module and its
+/// code, as some tools emit for empty maps.
 #[derive(Debug)]
-struct Replace;
+struct Replace {
+  with_sources: bool,
+}
 
 impl Plugin for Replace {
   fn name(&self) -> Cow<'static, str> {
@@ -93,9 +96,16 @@ impl Plugin for Replace {
     if !is_action(args.id) {
       return Ok(None);
     }
+    let map = if self.with_sources {
+      let mut builder = SourceMapBuilder::default();
+      builder.add_source_and_content(args.id, args.code);
+      builder.into_sourcemap().into_owned()
+    } else {
+      empty_sourcemap()
+    };
     Ok(Some(rolldown_plugin::HookTransformOutput {
       code: Some("export const save = () => 'proxy';\n".to_string()),
-      map: HookTransformOutputMap::Sourcemap(Box::new(empty_sourcemap())),
+      map: HookTransformOutputMap::Sourcemap(Box::new(map)),
       ..Default::default()
     }))
   }
@@ -139,13 +149,13 @@ fn assert_no_leak(map: &SourceMap) {
 }
 
 /// Builds `entry.js` with the `Replace` plugin, preceded by `Earlier` when `with_earlier` is set.
-async fn run(with_earlier: bool) {
+async fn run(with_earlier: bool, replace: Replace) {
   let combined_sourcemap = Arc::default();
   let mut plugins = vec![];
   if with_earlier {
     plugins.push(Plugin::new_shared(Earlier));
   }
-  plugins.push(Plugin::new_shared(Replace));
+  plugins.push(Plugin::new_shared(replace));
   plugins.push(Plugin::new_shared(CombinedSourcemap(Arc::clone(&combined_sourcemap))));
   let mut bundler = Bundler::with_plugins(
     BundlerOptions {
@@ -180,10 +190,16 @@ async fn run(with_earlier: bool) {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn empty_mappings_drops_original_source() {
-  Box::pin(run(false)).await;
+  Box::pin(run(false, Replace { with_sources: false })).await;
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn empty_mappings_after_real_map_drops_original_source() {
-  Box::pin(run(true)).await;
+  Box::pin(run(true, Replace { with_sources: false })).await;
+}
+
+/// The empty map is the only map in the chain, so `getCombinedSourcemap` has nothing to collapse.
+#[tokio::test(flavor = "multi_thread")]
+async fn empty_mappings_with_sources_drops_original_source() {
+  Box::pin(run(false, Replace { with_sources: true })).await;
 }

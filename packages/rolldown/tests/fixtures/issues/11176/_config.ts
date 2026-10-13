@@ -7,11 +7,16 @@ const SECRET = 'SERVER_ONLY_SECRET';
 const isAction = (id: string) => /action(-without-earlier-map)?\.js$/.test(id);
 const combinedSourcemaps = new Map<string, SourceMap>();
 
-function expectNoLeak(map: { sources: (string | null)[]; sourcesContent?: (string | null)[] }) {
+function expectNoLeak(map: {
+  sources: (string | null)[];
+  sourcesContent?: (string | null)[];
+  names: string[];
+}) {
   expect(map.sources.filter((source) => source && isAction(source))).toStrictEqual([]);
   expect((map.sourcesContent ?? []).filter((content) => content?.includes(SECRET))).toStrictEqual(
     [],
   );
+  expect(map.names.filter((name) => name.includes(SECRET))).toStrictEqual([]);
 }
 
 // https://github.com/rolldown/rolldown/issues/11176: a transform returning `map: { mappings: '' }`
@@ -28,7 +33,10 @@ export default defineTest({
         name: 'earlier',
         transform(code, id) {
           if (!id.endsWith('/action.js')) return;
-          return { code: `/* earlier */\n${code}`, map: { mappings: ';AAAA' } };
+          return {
+            code: `/* earlier */\n${code}`,
+            map: { mappings: ';AAAAA', names: ['SERVER_ONLY_SECRET_NAME'] },
+          };
         },
       },
       {

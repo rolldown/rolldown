@@ -6,7 +6,7 @@ use std::{
 use rolldown::{Bundler, BundlerOptions, InputItem, SourceMapType};
 use rolldown_common::Output;
 use rolldown_plugin::{HookTransformOutputMap, HookUsage, Plugin};
-use rolldown_sourcemap::{SourceMap, empty_sourcemap};
+use rolldown_sourcemap::{SourceMap, SourceMapBuilder, empty_sourcemap};
 use string_wizard::{MagicString, SourceMapOptions};
 
 /// A transform that returns `map: { mappings: '' }` declares that its output has no mapping back
@@ -14,6 +14,7 @@ use string_wizard::{MagicString, SourceMapOptions};
 /// sourcemap, even when an earlier transform produced a real map.
 /// See: https://github.com/rolldown/rolldown/issues/11176
 const SECRET: &str = "SERVER_ONLY_SECRET";
+const SECRET_NAME: &str = "SERVER_ONLY_SECRET_NAME";
 
 fn is_action(id: &str) -> bool {
   id.ends_with("action.js")
@@ -47,6 +48,21 @@ impl Plugin for Earlier {
       include_content: true,
       source: args.id.into(),
     });
+    // Name the first mapped segment like a TypeScript transform would name an identifier.
+    let mut builder = SourceMapBuilder::default();
+    let source = builder.add_source_and_content(args.id, args.code);
+    let name = builder.add_name(SECRET_NAME);
+    for (index, token) in map.get_tokens().enumerate() {
+      builder.add_token(
+        token.get_dst_line(),
+        token.get_dst_col(),
+        token.get_src_line(),
+        token.get_src_col(),
+        Some(source),
+        (index == 0).then_some(name),
+      );
+    }
+    let map = builder.into_sourcemap().into_owned();
     Ok(Some(rolldown_plugin::HookTransformOutput {
       code: Some(magic_string.to_string()),
       map: HookTransformOutputMap::Sourcemap(Box::new(map)),
@@ -118,6 +134,8 @@ fn assert_no_leak(map: &SourceMap) {
     "leaked sourcesContent: {:?}",
     map.get_source_contents().collect::<Vec<_>>()
   );
+  let names = map.get_names().collect::<Vec<_>>();
+  assert!(!names.contains(&SECRET_NAME), "leaked name: {names:?}");
 }
 
 /// Builds `entry.js` with the `Replace` plugin, preceded by `Earlier` when `with_earlier` is set.

@@ -5,7 +5,8 @@ use rolldown_common::{
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_sourcemap::{
-  Source, SourceMap, SourceMapSource, collapse_sourcemaps, drop_unreached_sources, empty_sourcemap,
+  Source, SourceMap, SourceMapSource, collapse_sourcemaps, drop_unreached_sources_and_names,
+  empty_sourcemap,
 };
 use rolldown_utils::concat_string;
 
@@ -117,7 +118,7 @@ pub fn collapse_module_sourcemap(
     }
     // A plugin map without mappings (e.g. `{ mappings: '' }`) or an omitted one leaves earlier
     // sources unreached. Drop them so the module's original code does not leak (rolldown#11176).
-    Some(drop_unreached_sources(collapse_sourcemaps(&owned_chain)))
+    Some(drop_unreached_sources_and_names(collapse_sourcemaps(&owned_chain)))
   }
 }
 

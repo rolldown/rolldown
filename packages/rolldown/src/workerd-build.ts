@@ -52,6 +52,41 @@ async function buildWithInstance(
 }
 
 /**
+ * Record a failed private dispose on the build error without throwing, so the
+ * build error is always what `build()` rejects with. The disposal error becomes
+ * `cause`; a cause the error already has (a release error, or its own) is kept
+ * beside it in an AggregateError. A thrown value that is not an object, or
+ * whose `cause` cannot be read or can be neither assigned nor redefined, drops
+ * the disposal error.
+ * See internal-docs/workerd-managed-instance/implementation.md (invariant 6).
+ */
+function attachDisposeError(error: unknown, disposeError: unknown): void {
+  if (Object(error) !== error) return;
+  const target = error as { cause?: unknown };
+  try {
+    const value =
+      target.cause === undefined
+        ? disposeError
+        : new AggregateError(
+            [target.cause, disposeError],
+            'Disposing the private workerd Rolldown instance also failed',
+          );
+    let assigned = false;
+    try {
+      assigned = Reflect.set(target, 'cause', value);
+    } catch {}
+    if (!assigned) {
+      Object.defineProperty(target, 'cause', {
+        value,
+        writable: true,
+        configurable: true,
+        enumerable: false,
+      });
+    }
+  } catch {}
+}
+
+/**
  * Bundle once, in memory, with the rollup-style options (`input`, `plugins`,
  * `output`, ...). Builds on the same instance may overlap; a build on another
  * instance rejects while one is active, so share one module-scope instance.
@@ -78,19 +113,9 @@ export async function build(options: WorkerdBuildOptions): Promise<RolldownOutpu
   try {
     result = await buildWithInstance(owned, inputOptions, output);
   } catch (error) {
-    // The build error stays primary; a failed dispose rides along as `cause`.
-    // A cause the error already has (a release error, or its own) is kept
-    // beside it in an AggregateError, so neither is lost.
-    await disposePrivateInstance(owned).catch((disposeError: unknown) => {
-      if (!(error instanceof Error) || !Object.isExtensible(error)) return;
-      error.cause =
-        error.cause === undefined
-          ? disposeError
-          : new AggregateError(
-              [error.cause, disposeError],
-              'Disposing the private workerd Rolldown instance also failed',
-            );
-    });
+    await disposePrivateInstance(owned).catch((disposeError: unknown) =>
+      attachDisposeError(error, disposeError),
+    );
     throw error;
   }
   await disposePrivateInstance(owned);

@@ -262,11 +262,17 @@ describe('workerd build() private-instance disposal', () => {
     }
   });
 
-  // Through the real `RolldownBuild` failure path, which attaches its release
-  // error as the build error's `cause` before the private dispose runs.
-  test('a failed build keeps both a release error and a stuck private dispose', async () => {
-    const pluginError = new Error('plugin failed');
-    const releaseError = new TypeError('release failed');
+  const pluginError = new Error('plugin failed');
+  const releaseError = new TypeError('release failed');
+  const ownCause = new Error('own cause');
+
+  // Forces both cleanups of a failed private build to fail: `generate()`
+  // reports `pluginError`, the option-box release throws `releaseError`, and
+  // every private dispose rejects with the loader's retryable error, so
+  // `build({ module })` gives up after three tries.
+  async function withStuckPrivateDispose(
+    body: (workerd: typeof workerdEntryTypes, disposeCalls: () => number) => Promise<void>,
+  ): Promise<void> {
     let disposeCalls = 0;
     vi.resetModules();
     vi.doMock('../src/binding.cjs', () => ({
@@ -305,25 +311,104 @@ describe('workerd build() private-instance disposal', () => {
       }),
     }));
     try {
-      const workerd = await import('../src/workerd');
-      const failure = (await workerd
-        .build({ module: {} as WebAssembly.Module, input: 'x' })
-        .catch((error: unknown) => error)) as Error & { errors?: unknown[] };
-      expect(failure).toBeInstanceOf(Error);
-      expect(failure.message).toMatch(/^Build failed with 1 error/);
-      expect(failure.errors).toEqual([pluginError]);
-      expect(disposeCalls).toBe(3);
-      // Both cleanup errors stay reachable, in the order they happened.
-      expect(failure.cause).toBeInstanceOf(AggregateError);
-      const [first, second] = (failure.cause as AggregateError).errors;
-      expect(first).toBe(releaseError);
-      expect(second).toMatchObject({ code: 'ERR_NAPI_WASI_CLEANUP_PENDING' });
+      await body(await import('../src/workerd'), () => disposeCalls);
     } finally {
       vi.doUnmock('../src/binding.cjs');
       vi.doUnmock('../src/utils/create-bundler-option');
       vi.doUnmock('../src/rolldown-binding.wasip1-deferred.js');
       vi.resetModules();
     }
+  }
+
+  // An `options` hook error reaches the private dispose as thrown: it fails
+  // before `RolldownBuild` exists, so no release error is attached first.
+  function rejectionFromOptionsHook(
+    workerd: typeof workerdEntryTypes,
+    thrown: unknown,
+  ): Promise<unknown> {
+    const plugin: Plugin = {
+      name: 'throws-from-options',
+      options() {
+        throw thrown;
+      },
+    };
+    return workerd
+      .build({ module: {} as WebAssembly.Module, input: 'x', plugins: [plugin] })
+      .catch((error: unknown) => error);
+  }
+
+  // Through the real `RolldownBuild` failure path, which attaches its release
+  // error as the build error's `cause` before the private dispose runs.
+  test('a failed build keeps both a release error and a stuck private dispose', async () => {
+    await withStuckPrivateDispose(async (workerd, disposeCalls) => {
+      const failure = (await workerd
+        .build({ module: {} as WebAssembly.Module, input: 'x' })
+        .catch((error: unknown) => error)) as Error & { errors?: unknown[] };
+      expect(failure).toBeInstanceOf(Error);
+      expect(failure.message).toMatch(/^Build failed with 1 error/);
+      expect(failure.errors).toEqual([pluginError]);
+      expect(disposeCalls()).toBe(3);
+      // Both cleanup errors stay reachable, in the order they happened.
+      expect(failure.cause).toBeInstanceOf(AggregateError);
+      const [first, second] = (failure.cause as AggregateError).errors;
+      expect(first).toBe(releaseError);
+      expect(second).toMatchObject({ code: 'ERR_NAPI_WASI_CLEANUP_PENDING' });
+    });
+  });
+
+  test.each<[string, PropertyDescriptor]>([
+    ['read-only', { value: ownCause, writable: false, configurable: true }],
+    ['getter-only', { get: () => ownCause, configurable: true }],
+    [
+      'throwing-setter',
+      {
+        get: () => ownCause,
+        set() {
+          throw new RangeError('cause setter failed');
+        },
+        configurable: true,
+      },
+    ],
+  ])('a stuck private dispose joins a %s `cause` and keeps the build error', async (_, cause) => {
+    await withStuckPrivateDispose(async (workerd, disposeCalls) => {
+      const hookError = new Error('options hook failed');
+      Object.defineProperty(hookError, 'cause', cause);
+      expect(await rejectionFromOptionsHook(workerd, hookError)).toBe(hookError);
+      expect(disposeCalls()).toBe(3);
+      expect(hookError.cause).toBeInstanceOf(AggregateError);
+      const [first, second] = (hookError.cause as AggregateError).errors;
+      expect(first).toBe(ownCause);
+      expect(second).toMatchObject({ code: 'ERR_NAPI_WASI_CLEANUP_PENDING' });
+    });
+  });
+
+  test('a stuck private dispose becomes the `cause` of a build error from another realm', async () => {
+    await withStuckPrivateDispose(async (workerd) => {
+      const hookError = vm.runInNewContext('new Error("options hook failed")') as Error;
+      expect(hookError).not.toBeInstanceOf(Error);
+      expect(await rejectionFromOptionsHook(workerd, hookError)).toBe(hookError);
+      expect(hookError.cause).toMatchObject({ code: 'ERR_NAPI_WASI_CLEANUP_PENDING' });
+    });
+  });
+
+  // Nothing else is thrown in place of a build error that cannot carry the
+  // disposal error.
+  test('a frozen build error is rethrown unchanged when the private dispose is stuck', async () => {
+    await withStuckPrivateDispose(async (workerd, disposeCalls) => {
+      const hookError = Object.freeze(new Error('options hook failed', { cause: ownCause }));
+      expect(await rejectionFromOptionsHook(workerd, hookError)).toBe(hookError);
+      expect(disposeCalls()).toBe(3);
+      expect(hookError.cause).toBe(ownCause);
+    });
+  });
+
+  test('a thrown primitive is rethrown unchanged when the private dispose is stuck', async () => {
+    await withStuckPrivateDispose(async (workerd, disposeCalls) => {
+      expect(await rejectionFromOptionsHook(workerd, 'options hook failed')).toBe(
+        'options hook failed',
+      );
+      expect(disposeCalls()).toBe(3);
+    });
   });
 });
 

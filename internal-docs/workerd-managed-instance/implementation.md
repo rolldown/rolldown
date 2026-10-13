@@ -49,15 +49,22 @@ context and unshared memory.
    dispose of its private instance (the loader's retryable
    `ERR_NAPI_WASI_CLEANUP_PENDING`) a few macrotasks apart; if it still fails,
    the error is reported and the handle is dropped. When the build also
-   failed, the disposal error becomes the build error's `cause`; if that error
-   already has one (a release error, or its own), the `cause` becomes an
-   `AggregateError` of that cause and then the disposal error. A completed
-   `dispose()` destroys the environment and drops the handle's loader
-   reference; the Memory itself is reclaimed only once nothing references it
-   and the host garbage-collects, which workerd rarely does. An instance
-   dropped without a completed `dispose()` is reclaimed the same way (nothing
-   in the loader or emnapi pins it), so keeping a stuck handle would not free
-   it sooner; the entry holds no registry of them.
+   failed, the build error is always what `build()` rejects with; the disposal
+   error becomes its `cause`, or, if it already has one (a release error, or
+   its own), an `AggregateError` of that cause and then the disposal error. A
+   `cause` that refuses the assignment (read-only, getter-only, or a throwing
+   setter) is redefined as a data property. A thrown value that is not an
+   object, or whose `cause` cannot be read or can be neither assigned nor
+   redefined (a frozen error, a non-extensible one with no own `cause`, or a
+   non-configurable `cause` that refuses the assignment), drops the disposal
+   error; nothing is thrown in its place (`attachDisposeError` in
+   `workerd-build.ts`). A completed `dispose()` destroys the environment and
+   drops the handle's loader reference; the Memory itself is reclaimed only
+   once nothing references it and the host garbage-collects, which workerd
+   rarely does. An instance dropped without a completed `dispose()` is
+   reclaimed the same way (nothing in the loader or emnapi pins it), so
+   keeping a stuck handle would not free it sooner; the entry holds no
+   registry of them.
 
 The public handle has no raw binding exports: only `build()` reaches them, and
 it counts every use. Objects taken through the internal `instanceExports()`

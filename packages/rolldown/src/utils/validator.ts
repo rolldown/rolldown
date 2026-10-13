@@ -876,6 +876,7 @@ const InlineCommonChunksExcludeItemSchema = v.union([
 
 const ExperimentalInlineCommonChunksSchema = v.strictObject({
   maxSize: v.optional(v.number()),
+  maxCopies: v.optional(v.number()),
   exclude: v.optional(
     v.union([InlineCommonChunksExcludeItemSchema, v.array(InlineCommonChunksExcludeItemSchema)]),
   ),

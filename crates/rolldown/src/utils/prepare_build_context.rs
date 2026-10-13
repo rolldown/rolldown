@@ -197,6 +197,14 @@ fn verify_inline_common_chunks_options(
   if max_size == 0.0 {
     return;
   }
+  if let Some(max_copies) = options.max_copies
+    && (!inline_common_chunks_max_size_is_valid(max_copies) || max_copies < 1.0)
+  {
+    errors.push(BuildDiagnostic::invalid_option(InvalidOptionType::InlineCommonChunksRequirement(
+      "`maxCopies` to be a positive integer or `Infinity`",
+    )));
+    return;
+  }
   let mut require = |condition: bool, requirement: &'static str| {
     if !condition {
       errors.push(BuildDiagnostic::invalid_option(
@@ -267,6 +275,7 @@ pub fn prepare_build_context(
     .filter(|options| options.max_size.unwrap_or(0.0) > 0.0)
     .map(|options| NormalizedInlineCommonChunksOptions {
       max_size: options.max_size.unwrap_or(0.0) as usize,
+      max_copies: options.max_copies.map_or(usize::MAX, |max_copies| max_copies as usize),
       exclude: options.exclude.clone().unwrap_or_default(),
     });
   // `experimentalInlineCommonChunks` needs wrap-all strict execution order, so it turns the option

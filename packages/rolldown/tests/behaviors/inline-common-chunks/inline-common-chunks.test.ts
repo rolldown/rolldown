@@ -73,6 +73,34 @@ async function differential(name: string, options: CaseOptions) {
 }
 
 describe('experimentalInlineCommonChunks', () => {
+  test.each([2, 3, undefined, Infinity])(
+    'limits actual factory copies with maxCopies %s',
+    async (maxCopies) => {
+      const pair = await differential(`copy-budget-${maxCopies}`, {
+        input: { a: './a.js', b: './b.js', c: './c.js' },
+        modules: { ...twoEntries, './c.js': twoEntries['./a.js'] },
+        inline: { maxSize: 4096, maxCopies },
+      });
+      if (maxCopies === 2) {
+        expect(carriers(pair.on)).toEqual([]);
+        expect(chunkContaining(pair.on, 'shared.js')).toBeDefined();
+      } else expectInlined(pair, 'shared.js');
+    },
+  );
+
+  test.each([0, -1, 1.5, NaN, -Infinity, Number.MAX_SAFE_INTEGER + 1])(
+    'rejects invalid maxCopies %s',
+    async (maxCopies) => {
+      await expect(
+        buildCase('invalid-copy-budget', 'on', {
+          input: { a: './a.js', b: './b.js' },
+          modules: twoEntries,
+          inline: { maxSize: 4096, maxCopies },
+        }),
+      ).rejects.toThrow(/maxCopies/);
+    },
+  );
+
   test('two entries share one record, loaded in either order and interleaved', async () => {
     const pair = await differential('two-entries', {
       input: { a: './a.js', b: './b.js', 'a-then-b': './a-then-b.js', 'b-then-a': './b-then-a.js' },

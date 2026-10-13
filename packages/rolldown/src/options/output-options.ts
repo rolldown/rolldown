@@ -1076,6 +1076,12 @@ export type ExperimentalInlineCommonChunksOptions = {
    */
   maxSize?: number;
   /**
+   * Maximum files that print a common chunk's factory, after inherited registrations remove
+   * redundant copies. Chunks exceeding the budget stay files. Positive integer or `Infinity`;
+   * omitted means unlimited. Rechecked after rejected chunks change placement.
+   */
+  maxCopies?: number;
+  /**
    * A matcher for module ids, or an array of them: a string (matched as a regular expression), a
    * RegExp, or a function, each applied like {@linkcode CodeSplittingGroup.test | test}. A common
    * chunk is kept as a file when any of its modules matches any matcher.

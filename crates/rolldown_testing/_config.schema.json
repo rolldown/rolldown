@@ -1416,6 +1416,14 @@
             "null"
           ],
           "format": "double"
+        },
+        "maxCopies": {
+          "description": "A record printed into more files than this stays a file. Omitted means no limit.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
         }
       },
       "additionalProperties": false

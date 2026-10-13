@@ -457,6 +457,7 @@ fn normalize_code_splitting(
           .map(|inner| -> napi::Result<InlineCommonChunksOptions> {
             Ok(InlineCommonChunksOptions {
               max_size: inner.max_size,
+              max_copies: inner.max_copies,
               exclude: inner
                 .exclude
                 .map(|exclude| {

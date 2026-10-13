@@ -32,6 +32,7 @@ pub struct BindingManualCodeSplittingOptions {
 #[derive(Debug)]
 pub struct BindingInlineCommonChunksOptions {
   pub max_size: Option<f64>,
+  pub max_copies: Option<f64>,
   #[napi(ts_type = "Array<string | RegExp | ((ids: Array<string>) => Uint8Array)>")]
   #[debug("InlineCommonChunksExclude(...)")]
   pub exclude: Option<Vec<BindingMatchGroupTest>>,

@@ -2457,6 +2457,7 @@ export interface BindingInjectImportNamespace {
  */
 export interface BindingInlineCommonChunksOptions {
   maxSize?: number
+  maxCopies?: number
   exclude?: Array<string | RegExp | ((ids: Array<string>) => Uint8Array)>
 }
 

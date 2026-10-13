@@ -140,3 +140,7 @@ Dynamic imports inside records contribute an edge from every file that can print
 - `../code-splitting/implementation.md` — chunk creation, runtime placement, the unused-runtime sweep this hooks into
 - `../code-splitting/design.md` — strict execution order and `OrderWrapState`
 - `../runtime-helpers/implementation.md` — the registry helpers
+
+## Copy budget
+
+`maxCopies` limits output files carrying a record after placement removes inherited factories. A record above the positive-integer budget remains a file. Selection recomputes placement and budgets until stable. Omission or `Infinity` keeps unlimited behavior. This controls repeated factory bytes, not evaluation count: the registry still evaluates each module once.

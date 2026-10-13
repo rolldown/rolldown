@@ -4,7 +4,7 @@ use rolldown_common::{
   ImportRecordMeta, ModuleIdx, RuntimeHelper, StmtInfoMeta, SymbolOrMemberExprRef, WrapKind,
 };
 use rolldown_utils::indexmap::FxIndexSet;
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::{LOG_TARGET, place::compute_placement};
 use crate::{
@@ -39,7 +39,11 @@ impl GenerateStage<'_> {
     link_state: &CrossChunkLinkState,
     order_state: &mut OrderWrapState,
   ) -> bool {
-    let Some(max_size) = self.options.inline_common_chunks.as_ref().map(|options| options.max_size)
+    let Some((max_size, max_copies)) = self
+      .options
+      .inline_common_chunks
+      .as_ref()
+      .map(|options| (options.max_size, options.max_copies))
     else {
       return false;
     };
@@ -158,12 +162,28 @@ impl GenerateStage<'_> {
         |chunk_idx| chunk_graph.chunk_table[chunk_idx].exec_order,
         &records,
       );
+      // Count only factories actually printed, after inheritance removes redundant copies.
+      // Unlimited budgets retain the existing selection cost.
+      let copies = (max_copies != usize::MAX).then(|| {
+        let mut copies = FxHashMap::<ChunkIdx, usize>::default();
+        for record in placement.carried.values().flatten() {
+          *copies.entry(*record).or_default() += 1;
+        }
+        copies
+      });
       let rejected = records
         .iter()
         .copied()
         .filter_map(|record| {
           if !placement.is_carried(record) {
             return Some((record, "no file reads it"));
+          }
+          if copies
+            .as_ref()
+            .and_then(|copies| copies.get(&record))
+            .is_some_and(|count| *count > max_copies)
+          {
+            return Some((record, "printed into more files than maxCopies"));
           }
           let eval_carrier = placement
             .carried

@@ -136,8 +136,8 @@ is marked re-export-transparent when it has no local executable body, generated 
 assignment, unconditional execution dependency, or `keepNames` work. Each consumer then routes
 through it only to the leaf bindings that consumer retained.
 
-An interop ESM wrapper can also make a direct re-export-only barrel initialize all retained
-exports together, including bindings used only by a dynamic consumer. ESM-only consumer-local
+A barrel whose retained statements are direct re-exports can have an interop ESM wrapper that
+initializes all retained exports together, including bindings used only by a dynamic consumer. ESM-only consumer-local
 routing bypasses that shared initializer only when the entire static dependency graph can
 initialize independently of outside state. This proof is stronger than `moduleSideEffects: false`:
 an initializer such as `export const snapshot = importedValue` has no write side effect, but
@@ -192,8 +192,8 @@ inline mode as tree shaking. Module-global leaf or namespace liveness is deliber
 because another importer can make the same canonical symbol live without retaining it for this
 consumer.
 
-The CJS-carrier optimization is deliberately restricted to source modules whose body consists
-entirely of direct re-exports. Tree shaking must be enabled, and the module must not be in a
+The CJS-carrier optimization is restricted to modules whose retained body consists entirely of
+direct re-exports. Tree shaking must be enabled, and the module must not be in a
 synchronous `import`/`require` SCC, be the target of an opaque CommonJS `require()`, carry top-level await or a
 TLA dependency, expose dynamic exports, require a missing-export shim, or be a concatenated
 wrapper. CJS `export *` is also excluded because its namespace is dynamic. These shapes keep the
@@ -208,14 +208,12 @@ namespace getters.
 Code-splitting placement makes the same consumer-local decision before chunks exist. A probe
 `OrderWrapState` is built from the wrap-all structural plan, and entry reachability routes an
 incoming record through the shared resolver. Once a non-entry consumer-local barrel is reached,
-its module-wide `load_dependencies` union is not traversed; only recursively eager carriers and
-consumer-local waypoint modules are unconditional. Named leaves and pure carriers get bits only
-from the incoming consumer that chose them. Namespace getters retain the nested namespace objects
-they reference even when forwarding statements are removed. A waypoint with an observably used namespace object
-receives bits only from consumers of that object; propagating it through unrelated routes would
-load every namespace getter target prematurely. Other waypoint modules stay reachable without
-reopening their union of unrelated leaves. A barrel that is itself
-a user or dynamic entry exposes its complete namespace and therefore uses the conservative full
+its module-wide `load_dependencies` union is not traversed. The resolver selects leaves and pure
+carriers for each incoming consumer. The unconditional waypoint walk retains recursively eager
+carriers and inner routes without opaque namespace use. Symbol-derived dependencies and retained
+namespace getters keep namespace owners reachable even when forwarding statements are removed.
+Opaque namespace use can place leaf modules in a statically loaded shared chunk. A barrel that is
+itself a user or dynamic entry exposes its complete namespace and uses the conservative full
 traversal and an entry prologue containing every statically known target.
 
 A wrapped mixed ESM module keeps its own guarded initializer for local code and mandatory dependencies.

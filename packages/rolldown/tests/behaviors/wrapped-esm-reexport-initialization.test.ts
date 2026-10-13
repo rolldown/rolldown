@@ -193,6 +193,42 @@ test.each<Mode>(['wrap-all', 'on-demand'])(
 );
 
 test.each<Mode>(['wrap-all', 'on-demand'])(
+  'routes re-exports through modules with unused local declarations (%s)',
+  async (mode) => {
+    for (const output of [
+      {},
+      { format: 'cjs', entryFileNames: '[name].cjs', chunkFileNames: '[name]-[hash].cjs' },
+    ] satisfies OutputOptions[]) {
+      await check(mode, {
+        modules: {
+          './barrel.js': "export { Foo } from './mixed.js'; export { bar } from './bar.js';",
+          './mixed.js': "export { Foo } from './foo.js'; export const Item = { name: 'Item' };",
+        },
+        output,
+        loadsFoo: false,
+      });
+      await check(mode, {
+        modules: {
+          './barrel.js': "export * as space from './mixed.js'; export { bar } from './bar.js';",
+          './mixed.js': "export { Foo } from './foo.js'; export const Item = { name: 'Item' };",
+          './forward.js': "import { space } from './barrel.js'; export { space };",
+          './lib.js':
+            "import { space } from './forward.js'; export const read = () => space.Foo.name;",
+          './entry.js': `
+            export async function run() {
+              const { bar } = require('./req.js');
+              return { bar, name: (await import('./lib.js')).read() };
+            }
+          `,
+        },
+        output,
+        loadsFoo: false,
+      });
+    }
+  },
+);
+
+test.each<Mode>(['wrap-all', 'on-demand'])(
   'retains nested namespace objects referenced by opaque consumers (%s)',
   async (mode) => {
     await check(mode, {

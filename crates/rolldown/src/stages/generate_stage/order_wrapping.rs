@@ -226,7 +226,10 @@ pub(super) fn consumer_local_reexport_plan(
         continue;
       };
       if ast.program().body.is_empty()
-        || !ast.program().body.iter().all(statement_is_direct_reexport)
+        || !ast.program().body.iter().enumerate().all(|(stmt_idx, stmt)| {
+          !meta.stmt_info_included.has_bit(StmtInfoIdx::from(stmt_idx + 1))
+            || statement_is_direct_reexport(stmt)
+        })
       {
         continue;
       }

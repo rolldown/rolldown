@@ -164,7 +164,12 @@ export class RolldownBuild {
         void result.output;
       }
     } catch (e) {
-      option.releaseOptionBoxes();
+      // The build error stays primary; a failed release rides along as `cause`.
+      try {
+        option.releaseOptionBoxes();
+      } catch (releaseError) {
+        if (e instanceof Error && Object.isExtensible(e)) e.cause ??= releaseError;
+      }
       await option.stopWorkers?.();
       throw e;
     }

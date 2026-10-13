@@ -605,23 +605,55 @@ describe('workerd build() against the built dist', () => {
 // its instance's emnapi env, so what the plugin keeps must hold no wrapper, or
 // the disposed instance's Memory stays reachable.
 describe('workerd build() data a plugin keeps', () => {
+  let dist: ReturnType<typeof loadDistWorkerd> | undefined;
+
+  // The build's rejection message and its cause's, or undefined when it
+  // succeeds. Only strings leave this frame: a kept build error keeps the
+  // instance alive through its unformatted stack trace, which these cases do
+  // not cover.
+  async function settledMessage(
+    build: Promise<unknown>,
+  ): Promise<{ message: string; cause: string | undefined } | undefined> {
+    try {
+      await build;
+      return undefined;
+    } catch (error) {
+      if (!(error instanceof Error)) return { message: String(error), cause: undefined };
+      const cause = error.cause instanceof Error ? error.cause.message : undefined;
+      return { message: error.message, cause };
+    }
+  }
+
   // Builds once on a fresh instance, disposes it, and reports whether its
-  // Memory was garbage-collected.
-  async function buildAndCollect(plugin: Plugin, output?: OutputOptions): Promise<boolean> {
+  // Memory was garbage-collected. With `expectedError`, the build must reject
+  // with that error rather than anything its cleanup threw.
+  async function buildAndCollect(
+    plugin: Plugin,
+    output?: OutputOptions,
+    expectedError?: RegExp,
+  ): Promise<boolean> {
     v8.setFlagsFromString('--expose-gc');
     const gc: () => void = vm.runInNewContext('gc');
-    const { workerd, wasmModule } = await loadDistWorkerd();
+    const { workerd, wasmModule } = await (dist ??= loadDistWorkerd());
     const instance = await workerd.createInstance(wasmModule);
     const memory = new WeakRef(instance.memory);
+    let settled: Awaited<ReturnType<typeof settledMessage>>;
     try {
-      await workerd.build({
-        instance,
-        input: 'virt:entry.js',
-        plugins: [makeVirtualGraph(3).plugin(), plugin],
-        output: { format: 'esm', ...output },
-      });
+      settled = await settledMessage(
+        workerd.build({
+          instance,
+          input: 'virt:entry.js',
+          plugins: [makeVirtualGraph(3).plugin(), plugin],
+          output: { format: 'esm', ...output },
+        }),
+      );
     } finally {
       await instance.dispose();
+    }
+    if (expectedError === undefined) {
+      expect(settled).toBeUndefined();
+    } else {
+      expect(settled?.message).toMatch(expectedError);
     }
     for (let i = 0; i < 4; i++) {
       gc();
@@ -744,4 +776,161 @@ describe('workerd build() data a plugin keeps', () => {
     },
     180_000,
   );
+
+  // A plugin may freeze what it keeps. Freezing is shallow, so the release must
+  // still detach the wrapper, and it must not fail a successful build or
+  // replace the error of a failed one.
+  for (const fails of [false, true]) {
+    const outcome = fails ? 'a build that fails in generateBundle' : 'a successful build';
+    const failure = 'frozen-case-failure';
+    const failLate: Plugin = {
+      name: 'fails-late',
+      generateBundle() {
+        if (fails) throw new Error(failure);
+      },
+    };
+    const expectedError = fails ? new RegExp(failure) : undefined;
+
+    distTest(
+      `frozen buildStart / buildEnd contexts are released on ${outcome}`,
+      async () => {
+        const kept: PluginContext[] = [];
+        const collected = await buildAndCollect(
+          {
+            ...failLate,
+            buildStart() {
+              kept.push(Object.freeze(this));
+            },
+            buildEnd() {
+              kept.push(Object.freeze(this));
+            },
+          },
+          undefined,
+          expectedError,
+        );
+
+        expect(collected).toBe(true);
+        expect(kept).toHaveLength(2);
+        for (const context of kept) {
+          expect(Object.isFrozen(context)).toBe(true);
+          expect(typeof context.meta.rolldownVersion).toBe('string');
+          expect(() => context.getModuleInfo('virt:entry.js')).toThrow(/already released/);
+        }
+      },
+      180_000,
+    );
+
+    distTest(
+      `frozen renderStart options are released on ${outcome}`,
+      async () => {
+        let keptInput: NormalizedInputOptions | undefined;
+        let keptOutput: NormalizedOutputOptions | undefined;
+        const collected = await buildAndCollect(
+          {
+            ...failLate,
+            renderStart(outputOptions, inputOptions) {
+              keptOutput = Object.freeze(outputOptions);
+              keptInput = Object.freeze(inputOptions);
+            },
+          },
+          undefined,
+          expectedError,
+        );
+
+        expect(collected).toBe(true);
+        expect(Object.isFrozen(keptInput)).toBe(true);
+        expect(Object.isFrozen(keptOutput)).toBe(true);
+        expect(keptInput!.input).toEqual(['virt:entry.js']);
+        expect(typeof keptInput!.cwd).toBe('string');
+        expect(keptOutput!.format).toBe('es');
+        expect(keptOutput!.entryFileNames).toBe('[name].js');
+      },
+      180_000,
+    );
+
+    distTest(
+      `a frozen groups[].name context is released on ${outcome}`,
+      async () => {
+        const kept: ChunkingContext[] = [];
+        const infos: ModuleInfo[] = [];
+        const collected = await buildAndCollect(
+          failLate,
+          {
+            codeSplitting: {
+              groups: [
+                {
+                  name(moduleId, ctx) {
+                    kept.push(Object.freeze(ctx));
+                    const info = ctx.getModuleInfo(moduleId);
+                    if (info) infos.push(info);
+                    return null;
+                  },
+                },
+              ],
+            },
+          },
+          expectedError,
+        );
+
+        expect(collected).toBe(true);
+        expect(infos.length).toBeGreaterThan(0);
+        for (const info of infos) {
+          expect(info.id).toMatch(/^virt:/);
+          expect(typeof info.code).toBe('string');
+        }
+        expect(Object.isFrozen(kept[0])).toBe(true);
+        expect(() => kept[0].getModuleInfo(infos[0].id)).toThrow(/already released/);
+      },
+      180_000,
+    );
+
+    // Freezing the context's own cell (an internal field) makes its release
+    // throw: the rest must still be released, the error must surface after,
+    // and a failed build must keep its own error.
+    distTest(
+      `a release that throws still releases the rest on ${outcome}`,
+      async () => {
+        const { workerd, wasmModule } = await (dist ??= loadDistWorkerd());
+        const instance = await workerd.createInstance(wasmModule);
+        const others: PluginContext[] = [];
+        let settled: Awaited<ReturnType<typeof settledMessage>>;
+        try {
+          settled = await settledMessage(
+            workerd.build({
+              instance,
+              input: 'virt:entry.js',
+              plugins: [
+                makeVirtualGraph(3).plugin(),
+                {
+                  name: 'freezes-its-cell',
+                  buildStart() {
+                    Object.freeze((this as unknown as { bindingCell: object }).bindingCell);
+                  },
+                },
+                {
+                  ...failLate,
+                  buildStart() {
+                    others.push(this);
+                  },
+                },
+              ],
+              output: { format: 'esm' },
+            }),
+          );
+        } finally {
+          await instance.dispose();
+        }
+
+        expect(others).toHaveLength(1);
+        expect(() => others[0].getModuleInfo('virt:entry.js')).toThrow(/already released/);
+        if (fails) {
+          expect(settled?.message).toMatch(failure);
+          expect(settled?.cause).toMatch(/read only property 'value'/);
+        } else {
+          expect(settled?.message).toMatch(/read only property 'value'/);
+        }
+      },
+      180_000,
+    );
+  }
 });

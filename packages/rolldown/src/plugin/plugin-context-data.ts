@@ -26,6 +26,26 @@ interface BindingContextOwner {
   releaseBinding(): void;
 }
 
+type ReleaseFailure = { error: unknown } | undefined;
+
+// Releases every item even when one throws, so one failure cannot leave the
+// rest attached; keeps the first error for the caller to rethrow once the
+// whole release is done.
+function releaseEach<T>(
+  items: Iterable<T>,
+  release: (item: T) => void,
+  failure: ReleaseFailure,
+): ReleaseFailure {
+  for (const item of items) {
+    try {
+      release(item);
+    } catch (error) {
+      failure ??= { error };
+    }
+  }
+  return failure;
+}
+
 export class PluginContextData {
   moduleOptionMap: Map<string, ModuleOptions> = new Map();
   resolveOptionsMap: Map<number, PluginContextResolveOptions> = new Map();
@@ -212,10 +232,23 @@ export class PluginContextData {
   // Terminal release once a build, `scan()` or watcher close settles. The only
   // drain for context boxes; also covers option boxes when the invalidate
   // callback never fired (failed builds, `scan()`). Idempotent; no-op off
-  // threadless WASI.
+  // threadless WASI. Both parts run to the end before the first error, if
+  // any, is rethrown.
   releaseRetainedOptionBoxes(): void {
-    this.#releaseContextBoxes();
-    this.#releaseOptionBoxes();
+    let failure: ReleaseFailure;
+    try {
+      this.#releaseContextBoxes();
+    } catch (error) {
+      failure = { error };
+    }
+    try {
+      this.#releaseOptionBoxes();
+    } catch (error) {
+      failure ??= { error };
+    }
+    if (failure) {
+      throw failure.error;
+    }
   }
 
   // `releaseOrDefer`, not `dropInner()`: a fire-and-forget `this.load()` /
@@ -232,14 +265,17 @@ export class PluginContextData {
     if (!shouldEagerlyFreeOutputs()) {
       return;
     }
-    for (const context of this.#retainedContexts) {
-      context.releaseBinding();
-    }
+    let failure = releaseEach(
+      this.#retainedContexts,
+      (context) => context.releaseBinding(),
+      undefined,
+    );
     this.#retainedContexts.clear();
-    for (const box of this.#retainedContextBoxes) {
-      releaseOrDefer(box);
-    }
+    failure = releaseEach(this.#retainedContextBoxes, releaseOrDefer, failure);
     this.#retainedContextBoxes.clear();
+    if (failure) {
+      throw failure.error;
+    }
   }
 
   // Copy box-backed values into the cached wrappers, release the boxes, then
@@ -261,12 +297,11 @@ export class PluginContextData {
         // "already released" error; cleanup must not throw or stop.
       }
     }
-    for (const box of this.#retainedOptionBoxes) {
-      box.dropInner();
-    }
+    let failure = releaseEach(this.#retainedOptionBoxes, (box) => box.dropInner(), undefined);
     this.#retainedOptionBoxes.clear();
-    for (const wrapper of wrappers) {
-      wrapper?.releaseBinding();
+    failure = releaseEach(wrappers, (wrapper) => wrapper?.releaseBinding(), failure);
+    if (failure) {
+      throw failure.error;
     }
   }
 }

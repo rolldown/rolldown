@@ -5,24 +5,30 @@ import { snapshotModuleInfo, transformModuleInfo } from '../utils/transform-modu
 import type { ModuleInfo } from './module-info';
 
 export class ChunkingContextImpl {
-  private moduleInfoCache: Map<string, ModuleInfo> | undefined = new Map();
-  // Undefined after `releaseBinding()`.
-  private context: BindingChunkingContext | undefined;
+  // Everything this context writes after construction, in one cell: a
+  // classifier may `Object.freeze` the context it receives, and freezing is
+  // shallow. `binding` is empty after `releaseBinding()`; `moduleInfoCache`
+  // after `clearModuleInfoCache()`.
+  private readonly state: {
+    binding: BindingChunkingContext | undefined;
+    moduleInfoCache: Map<string, ModuleInfo> | undefined;
+  };
 
   constructor(
     context: BindingChunkingContext,
     private pluginContextData: PluginContextData,
   ) {
-    this.context = context;
+    this.state = { binding: context, moduleInfoCache: new Map() };
   }
 
   // A TS-private method, not `#private`, as in `PluginContextImpl`: a context
   // reached through a Proxy or a derived object must keep working.
   private binding(): BindingChunkingContext {
-    if (this.context === undefined) {
+    const context = this.state.binding;
+    if (context === undefined) {
       throw new Error('This chunking context has already released its binding object');
     }
-    return this.context;
+    return context;
   }
 
   /**
@@ -31,11 +37,11 @@ export class ChunkingContextImpl {
    * survives the swap.
    */
   useBindingContext(context: BindingChunkingContext): void {
-    this.context = context;
+    this.state.binding = context;
   }
 
   clearModuleInfoCache(): void {
-    this.moduleInfoCache = undefined;
+    this.state.moduleInfoCache = undefined;
   }
 
   /**
@@ -45,11 +51,11 @@ export class ChunkingContextImpl {
    * that instance's memory too. Module infos already handed out stay readable.
    */
   releaseBinding(): void {
-    this.context = undefined;
+    this.state.binding = undefined;
   }
 
   getModuleInfo(moduleId: string): ModuleInfo | null {
-    const cached = this.moduleInfoCache?.get(moduleId);
+    const cached = this.state.moduleInfoCache?.get(moduleId);
     if (cached) {
       return cached;
     }
@@ -72,7 +78,7 @@ export class ChunkingContextImpl {
           option.invalidate = true;
         },
       });
-      this.moduleInfoCache?.set(moduleId, info);
+      this.state.moduleInfoCache?.set(moduleId, info);
       return info;
     }
     return null;

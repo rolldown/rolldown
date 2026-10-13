@@ -38,6 +38,15 @@ export interface DroppableBox {
   dropInner(): unknown;
 }
 
+/**
+ * Holds a JavaScript facade's binding wrapper until its `releaseBinding()`.
+ * A plugin may `Object.freeze` a facade it keeps; freezing is shallow, so the
+ * release can still clear `value`.
+ */
+export interface BindingCell<T> {
+  value: T | undefined;
+}
+
 interface InFlightNativeCalls {
   pending: number;
   dropRequested: boolean;

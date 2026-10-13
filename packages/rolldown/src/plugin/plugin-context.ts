@@ -22,7 +22,7 @@ import type { PartialNull } from '../types/utils';
 import { type AssetSource, bindingAssetSource } from '../utils/asset-source';
 import { bindingifyPreserveEntrySignatures } from '../utils/bindingify-input-options';
 import { isPathFragment, unreachable } from '../utils/misc';
-import { beginNativeCall, endNativeCall } from '../utils/threadless-free';
+import { type BindingCell, beginNativeCall, endNativeCall } from '../utils/threadless-free';
 import type { BindingifyPluginArgs } from './bindingify-plugin';
 import { fsModule, type RolldownFsModule } from './fs';
 import type { CustomPluginOptions, ModuleOptions, Plugin, ResolvedId } from './index';
@@ -278,8 +278,8 @@ export interface PluginContext extends MinimalPluginContext {
 export class PluginContextImpl extends MinimalPluginContextImpl {
   fs: RolldownFsModule = fsModule;
   getModuleInfo: GetModuleInfo;
-  // Undefined after `releaseBinding()`.
-  private context: BindingPluginContext | undefined;
+  // Empty after `releaseBinding()`.
+  private readonly bindingCell: BindingCell<BindingPluginContext>;
   constructor(
     private outputOptions: OutputOptions,
     context: BindingPluginContext,
@@ -291,8 +291,8 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     private currentLoadingModule?: string,
   ) {
     super(onLog, logLevel, plugin.name!, watchMode);
-    this.context = context;
-    // Reads the field on each call rather than closing over `context`, so a
+    this.bindingCell = { value: context };
+    // Reads the cell on each call rather than closing over `context`, so a
     // copy of `getModuleInfo` the plugin keeps does not keep the wrapper alive.
     this.getModuleInfo = (id: string) => this.data.getModuleInfo(id, this.binding());
   }
@@ -300,10 +300,11 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
   // Not a `#private` method: a context reached through a Proxy or a derived
   // object (`Object.create(this)`) must keep working.
   private binding(): BindingPluginContext {
-    if (this.context === undefined) {
+    const context = this.bindingCell.value;
+    if (context === undefined) {
       throw new Error('This plugin context has already released its binding object');
     }
-    return this.context;
+    return context;
   }
 
   /**
@@ -315,7 +316,7 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
    * flight holds its own reference, so its deferred box release still runs.
    */
   releaseBinding(): void {
-    this.context = undefined;
+    this.bindingCell.value = undefined;
   }
 
   public async load(

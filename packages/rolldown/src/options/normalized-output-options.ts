@@ -4,6 +4,7 @@ import { lazyProp } from '../decorators/lazy';
 import type { SourcemapIgnoreListOption, SourcemapPathTransformOption } from '../types/misc';
 import { getLazyFields, PlainObjectLike } from '../types/plain-object-like';
 import type { StringOrRegExp } from '../types/utils';
+import type { BindingCell } from '../utils/threadless-free';
 import type {
   AddonFunction,
   AssetFileNamesFunction,
@@ -148,8 +149,8 @@ export class NormalizedOutputOptionsImpl
   // original object from the release path.
   #boxReads: Map<string, unknown> | undefined;
 
-  // Undefined after `releaseBinding()`.
-  private inner: BindingNormalizedOptions | undefined;
+  // Empty after `releaseBinding()`.
+  private readonly bindingCell: BindingCell<BindingNormalizedOptions>;
 
   constructor(
     inner: BindingNormalizedOptions,
@@ -157,16 +158,17 @@ export class NormalizedOutputOptionsImpl
     private normalizedOutputPlugins: RolldownPlugin[],
   ) {
     super();
-    this.inner = inner;
+    this.bindingCell = { value: inner };
   }
 
   // `materializeBoxBackedFields()` caches every value read from the box before
   // the release, so no getter reaches this then.
   #binding(): BindingNormalizedOptions {
-    if (this.inner === undefined) {
+    const inner = this.bindingCell.value;
+    if (inner === undefined) {
       throw new Error('These normalized output options have already released their binding object');
     }
-    return this.inner;
+    return inner;
   }
 
   #boxRead<T>(key: string, read: () => T): T {
@@ -203,7 +205,7 @@ export class NormalizedOutputOptionsImpl
    * would keep that instance's memory too.
    */
   releaseBinding(): void {
-    this.inner = undefined;
+    this.bindingCell.value = undefined;
   }
 
   @lazyProp

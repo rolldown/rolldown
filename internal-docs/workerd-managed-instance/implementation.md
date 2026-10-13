@@ -86,6 +86,14 @@ Both are needed: a kept plugin context reaches the options through its
 ...) still hold their wrapper, so each keeps its instance's Memory alive until
 the plugin drops it.
 
+A plugin may `Object.freeze` what it keeps, so each of these objects holds
+its wrapper in a small cell object (`BindingCell` in `utils/threadless-free.ts`,
+`state` in `ChunkingContextImpl`, which also holds its module-info cache)
+rather than a plain field: freezing is shallow, so the release can still clear
+the cell. The release runs every item even when one throws, then rethrows the
+first error. On a failed build, `RolldownBuild#build` keeps the build error and
+attaches a release error as its `cause`.
+
 ## Tests
 
 `packages/workerd-tests/suite.mjs` (real workerd via Miniflare) and `memory.mjs`

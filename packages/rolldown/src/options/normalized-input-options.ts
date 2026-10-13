@@ -3,6 +3,7 @@ import type { BindingNormalizedOptions } from '../binding.cjs';
 import { lazyProp } from '../decorators/lazy';
 import type { LogHandler } from '../log/log-handler';
 import { getLazyFields, PlainObjectLike } from '../types/plain-object-like';
+import type { BindingCell } from '../utils/threadless-free';
 
 /** @category Plugin APIs */
 export interface NormalizedInputOptions {
@@ -21,8 +22,8 @@ export interface NormalizedInputOptions {
 }
 
 export class NormalizedInputOptionsImpl extends PlainObjectLike implements NormalizedInputOptions {
-  // Undefined after `releaseBinding()`.
-  private inner: BindingNormalizedOptions | undefined;
+  // Empty after `releaseBinding()`.
+  private readonly bindingCell: BindingCell<BindingNormalizedOptions>;
 
   constructor(
     inner: BindingNormalizedOptions,
@@ -30,16 +31,17 @@ export class NormalizedInputOptionsImpl extends PlainObjectLike implements Norma
     private inputPlugins: RolldownPlugin[],
   ) {
     super();
-    this.inner = inner;
+    this.bindingCell = { value: inner };
   }
 
   // `materializeBoxBackedFields()` caches every field before the release, so
   // no getter reaches this then.
   #binding(): BindingNormalizedOptions {
-    if (this.inner === undefined) {
+    const inner = this.bindingCell.value;
+    if (inner === undefined) {
       throw new Error('These normalized input options have already released their binding object');
     }
-    return this.inner;
+    return inner;
   }
 
   /**
@@ -60,7 +62,7 @@ export class NormalizedInputOptionsImpl extends PlainObjectLike implements Norma
    * would keep that instance's memory too.
    */
   releaseBinding(): void {
-    this.inner = undefined;
+    this.bindingCell.value = undefined;
   }
 
   @lazyProp

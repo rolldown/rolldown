@@ -1,0 +1,27 @@
+crates/rolldown/src/esm_init_obligations.rs
+  s_7b2a6ae90950dd::t_616980ad427ed9 98,352,509,515,518-528,530-539,542,545-546,548-549,551,554,556-561,564-590,592,596-606,609-620
+crates/rolldown/src/stages/generate_stage/order_wrapping.rs
+  s_7b2a6ae90950dd::t_9bbcd1b307c23a 18,169-171,174,176,202,207,235-236,318-321,330-335,337-343,346,354-397
+internal-docs/code-splitting/implementation.md
+  s_7b2a6ae90950dd::t_36a7ed9ea45cb7 101,120-124,128,132
+internal-docs/code-splitting/design.md
+  s_7b2a6ae90950dd::t_fbe16aceca5b8c 139-163,213-216
+crates/rolldown/src/stages/generate_stage/compute_cross_chunk_links.rs
+  s_7b2a6ae90950dd::t_9f597cf44b4b34 714-715,933-939
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "1bd7d260c1bc624831bbff800e79201fadd88215",
+  "prompts": {},
+  "sessions": {
+    "s_7b2a6ae90950dd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11469-befc-7c02-a2ba-975feb5f6cd9",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

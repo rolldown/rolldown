@@ -1,0 +1,493 @@
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/forwarder_with_dynamic_exports/artifacts.snap
+  s_7b2a6ae90950dd::t_23719e2acd5096 10,15,23,46,67-77,83-85,88,99,101,104-109,119,127-132,138
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/pure_definer_nested_star_barrel_split_readers/artifacts.snap
+  s_7b2a6ae90950dd::t_25f9aece811af8 137
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/retained_star_opaque_cycle/main.js
+  s_7b2a6ae90950dd::t_e366f30d34a533 10-11
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/pure_definer_star_barrel_split_readers/artifacts.snap
+  s_7b2a6ae90950dd::t_33d0c3bba92bdd 9,11-12,14,21,23-24,33-35,37,39-41,43,55,60,66-67,95-105,123
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/dead_barrel_namespace_member/package.json
+  s_7b2a6ae90950dd::t_c5def0078b50fc 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/artifacts.snap
+  s_7b2a6ae90950dd::t_80f649d0f24b35 1-136
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_snapshot/_test.mjs
+  s_7b2a6ae90950dd::t_75ccde96860c05 1-6
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_exception/mixed.js
+  s_7b2a6ae90950dd::t_c9ee607dcc446e 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/exception/mixed.js
+  s_7b2a6ae90950dd::t_bd1dd3ca8634e7 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_snapshot/leaf.cjs
+  s_7b2a6ae90950dd::t_8b6bc2de16ec3d 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/_config.json
+  s_7b2a6ae90950dd::t_45c0dcabf4c7fb 1-40
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_exception/_config.json
+  s_7b2a6ae90950dd::t_e4e00aefb50dae 1-45
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/dynamic_entry_retained_star_named/package.json
+  s_7b2a6ae90950dd::t_9d0ee8d724eb37 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_sibling/main.js
+  s_7b2a6ae90950dd::t_2bf51b8077dfed 1-11
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/namespace_ambiguous_star_reexports/common-a.js
+  s_7b2a6ae90950dd::t_4d2c82fed62d2a 1,3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_snapshot/mixed.js
+  s_7b2a6ae90950dd::t_538fdbdd3df136 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/assigned/mixed.js
+  s_7b2a6ae90950dd::t_f0a0bca0377236 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/exception/leaf.js
+  s_7b2a6ae90950dd::t_3318a9f16c4465 1-8
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_mixed/local.js
+  s_7b2a6ae90950dd::t_ea27a051c3a77d 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/assigned/lazy.js
+  s_7b2a6ae90950dd::t_adebab262867ad 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_mixed/_test.mjs
+  s_7b2a6ae90950dd::t_2fac6ed0c8fed1 1-6
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/local_call_assignment/leaf.js
+  s_7b2a6ae90950dd::t_f671cebc144d43 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_mixed/lazy.js
+  s_7b2a6ae90950dd::t_1a89e8ad5fd82b 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/namespace_dead_star_reexports/package.json
+  s_7b2a6ae90950dd::t_ee8096ef80cd7d 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/transparent_plain_reexport_chunk_cycle/artifacts.snap
+  s_7b2a6ae90950dd::t_4f9e56d54c4326 10,18,46-67,73-76,79,87,91,108-130,136-139,143-144,146-147,151,154,158-159,187-209,215-218,222-223,225-226,230,234,251,259,286-308,313-318,320,328,332
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/dead_barrel_reexport/package.json
+  s_7b2a6ae90950dd::t_44086190905217 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_exception/main.js
+  s_7b2a6ae90950dd::t_4e599ebd7eea0d 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/dead_barrel_namespace_member/artifacts.snap
+  s_7b2a6ae90950dd::t_65ada67f31a319 26-27,105-106
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_class/_config.json
+  s_7b2a6ae90950dd::t_29b6204709591c 1-40
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/exception/main.js
+  s_7b2a6ae90950dd::t_7d86a69b209d86 1-8
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_sibling/artifacts.snap
+  s_7b2a6ae90950dd::t_89a4b41c3b4d59 1-234
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/emergent_cycle_excluded_forwarder_import/artifacts.snap
+  s_7b2a6ae90950dd::t_1f289e58a589f4 10,32,119,141
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/dynamic_entry_retained_star_fanout/common-a.js
+  s_7b2a6ae90950dd::t_60d870300ad38e 1,3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/assigned_pure_call/mixed.js
+  s_7b2a6ae90950dd::t_50819234cf4a29 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_sibling/_config.json
+  s_7b2a6ae90950dd::t_4b2ea43e7f883f 1-45
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_barrel/leaf.js
+  s_7b2a6ae90950dd::t_f471184be2433f 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/dead_barrel_namespace_inlined_member/constants.js
+  s_7b2a6ae90950dd::t_458388b51e9b30 3,5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/assigned/main.js
+  s_7b2a6ae90950dd::t_4881918af4fdd4 1-8
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_call/_config.json
+  s_7b2a6ae90950dd::t_7264bd360cb5ad 1-40
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_call/_test.mjs
+  s_7b2a6ae90950dd::t_d7e1d25142a384 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/lazy/artifacts.snap
+  s_7b2a6ae90950dd::t_9b50dd5e5209b6 21,24-25
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_snapshot/main.js
+  s_7b2a6ae90950dd::t_fb0eba4d98b54e 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_snapshot/_config.json
+  s_7b2a6ae90950dd::t_c1858d83331d1c 1-45
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/export_star_as_namespace_folded_member/artifacts.snap
+  s_7b2a6ae90950dd::t_0b08520980fb25 20-21,36-62,66-67,75-81,83,101,113-132,153,169
+crates/rolldown/src/esm_init_obligations.rs
+  s_7b2a6ae90950dd::t_36e465163ae9d3 92,100-101,117,147,291,298,309-314,331,340,360-362,408,417-426,462-465,473,579-580,585-645,713-716,724-725,1124
+internal-docs/code-splitting/implementation.md
+  s_7b2a6ae90950dd::t_acfa6dcc335438 110,124-126,130,132,148,196
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/export_star_reexported_namespace_dead_reader/artifacts.snap
+  s_7b2a6ae90950dd::t_8568b56a8a7d96 22-23,25-32,34,42-43,58-84,119,124,137-155,175
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/function_local/extra.js
+  s_7b2a6ae90950dd::t_5c4e2f113be7bf 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/local_call_assignment/mixed.js
+  s_7b2a6ae90950dd::t_07fe72d41c701a 1-2
+internal-docs/code-splitting/design.md
+  s_7b2a6ae90950dd::t_95d8e1304e3fb5 203-227
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_unwrapped/named/artifacts.snap
+  s_7b2a6ae90950dd::t_bbf450f77ab078 9,27-28,37-39,43,54,72-73,82-84,88
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/function_local/mixed.js
+  s_7b2a6ae90950dd::t_89fd59f6b5454d 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/namespace_ambiguous_star_reexports/common-b.js
+  s_7b2a6ae90950dd::t_7ef19b13666db4 1,3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/export_star_reexported_namespace_opaque_read/artifacts.snap
+  s_7b2a6ae90950dd::t_7b00aae1798f71 21,36-54,66-67,81-87,89,107,119-138,158,174
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_sibling/local.js
+  s_7b2a6ae90950dd::t_7b42cbdae673ed 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/assigned_pure_call/leaf.js
+  s_7b2a6ae90950dd::t_841e73ba605598 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_sibling/mixed.js
+  s_7b2a6ae90950dd::t_52381ef8b210c2 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/exception/_test.mjs
+  s_7b2a6ae90950dd::t_900a6c95089265 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/dynamic_entry_retained_star/package.json
+  s_7b2a6ae90950dd::t_01781d9c69b8de 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/exception/artifacts.snap
+  s_7b2a6ae90950dd::t_b0c59f062ac62f 1-142
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_exception/leaf.cjs
+  s_7b2a6ae90950dd::t_fc2fb0b618b4b4 1-6
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/function_local/_test.mjs
+  s_7b2a6ae90950dd::t_8b4c751e61916f 1-6
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/assigned/_test.mjs
+  s_7b2a6ae90950dd::t_7829b99de07b33 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_mixed/main.js
+  s_7b2a6ae90950dd::t_6b247ce8d1e0e3 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/lazy/_test.mjs
+  s_7b2a6ae90950dd::t_48d7fcf4336574 2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/namespace_ambiguous_star_reexports/package.json
+  s_7b2a6ae90950dd::t_a79d159a41a3b3 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/function_local/main.js
+  s_7b2a6ae90950dd::t_0f251fc1977ada 1-11
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/assigned/artifacts.snap
+  s_7b2a6ae90950dd::t_5b5d34b4930b81 1-137
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/assigned/_config.json
+  s_7b2a6ae90950dd::t_cd3a779ed0d3af 1-40
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/retained_star_opaque_cycle/package.json
+  s_7b2a6ae90950dd::t_3c7d5eac7ecc43 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_sibling/lazy.js
+  s_7b2a6ae90950dd::t_3c095b241e4afd 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_sibling/leaf.js
+  s_7b2a6ae90950dd::t_9010038f28f287 1-6
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/visibility/_test.mjs
+  s_7b2a6ae90950dd::t_b9a6f2ac55524f 2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/dynamic_entry_retained_star_named/common.js
+  s_7b2a6ae90950dd::t_0c311448843c79 3,5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_unwrapped/namespace/artifacts.snap
+  s_7b2a6ae90950dd::t_dfd9e76aa6342a 9,27-28,37-39,43,54,72-73,82-84,88
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_exception/local.js
+  s_7b2a6ae90950dd::t_916e76ad984fae 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_call/artifacts.snap
+  s_7b2a6ae90950dd::t_75000aca903710 1-142
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/retained_star_smart_constant_cycle/package.json
+  s_7b2a6ae90950dd::t_6767d0d92e454e 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_sibling/_test.mjs
+  s_7b2a6ae90950dd::t_c2ea27ce98ab82 1-6
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_sibling/package.json
+  s_7b2a6ae90950dd::t_076c4b05e65659 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/function_local/_config.json
+  s_7b2a6ae90950dd::t_bf7ecefc356547 1-40
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/exception/_config.json
+  s_7b2a6ae90950dd::t_5936c549dc9043 1-40
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/assigned_pure_call/_test.mjs
+  s_7b2a6ae90950dd::t_3b37aec85d26d0 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/assigned_pure_call/lazy.js
+  s_7b2a6ae90950dd::t_84d255389567f6 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_mixed/_config.json
+  s_7b2a6ae90950dd::t_a18a298ee10dce 1-45
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_barrel/mixed.js
+  s_7b2a6ae90950dd::t_a4a4b91bdc01d0 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/deep/_test.mjs
+  s_7b2a6ae90950dd::t_1a6e3fbd8416c9 2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/namespace_ambiguous_star_reexports/page-a.js
+  s_7b2a6ae90950dd::t_c5a2a5e288a3d7 7-8
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/assigned_pure_call/_config.json
+  s_7b2a6ae90950dd::t_4ad3008bd41736 1-40
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/namespace_dead_star_reexports/shadowed.js
+  s_7b2a6ae90950dd::t_37fe8760a40f40 1-2,4
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/local_call_assignment/artifacts.snap
+  s_7b2a6ae90950dd::t_be95210ba018cb 1-143
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/retained_star_renamed_cycle/package.json
+  s_7b2a6ae90950dd::t_33c764cde2bd29 1-7
+crates/rolldown/src/stages/generate_stage/order_analysis.rs
+  s_7b2a6ae90950dd::t_9c7b84fa7fe531 15,368-369,511
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_sibling/unrelated.cjs
+  s_7b2a6ae90950dd::t_8312a408265aba 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/dynamic_entry_retained_star_fanout/common-b.js
+  s_7b2a6ae90950dd::t_4c7cfebe4268f0 1,3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/dynamic_entry_retained_star/common.js
+  s_7b2a6ae90950dd::t_b25d1c2701fc1e 3,5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_snapshot/local.js
+  s_7b2a6ae90950dd::t_4981ee2033bb63 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_unwrapped/star/artifacts.snap
+  s_7b2a6ae90950dd::t_d763058dc8c65b 9,22-23,32-34,38,49,62-63,72-74,78
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/retained_star_smart_constant_cycle/common.js
+  s_7b2a6ae90950dd::t_68ceab1b933451 3,5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_barrel/lazy.js
+  s_7b2a6ae90950dd::t_52613c6ba5fb2b 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_snapshot/lazy.js
+  s_7b2a6ae90950dd::t_8c23aef2450c6d 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/retained_star_renamed_cycle/common.js
+  s_7b2a6ae90950dd::t_7421dceccf0bbe 3,5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/function_local/lazy.js
+  s_7b2a6ae90950dd::t_e41d76edf1fa40 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/pure_definer_delegated_breadth_nested_barrels/artifacts.snap
+  s_7b2a6ae90950dd::t_a6c4a2c9c13ec3 147-148
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/strip_plain_chunk_imports/artifacts.snap
+  s_7b2a6ae90950dd::t_f3df429fe08b93 6,22-41,62,68,90-109,130,152,158
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/dead_barrel_namespace_member/common.js
+  s_7b2a6ae90950dd::t_a1b095adbd35f7 3-4,6
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/retained_star_smart_constant_cycle/main.js
+  s_7b2a6ae90950dd::t_fc284fa0df350e 5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_barrel/artifacts.snap
+  s_7b2a6ae90950dd::t_2414bc9c7342a4 1-134
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_mixed/mixed.js
+  s_7b2a6ae90950dd::t_4c369f49886bc0 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/assigned_pure_call/main.js
+  s_7b2a6ae90950dd::t_a8126dddb83b57 1-8
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/function_local/artifacts.snap
+  s_7b2a6ae90950dd::t_1fd8e257fb4d5f 1-229
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/function_local/leaf.js
+  s_7b2a6ae90950dd::t_e5552dea4c079f 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/exception/lazy.js
+  s_7b2a6ae90950dd::t_44a2972f6bde0f 1
+crates/rolldown/src/stages/link_stage/patch_module_dependencies.rs
+  s_7b2a6ae90950dd::t_4c97413aa8fa39 1-2,6,243-246,265-379
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/emergent_init_cycle_eager_interop/artifacts.snap
+  s_7b2a6ae90950dd::t_366bd7c0525638 40,54,148,162
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/local_call_assignment/_config.json
+  s_7b2a6ae90950dd::t_f9be2bc00a74a9 1-40
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_class/_test.mjs
+  s_7b2a6ae90950dd::t_1e5e89b6043c71 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_barrel/_config.json
+  s_7b2a6ae90950dd::t_7857c772fd80cb 1-40
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/assigned/leaf.js
+  s_7b2a6ae90950dd::t_9277d06b50f8ab 1-4
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_exception/_test.mjs
+  s_7b2a6ae90950dd::t_914ebf71a0b1ef 1-4
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/local_call_assignment/_test.mjs
+  s_7b2a6ae90950dd::t_42b6d4fdfb224f 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_mixed/leaf.cjs
+  s_7b2a6ae90950dd::t_e1125d1acbfe82 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/_test.mjs
+  s_7b2a6ae90950dd::t_49538cda9e9d56 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/assigned_pure_call/artifacts.snap
+  s_7b2a6ae90950dd::t_9c3c4eb08578a7 1-143
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/retained_star_opaque_cycle/common.js
+  s_7b2a6ae90950dd::t_31e20738aca10c 3,5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_barrel/main.js
+  s_7b2a6ae90950dd::t_79f577efa5162e 1-8
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/function_local/pure.js
+  s_7b2a6ae90950dd::t_180d10fe2544e7 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/local_call_assignment/main.js
+  s_7b2a6ae90950dd::t_994d2271e3bd9c 1-8
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_barrel/_test.mjs
+  s_7b2a6ae90950dd::t_660136818cb10b 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_class/artifacts.snap
+  s_7b2a6ae90950dd::t_7393eb846f59fb 1-146
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_sensitive/artifacts.snap
+  s_7b2a6ae90950dd::t_3c6572f7794f3c 9-10,25,29-30,38,47,60,79-87,97,108-109,124,128-129,137,146,159,178-186,196
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/namespace_dead_star_reexports/default-only.js
+  s_7b2a6ae90950dd::t_cfb7e81eaafdef 1-2,4
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/dynamic_entry_retained_star_fanout/package.json
+  s_7b2a6ae90950dd::t_60c4fb023bd196 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_sibling/extra.js
+  s_7b2a6ae90950dd::t_d5e511f4b97e1b 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/dead_barrel_namespace_inlined_member/package.json
+  s_7b2a6ae90950dd::t_ee757155e5fcee 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/namespace_dead_star_reexports/page-a.js
+  s_7b2a6ae90950dd::t_0bb94b54f8cb0f 7-8
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_barrel/local.js
+  s_7b2a6ae90950dd::t_48bfa719f652ed 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/cjs_exception/lazy.js
+  s_7b2a6ae90950dd::t_4035df6868797c 1
+crates/rolldown/src/stages/generate_stage/compute_wrapped_esm_init_metadata.rs
+  s_7b2a6ae90950dd::t_64dd7f2e87d628 20-22,247-249,255-264,390,401,413-415
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/local_call_assignment/lazy.js
+  s_7b2a6ae90950dd::t_92f7086a8813c8 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/dead_barrel_reexport/common.js
+  s_7b2a6ae90950dd::t_d39e300410e2db 3,5
+crates/rolldown/src/ast_scanner/impl_visit.rs
+  s_7b2a6ae90950dd::t_c16a1d5e98c660 68-69,91-92,109-119
+crates/rolldown/src/module_finalizers/finalizer_context.rs
+  s_7b2a6ae90950dd::t_18cdbd1513d4dd 148
+crates/rolldown/src/module_finalizers/mod.rs
+  s_7b2a6ae90950dd::t_762ca29f014e5f 43,97-98,235-239,253-255,276-278,402,411,416-421,451,475,507,526,619,623,1898-1906,2021,2029-2034,2132
+crates/rolldown/src/types/generator.rs
+  s_7b2a6ae90950dd::t_ebe0ff15dde236 74-76,79
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/dead_barrel_namespace_inlined_member/artifacts.snap
+  s_7b2a6ae90950dd::t_e86134092cdf8f 10-11,67-68,148-149
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/dead_barrel_reexport/artifacts.snap
+  s_7b2a6ae90950dd::t_4f5aee2ca0b624 26-27,105-106
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/dynamic_entry_retained_star/artifacts.snap
+  s_7b2a6ae90950dd::t_737916d77e5840 28-29,109-110
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/dynamic_entry_retained_star_fanout/artifacts.snap
+  s_7b2a6ae90950dd::t_1edfabe498e38c 27-28,36-37,119-120,128-129
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/dynamic_entry_retained_star_named/artifacts.snap
+  s_7b2a6ae90950dd::t_b757a4adb30cb6 28-29,109-110
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/emergent_cycle_eager_reexport_overlay/artifacts.snap
+  s_7b2a6ae90950dd::t_da6bbb27168ac4 9-10,12-16,29-33,35,43,45-51,64,72-73,75-79,84-87,116,136-138,178,193
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/emergent_cycle_partial_forwarder/artifacts.snap
+  s_7b2a6ae90950dd::t_a5921a84aa73a8 9-10,12-16,29-34,36,44,46-52,76,84-85,87-91,96-99,130,150-153,204,219
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/entry_fn_captures_wrapped_value/artifacts.snap
+  s_7b2a6ae90950dd::t_0d0cca7cb99ab5 22-26,38,100-104,115
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/issue_4920/artifacts.snap
+  s_7b2a6ae90950dd::t_15f0eaa72e2f65 51
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/issue_8777/artifacts.snap
+  s_7b2a6ae90950dd::t_59dee60cc39243 63-64
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/entry_order/_config.json
+  s_7b2a6ae90950dd::t_5afcc174238a08 1-34
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/entry_order/_test.mjs
+  s_7b2a6ae90950dd::t_ee4a2af3dd095e 1-6
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/entry_order/a.js
+  s_7b2a6ae90950dd::t_059d8d7ba310d2 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/entry_order/artifacts.snap
+  s_7b2a6ae90950dd::t_42c6452a540285 1-183
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/entry_order/b.js
+  s_7b2a6ae90950dd::t_bce23329e9edc6 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/entry_order/entry-a.js
+  s_7b2a6ae90950dd::t_b7a8b7b356c65e 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/entry_order/entry-b.js
+  s_7b2a6ae90950dd::t_95fb2ed09ef9e6 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/entry_order/from_a/_config.json
+  s_7b2a6ae90950dd::t_77d9e294942965 1-35
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/entry_order/from_a/_test.mjs
+  s_7b2a6ae90950dd::t_5f7c4d2b77e71a 1-6
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/entry_order/from_a/artifacts.snap
+  s_7b2a6ae90950dd::t_2831ce117d4fb5 1-183
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/entry_order/leaf-a.js
+  s_7b2a6ae90950dd::t_d2e66e282ef752 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/entry_order/leaf-b.js
+  s_7b2a6ae90950dd::t_5d081e018ea39d 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/entry_order/main.js
+  s_7b2a6ae90950dd::t_38dfaadf91490a 1-6
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/entry_order/package.json
+  s_7b2a6ae90950dd::t_0d87a544ad6d2b 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/excluded_forwarding_cycle/_config.json
+  s_7b2a6ae90950dd::t_5cdc8b3cc0e188 1-34
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/excluded_forwarding_cycle/_test.mjs
+  s_7b2a6ae90950dd::t_aaf6d2f0d9aa88 1-6
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/excluded_forwarding_cycle/a.js
+  s_7b2a6ae90950dd::t_30639d4307f64f 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/excluded_forwarding_cycle/artifacts.snap
+  s_7b2a6ae90950dd::t_54283d05b815e1 1-215
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/excluded_forwarding_cycle/b.js
+  s_7b2a6ae90950dd::t_ceba57003eb3c6 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/excluded_forwarding_cycle/entry-a.js
+  s_7b2a6ae90950dd::t_382c72cc5aaf96 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/excluded_forwarding_cycle/entry-b.js
+  s_7b2a6ae90950dd::t_70cd62005a8b14 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/excluded_forwarding_cycle/leaf-a.js
+  s_7b2a6ae90950dd::t_e0a8979fca3f6e 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/excluded_forwarding_cycle/leaf-b.js
+  s_7b2a6ae90950dd::t_85b681749d85f5 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/excluded_forwarding_cycle/main.js
+  s_7b2a6ae90950dd::t_a9195d7679863b 1-6
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/excluded_forwarding_cycle/package.json
+  s_7b2a6ae90950dd::t_f6abf61d364cb9 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/included_owner_cycle/_config.json
+  s_7b2a6ae90950dd::t_0eca547cd802e5 1-34
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/included_owner_cycle/_test.mjs
+  s_7b2a6ae90950dd::t_541f0078a55b84 1-11
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/included_owner_cycle/a.js
+  s_7b2a6ae90950dd::t_0fd72a7cd96f77 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/included_owner_cycle/artifacts.snap
+  s_7b2a6ae90950dd::t_ec894557d02cf2 1-215
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/included_owner_cycle/b.js
+  s_7b2a6ae90950dd::t_ad7b365ad52ad6 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/included_owner_cycle/c.js
+  s_7b2a6ae90950dd::t_5f41304cd61278 1-6
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/included_owner_cycle/d.js
+  s_7b2a6ae90950dd::t_55189a56bdffb6 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/included_owner_cycle/entry-a.js
+  s_7b2a6ae90950dd::t_09282fdfc147bd 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/included_owner_cycle/entry-b.js
+  s_7b2a6ae90950dd::t_8399b87941fb98 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/included_owner_cycle/from_a/_config.json
+  s_7b2a6ae90950dd::t_4109b094460d7a 1-35
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/included_owner_cycle/from_a/_test.mjs
+  s_7b2a6ae90950dd::t_ceb3b506bdf957 1-11
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/included_owner_cycle/from_a/artifacts.snap
+  s_7b2a6ae90950dd::t_a5f990dc63d852 1-215
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/included_owner_cycle/main.js
+  s_7b2a6ae90950dd::t_b4260e735eeb81 1-6
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/included_owner_cycle/package.json
+  s_7b2a6ae90950dd::t_3252fedd166b79 1-6
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/mixed_owner_entry_order/_config.json
+  s_7b2a6ae90950dd::t_9c3ddbe00ac87a 1-34
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/mixed_owner_entry_order/_test.mjs
+  s_7b2a6ae90950dd::t_ce8945db4bd5d6 1-18
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/mixed_owner_entry_order/a.js
+  s_7b2a6ae90950dd::t_a1f2e8ac2c17f0 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/mixed_owner_entry_order/artifacts.snap
+  s_7b2a6ae90950dd::t_9ca539db640f57 1-231
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/mixed_owner_entry_order/b.js
+  s_7b2a6ae90950dd::t_4ef094b6b1e39f 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/mixed_owner_entry_order/bridge-a.js
+  s_7b2a6ae90950dd::t_87d3cf6dfb4ba5 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/mixed_owner_entry_order/bridge-b.js
+  s_7b2a6ae90950dd::t_668b827a0cb211 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/mixed_owner_entry_order/entry-a.js
+  s_7b2a6ae90950dd::t_c97f59e31eec4b 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/mixed_owner_entry_order/entry-b.js
+  s_7b2a6ae90950dd::t_9f6a3ed03b9f93 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/mixed_owner_entry_order/from_a/_config.json
+  s_7b2a6ae90950dd::t_b88b176d05e0f5 1-35
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/mixed_owner_entry_order/from_a/_test.mjs
+  s_7b2a6ae90950dd::t_b7bb7c94d8a1cc 1-18
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/mixed_owner_entry_order/from_a/artifacts.snap
+  s_7b2a6ae90950dd::t_490953425c0c31 1-231
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/mixed_owner_entry_order/leaf-a.js
+  s_7b2a6ae90950dd::t_83b4826c074606 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/mixed_owner_entry_order/leaf-b.js
+  s_7b2a6ae90950dd::t_08f13325c9bc4f 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/mixed_owner_entry_order/main.js
+  s_7b2a6ae90950dd::t_389ffe17bc33f6 1-6
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/mixed_owner_entry_order/package.json
+  s_7b2a6ae90950dd::t_32cdce4432676b 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/nested_entry_order/_config.json
+  s_7b2a6ae90950dd::t_7c2e22d490529a 1-34
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/nested_entry_order/_test.mjs
+  s_7b2a6ae90950dd::t_323c4077717dc8 1-6
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/nested_entry_order/a.js
+  s_7b2a6ae90950dd::t_7dff7442b2bba6 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/nested_entry_order/artifacts.snap
+  s_7b2a6ae90950dd::t_8d2269a761f782 1-183
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/nested_entry_order/b.js
+  s_7b2a6ae90950dd::t_3936f1be1171a8 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/nested_entry_order/entry-a.js
+  s_7b2a6ae90950dd::t_ac7a5b795d804f 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/nested_entry_order/entry-b.js
+  s_7b2a6ae90950dd::t_84d4e3a689d127 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/nested_entry_order/inner-a.js
+  s_7b2a6ae90950dd::t_a3ac69168219cf 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/nested_entry_order/inner-b.js
+  s_7b2a6ae90950dd::t_137613db2668c5 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/nested_entry_order/leaf-a.js
+  s_7b2a6ae90950dd::t_87c6f31e078b2e 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/nested_entry_order/leaf-b.js
+  s_7b2a6ae90950dd::t_41968807e82816 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/nested_entry_order/main.js
+  s_7b2a6ae90950dd::t_b0789073327440 1-6
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/nested_entry_order/package.json
+  s_7b2a6ae90950dd::t_93de626a3d0d8c 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_call_entry_order/_config.json
+  s_7b2a6ae90950dd::t_7ea9ee1eb4e7b0 1-34
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_call_entry_order/_test.mjs
+  s_7b2a6ae90950dd::t_f31af0ab44912d 1-16
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_call_entry_order/a.js
+  s_7b2a6ae90950dd::t_88fdfb76d1f892 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_call_entry_order/artifacts.snap
+  s_7b2a6ae90950dd::t_0d73bc39612275 1-183
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_call_entry_order/b.js
+  s_7b2a6ae90950dd::t_17d41981ce5207 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_call_entry_order/entry-a.js
+  s_7b2a6ae90950dd::t_87f6c424c55a3e 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_call_entry_order/entry-b.js
+  s_7b2a6ae90950dd::t_4e5b6263a21eb9 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_call_entry_order/from_a/_config.json
+  s_7b2a6ae90950dd::t_3e032d21ab405f 1-35
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_call_entry_order/from_a/_test.mjs
+  s_7b2a6ae90950dd::t_b4c3bcaef8c882 1-16
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_call_entry_order/from_a/artifacts.snap
+  s_7b2a6ae90950dd::t_dd0ce548bc64b4 1-183
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_call_entry_order/leaf-a.js
+  s_7b2a6ae90950dd::t_61e42f82b74bc8 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_call_entry_order/leaf-b.js
+  s_7b2a6ae90950dd::t_6c42fab5bbc5a2 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_call_entry_order/main.js
+  s_7b2a6ae90950dd::t_09c9294a3a4fee 1-6
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/on_demand_reexport_snapshot/pure_call_entry_order/package.json
+  s_7b2a6ae90950dd::t_e84aeb1c0c729a 1-3
+crates/rolldown_common/src/types/stmt_info.rs
+  s_7b2a6ae90950dd::t_5f56b9ea652b37 136-137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "5dc77d4e99787c9b1e4b9d3f98a8e297f8b9a696",
+  "prompts": {},
+  "sessions": {
+    "s_7b2a6ae90950dd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11469-befc-7c02-a2ba-975feb5f6cd9",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

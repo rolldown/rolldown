@@ -1,0 +1,85 @@
+crates/rolldown/src/esm_init_obligations.rs
+  s_7b2a6ae90950dd::t_f3743693cc427b 33-34,452-459
+crates/rolldown/src/stages/generate_stage/order_wrap_state.rs
+  s_7b2a6ae90950dd::t_fcf704628f0585 175-176
+crates/rolldown/src/stages/link_stage/bind_imports_and_exports.rs
+  s_7b2a6ae90950dd::t_325672738b149a 289
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/_config.json
+  s_7b2a6ae90950dd::t_dd8b5242097350 1-28
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/_test.mjs
+  s_7b2a6ae90950dd::t_b6228969141669 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/artifacts.snap
+  s_7b2a6ae90950dd::t_2b64784e6518e0 1-50
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/deep/_config.json
+  s_7b2a6ae90950dd::t_0732f0e49eb11c 1-23
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/deep/_test.mjs
+  s_7b2a6ae90950dd::t_e92749f2ba10ef 1-8
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/deep/artifacts.snap
+  s_7b2a6ae90950dd::t_e03d48b7f934ee 1-53
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/deep/main.js
+  s_7b2a6ae90950dd::t_d44645bcd3c81b 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/deep/outer.js
+  s_7b2a6ae90950dd::t_816b34a0bc0d9c 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/lazy/_config.json
+  s_7b2a6ae90950dd::t_7f1adf97fbfa20 1-23
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/lazy/_test.mjs
+  s_7b2a6ae90950dd::t_09e41049345781 1-8
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/lazy/artifacts.snap
+  s_7b2a6ae90950dd::t_924d11aca4f956 1-76
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/lazy/lazy.js
+  s_7b2a6ae90950dd::t_62ad5efa7db725 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/lazy/main.js
+  s_7b2a6ae90950dd::t_616d8c4781a51d 1-6
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/leaf.js
+  s_7b2a6ae90950dd::t_d1d939eb227d08 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/main.js
+  s_7b2a6ae90950dd::t_beab92dd612eb9 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/mixed.js
+  s_7b2a6ae90950dd::t_9c42016ec307ce 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/outer.js
+  s_7b2a6ae90950dd::t_1190ac651dc27e 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/visibility/_config.json
+  s_7b2a6ae90950dd::t_3e7ddd3b4c06dd 1-41
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/visibility/_test.mjs
+  s_7b2a6ae90950dd::t_38c21c52d672a2 1-18
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/visibility/ambiguous.js
+  s_7b2a6ae90950dd::t_8fc71ff4584876 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/visibility/artifacts.snap
+  s_7b2a6ae90950dd::t_9082d90c86f9d3 1-148
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/visibility/defaulted.js
+  s_7b2a6ae90950dd::t_27f50e5af961d7 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/visibility/lazy.js
+  s_7b2a6ae90950dd::t_297146ea905dcc 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/visibility/leaf-default.js
+  s_7b2a6ae90950dd::t_e227ed284c4dd9 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/visibility/main.js
+  s_7b2a6ae90950dd::t_b5162c9ba2319f 1-12
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/visibility/mixed-default.js
+  s_7b2a6ae90950dd::t_d20307c2bc1cd6 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/visibility/other.js
+  s_7b2a6ae90950dd::t_daf6dbc1d2d91a 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/visibility/shadowed.js
+  s_7b2a6ae90950dd::t_77892c557f2c1c 1-2
+crates/rolldown/tests/rolldown/function/strict_execution_order_invariants/mod.rs
+  s_7b2a6ae90950dd::t_5c4827de088a51 287-294
+internal-docs/code-splitting/design.md
+  s_7b2a6ae90950dd::t_faa5e1141540f3 349,543
+internal-docs/code-splitting/implementation.md
+  s_7b2a6ae90950dd::t_1519e34cff164a 131,139
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "5dc8663a1ec1e04d6dc14de66ff1716a20af90ad",
+  "prompts": {},
+  "sessions": {
+    "s_7b2a6ae90950dd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11469-befc-7c02-a2ba-975feb5f6cd9",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

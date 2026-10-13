@@ -11,7 +11,7 @@ return {
 };
 ```
 
-Nothing in the output then maps back to the module's previous code, so that code is left out of the emitted sourcemap's `sources` and `sourcesContent`, even if earlier transforms returned sourcemaps.
+Nothing in the output then maps back to the module's previous code, so that code and its identifiers are left out of the emitted sourcemap's `sources`, `sourcesContent` and `names`, even if earlier transforms returned sourcemaps.
 
 If the transformation does not move code, you can preserve existing sourcemaps by returning `null`:
 

@@ -157,9 +157,9 @@ Eager consumers then initialize only the leaf bindings they use; a dynamic consu
 its own leaves when loaded. The leaves retain their existing memoized module initializers, live
 bindings and shared object identities. ESM-only route seeds require an interop `WrapKind::Esm`;
 every ESM-only outer forwarder must satisfy the same complete dependency proof. CJS carrier
-routes keep their separate record-based eligibility in the routing fixpoint. This keeps a
-hazard-free unwrapped graph byte-identical under on-demand mode. Direct `require()` targets and
-unproven graphs keep their guarded module initialization.
+routes keep their separate record-based eligibility in the routing fixpoint. Direct `require()`
+targets, inlined dynamic imports with code splitting disabled, and unproven graphs keep their
+guarded module initialization.
 
 A direct CJS re-export used to disqualify an otherwise pure barrel because the ordinary CJS
 finalizer generated `namespace = __toESM(require_cjs())` inside the shared barrel wrapper. Strict
@@ -210,7 +210,8 @@ Code-splitting placement makes the same consumer-local decision before chunks ex
 incoming record through the shared resolver. Once a non-entry consumer-local barrel is reached,
 its module-wide `load_dependencies` union is not traversed; only recursively eager carriers and
 consumer-local waypoint modules are unconditional. Named leaves and pure carriers get bits only
-from the incoming consumer that chose them. A waypoint with an observably used namespace object
+from the incoming consumer that chose them. Namespace getters retain the nested namespace objects
+they reference even when forwarding statements are removed. A waypoint with an observably used namespace object
 receives bits only from consumers of that object; propagating it through unrelated routes would
 load every namespace getter target prematurely. Other waypoint modules stay reachable without
 reopening their union of unrelated leaves. A barrel that is itself

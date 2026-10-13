@@ -136,6 +136,7 @@ test.each<Mode>(['wrap-all', 'on-demand'])(
     for (const output of [
       {},
       { minify: true },
+      { codeSplitting: false },
       { format: 'cjs', entryFileNames: '[name].cjs', chunkFileNames: '[name]-[hash].cjs' },
       {
         codeSplitting: {
@@ -147,7 +148,7 @@ test.each<Mode>(['wrap-all', 'on-demand'])(
       await check(mode, {
         input: output.codeSplitting ? { preserveEntrySignatures: 'allow-extension' } : undefined,
         output,
-        loadsFoo: false,
+        loadsFoo: output.codeSplitting === false,
       });
     }
     if (mode === 'wrap-all') {
@@ -168,6 +169,56 @@ test.each<Mode>(['wrap-all', 'on-demand'])(
         './forward.js': "export * from './foo.js';",
       },
       loadsFoo: false,
+    });
+  },
+);
+
+test.each<Mode>(['wrap-all', 'on-demand'])(
+  'retains nested namespace objects referenced by opaque consumers (%s)',
+  async (mode) => {
+    await check(mode, {
+      modules: {
+        './barrel.js': "export * as space from './namespace.js'; export { bar } from './bar.js';",
+        './namespace.js': "export * as Foo from './foo.js'; export * as bar from './bar.js';",
+        './lib.js': `
+          import * as api from './barrel.js';
+          export function read() { return JSON.stringify(api); }
+        `,
+        './entry.js': `
+          export async function run() {
+            const { bar } = require('./req.js');
+            return { bar, namespace: (await import('./lib.js')).read() };
+          }
+        `,
+      },
+      loadsFoo: true,
+    });
+  },
+);
+
+test.each<Mode>(['wrap-all', 'on-demand'])(
+  'initializes namespace members in manual chunks for an unwrapped consumer (%s)',
+  async (mode) => {
+    await check(mode, {
+      modules: {
+        './lib.js': `
+          import * as api from './barrel.js';
+          export function read() { return JSON.stringify(api); }
+        `,
+        './entry.js': `
+          export async function run() {
+            const { bar } = require('./req.js');
+            return { bar, namespace: (await import('./lib.js')).read() };
+          }
+        `,
+      },
+      output: {
+        codeSplitting: {
+          includeDependenciesRecursively: false,
+          groups: [{ name: 'leaf', test: /foo\.js$/ }],
+        },
+      },
+      loadsFoo: true,
     });
   },
 );

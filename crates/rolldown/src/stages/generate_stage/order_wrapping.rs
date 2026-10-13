@@ -62,6 +62,7 @@ pub(super) struct OrderLoweringInput<'a> {
   pub(super) used_symbol_refs_builder: &'a UsedSymbolRefsBuilder,
   pub(super) cyclic_modules: &'a FxHashSet<ModuleIdx>,
   pub(super) tree_shaking: bool,
+  pub(super) code_splitting_disabled: bool,
   pub(super) runtime_idx: ModuleIdx,
 }
 
@@ -460,7 +461,11 @@ fn consumer_local_reexport_records(
 }
 
 fn independently_initialized_esm_modules(input: &OrderLoweringInput<'_>) -> FxHashSet<ModuleIdx> {
-  if !input.linking.iter().any(|meta| matches!(meta.wrap_kind(), WrapKind::Esm)) {
+  // Inlined dynamic imports activate a single module wrapper, so their forwarding graph
+  // must keep that initialization path when there is no loading boundary to split.
+  if input.code_splitting_disabled
+    || !input.linking.iter().any(|meta| matches!(meta.wrap_kind(), WrapKind::Esm))
+  {
     return FxHashSet::default();
   }
   let mut independent = FxHashSet::default();
@@ -650,6 +655,7 @@ impl GenerateStage<'_> {
       used_symbol_refs_builder,
       cyclic_modules: &cyclic_modules,
       tree_shaking: self.options.treeshake.is_some(),
+      code_splitting_disabled,
       runtime_idx: self.link_output.runtime.id(),
     };
     let consumer_local_plan = consumer_local_reexport_plan(&input, order_state);

@@ -642,6 +642,7 @@ impl GenerateStage<'_> {
       used_symbol_refs_builder,
       cyclic_modules: &cyclic_modules,
       tree_shaking: self.options.treeshake.is_some(),
+      code_splitting_disabled: self.options.code_splitting.is_disabled(),
       runtime_idx: self.link_output.runtime.id(),
     };
     let consumer_local_plan =

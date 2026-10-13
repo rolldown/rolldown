@@ -2702,6 +2702,7 @@ version = "1.2.13"
 dependencies = [
  "anyhow",
  "arcstr",
+ "dunce",
  "futures",
  "rolldown",
  "rolldown_common",

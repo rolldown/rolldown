@@ -615,7 +615,7 @@ mod tests {
     let dir = std::env::temp_dir().join(format!("rolldown-dev-lazy-watch-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     // The resolver returns real paths, and the temp dir can sit behind a symlink.
-    let dir = std::fs::canonicalize(&dir).unwrap();
+    let dir = dunce::canonicalize(&dir).unwrap();
     std::fs::write(dir.join("main.js"), "import('./lazy.js');\n").unwrap();
     std::fs::write(dir.join("lazy.js"), "export { dep } from './dep.js';\n").unwrap();
     std::fs::write(dir.join("dep.js"), "export const dep = 1;\n").unwrap();
@@ -679,7 +679,7 @@ mod tests {
       std::env::temp_dir().join(format!("rolldown-dev-hmr-rebuild-watch-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     // The resolver returns real paths, and the temp dir can sit behind a symlink.
-    let dir = std::fs::canonicalize(&dir).unwrap();
+    let dir = dunce::canonicalize(&dir).unwrap();
     std::fs::write(dir.join("main.js"), "export const main = 1;\n").unwrap();
     std::fs::write(dir.join("dep.js"), "export const dep = 1;\n").unwrap();
     let main = dir.join("main.js").to_string_lossy().into_owned();

@@ -1,0 +1,59 @@
+crates/rolldown_common/src/inner_bundler_options/mod.rs
+  s_9e946ba59d7dae::t_f4890af338291b 36-39,95
+crates/rolldown_common/src/inner_bundler_options/types/mod.rs
+  s_9e946ba59d7dae::t_2aa4cbaa42adec 28
+crates/rolldown_testing/_config.schema.json
+  s_9e946ba59d7dae::t_252f46e3a1c1db 192-201,651-657
+packages/rolldown/src/binding.d.cts
+  s_9e946ba59d7dae::t_7b05a6b8770319 1763,2660
+packages/rolldown/src/rolldown-binding.wasi.d.cts
+  s_9e946ba59d7dae::t_2eb0e4ef893709 1758,2655
+crates/rolldown/src/hmr/hmr_stage.rs
+  s_9e946ba59d7dae::t_402dd4c432e2ee 1011
+crates/rolldown/src/stages/generate_stage/minify_chunks.rs
+  s_9e946ba59d7dae::t_d48d28c2329aa7 49
+crates/rolldown/src/utils/prepare_build_context.rs
+  s_9e946ba59d7dae::t_c10e5ce1aa7be5 506
+crates/rolldown_binding/src/options/binding_output_options/mod.rs
+  s_9e946ba59d7dae::t_cd0bec71f52b96 85-86
+crates/rolldown_binding/src/types/binding_normalized_options.rs
+  s_9e946ba59d7dae::t_865c8e2f1d9c91 120-127
+crates/rolldown_binding/src/utils/normalize_binding_options.rs
+  s_9e946ba59d7dae::t_dea9a523d581af 33-35,561-575
+crates/rolldown_common/src/inner_bundler_options/types/normalized_bundler_options.rs
+  s_9e946ba59d7dae::t_f650561858ecc3 29-32,67,151
+crates/rolldown_common/src/inner_bundler_options/types/output_charset.rs
+  s_9e946ba59d7dae::t_ccfc35c468da6a 1-23
+crates/rolldown_common/src/lib.rs
+  s_9e946ba59d7dae::t_e80fcbc87bec69 68
+crates/rolldown_common/src/module/normal_module.rs
+  s_9e946ba59d7dae::t_efc9a80436d944 223
+crates/rolldown_ecmascript/src/ecma_compiler.rs
+  s_9e946ba59d7dae::t_05fc86344b0a85 101,171
+packages/rolldown/src/options/normalized-output-options.ts
+  s_9e946ba59d7dae::t_8c4d9d5b3f86ae 35-36,133-137
+packages/rolldown/src/utils/bindingify-output-options.ts
+  s_9e946ba59d7dae::t_7339770efc1991 32,88
+packages/rolldown/src/utils/validator.ts
+  s_9e946ba59d7dae::t_4a77f67050ff7a 942-945
+packages/rolldown/tests/behaviors/output-charset.test.ts
+  s_9e946ba59d7dae::t_b371b756537946 1-69
+packages/rolldown/tests/fixtures/verify-options/_config.ts
+  s_9e946ba59d7dae::t_1d5d9db2d813ec 30,101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "d17c3f291776c41b75d1725f6c780a7d213d98a8",
+  "prompts": {},
+  "sessions": {
+    "s_9e946ba59d7dae": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a13348-47db-78b0-9f5a-997285c5c4f5",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

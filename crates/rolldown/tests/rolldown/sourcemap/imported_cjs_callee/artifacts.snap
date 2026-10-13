@@ -73,7 +73,7 @@ var import_client = require_client();
 
 ```
 - ../main.js
-(2:0) "createRoot(document.getElementById('root')).render();\n" --> (0:1) "0,(/* @__PURE__ */ ((e,t)=>()=>(t||(e((t={exports:{}}).exports,t,t.exports),e=null),t.exports))(((e,t)=>{"
+(2:0) "createRoot(document.getElementById('root')).render();\n" --> (0:1) "0,("
 - ../client.cjs
 (0:0) "module." --> (0:106) "t."
 (0:7) "exports." --> (0:108) "exports."
@@ -90,7 +90,7 @@ var import_client = require_client();
 (3:28) "'rendered';\n" --> (0:169) "`rendered`"
 (4:4) "},\n" --> (0:179) "}"
 (5:2) "};\n" --> (0:180) "}"
-(6:0) "};\n" --> (0:181) "}})))("
+(6:0) "};\n" --> (0:181) "}"
 - ../main.js
 (2:0) "createRoot(" --> (0:187) ")"
 (2:0) "createRoot(" --> (0:188) "."

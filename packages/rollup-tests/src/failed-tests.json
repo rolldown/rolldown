@@ -215,6 +215,9 @@
   "rollup@chunking form@non-circular-chunk-with-only-explicit-manual-chunks: Does not produce circular chunk with onlyExplicitManualChunks@generates es",
   "rollup@chunking form@option-virtual-dirname: expect the directory name for \"virtual\" files to be rollup_virtual@generates cjs",
   "rollup@chunking form@option-virtual-dirname: expect the directory name for \"virtual\" files to be rollup_virtual@generates es",
+  "rollup@chunking form@preserve-entry-signatures@false-with-awaited-dynamic-import-chain: keeps shared dependencies out of an awaiting entry if the dynamic entry is also imported from a chain with top-level await (#6516)@generates cjs",
+  "rollup@chunking form@preserve-entry-signatures@false-with-awaited-dynamic-import-chain: keeps shared dependencies out of an awaiting entry if the dynamic entry is also imported from a chain with top-level await (#6516)@generates es",
+  "rollup@chunking form@preserve-entry-signatures@false-with-indirect-awaited-dynamic-import: does not create a cycle by merging a shared dependency into an entry with an indirect awaited dynamic import (#5922)@generates cjs",
   "rollup@chunking form@preserve-modules-commonjs: Handles output from @rollup/plugin-commonjs@generates cjs",
   "rollup@chunking form@preserve-modules-commonjs: Handles output from @rollup/plugin-commonjs@generates es",
   "rollup@chunking form@preserve-modules-default-mode-namespace2: import namespace from chunks with default export mode when preserving modules@generates cjs",
@@ -292,7 +295,13 @@
   "rollup@form@namespace-optimization-in-operator: it does static optimization of internal namespaces when checking whether an export exists",
   "rollup@form@preserves-comments-after-imports: preserves comments between imports and first statement@generates es",
   "rollup@form@reexport-self: handles recursions when a module reexports its own namespace",
+  "rollup@form@try-statement-deoptimization@reassigned-helper-without-try-nesting: does not take exponential time to include nested callbacks of reassigned helpers without try statements (#6564)",
   "rollup@function@catch-scope-nested-deconflicting: deconflicts nested catch scope parameters correctly",
+  "rollup@function@close-bundle-error@build-end: preserves the buildEnd error when closeBundle rejects",
+  "rollup@function@close-bundle-error@build: preserves the build error when closeBundle rejects",
+  "rollup@function@close-bundle-error@compound: preserves the compound build and buildEnd error when closeBundle rejects",
+  "rollup@function@close-bundle-error@standalone: reports closeBundle errors when closing a successful build",
+  "rollup@function@close-bundle-error@successful-cleanup: preserves the build error after successful closeBundle cleanup",
   "rollup@function@emit-file@no-input: It is not necessary to provide an input if a dynamic entry is emitted",
   "rollup@function@resolveid-recursive-call: skipSelf: true option in resolveId hook option should skip the plugin if it has been called before with the same id and importer, see #5768 for more details"
 ]

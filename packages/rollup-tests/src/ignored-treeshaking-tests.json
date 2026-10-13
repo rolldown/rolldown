@@ -141,6 +141,7 @@
   "rollup@form@resolution-order: does not depend on the resolution order of modules for tree-shaking (#2753)",
   "rollup@form@return-after-error: tree-shakes entities referenced in a return statement after an error",
   "rollup@form@return-value-access-in-conditional: handles accessing function return values in deoptimized conditionals",
+  "rollup@form@same-variable-returns: resolves return values when all return statements return the same variable",
   "rollup@form@self-calling-function: discards a self-calling function without side-effects@generates es",
   "rollup@form@self-calling-function-with-effects: discards a self-calling function with side-effects@generates es",
   "rollup@form@self-deoptimization: handles situations where a member expression is deoptimized while being deoptimized",

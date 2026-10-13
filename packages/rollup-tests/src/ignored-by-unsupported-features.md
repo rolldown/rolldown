@@ -364,6 +364,12 @@
  - rollup@function@ast-validations@redeclare-catch-scope-parameter-var-outside-conflict: throws when redeclaring a parameter of a catch scope as a var that conflicts with an outside binding (unknown)
  - rollup@function@import-not-at-top-level-fails: disallows non-top-level imports (`cause` property is missing)
  - rollup@function@export-not-at-top-level-fails: disallows non-top-level exports (`cause` property is missing)
+ - rollup@function@close-bundle-error@build-end: preserves the buildEnd error when closeBundle rejects (https://github.com/rollup/rollup/pull/6554 not ported)
+ - rollup@function@close-bundle-error@build: preserves the build error when closeBundle rejects (https://github.com/rollup/rollup/pull/6554 not ported)
+ - rollup@function@close-bundle-error@compound: preserves the compound build and buildEnd error when closeBundle rejects (https://github.com/rollup/rollup/pull/6554 not ported)
+ - rollup@function@close-bundle-error@standalone: reports closeBundle errors when closing a successful build (https://github.com/rollup/rollup/pull/6554 not ported)
+ - rollup@function@close-bundle-error@successful-cleanup: preserves the build error after successful closeBundle cleanup (https://github.com/rollup/rollup/pull/6554 not ported)
+
 
 ### The error/warning not implement
  - rollup@hooks@Throws when using the "sourcemapFile" option for multiple chunks (`INVALID_OPTION` error)

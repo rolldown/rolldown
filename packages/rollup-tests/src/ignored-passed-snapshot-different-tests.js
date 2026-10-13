@@ -127,6 +127,7 @@ module.exports = [
     "rollup@form@remove-whitespace-of-logical-expression: remove the white space of the removed part of LogicalExpression",
     "rollup@form@pure-comment-scenarios-complex: correctly handles various advanced pure comment scenarios",
     "rollup@form@non-empty-block-statement: do not remove non an empty block statement@generates es", // https://github.com/rolldown/rolldown/pull/3541#issuecomment-2649731213
+    "rollup@form@try-statement-deoptimization@reassigned-helper-without-try-nesting: does not take exponential time to include nested callbacks of reassigned helpers without try statements (#6564)",
     // Passed. different code due to better optimization
     "rollup@form@nested-pure-comments: correctly associates pure comments before sequence expressions etc.",
     "rollup@form@unary-expressions-preserve-constants: Preserves constant identifiers in unary expressions when constants are used elsewhere",

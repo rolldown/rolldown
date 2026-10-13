@@ -48,14 +48,16 @@ context and unshared memory.
 6. **Private instance disposal.** `build({ module })` retries a rejected
    dispose of its private instance (the loader's retryable
    `ERR_NAPI_WASI_CLEANUP_PENDING`) a few macrotasks apart; if it still fails,
-   the error is reported (as the build error's `cause` when the build also
-   failed) and the handle is dropped. A completed `dispose()` destroys the
-   environment and drops the handle's loader reference; the Memory itself is
-   reclaimed only once nothing references it and the host garbage-collects,
-   which workerd rarely does. An instance dropped without a completed
-   `dispose()` is reclaimed the same way (nothing in the loader or emnapi pins
-   it), so keeping a stuck handle would not free it sooner; the entry holds no
-   registry of them.
+   the error is reported and the handle is dropped. When the build also
+   failed, the disposal error becomes the build error's `cause`; if that error
+   already has one (a release error, or its own), the `cause` becomes an
+   `AggregateError` of that cause and then the disposal error. A completed
+   `dispose()` destroys the environment and drops the handle's loader
+   reference; the Memory itself is reclaimed only once nothing references it
+   and the host garbage-collects, which workerd rarely does. An instance
+   dropped without a completed `dispose()` is reclaimed the same way (nothing
+   in the loader or emnapi pins it), so keeping a stuck handle would not free
+   it sooner; the entry holds no registry of them.
 
 The public handle has no raw binding exports: only `build()` reaches them, and
 it counts every use. Objects taken through the internal `instanceExports()`
@@ -92,7 +94,8 @@ its wrapper in a small cell object (`BindingCell` in `utils/threadless-free.ts`,
 rather than a plain field: freezing is shallow, so the release can still clear
 the cell. The release runs every item even when one throws, then rethrows the
 first error. On a failed build, `RolldownBuild#build` keeps the build error and
-attaches a release error as its `cause`.
+attaches a release error as its `cause`; a later private-instance disposal
+error joins it (invariant 6).
 
 ## Tests
 

@@ -79,8 +79,17 @@ export async function build(options: WorkerdBuildOptions): Promise<RolldownOutpu
     result = await buildWithInstance(owned, inputOptions, output);
   } catch (error) {
     // The build error stays primary; a failed dispose rides along as `cause`.
+    // A cause the error already has (a release error, or its own) is kept
+    // beside it in an AggregateError, so neither is lost.
     await disposePrivateInstance(owned).catch((disposeError: unknown) => {
-      if (error instanceof Error && Object.isExtensible(error)) error.cause ??= disposeError;
+      if (!(error instanceof Error) || !Object.isExtensible(error)) return;
+      error.cause =
+        error.cause === undefined
+          ? disposeError
+          : new AggregateError(
+              [error.cause, disposeError],
+              'Disposing the private workerd Rolldown instance also failed',
+            );
     });
     throw error;
   }

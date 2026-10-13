@@ -261,6 +261,70 @@ describe('workerd build() private-instance disposal', () => {
       vi.resetModules();
     }
   });
+
+  // Through the real `RolldownBuild` failure path, which attaches its release
+  // error as the build error's `cause` before the private dispose runs.
+  test('a failed build keeps both a release error and a stuck private dispose', async () => {
+    const pluginError = new Error('plugin failed');
+    const releaseError = new TypeError('release failed');
+    let disposeCalls = 0;
+    vi.resetModules();
+    vi.doMock('../src/binding.cjs', () => ({
+      __isWorkerdBindingProxy: true,
+      BindingBundler: class {
+        closed = false;
+        async generate() {
+          return { isBindingErrors: true, errors: [{ type: 'JsError', field0: pluginError }] };
+        }
+        async close() {
+          this.closed = true;
+        }
+      },
+    }));
+    vi.doMock('../src/utils/create-bundler-option', () => ({
+      createBundlerOptions: async () => ({
+        bundlerOptions: {},
+        releaseOptionBoxes: () => {
+          throw releaseError;
+        },
+      }),
+    }));
+    vi.doMock('../src/rolldown-binding.wasip1-deferred.js', () => ({
+      getDeferredRuntimeStats: () => ({ liveInstances: 0 }),
+      createInstance: async () => ({
+        exports: {},
+        memory: new WebAssembly.Memory({ initial: 1, maximum: 1 }),
+        memoryBytes: 65_536,
+        disposed: false,
+        async dispose() {
+          disposeCalls += 1;
+          throw Object.assign(new Error('1 queued settlement(s); retry dispose()'), {
+            code: 'ERR_NAPI_WASI_CLEANUP_PENDING',
+          });
+        },
+      }),
+    }));
+    try {
+      const workerd = await import('../src/workerd');
+      const failure = (await workerd
+        .build({ module: {} as WebAssembly.Module, input: 'x' })
+        .catch((error: unknown) => error)) as Error & { errors?: unknown[] };
+      expect(failure).toBeInstanceOf(Error);
+      expect(failure.message).toMatch(/^Build failed with 1 error/);
+      expect(failure.errors).toEqual([pluginError]);
+      expect(disposeCalls).toBe(3);
+      // Both cleanup errors stay reachable, in the order they happened.
+      expect(failure.cause).toBeInstanceOf(AggregateError);
+      const [first, second] = (failure.cause as AggregateError).errors;
+      expect(first).toBe(releaseError);
+      expect(second).toMatchObject({ code: 'ERR_NAPI_WASI_CLEANUP_PENDING' });
+    } finally {
+      vi.doUnmock('../src/binding.cjs');
+      vi.doUnmock('../src/utils/create-bundler-option');
+      vi.doUnmock('../src/rolldown-binding.wasip1-deferred.js');
+      vi.resetModules();
+    }
+  });
 });
 
 // Through the built dist workerd entry: real wasm instance, real pipeline.

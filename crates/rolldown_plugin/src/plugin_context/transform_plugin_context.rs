@@ -3,7 +3,7 @@ use std::{ops::Deref, sync::Arc};
 use crate::PluginContext;
 use arcstr::ArcStr;
 use rolldown_common::{ModuleIdx, PluginIdx, SourceMapGenMsg, SourcemapChainElement, WatchPath};
-use rolldown_sourcemap::{SourceMap, collapse_sourcemaps, empty_sourcemap};
+use rolldown_sourcemap::{SourceMap, collapse_sourcemaps, drop_unreached_sources, empty_sourcemap};
 use rolldown_utils::unique_arc::WeakRef;
 use std::sync::mpsc;
 use string_wizard::{MagicString, SourceMapOptions};
@@ -48,7 +48,7 @@ impl TransformPluginContext {
         [] => self.create_sourcemap(),
         [single] => (*single).clone(),
         // TODO Here could be cache result for pervious sourcemap_chain, only remapping new sourcemap chain
-        _ => collapse_sourcemaps(&chain),
+        _ => drop_unreached_sources(collapse_sourcemaps(&chain)),
       }
     })
   }

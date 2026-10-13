@@ -28,7 +28,7 @@ console.log(foo);
 - ../main.js
 (2:0) "const " --> (26:0) "const "
 (2:6) "foo = mod.version.startsWith('1');\n" --> (26:6) "foo = ("
-(2:6) "foo = mod.version.startsWith('1');\n" --> (26:13) "/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {\n"
+(2:6) "foo = mod.version.startsWith('1');\n" --> (26:13) "/* @__PURE__ */ "
 - ../cjs.js
 (0:0) "exports." --> (27:1) "exports."
 (0:8) "version = " --> (27:9) "version = "

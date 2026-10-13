@@ -23,13 +23,11 @@ export default defineTest({
     external: ['node:assert'],
   },
   async afterTest(output) {
-    // Importing the built chunk is the real assertion: a sync thunk would make
-    // it fail to parse before any of this runs.
     await import('./assert.mjs');
     output.output.forEach((item) => {
       if (item.type === 'chunk' && item.name === 'main') {
-        expect(item.code).not.toMatch(/__vitePreload\(\(\)\s*=>/);
-        expect(item.code).toMatch(/__vitePreload\(async\s*\(\)\s*=>/);
+        // skip wrapping `import(await ...)` with `__vitePreload`
+        expect(item.code).to.not.include('__vitePreload');
       }
     });
   },

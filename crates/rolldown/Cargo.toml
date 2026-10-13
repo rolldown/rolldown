@@ -77,9 +77,9 @@ regex = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_testing = { path = "../rolldown_testing" }
 rolldown_workspace = { workspace = true }
+saphyr = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
-serde_yaml = { workspace = true }
 sugar_path = { workspace = true }
 testing_macros = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }

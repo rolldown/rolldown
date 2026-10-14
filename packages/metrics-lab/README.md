@@ -78,6 +78,31 @@ The render-gap report also counts scripts that start after `load` and finish
 before FCP or LCP. The load event does not prove that downloads ended. Commands
 that resolve a page target print its path, including remembered targets.
 
+Static module analysis starts at build entries. It does not price a dynamic import
+that startup immediately executes. Check coverage and CPU evidence before treating
+small static entry totals as small startup totals. Manually grouped chunks can
+also load modules outside an observed facade's static closure.
+
+### CPU source attribution
+
+`profile` maps sampled work through every same-origin chunk's sourcemap. This
+includes static siblings and dynamic imports. `profile.json` records each source,
+its chunk filenames, and sampled self-time. It separates source work, engine work,
+and unattributed work. Missing or invalid maps, unmapped positions, inline scripts,
+and external scripts remain visible. They do not count as engine work.
+
+The verdict keeps source modules with at least 15ms of sampled work OPEN for
+inspection. A filename without a directory can also identify a source module.
+Missing attribution stays UNKNOWN. Old profiles that map only the entry chunk
+must be collected again. A clear CPU signal means no source reaches the threshold;
+it does not prove that all startup work is required.
+
+The profile stops when the harness observes FCP. The polling tail can include
+post-paint work. Sampled time is a lead, not a predicted paint gain. Check whether
+the first render needs each source module. Test deferring optional work, then
+compare both FCP and LCP in timed runs. The profile does not attribute CPU between
+FCP and LCP when those paints differ.
+
 ### Command list
 
 | Command                                                                          | One loop step                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |

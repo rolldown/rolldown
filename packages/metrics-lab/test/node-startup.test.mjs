@@ -15,6 +15,7 @@ import {
   attributeStartupCoverage,
   coldModules,
   graphIdCandidates,
+  profileStartup,
   splitProfileOwnership,
   summarizeStartup,
 } from '../lib/node/measure.mjs';
@@ -281,4 +282,34 @@ test('profile ownership separates what the bundle owns from what it never will',
   // 25% is the threshold the scan uses to say "the bundle is not your problem";
   // 50 of 300ms must land below it.
   assert.equal(split.appShare, 16.7);
+});
+
+test('a node startup profile maps the entry through its sourcemap', () => {
+  const frames = [
+    { url: 'file:///srv/app/dist/server.mjs', micros: 30_000 },
+    { url: 'node:internal/modules/esm/loader', micros: 10_000 },
+    { functionName: '(garbage collector)', micros: 5_000 },
+  ];
+  const profile = {
+    nodes: frames.map(({ micros: _micros, ...frame }, i) => ({
+      id: i + 1,
+      callFrame: { functionName: 'work', lineNumber: 0, columnNumber: 0, ...frame },
+    })),
+    samples: frames.map((_, i) => i + 1),
+    timeDeltas: frames.map((frame) => frame.micros),
+  };
+  const result = profileStartup(profile, {
+    code: 'function work() { return 42; }',
+    map: { version: 3, sources: ['src/app.ts'], names: [], mappings: 'AAAA' },
+    entryUrlSuffix: '/server.mjs',
+  });
+  assert.deepEqual(result.rows[0], {
+    bucket: 'src/app.ts',
+    kind: 'source',
+    ms: 30,
+    chunks: ['srv/app/dist/server.mjs'],
+  });
+  assert.equal(result.ownership.appMs, 30);
+  assert.equal(result.ownership.engineMs, 5);
+  assert.equal(result.ownership.runtimeMs, 10);
 });

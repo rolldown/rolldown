@@ -78,7 +78,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
 
   #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_id = %self.resolved_id.id))]
   pub async fn run(mut self) {
-    if let Err(errs) = self.run_inner().await {
+    if let Err(errs) = super::catch_task_panic(self.run_inner()).await {
       self.ctx.plugin_driver.mark_context_load_modules_loaded(self.resolved_id.id.clone());
       self
         .ctx

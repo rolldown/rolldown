@@ -60,7 +60,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
 
   #[tracing::instrument(name = "RuntimeNormalModuleTaskResult::run", level = "debug", skip_all)]
   pub async fn run(self) {
-    if let Err(errs) = self.run_inner().await {
+    if let Err(errs) = super::catch_task_panic(self.run_inner()).await {
       // If the main thread is dead, nothing we can do to handle these send failures.
       let _ = self.ctx.tx.send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
     }

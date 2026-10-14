@@ -37,7 +37,7 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
 
   #[tracing::instrument(name="ExternalModuleTask::run", level = "trace", skip_all, fields(module_id = %self.resolved_id.id))]
   pub async fn run(self) {
-    if let Err(errs) = self.run_inner().await {
+    if let Err(errs) = super::catch_task_panic(self.run_inner()).await {
       self
         .ctx
         .tx

@@ -13,7 +13,7 @@ import { median, quantile } from '../measure.mjs';
 const DEFAULT_REDACTIONS = [
   [/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '<uuid>'],
   [/[0-9a-f]{16,}/gi, '<hex>'],
-  [/[^\s/?&=@:]+@[^\s/?&=]+\.[a-z]{2,}/gi, '<email>'],
+  [/[^\s/?&=@:]+?(?:@|%40)[^\s/?&=]+\.[a-z]{2,}/gi, '<email>'],
   [/(?<![\w.])\d{6,}(?![\w])/g, '<n>'],
 ];
 
@@ -127,7 +127,9 @@ export function criticalPath(requests, lcpMs, options = {}) {
   const g = found.gate;
   const sendStart = g.sendStartMs ?? g.startMs;
   const headersEnd = g.headersEndMs ?? null;
-  const doc = requests.find((r) => r.type === 'Document' && !r.failed);
+  const doc =
+    requests.find((r) => r.navigation && !r.failed) ??
+    requests.find((r) => r.type === 'Document' && !r.failed);
   return {
     gate: { url: g.url, method: g.method, startMs: g.startMs, endMs: g.endMs },
     reason: found.reason,

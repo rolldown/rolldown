@@ -51,6 +51,7 @@ const PAGE_INFO_JS = `(() => {
   const c = navigator.connection;
   return {
     path: location.pathname,
+    navUrl: nav ? nav.name.split('#')[0] : null,
     requestStart: nav ? nav.requestStart : null,
     lcpEntries: F.lcp,
     hidden: F.hidden,
@@ -142,11 +143,14 @@ export function recordFieldNetwork(page, { maxFrames = 8 } = {}) {
     /**
      * Page time (ms since timeOrigin, the clock LCP uses) for every request. The
      * offset comes from the document request: its CDP sendStart equals the
-     * navigation entry's requestStart.
+     * navigation entry's requestStart. After a client-side redirect the page is
+     * the second document, so `navUrl` (the navigation entry's URL) picks it; that
+     * row is marked `navigation`.
      */
-    finish(requestStartPageMs, redact) {
+    finish(requestStartPageMs, redact, navUrl = null) {
       const rows = order.map((id) => byId.get(id));
-      const doc = rows.find((r) => r.type === 'Document' && r.sendStart != null);
+      const docs = rows.filter((r) => r.type === 'Document' && r.sendStart != null);
+      const doc = docs.find((r) => r.url === navUrl) ?? docs[0];
       const offset =
         doc && typeof requestStartPageMs === 'number'
           ? doc.sendStart * 1000 - requestStartPageMs
@@ -170,6 +174,7 @@ export function recordFieldNetwork(page, { maxFrames = 8 } = {}) {
         failed: r.failed ?? null,
         blocked: r.blocked ?? null,
         redirected: r.redirected,
+        ...(r === doc ? { navigation: true } : {}),
         ...(r.chunks ? { chunks: r.chunks.map((c) => ({ ms: pt(c.ts), bytes: c.bytes })) } : {}),
         initiator: {
           type: r.initiator.type,
@@ -217,13 +222,14 @@ function scrubSample(sample, redact) {
 
 export async function timingRun(
   cdp,
-  { variant, config, context, saved, redact, settleMs, timeoutMs, throttle },
+  { variant, config, context, saved, configured, redact, settleMs, timeoutMs, throttle },
 ) {
   const page = await openFieldPage(cdp, {
     browserContextId: context,
     origin: config.origin,
     cookies: variant.cookies,
     saved,
+    configured,
     block: config.block,
     scripts: [OBSERVER_JS, fieldObserverJs(config.ignoreLcp)],
     throttle,
@@ -241,7 +247,7 @@ export async function timingRun(
     // (a splash/loader). Field LCP is the last entry outside it.
     sample.lcp = counted.length ? counted[counted.length - 1].t : null;
     sample.lcpIgnoredEntries = info.lcpEntries.length - counted.length;
-    const requests = net.finish(info.requestStart, redact);
+    const requests = net.finish(info.requestStart, redact, info.navUrl);
     let invalid = null;
     if (info.hidden) invalid = 'page was hidden (window covered or in the background)';
     else if (sample.lcp == null) invalid = 'no LCP outside the ignored region';
@@ -267,12 +273,16 @@ export async function timingRun(
  * described by names and counts only: script-visible cookie names and the
  * number of localStorage keys.
  */
-export async function bodyRun(cdp, { variant, config, context, saved, settleMs, timeoutMs }) {
+export async function bodyRun(
+  cdp,
+  { variant, config, context, saved, configured, settleMs, timeoutMs },
+) {
   const page = await openFieldPage(cdp, {
     browserContextId: context,
     origin: config.origin,
     cookies: variant.cookies,
     saved,
+    configured,
     block: config.block,
     scripts: [OBSERVER_JS, fieldObserverJs(config.ignoreLcp)],
     bodies: true,
@@ -302,7 +312,7 @@ export async function bodyRun(cdp, { variant, config, context, saved, settleMs, 
       )
       .catch(() => ({ cookieNames: [], localStorageKeys: null }));
     const raw = net.rows();
-    const timed = net.finish(info.requestStart, (v) => v);
+    const timed = net.finish(info.requestStart, (v) => v, info.navUrl);
     const rows = [];
     for (let i = 0; i < raw.length; i++) {
       const x = extra.get(raw[i].id) ?? {};
@@ -346,13 +356,14 @@ export async function bodyRun(cdp, { variant, config, context, saved, settleMs, 
  */
 export async function diagnosticRun(
   cdp,
-  { variant, config, context, saved, redact, cut, settleMs, timeoutMs, throttle },
+  { variant, config, context, saved, configured, redact, cut, settleMs, timeoutMs, throttle },
 ) {
   const page = await openFieldPage(cdp, {
     browserContextId: context,
     origin: config.origin,
     cookies: variant.cookies,
     saved,
+    configured,
     block: config.block,
     scripts: [OBSERVER_JS, fieldObserverJs(config.ignoreLcp)],
     bodies: true,
@@ -360,12 +371,20 @@ export async function diagnosticRun(
   });
   const net = recordFieldNetwork(page, { maxFrames: 64 });
   let gateSeen = false;
+  // The timing runs find the gate in redacted URLs, so the cut matches the same way.
+  const gate = redact(config.gate);
   const stopGate =
-    cut === 'gate' && config.gate
+    cut === 'gate' && gate
       ? page.on('Network.requestWillBeSent', (e) => {
-          if (e.request.url.includes(config.gate)) gateSeen = true;
+          if (redact(e.request.url).includes(gate)) gateSeen = true;
         })
       : () => {};
+  // With the debugger on, a `debugger` statement or a breakpoint stops the page
+  // until a client resumes it. Resume at once: Debugger.setSkipAllPauses does
+  // not survive the navigation.
+  const stopPauses = page.on('Debugger.paused', () => {
+    page.send('Debugger.resume').catch(() => {});
+  });
   try {
     // Async parent stacks make the initiator of a fetch name its real caller,
     // not only the wrapper or microtask that issued it. They cost CPU, which is
@@ -379,10 +398,10 @@ export async function diagnosticRun(
     await page.navigate(variant.url);
     const deadline = Date.now() + timeoutMs;
     let state = null;
+    let reached = false;
     for (;;) {
       state = await page.evaluate(STATE_JS).catch(() => null);
-      const reached =
-        cut === 'gate' ? gateSeen : cut === 'fcp' ? state?.fcp != null : state?.lcp != null;
+      reached = cut === 'gate' ? gateSeen : cut === 'fcp' ? state?.fcp != null : state?.lcp != null;
       if (reached || state?.hidden || Date.now() > deadline) break;
       await sleep(cut === 'gate' ? 5 : 25);
     }
@@ -394,7 +413,7 @@ export async function diagnosticRun(
     const atSettle = await page.send('Profiler.takePreciseCoverage');
     await page.send('Profiler.stopPreciseCoverage').catch(() => {});
     const info = await page.evaluate(PAGE_INFO_JS);
-    const requests = net.finish(info.requestStart, redact);
+    const requests = net.finish(info.requestStart, redact, info.navUrl);
 
     // V8 omits a script from a snapshot when it ran nothing new in that window.
     const byUrl = new Map();
@@ -430,7 +449,9 @@ export async function diagnosticRun(
         /* evicted from the buffer: chunk-level coverage still works, matching does not */
       }
     }
-    const scriptFetches = requests
+    // Raw URLs: a redacted chunk name (a long hex hash) would not match its script.
+    const scriptFetches = net
+      .finish(info.requestStart, (v) => v, info.navUrl)
       .filter((r) => r.url.startsWith(config.origin) && /\.[mc]?js$/.test(new URL(r.url).pathname))
       .map((r) => ({
         pathname: new URL(r.url).pathname,
@@ -442,7 +463,9 @@ export async function diagnosticRun(
     let invalid = null;
     if (info.hidden || state?.hidden)
       invalid = 'page was hidden (window covered or in the background)';
-    else if (cut === 'gate' && !gateSeen) invalid = `gate request "${config.gate}" was never sent`;
+    else if (cut === 'gate' && !reached)
+      invalid = `gate request "${gate}" was not sent within ${timeoutMs}ms`;
+    else if (!reached) invalid = `no ${cut.toUpperCase()} within ${timeoutMs}ms`;
     return {
       scripts: [...byUrl.values()],
       bodies,
@@ -458,6 +481,7 @@ export async function diagnosticRun(
   } finally {
     await page.send('Debugger.disable').catch(() => {});
     stopGate();
+    stopPauses();
     net.stop();
     await page.close().catch(() => {});
   }

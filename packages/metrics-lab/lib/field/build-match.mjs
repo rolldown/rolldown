@@ -14,7 +14,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const sha256 = (text) => crypto.createHash('sha256').update(text).digest('hex');
-const DEBUG_ID_RE = /\/\/# debugId=([0-9a-fA-F-]{36})\s*$/;
+// A line of its own, often followed by the //# sourceMappingURL line.
+const DEBUG_ID_RE = /^\/\/# debugId=([0-9a-fA-F-]{36})[ \t]*$/m;
 
 function walk(dir, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {

@@ -17,9 +17,10 @@ import {
   outlierIndexes,
   pairedDelta,
 } from '../lib/field/analysis.mjs';
+import { openFieldPage } from '../lib/field/browser.mjs';
 import { indexBuild, matchScript, matchSummary } from '../lib/field/build-match.mjs';
 import { validateFieldConfig } from '../lib/field/config.mjs';
-import { diagnosticRun, timingRun } from '../lib/field/capture.mjs';
+import { diagnosticRun, recordFieldNetwork, timingRun } from '../lib/field/capture.mjs';
 
 test('redaction removes identifiers but keeps chunk names and query keys', () => {
   const redact = makeRedactor(['tenant-[a-z]+']);
@@ -31,6 +32,8 @@ test('redaction removes identifiers but keeps chunk names and query keys', () =>
   );
   assert.equal(redact('/assets/app-init.Ab12Cd34.js'), '/assets/app-init.Ab12Cd34.js');
   assert.equal(redact(null), null);
+  assert.equal(redact('/users/a.b%40example.com/items'), '/users/<email>/items');
+  assert.equal(redact('?u=first%2Blast%40example.com&x=1'), '?u=<email>&x=1');
 });
 
 const req = (over) => ({
@@ -96,6 +99,46 @@ test('findGate picks the last data response before LCP, or the pinned pattern', 
   assert.equal(none.gate, null);
   assert.match(none.reason, /no request matching/);
   assert.equal(findGate(REQUESTS, null).reason, 'no LCP');
+});
+
+test('page time comes from the document of the navigation entry, also after a client-side redirect', () => {
+  const handlers = new Map();
+  const net = recordFieldNetwork({
+    on: (method, handler) => (handlers.set(method, handler), () => handlers.delete(method)),
+  });
+  const emit = (method, event) => handlers.get(method)(event);
+  for (const [requestId, url, ts] of [
+    ['1', 'https://x.test/', 10],
+    ['2', 'https://x.test/home', 11],
+  ]) {
+    emit('Network.requestWillBeSent', {
+      requestId,
+      timestamp: ts,
+      type: 'Document',
+      request: { url, method: 'GET' },
+      initiator: { type: 'other' },
+    });
+    emit('Network.responseReceived', {
+      requestId,
+      type: 'Document',
+      response: { status: 200, timing: { requestTime: ts, sendStart: 1, receiveHeadersEnd: 50 } },
+    });
+    emit('Network.loadingFinished', { requestId, timestamp: ts + 0.1, encodedDataLength: 1000 });
+  }
+  // The navigation entry of /home: requestStart 1 ms after its timeOrigin.
+  const [first, home] = net.finish(1, (v) => v, 'https://x.test/home');
+  assert.deepEqual(
+    [home.navigation, home.startMs, home.sendStartMs, home.endMs],
+    [true, 0, 1, 100],
+  );
+  assert.equal(first.navigation, undefined);
+  assert.equal(first.endMs, -900);
+  const redirected = [
+    req({ url: 'https://x.test/', type: 'Document', startMs: -1000, endMs: -900 }),
+    { ...REQUESTS[0], url: 'https://x.test/home', navigation: true },
+    ...REQUESTS.slice(1),
+  ];
+  assert.equal(criticalPath(redirected, 1800).breakdown.documentEndMs, 100);
 });
 
 test('criticalPath splits LCP at the gate and walks the initiator chain to the document', () => {
@@ -191,7 +234,7 @@ test('build matching decides identity by content, not by name', () => {
   const debugId = crypto.randomUUID();
   fs.writeFileSync(
     path.join(dir, 'assets', 'c.js'),
-    `export const c = 3;\n//# debugId=${debugId}\n`,
+    `export const c = 3;\n//# debugId=${debugId}\n//# sourceMappingURL=c.js.map\n`,
   );
   try {
     const index = indexBuild(dir);
@@ -211,7 +254,7 @@ test('build matching decides identity by content, not by name', () => {
     assert.equal(
       matchScript(index, {
         file: 'assets/c.js',
-        body: `minified differently\n//# debugId=${debugId}\n`,
+        body: `minified differently\n//# debugId=${debugId}\n//# sourceMappingURL=c.js.map\n`,
       }).status,
       'debug-id',
     );
@@ -232,6 +275,60 @@ test('build matching decides identity by content, not by name', () => {
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('each run starts from the saved cookies, and a restore removes every variant scope', async () => {
+  const calls = [];
+  const cdp = {
+    send: async (method, params) => {
+      calls.push({ method, params });
+      if (method === 'Target.createTarget') return { targetId: 't1' };
+      if (method === 'Target.attachToTarget') return { sessionId: 's1' };
+      return {};
+    },
+    on: () => () => {},
+  };
+  const origin = 'https://app.example.test';
+  const saved = new Map([
+    [
+      'v',
+      {
+        name: 'v',
+        value: 'mine',
+        domain: 'app.example.test',
+        path: '/',
+        secure: true,
+        httpOnly: false,
+        session: true,
+      },
+    ],
+    ['flag', null],
+  ]);
+  const configured = [
+    { name: 'v', value: 'a' },
+    { name: 'v', value: 'b', domain: '.example.test' },
+    { name: 'flag', value: 'on' },
+  ];
+  await openFieldPage(cdp, { origin, cookies: [configured[1]], saved, configured });
+  const reset = calls.findIndex((c) => c.method === 'Storage.setCookies');
+  const set = calls.findIndex((c) => c.method === 'Network.setCookie');
+  assert.ok(reset >= 0 && reset < set, 'the reset runs before the variant cookie is set');
+  assert.deepEqual(
+    calls[reset].params.cookies.map((c) => [c.name, c.value, c.domain ?? c.url, c.path, c.expires]),
+    [
+      ['v', 'mine', 'app.example.test', '/', undefined],
+      ['v', '', '.example.test', '/', 1],
+      ['flag', '', origin, '/', 1],
+    ],
+  );
+  assert.deepEqual(calls[set].params, {
+    url: origin,
+    secure: true,
+    name: 'v',
+    value: 'b',
+    domain: '.example.test',
+    path: '/',
+  });
 });
 
 test('field config applies variant queries, resolves builds and rejects bad input', () => {
@@ -282,9 +379,11 @@ test('field capture finds the gate, its script chain, and matches served chunks 
       '}\n' +
       'export function neverCalled() { return [1, 2, 3].map((n) => n * 2).join(","); }\n',
   );
+  fs.writeFileSync(path.join(dir, 'data.0123456789abcdef.js'), 'export const data = 1;\n');
+  // A debugger statement must not stop the diagnostic run (it enables the debugger).
   fs.writeFileSync(
     path.join(dir, 'app.js'),
-    "const { boot } = await import('./core.js');\nboot();\n",
+    "import './data.0123456789abcdef.js';\ndebugger;\nconst { boot } = await import('./core.js');\nboot();\n",
   );
   fs.writeFileSync(
     path.join(dir, 'index.html'),
@@ -334,4 +433,14 @@ test('field capture finds the gate, its script chain, and matches served chunks 
   assert.equal(matchScript(index, { file: 'core.js', body }).status, 'exact');
   const cov = chunkCoverage({ bytes: body.length, atCut: core.atPaint, atSettle: core.atSettle });
   assert.ok(cov.cutBytes > 0 && cov.cutBytes < cov.bytes, 'neverCalled() stays cold');
+  const data = diag.scriptFetches.find((f) => f.pathname === '/data.0123456789abcdef.js');
+  assert.ok(data?.prePaint, 'a chunk with a hex name keeps its raw path for matching');
+
+  const unreached = await diagnosticRun(browser.cdp, {
+    ...common,
+    config: { ...config, gate: '/api/never' },
+    cut: 'gate',
+    timeoutMs: 1500,
+  });
+  assert.match(unreached.invalid, /was not sent within 1500ms/);
 });

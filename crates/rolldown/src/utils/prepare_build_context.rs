@@ -503,6 +503,7 @@ pub fn prepare_build_context(
     dir: raw_options.dir,
     out_dir,
     file: raw_options.file,
+    charset: raw_options.charset.unwrap_or_default(),
     format,
     exports: raw_options.exports.unwrap_or(crate::OutputExports::Auto),
     hash_characters: raw_options.hash_characters.unwrap_or(crate::HashCharacters::Base64),

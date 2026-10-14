@@ -30,9 +30,9 @@ use rolldown::{
   ChunkFilenamesOutputOption, CodeSplittingMode, DeferSyncScanDataOption, HashCharacters,
   InlineCommonChunksOptions, IsExternal, ManglePropertiesPattern, ManglePropertiesPatterns,
   ManualCodeSplittingOptions, MatchGroup, MatchGroupName, ModuleType, OptimizationOption,
-  OutputExports, OutputFormat, Platform, PluginTimingsOption, RawCompressOptions, RawMangleOptions,
-  RawManglePropertiesOptions, RawMinifyOptions, RawMinifyOptionsDetailed, SanitizeFilename,
-  StrictMode, TsConfig,
+  OutputCharset, OutputExports, OutputFormat, Platform, PluginTimingsOption, RawCompressOptions,
+  RawMangleOptions, RawManglePropertiesOptions, RawMinifyOptions, RawMinifyOptionsDetailed,
+  SanitizeFilename, StrictMode, TsConfig,
 };
 use rolldown_common::DeferSyncScanData;
 use rolldown_common::GeneratedCodeOptions;
@@ -558,6 +558,21 @@ pub fn normalize_binding_options(
     sanitize_filename: normalize_sanitize_filename(output_options.sanitize_file_name)?,
     dir: output_options.dir,
     file: output_options.file,
+    charset: output_options
+      .charset
+      .map(|charset| {
+        Ok(match charset.as_str() {
+          "ascii" => OutputCharset::Ascii,
+          "utf8" => OutputCharset::Utf8,
+          _ => {
+            return Err(napi::Error::new(
+              napi::Status::InvalidArg,
+              format!("Invalid value \"{charset}\" for option \"output.charset\" - valid values are \"ascii\" and \"utf8\"."),
+            ));
+          }
+        })
+      })
+      .transpose()?,
     sourcemap: output_options.sourcemap.map(Into::into),
     es_module: output_options.es_module.map(|es_module| match es_module {
       Either::A(es_module_bool) => es_module_bool.into(),

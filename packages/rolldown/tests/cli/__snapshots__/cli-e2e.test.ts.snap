@@ -24,6 +24,7 @@ OPTIONS
   --advancedChunks.minSize <advancedChunks.minSize>Minimum size of the chunk.
   --assetFileNames <name>     Name pattern for asset files.
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
+  --charset <charset>         Character set to use in generated JavaScript.
   --checks.bundlerTimings     Whether to emit warnings when plugins and option callbacks take significant time during the build process.
   --checks.cannotCallNamespace Whether to emit warnings when a namespace is called as a function.
   --checks.circularDependency Whether to emit warnings when detecting circular dependency.
@@ -177,6 +178,7 @@ OPTIONS
   --advancedChunks.minSize <advancedChunks.minSize>Minimum size of the chunk.
   --assetFileNames <name>     Name pattern for asset files.
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
+  --charset <charset>         Character set to use in generated JavaScript.
   --checks.bundlerTimings     Whether to emit warnings when plugins and option callbacks take significant time during the build process.
   --checks.cannotCallNamespace Whether to emit warnings when a namespace is called as a function.
   --checks.circularDependency Whether to emit warnings when detecting circular dependency.
@@ -330,6 +332,7 @@ OPTIONS
   --advancedChunks.minSize <advancedChunks.minSize>Minimum size of the chunk.
   --assetFileNames <name>     Name pattern for asset files.
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
+  --charset <charset>         Character set to use in generated JavaScript.
   --checks.bundlerTimings     Whether to emit warnings when plugins and option callbacks take significant time during the build process.
   --checks.cannotCallNamespace Whether to emit warnings when a namespace is called as a function.
   --checks.circularDependency Whether to emit warnings when detecting circular dependency.
@@ -483,6 +486,7 @@ OPTIONS
   --advancedChunks.minSize <advancedChunks.minSize>Minimum size of the chunk.
   --assetFileNames <name>     Name pattern for asset files.
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
+  --charset <charset>         Character set to use in generated JavaScript.
   --checks.bundlerTimings     Whether to emit warnings when plugins and option callbacks take significant time during the build process.
   --checks.cannotCallNamespace Whether to emit warnings when a namespace is called as a function.
   --checks.circularDependency Whether to emit warnings when detecting circular dependency.

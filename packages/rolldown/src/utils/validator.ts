@@ -939,6 +939,10 @@ const OutputOptionsSchema = v.strictObject({
     v.description('Output directory, defaults to `dist` if `file` is not set'),
   ),
   file: v.pipe(v.optional(v.string()), v.description('Single output file')),
+  charset: v.pipe(
+    v.optional(v.union([v.literal('ascii'), v.literal('utf8')])),
+    v.description('Character set to use in generated JavaScript'),
+  ),
   exports: v.pipe(
     v.optional(
       v.union([v.literal('auto'), v.literal('named'), v.literal('default'), v.literal('none')]),

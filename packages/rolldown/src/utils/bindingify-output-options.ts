@@ -29,6 +29,7 @@ export function bindingifyOutputOptions(
 ): BindingOutputOptions {
   const {
     dir,
+    charset,
     format,
     exports,
     hashCharacters,
@@ -84,6 +85,7 @@ export function bindingifyOutputOptions(
 
   return {
     dir,
+    charset,
     // Handle case: rollup/test/sourcemaps/samples/sourcemap-file-hashed/_config.js
     file: file == null ? undefined : file,
     format: bindingifyFormat(format),

@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { analyzeChunkDiscovery, loadChunkGraph } from '../lib/chunk-discovery.mjs';
+import { analyzeChunkDiscovery, loadChunkGraph, requestSamples } from '../lib/chunk-discovery.mjs';
 import { postLoadScripts } from '../lib/measure.mjs';
 
 const analyzeLcpDiscovery = (...args) => analyzeChunkDiscovery(...args).lcp;
@@ -178,6 +178,55 @@ test('missing one paint does not discard evidence for the other', () => {
   const afterFcp = analyzeChunkDiscovery(graph, [sample(resources, { fcp: 600 })], 150);
   assert.equal(afterFcp.fcp.state, 'clear');
   assert.equal(afterFcp.lcp.state, 'open');
+});
+
+test('field and replay CDP requests become discovery samples', () => {
+  const origin = 'https://app.example.test';
+  const request = (file, startMs, endMs, extra = {}) => ({
+    url: `${origin}/assets/${file}.js?v=1`,
+    method: 'GET',
+    type: 'Script',
+    startMs,
+    endMs,
+    encodedBytes: 100,
+    priority: 'High',
+    initiator: { type: 'parser', url: `${origin}/account-1234/home` },
+    ...extra,
+  });
+  const runs = [
+    {
+      lcp: 1500,
+      requests: [
+        request('facade', 100, 200),
+        request('shared', 700, 800, { lastPriority: 'Low' }),
+        request('app', 710, 900, { failed: 'net::ERR_ABORTED' }),
+        { ...request('optional', 120, 300), url: 'https://cdn.example.test/assets/optional.js' },
+      ],
+    },
+  ];
+  const redact = (value) => value?.replace(/account-\d+/, '<account>');
+  const [converted] = requestSamples(runs, origin, redact);
+  assert.equal(converted.fcp, null);
+  assert.equal(converted.resourceDetailsComplete, true);
+  assert.deepEqual(converted.resources[1], {
+    name: '/assets/shared.js?v=1',
+    type: 'script',
+    start: 700,
+    end: 800,
+    bytes: 100,
+    initiator: { type: 'parser', url: '/<account>/home' },
+    requestPriority: { initial: 'High', last: 'Low' },
+  });
+  assert.equal(converted.resources[2].end, 0, 'a failed request did not finish');
+  assert.equal(converted.resources[3].name, 'https://cdn.example.test/assets/optional.js');
+  const result = analyzeChunkDiscovery(graph, [converted], 150);
+  assert.equal(result.fcp.state, 'unknown', 'runs without FCP keep the FCP check unknown');
+  assert.equal(result.lcp.state, 'open');
+  assert.equal(result.lcp.matchedScripts, 2, 'the failed and the cross-origin script do not match');
+  assert.deepEqual(
+    result.lcp.groups[0].example.chunks.map((c) => c.file),
+    ['assets/shared.js'],
+  );
 });
 
 test('post-load download evidence separates FCP from LCP and excludes unfinished requests', () => {

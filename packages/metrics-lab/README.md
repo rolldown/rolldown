@@ -344,6 +344,70 @@ deferral **moved** into that route; the summary prints it next to the startup ga
 - **No response parity yet.** The first requests report status and size; a replayed
   request set against the frozen original is not built.
 
+## Field mode (a deployed site)
+
+The lab answers "what does this build pay for" on a local copy with a fixed throttle.
+Field mode asks the same question of the **deployed** site, in your own logged-in
+Chrome: real data, real network, real server time. Use it when the lab and production
+disagree, or to check that a gain survives a fast network.
+
+```bash
+# 1. Chrome: open a logged-in tab on the site, turn on chrome://inspect/#remote-debugging
+# 2. Describe how the site serves each build:
+node harness.mjs field --config field.json            # 6 alternating pairs + 1 diagnostic run each
+node harness.mjs field --config field.json --runs 10 --cut lcp --out /tmp/my-field
+```
+
+```json
+{
+  "url": "https://app.example.com/",
+  "variants": {
+    "base": {
+      "cookies": [{ "name": "version", "value": "stable" }],
+      "build": "/builds/stable/dist"
+    },
+    "candidate": { "query": { "preview": "pr-123" } }
+  },
+  "block": ["analytics.example.com"],
+  "ignoreLcp": "#splash",
+  "gate": "/api/items"
+}
+```
+
+| Part           | What it does                                                                                                                                                                                                                                                                                                   |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Timing runs    | Pairs of loads, one per variant, in alternating order, so a slow minute of the network hits both sides. A hidden page (covered window) or a missing LCP makes a run invalid; it is retried, never averaged in.                                                                                                 |
+| Critical path  | The request LCP waited for (`gate`; set it, or the last fetch/XHR that ended before LCP is used), split into: document end, client time before the gate request, gate TTFB, download, client time after it. Only the client parts can move with a front-end change.                                            |
+| Script chain   | What the gate request waited for: of all scripts on its initiator stack, the one that finished loading last, then that script's own initiator, back to the document. The shape comes from the diagnostic run (async stacks name the caller behind a fetch wrapper); the times come from the median timing run. |
+| Diagnostic run | V8 precise coverage at the cut (`--cut gate`: when the gate request is sent; `lcp`; `fcp`) and at settle, plus a CPU profile to the cut. Slower by design and never used for timing.                                                                                                                           |
+| Build match    | Each served script is matched to a local build file by SHA-256 (or `//# debugId=`). A match gives module attribution and the module graph; no match still gives chunk-level coverage from the served body.                                                                                                     |
+| Report         | `<out>/<variant>/runtime-metrics.json`, `coverage.json`, `profile.json` in the lab's shapes (`"paint"` means "at the cut", see `field.cut`), plus `field-report.json`: medians, paired deltas with a seeded bootstrap 90% interval, slow-server outlier pairs.                                                 |
+
+**Privacy.** Output goes outside the repo (default `$TMPDIR/metrics-lab-field/<site>`).
+It holds no cookies, no headers, no page text and no screenshots. IDs, emails and long
+numbers in URLs are redacted (add patterns with `redact`). Variant cookies change the
+whole profile, so the original values are restored at the end, also on Ctrl-C. Block the
+site's analytics beacons in `block` so runs do not add synthetic sessions.
+
+**Getting a matching build.** Production rarely serves its sourcemaps. Build the same
+commit locally with the deploy's settings and bundler version; identical inputs give
+byte-identical chunks. Anything the build fetches at build time must be identical too.
+`buildMatch` in `coverage.json` says how much of the page the build explains;
+`different-build` means the path exists locally with other content.
+
+### What this mode does NOT do
+
+- **It measures one account, one network, one machine.** Gates, data size and network
+  differ per user. Population behavior needs field RUM.
+- **Your extensions run in the measured page.** Their scripts show up in `profile.json`
+  as `external` rows (`null/...` for `chrome-extension://` frames). Use a profile with
+  few extensions when CPU numbers matter.
+- **No parity check.** Real data changes between loads.
+- **Only navigations.** It never clicks or submits. `nonGetRequests` in each
+  `runtime-metrics.json` lists what the page itself sent.
+- **`--throttle lab` adds the lab throttle on top of the real network.** The real RTT
+  stays in, so the result is not comparable to a lab scan.
+
 ## The loop protocol (for an agent)
 
 1. **Baseline**: `gen` → `build` → `measure --runs 5 --label baseline` → `baseline`.

@@ -105,6 +105,25 @@ on the worker). The loop below is unchanged, with these differences:
   the tool.** A 5xx on the first requests usually means the app needs its `.dev.vars`; startup
   is unaffected, the first-request numbers are not valid until it has them.
 
+## If the lab and production disagree
+
+`field --config <file>` measures the DEPLOYED site in the user's own logged-in Chrome
+(README.md, "Field mode"). It does not replace the loop above; it checks where the lab
+cannot see:
+
+- **Read the critical path first.** When `after gate` is small and `gate ttfb` is most
+  of the LCP, the page waits on the server; only `gate start` (client time before the
+  request the LCP waits for) can move with a bundle change. Optimize what delays that
+  request, not what renders after it.
+- **Judge by the paired deltas and their 90% intervals,** never by one load or by a
+  median of unpaired runs. An interval that crosses 0 is "no measured difference".
+- **Compare `gate - doc`, not only `gate start`,** when the variants come from different
+  servers (a preview worker can answer the HTML hundreds of ms slower than production).
+- **Module rows need a build match.** Read `buildMatch` before quoting a module; with no
+  match only the chunk-level rows are evidence.
+- Field output contains real account traffic. Keep it where the tool writes it; never
+  copy it into a repo, a ticket or a merge request.
+
 ## The rendered output must not change
 
 The first scan of a target saves the build as the ORIGINAL — run it before you touch

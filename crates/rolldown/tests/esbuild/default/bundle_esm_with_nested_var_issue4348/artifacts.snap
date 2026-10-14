@@ -13,8 +13,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 __esmMin((() => {
 	x = 1;
 	while (x--);
-	do	;
-while (0);
+	do;
+	while (0);
 	for (; x++;);
 	for (var y in "y");
 	for (var y of "y");

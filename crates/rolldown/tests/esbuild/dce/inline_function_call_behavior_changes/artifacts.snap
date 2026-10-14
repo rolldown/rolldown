@@ -31,17 +31,17 @@ let shouldBeWrapped = [
 	(0, foo[bar])` + "``" + `,
 	(foo?.bar)` + "``" + `,
 	(foo?.[bar])` + "``" + `,
-	delete id(foo),
-	delete id(foo.bar),
-	delete id(foo[bar]),
-	delete id(foo?.bar),
-	delete id(foo?.[bar]),
-	delete (0, foo),
-	delete (0, foo.bar),
-	delete (0, foo[bar]),
-	delete (0, foo?.bar),
-	delete (0, foo?.[bar]),
-	delete void 0
+	(foo, true),
+	(foo.bar, true),
+	(foo[bar], true),
+	(foo?.bar, true),
+	(foo?.[bar], true),
+	(foo, true),
+	(foo.bar, true),
+	(foo[bar], true),
+	(foo?.bar, true),
+	(foo?.[bar], true),
+	true
 ];
 let shouldNotBeWrapped = [
 	id(foo)(),
@@ -49,7 +49,7 @@ let shouldNotBeWrapped = [
 	id(foo)` + "``" + `,
 	foo` + "``" + `
 ];
-let shouldNotBeDoubleWrapped = [delete (foo(), bar()), delete id((foo(), bar()))];
+let shouldNotBeDoubleWrapped = [(foo(), bar(), true), (foo(), bar(), true)];
 //#endregion
 export { shouldBeWrapped, shouldNotBeDoubleWrapped, shouldNotBeWrapped };
 

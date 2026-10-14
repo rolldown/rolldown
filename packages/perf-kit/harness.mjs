@@ -114,6 +114,7 @@ import {
 import { compareLcp, describeLcp, lcpReason } from './lib/parity/compare.mjs';
 import { runParity, pageSlug } from './lib/parity/run.mjs';
 import { cmdField } from './lib/field/run.mjs';
+import { onInterrupt } from './lib/interrupt.mjs';
 import { cmdRecord, cmdReplay } from './lib/replay/run.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
@@ -179,9 +180,8 @@ const writeJson = (file, value) => {
 };
 
 const cleanups = [];
-process.on('SIGINT', async () => {
+onInterrupt(async () => {
   for (const fn of cleanups.splice(0)) await fn().catch(() => {});
-  process.exit(130);
 });
 
 function parse(argv, options) {
@@ -4438,7 +4438,8 @@ field mode (a DEPLOYED site in your own logged-in Chrome - real data, network, s
                             Writes runtime-metrics/coverage/profile.json per variant and
                             field-report.json (paired deltas, 90% intervals) OUTSIDE the repo.
                             Needs chrome://inspect/#remote-debugging on (or --cdp-port).
-  --runs 6 --diagnose 1     pairs of timed runs / diagnostic runs per variant
+  --runs 6                  pairs of timed runs
+  --diagnose 1|0            one coverage + CPU profile run per variant, or none
   --cut gate|lcp|fcp        coverage snapshot point; gate = when the config's "gate" request
                             is sent ("what ran before the request LCP waits for")
   --throttle lab [--net-scale n]   add the lab throttle ON TOP of the real network

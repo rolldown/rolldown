@@ -31,6 +31,7 @@ import { attachBrowser, contextForOrigin, restoreCookies, snapshotCookies } from
 import { indexBuild, matchScript, matchSummary, readMatched } from './build-match.mjs';
 import { describeConfig, loadFieldConfig } from './config.mjs';
 import { diagnosticRun, timingRun } from './capture.mjs';
+import { onInterrupt } from '../interrupt.mjs';
 
 // Mirrors the lab's defer-candidate thresholds (harness.mjs) so field coverage
 // reports read the same way.
@@ -87,7 +88,7 @@ export async function cmdField(argv) {
   const throttle =
     opts.throttle === 'lab' ? scaleThrottle(DEFAULT_THROTTLE, Number(opts['net-scale'])) : null;
   const outDir = path.resolve(
-    opts.out ?? path.join(os.tmpdir(), 'perf-kit-field', slug(config.url)),
+    opts.out ?? path.join(os.tmpdir(), 'perf-kit-field', slug(redact(config.url))),
   );
   const timing = { settleMs: Number(opts.settle), timeoutMs: Number(opts.timeout), throttle };
   const pause = Number(opts.pause);
@@ -113,23 +114,19 @@ export async function cmdField(argv) {
     names,
   });
   const configured = variants.flatMap((v) => v.cookies);
-  let restored = false;
-  const restore = async () => {
-    if (restored) return;
-    restored = true;
-    await restoreCookies(cdp, {
+  // One restore, shared: a Ctrl-C during the final restore waits for it.
+  let restoring = null;
+  const restore = () =>
+    (restoring ??= restoreCookies(cdp, {
       browserContextId: ctx.browserContextId,
       origin: config.origin,
       saved,
       configured,
-    });
-  };
-  const onSigint = async () => {
-    await restore().catch(() => {});
-    process.exit(130);
-  };
-  process.once('SIGINT', onSigint);
-  const common = { config, context: ctx.browserContextId, saved, redact };
+    }));
+  const offInterrupt = onInterrupt(restore);
+  const common = { config, context: ctx.browserContextId, saved, configured, redact };
+  // Requests in the timing runs carry redacted URLs; a pinned gate matches in that form.
+  const gate = redact(config.gate);
 
   try {
     // --- timing runs: alternating order, pair i = one run of each variant ---------
@@ -148,7 +145,7 @@ export async function cmdField(argv) {
             await sleep(pause);
             continue;
           }
-          const cp = criticalPath(run.requests, run.sample.lcp, { pattern: config.gate });
+          const cp = criticalPath(run.requests, run.sample.lcp, { pattern: gate });
           timed.push({ pair: i + 1, variant: variant.name, ...run, criticalPath: cp });
           const b = cp.breakdown;
           console.log(
@@ -198,7 +195,7 @@ export async function cmdField(argv) {
       if (diag && runtime.criticalPath) {
         runtime.criticalPath = {
           ...runtime.criticalPath,
-          ...diagnosticChain(runtime.criticalPath, diag, config),
+          ...diagnosticChain(runtime.criticalPath, diag, { ...config, gate }),
         };
       }
       if (runtime.criticalPath) delete runtime.criticalPath.medianRunRequests;
@@ -226,9 +223,13 @@ export async function cmdField(argv) {
     printFieldReport(report, summaries, config);
     console.log(`\nfiles: ${outDir}`);
   } finally {
-    process.off('SIGINT', onSigint);
-    await restore().catch((err) => console.error(`WARNING: cookie restore failed: ${err.message}`));
-    console.log(names.length ? `cookies restored: ${names.join(', ')} (values not printed)` : '');
+    try {
+      await restore();
+      if (names.length) console.log(`cookies restored: ${names.join(', ')} (values not printed)`);
+    } catch (err) {
+      console.error(`WARNING: cookie restore failed: ${err.message}`);
+    }
+    offInterrupt();
     await browser.close().catch(() => {});
   }
 }
@@ -424,7 +425,11 @@ export function buildDiagnosticReports({ variant, diag, config, redact }) {
     generatedAtMs: Date.now(),
     entry: diag.entry,
     ...profileSummary,
-    rows: profileSummary.rows.map((r) => ({ ...r, bucket: redact(r.bucket) })),
+    rows: profileSummary.rows.map((r) => ({
+      ...r,
+      bucket: redact(r.bucket),
+      chunks: r.chunks.map(redact),
+    })),
     field: { variant: variant.name, cut: diag.cut, cutMs: round(diag.cutMs) },
   };
   return { coverage, profile };

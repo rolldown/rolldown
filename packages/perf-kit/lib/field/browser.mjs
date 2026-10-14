@@ -92,23 +92,37 @@ const cookieParam = (c) => ({
 });
 
 /**
- * Put back each saved cookie. A name the user did not have is deleted with an
- * expired cookie in the same scope the variant used: `url` for host-only
- * cookies, `domain` when the config set one.
+ * Where a variant cookie lands: the config's domain/path, else those of the
+ * user's cookie of the same name. A null domain is a host-only cookie on the
+ * origin. CDP treats a domain without a leading dot as host-only too.
+ */
+const variantScope = (cookie, existing) => ({
+  domain: cookie.domain ?? existing?.domain ?? null,
+  path: cookie.path ?? existing?.path ?? '/',
+});
+
+/**
+ * Put back each saved cookie. A variant cookie in another scope than the saved
+ * one (or a name the user did not have) is deleted with an expired cookie in the
+ * scope the variant used: `url` for host-only cookies, `domain` otherwise.
  */
 export async function restoreCookies(cdp, { browserContextId, origin, saved, configured = [] }) {
+  const host = new URL(origin).hostname;
   const cookies = [];
   for (const [name, original] of saved) {
-    if (original) {
-      cookies.push(cookieParam(original));
-      continue;
-    }
+    if (original) cookies.push(cookieParam(original));
+    const scopes = new Map();
     for (const c of configured.filter((x) => x.name === name)) {
+      const scope = variantScope(c, original);
+      scopes.set(`${scope.domain ?? host} ${scope.path}`, scope);
+    }
+    for (const [key, scope] of scopes) {
+      if (original && key === `${original.domain} ${original.path}`) continue;
       cookies.push({
         name,
         value: '',
-        path: c.path ?? '/',
-        ...(c.domain ? { domain: c.domain } : { url: origin }),
+        path: scope.path,
+        ...(scope.domain ? { domain: scope.domain } : { url: origin }),
         expires: 1,
       });
     }
@@ -128,6 +142,7 @@ export async function restoreCookies(cdp, { browserContextId, origin, saved, con
  * service worker bypassed, blocked URLs, the variant's cookies, init scripts.
  * A variant cookie reuses the domain/path of the user's existing cookie of the
  * same name, so the profile never ends up with two cookies of that name.
+ * `configured` holds the cookies of all variants, for the reset to the saved state.
  * `bodies` raises the response buffers so script bodies stay readable for
  * build matching (diagnostic runs only).
  */
@@ -138,6 +153,7 @@ export async function openFieldPage(
     origin,
     cookies = [],
     saved = new Map(),
+    configured = [],
     block = [],
     scripts = [],
     bodies = false,
@@ -176,17 +192,19 @@ export async function openFieldPage(
     });
     await send('Emulation.setCPUThrottlingRate', { rate: throttle.cpuRate });
   }
+  // Each run starts from the user's own cookies: a cookie that an earlier variant
+  // set must not stay for a variant that does not set it.
+  if (saved.size) await restoreCookies(cdp, { browserContextId, origin, saved, configured });
   const secure = origin.startsWith('https:');
   for (const cookie of cookies) {
     const existing = saved.get(cookie.name);
+    const scope = variantScope(cookie, existing);
     await send('Network.setCookie', {
       url: origin,
-      path: '/',
-      secure,
-      ...(existing
-        ? { domain: existing.domain, path: existing.path, secure: existing.secure }
-        : {}),
+      secure: existing?.secure ?? secure,
       ...cookie,
+      path: scope.path,
+      ...(scope.domain ? { domain: scope.domain } : {}),
     });
   }
   for (const source of scripts) {

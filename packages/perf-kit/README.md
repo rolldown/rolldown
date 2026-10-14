@@ -381,17 +381,18 @@ node harness.mjs field --config field.json --runs 10 --cut lcp --out /tmp/my-fie
 | Part           | What it does                                                                                                                                                                                                                                                                                                   |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Timing runs    | Pairs of loads, one per variant, in alternating order, so a slow minute of the network hits both sides. A hidden page (covered window) or a missing LCP makes a run invalid; it is retried, never averaged in.                                                                                                 |
-| Critical path  | The request LCP waited for (`gate`; set it, or the last fetch/XHR that ended before LCP is used), split into: document end, client time before the gate request, gate TTFB, download, client time after it. Only the client parts can move with a front-end change.                                            |
+| Critical path  | The request LCP waited for (`gate`: a substring of a fetch/XHR URL, matched after redaction; unset: the last fetch/XHR that ended before LCP), split into: document end, client time before the gate request, gate TTFB, download, client time after it. Only the client parts can move.                       |
 | Script chain   | What the gate request waited for: of all scripts on its initiator stack, the one that finished loading last, then that script's own initiator, back to the document. The shape comes from the diagnostic run (async stacks name the caller behind a fetch wrapper); the times come from the median timing run. |
-| Diagnostic run | V8 precise coverage at the cut (`--cut gate`: when the gate request is sent; `lcp`; `fcp`) and at settle, plus a CPU profile to the cut. Slower by design and never used for timing.                                                                                                                           |
+| Diagnostic run | V8 precise coverage at the cut (`--cut gate`: when the gate request is sent; `lcp`; `fcp`) and at settle, plus a CPU profile to the cut. Slower by design and never used for timing. A run that does not reach its cut in `--timeout` is invalid.                                                              |
 | Build match    | Each served script is matched to a local build file by SHA-256 (or `//# debugId=`). A match gives module attribution and the module graph; no match still gives chunk-level coverage from the served body.                                                                                                     |
 | Report         | `<out>/<variant>/runtime-metrics.json`, `coverage.json`, `profile.json` in the lab's shapes (`"paint"` means "at the cut", see `field.cut`), plus `field-report.json`: medians, paired deltas with a seeded bootstrap 90% interval, slow-server outlier pairs.                                                 |
 
 **Privacy.** Output goes outside the repo (default `$TMPDIR/perf-kit-field/<site>`).
 It holds no cookies, no headers, no page text and no screenshots. IDs, emails and long
 numbers in URLs are redacted (add patterns with `redact`). Variant cookies change the
-whole profile, so the original values are restored at the end, also on Ctrl-C. Block the
-site's analytics beacons in `block` so runs do not add synthetic sessions.
+whole profile, so each run starts from the original values and they are restored at the
+end, also on Ctrl-C. Block the site's analytics beacons in `block` so runs do not add
+synthetic sessions.
 
 **Getting a matching build.** Production rarely serves its sourcemaps. Build the same
 commit locally with the deploy's settings and bundler version; identical inputs give
@@ -404,7 +405,7 @@ byte-identical chunks. Anything the build fetches at build time must be identica
 - **It measures one account, one network, one machine.** Gates, data size and network
   differ per user. Population behavior needs field RUM.
 - **Your extensions run in the measured page.** Their scripts show up in `profile.json`
-  as `external` rows (`null/...` for `chrome-extension://` frames). Use a profile with
+  as `external` rows (the full URL for `chrome-extension://` frames). Use a profile with
   few extensions when CPU numbers matter.
 - **No parity check.** Real data changes between loads.
 - **Only navigations.** It never clicks or submits. `nonGetRequests` in each

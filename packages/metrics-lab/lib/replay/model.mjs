@@ -306,11 +306,19 @@ const ttfbOf = (r) => (done(r) ? r.headersEndMs - r.sendStartMs : null);
 const downloadOf = (r) => (done(r) ? r.endMs - r.headersEndMs : null);
 const replayable = (r) => isHttp(r.url) && !r.failed && !r.blocked && typeof r.status === 'number';
 
+/**
+ * The page's own document: the row of the navigation entry, else the first
+ * document. Other documents (iframes) are recorded like any other request.
+ */
+const mainDocument = (rows) =>
+  rows.find((r) => r.navigation) ?? rows.find((r) => r.type === 'Document');
+
 /** Requests grouped by key, in call order. */
 function callsByKey(requests, volatile) {
   const map = new Map();
+  const main = mainDocument(requests);
   for (const r of requests) {
-    if (!replayable(r) || r.type === 'Document') continue;
+    if (!replayable(r) || r === main) continue;
     const key = requestKey(r.method, r.url, volatile);
     map.set(key, [...(map.get(key) ?? []), r]);
   }
@@ -353,10 +361,9 @@ export function buildArchive({ config, variant, timing, bodyRun, recordedAtMs = 
       }),
     };
   }
-  const docRow = bodyRun.rows.find((r) => r.type === 'Document' && replayable(r));
-  const docTimes = timing
-    .map((t) => t.requests.find((r) => r.type === 'Document' && !r.failed))
-    .filter(Boolean);
+  const mainRow = mainDocument(bodyRun.rows);
+  const docRow = mainRow && replayable(mainRow) ? mainRow : null;
+  const docTimes = timing.map((t) => mainDocument(t.requests)).filter((r) => r && !r.failed);
   const assetSizes = new Map();
   for (const t of timing) {
     for (const r of t.requests) {
@@ -593,8 +600,9 @@ export function calibrate(field, replay, { relative = 0.15, floorMs = 150 } = {}
   ].map(([key, label]) => {
     const f = field[key];
     const r = replay[key];
-    if (typeof f !== 'number' || typeof r !== 'number')
-      return { key, label, field: f ?? null, replay: r ?? null, pass: null };
+    if (typeof f !== 'number') return { key, label, field: null, replay: r ?? null, pass: null };
+    // The field has the value and the replay does not (no gate, no LCP): a model error.
+    if (typeof r !== 'number') return { key, label, field: f, replay: null, pass: false };
     const toleranceMs = Math.round(Math.max(relative * Math.abs(f), floorMs));
     return {
       key,
@@ -620,8 +628,9 @@ export function archiveGaps(archive, runs, { inBuild = () => false } = {}) {
   const counts = new Map();
   for (const run of runs) {
     const keys = new Set();
+    const main = mainDocument(run.requests ?? []);
     for (const r of run.requests ?? []) {
-      if (!replayable(r) || r.type === 'Document' || inBuild(r)) continue;
+      if (!replayable(r) || r === main || inBuild(r)) continue;
       keys.add(requestKey(r.method, r.url, archive.volatile));
     }
     for (const k of keys) counts.set(k, (counts.get(k) ?? 0) + 1);

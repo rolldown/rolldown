@@ -33,6 +33,7 @@ import {
 } from '../lib/replay/model.mjs';
 import {
   cmdInspect,
+  cmdRecord,
   cmdReplay,
   recordTarget,
   replayBrowserArgs,
@@ -338,6 +339,11 @@ test('buildArchive takes responses from the body run and median times from the t
         blocked: 'inspector',
         status: undefined,
       }),
+      row('https://frame.example.test/challenge', {
+        type: 'Document',
+        headers: { 'content-type': 'text/html' },
+        bodyRef: 'frame-ref',
+      }),
     ],
   };
   const archive = buildArchive({ config, variant, timing, bodyRun, recordedAtMs: 1 });
@@ -348,7 +354,11 @@ test('buildArchive takes responses from the body run and median times from the t
   assert.equal(items.calls.length, 1);
   assert.equal(items.calls[0].ttfbMs, 2000, 'median of the timing runs, not the body run');
   assert.equal(items.calls[0].samples, 3);
-  assert.equal(Object.keys(archive.endpoints).length, 1, 'blocked requests are not replayable');
+  assert.deepEqual(
+    Object.keys(archive.endpoints).sort(),
+    ['GET app.example.test/api/items', 'GET frame.example.test/challenge'],
+    'an iframe document is recorded like any response; blocked requests are not replayable',
+  );
   assert.equal(archive.field.lcpMs, 2410);
   assert.equal(archive.field.ttfbMs, 2000);
   assert.deepEqual(
@@ -356,6 +366,7 @@ test('buildArchive takes responses from the body run and median times from the t
     [
       ['app.example.test', 0],
       ['blocked.example.test', 1],
+      ['frame.example.test', 0],
     ],
   );
 });
@@ -397,6 +408,14 @@ test('calibrate passes inside max(15%, 150ms) and fails outside', () => {
   const off = calibrate(field, { lcpMs: 2400, beforeGateMs: 1000, ttfbMs: 900 });
   assert.equal(off.pass, false);
   assert.equal(off.rows.find((r) => r.key === 'lcpMs').deltaMs, 400);
+  const noGate = calibrate(field, { lcpMs: 2000 });
+  assert.equal(noGate.pass, false, 'the replay found no gate that the field runs had');
+  assert.equal(noGate.rows.find((r) => r.key === 'beforeGateMs').pass, false);
+  assert.equal(
+    calibrate({ lcpMs: 2000 }, { lcpMs: 2000, ttfbMs: 900 }).pass,
+    true,
+    'a value only the replay has is not compared',
+  );
 });
 
 test('archiveGaps lists requests most field runs made that the archive cannot answer', () => {
@@ -405,6 +424,7 @@ test('archiveGaps lists requests most field runs made that the archive cannot an
   const runs = [0, 1, 2, 3].map((i) => ({
     requests: [
       row(`${ORIGIN}/`, { type: 'Document' }),
+      row('https://frame.example.test/x', { type: 'Document' }),
       row(`${ORIGIN}/api/items`),
       row(`${ORIGIN}/assets/app.js`, { type: 'Script' }),
       ...(i < 3 ? [row(`${ORIGIN}/api/late?b=2&a=1`)] : []),
@@ -416,11 +436,12 @@ test('archiveGaps lists requests most field runs made that the archive cannot an
   }));
   const inBuild = (r) => r.url.includes('/assets/');
   assert.deepEqual(archiveGaps(archive, runs, { inBuild }), [
+    { key: 'GET frame.example.test/x', runs: 4, of: 4 },
     { key: 'GET app.example.test/api/late?a=1&b=2', runs: 3, of: 4 },
   ]);
   assert.equal(
     archiveGaps(archive, runs).length,
-    2,
+    3,
     'without inBuild, the build file counts as a gap too',
   );
   assert.deepEqual(archiveGaps(archive, []), []);
@@ -439,9 +460,12 @@ function fakeClock() {
   const timers = [];
   return {
     now: () => t,
+    // Returns a handle like setTimeout: the shaper keeps one pump chain.
     schedule: (fn, ms) => {
-      timers.push({ at: t + ms, fn });
+      const timer = { at: t + ms, fn };
+      timers.push(timer);
       timers.sort((a, b) => a.at - b.at);
+      return timer;
     },
     // Microtasks (promise callbacks) run between timers, as on a real event loop.
     async run() {
@@ -527,6 +551,57 @@ test('with a wire queue, response headers wait behind the bytes already on the w
   );
 });
 
+test('a static response waits for the wire one time: its body follows its headers', async () => {
+  const clock = fakeClock();
+  const shaper = createShaper({
+    bytesPerSec: 1000,
+    wireBytes: 500,
+    tickMs: 10,
+    now: clock.now,
+    schedule: clock.schedule,
+  });
+  const at = {};
+  const sends = [
+    shaper.send({ data: Buffer.alloc(2000), urgency: 3, write: () => {}, end: () => {} }),
+  ];
+  clock.schedule(() => {
+    sends.push(
+      shaper.send({
+        data: Buffer.alloc(100),
+        urgency: 1,
+        head: () => (at.head = clock.now()),
+        write: () => (at.first ??= clock.now()),
+        end: () => (at.end = clock.now()),
+      }),
+    );
+  }, 105);
+  await clock.run();
+  await Promise.all(sends);
+  assert.equal(at.head, 590, 'the headers wait for the 490 bytes on the wire');
+  assert.equal(at.first, 600, 'the body comes right behind them, not after a second wire');
+  assert.equal(at.end, 690);
+});
+
+test('a late timer loses no bandwidth', async () => {
+  const clock = fakeClock();
+  const shaper = createShaper({
+    bytesPerSec: 10_000_000,
+    tickMs: 5,
+    now: clock.now,
+    // Every timer fires 45 ms late, as on a busy event loop.
+    schedule: (fn, ms) => clock.schedule(fn, ms + 45),
+  });
+  let end = null;
+  const sent = shaper.send({
+    data: Buffer.alloc(1_000_000),
+    write: () => {},
+    end: () => (end = clock.now()),
+  });
+  await clock.run();
+  await sent;
+  assert.equal(end, 145, '1 MB at 10 MB/s: 100 ms of link time, after the first late timer');
+});
+
 // --- server ------------------------------------------------------------------------
 
 function syntheticSite() {
@@ -587,6 +662,7 @@ function syntheticSite() {
             headers: { 'content-type': 'application/json', 'content-encoding': 'br' },
             bodyRef: store('{"title":"Synthetic items"}'),
             ttfbMs: 300,
+            downloadMs: 200,
           },
         ],
       },
@@ -699,6 +775,10 @@ test('the replay server routes document, dist, recorded, preflight and unrecorde
 
   const items = await h2request(client, { ...app, ':path': '/api/items?t=12345' });
   assert.ok(items.headersMs >= 290, `recorded server time (${items.headersMs}ms)`);
+  assert.ok(
+    items.endMs >= 480 && items.endMs < 800,
+    `the last byte at the recorded download time (${items.endMs}ms)`,
+  );
   assert.equal(JSON.parse(zlib.brotliDecompressSync(items.body)).title, 'Synthetic items');
 
   const tracked = await h2request(
@@ -735,6 +815,38 @@ test('the replay server routes document, dist, recorded, preflight and unrecorde
     ],
   );
   assert.equal(log[1].urgency, 1);
+
+  const frame = await h2request(client, {
+    ...app,
+    ':path': '/',
+    'sec-fetch-mode': 'navigate',
+    'sec-fetch-dest': 'iframe',
+  });
+  assert.equal(frame.status, 404, 'an iframe navigation is not the page document');
+  const cancelled = client.request({ ...app, ':path': '/api/items?t=1' });
+  cancelled.on('error', () => {});
+  await new Promise((r) => setTimeout(r, 50));
+  cancelled.close(http2.constants.NGHTTP2_CANCEL);
+  await new Promise((r) => setTimeout(r, 400));
+  assert.deepEqual(
+    server.takeLog().map((e) => [e.source, Boolean(e.cancelled)]),
+    [
+      ['miss', false],
+      ['recorded', true],
+    ],
+    'a stream the client cancelled before its headers is never answered',
+  );
+});
+
+test('record --out refuses a folder that is not an archive', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'replay-out-'));
+  fs.writeFileSync(path.join(dir, 'notes.txt'), 'synthetic');
+  try {
+    await assert.rejects(cmdRecord(['--url', `${ORIGIN}/`, '--out', dir]), /refusing to replace/);
+    assert.ok(fs.existsSync(path.join(dir, 'notes.txt')));
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('recordTarget builds a target from flags alone and never repeats a cookie value', () => {
@@ -795,14 +907,22 @@ test('inspect reports a gap from the field runs, and a build file is not one', a
       ],
     }));
     fs.writeFileSync(path.join(site.archiveDir, 'timing.json'), JSON.stringify({ runs }));
+    const id = '0123456789abcdef0123';
     fs.writeFileSync(
       path.join(site.archiveDir, 'archive.json'),
-      JSON.stringify({ ...site.archive, build: site.dist }),
+      JSON.stringify({
+        ...site.archive,
+        build: site.dist,
+        field: { ...site.archive.field, paths: [`/accounts/${id}/home`] },
+        hosts: [{ host: `${id}.example.test`, requests: 1, blocked: 0 }],
+        recordedWith: { tool: 'metrics-lab replay', cookieNames: [`session-${id}`] },
+      }),
     );
     const result = await cmdInspect(['--archive', site.archiveDir]);
     assert.equal(result.usable, true);
     assert.equal(result.complete, false);
     assert.deepEqual(result.gaps, [{ key: 'GET app.example.test/api/late', runs: 2, of: 2 }]);
+    assert.ok(!JSON.stringify(result).includes(id), 'paths, hosts and cookie names are redacted');
   } finally {
     console.log = logLine;
     fs.rmSync(site.dir, { recursive: true, force: true });

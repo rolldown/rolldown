@@ -220,9 +220,21 @@ function scrubSample(sample, redact) {
   return out;
 }
 
+/** `keepRaw` adds `rawRequests`: the same rows with raw URLs (archives, chunk names). */
 export async function timingRun(
   cdp,
-  { variant, config, context, saved, configured, redact, settleMs, timeoutMs, throttle },
+  {
+    variant,
+    config,
+    context,
+    saved,
+    configured,
+    redact,
+    settleMs,
+    timeoutMs,
+    throttle,
+    keepRaw = false,
+  },
 ) {
   const page = await openFieldPage(cdp, {
     browserContextId: context,
@@ -254,6 +266,7 @@ export async function timingRun(
     return {
       sample,
       requests,
+      ...(keepRaw ? { rawRequests: net.finish(info.requestStart, (v) => v, info.navUrl) } : {}),
       path: redact(info.path),
       entry: info.entry,
       connection: info.connection,

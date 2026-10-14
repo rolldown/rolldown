@@ -10,8 +10,10 @@
 //   wire      - a FIFO of `wireBytes` (send buffer + bytes in flight) that drains
 //               at the link rate. Response headers join its tail and wait behind
 //               what is already there: on a busy slow link a response's first
-//               byte comes late because of the page's OWN downloads. With
-//               wireBytes 0 the wire holds one tick of data (no queue).
+//               byte comes late because of the page's OWN downloads. The body
+//               follows its headers into the scheduler at once, so a response
+//               waits for the wire one time, not once for the headers and again
+//               for the body. With wireBytes 0 the wire holds one tick of data.
 
 /** `u=1, i` -> 1. Chrome's default for a request without the header is u=3. */
 export function urgencyOf(priorityHeader) {
@@ -29,8 +31,6 @@ export function createShaper({
   schedule = (fn, ms) => setTimeout(() => fn(), ms),
 }) {
   const unlimited = !(bytesPerSec > 0) || bytesPerSec === Infinity;
-  // Idle time must not bank a large burst; two ticks of credit at most.
-  const maxCredit = unlimited ? Infinity : Math.max(SLICE, (bytesPerSec * tickMs * 2) / 1000);
   const queue = [];
   const wire = []; // { bytes, sent, chunk, write } or a marker { bytes: 0, fire }
   let wireLoad = 0;
@@ -94,7 +94,9 @@ export function createShaper({
     timer = null;
     if (closed) return;
     const t = now();
-    credit = Math.min(maxCredit, credit + ((t - last) * bytesPerSec) / 1000);
+    // The link was busy for all of this time, so all of it is usable: a late timer
+    // must not lose bandwidth. Idle time never banks a burst: start() drops it.
+    credit += ((t - last) * bytesPerSec) / 1000;
     last = t;
     fill(Math.max(wireBytes, Math.floor(credit)));
     drain();
@@ -110,15 +112,22 @@ export function createShaper({
   }
 
   return {
-    /** Sends `data` through the shared link; resolves after `end()` is called. */
-    send({ data, urgency = 3, write, end }) {
+    /**
+     * Sends `data` through the shared link; resolves after `end()` is called.
+     * `head()` writes the response headers: they join the wire's tail now, and
+     * the body enters the scheduler behind them.
+     */
+    send({ data, urgency = 3, write, end, head = null }) {
       if (unlimited || data.length === 0) {
+        head?.();
         if (data.length) write(data);
         end();
         return Promise.resolve();
       }
       return new Promise((resolve) => {
         start();
+        if (head && wire.length) wire.push({ bytes: 0, fire: head });
+        else head?.();
         queue.push({ data, offset: 0, urgency, seq: seq++, write, end, resolve });
         if (!timer) timer = schedule(pump, 0);
       });

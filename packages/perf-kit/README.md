@@ -406,6 +406,110 @@ byte-identical chunks. Anything the build fetches at build time must be identica
 - **`--throttle lab` adds the lab throttle on top of the real network.** The real RTT
   stays in, so the result is not comparable to a lab scan.
 
+## Replay (a build that is not deployed)
+
+Field mode needs every variant deployed. Replay gives field-like numbers for a LOCAL
+build: record the deployed site once, then serve that recording to a throwaway headless
+Chrome with your dist in place of the deployed files.
+
+```bash
+# 1. Record one deployed variant (same config file as field mode; Chrome as for field)
+node harness.mjs record --config field.json --variant base          # 6 timing runs + 1 body run
+# 2. Calibrate: the replay of the RECORDED build must reproduce the field medians
+node harness.mjs replay --archive $TMPDIR/perf-kit-replay/<site>-base \
+  --dist recorded=/builds/stable/dist --calibrate
+# 3. A/B: alternating pairs of two local builds on the same recorded network and server
+node harness.mjs replay --archive <dir> --dist base=/builds/stable/dist --dist candidate=./dist
+```
+
+### Standalone: one agent records, another replays
+
+`replay.mjs` (bin `perf-kit-replay`) runs record and replay with no harness target and
+no lab state. The archive folder is the whole interface: the recording agent hands over
+its path, and the replaying agent needs no browser login.
+
+```bash
+# Recording agent (the user's Chrome, remote debugging on). No config file needed.
+node replay.mjs record --url https://app.example.com/ --cookie version=canary \
+  --block analytics.example.com --gate /api/items --ignore-lcp '#splash' \
+  --build /builds/stable/dist --settle 6000 --json
+# -> stdout: { "archive": "<dir>", "complete": true, "gaps": [], "next": {...}, ... }
+
+# Replaying agent
+node replay.mjs inspect --archive <dir> --json            # usable? complete? warnings? age?
+node replay.mjs replay --archive <dir> --dist recorded=/builds/stable/dist \
+  --calibrate --json --exit-code                          # result.calibration.verdict
+node replay.mjs replay --archive <dir> --dist base=/builds/stable/dist --dist candidate=./dist --json
+```
+
+- `--json` prints one result object on stdout and sends the log to stderr. An error
+  gives `{ "error": "..." }`.
+- Exit codes: 0 done, 1 model error, 2 error, 3 record again. Codes 1 and 3 come only
+  with `replay --calibrate --exit-code`.
+- **Gaps.** `record` and `inspect` compare the archive with the field timing runs. A
+  request that at least half of the runs made, that the archive has no response for,
+  and that the build does not serve is a gap: the replay answers it with a 404. They
+  return `complete` and `gaps`. A gap usually means that the body run stopped too early;
+  record again with a longer `--settle`.
+- **Calibration verdict.** `calibration.verdict` says what to do next:
+
+  | Verdict        | Meaning                                                   | Next step                                        |
+  | -------------- | --------------------------------------------------------- | ------------------------------------------------ |
+  | `pass`         | Every row is within tolerance and the archive has no gaps | An A/B on this archive is usable                 |
+  | `record-again` | The archive has gaps                                      | Record again (longer `--settle`)                 |
+  | `model-error`  | The archive is complete, but a row is off                 | Report the rows. A new recording does not fix it |
+
+- `record` writes `HANDOFF.txt` next to `archive.json`. It holds the next commands
+  with absolute paths.
+- `archive.json` has `schemaVersion` and `recordedWith` (tool, Chrome and Node
+  versions, cookie names, never values). `inspect` and `replay` refuse an archive with
+  another schema or with missing bodies. Record again in that case.
+- `inspect` warns when the archive has no network rating, no bandwidth, no named build,
+  or is more than 24 h old.
+- `--build` on `record` names the local copy of the build that the site serves. The
+  replaying agent uses it for the calibration and the `next` commands.
+- **Late chunks.** `inspect` runs the chunk discovery check (see "Chunk discovery") on
+  the field timing runs with the `--build` manifest. `replay` runs it on each dist's
+  replay runs. Both read the CDP requests, not the Resource Timing list, and use the
+  archive's `rtt` as the threshold. They return `lateChunksBeforeLcp`, and `replay`
+  writes the full result to `runtime-metrics.json` → `chunkDiscovery`. These are leads,
+  not predicted gains: a replay A/B decides. The check needs `.vite/manifest.json` that
+  is not older than the files it names; copy a build with `mv` or `cp -p`, not `cp -R`.
+
+### How the replay works
+
+| Part                      | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Archive                   | Every response of the body run with safelisted headers (type, encoding, CORS, `vary`, `location`, `link`; never cookies or auth), request body hashes (never request bodies), the median server time of each call over the timing runs, volatile query parameters (values that change between loads), the field medians, and the timing runs (`timing.json`).                                                                                                                                                                                                        |
+| One server for every host | Chrome runs with `--host-resolver-rules`, so the page keeps its real origin (cookies, CORS, absolute URLs unchanged) and no request leaves the machine. HTTPS + HTTP/2, like the recorded site.                                                                                                                                                                                                                                                                                                                                                                      |
+| Document                  | The dist's `index.html` plus every tag that only the deployed HTML has (a host's nonce, analytics snippet, service-worker or bot-check loader), after the recorded TTFB. The head comes at once and the rest after the recorded download time, like the recorded early flush. `--document local\|recorded` serves either file bare.                                                                                                                                                                                                                                  |
+| Static files              | From the dist, compressed like the recorded assets (encoding and level fitted on the recorded sizes). Each time to first byte is DRAWN from the recorded TTFB of files that loaded on an idle link (less than 50 kB of other downloads during the wait): a startup step waits for the slowest of its parallel chunks, so a constant median makes every step too fast. Both builds of a pair use the same seed.                                                                                                                                                       |
+| Wire queue                | On a busy slow link a response's first byte comes late because of the page's OWN downloads. The replay keeps a FIFO of `wireBytes` (the median extra TTFB of files fetched on a busy link × bandwidth) between the scheduler and the link. Static response headers wait behind the bytes in it. `--wire <kB>` overrides it. Drawing from ALL recorded TTFBs instead counts this queue two times.                                                                                                                                                                     |
+| API                       | The recorded response after its recorded server time, matched by method + host + path + query without volatile parameters, then call order (request bodies: exact hash, then normalized hash). A recorded late body sends its last byte after the recorded download time. An unrecorded request gets a 404 and is listed in the report.                                                                                                                                                                                                                              |
+| Bandwidth                 | One token bucket for all streams, most urgent first (`priority: u=N`). A delay per request would let 80 parallel chunks all run at full speed. The default rate is the median over the timing runs of the busiest 250 ms window. On a link whose rate changes (for example a VPN), this estimate is too high; use `--bandwidth <Mbit/s>` and calibrate.                                                                                                                                                                                                              |
+| Chrome's network rating   | Over loopback Chrome rates the network as fast. On a slow real network (rating `3g` or slower) it holds back low-priority requests even on HTTP/2, which can add seconds. The replay forces the recorded rating (`navigator.connection.effectiveType`); `--ect` overrides it.                                                                                                                                                                                                                                                                                        |
+| Storage                   | The field runs load the page in a profile that visited it before. A page that caches data in `localStorage` (a boot payload, flags) starts from that copy there and does not wait for the API. `--storage warm` first loads the page once, unmeasured, in the same browser context, so the build writes its own storage; the measured load reads it. The HTTP cache stays off and service workers are bypassed on every load, as in the field runs, so only storage and cookies carry over. Default: `warm` when the recorded page had `localStorage`, else `empty`. |
+| Calibration               | `--calibrate` compares the first dist's medians with the field medians (LCP, document end, gate start, gate - doc, gate TTFB, after gate). Each must be within max(15%, 150 ms). The verdict (`pass`, `record-again`, `model-error`) says what to do next; `timing.json` holds the field waterfalls to find a model error.                                                                                                                                                                                                                                           |
+
+**Privacy.** The archive holds REAL responses from your account. It goes to
+`$TMPDIR/perf-kit-replay/` with owner-only permissions, and `record` refuses a path
+inside a git work tree. Delete it when done.
+
+### What replay does NOT do
+
+- **It models one recorded network and server.** A result holds for those conditions;
+  record again when the network changes (a slower RTT changes Chrome's rating, and with
+  it which requests wait).
+- **It does not copy the recorded profile's storage.** With `--storage warm` the build
+  writes its own storage in an unmeasured first load. Storage that only older visits or
+  other pages write (the archive's `page` field lists the cookie names and the number of
+  localStorage keys) is not there. A build that reads it can take another path; the
+  report warns when the replay lands on another path than the field.
+- **It does not model packet loss.** A lost packet on a real connection holds every
+  stream until it is resent. The sampled TTFB covers only part of this.
+- **New API calls of a candidate build have no response.** They get a 404 and the
+  report lists them; the result may not hold.
+
 ## The loop protocol (for an agent)
 
 1. **Baseline**: `gen` → `build` → `measure --runs 5 --label baseline` → `baseline`.

@@ -130,6 +130,34 @@ cannot see:
 - Field output contains real account traffic. Keep it where the tool writes it; never
   copy it into a repo, a ticket or a merge request.
 
+`record` + `replay` give field-like numbers for a build that is NOT deployed (README.md,
+"Replay"):
+
+- **Calibrate before any A/B.** `replay --calibrate` on the recorded build must PASS.
+  A FAIL means the model misses something real; find it in `timing.json` (the field
+  waterfalls) before you quote a replay delta.
+- **Read the unrecorded requests.** A page request that the recording never saw gets a
+  404; a candidate that adds an API call is then not measured as it would run.
+- **Record again when the network changes.** Chrome's network rating decides which
+  requests wait; an archive from a fast network says nothing about a slow one.
+- The archive holds real responses. It stays in `$TMPDIR`; never copy it anywhere.
+- **Two agents: hand over the archive path only.** The recording agent runs
+  `node replay.mjs record ... --json` and passes the `archive` path. The replaying
+  agent runs `node replay.mjs inspect --archive <dir> --json` first, then
+  `replay ... --calibrate --json --exit-code`. Exit 2 or `usable: false` means record
+  again; do not edit `archive.json` by hand.
+- **Act on the calibration verdict, not on PASS/FAIL alone.** `record-again` (exit 3,
+  `gaps` not empty): record again with a longer `--settle`, at most twice.
+  `model-error` (exit 1): the archive is complete; do NOT record again, report the rows
+  that are off. Recording again cannot fix a model error.
+- **Keep `--storage warm` for a page that caches data in storage.** The field profile
+  has visited the page before; an empty context measures a first visit instead.
+- **Find leads in the field runs, decide with a replay A/B.** `inspect` →
+  `lateChunksBeforeLcp` lists static chunks that started more than one recorded RTT
+  after a static ancestor finished, in the real field runs. Check in the source whether
+  paint needs them before you change a chunk boundary or a preload. Never quote a
+  discovery delay as a gain.
+
 ## The rendered output must not change
 
 The first scan of a target saves the build as the ORIGINAL — run it before you touch

@@ -114,6 +114,7 @@ import {
 import { compareLcp, describeLcp, lcpReason } from './lib/parity/compare.mjs';
 import { runParity, pageSlug } from './lib/parity/run.mjs';
 import { cmdField } from './lib/field/run.mjs';
+import { cmdRecord, cmdReplay } from './lib/replay/run.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const APP_DIR = path.join(ROOT, 'app');
@@ -4444,6 +4445,29 @@ field mode (a DEPLOYED site in your own logged-in Chrome - real data, network, s
   Module attribution needs "build" per variant: a local build whose chunks are
   byte-identical to the served ones (same commit, settings, bundler version).
 
+replay (field numbers for a build that is NOT deployed):
+  Standalone entry for agents (one records, another replays): node replay.mjs help
+  (adds inspect, record --url/--cookie without a config, --json results, HANDOFF.txt).
+  record --config <file.json> [--variant <name>] [--runs 6]
+                            load one deployed variant in your Chrome (like field) and write a
+                            replay archive to $TMPDIR: every response (safelisted headers, no
+                            cookies), its median server time, a fitted network model, the
+                            field medians. Holds REAL account data - it refuses a git work tree.
+  replay --archive <dir> --dist [name=]<dir> [--dist [name=]<dir>] [--runs 6]
+                            serve the archive to headless Chrome from one local HTTP/2 server
+                            for every host: the local dist replaces the deployed files, API
+                            responses keep their recorded server time, all bodies share the
+                            recorded bandwidth. Same reports as field, paired deltas.
+  replay ... --calibrate    FIRST: replay the recorded build; its medians must match the field
+                            medians, or the model misses something and an A/B means nothing
+  --bandwidth <Mbit/s> --rtt <ms> --static-ttfb <ms> --wire <kB> --ect <rating|off>   override the model
+  --document merged|local|recorded   the dist's index.html plus the tags only the deployed
+                            HTML has (default: a host's injected loaders run in the replay too),
+                            the bare dist index.html, or the recorded HTML
+  --storage warm|empty      warm: an unmeasured load first, in the same browser context, so the
+                            build's own storage is there (default when the recorded page had storage)
+  --diagnose 1 [--cut gate|lcp|fcp]   coverage + CPU profile run per dist, as in field
+
 server startup mode (node/deno - a process coming up, not a page loading):
   node-scan --entry dist/server.js --ready port:3000    timed spawn->ready runs + what had to
                             execute to get there + where the pre-ready CPU went + leads.
@@ -4558,6 +4582,8 @@ const commands = {
   'worker-config': cmdWorkerConfig,
   why: cmdWhy,
   field: cmdField,
+  record: cmdRecord,
+  replay: cmdReplay,
   defer: (argv) => cmdDefer(argv, 'deferred'),
   undefer: (argv) => cmdDefer(argv, 'baseline'),
   status: cmdStatus,

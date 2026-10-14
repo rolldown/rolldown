@@ -89,11 +89,17 @@ also load modules outside an observed facade's static closure.
 includes static siblings and dynamic imports. `profile.json` records each source,
 its chunk filenames, and sampled self-time. It separates source work, engine work,
 and unattributed work. Missing or invalid maps, unmapped positions, inline scripts,
-and external scripts remain visible. They do not count as engine work.
+and external scripts remain visible. They do not count as engine work. A frame
+without a URL (a builtin such as `JSON.parse` or a DOM call) counts for its nearest
+caller with a URL, or as engine work when it has none. Top-level code of a bundled
+chunk runs many modules in one frame: its time splits by the sampled lines, and a
+line that holds more than one source stays `top-level` (unattributed). Minified
+chunks keep most top-level time unattributed; profile an unminified build to split it.
 
 The verdict keeps source modules with at least 15ms of sampled work OPEN for
 inspection. A filename without a directory can also identify a source module.
-Missing attribution stays UNKNOWN. Old profiles that map only the entry chunk
+Unattributed rows of at least 15ms keep the check UNKNOWN; a smaller row cannot
+hide a source module that reaches the threshold. Old profiles that map only the entry chunk
 must be collected again. A clear CPU signal means no source reaches the threshold;
 it does not prove that all startup work is required.
 

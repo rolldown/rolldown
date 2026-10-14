@@ -95,20 +95,85 @@ test('cross-origin lookalikes and encoded traversal never read local files', () 
   );
 });
 
-test('engine work, idle time, and anonymous application frames stay distinct', () => {
+test('a frame without a URL counts for its nearest caller with a URL, else for the engine', () => {
+  const frames = [
+    { id: 1, callFrame: { functionName: '(idle)', url: '' } },
+    { id: 2, callFrame: { functionName: '(program)', url: '' } },
+    { id: 3, callFrame: { functionName: '(garbage collector)', url: '' } },
+    {
+      id: 4,
+      callFrame: {
+        functionName: 'work',
+        url: `${origin}/entry.js`,
+        lineNumber: 0,
+        columnNumber: 0,
+      },
+      children: [5],
+    },
+    { id: 5, callFrame: { functionName: 'now', url: '' } },
+    { id: 6, callFrame: { functionName: '(anonymous)', url: '' } },
+  ];
   const result = aggregateProfile(
-    profile([
-      { functionName: '(idle)', url: '' },
-      { functionName: '(program)', url: '' },
-      { functionName: '(garbage collector)', url: '' },
-      { functionName: '(anonymous)', url: '' },
-    ]),
-    { readChunk: () => assert.fail('no chunk URL') },
+    {
+      origin,
+      nodes: frames,
+      samples: [1, 2, 3, 5, 6],
+      timeDeltas: [1, 2, 3, 5, 6].map(() => 20_000),
+    },
+    { readChunk: () => chunk('src/work.ts') },
   );
-  assert.equal(result.totalMs, 40);
-  assert.equal(result.attribution.engineMs, 20);
-  assert.equal(result.attribution.unattributedMs, 20);
-  assert.equal(profileEvidence(result).state, 'unknown');
+  assert.equal(result.totalMs, 60);
+  assert.deepEqual(result.attribution, { sourceMs: 20, engineMs: 40, unattributedMs: 0 });
+  assert.deepEqual(
+    result.rows.find((row) => row.kind === 'source'),
+    { bucket: 'src/work.ts', kind: 'source', ms: 20, chunks: ['entry.js'] },
+  );
+  assert.equal(profileEvidence(result).state, 'open');
+});
+
+test('top-level code splits by sampled line and never names only the first module', () => {
+  const code = 'const a = 1;\nconst b = 2;\nconst c = 3; const d = 4;';
+  const map = {
+    version: 3,
+    sources: ['src/a.ts', 'src/b.ts'],
+    names: [],
+    mappings: 'AAAA;ACAA;ADAA,UCAA',
+  };
+  const topLevel = (positionTicks) => ({
+    origin,
+    nodes: [
+      {
+        id: 1,
+        callFrame: { functionName: '', url: `${origin}/chunk.js`, lineNumber: 0, columnNumber: 0 },
+        ...(positionTicks ? { positionTicks } : {}),
+      },
+    ],
+    samples: [1],
+    timeDeltas: [40_000],
+  });
+  const read = { readChunk: () => ({ code, map }) };
+  const split = aggregateProfile(
+    topLevel([
+      { line: 1, ticks: 2 },
+      { line: 2, ticks: 1 },
+      { line: 3, ticks: 1 },
+    ]),
+    read,
+  );
+  assert.deepEqual(
+    split.rows.map((row) => [row.bucket, row.kind, row.ms]),
+    [
+      ['src/a.ts', 'source', 20],
+      ['chunk.js', 'top-level', 10],
+      ['src/b.ts', 'source', 10],
+    ],
+  );
+  const unsplit = aggregateProfile(topLevel(null), read);
+  assert.deepEqual(
+    unsplit.rows.map((row) => [row.bucket, row.kind, row.ms]),
+    [['chunk.js', 'top-level', 40]],
+  );
+  assert.equal(profileEvidence(unsplit).state, 'unknown');
 });
 
 test('source candidates survive incomplete attribution and old reports are unknown', () => {

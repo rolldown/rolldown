@@ -174,6 +174,10 @@ const readBody = (req) =>
     req.on('error', () => resolve(null));
   });
 
+// Http2ServerResponse has no `destroyed` or `closed`; its stream has them.
+const gone = (res) =>
+  res.stream ? res.stream.destroyed || res.stream.closed : Boolean(res.destroyed || res.closed);
+
 const accepts = (req, encoding) =>
   encoding != null &&
   new RegExp(`(^|[,\\s])${encoding}(;|,|\\s|$)`).test(req.headers['accept-encoding'] ?? '');
@@ -212,7 +216,8 @@ export async function startReplayServer({
   /**
    * Headers after `delayMs`, then the body through the shaper. `segments`
    * ([{ atMs, data }], times from the request's arrival) sends the body in
-   * parts, like a host that flushes the head of the HTML early.
+   * parts, like a host that flushes the head of the HTML early. `queueHeaders`
+   * puts the headers on the wire's tail with the body behind them (static files).
    */
   async function respond(
     req,
@@ -230,11 +235,14 @@ export async function startReplayServer({
       cacheKey = null,
     },
   ) {
+    const write = (chunk) => {
+      if (!gone(res)) res.write(chunk);
+    };
+    // First: a stream the client cancels while it waits leaves the link at once.
+    res.on('close', () => shaper.cancel(write));
     const wait = entry.t + delayMs - performance.now();
     if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-    // Static headers queue behind the bytes already on the wire (see shaper.mjs).
-    if (queueHeaders) await shaper.header();
-    if (res.destroyed || res.closed) {
+    if (gone(res)) {
       entry.cancelled = true;
       return;
     }
@@ -259,44 +267,66 @@ export async function startReplayServer({
       ];
       out['content-encoding'] = encodeAs.encoding;
     }
-    // A late body: everything but the last byte now, the last byte `holdMs`
-    // after the headers. A script or JSON response is usable only when complete.
+    // A late body: everything but the last byte now, the last byte `holdMs` after
+    // the headers. A script or JSON response is usable only when complete. The
+    // last byte skips the shaper: the recorded download time already holds the
+    // time the real link queued it.
+    let held = null;
     if (!segments && holdMs > 0 && parts[0].data.length > 1) {
       const data = parts[0].data;
-      parts = [
-        { atMs: 0, data: data.subarray(0, data.length - 1) },
-        { atMs: delayMs + holdMs, data: data.subarray(data.length - 1) },
-      ];
+      parts = [{ atMs: 0, data: data.subarray(0, data.length - 1) }];
+      held = { atMs: delayMs + holdMs, data: data.subarray(data.length - 1) };
     }
-    const total = parts.reduce((s, p) => s + p.data.length, 0);
+    const total = parts.reduce((s, p) => s + p.data.length, 0) + (held?.data.length ?? 0);
     const noBody = req.method === 'HEAD' || NO_BODY.has(status);
     if (!noBody) out['content-length'] = String(total);
     out['cache-control'] = 'no-store';
-    res.writeHead(status, out);
-    Object.assign(entry, {
-      status,
-      bytes: noBody ? 0 : total,
-      headersMs: Math.round(performance.now() - entry.t),
-    });
+    const writeHead = () => {
+      if (gone(res)) return;
+      res.writeHead(status, out);
+      Object.assign(entry, {
+        status,
+        bytes: noBody ? 0 : total,
+        headersMs: Math.round(performance.now() - entry.t),
+      });
+    };
+    const end = () => !gone(res) && res.end();
     if (noBody) {
-      res.end();
+      // Static headers queue behind the bytes already on the wire (see shaper.mjs).
+      if (queueHeaders) await shaper.header();
+      writeHead();
+      end();
       return;
     }
-    const write = (chunk) => {
-      if (!res.destroyed) res.write(chunk);
-    };
-    res.on('close', () => shaper.cancel(write));
+    if (queueHeaders) {
+      await shaper.send({
+        data: parts[0].data,
+        urgency: entry.urgency,
+        write,
+        end,
+        head: writeHead,
+      });
+      entry.endMs = Math.round(performance.now() - entry.t);
+      return;
+    }
+    writeHead();
     for (const [i, part] of parts.entries()) {
       const until = entry.t + part.atMs - performance.now();
       if (until > 0) await new Promise((r) => setTimeout(r, until));
-      if (res.destroyed) return;
-      const last = i === parts.length - 1;
+      if (gone(res)) return;
+      const last = i === parts.length - 1 && !held;
       await shaper.send({
         data: part.data,
         urgency: entry.urgency,
         write,
-        end: last ? () => !res.destroyed && res.end() : () => {},
+        end: last ? end : () => {},
       });
+    }
+    if (held) {
+      const until = entry.t + held.atMs - performance.now();
+      if (until > 0) await new Promise((r) => setTimeout(r, until));
+      if (gone(res)) return;
+      res.end(held.data);
     }
     entry.endMs = Math.round(performance.now() - entry.t);
   }
@@ -323,7 +353,13 @@ export async function startReplayServer({
     log.push(entry);
     const sameOrigin = u.origin === archive.origin;
 
-    if (sameOrigin && req.headers['sec-fetch-mode'] === 'navigate' && archive.document) {
+    // The page's own navigation; an iframe navigates with another destination.
+    if (
+      sameOrigin &&
+      req.headers['sec-fetch-mode'] === 'navigate' &&
+      (req.headers['sec-fetch-dest'] ?? 'document') === 'document' &&
+      archive.document
+    ) {
       const doc = archive.document;
       const local = documentSource !== 'recorded' && dist && distFile(dist, '/index.html');
       const headers = { ...doc.headers };

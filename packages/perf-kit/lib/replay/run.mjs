@@ -42,6 +42,7 @@ import {
   slug,
   writeJson,
 } from '../field/run.mjs';
+import { onInterrupt } from '../interrupt.mjs';
 import { replayCertificate } from './cert.mjs';
 import {
   ARCHIVE_SCHEMA,
@@ -58,7 +59,6 @@ import {
 import { chooseCompression, distFile, startReplayServer } from './server.mjs';
 
 const mbit = (bps) => (typeof bps === 'number' ? `${((bps * 8) / 1e6).toFixed(1)} Mbit/s` : 'n/a');
-const identity = (v) => v;
 const CLI = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'replay.mjs');
 
 function insideGitWorkTree(dir) {
@@ -144,63 +144,72 @@ export function recordTarget(opts, baseDir = process.cwd()) {
 export async function cmdRecord(argv) {
   const opts = parseArgs({ args: argv, options: RECORD_OPTIONS, allowPositionals: true }).values;
   const { config, variant } = recordTarget(opts);
+  const redact = makeRedactor(config.redact);
   const outDir = path.resolve(
-    opts.out ?? path.join(os.tmpdir(), 'perf-kit-replay', `${slug(config.url)}-${variant.name}`),
+    opts.out ??
+      path.join(os.tmpdir(), 'perf-kit-replay', `${slug(redact(config.url))}-${variant.name}`),
   );
   const repo = insideGitWorkTree(outDir);
   if (repo)
     throw new Error(
       `refusing to write a replay archive inside a git work tree (${repo}): it holds real responses`,
     );
+  // The archive replaces the folder: never a folder that is not an archive.
+  if (
+    fs.existsSync(outDir) &&
+    fs.readdirSync(outDir).length &&
+    !fs.existsSync(path.join(outDir, 'archive.json'))
+  )
+    throw new Error(`refusing to replace ${outDir}: it is not empty and holds no archive.json`);
   const runs = Number(opts.runs);
   const timing = { settleMs: Number(opts.settle), timeoutMs: Number(opts.timeout), throttle: null };
   const pause = Number(opts.pause);
-  const redact = makeRedactor(config.redact);
 
   console.log(
     `record: ${redact(variant.url)}  variant: ${variant.name}  runs: ${runs} + 1 body run`,
   );
   const browser = await attachBrowser({ cdpUrl: opts['cdp-url'], cdpPort: opts['cdp-port'] });
   const { cdp } = browser;
-  const chrome = await cdp
-    .send('Browser.getVersion')
-    .then((v) => v.product)
-    .catch(() => null);
-  const ctx = await contextForOrigin(cdp, config.origin);
-  if (!ctx.found) console.log(`note: no open tab on ${config.origin}; using the default profile.`);
   const names = [...new Set(variant.cookies.map((c) => c.name))];
-  const saved = await snapshotCookies(cdp, {
-    browserContextId: ctx.browserContextId,
-    origin: config.origin,
-    names,
-  });
-  let restored = false;
-  const restore = async () => {
-    if (restored) return;
-    restored = true;
-    await restoreCookies(cdp, {
+  let restore = null;
+  let offInterrupt = () => {};
+  try {
+    const chrome = await cdp
+      .send('Browser.getVersion')
+      .then((v) => v.product)
+      .catch(() => null);
+    const ctx = await contextForOrigin(cdp, config.origin);
+    if (!ctx.found)
+      console.log(`note: no open tab on ${config.origin}; using the default profile.`);
+    const saved = await snapshotCookies(cdp, {
       browserContextId: ctx.browserContextId,
       origin: config.origin,
+      names,
+    });
+    // One restore, shared: a Ctrl-C during the final restore waits for it.
+    let restoring = null;
+    restore = () =>
+      (restoring ??= restoreCookies(cdp, {
+        browserContextId: ctx.browserContextId,
+        origin: config.origin,
+        saved,
+        configured: variant.cookies,
+      }));
+    offInterrupt = onInterrupt(restore);
+    // The critical path is found in redacted URLs with a redacted gate, as in
+    // `field` and the replay. The archive keeps the raw URLs: the replay matches on them.
+    const common = {
+      config,
+      variant,
+      context: ctx.browserContextId,
       saved,
       configured: variant.cookies,
-    });
-  };
-  const onSigint = async () => {
-    await restore().catch(() => {});
-    process.exit(130);
-  };
-  process.once('SIGINT', onSigint);
-  // Timing runs keep raw URLs (identity redactor): the replay matches on them.
-  const common = {
-    config,
-    variant,
-    context: ctx.browserContextId,
-    saved,
-    redact: identity,
-    ...timing,
-  };
+      redact,
+      keepRaw: true,
+      ...timing,
+    };
+    const gate = redact(config.gate);
 
-  try {
     const timed = [];
     for (let i = 0; i < runs; i++) {
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -212,9 +221,9 @@ export async function cmdRecord(argv) {
           await sleep(pause);
           continue;
         }
-        const cp = criticalPath(run.requests, run.sample.lcp, { pattern: config.gate });
+        const cp = criticalPath(run.requests, run.sample.lcp, { pattern: gate });
         timed.push({
-          requests: run.requests,
+          requests: run.rawRequests,
           lcp: run.sample.lcp,
           fcp: run.sample.fcp ?? null,
           lcpElement: run.sample.lcpElement ?? null,
@@ -313,9 +322,15 @@ export async function cmdRecord(argv) {
       next: commands,
     };
   } finally {
-    process.off('SIGINT', onSigint);
-    await restore().catch((err) => console.error(`WARNING: cookie restore failed: ${err.message}`));
-    if (names.length) console.log(`cookies restored: ${names.join(', ')} (values not printed)`);
+    if (restore) {
+      try {
+        await restore();
+        if (names.length) console.log(`cookies restored: ${names.join(', ')} (values not printed)`);
+      } catch (err) {
+        console.error(`WARNING: cookie restore failed: ${err.message}`);
+      }
+    }
+    offInterrupt();
     await browser.close().catch(() => {});
   }
 }
@@ -463,14 +478,19 @@ function archiveFacts(archive, archiveDir, redact) {
     variant: archive.variant,
     recordedAt: new Date(archive.recordedAtMs).toISOString(),
     ageHours: Math.round(((Date.now() - archive.recordedAtMs) / 3_600_000) * 10) / 10,
-    recordedWith: archive.recordedWith ?? null,
+    recordedWith: archive.recordedWith
+      ? {
+          ...archive.recordedWith,
+          cookieNames: (archive.recordedWith.cookieNames ?? []).map(redact),
+        }
+      : null,
     build: archive.build,
-    gate: archive.gate,
+    gate: redact(archive.gate),
     requestKeys: Object.keys(archive.endpoints).length,
     calls,
     bodyBytes: archiveBodyBytes(archiveDir),
-    hosts: archive.hosts,
-    field: archive.field,
+    hosts: archive.hosts.map((h) => ({ ...h, host: redact(h.host) })),
+    field: { ...archive.field, paths: (archive.field.paths ?? []).map(redact) },
     network: {
       effectiveType: n.effectiveType ?? null,
       staticTtfbMs: n.staticTtfbMs,
@@ -504,7 +524,7 @@ function printArchiveSummary(archive, archiveDir, redact) {
     }`,
   );
   console.log(
-    `  hosts: ${archive.hosts.map((h) => `${h.host} ${h.requests}${h.blocked ? ` (${h.blocked} blocked)` : ''}`).join(', ')}`,
+    `  hosts: ${facts.hosts.map((h) => `${h.host} ${h.requests}${h.blocked ? ` (${h.blocked} blocked)` : ''}`).join(', ')}`,
   );
   console.log(
     `  document: ttfb ${msStr(archive.document?.ttfbMs)}, download ${msStr(archive.document?.downloadMs)},` +
@@ -747,7 +767,9 @@ export async function cmdReplay(argv) {
   if (!['warm', 'empty'].includes(storage)) throw new Error('--storage must be warm or empty');
   const compression = chooseCompression(archive.assets, variants[0].build);
   if (!compression.encoding) {
-    const enc = archive.assets.find((a) => a.encoding)?.encoding ?? null;
+    // Only an encoding the server can produce; it sends any other body unencoded.
+    const enc =
+      archive.assets.find((a) => ['br', 'gzip', 'zstd'].includes(a.encoding))?.encoding ?? null;
     Object.assign(compression, { encoding: enc, level: null });
   }
   const redact = makeRedactor(archive.redact);
@@ -812,13 +834,28 @@ export async function cmdReplay(argv) {
     documentSource: opts.document,
   });
   const profileDir = fs.mkdtempSync(path.join(os.tmpdir(), 'perf-kit-replay-chrome-'));
-  const browser = await launchBrowser({
-    profileDir,
-    extraArgs: replayBrowserArgs(server.port, { ect }),
-  });
+  let browser = null;
+  const cleanup = async () => {
+    await browser?.close().catch(() => {});
+    await server.close().catch(() => {});
+    fs.rmSync(profileDir, { recursive: true, force: true });
+  };
+  const offInterrupt = onInterrupt(cleanup);
+  try {
+    browser = await launchBrowser({
+      profileDir,
+      extraArgs: replayBrowserArgs(server.port, { ect }),
+    });
+  } catch (err) {
+    offInterrupt();
+    await cleanup();
+    throw err;
+  }
   const { cdp } = browser;
   await cdp.send('Security.setIgnoreCertificateErrors', { ignore: true }).catch(() => {});
-  const common = { config, saved: new Map(), redact, ...timing };
+  // Raw rows too: chunk discovery needs the real chunk names (a hash can look like an ID).
+  const common = { config, saved: new Map(), redact, keepRaw: true, ...timing };
+  const gate = redact(config.gate);
 
   // A fresh browser context per load: no storage, cookies or connections carry
   // over. Both builds of a pair get the same seed: the same sampled network.
@@ -863,7 +900,7 @@ export async function cmdReplay(argv) {
             );
             continue;
           }
-          const cp = criticalPath(run.requests, run.sample.lcp, { pattern: config.gate });
+          const cp = criticalPath(run.requests, run.sample.lcp, { pattern: gate });
           timed.push({ pair: i + 1, variant: variant.name, ...run, criticalPath: cp });
           logs.get(variant.name).push(...log);
           const b = cp.breakdown;
@@ -909,7 +946,11 @@ export async function cmdReplay(argv) {
       );
       runtime.replay = replayInfo[variant.name];
       runtime.chunkDiscovery = discoverChunks(
-        mine.map((t) => ({ requests: t.requests, lcp: t.sample.lcp, fcp: t.sample.fcp ?? null })),
+        mine.map((t) => ({
+          requests: t.rawRequests,
+          lcp: t.sample.lcp,
+          fcp: t.sample.fcp ?? null,
+        })),
         { origin: archive.origin, build: variant.build, rttMs: network.rttMs, redact },
       );
       writeJson(path.join(outDir, variant.name, 'runtime-metrics.json'), runtime);
@@ -998,9 +1039,8 @@ export async function cmdReplay(argv) {
       calibration: report.calibration ?? null,
     };
   } finally {
-    await browser.close().catch(() => {});
-    await server.close().catch(() => {});
-    fs.rmSync(profileDir, { recursive: true, force: true });
+    offInterrupt();
+    await cleanup();
   }
 }
 
@@ -1076,9 +1116,9 @@ function printReplaySection(report, variants, summaries) {
       `\ncalibration: replay of ${variants[0].name} vs the recorded field medians (${c.pass ? 'PASS' : 'FAIL'})`,
     );
     for (const row of c.rows) {
-      if (row.pass === null) {
+      if (row.pass === null || row.replay === null) {
         console.log(
-          `  ${row.label.padEnd(13)} field ${msStr(row.field).padStart(7)}  replay ${msStr(row.replay).padStart(7)}  (not compared)`,
+          `  ${row.label.padEnd(13)} field ${msStr(row.field).padStart(7)}  replay ${msStr(row.replay).padStart(7)}  ${row.pass === null ? '(not compared)' : 'OFF (no value in the replay)'}`,
         );
         continue;
       }

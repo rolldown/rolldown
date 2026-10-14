@@ -287,6 +287,7 @@ test('profile ownership separates what the bundle owns from what it never will',
 test('a node startup profile maps the entry through its sourcemap', () => {
   const frames = [
     { url: 'file:///srv/app/dist/server.mjs', micros: 30_000 },
+    { url: 'file:///srv/app/node_modules/pg/lib/server.mjs', micros: 40_000 },
     { url: 'node:internal/modules/esm/loader', micros: 10_000 },
     { functionName: '(garbage collector)', micros: 5_000 },
   ];
@@ -301,9 +302,19 @@ test('a node startup profile maps the entry through its sourcemap', () => {
   const result = profileStartup(profile, {
     code: 'function work() { return 42; }',
     map: { version: 3, sources: ['src/app.ts'], names: [], mappings: 'AAAA' },
-    entryUrlSuffix: '/server.mjs',
+    entryPath: '/srv/app/dist/server.mjs',
   });
-  assert.deepEqual(result.rows[0], {
+  // A dependency with the same file name is not the entry.
+  assert.deepEqual(
+    result.rows.map((row) => [row.bucket, row.kind]),
+    [
+      ['srv/app/node_modules/pg/lib/server.mjs', 'no-sourcemap'],
+      ['src/app.ts', 'source'],
+      ['node:internal/modules/esm/loader', 'external'],
+      ['(engine: gc)', 'engine'],
+    ],
+  );
+  assert.deepEqual(result.rows[1], {
     bucket: 'src/app.ts',
     kind: 'source',
     ms: 30,
@@ -311,5 +322,5 @@ test('a node startup profile maps the entry through its sourcemap', () => {
   });
   assert.equal(result.ownership.appMs, 30);
   assert.equal(result.ownership.engineMs, 5);
-  assert.equal(result.ownership.runtimeMs, 10);
+  assert.equal(result.ownership.runtimeMs, 50);
 });

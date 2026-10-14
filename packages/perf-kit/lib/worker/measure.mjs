@@ -6,6 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
+import { pathToFileURL } from 'node:url';
 
 import { connect } from '../cdp.mjs';
 import { median, quantile } from '../measure.mjs';
@@ -196,8 +197,9 @@ export function attributeProfile(profile, { outDir, mainName }) {
   const { rows, totalMs, ownership } = profileStartup(profile, {
     code,
     map,
-    entryUrlSuffix: `/${mainName}`,
+    entryPath: path.join(outDir, mainName),
     readChunk: chunkResolver(outDir),
+    baseUrl: pathToFileURL(`${outDir}/`),
   });
   return { summary, rows, totalMs, ownership, missingSourcemap: false };
 }

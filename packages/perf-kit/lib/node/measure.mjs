@@ -15,7 +15,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { median, quantile } from '../measure.mjs';
 import { coverageBySource } from '../coverage.mjs';
@@ -259,21 +259,29 @@ export function splitProfileOwnership(rows, appSources) {
     appMs: round1(appMs),
     engineMs: round1(engineMs),
     runtimeMs: round1(runtimeMs),
-    // The three parts always sum to this. `aggregateProfile` drops sub-0.5ms buckets,
-    // so its `totalMs` is slightly larger — reporting that as the headline next to a
-    // split derived from the kept rows makes the numbers look like they fail to add up.
+    // The three parts always sum to this. `aggregateProfile` rounds each row, so its
+    // `totalMs` can differ slightly — reporting that as the headline next to a split
+    // derived from the rows makes the numbers look like they fail to add up.
     accountedMs: round1(total),
     appShare: total > 0 ? Math.round((appMs / total) * 1000) / 10 : null,
   };
 }
 
-/** `readChunk(file)` reads any other chunk with its sourcemap (Worker builds); default none. */
-export function profileStartup(profile, { code, map, entryUrlSuffix, readChunk = () => null }) {
-  // aggregateProfile reads frames of `origin` as local chunks. Node and Deno frames are
-  // file: (and node:) URLs, whose origin is "null".
+/**
+ * `entryPath`: the profiled entry file; by default only it has a sourcemap here.
+ * `readChunk(file)` reads any other chunk with its sourcemap, and `baseUrl` resolves bare
+ * script names (Worker builds).
+ */
+export function profileStartup(profile, { code, map, entryPath, readChunk = () => null, baseUrl }) {
+  // Node and Deno frames are file: URLs (plus node:/ext: internals, never local).
+  const entryFile = decodeURIComponent(pathToFileURL(path.resolve(entryPath)).pathname).replace(
+    /^\/+/,
+    '',
+  );
   const { rows, totalMs } = aggregateProfile(profile, {
-    origin: 'null',
-    readChunk: (file) => (`/${file}`.endsWith(entryUrlSuffix) ? { code, map } : readChunk(file)),
+    baseUrl,
+    isLocal: (url) => url.protocol === 'file:',
+    readChunk: (file) => (file === entryFile ? { code, map } : readChunk(file)),
   });
   return { rows, totalMs, ownership: splitProfileOwnership(rows, map.sources ?? []) };
 }

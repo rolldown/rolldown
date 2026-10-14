@@ -229,7 +229,8 @@ automatically; a shared chunk or stylesheet you change for `/` can break another
    - **pre-paint CPU by module** — the profile maps all sampled same-origin
      chunks through their sourcemaps, including dynamic imports. Inspect source
      rows and their chunk filenames in `profile.json`. Missing maps, unmapped
-     positions, inline scripts, and external scripts stay unattributed. Do not
+     positions, inline scripts, external scripts and mixed top-level lines
+     (`top-level`) stay unattributed. Do not
      classify a generated filename as engine work. Old entry-only profiles must
      be collected again. The profile stops at FCP observation; its polling tail
      can include post-paint work. It does not cover the FCP-to-LCP interval.

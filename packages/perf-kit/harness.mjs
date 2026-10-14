@@ -3636,7 +3636,7 @@ async function cmdNodeScan(argv) {
       profile = profileStartup(raw, {
         code: sources.code,
         map: sources.map,
-        entryUrlSuffix: `/${path.basename(target.entry)}`,
+        entryPath: target.entry,
       });
     }
   }

@@ -1,0 +1,85 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region lib/polyfill/index.js
+globalThis.__polyfilled = "installed";
+//#endregion
+//#region lib/ensure.js
+//#endregion
+//#region lib/reader.js
+const value = globalThis.__polyfilled;
+//#endregion
+//#region main.js
+if (value !== "installed") throw new Error(`polyfill did not run before reader.js: ${value}`);
+//#endregion
+
+```
+
+# Variant: wrap-all: [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region lib/polyfill/index.js
+function init_polyfill() {
+	return (init_polyfill = __esmMin((() => {
+		globalThis.__polyfilled = "installed";
+	})))();
+}
+//#endregion
+//#region lib/ensure.js
+function init_ensure() {
+	return (init_ensure = __esmMin((() => {
+		init_polyfill();
+	})))();
+}
+//#endregion
+//#region lib/reader.js
+var value;
+function init_reader() {
+	return (init_reader = __esmMin((() => {
+		init_ensure();
+		value = globalThis.__polyfilled;
+	})))();
+}
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_reader();
+		if (value !== "installed") throw new Error(`polyfill did not run before reader.js: ${value}`);
+	})))();
+}
+//#endregion
+init_main();
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+//#region lib/polyfill/index.js
+globalThis.__polyfilled = "installed";
+//#endregion
+//#region lib/ensure.js
+//#endregion
+//#region lib/reader.js
+const value = globalThis.__polyfilled;
+//#endregion
+//#region main.js
+if (value !== "installed") throw new Error(`polyfill did not run before reader.js: ${value}`);
+//#endregion
+
+```

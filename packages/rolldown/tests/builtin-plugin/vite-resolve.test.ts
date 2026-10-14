@@ -13,16 +13,26 @@ type CallableResolveIdHook = (
   id: string,
   importer?: string | null,
   options?: { isEntry?: boolean; kind?: string; scan?: boolean },
-) => Promise<{ id: string } | null | undefined>;
+) => Promise<
+  | {
+      id: string;
+      external?: boolean | 'absolute' | 'relative';
+      moduleSideEffects?: boolean | 'no-treeshake';
+    }
+  | null
+  | undefined
+>;
 
 function createViteResolvePlugin({
   isBuild = false,
   builtins = [],
+  convertExternalRequire = false,
   external = true,
   onWarn,
 }: {
   isBuild?: boolean;
   builtins?: Array<string | RegExp>;
+  convertExternalRequire?: boolean;
   external?: true | string[];
   onWarn?: (message: string) => void;
 } = {}) {
@@ -44,6 +54,7 @@ function createViteResolvePlugin({
     },
     environmentConsumer: 'server',
     environmentName: 'ssr',
+    convertExternalRequire,
     builtins,
     external,
     noExternal: true,
@@ -54,8 +65,10 @@ function createViteResolvePlugin({
   });
 }
 
-function createResolveIdHook(): CallableResolveIdHook {
-  const plugin = createViteResolvePlugin();
+function createResolveIdHook(
+  options: Parameters<typeof createViteResolvePlugin>[0] = {},
+): CallableResolveIdHook {
+  const plugin = createViteResolvePlugin(options);
   // `viteResolvePlugin` returns a callable builtin plugin, but its declared
   // type does not carry the hook methods.
   return (plugin as unknown as { resolveId: CallableResolveIdHook }).resolveId;
@@ -86,6 +99,7 @@ async function bundleNodeBuiltinRequire({
       createViteResolvePlugin({
         isBuild: true,
         builtins,
+        convertExternalRequire: platform === 'browser',
         external: [],
         onWarn(message) {
           warnings.push(message);
@@ -125,6 +139,22 @@ test('resolveId rejects an invalid `options.kind`', async () => {
   await expect(resolveId(DUAL_FORMAT_PACKAGE, importer, { kind: 'not-a-kind' })).rejects.toThrow(
     'Invalid import kind',
   );
+});
+
+test('resolveId handles Node builtins when called directly in build mode', async () => {
+  const resolveId = createResolveIdHook({
+    isBuild: true,
+    builtins: ['node:util'],
+    convertExternalRequire: true,
+  });
+
+  await expect(
+    resolveId('node:util', importer, { kind: 'import-statement' }),
+  ).resolves.toMatchObject({
+    id: 'node:util',
+    external: true,
+    moduleSideEffects: false,
+  });
 });
 
 test('converts automatically externalized Node builtin require calls for ssr.target=webworker builds', async () => {

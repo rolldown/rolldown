@@ -14,9 +14,7 @@ use owo_colors::OwoColorize;
 use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
 
-use rolldown_common::{
-  ImportKind, OutputFormat, Platform, WatcherChangeKind, side_effects::HookSideEffects,
-};
+use rolldown_common::{ImportKind, WatcherChangeKind, side_effects::HookSideEffects};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
   HookResolveIdReturn, HookUsage, Plugin, PluginContext, typedmap::TypedMapKey,
@@ -45,6 +43,7 @@ pub struct ViteResolveOptions {
   pub tsconfig: Option<String>,
   pub environment_consumer: String,
   pub environment_name: String,
+  pub convert_external_require: bool,
   pub builtins: Vec<StringOrRegex>,
   pub external: external::ResolveOptionsExternal,
   pub no_external: external::ResolveOptionsNoExternal,
@@ -127,6 +126,7 @@ pub struct ViteResolvePlugin {
   legacy_inconsistent_cjs_interop: bool,
   environment_consumer: String,
   environment_name: String,
+  convert_external_require: bool,
   #[debug(skip)]
   finalize_bare_specifier: Option<Arc<FinalizeBareSpecifierCallback>>,
   #[debug(skip)]
@@ -177,6 +177,7 @@ impl ViteResolvePlugin {
       legacy_inconsistent_cjs_interop: options.legacy_inconsistent_cjs_interop,
       environment_consumer: options.environment_consumer,
       environment_name: options.environment_name,
+      convert_external_require: options.convert_external_require,
       finalize_bare_specifier: options.finalize_bare_specifier,
       finalize_other_specifiers: options.finalize_other_specifiers,
       resolve_subpath_imports: options.resolve_subpath_imports,
@@ -218,16 +219,11 @@ impl ViteResolvePlugin {
 
   fn resolve_builtin_for_server(
     &self,
-    ctx: &PluginContext,
     args: &HookResolveIdArgs<'_>,
     id: &str,
   ) -> HookResolveIdOutput {
-    // compatibility for `ssr.target=webworker`
-    if self.resolve_options.is_build
-      && ctx.options().platform == Platform::Browser
-      && !matches!(ctx.options().format, OutputFormat::Cjs)
-      && args.kind == ImportKind::Require
-      && is_node_like_builtin(id)
+    // Convert CommonJS requires of Node built-ins to ESM imports for webworker SSR builds.
+    if self.convert_external_require && args.kind == ImportKind::Require && is_node_like_builtin(id)
     {
       return HookResolveIdOutput {
         id: format!("{CJS_EXTERNAL_BUILTIN_FACADE_PREFIX}{id}").into(),
@@ -448,7 +444,7 @@ impl Plugin for ViteResolvePlugin {
       // built-ins
       // externalize if building for a server environment, otherwise redirect to an empty module
       if self.environment_consumer == "server" && self.builtin_checker.is_builtin(&id) {
-        return Ok(Some(self.resolve_builtin_for_server(ctx, args, &id)));
+        return Ok(Some(self.resolve_builtin_for_server(args, &id)));
       } else if self.environment_consumer == "server" && is_node_like_builtin(&id) {
         if !(matches!(self.external, ResolveOptionsExternal::True)
           || self.external.is_external_explicitly(&id))
@@ -469,7 +465,7 @@ impl Plugin for ViteResolvePlugin {
           self.warn(ctx, message).await?;
         }
 
-        return Ok(Some(self.resolve_builtin_for_server(ctx, args, &id)));
+        return Ok(Some(self.resolve_builtin_for_server(args, &id)));
       } else if self.environment_consumer == "client" && is_node_like_builtin(&id) {
         if self.no_external.is_true()
             // if both noExternal and external are true, noExternal will take the higher priority and bundle it.

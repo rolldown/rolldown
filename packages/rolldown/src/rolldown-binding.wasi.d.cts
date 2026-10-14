@@ -3048,6 +3048,7 @@ export interface BindingViteResolvePluginConfig {
   tsconfig?: string
   environmentConsumer: string
   environmentName: string
+  convertExternalRequire?: boolean
   builtins: Array<BindingStringOrRegex>
   external: true | string[]
   noExternal: true | Array<string | RegExp>

@@ -4,6 +4,7 @@ pub mod dynamic_import;
 mod hmr;
 pub mod impl_visit;
 mod import_analyzer;
+mod independent_init;
 mod new_url;
 pub mod stmt_eval_analyzer;
 mod top_level_import_read;

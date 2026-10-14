@@ -160,7 +160,10 @@ automatically; a shared chunk or stylesheet you change for `/` can break another
      more than one RTT after an ancestor finishes. The download must finish before
      that paint. The check uses `chunk-graph.json` or the current Vite manifest.
      Each example includes an import chain, request timings, and the available
-     source module and initiator. Follow these to the source. Check whether the
+     source module and initiator. Request details also record Chrome's initial
+     priority and priority changes. Check them when testing preload priorities.
+     Repeated URLs and redirects omit ambiguous network evidence.
+     Follow the available source locations to the source. Check whether the
      chunk renders the first visible content or the LCP element. The report marks
      this dependency `unverified`; timing alone cannot prove it. If paint needs
      the chunk, test an earlier preload or a different chunk boundary. If paint

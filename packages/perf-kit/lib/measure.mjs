@@ -2,6 +2,7 @@
 // PerformanceObservers injected before any page script runs.
 
 import { openPage, sleep } from './cdp.mjs';
+import { recordNetworkEvidence } from './network-evidence.mjs';
 
 // Roughly Lighthouse's mobile lab shape: fast-3G-ish network, 4x CPU slowdown.
 // Absolute numbers are lab-only; the signal is the delta between builds.
@@ -207,23 +208,7 @@ export async function timedRun(
   { url, throttle, expectedFeatures = [], settleMs = 1500, timeoutMs = 60_000 },
 ) {
   const page = await openPage(cdp, { throttle, injectScript: OBSERVER_JS });
-  const initiators = new Map();
-  const stopRecording = page.on('Network.requestWillBeSent', (event) => {
-    const initiator = event.initiator ?? {};
-    let stack = initiator.stack;
-    let frame;
-    while (stack && !frame) {
-      frame = stack.callFrames?.find((f) => f.url);
-      stack = stack.parent;
-    }
-    // Keep source locations only. Headers, cookies and request bodies are not
-    // needed to diagnose chunk discovery.
-    initiators.set(event.request.url, {
-      type: initiator.type,
-      url: frame?.url ?? initiator.url ?? null,
-      lineNumber: frame?.lineNumber ?? initiator.lineNumber ?? null,
-    });
-  });
+  const network = recordNetworkEvidence(page);
   try {
     await page.navigate(url);
     const deadline = Date.now() + timeoutMs;
@@ -235,22 +220,10 @@ export async function timedRun(
     }
     await sleep(settleMs);
     const sample = await page.evaluate(COLLECT_JS);
-    const origin = new URL(url).origin;
-    for (const resource of sample.resources) {
-      const key = resource.name.startsWith('/') ? `${origin}${resource.name}` : resource.name;
-      const initiator = initiators.get(key);
-      if (initiator) {
-        resource.initiator = {
-          ...initiator,
-          url: initiator.url?.startsWith(`${origin}/`)
-            ? initiator.url.slice(origin.length)
-            : initiator.url,
-        };
-      }
-    }
+    network.attach(sample.resources, new URL(url).origin);
     return sample;
   } finally {
-    stopRecording();
+    network.stop();
     await page.close().catch(() => {});
   }
 }

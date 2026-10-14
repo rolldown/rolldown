@@ -19,7 +19,7 @@ pub struct Bundler {
 - **`BundleFactory`** — Reused across builds. Holds the shared resolver, plugin driver factory, file emitter, and options. Each build calls `factory.create_bundle()` to produce a fresh `Bundle` without discarding the factory.
 - **`ScanStageCache`** — Persists the module graph, barrel state, and module index maps across builds. Swapped in/out of `Bundle` via `with_cached_bundle()` so incremental builds only re-scan changed modules.
 - **`SharedResolver`** — Owned by the factory, shared across builds. The resolution cache survives between builds.
-- **`closed`** — Legacy flag, see "Close Mechanism" below.
+- **`closed`** — Owner guard that rejects new builds after close, see "Close mechanism" below.
 
 `Bundler` derefs to `BundleFactory`, so callers can access factory fields directly (e.g. `bundler.options`, `bundler.resolver`).
 
@@ -71,26 +71,25 @@ A `Bundle` represents a single build. Its consuming methods (`write()`, `generat
 
 For watch mode, the non-consuming methods (`scan_modules()`, `bundle_write()`, `bundle_generate()`, `get_watch_files()`) allow manual phase orchestration via `with_cached_bundle_experimental`.
 
-### `Bundler` doesn't need `close()`
+### Close mechanism
 
-`Bundler` is a long-lived Rust struct. Resources clean up on drop — there's nothing to "close." The only meaningful work `Bundler::close()` does today is call the `closeBundle` plugin hook, but that's a **per-build lifecycle concern**, not a per-bundler concern. It belongs on the build artifact (`BundleHandle`), not on the bundler.
+`closeBundle` is a per-build concern, so its state lives on `BundleHandle`.
+`Bundler::close()` sets `closed` (new builds are rejected) and closes the
+latest handle.
 
-The current `Bundler::close()` also resets the scan stage cache and clears the resolver cache — but these are rebuild concerns, not close concerns. In watch mode, destroying caches on `result.close()` is actively harmful (forces a cold rebuild).
-
-The following should be removed from `Bundler`:
-
-- **`closed` flag** — No purpose once `closeBundle` moves to `BundleHandle`.
-- **`inner_close()`** — Its only real job (calling `closeBundle`) moves to `BundleHandle.close()`. Cache/resolver cleanup happens on drop.
-- **`reset_closed_for_watch_mode()`** — This hack exists because `BindingWatcherBundler.close()` calls `bundler.close()` which sets `closed = true`, requiring a reset before each rebuild. With `closeBundle` on `BundleHandle`, no reset is needed.
-- **`create_error_if_closed()`** — Callers that need a closed guard (`ClassicBundler`, `DevEngine`) have their own `closed` flags.
-- **`close()`** — Removed entirely.
+- Before each `write`/`generate`/`scan`, the bundler closes the previous
+  handle (`ensure_last_bundle_closed`); a no-op if it is already closed.
+- `BundleHandle.close()` does not reset cache or resolver data, so closing a
+  watch result does not force the next build cold.
 
 ### `BundleHandle.close()` — Design Decision
 
-`BundleHandle` should own a `close()` method that:
+`BundleHandle` owns a `close()` method that:
 
 1. Calls the `closeBundle` plugin hook
 2. Is **idempotent** — calling close twice is safe (no-op on second call, tracked via `Arc<AtomicBool>`)
+3. Turns a panicking hook into an error and clears the plugin driver's
+   retained resources on every outcome
 
 This is the correct place because `closeBundle` signals that no more output processing will happen for a specific build. The watcher's BUNDLE_END/ERROR event data carries a `BundleHandle` (not the full bundler), and JS `result.close()` calls `handle.close()` directly — no bundler lock needed.
 
@@ -98,12 +97,13 @@ This is the correct place because `closeBundle` signals that no more output proc
 
 `rolldown_watcher` owns the build lifecycle:
 
-1. Each `WatchTask` holds an `Arc<TokioMutex<Bundler>>`
+1. Each `WatchTask` holds an `Arc<async_lock::Mutex<Bundler>>` (imported as `TokioMutex` in `watch_task.rs`)
 2. On rebuild, the coordinator locks the bundler, calls `with_cached_bundle_experimental`, and orchestrates scan/write phases
-3. After each build, `rolldown_watcher` should call `Bundle.close()` (or `BundleHandle.close()`) to fire `closeBundle` — this is the watcher's responsibility, not something JS reaches in to do
-4. On watcher close, the bundler is dropped, cleaning up resources
+3. The emitted `BUNDLE_END`/`ERROR` result owns that build's `BundleHandle`; JavaScript calls `event.result.close()` when finished, and the handle remains valid across later rebuilds
+4. Watcher shutdown closes the latest handle as a backstop after `closeWatcher`
 
-This means `BindingWatcherBundler` should NOT call `bundler.close()` — the `closeBundle` hook is the contract of `rolldown_watcher`, triggered at the right point in the build lifecycle.
+`BindingWatcherBundler::close` calls `BundleHandle.close()` directly, without
+the bundler lock.
 
 ## Related
 

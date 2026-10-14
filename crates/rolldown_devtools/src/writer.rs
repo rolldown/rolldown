@@ -7,9 +7,11 @@ use std::{
     Arc, LazyLock,
     mpsc::{Sender, channel},
   },
-  thread,
   time::{SystemTime, UNIX_EPOCH},
 };
+
+#[cfg(any(test, all(target_family = "wasm", not(rolldown_wasi_threads))))]
+use std::sync::Mutex;
 
 use rustc_hash::{FxHashMap, FxHashSet};
 use serde::ser::{SerializeMap, Serializer as _};
@@ -28,26 +30,65 @@ pub enum LogCommand {
   CloseSession { session_id: String, ack: Option<Sender<()>> },
 }
 
-static LOG_WRITER_TX: LazyLock<Sender<LogCommand>> = LazyLock::new(|| {
-  let (tx, rx) = channel::<LogCommand>();
-  thread::Builder::new()
-    .name("rolldown-devtools-writer".into())
-    .spawn(move || {
-      let mut state = WriterState::default();
-      while let Ok(cmd) = rx.recv() {
-        state.handle(cmd);
-      }
-      // Channel closed (process exit): flush everything still held.
-      state.flush_all();
-    })
-    .expect("failed to spawn rolldown-devtools-writer thread");
-  tx
-});
+// `build.rs` sets `rolldown_wasi_threads` only for `wasm32-wasip1-threads`, so the
+// `Synchronous` cfg below means threadless `wasm32-wasip1`.
+enum WriterBackend {
+  #[cfg(not(all(target_family = "wasm", not(rolldown_wasi_threads))))]
+  Thread(Sender<LogCommand>),
+  /// Threadless WASI cannot spawn the writer thread, so each command runs inline; the ack of a
+  /// `CloseSession` is then sent before `flush_session` returns. See
+  /// internal-docs/devtools/implementation.md, "Read-after-close contract".
+  #[cfg(any(test, all(target_family = "wasm", not(rolldown_wasi_threads))))]
+  Synchronous(Mutex<WriterState>),
+}
 
-/// Fire-and-forget send to the writer thread. Producers never block on I/O.
+impl WriterBackend {
+  fn start() -> Self {
+    #[cfg(all(target_family = "wasm", not(rolldown_wasi_threads)))]
+    {
+      Self::Synchronous(Mutex::default())
+    }
+    #[cfg(not(all(target_family = "wasm", not(rolldown_wasi_threads))))]
+    {
+      let (tx, rx) = channel::<LogCommand>();
+      std::thread::Builder::new()
+        .name("rolldown-devtools-writer".into())
+        .spawn(move || {
+          let mut state = WriterState::default();
+          while let Ok(cmd) = rx.recv() {
+            state.handle(cmd);
+          }
+          // Channel closed (process exit): flush everything still held.
+          state.flush_all();
+        })
+        .expect("failed to spawn rolldown-devtools-writer thread");
+      Self::Thread(tx)
+    }
+  }
+
+  fn send(&self, cmd: LogCommand) {
+    match self {
+      // If the writer thread has died, drop the command silently.
+      #[cfg(not(all(target_family = "wasm", not(rolldown_wasi_threads))))]
+      Self::Thread(tx) => {
+        let _ = tx.send(cmd);
+      }
+      #[cfg(any(test, all(target_family = "wasm", not(rolldown_wasi_threads))))]
+      Self::Synchronous(state) => {
+        if let Ok(mut state) = state.lock() {
+          state.handle(cmd);
+        }
+      }
+    }
+  }
+}
+
+static LOG_WRITER: LazyLock<WriterBackend> = LazyLock::new(WriterBackend::start);
+
+/// Fire-and-forget send to the writer backend. With the writer thread, producers never block on
+/// I/O.
 pub fn send(cmd: LogCommand) {
-  // If the writer thread has died, drop the command silently.
-  let _ = LOG_WRITER_TX.send(cmd);
+  LOG_WRITER.send(cmd);
 }
 
 /// Request the writer thread to drain and flush every file for `session_id`,
@@ -56,8 +97,15 @@ pub fn send(cmd: LogCommand) {
 /// resolving and a reader opening the session's log files.
 #[must_use = "the returned receiver must be awaited to actually wait for the flush"]
 pub fn flush_session(session_id: String) -> std::sync::mpsc::Receiver<()> {
+  flush_session_with(&LOG_WRITER, session_id)
+}
+
+fn flush_session_with(
+  backend: &WriterBackend,
+  session_id: String,
+) -> std::sync::mpsc::Receiver<()> {
   let (tx, rx) = channel();
-  send(LogCommand::CloseSession { session_id, ack: Some(tx) });
+  backend.send(LogCommand::CloseSession { session_id, ack: Some(tx) });
   rx
 }
 
@@ -129,6 +177,7 @@ impl WriterState {
     }
   }
 
+  #[cfg(not(all(target_family = "wasm", not(rolldown_wasi_threads))))]
   fn flush_all(&mut self) {
     for (_, mut w) in self.files.drain() {
       let _ = w.flush();
@@ -192,4 +241,31 @@ fn write_event(
 
 fn current_utc_timestamp_ms() -> u128 {
   SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_millis()
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn synchronous_backend_writes_and_acknowledges_flush_inline() {
+    let cwd = std::env::temp_dir()
+      .join(format!("rolldown-devtools-synchronous-backend-{}", std::process::id()));
+    let backend = WriterBackend::Synchronous(Mutex::default());
+    backend.send(LogCommand::SetSessionCwd { session_id: "session".into(), cwd: cwd.clone() });
+    backend.send(LogCommand::Write {
+      session_id: "session".into(),
+      filename: "node_modules/.rolldown/session/logs.json".into(),
+      action_value: serde_json::json!({ "action": "BuildStart" }),
+    });
+
+    // `try_recv`: the ack must already be there when `flush_session_with` returns.
+    flush_session_with(&backend, "session".into()).try_recv().expect("inline flush ack");
+    let events = std::fs::read_to_string(cwd.join("node_modules/.rolldown/session/logs.json"))
+      .expect("read flushed log");
+    let event: serde_json::Value = serde_json::from_str(events.trim()).expect("valid JSON");
+    assert_eq!(event["action"], "BuildStart");
+
+    std::fs::remove_dir_all(cwd).expect("remove cwd");
+  }
 }

@@ -160,10 +160,11 @@ bundled dev, and Rust callers. Support for other formats is not planned
 
 ### Threading model
 
-- The `BundleCoordinator` runs in **one** dedicated tokio task
-  (`DevEngine::run` does `tokio::spawn(coordinator.run())`,
-  `dev_engine.rs:115`). Its `run()` is a single `while let Some(msg) =
-self.rx.recv().await` loop, so all coordinator state mutation is
+- The `BundleCoordinator` runs in **one** task on the selected runtime.
+  `DevEngine::run` submits it with `try_spawn`; a rejected submission fails
+  `run()` (see `internal-docs/async-runtime/implementation.md`, "Rejected
+  `try_spawn` fails the start"). Its `run()` is a single `while let Some(msg) =
+self.rx.next().await` loop, so all coordinator state mutation is
   serialized — there is no lock on `CoordinatorState`, the message loop
   _is_ the lock.
 - Each `BundlingTask` runs in its **own** spawned task. The coordinator
@@ -172,8 +173,9 @@ self.rx.recv().await` loop, so all coordinator state mutation is
 - The `Bundler` is shared as `Arc<Mutex<Bundler>>`. A `BundlingTask`
   locks it for the duration of its HMR/rebuild work.
 - Communication is via an **unbounded** mpsc channel
-  (`unbounded_channel::<CoordinatorMsg>()`, `dev_engine.rs:62`).
-  Request/response messages carry a `tokio::sync::oneshot` reply
+  (`futures::channel::mpsc::unbounded::<CoordinatorMsg>()`,
+  `dev_engine.rs:89`). Request/response messages carry a
+  `futures::channel::oneshot` reply
   channel.
 
 ---
@@ -348,7 +350,7 @@ of them.
 2. Pushes a `TaskInput::FullBuild` into `queued_tasks`, sets state to
    `Idle`, calls `schedule_build_if_stale()` — this kicks off the
    initial build (`Idle → FullBuildInProgress`).
-3. Enters the `while let Some(msg) = self.rx.recv().await` loop,
+3. Enters the `while let Some(msg) = self.rx.next().await` loop,
    dispatching each `CoordinatorMsg` as in §2.
 4. On `Close`, awaits any running `BundlingTask` (so it doesn't panic
    trying to send `BundleCompleted` into a dropped channel) and breaks.
@@ -491,7 +493,7 @@ When it spawns a task:
 3. Construct a `BundlingTask`.
 4. If `task_input.requires_full_rebuild()` → state `FullBuildInProgress`;
    else → state `InProgress`.
-5. `tokio::spawn` the task's `run()` as a `Shared` future; store it in
+5. `spawn_detached` the task's `run()` as a `Shared` future; store it in
    `current_bundling_future`.
 
 The key invariant: at most one `BundlingTask` runs at a time. While one
@@ -1331,6 +1333,14 @@ The `#[cfg(feature = "testing")]` methods —
 `create_client_for_testing` — exist for the test harness to drive
 synthetic file changes and inspect coordinator state.
 
+`close()` does not touch the stored coordinator. A rejected `try_spawn`
+drops it inside `run()`, which takes it out of `CoordinatorState` before
+submitting. A coordinator that `run()` never started stays in
+`CoordinatorState`, with its watcher and receiver, until the engine drops.
+
+`dev()` needs a MultiThread executor. Which artifacts report `devSupported` is
+in `internal-docs/async-runtime/implementation.md`, "Dev and watch support".
+
 ---
 
 ## 16. Error handling
@@ -1394,7 +1404,7 @@ Examples:
 
 - `create_error_if_closed()?` at the top of every `DevEngine` method that
   touches the coordinator (`dev_engine.rs`).
-- `coordinator_sender.send(...).map_err_to_unhandleable().context(...)?`
+- `coordinator_sender.unbounded_send(...).map_err_to_unhandleable().context(...)?`
   after the engine has been closed.
 - `reply_receiver.await.map_err_to_unhandleable().context(...)?` when the
   coordinator has shut down before responding.
@@ -1541,7 +1551,7 @@ Three stops:
   method that touches the coordinator runs it first. By default the
   resulting error is surfaced to the binding consumer (§16d); methods that
   take the "swallow as `Ok`" exception (§16d) must also handle the
-  mid-call closed-race at every `.send(...)` and `.recv()` site.
+  mid-call closed-race at every `.unbounded_send(...)` and reply-await site.
 - **Plugin errors are user-visible.** Never silently drop them; they always
   reach `on_output` or `on_hmr_updates`.
 - **Each phase owns its delivery.** Inside `BundlingTask`, each phase
@@ -1575,23 +1585,21 @@ outside our crate?_ If yes, route it. If no, panic.
 
 Existing panic sites in `rolldown_dev` that are intentional, not punts:
 
-- `crates/rolldown_dev/src/watcher_event_handler.rs:10` —
-  `coordinator_tx.send(...).expect(...)`. The coordinator's mpsc receiver is
-  owned by the coordinator task, which only shuts down on the `Close`
-  message. The fs watcher cannot trigger that path; if its `send` fails, our
-  shutdown ordering is wrong.
-- `crates/rolldown_dev/src/bundling_task.rs:69` — same pattern on the final
-  `BundleCompleted` send. The coordinator awaits any in-flight `BundlingTask`
-  before processing `Close` (§4), so by construction the receiver is alive
-  when this send runs.
+- `crates/rolldown_dev/src/bundling_task.rs:117` —
+  `coordinator_tx.unbounded_send(...).expect(...)` on the final
+  `BundleCompleted` send. The coordinator's mpsc receiver is owned by the
+  coordinator task, which only shuts down on the `Close` message, and the
+  coordinator awaits any in-flight `BundlingTask` before processing `Close`
+  (§4), so by construction the receiver is alive when this send runs.
 - `crates/rolldown_dev/src/bundle_coordinator.rs:323, 420` —
   `current_bundling_future.clone().unwrap()` is reachable only in states
   `*InProgress`, where the state machine guarantees `Some(_)`. A `None` here
   means a transition was missed.
-- `crates/rolldown_dev/src/dev_engine.rs:117` — `join_handle.await.unwrap()`
-  on the coordinator task. The coordinator's `run()` is internal code that
-  must not panic; a `JoinError` here means we introduced a panic in
-  coordinator logic and should fix _that_, not paper over the symptom.
+
+Two sites route instead of panicking: `WatcherEventHandler::handle_events`
+logs at debug level when the coordinator channel is already closed, and
+`DevEngine::run` maps the coordinator task's `JoinError` to an error that
+`wait_for_close()` and `close()` return.
 
 When adding new panic sites, document the invariant being asserted in the
 `.expect(...)` message so the next reader sees the contract without having to

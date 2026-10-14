@@ -3,6 +3,7 @@ import { Worker } from 'node:worker_threads';
 import { rolldown } from 'rolldown';
 import { defineParallelPlugin } from 'rolldown/experimental';
 import { expect, test, vi } from 'vitest';
+import { isWasiTest } from '@tests/runtime-flavor';
 
 test('rolldown write twice', async () => {
   const bundle = await rolldown({
@@ -151,7 +152,8 @@ test('concurrent close() calls run the native close once and settle together', a
   expect(bundle.closed).toBe(true);
 });
 
-test('a failed worker shutdown still closes the native bundler', async () => {
+// Parallel plugins need a native binding.
+test.skipIf(isWasiTest)('a failed worker shutdown still closes the native bundler', async () => {
   let closeBundleCalls = 0;
   const parallelNoopPlugin = defineParallelPlugin<void>(
     path.join(import.meta.dirname, 'parallel-noop-plugin-impl.js'),

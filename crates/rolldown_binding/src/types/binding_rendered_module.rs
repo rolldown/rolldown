@@ -3,26 +3,41 @@ use napi_derive::napi;
 use rolldown_common::RenderedModule;
 use std::{fmt::Debug, sync::Arc};
 
+use super::external_memory_status::{ExternalMemoryStatus, release_arc};
+
 #[napi]
 #[derive(Clone)]
 pub struct BindingRenderedModule {
-  inner: Arc<RenderedModule>,
+  inner: Option<Arc<RenderedModule>>,
 }
 
 #[napi]
 impl BindingRenderedModule {
   pub fn new(inner: Arc<RenderedModule>) -> Self {
-    Self { inner }
+    Self { inner: Some(inner) }
+  }
+
+  fn try_get_inner(&self) -> napi::Result<&Arc<RenderedModule>> {
+    self.inner.as_ref().ok_or_else(|| {
+      napi::Error::from_reason(
+        "Memory has been freed by `freeExternalMemory()`. Cannot access properties. To prevent this, use `freeExternalMemory(handle, true)` with `keepDataAlive`.",
+      )
+    })
+  }
+
+  #[napi(enumerable = false)]
+  pub fn drop_inner(&mut self) -> ExternalMemoryStatus {
+    release_arc(&mut self.inner)
   }
 
   #[napi(getter)]
-  pub fn code(&self) -> Option<String> {
-    self.inner.code()
+  pub fn code(&self) -> napi::Result<Option<String>> {
+    Ok(self.try_get_inner()?.code())
   }
 
   #[napi(getter)]
-  pub fn rendered_exports(&self) -> Vec<&str> {
-    self.inner.rendered_exports.iter().map(AsRef::as_ref).collect()
+  pub fn rendered_exports(&self) -> napi::Result<Vec<&str>> {
+    Ok(self.try_get_inner()?.rendered_exports.iter().map(AsRef::as_ref).collect())
   }
 }
 
@@ -37,6 +52,6 @@ impl FromNapiValue for BindingRenderedModule {
     _env: napi::sys::napi_env,
     _napi_val: napi::sys::napi_value,
   ) -> napi::Result<Self> {
-    Ok(BindingRenderedModule { inner: Arc::new(RenderedModule::default()) })
+    Ok(BindingRenderedModule { inner: Some(Arc::new(RenderedModule::default())) })
   }
 }

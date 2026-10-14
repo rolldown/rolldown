@@ -34,7 +34,7 @@ When devtools is enabled, rolldown writes JSON-lines files to:
   logs.json    # All other actions, one JSON object per line
 ```
 
-The formatter emits paths relative to `node_modules/`, and the writer thread joins them onto the session `cwd` it received from `DebugTracer::init` — `InputOptions#cwd`, which defaults to the working directory the build ran from. The process working directory is not a usable fallback: the wasm binding runs on `wasm32-wasip1-threads`, where there is no process `cwd` and a relative path resolves against the `/` preopen instead of the project.
+The formatter emits paths relative to `node_modules/`, and the writer thread joins them onto the session `cwd` it received from `DebugTracer::init` — `InputOptions#cwd`, which defaults to the working directory the build ran from. The process working directory is not a usable fallback: the wasm bindings run on `wasm32-wasip1-threads` and `wasm32-wasip1`, where there is no process `cwd` and a relative path resolves against the `/` preopen instead of the project.
 
 Events with no session span in scope fall back to the `unknown-session` id (`DEFAULT_SESSION_ID` in `crates/rolldown_devtools/src/static_data.rs`), which never receives a `cwd`. Their paths stay relative, so they follow the process working directory natively and the writer warns instead of writing them on wasm. This is the same process-global activation caveat that [design.md](./design.md) tracks under per-build scoping: once any build turns devtools on, later builds in that process keep emitting under `unknown-session`.
 
@@ -42,7 +42,7 @@ Each line is a self-contained JSON object with an `action` discriminator field. 
 
 ### Read-after-close contract
 
-`meta.json` and `logs.json` are only guaranteed to be complete and readable **after `await bundle.close()` resolves**. Internally, events flow through a channel to a background writer thread and are buffered via `BufWriter`, so reading the files immediately after `generate()`/`write()` may return empty or truncated content. `bundle.close()` sends a `CloseSession` command with an ack channel and awaits the writer thread's signal, establishing the happens-before edge consumers depend on.
+`meta.json` and `logs.json` are only guaranteed to be complete and readable **after `await bundle.close()` resolves**. Internally, events flow through a channel to a background writer thread and are buffered via `BufWriter`, so reading the files immediately after `generate()`/`write()` may return empty or truncated content. `bundle.close()` sends a `CloseSession` command with an ack channel and awaits the writer thread's signal, establishing the happens-before edge consumers depend on. The threadless `wasm32-wasip1` build cannot create OS threads, so its writer handles each command inline under a mutex and sends the ack before `flush_session` returns.
 
 ### Large String Deduplication
 
@@ -167,7 +167,7 @@ Run: `pnpm --filter @rolldown/debug run gen-action-types`
 
 ## Static Data Management
 
-File handles, session directories, and hash caches live in `WriterState`, owned by the background writer thread, so no locking is needed:
+File handles, session directories, and hash caches live in `WriterState`, owned by the background writer thread, so no locking is needed (on threadless `wasm32-wasip1` the same state sits behind a mutex and is used inline):
 
 - `files` — one buffered file handle per output file path, preventing duplicate writes
 - `files_by_session` — tracks which files belong to which session (for cleanup)

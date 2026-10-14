@@ -46,7 +46,7 @@ async fn main() {
 
   let watcher = Watcher::new(vec![config], PrintHandler, &WatcherConfig::default())
     .expect("Failed to create watcher");
-  watcher.run();
+  watcher.run().expect("Failed to start watcher");
 
   println!("Watching for changes... Press Ctrl+C to stop.");
 

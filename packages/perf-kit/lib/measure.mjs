@@ -93,7 +93,7 @@ export const OBSERVER_JS = `(() => {
   } catch {}
 })();`;
 
-const COLLECT_JS = `(() => {
+export const COLLECT_JS = `(() => {
   const nav = performance.getEntriesByType('navigation')[0];
   const res = performance.getEntriesByType('resource');
   const M = window.__perfMetrics || {};

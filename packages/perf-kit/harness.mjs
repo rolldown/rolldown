@@ -113,6 +113,7 @@ import {
 } from './lib/parity/anchor.mjs';
 import { compareLcp, describeLcp, lcpReason } from './lib/parity/compare.mjs';
 import { runParity, pageSlug } from './lib/parity/run.mjs';
+import { cmdField } from './lib/field/run.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const APP_DIR = path.join(ROOT, 'app');
@@ -4429,6 +4430,20 @@ individual commands (same target rules):
          [--net-scale <1|2|4|8>]            ...and/or pin its throttle net-scale without probing
   gen | build | defer <f> | undefer <f> | status | serve    demo-app helpers (README.md)
 
+field mode (a DEPLOYED site in your own logged-in Chrome - real data, network, server):
+  field --config <file.json>   alternating timed runs per variant (cookie/query switches the
+                            build), the request LCP waited for and the script chain that
+                            started it, then one coverage + CPU profile run per variant.
+                            Writes runtime-metrics/coverage/profile.json per variant and
+                            field-report.json (paired deltas, 90% intervals) OUTSIDE the repo.
+                            Needs chrome://inspect/#remote-debugging on (or --cdp-port).
+  --runs 6 --diagnose 1     pairs of timed runs / diagnostic runs per variant
+  --cut gate|lcp|fcp        coverage snapshot point; gate = when the config's "gate" request
+                            is sent ("what ran before the request LCP waits for")
+  --throttle lab [--net-scale n]   add the lab throttle ON TOP of the real network
+  Module attribution needs "build" per variant: a local build whose chunks are
+  byte-identical to the served ones (same commit, settings, bundler version).
+
 server startup mode (node/deno - a process coming up, not a page loading):
   node-scan --entry dist/server.js --ready port:3000    timed spawn->ready runs + what had to
                             execute to get there + where the pre-ready CPU went + leads.
@@ -4542,6 +4557,7 @@ const commands = {
   'worker-attrib': cmdWorkerAttrib,
   'worker-config': cmdWorkerConfig,
   why: cmdWhy,
+  field: cmdField,
   defer: (argv) => cmdDefer(argv, 'deferred'),
   undefer: (argv) => cmdDefer(argv, 'baseline'),
   status: cmdStatus,

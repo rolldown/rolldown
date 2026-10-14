@@ -36,6 +36,13 @@ every build also refreshes the build-side report under `state/rolldown-metrics/`
 
 `scan` keeps the full resource detail list in `runtime-metrics.json`. This includes
 small preload facades. Each request records its initiator type and source location.
+`requestPriority` records Chrome's initial priority, its last observed priority,
+and changes with milliseconds since the request began. Use this history when
+comparing preload priorities. The last priority is the value at collection, not
+necessarily at paint. Repeated URLs and redirect hops have ambiguous matches;
+the report omits their initiator and priority evidence. Missing evidence is not
+proof of low priority. These fields use the
+[CDP Network protocol](https://github.com/ChromeDevTools/devtools-protocol/blob/master/json/browser_protocol.json).
 The report does not collect request headers or bodies. A browser timing buffer
 overflow keeps the discovery check UNKNOWN.
 

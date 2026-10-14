@@ -35,6 +35,7 @@ futures = { workspace = true }
 indexmap = { workspace = true, features = ["serde"] }
 infer = { workspace = true }
 itoa = { workspace = true }
+json-escape-simd = { workspace = true }
 memchr = { workspace = true }
 mime = { workspace = true }
 nom = { workspace = true }
@@ -46,7 +47,6 @@ regress = { workspace = true }
 rolldown_error = { workspace = true }
 rolldown_std_utils = { workspace = true }
 rustc-hash = { workspace = true }
-serde_json = { workspace = true }
 simdutf8 = { workspace = true }
 sugar_path = { workspace = true }
 tokio = { workspace = true }

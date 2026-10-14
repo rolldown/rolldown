@@ -45,12 +45,60 @@ test('output.charset: utf8 preserves non-ASCII characters', async () => {
   expect(output).toContain('你好 😀');
 });
 
-test('output.charset: ascii escapes non-ASCII characters', async () => {
-  const output = await generate({ charset: 'ascii' });
-  expect(isAscii(output)).toBe(true);
-  expect(output).toContain('\\u03C0');
-  expect(output).toContain('\\u4F60\\u597D \\u{1F600}');
-});
+test.each([
+  ['es', { format: 'es' }],
+  ['cjs', { format: 'cjs' }],
+  ['iife', { format: 'iife', name: '包' }],
+  ['umd', { format: 'umd', name: '包' }],
+] satisfies [string, OutputOptions][])(
+  'output.charset: ascii escapes non-ASCII characters in %s output',
+  async (_format, formatOptions) => {
+    const output = await generate({ ...formatOptions, charset: 'ascii', minify: false });
+    expect(isAscii(output)).toBe(true);
+    expect(output).toContain('\\u03C0');
+    expect(output).toContain('\\u4F60\\u597D \\u{1F600}');
+  },
+);
+
+test.each([
+  ['es', { format: 'es' }],
+  ['cjs', { format: 'cjs' }],
+  ['iife', { format: 'iife', name: 'bundle', globals: { 外部: 'globalThis.外部' } }],
+  ['umd', { format: 'umd', name: 'bundle', globals: { 外部: 'globalThis.外部' } }],
+] satisfies [string, OutputOptions][])(
+  'output.charset: ascii escapes generated external imports in %s output',
+  async (_format, formatOptions) => {
+    const externalPath = '外部';
+    const bundle = await rolldown({
+      input: 'entry',
+      plugins: [
+        {
+          name: 'virtual',
+          resolveId(id) {
+            if (id === 'entry') return id;
+            if (id === externalPath) return { id, external: true };
+          },
+          load(id) {
+            if (id === 'entry') return `export { π } from "${externalPath}";`;
+          },
+        },
+      ],
+    });
+    try {
+      const output = await bundle.generate({
+        ...formatOptions,
+        charset: 'ascii',
+        minify: false,
+      });
+      const code = output.output.find((item): item is OutputChunk => item.type === 'chunk')!.code;
+      expect(isAscii(code)).toBe(true);
+      expect(code).toContain('\\u03C0');
+      expect(code).toContain('\\u5916\\u90E8');
+    } finally {
+      await bundle.close();
+    }
+  },
+);
 
 test('output.charset: ascii applies when minifying', async () => {
   const output = await generate(

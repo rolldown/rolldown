@@ -94,6 +94,13 @@ The runtime report also records `paintComparison`. It compares both FCP and LCP
 with the pinned baseline. A gain in one metric cannot hide a regression beyond
 noise in the other. Render-gap advice preserves concurrent resource evidence.
 
+The perf-kit CPU profile also uses emitted sourcemaps for every sampled
+same-origin chunk. Schema version 2 records explicit source, engine, and
+unattributed rows with chunk filenames. Missing maps cannot produce a clear CPU
+verdict. The profile ends when FCP is observed, so its polling tail can include
+post-paint work. Use the result to choose experiments, then compare timed FCP
+and LCP against the pinned baseline.
+
 ### Read-after-close contract
 
 `meta.json` and `logs.json` are only guaranteed to be complete and readable **after `await bundle.close()` resolves**. Internally, events flow through a channel to a background writer thread and are buffered via `BufWriter`, so reading the files immediately after `generate()`/`write()` may return empty or truncated content. `bundle.close()` sends a `CloseSession` command with an ack channel and awaits the writer thread's signal, establishing the happens-before edge consumers depend on.

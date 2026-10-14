@@ -44,7 +44,7 @@ import {
   largeAtPaintModules,
   siblingVariantGroups,
 } from './lib/coverage.mjs';
-import { aggregateProfile, profileRun } from './lib/profile.mjs';
+import { aggregateProfile, profileEvidence, profileRun } from './lib/profile.mjs';
 import { analyzeChunkDiscovery, loadChunkGraph } from './lib/chunk-discovery.mjs';
 import {
   chunkDiscoveryAdvice,
@@ -1017,28 +1017,45 @@ function printCoverageReport(target, report, { compact = false, advice = true } 
 // --- profile core ----------------------------------------------------------------
 
 function buildProfileReport(target, profile, entry) {
-  const entryFile = path.join(target.dist, entry);
-  const { rows, totalMs } = aggregateProfile(profile, {
-    code: fs.readFileSync(entryFile, 'utf8'),
-    map: JSON.parse(fs.readFileSync(`${entryFile}.map`, 'utf8')),
-    entryUrlSuffix: `/${entry.replaceAll('\\', '/')}`,
+  const summary = aggregateProfile(profile, {
+    readChunk: (file) => {
+      const chunkFile = path.join(target.dist, file);
+      if (!fs.existsSync(chunkFile) || !fs.existsSync(`${chunkFile}.map`)) return null;
+      return {
+        code: fs.readFileSync(chunkFile, 'utf8'),
+        map: JSON.parse(fs.readFileSync(`${chunkFile}.map`, 'utf8')),
+      };
+    },
   });
-  const report = { schemaVersion: 1, generatedAtMs: Date.now(), entry, totalMs, rows };
+  const report = { schemaVersion: 2, generatedAtMs: Date.now(), entry, ...summary };
   writeJson(target.paths.profile, report);
   return report;
 }
 
 function printProfileReport(report, { advice = true } = {}) {
-  console.log(`boot CPU by module, navigation -> first paint (${report.totalMs}ms sampled):\n`);
+  console.log(`boot CPU by module, navigation -> FCP observation (${report.totalMs}ms sampled):\n`);
   for (const row of report.rows.slice(0, 20)) {
     const pctStr =
       report.totalMs > 0 ? `${((row.ms / report.totalMs) * 100).toFixed(0).padStart(4)}%` : '';
-    console.log(`  ${row.bucket.padEnd(40)} ${String(row.ms).padStart(7)}ms ${pctStr}`);
+    console.log(
+      `  ${row.bucket.padEnd(40)} ${String(row.ms).padStart(7)}ms ${pctStr} [${row.kind}]`,
+    );
   }
+  console.log(
+    `\nsource ${report.attribution.sourceMs}ms | engine ${report.attribution.engineMs}ms | unattributed ${report.attribution.unattributedMs}ms`,
+  );
+  console.log(
+    'The profile can include work between FCP and its observation. Sampled time is not a predicted paint gain.',
+  );
   if (advice) {
     console.log(
-      '\nnext: work here runs BEFORE the page paints. Defer whatever the first render does not need (idle callback + dynamic import). Fix render-gating fetches first: CPU that overlaps a blocked render is free, so deferring it can measure worse until the fetch is fixed.',
+      '\nnext: check whether each source module contributes to the first render. Test deferring only optional work. Compare both FCP and LCP.',
     );
+    if (profileEvidence(report).unattributed.length) {
+      console.log(
+        'Inspect unattributed rows and supply missing sourcemaps before treating CPU attribution as complete.',
+      );
+    }
   }
 }
 
@@ -1265,24 +1282,30 @@ function printVerdict(target) {
         `${CLI} profile  (or scan)`,
       );
     } else {
-      const appRows = (profile.rows ?? []).filter(
-        (row) => row.bucket.includes('/') && !row.bucket.startsWith('(') && row.ms >= 15,
+      const evidence = profileEvidence(profile);
+      lead(
+        evidence.state,
+        `pre-paint CPU ${Math.round(cpu)}ms`,
+        evidence.reason ??
+          (evidence.candidates.length
+            ? `sampled source work near FCP: ${evidence.candidates
+                .slice(0, 3)
+                .map((row) => `${row.bucket} ${row.ms}ms`)
+                .join(', ')}`
+            : evidence.unattributed.length
+              ? 'sampled work lacks complete source attribution'
+              : 'no source module reaches the 15ms sample threshold'),
+        'Check which work the first render needs. Test deferring optional work and compare both FCP and LCP. Run profile again for old reports.',
       );
-      if (appRows.length) {
+      if (evidence.unattributed.length) {
         lead(
-          'open',
-          `pre-paint CPU ${Math.round(cpu)}ms`,
-          `deferrable app work before paint: ${appRows
+          'unknown',
+          'CPU source attribution',
+          `${profile.attribution.unattributedMs}ms unattributed: ${evidence.unattributed
             .slice(0, 3)
-            .map((row) => `${row.bucket} ${row.ms}ms`)
+            .map((row) => `${row.bucket} [${row.kind}]`)
             .join(', ')}`,
-          'defer work the first render does not need (idle callback + dynamic import)',
-        );
-      } else {
-        lead(
-          'clear',
-          `pre-paint CPU ${Math.round(cpu)}ms`,
-          'profile attributes it to baseline parse/engine work, not deferrable app modules',
+          'Inspect profile.json. Supply missing sourcemaps or inspect generated/inline code; do not classify these rows as engine work.',
         );
       }
     }
@@ -1409,7 +1432,7 @@ function printVerdict(target) {
       const mods = mg.graph.modules;
       lead(
         'open',
-        `statically retained imports (${rows.length} module(s) >=${kb(GRAPH_RETAINED_OPEN_BYTES)})`,
+        `statically retained imports from build entries (${rows.length} module(s) >=${kb(GRAPH_RETAINED_OPEN_BYTES)})`,
         rows
           .slice(0, 3)
           .map(
@@ -1422,7 +1445,7 @@ function printVerdict(target) {
     } else {
       lead(
         'clear',
-        'statically retained imports',
+        'statically retained imports (build entries only)',
         `no non-framework module retains >=${kb(GRAPH_RETAINED_OPEN_BYTES)} behind a cuttable static edge`,
       );
     }
@@ -1669,11 +1692,6 @@ async function cmdProfile(argv) {
   const target = resolveTarget(opts);
   const entry = requireEntry(target, opts);
   if (!opts.entry) console.log(`entry: ${entry} (auto-detected from dist/index.html)`);
-  if (!fs.existsSync(path.join(target.dist, `${entry}.map`))) {
-    throw new Error(
-      `entry ${entry} has no sourcemap (${path.join(target.dist, entry)}.map) - build with sourcemap: true`,
-    );
-  }
   const profile = await withServerAndBrowser(
     target,
     opts['no-throttle'],

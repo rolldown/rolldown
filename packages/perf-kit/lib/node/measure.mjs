@@ -244,15 +244,13 @@ export async function startupProfile(runOpts, { intervalUs = 200 } = {}) {
  */
 export function splitProfileOwnership(rows, appSources) {
   const app = new Set(appSources.map((s) => String(s).replaceAll('\\', '/')));
-  // A bucket that names a source path came through some chunk's sourcemap, so it is app
-  // code even when the entry chunk's own sourcemap does not list it (multi-chunk builds).
-  const looksLikeSource = (bucket) =>
-    bucket.includes('/') && !/^[a-z-]+:/.test(bucket) && !bucket.startsWith('(');
   let appMs = 0;
   let engineMs = 0;
   let runtimeMs = 0;
   for (const row of rows) {
-    if (app.has(row.bucket) || looksLikeSource(row.bucket)) appMs += row.ms;
+    // A `source` row came through some chunk's sourcemap, so it is app code even when the
+    // entry chunk's own sourcemap does not list it (multi-chunk builds).
+    if (app.has(row.bucket) || row.kind === 'source') appMs += row.ms;
     else if (row.bucket.startsWith('(engine')) engineMs += row.ms;
     else runtimeMs += row.ms;
   }
@@ -269,8 +267,14 @@ export function splitProfileOwnership(rows, appSources) {
   };
 }
 
-export function profileStartup(profile, { code, map, entryUrlSuffix, resolveChunk = null }) {
-  const { rows, totalMs } = aggregateProfile(profile, { code, map, entryUrlSuffix, resolveChunk });
+/** `readChunk(file)` reads any other chunk with its sourcemap (Worker builds); default none. */
+export function profileStartup(profile, { code, map, entryUrlSuffix, readChunk = () => null }) {
+  // aggregateProfile reads frames of `origin` as local chunks. Node and Deno frames are
+  // file: (and node:) URLs, whose origin is "null".
+  const { rows, totalMs } = aggregateProfile(profile, {
+    origin: 'null',
+    readChunk: (file) => (`/${file}`.endsWith(entryUrlSuffix) ? { code, map } : readChunk(file)),
+  });
   return { rows, totalMs, ownership: splitProfileOwnership(rows, map.sources ?? []) };
 }
 

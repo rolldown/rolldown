@@ -179,8 +179,15 @@ automatically; a shared chunk or stylesheet you change for `/` can break another
      animation or fade-in wrapper that starts the hero at opacity 0 delays LCP
      until the reveal — LCP counts the first frame the element paints VISIBLE.
      Render the hero visible immediately and animate only decoration.
-   - **pre-paint CPU by module** — warm-up caches, telemetry, data-module
-     evaluation running ahead of paint. Defer what the first render does not need —
+   - **pre-paint CPU by module** — the profile maps all sampled same-origin
+     chunks through their sourcemaps, including dynamic imports. Inspect source
+     rows and their chunk filenames in `profile.json`. Missing maps, unmapped
+     positions, inline scripts, and external scripts stay unattributed. Do not
+     classify a generated filename as engine work. Old entry-only profiles must
+     be collected again. The profile stops at FCP observation; its polling tail
+     can include post-paint work. It does not cover the FCP-to-LCP interval.
+     Sampled time does not prove that work blocks paint or can be deferred.
+     Check warm-up caches, telemetry, and data-module evaluation. Defer what the first render does not need —
      but only judge deferrals AFTER any render gap is fixed (CPU that overlaps a
      blocked render is free, so deferring it can measure worse until then).
    - **cold bytes at paint** — the unified byte view: weight fetched+parsed before
@@ -205,7 +212,9 @@ automatically; a shared chunk or stylesheet you change for `/` can break another
      behind a dynamic import.
    - **sibling variant groups** — locales/themes/config families where one variant is
      active per session: keep the default in the entry, load the active one dynamically.
-   - **statically retained imports** (rolldown builds only) — the module graph's
+   - **statically retained imports** (rolldown builds only) — this view starts
+     at build entries. It does not price dynamic imports that startup immediately
+     executes. Check coverage and CPU evidence for those imports. The module graph's
      dominator view: any non-framework module retaining ≥100KB on the initial load
      is a priced split candidate; `what-if` shows the exact cut, `cut` the fewest
      import edits when several paths reach it, and `what-if <a> <b>` the combined

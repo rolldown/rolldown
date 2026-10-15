@@ -10,10 +10,8 @@ use super::LinkStage;
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn determine_module_exports_kind(&mut self) {
-    // Iterate by index so that we can release the iterator borrow on `module_table`
-    // before mutating an importee's `exports_kind` via `as_normal_mut`. Reads and
-    // writes interleave in the same order as the original closure walk, preserving
-    // the "earlier importer's promotion is observed by later importers" semantics.
+    // iterate by index to release the module-table borrow before mutating an
+    // importee's exports kind. later importers observe earlier promotions.
     let mut importer_indices: Vec<_> = self
       .module_table
       .modules
@@ -22,9 +20,9 @@ impl LinkStage<'_> {
       .collect();
 
     // `sort_modules` runs before this pass and assigns deterministic `exec_order`.
-    // Module-table (discovery) order depends on async load completion, so iterating
+    // module-table (discovery) order depends on async load completion, so iterating
     // in discovery order makes first Import vs Require promotion of
-    // `ExportsKind::None` nondeterministic. Iterate in reverse execution order so
+    // `ExportsKind::None` nondeterministic. iterate in reverse execution order so
     // entries and direct importers establish kinds before their dependencies,
     // tie-breaking by stable id for unvisited modules.
     importer_indices.sort_by(|&a, &b| {

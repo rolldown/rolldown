@@ -51,7 +51,7 @@ impl Plugin for BarrierPlugin {
     if !MANAGED.contains(&file) {
       return Ok(None);
     }
-    // Cross-branch barrier with no sleeps: the delayed aggregate waits for the
+    // cross-branch barrier with no sleeps: the delayed aggregate waits for the
     // opposite leaf to finish loading, forcing opposite discovery orders.
     if self.first == "left" {
       if file == "right.js" && !self.leaf_done.load(Ordering::SeqCst) {
@@ -61,9 +61,7 @@ impl Plugin for BarrierPlugin {
       self.notify.notified().await;
     }
     let code = tokio::fs::read_to_string(args.id).await?;
-    if (self.first == "left" && file == "esm.js")
-      || (self.first == "right" && file == "cjs.js")
-    {
+    if (self.first == "left" && file == "esm.js") || (self.first == "right" && file == "cjs.js") {
       self.leaf_done.store(true, Ordering::SeqCst);
       self.notify.notify_one();
     }
@@ -80,10 +78,7 @@ async fn bundle_with_barrier(entry: &str, first: &'static str) -> String {
   module_types.insert(".js".to_string(), ModuleType::Jsx);
   let mut bundler = Bundler::with_plugins(
     BundlerOptions {
-      input: Some(vec![InputItem {
-        name: Some("entry".to_string()),
-        import: entry.to_string(),
-      }]),
+      input: Some(vec![InputItem { name: Some("entry".to_string()), import: entry.to_string() }]),
       cwd: Some(PathBuf::from(FIXTURE_ROOT)),
       platform: Some(Platform::Neutral),
       format: Some(OutputFormat::Iife),
@@ -148,7 +143,7 @@ async fn exports_kind_stable_across_discovery_order() {
   assert_setup_runs_once(&left_first, "entry-left");
   assert_setup_runs_once(&right_first, "entry-right");
 
-  // Interacting input: swapped source order stays deterministic as well.
+  // interacting input: swapped source order stays deterministic as well.
   let swapped_left = bundle_with_barrier("./entry_swapped.js", "left").await;
   let swapped_right = bundle_with_barrier("./entry_swapped.js", "right").await;
   assert_eq!(

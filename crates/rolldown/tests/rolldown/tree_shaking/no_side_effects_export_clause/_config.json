@@ -1,0 +1,15 @@
+{
+  "_comment": "`@__NO_SIDE_EFFECTS__` should apply to a function exported after its declaration (`export { fn }`, `export { fn as alias }`, `export { fn as default }`, `export default fn`), as it does for `export function fn`. Two entries put the annotated modules in a shared chunk, so the per-chunk minifier cannot remove the calls and the result depends on tree-shaking alone. Every call in entry-a.js except the last two should be eliminated.",
+  "config": {
+    "input": [
+      {
+        "name": "entry-a",
+        "import": "./entry-a.js"
+      },
+      {
+        "name": "entry-b",
+        "import": "./entry-b.js"
+      }
+    ]
+  }
+}

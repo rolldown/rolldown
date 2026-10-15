@@ -1,0 +1,79 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry-a.js
+
+```js
+import { n as listed, t as reassigned } from "./reassigned.js";
+//#region entry-a.js
+reassigned("kept: reassigned after the annotation");
+const result = /* @__PURE__ */ listed("kept: result is used");
+//#endregion
+export { result };
+
+```
+
+## entry-b.js
+
+```js
+import { n as listed, t as reassigned } from "./reassigned.js";
+//#region declared.js
+/* #__NO_SIDE_EFFECTS__ */
+function declared(value) {
+	console.log(value);
+	return [];
+}
+//#endregion
+//#region aliased.js
+/* #__NO_SIDE_EFFECTS__ */
+function aliased(value) {
+	console.log(value);
+	return [];
+}
+//#endregion
+//#region arrow.js
+const arrow = /* #__NO_SIDE_EFFECTS__ */ (value) => {
+	console.log(value);
+	return [];
+};
+//#endregion
+//#region default-identifier.js
+/* #__NO_SIDE_EFFECTS__ */
+function defaultIdentifier(value) {
+	console.log(value);
+	return [];
+}
+//#endregion
+//#region default-specifier.js
+/* #__NO_SIDE_EFFECTS__ */
+function defaultSpecifier(value) {
+	console.log(value);
+	return [];
+}
+//#endregion
+export { aliased as alias, arrow, declared, defaultIdentifier, defaultSpecifier, listed, reassigned };
+
+```
+
+## reassigned.js
+
+```js
+//#region listed.js
+/* #__NO_SIDE_EFFECTS__ */
+function listed(value) {
+	console.log(value);
+	return [];
+}
+//#endregion
+//#region reassigned.js
+let reassigned = /* #__NO_SIDE_EFFECTS__ */ (value) => [];
+reassigned = (value) => {
+	console.log(value);
+	return [];
+};
+//#endregion
+export { listed as n, reassigned as t };
+
+```

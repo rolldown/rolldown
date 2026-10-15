@@ -1,0 +1,14 @@
+{
+  "_comment": "Test for issue #10231: a preserved module whose `export *` chain reaches an external module only through another preserved module keeps named exports, because the chunk merges that external's names onto `exports` at runtime and they would be lost behind `module.exports = ...`",
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "./entry.js"
+      }
+    ],
+    "format": "cjs",
+    "preserveModules": true,
+    "external": ["node:path"]
+  }
+}

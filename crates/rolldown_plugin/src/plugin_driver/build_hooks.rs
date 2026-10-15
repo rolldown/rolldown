@@ -393,6 +393,12 @@ impl PluginDriver {
     original_code: &str,
   ) -> Option<SourceMap> {
     let mut map = map?;
+    // A map without mappings (e.g. `{ mappings: '' }`) says the output has no mapping back to
+    // the original code, so it must not be filled with the original id and code.
+    // See https://rollupjs.org/plugin-development/#source-code-transformations
+    if map.get_tokens().len() == 0 {
+      return Some(map);
+    }
     // If sourcemap hasn't `sources`, using original id to fill it.
     let source = map.get_source(0);
     if source.is_none_or(str::is_empty)

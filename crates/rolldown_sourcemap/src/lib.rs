@@ -56,6 +56,88 @@ pub fn empty_sourcemap() -> SourceMap {
   SourceMap::new(None, vec![], None, vec![], vec![], Box::new([]), None)
 }
 
+/// Removes the sources and names that no token references, renumbering the tokens' ids and the
+/// `ignoreList` to match. Like Rollup's `traceMappings()`, which only adds the sources and names a
+/// traced segment reaches, this keeps a module's original code and identifiers out of `sources`,
+/// `sourcesContent` and `names` once a transform declares that nothing maps back to it (e.g. by
+/// returning `{ mappings: '' }`).
+pub fn drop_unreached_sources_and_names(sourcemap: SourceMap) -> SourceMap {
+  let source_ids = renumber_referenced(
+    sourcemap.get_sources().len(),
+    sourcemap.get_tokens().map(|t| t.get_source_id()),
+  );
+  let name_ids = renumber_referenced(
+    sourcemap.get_names().len(),
+    sourcemap.get_tokens().map(|t| t.get_name_id()),
+  );
+  if source_ids.is_none() && name_ids.is_none() {
+    return sourcemap;
+  }
+  let new_id = |new_ids: Option<&[Option<u32>]>, id: u32| match new_ids {
+    Some(new_ids) => new_ids.get(id as usize).copied().flatten(),
+    None => Some(id),
+  };
+
+  let mut parts = sourcemap.into_parts();
+  retain_referenced(&mut parts.sources, source_ids.as_deref());
+  retain_referenced(&mut parts.source_contents, source_ids.as_deref());
+  retain_referenced(&mut parts.names, name_ids.as_deref());
+  for token in &mut parts.tokens {
+    *token = Token::new(
+      token.get_dst_line(),
+      token.get_dst_col(),
+      token.get_src_line(),
+      token.get_src_col(),
+      token.get_source_id().and_then(|id| new_id(source_ids.as_deref(), id)),
+      token.get_name_id().and_then(|id| new_id(name_ids.as_deref(), id)),
+    );
+  }
+  if let Some(ignore_list) = &mut parts.ignore_list {
+    *ignore_list = ignore_list.iter().filter_map(|id| new_id(source_ids.as_deref(), *id)).collect();
+  }
+  // The VLQ baselines in `token_chunks` describe the old ids.
+  parts.token_chunks = None;
+
+  SourceMap::from_parts(parts)
+}
+
+/// Keeps the `items` whose id is renumbered by `new_ids`, or all of them when `new_ids` is `None`.
+fn retain_referenced<T>(items: &mut Vec<T>, new_ids: Option<&[Option<u32>]>) {
+  if let Some(new_ids) = new_ids {
+    let mut new_ids = new_ids.iter();
+    items.retain(|_| new_ids.next().is_some_and(Option::is_some));
+  }
+}
+
+/// Maps each of `len` ids to its index among the ids that `references` contains, or returns
+/// `None` when every id is referenced and nothing needs renumbering.
+fn renumber_referenced(
+  len: usize,
+  references: impl Iterator<Item = Option<u32>>,
+) -> Option<Vec<Option<u32>>> {
+  let mut referenced = vec![false; len];
+  for id in references.flatten() {
+    if let Some(is_referenced) = referenced.get_mut(id as usize) {
+      *is_referenced = true;
+    }
+  }
+  if referenced.iter().all(|is_referenced| *is_referenced) {
+    return None;
+  }
+  let mut next_id = 0;
+  Some(
+    referenced
+      .into_iter()
+      .map(|is_referenced| {
+        is_referenced.then(|| {
+          next_id += 1;
+          next_id - 1
+        })
+      })
+      .collect(),
+  )
+}
+
 // <https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts>
 //
 // Input maps may borrow their strings (e.g. a codegen map borrowing the source it was
@@ -400,6 +482,88 @@ fn test_collapse_sourcemaps_preserves_leading_unmapped_range_before_mapping() {
   assert_eq!(collapsed.get_tokens().count(), 2);
   assert_eq!(collapsed.lookup_token(&lookup_table, 0, 0).unwrap().get_source_id(), None);
   assert_eq!(collapsed.lookup_token(&lookup_table, 0, 5).unwrap().get_source_id(), Some(0));
+}
+
+/// Test for https://github.com/rolldown/rolldown/issues/11176
+#[test]
+fn test_drop_unreached_sources_and_names_after_empty_transform_map() {
+  use oxc_sourcemap::SourceMapBuilder;
+
+  // An earlier transform (e.g. TypeScript stripping) maps into the original module.
+  let mut earlier_builder = SourceMapBuilder::default();
+  let original_source =
+    earlier_builder.add_source_and_content("action.js", "export const secret = 1;\n");
+  let secret_name = earlier_builder.add_name("secret");
+  earlier_builder.add_token(0, 0, 0, 0, Some(original_source), Some(secret_name));
+  let earlier_map = earlier_builder.into_sourcemap().into_owned();
+
+  // A later transform replaces the module and returns `{ mappings: '' }`.
+  let replaced_map = empty_sourcemap();
+
+  // The codegen map of the replaced code.
+  let mut codegen_builder = SourceMapBuilder::default();
+  let replaced_source =
+    codegen_builder.add_source_and_content("action.js", "export const proxy = 1;\n");
+  codegen_builder.add_token(0, 0, 0, 0, Some(replaced_source), None);
+  let codegen_map = codegen_builder.into_sourcemap().into_owned();
+
+  let collapsed = drop_unreached_sources_and_names(collapse_sourcemaps(&[
+    &earlier_map,
+    &replaced_map,
+    &codegen_map,
+  ]));
+
+  assert_eq!(collapsed.get_tokens().filter(|token| token.get_source_id().is_some()).count(), 0);
+  assert_eq!(collapsed.get_sources().count(), 0);
+  assert_eq!(collapsed.get_source_contents().count(), 0);
+  assert_eq!(collapsed.get_names().count(), 0);
+}
+
+/// Referenced sources and names keep their order, and token ids and `ignoreList` are renumbered.
+#[test]
+fn test_drop_unreached_sources_and_names_renumbers_reached_sources() {
+  use oxc_sourcemap::SourceMapBuilder;
+
+  let mut builder = SourceMapBuilder::default();
+  builder.add_source_and_content("unreached.js", "unreached();\n");
+  let a_source = builder.add_source_and_content("a.js", "a();\n");
+  let b_source = builder.add_source_and_content("b.js", "b();\n");
+  builder.add_name("unreferenced");
+  let b_name = builder.add_name("b");
+  builder.add_token(0, 0, 0, 0, Some(a_source), None);
+  builder.add_token(1, 0, 0, 0, Some(b_source), Some(b_name));
+  let mut map = builder.into_sourcemap().into_owned();
+  map.set_ignore_list(vec![0, 2]);
+
+  let map = drop_unreached_sources_and_names(map);
+
+  assert_eq!(map.get_sources().collect::<Vec<_>>(), ["a.js", "b.js"]);
+  assert_eq!(map.get_names().collect::<Vec<_>>(), ["b"]);
+  assert_eq!(map.get_source_contents().collect::<Vec<_>>(), [Some("a();\n"), Some("b();\n")]);
+  assert_eq!(map.get_ignore_list(), Some([1].as_slice()));
+  let lookup_table = map.generate_lookup_table();
+  assert_eq!(map.lookup_token(&lookup_table, 0, 0).unwrap().get_source_id(), Some(0));
+  assert_eq!(map.lookup_token(&lookup_table, 1, 0).unwrap().get_source_id(), Some(1));
+  assert_eq!(map.lookup_token(&lookup_table, 1, 0).unwrap().get_name_id(), Some(0));
+  // The renumbered tokens must also survive serialization.
+  assert_eq!(
+    map.to_json_string(),
+    r#"{"version":3,"names":["b"],"sources":["a.js","b.js"],"sourcesContent":["a();\n","b();\n"],"ignoreList":[1],"mappings":"AAAA;ACAAA"}"#
+  );
+}
+
+/// A map whose sources and names are all referenced is returned unchanged.
+#[test]
+fn test_drop_unreached_sources_and_names_keeps_fully_reached_map() {
+  use oxc_sourcemap::SourceMapBuilder;
+
+  let mut builder = SourceMapBuilder::default();
+  let source = builder.add_source_and_content("a.js", "a();\n");
+  builder.add_token(0, 0, 0, 0, Some(source), None);
+  let map = builder.into_sourcemap().into_owned();
+  let json = map.to_json_string();
+
+  assert_eq!(drop_unreached_sources_and_names(map).to_json_string(), json);
 }
 
 /// Test for https://github.com/rollup/rollup/issues/5955

@@ -11,10 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 var imp1_exports = /* @__PURE__ */ __exportAll({ imp1: () => 1 });
 //#endregion
 //#region imp2.js
-var imp2_exports = /* @__PURE__ */ __exportAll({
-	imp2: () => 2,
-	imp22: () => 22
-});
+var imp2_exports = /* @__PURE__ */ __exportAll({ imp2: () => 2 });
 //#endregion
 //#region imp3.js
 var imp3_exports = /* @__PURE__ */ __exportAll({
@@ -130,10 +127,7 @@ const require_main = require("./main.js");
 var imp1_exports = /* @__PURE__ */ require_main.__exportAll({ imp1: () => 1 });
 //#endregion
 //#region imp2.js
-var imp2_exports = /* @__PURE__ */ require_main.__exportAll({
-	imp2: () => 2,
-	imp22: () => 22
-});
+var imp2_exports = /* @__PURE__ */ require_main.__exportAll({ imp2: () => 2 });
 //#endregion
 //#region imp3.js
 var imp3_exports = /* @__PURE__ */ require_main.__exportAll({

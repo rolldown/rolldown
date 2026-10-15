@@ -130,7 +130,8 @@ impl GenerateContext<'_> {
           if exported_name == "default" {
             // Use the exporter chunk's actual `output_exports`, not the user-level
             // `options.exports`. Each chunk decides its own export mode (e.g. under
-            // `preserveModules`, non-input modules are forced to `Named` and emit
+            // `preserveModules`, every preserved module resolves its own mode, so a
+            // default-only module emits `module.exports = ...` while the rest emit
             // `exports.default = ...`), so the access pattern must match what the
             // exporter actually renders.
             match exporter_chunk.output_exports {

@@ -1,0 +1,19 @@
+{
+  "_comment": "Test for issue #10231: With preserveModules, `output.exports` applies to every preserved module like Rollup, so a non-entry module with a single default export is emitted as `module.exports = ...` in CJS instead of `exports.default = ...`",
+  "config": {
+    "input": [
+      {
+        "name": "index",
+        "import": "./index.js"
+      }
+    ],
+    "format": "cjs",
+    "preserveModules": true
+  },
+  "configVariants": [
+    {
+      "_configName": "explicit-default",
+      "exports": "default"
+    }
+  ]
+}

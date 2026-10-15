@@ -1,4 +1,6 @@
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import nodePath from 'node:path';
+import { tmpdir } from 'node:os';
 import { rolldown, type Plugin } from 'rolldown';
 import { viteResolvePlugin } from 'rolldown/experimental';
 import { expect, test } from 'vitest';
@@ -28,12 +30,14 @@ function createViteResolvePlugin({
   builtins = [],
   convertExternalRequire = false,
   external = true,
+  root = import.meta.dirname,
   onWarn,
 }: {
   isBuild?: boolean;
   builtins?: Array<string | RegExp>;
   convertExternalRequire?: boolean;
   external?: true | string[];
+  root?: string;
   onWarn?: (message: string) => void;
 } = {}) {
   return viteResolvePlugin({
@@ -42,7 +46,7 @@ function createViteResolvePlugin({
       isProduction: false,
       asSrc: false,
       preferRelative: false,
-      root: import.meta.dirname,
+      root,
       scan: false,
       mainFields: ['main'],
       conditions: ['node'],
@@ -77,9 +81,13 @@ function createResolveIdHook(
 async function bundleNodeBuiltinRequire({
   platform,
   builtins = [],
+  specifier = 'node:util',
+  root,
 }: {
   platform: 'browser' | 'node';
   builtins?: Array<string | RegExp>;
+  specifier?: string;
+  root?: string;
 }) {
   const warnings: string[] = [];
   const entryPlugin: Plugin = {
@@ -88,7 +96,7 @@ async function bundleNodeBuiltinRequire({
       if (id === 'entry') return id;
     },
     load(id) {
-      if (id === 'entry') return `module.exports = require('node:util')`;
+      if (id === 'entry') return `module.exports = require(${JSON.stringify(specifier)})`;
     },
   };
   const bundle = await rolldown({
@@ -101,6 +109,7 @@ async function bundleNodeBuiltinRequire({
         builtins,
         convertExternalRequire: platform === 'browser',
         external: [],
+        root,
         onWarn(message) {
           warnings.push(message);
         },
@@ -176,6 +185,34 @@ test('converts configured Node builtin require calls for ssr.target=webworker bu
   expect(code).toContain('from "node:util"');
   expect(code).not.toContain('__require("node:util")');
   expect(warnings).toStrictEqual([]);
+});
+
+test('converts external Node builtin require calls when an npm package with the same name is installed', async () => {
+  const root = await mkdtemp(nodePath.join(tmpdir(), 'rolldown-vite-resolve-'));
+  try {
+    const packageRoot = nodePath.join(root, 'node_modules/util');
+    await mkdir(packageRoot, { recursive: true });
+    await Promise.all([
+      writeFile(nodePath.join(packageRoot, 'index.js'), 'module.exports = {};'),
+      writeFile(
+        nodePath.join(packageRoot, 'package.json'),
+        JSON.stringify({ name: 'util', version: '0.12.5', main: 'index.js' }),
+      ),
+    ]);
+
+    const { code, warnings } = await bundleNodeBuiltinRequire({
+      platform: 'browser',
+      builtins: ['util'],
+      specifier: 'util',
+      root,
+    });
+
+    expect(code).toContain('from "util"');
+    expect(code).not.toContain('__require("util")');
+    expect(warnings).toStrictEqual([]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 test('keeps Node builtin require calls for node builds', async () => {

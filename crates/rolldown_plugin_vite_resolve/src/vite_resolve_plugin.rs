@@ -426,6 +426,15 @@ impl Plugin for ViteResolvePlugin {
         self.legacy_inconsistent_cjs_interop,
       )?;
       if let Some(mut result) = result {
+        if self.environment_consumer == "server"
+          && self.convert_external_require
+          && args.kind == ImportKind::Require
+          && is_node_like_builtin(&id)
+          && result.external.as_ref().is_some_and(|external| external.is_external())
+        {
+          return Ok(Some(self.resolve_builtin_for_server(args, &id)));
+        }
+
         if let Some(finalize_bare_specifier) = &self.finalize_bare_specifier
           && !scan
           && result.id.as_path().is_in_node_modules()

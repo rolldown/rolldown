@@ -51,9 +51,12 @@ const sidebarForGuide: DefaultTheme.SidebarItem[] = [
     collapsed: true,
     items: [
       { text: 'Barrel Module', link: '/glossary/barrel-module.md' },
+      { text: 'Chunk', link: '/glossary/chunk.md' },
       { text: 'Entry', link: '/glossary/entry.md' },
       { text: 'Entry Chunk', link: '/glossary/entry-chunk.md' },
       { text: 'Entry Name', link: '/glossary/entry-name.md' },
+      { text: 'Module', link: '/glossary/module.md' },
+      { text: 'Source Map', link: '/glossary/source-map.md' },
       { text: 'User-defined Entry', link: '/glossary/user-defined-entry.md' },
     ],
   },

@@ -35,7 +35,7 @@ export { main_default as default };
 - ../foo.txt
 (0:0) "module." --> (27:1) "module."
 (0:7) "exports = " --> (27:8) "exports = "
-(0:17) "\"__ROLLDOWN_ASSET__#VRAku6fjghkApIISiBWPzg\"" --> (27:18) "\"./assets/foo-Cctl21F7.txt\";\n"
+(0:17) "\"__ROLLDOWN_ASSET__#5i6Di5lfZtwQEMb1mQrttA\"" --> (27:18) "\"./assets/foo-Cctl21F7.txt\";\n"
 - ../main.js
 (2:15) "filePath;\n" --> (28:6) "))"
 (2:15) "filePath;\n" --> (28:8) "."

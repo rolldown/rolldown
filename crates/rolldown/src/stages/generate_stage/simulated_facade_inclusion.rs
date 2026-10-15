@@ -91,6 +91,7 @@ impl GenerateStage<'_> {
       entry_module_idxs: &self.link_output.user_defined_entry_modules,
       body_demand_keys: &body_demand_keys,
       body_demand_swept: FxHashSet::default(),
+      deferred_forwarding_refs: FxHashMap::default(),
       pending: Vec::new(),
     };
 

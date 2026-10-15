@@ -220,6 +220,7 @@ impl NormalModule {
               c
             },
             initial_indent,
+            ascii_only: options.charset.is_ascii(),
           },
         );
         if !self.ecma_view.mutations.is_empty() {

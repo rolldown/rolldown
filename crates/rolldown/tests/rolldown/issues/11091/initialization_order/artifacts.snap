@@ -1,0 +1,98 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## barrel.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region state.js
+function mutate() {
+	value = "after";
+}
+var value;
+var init_state = __esmMin((() => {
+	value = "before";
+}));
+//#endregion
+//#region foo.js
+var Foo;
+var init_foo = __esmMin((() => {
+	init_state();
+	Foo = {
+		name: "Foo",
+		snapshot: value
+	};
+}));
+//#endregion
+//#region bar.js
+var bar;
+var init_bar = __esmMin((() => {
+	init_state();
+	mutate();
+	bar = {
+		name: "bar",
+		snapshot: value
+	};
+}));
+//#endregion
+//#region barrel.js
+var init_barrel = __esmMin((() => {
+	init_foo();
+	init_bar();
+}));
+//#endregion
+export { init_foo as a, Foo as i, bar as n, init_bar as r, init_barrel as t };
+
+```
+
+## entry.js
+
+```js
+import { n as __exportAll, r as __toCommonJS, t as __esmMin } from "./rolldown-runtime.js";
+import { n as bar$1, t as init_barrel } from "./barrel.js";
+//#region req.js
+var req_exports = /* @__PURE__ */ __exportAll({ bar: () => bar$1 });
+var init_req = __esmMin((() => {
+	init_barrel();
+}));
+//#endregion
+//#region entry.js
+var bar, Foo;
+function init_entry() {
+	return (init_entry = __esmMin((async () => {
+		({bar} = (init_req(), __toCommonJS(req_exports)));
+		({Foo} = await import("./lib.js"));
+	})))();
+}
+//#endregion
+await init_entry();
+export { Foo, bar };
+
+```
+
+## lib.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as Foo, t as init_barrel } from "./barrel.js";
+//#region lib.js
+function init_lib() {
+	return (init_lib = __esmMin((() => {
+		init_barrel();
+	})))();
+}
+//#endregion
+init_lib();
+export { Foo };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __toCommonJS as r, __esmMin as t };
+
+```

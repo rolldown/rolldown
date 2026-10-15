@@ -711,7 +711,8 @@ impl GenerateStage<'_> {
                 order_state.has_order_cjs_carrier(super::order_wrap_state::OrderCjsCarrierKey {
                   importer: module.idx,
                   record: *rec_idx,
-                })
+                }) || (order_state.is_consumer_local_reexport_route(module.idx)
+                  && module.import_records[*rec_idx].kind == ImportKind::Import)
               }) {
                 return;
               }
@@ -929,6 +930,13 @@ impl GenerateStage<'_> {
     symbol_ref: SymbolRef,
   ) {
     let meta = &self.link_output.metas[symbol_ref.owner];
+    if order_state.is_consumer_local_reexport_route(symbol_ref.owner)
+      && order_state
+        .esm_init_target(symbol_ref.owner, meta)
+        .is_some_and(|target| target.wrapper_ref == symbol_ref)
+    {
+      return;
+    }
     if !self.options.is_strict_execution_order_enabled() {
       // Off-strict keeps main's exact shape: lowering never mutates the chunk graph, so the
       // liveness guards below can never fire.
@@ -1128,10 +1136,7 @@ impl GenerateStage<'_> {
       return;
     }
     let meta = &self.link_output.metas[module_idx];
-    // Only modules that carry their own ESM init wrapper forward inits for their imports.
-    if order_state.esm_init_target(module_idx, meta).is_none() {
-      return;
-    }
+    let owns_esm_init = order_state.esm_init_target(module_idx, meta).is_some();
     let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
       return;
     };
@@ -1161,6 +1166,14 @@ impl GenerateStage<'_> {
       &self.link_output.stmt_infos,
       order_state,
       |rec_idx| {
+        if !owns_esm_init
+          && !module.import_records[rec_idx].resolved_module.is_some_and(|importee_idx| {
+            order_state.is_consumer_local_reexport_route(importee_idx)
+              || order_state.has_consumer_local_reexport_records(importee_idx)
+          })
+        {
+          return;
+        }
         let targets = collect_wrapped_esm_init_targets_for_import_record(
           &ctx,
           rec_idx,

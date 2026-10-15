@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## bundle.mjs
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region leaf.js
+var value;
+//#endregion
+//#region entry.js
+__esmMin((() => {
+	value = { answer: 42 };
+}))();
+//#endregion
+export { value };
+
+```

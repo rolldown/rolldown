@@ -87,6 +87,8 @@ Virtual modules in Rolldown are prefixed with `virtual:` for the user-facing pat
 
 Note that modules directly derived from a real file, as in the case of a script module in a Single File Component (like a `.vue` or `.svelte` SFC), don't need to follow this convention. SFCs generally generate a set of submodules when processed, but the code in these can be mapped back to the filesystem. Using `\0` for these submodules would prevent sourcemaps from working correctly.
 
+Rolldown also injects its own virtual [runtime module](/in-depth/runtime-module) (`\0rolldown/runtime.js`). Plugins may transform it, but must preserve its helper exports.
+
 ## Plugin Interface
 
 The [`Plugin`](/reference/Interface.Plugin) interface has a required `name` property and multiple optional properties and hooks.

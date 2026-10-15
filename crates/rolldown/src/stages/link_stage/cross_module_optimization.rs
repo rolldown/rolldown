@@ -14,8 +14,8 @@ use oxc::{
 };
 use rolldown_common::{
   AstScopes, ConstExportMeta, EcmaViewMeta, FlatOptions, GetLocalDb, ImportKind, IndexModules,
-  MemberExprRefResolutionMap, Module, ModuleIdx, NormalModule, SharedNormalizedBundlerOptions,
-  Specifier, StmtEvalFlags, StmtInfoIdx, SymbolRef, SymbolRefDb, SymbolRefFlags,
+  MemberExprRefResolutionMap, Module, ModuleIdx, SharedNormalizedBundlerOptions, Specifier,
+  StmtEvalFlags, StmtInfoIdx, SymbolRef, SymbolRefDb, SymbolRefFlags,
 };
 use rolldown_ecmascript_utils::ExpressionExt;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
@@ -349,33 +349,22 @@ impl<'a, 'ast: 'a> std::ops::Deref for CrossModuleOptimizationRunnerContext<'a, 
 }
 
 impl<'ast> CrossModuleOptimizationRunnerContext<'_, 'ast> {
-  /// Whether dropping a call to a function declared in `callee_owner` keeps every module
-  /// evaluation the call implied. The call is often the only used binding of a side-effect-free
-  /// module, so dropping it stops that module from being evaluated, and with it the side-effectful
-  /// modules it imports (e.g. a polyfill imported next to an empty `ensure()` function).
+  /// Whether dropping a call to a function declared in `callee_owner` keeps the side effects the
+  /// call implied. A side-effect-free module only used for that call stops being evaluated once the
+  /// call is dropped, and so do the side-effectful modules it imports (e.g. a polyfill).
   fn dropping_call_keeps_callee_module_evaluation(&self, callee_owner: ModuleIdx) -> bool {
     let modules = self.immutable_ctx.modules;
-    let module_idx = self.immutable_ctx.module_idx;
-    if callee_owner == module_idx {
+    if callee_owner == self.immutable_ctx.module_idx {
       return true;
     }
     let Module::Normal(owner) = &modules[callee_owner] else {
       return false;
     };
-    let is_static_import_of = |importer: &NormalModule, importee: ModuleIdx| {
-      importer
-        .import_records
-        .iter()
-        .any(|rec| rec.kind == ImportKind::Import && rec.resolved_module == Some(importee))
-    };
-    if owner.side_effects.has_side_effects() {
-      // This module's own side-effectful import evaluates the callee's module either way.
-      return modules[module_idx].as_normal().is_some_and(|m| is_static_import_of(m, callee_owner));
-    }
-    !owner.import_records.iter().any(|rec| {
-      rec.kind == ImportKind::Import
-        && rec.resolved_module.is_some_and(|dep| modules[dep].side_effects().has_side_effects())
-    })
+    owner.side_effects.has_side_effects()
+      || !owner.import_records.iter().any(|rec| {
+        rec.kind == ImportKind::Import
+          && rec.resolved_module.is_some_and(|dep| modules[dep].side_effects().has_side_effects())
+      })
   }
 
   /// Resolve a call expression's callee to the canonical declaration symbol it targets, if it is

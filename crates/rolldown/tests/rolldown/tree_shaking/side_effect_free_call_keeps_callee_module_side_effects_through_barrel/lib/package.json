@@ -1,4 +1,6 @@
 {
   "type": "module",
-  "sideEffects": ["./polyfill/*.js"]
+  "sideEffects": [
+    "./polyfill/*.js"
+  ]
 }

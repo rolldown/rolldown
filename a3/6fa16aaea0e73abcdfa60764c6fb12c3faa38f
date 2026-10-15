@@ -1,0 +1,29 @@
+packages/rolldown/tests/builtin-plugin/vite-resolve.test.ts
+  s_61ace4c0923c7a::t_a9b05af28297d8 1,3,33,40,49,84-85,89-90,99,112,190-217
+crates/rolldown_plugin_vite_resolve/src/vite_resolve_plugin.rs
+  s_32ba0e8d7777c0::t_79121191d53748 429-437
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a36fa16aaea0e73abcdfa60764c6fb12c3faa38f",
+  "prompts": {},
+  "sessions": {
+    "s_32ba0e8d7777c0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1399c-f646-7f91-b2c8-62586a032cde",
+        "model": "unknown"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    },
+    "s_61ace4c0923c7a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a139fb-7fc0-7ad1-a0f7-60c7ca0e2c82",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

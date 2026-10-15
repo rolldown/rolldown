@@ -583,8 +583,9 @@ impl<'a> GenerateStage<'a> {
   /// helpers, and a chunk that also exposes bindings beyond its declared exports, because
   /// `output.exports` describes the module's own interface and a `default`-mode chunk can carry
   /// nothing else: bundler-internal wrapper or namespace symbols that other chunks reach through
-  /// it, or `export *` from an external module, whose names are installed on `exports` at
-  /// runtime. A CommonJS-wrapped module renders its own symbols through
+  /// it, or `export *` that reaches an external module, directly or through other preserved
+  /// modules, whose names are installed on `exports` at runtime from the chunk's entry-level
+  /// external list. A CommonJS-wrapped module renders its own symbols through
   /// `render_wrapped_entry_chunk` and they are dropped from `render_chunk_exports`, so only
   /// foreign symbols count for it, while an ESM module renders every alias, so each one must be
   /// a declared export.
@@ -599,10 +600,10 @@ impl<'a> GenerateStage<'a> {
     if module.idx == self.link_output.runtime.id() {
       return None;
     }
-    let meta = &self.link_output.metas[module.idx];
-    if !meta.star_exports_from_external_modules.is_empty() {
+    if !chunk.entry_level_external_module_idx.is_empty() {
       return None;
     }
+    let meta = &self.link_output.metas[module.idx];
     let is_own_interface = |(symbol_ref, aliases): (&SymbolRef, &Vec<CompactStr>)| {
       if matches!(meta.wrap_kind(), WrapKind::Cjs) {
         self.link_output.symbol_db.canonical_ref_for(*symbol_ref).owner == module.idx

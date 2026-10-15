@@ -580,12 +580,14 @@ impl<'a> GenerateStage<'a> {
   /// every other chunk when `preserveModules` is on, since each chunk is a facade for exactly one
   /// module, so those chunks resolve their own mode as well, with two exceptions that keep the
   /// `Named` fallback: the synthetic runtime module, which is an internal detail with named
-  /// helpers, and a chunk that also exposes bundler-internal bindings (wrapper or namespace
-  /// symbols that other chunks reach through it), because `output.exports` describes the
-  /// module's own interface and a `default`-mode chunk can carry nothing else. A CommonJS-wrapped
-  /// module renders its own symbols through `render_wrapped_entry_chunk` and they are dropped
-  /// from `render_chunk_exports`, so only foreign symbols count for it, while an ESM module
-  /// renders every alias, so each one must be a declared export.
+  /// helpers, and a chunk that also exposes bindings beyond its declared exports, because
+  /// `output.exports` describes the module's own interface and a `default`-mode chunk can carry
+  /// nothing else: bundler-internal wrapper or namespace symbols that other chunks reach through
+  /// it, or `export *` from an external module, whose names are installed on `exports` at
+  /// runtime. A CommonJS-wrapped module renders its own symbols through
+  /// `render_wrapped_entry_chunk` and they are dropped from `render_chunk_exports`, so only
+  /// foreign symbols count for it, while an ESM module renders every alias, so each one must be
+  /// a declared export.
   fn export_mode_module(&self, chunk: &Chunk) -> Option<&NormalModule> {
     if let Some(module) = chunk.user_defined_entry_module(&self.link_output.module_table) {
       return Some(module);
@@ -598,6 +600,9 @@ impl<'a> GenerateStage<'a> {
       return None;
     }
     let meta = &self.link_output.metas[module.idx];
+    if !meta.star_exports_from_external_modules.is_empty() {
+      return None;
+    }
     let is_own_interface = |(symbol_ref, aliases): (&SymbolRef, &Vec<CompactStr>)| {
       if matches!(meta.wrap_kind(), WrapKind::Cjs) {
         self.link_output.symbol_db.canonical_ref_for(*symbol_ref).owner == module.idx

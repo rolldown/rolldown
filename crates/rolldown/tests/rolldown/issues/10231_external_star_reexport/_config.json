@@ -1,0 +1,14 @@
+{
+  "_comment": "Test for issue #10231: a preserved module that re-exports `*` from an external module keeps named exports, because those names are installed on `exports` at runtime and would be lost behind `module.exports = ...`",
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "./entry.js"
+      }
+    ],
+    "format": "cjs",
+    "preserveModules": true,
+    "external": ["node:path"]
+  }
+}

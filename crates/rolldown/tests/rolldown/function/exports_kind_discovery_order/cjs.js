@@ -1,1 +1,5 @@
-try { require('./setup.js'); } catch { require('./init.js'); }
+try {
+  require('./setup.js');
+} catch {
+  require('./init.js');
+}

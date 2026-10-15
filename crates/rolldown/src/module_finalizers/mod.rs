@@ -1848,6 +1848,38 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     None
   }
 
+  /// `Object.freeze({ __proto__: null, default: <expr> })`
+  ///
+  /// The namespace a CJS `import()` resolves to when the importee chunk is rendered in
+  /// `OutputExports::Default` mode, so `require()` hands back the default export itself.
+  fn default_only_namespace_expr(&self, default_expr: Expression<'ast>) -> Expression<'ast> {
+    let new_property = |name: &'static str, value: Expression<'ast>| {
+      ast::ObjectPropertyKind::new_object_property(
+        SPAN,
+        ast::PropertyKind::Init,
+        ast::PropertyKey::new_static_identifier(SPAN, name, self),
+        value,
+        false,
+        false,
+        false,
+        self,
+      )
+    };
+    Expression::new_call_with_arg(
+      Expression::new_member_access_expr("Object", "freeze", self),
+      ast::Expression::new_object_expression(
+        SPAN,
+        [
+          new_property("__proto__", ast::Expression::new_null_literal(SPAN, self)),
+          new_property("default", default_expr),
+        ],
+        self,
+      ),
+      true,
+      self,
+    )
+  }
+
   fn try_rewrite_inline_dynamic_import_expr(
     &self,
     import_expr: &oxc::allocator::Box<'ast, ImportExpression<'ast>>,
@@ -2886,26 +2918,38 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             self,
           );
 
+          // A chunk rendered in `OutputExports::Default` mode assigns its default export to
+          // `module.exports` itself, so `require('foo.mjs')` already is that value and must not be
+          // read through `.default`.
+          let importee_chunk_is_default_only =
+            matches!(importee_chunk.output_exports, OutputExports::Default);
+
           if importee.exports_kind.is_commonjs() {
             // Inline __toDynamicImportESM: __toESM(require('foo.mjs').default, isNodeMode)
             let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
 
-            // require('foo.mjs').default
-            let require_default_expr = ast::Expression::new_static_member_expression(
-              SPAN,
-              require_call_expr,
-              ast::IdentifierName::new(SPAN, "default", self),
-              false,
-              self,
-            );
+            // require('foo.mjs').default, or require('foo.mjs') when the chunk is default-only
+            let cjs_module_expr = if importee_chunk_is_default_only {
+              require_call_expr
+            } else {
+              ast::Expression::new_static_member_expression(
+                SPAN,
+                require_call_expr,
+                ast::IdentifierName::new(SPAN, "default", self),
+                false,
+                self,
+              )
+            };
 
             // __toESM(require('foo.mjs').default, isNodeMode)
             require_call_expr = Expression::new_to_esm_wrapper(
               to_esm_fn_name,
-              require_default_expr,
+              cjs_module_expr,
               self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
               self,
             );
+          } else if importee_chunk_is_default_only {
+            require_call_expr = self.default_only_namespace_expr(require_call_expr);
           }
 
           *node = Expression::new_promise_resolve_then(require_call_expr, self);

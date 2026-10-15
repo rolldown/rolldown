@@ -3,10 +3,11 @@ use std::path::PathBuf;
 use arcstr::ArcStr;
 use futures::future::try_join_all;
 use oxc_index::IndexVec;
+use oxc_str::CompactStr;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
 use rolldown_common::{
-  ChunkIdx, ChunkKind, InstantiationKind, ModuleIdx, OutputExports, PackageJson, PathsOutputOption,
-  UsedSymbolRefs, UsedSymbolRefsBuilder,
+  Chunk, ChunkIdx, ChunkKind, InstantiationKind, ModuleIdx, NormalModule, OutputExports,
+  PackageJson, PathsOutputOption, SymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -532,7 +533,7 @@ impl<'a> GenerateStage<'a> {
     // Collect all the chunk data we need first
     let mut chunk_export_data = Vec::new();
     for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
-      if let Some(entry_module) = chunk.user_defined_entry_module(&self.link_output.module_table) {
+      if let Some(entry_module) = self.export_mode_module(chunk) {
         let export_names = get_chunk_export_names(chunk, self.link_output);
         chunk_export_data.push((chunk_idx, entry_module, export_names));
       }
@@ -565,12 +566,46 @@ impl<'a> GenerateStage<'a> {
 
     // Set common chunks to Named
     for chunk in chunk_graph.chunk_table.iter_mut() {
-      if chunk.user_defined_entry_module(&self.link_output.module_table).is_none() {
+      if self.export_mode_module(chunk).is_none() {
         chunk.output_exports = OutputExports::Named;
       }
     }
 
     Ok(())
+  }
+
+  /// The module whose exports decide a chunk's `output.exports` mode.
+  ///
+  /// User-defined entries always resolve their own mode. Rollup also applies `output.exports` to
+  /// every other chunk when `preserveModules` is on, since each chunk is a facade for exactly one
+  /// module, so those chunks resolve their own mode as well, with two exceptions that keep the
+  /// `Named` fallback: the synthetic runtime module, which is an internal detail with named
+  /// helpers, and a chunk that also exposes bundler-internal bindings (wrapper or namespace
+  /// symbols that other chunks reach through it), because `output.exports` describes the
+  /// module's own interface and a `default`-mode chunk can carry nothing else. A CommonJS-wrapped
+  /// module renders its own symbols through `render_wrapped_entry_chunk` and they are dropped
+  /// from `render_chunk_exports`, so only foreign symbols count for it, while an ESM module
+  /// renders every alias, so each one must be a declared export.
+  fn export_mode_module(&self, chunk: &Chunk) -> Option<&NormalModule> {
+    if let Some(module) = chunk.user_defined_entry_module(&self.link_output.module_table) {
+      return Some(module);
+    }
+    if !self.options.preserve_modules {
+      return None;
+    }
+    let module = chunk.entry_module(&self.link_output.module_table)?;
+    if module.idx == self.link_output.runtime.id() {
+      return None;
+    }
+    let meta = &self.link_output.metas[module.idx];
+    let is_own_interface = |(symbol_ref, aliases): (&SymbolRef, &Vec<CompactStr>)| {
+      if matches!(meta.wrap_kind(), WrapKind::Cjs) {
+        self.link_output.symbol_db.canonical_ref_for(*symbol_ref).owner == module.idx
+      } else {
+        aliases.iter().all(|name| meta.sorted_and_non_ambiguous_resolved_exports.contains_key(name))
+      }
+    };
+    chunk.exports_to_other_chunks.iter().all(is_own_interface).then_some(module)
   }
 
   fn trace_action_chunks_infos(&self, chunk_graph: &ChunkGraph) {

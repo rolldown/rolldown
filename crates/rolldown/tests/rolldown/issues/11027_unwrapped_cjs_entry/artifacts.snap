@@ -1,0 +1,68 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dynamic.js
+
+```js
+const require_shared = require("./shared.js");
+//#region dynamic.js
+require_shared.init_shared();
+const value = require_shared.shared;
+//#endregion
+exports.value = value;
+
+```
+
+## lib.js
+
+```js
+const require_shared = require("./shared.js");
+//#region lib.js
+const { shared } = (require_shared.init_shared(), require_shared.__toCommonJS(require_shared.shared_exports));
+module.exports = {
+	shared,
+	load: () => Promise.resolve().then(() => require("./dynamic.js"))
+};
+//#endregion
+
+```
+
+## shared.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region shared.js
+var shared_exports = /* @__PURE__ */ __exportAll({ shared: () => shared });
+var shared;
+var init_shared = __esmMin((() => {
+	shared = "shared";
+}));
+//#endregion
+Object.defineProperty(exports, "__toCommonJS", {
+	enumerable: true,
+	get: function() {
+		return __toCommonJS;
+	}
+});
+Object.defineProperty(exports, "init_shared", {
+	enumerable: true,
+	get: function() {
+		return init_shared;
+	}
+});
+Object.defineProperty(exports, "shared", {
+	enumerable: true,
+	get: function() {
+		return shared;
+	}
+});
+Object.defineProperty(exports, "shared_exports", {
+	enumerable: true,
+	get: function() {
+		return shared_exports;
+	}
+});
+
+```

@@ -1,0 +1,21 @@
+{
+  "config": {
+    "input": [
+      { "name": "main", "import": "./main.js" },
+      { "name": "lib", "import": "./lib.js" }
+    ],
+    "format": "cjs"
+  },
+  "_comment": "A CommonJS entry that requires an ESM module the other entry imports. With `exports-only`, neither the runtime nor `shared.js` may be merged into lib.js. `allow-extension` still does that and overwrites its module.exports, so that variant is pinned as a known failure.",
+  "extendedTests": { "preserveEntrySignaturesAllowExtension": false },
+  "configVariants": [
+    {
+      "preserveEntrySignatures": "allow-extension",
+      "_snapshot": false,
+      "_expectExecutionFailure": {
+        "reason": "https://github.com/rolldown/rolldown/issues/11027",
+        "outputContains": ["actual: 'shared'"]
+      }
+    }
+  ]
+}

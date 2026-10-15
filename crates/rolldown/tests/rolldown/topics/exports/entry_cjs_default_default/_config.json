@@ -7,6 +7,16 @@
     "format": "cjs",
     "exports": "default"
   },
-  "_comment": "Tests Entry + Cjs WrapKind + Default OutputExports + default export access. BUG: lib.js generates two module.exports= statements, second overwrites runtime helpers.",
-  "expectExecuted": false
+  "_comment": "Tests Entry + Cjs WrapKind + Default OutputExports + default export access. `allow-extension` still merges the runtime into lib.js and overwrites its module.exports (#11027), so that variant is pinned as a known failure.",
+  "extendedTests": { "preserveEntrySignaturesAllowExtension": false },
+  "configVariants": [
+    {
+      "preserveEntrySignatures": "allow-extension",
+      "_snapshot": false,
+      "_expectExecutionFailure": {
+        "reason": "https://github.com/rolldown/rolldown/issues/11027",
+        "outputContains": ["[Function: __toESM]"]
+      }
+    }
+  ]
 }

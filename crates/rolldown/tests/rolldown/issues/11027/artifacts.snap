@@ -1,0 +1,81 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lib.js
+
+```js
+const require_lib$1 = require("./lib2.js");
+module.exports = require_lib$1.require_lib();
+
+```
+
+## lib2.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region shared.js
+var shared_exports = /* @__PURE__ */ __exportAll({ shared: () => shared });
+var shared;
+var init_shared = __esmMin((() => {
+	shared = "shared";
+}));
+//#endregion
+//#region lib.js
+var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	const { shared } = (init_shared(), __toCommonJS(shared_exports));
+	module.exports = {
+		value: 42,
+		shared
+	};
+}));
+//#endregion
+Object.defineProperty(exports, "__toCommonJS", {
+	enumerable: true,
+	get: function() {
+		return __toCommonJS;
+	}
+});
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
+Object.defineProperty(exports, "init_shared", {
+	enumerable: true,
+	get: function() {
+		return init_shared;
+	}
+});
+Object.defineProperty(exports, "require_lib", {
+	enumerable: true,
+	get: function() {
+		return require_lib;
+	}
+});
+Object.defineProperty(exports, "shared", {
+	enumerable: true,
+	get: function() {
+		return shared;
+	}
+});
+
+```
+
+## main.js
+
+```js
+const require_lib$1 = require("./lib2.js");
+//#region main.js
+var import_lib = /* @__PURE__ */ require_lib$1.__toESM(require_lib$1.require_lib());
+require_lib$1.init_shared();
+var main_default = {
+	value: import_lib.default.value,
+	shared: require_lib$1.shared
+};
+//#endregion
+module.exports = main_default;
+
+```

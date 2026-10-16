@@ -13,6 +13,7 @@
 // All commands work from any working directory.
 
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
@@ -31,6 +32,7 @@ import {
   DEFAULT_THROTTLE,
   deltaSection,
   heavyPrepaintTypes,
+  lcpElementOf,
   scaleThrottle,
   summarize,
   timedRun,
@@ -75,6 +77,16 @@ import {
   startupProfile,
   summarizeStartup,
 } from './lib/node/measure.mjs';
+import {
+  discoverPages,
+  gitState,
+  hashDist,
+  normalizePagePath,
+  parityPaths,
+  saveAnchor,
+} from './lib/parity/anchor.mjs';
+import { compareLcp, describeLcp, lcpReason } from './lib/parity/compare.mjs';
+import { runParity, pageSlug } from './lib/parity/run.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const APP_DIR = path.join(ROOT, 'app');
@@ -184,6 +196,7 @@ function targetPaths(dist) {
     history: path.join(dir, 'history.jsonl'),
     throttleProfile: path.join(dir, 'throttle-profile.json'),
     baselineModuleGraph: path.join(dir, 'baseline-module-graph.json'),
+    parity: parityPaths(dir),
   };
 }
 
@@ -451,6 +464,7 @@ function writeMeasureReport(
     gatingFetches: summary.gatingFetches,
     resourceWeight: summary.resourceWeight,
     renderBlockingGate: summary.renderBlockingGate,
+    lcpElement: summary.lcpElement,
     delta: sameScale(prev) ? deltaSection(prev.metrics, summary.metrics) : null,
     baselineDelta: sameScale(baseline) ? deltaSection(baseline.metrics, summary.metrics) : null,
     baselineScaleMismatch:
@@ -493,7 +507,11 @@ function deferredList() {
 // after this summary, and every one of them reappears there as the matching lead's
 // next: line - printed twice, they sit in the agent's context for the whole session
 // and get re-read on every later turn). The signal lines and numbers always print.
-function printMeasureSummary(report, hadBaseline, { advice = true } = {}) {
+function printMeasureSummary(
+  report,
+  hadBaseline,
+  { advice = true, parity = null, lcpCheck = null } = {},
+) {
   const m = report.metrics;
   console.log(
     `\n${report.label ? `[${report.label}] ` : ''}${report.runs} runs` +
@@ -602,7 +620,11 @@ function printMeasureSummary(report, hadBaseline, { advice = true } = {}) {
       `vs pinned baseline: LCP ${d.delta > 0 ? '+' : ''}${Math.round(d.delta)}ms ` +
         `(${d.pct > 0 ? '+' : ''}${d.pct}%) -> ${call} (noise threshold ${Math.round(threshold)}ms)`,
     );
-    if (call === 'improvement beyond noise') {
+    if (call === 'improvement beyond noise' && parity?.state === 'open') {
+      console.log(
+        'next: NOT a keeper - this build renders differently from the original (see "rendered output" below), so this LCP number does not count. Fix or revert the change that broke it, rebuild, re-scan.',
+      );
+    } else if (call === 'improvement beyond noise') {
       console.log(
         report.earlyStopped
           ? `next: keep this change - re-pin with \`${CLI} scan --pin\` (pins need full sampling), then commit it.`
@@ -622,6 +644,19 @@ function printMeasureSummary(report, hadBaseline, { advice = true } = {}) {
   } else if (hadBaseline) {
     console.log('vs pinned baseline: n/a (metric missing)');
   }
+  // Free on every measurement (the timed runs already observe it), so it is shown
+  // as it happens - information, not a gate; the final parity check gates on it.
+  if (lcpCheck?.state === 'same') {
+    console.log(`LCP element: same as the original - ${describeLcp(lcpCheck.current)}`);
+  } else if (lcpCheck?.state === 'unstable') {
+    console.log(
+      `LCP element: varies between loads (${describeLcp(lcpCheck.anchor)} / ${describeLcp(lcpCheck.current)})`,
+    );
+  } else if (lcpCheck && lcpCheck.state !== 'unknown') {
+    console.log(
+      `LCP element: ${lcpReason(lcpCheck)} - LCP now times a different paint than the original did, so this gain is likely not real (the final rendered-output check opens on it).`,
+    );
+  }
   if (report.delta?.['runtime.lcp_ms']) {
     const d = report.delta['runtime.lcp_ms'];
     console.log(
@@ -638,6 +673,21 @@ function pinBaseline(target) {
   if (state.runs === 1) {
     throw new Error(
       'refusing to pin a single-run measurement - run a full scan first (scan --pin re-measures with full sampling and then pins)',
+    );
+  }
+  // A build already KNOWN to render differently from the original must never become
+  // the reference later gains count from. An unchecked build may be pinned: the
+  // comparison runs once, when the optimizing is done.
+  const parity = parityStatus(target);
+  if (parity.state === 'open') {
+    throw new Error(
+      'refusing to pin: this build renders differently from the original (see the verdict). Fix or revert the change that caused it.\n' +
+        `If a HUMAN decides the difference is intended, they approve it: ${CLI} parity approve <page> --reason "<why>"`,
+    );
+  }
+  if (parity.report && !parity.report.integrity) {
+    throw new Error(
+      'refusing to pin: the saved original build was modified after it was saved - parity cannot vouch for this build.',
     );
   }
   writeJson(target.paths.runtimeBaseline, state);
@@ -973,13 +1023,117 @@ function printVerdict(target) {
   const lines = [];
   let openCount = 0;
   let unknownCount = 0;
+  let pendingCount = 0;
+  // pending = a check that belongs at the END of the loop (rendered-output parity):
+  // it blocks "done" like UNKNOWN does, but says it is not wanted per change.
   const lead = (state, title, detail, next) => {
     if (state === 'open') openCount++;
     if (state === 'unknown') unknownCount++;
-    const tag = state === 'open' ? '[OPEN]   ' : state === 'unknown' ? '[UNKNOWN]' : '[clear]  ';
+    if (state === 'pending') pendingCount++;
+    const tag = {
+      open: '[OPEN]   ',
+      unknown: '[UNKNOWN]',
+      pending: '[PENDING]',
+      clear: '[clear]  ',
+    }[state];
     lines.push(`  ${tag} ${title}${detail ? ` - ${detail}` : ''}`);
     if (next && state !== 'clear') lines.push(`            next: ${next}`);
   };
+
+  // Rendered output first: it decides whether any number below counts. It is
+  // compared ONCE, when the optimizing is done; a difference starts recover mode.
+  const parity = parityStatus(target);
+  const recover = readJson(target.paths.parity.recover);
+  const parityTitle = 'rendered output vs the original build';
+  const recheck =
+    recover?.strategy === 'each-tweak'
+      ? `every scan re-checks (strategy each-tweak)`
+      : `\`${CLI} parity\` (all pages; --only <page> re-checks just the broken ones)`;
+  if (parity.state === 'none') {
+    lead(
+      'unknown',
+      parityTitle,
+      'no original build saved for this target',
+      `${CLI} scan - the first scan saves the CURRENT build as the original, so run it before changing anything`,
+    );
+  } else if (parity.report && !parity.report.integrity) {
+    lead(
+      'unknown',
+      parityTitle,
+      'the saved original build was modified after it was saved',
+      `a human builds the original commit and saves it again: ${CLI} parity anchor --replace`,
+    );
+  } else if (parity.state === 'open') {
+    const open = parity.report.pages.filter((p) => p.state === 'open');
+    lead(
+      'open',
+      `rendered output differs from the original on ${open.length}/${parity.manifest.pages.length} page(s)`,
+      open.map((p) => `${p.page}: ${p.reasons.join('; ')}`).join(' | '),
+      `RECOVER MODE - this build's LCP numbers do not count. Fix or revert the change that caused it (diff images: ${target.paths.parity.pages}); re-check with ${recheck}. Options: \`${CLI} parity recover\``,
+    );
+  } else if (parity.state === 'stale' || parity.state === 'partial') {
+    const checked = parity.state === 'partial' ? parity.report.pages.length : 0;
+    if (recover) {
+      lead(
+        'unknown',
+        parityTitle,
+        `RECOVER MODE - ${checked ? `only ${checked}/${parity.manifest.pages.length} page(s) re-checked for this build` : 'this build is not re-checked yet'}`,
+        `re-check with ${recheck}; recover mode ends when every page matches`,
+      );
+    } else if (checked) {
+      lead(
+        'unknown',
+        parityTitle,
+        `only ${checked} of ${parity.manifest.pages.length} page(s) compared for this build`,
+        `${CLI} parity`,
+      );
+    } else {
+      lead(
+        'pending',
+        parityTitle,
+        'compared once, when you have finished optimizing - not needed per change',
+        `when you are done: ${CLI} scan --parity  (the final measurement + the comparison on every pinned page)`,
+      );
+    }
+  } else {
+    const pages = parity.report?.pages ?? [];
+    const unstable = pages.filter((p) => p.state === 'unknown');
+    // A check made without a fresh timed measurement could not compare the LCP
+    // element; a measurement taken since (same build) can, with no capture.
+    const lcpLate =
+      parity.state !== 'identical' && !parity.report.lcpCompared && fresh(runtime)
+        ? lateLcpCheck(parity.manifest, runtime)
+        : null;
+    if (unstable.length) {
+      lead(
+        'unknown',
+        parityTitle,
+        unstable.map((p) => `${p.page}: ${p.notes[0] ?? 'not judged'}`).join(' | '),
+        `a human declares masks for the parts that move: ${CLI} parity --mask <selector>`,
+      );
+    } else if (lcpLate && ['changed', 'shrank', 'placeholder'].includes(lcpLate.state)) {
+      lead(
+        'open',
+        'rendered output: the LCP element is not the original one',
+        lcpReason(lcpLate),
+        `RECOVER MODE - LCP now times a cheaper paint, so the gain does not count. Fix or revert the change that caused it; re-check with ${CLI} scan --parity`,
+      );
+    } else if (parity.state !== 'identical' && !parity.report.lcpCompared && !lcpLate) {
+      lead(
+        'unknown',
+        parityTitle,
+        `same on ${pages.length} page(s), but the LCP element was not compared (no fresh timed measurement of this build)`,
+        `${CLI} scan`,
+      );
+    } else {
+      const same = pages.filter((p) => p.state === 'clear').length;
+      lead(
+        'clear',
+        parityTitle,
+        `${parity.state === 'identical' ? 'this build is byte-identical to the original' : `same on ${same} of ${pages.length} page(s)`}${parityExtras(parity.report)}`,
+      );
+    }
+  }
 
   if (!fresh(runtime)) {
     lead(
@@ -1260,7 +1414,7 @@ function printVerdict(target) {
       'Confirm any accept/revert decision with a full scan (>=3 runs) before acting on it.\n',
     );
   }
-  if (openCount + unknownCount === 0) {
+  if (openCount + unknownCount + pendingCount === 0) {
     console.log(
       'VERDICT: every signal class is clear and fresh. Nothing further is indicated by these tools.',
     );
@@ -1277,10 +1431,32 @@ function printVerdict(target) {
       'cost are out of scope. Remaining LCP is baseline network + parse + render for what the',
     );
     console.log('page genuinely needs at first paint.');
+    console.log(
+      'Rendered output: compared with the original on every pinned page (first screen + full page',
+    );
+    console.log(
+      'pixels, text, accessible names, runtime errors, LCP element) as served statically - states',
+    );
+    console.log('behind interactions or live API data are not covered.');
   } else {
     console.log(
-      `VERDICT: not done - ${openCount} lead(s) OPEN, ${unknownCount} signal(s) UNKNOWN or stale.`,
+      `VERDICT: not done - ${openCount} lead(s) OPEN, ${unknownCount} signal(s) UNKNOWN or stale` +
+        `${pendingCount ? `, ${pendingCount} check(s) PENDING until you finish` : ''}.`,
     );
+    if (openCount === 0 && unknownCount === 0) {
+      console.log(
+        `Only the final rendered-output comparison is left: \`${CLI} scan --parity\` once you have`,
+      );
+      console.log('finished optimizing; report only after it is clear.');
+    }
+    if (parity.state === 'open') {
+      console.log(
+        'RECOVER MODE: this build renders differently from the original, so none of its LCP numbers',
+      );
+      console.log(
+        `count until it matches again. Fix or revert the change that broke it FIRST (\`${CLI} parity recover\`).`,
+      );
+    }
     console.log(
       'Work the OPEN items (render gap first), gather the UNKNOWN signals, rebuild, re-measure.',
     );
@@ -1351,6 +1527,7 @@ async function cmdMeasure(argv) {
   });
   const target = resolveTarget(opts);
   const expectedFeatures = expectedFeaturesFor(target, opts);
+  ensureAnchor(target);
   const baselineState = readJson(target.paths.runtimeBaseline);
   const pinnedLcp = baselineState?.metrics?.['runtime.lcp_ms'];
   // The early stop compares run 1 against the pinned baseline - only valid when
@@ -1394,7 +1571,10 @@ async function cmdMeasure(argv) {
     throttle: usedThrottle,
     earlyStopped,
   });
-  printMeasureSummary(report, hadBaseline);
+  printMeasureSummary(report, hadBaseline, {
+    parity: parityStatus(target),
+    lcpCheck: noteLcpElement(target, report),
+  });
   if (opts.pin) pinBaseline(target);
   else if (!hadBaseline)
     console.log(
@@ -1492,6 +1672,14 @@ async function cmdScan(argv) {
     // Pin the target's net-scale explicitly (one of 1/2/4/8) instead of the
     // calibrated value. Changing it makes the pinned baseline incomparable.
     'net-scale': { type: 'string' },
+    // Rendered-output parity: pages beyond the build's discoverable entries (SPA
+    // routes) and masks for regions the page renders differently on every load.
+    pages: { type: 'string' },
+    mask: { type: 'string', multiple: true },
+    // Compare the rendered output with the original in this scan too - the final
+    // check once the optimizing is done (recover mode's each-tweak strategy turns
+    // it on for every scan).
+    parity: { type: 'boolean', default: false },
   });
   if (opts.quick && opts.pin) {
     throw new Error(
@@ -1509,6 +1697,8 @@ async function cmdScan(argv) {
       `entry ${entry} has no sourcemap (${path.join(target.dist, entry)}.map) - build with sourcemap: true`,
     );
   }
+  // The first scan of a target saves the build as the original - before any change.
+  ensureAnchor(target, { pages: parsePages(opts.pages), masks: opts.mask ?? [] });
   // Early stop needs a decision context (a pinned baseline measured under the
   // SAME pinned net scale) and full-median exemptions: --pin measurements
   // BECOME the baseline, so they always sample fully; quick mode is already a
@@ -1553,22 +1743,37 @@ async function cmdScan(argv) {
         entryName: `/${entry.replaceAll('\\', '/')}`,
         settleMs: 2000,
       });
-      if (opts.quick) return { samples, earlyStopped, cov, profile: null, throttle };
-      // The profile only ever matters when pre-paint CPU is above the verdict's
-      // 150ms threshold - skip its navigation otherwise (a scan-time minute on
-      // slow apps). --profile forces it.
-      const prepaintMs = summarize(samples, expectedFeatures).metrics[
-        'runtime.prepaint_longtask_ms'
-      ];
-      if (!opts.profile && !(typeof prepaintMs === 'number' && prepaintMs > 150)) {
-        process.stderr.write(
-          `profile skipped (pre-paint CPU ${prepaintMs == null ? 'n/a' : `${Math.round(prepaintMs)}ms`} - baseline territory; force with --profile)\n`,
-        );
-        return { samples, earlyStopped, cov, profile: null, throttle };
+      let profile = null;
+      if (!opts.quick) {
+        // The profile only ever matters when pre-paint CPU is above the verdict's
+        // 150ms threshold - skip its navigation otherwise (a scan-time minute on
+        // slow apps). --profile forces it.
+        const prepaintMs = summarize(samples, expectedFeatures).metrics[
+          'runtime.prepaint_longtask_ms'
+        ];
+        if (opts.profile || (typeof prepaintMs === 'number' && prepaintMs > 150)) {
+          process.stderr.write('profile run...\n');
+          profile = await profileRun(cdp, { origin, throttle });
+        } else {
+          process.stderr.write(
+            `profile skipped (pre-paint CPU ${prepaintMs == null ? 'n/a' : `${Math.round(prepaintMs)}ms`} - baseline territory; force with --profile)\n`,
+          );
+        }
       }
-      process.stderr.write('profile run...\n');
-      const profile = await profileRun(cdp, { origin, throttle });
-      return { samples, earlyStopped, cov, profile, throttle };
+      // The rendered output is compared once, at the end (scan --parity), not per
+      // change - except in recover mode under the each-tweak strategy, which
+      // re-checks (and records a snapshot) with every scan.
+      const checkParity =
+        opts.parity || readJson(target.paths.parity.recover)?.strategy === 'each-tweak';
+      const parity = checkParity
+        ? await parityLeg(target, {
+            cdp,
+            throttle,
+            currentLcp: summarize(samples, expectedFeatures).lcpElement,
+            label: opts.label,
+          })
+        : null;
+      return { samples, earlyStopped, cov, profile, throttle, parity };
     },
     { netScaleFlag: opts['net-scale'] ?? null },
   );
@@ -1589,7 +1794,11 @@ async function cmdScan(argv) {
 
   // advice:false throughout - the verdict printed below carries every next: line,
   // so the sections above it report numbers without a second copy of the coaching.
-  printMeasureSummary(report, hadBaseline, { advice: false });
+  printMeasureSummary(report, hadBaseline, {
+    advice: false,
+    parity: parityStatus(target),
+    lcpCheck: noteLcpElement(target, report),
+  });
   console.log('');
   printCoverageReport(target, coverageReport, { compact: isRescan && !opts.full, advice: false });
   console.log('');
@@ -1600,6 +1809,10 @@ async function cmdScan(argv) {
   const graphBuiltAtMs = fs.statSync(path.join(target.dist, entry)).mtimeMs;
   printGraphSection(target, graphBuiltAtMs);
   printEagerDiffSummary(target, graphBuiltAtMs);
+  if (gathered.parity) {
+    printParityReport(gathered.parity, target);
+    console.log('');
+  }
   printVerdict(target);
 
   if (opts.pin) {
@@ -1622,6 +1835,769 @@ async function cmdScan(argv) {
 async function cmdVerdict(argv) {
   const opts = parse(argv, { ...TARGET_OPTS });
   printVerdict(resolveTarget(opts));
+}
+
+// --- rendered-output parity -------------------------------------------------------
+// The numbers above say how much faster the page got; parity says whether it is
+// still the same page. A build that renders differently from the original - a style
+// that stopped applying, a web font that never loads, a hero swapped for a skeleton -
+// can measure faster precisely BECAUSE it broke. So parity gates everything that
+// accepts a change: the keep/revert line, pinning, and the verdict's "done".
+// See README.md "Rendered-output parity" for the design.
+
+// The lab's own state can sit inside the build dir (--dist . with ./.metrics-lab):
+// never copy, hash or crawl it as part of the app.
+const PARITY_EXCLUDE = [STATE_DIR];
+
+const readApprovals = (target) => readJson(target.paths.parity.approvals) ?? { approvals: [] };
+
+/**
+ * A human approval turns an OPEN page "approved" - for its exact signature only.
+ * A build is only 'clear' once EVERY pinned page has a result; fewer is 'partial'
+ * (a recover-mode `parity --only` re-check).
+ */
+function effectiveParity(report, approvals, pinnedPages) {
+  if (!report) return null;
+  const pages = report.pages.map((page) => {
+    if (page.state !== 'open') return page;
+    const approval = approvals.approvals.find(
+      (a) => a.page === page.page && a.signature === page.signature,
+    );
+    return approval ? { ...page, state: 'approved', approval } : page;
+  });
+  const covered = pinnedPages.every((p) => pages.some((r) => r.page === p));
+  const state = pages.some((p) => p.state === 'open')
+    ? 'open'
+    : !report.integrity || pages.some((p) => p.state === 'unknown')
+      ? 'unknown'
+      : covered
+        ? 'clear'
+        : 'partial';
+  return { ...report, pages, state };
+}
+
+/**
+ * Where parity stands for the CURRENT build: 'none' (no original saved), 'identical'
+ * (same files as the original), 'stale' (not compared since the last rebuild),
+ * 'partial' (some pages compared), or the latest report's state with approvals
+ * applied.
+ */
+function parityStatus(target) {
+  const paths = target.paths.parity;
+  const manifest = readJson(paths.manifest);
+  if (!manifest || !fs.existsSync(path.join(target.dist, 'index.html'))) {
+    return { state: 'none', manifest, report: null };
+  }
+  const currentHash = hashDist(target.dist, { exclude: PARITY_EXCLUDE });
+  const stored = readJson(paths.report);
+  const report =
+    stored?.distHash === currentHash && stored.anchor?.distHash === manifest.distHash
+      ? effectiveParity(
+          stored,
+          readApprovals(target),
+          manifest.pages.map((p) => p.path),
+        )
+      : null;
+  if (currentHash === manifest.distHash) return { state: 'identical', manifest, report };
+  if (!report) return { state: 'stale', manifest, report: null };
+  return { state: report.state, manifest, report };
+}
+
+const throttleKey = (throttle) => (throttle ? `net x${throttle.netScale ?? 1}` : 'unthrottled');
+
+/**
+ * LCP-element bookkeeping on every measurement - free, the timed runs observed it.
+ * On the original build itself it records the original's LCP element; on any other
+ * build it compares with it. Shown as information; only the final check gates on it.
+ */
+function noteLcpElement(target, report) {
+  const paths = target.paths.parity;
+  const manifest = readJson(paths.manifest);
+  if (!manifest || !report.lcpElement) return null;
+  const key = throttleKey(report.throttle);
+  if (hashDist(target.dist, { exclude: PARITY_EXCLUDE }) === manifest.distHash) {
+    // a single run is no majority - quick probes never define the original's
+    if (manifest.lcp?.key !== key && report.runs > 1) {
+      manifest.lcp = { key, element: report.lcpElement, measuredAtMs: Date.now() };
+      writeJson(paths.manifest, manifest);
+    }
+    return null;
+  }
+  return manifest.lcp?.key === key ? compareLcp(manifest.lcp.element, report.lcpElement) : null;
+}
+
+/** The LCP-element comparison a later measurement of an already-compared build allows. */
+function lateLcpCheck(manifest, runtime) {
+  if (!runtime.lcpElement || manifest.lcp?.key !== throttleKey(runtime.throttle)) return null;
+  return compareLcp(manifest.lcp.element, runtime.lcpElement);
+}
+
+/** What a reader of a "clear" must also know: approvals, masks added late, a replaced original. */
+function parityExtras(report) {
+  if (!report) return '';
+  const parts = [];
+  const approved = report.pages.filter((p) => p.state === 'approved');
+  if (approved.length) {
+    parts.push(
+      `${approved.length} difference(s) approved by a human: ${approved
+        .map((p) => `${p.page} "${p.approval.reason}"`)
+        .join(', ')}`,
+    );
+  }
+  if (report.anchor.lateMasks.length) {
+    parts.push(`masks added after the original was saved: ${report.anchor.lateMasks.join(', ')}`);
+  }
+  if (report.anchor.replaced) parts.push(`the original was replaced ${report.anchor.replaced}x`);
+  if (report.anchor.late) {
+    parts.push('the original was saved after a perf baseline existed - it may include changes');
+  }
+  return parts.length ? ` (${parts.join('; ')})` : '';
+}
+
+function parsePages(value) {
+  return value
+    ? value
+        .split(',')
+        .map((p) => p.trim())
+        .filter(Boolean)
+        .map((p) => normalizePagePath(p))
+    : [];
+}
+
+/**
+ * Save the original build on a target's first scan / measure / parity; afterwards
+ * only ADD pages and masks (pages widen coverage; a mask narrows it, so every mask
+ * added after the save is listed in each verdict).
+ */
+function ensureAnchor(target, { pages = [], masks = [] } = {}) {
+  const paths = target.paths.parity;
+  const manifest = readJson(paths.manifest);
+  if (!fs.existsSync(path.join(target.dist, 'index.html'))) return manifest;
+  if (!manifest) {
+    guardStateDir();
+    const discovered = discoverPages(target.dist, { exclude: PARITY_EXCLUDE });
+    const late = fs.existsSync(target.paths.runtimeBaseline);
+    const created = saveAnchor({
+      dist: target.dist,
+      paths,
+      pages: Array.from(new Set(['/', ...discovered.pages, ...pages])),
+      masks,
+      git: gitState(path.dirname(target.dist), target.dist),
+      late,
+      exclude: PARITY_EXCLUDE,
+    });
+    writeJson(paths.manifest, created);
+    console.log(
+      `original build saved for rendered-output checks - page(s): ${created.pages.map((p) => p.path).join(' ')}`,
+    );
+    console.log(
+      '  every later build is compared against it; scan --pin / baseline never replace it.',
+    );
+    if (discovered.more.length) {
+      console.log(
+        `  ${discovered.more.length} more entry page(s) not pinned (add with --pages): ${discovered.more.slice(0, 5).join(' ')}`,
+      );
+    }
+    if (discovered.skipped.length) {
+      console.log(
+        `  skipped self-contained HTML (no bundled script/stylesheet): ${discovered.skipped.slice(0, 5).join(' ')}`,
+      );
+    }
+    if (created.pages.length === 1) {
+      console.log(
+        '  client-side routes are not discoverable from the build: pin the ones that matter with --pages /route,/other',
+      );
+    }
+    if (late) {
+      console.log(
+        '  note: a perf baseline was pinned before this - this build may already include changes. If it does,',
+      );
+      console.log(
+        `  a human rebuilds the original commit and runs \`${CLI} parity anchor --replace\` on that build.`,
+      );
+    }
+    if (created.git?.dirty) {
+      console.log(
+        '  note: the app has uncommitted changes - the saved build may already include some of them.',
+      );
+    }
+    return created;
+  }
+  let changed = false;
+  for (const page of pages) {
+    if (manifest.pages.some((p) => p.path === page)) continue;
+    manifest.pages.push({ path: page, addedAtMs: Date.now() });
+    changed = true;
+    console.log(`parity: page ${page} added`);
+  }
+  for (const selector of masks) {
+    if (manifest.masks.some((m) => m.selector === selector)) continue;
+    manifest.masks.push({ selector, addedAtMs: Date.now() });
+    changed = true;
+    console.log(
+      `parity: mask ${selector} added - masks added after the original was saved are listed in every verdict`,
+    );
+  }
+  if (changed) writeJson(paths.manifest, manifest);
+  return manifest;
+}
+
+/**
+ * The original's LCP element under the given throttle. A full scan of the original
+ * itself records it for free (noteLcpElement); otherwise it is measured once here
+ * (3 throttled runs against the saved build) and kept - the original never changes.
+ */
+async function anchorLcpElement(target, manifest, { cdp, throttle }) {
+  const key = throttleKey(throttle);
+  if (manifest.lcp?.key === key) return manifest.lcp.element;
+  const server = await startServer(target.paths.parity.anchorDist);
+  let element;
+  try {
+    const samples = [];
+    for (let i = 1; i <= 3; i++) {
+      process.stderr.write(`parity: LCP element of the original build, run ${i}/3 (once)...\n`);
+      samples.push(await timedRun(cdp, { url: `${server.origin}/`, throttle, settleMs: 1500 }));
+    }
+    element = lcpElementOf(samples);
+  } finally {
+    await server.close();
+  }
+  manifest.lcp = { key, element, measuredAtMs: Date.now() };
+  writeJson(target.paths.parity.manifest, manifest);
+  return element;
+}
+
+/**
+ * Compare the current build with the original and write the report - every pinned
+ * page, or just `only` (a recover-mode re-check; results for the same build merge,
+ * so a build is clear once every page has been compared). `currentLcp` is this
+ * build's LCP element from a timed measurement under `throttle`; undefined means
+ * there is none to compare (the report says so).
+ */
+async function parityLeg(target, { cdp, throttle, currentLcp, label = null, only = [] }) {
+  const paths = target.paths.parity;
+  const manifest = ensureAnchor(target);
+  if (!manifest) return null;
+  const pinned = manifest.pages.map((p) => p.path);
+  const checking = only.length ? only : pinned;
+  for (const page of checking) {
+    if (!pinned.includes(page)) {
+      throw new Error(`${page} is not a pinned page (${pinned.join(' ')}) - add it with --pages`);
+    }
+  }
+  const distHash = hashDist(target.dist, { exclude: PARITY_EXCLUDE });
+  const identical = distHash === manifest.distHash;
+  const integrity = hashDist(paths.anchorDist) === manifest.distHash;
+  let lcp = null;
+  if (integrity && !identical && currentLcp !== undefined && checking.includes('/')) {
+    lcp = compareLcp(await anchorLcpElement(target, manifest, { cdp, throttle }), currentLcp);
+  }
+  // Same files as the original renders the same by construction - nothing to capture.
+  const results =
+    integrity && !identical
+      ? await runParity({
+          cdp,
+          anchorDist: paths.anchorDist,
+          candidateDist: target.dist,
+          pages: checking,
+          masks: manifest.masks.map((m) => m.selector),
+          outDir: paths.pages,
+          lcpByPage: lcp ? { '/': lcp } : {},
+          log: (line) => process.stderr.write(`${line}\n`),
+        })
+      : [];
+  const previous = readJson(paths.report);
+  const carried =
+    previous?.distHash === distHash && previous.anchor?.distHash === manifest.distHash
+      ? previous.pages.filter((p) => !checking.includes(p.page))
+      : [];
+  const pages = identical
+    ? pinned.map((page) => ({ page, state: 'clear', reasons: [], notes: [] }))
+    : [...carried, ...results].sort((a, b) => pinned.indexOf(a.page) - pinned.indexOf(b.page));
+  const report = {
+    schemaVersion: 1,
+    generatedAtMs: Date.now(),
+    dist: target.dist,
+    distHash,
+    identical,
+    integrity,
+    lcpCompared: identical || Boolean(pages.find((p) => p.page === '/')?.lcp),
+    anchor: {
+      createdAtMs: manifest.createdAtMs,
+      distHash: manifest.distHash,
+      git: manifest.git,
+      late: manifest.late,
+      replaced: (manifest.replaced ?? []).length,
+      lateMasks: manifest.masks
+        .filter((m) => m.addedAtMs > manifest.createdAtMs)
+        .map((m) => m.selector),
+      lcp: manifest.lcp?.element ?? null,
+    },
+    pages,
+  };
+  writeJson(paths.report, report);
+  const effective = effectiveParity(report, readApprovals(target), pinned);
+  recordCheck(target, effective, {
+    label,
+    captured: results.map((r) => r.page),
+  });
+  return effective;
+}
+
+/**
+ * Every check is recorded - history.jsonl plus a copy of the pages it captured
+ * under snapshots/<n>/ - and moves recover mode: a difference enters it; a build
+ * compared on every page without one (or identical to the original) leaves it.
+ */
+function recordCheck(target, report, { label, captured }) {
+  const paths = target.paths.parity;
+  const n = fs.existsSync(paths.history)
+    ? fs.readFileSync(paths.history, 'utf8').split('\n').filter(Boolean).length + 1
+    : 1;
+  const recover = readJson(paths.recover);
+  let event = null;
+  if (report.state === 'open' && !recover) {
+    writeJson(paths.recover, { enteredAtMs: Date.now(), atCheck: n, strategy: 'on-demand' });
+    event = 'entered recover mode';
+  } else if (
+    recover &&
+    report.integrity &&
+    (report.identical || report.state === 'clear' || report.state === 'unknown')
+  ) {
+    fs.rmSync(paths.recover, { force: true });
+    event = 'left recover mode';
+  }
+  for (const page of captured) {
+    const from = path.join(paths.pages, pageSlug(page));
+    if (fs.existsSync(from)) {
+      fs.cpSync(from, path.join(paths.snapshots, String(n), pageSlug(page)), { recursive: true });
+    }
+  }
+  guardStateDir();
+  fs.appendFileSync(
+    paths.history,
+    `${JSON.stringify({
+      n,
+      label,
+      atMs: Date.now(),
+      distHash: report.distHash,
+      identical: report.identical,
+      state: report.state,
+      event,
+      pages: report.pages
+        .filter((p) => captured.includes(p.page))
+        .map((p) => ({ page: p.page, state: p.state, reasons: p.reasons })),
+    })}\n`,
+  );
+}
+
+/** What to do once a check found a difference - printed with it, and by `parity recover`. */
+function printRecoverGuide(target) {
+  const strategy = readJson(target.paths.parity.recover)?.strategy ?? 'on-demand';
+  // bisect runs from the app's repo: spell the lab by absolute path
+  const lab = CLI === 'node harness.mjs' ? `node ${path.join(ROOT, 'harness.mjs')}` : CLI;
+  const say = (line = '') => console.log(line);
+  say(
+    'RECOVER MODE - this build renders differently from the original, so its LCP numbers do not count',
+  );
+  say('until it matches again.');
+  say(
+    '  1. Diagnose: each OPEN page names what changed (element + property, rendered font, missing',
+  );
+  say(
+    '     text, new runtime error, LCP element) and points at its diff image (red = changed, blue =',
+  );
+  say('     varies between loads of the original, not judged).');
+  say(`  2. Choose how to re-check your fixes (now: ${strategy}):`);
+  say(
+    `       ${CLI} parity strategy on-demand    re-check when you decide: \`parity\` (every page), \`parity --only /page\` (the broken ones), --label <tweak> names the snapshot`,
+  );
+  say(`       ${CLI} parity strategy each-tweak   every scan re-checks and records a snapshot`);
+  say('  3. Not sure which kept change broke it? Bisect your commits - the check exits 1 while a');
+  say('     page differs:');
+  say(`       git bisect run sh -c '<build command> && ${lab} parity --only <page> --exit-code'`);
+  say(`  4. ${CLI} parity history   every check of this recovery, with its snapshot images`);
+  say(
+    '  A fix may give back part of the gain: the number you report must come from a build that matches',
+  );
+  say(
+    '  the original. Recover mode ends when a check covers every page and finds no difference - never by',
+  );
+  say('  approving, replacing the original or adding masks (human decisions).');
+}
+
+function describeRegionElement(e) {
+  const name = e.text ? `${e.label} "${e.text.slice(0, 30)}"` : e.label;
+  if (e.gone) return `${name} is gone`;
+  if (e.added) return `${name} is new`;
+  if (e.movedIn) return `${name} moved here`;
+  const bits = [];
+  if (e.font) bits.push(`rendered in ${e.font.to} (was ${e.font.from})`);
+  for (const c of e.changes ?? []) bits.push(`${c.prop} ${c.from} -> ${c.to}`);
+  if (e.moved) {
+    const r = (b) => `${b.x},${b.y} ${b.w}x${b.h}`;
+    bits.push(`moved ${r(e.moved.from)} -> ${r(e.moved.to)}`);
+  }
+  return bits.length ? `${name}: ${bits.join(', ')}` : name;
+}
+
+function printParityDetails(page) {
+  const out = (line) => console.log(`      ${line}`);
+  const list = (label, items, n = 5) => {
+    if (!items.length) return;
+    const more = items.length > n ? ` (+${items.length - n} more)` : '';
+    out(
+      `${label}: ${items
+        .slice(0, n)
+        .map((s) => JSON.stringify(s))
+        .join(', ')}${more}`,
+    );
+  };
+  for (const [name, view] of Object.entries(page.views)) {
+    for (const region of view.regions.slice(0, 3)) {
+      const where = name === 'viewport' ? 'first screen' : 'full page';
+      const what = region.elements?.length
+        ? `: ${region.elements.map((e) => describeRegionElement(e)).join('; ')}`
+        : '';
+      out(`${where} region ${region.w}x${region.h} at ${region.x},${region.y}${what}`);
+    }
+  }
+  list('text missing', page.text.missing);
+  list('text new', page.text.added);
+  list('accessible names missing', page.a11y.missing);
+  list('accessible names new', page.a11y.added);
+  for (const error of page.runtime.added.slice(0, 5)) out(`new runtime error: ${error}`);
+  for (const f of page.fonts.slice(0, 3)) {
+    out(
+      `font: ${f.label}${f.text ? ` "${f.text.slice(0, 30)}"` : ''} rendered in ${f.to} (was ${f.from})`,
+    );
+  }
+  list('web fonts no longer loaded', page.faces.missing, 4);
+  list('images missing', page.images.missing, 3);
+  list('images new', page.images.added, 3);
+  const styles = page.styles;
+  if (styles?.changedCount) {
+    const examples = styles.changed
+      .slice(0, 2)
+      .map(
+        (d) => `${d.label} ${d.changes.map((c) => `${c.prop} ${c.from} -> ${c.to}`).join(', ')}`,
+      );
+    out(`computed style changed on ${styles.changedCount} element(s), e.g. ${examples.join('; ')}`);
+  }
+  if (styles?.missingCount) {
+    out(`elements gone: ${styles.missingCount} (${styles.missing.slice(0, 3).join(', ')})`);
+  }
+  if (styles?.addedCount) {
+    out(`elements new: ${styles.addedCount} (${styles.added.slice(0, 3).join(', ')})`);
+  }
+  if (styles?.movedCount) out(`${styles.movedCount} element(s) moved or resized`);
+}
+
+function printParityReport(report, target) {
+  if (!report) return;
+  const a = report.anchor;
+  const saved = new Date(a.createdAtMs).toISOString().slice(0, 16).replace('T', ' ');
+  const commit = a.git ? `, commit ${a.git.sha}${a.git.dirty ? ' + uncommitted changes' : ''}` : '';
+  console.log(`rendered output vs the original build (saved ${saved} UTC${commit}):`);
+  if (!report.integrity) {
+    console.log(
+      '  the saved original build was modified after it was saved - nothing can be compared against it',
+    );
+    return;
+  }
+  if (report.identical) {
+    console.log('  this build is byte-identical to the original - same rendering by construction');
+    return;
+  }
+  for (const page of report.pages) {
+    const tag = { open: 'OPEN', unknown: 'UNKNOWN', approved: 'approved', clear: 'clear' }[
+      page.state
+    ];
+    console.log(
+      `  ${page.page}  ${tag}${page.reasons.length ? ` - ${page.reasons.join('; ')}` : ''}`,
+    );
+    if (page.approval) {
+      console.log(
+        `      approved by ${page.approval.by} ${new Date(page.approval.approvedAtMs).toISOString().slice(0, 10)}: "${page.approval.reason}"`,
+      );
+    }
+    if (page.state === 'open') printParityDetails(page);
+    for (const note of page.notes) console.log(`      note: ${note}`);
+    const evidence = Object.entries(page.files ?? {}).filter(([name]) => name.startsWith('diff'));
+    if (page.state !== 'clear' && evidence.length) {
+      console.log(`      evidence: ${evidence.map(([, file]) => file).join('  ')}`);
+    }
+  }
+  const root = report.pages.find((p) => p.page === '/');
+  if (!report.lcpCompared) {
+    console.log(
+      '  LCP element: not compared - no fresh timed measurement of this build (scan --parity compares it)',
+    );
+  } else if (root?.lcp?.state === 'same') {
+    console.log(`  LCP element: same as the original - ${describeLcp(root.lcp.current)}`);
+  }
+  if (report.state === 'partial') {
+    const pinned = readJson(target.paths.parity.manifest)?.pages.length ?? report.pages.length;
+    console.log(
+      `  ${report.pages.length} of ${pinned} page(s) compared for this build so far - it is clear once every pinned page is`,
+    );
+  }
+  if (a.lateMasks.length) {
+    console.log(`  masks added after the original was saved: ${a.lateMasks.join(', ')}`);
+  }
+  if (a.replaced) {
+    console.log(`  the original was replaced ${a.replaced}x since it was first saved`);
+  }
+  if (report.state === 'open') {
+    console.log('');
+    printRecoverGuide(target);
+  }
+}
+
+async function cmdParity(argv) {
+  const sub = {
+    approve: cmdParityApprove,
+    anchor: cmdParityAnchor,
+    strategy: cmdParityStrategy,
+    history: cmdParityHistory,
+    recover: cmdParityRecover,
+  }[argv[0]];
+  if (sub) return sub(argv.slice(1));
+  const opts = parse(argv, {
+    ...TARGET_OPTS,
+    pages: { type: 'string' },
+    mask: { type: 'string', multiple: true },
+    only: { type: 'string' },
+    label: { type: 'string' },
+    'exit-code': { type: 'boolean', default: false },
+  });
+  const target = resolveTarget(opts);
+  const manifest = ensureAnchor(target, { pages: parsePages(opts.pages), masks: opts.mask ?? [] });
+  if (!manifest) {
+    throw new Error(
+      `no build at ${target.dist} - build the app first.\n` +
+        '(Wrong target? --app <appRoot> resolves dist/build/out; --dist <builtDir> aims directly.)',
+    );
+  }
+  // The LCP element is only compared against a fresh timed measurement of THIS
+  // build (a scan's); without one, no throttled run is spent here.
+  const entry = detectEntry(target.dist);
+  const builtAtMs = entry ? fs.statSync(path.join(target.dist, entry)).mtimeMs : Infinity;
+  const runtime = readJson(target.paths.runtimeMetrics);
+  const fresh = runtime && runtime.entry === entry && runtime.generatedAtMs >= builtAtMs;
+  const report = await withServerAndBrowser(target, true, ({ cdp }) =>
+    parityLeg(target, {
+      cdp,
+      throttle: fresh ? runtime.throttle : null,
+      currentLcp: fresh ? (runtime.lcpElement ?? null) : undefined,
+      label: opts.label ?? null,
+      only: parsePages(opts.only),
+    }),
+  );
+  console.log('');
+  printParityReport(report, target);
+  const tag = { open: 'OPEN', unknown: 'UNKNOWN', partial: 'partial', clear: 'clear' }[
+    report.state
+  ];
+  console.log(`\nparity: ${tag} - full report ${target.paths.parity.report}`);
+  // lets `git bisect run` find the change that broke the page
+  if (opts['exit-code'] && report.state === 'open') process.exitCode = 1;
+}
+
+async function cmdParityStrategy(argv) {
+  const { values: opts, positionals } = parseArgs({
+    args: argv,
+    options: TARGET_OPTS,
+    allowPositionals: true,
+  });
+  const target = resolveTarget(opts);
+  const recover = readJson(target.paths.parity.recover);
+  if (!recover) {
+    console.log(
+      `not in recover mode - the rendered output is compared once, when you finish (${CLI} scan --parity); a strategy applies after that finds a difference`,
+    );
+    return;
+  }
+  const choice = positionals[0];
+  if (!choice) {
+    console.log(`recover strategy: ${recover.strategy}`);
+    return;
+  }
+  if (choice !== 'each-tweak' && choice !== 'on-demand') {
+    throw new Error('usage: parity strategy each-tweak|on-demand');
+  }
+  recover.strategy = choice;
+  writeJson(target.paths.parity.recover, recover);
+  console.log(
+    choice === 'each-tweak'
+      ? 'each-tweak: every scan now re-checks the rendered output and records a snapshot, until recover mode ends'
+      : `on-demand: re-check when you decide - \`${CLI} parity\` (every page) or \`${CLI} parity --only <page>\``,
+  );
+}
+
+async function cmdParityRecover(argv) {
+  const target = resolveTarget(parse(argv, { ...TARGET_OPTS }));
+  if (!readJson(target.paths.parity.recover)) {
+    console.log(
+      `not in recover mode - nothing found to differ. The comparison runs once, when you finish: ${CLI} scan --parity`,
+    );
+    return;
+  }
+  printRecoverGuide(target);
+}
+
+async function cmdParityHistory(argv) {
+  const target = resolveTarget(parse(argv, { ...TARGET_OPTS }));
+  const paths = target.paths.parity;
+  const checks = fs.existsSync(paths.history)
+    ? fs
+        .readFileSync(paths.history, 'utf8')
+        .split('\n')
+        .filter(Boolean)
+        .map((line) => JSON.parse(line))
+    : [];
+  if (!checks.length) {
+    console.log('no rendered-output checks recorded for this target yet');
+    return;
+  }
+  for (const check of checks) {
+    const when = new Date(check.atMs).toISOString().slice(0, 16).replace('T', ' ');
+    const what = check.identical ? 'identical to the original' : check.state;
+    console.log(
+      `#${check.n}${check.label ? ` "${check.label}"` : ''}  ${when} UTC  build ${check.distHash.slice(0, 8)}  ${what}${check.event ? `  (${check.event})` : ''}`,
+    );
+    for (const page of check.pages) {
+      console.log(
+        `    ${page.page}  ${page.state}${page.reasons.length ? ` - ${page.reasons.join('; ')}` : ''}`,
+      );
+    }
+    if (check.pages.length) {
+      console.log(`    snapshot: ${path.join(paths.snapshots, String(check.n))}`);
+    }
+  }
+  const recover = readJson(paths.recover);
+  console.log(
+    recover
+      ? `\nin recover mode since check #${recover.atCheck} (strategy: ${recover.strategy})`
+      : '\nnot in recover mode',
+  );
+}
+
+async function cmdParityApprove(argv) {
+  const { values: opts, positionals } = parseArgs({
+    args: argv,
+    options: { ...TARGET_OPTS, reason: { type: 'string' } },
+    allowPositionals: true,
+  });
+  const pagePath = positionals[0];
+  if (!pagePath || !opts.reason?.trim()) {
+    throw new Error(
+      'usage: parity approve <page> --reason "<why this difference is intended>"\n' +
+        'Approving is a HUMAN decision about a difference they looked at - an agent must never run it.',
+    );
+  }
+  const target = resolveTarget(opts);
+  const status = parityStatus(target);
+  if (!status.report) {
+    throw new Error(
+      `no current parity check for this build - run \`${CLI} parity\`, look at the evidence, then approve`,
+    );
+  }
+  const page = status.report.pages.find((p) => p.page === pagePath);
+  if (!page) {
+    throw new Error(
+      `no page ${pagePath} in the last check (pages: ${status.report.pages.map((p) => p.page).join(' ')})`,
+    );
+  }
+  if (page.state !== 'open') throw new Error(`${pagePath} is ${page.state} - nothing to approve`);
+  const approvals = readApprovals(target);
+  approvals.approvals.push({
+    page: pagePath,
+    signature: page.signature,
+    reasons: page.reasons,
+    reason: opts.reason.trim(),
+    by: os.userInfo().username,
+    approvedAtMs: Date.now(),
+  });
+  writeJson(target.paths.parity.approvals, approvals);
+  console.log(`approved ${pagePath}: ${page.reasons.join('; ')}`);
+  console.log(
+    'it covers this exact difference only - any further change to the page reopens it. Every verdict lists it.',
+  );
+}
+
+async function cmdParityAnchor(argv) {
+  const opts = parse(argv, { ...TARGET_OPTS, replace: { type: 'boolean', default: false } });
+  const target = resolveTarget(opts);
+  const paths = target.paths.parity;
+  const manifest = readJson(paths.manifest);
+  if (!manifest) {
+    console.log(
+      `no original build saved for ${target.dist} - \`${CLI} parity\` (or a scan) saves the current one`,
+    );
+    return;
+  }
+  if (opts.replace) {
+    if (!fs.existsSync(path.join(target.dist, 'index.html'))) {
+      throw new Error(
+        `no build at ${target.dist} - build the commit that should become the original`,
+      );
+    }
+    const next = saveAnchor({
+      dist: target.dist,
+      paths,
+      pages: [],
+      git: gitState(path.dirname(target.dist), target.dist),
+      late: false,
+      exclude: PARITY_EXCLUDE,
+    });
+    // Pages, masks (with their dates) and the first-save time carry over: lateness
+    // is measured from the FIRST save, and a replacement is recorded, never hidden.
+    next.createdAtMs = manifest.createdAtMs;
+    next.pages = manifest.pages;
+    next.masks = manifest.masks;
+    next.replaced = [
+      ...(manifest.replaced ?? []),
+      { atMs: Date.now(), previousHash: manifest.distHash, previousGit: manifest.git },
+    ];
+    writeJson(paths.manifest, next);
+    fs.rmSync(paths.report, { force: true });
+    fs.rmSync(paths.approvals, { force: true });
+    console.log(
+      `the saved original build was REPLACED by ${target.dist}${next.git ? ` (commit ${next.git.sha})` : ''}.`,
+    );
+    console.log(
+      'Parity now compares against it, and every verdict says the original was replaced. This is a human decision -',
+    );
+    console.log('an agent must never replace the original to make a difference go away.');
+    return;
+  }
+  const date = (msValue) => new Date(msValue).toISOString().slice(0, 16).replace('T', ' ');
+  console.log(`original build for ${target.dist}:`);
+  console.log(`  saved ${date(manifest.createdAtMs)} UTC from ${manifest.dist}`);
+  if (manifest.git) {
+    console.log(
+      `  commit ${manifest.git.sha}${manifest.git.dirty ? ' + uncommitted changes' : ''}`,
+    );
+  }
+  console.log(`  files hash ${manifest.distHash.slice(0, 12)} (copy at ${paths.anchorDist})`);
+  for (const page of manifest.pages) {
+    const later = page.addedAtMs > manifest.createdAtMs ? ` (added ${date(page.addedAtMs)})` : '';
+    console.log(`  page ${page.path}${later}`);
+  }
+  for (const mask of manifest.masks) {
+    const later = mask.addedAtMs > manifest.createdAtMs ? ` (added ${date(mask.addedAtMs)})` : '';
+    console.log(`  mask ${mask.selector}${later}`);
+  }
+  if (manifest.lcp?.element) {
+    console.log(`  LCP element (${manifest.lcp.key}): ${describeLcp(manifest.lcp.element)}`);
+  }
+  for (const r of manifest.replaced ?? []) {
+    console.log(`  replaced ${date(r.atMs)} (previous hash ${r.previousHash.slice(0, 12)})`);
+  }
+  if (manifest.late) {
+    console.log('  saved after a perf baseline existed - it may already include changes');
+  }
 }
 
 // --- module-graph analysis (rolldown devtools metrics builds) ---------------------
@@ -2242,6 +3218,12 @@ async function cmdStatus() {
       ? `pinned baseline: ${baseline.label ?? '(unlabeled)'} LCP ${ms(baseline.metrics['runtime.lcp_ms'])}`
       : 'pinned baseline: none',
   );
+  const parity = parityStatus(target);
+  console.log(
+    parity.manifest
+      ? `original build: saved ${new Date(parity.manifest.createdAtMs).toISOString().slice(0, 16).replace('T', ' ')} UTC, ${parity.manifest.pages.length} page(s) - rendered output ${parity.state}`
+      : 'original build: not saved yet (the first scan/measure/parity saves it)',
+  );
   if (target.isDemo) {
     const modes = featureModes(APP_DIR);
     if (modes) {
@@ -2697,6 +3679,31 @@ start here (the target is remembered after the first command):
                             Changing it makes the pinned baseline incomparable (re-pin).
   verdict                   fuse the gathered signals -> OPEN/clear/UNKNOWN; the only "done" that counts
 
+rendered output (parity) - is it still the same page? Compared ONCE, when you finish.
+  The first scan/measure/parity of a target saves the build as the ORIGINAL (a file copy).
+  Optimize freely; each scan only says whether the LCP element is still the original's
+  (free). When done, \`scan --parity\` takes the final measurement and compares every
+  pinned page with the original: first-screen + full-page pixels, page height, visible
+  text, accessible names, new runtime errors, and the LCP element (a different, smaller or
+  placeholder LCP element means the gain is not real). A difference starts RECOVER MODE:
+  that build's LCP numbers do not count until it matches again.
+  scan --parity             the final check: measurement + comparison, every pinned page
+  parity [--only /a,/b] [--label x] [--exit-code]   the comparison alone (no timed runs);
+                            --only re-checks some pages (a build is clear once every page
+                            is), --exit-code exits 1 while a page differs (git bisect run)
+  parity recover            recover mode: what to do, how to re-check, how to bisect
+  parity strategy each-tweak|on-demand   in recover mode: every scan re-checks and records
+                            a snapshot, or you re-check when you decide (default)
+  parity history            every check with its snapshot images
+  scan|parity --pages /pricing,/docs   add client-side routes (entry HTML files are found
+                            automatically). Pages can be added any time, never removed.
+  scan|parity --mask <selector>        mask a region the ORIGINAL renders differently on
+                            every load (a live clock, a rotating banner). Masks added after
+                            the original was saved are listed in every verdict.
+  parity anchor             show the saved original (commit, pages, masks, LCP element)
+  parity anchor --replace   HUMAN ONLY: make the current build the original
+  parity approve <page> --reason "..."  HUMAN ONLY: accept one exact, intended difference
+
 individual commands (same target rules):
   measure [--runs 5] [--label x] [--pin]    timed runs only -> LCP + "vs pinned baseline" verdict
   coverage | profile                        one signal each
@@ -2766,7 +3773,10 @@ the loop:
   5. rebuild; run the app's functional check; scan (--quick to probe, full scan to decide)
   6. "improvement beyond noise" + check passes -> keep, scan --pin (or baseline), commit;
      otherwise revert + rebuild
-  7. repeat. Declare done ONLY when the verdict reports every signal class clear -
+  7. repeat. When you have finished optimizing: scan --parity. A difference starts
+     recover mode - often the build was faster BECAUSE it broke (a style that stopped
+     applying, a hero swapped for a placeholder); fix or revert until it matches.
+     Declare done ONLY when the verdict reports every signal class clear -
      never because one report looks empty (a tool's silence is not "done").
      Stopping earlier is allowed ONLY with the verdict checklist copied into your
      summary and every OPEN lead justified (sub-noise measurement or concrete constraint)
@@ -2788,6 +3798,7 @@ const commands = {
   coverage: cmdCoverage,
   profile: cmdProfile,
   verdict: cmdVerdict,
+  parity: cmdParity,
   graph: cmdGraph,
   'what-if': cmdWhatIf,
   cut: cmdCut,

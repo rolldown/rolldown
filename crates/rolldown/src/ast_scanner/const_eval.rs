@@ -63,7 +63,7 @@ impl<'ast> GlobalContext<'ast> for ConstEvalCtx<'_, 'ast> {
     &self,
     reference_id: oxc::semantic::ReferenceId,
   ) -> Option<oxc_ecmascript::constant_evaluation::ConstantValue<'ast>> {
-    self.constant_value(reference_id).map(oxc_ecmascript::constant_evaluation::ConstantValue::from)
+    self.constant_value(reference_id).map(|value| value.to_oxc_value_in(self))
   }
 
   // Without the type, oxc's `+` reads a string constant as a number: `'3' + 1` gives `4`.
@@ -98,7 +98,7 @@ pub fn try_extract_const_literal<'me, 'ast: 'me>(
     Expression::TemplateLiteral(template) => {
       template_text(ctx, template).map(ConstantValue::String)
     }
-    _ => expr.evaluate_value(ctx).map(ConstantValue::from),
+    _ => expr.evaluate_value(ctx).and_then(ConstantValue::from_oxc),
   }?;
   (!contains_object_literal(expr)).then_some(value)
 }

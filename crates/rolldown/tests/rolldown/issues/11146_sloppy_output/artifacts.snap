@@ -1,0 +1,72 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
+   ╭─[ main.js:6:5 ]
+   │
+ 1 │ import { env } from './dynamic.js';
+   │          ─┬─  
+   │           ╰─── 'env' is imported here
+   │ 
+ 6 │ env.FOO = 'changed';
+   │     ─┬─  
+   │      ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+───╯
+
+```
+
+## ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
+   ╭─[ main.js:7:12 ]
+   │
+ 1 │ import { env } from './dynamic.js';
+   │          ─┬─  
+   │           ╰─── 'env' is imported here
+   │ 
+ 7 │ delete env.FOO;
+   │            ─┬─  
+   │             ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+───╯
+
+```
+
+## ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
+   ╭─[ main.js:8:8 ]
+   │
+ 2 │ import * as ns from './nested.js';
+   │             ─┬  
+   │              ╰── 'ns' is imported here
+   │ 
+ 8 │ ns.sub.FOO = 'changed';
+   │        ─┬─  
+   │         ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+───╯
+
+```
+
+## ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
+   ╭─[ main.js:9:8 ]
+   │
+ 3 │ import * as server from './server.js';
+   │             ───┬──  
+   │                ╰──── 'server' is imported here
+   │ 
+ 9 │ server.FOO = 'changed';
+   │        ─┬─  
+   │         ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+───╯
+
+```

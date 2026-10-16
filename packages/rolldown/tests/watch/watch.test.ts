@@ -317,6 +317,151 @@ test.concurrent(
   },
 );
 
+// https://github.com/rolldown/rolldown/issues/10613: one edit to a multi-output
+// config is one rebuild cycle, and END fires only after every output finished.
+test.concurrent(
+  'watch emits END after all outputs finish rebuilding',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, dir } = createTestInputAndOutput('watch-multiple-output-end-event', retryCount);
+    const outputDirs = [path.join(dir, 'dist-a'), path.join(dir, 'dist-b')];
+    const watcher = watch({
+      input,
+      output: outputDirs.map((outputDir) => ({ dir: outputDir })),
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const events: string[] = [];
+    watcher.on('event', async (event) => {
+      events.push(event.code);
+      if (event.code === 'BUNDLE_END') {
+        await event.result.close();
+      }
+    });
+
+    const expectedEvents = [
+      'START',
+      'BUNDLE_START',
+      'BUNDLE_END',
+      'BUNDLE_START',
+      'BUNDLE_END',
+      'END',
+    ];
+    await expect.poll(() => events).toEqual(expectedEvents);
+
+    for (let i = 0; i < 5; i++) {
+      events.length = 0;
+      await editFile(input, `console.log(${i + 2})`);
+      await expect.poll(() => events).toEqual(expectedEvents);
+    }
+  },
+);
+
+// Each config's outputs are read once: an `options` hook that adds an output
+// must not change the group sizes handed to the binding after the fact.
+test.concurrent(
+  'watch ignores outputs an options hook adds',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, dir } = createTestInputAndOutput('watch-options-hook-output', retryCount);
+    const outDir = (name: string) => ({ dir: path.join(dir, name) });
+    const watcher = watch([
+      {
+        input,
+        output: [outDir('a1')],
+        plugins: [
+          {
+            name: 'push-output',
+            // The hook receives the watch config object itself, `output` included.
+            options(options) {
+              (options as WatchOptions & { output: { dir: string }[] }).output.push(outDir('a2'));
+            },
+          },
+        ],
+      },
+      { input, output: outDir('b1') },
+    ]);
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const events: string[] = [];
+    watcher.on('event', async (event) => {
+      events.push(event.code);
+      if (event.code === 'BUNDLE_END' || event.code === 'ERROR') {
+        await event.result.close();
+      }
+    });
+
+    await expect
+      .poll(() => events)
+      .toEqual(['START', 'BUNDLE_START', 'BUNDLE_END', 'BUNDLE_START', 'BUNDLE_END', 'END']);
+    expect(fs.existsSync(path.join(dir, 'a2'))).toBe(false);
+  },
+);
+
+// A config with `output: []` builds nothing, and its siblings still rebuild.
+test.concurrent(
+  'watch accepts a config with no outputs',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, dir, outputDir } = createTestInputAndOutput('watch-empty-output', retryCount);
+    const watcher = watch([
+      { input, output: [] },
+      { input, output: { dir: outputDir } },
+    ]);
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const events: string[] = [];
+    watcher.on('event', async (event) => {
+      events.push(event.code);
+      if (event.code === 'BUNDLE_END' || event.code === 'ERROR') {
+        await event.result.close();
+      }
+    });
+
+    const expectedEvents = ['START', 'BUNDLE_START', 'BUNDLE_END', 'END'];
+    await expect.poll(() => events).toEqual(expectedEvents);
+    events.length = 0;
+    await editFile(input, 'console.log(2)');
+    await expect.poll(() => events).toEqual(expectedEvents);
+  },
+);
+
+test.concurrent(
+  'watch accepts an empty config list',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ expect, onTestFinished }) => {
+    const watcher = watch([]);
+    onTestFinished(async () => {
+      await watcher.close();
+    });
+
+    const events: string[] = [];
+    watcher.on('event', (event) => {
+      events.push(event.code);
+    });
+
+    await expect.poll(() => events).toEqual(['START', 'END']);
+  },
+);
+
 test.concurrent(
   'watch event off',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },

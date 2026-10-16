@@ -41,10 +41,11 @@ impl Plugin for ChunkImportMapPlugin {
     if !self.initialized.swap(true, Ordering::SeqCst) {
       let base = args.options.hash_characters.base();
       let mut used_names = FxHashSet::default();
+      let mut used_chunk_ids = FxHashSet::default();
       for chunk in args.chunks.values() {
-        let mut hash_placeholders =
-          find_hash_placeholders(&chunk.filename, &HASH_PLACEHOLDER_LEFT_FINDER).peekable();
-        if hash_placeholders.peek().is_none() {
+        let hash_placeholders: Vec<_> =
+          find_hash_placeholders(&chunk.filename, &HASH_PLACEHOLDER_LEFT_FINDER).collect();
+        if hash_placeholders.is_empty() {
           continue;
         }
         let hasher = match &chunk.facade_module_id {
@@ -67,13 +68,31 @@ impl Plugin for ChunkImportMapPlugin {
             hasher
           }
         };
-        let hash = encode_hash_with_base(&hasher.digest128().to_le_bytes(), base);
-        let mut chunk_id = chunk.filename.to_string();
-        for (start, end, placeholder) in hash_placeholders {
-          let hash = hash[..end - start].to_string();
-          unsafe { chunk_id.as_bytes_mut()[start..end].copy_from_slice(hash.as_bytes()) };
-          self.chunk_import_map.insert(placeholder.into(), hash);
+        let mut hash = encode_hash_with_base(&hasher.digest128().to_le_bytes(), base);
+        let mut chunk_id = replace_hash_placeholders(&chunk.filename, &hash_placeholders, &hash);
+        if used_chunk_ids.contains(&chunk_id) {
+          // Chunks can share modules (`experimentalInlineCommonChunks` copies a record into every
+          // carrier), so the fallback above can repeat. Hash every module, then a counter.
+          let mut hasher = Xxh3::with_seed(2);
+          chunk.name.hash(&mut hasher);
+          let mut module_ids: Vec<_> = chunk.module_ids.iter().map(|id| id.as_str()).collect();
+          module_ids.sort_unstable();
+          module_ids.hash(&mut hasher);
+          let mut attempt = 0u32;
+          loop {
+            hash = encode_hash_with_base(&hasher.digest128().to_le_bytes(), base);
+            chunk_id = replace_hash_placeholders(&chunk.filename, &hash_placeholders, &hash);
+            if !used_chunk_ids.contains(&chunk_id) {
+              break;
+            }
+            attempt += 1;
+            attempt.hash(&mut hasher);
+          }
         }
+        for &(start, end, placeholder) in &hash_placeholders {
+          self.chunk_import_map.insert(placeholder.into(), hash[..end - start].to_string());
+        }
+        used_chunk_ids.insert(chunk_id.clone());
         self.chunk_import_map.insert(chunk.filename.clone(), chunk_id);
       }
     }
@@ -139,4 +158,16 @@ impl Plugin for ChunkImportMapPlugin {
   fn generate_bundle_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
     Some(rolldown_plugin::PluginHookMeta { order: Some(rolldown_plugin::PluginOrder::Pre) })
   }
+}
+
+fn replace_hash_placeholders(
+  filename: &str,
+  hash_placeholders: &[(usize, usize, &str)],
+  hash: &str,
+) -> String {
+  let mut chunk_id = filename.to_string();
+  for &(start, end, _) in hash_placeholders {
+    unsafe { chunk_id.as_bytes_mut()[start..end].copy_from_slice(&hash.as_bytes()[..end - start]) };
+  }
+  chunk_id
 }

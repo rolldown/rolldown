@@ -13,14 +13,14 @@ impl<'ast> VisitJsMut<'ast> for TypeImportVisitor<'ast> {
   fn visit_import_declaration(&mut self, decl: &mut ImportDeclaration<'ast>) {
     match decl.import_kind {
       ImportOrExportKind::Type => {
-        self.imported.push(decl.source.value);
+        self.imported.extend(decl.source.value.as_arena_str());
       }
       ImportOrExportKind::Value => {
         if let Some(specifiers) = &decl.specifiers {
           for specifier in specifiers {
             if let ImportDeclarationSpecifier::ImportSpecifier(specifier) = specifier {
               if matches!(specifier.import_kind, ImportOrExportKind::Type) {
-                self.imported.push(decl.source.value);
+                self.imported.extend(decl.source.value.as_arena_str());
                 break;
               }
             }
@@ -33,12 +33,12 @@ impl<'ast> VisitJsMut<'ast> for TypeImportVisitor<'ast> {
   fn visit_export_from_declaration(&mut self, decl: &mut ExportFromDeclaration<'ast>) {
     match decl.export_kind {
       ImportOrExportKind::Type => {
-        self.imported.push(decl.source.value);
+        self.imported.extend(decl.source.value.as_arena_str());
       }
       ImportOrExportKind::Value => {
         for specifier in &decl.specifiers {
           if matches!(specifier.export_kind, ImportOrExportKind::Type) {
-            self.imported.push(decl.source.value);
+            self.imported.extend(decl.source.value.as_arena_str());
             break;
           }
         }

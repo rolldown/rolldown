@@ -3,7 +3,7 @@ use oxc::ast::{
   ast::{self, AssignmentExpression, Expression, IdentifierReference, PropertyKey},
 };
 use oxc::semantic::NodeId;
-use oxc_str::CompactStr;
+use oxc_str::{CompactStr, JSStr};
 use rolldown_common::{AstScopes, EcmaModuleAstUsage};
 use rolldown_ecmascript_utils::ExpressionExt;
 
@@ -142,10 +142,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       return Some(CommonJsAstType::ExportsRead);
     }
 
-    let Some(static_property_name) = static_property_name else {
+    // A name with a lone surrogate is treated like a computed one.
+    let Some(static_property_name) = static_property_name.and_then(JSStr::as_str) else {
       return Some(CommonJsAstType::ExportsPropWrite(CompactStr::from("*")));
     };
-    if static_property_name.as_str() != "__esModule" {
+    if static_property_name != "__esModule" {
       return Some(CommonJsAstType::ExportsPropWrite(CompactStr::from(static_property_name)));
     }
 
@@ -214,7 +215,10 @@ pub fn is_object_define_property_es_module(
     return Some(CommonJsAstType::ExportsPropWrite("*".into()));
   };
   if string_lit.value != "__esModule" {
-    return Some(CommonJsAstType::ExportsPropWrite(string_lit.value.as_str().into()));
+    let Some(name) = string_lit.value.as_str() else {
+      return Some(CommonJsAstType::ExportsPropWrite("*".into()));
+    };
+    return Some(CommonJsAstType::ExportsPropWrite(name.into()));
   }
   let third = call_expr.arguments.get(2)?;
   let ret = third

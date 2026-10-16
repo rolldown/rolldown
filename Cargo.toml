@@ -337,3 +337,33 @@ opt-level = "s"
 # it will strip these information for non-debug files
 debug = "full"
 strip = "none"
+
+# Testing oxc main (https://github.com/oxc-project/oxc/issues/26242). Do not merge.
+[patch.crates-io]
+oxc = { git = "https://github.com/oxc-project/oxc", rev = "d2bea21099627e0122285ee301ef80aa4e519ff0" }
+oxc_allocator = { git = "https://github.com/oxc-project/oxc", rev = "d2bea21099627e0122285ee301ef80aa4e519ff0" }
+oxc_ast = { git = "https://github.com/oxc-project/oxc", rev = "d2bea21099627e0122285ee301ef80aa4e519ff0" }
+oxc_ast_macros = { git = "https://github.com/oxc-project/oxc", rev = "d2bea21099627e0122285ee301ef80aa4e519ff0" }
+oxc_ast_visit = { git = "https://github.com/oxc-project/oxc", rev = "d2bea21099627e0122285ee301ef80aa4e519ff0" }
+oxc_codegen = { git = "https://github.com/oxc-project/oxc", rev = "d2bea21099627e0122285ee301ef80aa4e519ff0" }
+oxc_compat = { git = "https://github.com/oxc-project/oxc", rev = "d2bea21099627e0122285ee301ef80aa4e519ff0" }
+oxc_data_structures = { git = "https://github.com/oxc-project/oxc", rev = "d2bea21099627e0122285ee301ef80aa4e519ff0" }
+oxc_diagnostics = { git = "https://github.com/oxc-project/oxc", rev = "d2bea21099627e0122285ee301ef80aa4e519ff0" }
+oxc_ecmascript = { git = "https://github.com/oxc-project/oxc", rev = "d2bea21099627e0122285ee301ef80aa4e519ff0" }
+oxc_estree = { git = "https://github.com/oxc-project/oxc", rev = "d2bea21099627e0122285ee301ef80aa4e519ff0" }
+oxc_isolated_declarations = { git = "https://github.com/oxc-project/oxc", rev = "d2bea21099627e0122285ee301ef80aa4e519ff0" }
+oxc_mangler = { git = "https://github.com/oxc-project/oxc", rev = "d2bea21099627e0122285ee301ef80aa4e519ff0" }
+oxc_minifier = { git = "https://github.com/oxc-project/oxc", rev = "d2bea21099627e0122285ee301ef80aa4e519ff0" }
+oxc_minify_napi = { git = "https://github.com/oxc-project/oxc", rev = "d2bea21099627e0122285ee301ef80aa4e519ff0" }
+oxc_napi = { git = "https://github.com/oxc-project/oxc", rev = "d2bea21099627e0122285ee301ef80aa4e519ff0" }
+oxc_parser = { git = "https://github.com/oxc-project/oxc", rev = "d2bea21099627e0122285ee301ef80aa4e519ff0" }
+oxc_parser_napi = { git = "https://github.com/oxc-project/oxc", rev = "d2bea21099627e0122285ee301ef80aa4e519ff0" }
+oxc_regular_expression = { git = "https://github.com/oxc-project/oxc", rev = "d2bea21099627e0122285ee301ef80aa4e519ff0" }
+oxc_semantic = { git = "https://github.com/oxc-project/oxc", rev = "d2bea21099627e0122285ee301ef80aa4e519ff0" }
+oxc_span = { git = "https://github.com/oxc-project/oxc", rev = "d2bea21099627e0122285ee301ef80aa4e519ff0" }
+oxc_str = { git = "https://github.com/oxc-project/oxc", rev = "d2bea21099627e0122285ee301ef80aa4e519ff0" }
+oxc_syntax = { git = "https://github.com/oxc-project/oxc", rev = "d2bea21099627e0122285ee301ef80aa4e519ff0" }
+oxc_transform_napi = { git = "https://github.com/oxc-project/oxc", rev = "d2bea21099627e0122285ee301ef80aa4e519ff0" }
+oxc_transformer = { git = "https://github.com/oxc-project/oxc", rev = "d2bea21099627e0122285ee301ef80aa4e519ff0" }
+oxc_transformer_plugins = { git = "https://github.com/oxc-project/oxc", rev = "d2bea21099627e0122285ee301ef80aa4e519ff0" }
+oxc_traverse = { git = "https://github.com/oxc-project/oxc", rev = "d2bea21099627e0122285ee301ef80aa4e519ff0" }

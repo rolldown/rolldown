@@ -1,5 +1,6 @@
 use oxc::ast::ast;
 use oxc::ast::ast::Str;
+use oxc::str::JSStr;
 
 pub trait ExpressionExt<'ast> {
   fn as_call_expression(&self) -> Option<&ast::CallExpression<'ast>>;
@@ -36,10 +37,14 @@ impl<'ast> ExpressionExt<'ast> for ast::Expression<'ast> {
     Some(expr)
   }
 
+  // TODO(oxc): a specifier with a lone surrogate is treated as non-static, because import records
+  // store `CompactStr` and oxc has no owned `JSStr` counterpart.
   fn as_static_module_request(&self) -> Option<Str<'ast>> {
     match &self {
-      ast::Expression::StringLiteral(request) => Some(request.value),
-      ast::Expression::TemplateLiteral(request) => request.single_quasi(),
+      ast::Expression::StringLiteral(request) => request.value.as_arena_str(),
+      ast::Expression::TemplateLiteral(request) => {
+        request.single_quasi().and_then(JSStr::as_arena_str)
+      }
       _ => None,
     }
   }

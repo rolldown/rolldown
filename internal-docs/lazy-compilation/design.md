@@ -161,8 +161,12 @@ The state transition is managed by `LazyCompilationContext.mark_as_fetched()`.
 The dev server owns the lazy endpoint URL. The client loads a lazy chunk through `DevRuntime#loadLazyChunk(proxyModuleId)` (`runtime-extra-dev-common.js`):
 
 - The default imports `/@vite/lazy?id=...&clientId=...`.
-- A server that serves the endpoint at another URL overrides the method in its `DevRuntime` subclass.
+- A server that serves the endpoint at another URL overrides the method in its `DevRuntime` subclass. Vite adds its `base` there, because its base middleware answers a request outside `base` with a 404 (vitejs/vite#23216). This is the same place Vite adds `base` to HMR patch URLs.
 - Emitted code carries ids only. It never contains the URL, the `clientId`, or `encodeURIComponent` (a user binding of that name in the importer's scope cannot break the request).
+
+**Why a runtime method, not a rolldown option.** A `devMode` option with the URL would bake a server setting into compiled output, and rolldown would have to support it as public API. With the method, the URL and the request format live in one place on the client, next to the other URLs the server owns.
+
+**Rejected:** accepting `/@vite/lazy` outside `base` on the server. It fails when a reverse proxy forwards only `<base>/*` to Vite, or when Vite is mounted under a sub-path in middleware mode.
 
 The dev server handles these requests:
 

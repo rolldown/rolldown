@@ -11,7 +11,7 @@ bare — no paths. Each target app keeps its own state (baseline, history, repor
 ## The two commands that matter
 
 - `node harness.mjs scan --app <appDir>` — one browser session that does it all:
-  N throttled timed runs (LCP + verdict vs the pinned baseline), first-paint
+  N throttled timed runs (FCP and LCP vs the pinned baseline), first-paint
   coverage, boot CPU profile — then prints the fused verdict. The FIRST scan of a
   target automatically pins the baseline. After a kept change, `scan --pin` re-pins.
 - `node harness.mjs verdict` — re-print the fused OPEN / clear / UNKNOWN checklist
@@ -148,13 +148,25 @@ automatically; a shared chunk or stylesheet you change for `/` can break another
      styles only later routes need. (On pages loading many scripts, a plain
      `media="print"` link gets fetch-deprioritized behind them — pair it with
      `rel="preload"`.)
-   - **render gap** — paint gated on post-load work. The gate is named when the
-     data can name it: a gating fetch/xhr, or heavy pre-paint fonts/images (the
-     per-type "before first paint" weights). Fix FIRST: fetches → render with
-     bundled defaults and apply results when they land; fonts → paint with one
-     preloaded (subset) font, register the rest after paint. When neither the
-     fetches nor the profile explain the gap (profile says framework/baseline
-     work), check whether the LCP element **mounts invisible**: an entry
+   - **late chunk candidates before FCP or LCP** — inspect
+     `runtime-metrics.json` → `chunkDiscovery.fcp.groups` and
+     `chunkDiscovery.lcp.groups`. Each check follows static imports that start
+     more than one RTT after an ancestor finishes. The download must finish before
+     that paint. The check uses `chunk-graph.json` or the current Vite manifest.
+     Each example includes an import chain, request timings, and the available
+     source module and initiator. Follow these to the source. Check whether the
+     chunk renders the first visible content or the LCP element. The report marks
+     this dependency `unverified`; timing alone cannot prove it. If paint needs
+     the chunk, test an earlier preload or a different chunk boundary. If paint
+     does not need it, test deferring its load and work. Groups and paint windows
+     overlap. Never add their bytes or delays. A delay is not a predicted paint gain.
+   - **render gap** — LCP after the load event. Downloads can continue after
+     load. Inspect concurrent script, fetch/XHR, font, and image evidence together.
+     One candidate does not exclude another. Check which responses rendering
+     awaits before changing load order. Test moving optional data reads after
+     paint. Keep the LCP image request early. Check which fonts visible text needs.
+     Compare the candidates with the CPU profile. When these checks do not
+     explain the gap, check whether the LCP element **mounts invisible**: an entry
      animation or fade-in wrapper that starts the hero at opacity 0 delays LCP
      until the reveal — LCP counts the first frame the element paints VISIBLE.
      Render the hero visible immediately and animate only decoration.
@@ -193,11 +205,16 @@ automatically; a shared chunk or stylesheet you change for `/` can break another
 3. Read the app source and find why the landing page pays for each lead.
 4. Change the app, without removing any feature. One small change at a time — render
    gap first, then data/variant splits, then CPU deferrals.
-5. Rebuild. Run the app's own functional check (it must pass). `scan` — or
+5. Rebuild. Run the app's own functional check (it must pass). `scan --no-early-stop` — or
    `scan --quick` (1 run, no profile) as a cheap probe on slow apps; quick results
-   are indicative only, so confirm any accept/revert/pin with a full scan.
-6. "improvement beyond noise" AND the check passes → keep it, `scan --pin` (or
-   `baseline`), commit. Anything else → revert the change exactly and rebuild.
+   are indicative only. Early-stopped scans are probes too. Check both paint
+   metrics with a full scan of at least 3 runs before a keep/revert decision.
+6. Read `paintComparison` and both entries in `baselineDelta`. At least one of
+   FCP or LCP must improve beyond noise. Neither may regress beyond noise.
+   The threshold for each metric is max(30ms, 2% of its baseline).
+   Both metrics must appear in every run. If these checks and the functional check pass,
+   keep the change, `scan --pin` (or `baseline`), and commit. Otherwise, revert
+   the change and rebuild. Keep the same content and features.
    (A deferral that measures worse while a render gap exists is worth retrying
    after the gap is fixed.)
 7. Repeat. When you have finished optimizing, run `scan --parity` (above) and work any
@@ -205,7 +222,7 @@ automatically; a shared chunk or stylesheet you change for `/` can break another
    class clear and fresh — never because a single report looks empty. One tool's
    silence only means that tool sees nothing; the verdict checks them all and tells
    you which signals you haven't gathered yet.
-8. Report: baseline LCP, final LCP, % change, entry size before/after, and one
+8. Report: baseline and final FCP and LCP, their % changes, entry size before/after, and one
    sentence per kept change — **plus the final verdict checklist, copied verbatim.**
    A re-pinned baseline records a gain; it does NOT close the checklist. If you stop
    while leads are OPEN, say "stopping with N lead(s) OPEN" and justify each one:

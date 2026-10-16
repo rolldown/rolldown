@@ -1,7 +1,5 @@
-use std::borrow::Cow;
-
 use num_bigint::BigInt;
-use oxc::{ast::ast::Expression, span::SPAN};
+use oxc::{allocator::GetAllocator, ast::ast::Expression, span::SPAN, str::JSStr};
 use oxc_ecmascript::constant_evaluation;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -37,33 +35,51 @@ impl ConstExportMeta {
   }
 }
 
-impl From<constant_evaluation::ConstantValue<'_>> for ConstantValue {
-  fn from(value: constant_evaluation::ConstantValue<'_>) -> Self {
-    match value {
+impl ConstantValue {
+  /// Converts an oxc constant. A string with a lone surrogate can't be stored, so it is not
+  /// treated as a constant.
+  ///
+  /// TODO(oxc): an owned `JSStr` counterpart would keep such constants.
+  pub fn from_oxc(value: constant_evaluation::ConstantValue<'_>) -> Option<Self> {
+    Some(match value {
       constant_evaluation::ConstantValue::Number(n) => ConstantValue::Number(n),
       constant_evaluation::ConstantValue::BigInt(b) => ConstantValue::BigInt(b),
-      constant_evaluation::ConstantValue::String(s) => ConstantValue::String(s.to_string()),
+      constant_evaluation::ConstantValue::String(s) => {
+        ConstantValue::String(s.as_str()?.to_string())
+      }
       constant_evaluation::ConstantValue::Boolean(b) => ConstantValue::Boolean(b),
       constant_evaluation::ConstantValue::Undefined => ConstantValue::Undefined,
       constant_evaluation::ConstantValue::Null => ConstantValue::Null,
-    }
+    })
   }
-}
 
-impl From<&ConstantValue> for constant_evaluation::ConstantValue<'_> {
-  fn from(value: &ConstantValue) -> Self {
-    match value {
+  /// Borrows the value as an oxc constant.
+  pub fn as_oxc_value(&self) -> constant_evaluation::ConstantValue<'_> {
+    self.to_oxc_value(JSStr::from)
+  }
+
+  /// Copies the value into `allocator` as an oxc constant.
+  pub fn to_oxc_value_in<'a>(
+    &self,
+    allocator: &impl GetAllocator<'a>,
+  ) -> constant_evaluation::ConstantValue<'a> {
+    self.to_oxc_value(|s| JSStr::from_str_in(s, allocator))
+  }
+
+  fn to_oxc_value<'s, 'a>(
+    &'s self,
+    to_js_str: impl FnOnce(&'s str) -> JSStr<'a>,
+  ) -> constant_evaluation::ConstantValue<'a> {
+    match self {
       ConstantValue::Number(n) => constant_evaluation::ConstantValue::Number(*n),
       ConstantValue::BigInt(b) => constant_evaluation::ConstantValue::BigInt(b.clone()),
-      ConstantValue::String(s) => constant_evaluation::ConstantValue::String(Cow::Owned(s.clone())),
+      ConstantValue::String(s) => constant_evaluation::ConstantValue::String(to_js_str(s)),
       ConstantValue::Boolean(b) => constant_evaluation::ConstantValue::Boolean(*b),
       ConstantValue::Undefined => constant_evaluation::ConstantValue::Undefined,
       ConstantValue::Null => constant_evaluation::ConstantValue::Null,
     }
   }
-}
 
-impl ConstantValue {
   /// Returns the JavaScript type of the value, for oxc's `value_type_for_reference_id` hook.
   pub fn value_type(&self) -> oxc_ecmascript::ValueType {
     match self {

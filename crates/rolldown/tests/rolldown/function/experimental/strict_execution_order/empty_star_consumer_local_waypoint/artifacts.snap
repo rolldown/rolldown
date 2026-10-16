@@ -1,0 +1,353 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## SHIMMED_EXPORT
+
+```text
+[SHIMMED_EXPORT] Missing export "HeaderTitle" has been shimmed in module "label.js".
+
+```
+
+## SHIMMED_EXPORT
+
+```text
+[SHIMMED_EXPORT] Missing export "getHeaderTitle" has been shimmed in module "title.js".
+
+```
+
+# Assets
+
+## main.js
+
+```js
+(function() {
+	// HIDDEN [\0rolldown/runtime.js]
+	//#region native.js
+	var require_native = /* @__PURE__ */ __commonJSMin((() => {}));
+	var import_native;
+	function init_color_bridge_cjs_0() {
+		return (init_color_bridge_cjs_0 = __esmMin((() => {
+			import_native = require_native();
+		})))();
+	}
+	//#endregion
+	//#region title.js
+	var getHeaderTitle;
+	var init_title = __esmMin((() => {
+		getHeaderTitle = void 0;
+	}));
+	//#endregion
+	//#region color-bridge.js
+	//#endregion
+	//#region label.js
+	var HeaderTitle;
+	var init_label = __esmMin((() => {
+		HeaderTitle = void 0;
+	}));
+	//#endregion
+	//#region empty.js
+	//#endregion
+	//#region elements.js
+	//#endregion
+	//#region color.js
+	function Color(value) {
+		return value;
+	}
+	var init_color = __esmMin((() => {
+		init_color_bridge_cjs_0();
+		Color.foreground = () => [import_native.PlatformColor, import_native.DynamicColorIOS];
+	}));
+	//#endregion
+	//#region internal.js
+	var init_internal = __esmMin((() => {
+		init_color();
+	}));
+	//#endregion
+	//#region config.js
+	function useHeaderConfigProps() {
+		return [
+			getHeaderTitle,
+			HeaderTitle,
+			processBarButtonItems()
+		];
+	}
+	var processBarButtonItems;
+	var init_config = __esmMin((() => {
+		init_title(), init_label();
+		init_internal();
+		processBarButtonItems = () => Color.foreground();
+	}));
+	//#endregion
+	//#region view.js
+	function NativeStackView() {
+		return SceneView;
+	}
+	var SceneView;
+	var init_view = __esmMin((() => {
+		init_config();
+		SceneView = React.memo(function SceneView() {
+			return useHeaderConfigProps();
+		});
+	}));
+	//#endregion
+	//#region stack.js
+	var stack_exports = /* @__PURE__ */ __exportAll({ NativeStackView: () => NativeStackView });
+	var init_stack = __esmMin((() => {
+		init_view();
+	}));
+	//#endregion
+	//#region main.js
+	var _require;
+	function init_main() {
+		return (init_main = __esmMin((() => {
+			_require = require_native();
+			_require.FlatList;
+			_require.Pressable;
+			_require.ScrollView;
+			_require.Text;
+			_require.View;
+			(init_stack(), __toCommonJS(stack_exports)).createNativeStackNavigator;
+		})))();
+	}
+	//#endregion
+	init_main();
+})();
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## warnings
+
+### SHIMMED_EXPORT
+
+```text
+[SHIMMED_EXPORT] Missing export "HeaderTitle" has been shimmed in module "label.js".
+
+```
+
+### SHIMMED_EXPORT
+
+```text
+[SHIMMED_EXPORT] Missing export "getHeaderTitle" has been shimmed in module "title.js".
+
+```
+
+## Assets
+
+### main.js
+
+```js
+(function() {
+	// HIDDEN [\0rolldown/runtime.js]
+	//#region native.js
+	var require_native = /* @__PURE__ */ __commonJSMin((() => {}));
+	var import_native;
+	function init_color_bridge_cjs_0() {
+		return (init_color_bridge_cjs_0 = __esmMin((() => {
+			import_native = require_native();
+		})))();
+	}
+	//#endregion
+	//#region title.js
+	var getHeaderTitle;
+	var init_title = __esmMin((() => {
+		getHeaderTitle = void 0;
+	}));
+	//#endregion
+	//#region color-bridge.js
+	//#endregion
+	//#region label.js
+	var HeaderTitle;
+	var init_label = __esmMin((() => {
+		HeaderTitle = void 0;
+	}));
+	//#endregion
+	//#region empty.js
+	//#endregion
+	//#region elements.js
+	//#endregion
+	//#region color.js
+	function Color(value) {
+		return value;
+	}
+	var init_color = __esmMin((() => {
+		init_color_bridge_cjs_0();
+		Color.foreground = () => [import_native.PlatformColor, import_native.DynamicColorIOS];
+	}));
+	//#endregion
+	//#region internal.js
+	var init_internal = __esmMin((() => {
+		init_color();
+	}));
+	//#endregion
+	//#region config.js
+	function useHeaderConfigProps() {
+		return [
+			getHeaderTitle,
+			HeaderTitle,
+			processBarButtonItems()
+		];
+	}
+	var processBarButtonItems;
+	var init_config = __esmMin((() => {
+		init_title(), init_label();
+		init_internal();
+		processBarButtonItems = () => Color.foreground();
+	}));
+	//#endregion
+	//#region view.js
+	function NativeStackView() {
+		return SceneView;
+	}
+	var SceneView;
+	var init_view = __esmMin((() => {
+		init_config();
+		SceneView = React.memo(function SceneView() {
+			return useHeaderConfigProps();
+		});
+	}));
+	//#endregion
+	//#region stack.js
+	var stack_exports = /* @__PURE__ */ __exportAll({ NativeStackView: () => NativeStackView });
+	var init_stack = __esmMin((() => {
+		init_view();
+	}));
+	//#endregion
+	//#region main.js
+	var _require;
+	function init_main() {
+		return (init_main = __esmMin((() => {
+			_require = require_native();
+			_require.FlatList;
+			_require.Pressable;
+			_require.ScrollView;
+			_require.Text;
+			_require.View;
+			(init_stack(), __toCommonJS(stack_exports)).createNativeStackNavigator;
+		})))();
+	}
+	//#endregion
+	init_main();
+})();
+
+```
+
+# Variant: flag-off: [strict_execution_order: false]
+
+## warnings
+
+### SHIMMED_EXPORT
+
+```text
+[SHIMMED_EXPORT] Missing export "HeaderTitle" has been shimmed in module "label.js".
+
+```
+
+### SHIMMED_EXPORT
+
+```text
+[SHIMMED_EXPORT] Missing export "getHeaderTitle" has been shimmed in module "title.js".
+
+```
+
+## Assets
+
+### main.js
+
+```js
+(function() {
+	// HIDDEN [\0rolldown/runtime.js]
+	//#region native.js
+	var require_native = /* @__PURE__ */ __commonJSMin((() => {}));
+	//#endregion
+	//#region title.js
+	var getHeaderTitle;
+	var init_title = __esmMin((() => {
+		getHeaderTitle = void 0;
+	}));
+	//#endregion
+	//#region color-bridge.js
+	var import_native;
+	var init_color_bridge = __esmMin((() => {
+		import_native = require_native();
+	}));
+	//#endregion
+	//#region label.js
+	var HeaderTitle;
+	var init_label = __esmMin((() => {
+		HeaderTitle = void 0;
+	}));
+	//#endregion
+	//#region empty.js
+	var init_empty = __esmMin((() => {}));
+	//#endregion
+	//#region elements.js
+	var init_elements = __esmMin((() => {
+		init_title();
+		init_color_bridge();
+		init_label();
+		init_empty();
+	}));
+	//#endregion
+	//#region color.js
+	function Color(value) {
+		return value;
+	}
+	var init_color = __esmMin((() => {
+		init_color_bridge();
+		Color.foreground = () => [import_native.PlatformColor, import_native.DynamicColorIOS];
+	}));
+	//#endregion
+	//#region internal.js
+	var init_internal = __esmMin((() => {
+		init_color();
+	}));
+	//#endregion
+	//#region config.js
+	function useHeaderConfigProps() {
+		return [
+			getHeaderTitle,
+			HeaderTitle,
+			processBarButtonItems()
+		];
+	}
+	var processBarButtonItems;
+	var init_config = __esmMin((() => {
+		init_elements();
+		init_internal();
+		processBarButtonItems = () => Color.foreground();
+	}));
+	//#endregion
+	//#region view.js
+	function NativeStackView() {
+		return SceneView;
+	}
+	var SceneView;
+	var init_view = __esmMin((() => {
+		init_config();
+		SceneView = React.memo(function SceneView() {
+			return useHeaderConfigProps();
+		});
+	}));
+	//#endregion
+	//#region stack.js
+	var stack_exports = /* @__PURE__ */ __exportAll({ NativeStackView: () => NativeStackView });
+	var init_stack = __esmMin((() => {
+		init_view();
+	}));
+	//#endregion
+	//#region main.js
+	var _require = require_native();
+	_require.FlatList;
+	_require.Pressable;
+	_require.ScrollView;
+	_require.Text;
+	_require.View;
+	(init_stack(), __toCommonJS(stack_exports)).createNativeStackNavigator;
+	//#endregion
+})();
+
+```

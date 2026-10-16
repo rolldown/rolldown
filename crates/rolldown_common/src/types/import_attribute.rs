@@ -42,19 +42,21 @@ impl ImportAttribute {
       ast::WithClauseKeyword::With => ImportAttributeKind::With,
       ast::WithClauseKeyword::Assert => ImportAttributeKind::Assert,
     };
+    // TODO(oxc): entries with a lone surrogate are dropped, because oxc has no owned `JSStr`
+    // counterpart to store them in.
     let entries: FxIndexMap<ImportAttributeKey, String> = with_clause
       .with_entries
       .iter()
-      .map(|entry| {
+      .filter_map(|entry| {
         let key = match &entry.key {
           ast::ImportAttributeKey::Identifier(identifier_name) => {
             ImportAttributeKey::Identifier(identifier_name.name.into())
           }
           ast::ImportAttributeKey::StringLiteral(string_literal) => {
-            ImportAttributeKey::String(string_literal.value.into())
+            ImportAttributeKey::String(string_literal.value.as_str()?.into())
           }
         };
-        (key, entry.value.value.to_string())
+        Some((key, entry.value.value.as_str()?.to_string()))
       })
       .collect();
     Self { kind, entries }

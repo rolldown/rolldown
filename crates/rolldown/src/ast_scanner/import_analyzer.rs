@@ -5,6 +5,7 @@ use oxc::{
   },
   semantic::{SymbolFlags, SymbolId},
   span::Span,
+  str::JSStr,
 };
 use rolldown_common::{MemberExprWriteKind, Specifier, SymbolRef};
 use rolldown_error::BuildDiagnostic;
@@ -55,7 +56,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             self.immutable_ctx.id.as_arc_str().clone(),
             self.immutable_ctx.source.clone(),
             span,
-            name.into(),
+            name.display().to_string().into(),
             Some(import_decl_span),
             Some(imported_name.into()),
           ));
@@ -97,17 +98,17 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     is_deleted.then_some(MemberExprWriteKind::Delete)
   }
 
-  pub fn get_span_if_namespace_specifier_updated(&self) -> Option<(Span, &'ast str)> {
+  pub fn get_span_if_namespace_specifier_updated(&self) -> Option<(Span, JSStr<'ast>)> {
     let ancestor_cursor = self.visit_path.len() - 1;
     let parent_node = self.visit_path.get(ancestor_cursor)?;
     if let Some(member_expr_kind) = parent_node.as_member_expression_kind() {
       if self.member_expr_write_kind(ancestor_cursor).is_some() {
         return match member_expr_kind {
           MemberExpressionKind::Computed(expr) => match &expr.expression {
-            Expression::StringLiteral(lit) => Some((lit.span, lit.value.as_str())),
+            Expression::StringLiteral(lit) => Some((lit.span, lit.value)),
             Expression::TemplateLiteral(lit) => {
               if lit.quasis.len() == 1 {
-                lit.quasis[0].value.cooked.map(|cooked| (lit.span, cooked.as_str()))
+                lit.quasis[0].value.cooked.map(|cooked| (lit.span, cooked))
               } else {
                 None
               }
@@ -115,7 +116,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             _ => None,
           },
           MemberExpressionKind::Static(expr) => {
-            Some((expr.property.span, expr.property.name.as_str()))
+            Some((expr.property.span, expr.property.name.into()))
           }
           MemberExpressionKind::PrivateField(_) => None,
         };

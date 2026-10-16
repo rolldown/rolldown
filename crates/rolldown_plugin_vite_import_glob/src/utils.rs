@@ -7,6 +7,7 @@ use oxc::ast::ast::{
   self, Argument, ArrayExpressionElement, Expression, ObjectPropertyKind, PropertyKey, PropertyKind,
 };
 use oxc::ast_visit::{VisitJs, walk_js};
+use oxc::str::JSStr;
 use rolldown_ecmascript_utils::ExpressionExt;
 use rolldown_plugin::{LogWithoutPlugin, PluginContext};
 use rolldown_plugin_utils::{
@@ -422,22 +423,19 @@ impl GlobImportVisit<'_> {
     let mut negated_globs = vec![];
     let mut positive_globs = vec![];
 
+    // A glob with a lone surrogate matches no file path, so it is skipped.
     let mut values = vec![];
     match arg {
-      Argument::StringLiteral(str) => values.push(str.value.as_str()),
+      Argument::StringLiteral(str) => values.extend(str.value.as_str()),
       Argument::TemplateLiteral(lit) => {
-        if let Some(str) = lit.single_quasi() {
-          values.push(str.as_str());
-        }
+        values.extend(lit.single_quasi().and_then(JSStr::as_str));
       }
       Argument::ArrayExpression(array_expr) => {
         for expr in &array_expr.elements {
           match expr {
-            ArrayExpressionElement::StringLiteral(str) => values.push(&str.value),
+            ArrayExpressionElement::StringLiteral(str) => values.extend(str.value.as_str()),
             ArrayExpressionElement::TemplateLiteral(lit) => {
-              if let Some(str) = lit.single_quasi() {
-                values.push(str.as_str());
-              }
+              values.extend(lit.single_quasi().and_then(JSStr::as_str));
             }
             _ => {}
           }
@@ -615,16 +613,18 @@ impl GlobImportVisit<'_> {
         continue;
       };
 
+      // Option names and values are matched or used as paths and specifiers, which never contain a
+      // lone surrogate, so such a key or value is skipped.
       let key = match &p.key {
         PropertyKey::StringLiteral(str) => str.value.as_str(),
-        PropertyKey::StaticIdentifier(id) => id.name.as_str(),
+        PropertyKey::StaticIdentifier(id) => Some(id.name.as_str()),
         _ => continue,
       };
 
       match key {
-        "base" => match &p.value {
+        Some("base") => match &p.value {
           Expression::StringLiteral(str) if !str.value.is_empty() => {
-            options.base = Some(str.value.as_str().to_string());
+            options.base = str.value.as_str().map(ToString::to_string);
           }
           Expression::TemplateLiteral(str)
             if str.is_no_substitution_template() && !str.quasis[0].value.raw.is_empty() =>
@@ -633,33 +633,31 @@ impl GlobImportVisit<'_> {
           }
           _ => {}
         },
-        "import" => {
+        Some("import") => {
           if let Expression::StringLiteral(str) = &p.value {
-            options.import = Some(str.value.as_str().to_string());
+            options.import = str.value.as_str().map(ToString::to_string);
           }
         }
-        "eager" => {
+        Some("eager") => {
           if let Expression::BooleanLiteral(bool) = &p.value {
             options.eager = bool.value;
           }
         }
-        "exhaustive" => {
+        Some("exhaustive") => {
           if let Expression::BooleanLiteral(bool) = &p.value {
             options.exhaustive = bool.value;
           }
         }
-        "caseSensitive" => {
+        Some("caseSensitive") => {
           if let Expression::BooleanLiteral(bool) = &p.value {
             options.case_sensitive = Some(bool.value);
           }
         }
-        "query" => match &p.value {
+        Some("query") => match &p.value {
           Expression::StringLiteral(str) => {
-            options.query = if str.value.starts_with('?') {
-              Some(str.value.to_string())
-            } else {
-              Some(format!("?{}", str.value))
-            }
+            options.query = str.value.as_str().map(|query| {
+              if query.starts_with('?') { query.to_string() } else { format!("?{query}") }
+            });
           }
           Expression::ObjectExpression(expr) => {
             let mut query_string = String::from("?");
@@ -667,13 +665,19 @@ impl GlobImportVisit<'_> {
               let ObjectPropertyKind::ObjectProperty(p) = prop else { continue };
 
               let key = match &p.key {
-                PropertyKey::StringLiteral(key) => key.value.as_str(),
+                PropertyKey::StringLiteral(key) => {
+                  let Some(key) = key.value.as_str() else { continue };
+                  key
+                }
                 PropertyKey::StaticIdentifier(ident) => ident.name.as_str(),
                 _ => continue,
               };
 
               let value = match &p.value {
-                Expression::StringLiteral(v) => v.value.as_str(),
+                Expression::StringLiteral(v) => {
+                  let Some(value) = v.value.as_str() else { continue };
+                  value
+                }
                 Expression::BooleanLiteral(v) => {
                   if v.value {
                     "true"

@@ -183,6 +183,11 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
       match property {
         ast::ObjectPropertyKind::ObjectProperty(property) => {
           let key = property.key.static_name().expect("should be static name");
+          // An export name can't contain a lone surrogate, so such a key is kept only on the
+          // default export.
+          let Some(key) = key.into_cow_str() else {
+            continue;
+          };
           if key.is_empty() {
             continue;
           }

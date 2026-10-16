@@ -150,10 +150,7 @@ fn template_text<'ast>(
 ) -> Option<String> {
   let mut text = String::new();
   for (i, quasi) in template.quasis.iter().enumerate() {
-    if quasi.lone_surrogates {
-      return None;
-    }
-    text.push_str(quasi.value.cooked.as_ref()?);
+    text.push_str(quasi.value.cooked?.as_str()?);
     match template.expressions.get(i) {
       None => {}
       Some(Expression::TemplateLiteral(inner)) => text.push_str(&template_text(ctx, inner)?),

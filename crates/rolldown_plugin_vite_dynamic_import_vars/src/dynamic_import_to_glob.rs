@@ -71,7 +71,10 @@ fn expr_to_glob<'a>(expr: &'a Expression) -> anyhow::Result<Cow<'a, str>> {
     Expression::TemplateLiteral(node) => template_literal_to_glob(node),
     Expression::CallExpression(node) => call_expr_to_glob(node),
     Expression::BinaryExpression(node) => binary_expr_to_glob(node),
-    Expression::StringLiteral(node) => sanitize_string(&node.value),
+    Expression::StringLiteral(node) => match node.value.as_str() {
+      Some(value) => sanitize_string(value),
+      None => Err(anyhow::anyhow!("A dynamic import cannot contain lone surrogates.")),
+    },
     _ => Ok(Cow::Borrowed("*")),
   }
 }

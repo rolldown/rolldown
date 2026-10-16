@@ -916,7 +916,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       ast::MemberExpression::StaticMemberExpression(m) => (&m.object, m.property.name.as_str()),
       ast::MemberExpression::ComputedMemberExpression(m) => {
         let ast::Expression::StringLiteral(prop) = &m.expression else { return None };
-        (&m.object, prop.value.as_str())
+        (&m.object, prop.value.as_str()?)
       }
       ast::MemberExpression::PrivateFieldExpression(_) => return None,
     };
@@ -1260,7 +1260,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       let original_expr_span = member_expr.span();
       let can_polyfill_import_meta_url = self.can_polyfill_import_meta_url();
 
-      let property_name = member_expr.static_property_name()?;
+      let property_name = member_expr.static_property_name()?.as_str()?;
       match property_name {
         // Try to polyfill `import.meta.url`
         "url" => {

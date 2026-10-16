@@ -99,6 +99,7 @@ pub struct EnhancedTransformOptions {
   pub jsx: Option<Either<String, JsxOptions>>,
 
   /// Sets the target environment for the generated JavaScript.
+  /// Browserslist queries such as `baseline widely available` are supported.
   pub target: Option<Either<String, Vec<String>>>,
 
   /// Set assumptions in order to produce smaller output.

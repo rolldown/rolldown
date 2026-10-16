@@ -3,6 +3,25 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # warnings
 
+## NAMESPACE_CONFLICT
+
+```text
+[NAMESPACE_CONFLICT] Conflicting namespaces: "elements.js" re-exports "clash" from one of the modules "ambiguous-left.js" and "ambiguous-right.js" (will be ignored).
+   ╭─[ ambiguous-left.js:1:14 ]
+   │
+ 1 │ export const clash = 1;
+   │              ──┬──  
+   │                ╰──── One matching export is here.
+   │
+   ├─[ ambiguous-right.js:1:14 ]
+   │
+ 1 │ export const clash = 2;
+   │              ──┬──  
+   │                ╰──── One matching export is here.
+───╯
+
+```
+
 ## SHIMMED_EXPORT
 
 ```text
@@ -48,6 +67,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 	}));
 	//#endregion
 	//#region empty.js
+	//#endregion
+	//#region ambiguous-left.js
+	//#endregion
+	//#region ambiguous-right.js
 	//#endregion
 	//#region elements.js
 	//#endregion
@@ -121,6 +144,25 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ## warnings
 
+### NAMESPACE_CONFLICT
+
+```text
+[NAMESPACE_CONFLICT] Conflicting namespaces: "elements.js" re-exports "clash" from one of the modules "ambiguous-left.js" and "ambiguous-right.js" (will be ignored).
+   ╭─[ ambiguous-left.js:1:14 ]
+   │
+ 1 │ export const clash = 1;
+   │              ──┬──  
+   │                ╰──── One matching export is here.
+   │
+   ├─[ ambiguous-right.js:1:14 ]
+   │
+ 1 │ export const clash = 2;
+   │              ──┬──  
+   │                ╰──── One matching export is here.
+───╯
+
+```
+
 ### SHIMMED_EXPORT
 
 ```text
@@ -166,6 +208,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 	}));
 	//#endregion
 	//#region empty.js
+	//#endregion
+	//#region ambiguous-left.js
+	//#endregion
+	//#region ambiguous-right.js
 	//#endregion
 	//#region elements.js
 	//#endregion
@@ -239,6 +285,25 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ## warnings
 
+### NAMESPACE_CONFLICT
+
+```text
+[NAMESPACE_CONFLICT] Conflicting namespaces: "elements.js" re-exports "clash" from one of the modules "ambiguous-left.js" and "ambiguous-right.js" (will be ignored).
+   ╭─[ ambiguous-left.js:1:14 ]
+   │
+ 1 │ export const clash = 1;
+   │              ──┬──  
+   │                ╰──── One matching export is here.
+   │
+   ├─[ ambiguous-right.js:1:14 ]
+   │
+ 1 │ export const clash = 2;
+   │              ──┬──  
+   │                ╰──── One matching export is here.
+───╯
+
+```
+
 ### SHIMMED_EXPORT
 
 ```text
@@ -284,12 +349,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 	//#region empty.js
 	var init_empty = __esmMin((() => {}));
 	//#endregion
+	//#region ambiguous-left.js
+	var init_ambiguous_left = __esmMin((() => {}));
+	//#endregion
+	//#region ambiguous-right.js
+	var init_ambiguous_right = __esmMin((() => {}));
+	//#endregion
 	//#region elements.js
 	var init_elements = __esmMin((() => {
 		init_title();
 		init_color_bridge();
 		init_label();
 		init_empty();
+		init_ambiguous_left();
+		init_ambiguous_right();
 	}));
 	//#endregion
 	//#region color.js

@@ -1300,10 +1300,14 @@ impl GenerateStage<'_> {
             }
           }
         }
-        let binding_star_records =
-          meta.star_export_record_by_name.values().copied().collect::<FxHashSet<_>>();
+        let binding_star_records = meta
+          .star_export_record_by_name
+          .iter()
+          .filter(|(name, _)| meta.sorted_and_non_ambiguous_resolved_exports.contains_key(*name))
+          .map(|(_, rec_idx)| *rec_idx)
+          .collect::<FxHashSet<_>>();
         for (rec_idx, rec) in module.import_records.iter_enumerated() {
-          // a retained star without exported names has no consumer-specific binding route.
+          // a retained star without visible, unambiguous names has no binding route.
           // preserve its structural loading edge, including an empty ESM wrapper.
           if rec.meta.contains(ImportRecordMeta::IsExportStar)
             && !binding_star_records.contains(&rec_idx)

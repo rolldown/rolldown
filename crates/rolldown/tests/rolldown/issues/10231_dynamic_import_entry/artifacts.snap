@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lazy.js
+
+```js
+//#region lazy.js
+var lazy_default = 42;
+//#endregion
+module.exports = lazy_default;
+
+```
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+//#region main.js
+const ready = Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({
+	__proto__: null,
+	default: require("./lazy.js")
+})).then((m) => {
+	node_assert.default.strictEqual(m.default, 42);
+	node_assert.default.deepStrictEqual(Object.keys(m), ["default"]);
+});
+//#endregion
+exports.ready = ready;
+
+```

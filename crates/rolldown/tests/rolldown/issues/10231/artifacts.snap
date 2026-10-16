@@ -1,0 +1,48 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## index.js
+
+```js
+//#region index.js
+const plugin = { rules: { "test-rule": require("./rule.js") } };
+//#endregion
+module.exports = plugin;
+
+```
+
+## rule.js
+
+```js
+//#region rule.js
+const rule = { name: "test" };
+//#endregion
+module.exports = rule;
+
+```
+
+# Variant: explicit-default: [exports: Default]
+
+## Assets
+
+### index.js
+
+```js
+//#region index.js
+const plugin = { rules: { "test-rule": require("./rule.js") } };
+//#endregion
+module.exports = plugin;
+
+```
+
+### rule.js
+
+```js
+//#region rule.js
+const rule = { name: "test" };
+//#endregion
+module.exports = rule;
+
+```

@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dep.js
+
+```js
+//#region dep.js
+var dep_default = { name: "value" };
+//#endregion
+exports.default = dep_default;
+var node_path = require("node:path");
+Object.keys(node_path).forEach(function(k) {
+	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function() {
+			return node_path[k];
+		}
+	});
+});
+
+```
+
+## entry.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+//#region entry.js
+const seen = require("./dep.js").default.name;
+//#endregion
+exports.seen = seen;
+
+```

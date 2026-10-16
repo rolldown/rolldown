@@ -25,7 +25,8 @@ export function findChrome() {
   throw new Error('No Chrome/Edge executable found. Set CHROME_PATH to a Chromium binary.');
 }
 
-export async function launchBrowser({ profileDir }) {
+/** `extraArgs`: more Chrome switches (the replay maps every host to its server). */
+export async function launchBrowser({ profileDir, extraArgs = [] }) {
   if (typeof WebSocket === 'undefined') {
     throw new Error(
       `This harness needs Node >= 22 (global WebSocket); running ${process.version}.`,
@@ -48,6 +49,7 @@ export async function launchBrowser({ profileDir }) {
       '--disable-default-apps',
       '--mute-audio',
       '--window-size=1280,900',
+      ...extraArgs,
       'about:blank',
     ],
     { stdio: ['ignore', 'ignore', 'pipe'] },

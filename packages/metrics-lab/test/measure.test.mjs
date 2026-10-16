@@ -16,7 +16,6 @@ test('browser timing keeps more than 60 resources, including a tiny preload faca
     return;
   }
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'metrics-requests-'));
-  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   for (let i = 0; i < 85; i++) {
     fs.writeFileSync(path.join(dir, `module-${i}.js`), `export default ${i};`);
   }
@@ -31,9 +30,12 @@ test('browser timing keeps more than 60 resources, including a tiny preload faca
     '<!doctype html><link rel="modulepreload" href="/facade.js"><script type="module" src="/entry.js"></script><body></body>',
   );
   const server = await startServer(dir);
-  t.after(() => server.close());
   const browser = await launchBrowser({ profileDir: path.join(dir, 'chrome-profile') });
-  t.after(() => browser.close());
+  t.after(async () => {
+    await browser.close();
+    await server.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
   const result = await timedRun(browser.cdp, { url: `${server.origin}/`, settleMs: 100 });
   assert.ok(result.resources.length >= 87);
   assert.equal(result.resourceDetailsComplete, true);
@@ -43,6 +45,10 @@ test('browser timing keeps more than 60 resources, including a tiny preload faca
   assert.ok(['link', 'other'].includes(facade.initiatorType));
   assert.equal(facade.type, 'script');
   assert.ok(facade.initiator.type);
+  assert.equal(facade.networkEvidence, 'matched');
+  assert.equal(typeof facade.requestPriority.initial, 'string');
+  assert.equal(typeof facade.requestPriority.last, 'string');
+  assert.ok(Array.isArray(facade.requestPriority.changes));
   assert.ok(facade.bytes > 0 && facade.bytes < 100);
   assert.equal('headers' in facade.initiator, false);
   assert.equal(result.lcpElement.text, 'Synthetic load test');

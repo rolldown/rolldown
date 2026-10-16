@@ -44,7 +44,7 @@ import {
   largeAtPaintModules,
   siblingVariantGroups,
 } from './lib/coverage.mjs';
-import { aggregateProfile, profileRun } from './lib/profile.mjs';
+import { aggregateProfile, profileEvidence, profileRun } from './lib/profile.mjs';
 import { analyzeChunkDiscovery, loadChunkGraph } from './lib/chunk-discovery.mjs';
 import {
   chunkDiscoveryAdvice,
@@ -112,6 +112,9 @@ import {
 } from './lib/parity/anchor.mjs';
 import { compareLcp, describeLcp, lcpReason } from './lib/parity/compare.mjs';
 import { runParity, pageSlug } from './lib/parity/run.mjs';
+import { cmdField } from './lib/field/run.mjs';
+import { onInterrupt } from './lib/interrupt.mjs';
+import { cmdRecord, cmdReplay } from './lib/replay/run.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const APP_DIR = path.join(ROOT, 'app');
@@ -175,9 +178,8 @@ const writeJson = (file, value) => {
 };
 
 const cleanups = [];
-process.on('SIGINT', async () => {
+onInterrupt(async () => {
   for (const fn of cleanups.splice(0)) await fn().catch(() => {});
-  process.exit(130);
 });
 
 function parse(argv, options) {
@@ -1015,28 +1017,45 @@ function printCoverageReport(target, report, { compact = false, advice = true } 
 // --- profile core ----------------------------------------------------------------
 
 function buildProfileReport(target, profile, entry) {
-  const entryFile = path.join(target.dist, entry);
-  const { rows, totalMs } = aggregateProfile(profile, {
-    code: fs.readFileSync(entryFile, 'utf8'),
-    map: JSON.parse(fs.readFileSync(`${entryFile}.map`, 'utf8')),
-    entryUrlSuffix: `/${entry.replaceAll('\\', '/')}`,
+  const summary = aggregateProfile(profile, {
+    readChunk: (file) => {
+      const chunkFile = path.join(target.dist, file);
+      if (!fs.existsSync(chunkFile) || !fs.existsSync(`${chunkFile}.map`)) return null;
+      return {
+        code: fs.readFileSync(chunkFile, 'utf8'),
+        map: JSON.parse(fs.readFileSync(`${chunkFile}.map`, 'utf8')),
+      };
+    },
   });
-  const report = { schemaVersion: 1, generatedAtMs: Date.now(), entry, totalMs, rows };
+  const report = { schemaVersion: 2, generatedAtMs: Date.now(), entry, ...summary };
   writeJson(target.paths.profile, report);
   return report;
 }
 
 function printProfileReport(report, { advice = true } = {}) {
-  console.log(`boot CPU by module, navigation -> first paint (${report.totalMs}ms sampled):\n`);
+  console.log(`boot CPU by module, navigation -> FCP observation (${report.totalMs}ms sampled):\n`);
   for (const row of report.rows.slice(0, 20)) {
     const pctStr =
       report.totalMs > 0 ? `${((row.ms / report.totalMs) * 100).toFixed(0).padStart(4)}%` : '';
-    console.log(`  ${row.bucket.padEnd(40)} ${String(row.ms).padStart(7)}ms ${pctStr}`);
+    console.log(
+      `  ${row.bucket.padEnd(40)} ${String(row.ms).padStart(7)}ms ${pctStr} [${row.kind}]`,
+    );
   }
+  console.log(
+    `\nsource ${report.attribution.sourceMs}ms | engine ${report.attribution.engineMs}ms | unattributed ${report.attribution.unattributedMs}ms`,
+  );
+  console.log(
+    'The profile can include work between FCP and its observation. Sampled time is not a predicted paint gain.',
+  );
   if (advice) {
     console.log(
-      '\nnext: work here runs BEFORE the page paints. Defer whatever the first render does not need (idle callback + dynamic import). Fix render-gating fetches first: CPU that overlaps a blocked render is free, so deferring it can measure worse until the fetch is fixed.',
+      '\nnext: check whether each source module contributes to the first render. Test deferring only optional work. Compare both FCP and LCP.',
     );
+    if (profileEvidence(report).unattributed.length) {
+      console.log(
+        'Inspect unattributed rows and supply missing sourcemaps before treating CPU attribution as complete.',
+      );
+    }
   }
 }
 
@@ -1263,24 +1282,30 @@ function printVerdict(target) {
         `${CLI} profile  (or scan)`,
       );
     } else {
-      const appRows = (profile.rows ?? []).filter(
-        (row) => row.bucket.includes('/') && !row.bucket.startsWith('(') && row.ms >= 15,
+      const evidence = profileEvidence(profile);
+      lead(
+        evidence.state,
+        `pre-paint CPU ${Math.round(cpu)}ms`,
+        evidence.reason ??
+          (evidence.candidates.length
+            ? `sampled source work near FCP: ${evidence.candidates
+                .slice(0, 3)
+                .map((row) => `${row.bucket} ${row.ms}ms`)
+                .join(', ')}`
+            : evidence.unattributed.length
+              ? 'sampled work lacks complete source attribution'
+              : 'no source module reaches the 15ms sample threshold'),
+        'Check which work the first render needs. Test deferring optional work and compare both FCP and LCP. Run profile again for old reports.',
       );
-      if (appRows.length) {
+      if (evidence.unattributed.length) {
         lead(
-          'open',
-          `pre-paint CPU ${Math.round(cpu)}ms`,
-          `deferrable app work before paint: ${appRows
+          'unknown',
+          'CPU source attribution',
+          `${profile.attribution.unattributedMs}ms unattributed: ${evidence.unattributed
             .slice(0, 3)
-            .map((row) => `${row.bucket} ${row.ms}ms`)
+            .map((row) => `${row.bucket} [${row.kind}]`)
             .join(', ')}`,
-          'defer work the first render does not need (idle callback + dynamic import)',
-        );
-      } else {
-        lead(
-          'clear',
-          `pre-paint CPU ${Math.round(cpu)}ms`,
-          'profile attributes it to baseline parse/engine work, not deferrable app modules',
+          'Inspect profile.json. Supply missing sourcemaps or inspect generated/inline code; do not classify these rows as engine work.',
         );
       }
     }
@@ -1407,7 +1432,7 @@ function printVerdict(target) {
       const mods = mg.graph.modules;
       lead(
         'open',
-        `statically retained imports (${rows.length} module(s) >=${kb(GRAPH_RETAINED_OPEN_BYTES)})`,
+        `statically retained imports from build entries (${rows.length} module(s) >=${kb(GRAPH_RETAINED_OPEN_BYTES)})`,
         rows
           .slice(0, 3)
           .map(
@@ -1420,7 +1445,7 @@ function printVerdict(target) {
     } else {
       lead(
         'clear',
-        'statically retained imports',
+        'statically retained imports (build entries only)',
         `no non-framework module retains >=${kb(GRAPH_RETAINED_OPEN_BYTES)} behind a cuttable static edge`,
       );
     }
@@ -1667,11 +1692,6 @@ async function cmdProfile(argv) {
   const target = resolveTarget(opts);
   const entry = requireEntry(target, opts);
   if (!opts.entry) console.log(`entry: ${entry} (auto-detected from dist/index.html)`);
-  if (!fs.existsSync(path.join(target.dist, `${entry}.map`))) {
-    throw new Error(
-      `entry ${entry} has no sourcemap (${path.join(target.dist, entry)}.map) - build with sourcemap: true`,
-    );
-  }
   const profile = await withServerAndBrowser(
     target,
     opts['no-throttle'],
@@ -3614,7 +3634,7 @@ async function cmdNodeScan(argv) {
       profile = profileStartup(raw, {
         code: sources.code,
         map: sources.map,
-        entryUrlSuffix: `/${path.basename(target.entry)}`,
+        entryPath: target.entry,
       });
     }
   }
@@ -4410,6 +4430,44 @@ individual commands (same target rules):
          [--net-scale <1|2|4|8>]            ...and/or pin its throttle net-scale without probing
   gen | build | defer <f> | undefer <f> | status | serve    demo-app helpers (README.md)
 
+field mode (a DEPLOYED site in your own logged-in Chrome - real data, network, server):
+  field --config <file.json>   alternating timed runs per variant (cookie/query switches the
+                            build), the request LCP waited for and the script chain that
+                            started it, then one coverage + CPU profile run per variant.
+                            Writes runtime-metrics/coverage/profile.json per variant and
+                            field-report.json (paired deltas, 90% intervals) OUTSIDE the repo.
+                            Needs chrome://inspect/#remote-debugging on (or --cdp-port).
+  --runs 6                  pairs of timed runs
+  --diagnose 1|0            one coverage + CPU profile run per variant, or none
+  --cut gate|lcp|fcp        coverage snapshot point; gate = when the config's "gate" request
+                            is sent ("what ran before the request LCP waits for")
+  --throttle lab [--net-scale n]   add the lab throttle ON TOP of the real network
+  Module attribution needs "build" per variant: a local build whose chunks are
+  byte-identical to the served ones (same commit, settings, bundler version).
+
+replay (field numbers for a build that is NOT deployed):
+  Standalone entry for agents (one records, another replays): node replay.mjs help
+  (adds inspect, record --url/--cookie without a config, --json results, HANDOFF.txt).
+  record --config <file.json> [--variant <name>] [--runs 6]
+                            load one deployed variant in your Chrome (like field) and write a
+                            replay archive to $TMPDIR: every response (safelisted headers, no
+                            cookies), its median server time, a fitted network model, the
+                            field medians. Holds REAL account data - it refuses a git work tree.
+  replay --archive <dir> --dist [name=]<dir> [--dist [name=]<dir>] [--runs 6]
+                            serve the archive to headless Chrome from one local HTTP/2 server
+                            for every host: the local dist replaces the deployed files, API
+                            responses keep their recorded server time, all bodies share the
+                            recorded bandwidth. Same reports as field, paired deltas.
+  replay ... --calibrate    FIRST: replay the recorded build; its medians must match the field
+                            medians, or the model misses something and an A/B means nothing
+  --bandwidth <Mbit/s> --rtt <ms> --static-ttfb <ms> --wire <kB> --ect <rating|off>   override the model
+  --document merged|local|recorded   the dist's index.html plus the tags only the deployed
+                            HTML has (default: a host's injected loaders run in the replay too),
+                            the bare dist index.html, or the recorded HTML
+  --storage warm|empty      warm: an unmeasured load first, in the same browser context, so the
+                            build's own storage is there (default when the recorded page had storage)
+  --diagnose 1 [--cut gate|lcp|fcp]   coverage + CPU profile run per dist, as in field
+
 server startup mode (node/deno - a process coming up, not a page loading):
   node-scan --entry dist/server.js --ready port:3000    timed spawn->ready runs + what had to
                             execute to get there + where the pre-ready CPU went + leads.
@@ -4523,6 +4581,9 @@ const commands = {
   'worker-attrib': cmdWorkerAttrib,
   'worker-config': cmdWorkerConfig,
   why: cmdWhy,
+  field: cmdField,
+  record: cmdRecord,
+  replay: cmdReplay,
   defer: (argv) => cmdDefer(argv, 'deferred'),
   undefer: (argv) => cmdDefer(argv, 'baseline'),
   status: cmdStatus,

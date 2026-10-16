@@ -1,1 +1,6 @@
-import { getHeaderTitle, HeaderTitle } from "./elements.js"; import { Color } from "./internal.js"; var processBarButtonItems = () => Color.foreground(); export function useHeaderConfigProps() { return [getHeaderTitle, HeaderTitle, processBarButtonItems()]; }
+import { getHeaderTitle, HeaderTitle } from './elements.js';
+import { Color } from './internal.js';
+var processBarButtonItems = () => Color.foreground();
+export function useHeaderConfigProps() {
+  return [getHeaderTitle, HeaderTitle, processBarButtonItems()];
+}

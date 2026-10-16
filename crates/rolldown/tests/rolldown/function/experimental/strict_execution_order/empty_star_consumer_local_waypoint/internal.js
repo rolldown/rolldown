@@ -1,2 +1,1 @@
-export { Color } from "./color.js";
-
+export { Color } from './color.js';

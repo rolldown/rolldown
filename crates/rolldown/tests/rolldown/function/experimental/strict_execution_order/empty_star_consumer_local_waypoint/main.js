@@ -6,4 +6,3 @@ var _require = require('./native.js'),
   View = _require.View;
 var _require4 = require('./stack.js'),
   createNativeStackNavigator = _require4.createNativeStackNavigator;
-

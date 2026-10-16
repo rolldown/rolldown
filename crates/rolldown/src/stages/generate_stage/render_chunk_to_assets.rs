@@ -72,8 +72,16 @@ impl GenerateStage<'_> {
 
     self.trace_action_package_graph_ready(chunk_graph, &instantiated_chunks);
 
-    diagnostics
-      .extend(render_chunks(self.plugin_driver, &mut instantiated_chunks, self.options).await?);
+    diagnostics.extend(
+      render_chunks(
+        self.plugin_driver,
+        &mut instantiated_chunks,
+        self.options,
+        &chunk_graph.chunk_table,
+        &self.link_output.module_table,
+      )
+      .await?,
+    );
 
     augment_chunk_hash(self.plugin_driver, &mut instantiated_chunks).await?;
 

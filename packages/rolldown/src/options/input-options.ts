@@ -606,9 +606,11 @@ export interface InputOptions {
     /**
      * Enables automatic generation of a chunk import map asset during build.
      *
-     * This map only includes chunks with hashed filenames, where keys are derived from the facade module
-     * name or primary chunk name. It produces stable and unique hash-based filenames, effectively preventing
-     * cascading cache invalidation caused by content hashes and maximizing browser cache reuse.
+     * This map includes chunks with hashed filenames. Entry keys are derived from their facade module ID;
+     * common chunk keys use the smallest resolved module ID in their logical chunk. Modules copied into
+     * a file by `experimentalInlineCommonChunks` remain in `moduleIds` but do not affect that file's key.
+     * Keeping these keys independent of content hashes reduces cascading cache invalidation when
+     * a dependency changes.
      *
      * The output defaults to `importmap.json` unless overridden via `fileName`. A base URL prefix
      * (default `"/"`) can be applied to all paths. The resulting JSON is a valid import map and can be

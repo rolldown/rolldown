@@ -13,7 +13,7 @@ use rolldown_utils::{
   rustc_hash::FxHashMapExt as _,
   xxhash::encode_hash_with_base,
 };
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 use xxhash_rust::xxh3::Xxh3;
 
 #[derive(Debug, Default)]
@@ -40,7 +40,6 @@ impl Plugin for ChunkImportMapPlugin {
   ) -> rolldown_plugin::HookRenderChunkReturn {
     if !self.initialized.swap(true, Ordering::SeqCst) {
       let base = args.options.hash_characters.base();
-      let mut used_names = FxHashSet::default();
       for chunk in args.chunks.values() {
         let mut hash_placeholders =
           find_hash_placeholders(&chunk.filename, &HASH_PLACEHOLDER_LEFT_FINDER).peekable();
@@ -54,14 +53,15 @@ impl Plugin for ChunkImportMapPlugin {
             hasher
           }
           None => {
-            // Fallback logic for common chunk
             let mut hasher = Xxh3::with_seed(1);
-            if used_names.contains(&chunk.name) {
-              // Reduce the impact factor
-              let Some(module_id) = chunk.module_ids.iter().min() else { continue };
-              module_id.as_str().hash(&mut hasher);
+            // Logical membership stays fixed when files print copied modules.
+            // See internal-docs/inline-common-chunks/implementation.md.
+            let logical_chunk = &args.chunk_table[chunk.originate_from];
+            if let Some(module_id) =
+              logical_chunk.modules.iter().map(|&idx| args.module_table[idx].id().as_str()).min()
+            {
+              module_id.hash(&mut hasher);
             } else {
-              used_names.insert(chunk.name.clone());
               chunk.name.hash(&mut hasher);
             }
             hasher

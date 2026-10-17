@@ -607,8 +607,9 @@ export interface InputOptions {
      * Enables automatic generation of a chunk import map asset during build.
      *
      * This map includes chunks with hashed filenames. Entry keys are derived from their facade module ID;
-     * common chunk keys use the smallest resolved module ID in their logical chunk. Modules copied into
-     * a file by `experimentalInlineCommonChunks` remain in `moduleIds` but do not affect that file's key.
+     * common chunk keys use the smallest original module identity, with file paths relative to `cwd`.
+     * Modules copied into a file by `experimentalInlineCommonChunks` remain in `moduleIds` but do not
+     * affect that file's key.
      * Keeping these keys independent of content hashes reduces cascading cache invalidation when
      * a dependency changes.
      *

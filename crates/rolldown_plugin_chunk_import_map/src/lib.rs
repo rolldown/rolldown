@@ -40,6 +40,34 @@ impl Plugin for ChunkImportMapPlugin {
   ) -> rolldown_plugin::HookRenderChunkReturn {
     if !self.initialized.swap(true, Ordering::SeqCst) {
       let base = args.options.hash_characters.base();
+      // See internal-docs/inline-common-chunks/implementation.md.
+      let mut common_modules = args
+        .chunks
+        .values()
+        .filter(|chunk| chunk.facade_module_id.is_none())
+        .filter_map(|chunk| {
+          let (identity, module_id) = args.chunk_table[chunk.originate_from]
+            .modules
+            .iter()
+            .map(|&idx| {
+              let module = &args.module_table[idx];
+              let is_path = module.id().is_path();
+              let id = if is_path { module.stable_id().as_str() } else { module.id().as_str() };
+              ((id, is_path), module.id())
+            })
+            .min()?;
+          Some((identity, module_id, chunk.originate_from))
+        })
+        .collect::<Vec<_>>();
+      common_modules.sort_unstable();
+      let mut common_identities = FxHashMap::default();
+      let mut previous_identity = None;
+      let mut discriminator = 0_u32;
+      for (identity, _, chunk_idx) in common_modules {
+        discriminator = if previous_identity == Some(identity) { discriminator + 1 } else { 0 };
+        common_identities.insert(chunk_idx, (identity, discriminator));
+        previous_identity = Some(identity);
+      }
       for chunk in args.chunks.values() {
         let mut hash_placeholders =
           find_hash_placeholders(&chunk.filename, &HASH_PLACEHOLDER_LEFT_FINDER).peekable();
@@ -54,13 +82,8 @@ impl Plugin for ChunkImportMapPlugin {
           }
           None => {
             let mut hasher = Xxh3::with_seed(1);
-            // Logical membership stays fixed when files print copied modules.
-            // See internal-docs/inline-common-chunks/implementation.md.
-            let logical_chunk = &args.chunk_table[chunk.originate_from];
-            if let Some(module_id) =
-              logical_chunk.modules.iter().map(|&idx| args.module_table[idx].id().as_str()).min()
-            {
-              module_id.hash(&mut hasher);
+            if let Some(identity) = common_identities.get(&chunk.originate_from) {
+              identity.hash(&mut hasher);
             } else {
               chunk.name.hash(&mut hasher);
             }

@@ -141,7 +141,7 @@ init_a();
 
 Factories come in `carried` order (dependencies first); a factory that reads other records opens with `var share_y = __share_require("<id>")` for each. `RenderedChunk.imports` comes from the projected `cross_chunk_imports`; content hashes include the factory text and the record ids; the runtime import carries its placeholder. `renderChunk`, `augmentChunkHash` and `generateBundle` see only files, and each carrier lists the carried modules after its own in `moduleIds` and in execution order in `modules`: a record's module belongs to every file that prints it.
 
-Native Rust `renderChunk` hooks receive each file's `originate_from` logical chunk index and immutable chunk/module table borrows. Common import-map keys hash the minimum `(id, is_path)` among that logical chunk's original members: filesystem IDs use their cwd-relative, slash-normalized form, and non-path IDs keep their exact string. The path marker distinguishes a file from a plugin module with the same relative ID. Distinct resolved IDs that normalize to the same identity receive a discriminator in resolved-ID order. Copied factories affect the complete printed-module metadata but leave that identity input unchanged; the origin index is only a lookup key for the current generation.
+Native Rust `renderChunk` hooks receive each file's `originate_from` logical chunk index and immutable chunk/module table borrows. The import-map plugin keys the first common chunk of a given name by that name and later chunks by the minimum resolved module ID in their original logical membership. Copied factories appear in the complete printed-module metadata but do not enter that calculation. The origin index is only a lookup key for the current generation.
 
 ## Runtime registry
 

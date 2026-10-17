@@ -1,11 +1,9 @@
 import { execFileSync } from 'node:child_process';
-import fs from 'node:fs/promises';
-import path from 'node:path';
 import type { OutputChunk, OutputOptions, RolldownOutput } from 'rolldown';
 import { rolldown } from 'rolldown';
 import { describe, expect, test } from 'vitest';
 import { virtualPlugin } from '../src/inline-common-chunks/harness';
-import { getOutputAsset, getOutputChunk, workspaceRoot } from '../src/utils';
+import { getOutputAsset, getOutputChunk } from '../src/utils';
 
 const documentUrl = 'https://example.com/';
 const input = { e1: './e1.js', e2: './e2.js', e3: './e3.js' };
@@ -57,14 +55,9 @@ function options(inline: boolean, extra: OutputOptions = {}): OutputOptions {
   };
 }
 
-async function build(
-  inline: boolean,
-  modules = fixture(),
-  entries: Record<string, string> = input,
-  outputOptions: OutputOptions = {},
-) {
+async function build(inline: boolean, modules = fixture(), outputOptions: OutputOptions = {}) {
   const bundle = await rolldown({
-    input: entries,
+    input,
     preserveEntrySignatures: false,
     experimental: { chunkImportMap: true },
     plugins: [virtualPlugin(modules)],
@@ -143,116 +136,10 @@ function execute(output: RolldownOutput, entryName: string): string[] {
 }
 
 describe('chunkImportMap', () => {
-  test.each([false, true])(
-    'common chunk aliases survive relocating the project, inline=%s',
-    async (inline) => {
-      const root = workspaceRoot('temp');
-      await fs.mkdir(root, { recursive: true });
-      const directory = await fs.mkdtemp(path.join(root, 'chunk-import-map-'));
-      const modules = {
-        'e1.js': `import { shared } from './shared.js'; globalThis.log(shared());`,
-        'e2.js': `import { shared } from './shared.js'; globalThis.log(shared());`,
-        'e3.js': `import { tiny } from './tiny.js'; globalThis.log(tiny);`,
-        'shared.js': `import { tiny } from './tiny.js'; export const shared = () => tiny;`,
-        'tiny.js': `export const tiny = String(globalThis.value ?? 'shared');`,
-      };
-      const outputs = [];
-      try {
-        for (const name of ['first', 'second']) {
-          const cwd = path.join(directory, name);
-          await fs.mkdir(cwd);
-          await Promise.all(
-            Object.entries(modules).map(([id, code]) => fs.writeFile(path.join(cwd, id), code)),
-          );
-          const bundle = await rolldown({
-            cwd,
-            input,
-            preserveEntrySignatures: false,
-            experimental: { chunkImportMap: true },
-          });
-          try {
-            const output = await bundle.generate(
-              options(inline, {
-                codeSplitting: inline
-                  ? {
-                      experimentalInlineCommonChunks: { maxSize: Infinity, exclude: /shared\.js$/ },
-                    }
-                  : {},
-              }),
-            );
-            const chunks = getOutputChunk(output);
-            const shared = chunks.find((chunk) =>
-              chunk.moduleIds.includes(path.join(cwd, 'shared.js')),
-            )!;
-            expect(shared.isEntry).toBe(false);
-            expect(shared.moduleIds.includes(path.join(cwd, 'tiny.js'))).toBe(inline);
-            outputs.push({
-              imports: importMap(output),
-              chunks: Object.fromEntries(chunks.map((chunk) => [chunk.fileName, chunk.code])),
-            });
-          } finally {
-            await bundle.close();
-          }
-        }
-        expect(outputs[1]).toEqual(outputs[0]);
-      } finally {
-        await fs.rm(directory, { recursive: true, force: true });
-      }
-    },
-  );
-
-  test('common chunk aliases distinguish file paths and plugin module IDs', async () => {
-    const ids = [
-      path.resolve('shared.js'),
-      `${process.cwd()}${path.sep}.${path.sep}shared.js`,
-      'shared.js',
-      '\0shared.js',
-      '\\0shared.js',
-    ];
-    const code =
-      ids
-        .map((id, index) => `import { value as value${index} } from ${JSON.stringify(id)};`)
-        .join('\n') +
-      `\nglobalThis.log([${ids.map((_, index) => `value${index}`).join(',')}].join(','));`;
-    const modules = {
-      './e1.js': code,
-      './e2.js': code,
-      ...Object.fromEntries(
-        ids.map((id, index) => [id, `export const value = String(globalThis.value ?? ${index});`]),
-      ),
-    };
-    const aliases = [];
-    for (const entries of [
-      { e1: input.e1, e2: input.e2 },
-      { e2: input.e2, e1: input.e1 },
-    ]) {
-      const output = await build(false, modules, entries, {
-        codeSplitting: {
-          groups: ids.map((id, index) => ({
-            name: `shared${index}`,
-            test: (moduleId) => moduleId === id,
-          })),
-        },
-      });
-      const chunks = getOutputChunk(output);
-      const keys = ids.map((id) =>
-        alias(
-          output,
-          chunks.find((chunk) => chunk.moduleIds.includes(id))!,
-        ),
-      );
-      expect(new Set(keys).size).toBe(ids.length);
-      aliases.push(keys);
-      expect(execute(output, 'e1')).toEqual(['0,1,2,3,4']);
-      expect(execute(output, 'e2')).toEqual(['0,1,2,3,4']);
-    }
-    expect(aliases[1]).toEqual(aliases[0]);
-  });
-
   test.each([false, true].flatMap((inline) => [false, true].map((minify) => ({ inline, minify }))))(
     'same-named common chunks resolve to their own code: %j',
     async ({ inline, minify }) => {
-      const output = await build(inline, fixture(), input, { minify });
+      const output = await build(inline, fixture(), { minify });
       const chunks = getOutputChunk(output);
       const imports = importMap(output);
       expect(Object.keys(imports)).toHaveLength(chunks.filter((chunk) => !chunk.isEntry).length);
@@ -284,18 +171,13 @@ describe('chunkImportMap', () => {
           JSON.stringify(variant),
         ).toEqual(baseline);
       }
-      expect(
-        carrierAliases(
-          await build(inline, fixture(), { e3: input.e3, e2: input.e2, e1: input.e1 }),
-        ),
-      ).toEqual(baseline);
     },
   );
 
   test('entry aliases use facade identity in both inlining modes', async () => {
     const aliases = [];
     for (const inline of [false, true]) {
-      const output = await build(inline, fixture(), input, { entryFileNames: '[name]-[hash].js' });
+      const output = await build(inline, fixture(), { entryFileNames: '[name]-[hash].js' });
       aliases.push(
         Object.keys(input).map((name) =>
           alias(

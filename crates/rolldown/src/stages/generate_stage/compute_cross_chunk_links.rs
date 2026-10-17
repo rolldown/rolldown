@@ -946,10 +946,25 @@ impl GenerateStage<'_> {
           let Module::Normal(module) = &self.link_output.module_table[module_id] else {
             return;
           };
+          // Runtime imports are included only through live statements. A user import can make
+          // the same external side-effectful, but must not revive a dead runtime import.
+          // See internal-docs/runtime-helpers/implementation.md.
+          let included_runtime_imports = (module.idx == self.link_output.runtime.id()).then(|| {
+            self.link_output.stmt_infos[module.idx]
+              .iter_enumerated()
+              .filter(|(idx, _)| {
+                self.link_output.metas[module.idx].stmt_info_included.has_bit(*idx)
+              })
+              .flat_map(|(_, stmt)| stmt.import_records.iter().copied())
+              .collect::<FxHashSet<_>>()
+          });
+          let is_import_included =
+            |idx| included_runtime_imports.as_ref().is_none_or(|imports| imports.contains(&idx));
           module
             .import_records
-            .iter()
-            .filter_map(|rec| rec.resolved_module.map(|module_idx| (rec, module_idx)))
+            .iter_enumerated()
+            .filter(|(idx, _)| is_import_included(*idx))
+            .filter_map(|(_, rec)| rec.resolved_module.map(|module_idx| (rec, module_idx)))
             .for_each(|(rec, module_idx)| match &self.link_output.module_table[module_idx] {
               Module::Normal(_) => self.collect_dynamic_chunk_import(
                 chunk_graph,
@@ -970,6 +985,7 @@ impl GenerateStage<'_> {
           module
             .named_imports
             .iter()
+            .filter(|(_, import)| is_import_included(import.record_idx))
             .filter_map(|(_, import)| {
               module.import_records[import.record_idx]
                 .resolved_module

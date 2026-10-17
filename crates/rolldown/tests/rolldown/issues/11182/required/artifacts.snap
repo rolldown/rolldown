@@ -1,0 +1,79 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { createRequire } from "node:module";
+//#region a.js
+const req = createRequire(import.meta.url);
+const x = () => req.resolve("foo");
+//#endregion
+export { x };
+
+```
+
+## b.js
+
+```js
+import { createRequire } from "node:module";
+// HIDDEN [\0rolldown/runtime.js]
+//#region c.js
+var c_exports = /* @__PURE__ */ __exportAll({ y: () => 1 });
+//#endregion
+//#region b.js
+const load = () => __require("node:fs");
+//#endregion
+export { load, c_exports as ns };
+
+```
+
+# Variant: [preserve_modules: true]
+
+## Assets
+
+### _virtual/_rolldown/runtime.js
+
+```js
+import { createRequire } from "node:module";
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll, __require };
+
+```
+
+### a.js
+
+```js
+import { createRequire } from "node:module";
+//#region a.js
+const req = createRequire(import.meta.url);
+const x = () => req.resolve("foo");
+//#endregion
+export { x };
+
+```
+
+### b.js
+
+```js
+import { __require } from "./_virtual/_rolldown/runtime.js";
+import { c_exports } from "./c.js";
+//#region b.js
+const load = () => __require("node:fs");
+//#endregion
+export { load, c_exports as ns };
+
+```
+
+### c.js
+
+```js
+import { __exportAll } from "./_virtual/_rolldown/runtime.js";
+//#region c.js
+var c_exports = /* @__PURE__ */ __exportAll({ y: () => 1 });
+//#endregion
+export { c_exports };
+
+```

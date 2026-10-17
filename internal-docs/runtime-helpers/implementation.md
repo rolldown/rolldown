@@ -1,5 +1,9 @@
 # Runtime Helpers
 
+## External imports follow runtime statement inclusion
+
+The runtime is normally included through referenced helpers rather than a sweep of side-effectful statements. Chunk import collection must therefore ignore its excluded import statements, including their named bindings. Otherwise a user import of the same external can make the runtime chunk emit a bare import after the helper needing it was removed (issue #11182). Included runtime imports and user side-effect imports still follow the usual external rendering rules. See `collect_depended_symbols` in `crates/rolldown/src/stages/generate_stage/compute_cross_chunk_links.rs`.
+
 ## `__commonJS` and `__commonJSMin`: release `cb` after initialization
 
 After the first call in either helper, `mod` is set and `cb` is never accessed again. Without an explicit `cb = null`, the factory is permanently retained in the closure — a memory leak in long-lived processes (e.g. SSR servers loading bundles via `vm.createContext`).

@@ -63,7 +63,7 @@ impl<'ast> GlobalContext<'ast> for ConstEvalCtx<'_, 'ast> {
     &self,
     reference_id: oxc::semantic::ReferenceId,
   ) -> Option<oxc_ecmascript::constant_evaluation::ConstantValue<'ast>> {
-    self.constant_value(reference_id).map(oxc_ecmascript::constant_evaluation::ConstantValue::from)
+    self.constant_value(reference_id).map(|value| value.to_oxc_value_in(self))
   }
 
   // Without the type, oxc's `+` reads a string constant as a number: `'3' + 1` gives `4`.
@@ -98,7 +98,7 @@ pub fn try_extract_const_literal<'me, 'ast: 'me>(
     Expression::TemplateLiteral(template) => {
       template_text(ctx, template).map(ConstantValue::String)
     }
-    _ => expr.evaluate_value(ctx).map(ConstantValue::from),
+    _ => expr.evaluate_value(ctx).and_then(ConstantValue::from_oxc),
   }?;
   (!contains_object_literal(expr)).then_some(value)
 }
@@ -150,10 +150,7 @@ fn template_text<'ast>(
 ) -> Option<String> {
   let mut text = String::new();
   for (i, quasi) in template.quasis.iter().enumerate() {
-    if quasi.lone_surrogates {
-      return None;
-    }
-    text.push_str(quasi.value.cooked.as_ref()?);
+    text.push_str(quasi.value.cooked?.as_str()?);
     match template.expressions.get(i) {
       None => {}
       Some(Expression::TemplateLiteral(inner)) => text.push_str(&template_text(ctx, inner)?),

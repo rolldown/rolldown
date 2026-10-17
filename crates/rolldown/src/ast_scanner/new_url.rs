@@ -34,14 +34,18 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     };
 
     let (path, first_arg_span) = match first_arg {
-      Expression::StringLiteral(lit) => (&lit.value, lit.span),
+      Expression::StringLiteral(lit) => (lit.value, lit.span),
       Expression::TemplateLiteral(tpl) if tpl.is_no_substitution_template() => {
-        let Some(value) = &tpl.quasis[0].value.cooked else {
+        let Some(value) = tpl.quasis[0].value.cooked else {
           return;
         };
         (value, tpl.span)
       }
       _ => return,
+    };
+    // A path with a lone surrogate can't name a file, so the `new URL` is left untouched.
+    let Some(path) = path.as_str() else {
+      return;
     };
 
     let has_leading_ignore_comment = get_leading_comment(

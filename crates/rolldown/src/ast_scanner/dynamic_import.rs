@@ -2,7 +2,7 @@ use oxc::ast::{
   AstKind,
   ast::{self, Argument, IdentifierReference},
 };
-use oxc_str::CompactStr;
+use oxc_str::{CompactStr, JSStr};
 use rolldown_common::{ImportRecordIdx, dynamic_import_usage::DynamicImportExportsUsage};
 use rustc_hash::FxHashSet;
 
@@ -32,8 +32,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     // a.b // static
     // a['b'] // static
     // a[b] // dynamic
-    let partial_name =
-      parent.as_member_expression_kind().and_then(|expr| expr.static_property_name());
+    // An export name can't contain a lone surrogate, so such a name is treated as dynamic.
+    let partial_name = parent
+      .as_member_expression_kind()
+      .and_then(|expr| expr.static_property_name().and_then(JSStr::as_str));
     let rec_idx = *self
       .dynamic_import_usage_info
       .dynamic_import_binding_to_import_record_idx
@@ -152,6 +154,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         .as_member_expression_kind()
         .unwrap()
         .static_property_name()?
+        .as_str()?
         .into()])),
       // for rest of the cases, just bailout, until we find other optimization could apply
       _ => None,

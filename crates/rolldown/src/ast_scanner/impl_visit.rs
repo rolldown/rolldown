@@ -10,7 +10,7 @@ use oxc::{
   semantic::{ScopeFlags, SymbolId},
   span::{GetSpan, Span},
 };
-use oxc_str::CompactStr;
+use oxc_str::{CompactStr, JSStr};
 use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ImportKind, ImportRecordMeta, LocalExport,
   MemberExprObjectReferencedType, MemberExprRef, RUNTIME_MODULE_KEY, RolldownFileUrlReference,
@@ -263,7 +263,7 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
       match member_expr.object() {
         Expression::Identifier(id) => {
           if id.name == "module"
-            && member_expr.static_property_name() == Some("exports")
+            && member_expr.static_property_name().is_some_and(|name| name == "exports")
             && self.is_global_identifier_reference(id)
           {
             self.cjs_module_ident.get_or_insert(Span::new(id.span.start, id.span.start + 6));
@@ -273,7 +273,11 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
           }
           if id.name == "exports" && self.is_global_identifier_reference(id) {
             self.cjs_exports_ident.get_or_insert(Span::new(id.span.start, id.span.start + 7));
-            if let Some((span, export_name)) = member_expr.static_property_info() {
+            // A name with a lone surrogate is treated like a computed one.
+            if let Some((span, export_name)) = member_expr
+              .static_property_info()
+              .and_then(|(span, name)| Some((span, name.as_str()?)))
+            {
               // `exports.test = ...`
               let exported_symbol =
                 self.result.symbol_ref_db.create_facade_root_symbol_ref(export_name);
@@ -325,7 +329,7 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
   /// regardless of that option.
   fn visit_member_expression(&mut self, it: &ast::MemberExpression<'ast>) {
     if it.object().is_import_meta()
-      && let Some(property_name) = it.static_property_name()
+      && let Some(property_name) = it.static_property_name().and_then(JSStr::as_str)
       && let Some(file_url) = utils::file_url::strip_file_url_prefix(property_name)
     {
       self.result.rolldown_file_url_references.push(RolldownFileUrlReference {
@@ -694,6 +698,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       },
       _ => return false,
     };
+    // TODO(oxc): a specifier with a lone surrogate is left as a runtime `require`, because import
+    // records store `CompactStr` and oxc has no owned `JSStr` counterpart.
+    let Some(value) = value.as_str() else { return false };
     let mut init_meta = if span.is_empty() {
       ImportRecordMeta::IsUnspannedImport
     } else {
@@ -734,8 +741,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     };
     let in_side_try_catch_block = self.in_side_try_catch_block();
     init_meta.set(ImportRecordMeta::InTryCatchBlock, in_side_try_catch_block);
-    let id =
-      self.add_import_record(value.as_ref(), ImportKind::Require, span, expr.span, init_meta, None);
+    let id = self.add_import_record(value, ImportKind::Require, span, expr.span, init_meta, None);
     self.result.imports.insert(expr.node_id(), id);
     true
   }

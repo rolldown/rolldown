@@ -180,7 +180,10 @@ impl<'a> StmtEvalAnalyzer<'a> {
     }
   }
 
-  fn constant_value_for_reference_id(&self, reference_id: ReferenceId) -> Option<&ConstantValue> {
+  fn constant_value_for_reference_id(
+    &self,
+    reference_id: ReferenceId,
+  ) -> Option<&'a ConstantValue> {
     if !self.use_constants.get() {
       return None;
     }
@@ -250,9 +253,9 @@ impl<'a> StmtEvalAnalyzer<'a> {
     let Expression::ImportMeta(_) = member_expr.object() else {
       return false;
     };
-    member_expr
-      .static_property_name()
-      .is_some_and(|name| name == "url" || utils::file_url::starts_with_file_url_prefix(name))
+    member_expr.static_property_name().is_some_and(|name| {
+      name == "url" || name.as_str().is_some_and(utils::file_url::starts_with_file_url_prefix)
+    })
   }
 
   fn analyze_member_expr(&self, member_expr: &ast::MemberExpression) -> StmtEvalFacts {
@@ -1173,16 +1176,16 @@ fn for_each_eager_chain_child<'a>(expr: &'a Expression, visit: impl FnMut(EagerC
   let _ = chain_root_visiting_eager_children(expr, visit);
 }
 
-impl<'ast> GlobalContext<'ast> for StmtEvalAnalyzer<'_> {
-  fn is_global_reference(&self, reference: &IdentifierReference<'ast>) -> bool {
+impl<'a> GlobalContext<'a> for StmtEvalAnalyzer<'a> {
+  fn is_global_reference(&self, reference: &IdentifierReference<'a>) -> bool {
     self.is_unresolved_reference(reference)
   }
 
   fn get_constant_value_for_reference_id(
     &self,
     reference_id: ReferenceId,
-  ) -> Option<oxc_ecmascript::ConstantValue<'ast>> {
-    self.constant_value_for_reference_id(reference_id).map(oxc_ecmascript::ConstantValue::from)
+  ) -> Option<oxc_ecmascript::ConstantValue<'a>> {
+    self.constant_value_for_reference_id(reference_id).map(ConstantValue::as_oxc_value)
   }
 
   fn value_type_for_reference_id(&self, reference_id: ReferenceId) -> Option<ValueType> {
@@ -1190,7 +1193,7 @@ impl<'ast> GlobalContext<'ast> for StmtEvalAnalyzer<'_> {
   }
 }
 
-impl MayHaveSideEffectsContext<'_> for StmtEvalAnalyzer<'_> {
+impl<'a> MayHaveSideEffectsContext<'a> for StmtEvalAnalyzer<'a> {
   fn engine_targets(&self) -> Option<&EngineTargets> {
     Some(&self.options.transform_options.target)
   }

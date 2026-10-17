@@ -28,7 +28,7 @@ use oxc::{
   span::{GetSpan, Span},
 };
 use oxc_index::IndexVec;
-use oxc_str::CompactStr;
+use oxc_str::{CompactStr, JSStr};
 use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicImportUsageInfo};
 use rolldown_common::{
   ConstExportMeta, ConstantValue, DynamicImportExprInfo, EcmaModuleAstUsage, EcmaViewMeta,
@@ -491,6 +491,20 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   /// `import_expression_node_id` - The AST node ID of the ImportExpression node,
   /// required for dynamic imports to track their position for optimization purposes.
   /// Should be `None` for static imports and `Some(node_id)` for dynamic imports.
+  /// TODO(oxc): import records store `CompactStr`, and oxc has no owned `JSStr` counterpart, so a
+  /// static specifier with a lone surrogate is reported as unsupported.
+  fn static_module_request(&mut self, source: &ast::StringLiteral<'ast>) -> &'ast str {
+    source.value.as_str().unwrap_or_else(|| {
+      self.result.errors.push(BuildDiagnostic::unsupported_feature(
+        self.immutable_ctx.id.as_arc_str().clone(),
+        self.immutable_ctx.source.clone(),
+        source.span,
+        "Module specifiers containing lone surrogates are not supported".to_string(),
+      ));
+      ""
+    })
+  }
+
   fn add_import_record(
     &mut self,
     module_request: &str,
@@ -690,9 +704,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.result.named_imports.insert(generated_imported_as_ref, name_import);
   }
 
-  fn scan_export_all_decl(&mut self, decl: &ExportAllDeclaration) {
+  fn scan_export_all_decl(&mut self, decl: &ExportAllDeclaration<'ast>) {
+    let request = self.static_module_request(&decl.source);
     let id = self.add_import_record(
-      decl.source.value.as_str(),
+      request,
       ImportKind::Import,
       decl.source.span(),
       decl.span,
@@ -733,8 +748,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   fn scan_export_from_decl(&mut self, decl: &ExportFromDeclaration<'ast>) {
     let source = &decl.source;
+    let request = self.static_module_request(source);
     let record_idx = self.add_import_record(
-      source.value.as_str(),
+      request,
       ImportKind::Import,
       source.span(),
       decl.span,
@@ -908,9 +924,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.add_local_default_export(reference, span);
   }
 
-  fn scan_import_decl(&mut self, decl: &ImportDeclaration) {
+  fn scan_import_decl(&mut self, decl: &ImportDeclaration<'ast>) {
+    let request = self.static_module_request(&decl.source);
     let rec_id = self.add_import_record(
-      decl.source.value.as_str(),
+      request,
       ImportKind::Import,
       decl.source.span(),
       decl.span,
@@ -1060,7 +1077,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           });
         }
         AstKind::ComputedMemberExpression(expr) => {
-          if let Some(name) = expr.static_property_name() {
+          if let Some(name) = expr.static_property_name().and_then(JSStr::as_str) {
             node_id = ancestor_ast.node_id();
             span = ancestor_ast.span();
             props.push(MemberExprProp {

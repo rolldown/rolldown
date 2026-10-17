@@ -1,0 +1,69 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { createRequire } from "node:module";
+//#region a.js
+const req = createRequire(import.meta.url);
+const x = () => req.resolve("foo");
+//#endregion
+export { x };
+
+```
+
+## b.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region c.js
+var c_exports = /* @__PURE__ */ __exportAll({ y: () => 1 });
+//#endregion
+export { c_exports as ns };
+
+```
+
+# Variant: [preserve_modules: true]
+
+## Assets
+
+### _virtual/_rolldown/runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll };
+
+```
+
+### a.js
+
+```js
+import { createRequire } from "node:module";
+//#region a.js
+const req = createRequire(import.meta.url);
+const x = () => req.resolve("foo");
+//#endregion
+export { x };
+
+```
+
+### b.js
+
+```js
+export { c_exports as ns } from "./c.js";
+
+```
+
+### c.js
+
+```js
+import { __exportAll } from "./_virtual/_rolldown/runtime.js";
+//#region c.js
+var c_exports = /* @__PURE__ */ __exportAll({ y: () => 1 });
+//#endregion
+export { c_exports };
+
+```

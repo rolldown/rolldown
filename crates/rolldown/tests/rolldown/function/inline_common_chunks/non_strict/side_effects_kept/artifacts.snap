@@ -1,0 +1,84 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { n as count, r as marker, t as bump } from "./shared.js";
+//#region a.js
+globalThis.events.push("A " + count + " " + bump() + " " + count);
+globalThis.markers.push(marker);
+//#endregion
+
+```
+
+## b.js
+
+```js
+import { n as count, r as marker, t as bump } from "./shared.js";
+//#region b.js
+globalThis.events.push("B " + count + " " + bump?.() + " " + count);
+globalThis.markers.push(marker);
+//#endregion
+
+```
+
+## shared.js
+
+```js
+//#region shared.js
+globalThis.events.push("S body");
+let count = 0;
+function bump() {
+	count += 1;
+	return this === void 0 ? "this:undefined" : "this:bound";
+}
+const marker = { tag: "shared" };
+//#endregion
+export { count as n, marker as r, bump as t };
+
+```
+
+# Variant: off: [code_splitting: enabled]
+
+## Assets
+
+### a.js
+
+```js
+import { n as count, r as marker, t as bump } from "./shared.js";
+//#region a.js
+globalThis.events.push("A " + count + " " + bump() + " " + count);
+globalThis.markers.push(marker);
+//#endregion
+
+```
+
+### b.js
+
+```js
+import { n as count, r as marker, t as bump } from "./shared.js";
+//#region b.js
+globalThis.events.push("B " + count + " " + bump?.() + " " + count);
+globalThis.markers.push(marker);
+//#endregion
+
+```
+
+### shared.js
+
+```js
+//#region shared.js
+globalThis.events.push("S body");
+let count = 0;
+function bump() {
+	count += 1;
+	return this === void 0 ? "this:undefined" : "this:bound";
+}
+const marker = { tag: "shared" };
+//#endregion
+export { count as n, marker as r, bump as t };
+
+```

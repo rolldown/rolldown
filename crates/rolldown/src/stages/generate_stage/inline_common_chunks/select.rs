@@ -122,10 +122,16 @@ impl GenerateStage<'_> {
         }
       }
     }
+    // Without strict execution order a factory runs its unwrapped members' code when required,
+    // so a cycle of records would read a record whose factory is still running.
+    let strict = self.options.is_strict_execution_order_enabled();
     for component in petgraph::algo::tarjan_scc(&graph) {
       let selected =
         component.iter().copied().filter(|chunk_idx| candidates.contains(chunk_idx)).collect_vec();
-      if selected.is_empty() || selected.len() == component.len() {
+      if selected.is_empty() || (strict && selected.len() == component.len()) {
+        continue;
+      }
+      if component.len() == 1 {
         continue;
       }
       for chunk_idx in selected {
@@ -134,7 +140,11 @@ impl GenerateStage<'_> {
           target: LOG_TARGET,
           chunk = chunk_idx.raw(),
           modules = ?self.module_ids_of(&chunk_graph.chunk_table[chunk_idx]),
-          reason = "in a static import cycle with a file",
+          reason = if strict {
+            "in a static import cycle with a file"
+          } else {
+            "in a static import cycle and strict execution order is off"
+          },
           "kept as file"
         );
       }
@@ -279,7 +289,10 @@ impl GenerateStage<'_> {
         return Some(reason);
       }
       let meta = &self.link_output.metas[module_idx];
-      if order_state.esm_init_target(module_idx, meta).is_none()
+      // Without strict execution order, `inline_common_chunk_module_bailout` already rejected an
+      // unwrapped member with side effects; an unwrapped one without runs in the factory.
+      if self.options.is_strict_execution_order_enabled()
+        && order_state.esm_init_target(module_idx, meta).is_none()
         && !matches!(meta.wrap_kind(), WrapKind::Cjs)
       {
         return Some("member has no wrapper");
@@ -332,6 +345,15 @@ impl GenerateStage<'_> {
     }
     if !matches!(meta.concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::None) {
       return Some("member is a concatenated wrapped module");
+    }
+    // A factory runs when its first reader starts, after that reader's earlier imports and,
+    // unlike the file it replaces, after its later ones too. Only a module whose evaluation
+    // nothing can observe may move there unwrapped.
+    if !self.options.is_strict_execution_order_enabled()
+      && matches!(meta.wrap_kind(), WrapKind::None)
+      && module.side_effects.has_side_effects()
+    {
+      return Some("member has side effects and strict execution order is off");
     }
     for (stmt_info_idx, stmt_info) in self.link_output.stmt_infos[module_idx].iter_enumerated() {
       if !meta.stmt_info_included.has_bit(stmt_info_idx) {

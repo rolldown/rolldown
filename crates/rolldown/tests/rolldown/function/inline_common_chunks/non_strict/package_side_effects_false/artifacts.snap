@@ -1,0 +1,165 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { n as __share_export, r as __share_require, t as __share } from "./rolldown-runtime.js";
+import "./after.js";
+__share("lib-vafacz8y", (exports) => {
+	//#region lib/index.js
+	globalThis.events.push("L body");
+	const marker = { tag: "lib" };
+	//#endregion
+	__share_export(exports, { t: () => marker });
+});
+var share_lib = __share_require("lib-vafacz8y");
+//#region a.js
+globalThis.events.push("A");
+globalThis.markers.push(share_lib.t);
+//#endregion
+
+```
+
+## after.js
+
+```js
+//#region after.js
+globalThis.events.push("after body");
+//#endregion
+
+```
+
+## b.js
+
+```js
+import { n as __share_export, r as __share_require, t as __share } from "./rolldown-runtime.js";
+import "./after.js";
+__share("lib-vafacz8y", (exports) => {
+	//#region lib/index.js
+	globalThis.events.push("L body");
+	const marker = { tag: "lib" };
+	//#endregion
+	__share_export(exports, { t: () => marker });
+});
+var share_lib = __share_require("lib-vafacz8y");
+//#region b.js
+globalThis.events.push("B");
+globalThis.markers.push(share_lib.t);
+//#endregion
+
+```
+
+## c.js
+
+```js
+import "./after.js";
+//#region c.js
+globalThis.events.push("C");
+//#endregion
+
+```
+
+## rolldown-runtime.js
+
+```js
+//#region \0rolldown/runtime.js
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __share_factories = /* @__PURE__ */ __create(null);
+var __share_records = /* @__PURE__ */ __create(null);
+var __share = (id, factory) => {
+	if (!(id in __share_factories)) __share_factories[id] = factory;
+};
+var __share_require = (id) => {
+	var record = __share_records[id];
+	if (record) {
+		if (record.failed) throw record.error;
+		return record.exports;
+	}
+	var factory = __share_factories[id];
+	if (!factory) throw new Error("Shared chunk \"" + id + "\" was not registered before it was required.");
+	record = __share_records[id] = {
+		exports: {},
+		failed: false,
+		error: void 0
+	};
+	try {
+		factory(record.exports);
+	} catch (error) {
+		record.failed = true;
+		record.error = error;
+		throw error;
+	}
+	return record.exports;
+};
+var __share_export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
+//#endregion
+export { __share_export as n, __share_require as r, __share as t };
+
+```
+
+# Variant: off: [code_splitting: enabled]
+
+## Assets
+
+### a.js
+
+```js
+import { t as marker } from "./lib.js";
+import "./after.js";
+//#region a.js
+globalThis.events.push("A");
+globalThis.markers.push(marker);
+//#endregion
+
+```
+
+### after.js
+
+```js
+//#region after.js
+globalThis.events.push("after body");
+//#endregion
+
+```
+
+### b.js
+
+```js
+import { t as marker } from "./lib.js";
+import "./after.js";
+//#region b.js
+globalThis.events.push("B");
+globalThis.markers.push(marker);
+//#endregion
+
+```
+
+### c.js
+
+```js
+import "./after.js";
+//#region c.js
+globalThis.events.push("C");
+//#endregion
+
+```
+
+### lib.js
+
+```js
+//#region lib/index.js
+globalThis.events.push("L body");
+const marker = { tag: "lib" };
+//#endregion
+export { marker as t };
+
+```

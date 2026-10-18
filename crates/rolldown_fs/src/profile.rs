@@ -495,11 +495,16 @@ const STALE: u8 = 2;
 /// `3` = no `readdir`: record each probe result per directory, checked by one `stat` of the directory.
 fn dircache_mode() -> u8 {
   static MODE: OnceLock<u8> = OnceLock::new();
-  *MODE.get_or_init(|| match std::env::var("ROLLDOWN_FS_DIRCACHE").as_deref() {
-    Ok("1") => 1,
-    Ok("2") => 2,
-    Ok("3") => 3,
-    _ => 0,
+  *MODE.get_or_init(|| {
+    if !STAMPS_SUPPORTED {
+      return 0;
+    }
+    match std::env::var("ROLLDOWN_FS_DIRCACHE").as_deref() {
+      Ok("1") => 1,
+      Ok("2") => 2,
+      Ok("3") => 3,
+      _ => 0,
+    }
   })
 }
 
@@ -520,7 +525,13 @@ fn dir_persist_path() -> Option<&'static PathBuf> {
 
 fn cc_path() -> Option<&'static PathBuf> {
   static P: OnceLock<Option<PathBuf>> = OnceLock::new();
-  P.get_or_init(|| std::env::var_os("ROLLDOWN_FS_CONTENT_CACHE").map(PathBuf::from)).as_ref()
+  P.get_or_init(|| {
+    if !STAMPS_SUPPORTED {
+      return None;
+    }
+    std::env::var_os("ROLLDOWN_FS_CONTENT_CACHE").map(PathBuf::from)
+  })
+  .as_ref()
 }
 
 pub fn content_cache_enabled() -> bool {
@@ -552,6 +563,29 @@ fn stamp_from(m: &std::fs::Metadata) -> Stamp {
 #[cfg(not(unix))]
 fn stamp_from(_m: &std::fs::Metadata) -> Stamp {
   [0; 7]
+}
+
+/// The stamp needs unix metadata, so the cache env vars are ignored on other targets.
+const STAMPS_SUPPORTED: bool = cfg!(unix);
+
+#[cfg(unix)]
+fn os_str_bytes(s: &std::ffi::OsStr) -> &[u8] {
+  use std::os::unix::ffi::OsStrExt;
+  s.as_bytes()
+}
+#[cfg(not(unix))]
+fn os_str_bytes(s: &std::ffi::OsStr) -> &[u8] {
+  s.to_str().unwrap_or_default().as_bytes()
+}
+
+#[cfg(unix)]
+fn os_string_from_bytes(b: &[u8]) -> std::ffi::OsString {
+  use std::os::unix::ffi::OsStrExt;
+  std::ffi::OsStr::from_bytes(b).to_os_string()
+}
+#[cfg(not(unix))]
+fn os_string_from_bytes(b: &[u8]) -> std::ffi::OsString {
+  String::from_utf8_lossy(b).into_owned().into()
 }
 
 fn stamp_of(path: &Path) -> Option<Stamp> {
@@ -604,9 +638,8 @@ impl<'a> Reader<'a> {
     Some(s)
   }
   fn path(&mut self) -> Option<PathBuf> {
-    use std::os::unix::ffi::OsStrExt;
     let n = self.u32()? as usize;
-    Some(PathBuf::from(std::ffi::OsStr::from_bytes(self.bytes(n)?)))
+    Some(PathBuf::from(os_string_from_bytes(self.bytes(n)?)))
   }
 }
 
@@ -622,8 +655,7 @@ impl Writer {
     }
   }
   fn path(&mut self, p: &Path) {
-    use std::os::unix::ffi::OsStrExt;
-    let b = p.as_os_str().as_bytes();
+    let b = os_str_bytes(p.as_os_str());
     self.bytes(&(b.len() as u32).to_le_bytes());
     self.bytes(b);
   }
@@ -718,7 +750,6 @@ fn dirs_load() -> DirState {
 }
 
 fn dirs_parse(buf: &[u8]) -> Option<HashMap<PathBuf, StoredDir>> {
-  use std::os::unix::ffi::OsStrExt;
   let mut r = Reader { buf, p: 0 };
   if r.bytes(8)? != if dircache_mode() == 3 { DP_MAGIC } else { DC_MAGIC } {
     return None;
@@ -733,7 +764,7 @@ fn dirs_parse(buf: &[u8]) -> Option<HashMap<PathBuf, StoredDir>> {
     for _ in 0..count {
       let kind = r.u8()?;
       let len = r.u16()? as usize;
-      let name = std::ffi::OsStr::from_bytes(r.bytes(len)?).to_os_string();
+      let name = os_string_from_bytes(r.bytes(len)?);
       listing.insert(name, kind);
     }
     map
@@ -1294,7 +1325,6 @@ fn warm_save() -> Option<String> {
         write_atomic(cc_path().unwrap(), &out.0);
       }
       if save_dirs {
-        use std::os::unix::ffi::OsStrExt;
         let mut out = Writer::default();
         out.bytes(if dircache_mode() == 3 { DP_MAGIC } else { DC_MAGIC });
         out.bytes(&(dirs_out.len() as u64).to_le_bytes());
@@ -1303,7 +1333,7 @@ fn warm_save() -> Option<String> {
           out.stamp(s);
           out.bytes(&(l.len() as u32).to_le_bytes());
           for (name, kind) in l.iter() {
-            let b = name.as_bytes();
+            let b = os_str_bytes(name);
             out.bytes(&[*kind]);
             out.bytes(&(b.len() as u16).to_le_bytes());
             out.bytes(b);

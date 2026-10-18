@@ -6,7 +6,8 @@
 //! runtime is often followed by the chunk's `export { … }` or `require` lines, not by another
 //! module. Before minification the end is still known, because the chunk joiner puts a blank line
 //! after each module. `renderChunk` runs right before the internal minify pass, so this plugin
-//! writes the pair there and restores it in `generateBundle`, after every other plugin.
+//! writes the pair there and restores it in `generateBundle`, after every other plugin. Only real
+//! comment tokens count as markers, so the same text inside a string or template literal stays.
 //!
 //! The pair is disguised as legal comments (`//!#region`). The dce-only pass removes an ordinary
 //! comment together with the statement that follows it, and a lost `//#endregion` makes the
@@ -20,11 +21,15 @@
 use std::borrow::Cow;
 use std::sync::Arc;
 
+use oxc::allocator::Allocator;
+use oxc::ast::CommentKind;
+use oxc::parser::{ParseOptions, Parser};
+use oxc::span::SourceType;
 use rolldown::plugin::{
   HookGenerateBundleArgs, HookNoopReturn, HookRenderChunkArgs, HookRenderChunkOutput,
   HookRenderChunkReturn, HookTransformOutputMap, HookUsage, Plugin, PluginContext,
 };
-use rolldown_common::{MinifyOptions, Output};
+use rolldown_common::{MinifyOptions, Output, OutputFormat};
 
 #[derive(Debug)]
 pub struct HiddenModuleMarkersPlugin {
@@ -51,7 +56,13 @@ impl Plugin for HiddenModuleMarkersPlugin {
     if matches!(args.options.minify, MinifyOptions::Enabled(_)) {
       return Ok(None);
     }
-    let Some(code) = protect_hidden_module_markers(&args.code, self.hide_runtime_module) else {
+    let source_type = match args.options.format {
+      OutputFormat::Cjs => SourceType::cjs(),
+      OutputFormat::Esm | OutputFormat::Iife | OutputFormat::Umd => SourceType::mjs(),
+    };
+    let Some(code) =
+      protect_hidden_module_markers(&args.code, source_type, self.hide_runtime_module)
+    else {
       return Ok(None);
     };
     // Only whole comment lines and blank lines change, so the existing sourcemap stays valid —
@@ -82,14 +93,23 @@ impl Plugin for HiddenModuleMarkersPlugin {
 
 /// Wraps each hidden module of `source` in a disguised `//!#region` pair, and disguises the
 /// `//#region` pairs that `full` mode wrote. Returns `None` when nothing changes.
-fn protect_hidden_module_markers(source: &str, hide_runtime_module: bool) -> Option<String> {
+fn protect_hidden_module_markers(
+  source: &str,
+  source_type: SourceType,
+  hide_runtime_module: bool,
+) -> Option<String> {
   let mut out = String::with_capacity(source.len() + 64);
   let mut changed = false;
   // Indentation of the hidden module whose closing blank line is not reached yet.
   let mut open_indent: Option<&str> = None;
+  // Parsed only when a line looks like a marker, because most chunks have none.
+  let mut marker_starts: Option<Vec<u32>> = None;
+  let mut line_start = 0;
   for line in source.split_inclusive('\n') {
     let trimmed = line.trim_start();
     let indent = &line[..line.len() - trimmed.len()];
+    let trimmed_start = line_start + indent.len();
+    line_start += line.len();
     if let Some(module_indent) = open_indent
       && trimmed.is_empty()
     {
@@ -104,6 +124,12 @@ fn protect_hidden_module_markers(source: &str, hide_runtime_module: bool) -> Opt
     }
     if let Some(id) = trimmed.strip_prefix("// ")
       && is_hidden_module(id.trim_end(), hide_runtime_module)
+      && marker_starts
+        .get_or_insert_with(|| {
+          hidden_module_marker_starts(source, source_type, hide_runtime_module)
+        })
+        .binary_search(&u32::try_from(trimmed_start).unwrap())
+        .is_ok()
     {
       out.push_str(indent);
       out.push_str("//!#region ");
@@ -137,6 +163,32 @@ fn protect_hidden_module_markers(source: &str, hide_runtime_module: bool) -> Opt
   changed.then_some(out)
 }
 
+/// Sorted start offsets of the `// <id>` line comments that start a hidden module.
+fn hidden_module_marker_starts(
+  source: &str,
+  source_type: SourceType,
+  hide_runtime_module: bool,
+) -> Vec<u32> {
+  let allocator = Allocator::default();
+  let ret = Parser::new(&allocator, source, source_type.with_jsx(true))
+    .with_options(ParseOptions { allow_return_outside_function: true, ..Default::default() })
+    .parse();
+  ret
+    .program
+    .comments
+    .iter()
+    .filter(|comment| {
+      comment.kind == CommentKind::Line
+        && comment
+          .content_span()
+          .source_text(source)
+          .strip_prefix(' ')
+          .is_some_and(|id| is_hidden_module(id.trim_end(), hide_runtime_module))
+    })
+    .map(|comment| comment.span.start)
+    .collect()
+}
+
 /// The module ids whose output `tweak_snapshot` replaces with a `// HIDDEN [...]` line.
 fn is_hidden_module(id: &str, hide_runtime_module: bool) -> bool {
   (hide_runtime_module && id == r"\0rolldown/runtime.js")
@@ -167,12 +219,14 @@ fn map_region_marker_lines(source: &str, from: &str, to: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+  use oxc::span::SourceType;
+
   use super::{map_region_marker_lines, protect_hidden_module_markers};
 
   #[test]
   fn hidden_modules_get_a_region_pair_without_moving_lines() {
     let source = "// \\0rolldown/runtime.js\nvar __a = 1;\n\n// a.js\nconst s = \"// \\0rolldown/runtime.js\";\nexport { __a };\n\t// \\0@oxc-project+runtime@0.1.0/helpers/x.js\n\tvar x = 1;\n";
-    let protected = protect_hidden_module_markers(source, true).unwrap();
+    let protected = protect_hidden_module_markers(source, SourceType::mjs(), true).unwrap();
     assert_eq!(
       protected,
       "//!#region \\0rolldown/runtime.js\nvar __a = 1;\n//!#endregion\n// a.js\nconst s = \"// \\0rolldown/runtime.js\";\nexport { __a };\n\t//!#region \\0@oxc-project+runtime@0.1.0/helpers/x.js\n\tvar x = 1;\n\t//!#endregion\n"
@@ -186,15 +240,25 @@ mod tests {
   #[test]
   fn shown_runtime_is_left_as_built() {
     assert_eq!(
-      protect_hidden_module_markers("// \\0rolldown/runtime.js\nvar __a = 1;\n", false),
+      protect_hidden_module_markers(
+        "// \\0rolldown/runtime.js\nvar __a = 1;\n",
+        SourceType::mjs(),
+        false
+      ),
       None
     );
   }
 
   #[test]
+  fn marker_text_inside_a_template_literal_is_left_as_built() {
+    let source = "const a = `x\n// rolldown:hmr\n\ny`;\nconst b = `x\n// \\0rolldown/runtime.js\ny`;\n\nexport { a, b };\n";
+    assert_eq!(protect_hidden_module_markers(source, SourceType::mjs(), true), None);
+  }
+
+  #[test]
   fn full_mode_pairs_are_disguised_reversibly() {
     let source = "//#region a.js\n\tvar a = 1;\n\t//#endregion\nconst s = \"//#region not a marker\";\n//# sourceMappingURL=x.map\n";
-    let protected = protect_hidden_module_markers(source, true).unwrap();
+    let protected = protect_hidden_module_markers(source, SourceType::mjs(), true).unwrap();
     assert_eq!(
       protected,
       "//!#region a.js\n\tvar a = 1;\n\t//!#endregion\nconst s = \"//#region not a marker\";\n//# sourceMappingURL=x.map\n"

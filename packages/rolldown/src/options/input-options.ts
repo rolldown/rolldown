@@ -595,8 +595,8 @@ export interface InputOptions {
      *
      * Available modes:
      * - `none`: No debug information is attached.
-     * - `simple`: Attach comments indicating which files the bundled code comes from. These comments could be removed by the minifier.
-     * - `full`: Attach detailed debug information to the output bundle. These comments are using legal comment syntax, so they won't be removed by the minifier.
+     * - `simple`: Attach a `// <module id>` comment where the code of each module starts, like esbuild and Bun. These comments could be removed by the minifier.
+     * - `full`: Wrap the code of each module in `//#region <module id>` and `//#endregion` comments, so editors can fold it. Also attach comments that tell why each chunk exists. These use legal comment syntax, so they won't be removed by the minifier.
      *
      * @default 'simple'
      *

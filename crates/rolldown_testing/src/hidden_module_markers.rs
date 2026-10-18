@@ -6,8 +6,9 @@
 //! runtime is often followed by the chunk's `export { … }` or `require` lines, not by another
 //! module. Before minification the end is still known, because the chunk joiner puts a blank line
 //! after each module. `renderChunk` runs right before the internal minify pass, so this plugin
-//! writes the pair there and restores it in `generateBundle`, after every other plugin. Only real
-//! comment tokens count as markers, so the same text inside a string or template literal stays.
+//! writes the pair there and restores it in `generateBundle`, after every other plugin. Both
+//! hooks change only real comment tokens, so the same text inside a string or template literal
+//! stays.
 //!
 //! The pair is disguised as legal comments (`//!#region`). The dce-only pass removes an ordinary
 //! comment together with the statement that follows it, and a lost `//#endregion` makes the
@@ -56,10 +57,7 @@ impl Plugin for HiddenModuleMarkersPlugin {
     if matches!(args.options.minify, MinifyOptions::Enabled(_)) {
       return Ok(None);
     }
-    let source_type = match args.options.format {
-      OutputFormat::Cjs => SourceType::cjs(),
-      OutputFormat::Esm | OutputFormat::Iife | OutputFormat::Umd => SourceType::mjs(),
-    };
+    let source_type = chunk_source_type(args.options.format);
     let Some(code) =
       protect_hidden_module_markers(&args.code, source_type, self.hide_runtime_module)
     else {
@@ -80,10 +78,11 @@ impl Plugin for HiddenModuleMarkersPlugin {
     if matches!(args.options.minify, MinifyOptions::Enabled(_)) {
       return Ok(());
     }
+    let source_type = chunk_source_type(args.options.format);
     for output in args.bundle.iter_mut() {
       if let Output::Chunk(chunk) = output {
         if chunk.code.contains("//!#") {
-          Arc::make_mut(chunk).code = map_region_marker_lines(&chunk.code, "//!#", "//#");
+          Arc::make_mut(chunk).code = restore_region_markers(&chunk.code, source_type);
         }
       }
     }
@@ -103,7 +102,20 @@ fn protect_hidden_module_markers(
   // Indentation of the hidden module whose closing blank line is not reached yet.
   let mut open_indent: Option<&str> = None;
   // Parsed only when a line looks like a marker, because most chunks have none.
-  let mut marker_starts: Option<Vec<u32>> = None;
+  let mut comment_starts: Option<Vec<u32>> = None;
+  let mut is_comment = |offset: usize| {
+    comment_starts
+      .get_or_insert_with(|| {
+        line_comment_starts(source, source_type, |text| {
+          text
+            .strip_prefix(' ')
+            .is_some_and(|id| is_hidden_module(id.trim_end(), hide_runtime_module))
+            || is_region_marker(text, "#")
+        })
+      })
+      .binary_search(&u32::try_from(offset).unwrap())
+      .is_ok()
+  };
   let mut line_start = 0;
   for line in source.split_inclusive('\n') {
     let trimmed = line.trim_start();
@@ -124,12 +136,7 @@ fn protect_hidden_module_markers(
     }
     if let Some(id) = trimmed.strip_prefix("// ")
       && is_hidden_module(id.trim_end(), hide_runtime_module)
-      && marker_starts
-        .get_or_insert_with(|| {
-          hidden_module_marker_starts(source, source_type, hide_runtime_module)
-        })
-        .binary_search(&u32::try_from(trimmed_start).unwrap())
-        .is_ok()
+      && is_comment(trimmed_start)
     {
       out.push_str(indent);
       out.push_str("//!#region ");
@@ -138,12 +145,13 @@ fn protect_hidden_module_markers(
       changed = true;
       continue;
     }
-    if let Some(rest) = trimmed.strip_prefix("//#")
-      && (rest.starts_with("region") || rest.starts_with("endregion"))
+    if let Some(text) = trimmed.strip_prefix("//")
+      && is_region_marker(text, "#")
+      && is_comment(trimmed_start)
     {
       out.push_str(indent);
-      out.push_str("//!#");
-      out.push_str(rest);
+      out.push_str("//!");
+      out.push_str(text);
       changed = true;
       continue;
     }
@@ -163,11 +171,36 @@ fn protect_hidden_module_markers(
   changed.then_some(out)
 }
 
-/// Sorted start offsets of the `// <id>` line comments that start a hidden module.
-fn hidden_module_marker_starts(
+/// Turns the disguised `//!#region` and `//!#endregion` comments back into `//#` form.
+fn restore_region_markers(source: &str, source_type: SourceType) -> String {
+  let comment_starts =
+    line_comment_starts(source, source_type, |text| is_region_marker(text, "!#"));
+  let mut out = String::with_capacity(source.len());
+  let mut line_start = 0;
+  for line in source.split_inclusive('\n') {
+    let trimmed = line.trim_start();
+    let indent = &line[..line.len() - trimmed.len()];
+    let trimmed_start = line_start + indent.len();
+    line_start += line.len();
+    if trimmed.starts_with("//!#")
+      && comment_starts.binary_search(&u32::try_from(trimmed_start).unwrap()).is_ok()
+    {
+      out.push_str(indent);
+      out.push_str("//");
+      out.push_str(&trimmed["//!".len()..]);
+    } else {
+      out.push_str(line);
+    }
+  }
+  out
+}
+
+/// Sorted start offsets of the line comments whose text after `//` passes `keep`. Marker-like
+/// text inside a string or template literal is not a comment token, so it never matches.
+fn line_comment_starts(
   source: &str,
   source_type: SourceType,
-  hide_runtime_module: bool,
+  keep: impl Fn(&str) -> bool,
 ) -> Vec<u32> {
   let allocator = Allocator::default();
   let ret = Parser::new(&allocator, source, source_type.with_jsx(true))
@@ -178,15 +211,17 @@ fn hidden_module_marker_starts(
     .comments
     .iter()
     .filter(|comment| {
-      comment.kind == CommentKind::Line
-        && comment
-          .content_span()
-          .source_text(source)
-          .strip_prefix(' ')
-          .is_some_and(|id| is_hidden_module(id.trim_end(), hide_runtime_module))
+      comment.kind == CommentKind::Line && keep(comment.content_span().source_text(source))
     })
     .map(|comment| comment.span.start)
     .collect()
+}
+
+/// Whether the text of a line comment after `//` starts with `{prefix}region` or `{prefix}endregion`.
+fn is_region_marker(text: &str, prefix: &str) -> bool {
+  text
+    .strip_prefix(prefix)
+    .is_some_and(|rest| rest.starts_with("region") || rest.starts_with("endregion"))
 }
 
 /// The module ids whose output `tweak_snapshot` replaces with a `// HIDDEN [...]` line.
@@ -196,32 +231,19 @@ fn is_hidden_module(id: &str, hide_runtime_module: bool) -> bool {
     || id.starts_with(r"\0@oxc-project+runtime@")
 }
 
-/// Rewrite the marker token of every line that starts (after indentation) with
-/// `{from}region` or `{from}endregion`. Line-anchored, so `//# sourceMappingURL` and marker-like
-/// text inside string content never match; only the first token on the line is touched.
-fn map_region_marker_lines(source: &str, from: &str, to: &str) -> String {
-  let mut out = String::with_capacity(source.len() + 64);
-  for line in source.split_inclusive('\n') {
-    let trimmed = line.trim_start();
-    if trimmed.starts_with(from)
-      && (trimmed[from.len()..].starts_with("region")
-        || trimmed[from.len()..].starts_with("endregion"))
-    {
-      out.push_str(&line[..line.len() - trimmed.len()]);
-      out.push_str(to);
-      out.push_str(&trimmed[from.len()..]);
-    } else {
-      out.push_str(line);
-    }
+/// The source type that the harness syntax check uses for a chunk of this format.
+fn chunk_source_type(format: OutputFormat) -> SourceType {
+  match format {
+    OutputFormat::Cjs => SourceType::cjs(),
+    OutputFormat::Esm | OutputFormat::Iife | OutputFormat::Umd => SourceType::mjs(),
   }
-  out
 }
 
 #[cfg(test)]
 mod tests {
   use oxc::span::SourceType;
 
-  use super::{map_region_marker_lines, protect_hidden_module_markers};
+  use super::{protect_hidden_module_markers, restore_region_markers};
 
   #[test]
   fn hidden_modules_get_a_region_pair_without_moving_lines() {
@@ -232,7 +254,7 @@ mod tests {
       "//!#region \\0rolldown/runtime.js\nvar __a = 1;\n//!#endregion\n// a.js\nconst s = \"// \\0rolldown/runtime.js\";\nexport { __a };\n\t//!#region \\0@oxc-project+runtime@0.1.0/helpers/x.js\n\tvar x = 1;\n\t//!#endregion\n"
     );
     assert_eq!(
-      map_region_marker_lines(&protected, "//!#", "//#"),
+      restore_region_markers(&protected, SourceType::mjs()),
       "//#region \\0rolldown/runtime.js\nvar __a = 1;\n//#endregion\n// a.js\nconst s = \"// \\0rolldown/runtime.js\";\nexport { __a };\n\t//#region \\0@oxc-project+runtime@0.1.0/helpers/x.js\n\tvar x = 1;\n\t//#endregion\n"
     );
   }
@@ -251,8 +273,9 @@ mod tests {
 
   #[test]
   fn marker_text_inside_a_template_literal_is_left_as_built() {
-    let source = "const a = `x\n// rolldown:hmr\n\ny`;\nconst b = `x\n// \\0rolldown/runtime.js\ny`;\n\nexport { a, b };\n";
+    let source = "const a = `x\n// rolldown:hmr\n\ny`;\nconst b = `x\n// \\0rolldown/runtime.js\ny`;\n\nconst c = `x\n//#region literal\n//!#region literal\ny`;\nexport { a, b, c };\n";
     assert_eq!(protect_hidden_module_markers(source, SourceType::mjs(), true), None);
+    assert_eq!(restore_region_markers(source, SourceType::mjs()), source);
   }
 
   #[test]
@@ -263,6 +286,6 @@ mod tests {
       protected,
       "//!#region a.js\n\tvar a = 1;\n\t//!#endregion\nconst s = \"//#region not a marker\";\n//# sourceMappingURL=x.map\n"
     );
-    assert_eq!(map_region_marker_lines(&protected, "//!#", "//#"), source);
+    assert_eq!(restore_region_markers(&protected, SourceType::mjs()), source);
   }
 }

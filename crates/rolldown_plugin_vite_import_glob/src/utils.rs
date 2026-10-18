@@ -67,13 +67,13 @@ struct ImportGlobFileData {
 }
 
 #[derive(Debug)]
-struct PathWithGlob<'a> {
+pub struct PathWithGlob<'a> {
   pub path: String,
   pub glob: &'a str,
 }
 
 impl<'a> PathWithGlob<'a> {
-  fn new(mut path: String, glob: &'a str) -> Self {
+  pub fn new(mut path: String, glob: &'a str) -> Self {
     let j = Self::split_path_and_glob_inner(&path, glob);
     let i = Self::find_glob_syntax(&glob[glob.len() - j..]);
     path.truncate(path.len() - i);
@@ -81,7 +81,7 @@ impl<'a> PathWithGlob<'a> {
   }
 
   /// `path` is literal, so its glob syntax is escaped, like vite's `globSafeResolvedPath`.
-  fn to_absolute_glob(&self) -> String {
+  pub fn to_absolute_glob(&self) -> String {
     let mut glob = String::with_capacity(self.path.len() + self.glob.len());
     for char in self.path.chars() {
       if matches!(char, '\\' | '*' | '?' | '[' | ']' | '{' | '}') {

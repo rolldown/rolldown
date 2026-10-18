@@ -12,15 +12,13 @@ asset
 ## main.js
 
 ```js
-//#region other.js
+// other.js
 const URL$1 = () => "local";
 const other = URL$1();
-//#endregion
-//#region main.js
+// main.js
 function href(URL$2) {
 	return new URL("assets/asset-jGaNvs6u.txt", import.meta.url).href;
 }
-//#endregion
 export { href, other };
 
 ```

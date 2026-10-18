@@ -12,13 +12,12 @@ __rolldown_runtime__.registerGraph({
 	localCount: 1,
 	edges: [[]]
 });
-//#region app.js
+// app.js
 const app_hot = __rolldown_runtime__.createModuleHotContext("app.js");
 __rolldown_runtime__.registerModule("app.js");
 app_hot.accept();
 const value = await Promise.resolve(1);
 console.log(value);
-//#endregion
 
 ```
 
@@ -32,11 +31,9 @@ __rolldown_runtime__.registerGraph({
 	edges: [[]],
 	dynamicEdges: { 0: [1] }
 });
-//#region main.js
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js");
 import("./app.js");
-//#endregion
 
 ```
 

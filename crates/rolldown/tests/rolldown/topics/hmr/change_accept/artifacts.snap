@@ -37,12 +37,11 @@ __rolldown_runtime__.registerGraph({
 		[1]
 	]
 });
-//#region child.js
+// child.js
 var child_exports = /* @__PURE__ */ __exportAll({ foo: () => 0 });
 __rolldown_runtime__.createModuleHotContext("child.js");
 __rolldown_runtime__.registerModule("child.js", { exports: child_exports });
-//#endregion
-//#region parent.js
+// parent.js
 var parent_exports = /* @__PURE__ */ __exportAll({});
 const parent_hot = __rolldown_runtime__.createModuleHotContext("parent.js");
 __rolldown_runtime__.registerModule("parent.js", { exports: parent_exports });
@@ -53,13 +52,11 @@ process.on("beforeExit", (code) => {
 	if (code !== 0) return;
 	assert(!globalThis.oldAcceptWasCalled);
 });
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 main_hot.accept("parent.js", () => {});
-//#endregion
 
 ```
 

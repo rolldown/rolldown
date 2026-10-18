@@ -7,43 +7,37 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region cjs_esmodule_flag1.js
+// cjs_esmodule_flag1.js
 var require_cjs_esmodule_flag1 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.foo = 1e3;
 	exports.__esModule = true;
 }));
-//#endregion
-//#region cjs_esmodule_flag2.js
+// cjs_esmodule_flag2.js
 var require_cjs_esmodule_flag2 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.foo = 1e3;
 	Object.defineProperty(exports, "__esModule", { value: true });
 }));
-//#endregion
-//#region cjs_esmodule_flag3.js
+// cjs_esmodule_flag3.js
 var require_cjs_esmodule_flag3 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	exports.foo = 1e3;
 	Object.defineProperty(module.exports, "__esModule", { value: true });
 }));
-//#endregion
-//#region cjs_esmodule_flag4.js
+// cjs_esmodule_flag4.js
 var require_cjs_esmodule_flag4 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	exports.foo = 1e3;
 	module.exports.__esModule = true;
 }));
-//#endregion
-//#region commonjs_without_module_exports.js
+// commonjs_without_module_exports.js
 var require_commonjs_without_module_exports = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.default = 1e3;
 	exports.foo = 1e3;
 }));
-//#endregion
-//#region main.js
+// main.js
 var import_cjs_esmodule_flag1 = /* @__PURE__ */ __toESM(require_cjs_esmodule_flag1());
 var import_cjs_esmodule_flag2 = /* @__PURE__ */ __toESM(require_cjs_esmodule_flag2());
 var import_cjs_esmodule_flag3 = /* @__PURE__ */ __toESM(require_cjs_esmodule_flag3());
 var import_cjs_esmodule_flag4 = /* @__PURE__ */ __toESM(require_cjs_esmodule_flag4());
 var import_commonjs_without_module_exports = /* @__PURE__ */ __toESM(require_commonjs_without_module_exports());
 console.log(import_cjs_esmodule_flag1.default, import_cjs_esmodule_flag2.default, import_cjs_esmodule_flag3.default, import_cjs_esmodule_flag4.default, import_commonjs_without_module_exports.default);
-//#endregion
 
 ```

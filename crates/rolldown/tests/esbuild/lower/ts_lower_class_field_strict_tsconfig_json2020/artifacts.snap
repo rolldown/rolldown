@@ -6,22 +6,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region loose/index.ts
+// loose/index.ts
 var loose_default = class {};
-//#endregion
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
-//#region strict/index.ts
+// strict/index.ts
 var strict_default = class {
 	constructor() {
 		_defineProperty(this, "foo", void 0);
 	}
 };
-//#endregion
-//#region entry.js
+// entry.js
 console.log(loose_default, strict_default);
-//#endregion
 
 ```

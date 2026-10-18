@@ -6,17 +6,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## c.js
 
 ```js
-//#region c.js
+// c.js
 console.log("c");
-//#endregion
 
 ```
 
 ## d.js
 
 ```js
-//#region d.js
+// d.js
 console.log("d");
-//#endregion
 
 ```

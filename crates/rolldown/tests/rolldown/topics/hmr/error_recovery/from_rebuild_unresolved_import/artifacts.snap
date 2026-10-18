@@ -12,18 +12,16 @@ __rolldown_runtime__.registerGraph({
 	localCount: 2,
 	edges: [[], [0]]
 });
-//#region dep.js
+// dep.js
 var dep_exports = /* @__PURE__ */ __exportAll({ value: () => "dep" });
 const dep_hot = __rolldown_runtime__.createModuleHotContext("dep.js");
 __rolldown_runtime__.registerModule("dep.js", { exports: dep_exports });
 if (dep_hot) dep_hot.accept();
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 console.log("dep");
-//#endregion
 
 ```
 
@@ -91,17 +89,15 @@ __rolldown_runtime__.registerGraph({
 	localCount: 2,
 	edges: [[], [0]]
 });
-//#region dep.js
+// dep.js
 var dep_exports = /* @__PURE__ */ __exportAll({ value: () => "dep" });
 const dep_hot = __rolldown_runtime__.createModuleHotContext("dep.js");
 __rolldown_runtime__.registerModule("dep.js", { exports: dep_exports });
 if (dep_hot) dep_hot.accept();
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 console.log("dep");
-//#endregion
 
 ```

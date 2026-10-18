@@ -7,15 +7,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region value.js
+// value.js
 var VALUE;
 function init_value() {
 	return (init_value = __esmMin((() => {
 		VALUE = { value: "entry" };
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 var LOCAL, load;
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -24,7 +23,6 @@ function init_main() {
 		load = () => import("./shared.js").then((module) => module.FORWARDED);
 	})))();
 }
-//#endregion
 init_main();
 export { LOCAL, VALUE, load };
 
@@ -42,21 +40,19 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region forwarded.js
+// forwarded.js
 var FORWARDED;
 function init_forwarded() {
 	return (init_forwarded = __esmMin((() => {
 		FORWARDED = { value: "dynamic" };
 	})))();
 }
-//#endregion
-//#region shared.js
+// shared.js
 function init_shared() {
 	return (init_shared = __esmMin((() => {
 		init_forwarded();
 	})))();
 }
-//#endregion
 init_shared();
 export { FORWARDED };
 
@@ -70,15 +66,14 @@ export { FORWARDED };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region value.js
+// value.js
 var VALUE;
 function init_value() {
 	return (init_value = __esmMin((() => {
 		VALUE = { value: "entry" };
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 var LOCAL, load;
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -87,7 +82,6 @@ function init_main() {
 		load = () => import("./shared.js").then((module) => module.FORWARDED);
 	})))();
 }
-//#endregion
 init_main();
 export { LOCAL, VALUE, load };
 
@@ -105,21 +99,19 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region forwarded.js
+// forwarded.js
 var FORWARDED;
 function init_forwarded() {
 	return (init_forwarded = __esmMin((() => {
 		FORWARDED = { value: "dynamic" };
 	})))();
 }
-//#endregion
-//#region shared.js
+// shared.js
 function init_shared() {
 	return (init_shared = __esmMin((() => {
 		init_forwarded();
 	})))();
 }
-//#endregion
 init_shared();
 export { FORWARDED };
 
@@ -132,13 +124,11 @@ export { FORWARDED };
 ### main.js
 
 ```js
-//#region value.js
+// value.js
 const VALUE = { value: "entry" };
-//#endregion
-//#region main.js
+// main.js
 const LOCAL = "local";
 const load = () => import("./shared.js").then((module) => module.FORWARDED);
-//#endregion
 export { LOCAL, VALUE, load };
 
 ```
@@ -146,9 +136,8 @@ export { LOCAL, VALUE, load };
 ### shared.js
 
 ```js
-//#region forwarded.js
+// forwarded.js
 const FORWARDED = { value: "dynamic" };
-//#endregion
 export { FORWARDED };
 
 ```

@@ -12,18 +12,16 @@ __rolldown_runtime__.registerGraph({
 	localCount: 2,
 	edges: [[], [0]]
 });
-//#region a.ts
+// a.ts
 var a_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 __rolldown_runtime__.createModuleHotContext("a.ts");
 __rolldown_runtime__.registerModule("a.ts", { exports: a_exports });
 const value = "from-a";
-//#endregion
-//#region main.ts
+// main.ts
 var main_exports = /* @__PURE__ */ __exportAll({ result: () => result });
 __rolldown_runtime__.createModuleHotContext("main.ts");
 __rolldown_runtime__.registerModule("main.ts", { exports: main_exports });
 const result = value;
-//#endregion
 export { result };
 
 ```
@@ -48,18 +46,16 @@ __rolldown_runtime__.registerGraph({
 	localCount: 2,
 	edges: [[], [0]]
 });
-//#region b.ts
+// b.ts
 var b_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 __rolldown_runtime__.createModuleHotContext("b.ts");
 __rolldown_runtime__.registerModule("b.ts", { exports: b_exports });
 const value = "from-b";
-//#endregion
-//#region main.ts
+// main.ts
 var main_exports = /* @__PURE__ */ __exportAll({ result: () => result });
 __rolldown_runtime__.createModuleHotContext("main.ts");
 __rolldown_runtime__.registerModule("main.ts", { exports: main_exports });
 const result = value;
-//#endregion
 export { result };
 
 ```

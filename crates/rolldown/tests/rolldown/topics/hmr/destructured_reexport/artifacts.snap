@@ -12,7 +12,7 @@ __rolldown_runtime__.registerGraph({
 	localCount: 2,
 	edges: [[], [0]]
 });
-//#region hmr.js
+// hmr.js
 var hmr_exports = /* @__PURE__ */ __exportAll({
 	aliasA: () => aliasA,
 	aliasB: () => aliasB,
@@ -29,12 +29,10 @@ const { selectA: aliasA, selectB: aliasB, selectC: aliasC } = {
 const plain = "plain";
 console.log(aliasA, aliasB, aliasC, plain);
 hmr_hot.accept();
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
-//#endregion
 
 ```
 

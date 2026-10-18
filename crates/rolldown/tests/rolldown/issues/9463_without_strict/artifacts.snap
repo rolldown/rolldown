@@ -1,0 +1,41 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { t as foo } from "./common~a~shared.js";
+//#region a.js
+(globalThis.sideEffectLog ??= []).push("a");
+foo();
+//#endregion
+
+```
+
+## b.js
+
+```js
+//#region b.js
+(globalThis.sideEffectLog ??= []).push("b");
+import("./common~a~shared.js").then((n) => n.n).then(({ foo }) => {
+	foo();
+});
+//#endregion
+
+```
+
+## common~a~shared.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region shared.js
+var shared_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
+function foo() {
+	(globalThis.sideEffectLog ??= []).push("shared-foo");
+}
+//#endregion
+export { shared_exports as n, foo as t };
+
+```

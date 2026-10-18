@@ -4,12 +4,13 @@
 //! `//#region <id> … //#endregion`. The default `attachDebugInfo: 'simple'` writes only a
 //! `// <id>` line where a module starts, and the final output does not show where it ends: the
 //! runtime is often followed by the chunk's `export { … }` or `require` lines, not by another
-//! module. Before minification the end is still known: the line count of the code that the
-//! bundler recorded for the module (`RenderedModule::code`) gives it, even when a template literal
-//! in the module holds a blank line. `renderChunk` runs right before the internal minify pass, so
-//! this plugin writes the pair there and restores it in `generateBundle`, after every other plugin.
-//! Both hooks change only real comment tokens, so the same text inside a string or template
-//! literal stays.
+//! module. Before minification the end is still known, because the chunk joiner puts a blank line
+//! after each module. The plugin parses the chunk and skips a blank line inside a template literal,
+//! a block comment or JSX, because there the blank line is content. Any other place can take a
+//! comment line without a change in behavior. `renderChunk` runs right before the internal minify
+//! pass, so this plugin writes the pair there and restores it in `generateBundle`, after every
+//! other plugin. Both hooks change only real comment tokens, so the same text inside a string or
+//! template literal stays.
 //!
 //! The pair is disguised as legal comments (`//!#region`). The dce-only pass removes an ordinary
 //! comment together with the statement that follows it, and a lost `//#endregion` makes the
@@ -22,12 +23,15 @@
 //! observes the disguised `//!#region` form.
 
 use std::borrow::Cow;
+use std::cell::OnceCell;
 use std::sync::Arc;
 
 use oxc::allocator::Allocator;
 use oxc::ast::CommentKind;
-use oxc::parser::{ParseOptions, Parser};
-use oxc::span::SourceType;
+use oxc::ast::ast::{JSXElement, JSXFragment, TemplateLiteral};
+use oxc::ast_visit::Visit;
+use oxc::parser::{ParseOptions, Parser, ParserReturn};
+use oxc::span::{SourceType, Span};
 use rolldown::plugin::{
   HookGenerateBundleArgs, HookNoopReturn, HookRenderChunkArgs, HookRenderChunkOutput,
   HookRenderChunkReturn, HookTransformOutputMap, HookUsage, Plugin, PluginContext,
@@ -59,21 +63,9 @@ impl Plugin for HiddenModuleMarkersPlugin {
     if matches!(args.options.minify, MinifyOptions::Enabled(_)) {
       return Ok(None);
     }
-    // The recorded code of a module starts with its `// <id>` line.
-    let hidden_module_lines: Vec<(String, usize)> = args
-      .chunk
-      .modules
-      .values
-      .iter()
-      .filter_map(|module| {
-        let code = module.code()?;
-        let id = code.lines().next()?.strip_prefix("// ")?;
-        is_hidden_module(id, self.hide_runtime_module)
-          .then(|| (id.to_string(), code.lines().count()))
-      })
-      .collect();
     let source_type = chunk_source_type(args.options.format);
-    let Some(code) = protect_hidden_module_markers(&args.code, source_type, &hidden_module_lines)
+    let Some(code) =
+      protect_hidden_module_markers(&args.code, source_type, self.hide_runtime_module)
     else {
       return Ok(None);
     };
@@ -105,68 +97,52 @@ impl Plugin for HiddenModuleMarkersPlugin {
 }
 
 /// Wraps each hidden module of `source` in a disguised `//!#region` pair, and disguises the
-/// `//#region` pairs that `full` mode wrote. `hidden_module_lines` holds the id and the line count
-/// (marker line included) of each hidden module. Returns `None` when nothing changes.
+/// `//#region` pairs that `full` mode wrote. Returns `None` when nothing changes.
 fn protect_hidden_module_markers(
   source: &str,
   source_type: SourceType,
-  hidden_module_lines: &[(String, usize)],
+  hide_runtime_module: bool,
 ) -> Option<String> {
   let mut out = String::with_capacity(source.len() + 64);
   let mut changed = false;
-  let line_count_of = |id: &str| {
-    hidden_module_lines.iter().find(|(hidden_id, _)| hidden_id == id).map(|(_, count)| *count)
-  };
-  // Indentation and end line of the hidden module whose end marker is not written yet.
-  let mut open: Option<(&str, usize)> = None;
   // Parsed only when a line looks like a marker, because most chunks have none.
-  let mut comment_starts: Option<Vec<u32>> = None;
-  let mut is_comment = |offset: usize| {
-    comment_starts
-      .get_or_insert_with(|| {
-        line_comment_starts(source, source_type, |text| {
-          text.strip_prefix(' ').is_some_and(|id| line_count_of(id.trim_end()).is_some())
-            || is_region_marker(text, "#")
-        })
-      })
-      .binary_search(&u32::try_from(offset).unwrap())
-      .is_ok()
-  };
+  let parsed = OnceCell::new();
+  let tokens = || parsed.get_or_init(|| ChunkTokens::new(source, source_type, hide_runtime_module));
+  // Indentation of the hidden module whose end marker is not written yet.
+  let mut open_indent: Option<&str> = None;
   let mut line_start = 0;
-  for (line_index, line) in source.split_inclusive('\n').enumerate() {
+  for line in source.split_inclusive('\n') {
+    let start = line_start;
+    line_start += line.len();
     let trimmed = line.trim_start();
     let indent = &line[..line.len() - trimmed.len()];
-    let trimmed_start = line_start + indent.len();
-    line_start += line.len();
-    if let Some((module_indent, end_line)) = open
-      && line_index == end_line
+    if let Some(module_indent) = open_indent
+      && trimmed.is_empty()
+      && !tokens().is_inside_multiline_text(start)
     {
-      open = None;
+      // The joiner's blank line after the module becomes its end marker, so no line moves.
       out.push_str(module_indent);
       out.push_str("//!#endregion");
-      if trimmed.is_empty() {
-        // The joiner's blank line after the module becomes its end marker, so no line moves.
-        if line.ends_with('\n') {
-          out.push('\n');
-        }
-        continue;
+      if line.ends_with('\n') {
+        out.push('\n');
       }
-      out.push('\n');
+      open_indent = None;
+      continue;
     }
     if let Some(id) = trimmed.strip_prefix("// ")
-      && let Some(line_count) = line_count_of(id.trim_end())
-      && is_comment(trimmed_start)
+      && is_hidden_module(id.trim_end(), hide_runtime_module)
+      && tokens().is_marker_comment(start + indent.len())
     {
       out.push_str(indent);
       out.push_str("//!#region ");
       out.push_str(id);
-      open = Some((indent, line_index + line_count));
+      open_indent = Some(indent);
       changed = true;
       continue;
     }
     if let Some(text) = trimmed.strip_prefix("//")
       && is_region_marker(text, "#")
-      && is_comment(trimmed_start)
+      && tokens().is_marker_comment(start + indent.len())
     {
       out.push_str(indent);
       out.push_str("//!");
@@ -176,7 +152,7 @@ fn protect_hidden_module_markers(
     }
     out.push_str(line);
   }
-  if let Some((module_indent, _)) = open {
+  if let Some(module_indent) = open_indent {
     // The hidden module is the last source of the chunk, so no blank line follows it.
     if !out.ends_with('\n') {
       out.push('\n');
@@ -192,8 +168,18 @@ fn protect_hidden_module_markers(
 
 /// Turns the disguised `//!#region` and `//!#endregion` comments back into `//#` form.
 fn restore_region_markers(source: &str, source_type: SourceType) -> String {
-  let comment_starts =
-    line_comment_starts(source, source_type, |text| is_region_marker(text, "!#"));
+  let allocator = Allocator::default();
+  let ret = parse_chunk(&allocator, source, source_type);
+  let comment_starts: Vec<u32> = ret
+    .program
+    .comments
+    .iter()
+    .filter(|comment| {
+      comment.kind == CommentKind::Line
+        && is_region_marker(comment.content_span().source_text(source), "!#")
+    })
+    .map(|comment| comment.span.start)
+    .collect();
   let mut out = String::with_capacity(source.len());
   let mut line_start = 0;
   for line in source.split_inclusive('\n') {
@@ -214,26 +200,78 @@ fn restore_region_markers(source: &str, source_type: SourceType) -> String {
   out
 }
 
-/// Sorted start offsets of the line comments whose text after `//` passes `keep`. Marker-like
-/// text inside a string or template literal is not a comment token, so it never matches.
-fn line_comment_starts(
-  source: &str,
+/// What a parse of the chunk tells about its marker comments and multi-line tokens.
+struct ChunkTokens {
+  /// Sorted start offsets of the line comments that are `// <hidden id>` or `//#region` markers.
+  /// Marker-like text inside a string or template literal is not a comment, so it is not here.
+  marker_comment_starts: Vec<u32>,
+  /// Spans of the template literals, block comments and JSX, where a blank line is content.
+  multiline_text_spans: Vec<Span>,
+}
+
+impl ChunkTokens {
+  fn new(source: &str, source_type: SourceType, hide_runtime_module: bool) -> Self {
+    let allocator = Allocator::default();
+    let ret = parse_chunk(&allocator, source, source_type);
+    let mut collector = MultilineTextSpans::default();
+    collector.visit_program(&ret.program);
+    let mut multiline_text_spans = collector.0;
+    let mut marker_comment_starts = Vec::new();
+    for comment in &ret.program.comments {
+      if comment.kind == CommentKind::Line {
+        let text = comment.content_span().source_text(source);
+        if text
+          .strip_prefix(' ')
+          .is_some_and(|id| is_hidden_module(id.trim_end(), hide_runtime_module))
+          || is_region_marker(text, "#")
+        {
+          marker_comment_starts.push(comment.span.start);
+        }
+      } else if comment.is_block() {
+        multiline_text_spans.push(comment.span);
+      }
+    }
+    Self { marker_comment_starts, multiline_text_spans }
+  }
+
+  fn is_marker_comment(&self, offset: usize) -> bool {
+    self.marker_comment_starts.binary_search(&u32::try_from(offset).unwrap()).is_ok()
+  }
+
+  fn is_inside_multiline_text(&self, offset: usize) -> bool {
+    let offset = u32::try_from(offset).unwrap();
+    self.multiline_text_spans.iter().any(|span| span.start < offset && offset < span.end)
+  }
+}
+
+/// Collects the spans of the template literals and JSX of a chunk. It does not walk inside them,
+/// because their spans already cover the nested ones.
+#[derive(Default)]
+struct MultilineTextSpans(Vec<Span>);
+
+impl<'a> Visit<'a> for MultilineTextSpans {
+  fn visit_template_literal(&mut self, it: &TemplateLiteral<'a>) {
+    self.0.push(it.span);
+  }
+
+  fn visit_jsx_element(&mut self, it: &JSXElement<'a>) {
+    self.0.push(it.span);
+  }
+
+  fn visit_jsx_fragment(&mut self, it: &JSXFragment<'a>) {
+    self.0.push(it.span);
+  }
+}
+
+/// Parses a chunk with the same settings as the harness syntax check.
+fn parse_chunk<'a>(
+  allocator: &'a Allocator,
+  source: &'a str,
   source_type: SourceType,
-  keep: impl Fn(&str) -> bool,
-) -> Vec<u32> {
-  let allocator = Allocator::default();
-  let ret = Parser::new(&allocator, source, source_type.with_jsx(true))
+) -> ParserReturn<'a> {
+  Parser::new(allocator, source, source_type.with_jsx(true))
     .with_options(ParseOptions { allow_return_outside_function: true, ..Default::default() })
-    .parse();
-  ret
-    .program
-    .comments
-    .iter()
-    .filter(|comment| {
-      comment.kind == CommentKind::Line && keep(comment.content_span().source_text(source))
-    })
-    .map(|comment| comment.span.start)
-    .collect()
+    .parse()
 }
 
 /// Whether a line comment's text after `//` starts with `{prefix}region` or `{prefix}endregion`.
@@ -262,20 +300,12 @@ fn chunk_source_type(format: OutputFormat) -> SourceType {
 mod tests {
   use oxc::span::SourceType;
 
-  use super::{is_hidden_module, protect_hidden_module_markers, restore_region_markers};
-
-  fn hidden_lines(lines: &[(&str, usize)]) -> Vec<(String, usize)> {
-    lines.iter().map(|(id, count)| ((*id).to_string(), *count)).collect()
-  }
+  use super::{protect_hidden_module_markers, restore_region_markers};
 
   #[test]
   fn hidden_modules_get_a_region_pair_without_moving_lines() {
     let source = "// \\0rolldown/runtime.js\nvar __a = 1;\n\n// a.js\nconst s = \"// \\0rolldown/runtime.js\";\nexport { __a };\n\t// \\0@oxc-project+runtime@0.1.0/helpers/x.js\n\tvar x = 1;\n";
-    let lines = hidden_lines(&[
-      (r"\0rolldown/runtime.js", 2),
-      (r"\0@oxc-project+runtime@0.1.0/helpers/x.js", 2),
-    ]);
-    let protected = protect_hidden_module_markers(source, SourceType::mjs(), &lines).unwrap();
+    let protected = protect_hidden_module_markers(source, SourceType::mjs(), true).unwrap();
     assert_eq!(
       protected,
       "//!#region \\0rolldown/runtime.js\nvar __a = 1;\n//!#endregion\n// a.js\nconst s = \"// \\0rolldown/runtime.js\";\nexport { __a };\n\t//!#region \\0@oxc-project+runtime@0.1.0/helpers/x.js\n\tvar x = 1;\n\t//!#endregion\n"
@@ -288,40 +318,36 @@ mod tests {
 
   #[test]
   fn shown_runtime_is_left_as_built() {
-    // `render_chunk` leaves a shown runtime out of the hidden-module list.
-    assert!(!is_hidden_module(r"\0rolldown/runtime.js", false));
     assert_eq!(
       protect_hidden_module_markers(
         "// \\0rolldown/runtime.js\nvar __a = 1;\n",
         SourceType::mjs(),
-        &[]
+        false
       ),
       None
     );
   }
 
   #[test]
-  fn hidden_module_ends_at_its_recorded_line_count() {
-    let source = "// \\0rolldown/runtime.js\nvar t = `a\n\nb`;\n\nexport { t };\n";
-    let lines = hidden_lines(&[(r"\0rolldown/runtime.js", 4)]);
+  fn blank_lines_inside_a_hidden_module_token_do_not_end_it() {
+    let source = "// \\0rolldown/runtime.js\n/* c\n\n*/\nvar t = `a\n\nb`;\n\nexport { t };\n";
     assert_eq!(
-      protect_hidden_module_markers(source, SourceType::mjs(), &lines).unwrap(),
-      "//!#region \\0rolldown/runtime.js\nvar t = `a\n\nb`;\n//!#endregion\nexport { t };\n"
+      protect_hidden_module_markers(source, SourceType::mjs(), true).unwrap(),
+      "//!#region \\0rolldown/runtime.js\n/* c\n\n*/\nvar t = `a\n\nb`;\n//!#endregion\nexport { t };\n"
     );
   }
 
   #[test]
   fn marker_text_inside_a_template_literal_is_left_as_built() {
     let source = "const a = `x\n// rolldown:hmr\n\ny`;\nconst b = `x\n// \\0rolldown/runtime.js\ny`;\n\nconst c = `x\n//#region literal\n//!#region literal\ny`;\nexport { a, b, c };\n";
-    let lines = hidden_lines(&[("rolldown:hmr", 2), (r"\0rolldown/runtime.js", 2)]);
-    assert_eq!(protect_hidden_module_markers(source, SourceType::mjs(), &lines), None);
+    assert_eq!(protect_hidden_module_markers(source, SourceType::mjs(), true), None);
     assert_eq!(restore_region_markers(source, SourceType::mjs()), source);
   }
 
   #[test]
   fn full_mode_pairs_are_disguised_reversibly() {
     let source = "//#region a.js\n\tvar a = 1;\n\t//#endregion\nconst s = \"//#region not a marker\";\n//# sourceMappingURL=x.map\n";
-    let protected = protect_hidden_module_markers(source, SourceType::mjs(), &[]).unwrap();
+    let protected = protect_hidden_module_markers(source, SourceType::mjs(), true).unwrap();
     assert_eq!(
       protected,
       "//!#region a.js\n\tvar a = 1;\n\t//!#endregion\nconst s = \"//#region not a marker\";\n//# sourceMappingURL=x.map\n"

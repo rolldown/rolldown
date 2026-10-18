@@ -122,22 +122,29 @@ This can be more convenient than adding `@__PURE__` to every call site when you 
 
 ## Marking Entire Modules as Side-Effect-Free
 
-While you can mark individual expressions or functions, you can also mark entire modules as side-effect-free. If you mark a module as side-effect-free, Rolldown will treat every statement in that module as side-effect-free when none of its exports are used.
+While you can mark individual expressions or functions, you can also mark entire modules as side-effect-free (via `package.json` `"sideEffects"`, [`treeshake.moduleSideEffects`](/reference/InputOptions.treeshake#modulesideeffects), or plugin hooks — see below).
 
-::: details What does "none of its exports are used" mean?
+Marking a module as side-effect-free means: **evaluating that module is unnecessary unless its body is observable**. Rolldown treats the body as observable when any of the following is true:
 
-This refers to the exports that are **defined in the module itself**, not re-exports from other modules.
+1. One of the module's **own exports** is used (an export declared in this module, not a re-export of another module's binding).
+2. The module's **namespace object** is used (for example `import * as ns from './mod.js'`, or requiring an ESM module as CommonJS).
+
+If neither applies, Rolldown does not need to evaluate the module: its top-level statements can be dropped, importers do not load it solely for re-exported bindings, and code splitting does not treat it as reachable from entries that only use those re-exports.
+
+::: details Own exports vs re-exports vs namespace
+
+"Own exports" are bindings **defined in the module itself**. Re-exports do **not** make the module's body observable. Observing the namespace object does.
 
 ```js [utils.js]
 // assume that this file is marked as side-effect-free
 window.loaded = true; // side effect
 
-// Defined in this file - counts as "its exports"
+// Defined in this file — counts as an own export
 export function add(a, b) {
   return a + b;
 }
 
-// Re-exported from another file - these does NOT count
+// Re-exported from another file — does NOT make this module's body observable
 export { multiply } from './math.js';
 export * from './math2.js';
 import { divide } from './math3.js';
@@ -146,15 +153,20 @@ export { divide };
 
 In this example:
 
-- If you `import { add } from './utils.js'`, the module is considered "used" because `add` is defined in `utils.js`
-- If you only `import { multiply } from './utils.js'`, the module is considered "unused" because `multiply` is just re-exported, not defined here
+- `import { add } from './utils.js'` — the body is observable, because `add` is defined in `utils.js`
+- `import { multiply } from './utils.js'` only — the body is **not** observable; `multiply` is only re-exported, so evaluation of `utils.js` is skipped and the binding resolves to `math.js`
+- `import * as utils from './utils.js'` (or otherwise using the namespace) — the body is observable
+
+This own-export vs re-export distinction is the same classification used by [lazy barrel optimization](/in-depth/lazy-barrel-optimization).
 
 :::
 
-For example, consider this case:
+### What this enables
+
+**1. Drop the module when nothing needs its body**
 
 ```js
-// math.js
+// math.js (marked as side-effect-free)
 window.myGlobal = 'hello'; // side effect: modifies global
 
 export function add(a, b) {
@@ -166,23 +178,19 @@ import './math.js';
 console.log('main');
 ```
 
-If `math.js` is marked as side-effect-free, the output will be:
+Output:
 
 ```js
 console.log('main');
 ```
 
-:::: warning This is conditional
+**2. Keep side effects when the body is observable**
 
-The statements are only treated as side-effect-free when none of the module's exports are used. If any export is used, side effects are preserved.
-
-::: details Example
-
-For example, consider this case:
+If an own export (or the namespace) is used, evaluating the module is required, so top-level side effects are preserved:
 
 ```js
 // math.js (marked as side-effect-free)
-window.myGlobal = 'hello'; // side effect: modifies global
+window.myGlobal = 'hello';
 
 export function add(a, b) {
   return a + b;
@@ -193,7 +201,7 @@ import { add } from './math.js';
 console.log('main', add(2, 3));
 ```
 
-The output will be:
+Output:
 
 ```js
 window.myGlobal = 'hello';
@@ -205,19 +213,34 @@ function add(a, b) {
 console.log('main', add(2, 3));
 ```
 
-On the other hand, if you mark every statement in `math.js` as side-effect-free, the output will be:
+To drop those side effects even when `add` is used, mark the individual statements as pure (for example with `@__PURE__`) instead of relying only on the module-level flag.
 
-```js
-function add(a, b) {
-  return a + b;
-}
+::: tip Binding-reading side effects
 
-console.log('main', add(2, 3));
-```
+For user-declared side-effect-free ESM modules, side-effect statements that **read module-level bindings** (for example `foo.bar = 1` where `foo` is local) are included only once the body is demanded. Bare statements with no module-level references (for example `console.log('hi')`) still join when the module is included for any reason. User-defined entry modules, modules that use `eval`, and CommonJS modules are not subject to this on-demand gating.
 
 :::
 
-::::
+**3. Skip intermediate modules on pure re-export paths**
+
+When an entry only imports re-exported bindings from a side-effect-free barrel, Rolldown does not load the barrel for that entry. Used bindings resolve to their canonical owners, and code splitting does not put unused leaves into a shared chunk with that entry:
+
+```js
+// barrel.js (side-effect-free)
+import { HeavyService } from './heavy.js';
+export const createService = () => new HeavyService();
+export { light } from './light.js';
+
+// entry-light.js
+import { light } from './barrel.js';
+console.log(light());
+
+// entry-heavy.js
+import { createService } from './barrel.js';
+console.log(createService().run());
+```
+
+With two entries, the light entry's chunk contains `light` (not the barrel or `heavy`); the heavy entry's chunk contains the barrel and `heavy`, because `createService` is an **own** export of the barrel. Without marking the barrel side-effect-free, both entries would typically share a chunk that pulls `heavy` into the light path as well.
 
 #### `sideEffects` in package.json
 

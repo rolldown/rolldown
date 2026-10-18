@@ -1,0 +1,19 @@
+crates/rolldown/src/utils/renamer.rs
+  s_d43624d0762669::t_81c7f279a1306d 142
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "cdd43090f98e3775bd7f9d48ada346f6e00b9f81",
+  "prompts": {},
+  "sessions": {
+    "s_d43624d0762669": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7f7265c1-aa11-4a4b-9d11-215aef9a579c",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

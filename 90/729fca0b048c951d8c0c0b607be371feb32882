@@ -1,0 +1,19 @@
+packages/rolldown/tests/cli/__snapshots__/cli-e2e.test.ts.snap
+  s_365843c86d59a8::t_06f6a7f499fb55 27,181,335,489
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "90729fca0b048c951d8c0c0b607be371feb32882",
+  "prompts": {},
+  "sessions": {
+    "s_365843c86d59a8": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a13402-99b4-7363-b2e2-d988e3a1d899",
+        "model": "unknown"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

@@ -1,0 +1,57 @@
+crates/rolldown/src/stages/generate_stage/code_splitting.rs
+  s_7b2a6ae90950dd::t_e03d9f55696f49 15,24-26,600-601,919-922,939,1128-1222,1229,1272,1309-1310,1316-1336
+crates/rolldown/src/stages/generate_stage/compute_wrapped_esm_init_metadata.rs
+  s_7b2a6ae90950dd::t_176fa91b43e8df 121,143-177,183,194-236,343,345-354,356,403-404,427-428,431-432,436-437,500,503
+crates/rolldown/src/stages/generate_stage/order_analysis.rs
+  s_7b2a6ae90950dd::t_35e2092cb5ae88 97,110,113-117,333-338,575-585,594-596,599,632-638,640-648
+crates/rolldown/src/stages/generate_stage/order_wrapping.rs
+  s_7b2a6ae90950dd::t_53e564fb2ed0c5 626,693-728
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_cjs_export_star_fallback/artifacts.snap
+  s_7b2a6ae90950dd::t_872157eaee4d57 9,15,25-34,57-62,64,68,72,75-76,80,84-88,90-91,95-96,100-104,107-109,113,123-132,155-182,193-194
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_external_star_fallback/_test.mjs
+  s_7b2a6ae90950dd::t_9531ed01416600 42-50
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_external_star_fallback/artifacts.snap
+  s_7b2a6ae90950dd::t_b05e8c25ea3c15 6,9-18,52-57,59,63,67,70-71,75,79-83,85-86,90-91,95-99,102-104,108,111-117,133-141,145-152,154-155,157
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_tla_fallback/artifacts.snap
+  s_7b2a6ae90950dd::t_38d2fdf2212e99 9-21,27,30,59-75,98-104,109,112,114-115,121-123,128,130,134,137-141
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/export_star_as_namespace_folded_member/artifacts.snap
+  s_7b2a6ae90950dd::t_af4c8b3bcf7602 20,22,28,37-49,69-70,82-117,137,145,152-153,163-164
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/export_star_reexported_namespace_opaque_read/artifacts.snap
+  s_7b2a6ae90950dd::t_6f073c0cd66cab 20,22,28,44-56,76-77,89-90,100-101,105,137-171,181-182
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_sensitive/artifacts.snap
+  s_7b2a6ae90950dd::t_30583b2209ae1a 9-10,29-30,38,47,60,79-87,97,108-109,128-129,137,146,159,178-186,196
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_unwrapped/named/artifacts.snap
+  s_7b2a6ae90950dd::t_4dd4accef7e80b 9,27-28,37-39,43,54,72-73,82-84,88
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_unwrapped/namespace/artifacts.snap
+  s_7b2a6ae90950dd::t_ae152f536fbab9 9,27-28,37-39,43,54,72-73,82-84,88
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_unwrapped/star/artifacts.snap
+  s_7b2a6ae90950dd::t_0174ddc2108afb 9,22-23,32-34,38,49,62-63,72-74,78
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/pure_definer_star_barrel_split_readers/artifacts.snap
+  s_7b2a6ae90950dd::t_058bdd89708fae 9,11-12,14,21,23-24,33-35,37,39-41,43,55,66-67,95-105,123
+crates/rolldown/tests/rolldown/issues/11033/artifacts.snap
+  s_7b2a6ae90950dd::t_912740b9d7b132 14-15,27-62,82,90,97-98,108-109,131,133,139,148-160
+crates/rolldown/tests/rolldown/issues/11033_side_effect_free_package/artifacts.snap
+  s_7b2a6ae90950dd::t_1b9ed97ee74e97 14-15,27-28,38-39,43,46,65-100,110-111,123-124,133,135,137,141,144-157,164,166,168
+internal-docs/code-splitting/design.md
+  s_7b2a6ae90950dd::t_ff43c2df20be86 217-226,553
+internal-docs/code-splitting/implementation.md
+  s_7b2a6ae90950dd::t_76b02f56f4640a 45-46,52,195-201
+packages/rolldown/tests/behaviors/strict-execution-order-loading.test.ts
+  s_7b2a6ae90950dd::t_19f30e3ab4cc3d 1-279
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "d6424e8ff40885cdc81e37898822d4b974ce3133",
+  "prompts": {},
+  "sessions": {
+    "s_7b2a6ae90950dd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11469-befc-7c02-a2ba-975feb5f6cd9",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

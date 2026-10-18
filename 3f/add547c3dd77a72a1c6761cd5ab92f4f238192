@@ -1,0 +1,20 @@
+crates/rolldown_plugin_vite_resolve/src/vite_resolve_plugin.rs
+  s_90371e29368ff6::t_bbd00b13a95aac 231,268-271
+  s_90371e29368ff6::t_ec768a017d8d6d 17-19,40,218-230,232-244,272-279,451,472,564-576
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "3fadd547c3dd77a72a1c6761cd5ab92f4f238192",
+  "prompts": {},
+  "sessions": {
+    "s_90371e29368ff6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a134d7-4331-7c41-aeda-14ab8da1440a",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

@@ -1,0 +1,127 @@
+crates/rolldown/src/stages/generate_stage/mod.rs
+  s_d43624d0762669::t_ec54ab737a1635 9
+crates/rolldown/src/utils/chunk/deconflict_chunk_symbols.rs
+  s_d43624d0762669::t_f0db5942e2c20c 12,20,59-69,100,108,118-119,132,158,160-162,193-208,217,227-228,300,302,308-333,337,341,347,359-362,365,368-369,371-373
+crates/rolldown/src/utils/renamer.rs
+  s_d43624d0762669::t_ea8daf933e8758 1,8,11,18-78,88,96,118,220-223,226-228,239-241,247-248,253-254,256-259,262-263,266-268,324-330
+crates/rolldown/tests/rolldown/issues/9630/artifacts.snap
+  s_d43624d0762669::t_0d75ed1ffc4f31 102,104-105
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_entry_local_renamed_onto_sibling_local/_config.json
+  s_d43624d0762669::t_d37ad9dc6250de 1-6
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_entry_local_renamed_onto_sibling_local/_test.mjs
+  s_d43624d0762669::t_dfdc6857b31915 1-15
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_entry_local_renamed_onto_sibling_local/artifacts.snap
+  s_d43624d0762669::t_930625087d2bdc 1-32
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_entry_local_renamed_onto_sibling_local/main.cjs
+  s_d43624d0762669::t_33e40d8a8b2ddd 1-8
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_local_renamed_onto_sibling_local/_config.json
+  s_d43624d0762669::t_444e1b309acb44 1-6
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_local_renamed_onto_sibling_local/_test.mjs
+  s_d43624d0762669::t_907019b937ed82 1-12
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_local_renamed_onto_sibling_local/artifacts.snap
+  s_d43624d0762669::t_cca50f3acab335 1-48
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_local_renamed_onto_sibling_local/dup.cjs
+  s_d43624d0762669::t_3f61f2e89e79c9 1-8
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_local_renamed_onto_sibling_local/lib.cjs
+  s_d43624d0762669::t_44914e73b30729 1-5
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_local_renamed_onto_sibling_local/main.js
+  s_d43624d0762669::t_67d0119c004503 1-5
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_shadowing_require_namespace_object/artifacts.snap
+  s_d43624d0762669::t_8ea69f954a9141 11,25-26
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_shadowing_suffixed_wrapper_name/artifacts.snap
+  s_d43624d0762669::t_49cccd3eee23c4 11,16,24-25,28,45,50,58-59,62
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_shadowing_wrapper_name_unused_require/artifacts.snap
+  s_d43624d0762669::t_858d6e0354b1da 11,16,25-27,30,47,52,61-63,66
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_wrapper_renamed_onto_importer_nested_binding/_config.json
+  s_d43624d0762669::t_db1e80e7e78ae7 1-6
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_wrapper_renamed_onto_importer_nested_binding/_test.mjs
+  s_d43624d0762669::t_98fb2e6b70a5c6 1-13
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_wrapper_renamed_onto_importer_nested_binding/artifacts.snap
+  s_d43624d0762669::t_682a8533004836 1-48
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_wrapper_renamed_onto_importer_nested_binding/dup.cjs
+  s_d43624d0762669::t_4aa36a6de091e8 1-5
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_wrapper_renamed_onto_importer_nested_binding/main.js
+  s_d43624d0762669::t_bbec800f7969d1 1-8
+crates/rolldown/tests/rolldown/topics/deconflict/cross_chunk_require_binding_shadowed_by_nested_binding/_config.json
+  s_d43624d0762669::t_041b0915428f9f 1-9
+crates/rolldown/tests/rolldown/topics/deconflict/cross_chunk_require_binding_shadowed_by_nested_binding/_test.mjs
+  s_d43624d0762669::t_dabd5ef7e113cf 1-8
+crates/rolldown/tests/rolldown/topics/deconflict/cross_chunk_require_binding_shadowed_by_nested_binding/artifacts.snap
+  s_d43624d0762669::t_5f7c760957a6dc 1-46
+crates/rolldown/tests/rolldown/topics/deconflict/cross_chunk_require_binding_shadowed_by_nested_binding/main.js
+  s_d43624d0762669::t_3ea5e46cc16cc0 1-7
+crates/rolldown/tests/rolldown/topics/deconflict/cross_chunk_require_binding_shadowed_by_nested_binding/other.js
+  s_d43624d0762669::t_0feeb1adb813f8 1-3
+crates/rolldown/tests/rolldown/topics/deconflict/cross_chunk_require_binding_shadowed_by_nested_binding/shared.js
+  s_d43624d0762669::t_e7cb4c8910b086 1-3
+crates/rolldown/tests/rolldown/topics/deconflict/interop_namespace_shadowed_by_nested_binding/_config.json
+  s_d43624d0762669::t_e38cea5a48f7fb 1-5
+crates/rolldown/tests/rolldown/topics/deconflict/interop_namespace_shadowed_by_nested_binding/_test.mjs
+  s_d43624d0762669::t_47c7045c47c2ca 1-5
+crates/rolldown/tests/rolldown/topics/deconflict/interop_namespace_shadowed_by_nested_binding/artifacts.snap
+  s_d43624d0762669::t_d96c0e94499e3e 1-22
+crates/rolldown/tests/rolldown/topics/deconflict/interop_namespace_shadowed_by_nested_binding/dep.cjs
+  s_d43624d0762669::t_a9f58437f46856 1-5
+crates/rolldown/tests/rolldown/topics/deconflict/interop_namespace_shadowed_by_nested_binding/main.js
+  s_d43624d0762669::t_09f92a82b0a06b 1-7
+crates/rolldown/tests/rolldown/topics/deconflict/require_wrapper_shadowed_by_nested_binding/_config.json
+  s_d43624d0762669::t_dc239a923981f7 1-5
+crates/rolldown/tests/rolldown/topics/deconflict/require_wrapper_shadowed_by_nested_binding/_test.mjs
+  s_d43624d0762669::t_485145887df821 1-5
+crates/rolldown/tests/rolldown/topics/deconflict/require_wrapper_shadowed_by_nested_binding/artifacts.snap
+  s_d43624d0762669::t_278f9a934fe5e0 1-22
+crates/rolldown/tests/rolldown/topics/deconflict/require_wrapper_shadowed_by_nested_binding/dep.cjs
+  s_d43624d0762669::t_3fcac0afb1a207 1
+crates/rolldown/tests/rolldown/topics/deconflict/require_wrapper_shadowed_by_nested_binding/main.js
+  s_d43624d0762669::t_530ce59522d06d 1-5
+crates/rolldown/tests/rolldown/topics/deconflict/require_wrapper_shadowed_by_nested_binding_in_cjs/_config.json
+  s_d43624d0762669::t_6caea8476891ee 1-5
+crates/rolldown/tests/rolldown/topics/deconflict/require_wrapper_shadowed_by_nested_binding_in_cjs/_test.mjs
+  s_d43624d0762669::t_e063f81a69519a 1-5
+crates/rolldown/tests/rolldown/topics/deconflict/require_wrapper_shadowed_by_nested_binding_in_cjs/artifacts.snap
+  s_d43624d0762669::t_12aeba88eaba4a 1-26
+crates/rolldown/tests/rolldown/topics/deconflict/require_wrapper_shadowed_by_nested_binding_in_cjs/dep.cjs
+  s_d43624d0762669::t_afa5cf07a69a7a 1
+crates/rolldown/tests/rolldown/topics/deconflict/require_wrapper_shadowed_by_nested_binding_in_cjs/lib.cjs
+  s_d43624d0762669::t_9cbe7fd9ea41a4 1-5
+crates/rolldown/tests/rolldown/topics/deconflict/require_wrapper_shadowed_by_nested_binding_in_cjs/main.js
+  s_d43624d0762669::t_11700a7f3ec3d8 1-4
+crates/rolldown/tests/rolldown/topics/deconflict/runtime_helper_shadowed_by_cjs_local/_config.json
+  s_d43624d0762669::t_467245a9795b53 1-5
+crates/rolldown/tests/rolldown/topics/deconflict/runtime_helper_shadowed_by_cjs_local/_test.mjs
+  s_d43624d0762669::t_555dc1f2f6e62f 1-6
+crates/rolldown/tests/rolldown/topics/deconflict/runtime_helper_shadowed_by_cjs_local/artifacts.snap
+  s_d43624d0762669::t_ab891fd8052807 1-27
+crates/rolldown/tests/rolldown/topics/deconflict/runtime_helper_shadowed_by_cjs_local/esm.js
+  s_d43624d0762669::t_b05c5f1b6a7b5b 1
+crates/rolldown/tests/rolldown/topics/deconflict/runtime_helper_shadowed_by_cjs_local/lib.cjs
+  s_d43624d0762669::t_5cd4787efadbbd 1-6
+crates/rolldown/tests/rolldown/topics/deconflict/runtime_helper_shadowed_by_cjs_local/main.js
+  s_d43624d0762669::t_f478931aefa8ff 1-4
+crates/rolldown/tests/rolldown/topics/deconflict/runtime_helper_shadowed_by_nested_binding/_config.json
+  s_d43624d0762669::t_0d04cf72779820 1-5
+crates/rolldown/tests/rolldown/topics/deconflict/runtime_helper_shadowed_by_nested_binding/_test.mjs
+  s_d43624d0762669::t_fee60a7c579e91 1-5
+crates/rolldown/tests/rolldown/topics/deconflict/runtime_helper_shadowed_by_nested_binding/artifacts.snap
+  s_d43624d0762669::t_24c87f64fa0dc1 1-38
+crates/rolldown/tests/rolldown/topics/deconflict/runtime_helper_shadowed_by_nested_binding/dep.cjs
+  s_d43624d0762669::t_0554a5f9e58aa6 1
+crates/rolldown/tests/rolldown/topics/deconflict/runtime_helper_shadowed_by_nested_binding/main.js
+  s_d43624d0762669::t_25adf635094307 1-6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "2ad8ba094c2f491d315418dc2d1f1e796ccccf9f",
+  "prompts": {},
+  "sessions": {
+    "s_d43624d0762669": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7f7265c1-aa11-4a4b-9d11-215aef9a579c",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

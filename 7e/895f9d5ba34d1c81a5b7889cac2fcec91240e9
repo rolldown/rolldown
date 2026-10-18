@@ -1,0 +1,29 @@
+crates/rolldown/src/utils/renamer.rs
+  s_d43624d0762669::t_6a183ef6ef6348 71-81,369,374,412-415,424,430
+crates/rolldown/tests/rolldown/topics/deconflict/external_namespace_shadowed_through_reexport/_config.json
+  s_d43624d0762669::t_0b2f502f803c65 1-7
+crates/rolldown/tests/rolldown/topics/deconflict/external_namespace_shadowed_through_reexport/_test.mjs
+  s_d43624d0762669::t_22d84673d4bb2a 1-7
+crates/rolldown/tests/rolldown/topics/deconflict/external_namespace_shadowed_through_reexport/artifacts.snap
+  s_d43624d0762669::t_684cbf4b7fb5ad 1-18
+crates/rolldown/tests/rolldown/topics/deconflict/external_namespace_shadowed_through_reexport/main.js
+  s_d43624d0762669::t_cb79668446b32c 1-8
+crates/rolldown/tests/rolldown/topics/deconflict/external_namespace_shadowed_through_reexport/reexport.js
+  s_d43624d0762669::t_394ac8d0db3c97 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7e895f9d5ba34d1c81a5b7889cac2fcec91240e9",
+  "prompts": {},
+  "sessions": {
+    "s_d43624d0762669": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7f7265c1-aa11-4a4b-9d11-215aef9a579c",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+packages/metrics-lab/lib/measure.mjs
+  s_a5d2b62f6e0c47::t_53c066a3cd84cc 36-58,60-61,64-79,165-187,333-351,384
+packages/metrics-lab/lib/parity/run.mjs
+  s_a5d2b62f6e0c47::t_5d3bebd60c0197 1-160
+packages/metrics-lab/lib/serve.mjs
+  s_a5d2b62f6e0c47::t_9e135413d7244f 58-82,100-105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "6cfb7edd038a8c1f411dd05b64e4a3755ecb7fba",
+  "prompts": {},
+  "sessions": {
+    "s_a5d2b62f6e0c47": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "775b5026-9ed2-4425-bc22-64655b277c62",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

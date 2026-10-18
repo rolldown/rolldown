@@ -1,0 +1,51 @@
+crates/rolldown/src/esm_init_obligations.rs
+  s_fe2c3c2eb70356::t_8472ffbc8514e4 93-95
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/emergent_cycle_eager_reexport_overlay/artifacts.snap
+  s_fe2c3c2eb70356::t_a29f3e09b18c52 113
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/emergent_cycle_partial_forwarder/artifacts.snap
+  s_fe2c3c2eb70356::t_ddca6ac380f656 126
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/transparent_plain_reexport_chunk_cycle/_config.json
+  s_fe2c3c2eb70356::t_d93999f6a905b6 1-39
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/transparent_plain_reexport_chunk_cycle/_test.mjs
+  s_fe2c3c2eb70356::t_b108e0b5aeb18f 1-17
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/transparent_plain_reexport_chunk_cycle/artifacts.snap
+  s_fe2c3c2eb70356::t_a45003f20d99a7 1-407
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/transparent_plain_reexport_chunk_cycle/main.js
+  s_fe2c3c2eb70356::t_be8e24c8c0e200 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/transparent_plain_reexport_chunk_cycle/shared-equality.js
+  s_fe2c3c2eb70356::t_c5858974f4a219 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/transparent_plain_reexport_chunk_cycle/toast.js
+  s_fe2c3c2eb70356::t_fef48808348694 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/transparent_plain_reexport_chunk_cycle/utilities-page.js
+  s_fe2c3c2eb70356::t_8410221932f954 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/transparent_plain_reexport_chunk_cycle/utilities/index.js
+  s_fe2c3c2eb70356::t_cc67020d3378cc 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/transparent_plain_reexport_entry/_config.json
+  s_fe2c3c2eb70356::t_89418557026a0e 1-11
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/transparent_plain_reexport_entry/_test.mjs
+  s_fe2c3c2eb70356::t_30a75adb574640 1-6
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/transparent_plain_reexport_entry/artifacts.snap
+  s_fe2c3c2eb70356::t_59208f19207b01 1-56
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/transparent_plain_reexport_entry/main.js
+  s_fe2c3c2eb70356::t_f5139f74a1fb6d 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/transparent_plain_reexport_entry/shared-equality.js
+  s_fe2c3c2eb70356::t_fdc7e8a221c480 1-5
+internal-docs/code-splitting/implementation.md
+  s_fe2c3c2eb70356::t_1062e7f75c54d8 127-128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "69a285a5070e3438dcb63ccfbb864cdb6139dc89",
+  "prompts": {},
+  "sessions": {
+    "s_fe2c3c2eb70356": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0f7f3-0356-7483-bde5-e73ee2a4fbf6",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

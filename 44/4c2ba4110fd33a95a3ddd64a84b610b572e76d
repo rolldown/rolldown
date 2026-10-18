@@ -1,0 +1,35 @@
+crates/rolldown/tests/rolldown/plugin/render_chunk_origin/shared.js
+  s_cc8bfbe4c61a33::t_c2adffe5024e5c 1
+crates/rolldown_plugin/src/types/hook_render_chunk_args.rs
+  s_cc8bfbe4c61a33::t_3096964cf8a5fd 4-6,12-13
+crates/rolldown_plugin_chunk_import_map/src/chunk_ids.rs
+  s_cc8bfbe4c61a33::t_df2d0215ffebbf 1-158
+crates/rolldown/tests/rolldown/plugin/mod.rs
+  s_cc8bfbe4c61a33::t_575cdf7521e960 2
+packages/rolldown/tests/behaviors/chunk-import-map.test.ts
+  s_cc8bfbe4c61a33::t_f6000c74209a52 1-249
+crates/rolldown/tests/rolldown/plugin/render_chunk_origin/b.js
+  s_cc8bfbe4c61a33::t_f35ade93b4fe64 1-2
+crates/rolldown/tests/rolldown/plugin/render_chunk_origin/a.js
+  s_cc8bfbe4c61a33::t_d69f6569c4a7e8 1-2
+Cargo.lock
+  s_cc8bfbe4c61a33::t_3f8c787cbe528d 2898,2905
+crates/rolldown_plugin_chunk_import_map/src/lib.rs
+  s_cc8bfbe4c61a33::t_38e578df4819a2 19-22,37-47,57-66,81-87,95-96,99,101-104
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "444c2ba4110fd33a95a3ddd64a84b610b572e76d",
+  "prompts": {},
+  "sessions": {
+    "s_cc8bfbe4c61a33": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11ed5-6ab1-7152-89c5-2f186165d3ef",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

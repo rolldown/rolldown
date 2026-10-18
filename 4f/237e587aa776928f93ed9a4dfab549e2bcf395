@@ -1,0 +1,19 @@
+crates/rolldown/src/stages/generate_stage/order_analysis.rs
+  s_eb793ced011c57::t_b3a9ac0dcaf5c4 115
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4f237e587aa776928f93ed9a4dfab549e2bcf395",
+  "prompts": {},
+  "sessions": {
+    "s_eb793ced011c57": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a12e2f-062f-7ea1-846f-965e835134a2",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

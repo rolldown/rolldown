@@ -1,0 +1,57 @@
+crates/rolldown/src/ast_scanner/impl_visit.rs
+  s_bd04312b686058::t_d795f2a558bfd0 637
+crates/rolldown/src/ast_scanner/import_analyzer.rs
+  s_bd04312b686058::t_fc8deb41aa3da2 15-23,59-61
+crates/rolldown/src/stages/link_stage/bind_imports_and_exports.rs
+  s_bd04312b686058::t_2df0bb8619ace0 13,730-732,786-795,820-825,839-841,846,849,1907-1913,1915,1920,1926-1931,1934,1936-1966,1973
+crates/rolldown/tests/integration/snapshots/integration__test262__test262_module_code.snap
+  s_bd04312b686058::t_12ebdc5b27361e 5,1364,1366,1371,1374-1376,1380,1382,1605
+crates/rolldown/tests/rolldown/issues/11146/_config.json
+  s_bd04312b686058::t_5cf53e3dcccfcc 2-8
+crates/rolldown/tests/rolldown/issues/11146/artifacts.snap
+  s_bd04312b686058::t_534e86c6dab64b 4,10,12-31,33,44-53,61-70,78-87,95-121,129-146,148,152-154,159-308,312-346,348,352-354,358-402
+crates/rolldown/tests/rolldown/issues/11146/main.js
+  s_bd04312b686058::t_eaa13eac0819d9 1,4,6-34
+crates/rolldown/tests/rolldown/issues/11146_missing_assign/_config.json
+  s_bd04312b686058::t_3cb0bbe760d5fd 1-3
+crates/rolldown/tests/rolldown/issues/11146_missing_assign/artifacts.snap
+  s_bd04312b686058::t_d4b4cf2aca8cfb 1-72
+crates/rolldown/tests/rolldown/issues/11146_missing_assign/dynamic.js
+  s_bd04312b686058::t_8b929c39477ea2 1-2
+crates/rolldown/tests/rolldown/issues/11146_missing_assign/main.js
+  s_bd04312b686058::t_0073a9690f0c0c 1-9
+crates/rolldown/tests/rolldown/issues/11146_missing_assign/nested.js
+  s_bd04312b686058::t_25d0ddf57f0e2b 1
+crates/rolldown/tests/rolldown/issues/11146_missing_assign/server.js
+  s_bd04312b686058::t_df30f06874b38a 1
+crates/rolldown/tests/rolldown/issues/11146_sloppy_output/_config.json
+  s_bd04312b686058::t_5f3113c5c9ea5a 1-6
+crates/rolldown/tests/rolldown/issues/11146_sloppy_output/artifacts.snap
+  s_bd04312b686058::t_cf68e68a7e1a9b 1-72
+crates/rolldown/tests/rolldown/issues/11146_sloppy_output/dynamic.js
+  s_bd04312b686058::t_c3622ef72c0348 1-2
+crates/rolldown/tests/rolldown/issues/11146_sloppy_output/main.js
+  s_bd04312b686058::t_aa2df3757a87d2 1-9
+crates/rolldown/tests/rolldown/issues/11146_sloppy_output/nested.js
+  s_bd04312b686058::t_f0c8a9b0bbe6fb 1
+crates/rolldown/tests/rolldown/issues/11146_sloppy_output/server.js
+  s_bd04312b686058::t_125f61a1916862 1
+crates/rolldown/tests/test262_failures.json
+  s_bd04312b686058::t_f634f982ac0759 84,120
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4ef67eefe1df3de36360229cbaed6ea1ee5230ab",
+  "prompts": {},
+  "sessions": {
+    "s_bd04312b686058": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a28054c5-9362-4660-908e-dae73191824e",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

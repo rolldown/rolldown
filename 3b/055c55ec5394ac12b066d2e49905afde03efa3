@@ -1,0 +1,21 @@
+packages/rollup-tests/src/intercept/utils.js
+  s_bb78e5e725a861::t_9a3e3f8e7c1b49 64-70,75,82
+packages/rollup-tests/test/form/found-tree-shaking-not-align.js
+  s_bb78e5e725a861::t_6c15880a13b99c 9-11,27-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "3b055c55ec5394ac12b066d2e49905afde03efa3",
+  "prompts": {},
+  "sessions": {
+    "s_bb78e5e725a861": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1143a-750a-7ae3-b342-eac31c6a99f6",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

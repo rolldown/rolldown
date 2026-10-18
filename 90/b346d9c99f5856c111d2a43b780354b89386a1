@@ -1,0 +1,33 @@
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_nested_binding_renamed_onto_root_local/artifacts.snap
+  s_d43624d0762669::t_e10b028b3df2b5 1-46
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_nested_binding_renamed_onto_root_local/lib.cjs
+  s_d43624d0762669::t_99603aa1c622e6 1-11
+crates/rolldown/tests/rolldown/topics/deconflict/node_mode_external_namespace_shadowed_by_nested_binding/_config.json
+  s_d43624d0762669::t_670f0aae3129b0 1-7
+crates/rolldown/tests/rolldown/topics/deconflict/node_mode_external_namespace_shadowed_by_nested_binding/_test.mjs
+  s_d43624d0762669::t_c21f46312e1da4 1-9
+crates/rolldown/tests/rolldown/topics/deconflict/node_mode_external_namespace_shadowed_by_nested_binding/artifacts.snap
+  s_d43624d0762669::t_1669d9b14caa6e 1-29
+crates/rolldown/tests/rolldown/topics/deconflict/node_mode_external_namespace_shadowed_by_nested_binding/main.js
+  s_d43624d0762669::t_084c572e4c37d6 1-4
+crates/rolldown/tests/rolldown/topics/deconflict/node_mode_external_namespace_shadowed_by_nested_binding/node-mode.mjs
+  s_d43624d0762669::t_b624aae5ef0e83 1-7
+crates/rolldown/tests/rolldown/topics/deconflict/node_mode_external_namespace_shadowed_by_nested_binding/non-node.js
+  s_d43624d0762669::t_1dd51293673ace 1-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "90b346d9c99f5856c111d2a43b780354b89386a1",
+  "prompts": {},
+  "sessions": {
+    "s_d43624d0762669": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7f7265c1-aa11-4a4b-9d11-215aef9a579c",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

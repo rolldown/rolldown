@@ -1,0 +1,49 @@
+Cargo.lock
+  s_e0b36c0f58eb01::t_4a9c1343115625 3018
+crates/rolldown_plugin_vite_build_import_analysis/Cargo.toml
+  s_e0b36c0f58eb01::t_2eb9c873244414 27
+crates/rolldown_plugin_vite_build_import_analysis/src/ast_visit.rs
+  s_c401ca5a3a61c5::t_355cd9fd05f091 29-30
+packages/rolldown/tests/fixtures/builtin-plugin/build-import-analysis/unique-preload-markers/a.js
+  s_8d7cab34225035::t_74c06c3977e8fa 1
+packages/rolldown/tests/fixtures/builtin-plugin/build-import-analysis/unique-preload-markers/b.js
+  s_8d7cab34225035::t_f24f3a83b9d264 1
+packages/rolldown/tests/fixtures/builtin-plugin/build-import-analysis/unique-preload-markers/c.js
+  s_8d7cab34225035::t_198da6fc4e8213 1
+packages/rolldown/tests/fixtures/builtin-plugin/build-import-analysis/unique-preload-markers/main.js
+  s_8d7cab34225035::t_3443e4f619ffc2 1-7
+packages/rolldown/tests/fixtures/builtin-plugin/build-import-analysis/unique-preload-markers/other.js
+  s_8d7cab34225035::t_ef4117c63af0b7 1-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "d076e65617f703b5e63cf4e56cd779f68ede617b",
+  "prompts": {},
+  "sessions": {
+    "s_8d7cab34225035": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11ac3-bd2c-7812-acd9-e5556cbc27fc",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    },
+    "s_c401ca5a3a61c5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11aec-42f5-7de1-b493-fe23a6220ba5",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    },
+    "s_e0b36c0f58eb01": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11acb-f2d4-7050-97a3-c63e9923b40a",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

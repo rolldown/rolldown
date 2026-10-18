@@ -1,0 +1,25 @@
+crates/rolldown/src/utils/chunk/deconflict_chunk_symbols.rs
+  s_d43624d0762669::t_97e7670f907f15 39-40,373
+crates/rolldown/src/utils/renamer.rs
+  s_d43624d0762669::t_77d756d8e424f3 18-19
+internal-docs/renaming/design.md
+  s_d43624d0762669::t_1a11a1879fb13f 1-52
+internal-docs/renaming/implementation.md
+  s_d43624d0762669::t_698461b7680499 1-72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "2ce1d759a82c762b400a610ea3db7012ce7e1d0c",
+  "prompts": {},
+  "sessions": {
+    "s_d43624d0762669": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7f7265c1-aa11-4a4b-9d11-215aef9a579c",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

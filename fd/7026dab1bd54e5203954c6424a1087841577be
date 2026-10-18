@@ -1,0 +1,19 @@
+crates/rolldown/src/stages/generate_stage/code_splitting.rs
+  s_ab93ea321193d1::t_ea7f2c65210bcf 697-699,719-721,729-737
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "fd7026dab1bd54e5203954c6424a1087841577be",
+  "prompts": {},
+  "sessions": {
+    "s_ab93ea321193d1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a10a35-e0dc-79b1-8da3-d016157f5d14",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

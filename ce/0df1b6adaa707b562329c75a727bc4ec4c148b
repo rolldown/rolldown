@@ -1,0 +1,35 @@
+crates/rolldown/src/stages/generate_stage/mod.rs
+  s_3e9cbcdc43d843::t_f786f1aea2e316 381,386
+crates/rolldown_common/src/inner_bundler_options/types/sanitize_filename.rs
+  s_3e9cbcdc43d843::t_7cbd6c33a77cda 5-7,41-49
+crates/rolldown_utils/src/sanitize_filename.rs
+  s_3e9cbcdc43d843::t_c734bdde65bd42 39-49,54,101-104
+packages/rolldown/tests/fixtures/topics/preserve-modules/sanitize-filename-drive-prefix/_config.ts
+  s_d43624d0762669::t_7ae8273fe18217 1-36
+packages/rolldown/tests/fixtures/topics/preserve-modules/sanitize-filename-drive-prefix/entry.js
+  s_d43624d0762669::t_dda19db0c65949 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ce0df1b6adaa707b562329c75a727bc4ec4c148b",
+  "prompts": {},
+  "sessions": {
+    "s_3e9cbcdc43d843": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "da4eae2b-f4cf-479f-9e2b-024949da0345",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    },
+    "s_d43624d0762669": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7f7265c1-aa11-4a4b-9d11-215aef9a579c",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

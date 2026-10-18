@@ -1,0 +1,37 @@
+crates/rolldown/src/utils/chunk/deconflict_chunk_symbols.rs
+  s_d43624d0762669::t_00645f8ecacf87 423
+crates/rolldown/src/utils/renamer.rs
+  s_d43624d0762669::t_ca0bce7a70e407 11-12,590-616
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_require_local_shadowing_lowered_dynamic_import/_config.json
+  s_d43624d0762669::t_130c6435b8e88d 1-10
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_require_local_shadowing_lowered_dynamic_import/_test.mjs
+  s_d43624d0762669::t_ac8dd59efb34fb 1-11
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_require_local_shadowing_lowered_dynamic_import/artifacts.snap
+  s_d43624d0762669::t_bbc64d70616f1a 1-36
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_require_local_shadowing_lowered_dynamic_import/esm.js
+  s_d43624d0762669::t_efb5729380a781 1
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_require_local_shadowing_lowered_dynamic_import/main.js
+  s_d43624d0762669::t_0bfa0115f0a54f 1-4
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_require_local_shadowing_lowered_dynamic_import/object-lib.cjs
+  s_d43624d0762669::t_b9d68ca49164a7 1-6
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_require_local_shadowing_lowered_dynamic_import/promise-lib.cjs
+  s_d43624d0762669::t_aade43e197a3c2 1-7
+internal-docs/renaming/implementation.md
+  s_d43624d0762669::t_1f2a7cb0cbd314 53,59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "df7f05e7e622eb73f34ff33ec15ce539a0fa6cbb",
+  "prompts": {},
+  "sessions": {
+    "s_d43624d0762669": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7f7265c1-aa11-4a4b-9d11-215aef9a579c",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

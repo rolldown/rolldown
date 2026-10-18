@@ -1,0 +1,43 @@
+crates/rolldown_plugin_vite_resolve/src/vite_resolve_plugin.rs
+  s_90371e29368ff6::t_bbd00b13a95aac 227,264-267
+  s_90371e29368ff6::t_ec768a017d8d6d 38,219-221,222-224,228-240,268-275,560-572
+  s_9863e80e9758ea::t_bdf8b094dc1da9 17,46,129,180,225-226,447,468
+packages/rolldown/src/binding.d.cts
+  s_32ba0e8d7777c0::t_e13e922ce936fb 3056
+packages/rolldown/src/rolldown-binding.wasi.d.cts
+  s_32ba0e8d7777c0::t_7778154710b6ff 3051
+crates/rolldown_binding/src/options/plugin/config/binding_vite_resolve_plugin_config.rs
+  s_32ba0e8d7777c0::t_765c9318d37943 28,79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "3c706e1194733bc5e63ddf2c40db076f4c625a8c",
+  "prompts": {},
+  "sessions": {
+    "s_32ba0e8d7777c0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1399c-f646-7f91-b2c8-62586a032cde",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    },
+    "s_90371e29368ff6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a134d7-4331-7c41-aeda-14ab8da1440a",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    },
+    "s_9863e80e9758ea": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a139e0-d53b-7950-974d-0230ac9a3cc0",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

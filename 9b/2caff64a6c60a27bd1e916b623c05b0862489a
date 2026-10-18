@@ -1,0 +1,27 @@
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_wrapper_renamed_onto_importer_nested_binding/_config.json
+  s_d43624d0762669::t_b95a5c4180c297 1-6
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_wrapper_renamed_onto_importer_nested_binding/_test.mjs
+  s_d43624d0762669::t_1d111a273e61f9 1-13
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_wrapper_renamed_onto_importer_nested_binding/artifacts.snap
+  s_d43624d0762669::t_599266b929f0b1 1-48
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_wrapper_renamed_onto_importer_nested_binding/dup.cjs
+  s_d43624d0762669::t_ff9662e1e6a5d4 1-5
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_wrapper_renamed_onto_importer_nested_binding/main.js
+  s_d43624d0762669::t_be23d416342211 1-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "9b2caff64a6c60a27bd1e916b623c05b0862489a",
+  "prompts": {},
+  "sessions": {
+    "s_d43624d0762669": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7f7265c1-aa11-4a4b-9d11-215aef9a579c",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

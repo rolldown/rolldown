@@ -1,0 +1,29 @@
+crates/rolldown_plugin_utils/src/data_to_esm.rs
+  s_2092e3a36ee475::t_eb58501d6a4093 13-14
+crates/rolldown_plugin_vite_json/src/lib.rs
+  s_2092e3a36ee475::t_2e61f534e6f590 60,62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "91f3f370390e2bee9cc8a0e6cfa640565f9dc36f",
+  "prompts": {},
+  "sessions": {
+    "s_2092e3a36ee475": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "75281a3e-ba4e-470f-96d6-c5941cb02120",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    },
+    "s_d43624d0762669": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7f7265c1-aa11-4a4b-9d11-215aef9a579c",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

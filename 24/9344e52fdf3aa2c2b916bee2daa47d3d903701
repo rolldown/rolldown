@@ -1,0 +1,23 @@
+docs/apis/plugin-api/hook-filters.md
+  s_b5f33a887bb89a::t_858b757a7315bb 75
+packages/rolldown/src/plugin/docs/object-hook.md
+  s_b5f33a887bb89a::t_da96a9526989e4 34
+packages/rolldown/src/plugin/hook-filter.ts
+  s_b5f33a887bb89a::t_c273906a488e89 74,76-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "249344e52fdf3aa2c2b916bee2daa47d3d903701",
+  "prompts": {},
+  "sessions": {
+    "s_b5f33a887bb89a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0f72f-b5ca-7e30-95de-3356f9ee0684",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

@@ -1,0 +1,47 @@
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_nested_binding_renamed_onto_root_local/artifacts.snap
+  s_d43624d0762669::t_e10b028b3df2b5 1-46
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_nested_binding_renamed_onto_root_local/lib.cjs
+  s_d43624d0762669::t_99603aa1c622e6 1-11
+crates/rolldown/tests/rolldown/topics/deconflict/node_mode_external_namespace_shadowed_by_nested_binding/_config.json
+  s_d43624d0762669::t_670f0aae3129b0 1-7
+crates/rolldown/tests/rolldown/topics/deconflict/node_mode_external_namespace_shadowed_by_nested_binding/_test.mjs
+  s_d43624d0762669::t_c21f46312e1da4 1-9
+crates/rolldown/tests/rolldown/topics/deconflict/node_mode_external_namespace_shadowed_by_nested_binding/artifacts.snap
+  s_d43624d0762669::t_1669d9b14caa6e 1-29
+crates/rolldown/tests/rolldown/topics/deconflict/node_mode_external_namespace_shadowed_by_nested_binding/main.js
+  s_d43624d0762669::t_084c572e4c37d6 1-4
+crates/rolldown/tests/rolldown/topics/deconflict/node_mode_external_namespace_shadowed_by_nested_binding/node-mode.mjs
+  s_d43624d0762669::t_b624aae5ef0e83 1-7
+crates/rolldown/tests/rolldown/topics/deconflict/node_mode_external_namespace_shadowed_by_nested_binding/non-node.js
+  s_d43624d0762669::t_1dd51293673ace 1-3
+crates/rolldown/src/utils/renamer.rs
+  s_d43624d0762669::t_81c7f279a1306d 139
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_entry_local_renamed_onto_sibling_local/main.cjs
+  s_d43624d0762669::t_5d9195865d2259 1-4
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_local_renamed_onto_sibling_local/dup.cjs
+  s_d43624d0762669::t_ea1d6ed1030b2b 1-5
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_local_renamed_onto_sibling_local/lib.cjs
+  s_d43624d0762669::t_a26a08788a1eac 1-2
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_shadowing_require_namespace_object/main.js
+  s_d43624d0762669::t_e4d523ec7c7879 10-11
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_shadowing_wrapper_name_unused_require/lib.cjs
+  s_d43624d0762669::t_861138ff7c8aa6 5-6,9-10
+internal-docs/renaming/implementation.md
+  s_d43624d0762669::t_dec3a4cc46df3e 44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a76c641e3fe9daaf4d603c66497607121715cd48",
+  "prompts": {},
+  "sessions": {
+    "s_d43624d0762669": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7f7265c1-aa11-4a4b-9d11-215aef9a579c",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

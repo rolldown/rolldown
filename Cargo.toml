@@ -338,3 +338,7 @@ opt-level = "s"
 # it will strip these information for non-debug files
 debug = "full"
 strip = "none"
+
+# TEMPORARY experiment: skip the exports key check when SKIP_EXPORTS_KEY_CHECK is set.
+[patch.crates-io]
+oxc_resolver = { git = "https://github.com/IWANABETHATGUY/oxc_resolver", branch = "perf/skip-exports-key-check" }

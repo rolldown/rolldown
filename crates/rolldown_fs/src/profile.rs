@@ -464,7 +464,7 @@ fn prefetch_report(build_start: Instant) {
 // `ROLLDOWN_FS_DIRCACHE_PERSIST=<file>` keeps the listings between builds. A stored listing is
 // used when one `stat` of the directory gives the same stamp: adding, removing or renaming an
 // entry changes the directory's mtime and ctime.
-// Caveat: names match by exact case, but APFS `lstat` is case-insensitive by default.
+// Caveat: names match by exact case, but APFS and NTFS `lstat` are case-insensitive by default.
 //
 // Experiment #4, `ROLLDOWN_FS_CONTENT_CACHE=<file>`: keep the content of every file that the
 // loader and the resolver (`package.json`) read, with a stamp per file, like git's index. A read
@@ -478,7 +478,8 @@ fn prefetch_report(build_start: Instant) {
 // A file or directory changed less than 1 s ago is not stored (git's "racily clean" problem).
 // Both files are written on a background thread at build end; the next load waits for it.
 
-/// dev, ino, size, mtime s, mtime ns, ctime s, ctime ns
+/// dev, ino, size, mtime s, mtime ns, ctime s, ctime ns.
+/// On Windows: 0, 0, size, last write s, ns, creation s, ns (the fields git for Windows uses).
 pub type Stamp = [i64; 7];
 const CC_MAGIC: &[u8; 8] = b"RDCC0002";
 const DC_MAGIC: &[u8; 8] = b"RDDC0001";
@@ -560,22 +561,41 @@ fn stamp_from(m: &std::fs::Metadata) -> Stamp {
     m.ctime_nsec(),
   ]
 }
-#[cfg(not(unix))]
+/// Stable std has no inode or change time on Windows, so the stamp has size, write and creation time.
+#[cfg(windows)]
+fn stamp_from(m: &std::fs::Metadata) -> Stamp {
+  use std::os::windows::fs::MetadataExt;
+  /// `FILETIME` counts 100 ns ticks from 1601-01-01; the stamp counts from 1970-01-01.
+  fn unix_time(ticks: u64) -> (i64, i64) {
+    let t = ticks.cast_signed() - 116_444_736_000_000_000;
+    (t.div_euclid(10_000_000), t.rem_euclid(10_000_000) * 100)
+  }
+  let (ms, mns) = unix_time(m.last_write_time());
+  let (cs, cns) = unix_time(m.creation_time());
+  [0, 0, m.file_size().cast_signed(), ms, mns, cs, cns]
+}
+#[cfg(not(any(unix, windows)))]
 fn stamp_from(_m: &std::fs::Metadata) -> Stamp {
   [0; 7]
 }
 
-/// The stamp needs unix metadata, so the cache env vars are ignored on other targets.
-const STAMPS_SUPPORTED: bool = cfg!(unix);
+/// Other targets (wasi) have no stamp, so they ignore the cache env vars.
+const STAMPS_SUPPORTED: bool = cfg!(any(unix, windows));
 
 #[cfg(unix)]
-fn os_str_bytes(s: &std::ffi::OsStr) -> &[u8] {
+fn os_str_bytes(s: &std::ffi::OsStr) -> std::borrow::Cow<'_, [u8]> {
   use std::os::unix::ffi::OsStrExt;
-  s.as_bytes()
+  std::borrow::Cow::Borrowed(s.as_bytes())
 }
-#[cfg(not(unix))]
-fn os_str_bytes(s: &std::ffi::OsStr) -> &[u8] {
-  s.to_str().unwrap_or_default().as_bytes()
+/// UTF-16 code units, so a name that is not valid Unicode keeps its own key.
+#[cfg(windows)]
+fn os_str_bytes(s: &std::ffi::OsStr) -> std::borrow::Cow<'_, [u8]> {
+  use std::os::windows::ffi::OsStrExt;
+  std::borrow::Cow::Owned(s.encode_wide().flat_map(u16::to_le_bytes).collect())
+}
+#[cfg(not(any(unix, windows)))]
+fn os_str_bytes(s: &std::ffi::OsStr) -> std::borrow::Cow<'_, [u8]> {
+  std::borrow::Cow::Borrowed(s.to_str().unwrap_or_default().as_bytes())
 }
 
 #[cfg(unix)]
@@ -583,7 +603,13 @@ fn os_string_from_bytes(b: &[u8]) -> std::ffi::OsString {
   use std::os::unix::ffi::OsStrExt;
   std::ffi::OsStr::from_bytes(b).to_os_string()
 }
-#[cfg(not(unix))]
+#[cfg(windows)]
+fn os_string_from_bytes(b: &[u8]) -> std::ffi::OsString {
+  use std::os::windows::ffi::OsStringExt;
+  let units: Vec<u16> = b.as_chunks::<2>().0.iter().map(|c| u16::from_le_bytes(*c)).collect();
+  std::ffi::OsString::from_wide(&units)
+}
+#[cfg(not(any(unix, windows)))]
 fn os_string_from_bytes(b: &[u8]) -> std::ffi::OsString {
   String::from_utf8_lossy(b).into_owned().into()
 }
@@ -657,14 +683,16 @@ impl Writer {
   fn path(&mut self, p: &Path) {
     let b = os_str_bytes(p.as_os_str());
     self.bytes(&(b.len() as u32).to_le_bytes());
-    self.bytes(b);
+    self.bytes(&b);
   }
 }
 
+/// A failed save only costs the next build its cache. On Windows, a scanner can hold the file open.
 fn write_atomic(dst: &Path, data: &[u8]) {
   let tmp = dst.with_extension("tmp");
-  std::fs::write(&tmp, data).unwrap();
-  std::fs::rename(&tmp, dst).unwrap();
+  if std::fs::write(&tmp, data).and_then(|()| std::fs::rename(&tmp, dst)).is_err() {
+    let _ = std::fs::remove_file(&tmp);
+  }
 }
 
 // ---- stored content
@@ -1336,7 +1364,7 @@ fn warm_save() -> Option<String> {
             let b = os_str_bytes(name);
             out.bytes(&[*kind]);
             out.bytes(&(b.len() as u16).to_le_bytes());
-            out.bytes(b);
+            out.bytes(&b);
           }
         }
         write_atomic(dir_persist_path().unwrap(), &out.0);

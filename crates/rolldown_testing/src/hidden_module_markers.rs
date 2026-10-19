@@ -14,9 +14,8 @@
 //!
 //! The pair is disguised as legal comments (`//!#region`). The dce-only pass removes an ordinary
 //! comment together with the statement that follows it, and a lost `//#endregion` makes the
-//! snapshot hide user code. `full`-mode `//#region` pairs get the same disguise. The end marker
-//! replaces the blank line that the chunk joiner puts after each module, so no line moves and the
-//! existing sourcemap stays valid.
+//! snapshot hide user code. The end marker replaces the blank line that the chunk joiner puts
+//! after each module, so no line moves and the existing sourcemap stays valid.
 //!
 //! The pairs are a harness artifact: production builds do not have them, but the `dist` files a
 //! `_test.mjs` reads do. A fixture's own `generateBundle` hook runs before the restore and
@@ -96,8 +95,8 @@ impl Plugin for HiddenModuleMarkersPlugin {
   }
 }
 
-/// Wraps each hidden module of `source` in a disguised `//!#region` pair, and disguises the
-/// `//#region` pairs that `full` mode wrote. Returns `None` when nothing changes.
+/// Wraps each hidden module of `source` in a disguised `//!#region` pair. Returns `None` when
+/// nothing changes.
 fn protect_hidden_module_markers(
   source: &str,
   source_type: SourceType,
@@ -140,16 +139,6 @@ fn protect_hidden_module_markers(
       changed = true;
       continue;
     }
-    if let Some(text) = trimmed.strip_prefix("//")
-      && is_region_marker(text, "#")
-      && tokens().is_marker_comment(start + indent.len())
-    {
-      out.push_str(indent);
-      out.push_str("//!");
-      out.push_str(text);
-      changed = true;
-      continue;
-    }
     out.push_str(line);
   }
   if let Some(module_indent) = open_indent {
@@ -176,7 +165,7 @@ fn restore_region_markers(source: &str, source_type: SourceType) -> String {
     .iter()
     .filter(|comment| {
       comment.kind == CommentKind::Line
-        && is_region_marker(comment.content_span().source_text(source), "!#")
+        && is_disguised_marker(comment.content_span().source_text(source))
     })
     .map(|comment| comment.span.start)
     .collect();
@@ -202,8 +191,8 @@ fn restore_region_markers(source: &str, source_type: SourceType) -> String {
 
 /// What a parse of the chunk tells about its marker comments and multi-line tokens.
 struct ChunkTokens {
-  /// Sorted start offsets of the line comments that are `// <hidden id>` or `//#region` markers.
-  /// Marker-like text inside a string or template literal is not a comment, so it is not here.
+  /// Sorted start offsets of the line comments that are `// <hidden id>` markers. Marker-like
+  /// text inside a string or template literal is not a comment, so it is not here.
   marker_comment_starts: Vec<u32>,
   /// Spans of the template literals, block comments and JSX, where a blank line is content.
   multiline_text_spans: Vec<Span>,
@@ -223,7 +212,6 @@ impl ChunkTokens {
         if text
           .strip_prefix(' ')
           .is_some_and(|id| is_hidden_module(id.trim_end(), hide_runtime_module))
-          || is_region_marker(text, "#")
         {
           marker_comment_starts.push(comment.span.start);
         }
@@ -274,10 +262,10 @@ fn parse_chunk<'a>(
     .parse()
 }
 
-/// Whether a line comment's text after `//` starts with `{prefix}region` or `{prefix}endregion`.
-fn is_region_marker(text: &str, prefix: &str) -> bool {
+/// Whether a line comment's text after `//` starts with `!#region` or `!#endregion`.
+fn is_disguised_marker(text: &str) -> bool {
   text
-    .strip_prefix(prefix)
+    .strip_prefix("!#")
     .is_some_and(|rest| rest.starts_with("region") || rest.starts_with("endregion"))
 }
 
@@ -342,16 +330,5 @@ mod tests {
     let source = "const a = `x\n// rolldown:hmr\n\ny`;\nconst b = `x\n// \\0rolldown/runtime.js\ny`;\n\nconst c = `x\n//#region literal\n//!#region literal\ny`;\nexport { a, b, c };\n";
     assert_eq!(protect_hidden_module_markers(source, SourceType::mjs(), true), None);
     assert_eq!(restore_region_markers(source, SourceType::mjs()), source);
-  }
-
-  #[test]
-  fn full_mode_pairs_are_disguised_reversibly() {
-    let source = "//#region a.js\n\tvar a = 1;\n\t//#endregion\nconst s = \"//#region not a marker\";\n//# sourceMappingURL=x.map\n";
-    let protected = protect_hidden_module_markers(source, SourceType::mjs(), true).unwrap();
-    assert_eq!(
-      protected,
-      "//!#region a.js\n\tvar a = 1;\n\t//!#endregion\nconst s = \"//#region not a marker\";\n//# sourceMappingURL=x.map\n"
-    );
-    assert_eq!(restore_region_markers(&protected, SourceType::mjs()), source);
   }
 }

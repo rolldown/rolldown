@@ -24,16 +24,12 @@ pub fn render_ecma_module(
     return RenderEcmaModuleOutput { sources: None, warnings: vec![] };
   }
   let mut sources: Vec<Box<dyn rolldown_sourcemap::Source + Send + Sync>> = Vec::with_capacity(6);
-  // `simple` marks only where a module starts, like esbuild and bun. `full` keeps the
-  // `//#region` pair so editors can fold each module.
-  match options.experimental.attach_debug_info {
-    Some(AttachDebugInfo::Simple) => {
-      sources.push(Box::new(concat_string!("// ", module.debug_id)));
-    }
-    Some(AttachDebugInfo::Full) => {
-      sources.push(Box::new(concat_string!("//#region ", module.debug_id)));
-    }
-    Some(AttachDebugInfo::None) | None => {}
+  // Mark only where a module starts, like esbuild and bun.
+  if matches!(
+    options.experimental.attach_debug_info,
+    Some(AttachDebugInfo::Simple | AttachDebugInfo::Full)
+  ) {
+    sources.push(Box::new(concat_string!("// ", module.debug_id)));
   }
 
   let enable_sourcemap = options.sourcemap.is_some() && !module.is_virtual();
@@ -59,10 +55,6 @@ pub fn render_ecma_module(
     }
   } else {
     sources.push(Box::new(render_output.code));
-  }
-
-  if options.experimental.is_attach_debug_info_full() {
-    sources.push(Box::new("//#endregion"));
   }
 
   RenderEcmaModuleOutput { sources: Some(Arc::from(sources.into_boxed_slice())), warnings }

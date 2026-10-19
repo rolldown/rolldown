@@ -475,7 +475,7 @@ fn prefetch_report(build_start: Instant) {
 // `ROLLDOWN_FS_CONTENT_CACHE_COLD=1` ignores both stored files (measures a cold build + save).
 // `ROLLDOWN_FS_WARM_EARLY=1`: `BindingBundler::new()` (the `rolldown()` call) loads both files and
 // checks every stored stamp on `ROLLDOWN_FS_WARM_THREADS` (default 4) threads.
-// A file or directory changed less than 1 s ago is not stored (git's "racily clean" problem).
+// A file or directory changed less than 2 s ago is not stored (git's "racily clean" problem).
 // Both files are written on a background thread at build end; the next load waits for it.
 
 /// dev, ino, size, mtime s, mtime ns, ctime s, ctime ns.
@@ -618,13 +618,17 @@ fn stamp_of(path: &Path) -> Option<Stamp> {
   std::fs::metadata(path).ok().map(|m| stamp_from(&m))
 }
 
+/// FAT stores mtime in 2 s steps, so a shorter window can store a file that changes again with the
+/// same stamp.
+const RACY_WINDOW_NS: i128 = 2_000_000_000;
+
 /// Some file systems (FUSE) report mtime 0, so the stamp cannot show an edit that keeps the size.
 fn is_hot(s: &Stamp) -> bool {
   let now = std::time::SystemTime::now()
     .duration_since(std::time::UNIX_EPOCH)
     .map_or(0, |d| d.as_nanos() as i128);
   let mtime = i128::from(s[3]) * 1_000_000_000 + i128::from(s[4]);
-  mtime <= 0 || now - mtime < 1_000_000_000
+  mtime <= 0 || now - mtime < RACY_WINDOW_NS
 }
 
 /// The early check result if there is one, else one `stat` now.

@@ -3,6 +3,7 @@
   clippy::print_stderr,
   clippy::cast_possible_truncation,
   clippy::cast_precision_loss,
+  clippy::cast_sign_loss,
   clippy::missing_panics_doc
 )]
 use std::{
@@ -481,10 +482,10 @@ fn prefetch_report(build_start: Instant) {
 /// dev, ino, size, mtime s, mtime ns, ctime s, ctime ns.
 /// On Windows: 0, 0, size, last write s, ns, creation s, ns (the fields git for Windows uses).
 pub type Stamp = [i64; 7];
-const CC_MAGIC: &[u8; 8] = b"RDCC0002";
+const CC_MAGIC: &[u8; 8] = b"RDCC0003";
 const DC_MAGIC: &[u8; 8] = b"RDDC0001";
 /// Mode 3 file: per directory, only the names that were probed (kind byte `MISSING` = absent).
-const DP_MAGIC: &[u8; 8] = b"RDDP0001";
+const DP_MAGIC: &[u8; 8] = b"RDDP0002";
 /// Kind bits: 1 file, 2 dir, 4 symlink, 8 missing (mode 3 only).
 const MISSING: u8 = 8;
 const UNKNOWN: u8 = 0;
@@ -629,6 +630,101 @@ fn is_hot(s: &Stamp) -> bool {
     .map_or(0, |d| d.as_nanos() as i128);
   let mtime = i128::from(s[3]) * 1_000_000_000 + i128::from(s[4]);
   mtime <= 0 || now - mtime < RACY_WINDOW_NS
+}
+
+/// Network file systems can answer `stat` from an attribute cache (NFS `actimeo`, 3-60 s), and
+/// their clock can differ from ours, so a stamp there cannot prove that a file did not change.
+/// FUSE can report any stamp. The cache stores nothing from these file systems.
+fn is_local_fs(s: &Stamp, path: &Path) -> bool {
+  /// One answer per device. A build uses few devices, so a list is enough.
+  static SEEN: RwLock<Vec<(i64, bool)>> = RwLock::new(Vec::new());
+  let key = fs_key(s, path);
+  if let Some(&(_, local)) = SEEN.read().unwrap().iter().find(|e| e.0 == key) {
+    return local;
+  }
+  let Some(local) = fs_type_is_local(path) else { return false };
+  SEEN.write().unwrap().push((key, local));
+  local
+}
+
+#[cfg(not(windows))]
+fn fs_key(s: &Stamp, _path: &Path) -> i64 {
+  s[0]
+}
+/// The Windows stamp has no device, so the drive letter is the key (-1 for a UNC path).
+#[cfg(windows)]
+fn fs_key(_s: &Stamp, path: &Path) -> i64 {
+  windows_drive(path).map_or(-1, |l| i64::from(l.to_ascii_uppercase()))
+}
+
+#[cfg(windows)]
+fn windows_drive(path: &Path) -> Option<u8> {
+  use std::path::{Component, Prefix};
+  let Some(Component::Prefix(p)) = path.components().next() else { return None };
+  match p.kind() {
+    Prefix::Disk(l) | Prefix::VerbatimDisk(l) => Some(l),
+    _ => None,
+  }
+}
+
+/// `None` when the call fails, so the next miss on this device asks again.
+#[cfg(any(target_os = "linux", target_os = "android"))]
+fn fs_type_is_local(path: &Path) -> Option<bool> {
+  /// `f_type` of NFS, SMB, CIFS, SMB2, FUSE, 9P (WSL2 `/mnt/c`), Ceph, AFS (2), Coda and NCP.
+  const REMOTE: [u32; 11] = [
+    0x6969,
+    0x517B,
+    0xFF53_4D42,
+    0xFE53_4D42,
+    0x6573_5546,
+    0x0102_1997,
+    0x00C3_6400,
+    0x5346_414F,
+    0x6B41_4653,
+    0x7375_7245,
+    0x564C,
+  ];
+  // `f_type` is i32, u32, i64 or u64 on the different targets. The magic is in the low 32 bits.
+  Some(!REMOTE.contains(&(statfs(path)?.f_type as u32)))
+}
+#[cfg(target_vendor = "apple")]
+fn fs_type_is_local(path: &Path) -> Option<bool> {
+  let st = statfs(path)?;
+  let name: Vec<u8> =
+    st.f_fstypename.iter().take_while(|&&c| c != 0).map(|c| c.cast_unsigned()).collect();
+  Some(st.f_flags & libc::MNT_LOCAL.cast_unsigned() != 0 && !name.windows(4).any(|w| w == b"fuse"))
+}
+#[cfg(any(target_os = "linux", target_os = "android", target_vendor = "apple"))]
+fn statfs(path: &Path) -> Option<libc::statfs> {
+  use std::os::unix::ffi::OsStrExt;
+  let c = std::ffi::CString::new(path.as_os_str().as_bytes()).ok()?;
+  let mut st = std::mem::MaybeUninit::<libc::statfs>::uninit();
+  // SAFETY: `c` is a NUL-terminated path and `st` is a valid out pointer.
+  let ok = unsafe { libc::statfs(c.as_ptr(), st.as_mut_ptr()) } == 0;
+  // SAFETY: `statfs` returned 0, so it filled `st`.
+  ok.then(|| unsafe { st.assume_init() })
+}
+#[cfg(windows)]
+fn fs_type_is_local(path: &Path) -> Option<bool> {
+  #[link(name = "kernel32")]
+  unsafe extern "system" {
+    fn GetDriveTypeW(root: *const u16) -> u32;
+  }
+  const DRIVE_REMOTE: u32 = 4;
+  // A path with no drive letter is a UNC or device path, which can be on a network share.
+  let Some(l) = windows_drive(path) else { return Some(false) };
+  let root = [u16::from(l), u16::from(b':'), u16::from(b'\\'), 0];
+  // SAFETY: `root` is a NUL-terminated UTF-16 string.
+  match unsafe { GetDriveTypeW(root.as_ptr()) } {
+    // The type is unknown, so the next miss on this drive asks again.
+    0 => None,
+    // 1: the root does not exist.
+    t => Some(t != 1 && t != DRIVE_REMOTE),
+  }
+}
+#[cfg(not(any(target_os = "linux", target_os = "android", target_vendor = "apple", windows)))]
+fn fs_type_is_local(_path: &Path) -> Option<bool> {
+  Some(true)
 }
 
 /// The early check result if there is one, else one `stat` now.
@@ -849,6 +945,7 @@ struct WarmCounters {
   recorded: AtomicU64,
   early_checked: AtomicU64,
   early_stale: AtomicU64,
+  not_local: AtomicU64,
   early_ns: AtomicU64,
 }
 
@@ -1059,7 +1156,7 @@ fn list_dir(w: &Warm, dir: &Path, slot: &DirSlot) -> Option<Arc<Listing>> {
     );
   }
   match stamp {
-    Some(s) if !is_hot(&s) => {
+    Some(s) if !is_hot(&s) && is_local_fs(&s, dir) => {
       let _ = slot.stamp.set(s);
     }
     Some(_) => {
@@ -1099,6 +1196,10 @@ fn rec_init(w: &Warm, dir: &Path) -> Rec {
     }
     Some(s) if is_hot(&s) => {
       w.c.dir_hot.fetch_add(1, Relaxed);
+      Rec::default()
+    }
+    Some(s) if !is_local_fs(&s, dir) => {
+      w.c.not_local.fetch_add(1, Relaxed);
       Rec::default()
     }
     Some(s) => {
@@ -1239,6 +1340,8 @@ pub fn content_cache_read_bytes(path: &Path) -> std::io::Result<Vec<u8>> {
   let w = warm();
   if is_hot(&stamp) {
     w.c.hot.fetch_add(1, Relaxed);
+  } else if !is_local_fs(&stamp, path) {
+    w.c.not_local.fetch_add(1, Relaxed);
   } else {
     w.fresh.lock().unwrap().push((path.to_path_buf(), stamp, buf.clone()));
   }
@@ -1327,6 +1430,7 @@ fn warm_save() -> Option<String> {
       if done == 0 { "NO".to_string() } else { format!("at +{:.1} ms", ms(done)) },
     ));
   }
+  line.push_str(&format!(" not local {};", c.not_local.load(Relaxed)));
   line.push_str(&format!(" save content {save_content} dirs {save_dirs}"));
   if env_is("ROLLDOWN_FS_NO_SAVE", "1") {
     line.push_str(" (skipped)");
@@ -1468,5 +1572,17 @@ pub fn report(label: &str, scan_start: Instant, scan_end: Instant, total_end: In
       ms(last.saturating_sub(scan_s)),
       v.iter().map(|x| x.1 - x.0).sum::<u64>() as f64 / u.max(1) as f64
     );
+  }
+}
+
+#[cfg(all(test, any(unix, windows)))]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn temp_dir_is_on_a_local_fs() {
+    let dir = std::env::temp_dir();
+    let s = stamp_of(&dir).unwrap();
+    assert!(is_local_fs(&s, &dir));
   }
 }

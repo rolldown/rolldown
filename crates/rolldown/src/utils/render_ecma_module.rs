@@ -5,7 +5,8 @@ use rolldown_common::{
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_sourcemap::{
-  Source, SourceMap, SourceMapSource, collapse_sourcemaps, empty_sourcemap,
+  Source, SourceMap, SourceMapSource, collapse_sourcemaps, drop_unreached_sources_and_names,
+  empty_sourcemap,
 };
 use rolldown_utils::concat_string;
 
@@ -115,7 +116,9 @@ pub fn collapse_module_sourcemap(
     if let Some(sourcemap) = codegen_map.as_ref() {
       owned_chain.push(sourcemap);
     }
-    Some(collapse_sourcemaps(&owned_chain))
+    // A plugin map without mappings (e.g. `{ mappings: '' }`) or an omitted one leaves earlier
+    // sources unreached. Drop them so the module's original code does not leak (rolldown#11176).
+    Some(drop_unreached_sources_and_names(collapse_sourcemaps(&owned_chain)))
   }
 }
 
@@ -125,7 +128,7 @@ mod tests {
   use arcstr::ArcStr;
   use insta::assert_snapshot;
   use rolldown_common::{PluginIdx, SourcemapChainElement};
-  use rolldown_sourcemap::{SourceMap, SourceMapBuilder};
+  use rolldown_sourcemap::{SourceMap, SourceMapBuilder, empty_sourcemap};
 
   const MODULE_ID: &str = "/project/src/index.js";
 
@@ -152,6 +155,10 @@ mod tests {
 
   fn omitted() -> SourcemapChainElement {
     SourcemapChainElement::Omitted { plugin_idx: plugin_idx(), plugin_name: ArcStr::from("plugin") }
+  }
+
+  fn transform(map: SourceMap) -> SourcemapChainElement {
+    SourcemapChainElement::Transform((plugin_idx(), map))
   }
 
   fn null(original_content: &str) -> SourcemapChainElement {
@@ -224,5 +231,54 @@ mod tests {
         .unwrap();
     assert_snapshot!(result.to_json_string(), @r#"{"version":3,"names":[],"sources":["loaded.js"],"sourcesContent":["const a = 1;\n"],"mappings":"AAAA,MAAM"}"#);
     assert!(warnings.is_empty());
+  }
+
+  /// Test for https://github.com/rolldown/rolldown/issues/11176
+  #[test]
+  fn empty_transform_map_drops_original_source() {
+    // A transform that replaces the module returns `{ mappings: '' }`: nothing maps back to the
+    // original module, so neither it nor its content may appear in the module sourcemap.
+    let mut warnings = vec![];
+    let result = collapse_module_sourcemap(
+      &[transform(empty_sourcemap())],
+      Some(codegen_map("proxy();\n")),
+      MODULE_ID,
+      &mut warnings,
+    )
+    .unwrap();
+    assert_snapshot!(result.to_json_string(), @r#"{"version":3,"names":[],"sources":[],"mappings":""}"#);
+    assert!(warnings.is_empty());
+  }
+
+  /// Test for https://github.com/rolldown/rolldown/issues/11176
+  #[test]
+  fn empty_transform_map_after_real_map_drops_original_source() {
+    // An earlier transform's map (e.g. TypeScript stripping) must not bring the original module
+    // back when a later transform returns `{ mappings: '' }`.
+    let mut warnings = vec![];
+    let result = collapse_module_sourcemap(
+      &[transform(map(MODULE_ID, "secret();\n")), transform(empty_sourcemap())],
+      Some(codegen_map("proxy();\n")),
+      MODULE_ID,
+      &mut warnings,
+    )
+    .unwrap();
+    assert_snapshot!(result.to_json_string(), @r#"{"version":3,"names":[],"sources":[],"mappings":""}"#);
+    assert!(warnings.is_empty());
+  }
+
+  #[test]
+  fn omitted_after_real_map_drops_original_source() {
+    // An omitted map breaks the chain, so the earlier map's source is no longer reached.
+    let mut warnings = vec![];
+    let result = collapse_module_sourcemap(
+      &[transform(map(MODULE_ID, "secret();\n")), omitted()],
+      Some(codegen_map("proxy();\n")),
+      MODULE_ID,
+      &mut warnings,
+    )
+    .unwrap();
+    assert_snapshot!(result.to_json_string(), @r#"{"version":3,"names":[],"sources":[],"mappings":""}"#);
+    assert_eq!(warnings.len(), 1);
   }
 }

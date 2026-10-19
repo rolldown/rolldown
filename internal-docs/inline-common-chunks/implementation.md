@@ -141,6 +141,8 @@ init_a();
 
 Factories come in `carried` order (dependencies first); a factory that reads other records opens with `var share_y = __share_require("<id>")` for each. `RenderedChunk.imports` comes from the projected `cross_chunk_imports`; content hashes include the factory text and the record ids; the runtime import carries its placeholder. `renderChunk`, `augmentChunkHash` and `generateBundle` see only files, and each carrier lists the carried modules after its own in `moduleIds` and in execution order in `modules`: a record's module belongs to every file that prints it.
 
+Native Rust `renderChunk` hooks receive each file's `originate_from` logical chunk index and immutable chunk/module table borrows. The import-map plugin keys the first common chunk of a given name by that name and later chunks by the minimum resolved module ID in their original logical membership. Copied factories appear in the complete printed-module metadata but do not enter that calculation. The origin index is only a lookup key for the current generation.
+
 ## Runtime registry
 
 In `crates/rolldown/src/runtime/runtime-base.js`; flags regenerated into `crates/rolldown_common/src/generated/runtime_helper.rs` by `just update-generated-code`. See `../runtime-helpers/implementation.md` for the state machine.

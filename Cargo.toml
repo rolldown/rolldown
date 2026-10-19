@@ -339,6 +339,6 @@ opt-level = "s"
 debug = "full"
 strip = "none"
 
-# TEMPORARY experiment: skip the exports key check when SKIP_EXPORTS_KEY_CHECK is set.
+# TEMPORARY experiment: check the exports keys once per package.json (oxc-project/oxc-resolver#1418 on v11.24.3).
 [patch.crates-io]
-oxc_resolver = { git = "https://github.com/IWANABETHATGUY/oxc_resolver", branch = "perf/skip-exports-key-check" }
+oxc_resolver = { git = "https://github.com/IWANABETHATGUY/oxc_resolver", branch = "perf/cache-exports-key-check-v11.24.3" }

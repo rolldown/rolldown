@@ -26,6 +26,8 @@ pub struct BuildImportAnalysisVisitor<'a> {
   pub render_built_url: bool,
   pub is_relative_base: bool,
   pub is_modern: bool,
+  pub preload_marker_module_id: String,
+  pub preload_marker_index: u32,
 }
 
 impl<'a> VisitJsMut<'a> for BuildImportAnalysisVisitor<'a> {

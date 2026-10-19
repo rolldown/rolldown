@@ -480,7 +480,8 @@ fn prefetch_report(build_start: Instant) {
 // Both files are written on a background thread at build end; the next load waits for it.
 
 /// dev, ino, size, mtime s, mtime ns, ctime s, ctime ns.
-/// On Windows: 0, 0, size, last write s, ns, creation s, ns (the fields git for Windows uses).
+/// On Windows: volume serial, file index, size, last write s, ns, change time, creation time
+/// (the last two in 100 ns ticks).
 pub type Stamp = [i64; 7];
 const CC_MAGIC: &[u8; 8] = b"RDCC0003";
 const DC_MAGIC: &[u8; 8] = b"RDDC0001";
@@ -562,19 +563,6 @@ fn stamp_from(m: &std::fs::Metadata) -> Stamp {
     m.ctime_nsec(),
   ]
 }
-/// Stable std has no inode or change time on Windows, so the stamp has size, write and creation time.
-#[cfg(windows)]
-fn stamp_from(m: &std::fs::Metadata) -> Stamp {
-  use std::os::windows::fs::MetadataExt;
-  /// `FILETIME` counts 100 ns ticks from 1601-01-01; the stamp counts from 1970-01-01.
-  fn unix_time(ticks: u64) -> (i64, i64) {
-    let t = ticks.cast_signed() - 116_444_736_000_000_000;
-    (t.div_euclid(10_000_000), t.rem_euclid(10_000_000) * 100)
-  }
-  let (ms, mns) = unix_time(m.last_write_time());
-  let (cs, cns) = unix_time(m.creation_time());
-  [0, 0, m.file_size().cast_signed(), ms, mns, cs, cns]
-}
 #[cfg(not(any(unix, windows)))]
 fn stamp_from(_m: &std::fs::Metadata) -> Stamp {
   [0; 7]
@@ -616,7 +604,107 @@ fn os_string_from_bytes(b: &[u8]) -> std::ffi::OsString {
 }
 
 fn stamp_of(path: &Path) -> Option<Stamp> {
-  std::fs::metadata(path).ok().map(|m| stamp_from(&m))
+  stat_stamp(path).map(|(s, _)| s)
+}
+
+/// The stamp of `path` (symlinks followed), and whether it is a directory.
+#[cfg(not(windows))]
+fn stat_stamp(path: &Path) -> Option<(Stamp, bool)> {
+  std::fs::metadata(path).ok().map(|m| (stamp_from(&m), m.is_dir()))
+}
+#[cfg(not(windows))]
+fn file_stamp(f: &std::fs::File) -> std::io::Result<Stamp> {
+  f.metadata().map(|m| stamp_from(&m))
+}
+
+/// The same open as `std::fs::metadata`: no access rights, so it never conflicts with a writer.
+#[cfg(windows)]
+fn stat_stamp(path: &Path) -> Option<(Stamp, bool)> {
+  use std::os::windows::fs::OpenOptionsExt;
+  /// Lets `CreateFileW` open a directory.
+  const FILE_FLAG_BACKUP_SEMANTICS: u32 = 0x0200_0000;
+  let f = std::fs::OpenOptions::new()
+    .access_mode(0)
+    .custom_flags(FILE_FLAG_BACKUP_SEMANTICS)
+    .open(path)
+    .ok()?;
+  win_stamp(&f).ok()
+}
+#[cfg(windows)]
+fn file_stamp(f: &std::fs::File) -> std::io::Result<Stamp> {
+  win_stamp(f).map(|(s, _)| s)
+}
+
+/// Stable std has no file index or change time on Windows, so this calls the Win32 API. The
+/// creation time alone cannot show a replaced file: NTFS gives a new file the creation time of a
+/// file with the same name that was deleted less than 15 s before (tunneling).
+#[cfg(windows)]
+fn win_stamp(f: &std::fs::File) -> std::io::Result<(Stamp, bool)> {
+  use std::os::windows::io::AsRawHandle;
+  #[repr(C)]
+  #[derive(Default)]
+  struct ByHandleFileInformation {
+    attributes: u32,
+    creation: [u32; 2],
+    last_access: [u32; 2],
+    last_write: [u32; 2],
+    volume_serial: u32,
+    size_high: u32,
+    size_low: u32,
+    links: u32,
+    index_high: u32,
+    index_low: u32,
+  }
+  #[repr(C)]
+  #[derive(Default)]
+  struct FileBasicInfo {
+    creation: i64,
+    last_access: i64,
+    last_write: i64,
+    change: i64,
+    attributes: u32,
+  }
+  #[link(name = "kernel32")]
+  unsafe extern "system" {
+    fn GetFileInformationByHandle(
+      file: std::os::windows::io::RawHandle,
+      info: *mut ByHandleFileInformation,
+    ) -> i32;
+    fn GetFileInformationByHandleEx(
+      file: std::os::windows::io::RawHandle,
+      class: i32,
+      info: *mut std::ffi::c_void,
+      size: u32,
+    ) -> i32;
+  }
+  const FILE_BASIC_INFO: i32 = 0;
+  const FILE_ATTRIBUTE_DIRECTORY: u32 = 0x10;
+  /// `FILETIME` counts 100 ns ticks from 1601-01-01; the stamp counts from 1970-01-01.
+  fn unix_time(ticks: i64) -> (i64, i64) {
+    let t = ticks - 116_444_736_000_000_000;
+    (t.div_euclid(10_000_000), t.rem_euclid(10_000_000) * 100)
+  }
+  let h = f.as_raw_handle();
+  let mut a = ByHandleFileInformation::default();
+  let mut b = FileBasicInfo::default();
+  // SAFETY: `h` is an open handle, and each out pointer points to a struct of the size we pass.
+  let ok = unsafe {
+    GetFileInformationByHandle(h, &raw mut a) != 0
+      && GetFileInformationByHandleEx(
+        h,
+        FILE_BASIC_INFO,
+        (&raw mut b).cast(),
+        size_of::<FileBasicInfo>() as u32,
+      ) != 0
+  };
+  if !ok {
+    return Err(std::io::Error::last_os_error());
+  }
+  let (ws, wns) = unix_time(b.last_write);
+  let size = ((u64::from(a.size_high) << 32) | u64::from(a.size_low)).cast_signed();
+  let index = ((u64::from(a.index_high) << 32) | u64::from(a.index_low)).cast_signed();
+  let stamp = [i64::from(a.volume_serial), index, size, ws, wns, b.change, b.creation];
+  Ok((stamp, b.attributes & FILE_ATTRIBUTE_DIRECTORY != 0))
 }
 
 /// FAT stores mtime in 2 s steps, so a shorter window can store a file that changes again with the
@@ -1189,7 +1277,7 @@ fn rec_init(w: &Warm, dir: &Path) -> Rec {
     w.c.dir_valid.fetch_add(1, Relaxed);
     return Rec { stamp: Some(d.stamp), stored: Some(Arc::clone(&d.listing)), ..Rec::default() };
   }
-  match std::fs::metadata(dir).ok().filter(std::fs::Metadata::is_dir).map(|m| stamp_from(&m)) {
+  match stat_stamp(dir).filter(|(_, is_dir)| *is_dir).map(|(s, _)| s) {
     None => {
       w.c.dir_missing.fetch_add(1, Relaxed);
       Rec { missing: true, ..Rec::default() }
@@ -1333,10 +1421,9 @@ pub fn content_cache_get_bytes(path: &Path) -> Option<Vec<u8>> {
 pub fn content_cache_read_bytes(path: &Path) -> std::io::Result<Vec<u8>> {
   use std::io::Read;
   let mut f = std::fs::File::open(path)?;
-  let m = f.metadata()?;
-  let mut buf = Vec::with_capacity(m.len() as usize);
+  let stamp = file_stamp(&f)?;
+  let mut buf = Vec::with_capacity(stamp[2] as usize);
   f.read_to_end(&mut buf)?;
-  let stamp = stamp_from(&m);
   let w = warm();
   if is_hot(&stamp) {
     w.c.hot.fetch_add(1, Relaxed);

@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_v4 = require("./v4.js");
-exports.v4 = require_v4.default;
+exports.v4 = require_v4;
 
 ```
 
@@ -20,6 +20,6 @@ function v4() {
 	return "uuid-here";
 }
 //#endregion
-exports.default = v4;
+module.exports = v4;
 
 ```

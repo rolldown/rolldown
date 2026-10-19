@@ -618,11 +618,13 @@ fn stamp_of(path: &Path) -> Option<Stamp> {
   std::fs::metadata(path).ok().map(|m| stamp_from(&m))
 }
 
+/// Some file systems (FUSE) report mtime 0, so the stamp cannot show an edit that keeps the size.
 fn is_hot(s: &Stamp) -> bool {
   let now = std::time::SystemTime::now()
     .duration_since(std::time::UNIX_EPOCH)
     .map_or(0, |d| d.as_nanos() as i128);
-  now - (i128::from(s[3]) * 1_000_000_000 + i128::from(s[4])) < 1_000_000_000
+  let mtime = i128::from(s[3]) * 1_000_000_000 + i128::from(s[4]);
+  mtime <= 0 || now - mtime < 1_000_000_000
 }
 
 /// The early check result if there is one, else one `stat` now.

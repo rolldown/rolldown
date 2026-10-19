@@ -20,9 +20,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNSUPPORTED_FEATURE] Module specifiers containing lone surrogates are not supported
-   ╭─[ main.js:7:37 ]
+   ╭─[ main.js:7:24 ]
    │
- 7 │ import.meta.hot.accept(['./dep.js', './dep\uD800.js'], cb);
+ 7 │ import.meta.hot.accept(`./dep\uD800.js`, cb);
+   │                        ────────┬───────  
+   │                                ╰───────── 
+───╯
+
+```
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] Module specifiers containing lone surrogates are not supported
+   ╭─[ main.js:8:37 ]
+   │
+ 8 │ import.meta.hot.accept(['./dep.js', './dep\uD800.js'], cb);
    │                                     ────────┬───────  
    │                                             ╰───────── 
 ───╯

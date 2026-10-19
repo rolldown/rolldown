@@ -7,9 +7,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNSUPPORTED_FEATURE] Import attributes containing lone surrogates are not supported
-    ╭─[ main.js:10:30 ]
+    ╭─[ main.js:13:30 ]
     │
- 10 │ import './g.js' with { type: 'json\uD800' };
+ 13 │ import './g.js' with { type: 'json\uD800' };
     │                              ──────┬─────  
     │                                    ╰─────── 
 ────╯
@@ -20,11 +20,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNSUPPORTED_FEATURE] Import attributes containing lone surrogates are not supported
-    ╭─[ main.js:11:24 ]
+    ╭─[ main.js:14:24 ]
     │
- 11 │ import './h.js' with { 'type\uD800': 'json' };
+ 14 │ import './h.js' with { 'type\uD800': 'json' };
     │                        ──────┬─────  
     │                              ╰─────── 
+────╯
+
+```
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] Module specifiers containing lone surrogates are not supported
+    ╭─[ main.js:10:9 ]
+    │
+ 10 │ new URL('./f\uD800.png', import.meta.url);
+    │         ───────┬───────  
+    │                ╰───────── 
 ────╯
 
 ```
@@ -98,11 +111,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNSUPPORTED_FEATURE] Module specifiers containing lone surrogates are not supported
-   ╭─[ main.js:7:9 ]
+   ╭─[ main.js:8:11 ]
    │
- 7 │ new URL('./f\uD800.png', import.meta.url);
-   │         ───────┬───────  
-   │                ╰───────── 
+ 8 │   require('./k\uD800.js');
+   │           ───────┬──────  
+   │                  ╰──────── 
 ───╯
 
 ```

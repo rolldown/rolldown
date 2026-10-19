@@ -7,3 +7,6 @@ b -= 1;
 
 ns.test += 1;
 delete ns.test;
+
+// The name keeps its lone surrogate in the message.
+ns['\uD800'] = 1;

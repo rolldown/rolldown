@@ -37,8 +37,8 @@ impl<'me> ConstEvalCtx<'me, '_> {
 }
 
 // The traits use `'me`, not `'ast`, so the constants (which live for `'me`) can be lent to oxc
-// without copying them into the arena. The AST is covariant, so an `Expression<'ast>` is an
-// `Expression<'me>`.
+// without copying them into the arena. `AstBuilder` and the AST are covariant, so
+// `AstBuilder<'ast>` and `Expression<'ast>` coerce to their `'me` forms.
 impl<'me> ConstantEvaluationCtx<'me> for ConstEvalCtx<'me, '_> {}
 
 impl<'me> GetAstBuilder<'me> for ConstEvalCtx<'me, '_> {

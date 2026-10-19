@@ -1,6 +1,9 @@
-use oxc::ast::{
-  Comment,
-  ast::{Expression, NewExpression},
+use oxc::{
+  ast::{
+    Comment,
+    ast::{Expression, NewExpression},
+  },
+  str::JSStr,
 };
 use rolldown_common::{ImportKind, ImportRecordMeta, ModuleType, get_leading_comment};
 use rolldown_ecmascript_utils::ExpressionExt;
@@ -53,14 +56,15 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       return;
     }
 
+    // A data URL is left untouched, whatever it contains.
+    if is_data_url(text_before_lone_surrogate(path)) {
+      return;
+    }
+
     // `URL` replaces a lone surrogate with U+FFFD, so such a path still names a file.
     let Some(path) = self.module_request(path, first_arg_span) else {
       return;
     };
-
-    if is_data_url(path) {
-      return;
-    }
 
     let idx = self.add_import_record(
       path,
@@ -73,4 +77,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.result.import_records[idx].asserted_module_type = Some(ModuleType::Asset);
     self.result.new_url_references.insert(expr.node_id(), idx);
   }
+}
+
+/// A lone surrogate is never whitespace or part of `data:`, so this text is enough for
+/// `is_data_url`.
+fn text_before_lone_surrogate(value: JSStr<'_>) -> &str {
+  value.as_str().unwrap_or_else(|| {
+    let bytes = value.as_bytes();
+    let len = std::str::from_utf8(bytes).map_or_else(|err| err.valid_up_to(), str::len);
+    std::str::from_utf8(&bytes[..len]).unwrap_or_default()
+  })
 }

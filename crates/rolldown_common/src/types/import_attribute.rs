@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use json_escape_simd::escape;
-use oxc::ast::ast;
+use oxc::{ast::ast, span::Span};
 use oxc_str::CompactStr;
 use rolldown_utils::indexmap::FxIndexMap;
 
@@ -37,29 +37,30 @@ impl ImportAttribute {
     self.entries.contains_key(key)
   }
 
-  pub fn from_with_clause(with_clause: &ast::WithClause) -> Self {
+  /// Fails with the span of the first key or value that has a lone surrogate, which the UTF-8
+  /// entries can't hold.
+  pub fn from_with_clause(with_clause: &ast::WithClause) -> Result<Self, Span> {
     let kind = match with_clause.keyword {
       ast::WithClauseKeyword::With => ImportAttributeKind::With,
       ast::WithClauseKeyword::Assert => ImportAttributeKind::Assert,
     };
-    // TODO(oxc): entries with a lone surrogate are dropped, because oxc has no owned `JSStr`
-    // counterpart to store them in.
-    let entries: FxIndexMap<ImportAttributeKey, String> = with_clause
+    let entries = with_clause
       .with_entries
       .iter()
-      .filter_map(|entry| {
+      .map(|entry| {
         let key = match &entry.key {
           ast::ImportAttributeKey::Identifier(identifier_name) => {
             ImportAttributeKey::Identifier(identifier_name.name.into())
           }
-          ast::ImportAttributeKey::StringLiteral(string_literal) => {
-            ImportAttributeKey::String(string_literal.value.as_str()?.into())
-          }
+          ast::ImportAttributeKey::StringLiteral(string_literal) => ImportAttributeKey::String(
+            string_literal.value.as_str().ok_or(string_literal.span)?.into(),
+          ),
         };
-        Some((key, entry.value.value.as_str()?.to_string()))
+        let value = entry.value.value.as_str().ok_or(entry.value.span)?;
+        Ok((key, value.to_string()))
       })
-      .collect();
-    Self { kind, entries }
+      .collect::<Result<FxIndexMap<_, _>, Span>>()?;
+    Ok(Self { kind, entries })
   }
 }
 

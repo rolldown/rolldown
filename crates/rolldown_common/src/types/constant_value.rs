@@ -1,5 +1,5 @@
 use num_bigint::BigInt;
-use oxc::{allocator::GetAllocator, ast::ast::Expression, span::SPAN, str::JSStr};
+use oxc::{ast::ast::Expression, span::SPAN, str::JSStr};
 use oxc_ecmascript::constant_evaluation;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -55,25 +55,12 @@ impl ConstantValue {
 
   /// Borrows the value as an oxc constant.
   pub fn as_oxc_value(&self) -> constant_evaluation::ConstantValue<'_> {
-    self.to_oxc_value(JSStr::from)
-  }
-
-  /// Copies the value into `allocator` as an oxc constant.
-  pub fn to_oxc_value_in<'a>(
-    &self,
-    allocator: &impl GetAllocator<'a>,
-  ) -> constant_evaluation::ConstantValue<'a> {
-    self.to_oxc_value(|s| JSStr::from_str_in(s, allocator))
-  }
-
-  fn to_oxc_value<'s, 'a>(
-    &'s self,
-    to_js_str: impl FnOnce(&'s str) -> JSStr<'a>,
-  ) -> constant_evaluation::ConstantValue<'a> {
     match self {
       ConstantValue::Number(n) => constant_evaluation::ConstantValue::Number(*n),
       ConstantValue::BigInt(b) => constant_evaluation::ConstantValue::BigInt(b.clone()),
-      ConstantValue::String(s) => constant_evaluation::ConstantValue::String(to_js_str(s)),
+      ConstantValue::String(s) => {
+        constant_evaluation::ConstantValue::String(JSStr::from(s.as_str()))
+      }
       ConstantValue::Boolean(b) => constant_evaluation::ConstantValue::Boolean(*b),
       ConstantValue::Undefined => constant_evaluation::ConstantValue::Undefined,
       ConstantValue::Null => constant_evaluation::ConstantValue::Null,

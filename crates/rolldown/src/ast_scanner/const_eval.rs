@@ -36,34 +36,37 @@ impl<'me> ConstEvalCtx<'me, '_> {
   }
 }
 
-impl<'ast> ConstantEvaluationCtx<'ast> for ConstEvalCtx<'_, 'ast> {}
+// The traits use `'me`, not `'ast`, so the constants (which live for `'me`) can be lent to oxc
+// without copying them into the arena. The AST is covariant, so an `Expression<'ast>` is an
+// `Expression<'me>`.
+impl<'me> ConstantEvaluationCtx<'me> for ConstEvalCtx<'me, '_> {}
 
-impl<'ast> GetAstBuilder<'ast> for ConstEvalCtx<'_, 'ast> {
-  type Builder = oxc::ast::builder::AstBuilder<'ast>;
+impl<'me> GetAstBuilder<'me> for ConstEvalCtx<'me, '_> {
+  type Builder = oxc::ast::builder::AstBuilder<'me>;
 
   #[inline]
-  fn builder(&self) -> &oxc::ast::builder::AstBuilder<'ast> {
+  fn builder(&self) -> &oxc::ast::builder::AstBuilder<'me> {
     &self.ast
   }
 }
 
-impl<'ast> GetAllocator<'ast> for ConstEvalCtx<'_, 'ast> {
+impl<'me> GetAllocator<'me> for ConstEvalCtx<'me, '_> {
   #[inline]
-  fn allocator(&self) -> &'ast Allocator {
+  fn allocator(&self) -> &'me Allocator {
     self.ast.allocator()
   }
 }
 
-impl<'ast> GlobalContext<'ast> for ConstEvalCtx<'_, 'ast> {
-  fn is_global_reference(&self, reference: &oxc::ast::ast::IdentifierReference<'ast>) -> bool {
+impl<'me> GlobalContext<'me> for ConstEvalCtx<'me, '_> {
+  fn is_global_reference(&self, reference: &oxc::ast::ast::IdentifierReference<'me>) -> bool {
     reference.is_global_reference(self.scope)
   }
 
   fn get_constant_value_for_reference_id(
     &self,
     reference_id: oxc::semantic::ReferenceId,
-  ) -> Option<oxc_ecmascript::constant_evaluation::ConstantValue<'ast>> {
-    self.constant_value(reference_id).map(|value| value.to_oxc_value_in(self))
+  ) -> Option<oxc_ecmascript::constant_evaluation::ConstantValue<'me>> {
+    self.constant_value(reference_id).map(ConstantValue::as_oxc_value)
   }
 
   // Without the type, oxc's `+` reads a string constant as a number: `'3' + 1` gives `4`.
@@ -72,7 +75,7 @@ impl<'ast> GlobalContext<'ast> for ConstEvalCtx<'_, 'ast> {
   }
 }
 
-impl<'ast> MayHaveSideEffectsContext<'ast> for ConstEvalCtx<'_, 'ast> {
+impl<'me> MayHaveSideEffectsContext<'me> for ConstEvalCtx<'me, '_> {
   fn annotations(&self) -> bool {
     false
   }
@@ -247,6 +250,15 @@ mod tests {
     assert_eq!(extract("const NAME = 'rolldown'; const a = `${NAME}${x}`;", "a"), None);
     // A new string literal cannot carry a lone surrogate.
     assert_eq!(extract("const a = `\\uD800`;", "a"), None);
+  }
+
+  #[test]
+  fn test_string_with_a_lone_surrogate_is_not_a_constant() {
+    // `ConstantValue::String` is UTF-8, so it can't hold the value.
+    assert_eq!(extract("const a = '\\uD800';", "a"), None);
+    assert_eq!(extract("const a = '\\uD800' + 'x';", "a"), None);
+    // A pair joined by `+` is a valid code point.
+    assert_eq!(extract("const a = '\\uD800' + '\\uDC00';", "a"), Some(string("\u{10000}")));
   }
 
   #[test]

@@ -37,8 +37,17 @@ impl Plugin for IsolatedDeclarationPlugin {
         visitor.imported
       });
 
-      for specifier in type_import_specifiers {
-        let resolved_id = ctx.resolve(&specifier, Some(args.id), None).await??;
+      for (specifier, span) in type_import_specifiers {
+        // Rolldown resolves module requests as UTF-8.
+        let Some(specifier) = specifier.as_str() else {
+          Err(BatchedBuildDiagnostic::new(vec![BuildDiagnostic::unsupported_feature(
+            args.id.into(),
+            args.ast.source().clone(),
+            span,
+            "Module specifiers containing lone surrogates are not supported".to_string(),
+          )]))?
+        };
+        let resolved_id = ctx.resolve(specifier, Some(args.id), None).await??;
         if matches!(resolved_id.external, ResolvedExternal::Bool(false)) {
           ctx.load(&resolved_id.id, None, resolved_id.module_def_format).await?;
         }

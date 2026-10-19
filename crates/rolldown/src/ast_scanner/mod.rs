@@ -486,25 +486,50 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.result.symbol_ref_db.scoping().get_root_binding(name.into())
   }
 
+  /// Returns `request` as UTF-8, or reports it as unsupported when it has a lone surrogate.
+  ///
+  /// Rolldown resolves and stores module requests as UTF-8: `resolveId` takes a string and import
+  /// records hold a `CompactStr`. Leaving such a request untouched would change what the code
+  /// loads, so every form of import reports it.
+  fn module_request(&mut self, request: JSStr<'ast>, span: Span) -> Option<&'ast str> {
+    let request = request.as_str();
+    if request.is_none() {
+      self.report_lone_surrogate("Module specifiers", span);
+    }
+    request
+  }
+
+  fn report_lone_surrogate(&mut self, subject: &str, span: Span) {
+    self.result.errors.push(BuildDiagnostic::unsupported_feature(
+      self.immutable_ctx.id.as_arc_str().clone(),
+      self.immutable_ctx.source.clone(),
+      span,
+      format!("{subject} containing lone surrogates are not supported"),
+    ));
+  }
+
+  /// Rolldown prints import attributes as UTF-8 text, so an attribute with a lone surrogate is
+  /// reported instead of being dropped from the output.
+  fn add_import_attribute(&mut self, record_idx: ImportRecordIdx, with_clause: &ast::WithClause) {
+    match ImportAttribute::from_with_clause(with_clause) {
+      Ok(attribute) => {
+        self.result.import_attribute_map.insert(record_idx, attribute);
+      }
+      Err(span) => self.report_lone_surrogate("Import attributes", span),
+    }
+  }
+
+  /// A static import with an unsupported request still gets a record, so its specifiers have one
+  /// to bind to. The reported error stops the build before the record is resolved.
+  fn static_module_request(&mut self, source: &ast::StringLiteral<'ast>) -> &'ast str {
+    self.module_request(source.value, source.span).unwrap_or_default()
+  }
+
   /// `is_dummy` means if it the import record is created during ast transformation.
   ///
   /// `import_expression_node_id` - The AST node ID of the ImportExpression node,
   /// required for dynamic imports to track their position for optimization purposes.
   /// Should be `None` for static imports and `Some(node_id)` for dynamic imports.
-  /// TODO(oxc): import records store `CompactStr`, and oxc has no owned `JSStr` counterpart, so a
-  /// static specifier with a lone surrogate is reported as unsupported.
-  fn static_module_request(&mut self, source: &ast::StringLiteral<'ast>) -> &'ast str {
-    source.value.as_str().unwrap_or_else(|| {
-      self.result.errors.push(BuildDiagnostic::unsupported_feature(
-        self.immutable_ctx.id.as_arc_str().clone(),
-        self.immutable_ctx.source.clone(),
-        source.span,
-        "Module specifiers containing lone surrogates are not supported".to_string(),
-      ));
-      ""
-    })
-  }
-
   fn add_import_record(
     &mut self,
     module_request: &str,
@@ -729,7 +754,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     }
     self.result.imports.insert(decl.node_id(), id);
     if let Some(ref with_clause) = decl.with_clause {
-      self.result.import_attribute_map.insert(id, ImportAttribute::from_with_clause(with_clause));
+      self.add_import_attribute(id, with_clause);
     }
   }
 
@@ -770,10 +795,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       );
     });
     if let Some(ref with_clause) = decl.with_clause {
-      self
-        .result
-        .import_attribute_map
-        .insert(record_idx, ImportAttribute::from_with_clause(with_clause));
+      self.add_import_attribute(record_idx, with_clause);
     }
     self.result.imports.insert(decl.node_id(), record_idx);
     self.result.import_records[record_idx].meta.insert(ImportRecordMeta::IsReExportOnly);
@@ -940,10 +962,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     );
 
     if let Some(ref with_clause) = decl.with_clause {
-      self
-        .result
-        .import_attribute_map
-        .insert(rec_id, ImportAttribute::from_with_clause(with_clause));
+      self.add_import_attribute(rec_id, with_clause);
     }
     self.result.imports.insert(decl.node_id(), rec_id);
 

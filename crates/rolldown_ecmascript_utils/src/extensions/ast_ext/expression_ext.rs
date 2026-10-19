@@ -1,5 +1,4 @@
 use oxc::ast::ast;
-use oxc::ast::ast::Str;
 use oxc::str::JSStr;
 
 pub trait ExpressionExt<'ast> {
@@ -8,7 +7,7 @@ pub trait ExpressionExt<'ast> {
   fn as_identifier(&self) -> Option<&ast::IdentifierReference<'ast>>;
   fn as_identifier_mut(&mut self) -> Option<&mut ast::IdentifierReference<'ast>>;
   fn as_string_literal(&self) -> Option<&ast::StringLiteral<'ast>>;
-  fn as_static_module_request(&self) -> Option<Str<'ast>>;
+  fn as_static_module_request(&self) -> Option<JSStr<'ast>>;
 
   fn is_import_meta(&self) -> bool;
   fn is_import_meta_url(&self) -> bool;
@@ -37,14 +36,12 @@ impl<'ast> ExpressionExt<'ast> for ast::Expression<'ast> {
     Some(expr)
   }
 
-  // TODO(oxc): a specifier with a lone surrogate is treated as non-static, because import records
-  // store `CompactStr` and oxc has no owned `JSStr` counterpart.
-  fn as_static_module_request(&self) -> Option<Str<'ast>> {
+  /// Returns the value of a string literal or a template literal without substitutions. The value
+  /// can have a lone surrogate, which no module request supports.
+  fn as_static_module_request(&self) -> Option<JSStr<'ast>> {
     match &self {
-      ast::Expression::StringLiteral(request) => request.value.as_arena_str(),
-      ast::Expression::TemplateLiteral(request) => {
-        request.single_quasi().and_then(JSStr::as_arena_str)
-      }
+      ast::Expression::StringLiteral(request) => Some(request.value),
+      ast::Expression::TemplateLiteral(request) => request.single_quasi(),
       _ => None,
     }
   }

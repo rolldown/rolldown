@@ -43,11 +43,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
       _ => return,
     };
-    // A path with a lone surrogate can't name a file, so the `new URL` is left untouched.
-    let Some(path) = path.as_str() else {
-      return;
-    };
-
     let has_leading_ignore_comment = get_leading_comment(
       self.immutable_ctx.comments,
       first_arg_span,
@@ -57,6 +52,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     if has_leading_ignore_comment {
       return;
     }
+
+    // `URL` replaces a lone surrogate with U+FFFD, so such a path still names a file.
+    let Some(path) = self.module_request(path, first_arg_span) else {
+      return;
+    };
 
     if is_data_url(path) {
       return;

@@ -3,6 +3,7 @@ use oxc::ast::builder::AstBuilder;
 use oxc::{
   ast::ast,
   span::{GetSpan, SPAN},
+  str::JSStr,
 };
 use rolldown_common::{IndexModules, NormalModule};
 use rolldown_ecmascript::CJS_MODULE_REF;
@@ -25,10 +26,8 @@ pub fn rewrite_hot_accept_deps<'ast>(
     return;
   }
   let rewrite = |expr: &mut ast::Expression<'ast>| {
-    let Some(request) = expr.as_static_module_request() else { return };
-    let Some(record_idx) =
-      module.hmr_info.module_request_to_import_record_idx.get(request.as_str())
-    else {
+    let Some(request) = expr.as_static_module_request().and_then(JSStr::as_str) else { return };
+    let Some(record_idx) = module.hmr_info.module_request_to_import_record_idx.get(request) else {
       return;
     };
     let Some(module_idx) = module.import_records[*record_idx].resolved_module else { return };

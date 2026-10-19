@@ -2922,7 +2922,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           return false;
         }
         let import_path = importee.get_import_path(self.ctx.chunk, self.ctx.resolved_paths);
-        if str != import_path {
+        if str != import_path.as_str() {
           expr.source = Expression::new_string_literal(
             expr.source.span(),
             oxc::ast::ast::Str::from_str_in(&import_path, self),

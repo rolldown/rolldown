@@ -161,8 +161,11 @@ impl<'ast> GlobImportVisit<'_> {
         let mut options = ImportGlobOptions::default();
 
         // import.meta.glob(['./dir/*.js'], { import: 'setup' })
-        if let Some(arg) = call_expr.arguments.get(1) {
-          Self::update_options(arg, &mut options);
+        if let Some(arg) = call_expr.arguments.get(1)
+          && let Err(err) = Self::update_options(arg, &mut options)
+        {
+          self.errors.push(err);
+          return true;
         }
 
         // import.meta.glob('./dir/*.js')
@@ -599,9 +602,11 @@ impl GlobImportVisit<'_> {
     }
   }
 
-  fn update_options(arg: &Argument, options: &mut ImportGlobOptions) {
+  /// Option values become paths and import specifiers, which Rolldown keeps as UTF-8, so a value
+  /// with a lone surrogate is an error.
+  fn update_options(arg: &Argument, options: &mut ImportGlobOptions) -> anyhow::Result<()> {
     let Argument::ObjectExpression(obj) = arg else {
-      return;
+      return Ok(());
     };
 
     for prop in &obj.properties {
@@ -613,8 +618,7 @@ impl GlobImportVisit<'_> {
         continue;
       };
 
-      // Option names and values are matched or used as paths and specifiers, which never contain a
-      // lone surrogate, so such a key or value is skipped.
+      // A key with a lone surrogate names no option, so it is ignored like any unknown key.
       let key = match &p.key {
         PropertyKey::StringLiteral(str) => str.value.as_str(),
         PropertyKey::StaticIdentifier(id) => Some(id.name.as_str()),
@@ -624,7 +628,7 @@ impl GlobImportVisit<'_> {
       match key {
         Some("base") => match &p.value {
           Expression::StringLiteral(str) if !str.value.is_empty() => {
-            options.base = str.value.as_str().map(ToString::to_string);
+            options.base = Some(option_str(str.value)?.to_string());
           }
           Expression::TemplateLiteral(str)
             if str.is_no_substitution_template() && !str.quasis[0].value.raw.is_empty() =>
@@ -635,7 +639,7 @@ impl GlobImportVisit<'_> {
         },
         Some("import") => {
           if let Expression::StringLiteral(str) = &p.value {
-            options.import = str.value.as_str().map(ToString::to_string);
+            options.import = Some(option_str(str.value)?.to_string());
           }
         }
         Some("eager") => {
@@ -655,9 +659,9 @@ impl GlobImportVisit<'_> {
         }
         Some("query") => match &p.value {
           Expression::StringLiteral(str) => {
-            options.query = str.value.as_str().map(|query| {
-              if query.starts_with('?') { query.to_string() } else { format!("?{query}") }
-            });
+            let query = option_str(str.value)?;
+            options.query =
+              Some(if query.starts_with('?') { query.to_string() } else { format!("?{query}") });
           }
           Expression::ObjectExpression(expr) => {
             let mut query_string = String::from("?");
@@ -665,19 +669,13 @@ impl GlobImportVisit<'_> {
               let ObjectPropertyKind::ObjectProperty(p) = prop else { continue };
 
               let key = match &p.key {
-                PropertyKey::StringLiteral(key) => {
-                  let Some(key) = key.value.as_str() else { continue };
-                  key
-                }
+                PropertyKey::StringLiteral(key) => option_str(key.value)?,
                 PropertyKey::StaticIdentifier(ident) => ident.name.as_str(),
                 _ => continue,
               };
 
               let value = match &p.value {
-                Expression::StringLiteral(v) => {
-                  let Some(value) = v.value.as_str() else { continue };
-                  value
-                }
+                Expression::StringLiteral(v) => option_str(v.value)?,
                 Expression::BooleanLiteral(v) => {
                   if v.value {
                     "true"
@@ -705,5 +703,48 @@ impl GlobImportVisit<'_> {
         _ => {}
       }
     }
+    Ok(())
+  }
+}
+
+fn option_str(value: JSStr<'_>) -> anyhow::Result<&str> {
+  value
+    .as_str()
+    .ok_or_else(|| anyhow::anyhow!("`import.meta.glob()` options cannot contain lone surrogates."))
+}
+
+#[cfg(test)]
+mod tests {
+  use oxc::{allocator::Allocator, parser::Parser, span::SourceType};
+
+  use super::*;
+
+  fn options_error(options: &str) -> Option<String> {
+    let allocator = Allocator::default();
+    let code = format!("f({options})");
+    let expr = Parser::new(&allocator, &code, SourceType::default()).parse_expression().unwrap();
+    let Expression::CallExpression(call) = expr else { unreachable!() };
+    GlobImportVisit::update_options(&call.arguments[0], &mut ImportGlobOptions::default())
+      .err()
+      .map(|err| err.to_string())
+  }
+
+  #[test]
+  fn rejects_options_with_lone_surrogates() {
+    for options in [
+      "{ base: './\\uD800' }",
+      "{ import: '\\uD800' }",
+      "{ query: '\\uD800' }",
+      "{ query: { '\\uD800': true } }",
+      "{ query: { raw: '\\uD800' } }",
+    ] {
+      assert_eq!(
+        options_error(options).as_deref(),
+        Some("`import.meta.glob()` options cannot contain lone surrogates."),
+        "{options}"
+      );
+    }
+    // A key with a lone surrogate names no option.
+    assert_eq!(options_error("{ '\\uD800': 'x', import: 'default' }"), None);
   }
 }

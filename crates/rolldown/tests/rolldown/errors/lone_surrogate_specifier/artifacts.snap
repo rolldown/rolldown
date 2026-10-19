@@ -1,0 +1,108 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] Import attributes containing lone surrogates are not supported
+    ╭─[ main.js:10:30 ]
+    │
+ 10 │ import './g.js' with { type: 'json\uD800' };
+    │                              ──────┬─────  
+    │                                    ╰─────── 
+────╯
+
+```
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] Import attributes containing lone surrogates are not supported
+    ╭─[ main.js:11:24 ]
+    │
+ 11 │ import './h.js' with { 'type\uD800': 'json' };
+    │                        ──────┬─────  
+    │                              ╰─────── 
+────╯
+
+```
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] Module specifiers containing lone surrogates are not supported
+   ╭─[ main.js:2:15 ]
+   │
+ 2 │ import a from './a\uD800.js';
+   │               ───────┬──────  
+   │                      ╰──────── 
+───╯
+
+```
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] Module specifiers containing lone surrogates are not supported
+   ╭─[ main.js:3:15 ]
+   │
+ 3 │ export * from './b\uD800.js';
+   │               ───────┬──────  
+   │                      ╰──────── 
+───╯
+
+```
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] Module specifiers containing lone surrogates are not supported
+   ╭─[ main.js:4:19 ]
+   │
+ 4 │ export { c } from './c\uD800.js';
+   │                   ───────┬──────  
+   │                          ╰──────── 
+───╯
+
+```
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] Module specifiers containing lone surrogates are not supported
+   ╭─[ main.js:5:8 ]
+   │
+ 5 │ import('./d\uD800.js');
+   │        ───────┬──────  
+   │               ╰──────── 
+───╯
+
+```
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] Module specifiers containing lone surrogates are not supported
+   ╭─[ main.js:6:9 ]
+   │
+ 6 │ require(`./e\uD800.js`);
+   │         ───────┬──────  
+   │                ╰──────── 
+───╯
+
+```
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] Module specifiers containing lone surrogates are not supported
+   ╭─[ main.js:7:9 ]
+   │
+ 7 │ new URL('./f\uD800.png', import.meta.url);
+   │         ───────┬───────  
+   │                ╰───────── 
+───╯
+
+```

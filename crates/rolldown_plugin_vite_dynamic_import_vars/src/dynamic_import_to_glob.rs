@@ -211,6 +211,12 @@ mod tests {
         "\"-\" operator is not supported.",
       ),
       (
+        "throws_when_dynamic_import_contains_a_lone_surrogate",
+        "'./\\uD800' + foo + '.js'",
+        "",
+        "A dynamic import cannot contain lone surrogates.",
+      ),
+      (
         "throws_when_dynamic_import_imports_does_not_contain_a_file_extension",
         "`./foo/${bar}`",
         "\"`./foo/${bar}`\"",

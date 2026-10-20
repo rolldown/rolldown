@@ -22,7 +22,7 @@ export function normalizeTransformHookSourcemap(
   // The Rust side already has the feature at `crates/rolldown_plugin/src/plugin_driver/build_hooks.rs#transform`.
   // but it could be failed at `rolldown_sourcemap::SourceMap::from_json`, because the map is invalid.
   let map = typeof rawMap === 'object' ? rawMap : (JSON.parse(rawMap) as ExistingRawSourceMap);
-  if (isEmptySourcemapFiled(map.sourcesContent)) {
+  if ((map.sources?.length ?? 0) <= 1 && isEmptySourcemapFiled(map.sourcesContent)) {
     map.sourcesContent = [originalCode];
   }
   if (

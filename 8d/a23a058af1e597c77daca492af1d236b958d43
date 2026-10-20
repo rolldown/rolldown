@@ -1,0 +1,41 @@
+crates/rolldown/tests/rollup/jsx/automatic-string-attribute-values/artifacts.snap
+  s_c2bb4249194d79::t_7d8312eb5afc43 1-26
+crates/rolldown/tests/rollup/jsx/classic-string-attribute-values/artifacts.snap
+  s_c2bb4249194d79::t_8b812709285f70 1-26
+crates/rolldown/tests/rollup/jsx/automatic-string-attribute-values/_config.json
+  s_c2bb4249194d79::t_b39d7bcdb19036 1-13
+crates/rolldown/tests/rollup/jsx/automatic-string-attribute-values/local/jsx-runtime.js
+  s_c2bb4249194d79::t_dc54820e634fc9 1
+crates/rolldown/tests/rollup/jsx/automatic-string-attribute-values/main.js
+  s_c2bb4249194d79::t_45b6e17748f33f 1-14
+crates/rolldown/tests/rollup/jsx/classic-string-attribute-values/_config.json
+  s_c2bb4249194d79::t_3af9172f6d6a6c 1-13
+crates/rolldown/tests/rollup/jsx/classic-string-attribute-values/h.js
+  s_c2bb4249194d79::t_328abed542fed8 1
+crates/rolldown/tests/rollup/jsx/classic-string-attribute-values/main.js
+  s_c2bb4249194d79::t_a9a936c746d176 1-19
+packages/rollup-tests/src/failed-tests.json
+  s_c2bb4249194d79::t_f472088a3d6e45 307
+packages/rollup-tests/src/ignored-tests.js
+  s_c2bb4249194d79::t_16bd30332d23b5 46-47
+packages/rollup-tests/src/status.json
+  s_c2bb4249194d79::t_b9b3b17200eb18 2-6
+packages/rollup-tests/src/status.md
+  s_c2bb4249194d79::t_b1b57cd48fc340 3-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "8da23a058af1e597c77daca492af1d236b958d43",
+  "prompts": {},
+  "sessions": {
+    "s_c2bb4249194d79": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a15859-86ec-77f3-a2a9-8e38d20ca623",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

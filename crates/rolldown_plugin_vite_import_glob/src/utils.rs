@@ -602,8 +602,8 @@ impl GlobImportVisit<'_> {
     }
   }
 
-  /// Option values become paths and import specifiers, which Rolldown keeps as UTF-8, so a value
-  /// with a lone surrogate is an error.
+  /// `base`, `import` and `query` end up in paths, export names and import specifiers, which are
+  /// UTF-8, so a value with a lone surrogate is an error.
   fn update_options(arg: &Argument, options: &mut ImportGlobOptions) -> anyhow::Result<()> {
     let Argument::ObjectExpression(obj) = arg else {
       return Ok(());

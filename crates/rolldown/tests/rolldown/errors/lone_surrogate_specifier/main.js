@@ -9,11 +9,11 @@ try {
 } catch {}
 new URL('./f\uD800.png', import.meta.url);
 
-// Attributes are reported instead of being dropped.
+// Attribute keys and values are reported too.
 import './g.js' with { type: 'json\uD800' };
 import './h.js' with { 'type\uD800': 'json' };
 
-// An ignored specifier is left untouched.
+// An ignored specifier and a data URL are left untouched.
 import(/* @vite-ignore */ './i\uD800.js');
 new URL(/* @vite-ignore */ './j\uD800.png', import.meta.url);
 new URL('data:text/plain,\uD800', import.meta.url);

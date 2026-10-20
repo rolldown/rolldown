@@ -1173,11 +1173,16 @@ fn for_each_eager_chain_child<'a>(expr: &'a Expression, visit: impl FnMut(EagerC
   let _ = chain_root_visiting_eager_children(expr, visit);
 }
 
-// oxc reads `get_constant_value_for_reference_id` only through `ConstantEvaluationCtx`, which this
-// analyzer doesn't implement, so only the type is provided.
 impl<'ast> GlobalContext<'ast> for StmtEvalAnalyzer<'_> {
   fn is_global_reference(&self, reference: &IdentifierReference<'ast>) -> bool {
     self.is_unresolved_reference(reference)
+  }
+
+  fn get_constant_value_for_reference_id(
+    &self,
+    reference_id: ReferenceId,
+  ) -> Option<oxc_ecmascript::ConstantValue<'ast>> {
+    self.constant_value_for_reference_id(reference_id).map(oxc_ecmascript::ConstantValue::from)
   }
 
   fn value_type_for_reference_id(&self, reference_id: ReferenceId) -> Option<ValueType> {

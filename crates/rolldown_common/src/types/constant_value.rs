@@ -50,13 +50,12 @@ impl From<constant_evaluation::ConstantValue<'_>> for ConstantValue {
   }
 }
 
-/// Lends a string constant instead of copying it.
-impl<'a> From<&'a ConstantValue> for constant_evaluation::ConstantValue<'a> {
-  fn from(value: &'a ConstantValue) -> Self {
+impl From<&ConstantValue> for constant_evaluation::ConstantValue<'_> {
+  fn from(value: &ConstantValue) -> Self {
     match value {
       ConstantValue::Number(n) => constant_evaluation::ConstantValue::Number(*n),
       ConstantValue::BigInt(b) => constant_evaluation::ConstantValue::BigInt(b.clone()),
-      ConstantValue::String(s) => constant_evaluation::ConstantValue::String(Cow::Borrowed(s)),
+      ConstantValue::String(s) => constant_evaluation::ConstantValue::String(Cow::Owned(s.clone())),
       ConstantValue::Boolean(b) => constant_evaluation::ConstantValue::Boolean(*b),
       ConstantValue::Undefined => constant_evaluation::ConstantValue::Undefined,
       ConstantValue::Null => constant_evaluation::ConstantValue::Null,

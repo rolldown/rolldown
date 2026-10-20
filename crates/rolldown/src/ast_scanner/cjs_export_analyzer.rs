@@ -142,7 +142,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       return Some(CommonJsAstType::ExportsRead);
     }
 
-    // A name with a lone surrogate is treated like a computed one.
+    // An export name can't contain a lone surrogate, so such a name is treated like a computed
+    // one.
     let Some(static_property_name) = static_property_name.and_then(JSStr::as_str) else {
       return Some(CommonJsAstType::ExportsPropWrite(CompactStr::from("*")));
     };

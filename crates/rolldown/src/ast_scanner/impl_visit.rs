@@ -275,7 +275,8 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
           }
           if id.name == "exports" && self.is_global_identifier_reference(id) {
             self.cjs_exports_ident.get_or_insert(Span::new(id.span.start, id.span.start + 7));
-            // A name with a lone surrogate is treated like a computed one.
+            // An export name can't contain a lone surrogate, so such a name is treated like a
+            // computed one.
             if let Some((span, export_name)) = member_expr
               .static_property_info()
               .and_then(|(span, name)| Some((span, name.as_str()?)))

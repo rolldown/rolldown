@@ -8,5 +8,5 @@ b -= 1;
 ns.test += 1;
 delete ns.test;
 
-// The name keeps its lone surrogate in the message.
+// The message prints the lone surrogate as `\ud800`.
 ns['\uD800'] = 1;

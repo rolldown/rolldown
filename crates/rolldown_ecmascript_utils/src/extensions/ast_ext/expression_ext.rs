@@ -37,7 +37,7 @@ impl<'ast> ExpressionExt<'ast> for ast::Expression<'ast> {
   }
 
   /// Returns the value of a string literal or a template literal without substitutions. The value
-  /// can have a lone surrogate, which no module request supports.
+  /// can have a lone surrogate, which Rolldown can't use as a module request.
   fn as_static_module_request(&self) -> Option<JSStr<'ast>> {
     match &self {
       ast::Expression::StringLiteral(request) => Some(request.value),

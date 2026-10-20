@@ -488,9 +488,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   /// Returns `request` as UTF-8, or reports it as unsupported when it has a lone surrogate.
   ///
-  /// Rolldown resolves and stores module requests as UTF-8: `resolveId` takes a string and import
-  /// records hold a `CompactStr`. Leaving such a request untouched would change what the code
-  /// loads, so every form of import reports it.
+  /// Rolldown's resolver, plugin hooks and import records take UTF-8 strings, so it can't resolve
+  /// such a request. Every form of import reports it, because leaving the import as written would
+  /// resolve it at runtime against the output instead of the source.
   fn module_request(&mut self, request: JSStr<'ast>, span: Span) -> Option<&'ast str> {
     let request = request.as_str();
     if request.is_none() {
@@ -508,8 +508,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     ));
   }
 
-  /// Rolldown prints import attributes as UTF-8 text, so an attribute with a lone surrogate is
-  /// reported instead of being dropped from the output.
+  /// Import attributes are stored as UTF-8, so an attribute with a lone surrogate is reported. That
+  /// includes bundled imports, whose attributes never reach the output, to keep one rule for every
+  /// import.
   fn add_import_attribute(&mut self, record_idx: ImportRecordIdx, with_clause: &ast::WithClause) {
     match ImportAttribute::from_with_clause(with_clause) {
       Ok(attribute) => {
@@ -519,8 +520,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     }
   }
 
-  /// A static import with an unsupported request still gets a record, so its specifiers have one
-  /// to bind to. The reported error stops the build before the record is resolved.
+  /// An unsupported request still gets a record, with an empty request, so the import's specifiers
+  /// have a record to bind to. The reported error stops the build before the record is resolved.
   fn static_module_request(&mut self, source: &ast::StringLiteral<'ast>) -> &'ast str {
     self.module_request(source.value, source.span).unwrap_or_default()
   }

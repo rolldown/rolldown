@@ -61,7 +61,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       return;
     }
 
-    // `URL` replaces a lone surrogate with U+FFFD, so such a path still names a file.
+    // `URL` replaces a lone surrogate with U+FFFD, so the path still names a file and can't be left
+    // untouched.
     let Some(path) = self.module_request(path, first_arg_span) else {
       return;
     };
@@ -79,8 +80,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 }
 
-/// A lone surrogate is never whitespace or part of `data:`, so this text is enough for
-/// `is_data_url`.
+/// Returns the text before the first lone surrogate. A lone surrogate is never whitespace or part
+/// of `data:`, so that text is enough for `is_data_url`.
 fn text_before_lone_surrogate(value: JSStr<'_>) -> &str {
   value.as_str().unwrap_or_else(|| {
     let bytes = value.as_bytes();

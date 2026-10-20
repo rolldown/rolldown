@@ -36,36 +36,33 @@ impl<'me> ConstEvalCtx<'me, '_> {
   }
 }
 
-// The traits use `'me`, not `'ast`, so the constants (which live for `'me`) can be lent to oxc
-// without copying them into the arena. `AstBuilder` and the AST are covariant, so
-// `AstBuilder<'ast>` and `Expression<'ast>` coerce to their `'me` forms.
-impl<'me> ConstantEvaluationCtx<'me> for ConstEvalCtx<'me, '_> {}
+impl<'ast> ConstantEvaluationCtx<'ast> for ConstEvalCtx<'_, 'ast> {}
 
-impl<'me> GetAstBuilder<'me> for ConstEvalCtx<'me, '_> {
-  type Builder = oxc::ast::builder::AstBuilder<'me>;
+impl<'ast> GetAstBuilder<'ast> for ConstEvalCtx<'_, 'ast> {
+  type Builder = oxc::ast::builder::AstBuilder<'ast>;
 
   #[inline]
-  fn builder(&self) -> &oxc::ast::builder::AstBuilder<'me> {
+  fn builder(&self) -> &oxc::ast::builder::AstBuilder<'ast> {
     &self.ast
   }
 }
 
-impl<'me> GetAllocator<'me> for ConstEvalCtx<'me, '_> {
+impl<'ast> GetAllocator<'ast> for ConstEvalCtx<'_, 'ast> {
   #[inline]
-  fn allocator(&self) -> &'me Allocator {
+  fn allocator(&self) -> &'ast Allocator {
     self.ast.allocator()
   }
 }
 
-impl<'me> GlobalContext<'me> for ConstEvalCtx<'me, '_> {
-  fn is_global_reference(&self, reference: &oxc::ast::ast::IdentifierReference<'me>) -> bool {
+impl<'ast> GlobalContext<'ast> for ConstEvalCtx<'_, 'ast> {
+  fn is_global_reference(&self, reference: &oxc::ast::ast::IdentifierReference<'ast>) -> bool {
     reference.is_global_reference(self.scope)
   }
 
   fn get_constant_value_for_reference_id(
     &self,
     reference_id: oxc::semantic::ReferenceId,
-  ) -> Option<oxc_ecmascript::constant_evaluation::ConstantValue<'me>> {
+  ) -> Option<oxc_ecmascript::constant_evaluation::ConstantValue<'ast>> {
     self.constant_value(reference_id).map(oxc_ecmascript::constant_evaluation::ConstantValue::from)
   }
 
@@ -75,7 +72,7 @@ impl<'me> GlobalContext<'me> for ConstEvalCtx<'me, '_> {
   }
 }
 
-impl<'me> MayHaveSideEffectsContext<'me> for ConstEvalCtx<'me, '_> {
+impl<'ast> MayHaveSideEffectsContext<'ast> for ConstEvalCtx<'_, 'ast> {
   fn annotations(&self) -> bool {
     false
   }
@@ -254,11 +251,10 @@ mod tests {
 
   #[test]
   fn test_string_with_a_lone_surrogate_is_not_a_constant() {
-    // oxc doesn't evaluate a literal with a lone surrogate.
+    // oxc doesn't evaluate a literal with a lone surrogate, so a pair split across two literals
+    // isn't joined either.
     assert_eq!(extract("const a = '\\uD800';", "a"), None);
     assert_eq!(extract("const a = '\\uD800' + 'x';", "a"), None);
-    // So a pair split across two literals isn't joined either, until oxc-project/oxc#27098 is
-    // released.
     assert_eq!(extract("const a = '\\uD800' + '\\uDC00';", "a"), None);
   }
 

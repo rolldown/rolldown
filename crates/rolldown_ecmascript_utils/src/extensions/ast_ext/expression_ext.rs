@@ -1,5 +1,7 @@
+use std::borrow::Cow;
+
 use oxc::ast::ast;
-use oxc::str::JSStr;
+use rolldown_utils::ecmascript::to_usv_str;
 
 pub trait ExpressionExt<'ast> {
   fn as_call_expression(&self) -> Option<&ast::CallExpression<'ast>>;
@@ -7,7 +9,7 @@ pub trait ExpressionExt<'ast> {
   fn as_identifier(&self) -> Option<&ast::IdentifierReference<'ast>>;
   fn as_identifier_mut(&mut self) -> Option<&mut ast::IdentifierReference<'ast>>;
   fn as_string_literal(&self) -> Option<&ast::StringLiteral<'ast>>;
-  fn as_static_module_request(&self) -> Option<JSStr<'ast>>;
+  fn as_static_module_request(&self) -> Option<Cow<'ast, str>>;
 
   fn is_import_meta(&self) -> bool;
   fn is_import_meta_url(&self) -> bool;
@@ -36,12 +38,11 @@ impl<'ast> ExpressionExt<'ast> for ast::Expression<'ast> {
     Some(expr)
   }
 
-  /// Returns the value of a string literal or a template literal without substitutions. The value
-  /// can have a lone surrogate, which Rolldown can't use as a module request.
-  fn as_static_module_request(&self) -> Option<JSStr<'ast>> {
+  /// A lone surrogate becomes U+FFFD, as it does when the runtime resolves the request.
+  fn as_static_module_request(&self) -> Option<Cow<'ast, str>> {
     match &self {
-      ast::Expression::StringLiteral(request) => Some(request.value),
-      ast::Expression::TemplateLiteral(request) => request.single_quasi(),
+      ast::Expression::StringLiteral(request) => Some(to_usv_str(request.value)),
+      ast::Expression::TemplateLiteral(request) => request.single_quasi().map(to_usv_str),
       _ => None,
     }
   }

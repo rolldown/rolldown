@@ -1,8 +1,11 @@
-import './dep.js';
+import assert from 'node:assert';
+import './parent.js';
 
-const cb = () => {};
-
-// Reported as unsupported, not read as a self-accept or as a non-string dep.
-import.meta.hot.accept('./dep\uD800.js', cb);
-import.meta.hot.accept(`./dep\uD800.js`, cb);
-import.meta.hot.accept(['./dep.js', './dep\uD800.js'], cb);
+process.on('beforeExit', (code) => {
+  if (code !== 0) return;
+  // The parent is a boundary for both deps: each dep re-runs, the parent does not.
+  assert.strictEqual(globalThis.aRuns, 2);
+  assert.strictEqual(globalThis.bRuns, 2);
+  assert.strictEqual(globalThis.parentRuns, 1);
+  assert.deepStrictEqual(globalThis.saw, [1, 1]);
+});

@@ -1,13 +1,10 @@
-use oxc::{
-  ast::{
-    Comment,
-    ast::{Expression, NewExpression},
-  },
-  str::JSStr,
+use oxc::ast::{
+  Comment,
+  ast::{Expression, NewExpression},
 };
 use rolldown_common::{ImportKind, ImportRecordMeta, ModuleType, get_leading_comment};
 use rolldown_ecmascript_utils::ExpressionExt;
-use rolldown_utils::dataurl::is_data_url;
+use rolldown_utils::{dataurl::is_data_url, ecmascript::to_usv_str};
 
 use super::AstScanner;
 
@@ -37,15 +34,16 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     };
 
     let (path, first_arg_span) = match first_arg {
-      Expression::StringLiteral(lit) => (lit.value, lit.span),
+      Expression::StringLiteral(lit) => (to_usv_str(lit.value), lit.span),
       Expression::TemplateLiteral(tpl) if tpl.is_no_substitution_template() => {
         let Some(value) = tpl.quasis[0].value.cooked else {
           return;
         };
-        (value, tpl.span)
+        (to_usv_str(value), tpl.span)
       }
       _ => return,
     };
+
     let has_leading_ignore_comment = get_leading_comment(
       self.immutable_ctx.comments,
       first_arg_span,
@@ -56,19 +54,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       return;
     }
 
-    // A data URL is left untouched, whatever it contains.
-    if is_data_url(text_before_lone_surrogate(path)) {
+    if is_data_url(&path) {
       return;
     }
 
-    // `URL` replaces a lone surrogate with U+FFFD, so the path still names a file and can't be left
-    // untouched.
-    let Some(path) = self.module_request(path, first_arg_span) else {
-      return;
-    };
-
     let idx = self.add_import_record(
-      path,
+      &path,
       ImportKind::NewUrl,
       first_arg_span,
       expr.span,
@@ -78,10 +69,4 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.result.import_records[idx].asserted_module_type = Some(ModuleType::Asset);
     self.result.new_url_references.insert(expr.node_id(), idx);
   }
-}
-
-/// Returns the text before the first lone surrogate. A lone surrogate is never whitespace or part
-/// of `data:`, so that text is enough for `is_data_url`.
-fn text_before_lone_surrogate(value: JSStr<'_>) -> &str {
-  value.as_str().unwrap_or_else(|| value.as_bytes().utf8_chunks().next().map_or("", |c| c.valid()))
 }

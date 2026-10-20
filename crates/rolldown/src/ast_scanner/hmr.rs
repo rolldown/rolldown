@@ -71,15 +71,18 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     call_expr: &ast::CallExpression<'ast>,
   ) {
     let Some(request) = expr.as_static_module_request() else { return };
-    let Some(request) = self.module_request(request, expr.span()) else { return };
     let record_idx = self.add_import_record(
-      request,
+      &request,
       ImportKind::HotAccept,
       expr.span(),
       call_expr.span,
       ImportRecordMeta::empty(),
       None,
     );
-    self.result.hmr_info.module_request_to_import_record_idx.insert(request.into(), record_idx);
+    self
+      .result
+      .hmr_info
+      .module_request_to_import_record_idx
+      .insert(request.as_ref().into(), record_idx);
   }
 }

@@ -1,8 +1,8 @@
 {
   "config": {
+    "external": ["node:assert", "node:fs"],
     "experimental": {
       "resolveNewUrlToAsset": true
     }
-  },
-  "expectError": true
+  }
 }

@@ -42,7 +42,7 @@ use rolldown_ecmascript_utils::FunctionExt;
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
 use rolldown_std_utils::PathExt;
 use rolldown_utils::concat_string;
-use rolldown_utils::ecmascript::legitimize_identifier_name;
+use rolldown_utils::ecmascript::{legitimize_identifier_name, to_usv_str};
 use rolldown_utils::indexmap::FxIndexMap;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::borrow::Cow;
@@ -486,47 +486,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.result.symbol_ref_db.scoping().get_root_binding(name.into())
   }
 
-  /// Returns `request` as UTF-8, or reports it as unsupported when it has a lone surrogate.
-  ///
-  /// Rolldown's resolver, plugin hooks and import records take UTF-8 strings, so it can't resolve
-  /// such a request. Every form of import reports it, even an absolute URL or a bare specifier
-  /// that would work as written: `resolveId` hooks see a specifier before Rolldown knows it is
-  /// external.
-  fn module_request(&mut self, request: JSStr<'ast>, span: Span) -> Option<&'ast str> {
-    let request = request.as_str();
-    if request.is_none() {
-      self.report_lone_surrogate("Module specifiers", span);
-    }
-    request
-  }
-
-  fn report_lone_surrogate(&mut self, subject: &str, span: Span) {
-    self.result.errors.push(BuildDiagnostic::unsupported_feature(
-      self.immutable_ctx.id.as_arc_str().clone(),
-      self.immutable_ctx.source.clone(),
-      span,
-      format!("{subject} containing lone surrogates are not supported"),
-    ));
-  }
-
-  /// Import attributes are stored as UTF-8, so an attribute with a lone surrogate is reported. That
-  /// includes bundled imports, whose attributes never reach the output, to keep one rule for every
-  /// import.
-  fn add_import_attribute(&mut self, record_idx: ImportRecordIdx, with_clause: &ast::WithClause) {
-    match ImportAttribute::from_with_clause(with_clause) {
-      Ok(attribute) => {
-        self.result.import_attribute_map.insert(record_idx, attribute);
-      }
-      Err(span) => self.report_lone_surrogate("Import attributes", span),
-    }
-  }
-
-  /// An unsupported request still gets a record, with an empty request, so the import's specifiers
-  /// have a record to bind to. The reported error stops the build before the record is resolved.
-  fn static_module_request(&mut self, source: &ast::StringLiteral<'ast>) -> &'ast str {
-    self.module_request(source.value, source.span).unwrap_or_default()
-  }
-
   /// `is_dummy` means if it the import record is created during ast transformation.
   ///
   /// `import_expression_node_id` - The AST node ID of the ImportExpression node,
@@ -731,10 +690,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.result.named_imports.insert(generated_imported_as_ref, name_import);
   }
 
-  fn scan_export_all_decl(&mut self, decl: &ExportAllDeclaration<'ast>) {
-    let request = self.static_module_request(&decl.source);
+  fn scan_export_all_decl(&mut self, decl: &ExportAllDeclaration) {
     let id = self.add_import_record(
-      request,
+      &to_usv_str(decl.source.value),
       ImportKind::Import,
       decl.source.span(),
       decl.span,
@@ -756,7 +714,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     }
     self.result.imports.insert(decl.node_id(), id);
     if let Some(ref with_clause) = decl.with_clause {
-      self.add_import_attribute(id, with_clause);
+      self.result.import_attribute_map.insert(id, ImportAttribute::from_with_clause(with_clause));
     }
   }
 
@@ -775,9 +733,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   fn scan_export_from_decl(&mut self, decl: &ExportFromDeclaration<'ast>) {
     let source = &decl.source;
-    let request = self.static_module_request(source);
     let record_idx = self.add_import_record(
-      request,
+      &to_usv_str(source.value),
       ImportKind::Import,
       source.span(),
       decl.span,
@@ -797,7 +754,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       );
     });
     if let Some(ref with_clause) = decl.with_clause {
-      self.add_import_attribute(record_idx, with_clause);
+      self
+        .result
+        .import_attribute_map
+        .insert(record_idx, ImportAttribute::from_with_clause(with_clause));
     }
     self.result.imports.insert(decl.node_id(), record_idx);
     self.result.import_records[record_idx].meta.insert(ImportRecordMeta::IsReExportOnly);
@@ -948,10 +908,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.add_local_default_export(reference, span);
   }
 
-  fn scan_import_decl(&mut self, decl: &ImportDeclaration<'ast>) {
-    let request = self.static_module_request(&decl.source);
+  fn scan_import_decl(&mut self, decl: &ImportDeclaration) {
     let rec_id = self.add_import_record(
-      request,
+      &to_usv_str(decl.source.value),
       ImportKind::Import,
       decl.source.span(),
       decl.span,
@@ -964,7 +923,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     );
 
     if let Some(ref with_clause) = decl.with_clause {
-      self.add_import_attribute(rec_id, with_clause);
+      self
+        .result
+        .import_attribute_map
+        .insert(rec_id, ImportAttribute::from_with_clause(with_clause));
     }
     self.result.imports.insert(decl.node_id(), rec_id);
 

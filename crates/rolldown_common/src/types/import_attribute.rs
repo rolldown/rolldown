@@ -1,9 +1,9 @@
 use std::fmt::Display;
 
 use json_escape_simd::escape;
-use oxc::{ast::ast, span::Span};
+use oxc::ast::ast;
 use oxc_str::CompactStr;
-use rolldown_utils::indexmap::FxIndexMap;
+use rolldown_utils::{ecmascript::to_usv_str, indexmap::FxIndexMap};
 
 #[derive(Debug, Clone, Default)]
 pub struct ImportAttribute {
@@ -37,14 +37,12 @@ impl ImportAttribute {
     self.entries.contains_key(key)
   }
 
-  /// Fails with the span of the first key or value that has a lone surrogate, which the UTF-8
-  /// entries can't hold.
-  pub fn from_with_clause(with_clause: &ast::WithClause) -> Result<Self, Span> {
+  pub fn from_with_clause(with_clause: &ast::WithClause) -> Self {
     let kind = match with_clause.keyword {
       ast::WithClauseKeyword::With => ImportAttributeKind::With,
       ast::WithClauseKeyword::Assert => ImportAttributeKind::Assert,
     };
-    let entries = with_clause
+    let entries: FxIndexMap<ImportAttributeKey, String> = with_clause
       .with_entries
       .iter()
       .map(|entry| {
@@ -52,15 +50,14 @@ impl ImportAttribute {
           ast::ImportAttributeKey::Identifier(identifier_name) => {
             ImportAttributeKey::Identifier(identifier_name.name.into())
           }
-          ast::ImportAttributeKey::StringLiteral(string_literal) => ImportAttributeKey::String(
-            string_literal.value.as_str().ok_or(string_literal.span)?.into(),
-          ),
+          ast::ImportAttributeKey::StringLiteral(string_literal) => {
+            ImportAttributeKey::String(to_usv_str(string_literal.value).into())
+          }
         };
-        let value = entry.value.value.as_str().ok_or(entry.value.span)?;
-        Ok((key, value.to_string()))
+        (key, to_usv_str(entry.value.value).into_owned())
       })
-      .collect::<Result<FxIndexMap<_, _>, Span>>()?;
-    Ok(Self { kind, entries })
+      .collect();
+    Self { kind, entries }
   }
 }
 

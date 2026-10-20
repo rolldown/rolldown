@@ -7,7 +7,6 @@ use oxc::ast::ast::{
   self, Argument, ArrayExpressionElement, Expression, ObjectPropertyKind, PropertyKey, PropertyKind,
 };
 use oxc::ast_visit::{VisitJs, walk_js};
-use oxc::str::JSStr;
 use rolldown_ecmascript_utils::ExpressionExt;
 use rolldown_plugin::{LogWithoutPlugin, PluginContext};
 use rolldown_plugin_utils::{
@@ -15,6 +14,7 @@ use rolldown_plugin_utils::{
   to_string_literal,
 };
 use rolldown_std_utils::relative_path_to_slash;
+use rolldown_utils::ecmascript::to_usv_str;
 use string_wizard::MagicString;
 use sugar_path::SugarPath;
 
@@ -161,11 +161,8 @@ impl<'ast> GlobImportVisit<'_> {
         let mut options = ImportGlobOptions::default();
 
         // import.meta.glob(['./dir/*.js'], { import: 'setup' })
-        if let Some(arg) = call_expr.arguments.get(1)
-          && let Err(err) = Self::update_options(arg, &mut options)
-        {
-          self.errors.push(err);
-          return true;
+        if let Some(arg) = call_expr.arguments.get(1) {
+          Self::update_options(arg, &mut options);
         }
 
         // import.meta.glob('./dir/*.js')
@@ -426,19 +423,22 @@ impl GlobImportVisit<'_> {
     let mut negated_globs = vec![];
     let mut positive_globs = vec![];
 
-    // A glob with a lone surrogate matches no file path, so it is skipped.
     let mut values = vec![];
     match arg {
-      Argument::StringLiteral(str) => values.extend(str.value.as_str()),
+      Argument::StringLiteral(str) => values.push(to_usv_str(str.value)),
       Argument::TemplateLiteral(lit) => {
-        values.extend(lit.single_quasi().and_then(JSStr::as_str));
+        if let Some(str) = lit.single_quasi() {
+          values.push(to_usv_str(str));
+        }
       }
       Argument::ArrayExpression(array_expr) => {
         for expr in &array_expr.elements {
           match expr {
-            ArrayExpressionElement::StringLiteral(str) => values.extend(str.value.as_str()),
+            ArrayExpressionElement::StringLiteral(str) => values.push(to_usv_str(str.value)),
             ArrayExpressionElement::TemplateLiteral(lit) => {
-              values.extend(lit.single_quasi().and_then(JSStr::as_str));
+              if let Some(str) = lit.single_quasi() {
+                values.push(to_usv_str(str));
+              }
             }
             _ => {}
           }
@@ -447,7 +447,7 @@ impl GlobImportVisit<'_> {
       _ => {}
     }
 
-    for value in values {
+    for value in &values {
       if let Some(glob) = value.strip_prefix('!') {
         negated_globs.push(self.to_absolute_glob(
           glob,
@@ -602,11 +602,9 @@ impl GlobImportVisit<'_> {
     }
   }
 
-  /// `base`, `import` and `query` end up in paths, export names and import specifiers, which are
-  /// UTF-8, so a value with a lone surrogate is an error.
-  fn update_options(arg: &Argument, options: &mut ImportGlobOptions) -> anyhow::Result<()> {
+  fn update_options(arg: &Argument, options: &mut ImportGlobOptions) {
     let Argument::ObjectExpression(obj) = arg else {
-      return Ok(());
+      return;
     };
 
     for prop in &obj.properties {
@@ -618,17 +616,16 @@ impl GlobImportVisit<'_> {
         continue;
       };
 
-      // A key with a lone surrogate names no option, so it is ignored like any unknown key.
-      let key = match &p.key {
-        PropertyKey::StringLiteral(str) => str.value.as_str(),
-        PropertyKey::StaticIdentifier(id) => Some(id.name.as_str()),
+      let key: &str = match &p.key {
+        PropertyKey::StringLiteral(str) => &to_usv_str(str.value),
+        PropertyKey::StaticIdentifier(id) => id.name.as_str(),
         _ => continue,
       };
 
       match key {
-        Some("base") => match &p.value {
+        "base" => match &p.value {
           Expression::StringLiteral(str) if !str.value.is_empty() => {
-            options.base = Some(option_str(str.value)?.to_string());
+            options.base = Some(to_usv_str(str.value).into_owned());
           }
           Expression::TemplateLiteral(str)
             if str.is_no_substitution_template() && !str.quasis[0].value.raw.is_empty() =>
@@ -637,45 +634,48 @@ impl GlobImportVisit<'_> {
           }
           _ => {}
         },
-        Some("import") => {
+        "import" => {
           if let Expression::StringLiteral(str) = &p.value {
-            options.import = Some(option_str(str.value)?.to_string());
+            options.import = Some(to_usv_str(str.value).into_owned());
           }
         }
-        Some("eager") => {
+        "eager" => {
           if let Expression::BooleanLiteral(bool) = &p.value {
             options.eager = bool.value;
           }
         }
-        Some("exhaustive") => {
+        "exhaustive" => {
           if let Expression::BooleanLiteral(bool) = &p.value {
             options.exhaustive = bool.value;
           }
         }
-        Some("caseSensitive") => {
+        "caseSensitive" => {
           if let Expression::BooleanLiteral(bool) = &p.value {
             options.case_sensitive = Some(bool.value);
           }
         }
-        Some("query") => match &p.value {
+        "query" => match &p.value {
           Expression::StringLiteral(str) => {
-            let query = option_str(str.value)?;
-            options.query =
-              Some(if query.starts_with('?') { query.to_string() } else { format!("?{query}") });
+            let query = to_usv_str(str.value);
+            options.query = if query.starts_with('?') {
+              Some(query.into_owned())
+            } else {
+              Some(format!("?{query}"))
+            }
           }
           Expression::ObjectExpression(expr) => {
             let mut query_string = String::from("?");
             for prop in &expr.properties {
               let ObjectPropertyKind::ObjectProperty(p) = prop else { continue };
 
-              let key = match &p.key {
-                PropertyKey::StringLiteral(key) => option_str(key.value)?,
+              let key: &str = match &p.key {
+                PropertyKey::StringLiteral(key) => &to_usv_str(key.value),
                 PropertyKey::StaticIdentifier(ident) => ident.name.as_str(),
                 _ => continue,
               };
 
-              let value = match &p.value {
-                Expression::StringLiteral(v) => option_str(v.value)?,
+              let value: &str = match &p.value {
+                Expression::StringLiteral(v) => &to_usv_str(v.value),
                 Expression::BooleanLiteral(v) => {
                   if v.value {
                     "true"
@@ -703,48 +703,5 @@ impl GlobImportVisit<'_> {
         _ => {}
       }
     }
-    Ok(())
-  }
-}
-
-fn option_str(value: JSStr<'_>) -> anyhow::Result<&str> {
-  value
-    .as_str()
-    .ok_or_else(|| anyhow::anyhow!("`import.meta.glob()` options cannot contain lone surrogates."))
-}
-
-#[cfg(test)]
-mod tests {
-  use oxc::{allocator::Allocator, parser::Parser, span::SourceType};
-
-  use super::*;
-
-  fn options_error(options: &str) -> Option<String> {
-    let allocator = Allocator::default();
-    let code = format!("f({options})");
-    let expr = Parser::new(&allocator, &code, SourceType::default()).parse_expression().unwrap();
-    let Expression::CallExpression(call) = expr else { unreachable!() };
-    GlobImportVisit::update_options(&call.arguments[0], &mut ImportGlobOptions::default())
-      .err()
-      .map(|err| err.to_string())
-  }
-
-  #[test]
-  fn rejects_options_with_lone_surrogates() {
-    for options in [
-      "{ base: './\\uD800' }",
-      "{ import: '\\uD800' }",
-      "{ query: '\\uD800' }",
-      "{ query: { '\\uD800': true } }",
-      "{ query: { raw: '\\uD800' } }",
-    ] {
-      assert_eq!(
-        options_error(options).as_deref(),
-        Some("`import.meta.glob()` options cannot contain lone surrogates."),
-        "{options}"
-      );
-    }
-    // A key with a lone surrogate names no option.
-    assert_eq!(options_error("{ '\\uD800': 'x', import: 'default' }"), None);
   }
 }

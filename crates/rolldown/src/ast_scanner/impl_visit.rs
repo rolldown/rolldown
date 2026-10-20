@@ -21,6 +21,7 @@ use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{ExpressionExt, is_top_level};
 use rolldown_error::{BuildDiagnostic, EventKindSwitcher};
 use rolldown_std_utils::OptionExt;
+use rolldown_utils::ecmascript::to_usv_str;
 
 use crate::{ast_scanner::cjs_export_analyzer::CommonJsAstType, utils};
 
@@ -234,10 +235,9 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
     // If a `ImportExpression` is ignored by `/* @vite-ignore */` comment, we should not treat it as a dynamic import
     if !self.is_import_expr_ignored_by_comment(expr)
       && let Some(request) = expr.source.as_static_module_request()
-      && let Some(request) = self.module_request(request, expr.source.span())
     {
       let import_rec_idx = self.add_import_record(
-        request,
+        &request,
         ImportKind::DynamicImport,
         expr.source.span(),
         expr.span,
@@ -253,8 +253,7 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
       self.init_dynamic_import_binding_usage_info(import_rec_idx);
       self.result.imports.insert(expr.node_id(), import_rec_idx);
     } else {
-      // No import record - either @vite-ignore, a non-static dynamic import, or an unsupported
-      // specifier
+      // No import record - either @vite-ignore or non-static dynamic import
       self.current_stmt_info.meta.insert(StmtInfoMeta::NonStaticDynamicImport);
     }
     walk_js::walk_import_expression(self, expr);
@@ -701,7 +700,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       },
       _ => return false,
     };
-    let Some(value) = self.module_request(value, span) else { return false };
     let mut init_meta = if span.is_empty() {
       ImportRecordMeta::IsUnspannedImport
     } else {
@@ -742,7 +740,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     };
     let in_side_try_catch_block = self.in_side_try_catch_block();
     init_meta.set(ImportRecordMeta::InTryCatchBlock, in_side_try_catch_block);
-    let id = self.add_import_record(value, ImportKind::Require, span, expr.span, init_meta, None);
+    let id = self.add_import_record(
+      &to_usv_str(value),
+      ImportKind::Require,
+      span,
+      expr.span,
+      init_meta,
+      None,
+    );
     self.result.imports.insert(expr.node_id(), id);
     true
   }

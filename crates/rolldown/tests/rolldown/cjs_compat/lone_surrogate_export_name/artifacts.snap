@@ -8,9 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
-//#region cjs.js
-//#endregion
-//#region main.js
+// main.js
 var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports["\ud800"] = "assigned";
 	Object.defineProperty(exports, "\udc00", {
@@ -22,6 +20,5 @@ var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((export
 assert.strictEqual(import_cjs["\ud800"], "assigned");
 assert.strictEqual(import_cjs["\udc00"], "defined");
 assert.strictEqual("foo", "foo");
-//#endregion
 
 ```

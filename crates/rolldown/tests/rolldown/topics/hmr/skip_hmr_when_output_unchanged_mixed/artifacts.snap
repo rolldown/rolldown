@@ -23,27 +23,24 @@ __rolldown_runtime__.registerGraph({
 		[2]
 	]
 });
-//#region a.js
+// a.js
 var a_exports = /* @__PURE__ */ __exportAll({ a: () => "a1" });
 __rolldown_runtime__.createModuleHotContext("a.js");
 __rolldown_runtime__.registerModule("a.js", { exports: a_exports });
 globalThis.__mixed_runs_a = (globalThis.__mixed_runs_a ?? 0) + 1;
-//#endregion
-//#region b.js
+// b.js
 var b_exports = /* @__PURE__ */ __exportAll({ b: () => "b1" });
 __rolldown_runtime__.createModuleHotContext("b.js");
 __rolldown_runtime__.registerModule("b.js", { exports: b_exports });
 globalThis.__mixed_runs_b = (globalThis.__mixed_runs_b ?? 0) + 1;
-//#endregion
-//#region hub.js
+// hub.js
 var hub_exports = /* @__PURE__ */ __exportAll({ combined: () => combined });
 const hub_hot = __rolldown_runtime__.createModuleHotContext("hub.js");
 __rolldown_runtime__.registerModule("hub.js", { exports: hub_exports });
 const combined = "a1b1";
 globalThis.__mixed_runs_hub = (globalThis.__mixed_runs_hub ?? 0) + 1;
 if (hub_hot) hub_hot.accept(() => {});
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
@@ -53,7 +50,6 @@ process.on("beforeExit", (code) => {
 	assert.strictEqual(globalThis.__mixed_runs_b, 2, "b.js must re-run only at step 0 (real change)");
 	assert.strictEqual(globalThis.__mixed_runs_hub, 3, "hub.js must re-run at steps 0 and 2, not at step 1");
 });
-//#endregion
 
 ```
 

@@ -30,22 +30,20 @@ __rolldown_runtime__.registerGraph({
 		[1]
 	]
 });
-//#region esm.js
+// esm.js
 var esm_exports = /* @__PURE__ */ __exportAll({ default: () => esm_default }), esm_default;
 var init_esm = __esmMin((() => {
 	__rolldown_runtime__.createModuleHotContext("esm.js");
 	__rolldown_runtime__.registerModule("esm.js", { exports: esm_exports });
 	esm_default = "esm-default";
 }));
-//#endregion
-//#region bridge.js
+// bridge.js
 var require_bridge = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	__rolldown_runtime__.createModuleHotContext("bridge.js");
 	__rolldown_runtime__.registerModule("bridge.js", module);
 	module.exports = (init_esm(), __toCommonJS(esm_exports));
 }));
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 var import_bridge = /* @__PURE__ */ __toESM(require_bridge());
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
@@ -60,7 +58,6 @@ process.on("beforeExit", (code) => {
 	if (code !== 0) return;
 	assert.strictEqual(globalThis.__cjs_bridge_esm_default_patch_verified, true, "bridge.js HMR patch accept handler should have run and verified");
 });
-//#endregion
 
 ```
 

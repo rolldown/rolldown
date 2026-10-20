@@ -7,14 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region entry.js
+// entry.js
 var require_entry = /* @__PURE__ */ __commonJSMin(((exports) => {
 	try {
 		const supportsColor = __require("supports-color");
 		if (supportsColor && (supportsColor.stderr || supportsColor).level >= 2) exports.colors = [];
 	} catch (error) {}
 }));
-//#endregion
 export default require_entry();
 
 ```

@@ -7,9 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region foo.js
-//#endregion
-//#region entry.js
+// entry.js
 __esmMin((() => {
 	x = 1;
 	while (x--);
@@ -19,6 +17,5 @@ __esmMin((() => {
 	for (var y in "y");
 	for (var y of "y");
 }))();
-//#endregion
 
 ```

@@ -16,14 +16,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region leaf.js
+// leaf.js
 function init_leaf() {
 	return (init_leaf = __esmMin((() => {
 		(globalThis.__events ??= []).push("leaf");
 	})))();
 }
-//#endregion
-//#region definer.js
+// definer.js
 function makeValue() {
 	return 5;
 }
@@ -34,22 +33,19 @@ function init_definer() {
 		value = makeValue();
 	})))();
 }
-//#endregion
-//#region barrel-inner.js
+// barrel-inner.js
 function init_barrel_inner() {
 	return (init_barrel_inner = __esmMin((() => {
 		init_definer();
 	})))();
 }
-//#endregion
-//#region barrel-outer.js
+// barrel-outer.js
 function init_barrel_outer() {
 	return (init_barrel_outer = __esmMin((() => {
 		init_barrel_inner();
 	})))();
 }
-//#endregion
-//#region reader.js
+// reader.js
 var readerValue;
 function init_reader() {
 	return (init_reader = __esmMin((() => {
@@ -59,23 +55,20 @@ function init_reader() {
 		readerValue = value + 100;
 	})))();
 }
-//#endregion
-//#region reader-host.js
+// reader-host.js
 function init_reader_host() {
 	return (init_reader_host = __esmMin((() => {
 		init_reader();
 		(globalThis.__events ??= []).push("reader-host:" + readerValue);
 	})))();
 }
-//#endregion
-//#region dynamic-page.js
+// dynamic-page.js
 function init_dynamic_page() {
 	return (init_dynamic_page = __esmMin((() => {
 		init_reader_host();
 		(globalThis.__events ??= []).push("dynamic-page");
 	})))();
 }
-//#endregion
 init_dynamic_page();
 
 ```
@@ -84,7 +77,7 @@ init_dynamic_page();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region main.js
+// main.js
 function loadPage() {
 	return import("./dynamic-page.js");
 }
@@ -93,7 +86,6 @@ function init_main() {
 		(globalThis.__events ??= []).push("main");
 	})))();
 }
-//#endregion
 init_main();
 export { loadPage };
 
@@ -123,38 +115,32 @@ export { __esmMin as t };
 ### dynamic-page.js
 
 ```js
-//#region leaf.js
+// leaf.js
 (globalThis.__events ??= []).push("leaf");
-//#endregion
-//#region definer.js
+// definer.js
 (globalThis.__events ??= []).push("definer");
 function makeValue() {
 	return 5;
 }
 const value = makeValue();
-//#endregion
-//#region reader.js
+// reader.js
 (globalThis.__events ??= []).push("reader:" + value);
 const readerValue = value + 100;
-//#endregion
-//#region reader-host.js
+// reader-host.js
 (globalThis.__events ??= []).push("reader-host:" + readerValue);
-//#endregion
-//#region dynamic-page.js
+// dynamic-page.js
 (globalThis.__events ??= []).push("dynamic-page");
-//#endregion
 
 ```
 
 ### main.js
 
 ```js
-//#region main.js
+// main.js
 (globalThis.__events ??= []).push("main");
 function loadPage() {
 	return import("./dynamic-page.js");
 }
-//#endregion
 export { loadPage };
 
 ```

@@ -392,13 +392,11 @@ Since `lib.js` appears before `main.js` in the bundle, `require_leaflet_toolbar(
 
 ```js
 // ❌ Wrong output: require_leaflet_toolbar() runs before require_leaflet()
-//#region lib.js
+// lib.js
 require_leaflet_toolbar(); // 💥 global.L is undefined here
-//#endregion
-//#region main.js
+// main.js
 var import_leaflet = require_leaflet(); // too late — toolbar already failed
 assert.equal(bar, 'foo');
-//#endregion
 ```
 
 Note: if `main.js` imported `leaflet-toolbar.js` directly (without `lib.js` as intermediary), both init calls would land in the same module region and rolldown would order them correctly. The problem only arises when init calls are split across different unwrapped modules.
@@ -407,13 +405,11 @@ Note: if `main.js` imported `leaflet-toolbar.js` directly (without `lib.js` as i
 
 ```js
 // ✅ Correct output: require_leaflet() runs before require_leaflet_toolbar()
-//#region lib.js
+// lib.js
 require_leaflet(); // ← transferred here by insert_map
 require_leaflet_toolbar();
-//#endregion
-//#region main.js
+// main.js
 assert.equal(bar, 'foo'); // require_leaflet() removed from here by remove_map
-//#endregion
 ```
 
 The function builds `insert_map` and `remove_map` on each chunk to move init calls from their default position to the correct one. `remove_map` suppresses the init call at the original location; `insert_map` prepends it before the module that needs it.

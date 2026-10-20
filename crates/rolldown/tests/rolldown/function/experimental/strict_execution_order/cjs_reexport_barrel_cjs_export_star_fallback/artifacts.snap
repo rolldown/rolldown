@@ -16,13 +16,12 @@ export { loadRoute };
 
 ```js
 import { a as __toESM, i as __reExport, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
-//#region node_modules/pure-barrel/extra.cjs
+// node_modules/pure-barrel/extra.cjs
 var require_extra = /* @__PURE__ */ __commonJSMin(((exports) => {
 	globalThis.__events.push("extra");
 	exports.extraValue = "extra";
 }));
-//#endregion
-//#region node_modules/pure-barrel/cn.js
+// node_modules/pure-barrel/cn.js
 function cn(...values) {
 	return values.filter(Boolean).join(" ");
 }
@@ -31,16 +30,14 @@ function init_cn() {
 		globalThis.__events.push("cn");
 	})))();
 }
-//#endregion
-//#region node_modules/pure-barrel/clone-deep.cjs
+// node_modules/pure-barrel/clone-deep.cjs
 var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("clone-deep");
 	module.exports = function cloneDeep(value) {
 		return JSON.parse(JSON.stringify(value));
 	};
 }));
-//#endregion
-//#region node_modules/pure-barrel/index.js
+// node_modules/pure-barrel/index.js
 var pure_barrel_exports = /* @__PURE__ */ __exportAll({
 	cloneDeep: () => import_clone_deep.default,
 	cn: () => cn
@@ -53,8 +50,7 @@ function init_pure_barrel() {
 		import_clone_deep = /* @__PURE__ */ __toESM(require_clone_deep(), 1);
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 function loadRoute() {
 	return import("./route.js");
 }
@@ -64,7 +60,6 @@ function init_main() {
 		globalThis.__events.push(`main:${cn("a", "b")}`);
 	})))();
 }
-//#endregion
 export { pure_barrel_exports as a, init_pure_barrel as i, loadRoute as n, import_clone_deep as r, init_main as t };
 
 ```
@@ -82,7 +77,7 @@ export { __toESM as a, __reExport as i, __esmMin as n, __exportAll as r, __commo
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { a as pure_barrel_exports, i as init_pure_barrel, r as import_clone_deep } from "./main2.js";
-//#region route.js
+// route.js
 var value;
 function init_route() {
 	return (init_route = __esmMin((() => {
@@ -91,7 +86,6 @@ function init_route() {
 		value = (0, import_clone_deep.default)({ value: 1 });
 	})))();
 }
-//#endregion
 init_route();
 export { value };
 
@@ -114,13 +108,12 @@ export { loadRoute };
 
 ```js
 import { a as __toESM, i as __reExport, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
-//#region node_modules/pure-barrel/extra.cjs
+// node_modules/pure-barrel/extra.cjs
 var require_extra = /* @__PURE__ */ __commonJSMin(((exports) => {
 	globalThis.__events.push("extra");
 	exports.extraValue = "extra";
 }));
-//#endregion
-//#region node_modules/pure-barrel/cn.js
+// node_modules/pure-barrel/cn.js
 function cn(...values) {
 	return values.filter(Boolean).join(" ");
 }
@@ -129,16 +122,14 @@ function init_cn() {
 		globalThis.__events.push("cn");
 	})))();
 }
-//#endregion
-//#region node_modules/pure-barrel/clone-deep.cjs
+// node_modules/pure-barrel/clone-deep.cjs
 var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("clone-deep");
 	module.exports = function cloneDeep(value) {
 		return JSON.parse(JSON.stringify(value));
 	};
 }));
-//#endregion
-//#region node_modules/pure-barrel/index.js
+// node_modules/pure-barrel/index.js
 var pure_barrel_exports = /* @__PURE__ */ __exportAll({
 	cloneDeep: () => import_clone_deep.default,
 	cn: () => cn
@@ -151,8 +142,7 @@ function init_pure_barrel() {
 		import_clone_deep = /* @__PURE__ */ __toESM(require_clone_deep(), 1);
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 function loadRoute() {
 	return import("./route.js");
 }
@@ -162,7 +152,6 @@ function init_main() {
 		globalThis.__events.push(`main:${cn("a", "b")}`);
 	})))();
 }
-//#endregion
 export { pure_barrel_exports as a, init_pure_barrel as i, loadRoute as n, import_clone_deep as r, init_main as t };
 
 ```
@@ -180,7 +169,7 @@ export { __toESM as a, __reExport as i, __esmMin as n, __exportAll as r, __commo
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { a as pure_barrel_exports, i as init_pure_barrel, r as import_clone_deep } from "./main2.js";
-//#region route.js
+// route.js
 var value;
 function init_route() {
 	return (init_route = __esmMin((() => {
@@ -189,7 +178,6 @@ function init_route() {
 		value = (0, import_clone_deep.default)({ value: 1 });
 	})))();
 }
-//#endregion
 init_route();
 export { value };
 

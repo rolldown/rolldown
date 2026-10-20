@@ -8,9 +8,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 const url = new URL("assets/foo-u1ylrPOy.bin", import.meta.url);
-//#endregion
 export { url };
 
 ```

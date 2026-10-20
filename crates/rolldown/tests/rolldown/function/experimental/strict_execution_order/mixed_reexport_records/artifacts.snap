@@ -8,15 +8,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_shared } from "./shared.js";
-//#region a.js
+// a.js
 var A;
 function init_a() {
 	return (init_a = __esmMin((() => {
 		A = { value: "a" };
 	})))();
 }
-//#endregion
-//#region lazy-a.js
+// lazy-a.js
 function read() {
 	return A;
 }
@@ -25,7 +24,6 @@ function init_lazy_a() {
 		init_a(), init_shared();
 	})))();
 }
-//#endregion
 init_lazy_a();
 export { read };
 
@@ -36,15 +34,14 @@ export { read };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_shared } from "./shared.js";
-//#region b.js
+// b.js
 var B;
 function init_b() {
 	return (init_b = __esmMin((() => {
 		B = { value: "b" };
 	})))();
 }
-//#endregion
-//#region lazy-b.js
+// lazy-b.js
 function read() {
 	return B;
 }
@@ -53,7 +50,6 @@ function init_lazy_b() {
 		init_b(), init_shared();
 	})))();
 }
-//#endregion
 init_lazy_b();
 export { read };
 
@@ -64,7 +60,7 @@ export { read };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_shared, t as LOCAL } from "./shared.js";
-//#region main.js
+// main.js
 var local, loadA, loadB;
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -74,7 +70,6 @@ function init_main() {
 		loadB = () => import("./lazy-b.js").then((module) => module.read());
 	})))();
 }
-//#endregion
 init_main();
 export { loadA, loadB, local };
 
@@ -92,7 +87,7 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region required.js
+// required.js
 var REQUIRED;
 function init_required() {
 	return (init_required = __esmMin((() => {
@@ -100,8 +95,7 @@ function init_required() {
 		REQUIRED = "required";
 	})))();
 }
-//#endregion
-//#region shared.js
+// shared.js
 var LOCAL;
 function init_shared() {
 	return (init_shared = __esmMin((() => {
@@ -110,7 +104,6 @@ function init_shared() {
 		LOCAL = REQUIRED;
 	})))();
 }
-//#endregion
 export { init_shared as n, LOCAL as t };
 
 ```
@@ -124,15 +117,14 @@ export { init_shared as n, LOCAL as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_shared } from "./shared.js";
-//#region a.js
+// a.js
 var A;
 function init_a() {
 	return (init_a = __esmMin((() => {
 		A = { value: "a" };
 	})))();
 }
-//#endregion
-//#region lazy-a.js
+// lazy-a.js
 function read() {
 	return A;
 }
@@ -141,7 +133,6 @@ function init_lazy_a() {
 		init_a(), init_shared();
 	})))();
 }
-//#endregion
 init_lazy_a();
 export { read };
 
@@ -152,15 +143,14 @@ export { read };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_shared } from "./shared.js";
-//#region b.js
+// b.js
 var B;
 function init_b() {
 	return (init_b = __esmMin((() => {
 		B = { value: "b" };
 	})))();
 }
-//#endregion
-//#region lazy-b.js
+// lazy-b.js
 function read() {
 	return B;
 }
@@ -169,7 +159,6 @@ function init_lazy_b() {
 		init_b(), init_shared();
 	})))();
 }
-//#endregion
 init_lazy_b();
 export { read };
 
@@ -180,7 +169,7 @@ export { read };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_shared, t as LOCAL } from "./shared.js";
-//#region main.js
+// main.js
 var local, loadA, loadB;
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -190,7 +179,6 @@ function init_main() {
 		loadB = () => import("./lazy-b.js").then((module) => module.read());
 	})))();
 }
-//#endregion
 init_main();
 export { loadA, loadB, local };
 
@@ -208,7 +196,7 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region required.js
+// required.js
 var REQUIRED;
 function init_required() {
 	return (init_required = __esmMin((() => {
@@ -216,8 +204,7 @@ function init_required() {
 		REQUIRED = "required";
 	})))();
 }
-//#endregion
-//#region shared.js
+// shared.js
 var LOCAL;
 function init_shared() {
 	return (init_shared = __esmMin((() => {
@@ -226,7 +213,6 @@ function init_shared() {
 		LOCAL = REQUIRED;
 	})))();
 }
-//#endregion
 export { init_shared as n, LOCAL as t };
 
 ```
@@ -239,14 +225,12 @@ export { init_shared as n, LOCAL as t };
 
 ```js
 import "./shared.js";
-//#region a.js
+// a.js
 const A = { value: "a" };
-//#endregion
-//#region lazy-a.js
+// lazy-a.js
 function read() {
 	return A;
 }
-//#endregion
 export { read };
 
 ```
@@ -255,14 +239,12 @@ export { read };
 
 ```js
 import "./shared.js";
-//#region b.js
+// b.js
 const B = { value: "b" };
-//#endregion
-//#region lazy-b.js
+// lazy-b.js
 function read() {
 	return B;
 }
-//#endregion
 export { read };
 
 ```
@@ -271,11 +253,10 @@ export { read };
 
 ```js
 import { t as LOCAL } from "./shared.js";
-//#region main.js
+// main.js
 const local = LOCAL;
 const loadA = () => import("./lazy-a.js").then((module) => module.read());
 const loadB = () => import("./lazy-b.js").then((module) => module.read());
-//#endregion
 export { loadA, loadB, local };
 
 ```
@@ -283,14 +264,12 @@ export { loadA, loadB, local };
 ### shared.js
 
 ```js
-//#region required.js
+// required.js
 globalThis.events.push("required");
 const REQUIRED = "required";
-//#endregion
-//#region shared.js
+// shared.js
 globalThis.events.push("shared");
 const LOCAL = REQUIRED;
-//#endregion
 export { LOCAL as t };
 
 ```

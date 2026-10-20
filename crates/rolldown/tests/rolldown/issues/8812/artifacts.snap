@@ -7,9 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as import_fake_core, t as useCore } from "./utils.js";
-//#region entry-a.js
+// entry-a.js
 console.log("Entry A:", import_fake_core.default, useCore());
-//#endregion
 
 ```
 
@@ -17,9 +16,8 @@ console.log("Entry A:", import_fake_core.default, useCore());
 
 ```js
 import { n as import_fake_core, t as useCore } from "./utils.js";
-//#region entry-b.js
+// entry-b.js
 console.log("Entry B:", import_fake_core.default, useCore());
-//#endregion
 
 ```
 
@@ -27,7 +25,7 @@ console.log("Entry B:", import_fake_core.default, useCore());
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region fake-core.cjs
+// fake-core.cjs
 var require_fake_core = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	(function() {
 		"use strict";
@@ -43,29 +41,24 @@ var require_fake_core = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		} catch (_e) {}
 	})();
 }));
-//#endregion
-//#region fake-plugin-model.cjs
+// fake-plugin-model.cjs
 var require_fake_plugin_model = /* @__PURE__ */ __commonJSMin((() => {
 	(function() {
 		"use strict";
 		globalThis.fakeCore.register("dom-model");
 	})();
 }));
-//#endregion
-//#region fake-plugin.cjs
+// fake-plugin.cjs
 var require_fake_plugin = /* @__PURE__ */ __commonJSMin((() => {
 	require_fake_plugin_model();
 }));
-//#endregion
-//#region wrapper.js
+// wrapper.js
 var import_fake_core = /* @__PURE__ */ __toESM(require_fake_core());
 require_fake_plugin();
-//#endregion
-//#region utils.js
+// utils.js
 function useCore() {
 	return import_fake_core.default.registry;
 }
-//#endregion
 export { import_fake_core as n, useCore as t };
 
 ```

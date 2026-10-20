@@ -20,9 +20,7 @@ __rolldown_runtime__.registerGraph({
 		[0, 1]
 	]
 });
-//#region cjs.js
-//#endregion
-//#region esm.js
+// esm.js
 var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	__rolldown_runtime__.createModuleHotContext("cjs.js");
 	__rolldown_runtime__.registerModule("cjs.js", module);
@@ -32,12 +30,10 @@ var esm_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 __rolldown_runtime__.createModuleHotContext("esm.js");
 __rolldown_runtime__.registerModule("esm.js", { exports: esm_exports });
 const value = "main";
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 console.log(import_cjs, esm_exports);
-//#endregion
 
 ```

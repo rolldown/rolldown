@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-//#region \0rolldown/runtime.js
+// \0rolldown/runtime.js
 var __defProp = Object.defineProperty;
 var __exportAll = (all, no_symbols) => {
 	let target = {};
@@ -17,12 +17,8 @@ var __exportAll = (all, no_symbols) => {
 	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
 	return target;
 };
-//#endregion
-//#region c.js
-//#endregion
-//#region a.js
+// a.js
 console.log("A", Object.keys(/* @__PURE__ */ __exportAll({ c: () => 1 })).join());
-//#endregion
 
 ```
 
@@ -31,12 +27,10 @@ console.log("A", Object.keys(/* @__PURE__ */ __exportAll({ c: () => 1 })).join()
 ```js
 import { t as p } from "./group-b.js";
 import "./a.js";
-//#region q.js
+// q.js
 console.log("Q");
-//#endregion
-//#region e0.js
+// e0.js
 console.log("E0", Object.keys(p).join());
-//#endregion
 
 ```
 
@@ -44,21 +38,18 @@ console.log("E0", Object.keys(p).join());
 
 ```js
 import "./a.js";
-//#region e1.js
+// e1.js
 console.log("E1");
-//#endregion
 
 ```
 
 ## group-b.js
 
 ```js
-//#region p.js
+// p.js
 const p = {};
-//#endregion
-//#region b.js
+// b.js
 console.log("B");
-//#endregion
 export { p as t };
 
 ```
@@ -66,9 +57,8 @@ export { p as t };
 ## z.js
 
 ```js
-//#region z.js
+// z.js
 console.log("Z");
-//#endregion
 
 ```
 
@@ -79,11 +69,8 @@ console.log("Z");
 ### a.js
 
 ```js
-//#region c.js
-//#endregion
-//#region a.js
+// a.js
 console.log("A", Object.keys(/* @__PURE__ */ require("./rolldown-runtime.js").__exportAll({ c: () => 1 })).join());
-//#endregion
 
 ```
 
@@ -92,12 +79,10 @@ console.log("A", Object.keys(/* @__PURE__ */ require("./rolldown-runtime.js").__
 ```js
 const require_group_b = require("./group-b.js");
 require("./a.js");
-//#region q.js
+// q.js
 console.log("Q");
-//#endregion
-//#region e0.js
+// e0.js
 console.log("E0", Object.keys(require_group_b.p).join());
-//#endregion
 
 ```
 
@@ -105,21 +90,18 @@ console.log("E0", Object.keys(require_group_b.p).join());
 
 ```js
 require("./a.js");
-//#region e1.js
+// e1.js
 console.log("E1");
-//#endregion
 
 ```
 
 ### group-b.js
 
 ```js
-//#region p.js
+// p.js
 const p = {};
-//#endregion
-//#region b.js
+// b.js
 console.log("B");
-//#endregion
 Object.defineProperty(exports, "p", {
 	enumerable: true,
 	get: function() {
@@ -132,7 +114,7 @@ Object.defineProperty(exports, "p", {
 ### rolldown-runtime.js
 
 ```js
-//#region \0rolldown/runtime.js
+// \0rolldown/runtime.js
 var __defProp = Object.defineProperty;
 var __exportAll = (all, no_symbols) => {
 	let target = {};
@@ -143,7 +125,6 @@ var __exportAll = (all, no_symbols) => {
 	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
 	return target;
 };
-//#endregion
 Object.defineProperty(exports, "__exportAll", {
 	enumerable: true,
 	get: function() {
@@ -156,8 +137,7 @@ Object.defineProperty(exports, "__exportAll", {
 ### z.js
 
 ```js
-//#region z.js
+// z.js
 console.log("Z");
-//#endregion
 
 ```

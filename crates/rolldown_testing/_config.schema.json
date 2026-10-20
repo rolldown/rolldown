@@ -1067,6 +1067,12 @@
             "boolean",
             "null"
           ]
+        },
+        "importAttributes": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false
@@ -1598,6 +1604,12 @@
           ]
         },
         "shimmedExport": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "invalidImportAttribute": {
           "type": [
             "boolean",
             "null"

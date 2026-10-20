@@ -730,6 +730,20 @@ export interface InputOptions {
      * @default false
      */
     lazyBarrel?: boolean;
+    /**
+     * Make import attributes part of module identity, aligned with Rollup 5.
+     *
+     * A module imported with attributes, e.g. `import data from './data.json' with { type: 'json' }`,
+     * gets the id `<rawId>?attributes=<encoded attributes>`, so the same file imported with
+     * different attributes becomes different modules. The `type` attribute also selects a
+     * built-in module type: `json`, `text` or `bytes`.
+     *
+     * The `rawId` and `attributes` fields of plugin hooks are available without this option.
+     *
+     * @see {@link https://github.com/rolldown/rolldown/discussions/11217 | RFC}
+     * @default false
+     */
+    importAttributes?: boolean;
   };
   /**
    * Configure how the code is transformed. This process happens after the `transform` hook.

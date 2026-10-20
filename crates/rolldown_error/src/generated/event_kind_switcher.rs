@@ -56,5 +56,6 @@ bitflags! {
     const SourcemapBroken = 1 << 48;
     const NamespaceConflict = 1 << 49;
     const ShimmedExport = 1 << 50;
+    const InvalidImportAttribute = 1 << 51;
   }
 }

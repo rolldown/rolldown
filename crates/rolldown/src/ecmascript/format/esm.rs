@@ -3,8 +3,7 @@ use std::collections::VecDeque;
 use itertools::Itertools;
 use rolldown_common::{
   AddonRenderContext, ChunkIdx, ExportsKind, ExternalModule, ImportAttribute, ImportKind,
-  ImportRecordIdx, ImportRecordMeta, ModuleIdx, ModuleTable, RUNTIME_MODULE_KEY, Specifier,
-  SymbolRef,
+  ImportRecordIdx, ImportRecordMeta, ModuleIdx, RUNTIME_MODULE_KEY, Specifier, SymbolRef,
 };
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{
@@ -82,14 +81,18 @@ pub fn render_esm<'code>(
           // - If several records re-export the same external with *different* attributes (a
           //   pathological, conflicting input), the first attributed record in the entry's
           //   breadth-first export-star traversal wins.
-          let with_clause =
-            find_entry_level_external_import_attribute(ctx, entry_module.idx, importee_idx);
+          let with_clause = if ctx.options.experimental.is_import_attributes_enabled() {
+            m.attributes.to_with_clause(ctx.options.charset.is_ascii())
+          } else {
+            find_entry_level_external_import_attribute(ctx, entry_module.idx, importee_idx)
+              .map(ToString::to_string)
+          };
           // An absent attribute is just an empty suffix, so both cases collapse to a
           // single `append_source` (same shape `create_import_declaration` uses below).
           source_joiner.append_source(concat_string!(
             "export * from ",
             to_ecma_string_literal(&ext_name, ctx.options.charset.is_ascii()),
-            with_clause.map(|attr| concat_string!(" ", attr.to_string())).unwrap_or_default(),
+            with_clause.map(|attr| concat_string!(" ", attr)).unwrap_or_default(),
             "\n"
           ));
         }
@@ -385,7 +388,6 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
     specifiers.sort_unstable();
 
     s.push_str(&create_import_declaration(
-      &ctx.link_output.module_table,
       specifiers,
       &default_alias,
       &ctx.chunk.import_path_for(importee_chunk),
@@ -451,20 +453,30 @@ fn bare_import_attributes(
   ret
 }
 
+/// The `with` clause of an import of the external `importee`. With `experimental.importAttributes`
+/// the attributes are part of the external module itself, so every import of it carries them.
+/// Otherwise the clause of the import record `record` is kept as written.
+fn external_import_with_clause(
+  ctx: &GenerateContext<'_>,
+  importee: &ExternalModule,
+  record: Option<(ModuleIdx, ImportRecordIdx)>,
+) -> Option<String> {
+  if ctx.options.experimental.is_import_attributes_enabled() {
+    return importee.attributes.to_with_clause(ctx.options.charset.is_ascii());
+  }
+  let (module_idx, record_idx) = record?;
+  let module = ctx.link_output.module_table[module_idx].as_normal()?;
+  Some(module.import_attribute_map.get(&record_idx)?.to_string())
+}
+
 fn create_import_declaration(
-  module_table: &ModuleTable,
   mut specifiers: Vec<String>,
   default_alias: &[String],
   path: &str,
-  with_clause: Option<(ModuleIdx, ImportRecordIdx)>,
+  with_clause_string: Option<String>,
   ascii_only: bool,
 ) -> String {
   let mut ret = String::new();
-  let with_clause_string = with_clause.and_then(|(module_idx, record_idx)| {
-    let module = module_table[module_idx].as_normal()?;
-    let import_attribute = module.import_attribute_map.get(&record_idx)?;
-    Some(import_attribute.to_string())
-  });
   let first_default_alias = match &default_alias {
     [] => None,
     [first] => Some(first),
@@ -549,6 +561,12 @@ where
             &importee.get_import_path(ctx.chunk, ctx.resolved_paths),
             ascii_only,
           ));
+          if ctx.options.experimental.is_import_attributes_enabled()
+            && let Some(with_clause) = importee.attributes.to_with_clause(ascii_only)
+          {
+            s.push(' ');
+            s.push_str(&with_clause);
+          }
           s.push_str(";\n");
           None
         }
@@ -583,11 +601,10 @@ where
       with_clause
     };
     s.push_str(&create_import_declaration(
-      &ctx.link_output.module_table,
       specifiers,
       &default_alias,
       &importee.get_import_path(ctx.chunk, ctx.resolved_paths),
-      with_clause,
+      external_import_with_clause(ctx, importee, with_clause),
       ascii_only,
     ));
   }

@@ -32,6 +32,7 @@ pub struct BindingChecksOptions {
   pub sourcemap_broken: Option<bool>,
   pub namespace_conflict: Option<bool>,
   pub shimmed_export: Option<bool>,
+  pub invalid_import_attribute: Option<bool>,
 }
 impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
   fn from(value: BindingChecksOptions) -> Self {
@@ -63,6 +64,7 @@ impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
       sourcemap_broken: value.sourcemap_broken,
       namespace_conflict: value.namespace_conflict,
       shimmed_export: value.shimmed_export,
+      invalid_import_attribute: value.invalid_import_attribute,
     }
   }
 }

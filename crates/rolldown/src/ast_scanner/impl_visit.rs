@@ -12,14 +12,15 @@ use oxc::{
 };
 use oxc_str::{CompactStr, JSStr};
 use rolldown_common::{
-  ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ImportKind, ImportRecordMeta, LocalExport,
-  MemberExprObjectReferencedType, MemberExprRef, RUNTIME_MODULE_KEY, RolldownFileUrlReference,
-  StmtInfoIdx, StmtInfoMeta, SymbolRefFlags, dynamic_import_usage::DynamicImportExportsUsage,
+  ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ImportAttributes, ImportKind,
+  ImportRecordMeta, LocalExport, MemberExprObjectReferencedType, MemberExprRef, RUNTIME_MODULE_KEY,
+  RolldownFileUrlReference, StmtInfoIdx, StmtInfoMeta, SymbolRefFlags,
+  dynamic_import_usage::DynamicImportExportsUsage,
 };
 #[cfg(debug_assertions)]
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{ExpressionExt, is_top_level};
-use rolldown_error::{BuildDiagnostic, EventKindSwitcher};
+use rolldown_error::{BuildDiagnostic, EventKindSwitcher, InvalidImportAttributeKind};
 use rolldown_std_utils::OptionExt;
 use rolldown_utils::ecmascript::to_usv_str;
 
@@ -250,6 +251,26 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
         },
         Some(expr.node_id()),
       );
+      if let Some(options) = &expr.options {
+        let attributes = if self.warns_invalid_import_attribute() {
+          let ctx = &self.immutable_ctx;
+          let warnings = &mut self.result.warnings;
+          import_attributes_from_import_options(options, &mut |kind, span| {
+            warnings.push(
+              BuildDiagnostic::invalid_import_attribute(
+                ctx.id.to_string(),
+                ctx.source.clone(),
+                span,
+                kind,
+              )
+              .with_severity_warning(),
+            );
+          })
+        } else {
+          import_attributes_from_import_options(options, &mut |_, _| {})
+        };
+        self.result.import_records[import_rec_idx].attributes = attributes;
+      }
       self.init_dynamic_import_binding_usage_info(import_rec_idx);
       self.result.imports.insert(expr.node_id(), import_rec_idx);
     } else {
@@ -801,4 +822,50 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   fn visit_jsx_closing_element_for_jsx_preserve(&mut self, elem: &JSXClosingElement<'ast>) {
     self.mark_jsx_member_expression_root(&elem.name);
   }
+}
+
+/// `{ type: 'json' }` in `import('./data.json', { with: { type: 'json' } })`. Like Rollup, only
+/// statically known string attributes count, and `report` gets what is ignored. The legacy
+/// `assert` key gives no attributes.
+pub fn import_attributes_from_import_options(
+  options: &Expression,
+  report: &mut impl FnMut(InvalidImportAttributeKind, Span),
+) -> ImportAttributes {
+  let Expression::ObjectExpression(options) = options else {
+    report(InvalidImportAttributeKind::DynamicImportOptions, options.span());
+    return ImportAttributes::default();
+  };
+  let Some((keyword, with)) = options.properties.iter().find_map(|property| {
+    let ast::ObjectPropertyKind::ObjectProperty(property) = property else { return None };
+    let name = property.key.static_name().filter(|_| !property.computed)?;
+    (name == "with" || name == "assert").then_some((name, property))
+  }) else {
+    return ImportAttributes::default();
+  };
+  if keyword == "assert" {
+    report(InvalidImportAttributeKind::Assert, with.key.span());
+    return ImportAttributes::default();
+  }
+  let Expression::ObjectExpression(with) = &with.value else {
+    report(InvalidImportAttributeKind::DynamicImportOptions, with.value.span());
+    return ImportAttributes::default();
+  };
+  ImportAttributes::from_entries(with.properties.iter().filter_map(|property| {
+    let entry = match property {
+      ast::ObjectPropertyKind::ObjectProperty(property) => match &property.value {
+        // Lone surrogates become U+FFFD, like in a static `with` clause.
+        Expression::StringLiteral(value) => property
+          .key
+          .static_name()
+          .filter(|_| !property.computed)
+          .map(|key| (CompactStr::from(to_usv_str(key.as_js_str())), to_usv_str(value.value))),
+        _ => None,
+      },
+      ast::ObjectPropertyKind::SpreadProperty(_) => None,
+    };
+    if entry.is_none() {
+      report(InvalidImportAttributeKind::DynamicImportAttribute, property.span());
+    }
+    entry
+  }))
 }

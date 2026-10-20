@@ -213,4 +213,10 @@ export interface ChecksOptions {
    * @default true
    * */
   shimmedExport?: boolean;
+
+  /**
+   * Whether to emit warnings when `experimental.importAttributes` ignores import attributes, such as dynamic import options that are not statically analyzable or the legacy `assert` keyword.
+   * @default true
+   * */
+  invalidImportAttribute?: boolean;
 }

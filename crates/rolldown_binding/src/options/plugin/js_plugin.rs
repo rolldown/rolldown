@@ -12,9 +12,11 @@ use super::{
   binding_load_context::BindingLoadPluginContext,
   binding_transform_context::BindingTransformPluginContext,
   types::{
+    binding_hook_load_extra_args::BindingHookLoadExtraArgs,
     binding_hook_resolve_file_url_args::BindingHookResolveFileUrlArgs,
     binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
     binding_hot_update_args::BindingHotUpdateArgs,
+    binding_import_attributes::to_binding_import_attributes,
     binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
     binding_render_chunk_meta_chunks::BindingRenderedChunkMeta,
     binding_shared_string::BindingSharedString,
@@ -122,14 +124,7 @@ impl Plugin for JsPlugin {
       }
     }
 
-    let extra_args = BindingHookResolveIdExtraArgs {
-      is_entry: args.is_entry,
-      kind: args.kind.to_string(),
-      custom: args
-        .custom
-        .get::<JsPluginContextResolveCustomArgId>(&JsPluginContextResolveCustomArgId)
-        .copied(),
-    };
+    let extra_args = resolve_id_extra_args(args);
 
     let span =
       debug_span!("resolve_id_hook", plugin_name = self.name, result_kind = tracing::field::Empty);
@@ -175,7 +170,13 @@ impl Plugin for JsPlugin {
     );
     let result = cb
       .await_call(
-        (ctx.clone().into(), args.specifier.to_string(), args.importer.map(str::to_string)).into(),
+        (
+          ctx.clone().into(),
+          args.specifier.to_string(),
+          args.importer.map(str::to_string),
+          resolve_id_extra_args(args),
+        )
+          .into(),
       )
       .instrument(span.clone())
       .await?
@@ -219,8 +220,10 @@ impl Plugin for JsPlugin {
     let binding_ctx = BindingLoadPluginContext::new(Arc::clone(&ctx));
     let span =
       debug_span!("load_hook", plugin_name = self.name, result_kind = tracing::field::Empty);
+    let extra_args = to_binding_import_attributes(args.attributes)
+      .map(|attributes| BindingHookLoadExtraArgs { raw_id: args.raw_id.to_string(), attributes });
     let result = cb
-      .await_call((binding_ctx, args.id.to_string()).into())
+      .await_call((binding_ctx, args.id.to_string(), extra_args).into())
       .instrument(span.clone())
       .await?
       .map(TryInto::try_into)
@@ -254,7 +257,11 @@ impl Plugin for JsPlugin {
       }
     }
 
-    let extra_args = BindingTransformHookExtraArgs { module_type: args.module_type.to_string() };
+    let extra_args = BindingTransformHookExtraArgs {
+      module_type: args.module_type.to_string(),
+      raw_id: (!args.attributes.is_empty()).then(|| args.raw_id.to_string()),
+      attributes: to_binding_import_attributes(args.attributes),
+    };
 
     let span =
       debug_span!("transform_hook", plugin_name = self.name, result_kind = tracing::field::Empty);
@@ -735,5 +742,26 @@ impl Plugin for JsPlugin {
 
   fn register_hook_usage(&self) -> HookUsage {
     HookUsage::from_bits(self.inner.hook_usage).expect("Failed to register hook usage")
+  }
+}
+
+/// The extra arguments of `resolveId` and `resolveDynamicImport`. Empty attributes and a raw id
+/// equal to the importer are left out, and `bindingify-build-hooks.ts` fills them in.
+fn resolve_id_extra_args(
+  args: &rolldown_plugin::HookResolveIdArgs<'_>,
+) -> BindingHookResolveIdExtraArgs {
+  BindingHookResolveIdExtraArgs {
+    is_entry: args.is_entry,
+    kind: args.kind.to_string(),
+    custom: args
+      .custom
+      .get::<JsPluginContextResolveCustomArgId>(&JsPluginContextResolveCustomArgId)
+      .copied(),
+    attributes: to_binding_import_attributes(args.attributes),
+    importer_raw_id: args
+      .importer_raw_id
+      .filter(|raw_id| Some(*raw_id) != args.importer)
+      .map(str::to_string),
+    importer_attributes: to_binding_import_attributes(args.importer_attributes),
   }
 }

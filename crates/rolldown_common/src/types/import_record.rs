@@ -6,7 +6,7 @@ use std::{
 use oxc::{semantic::NodeId, span::Span};
 use oxc_str::CompactStr;
 
-use crate::{ImportKind, ModuleIdx, ModuleType, StmtInfoIdx, SymbolRef};
+use crate::{ImportAttributes, ImportKind, ModuleIdx, ModuleType, StmtInfoIdx, SymbolRef};
 
 oxc_index::define_index_type! {
   pub struct ImportRecordIdx = u32;
@@ -30,6 +30,8 @@ pub struct ImportRecordStateInit {
   pub importer_span: Span,
   /// The importee of this import record is asserted to be this specific module type.
   pub asserted_module_type: Option<ModuleType>,
+  /// `{ type: 'json' }` in `import data from './data.json' with { type: 'json' }`.
+  pub attributes: ImportAttributes,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -142,6 +144,7 @@ impl RawImportRecord {
         span,
         importer_span,
         asserted_module_type: assert_module_type,
+        attributes: ImportAttributes::default(),
       },
       dynamic_import_expr_info,
     }

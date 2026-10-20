@@ -70,22 +70,24 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
     let need_renormalize_render_path =
       !matches!(resolved_id.external, ResolvedExternal::Absolute) && resolved_id.id.is_path();
 
+    // Import attributes are rendered as a `with` clause, never as part of the import path.
+    let raw_id = resolved_id.id.raw_id();
     let file_name: ArcStr = if need_renormalize_render_path {
       let entries_common_dir = commondir::common_dir(
-        self.user_defined_entries.iter().map(|(_, resolved_id)| resolved_id.id.as_str()),
+        self.user_defined_entries.iter().map(|(_, resolved_id)| resolved_id.id.raw_id()),
       )
       .expect("should have common dir for entries");
-      let relative_path = Path::new(resolved_id.id.as_str()).relative(&entries_common_dir);
+      let relative_path = Path::new(raw_id).relative(&entries_common_dir);
       ArcStr::from(relative_path.to_slash())
     } else {
-      resolved_id.id.as_arc_str().clone()
+      raw_id.into()
     };
 
     let identifier_name: ArcStr = if need_renormalize_render_path {
-      let relative_path = Path::new(resolved_id.id.as_str()).relative(&self.ctx.options.cwd);
+      let relative_path = Path::new(raw_id).relative(&self.ctx.options.cwd);
       ArcStr::from(relative_path.to_slash())
     } else {
-      resolved_id.id.as_arc_str().clone()
+      raw_id.into()
     };
     let legitimized_identifier_name = legitimize_identifier_name(&identifier_name);
     let msg = ModuleLoaderMsg::ExternalModuleDone(Box::new(ExternalModuleTaskResult {
@@ -95,6 +97,7 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
       identifier_name: legitimized_identifier_name.into(),
       side_effects: external_module_side_effects,
       need_renormalize_render_path,
+      attributes: resolved_id.attributes.clone(),
     }));
     self.ctx.tx.send(msg).expect(
       "ModuleLoader channel closed while sending external module completion - main thread terminated unexpectedly"

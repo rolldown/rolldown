@@ -1,0 +1,44 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dep.js
+
+```js
+export { t as instance } from "./dep2.js";
+
+```
+
+## dep2.js
+
+```js
+// dep.js
+const instance = {};
+export { instance as t };
+
+```
+
+## dep3.js
+
+```js
+// dep.js?attributes=%7B%22kind%22%3A%22x%22%7D
+const instance = {};
+export { instance };
+
+```
+
+## main.js
+
+```js
+import { t as instance } from "./dep2.js";
+import assert from "node:assert";
+// main.js
+const tagged = await import("./dep3.js");
+const same = await import("./dep3.js");
+const plain = await import("./dep.js");
+assert.strictEqual(plain.instance, instance);
+assert.notStrictEqual(tagged.instance, instance);
+assert.strictEqual(same.instance, tagged.instance);
+
+```

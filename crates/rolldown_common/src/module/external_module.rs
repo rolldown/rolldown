@@ -3,7 +3,8 @@ use std::path::Path;
 use crate::inner_bundler_options::types::output_option::PathsOutputOption;
 use crate::side_effects::DeterminedSideEffects;
 use crate::{
-  Chunk, ImportRecordIdx, ModuleId, ModuleIdx, ResolvedImportRecord, StableModuleId, SymbolRef,
+  Chunk, ImportAttributes, ImportRecordIdx, ModuleId, ModuleIdx, ResolvedImportRecord,
+  StableModuleId, SymbolRef,
 };
 use arcstr::ArcStr;
 use oxc_index::IndexVec;
@@ -28,9 +29,13 @@ pub struct ExternalModule {
   pub import_records: IndexVec<ImportRecordIdx, ResolvedImportRecord>,
   pub side_effects: DeterminedSideEffects,
   pub need_renormalize_render_path: bool,
+  /// The import attributes that are part of `id`, rendered as the `with` clause of every
+  /// import of this module. Always empty unless `experimental.importAttributes` is enabled.
+  pub attributes: ImportAttributes,
 }
 
 impl ExternalModule {
+  #[expect(clippy::too_many_arguments)]
   pub fn new(
     idx: ModuleIdx,
     id: ModuleId,
@@ -39,6 +44,7 @@ impl ExternalModule {
     side_effects: DeterminedSideEffects,
     namespace_ref: SymbolRef,
     need_renormalize_render_path: bool,
+    attributes: ImportAttributes,
   ) -> Self {
     Self {
       idx,
@@ -52,13 +58,14 @@ impl ExternalModule {
       import_records: IndexVec::default(),
       side_effects,
       need_renormalize_render_path,
+      attributes,
     }
   }
 
   pub fn get_file_name(&self, paths: Option<&PathsOutputOption>) -> ArcStr {
     // Try to apply paths mapping first
     if let Some(paths_option) = paths {
-      if let Some(mapped_path) = paths_option.call(self.id.as_str()) {
+      if let Some(mapped_path) = paths_option.call(self.id.raw_id()) {
         return mapped_path.into();
       }
     }

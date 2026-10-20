@@ -278,7 +278,8 @@ impl PluginDriver {
   #[expect(clippy::too_many_arguments)]
   pub async fn transform(
     &self,
-    id: &str,
+    module_id: &rolldown_common::ModuleId,
+    attributes: &rolldown_common::ImportAttributes,
     module_idx: rolldown_common::ModuleIdx,
     original_code: String,
     sourcemap_chain: &mut Vec<SourcemapChainElement>,
@@ -287,6 +288,7 @@ impl PluginDriver {
     magic_string_tx: Option<std::sync::mpsc::Sender<rolldown_common::SourceMapGenMsg>>,
     code_changed_by_plugins: &mut Option<Vec<String>>,
   ) -> Result<String> {
+    let id = module_id.as_str();
     let mut code = original_code;
     let mut code_arc: Option<ArcStr> = None;
     let mut original_sourcemap_chain = std::mem::take(sourcemap_chain);
@@ -324,7 +326,13 @@ impl PluginDriver {
             plugin_idx,
             magic_string_tx.clone(),
           )),
-          &HookTransformArgs { id, code: code_arc_ref, module_type: &*module_type },
+          &HookTransformArgs {
+            id,
+            raw_id: module_id.raw_id(),
+            attributes,
+            code: code_arc_ref,
+            module_type: &*module_type,
+          },
         )
         .await;
       if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {

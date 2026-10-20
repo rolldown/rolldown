@@ -32,6 +32,8 @@ import type { WatcherOptions } from '../options/input-options';
 import type { RolldownBuild } from '../api/rolldown/rolldown-build';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
 import type { BundleError } from '../utils/error';
+// oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
+import type { stringifyModuleId } from '../utils/module-id';
 
 type ModuleSideEffects = boolean | 'no-treeshake' | null;
 export { withFilter } from './with-filter';
@@ -121,7 +123,16 @@ export interface ModuleOptions {
 /** @category Plugin APIs */
 export interface ResolvedId extends ModuleOptions {
   external: boolean | 'absolute';
+  /** The resolved id, without import attributes. */
   id: string;
+  /**
+   * The import attributes the import resolved with, after any change made by
+   * {@linkcode Plugin.resolveId | resolveId} hooks. `{}` means none.
+   *
+   * With {@linkcode InputOptions.experimental | experimental.importAttributes}, they are part of
+   * the module id: see {@linkcode stringifyModuleId}.
+   */
+  attributes: Record<string, string>;
 }
 
 // Separate interface to dedupe the JSDoc comment
@@ -161,7 +172,15 @@ export interface PartialResolvedId
    * - If `'absolute'`, absolute ids will always be kept as absolute ids.
    */
   external?: boolean | 'absolute' | 'relative';
+  /** The resolved id, without import attributes. */
   id: string;
+  /**
+   * Replaces the import attributes of the import. `{}` removes them. If omitted, the import
+   * keeps the attributes written in the source.
+   *
+   * For an external module, they become the `with` clause of the import in the output.
+   */
+  attributes?: Record<string, string>;
 }
 
 /** @category Plugin APIs */
@@ -245,6 +264,25 @@ export interface ResolveIdExtraOptions {
    * - `hot-accept`: `import.meta.hot.accept('./lib.js', () => {})` (experimental)
    */
   kind: BindingHookResolveIdExtraArgs['kind'];
+  /**
+   * The import attributes of the import being resolved, e.g. `{ type: 'json' }` for
+   * `import data from './data.json' with { type: 'json' }`. `{}` means none.
+   */
+  attributes: Record<string, string>;
+  /**
+   * The `importer` without its import attributes. Use it to read or compare the importing file.
+   */
+  importerRawId: string | undefined;
+  /** The import attributes the importer itself was imported with. `{}` means none. */
+  importerAttributes: Record<string, string>;
+}
+
+/** @inline */
+export interface LoadExtraOptions {
+  /** The module id without import attributes. Read the file from it. */
+  rawId: string;
+  /** The import attributes the module was imported with. `{}` means none. */
+  attributes: Record<string, string>;
 }
 
 /** @inline @category Plugin APIs */
@@ -414,6 +452,10 @@ export interface FunctionPluginHooks {
      * This will be `undefined` when {@linkcode PluginContext.resolve | this.resolve(source, undefined, { kind: 'dynamic-import' })} is called.
      */
     importer: string | undefined,
+    extraOptions: Pick<
+      ResolveIdExtraOptions,
+      'attributes' | 'importerRawId' | 'importerAttributes'
+    >,
   ) => ResolveIdResult;
 
   /**
@@ -426,7 +468,17 @@ export interface FunctionPluginHooks {
    * @kind async first
    * @group Build Hooks
    */
-  [DEFINED_HOOK_NAMES.load]: (this: PluginContext, id: string) => MaybePromise<LoadResult>;
+  [DEFINED_HOOK_NAMES.load]: (
+    this: PluginContext,
+    /**
+     * The module id. With
+     * {@linkcode InputOptions.experimental | experimental.importAttributes}, it contains the
+     * import attributes of the module, so read the file from
+     * {@linkcode LoadExtraOptions.rawId | options.rawId}.
+     */
+    id: string,
+    options: LoadExtraOptions,
+  ) => MaybePromise<LoadResult>;
 
   /**
    * Can be used to transform individual modules.
@@ -448,6 +500,10 @@ export interface FunctionPluginHooks {
       moduleType: ModuleType;
       magicString?: RolldownMagicString;
       ast?: Program;
+      /** The module id without import attributes. */
+      rawId: string;
+      /** The import attributes the module was imported with. `{}` means none. */
+      attributes: Record<string, string>;
     },
   ) => TransformResult;
 

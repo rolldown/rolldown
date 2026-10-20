@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// a.png?attributes=%7B%22type%22%3A%22text%22%7D
+var a_default$1 = "png\n";
+// a.txt?attributes=%7B%22type%22%3A%22text%22%7D
+var a_default = "txt\n";
+// main.js
+assert.strictEqual(a_default$1, "png\n");
+assert.strictEqual(a_default, "txt\n");
+
+```

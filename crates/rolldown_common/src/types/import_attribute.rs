@@ -5,6 +5,8 @@ use oxc::ast::ast;
 use oxc_str::CompactStr;
 use rolldown_utils::{ecmascript::to_usv_str, indexmap::FxIndexMap};
 
+use crate::ImportAttributes;
+
 #[derive(Debug, Clone, Default)]
 pub struct ImportAttribute {
   kind: ImportAttributeKind,
@@ -25,6 +27,21 @@ pub enum ImportAttributeKey {
 }
 
 impl ImportAttribute {
+  /// The attributes this clause imports the module with. The legacy `assert` keyword takes no
+  /// part in resolution or module identity, and only survives in the output without
+  /// `experimental.importAttributes`.
+  pub fn to_import_attributes(&self) -> ImportAttributes {
+    match self.kind {
+      ImportAttributeKind::With => {
+        ImportAttributes::from_entries(self.entries.iter().map(|(key, value)| {
+          let (ImportAttributeKey::String(key) | ImportAttributeKey::Identifier(key)) = key;
+          (key.clone(), value.as_str())
+        }))
+      }
+      ImportAttributeKind::Assert => ImportAttributes::default(),
+    }
+  }
+
   pub fn insert(&mut self, key: ImportAttributeKey, value: String) {
     self.entries.insert(key, value);
   }

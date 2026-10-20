@@ -28,6 +28,7 @@ use super::events::illegal_identifier_as_name::IllegalIdentifierAsName;
 use super::events::import_is_undefined::ImportIsUndefined;
 use super::events::invalid_annotation::InvalidAnnotation;
 use super::events::invalid_define_config::InvalidDefineConfig;
+use super::events::invalid_import_attribute::{InvalidImportAttribute, InvalidImportAttributeKind};
 use super::events::invalid_option::{InvalidOption, InvalidOptionType};
 use super::events::json_parse::JsonParse;
 use super::events::missing_global_name::MissingGlobalName;
@@ -73,6 +74,15 @@ impl BuildDiagnostic {
     span: Span,
   ) -> Self {
     Self::new_inner(ModuleLevelDirective { module_id, directive, source, span })
+  }
+
+  pub fn invalid_import_attribute(
+    module_id: String,
+    source: ArcStr,
+    span: Span,
+    kind: InvalidImportAttributeKind,
+  ) -> Self {
+    Self::new_inner(InvalidImportAttribute { module_id, source, span, kind })
   }
 
   pub fn entry_cannot_be_external(unresolved_id: impl AsRef<Path>) -> Self {

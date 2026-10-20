@@ -7,6 +7,5 @@
     "format": "cjs",
     "exports": "default"
   },
-  "_comment": "Tests Entry + Cjs WrapKind + Default OutputExports + default export access. BUG: lib.js generates two module.exports= statements, second overwrites runtime helpers.",
-  "expectExecuted": false
+  "_comment": "Tests Entry + Cjs WrapKind + Default OutputExports + default export access. The runtime must not merge into lib.js: its `module.exports` is the CommonJS value, so it cannot also export helpers (issue #11027)."
 }

@@ -1,0 +1,21 @@
+{
+  "_comment": "https://github.com/rolldown/rolldown/issues/11027 - `lib.js` is a CommonJS entry, so its chunk exports the whole `module.exports` value. The optimizer treated it as an export-less entry and folded the runtime and `shared.js` into it, then rendered each extra export as another `module.exports =`. In non-ESM formats such a chunk must not get extra exports, and under `exports-only` it must not get extra exports in any format.",
+  "configName": "cjs",
+  "config": {
+    "input": [
+      { "name": "main", "import": "./main.js" },
+      { "name": "lib", "import": "./lib.js" }
+    ],
+    "format": "cjs"
+  },
+  "configVariants": [
+    { "_configName": "cjs-allow-extension", "preserveEntrySignatures": "allow-extension" },
+    { "_configName": "cjs-false", "preserveEntrySignatures": "false" },
+    { "_configName": "esm", "format": "esm" },
+    {
+      "_configName": "esm-allow-extension",
+      "format": "esm",
+      "preserveEntrySignatures": "allow-extension"
+    }
+  ]
+}

@@ -847,13 +847,26 @@ impl GenerateStage<'_> {
 
       let is_user_defined_entry = self.link_output.user_defined_entry_modules.contains(&module.idx);
       let preserve_entry_signature = if is_user_defined_entry {
+        let meta = &self.link_output.metas[module.idx];
+        // A CJS-wrapped entry exports its whole `module.exports` value as the chunk's `default`
+        // export, although it has no resolved exports. In non-ESM formats that value *is* the
+        // chunk's `module.exports`, so the chunk cannot carry any extra export (issue #11027).
+        // See internal-docs/code-splitting/implementation.md.
+        let is_cjs_wrapped_entry = matches!(meta.wrap_kind(), WrapKind::Cjs);
         match finalized_preserve_entry_signatures {
+          PreserveEntrySignatures::AllowExtension | PreserveEntrySignatures::False
+            if is_cjs_wrapped_entry && !self.options.format.is_esm() =>
+          {
+            Some(PreserveEntrySignatures::Strict)
+          }
           PreserveEntrySignatures::AllowExtension
           | PreserveEntrySignatures::Strict
           | PreserveEntrySignatures::False => Some(finalized_preserve_entry_signatures),
           PreserveEntrySignatures::ExportsOnly => {
-            let meta = &self.link_output.metas[module.idx];
-            if meta.is_canonical_exports_empty() && !meta.has_dynamic_exports {
+            if meta.is_canonical_exports_empty()
+              && !meta.has_dynamic_exports
+              && !is_cjs_wrapped_entry
+            {
               Some(PreserveEntrySignatures::AllowExtension)
             } else {
               Some(PreserveEntrySignatures::Strict)

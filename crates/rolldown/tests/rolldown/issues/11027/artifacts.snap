@@ -1,0 +1,287 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lib.js
+
+```js
+const require_lib$1 = require("./lib2.js");
+module.exports = require_lib$1.require_lib();
+
+```
+
+## lib2.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+function getShared() {
+	return "shared";
+}
+var init_shared = __esmMin((() => {
+	globalThis.sharedEvaluated = (globalThis.sharedEvaluated ?? 0) + 1;
+}));
+// lib.js
+var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	init_shared();
+	module.exports = { value: 42 };
+}));
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
+Object.defineProperty(exports, "getShared", {
+	enumerable: true,
+	get: function() {
+		return getShared;
+	}
+});
+Object.defineProperty(exports, "init_shared", {
+	enumerable: true,
+	get: function() {
+		return init_shared;
+	}
+});
+Object.defineProperty(exports, "require_lib", {
+	enumerable: true,
+	get: function() {
+		return require_lib;
+	}
+});
+
+```
+
+## main.js
+
+```js
+const require_lib$1 = require("./lib2.js");
+// main.js
+var import_lib = /* @__PURE__ */ require_lib$1.__toESM(require_lib$1.require_lib());
+require_lib$1.init_shared();
+globalThis.mainResult = {
+	value: import_lib.default.value,
+	shared: require_lib$1.getShared()
+};
+
+```
+
+# Variant: cjs-allow-extension: [preserve_entry_signatures: AllowExtension]
+
+## Assets
+
+### lib.js
+
+```js
+const require_lib$1 = require("./lib2.js");
+module.exports = require_lib$1.require_lib();
+
+```
+
+### lib2.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+function getShared() {
+	return "shared";
+}
+var init_shared = __esmMin((() => {
+	globalThis.sharedEvaluated = (globalThis.sharedEvaluated ?? 0) + 1;
+}));
+// lib.js
+var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	init_shared();
+	module.exports = { value: 42 };
+}));
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
+Object.defineProperty(exports, "getShared", {
+	enumerable: true,
+	get: function() {
+		return getShared;
+	}
+});
+Object.defineProperty(exports, "init_shared", {
+	enumerable: true,
+	get: function() {
+		return init_shared;
+	}
+});
+Object.defineProperty(exports, "require_lib", {
+	enumerable: true,
+	get: function() {
+		return require_lib;
+	}
+});
+
+```
+
+### main.js
+
+```js
+const require_lib$1 = require("./lib2.js");
+// main.js
+var import_lib = /* @__PURE__ */ require_lib$1.__toESM(require_lib$1.require_lib());
+require_lib$1.init_shared();
+globalThis.mainResult = {
+	value: import_lib.default.value,
+	shared: require_lib$1.getShared()
+};
+
+```
+
+# Variant: cjs-false: [preserve_entry_signatures: False]
+
+## Assets
+
+### lib.js
+
+```js
+const require_lib$1 = require("./lib2.js");
+module.exports = require_lib$1.require_lib();
+
+```
+
+### lib2.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+function getShared() {
+	return "shared";
+}
+var init_shared = __esmMin((() => {
+	globalThis.sharedEvaluated = (globalThis.sharedEvaluated ?? 0) + 1;
+}));
+// lib.js
+var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	init_shared();
+	module.exports = { value: 42 };
+}));
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
+Object.defineProperty(exports, "getShared", {
+	enumerable: true,
+	get: function() {
+		return getShared;
+	}
+});
+Object.defineProperty(exports, "init_shared", {
+	enumerable: true,
+	get: function() {
+		return init_shared;
+	}
+});
+Object.defineProperty(exports, "require_lib", {
+	enumerable: true,
+	get: function() {
+		return require_lib;
+	}
+});
+
+```
+
+### main.js
+
+```js
+const require_lib$1 = require("./lib2.js");
+// main.js
+var import_lib = /* @__PURE__ */ require_lib$1.__toESM(require_lib$1.require_lib());
+require_lib$1.init_shared();
+globalThis.mainResult = {
+	value: import_lib.default.value,
+	shared: require_lib$1.getShared()
+};
+
+```
+
+# Variant: esm: [format: Esm]
+
+## Assets
+
+### lib.js
+
+```js
+import { t as require_lib } from "./lib2.js";
+export default require_lib();
+
+```
+
+### lib2.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+function getShared() {
+	return "shared";
+}
+var init_shared = __esmMin((() => {
+	globalThis.sharedEvaluated = (globalThis.sharedEvaluated ?? 0) + 1;
+}));
+// lib.js
+var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	init_shared();
+	module.exports = { value: 42 };
+}));
+export { __toESM as i, getShared as n, init_shared as r, require_lib as t };
+
+```
+
+### main.js
+
+```js
+import { i as __toESM, n as getShared, r as init_shared, t as require_lib } from "./lib2.js";
+// main.js
+var import_lib = /* @__PURE__ */ __toESM(require_lib());
+init_shared();
+globalThis.mainResult = {
+	value: import_lib.default.value,
+	shared: getShared()
+};
+
+```
+
+# Variant: esm-allow-extension: [format: Esm] [preserve_entry_signatures: AllowExtension]
+
+## Assets
+
+### lib.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+function getShared() {
+	return "shared";
+}
+var init_shared = __esmMin((() => {
+	globalThis.sharedEvaluated = (globalThis.sharedEvaluated ?? 0) + 1;
+}));
+// lib.js
+var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	init_shared();
+	module.exports = { value: 42 };
+}));
+export default require_lib();
+export { __toESM as i, getShared as n, init_shared as r, require_lib as t };
+
+```
+
+### main.js
+
+```js
+import { i as __toESM, n as getShared, r as init_shared, t as require_lib } from "./lib.js";
+// main.js
+var import_lib = /* @__PURE__ */ __toESM(require_lib());
+init_shared();
+globalThis.mainResult = {
+	value: import_lib.default.value,
+	shared: getShared()
+};
+
+```

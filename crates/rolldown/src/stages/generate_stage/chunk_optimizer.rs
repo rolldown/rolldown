@@ -1427,7 +1427,9 @@ impl GenerateStage<'_> {
   /// - the target is the only consumer (helpers stay internal — no re-export),
   /// - the target is not a user-defined entry (a common chunk has no signature),
   /// - `preserveEntrySignatures` allows extra exports: `allow-extension`/`false`,
-  ///   or `exports-only` for an entry that declares no exports.
+  ///   or `exports-only` for an entry that declares no exports. A CJS-wrapped
+  ///   entry is never export-less, and in non-ESM formats it never allows extra
+  ///   exports (see `code_splitting.rs`, issue #11027).
   fn runtime_merge_preserves_target_signature(
     &self,
     chunk_graph: &ChunkGraph,
@@ -1450,9 +1452,11 @@ impl GenerateStage<'_> {
       Some(PreserveEntrySignatures::AllowExtension | PreserveEntrySignatures::False) => true,
       Some(PreserveEntrySignatures::Strict) => false,
       // `exports-only` (the default) only fixes the signature of entries that
-      // actually declare exports; an export-less entry behaves like `false`.
+      // actually declare exports; an export-less entry behaves like `false`. A
+      // CJS-wrapped entry always exports its `module.exports` value as `default`.
       Some(PreserveEntrySignatures::ExportsOnly) | None => {
-        self.link_output.metas[entry_module_idx].resolved_exports.is_empty()
+        let entry_meta = &self.link_output.metas[entry_module_idx];
+        entry_meta.resolved_exports.is_empty() && !matches!(entry_meta.wrap_kind(), WrapKind::Cjs)
       }
     }
   }

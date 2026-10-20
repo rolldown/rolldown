@@ -22,8 +22,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import "third";
-//#region entry.ts
+// entry.ts
 console.log("third");
-//#endregion
 
 ```

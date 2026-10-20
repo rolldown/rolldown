@@ -7,11 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as value_default } from "./value.js";
-//#region admin.js
+// admin.js
 const m = import("./common.js");
 console.log("rendering admin");
 console.log(m, value_default);
-//#endregion
 
 ```
 
@@ -19,29 +18,26 @@ console.log(m, value_default);
 
 ```js
 import { t as value_default } from "./value.js";
-//#region common.js
+// common.js
 console.log(value_default);
-//#endregion
 
 ```
 
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 const m = import("./common.js");
 console.log("rendering main");
 console.log(m);
-//#endregion
 
 ```
 
 ## value.js
 
 ```js
-//#region value.js
+// value.js
 var value_default = { value: 42 };
-//#endregion
 export { value_default as t };
 
 ```

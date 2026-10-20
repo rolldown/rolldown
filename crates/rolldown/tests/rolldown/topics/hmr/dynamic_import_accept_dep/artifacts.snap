@@ -12,12 +12,11 @@ __rolldown_runtime__.registerGraph({
 	localCount: 1,
 	edges: [[]]
 });
-//#region foo.js
+// foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
 __rolldown_runtime__.createModuleHotContext("foo.js");
 __rolldown_runtime__.registerModule("foo.js", { exports: foo_exports });
 const value = 1;
-//#endregion
 export { value };
 
 ```
@@ -36,7 +35,7 @@ __rolldown_runtime__.registerGraph({
 	edges: [[], [0]],
 	dynamicEdges: { 0: [2] }
 });
-//#region app.js
+// app.js
 var app_exports = /* @__PURE__ */ __exportAll({});
 const app_hot = __rolldown_runtime__.createModuleHotContext("app.js");
 __rolldown_runtime__.registerModule("app.js", { exports: app_exports });
@@ -46,12 +45,10 @@ import("./foo.js").then((mod) => {
 app_hot.accept("foo.js", (mod) => {
 	console.log(".app", mod.value);
 });
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
-//#endregion
 export { __exportAll as t };
 
 ```

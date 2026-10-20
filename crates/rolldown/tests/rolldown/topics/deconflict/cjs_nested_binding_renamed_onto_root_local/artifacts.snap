@@ -7,9 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
-//#region dep.js
+// dep.js
 var value;
-//#endregion
 __esmMin((() => {
 	value = "dep";
 }))();
@@ -21,9 +20,6 @@ export { value };
 
 ```js
 import { r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
-//#region lib.cjs
-//#endregion
-//#region main.js
 var main_default = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const Promise$1 = { tag: "root-local" };
 	function read(Promise$2) {
@@ -34,7 +30,6 @@ var main_default = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exp
 		load: () => import("./dep.js")
 	};
 })))())).default.read({ tag: "param" });
-//#endregion
 export { main_default as default };
 
 ```
@@ -55,9 +50,8 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
-//#region dep.js
+// dep.js
 var value;
-//#endregion
 require_rolldown_runtime.__esmMin((() => {
 	value = "dep";
 }))();
@@ -69,7 +63,7 @@ exports.value = value;
 
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
-//#region lib.cjs
+// lib.cjs
 var require_lib = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports, module) => {
 	const Promise$1 = { tag: "root-local" };
 	function read(Promise$2) {
@@ -80,10 +74,7 @@ var require_lib = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((expor
 		load: () => Promise.resolve().then(() => require("./dep.js"))
 	};
 }));
-//#endregion
-//#region main.js
 var main_default = (/* @__PURE__ */ require_rolldown_runtime.__toESM(require_lib())).default.read({ tag: "param" });
-//#endregion
 module.exports = main_default;
 
 ```

@@ -7,11 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 const require_shared$1 = require("./shared.js");
-//#region dynamic.cjs
+// dynamic.cjs
 var require_dynamic = /* @__PURE__ */ require_shared$1.__commonJSMin(((exports, module) => {
 	module.exports = require_shared$1.require_shared();
 }));
-//#endregion
 Object.defineProperty(exports, "default", {
 	enumerable: true,
 	get: function() {
@@ -25,10 +24,9 @@ Object.defineProperty(exports, "default", {
 
 ```js
 const require_shared$1 = require("./shared.js");
-//#region main.cjs
+// main.cjs
 const shared = require_shared$1.require_shared();
 exports.POST = async () => (await Promise.resolve().then(() => /* @__PURE__ */ require_shared$1.__toESM(require("./dynamic.js").default, 1))).default === shared;
-//#endregion
 
 ```
 
@@ -36,12 +34,11 @@ exports.POST = async () => (await Promise.resolve().then(() => /* @__PURE__ */ r
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region shared.cjs
+// shared.cjs
 var require_shared = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.sharedInitializations = (globalThis.sharedInitializations ?? 0) + 1;
 	module.exports = { tag: "shared" };
 }));
-//#endregion
 Object.defineProperty(exports, "__commonJSMin", {
 	enumerable: true,
 	get: function() {

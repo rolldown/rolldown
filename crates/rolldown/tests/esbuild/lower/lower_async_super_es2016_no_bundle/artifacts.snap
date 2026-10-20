@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 Base;
 Base;
 for (let i = 0; i < 3; i++) objs.push({
@@ -17,6 +17,5 @@ for (let i = 0; i < 3; i++) objs.push({
 		return super.foo();
 	}
 });
-//#endregion
 
 ```

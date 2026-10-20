@@ -7,11 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as __exportAll } from "./rolldown-runtime.js";
-//#region c.js
-//#endregion
-//#region a.js
+// a.js
 console.log("A", Object.keys(/* @__PURE__ */ __exportAll({ c: () => 1 })).join());
-//#endregion
 
 ```
 
@@ -22,7 +19,7 @@ import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as p, t as init_b } from "./group-b.js";
 import "./a.js";
 import { n as init_q } from "./z2.js";
-//#region e0.js
+// e0.js
 function init_e0() {
 	return (init_e0 = __esmMin((() => {
 		init_b();
@@ -30,7 +27,6 @@ function init_e0() {
 		console.log("E0", Object.keys(p).join());
 	})))();
 }
-//#endregion
 init_e0();
 
 ```
@@ -39,9 +35,8 @@ init_e0();
 
 ```js
 import "./a.js";
-//#region e1.js
+// e1.js
 console.log("E1");
-//#endregion
 
 ```
 
@@ -49,16 +44,14 @@ console.log("E1");
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region p.js
+// p.js
 const p = {};
-//#endregion
-//#region b.js
+// b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
 		console.log("B");
 	})))();
 }
-//#endregion
 export { p as n, init_b as t };
 
 ```
@@ -66,7 +59,7 @@ export { p as n, init_b as t };
 ## rolldown-runtime.js
 
 ```js
-//#region \0rolldown/runtime.js
+// \0rolldown/runtime.js
 var __defProp = Object.defineProperty;
 var __esmMin = (fn, res, err) => () => {
 	if (err) throw err[0];
@@ -85,7 +78,6 @@ var __exportAll = (all, no_symbols) => {
 	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
 	return target;
 };
-//#endregion
 export { __exportAll as n, __esmMin as t };
 
 ```
@@ -102,20 +94,18 @@ init_z();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region q.js
+// q.js
 function init_q() {
 	return (init_q = __esmMin((() => {
 		console.log("Q");
 	})))();
 }
-//#endregion
-//#region z.js
+// z.js
 function init_z() {
 	return (init_z = __esmMin((() => {
 		console.log("Z");
 	})))();
 }
-//#endregion
 export { init_q as n, init_z as t };
 
 ```
@@ -127,11 +117,8 @@ export { init_q as n, init_z as t };
 ### a.js
 
 ```js
-//#region c.js
-//#endregion
-//#region a.js
+// a.js
 console.log("A", Object.keys(/* @__PURE__ */ require("./rolldown-runtime.js").__exportAll({ c: () => 1 })).join());
-//#endregion
 
 ```
 
@@ -142,7 +129,7 @@ const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_group_b = require("./group-b.js");
 require("./a.js");
 const require_z = require("./z2.js");
-//#region e0.js
+// e0.js
 function init_e0() {
 	return (init_e0 = require_rolldown_runtime.__esmMin((() => {
 		require_group_b.init_b();
@@ -150,7 +137,6 @@ function init_e0() {
 		console.log("E0", Object.keys(require_group_b.p).join());
 	})))();
 }
-//#endregion
 init_e0();
 
 ```
@@ -159,9 +145,8 @@ init_e0();
 
 ```js
 require("./a.js");
-//#region e1.js
+// e1.js
 console.log("E1");
-//#endregion
 
 ```
 
@@ -169,16 +154,14 @@ console.log("E1");
 
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
-//#region p.js
+// p.js
 const p = {};
-//#endregion
-//#region b.js
+// b.js
 function init_b() {
 	return (init_b = require_rolldown_runtime.__esmMin((() => {
 		console.log("B");
 	})))();
 }
-//#endregion
 Object.defineProperty(exports, "init_b", {
 	enumerable: true,
 	get: function() {
@@ -197,7 +180,7 @@ Object.defineProperty(exports, "p", {
 ### rolldown-runtime.js
 
 ```js
-//#region \0rolldown/runtime.js
+// \0rolldown/runtime.js
 var __defProp = Object.defineProperty;
 var __esmMin = (fn, res, err) => () => {
 	if (err) throw err[0];
@@ -216,7 +199,6 @@ var __exportAll = (all, no_symbols) => {
 	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
 	return target;
 };
-//#endregion
 Object.defineProperty(exports, "__esmMin", {
 	enumerable: true,
 	get: function() {
@@ -243,20 +225,18 @@ require("./z2.js").init_z();
 
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
-//#region q.js
+// q.js
 function init_q() {
 	return (init_q = require_rolldown_runtime.__esmMin((() => {
 		console.log("Q");
 	})))();
 }
-//#endregion
-//#region z.js
+// z.js
 function init_z() {
 	return (init_z = require_rolldown_runtime.__esmMin((() => {
 		console.log("Z");
 	})))();
 }
-//#endregion
 Object.defineProperty(exports, "init_q", {
 	enumerable: true,
 	get: function() {

@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 try {
 	throw "FAIL";
 } catch (t) {
@@ -21,6 +21,5 @@ try {
 	assert.strictEqual(b, "PASS1");
 	assert.strictEqual(d, "PASS2");
 }
-//#endregion
 
 ```

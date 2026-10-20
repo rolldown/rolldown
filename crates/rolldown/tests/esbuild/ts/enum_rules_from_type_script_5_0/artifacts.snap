@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## not-supported.js
 
 ```js
-//#region not-supported.ts
+// not-supported.ts
 console.log("1", "1.5");
 console.log("1000000000", "1000000000000");
 var TemplateExpressions = /* @__PURE__ */ function(TemplateExpressions) {
@@ -17,15 +17,13 @@ var TemplateExpressions = /* @__PURE__ */ function(TemplateExpressions) {
 	return TemplateExpressions;
 }(TemplateExpressions || {});
 console.log(TemplateExpressions.NULL, TemplateExpressions.TRUE, TemplateExpressions.FALSE, TemplateExpressions.BIGINT);
-//#endregion
 
 ```
 
 ## supported.js
 
 ```js
-//#region supported.ts
+// supported.ts
 console.log(123, "x", 1, -2, -4, 3, -1, 6, .5, 1, 8, 4, -5, 2147483643, 13, 4, 9, "x0", "0x", "xy", "NaN", "Infinity", "-Infinity", "0", "A0BxC-31246D", 321, 123, "123x", "x123", "a123b", 123, "123x", "x123", "a123b", "x", "xy", "yx", "axb", "x", "xy", "yx", "axb");
-//#endregion
 
 ```

@@ -11,7 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
-//#region entry.js
+// entry.js
 var _a = /* @__PURE__ */ new WeakMap();
 var A = class {
 	constructor() {
@@ -22,7 +22,6 @@ var A = class {
 		(_classPrivateFieldGet2$1 = _classPrivateFieldGet2(_a, this)) !== null && _classPrivateFieldGet2$1 !== void 0 || _classPrivateFieldSet2(_a, this, 1);
 	}
 };
-//#endregion
 export { A };
 
 ```

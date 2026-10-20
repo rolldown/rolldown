@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 __share("shared-ZmCA4nrZ", (exports) => {
-	//#region shared.js
+	// shared.js
 	function bump() {
 		count += 1;
 		return this === void 0 ? "this:undefined" : "this:bound";
@@ -21,7 +21,6 @@ __share("shared-ZmCA4nrZ", (exports) => {
 			marker = { tag: "shared" };
 		})))();
 	}
-	//#endregion
 	__share_export(exports, {
 		i: () => marker,
 		n: () => count,
@@ -30,7 +29,7 @@ __share("shared-ZmCA4nrZ", (exports) => {
 	});
 });
 var share_shared = __share_require("shared-ZmCA4nrZ");
-//#region a.js
+// a.js
 function init_a() {
 	return (init_a = __esmMin((() => {
 		share_shared.r();
@@ -38,7 +37,6 @@ function init_a() {
 		globalThis.markers.push(share_shared.i);
 	})))();
 }
-//#endregion
 init_a();
 
 ```
@@ -48,7 +46,7 @@ init_a();
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 __share("shared-ZmCA4nrZ", (exports) => {
-	//#region shared.js
+	// shared.js
 	function bump() {
 		count += 1;
 		return this === void 0 ? "this:undefined" : "this:bound";
@@ -61,7 +59,6 @@ __share("shared-ZmCA4nrZ", (exports) => {
 			marker = { tag: "shared" };
 		})))();
 	}
-	//#endregion
 	__share_export(exports, {
 		i: () => marker,
 		n: () => count,
@@ -70,7 +67,7 @@ __share("shared-ZmCA4nrZ", (exports) => {
 	});
 });
 var share_shared = __share_require("shared-ZmCA4nrZ");
-//#region b.js
+// b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
 		share_shared.r();
@@ -78,7 +75,6 @@ function init_b() {
 		globalThis.markers.push(share_shared.i);
 	})))();
 }
-//#endregion
 init_b();
 
 ```
@@ -86,7 +82,7 @@ init_b();
 ## rolldown-runtime.js
 
 ```js
-//#region \0rolldown/runtime.js
+// \0rolldown/runtime.js
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __esmMin = (fn, res, err) => () => {
@@ -130,7 +126,6 @@ var __share_export = (target, all) => {
 		enumerable: true
 	});
 };
-//#endregion
 export { __share_require as i, __share as n, __share_export as r, __esmMin as t };
 
 ```
@@ -143,10 +138,9 @@ export { __share_require as i, __share as n, __share_export as r, __esmMin as t 
 
 ```js
 import { n as count, r as marker, t as bump } from "./shared.js";
-//#region a.js
+// a.js
 globalThis.events.push("A " + count + " " + bump() + " " + count);
 globalThis.markers.push(marker);
-//#endregion
 
 ```
 
@@ -154,17 +148,16 @@ globalThis.markers.push(marker);
 
 ```js
 import { n as count, r as marker, t as bump } from "./shared.js";
-//#region b.js
+// b.js
 globalThis.events.push("B " + count + " " + bump?.() + " " + count);
 globalThis.markers.push(marker);
-//#endregion
 
 ```
 
 ### shared.js
 
 ```js
-//#region shared.js
+// shared.js
 globalThis.events.push("S body");
 let count = 0;
 function bump() {
@@ -172,7 +165,6 @@ function bump() {
 	return this === void 0 ? "this:undefined" : "this:bound";
 }
 const marker = { tag: "shared" };
-//#endregion
 export { count as n, marker as r, bump as t };
 
 ```

@@ -18,11 +18,10 @@ export default defineTest({
     expect(output.output[2].fileName).toMatchInlineSnapshot(`"lib.js"`);
     expect((output.output[2] as OutputChunk).code).toMatchInlineSnapshot(`
       "import { __commonJSMin } from "./_virtual/_rolldown/runtime.js";
-      //#region lib.js
+      // lib.js
       var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
       	module.exports = () => {};
       }));
-      //#endregion
       export default require_lib();
       export { require_lib };
       "

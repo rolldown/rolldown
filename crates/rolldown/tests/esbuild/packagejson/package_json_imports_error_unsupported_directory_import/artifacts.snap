@@ -6,11 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region foo1/bar/index.js
+// foo1/bar/index.js
 console.log(bar);
-//#endregion
-//#region foo2/bar/index.js
+// foo2/bar/index.js
 console.log(bar);
-//#endregion
 
 ```

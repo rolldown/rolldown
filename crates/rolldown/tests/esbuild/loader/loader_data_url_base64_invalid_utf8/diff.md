@@ -9,11 +9,8 @@ console.log(binary_default);
 ```
 ### rolldown
 ```js
-//#region binary.txt
-//#endregion
-//#region entry.js
+// entry.js
 console.log("data:application/octet-stream;base64,/w==");
-//#endregion
 
 ```
 ### diff

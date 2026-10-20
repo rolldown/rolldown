@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { __commonJSMin, require_shared } from "./main2.js";
-//#region dynamic.cjs
+// dynamic.cjs
 var require_dynamic = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const shared = require_shared();
 	module.exports = {
@@ -15,7 +15,6 @@ var require_dynamic = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		run: () => shared.tag
 	};
 }));
-//#endregion
 export default require_dynamic();
 export {};
 
@@ -32,13 +31,12 @@ export { POST } from "./main2.js";
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region shared.cjs
+// shared.cjs
 var require_shared = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.sharedInitializations = (globalThis.sharedInitializations ?? 0) + 1;
 	module.exports = { tag: "shared" };
 }));
-//#endregion
-//#region main.js
+// main.js
 var import_shared = /* @__PURE__ */ __toESM(require_shared());
 const POST = async () => {
 	const { default: dynamic } = await import("./dynamic.js").then((m) => /* @__PURE__ */ __toESM(m.default));
@@ -47,7 +45,6 @@ const POST = async () => {
 		value: import_shared.default.tag + ":" + dynamic.run()
 	};
 };
-//#endregion
 export { POST, __commonJSMin, require_shared };
 
 ```
@@ -60,7 +57,7 @@ export { POST, __commonJSMin, require_shared };
 
 ```js
 const require_main = require("./main2.js");
-//#region dynamic.cjs
+// dynamic.cjs
 var require_dynamic = /* @__PURE__ */ require_main.__commonJSMin(((exports, module) => {
 	const shared = require_main.require_shared();
 	module.exports = {
@@ -68,7 +65,6 @@ var require_dynamic = /* @__PURE__ */ require_main.__commonJSMin(((exports, modu
 		run: () => shared.tag
 	};
 }));
-//#endregion
 Object.defineProperty(exports, "default", {
 	enumerable: true,
 	get: function() {
@@ -91,13 +87,12 @@ exports.POST = require_main.POST;
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region shared.cjs
+// shared.cjs
 var require_shared = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.sharedInitializations = (globalThis.sharedInitializations ?? 0) + 1;
 	module.exports = { tag: "shared" };
 }));
-//#endregion
-//#region main.js
+// main.js
 var import_shared = /* @__PURE__ */ __toESM(require_shared());
 const POST = async () => {
 	const { default: dynamic } = await Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("./dynamic.js").default));
@@ -106,7 +101,6 @@ const POST = async () => {
 		value: import_shared.default.tag + ":" + dynamic.run()
 	};
 };
-//#endregion
 Object.defineProperty(exports, "POST", {
 	enumerable: true,
 	get: function() {

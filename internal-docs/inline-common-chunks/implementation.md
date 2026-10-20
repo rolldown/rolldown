@@ -113,29 +113,27 @@ Because the carrier's import table already holds the carried records' import ite
 
 ## Rendering
 
-`instantiate_chunks` hands each file its `CarriedRender`s. `EcmaGenerator` turns them into `RenderedModuleSource`s through the same `render_ecma_module` as the file's own modules (source maps, `//#region` markers), adds them to `RenderedChunk.modules`, and `render_esm` prints, after the file's imports and before anything else (`share_factory.rs::render_inline_records`):
+`instantiate_chunks` hands each file its `CarriedRender`s. `EcmaGenerator` turns them into `RenderedModuleSource`s through the same `render_ecma_module` as the file's own modules (source maps, module markers), adds them to `RenderedChunk.modules`, and `render_esm` prints, after the file's imports and before anything else (`share_factory.rs::render_inline_records`):
 
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 __share("shared-ZmCA4nrZ", (exports) => {
-	//#region shared.js
+	// shared.js
 	var count;
 	function init_shared() { ... }
-	//#endregion
 	__share_export(exports, {
 		n: () => count,
 		r: () => init_shared
 	});
 });
 var share_shared = __share_require("shared-ZmCA4nrZ");
-//#region a.js
+// a.js
 function init_a() {
 	return (init_a = __esmMin((() => {
 		share_shared.r();
 		globalThis.events.push("A " + share_shared.n);
 	})))();
 }
-//#endregion
 init_a();
 ```
 

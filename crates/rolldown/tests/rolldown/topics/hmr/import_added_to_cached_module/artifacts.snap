@@ -22,30 +22,26 @@ __rolldown_runtime__.registerGraph({
 		[1, 2]
 	]
 });
-//#region lib.js
+// lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ value: () => "lib" });
 __rolldown_runtime__.createModuleHotContext("lib.js");
 __rolldown_runtime__.registerModule("lib.js", { exports: lib_exports });
-//#endregion
-//#region accepter.js
+// accepter.js
 var accepter_exports = /* @__PURE__ */ __exportAll({ read: () => read });
 const accepter_hot = __rolldown_runtime__.createModuleHotContext("accepter.js");
 __rolldown_runtime__.registerModule("accepter.js", { exports: accepter_exports });
 const read = () => "lib";
 accepter_hot.accept();
-//#endregion
-//#region adder.js
+// adder.js
 var adder_exports = /* @__PURE__ */ __exportAll({ tag: () => tag });
 const adder_hot = __rolldown_runtime__.createModuleHotContext("adder.js");
 __rolldown_runtime__.registerModule("adder.js", { exports: adder_exports });
 const tag = "adder";
 adder_hot.accept();
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
-//#endregion
 
 ```
 

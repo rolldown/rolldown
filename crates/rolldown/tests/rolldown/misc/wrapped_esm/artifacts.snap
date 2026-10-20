@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
-//#region foo.js
+// foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({
 	a: () => a,
 	a1: () => a1,
@@ -47,8 +47,7 @@ var init_foo = __esmMin((() => {
 	for (index = 0; index < 10; index++) a3 = 1e3;
 	({destructuring} = { destructuring: "destructuring" });
 }));
-//#endregion
-//#region main.js
+// main.js
 globalThis.globalVar = true;
 const foo = (init_foo(), __toCommonJS(foo_exports));
 assert.strictEqual(foo.a1, 1e3);
@@ -56,7 +55,6 @@ assert.strictEqual(foo.a2, "baz");
 assert.strictEqual(foo.a3, 1e3);
 assert.strictEqual(foo.destructuring, "destructuring");
 assert.strictEqual(foo.index, 10);
-//#endregion
 
 //# sourceMappingURL=main.js.map
 ```
@@ -155,44 +153,44 @@ assert.strictEqual(foo.index, 10);
 (30:41) "'destructuring' " --> (72:37) "\"destructuring\" "
 (30:57) "};\n" --> (72:53) "});\n"
 - ../main.js
-(0:0) "globalThis." --> (76:0) "globalThis."
-(0:11) "globalVar = " --> (76:11) "globalVar = "
-(0:23) "true;\n" --> (76:23) "true;\n"
-(1:0) "const " --> (77:0) "const "
-(1:6) "foo = require('./foo');\n" --> (77:6) "foo = ("
-(1:6) "foo = require('./foo');\n" --> (77:13) "init_foo("
-(1:6) "foo = require('./foo');\n" --> (77:22) "), "
-(1:6) "foo = require('./foo');\n" --> (77:25) "__toCommonJS("
-(1:6) "foo = require('./foo');\n" --> (77:38) "foo_exports"
-(1:6) "foo = require('./foo');\n" --> (77:49) "));\n"
-(4:0) "assert." --> (78:0) "assert."
-(4:7) "strictEqual(" --> (78:7) "strictEqual("
-(4:19) "foo." --> (78:19) "foo."
-(4:23) "a1, " --> (78:23) "a1, "
-(4:27) "1000" --> (78:27) "1e3"
-(4:31) ");\n" --> (78:30) ");\n"
-(5:0) "assert." --> (79:0) "assert."
-(5:7) "strictEqual(" --> (79:7) "strictEqual("
-(5:19) "foo." --> (79:19) "foo."
-(5:23) "a2, " --> (79:23) "a2, "
-(5:27) "'baz'" --> (79:27) "\"baz\""
-(5:32) ");\n" --> (79:32) ");\n"
-(6:0) "assert." --> (80:0) "assert."
-(6:7) "strictEqual(" --> (80:7) "strictEqual("
-(6:19) "foo." --> (80:19) "foo."
-(6:23) "a3, " --> (80:23) "a3, "
-(6:27) "1000" --> (80:27) "1e3"
-(6:31) ");\n" --> (80:30) ");\n"
-(7:0) "assert." --> (81:0) "assert."
-(7:7) "strictEqual(" --> (81:7) "strictEqual("
-(7:19) "foo." --> (81:19) "foo."
-(7:23) "destructuring, " --> (81:23) "destructuring, "
-(7:38) "'destructuring'" --> (81:38) "\"destructuring\""
-(7:53) ");\n" --> (81:53) ");\n"
-(8:0) "assert." --> (82:0) "assert."
-(8:7) "strictEqual(" --> (82:7) "strictEqual("
-(8:19) "foo." --> (82:19) "foo."
-(8:23) "index, " --> (82:23) "index, "
-(8:30) "10" --> (82:30) "10"
-(8:32) ");\n" --> (82:32) ");\n"
+(0:0) "globalThis." --> (75:0) "globalThis."
+(0:11) "globalVar = " --> (75:11) "globalVar = "
+(0:23) "true;\n" --> (75:23) "true;\n"
+(1:0) "const " --> (76:0) "const "
+(1:6) "foo = require('./foo');\n" --> (76:6) "foo = ("
+(1:6) "foo = require('./foo');\n" --> (76:13) "init_foo("
+(1:6) "foo = require('./foo');\n" --> (76:22) "), "
+(1:6) "foo = require('./foo');\n" --> (76:25) "__toCommonJS("
+(1:6) "foo = require('./foo');\n" --> (76:38) "foo_exports"
+(1:6) "foo = require('./foo');\n" --> (76:49) "));\n"
+(4:0) "assert." --> (77:0) "assert."
+(4:7) "strictEqual(" --> (77:7) "strictEqual("
+(4:19) "foo." --> (77:19) "foo."
+(4:23) "a1, " --> (77:23) "a1, "
+(4:27) "1000" --> (77:27) "1e3"
+(4:31) ");\n" --> (77:30) ");\n"
+(5:0) "assert." --> (78:0) "assert."
+(5:7) "strictEqual(" --> (78:7) "strictEqual("
+(5:19) "foo." --> (78:19) "foo."
+(5:23) "a2, " --> (78:23) "a2, "
+(5:27) "'baz'" --> (78:27) "\"baz\""
+(5:32) ");\n" --> (78:32) ");\n"
+(6:0) "assert." --> (79:0) "assert."
+(6:7) "strictEqual(" --> (79:7) "strictEqual("
+(6:19) "foo." --> (79:19) "foo."
+(6:23) "a3, " --> (79:23) "a3, "
+(6:27) "1000" --> (79:27) "1e3"
+(6:31) ");\n" --> (79:30) ");\n"
+(7:0) "assert." --> (80:0) "assert."
+(7:7) "strictEqual(" --> (80:7) "strictEqual("
+(7:19) "foo." --> (80:19) "foo."
+(7:23) "destructuring, " --> (80:23) "destructuring, "
+(7:38) "'destructuring'" --> (80:38) "\"destructuring\""
+(7:53) ");\n" --> (80:53) ");\n"
+(8:0) "assert." --> (81:0) "assert."
+(8:7) "strictEqual(" --> (81:7) "strictEqual("
+(8:19) "foo." --> (81:19) "foo."
+(8:23) "index, " --> (81:23) "index, "
+(8:30) "10" --> (81:30) "10"
+(8:32) ");\n" --> (81:32) ");\n"
 ```

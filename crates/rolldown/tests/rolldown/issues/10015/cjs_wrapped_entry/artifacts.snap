@@ -7,9 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 const require_main$1 = require("./main2.js");
-//#region consumer.cjs
+// consumer.cjs
 module.exports = () => require_main$1.require_main();
-//#endregion
 
 ```
 
@@ -17,11 +16,10 @@ module.exports = () => require_main$1.require_main();
 
 ```js
 const require_main = require("./main2.js");
-//#region dynamic.cjs
+// dynamic.cjs
 var require_dynamic = /* @__PURE__ */ require_main.__commonJSMin(((exports, module) => {
 	module.exports = require_main.require_shared();
 }));
-//#endregion
 Object.defineProperty(exports, "default", {
 	enumerable: true,
 	get: function() {
@@ -43,18 +41,16 @@ module.exports = require_main$1.require_main();
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region shared.cjs
+// shared.cjs
 var require_shared = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.sharedInitializations = (globalThis.sharedInitializations ?? 0) + 1;
 	module.exports = { tag: "shared" };
 }));
-//#endregion
-//#region main.cjs
+// main.cjs
 var require_main = /* @__PURE__ */ __commonJSMin(((exports) => {
 	const shared = require_shared();
 	exports.POST = async () => (await Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("./dynamic.js").default, 1))).default === shared;
 }));
-//#endregion
 Object.defineProperty(exports, "__commonJSMin", {
 	enumerable: true,
 	get: function() {

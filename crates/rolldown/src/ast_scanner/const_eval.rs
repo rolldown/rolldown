@@ -66,7 +66,7 @@ impl<'me> GlobalContext<'me> for ConstEvalCtx<'me, '_> {
     &self,
     reference_id: oxc::semantic::ReferenceId,
   ) -> Option<oxc_ecmascript::constant_evaluation::ConstantValue<'me>> {
-    self.constant_value(reference_id).map(ConstantValue::as_oxc_value)
+    self.constant_value(reference_id).map(oxc_ecmascript::constant_evaluation::ConstantValue::from)
   }
 
   // Without the type, oxc's `+` reads a string constant as a number: `'3' + 1` gives `4`.
@@ -101,7 +101,7 @@ pub fn try_extract_const_literal<'me, 'ast: 'me>(
     Expression::TemplateLiteral(template) => {
       template_text(ctx, template).map(ConstantValue::String)
     }
-    _ => expr.evaluate_value(ctx).and_then(ConstantValue::from_oxc),
+    _ => expr.evaluate_value(ctx).map(ConstantValue::from),
   }?;
   (!contains_object_literal(expr)).then_some(value)
 }
@@ -254,11 +254,12 @@ mod tests {
 
   #[test]
   fn test_string_with_a_lone_surrogate_is_not_a_constant() {
-    // `ConstantValue::String` is UTF-8, so it can't hold the value.
+    // oxc doesn't evaluate a literal with a lone surrogate.
     assert_eq!(extract("const a = '\\uD800';", "a"), None);
     assert_eq!(extract("const a = '\\uD800' + 'x';", "a"), None);
-    // A pair joined by `+` is a valid code point.
-    assert_eq!(extract("const a = '\\uD800' + '\\uDC00';", "a"), Some(string("\u{10000}")));
+    // So a pair split across two literals isn't joined either, until oxc-project/oxc#27098 is
+    // released.
+    assert_eq!(extract("const a = '\\uD800' + '\\uDC00';", "a"), None);
   }
 
   #[test]

@@ -252,7 +252,8 @@ mod tests {
   #[test]
   fn test_string_with_a_lone_surrogate_is_not_a_constant() {
     // oxc doesn't evaluate a literal with a lone surrogate, so a pair split across two literals
-    // isn't joined either.
+    // isn't joined either. oxc-project/oxc#27098 changes both, and `ConstantValue::String` with
+    // them.
     assert_eq!(extract("const a = '\\uD800';", "a"), None);
     assert_eq!(extract("const a = '\\uD800' + 'x';", "a"), None);
     assert_eq!(extract("const a = '\\uD800' + '\\uDC00';", "a"), None);

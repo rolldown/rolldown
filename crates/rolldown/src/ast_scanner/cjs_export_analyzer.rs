@@ -142,8 +142,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       return Some(CommonJsAstType::ExportsRead);
     }
 
-    // An export name can't contain a lone surrogate, so such a name is treated like a computed
-    // one.
+    // Rolldown stores export names as UTF-8, so a name with a lone surrogate is treated like a
+    // computed one.
     let Some(static_property_name) = static_property_name.and_then(JSStr::as_str) else {
       return Some(CommonJsAstType::ExportsPropWrite(CompactStr::from("*")));
     };

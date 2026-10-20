@@ -1260,7 +1260,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       let original_expr_span = member_expr.span();
       let can_polyfill_import_meta_url = self.can_polyfill_import_meta_url();
 
-      let property_name = member_expr.static_property_name()?.as_str()?;
+      let name = member_expr.static_property_name()?;
+      let Some(property_name) = name.as_str() else {
+        // Reference ids are ASCII, so a file URL name with a lone surrogate matches no emitted
+        // file. It is reported like any unknown reference id.
+        if let Some(file_url) = utils::file_url::strip_file_url_prefix(&name.display().to_string())
+        {
+          self
+            .missing_file_reference_ids
+            .entry(CompactStr::new(file_url.reference_id))
+            .or_insert(original_expr_span);
+        }
+        return None;
+      };
       match property_name {
         // Try to polyfill `import.meta.url`
         "url" => {

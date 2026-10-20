@@ -489,8 +489,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   /// Returns `request` as UTF-8, or reports it as unsupported when it has a lone surrogate.
   ///
   /// Rolldown's resolver, plugin hooks and import records take UTF-8 strings, so it can't resolve
-  /// such a request. Every form of import reports it, because leaving the import as written would
-  /// resolve it at runtime against the output instead of the source.
+  /// such a request. Every form of import reports it, even an absolute URL or a bare specifier
+  /// that would work as written: `resolveId` hooks see a specifier before Rolldown knows it is
+  /// external.
   fn module_request(&mut self, request: JSStr<'ast>, span: Span) -> Option<&'ast str> {
     let request = request.as_str();
     if request.is_none() {

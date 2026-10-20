@@ -32,7 +32,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     // a.b // static
     // a['b'] // static
     // a[b] // dynamic
-    // An export name can't contain a lone surrogate, so such a name is treated as dynamic.
+    // Rolldown stores export names as UTF-8, so a name with a lone surrogate is treated as
+    // dynamic.
     let partial_name = parent
       .as_member_expression_kind()
       .and_then(|expr| expr.static_property_name().and_then(JSStr::as_str));

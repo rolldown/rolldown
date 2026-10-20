@@ -119,6 +119,12 @@ const ignoreTests = [
   "rollup@form@supports-core-js: supports core-js", // relies on @rollup/plugin-commonjs
   "rollup@form@supports-es5-shim: supports es5-shim", // relies on @rollup/plugin-commonjs
   "rollup@form@supports-es6-shim: supports es6-shim", // relies on @rollup/plugin-commonjs
+  "rollup@chunking form@option-virtual-dirname: expect the directory name for \"virtual\" files to be rollup_virtual@generates cjs", // relies on @rollup/plugin-commonjs
+  "rollup@chunking form@option-virtual-dirname: expect the directory name for \"virtual\" files to be rollup_virtual@generates es", // relies on @rollup/plugin-commonjs
+  "rollup@chunking form@preserve-modules-commonjs: Handles output from @rollup/plugin-commonjs@generates cjs", // relies on @rollup/plugin-commonjs
+  "rollup@chunking form@preserve-modules-commonjs: Handles output from @rollup/plugin-commonjs@generates es", // relies on @rollup/plugin-commonjs
+  "rollup@chunking form@preserve-modules-root: confirm preserveModulesRoot restructures src appropriately@generates cjs", // relies on @rollup/plugin-commonjs
+  "rollup@chunking form@preserve-modules-root: confirm preserveModulesRoot restructures src appropriately@generates es", // relies on @rollup/plugin-commonjs
 
   // ## Order not guaranteed due to parallelism
   "rollup@hooks@assigns chunk IDs before creating outputBundle chunks", // The `renderChunk` is called at parallel, collect chunk info to array is unstable.  https://github.com/rolldown/rolldown/issues/2364
@@ -128,6 +134,10 @@ const ignoreTests = [
   "rollup@function@external-namespace-and-default-reexport-compat2: reexports both a namespace, the namespace as a name and the default export when using compat interop",
   "rollup@function@external-namespace-and-default-reexport-compat3: reexports both a namespace and the default export when using compat interop",
   "rollup@function@external-namespace-and-default-reexport-compat: reexports both a namespace and the default export when using compat interop",
+
+  // ## uses `import` in CJS files
+  "rollup@chunking form@preserve-modules-filename-pattern: entryFileNames pattern supported in combination with preserveModules@generates cjs",
+  "rollup@chunking form@preserve-modules-filename-pattern: entryFileNames pattern supported in combination with preserveModules@generates es",
 
   // ## Others
   'rollup@hooks@Throws when not specifying "file" or "dir"', // Rolldown defaults `output.dir` to `dist`

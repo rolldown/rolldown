@@ -183,8 +183,11 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
       match property {
         ast::ObjectPropertyKind::ObjectProperty(property) => {
           let key = property.key.static_name().expect("should be static name");
-          // JSON modules are parsed by `serde_json`, so their keys are always UTF-8.
-          let key = key.into_cow_str().expect("JSON keys are UTF-8");
+          // Only a `transform_ast` hook can add a key with a lone surrogate. An export name can't
+          // contain one, so such a key stays only on the default export.
+          let Some(key) = key.into_cow_str() else {
+            continue;
+          };
           if key.is_empty() {
             continue;
           }

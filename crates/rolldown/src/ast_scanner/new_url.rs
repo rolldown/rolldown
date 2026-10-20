@@ -83,9 +83,5 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 /// Returns the text before the first lone surrogate. A lone surrogate is never whitespace or part
 /// of `data:`, so that text is enough for `is_data_url`.
 fn text_before_lone_surrogate(value: JSStr<'_>) -> &str {
-  value.as_str().unwrap_or_else(|| {
-    let bytes = value.as_bytes();
-    let len = std::str::from_utf8(bytes).map_or_else(|err| err.valid_up_to(), str::len);
-    std::str::from_utf8(&bytes[..len]).unwrap_or_default()
-  })
+  value.as_str().unwrap_or_else(|| value.as_bytes().utf8_chunks().next().map_or("", |c| c.valid()))
 }

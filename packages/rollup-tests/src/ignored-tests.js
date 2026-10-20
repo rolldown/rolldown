@@ -43,6 +43,8 @@ const ignoreTests = [
   "rollup@form@jsx@transpiles-react-jsx: transpiles JSX for react",
   "rollup@form@jsx@transpiles-react-jsx-expression-semicolon: Adds semicolons at the correct positions in transpiled JSX",
   "rollup@function@jsx@missing-jsx-export: throws when the JSX factory is not exported",
+  "rollup@function@jsx@automatic-string-attribute-values: uses the decoded value of JSX string attributes and keys in automatic mode",
+  "rollup@function@jsx@classic-string-attribute-values: uses the decoded value of JSX string attributes in classic mode",
 
   // --------------------------------------------------------------------------------------
   // # Test infraructure related ignores

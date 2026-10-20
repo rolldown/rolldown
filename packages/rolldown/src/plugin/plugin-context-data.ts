@@ -18,6 +18,7 @@ import type { PluginContextResolveOptions } from './plugin-context';
 export class PluginContextData {
   moduleOptionMap: Map<string, ModuleOptions> = new Map();
   resolveOptionsMap: Map<number, PluginContextResolveOptions> = new Map();
+  private resolveOptionsReceipt = 0;
   loadModulePromiseMap: Map<string, Promise<void>> = new Map();
   renderedChunkMeta: RenderedChunkMeta | null = null;
   normalizedInputOptions: NormalizedInputOptions | null = null;
@@ -95,7 +96,7 @@ export class PluginContextData {
   }
 
   saveResolveOptions(options: PluginContextResolveOptions): number {
-    const index = this.resolveOptionsMap.size;
+    const index = this.resolveOptionsReceipt++;
     this.resolveOptionsMap.set(index, options);
     return index;
   }

@@ -118,6 +118,10 @@
  - rollup@form@import-namespace-systemjs: imports namespace (systemjs only)
  - rollup@form@modify-export-semi: inserts semicolons correctly when modifying SystemJS exports@generates system
  - rollup@form@system-module-reserved: does not output reserved system format identifiers@generates es
+ - rollup@function@nested-async-statements: keeps for-await loops and await using inside functions out of top-level await detection
+ - rollup@function@top-level-await-using-system: awaits disposal from top-level await using in System output
+ - rollup@function@top-level-for-await-system: executes top-level for-await loops asynchronously in System output
+ - rollup@function@top-level-for-await-using-system: awaits disposal from loop-head await using in System output
 
 ### The `input.perf` and `bundle.getTimings()` is not supported
  - rollup@function@adds-timings-to-bundle-when-codesplitting: Adds timing information to bundle when bundling with perf=true
@@ -212,6 +216,8 @@
  - rollup@function@emit-chunk-manual-asset-source: supports setting asset sources as side effect of the manual chunks option
  - rollup@function@emit-chunk-manual: supports emitting chunks as side effect of the manual chunks option
  - rollup@function@manual-chunks-order: sorts manual chunks by entry index
+ - rollup@chunking form@manual-chunk-dependency-of-dynamic-entry: does not merge a dynamic entry depending on a manual chunk into its importer@generates cjs
+ - rollup@chunking form@manual-chunk-dependency-of-dynamic-entry: does not merge a dynamic entry depending on a manual chunk into its importer@generates es
 
 ### The `format: amd` not supported
  - rollup@function@amd-auto-id-id: throws when using both the amd.autoId and the amd.id option

@@ -1,5 +1,5 @@
 use rolldown_common::{
-  DeclaredSymbols, EntryPoint, ExportsKind, ImportRecordMeta, ModuleIdx, OutputFormat,
+  DeclaredSymbols, EntryPoint, ExportsKind, ImportKind, ImportRecordMeta, ModuleIdx, OutputFormat,
   PreserveEntrySignatures, SharedNormalizedBundlerOptions, StmtInfo, StmtInfoMeta, TaggedSymbolRef,
   WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
 };
@@ -50,6 +50,24 @@ fn init_entry_point_stmt_info(
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn create_exports_for_ecma_modules(&mut self) {
+    for module in &mut self.module_table.modules {
+      let Some(module) = module.as_normal_mut() else { continue };
+      for record in &mut module.import_records {
+        if record.kind != ImportKind::DynamicImport {
+          continue;
+        }
+        let Some(importee) = record.resolved_module else { continue };
+        let meta = &self.metas[importee];
+        // Promise resolution calls `then` with the namespace as its receiver.
+        if meta.has_dynamic_exports || meta.resolved_exports.contains_key("then") {
+          self
+            .dynamic_import_exports_usage_map
+            .insert(importee, DynamicImportExportsUsage::Complete);
+          record.meta.remove(ImportRecordMeta::PureDynamicImport);
+        }
+      }
+    }
+
     for m in &mut self.module_table.modules {
       let Some(ecma_module) = m.as_normal_mut() else { continue };
       let idx = ecma_module.idx;

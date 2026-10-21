@@ -190,6 +190,8 @@ Entry reachability follows this graph from the entry's own atom. Under `strictEx
 
 When the reduced bitset would put an atom into a single purely dynamic-imported entry chunk, the reduction is not restricted by `preserveEntrySignatures`. If every dynamic importer only reads a statically-known subset of exports from the namespace (`DynamicImportExportsUsage::Partial`), the extra exports are unobservable and the atom is merged as-is, with no extra intermediate namespace. Otherwise, since we control all dynamic importers of the chunk, we generate a synthetic namespace inside the chunk, and use it as the "imported namespace" in the importer code (`import("./chunk.js").then((n) => n.<ns>)`). We bail out in case of a `then` export, or of a dynamic/external `export * from`. The rewrite also requires bundler-controlled export naming, so it is disabled under `preserveModules` and when `minifyInternalExports` is off.
 
+Namespace member calls and tagged templates use `Complete`: the callee receives the namespace as `this`. Dynamic imports whose target may export `then` also use `Complete`, and remain effectful even when their result is unused, because Promise resolution can call `then` with the namespace as its receiver.
+
 Every accepted reduction must also keep the regrouped static atom graph acyclic. "Already loaded" does not always mean "already initialized": if a reduced atom is moved into a chunk that statically imports one of its consumers, an ES module cycle can expose uninitialized bindings, including CJS wrapper functions.
 
 When `experimentalInlineCommonChunks` is enabled, module groups below its size threshold that pass its module-level checks keep their common placement instead of being reduced or merged into a single entry. The final inline selector still validates the completed graph. This lets a shared module be copied into its main and lazy consumers instead of forcing an entry-trigger facade; see `../inline-common-chunks/design.md#keeping-shared-code-available-for-inlining`.
@@ -257,6 +259,8 @@ Dynamic/emitted entries can become empty facades when all their modules are pull
 
 - Merges the facade into its target chunk
 - Marks it as `Removed` in `post_chunk_optimization_operations`
+
+For a removed dynamic facade whose namespace is only observed through known dynamic-import reads, `dynamic_facade_export_names` keeps the generated getters and their symbol dependencies restricted to the same names. Global symbol liveness also includes static importers' reads and cannot determine that namespace's interface.
 
 A **user-defined** entry can likewise become an empty facade when manual code splitting (a `codeSplitting` group, possibly via `entriesAware` subgroup merging) places its module into a common chunk. Folding that common chunk back into the entry chunk is only safe when the chunk does not also hold **another user-defined entry's module**. Otherwise the sibling entry would be forced to import this entry chunk just to reach its own module, and loading it would eagerly run this entry's top-level `init_*` — leaking its side effects into the sibling (visible under `strictExecutionOrder`). In that case the facade is kept so each entry imports the shared (wrapped) chunk and runs only its own `init_*`. See [#9463](https://github.com/rolldown/rolldown/issues/9463).
 

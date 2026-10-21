@@ -54,8 +54,26 @@ async fn line_terminator_in_module_id() {
         // Each module gets its own chunk, and its `stable_id` goes in the `//!` header.
         NamedBundlerOptions {
           description: Some("preserveModules".to_string()),
-          options: BundlerOptions { preserve_modules: Some(true), ..options },
+          options: BundlerOptions { preserve_modules: Some(true), ..options.clone() },
           snapshot: None,
+          config_name: None,
+          expect_execution_failure: None,
+        },
+        NamedBundlerOptions {
+          description: Some("minify".to_string()),
+          options: BundlerOptions { minify: Some(true.into()), ..options.clone() },
+          snapshot: Some(false),
+          config_name: None,
+          expect_execution_failure: None,
+        },
+        NamedBundlerOptions {
+          description: Some("preserveModules + minify".to_string()),
+          options: BundlerOptions {
+            preserve_modules: Some(true),
+            minify: Some(true.into()),
+            ..options
+          },
+          snapshot: Some(false),
           config_name: None,
           expect_execution_failure: None,
         },

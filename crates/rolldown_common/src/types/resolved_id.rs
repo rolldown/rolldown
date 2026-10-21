@@ -91,3 +91,36 @@ impl ResolvedId {
     }
   }
 }
+
+#[test]
+fn debug_id_escapes_comments_without_changing_module_identity() {
+  use rolldown_std_utils::PathExt as _;
+
+  let cwd = std::env::current_dir().unwrap();
+  for suffix in ["plain", "—…😀", "\n\r\u{2028}\u{2029}", r"\n\r\u2028\u2029"] {
+    let escaped = suffix
+      .replace('\n', "\\n")
+      .replace('\r', "\\r")
+      .replace('\u{2028}', "\\u2028")
+      .replace('\u{2029}', "\\u2029");
+    for (id, expected) in [
+      (ModuleId::new(format!("bare:{suffix}")), format!("bare:{escaped}")),
+      (ModuleId::new(format!("\0virtual:{suffix}")), format!("\\0virtual:{escaped}")),
+      (ModuleId::new_empty(&format!("bare:{suffix}")), format!("(ignored) bare:{escaped}")),
+      (
+        ModuleId::new(format!("data:text/javascript,{suffix}")),
+        format!("<data:text/javascript,{escaped}>"),
+      ),
+    ] {
+      let resolved = ResolvedId { id: id.clone(), ..Default::default() };
+      let stable_id = id.stabilize(&cwd);
+      assert_eq!(resolved.debug_id(&cwd), expected);
+      assert_eq!(resolved.id, id);
+      assert_eq!(resolved.id.stabilize(&cwd), stable_id);
+    }
+  }
+  let path = cwd.join("module\n\r\u{2028}\u{2029}.js");
+  let resolved = ResolvedId { id: ModuleId::new(path.expect_to_str()), ..Default::default() };
+  assert_eq!(resolved.debug_id(&cwd), r"module\n\r\u2028\u2029.js");
+  assert_eq!(resolved.id.as_str(), path.expect_to_str());
+}

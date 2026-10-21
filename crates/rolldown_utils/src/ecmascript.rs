@@ -227,6 +227,78 @@ fn test_escape_line_terminators() {
   );
 }
 
+#[test]
+fn test_escape_line_terminators_all_unicode_scalars() {
+  let text: String = (0..=u32::from(char::MAX))
+    .filter_map(char::from_u32)
+    .filter(|c| !matches!(c, '\n' | '\r' | '\u{2028}' | '\u{2029}'))
+    .collect();
+  let expected = text.clone();
+  let ptr = text.as_ptr();
+  let escaped = escape_line_terminators(text);
+  assert_eq!(escaped, expected);
+  // Ordinary Unicode must retain the allocation, including other E2-prefixed characters.
+  assert_eq!(escaped.as_ptr(), ptr);
+}
+
+#[test]
+fn test_escape_line_terminators_fuzz() {
+  use oxc::{allocator::Allocator, parser::Parser, span::SourceType};
+
+  fn check(text: String) {
+    // Use independent replacements as an oracle for the byte scan and character loop.
+    let expected = text
+      .replace('\n', "\\n")
+      .replace('\r', "\\r")
+      .replace('\u{2028}', "\\u2028")
+      .replace('\u{2029}', "\\u2029");
+    let escaped = escape_line_terminators(text);
+    assert_eq!(escaped, expected);
+    assert_eq!(escape_line_terminators(escaped.clone()), escaped);
+
+    // Cover ordinary comments, full debug headers, and HMR region markers.
+    for prefix in ["// ", "//! ", "//#region "] {
+      let source = format!("{prefix}{escaped}\nlet sentinel = 1;");
+      let allocator = Allocator::default();
+      let parsed = Parser::new(&allocator, &source, SourceType::mjs()).parse();
+      assert!(parsed.diagnostics.is_empty(), "{source:?}: {:?}", parsed.diagnostics);
+      assert_eq!(parsed.program.body.len(), 1, "{source:?}");
+    }
+  }
+
+  let fragments = [
+    "",
+    "ascii",
+    "\\",
+    r"\n\r\u2028\u2029",
+    "\0",
+    "\u{85}\u{B}\u{C}",
+    "\u{2027}\u{202A}",
+    "—…",
+    "π中文😀",
+    "/* */ //",
+    "'\"`",
+    "//# sourceMappingURL=data:application/json,{}",
+    "<!-- -->",
+    "\r\n",
+    "\n\r\u{2028}\u{2029}",
+    "throw new Error('escaped');",
+  ];
+  for left in fragments {
+    for right in fragments {
+      for terminator in ['\n', '\r', '\u{2028}', '\u{2029}'] {
+        check(format!("{left}{terminator}{right}"));
+      }
+    }
+  }
+  // Exercise every byte alignment around typical SIMD block boundaries.
+  for offset in 0..=128 {
+    for terminator in ['\n', '\r', '\u{2028}', '\u{2029}'] {
+      check(format!("{}{terminator}—…😀\\", "a".repeat(offset)));
+    }
+  }
+}
+
 pub fn is_relative_specifier(specifier: &str) -> bool {
   // `Path::is_relative` is not used here because it consider implicit relative path as relative path. such
   // as `Path::new("foo.txt")` is considered as a relative path.

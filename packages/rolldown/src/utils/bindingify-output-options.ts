@@ -13,7 +13,6 @@ import { ChunkingContextImpl } from '../types/chunking-context';
 import { transformAssetSource } from './asset-source';
 import { arraify, unimplemented } from './misc';
 import { transformRenderedChunk } from './transform-rendered-chunk';
-import { logger } from '../cli/logger';
 import {
   measureHookCost,
   measureIfFunction,
@@ -21,12 +20,21 @@ import {
   type PluginTimingsRecorder,
 } from './plugin-timings';
 
-export function bindingifyOutputOptions(
+// The CLI logger loads consola. consola bundles `string-width`, which creates an `Intl.Segmenter`
+// when it loads. Import the logger only when a warning is emitted, so that `rolldown()` users who
+// set none of these options do not pay for it. The warning keeps the CLI logger's format.
+// See internal-docs/cli/implementation.md
+async function warn(message: string): Promise<void> {
+  const { logger } = await import('../cli/logger');
+  logger.warn(message);
+}
+
+export async function bindingifyOutputOptions(
   outputOptions: OutputOptions,
   pluginContextData: PluginContextData,
   onLog: LogHandler,
   timings: PluginTimingsRecorder | undefined,
-): BindingOutputOptions {
+): Promise<BindingOutputOptions> {
   const {
     dir,
     charset,
@@ -69,11 +77,11 @@ export function bindingifyOutputOptions(
   } = outputOptions;
 
   if (legalComments != null) {
-    logger.warn('`legalComments` option is deprecated, please use `comments.legal` instead.');
+    await warn('`legalComments` option is deprecated, please use `comments.legal` instead.');
   }
 
   // Handle codeSplitting and inlineDynamicImports
-  const { inlineDynamicImports, advancedChunks } = bindingifyCodeSplitting(
+  const { inlineDynamicImports, advancedChunks } = await bindingifyCodeSplitting(
     outputOptions.codeSplitting,
     outputOptions.inlineDynamicImports,
     outputOptions.advancedChunks,
@@ -253,7 +261,7 @@ function bindingifyComments(comments: OutputOptions['comments']): BindingOutputO
   return comments;
 }
 
-function bindingifyCodeSplitting(
+async function bindingifyCodeSplitting(
   codeSplitting: OutputOptions['codeSplitting'],
   inlineDynamicImportsOption: OutputOptions['inlineDynamicImports'],
   advancedChunks: OutputOptions['advancedChunks'],
@@ -261,10 +269,10 @@ function bindingifyCodeSplitting(
   pluginContextData: PluginContextData,
   onLog: LogHandler,
   timings: PluginTimingsRecorder | undefined,
-): {
+): Promise<{
   inlineDynamicImports: BindingOutputOptions['inlineDynamicImports'];
   advancedChunks: BindingOutputOptions['manualCodeSplitting'];
-} {
+}> {
   let inlineDynamicImports: boolean | undefined;
   let effectiveChunksOption: Exclude<OutputOptions['codeSplitting'], boolean> | undefined;
   let migratedManualChunksGroup: CodeSplittingGroup | undefined;
@@ -275,9 +283,7 @@ function bindingifyCodeSplitting(
   if (codeSplitting === false) {
     // Warn if inlineDynamicImports is also set
     if (inlineDynamicImportsOption != null) {
-      logger.warn(
-        '`inlineDynamicImports` option is ignored because `codeSplitting: false` is set.',
-      );
+      await warn('`inlineDynamicImports` option is ignored because `codeSplitting: false` is set.');
     }
     // Validate that manualChunks is not set with code splitting disabled
     if (manualChunks != null) {
@@ -287,7 +293,7 @@ function bindingifyCodeSplitting(
     }
     // When code splitting is disabled, ignore advancedChunks
     if (advancedChunks != null) {
-      logger.warn('`advancedChunks` option is ignored because `codeSplitting` is set to `false`.');
+      await warn('`advancedChunks` option is ignored because `codeSplitting` is set to `false`.');
     }
     // Return early - no advanced chunks when code splitting is disabled
     return {
@@ -297,13 +303,13 @@ function bindingifyCodeSplitting(
   } else if (codeSplitting === true) {
     // Explicit code splitting enabled - ignore deprecated inlineDynamicImports
     if (inlineDynamicImportsOption != null) {
-      logger.warn('`inlineDynamicImports` option is ignored because `codeSplitting: true` is set.');
+      await warn('`inlineDynamicImports` option is ignored because `codeSplitting: true` is set.');
     }
   } else if (codeSplitting == null) {
     // Default behavior: no inlining, automatic code splitting
     // Check if deprecated inlineDynamicImports is used
     if (inlineDynamicImportsOption != null) {
-      logger.warn(
+      await warn(
         '`inlineDynamicImports` option is deprecated, please use `codeSplitting: false` instead.',
       );
       inlineDynamicImports = inlineDynamicImportsOption;
@@ -314,7 +320,7 @@ function bindingifyCodeSplitting(
     chunksOptionName = 'codeSplitting';
     // Ignore inlineDynamicImports if codeSplitting object is specified
     if (inlineDynamicImportsOption != null) {
-      logger.warn(
+      await warn(
         '`inlineDynamicImports` option is ignored because the `codeSplitting` option is specified.',
       );
     }
@@ -330,21 +336,19 @@ function bindingifyCodeSplitting(
   // Handle advancedChunks deprecation (only if codeSplitting is not set to object)
   if (effectiveChunksOption == null) {
     if (advancedChunks != null) {
-      logger.warn('`advancedChunks` option is deprecated, please use `codeSplitting` instead.');
+      await warn('`advancedChunks` option is deprecated, please use `codeSplitting` instead.');
       effectiveChunksOption = advancedChunks;
       chunksOptionName = 'advancedChunks';
     }
   } else if (advancedChunks != null) {
-    logger.warn(
+    await warn(
       '`advancedChunks` option is ignored because the `codeSplitting` option is specified.',
     );
   }
 
   // Handle manualChunks migration
   if (manualChunks != null && effectiveChunksOption != null) {
-    logger.warn(
-      '`manualChunks` option is ignored because the `codeSplitting` option is specified.',
-    );
+    await warn('`manualChunks` option is ignored because the `codeSplitting` option is specified.');
   } else if (manualChunks != null) {
     chunksOptionName = 'manualChunks';
     migratedManualChunksGroup = {
@@ -365,7 +369,7 @@ function bindingifyCodeSplitting(
   // point. Without this, the grouping would be forwarded and then silently discarded in the Rust
   // binding, ignoring the requested groups without any diagnostic.
   if (inlineDynamicImports === true && effectiveChunksOption != null) {
-    logger.warn(
+    await warn(
       '`advancedChunks` option is ignored because `inlineDynamicImports: true` disables code splitting.',
     );
     effectiveChunksOption = undefined;

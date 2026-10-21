@@ -178,6 +178,10 @@ After cac's `setDotProp`, parsed options already have nested structure. The obje
 
 `parseArgs` treats args after `--` as positionals. cac collects them into `options['--']` as an array. We delete this key in post-processing since no downstream code uses it.
 
+### The JS API Loads `cli/logger.ts` Lazily
+
+`utils/bindingify-output-options.ts` prints its output option warnings (deprecated or ignored options) with the CLI logger, so the JS API and the CLI show them in the same format. consola is costly to load: it bundles `string-width`, which creates an `Intl.Segmenter` at load time. The JS API therefore imports `cli/logger.ts` with `await import()` when it prints one of these warnings, so that `import('rolldown')` does not load consola. Keep `cli/logger.ts` out of the static imports of the JS API entries (`index.ts`, `experimental-index.ts`).
+
 ## Edge Cases
 
 ### `--sourcemap` Dual Behavior

@@ -6,16 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region constants.js
+// constants.js
 const SECOND = 1e3;
 
-//#endregion
-//#region derived.js
+// derived.js
 const used = "used";
 
-//#endregion
-//#region main.js
+// main.js
 console.log(SECOND, used);
 
-//#endregion
 ```

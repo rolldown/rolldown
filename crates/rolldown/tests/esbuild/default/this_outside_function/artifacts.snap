@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 if (shouldBeExportsNotThis) {
 	console.log(void 0);
 	console.log((x = void 0) => void 0);
@@ -39,6 +39,5 @@ if (shouldBeThisNotExports) {
 		static foo() {}
 	});
 }
-//#endregion
 
 ```

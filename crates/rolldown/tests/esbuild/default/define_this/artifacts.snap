@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 ok(1, 2, 3, 2 .baz, 1 .bar);
 (() => {
 	ok(1, 2, 3, 2 .baz, 1 .bar);
@@ -14,6 +14,5 @@ ok(1, 2, 3, 2 .baz, 1 .bar);
 (function() {
 	doNotSubstitute(this, this.foo, this.foo.bar, this.foo.baz, this.bar);
 })();
-//#endregion
 
 ```

@@ -19,21 +19,20 @@ __rolldown_runtime__.registerGraph({
 		[],
 		[0],
 		[1]
-	]
+	],
+	entries: [2]
 });
-//#region child.js
+// child.js
 var child_exports = /* @__PURE__ */ __exportAll({ child: () => "c1" });
 __rolldown_runtime__.createModuleHotContext("child.js");
 __rolldown_runtime__.registerModule("child.js", { exports: child_exports });
-//#endregion
-//#region parent.js
+// parent.js
 var parent_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 const parent_hot = __rolldown_runtime__.createModuleHotContext("parent.js");
 __rolldown_runtime__.registerModule("parent.js", { exports: parent_exports });
 const value = "c1";
 parent_hot.accept();
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
@@ -41,7 +40,6 @@ process.on("beforeExit", (code) => {
 	if (code !== 0) return;
 	assert.strictEqual(globalThis.__reload_after_failed_patch_of_deleted_file_step, 2);
 });
-//#endregion
 
 //# sourceMappingURL=main.js.map
 ```
@@ -77,17 +75,17 @@ import assert from "node:assert";
 __rolldown_runtime__.registerGraph({
 	ids: ["parent.js", "main.js"],
 	localCount: 2,
-	edges: [[], [0]]
+	edges: [[], [0]],
+	entries: [1]
 });
-//#region parent.js
+// parent.js
 var parent_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 const parent_hot = __rolldown_runtime__.createModuleHotContext("parent.js");
 __rolldown_runtime__.registerModule("parent.js", { exports: parent_exports });
 const value = "no-child";
 globalThis.__reload_after_failed_patch_of_deleted_file_step = 1;
 parent_hot.accept();
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
@@ -95,7 +93,6 @@ process.on("beforeExit", (code) => {
 	if (code !== 0) return;
 	assert.strictEqual(globalThis.__reload_after_failed_patch_of_deleted_file_step, 2);
 });
-//#endregion
 
 //# sourceMappingURL=main.js.map
 ```

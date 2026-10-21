@@ -65,29 +65,18 @@ init_e();
 ```js
 import * as import_x from "x";
 // HIDDEN [\0rolldown/runtime.js]
-//#region a.js
 var init_a = __esmMin((() => {}));
-//#endregion
-//#region b.js
 var init_b = __esmMin((() => {}));
-//#endregion
-//#region c.js
 var init_c = __esmMin((() => {}));
-//#endregion
-//#region d.js
 var init_d = __esmMin((() => {}));
-//#endregion
-//#region e.js
 __reExport(/* @__PURE__ */ __exportAll({}), import_x);
 var init_e = __esmMin((() => {}));
-//#endregion
-//#region entry.js
+// entry.js
 init_a();
 init_b();
 init_c();
 init_d();
 init_e();
-//#endregion
 
 ```
 ### diff

@@ -10,11 +10,10 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 let node_https = require("node:https");
 node_https = require_rolldown_runtime.__toESM(node_https);
-//#region entry-reader.js
+// entry-reader.js
 function getServerCtor() {
 	return node_https.default.Server;
 }
-//#endregion
 exports.getServerCtor = getServerCtor;
 
 ```

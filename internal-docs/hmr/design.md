@@ -189,6 +189,15 @@ module in the payload: its static and dynamic `import()` edges, in
 separate sets, unioned by `getImporters`. The client merges deltas into
 one flat graph; the newest row for a module replaces the older one.
 
+A row also says whether its module is an entry (`isEntry`). The page
+started each entry, and only a page load starts it again. So when an
+update removes an entry from the module cache and no boundary runs it
+again, the client reloads. A module that is not an entry and has no
+importer that ran is no longer imported, so the update stops there.
+Webpack records a similar fact at run time (`module.hot._main`: no
+parent's `require` ran the module first). FBM has no `require` call to
+watch, so the compiler sends the flag.
+
 Rejected: an edges argument on `registerModule` (the call that enters a
 module into the module cache). A module registers itself only when it
 runs, so those edges would exist only for modules that ran — but the
@@ -477,7 +486,7 @@ the changed module.
 - Runtime API (`runtime-extra-dev-common.js`): lifecycle methods
   `registerGraph`, `registerFactory`, `registerModule`, `initModule`,
   `removeModuleCache`, `loadExports`; read-only queries
-  `getImporters`, `isExecuted`, `hasFactory`; hooks
+  `getImporters`, `isEntry`, `isExecuted`, `hasFactory`; hooks
   `createModuleHotContext`, `onModuleCacheRemoval`
 - Key code: `crates/rolldown/src/hmr/module_graph_delta.rs`,
   `crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js`

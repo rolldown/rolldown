@@ -89,11 +89,15 @@ fn edge_bindings<'a>(
 /// `stamps` (patches and lazy chunks only) is sparse like `dynamicEdges`; a missing row means
 /// stamp 0.
 ///
+/// `entries` lists the rows whose module is in `entry_modules`, and is left out when no row
+/// is one.
+///
 /// `ids[0, local_count)` are the carried modules in input order; `ids[local_count, ..)` are
 /// foreign edge targets interned on first use. Returns `None` when the payload carries no rows.
 pub fn render_register_graph_source(
   module_table: &ModuleTable,
   carried_modules: impl IntoIterator<Item = ModuleIdx>,
+  entry_modules: &FxHashSet<ModuleIdx>,
   stamp_table: Option<&HmrStampTable>,
 ) -> Option<String> {
   let mut ids: Vec<ModuleIdx> = Vec::new();
@@ -259,6 +263,17 @@ pub fn render_register_graph_source(
       source.push_str(itoa::Buffer::new().format(stamp));
     }
     source.push('}');
+  }
+  let mut entry_rows =
+    ids[..local_count].iter().enumerate().filter(|(_, idx)| entry_modules.contains(idx));
+  if let Some((first_row, _)) = entry_rows.next() {
+    source.push_str(",entries:[");
+    source.push_str(itoa::Buffer::new().format(first_row));
+    for (row, _) in entry_rows {
+      source.push(',');
+      source.push_str(itoa::Buffer::new().format(row));
+    }
+    source.push(']');
   }
   source.push_str("});");
 

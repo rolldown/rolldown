@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region shared-equality.js
+// shared-equality.js
 function isEqual(left, right) {
 	return left === right || typeof left === "object" && hasOwnProperty.call(left, right);
 }
@@ -17,8 +17,7 @@ function init_shared_equality() {
 		hasOwnProperty = Object.prototype.hasOwnProperty;
 	})))();
 }
-//#endregion
-//#region utilities/index.js
+// utilities/index.js
 var utilities_exports = /* @__PURE__ */ __exportAll({
 	hasExpectedValue: () => hasExpectedValue,
 	isEqual: () => isEqual
@@ -33,8 +32,7 @@ function init_utilities() {
 		init_shared_equality();
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_utilities();
@@ -45,7 +43,6 @@ function init_main() {
 		];
 	})))();
 }
-//#endregion
 init_main();
 
 ```
@@ -58,13 +55,12 @@ init_main();
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region shared-equality.js
+// shared-equality.js
 const hasOwnProperty = Object.prototype.hasOwnProperty;
 function isEqual(left, right) {
 	return left === right || typeof left === "object" && hasOwnProperty.call(left, right);
 }
-//#endregion
-//#region utilities/index.js
+// utilities/index.js
 var utilities_exports = /* @__PURE__ */ __exportAll({
 	hasExpectedValue: () => hasExpectedValue,
 	isEqual: () => isEqual
@@ -74,13 +70,11 @@ __reExport(utilities_exports, import_node_path);
 function hasExpectedValue(actual) {
 	return actual === "expected";
 }
-//#endregion
-//#region main.js
+// main.js
 globalThis.__result = [
 	hasExpectedValue("expected"),
 	isEqual({ key: 1 }, "key"),
 	typeof utilities_exports.sep
 ];
-//#endregion
 
 ```

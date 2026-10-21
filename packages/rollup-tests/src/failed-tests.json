@@ -184,6 +184,5 @@
   "rollup@function@invalid-top-level-for-await-using: rejects CommonJS output for await using in a for-of loop head",
   "rollup@function@invalid-top-level-for-await: rejects CommonJS output for a top-level for-await loop",
   "rollup@function@logging@transform-log-at-position-zero: includes source locations for transform logs at position zero",
-  "rollup@function@plugin-error-transform-pos-zero: includes the current source location for transform errors at position zero",
-  "rollup@function@resolveid-recursive-call: skipSelf: true option in resolveId hook option should skip the plugin if it has been called before with the same id and importer, see #5768 for more details"
+  "rollup@function@plugin-error-transform-pos-zero: includes the current source location for transform errors at position zero"
 ]

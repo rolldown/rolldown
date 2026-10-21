@@ -19,7 +19,8 @@ __rolldown_runtime__.registerGraph({
 		[],
 		[],
 		[0, 1]
-	]
+	],
+	entries: [2]
 });
 // hmr.js
 var hmr_exports = /* @__PURE__ */ __exportAll({ value: () => "v1" });
@@ -77,7 +78,8 @@ __rolldown_runtime__.registerGraph({
 		[],
 		[],
 		[0, 1]
-	]
+	],
+	entries: [2]
 });
 // hmr.js
 var hmr_exports = /* @__PURE__ */ __exportAll({ value: () => "v2" });

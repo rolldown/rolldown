@@ -68,7 +68,8 @@ __rolldown_runtime__.registerGraph({
 	],
 	localCount: 1,
 	edges: [[]],
-	dynamicEdges: { 0: [1, 2] }
+	dynamicEdges: { 0: [1, 2] },
+	entries: [0]
 });
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js");

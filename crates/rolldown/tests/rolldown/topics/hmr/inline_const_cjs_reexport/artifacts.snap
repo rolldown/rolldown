@@ -21,7 +21,8 @@ __rolldown_runtime__.registerGraph({
 		[],
 		[0, 1],
 		[2]
-	]
+	],
+	entries: [3]
 });
 // jsx-dev-runtime.development.js
 var require_jsx_dev_runtime_development = /* @__PURE__ */ __commonJSMin(((exports, module) => {

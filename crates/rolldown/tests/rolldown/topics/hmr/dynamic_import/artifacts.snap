@@ -53,7 +53,8 @@ __rolldown_runtime__.registerGraph({
 	],
 	localCount: 2,
 	edges: [[], [0]],
-	dynamicEdges: { 0: [2, 3] }
+	dynamicEdges: { 0: [2, 3] },
+	entries: [1]
 });
 // hmr.js
 var hmr_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });

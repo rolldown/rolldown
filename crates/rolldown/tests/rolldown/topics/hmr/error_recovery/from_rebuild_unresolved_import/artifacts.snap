@@ -10,7 +10,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 __rolldown_runtime__.registerGraph({
 	ids: ["dep.js", "main.js"],
 	localCount: 2,
-	edges: [[], [0]]
+	edges: [[], [0]],
+	entries: [1]
 });
 // dep.js
 var dep_exports = /* @__PURE__ */ __exportAll({ value: () => "dep" });
@@ -87,7 +88,8 @@ __rolldown_runtime__.registerFactory("dep.js", (function(__rolldown_module_id__)
 __rolldown_runtime__.registerGraph({
 	ids: ["dep.js", "main.js"],
 	localCount: 2,
-	edges: [[], [0]]
+	edges: [[], [0]],
+	entries: [1]
 });
 // dep.js
 var dep_exports = /* @__PURE__ */ __exportAll({ value: () => "dep" });

@@ -11,7 +11,8 @@ import "node:assert";
 __rolldown_runtime__.registerGraph({
 	ids: ["a.js", "main.js"],
 	localCount: 2,
-	edges: [[], [0]]
+	edges: [[], [0]],
+	entries: [1]
 });
 // a.js
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {

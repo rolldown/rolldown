@@ -20,7 +20,8 @@ __rolldown_runtime__.registerGraph({
 		[0],
 		[],
 		[1, 2]
-	]
+	],
+	entries: [3]
 });
 // lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ value: () => "lib" });

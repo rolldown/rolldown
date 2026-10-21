@@ -30,7 +30,8 @@ __rolldown_runtime__.registerGraph({
 		[],
 		[0, 1],
 		[2]
-	]
+	],
+	entries: [3]
 });
 // data.json
 var require_data = /* @__PURE__ */ __commonJSMin(((exports, module) => {

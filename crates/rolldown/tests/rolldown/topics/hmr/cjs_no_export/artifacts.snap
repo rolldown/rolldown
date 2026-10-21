@@ -18,7 +18,8 @@ __rolldown_runtime__.registerGraph({
 		[],
 		[],
 		[0, 1]
-	]
+	],
+	entries: [2]
 });
 // a.js
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {

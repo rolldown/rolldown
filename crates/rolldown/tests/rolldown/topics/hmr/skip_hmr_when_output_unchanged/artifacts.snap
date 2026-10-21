@@ -11,7 +11,8 @@ import assert from "node:assert";
 __rolldown_runtime__.registerGraph({
 	ids: ["mod.js", "main.js"],
 	localCount: 2,
-	edges: [[], [0]]
+	edges: [[], [0]],
+	entries: [1]
 });
 // mod.js
 var hmr_temp_exports = /* @__PURE__ */ __exportAll({ value: () => value });

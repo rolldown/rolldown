@@ -24,7 +24,8 @@ __rolldown_runtime__.registerGraph({
 		[0],
 		[1, 2],
 		[3]
-	]
+	],
+	entries: [4]
 });
 // dep.js
 var dep_exports = /* @__PURE__ */ __exportAll({ value: () => value });

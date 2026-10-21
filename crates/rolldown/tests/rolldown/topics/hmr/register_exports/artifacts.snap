@@ -18,7 +18,8 @@ __rolldown_runtime__.registerGraph({
 		[],
 		[],
 		[0, 1]
-	]
+	],
+	entries: [2]
 });
 // esm.js
 var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {

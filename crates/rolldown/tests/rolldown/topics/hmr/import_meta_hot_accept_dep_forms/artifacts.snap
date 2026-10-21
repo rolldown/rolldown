@@ -92,7 +92,8 @@ __rolldown_runtime__.registerGraph({
 			10,
 			12
 		]
-	]
+	],
+	entries: [13]
 });
 // one_arg/child.js
 var child_exports$3 = /* @__PURE__ */ __exportAll({ count: () => 0 });

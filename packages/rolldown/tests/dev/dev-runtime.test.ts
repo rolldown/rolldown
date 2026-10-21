@@ -144,6 +144,42 @@ test('registerGraph maintains static + dynamic reverse indexes; getImporters uni
   expect(runtime.getImporters('both.js')).toEqual([]);
 });
 
+test('registerGraph keeps the entry flag of each row it carries', async () => {
+  const { runtime } = await createRuntime();
+
+  // `foo.js` is a foreign target here, so this payload says nothing about it
+  runtime.registerGraph({
+    ids: ['main.js', 'app.js', 'foo.js'],
+    localCount: 2,
+    edges: [[1], [2]],
+    entries: [0],
+  });
+  expect(runtime.isEntry('main.js')).toBe(true);
+  expect(runtime.isEntry('app.js')).toBe(false);
+  expect(runtime.isEntry('foo.js')).toBe(false);
+
+  runtime.registerGraph({ ids: ['foo.js'], localCount: 1, edges: [[]] });
+  expect(runtime.isEntry('main.js')).toBe(true);
+
+  runtime.registerGraph({ ids: ['main.js', 'app.js'], localCount: 2, edges: [[1], []] });
+  expect(runtime.isEntry('main.js')).toBe(false);
+
+  runtime.registerGraph({ ids: ['main.js'], localCount: 1, edges: [[]], entries: [0] });
+  runtime.removeModuleCache('main.js');
+  expect(runtime.isEntry('main.js')).toBe(true);
+
+  // a late row with an older stamp does not change the flag
+  runtime.registerGraph({
+    ids: ['main.js'],
+    localCount: 1,
+    edges: [[]],
+    entries: [0],
+    stamps: { 0: 2 },
+  });
+  runtime.registerGraph({ ids: ['main.js'], localCount: 1, edges: [[]], stamps: { 0: 1 } });
+  expect(runtime.isEntry('main.js')).toBe(true);
+});
+
 test('registerGraph keeps the export names each static edge imports', async () => {
   const { runtime } = await createRuntime();
 

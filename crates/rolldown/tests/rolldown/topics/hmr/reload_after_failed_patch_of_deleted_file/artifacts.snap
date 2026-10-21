@@ -19,7 +19,8 @@ __rolldown_runtime__.registerGraph({
 		[],
 		[0],
 		[1]
-	]
+	],
+	entries: [2]
 });
 // child.js
 var child_exports = /* @__PURE__ */ __exportAll({ child: () => "c1" });
@@ -74,7 +75,8 @@ import assert from "node:assert";
 __rolldown_runtime__.registerGraph({
 	ids: ["parent.js", "main.js"],
 	localCount: 2,
-	edges: [[], [0]]
+	edges: [[], [0]],
+	entries: [1]
 });
 // parent.js
 var parent_exports = /* @__PURE__ */ __exportAll({ value: () => value });

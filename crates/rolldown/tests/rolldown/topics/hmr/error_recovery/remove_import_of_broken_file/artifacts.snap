@@ -18,7 +18,8 @@ __rolldown_runtime__.registerGraph({
 		[],
 		[0],
 		[1]
-	]
+	],
+	entries: [2]
 });
 // b.js
 var b_exports = /* @__PURE__ */ __exportAll({ b: () => "b" });
@@ -113,7 +114,8 @@ __rolldown_runtime__.registerFactory("a.js", (function(__rolldown_module_id__) {
 __rolldown_runtime__.registerGraph({
 	ids: ["a.js", "main.js"],
 	localCount: 2,
-	edges: [[], [0]]
+	edges: [[], [0]],
+	entries: [1]
 });
 // a.js
 var a_exports = /* @__PURE__ */ __exportAll({ a: () => a });

@@ -18,7 +18,8 @@ __rolldown_runtime__.registerGraph({
 		[],
 		[],
 		[0, 1]
-	]
+	],
+	entries: [2]
 });
 // a.js
 var a_exports = /* @__PURE__ */ __exportAll({});

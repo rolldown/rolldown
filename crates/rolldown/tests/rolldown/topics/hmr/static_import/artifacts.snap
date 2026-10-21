@@ -42,7 +42,8 @@ __rolldown_runtime__.registerGraph({
 			7
 		],
 		[8]
-	]
+	],
+	entries: [9]
 });
 (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	__rolldown_runtime__.createModuleHotContext("modules/dep-cjs.js");

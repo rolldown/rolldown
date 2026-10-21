@@ -1,9 +1,4 @@
-import {
-  type BindingWatcherEvent,
-  BindingWatcher,
-  shutdownAsyncRuntime,
-  startAsyncRuntime,
-} from '../../binding.cjs';
+import { type BindingWatcherEvent, BindingWatcher } from '../../binding.cjs';
 import { LOG_LEVEL_WARN } from '../../log/logging';
 import { logMultipleWatcherOption } from '../../log/logs';
 import { aggregateBindingErrorsIntoJsError } from '../../utils/error';
@@ -65,22 +60,24 @@ class Watcher {
   inner: BindingWatcher;
   emitter: WatcherEmitter;
   stopWorkers: ((() => Promise<void>) | undefined)[];
+  releaseOptionBoxes: (() => void)[];
 
   constructor(
     emitter: WatcherEmitter,
     inner: BindingWatcher,
     stopWorkers: ((() => Promise<void>) | undefined)[],
+    releaseOptionBoxes: (() => void)[],
   ) {
     this.closed = false;
     this.inner = inner;
     this.emitter = emitter;
-    startAsyncRuntime();
     const originClose = emitter.close.bind(emitter);
     emitter.close = async () => {
       await this.close();
       originClose();
     };
     this.stopWorkers = stopWorkers;
+    this.releaseOptionBoxes = releaseOptionBoxes;
 
     // Defer so watch() returns the emitter before the first build,
     // giving the caller a chance to attach .on() handlers.
@@ -97,7 +94,8 @@ class Watcher {
       }
       await this.inner.close();
     } finally {
-      shutdownAsyncRuntime();
+      // Free the option boxes a per-rebuild invalidate did not release.
+      for (const release of this.releaseOptionBoxes) release();
     }
   }
 
@@ -133,6 +131,7 @@ export async function createWatcher(
     emitter,
     bindingWatcher,
     bundlerOptions.map((option) => option.stopWorkers),
+    bundlerOptions.map((option) => option.releaseOptionBoxes),
   );
 }
 

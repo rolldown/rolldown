@@ -7,8 +7,6 @@ import {
   type BindingModuleInfo,
   BindingRebuildStrategy,
   type BindingResult,
-  shutdownAsyncRuntime,
-  startAsyncRuntime,
 } from '../../binding.cjs';
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
@@ -17,6 +15,7 @@ import { createBundlerOptions } from '../../utils/create-bundler-option';
 import { normalizeBindingResult, unwrapBindingResult } from '../../utils/error';
 import { normalizedStringOrRegex } from '../../utils/normalize-string-or-regex';
 import { transformToRollupOutput } from '../../utils/transform-to-rollup-output';
+import { assertRuntimeFeature } from '../../runtime-support';
 import type { DevOptions } from './dev-options';
 
 /**
@@ -61,7 +60,6 @@ export class DevEngineModuleGraph {
 export class DevEngine {
   #inner: BindingDevEngine;
   #cachedBuildFinishPromise: Promise<void> | null = null;
-  #asyncRuntimeReleased = false;
 
   readonly moduleGraph: DevEngineModuleGraph;
 
@@ -70,7 +68,9 @@ export class DevEngine {
     outputOptions: OutputOptions = {},
     devOptions: DevOptions = {},
   ): Promise<DevEngine> {
+    assertRuntimeFeature('dev');
     inputOptions = await PluginDriver.callOptionsHook(inputOptions);
+    // Dev needs threads, so no option box is retained on the artifacts where it runs.
     const options = await createBundlerOptions(inputOptions, outputOptions, false);
 
     const userOnHmrUpdates = devOptions.onHmrUpdates;
@@ -135,8 +135,6 @@ export class DevEngine {
 
     const inner = new BindingDevEngine(options.bundlerOptions, bindingDevOptions);
 
-    startAsyncRuntime();
-
     return new DevEngine(inner);
   }
 
@@ -196,16 +194,7 @@ export class DevEngine {
   }
 
   async close(): Promise<void> {
-    // Claim the release before the first await so a second `close` cannot release twice.
-    const shouldRelease = !this.#asyncRuntimeReleased;
-    this.#asyncRuntimeReleased = true;
-    try {
-      await this.#inner.close();
-    } finally {
-      if (shouldRelease) {
-        shutdownAsyncRuntime();
-      }
-    }
+    await this.#inner.close();
   }
 
   /**

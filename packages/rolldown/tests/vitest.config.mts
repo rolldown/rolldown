@@ -6,6 +6,7 @@ export default defineConfig({
     testTimeout: 20000,
     disableConsoleIntercept: true,
     pool: 'forks',
+    globalSetup: nodePath.resolve(__dirname, 'src/stage-native-binding.ts'),
   },
   resolve: {
     alias: {

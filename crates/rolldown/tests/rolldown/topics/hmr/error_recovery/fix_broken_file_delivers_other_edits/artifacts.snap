@@ -20,23 +20,20 @@ __rolldown_runtime__.registerGraph({
 		[0, 1]
 	]
 });
-//#region a.js
+// a.js
 var a_exports = /* @__PURE__ */ __exportAll({ a: () => "a" });
 const a_hot = __rolldown_runtime__.createModuleHotContext("a.js");
 __rolldown_runtime__.registerModule("a.js", { exports: a_exports });
 a_hot.accept();
-//#endregion
-//#region b.js
+// b.js
 var b_exports = /* @__PURE__ */ __exportAll({ b: () => "b" });
 const b_hot = __rolldown_runtime__.createModuleHotContext("b.js");
 __rolldown_runtime__.registerModule("b.js", { exports: b_exports });
 b_hot.accept();
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
-//#endregion
 
 ```
 
@@ -140,24 +137,21 @@ __rolldown_runtime__.registerGraph({
 		[0, 1]
 	]
 });
-//#region a.js
+// a.js
 var a_exports = /* @__PURE__ */ __exportAll({ a: () => a });
 const a_hot = __rolldown_runtime__.createModuleHotContext("a.js");
 __rolldown_runtime__.registerModule("a.js", { exports: a_exports });
 const a = "a-edited-while-b-broken";
 a_hot.accept();
-//#endregion
-//#region b.js
+// b.js
 var b_exports = /* @__PURE__ */ __exportAll({ b: () => b });
 const b_hot = __rolldown_runtime__.createModuleHotContext("b.js");
 __rolldown_runtime__.registerModule("b.js", { exports: b_exports });
 const b = "b-fixed";
 b_hot.accept();
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
-//#endregion
 
 ```

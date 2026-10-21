@@ -1,9 +1,9 @@
 |  | number |
 |----| ---- |
 | failed | 0 |
-| skipFailed | 291 |
-| ignored | 106 |
-| ignored(unsupported features) | 326 |
-| ignored(treeshaking) | 328 |
-| ignored(behavior passed, snapshot different) | 165 |
-| passed | 1222 |
+| skipFailed | 185 |
+| ignored | 116 |
+| ignored(unsupported features) | 414 |
+| ignored(treeshaking) | 330 |
+| ignored(behavior passed, snapshot different) | 168 |
+| passed | 1250 |

@@ -22,12 +22,11 @@ To fix:
 
 ```js
 import { t as sharedValue } from "./vendor.js";
-//#region main.js
+// main.js
 console.log("Main entry with shared:", sharedValue);
 function mainFunc() {
 	return "main function";
 }
-//#endregion
 export { mainFunc };
 
 ```
@@ -35,9 +34,8 @@ export { mainFunc };
 ## vendor.js
 
 ```js
-//#region shared.js
+// shared.js
 const sharedValue = "shared module value";
-//#endregion
 export { sharedValue as t };
 
 ```

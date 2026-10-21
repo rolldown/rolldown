@@ -136,6 +136,31 @@ is marked re-export-transparent when it has no local executable body, generated 
 assignment, unconditional execution dependency, or `keepNames` work. Each consumer then routes
 through it only to the leaf bindings that consumer retained.
 
+A barrel whose retained statements are direct re-exports can have an interop ESM wrapper that
+initializes all retained exports together, including bindings used only by a dynamic consumer. ESM-only consumer-local
+routing bypasses that shared initializer only when the entire static dependency graph can
+initialize independently of outside state. This proof is stronger than `moduleSideEffects: false`:
+an initializer such as `export const snapshot = importedValue` has no write side effect, but
+delaying it past a mutation changes its exported value. Calls annotated pure, getter reads and
+coercions can observe the same timing difference.
+
+The scanner proves a restricted set of local initializations: literal data, inert functions and
+classes, and reads of already initialized local bindings. Function bodies and instance field
+initializers are deferred; imported/global eager reads, calls, spreads, destructuring, computed
+keys, class definition-time work and possible local TDZ reads reject the proof. A reverse
+static-import worklist rejects every module depending on an unproven module, an external, a
+synchronous cycle, TLA, a missing-export shim, a concatenated wrapper or an explicit effectful
+module contract. Ordinary tree-shaking analysis remains separate: generated star-re-export glue
+can mark a module effectful even when this source-level proof succeeds.
+
+Eager consumers then initialize only the leaf bindings they use; a dynamic consumer initializes
+its own leaves when loaded. The leaves retain their existing memoized module initializers, live
+bindings and shared object identities. ESM-only route seeds require an interop `WrapKind::Esm`;
+every ESM-only outer forwarder must satisfy the same complete dependency proof. CJS carrier
+routes keep their separate record-based eligibility in the routing fixpoint. Direct `require()`
+targets, inlined dynamic imports with code splitting disabled, and unproven graphs keep their
+guarded module initialization.
+
 A direct CJS re-export used to disqualify an otherwise pure barrel because the ordinary CJS
 finalizer generated `namespace = __toESM(require_cjs())` inside the shared barrel wrapper. Strict
 lowering now represents that generated body as one `OrderCjsCarrier` per import record. The barrel
@@ -167,8 +192,8 @@ inline mode as tree shaking. Module-global leaf or namespace liveness is deliber
 because another importer can make the same canonical symbol live without retaining it for this
 consumer.
 
-The CJS-carrier optimization is deliberately restricted to source modules whose body consists
-entirely of direct re-exports. Tree shaking must be enabled, and the module must not be in a
+The CJS-carrier optimization is restricted to modules whose retained body consists entirely of
+direct re-exports. Tree shaking must be enabled, and the module must not be in a
 synchronous `import`/`require` SCC, be the target of an opaque CommonJS `require()`, carry top-level await or a
 TLA dependency, expose dynamic exports, require a missing-export shim, or be a concatenated
 wrapper. CJS `export *` is also excluded because its namespace is dynamic. These shapes keep the
@@ -183,11 +208,12 @@ namespace getters.
 Code-splitting placement makes the same consumer-local decision before chunks exist. A probe
 `OrderWrapState` is built from the wrap-all structural plan, and entry reachability routes an
 incoming record through the shared resolver. Once a non-entry consumer-local barrel is reached,
-its module-wide `load_dependencies` union is not traversed; only recursively eager carriers and
-consumer-local waypoint modules are unconditional. Named leaves and pure carriers get bits only
-from the incoming consumer that chose them. Preserving waypoint modules keeps every included
-routing barrel reachable without reopening its union of unrelated leaves. A barrel that is itself
-a user or dynamic entry exposes its complete namespace and therefore uses the conservative full
+its module-wide `load_dependencies` union is not traversed. The resolver selects leaves and pure
+carriers for each incoming consumer. The unconditional waypoint walk retains recursively eager
+carriers and inner routes without opaque namespace use. Symbol-derived dependencies and retained
+namespace getters keep namespace owners reachable even when forwarding statements are removed.
+Opaque namespace use can place leaf modules in a statically loaded shared chunk. A barrel that is
+itself a user or dynamic entry exposes its complete namespace and uses the conservative full
 traversal and an entry prologue containing every statically known target.
 
 A wrapped mixed ESM module keeps its own guarded initializer for local code and mandatory dependencies.
@@ -198,12 +224,13 @@ The routing decision is per record, so evaluating the local body cannot discharg
 consumer's demand for a forwarded binding. The existing module guards preserve one-time execution.
 If on-demand wrapping leaves the mixed module unwrapped, a consumer that imports a forwarded
 binding initializes that binding's defining module itself. A non-routed record whose definer is
-order-wrapped but has no binding consumer at startup has no initialization site in that mode: the
-unwrapped mixed module emits no `init_*` call for its excluded re-export, so the definer evaluates
-when a lazy consumer first imports it, later than under wrap-all, where the mixed module's wrapper
-initializes it. Pre-chunk init edges usually place such a definer in the startup chunk, where its
-body runs at load; `mixed_reexport_sensitive` pins the remaining gap under manual chunk groups with
-an expected-failure variant.
+order-wrapped has its only initialization site inside the mixed module's wrapper: an unwrapped
+mixed module emits no `init_*` call for an excluded re-export, so a definer that no startup
+consumer imports would evaluate when a lazy consumer first imports it, later than under wrap-all.
+The on-demand plan therefore wraps every eager module whose wrapper would forward initialization
+to a planned module (see [Emergent-cycle plan projection](#emergent-cycle-plan-projection-on-demand)).
+`mixed_reexport_sensitive` and `mixed_reexport_grouped_definer` isolate such a definer with a
+manual chunk group so placement cannot hide the hop.
 
 A routed target must be side-effect-free and have no `ExecutionOrderSensitive` module in its static
 or binding dependency closure, apart from the inert runtime helpers. Side-effect metadata alone is
@@ -306,6 +333,20 @@ static SCC (debug-asserted in the final link pass). The remaining over-approxima
 wrapping's own liveness suppression, and it keeps the records of a re-export-transparent wrapper,
 which registration skips) only ever wraps more, which is always legal — wrap-all is the standing
 proof.
+
+The same fixpoint closes the plan over **eager forwarders of planned modules**. The final metadata
+pass gives a wrapper the `init_*` calls of its tree-shaken re-export hops and retained re-export
+paths; an eager module emits none of them, so an eager forwarder gives a planned definer no
+initialization site at its own position (see
+[Tree-shaking parity across strict modes](#tree-shaking-parity-across-strict-modes)). Each
+eager-eligible module's would-be obligations are resolved once with that pass against a wrap-all
+probe on the same chunk graph — the frozen re-export evidence assigns a hop to the first wrapped
+barrel on its path, so only a probe that wraps the forwarder itself shows what its wrapper would
+forward. Each round traverses these obligations in reverse from the planned modules, wrapping
+every forwarder reached before rebuilding the plan. Forwarding chains therefore require no
+per-hop chunk projection. Routed records contribute nothing (their definers are
+time-independent by construction), and a transparent wrapper owns no calls, so a pure barrel is
+never wrapped by this rule.
 
 ## Non-Goals
 

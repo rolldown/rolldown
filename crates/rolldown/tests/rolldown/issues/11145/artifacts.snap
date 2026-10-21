@@ -8,15 +8,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_shared } from "./shared.js";
-//#region values.js
+// values.js
 var LAZY;
 function init_values() {
 	return (init_values = __esmMin((() => {
 		LAZY = "lazy";
 	})))();
 }
-//#endregion
-//#region lazy.js
+// lazy.js
 function read() {
 	return LAZY;
 }
@@ -25,7 +24,6 @@ function init_lazy() {
 		init_values(), init_shared();
 	})))();
 }
-//#endregion
 init_lazy();
 export { read };
 
@@ -36,7 +34,7 @@ export { read };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_shared, t as LOCAL } from "./shared.js";
-//#region main.js
+// main.js
 var local, load;
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -45,7 +43,6 @@ function init_main() {
 		load = () => import("./lazy.js").then((module) => module.read());
 	})))();
 }
-//#endregion
 init_main();
 export { load, local };
 
@@ -63,14 +60,13 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region shared.js
+// shared.js
 var LOCAL;
 function init_shared() {
 	return (init_shared = __esmMin((() => {
 		LOCAL = "local";
 	})))();
 }
-//#endregion
 export { init_shared as n, LOCAL as t };
 
 ```
@@ -84,15 +80,14 @@ export { init_shared as n, LOCAL as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_shared } from "./shared.js";
-//#region values.js
+// values.js
 var LAZY;
 function init_values() {
 	return (init_values = __esmMin((() => {
 		LAZY = "lazy";
 	})))();
 }
-//#endregion
-//#region lazy.js
+// lazy.js
 function read() {
 	return LAZY;
 }
@@ -101,7 +96,6 @@ function init_lazy() {
 		init_values(), init_shared();
 	})))();
 }
-//#endregion
 init_lazy();
 export { read };
 
@@ -112,7 +106,7 @@ export { read };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_shared, t as LOCAL } from "./shared.js";
-//#region main.js
+// main.js
 var local, load;
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -121,7 +115,6 @@ function init_main() {
 		load = () => import("./lazy.js").then((module) => module.read());
 	})))();
 }
-//#endregion
 init_main();
 export { load, local };
 
@@ -139,14 +132,13 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region shared.js
+// shared.js
 var LOCAL;
 function init_shared() {
 	return (init_shared = __esmMin((() => {
 		LOCAL = "local";
 	})))();
 }
-//#endregion
 export { init_shared as n, LOCAL as t };
 
 ```
@@ -158,14 +150,12 @@ export { init_shared as n, LOCAL as t };
 ### lazy.js
 
 ```js
-//#region values.js
+// values.js
 const LAZY = "lazy";
-//#endregion
-//#region lazy.js
+// lazy.js
 function read() {
 	return LAZY;
 }
-//#endregion
 export { read };
 
 ```
@@ -174,10 +164,9 @@ export { read };
 
 ```js
 import { t as LOCAL } from "./shared.js";
-//#region main.js
+// main.js
 const local = LOCAL;
 const load = () => import("./lazy.js").then((module) => module.read());
-//#endregion
 export { load, local };
 
 ```
@@ -185,9 +174,8 @@ export { load, local };
 ### shared.js
 
 ```js
-//#region shared.js
+// shared.js
 const LOCAL = "local";
-//#endregion
 export { LOCAL as t };
 
 ```
@@ -199,14 +187,12 @@ export { LOCAL as t };
 ### lazy.js
 
 ```js
-//#region values.js
+// values.js
 const LAZY = "lazy";
-//#endregion
-//#region lazy.js
+// lazy.js
 function read() {
 	return LAZY;
 }
-//#endregion
 exports.read = read;
 
 ```
@@ -215,10 +201,9 @@ exports.read = read;
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-//#region main.js
+// main.js
 const local = require("./shared.js").LOCAL;
 const load = () => Promise.resolve().then(() => require("./lazy.js")).then((module) => module.read());
-//#endregion
 exports.load = load;
 exports.local = local;
 
@@ -227,9 +212,8 @@ exports.local = local;
 ### shared.js
 
 ```js
-//#region shared.js
+// shared.js
 const LOCAL = "local";
-//#endregion
 Object.defineProperty(exports, "LOCAL", {
 	enumerable: true,
 	get: function() {
@@ -246,14 +230,12 @@ Object.defineProperty(exports, "LOCAL", {
 ### lazy.js
 
 ```js
-//#region values.js
+// values.js
 const LAZY = "lazy";
-//#endregion
-//#region lazy.js
+// lazy.js
 function read() {
 	return LAZY;
 }
-//#endregion
 exports.read = read;
 
 ```
@@ -262,10 +244,9 @@ exports.read = read;
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-//#region main.js
+// main.js
 const local = require("./shared.js").LOCAL;
 const load = () => Promise.resolve().then(() => require("./lazy.js")).then((module) => module.read());
-//#endregion
 exports.load = load;
 exports.local = local;
 
@@ -274,9 +255,8 @@ exports.local = local;
 ### shared.js
 
 ```js
-//#region shared.js
+// shared.js
 const LOCAL = "local";
-//#endregion
 Object.defineProperty(exports, "LOCAL", {
 	enumerable: true,
 	get: function() {

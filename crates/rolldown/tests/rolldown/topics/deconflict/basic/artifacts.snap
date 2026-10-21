@@ -7,12 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "assert";
-//#region a.js
+// a.js
 const a = "a.js";
-//#endregion
-//#region main.js
+// main.js
 assert.equal("main.js", "main.js");
 assert.equal(a, "a.js");
-//#endregion
 
 ```

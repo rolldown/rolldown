@@ -1,4 +1,59 @@
 
+## [1.2.14] - 2026-10-14
+
+### 🚀 Features
+
+- add `output.charset` option (#11194) by @sapphi-red
+- code-splitting: route independent ESM re-exports per consumer (#11177) by @hyfdev
+
+### 🐛 Bug Fixes
+
+- handle `output.charset: 'ascii'` + `output.minify: false` (#11207) by @sapphi-red
+- tree-shaking: preserve initialization of wrapped ESM re-exports (#11167) by @hyfdev
+- sourcemap: preserve boundaries when tracing has no mapping (#11170) by @sapphi-red
+- strict-execution-order: account for init imports during code splitting (#11162) by @hyfdev
+- strict-execution-order: avoid eager loading through mixed re-exports (#11151) by @hyfdev
+- tree-shake expression statements that coerce known constants (#10825) by @IWANABETHATGUY
+- shim-missing-exports: shim deep namespace reads through default imports (#11184) by @IWANABETHATGUY
+- shim-missing-exports: shim missing static namespace members (#11179) by @hyfdev
+- preserve-entry-signatures: keep internal bindings out of entry exports (#11094) by @hyfdev
+- report ASSIGN_TO_IMPORT for writes to re-exported namespace members (#11148) by @IWANABETHATGUY
+- dev: keep files loaded by the HMR stage watched when the same task rebuilds (#11154) by @Brooooooklyn
+- dev: watch lazily compiled files even when a build starts first (#11152) by @Brooooooklyn
+- cjs: print a CommonJS module's top-level `this` as a wrapper parameter rolldown names (#11135) by @IWANABETHATGUY
+- renamer: keep fixed names off the bindings that would capture them (#11134) by @IWANABETHATGUY
+- renamer: keep an external `require()` local in a CJS module off the top-level names (#11133) by @IWANABETHATGUY
+- rolldown: make a repeated `close()` a no-op (#11142) by @Brooooooklyn
+- avoid renaming entry top-level bindings onto their nested bindings (#11122) by @IWANABETHATGUY
+- renamer: keep generated top-level names off inner bindings (#11121) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- renamer: treat a CJS-wrapped module's root scope as an inner scope (#11130) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- add renaming design and implementation docs (#11131) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- ci: overlap independent setup, checks, and artifacts (#11169) by @hyfdev
+
+### 🧪 Testing
+
+- dev: use dunce::canonicalize so dev engine tests pass on Windows (#11192) by @shulaoda
+- preserve-entry-signatures: cover nested dynamic imports (#11164) by @hyfdev
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: upgrade oxc to 0.154.0 (#11209) by @shulaoda
+- make Security Analysis pass again (security-action v1.0.10, serde_yaml -> saphyr) (#11197) by @Brooooooklyn
+- deps: update rollup submodule for tests to v4.64.5 (#11190) by @rolldown-guard[bot]
+- deps: update test262 submodule for tests (#11191) by @rolldown-guard[bot]
+- deps: update crate-ci/typos action to v1.51.1 (#11174) by @renovate[bot]
+- vite-tests: link the workspace rolldown into the Vite clone again (#11147) by @Brooooooklyn
+
+
 ## [1.2.13] - 2026-10-07
 
 ### 🚀 Features

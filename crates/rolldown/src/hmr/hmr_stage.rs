@@ -1008,6 +1008,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
           jsdoc: self.options.comments.jsdoc,
         },
         initial_indent: 0,
+        ascii_only: self.options.charset.is_ascii(),
       },
     );
 

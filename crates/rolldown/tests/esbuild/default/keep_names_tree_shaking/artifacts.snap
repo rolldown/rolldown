@@ -6,13 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 function fnStmtKeep() {}
 x = fnStmtKeep;
 x = function keep() {};
 var clsStmtKeep = class {};
 new clsStmtKeep();
 new class keep {}();
-//#endregion
 
 ```

@@ -36,8 +36,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import * as fs from "fs";
 import defaultValue, { readFileSync } from "fs";
-//#region entry.js
+// entry.js
 console.log(fs, readFileSync, defaultValue);
-//#endregion
 
 ```

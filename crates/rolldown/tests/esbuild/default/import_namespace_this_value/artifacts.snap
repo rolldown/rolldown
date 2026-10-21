@@ -50,9 +50,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 let external = require("external");
 external = require_rolldown_runtime.__toESM(external);
-//#region a.js
+// a.js
 console.log(external[foo](), new external[foo]());
-//#endregion
 
 ```
 
@@ -62,9 +61,8 @@ console.log(external[foo](), new external[foo]());
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 let external = require("external");
 external = require_rolldown_runtime.__toESM(external);
-//#region b.js
+// b.js
 console.log(external.foo(), new external.foo());
-//#endregion
 
 ```
 
@@ -74,10 +72,9 @@ console.log(external.foo(), new external.foo());
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 let external = require("external");
 external = require_rolldown_runtime.__toESM(external);
-//#region c.js
+// c.js
 console.log((0, external.default)(), (0, external.foo)());
 console.log(new external.default(), new external.foo());
-//#endregion
 
 ```
 

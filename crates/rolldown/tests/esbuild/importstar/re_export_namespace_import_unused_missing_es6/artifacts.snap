@@ -22,8 +22,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert/strict";
-//#region entry.js
+// entry.js
 assert.deepEqual(void 0, void 0);
-//#endregion
 
 ```

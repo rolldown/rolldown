@@ -6,9 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## assets/main.js
 
 ```js
-//#region main.js
+// main.js
 console.log(1);
-//#endregion
 
 //# sourceMappingURL=main.js.map
 ```

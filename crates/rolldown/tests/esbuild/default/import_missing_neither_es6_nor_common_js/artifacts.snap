@@ -30,9 +30,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { r as init_foo } from "./foo.js";
-//#region bare.js
+// bare.js
 init_foo();
-//#endregion
 
 ```
 
@@ -40,7 +39,7 @@ init_foo();
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region foo.js
+// foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({
 	default: () => _default,
 	x: () => x,
@@ -53,7 +52,6 @@ var init_foo = __esmMin((() => {
 	x = void 0;
 	y = void 0;
 }));
-//#endregion
 export { y as a, x as i, foo_exports as n, __toCommonJS as o, init_foo as r, _default as t };
 
 ```
@@ -61,9 +59,8 @@ export { y as a, x as i, foo_exports as n, __toCommonJS as o, init_foo as r, _de
 ## import.js
 
 ```js
-//#region import.js
+// import.js
 console.log(import("./foo.js").then((n) => (n.r(), n.n)));
-//#endregion
 
 ```
 
@@ -71,10 +68,9 @@ console.log(import("./foo.js").then((n) => (n.r(), n.n)));
 
 ```js
 import { a as y, i as x, r as init_foo, t as _default } from "./foo.js";
-//#region named.js
+// named.js
 init_foo();
 console.log(_default(x, y));
-//#endregion
 
 ```
 
@@ -82,9 +78,8 @@ console.log(_default(x, y));
 
 ```js
 import { n as foo_exports, o as __toCommonJS, r as init_foo } from "./foo.js";
-//#region require.js
+// require.js
 console.log((init_foo(), __toCommonJS(foo_exports)));
-//#endregion
 
 ```
 
@@ -92,10 +87,9 @@ console.log((init_foo(), __toCommonJS(foo_exports)));
 
 ```js
 import { n as foo_exports, r as init_foo } from "./foo.js";
-//#region star-capture.js
+// star-capture.js
 init_foo();
 console.log(foo_exports);
-//#endregion
 
 ```
 
@@ -103,9 +97,8 @@ console.log(foo_exports);
 
 ```js
 import { a as y, i as x, r as init_foo, t as _default } from "./foo.js";
-//#region star.js
+// star.js
 init_foo();
 console.log(_default(x, y));
-//#endregion
 
 ```

@@ -113,33 +113,33 @@ Because the carrier's import table already holds the carried records' import ite
 
 ## Rendering
 
-`instantiate_chunks` hands each file its `CarriedRender`s. `EcmaGenerator` turns them into `RenderedModuleSource`s through the same `render_ecma_module` as the file's own modules (source maps, `//#region` markers), adds them to `RenderedChunk.modules`, and `render_esm` prints, after the file's imports and before anything else (`share_factory.rs::render_inline_records`):
+`instantiate_chunks` hands each file its `CarriedRender`s. `EcmaGenerator` turns them into `RenderedModuleSource`s through the same `render_ecma_module` as the file's own modules (source maps, module markers), adds them to `RenderedChunk.modules`, and `render_esm` prints, after the file's imports and before anything else (`share_factory.rs::render_inline_records`):
 
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 __share("shared-ZmCA4nrZ", (exports) => {
-	//#region shared.js
+	// shared.js
 	var count;
 	function init_shared() { ... }
-	//#endregion
 	__share_export(exports, {
 		n: () => count,
 		r: () => init_shared
 	});
 });
 var share_shared = __share_require("shared-ZmCA4nrZ");
-//#region a.js
+// a.js
 function init_a() {
 	return (init_a = __esmMin((() => {
 		share_shared.r();
 		globalThis.events.push("A " + share_shared.n);
 	})))();
 }
-//#endregion
 init_a();
 ```
 
 Factories come in `carried` order (dependencies first); a factory that reads other records opens with `var share_y = __share_require("<id>")` for each. `RenderedChunk.imports` comes from the projected `cross_chunk_imports`; content hashes include the factory text and the record ids; the runtime import carries its placeholder. `renderChunk`, `augmentChunkHash` and `generateBundle` see only files, and each carrier lists the carried modules after its own in `moduleIds` and in execution order in `modules`: a record's module belongs to every file that prints it.
+
+Native Rust `renderChunk` hooks receive each file's `originate_from` logical chunk index and immutable chunk/module table borrows. The import-map plugin keys the first common chunk of a given name by that name and later chunks by the minimum resolved module ID in their original logical membership. Copied factories appear in the complete printed-module metadata but do not enter that calculation. The origin index is only a lookup key for the current generation.
 
 ## Runtime registry
 

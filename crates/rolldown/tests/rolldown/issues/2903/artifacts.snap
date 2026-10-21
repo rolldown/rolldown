@@ -9,9 +9,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 let node_path = require("node:path");
 node_path = require_rolldown_runtime.__toESM(node_path);
-//#region main.js
+// main.js
 var main_default = node_path.default.join;
-//#endregion
 module.exports = main_default;
 
 ```
@@ -22,9 +21,8 @@ module.exports = main_default;
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 let node_fs = require("node:fs");
 node_fs = require_rolldown_runtime.__toESM(node_fs);
-//#region main2.js
+// main2.js
 var main2_default = node_fs.default.existsSync;
-//#endregion
 module.exports = main2_default;
 
 ```

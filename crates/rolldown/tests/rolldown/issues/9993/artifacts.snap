@@ -16,7 +16,7 @@ export default require_node4();
 ```js
 import { n as __esmMin, r as __exportAll } from "./rolldown-runtime.js";
 import { t as require_node3 } from "./v.js";
-//#region node5.js
+// node5.js
 var node5_exports = /* @__PURE__ */ __exportAll({ node_5: () => node_5 });
 var node_5;
 var init_node5 = __esmMin((() => {
@@ -24,7 +24,6 @@ var init_node5 = __esmMin((() => {
 	node_5 = {};
 	node_5.value = 5;
 }));
-//#endregion
 export default require_node3();
 export { node5_exports as n, init_node5 as t };
 
@@ -43,19 +42,17 @@ export { __esmMin as n, __exportAll as r, __commonJSMin as t };
 ```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
 import { t as init_node5 } from "./entry-2.js";
-//#region node4.cjs
+// node4.cjs
 var require_node4 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	globalThis.__issue_9993_4 = (globalThis.__issue_9993_4 || 0) + 1;
 	exports.node_4 = 4;
 }));
-//#endregion
-//#region node3.cjs
+// node3.cjs
 var require_node3 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	globalThis.__issue_9993_3 = (globalThis.__issue_9993_3 || 0) + 1;
 	init_node5();
 	exports.node_3 = 3;
 }));
-//#endregion
 export { require_node4 as n, require_node3 as t };
 
 ```

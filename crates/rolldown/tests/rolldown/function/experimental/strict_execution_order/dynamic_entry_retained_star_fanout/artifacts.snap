@@ -6,11 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 await import("./page-b.js").then((n) => (n.t(), n.n));
 const pageA = await import("./page-a.js");
 console.log(pageA.commonA, pageA.commonB);
-//#endregion
 
 ```
 
@@ -20,7 +19,7 @@ console.log(pageA.commonA, pageA.commonB);
 import { t as __esmMin } from "./rolldown-runtime.js";
 import "./page-b.js";
 import assert from "node:assert";
-//#region common-a.js
+// common-a.js
 function init$1() {
 	globalThis.valueA = typeof globalThis.valueA === "number" ? globalThis.valueA + 1 : 0;
 }
@@ -30,8 +29,7 @@ function init_common_a() {
 		commonA = /* @__PURE__ */ init$1();
 	})))();
 }
-//#endregion
-//#region common-b.js
+// common-b.js
 function init() {
 	globalThis.valueB = typeof globalThis.valueB === "number" ? globalThis.valueB + 1 : 0;
 }
@@ -41,8 +39,7 @@ function init_common_b() {
 		commonB = /* @__PURE__ */ init();
 	})))();
 }
-//#endregion
-//#region page-a.js
+// page-a.js
 function init_page_a() {
 	return (init_page_a = __esmMin((() => {
 		init_common_a();
@@ -51,7 +48,6 @@ function init_page_a() {
 		assert.strictEqual(globalThis.valueB, 0);
 	})))();
 }
-//#endregion
 init_page_a();
 export { commonA, commonB };
 
@@ -62,12 +58,11 @@ export { commonA, commonB };
 ```js
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
-//#region bridge.js
+// bridge.js
 function x() {
 	return 1;
 }
-//#endregion
-//#region page-b.js
+// page-b.js
 var page_b_exports = /* @__PURE__ */ __exportAll({});
 function init_page_b() {
 	return (init_page_b = __esmMin((() => {
@@ -75,7 +70,6 @@ function init_page_b() {
 		assert.strictEqual(globalThis.valueB, void 0);
 	})))();
 }
-//#endregion
 export { page_b_exports as n, x as r, init_page_b as t };
 
 ```
@@ -96,7 +90,7 @@ export { __exportAll as n, __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region main.js
+// main.js
 var pageA;
 function init_main() {
 	return (init_main = __esmMin((async () => {
@@ -105,7 +99,6 @@ function init_main() {
 		console.log(pageA.commonA, pageA.commonB);
 	})))();
 }
-//#endregion
 await init_main();
 
 ```
@@ -116,7 +109,7 @@ await init_main();
 import { t as __esmMin } from "./rolldown-runtime.js";
 import "./page-b.js";
 import assert from "node:assert";
-//#region common-a.js
+// common-a.js
 function init$1() {
 	globalThis.valueA = typeof globalThis.valueA === "number" ? globalThis.valueA + 1 : 0;
 }
@@ -126,8 +119,7 @@ function init_common_a() {
 		commonA = /* @__PURE__ */ init$1();
 	})))();
 }
-//#endregion
-//#region common-b.js
+// common-b.js
 function init() {
 	globalThis.valueB = typeof globalThis.valueB === "number" ? globalThis.valueB + 1 : 0;
 }
@@ -137,8 +129,7 @@ function init_common_b() {
 		commonB = /* @__PURE__ */ init();
 	})))();
 }
-//#endregion
-//#region page-a.js
+// page-a.js
 function init_page_a() {
 	return (init_page_a = __esmMin((() => {
 		init_common_a();
@@ -147,7 +138,6 @@ function init_page_a() {
 		assert.strictEqual(globalThis.valueB, 0);
 	})))();
 }
-//#endregion
 init_page_a();
 export { commonA, commonB };
 
@@ -158,15 +148,14 @@ export { commonA, commonB };
 ```js
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
-//#region bridge.js
+// bridge.js
 function x() {
 	return 1;
 }
 function init_bridge() {
 	return (init_bridge = __esmMin((() => {})))();
 }
-//#endregion
-//#region page-b.js
+// page-b.js
 var page_b_exports = /* @__PURE__ */ __exportAll({});
 function init_page_b() {
 	return (init_page_b = __esmMin((() => {
@@ -174,7 +163,6 @@ function init_page_b() {
 		assert.strictEqual(globalThis.valueB, void 0);
 	})))();
 }
-//#endregion
 export { x as i, page_b_exports as n, init_bridge as r, init_page_b as t };
 
 ```

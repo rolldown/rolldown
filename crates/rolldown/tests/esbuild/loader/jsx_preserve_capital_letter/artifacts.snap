@@ -6,11 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region foo.js
+// foo.js
 var MustStartWithUpperCaseLetter = class {};
-//#endregion
-//#region entry.jsx
+// entry.jsx
 console.log(<MustStartWithUpperCaseLetter />);
-//#endregion
 
 ```

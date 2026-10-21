@@ -1,4 +1,39 @@
 
+## [1.2.15] - 2026-10-21
+
+### 🚀 Features
+
+- rolldown_plugin_vite_resolve: add `isBundled` to pick the browser-external stub format (#11260) by @h-a-n-a
+- dev: mark entry modules in the HMR module graph (#11252) by @h-a-n-a
+- mark module starts with `// <id>` comments instead of `#region` pairs (#11235) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- plugin: stop `this.resolve` recursion between plugins with `skipSelf: true` (#11181) by @anzal1
+- rolldown_plugin_vite_resolve: handle external `require` for `ssr.target: 'webworker'` (#11205) by @sapphi-red
+- rolldown_plugin_vite_build_import_analysis: only wrap dynamic imports with static specifiers in __vitePreload (#10879) by @smeng9
+- strict-execution-order: wrap eager modules that forward wrapped definers (#11186) by @hyfdev
+- chunk-import-map: keep common chunk keys unique when enabling inline common chunks (#11230) by @hyfdev
+- only register signal-exit handler when a trace subscriber is active (#11208) by @DaniilIsupov
+
+### 🧪 Testing
+
+- fold hand-unrolled Rust test tables (#11212) by @Brooooooklyn
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: upgrade oxc to 0.155.0 (#11228) by @Dunqing
+- rollup-tests: retriage failed tests (#11251) by @sapphi-red
+- deps: update rollup submodule for tests to v4.64.12 (#11249) by @rolldown-guard[bot]
+- deps: update test262 submodule for tests (#11242) by @rolldown-guard[bot]
+
+### ❤️ New Contributors
+
+* @anzal1 made their first contribution in [#11181](https://github.com/rolldown/rolldown/pull/11181)
+* @smeng9 made their first contribution in [#10879](https://github.com/rolldown/rolldown/pull/10879)
+* @DaniilIsupov made their first contribution in [#11208](https://github.com/rolldown/rolldown/pull/11208)
+
+
 ## [1.2.14] - 2026-10-14
 
 ### 🚀 Features

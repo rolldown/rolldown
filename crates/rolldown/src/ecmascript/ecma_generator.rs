@@ -15,10 +15,10 @@ use rolldown_common::{
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::HookAddonArgs;
 use rolldown_sourcemap::Source;
-use rolldown_utils::ecmascript::escape_line_terminators;
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
+use rolldown_utils::{concat_string, ecmascript::escape_line_terminators};
 use rustc_hash::FxHashMap;
 
 use super::format::utils::is_use_strict_directive;
@@ -305,7 +305,7 @@ impl Generator for EcmaGenerator {
         .map(|info| escape_line_terminators(info.to_string()))
         .collect::<Vec<_>>()
         .join("\n//! ");
-      source_joiner.prepend_source(format!("//! {debug_info_str}"));
+      source_joiner.prepend_source(concat_string!("//! ", debug_info_str));
     }
 
     let (content, map) = source_joiner.join();

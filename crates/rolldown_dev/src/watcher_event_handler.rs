@@ -7,7 +7,7 @@ pub struct WatcherEventHandler {
 }
 impl FsEventHandler for WatcherEventHandler {
   fn handle_events(&mut self, events: Vec<FsEvent>) {
-    if self.coordinator_tx.send(CoordinatorMsg::WatchEvent(events)).is_err() {
+    if self.coordinator_tx.unbounded_send(CoordinatorMsg::WatchEvent(events)).is_err() {
       tracing::debug!(
         "[WatcherEventHandler] coordinator channel closed while sending file change event"
       );

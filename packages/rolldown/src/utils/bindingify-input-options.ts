@@ -20,6 +20,7 @@ import type { AttachDebugOptions, DevModeOptions, InputOptions } from '../option
 import type { OutputOptions } from '../options/output-options';
 import type { Plugin, RolldownPlugin } from '../plugin';
 import { bindingifyPlugin } from '../plugin/bindingify-plugin';
+import { assertParallelPluginsSupported } from '../plugin/parallel-plugin';
 import type { PluginContextData } from '../plugin/plugin-context-data';
 import { arraify } from './misc';
 import { normalizedStringOrRegex } from './normalize-string-or-regex';
@@ -50,6 +51,10 @@ export function bindingifyInputOptions(
 ): BindingInputOptions {
   const plugins = rawPlugins.map((plugin) => {
     if (getParallelPluginInfo(plugin)) {
+      // Runs workers through the registry, not as a binding plugin. The final plugin
+      // list (after `options` hooks) is checked here because the browser build skips
+      // worker setup and would otherwise drop the plugin silently.
+      assertParallelPluginsSupported();
       return undefined;
     }
     if (plugin instanceof BuiltinPlugin) {
@@ -79,7 +84,7 @@ export function bindingifyInputOptions(
   return {
     input: bindingifyInput(inputOptions.input),
     plugins,
-    cwd: inputOptions.cwd ?? process.cwd(),
+    cwd: inputOptions.cwd ?? (import.meta.browserBuild ? '/' : process.cwd()),
     external: bindingifyExternal(inputOptions.external, timings),
     resolve: bindingifyResolve(inputOptions.resolve),
     platform: inputOptions.platform,

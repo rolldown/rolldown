@@ -81,6 +81,11 @@ jobs:
             build: |
               vp run --filter rolldown build-binding:wasi:release
 
+          - os: ubuntu-latest
+            target: wasm32-wasip1
+            build: |
+              vp run --filter rolldown build-binding:wasi-single:release
+
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     steps:
@@ -260,6 +265,9 @@ jobs:
           version: '1.0.0'
           cache: true
 
+      # Runs before "Determine Version" on purpose: napi bakes the version this step
+      # sees into the loader, and pnpm drops the `+commit.<sha>` metadata when it packs.
+      # See internal-docs/async-runtime/implementation.md, "Binding version is set after the build".
       - name: Build Node binding
         # This binary is only used to build the node package itself. It's won't be published.
         run: vp run --filter rolldown build-binding
@@ -314,10 +322,12 @@ jobs:
           save-cache: false
 
       - name: Add WASI target
-        run: rustup target add wasm32-wasip1-threads
+        run: rustup target add wasm32-wasip1-threads wasm32-wasip1
 
       - wait: vp-setup
 
+      # Same ordering rule as the node package job above: the version this step
+      # sees is the one napi bakes into the generated binding loader.
       - name: Build Node binding
         # This binary is only used to build the node package itself. It's won't be published.
         run: vp run --filter rolldown build-binding
@@ -332,6 +342,12 @@ jobs:
         # Binaries are built in the previous steps. Unlike in local development, we only need to build the node package itself.
         run: vp run --filter "@rolldown/browser" build:release
 
+      - name: Assert browser CurrentThread timer registration
+        run: node packages/browser-tests/runtime-contract.mjs packages/browser/dist
+
+      - name: Exercise published workerd entry lifecycle and memory canary
+        run: node --expose-gc packages/workerd-tests/memory.mjs --loader=packages/browser/dist/workerd.mjs --wasm=packages/browser/dist/rolldown-binding.wasm32-wasip1.wasm --max-rss-growth-mb=128
+
       - name: Upload `@rolldown/browser` Artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -339,6 +355,14 @@ jobs:
           name: browser-artifact
           path: |
             packages/browser/dist/**
+
+      - name: Upload bundled threaded WASI loaders
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          if-no-files-found: error
+          name: threaded-wasi-loader-artifact
+          path: |
+            packages/rolldown/artifacts/threaded-wasi-loaders/**
 
   build-rolldown-debug:
     strategy:

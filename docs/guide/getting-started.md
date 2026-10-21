@@ -56,20 +56,16 @@ Prebuilt binaries are distributed for the following platforms (grouped by [Node.
   - Android arm64 (`aarch64-linux-android`)
   - Android armv7 (`armv7-linux-androideabi`)
   - Wasm + Wasi (`wasm32-wasip1-threads`)
+  - Wasm + Wasi, no threads (`wasm32-wasip1`)
+
+See [WASI and workerd](/guide/wasi).
 
 If you are using a platform that a prebuilt binary is not distributed, you have the following options:
 
 - Use the Wasm build
-  1. Download the Wasm build.
-     - For npm, you can run `npm install --cpu wasm32 --os wasip1-threads`.
-     - For yarn or pnpm, you need to add the following content to your `.yarnrc.yaml` or `pnpm-workspace.yaml`:
-       ```yaml
-       supportedArchitectures:
-         os:
-           - wasip1-threads
-         cpu:
-           - wasm32
-       ```
+  1. Install the Wasm build's package next to `rolldown`, at the same version (`rolldown` does not list it as an optional dependency, so it is never installed automatically). Replace `<version>` with the installed `rolldown` version:
+     - With threads (`wasm32-wasip1-threads`): `npm install @rolldown/binding-wasm32-wasi@<version>`
+     - Without threads (`wasm32-wasip1`): `npm install @rolldown/binding-wasm32-wasip1@<version>`
   2. Make Rolldown load the Wasm build.
      - If the prebuilt binary is not available, Rolldown will fallback to the Wasm binary automatically.
      - In case you need to force Rolldown to use the Wasm build, you can set `NAPI_RS_FORCE_WASI=error` environment variable.

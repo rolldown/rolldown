@@ -14,6 +14,7 @@ const sidebarForGuide: DefaultTheme.SidebarItem[] = [
     items: [
       { text: 'Introduction', link: '/guide/introduction.md' },
       { text: 'Getting Started', link: '/guide/getting-started.md' },
+      { text: 'WASI and workerd', link: '/guide/wasi.md' },
       { text: 'Notable Features', link: '/guide/notable-features.md' },
       {
         text: 'Troubleshooting',

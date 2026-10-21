@@ -1,5 +1,7 @@
 import type { InputOptions } from '../../options/input-options';
+import { assertParallelPluginsSupported } from '../../plugin/parallel-plugin';
 import { PluginDriver } from '../../plugin/plugin-driver';
+import { getParallelPluginInfo } from '../../utils/parallel-plugin';
 import { validateOption } from '../../utils/validator';
 import { RolldownBuild } from './rolldown-build';
 
@@ -38,6 +40,15 @@ import { RolldownBuild } from './rolldown-build';
 // `async` here is intentional to be compatible with `rollup.rollup`.
 export const rolldown = async (input: InputOptions): Promise<RolldownBuild> => {
   validateOption('input', input);
+  // Fail at `rolldown()` on artifacts without parallel-plugin support, not at
+  // the first build.
+  if (
+    ([input.plugins] as unknown[])
+      .flat(Infinity)
+      .some((plugin) => getParallelPluginInfo(plugin) !== undefined)
+  ) {
+    assertParallelPluginsSupported();
+  }
   const inputOptions = await PluginDriver.callOptionsHook(input);
   return new RolldownBuild(inputOptions);
 };

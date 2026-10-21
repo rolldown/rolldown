@@ -4,11 +4,13 @@ mod utils;
 
 use std::{borrow::Cow, pin::Pin, sync::Arc};
 
+use oxc::ast::ast::Program;
 use oxc::ast_visit::VisitJs;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, HookTransformOutput, HookTransformOutputMap, HookUsage, Plugin,
-  PluginContext, SharedLoadPluginContext,
+  HookResolveIdReturn, HookTransformArgs, HookTransformOutput, HookTransformOutputMap,
+  HookTransformReturn, HookUsage, Plugin, PluginContext, SharedLoadPluginContext,
+  SharedTransformPluginContext,
 };
 use rolldown_plugin_utils::parse_program;
 use rolldown_std_utils::relative_path_as_js_specifier;
@@ -28,6 +30,73 @@ pub struct ViteDynamicImportVarsPlugin {
   pub exclude: Vec<StringOrRegex>,
   #[debug(skip)]
   pub resolver: Option<Arc<ResolverFn>>,
+}
+
+impl ViteDynamicImportVarsPlugin {
+  fn transform_program(
+    &self,
+    ctx: &SharedTransformPluginContext,
+    args: &HookTransformArgs<'_>,
+    program: &Program<'_>,
+    resolved_async_imports: Option<Vec<Option<String>>>,
+  ) -> HookTransformReturn {
+    let mut visitor = ast_visit::DynamicImportVarsVisit {
+      ctx,
+      source_text: args.code,
+      root: ctx.cwd(),
+      importer: args.id.as_path(),
+      need_helper: false,
+      comments: &program.comments,
+      current_comment: 0,
+      async_imports: Vec::default(),
+      async_imports_addrs: Vec::default(),
+      magic_string: None,
+    };
+
+    visitor.visit_program(program);
+
+    if let Some(result) = resolved_async_imports {
+      if visitor.async_imports_addrs.len() != result.len() {
+        return Err(anyhow::anyhow!(
+          "Dynamic import resolver collection changed between parse passes for '{}'",
+          args.id
+        ));
+      }
+      let importer = args.id.as_path().parent().unwrap();
+      let async_imports_addrs = std::mem::take(&mut visitor.async_imports_addrs);
+      for (addr, item) in async_imports_addrs.into_iter().zip(result) {
+        if let Some(id) = item {
+          let id = relative_path_as_js_specifier(id, importer);
+          if id == "." {
+            continue;
+          }
+          if memchr::memchr(b'*', id.as_bytes()).is_none() {
+            continue;
+          }
+          visitor.rewrite_variable_dynamic_import(unsafe { &*addr }, Some(&id));
+        }
+      }
+    }
+
+    Ok(visitor.magic_string.map(|mut magic_string| {
+      if visitor.need_helper {
+        magic_string.prepend(format!(
+          "import __variableDynamicImportRuntimeHelper from \"{DYNAMIC_IMPORT_HELPER}\";"
+        ));
+      }
+      HookTransformOutput {
+        code: Some(magic_string.to_string()),
+        map: HookTransformOutputMap::from_if_enabled(self.sourcemap, || {
+          magic_string.source_map(string_wizard::SourceMapOptions {
+            hires: string_wizard::Hires::Boundary,
+            source: args.id.into(),
+            ..Default::default()
+          })
+        }),
+        ..Default::default()
+      }
+    }))
+  }
 }
 
 impl Plugin for ViteDynamicImportVarsPlugin {
@@ -66,68 +135,49 @@ impl Plugin for ViteDynamicImportVarsPlugin {
       return Ok(None);
     }
     if utils::has_dynamic_import(args.code) {
-      let mut visitor = ast_visit::DynamicImportVarsVisit {
-        ctx: &ctx,
-        source_text: args.code,
-        root: ctx.cwd(),
-        importer: args.id.as_path(),
-        need_helper: false,
-        vite_ignored_starts: Vec::default(),
-        async_imports: Vec::default(),
-        magic_string: None,
-      };
-      {
+      if let Some(resolver) = &self.resolver {
+        let async_imports = {
+          let allocator = oxc::allocator::Allocator::default();
+          let Some(parser_ret) = parse_program(&allocator, args.code, args.module_type, args.id)?
+          else {
+            return Ok(None);
+          };
+          let mut visitor = ast_visit::DynamicImportResolveVisit {
+            comments: &parser_ret.program.comments,
+            current_comment: 0,
+            async_imports: Vec::default(),
+          };
+          visitor.visit_program(&parser_ret.program);
+          if visitor.async_imports.is_empty() {
+            return self.transform_program(&ctx, args, &parser_ret.program, None);
+          }
+          visitor.async_imports
+        };
+
+        let mut resolved_async_imports = Vec::with_capacity(async_imports.len());
+        for glob in async_imports {
+          resolved_async_imports.push(resolver(glob, args.id.to_string()).await.ok().flatten());
+        }
+
         let allocator = oxc::allocator::Allocator::default();
         let Some(parser_ret) = parse_program(&allocator, args.code, args.module_type, args.id)?
         else {
           return Ok(None);
         };
-        visitor.visit_program(&parser_ret.program);
+        return self.transform_program(
+          &ctx,
+          args,
+          &parser_ret.program,
+          Some(resolved_async_imports),
+        );
       }
 
-      if !visitor.async_imports.is_empty()
-        && let Some(resolver) = &self.resolver
-      {
-        let importer = args.id.as_path().parent().unwrap();
-        for import in std::mem::take(&mut visitor.async_imports) {
-          if let Some(id) = resolver(import.glob, args.id.to_string()).await.ok().flatten() {
-            let id = relative_path_as_js_specifier(id, importer);
-            if id == "." {
-              continue;
-            }
-
-            let Some(index) = memchr::memchr(b'*', id.as_bytes()) else {
-              continue;
-            };
-            visitor.rewrite(
-              import.span,
-              import.source_span,
-              import.first_quasi_len,
-              &id[..index],
-              &id,
-            );
-          }
-        }
-      }
-
-      if let Some(mut magic_string) = visitor.magic_string {
-        if visitor.need_helper {
-          magic_string.prepend(format!(
-            "import __variableDynamicImportRuntimeHelper from \"{DYNAMIC_IMPORT_HELPER}\";"
-          ));
-        }
-        return Ok(Some(HookTransformOutput {
-          code: Some(magic_string.to_string()),
-          map: HookTransformOutputMap::from_if_enabled(self.sourcemap, || {
-            magic_string.source_map(string_wizard::SourceMapOptions {
-              hires: string_wizard::Hires::Boundary,
-              source: args.id.into(),
-              ..Default::default()
-            })
-          }),
-          ..Default::default()
-        }));
-      }
+      let allocator = oxc::allocator::Allocator::default();
+      let Some(parser_ret) = parse_program(&allocator, args.code, args.module_type, args.id)?
+      else {
+        return Ok(None);
+      };
+      return self.transform_program(&ctx, args, &parser_ret.program, None);
     }
     Ok(None)
   }

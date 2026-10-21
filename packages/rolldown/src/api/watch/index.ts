@@ -1,4 +1,5 @@
 import type { WatchOptions } from '../../options/watch-options';
+import { assertRuntimeFeature } from '../../runtime-support';
 import { type RolldownWatcher, WatcherEmitter } from './watch-emitter';
 import { createWatcher } from './watcher';
 
@@ -35,6 +36,7 @@ import { createWatcher } from './watcher';
  * @category Programmatic APIs
  */
 export function watch(input: WatchOptions | WatchOptions[]): RolldownWatcher {
+  assertRuntimeFeature('watch');
   const emitter = new WatcherEmitter();
   createWatcher(emitter, input);
   return emitter;

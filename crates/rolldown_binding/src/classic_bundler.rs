@@ -64,6 +64,7 @@ use rolldown_common::BundleMode;
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::__inner::SharedPluginable;
 use rolldown_std_utils::{discard_panic_payload, panic_payload_message};
+use rolldown_utils::futures::spawn_blocking;
 use std::{panic::AssertUnwindSafe, sync::Arc};
 
 use futures::FutureExt;
@@ -118,7 +119,8 @@ impl ClassicBundler {
       self.closed = true;
     }
     // Release the handle with the first close rather than retaining it until the N-API
-    // finalizer. A later close finds no handle, so `closeBundle` runs once.
+    // finalizer, which may never run on threadless WASI. A later close finds no handle,
+    // so `closeBundle` runs once.
     let last_bundle_handle = self.last_bundle_handle.take();
     // When devtools is active, ask the writer thread to drain this session and
     // receive an ack. Consumers rely on "files are readable after
@@ -143,16 +145,15 @@ impl ClassicBundler {
       }
       if let Some(rx) = devtools_flush_rx {
         // Block on the writer-thread ack in a blocking task so we don't stall
-        // a tokio worker. Bounded wait so a hung writer thread (e.g. stalled
+        // a runtime worker. Bounded wait so a hung writer thread (e.g. stalled
         // fs I/O on an NFS disconnect) can't wedge `bundle.close()` forever.
         // All three failure modes (timeout, writer disconnected, blocking task
         // panicked) are surfaced as errors so the documented "logs readable
         // after close()" contract does not silently break.
-        let join_result = napi::tokio::task::spawn_blocking(move || {
-          rx.recv_timeout(std::time::Duration::from_secs(30))
-        })
-        .await
-        .map_err(|err| anyhow::anyhow!("devtools flush task failed to join: {err}"))?;
+        let join_result =
+          spawn_blocking(move || rx.recv_timeout(std::time::Duration::from_secs(30)))
+            .await
+            .map_err(|err| anyhow::anyhow!("devtools flush task failed to join: {err}"))?;
         match join_result {
           Ok(()) => {}
           Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {

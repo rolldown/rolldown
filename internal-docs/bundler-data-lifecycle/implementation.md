@@ -58,7 +58,10 @@ Data that survives across all builds. It is either immutable configuration or in
 | `transform_dependencies_for_incremental_build` | `addWatchFile()` dependencies from plugins. Critical for HMR invalidation — must persist so the HMR stage knows which files affect which modules.                                                                                                                                                        |
 | `ScanStageCache`                               | Module graph snapshot, module index maps, barrel state. Makes incremental builds possible — on `IncrementalBuild`, only changed modules are re-scanned and merged via `ScanStageCache::merge()`. Temporarily moved into `Bundle` during a build, then moved back (see "ScanStageCache Ownership" below). |
 
-**Reset rules:** `module_infos` and `transform_dependencies` are reset to fresh `Arc::default()` on `FullBuild` and `IncrementalFullBuild` (via `BundleFactory::create_bundle`). They are preserved across `IncrementalBuild`.
+**Reset rules:** on `FullBuild` and `IncrementalFullBuild`,
+`BundleFactory::create_bundle` clears `module_infos` in place (same `Arc`, so
+long-lived handles see the current build) and replaces `transform_dependencies`
+with `Arc::default()`. Both are preserved across `IncrementalBuild`.
 
 ### Tier 2: Bundle-Level (Per-Build)
 

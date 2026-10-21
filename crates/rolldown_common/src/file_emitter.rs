@@ -74,7 +74,7 @@ pub struct EmittedPrebuiltChunk {
 
 #[derive(Debug)]
 pub struct FileEmitter {
-  tx: Arc<Mutex<Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
+  tx: Arc<Mutex<Option<futures::channel::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
   source_hash_to_reference_id: FxDashMap<ArcStr, ArcStr>,
   names: FxDashMap<ArcStr, u32>,
   files: FxDashMap<ArcStr, OutputAsset>,
@@ -152,7 +152,7 @@ impl FileEmitter {
       (&chunk.name, chunk.importer.as_deref().map(stable), stable(&chunk.id), &chunk.file_name)
     ));
     sender
-      .send(ModuleLoaderMsg::AddEntryModule(Box::new(AddEntryModuleMsg {
+      .unbounded_send(ModuleLoaderMsg::AddEntryModule(Box::new(AddEntryModuleMsg {
         chunk: Arc::clone(&chunk),
         reference_id: reference_id.clone(),
       })))
@@ -446,7 +446,7 @@ impl FileEmitter {
 
   pub fn set_context_load_modules_tx(
     &self,
-    tx: Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>,
+    tx: Option<futures::channel::mpsc::UnboundedSender<ModuleLoaderMsg>>,
   ) -> anyhow::Result<()> {
     *self.tx.lock().ok().context("Failed to acquire FileEmitter tx lock")? = tx;
     Ok(())

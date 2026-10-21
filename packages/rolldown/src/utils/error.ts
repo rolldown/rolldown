@@ -92,6 +92,7 @@ function getErrorMessage(e: RolldownError): string {
   // A JavaScript callback may reject with anything, and that value reaches us
   // unchanged. `Object.hasOwn` throws on `null`/`undefined`, so render those
   // here instead of losing the whole report to a secondary `TypeError`.
+  // See internal-docs/async-runtime/implementation.md, "Plugin error metadata".
   if (e === null || e === undefined) {
     return `Error: ${String(e)}`;
   }

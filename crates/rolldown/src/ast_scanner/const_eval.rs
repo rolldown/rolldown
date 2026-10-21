@@ -150,10 +150,7 @@ fn template_text<'ast>(
 ) -> Option<String> {
   let mut text = String::new();
   for (i, quasi) in template.quasis.iter().enumerate() {
-    if quasi.lone_surrogates {
-      return None;
-    }
-    text.push_str(quasi.value.cooked.as_ref()?);
+    text.push_str(quasi.value.cooked?.as_str()?);
     match template.expressions.get(i) {
       None => {}
       Some(Expression::TemplateLiteral(inner)) => text.push_str(&template_text(ctx, inner)?),
@@ -250,6 +247,16 @@ mod tests {
     assert_eq!(extract("const NAME = 'rolldown'; const a = `${NAME}${x}`;", "a"), None);
     // A new string literal cannot carry a lone surrogate.
     assert_eq!(extract("const a = `\\uD800`;", "a"), None);
+  }
+
+  #[test]
+  fn test_string_with_a_lone_surrogate_is_not_a_constant() {
+    // oxc doesn't evaluate a literal with a lone surrogate, so a pair split across two literals
+    // isn't joined either. oxc-project/oxc#27098 changes both, and `ConstantValue::String` with
+    // them.
+    assert_eq!(extract("const a = '\\uD800';", "a"), None);
+    assert_eq!(extract("const a = '\\uD800' + 'x';", "a"), None);
+    assert_eq!(extract("const a = '\\uD800' + '\\uDC00';", "a"), None);
   }
 
   #[test]

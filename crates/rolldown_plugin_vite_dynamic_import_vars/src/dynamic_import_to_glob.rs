@@ -3,6 +3,7 @@ use oxc::{
   ast::ast::{Argument, BinaryExpression, CallExpression, Expression, TemplateLiteral},
   syntax::operator::BinaryOperator,
 };
+use rolldown_utils::ecmascript::to_usv_str;
 use std::{borrow::Cow, path::Path};
 
 const EXAMPLE_CODE: &str = "For example: import(`./foo/${bar}.js`).";
@@ -71,7 +72,10 @@ fn expr_to_glob<'a>(expr: &'a Expression) -> anyhow::Result<Cow<'a, str>> {
     Expression::TemplateLiteral(node) => template_literal_to_glob(node),
     Expression::CallExpression(node) => call_expr_to_glob(node),
     Expression::BinaryExpression(node) => binary_expr_to_glob(node),
-    Expression::StringLiteral(node) => sanitize_string(&node.value),
+    Expression::StringLiteral(node) => match to_usv_str(node.value) {
+      Cow::Borrowed(value) => sanitize_string(value),
+      Cow::Owned(value) => sanitize_string(&value).map(|glob| Cow::Owned(glob.into_owned())),
+    },
     _ => Ok(Cow::Borrowed("*")),
   }
 }
@@ -182,6 +186,12 @@ mod tests {
       ("escapes_round_brackets", "`./${foo}/(foo).js`", Some("./*/(foo).js")),
       // The escaped glob in JS is "./*/\\[foo\\].js"
       ("escapes_square_brackets", "`./${foo}/[foo].js`", Some("./*/[[]foo[]].js")),
+      // A lone surrogate becomes U+FFFD, as it does when the runtime resolves the import.
+      (
+        "string_literal_with_a_lone_surrogate",
+        r"'./foo\uD800/' + bar + '.js'",
+        Some("./foo\u{FFFD}/*.js"),
+      ),
     ];
     for &(case, code, expected) in cases {
       let glob = run(code, "").unwrap_or_else(|err| panic!("{case}: unexpected error: {err}"));

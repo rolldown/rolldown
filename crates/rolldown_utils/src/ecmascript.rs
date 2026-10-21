@@ -1,5 +1,5 @@
 use oxc::syntax::{identifier, keyword};
-use oxc_str::CompactStr;
+use oxc_str::{CompactStr, JSStr};
 use std::{borrow::Cow, fmt::Write, path::Path};
 
 use crate::{concat_string, indexmap::FxIndexMap};
@@ -162,6 +162,33 @@ fn test_escape_non_ascii() {
   assert_eq!(escape_non_ascii("π你😀", false), "π你😀");
   assert_eq!(escape_non_ascii("π你😀", true), "\\u03C0\\u4F60\\u{1F600}");
   assert_eq!(to_ecma_string_literal("外部", true), "\"\\u5916\\u90E8\"");
+}
+
+/// Converts a JavaScript string to UTF-8 the way `URL` and Node's file system APIs do: each lone
+/// surrogate becomes U+FFFD. A module request with a lone surrogate then names the file the runtime
+/// would load.
+pub fn to_usv_str(value: JSStr<'_>) -> Cow<'_, str> {
+  match value.as_str() {
+    Some(value) => Cow::Borrowed(value),
+    None => Cow::Owned(
+      char::decode_utf16(value.encode_utf16())
+        .map(|c| c.unwrap_or(char::REPLACEMENT_CHARACTER))
+        .collect(),
+    ),
+  }
+}
+
+#[test]
+fn test_to_usv_str() {
+  use oxc::{allocator::Allocator, ast::ast::Expression, parser::Parser, span::SourceType};
+  let allocator = Allocator::default();
+  let expr = Parser::new(&allocator, r"'a\uD800b\uD800\uDC00'", SourceType::default())
+    .parse_expression()
+    .unwrap();
+  let Expression::StringLiteral(lit) = expr else { unreachable!() };
+  // A lone surrogate becomes U+FFFD, and a pair stays one code point.
+  assert_eq!(to_usv_str(lit.value), "a\u{FFFD}b\u{10000}");
+  assert!(matches!(to_usv_str(JSStr::from("plain")), Cow::Borrowed("plain")));
 }
 
 pub fn is_relative_specifier(specifier: &str) -> bool {

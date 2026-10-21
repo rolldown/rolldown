@@ -8,7 +8,7 @@ use arcstr::ArcStr;
 use dashmap::DashMap;
 use oxc_resolver::{
   ModuleType, PackageJson as OxcPackageJson, PackageType, Resolution, ResolveError,
-  ResolverGeneric, TsConfig as OxcTsConfig,
+  ResolverGeneric, TsConfig as OxcTsConfig, TsconfigDiscovery,
 };
 use rolldown_common::{
   ImportKind, ModuleDefFormat, ModuleId, PackageJson, Platform, ResolveOptions, ResolvedId,
@@ -160,6 +160,14 @@ impl<Fs: FileSystem> Resolver<Fs> {
       // check if `is_absolute` to avoid extra `join` overhead
       if importer.is_absolute() {
         selected_resolver.resolve_file(importer, specifier)
+      } else if importer.to_str().is_some_and(|id| id.starts_with('\0'))
+        && matches!(selected_resolver.options().tsconfig, Some(TsconfigDiscovery::Auto))
+      {
+        // A `\0` importer, such as `\0rolldown/runtime.js`, is a virtual module, not a file.
+        // `resolve_file` would search for a tsconfig from `<cwd>/<importer>` upward and fail on
+        // one that does not load. `resolve` from the same directory skips that search.
+        let importer = self.cwd.join(importer);
+        selected_resolver.resolve(importer.parent().unwrap_or(&self.cwd), specifier)
       } else {
         selected_resolver.resolve_file(self.cwd.join(importer), specifier)
       }

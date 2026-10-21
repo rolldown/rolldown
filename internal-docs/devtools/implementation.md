@@ -26,6 +26,27 @@ CLI equivalent: `--devtools.session-id <id>`.
 
 ## Output
 
+With `devtools: { mode: 'metrics' }`, the metrics sink also writes
+`chunk-graph.json` beside `metrics.json`. The graph contains every emitted chunk,
+including its final filename, size, facade module, static imports, and dynamic
+imports. `OutputChunkGraphReady` supplies this data after `generateBundle` hooks
+finish. The graph includes plugin changes to filenames, imports, and code. It
+excludes chunks that plugins delete. The graph has no top-N limit.
+An empty graph replaces the previous file when a new build has no chunk assets.
+
+The metrics lab joins this graph to full browser resource timings. It checks
+late discovery across static imports before FCP and LCP separately. Each example
+keeps one run's timings and an import chain. Source modules and request initiators
+help an agent check whether the chunk contributes to visible content. The report
+marks the paint dependency as unverified. It does not follow dynamic imports or
+predict a paint gain from a discovery delay. Vite's manifest supplies a fallback
+when the build does not emit this graph.
+The loader rejects a sidecar when an emitted chunk or the Vite manifest is newer.
+This check also applies when a rebuild reuses the same filenames.
+The runtime report also records `paintComparison`. It compares both FCP and LCP
+with the pinned baseline. A gain in one metric cannot hide a regression beyond
+noise in the other. Render-gap advice preserves concurrent resource evidence.
+
 When devtools is enabled, rolldown writes JSON-lines files to:
 
 ```
@@ -149,6 +170,7 @@ Each hook call pair gets a unique `call_id` (UUID v4) via its enclosing span.
 | `PackageGraphReady`          | After chunk instantiation                 | packages[]{package_id, name, version, package_json_path, package_root, is_used, dependency_type, size, modules[], chunk_ids[]} |
 | `HookRenderChunkStart/End`   | Per plugin per renderChunk call           | chunk_id, plugin_name, plugin_id, call_id, content                                                                             |
 | `AssetsReady`                | After final asset generation              | assets[]{chunk_id, content, size, filename}                                                                                    |
+| `OutputChunkGraphReady`      | After `generateBundle` hooks finish       | chunks[]{file_name, name, bytes, is_entry, facade_module_id, imports, dynamic_imports}                                         |
 | `StringRef`                  | Before any action with large strings      | id (blake3 hash), content                                                                                                      |
 
 All actions except `StringRef` carry injected `session_id`, `build_id`, and `timestamp` fields. `StringRef` entries contain only `action`, `id`, and `content`.

@@ -32,6 +32,47 @@ every build also refreshes the build-side report under `state/rolldown-metrics/`
 
 ## Commands
 
+### Chunk discovery
+
+`scan` keeps the full resource detail list in `runtime-metrics.json`. This includes
+small preload facades. Each request records its initiator type and source location.
+The report does not collect request headers or bodies. A browser timing buffer
+overflow keeps the discovery check UNKNOWN.
+
+The check reads `chunk-graph.json` from rolldown metrics. It can also use a Vite
+manifest at `dist/.vite/manifest.json`. It follows static imports only. The report
+stores separate results in `chunkDiscovery.fcp` and `chunkDiscovery.lcp`.
+Each result uses that paint's time as the download deadline. A candidate starts
+more than one configured RTT after its ancestor finishes. A download that finishes
+after FCP can appear only in the LCP result. Missing LCP does not discard FCP evidence.
+
+Each group includes filenames, bytes, and the number of affected runs. Its example
+keeps one run's timings, import chains, and available source modules and initiators.
+Groups and paint windows overlap. Do not add their bytes or delays.
+
+The report marks each candidate's `paintDependency` as `unverified`. Check the
+source to find whether the chunk renders the first visible content or the LCP
+element. If paint needs it, test an earlier preload or a different chunk boundary.
+If paint does not need it, test deferring its load and work. A discovery delay is
+not a predicted paint gain. Earlier downloads can compete with other required assets.
+
+The render-gap advice shows concurrent script, fetch/XHR, font, and image evidence.
+Check which requests rendering awaits before changing load order. Keep the LCP
+image request early. Compare these candidates with the CPU profile.
+
+`paintComparison` checks both FCP and LCP against the pinned baseline. A change
+must improve at least one metric beyond noise. Neither may regress beyond noise.
+The threshold for each metric is max(30ms, 2% of its baseline). Missing metrics
+leave the comparison unknown. Quick and early-stopped scans are probes. Use
+`scan --no-early-stop` for a keep/revert decision. Check the app's features before
+keeping a change. Check rendered output with `scan --parity` when the work is complete.
+
+The render-gap report also counts scripts that start after `load` and finish
+before FCP or LCP. The load event does not prove that downloads ended. Commands
+that resolve a page target print its path, including remembered targets.
+
+### Command list
+
 | Command                                                                          | One loop step                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `node harness.mjs scan --app <appDir>`                                           | **The whole iteration in one browser session**: N timed runs + coverage + boot profile + the fused verdict. First scan of a target auto-pins the baseline; `--pin` re-pins after a kept change; `--quick` = 1 run + no profile, a fast mid-iteration probe on slow apps (indicative only — never pinned, and the verdict flags single-run measurements). The target is remembered — afterwards run everything bare, from any cwd. Per-target state dirs keep baselines/history from mixing across apps.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
@@ -282,10 +323,11 @@ deferral **moved** into that route; the summary prints it next to the startup ga
 4. **Judge**: `measure --runs 5 --label "defer <name>"`, then read
    `state/runtime-metrics.json`:
    - **Guard must pass**: `guard.allFeaturesReady && guard.heroRendered &&
-guard.lcpObservedInAllRuns`, and `runtime.cls` must not grow by more than 0.02.
+guard.fcpObservedInAllRuns && guard.lcpObservedInAllRuns`, and `runtime.cls` must not grow by more than 0.02.
      A faster build that broke a feature is a revert, not a win.
-   - **Improvement must beat noise**: `baselineDelta["runtime.lcp_ms"].delta` ≤
-     −max(30ms, 2% of baseline). Judge by `baselineDelta`, not the chain `delta`.
+   - **Improvement must beat noise**: check `paintComparison` and `baselineDelta`.
+     FCP or LCP must improve by at least max(30ms, 2% of its baseline). Neither
+     metric may regress by that amount. Use a full scan with `--no-early-stop`.
 5. **Decide**:
    - Accept → `baseline` (re-pin: this is the new reference).
    - Revert → `undefer <name>` → `build`, and don't retry that candidate.

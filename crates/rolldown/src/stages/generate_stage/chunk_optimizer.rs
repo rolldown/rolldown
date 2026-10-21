@@ -811,17 +811,9 @@ impl GenerateStage<'_> {
       let ChunkKind::EntryPoint { meta, bit: _, module } = chunk.kind else {
         continue;
       };
-      let is_emitted_entry_chunk = if meta.contains(ChunkMeta::EmittedChunk) {
-        if matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::AllowExtension)) {
-          true
-        } else {
-          // If an emitted chunk has other `preserveEntrySignatures` values, we can't optimize it.
-          // The facade chunk needs to be preserved.
-          continue;
-        }
-      } else {
-        false
-      };
+      let is_emitted_entry_chunk = meta.contains(ChunkMeta::EmittedChunk);
+      let can_eliminate_emitted_entry = is_emitted_entry_chunk
+        && matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::AllowExtension));
       if !chunk.modules.is_empty() {
         continue;
       }
@@ -830,15 +822,24 @@ impl GenerateStage<'_> {
         continue;
       };
       let target_chunk = &chunk_graph.chunk_table[target_chunk_idx];
+      let is_target_manual_chunk = matches!(
+        target_chunk.chunk_reason_type.as_ref(),
+        ChunkReasonType::ManualCodeSplitting { .. }
+      );
 
-      if meta.intersects(ChunkMeta::UserDefinedEntry) {
+      if meta.intersects(ChunkMeta::UserDefinedEntry)
+        || (is_emitted_entry_chunk
+          && !self.options.is_strict_execution_order_enabled()
+          && !is_target_manual_chunk
+          && matches!(target_chunk.kind, ChunkKind::Common))
+      {
         if matches!(target_chunk.kind, ChunkKind::Common) {
           // Execution-isolation guard (issue #9463).
           //
           // Folding the common chunk *into* this user-defined entry chunk makes the
           // entry chunk eagerly run this entry's top-level (its `init_*` call)
-          // whenever the chunk is loaded. If the common chunk also holds *another*
-          // user-defined entry's module, that other entry would be forced to import
+          // whenever the chunk is loaded. If the common chunk also holds another
+          // incompatible entry's module, that other entry would be forced to import
           // this entry chunk just to reach its own module — and would then run this
           // entry's side effects. e.g. loading entry `b` would trigger entry `a`'s
           // side effects. This happens when manual code splitting (a `codeSplitting`
@@ -849,11 +850,15 @@ impl GenerateStage<'_> {
           // shared chunk and runs only its own `init_*`. A shared chunk that holds
           // just this entry's module (plus non-entry deps a sibling genuinely
           // depends on) is still folded in, preserving the #5726 facade-elimination.
-          let holds_other_user_entry = target_chunk.modules.iter().any(|&module_idx| {
+          let holds_other_entry = target_chunk.modules.iter().any(|&module_idx| {
             module_idx != module
-              && self.link_output.user_defined_entry_modules.contains(&module_idx)
+              && if is_emitted_entry_chunk {
+                self.link_output.entries.contains_key(&module_idx)
+              } else {
+                self.link_output.user_defined_entry_modules.contains(&module_idx)
+              }
           });
-          let can_merge = !holds_other_user_entry
+          let can_merge = !holds_other_entry
             && match chunk.preserve_entry_signature {
               Some(PreserveEntrySignatures::Strict) => {
                 self.can_merge_without_changing_entry_signature(chunk, &target_chunk.modules)
@@ -872,10 +877,12 @@ impl GenerateStage<'_> {
         continue;
       }
 
-      let is_target_manual_chunk = matches!(
-        target_chunk.chunk_reason_type.as_ref(),
-        ChunkReasonType::ManualCodeSplitting { .. }
-      );
+      // Emitted entries with stricter signatures may absorb a compatible common chunk above, but
+      // their facade must otherwise be preserved.
+      if is_emitted_entry_chunk && !can_eliminate_emitted_entry {
+        continue;
+      }
+
       let is_target_pure_user_entry_chunk = matches!(target_chunk.kind, ChunkKind::EntryPoint { meta, bit: _, module: _ } if meta.is_pure_user_defined_entry());
       let is_target_common_chunk = matches!(target_chunk.kind, ChunkKind::Common);
       // Five optimization scenarios (scenario 1 is handled above for user-defined entries):
@@ -889,7 +896,7 @@ impl GenerateStage<'_> {
       //    → Directly merge, the facade chunk can be removed
       // 5. Dynamic entry chunk merged into common chunk
       //    → Directly merge, the facade chunk can be removed
-      if is_target_manual_chunk && is_emitted_entry_chunk {
+      if is_target_manual_chunk && can_eliminate_emitted_entry {
         emitted_chunk_groups.entry(target_chunk_idx).or_default().push(from_chunk_idx);
       } else if !is_emitted_entry_chunk {
         // Check if merging would create a circular dependency.

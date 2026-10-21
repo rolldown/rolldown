@@ -146,7 +146,12 @@ pub fn to_module_import_export_name_with_ascii(name: &str, ascii_only: bool) -> 
 pub fn escape_line_terminators(text: String) -> String {
   use oxc::syntax::line_terminator::{CR, LF, LS, PS};
 
-  if !text.contains([LF, CR, LS, PS]) {
+  // LS and PS are `E2 80 A8` and `E2 80 A9` in UTF-8. A byte scan for `0xE2` is much faster
+  // than a char scan, and it finds both.
+  let bytes = text.as_bytes();
+  let has_line_terminator = memchr::memchr3_iter(b'\n', b'\r', 0xE2, bytes)
+    .any(|i| bytes[i] != 0xE2 || matches!(bytes.get(i + 1..i + 3), Some([0x80, 0xA8 | 0xA9])));
+  if !has_line_terminator {
     return text;
   }
   let mut escaped = String::with_capacity(text.len() + 8);
@@ -215,6 +220,7 @@ fn test_to_usv_str() {
 #[test]
 fn test_escape_line_terminators() {
   assert_eq!(escape_line_terminators("src/main.js".to_string()), "src/main.js");
+  assert_eq!(escape_line_terminators("a\u{2014}b\u{2026}".to_string()), "a\u{2014}b\u{2026}");
   assert_eq!(
     escape_line_terminators("a\nb\rc\u{2028}d\u{2029}e".to_string()),
     "a\\nb\\rc\\u2028d\\u2029e"

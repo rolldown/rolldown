@@ -93,9 +93,6 @@ impl NativePluginContextImpl {
       .ok_or_else(|| anyhow::anyhow!("Plugin driver is already dropped."))?;
 
     let normalized_extra_options = extra_options.unwrap_or_default();
-    // If this plugin is already being skipped for the same specifier and importer, it called
-    // itself recursively. Return "not found" so the caller falls back to the default behavior.
-    // This mirrors `resolveIdViaPlugins` in Rollup.
     if normalized_extra_options.skip_self
       && self.skipped_resolve_calls.iter().any(|call| {
         call.plugin_idx == self.plugin_idx
@@ -103,6 +100,7 @@ impl NativePluginContextImpl {
           && call.importer.as_deref() == importer
       })
     {
+      // This means that the plugin recursively called itself
       return Ok(Err(ResolveError::NotFound(specifier.to_string())));
     }
 

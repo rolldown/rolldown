@@ -10,13 +10,7 @@ impl Locator {
     let mut line_start_pos: u32 = 0;
     for line in source.split('\n') {
       line_offsets.push(line_start_pos);
-      // Fast path: ASCII lines have 1:1 byte-to-UTF-16 mapping
-      let utf16_len = if line.is_ascii() {
-        line.len() as u32
-      } else {
-        line.chars().map(|c| c.len_utf16() as u32).sum::<u32>()
-      };
-      line_start_pos += 1 + utf16_len;
+      line_start_pos += 1 + simd_utf16_len::utf16_len(line) as u32;
     }
     Self { line_offsets: line_offsets.into_boxed_slice() }
   }

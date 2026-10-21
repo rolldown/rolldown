@@ -341,14 +341,9 @@ fn normalize_invalidate_js_side_cache_option(
 fn normalize_on_log_option(on_log: BindingOnLog) -> Option<rolldown::OnLog> {
   on_log.map(|ts_fn| {
     rolldown::OnLog::new(Arc::new(move |level, log| {
-      let ts_fn = Arc::clone(&ts_fn);
-      Box::pin(async move {
-        ts_fn
-          .invoke_async((level.to_string(), log.into()).into())
-          .await
-          .context("onLog option")
-          .map_err(anyhow::Error::from)
-      })
+      // Enqueued at call time, so a log reaches `onLog` before the build settles.
+      let result = ts_fn.invoke_eager((level.to_string(), log.into()).into());
+      Box::pin(async move { result.await.context("onLog option").map_err(anyhow::Error::from) })
     }))
   })
 }

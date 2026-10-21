@@ -15,6 +15,7 @@ use rolldown_common::{
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::HookAddonArgs;
 use rolldown_sourcemap::Source;
+use rolldown_utils::ecmascript::escape_line_terminators;
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
@@ -295,8 +296,15 @@ impl Generator for EcmaGenerator {
     };
 
     if ctx.options.experimental.is_attach_debug_info_full() && !ctx.chunk.debug_info.is_empty() {
-      let debug_info_str =
-        ctx.chunk.debug_info.iter().map(ToString::to_string).collect::<Vec<_>>().join("\n//! ");
+      // Module ids and chunk names can hold line terminators. Escape them, so that each item
+      // stays on its own `//!` line.
+      let debug_info_str = ctx
+        .chunk
+        .debug_info
+        .iter()
+        .map(|info| escape_line_terminators(info.to_string()))
+        .collect::<Vec<_>>()
+        .join("\n//! ");
       source_joiner.prepend_source(format!("//! {debug_info_str}"));
     }
 

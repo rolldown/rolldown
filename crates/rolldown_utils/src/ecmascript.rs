@@ -141,6 +141,27 @@ pub fn to_module_import_export_name_with_ascii(name: &str, ascii_only: bool) -> 
   }
 }
 
+/// Escapes the JS line terminators in `text`. A raw one ends a `//` comment, and the rest of
+/// `text` becomes code.
+pub fn escape_line_terminators(text: String) -> String {
+  use oxc::syntax::line_terminator::{CR, LF, LS, PS};
+
+  if !text.contains([LF, CR, LS, PS]) {
+    return text;
+  }
+  let mut escaped = String::with_capacity(text.len() + 8);
+  for char in text.chars() {
+    match char {
+      LF => escaped.push_str("\\n"),
+      CR => escaped.push_str("\\r"),
+      LS => escaped.push_str("\\u2028"),
+      PS => escaped.push_str("\\u2029"),
+      _ => escaped.push(char),
+    }
+  }
+  escaped
+}
+
 #[test]
 fn test_is_validate_identifier_name() {
   assert!(is_validate_identifier_name("foo"));
@@ -189,6 +210,15 @@ fn test_to_usv_str() {
   // A lone surrogate becomes U+FFFD, and a pair stays one code point.
   assert_eq!(to_usv_str(lit.value), "a\u{FFFD}b\u{10000}");
   assert!(matches!(to_usv_str(JSStr::from("plain")), Cow::Borrowed("plain")));
+}
+
+#[test]
+fn test_escape_line_terminators() {
+  assert_eq!(escape_line_terminators("src/main.js".to_string()), "src/main.js");
+  assert_eq!(
+    escape_line_terminators("a\nb\rc\u{2028}d\u{2029}e".to_string()),
+    "a\\nb\\rc\\u2028d\\u2029e"
+  );
 }
 
 pub fn is_relative_specifier(specifier: &str) -> bool {

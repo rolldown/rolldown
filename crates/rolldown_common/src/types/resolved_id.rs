@@ -1,7 +1,10 @@
 use std::{path::Path, sync::Arc};
 
 use arcstr::ArcStr;
-use rolldown_utils::{dataurl::is_data_url, stabilize_id::stabilize_id};
+use rolldown_utils::{
+  concat_string, dataurl::is_data_url, ecmascript::escape_line_terminators,
+  stabilize_id::stabilize_id,
+};
 
 use super::module_id::ModuleId;
 use crate::{ModuleDefFormat, PackageJson, side_effects::HookSideEffects};
@@ -64,16 +67,16 @@ impl ResolvedId {
   /// Created a pretty string representation of the path. The path
   /// 1. doesn't guarantee to be unique
   /// 2. relative to the cwd, so it could show stable path across different machines
+  /// 3. has its line terminators escaped, so it can go in a `//` comment
   pub fn debug_id(&self, cwd: impl AsRef<Path>) -> String {
-    if is_data_url(&self.id) {
-      return format!("<{}>", self.id.as_str());
-    }
-
-    if let Some(original) = self.id.strip_empty_prefix() {
-      return format!("(ignored) {}", stabilize_id(original, cwd.as_ref()));
-    }
-
-    stabilize_id(&self.id, cwd.as_ref())
+    let debug_id = if is_data_url(&self.id) {
+      concat_string!("<", self.id.as_str(), ">")
+    } else if let Some(original) = self.id.strip_empty_prefix() {
+      concat_string!("(ignored) ", stabilize_id(original, cwd.as_ref()))
+    } else {
+      stabilize_id(&self.id, cwd.as_ref())
+    };
+    escape_line_terminators(debug_id)
   }
 
   pub fn new_external_without_side_effects(id: ArcStr) -> Self {

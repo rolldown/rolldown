@@ -1,0 +1,50 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## hook.js
+
+```js
+// hook.js
+function hook() {
+	return 1;
+}
+export { hook };
+
+```
+
+## other.js
+
+```js
+import { memo } from "dep";
+// other.js
+const other = () => memo();
+export { other };
+
+```
+
+# Variant: [preserve_modules: true]
+
+## Assets
+
+### hook.js
+
+```js
+// hook.js
+function hook() {
+	return 1;
+}
+export { hook };
+
+```
+
+### other.js
+
+```js
+import { memo } from "dep";
+// other.js
+const other = () => memo();
+export { other };
+
+```

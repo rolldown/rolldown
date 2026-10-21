@@ -517,13 +517,20 @@ where
   let ascii_only = ctx.options.charset.is_ascii();
   let mut default_alias = vec![];
   let specifiers = named_imports
-    .filter_map(|(_importer, named_import)| {
+    .filter_map(|(importer, named_import)| {
       let canonical_ref = ctx.link_output.symbol_db.canonical_ref_for(named_import.imported_as);
       // A named import that is itself re-exported skips the external binding merger
       // (`bind_imports_and_exports`), so its canonical ref stays importer-local; its usage
       // is still answered by `used_symbol_refs` until exports get their own tracking.
       let is_used = if ctx.link_output.module_table[canonical_ref.owner].is_external() {
+        // The binding is shared by every importer of the external module, so it can be used by
+        // another chunk while this chunk dropped all of its references. A direct `eval` in the
+        // importer can still reach the binding without referencing it.
         ctx.link_output.used_external_symbols.contains(&canonical_ref)
+          && (ctx.chunk.depended_external_symbols.contains(&canonical_ref)
+            || ctx.link_output.module_table[*importer]
+              .as_normal()
+              .is_some_and(|module| module.meta.has_eval()))
       } else {
         ctx.used_symbol_refs.contains(&canonical_ref)
       };

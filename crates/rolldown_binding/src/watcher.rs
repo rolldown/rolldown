@@ -9,7 +9,7 @@ use napi::{
 };
 use napi_derive::napi;
 use rolldown_common::WatcherChangeKind;
-use rolldown_watcher::{WatchEvent, WatcherConfig, WatcherEventHandler};
+use rolldown_watcher::{WatchEvent, WatcherConfig, WatcherEventHandler, WatcherStartError};
 
 use crate::types::binding_bundler_options::BindingBundlerOptions;
 use crate::types::binding_watcher_event::BindingWatcherEvent;
@@ -18,6 +18,10 @@ use crate::utils::{
   create_bundler_config_from_binding_options::create_bundler_config_from_binding_options,
   spawn_boxed_future,
 };
+
+fn watcher_start_error_to_napi(error: WatcherStartError) -> napi::Error {
+  napi::Error::from_reason(error.to_string())
+}
 
 /// Bridges watcher events from Rust to JS via a `ThreadsafeFunction`.
 struct NapiWatcherEventHandler {
@@ -100,11 +104,13 @@ impl BindingWatcher {
   #[tracing::instrument(level = "debug", skip_all)]
   #[napi(ts_return_type = "Promise<void>")]
   pub fn run<'env>(&self, env: &'env Env) -> napi::Result<PromiseRaw<'env, ()>> {
-    let inner = Arc::clone(&self.inner);
-    spawn_boxed_future(env, async move {
-      inner.run();
-      Ok(())
-    })
+    // Submit before entering an N-API future: a stopped runtime still returns a rejected
+    // Promise (`WatcherStartError`). The refused coordinator is dropped, so a later `run()`
+    // starts nothing.
+    match self.inner.run().map_err(watcher_start_error_to_napi) {
+      Ok(()) => PromiseRaw::resolve(env, ()),
+      Err(error) => PromiseRaw::reject(env, error),
+    }
   }
 
   /// Gives consumers a reliable way to await the watcher's completion.

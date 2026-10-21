@@ -7,10 +7,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { createRequire } from "node:module";
-//#region a.js
+// a.js
 const req = createRequire(import.meta.url);
 const x = () => req.resolve("foo");
-//#endregion
 export { x };
 
 ```
@@ -20,12 +19,10 @@ export { x };
 ```js
 import { createRequire } from "node:module";
 // HIDDEN [\0rolldown/runtime.js]
-//#region c.js
+// c.js
 var c_exports = /* @__PURE__ */ __exportAll({ y: () => 1 });
-//#endregion
-//#region b.js
+// b.js
 const load = () => __require("node:fs");
-//#endregion
 export { load, c_exports as ns };
 
 ```
@@ -47,10 +44,9 @@ export { __exportAll, __require };
 
 ```js
 import { createRequire } from "node:module";
-//#region a.js
+// a.js
 const req = createRequire(import.meta.url);
 const x = () => req.resolve("foo");
-//#endregion
 export { x };
 
 ```
@@ -60,9 +56,8 @@ export { x };
 ```js
 import { __require } from "./_virtual/_rolldown/runtime.js";
 import { c_exports } from "./c.js";
-//#region b.js
+// b.js
 const load = () => __require("node:fs");
-//#endregion
 export { load, c_exports as ns };
 
 ```
@@ -71,9 +66,8 @@ export { load, c_exports as ns };
 
 ```js
 import { __exportAll } from "./_virtual/_rolldown/runtime.js";
-//#region c.js
+// c.js
 var c_exports = /* @__PURE__ */ __exportAll({ y: () => 1 });
-//#endregion
 export { c_exports };
 
 ```

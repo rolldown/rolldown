@@ -181,6 +181,19 @@ impl ClassicBundler {
         tracing::debug_span!("session", CONTEXT_session_id = self.session_id.as_ref());
       // Update the `session` with the actual session span
       self.session = rolldown_devtools::Session::new(Arc::clone(&self.session_id), session_span);
+
+      // Metrics mode: aggregate the event stream in-memory and emit an agent-readable report
+      // instead of the JSON-lines log. Registered before the build emits any events.
+      if let Some(devtools) = &options.devtools {
+        if devtools.mode.as_deref() == Some("metrics") {
+          let config = rolldown_devtools::MetricsConfig::new(
+            devtools.metrics_dir.clone(),
+            devtools.metrics_top_n.and_then(|n| usize::try_from(n).ok()),
+            devtools.metrics_delta,
+          );
+          rolldown_devtools::open_metrics_session(self.session_id.as_ref().to_string(), config);
+        }
+      }
     }
     Ok(())
   }
@@ -250,6 +263,7 @@ mod tests {
     let requested_options = BundlerOptions {
       devtools: Some(rolldown::DevtoolsOptions {
         session_id: Some("requested-session".to_string()),
+        ..Default::default()
       }),
       ..Default::default()
     };
@@ -259,7 +273,10 @@ mod tests {
 
   fn options_with_session_id(session_id: &str) -> BundlerOptions {
     BundlerOptions {
-      devtools: Some(rolldown::DevtoolsOptions { session_id: Some(session_id.to_string()) }),
+      devtools: Some(rolldown::DevtoolsOptions {
+        session_id: Some(session_id.to_string()),
+        ..Default::default()
+      }),
       ..Default::default()
     }
   }

@@ -3067,6 +3067,8 @@ export interface BindingViteResolvePluginConfig {
 
 export interface BindingViteResolvePluginResolveOptions {
   isBuild: boolean
+  /** Defaults to `isBuild`. */
+  isBundled?: boolean
   isProduction: boolean
   asSrc: boolean
   preferRelative: boolean

@@ -92,6 +92,8 @@ pub type OnLogCallback =
 #[derive(Debug)]
 pub struct ViteResolveResolveOptions {
   pub is_build: bool,
+  /// Rolldown bundles this environment's output: true in build and in bundled dev.
+  pub is_bundled: bool,
   pub is_production: bool,
   pub as_src: bool,
   pub prefer_relative: bool,
@@ -585,9 +587,9 @@ impl Plugin for ViteResolvePlugin {
       // that throws on property access.
       let is_browser_field_false = id_without_prefix.is_empty();
 
-      if self.resolve_options.is_build {
+      if self.resolve_options.is_bundled {
         if self.resolve_options.is_production || is_browser_field_false {
-          // rolldown treats missing export as an error, and will break build.
+          // rolldown treats missing export as an error, and will break the bundle.
           // So use cjs to avoid it.
           return Ok(Some(HookLoadOutput {
             code: arcstr::literal!("module.exports = {}"),
@@ -601,7 +603,7 @@ impl Plugin for ViteResolvePlugin {
           }));
         }
       } else if self.resolve_options.is_production || is_browser_field_false {
-        // in dev, needs to return esm
+        // unbundled dev serves this module as is, so it needs to be esm
         return Ok(Some(HookLoadOutput {
           code: arcstr::literal!("export default {}"),
           ..Default::default()

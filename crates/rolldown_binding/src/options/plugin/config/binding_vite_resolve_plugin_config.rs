@@ -164,6 +164,8 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
 #[expect(clippy::struct_excessive_bools)]
 pub struct BindingViteResolvePluginResolveOptions {
   pub is_build: bool,
+  /// Defaults to `isBuild`.
+  pub is_bundled: Option<bool>,
   pub is_production: bool,
   pub as_src: bool,
   pub prefer_relative: bool,
@@ -185,6 +187,7 @@ impl From<BindingViteResolvePluginResolveOptions> for ViteResolveResolveOptions 
   fn from(value: BindingViteResolvePluginResolveOptions) -> Self {
     Self {
       is_build: value.is_build,
+      is_bundled: value.is_bundled.unwrap_or(value.is_build),
       is_production: value.is_production,
       as_src: value.as_src,
       prefer_relative: value.prefer_relative,

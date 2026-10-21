@@ -27,22 +27,29 @@ type CallableResolveIdHook = (
 
 function createViteResolvePlugin({
   isBuild = false,
+  isBundled,
+  environmentConsumer = 'server',
   builtins = [],
   convertExternalRequire = false,
   external = true,
+  noExternal = true,
   root = import.meta.dirname,
   onWarn,
 }: {
   isBuild?: boolean;
+  isBundled?: boolean;
+  environmentConsumer?: 'client' | 'server';
   builtins?: Array<string | RegExp>;
   convertExternalRequire?: boolean;
   external?: true | string[];
+  noExternal?: true | string[];
   root?: string;
   onWarn?: (message: string) => void;
 } = {}) {
   return viteResolvePlugin({
     resolveOptions: {
       isBuild,
+      isBundled,
       isProduction: false,
       asSrc: false,
       preferRelative: false,
@@ -56,12 +63,12 @@ function createViteResolvePlugin({
       preserveSymlinks: false,
       tsconfigPaths: false,
     },
-    environmentConsumer: 'server',
-    environmentName: 'ssr',
+    environmentConsumer,
+    environmentName: environmentConsumer === 'client' ? 'client' : 'ssr',
     convertExternalRequire,
     builtins,
     external,
-    noExternal: true,
+    noExternal,
     dedupe: [],
     legacyInconsistentCjsInterop: false,
     resolveSubpathImports: () => undefined,
@@ -119,6 +126,33 @@ async function bundleNodeBuiltinRequire({
   const { output } = await bundle.generate({ format: 'esm' });
   const chunk = output.find((item) => item.type === 'chunk');
   return { code: chunk!.code, warnings };
+}
+
+async function bundleNodeBuiltinNamedImport(options: { isBuild: boolean; isBundled?: boolean }) {
+  const entryPlugin: Plugin = {
+    name: 'entry',
+    resolveId(id) {
+      if (id === 'entry') return id;
+    },
+    load(id) {
+      if (id === 'entry') {
+        return `import { readFileSync } from 'node:fs'; export const read = () => readFileSync;`;
+      }
+    },
+  };
+  const bundle = await rolldown({
+    input: 'entry',
+    platform: 'browser',
+    plugins: [
+      entryPlugin,
+      createViteResolvePlugin({ ...options, environmentConsumer: 'client', noExternal: [] }),
+    ],
+  });
+  const { output } = await bundle.generate({ format: 'esm' });
+  const { read }: { read: () => unknown } = await import(
+    `data:text/javascript,${encodeURIComponent(output[0].code)}`
+  );
+  return read;
 }
 
 test('resolveId forwards `options.kind` to the native resolver', async () => {
@@ -221,4 +255,16 @@ test('keeps Node builtin require calls for node builds', async () => {
     builtins: ['node:util'],
   });
   expect(code).toContain('__require("node:util")');
+});
+
+test('a bundled dev environment allows named imports from the Node builtin stub', async () => {
+  const read = await bundleNodeBuiltinNamedImport({ isBuild: false, isBundled: true });
+  expect(read).toThrow('Cannot access "node:fs.readFileSync" in client code');
+});
+
+test('`isBundled` defaults to `isBuild`', async () => {
+  const read = await bundleNodeBuiltinNamedImport({ isBuild: true });
+  expect(read).toThrow('Cannot access "node:fs.readFileSync" in client code');
+
+  await expect(bundleNodeBuiltinNamedImport({ isBuild: false })).rejects.toThrow('MISSING_EXPORT');
 });

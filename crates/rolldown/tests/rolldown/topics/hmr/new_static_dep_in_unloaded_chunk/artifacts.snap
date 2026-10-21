@@ -38,7 +38,8 @@ __rolldown_runtime__.registerGraph({
 		[],
 		[0, 1]
 	],
-	dynamicEdges: { 1: [3] }
+	dynamicEdges: { 1: [3] },
+	entries: [2]
 });
 // hmr.js
 var hmr_exports = /* @__PURE__ */ __exportAll({ value: () => "v1" });

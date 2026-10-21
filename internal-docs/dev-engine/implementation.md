@@ -836,6 +836,11 @@ left out when no row qualifies. The runtime keeps the names in
 reason: few modules call `import()`. A missing row means no dynamic edges.
 `edges` stays a dense array, because most modules import something and an
 empty row (`[]`) is shorter than a row key.
+`entries` lists the rows whose module is a user-defined entry
+(`user_defined_entry_modules`: configured entries and `emitFile` chunks;
+not dynamic-import or lazy entries), for example `entries:[3]`. It is left
+out when no row is an entry, and a row that is sent but not listed is not
+an entry. The runtime exposes it through `isEntry`.
 
 Known gaps in this walk, kept on purpose for now:
 

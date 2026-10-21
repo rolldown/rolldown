@@ -26,7 +26,8 @@ __rolldown_runtime__.registerGraph({
 			0
 		],
 		[3]
-	]
+	],
+	entries: [4]
 });
 // common.js
 var common_exports = /* @__PURE__ */ __exportAll({ prefix: () => prefix });

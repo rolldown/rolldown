@@ -48,7 +48,8 @@ __rolldown_runtime__.registerGraph({
 			4,
 			5
 		]
-	]
+	],
+	entries: [6]
 });
 // self_accept.js
 var self_accept_exports = /* @__PURE__ */ __exportAll({ foo: () => "foo" });

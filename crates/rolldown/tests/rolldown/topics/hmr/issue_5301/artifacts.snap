@@ -33,7 +33,8 @@ import "./foo.js";
 __rolldown_runtime__.registerGraph({
 	ids: ["main.js", "foo.js"],
 	localCount: 1,
-	edges: [[1]]
+	edges: [[1]],
+	entries: [0]
 });
 // main.js
 var main_exports = /* @__PURE__ */ __exportAll({});

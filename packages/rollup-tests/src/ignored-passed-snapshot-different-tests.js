@@ -93,6 +93,7 @@ module.exports = [
     "rollup@hooks@caches asset emission in transform hook",
     "rollup@form@comment-before-import: preserves comments before imports@generates es",
     "rollup@form@paths-function: external paths (#754)@generates es",
+    "rollup@form@export-globals: Supports reexports of globals with namespace access@generates es",
     // Passed. convert reexport to import and export
     "rollup@form@reexport-external-default-and-name: reexports a an external default as a name and imports another name from that dependency@generates es",
     "rollup@form@reexport-external-default-and-namespace: reexports a default external import as default export (when using named exports)@generates es",
@@ -128,6 +129,8 @@ module.exports = [
     "rollup@form@pure-comment-scenarios-complex: correctly handles various advanced pure comment scenarios",
     "rollup@form@non-empty-block-statement: do not remove non an empty block statement@generates es", // https://github.com/rolldown/rolldown/pull/3541#issuecomment-2649731213
     "rollup@form@try-statement-deoptimization@reassigned-helper-without-try-nesting: does not take exponential time to include nested callbacks of reassigned helpers without try statements (#6564)",
+    "rollup@form@preserves-comments-after-imports: preserves comments between imports and first statement@generates es",
+    "rollup@form@reexport-self: handles recursions when a module reexports its own namespace",
     // Passed. different code due to better optimization
     "rollup@form@nested-pure-comments: correctly associates pure comments before sequence expressions etc.",
     "rollup@form@unary-expressions-preserve-constants: Preserves constant identifiers in unary expressions when constants are used elsewhere",

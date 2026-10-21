@@ -28,7 +28,8 @@ __rolldown_runtime__.registerGraph({
 		[],
 		[0],
 		[1]
-	]
+	],
+	entries: [2]
 });
 // esm.js
 var esm_exports = /* @__PURE__ */ __exportAll({ default: () => esm_default }), esm_default;

@@ -10,7 +10,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 __rolldown_runtime__.registerGraph({
 	ids: ["hmr.js", "main.js"],
 	localCount: 2,
-	edges: [[], [0]]
+	edges: [[], [0]],
+	entries: [1]
 });
 // hmr.js
 var hmr_exports = /* @__PURE__ */ __exportAll({

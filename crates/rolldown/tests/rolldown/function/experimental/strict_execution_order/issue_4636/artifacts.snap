@@ -11,7 +11,8 @@ import nodeAssert from "node:assert";
 __rolldown_runtime__.registerGraph({
 	ids: ["foo.cjs", "main.js"],
 	localCount: 2,
-	edges: [[], [0]]
+	edges: [[], [0]],
+	entries: [1]
 });
 // foo.cjs
 var require_foo = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -40,7 +41,8 @@ import nodeAssert from "node:assert";
 __rolldown_runtime__.registerGraph({
 	ids: ["foo.cjs", "main.js"],
 	localCount: 2,
-	edges: [[], [0]]
+	edges: [[], [0]],
+	entries: [1]
 });
 // foo.cjs
 var require_foo = /* @__PURE__ */ __commonJSMin(((exports, module) => {

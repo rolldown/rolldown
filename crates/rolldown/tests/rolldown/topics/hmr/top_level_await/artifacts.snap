@@ -29,7 +29,8 @@ __rolldown_runtime__.registerGraph({
 	ids: ["main.js", "app.js"],
 	localCount: 1,
 	edges: [[]],
-	dynamicEdges: { 0: [1] }
+	dynamicEdges: { 0: [1] },
+	entries: [0]
 });
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js");

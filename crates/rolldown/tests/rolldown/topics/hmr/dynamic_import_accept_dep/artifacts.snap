@@ -33,7 +33,8 @@ __rolldown_runtime__.registerGraph({
 	],
 	localCount: 2,
 	edges: [[], [0]],
-	dynamicEdges: { 0: [2] }
+	dynamicEdges: { 0: [2] },
+	entries: [1]
 });
 // app.js
 var app_exports = /* @__PURE__ */ __exportAll({});

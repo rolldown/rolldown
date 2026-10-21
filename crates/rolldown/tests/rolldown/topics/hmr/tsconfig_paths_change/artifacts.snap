@@ -10,7 +10,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 __rolldown_runtime__.registerGraph({
 	ids: ["a.ts", "main.ts"],
 	localCount: 2,
-	edges: [[], [0]]
+	edges: [[], [0]],
+	entries: [1]
 });
 // a.ts
 var a_exports = /* @__PURE__ */ __exportAll({ value: () => value });
@@ -44,7 +45,8 @@ export { result };
 __rolldown_runtime__.registerGraph({
 	ids: ["b.ts", "main.ts"],
 	localCount: 2,
-	edges: [[], [0]]
+	edges: [[], [0]],
+	entries: [1]
 });
 // b.ts
 var b_exports = /* @__PURE__ */ __exportAll({ value: () => value });

@@ -35,7 +35,8 @@ __rolldown_runtime__.registerGraph({
 		[],
 		[0],
 		[1]
-	]
+	],
+	entries: [2]
 });
 // child.js
 var child_exports = /* @__PURE__ */ __exportAll({ foo: () => 0 });

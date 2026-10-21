@@ -25,6 +25,7 @@ pub struct BindingViteResolvePluginConfig {
   pub tsconfig: Option<String>,
   pub environment_consumer: String,
   pub environment_name: String,
+  pub convert_external_require: Option<bool>,
   pub builtins: Vec<BindingStringOrRegex>,
   #[napi(ts_type = "true | string[]")]
   pub external: napi::Either<BindingTrueValue, Vec<String>>,
@@ -75,6 +76,7 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
       tsconfig: value.tsconfig,
       environment_consumer: value.environment_consumer,
       environment_name: value.environment_name,
+      convert_external_require: value.convert_external_require.unwrap_or_default(),
       builtins: bindingify_string_or_regex_array(value.builtins),
       external,
       no_external,

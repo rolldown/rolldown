@@ -38,6 +38,8 @@ extend-ignore-re = [
 [default.extend-words]
 splitted = "splitted"
 styl = "styl"
+# the PNG scanline filter (after Alan W. Paeth), decoded by packages/metrics-lab
+paeth = "paeth"
 
 [default.extend-identifiers]
 IIFEs = "IIFEs"

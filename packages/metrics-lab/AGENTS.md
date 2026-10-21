@@ -105,6 +105,53 @@ on the worker). The loop below is unchanged, with these differences:
   the tool.** A 5xx on the first requests usually means the app needs its `.dev.vars`; startup
   is unaffected, the first-request numbers are not valid until it has them.
 
+## If the lab and production disagree
+
+`field --config <file>` measures the DEPLOYED site in the user's own logged-in Chrome
+(README.md, "Field mode"). It does not replace the loop above; it checks where the lab
+cannot see:
+
+- **Read the critical path first.** When `after gate` is small and `gate ttfb` is most
+  of the LCP, the page waits on the server; only `gate start` (client time before the
+  request the LCP waits for) can move with a bundle change. Optimize what delays that
+  request, not what renders after it.
+- **Judge by the paired deltas and their 90% intervals,** never by one load or by a
+  median of unpaired runs. An interval that crosses 0 is "no measured difference".
+- **Compare `gate - doc`, not only `gate start`,** when the variants come from different
+  servers (a preview worker can answer the HTML hundreds of ms slower than production).
+- **Module rows need a build match.** Read `buildMatch` before quoting a module; with no
+  match only the chunk-level rows are evidence.
+- Field output contains real account traffic. Keep it where the tool writes it; never
+  copy it into a repo, a ticket or a merge request.
+
+`record` + `replay` give field-like numbers for a build that is NOT deployed (README.md,
+"Replay"):
+
+- **Calibrate before any A/B.** `replay --calibrate` on the recorded build must PASS.
+  A FAIL means the model misses something real; find it in `timing.json` (the field
+  waterfalls) before you quote a replay delta.
+- **Read the unrecorded requests.** A page request that the recording never saw gets a
+  404; a candidate that adds an API call is then not measured as it would run.
+- **Record again when the network changes.** Chrome's network rating decides which
+  requests wait; an archive from a fast network says nothing about a slow one.
+- The archive holds real responses. It stays in `$TMPDIR`; never copy it anywhere.
+- **Two agents: hand over the archive path only.** The recording agent runs
+  `node replay.mjs record ... --json` and passes the `archive` path. The replaying
+  agent runs `node replay.mjs inspect --archive <dir> --json` first, then
+  `replay ... --calibrate --json --exit-code`. Exit 2 or `usable: false` means record
+  again; do not edit `archive.json` by hand.
+- **Act on the calibration verdict, not on PASS/FAIL alone.** `record-again` (exit 3,
+  `gaps` not empty): record again with a longer `--settle`, at most twice.
+  `model-error` (exit 1): the archive is complete; do NOT record again, report the rows
+  that are off. Recording again cannot fix a model error.
+- **Keep `--storage warm` for a page that caches data in storage.** The field profile
+  has visited the page before; an empty context measures a first visit instead.
+- **Find leads in the field runs, decide with a replay A/B.** `inspect` →
+  `lateChunksBeforeLcp` lists static chunks that started more than one recorded RTT
+  after a static ancestor finished, in the real field runs. Check in the source whether
+  paint needs them before you change a chunk boundary or a preload. Never quote a
+  discovery delay as a gain.
+
 ## The rendered output must not change
 
 The first scan of a target saves the build as the ORIGINAL — run it before you touch
@@ -154,7 +201,10 @@ automatically; a shared chunk or stylesheet you change for `/` can break another
      more than one RTT after an ancestor finishes. The download must finish before
      that paint. The check uses `chunk-graph.json` or the current Vite manifest.
      Each example includes an import chain, request timings, and the available
-     source module and initiator. Follow these to the source. Check whether the
+     source module and initiator. Request details also record Chrome's initial
+     priority and priority changes. Check them when testing preload priorities.
+     Repeated URLs and redirects omit ambiguous network evidence.
+     Follow the available source locations to the source. Check whether the
      chunk renders the first visible content or the LCP element. The report marks
      this dependency `unverified`; timing alone cannot prove it. If paint needs
      the chunk, test an earlier preload or a different chunk boundary. If paint
@@ -170,8 +220,16 @@ automatically; a shared chunk or stylesheet you change for `/` can break another
      animation or fade-in wrapper that starts the hero at opacity 0 delays LCP
      until the reveal — LCP counts the first frame the element paints VISIBLE.
      Render the hero visible immediately and animate only decoration.
-   - **pre-paint CPU by module** — warm-up caches, telemetry, data-module
-     evaluation running ahead of paint. Defer what the first render does not need —
+   - **pre-paint CPU by module** — the profile maps all sampled same-origin
+     chunks through their sourcemaps, including dynamic imports. Inspect source
+     rows and their chunk filenames in `profile.json`. Missing maps, unmapped
+     positions, inline scripts, external scripts and mixed top-level lines
+     (`top-level`) stay unattributed. Do not
+     classify a generated filename as engine work. Old entry-only profiles must
+     be collected again. The profile stops at FCP observation; its polling tail
+     can include post-paint work. It does not cover the FCP-to-LCP interval.
+     Sampled time does not prove that work blocks paint or can be deferred.
+     Check warm-up caches, telemetry, and data-module evaluation. Defer what the first render does not need —
      but only judge deferrals AFTER any render gap is fixed (CPU that overlaps a
      blocked render is free, so deferring it can measure worse until then).
    - **cold bytes at paint** — the unified byte view: weight fetched+parsed before
@@ -196,7 +254,9 @@ automatically; a shared chunk or stylesheet you change for `/` can break another
      behind a dynamic import.
    - **sibling variant groups** — locales/themes/config families where one variant is
      active per session: keep the default in the entry, load the active one dynamically.
-   - **statically retained imports** (rolldown builds only) — the module graph's
+   - **statically retained imports** (rolldown builds only) — this view starts
+     at build entries. It does not price dynamic imports that startup immediately
+     executes. Check coverage and CPU evidence for those imports. The module graph's
      dominator view: any non-framework module retaining ≥100KB on the initial load
      is a priced split candidate; `what-if` shows the exact cut, `cut` the fewest
      import edits when several paths reach it, and `what-if <a> <b>` the combined

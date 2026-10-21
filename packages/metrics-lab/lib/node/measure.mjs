@@ -15,7 +15,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { median, quantile } from '../measure.mjs';
 import { coverageBySource } from '../coverage.mjs';
@@ -244,15 +244,13 @@ export async function startupProfile(runOpts, { intervalUs = 200 } = {}) {
  */
 export function splitProfileOwnership(rows, appSources) {
   const app = new Set(appSources.map((s) => String(s).replaceAll('\\', '/')));
-  // A bucket that names a source path came through some chunk's sourcemap, so it is app
-  // code even when the entry chunk's own sourcemap does not list it (multi-chunk builds).
-  const looksLikeSource = (bucket) =>
-    bucket.includes('/') && !/^[a-z-]+:/.test(bucket) && !bucket.startsWith('(');
   let appMs = 0;
   let engineMs = 0;
   let runtimeMs = 0;
   for (const row of rows) {
-    if (app.has(row.bucket) || looksLikeSource(row.bucket)) appMs += row.ms;
+    // A `source` row came through some chunk's sourcemap, so it is app code even when the
+    // entry chunk's own sourcemap does not list it (multi-chunk builds).
+    if (app.has(row.bucket) || row.kind === 'source') appMs += row.ms;
     else if (row.bucket.startsWith('(engine')) engineMs += row.ms;
     else runtimeMs += row.ms;
   }
@@ -261,16 +259,30 @@ export function splitProfileOwnership(rows, appSources) {
     appMs: round1(appMs),
     engineMs: round1(engineMs),
     runtimeMs: round1(runtimeMs),
-    // The three parts always sum to this. `aggregateProfile` drops sub-0.5ms buckets,
-    // so its `totalMs` is slightly larger — reporting that as the headline next to a
-    // split derived from the kept rows makes the numbers look like they fail to add up.
+    // The three parts always sum to this. `aggregateProfile` rounds each row, so its
+    // `totalMs` can differ slightly — reporting that as the headline next to a split
+    // derived from the rows makes the numbers look like they fail to add up.
     accountedMs: round1(total),
     appShare: total > 0 ? Math.round((appMs / total) * 1000) / 10 : null,
   };
 }
 
-export function profileStartup(profile, { code, map, entryUrlSuffix, resolveChunk = null }) {
-  const { rows, totalMs } = aggregateProfile(profile, { code, map, entryUrlSuffix, resolveChunk });
+/**
+ * `entryPath`: the profiled entry file; by default only it has a sourcemap here.
+ * `readChunk(file)` reads any other chunk with its sourcemap, and `baseUrl` resolves bare
+ * script names (Worker builds).
+ */
+export function profileStartup(profile, { code, map, entryPath, readChunk = () => null, baseUrl }) {
+  // Node and Deno frames are file: URLs (plus node:/ext: internals, never local).
+  const entryFile = decodeURIComponent(pathToFileURL(path.resolve(entryPath)).pathname).replace(
+    /^\/+/,
+    '',
+  );
+  const { rows, totalMs } = aggregateProfile(profile, {
+    baseUrl,
+    isLocal: (url) => url.protocol === 'file:',
+    readChunk: (file) => (file === entryFile ? { code, map } : readChunk(file)),
+  });
   return { rows, totalMs, ownership: splitProfileOwnership(rows, map.sources ?? []) };
 }
 

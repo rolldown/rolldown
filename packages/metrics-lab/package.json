@@ -4,10 +4,12 @@
   "private": true,
   "description": "Load-performance harness for agent loops: throttled browser runs with first-paint coverage and boot profile, node/deno startup runs, static deferral planning on the module graph.",
   "bin": {
-    "metrics-lab": "./harness.mjs"
+    "metrics-lab": "./harness.mjs",
+    "metrics-replay": "./replay.mjs"
   },
   "files": [
     "harness.mjs",
+    "replay.mjs",
     "lib",
     "AGENTS.md",
     "README.md"

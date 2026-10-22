@@ -110,7 +110,7 @@ A proxy module has two states that determine what content the `LazyCompilationPl
 
 #### Not Fetched (Initial State)
 
-Returns the **stub template** (`proxy-module-template.js`), which fetches via the `/@vite/lazy` endpoint:
+Returns the **stub template** (`proxy-module-template.js`), which fetches via the `/@vite/lazy` endpoint (the `$LAZY_ENDPOINT` placeholder is rendered as the `base`-prefixed endpoint URL by `LazyCompilationPlugin`):
 
 ```js
 const lazyExports = (async () => {
@@ -120,7 +120,7 @@ const lazyExports = (async () => {
   // Dev server will intercept this import and serve the actual module code.
   // We send the proxy module ID (with ?rolldown-lazy=1) so the server can mark it as fetched.
   await import(
-    /* @vite-ignore */ `/@vite/lazy?id=${encodeURIComponent($PROXY_MODULE_ID)}&clientId=${__rolldown_runtime__.clientId}`
+    /* @vite-ignore */ `$LAZY_ENDPOINT?id=${encodeURIComponent($PROXY_MODULE_ID)}&clientId=${__rolldown_runtime__.clientId}`
   );
   // Loading the chunk re-registers this proxy id, exposing the real module's
   // initializer as its own `rolldown:exports` promise. Await that promise (don't
@@ -154,7 +154,13 @@ The state transition is managed by `LazyCompilationContext.mark_as_fetched()`.
 
 ### 4. Dev Server Integration
 
-The dev server handles `/@vite/lazy?id=...&clientId=...` requests:
+The dev server handles `/@vite/lazy?id=...&clientId=...` requests. The endpoint path is prefixed
+with `experimental.devMode.base` (the dev server's public base path) everywhere it is generated
+from Rust: the HMR finalizer's nested-import rewrite prefixes it via
+`crate::hmr::utils::lazy_endpoint_url`, and the initial build's stub template substitutes the same
+URL into its `$LAZY_ENDPOINT` placeholder (`apply_inner_plugins` computes it once and hands it to
+`LazyCompilationPlugin::new`). Requests therefore stay reachable when the server is not mounted at
+the domain root (e.g. Vite's `base`).
 
 1. Receive request with the **proxy module ID** (absolute path with `?rolldown-lazy=1`) and the client's UUID
 2. Call `DevEngine.compileEntry(moduleId, clientId)` (TS) / `DevEngine::compile_lazy_entry` (Rust)

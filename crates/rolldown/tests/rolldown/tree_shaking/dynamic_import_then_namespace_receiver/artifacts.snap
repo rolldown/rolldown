@@ -16,7 +16,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region target.js
+// target.js
 var target_exports = /* @__PURE__ */ __exportAll({
 	then: () => then,
 	value: () => value
@@ -25,11 +25,9 @@ let value = "expected";
 function then(resolve) {
 	resolve({ value: "assimilated:" + this.value });
 }
-//#endregion
-//#region main.js
+// main.js
 import("./unused.js");
 const load = () => Promise.resolve().then(() => target_exports).then((ns) => ns.value);
-//#endregion
 export { then as keepThen, load };
 
 ```
@@ -37,13 +35,12 @@ export { then as keepThen, load };
 ## unused.js
 
 ```js
-//#region unused.js
+// unused.js
 function then(resolve) {
 	globalThis.thenCalls = (globalThis.thenCalls ?? 0) + 1;
 	globalThis.thenCalled();
 	resolve({});
 }
-//#endregion
 export { then };
 
 ```

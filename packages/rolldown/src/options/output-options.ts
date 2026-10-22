@@ -167,6 +167,17 @@ export interface OutputOptions {
    */
   file?: string;
   /**
+   * Controls how non-ASCII characters are represented in generated JavaScript.
+   *
+   * - `'utf8'`: Preserve non-ASCII characters.
+   * - `'ascii'`: Escape non-ASCII characters where possible.
+   *
+   * {@include ./docs/output-charset.md}
+   *
+   * @default 'utf8'
+   */
+  charset?: 'ascii' | 'utf8';
+  /**
    * Which exports mode to use.
    *
    * {@include ./docs/output-exports.md}

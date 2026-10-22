@@ -4,6 +4,7 @@ pub mod dynamic_import;
 mod hmr;
 pub mod impl_visit;
 mod import_analyzer;
+mod independent_init;
 mod new_url;
 pub mod stmt_eval_analyzer;
 mod top_level_import_read;
@@ -27,7 +28,7 @@ use oxc::{
   span::{GetSpan, Span},
 };
 use oxc_index::IndexVec;
-use oxc_str::CompactStr;
+use oxc_str::{CompactStr, JSStr};
 use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicImportUsageInfo};
 use rolldown_common::{
   ConstExportMeta, ConstantValue, DynamicImportExprInfo, EcmaModuleAstUsage, EcmaViewMeta,
@@ -41,7 +42,7 @@ use rolldown_ecmascript_utils::FunctionExt;
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
 use rolldown_std_utils::PathExt;
 use rolldown_utils::concat_string;
-use rolldown_utils::ecmascript::legitimize_identifier_name;
+use rolldown_utils::ecmascript::{legitimize_identifier_name, to_usv_str};
 use rolldown_utils::indexmap::FxIndexMap;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::borrow::Cow;
@@ -691,7 +692,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   fn scan_export_all_decl(&mut self, decl: &ExportAllDeclaration) {
     let id = self.add_import_record(
-      decl.source.value.as_str(),
+      &to_usv_str(decl.source.value),
       ImportKind::Import,
       decl.source.span(),
       decl.span,
@@ -733,7 +734,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   fn scan_export_from_decl(&mut self, decl: &ExportFromDeclaration<'ast>) {
     let source = &decl.source;
     let record_idx = self.add_import_record(
-      source.value.as_str(),
+      &to_usv_str(source.value),
       ImportKind::Import,
       source.span(),
       decl.span,
@@ -909,7 +910,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   fn scan_import_decl(&mut self, decl: &ImportDeclaration) {
     let rec_id = self.add_import_record(
-      decl.source.value.as_str(),
+      &to_usv_str(decl.source.value),
       ImportKind::Import,
       decl.source.span(),
       decl.span,
@@ -1059,7 +1060,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           });
         }
         AstKind::ComputedMemberExpression(expr) => {
-          if let Some(name) = expr.static_property_name() {
+          if let Some(name) = expr.static_property_name().and_then(JSStr::as_str) {
             node_id = ancestor_ast.node_id();
             span = ancestor_ast.span();
             props.push(MemberExprProp {

@@ -6,10 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## computed_lib.js
 
 ```js
-//#region computed_lib.js
+// computed_lib.js
 const a = "a";
 const b = "b";
-//#endregion
 export { a, b };
 
 ```
@@ -17,7 +16,7 @@ export { a, b };
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 const k = globalThis.k;
 import("./computed_lib.js").then((ns) => {
 	const { [k]: x } = ns;
@@ -27,17 +26,15 @@ let m = await import("./reassigned_lib.js");
 m = { a: 1 };
 const { a } = m;
 console.log(a);
-//#endregion
 
 ```
 
 ## reassigned_lib.js
 
 ```js
-//#region reassigned_lib.js
+// reassigned_lib.js
 const a = "a";
 const b = "b";
-//#endregion
 export { a, b };
 
 ```

@@ -185,6 +185,23 @@ After this pass:
 
 A bug in any of (1)–(4) typically surfaces as a tree-shaking false-positive (helper or wrapper missing in output) or a de-conflict miss.
 
+## Forwarding declarations in `include_statements`
+
+Binding demand retains initialization as well as the declaration. In
+`tree_shaking/include_statements.rs`, `demand_esm_initialization` retains a wrapped ESM owner's
+wrapper and, through `retain_forwarding_declarations`, the import or re-export statements that
+forward the binding to its consumer (`normal_symbol_exports_chain_map`); entry exports and bindings
+read in included statements share this path. A forwarding statement whose importee is wrapped lowers
+to that importee's `init_*()` call, so a wrapped barrel's wrapper initializes the module it
+re-exports from, in source order and also when chunking places that module elsewhere.
+
+A forwarding statement is retained only once its owner module is included; a declaration whose owner
+is included later is retained at that point (`deferred_forwarding_refs`). In a module that never
+joins the output the statement is dead, and its wrapper reference would otherwise include the
+wrapped importee without any entry reaching it: debug builds assert in chunk assignment, release
+builds emit a chunk no entry loads. The consumer then initializes the canonical owner itself, as the
+`Import`, `WrapKind::None` arm under [Dispatch](#dispatch) describes.
+
 ## Implementation constraints
 
 - **Parallel mutation through raw-pointer casts.** The pass walks modules in parallel via `par_iter()` (which yields `&NormalModule`) but writes to two of the importer's fields, `stmt_infos` and `depended_runtime_helper`. Both are mutated through `addr_of!(...).cast_mut()`. Safety relies on per-module isolation: each closure mutates only the importer it was handed, and all cross-module reads (e.g. `self.module_table[importee_idx]`, `self.metas[..]`) touch other modules' state through `&self`. Don't widen the casts beyond those two fields without rebuilding the safety argument.

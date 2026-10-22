@@ -7,10 +7,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as other } from "./helper.js";
-//#region entry-a.js
+// entry-a.js
 Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
 console.log(other);
-//#endregion
 
 ```
 
@@ -18,18 +17,16 @@ console.log(other);
 
 ```js
 import { t as other } from "./helper.js";
-//#region entry-b.js
+// entry-b.js
 console.log(other);
-//#endregion
 
 ```
 
 ## helper.js
 
 ```js
-//#region helper.js
+// helper.js
 const other = "other";
-//#endregion
 export { other as t };
 
 ```
@@ -43,7 +40,7 @@ export { other as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as other, t as init_helper } from "./helper.js";
-//#region entry-a.js
+// entry-a.js
 function init_entry_a() {
 	return (init_entry_a = __esmMin((() => {
 		init_helper();
@@ -51,7 +48,6 @@ function init_entry_a() {
 		console.log(other);
 	})))();
 }
-//#endregion
 init_entry_a();
 
 ```
@@ -61,14 +57,13 @@ init_entry_a();
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as other, t as init_helper } from "./helper.js";
-//#region entry-b.js
+// entry-b.js
 function init_entry_b() {
 	return (init_entry_b = __esmMin((() => {
 		init_helper();
 		console.log(other);
 	})))();
 }
-//#endregion
 init_entry_b();
 
 ```
@@ -77,14 +72,13 @@ init_entry_b();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region helper.js
+// helper.js
 var other;
 function init_helper() {
 	return (init_helper = __esmMin((() => {
 		other = "other";
 	})))();
 }
-//#endregion
 export { other as n, init_helper as t };
 
 ```

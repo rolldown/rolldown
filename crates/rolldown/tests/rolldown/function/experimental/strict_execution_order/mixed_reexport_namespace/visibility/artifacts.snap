@@ -28,30 +28,27 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region ../leaf.js
+// ../leaf.js
 var VALUE;
 function init_leaf() {
 	return (init_leaf = __esmMin((() => {
 		VALUE = "leaf";
 	})))();
 }
-//#endregion
-//#region leaf-default.js
+// leaf-default.js
 var leaf_default_default;
 function init_leaf_default() {
 	return (init_leaf_default = __esmMin((() => {
 		leaf_default_default = "default";
 	})))();
 }
-//#endregion
-//#region lazy.js
+// lazy.js
 function init_lazy() {
 	return (init_lazy = __esmMin((() => {
 		init_leaf();
 		init_leaf_default();
 	})))();
 }
-//#endregion
 init_lazy();
 export { leaf_default_default as DEFAULT, VALUE };
 
@@ -61,15 +58,14 @@ export { leaf_default_default as DEFAULT, VALUE };
 
 ```js
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
-//#region ../mixed.js
+// ../mixed.js
 var LOCAL;
 function init_mixed() {
 	return (init_mixed = __esmMin((() => {
 		LOCAL = "local";
 	})))();
 }
-//#endregion
-//#region shadowed.js
+// shadowed.js
 var shadowed_exports = /* @__PURE__ */ __exportAll({
 	LOCAL: () => LOCAL,
 	VALUE: () => "own"
@@ -79,16 +75,14 @@ function init_shadowed() {
 		init_mixed();
 	})))();
 }
-//#endregion
-//#region other.js
+// other.js
 var OTHER;
 function init_other() {
 	return (init_other = __esmMin((() => {
 		OTHER = "other-local";
 	})))();
 }
-//#endregion
-//#region ambiguous.js
+// ambiguous.js
 var ambiguous_exports = /* @__PURE__ */ __exportAll({
 	LOCAL: () => LOCAL,
 	OTHER: () => OTHER
@@ -99,24 +93,21 @@ function init_ambiguous() {
 		init_other();
 	})))();
 }
-//#endregion
-//#region mixed-default.js
+// mixed-default.js
 var LOCAL_DEFAULT;
 function init_mixed_default() {
 	return (init_mixed_default = __esmMin((() => {
 		LOCAL_DEFAULT = "local-default";
 	})))();
 }
-//#endregion
-//#region defaulted.js
+// defaulted.js
 var defaulted_exports = /* @__PURE__ */ __exportAll({ LOCAL_DEFAULT: () => LOCAL_DEFAULT });
 function init_defaulted() {
 	return (init_defaulted = __esmMin((() => {
 		init_mixed_default();
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 async function read() {
 	return Object.entries(await import("./lazy.js"));
 }
@@ -133,7 +124,6 @@ function init_main() {
 		};
 	})))();
 }
-//#endregion
 init_main();
 export { entries, read };
 

@@ -96,6 +96,10 @@
 - rollup@function@emit-file@original-file-name: forwards the original file name to other hooks
 - rollup@function@emit-file@original-file-names: forwards the original file name to other hooks
 
+### `originalFileName` (deprecated) is not supported
+- rollup@chunking form@emit-file@filenames-function-patterns: supports using a function that returns a pattern for FileNames@generates cjs
+- rollup@chunking form@emit-file@filenames-function-patterns: supports using a function that returns a pattern for FileNames@generates es
+
 ### `import.meta.ROLLUP_FILE_URL_OBJ_*` is not supported
 - rollup@chunking form@resolve-file-url-obj: allows to use ROLLUP_FILE_URL_OBJ to get URL objects directly@generates cjs
 - rollup@chunking form@resolve-file-url-obj: allows to use ROLLUP_FILE_URL_OBJ to get URL objects directly@generates es
@@ -118,6 +122,10 @@
  - rollup@form@import-namespace-systemjs: imports namespace (systemjs only)
  - rollup@form@modify-export-semi: inserts semicolons correctly when modifying SystemJS exports@generates system
  - rollup@form@system-module-reserved: does not output reserved system format identifiers@generates es
+ - rollup@function@nested-async-statements: keeps for-await loops and await using inside functions out of top-level await detection
+ - rollup@function@top-level-await-using-system: awaits disposal from top-level await using in System output
+ - rollup@function@top-level-for-await-system: executes top-level for-await loops asynchronously in System output
+ - rollup@function@top-level-for-await-using-system: awaits disposal from loop-head await using in System output
 
 ### The `input.perf` and `bundle.getTimings()` is not supported
  - rollup@function@adds-timings-to-bundle-when-codesplitting: Adds timing information to bundle when bundling with perf=true
@@ -176,6 +184,10 @@
  - rollup@form@generated-code@reserved-names-as-props-false: escapes reserved names used as props@generates es
  - rollup@form@generated-code@reserved-names-as-props-true: escapes reserved names used as props@generates es
  - rollup@function@unknown-generated-code-value: throws for unknown string values for the generatedCode option
+ - rollup@chunking form@generated-code@arrow-functions-false: does not use arrow functions@generates es
+ - rollup@chunking form@generated-code@arrow-functions-false: does not use arrow functions@generates cjs
+ - rollup@chunking form@generated-code@arrow-functions-true: uses arrow functions@generates es
+ - rollup@chunking form@generated-code@arrow-functions-true: uses arrow functions@generates cjs
 
 ### The `output.generatedCode.preset` is not supported
  - rollup@form@generated-code-presets@es2015: handles generatedCode preset "es2015"
@@ -212,6 +224,69 @@
  - rollup@function@emit-chunk-manual-asset-source: supports setting asset sources as side effect of the manual chunks option
  - rollup@function@emit-chunk-manual: supports emitting chunks as side effect of the manual chunks option
  - rollup@function@manual-chunks-order: sorts manual chunks by entry index
+ - rollup@chunking form@manual-chunk-dependency-of-dynamic-entry: does not merge a dynamic entry depending on a manual chunk into its importer@generates cjs
+ - rollup@chunking form@manual-chunk-dependency-of-dynamic-entry: does not merge a dynamic entry depending on a manual chunk into its importer@generates es
+ - rollup@chunking form@allow-extension-exports-with-explicat-file-name: generate the separate chunk for the entry module with explicated file name@generates cjs
+ - rollup@chunking form@allow-extension-exports-with-explicat-file-name: generate the separate chunk for the entry module with explicated file name@generates es
+ - rollup@chunking form@allow-extension-exports: preserves exports for modules with allow-extension signature@generates cjs
+ - rollup@chunking form@allow-extension-exports: preserves exports for modules with allow-extension signature@generates es
+ - rollup@chunking form@allow-extension-merge-same-exports: merges same exports for modules with allow-extension signature@generates cjs
+ - rollup@chunking form@allow-extension-merge-same-exports: merges same exports for modules with allow-extension signature@generates es
+ - rollup@chunking form@circular-manual-chunks: handles manual chunks with circular dependencies@generates cjs
+ - rollup@chunking form@circular-manual-chunks: handles manual chunks with circular dependencies@generates es
+ - rollup@chunking form@dynamic-import-from-manual-chunk: handles dynamic imports in manual chunks@generates cjs
+ - rollup@chunking form@dynamic-import-from-manual-chunk: handles dynamic imports in manual chunks@generates es
+ - rollup@chunking form@emit-file@emit-chunk-facade: retrieves the correct name of an emitted chunk in case a facade is created@generates cjs
+ - rollup@chunking form@emit-file@emit-chunk-facade: retrieves the correct name of an emitted chunk in case a facade is created@generates es
+ - rollup@chunking form@manual-chunk-avoid-facade: avoid facades if possible when using manual chunks@generates cjs
+ - rollup@chunking form@manual-chunk-avoid-facade: avoid facades if possible when using manual chunks@generates es
+ - rollup@chunking form@manual-chunk-contains-entry-conflict: Uses entry alias if manual chunks contain entry chunks with different alias@generates cjs
+ - rollup@chunking form@manual-chunk-contains-entry-conflict: Uses entry alias if manual chunks contain entry chunks with different alias@generates es
+ - rollup@chunking form@manual-chunk-contains-entry-match: Identifies the entry chunk with the manual chunk that contains it if the aliases match@generates cjs
+ - rollup@chunking form@manual-chunk-contains-entry-match: Identifies the entry chunk with the manual chunk that contains it if the aliases match@generates es
+ - rollup@chunking form@manual-chunk-is-entry-conflict: Uses entry alias if manual chunks are entry chunks with different alias@generates cjs
+ - rollup@chunking form@manual-chunk-is-entry-conflict: Uses entry alias if manual chunks are entry chunks with different alias@generates es
+ - rollup@chunking form@manual-chunk-is-entry-match: Identifies the entry chunk with the manual chunk that has the same entry if the aliases match@generates cjs
+ - rollup@chunking form@manual-chunk-is-entry-match: Identifies the entry chunk with the manual chunk that has the same entry if the aliases match@generates es
+ - rollup@chunking form@manual-chunk-not-included: handles manual chunks where the root is not part of the module graph@generates cjs
+ - rollup@chunking form@manual-chunk-not-included: handles manual chunks where the root is not part of the module graph@generates es
+ - rollup@chunking form@manual-chunks-different-nested: manual chunks can have other manual chunks as dependencies@generates cjs
+ - rollup@chunking form@manual-chunks-different-nested: manual chunks can have other manual chunks as dependencies@generates es
+ - rollup@chunking form@manual-chunks-dynamic-facades: creates facades for dynamic manual chunks if necessary@generates cjs
+ - rollup@chunking form@manual-chunks-dynamic-facades: creates facades for dynamic manual chunks if necessary@generates es
+ - rollup@chunking form@manual-chunks-dynamic-name-conflict: handles name conflicts in manual chunks@generates cjs
+ - rollup@chunking form@manual-chunks-dynamic-name-conflict: handles name conflicts in manual chunks@generates es
+ - rollup@chunking form@manual-chunks-dynamic: supports dynamic manual chunks@generates cjs
+ - rollup@chunking form@manual-chunks-dynamic: supports dynamic manual chunks@generates es
+ - rollup@chunking form@manual-chunks-nested: manual chunks can contain nested modules@generates cjs
+ - rollup@chunking form@manual-chunks-nested: manual chunks can contain nested modules@generates es
+ - rollup@chunking form@manual-chunks-only-explicit-dependencies@object-form: manual chunks object form merges the specified modules' dependencies into the output chunk@generates cjs
+ - rollup@chunking form@manual-chunks-only-explicit-dependencies@object-form: manual chunks object form merges the specified modules' dependencies into the output chunk@generates es
+ - rollup@chunking form@manual-chunks: manual chunks support@generates cjs
+ - rollup@chunking form@manual-chunks: manual chunks support@generates es
+
+### The `output.experimentalMinChunkSize` is not supported
+ - rollup@chunking form@min-chunk-size@best-merge-target: uses the merge target that is closest@generates cjs
+ - rollup@chunking form@min-chunk-size@best-merge-target: uses the merge target that is closest@generates es
+ - rollup@chunking form@min-chunk-size@merge-dependency-side-effects: merges chunks if their dependency side effects are the same@generates cjs
+ - rollup@chunking form@min-chunk-size@merge-dependency-side-effects: merges chunks if their dependency side effects are the same@generates es
+ - rollup@chunking form@min-chunk-size@merge-despite-correlated-side-effects: merges chunks if their dependency side effects are a subset of the other's correlated side effects@generates cjs
+ - rollup@chunking form@min-chunk-size@merge-despite-correlated-side-effects: merges chunks if their dependency side effects are a subset of the other's correlated side effects@generates es
+ - rollup@chunking form@min-chunk-size@merge-dynamic-imports: merges small chunks without side effects into suitable chunks@generates cjs
+ - rollup@chunking form@min-chunk-size@merge-dynamic-imports: merges small chunks without side effects into suitable chunks@generates es
+ - rollup@chunking form@min-chunk-size@merge-small-side-effect-chunks: merges small chunks with side effects into suitable pure chunks@generates cjs
+ - rollup@chunking form@min-chunk-size@merge-small-side-effect-chunks: merges small chunks with side effects into suitable pure chunks@generates es
+ - rollup@chunking form@min-chunk-size@merge-unrelated: merges unrelated small chunks if there is no better alternative@generates cjs
+ - rollup@chunking form@min-chunk-size@merge-unrelated: merges unrelated small chunks if there is no better alternative@generates es
+ - rollup@chunking form@min-chunk-size@merge-with-entry-side-effect: merges dynamic imports even when the entry has side effects@generates cjs
+ - rollup@chunking form@min-chunk-size@merge-with-entry-side-effect: merges dynamic imports even when the entry has side effects@generates es
+ - rollup@chunking form@min-chunk-size@no-merge-for-big-chunks: does not merge chunks if all chunks are below the size limit@generates cjs
+ - rollup@chunking form@min-chunk-size@no-merge-for-big-chunks: does not merge chunks if all chunks are below the size limit@generates es
+ - rollup@chunking form@min-chunk-size@track-external-effects2: does not tracks external imports as side effects if they are marked as side effect free@generates cjs
+ - rollup@chunking form@min-chunk-size@track-external-effects2: does not tracks external imports as side effects if they are marked as side effect free@generates es
+ - rollup@chunking form@min-chunk-size@tree-shaking: takes tree-shaking into account and ignores top-level comments@generates cjs
+ - rollup@chunking form@min-chunk-size@tree-shaking: takes tree-shaking into account and ignores top-level comments@generates es
+
 
 ### The `format: amd` not supported
  - rollup@function@amd-auto-id-id: throws when using both the amd.autoId and the amd.id option
@@ -240,6 +315,10 @@
  - rollup@function@check-exports-exportedBindings-as-a-supplementary-test: check exports and exportedBindings in moduleParsed as a supplementary test
  - rollup@function@load-resolve-dependencies: allows to wait for dependency resolution in this.load to scan dependency trees (`importedIdResolutions`) 
  - rollup@function@resolve-relative-external-id: resolves relative external ids
+
+### `ModuleInfo.ast` is not supported
+ - rollup@chunking form@implicit-dependencies@single-dependency: supports implicit dependencies when emitting files@generates cjs
+ - rollup@chunking form@implicit-dependencies@single-dependency: supports implicit dependencies when emitting files@generates es
 
 ### The chunk information is not compatible with rollup
  - rollup@form@addon-functions: provides module information when adding addons@generates es
@@ -272,6 +351,22 @@
  - rollup@form@merge-namespaces-non-live: merges namespaces without live-bindings
  - rollup@form@merge-namespaces: merges namespaces with live-bindings
  - rollup@form@namespace-optimization-in-operator-synthetic: disables optimization for synthetic named exports when using the in operator
+ - rollup@chunking form@synthetic-named-exports@chained-default-reexport: handles synthetic named exports that are reexported as a default export over several stages@generates cjs
+ - rollup@chunking form@synthetic-named-exports@chained-default-reexport: handles synthetic named exports that are reexported as a default export over several stages@generates es
+ - rollup@chunking form@synthetic-named-exports@deduplicate-synthetic-named-exports-and-default: handles importing a synthetic named export together with the default export@generates cjs
+ - rollup@chunking form@synthetic-named-exports@deduplicate-synthetic-named-exports-and-default: handles importing a synthetic named export together with the default export@generates es
+ - rollup@chunking form@synthetic-named-exports@default-reexport: handles synthetic named exports that are reexported as a default export where both the default and a named export is used@generates cjs
+ - rollup@chunking form@synthetic-named-exports@default-reexport: handles synthetic named exports that are reexported as a default export where both the default and a named export is used@generates es
+ - rollup@chunking form@synthetic-named-exports@entry: does not expose the synthetic namespace if an entry point uses a string value@generates cjs
+ - rollup@chunking form@synthetic-named-exports@entry: does not expose the synthetic namespace if an entry point uses a string value@generates es
+ - rollup@chunking form@synthetic-named-exports@global-conflict: avoids conflicts with global variables when re-exporting synthetic named exports@generates cjs
+ - rollup@chunking form@synthetic-named-exports@global-conflict: avoids conflicts with global variables when re-exporting synthetic named exports@generates es
+ - rollup@chunking form@synthetic-named-exports@mixed-synthetic-named-exports-2: mixed synthetic named exports 2@generates cjs
+ - rollup@chunking form@synthetic-named-exports@mixed-synthetic-named-exports-2: mixed synthetic named exports 2@generates es
+ - rollup@chunking form@synthetic-named-exports@mixed-synthetic-named-exports: mixed synthetic named exports@generates cjs
+ - rollup@chunking form@synthetic-named-exports@mixed-synthetic-named-exports: mixed synthetic named exports@generates es
+ - rollup@chunking form@synthetic-named-exports@multi-level: handles multiple levels of synthetic named exports@generates cjs
+ - rollup@chunking form@synthetic-named-exports@multi-level: handles multiple levels of synthetic named exports@generates es
 
 ### Import Assertions is not supported
  - rollup@function@import-assertions@plugin-assertions-this-resolve: allows plugins to provide assertions for this.resolve'
@@ -406,7 +501,6 @@
  - rollup@function@invalid-transform-source-function: throw descriptive error if sourcemapPathTransform-function does not return a string (#3484) (`VALIDATION_ERROR` error expected, but got `GenericFailure`)
  - rollup@function@invalid-pattern-replacement: throws for invalid placeholders in patterns (`VALIDATION_ERROR` error)
  - rollup@function@invalid-pattern: throws for invalid patterns (`VALIDATION_ERROR` error expected, but got `INVALID_OPTION`)
- - rollup@function@invalid-top-level-await: throws for invalid top-level-await format (`INVALID_TLA_FORMAT` error expected, but got `UNSUPPORTED_FEATURE`)
  - rollup@function@load-returns-string-or-null: throws error if load returns something wacky (`BAD_LOADER` error expected, but got `InvalidArg`)
  - rollup@function@vars-with-init-in-dead-branch: handles vars with init in dead branch (#1198) (`EMPTY_BUNDLE` warning)
  - rollup@function@hashing@maximum-hash-size: throws when the maximum hash size is exceeded (`VALIDATION_ERROR` error)

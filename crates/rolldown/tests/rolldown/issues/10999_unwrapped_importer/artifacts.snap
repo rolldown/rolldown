@@ -7,27 +7,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region w.js
+// w.js
 var init_w = __esmMin((() => {
 	init_x();
 }));
 
-//#endregion
-//#region data.json
+// data.json
 var data_default = {};
 
-//#endregion
-//#region x.js
+// x.js
 var x_exports = /* @__PURE__ */ __exportAll({});
 var init_x = __esmMin((() => {
 	init_w();
 }));
 
-//#endregion
-//#region main.js
+// main.js
 init_x();
 init_w();
 
-//#endregion
 export { data_default as default };
 ```

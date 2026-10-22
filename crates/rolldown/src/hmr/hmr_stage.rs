@@ -729,6 +729,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     if let Some(prelude) = crate::hmr::module_graph_delta::render_register_graph_source(
       self.module_table(),
       modules_to_be_updated.iter().copied(),
+      &self.cache.get_snapshot().user_defined_entry_modules,
       Some(stamp_table),
     ) {
       source_joiner.append_source(prelude);
@@ -862,6 +863,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     if let Some(prelude) = crate::hmr::module_graph_delta::render_register_graph_source(
       self.module_table(),
       carried_modules.iter().copied(),
+      &self.cache.get_snapshot().user_defined_entry_modules,
       Some(stamp_table),
     ) {
       source_joiner.append_source(prelude);
@@ -1008,6 +1010,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
           jsdoc: self.options.comments.jsdoc,
         },
         initial_indent: 0,
+        ascii_only: self.options.charset.is_ascii(),
       },
     );
 

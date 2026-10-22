@@ -21,7 +21,7 @@ export { f, load } from "./main2.js";
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({
 	f: () => f,
 	load: () => load
@@ -30,7 +30,6 @@ function f() {
 	return 42;
 }
 const load = () => import("./dynamic.js");
-//#endregion
 export { f, load, main_exports };
 
 ```
@@ -66,7 +65,7 @@ exports.load = require_main.load;
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({
 	f: () => f,
 	load: () => load
@@ -75,7 +74,6 @@ function f() {
 	return 42;
 }
 const load = () => Promise.resolve().then(() => require("./dynamic.js"));
-//#endregion
 Object.defineProperty(exports, "f", {
 	enumerable: true,
 	get: function() {

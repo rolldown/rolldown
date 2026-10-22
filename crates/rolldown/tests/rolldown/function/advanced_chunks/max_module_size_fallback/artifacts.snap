@@ -7,17 +7,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import "./smaller-than-20.js";
-//#region size-23.js
+// size-23.js
 console.log(1234567890);
-//#endregion
 
 ```
 
 ## smaller-than-20.js
 
 ```js
-//#region size-14.js
+// size-14.js
 console.log(0);
-//#endregion
 
 ```

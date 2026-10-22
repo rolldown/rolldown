@@ -172,6 +172,12 @@ impl GenerateStage<'_> {
     // mid-cycle), which is the standing correctness proof; the extra wrapping is bounded to
     // emergent-cycle members, the at-risk set only grows, and it is finite — so this converges.
     //
+    // The same fixpoint wraps every eager module whose wrapper would forward `init_*` to a planned
+    // module (`wrap_all_forwarded_importers`): each round walks the reverse of those precomputed
+    // obligations from the current plan, closing forwarding chains before rebuilding the plan.
+    // See
+    // internal-docs/code-splitting/design.md#emergent-cycle-plan-projection-on-demand.
+    //
     // Both inputs below are plan-independent, so they are computed once for every plan rebuild:
     // the roots never change across rounds, and the reverse index inverts the static module graph,
     // not anything the plan mints.
@@ -184,8 +190,14 @@ impl GenerateStage<'_> {
     // placement and couple all of the routes again. The structural candidate check excludes
     // synchronous import/require SCCs, so this monotone addition keeps the existing conservative
     // cycle fallback.
-    let placement_state = self.pre_chunk_order_state(used_symbol_refs_builder);
-    all_at_risk.extend(placement_state.order_cjs_carrier_keys().map(|key| key.importer));
+    let wrap_all_plan = self.wrap_all_order_analysis().plan;
+    let wrap_all_state = self.probe_order_state(
+      Some(chunk_graph),
+      &wrap_all_plan,
+      used_symbol_refs_builder,
+      &reverse_static_imports,
+    );
+    all_at_risk.extend(wrap_all_state.order_cjs_carrier_keys().map(|key| key.importer));
 
     let mut plan = self.build_order_wrap_plan(
       all_at_risk.clone(),
@@ -205,6 +217,12 @@ impl GenerateStage<'_> {
     // The at-risk set is monotone and finite; this bound only guards against a logic error.
     let iteration_cap = self.link_output.module_table.modules.len() + 1;
     let mut iterations = 0usize;
+    let forwarded_importers = self.wrap_all_forwarded_importers(
+      chunk_graph,
+      &source_reachable,
+      used_symbol_refs_builder,
+      &wrap_all_state,
+    );
     loop {
       // Project the chunk edges the current plan's lowering will add — the `init_*` forwarding
       // imports of wrapped modules — on top of the pre-lowering baseline, then find the chunk
@@ -220,20 +238,32 @@ impl GenerateStage<'_> {
       // Mark every eligible module hosted in an emergent cyclic chunk at-risk. Wrapping them all
       // (not only the order-sensitive ones) removes every eager body from those chunks, matching the
       // wrap-all shape that is provably safe under cyclic evaluation. `all_at_risk` only grows.
-      let mut added = 0usize;
+      let mut cyclic = 0usize;
       for scc in &post_cycles.sccs {
         for &chunk_idx in scc {
           for &module_idx in &chunk_graph.chunk_table[chunk_idx].modules {
             if self.is_order_wrap_eligible(module_idx) && all_at_risk.insert(module_idx) {
-              added += 1;
+              cyclic += 1;
             }
           }
         }
       }
+      // Eager forwarders whose wrapper would initialize a planned module.
+      let mut forwarding = 0usize;
+      let mut pending = plan.modules().collect_vec();
+      while let Some(target_idx) = pending.pop() {
+        for &module_idx in &forwarded_importers[target_idx] {
+          if plan.insert(module_idx) {
+            pending.push(module_idx);
+            forwarding += usize::from(all_at_risk.insert(module_idx));
+          }
+        }
+      }
+      let added = cyclic + forwarding;
       iterations += 1;
       order_debug_trace(|| {
         format!(
-          "[order] fixpoint round {iterations}: {} emergent cyclic chunk SCC(s), +{added} at-risk (total {})",
+          "[order] fixpoint round {iterations}: {} emergent cyclic chunk SCC(s), +{cyclic} cyclic and +{forwarding} forwarding at-risk (total {})",
           post_cycles.sccs.len(),
           all_at_risk.len(),
         )
@@ -584,6 +614,49 @@ impl GenerateStage<'_> {
     }
   }
 
+  /// Reverse the excluded-statement initialization obligations of eligible source-reachable
+  /// modules. A wrap-all state exposes the obligations each forwarder's wrapper would own, so
+  /// walking from a planned target finds every forwarder that needs wrapping. See
+  /// internal-docs/code-splitting/design.md#emergent-cycle-plan-projection-on-demand.
+  fn wrap_all_forwarded_importers(
+    &self,
+    chunk_graph: &ChunkGraph,
+    source_reachable: &FxHashSet<ModuleIdx>,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
+    wrap_all_state: &super::order_wrap_state::OrderWrapState,
+  ) -> IndexVec<ModuleIdx, Vec<ModuleIdx>> {
+    let metadata = self.compute_wrapped_esm_init_metadata(
+      &self.ast_table,
+      chunk_graph,
+      wrap_all_state,
+      used_symbol_refs_builder.view(),
+    );
+    let mut importers = index_vec![Vec::new(); self.link_output.module_table.modules.len()];
+    for module in
+      self.link_output.module_table.modules.iter().filter_map(Module::as_normal).filter(|module| {
+        source_reachable.contains(&module.idx) && self.is_order_wrap_eligible(module.idx)
+      })
+    {
+      let Some(targets) = metadata.transitive_init_targets(module.idx) else { continue };
+      for target_idx in targets
+        .values()
+        .flatten()
+        .filter_map(|target| match target {
+          WrappedEsmInitTarget::Module(target_idx)
+            if wrap_all_state.has_order_wrapper(*target_idx) =>
+          {
+            Some(*target_idx)
+          }
+          WrappedEsmInitTarget::Module(_) | WrappedEsmInitTarget::CjsCarrier(_) => None,
+        })
+        .unique()
+      {
+        importers[target_idx].push(module.idx);
+      }
+    }
+    importers
+  }
+
   /// A discovery-only [`OrderWrapState`] that marks exactly the plan's modules order-wrapped, so
   /// `esm_init_target` answers "is this module wrapped by this plan?" during edge projection.
   /// Reuses each module's existing namespace symbol as the wrapper placeholder — the projector only
@@ -642,6 +715,7 @@ impl GenerateStage<'_> {
       used_symbol_refs_builder,
       cyclic_modules: &cyclic_modules,
       tree_shaking: self.options.treeshake.is_some(),
+      code_splitting_disabled: self.options.code_splitting.is_disabled(),
       runtime_idx: self.link_output.runtime.id(),
     };
     let consumer_local_plan =

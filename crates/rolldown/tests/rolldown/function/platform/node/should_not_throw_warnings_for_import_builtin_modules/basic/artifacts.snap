@@ -10,9 +10,8 @@ import { createRequire } from "node:module";
 import * as fs from "fs";
 import * as nodeFs from "node:fs";
 // HIDDEN [\0rolldown/runtime.js]
-//#region main.js
+// main.js
 console.log(fs, nodeFs, __require("path"), __require("node:path"));
-//#endregion
 export {};
 
 ```

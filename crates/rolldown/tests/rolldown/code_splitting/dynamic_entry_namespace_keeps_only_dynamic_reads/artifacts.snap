@@ -7,14 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region lib/x.js
+// lib/x.js
 var X = class {
 	static value = "x";
 };
-//#endregion
-//#region lib/index.js
+// lib/index.js
 var lib_exports = /* @__PURE__ */ __exportAll({ X: () => X });
-//#endregion
 export { X as n, lib_exports as t };
 
 ```
@@ -23,10 +21,9 @@ export { X as n, lib_exports as t };
 
 ```js
 import { n as X } from "./lib.js";
-//#region main1.js
+// main1.js
 const fromMain1 = X.value;
 const loadX = () => import("./lib.js").then((n) => n.t).then((lib) => lib.X.value);
-//#endregion
 export { fromMain1, loadX };
 
 ```
@@ -36,9 +33,8 @@ export { fromMain1, loadX };
 ```js
 import { n as X } from "./lib.js";
 import { t as Y } from "./y.js";
-//#region main2.js
+// main2.js
 const fromMain2 = Y() + X.value;
-//#endregion
 export { fromMain2 };
 
 ```
@@ -48,9 +44,8 @@ export { fromMain2 };
 ```js
 import { n as X } from "./lib.js";
 import { t as Y } from "./y.js";
-//#region main3.js
+// main3.js
 const fromMain3 = Y() + X.value;
-//#endregion
 export { fromMain3 };
 
 ```
@@ -59,12 +54,11 @@ export { fromMain3 };
 
 ```js
 import { n as X } from "./lib.js";
-//#region lib/y.js
+// lib/y.js
 const prefix = "y" + X.value;
 function Y() {
 	return prefix;
 }
-//#endregion
 export { Y as t };
 
 ```

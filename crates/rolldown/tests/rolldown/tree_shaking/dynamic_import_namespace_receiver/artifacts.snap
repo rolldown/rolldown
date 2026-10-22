@@ -30,7 +30,7 @@ export { t as read, n as value } from "./shared.js";
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region merged.js
+// merged.js
 var merged_exports = /* @__PURE__ */ __exportAll({
 	read: () => read,
 	value: () => value
@@ -39,8 +39,7 @@ const value = "expected";
 function read() {
 	return this.value;
 }
-//#endregion
-//#region main.js
+// main.js
 const merged = () => Promise.resolve().then(() => merged_exports).then((ns) => ns.read());
 const method = async () => import("./method.js").then((ns) => ns.read());
 const computed = async () => import("./computed.js").then((ns) => ns["read"]());
@@ -48,7 +47,6 @@ const optional = async () => import("./optional.js").then((ns) => ns?.read?.());
 const parenthesized = async () => import("./parenthesized.js").then((ns) => ns.read());
 const tagged = async () => import("./tagged.js").then((ns) => ns.read``);
 const awaited = async () => (await import("./awaited.js")).read();
-//#endregion
 export { awaited, computed, merged, method, optional, parenthesized, tagged, value };
 
 ```
@@ -77,12 +75,11 @@ export { t as read, n as value } from "./shared.js";
 ## shared.js
 
 ```js
-//#region shared.js
+// shared.js
 let value = "expected";
 function read() {
 	return this.value;
 }
-//#endregion
 export { value as n, read as t };
 
 ```

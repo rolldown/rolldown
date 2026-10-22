@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region outside-node-modules/index.jsx
+// outside-node-modules/index.jsx
 console.log({
 	a: 1,
 	a: 2
@@ -14,8 +14,7 @@ console.log({
 	a2: true,
 	a2: 3
 }));
-//#endregion
-//#region node_modules/inside-node-modules/index.jsx
+// node_modules/inside-node-modules/index.jsx
 console.log({
 	c: 1,
 	c: 2
@@ -23,6 +22,5 @@ console.log({
 	c2: true,
 	c2: 3
 }));
-//#endregion
 
 ```

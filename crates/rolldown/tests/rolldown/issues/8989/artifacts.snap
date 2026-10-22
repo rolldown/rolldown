@@ -15,12 +15,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry0.js
 
 ```js
-//#region node0.js
+// node0.js
 globalThis.__acyclic_output_fuzz_0 = 0;
 var node_0 = {};
 node_0.value = 0;
 
-//#endregion
 export { node_0 };
 ```
 
@@ -30,14 +29,13 @@ export { node_0 };
 import { node_3 } from "./entry3.js";
 import { t as node2_exports } from "./entry2.js";
 
-//#region node1.js
+// node1.js
 globalThis.__acyclic_output_fuzz_1 = 1;
 var use_1_2 = node2_exports;
 use_1_2.ref = 1;
 var node_1 = {};
 node_1.value = 1;
 
-//#endregion
 export { node_1, node_3 as reexport_1_3, use_1_2 };
 ```
 
@@ -46,7 +44,7 @@ export { node_1, node_3 as reexport_1_3, use_1_2 };
 ```js
 import { node_3, t as __exportAll } from "./entry3.js";
 
-//#region node2.js
+// node2.js
 var node2_exports = /* @__PURE__ */ __exportAll({
 	node_2: () => node_2,
 	reexport_2_3: () => node_3
@@ -55,7 +53,6 @@ globalThis.__acyclic_output_fuzz_2 = 2;
 var node_2 = {};
 node_2.value = 2;
 
-//#endregion
 export { node_2, node_3 as reexport_2_3, node2_exports as t };
 ```
 
@@ -63,19 +60,17 @@ export { node_2, node_3 as reexport_2_3, node2_exports as t };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region node4.js
+// node4.js
 var node4_exports = /* @__PURE__ */ __exportAll({});
 globalThis.__acyclic_output_fuzz_4 = 4;
 var node_4 = {};
 node_4.value = 4;
 
-//#endregion
-//#region node3.js
+// node3.js
 globalThis.__acyclic_output_fuzz_3 = 3;
 Promise.resolve().then(() => node4_exports);
 var node_3 = {};
 node_3.value = 3;
 
-//#endregion
 export { node_3, node_4 as reexport_3_4, __exportAll as t };
 ```

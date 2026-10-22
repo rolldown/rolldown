@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as b_exports } from "./b2.js";
-//#region a.js
+// a.js
 var a_default = 123;
 var varName = 234;
 let letName = 234;
@@ -16,7 +16,6 @@ function Func2() {}
 var Class2 = class {};
 function Func() {}
 var Class = class {};
-//#endregion
 export { Class, Class as Cls, Class2 as Cls2, Func2 as Fn2, Func, constName, a_default as default, b_exports as fromB, letName, varName };
 
 ```
@@ -32,10 +31,9 @@ export { t as default } from "./b2.js";
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region b.js
+// b.js
 var b_exports = /* @__PURE__ */ __exportAll({ default: () => b_default });
 function b_default() {}
-//#endregion
 export { b_exports as n, b_default as t };
 
 ```
@@ -43,9 +41,8 @@ export { b_exports as n, b_default as t };
 ## c.js
 
 ```js
-//#region c.js
+// c.js
 function foo() {}
-//#endregion
 export { foo as default };
 
 ```
@@ -53,9 +50,8 @@ export { foo as default };
 ## d.js
 
 ```js
-//#region d.js
+// d.js
 var d_default = class {};
-//#endregion
 export { d_default as default };
 
 ```
@@ -63,9 +59,8 @@ export { d_default as default };
 ## e.js
 
 ```js
-//#region e.js
+// e.js
 var Foo = class {};
-//#endregion
 export { Foo as default };
 
 ```

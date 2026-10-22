@@ -100,9 +100,6 @@ pub struct LinkingMetadata {
   /// Set when the runtime module has side effects (e.g. dev/HMR mode).
   pub has_side_effectful_runtime_dep: bool,
   pub module_namespace_included_reason: ModuleNamespaceIncludedReason,
-  /// The exports a namespace object rebuilt for an absorbed dynamic entry holds, when it was
-  /// narrowed to what the dynamic imports read; see `narrow_namespace_stmt_to_used_symbols`.
-  pub dynamic_facade_export_names: Option<FxHashSet<CompactStr>>,
   /// Final decision on whether this module's namespace object is retained in the output.
   /// Computed by [`crate::stages::generate_stage`]'s `finalized_module_namespace_ref_usage`
   /// from `module_namespace_included_reason` together with the module's `exports_kind` and
@@ -162,6 +159,25 @@ impl LinkingMetadata {
           || self.module_namespace_included_reason.contains(ModuleNamespaceIncludedReason::Unknown)
       }
       OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => true,
+    }
+  }
+
+  /// Export names observable through known dynamic imports, unless another consumer needs
+  /// the complete namespace. See internal-docs/code-splitting/implementation.md.
+  pub fn dynamically_read_export_names<'a>(
+    &self,
+    usage: Option<&'a DynamicImportExportsUsage>,
+  ) -> Option<&'a FxHashSet<CompactStr>> {
+    if self.module_namespace_included_reason.intersects(
+      ModuleNamespaceIncludedReason::Unknown
+        | ModuleNamespaceIncludedReason::ReExportDynamicExports,
+    ) {
+      return None;
+    }
+    match usage? {
+      DynamicImportExportsUsage::Complete => None,
+      DynamicImportExportsUsage::Partial(names) => Some(names),
+      DynamicImportExportsUsage::Single(_) => unreachable!(),
     }
   }
 

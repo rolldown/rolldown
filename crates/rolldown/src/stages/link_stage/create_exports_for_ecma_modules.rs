@@ -1,7 +1,8 @@
 use rolldown_common::{
-  DeclaredSymbols, EntryPoint, ExportsKind, ImportKind, ImportRecordMeta, Module, ModuleIdx,
-  OutputFormat, PreserveEntrySignatures, SharedNormalizedBundlerOptions, StmtInfo, StmtInfoMeta,
-  SymbolRefFlags, TaggedSymbolRef, WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
+  DeclaredSymbols, EcmaModuleAstUsage, EcmaViewMeta, EntryPoint, ExportsKind, ImportKind,
+  ImportRecordMeta, Module, ModuleIdx, NormalModule, OutputFormat, PreserveEntrySignatures,
+  SharedNormalizedBundlerOptions, StmtInfo, StmtInfoMeta, SymbolRefFlags, TaggedSymbolRef,
+  WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::smallvec;
@@ -11,6 +12,16 @@ use crate::{
 };
 
 use super::{LinkStage, bind_imports_and_exports::record_star_reexport_path};
+
+/// Whether a CommonJS module's own code may give its exports object a `then`.
+/// See internal-docs/code-splitting/implementation.md.
+fn commonjs_exports_may_be_thenable(module: &NormalModule) -> bool {
+  module.meta.has_eval()
+    || (module.ast_usage.intersects(EcmaModuleAstUsage::ModuleOrExports)
+      && (!module.meta.contains(EcmaViewMeta::SafelyTreeshakeCommonjs)
+        || module.ast_usage.contains(EcmaModuleAstUsage::ThenableExportsWrite)
+        || module.cjs_this_ref.is_some()))
+}
 
 fn init_entry_point_stmt_info(
   meta: &mut LinkingMetadata,
@@ -70,6 +81,38 @@ impl LinkStage<'_> {
       self.dynamic_import_exports_usage_map.insert(importee, DynamicImportExportsUsage::Complete);
     }
 
+    // Other code can give an exports object a `then` once anything but an unused `import()`
+    // loads the module, or once the module is an entry.
+    let exports_reachable = self
+      .module_table
+      .modules
+      .iter()
+      .filter_map(Module::as_normal)
+      .flat_map(|module| module.import_records.iter())
+      .filter(|record| {
+        record.kind != ImportKind::DynamicImport
+          || !record.meta.contains(ImportRecordMeta::PureDynamicImport)
+      })
+      .filter_map(|record| record.resolved_module)
+      .chain(
+        self
+          .entries
+          .iter()
+          .filter(|(_, entries)| entries.iter().any(|entry| entry.kind.is_user_defined()))
+          .map(|(idx, _)| *idx),
+      )
+      .collect::<FxHashSet<_>>();
+    let thenable_commonjs_modules = self
+      .module_table
+      .modules
+      .iter()
+      .filter_map(Module::as_normal)
+      .filter(|module| {
+        module.exports_kind == ExportsKind::CommonJs
+          && (exports_reachable.contains(&module.idx) || commonjs_exports_may_be_thenable(module))
+      })
+      .map(|module| module.idx)
+      .collect::<FxHashSet<_>>();
     for module in &mut self.module_table.modules {
       let Some(module) = module.as_normal_mut() else { continue };
       for record in &mut module.import_records {
@@ -79,7 +122,10 @@ impl LinkStage<'_> {
         let Some(importee) = record.resolved_module else { continue };
         let meta = &self.metas[importee];
         // Promise resolution calls `then` with the namespace as its receiver.
-        if meta.has_dynamic_exports || meta.resolved_exports.contains_key("then") {
+        if meta.has_dynamic_exports
+          || meta.resolved_exports.contains_key("then")
+          || thenable_commonjs_modules.contains(&importee)
+        {
           self
             .dynamic_import_exports_usage_map
             .insert(importee, DynamicImportExportsUsage::Complete);

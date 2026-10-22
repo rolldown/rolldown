@@ -1,4 +1,7 @@
 import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import type { OutputChunk, OutputOptions, RolldownOutput } from 'rolldown';
 import { rolldown } from 'rolldown';
 import { describe, expect, test } from 'vitest';
@@ -191,5 +194,36 @@ describe('chunkImportMap', () => {
       }
     }
     expect(aliases[1]).toEqual(aliases[0]);
+  });
+  test('aliases do not depend on the folder the build runs from', async () => {
+    const outputs = [];
+    for (const name of ['project-a', 'project-b']) {
+      const cwd = mkdtempSync(join(realpathSync(tmpdir()), `rolldown-chunk-import-map-${name}-`));
+      try {
+        for (const [file, code] of Object.entries(fixture())) {
+          mkdirSync(dirname(join(cwd, file)), { recursive: true });
+          writeFileSync(join(cwd, file), code);
+        }
+        const bundle = await rolldown({
+          input,
+          cwd,
+          preserveEntrySignatures: false,
+          experimental: { chunkImportMap: true },
+        });
+        try {
+          outputs.push(await bundle.generate(options(false, { entryFileNames: '[name]-[hash].js' })));
+        } finally {
+          await bundle.close();
+        }
+      } finally {
+        rmSync(cwd, { recursive: true, force: true });
+      }
+    }
+    const [a, b] = outputs;
+    expect(Object.keys(importMap(a))).toHaveLength(getOutputChunk(a).length);
+    expect(importMap(b)).toEqual(importMap(a));
+    const fileNames = (output: RolldownOutput) =>
+      getOutputChunk(output).map((chunk) => chunk.fileName).sort();
+    expect(fileNames(b)).toEqual(fileNames(a));
   });
 });

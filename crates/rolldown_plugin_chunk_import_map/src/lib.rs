@@ -50,7 +50,7 @@ impl Plugin for ChunkImportMapPlugin {
         let hasher = match &chunk.facade_module_id {
           Some(module_id) => {
             let mut hasher = Xxh3::with_seed(0);
-            module_id.as_str().hash(&mut hasher);
+            module_id.stabilize(&args.options.cwd).as_str().hash(&mut hasher);
             hasher
           }
           None => {
@@ -59,7 +59,7 @@ impl Plugin for ChunkImportMapPlugin {
               // See internal-docs/inline-common-chunks/implementation.md.
               let logical_chunk = &args.chunk_table[chunk.originate_from];
               let Some(module_id) =
-                logical_chunk.modules.iter().map(|&idx| args.module_table[idx].id().as_str()).min()
+                logical_chunk.modules.iter().map(|&idx| args.module_table[idx].stable_id().as_str()).min()
               else {
                 continue;
               };

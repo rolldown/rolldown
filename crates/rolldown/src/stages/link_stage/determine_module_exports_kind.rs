@@ -1,6 +1,6 @@
 use rolldown_common::{
   EcmaModuleAstUsage, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module,
-  OutputFormat, WrapKind,
+  ModuleIdx, OutputFormat, ThisExprReplaceKind, WrapKind,
 };
 
 use crate::utils::external_import_interop::import_record_needs_interop;
@@ -57,9 +57,7 @@ impl LinkStage<'_> {
             ExportsKind::None => {
               self.metas[importee_idx].set_wrap_kind(WrapKind::Cjs);
               // A `require`'d module with `ExportsKind::None` is promoted to `ExportsKind::CommonJs`.
-              if let Some(m) = self.module_table[importee_idx].as_normal_mut() {
-                m.exports_kind = ExportsKind::CommonJs;
-              }
+              self.promote_to_commonjs(importee_idx);
             }
           },
           ImportKind::DynamicImport => {
@@ -77,9 +75,7 @@ impl LinkStage<'_> {
                   self.metas[importee_idx].set_wrap_kind(WrapKind::Cjs);
                   // A dynamically-imported module with `ExportsKind::None` is promoted to `ExportsKind::CommonJs`
                   // since we wrap it as CJS.
-                  if let Some(m) = self.module_table[importee_idx].as_normal_mut() {
-                    m.exports_kind = ExportsKind::CommonJs;
-                  }
+                  self.promote_to_commonjs(importee_idx);
                 }
               }
             }
@@ -139,5 +135,26 @@ impl LinkStage<'_> {
         }
       }
     }
+  }
+
+  /// Promotes a module with `ExportsKind::None` to `ExportsKind::CommonJs`.
+  ///
+  /// The scanner maps the top-level `this` of a module without module syntax to
+  /// `ThisExprReplaceKind::Context`, because it can't know yet how the module is loaded. Once the
+  /// module turns out to be CommonJS, its top-level `this` is its exports object, as in Node. So
+  /// switch those entries to `ThisExprReplaceKind::Exports` and give the module the `this`
+  /// binding of its CJS closure, the same as the scanner does for a module with CommonJS syntax.
+  fn promote_to_commonjs(&mut self, module_idx: ModuleIdx) {
+    let Some(m) = self.module_table[module_idx].as_normal_mut() else { return };
+    m.exports_kind = ExportsKind::CommonJs;
+    if m.ecma_view.this_expr_replace_map.is_empty() || m.ecma_view.cjs_this_ref.is_some() {
+      return;
+    }
+    for kind in m.ecma_view.this_expr_replace_map.values_mut() {
+      *kind = ThisExprReplaceKind::Exports;
+    }
+    // Top-level `this` is the module's exports object, an implicit `exports` reference.
+    m.ecma_view.ast_usage.insert(EcmaModuleAstUsage::ExportsRef);
+    m.ecma_view.cjs_this_ref = Some(self.symbols.create_facade_root_symbol_ref(module_idx, "this"));
   }
 }

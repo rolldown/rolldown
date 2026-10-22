@@ -501,7 +501,6 @@
  - rollup@function@invalid-transform-source-function: throw descriptive error if sourcemapPathTransform-function does not return a string (#3484) (`VALIDATION_ERROR` error expected, but got `GenericFailure`)
  - rollup@function@invalid-pattern-replacement: throws for invalid placeholders in patterns (`VALIDATION_ERROR` error)
  - rollup@function@invalid-pattern: throws for invalid patterns (`VALIDATION_ERROR` error expected, but got `INVALID_OPTION`)
- - rollup@function@invalid-top-level-await: throws for invalid top-level-await format (`INVALID_TLA_FORMAT` error expected, but got `UNSUPPORTED_FEATURE`)
  - rollup@function@load-returns-string-or-null: throws error if load returns something wacky (`BAD_LOADER` error expected, but got `InvalidArg`)
  - rollup@function@vars-with-init-in-dead-branch: handles vars with init in dead branch (#1198) (`EMPTY_BUNDLE` warning)
  - rollup@function@hashing@maximum-hash-size: throws when the maximum hash size is exceeded (`VALIDATION_ERROR` error)

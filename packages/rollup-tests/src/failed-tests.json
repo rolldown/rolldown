@@ -180,9 +180,6 @@
   "rollup@function@catch-scope-nested-deconflicting: deconflicts nested catch scope parameters correctly",
   "rollup@function@emit-file@no-input: It is not necessary to provide an input if a dynamic entry is emitted",
   "rollup@function@external-regex-stateful@sticky: matches sticky external regexes at the start without changing their lastIndex",
-  "rollup@function@invalid-top-level-await-using: rejects CommonJS output for await using in a top-level block",
-  "rollup@function@invalid-top-level-for-await-using: rejects CommonJS output for await using in a for-of loop head",
-  "rollup@function@invalid-top-level-for-await: rejects CommonJS output for a top-level for-await loop",
   "rollup@function@logging@transform-log-at-position-zero: includes source locations for transform logs at position zero",
   "rollup@function@plugin-error-transform-pos-zero: includes the current source location for transform errors at position zero"
 ]

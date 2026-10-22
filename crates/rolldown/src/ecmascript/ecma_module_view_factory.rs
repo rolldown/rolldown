@@ -81,6 +81,7 @@ pub async fn create_ecma_view(
     hashbang_range,
     ecma_view_meta,
     dynamic_import_rec_exports_usage,
+    dynamic_import_called_names,
     new_url_references: new_url_imports,
     rolldown_file_url_references,
     this_expr_replace_map,
@@ -157,6 +158,7 @@ pub async fn create_ecma_view(
     import_attribute_map,
     json_module_none_self_reference_included_symbol: None,
     cjs_reexport_import_record_ids,
+    dynamic_import_called_names,
   };
 
   let ecma_related =

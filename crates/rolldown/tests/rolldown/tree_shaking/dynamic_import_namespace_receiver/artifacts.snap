@@ -3,6 +3,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # warnings
 
+## EVAL
+
+```text
+[EVAL] Use of direct `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
+   ╭─[ evaluated.js:3:10 ]
+   │
+ 3 │   return eval('this.value');
+   │          ──┬─  
+   │            ╰─── Use of direct `eval` here.
+   │ 
+   │ Help: Consider using indirect eval. For more information, check the documentation: https://rolldown.rs/guide/troubleshooting#avoiding-direct-eval
+───╯
+
+```
+
 ## INEFFECTIVE_DYNAMIC_IMPORT
 
 ```text
@@ -23,6 +38,50 @@ export { t as read, n as value } from "./shared.js";
 
 ```js
 export { t as read, n as value } from "./shared.js";
+
+```
+
+## default-arrow.js
+
+```js
+// default-arrow.js
+var default_arrow_default = () => "expected";
+export { default_arrow_default as default };
+
+```
+
+## default-named.js
+
+```js
+// default-named.js
+function run() {
+	return "expected";
+}
+export { run as default };
+
+```
+
+## default-this.js
+
+```js
+// default-this.js
+let value = "expected";
+function default_this_default() {
+	return this.value;
+}
+export { default_this_default as default, value };
+
+```
+
+## evaluated.js
+
+```js
+// evaluated.js
+let value = "expected";
+function read() {
+	return eval("this.value");
+}
+export { read, value };
 
 ```
 
@@ -47,7 +106,15 @@ const optional = async () => import("./optional.js").then((ns) => ns?.read?.());
 const parenthesized = async () => import("./parenthesized.js").then((ns) => ns.read());
 const tagged = async () => import("./tagged.js").then((ns) => ns.read``);
 const awaited = async () => (await import("./awaited.js")).read();
-export { awaited, computed, merged, method, optional, parenthesized, tagged, value };
+const nestedArrow = async () => import("./nested-arrow.js").then((ns) => ns.read());
+const evaluated = async () => import("./evaluated.js").then((ns) => ns.read());
+const reassigned = async () => import("./reassigned.js").then((ns) => ns.read());
+const plain = async () => import("./plain.js").then((ns) => ns.read());
+const redeclared = async () => import("./redeclared.js").then((ns) => ns.read());
+const defaultThis = async () => import("./default-this.js").then((ns) => ns.default());
+const defaultArrow = async () => import("./default-arrow.js").then((ns) => ns.default());
+const defaultNamed = async () => import("./default-named.js").then((ns) => ns.default());
+export { awaited, computed, defaultArrow, defaultNamed, defaultThis, evaluated, merged, method, nestedArrow, optional, parenthesized, plain, reassigned, redeclared, tagged, value };
 
 ```
 
@@ -55,6 +122,18 @@ export { awaited, computed, merged, method, optional, parenthesized, tagged, val
 
 ```js
 export { t as read, n as value } from "./shared.js";
+
+```
+
+## nested-arrow.js
+
+```js
+// nested-arrow.js
+let value = "expected";
+function read() {
+	return (() => this.value)();
+}
+export { read, value };
 
 ```
 
@@ -69,6 +148,47 @@ export { t as read, n as value } from "./shared.js";
 
 ```js
 export { t as read, n as value } from "./shared.js";
+
+```
+
+## plain.js
+
+```js
+// plain.js
+function read() {
+	return "expected";
+}
+export { read };
+
+```
+
+## reassigned.js
+
+```js
+// reassigned.js
+let value = "expected";
+let read = function() {
+	return "stale";
+};
+read = function() {
+	return this.value;
+};
+export { read, value };
+
+```
+
+## redeclared.js
+
+```js
+// redeclared.js
+let value = "expected";
+var read = function() {
+	return "stale";
+};
+var read = function() {
+	return this.value;
+};
+export { read, value };
 
 ```
 

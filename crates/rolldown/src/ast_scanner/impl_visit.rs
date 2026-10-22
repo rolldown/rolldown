@@ -114,6 +114,9 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
       }
 
       self.visit_statement(stmt);
+      if self.last_nested_this_stmt_idx != Some(self.current_stmt_idx) {
+        self.mark_functions_never_reading_this(stmt);
+      }
       // Tree-shaking side effects / global reads / pure annotations come from the analyzer.
       // Top-level reads of imported bindings are detected by a separate uniform walk so the
       // signal is complete by construction (no per-expression-form gaps).
@@ -344,7 +347,9 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
     walk_js::walk_member_expression(self, it);
   }
   fn visit_this_expression(&mut self, it: &ast::ThisExpression) {
-    if !self.is_this_nested() {
+    if self.is_this_nested() {
+      self.last_nested_this_stmt_idx = Some(self.current_stmt_idx);
+    } else {
       self.top_level_this_expr_set.insert(it.node_id());
     }
     walk_js::walk_this_expression(self, it);

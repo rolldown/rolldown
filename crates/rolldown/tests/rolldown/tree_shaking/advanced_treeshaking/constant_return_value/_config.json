@@ -1,0 +1,8 @@
+{
+  "_comment": "T1: the return value of a call folds, so the guarded branch goes.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

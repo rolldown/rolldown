@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+globalThis.log = [];
+const target = { set x(v) {
+	globalThis.log.push(v);
+} };
+const other = {};
+function write(useTarget) {
+	(useTarget ? target : other).x = "written";
+}
+export { write };
+
+```

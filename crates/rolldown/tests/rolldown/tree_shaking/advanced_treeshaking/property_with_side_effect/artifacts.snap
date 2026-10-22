@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+globalThis.log = [];
+function effect() {
+	globalThis.log.push("effect");
+	return 2;
+}
+const value = {
+	a: 1,
+	b: effect()
+}.a;
+export { value };
+
+```

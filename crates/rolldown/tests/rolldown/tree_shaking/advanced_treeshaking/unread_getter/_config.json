@@ -1,0 +1,8 @@
+{
+  "_comment": "E2: a read of a data property next to a getter does not run the getter, so it goes.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

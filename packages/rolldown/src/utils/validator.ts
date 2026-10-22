@@ -707,6 +707,7 @@ const InputOptionsSchema = v.strictObject({
         ]),
       ),
       lazyBarrel: v.optional(v.boolean()),
+      advancedTreeshaking: v.optional(v.boolean()),
     }),
   ),
   transform: v.optional(TransformOptionsSchema),

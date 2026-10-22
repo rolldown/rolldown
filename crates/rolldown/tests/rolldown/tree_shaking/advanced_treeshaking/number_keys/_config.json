@@ -1,0 +1,8 @@
+{
+  "_comment": "A number key has the name that JavaScript gives it: `1e21` is `'1e+21'` and `0x10` is `'16'`. Keys that the analysis cannot name stay.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

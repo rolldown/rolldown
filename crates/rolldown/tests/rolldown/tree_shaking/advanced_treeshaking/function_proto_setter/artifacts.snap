@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+globalThis.log = [];
+function f() {}
+f.__proto__ = { set x(value) {
+	globalThis.log.push(value);
+} };
+f.x = "set";
+const done = true;
+export { done };
+
+```

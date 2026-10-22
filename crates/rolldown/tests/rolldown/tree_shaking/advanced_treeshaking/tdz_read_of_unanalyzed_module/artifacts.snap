@@ -1,0 +1,41 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## EVAL
+
+```text
+[EVAL] Use of direct `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
+   ╭─[ b.js:3:1 ]
+   │
+ 3 │ eval('');
+   │ ──┬─  
+   │   ╰─── Use of direct `eval` here.
+   │ 
+   │ Help: Consider using indirect eval. For more information, check the documentation: https://rolldown.rs/guide/troubleshooting#avoiding-direct-eval
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+// a.js
+function ignore(_value) {
+	return "called";
+}
+let result;
+try {
+	result = ignore(x);
+} catch {
+	result = "tdz";
+}
+// b.js
+let x = 1;
+eval("");
+export { result };
+
+```

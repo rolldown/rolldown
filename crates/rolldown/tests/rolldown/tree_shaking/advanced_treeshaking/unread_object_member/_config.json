@@ -1,0 +1,8 @@
+{
+  "_comment": "H1: a property that nothing reads goes, even when the object is an export of another module.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

@@ -1,4 +1,5 @@
 use crate::stages::link_stage::{ModuleInclusionVec, ModuleNamespaceReasonVec, StmtInclusionVec};
+use crate::types::tree_shaking_rewrites::TreeShakingRewrites;
 use oxc_index::IndexVec;
 use oxc_str::CompactStr;
 use rolldown_common::{
@@ -110,6 +111,8 @@ pub struct LinkingMetadata {
   pub stmt_info_included: IndexBitSet<StmtInfoIdx>,
   /// Tracks whether the module is included after tree-shaking.
   pub is_included: bool,
+  /// Sub-statement edits from advanced tree shaking, applied by the module finalizer.
+  pub tree_shaking_rewrites: Option<Box<TreeShakingRewrites>>,
 }
 
 impl LinkingMetadata {

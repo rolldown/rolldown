@@ -1067,6 +1067,13 @@
             "boolean",
             "null"
           ]
+        },
+        "advancedTreeshaking": {
+          "description": "Remove unused object properties, dead branches, unused call arguments, and statements\nwithout effects, with an analysis of the whole module graph before chunking.",
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

@@ -1,0 +1,8 @@
+{
+  "_comment": "An argument for an unused parameter stays when it has an effect.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

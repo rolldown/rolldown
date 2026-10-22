@@ -1,3 +1,4 @@
+mod advanced;
 pub(super) mod determine_side_effects;
 mod dynamic_entries;
 pub mod include_statements;

@@ -1,0 +1,8 @@
+{
+  "_comment": "An `import()` in a removed branch goes, and so does the chunk of its dynamic entry.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

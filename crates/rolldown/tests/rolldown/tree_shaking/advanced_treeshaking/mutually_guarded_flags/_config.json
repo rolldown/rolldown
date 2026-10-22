@@ -1,0 +1,8 @@
+{
+  "_comment": "W2: flags that guard each other stay false, which only the fixpoint finds.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "_comment": "A namespace object that escapes keeps every export and every property of the exports.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+function read() {
+	return flag ? "set" : "unset";
+}
+let early;
+try {
+	early = read();
+} catch {
+	early = "tdz";
+}
+let flag = true;
+export { early, read };
+
+```

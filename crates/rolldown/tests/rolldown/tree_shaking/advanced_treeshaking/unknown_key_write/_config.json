@@ -1,0 +1,8 @@
+{
+  "_comment": "A write with an unknown key makes every property of the object unknown.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

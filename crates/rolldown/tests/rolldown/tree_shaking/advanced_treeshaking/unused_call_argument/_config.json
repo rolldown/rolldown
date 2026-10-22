@@ -1,0 +1,8 @@
+{
+  "_comment": "T3: an argument for a parameter that the callee never reads goes, so `clientHello` goes.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

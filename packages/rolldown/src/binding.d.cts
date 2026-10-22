@@ -2302,6 +2302,7 @@ export interface BindingExperimentalOptions {
   nativeMagicString?: boolean
   chunkOptimization?: boolean | BindingChunkOptimizationOptions
   lazyBarrel?: boolean
+  advancedTreeshaking?: boolean
 }
 
 export interface BindingFilterToken {

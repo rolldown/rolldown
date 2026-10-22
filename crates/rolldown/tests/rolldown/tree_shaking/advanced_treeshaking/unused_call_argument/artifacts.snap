@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+function serverHello() {
+	return "server";
+}
+function pick(s, c) {
+	return s;
+}
+const hello = pick(serverHello);
+export { hello };
+
+```

@@ -1,0 +1,8 @@
+{
+  "_comment": "A write through a value that the analysis cannot resolve still keeps the setter at the written key.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

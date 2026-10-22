@@ -80,6 +80,9 @@ pub struct ExperimentalOptions {
   pub native_magic_string: Option<bool>,
   pub chunk_optimization: Option<ChunkOptimizationOption>,
   pub lazy_barrel: Option<bool>,
+  /// Remove unused object properties, dead branches, unused call arguments, and statements
+  /// without effects, with an analysis of the whole module graph before chunking.
+  pub advanced_treeshaking: Option<bool>,
 }
 
 impl ExperimentalOptions {
@@ -120,5 +123,9 @@ impl ExperimentalOptions {
 
   pub fn is_lazy_barrel_enabled(&self) -> bool {
     self.lazy_barrel.unwrap_or(false)
+  }
+
+  pub fn is_advanced_treeshaking_enabled(&self) -> bool {
+    self.advanced_treeshaking.unwrap_or(false)
   }
 }

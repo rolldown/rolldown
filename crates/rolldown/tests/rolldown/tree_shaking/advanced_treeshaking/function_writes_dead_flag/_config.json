@@ -1,0 +1,8 @@
+{
+  "_comment": "W1: a call of a function that only writes a flag that nothing reads has no effect.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

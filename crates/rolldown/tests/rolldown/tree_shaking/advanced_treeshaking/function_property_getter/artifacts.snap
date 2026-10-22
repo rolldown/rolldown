@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+globalThis.log = [];
+function f() {}
+Object.defineProperty(f, "x", { get() {
+	globalThis.log.push("getter");
+	return 1;
+} });
+f.x;
+const done = true;
+export { done };
+
+```

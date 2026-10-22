@@ -1,0 +1,8 @@
+{
+  "_comment": "A chain of steps: a path read (H), a never-called writer (W), a return value (T), and a pruned branch.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

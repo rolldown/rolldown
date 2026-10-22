@@ -1,0 +1,8 @@
+{
+  "_comment": "A method that reads `this` can read any property, so the object keeps every property.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "_comment": "A function of a module in an import cycle can run before the module ran, so its reads must not fold. The value is an object, so `inlineConst` does not inline it.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

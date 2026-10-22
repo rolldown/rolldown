@@ -1,0 +1,8 @@
+{
+  "_comment": "A write to `__proto__` of a function can bring a setter, so the write and the later property write stay.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

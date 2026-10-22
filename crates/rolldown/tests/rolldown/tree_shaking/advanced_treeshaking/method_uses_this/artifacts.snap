@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+const once = {
+	n: 0,
+	untouched: 1,
+	inc() {
+		this.n++;
+		return this.n + this.untouched;
+	}
+}.inc();
+export { once };
+
+```

@@ -1,0 +1,8 @@
+{
+  "_comment": "A function that a statement calls before the declaration ran can see the binding uninitialized, so its read must not fold.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

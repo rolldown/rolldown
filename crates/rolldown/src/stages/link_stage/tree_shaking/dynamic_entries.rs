@@ -14,6 +14,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::stages::link_stage::LinkStage;
 
+use super::advanced::AdvancedTreeShaking;
 use super::include_statements::{
   IncludeContext, StmtInclusionVec, SymbolIncludeReason, include_declaring_statements,
   include_module, include_symbol_and_check_cjs_bailout,
@@ -35,6 +36,7 @@ impl LinkStage<'_> {
         entry,
         context.is_included_vec,
         unreachable_import_expression_node_ids,
+        context.advanced.as_deref(),
       ) {
         unused_record_idxs.extend(item);
         return false;
@@ -172,6 +174,7 @@ impl LinkStage<'_> {
     entry_point: &EntryPoint,
     is_stmt_included_vec: &StmtInclusionVec,
     unreachable_import_expression_node_ids: &FxHashSet<(ModuleIdx, NodeId)>,
+    advanced: Option<&AdvancedTreeShaking>,
   ) -> Option<Vec<(ModuleIdx, ImportRecordIdx)>> {
     let mut ret = vec![];
     let is_lived = match entry_point.kind {
@@ -186,6 +189,12 @@ impl LinkStage<'_> {
         entry_point.related_stmt_infos.iter().any(
           |(module_idx, stmt_idx, node_id, import_record_idx)| {
             if unreachable_import_expression_node_ids.contains(&(*module_idx, *node_id)) {
+              return false;
+            }
+            // Advanced tree shaking removes this `import()`, and it marks the record dead itself.
+            if advanced.is_some_and(|advanced| {
+              advanced.is_import_node_excluded(*module_idx, *stmt_idx, *node_id)
+            }) {
               return false;
             }
             let module =

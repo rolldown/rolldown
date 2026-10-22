@@ -50,6 +50,7 @@ use crate::utils::external_import_interop::import_record_needs_interop;
 
 mod hmr;
 mod rename;
+mod tree_shaking_rewrites;
 
 /// Helper enum for `try_rewrite_cjs_member_expr_assignment_target` to handle both static and computed member properties.
 enum CjsMemberProperty<'a, 'ast> {

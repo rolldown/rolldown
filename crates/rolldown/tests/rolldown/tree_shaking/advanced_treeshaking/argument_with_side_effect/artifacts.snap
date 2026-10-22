@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+globalThis.log = [];
+function pick(a, b) {
+	return a;
+}
+function effect() {
+	globalThis.log.push("effect");
+	return "b";
+}
+const picked = pick("a", effect());
+export { picked };
+
+```

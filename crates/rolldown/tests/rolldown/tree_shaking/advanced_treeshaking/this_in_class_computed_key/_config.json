@@ -1,0 +1,8 @@
+{
+  "_comment": "A computed key of a class reads the `this` of the function around the class, so a method call on `o` keeps the properties of `o`.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

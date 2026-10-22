@@ -1,0 +1,8 @@
+{
+  "_comment": "A proxy in the prototype chain can trap `in`, so `'x' in o` stays when `o` sets `__proto__`.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

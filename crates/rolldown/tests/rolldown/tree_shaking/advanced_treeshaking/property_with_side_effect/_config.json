@@ -1,0 +1,8 @@
+{
+  "_comment": "An unread property stays when its value has an effect.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

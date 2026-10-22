@@ -1,0 +1,8 @@
+{
+  "_comment": "E4: a property write to a binding that nothing includes has no effect, so `txt` and its write go.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

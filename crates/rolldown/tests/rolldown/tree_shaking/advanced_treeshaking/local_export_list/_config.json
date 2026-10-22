@@ -1,0 +1,8 @@
+{
+  "_comment": "An export list (`export { obj }`) reads nothing, so an importer that reads one property keeps only that property.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

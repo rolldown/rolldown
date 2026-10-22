@@ -3,11 +3,11 @@ use oxc::semantic::NodeId;
 use oxc_index::IndexVec;
 use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ExportsKind, ExternalInteropUse, ImportKind,
-  ImportRecordMeta, IndexModules, MemberExprRef, Module, ModuleIdx, ModuleNamespaceIncludedReason,
-  ModuleType, NormalModule, NormalizedBundlerOptions, RUNTIME_MODULE_ID, RuntimeHelper,
-  StmtEvalFlags, StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolOrMemberExprRef, SymbolRef,
-  SymbolRefDb, UsedExternalSymbols, UsedSymbolRefsBuilder, WrapKind,
-  side_effects::DeterminedSideEffects,
+  ImportRecordIdx, ImportRecordMeta, IndexModules, MemberExprRef, Module, ModuleIdx,
+  ModuleNamespaceIncludedReason, ModuleType, NormalModule, NormalizedBundlerOptions,
+  RUNTIME_MODULE_ID, RuntimeHelper, StmtEvalFlags, StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos,
+  SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, UsedExternalSymbols, UsedSymbolRefsBuilder,
+  WrapKind, side_effects::DeterminedSideEffects,
 };
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
@@ -26,6 +26,7 @@ use crate::{
 };
 
 use super::{
+  advanced::{AdvancedOutput, AdvancedTreeShaking, Env},
   on_demand::{
     compute_body_demand_keys, is_gated_side_effect_stmt, side_effects_included_on_demand,
   },
@@ -58,6 +59,10 @@ bitflags::bitflags! {
         /// Currently only used to track namespace symbol inclusion.
         /// https://github.com/rolldown/rolldown/blob/d6d65f9080e427cd9feef56eb7a110fbcf6c1414/crates/rolldown/src/stages/generate_stage/chunk_optimizer.rs#L422
         const SimulatedFacadeChunk = 1 << 4;
+        /// A reference in a statement that advanced tree shaking walked. The walk already
+        /// recorded how the statement uses the symbol, so the symbol does not escape.
+        /// See internal-docs/advanced-tree-shaking/implementation.md.
+        const AnalyzedReference = 1 << 5;
     }
 }
 
@@ -113,6 +118,9 @@ pub struct IncludeContext<'a> {
   /// `chunk_optimizer` constructs `IncludeContext` with a struct literal; nothing outside this
   /// module should touch it.
   pub(in crate::stages) pending: Vec<WorkItem>,
+  /// `experimental.advancedTreeshaking`. Walks each included statement and decides which of its
+  /// parts the output keeps. See internal-docs/advanced-tree-shaking/implementation.md.
+  pub advanced: Option<Box<AdvancedTreeShaking<'a>>>,
 }
 
 impl<'a> IncludeContext<'a> {
@@ -159,6 +167,7 @@ impl<'a> IncludeContext<'a> {
       body_demand_swept: FxHashSet::default(),
       deferred_forwarding_refs: FxHashMap::default(),
       pending: Vec::new(),
+      advanced: None,
     }
   }
 }
@@ -258,6 +267,7 @@ fn check_cjs_bailout(ctx: &mut IncludeContext, symbol_ref: SymbolRef) {
 
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
+  #[expect(clippy::too_many_lines)]
   pub fn include_statements(
     &mut self,
     unreachable_import_expression_node_ids: &FxHashSet<(ModuleIdx, NodeId)>,
@@ -307,6 +317,22 @@ impl LinkStage<'_> {
       &entry_module_idxs,
       &body_demand_keys,
     );
+    if self.options.treeshake.is_some()
+      && self.options.experimental.is_advanced_treeshaking_enabled()
+      && !self.options.is_dev_mode_enabled()
+    {
+      context.advanced = Some(Box::new(AdvancedTreeShaking::new(Env::new(
+        &self.module_table.modules,
+        &self.ast_table,
+        &self.symbols,
+        &self.stmt_infos,
+        &self.metas,
+        self.options,
+        self.flat_options,
+        &self.import_cycles,
+        self.runtime.id(),
+      ))));
+    }
 
     let (user_defined_entries, mut dynamic_entries): (Vec<_>, Vec<_>) =
       std::mem::take(&mut self.entries)
@@ -342,39 +368,53 @@ impl LinkStage<'_> {
     let cycled_idx = self.sort_dynamic_entries_by_topological_order(&mut dynamic_entries);
     let mut included_dynamic_entry = FxHashSet::default();
     loop {
-      context.module_inclusion_changed = false;
+      loop {
+        context.module_inclusion_changed = false;
 
-      // It could be safely take since it is no more used.
-      // We extract bailout_modules first to avoid borrowing conflict:
-      // passing `context` requires a mutable borrow, which conflicts with
-      // borrowing `context.bailout_cjs_tree_shaking_modules` inside the call.
-      let bailout_modules = std::mem::take(&mut context.bailout_cjs_tree_shaking_modules);
-      include_cjs_bailout_exports(context, &self.metas, bailout_modules);
+        // It could be safely take since it is no more used.
+        // We extract bailout_modules first to avoid borrowing conflict:
+        // passing `context` requires a mutable borrow, which conflicts with
+        // borrowing `context.bailout_cjs_tree_shaking_modules` inside the call.
+        let bailout_modules = std::mem::take(&mut context.bailout_cjs_tree_shaking_modules);
+        include_cjs_bailout_exports(context, &self.metas, bailout_modules);
 
-      dynamic_entries.iter().for_each(|entry| {
-        if included_dynamic_entry.contains(&entry.idx) {
-          return;
+        dynamic_entries.iter().for_each(|entry| {
+          if included_dynamic_entry.contains(&entry.idx) {
+            return;
+          }
+          let included = self.process_and_retain_dynamic_entry(
+            entry,
+            &cycled_idx,
+            context,
+            &mut unused_record_idxs,
+            unreachable_import_expression_node_ids,
+          );
+          if included {
+            included_dynamic_entry.insert(entry.idx);
+          }
+        });
+
+        if !context.module_inclusion_changed {
+          break;
         }
-        let included = self.process_and_retain_dynamic_entry(
-          entry,
-          &cycled_idx,
-          context,
-          &mut unused_record_idxs,
-          unreachable_import_expression_node_ids,
-        );
-        if included {
-          included_dynamic_entry.insert(entry.idx);
-        }
-      });
-
-      if !context.module_inclusion_changed {
-        break;
       }
-    }
 
-    // Under `preserveModules`, preserve each module's re-exports whose canonical value survived
-    // tree-shaking, so every emitted file mirrors its source's export interface (issue #9122).
-    preserve_reexported_interfaces(context);
+      // Advanced tree shaking can include more code, and new code can make more dynamic entries
+      // alive.
+      if run_advanced_passes(context) {
+        continue;
+      }
+
+      // Under `preserveModules`, preserve each module's re-exports whose canonical value survived
+      // tree-shaking, so every emitted file mirrors its source's export interface (issue #9122).
+      let generation = context.advanced.as_ref().map(|advanced| advanced.generation());
+      preserve_reexported_interfaces(context);
+      if generation != context.advanced.as_ref().map(|advanced| advanced.generation()) {
+        continue;
+      }
+      break;
+    }
+    let advanced_output = context.advanced.take().map(|advanced| advanced.finish());
 
     dynamic_entries.retain(|entry| included_dynamic_entry.contains(&entry.idx));
 
@@ -470,6 +510,10 @@ impl LinkStage<'_> {
     );
     include_runtime_symbol(context, &self.runtime, depended_runtime_helper);
 
+    if let Some(output) = advanced_output {
+      self.apply_advanced_tree_shaking(output);
+    }
+
     self.used_symbol_refs_builder = used_symbol_refs_builder;
     self.used_external_symbols = used_external_symbols;
     // Store the final statement inclusion results back to metas.
@@ -487,6 +531,70 @@ impl LinkStage<'_> {
         self.metas.iter().map(|meta| meta.stmt_info_included.bit_count()).sum::<u32>(),
       "tree shaking inclusion ready"
     );
+  }
+
+  /// Remove the references and import records of the excluded parts from their statements, so
+  /// the generate stage sees only what the output contains. The finalizer applies the rewrites.
+  fn apply_advanced_tree_shaking(&mut self, output: AdvancedOutput) {
+    for (module_idx, stmt_idx, kept, excluded_records) in output.stmts {
+      let stmt_info = self.stmt_infos[module_idx].get_mut(stmt_idx);
+      let mut kept = kept.into_iter();
+      stmt_info.referenced_symbols.retain(|_| kept.next().unwrap_or(true));
+      stmt_info.import_records.retain(|record_idx| !excluded_records.contains(record_idx));
+    }
+    for (module_idx, rewrites) in output.rewrites {
+      self.metas[module_idx].tree_shaking_rewrites = Some(Box::new(rewrites));
+    }
+    for (module_idx, record_idx) in output.dead_dynamic_imports {
+      let module =
+        self.module_table[module_idx].as_normal_mut().expect("should be a normal module");
+      module.import_records[record_idx].meta.insert(ImportRecordMeta::DeadDynamicImport);
+    }
+  }
+}
+
+/// Run passes of advanced tree shaking until a pass finds nothing new. Returns whether the passes
+/// included more code.
+fn run_advanced_passes(ctx: &mut IncludeContext) -> bool {
+  let mut progress = false;
+  loop {
+    let Some(advanced) = ctx.advanced.as_deref_mut() else {
+      return progress;
+    };
+    let pass = advanced.run_pass(ctx.is_included_vec);
+    if pass.new_stmts.is_empty() && pass.grown.is_empty() {
+      if pass.facts_changed {
+        continue;
+      }
+      return progress;
+    }
+    progress = true;
+    for (module_idx, stmt_info_idx) in pass.new_stmts {
+      ctx.pending.push(WorkItem::Statement(module_idx, stmt_info_idx));
+    }
+    for (module_idx, stmt_info_idx, newly_kept) in pass.grown {
+      let Module::Normal(module) = &ctx.modules[module_idx] else {
+        continue;
+      };
+      let stmt_info = ctx.stmt_infos[module_idx].get(stmt_info_idx);
+      let excluded_records = ctx
+        .advanced
+        .as_deref()
+        .map(|advanced| advanced.excluded_records(module_idx, stmt_info_idx).to_vec())
+        .unwrap_or_default();
+      scan_import_records_for_cjs_bailout(ctx, module, stmt_info, &excluded_records);
+      let include_kind = stmt_include_kind(module, stmt_info);
+      for idx in newly_kept {
+        let reference_ref = &stmt_info.referenced_symbols[idx];
+        include_reference(
+          ctx,
+          module,
+          reference_ref,
+          analyzed_reason(module, reference_ref, include_kind),
+        );
+      }
+    }
+    drain_work_items(ctx);
   }
 }
 
@@ -613,8 +721,14 @@ fn sweep_side_effect_statements(ctx: &mut IncludeContext, module: &NormalModule)
       } else {
         stmt_info.eval_flags.has_side_effect_for_tree_shaking()
       };
-      if (has_side_effects && !(on_demand_side_effects && is_gated_side_effect_stmt(stmt_info)))
-        || bail_eval
+      let include = (has_side_effects
+        && !(on_demand_side_effects && is_gated_side_effect_stmt(stmt_info)))
+        || bail_eval;
+      if include
+        && ctx
+          .advanced
+          .as_deref_mut()
+          .is_none_or(|advanced| advanced.sweep_has_effects(module.idx, stmt_info_id))
       {
         ctx.pending.push(WorkItem::Statement(module.idx, stmt_info_id));
       }
@@ -694,6 +808,13 @@ fn handle_include_symbol(
 
   if is_bypassed_inlined_constant(ctx, canonical_ref, include_reason) {
     return;
+  }
+
+  if let Some(advanced) = ctx.advanced.as_deref_mut() {
+    advanced.on_symbol_included(
+      canonical_ref,
+      include_reason.contains(SymbolIncludeReason::AnalyzedReference),
+    );
   }
 
   // A simulated-facade include only materializes the eliminated facade's namespace object
@@ -777,7 +898,12 @@ fn drain_body_demand_stmts(ctx: &mut IncludeContext, canonical_ref: SymbolRef) {
   if let Module::Normal(_) = &ctx.modules[module_idx] {
     ctx.stmt_infos[module_idx].iter_enumerated_without_namespace_stmt().for_each(
       |(stmt_info_idx, stmt_info)| {
-        if is_gated_side_effect_stmt(stmt_info) {
+        if is_gated_side_effect_stmt(stmt_info)
+          && ctx
+            .advanced
+            .as_deref_mut()
+            .is_none_or(|advanced| advanced.sweep_has_effects(module_idx, stmt_info_idx))
+        {
           ctx.pending.push(WorkItem::Statement(module_idx, stmt_info_idx));
         }
       },
@@ -1035,58 +1161,100 @@ fn handle_include_statement(
 
   let stmt_info = ctx.stmt_infos[module.idx].get(stmt_info_idx);
 
-  scan_import_records_for_cjs_bailout(ctx, module, stmt_info);
+  // Advanced tree shaking decides which parts of the statement the output keeps. The references
+  // and import records in the other parts are not followed.
+  let (kept, excluded_records) = match ctx.advanced.as_deref_mut() {
+    Some(advanced) if advanced.is_walked_stmt(module_idx, stmt_info_idx) => {
+      let (kept, excluded_records) = advanced.walk_new_stmt(module_idx, stmt_info_idx);
+      (Some(kept), excluded_records)
+    }
+    _ => (None, Vec::new()),
+  };
+
+  scan_import_records_for_cjs_bailout(ctx, module, stmt_info, &excluded_records);
+  let include_kind = stmt_include_kind(module, stmt_info);
+
+  stmt_info.referenced_symbols.iter().enumerate().for_each(|(idx, reference_ref)| {
+    let reason = match &kept {
+      Some(kept) if !kept[idx] => return,
+      Some(_) => analyzed_reason(module, reference_ref, include_kind),
+      None => include_kind,
+    };
+    include_reference(ctx, module, reference_ref, reason);
+  });
+}
+
+fn stmt_include_kind(module: &NormalModule, stmt_info: &StmtInfo) -> SymbolIncludeReason {
   let mut include_kind = if stmt_info.meta.contains(StmtInfoMeta::ReExportDynamicExports) {
     SymbolIncludeReason::ReExportDynamicExports
   } else {
     SymbolIncludeReason::Normal
   };
 
-  let is_json_module = module.module_type == ModuleType::Json;
-
   // For a transformed json module
-  if is_json_module && !stmt_info.referenced_symbols.is_empty() {
+  if module.module_type == ModuleType::Json && !stmt_info.referenced_symbols.is_empty() {
     include_kind |= SymbolIncludeReason::JsonDefaultExportSelfReference;
   }
+  include_kind
+}
 
-  stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
-    if let Some(member_expr_resolution) = match reference_ref {
-      SymbolOrMemberExprRef::Symbol(_) => None,
-      SymbolOrMemberExprRef::MemberExpr(member_expr_ref) => {
-        member_expr_ref.resolution(&ctx.metas[module.idx].resolved_member_expr_refs)
-      }
-    } {
-      // Caveat: If we can get the `MemberExprRefResolution` from the `resolved_member_expr_refs`,
-      // it means this member expr definitely contains module namespace ref.
-      if let Some(resolved_ref) = member_expr_resolution.resolved {
-        member_expr_resolution.depended_refs.iter().for_each(|sym_ref| {
-          retain_forwarding_declaration(ctx, *sym_ref);
-        });
-        ctx.pending.push(WorkItem::Symbol(resolved_ref, include_kind));
-        // When the member expression resolves to a specific CJS export property
-        // (e.g., `ns.x`), we skip the bailout check — we know the access is partial
-        // and CJS tree-shaking can work. Otherwise, the full namespace may be used
-        // opaquely, so we check for bailout.
-        if member_expr_resolution.target_commonjs_exported_symbol.is_none() {
-          check_cjs_bailout(ctx, resolved_ref);
-        }
-      } else {
-        // If it points to nothing, the expression will be rewritten as `void 0` and there's nothing we need to include
+/// The reason for a reference in a walked statement. Only the scanner's references are
+/// occurrences in the AST that the walk saw. The link stage adds references with other owners.
+fn analyzed_reason(
+  module: &NormalModule,
+  reference_ref: &SymbolOrMemberExprRef,
+  include_kind: SymbolIncludeReason,
+) -> SymbolIncludeReason {
+  if reference_ref.symbol_ref().owner == module.idx {
+    include_kind | SymbolIncludeReason::AnalyzedReference
+  } else {
+    include_kind
+  }
+}
+
+/// Follow one entry of a statement's `referenced_symbols`.
+fn include_reference(
+  ctx: &mut IncludeContext,
+  module: &NormalModule,
+  reference_ref: &SymbolOrMemberExprRef,
+  include_kind: SymbolIncludeReason,
+) {
+  if let Some(member_expr_resolution) = match reference_ref {
+    SymbolOrMemberExprRef::Symbol(_) => None,
+    SymbolOrMemberExprRef::MemberExpr(member_expr_ref) => {
+      member_expr_ref.resolution(&ctx.metas[module.idx].resolved_member_expr_refs)
+    }
+  } {
+    // Caveat: If we can get the `MemberExprRefResolution` from the `resolved_member_expr_refs`,
+    // it means this member expr definitely contains module namespace ref.
+    if let Some(resolved_ref) = member_expr_resolution.resolved {
+      member_expr_resolution.depended_refs.iter().for_each(|sym_ref| {
+        retain_forwarding_declaration(ctx, *sym_ref);
+      });
+      ctx.pending.push(WorkItem::Symbol(resolved_ref, include_kind));
+      // When the member expression resolves to a specific CJS export property
+      // (e.g., `ns.x`), we skip the bailout check — we know the access is partial
+      // and CJS tree-shaking can work. Otherwise, the full namespace may be used
+      // opaquely, so we check for bailout.
+      if member_expr_resolution.target_commonjs_exported_symbol.is_none() {
+        check_cjs_bailout(ctx, resolved_ref);
       }
     } else {
-      // For enum member accesses (e.g., `B.member`), check if the member will be inlined
-      // by the finalizer. If so, skip including the enum's declaration — it's dead code
-      // after inlining. This mirrors the `constant_symbol_map` bypass in `include_symbol`.
-      if let SymbolOrMemberExprRef::MemberExpr(member_expr_ref) = reference_ref {
-        if is_inlined_enum_member_access(ctx.modules, ctx.symbols, member_expr_ref) {
-          return;
-        }
-      }
-      let original_ref = *reference_ref.symbol_ref();
-      retain_forwarding_declarations(ctx, original_ref);
-      push_symbol_and_check_cjs_bailout(ctx, original_ref, include_kind);
+      // If it points to nothing, the expression will be rewritten as `void 0` and there's nothing we need to include
     }
-  });
+  } else {
+    // For enum member accesses (e.g., `B.member`), check if the member will be inlined
+    // by the finalizer. If so, skip including the enum's declaration — it's dead code
+    // after inlining. This mirrors the `constant_symbol_map` bypass in `include_symbol`.
+    if let SymbolOrMemberExprRef::MemberExpr(member_expr_ref) = reference_ref {
+      if is_inlined_enum_member_access(ctx.modules, ctx.symbols, member_expr_ref) {
+        return;
+      }
+    }
+    let original_ref = *reference_ref.symbol_ref();
+    retain_forwarding_declarations(ctx, original_ref);
+    push_symbol_and_check_cjs_bailout(ctx, original_ref, include_kind);
+  }
 }
 
 /// FIXME: bailout for require() import for now
@@ -1098,10 +1266,12 @@ fn scan_import_records_for_cjs_bailout(
   ctx: &mut IncludeContext,
   module: &NormalModule,
   stmt_info: &StmtInfo,
+  excluded_records: &[ImportRecordIdx],
 ) {
   stmt_info
     .import_records
     .iter()
+    .filter(|import_record_idx| !excluded_records.contains(import_record_idx))
     .filter_map(|import_record_idx| {
       let rec = &module.import_records[*import_record_idx];
       rec.resolved_module.map(|module_idx| (rec, module_idx))

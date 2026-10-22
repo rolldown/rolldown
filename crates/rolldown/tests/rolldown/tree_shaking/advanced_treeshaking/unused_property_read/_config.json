@@ -1,0 +1,8 @@
+{
+  "_comment": "E1: a statement that only reads a data property has no effect.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

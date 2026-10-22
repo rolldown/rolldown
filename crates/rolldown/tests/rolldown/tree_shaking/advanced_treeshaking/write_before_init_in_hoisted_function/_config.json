@@ -1,0 +1,8 @@
+{
+  "_comment": "A write in a hoisted function that a statement can call before the declaration ran still makes the property unknown, because a later call can write the initialized object.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

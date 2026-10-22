@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+function setX() {
+	obj.x = 1;
+}
+try {
+	setX();
+} catch {}
+const obj = { x: 0 };
+function check() {
+	return obj.x === 1 ? "changed" : "same";
+}
+export { check, setX };
+
+```

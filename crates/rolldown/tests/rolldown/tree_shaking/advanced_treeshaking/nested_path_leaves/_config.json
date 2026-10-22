@@ -1,0 +1,8 @@
+{
+  "_comment": "H2: the demand keeps nested paths apart, so only the read leaf stays.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

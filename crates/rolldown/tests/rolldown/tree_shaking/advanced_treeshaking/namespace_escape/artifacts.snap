@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// mod.js
+var namespace_escape_exports = /* @__PURE__ */ __exportAll({
+	a: () => 1,
+	b: () => b
+});
+const b = {
+	inner: 2,
+	other: 3
+};
+// main.js
+function keys() {
+	return Object.keys(namespace_escape_exports);
+}
+function other() {
+	return b.other;
+}
+export { keys, other };
+
+```

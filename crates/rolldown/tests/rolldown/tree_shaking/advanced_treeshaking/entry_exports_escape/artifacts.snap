@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+const config = {
+	a: 1,
+	b: {
+		c: 2,
+		d: 3
+	}
+};
+export { config };
+
+```

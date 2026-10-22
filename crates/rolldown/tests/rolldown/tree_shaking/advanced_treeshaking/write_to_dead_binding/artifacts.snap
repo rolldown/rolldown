@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+function _child(node) {
+	return node.firstChild;
+}
+const child = (...args) => child.impl(...args);
+child.impl = _child;
+function main(node) {
+	return child(node);
+}
+export { main };
+
+```

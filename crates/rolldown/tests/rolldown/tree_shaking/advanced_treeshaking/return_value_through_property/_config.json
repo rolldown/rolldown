@@ -1,0 +1,8 @@
+{
+  "_comment": "T2: a return value that reads a property folds.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

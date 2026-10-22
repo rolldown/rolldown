@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// b.js
+const fromB = readA();
+// a.js
+var a = { mode: "a" };
+function readA() {
+	return a && a.mode === "a" ? "a-ready" : "a-missing";
+}
+export { fromB, readA };
+
+```

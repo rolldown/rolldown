@@ -1,0 +1,8 @@
+{
+  "_comment": "A binding that included code writes is a live binding, so its reads must not fold.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

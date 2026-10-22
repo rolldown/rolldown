@@ -1,0 +1,18 @@
+{
+  "_comment": "W3: the analysis runs before chunking, so a binding that no included code writes folds in every chunk.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "another",
+        "import": "./another.js"
+      }
+    ],
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

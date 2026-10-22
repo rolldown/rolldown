@@ -1,0 +1,8 @@
+{
+  "_comment": "Unknown code can define a getter on a function that escapes, so a read of a property of a function runs code.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

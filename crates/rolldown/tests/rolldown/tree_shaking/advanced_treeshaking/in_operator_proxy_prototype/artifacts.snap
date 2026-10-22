@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+globalThis.log = [];
+const o = { __proto__: new Proxy({}, { has(_target, key) {
+	globalThis.log.push(key);
+	return false;
+} }) };
+"x" in o;
+"y" in o;
+const done = true;
+export { done };
+
+```

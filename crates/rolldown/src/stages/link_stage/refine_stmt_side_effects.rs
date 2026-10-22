@@ -22,11 +22,35 @@ use super::LinkStage;
 #[derive(Debug, Default)]
 pub(super) struct ImportCycles {
   components: OnceLock<IndexVec<ModuleIdx, ModuleIdx>>,
+  /// Whether a module shares its component with another module.
+  in_cycle: OnceLock<IndexVec<ModuleIdx, bool>>,
 }
 
 impl ImportCycles {
-  fn same_cycle(&self, modules: &IndexModules, importer: ModuleIdx, exporter: ModuleIdx) -> bool {
-    let components = self.components.get_or_init(|| {
+  pub(super) fn same_cycle(
+    &self,
+    modules: &IndexModules,
+    importer: ModuleIdx,
+    exporter: ModuleIdx,
+  ) -> bool {
+    let components = self.components(modules);
+    components[importer] == components[exporter]
+  }
+
+  /// Whether `module` shares a static-import cycle with another module.
+  pub(super) fn is_in_cycle(&self, modules: &IndexModules, module: ModuleIdx) -> bool {
+    self.in_cycle.get_or_init(|| {
+      let components = self.components(modules);
+      let mut sizes = FxHashMap::<ModuleIdx, u32>::default();
+      for representative in components {
+        *sizes.entry(*representative).or_default() += 1;
+      }
+      components.iter().map(|representative| sizes[representative] > 1).collect()
+    })[module]
+  }
+
+  fn components(&self, modules: &IndexModules) -> &IndexVec<ModuleIdx, ModuleIdx> {
+    self.components.get_or_init(|| {
       let mut graph = DiGraph::<(), ()>::with_capacity(modules.len(), 0);
       for _ in modules {
         graph.add_node(());
@@ -50,8 +74,7 @@ impl ImportCycles {
         }
       }
       components
-    });
-    components[importer] == components[exporter]
+    })
   }
 }
 

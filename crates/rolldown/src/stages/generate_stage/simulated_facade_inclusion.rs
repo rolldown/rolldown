@@ -109,6 +109,7 @@ impl GenerateStage<'_> {
       body_demand_swept: FxHashSet::default(),
       deferred_forwarding_refs: FxHashMap::default(),
       pending: Vec::new(),
+      advanced: None,
     };
 
     if f(context) {

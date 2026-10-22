@@ -1,0 +1,8 @@
+{
+  "_comment": "E3: a spread of an object without getters into an unused object has no effect.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "_comment": "Each evaluation of an object literal creates a new object, so `===` of two of them must not fold.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

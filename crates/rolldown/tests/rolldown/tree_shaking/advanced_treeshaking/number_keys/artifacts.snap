@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+const o = {
+	1e21: "big",
+	1e-7: "small",
+	16: "hex"
+};
+const big = o["1e+21"];
+const small = o["1e-7"];
+const hex = o["16"];
+export { big, hex, small };
+
+```

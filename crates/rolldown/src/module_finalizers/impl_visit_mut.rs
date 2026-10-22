@@ -460,6 +460,9 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   }
 
   fn visit_statement(&mut self, it: &mut ast::Statement<'ast>) {
+    if let Some(rewrites) = self.ctx.linking_info.tree_shaking_rewrites.as_deref() {
+      self.fold_if_statement(it, rewrites);
+    }
     _ = self.try_inline_json_module_prop(it);
 
     walk_js_mut::walk_statement(self, it);
@@ -480,6 +483,9 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   }
 
   fn visit_statements(&mut self, it: &mut allocator::Vec<'ast, ast::Statement<'ast>>) {
+    if let Some(rewrites) = self.ctx.linking_info.tree_shaking_rewrites.as_deref() {
+      self.remove_tree_shaken_statements(it, rewrites);
+    }
     let previous_stmt_index = self.cur_stmt_index;
     let previous_keep_name_statement = std::mem::take(&mut self.keep_name_statement_to_insert);
     for (i, stmt) in it.iter_mut().enumerate() {
@@ -503,6 +509,9 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   }
 
   fn visit_expression(&mut self, expr: &mut ast::Expression<'ast>) {
+    if let Some(rewrites) = self.ctx.linking_info.tree_shaking_rewrites.as_deref() {
+      self.apply_tree_shaking_expr_rewrites(expr, rewrites);
+    }
     // Handle keep_names for named class/function expressions in any expression context
     // (return statements, function args, array elements, etc.)
     if self.ctx.options.keep_names && self.ctx.runtime.id() != self.ctx.idx {

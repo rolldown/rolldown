@@ -10,3 +10,4 @@ pub mod member_read_star_reexport_path;
 pub mod module_factory;
 pub mod oxc_parse_type;
 pub mod scan_stage_cache;
+pub mod tree_shaking_rewrites;

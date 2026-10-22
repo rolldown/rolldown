@@ -730,6 +730,27 @@ export interface InputOptions {
      * @default false
      */
     lazyBarrel?: boolean;
+    /**
+     * Control whether to enable advanced tree shaking.
+     *
+     * Advanced tree shaking analyzes the whole module graph before chunking and keeps facts per
+     * property path, not per top-level statement. It removes:
+     *
+     * - object properties that nothing reads,
+     * - statements whose only work is a property read or a write that nothing observes,
+     * - branches whose condition folds through a function call or a binding that is never written,
+     * - functions and call arguments that only the removed code used.
+     *
+     * Getters that the program reads still run, live bindings stay live, and the
+     * `moduleSideEffects`, `annotations`, and `manualPureFunctions` options keep their meanings.
+     *
+     * > [!WARNING]
+     * > This is an experimental feature. A bug in the analysis can emit a bundle that runs but
+     * > behaves differently. Please report any difference that you find.
+     *
+     * @default false
+     */
+    advancedTreeshaking?: boolean;
   };
   /**
    * Configure how the code is transformed. This process happens after the `transform` hook.

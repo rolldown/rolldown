@@ -1,0 +1,8 @@
+{
+  "_comment": "`b.js` uses `eval`, so the analysis does not cover it. `a.js` runs first in the cycle, so the read of `x` throws, and the argument `x` stays although `ignore` never reads it.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

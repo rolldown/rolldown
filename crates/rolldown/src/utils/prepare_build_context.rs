@@ -375,10 +375,11 @@ pub fn prepare_build_context(
   let mut experimental = raw_options.experimental.unwrap_or_default();
   if experimental.dev_mode.is_some() {
     experimental.incremental_build = Some(true);
-    // Dev mode requires treeshaking to be disabled, and lazy barrel relies on
-    // treeshaking, so it must be disabled as well.
+    // Dev mode requires treeshaking to be disabled, and lazy barrel and advanced
+    // treeshaking rely on treeshaking, so they must be disabled as well.
     raw_treeshake = TreeshakeOptions::Boolean(false);
     experimental.lazy_barrel = Some(false);
+    experimental.advanced_treeshaking = Some(false);
     // Dev rebuilds write only the changed chunks, so cleaning the output
     // directory would delete chunks the browser can still ask for.
     clean_dir = false;

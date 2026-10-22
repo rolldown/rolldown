@@ -42,7 +42,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       .dynamic_import_binding_to_import_record_idx
       .get(&symbol_id)?;
     let usage = match partial_name {
-      Some(name) => DynamicImportExportsUsage::Single(name.into()),
+      Some(name) => {
+        if self.dynamic_import_member_is_called(self.visit_path.len() - 1) {
+          self.record_dynamic_import_called_name(rec_idx, name);
+        }
+        DynamicImportExportsUsage::Single(name.into())
+      }
       None => match parent {
         // The binding is destructured in a later statement rather than accessed as a
         // member, e.g. `import('mod').then(ns => { const { a } = ns })`.
@@ -81,6 +86,26 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     }
 
     None
+  }
+
+  /// See internal-docs/code-splitting/implementation.md.
+  fn record_dynamic_import_called_name(&mut self, rec_idx: ImportRecordIdx, name: &str) {
+    self.result.dynamic_import_called_names.entry(rec_idx).or_default().insert(name.into());
+  }
+
+  fn dynamic_import_member_is_called(&self, member_idx: usize) -> bool {
+    let mut callee_id = self.visit_path[member_idx].node_id();
+    for ancestor in self.visit_path[..member_idx].iter().rev() {
+      match ancestor {
+        AstKind::ParenthesizedExpression(_) | AstKind::ChainExpression(_) => {
+          callee_id = ancestor.node_id();
+        }
+        AstKind::CallExpression(call) => return call.callee.node_id() == callee_id,
+        AstKind::TaggedTemplateExpression(tagged) => return tagged.tag.node_id() == callee_id,
+        _ => return false,
+      }
+    }
+    false
   }
 
   pub fn init_dynamic_import_binding_usage_info(&mut self, import_record_idx: ImportRecordIdx) {
@@ -151,12 +176,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         }
       }
       // 4. (await import('mod')).a
-      kind if kind.is_member_expression_kind() => Some(FxHashSet::from_iter([kind
-        .as_member_expression_kind()
-        .unwrap()
-        .static_property_name()?
-        .as_str()?
-        .into()])),
+      kind if kind.is_member_expression_kind() => {
+        let name: CompactStr =
+          kind.as_member_expression_kind().unwrap().static_property_name()?.as_str()?.into();
+        if self.dynamic_import_member_is_called(ast_after_remove_paren_idx) {
+          self.record_dynamic_import_called_name(import_record_idx, &name);
+        }
+        Some(FxHashSet::from_iter([name]))
+      }
       // for rest of the cases, just bailout, until we find other optimization could apply
       _ => None,
     }

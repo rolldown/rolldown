@@ -1068,12 +1068,20 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         .requires_semantic_namespace(self.ctx.module.namespace_object_ref, |importer_idx| {
           self.ctx.chunk_graph.module_is_in_live_chunk(importer_idx)
         });
+    let dynamic_export_names = self
+      .ctx
+      .linking_info
+      .module_namespace_included_reason
+      .contains(ModuleNamespaceIncludedReason::SimulateFacadeChunk)
+      .then(|| self.ctx.linking_info.dynamically_read_export_names(self.ctx.dynamic_import_usage))
+      .flatten();
     let simulated_facade_export_names = (!namespace_is_semantically_observed)
       .then(|| {
         self
           .ctx
           .order_wrap_state
           .simulated_facade_export_names(self.ctx.module.namespace_object_ref)
+          .or(dynamic_export_names)
       })
       .flatten();
 

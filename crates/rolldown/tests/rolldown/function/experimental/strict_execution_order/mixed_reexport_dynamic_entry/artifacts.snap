@@ -219,10 +219,7 @@ const require_rolldown_runtime = require("./rolldown-runtime.js");
 // a.js
 const A = { value: "a" };
 // shared.js
-var shared_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
-	A: () => A,
-	LOCAL: () => LOCAL
-});
+var shared_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ A: () => A });
 const LOCAL = "local";
 Object.defineProperty(exports, "LOCAL", {
 	enumerable: true,

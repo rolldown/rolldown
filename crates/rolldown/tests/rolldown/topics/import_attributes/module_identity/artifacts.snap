@@ -1,0 +1,33 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// counter.js
+let count = 0;
+const next = () => ++count;
+// dep.js
+var dep_default$2 = next();
+// dep.js?attributes=%7B%22kind%22%3A%22x%22%7D
+var dep_default$1 = next();
+// dep.js?attributes=%7B%22kind%22%3A%22x%22%2C%22other%22%3A%22y%22%7D
+var dep_default = next();
+// main.js
+assert.deepStrictEqual([
+	dep_default$2,
+	dep_default$1,
+	dep_default,
+	dep_default
+].sort(), [
+	1,
+	2,
+	3,
+	3
+]);
+assert.strictEqual(dep_default, dep_default);
+
+```

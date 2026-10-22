@@ -1,0 +1,15 @@
+{
+  "_comment": "A namespace re-export of an external keeps the module's attributes in ESM, and requires the path without attributes in CJS.",
+  "config": {
+    "external": ["ext"],
+    "experimental": {
+      "importAttributes": true
+    }
+  },
+  "configVariants": [
+    {
+      "format": "cjs"
+    }
+  ],
+  "expectExecuted": false
+}

@@ -19,6 +19,7 @@ use super::{
   binding_transform_context::BindingTransformPluginContext,
   types::{
     binding_filter_expression::normalized_tokens, binding_hook_filter::BindingHookFilter,
+    binding_hook_load_extra_args::BindingHookLoadExtraArgs,
     binding_hook_load_output::BindingHookLoadOutput,
     binding_hook_render_chunk_output::BindingHookRenderChunkOutput,
     binding_hook_resolve_file_url_args::BindingHookResolveFileUrlArgs,
@@ -61,21 +62,24 @@ pub struct BindingPluginOptions {
   pub resolve_id_filter: Option<BindingHookFilter>,
 
   #[napi(
-    ts_type = "(ctx: BindingPluginContext, specifier: string, importer: Nullable<string>) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>"
+    ts_type = "(ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraArgs) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>"
   )]
   pub resolve_dynamic_import: Option<
     MaybeAsyncJsCallback<
-      FnArgs<(BindingPluginContext, String, Option<String>)>,
+      FnArgs<(BindingPluginContext, String, Option<String>, BindingHookResolveIdExtraArgs)>,
       Option<BindingHookResolveIdOutput>,
     >,
   >,
   pub resolve_dynamic_import_meta: Option<BindingPluginHookMeta>,
 
   #[napi(
-    ts_type = "(ctx: BindingLoadPluginContext, id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>"
+    ts_type = "(ctx: BindingLoadPluginContext, id: string, options: Nullable<BindingHookLoadExtraArgs>) => MaybePromise<VoidNullable<BindingHookLoadOutput>>"
   )]
   pub load: Option<
-    MaybeAsyncJsCallback<FnArgs<(BindingLoadPluginContext, String)>, Option<BindingHookLoadOutput>>,
+    MaybeAsyncJsCallback<
+      FnArgs<(BindingLoadPluginContext, String, Option<BindingHookLoadExtraArgs>)>,
+      Option<BindingHookLoadOutput>,
+    >,
   >,
   pub load_meta: Option<BindingPluginHookMeta>,
   pub load_filter: Option<BindingHookFilter>,

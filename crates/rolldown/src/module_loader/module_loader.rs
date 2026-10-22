@@ -544,7 +544,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
             raw_import_records.into_iter_enumerated().zip(resolved_deps)
           {
             if self.shared_context.options.experimental.vite_mode.unwrap_or_default()
-              && resolved_id.id.as_str().ends_with(".json")
+              && resolved_id.id.raw_id().ends_with(".json")
             {
               raw_rec.meta.insert(ImportRecordMeta::JsonModule);
             }
@@ -659,6 +659,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
             identifier_name,
             side_effects,
             need_renormalize_render_path,
+            attributes,
           } = *task_result;
 
           self.symbol_ref_db.store_local_db(
@@ -674,6 +675,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
             side_effects,
             symbol_ref,
             need_renormalize_render_path,
+            attributes,
           )));
 
           *self.intermediate_normal_modules.modules.get_mut(idx) = Some(external_module);
@@ -727,6 +729,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         ModuleLoaderMsg::AddEntryModule(msg) => {
           let data = msg.chunk;
           let result = load_entry_module(
+            &self.shared_context.options,
             &self.shared_context.resolver,
             &self.shared_context.plugin_driver,
             &data.id,
@@ -935,6 +938,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     let resolved_ids =
       join_all(self.shared_context.options.input.iter().map(|input_item| async move {
         let resolved = load_entry_module(
+          &self.shared_context.options,
           &self.shared_context.resolver,
           &self.shared_context.plugin_driver,
           &input_item.import,

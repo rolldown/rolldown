@@ -1,0 +1,33 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// mid.js
+var mid_exports = /* @__PURE__ */ __exportAll({ a: () => 1 });
+import * as import_ext from "ext" with { type: "json" };
+__reExport(mid_exports, import_ext);
+// main.js
+console.log(mid_exports);
+
+```
+
+# Variant: [format: Cjs]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// mid.js
+var mid_exports = /* @__PURE__ */ __exportAll({ a: () => 1 });
+__reExport(mid_exports, require("ext"));
+// main.js
+console.log(mid_exports);
+
+```

@@ -769,9 +769,9 @@ impl GenerateStage<'_> {
     /// preserve-modules chunk names disagree about where the module lives.
     fn common_dir_input<'a>(id: &'a ModuleId, cwd: &Path) -> Option<Cow<'a, str>> {
       if id.is_path() {
-        return Some(Cow::Borrowed(id.as_ref()));
+        return Some(Cow::Borrowed(id.raw_id()));
       }
-      let glued = node_style_absolute(Path::new(id.as_str()), cwd)?;
+      let glued = node_style_absolute(Path::new(id.raw_id()), cwd)?;
       Some(Cow::Owned(glued.into_owned().expect_into_string()))
     }
 

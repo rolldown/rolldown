@@ -1,0 +1,12 @@
+{
+  "_comment": "A `type` attribute with a built-in meaning beats `moduleTypes`, including `asset` and `copy`.",
+  "config": {
+    "moduleTypes": {
+      ".png": "asset",
+      ".txt": "copy"
+    },
+    "experimental": {
+      "importAttributes": true
+    }
+  }
+}

@@ -69,6 +69,9 @@ export function bindingifyResolveId(
         {
           ...extraOptions,
           custom: contextResolveOptions?.custom,
+          attributes: extraOptions.attributes ?? {},
+          importerRawId: extraOptions.importerRawId ?? importer ?? undefined,
+          importerAttributes: extraOptions.importerAttributes ?? {},
         },
       );
       if (ret == null) {
@@ -86,11 +89,14 @@ export function bindingifyResolveId(
       }
 
       // Make sure the `moduleSideEffects` is update to date
-      let exist = args.pluginContextData.updateModuleOption(ret.id, {
-        meta: ret.meta || {},
-        moduleSideEffects: ret.moduleSideEffects ?? null,
-        invalidate: false,
-      });
+      let exist = args.pluginContextData.updateModuleOption(
+        args.pluginContextData.toModuleId(ret.id, ret.attributes ?? extraOptions.attributes),
+        {
+          meta: ret.meta || {},
+          moduleSideEffects: ret.moduleSideEffects ?? null,
+          invalidate: false,
+        },
+      );
 
       return {
         id: ret.id,
@@ -98,6 +104,7 @@ export function bindingifyResolveId(
         normalizeExternalId: false,
         moduleSideEffects: exist.moduleSideEffects ?? undefined,
         packageJsonPath: ret.packageJsonPath,
+        attributes: ret.attributes,
       };
     },
     filter: bindingifyResolveIdFilter(options.filter),
@@ -108,11 +115,17 @@ export function bindingifyResolveDynamicImport(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['resolveDynamicImport']> {
   return bindingifyHook(args.plugin.resolveDynamicImport, ({ handler }) => ({
-    plugin: async (ctx, specifier, importer) => {
+    plugin: async (ctx, specifier, importer, extraOptions) => {
+      const attributes = extraOptions.attributes ?? {};
       const ret = await handler.call(
         createPluginContext(args, ctx),
         specifier,
         importer ?? undefined,
+        {
+          attributes,
+          importerRawId: extraOptions.importerRawId ?? importer ?? undefined,
+          importerAttributes: extraOptions.importerAttributes ?? {},
+        },
       );
       if (ret == null) {
         return;
@@ -133,17 +146,21 @@ export function bindingifyResolveDynamicImport(
         id: ret.id,
         external: ret.external,
         packageJsonPath: ret.packageJsonPath,
+        attributes: ret.attributes,
       };
 
       if (ret.moduleSideEffects !== null) {
         result.moduleSideEffects = ret.moduleSideEffects;
       }
 
-      args.pluginContextData.updateModuleOption(ret.id, {
-        meta: ret.meta || {},
-        moduleSideEffects: ret.moduleSideEffects || null,
-        invalidate: false,
-      });
+      args.pluginContextData.updateModuleOption(
+        args.pluginContextData.toModuleId(ret.id, ret.attributes ?? attributes),
+        {
+          meta: ret.meta || {},
+          moduleSideEffects: ret.moduleSideEffects || null,
+          invalidate: false,
+        },
+      );
 
       return result;
     },
@@ -154,8 +171,13 @@ export function bindingifyTransform(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['transform'], BindingHookFilter | undefined> {
   return bindingifyHook(args.plugin.transform, ({ handler, options }) => ({
-    plugin: async (ctx, code, id, meta) => {
+    plugin: async (ctx, code, id, bindingMeta) => {
       let magicStringInstance: RolldownMagicString, astInstance: Program;
+      const meta = {
+        ...bindingMeta,
+        rawId: bindingMeta.rawId ?? id,
+        attributes: bindingMeta.attributes ?? {},
+      };
       Object.defineProperties(meta, {
         magicString: {
           get() {
@@ -259,7 +281,8 @@ export function bindingifyLoad(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['load'], BindingHookFilter | undefined> {
   return bindingifyHook(args.plugin.load, ({ handler, options }) => ({
-    plugin: async (ctx, id) => {
+    plugin: async (ctx, id, bindingExtraOptions) => {
+      const extraOptions = bindingExtraOptions ?? { rawId: id, attributes: {} };
       const ret = await handler.call(
         new LoadPluginContextImpl(
           args.outputOptions,
@@ -273,6 +296,7 @@ export function bindingifyLoad(
           args.watchMode,
         ),
         id,
+        extraOptions,
       );
 
       if (ret == null) {
@@ -289,7 +313,7 @@ export function bindingifyLoad(
         invalidate: false,
       });
 
-      let map = preProcessSourceMap(ret, id);
+      let map = preProcessSourceMap(ret, extraOptions.rawId);
 
       return {
         code: ret.code,

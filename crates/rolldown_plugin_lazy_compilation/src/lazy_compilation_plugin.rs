@@ -90,6 +90,7 @@ impl Plugin for LazyCompilationPlugin {
         normalize_external_id: None,
         side_effects: None,
         package_json_path: None,
+        attributes: None,
       }));
     }
 
@@ -112,6 +113,7 @@ impl Plugin for LazyCompilationPlugin {
             is_entry: false,
             skip_self: true,
             custom: std::sync::Arc::<rolldown_plugin::CustomField>::clone(&args.custom),
+            attributes: args.attributes.clone(),
           }),
         )
         .await??;
@@ -137,6 +139,7 @@ impl Plugin for LazyCompilationPlugin {
         normalize_external_id: None,
         side_effects: None,
         package_json_path: None,
+        attributes: None,
       }));
     }
 

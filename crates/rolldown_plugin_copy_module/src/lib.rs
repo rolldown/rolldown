@@ -4,7 +4,8 @@ use arcstr::ArcStr;
 use rolldown_common::{ModuleType, ResolvedExternal};
 use rolldown_plugin::{
   HookRenderChunkArgs, HookRenderChunkReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, HookUsage, Plugin, PluginContext, PluginHookMeta, PluginOrder,
+  HookResolveIdReturn, HookUsage, Plugin, PluginContext, PluginContextResolveOptions,
+  PluginHookMeta, PluginOrder,
 };
 use rolldown_plugin_utils::{emit_asset, rewrite_emitted_asset_references};
 use rolldown_utils::url::clean_url;
@@ -59,8 +60,24 @@ impl Plugin for CopyModulePlugin {
       return Ok(None);
     }
 
+    // A `type` import attribute that selects a built-in module type beats `moduleTypes`.
+    if ctx.options().experimental.is_import_attributes_enabled()
+      && args.attributes.module_type().is_some()
+    {
+      return Ok(None);
+    }
+
     // Resolve the specifier to get the absolute path
-    let resolved = ctx.resolve(args.specifier, args.importer, None).await?;
+    let resolved = ctx
+      .resolve(
+        args.specifier,
+        args.importer,
+        Some(PluginContextResolveOptions {
+          attributes: args.attributes.clone(),
+          ..Default::default()
+        }),
+      )
+      .await?;
 
     let resolved_id = match resolved {
       Ok(id) => id,

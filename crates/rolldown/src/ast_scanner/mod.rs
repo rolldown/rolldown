@@ -39,7 +39,9 @@ use rolldown_common::{
   TaggedSymbolRef, ThisExprReplaceKind, generate_replace_this_expr_map,
 };
 use rolldown_ecmascript_utils::FunctionExt;
-use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
+use rolldown_error::{
+  BuildDiagnostic, BuildResult, CjsExportSpan, EventKindSwitcher, InvalidImportAttributeKind,
+};
 use rolldown_std_utils::PathExt;
 use rolldown_utils::concat_string;
 use rolldown_utils::ecmascript::{legitimize_identifier_name, to_usv_str};
@@ -529,6 +531,37 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     id
   }
 
+  /// Ignored import attributes are only worth a warning when they would be part of the module id.
+  fn warns_invalid_import_attribute(&self) -> bool {
+    self.immutable_ctx.options.experimental.is_import_attributes_enabled()
+      && self.immutable_ctx.options.checks.contains(EventKindSwitcher::InvalidImportAttribute)
+  }
+
+  fn add_with_clause(&mut self, record_idx: ImportRecordIdx, with_clause: &ast::WithClause) {
+    if matches!(with_clause.keyword, ast::WithClauseKeyword::Assert)
+      && self.warns_invalid_import_attribute()
+    {
+      // The span of the clause starts at its `{`, so widen it to the keyword.
+      let source = self.immutable_ctx.source;
+      let start = source[..with_clause.span.start as usize]
+        .rfind("assert")
+        .and_then(|start| u32::try_from(start).ok())
+        .unwrap_or(with_clause.span.start);
+      self.result.warnings.push(
+        BuildDiagnostic::invalid_import_attribute(
+          self.immutable_ctx.id.to_string(),
+          source.clone(),
+          Span::new(start, with_clause.span.end),
+          InvalidImportAttributeKind::Assert,
+        )
+        .with_severity_warning(),
+      );
+    }
+    let import_attribute = ImportAttribute::from_with_clause(with_clause);
+    self.result.import_records[record_idx].attributes = import_attribute.to_import_attributes();
+    self.result.import_attribute_map.insert(record_idx, import_attribute);
+  }
+
   fn add_named_import(
     &mut self,
     local: SymbolId,
@@ -714,7 +747,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     }
     self.result.imports.insert(decl.node_id(), id);
     if let Some(ref with_clause) = decl.with_clause {
-      self.result.import_attribute_map.insert(id, ImportAttribute::from_with_clause(with_clause));
+      self.add_with_clause(id, with_clause);
     }
   }
 
@@ -754,10 +787,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       );
     });
     if let Some(ref with_clause) = decl.with_clause {
-      self
-        .result
-        .import_attribute_map
-        .insert(record_idx, ImportAttribute::from_with_clause(with_clause));
+      self.add_with_clause(record_idx, with_clause);
     }
     self.result.imports.insert(decl.node_id(), record_idx);
     self.result.import_records[record_idx].meta.insert(ImportRecordMeta::IsReExportOnly);
@@ -923,10 +953,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     );
 
     if let Some(ref with_clause) = decl.with_clause {
-      self
-        .result
-        .import_attribute_map
-        .insert(rec_id, ImportAttribute::from_with_clause(with_clause));
+      self.add_with_clause(rec_id, with_clause);
     }
     self.result.imports.insert(decl.node_id(), rec_id);
 

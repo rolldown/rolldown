@@ -22,11 +22,7 @@ import {
 
 type Warn = (message: string) => void;
 
-// The CLI logger loads consola. consola bundles `string-width`, which creates an `Intl.Segmenter`
-// when it loads. Import the logger only when one of these options is set, so that `rolldown()`
-// users who set none of them do not pay for it. Every warning in this file depends on one of
-// them. The warnings keep the CLI logger's format.
-// See internal-docs/cli/implementation.md
+// consola is costly to load, so import the CLI logger only when an option that can warn is set.
 async function getWarn(outputOptions: OutputOptions): Promise<Warn> {
   if (
     outputOptions.legalComments == null &&
@@ -34,8 +30,6 @@ async function getWarn(outputOptions: OutputOptions): Promise<Warn> {
     outputOptions.advancedChunks == null &&
     outputOptions.manualChunks == null
   ) {
-    // No warning can be printed here. If a new warning depends on another option, it still
-    // prints, without the CLI logger's format; its test, which expects the CLI logger, fails.
     return (message) => console.warn(message);
   }
   const { logger } = await import('../cli/logger');
@@ -89,8 +83,7 @@ export async function bindingifyOutputOptions(
     strictExecutionOrder,
   } = outputOptions;
 
-  // The only `await` in the conversion. It comes before the first warning, so outputs that
-  // `build([...])` and `watch()` convert concurrently cannot print between one output's warnings.
+  // Await before the first warning, so concurrent builds don't interleave their warnings.
   const warn = await getWarn(outputOptions);
 
   if (legalComments != null) {

@@ -1057,6 +1057,16 @@ export type ExperimentalInlineCommonChunksOptions = {
    */
   maxSize?: number;
   /**
+   * The most source bytes a candidate may duplicate, in bytes: its size times the number of files
+   * beyond the first that would print a copy. A candidate at or above it stays a file, which every
+   * one of those files imports instead. When a candidate's copies come from another candidate that
+   * also stays a file, that file prints the one copy and the count is taken again. Candidates that
+   * import each other in a cycle are judged together on their summed sizes, and stay files together.
+   *
+   * @default Infinity
+   */
+  maxDuplicatedSize?: number;
+  /**
    * A matcher for module ids, or an array of them: a string (matched as a regular expression), a
    * RegExp, or a function, each applied like {@linkcode CodeSplittingGroup.test | test}. A common
    * chunk is not inlined when any of its modules matches any matcher.

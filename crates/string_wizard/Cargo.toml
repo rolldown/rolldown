@@ -20,6 +20,7 @@ oxc_sourcemap = { workspace = true, optional = true }
 regex = { workspace = true }
 rustc-hash = { workspace = true }
 serde = { workspace = true, optional = true }
+simd-utf16-len = { workspace = true }
 
 [dev-dependencies]
 insta = { workspace = true }

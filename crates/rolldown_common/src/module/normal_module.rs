@@ -25,7 +25,7 @@ pub struct NormalModule {
   pub id: ModuleId,
   /// `stable_id` is calculated based on `id` to be stable across machine and os.
   pub stable_id: StableModuleId,
-  // Pretty resource id for debug
+  // Pretty resource id for debug. It can go in a `//` comment; see `ResolvedId::debug_id`.
   pub debug_id: String,
   pub repr_name: String,
   pub module_type: ModuleType,

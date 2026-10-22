@@ -141,6 +141,32 @@ pub fn to_module_import_export_name_with_ascii(name: &str, ascii_only: bool) -> 
   }
 }
 
+/// Escapes the JS line terminators in `text`. A raw one ends a `//` comment, and the rest of
+/// `text` becomes code.
+pub fn escape_line_terminators(text: String) -> String {
+  use oxc::syntax::line_terminator::{CR, LF, LS, PS};
+
+  // LS and PS are `E2 80 A8` and `E2 80 A9` in UTF-8. A byte scan for `0xE2` is much faster
+  // than a char scan, and it finds both.
+  let bytes = text.as_bytes();
+  let has_line_terminator = memchr::memchr3_iter(b'\n', b'\r', 0xE2, bytes)
+    .any(|i| bytes[i] != 0xE2 || matches!(bytes.get(i + 1..i + 3), Some([0x80, 0xA8 | 0xA9])));
+  if !has_line_terminator {
+    return text;
+  }
+  let mut escaped = String::with_capacity(text.len() + 8);
+  for char in text.chars() {
+    match char {
+      LF => escaped.push_str("\\n"),
+      CR => escaped.push_str("\\r"),
+      LS => escaped.push_str("\\u2028"),
+      PS => escaped.push_str("\\u2029"),
+      _ => escaped.push(char),
+    }
+  }
+  escaped
+}
+
 #[test]
 fn test_is_validate_identifier_name() {
   assert!(is_validate_identifier_name("foo"));
@@ -189,6 +215,88 @@ fn test_to_usv_str() {
   // A lone surrogate becomes U+FFFD, and a pair stays one code point.
   assert_eq!(to_usv_str(lit.value), "a\u{FFFD}b\u{10000}");
   assert!(matches!(to_usv_str(JSStr::from("plain")), Cow::Borrowed("plain")));
+}
+
+#[test]
+fn test_escape_line_terminators() {
+  assert_eq!(escape_line_terminators("src/main.js".to_string()), "src/main.js");
+  assert_eq!(escape_line_terminators("a\u{2014}b\u{2026}".to_string()), "a\u{2014}b\u{2026}");
+  assert_eq!(
+    escape_line_terminators("a\nb\rc\u{2028}d\u{2029}e".to_string()),
+    "a\\nb\\rc\\u2028d\\u2029e"
+  );
+}
+
+#[test]
+fn test_escape_line_terminators_all_unicode_scalars() {
+  let text: String = (0..=u32::from(char::MAX))
+    .filter_map(char::from_u32)
+    .filter(|c| !matches!(c, '\n' | '\r' | '\u{2028}' | '\u{2029}'))
+    .collect();
+  let expected = text.clone();
+  let ptr = text.as_ptr();
+  let escaped = escape_line_terminators(text);
+  assert_eq!(escaped, expected);
+  // Ordinary Unicode must retain the allocation, including other E2-prefixed characters.
+  assert_eq!(escaped.as_ptr(), ptr);
+}
+
+#[test]
+fn test_escape_line_terminators_fuzz() {
+  use oxc::{allocator::Allocator, parser::Parser, span::SourceType};
+
+  fn check(text: String) {
+    // Use independent replacements as an oracle for the byte scan and character loop.
+    let expected = text
+      .replace('\n', "\\n")
+      .replace('\r', "\\r")
+      .replace('\u{2028}', "\\u2028")
+      .replace('\u{2029}', "\\u2029");
+    let escaped = escape_line_terminators(text);
+    assert_eq!(escaped, expected);
+    assert_eq!(escape_line_terminators(escaped.clone()), escaped);
+
+    // Cover ordinary comments, full debug headers, and HMR region markers.
+    for prefix in ["// ", "//! ", "//#region "] {
+      let source = format!("{prefix}{escaped}\nlet sentinel = 1;");
+      let allocator = Allocator::default();
+      let parsed = Parser::new(&allocator, &source, SourceType::mjs()).parse();
+      assert!(parsed.diagnostics.is_empty(), "{source:?}: {:?}", parsed.diagnostics);
+      assert_eq!(parsed.program.body.len(), 1, "{source:?}");
+    }
+  }
+
+  let fragments = [
+    "",
+    "ascii",
+    "\\",
+    r"\n\r\u2028\u2029",
+    "\0",
+    "\u{85}\u{B}\u{C}",
+    "\u{2027}\u{202A}",
+    "—…",
+    "π中文😀",
+    "/* */ //",
+    "'\"`",
+    "//# sourceMappingURL=data:application/json,{}",
+    "<!-- -->",
+    "\r\n",
+    "\n\r\u{2028}\u{2029}",
+    "throw new Error('escaped');",
+  ];
+  for left in fragments {
+    for right in fragments {
+      for terminator in ['\n', '\r', '\u{2028}', '\u{2029}'] {
+        check(format!("{left}{terminator}{right}"));
+      }
+    }
+  }
+  // Exercise every byte alignment around typical SIMD block boundaries.
+  for offset in 0..=128 {
+    for terminator in ['\n', '\r', '\u{2028}', '\u{2029}'] {
+      check(format!("{}{terminator}—…😀\\", "a".repeat(offset)));
+    }
+  }
 }
 
 pub fn is_relative_specifier(specifier: &str) -> bool {

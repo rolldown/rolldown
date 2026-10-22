@@ -1,0 +1,8 @@
+{
+  "_comment": "Top-level await and `eval`: a module with top-level await finishes before its importers run, and a direct `eval` in included code can read and write each binding of its module. The analysis keeps each branch.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

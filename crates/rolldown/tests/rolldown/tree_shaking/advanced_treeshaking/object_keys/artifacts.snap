@@ -1,0 +1,16 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+const overwritten = { a: 1 };
+function main() {
+	return overwritten.a;
+}
+export { main };
+
+```

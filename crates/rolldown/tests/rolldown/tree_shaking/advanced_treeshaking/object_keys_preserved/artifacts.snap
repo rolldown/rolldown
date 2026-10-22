@@ -1,0 +1,37 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+globalThis.log = [];
+const log = (msg) => globalThis.log.push(msg);
+const key = Symbol();
+({ get [key]() {
+	log("LIVE_symbol_getter");
+	return 1;
+} })[key];
+const written = Symbol();
+const writable = { [written]: false };
+writable[written] = true;
+if (writable[written]) log("LIVE_symbol_write");
+const first = Symbol();
+const second = Symbol();
+const distinct = { [first]: false };
+distinct[second] = true;
+if (!distinct[first] && distinct[second]) log("LIVE_symbol_identity");
+const deleted = { a: "x" };
+delete deleted.a;
+if (deleted.a === void 0) log("LIVE_delete_read");
+log(`LIVE_key_order_${Object.keys({
+	a: 1,
+	b: 2,
+	a: 3
+}).join("")}`);
+const done = true;
+export { done };
+
+```

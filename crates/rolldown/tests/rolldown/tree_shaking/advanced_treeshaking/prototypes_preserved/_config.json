@@ -1,0 +1,8 @@
+{
+  "_comment": "Prototypes: the analysis keeps each read that a prototype change can affect. The cases cover writes to the prototype, `Object.setPrototypeOf`, getters of the prototype after a `delete`, computed `__proto__` keys, and keys that code adds to `Object.prototype` and `Function.prototype`.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

@@ -1,0 +1,14 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+({ USERS: "/LIVE_users" }).USERS;
+const done = true;
+export { done };
+
+```

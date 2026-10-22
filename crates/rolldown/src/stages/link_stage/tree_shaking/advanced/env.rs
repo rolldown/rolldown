@@ -17,7 +17,8 @@ use oxc_index::IndexVec;
 use rolldown_common::{
   AstScopes, EcmaViewMeta, ExportsKind, FlatOptions, IndexModules, ModuleIdx, ModuleType,
   NormalModule, NormalizedBundlerOptions, PropertyWriteSideEffects, StmtInfoIdx, SymbolRef,
-  SymbolRefDb, WrapKind, side_effects::DeterminedSideEffects,
+  SymbolRefDb, WrapKind, bundler_options::PropertyReadSideEffects as ReadOption,
+  side_effects::DeterminedSideEffects,
 };
 use rustc_hash::FxHashMap;
 
@@ -35,7 +36,7 @@ pub enum DeclKind {
   Class,
   /// `export default <expression>`: a hidden `const`.
   Default,
-  /// A binding that the analysis does not track, such as one inside a destructuring pattern.
+  /// A binding that the analysis does not track: a `using` declaration.
   Other,
 }
 
@@ -44,6 +45,10 @@ pub enum Init<'a> {
   None,
   Expr(&'a Expression<'a>),
   Function(&'a ast::Function<'a>),
+  Class(&'a ast::Class<'a>),
+  /// A binding inside a destructuring pattern, with the initializer that the pattern
+  /// destructures.
+  Pattern(&'a Expression<'a>, &'a BindingPattern<'a>),
 }
 
 /// The top-level declaration of a binding.
@@ -92,6 +97,13 @@ pub struct Env<'a> {
   pub metas: &'a LinkingMetadataVec,
   pub options: &'a NormalizedBundlerOptions,
   pub flat_options: FlatOptions,
+  /// `treeshake.propertyReadSideEffects: 'always'`: every property read that does not resolve to
+  /// an export of a namespace has an effect, like in rollup.
+  pub property_reads_always: bool,
+  /// With `treeshake.propertyWriteSideEffects: false`, the top-level statements of analyzed
+  /// modules that the inclusion engine includes only when it includes the written binding. The
+  /// sweep never checks them, so each pass applies their write deopts.
+  pub gated_writes: Vec<(ModuleIdx, StmtInfoIdx)>,
   pub(in crate::stages::link_stage) import_cycles: &'a ImportCycles,
   /// `None` for modules that the analysis does not cover.
   pub facts: IndexVec<ModuleIdx, Option<ModuleFacts<'a>>>,
@@ -110,26 +122,19 @@ impl<'a> Env<'a> {
     import_cycles: &'a ImportCycles,
     runtime_idx: ModuleIdx,
   ) -> Self {
-    // With `propertyWriteSideEffects: false`, the sweep never checks a property write, so the
-    // analysis would miss its deopt.
-    let enabled =
-      !matches!(options.treeshake.property_write_side_effects(), PropertyWriteSideEffects::False);
-    let facts = modules
+    let facts: IndexVec<ModuleIdx, Option<ModuleFacts<'a>>> = modules
       .iter()
       .map(|module| {
         let module = module.as_normal()?;
         let meta = &metas[module.idx];
-        let analyzable = enabled
-          && module.idx != runtime_idx
+        let analyzable = module.idx != runtime_idx
           && matches!(module.exports_kind, ExportsKind::Esm | ExportsKind::None)
           && matches!(meta.wrap_kind(), WrapKind::None)
           && matches!(
             module.module_type,
             ModuleType::Js | ModuleType::Jsx | ModuleType::Ts | ModuleType::Tsx
           )
-          && !module.meta.has_eval()
           && !module.meta.contains(EcmaViewMeta::HasLazyExport)
-          && !meta.is_tla_or_contains_tla_dependency
           && !matches!(module.side_effects, DeterminedSideEffects::NoTreeshake);
         if !analyzable {
           return None;
@@ -144,7 +149,34 @@ impl<'a> Env<'a> {
         Some(build_module_facts(module, program, scopes, in_cycle))
       })
       .collect();
-    Self { modules, symbols, stmt_infos, metas, options, flat_options, import_cycles, facts }
+    let property_reads_always =
+      matches!(options.treeshake.property_read_side_effects(), ReadOption::Always);
+    let mut gated_writes = Vec::new();
+    if matches!(options.treeshake.property_write_side_effects(), PropertyWriteSideEffects::False) {
+      for module in facts.iter().flatten() {
+        gated_writes.extend(
+          stmt_infos[module.idx]
+            .symbol_ref_to_referenced_stmt_idx()
+            .values()
+            .flatten()
+            .map(|stmt_idx| (module.idx, *stmt_idx)),
+        );
+      }
+      gated_writes.sort_unstable();
+      gated_writes.dedup();
+    }
+    Self {
+      modules,
+      symbols,
+      stmt_infos,
+      metas,
+      options,
+      flat_options,
+      property_reads_always,
+      gated_writes,
+      import_cycles,
+      facts,
+    }
   }
 
   pub fn module(&self, idx: ModuleIdx) -> Option<&ModuleFacts<'a>> {
@@ -309,7 +341,7 @@ fn build_module_facts<'a>(
               .as_ref()
               .and_then(|id| id.symbol_id.get())
               .unwrap_or(module.default_export_ref.symbol);
-            add(Some(symbol_id), stmt_idx, DeclKind::Class, Init::None);
+            add(Some(symbol_id), stmt_idx, DeclKind::Class, Init::Class(class));
           }
           ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {}
           expr => add(
@@ -343,8 +375,12 @@ fn build_module_facts<'a>(
               declarator.init.as_ref().map_or(Init::None, Init::Expr),
             ),
             pattern => {
+              let init = match &declarator.init {
+                Some(init) if kind != DeclKind::Other => Init::Pattern(init, pattern),
+                _ => Init::None,
+              };
               for id in pattern.get_binding_identifiers() {
-                add(id.symbol_id.get(), stmt_idx, DeclKind::Other, Init::None);
+                add(id.symbol_id.get(), stmt_idx, kind, init);
               }
             }
           }
@@ -358,7 +394,7 @@ fn build_module_facts<'a>(
       }
       Declaration::ClassDeclaration(class) => {
         if let Some(id) = &class.id {
-          add(id.symbol_id.get(), stmt_idx, DeclKind::Class, Init::None);
+          add(id.symbol_id.get(), stmt_idx, DeclKind::Class, Init::Class(class));
         }
       }
       _ => {}

@@ -1,0 +1,8 @@
+{
+  "_comment": "Getters and setters: the analysis keeps each getter and setter call that has an effect, each write that a later read sees, and each throw. The cases cover writes through `this`, values that change, getter-only properties, and overwritten keys.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

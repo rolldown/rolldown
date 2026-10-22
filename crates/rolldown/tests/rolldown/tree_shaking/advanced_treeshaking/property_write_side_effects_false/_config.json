@@ -1,0 +1,11 @@
+{
+  "_comment": "With `propertyWriteSideEffects: false`, the analysis still runs. A write that the inclusion engine includes only with its object still changes the facts, so the branch stays.",
+  "config": {
+    "treeshake": {
+      "propertyWriteSideEffects": "false"
+    },
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

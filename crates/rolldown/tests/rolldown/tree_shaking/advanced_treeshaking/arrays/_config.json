@@ -1,0 +1,8 @@
+{
+  "_comment": "Arrays: the values of elements fold branches and dynamic imports, and calls of array methods without effects go.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

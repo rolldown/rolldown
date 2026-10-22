@@ -1,0 +1,8 @@
+{
+  "_comment": "Builtin calls: the analysis keeps each call that runs code or throws. The cases cover arguments that are not primitives, arguments out of range, methods that the object defines, writes to frozen objects, and the state of a regular expression object.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "_comment": "The analysis covers modules with top-level await, dependencies with top-level await, and modules with a direct `eval` that no included code runs.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

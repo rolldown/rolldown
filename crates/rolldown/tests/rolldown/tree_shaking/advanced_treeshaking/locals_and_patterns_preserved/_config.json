@@ -1,0 +1,8 @@
+{
+  "_comment": "Locals and patterns: the analysis keeps each closure read that a write changes, each getter that a pattern or a rest element runs, and each default that runs.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

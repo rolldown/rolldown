@@ -1,0 +1,51 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+globalThis.log = [];
+const log = (msg) => globalThis.log.push(msg);
+const proto = { debug: false };
+const child = { __proto__: proto };
+proto.debug = true;
+if (child.debug) log("LIVE_proto_write");
+const proto2 = { debug: false };
+const child2 = { __proto__: proto2 };
+child2.debug = true;
+if (child2.debug && !proto2.debug) log("LIVE_own_shadow");
+const child3 = { __proto__: { debug: false } };
+Object.setPrototypeOf(child3, { debug: true });
+if (child3.debug) log("LIVE_set_prototype");
+const getterProto = { get x() {
+	log("LIVE_proto_getter");
+	return 1;
+} };
+({ __proto__: getterProto }).x;
+const child5 = {
+	__proto__: getterProto,
+	x: 0
+};
+delete child5.x;
+child5.x;
+if ({ ["__proto__"]: { debug: true } }.__proto__.debug) log("LIVE_computed_proto_key");
+function Ctor() {}
+Ctor.prototype.debug = true;
+if ({ __proto__: Ctor.prototype }.debug) log("LIVE_fn_prototype");
+Object.prototype.addedKey = true;
+Function.prototype.addedKey = true;
+const plain = {};
+const withProto = { __proto__: {} };
+var Plain = class {};
+if (plain.addedKey) log("LIVE_object_prototype_key");
+if (withProto.addedKey) log("LIVE_object_prototype_chain");
+if (Plain.addedKey) log("LIVE_function_prototype_key");
+delete Object.prototype.addedKey;
+delete Function.prototype.addedKey;
+const done = true;
+export { done };
+
+```

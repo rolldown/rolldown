@@ -1,0 +1,8 @@
+{
+  "_comment": "Classes, constructors, and function properties: reads, calls, `new`, static blocks, and prototype writes that change nothing that included code sees all go. Static fields fold branches.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

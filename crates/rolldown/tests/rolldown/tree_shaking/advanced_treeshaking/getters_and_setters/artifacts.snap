@@ -1,0 +1,25 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+globalThis.log = [];
+const log = (msg) => globalThis.log.push(msg);
+const loud = { get debug() {
+	log("getter");
+	return false;
+} };
+function main() {
+	if (loud.debug);
+	return 1;
+}
+async function load() {
+	return 1;
+}
+export { load, main };
+
+```

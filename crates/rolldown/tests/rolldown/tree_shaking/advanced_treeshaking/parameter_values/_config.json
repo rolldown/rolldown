@@ -1,0 +1,8 @@
+{
+  "_comment": "Parameter values: when all recorded calls give the same value, the analysis uses it. The functions do not escape.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

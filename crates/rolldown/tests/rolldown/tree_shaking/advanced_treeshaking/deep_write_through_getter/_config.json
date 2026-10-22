@@ -1,0 +1,8 @@
+{
+  "_comment": "A write below the value of a getter or a call changes the object that the getter or the call returns. The analysis keeps each `LIVE_` branch.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

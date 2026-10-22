@@ -1,0 +1,11 @@
+{
+  "_comment": "`propertyReadSideEffects: true` asks the object, so a read of a data property of a known object has no effect.",
+  "config": {
+    "treeshake": {
+      "propertyReadSideEffects": "true"
+    },
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

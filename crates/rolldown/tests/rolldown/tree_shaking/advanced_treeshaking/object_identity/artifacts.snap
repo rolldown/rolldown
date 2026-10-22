@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // main.js
 globalThis.log = [];
 function make() {
-	return { v: 1 };
+	return {};
 }
 if (make() === make()) globalThis.log.push("equal");
 else globalThis.log.push("different");

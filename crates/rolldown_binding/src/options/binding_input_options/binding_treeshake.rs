@@ -14,6 +14,7 @@ use crate::types::js_callback::{JsCallback, JsCallbackExt, JsCallbackResultExt};
 #[derive(Debug)]
 pub enum BindingPropertyReadSideEffects {
   Always,
+  True,
   False,
 }
 
@@ -95,6 +96,7 @@ impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
 
     let property_read_side_effects = value.property_read_side_effects.map(|v| match v {
       BindingPropertyReadSideEffects::Always => rolldown::PropertyReadSideEffects::Always,
+      BindingPropertyReadSideEffects::True => rolldown::PropertyReadSideEffects::True,
       BindingPropertyReadSideEffects::False => rolldown::PropertyReadSideEffects::False,
     });
 

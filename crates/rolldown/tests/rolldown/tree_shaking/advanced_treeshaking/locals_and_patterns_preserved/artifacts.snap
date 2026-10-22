@@ -1,0 +1,91 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+globalThis.log = [];
+const log = (msg) => globalThis.log.push(msg);
+function closure() {
+	const o = { used: false };
+	function read() {
+		return o.used;
+	}
+	o.used = true;
+	return read();
+}
+if (closure()) log("LIVE_closure_write");
+function makeCounter() {
+	let n = 0;
+	return { inc() {
+		n++;
+		return n;
+	} };
+}
+const counter = makeCounter();
+counter.inc();
+if (counter.inc() === 2) log("LIVE_closure_counter");
+let topFlag = false;
+function localSet() {
+	function set() {
+		topFlag = true;
+	}
+	set();
+}
+localSet();
+if (topFlag) log("LIVE_local_set");
+const { used } = { get used() {
+	log("LIVE_destructure_getter");
+	return 1;
+} };
+const { used: restUsed, ...rest } = {
+	used: 1,
+	get other() {
+		log("LIVE_rest_getter");
+		return 2;
+	}
+};
+function restParam({ used, ...rest }) {
+	return used;
+}
+restParam({
+	used: 1,
+	get other() {
+		log("LIVE_rest_param_getter");
+		return 2;
+	}
+});
+const { inner: { used: innerUsed, ...innerRest } } = { inner: {
+	used: 1,
+	get other() {
+		log("LIVE_nested_rest_getter");
+		return 2;
+	}
+} };
+let assignedUsed;
+let assignedRest;
+({used: assignedUsed, ...assignedRest} = {
+	used: 1,
+	get other() {
+		log("LIVE_assignment_rest_getter");
+		return 2;
+	}
+});
+const { used: copiedUsed, ...copy } = {
+	used: 1,
+	other: "LIVE_rest_copy"
+};
+log(copy.other);
+const changed = { nested: { flag: false } };
+changed.nested.flag = true;
+const { nested: { flag } } = changed;
+if (flag) log("LIVE_pattern_after_write");
+const { a = "LIVE_default_value" } = { a: void 0 };
+log(a);
+const done = true;
+export { closure, done };
+
+```

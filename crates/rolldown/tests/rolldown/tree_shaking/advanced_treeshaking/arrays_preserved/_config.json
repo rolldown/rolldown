@@ -1,0 +1,8 @@
+{
+  "_comment": "Arrays: the analysis keeps each read that a write or a method call can change, and each conversion or `constructor` lookup that runs code. The cases cover writes through aliases, callbacks, spreads, loops, patterns, and keys that code adds to `Array.prototype`.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

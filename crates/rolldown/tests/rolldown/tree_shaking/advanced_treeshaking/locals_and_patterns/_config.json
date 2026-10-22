@@ -1,0 +1,8 @@
+{
+  "_comment": "Locals and patterns: the analysis follows local functions, closures, and destructuring. A pattern reads only its keys, and a rest element that no code reads keeps no data property.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

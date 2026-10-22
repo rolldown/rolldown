@@ -1,0 +1,8 @@
+{
+  "_comment": "Object keys: the analysis keeps symbol getters, symbol writes, reads after a `delete`, and the key order of an object with an overwritten key.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

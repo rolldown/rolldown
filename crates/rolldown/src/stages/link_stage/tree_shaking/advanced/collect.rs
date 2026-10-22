@@ -5,8 +5,8 @@ use oxc::{
   ast::{
     AstKind,
     ast::{
-      Argument, Class, Expression, Function, ObjectExpression, ObjectPropertyKind, Statement,
-      VariableDeclarationKind,
+      Argument, Class, ClassElement, Expression, Function, ObjectExpression, ObjectPropertyKind,
+      Statement, VariableDeclarationKind,
     },
   },
   ast_visit::{VisitJs, walk_js},
@@ -117,12 +117,7 @@ impl<'v, F: FnMut(&AstKind<'v>) -> bool> VisitJs<'v> for Finder<F> {
 /// Whether the body of `func` reads `this` or `super`. Arrow functions inside see the same
 /// values.
 pub fn function_uses_this(func: &Function) -> bool {
-  let mut finder = Finder {
-    matches: |kind: &AstKind| matches!(kind, AstKind::ThisExpression(_) | AstKind::Super(_)),
-    into_arrows: true,
-    into_classes: true,
-    found: false,
-  };
+  let mut finder = this_finder();
   walk_function_parts(&mut finder, func);
   finder.found
 }
@@ -143,6 +138,63 @@ fn walk_function_parts<'v, V: VisitJs<'v>>(visitor: &mut V, func: &Function<'v>)
   visitor.visit_formal_parameters(&func.params);
   if let Some(body) = &func.body {
     visitor.visit_function_body(body);
+  }
+}
+
+fn this_finder() -> Finder<impl FnMut(&AstKind) -> bool> {
+  Finder {
+    matches: |kind: &AstKind| matches!(kind, AstKind::ThisExpression(_) | AstKind::Super(_)),
+    into_arrows: true,
+    into_classes: true,
+    found: false,
+  }
+}
+
+/// Whether code of the class can reach the class object in a way that the analysis does not
+/// track: a static element reads `this` or `super`, an `accessor` property exists, or a class
+/// expression refers to its own name. The name of a class declaration is a top-level binding,
+/// so the walk of the class sees each reference to it.
+pub fn class_opaque(class: &Class) -> bool {
+  let static_this = class.body.body.iter().any(|element| match element {
+    ClassElement::MethodDefinition(method) => method.r#static && function_uses_this(&method.value),
+    ClassElement::PropertyDefinition(prop) => {
+      prop.r#static
+        && prop.value.as_ref().is_some_and(|value| {
+          let mut finder = this_finder();
+          finder.visit_expression(value);
+          finder.found
+        })
+    }
+    ClassElement::StaticBlock(block) => {
+      let mut finder = this_finder();
+      finder.visit_statements(&block.body);
+      finder.found
+    }
+    ClassElement::AccessorProperty(_) => true,
+    ClassElement::TSIndexSignature(_) => false,
+  });
+  static_this
+    || (class.is_expression()
+      && class.id.as_ref().is_some_and(|id| {
+        let mut finder = NameFinder { name: id.name.as_str(), found: false };
+        finder.visit_class(class);
+        finder.found
+      }))
+}
+
+/// Finds a reference to a name anywhere, nested functions included.
+struct NameFinder<'n> {
+  name: &'n str,
+  found: bool,
+}
+
+impl<'v> VisitJs<'v> for NameFinder<'_> {
+  fn enter_node(&mut self, kind: AstKind<'v>) {
+    if let AstKind::IdentifierReference(ident) = kind
+      && ident.name == self.name
+    {
+      self.found = true;
+    }
   }
 }
 

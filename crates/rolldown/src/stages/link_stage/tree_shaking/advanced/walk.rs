@@ -2,15 +2,17 @@ use oxc::{
   ast::{
     AstKind,
     ast::{
-      Argument, ArrayExpressionElement, AssignmentExpression, AssignmentOperator, AssignmentTarget,
-      BinaryExpression, BinaryOperator, BindingPattern, CallExpression, ChainElement,
-      ConditionalExpression, Declaration, ExportDefaultDeclarationKind, Expression,
-      IdentifierReference, IfStatement, LogicalExpression, LogicalOperator, MemberExpression,
-      ObjectExpression, ObjectProperty, ObjectPropertyKind, PropertyKind, SimpleAssignmentTarget,
-      Statement, UnaryOperator, VariableDeclaration, VariableDeclarationKind,
+      Argument, ArrayExpression, ArrayExpressionElement, AssignmentExpression, AssignmentOperator,
+      AssignmentTarget, BinaryExpression, BinaryOperator, BindingPattern, CallExpression,
+      ChainElement, Class, ConditionalExpression, Declaration, ExportDefaultDeclarationKind,
+      Expression, IdentifierReference, IfStatement, LogicalExpression, LogicalOperator,
+      MemberExpression, ObjectExpression, ObjectProperty, ObjectPropertyKind, PropertyKind,
+      SimpleAssignmentTarget, Statement, UnaryOperator, VariableDeclaration,
+      VariableDeclarationKind,
     },
   },
   ast_visit::VisitJs,
+  semantic::SymbolId,
 };
 use rolldown_common::{ModuleIdx, SymbolRef};
 
@@ -22,7 +24,7 @@ use super::{
   effects::Cx,
   env::Site,
   facts::PathTree,
-  value::{FnNode, FnValue, Lit, Value, is_proto_setter},
+  value::{FnNode, FnValue, Lit, Resolved, Value, is_primitive_key, is_proto_setter},
 };
 
 impl Analyzer<'_, '_> {
@@ -49,8 +51,42 @@ impl Analyzer<'_, '_> {
       if is_read {
         self.add_demand_to(canonical, demand);
       }
-    } else if is_read {
-      self.state.mark_local_used((module, symbol_id));
+    } else {
+      let local = SymbolRef::from((module, symbol_id));
+      if is_write {
+        self.state.mark_reassigned(local);
+      }
+      if is_read {
+        self.state.mark_local_used((module, symbol_id));
+        self.state.add_demand(local, demand);
+      }
+    }
+  }
+
+  /// A direct `eval` in included code can read and write each binding in its scope by name. The
+  /// analysis does not track scopes, so every binding of the module escapes and becomes
+  /// unknown. Then the statements that the `eval` bailout of the inclusion engine keeps stay too.
+  pub fn on_direct_eval(&mut self, module: ModuleIdx) {
+    if !self.state.mark_live_eval(module) {
+      return;
+    }
+    let env = self.env;
+    let Some(facts) = env.module(module) else {
+      return;
+    };
+    for symbol_id in facts.scopes.scoping().symbol_ids() {
+      let symbol_ref = SymbolRef::from((module, symbol_id));
+      if env.symbols.is_declared_in_root_scope(symbol_ref) {
+        // `eval` cannot write an import, but it can read it.
+        if !facts.is_named_import(symbol_id) {
+          self.state.mark_reassigned(env.canonical(module, symbol_id));
+        }
+        self.add_demand_to(env.canonical(module, symbol_id), &PathTree::whole());
+      } else {
+        self.state.mark_reassigned(symbol_ref);
+        self.state.mark_local_used((module, symbol_id));
+        self.state.add_demand(symbol_ref, &PathTree::whole());
+      }
     }
   }
 
@@ -94,6 +130,13 @@ impl<'v> VisitJs<'v> for EscapeVisitor<'_, '_, '_> {
         self.an.use_ident(self.module, ident, &PathTree::whole());
       }
       AstKind::ObjectExpression(obj) => self.an.state.escape_entity((self.module, obj.node_id())),
+      AstKind::ArrayExpression(arr) => self.an.state.escape_entity((self.module, arr.node_id())),
+      AstKind::Class(class) => self.an.state.escape_entity((self.module, class.node_id())),
+      // Unknown code can call a function in code that the analysis does not model.
+      AstKind::Function(func) => self.an.state.escape_entity((self.module, func.node_id())),
+      AstKind::ArrowFunctionExpression(arrow) => {
+        self.an.state.escape_entity((self.module, arrow.node_id()));
+      }
       _ => {}
     }
   }
@@ -105,6 +148,8 @@ pub struct Walker<'w, 's, 'a> {
   pub an: &'w mut Analyzer<'s, 'a>,
   pub module: ModuleIdx,
   pub site: Site,
+  /// The innermost function that the walk is in.
+  pub func: Option<FnValue<'a>>,
   pub excluded: Vec<Excluded<'a>>,
   pub rewrites: TreeShakingRewrites,
 }
@@ -114,7 +159,7 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
     EscapeVisitor { an: &mut *self.an, module: self.module }
   }
 
-  fn removal_cx(&self) -> Cx {
+  fn removal_cx(&self) -> Cx<'a> {
     Cx::removal(self.site)
   }
 
@@ -136,21 +181,141 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
     }
   }
 
+  fn symbol_demand(&self, module: ModuleIdx, symbol_id: SymbolId) -> PathTree {
+    self.binding_demand(self.an.symbol_key(module, symbol_id))
+  }
+
+  /// Whether included code reads a binding of the pattern.
+  fn is_pattern_read(&self, module: ModuleIdx, pattern: &BindingPattern) -> bool {
+    pattern.get_binding_identifiers().iter().any(|id| {
+      id.symbol_id.get().is_none_or(|symbol_id| {
+        let key = self.an.symbol_key(module, symbol_id);
+        if key.owner == module && !self.an.env.symbols.is_declared_in_root_scope(key) {
+          self.an.state.used_locals.contains(&(module, symbol_id))
+        } else {
+          self.an.state.is_included(key) || self.an.state.is_reassigned(key)
+        }
+      })
+    })
+  }
+
+  /// The demand on the value that a binding pattern of `module` destructures.
+  fn pattern_demand(&mut self, module: ModuleIdx, pattern: &'a BindingPattern<'a>) -> PathTree {
+    match pattern {
+      BindingPattern::BindingIdentifier(id) => id
+        .symbol_id
+        .get()
+        .map_or_else(PathTree::whole, |symbol_id| self.symbol_demand(module, symbol_id)),
+      BindingPattern::ObjectPattern(obj) => {
+        let mut tree = PathTree::default();
+        for prop in &obj.properties {
+          let Some(key) = self.an.binding_key(prop, self.site) else {
+            return PathTree::whole();
+          };
+          let sub = self.pattern_demand(module, &prop.value);
+          tree.merge(&PathTree::prefixed(&key, sub));
+        }
+        // A rest element copies the other properties. When code does not read the copy, the
+        // rest element still reads each key, which runs the getters.
+        if let Some(rest) = &obj.rest {
+          if self.is_pattern_read(module, &rest.argument) {
+            return PathTree::whole();
+          }
+          tree.every_key = true;
+        }
+        tree
+      }
+      // The iterator protocol can read anything.
+      BindingPattern::ArrayPattern(_) => PathTree::whole(),
+      BindingPattern::AssignmentPattern(assign) => self.pattern_demand(module, &assign.left),
+    }
+  }
+
+  /// Walk the computed keys and the default values of a binding pattern. A default value flows
+  /// into its binding.
+  fn walk_pattern_parts(&mut self, pattern: &'a BindingPattern<'a>) {
+    match pattern {
+      BindingPattern::BindingIdentifier(_) => {}
+      BindingPattern::ObjectPattern(obj) => {
+        for prop in &obj.properties {
+          if prop.computed
+            && let Some(key) = prop.key.as_expression()
+          {
+            let key_demand = if is_primitive_key(&self.an.value(key, self.site)) {
+              PathTree::default()
+            } else {
+              PathTree::whole()
+            };
+            self.walk_expr(key, &key_demand);
+          }
+          self.walk_pattern_parts(&prop.value);
+        }
+        if let Some(rest) = &obj.rest {
+          self.walk_pattern_parts(&rest.argument);
+        }
+      }
+      BindingPattern::ArrayPattern(arr) => {
+        for element in arr.elements.iter().flatten() {
+          self.walk_pattern_parts(element);
+        }
+        if let Some(rest) = &arr.rest {
+          self.walk_pattern_parts(&rest.argument);
+        }
+      }
+      BindingPattern::AssignmentPattern(assign) => {
+        let demand = self.pattern_demand(self.module, &assign.left);
+        self.walk_expr(&assign.right, &demand);
+        self.walk_pattern_parts(&assign.left);
+      }
+    }
+  }
+
+  /// The demand on the values that the current function returns. Unknown code can read what an
+  /// escaped function returns, and a promise or an iterator of an async function or a generator
+  /// goes to code that the analysis does not model.
+  fn return_demand(&self) -> PathTree {
+    match self.func {
+      Some(func)
+        if !func.node.is_async()
+          && !func.node.is_generator()
+          && !self.an.is_fn_escaped(func.module, func.node) =>
+      {
+        self.an.state.return_demand(func.key())
+      }
+      _ => PathTree::whole(),
+    }
+  }
+
+  /// The demand on the argument at `index` of a call of `func`: the demand on the parameter
+  /// that receives it.
+  fn param_demand(&mut self, func: &FnValue<'a>, index: usize) -> PathTree {
+    let params = func.node.params();
+    match params.items.get(index) {
+      Some(item) => self.pattern_demand(func.module, &item.pattern),
+      None => match &params.rest {
+        // The rest parameter is an array that the analysis does not model.
+        Some(rest) if self.is_pattern_read(func.module, &rest.rest.argument) => PathTree::whole(),
+        _ => PathTree::default(),
+      },
+    }
+  }
+
   pub fn walk_top(&mut self, stmt: &'a Statement<'a>) {
     match stmt {
-      Statement::VariableDeclaration(decl) => self.walk_top_var(decl),
+      Statement::VariableDeclaration(decl) => self.walk_var_decl(decl),
       Statement::FunctionDeclaration(func) => self.walk_function(FnNode::Function(func)),
-      Statement::ClassDeclaration(class) => self.escape().visit_class(class),
+      Statement::ClassDeclaration(class) => self.walk_class_decl(class),
       Statement::ExportDeclaration(export) => match &export.declaration {
-        Declaration::VariableDeclaration(decl) => self.walk_top_var(decl),
+        Declaration::VariableDeclaration(decl) => self.walk_var_decl(decl),
         Declaration::FunctionDeclaration(func) => self.walk_function(FnNode::Function(func)),
+        Declaration::ClassDeclaration(class) => self.walk_class_decl(class),
         decl => self.escape().visit_declaration(decl),
       },
       Statement::ExportDefaultDeclaration(export) => match &export.declaration {
         ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
           self.walk_function(FnNode::Function(func));
         }
-        ExportDefaultDeclarationKind::ClassDeclaration(class) => self.escape().visit_class(class),
+        ExportDefaultDeclarationKind::ClassDeclaration(class) => self.walk_class_decl(class),
         ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {}
         expr => {
           let Some(facts) = self.an.env.module(self.module) else {
@@ -169,26 +334,52 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
     }
   }
 
-  fn walk_top_var(&mut self, decl: &'a VariableDeclaration<'a>) {
+  /// Walk a top-level class declaration with the demand on its binding.
+  fn walk_class_decl(&mut self, class: &'a Class<'a>) {
+    let symbol_id = class.id.as_ref().and_then(|id| id.symbol_id.get()).or_else(|| {
+      self.an.env.module(self.module).map(|facts| facts.module.default_export_ref.symbol)
+    });
+    let demand = symbol_id
+      .map_or_else(PathTree::whole, |symbol_id| self.symbol_demand(self.module, symbol_id));
+    self.walk_class(class, &demand);
+  }
+
+  /// The analysis does not walk the parts of a class, so each reference in them escapes. The
+  /// class itself escapes only when `demand` lets unknown code see it.
+  fn walk_class(&mut self, class: &'a Class<'a>, demand: &PathTree) {
+    let key = (self.module, class.node_id());
+    if demand.whole {
+      self.an.state.escape_entity(key);
+    } else {
+      self.an.state.add_entity_demand(key, demand);
+    }
+    let mut escape = self.escape();
+    escape.visit_decorators(&class.decorators);
+    if let Some(heritage) = &class.heritage {
+      escape.visit_class_heritage(heritage);
+    }
+    escape.visit_class_body(&class.body);
+  }
+
+  /// Walk a variable declaration at the top level or inside a function. An initializer gets the
+  /// demand of what its pattern reads.
+  fn walk_var_decl(&mut self, decl: &'a VariableDeclaration<'a>) {
+    // `using` calls a method of the value when the scope ends.
     let using =
       matches!(decl.kind, VariableDeclarationKind::Using | VariableDeclarationKind::AwaitUsing);
     for declarator in &decl.declarations {
-      match (&declarator.id, &declarator.init) {
-        (BindingPattern::BindingIdentifier(id), Some(init)) if !using => match id.symbol_id.get() {
-          Some(symbol_id) => {
-            let holder = self.an.env.canonical(self.module, symbol_id);
-            let demand = self.binding_demand(holder);
-            self.walk_expr(init, &demand);
-          }
-          None => self.walk_expr(init, &PathTree::whole()),
-        },
-        (BindingPattern::BindingIdentifier(_), None) => {}
-        (pattern, init) => {
-          self.escape().visit_binding_pattern(pattern);
-          if let Some(init) = init {
-            self.walk_expr(init, &PathTree::whole());
-          }
+      if using {
+        self.escape().visit_binding_pattern(&declarator.id);
+        if let Some(init) = &declarator.init {
+          self.walk_expr(init, &PathTree::whole());
         }
+        continue;
+      }
+      self.an.register_local_decl(declarator, self.site);
+      self.walk_pattern_parts(&declarator.id);
+      if let Some(init) = &declarator.init {
+        let demand = self.pattern_demand(self.module, &declarator.id);
+        self.walk_expr(init, &demand);
       }
     }
   }
@@ -204,8 +395,10 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
       || self.an.object_uses_this(self.module, obj);
     if escaped {
       self.an.state.escape_entity(key);
+    } else {
+      self.an.state.add_entity_demand(key, demand);
     }
-    for prop in &obj.properties {
+    for (index, prop) in obj.properties.iter().enumerate() {
       let p = match prop {
         ObjectPropertyKind::SpreadProperty(spread) => {
           self.walk_expr(&spread.argument, &PathTree::whole());
@@ -213,8 +406,31 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
         }
         ObjectPropertyKind::ObjectProperty(p) => p,
       };
-      if escaped || is_proto_setter(p) {
+      // The analysis does not model the calls of a getter or a setter.
+      if p.kind != PropertyKind::Init
+        && let Expression::FunctionExpression(func) = &p.value
+      {
+        self.an.state.escape_entity((self.module, func.node_id()));
+      }
+      if !is_proto_setter(p)
+        && let Some(name) = self.an.property_key(p, self.site)
+        && self.is_overwritten(obj, index, &name, escaped)
+      {
+        if self.an.property_effects(p, self.removal_cx()) {
+          self.walk_property(p, &PathTree::default());
+        } else {
+          self.excluded.push(Excluded::Prop(prop));
+          self.rewrites.removed_props.insert(p.node_id());
+        }
+        continue;
+      }
+      if escaped {
         self.walk_property(p, &PathTree::whole());
+        continue;
+      }
+      // A read of a key that the literal does not define reads the prototype.
+      if is_proto_setter(p) {
+        self.walk_property(p, demand);
         continue;
       }
       let Some(name) = self.an.property_key(p, self.site) else {
@@ -225,8 +441,11 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
       let deopted = self.an.state.entity(key).is_some_and(|entity| {
         entity.all_keys_deopted || entity.deopted_keys.contains(name.as_str())
       });
-      // A write runs a setter, and a write to a getter-only property throws.
-      let needed = sub.is_some() || (p.kind != PropertyKind::Init && deopted);
+      // A write runs a setter, and a write to a getter-only property throws. A read of each key
+      // runs each getter.
+      let needed = sub.is_some()
+        || (p.kind != PropertyKind::Init && deopted)
+        || (p.kind == PropertyKind::Get && demand.every_key);
       if needed {
         self.walk_property(p, &sub.unwrap_or_default());
       } else if self.an.property_effects(p, self.removal_cx()) {
@@ -238,11 +457,73 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
     }
   }
 
+  /// Whether a later property of the literal replaces the property at `index`, so that no code
+  /// can read its value. The key order of the object can still see it, because the first
+  /// definition of a key decides the position of the key. So when unknown code can list the
+  /// keys, the property goes only when the definitions of the same key follow it directly.
+  fn is_overwritten(
+    &mut self,
+    obj: &'a ObjectExpression<'a>,
+    index: usize,
+    name: &str,
+    escaped: bool,
+  ) -> bool {
+    let ObjectPropertyKind::ObjectProperty(p) = &obj.properties[index] else {
+      return false;
+    };
+    for later in &obj.properties[index + 1..] {
+      match later {
+        ObjectPropertyKind::ObjectProperty(q)
+          if !is_proto_setter(q) && self.an.property_key(q, self.site).as_deref() == Some(name) =>
+        {
+          // A getter and a setter of one key make one accessor property.
+          if q.kind == PropertyKind::Init || p.kind == PropertyKind::Init || q.kind == p.kind {
+            return true;
+          }
+        }
+        _ if escaped => return false,
+        _ => {}
+      }
+    }
+    false
+  }
+
+  /// An element gets the demand at its index. After a spread, the indexes are unknown.
+  fn walk_array(&mut self, arr: &'a ArrayExpression<'a>, demand: &PathTree) {
+    let key = (self.module, arr.node_id());
+    let escaped = demand.whole
+      || self.an.state.all_objects_deopted
+      || self.an.state.entity(key).is_some_and(|entity| entity.escaped);
+    if escaped {
+      self.an.state.escape_entity(key);
+    } else {
+      self.an.state.add_entity_demand(key, demand);
+    }
+    let mut after_spread = false;
+    for (index, element) in arr.elements.iter().enumerate() {
+      match element {
+        ArrayExpressionElement::SpreadElement(spread) => {
+          self.walk_expr(&spread.argument, &PathTree::whole());
+          after_spread = true;
+        }
+        ArrayExpressionElement::Elision(_) => {}
+        _ => {
+          let sub = if escaped || after_spread {
+            PathTree::whole()
+          } else {
+            demand.at(&index.to_string()).unwrap_or_default()
+          };
+          self.walk_expr(element.to_expression(), &sub);
+        }
+      }
+    }
+  }
+
   fn walk_property(&mut self, p: &'a ObjectProperty<'a>, demand: &PathTree) {
     if p.computed
       && let Some(key) = p.key.as_expression()
     {
-      let key_demand = if matches!(self.an.value(key, self.site), Value::Lit(_)) {
+      let key_demand = if is_primitive_key(&self.an.value(key, self.site)) {
         PathTree::default()
       } else {
         PathTree::whole()
@@ -253,33 +534,46 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
   }
 
   pub fn walk_function(&mut self, func: FnNode<'a>) {
-    let saved = self.site;
-    self.site = saved.in_function();
+    let saved_site = self.site;
+    let saved_func = self.func;
+    self.site = saved_site.in_function();
+    let value = FnValue { module: self.module, stmt: self.site.stmt, node: func, holder: None };
+    self.an.register_params(&value);
+    self.func = Some(value);
     let params = func.params();
     for item in &params.items {
-      if !matches!(item.pattern, BindingPattern::BindingIdentifier(_)) {
-        self.escape().visit_binding_pattern(&item.pattern);
-      }
+      self.walk_pattern_parts(&item.pattern);
       if let Some(init) = &item.initializer {
-        self.walk_expr(init, &PathTree::whole());
+        let demand = self.pattern_demand(self.module, &item.pattern);
+        self.walk_expr(init, &demand);
       }
     }
-    if let Some(rest) = &params.rest
-      && !matches!(rest.rest.argument, BindingPattern::BindingIdentifier(_))
-    {
-      self.escape().visit_binding_pattern(&rest.rest.argument);
+    if let Some(rest) = &params.rest {
+      self.walk_pattern_parts(&rest.rest.argument);
     }
     match func.expression_body() {
-      Some(expr) => self.walk_expr(expr, &PathTree::whole()),
+      Some(expr) => {
+        let demand = self.return_demand();
+        self.walk_expr(expr, &demand);
+      }
       None => self.walk_stmts(func.body_statements()),
     }
-    self.site = saved;
+    self.func = saved_func;
+    self.site = saved_site;
   }
 
   /// Walk a nested statement list, and remove the statements that do nothing. Declarations,
-  /// `return`, and jumps always stay.
+  /// `return`, and jumps always stay. After a statement that always jumps, the statements that
+  /// are not declarations never run, so they go.
   fn walk_stmts(&mut self, stmts: &'a [Statement<'a>]) {
+    self.an.register_local_fns(stmts, self.site);
+    let mut reachable = true;
     for stmt in stmts {
+      if !reachable && !stmt.is_declaration() && !collect::contains_var_decl(stmt) {
+        self.exclude_stmt(stmt);
+        self.rewrites.removed_stmts.insert(stmt.node_id());
+        continue;
+      }
       let removable = match stmt {
         Statement::ExpressionStatement(_) | Statement::EmptyStatement(_) => true,
         Statement::BlockStatement(_) | Statement::IfStatement(_) => {
@@ -293,6 +587,34 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
         continue;
       }
       self.walk_stmt(stmt);
+      reachable &= !self.always_jumps(stmt);
+    }
+  }
+
+  /// Whether `stmt`, as the walk keeps it, ends with a jump on each path. A labeled statement
+  /// can end normally through a `break` of its label.
+  fn always_jumps(&self, stmt: &Statement<'a>) -> bool {
+    match stmt {
+      Statement::ReturnStatement(_)
+      | Statement::ThrowStatement(_)
+      | Statement::BreakStatement(_)
+      | Statement::ContinueStatement(_) => true,
+      Statement::BlockStatement(block) => block.body.iter().any(|stmt| self.always_jumps(stmt)),
+      Statement::IfStatement(if_stmt) => match self.rewrites.folded_ifs.get(&if_stmt.node_id()) {
+        Some(folded) => {
+          let live = if folded.keep_consequent {
+            Some(&if_stmt.consequent)
+          } else {
+            if_stmt.alternate.as_ref()
+          };
+          live.is_some_and(|live| self.always_jumps(live))
+        }
+        None => {
+          self.always_jumps(&if_stmt.consequent)
+            && if_stmt.alternate.as_ref().is_some_and(|alternate| self.always_jumps(alternate))
+        }
+      },
+      _ => false,
     }
   }
 
@@ -305,20 +627,12 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
       Statement::IfStatement(if_stmt) => self.walk_if(if_stmt),
       Statement::ReturnStatement(ret) => {
         if let Some(arg) = &ret.argument {
-          self.walk_expr(arg, &PathTree::whole());
+          let demand = self.return_demand();
+          self.walk_expr(arg, &demand);
         }
       }
       Statement::ThrowStatement(throw) => self.walk_expr(&throw.argument, &PathTree::whole()),
-      Statement::VariableDeclaration(decl) => {
-        for declarator in &decl.declarations {
-          if !matches!(declarator.id, BindingPattern::BindingIdentifier(_)) {
-            self.escape().visit_binding_pattern(&declarator.id);
-          }
-          if let Some(init) = &declarator.init {
-            self.walk_expr(init, &PathTree::whole());
-          }
-        }
-      }
+      Statement::VariableDeclaration(decl) => self.walk_var_decl(decl),
       Statement::FunctionDeclaration(func) => self.walk_function(FnNode::Function(func)),
       Statement::ForStatement(for_stmt) => {
         if let Some(init) = &for_stmt.init {
@@ -441,13 +755,13 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
       oxc::ast::match_member_expression!(Expression) => {
         self.walk_member(expr.to_member_expression(), demand);
       }
-      Expression::CallExpression(call) => self.walk_call(call, true),
+      Expression::CallExpression(call) => self.walk_call(call, true, demand),
       Expression::NewExpression(new) => {
         self.walk_expr(&new.callee, &PathTree::whole());
         self.walk_arguments(&new.arguments);
       }
       Expression::ChainExpression(chain) => match &chain.expression {
-        ChainElement::CallExpression(call) => self.walk_call(call, false),
+        ChainElement::CallExpression(call) => self.walk_call(call, false, demand),
         ChainElement::TSNonNullExpression(inner) => self.walk_expr(&inner.expression, demand),
         element => self.walk_member(element.to_member_expression(), demand),
       },
@@ -480,17 +794,8 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
         target => self.escape().visit_simple_assignment_target(target),
       },
       Expression::ObjectExpression(obj) => self.walk_object(obj, demand),
-      Expression::ArrayExpression(arr) => {
-        for element in &arr.elements {
-          match element {
-            ArrayExpressionElement::SpreadElement(spread) => {
-              self.walk_expr(&spread.argument, &PathTree::whole());
-            }
-            ArrayExpressionElement::Elision(_) => {}
-            _ => self.walk_expr(element.to_expression(), &PathTree::whole()),
-          }
-        }
-      }
+      Expression::ArrayExpression(arr) => self.walk_array(arr, demand),
+      Expression::ClassExpression(class) => self.walk_class(class, demand),
       Expression::TemplateLiteral(template) => {
         for expr in &template.expressions {
           self.walk_expr(expr, &PathTree::whole());
@@ -502,8 +807,14 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
           self.walk_expr(expr, &PathTree::whole());
         }
       }
-      Expression::FunctionExpression(func) => self.walk_function(FnNode::Function(func)),
-      Expression::ArrowFunctionExpression(arrow) => self.walk_function(FnNode::Arrow(arrow)),
+      Expression::FunctionExpression(func) => {
+        self.on_fn_value(FnNode::Function(func), demand);
+        self.walk_function(FnNode::Function(func));
+      }
+      Expression::ArrowFunctionExpression(arrow) => {
+        self.on_fn_value(FnNode::Arrow(arrow), demand);
+        self.walk_function(FnNode::Arrow(arrow));
+      }
       Expression::AwaitExpression(await_expr) => {
         self.walk_expr(&await_expr.argument, &PathTree::whole());
       }
@@ -513,6 +824,13 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
         }
       }
       expr => self.escape().visit_expression(expr),
+    }
+  }
+
+  /// A function value with a demand that lets unknown code call it escapes.
+  fn on_fn_value(&mut self, func: FnNode<'a>, demand: &PathTree) {
+    if Analyzer::is_call_revealing(demand) {
+      self.an.state.escape_entity((self.module, func.node_id()));
     }
   }
 
@@ -540,14 +858,27 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
     }
   }
 
-  /// Walk a call. A known callee needs only the property that holds it, unless it reads
-  /// `this`. An argument goes when the callee never reads its parameter and the argument does
-  /// nothing.
-  fn walk_call(&mut self, call: &'a CallExpression<'a>, can_remove_args: bool) {
+  /// Walk a call whose value the context uses at the paths in `demand`. A known callee needs
+  /// only the property that holds it, unless it reads `this`, and the call is a recorded call of
+  /// it. An unknown callee escapes, because the analysis cannot record its calls. An argument of
+  /// a known callee gets the demand of its parameter, and it goes when the callee never reads
+  /// the parameter and the argument does nothing.
+  fn walk_call(&mut self, call: &'a CallExpression<'a>, can_remove_args: bool, demand: &PathTree) {
     let callee_fn = match self.an.value(&call.callee, self.site) {
       Value::Function(func) => Some(func),
       _ => None,
     };
+    if let Some(func) = &callee_fn {
+      self.an.record_call(func, call, self.site);
+      self.an.state.add_return_demand(func.key(), demand);
+    }
+    if !call.optional
+      && let Expression::Identifier(ident) = call.callee.without_parentheses()
+      && ident.name == "eval"
+      && matches!(self.an.resolve(self.module, ident), Resolved::Global)
+    {
+      self.an.on_direct_eval(self.module);
+    }
     match call.callee.without_parentheses() {
       callee @ oxc::ast::match_member_expression!(Expression) => {
         let member = callee.to_member_expression();
@@ -574,18 +905,22 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
           }
         }
       }
-      _ => self.walk_expr(&call.callee, &PathTree::default()),
+      _ => {
+        let callee_demand =
+          if callee_fn.is_some() { PathTree::default() } else { PathTree::whole() };
+        self.walk_expr(&call.callee, &callee_demand);
+      }
     }
-    let removable = callee_fn.filter(|func| {
-      can_remove_args
-        && !call.arguments.iter().any(|arg| matches!(arg, Argument::SpreadElement(_)))
-        && !self.an.fn_uses_arguments(func)
-    });
+    let has_spread = call.arguments.iter().any(|arg| matches!(arg, Argument::SpreadElement(_)));
+    let tracked = callee_fn.filter(|func| !self.an.fn_uses_arguments(func));
+    let removable = tracked.filter(|_| can_remove_args && !has_spread);
+    let mut after_spread = false;
     for (index, arg) in call.arguments.iter().enumerate() {
       let Some(expr) = arg.as_expression() else {
         if let Argument::SpreadElement(spread) = arg {
           self.walk_expr(&spread.argument, &PathTree::whole());
         }
+        after_spread = true;
         continue;
       };
       if let Some(func) = &removable
@@ -596,7 +931,11 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
         self.rewrites.removed_args.insert(arg.node_id());
         continue;
       }
-      self.walk_expr(expr, &PathTree::whole());
+      let arg_demand = match &tracked {
+        Some(func) if !after_spread => self.param_demand(func, index),
+        _ => PathTree::whole(),
+      };
+      self.walk_expr(expr, &arg_demand);
     }
   }
 
@@ -746,7 +1085,9 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
   fn walk_delete(&mut self, arg: &'a Expression<'a>) {
     match arg.without_parentheses() {
       target @ oxc::ast::match_member_expression!(Expression) => {
-        self.walk_member_write(target.to_member_expression(), false);
+        let member = target.to_member_expression();
+        self.an.deopt_member_delete(member, self.site);
+        self.walk_member_write(member, false);
       }
       arg => self.walk_expr(arg, &PathTree::default()),
     }

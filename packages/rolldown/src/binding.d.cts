@@ -2843,7 +2843,8 @@ export type BindingPreserveEntrySignatures =
 
 export declare enum BindingPropertyReadSideEffects {
   Always = 0,
-  False = 1,
+  True = 1,
+  False = 2,
 }
 
 export declare enum BindingPropertyWriteSideEffects {

@@ -966,10 +966,22 @@
       "additionalProperties": false
     },
     "PropertyReadSideEffects": {
-      "type": "string",
-      "enum": [
-        "always",
-        "false"
+      "oneOf": [
+        {
+          "description": "Every property read can have side effects.",
+          "type": "string",
+          "const": "always"
+        },
+        {
+          "description": "A property read can have side effects. With `experimental.advancedTreeshaking`, the analysis\nasks the object, so a read of a known object with no getter has none. Without the analysis,\nthis is the same as `Always`.",
+          "type": "string",
+          "const": "true"
+        },
+        {
+          "description": "Property reads have no side effects.",
+          "type": "string",
+          "const": "false"
+        }
       ]
     },
     "PropertyWriteSideEffects": {

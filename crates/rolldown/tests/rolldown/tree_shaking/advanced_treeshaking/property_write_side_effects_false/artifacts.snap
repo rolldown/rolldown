@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+globalThis.log = [];
+const log = (msg) => globalThis.log.push(msg);
+const o = { used: 1 };
+function main() {
+	return o.used;
+}
+const cfg = { debug: false };
+cfg.debug = true;
+if (cfg.debug) log("LIVE_gated_write");
+const done = true;
+export { done, main };
+
+```

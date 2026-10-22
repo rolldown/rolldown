@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+globalThis.log = [];
+function main() {
+	return 1;
+}
+const done = true;
+export { done, main };
+
+```

@@ -1,0 +1,8 @@
+{
+  "_comment": "Object keys: a read of a symbol key goes, a `delete` on an object that nothing reads goes, and a property that a later definition of the key replaces goes.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

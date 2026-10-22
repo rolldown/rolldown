@@ -568,7 +568,7 @@ const TreeshakingOptionsSchema = v.strictObject({
   unknownGlobalSideEffects: v.optional(v.boolean()),
   invalidImportSideEffects: v.optional(v.boolean()),
   commonjs: v.optional(v.boolean()),
-  propertyReadSideEffects: v.optional(v.union([v.literal(false), v.literal('always')])),
+  propertyReadSideEffects: v.optional(v.union([v.boolean(), v.literal('always')])),
   propertyWriteSideEffects: v.optional(v.union([v.literal(false), v.literal('always')])),
 });
 isTypeTrue<IsSchemaSubType<typeof TreeshakingOptionsSchema, TreeshakingOptions>>();

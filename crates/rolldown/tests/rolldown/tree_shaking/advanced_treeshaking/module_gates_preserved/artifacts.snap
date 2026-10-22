@@ -1,0 +1,94 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## EVAL
+
+```text
+[EVAL] Use of direct `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
+    ╭─[ eval.js:11:1 ]
+    │
+ 11 │ eval('evalFlag = true');
+    │ ──┬─  
+    │   ╰─── Use of direct `eval` here.
+    │ 
+    │ Help: Consider using indirect eval. For more information, check the documentation: https://rolldown.rs/guide/troubleshooting#avoiding-direct-eval
+────╯
+
+```
+
+## EVAL
+
+```text
+[EVAL] Use of direct `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
+   ╭─[ eval.js:3:3 ]
+   │
+ 3 │   eval('secret.flag = true');
+   │   ──┬─  
+   │     ╰─── Use of direct `eval` here.
+   │ 
+   │ Help: Consider using indirect eval. For more information, check the documentation: https://rolldown.rs/guide/troubleshooting#avoiding-direct-eval
+───╯
+
+```
+
+## EVAL
+
+```text
+[EVAL] Use of direct `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
+   ╭─[ eval.js:8:10 ]
+   │
+ 8 │   return eval('viaEval.a');
+   │          ──┬─  
+   │            ╰─── Use of direct `eval` here.
+   │ 
+   │ Help: Consider using indirect eval. For more information, check the documentation: https://rolldown.rs/guide/troubleshooting#avoiding-direct-eval
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+// tla.js
+let ready = false;
+const state = { ready: false };
+let value;
+function late() {
+	return value;
+}
+await null;
+ready = true;
+state.ready = true;
+value = "set";
+// eval.js
+const secret = { flag: false };
+function run() {
+	eval("secret.flag = true");
+	if (secret.flag) globalThis.log.push("LIVE_eval_write");
+}
+const viaEval = {
+	a: "LIVE_eval_read",
+	b: 1
+};
+function readEval() {
+	return eval("viaEval.a");
+}
+let evalFlag = false;
+eval("evalFlag = true");
+// main.js
+globalThis.log = [];
+const log = (msg) => globalThis.log.push(msg);
+if (ready) log("LIVE_tla_binding");
+if (state.ready) log("LIVE_tla_property");
+if (late() === "set") log("LIVE_tla_function");
+run();
+log(readEval());
+if (evalFlag) log("LIVE_eval_binding");
+const done = true;
+export { done };
+
+```

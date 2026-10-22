@@ -1,0 +1,8 @@
+{
+  "_comment": "Classes, constructors, and function properties: the analysis keeps each accessor call, each write that a later read sees, and each throw. The cases cover accessors that unknown code defines, writes through `this` and through names, arguments of `new`, and invalid writes.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "_comment": "Prototypes: a read of a data property of a known prototype or of a `null` prototype has no effect, and a value of the prototype folds a branch.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

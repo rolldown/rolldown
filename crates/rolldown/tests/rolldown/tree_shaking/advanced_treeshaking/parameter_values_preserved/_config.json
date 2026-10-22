@@ -1,0 +1,8 @@
+{
+  "_comment": "Parameter values: the analysis keeps each branch that a call can reach. The cases cover calls that the analysis does not record, writes to parameters, and writes through parameters.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

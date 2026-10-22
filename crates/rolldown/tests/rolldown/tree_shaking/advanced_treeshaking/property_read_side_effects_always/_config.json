@@ -1,0 +1,11 @@
+{
+  "_comment": "An explicit `propertyReadSideEffects: 'always'` keeps every property read and spread, like rollup. A read of a namespace export is not a property read.",
+  "config": {
+    "treeshake": {
+      "propertyReadSideEffects": "always"
+    },
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

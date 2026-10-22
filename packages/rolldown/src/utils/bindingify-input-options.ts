@@ -360,6 +360,9 @@ function bindingifyTreeshakeOptions(
     case 'always':
       normalizedConfig.propertyReadSideEffects = BindingPropertyReadSideEffects.Always;
       break;
+    case true:
+      normalizedConfig.propertyReadSideEffects = BindingPropertyReadSideEffects.True;
+      break;
     case false:
       normalizedConfig.propertyReadSideEffects = BindingPropertyReadSideEffects.False;
       break;

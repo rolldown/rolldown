@@ -15,7 +15,13 @@ use serde::{Deserialize, Deserializer};
   serde(rename_all = "camelCase")
 )]
 pub enum PropertyReadSideEffects {
+  /// Every property read can have side effects.
   Always,
+  /// A property read can have side effects. With `experimental.advancedTreeshaking`, the analysis
+  /// asks the object, so a read of a known object with no getter has none. Without the analysis,
+  /// this is the same as `Always`.
+  True,
+  /// Property reads have no side effects.
   False,
 }
 
@@ -82,7 +88,7 @@ impl NormalizedTreeshakeOptions {
     self
       .as_ref()
       .and_then(|opt| opt.property_read_side_effects)
-      .unwrap_or(PropertyReadSideEffects::Always)
+      .unwrap_or(PropertyReadSideEffects::True)
   }
 
   /// By default we assume property writes have side effects
@@ -249,7 +255,9 @@ impl From<&NormalizedTreeshakeOptions> for oxc::minifier::TreeShakeOptions {
         .manual_pure_functions()
         .map_or(default.manual_pure_functions, |set| set.iter().cloned().collect::<Vec<_>>()),
       property_read_side_effects: match value.property_read_side_effects() {
-        PropertyReadSideEffects::Always => oxc::minifier::PropertyReadSideEffects::All,
+        PropertyReadSideEffects::Always | PropertyReadSideEffects::True => {
+          oxc::minifier::PropertyReadSideEffects::All
+        }
         PropertyReadSideEffects::False => oxc::minifier::PropertyReadSideEffects::None,
       },
       property_write_side_effects: match value.property_write_side_effects() {

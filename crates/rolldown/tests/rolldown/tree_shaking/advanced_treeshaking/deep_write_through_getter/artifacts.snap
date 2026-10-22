@@ -1,0 +1,80 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+globalThis.log = [];
+const a = { v: false };
+const getter = { get g() {
+	return a;
+} };
+getter.g.v = true;
+if (a.v) globalThis.log.push("LIVE_object_getter");
+const b = { v: false };
+const child = { __proto__: { get g() {
+	return b;
+} } };
+child.g.v = true;
+if (b.v) globalThis.log.push("LIVE_proto_getter");
+const c = { v: false };
+var Static = class {
+	static get g() {
+		return c;
+	}
+};
+Static.g.v = true;
+if (c.v) globalThis.log.push("LIVE_static_getter");
+const d = { v: false };
+var Parent = class {
+	static get g() {
+		return d;
+	}
+};
+var Child = class extends Parent {};
+Child.g.v = true;
+if (d.v) globalThis.log.push("LIVE_inherited_static_getter");
+const e = { v: false };
+var Instance = class {
+	get g() {
+		return e;
+	}
+};
+new Instance().g.v = true;
+if (e.v) globalThis.log.push("LIVE_instance_getter");
+const f = { v: false };
+const holder = { f };
+const nested = { get g() {
+	return holder.f;
+} };
+nested.g.v = true;
+if (f.v) globalThis.log.push("LIVE_nested_getter");
+const h = { v: false };
+const literal = { get g() {
+	return { h };
+} };
+literal.g.h.v = true;
+if (h.v) globalThis.log.push("LIVE_getter_literal");
+const i = { v: false };
+function fn() {
+	return i;
+}
+fn().v = true;
+if (i.v) globalThis.log.push("LIVE_function_return");
+const j = { v: false };
+const methods = { m() {
+	return j;
+} };
+methods.m().v = true;
+if (j.v) globalThis.log.push("LIVE_method_return");
+const k = { v: false };
+const arrow = () => k;
+arrow().v = true;
+if (k.v) globalThis.log.push("LIVE_arrow_return");
+const done = true;
+export { done };
+
+```

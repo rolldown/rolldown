@@ -1,0 +1,135 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+globalThis.log = [];
+const log = (msg) => globalThis.log.push(msg);
+function mixed(x) {
+	if (x) log("LIVE_mixed");
+}
+mixed(false);
+mixed(true);
+function escaped(x) {
+	if (x) log("LIVE_escaped");
+}
+escaped(false);
+function viaA(x) {
+	if (x) log("LIVE_viaA");
+}
+function viaB(x) {
+	if (x) log("LIVE_viaB");
+}
+viaA(false);
+viaB(false);
+(globalThis.pickA ? viaA : viaB)(true);
+function reassigned(x) {
+	x = true;
+	if (x) log("LIVE_reassigned");
+}
+reassigned(false);
+const cfg = { debug: false };
+function enable(o) {
+	o.debug = true;
+}
+enable(cfg);
+if (cfg.debug) log("LIVE_param_write");
+const cfg2 = { debug: false };
+function enable2() {
+	const alias = cfg2;
+	alias.debug = true;
+}
+enable2();
+if (cfg2.debug) log("LIVE_alias_write");
+const cfg3 = { debug: false };
+function id(o) {
+	return o;
+}
+id(cfg3).debug = true;
+if (cfg3.debug) log("LIVE_return_write");
+const cfg4 = { flag: false };
+function setLater(o) {
+	o.flag = true;
+}
+setLater({});
+setLater(cfg4);
+if (cfg4.flag) log("LIVE_later_call");
+function callback(x) {
+	if (x) log("LIVE_callback");
+}
+callback(false);
+[true].forEach(callback);
+function viaCall(x) {
+	if (x) log("LIVE_call");
+}
+viaCall(false);
+viaCall.call(null, true);
+function withDefault(x = true) {
+	if (x) log("LIVE_default");
+}
+withDefault(void 0);
+function spread(x) {
+	if (x) log("LIVE_spread");
+}
+spread(false);
+spread(...[true]);
+function leak(o) {
+	return arguments[0];
+}
+log(leak({
+	a: "LIVE_arguments",
+	b: 1
+}).a);
+function countdown(n) {
+	if (n === 1) log("LIVE_recursion");
+	if (n > 0) countdown(n - 1);
+}
+countdown(2);
+function setV(o) {
+	o.v = "LIVE_holderless";
+	return o;
+}
+log(setV({}).v);
+function readX(o) {
+	return o.x;
+}
+readX({ get x() {
+	log("LIVE_getter");
+	return 1;
+} });
+function destructure({ y }) {
+	return y;
+}
+destructure({ get y() {
+	log("LIVE_destructure_getter");
+	return 1;
+} });
+function make() {
+	return {
+		a: "LIVE_return_escape",
+		b: 1
+	};
+}
+globalThis.made = make();
+function localFn() {
+	function f() {
+		return false;
+	}
+	f = () => true;
+	if (f()) log("LIVE_local_fn");
+}
+localFn();
+function capture(x) {
+	return () => x;
+}
+const capturedTrue = capture(true);
+const capturedFalse = capture(false);
+if (capturedTrue() && !capturedFalse()) log("LIVE_closure_param");
+const done = true;
+export { done, escaped };
+
+```

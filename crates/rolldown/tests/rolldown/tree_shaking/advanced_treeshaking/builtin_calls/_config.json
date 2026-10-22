@@ -1,0 +1,8 @@
+{
+  "_comment": "Builtin calls: calls of methods of primitives, regular expression literals, and object literals with primitive arguments go. `Object.freeze` of an object that nothing reads goes.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

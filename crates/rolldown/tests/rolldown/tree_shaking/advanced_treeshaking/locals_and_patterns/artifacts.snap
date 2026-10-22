@@ -1,0 +1,25 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+function main() {
+	const o = { used: 1 };
+	function read() {
+		return o.used;
+	}
+	return read();
+}
+const { used } = { used: 1 };
+const { inner: { used: nestedUsed } } = { inner: { used: 1 } };
+const { used: restUsed, ...rest } = { used: 1 };
+function read() {
+	return used + nestedUsed + restUsed;
+}
+export { main, read };
+
+```

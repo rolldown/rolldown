@@ -7,8 +7,11 @@ step of the link stage. The top-level statement stays the unit that the inclusio
 For each included statement of an analyzed module, the analysis decides which parts of it the
 output keeps: object properties, call arguments, branches, and statements in function bodies and
 blocks. It also stops the side-effect sweep from including a statement that has no effect under
-its facts. The option closes the 13 gaps of the RFC (H1–H3, E1–E4, T1–T3, W1–W3), which were
-measured against `rollup@4.62.4`.
+its facts.
+
+The option closes the 13 gaps of the RFC (H1–H3, E1–E4, T1–T3, W1–W3), which were measured
+against `rollup@4.62.4`. It also closes the 74 cases of the RFC supplement of 2026-10-22 (groups
+G1–G18 and O1), which were measured against `rollup@4.62.4` and `rollup@4.64.0`.
 
 The contract:
 
@@ -21,6 +24,9 @@ The contract:
 - **Behavior stays the same:** evaluation order, effects, getters and setters that run, thrown
   errors (TDZ errors too), and live bindings. `moduleSideEffects`, `annotations`, and
   `manualPureFunctions` keep their meanings and still win.
+- **One assumption, like rollup:** no code replaces a builtin method or adds an array index to a
+  builtin prototype. Code can add other keys to a builtin prototype, so a read of a key that an
+  object literal does not define is unknown (see principle 11).
 
 The machinery is in [implementation.md](./implementation.md).
 
@@ -37,10 +43,10 @@ The machinery is in [implementation.md](./implementation.md).
    cannot do this. The chain example of the RFC shows that a dimension left to the minifier stops
    the other dimensions, because its results never go back into the fixpoint.
 3. **An optimistic fixpoint, like rollup.** The analysis first assumes that nothing is included,
-   read, written, or escaped. It gives up an assumption only when code that it must keep breaks
-   the assumption. A pessimistic analysis cannot prove W2: each of the mutually guarded `if`
-   statements keeps the other alive. Facts only grow, so the fixpoint ends. Each pass walks every
-   walked statement again with all facts so far, and the last pass decides.
+   read, written, called, or escaped. It gives up an assumption only when code that it must keep
+   breaks the assumption. A pessimistic analysis cannot prove W2: each of the mutually guarded
+   `if` statements keeps the other alive. Facts only grow, so the fixpoint ends. Each pass walks
+   every walked statement again with all facts so far, and the last pass decides.
 4. **The old verdict AND the new verdict.** The sweep includes a statement only when the existing
    side-effect flags say that it has effects and the analysis agrees. The existing flags carry
    decisions that the analysis must not override: `moduleSideEffects`, pure annotations,
@@ -50,16 +56,19 @@ The machinery is in [implementation.md](./implementation.md).
    the demand `whole`. Then every property of it stays, and every property value is unknown. A
    symbol that the engine includes for a reason other than a reference in a walked statement
    escapes: entry exports, namespace objects, references from modules that the analysis does not
-   cover, CommonJS interop. The analysis aims at the common shapes (configuration objects, flags,
-   small helpers, unused arguments) and gives up early on the rest.
+   cover, CommonJS interop. The modeled places are parameters and returns of known functions,
+   elements of array literals, patterns, and members of classes. The analysis aims at the common
+   shapes (configuration objects, flags, small helpers, unused arguments) and gives up early on
+   the rest.
 6. **Value and effect are separate questions.** What `o.b` holds and whether a read of `o.b` runs
-   code have different answers. A read of a key with a getter is an effect. A read of a different
-   key of the same object is not (E2, and the dilemma of the RFC). So "give up on every object
-   with a getter" is not used, and `propertyReadSideEffects: false` is not needed.
+   code have different answers. A read of a key with a getter is the call of the getter. A read
+   of a different key of the same object is not (E2, and the dilemma of the RFC). So "give up on
+   every object with a getter" is not used, and `propertyReadSideEffects: false` is not needed.
 7. **A removed write still changes facts.** The effect check of a write applies the deopt of the
    write before it decides whether the write has an effect. So the analysis never folds a
    property that a removed write would change. A write has no effect only when nothing can read
-   what it writes: the binding or the object is not included, and no setter runs (E4, W1).
+   what it writes: the binding or the object is not included, and no setter runs (E4, W1). A
+   write below a value that a getter or a call returns changes the objects that it can return.
 8. **Initialization order is a part of the value.** A value is known only at a read that cannot
    see the binding uninitialized. Import cycles and hoisted functions make many reads in function
    bodies unsafe. The rules are syntactic and conservative, and they also decide TDZ effects.
@@ -72,22 +81,52 @@ The machinery is in [implementation.md](./implementation.md).
     records the node ids of the parts to remove or fold, and the module finalizer applies the
     edits before it visits the children of a node. So the finalizer never renames or rewrites
     code that the output does not contain.
+11. **Builtins, like rollup.** The analysis knows the builtin methods of primitives, arrays,
+    regular expression literals, `Object.prototype`, `Symbol`, and `Object.freeze`, and it
+    assumes that no code replaces them. Rollup makes the same assumption. Rollup does not assume
+    that the builtin prototypes have no other keys: a missing key of an object is unknown, apart
+    from an integer key. The analysis uses the same rule, because a missing key that folds to
+    `undefined` would remove a branch that a polyfill or a test helper enables.
+12. **Parameters need every call.** A parameter has a value only when the analysis sees every
+    call of its function: the function does not escape, does not read `arguments`, and has no
+    call that the analysis cannot follow (`call`, `apply`, `bind`, a callback of unknown code).
+    Each call that included code or an effect check reaches goes into the facts. Facts only grow,
+    so a call that appears later makes the parameter value smaller, never wrong at the end.
 
 ## Analyzed modules
 
 The analysis covers a module only when all of these conditions are true. A module that it does
 not cover uses the existing behavior, and the values that it exports are unknown.
 
-| Condition                                                          | Why                                                                                                                                                                 |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| not the runtime module                                             | Its helpers belong to the generate stage.                                                                                                                           |
-| ES module or no exports, and `WrapKind::None`                      | A wrapped body runs in a function at a time that the analysis does not know. CommonJS exports are properties of an object that the analysis does not model.         |
-| module type JS, JSX, TS, or TSX                                    | Other types (JSON, CSS, assets) have generated or no ASTs.                                                                                                          |
-| no direct `eval`                                                   | `eval` can read and write each binding by name.                                                                                                                     |
-| no lazy export                                                     | The AST is generated later.                                                                                                                                         |
-| no top-level await, and no dependency with top-level await         | Evaluation can stop and continue later, so the order of reads and writes is not known.                                                                              |
-| side effects are not `NoTreeshake`                                 | The user asked to keep the module as it is.                                                                                                                         |
-| the build does not set `treeshake.propertyWriteSideEffects: false` | Then the existing flags call every property write free of effects. The sweep never asks the analysis about such a write, so the analysis would not apply its deopt. |
+| Condition                                     | Why                                                                                                                                                                                                                                                              |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| not the runtime module                        | Its helpers belong to the generate stage.                                                                                                                                                                                                                        |
+| ES module or no exports, and `WrapKind::None` | A wrapped body runs in a function at the time of the first `require` or the first call of the init function, so the statement order does not tell when a read runs. CommonJS exports are properties of `module.exports`, and `require` gives it to unknown code. |
+| module type JS, JSX, TS, or TSX               | Other types (JSON, CSS, assets) have generated or no ASTs.                                                                                                                                                                                                       |
+| no lazy export                                | The AST is generated later.                                                                                                                                                                                                                                      |
+| side effects are not `NoTreeshake`            | The user asked to keep the module as it is.                                                                                                                                                                                                                      |
+
+The first version also excluded modules with a direct `eval`, modules affected by top-level
+await, and every module of a build with `treeshake.propertyWriteSideEffects: false`. Those gates
+are gone (G15, O1):
+
+- **Direct `eval`.** An `eval` in code that the output does not include never runs, so it changes
+  no fact. When the walker reaches a direct `eval` in included code, every binding of the module
+  escapes and becomes unknown (an import only escapes, because `eval` cannot write it). The sweep
+  then keeps each declaration of the module, like the existing `eval` bailout of the engine. An
+  indirect `eval` runs in the global scope and cannot see a module binding.
+- **Top-level await.** The output keeps the statement order of each module, and an importer runs
+  only after the module with the `await` finishes. An `await` pauses the evaluation but does not
+  change that order, so the init-safety rules still hold. Code that runs during the pause, for
+  example a promise callback, reaches the bindings of the module only through a function or an
+  object that an earlier statement gave out. That statement comes before each declaration after
+  the `await`, so a read in that function is not init safe. The other facts do not depend on the
+  order: a write anywhere makes the value unknown everywhere.
+- **`propertyWriteSideEffects: false`.** With this option, the existing flags call each property
+  write free of effects. The engine includes a statement that writes a property of a binding only
+  when it includes the binding, and the sweep never asks the analysis about it. So each pass
+  first applies the write deopts of such statements that the engine did not include yet. A fold
+  never depends on a value that such a write can change.
 
 ## How each gap closes
 
@@ -105,18 +144,58 @@ not cover uses the existing behavior, and the values that it exports are unknown
 | W2     | The fixpoint is optimistic: a write in a dead branch never runs, so the binding is never reassigned, and the next `if` folds too.                  |
 | W3     | The analysis runs on the whole module graph before chunking.                                                                                       |
 
+The groups of the supplement:
+
+| Group | Mechanism                                                                                                                                                                                                                                                                                    |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| G1    | A parameter has the join of the arguments of every recorded call (principle 12). A destructured parameter follows its pattern.                                                                                                                                                               |
+| G2    | The demand on a parameter goes to the arguments of the recorded calls. A write through a parameter deopts the argument of each recorded call, also of a call that comes later.                                                                                                               |
+| G3    | A function declaration in a function has a value. An object literal in a function keeps only the paths that its reads demand.                                                                                                                                                                |
+| G4    | A pattern demands only its keys. A rest element that no code reads reads each key, which runs the getters, but uses no value.                                                                                                                                                                |
+| G5    | A getter that does not read `this` has the value that its returns give. A read of it has the effects of a call of it.                                                                                                                                                                        |
+| G6    | A write that runs a setter has the effects of a call of the setter.                                                                                                                                                                                                                          |
+| G7    | `__proto__: value` with an object literal or `null` gives a known prototype. A read or a write of a key that the literal does not define goes to the prototype.                                                                                                                              |
+| G8    | An array literal is an entity like an object literal, with indexes, holes, and `length`.                                                                                                                                                                                                     |
+| G9    | A call of a known array method has the effects of its callback and of the conversions of its arguments. `push`, `pop`, `shift`, and `unshift` change the array.                                                                                                                              |
+| G10   | A known method of a string, a number, a boolean, a regular expression literal, or `Object.prototype` has no effect when no argument conversion runs code and no `RangeError` can occur. So do `Symbol()` with a primitive description and `Object.freeze` of an object that is not included. |
+| G11   | A function object that did not escape has data properties only. `X.prototype.k` goes to the prototype of a known constructor.                                                                                                                                                                |
+| G12   | An optional read or call of a known value that is not nullish is the plain read or call. On a nullish value, it reads and calls nothing.                                                                                                                                                     |
+| G13   | The statements after a jump that always runs never run. A `for...in` loop over a known object enumerates its keys without user code, so only the body decides.                                                                                                                               |
+| G14   | A class is an entity with static members, a prototype, and a constructor. `new` of a known class or ES5 constructor checks the constructor with `this` as the new object.                                                                                                                    |
+| G15   | The `eval`, top-level await, and write gates are gone (see "Analyzed modules").                                                                                                                                                                                                              |
+| G16   | A symbol from `Symbol()` is a primitive key, so its conversion runs no code. A read of an unknown primitive key of a known object with no getter and no `__proto__` key has no effect.                                                                                                       |
+| G17   | A `delete` of a key of an object that is not included, not frozen, and not escaped has no effect. A later read of the key can reach the prototype.                                                                                                                                           |
+| G18   | A property that a later definition of the same key replaces goes, unless unknown code can list the keys.                                                                                                                                                                                     |
+| O1    | `propertyWriteSideEffects: false` no longer turns the analysis off (see "Analyzed modules").                                                                                                                                                                                                 |
+
+## `treeshake.propertyReadSideEffects`
+
+The option has three values. The default is `true`.
+
+| Value      | Option off                         | Option on                                                                                 |
+| ---------- | ---------------------------------- | ----------------------------------------------------------------------------------------- |
+| `true`     | Every property read has an effect. | The analysis asks the object, like rollup's `true`.                                       |
+| `'always'` | Every property read has an effect. | Every property read has an effect, like rollup's `'always'`. Namespace reads are exports. |
+| `false`    | No property read has an effect.    | No property read has an effect.                                                           |
+
+Before the supplement, the default was `'always'`, and the analysis could not tell an explicit
+`'always'` from the default. The RFC proposed a separate `true` value, and the option has it now.
+With the option off, `true` and `'always'` give the same flags, so a build without
+`experimental.advancedTreeshaking` does not change.
+
 ## Known limitations
 
-- Class bodies escape. Neither bundler removes unused class members.
-- Arrays, locals in functions, and parameter values are not modeled. Call arguments and returned
-  values escape.
-- The properties of function objects are not tracked. A read of a property of a function is an
-  effect when `propertyReadSideEffects` is not `false`.
-- A read of a getter is always an effect, and the value of a getter is unknown.
+- Class bodies are walked with `EscapeVisitor`. So a class never loses a member, and each value
+  in a class body escapes.
+- `new` of a derived class, or of a class with a decorator or an `accessor` property, goes to
+  oxc's check.
+- The analysis does not track instances. The value of a property of `new X()` is unknown, also
+  for a method of the prototype.
+- A binding in a function has a value only when it is a parameter or a function declaration. The
+  value of a `const` or a `let` in a function is unknown.
 - Only `if`, `?:`, `&&`, `||`, `??`, and `'k' in ns` fold.
 - A dynamic entry in a cycle of dynamic imports stays, also when the analysis removes its
   `import()`. The existing cycled-entry bailout keeps it.
-- `treeshake.propertyWriteSideEffects: false` turns the analysis off for the build.
 
 ## Rejected alternatives
 
@@ -129,16 +208,14 @@ not cover uses the existing behavior, and the values that it exports are unknown
 - **A pessimistic analysis:** it cannot close W2.
 - **AST edits in the link stage:** the link stage shares the AST as read-only data. The finalizer
   is where rolldown changes code.
+- **A missing key folds to `undefined`:** the first version did this. It is not sound when code
+  adds a key to `Object.prototype`, and rollup does not do it (principle 11).
 
 ## Unresolved questions
 
 - The build-time budget. Each pass walks every included statement of every analyzed module
   again, and no benchmark exists yet.
 - When the default flips, and whether the option stays as a way to bisect.
-- With the option on, the default `treeshake.propertyReadSideEffects` (`'always'`) acts as rollup's
-  `true` in analyzed modules: the analysis asks the object. The option cannot tell an explicit
-  `'always'` from the default, so `'always'` cannot keep its meaning of "assume that every read
-  has an effect". A separate `true` value, as the RFC proposes, would make this explicit.
 - Whether the analysis should feed oxc or replace a part of its folding, so that two passes do
   not prove the same fact.
 - Which plugins expect that a write to an object that nothing reads stays (E4).

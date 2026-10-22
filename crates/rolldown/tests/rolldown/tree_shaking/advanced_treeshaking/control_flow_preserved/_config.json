@@ -1,0 +1,8 @@
+{
+  "_comment": "Optional chains and loops: the analysis keeps each loop part that can run. The cases cover a `break` that depends on a changing value, labels, `continue`, `switch`, `finally`, loop initializers, and optional chains after writes.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

@@ -12,8 +12,8 @@ bitflags! {
     /// (e.g. a module's `tsconfig.json` specifies `"jsx": "preserve"`).
     const JsxPreserve = 1 << 1;
     const IsManualPureFunctionsEmpty = 1 << 2;
-    /// If the flag is set, it means the `treeshake.property_read_side_effects` is `Always`.
-    /// Otherwise, it is `False`.
+    /// If the flag is set, it means the `treeshake.property_read_side_effects` is `Always` or
+    /// `True`. Otherwise, it is `False`.
     const PropertyReadSideEffects = 1 << 3;
     /// If the flag is set, it means the `treeshake.property_write_side_effects` is `Always`.
     /// Otherwise, it is `False`.
@@ -47,9 +47,9 @@ impl FlatOptions {
       .set(Self::IsManualPureFunctionsEmpty, options.treeshake.manual_pure_functions().is_none());
     flags.set(
       Self::PropertyReadSideEffects,
-      matches!(
+      !matches!(
         options.treeshake.property_read_side_effects(),
-        crate::bundler_options::PropertyReadSideEffects::Always
+        crate::bundler_options::PropertyReadSideEffects::False
       ),
     );
     flags.set(

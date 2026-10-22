@@ -1,0 +1,8 @@
+{
+  "_comment": "Getters and setters: a getter or a setter whose call has no effect goes, and the value of a getter folds branches and dynamic imports. A getter with an effect still runs.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

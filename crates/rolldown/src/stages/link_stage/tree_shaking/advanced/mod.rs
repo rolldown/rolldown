@@ -5,6 +5,8 @@
 //!
 //! See internal-docs/advanced-tree-shaking/implementation.md.
 
+mod builtins;
+mod classes;
 mod collect;
 mod effects;
 mod env;
@@ -157,6 +159,18 @@ impl<'a> AdvancedTreeShaking<'a> {
   /// start empty.
   pub fn run_pass(&mut self, included: &StmtInclusionVec) -> PassResult {
     self.state.begin_pass();
+    // A gated write statement that is not included runs only if the engine includes the
+    // binding that it writes. A fold that depends on the value before the write could remove
+    // the last read of that binding, so the write must change the facts first.
+    for (module, stmt_idx) in self.env.gated_writes.clone() {
+      if included[module].has_bit(stmt_idx) {
+        continue;
+      }
+      if let Some(stmt) = self.env.module(module).and_then(|facts| facts.stmt(stmt_idx)) {
+        let site = Site { module, stmt: stmt_idx, in_function: false };
+        Analyzer { env: &self.env, state: &mut self.state }.deopt_writes(stmt, site);
+      }
+    }
     let mut new_stmts = Vec::new();
     for (module, stmt_idx) in std::mem::take(&mut self.candidates) {
       if included[module].has_bit(stmt_idx) {
@@ -235,9 +249,19 @@ impl<'a> AdvancedTreeShaking<'a> {
   }
 
   fn stmt_has_effects(&mut self, module: ModuleIdx, stmt_idx: StmtInfoIdx) -> bool {
-    let Some(stmt) = self.env.module(module).and_then(|facts| facts.stmt(stmt_idx)) else {
+    let Some(facts) = self.env.module(module) else {
       return true;
     };
+    let Some(stmt) = facts.stmt(stmt_idx) else {
+      return true;
+    };
+    // The `eval` bailout of the sweep keeps each declaration, which a live `eval` can read.
+    if facts.module.meta.has_eval()
+      && self.state.live_evals.contains(&module)
+      && !self.env.stmt_infos[module].get(stmt_idx).declared_symbols.is_empty()
+    {
+      return true;
+    }
     let site = Site { module, stmt: stmt_idx, in_function: false };
     Analyzer { env: &self.env, state: &mut self.state }.stmt_effects(stmt, Cx::removal(site))
   }
@@ -253,6 +277,7 @@ impl<'a> AdvancedTreeShaking<'a> {
       an: &mut an,
       module,
       site: Site { module, stmt: stmt_idx, in_function: false },
+      func: None,
       excluded: Vec::new(),
       rewrites: TreeShakingRewrites::default(),
     };

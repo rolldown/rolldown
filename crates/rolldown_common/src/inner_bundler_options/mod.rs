@@ -421,12 +421,17 @@ where
           Value::String(s) if s == "always" => {
             Ok(Some(types::treeshake::PropertyReadSideEffects::Always))
           }
+          Value::Bool(true) => Ok(Some(types::treeshake::PropertyReadSideEffects::True)),
+          Value::String(s) if s == "true" => {
+            Ok(Some(types::treeshake::PropertyReadSideEffects::True))
+          }
+          Value::Bool(false) => Ok(Some(types::treeshake::PropertyReadSideEffects::False)),
           Value::String(s) if s == "false" => {
             Ok(Some(types::treeshake::PropertyReadSideEffects::False))
           }
-          _ => {
-            Err(serde::de::Error::custom("propertyReadSideEffects should be 'false' or 'always'"))
-          }
+          _ => Err(serde::de::Error::custom(
+            "propertyReadSideEffects should be 'always', 'true' or 'false'",
+          )),
         },
       )?;
       let property_write_side_effects = obj.get("propertyWriteSideEffects").map_or_else(

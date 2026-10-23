@@ -128,6 +128,7 @@ impl GenerateStage<'_> {
           &atoms,
           &atom_dependencies.cycle,
           &host_atom_by_entry_bit,
+          atom_idx,
         )
       {
         changed = true;
@@ -577,10 +578,15 @@ impl GenerateStage<'_> {
     owners
   }
 
+  /// Whether the chunk that `folded_atom_idx` lands in sits on a cycle of the reduced chunk graph.
+  /// Moving one atom only adds edges at its new chunk, so every cycle the fold can create runs
+  /// through that chunk. A cycle elsewhere in the over-approximated `cycle` graph predates the fold
+  /// and must not veto it.
   fn reduced_atom_graph_has_static_cycle(
     atoms: &[ChunkAtom],
     atom_dependencies: &[Vec<usize>],
     host_atom_by_entry_bit: &[Option<usize>],
+    folded_atom_idx: usize,
   ) -> bool {
     let mut chunk_idx_by_bits = FxHashMap::default();
     let mut atom_to_chunk = Vec::with_capacity(atoms.len());
@@ -646,41 +652,20 @@ impl GenerateStage<'_> {
       }
     }
 
-    Self::chunk_dependency_graph_has_cycle(&chunk_dependencies)
+    Self::chunk_reaches_itself(&chunk_dependencies, atom_to_chunk[folded_atom_idx])
   }
 
-  fn chunk_dependency_graph_has_cycle(chunk_dependencies: &[FxHashSet<usize>]) -> bool {
-    let mut state = vec![0_u8; chunk_dependencies.len()];
-    for start_chunk_idx in 0..chunk_dependencies.len() {
-      if state[start_chunk_idx] != 0 {
-        continue;
+  fn chunk_reaches_itself(chunk_dependencies: &[FxHashSet<usize>], start_chunk_idx: usize) -> bool {
+    let mut visited = vec![false; chunk_dependencies.len()];
+    let mut stack = chunk_dependencies[start_chunk_idx].iter().copied().collect::<Vec<_>>();
+    while let Some(chunk_idx) = stack.pop() {
+      if chunk_idx == start_chunk_idx {
+        return true;
       }
-
-      let mut stack = vec![(start_chunk_idx, false)];
-      while let Some((chunk_idx, exiting)) = stack.pop() {
-        if exiting {
-          state[chunk_idx] = 2;
-          continue;
-        }
-
-        match state[chunk_idx] {
-          1 => return true,
-          2 => continue,
-          _ => {}
-        }
-
-        state[chunk_idx] = 1;
-        stack.push((chunk_idx, true));
-        for &dep_chunk_idx in &chunk_dependencies[chunk_idx] {
-          match state[dep_chunk_idx] {
-            1 => return true,
-            0 => stack.push((dep_chunk_idx, false)),
-            _ => {}
-          }
-        }
+      if !std::mem::replace(&mut visited[chunk_idx], true) {
+        stack.extend(chunk_dependencies[chunk_idx].iter().copied());
       }
     }
-
     false
   }
 

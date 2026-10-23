@@ -1300,7 +1300,22 @@ impl GenerateStage<'_> {
             }
           }
         }
-        for rec in &module.import_records {
+        let binding_star_records = meta
+          .star_export_record_by_name
+          .iter()
+          .filter(|(name, _)| meta.sorted_and_non_ambiguous_resolved_exports.contains_key(*name))
+          .map(|(_, rec_idx)| *rec_idx)
+          .collect::<FxHashSet<_>>();
+        for (rec_idx, rec) in module.import_records.iter_enumerated() {
+          // a retained star without visible, unambiguous names has no binding route.
+          // preserve its structural loading edge, including an empty ESM wrapper.
+          if rec.meta.contains(ImportRecordMeta::IsExportStar)
+            && !binding_star_records.contains(&rec_idx)
+            && let Some(importee_idx) = rec.resolved_module
+            && meta.load_dependencies.contains(&importee_idx)
+          {
+            q.push_back(importee_idx);
+          }
           // A materialized namespace belongs to the consumers of that object. Adding it as an
           // unconditional waypoint would import all its getter targets into unrelated consumers.
           if rec.kind == ImportKind::Import

@@ -13,7 +13,7 @@ use oxc_index::{IndexVec, index_vec};
 use oxc_str::CompactStr;
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
-  ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PostChunkOptimizationOperation,
+  ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, NamedImport, NormalModule, OutputFormat, PostChunkOptimizationOperation,
   PreserveEntrySignatures, RUNTIME_HELPER_NAMES, ResolvedImportRecord, RuntimeHelper, SymbolRef,
   SymbolRefDb, TaggedSymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder, UsedSymbolRefsView,
   WrapKind,
@@ -907,6 +907,40 @@ impl GenerateStage<'_> {
     cross_chunk_dynamic_imports.insert(importee_chunk);
   }
 
+
+  /// Import records of the runtime module that should still appear in the runtime chunk:
+  /// statements kept by tree shaking, plus those order lowering forces, plus named imports
+  /// whose local bindings are in the order-lowering runtime dependency closure.
+  /// See internal-docs/runtime-helpers/implementation.md.
+  fn included_runtime_imports(
+    &self,
+    module: &NormalModule,
+    order_state: &super::order_wrap_state::OrderWrapState,
+    symbols: &SymbolRefDb,
+  ) -> Option<FxHashSet<ImportRecordIdx>> {
+    (module.idx == self.link_output.runtime.id()).then(|| {
+      let mut imports = self.link_output.stmt_infos[module.idx]
+        .iter_enumerated()
+        .filter(|(idx, stmt)| {
+          self.link_output.metas[module.idx].stmt_info_included.has_bit(*idx)
+            || order_state.forces_runtime_stmt(&self.link_output.runtime, module.idx, stmt)
+        })
+        .flat_map(|(_, stmt)| stmt.import_records.iter().copied())
+        .collect::<FxHashSet<_>>();
+      // The order-lowering closure stores canonical symbols, while import declarations
+      // still declare local bindings. Match those bindings through the symbol database.
+      imports.extend(module.named_imports.iter().filter_map(|(symbol, import)| {
+        order_state
+          .requires_runtime_symbol(
+            &self.link_output.runtime,
+            symbols.canonical_ref_resolving_namespace(*symbol),
+          )
+          .then_some(import.record_idx)
+      }));
+      imports
+    })
+  }
+
   /// - Derive each declared symbol's owning chunk, returned as the pass-local
   ///   [`SymbolChunkTable`]
   /// - Collect all referenced symbols and consider them potential imports
@@ -949,27 +983,8 @@ impl GenerateStage<'_> {
           // Runtime imports are included through tree shaking or order lowering. A user import can make
           // the same external side-effectful, but must not revive a dead runtime import.
           // See internal-docs/runtime-helpers/implementation.md.
-          let included_runtime_imports = (module.idx == self.link_output.runtime.id()).then(|| {
-            let mut imports = self.link_output.stmt_infos[module.idx]
-              .iter_enumerated()
-              .filter(|(idx, stmt)| {
-                self.link_output.metas[module.idx].stmt_info_included.has_bit(*idx)
-                  || order_state.forces_runtime_stmt(&self.link_output.runtime, module.idx, stmt)
-              })
-              .flat_map(|(_, stmt)| stmt.import_records.iter().copied())
-              .collect::<FxHashSet<_>>();
-            // The order-lowering closure stores canonical symbols, while import declarations
-            // still declare local bindings. Match those bindings through the symbol database.
-            imports.extend(module.named_imports.iter().filter_map(|(symbol, import)| {
-              order_state
-                .requires_runtime_symbol(
-                  &self.link_output.runtime,
-                  symbols.canonical_ref_resolving_namespace(*symbol),
-                )
-                .then_some(import.record_idx)
-            }));
-            imports
-          });
+          let included_runtime_imports =
+            self.included_runtime_imports(module, order_state, symbols);
           let is_import_included =
             |idx| included_runtime_imports.as_ref().is_none_or(|imports| imports.contains(&idx));
           module

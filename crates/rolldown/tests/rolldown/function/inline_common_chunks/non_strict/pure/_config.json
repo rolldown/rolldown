@@ -11,13 +11,22 @@
       }
     ],
     "strictExecutionOrder": false,
+    "preserveEntrySignatures": "false",
     "codeSplitting": {
       "experimentalInlineCommonChunks": {
         "maxSize": 4096
       }
-    },
-    "preserveEntrySignatures": "false"
+    }
   },
-  "expectError": true,
-  "expectExecuted": false
+  "hiddenRuntimeModule": false,
+  "configVariants": [
+    {
+      "_configName": "off",
+      "codeSplitting": {
+        "experimentalInlineCommonChunks": {
+          "maxSize": 0
+        }
+      }
+    }
+  ]
 }

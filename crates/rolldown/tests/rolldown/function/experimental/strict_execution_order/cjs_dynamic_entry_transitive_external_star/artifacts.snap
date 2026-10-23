@@ -9,14 +9,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 //! User-defined Entry: [Entry-Module-Id: main.js] [Name: main]
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_rolldown_runtime = require("./rolldown-runtime.js");
-//#region main.js
+// main.js
 var loaded;
 function init_main() {
 	return (init_main = require_rolldown_runtime.__esmMin((() => {
 		loaded = Promise.resolve().then(() => require("./target2.js")).then((namespace) => namespace);
 	})))();
 }
-//#endregion
 init_main();
 exports.loaded = loaded;
 
@@ -28,7 +27,7 @@ exports.loaded = loaded;
 //! ManualCodeSplitting: [Group-Name: reader]
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_target = require("./target.js");
-//#region reader.js
+// reader.js
 function read() {
 	globalThis.__externalStarLog.push(`reader:1`);
 }
@@ -37,7 +36,6 @@ function init_reader() {
 		require_target.init_target();
 	})))();
 }
-//#endregion
 Object.defineProperty(exports, "init_reader", {
 	enumerable: true,
 	get: function() {
@@ -57,7 +55,7 @@ Object.defineProperty(exports, "read", {
 
 ```js
 //! Common Chunk: [Shared-By: main.js, target.js]
-//#region \0rolldown/runtime.js
+// \0rolldown/runtime.js
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
@@ -90,7 +88,6 @@ var __copyProps = (to, from, except, desc) => {
 	return to;
 };
 var __reExport = (target, mod, secondTarget) => (__copyProps(target, mod, "default"), secondTarget && __copyProps(secondTarget, mod, "default"));
-//#endregion
 Object.defineProperty(exports, "__esmMin", {
 	enumerable: true,
 	get: function() {
@@ -119,12 +116,11 @@ Object.defineProperty(exports, "__reExport", {
 //! Common Chunk: [Shared-By: target.js]
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_reader = require("./reader.js");
-//#region barrel.js
+// barrel.js
 function init_barrel() {
 	return (init_barrel = require_rolldown_runtime.__esmMin((() => {})))();
 }
-//#endregion
-//#region target.js
+// target.js
 var x;
 function init_target() {
 	return (init_target = require_rolldown_runtime.__esmMin((() => {
@@ -135,7 +131,6 @@ function init_target() {
 		require_reader.read();
 	})))();
 }
-//#endregion
 Object.defineProperty(exports, "init_target", {
 	enumerable: true,
 	get: function() {

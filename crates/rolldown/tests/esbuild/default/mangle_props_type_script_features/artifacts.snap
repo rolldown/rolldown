@@ -47,19 +47,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## enum-values.js
 
 ```js
-//#region enum-values.ts
+// enum-values.ts
 console.log({
 	foo: 0,
 	bar: ""
 });
-//#endregion
 
 ```
 
 ## namespace-exports.js
 
 ```js
-//#region namespace-exports.ts
+// namespace-exports.ts
 let ns;
 (function(_ns) {
 	var MANGLE_VAR_ = _ns.MANGLE_VAR_ = 1;
@@ -110,14 +109,13 @@ console.log({
 		ENUM: MANGLE_ENUM_
 	});
 })(ns || (ns = {}));
-//#endregion
 
 ```
 
 ## parameter-properties.js
 
 ```js
-//#region parameter-properties.ts
+// parameter-properties.ts
 var Foo = class {
 	constructor(KEEP_FIELD, MANGLE_FIELD_) {
 		this.KEEP_FIELD = KEEP_FIELD;
@@ -126,6 +124,5 @@ var Foo = class {
 };
 let foo = new Foo();
 console.log(foo.KEEP_FIELD, foo.MANGLE_FIELD_);
-//#endregion
 
 ```

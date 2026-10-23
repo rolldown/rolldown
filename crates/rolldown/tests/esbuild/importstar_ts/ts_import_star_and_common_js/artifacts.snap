@@ -7,14 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region foo.ts
+// foo.ts
 var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => 123 });
 var init_foo = __esmMin((() => {}));
-//#endregion
-//#region entry.js
+// entry.js
 init_foo();
 const ns2 = (init_foo(), __toCommonJS(foo_exports));
 console.log(123, ns2.foo);
-//#endregion
 
 ```

@@ -80,7 +80,7 @@ impl<'a> VisitJsMut<'a> for BuildImportAnalysisVisitor<'a> {
         if let BindingPattern::ObjectPattern(object_pat) = &decl.id
           && matches!(
             &decl.init,
-            Some(Expression::AwaitExpression(expr)) if matches!(expr.argument, Expression::ImportExpression(_))
+            Some(Expression::AwaitExpression(expr)) if Self::is_import_with_static_specifier(&expr.argument)
           )
         {
           decl.init = Some(Expression::new_await_expression(

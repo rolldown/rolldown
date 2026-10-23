@@ -8,9 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import "./rolldown-runtime.js";
 import { t as require_foo } from "./foo.js";
-//#region bare.js
 require_foo();
-//#endregion
 
 ```
 
@@ -18,11 +16,10 @@ require_foo();
 
 ```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
-//#region foo.js
+// foo.js
 var require_foo = /* @__PURE__ */ __commonJSMin((() => {
 	console.log("no exports here");
 }));
-//#endregion
 export { require_foo as t };
 
 ```
@@ -31,9 +28,8 @@ export { require_foo as t };
 
 ```js
 import { n as __toESM } from "./rolldown-runtime.js";
-//#region import.js
+// import.js
 console.log(import("./foo.js").then((n) => /* @__PURE__ */ __toESM(n.t())));
-//#endregion
 
 ```
 
@@ -42,10 +38,9 @@ console.log(import("./foo.js").then((n) => /* @__PURE__ */ __toESM(n.t())));
 ```js
 import { n as __toESM } from "./rolldown-runtime.js";
 import { t as require_foo } from "./foo.js";
-//#region named.js
+// named.js
 var import_foo = /* @__PURE__ */ __toESM(require_foo());
 console.log((0, import_foo.default)(import_foo.x, import_foo.y));
-//#endregion
 
 ```
 
@@ -53,9 +48,8 @@ console.log((0, import_foo.default)(import_foo.x, import_foo.y));
 
 ```js
 import { t as require_foo } from "./foo.js";
-//#region require.js
+// require.js
 console.log(require_foo());
-//#endregion
 
 ```
 
@@ -72,10 +66,9 @@ export { __toESM as n, __commonJSMin as t };
 ```js
 import { n as __toESM } from "./rolldown-runtime.js";
 import { t as require_foo } from "./foo.js";
-//#region star-capture.js
+// star-capture.js
 var import_foo = /* @__PURE__ */ __toESM(require_foo());
 console.log(import_foo);
-//#endregion
 
 ```
 
@@ -84,9 +77,8 @@ console.log(import_foo);
 ```js
 import { n as __toESM } from "./rolldown-runtime.js";
 import { t as require_foo } from "./foo.js";
-//#region star.js
+// star.js
 var import_foo = /* @__PURE__ */ __toESM(require_foo());
 console.log(import_foo.default(import_foo.x, import_foo.y));
-//#endregion
 
 ```

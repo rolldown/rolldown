@@ -6,12 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
 console.log(1);
 console.log(2);
 for (const c = x;;) console.log(c);
 for (const d in x) console.log(d);
 for (const e of x) console.log(e);
-//#endregion
 
 ```

@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region client.cjs
+// client.cjs
 var require_client = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports.createRoot = function createRoot(element) {
 		return { render() {
@@ -16,12 +16,10 @@ var require_client = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	};
 }));
 
-//#endregion
-//#region main.js
+// main.js
 var import_client = require_client();
 (0, import_client.createRoot)(document.getElementById("root")).render();
 
-//#endregion
 //# sourceMappingURL=main.js.map
 ```
 
@@ -29,33 +27,33 @@ var import_client = require_client();
 
 ```
 - ../client.cjs
-(0:0) "module." --> (6:1) "module."
-(0:7) "exports." --> (6:8) "exports."
-(0:15) "createRoot = " --> (6:16) "createRoot = "
-(0:28) "function " --> (6:29) "function "
-(0:37) "createRoot(" --> (6:38) "createRoot("
-(0:48) "element) " --> (6:49) "element) "
-(0:57) "{\n" --> (6:58) "{\n"
-(1:2) "return " --> (7:2) "return "
-(1:9) "{\n" --> (7:9) "{ "
-(2:4) "render() " --> (7:11) "render() "
-(2:13) "{\n" --> (7:20) "{\n"
-(3:6) "element." --> (8:3) "element."
-(3:14) "textContent = " --> (8:11) "textContent = "
-(3:28) "'rendered';\n" --> (8:25) "\"rendered\";\n"
-(4:4) "},\n" --> (9:2) "} "
-(5:2) "};\n" --> (9:4) "};\n"
-(6:0) "};\n" --> (10:1) "};\n"
+(0:0) "module." --> (5:1) "module."
+(0:7) "exports." --> (5:8) "exports."
+(0:15) "createRoot = " --> (5:16) "createRoot = "
+(0:28) "function " --> (5:29) "function "
+(0:37) "createRoot(" --> (5:38) "createRoot("
+(0:48) "element) " --> (5:49) "element) "
+(0:57) "{\n" --> (5:58) "{\n"
+(1:2) "return " --> (6:2) "return "
+(1:9) "{\n" --> (6:9) "{ "
+(2:4) "render() " --> (6:11) "render() "
+(2:13) "{\n" --> (6:20) "{\n"
+(3:6) "element." --> (7:3) "element."
+(3:14) "textContent = " --> (7:11) "textContent = "
+(3:28) "'rendered';\n" --> (7:25) "\"rendered\";\n"
+(4:4) "},\n" --> (8:2) "} "
+(5:2) "};\n" --> (8:4) "};\n"
+(6:0) "};\n" --> (9:1) "};\n"
 - ../main.js
-(2:0) "createRoot(" --> (16:4) "import_client.createRoot)("
-(2:11) "document." --> (16:30) "document."
-(2:20) "getElementById(" --> (16:39) "getElementById("
-(2:35) "'root'" --> (16:54) "\"root\""
-(2:41) ")" --> (16:60) ")"
-(2:42) ")" --> (16:61) ")"
-(2:43) "." --> (16:62) "."
-(2:44) "render(" --> (16:63) "render("
-(2:51) ");\n" --> (16:70) ");\n"
+(2:0) "createRoot(" --> (14:4) "import_client.createRoot)("
+(2:11) "document." --> (14:30) "document."
+(2:20) "getElementById(" --> (14:39) "getElementById("
+(2:35) "'root'" --> (14:54) "\"root\""
+(2:41) ")" --> (14:60) ")"
+(2:42) ")" --> (14:61) ")"
+(2:43) "." --> (14:62) "."
+(2:44) "render(" --> (14:63) "render("
+(2:51) ");\n" --> (14:70) ");\n"
 ```
 
 # Variant: minified: [minify: true]

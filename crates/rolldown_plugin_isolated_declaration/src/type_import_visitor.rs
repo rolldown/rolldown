@@ -1,12 +1,13 @@
 use oxc::{
   ast::ast::{
-    ExportFromDeclaration, ImportDeclaration, ImportDeclarationSpecifier, ImportOrExportKind, Str,
+    ExportFromDeclaration, ImportDeclaration, ImportDeclarationSpecifier, ImportOrExportKind,
   },
   ast_visit::VisitJsMut,
+  str::JSStr,
 };
 
 pub struct TypeImportVisitor<'ast> {
-  pub imported: Vec<Str<'ast>>,
+  pub imported: Vec<JSStr<'ast>>,
 }
 
 impl<'ast> VisitJsMut<'ast> for TypeImportVisitor<'ast> {

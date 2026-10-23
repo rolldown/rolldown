@@ -1,0 +1,64 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lib.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// lib/x.js
+var X = class {
+	static value = "x";
+};
+// lib/index.js
+var lib_exports = /* @__PURE__ */ __exportAll({ X: () => X });
+export { X as n, lib_exports as t };
+
+```
+
+## main1.js
+
+```js
+import { n as X } from "./lib.js";
+// main1.js
+const fromMain1 = X.value;
+const loadX = () => import("./lib.js").then((n) => n.t).then((lib) => lib.X.value);
+export { fromMain1, loadX };
+
+```
+
+## main2.js
+
+```js
+import { n as X } from "./lib.js";
+import { t as Y } from "./y.js";
+// main2.js
+const fromMain2 = Y() + X.value;
+export { fromMain2 };
+
+```
+
+## main3.js
+
+```js
+import { n as X } from "./lib.js";
+import { t as Y } from "./y.js";
+// main3.js
+const fromMain3 = Y() + X.value;
+export { fromMain3 };
+
+```
+
+## y.js
+
+```js
+import { n as X } from "./lib.js";
+// lib/y.js
+const prefix = "y" + X.value;
+function Y() {
+	return prefix;
+}
+export { Y as t };
+
+```

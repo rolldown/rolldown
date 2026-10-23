@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region main.ts
+// main.ts
 console.log("production");
 let Theme = /* @__PURE__ */ function(Theme) {
 	Theme["Light"] = "Light";
@@ -14,7 +14,6 @@ let Theme = /* @__PURE__ */ function(Theme) {
 	Theme["Default"] = "Light";
 	return Theme;
 }({});
-//#endregion
 export { Theme };
 
 ```

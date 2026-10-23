@@ -138,7 +138,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 import("foo");
 import("foo");
 import("foo").catch();
@@ -149,6 +149,5 @@ import("bar");
 import("bar");
 import("baz").catch();
 import("baz").catch();
-//#endregion
 
 ```

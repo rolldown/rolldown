@@ -7,8 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { a as __share_require, i as __share_export, n as __esmMin, o as __toESM, r as __share, t as __commonJSMin } from "./rolldown-runtime.js";
-__share("cjs-1tongeCO", (exports) => {
-	//#region cjs.js
+__share("cjs-1tongeCO", (exports$1) => {
+	// cjs.js
 	var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		let n = 0;
 		module.exports = {
@@ -22,11 +22,10 @@ __share("cjs-1tongeCO", (exports) => {
 		};
 		globalThis.events.push("CJS body");
 	}));
-	//#endregion
-	__share_export(exports, { t: () => require_cjs });
+	__share_export(exports$1, { t: () => require_cjs });
 });
 var share_cjs = __share_require("cjs-1tongeCO");
-//#region a.js
+// a.js
 var import_cjs;
 function init_a() {
 	return (init_a = __esmMin((() => {
@@ -35,7 +34,6 @@ function init_a() {
 		globalThis.markers.push(import_cjs.default);
 	})))();
 }
-//#endregion
 init_a();
 
 ```
@@ -44,8 +42,8 @@ init_a();
 
 ```js
 import { a as __share_require, i as __share_export, n as __esmMin, o as __toESM, r as __share, t as __commonJSMin } from "./rolldown-runtime.js";
-__share("cjs-1tongeCO", (exports) => {
-	//#region cjs.js
+__share("cjs-1tongeCO", (exports$1) => {
+	// cjs.js
 	var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		let n = 0;
 		module.exports = {
@@ -59,11 +57,10 @@ __share("cjs-1tongeCO", (exports) => {
 		};
 		globalThis.events.push("CJS body");
 	}));
-	//#endregion
-	__share_export(exports, { t: () => require_cjs });
+	__share_export(exports$1, { t: () => require_cjs });
 });
 var share_cjs = __share_require("cjs-1tongeCO");
-//#region b.js
+// b.js
 var import_cjs;
 function init_b() {
 	return (init_b = __esmMin((() => {
@@ -72,7 +69,6 @@ function init_b() {
 		globalThis.markers.push(import_cjs.default);
 	})))();
 }
-//#endregion
 init_b();
 
 ```
@@ -94,7 +90,7 @@ export { __share_require as a, __share_export as i, __esmMin as n, __toESM as o,
 ```js
 import { n as __esmMin, r as __toESM } from "./rolldown-runtime.js";
 import { t as require_cjs } from "./cjs.js";
-//#region a.js
+// a.js
 var import_cjs;
 function init_a() {
 	return (init_a = __esmMin((() => {
@@ -103,7 +99,6 @@ function init_a() {
 		globalThis.markers.push(import_cjs.default);
 	})))();
 }
-//#endregion
 init_a();
 
 ```
@@ -113,7 +108,7 @@ init_a();
 ```js
 import { n as __esmMin, r as __toESM } from "./rolldown-runtime.js";
 import { t as require_cjs } from "./cjs.js";
-//#region b.js
+// b.js
 var import_cjs;
 function init_b() {
 	return (init_b = __esmMin((() => {
@@ -122,7 +117,6 @@ function init_b() {
 		globalThis.markers.push(import_cjs.default);
 	})))();
 }
-//#endregion
 init_b();
 
 ```
@@ -131,7 +125,7 @@ init_b();
 
 ```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
-//#region cjs.js
+// cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	let n = 0;
 	module.exports = {
@@ -145,7 +139,6 @@ var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	};
 	globalThis.events.push("CJS body");
 }));
-//#endregion
 export { require_cjs as t };
 
 ```

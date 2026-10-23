@@ -25,11 +25,11 @@ export var __esmMin = (fn, res, err) => () => {
 export var __commonJS = (cb, mod) =>
   function () {
     return (
-      mod || ((0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), cb = null), mod.exports
+      mod || ((0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports
     );
   };
 export var __commonJSMin = (cb, mod) => () => (
-  mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports
+  mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports
 );
 export var __exportAll = (all, no_symbols) => {
   let target = {};

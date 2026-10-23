@@ -17,10 +17,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
-//#region lib.js
+// lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ a: () => 123 });
-//#endregion
-//#region entry.js
+// entry.js
 function init_entry() {
 	return (init_entry = __esmMin((() => {
 		Promise.resolve().then(() => lib_exports).then((mod) => {
@@ -29,7 +28,6 @@ function init_entry() {
 		});
 	})))();
 }
-//#endregion
 init_entry();
 
 ```
@@ -53,10 +51,9 @@ init_entry();
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 let node_assert = require("node:assert");
 node_assert = require_rolldown_runtime.__toESM(node_assert);
-//#region lib.js
+// lib.js
 var lib_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ a: () => 123 });
-//#endregion
-//#region entry.js
+// entry.js
 function init_entry() {
 	return (init_entry = require_rolldown_runtime.__esmMin((() => {
 		Promise.resolve().then(() => lib_exports).then((mod) => {
@@ -65,7 +62,6 @@ function init_entry() {
 		});
 	})))();
 }
-//#endregion
 init_entry();
 
 ```
@@ -114,13 +110,12 @@ Object.defineProperty(exports, "__toESM", {
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 let node_assert = require("node:assert");
 node_assert = require_rolldown_runtime.__toESM(node_assert);
-//#region lib.js
+// lib.js
 var lib_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ a: () => 123 });
 function init_lib() {
 	return (init_lib = require_rolldown_runtime.__esmMin((() => {})))();
 }
-//#endregion
-//#region entry.js
+// entry.js
 function init_entry() {
 	return (init_entry = require_rolldown_runtime.__esmMin((() => {
 		init_lib();
@@ -130,7 +125,6 @@ function init_entry() {
 		});
 	})))();
 }
-//#endregion
 init_entry();
 
 ```
@@ -178,13 +172,12 @@ Object.defineProperty(exports, "__toESM", {
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
-//#region lib.js
+// lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ a: () => 123 });
 function init_lib() {
 	return (init_lib = __esmMin((() => {})))();
 }
-//#endregion
-//#region entry.js
+// entry.js
 function init_entry() {
 	return (init_entry = __esmMin((() => {
 		init_lib();
@@ -194,7 +187,6 @@ function init_entry() {
 		});
 	})))();
 }
-//#endregion
 init_entry();
 
 ```

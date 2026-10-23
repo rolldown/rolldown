@@ -9,9 +9,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 #!/usr/bin/env node
 /* line 1 */
 /* line 2 */
-//#region main.js
+// main.js
 console.log("hello");
-//#endregion
 
 //# sourceMappingURL=main.js.map
 ```

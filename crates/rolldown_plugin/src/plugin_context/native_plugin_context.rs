@@ -93,6 +93,17 @@ impl NativePluginContextImpl {
       .ok_or_else(|| anyhow::anyhow!("Plugin driver is already dropped."))?;
 
     let normalized_extra_options = extra_options.unwrap_or_default();
+    if normalized_extra_options.skip_self
+      && self.skipped_resolve_calls.iter().any(|call| {
+        call.plugin_idx == self.plugin_idx
+          && call.specifier == specifier
+          && call.importer.as_deref() == importer
+      })
+    {
+      // This means that the plugin recursively called itself
+      return Ok(Err(ResolveError::NotFound(specifier.to_string())));
+    }
+
     let skipped_resolve_calls = if normalized_extra_options.skip_self {
       let mut skipped_resolve_calls = Vec::with_capacity(self.skipped_resolve_calls.len() + 1);
       skipped_resolve_calls.extend(self.skipped_resolve_calls.clone());

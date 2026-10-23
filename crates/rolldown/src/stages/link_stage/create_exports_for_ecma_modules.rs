@@ -1,7 +1,7 @@
 use rolldown_common::{
-  DeclaredSymbols, EntryPoint, ExportsKind, ImportRecordMeta, ModuleIdx, OutputFormat,
-  PreserveEntrySignatures, SharedNormalizedBundlerOptions, StmtInfo, StmtInfoMeta, TaggedSymbolRef,
-  WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
+  DeclaredSymbols, EntryPoint, ExportsKind, ImportKind, ImportRecordMeta, Module, ModuleIdx,
+  OutputFormat, PreserveEntrySignatures, SharedNormalizedBundlerOptions, StmtInfo, StmtInfoMeta,
+  SymbolRefFlags, TaggedSymbolRef, WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::smallvec;
@@ -50,6 +50,44 @@ fn init_entry_point_stmt_info(
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn create_exports_for_ecma_modules(&mut self) {
+    // See internal-docs/code-splitting/implementation.md.
+    let receiver_importees = self
+      .module_table
+      .modules
+      .iter()
+      .filter_map(Module::as_normal)
+      .flat_map(|module| {
+        module.ecma_view.dynamic_import_called_names.iter().filter_map(|(rec_idx, names)| {
+          let importee = module.import_records[*rec_idx].resolved_module?;
+          names
+            .iter()
+            .any(|name| self.called_export_may_read_this(importee, name))
+            .then_some(importee)
+        })
+      })
+      .collect::<FxHashSet<_>>();
+    for importee in receiver_importees {
+      self.dynamic_import_exports_usage_map.insert(importee, DynamicImportExportsUsage::Complete);
+    }
+
+    for module in &mut self.module_table.modules {
+      let Some(module) = module.as_normal_mut() else { continue };
+      for record in &mut module.import_records {
+        if record.kind != ImportKind::DynamicImport {
+          continue;
+        }
+        let Some(importee) = record.resolved_module else { continue };
+        let meta = &self.metas[importee];
+        // Promise resolution calls `then` with the namespace as its receiver.
+        if meta.has_dynamic_exports || meta.resolved_exports.contains_key("then") {
+          self
+            .dynamic_import_exports_usage_map
+            .insert(importee, DynamicImportExportsUsage::Complete);
+          record.meta.remove(ImportRecordMeta::PureDynamicImport);
+        }
+      }
+    }
+
     for m in &mut self.module_table.modules {
       let Some(ecma_module) = m.as_normal_mut() else { continue };
       let idx = ecma_module.idx;
@@ -88,8 +126,9 @@ impl LinkStage<'_> {
       // - Module Namespace Object: https://tc39.es/ecma262/#sec-module-namespace-exotic-objects
       // Though Module Namespace Object is created in runtime, as a bundler, we have stimulus the behavior in compile-time and generate a
       // real statement to construct the Module Namespace Object and assign it to a variable.
-      // This is only a concept of esm, so no need to care about this in commonjs.
-      if matches!(ecma_module.exports_kind, ExportsKind::Esm) {
+      // This is only a concept of esm, so no need to care about this in commonjs. A module without
+      // module syntax (`ExportsKind::None`) still needs it when `import()` reads its namespace.
+      if matches!(ecma_module.exports_kind, ExportsKind::Esm | ExportsKind::None) {
         let meta = &mut self.metas[ecma_module.idx];
         let mut referenced_symbols = vec![];
         let mut declared_symbols: DeclaredSymbols = smallvec![];
@@ -170,5 +209,21 @@ impl LinkStage<'_> {
         );
       }
     }
+  }
+
+  /// Whether calling `name` on `importee`'s namespace can observe the namespace through `this`.
+  /// Only an export that resolves to a function marked `NeverReadsThis` cannot.
+  fn called_export_may_read_this(&self, importee: ModuleIdx, name: &str) -> bool {
+    if !self.module_table[importee].as_normal().is_some_and(|m| m.exports_kind == ExportsKind::Esm)
+    {
+      return true;
+    }
+    !self.metas[importee].resolved_exports.get(name).is_some_and(|export| {
+      self
+        .symbols
+        .canonical_ref_for(export.symbol_ref)
+        .flags(&self.symbols)
+        .is_some_and(|flags| flags.contains(SymbolRefFlags::NeverReadsThis))
+    })
   }
 }

@@ -6,9 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 const loaded = import("./tla-target.js").then((mod) => mod.value);
-//#endregion
 export { loaded };
 
 ```
@@ -16,9 +15,8 @@ export { loaded };
 ## tla-target.js
 
 ```js
-//#region tla-target.js
+// tla-target.js
 const value = await Promise.resolve("tla");
-//#endregion
 export { value };
 
 ```
@@ -31,14 +29,13 @@ export { value };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region main.js
+// main.js
 var loaded;
 function init_main() {
 	return (init_main = __esmMin((() => {
 		loaded = import("./tla-target.js").then((mod) => mod.value);
 	})))();
 }
-//#endregion
 init_main();
 export { loaded };
 
@@ -56,14 +53,13 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region tla-target.js
+// tla-target.js
 var value;
 function init_tla_target() {
 	return (init_tla_target = __esmMin((async () => {
 		value = await Promise.resolve("tla");
 	})))();
 }
-//#endregion
 await init_tla_target();
 export { value };
 
@@ -76,9 +72,8 @@ export { value };
 ### main.js
 
 ```js
-//#region main.js
+// main.js
 const loaded = import("./tla-target.js").then((mod) => mod.value);
-//#endregion
 export { loaded };
 
 ```
@@ -86,9 +81,8 @@ export { loaded };
 ### tla-target.js
 
 ```js
-//#region tla-target.js
+// tla-target.js
 const value = await Promise.resolve("tla");
-//#endregion
 export { value };
 
 ```

@@ -6,11 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## bridge.js
 
 ```js
-//#region bridge.js
+// bridge.js
 function x() {
 	return 1;
 }
-//#endregion
 export { x as t };
 
 ```
@@ -18,11 +17,10 @@ export { x as t };
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 await import("./page-b.js");
 const namespaceCopy = { ...await import("./page-a.js") };
 if (namespaceCopy.x() !== 1 || namespaceCopy.common !== "common" || namespaceCopy.commonLeaf !== "common" || namespaceCopy._ !== void 0 || namespaceCopy.underscoreLeaf !== void 0) throw new Error("opaque dynamic import observed the wrong namespace");
-//#endregion
 
 ```
 
@@ -31,7 +29,7 @@ if (namespaceCopy.x() !== 1 || namespaceCopy.common !== "common" || namespaceCop
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as x } from "./bridge.js";
-//#region common.js
+// common.js
 function init() {
 	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
 }
@@ -42,15 +40,13 @@ function init_common() {
 		_ = /* @__PURE__ */ init();
 	})))();
 }
-//#endregion
-//#region page-a.js
+// page-a.js
 function init_page_a() {
 	return (init_page_a = __esmMin((() => {
 		init_common();
 		if (globalThis.value !== 0) throw new Error(`page-a observed ${globalThis.value}`);
 	})))();
 }
-//#endregion
 init_page_a();
 export { _, _ as underscoreLeaf, common, common as commonLeaf, x };
 
@@ -61,14 +57,13 @@ export { _, _ as underscoreLeaf, common, common as commonLeaf, x };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as x } from "./bridge.js";
-//#region page-b.js
+// page-b.js
 function init_page_b() {
 	return (init_page_b = __esmMin((() => {
 		x();
 		if (globalThis.value !== void 0) throw new Error(`page-b observed ${globalThis.value}`);
 	})))();
 }
-//#endregion
 init_page_b();
 
 ```
@@ -89,14 +84,13 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region bridge.js
+// bridge.js
 function x() {
 	return 1;
 }
 function init_bridge() {
 	return (init_bridge = __esmMin((() => {})))();
 }
-//#endregion
 export { x as n, init_bridge as t };
 
 ```
@@ -105,7 +99,7 @@ export { x as n, init_bridge as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region main.js
+// main.js
 var namespaceCopy;
 function init_main() {
 	return (init_main = __esmMin((async () => {
@@ -114,7 +108,6 @@ function init_main() {
 		if (namespaceCopy.x() !== 1 || namespaceCopy.common !== "common" || namespaceCopy.commonLeaf !== "common" || namespaceCopy._ !== void 0 || namespaceCopy.underscoreLeaf !== void 0) throw new Error("opaque dynamic import observed the wrong namespace");
 	})))();
 }
-//#endregion
 await init_main();
 
 ```
@@ -124,7 +117,7 @@ await init_main();
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as x } from "./bridge.js";
-//#region common.js
+// common.js
 function init() {
 	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
 }
@@ -135,15 +128,13 @@ function init_common() {
 		_ = /* @__PURE__ */ init();
 	})))();
 }
-//#endregion
-//#region page-a.js
+// page-a.js
 function init_page_a() {
 	return (init_page_a = __esmMin((() => {
 		init_common();
 		if (globalThis.value !== 0) throw new Error(`page-a observed ${globalThis.value}`);
 	})))();
 }
-//#endregion
 init_page_a();
 export { _, _ as underscoreLeaf, common, common as commonLeaf, x };
 
@@ -154,14 +145,13 @@ export { _, _ as underscoreLeaf, common, common as commonLeaf, x };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as x } from "./bridge.js";
-//#region page-b.js
+// page-b.js
 function init_page_b() {
 	return (init_page_b = __esmMin((() => {
 		x();
 		if (globalThis.value !== void 0) throw new Error(`page-b observed ${globalThis.value}`);
 	})))();
 }
-//#endregion
 init_page_b();
 
 ```

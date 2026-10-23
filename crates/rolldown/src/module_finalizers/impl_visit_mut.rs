@@ -20,13 +20,32 @@ use rolldown_ecmascript_utils::{
 };
 use rolldown_error::EmptyImportMetaKind;
 
-use crate::module_finalizers::{
-  FinalizedExprProcessHint, KeepNameId, ModuleWrapperMode, TraverseState,
+use crate::{
+  module_finalizers::{FinalizedExprProcessHint, KeepNameId, ModuleWrapperMode, TraverseState},
+  utils::renamer::cjs_wrapper_fixed_params,
 };
 
 use super::ScopeHoistingFinalizer;
 
 impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
+  /// Returns the parameters of the CJS closure: `cjs_wrapper_fixed_params`, then the `this`
+  /// binding.
+  fn cjs_wrapper_params(&self) -> Vec<&str> {
+    let mut params = cjs_wrapper_fixed_params(self.ctx.module).to_vec();
+    params.extend(self.cjs_this_name());
+    params
+  }
+
+  /// Returns the name that the finalizer prints for the top-level `this` of the module: the `this`
+  /// parameter of its CJS closure. An unwrapped CommonJS entry has no CJS closure. The finalizer
+  /// prints it at the top of a CJS output file, where `this` is the module `this` of Node. Thus
+  /// this function returns `None` for it.
+  fn cjs_this_name(&self) -> Option<&str> {
+    let this_ref = self.ctx.module.ecma_view.cjs_this_ref?;
+    matches!(self.ctx.wrapper_mode(), ModuleWrapperMode::InteropCjs(_))
+      .then(|| self.canonical_name_for(this_ref))
+  }
+
   fn append_order_cjs_carriers(&self, program: &mut ast::Program<'ast>) {
     let carrier_keys =
       self.ctx.order_wrap_state.order_cjs_carriers_for_importee(self.ctx.idx).to_vec();
@@ -267,7 +286,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           wrap_ref_name,
           commonjs_ref_expr,
           stmts_inside_closure,
-          self.ctx.module.ast_usage,
+          &self.cjs_wrapper_params(),
           self.ctx.options.profiler_names,
           &self.ctx.module.stable_id,
           self.ctx.linking_info.is_tla_or_contains_tla_dependency,
@@ -576,7 +595,9 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         {
           match kind {
             ThisExprReplaceKind::Exports => {
-              *expr = ast::Expression::new_identifier(SPAN, "exports", self);
+              if let Some(this_name) = self.cjs_this_name() {
+                *expr = Expression::new_id_ref_expr(SPAN, this_name, self);
+              }
             }
             ThisExprReplaceKind::Context if self.ctx.options.context.is_empty() => {
               *expr = ast::Expression::new_void_0(SPAN, self);

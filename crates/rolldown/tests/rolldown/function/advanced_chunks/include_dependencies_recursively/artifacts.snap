@@ -8,18 +8,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { t as foo } from "./vendor.js";
 import nodeAssert from "node:assert";
-//#region main.js
+// main.js
 nodeAssert.strictEqual(foo, "foo bar");
-//#endregion
 
 ```
 
 ## vendor.js
 
 ```js
-//#region foo.js
+// foo.js
 const foo = "foo bar";
-//#endregion
 export { foo as t };
 
 ```
@@ -34,14 +32,13 @@ export { foo as t };
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_foo, t as foo } from "./vendor.js";
 import nodeAssert from "node:assert";
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_foo();
 		nodeAssert.strictEqual(foo, "foo bar");
 	})))();
 }
-//#endregion
 init_main();
 
 ```
@@ -58,14 +55,13 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region foo.js
+// foo.js
 var foo;
 function init_foo() {
 	return (init_foo = __esmMin((() => {
 		foo = "foo bar";
 	})))();
 }
-//#endregion
 export { init_foo as n, foo as t };
 
 ```

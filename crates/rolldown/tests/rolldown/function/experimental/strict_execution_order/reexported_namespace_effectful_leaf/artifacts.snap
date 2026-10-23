@@ -6,10 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## css.js
 
 ```js
-//#region color.js
+// color.js
 const setOpacity = (color, opacity) => `${color}:${opacity}`;
 globalThis.colorLoaded = (globalThis.colorLoaded ?? 0) + 1;
-//#endregion
 export { setOpacity as t };
 
 ```
@@ -19,23 +18,20 @@ export { setOpacity as t };
 ```js
 import { t as setOpacity } from "./css.js";
 import assert from "node:assert";
-//#region theme.js
+// theme.js
 assert.strictEqual(globalThis.colorLoaded, 1);
 const theme = setOpacity("red", .5);
-//#endregion
-//#region first.js
+// first.js
 assert.strictEqual(theme, "red:0.5");
-//#endregion
 
 ```
 
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 await import("./first.js");
 await import("./second.js");
-//#endregion
 
 ```
 
@@ -44,10 +40,9 @@ await import("./second.js");
 ```js
 import { t as setOpacity } from "./css.js";
 import assert from "node:assert";
-//#region second.js
+// second.js
 assert.strictEqual(setOpacity("blue", .2), "blue:0.2");
 assert.strictEqual(globalThis.colorLoaded, 1);
-//#endregion
 
 ```
 
@@ -59,7 +54,7 @@ assert.strictEqual(globalThis.colorLoaded, 1);
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region color.js
+// color.js
 var setOpacity;
 function init_color() {
 	return (init_color = __esmMin((() => {
@@ -67,21 +62,18 @@ function init_color() {
 		globalThis.colorLoaded = (globalThis.colorLoaded ?? 0) + 1;
 	})))();
 }
-//#endregion
-//#region fns.js
+// fns.js
 function init_fns() {
 	return (init_fns = __esmMin((() => {
 		init_color();
 	})))();
 }
-//#endregion
-//#region css.js
+// css.js
 function init_css() {
 	return (init_css = __esmMin((() => {
 		init_fns();
 	})))();
 }
-//#endregion
 export { init_color as n, setOpacity as r, init_css as t };
 
 ```
@@ -92,7 +84,7 @@ export { init_color as n, setOpacity as r, init_css as t };
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { r as setOpacity, t as init_css } from "./css.js";
 import assert from "node:assert";
-//#region theme.js
+// theme.js
 var theme;
 function init_theme() {
 	return (init_theme = __esmMin((() => {
@@ -101,15 +93,13 @@ function init_theme() {
 		theme = setOpacity("red", .5);
 	})))();
 }
-//#endregion
-//#region first.js
+// first.js
 function init_first() {
 	return (init_first = __esmMin((() => {
 		init_theme();
 		assert.strictEqual(theme, "red:0.5");
 	})))();
 }
-//#endregion
 init_first();
 
 ```
@@ -118,14 +108,13 @@ init_first();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((async () => {
 		await import("./first.js");
 		await import("./second.js");
 	})))();
 }
-//#endregion
 await init_main();
 
 ```
@@ -144,7 +133,7 @@ export { __esmMin as t };
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { r as setOpacity, t as init_css } from "./css.js";
 import assert from "node:assert";
-//#region second.js
+// second.js
 function init_second() {
 	return (init_second = __esmMin((() => {
 		init_css();
@@ -152,7 +141,6 @@ function init_second() {
 		assert.strictEqual(globalThis.colorLoaded, 1);
 	})))();
 }
-//#endregion
 init_second();
 
 ```

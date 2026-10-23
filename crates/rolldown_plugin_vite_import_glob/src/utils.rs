@@ -14,6 +14,7 @@ use rolldown_plugin_utils::{
   to_string_literal,
 };
 use rolldown_std_utils::relative_path_to_slash;
+use rolldown_utils::ecmascript::to_usv_str;
 use string_wizard::MagicString;
 use sugar_path::SugarPath;
 
@@ -424,19 +425,19 @@ impl GlobImportVisit<'_> {
 
     let mut values = vec![];
     match arg {
-      Argument::StringLiteral(str) => values.push(str.value.as_str()),
+      Argument::StringLiteral(str) => values.push(to_usv_str(str.value)),
       Argument::TemplateLiteral(lit) => {
         if let Some(str) = lit.single_quasi() {
-          values.push(str.as_str());
+          values.push(to_usv_str(str));
         }
       }
       Argument::ArrayExpression(array_expr) => {
         for expr in &array_expr.elements {
           match expr {
-            ArrayExpressionElement::StringLiteral(str) => values.push(&str.value),
+            ArrayExpressionElement::StringLiteral(str) => values.push(to_usv_str(str.value)),
             ArrayExpressionElement::TemplateLiteral(lit) => {
               if let Some(str) = lit.single_quasi() {
-                values.push(str.as_str());
+                values.push(to_usv_str(str));
               }
             }
             _ => {}
@@ -446,7 +447,7 @@ impl GlobImportVisit<'_> {
       _ => {}
     }
 
-    for value in values {
+    for value in &values {
       if let Some(glob) = value.strip_prefix('!') {
         negated_globs.push(self.to_absolute_glob(
           glob,
@@ -615,8 +616,8 @@ impl GlobImportVisit<'_> {
         continue;
       };
 
-      let key = match &p.key {
-        PropertyKey::StringLiteral(str) => str.value.as_str(),
+      let key: &str = match &p.key {
+        PropertyKey::StringLiteral(str) => &to_usv_str(str.value),
         PropertyKey::StaticIdentifier(id) => id.name.as_str(),
         _ => continue,
       };
@@ -624,7 +625,7 @@ impl GlobImportVisit<'_> {
       match key {
         "base" => match &p.value {
           Expression::StringLiteral(str) if !str.value.is_empty() => {
-            options.base = Some(str.value.as_str().to_string());
+            options.base = Some(to_usv_str(str.value).into_owned());
           }
           Expression::TemplateLiteral(str)
             if str.is_no_substitution_template() && !str.quasis[0].value.raw.is_empty() =>
@@ -635,7 +636,7 @@ impl GlobImportVisit<'_> {
         },
         "import" => {
           if let Expression::StringLiteral(str) = &p.value {
-            options.import = Some(str.value.as_str().to_string());
+            options.import = Some(to_usv_str(str.value).into_owned());
           }
         }
         "eager" => {
@@ -655,10 +656,11 @@ impl GlobImportVisit<'_> {
         }
         "query" => match &p.value {
           Expression::StringLiteral(str) => {
-            options.query = if str.value.starts_with('?') {
-              Some(str.value.to_string())
+            let query = to_usv_str(str.value);
+            options.query = if query.starts_with('?') {
+              Some(query.into_owned())
             } else {
-              Some(format!("?{}", str.value))
+              Some(format!("?{query}"))
             }
           }
           Expression::ObjectExpression(expr) => {
@@ -666,14 +668,14 @@ impl GlobImportVisit<'_> {
             for prop in &expr.properties {
               let ObjectPropertyKind::ObjectProperty(p) = prop else { continue };
 
-              let key = match &p.key {
-                PropertyKey::StringLiteral(key) => key.value.as_str(),
+              let key: &str = match &p.key {
+                PropertyKey::StringLiteral(key) => &to_usv_str(key.value),
                 PropertyKey::StaticIdentifier(ident) => ident.name.as_str(),
                 _ => continue,
               };
 
-              let value = match &p.value {
-                Expression::StringLiteral(v) => v.value.as_str(),
+              let value: &str = match &p.value {
+                Expression::StringLiteral(v) => &to_usv_str(v.value),
                 Expression::BooleanLiteral(v) => {
                   if v.value {
                     "true"

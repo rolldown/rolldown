@@ -6,9 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 const __proto__ = 123;
-//#endregion
 export { __proto__ };
 
 ```
@@ -21,8 +20,6 @@ export { __proto__ };
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-//#region main.js
-//#endregion
 Object.defineProperty(exports, "__proto__", {
 	enumerable: true,
 	value: 123
@@ -39,8 +36,6 @@ Object.defineProperty(exports, "__proto__", {
 ```js
 var bundle = (function(exports) {
 	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-	//#region main.js
-	//#endregion
 	Object.defineProperty(exports, "__proto__", {
 		enumerable: true,
 		value: 123
@@ -62,8 +57,6 @@ globalThis.bundle = bundle;
 	typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.bundle = {}));
 })(this, function(exports) {
 	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-	//#region main.js
-	//#endregion
 	Object.defineProperty(exports, "__proto__", {
 		enumerable: true,
 		value: 123

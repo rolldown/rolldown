@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region createIcon.js
+// createIcon.js
 var createIcon_exports = /* @__PURE__ */ __exportAll({
 	SvgIcon: () => SvgIcon,
 	createIcon: () => createIcon
@@ -20,7 +20,6 @@ var init_createIcon = __esmMin((() => {
 	SvgIcon = { muiName: "SvgIcon" };
 }));
 
-//#endregion
 export { createIcon_exports as n, init_createIcon as r, createIcon as t };
 ```
 
@@ -29,11 +28,10 @@ export { createIcon_exports as n, init_createIcon as r, createIcon as t };
 ```js
 import { r as init_createIcon, t as createIcon } from "./createIcon.js";
 
-//#region entry1.js
+// entry1.js
 init_createIcon();
 console.log(createIcon("Arrow"));
 
-//#endregion
 ```
 
 ## entry2.js
@@ -41,8 +39,7 @@ console.log(createIcon("Arrow"));
 ```js
 import { n as createIcon_exports, r as init_createIcon } from "./createIcon.js";
 
-//#region entry2.js
+// entry2.js
 init_createIcon();
 
-//#endregion
 ```

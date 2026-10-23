@@ -1,0 +1,18 @@
+{
+  "config": {
+    "preserveEntrySignatures": "strict"
+  },
+  "configVariants": [
+    {
+      "preserveEntrySignatures": "exports-only",
+      "_snapshot": false
+    },
+    {
+      "chunkOptimization": {
+        "mergeCommonChunks": false,
+        "avoidRedundantChunkLoads": true
+      },
+      "_snapshot": false
+    }
+  ]
+}

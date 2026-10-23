@@ -19,10 +19,8 @@ export default defineTest({
         augmentChunkHash: (chunk) => {
           fn();
           if (chunk.fileName.includes('entry')) {
-            expect(Object.values(chunk.modules)[0].code).toBe(
-              '//#region entry.js\nconsole.log();\n\n//#endregion',
-            );
-            expect(Object.values(chunk.modules)[0].renderedLength).toBe(47);
+            expect(Object.values(chunk.modules)[0].code).toBe('// entry.js\nconsole.log();\n');
+            expect(Object.values(chunk.modules)[0].renderedLength).toBe(27);
             return 'entry-hash';
           }
         },
@@ -35,11 +33,11 @@ export default defineTest({
     for (const chunk of chunks) {
       switch (chunk.facadeModuleId) {
         case path.join(__dirname, 'main.js'):
-          expect(chunk.fileName).toMatchInlineSnapshot(`"main-BjvhWV4N.js"`);
+          expect(chunk.fileName).toMatchInlineSnapshot(`"main-D1A2dxke.js"`);
           break;
 
         case path.join(__dirname, 'entry.js'):
-          expect(chunk.fileName).toMatchInlineSnapshot(`"entry-UvsVsNUD.js"`);
+          expect(chunk.fileName).toMatchInlineSnapshot(`"entry-C_K2JJpP.js"`);
           break;
 
         default:

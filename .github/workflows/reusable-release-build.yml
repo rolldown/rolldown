@@ -86,6 +86,13 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
+      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
+        id: vp-setup
+        background: true
+        with:
+          version: '1.0.0'
+          cache: true
+
       - name: Setup Rust
         uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
         with:
@@ -93,29 +100,27 @@ jobs:
           restore-cache: false
           save-cache: false
 
-      - name: Rustup Adds Target
-        run: rustup target add ${{ matrix.target }}
+      - parallel:
+          - name: Rustup Adds Target
+            run: rustup target add ${{ matrix.target }}
 
-      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
-        if: ${{ contains(matrix.target, 'musl') }}
-        with:
-          version: 0.15.2
+          - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+            if: ${{ contains(matrix.target, 'musl') }}
+            with:
+              version: 0.15.2
 
-      - name: Setup OpenHarmony SDK
-        if: ${{ contains(matrix.target, 'ohos') }}
-        uses: Boshen/setup-ohos-sdk@edb865a89a712f1f15dbad932dfa9cfce849d95c # v1.0.0
+          - name: Setup OpenHarmony SDK
+            if: ${{ contains(matrix.target, 'ohos') }}
+            uses: Boshen/setup-ohos-sdk@edb865a89a712f1f15dbad932dfa9cfce849d95c # v1.0.0
 
-      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
-        if: ${{ contains(matrix.target, 'musl') }}
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          tool: cargo-zigbuild
+          - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
+            if: ${{ contains(matrix.target, 'musl') }}
+            env:
+              GITHUB_TOKEN: ${{ github.token }}
+            with:
+              tool: cargo-zigbuild
 
-      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
-        with:
-          version: '1.0.0'
-          cache: true
+      - wait: vp-setup
 
       # Targets with `debuginfo: true` build with debug info, which the next
       # steps split out and publish. The env overrides keep `[profile.release]`
@@ -145,22 +150,23 @@ jobs:
           TARGET: ${{ matrix.target }}
         run: node scripts/misc/split-debuginfo.mjs --target "$TARGET"
 
-      - name: Upload Binding Artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          if-no-files-found: error
-          name: bindings-${{ matrix.target }}
-          path: |
-            packages/rolldown/src/rolldown-binding.*.node
-            packages/rolldown/src/rolldown-binding.*.wasm
+      - parallel:
+          - name: Upload Binding Artifact
+            uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+            with:
+              if-no-files-found: error
+              name: bindings-${{ matrix.target }}
+              path: |
+                packages/rolldown/src/rolldown-binding.*.node
+                packages/rolldown/src/rolldown-binding.*.wasm
 
-      - name: Upload Debug Info Artifact
-        if: ${{ matrix.debuginfo }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          if-no-files-found: error
-          name: debuginfo-${{ matrix.target }}
-          path: target/debuginfo/*.debuginfo.tar.zst
+          - name: Upload Debug Info Artifact
+            if: ${{ matrix.debuginfo }}
+            uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+            with:
+              if-no-files-found: error
+              name: debuginfo-${{ matrix.target }}
+              path: target/debuginfo/*.debuginfo.tar.zst
 
   # Keep this list in sync with the `debuginfo: true` entries above.
   # The check only reads the files, so every target runs on Linux.
@@ -178,17 +184,18 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - name: Download Binding Artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: bindings-${{ matrix.target }}
-          path: packages/rolldown/src
+      - parallel:
+          - name: Download Binding Artifact
+            uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+            with:
+              name: bindings-${{ matrix.target }}
+              path: packages/rolldown/src
 
-      - name: Download Debug Info Artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: debuginfo-${{ matrix.target }}
-          path: target/debuginfo
+          - name: Download Debug Info Artifact
+            uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+            with:
+              name: debuginfo-${{ matrix.target }}
+              path: target/debuginfo
 
       - name: Verify Debug Info Matches Binding
         run: node scripts/misc/verify-debuginfo.mjs
@@ -267,21 +274,22 @@ jobs:
         # Binaries are built in the previous steps. Unlike in local development, we only need to build the node package itself.
         run: vp run --filter rolldown build-node
 
-      - name: Upload Node Artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          if-no-files-found: error
-          name: node-artifact
-          path: |
-            packages/rolldown/dist/**
+      - parallel:
+          - name: Upload Node Artifact
+            uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+            with:
+              if-no-files-found: error
+              name: node-artifact
+              path: |
+                packages/rolldown/dist/**
 
-      - name: Upload `rolldown-version.txt`
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          if-no-files-found: warn
-          name: rolldown-version
-          path: |
-            rolldown-version.txt
+          - name: Upload `rolldown-version.txt`
+            uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+            with:
+              if-no-files-found: warn
+              name: rolldown-version
+              path: |
+                rolldown-version.txt
 
   build-rolldown-browser:
     strategy:
@@ -290,6 +298,13 @@ jobs:
     runs-on: namespace-profile-linux-x64-default
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+
+      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
+        id: vp-setup
+        background: true
+        with:
+          version: '1.0.0'
+          cache: true
 
       - name: Setup Rust
         uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
@@ -301,10 +316,7 @@ jobs:
       - name: Add WASI target
         run: rustup target add wasm32-wasip1-threads
 
-      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
-        with:
-          version: '1.0.0'
-          cache: true
+      - wait: vp-setup
 
       - name: Build Node binding
         # This binary is only used to build the node package itself. It's won't be published.
@@ -336,17 +348,18 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - name: Setup Rust
-        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
-        with:
-          # No caching to avoid cache poisoning in release artifacts
-          restore-cache: false
-          save-cache: false
+      - parallel:
+          - name: Setup Rust
+            uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+            with:
+              # No caching to avoid cache poisoning in release artifacts
+              restore-cache: false
+              save-cache: false
 
-      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
-        with:
-          version: '1.0.0'
-          cache: true
+          - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
+            with:
+              version: '1.0.0'
+              cache: true
 
       - name: Build `@rolldown/debug`
         # This binary is only used to build the node package itself. It's won't be published.

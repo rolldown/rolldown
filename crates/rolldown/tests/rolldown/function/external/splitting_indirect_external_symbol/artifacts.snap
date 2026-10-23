@@ -18,18 +18,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { read } from "node:fs";
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
-//#region indirect.js
+// indirect.js
 var indirect_exports = /* @__PURE__ */ __exportAll({ read: () => read });
-//#endregion
-//#region read.js
+// read.js
 console.log(1);
-//#endregion
-//#region main.js
+// main.js
 assert.strictEqual(typeof read, "function");
 Promise.resolve().then(() => indirect_exports).then((mod) => {
 	assert.strictEqual(typeof mod.read, "function");
 	console.log(mod);
 });
-//#endregion
 
 ```

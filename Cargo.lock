@@ -1961,8 +1961,7 @@ dependencies = [
 [[package]]
 name = "oxc_resolver"
 version = "11.24.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c7fd0839a5ecee17c0d2c88c8006e8ab4dff25d4a79e3a0bf7a9f0cce17f4e3"
+source = "git+https://github.com/IWANABETHATGUY/oxc_resolver?branch=perf%2Fcache-exports-key-check-v11.24.3#9a0db69c1f3eadbc0f055fd34f90f664bb616def"
 dependencies = [
  "compact_str",
  "dashmap",

@@ -339,3 +339,7 @@ opt-level = "s"
 # it will strip these information for non-debug files
 debug = "full"
 strip = "none"
+
+# TEMPORARY experiment: check the exports keys once per package.json (oxc-project/oxc-resolver#1418 on v11.24.3).
+[patch.crates-io]
+oxc_resolver = { git = "https://github.com/IWANABETHATGUY/oxc_resolver", branch = "perf/cache-exports-key-check-v11.24.3" }

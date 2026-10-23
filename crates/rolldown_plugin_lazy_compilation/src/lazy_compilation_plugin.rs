@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use arcstr::ArcStr;
-use rolldown_common::{ImportKind, LAZY_PROXY_QUERY, is_lazy_proxy, lazy_proxy_target};
+use rolldown_common::{ImportKind, LAZY_PROXY_QUERY, ResolvedId, is_lazy_proxy, lazy_proxy_target};
 use rolldown_plugin::{HookResolveIdOutput, HookUsage, Plugin, PluginContextResolveOptions};
-use rolldown_utils::dashmap::FxDashSet;
+use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
 
 pub type SharedLazyEntries = Arc<FxDashSet<ArcStr>>;
 
@@ -23,13 +23,19 @@ impl LazyCompilationContext {
 pub struct LazyCompilationPlugin {
   lazy_entries: SharedLazyEntries,
   fetched_entries: SharedLazyEntries,
+  /// Proxy id → how the dynamic import of the real module was first resolved.
+  original_resolutions: FxDashMap<ArcStr, ResolvedId>,
 }
 
 impl LazyCompilationPlugin {
   pub fn new() -> Self {
     let lazy_entries: SharedLazyEntries = Arc::new(FxDashSet::default());
     let fetched_entries: SharedLazyEntries = Arc::new(FxDashSet::default());
-    LazyCompilationPlugin { lazy_entries, fetched_entries }
+    LazyCompilationPlugin {
+      lazy_entries,
+      fetched_entries,
+      original_resolutions: FxDashMap::default(),
+    }
   }
 
   pub fn context(&self) -> LazyCompilationContext {
@@ -71,6 +77,11 @@ impl Plugin for LazyCompilationPlugin {
       // own id back, so the proxy would import itself and the real module never enter the graph.
       if let Some(importer) = args.importer {
         if is_lazy_proxy(importer) && self.fetched_entries.contains(importer) {
+          if let Some(original) = self.original_resolutions.get(importer) {
+            if original.id.as_str() == args.specifier {
+              return Ok(Some(HookResolveIdOutput::from_resolved_id(original.clone())));
+            }
+          }
           return Ok(None);
         }
       }
@@ -96,6 +107,9 @@ impl Plugin for LazyCompilationPlugin {
         format!("{}{LAZY_PROXY_QUERY}", original_id.id).into()
       };
       self.lazy_entries.insert(lazy_id.clone());
+      if lazy_id.as_str() != original_id.id.as_str() {
+        self.original_resolutions.insert(lazy_id.clone(), original_id);
+      }
 
       return Ok(Some(HookResolveIdOutput {
         id: lazy_id,

@@ -661,17 +661,29 @@ impl GenerateStage<'_> {
           let Module::Normal(module) = &self.link_output.module_table[module_id] else {
             return;
           };
-          // Runtime imports are included only through live statements. A user import can make
+          // Runtime imports are included through tree shaking or order lowering. A user import can make
           // the same external side-effectful, but must not revive a dead runtime import.
           // See internal-docs/runtime-helpers/implementation.md.
           let included_runtime_imports = (module.idx == self.link_output.runtime.id()).then(|| {
-            self.link_output.stmt_infos[module.idx]
+            let mut imports = self.link_output.stmt_infos[module.idx]
               .iter_enumerated()
-              .filter(|(idx, _)| {
+              .filter(|(idx, stmt)| {
                 self.link_output.metas[module.idx].stmt_info_included.has_bit(*idx)
+                  || order_state.forces_runtime_stmt(&self.link_output.runtime, module.idx, stmt)
               })
               .flat_map(|(_, stmt)| stmt.import_records.iter().copied())
-              .collect::<FxHashSet<_>>()
+              .collect::<FxHashSet<_>>();
+            // The order-lowering closure stores canonical symbols, while import declarations
+            // still declare local bindings. Match those bindings through the symbol database.
+            imports.extend(module.named_imports.iter().filter_map(|(symbol, import)| {
+              order_state
+                .requires_runtime_symbol(
+                  &self.link_output.runtime,
+                  symbols.canonical_ref_resolving_namespace(*symbol),
+                )
+                .then_some(import.record_idx)
+            }));
+            imports
           });
           let is_import_included =
             |idx| included_runtime_imports.as_ref().is_none_or(|imports| imports.contains(&idx));

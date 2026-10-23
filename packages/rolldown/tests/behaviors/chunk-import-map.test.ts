@@ -211,7 +211,9 @@ describe('chunkImportMap', () => {
           experimental: { chunkImportMap: true },
         });
         try {
-          outputs.push(await bundle.generate(options(false, { entryFileNames: '[name]-[hash].js' })));
+          outputs.push(
+            await bundle.generate(options(false, { entryFileNames: '[name]-[hash].js' })),
+          );
         } finally {
           await bundle.close();
         }
@@ -223,7 +225,9 @@ describe('chunkImportMap', () => {
     expect(Object.keys(importMap(a))).toHaveLength(getOutputChunk(a).length);
     expect(importMap(b)).toEqual(importMap(a));
     const fileNames = (output: RolldownOutput) =>
-      getOutputChunk(output).map((chunk) => chunk.fileName).sort();
+      getOutputChunk(output)
+        .map((chunk) => chunk.fileName)
+        .sort();
     expect(fileNames(b)).toEqual(fileNames(a));
   });
 });

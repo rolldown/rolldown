@@ -58,8 +58,11 @@ impl Plugin for ChunkImportMapPlugin {
             if used_names.contains(&chunk.name) {
               // See internal-docs/inline-common-chunks/implementation.md.
               let logical_chunk = &args.chunk_table[chunk.originate_from];
-              let Some(module_id) =
-                logical_chunk.modules.iter().map(|&idx| args.module_table[idx].stable_id().as_str()).min()
+              let Some(module_id) = logical_chunk
+                .modules
+                .iter()
+                .map(|&idx| args.module_table[idx].stable_id().as_str())
+                .min()
               else {
                 continue;
               };

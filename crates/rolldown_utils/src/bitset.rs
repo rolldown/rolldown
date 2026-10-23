@@ -70,11 +70,15 @@ impl BitSet {
   }
 
   pub fn is_subset(&self, other: &Self) -> bool {
-    self
-      .entries
-      .iter()
-      .enumerate()
-      .all(|(i, &e)| e & !other.entries.get(i).copied().unwrap_or(0) == 0)
+    let common = self.entries.len().min(other.entries.len());
+    let (head, tail) = self.entries.split_at(common);
+    let (blocks, rest) = head.as_chunks::<32>();
+    let (other_blocks, other_rest) = other.entries[..common].as_chunks::<32>();
+    // No early exit inside a block, so the compiler can vectorize the comparison of each block.
+    blocks.iter().zip(other_blocks).all(|(block, other_block)| {
+      block.iter().zip(other_block).fold(0, |acc, (&e, &o)| acc | (e & !o)) == 0
+    }) && rest.iter().zip(other_rest).all(|(&e, &o)| e & !o == 0)
+      && tail.iter().all(|&e| e == 0)
   }
 
   // It is safe to convert `usize` to `u32` here because we ensure that the bitset is created with a maximum bit count that fits within `u32`.
@@ -211,6 +215,38 @@ mod tests {
     wide.extend([8, 15]);
     bs.subtract(&wide);
     assert_eq!(bs.index_of_one().collect::<Vec<_>>(), vec![5]);
+  }
+
+  #[test]
+  fn is_subset_block_edges() {
+    // Byte lengths around the 32-byte blocks that `is_subset` compares.
+    for bytes in [1_u32, 31, 32, 33, 64, 65] {
+      let bits = bytes * 8;
+      let mut other = BitSet::new(bits);
+      other.extend([0, bits / 2 + 1, bits - 1]);
+      let mut small = BitSet::new(bits);
+      small.extend([0, bits - 1]);
+      assert!(small.is_subset(&other), "{bytes} bytes");
+      assert!(other.is_subset(&other), "{bytes} bytes");
+      for extra in [1, 31 * 8, 32 * 8, bits - 2] {
+        if extra >= bits || other.has_bit(extra) {
+          continue;
+        }
+        let mut not_subset = small.clone();
+        not_subset.set_bit(extra);
+        assert!(!not_subset.is_subset(&other), "{bytes} bytes, bit {extra}");
+      }
+    }
+
+    // Different lengths: the bytes past the shorter set must be empty on the left side.
+    let mut short = BitSet::new(8);
+    short.set_bit(3);
+    let mut long = BitSet::new(300);
+    long.set_bit(3);
+    assert!(short.is_subset(&long));
+    assert!(long.is_subset(&short));
+    long.set_bit(299);
+    assert!(!long.is_subset(&short));
   }
 
   #[test]

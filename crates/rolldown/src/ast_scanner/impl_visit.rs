@@ -77,6 +77,8 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
       self.result.ecma_view_meta.insert(EcmaViewMeta::IndependentInitialization);
     }
 
+    self.collect_side_effect_free_functions(program);
+
     for (idx, stmt) in program.body.iter().enumerate() {
       // `0` is reserved for Module Namespace Object stmt info
       #[expect(

@@ -44,13 +44,17 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn write(mut self) -> BuildResult<BundleOutput> {
     let start = self.plugin_driver.build_timings.start();
+    rolldown_fs::profile::reset();
+    let __scan_start = std::time::Instant::now();
     let result = async {
       self.trace_action_session_meta();
       trace_action!(action::BuildStart { action: "BuildStart" });
       let scan_stage_output = self.scan_modules(ScanMode::Full).await?;
+      let __scan_end = std::time::Instant::now();
 
       let ret = self.bundle_write(scan_stage_output).await;
       trace_action!(action::BuildEnd { action: "BuildEnd" });
+      rolldown_fs::profile::report("write", __scan_start, __scan_end, std::time::Instant::now());
       ret
     }
     .await;

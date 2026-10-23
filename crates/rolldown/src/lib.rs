@@ -34,6 +34,8 @@ pub use rolldown_common::bundler_options::*;
 
 pub use rolldown_resolver::ResolveOptions;
 
+/// TEMPORARY prefetch experiment.
+pub use rolldown_fs::profile as fs_profile;
 pub use rolldown_plugin as plugin;
 
 #[cfg(feature = "testing")]

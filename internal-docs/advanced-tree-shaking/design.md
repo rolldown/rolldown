@@ -71,27 +71,51 @@ The machinery is in [implementation.md](./implementation.md).
    write below a value that a getter or a call returns changes the objects that it can return.
 8. **Initialization order is a part of the value.** A value is known only at a read that cannot
    see the binding uninitialized. Import cycles and hoisted functions make many reads in function
-   bodies unsafe. The rules are syntactic and conservative, and they also decide TDZ effects.
+   bodies unsafe. The rules are syntactic and conservative, and they also decide TDZ effects. A
+   `const` or a `let` in a function has the value of its initializer only at a read that runs
+   after the initialization in the same run of its scope: a read later in the source with no
+   function between, or a read in a function that code creates after the initialization. A
+   function declaration is hoisted, so a read in it counts only when each reference to the
+   declaration from outside it counts. A declaration in a `case` clause, and a read through a
+   `with` scope, never count, because a jump or an object can skip the initialization.
 9. **Widening.** The RFC leaves the widening policy to rolldown. The current settings: a path
    deeper than 8 keys becomes `whole`. An evaluation deeper than 64 levels is unknown. A deopt
-   chain deeper than 64 levels makes every object literal unknown. Rollup widens a path to top on
-   the first unknown write. This analysis widens one key of one object literal, or one whole
-   object literal for a write with an unknown key.
+   chain deeper than 64 levels makes every object literal unknown. A summary of a function (its
+   return value or its effects) that an evaluation reaches 48 levels deep or more waits: the
+   evaluation gives the pessimistic result and does not cache it, the analysis computes the
+   summary from depth 0, and then it evaluates again. One evaluation does at most 32 such steps,
+   so a chain of 80 calls still folds, and a deeper chain gives the pessimistic result. Rollup
+   widens a path to top on the first unknown write. This analysis widens one key of one object
+   literal, or one whole object literal for a write with an unknown key.
 10. **Edits by node id.** The link stage reads the AST but does not change it. The analysis
     records the node ids of the parts to remove or fold, and the module finalizer applies the
     edits before it visits the children of a node. So the finalizer never renames or rewrites
     code that the output does not contain.
 11. **Builtins, like rollup.** The analysis knows the builtin methods of primitives, arrays,
-    regular expression literals, `Object.prototype`, `Symbol`, and `Object.freeze`, and it
-    assumes that no code replaces them. Rollup makes the same assumption. Rollup does not assume
-    that the builtin prototypes have no other keys: a missing key of an object is unknown, apart
-    from an integer key. The analysis uses the same rule, because a missing key that folds to
-    `undefined` would remove a branch that a polyfill or a test helper enables.
+    regular expression literals, `Object.prototype`, `Symbol`, `Object.freeze`, `Object.values`,
+    `Object.entries`, and the typed array constructors, and it assumes that no code replaces them.
+    Rollup makes the same assumption. Rollup does not assume that the builtin prototypes have no
+    other keys: a missing key of an object is unknown, apart from an integer key. The analysis uses
+    the same rule, because a missing key that folds to `undefined` would remove a branch that a
+    polyfill or a test helper enables.
 12. **Parameters need every call.** A parameter has a value only when the analysis sees every
     call of its function: the function does not escape, does not read `arguments`, and has no
     call that the analysis cannot follow (`call`, `apply`, `bind`, a callback of unknown code).
     Each call that included code or an effect check reaches goes into the facts. Facts only grow,
     so a call that appears later makes the parameter value smaller, never wrong at the end.
+13. **`try` blocks, like rollup.** oxc treats some code that can throw as pure, for example
+    `new WeakSet([1])` and `new ArrayBuffer(-1)`. A _catching `try` block_ is the block of a
+    `try` statement that can discard a throw of the block: the statement has a `catch` clause, or
+    its `finally` block has a `return`, a `break`, or a `continue`. The code that runs after such
+    a block sees whether the block threw. So such a block with code in it has an effect, and in
+    that block the analysis removes only code that never runs: a dead branch, or a statement
+    after a jump. A folded `if` keeps its test there. A function can also run in such a block.
+    When the block reads a parameter, or the `arguments` object, each argument at that position
+    keeps the code that runs, and so does the body of a function that the argument gives. Rollup
+    does the same by default (`treeshake.tryCatchDeoptimization`), but for each `try` statement,
+    and for a parameter only when the block calls it directly. Outside such code, the analysis
+    assumes, like rollup, that code that oxc treats as pure does not throw. `new` of a typed
+    array is an exception: the analysis checks its length itself, because the check is simple.
 
 ## Analyzed modules
 
@@ -168,6 +192,23 @@ The groups of the supplement:
 | G18   | A property that a later definition of the same key replaces goes, unless unknown code can list the keys.                                                                                                                                                                                     |
 | O1    | `propertyWriteSideEffects: false` no longer turns the analysis off (see "Analyzed modules").                                                                                                                                                                                                 |
 
+The groups of the further comparison (2026-10-23):
+
+| Group | Mechanism                                                                                                                                                                                                                                                                                                                                                                               |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| N1    | `Value::Prim` is a primitive with an unknown value. It is never a symbol or a BigInt, so its conversion runs no code. Arithmetic, bitwise, and comparison operators on literals fold with the rules of JavaScript: `ToInt32`, shift counts modulo 32, UTF-16 order for strings, and only exact powers. An unknown condition with equal alternatives gives the join of the alternatives. |
+| N2    | A local `const` or `let` has the value of its initializer at a read that cannot see it uninitialized (principle 8).                                                                                                                                                                                                                                                                     |
+| N3    | A write of an array index changes only that index, and `length` when the index is past the end. A write of `length` changes each index. A write of another key changes only the key.                                                                                                                                                                                                    |
+| N4    | `new` of a function expression that is not a method checks its body. The default constructor of a derived class runs the parent constructor with the new object, then the fields. `extends null` throws. When a parent constructor can return a value, a derived class with fields is unknown, because the returned object gets the fields.                                             |
+| N5    | `concat`, `flat` (to a depth of 1), `flatMap`, `reduce`, `reduceRight`, `reverse`, `sort`, `splice`, `copyWithin`, and `fill` of a known array. A method that only moves or removes elements keeps the element values known.                                                                                                                                                            |
+| N6    | The call record of a builtin gives the parameters of the callback values: the join of the elements, a number for the index, the array, and the accumulator of a reducer.                                                                                                                                                                                                                |
+| N7    | `repeat`, `padStart`, `padEnd`, `normalize`, `match`, `matchAll`, `search`, `localeCompare`, `toLocaleLowerCase`, and `toLocaleUpperCase` with arguments that cannot throw: a length below the smallest engine limit, a known normalization form, a plain pattern, the `g` flag for `matchAll`, and a simple language tag.                                                              |
+| N8    | A number method ignores the arguments after the first.                                                                                                                                                                                                                                                                                                                                  |
+| N9    | `Object.freeze` of a new array, function, or regular expression literal has no effect. `Object.values` and `Object.entries` of an object literal with no getters, of an array literal, or of a primitive that is not `null` or `undefined` have no effect.                                                                                                                              |
+| N10   | `Value::RegExp` is a regular expression literal with entity facts, so an alias of it is known. `exec` and `test` change `lastIndex` only with the `g` or `y` flag, and the change is an effect only when included code can read the object.                                                                                                                                             |
+| N11   | `new` of a typed array with no argument, a length from 0 to 65536, or an array literal of primitive values has no effect.                                                                                                                                                                                                                                                               |
+| N12   | A summary that an evaluation reaches 48 levels deep waits, and the analysis evaluates again (principle 9).                                                                                                                                                                                                                                                                              |
+
 ## `treeshake.propertyReadSideEffects`
 
 The option has three values. The default is `true`.
@@ -187,12 +228,25 @@ With the option off, `true` and `'always'` give the same flags, so a build witho
 
 - Class bodies are walked with `EscapeVisitor`. So a class never loses a member, and each value
   in a class body escapes.
-- `new` of a derived class, or of a class with a decorator or an `accessor` property, goes to
-  oxc's check.
+- `new` of a derived class with an explicit constructor (which calls `super()`), of a class with
+  a decorator or an `accessor` property, or of a derived class with fields whose parent
+  constructor can return a value, goes to oxc's check.
 - The analysis does not track instances. The value of a property of `new X()` is unknown, also
   for a method of the prototype.
-- A binding in a function has a value only when it is a parameter or a function declaration. The
-  value of a `const` or a `let` in a function is unknown.
+- A `const` or a `let` in a function has a value only at a read that principle 8 accepts. A read
+  in a function that code creates before the initialization is unknown, also when the function
+  runs after it.
+- The accumulator of a reducer has a value only when the callback has one call record and a
+  plain first parameter.
+- One evaluation does at most 32 steps of the depth retry (principle 9).
+- For both option values, other passes remove some code that throws, and the analysis cannot
+  keep it. A read, in another `case` clause, of a `const` with a constant initializer goes. The
+  DCE of the scan stage removes `new ArrayBuffer(-1)` and `decodeURIComponent('%')`, also from a
+  catching `try` block, before the analysis runs.
+- Principle 13 follows only the parameters of a known callee. Code that a catching `try` block
+  reaches in another way loses the code that oxc treats as pure, like in rollup: a local function
+  that the block calls, a getter, a value that an alias of the parameter holds, or a callback
+  that unknown code calls.
 - Only `if`, `?:`, `&&`, `||`, `??`, and `'k' in ns` fold.
 - A dynamic entry in a cycle of dynamic imports stays, also when the analysis removes its
   `import()`. The existing cycled-entry bailout keeps it.
@@ -210,6 +264,15 @@ With the option off, `true` and `'always'` give the same flags, so a build witho
   is where rolldown changes code.
 - **A missing key folds to `undefined`:** the first version did this. It is not sound when code
   adds a key to `Object.prototype`, and rollup does not do it (principle 11).
+- **A `try` block like other code:** the earlier versions did this. oxc treats some throws as
+  pure, so the analysis removed a `try` statement whose `catch` clause runs, for example around
+  `new WeakSet([1])` (principle 13).
+- **Only the `try` block itself:** the first version of principle 13 did this. A callback that the
+  block calls through a parameter lost its throw, for example in
+  `attempt(() => new WeakSet([1]))`, and the option-off build keeps that throw.
+- **Each function that a catching `try` block reads:** such a function would keep all of its code
+  that runs, and so would each function that it reads. Many programs call their main code from a
+  `try` block, so the analysis would remove almost nothing. Rollup also follows only parameters.
 
 ## Unresolved questions
 

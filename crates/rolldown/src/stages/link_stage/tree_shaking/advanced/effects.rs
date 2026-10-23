@@ -23,11 +23,11 @@ use super::{
   classes::{ClassSlot, ThisValue},
   collect,
   env::{DeclKind, Init, OxcCtx, Site, is_manual_pure},
-  facts::{CallRecord, LocalInit, LocalKey, NodeKey},
+  facts::{CallArgs, CallRecord, LocalInit, LocalKey, NodeKey, Summary},
   value::{
-    ArrValue, ClassValue, FnNode, FnValue, Lit, MAX_DEPTH, ObjValue, PatternPath, Proto, Resolved,
-    Slot, Value, accessor_fn, array_index, has_proto_setter, is_primitive_key, is_proto_setter,
-    pattern_path,
+    ArrValue, ClassValue, DEFER_DEPTH, FnNode, FnValue, Lit, MAX_DEPTH, ObjValue, PatternPath,
+    Proto, Resolved, Slot, Value, accessor_fn, array_index, has_proto_setter, is_primitive_key,
+    is_proto_setter, pattern_path,
   },
   walk::EscapeVisitor,
 };
@@ -191,7 +191,7 @@ impl<'a> Analyzer<'_, 'a> {
       // A proxy in the prototype chain can trap the enumeration.
       Value::Object(obj) => !self.is_object_escaped(&obj) && !has_proto_setter(obj.node),
       Value::Array(arr) => !self.is_array_escaped(&arr),
-      Value::Lit(_) => true,
+      Value::Lit(_) | Value::Prim => true,
       _ => false,
     };
     !enumerable || self.stmt_effects(&for_in.body, cx)
@@ -223,8 +223,13 @@ impl<'a> Analyzer<'_, 'a> {
       Statement::VariableDeclaration(decl) => self.var_decl_effects(decl, cx),
       Statement::ClassDeclaration(class) => self.class_effects(class, cx),
       Statement::ForInStatement(for_in) => self.for_in_effects(for_in, cx),
+      // The code after a catching `try` block sees each throw of the block, also a throw of code
+      // that oxc treats as pure. So such a block with code in it has an effect, like rollup's
+      // default `treeshake.tryCatchDeoptimization`. See
+      // internal-docs/advanced-tree-shaking/design.md.
       Statement::TryStatement(try_stmt) => {
-        self.stmts_effects(&try_stmt.block.body, cx)
+        (!try_stmt.block.body.is_empty() && collect::discards_throw(try_stmt))
+          || self.stmts_effects(&try_stmt.block.body, cx)
           || try_stmt
             .finalizer
             .as_ref()
@@ -310,18 +315,19 @@ impl<'a> Analyzer<'_, 'a> {
           Value::Lit(lit) => matches!(lit, Lit::Undefined),
           Value::Object(_)
           | Value::Array(_)
+          | Value::RegExp(_)
           | Value::Function(_)
           | Value::Class(_)
           | Value::Namespace(_)
           | Value::Symbol => false,
-          Value::Unknown => true,
+          Value::Prim | Value::Unknown => true,
         };
         if may_be_undefined && self.expr_effects(&assign.right, cx) {
           return true;
         }
         let value = match value {
           Value::Lit(Lit::Undefined) => self.value(&assign.right, cx.site),
-          Value::Unknown => Value::Unknown,
+          Value::Prim | Value::Unknown => Value::Unknown,
           value => value,
         };
         self.pattern_effects(&assign.left, value, cx)
@@ -371,6 +377,9 @@ impl<'a> Analyzer<'_, 'a> {
   }
 
   pub fn expr_effects(&mut self, expr: &'a Expression<'a>, cx: Cx<'a>) -> bool {
+    if self.state.depth == 0 && !self.state.retrying {
+      return self.with_retry(|an| an.expr_effects(expr, cx));
+    }
     if self.state.depth >= MAX_DEPTH {
       return true;
     }
@@ -404,7 +413,7 @@ impl<'a> Analyzer<'_, 'a> {
           if self.expr_effects(expr, cx) {
             return true;
           }
-          all_primitive &= matches!(self.value(expr, cx.site), Value::Lit(_));
+          all_primitive &= self.value(expr, cx.site).is_primitive();
         }
         // Converting an object to a string can run user code.
         !all_primitive && self.oxc_effects(expr, cx)
@@ -523,8 +532,11 @@ impl<'a> Analyzer<'_, 'a> {
       }
     }
     match object {
-      Value::Lit(Lit::Undefined | Lit::Null) => !member.optional(),
+      Value::Lit(Lit::Undefined | Lit::Null) | Value::Prim => !member.optional(),
       Value::Lit(_) | Value::Symbol => false,
+      // The own property `lastIndex` is a data property, and the accessors of the prototype are
+      // builtins. A write makes the object escape.
+      Value::RegExp(re) => self.is_regexp_escaped(&re) && self.oxc_member_effects(member, cx),
       Value::Object(obj) => {
         if self.is_object_escaped(&obj) {
           self.oxc_member_effects(member, cx)
@@ -643,7 +655,7 @@ impl<'a> Analyzer<'_, 'a> {
 
   /// Whether the object literal has a getter that a read of `key` can run. `None` is an
   /// unknown key.
-  fn object_getter_at(&mut self, obj: &ObjValue<'a>, key: Option<&str>) -> bool {
+  pub fn object_getter_at(&mut self, obj: &ObjValue<'a>, key: Option<&str>) -> bool {
     self.object_accessor_at(obj, key, |kind| kind == PropertyKind::Get)
   }
 
@@ -732,6 +744,9 @@ impl<'a> Analyzer<'_, 'a> {
     if new.pure && self.env.annotations() {
       return false;
     }
+    if let Some(effects) = self.builtin_new_effects(new, cx) {
+      return effects;
+    }
     let callee = self.value(&new.callee, cx.site);
     self.construct_effects(&callee, new, cx.site).unwrap_or_else(|| self.oxc_effects(expr, cx))
   }
@@ -751,7 +766,7 @@ impl<'a> Analyzer<'_, 'a> {
     this: ThisValue<'a>,
     construct: bool,
   ) -> bool {
-    let key = func.key();
+    let key = (func.key(), if construct { this.ctor_key() } else { None });
     let cache = if construct { &self.state.construct_effects } else { &self.state.call_effects };
     if let Some(effects) = cache.get(&key) {
       return *effects;
@@ -761,6 +776,10 @@ impl<'a> Analyzer<'_, 'a> {
       self.state.used_assumption = true;
       return false;
     }
+    if self.state.retrying && self.state.depth >= DEFER_DEPTH {
+      self.defer_summary(Summary::Invoke(func, this, construct));
+      return true;
+    }
     if self.state.depth >= MAX_DEPTH {
       return true;
     }
@@ -769,6 +788,7 @@ impl<'a> Analyzer<'_, 'a> {
     active.insert(key);
     self.register_params(&func);
     let saved_assumption = std::mem::replace(&mut self.state.used_assumption, false);
+    let saved_cut = std::mem::replace(&mut self.state.cut, false);
     let cx = Cx { site: func.body_site(), callee_scope: func.node.scope_id(), this };
     // A generator call runs only the parameter defaults.
     let effects = self.params_effects(&func, cx)
@@ -781,8 +801,10 @@ impl<'a> Analyzer<'_, 'a> {
       if construct { &mut self.state.active_constructs } else { &mut self.state.active_calls };
     active.remove(&key);
     let used_assumption = std::mem::replace(&mut self.state.used_assumption, saved_assumption);
-    if used_assumption {
-      self.state.used_assumption = true;
+    let cut = std::mem::replace(&mut self.state.cut, saved_cut);
+    if used_assumption || cut {
+      self.state.used_assumption |= used_assumption;
+      self.state.cut |= cut;
     } else if construct {
       self.state.construct_effects.insert(key, effects);
     } else {
@@ -817,17 +839,12 @@ impl<'a> Analyzer<'_, 'a> {
   /// Record a call of a known function. The write deopts of the parameters apply to the new
   /// arguments.
   pub fn record_call(&mut self, func: &FnValue<'a>, call: &'a CallExpression<'a>, site: Site) {
-    self.record_args(func, call.node_id(), &call.arguments, site);
+    self.record_args(func, call.node_id(), CallArgs::Ast(&call.arguments), site);
   }
 
-  /// Record a call or a `new` (the node `node`) of a known function, with its arguments.
-  pub fn record_args(
-    &mut self,
-    func: &FnValue<'a>,
-    node: NodeId,
-    args: &'a [Argument<'a>],
-    site: Site,
-  ) {
+  /// Record a call (the node `node`) of a known function, with its arguments. `node` is a call,
+  /// a `new`, or the call of a builtin method that calls the function.
+  pub fn record_args(&mut self, func: &FnValue<'a>, node: NodeId, args: CallArgs<'a>, site: Site) {
     self.register_params(func);
     let record = CallRecord { site, args };
     if !self.state.record_call(func.key(), (site.module, node), record) {
@@ -1078,6 +1095,14 @@ impl<'a> Analyzer<'_, 'a> {
     self.deopt_path(expr, &[Some(CompactStr::new("length"))], cx.site, 0);
   }
 
+  /// A method call moves or removes elements of the array that `expr` holds, but it puts no new
+  /// value in an element.
+  pub fn deopt_array_reorder(&mut self, expr: &'a Expression<'a>, cx: Cx<'a>) {
+    let reordering = std::mem::replace(&mut self.state.reordering, true);
+    self.deopt_array_change(expr, cx);
+    self.state.reordering = reordering;
+  }
+
   /// Make the properties that a write or a `delete` of `member` can change unknown. It follows
   /// every way that `value` can find an object below `member.object()`, like rollup's
   /// `deoptimizePath`. Unlike `value`, it ignores init safety: a write that can run before the
@@ -1152,6 +1177,12 @@ impl<'a> Analyzer<'_, 'a> {
       }
       Expression::ArrayExpression(arr) => {
         self.deopt_array(ArrValue { site, node: arr, holder: None }, path, depth);
+      }
+      // A write can replace `exec` or set `lastIndex` to an object, so the object escapes.
+      Expression::RegExpLiteral(re) => {
+        if !path.is_empty() {
+          self.state.escape_entity((site.module, re.node_id()));
+        }
       }
       Expression::FunctionExpression(func) => self.deopt_fn((site.module, func.node_id()), path),
       Expression::ArrowFunctionExpression(arrow) => {
@@ -1282,19 +1313,65 @@ impl<'a> Analyzer<'_, 'a> {
     path: &[Option<CompactStr>],
     depth: u32,
   ) {
-    for (i, arg) in record.args.iter().enumerate() {
-      match arg {
-        // The argument is an element of a spread value, which the analysis does not model.
-        Argument::SpreadElement(spread) => {
+    let arr = match record.args {
+      CallArgs::Ast(args) => {
+        for (i, arg) in args.iter().enumerate() {
+          match arg {
+            // The argument is an element of a spread value, which the analysis does not model.
+            Argument::SpreadElement(spread) => {
+              let full = std::iter::once(None).chain(path.iter().cloned()).collect::<Vec<_>>();
+              self.deopt_path(&spread.argument, &full, record.site, depth);
+              return;
+            }
+            arg if i == index => {
+              self.deopt_path(arg.to_expression(), path, record.site, depth);
+              return;
+            }
+            _ => {}
+          }
+        }
+        return;
+      }
+      CallArgs::Each { arr } => match index {
+        0 => arr,
+        2 => return self.deopt_array(arr, path, depth),
+        _ => return,
+      },
+      CallArgs::Reduce { arr, initial, callback } => match index {
+        0 => {
+          // The accumulator is the start value or a value that the callback returns.
+          self.deopt_returns(callback, path, depth);
+          match initial {
+            Some(initial) => return self.deopt_path(initial, path, record.site, depth),
+            None => arr,
+          }
+        }
+        1 => arr,
+        3 => return self.deopt_array(arr, path, depth),
+        _ => return,
+      },
+      CallArgs::Compare { arr } => match index {
+        0 | 1 => arr,
+        _ => return,
+      },
+    };
+    self.deopt_elements(arr, path, depth);
+  }
+
+  /// A write below an element of the arrays of the literal changes the objects that each
+  /// element can be.
+  fn deopt_elements(&mut self, arr: ArrValue<'a>, path: &[Option<CompactStr>], depth: u32) {
+    if path.is_empty() {
+      return;
+    }
+    for element in &arr.node.elements {
+      match element {
+        ArrayExpressionElement::SpreadElement(spread) => {
           let full = std::iter::once(None).chain(path.iter().cloned()).collect::<Vec<_>>();
-          self.deopt_path(&spread.argument, &full, record.site, depth);
-          return;
+          self.deopt_path(&spread.argument, &full, arr.site, depth);
         }
-        arg if i == index => {
-          self.deopt_path(arg.to_expression(), path, record.site, depth);
-          return;
-        }
-        _ => {}
+        ArrayExpressionElement::Elision(_) => {}
+        element => self.deopt_path(element.to_expression(), path, arr.site, depth),
       }
     }
   }
@@ -1431,8 +1508,9 @@ impl<'a> Analyzer<'_, 'a> {
     }
   }
 
-  /// A write to an array can change its length, so it makes every element unknown. A deeper
-  /// write changes the objects at the elements that its key can name.
+  /// A write of an index changes that element, and the length when the index can be past the
+  /// end. A write of `length` can remove every element. A deeper write changes the objects at
+  /// the elements that its key can name.
   fn deopt_array(&mut self, arr: ArrValue<'a>, path: &[Option<CompactStr>], depth: u32) {
     let Some((first, rest)) = path.split_first() else {
       return;
@@ -1441,18 +1519,33 @@ impl<'a> Analyzer<'_, 'a> {
       self.state.escape_entity(arr.key());
       return;
     };
-    if rest.is_empty() {
-      self.state.deopt_entity_key(arr.key(), None);
-      return;
-    }
-    let Some(index) = array_index(key) else {
-      return;
-    };
     let has_spread = arr
       .node
       .elements
       .iter()
       .any(|element| matches!(element, ArrayExpressionElement::SpreadElement(_)));
+    if rest.is_empty() {
+      match array_index(key) {
+        Some(index) => {
+          self.state.deopt_entity_key(arr.key(), Some(key));
+          self.state.mark_new_elements(arr.key());
+          if has_spread || index >= arr.node.elements.len() {
+            self.state.deopt_entity_key(arr.key(), Some("length"));
+          }
+        }
+        None if key == "length" => {
+          self.state.deopt_entity_key(arr.key(), None);
+          if !self.state.reordering {
+            self.state.mark_new_elements(arr.key());
+          }
+        }
+        None => self.state.deopt_entity_key(arr.key(), Some(key)),
+      }
+      return;
+    }
+    let Some(index) = array_index(key) else {
+      return;
+    };
     for (i, element) in arr.node.elements.iter().enumerate() {
       match element {
         ArrayExpressionElement::SpreadElement(spread) => {
@@ -1519,7 +1612,7 @@ impl<'a> Analyzer<'_, 'a> {
       return true;
     }
     match value {
-      Value::Lit(_) => false,
+      Value::Lit(_) | Value::Prim => false,
       Value::Array(arr) => self.is_array_escaped(arr),
       Value::Object(obj) => {
         self.is_object_escaped(obj)
@@ -1569,8 +1662,7 @@ impl<'a> Analyzer<'_, 'a> {
       UnaryOperator::Void | UnaryOperator::LogicalNot => self.expr_effects(&unary.argument, cx),
       _ => {
         self.expr_effects(&unary.argument, cx)
-          || (!matches!(self.value(&unary.argument, cx.site), Value::Lit(_))
-            && self.oxc_effects(expr, cx))
+          || (!self.value(&unary.argument, cx.site).is_primitive() && self.oxc_effects(expr, cx))
       }
     }
   }
@@ -1600,8 +1692,8 @@ impl<'a> Analyzer<'_, 'a> {
       }
       BinaryOperator::Instanceof => true,
       _ => {
-        let primitives = matches!(self.value(&binary.left, cx.site), Value::Lit(_))
-          && matches!(self.value(&binary.right, cx.site), Value::Lit(_));
+        let primitives = self.value(&binary.left, cx.site).is_primitive()
+          && self.value(&binary.right, cx.site).is_primitive();
         !primitives && self.oxc_effects(expr, cx)
       }
     }

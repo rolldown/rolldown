@@ -1,0 +1,127 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+globalThis.log = [];
+const log = (msg) => globalThis.log.push(msg);
+const attempt = (name, run) => {
+	const call = run;
+	try {
+		call();
+	} catch {
+		log(name);
+	}
+};
+const methods = { method() {} };
+attempt("LIVE_new_method", () => {
+	new methods.method();
+});
+const Arrow = () => {};
+attempt("LIVE_new_arrow", () => {
+	new Arrow();
+});
+const Async = async function() {};
+attempt("LIVE_new_async", () => {
+	new Async();
+});
+const Generator = function* () {};
+attempt("LIVE_new_generator", () => {
+	new Generator();
+});
+var WithMethods = class {
+	method() {}
+	static staticMethod() {}
+};
+attempt("LIVE_new_class_method", () => {
+	new WithMethods.prototype.method();
+});
+attempt("LIVE_new_static_method", () => {
+	new WithMethods.staticMethod();
+});
+var Parent = class {
+	constructor() {
+		log("LIVE_parent_constructor");
+	}
+};
+var Child = class extends Parent {};
+new Child();
+var Plain = class {};
+var ChildField = class extends Plain {
+	field = log("LIVE_derived_field");
+};
+new ChildField();
+function Es5Parent() {
+	log("LIVE_es5_parent");
+}
+var Es5Child = class extends Es5Parent {};
+new Es5Child();
+var GrandChild = class extends Child {};
+new GrandChild();
+var NullParent = class extends null {};
+attempt("LIVE_extends_null", () => {
+	new NullParent();
+});
+var FrozenParent = class {
+	constructor() {
+		return Object.freeze({});
+	}
+};
+var FrozenChild = class extends FrozenParent {
+	field = 1;
+};
+attempt("LIVE_frozen_parent", () => {
+	new FrozenChild();
+});
+function FrozenEs5() {
+	return Object.freeze({});
+}
+var FrozenEs5Child = class extends FrozenEs5 {
+	field = 1;
+};
+attempt("LIVE_frozen_es5_parent", () => {
+	new FrozenEs5Child();
+});
+var FrozenMiddle = class extends FrozenParent {};
+var FrozenGrandChild = class extends FrozenMiddle {
+	field = 1;
+};
+attempt("LIVE_frozen_grandparent", () => {
+	new FrozenGrandChild();
+});
+var ReturnParent = class {
+	constructor(target) {
+		return target;
+	}
+};
+var PrivateField = class extends ReturnParent {
+	#mark = 1;
+};
+const fieldTarget = {};
+new PrivateField(fieldTarget);
+attempt("LIVE_private_field_twice", () => {
+	new PrivateField(fieldTarget);
+});
+var PrivateMethod = class extends ReturnParent {
+	#method() {}
+};
+const methodTarget = {};
+new PrivateMethod(methodTarget);
+attempt("LIVE_private_method_twice", () => {
+	new PrivateMethod(methodTarget);
+});
+const Logger = function() {
+	log("LIVE_function_expression");
+};
+new Logger();
+new { Ctor: function() {
+	log("LIVE_holder_constructor");
+} }.Ctor();
+const done = true;
+export { done };
+
+```

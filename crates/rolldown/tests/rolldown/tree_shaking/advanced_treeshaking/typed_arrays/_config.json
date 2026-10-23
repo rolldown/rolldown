@@ -1,0 +1,8 @@
+{
+  "_comment": "Typed arrays: `new` of a typed array constructor with no argument, a small length, or an array literal of primitive values goes.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "_comment": "Regular expressions: the analysis keeps each call that changes a `lastIndex` that included code can read, and each call that runs code. The cases cover reads through the binding, a property, an alias, and an export, an `exec` that a write sets, conversions of `lastIndex` and of an argument, and an expression that escapes.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

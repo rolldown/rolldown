@@ -1,0 +1,8 @@
+{
+  "_comment": "Try statements: when a catching `try` block reads a parameter, the code after the block can see each throw of the argument, also a throw of code that oxc treats as pure. So the code of the argument that runs stays. The cases cover arrows, function expressions, a function declaration, `new` of a function, a class, and a derived class, a method, nested calls, a destructured, a rest, and an optional parameter, `call`, `await`, `arguments`, a spread argument, a helper in another module, and `finally` blocks with a `return` or a `continue`.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

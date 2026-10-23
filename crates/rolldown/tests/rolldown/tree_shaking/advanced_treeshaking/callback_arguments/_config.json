@@ -1,0 +1,8 @@
+{
+  "_comment": "Callback arguments: a callback of an array method gets the element values, a number for the index, and the array, so conversions of primitive elements go. A reducer gets a primitive accumulator.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

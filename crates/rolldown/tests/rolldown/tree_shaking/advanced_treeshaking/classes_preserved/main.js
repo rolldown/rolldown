@@ -1,5 +1,14 @@
 globalThis.log = [];
 const log = (msg) => globalThis.log.push(msg);
+// The alias hides the callback from the `try` rule, so the walk of the callback checks it.
+const attempt = (name, run) => {
+  const call = run;
+  try {
+    call();
+  } catch {
+    log(name);
+  }
+};
 
 // A static block writes through a static setter.
 class StaticSetter {
@@ -267,53 +276,37 @@ class GetterOnly {
     this.v = 2;
   }
 }
-try {
+attempt('LIVE_getter_only', () => {
   new GetterOnly();
-} catch {
-  log('LIVE_getter_only');
-}
+});
 class Caller {}
-try {
+attempt('LIVE_class_caller', () => {
   Caller.caller;
-} catch {
-  log('LIVE_class_caller');
-}
+});
 function FnCaller() {}
-try {
+attempt('LIVE_fn_caller', () => {
   FnCaller.caller;
-} catch {
-  log('LIVE_fn_caller');
-}
+});
 class Named {}
-try {
+attempt('LIVE_class_name', () => {
   Named.name = 'x';
-} catch {
-  log('LIVE_class_name');
-}
+});
 async function AsyncFn() {}
-try {
+attempt('LIVE_new_async', () => {
   new AsyncFn();
-} catch {
-  log('LIVE_new_async');
-}
+});
 const Arrow = () => {};
-try {
+attempt('LIVE_new_arrow', () => {
   new Arrow();
-} catch {
-  log('LIVE_new_arrow');
-}
+});
 class NotCallable {}
-try {
+attempt('LIVE_call_class', () => {
   NotCallable();
-} catch {
-  log('LIVE_call_class');
-}
+});
 class Frozen {}
 Object.freeze(Frozen.prototype);
-try {
+attempt('LIVE_frozen_prototype', () => {
   Frozen.prototype.x = 1;
-} catch {
-  log('LIVE_frozen_prototype');
-}
+});
 
 export const done = true;

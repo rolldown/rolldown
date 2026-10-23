@@ -1,0 +1,8 @@
+{
+  "_comment": "Callback arguments: the analysis keeps each callback that converts an object, reads a getter, or writes the array. The cases cover elements that a write or `push` sets, the array parameter, direct calls of the callback, the `this` argument, and values that the callback computes.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

@@ -5,12 +5,13 @@ use oxc::{
   ast::{
     AstKind,
     ast::{
-      Argument, Class, ClassElement, Expression, Function, ObjectExpression, ObjectPropertyKind,
-      Statement, VariableDeclarationKind,
+      Argument, Class, ClassElement, Expression, FormalParameters, Function, ObjectExpression,
+      ObjectPropertyKind, Program, PropertyKind, Statement, SwitchCase, TryStatement,
+      VariableDeclarationKind,
     },
   },
   ast_visit::{VisitJs, walk_js},
-  semantic::{NodeId, ReferenceId, ScopeFlags, SymbolId},
+  semantic::{NodeId, ReferenceId, ScopeFlags, ScopeId, Scoping, SymbolFlags, SymbolId},
 };
 use rolldown_common::{AstScopes, ImportRecordIdx};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -245,6 +246,7 @@ fn return_arguments_in<'a>(stmt: &'a Statement<'a>, out: &mut Vec<&'a Expression
       }
     }
     Statement::LabeledStatement(labeled) => return_arguments_in(&labeled.body, out),
+    Statement::WithStatement(with) => return_arguments_in(&with.body, out),
     _ => {}
   }
 }
@@ -272,4 +274,343 @@ pub fn contains_var_decl(stmt: &Statement) -> bool {
   };
   finder.visit_statement(stmt);
   finder.found
+}
+
+/// Whether `try_stmt` can discard a throw of its block: it has a `catch` clause, or its `finally`
+/// block has a `return`, a `break`, or a `continue`. Its block is a catching `try` block. The code
+/// that runs after such a block sees whether the block throws, also when code that oxc treats as
+/// pure throws. See internal-docs/advanced-tree-shaking/design.md.
+pub fn discards_throw(try_stmt: &TryStatement) -> bool {
+  try_stmt.handler.is_some()
+    || try_stmt.finalizer.as_ref().is_some_and(|finalizer| {
+      let mut finder = Finder {
+        matches: |kind: &AstKind| {
+          matches!(
+            kind,
+            AstKind::ReturnStatement(_)
+              | AstKind::BreakStatement(_)
+              | AstKind::ContinueStatement(_)
+          )
+        },
+        into_arrows: false,
+        into_classes: false,
+        found: false,
+      };
+      finder.visit_block_statement(finalizer);
+      finder.found
+    })
+}
+
+/// The parameters of a function whose arguments a catching `try` block (see [`discards_throw`])
+/// in the function can call. Such a block reads the parameter, or the `arguments` object of the
+/// function. The check compares names, so another binding with the same name only makes the walk
+/// keep more code. See internal-docs/advanced-tree-shaking/design.md.
+#[derive(Debug, Default)]
+pub struct CaughtParams {
+  /// The positions of the parameters. The position of the rest parameter is the number of the
+  /// other parameters.
+  positions: Vec<usize>,
+  /// Such a block reads `arguments`, which gives each argument.
+  all: bool,
+}
+
+impl CaughtParams {
+  /// Whether such a block can call the argument at `index`. `None` is an argument at an unknown
+  /// position, after a spread argument.
+  pub fn contains(&self, params: &FormalParameters, index: Option<usize>) -> bool {
+    if self.all {
+      return true;
+    }
+    match index {
+      None => !self.positions.is_empty(),
+      Some(index) if index < params.items.len() => self.positions.contains(&index),
+      Some(_) => params.rest.is_some() && self.positions.contains(&params.items.len()),
+    }
+  }
+}
+
+/// The parameters of a function whose arguments a catching `try` block in the function can call.
+/// Nested functions count, because the block can call them. `has_arguments` is for a function that
+/// has its own `arguments` object.
+pub fn caught_params(
+  params: &FormalParameters,
+  body: &[Statement],
+  has_arguments: bool,
+) -> CaughtParams {
+  struct CaughtParamFinder<'n> {
+    names: &'n [(&'n str, usize)],
+    has_arguments: bool,
+    /// The number of catching `try` blocks around the visit.
+    caught: u32,
+    found: CaughtParams,
+  }
+
+  impl<'v> VisitJs<'v> for CaughtParamFinder<'_> {
+    fn enter_node(&mut self, kind: AstKind<'v>) {
+      let AstKind::IdentifierReference(ident) = kind else {
+        return;
+      };
+      if self.caught == 0 {
+        return;
+      }
+      if self.has_arguments && ident.name == "arguments" {
+        self.found.all = true;
+      }
+      for &(name, position) in self.names {
+        if ident.name == name && !self.found.positions.contains(&position) {
+          self.found.positions.push(position);
+        }
+      }
+    }
+
+    fn visit_try_statement(&mut self, it: &TryStatement<'v>) {
+      let caught = u32::from(discards_throw(it));
+      self.caught += caught;
+      self.visit_block_statement(&it.block);
+      self.caught -= caught;
+      if let Some(handler) = &it.handler {
+        self.visit_catch_clause(handler);
+      }
+      if let Some(finalizer) = &it.finalizer {
+        self.visit_block_statement(finalizer);
+      }
+    }
+  }
+
+  let mut names = Vec::new();
+  for (position, item) in params.items.iter().enumerate() {
+    for id in item.pattern.get_binding_identifiers() {
+      names.push((id.name.as_str(), position));
+    }
+  }
+  if let Some(rest) = &params.rest {
+    for id in rest.rest.argument.get_binding_identifiers() {
+      names.push((id.name.as_str(), params.items.len()));
+    }
+  }
+  let mut finder =
+    CaughtParamFinder { names: &names, has_arguments, caught: 0, found: CaughtParams::default() };
+  finder.visit_formal_parameters(params);
+  for stmt in body {
+    finder.visit_statement(stmt);
+  }
+  finder.found
+}
+
+/// Whether `new` of the class puts elements on the new object: instance fields, `accessor`
+/// properties, or private methods.
+pub fn installs_instance_elements(class: &Class) -> bool {
+  class.body.body.iter().any(|element| match element {
+    ClassElement::PropertyDefinition(prop) => !prop.r#static,
+    ClassElement::AccessorProperty(prop) => !prop.r#static,
+    ClassElement::MethodDefinition(method) => {
+      !method.r#static && method.key.is_private_identifier()
+    }
+    ClassElement::StaticBlock(_) | ClassElement::TSIndexSignature(_) => false,
+  })
+}
+
+/// The functions of a module that are methods, getters, setters, or constructors of an object
+/// literal or a class. `new` of such a function throws.
+pub fn method_functions(program: &Program) -> FxHashSet<NodeId> {
+  struct Methods(FxHashSet<NodeId>);
+
+  impl<'v> VisitJs<'v> for Methods {
+    fn enter_node(&mut self, kind: AstKind<'v>) {
+      match kind {
+        AstKind::ObjectProperty(prop) if prop.method || prop.kind != PropertyKind::Init => {
+          if let Expression::FunctionExpression(func) = &prop.value {
+            self.0.insert(func.node_id());
+          }
+        }
+        AstKind::MethodDefinition(method) => {
+          self.0.insert(method.value.node_id());
+        }
+        _ => {}
+      }
+    }
+  }
+
+  let mut methods = Methods(FxHashSet::default());
+  methods.visit_program(program);
+  methods.0
+}
+
+/// Facts about the local `let` and `const` bindings of one top-level statement. They decide
+/// whether a read of such a binding can run before the initialization, in the temporal dead
+/// zone. See internal-docs/advanced-tree-shaking/implementation.md.
+#[derive(Default)]
+pub struct LocalTdz {
+  /// The end of the declarator of each `let` or `const` with an initializer. A declaration in a
+  /// `case` clause is not here: a jump to a later clause skips it.
+  decl_end: FxHashMap<SymbolId, u32>,
+  /// The start of each reference to a local `let`, `const`, or function declaration.
+  ref_start: FxHashMap<ReferenceId, u32>,
+  /// The start of each function, keyed by its scope, with the binding of a function
+  /// declaration. A function declaration exists from the start of the scope that contains it.
+  fn_scopes: FxHashMap<ScopeId, (u32, Option<SymbolId>)>,
+}
+
+impl LocalTdz {
+  pub fn collect(stmt: &Statement, scoping: &Scoping) -> Self {
+    let mut collector = LocalTdzCollector { scoping, tdz: Self::default(), case_decls: Vec::new() };
+    collector.visit_statement(stmt);
+    let LocalTdzCollector { mut tdz, case_decls, .. } = collector;
+    for symbol_id in case_decls {
+      tdz.decl_end.remove(&symbol_id);
+    }
+    tdz
+  }
+
+  /// Whether the reference `ref_id` to the local binding `symbol_id` runs only after the
+  /// initialization of the binding.
+  pub fn is_read_safe(&self, scoping: &Scoping, symbol_id: SymbolId, ref_id: ReferenceId) -> bool {
+    let (Some(&end), Some(&start)) = (self.decl_end.get(&symbol_id), self.ref_start.get(&ref_id))
+    else {
+      return false;
+    };
+    let decl_scope = scoping.symbol_scope_id(symbol_id);
+    let scope = scoping.get_reference(ref_id).scope_id();
+    self.runs_after(scoping, decl_scope, end, start, scope, &mut FxHashSet::default())
+  }
+
+  /// Whether code at `start` in `scope`, a scope inside `decl_scope`, runs only after the
+  /// position `end` in the same run of `decl_scope`. In one run of a scope, the statements run
+  /// in source order, apart from the jumps of a `switch`. A function runs only after its
+  /// creation. `checked` holds the function declarations whose check is in progress or passed.
+  fn runs_after(
+    &self,
+    scoping: &Scoping,
+    decl_scope: ScopeId,
+    end: u32,
+    start: u32,
+    scope: ScopeId,
+    checked: &mut FxHashSet<SymbolId>,
+  ) -> bool {
+    // The outermost function between the code and the declaration.
+    let mut outermost = None;
+    let mut current = scope;
+    while current != decl_scope {
+      let flags = scoping.scope_flags(current);
+      if flags.is_with() {
+        return false;
+      }
+      if flags.intersects(ScopeFlags::Function | ScopeFlags::Arrow | ScopeFlags::ClassStaticBlock) {
+        outermost = Some(current);
+      }
+      let Some(parent) = scoping.scope_parent_id(current) else {
+        return false;
+      };
+      current = parent;
+    }
+    let Some(func_scope) = outermost else {
+      return start >= end;
+    };
+    let Some(&(func_start, declared)) = self.fn_scopes.get(&func_scope) else {
+      return false;
+    };
+    let Some(binding) = declared else {
+      return func_start >= end;
+    };
+    // The declaration can run early only through a reference that runs early. A reference in
+    // the function itself runs only after a first call from outside.
+    if !checked.insert(binding) {
+      return true;
+    }
+    scoping.get_resolved_reference_ids(binding).iter().all(|&ref_id| {
+      let ref_scope = scoping.get_reference(ref_id).scope_id();
+      is_scope_inside(scoping, ref_scope, func_scope)
+        || self.ref_start.get(&ref_id).is_some_and(|&ref_start| {
+          self.runs_after(scoping, decl_scope, end, ref_start, ref_scope, checked)
+        })
+    })
+  }
+}
+
+fn is_scope_inside(scoping: &Scoping, mut scope: ScopeId, ancestor: ScopeId) -> bool {
+  loop {
+    if scope == ancestor {
+      return true;
+    }
+    match scoping.scope_parent_id(scope) {
+      Some(parent) => scope = parent,
+      None => return false,
+    }
+  }
+}
+
+struct LocalTdzCollector<'s> {
+  scoping: &'s Scoping,
+  tdz: LocalTdz,
+  /// The bindings that a declaration directly in a `case` clause declares.
+  case_decls: Vec<SymbolId>,
+}
+
+impl<'v> VisitJs<'v> for LocalTdzCollector<'_> {
+  fn enter_node(&mut self, kind: AstKind<'v>) {
+    match kind {
+      AstKind::VariableDeclaration(decl)
+        if matches!(decl.kind, VariableDeclarationKind::Let | VariableDeclarationKind::Const) =>
+      {
+        for declarator in &decl.declarations {
+          if declarator.init.is_none() {
+            continue;
+          }
+          for id in declarator.id.get_binding_identifiers() {
+            if let Some(symbol_id) = id.symbol_id.get() {
+              self.tdz.decl_end.insert(symbol_id, declarator.span.end);
+            }
+          }
+        }
+      }
+      AstKind::IdentifierReference(ident) => {
+        if let Some(ref_id) = ident.reference_id.get()
+          && let Some(symbol_id) = self.scoping.get_reference(ref_id).symbol_id()
+          && self.scoping.symbol_scope_id(symbol_id) != self.scoping.root_scope_id()
+          && self
+            .scoping
+            .symbol_flags(symbol_id)
+            .intersects(SymbolFlags::BlockScopedVariable | SymbolFlags::Function)
+        {
+          self.tdz.ref_start.insert(ref_id, ident.span.start);
+        }
+      }
+      AstKind::Function(func) => {
+        if let Some(scope_id) = func.scope_id.get() {
+          let declared = if func.is_function_declaration() {
+            func.id.as_ref().and_then(|id| id.symbol_id.get())
+          } else {
+            None
+          };
+          self.tdz.fn_scopes.insert(scope_id, (func.span.start, declared));
+        }
+      }
+      AstKind::ArrowFunctionExpression(arrow) => {
+        if let Some(scope_id) = arrow.scope_id.get() {
+          self.tdz.fn_scopes.insert(scope_id, (arrow.span.start, None));
+        }
+      }
+      AstKind::StaticBlock(block) => {
+        if let Some(scope_id) = block.scope_id.get() {
+          self.tdz.fn_scopes.insert(scope_id, (block.span.start, None));
+        }
+      }
+      _ => {}
+    }
+  }
+
+  fn visit_switch_case(&mut self, case: &SwitchCase<'v>) {
+    for stmt in &case.consequent {
+      if let Statement::VariableDeclaration(decl) = stmt {
+        self.case_decls.extend(
+          decl
+            .declarations
+            .iter()
+            .flat_map(|declarator| declarator.id.get_binding_identifiers())
+            .filter_map(|id| id.symbol_id.get()),
+        );
+      }
+    }
+    walk_js::walk_switch_case(self, case);
+  }
 }

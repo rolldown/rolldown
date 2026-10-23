@@ -1,0 +1,53 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+globalThis.log = [];
+const log = (msg) => globalThis.log.push(msg);
+const global = /a/g;
+global.test("a");
+if (global.lastIndex === 1) log("LIVE_test_last_index");
+const sticky = /a/y;
+sticky.exec("a");
+if (sticky.lastIndex === 1) log("LIVE_exec_last_index");
+const holder = { pattern: /a/g };
+holder.pattern.test("a");
+if (holder.pattern.lastIndex === 1) log("LIVE_holder_last_index");
+const original = /a/g;
+original.test("a");
+if (original.lastIndex === 1) log("LIVE_alias_last_index");
+const exported = /a/g;
+exported.test("a");
+function lastIndex() {
+	return exported.lastIndex;
+}
+const replaced = /a/;
+replaced.exec = () => {
+	log("LIVE_own_exec");
+	return null;
+};
+replaced.test("a");
+const converted = /a/g;
+converted.lastIndex = { valueOf() {
+	log("LIVE_last_index_value_of");
+	return 0;
+} };
+converted.test("a");
+/a/.test({ toString() {
+	log("LIVE_test_argument");
+	return "a";
+} });
+const escaped = /a/g;
+globalThis.escapedPattern = escaped;
+escaped.test("a");
+if (globalThis.escapedPattern.lastIndex === 1) log("LIVE_escaped_last_index");
+delete globalThis.escapedPattern;
+const done = true;
+export { done, lastIndex };
+
+```

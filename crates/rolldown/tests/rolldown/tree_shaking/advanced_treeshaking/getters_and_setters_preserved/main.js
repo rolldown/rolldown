@@ -1,5 +1,14 @@
 globalThis.log = [];
 const log = (msg) => globalThis.log.push(msg);
+// The alias hides the callback from the `try` rule, so the walk of the callback checks it.
+const attempt = (name, run) => {
+  const call = run;
+  try {
+    call();
+  } catch {
+    log(name);
+  }
+};
 
 // A getter that writes through `this`, and a getter that writes a binding that code reads.
 const viaThis = {
@@ -40,16 +49,12 @@ const throws = {
     throw new Error('LIVE_setter_throw');
   },
 };
-try {
+attempt('LIVE_getter_throw', () => {
   throws.value;
-} catch (error) {
-  log(error.message);
-}
-try {
+});
+attempt('LIVE_setter_throw', () => {
   throws.value = 1;
-} catch (error) {
-  log(error.message);
-}
+});
 
 // A setter that writes a binding that code reads, and a setter that writes through `this`.
 let setSeen = false;
@@ -73,11 +78,9 @@ const getterOnly = {
     return 1;
   },
 };
-try {
+attempt('LIVE_getter_only_write', () => {
   getterOnly.value = 2;
-} catch {
-  log('LIVE_getter_only_write');
-}
+});
 
 // The last definition of a key wins.
 const overwritten = {

@@ -1,0 +1,8 @@
+{
+  "_comment": "Array writes: the analysis keeps each read that a write can change. The cases cover the same index, a string key, an unknown key, writes of `length`, a write past the end, a `delete`, keys that are not indexes, and an alias.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

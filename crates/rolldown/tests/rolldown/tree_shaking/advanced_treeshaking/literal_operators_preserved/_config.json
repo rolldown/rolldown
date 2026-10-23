@@ -1,0 +1,8 @@
+{
+  "_comment": "Operators on literals: the folding gives the exact result for signed zeros, NaN, powers, UTF-16 string order, and 32-bit conversions. The analysis keeps each conversion of an object, and an unknown condition with different alternatives decides nothing.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

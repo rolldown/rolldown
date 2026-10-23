@@ -1,0 +1,18 @@
+{
+  "_comment": "Constructors: `new` of a function expression, of a function in an object property, and of a derived class with the default constructor goes, also when the constructor is in a shared chunk.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "another",
+        "import": "./another.js"
+      }
+    ],
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

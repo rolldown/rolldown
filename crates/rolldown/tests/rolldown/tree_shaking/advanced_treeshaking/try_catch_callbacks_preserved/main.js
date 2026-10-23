@@ -1,0 +1,192 @@
+globalThis.log = [];
+const log = (msg) => globalThis.log.push(msg);
+const attempt = (name, run) => {
+  try {
+    run();
+  } catch {
+    log(name);
+  }
+};
+import { guard } from './helpers.js';
+
+attempt('LIVE_arrow', () => {
+  new WeakSet([1]);
+});
+attempt('LIVE_function_expression', function () {
+  new WeakMap([[1, 1]]);
+});
+function check() {
+  new WeakSet([1]);
+}
+attempt('LIVE_function_declaration', check);
+
+function Probe(run) {
+  try {
+    run();
+  } catch {
+    log('LIVE_function_new');
+  }
+}
+new Probe(() => {
+  new WeakSet([1]);
+});
+class Runner {
+  constructor(name, run) {
+    try {
+      run();
+    } catch {
+      log(name);
+    }
+  }
+}
+new Runner('LIVE_class_new', () => {
+  new WeakSet([1]);
+});
+class Derived extends Runner {}
+new Derived('LIVE_derived_new', () => {
+  new WeakSet([1]);
+});
+const tools = {
+  attempt(run) {
+    try {
+      run();
+    } catch {
+      log('LIVE_method');
+    }
+  },
+};
+tools.attempt(() => {
+  new WeakSet([1]);
+});
+
+const nested = (run) => {
+  try {
+    [0].forEach(() => run());
+  } catch {
+    log('LIVE_nested_call');
+  }
+};
+nested(() => {
+  new WeakSet([1]);
+});
+const inArgument = (run) => {
+  try {
+    String(run());
+  } catch {
+    log('LIVE_call_in_argument');
+  }
+};
+inArgument(() => {
+  new WeakSet([1]);
+});
+const inner = (run) => {
+  try {
+    const go = () => run();
+    go();
+  } catch {
+    log('LIVE_inner_function');
+  }
+};
+inner(() => {
+  new WeakSet([1]);
+});
+const destructured = ({ run }) => {
+  try {
+    run();
+  } catch {
+    log('LIVE_destructured');
+  }
+};
+destructured({
+  run: () => {
+    new WeakSet([1]);
+  },
+});
+const rest = (...[run]) => {
+  try {
+    run();
+  } catch {
+    log('LIVE_rest');
+  }
+};
+rest(() => {
+  new WeakSet([1]);
+});
+const optional = (run) => {
+  try {
+    run?.();
+  } catch {
+    log('LIVE_optional_call');
+  }
+};
+optional(() => {
+  new WeakSet([1]);
+});
+const viaCall = (run) => {
+  try {
+    run.call();
+  } catch {
+    log('LIVE_call_method');
+  }
+};
+viaCall(() => {
+  new WeakSet([1]);
+});
+const awaited = async (run) => {
+  try {
+    await run();
+  } catch {
+    log('LIVE_await');
+  }
+};
+awaited(() => {
+  new WeakSet([1]);
+});
+function viaArguments() {
+  try {
+    arguments[0]();
+  } catch {
+    log('LIVE_arguments');
+  }
+}
+viaArguments(() => {
+  new WeakSet([1]);
+});
+attempt(
+  ...[
+    'LIVE_spread',
+    () => {
+      new WeakSet([1]);
+    },
+  ],
+);
+guard('LIVE_other_module', () => {
+  new WeakSet([1]);
+});
+
+// A jump in a `finally` block discards the throw.
+const swallow = (name, run) => {
+  let threw = true;
+  try {
+    run();
+    threw = false;
+  } finally {
+    if (threw) log(name);
+    return;
+  }
+};
+swallow('LIVE_finally_return', () => {
+  new WeakSet([1]);
+});
+for (const name of ['LIVE_finally_continue']) {
+  let threw = true;
+  try {
+    new WeakMap([[1, 1]]);
+    threw = false;
+  } finally {
+    if (threw) log(name);
+    continue;
+  }
+}
+
+export const done = true;

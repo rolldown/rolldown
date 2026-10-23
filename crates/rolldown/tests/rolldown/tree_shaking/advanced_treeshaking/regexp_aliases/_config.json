@@ -1,0 +1,8 @@
+{
+  "_comment": "Regular expressions: an alias of a regular expression literal is a known object, so `test`, `exec`, and `toString` with primitive arguments go. A change of `lastIndex` that no included code reads goes too.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

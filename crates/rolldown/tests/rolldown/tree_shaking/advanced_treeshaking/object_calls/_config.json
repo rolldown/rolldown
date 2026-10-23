@@ -1,0 +1,8 @@
+{
+  "_comment": "Object calls: `Object.freeze` of a new array, function, or regular expression, and `Object.values` and `Object.entries` of an object without getters, of an array, or of a primitive go.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

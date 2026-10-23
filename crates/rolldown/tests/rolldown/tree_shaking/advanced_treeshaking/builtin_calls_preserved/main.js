@@ -1,5 +1,14 @@
 globalThis.log = [];
 const log = (msg) => globalThis.log.push(msg);
+// The alias hides the callback from the `try` rule, so the walk of the callback checks it.
+const attempt = (name, run) => {
+  const call = run;
+  try {
+    call();
+  } catch {
+    log(name);
+  }
+};
 const convert = (msg) => ({
   valueOf() {
     log(msg);
@@ -28,30 +37,22 @@ const convert = (msg) => ({
   return 'y';
 });
 /x/.test(convert('LIVE_regexp_argument'));
-try {
+attempt('LIVE_radix_throw', () => {
   (123).toString(1);
-} catch {
-  log('LIVE_radix_throw');
-}
-try {
+});
+attempt('LIVE_to_fixed_throw', () => {
   (123).toFixed(101);
-} catch {
-  log('LIVE_to_fixed_throw');
-}
-try {
+});
+attempt('LIVE_repeat_throw', () => {
   'x'.repeat(-1);
-} catch {
-  log('LIVE_repeat_throw');
-}
-try {
+});
+attempt('LIVE_symbol_throw', () => {
   Symbol({
     toString() {
       throw new Error('description');
     },
   });
-} catch {
-  log('LIVE_symbol_throw');
-}
+});
 
 // A method that the object defines, on itself or on its prototype.
 const ownMethod = {
@@ -74,30 +75,22 @@ protoMethod.hasOwnProperty('x');
 // A write to a frozen object throws. `Object.freeze` is shallow.
 const frozen = { a: 1, nested: { a: 1 } };
 Object.freeze(frozen);
-try {
+attempt('LIVE_frozen_write', () => {
   frozen.a = 2;
-} catch {
-  log('LIVE_frozen_write');
-}
-try {
+});
+attempt('LIVE_frozen_add', () => {
   frozen.b = 2;
-} catch {
-  log('LIVE_frozen_add');
-}
-try {
+});
+attempt('LIVE_frozen_delete', () => {
   delete frozen.a;
-} catch {
-  log('LIVE_frozen_delete');
-}
+});
 frozen.nested.a = 2;
 if (frozen.nested.a === 2) log('LIVE_freeze_shallow');
 const frozenArray = [1];
 Object.freeze(frozenArray);
-try {
+attempt('LIVE_frozen_push', () => {
   frozenArray.push(2);
-} catch {
-  log('LIVE_frozen_push');
-}
+});
 const frozenRead = { a: 'LIVE_frozen_read' };
 Object.freeze(frozenRead);
 log(frozenRead.a);

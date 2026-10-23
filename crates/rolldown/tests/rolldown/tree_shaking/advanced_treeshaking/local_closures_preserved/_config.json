@@ -1,0 +1,8 @@
+{
+  "_comment": "Local bindings: the analysis keeps each read that can come before the initialization, which throws. The cases cover closures and hoisted functions that run early, callbacks, `typeof`, a `const` in another `case` clause, and a `let` that a closure writes.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

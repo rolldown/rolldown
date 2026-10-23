@@ -9,22 +9,22 @@ inclusion engine in `include_statements.rs` owns it as `IncludeContext::advanced
 five hooks. After the inclusion fixpoint, the link stage writes the decisions back into the
 statement infos, and the module finalizer applies the AST edits.
 
-| File                                         | Contents                                                                                                                                                   |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `advanced/mod.rs`                            | `AdvancedTreeShaking`: candidates, walked statements, passes, gated writes, the reference filter, and the output                                           |
-| `advanced/env.rs`                            | `Env` (the inputs and the option flags) and `ModuleFacts` (declarations, hoisted functions, first reach, cycles), init safety, namespaces, the oxc context |
-| `advanced/facts.rs`                          | `State` (the facts and the per-pass caches), `PathTree`, `BindingFacts`, `EntityFacts`, call records, parameters, and locals                               |
-| `advanced/value.rs`                          | The value evaluator: `Value`, `Lit`, `ObjValue`, `ArrValue`, `FnValue`, `ClassValue`, slots, prototypes, parameter values, and return values               |
-| `advanced/effects.rs`                        | The effect checker (`Cx`, calls, `new`, reads, writes, `delete`) and the write deopts                                                                      |
-| `advanced/classes.rs`                        | Classes, constructors, function properties, and `this`: class slots, static and instance member effects, `prototype_owner`, and `construct_effects`        |
-| `advanced/builtins.rs`                       | Calls of builtin methods of known values, `Symbol()`, and `Object.freeze`                                                                                  |
-| `advanced/walk.rs`                           | `Walker` (demand, exclusions, rewrites), `EscapeVisitor`, and `on_direct_eval`                                                                             |
-| `advanced/collect.rs`                        | `RefCollector` for excluded parts, and syntactic finders (`this`, `arguments`, `return`, `var`, class opacity)                                             |
-| `types/tree_shaking_rewrites.rs`             | `TreeShakingRewrites`, stored in `LinkingMetadata::tree_shaking_rewrites`                                                                                  |
-| `module_finalizers/tree_shaking_rewrites.rs` | The finalizer edits                                                                                                                                        |
-| `tree_shaking/include_statements.rs`         | The hooks, `run_advanced_passes`, and `apply_advanced_tree_shaking`                                                                                        |
-| `tree_shaking/dynamic_entries.rs`            | An `import()` in an excluded part does not keep its dynamic entry alive                                                                                    |
-| `refine_stmt_side_effects.rs`                | `ImportCycles::is_in_cycle`                                                                                                                                |
+| File                                         | Contents                                                                                                                                                                                              |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `advanced/mod.rs`                            | `AdvancedTreeShaking`: candidates, walked statements, passes, gated writes, the reference filter, and the output                                                                                      |
+| `advanced/env.rs`                            | `Env` (the inputs and the option flags) and `ModuleFacts` (declarations, hoisted functions, first reach, cycles), init safety, namespaces, the oxc context                                            |
+| `advanced/facts.rs`                          | `State` (the facts and the per-pass caches), `PathTree`, `BindingFacts`, `EntityFacts`, call records (`CallArgs`), parameters, locals, and the summaries of the depth retry                           |
+| `advanced/value.rs`                          | The value evaluator: `Value`, `Lit`, `ObjValue`, `ArrValue`, `FnValue`, `ClassValue`, `RegExpValue`, operators, slots, prototypes, parameter values, local values, return values, and the depth retry |
+| `advanced/effects.rs`                        | The effect checker (`Cx`, calls, `new`, reads, writes, `delete`) and the write deopts                                                                                                                 |
+| `advanced/classes.rs`                        | Classes, constructors, function properties, and `this`: class slots, static and instance member effects, `prototype_owner`, `construct_effects`, and `ctor_args_fn`                                   |
+| `advanced/builtins.rs`                       | Calls of builtin methods of known values, `Symbol()`, `Object.freeze`, `Object.values`, `Object.entries`, and `new` of typed arrays                                                                   |
+| `advanced/walk.rs`                           | `Walker` (demand, exclusions, rewrites, `catching`), `EscapeVisitor`, and `on_direct_eval`                                                                                                            |
+| `advanced/collect.rs`                        | `RefCollector` for excluded parts, `LocalTdz`, `CaughtParams`, and syntactic finders (`this`, `arguments`, `return`, `var`, class opacity, methods, instance elements, catching `try` blocks)         |
+| `types/tree_shaking_rewrites.rs`             | `TreeShakingRewrites`, stored in `LinkingMetadata::tree_shaking_rewrites`                                                                                                                             |
+| `module_finalizers/tree_shaking_rewrites.rs` | The finalizer edits                                                                                                                                                                                   |
+| `tree_shaking/include_statements.rs`         | The hooks, `run_advanced_passes`, and `apply_advanced_tree_shaking`                                                                                                                                   |
+| `tree_shaking/dynamic_entries.rs`            | An `import()` in an excluded part does not keep its dynamic entry alive                                                                                                                               |
+| `refine_stmt_side_effects.rs`                | `ImportCycles::is_in_cycle`                                                                                                                                                                           |
 
 ## Option plumbing
 
@@ -73,18 +73,21 @@ only with the binding that they reference.
 | `EntityFacts::deopted_keys`, `all_keys_deopted`        | module and node id    | the write deopts                                                                                          | values, `walk_object`, accessor checks                            |
 | `EntityFacts::deleted_keys`                            | module and node id    | `deopt_member_delete`                                                                                     | `is_key_deleted`: a read can reach the prototype                  |
 | `EntityFacts::frozen`                                  | module and node id    | `freeze_effects`                                                                                          | write and `delete` effects                                        |
+| `EntityFacts::new_elements`                            | module and node id    | a write of an index, a write of `length` that is not a reorder, a builtin that stores its arguments       | `is_array_values_known`                                           |
 | `calls`                                                | function              | `record_args`, for each call or `new` that included code or an effect check reaches                       | `arg_join`, `deopt_args`                                          |
 | `return_demands`                                       | function              | `walk_call`: the demand on the call                                                                       | `Walker::return_demand`                                           |
 | `arg_deopts`                                           | function              | `deopt_local` of a parameter                                                                              | `record_args`, so a later call gets the deopt                     |
 | `params`, `local_inits`, `local_fns`, `registered_fns` | local or function     | `register_params`, `register_local_decl`, `register_local_fns`                                            | `local_value`, `deopt_local`                                      |
 | `used_locals`                                          | module and `SymbolId` | reads of locals and parameters in the walker, `on_direct_eval`                                            | `is_param_unused`, `is_pattern_read`                              |
 | `live_evals`                                           | module                | `on_direct_eval`                                                                                          | `stmt_has_effects` keeps each declaration                         |
+| `caught_fns`                                           | function              | `walk_arg`, for a function that a catching `try` block can call through a parameter                       | `walk_function` sets `catching`                                   |
 | `all_objects_deopted`                                  | the build             | a deopt chain deeper than `MAX_DEPTH`                                                                     | every escape check                                                |
 
 `begin_pass` clears the per-pass caches `call_effects`, `construct_effects`, `return_values`, and
 `param_values`, because facts that change during a pass can make a cached result too optimistic.
 `syntax` caches results that only depend on the AST (`uses_this`, `uses_arguments`,
-`class_opaque`), for the whole build.
+`class_opaque`, `caught_params`, `local_tdz` for each top-level statement, and `methods` for each
+module), for the whole build.
 
 `PathTree` is the demand type. `whole` covers every path. `children` holds the demanded keys.
 `every_key` says that code reads each own key but uses no value at a key that `children` does
@@ -96,9 +99,13 @@ keeps each getter, and a data property can still go.
 All three are methods of `Analyzer { env, state }`. `Site` says where code runs: the module, the
 top-level statement, and whether the code is in a function body.
 
-- **Values** (`value.rs`): `value(expr, site)` gives a literal, a symbol, an object literal
-  (`ObjValue`), an array literal (`ArrValue`), a function (`FnValue`), a class (`ClassValue`), a
-  namespace of an analyzed module, or `Unknown`. An identifier has the value of its initializer
+- **Values** (`value.rs`): `value(expr, site)` gives a literal, `Prim` (a primitive with an
+  unknown value, never a symbol or a BigInt), a symbol, an object literal (`ObjValue`), an array
+  literal (`ArrValue`), a regular expression literal (`RegExpValue`), a function (`FnValue`), a
+  class (`ClassValue`), a namespace of an analyzed module, or `Unknown`. A join of two primitives
+  is `Prim`. `unary_value`, `binary_value`, `logical_value`, and `conditional_value` fold the
+  operators on literals (`number_op`, `exponent`, `to_int32`), and an operator on primitives
+  gives `Prim`. An identifier has the value of its initializer
   only when the binding is unique, not reassigned, and init safe at the site
   (`Env::is_init_safe`). `holder` is the top-level binding whose initializer contains a literal.
   Only a literal with a holder runs one time, so only such literals have an identity for `===`
@@ -127,9 +134,15 @@ top-level statement, and whether the code is in a function body.
   with a default are unknown. The walker gives each argument the demand of its parameter
   (`param_demand`). A write through a parameter goes into `arg_deopts`, and `deopt_args` applies
   it to the argument of each record, also of a record that comes later.
-- **Locals and closures** (G3). A function declaration in a function has a value
-  (`register_local_fns`). Other locals are unknown, but `local_inits` lets a write through a local
-  alias deopt the initializer.
+- **Locals and closures** (G3, N2). A function declaration in a function has a value
+  (`register_local_fns`). A `const` or a `let` with an initializer has the value of the
+  initializer at a read that `LocalTdz::is_read_safe` accepts (design.md principle 8).
+  `LocalTdz::collect` records, for one top-level statement, the end of each declarator, the start
+  of each reference, and the start of each function. It leaves out a declaration directly in a
+  `case` clause. `runs_after` walks the scopes from the read to the declaration: a `with` scope
+  fails, and the outermost function between them must start after the declarator, or, for a
+  function declaration, each reference to it from outside it must pass the same check.
+  `local_inits` also lets a write through a local alias deopt the initializer.
 - **Returns** (T1, T2). `return_value` merges the values of all `return` statements, and adds
   `undefined` when the body can end without one. Async functions and generators are unknown. A
   write below a returned value deopts each returned expression (`deopt_returns`).
@@ -147,20 +160,46 @@ top-level statement, and whether the code is in a function body.
   follows a known prototype. On the default prototype, a missing key is unknown, apart from an
   array index (design.md principle 11). A `delete` makes later reads of the key reach the
   prototype (`deleted_keys`).
-- **Arrays** (G8, G9). An array literal has indexes, holes, and `length`, and a spread element
-  makes the later indexes unknown. A write to an array deopts all its keys. `builtins.rs` models
-  the read methods, the callback methods, `join`, and `push`, `pop`, `shift`, and `unshift`. A
-  callback of a builtin escapes, because the builtin calls it with arguments that the analysis
-  does not record. A method that creates its result through `constructor` (`filter`, `map`,
-  `slice`) needs an array that no write changed, because a write can set `constructor`.
-- **Other builtins** (G10, G16). `builtin_call_effects` handles strings, numbers, booleans,
-  regular expression literals, `Object.prototype` methods of an object literal that does not
-  define them, `Symbol()`, and `Object.freeze`. Each needs primitive arguments, so that no
-  conversion runs user code. Number methods also need arguments in the range that does not throw.
+- **Arrays** (G8, G9, N3, N5). An array literal has indexes, holes, and `length`, and a spread
+  element makes the later indexes unknown. `deopt_array` applies a write of an index to the
+  index, and to `length` when the index is past the end or the literal has a spread. A write of
+  `length` deopts every key, and a write of another key deopts the key. `new_elements` says that
+  a write or a builtin stored a value. A method that only moves or removes elements
+  (`ARRAY_REORDER_METHODS`, and `splice` with two arguments at most) goes through
+  `deopt_array_reorder`, which sets no `new_elements`. So the join of the elements stays known
+  (`is_array_values_known`), but the value at each index does not. `builtins.rs` models the read
+  methods, the callback methods, `join`, `concat`, `flat`, `flatMap`, `reduce`, `reduceRight`,
+  `sort`, and the methods that change the array. A method key or `constructor` that a write set
+  makes the call unknown (`is_array_key_written`).
+- **Callbacks of builtins** (N6). A callback gets a call record with `CallArgs::Each`, `Reduce`,
+  or `Compare`, so its parameters have values: the join of the elements, `Prim` for the index,
+  and the array. `accumulator_value` gives `Prim` for the accumulator of a reducer when the start
+  value is primitive and the callback, with `Prim` assumed for the parameter, returns a
+  primitive. When it does not, `clear_caches` drops the results that the assumption gave. The
+  walker still makes the callback of a kept call escape, because the builtin calls it in ways
+  that the analysis does not follow.
+- **Other builtins** (G10, G16, N7, N8, N9, N11). `builtin_call_effects` handles strings,
+  numbers, booleans, regular expressions, `Object.prototype` methods of an object literal that
+  does not define them, `Symbol()`, `Object.freeze`, `Object.values`, and `Object.entries`. Each
+  needs primitive arguments, so that no conversion runs user code. `string_method_ok` checks
+  `repeat`, `padStart`, and `padEnd` against `MAX_STRING_LENGTH`, `normalize` against the four
+  forms, `match`, `matchAll`, and `search` against a plain pattern or a regular expression that
+  did not escape, and the locale methods against a simple language tag. A number method checks
+  only its first argument, against the range that does not throw. `own_values_effects` gives
+  the getters of an object literal for `Object.values` and `Object.entries`.
+  `builtin_new_effects` decides each `new` of a global typed array: no effect for no argument,
+  `undefined`, `null`, a boolean, an integer length from 0 to 65536, or an array literal of at
+  most 65536 primitive values with no new elements. A BigInt typed array takes only the lengths.
   `Value::Symbol` is a primitive key, and a key of unknown identity.
-- **`Object.freeze`** (G10). `freeze_effects` marks the literal `frozen`. Then a write or a
+- **Regular expressions** (N10). A `RegExpValue` has entity facts. A write to it, and each place
+  that the walker does not model, makes it escape. `exec` and `test` with primitive arguments
+  have an effect only when the expression has the `g` or `y` flag and included code can read the
+  object (`regexp_write_effects`): it escaped, its holder is included, or a walk demanded a key of
+  a literal without a holder.
+- **`Object.freeze`** (G10, N9). `freeze_effects` marks the literal `frozen`. Then a write or a
   `delete` of it throws, so it has an effect. The call has an effect only when the object is
-  included.
+  included. A new array, function, or regular expression literal in the argument has no other
+  reference, so the call has no effect.
 - **Function properties** (G11). A function object that did not escape has data properties only,
   apart from `caller` and `arguments`, which throw (`is_fn_object_escaped`). `deopt_fn` applies a
   write to one key. A write of `X.prototype.k` goes to `prototype_owner`.
@@ -168,13 +207,46 @@ top-level statement, and whether the code is in a function body.
   instance member, and `class_parent` follows `extends`. `static_member_effects` and
   `instance_member_effects` check accessors and the prototype chain. `class_effects` checks the
   definition: decorators, `extends`, computed keys, static fields, and static blocks with `this`
-  as the class. `construct_effects` checks `new` of an ES5 function declaration or a base class,
-  with `this` as the new instance when the prototype is known. `class_opaque` makes a class
+  as the class. `construct_effects` checks `new` of an ES5 constructor or a base class, with
+  `this` as the new instance when the prototype is known. An ES5 constructor is a function
+  declaration, or a function expression that is not a method, a getter, or a setter
+  (`is_es5_ctor`, with `collect::method_functions`), and not async or a generator (N4).
+  `run_ctor_effects` runs the default constructor of a derived class: the parent constructor with
+  `this` as the new instance of the derived class, then the fields. `extends null` throws. When
+  the class puts elements on the new object (`collect::installs_instance_elements`) and a
+  constructor in the parent chain can return a value (`ctor_may_return_value`), the result is
+  unknown: the returned object can reject new properties, or already have the private elements.
+  The cache key of a construction holds the class of `this`. `class_opaque` makes a class
   escape when its static code reads `this` or `super`, it has an `accessor` property, or a class
   expression refers to its own name.
 - **Control flow** (G12, G13). An optional read or call of a nullish value has no effect. The
   statements after a jump that always runs never run (`always_jumps`). `for_in_effects` lets a
   `for...in` over a known object with a fresh `let` or `const` binding go when its body does.
+- **`try` statements** (design.md principle 13). `collect::discards_throw` decides whether the
+  block of a `try` statement is a catching `try` block: the statement has a `catch` clause, or its
+  `finally` block has a `return`, a `break`, or a `continue`. Such a block with code in it has an
+  effect (`stmt_effects`). In such a block, the walker sets `catching`, and then it removes no
+  code that runs: no statement, property, or argument goes, a fold that removes a test or an
+  operand does not happen, and a folded `if` keeps its test. Dead branches and statements after
+  a jump still go. The `catch` clause and the `finally` block are walked like other code.
+- **Arguments that a catching `try` block can call** (design.md principle 13).
+  `collect::caught_params` finds the parameters that a catching `try` block in a function reads.
+  It compares names, also in nested functions, and a read of `arguments` in a function that is
+  not an arrow counts for each parameter. `syntax.caught_params` caches the result for each
+  function. `walk_call` and `walk_arguments` ask `is_arg_caught` for each argument of a known
+  callee. For `new`, `ctor_args_fn` gives the function that gets the arguments: the function, the
+  constructor of the class, or the constructor of a parent when the class has the default
+  constructor. `walk_arg` walks such an argument with `catching`, and adds a function that the
+  argument gives to `caught_fns`. `walk_function` sets `catching` for a function in `caught_fns`.
+  A new entry is a fact change, so the next pass walks the function again, also when an earlier
+  walk saw the function before the call.
+- **Depth** (N12). At depth 0, `value` and `expr_effects` run `with_retry`. During a retry,
+  `return_value` and `invoke_effects` at `DEFER_DEPTH` (48) or deeper call `defer_summary`: the
+  result is pessimistic, `cut` is set, and the result does not go into a cache. Then
+  `with_retry` warms each deferred summary from depth 0 (`warm`, which also warms the summaries
+  that it defers) and evaluates again. A deferral of a summary that is warming is a cycle: its
+  pessimistic result stays, and it sets no `cut`. `WARM_BUDGET` (32) limits the steps of one
+  evaluation.
 - **`delete` and overwritten keys** (G17, G18). `delete_effects` applies the deopt first. A
   `delete` has no effect when the root and the holder are not included, and the object is not
   frozen and did not escape. `is_overwritten` removes a property that a later definition of the
@@ -251,6 +323,9 @@ one becomes `void 0`, so the other arguments keep their positions. Synthetic nod
 - **A `false` from the effect checker visited every write.** It applied the deopt of each write
   that the code can run, because the code goes and the walker never sees it. A `true` can stop
   early: the code stays, so the walker visits it in this pass or in a later one.
+- **A `false` from the effect checker means that the code cannot throw**, apart from code that
+  oxc treats as pure. The walker never removes such code from a catching `try` block, or from an
+  argument or a function that such a block can call through a parameter (design.md principle 13).
 - **A deeper write deopts every object that the written value can be.** `deopt_path` follows
   bindings, locals, parameters (through `arg_deopts`), object and array literals, prototypes,
   getters and calls (`deopt_returns`), class members, and conditional and logical operands. A
@@ -275,15 +350,28 @@ one becomes `void 0`, so the other arguments keep their positions. Synthetic nod
   is in `dist/*.js` where the code must go. The fixtures cover the 13 gaps, the chain, the
   dilemma, and the preserved semantics (live bindings, TDZ, cycles, escapes, setters, getters
   and `__proto__` on functions, `this`, `in` with a proxy prototype, object identity, numeric
-  keys, effects in arguments and properties). Each supplement group has a removal fixture and a
-  `_preserved` fixture, for example `arrays` and `arrays_preserved`. A `_preserved` fixture
-  checks the exact log of its `LIVE_` markers.
+  keys, effects in arguments and properties). Each supplement group and each group of the
+  further comparison (N1–N12) has a removal fixture and a `_preserved` fixture, for example
+  `arrays` and `arrays_preserved`, or `call_depth` and `call_depth_preserved`. Principle 13 has
+  two pairs: `try_catch` for catching `try` blocks, and `try_catch_callbacks` for the arguments
+  that such a block can call. A `_preserved` fixture checks the exact log of its `LIVE_` markers.
+- A marker of a removal fixture must be in code that the option-off build keeps, so that the
+  fixture checks the analysis. The DCE of the scan stage already removes some code, for example
+  a call of a function that only returns its argument.
+- A `_preserved` fixture puts code that must throw in a callback of `attempt(name, run)`. The
+  helper calls the callback through an alias (`const call = run`), which principle 13 does not
+  follow, so the walk of the callback checks the rule of the fixture. Code directly in a
+  catching `try` block always stays, so such code checks only principle 13.
+  `try_catch_callbacks` fails when principle 13 starts to follow aliases.
 - Soundness: set the default to `unwrap_or(true)` in `is_advanced_treeshaking_enabled`, run
   `INSTA_FORCE_PASS=1 INSTA_UPDATE=no cargo test -p rolldown --test integration --no-fail-fast -- --skip test262`,
   and set the default back to `false`. Every runtime test of every fixture must pass. Result on
-  2026-10-23: 2218 passed, 0 failed.
-- The rollup comparison of the RFC supplement: 177 cases, with 0 gaps, 0 gaps with `minify: true`,
-  and 0 runtime differences against `rollup@4.64.0` and `rollup@4.62.4` on 2026-10-23.
+  2026-10-23: 2246 passed, 0 failed.
+- The rollup comparison: the 177 cases of the RFC supplement and the 265 cases of the further
+  comparison, against `rollup@4.64.0` and the saved verdicts of `rollup@4.62.4`. Result on
+  2026-10-23: 0 gaps, and 0 gaps with `minify: true`, in both suites. The 177 cases have no
+  runtime difference. The 265 cases have 9 runtime differences in 4 control cases, and the build
+  before the further comparison has the same 9.
 
 ## Related
 

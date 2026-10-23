@@ -1,0 +1,8 @@
+{
+  "_comment": "String methods: `repeat`, `padStart`, `padEnd`, `normalize`, `match`, `matchAll`, `search`, `localeCompare`, `toLocaleLowerCase`, and `toLocaleUpperCase` with arguments that cannot throw go.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

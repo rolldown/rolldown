@@ -1,0 +1,8 @@
+{
+  "_comment": "Array writes: a write of another index, a write of a key that is not an index, a write past the end, and a `delete` of another index do not change an element.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

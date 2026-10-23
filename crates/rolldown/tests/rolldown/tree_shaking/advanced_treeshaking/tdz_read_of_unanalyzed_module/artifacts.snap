@@ -27,12 +27,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 function ignore(_value) {
 	return "called";
 }
+const attempt = (run) => {
+	const call = run;
+	try {
+		call();
+	} catch {
+		result = "tdz";
+	}
+};
 let result;
-try {
+attempt(() => {
 	result = ignore(x);
-} catch {
-	result = "tdz";
-}
+});
 // b.js
 let x = 1;
 eval("");

@@ -1,0 +1,54 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+globalThis.log = [];
+const log = (msg) => globalThis.log.push(msg);
+const attempt = (name, run) => {
+	const call = run;
+	try {
+		call();
+	} catch {
+		log(name);
+	}
+};
+new Uint8Array([{ valueOf() {
+	log("LIVE_element_value_of");
+	return 1;
+} }]);
+attempt("LIVE_negative_length", () => {
+	new Uint8Array(-1);
+});
+attempt("LIVE_large_length", () => {
+	new Float64Array(2 ** 53);
+});
+attempt("LIVE_bigint_array", () => {
+	new BigInt64Array([1]);
+});
+const source = [1];
+source[0] = { valueOf() {
+	log("LIVE_written_source");
+	return 1;
+} };
+new Uint8Array(source);
+new Uint8Array({ get length() {
+	log("LIVE_array_like_length");
+	return 0;
+} });
+function shadowed() {
+	const Uint8Array = function() {
+		log("LIVE_shadowed_constructor");
+	};
+	new Uint8Array([1]);
+}
+shadowed();
+if (new Uint8Array([257])[0] === 1) log("LIVE_typed_value");
+const done = true;
+export { done };
+
+```

@@ -1,0 +1,29 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## another.js
+
+```js
+// another.js
+const other = 1;
+export { other };
+
+```
+
+## main.js
+
+```js
+// main.js
+globalThis.log = [];
+function main() {
+	return 1;
+}
+globalThis.unknown;
+async function load() {
+	return 1;
+}
+export { load, main };
+
+```

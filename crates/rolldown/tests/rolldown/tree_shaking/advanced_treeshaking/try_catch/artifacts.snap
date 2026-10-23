@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+globalThis.log = [];
+const settings = { off: false };
+function main() {
+	try {
+		if (settings.off);
+		return 1;
+	} catch {
+		return 2;
+	}
+}
+export { main };
+
+```

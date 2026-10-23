@@ -1,0 +1,18 @@
+{
+  "_comment": "Operators on literals: arithmetic, bitwise, and string comparison operators on imported values fold branches and a dynamic import, also when the values are in a shared chunk. An unknown condition with equal alternatives gives the alternative.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "another",
+        "import": "./another.js"
+      }
+    ],
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "_comment": "Try statements: a `catch` clause sees each throw, also a throw of code that oxc treats as pure, so code that runs in a `try` block with a `catch` clause stays. The cases cover statements, callbacks, blocks, arguments, properties, conditions, functions, and a folded branch.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

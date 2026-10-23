@@ -1,0 +1,44 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// values.js
+const object = { valueOf() {
+	globalThis.log.push("LIVE_value_of");
+	return 1;
+} };
+const named = { toString() {
+	globalThis.log.push("LIVE_to_string");
+	return "m";
+} };
+// main.js
+globalThis.log = [];
+const log = (msg) => globalThis.log.push(msg);
+log("LIVE_negative_zero");
+log("LIVE_remainder_sign");
+log("LIVE_nan");
+log("LIVE_nan_power");
+log("LIVE_one_power_infinity");
+log("LIVE_negative_power");
+log("LIVE_utf16_order");
+log("LIVE_string_order");
+log("LIVE_case_order");
+log("LIVE_shift_count");
+log("LIVE_unsigned_shift");
+log("LIVE_int32_wrap");
+log("LIVE_bit_not");
+log("LIVE_string_concat");
+log("LIVE_bool_add");
+log("LIVE_typeof_regexp");
+if (object - 1 === 0) log("LIVE_subtract_object");
+if (named < "z") log("LIVE_compare_object");
+if (globalThis.missing ? false : true) log("LIVE_conditional_mixed");
+if ((globalThis.missing || "fallback") === "fallback") log("LIVE_logical_fallback");
+const done = true;
+export { done };
+
+```

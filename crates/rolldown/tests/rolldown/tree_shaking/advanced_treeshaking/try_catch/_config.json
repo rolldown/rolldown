@@ -1,0 +1,8 @@
+{
+  "_comment": "Try statements: code that never runs goes from a `try` block, and a `try` statement with an empty block goes.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

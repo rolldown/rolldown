@@ -1,0 +1,8 @@
+{
+  "_comment": "Local bindings: the value of a local `const` reaches a closure, a hoisted function, and a destructuring pattern when no read can come before the initialization.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

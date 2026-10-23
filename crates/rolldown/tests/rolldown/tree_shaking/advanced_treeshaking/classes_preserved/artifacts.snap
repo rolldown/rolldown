@@ -9,6 +9,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 // main.js
 globalThis.log = [];
 const log = (msg) => globalThis.log.push(msg);
+const attempt = (name, run) => {
+	const call = run;
+	try {
+		call();
+	} catch {
+		log(name);
+	}
+};
 var StaticSetter = class {
 	static set v(x) {
 		log("LIVE_static_setter");
@@ -216,54 +224,38 @@ var GetterOnly = class {
 		this.v = 2;
 	}
 };
-try {
+attempt("LIVE_getter_only", () => {
 	new GetterOnly();
-} catch {
-	log("LIVE_getter_only");
-}
+});
 var Caller = class {};
-try {
+attempt("LIVE_class_caller", () => {
 	Caller.caller;
-} catch {
-	log("LIVE_class_caller");
-}
+});
 function FnCaller() {}
-try {
+attempt("LIVE_fn_caller", () => {
 	FnCaller.caller;
-} catch {
-	log("LIVE_fn_caller");
-}
+});
 var Named = class {};
-try {
+attempt("LIVE_class_name", () => {
 	Named.name = "x";
-} catch {
-	log("LIVE_class_name");
-}
+});
 async function AsyncFn() {}
-try {
+attempt("LIVE_new_async", () => {
 	new AsyncFn();
-} catch {
-	log("LIVE_new_async");
-}
+});
 const Arrow = () => {};
-try {
+attempt("LIVE_new_arrow", () => {
 	new Arrow();
-} catch {
-	log("LIVE_new_arrow");
-}
+});
 var NotCallable = class {};
-try {
+attempt("LIVE_call_class", () => {
 	NotCallable();
-} catch {
-	log("LIVE_call_class");
-}
+});
 var Frozen = class {};
 Object.freeze(Frozen.prototype);
-try {
+attempt("LIVE_frozen_prototype", () => {
 	Frozen.prototype.x = 1;
-} catch {
-	log("LIVE_frozen_prototype");
-}
+});
 const done = true;
 export { done };
 

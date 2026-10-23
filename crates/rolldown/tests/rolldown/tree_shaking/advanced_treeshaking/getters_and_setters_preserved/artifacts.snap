@@ -9,6 +9,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 // main.js
 globalThis.log = [];
 const log = (msg) => globalThis.log.push(msg);
+const attempt = (name, run) => {
+	const call = run;
+	try {
+		call();
+	} catch {
+		log(name);
+	}
+};
 const viaThis = {
 	flag: false,
 	get on() {
@@ -38,16 +46,12 @@ const throws = {
 		throw new Error("LIVE_setter_throw");
 	}
 };
-try {
+attempt("LIVE_getter_throw", () => {
 	throws.value;
-} catch (error) {
-	log(error.message);
-}
-try {
+});
+attempt("LIVE_setter_throw", () => {
 	throws.value = 1;
-} catch (error) {
-	log(error.message);
-}
+});
 let setSeen = false;
 const setter = {
 	flag: false,
@@ -65,11 +69,9 @@ if (setter.flag) log("LIVE_setter_this");
 const getterOnly = { get value() {
 	return 1;
 } };
-try {
+attempt("LIVE_getter_only_write", () => {
 	getterOnly.value = 2;
-} catch {
-	log("LIVE_getter_only_write");
-}
+});
 const overwritten = {
 	a: "LIVE_overwrite_value",
 	get b() {

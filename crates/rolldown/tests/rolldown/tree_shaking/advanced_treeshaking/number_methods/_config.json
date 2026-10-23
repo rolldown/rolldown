@@ -1,0 +1,8 @@
+{
+  "_comment": "Number methods: the methods ignore the arguments after the first, so a call with an argument in range and other primitive arguments goes.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

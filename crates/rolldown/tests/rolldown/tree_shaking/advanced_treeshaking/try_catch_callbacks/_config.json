@@ -1,0 +1,8 @@
+{
+  "_comment": "Try statements: a callback that a catching `try` block can call loses only code that never runs. A callback of a `try` block that does not read the parameter, of a `try` statement that cannot discard a throw, at a position that the block does not read, or that the block calls through an alias loses unused code.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

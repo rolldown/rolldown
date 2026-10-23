@@ -1,0 +1,68 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+globalThis.log = [];
+const log = (msg) => globalThis.log.push(msg);
+const attempt = (name, run) => {
+	const call = run;
+	try {
+		call();
+	} catch {
+		log(name);
+	}
+};
+const frozenArray = Object.freeze([1]);
+attempt("LIVE_frozen_array_write", () => {
+	frozenArray[0] = 2;
+});
+const frozenFunction = Object.freeze(function() {});
+attempt("LIVE_frozen_function_write", () => {
+	frozenFunction.extra = 1;
+});
+const frozenObject = { value: 1 };
+Object.freeze(frozenObject);
+attempt("LIVE_frozen_object_write", () => {
+	frozenObject.value = 2;
+});
+const frozenPush = Object.freeze([]);
+attempt("LIVE_frozen_push", () => {
+	frozenPush.push(1);
+});
+Object.values({ get value() {
+	log("LIVE_values_getter");
+	return 1;
+} });
+Object.entries({ get value() {
+	log("LIVE_entries_getter");
+	return 1;
+} });
+attempt("LIVE_values_null", () => {
+	Object.values(null);
+});
+attempt("LIVE_entries_undefined", () => {
+	Object.entries(void 0);
+});
+const defined = {};
+Object.defineProperty(defined, "value", {
+	enumerable: true,
+	get() {
+		log("LIVE_defined_getter");
+		return 1;
+	}
+});
+Object.values(defined);
+const proxied = new Proxy({ value: 1 }, { ownKeys(target) {
+	log("LIVE_proxy_keys");
+	return Reflect.ownKeys(target);
+} });
+Object.entries(proxied);
+const done = true;
+export { done };
+
+```

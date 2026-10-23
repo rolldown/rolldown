@@ -1,0 +1,8 @@
+{
+  "_comment": "Number methods: the analysis keeps each call with a first argument out of range or one that converts, and each extra argument with an effect.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

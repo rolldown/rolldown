@@ -1,0 +1,8 @@
+{
+  "_comment": "Call depth: the analysis follows chains of 40, 65, and 80 calls to the returned value, and a chain of 80 calls without an effect goes.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

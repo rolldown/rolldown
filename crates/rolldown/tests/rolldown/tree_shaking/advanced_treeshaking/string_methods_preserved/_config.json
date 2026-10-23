@@ -1,0 +1,8 @@
+{
+  "_comment": "String methods: the analysis keeps each call that runs code or throws. The cases cover counts and lengths out of range, forms and patterns that are not valid, a `matchAll` without the `g` flag, language tags that are not valid, conversions of arguments, custom matchers, and the `lastIndex` of sticky and global expressions.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

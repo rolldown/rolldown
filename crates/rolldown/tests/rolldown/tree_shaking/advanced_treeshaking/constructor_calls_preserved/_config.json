@@ -1,0 +1,8 @@
+{
+  "_comment": "Constructors: the analysis keeps each `new` that runs code or throws. The cases cover methods, arrow, async, and generator functions, the parent constructors and fields of derived classes, `extends null`, and fields on an object that a parent constructor returns.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

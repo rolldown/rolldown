@@ -4,17 +4,19 @@ use oxc::{
     BinaryOperator, BindingPattern, BindingProperty, CallExpression, ChainElement, Class,
     ConditionalExpression, Expression, FormalParameters, Function, IdentifierReference,
     LogicalExpression, LogicalOperator, MemberExpression, ObjectExpression, ObjectProperty,
-    ObjectPropertyKind, PropertyKey, PropertyKind, Statement, UnaryExpression, UnaryOperator,
+    ObjectPropertyKind, PropertyKey, PropertyKind, RegExpFlags, RegExpLiteral, Statement,
+    UnaryExpression, UnaryOperator,
   },
-  semantic::{NodeId, ScopeId, SymbolId},
+  semantic::{NodeId, ReferenceId, ScopeId, SymbolId},
 };
 use oxc_str::CompactStr;
 use rolldown_common::{ModuleIdx, StmtInfoIdx, SymbolRef};
 
 use super::{
-  Analyzer, collect,
+  Analyzer,
+  collect::{self, LocalTdz},
   env::{DeclKind, Init, Site},
-  facts::{CallRecord, LocalKey, ParamInfo},
+  facts::{CallArgs, CallRecord, LocalKey, ParamInfo, Summary},
 };
 
 /// Keys of a function whose reads can lead to calls that the analysis does not see.
@@ -22,6 +24,11 @@ const CALL_KEYS: [&str; 5] = ["apply", "arguments", "bind", "call", "caller"];
 
 /// A deeper evaluation gives up and returns `Value::Unknown`.
 pub const MAX_DEPTH: u32 = 64;
+/// An evaluation with retries defers a summary that it reaches at this depth. See
+/// `Analyzer::with_retry`.
+pub const DEFER_DEPTH: u32 = MAX_DEPTH - 16;
+/// The number of summaries that one outermost evaluation can compute from depth 0.
+const WARM_BUDGET: u32 = 32;
 
 #[derive(Debug, Clone)]
 pub enum Lit {
@@ -81,7 +88,7 @@ impl Lit {
     }
   }
 
-  fn to_number(&self) -> Option<f64> {
+  pub fn to_number(&self) -> Option<f64> {
     match self {
       Lit::Undefined => Some(f64::NAN),
       Lit::Null => Some(0.0),
@@ -228,12 +235,41 @@ impl ClassValue<'_> {
   }
 }
 
+/// A regular expression literal. Like an object literal, all objects that one literal creates
+/// share one entity.
+#[derive(Debug, Clone, Copy)]
+pub struct RegExpValue<'a> {
+  pub site: Site,
+  pub node: &'a RegExpLiteral<'a>,
+  pub holder: Option<SymbolRef>,
+}
+
+impl RegExpValue<'_> {
+  pub fn key(&self) -> (ModuleIdx, NodeId) {
+    (self.site.module, self.node.node_id())
+  }
+
+  /// Whether `exec` and `test` write `lastIndex`.
+  pub fn writes_last_index(&self) -> bool {
+    self.node.regex.flags.intersects(RegExpFlags::G | RegExpFlags::Y)
+  }
+
+  pub fn is_global(&self) -> bool {
+    self.node.regex.flags.contains(RegExpFlags::G)
+  }
+}
+
 #[derive(Debug, Clone)]
 pub enum Value<'a> {
   Unknown,
   Lit(Lit),
+  /// A primitive whose value the analysis does not know: `undefined`, `null`, a boolean, a
+  /// number, or a string. It is never a symbol or a BigInt, so converting it to a number, a
+  /// string, or a property key runs no user code and cannot throw.
+  Prim,
   Object(ObjValue<'a>),
   Array(ArrValue<'a>),
+  RegExp(RegExpValue<'a>),
   Function(FnValue<'a>),
   Class(ClassValue<'a>),
   /// The namespace object of an analyzed ES module.
@@ -245,16 +281,17 @@ pub enum Value<'a> {
 
 /// Whether converting `value` to a property key runs no user code.
 pub fn is_primitive_key(value: &Value) -> bool {
-  matches!(value, Value::Lit(_) | Value::Symbol)
+  matches!(value, Value::Lit(_) | Value::Prim | Value::Symbol)
 }
 
 impl Value<'_> {
   pub fn truthy(&self) -> Option<bool> {
     match self {
-      Value::Unknown => None,
+      Value::Unknown | Value::Prim => None,
       Value::Lit(lit) => Some(lit.truthy()),
       Value::Object(_)
       | Value::Array(_)
+      | Value::RegExp(_)
       | Value::Function(_)
       | Value::Class(_)
       | Value::Namespace(_)
@@ -264,15 +301,22 @@ impl Value<'_> {
 
   pub fn nullish(&self) -> Option<bool> {
     match self {
-      Value::Unknown => None,
+      Value::Unknown | Value::Prim => None,
       Value::Lit(lit) => Some(matches!(lit, Lit::Undefined | Lit::Null)),
       Value::Object(_)
       | Value::Array(_)
+      | Value::RegExp(_)
       | Value::Function(_)
       | Value::Class(_)
       | Value::Namespace(_)
       | Value::Symbol => Some(false),
     }
+  }
+
+  /// Whether the value is a primitive that converts to a number or a string without user code
+  /// and without an error.
+  pub fn is_primitive(&self) -> bool {
+    matches!(self, Value::Lit(_) | Value::Prim)
   }
 
   fn same(&self, other: &Value) -> bool {
@@ -282,6 +326,9 @@ impl Value<'_> {
         a.key() == b.key() && a.holder.is_some() && a.holder == b.holder
       }
       (Value::Array(a), Value::Array(b)) => {
+        a.key() == b.key() && a.holder.is_some() && a.holder == b.holder
+      }
+      (Value::RegExp(a), Value::RegExp(b)) => {
         a.key() == b.key() && a.holder.is_some() && a.holder == b.holder
       }
       (Value::Function(a), Value::Function(b)) => {
@@ -300,9 +347,10 @@ fn strict_equals(left: &Value, right: &Value) -> Option<bool> {
   match (left, right) {
     (Value::Lit(a), Value::Lit(b)) => Some(a.strict_eq(b)),
     (
-      Value::Lit(_),
+      Value::Lit(_) | Value::Prim,
       Value::Object(_)
       | Value::Array(_)
+      | Value::RegExp(_)
       | Value::Function(_)
       | Value::Class(_)
       | Value::Namespace(_),
@@ -310,15 +358,19 @@ fn strict_equals(left: &Value, right: &Value) -> Option<bool> {
     | (
       Value::Object(_)
       | Value::Array(_)
+      | Value::RegExp(_)
       | Value::Function(_)
       | Value::Class(_)
       | Value::Namespace(_),
-      Value::Lit(_),
+      Value::Lit(_) | Value::Prim,
     ) => Some(false),
     (Value::Object(a), Value::Object(b)) if a.holder.is_some() && b.holder.is_some() => {
       Some(a.key() == b.key())
     }
     (Value::Array(a), Value::Array(b)) if a.holder.is_some() && b.holder.is_some() => {
+      Some(a.key() == b.key())
+    }
+    (Value::RegExp(a), Value::RegExp(b)) if a.holder.is_some() && b.holder.is_some() => {
       Some(a.key() == b.key())
     }
     (Value::Namespace(a), Value::Namespace(b)) => Some(a == b),
@@ -327,7 +379,8 @@ fn strict_equals(left: &Value, right: &Value) -> Option<bool> {
 }
 
 /// Merge `value` into the join `acc` of the values that one place can hold. Objects and functions
-/// from one node with different holders join to that node without a holder.
+/// from one node with different holders join to that node without a holder. Different
+/// primitives join to `Value::Prim`.
 pub fn join_value<'a>(acc: &mut Option<Value<'a>>, value: Value<'a>) {
   let Some(prev) = acc else {
     *acc = Some(value);
@@ -337,11 +390,15 @@ pub fn join_value<'a>(acc: &mut Option<Value<'a>>, value: Value<'a>) {
     return;
   }
   *acc = Some(match (&*prev, value) {
+    (Value::Lit(_) | Value::Prim, Value::Lit(_) | Value::Prim) => Value::Prim,
     (Value::Object(a), Value::Object(b)) if a.key() == b.key() => {
       Value::Object(ObjValue { holder: None, ..b })
     }
     (Value::Array(a), Value::Array(b)) if a.key() == b.key() => {
       Value::Array(ArrValue { holder: None, ..b })
+    }
+    (Value::RegExp(a), Value::RegExp(b)) if a.key() == b.key() => {
+      Value::RegExp(RegExpValue { holder: None, ..b })
     }
     (Value::Function(a), Value::Function(b)) if a.key() == b.key() => {
       Value::Function(FnValue { holder: None, ..b })
@@ -530,6 +587,9 @@ impl<'a> Analyzer<'_, 'a> {
   }
 
   pub fn value(&mut self, expr: &'a Expression<'a>, site: Site) -> Value<'a> {
+    if self.state.depth == 0 && !self.state.retrying {
+      return self.with_retry(|an| an.value(expr, site));
+    }
     if self.state.depth >= MAX_DEPTH {
       return Value::Unknown;
     }
@@ -537,6 +597,78 @@ impl<'a> Analyzer<'_, 'a> {
     let value = self.value_inner(expr, site);
     self.state.depth -= 1;
     value
+  }
+
+  /// Run an outermost evaluation. The evaluation defers each summary (a return value or the
+  /// effects of a call) that it reaches at `DEFER_DEPTH`: it uses a pessimistic result for it,
+  /// and no cache keeps a result that depends on it. Then each deferred summary is computed
+  /// from depth 0 into the cache, and the evaluation runs again. So the analysis follows a long
+  /// chain of calls in parts, and the recursion stays below `MAX_DEPTH`.
+  /// See internal-docs/advanced-tree-shaking/implementation.md.
+  pub fn with_retry<T>(&mut self, eval: impl Fn(&mut Self) -> T) -> T {
+    self.state.retrying = true;
+    let mut budget = WARM_BUDGET;
+    let result = loop {
+      self.state.cut = false;
+      let result = eval(self);
+      if !self.state.cut || budget == 0 {
+        break result;
+      }
+      budget -= 1;
+      for summary in std::mem::take(&mut self.state.deferred) {
+        self.warm(summary, &mut budget);
+      }
+    };
+    self.state.deferred.clear();
+    self.state.cut = false;
+    self.state.retrying = false;
+    result
+  }
+
+  /// Compute a deferred summary from depth 0, so that the cache keeps it. The summaries that the
+  /// computation defers are computed first.
+  fn warm(&mut self, summary: Summary<'a>, budget: &mut u32) {
+    if self.is_summary_cached(summary) || !self.state.warming.insert(summary.key()) {
+      return;
+    }
+    while *budget > 0 {
+      *budget -= 1;
+      self.state.cut = false;
+      match summary {
+        Summary::Return(func) => {
+          self.return_value(func);
+        }
+        Summary::Invoke(func, this, construct) => {
+          self.invoke_effects(func, this, construct);
+        }
+      }
+      if !self.state.cut {
+        break;
+      }
+      for inner in std::mem::take(&mut self.state.deferred) {
+        self.warm(inner, budget);
+      }
+    }
+    self.state.warming.remove(&summary.key());
+  }
+
+  fn is_summary_cached(&self, summary: Summary<'a>) -> bool {
+    match summary {
+      Summary::Return(func) => self.state.return_values.contains_key(&func.key()),
+      Summary::Invoke(func, _, false) => self.state.call_effects.contains_key(&(func.key(), None)),
+      Summary::Invoke(func, this, true) => {
+        self.state.construct_effects.contains_key(&(func.key(), this.ctor_key()))
+      }
+    }
+  }
+
+  /// Defer a summary that the evaluation reached too deep. The summary of a computation in
+  /// progress is part of a cycle, and then the pessimistic result is final.
+  pub fn defer_summary(&mut self, summary: Summary<'a>) {
+    if !self.state.warming.contains(&summary.key()) {
+      self.state.deferred.push(summary);
+      self.state.cut = true;
+    }
   }
 
   fn value_inner(&mut self, expr: &'a Expression<'a>, site: Site) -> Value<'a> {
@@ -550,7 +682,8 @@ impl<'a> Analyzer<'_, 'a> {
       Expression::TemplateLiteral(template) => template
         .single_quasi()
         .and_then(|quasi| quasi.as_str().map(CompactStr::new))
-        .map_or(Value::Unknown, |value| Value::Lit(Lit::Str(value))),
+        // Each substitution converts to a string or throws, so the result is a string.
+        .map_or(Value::Prim, |value| Value::Lit(Lit::Str(value))),
       Expression::Identifier(ident) => self.ident_value(ident, site),
       Expression::ParenthesizedExpression(paren) => self.value(&paren.expression, site),
       Expression::SequenceExpression(seq) => {
@@ -572,6 +705,7 @@ impl<'a> Analyzer<'_, 'a> {
         Value::Object(ObjValue { site, node: obj, holder: None })
       }
       Expression::ArrayExpression(arr) => Value::Array(ArrValue { site, node: arr, holder: None }),
+      Expression::RegExpLiteral(re) => Value::RegExp(RegExpValue { site, node: re, holder: None }),
       Expression::ClassExpression(class) => {
         Value::Class(ClassValue { site, node: class, holder: None })
       }
@@ -637,6 +771,7 @@ impl<'a> Analyzer<'_, 'a> {
     match expr.without_parentheses() {
       Expression::ObjectExpression(obj) => Value::Object(ObjValue { site, node: obj, holder }),
       Expression::ArrayExpression(arr) => Value::Array(ArrValue { site, node: arr, holder }),
+      Expression::RegExpLiteral(re) => Value::RegExp(RegExpValue { site, node: re, holder }),
       Expression::ClassExpression(class) => Value::Class(ClassValue { site, node: class, holder }),
       Expression::FunctionExpression(func) => Value::Function(FnValue {
         module: site.module,
@@ -666,21 +801,67 @@ impl<'a> Analyzer<'_, 'a> {
         let canonical = self.env.canonical(site.module, symbol_id);
         self.binding_value(site, canonical)
       }
-      Resolved::Local(symbol_id) => self.local_value((site.module, symbol_id)),
+      Resolved::Local(symbol_id) => {
+        self.local_value((site.module, symbol_id), ident.reference_id.get())
+      }
       Resolved::None => Value::Unknown,
     }
   }
 
-  /// The value of a binding inside a function: a parameter, or a function declaration. Other
-  /// bindings inside functions are unknown.
-  fn local_value(&mut self, key: LocalKey) -> Value<'a> {
+  /// The value of a binding inside a function at the reference `ref_id`: a parameter, a
+  /// function declaration, or a `const` or `let` with an initializer. Other bindings inside
+  /// functions are unknown.
+  fn local_value(&mut self, key: LocalKey, ref_id: Option<ReferenceId>) -> Value<'a> {
     if self.state.is_reassigned(SymbolRef::from(key)) {
       return Value::Unknown;
     }
     if let Some(param) = self.state.params.get(&key).copied() {
       return self.param_value(key, param);
     }
-    self.state.local_fns.get(&key).map_or(Value::Unknown, |func| Value::Function(*func))
+    if let Some(func) = self.state.local_fns.get(&key) {
+      return Value::Function(*func);
+    }
+    match ref_id {
+      Some(ref_id) => self.local_init_value(key, ref_id),
+      None => Value::Unknown,
+    }
+  }
+
+  /// A read of a `const` or `let` after the initialization sees the value of the initializer.
+  /// The value covers every run of the declaration, because a literal in a function has no
+  /// holder. The walk and the effect check record the initializer.
+  fn local_init_value(&mut self, key: LocalKey, ref_id: ReferenceId) -> Value<'a> {
+    let Some(local) = self.state.local_inits.get(&key).copied() else {
+      return Value::Unknown;
+    };
+    let symbol_ref = SymbolRef::from(key);
+    if !self.is_local_read_safe(key, local.site, ref_id)
+      || !self.state.active_bindings.insert(symbol_ref)
+    {
+      return Value::Unknown;
+    }
+    let value = match local.pattern {
+      None => self.init_value(local.init, local.site, None),
+      Some(pattern) => {
+        let source = self.value(local.init, local.site);
+        self.pattern_binding_value(pattern, key.1, source, local.site)
+      }
+    };
+    self.state.active_bindings.remove(&symbol_ref);
+    value
+  }
+
+  /// Whether the reference `ref_id` to the local binding `key`, declared in the top-level
+  /// statement of `site`, cannot see the binding before its initialization.
+  fn is_local_read_safe(&mut self, key: LocalKey, site: Site, ref_id: ReferenceId) -> bool {
+    let Some(facts) = self.env.module(key.0) else {
+      return false;
+    };
+    let scoping = facts.scopes.scoping();
+    let tdz = self.state.syntax.local_tdz.entry((key.0, site.stmt)).or_insert_with(|| {
+      facts.stmt(site.stmt).map_or_else(LocalTdz::default, |stmt| LocalTdz::collect(stmt, scoping))
+    });
+    tdz.is_read_safe(scoping, key.1, ref_id)
   }
 
   /// The join of the arguments that the calls of the function pass to the parameter. Each call
@@ -696,6 +877,7 @@ impl<'a> Analyzer<'_, 'a> {
     if !self.state.active_params.insert(key) {
       return Value::Unknown;
     }
+    let saved_cut = std::mem::replace(&mut self.state.cut, false);
     let mut value = self.arg_join(param.module, param.func, param.index);
     self.state.active_params.remove(&key);
     if let Some(pattern) = param.pattern {
@@ -704,7 +886,11 @@ impl<'a> Analyzer<'_, 'a> {
       let site = Site { module: param.module, stmt: StmtInfoIdx::from_usize(0), in_function: true };
       value = self.pattern_binding_value(pattern, key.1, value, site);
     }
-    self.state.param_values.insert(key, value.clone());
+    if std::mem::replace(&mut self.state.cut, saved_cut) {
+      self.state.cut = true;
+    } else {
+      self.state.param_values.insert(key, value.clone());
+    }
     value
   }
 
@@ -734,14 +920,88 @@ impl<'a> Analyzer<'_, 'a> {
 
   /// The value that a call passes at `index`.
   pub fn arg_value(&mut self, record: &CallRecord<'a>, index: usize) -> Value<'a> {
-    for (i, arg) in record.args.iter().enumerate() {
-      match arg {
-        Argument::SpreadElement(_) => return Value::Unknown,
-        arg if i == index => return self.value(arg.to_expression(), record.site),
-        _ => {}
+    match record.args {
+      CallArgs::Ast(args) => {
+        for (i, arg) in args.iter().enumerate() {
+          match arg {
+            Argument::SpreadElement(_) => return Value::Unknown,
+            arg if i == index => return self.value(arg.to_expression(), record.site),
+            _ => {}
+          }
+        }
+        Value::Lit(Lit::Undefined)
+      }
+      CallArgs::Each { arr } => match index {
+        0 => self.element_join(&arr),
+        1 => Value::Prim,
+        2 => Value::Array(arr),
+        _ => Value::Lit(Lit::Undefined),
+      },
+      CallArgs::Reduce { arr, initial, callback } => match index {
+        0 => self.accumulator_value(arr, initial, callback, record.site),
+        1 => self.element_join(&arr),
+        2 => Value::Prim,
+        3 => Value::Array(arr),
+        _ => Value::Lit(Lit::Undefined),
+      },
+      CallArgs::Compare { arr } => match index {
+        0 | 1 => self.element_join(&arr),
+        _ => Value::Lit(Lit::Undefined),
+      },
+    }
+  }
+
+  /// The join of the elements of the arrays of the literal. A hole gives `undefined`, because
+  /// some methods visit holes.
+  pub fn element_join(&mut self, arr: &ArrValue<'a>) -> Value<'a> {
+    if self.is_array_escaped(arr) || !self.is_array_values_known(arr) {
+      return Value::Unknown;
+    }
+    let mut acc = None;
+    for element in &arr.node.elements {
+      let value = match element {
+        ArrayExpressionElement::SpreadElement(_) => Value::Unknown,
+        ArrayExpressionElement::Elision(_) => Value::Lit(Lit::Undefined),
+        element => self.init_value(element.to_expression(), arr.site, arr.holder),
+      };
+      join_value(&mut acc, value);
+      if matches!(acc, Some(Value::Unknown)) {
+        break;
       }
     }
-    Value::Lit(Lit::Undefined)
+    acc.unwrap_or(Value::Unknown)
+  }
+
+  /// The accumulator of `reduce`: the start value, or a value that the callback returns. The
+  /// analysis assumes that the accumulator is a primitive, and checks that the callback then
+  /// returns a primitive. The assumption is valid only when the `reduce` call is the only call of
+  /// the callback. A failed check clears the results that depend on the assumption.
+  fn accumulator_value(
+    &mut self,
+    arr: ArrValue<'a>,
+    initial: Option<&'a Expression<'a>>,
+    callback: FnValue<'a>,
+    site: Site,
+  ) -> Value<'a> {
+    let start = match initial {
+      Some(initial) => self.value(initial, site),
+      None => self.element_join(&arr),
+    };
+    let single_call = self.state.calls.get(&callback.key()).is_some_and(|calls| calls.len() == 1);
+    let acc_key = match callback.node.params().items.first().map(|item| &item.pattern) {
+      Some(BindingPattern::BindingIdentifier(id)) => id.symbol_id.get(),
+      _ => None,
+    };
+    let (true, Some(symbol_id)) = (start.is_primitive() && single_call, acc_key) else {
+      return Value::Unknown;
+    };
+    let key = (callback.module, symbol_id);
+    self.state.param_values.insert(key, Value::Prim);
+    if self.return_value(callback).is_primitive() {
+      return Value::Prim;
+    }
+    self.state.clear_caches();
+    Value::Unknown
   }
 
   /// The value of the binding `symbol_id` in `pattern`, when `source` is the destructured value.
@@ -1018,9 +1278,7 @@ impl<'a> Analyzer<'_, 'a> {
 
   /// An element or the length of an array literal. Other keys are inherited methods.
   fn array_property_value(&mut self, arr: ArrValue<'a>, key: &str) -> Value<'a> {
-    if self.is_array_escaped(&arr)
-      || self.state.entity(arr.key()).is_some_and(|entity| entity.all_keys_deopted)
-    {
+    if self.is_array_escaped(&arr) || self.is_entity_key_deopted(arr.key(), key) {
       return Value::Unknown;
     }
     let elements = &arr.node.elements;
@@ -1052,6 +1310,28 @@ impl<'a> Analyzer<'_, 'a> {
     self.state.all_objects_deopted
       || self.state.entity(arr.key()).is_some_and(|entity| entity.escaped)
       || arr.holder.is_some_and(|holder| self.state.is_escaped(holder))
+  }
+
+  /// Whether the elements and the length of the arrays of the literal are the ones that the
+  /// literal creates: no visited write or `delete` changed an index or `length`.
+  pub fn is_array_shape_known(&self, arr: &ArrValue<'a>) -> bool {
+    self.state.entity(arr.key()).is_none_or(|entity| {
+      !entity.all_keys_deopted
+        && !entity.deopted_keys.iter().any(|key| key == "length" || array_index(key).is_some())
+    })
+  }
+
+  /// Whether each element of the arrays of the literal is a value that the literal creates, or
+  /// a hole when the literal has one. A method can have moved or removed elements.
+  pub fn is_array_values_known(&self, arr: &ArrValue<'a>) -> bool {
+    self.state.entity(arr.key()).is_none_or(|entity| !entity.new_elements)
+  }
+
+  /// Whether unknown code can see the regular expression object.
+  pub fn is_regexp_escaped(&self, re: &RegExpValue<'a>) -> bool {
+    self.state.all_objects_deopted
+      || self.state.entity(re.key()).is_some_and(|entity| entity.escaped)
+      || re.holder.is_some_and(|holder| self.state.is_escaped(holder))
   }
 
   /// Whether a visited write or `delete` can have changed the property `key` of the objects of
@@ -1163,19 +1443,44 @@ impl<'a> Analyzer<'_, 'a> {
       .or_insert_with(|| collect::function_uses_arguments(node))
   }
 
+  /// Whether a catching `try` block in `func` can call the argument at `index`. `None` is an
+  /// argument at an unknown position, after a spread argument.
+  pub fn is_arg_caught(&mut self, func: &FnValue<'a>, index: Option<usize>) -> bool {
+    let node = func.node;
+    self
+      .state
+      .syntax
+      .caught_params
+      .entry(func.key())
+      .or_insert_with(|| {
+        collect::caught_params(
+          node.params(),
+          node.body_statements(),
+          matches!(node, FnNode::Function(_)),
+        )
+      })
+      .contains(node.params(), index)
+  }
+
   /// The value that every call of `func` returns, if it is the same for every call.
   pub fn return_value(&mut self, func: FnValue<'a>) -> Value<'a> {
     let key = func.key();
     if let Some(value) = self.state.return_values.get(&key) {
       return value.clone();
     }
-    if func.node.is_async()
-      || func.node.is_generator()
-      || self.state.depth >= MAX_DEPTH
-      || !self.state.active_returns.insert(key)
+    if func.node.is_async() || func.node.is_generator() || self.state.active_returns.contains(&key)
     {
       return Value::Unknown;
     }
+    if self.state.retrying && self.state.depth >= DEFER_DEPTH {
+      self.defer_summary(Summary::Return(func));
+      return Value::Unknown;
+    }
+    if self.state.depth >= MAX_DEPTH {
+      return Value::Unknown;
+    }
+    self.state.active_returns.insert(key);
+    let saved_cut = std::mem::replace(&mut self.state.cut, false);
     self.state.depth += 1;
     self.register_params(&func);
     let site = func.body_site();
@@ -1191,7 +1496,11 @@ impl<'a> Analyzer<'_, 'a> {
     };
     self.state.depth -= 1;
     self.state.active_returns.remove(&key);
-    self.state.return_values.insert(key, value.clone());
+    if std::mem::replace(&mut self.state.cut, saved_cut) {
+      self.state.cut = true;
+    } else {
+      self.state.return_values.insert(key, value.clone());
+    }
     value
   }
 
@@ -1259,29 +1568,32 @@ impl<'a> Analyzer<'_, 'a> {
       UnaryOperator::LogicalNot => self
         .value(&unary.argument, site)
         .truthy()
-        .map_or(Value::Unknown, |truthy| Value::Lit(Lit::Bool(!truthy))),
+        .map_or(Value::Prim, |truthy| Value::Lit(Lit::Bool(!truthy))),
       UnaryOperator::Typeof => match self.value(&unary.argument, site) {
         Value::Lit(lit) => Value::Lit(Lit::Str(CompactStr::new(lit.type_of()))),
-        Value::Object(_) | Value::Array(_) | Value::Namespace(_) => {
+        Value::Object(_) | Value::Array(_) | Value::RegExp(_) | Value::Namespace(_) => {
           Value::Lit(Lit::Str(CompactStr::new("object")))
         }
         Value::Function(_) | Value::Class(_) => Value::Lit(Lit::Str(CompactStr::new("function"))),
         Value::Symbol => Value::Lit(Lit::Str(CompactStr::new("symbol"))),
-        Value::Unknown => Value::Unknown,
+        Value::Prim | Value::Unknown => Value::Prim,
       },
-      UnaryOperator::UnaryNegation | UnaryOperator::UnaryPlus => {
-        let Value::Lit(lit) = self.value(&unary.argument, site) else {
-          return Value::Unknown;
+      UnaryOperator::UnaryNegation | UnaryOperator::UnaryPlus | UnaryOperator::BitwiseNot => {
+        // A BigInt or an object can make the result a BigInt.
+        let argument = self.value(&unary.argument, site);
+        let Value::Lit(lit) = argument else {
+          return if argument.is_primitive() { Value::Prim } else { Value::Unknown };
         };
         match lit.to_number() {
-          Some(number) if unary.operator == UnaryOperator::UnaryNegation => {
-            Value::Lit(Lit::Number(-number))
-          }
-          Some(number) => Value::Lit(Lit::Number(number)),
-          None => Value::Unknown,
+          Some(number) => Value::Lit(Lit::Number(match unary.operator {
+            UnaryOperator::UnaryNegation => -number,
+            UnaryOperator::UnaryPlus => number,
+            _ => f64::from(!to_int32(number)),
+          })),
+          None => Value::Prim,
         }
       }
-      _ => Value::Unknown,
+      UnaryOperator::Delete => Value::Prim,
     }
   }
 
@@ -1289,11 +1601,10 @@ impl<'a> Analyzer<'_, 'a> {
     if binary.operator == BinaryOperator::In {
       let key = self.computed_key(&binary.left, site);
       return match (key, self.value(&binary.right, site)) {
-        (Some(key), Value::Namespace(module)) => self
-          .env
-          .namespace_has(module, &key)
-          .map_or(Value::Unknown, |has| Value::Lit(Lit::Bool(has))),
-        _ => Value::Unknown,
+        (Some(key), Value::Namespace(module)) => {
+          self.env.namespace_has(module, &key).map_or(Value::Prim, |has| Value::Lit(Lit::Bool(has)))
+        }
+        _ => Value::Prim,
       };
     }
     let left = self.value(&binary.left, site);
@@ -1312,28 +1623,66 @@ impl<'a> Analyzer<'_, 'a> {
       | BinaryOperator::LessEqualThan
       | BinaryOperator::GreaterThan
       | BinaryOperator::GreaterEqualThan => match (&left, &right) {
-        (Value::Lit(Lit::Number(a)), Value::Lit(Lit::Number(b))) => Some(match binary.operator {
-          BinaryOperator::LessThan => a < b,
-          BinaryOperator::LessEqualThan => a <= b,
-          BinaryOperator::GreaterThan => a > b,
-          _ => a >= b,
-        }),
+        (Value::Lit(Lit::Str(a)), Value::Lit(Lit::Str(b))) => {
+          // Strings compare by UTF-16 code units.
+          let order = a.encode_utf16().cmp(b.encode_utf16());
+          Some(match binary.operator {
+            BinaryOperator::LessThan => order.is_lt(),
+            BinaryOperator::LessEqualThan => order.is_le(),
+            BinaryOperator::GreaterThan => order.is_gt(),
+            _ => order.is_ge(),
+          })
+        }
+        (Value::Lit(a), Value::Lit(b)) => match (a.to_number(), b.to_number()) {
+          // A comparison with `NaN` is false.
+          (Some(a), Some(b)) => Some(match binary.operator {
+            BinaryOperator::LessThan => a < b,
+            BinaryOperator::LessEqualThan => a <= b,
+            BinaryOperator::GreaterThan => a > b,
+            _ => a >= b,
+          }),
+          _ => None,
+        },
         _ => None,
       },
+      BinaryOperator::Instanceof => None,
       BinaryOperator::Addition => {
         return match (left, right) {
-          (Value::Lit(Lit::Number(a)), Value::Lit(Lit::Number(b))) => {
-            Value::Lit(Lit::Number(a + b))
-          }
           (Value::Lit(Lit::Str(a)), Value::Lit(Lit::Str(b))) => {
             Value::Lit(Lit::Str(CompactStr::new(&format!("{a}{b}"))))
           }
+          (Value::Lit(a), Value::Lit(b))
+            if !matches!(a, Lit::Str(_)) && !matches!(b, Lit::Str(_)) =>
+          {
+            match (a.to_number(), b.to_number()) {
+              (Some(a), Some(b)) => Value::Lit(Lit::Number(a + b)),
+              _ => Value::Prim,
+            }
+          }
+          // The sum of two such primitives is a number or a string.
+          (left, right) if left.is_primitive() && right.is_primitive() => Value::Prim,
           _ => Value::Unknown,
         };
       }
-      _ => None,
+      operator => {
+        // The other operators convert both operands to numbers. Only a BigInt or an object can
+        // make the result something other than a number.
+        if !left.is_primitive() || !right.is_primitive() {
+          return Value::Unknown;
+        }
+        let (Value::Lit(a), Value::Lit(b)) = (&left, &right) else {
+          return Value::Prim;
+        };
+        return match (a.to_number(), b.to_number()) {
+          (Some(a), Some(b)) => {
+            number_op(operator, a, b).map_or(Value::Prim, |value| Value::Lit(Lit::Number(value)))
+          }
+          _ => Value::Prim,
+        };
+      }
     };
-    bool_value.map_or(Value::Unknown, |value| Value::Lit(Lit::Bool(value)))
+    // These operators always give a boolean.
+    bool_value.map_or(Value::Prim, |value| Value::Lit(Lit::Bool(value)))
   }
 
   fn logical_value(&mut self, logical: &'a LogicalExpression<'a>, site: Site) -> Value<'a> {
@@ -1346,7 +1695,12 @@ impl<'a> Analyzer<'_, 'a> {
     match left_decides {
       Some(true) => left,
       Some(false) => self.value(&logical.right, site),
-      None => Value::Unknown,
+      // The result is one of the two values.
+      None => {
+        let mut acc = Some(left);
+        join_value(&mut acc, self.value(&logical.right, site));
+        acc.unwrap_or(Value::Unknown)
+      }
     }
   }
 
@@ -1354,9 +1708,78 @@ impl<'a> Analyzer<'_, 'a> {
     match self.value(&cond.test, site).truthy() {
       Some(true) => self.value(&cond.consequent, site),
       Some(false) => self.value(&cond.alternate, site),
-      None => Value::Unknown,
+      // Equal alternatives give their value whatever the test is.
+      None => {
+        let mut acc = Some(self.value(&cond.consequent, site));
+        join_value(&mut acc, self.value(&cond.alternate, site));
+        acc.unwrap_or(Value::Unknown)
+      }
     }
   }
+}
+
+/// The result of an arithmetic, bitwise, or shift operator on two numbers, when Rust computes the
+/// same number as JavaScript.
+fn number_op(operator: BinaryOperator, a: f64, b: f64) -> Option<f64> {
+  Some(match operator {
+    BinaryOperator::Subtraction => a - b,
+    BinaryOperator::Multiplication => a * b,
+    BinaryOperator::Division => a / b,
+    // Rust's remainder of floats is the truncating `fmod`, like JavaScript's.
+    BinaryOperator::Remainder => a % b,
+    BinaryOperator::Exponential => exponent(a, b)?,
+    BinaryOperator::BitwiseAnd => f64::from(to_int32(a) & to_int32(b)),
+    BinaryOperator::BitwiseOR => f64::from(to_int32(a) | to_int32(b)),
+    BinaryOperator::BitwiseXOR => f64::from(to_int32(a) ^ to_int32(b)),
+    BinaryOperator::ShiftLeft => f64::from(to_int32(a).wrapping_shl(to_uint32(b) & 31)),
+    BinaryOperator::ShiftRight => f64::from(to_int32(a) >> (to_uint32(b) & 31)),
+    BinaryOperator::ShiftRightZeroFill => f64::from(to_uint32(a) >> (to_uint32(b) & 31)),
+    _ => return None,
+  })
+}
+
+/// `a ** b`, only where the result is exact. A general power can differ from the engine in the
+/// last bit.
+#[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::float_cmp)]
+fn exponent(a: f64, b: f64) -> Option<f64> {
+  const SAFE: f64 = 9_007_199_254_740_992.0;
+  if b.is_nan() {
+    return Some(f64::NAN);
+  }
+  if b == 0.0 {
+    return Some(1.0);
+  }
+  if a.is_nan() || (a.abs() == 1.0 && b.is_infinite()) {
+    return Some(f64::NAN);
+  }
+  if a.fract() != 0.0 || b.fract() != 0.0 || b < 0.0 || b > 64.0 || a.abs() >= SAFE {
+    return None;
+  }
+  let mut result = 1.0_f64;
+  for _ in 0..(b as u32) {
+    result *= a;
+    if result.abs() >= SAFE {
+      return None;
+    }
+  }
+  Some(result)
+}
+
+/// The `ToInt32` conversion.
+#[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
+fn to_int32(value: f64) -> i32 {
+  const TWO_32: f64 = 4_294_967_296.0;
+  if !value.is_finite() {
+    return 0;
+  }
+  let int = value.trunc() % TWO_32;
+  let int = if int < 0.0 { int + TWO_32 } else { int };
+  int as u32 as i32
+}
+
+#[expect(clippy::cast_sign_loss)]
+fn to_uint32(value: f64) -> u32 {
+  to_int32(value) as u32
 }
 
 fn merge_value<'a>(acc: &mut Option<Value<'a>>, value: Value<'a>) {
@@ -1364,7 +1787,11 @@ fn merge_value<'a>(acc: &mut Option<Value<'a>>, value: Value<'a>) {
     None => *acc = Some(value),
     Some(prev) => {
       if !prev.same(&value) {
-        *acc = Some(Value::Unknown);
+        *acc = Some(if prev.is_primitive() && value.is_primitive() {
+          Value::Prim
+        } else {
+          Value::Unknown
+        });
       }
     }
   }

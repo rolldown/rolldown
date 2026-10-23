@@ -1,0 +1,8 @@
+{
+  "_comment": "Call depth: the analysis keeps the effects and the values at the end of long call chains, and recursion that goes past the depth limit decides nothing.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

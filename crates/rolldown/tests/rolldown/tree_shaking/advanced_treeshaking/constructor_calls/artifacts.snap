@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## another.js
+
+```js
+// shared.js
+const Shared = function() {};
+// another.js
+const other = Shared;
+export { other };
+
+```
+
+## main.js
+
+```js
+// main.js
+function main() {
+	return 1;
+}
+export { main };
+
+```

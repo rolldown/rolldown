@@ -1,0 +1,53 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+globalThis.log = [];
+const log = (msg) => globalThis.log.push(msg);
+const attempt = (run) => {
+	try {
+		return run();
+	} catch {
+		return 0;
+	}
+};
+const later = (run) => {
+	try {
+		log.length;
+	} catch {}
+	return run;
+};
+const cleanup = (run) => {
+	log("cleanup");
+};
+const second = (name, run) => {
+	try {
+		run();
+	} catch {}
+};
+const aliased = (run) => {
+	const call = run;
+	try {
+		call();
+	} catch {}
+};
+const settings = { off: false };
+function main() {
+	const value = attempt(() => {
+		if (settings.off);
+		return 1;
+	});
+	later(() => {})();
+	cleanup();
+	second(void 0, () => {});
+	aliased(() => {});
+	return value;
+}
+export { main };
+
+```

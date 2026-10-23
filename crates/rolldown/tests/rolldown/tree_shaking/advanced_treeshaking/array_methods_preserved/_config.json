@@ -1,0 +1,8 @@
+{
+  "_comment": "Array methods: the analysis keeps each call that runs code or throws, and each read that a call can change. The cases cover conversions in the default sort, comparators, `reduce` of an empty array, conversions in reducers, numeric arguments, `Symbol.isConcatSpreadable`, proxies in flattening, methods and `constructor` that a write sets, and reads after a reorder.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

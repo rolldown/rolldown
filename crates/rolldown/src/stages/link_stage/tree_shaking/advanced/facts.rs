@@ -3,17 +3,23 @@ use oxc::{
   semantic::{NodeId, SymbolId},
 };
 use oxc_str::CompactStr;
-use rolldown_common::{ModuleIdx, SymbolRef};
+use rolldown_common::{ModuleIdx, StmtInfoIdx, SymbolRef};
 use rolldown_utils::indexmap::FxIndexMap;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::{
+  classes::ThisValue,
+  collect::{CaughtParams, LocalTdz},
   env::Site,
-  value::{FnNode, FnValue, Value},
+  value::{ArrValue, FnNode, FnValue, Value},
 };
 
 /// A function or an object literal: its module and node id.
 pub type NodeKey = (ModuleIdx, NodeId);
+/// The key of the effects of a call: the function, and for `new`, the constructor of `this`.
+pub type InvokeKey = (NodeKey, Option<NodeKey>);
+/// The key of a summary: the function, the constructor of `this`, and the kind.
+pub type SummaryKey = (NodeKey, Option<NodeKey>, u8);
 /// A binding inside a function: its module and symbol.
 pub type LocalKey = (ModuleIdx, SymbolId);
 /// A list of property keys. `None` is an unknown key.
@@ -107,6 +113,7 @@ pub struct BindingFacts {
 /// Facts about an object literal, an array literal, a function, or a class, keyed by its module
 /// and node id.
 #[derive(Debug, Default)]
+#[expect(clippy::struct_excessive_bools)]
 pub struct EntityFacts {
   /// Unknown code can read and write the object, so every property is unknown. For a function,
   /// unknown code can also call it, so its parameters are unknown and its return values escape.
@@ -123,6 +130,10 @@ pub struct EntityFacts {
   pub all_keys_deopted: bool,
   /// `Object.freeze` can freeze the objects, so a write or a `delete` can throw.
   pub frozen: bool,
+  /// For an array literal: a visited write can have put a value that the literal does not
+  /// create, or a hole, in an element. A change that only moves elements, such as `sort`, does
+  /// not set it.
+  pub new_elements: bool,
 }
 
 /// Syntactic facts about functions and object literals. They never change, so they stay valid
@@ -136,13 +147,35 @@ pub struct SyntaxCache {
   /// Whether code of a class can reach the class object in a way that the analysis does not
   /// track.
   pub class_opaque: FxHashMap<(ModuleIdx, NodeId), bool>,
+  /// The temporal dead zone facts of the local bindings of each top-level statement.
+  pub local_tdz: FxHashMap<(ModuleIdx, StmtInfoIdx), LocalTdz>,
+  /// The functions of each module that are methods, getters, setters, or constructors.
+  pub methods: FxHashMap<ModuleIdx, FxHashSet<NodeId>>,
+  /// The parameters of each function whose arguments a catching `try` block in the function can
+  /// call.
+  pub caught_params: FxHashMap<(ModuleIdx, NodeId), CaughtParams>,
 }
 
 /// A call of a known function that can run.
 #[derive(Debug, Clone, Copy)]
 pub struct CallRecord<'a> {
   pub site: Site,
-  pub args: &'a [Argument<'a>],
+  pub args: CallArgs<'a>,
+}
+
+/// The arguments of a call of a known function.
+#[derive(Debug, Clone, Copy)]
+pub enum CallArgs<'a> {
+  /// The arguments of a call or a `new` in the code.
+  Ast(&'a [Argument<'a>]),
+  /// A builtin array method calls the callback with an element, its index, and the array.
+  Each { arr: ArrValue<'a> },
+  /// `reduce` and `reduceRight` call the callback with the accumulator, an element, its index,
+  /// and the array. The accumulator starts as `initial`, or as an element when `initial` is
+  /// `None`, and then it is the value that the last call returned.
+  Reduce { arr: ArrValue<'a>, initial: Option<&'a Expression<'a>>, callback: FnValue<'a> },
+  /// `sort` calls the comparator with two elements.
+  Compare { arr: ArrValue<'a> },
 }
 
 /// A parameter of a function.
@@ -157,6 +190,25 @@ pub struct ParamInfo<'a> {
   pub rest: bool,
   /// The parameter has a default value.
   pub has_default: bool,
+}
+
+/// A result about a function that a cache keeps for the pass.
+#[derive(Debug, Clone, Copy)]
+pub enum Summary<'a> {
+  /// The value that the calls return.
+  Return(FnValue<'a>),
+  /// The effects of a call, or of `new` (`true`) with the value of `this`.
+  Invoke(FnValue<'a>, ThisValue<'a>, bool),
+}
+
+impl Summary<'_> {
+  pub fn key(&self) -> SummaryKey {
+    match self {
+      Summary::Return(func) => (func.key(), None, 0),
+      Summary::Invoke(func, _, false) => (func.key(), None, 1),
+      Summary::Invoke(func, this, true) => (func.key(), this.ctor_key(), 2),
+    }
+  }
 }
 
 /// The initializer of a binding inside a function.
@@ -195,6 +247,9 @@ pub struct State<'a> {
   pub registered_fns: FxHashSet<NodeKey>,
   /// Modules with a direct `eval` in included code.
   pub live_evals: FxHashSet<ModuleIdx>,
+  /// Functions that a catching `try` block can call through a parameter. The walk keeps the code
+  /// of their bodies that runs. See internal-docs/advanced-tree-shaking/design.md.
+  pub caught_fns: FxHashSet<NodeKey>,
   /// A fact changed since the start of the pass.
   pub facts_changed: bool,
   /// Counts every fact change, so a caller can see whether an action changed a fact.
@@ -202,14 +257,15 @@ pub struct State<'a> {
   /// Per-pass caches. Facts can change during a pass, so a cached result can be too
   /// optimistic. A pass that changes a fact always causes one more pass, and that pass starts
   /// with empty caches.
-  pub call_effects: FxHashMap<NodeKey, bool>,
-  /// The effects of `new` of a function or a class, keyed by the function or the class.
-  pub construct_effects: FxHashMap<NodeKey, bool>,
+  pub call_effects: FxHashMap<InvokeKey, bool>,
+  /// The effects of `new`, keyed by the function that runs and the constructor of `this`. A
+  /// parent constructor runs with the object of a derived class.
+  pub construct_effects: FxHashMap<InvokeKey, bool>,
   pub return_values: FxHashMap<NodeKey, Value<'a>>,
   pub param_values: FxHashMap<LocalKey, Value<'a>>,
   /// Functions and bindings whose analysis is in progress, to stop recursion.
-  pub active_calls: FxHashSet<NodeKey>,
-  pub active_constructs: FxHashSet<NodeKey>,
+  pub active_calls: FxHashSet<InvokeKey>,
+  pub active_constructs: FxHashSet<InvokeKey>,
   pub active_returns: FxHashSet<NodeKey>,
   pub active_bindings: FxHashSet<SymbolRef>,
   pub active_deopts: FxHashSet<SymbolRef>,
@@ -218,10 +274,21 @@ pub struct State<'a> {
   pub all_objects_deopted: bool,
   /// The deopt in progress is the one of a `delete`.
   pub deleting: bool,
+  /// The deopt in progress is the one of a method that only moves or removes elements.
+  pub reordering: bool,
   /// An effect check assumed that a function in progress has no effects. A result that
   /// depends on that assumption must not go into the cache.
   pub used_assumption: bool,
   pub depth: u32,
+  /// An outermost evaluation runs with retries, so a summary that it reaches too deep can wait.
+  /// See `Analyzer::with_retry`.
+  pub retrying: bool,
+  /// The result in progress depends on a deferred summary, so no cache keeps it.
+  pub cut: bool,
+  /// The summaries that the evaluation deferred.
+  pub deferred: Vec<Summary<'a>>,
+  /// The summaries whose computation from depth 0 is in progress.
+  pub warming: FxHashSet<SummaryKey>,
   pub syntax: SyntaxCache,
 }
 
@@ -231,7 +298,7 @@ impl<'a> State<'a> {
     self.clear_caches();
   }
 
-  fn clear_caches(&mut self) {
+  pub fn clear_caches(&mut self) {
     self.call_effects.clear();
     self.construct_effects.clear();
     self.return_values.clear();
@@ -275,6 +342,12 @@ impl<'a> State<'a> {
     }
   }
 
+  pub fn add_caught_fn(&mut self, key: NodeKey) {
+    if self.caught_fns.insert(key) {
+      self.changed();
+    }
+  }
+
   pub fn escape_entity(&mut self, key: NodeKey) {
     let facts = self.entities.entry(key).or_default();
     if !facts.escaped {
@@ -306,6 +379,14 @@ impl<'a> State<'a> {
       changed |= facts.deleted_keys.insert(CompactStr::new(prop));
     }
     if changed {
+      self.changed();
+    }
+  }
+
+  pub fn mark_new_elements(&mut self, key: NodeKey) {
+    let facts = self.entities.entry(key).or_default();
+    if !facts.new_elements {
+      facts.new_elements = true;
       self.changed();
     }
   }

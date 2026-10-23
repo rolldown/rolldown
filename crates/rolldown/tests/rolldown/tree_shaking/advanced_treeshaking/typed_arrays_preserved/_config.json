@@ -1,0 +1,8 @@
+{
+  "_comment": "Typed arrays: the analysis keeps each `new` that converts an object, throws for a length, gets a BigInt array, reads an array-like object, or calls a local binding with the same name. A write to the source array changes the elements.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

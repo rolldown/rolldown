@@ -1,0 +1,82 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+globalThis.log = [];
+const log = (msg) => globalThis.log.push(msg);
+try {
+	new Map([1]);
+} catch {
+	log("LIVE_map_entry");
+}
+try {
+	new WeakSet([1]);
+} catch {
+	log("LIVE_weak_set");
+}
+try {
+	Object.keys(null);
+} catch {
+	log("LIVE_keys_null");
+}
+try {
+	new Uint8Array(-1);
+} catch {
+	log("LIVE_typed_array_length");
+}
+try {
+	[1].forEach(() => {
+		new Map([1]);
+	});
+} catch {
+	log("LIVE_callback");
+}
+try {
+	if (log) new Map([1]);
+} catch {
+	log("LIVE_block");
+}
+try {
+	new Map([1]);
+} catch {
+	log("LIVE_argument");
+}
+try {
+	new Map([1]);
+} catch {
+	log("LIVE_property");
+}
+try {
+	log && new Map([1]);
+} catch {
+	log("LIVE_conditional");
+}
+try {
+	log && new Map([1]);
+} catch {
+	log("LIVE_logical");
+}
+function inFunction() {
+	try {
+		new Map([1]);
+	} catch {
+		log("LIVE_function");
+	}
+}
+inFunction();
+const settings = { off: false };
+try {
+	if (settings.off);
+	new WeakMap([[1, 1]]);
+} catch {
+	log("LIVE_after_folded_branch");
+}
+const done = true;
+export { done };
+
+```

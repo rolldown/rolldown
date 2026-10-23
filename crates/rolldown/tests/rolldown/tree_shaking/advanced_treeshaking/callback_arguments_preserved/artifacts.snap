@@ -1,0 +1,69 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+globalThis.log = [];
+const log = (msg) => globalThis.log.push(msg);
+[{ valueOf() {
+	log("LIVE_unary_value_of");
+	return 1;
+} }].map((x) => +x);
+[{ valueOf() {
+	log("LIVE_bitwise_value_of");
+	return 1;
+} }].map((x) => x | 0);
+[{ toString() {
+	log("LIVE_template_to_string");
+	return "x";
+} }].map((x) => `${x}`);
+let sortConverted = false;
+[1, { valueOf() {
+	sortConverted = true;
+	return 2;
+} }].sort((a, b) => a - b);
+if (sortConverted) log("LIVE_sort_value_of");
+const written = ["a"];
+written[0] = { toString() {
+	log("LIVE_written_element");
+	return "b";
+} };
+written.map((x) => `${x}`);
+const pushed = ["a"];
+pushed.push({ valueOf() {
+	log("LIVE_pushed_element");
+	return 1;
+} });
+pushed.forEach((x) => +x);
+const viaArray = [false];
+viaArray.forEach((x, i, all) => {
+	all[i] = true;
+});
+if (viaArray[0]) log("LIVE_array_parameter_write");
+function convert(x) {
+	return +x;
+}
+convert({ valueOf() {
+	log("LIVE_direct_call");
+	return 1;
+} });
+["a"].map(convert);
+[1].forEach(function() {
+	if (this.flag) log("LIVE_this_argument");
+}, { flag: true });
+[{ get value() {
+	log("LIVE_element_getter");
+	return 1;
+} }].forEach((x) => x.value);
+["a", "b"].forEach((x, i) => {
+	if (i === 1) log("LIVE_index_value");
+});
+if ([1, 2].reduce((acc, x) => acc + x, 0) === 3) log("LIVE_reduce_total");
+const done = true;
+export { done };
+
+```

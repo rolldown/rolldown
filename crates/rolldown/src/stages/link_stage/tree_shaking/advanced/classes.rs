@@ -14,7 +14,7 @@ use super::{
   Analyzer, collect,
   effects::Cx,
   env::Site,
-  facts::{NodeKey, PathTree},
+  facts::{CallArgs, NodeKey, PathTree},
   value::{
     ClassValue, FnNode, FnValue, Lit, MAX_DEPTH, Value, array_index, is_primitive_key,
     static_key_name,
@@ -35,6 +35,13 @@ impl Ctor<'_> {
       Ctor::Class(class) => class.holder,
     }
   }
+
+  pub fn key(&self) -> NodeKey {
+    match self {
+      Ctor::Function(func) => func.key(),
+      Ctor::Class(class) => class.key(),
+    }
+  }
 }
 
 /// The value of `this` in the code that an effect check analyzes.
@@ -46,6 +53,17 @@ pub enum ThisValue<'a> {
   /// The class, while its definition runs its static fields and static blocks. No other code
   /// can see the class then.
   Class(ClassValue<'a>),
+}
+
+impl ThisValue<'_> {
+  /// The constructor of the new object, which decides the result of an effect check of a
+  /// constructor body.
+  pub fn ctor_key(&self) -> Option<NodeKey> {
+    match self {
+      ThisValue::Instance(ctor) => Some(ctor.key()),
+      ThisValue::Unknown | ThisValue::Class(_) => None,
+    }
+  }
 }
 
 /// The own property of a class, or of its prototype, at one key.
@@ -89,14 +107,28 @@ fn class_method_fn<'a>(class: &ClassValue<'a>, method: &'a MethodDefinition<'a>)
 }
 
 impl<'a> Analyzer<'_, 'a> {
-  /// Whether `func` is a function declaration that `new` can call. `new` of an arrow function,
-  /// a method, an async function, or a generator throws.
-  pub fn is_es5_ctor(func: &FnValue<'a>) -> bool {
-    matches!(
-      func.node,
-      FnNode::Function(node)
-        if node.is_function_declaration() && !node.r#async && !node.generator
-    )
+  /// Whether `new` can call `func`: a function declaration or a function expression. `new` of
+  /// an arrow function, a method, an async function, or a generator throws.
+  pub fn is_es5_ctor(&mut self, func: &FnValue<'a>) -> bool {
+    let FnNode::Function(node) = func.node else {
+      return false;
+    };
+    if node.r#async || node.generator {
+      return false;
+    }
+    if node.is_function_declaration() {
+      return true;
+    }
+    let Some(facts) = self.env.module(func.module) else {
+      return false;
+    };
+    !self
+      .state
+      .syntax
+      .methods
+      .entry(func.module)
+      .or_insert_with(|| collect::method_functions(facts.program))
+      .contains(&node.node_id())
   }
 
   /// Whether unknown code can see the function object, so it can define accessors on it.
@@ -233,7 +265,7 @@ impl<'a> Analyzer<'_, 'a> {
     match self.value(heritage, class.site) {
       Value::Lit(Lit::Null) => Parent::Builtin,
       Value::Class(parent) => Parent::Ctor(Ctor::Class(parent)),
-      Value::Function(func) if Self::is_es5_ctor(&func) => Parent::Ctor(Ctor::Function(func)),
+      Value::Function(func) if self.is_es5_ctor(&func) => Parent::Ctor(Ctor::Function(func)),
       _ => Parent::Unknown,
     }
   }
@@ -380,7 +412,7 @@ impl<'a> Analyzer<'_, 'a> {
     }
     match self.value(member.object(), site) {
       Value::Class(class) => Some(Ctor::Class(class)),
-      Value::Function(func) if Self::is_es5_ctor(&func) => Some(Ctor::Function(func)),
+      Value::Function(func) if self.is_es5_ctor(&func) => Some(Ctor::Function(func)),
       _ => None,
     }
   }
@@ -453,18 +485,60 @@ impl<'a> Analyzer<'_, 'a> {
     site: Site,
   ) -> Option<bool> {
     let ctor = match callee {
-      Value::Function(func) if Self::is_es5_ctor(func) => Ctor::Function(*func),
+      Value::Function(func) if self.is_es5_ctor(func) => Ctor::Function(*func),
       Value::Class(class) => Ctor::Class(*class),
       _ => return None,
     };
     let this =
       if self.is_proto_known(ctor) { ThisValue::Instance(ctor) } else { ThisValue::Unknown };
+    self.run_ctor_effects(ctor, this, new, site)
+  }
+
+  /// The function that gets the arguments of a `new` of `callee`: the function, or the
+  /// constructor of the class. The default constructor of a derived class gives its arguments to
+  /// the parent constructor.
+  pub fn ctor_args_fn(&mut self, callee: &Value<'a>) -> Option<FnValue<'a>> {
+    let mut class = match callee {
+      Value::Function(func) => return Some(*func),
+      Value::Class(class) => *class,
+      _ => return None,
+    };
+    for _ in 0..MAX_DEPTH {
+      let node: &'a Class<'a> = class.node;
+      let constructor = node.body.body.iter().find_map(|element| match element {
+        ClassElement::MethodDefinition(method)
+          if method.kind == MethodDefinitionKind::Constructor =>
+        {
+          Some(method)
+        }
+        _ => None,
+      });
+      if let Some(method) = constructor {
+        return Some(class_method_fn(&class, method));
+      }
+      node.heritage.as_ref()?;
+      match self.class_parent(&class) {
+        Parent::Ctor(Ctor::Class(parent)) => class = parent,
+        Parent::Ctor(Ctor::Function(func)) => return Some(func),
+        Parent::Builtin | Parent::Unknown => return None,
+      }
+    }
+    None
+  }
+
+  /// The effects of the constructor `ctor` for `new`, where `this` is the new object. The default
+  /// constructor of a derived class gives its arguments to the parent constructor, and then it
+  /// defines the fields.
+  fn run_ctor_effects(
+    &mut self,
+    ctor: Ctor<'a>,
+    this: ThisValue<'a>,
+    new: &'a NewExpression<'a>,
+    site: Site,
+  ) -> Option<bool> {
     let func = match ctor {
       Ctor::Function(func) => func,
       Ctor::Class(class) => {
-        if self.class_fields_effects(&class, this)? {
-          return Some(true);
-        }
         let node: &'a Class<'a> = class.node;
         let constructor = node.body.body.iter().find_map(|element| match element {
           ClassElement::MethodDefinition(method)
@@ -474,6 +548,36 @@ impl<'a> Analyzer<'_, 'a> {
           }
           _ => None,
         });
+        if node.heritage.is_some() {
+          // An explicit constructor of a derived class calls `super()`, which the analysis does
+          // not model.
+          if constructor.is_some() || !node.decorators.is_empty() {
+            return None;
+          }
+          let parent_effects = match self.class_parent(&class) {
+            // `super()` throws for `extends null`.
+            Parent::Builtin => return Some(true),
+            Parent::Ctor(parent) => {
+              // The fields go on the object that the parent constructor gives, which can be an
+              // object that rejects new properties.
+              if collect::installs_instance_elements(node) && self.ctor_may_return_value(parent) {
+                return None;
+              }
+              if self.state.depth >= MAX_DEPTH {
+                return Some(true);
+              }
+              self.state.depth += 1;
+              let effects = self.run_ctor_effects(parent, this, new, site);
+              self.state.depth -= 1;
+              effects?
+            }
+            Parent::Unknown => return None,
+          };
+          return if parent_effects { Some(true) } else { self.class_fields_effects(&class, this) };
+        }
+        if self.class_fields_effects(&class, this)? {
+          return Some(true);
+        }
         // The default constructor of a base class does nothing.
         let Some(func) = constructor else {
           return Some(false);
@@ -481,17 +585,63 @@ impl<'a> Analyzer<'_, 'a> {
         func
       }
     };
-    self.record_args(&func, new.node_id(), &new.arguments, site);
+    self.record_args(&func, new.node_id(), CallArgs::Ast(&new.arguments), site);
     Some(self.invoke_effects(func, this, true))
   }
 
-  /// The effects of the instance fields that `new` of a base class defines. A field is a new own
-  /// data property, so only its initializer can have effects. `None` when the analysis does not
-  /// model the class: a derived class runs the constructor of its parent, and decorators can
-  /// change any member.
+  /// Whether `new` of `ctor` can give an object other than the new object: a constructor in the
+  /// chain returns a value.
+  fn ctor_may_return_value(&mut self, ctor: Ctor<'a>) -> bool {
+    let returns_value = |stmts: &'a [oxc::ast::ast::Statement<'a>]| {
+      let mut returned = Vec::new();
+      collect::return_arguments(stmts, &mut returned);
+      !returned.is_empty()
+    };
+    match ctor {
+      Ctor::Function(func) => returns_value(func.node.body_statements()),
+      Ctor::Class(class) => {
+        let node: &'a Class<'a> = class.node;
+        let constructor = node.body.body.iter().find_map(|element| match element {
+          ClassElement::MethodDefinition(method)
+            if method.kind == MethodDefinitionKind::Constructor =>
+          {
+            Some(method)
+          }
+          _ => None,
+        });
+        if let Some(constructor) = constructor {
+          return constructor
+            .value
+            .body
+            .as_ref()
+            .is_none_or(|body| returns_value(&body.statements));
+        }
+        if node.heritage.is_none() {
+          return false;
+        }
+        match self.class_parent(&class) {
+          Parent::Builtin => false,
+          Parent::Ctor(parent) => {
+            if self.state.depth >= MAX_DEPTH {
+              return true;
+            }
+            self.state.depth += 1;
+            let returns = self.ctor_may_return_value(parent);
+            self.state.depth -= 1;
+            returns
+          }
+          Parent::Unknown => true,
+        }
+      }
+    }
+  }
+
+  /// The effects of the instance fields that `new` of the class defines. A field is a new own
+  /// data property, so only its initializer can have effects. `None` when decorators can change
+  /// a member.
   fn class_fields_effects(&mut self, class: &ClassValue<'a>, this: ThisValue<'a>) -> Option<bool> {
     let node: &'a Class<'a> = class.node;
-    if node.heritage.is_some() || !node.decorators.is_empty() {
+    if !node.decorators.is_empty() {
       return None;
     }
     let cx = Cx { site: class.site.in_function(), callee_scope: None, this };

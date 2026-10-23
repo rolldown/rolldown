@@ -1,0 +1,8 @@
+{
+  "_comment": "Array methods: `concat`, `flat`, `flatMap`, `reduce`, `reduceRight`, `reverse`, `sort`, `splice`, `copyWithin`, and `fill` of a local array with primitive values go.",
+  "config": {
+    "experimental": {
+      "advancedTreeshaking": true
+    }
+  }
+}

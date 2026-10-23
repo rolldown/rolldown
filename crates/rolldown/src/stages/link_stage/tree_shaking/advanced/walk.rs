@@ -131,6 +131,7 @@ impl<'v> VisitJs<'v> for EscapeVisitor<'_, '_, '_> {
       }
       AstKind::ObjectExpression(obj) => self.an.state.escape_entity((self.module, obj.node_id())),
       AstKind::ArrayExpression(arr) => self.an.state.escape_entity((self.module, arr.node_id())),
+      AstKind::RegExpLiteral(re) => self.an.state.escape_entity((self.module, re.node_id())),
       AstKind::Class(class) => self.an.state.escape_entity((self.module, class.node_id())),
       // Unknown code can call a function in code that the analysis does not model.
       AstKind::Function(func) => self.an.state.escape_entity((self.module, func.node_id())),
@@ -150,6 +151,12 @@ pub struct Walker<'w, 's, 'a> {
   pub site: Site,
   /// The innermost function that the walk is in.
   pub func: Option<FnValue<'a>>,
+  /// The walk is in a catching `try` block (see `collect::discards_throw`), or in an argument or
+  /// a function that such a block can call. The code after the block sees each throw, also a
+  /// throw of code that oxc treats as pure, such as `new WeakSet([1])`. So code that runs stays
+  /// there, and only code that never runs goes, like rollup's default
+  /// `treeshake.tryCatchDeoptimization`. See internal-docs/advanced-tree-shaking/design.md.
+  pub catching: bool,
   pub excluded: Vec<Excluded<'a>>,
   pub rewrites: TreeShakingRewrites,
 }
@@ -416,7 +423,7 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
         && let Some(name) = self.an.property_key(p, self.site)
         && self.is_overwritten(obj, index, &name, escaped)
       {
-        if self.an.property_effects(p, self.removal_cx()) {
+        if self.catching || self.an.property_effects(p, self.removal_cx()) {
           self.walk_property(p, &PathTree::default());
         } else {
           self.excluded.push(Excluded::Prop(prop));
@@ -448,7 +455,7 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
         || (p.kind == PropertyKind::Get && demand.every_key);
       if needed {
         self.walk_property(p, &sub.unwrap_or_default());
-      } else if self.an.property_effects(p, self.removal_cx()) {
+      } else if self.catching || self.an.property_effects(p, self.removal_cx()) {
         self.walk_property(p, &PathTree::default());
       } else {
         self.excluded.push(Excluded::Prop(prop));
@@ -539,6 +546,8 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
     self.site = saved_site.in_function();
     let value = FnValue { module: self.module, stmt: self.site.stmt, node: func, holder: None };
     self.an.register_params(&value);
+    let catching = self.catching;
+    self.catching |= self.an.state.caught_fns.contains(&value.key());
     self.func = Some(value);
     let params = func.params();
     for item in &params.items {
@@ -558,6 +567,7 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
       }
       None => self.walk_stmts(func.body_statements()),
     }
+    self.catching = catching;
     self.func = saved_func;
     self.site = saved_site;
   }
@@ -581,7 +591,7 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
         }
         _ => false,
       };
-      if removable && !self.an.stmt_effects(stmt, self.removal_cx()) {
+      if removable && !self.catching && !self.an.stmt_effects(stmt, self.removal_cx()) {
         self.exclude_stmt(stmt);
         self.rewrites.removed_stmts.insert(stmt.node_id());
         continue;
@@ -677,7 +687,10 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
         }
       }
       Statement::TryStatement(try_stmt) => {
+        let catching = self.catching;
+        self.catching |= collect::discards_throw(try_stmt);
         self.walk_stmts(&try_stmt.block.body);
+        self.catching = catching;
         if let Some(handler) = &try_stmt.handler {
           if let Some(param) = &handler.param {
             self.escape().visit_binding_pattern(&param.pattern);
@@ -710,7 +723,7 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
       let dead = if test { if_stmt.alternate.as_ref() } else { Some(&if_stmt.consequent) };
       // Removing a `var` declaration changes the scope.
       if dead.is_none_or(|dead| !collect::contains_var_decl(dead)) {
-        let keep_test = self.an.expr_effects(&if_stmt.test, self.removal_cx());
+        let keep_test = self.catching || self.an.expr_effects(&if_stmt.test, self.removal_cx());
         self
           .rewrites
           .folded_ifs
@@ -744,12 +757,19 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
       | Expression::NullLiteral(_)
       | Expression::NumericLiteral(_)
       | Expression::BigIntLiteral(_)
-      | Expression::RegExpLiteral(_)
       | Expression::StringLiteral(_)
       | Expression::ThisExpression(_)
       | Expression::Super(_)
       | Expression::ImportMeta(_)
       | Expression::NewTarget(_) => {}
+      Expression::RegExpLiteral(re) => {
+        let key = (self.module, re.node_id());
+        if demand.whole {
+          self.an.state.escape_entity(key);
+        } else {
+          self.an.state.add_entity_demand(key, demand);
+        }
+      }
       Expression::Identifier(ident) => self.an.use_ident(self.module, ident, demand),
       Expression::ParenthesizedExpression(paren) => self.walk_expr(&paren.expression, demand),
       oxc::ast::match_member_expression!(Expression) => {
@@ -758,7 +778,9 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
       Expression::CallExpression(call) => self.walk_call(call, true, demand),
       Expression::NewExpression(new) => {
         self.walk_expr(&new.callee, &PathTree::whole());
-        self.walk_arguments(&new.arguments);
+        let callee = self.an.value(&new.callee, self.site);
+        let ctor = self.an.ctor_args_fn(&callee);
+        self.walk_arguments(ctor.as_ref(), &new.arguments);
       }
       Expression::ChainExpression(chain) => match &chain.expression {
         ChainElement::CallExpression(call) => self.walk_call(call, false, demand),
@@ -918,13 +940,18 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
     for (index, arg) in call.arguments.iter().enumerate() {
       let Some(expr) = arg.as_expression() else {
         if let Argument::SpreadElement(spread) = arg {
-          self.walk_expr(&spread.argument, &PathTree::whole());
+          let caught = callee_fn.as_ref().is_some_and(|func| self.an.is_arg_caught(func, None));
+          self.walk_arg(&spread.argument, caught, &PathTree::whole());
         }
         after_spread = true;
         continue;
       };
+      let position = (!after_spread).then_some(index);
+      let caught = callee_fn.as_ref().is_some_and(|func| self.an.is_arg_caught(func, position));
       if let Some(func) = &removable
+        && !caught
         && self.is_param_unused(func, index)
+        && !self.catching
         && !self.an.expr_effects(expr, self.removal_cx())
       {
         self.excluded.push(Excluded::Arg(arg));
@@ -935,17 +962,43 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
         Some(func) if !after_spread => self.param_demand(func, index),
         _ => PathTree::whole(),
       };
-      self.walk_expr(expr, &arg_demand);
+      self.walk_arg(expr, caught, &arg_demand);
     }
   }
 
-  fn walk_arguments(&mut self, arguments: &'a [Argument<'a>]) {
-    for arg in arguments {
-      match arg {
-        Argument::SpreadElement(spread) => self.walk_expr(&spread.argument, &PathTree::whole()),
-        _ => self.walk_expr(arg.to_expression(), &PathTree::whole()),
-      }
+  /// Walk the arguments of a `new`. `callee` is the function that gets them.
+  fn walk_arguments(&mut self, callee: Option<&FnValue<'a>>, arguments: &'a [Argument<'a>]) {
+    let mut after_spread = false;
+    for (index, arg) in arguments.iter().enumerate() {
+      after_spread |= matches!(arg, Argument::SpreadElement(_));
+      let position = (!after_spread).then_some(index);
+      let caught = callee.is_some_and(|func| self.an.is_arg_caught(func, position));
+      let expr = match arg {
+        Argument::SpreadElement(spread) => &spread.argument,
+        _ => arg.to_expression(),
+      };
+      self.walk_arg(expr, caught, &PathTree::whole());
     }
+  }
+
+  /// Walk an argument. When a catching `try` block in the callee can call the argument
+  /// (`caught`), the code after that block sees each throw of it. Then the walk keeps the code of
+  /// the argument that runs, like the code of that block, and a function that the argument gives
+  /// keeps the code of its body that runs. Rollup's default `treeshake.tryCatchDeoptimization`
+  /// does the same for a parameter that a `try` block calls. See
+  /// internal-docs/advanced-tree-shaking/design.md.
+  fn walk_arg(&mut self, expr: &'a Expression<'a>, caught: bool, demand: &PathTree) {
+    if !caught {
+      self.walk_expr(expr, demand);
+      return;
+    }
+    if let Value::Function(func) = self.an.value(expr, self.site) {
+      self.an.state.add_caught_fn(func.key());
+    }
+    let catching = self.catching;
+    self.catching = true;
+    self.walk_expr(expr, demand);
+    self.catching = catching;
   }
 
   fn is_param_unused(&self, func: &FnValue<'a>, index: usize) -> bool {
@@ -969,6 +1022,7 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
       // `'x' in ns` must not build the namespace object.
       if let Value::Namespace(_) = self.an.value(&binary.right, self.site)
         && let Value::Lit(Lit::Bool(has)) = self.an.value(expr, self.site)
+        && !self.catching
         && !self.an.expr_effects(expr, self.removal_cx())
       {
         self.rewrites.folded_exprs.insert(binary.node_id(), FoldedExpr::Bool(has));
@@ -1010,7 +1064,7 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
         self.exclude_expr(&logical.right);
         self.walk_expr(&logical.left, demand);
       }
-      Some(false) if !self.an.expr_effects(&logical.left, self.removal_cx()) => {
+      Some(false) if !self.catching && !self.an.expr_effects(&logical.left, self.removal_cx()) => {
         self.rewrites.folded_exprs.insert(logical.node_id(), FoldedExpr::Logical(false));
         self.exclude_expr(&logical.left);
         self.walk_expr(&logical.right, demand);
@@ -1024,6 +1078,7 @@ impl<'s, 'a> Walker<'_, 's, 'a> {
 
   fn walk_conditional(&mut self, cond: &'a ConditionalExpression<'a>, demand: &PathTree) {
     if let Some(test) = self.an.value(&cond.test, self.site).truthy()
+      && !self.catching
       && !self.an.expr_effects(&cond.test, self.removal_cx())
     {
       self.rewrites.folded_exprs.insert(cond.node_id(), FoldedExpr::Conditional(test));

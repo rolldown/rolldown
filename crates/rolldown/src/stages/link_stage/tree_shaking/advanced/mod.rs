@@ -278,6 +278,7 @@ impl<'a> AdvancedTreeShaking<'a> {
       module,
       site: Site { module, stmt: stmt_idx, in_function: false },
       func: None,
+      catching: false,
       excluded: Vec::new(),
       rewrites: TreeShakingRewrites::default(),
     };

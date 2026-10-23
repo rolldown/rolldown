@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+globalThis.log = [];
+function main() {
+	const { flag: destructured } = { flag: false };
+	return 1;
+}
+function hoisted() {
+	return 1;
+}
+export { hoisted, main };
+
+```

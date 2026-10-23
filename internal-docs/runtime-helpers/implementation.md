@@ -2,7 +2,7 @@
 
 ## External imports follow runtime statement inclusion
 
-The runtime is normally included through referenced helpers rather than a sweep of side-effectful statements. Chunk import collection must therefore ignore its excluded import statements, including their named bindings. Otherwise a user import of the same external can make the runtime chunk emit a bare import after the helper needing it was removed (issue #11182). Included runtime imports and user side-effect imports still follow the usual external rendering rules. See `collect_depended_symbols` in `crates/rolldown/src/stages/generate_stage/compute_cross_chunk_links.rs`.
+The runtime is normally included through referenced helpers rather than a sweep of side-effectful statements. Chunk import collection must therefore ignore its excluded import statements, including their named bindings. Otherwise a user import of the same external can make the runtime chunk emit a bare import after the helper needing it was removed (issue #11182). Order lowering can retain helpers and their dependency statements after tree shaking via `OrderWrapState::forces_runtime_stmt`. Their external imports must also survive even when the import statement's inclusion bit is unset; match named import bindings against the canonical symbols in the order-lowering runtime dependency closure. Included runtime imports and user side-effect imports still follow the usual external rendering rules. See `collect_depended_symbols` in `crates/rolldown/src/stages/generate_stage/compute_cross_chunk_links.rs`.
 
 ## `__commonJS` and `__commonJSMin`: release `cb` after initialization
 

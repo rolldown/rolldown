@@ -1,10 +1,8 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
-import type { OutputChunk, OutputOptions, RolldownOutput } from 'rolldown';
+import { join, resolve } from 'node:path';
+import type { OutputChunk, OutputOptions, Plugin, RolldownOutput } from 'rolldown';
 import { rolldown } from 'rolldown';
-import { describe, expect, test } from 'vitest';
+import { describe, expect, onTestFinished, test } from 'vitest';
 import { virtualPlugin } from '../src/inline-common-chunks/harness';
 import { getOutputAsset, getOutputChunk } from '../src/utils';
 
@@ -196,38 +194,33 @@ describe('chunkImportMap', () => {
     expect(aliases[1]).toEqual(aliases[0]);
   });
   test('aliases do not depend on the folder the build runs from', async () => {
-    const outputs = [];
-    for (const name of ['project-a', 'project-b']) {
-      const cwd = mkdtempSync(join(realpathSync(tmpdir()), `rolldown-chunk-import-map-${name}-`));
-      try {
-        for (const [file, code] of Object.entries(fixture())) {
-          mkdirSync(dirname(join(cwd, file)), { recursive: true });
-          writeFileSync(join(cwd, file), code);
-        }
-        const bundle = await rolldown({
-          input,
-          cwd,
-          preserveEntrySignatures: false,
-          experimental: { chunkImportMap: true },
-        });
-        try {
-          outputs.push(
-            await bundle.generate(options(false, { entryFileNames: '[name]-[hash].js' })),
-          );
-        } finally {
-          await bundle.close();
-        }
-      } finally {
-        rmSync(cwd, { recursive: true, force: true });
-      }
-    }
-    const [a, b] = outputs;
-    expect(Object.keys(importMap(a))).toHaveLength(getOutputChunk(a).length);
-    expect(importMap(b)).toEqual(importMap(a));
+    const build = async (cwd: string) => {
+      const files = Object.fromEntries(
+        Object.entries(fixture()).map(([id, code]) => [join(cwd, id), code]),
+      );
+      const plugin: Plugin = {
+        name: 'folder',
+        resolveId: (id) => (join(cwd, id) in files ? join(cwd, id) : undefined),
+        load: (id) => files[id],
+      };
+      const bundle = await rolldown({
+        input,
+        cwd,
+        preserveEntrySignatures: false,
+        experimental: { chunkImportMap: true },
+        plugins: [plugin],
+      });
+      onTestFinished(() => bundle.close());
+      return bundle.generate(options(false, { entryFileNames: '[name]-[hash].js' }));
+    };
     const fileNames = (output: RolldownOutput) =>
       getOutputChunk(output)
         .map((chunk) => chunk.fileName)
         .sort();
+    const a = await build(resolve('/project-a'));
+    const b = await build(resolve('/nested/project-b'));
+    expect(Object.keys(importMap(a))).toHaveLength(getOutputChunk(a).length);
+    expect(importMap(b)).toEqual(importMap(a));
     expect(fileNames(b)).toEqual(fileNames(a));
   });
 });

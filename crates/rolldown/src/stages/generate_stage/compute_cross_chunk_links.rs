@@ -13,10 +13,10 @@ use oxc_index::{IndexVec, index_vec};
 use oxc_str::CompactStr;
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
-  ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, NamedImport, NormalModule, OutputFormat, PostChunkOptimizationOperation,
-  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, ResolvedImportRecord, RuntimeHelper, SymbolRef,
-  SymbolRefDb, TaggedSymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder, UsedSymbolRefsView,
-  WrapKind,
+  ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, NamedImport, NormalModule, OutputFormat,
+  PostChunkOptimizationOperation, PreserveEntrySignatures, RUNTIME_HELPER_NAMES,
+  ResolvedImportRecord, RuntimeHelper, SymbolRef, SymbolRefDb, TaggedSymbolRef, UsedSymbolRefs,
+  UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
 };
 use rolldown_utils::index_vec_ext::IndexVecRefExt as _;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
@@ -906,7 +906,6 @@ impl GenerateStage<'_> {
       .expect("importee chunk should exist");
     cross_chunk_dynamic_imports.insert(importee_chunk);
   }
-
 
   /// Import records of the runtime module that should still appear in the runtime chunk:
   /// statements kept by tree shaking, plus those order lowering forces, plus named imports

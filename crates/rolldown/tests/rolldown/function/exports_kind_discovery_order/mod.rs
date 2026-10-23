@@ -37,7 +37,6 @@ impl Plugin for BarrierPlugin {
     _ctx: SharedLoadPluginContext,
     args: &HookLoadArgs<'_>,
   ) -> rolldown_plugin::HookLoadReturn {
-    let file = Self::file_name(args.id);
     const MANAGED: &[&str] = &[
       "entry.js",
       "entry_swapped.js",
@@ -48,6 +47,7 @@ impl Plugin for BarrierPlugin {
       "init.js",
       "setup.js",
     ];
+    let file = Self::file_name(args.id);
     if !MANAGED.contains(&file) {
       return Ok(None);
     }

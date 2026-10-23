@@ -10,10 +10,14 @@ import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 // y.txt
 var y_default = "y";
+// x.txt
+function require_x() {
+	return (require_x = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = "x";
+	})))();
+}
 // entry.js
-const x_txt = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "x";
-})))();
+const x_txt = require_x();
 assert.equal(x_txt, "x");
 assert.equal(y_default, "y");
 

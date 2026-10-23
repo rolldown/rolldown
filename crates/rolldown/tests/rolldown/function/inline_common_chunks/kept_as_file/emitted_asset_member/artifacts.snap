@@ -50,9 +50,11 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 ```js
 import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
 // logo.png
-var require_logo = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "../assets/logo-Byt54u-j.png";
-}));
+function require_logo() {
+	return (require_logo = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = "../assets/logo-Byt54u-j.png";
+	})))();
+}
 // shared.js
 var import_logo, url;
 function init_shared() {

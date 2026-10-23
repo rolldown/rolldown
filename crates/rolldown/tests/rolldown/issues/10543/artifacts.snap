@@ -20,12 +20,16 @@ export { iconP };
 import { a as __esmMin, i as __commonJSMin, o as __exportAll, s as __toCommonJS } from "./w.js";
 // top.js
 var top_exports = /* @__PURE__ */ __exportAll({ t: () => 2 });
-var init_top = __esmMin((() => {}));
+function init_top() {
+	return (init_top = __esmMin((() => {})))();
+}
 // lab.cjs
-var require_lab = /* @__PURE__ */ __commonJSMin(((exports) => {
-	const { t } = (init_top(), __toCommonJS(top_exports));
-	exports.t = t;
-}));
+function require_lab() {
+	return (require_lab = /* @__PURE__ */ __commonJSMin(((exports) => {
+		const { t } = (init_top(), __toCommonJS(top_exports));
+		exports.t = t;
+	})))();
+}
 export default require_lab();
 
 ```
@@ -35,16 +39,21 @@ export default require_lab();
 ```js
 import { a as __esmMin, n as V, r as init_w, t as P } from "./w.js";
 // mid.js
-var init_mid = __esmMin((() => {
-	init_w();
-}));
+function init_mid() {
+	return (init_mid = __esmMin((() => {
+		init_w();
+	})))();
+}
 // system.js
 var util;
+function init_system() {
+	return (init_system = __esmMin((() => {
+		init_mid();
+		util = 1;
+	})))();
+}
 // styles.js
-__esmMin((() => {
-	init_mid();
-	util = 1;
-}))();
+init_system();
 init_w();
 globalThis.__entry_body_saw_w = globalThis.__w_side_effect;
 export { P, V, util };
@@ -60,10 +69,12 @@ function P() {
 	return "v18";
 }
 var V;
-var init_w = __esmMin((() => {
-	globalThis.__w_side_effect = "ran";
-	V = "v18";
-}));
+function init_w() {
+	return (init_w = __esmMin((() => {
+		globalThis.__w_side_effect = "ran";
+		V = "v18";
+	})))();
+}
 export { __esmMin as a, __commonJSMin as i, V as n, __exportAll as o, init_w as r, __toCommonJS as s, P as t };
 
 ```

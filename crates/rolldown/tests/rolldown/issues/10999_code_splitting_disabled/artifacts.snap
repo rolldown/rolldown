@@ -10,21 +10,25 @@ source: crates/rolldown_testing/src/integration_test.rs
 // h1.js
 var h1_exports = /* @__PURE__ */ __exportAll({ h1: () => h1 });
 var h1;
-var init_h1 = __esmMin((() => {
-	init_app();
-	h1 = () => load;
-}));
+function init_h1() {
+	return (init_h1 = __esmMin((() => {
+		init_app();
+		h1 = () => load;
+	})))();
+}
 
 // data.json
 var data_default = {};
 
 // app.js
 var load, value;
-var init_app = __esmMin((() => {
-	init_h1();
-	load = () => Promise.resolve().then(() => (init_h1(), h1_exports));
-	value = [h1, data_default];
-}));
+function init_app() {
+	return (init_app = __esmMin((() => {
+		init_h1();
+		load = () => Promise.resolve().then(() => (init_h1(), h1_exports));
+		value = [h1, data_default];
+	})))();
+}
 
 // main.js
 init_app();

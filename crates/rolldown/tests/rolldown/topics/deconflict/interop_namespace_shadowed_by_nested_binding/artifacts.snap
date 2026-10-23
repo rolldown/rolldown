@@ -7,10 +7,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+// dep.cjs
+function require_dep() {
+	return (require_dep = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.v = 1;
+	})))();
+}
 // main.js
-var import_dep$1 = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.v = 1;
-})))());
+var import_dep$1 = /* @__PURE__ */ __toESM(require_dep());
 function read(import_dep) {
 	return [import_dep$1.v, import_dep];
 }

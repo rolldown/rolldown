@@ -26,10 +26,12 @@ init_main();
 ```js
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
 // c.js
-var require_c = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	console.log("C");
-	module.exports = {};
-}));
+function require_c() {
+	return (require_c = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		console.log("C");
+		module.exports = {};
+	})))();
+}
 function init_p() {
 	return (init_p = __esmMin((() => {
 		require_c();
@@ -103,10 +105,12 @@ init_main();
 ```js
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
 // c.js
-var require_c = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	console.log("C");
-	module.exports = {};
-}));
+function require_c() {
+	return (require_c = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		console.log("C");
+		module.exports = {};
+	})))();
+}
 function init_p() {
 	return (init_p = __esmMin((() => {
 		require_c();

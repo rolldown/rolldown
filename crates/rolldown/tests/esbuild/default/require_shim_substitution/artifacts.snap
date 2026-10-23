@@ -23,26 +23,30 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // example.json
-var require_example = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = { "works": true };
-}));
+function require_example() {
+	return (require_example = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = { "works": true };
+	})))();
+}
 // entry.js
-var require_entry = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	console.log([
-		__require,
-		typeof __require,
-		require_example(),
-		require_example(),
-		__require(window.SOME_PATH),
-		module.require("./example.json"),
-		module.require("./example.json", { type: "json" }),
-		module.require(window.SOME_PATH),
-		__require.resolve("some-path"),
-		__require.resolve(window.SOME_PATH),
-		import("some-path"),
-		import(window.SOME_PATH)
-	]);
-}));
+function require_entry() {
+	return (require_entry = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		console.log([
+			__require,
+			typeof __require,
+			require_example(),
+			require_example(),
+			__require(window.SOME_PATH),
+			module.require("./example.json"),
+			module.require("./example.json", { type: "json" }),
+			module.require(window.SOME_PATH),
+			__require.resolve("some-path"),
+			__require.resolve(window.SOME_PATH),
+			import("some-path"),
+			import(window.SOME_PATH)
+		]);
+	})))();
+}
 export default require_entry();
 
 ```

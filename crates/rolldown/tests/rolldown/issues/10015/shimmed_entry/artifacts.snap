@@ -31,9 +31,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { __commonJSMin, require_shared } from "./entry2.js";
 // dynamic.cjs
-var require_dynamic = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = require_shared();
-}));
+function require_dynamic() {
+	return (require_dynamic = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = require_shared();
+	})))();
+}
 export default require_dynamic();
 export {};
 
@@ -51,9 +53,11 @@ export { a_b as "a-b", _default as default, load, unused, value } from "./entry2
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // shared.cjs
-var require_shared = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = { value: 42 };
-}));
+function require_shared() {
+	return (require_shared = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = { value: 42 };
+	})))();
+}
 // entry.js
 var import_shared = /* @__PURE__ */ __toESM(require_shared());
 const value = import_shared.default.value;

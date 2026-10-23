@@ -17,14 +17,18 @@ var object_default = {
 };
 // array.json
 var array_default = [{ ["__proto__"]: false }, { "nested": { ["__proto__"]: 2 } }];
+// required.json
+function require_required() {
+	return (require_required = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = {
+			["__proto__"]: { "marker": 1 },
+			"nested": { ["__proto__"]: null },
+			"array": [{ ["__proto__"]: 42 }]
+		};
+	})))();
+}
 // main.js
-const required = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = {
-		["__proto__"]: { "marker": 1 },
-		"nested": { ["__proto__"]: null },
-		"array": [{ ["__proto__"]: 42 }]
-	};
-})))();
+const required = require_required();
 assert.deepStrictEqual(object_default, JSON.parse("{\"__proto__\":0,\"object\":{\"__proto__\":{\"marker\":42}},\"nil\":{\"__proto__\":null},\"array\":[{\"__proto__\":\"value\"}]}"));
 assert.deepStrictEqual(array_default, JSON.parse("[{\"__proto__\":false},{\"nested\":{\"__proto__\":2}}]"));
 assert.deepStrictEqual(required, JSON.parse("{\"__proto__\":{\"marker\":1},\"nested\":{\"__proto__\":null},\"array\":[{\"__proto__\":42}]}"));
@@ -71,5 +75,5 @@ node_assert_strict.default.deepStrictEqual(required, JSON.parse("{\"__proto__\":
 ### main.js
 
 ```js
-import e from"node:assert/strict";var t=(e,t)=>()=>(t||(e((t={exports:{}}).exports,t,t.exports),e=null),t.exports),n={["__proto__"]:0,object:{["__proto__"]:{marker:42}},nil:{["__proto__"]:null},array:[{["__proto__"]:`value`}]},r=[{["__proto__"]:!1},{nested:{["__proto__"]:2}}];const i=(/* @__PURE__ */ t(((e,t)=>{t.exports={["__proto__"]:{marker:1},nested:{["__proto__"]:null},array:[{["__proto__"]:42}]}})))();e.deepStrictEqual(n,JSON.parse(`{"__proto__":0,"object":{"__proto__":{"marker":42}},"nil":{"__proto__":null},"array":[{"__proto__":"value"}]}`)),e.deepStrictEqual(r,JSON.parse(`[{"__proto__":false},{"nested":{"__proto__":2}}]`)),e.deepStrictEqual(i,JSON.parse(`{"__proto__":{"marker":1},"nested":{"__proto__":null},"array":[{"__proto__":42}]}`));
+import e from"node:assert/strict";var t=(e,t)=>()=>(t||(e((t={exports:{}}).exports,t,t.exports),e=null),t.exports),n={["__proto__"]:0,object:{["__proto__"]:{marker:42}},nil:{["__proto__"]:null},array:[{["__proto__"]:`value`}]},r=[{["__proto__"]:!1},{nested:{["__proto__"]:2}}];function i(){return(i=/* @__PURE__ */ t(((e,t)=>{t.exports={["__proto__"]:{marker:1},nested:{["__proto__"]:null},array:[{["__proto__"]:42}]}})))()}const a=i();e.deepStrictEqual(n,JSON.parse(`{"__proto__":0,"object":{"__proto__":{"marker":42}},"nil":{"__proto__":null},"array":[{"__proto__":"value"}]}`)),e.deepStrictEqual(r,JSON.parse(`[{"__proto__":false},{"nested":{"__proto__":2}}]`)),e.deepStrictEqual(a,JSON.parse(`{"__proto__":{"marker":1},"nested":{"__proto__":null},"array":[{"__proto__":42}]}`));
 ```

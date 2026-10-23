@@ -39,10 +39,12 @@ module.exports = foo;
 import { t as __commonJSMin } from "./rolldown-runtime.js";
 import { foo } from "bar";
 // import-in-cjs.js
-var require_import_in_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	exports.foo = foo;
-	module.exports = foo;
-}));
+function require_import_in_cjs() {
+	return (require_import_in_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		exports.foo = foo;
+		module.exports = foo;
+	})))();
+}
 export default require_import_in_cjs();
 
 ```
@@ -51,15 +53,17 @@ export default require_import_in_cjs();
 ===================================================================
 --- esbuild	/out/import-in-cjs.js
 +++ rolldown	import-in-cjs.js
-@@ -1,3 +1,7 @@
+@@ -1,3 +1,9 @@
 +import {t as __commonJSMin} from "./rolldown-runtime.js";
  import {foo} from "bar";
 -exports.foo = foo;
 -module.exports = foo;
-+var require_import_in_cjs = __commonJSMin((exports, module) => {
-+    exports.foo = foo;
-+    module.exports = foo;
-+});
++function require_import_in_cjs() {
++    return (require_import_in_cjs = __commonJSMin((exports, module) => {
++        exports.foo = foo;
++        module.exports = foo;
++    }))();
++}
 +export default require_import_in_cjs();
 
 ```
@@ -72,9 +76,11 @@ console.log(module, exports);
 ```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
 // no-warnings-here.js
-var require_no_warnings_here = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	console.log(module, exports);
-}));
+function require_no_warnings_here() {
+	return (require_no_warnings_here = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		console.log(module, exports);
+	})))();
+}
 export default require_no_warnings_here();
 
 ```
@@ -83,12 +89,14 @@ export default require_no_warnings_here();
 ===================================================================
 --- esbuild	/out/no-warnings-here.js
 +++ rolldown	no-warnings-here.js
-@@ -1,1 +1,5 @@
+@@ -1,1 +1,7 @@
 -console.log(module, exports);
 +import {t as __commonJSMin} from "./rolldown-runtime.js";
-+var require_no_warnings_here = __commonJSMin((exports, module) => {
-+    console.log(module, exports);
-+});
++function require_no_warnings_here() {
++    return (require_no_warnings_here = __commonJSMin((exports, module) => {
++        console.log(module, exports);
++    }))();
++}
 +export default require_no_warnings_here();
 
 ```

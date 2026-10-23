@@ -9,10 +9,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+// images/image.png
+function require_image() {
+	return (require_image = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = "../assets/image-RzbKAZGz.png";
+	})))();
+}
 // entries/entry.js
-var import_image = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "../assets/image-RzbKAZGz.png";
-})))());
+var import_image = /* @__PURE__ */ __toESM(require_image());
 console.log(import_image.default);
 
 ```

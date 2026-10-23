@@ -8,11 +8,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // dep-a.js
-var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const sideEffect = {};
-	globalThis.sideEffect = {};
-	module.exports = sideEffect;
-}));
+function require_dep_a() {
+	return (require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		const sideEffect = {};
+		globalThis.sideEffect = {};
+		module.exports = sideEffect;
+	})))();
+}
 // dep-b.js
 function init_dep_b() {
 	return (init_dep_b = __esmMin((() => {
@@ -38,11 +40,13 @@ init_main();
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // dep-a.js
-var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const sideEffect = {};
-	globalThis.sideEffect = {};
-	module.exports = sideEffect;
-}));
+function require_dep_a() {
+	return (require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		const sideEffect = {};
+		globalThis.sideEffect = {};
+		module.exports = sideEffect;
+	})))();
+}
 // dep-b.js
 function init_dep_b() {
 	return (init_dep_b = __esmMin((() => {

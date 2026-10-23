@@ -19,7 +19,9 @@ export { foo };
 // a.js
 var a_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
 var foo;
-var init_a = __esmMin((() => {}));
+function init_a() {
+	return (init_a = __esmMin((() => {})))();
+}
 export { __toCommonJS as i, foo as n, init_a as r, a_exports as t };
 
 ```

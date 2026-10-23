@@ -35,12 +35,16 @@ export { __commonJSMin as i, start as n, stop as r, daemon_exports as t };
 
 ```js
 import { i as __commonJSMin, n as start, r as stop } from "./daemon.js";
+// cjs-dep.cjs
+function require_cjs_dep() {
+	return (require_cjs_dep = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.helper = function() {
+			return "cjs-helper";
+		};
+	})))();
+}
 // gateway.js
-var import_cjs_dep = (/* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.helper = function() {
-		return "cjs-helper";
-	};
-})))();
+var import_cjs_dep = require_cjs_dep();
 function gateway() {
 	return start() + stop();
 }

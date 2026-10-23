@@ -15,15 +15,21 @@ var esm_exports = /* @__PURE__ */ __exportAll({
 	namedExport: () => namedExport
 });
 var namedExport, esm_default, moduleExports;
-var init_esm = __esmMin((() => {
-	namedExport = "named";
-	esm_default = { defaultValue: "default" };
-	moduleExports = { priorityValue: "module.exports wins" };
-}));
+function init_esm() {
+	return (init_esm = __esmMin((() => {
+		namedExport = "named";
+		esm_default = { defaultValue: "default" };
+		moduleExports = { priorityValue: "module.exports wins" };
+	})))();
+}
+// cjs.js
+function require_cjs() {
+	return (require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = (init_esm(), __toCommonJS(esm_exports));
+	})))();
+}
 // main.js
-var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = (init_esm(), __toCommonJS(esm_exports));
-})))());
+var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
 assert.deepStrictEqual(import_cjs.default, { priorityValue: "module.exports wins" });
 
 ```

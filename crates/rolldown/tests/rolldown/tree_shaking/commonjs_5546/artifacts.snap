@@ -9,13 +9,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 // lib/cjs.js
-var require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.default = "default";
-	exports.foo = "foo";
-}));
-let indirect = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = require_cjs();
-})))())).default;
+function require_cjs() {
+	return (require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.default = "default";
+		exports.foo = "foo";
+	})))();
+}
+// lib/index.js
+function require_lib() {
+	return (require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = require_cjs();
+	})))();
+}
+let indirect = (/* @__PURE__ */ __toESM(require_lib())).default;
 assert.strictEqual(indirect.default, "default");
 assert.strictEqual(indirect.foo, "foo");
 

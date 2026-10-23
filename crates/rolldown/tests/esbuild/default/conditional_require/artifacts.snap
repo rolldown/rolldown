@@ -8,9 +8,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // b.js
-var require_b = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.foo = 213;
-}));
+function require_b() {
+	return (require_b = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.foo = 213;
+	})))();
+}
 // a.js
 x ? __require("a") : y ? require_b() : __require("c");
 x ? y ? __require("a") : require_b() : __require(c);

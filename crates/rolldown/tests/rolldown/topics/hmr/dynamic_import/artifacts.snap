@@ -13,11 +13,13 @@ __rolldown_runtime__.registerGraph({
 	edges: [[]]
 });
 // exist-dep-cjs.js
-var require_exist_dep_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	__rolldown_runtime__.createModuleHotContext("exist-dep-cjs.js");
-	__rolldown_runtime__.registerModule("exist-dep-cjs.js", module, 1);
-	exports.value = "exist-cjs";
-}));
+function require_exist_dep_cjs() {
+	return (require_exist_dep_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		__rolldown_runtime__.createModuleHotContext("exist-dep-cjs.js");
+		__rolldown_runtime__.registerModule("exist-dep-cjs.js", module, 1);
+		exports.value = "exist-cjs";
+	})))();
+}
 export default require_exist_dep_cjs();
 
 ```

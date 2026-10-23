@@ -1,0 +1,24 @@
+{
+  "_comment": "Two groups that import each other: `ga` holds `a.js`, which imports `b.cjs` from `gb`, and `gb` holds `d.js`, which imports `e.cjs` from `ga`. `includeDependenciesRecursively: false` keeps each group to the modules its `test` matches, which is what forms the chunk cycle. ESM evaluates `gb` first, so `d.js` calls `require_e()` before `ga` has run; the wrapper must already be callable then.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "entryFilenames": "[name].js",
+    "chunkFilenames": "[name].js",
+    "preserveEntrySignatures": "allow-extension",
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "ga",
+          "test": "[\\\\/](?:a\\.js|e\\.cjs)$",
+          "includeDependenciesRecursively": false
+        },
+        {
+          "name": "gb",
+          "test": "[\\\\/](?:b\\.cjs|d\\.js)$",
+          "includeDependenciesRecursively": false
+        }
+      ]
+    }
+  },
+  "configVariants": [{ "strictExecutionOrder": true }]
+}

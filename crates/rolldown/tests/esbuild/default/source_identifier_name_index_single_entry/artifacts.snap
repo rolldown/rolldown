@@ -8,19 +8,25 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // node_modules/pkg/index.js
-var require_pkg = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.pkg = true;
-}));
+function require_pkg() {
+	return (require_pkg = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.pkg = true;
+	})))();
+}
 // nested/index.js
-var require_nested = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.nested = true;
-}));
+function require_nested() {
+	return (require_nested = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.nested = true;
+	})))();
+}
 // index.js
-var require_source_identifier_name_index_single_entry = /* @__PURE__ */ __commonJSMin((() => {
-	require_source_identifier_name_index_single_entry();
-	require_pkg();
-	require_nested();
-}));
+function require_source_identifier_name_index_single_entry() {
+	return (require_source_identifier_name_index_single_entry = /* @__PURE__ */ __commonJSMin((() => {
+		require_source_identifier_name_index_single_entry();
+		require_pkg();
+		require_nested();
+	})))();
+}
 export default require_source_identifier_name_index_single_entry();
 
 ```

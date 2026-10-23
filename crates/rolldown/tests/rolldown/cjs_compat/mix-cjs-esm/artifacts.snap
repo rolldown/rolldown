@@ -29,17 +29,23 @@ import assert from "node:assert";
 // esm-export-cjs-export.js
 module.exports = 1;
 // foo.js
-var require_foo = /* @__PURE__ */ __commonJSMin((() => {}));
+function require_foo() {
+	return (require_foo = /* @__PURE__ */ __commonJSMin((() => {})))();
+}
 // esm-export-cjs-require.js
 require_foo();
 // esm-import-cjs-export.js
-var require_esm_import_cjs_export = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = 1;
-}));
+function require_esm_import_cjs_export() {
+	return (require_esm_import_cjs_export = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = 1;
+	})))();
+}
 // cjs.js
-var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = 1;
-}));
+function require_cjs() {
+	return (require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = 1;
+	})))();
+}
 require_esm_import_cjs_export();
 var import_cjs = require_cjs();
 require_foo();
@@ -56,19 +62,19 @@ assert.equal(import_cjs.a, void 0);
 (0:7) "exports = " --> (5:7) "exports = "
 (0:17) "1;\n" --> (5:17) "1;\n"
 - ../esm-import-cjs-export.js
-(1:0) "module." --> (12:1) "module."
-(1:7) "exports = " --> (12:8) "exports = "
-(1:17) "1;\n" --> (12:18) "1;\n"
+(1:0) "module." --> (15:2) "module."
+(1:7) "exports = " --> (15:9) "exports = "
+(1:17) "1;\n" --> (15:19) "1;\n"
 - ../cjs.js
-(0:0) "module." --> (16:1) "module."
-(0:7) "exports = " --> (16:8) "exports = "
-(0:17) "1;\n" --> (16:18) "1;\n"
+(0:0) "module." --> (21:2) "module."
+(0:7) "exports = " --> (21:9) "exports = "
+(0:17) "1;\n" --> (21:19) "1;\n"
 - ../esm-import-cjs-require.js
-(3:0) "assert." --> (21:0) "assert."
-(3:7) "equal(" --> (21:7) "equal("
-(3:13) "a, " --> (21:13) "import_cjs."
-(3:13) "a, " --> (21:24) "a, "
-(3:16) "undefined" --> (21:27) "void "
-(3:16) "undefined" --> (21:32) "0"
-(3:25) ");\n" --> (21:33) ");\n"
+(3:0) "assert." --> (27:0) "assert."
+(3:7) "equal(" --> (27:7) "equal("
+(3:13) "a, " --> (27:13) "import_cjs."
+(3:13) "a, " --> (27:24) "a, "
+(3:16) "undefined" --> (27:27) "void "
+(3:16) "undefined" --> (27:32) "0"
+(3:25) ");\n" --> (27:33) ");\n"
 ```

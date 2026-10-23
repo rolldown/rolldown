@@ -8,10 +8,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert/strict";
 // HIDDEN [\0rolldown/runtime.js]
+// commonjs.js
+function require_commonjs() {
+	return (require_commonjs = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.a = 1;
+	})))();
+}
 // main.js
-var import_commonjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.a = 1;
-})))());
+var import_commonjs = /* @__PURE__ */ __toESM(require_commonjs());
 assert.deepEqual(import_commonjs, {
 	default: { a: 1 },
 	a: 1

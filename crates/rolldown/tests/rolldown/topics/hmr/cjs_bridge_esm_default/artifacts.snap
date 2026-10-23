@@ -33,17 +33,21 @@ __rolldown_runtime__.registerGraph({
 });
 // esm.js
 var esm_exports = /* @__PURE__ */ __exportAll({ default: () => esm_default }), esm_default;
-var init_esm = __esmMin((() => {
-	__rolldown_runtime__.createModuleHotContext("esm.js");
-	__rolldown_runtime__.registerModule("esm.js", { exports: esm_exports });
-	esm_default = "esm-default";
-}));
+function init_esm() {
+	return (init_esm = __esmMin((() => {
+		__rolldown_runtime__.createModuleHotContext("esm.js");
+		__rolldown_runtime__.registerModule("esm.js", { exports: esm_exports });
+		esm_default = "esm-default";
+	})))();
+}
 // bridge.js
-var require_bridge = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	__rolldown_runtime__.createModuleHotContext("bridge.js");
-	__rolldown_runtime__.registerModule("bridge.js", module, 1);
-	module.exports = (init_esm(), __toCommonJS(esm_exports));
-}));
+function require_bridge() {
+	return (require_bridge = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		__rolldown_runtime__.createModuleHotContext("bridge.js");
+		__rolldown_runtime__.registerModule("bridge.js", module, 1);
+		module.exports = (init_esm(), __toCommonJS(esm_exports));
+	})))();
+}
 // main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 var import_bridge = /* @__PURE__ */ __toESM(require_bridge());

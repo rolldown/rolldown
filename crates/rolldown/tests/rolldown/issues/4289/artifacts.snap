@@ -8,10 +8,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { t as __commonJSMin } from "./main.js";
 // lib.js
-var require_lib = /* @__PURE__ */ __commonJSMin(((exports) => {
-	Object.defineProperty(exports, "__esModule", { value: true });
-	exports.parse = "parse";
-}));
+function require_lib() {
+	return (require_lib = /* @__PURE__ */ __commonJSMin(((exports) => {
+		Object.defineProperty(exports, "__esModule", { value: true });
+		exports.parse = "parse";
+	})))();
+}
 export default require_lib();
 export {};
 
@@ -40,17 +42,21 @@ async function main() {
 	nodeAssert$1.strictEqual(exports.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
 }
 main();
-(/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const nodeAssert = __require("node:assert");
-	async function main() {
-		const exports = await import("./lib.js").then((m) => /* @__PURE__ */ __toESM(m.default, 1));
-		nodeAssert.deepEqual(Object.keys(exports).sort(), ["default", "parse"]);
-		nodeAssert.strictEqual(exports.parse, "parse", "Expected export exists and is correct");
-		nodeAssert.strictEqual(exports.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
-	}
-	main();
-	module.exports = {};
-})))();
+// node-mode-by-cjs-extension.cjs
+function require_node_mode_by_cjs_extension() {
+	return (require_node_mode_by_cjs_extension = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		const nodeAssert = __require("node:assert");
+		async function main() {
+			const exports = await import("./lib.js").then((m) => /* @__PURE__ */ __toESM(m.default, 1));
+			nodeAssert.deepEqual(Object.keys(exports).sort(), ["default", "parse"]);
+			nodeAssert.strictEqual(exports.parse, "parse", "Expected export exists and is correct");
+			nodeAssert.strictEqual(exports.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
+		}
+		main();
+		module.exports = {};
+	})))();
+}
+require_node_mode_by_cjs_extension();
 export { __commonJSMin as t };
 
 ```
@@ -128,10 +134,12 @@ import nodeAssert from "node:assert/strict";
 import nodeAssert$1 from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 // lib.js
-var require_lib = /* @__PURE__ */ __commonJSMin(((exports) => {
-	Object.defineProperty(exports, "__esModule", { value: true });
-	exports.parse = "parse";
-}));
+function require_lib() {
+	return (require_lib = /* @__PURE__ */ __commonJSMin(((exports) => {
+		Object.defineProperty(exports, "__esModule", { value: true });
+		exports.parse = "parse";
+	})))();
+}
 // non-node-mode.js
 async function main$1() {
 	const exports = await Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_lib()));
@@ -148,17 +156,21 @@ async function main() {
 	nodeAssert$1.strictEqual(exports.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
 }
 main();
-(/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const nodeAssert = __require("node:assert");
-	async function main() {
-		const exports = await Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_lib(), 1));
-		nodeAssert.deepEqual(Object.keys(exports).sort(), ["default", "parse"]);
-		nodeAssert.strictEqual(exports.parse, "parse", "Expected export exists and is correct");
-		nodeAssert.strictEqual(exports.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
-	}
-	main();
-	module.exports = {};
-})))();
+// node-mode-by-cjs-extension.cjs
+function require_node_mode_by_cjs_extension() {
+	return (require_node_mode_by_cjs_extension = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		const nodeAssert = __require("node:assert");
+		async function main() {
+			const exports = await Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_lib(), 1));
+			nodeAssert.deepEqual(Object.keys(exports).sort(), ["default", "parse"]);
+			nodeAssert.strictEqual(exports.parse, "parse", "Expected export exists and is correct");
+			nodeAssert.strictEqual(exports.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
+		}
+		main();
+		module.exports = {};
+	})))();
+}
+require_node_mode_by_cjs_extension();
 export {};
 
 ```

@@ -26,9 +26,11 @@ require_shared();
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // shared.js
-var require_shared = /* @__PURE__ */ __commonJSMin((() => {
-	globalThis.sideEffectExecuted = true;
-}));
+function require_shared() {
+	return (require_shared = /* @__PURE__ */ __commonJSMin((() => {
+		globalThis.sideEffectExecuted = true;
+	})))();
+}
 export { require_shared as t };
 
 ```

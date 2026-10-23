@@ -9,9 +9,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
 import { n as require_c3 } from "./main2.js";
 // c4.cjs
-var require_c4 = /* @__PURE__ */ __commonJSMin((() => {
-	console.log("c4");
-}));
+function require_c4() {
+	return (require_c4 = /* @__PURE__ */ __commonJSMin((() => {
+		console.log("c4");
+	})))();
+}
 function init_m2() {
 	return (init_m2 = __esmMin((() => {
 		require_c4();
@@ -45,9 +47,11 @@ init_main();
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
 import { n as init_m2, t as init_m1 } from "./group-1.js";
 // c3.cjs
-var require_c3 = /* @__PURE__ */ __commonJSMin(((exports) => {
-	console.log("c3");
-}));
+function require_c3() {
+	return (require_c3 = /* @__PURE__ */ __commonJSMin(((exports) => {
+		console.log("c3");
+	})))();
+}
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -78,9 +82,11 @@ export { __esmMin as n, __commonJSMin as t };
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
 import { n as require_c3 } from "./main2.js";
 // c4.cjs
-var require_c4 = /* @__PURE__ */ __commonJSMin((() => {
-	console.log("c4");
-}));
+function require_c4() {
+	return (require_c4 = /* @__PURE__ */ __commonJSMin((() => {
+		console.log("c4");
+	})))();
+}
 function init_m2() {
 	return (init_m2 = __esmMin((() => {
 		require_c4();
@@ -114,9 +120,11 @@ init_main();
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
 import { n as init_m2, t as init_m1 } from "./group-1.js";
 // c3.cjs
-var require_c3 = /* @__PURE__ */ __commonJSMin(((exports) => {
-	console.log("c3");
-}));
+function require_c3() {
+	return (require_c3 = /* @__PURE__ */ __commonJSMin(((exports) => {
+		console.log("c3");
+	})))();
+}
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {

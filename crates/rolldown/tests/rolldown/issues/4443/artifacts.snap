@@ -8,10 +8,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
-(/* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.value = "foo";
-	globalThis.value = exports.value;
-})))();
+// foo.js
+function require_foo() {
+	return (require_foo = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.value = "foo";
+		globalThis.value = exports.value;
+	})))();
+}
+require_foo();
 assert.strictEqual(globalThis.value, "foo", "globalThis.value should be \"foo\"");
 
 ```

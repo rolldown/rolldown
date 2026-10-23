@@ -21,12 +21,16 @@ __rolldown_runtime__.registerGraph({
 	],
 	entries: [2]
 });
+// cjs.js
+function require_cjs() {
+	return (require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		__rolldown_runtime__.createModuleHotContext("cjs.js");
+		__rolldown_runtime__.registerModule("cjs.js", module, 1);
+		module.exports.value = "cjs";
+	})))();
+}
 // esm.js
-var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	__rolldown_runtime__.createModuleHotContext("cjs.js");
-	__rolldown_runtime__.registerModule("cjs.js", module, 1);
-	module.exports.value = "cjs";
-})))());
+var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
 var esm_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 __rolldown_runtime__.createModuleHotContext("esm.js");
 __rolldown_runtime__.registerModule("esm.js", { exports: esm_exports });

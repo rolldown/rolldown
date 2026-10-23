@@ -10,13 +10,15 @@ import assert from "node:assert";
 
 // HIDDEN [\0rolldown/runtime.js]
 // cjs.js
-var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	exports.foo = 1;
-	function createExports() {
-		return { foo: 2 };
-	}
-	module.exports = createExports();
-}));
+function require_cjs() {
+	return (require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		exports.foo = 1;
+		function createExports() {
+			return { foo: 2 };
+		}
+		module.exports = createExports();
+	})))();
+}
 
 // main.js
 var import_cjs = /* @__PURE__ */ __toESM(require_cjs());

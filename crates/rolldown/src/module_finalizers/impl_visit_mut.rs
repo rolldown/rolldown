@@ -314,6 +314,16 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           self.ctx.options.profiler_names,
           &self.ctx.module.stable_id,
           self.ctx.linking_info.is_tla_or_contains_tla_dependency,
+          // Hoisted for the same reason as the ESM wrappers below: a `var require_x` is
+          // `undefined` until its statement runs, and a cyclic sibling chunk may call it first.
+          // Only in ESM output: a CommonJS module's top-level `arguments` resolves through the
+          // arrow to the enclosing function, which in a CommonJS or IIFE file is the file's own
+          // wrapper and must stay reachable.
+          if self.ctx.options.format.is_esm() {
+            EsmWrapperDeclKind::HoistedFunction
+          } else {
+            EsmWrapperDeclKind::Var
+          },
           self,
         ));
       }
@@ -406,7 +416,16 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             } else {
               EsmWrapperBodyKind::Sync
             },
-            decl_kind: if matches!(wrapper_mode, ModuleWrapperMode::ExecutionOrder(_)) {
+            // Hoist in ESM output. A `var init_x = __esm(...)` wrapper is `undefined` until its
+            // chunk's top level runs, so an eager importer in a cyclic sibling chunk that calls
+            // `init_x()` first throws `init_x is not a function`. A function declaration is
+            // initialised when the module is instantiated, before any chunk in the cycle
+            // evaluates, which is why execution-order wrappers already use this shape; interop
+            // wrappers (ESM reached from CommonJS or `require`) hit the same cycles. Other
+            // formats keep the `var` shape and its inline single-use form for interop wrappers.
+            decl_kind: if matches!(wrapper_mode, ModuleWrapperMode::ExecutionOrder(_))
+              || self.ctx.options.format.is_esm()
+            {
               EsmWrapperDeclKind::HoistedFunction
             } else {
               EsmWrapperDeclKind::Var

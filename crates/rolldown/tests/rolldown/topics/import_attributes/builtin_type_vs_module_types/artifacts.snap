@@ -16,9 +16,13 @@ import cssTxt from "./assets/a-sVrPnKUg.txt" with { type: "css" };
 var a_default = "png\n";
 // a.txt with { type: "text" }
 var a_default$1 = "txt\n";
-var cssPng = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "./assets/a-9GU1MUiM.png";
-})))())).default;
+// a.png with { type: "css" }
+function require_a() {
+	return (require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = "./assets/a-9GU1MUiM.png";
+	})))();
+}
+var cssPng = (/* @__PURE__ */ __toESM(require_a())).default;
 export { cssPng, cssTxt, a_default as png, a_default$1 as txt };
 
 ```
@@ -37,10 +41,14 @@ export { cssPng, cssTxt, a_default as png, a_default$1 as txt };
 import txt from "./assets/a-sVrPnKUg.txt" with { type: "text" };
 import cssTxt from "./assets/a-sVrPnKUg.txt" with { type: "css" };
 // HIDDEN [\0rolldown/runtime.js]
+// a.png
+function require_a() {
+	return (require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = "./assets/a-9GU1MUiM.png";
+	})))();
+}
 // main.js
-var import_a = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "./assets/a-9GU1MUiM.png";
-})))());
+var import_a = /* @__PURE__ */ __toESM(require_a());
 var cssPng = import_a.default;
 var png = import_a.default;
 export { cssPng, cssTxt, png, txt };

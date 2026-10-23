@@ -7,11 +7,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+// cjs.cjs
+function require_cjs() {
+	return (require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		console.log("cjs");
+		module.exports = { value: 1 };
+	})))();
+}
 // lib.js
-var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	console.log("cjs");
-	module.exports = { value: 1 };
-})))());
+var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
 const fromLib = import_cjs.default.value;
 // main.js
 console.log("main", fromLib, import_cjs.default.value);
@@ -27,10 +31,12 @@ console.log("main", fromLib, import_cjs.default.value);
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // cjs.cjs
-var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	console.log("cjs");
-	module.exports = { value: 1 };
-}));
+function require_cjs() {
+	return (require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		console.log("cjs");
+		module.exports = { value: 1 };
+	})))();
+}
 // lib.js
 var import_cjs$1, fromLib;
 function init_lib() {
@@ -61,10 +67,12 @@ init_main();
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // cjs.cjs
-var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	console.log("cjs");
-	module.exports = { value: 1 };
-}));
+function require_cjs() {
+	return (require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		console.log("cjs");
+		module.exports = { value: 1 };
+	})))();
+}
 const fromLib = (/* @__PURE__ */ __toESM(require_cjs())).default.value;
 // main.js
 var import_cjs = /* @__PURE__ */ __toESM(require_cjs());

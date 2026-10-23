@@ -72,10 +72,12 @@ export { value };
 ```js
 import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
 // node_modules/shared-importee-barrel/shared.cjs
-var require_shared = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	globalThis.__events.push("shared-cjs");
-	module.exports = "shared";
-}));
+function require_shared() {
+	return (require_shared = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		globalThis.__events.push("shared-cjs");
+		module.exports = "shared";
+	})))();
+}
 var import_shared;
 function init_barrel_a_cjs_0() {
 	return (init_barrel_a_cjs_0 = __esmMin((() => {
@@ -158,10 +160,12 @@ export { value };
 ```js
 import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
 // node_modules/shared-importee-barrel/shared.cjs
-var require_shared = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	globalThis.__events.push("shared-cjs");
-	module.exports = "shared";
-}));
+function require_shared() {
+	return (require_shared = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		globalThis.__events.push("shared-cjs");
+		module.exports = "shared";
+	})))();
+}
 var import_shared;
 function init_barrel_a_cjs_0() {
 	return (init_barrel_a_cjs_0 = __esmMin((() => {

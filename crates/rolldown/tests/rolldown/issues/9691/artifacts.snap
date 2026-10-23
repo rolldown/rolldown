@@ -24,22 +24,32 @@ source: crates/rolldown_testing/src/integration_test.rs
 import dep_a from "node:https";
 // HIDDEN [\0rolldown/runtime.js]
 // lib/dep-a.js
-var init_dep_a = __esmMin((() => {}));
+function init_dep_a() {
+	return (init_dep_a = __esmMin((() => {})))();
+}
 // lib/handler-a.js
 var HandlerA;
-var init_handler_a = __esmMin((() => {
-	init_dep_a();
-	HandlerA = class {
-		constants = dep_a.constants;
-	};
-}));
+function init_handler_a() {
+	return (init_handler_a = __esmMin((() => {
+		init_dep_a();
+		HandlerA = class {
+			constants = dep_a.constants;
+		};
+	})))();
+}
 // lib/handler-b.js
-var init_handler_b = __esmMin((() => {}));
+function init_handler_b() {
+	return (init_handler_b = __esmMin((() => {})))();
+}
+// lib/index.js
+function init_lib() {
+	return (init_lib = __esmMin((() => {
+		init_handler_a();
+		init_handler_b();
+	})))();
+}
 // main.js
-__esmMin((() => {
-	init_handler_a();
-	init_handler_b();
-}))();
+init_lib();
 Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
 console.log(HandlerA);
 

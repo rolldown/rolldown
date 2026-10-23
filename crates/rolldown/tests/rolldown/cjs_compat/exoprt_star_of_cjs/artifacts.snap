@@ -8,9 +8,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // c.js
-var require_c = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.test = 1e3;
-}));
+function require_c() {
+	return (require_c = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.test = 1e3;
+	})))();
+}
 // b.js
 var b_exports = /* @__PURE__ */ __exportAll({}, 2);
 __reExport(b_exports, /* @__PURE__ */ __toESM(require_c()));

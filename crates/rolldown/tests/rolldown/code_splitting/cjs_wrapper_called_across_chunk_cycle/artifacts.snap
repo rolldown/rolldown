@@ -1,0 +1,130 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## ga.js
+
+```js
+import { n as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+import { n as require_b } from "./gb.js";
+const a = (/* @__PURE__ */ __toESM(require_b())).default.value;
+// e.cjs
+function require_e() {
+	return (require_e = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = { value: "e" };
+	})))();
+}
+export { a as n, require_e as t };
+
+```
+
+## gb.js
+
+```js
+import { n as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+import { t as require_e } from "./ga.js";
+// b.cjs
+function require_b() {
+	return (require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = { value: "b" };
+	})))();
+}
+const d = (/* @__PURE__ */ __toESM(require_e())).default.value;
+export { require_b as n, d as t };
+
+```
+
+## main.js
+
+```js
+import { n as a } from "./ga.js";
+import { t as d } from "./gb.js";
+// main.js
+globalThis.result = a + d;
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __toESM as n, __commonJSMin as t };
+
+```
+
+# Variant: [strict_execution_order: true]
+
+## Assets
+
+### ga.js
+
+```js
+import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+import { r as require_b } from "./gb.js";
+// a.js
+var import_b, a;
+function init_a() {
+	return (init_a = __esmMin((() => {
+		import_b = /* @__PURE__ */ __toESM(require_b());
+		a = import_b.default.value;
+	})))();
+}
+// e.cjs
+function require_e() {
+	return (require_e = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = { value: "e" };
+	})))();
+}
+export { a as n, init_a as r, require_e as t };
+
+```
+
+### gb.js
+
+```js
+import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+import { t as require_e } from "./ga.js";
+// b.cjs
+function require_b() {
+	return (require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = { value: "b" };
+	})))();
+}
+// d.js
+var import_e, d;
+function init_d() {
+	return (init_d = __esmMin((() => {
+		import_e = /* @__PURE__ */ __toESM(require_e());
+		d = import_e.default.value;
+	})))();
+}
+export { init_d as n, require_b as r, d as t };
+
+```
+
+### main.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+import { n as init_d, t as d } from "./gb.js";
+import { n as a, r as init_a } from "./ga.js";
+// main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_a();
+		init_d();
+		globalThis.result = a + d;
+	})))();
+}
+init_main();
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __toESM as r, __commonJSMin as t };
+
+```

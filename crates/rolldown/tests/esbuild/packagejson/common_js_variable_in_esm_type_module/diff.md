@@ -8,9 +8,11 @@ module.exports = null;
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // entry.js
-var require_entry = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = null;
-}));
+function require_entry() {
+	return (require_entry = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = null;
+	})))();
+}
 export default require_entry();
 
 ```
@@ -19,11 +21,13 @@ export default require_entry();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,1 +1,4 @@
+@@ -1,1 +1,6 @@
 -module.exports = null;
-+var require_entry = __commonJSMin((exports, module) => {
-+    module.exports = null;
-+});
++function require_entry() {
++    return (require_entry = __commonJSMin((exports, module) => {
++        module.exports = null;
++    }))();
++}
 +export default require_entry();
 
 ```

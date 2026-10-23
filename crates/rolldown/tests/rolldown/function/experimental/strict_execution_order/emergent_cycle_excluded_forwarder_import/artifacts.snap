@@ -14,11 +14,13 @@ function init_a_first() {
 	})))();
 }
 // a/carrier.cjs.js
-var require_carrier_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = function carrier() {
-		return "CARRIED";
-	};
-}));
+function require_carrier_cjs() {
+	return (require_carrier_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = function carrier() {
+			return "CARRIED";
+		};
+	})))();
+}
 // a/wrapper.js
 function mkWv() {
 	return "WV";
@@ -114,11 +116,13 @@ function init_a_first() {
 	})))();
 }
 // a/carrier.cjs.js
-var require_carrier_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = function carrier() {
-		return "CARRIED";
-	};
-}));
+function require_carrier_cjs() {
+	return (require_carrier_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = function carrier() {
+			return "CARRIED";
+		};
+	})))();
+}
 // a/wrapper.js
 function mkWv() {
 	return "WV";

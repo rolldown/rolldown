@@ -35,9 +35,13 @@ import "./a.js";
 
 ```js
 import { t as __commonJSMin } from "./a.js";
-(/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = 42;
-})))();
+// x.js
+function require_x() {
+	return (require_x = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = 42;
+	})))();
+}
+require_x();
 
 ```
 

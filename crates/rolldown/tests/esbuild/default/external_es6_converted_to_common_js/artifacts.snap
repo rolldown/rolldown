@@ -8,12 +8,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import * as import_x from "x";
 // HIDDEN [\0rolldown/runtime.js]
-var init_a = __esmMin((() => {}));
-var init_b = __esmMin((() => {}));
-var init_c = __esmMin((() => {}));
-var init_d = __esmMin((() => {}));
+function init_a() {
+	return (init_a = __esmMin((() => {})))();
+}
+function init_b() {
+	return (init_b = __esmMin((() => {})))();
+}
+function init_c() {
+	return (init_c = __esmMin((() => {})))();
+}
+function init_d() {
+	return (init_d = __esmMin((() => {})))();
+}
 __reExport(/* @__PURE__ */ __exportAll({}, 2), import_x);
-var init_e = __esmMin((() => {}));
+function init_e() {
+	return (init_e = __esmMin((() => {})))();
+}
 // entry.js
 init_a();
 init_b();

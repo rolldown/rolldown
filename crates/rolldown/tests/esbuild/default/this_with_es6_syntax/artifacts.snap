@@ -20,7 +20,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 console.log(void 0);
 // dummy.js
 var dummy_exports = /* @__PURE__ */ __exportAll({ dummy: () => 123 });
-var init_dummy = __esmMin((() => {}));
+function init_dummy() {
+	return (init_dummy = __esmMin((() => {})))();
+}
 // es6-import-stmt.js
 console.log(void 0);
 // es6-import-assign.ts
@@ -64,10 +66,14 @@ init_dummy();
 console.log(void 0);
 // es6-export-star-as.js
 console.log(void 0);
-(/* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
-	module.exports = 123;
-	console.log(this$1);
-})))();
+// es6-export-assign.ts
+function require_es6_export_assign() {
+	return (require_es6_export_assign = /* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
+		module.exports = 123;
+		console.log(this$1);
+	})))();
+}
+require_es6_export_assign();
 init_dummy(), __toCommonJS(dummy_exports);
 console.log(void 0);
 // es6-ns-export-variable.ts

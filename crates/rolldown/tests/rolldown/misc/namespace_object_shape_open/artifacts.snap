@@ -13,9 +13,11 @@ import * as import_node_path from "node:path";
 __reExport(external_star_exports, import_node_path);
 const fromExternalStar = "external star";
 // commonjs.cjs
-var require_commonjs = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.fromCommonjs = "commonjs";
-}));
+function require_commonjs() {
+	return (require_commonjs = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.fromCommonjs = "commonjs";
+	})))();
+}
 // commonjs-star.js
 var commonjs_star_exports = /* @__PURE__ */ __exportAll({ fromCommonjsStar: () => fromCommonjsStar }, 2);
 __reExport(commonjs_star_exports, /* @__PURE__ */ __toESM(require_commonjs()));

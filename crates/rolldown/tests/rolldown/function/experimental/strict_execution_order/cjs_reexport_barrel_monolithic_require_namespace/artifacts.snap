@@ -9,17 +9,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 // node_modules/pure-barrel/cn.js
 var cn;
-var init_cn = __esmMin((() => {
-	globalThis.__events.push("cn");
-	cn = (...values) => values.filter(Boolean).join(" ");
-}));
+function init_cn() {
+	return (init_cn = __esmMin((() => {
+		globalThis.__events.push("cn");
+		cn = (...values) => values.filter(Boolean).join(" ");
+	})))();
+}
 // node_modules/pure-barrel/clone-deep.cjs
-var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	globalThis.__events.push("clone-deep");
-	module.exports = function cloneDeep(value) {
-		return JSON.parse(JSON.stringify(value));
-	};
-}));
+function require_clone_deep() {
+	return (require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		globalThis.__events.push("clone-deep");
+		module.exports = function cloneDeep(value) {
+			return JSON.parse(JSON.stringify(value));
+		};
+	})))();
+}
 var import_clone_deep;
 function init_pure_barrel_cjs_0() {
 	return (init_pure_barrel_cjs_0 = __esmMin((() => {
@@ -31,18 +35,22 @@ var wrapper_exports = /* @__PURE__ */ __exportAll({
 	cloneDeep: () => import_clone_deep.default,
 	cn: () => cn
 });
-var init_wrapper = __esmMin((() => {
-	init_cn(), init_pure_barrel_cjs_0();
-}));
+function init_wrapper() {
+	return (init_wrapper = __esmMin((() => {
+		init_cn(), init_pure_barrel_cjs_0();
+	})))();
+}
 // outer.cjs
-var require_outer = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const ns = (init_wrapper(), __toCommonJS(wrapper_exports));
-	module.exports = {
-		cloned: ns.cloneDeep({ value: 1 }),
-		cn: ns.cn("x"),
-		keys: Object.keys(ns).sort()
-	};
-}));
+function require_outer() {
+	return (require_outer = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		const ns = (init_wrapper(), __toCommonJS(wrapper_exports));
+		module.exports = {
+			cloned: ns.cloneDeep({ value: 1 }),
+			cn: ns.cn("x"),
+			keys: Object.keys(ns).sort()
+		};
+	})))();
+}
 var import_outer;
 function init_main_cjs_1() {
 	return (init_main_cjs_1 = __esmMin((() => {
@@ -65,17 +73,21 @@ export { result };
 // HIDDEN [\0rolldown/runtime.js]
 // node_modules/pure-barrel/cn.js
 var cn;
-var init_cn = __esmMin((() => {
-	globalThis.__events.push("cn");
-	cn = (...values) => values.filter(Boolean).join(" ");
-}));
+function init_cn() {
+	return (init_cn = __esmMin((() => {
+		globalThis.__events.push("cn");
+		cn = (...values) => values.filter(Boolean).join(" ");
+	})))();
+}
 // node_modules/pure-barrel/clone-deep.cjs
-var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	globalThis.__events.push("clone-deep");
-	module.exports = function cloneDeep(value) {
-		return JSON.parse(JSON.stringify(value));
-	};
-}));
+function require_clone_deep() {
+	return (require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		globalThis.__events.push("clone-deep");
+		module.exports = function cloneDeep(value) {
+			return JSON.parse(JSON.stringify(value));
+		};
+	})))();
+}
 var import_clone_deep;
 function init_pure_barrel_cjs_0() {
 	return (init_pure_barrel_cjs_0 = __esmMin((() => {
@@ -87,18 +99,22 @@ var wrapper_exports = /* @__PURE__ */ __exportAll({
 	cloneDeep: () => import_clone_deep.default,
 	cn: () => cn
 });
-var init_wrapper = __esmMin((() => {
-	init_cn(), init_pure_barrel_cjs_0();
-}));
+function init_wrapper() {
+	return (init_wrapper = __esmMin((() => {
+		init_cn(), init_pure_barrel_cjs_0();
+	})))();
+}
 // outer.cjs
-var require_outer = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const ns = (init_wrapper(), __toCommonJS(wrapper_exports));
-	module.exports = {
-		cloned: ns.cloneDeep({ value: 1 }),
-		cn: ns.cn("x"),
-		keys: Object.keys(ns).sort()
-	};
-}));
+function require_outer() {
+	return (require_outer = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		const ns = (init_wrapper(), __toCommonJS(wrapper_exports));
+		module.exports = {
+			cloned: ns.cloneDeep({ value: 1 }),
+			cn: ns.cn("x"),
+			keys: Object.keys(ns).sort()
+		};
+	})))();
+}
 var import_outer;
 function init_main_cjs_1() {
 	return (init_main_cjs_1 = __esmMin((() => {

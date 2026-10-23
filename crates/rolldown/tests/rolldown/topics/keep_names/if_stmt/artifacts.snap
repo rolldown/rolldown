@@ -9,16 +9,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 // c.js
-var require_c = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	function Router() {}
-	module.exports = function() {
-		return { Router };
-	};
-}));
+function require_c() {
+	return (require_c = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		function Router() {}
+		module.exports = function() {
+			return { Router };
+		};
+	})))();
+}
+// cjs.js
+function require_cjs() {
+	return (require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = require_c()();
+	})))();
+}
 // main.js
-var import_cjs = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = require_c()();
-})))();
+var import_cjs = require_cjs();
 assert.strictEqual(import_cjs.Router.name, "Router");
 
 ```

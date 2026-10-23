@@ -14,13 +14,17 @@ test
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // a/test.txt
-var require_test$1 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "./assets/test-C4X7hChn.txt";
-}));
+function require_test$1() {
+	return (require_test$1 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = "./assets/test-C4X7hChn.txt";
+	})))();
+}
 // b/test.txt
-var require_test = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "./assets/test-C4X7hChn.txt";
-}));
+function require_test() {
+	return (require_test = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = "./assets/test-C4X7hChn.txt";
+	})))();
+}
 // entry.js
 console.log(require_test$1(), require_test());
 

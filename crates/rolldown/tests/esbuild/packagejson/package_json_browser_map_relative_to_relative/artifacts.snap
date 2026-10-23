@@ -9,16 +9,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert/strict";
 // HIDDEN [\0rolldown/runtime.js]
 // node_modules/demo-pkg/lib/util-browser.js
-var require_util_browser = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "util-browser";
-}));
+function require_util_browser() {
+	return (require_util_browser = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = "util-browser";
+	})))();
+}
+// node_modules/demo-pkg/main-browser.js
+function require_main_browser() {
+	return (require_main_browser = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		const util = require_util_browser();
+		module.exports = function() {
+			return ["main-browser", util];
+		};
+	})))();
+}
 // src/entry.js
-var import_main_browser = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const util = require_util_browser();
-	module.exports = function() {
-		return ["main-browser", util];
-	};
-})))());
+var import_main_browser = /* @__PURE__ */ __toESM(require_main_browser());
 assert.deepEqual((0, import_main_browser.default)(), ["main-browser", "util-browser"]);
 
 ```

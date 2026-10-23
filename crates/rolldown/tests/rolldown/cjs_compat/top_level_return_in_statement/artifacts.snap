@@ -8,10 +8,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
-(/* @__PURE__ */ __commonJSMin((() => {
-	if (typeof window === "undefined") return;
-	globalThis.afterReturnInIf = true;
-})))();
+// return_in_if.cjs
+function require_return_in_if() {
+	return (require_return_in_if = /* @__PURE__ */ __commonJSMin((() => {
+		if (typeof window === "undefined") return;
+		globalThis.afterReturnInIf = true;
+	})))();
+}
+require_return_in_if();
 assert.strictEqual(globalThis.afterReturnInIf, void 0);
 
 ```

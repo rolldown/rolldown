@@ -8,9 +8,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // file.json
-var require_file = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = { "foo": "bar" };
-}));
+function require_file() {
+	return (require_file = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = { "foo": "bar" };
+	})))();
+}
 export { __toESM as n, require_file as t };
 
 ```

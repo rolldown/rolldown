@@ -14,9 +14,11 @@ function foo() {
 	return fn();
 }
 var fn;
-var init_lib_impl = __esmMin((() => {
-	fn = () => 1;
-}));
+function init_lib_impl() {
+	return (init_lib_impl = __esmMin((() => {
+		fn = () => 1;
+	})))();
+}
 // lib-index.js
 init_lib_impl();
 // trigger-error.js

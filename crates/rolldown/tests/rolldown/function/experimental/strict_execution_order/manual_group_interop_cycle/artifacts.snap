@@ -9,9 +9,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
 import { t as init_m1 } from "./m1.js";
 // m3.cjs
-var require_m3 = /* @__PURE__ */ __commonJSMin((() => {
-	console.log("m3");
-}));
+function require_m3() {
+	return (require_m3 = /* @__PURE__ */ __commonJSMin((() => {
+		console.log("m3");
+	})))();
+}
 // m2.js
 function init_m2() {
 	return (init_m2 = __esmMin((() => {
@@ -72,9 +74,11 @@ export { __esmMin as n, __commonJSMin as t };
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
 import { t as init_m1 } from "./m1.js";
 // m3.cjs
-var require_m3 = /* @__PURE__ */ __commonJSMin((() => {
-	console.log("m3");
-}));
+function require_m3() {
+	return (require_m3 = /* @__PURE__ */ __commonJSMin((() => {
+		console.log("m3");
+	})))();
+}
 // m2.js
 function init_m2() {
 	return (init_m2 = __esmMin((() => {

@@ -15,15 +15,17 @@ __rolldown_runtime__.registerGraph({
 	entries: [1]
 });
 // a.js
-var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const a_hot = __rolldown_runtime__.createModuleHotContext("a.js");
-	__rolldown_runtime__.registerModule("a.js", module, 1);
-	exports = module.exports = {};
-	exports.value = "v1";
-	module.exports.other = "o1";
-	console.log(exports.value, exports.other);
-	a_hot.accept();
-}));
+function require_a() {
+	return (require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		const a_hot = __rolldown_runtime__.createModuleHotContext("a.js");
+		__rolldown_runtime__.registerModule("a.js", module, 1);
+		exports = module.exports = {};
+		exports.value = "v1";
+		module.exports.other = "o1";
+		console.log(exports.value, exports.other);
+		a_hot.accept();
+	})))();
+}
 // main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 require_a();

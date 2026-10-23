@@ -11,25 +11,31 @@ import { createRequire } from "node:module";
 // bar.mjs
 var bar_exports = /* @__PURE__ */ __exportAll({ test: () => test$1 });
 var test$1;
-var init_bar = __esmMin((() => {
-	test$1 = /* @__PURE__ */ __name(() => {
-		return { test: "bar" };
-	}, "test");
-}));
+function init_bar() {
+	return (init_bar = __esmMin((() => {
+		test$1 = /* @__PURE__ */ __name(() => {
+			return { test: "bar" };
+		}, "test");
+	})))();
+}
 // foo.mjs
 var foo_exports = /* @__PURE__ */ __exportAll({ default: () => test });
 function test() {
 	return { test: "foo" };
 }
-var init_foo = __esmMin((() => {}));
+function init_foo() {
+	return (init_foo = __esmMin((() => {})))();
+}
 // index.cjs
-var require_src = /* @__PURE__ */ __commonJSMin((() => {
-	const assert = __require("node:assert");
-	const { test: barTest } = (init_bar(), __toCommonJS(bar_exports));
-	const { default: test } = (init_foo(), __toCommonJS(foo_exports));
-	assert.strictEqual(barTest.name, "test");
-	assert.strictEqual(test.name, "test");
-}));
+function require_src() {
+	return (require_src = /* @__PURE__ */ __commonJSMin((() => {
+		const assert = __require("node:assert");
+		const { test: barTest } = (init_bar(), __toCommonJS(bar_exports));
+		const { default: test } = (init_foo(), __toCommonJS(foo_exports));
+		assert.strictEqual(barTest.name, "test");
+		assert.strictEqual(test.name, "test");
+	})))();
+}
 export default require_src();
 export {};
 

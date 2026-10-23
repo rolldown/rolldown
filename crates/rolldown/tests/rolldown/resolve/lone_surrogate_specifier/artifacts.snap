@@ -25,13 +25,17 @@ const b = "b";
 // c�.js
 const c = "c";
 // e�.cjs
-var require_e_ = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "e";
-}));
+function require_e_() {
+	return (require_e_ = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = "e";
+	})))();
+}
 // f�.cjs
-var require_f_ = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "f";
-}));
+function require_f_() {
+	return (require_f_ = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = "f";
+	})))();
+}
 // main.js
 assert.strictEqual("a", "a");
 assert.strictEqual((await import("./d�.js")).d, "d");

@@ -8,9 +8,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // entry.js
-var require_entry = /* @__PURE__ */ __commonJSMin((() => {
-	require_entry();
-}));
+function require_entry() {
+	return (require_entry = /* @__PURE__ */ __commonJSMin((() => {
+		require_entry();
+	})))();
+}
 export default require_entry();
 
 ```

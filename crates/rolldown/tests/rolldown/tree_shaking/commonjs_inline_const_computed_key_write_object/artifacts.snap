@@ -8,9 +8,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
-(/* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.a = "cjs-a";
-})))();
+// src/cjs.js
+function require_cjs() {
+	return (require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.a = "cjs-a";
+	})))();
+}
+require_cjs();
 const obj = {};
 obj["cjs-a"] = 1;
 obj["cjs-a"] = 2;

@@ -8,14 +8,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // dep.cjs
-var require_dep$1 = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.v = 1;
-}));
-var read = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = function(require_dep) {
-		return [require_dep$1().v, require_dep];
-	};
-})))())).default;
+function require_dep$1() {
+	return (require_dep$1 = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.v = 1;
+	})))();
+}
+// lib.cjs
+function require_lib() {
+	return (require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = function(require_dep) {
+			return [require_dep$1().v, require_dep];
+		};
+	})))();
+}
+var read = (/* @__PURE__ */ __toESM(require_lib())).default;
 export { read };
 
 ```

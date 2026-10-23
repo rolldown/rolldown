@@ -18,9 +18,11 @@ export { __commonJSMin as t };
 ```js
 import { t as __commonJSMin } from "./entry.js";
 // foo.js
-var require_foo = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.bar = 123;
-}));
+function require_foo() {
+	return (require_foo = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.bar = 123;
+	})))();
+}
 export default require_foo();
 
 ```

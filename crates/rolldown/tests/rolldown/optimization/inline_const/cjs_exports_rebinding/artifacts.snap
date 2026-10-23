@@ -9,46 +9,60 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 // assignment.cjs
-var require_assignment = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports = {};
-	exports.x = true;
-}));
+function require_assignment() {
+	return (require_assignment = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports = {};
+		exports.x = true;
+	})))();
+}
 // destructuring.cjs
-var require_destructuring = /* @__PURE__ */ __commonJSMin(((exports) => {
-	({value: exports} = { value: {} });
-	exports.x = true;
-}));
+function require_destructuring() {
+	return (require_destructuring = /* @__PURE__ */ __commonJSMin(((exports) => {
+		({value: exports} = { value: {} });
+		exports.x = true;
+	})))();
+}
 // logical_assignment.cjs
-var require_logical_assignment = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports &&= {};
-	exports.x = true;
-}));
+function require_logical_assignment() {
+	return (require_logical_assignment = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports &&= {};
+		exports.x = true;
+	})))();
+}
 // loop.cjs
-var require_loop = /* @__PURE__ */ __commonJSMin(((exports) => {
-	for (exports of [{}]);
-	exports.x = true;
-}));
+function require_loop() {
+	return (require_loop = /* @__PURE__ */ __commonJSMin(((exports) => {
+		for (exports of [{}]);
+		exports.x = true;
+	})))();
+}
 // nested.cjs
-var require_nested = /* @__PURE__ */ __commonJSMin(((exports) => {
-	function rebind() {
-		exports = {};
-	}
-	rebind();
-	exports.x = true;
-}));
+function require_nested() {
+	return (require_nested = /* @__PURE__ */ __commonJSMin(((exports) => {
+		function rebind() {
+			exports = {};
+		}
+		rebind();
+		exports.x = true;
+	})))();
+}
 // property.cjs
-var require_property = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.x = true;
-	exports["y"] = true;
-}));
+function require_property() {
+	return (require_property = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.x = true;
+		exports["y"] = true;
+	})))();
+}
 // shadowed.cjs
-var require_shadowed = /* @__PURE__ */ __commonJSMin(((exports) => {
-	function rebind(exports) {
-		exports = {};
-	}
-	rebind({});
-	exports.x = true;
-}));
+function require_shadowed() {
+	return (require_shadowed = /* @__PURE__ */ __commonJSMin(((exports) => {
+		function rebind(exports) {
+			exports = {};
+		}
+		rebind({});
+		exports.x = true;
+	})))();
+}
 // main.js
 var import_assignment = require_assignment();
 var import_destructuring = require_destructuring();
@@ -78,46 +92,60 @@ assert.strictEqual("truthy", "truthy");
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 // assignment.cjs
-var require_assignment = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports = {};
-	exports.x = true;
-}));
+function require_assignment() {
+	return (require_assignment = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports = {};
+		exports.x = true;
+	})))();
+}
 // destructuring.cjs
-var require_destructuring = /* @__PURE__ */ __commonJSMin(((exports) => {
-	({value: exports} = { value: {} });
-	exports.x = true;
-}));
+function require_destructuring() {
+	return (require_destructuring = /* @__PURE__ */ __commonJSMin(((exports) => {
+		({value: exports} = { value: {} });
+		exports.x = true;
+	})))();
+}
 // logical_assignment.cjs
-var require_logical_assignment = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports &&= {};
-	exports.x = true;
-}));
+function require_logical_assignment() {
+	return (require_logical_assignment = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports &&= {};
+		exports.x = true;
+	})))();
+}
 // loop.cjs
-var require_loop = /* @__PURE__ */ __commonJSMin(((exports) => {
-	for (exports of [{}]);
-	exports.x = true;
-}));
+function require_loop() {
+	return (require_loop = /* @__PURE__ */ __commonJSMin(((exports) => {
+		for (exports of [{}]);
+		exports.x = true;
+	})))();
+}
 // nested.cjs
-var require_nested = /* @__PURE__ */ __commonJSMin(((exports) => {
-	function rebind() {
-		exports = {};
-	}
-	rebind();
-	exports.x = true;
-}));
+function require_nested() {
+	return (require_nested = /* @__PURE__ */ __commonJSMin(((exports) => {
+		function rebind() {
+			exports = {};
+		}
+		rebind();
+		exports.x = true;
+	})))();
+}
 // property.cjs
-var require_property = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.x = true;
-	exports["y"] = true;
-}));
+function require_property() {
+	return (require_property = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.x = true;
+		exports["y"] = true;
+	})))();
+}
 // shadowed.cjs
-var require_shadowed = /* @__PURE__ */ __commonJSMin(((exports) => {
-	function rebind(exports) {
-		exports = {};
-	}
-	rebind({});
-	exports.x = true;
-}));
+function require_shadowed() {
+	return (require_shadowed = /* @__PURE__ */ __commonJSMin(((exports) => {
+		function rebind(exports) {
+			exports = {};
+		}
+		rebind({});
+		exports.x = true;
+	})))();
+}
 // main.js
 var import_assignment = require_assignment();
 var import_destructuring = require_destructuring();

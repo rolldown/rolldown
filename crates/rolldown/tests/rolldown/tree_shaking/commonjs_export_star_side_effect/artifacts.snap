@@ -8,14 +8,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
+// mixed_barrel_dep.cjs
+function require_mixed_barrel_dep() {
+	return (require_mixed_barrel_dep = /* @__PURE__ */ __commonJSMin(((exports) => {
+		(globalThis.evaluated ??= []).push("mixed_barrel_dep");
+	})))();
+}
 // mixed_barrel.js
-(/* @__PURE__ */ __commonJSMin(((exports) => {
-	(globalThis.evaluated ??= []).push("mixed_barrel_dep");
-})))();
+require_mixed_barrel_dep();
+// star_only_dep.cjs
+function require_star_only_dep() {
+	return (require_star_only_dep = /* @__PURE__ */ __commonJSMin((() => {
+		(globalThis.evaluated ??= []).push("star_only_dep");
+	})))();
+}
 // star_only.js
-(/* @__PURE__ */ __commonJSMin((() => {
-	(globalThis.evaluated ??= []).push("star_only_dep");
-})))();
+require_star_only_dep();
 // main.js
 assert.strictEqual(1, 1);
 assert.deepStrictEqual(globalThis.evaluated, ["mixed_barrel_dep", "star_only_dep"]);

@@ -10,11 +10,13 @@ import { t as __commonJSMin } from "./rolldown-runtime.js";
 import { t as require_m5 } from "./m5.js";
 import { t as init_m2 } from "./m22.js";
 // e1.cjs
-var require_e1 = /* @__PURE__ */ __commonJSMin((() => {
-	require_m5();
-	init_m2();
-	globalThis.__entryInteropOrder.push("e1");
-}));
+function require_e1() {
+	return (require_e1 = /* @__PURE__ */ __commonJSMin((() => {
+		require_m5();
+		init_m2();
+		globalThis.__entryInteropOrder.push("e1");
+	})))();
+}
 export default require_e1();
 
 ```
@@ -25,10 +27,12 @@ export default require_e1();
 import { t as __commonJSMin } from "./rolldown-runtime.js";
 import { t as require_m5 } from "./m5.js";
 // e2.cjs
-var require_e2 = /* @__PURE__ */ __commonJSMin((() => {
-	require_m5();
-	globalThis.__entryInteropOrder.push("e2");
-}));
+function require_e2() {
+	return (require_e2 = /* @__PURE__ */ __commonJSMin((() => {
+		require_m5();
+		globalThis.__entryInteropOrder.push("e2");
+	})))();
+}
 export default require_e2();
 
 ```
@@ -49,10 +53,12 @@ import { n as __esmMin, r as __exportAll } from "./rolldown-runtime.js";
 // m2.js
 var m2_exports = /* @__PURE__ */ __exportAll({ value: () => 2 });
 var value;
-var init_m2 = __esmMin((() => {
-	globalThis.__entryInteropOrder.push("m2");
-	value = 2;
-}));
+function init_m2() {
+	return (init_m2 = __esmMin((() => {
+		globalThis.__entryInteropOrder.push("m2");
+		value = 2;
+	})))();
+}
 export { m2_exports as n, value as r, init_m2 as t };
 
 ```
@@ -62,9 +68,11 @@ export { m2_exports as n, value as r, init_m2 as t };
 ```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
 // m5.cjs
-var require_m5 = /* @__PURE__ */ __commonJSMin((() => {
-	globalThis.__entryInteropOrder.push("m5");
-}));
+function require_m5() {
+	return (require_m5 = /* @__PURE__ */ __commonJSMin((() => {
+		globalThis.__entryInteropOrder.push("m5");
+	})))();
+}
 export { require_m5 as t };
 
 ```
@@ -107,11 +115,13 @@ import { t as __commonJSMin } from "./rolldown-runtime.js";
 import { t as require_m5 } from "./m5.js";
 import { t as init_m2 } from "./m22.js";
 // e1.cjs
-var require_e1 = /* @__PURE__ */ __commonJSMin((() => {
-	require_m5();
-	init_m2();
-	globalThis.__entryInteropOrder.push("e1");
-}));
+function require_e1() {
+	return (require_e1 = /* @__PURE__ */ __commonJSMin((() => {
+		require_m5();
+		init_m2();
+		globalThis.__entryInteropOrder.push("e1");
+	})))();
+}
 export default require_e1();
 
 ```
@@ -122,10 +132,12 @@ export default require_e1();
 import { t as __commonJSMin } from "./rolldown-runtime.js";
 import { t as require_m5 } from "./m5.js";
 // e2.cjs
-var require_e2 = /* @__PURE__ */ __commonJSMin((() => {
-	require_m5();
-	globalThis.__entryInteropOrder.push("e2");
-}));
+function require_e2() {
+	return (require_e2 = /* @__PURE__ */ __commonJSMin((() => {
+		require_m5();
+		globalThis.__entryInteropOrder.push("e2");
+	})))();
+}
 export default require_e2();
 
 ```
@@ -146,10 +158,12 @@ import { n as __esmMin, r as __exportAll } from "./rolldown-runtime.js";
 // m2.js
 var m2_exports = /* @__PURE__ */ __exportAll({ value: () => 2 });
 var value;
-var init_m2 = __esmMin((() => {
-	globalThis.__entryInteropOrder.push("m2");
-	value = 2;
-}));
+function init_m2() {
+	return (init_m2 = __esmMin((() => {
+		globalThis.__entryInteropOrder.push("m2");
+		value = 2;
+	})))();
+}
 export { m2_exports as n, value as r, init_m2 as t };
 
 ```
@@ -159,9 +173,11 @@ export { m2_exports as n, value as r, init_m2 as t };
 ```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
 // m5.cjs
-var require_m5 = /* @__PURE__ */ __commonJSMin((() => {
-	globalThis.__entryInteropOrder.push("m5");
-}));
+function require_m5() {
+	return (require_m5 = /* @__PURE__ */ __commonJSMin((() => {
+		globalThis.__entryInteropOrder.push("m5");
+	})))();
+}
 export { require_m5 as t };
 
 ```

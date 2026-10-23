@@ -8,10 +8,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
+// dep.cjs
+function require_dep() {
+	return (require_dep = /* @__PURE__ */ __commonJSMin((() => {
+		(globalThis.evaluated ??= []).push("dep");
+	})))();
+}
 // esm.js
-(/* @__PURE__ */ __commonJSMin((() => {
-	(globalThis.evaluated ??= []).push("dep");
-})))();
+require_dep();
 (globalThis.evaluated ??= []).push("esm");
 // main.js
 assert.strictEqual(1, 1);

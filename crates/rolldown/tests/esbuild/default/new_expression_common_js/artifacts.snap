@@ -7,10 +7,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+// foo.js
+function require_foo() {
+	return (require_foo = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		var Foo = class {};
+		module.exports = { Foo };
+	})))();
+}
 // entry.js
-new ((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	var Foo = class {};
-	module.exports = { Foo };
-})))()).Foo();
+new (require_foo()).Foo();
 
 ```

@@ -8,12 +8,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // src/node_modules/sub/index.js
-var require_sub = /* @__PURE__ */ __commonJSMin((() => {
-	works();
-}));
+function require_sub() {
+	return (require_sub = /* @__PURE__ */ __commonJSMin((() => {
+		works();
+	})))();
+}
+// src/node_modules/pkg/sub/foo.js
+function require_foo() {
+	return (require_foo = /* @__PURE__ */ __commonJSMin((() => {
+		require_sub();
+	})))();
+}
 // src/entry.js
-(/* @__PURE__ */ __commonJSMin((() => {
-	require_sub();
-})))();
+require_foo();
 
 ```

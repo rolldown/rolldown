@@ -8,13 +8,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { __commonJSMin, require_shared } from "./main2.js";
 // dynamic.cjs
-var require_dynamic = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const shared = require_shared();
-	module.exports = {
-		get: () => shared,
-		run: () => shared.tag
-	};
-}));
+function require_dynamic() {
+	return (require_dynamic = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		const shared = require_shared();
+		module.exports = {
+			get: () => shared,
+			run: () => shared.tag
+		};
+	})))();
+}
 export default require_dynamic();
 export {};
 
@@ -32,10 +34,12 @@ export { POST } from "./main2.js";
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // shared.cjs
-var require_shared = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	globalThis.sharedInitializations = (globalThis.sharedInitializations ?? 0) + 1;
-	module.exports = { tag: "shared" };
-}));
+function require_shared() {
+	return (require_shared = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		globalThis.sharedInitializations = (globalThis.sharedInitializations ?? 0) + 1;
+		module.exports = { tag: "shared" };
+	})))();
+}
 // main.js
 var import_shared = /* @__PURE__ */ __toESM(require_shared());
 const POST = async () => {

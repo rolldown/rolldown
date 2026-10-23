@@ -31,9 +31,11 @@ node_assert.default.equal(Object.prototype.toString.call(reexports_exports), "[o
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 // cjs.js
-var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = { a: 1 };
-}));
+function require_cjs() {
+	return (require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = { a: 1 };
+	})))();
+}
 // reexports.mjs
 var reexports_exports = /* @__PURE__ */ __exportAll({}, 2);
 __reExport(reexports_exports, /* @__PURE__ */ __toESM(require_cjs(), 1));

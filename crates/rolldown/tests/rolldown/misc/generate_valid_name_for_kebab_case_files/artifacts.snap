@@ -8,9 +8,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // react-dom.js
-var require_react_dom = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "react-dom";
-}));
+function require_react_dom() {
+	return (require_react_dom = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = "react-dom";
+	})))();
+}
 export default require_react_dom();
 
 ```

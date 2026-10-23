@@ -9,17 +9,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { strict } from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 // greet.cjs
-var require_greet$1 = /* @__PURE__ */ __commonJSMin(((exports) => {
-	function greet() {
-		return "hello from cjs-dependency";
-	}
-	exports.greet = greet;
-}));
+function require_greet$1() {
+	return (require_greet$1 = /* @__PURE__ */ __commonJSMin(((exports) => {
+		function greet() {
+			return "hello from cjs-dependency";
+		}
+		exports.greet = greet;
+	})))();
+}
+// cjs-dependency.cjs
+function require_cjs_dependency() {
+	return (require_cjs_dependency = /* @__PURE__ */ __commonJSMin(((exports) => {
+		Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+		exports.greet = require_greet$1().greet;
+	})))();
+}
 // index.js
-var import_cjs_dependency = (/* @__PURE__ */ __commonJSMin(((exports) => {
-	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-	exports.greet = require_greet$1().greet;
-})))();
+var import_cjs_dependency = require_cjs_dependency();
 strict.strictEqual(typeof import_cjs_dependency.greet, "function");
 strict.strictEqual((0, import_cjs_dependency.greet)(), "hello from cjs-dependency");
 

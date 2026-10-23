@@ -7,10 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+function init_demo_pkg() {
+	return (init_demo_pkg = __esmMin((() => {
+		console.log("hello");
+	})))();
+}
 // src/entry.js
-__esmMin((() => {
-	console.log("hello");
-}))();
+init_demo_pkg();
 console.log("unused import");
 
 ```

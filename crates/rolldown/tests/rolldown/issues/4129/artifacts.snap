@@ -15,11 +15,13 @@ __rolldown_runtime__.registerGraph({
 	entries: [1]
 });
 // lib.js
-var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	__rolldown_runtime__.createModuleHotContext("lib.js");
-	__rolldown_runtime__.registerModule("lib.js", module, 1);
-	exports.a = 1;
-}));
+function require_lib() {
+	return (require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		__rolldown_runtime__.createModuleHotContext("lib.js");
+		__rolldown_runtime__.registerModule("lib.js", module, 1);
+		exports.a = 1;
+	})))();
+}
 // main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 var import_lib = require_lib();

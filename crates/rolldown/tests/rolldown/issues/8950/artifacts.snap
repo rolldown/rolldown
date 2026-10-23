@@ -16,9 +16,11 @@ function createIcon(name) {
 	return SvgIcon.muiName + "-" + name;
 }
 var SvgIcon;
-var init_createIcon = __esmMin((() => {
-	SvgIcon = { muiName: "SvgIcon" };
-}));
+function init_createIcon() {
+	return (init_createIcon = __esmMin((() => {
+		SvgIcon = { muiName: "SvgIcon" };
+	})))();
+}
 
 export { createIcon_exports as n, init_createIcon as r, createIcon as t };
 ```

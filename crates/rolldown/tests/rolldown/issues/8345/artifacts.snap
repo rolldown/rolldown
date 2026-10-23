@@ -9,21 +9,29 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 // lib/prod.js
-var require_prod = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.a = 1, exports.b = 2;
-}));
+function require_prod() {
+	return (require_prod = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.a = 1, exports.b = 2;
+	})))();
+}
 // lib/dev.js
-var require_dev = /* @__PURE__ */ __commonJSMin(((exports) => {
-	var a = 1;
-	var b = 2;
-	exports.a = a;
-	exports.b = b;
-}));
+function require_dev() {
+	return (require_dev = /* @__PURE__ */ __commonJSMin(((exports) => {
+		var a = 1;
+		var b = 2;
+		exports.a = a;
+		exports.b = b;
+	})))();
+}
+// lib/index.js
+function require_lib() {
+	return (require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		if (process.env.NODE_ENV === "production") module.exports = require_prod();
+		else module.exports = require_dev();
+	})))();
+}
 // main.js
-const lib = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	if (process.env.NODE_ENV === "production") module.exports = require_prod();
-	else module.exports = require_dev();
-})))();
+const lib = require_lib();
 assert.strictEqual(typeof lib.a, "number", "lib.a should be a number");
 assert.strictEqual(typeof lib.b, "number", "lib.b should be a number");
 assert.strictEqual(lib.a, 1);

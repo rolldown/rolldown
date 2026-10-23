@@ -7,12 +7,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+// b.js
+function require_b() {
+	return (require_b = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports._default = function test() {
+			return "f";
+		};
+	})))();
+}
 // a.js
-var import_b = (/* @__PURE__ */ __commonJSMin(((exports) => {
-	exports._default = function test() {
-		return "f";
-	};
-})))();
+var import_b = require_b();
 var b_default = import_b._default;
 export { b_default as default, import_b as t };
 

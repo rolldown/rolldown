@@ -71,56 +71,64 @@ __rolldown_runtime__.registerGraph({
 });
 // trigger-dep.js
 var trigger_dep_exports = /* @__PURE__ */ __exportAll({});
-var init_trigger_dep = __esmMin((() => {
-	__rolldown_runtime__.createModuleHotContext("trigger-dep.js");
-	__rolldown_runtime__.registerModule("trigger-dep.js", { exports: trigger_dep_exports });
-	console.log();
-}));
+function init_trigger_dep() {
+	return (init_trigger_dep = __esmMin((() => {
+		__rolldown_runtime__.createModuleHotContext("trigger-dep.js");
+		__rolldown_runtime__.registerModule("trigger-dep.js", { exports: trigger_dep_exports });
+		console.log();
+	})))();
+}
 // cases/require/cjs-lib-reassign-module-exports.js
-var require_cjs_lib_reassign_module_exports = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	init_trigger_dep();
-	__rolldown_runtime__.createModuleHotContext("cases/require/cjs-lib-reassign-module-exports.js");
-	__rolldown_runtime__.registerModule("cases/require/cjs-lib-reassign-module-exports.js", module, 1);
-	module.exports = function() {
-		return "exports";
-	};
-	module.exports.foo = "foo";
-}));
-// cases/require/cjs-lib.js
-var require_cjs_lib = /* @__PURE__ */ __commonJSMin(((exports, module, this$2) => {
-	init_trigger_dep();
-	__rolldown_runtime__.createModuleHotContext("cases/require/cjs-lib.js");
-	__rolldown_runtime__.registerModule("cases/require/cjs-lib.js", module, 1);
-	exports.foo = "foo";
-	this$2.bar = "bar";
-	var Noop = class {
-		static baz2 = this.baz3 = "wrong";
-		static {
-			this.baz = "bar";
-		}
-	};
-	console.log(Noop);
-	this$2.qux = "qux";
-}));
-// cases/require/umd-lib.js
-var require_umd_lib = /* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
-	init_trigger_dep();
-	__rolldown_runtime__.createModuleHotContext("cases/require/umd-lib.js");
-	__rolldown_runtime__.registerModule("cases/require/umd-lib.js", module, 1);
-	(function(root, umdLib) {
-		if (typeof __require === "function" && typeof exports === "object" && typeof module === "object") module.exports = umdLib();
-		else if (typeof define === "function" && define.amd) define(function() {
-			return umdLib();
-		});
-		else root.umdLib = umdLib();
-	})(this$1, function() {
-		const exports = function() {
+function require_cjs_lib_reassign_module_exports() {
+	return (require_cjs_lib_reassign_module_exports = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		init_trigger_dep();
+		__rolldown_runtime__.createModuleHotContext("cases/require/cjs-lib-reassign-module-exports.js");
+		__rolldown_runtime__.registerModule("cases/require/cjs-lib-reassign-module-exports.js", module, 1);
+		module.exports = function() {
 			return "exports";
 		};
+		module.exports.foo = "foo";
+	})))();
+}
+// cases/require/cjs-lib.js
+function require_cjs_lib() {
+	return (require_cjs_lib = /* @__PURE__ */ __commonJSMin(((exports, module, this$2) => {
+		init_trigger_dep();
+		__rolldown_runtime__.createModuleHotContext("cases/require/cjs-lib.js");
+		__rolldown_runtime__.registerModule("cases/require/cjs-lib.js", module, 1);
 		exports.foo = "foo";
-		return exports;
-	});
-}));
+		this$2.bar = "bar";
+		var Noop = class {
+			static baz2 = this.baz3 = "wrong";
+			static {
+				this.baz = "bar";
+			}
+		};
+		console.log(Noop);
+		this$2.qux = "qux";
+	})))();
+}
+// cases/require/umd-lib.js
+function require_umd_lib() {
+	return (require_umd_lib = /* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
+		init_trigger_dep();
+		__rolldown_runtime__.createModuleHotContext("cases/require/umd-lib.js");
+		__rolldown_runtime__.registerModule("cases/require/umd-lib.js", module, 1);
+		(function(root, umdLib) {
+			if (typeof __require === "function" && typeof exports === "object" && typeof module === "object") module.exports = umdLib();
+			else if (typeof define === "function" && define.amd) define(function() {
+				return umdLib();
+			});
+			else root.umdLib = umdLib();
+		})(this$1, function() {
+			const exports = function() {
+				return "exports";
+			};
+			exports.foo = "foo";
+			return exports;
+		});
+	})))();
+}
 // cases/require/index.js
 var require_exports = /* @__PURE__ */ __exportAll({});
 init_trigger_dep();

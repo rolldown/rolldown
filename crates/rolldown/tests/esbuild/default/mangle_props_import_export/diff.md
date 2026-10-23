@@ -35,10 +35,12 @@ let bar_ = require("xyz").b;
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // cjs.js
-var require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.foo_ = 123;
-	__require("xyz").bar_;
-}));
+function require_cjs() {
+	return (require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.foo_ = 123;
+		__require("xyz").bar_;
+	})))();
+}
 export default require_cjs();
 
 ```
@@ -47,13 +49,15 @@ export default require_cjs();
 ===================================================================
 --- esbuild	/out/cjs.js
 +++ rolldown	cjs.js
-@@ -1,2 +1,5 @@
+@@ -1,2 +1,7 @@
 -exports.a = 123;
 -let bar_ = require("xyz").b;
-+var require_cjs = __commonJSMin(exports => {
-+    exports.foo_ = 123;
-+    __require("xyz").bar_;
-+});
++function require_cjs() {
++    return (require_cjs = __commonJSMin(exports => {
++        exports.foo_ = 123;
++        __require("xyz").bar_;
++    }))();
++}
 +export default require_cjs();
 
 ```

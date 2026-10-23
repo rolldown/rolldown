@@ -82,9 +82,11 @@ console.log(void 0, void 0, import_no_side_effects.nope);
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // foo/no-side-effects.cjs
-var require_no_side_effects = /* @__PURE__ */ __commonJSMin((() => {
-	console.log("cjs");
-}));
+function require_no_side_effects() {
+	return (require_no_side_effects = /* @__PURE__ */ __commonJSMin((() => {
+		console.log("cjs");
+	})))();
+}
 export { __toESM as n, require_no_side_effects as t };
 
 ```

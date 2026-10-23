@@ -34,10 +34,12 @@ var required_exports = /* @__PURE__ */ __exportAll({ double: () => double$1 });
 function double$1(n) {
 	return n * 2;
 }
-var init_required = __esmMin((() => {
-	__rolldown_runtime__.createModuleHotContext("required.js");
-	__rolldown_runtime__.registerModule("required.js", { exports: required_exports });
-}));
+function init_required() {
+	return (init_required = __esmMin((() => {
+		__rolldown_runtime__.createModuleHotContext("required.js");
+		__rolldown_runtime__.registerModule("required.js", { exports: required_exports });
+	})))();
+}
 // main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
@@ -87,10 +89,12 @@ var required_exports = /* @__PURE__ */ __exportAll({ double: () => double$1 });
 function double$1(n) {
 	return n * 2;
 }
-var init_required = __esmMin((() => {
-	__rolldown_runtime__.createModuleHotContext("required.js");
-	__rolldown_runtime__.registerModule("required.js", { exports: required_exports });
-}));
+function init_required() {
+	return (init_required = __esmMin((() => {
+		__rolldown_runtime__.createModuleHotContext("required.js");
+		__rolldown_runtime__.registerModule("required.js", { exports: required_exports });
+	})))();
+}
 // main.js
 var main_exports = /* @__PURE__ */ __exportAll({}), double;
 function init_main() {

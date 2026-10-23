@@ -8,10 +8,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import nodeAssert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
+// pkg-barrel/other.cjs
+function require_other() {
+	return (require_other = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = "other-value";
+	})))();
+}
 // pkg-barrel/index.mjs
-var import_other = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "other-value";
-})))(), 1);
+var import_other = /* @__PURE__ */ __toESM(require_other(), 1);
 // main.js
 nodeAssert.equal(import_other.default, "other-value");
 
@@ -26,10 +30,14 @@ nodeAssert.equal(import_other.default, "other-value");
 ```js
 import nodeAssert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
+// pkg-barrel/other.cjs
+function require_other() {
+	return (require_other = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = "other-value";
+	})))();
+}
 // pkg-barrel/index.mjs
-var import_other = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "other-value";
-})))(), 1);
+var import_other = /* @__PURE__ */ __toESM(require_other(), 1);
 // main.js
 nodeAssert.equal(import_other.default, "other-value");
 
@@ -45,9 +53,11 @@ nodeAssert.equal(import_other.default, "other-value");
 import nodeAssert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 // pkg-barrel/other.cjs
-var require_other = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "other-value";
-}));
+function require_other() {
+	return (require_other = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = "other-value";
+	})))();
+}
 // pkg-barrel/index.mjs
 var import_other;
 function init_pkg_barrel() {

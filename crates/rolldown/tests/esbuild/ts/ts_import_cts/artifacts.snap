@@ -7,9 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+// required.cjs
+function require_required() {
+	return (require_required = /* @__PURE__ */ __commonJSMin((() => {
+		console.log("works");
+	})))();
+}
 // entry.ts
-(/* @__PURE__ */ __commonJSMin((() => {
-	console.log("works");
-})))();
+require_required();
 
 ```

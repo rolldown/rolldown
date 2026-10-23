@@ -7,9 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+// dir/index.js
+function require_dir() {
+	return (require_dir = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = 123;
+	})))();
+}
 // entry.js
-console.log((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = 123;
-})))());
+console.log(require_dir());
 
 ```

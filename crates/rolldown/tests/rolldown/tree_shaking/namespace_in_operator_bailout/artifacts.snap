@@ -10,10 +10,12 @@ import assert from "node:assert";
 import * as path from "node:path";
 // HIDDEN [\0rolldown/runtime.js]
 // cjs.js
-var require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.a = "a";
-	exports.b = "b";
-}));
+function require_cjs() {
+	return (require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.a = "a";
+		exports.b = "b";
+	})))();
+}
 // reexport_cjs.js
 var reexport_cjs_exports = /* @__PURE__ */ __exportAll({}, 2);
 __reExport(reexport_cjs_exports, /* @__PURE__ */ __toESM(require_cjs()));

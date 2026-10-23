@@ -26,9 +26,11 @@ x ? y ? import("a") : import("./import.js").then((m) => /* @__PURE__ */ __toESM(
 ```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
 // import.js
-var require_import = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.foo = 213;
-}));
+function require_import() {
+	return (require_import = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.foo = 213;
+	})))();
+}
 export default require_import();
 
 ```

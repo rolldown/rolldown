@@ -9,15 +9,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 // cjs.js
-var require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.a = "original";
-	exports.b = "original";
-	exports.c = "ab";
-}));
+function require_cjs() {
+	return (require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.a = "original";
+		exports.b = "original";
+		exports.c = "ab";
+	})))();
+}
 // cjs_ns.js
-var require_cjs_ns = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.a = "n1";
-}));
+function require_cjs_ns() {
+	return (require_cjs_ns = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.a = "n1";
+	})))();
+}
 // main.js
 var import_cjs = /* @__PURE__ */ __toESM(require_cjs(), 1);
 var import_cjs_ns = /* @__PURE__ */ __toESM(require_cjs_ns(), 1);

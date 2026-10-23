@@ -26,32 +26,38 @@ console.log("Entry B:", import_fake_core.default, useCore());
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // fake-core.cjs
-var require_fake_core = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	(function() {
-		"use strict";
-		var fakeCore = {
-			registry: [],
-			register: function(name) {
-				this.registry.push(name);
-			}
-		};
-		globalThis.fakeCore = fakeCore;
-		if (typeof module === "object") try {
-			module.exports = fakeCore;
-		} catch (_e) {}
-	})();
-}));
+function require_fake_core() {
+	return (require_fake_core = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		(function() {
+			"use strict";
+			var fakeCore = {
+				registry: [],
+				register: function(name) {
+					this.registry.push(name);
+				}
+			};
+			globalThis.fakeCore = fakeCore;
+			if (typeof module === "object") try {
+				module.exports = fakeCore;
+			} catch (_e) {}
+		})();
+	})))();
+}
 // fake-plugin-model.cjs
-var require_fake_plugin_model = /* @__PURE__ */ __commonJSMin((() => {
-	(function() {
-		"use strict";
-		globalThis.fakeCore.register("dom-model");
-	})();
-}));
+function require_fake_plugin_model() {
+	return (require_fake_plugin_model = /* @__PURE__ */ __commonJSMin((() => {
+		(function() {
+			"use strict";
+			globalThis.fakeCore.register("dom-model");
+		})();
+	})))();
+}
 // fake-plugin.cjs
-var require_fake_plugin = /* @__PURE__ */ __commonJSMin((() => {
-	require_fake_plugin_model();
-}));
+function require_fake_plugin() {
+	return (require_fake_plugin = /* @__PURE__ */ __commonJSMin((() => {
+		require_fake_plugin_model();
+	})))();
+}
 // wrapper.js
 var import_fake_core = /* @__PURE__ */ __toESM(require_fake_core());
 require_fake_plugin();

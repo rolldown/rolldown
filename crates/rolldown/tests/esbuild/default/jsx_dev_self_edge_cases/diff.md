@@ -522,13 +522,15 @@ export default require_top_level_this_cjs();
 import { jsxDEV } from "react/jsx-dev-runtime";
 // HIDDEN [\0rolldown/runtime.js]
 // top-level-this-cjs.jsx
-var require_top_level_this_cjs = /* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
-	exports.foo = /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
-		fileName: "top-level-this-cjs.jsx",
-		lineNumber: 1,
-		columnNumber: 15
-	}, this$1);
-}));
+function require_top_level_this_cjs() {
+	return (require_top_level_this_cjs = /* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
+		exports.foo = /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
+			fileName: "top-level-this-cjs.jsx",
+			lineNumber: 1,
+			columnNumber: 15
+		}, this$1);
+	})))();
+}
 export default require_top_level_this_cjs();
 
 ```
@@ -537,23 +539,22 @@ export default require_top_level_this_cjs();
 ===================================================================
 --- esbuild	/out/top-level-this-cjs.js
 +++ rolldown	top-level-this-cjs.js
-@@ -1,11 +1,9 @@
+@@ -1,11 +1,11 @@
  import {jsxDEV} from "react/jsx-dev-runtime";
 -var require_top_level_this_cjs = __commonJS({
 -    "top-level-this-cjs.jsx"(exports) {
--        exports.foo = jsxDEV("div", {}, void 0, false, {
--            fileName: "top-level-this-cjs.jsx",
--            lineNumber: 1,
--            columnNumber: 15
++function require_top_level_this_cjs() {
++    return (require_top_level_this_cjs = __commonJSMin((exports, module, this$1) => {
+         exports.foo = jsxDEV("div", {}, void 0, false, {
+             fileName: "top-level-this-cjs.jsx",
+             lineNumber: 1,
+             columnNumber: 15
 -        });
 -    }
-+var require_top_level_this_cjs = __commonJSMin((exports, module, this$1) => {
-+    exports.foo = jsxDEV("div", {}, void 0, false, {
-+        fileName: "top-level-this-cjs.jsx",
-+        lineNumber: 1,
-+        columnNumber: 15
-+    }, this$1);
- });
+-});
++        }, this$1);
++    }))();
++}
  export default require_top_level_this_cjs();
 
 ```

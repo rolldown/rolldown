@@ -8,11 +8,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // node_modules/component-indexof/index.js
-var require_component_indexof = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = function() {
-		return 234;
-	};
-}));
+function require_component_indexof() {
+	return (require_component_indexof = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = function() {
+			return 234;
+		};
+	})))();
+}
 // node_modules/component-classes/index.js
 try {
 	require_component_indexof();

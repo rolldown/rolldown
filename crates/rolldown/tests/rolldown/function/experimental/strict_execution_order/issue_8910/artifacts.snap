@@ -9,12 +9,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { n as __esmMin } from "./rolldown-runtime.js";
 // node0.js
 var node_0;
-__esmMin((() => {
-	globalThis.__acyclic_output_fuzz_0 = 0;
-	import("./node12.js").then((n) => (n.n(), n.r));
-	node_0 = {};
-	node_0.value = 0;
-}))();
+function init_node0() {
+	return (init_node0 = __esmMin((() => {
+		globalThis.__acyclic_output_fuzz_0 = 0;
+		import("./node12.js").then((n) => (n.n(), n.r));
+		node_0 = {};
+		node_0.value = 0;
+	})))();
+}
+init_node0();
 
 ```
 
@@ -33,18 +36,22 @@ import { n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-
 // node2.js
 var node2_exports = /* @__PURE__ */ __exportAll({ node_2: () => node_2 });
 var node_2;
-var init_node2 = __esmMin((() => {
-	globalThis.__acyclic_output_fuzz_2 = 2;
-	import("./node0.js");
-	node_2 = {};
-	node_2.value = 2;
-}));
+function init_node2() {
+	return (init_node2 = __esmMin((() => {
+		globalThis.__acyclic_output_fuzz_2 = 2;
+		import("./node0.js");
+		node_2 = {};
+		node_2.value = 2;
+	})))();
+}
 // node1.cjs
-var require_node1 = /* @__PURE__ */ __commonJSMin(((exports) => {
-	globalThis.__acyclic_output_fuzz_1 = 1;
-	init_node2();
-	exports.node_1 = 1;
-}));
+function require_node1() {
+	return (require_node1 = /* @__PURE__ */ __commonJSMin(((exports) => {
+		globalThis.__acyclic_output_fuzz_1 = 1;
+		init_node2();
+		exports.node_1 = 1;
+	})))();
+}
 export { init_node2 as n, node2_exports as r, require_node1 as t };
 
 ```
@@ -67,12 +74,15 @@ export { __esmMin as n, __exportAll as r, __commonJSMin as t };
 import { n as __esmMin } from "./rolldown-runtime.js";
 // node0.js
 var node_0;
-__esmMin((() => {
-	globalThis.__acyclic_output_fuzz_0 = 0;
-	import("./node12.js").then((n) => (n.n(), n.r));
-	node_0 = {};
-	node_0.value = 0;
-}))();
+function init_node0() {
+	return (init_node0 = __esmMin((() => {
+		globalThis.__acyclic_output_fuzz_0 = 0;
+		import("./node12.js").then((n) => (n.n(), n.r));
+		node_0 = {};
+		node_0.value = 0;
+	})))();
+}
+init_node0();
 
 ```
 
@@ -91,18 +101,22 @@ import { n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-
 // node2.js
 var node2_exports = /* @__PURE__ */ __exportAll({ node_2: () => node_2 });
 var node_2;
-var init_node2 = __esmMin((() => {
-	globalThis.__acyclic_output_fuzz_2 = 2;
-	import("./node0.js");
-	node_2 = {};
-	node_2.value = 2;
-}));
+function init_node2() {
+	return (init_node2 = __esmMin((() => {
+		globalThis.__acyclic_output_fuzz_2 = 2;
+		import("./node0.js");
+		node_2 = {};
+		node_2.value = 2;
+	})))();
+}
 // node1.cjs
-var require_node1 = /* @__PURE__ */ __commonJSMin(((exports) => {
-	globalThis.__acyclic_output_fuzz_1 = 1;
-	init_node2();
-	exports.node_1 = 1;
-}));
+function require_node1() {
+	return (require_node1 = /* @__PURE__ */ __commonJSMin(((exports) => {
+		globalThis.__acyclic_output_fuzz_1 = 1;
+		init_node2();
+		exports.node_1 = 1;
+	})))();
+}
 export { init_node2 as n, node2_exports as r, require_node1 as t };
 
 ```

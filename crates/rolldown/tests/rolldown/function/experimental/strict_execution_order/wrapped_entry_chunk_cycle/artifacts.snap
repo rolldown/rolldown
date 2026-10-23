@@ -11,10 +11,12 @@ import { n as extend, t as init_hub } from "./hub2.js";
 // dep.js
 var dep_exports = /* @__PURE__ */ __exportAll({ useDep: () => useDep });
 var useDep;
-var init_dep = __esmMin((() => {
-	init_hub();
-	useDep = () => extend({}, {});
-}));
+function init_dep() {
+	return (init_dep = __esmMin((() => {
+		init_hub();
+		useDep = () => extend({}, {});
+	})))();
+}
 export { init_dep as n, useDep as r, dep_exports as t };
 
 ```
@@ -35,19 +37,25 @@ export { extend, useDep };
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
 import { n as init_dep } from "./dep.js";
 var extend;
-var init_shared = __esmMin((() => {
-	extend = Object.assign;
-}));
+function init_shared() {
+	return (init_shared = __esmMin((() => {
+		extend = Object.assign;
+	})))();
+}
 // interop.cjs
-var require_interop = /* @__PURE__ */ __commonJSMin((() => {
-	init_shared();
-	init_dep();
-}));
-var init_hub = __esmMin((() => {
-	require_interop();
-	init_shared();
-	init_dep();
-}));
+function require_interop() {
+	return (require_interop = /* @__PURE__ */ __commonJSMin((() => {
+		init_shared();
+		init_dep();
+	})))();
+}
+function init_hub() {
+	return (init_hub = __esmMin((() => {
+		require_interop();
+		init_shared();
+		init_dep();
+	})))();
+}
 export { extend as n, init_shared as r, init_hub as t };
 
 ```
@@ -416,10 +424,12 @@ import { n as extend, t as init_hub } from "./hub2.js";
 // dep.js
 var dep_exports = /* @__PURE__ */ __exportAll({ useDep: () => useDep });
 var useDep;
-var init_dep = __esmMin((() => {
-	init_hub();
-	useDep = () => extend({}, {});
-}));
+function init_dep() {
+	return (init_dep = __esmMin((() => {
+		init_hub();
+		useDep = () => extend({}, {});
+	})))();
+}
 export { init_dep as n, useDep as r, dep_exports as t };
 
 ```
@@ -440,19 +450,25 @@ export { extend, useDep };
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
 import { n as init_dep } from "./dep.js";
 var extend;
-var init_shared = __esmMin((() => {
-	extend = Object.assign;
-}));
+function init_shared() {
+	return (init_shared = __esmMin((() => {
+		extend = Object.assign;
+	})))();
+}
 // interop.cjs
-var require_interop = /* @__PURE__ */ __commonJSMin((() => {
-	init_shared();
-	init_dep();
-}));
-var init_hub = __esmMin((() => {
-	require_interop();
-	init_shared();
-	init_dep();
-}));
+function require_interop() {
+	return (require_interop = /* @__PURE__ */ __commonJSMin((() => {
+		init_shared();
+		init_dep();
+	})))();
+}
+function init_hub() {
+	return (init_hub = __esmMin((() => {
+		require_interop();
+		init_shared();
+		init_dep();
+	})))();
+}
 export { extend as n, init_shared as r, init_hub as t };
 
 ```

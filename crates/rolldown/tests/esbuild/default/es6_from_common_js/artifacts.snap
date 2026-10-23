@@ -9,17 +9,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 // foo.js
-var require_foo = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.foo = function() {
-		return "foo";
-	};
-}));
+function require_foo() {
+	return (require_foo = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.foo = function() {
+			return "foo";
+		};
+	})))();
+}
 // bar.js
-var require_bar = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.bar = function() {
-		return "bar";
-	};
-}));
+function require_bar() {
+	return (require_bar = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.bar = function() {
+			return "bar";
+		};
+	})))();
+}
 // entry.js
 var import_foo = require_foo();
 var import_bar = require_bar();

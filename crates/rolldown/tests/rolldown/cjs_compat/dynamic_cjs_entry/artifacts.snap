@@ -8,9 +8,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
 // cjs.js
-var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "cjs";
-}));
+function require_cjs() {
+	return (require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = "cjs";
+	})))();
+}
 export default require_cjs();
 
 ```

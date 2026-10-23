@@ -38,11 +38,13 @@ import * as fs from "fs";
 import { readFileSync } from "fs";
 // HIDDEN [\0rolldown/runtime.js]
 // entry.js
-var require_entry = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.fs = fs;
-	exports.readFileSync = readFileSync;
-	exports.foo = 123;
-}));
+function require_entry() {
+	return (require_entry = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.fs = fs;
+		exports.readFileSync = readFileSync;
+		exports.foo = 123;
+	})))();
+}
 export default require_entry();
 
 ```

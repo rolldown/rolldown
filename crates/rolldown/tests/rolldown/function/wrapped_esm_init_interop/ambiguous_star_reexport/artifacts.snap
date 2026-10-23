@@ -30,18 +30,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 // mod_a.js
 var mod_a_exports = /* @__PURE__ */ __exportAll({ x: () => "ax" });
-var init_mod_a = __esmMin((() => {
-	globalThis.__log.push("A");
-}));
+function init_mod_a() {
+	return (init_mod_a = __esmMin((() => {
+		globalThis.__log.push("A");
+	})))();
+}
 // mod_b.js
 var mod_b_exports = /* @__PURE__ */ __exportAll({ x: () => "bx" });
-var init_mod_b = __esmMin((() => {
-	globalThis.__log.push("B");
-}));
+function init_mod_b() {
+	return (init_mod_b = __esmMin((() => {
+		globalThis.__log.push("B");
+	})))();
+}
 // dynamic.cjs
-var require_dynamic = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = { dynamic: "dynamic" };
-}));
+function require_dynamic() {
+	return (require_dynamic = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = { dynamic: "dynamic" };
+	})))();
+}
 // barrel.js
 var barrel_exports = /* @__PURE__ */ __exportAll({}, 2);
 init_mod_a();

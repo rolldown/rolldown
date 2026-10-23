@@ -8,13 +8,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { n as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
 // vendor/rc-picker/locale/common.js
-var require_common = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.commonLocale = {
-		yearFormat: "YYYY",
-		dayFormat: "D",
-		monthBeforeYear: true
-	};
-}));
+function require_common() {
+	return (require_common = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.commonLocale = {
+			yearFormat: "YYYY",
+			dayFormat: "D",
+			monthBeforeYear: true
+		};
+	})))();
+}
 // vendor/rc-picker/locale/ar_EG.js
 var import_common = require_common();
 var locale$1 = Object.assign({}, import_common.commonLocale, {

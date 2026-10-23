@@ -13,15 +13,19 @@ async function loadEventStreamCapability() {
 	const { EventStreamSerde } = await import("./e.js");
 	console.log(`EventStreamSerde: `, EventStreamSerde);
 }
-var init_d = __esmMin((() => {
-	loadEventStreamCapability();
-}));
+function init_d() {
+	return (init_d = __esmMin((() => {
+		loadEventStreamCapability();
+	})))();
+}
 // c.js
-var require_c = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.validateSsoProfile = function test() {
-		return init_d(), __toCommonJS(d_exports);
-	};
-}));
+function require_c() {
+	return (require_c = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.validateSsoProfile = function test() {
+			return init_d(), __toCommonJS(d_exports);
+		};
+	})))();
+}
 export default require_c();
 
 ```
@@ -30,9 +34,13 @@ export default require_c();
 
 ```js
 import { n as __esmMin } from "./index.js";
-__esmMin((() => {
-	console.log("event");
-}))();
+// e.js
+function init_e() {
+	return (init_e = __esmMin((() => {
+		console.log("event");
+	})))();
+}
+init_e();
 
 ```
 
@@ -40,13 +48,17 @@ __esmMin((() => {
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+// b.js
+function require_b() {
+	return (require_b = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.defaultProvider = async function test() {
+			const { fromIni } = await import("./c.js").then((m) => /* @__PURE__ */ __toESM(m.default));
+			console.log(fromIni);
+		};
+	})))();
+}
 // a.js
-(/* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.defaultProvider = async function test() {
-		const { fromIni } = await import("./c.js").then((m) => /* @__PURE__ */ __toESM(m.default));
-		console.log(fromIni);
-	};
-})))();
+require_b();
 export { __toCommonJS as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
 
 ```

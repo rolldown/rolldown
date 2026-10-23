@@ -7,9 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-var commonjs_default = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "foo";
-})))())).default;
+// commonjs.js
+function require_commonjs() {
+	return (require_commonjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = "foo";
+	})))();
+}
+var commonjs_default = (/* @__PURE__ */ __toESM(require_commonjs())).default;
 export { commonjs_default as default };
 
 ```

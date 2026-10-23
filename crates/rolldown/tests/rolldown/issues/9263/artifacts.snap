@@ -12,15 +12,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 // index.cjs
-var require__9263 = /* @__PURE__ */ __commonJSMin((() => {
-	var _defineProperty = require_defineProperty();
-	var Foo = class {
-		constructor() {
-			_defineProperty(this, "foo", 1);
-		}
-	};
-	new Foo();
-}));
+function require__9263() {
+	return (require__9263 = /* @__PURE__ */ __commonJSMin((() => {
+		var _defineProperty = require_defineProperty();
+		var Foo = class {
+			constructor() {
+				_defineProperty(this, "foo", 1);
+			}
+		};
+		new Foo();
+	})))();
+}
 
 export default require__9263();
 

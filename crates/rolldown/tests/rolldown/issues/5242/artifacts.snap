@@ -9,10 +9,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 // main.js
-var require_main = /* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
-	exports.foo = "foo";
-	assert.strictEqual(this$1.foo, "foo");
-}));
+function require_main() {
+	return (require_main = /* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
+		exports.foo = "foo";
+		assert.strictEqual(this$1.foo, "foo");
+	})))();
+}
 export default require_main();
 
 ```

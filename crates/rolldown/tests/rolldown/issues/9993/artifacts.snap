@@ -19,11 +19,13 @@ import { t as require_node3 } from "./v.js";
 // node5.js
 var node5_exports = /* @__PURE__ */ __exportAll({ node_5: () => node_5 });
 var node_5;
-var init_node5 = __esmMin((() => {
-	globalThis.__issue_9993_5 = (globalThis.__issue_9993_5 || 0) + 1;
-	node_5 = {};
-	node_5.value = 5;
-}));
+function init_node5() {
+	return (init_node5 = __esmMin((() => {
+		globalThis.__issue_9993_5 = (globalThis.__issue_9993_5 || 0) + 1;
+		node_5 = {};
+		node_5.value = 5;
+	})))();
+}
 export default require_node3();
 export { node5_exports as n, init_node5 as t };
 
@@ -43,16 +45,20 @@ export { __esmMin as n, __exportAll as r, __commonJSMin as t };
 import { t as __commonJSMin } from "./rolldown-runtime.js";
 import { t as init_node5 } from "./entry-2.js";
 // node4.cjs
-var require_node4 = /* @__PURE__ */ __commonJSMin(((exports) => {
-	globalThis.__issue_9993_4 = (globalThis.__issue_9993_4 || 0) + 1;
-	exports.node_4 = 4;
-}));
+function require_node4() {
+	return (require_node4 = /* @__PURE__ */ __commonJSMin(((exports) => {
+		globalThis.__issue_9993_4 = (globalThis.__issue_9993_4 || 0) + 1;
+		exports.node_4 = 4;
+	})))();
+}
 // node3.cjs
-var require_node3 = /* @__PURE__ */ __commonJSMin(((exports) => {
-	globalThis.__issue_9993_3 = (globalThis.__issue_9993_3 || 0) + 1;
-	init_node5();
-	exports.node_3 = 3;
-}));
+function require_node3() {
+	return (require_node3 = /* @__PURE__ */ __commonJSMin(((exports) => {
+		globalThis.__issue_9993_3 = (globalThis.__issue_9993_3 || 0) + 1;
+		init_node5();
+		exports.node_3 = 3;
+	})))();
+}
 export { require_node4 as n, require_node3 as t };
 
 ```

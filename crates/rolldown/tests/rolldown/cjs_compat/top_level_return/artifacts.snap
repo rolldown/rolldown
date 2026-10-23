@@ -8,10 +8,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // main.js
-var require_main = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.before = "before return";
-	return "foo";
-}));
+function require_main() {
+	return (require_main = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.before = "before return";
+		return "foo";
+	})))();
+}
 export default require_main();
 
 ```

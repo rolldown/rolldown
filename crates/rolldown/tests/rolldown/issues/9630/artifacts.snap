@@ -8,12 +8,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // isArrayLike.cjs
-var require_isArrayLike = /* @__PURE__ */ __commonJSMin(((exports) => {
-	function isArrayLike(value) {
-		return value != null && typeof value.length === "number";
-	}
-	exports.isArrayLike = isArrayLike;
-}));
+function require_isArrayLike() {
+	return (require_isArrayLike = /* @__PURE__ */ __commonJSMin(((exports) => {
+		function isArrayLike(value) {
+			return value != null && typeof value.length === "number";
+		}
+		exports.isArrayLike = isArrayLike;
+	})))();
+}
 export { __commonJSMin as n, __toESM as r, require_isArrayLike as t };
 
 ```
@@ -23,18 +25,20 @@ export { __commonJSMin as n, __toESM as r, require_isArrayLike as t };
 ```js
 import { n as __commonJSMin, t as require_isArrayLike$1 } from "./isArrayLike.js";
 // last.cjs
-var require_last = /* @__PURE__ */ __commonJSMin(((exports) => {
-	var require_isArrayLike = require_isArrayLike$1();
-	function last(array) {
-		if (!require_isArrayLike.isArrayLike(array)) return;
-		return array[array.length - 1];
-	}
-	var require_isArrayLike$2 = {};
-	exports.shadow = function() {
-		return require_isArrayLike$2;
-	};
-	exports.last = last;
-}));
+function require_last() {
+	return (require_last = /* @__PURE__ */ __commonJSMin(((exports) => {
+		var require_isArrayLike = require_isArrayLike$1();
+		function last(array) {
+			if (!require_isArrayLike.isArrayLike(array)) return;
+			return array[array.length - 1];
+		}
+		var require_isArrayLike$2 = {};
+		exports.shadow = function() {
+			return require_isArrayLike$2;
+		};
+		exports.last = last;
+	})))();
+}
 export default require_last();
 
 ```

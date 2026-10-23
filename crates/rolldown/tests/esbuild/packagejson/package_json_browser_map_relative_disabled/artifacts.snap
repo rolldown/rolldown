@@ -9,14 +9,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert/strict";
 // HIDDEN [\0rolldown/runtime.js]
 // (ignored) node_modules/demo-pkg/util-node.js
-var require_util_node = /* @__PURE__ */ __commonJSMin((() => {}));
+function require_util_node() {
+	return (require_util_node = /* @__PURE__ */ __commonJSMin((() => {})))();
+}
+// node_modules/demo-pkg/main.js
+function require_main() {
+	return (require_main = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		const util = require_util_node();
+		module.exports = function(obj) {
+			return util.inspect(obj);
+		};
+	})))();
+}
 // src/entry.js
-var import_main = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const util = require_util_node();
-	module.exports = function(obj) {
-		return util.inspect(obj);
-	};
-})))());
+var import_main = /* @__PURE__ */ __toESM(require_main());
 assert.deepEqual((0, import_main.default)(), {});
 
 ```

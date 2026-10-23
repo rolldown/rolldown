@@ -8,9 +8,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // dep.cjs
-var require_dep$1 = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.v = 1;
-}));
+function require_dep$1() {
+	return (require_dep$1 = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.v = 1;
+	})))();
+}
 // main.js
 function read(require_dep) {
 	return [require_dep$1().v, require_dep];

@@ -8,11 +8,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // pure/clone-deep.cjs
-var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = function cloneDeep(value) {
-		return JSON.parse(JSON.stringify(value));
-	};
-}));
+function require_clone_deep() {
+	return (require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = function cloneDeep(value) {
+			return JSON.parse(JSON.stringify(value));
+		};
+	})))();
+}
 var import_clone_deep;
 function init_pure_cjs_0() {
 	return (init_pure_cjs_0 = __esmMin((() => {
@@ -43,11 +45,13 @@ init_main();
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // pure/clone-deep.cjs
-var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = function cloneDeep(value) {
-		return JSON.parse(JSON.stringify(value));
-	};
-}));
+function require_clone_deep() {
+	return (require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = function cloneDeep(value) {
+			return JSON.parse(JSON.stringify(value));
+		};
+	})))();
+}
 var import_clone_deep;
 function init_pure_cjs_0() {
 	return (init_pure_cjs_0 = __esmMin((() => {

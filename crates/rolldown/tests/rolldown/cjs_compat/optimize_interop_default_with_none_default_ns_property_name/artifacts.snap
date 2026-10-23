@@ -7,15 +7,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+// commonjs.js
+function require_commonjs() {
+	return (require_commonjs = /* @__PURE__ */ __commonJSMin(((exports) => {
+		let elements = {
+			ObjectElement: {},
+			refract: {}
+		};
+		exports.ObjectElement = elements.ObjectElement;
+		exports.refract = elements.refract;
+	})))();
+}
 // refactor.mjs
-var import_commonjs = (/* @__PURE__ */ __commonJSMin(((exports) => {
-	let elements = {
-		ObjectElement: {},
-		refract: {}
-	};
-	exports.ObjectElement = elements.ObjectElement;
-	exports.refract = elements.refract;
-})))();
+var import_commonjs = require_commonjs();
 var refactor_default = (a) => a;
 // main.js
 import_commonjs.ObjectElement.refract = refactor_default(import_commonjs.ObjectElement);

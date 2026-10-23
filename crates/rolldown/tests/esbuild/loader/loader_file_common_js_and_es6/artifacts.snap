@@ -20,13 +20,17 @@ y
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // y.txt
-var require_y = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "./assets/y-DlqcDX5l.txt";
-}));
+function require_y() {
+	return (require_y = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = "./assets/y-DlqcDX5l.txt";
+	})))();
+}
 // x.txt
-var require_x = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "./assets/x-RzbKAZGz.txt";
-}));
+function require_x() {
+	return (require_x = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = "./assets/x-RzbKAZGz.txt";
+	})))();
+}
 // entry.js
 var import_y = /* @__PURE__ */ __toESM(require_y());
 const x_url = require_x();

@@ -11,9 +11,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 // file.txt
-var require_file = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "./assets/file-Cc5MjxNb.txt";
-}));
+function require_file() {
+	return (require_file = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = "./assets/file-Cc5MjxNb.txt";
+	})))();
+}
 // main.js
 var import_file = /* @__PURE__ */ __toESM(require_file());
 const requiredAsset = require_file();

@@ -7,9 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+// test.custom
+function require_test() {
+	return (require_test = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = "YQBigGP/ZA==";
+	})))();
+}
 // entry.js
-console.log((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "YQBigGP/ZA==";
-})))());
+console.log(require_test());
 
 ```

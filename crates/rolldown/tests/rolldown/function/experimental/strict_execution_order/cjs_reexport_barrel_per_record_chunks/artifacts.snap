@@ -44,10 +44,12 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
 import "./split-barrel.js";
 // node_modules/split-barrel/a.cjs
-var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	globalThis.__events.push("cjs-a");
-	module.exports = "a";
-}));
+function require_a() {
+	return (require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		globalThis.__events.push("cjs-a");
+		module.exports = "a";
+	})))();
+}
 var import_a;
 function init_split_barrel_cjs_0() {
 	return (init_split_barrel_cjs_0 = __esmMin((() => {
@@ -74,10 +76,12 @@ export { value };
 import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
 import "./split-barrel.js";
 // node_modules/split-barrel/b.cjs
-var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	globalThis.__events.push("cjs-b");
-	module.exports = "b";
-}));
+function require_b() {
+	return (require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		globalThis.__events.push("cjs-b");
+		module.exports = "b";
+	})))();
+}
 var import_b;
 function init_split_barrel_cjs_1() {
 	return (init_split_barrel_cjs_1 = __esmMin((() => {
@@ -155,10 +159,12 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
 import "./split-barrel.js";
 // node_modules/split-barrel/a.cjs
-var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	globalThis.__events.push("cjs-a");
-	module.exports = "a";
-}));
+function require_a() {
+	return (require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		globalThis.__events.push("cjs-a");
+		module.exports = "a";
+	})))();
+}
 var import_a;
 function init_split_barrel_cjs_0() {
 	return (init_split_barrel_cjs_0 = __esmMin((() => {
@@ -185,10 +191,12 @@ export { value };
 import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
 import "./split-barrel.js";
 // node_modules/split-barrel/b.cjs
-var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	globalThis.__events.push("cjs-b");
-	module.exports = "b";
-}));
+function require_b() {
+	return (require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		globalThis.__events.push("cjs-b");
+		module.exports = "b";
+	})))();
+}
 var import_b;
 function init_split_barrel_cjs_1() {
 	return (init_split_barrel_cjs_1 = __esmMin((() => {

@@ -46,12 +46,14 @@ var foo_exports = /* @__PURE__ */ __exportAll({
 	y: () => y
 });
 var _default, x, y;
-var init_foo = __esmMin((() => {
-	console.log("no exports here");
-	_default = void 0;
-	x = void 0;
-	y = void 0;
-}));
+function init_foo() {
+	return (init_foo = __esmMin((() => {
+		console.log("no exports here");
+		_default = void 0;
+		x = void 0;
+		y = void 0;
+	})))();
+}
 export { y as a, x as i, foo_exports as n, __toCommonJS as o, init_foo as r, _default as t };
 
 ```

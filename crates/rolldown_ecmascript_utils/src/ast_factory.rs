@@ -737,6 +737,8 @@ pub trait StatementFactoryExt<'ast> {
   }
 
   /// `var <binding_name> = __commonJS(... (<params>) => { <statements> } ...)`
+  /// or, hoisted so it is callable before its statement runs:
+  /// `function <binding_name>() { return (<binding_name> = __commonJS(...))(); }`
   ///
   /// The closure is an arrow function, so it binds only `params`. The `this` and `arguments` of
   /// the module resolve past it.
@@ -749,6 +751,7 @@ pub trait StatementFactoryExt<'ast> {
     profiler_names: bool,
     stable_id: &str,
     is_async: bool,
+    decl_kind: EsmWrapperDeclKind,
     builder: &B,
   ) -> Statement<'ast> {
     let params = FormalParameters::boxed(
@@ -815,15 +818,16 @@ pub trait StatementFactoryExt<'ast> {
     } else {
       commonjs_call_expr.arguments.push(Argument::ArrowFunctionExpression(arrow_expr));
     }
-    Statement::new_var_decl(
+    wrapper_decl_stmt(
       binding_name,
       Expression::CallExpression(commonjs_call_expr.into_in(builder.allocator())),
+      decl_kind,
       builder,
     )
   }
 
   /// `var <binding_name> = __esm(... () => { <statements> } ...)`
-  /// or, for order wrappers that must be callable across chunk cycles before assignment:
+  /// or, hoisted so it is callable across chunk cycles before assignment:
   /// `function <binding_name>() { return (<binding_name> = __esm(... () => { <statements> } ...))(); }`
   fn new_esm_wrapper_stmt<B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
     options: EsmWrapperStmtOptions<'ast, '_>,
@@ -875,53 +879,65 @@ pub trait StatementFactoryExt<'ast> {
     } else {
       esm_call_expr.arguments.push(Argument::ArrowFunctionExpression(arrow_expr));
     }
-    if matches!(decl_kind, EsmWrapperDeclKind::Var) {
-      return Statement::new_var_decl(
-        binding_name,
-        Expression::CallExpression(esm_call_expr.into_in(builder.allocator())),
-        builder,
-      );
-    }
-    let assignment_expr = Expression::new_assignment_expression(
-      SPAN,
-      AssignmentOperator::Assign,
-      AssignmentTarget::new_assignment_target_identifier(
-        SPAN,
-        oxc::ast::ast::Str::from_str_in(binding_name, builder),
-        builder,
-      ),
+    wrapper_decl_stmt(
+      binding_name,
       Expression::CallExpression(esm_call_expr.into_in(builder.allocator())),
-      builder,
-    );
-    let call_expr =
-      Expression::new_call_expression(SPAN, assignment_expr, None, [], false, builder);
-    Statement::new_function_declaration(
-      SPAN,
-      FunctionType::FunctionDeclaration,
-      Some(BindingIdentifier::new(
-        SPAN,
-        oxc::ast::ast::Str::from_str_in(binding_name, builder),
-        builder,
-      )),
-      false,
-      false,
-      false,
-      None,
-      None,
-      FormalParameters::boxed(SPAN, FormalParameterKind::Signature, [], None, builder),
-      None,
-      Some(FunctionBody::boxed(
-        SPAN,
-        [],
-        [Statement::new_return_statement(SPAN, Some(call_expr), builder)],
-        builder,
-      )),
+      decl_kind,
       builder,
     )
   }
 }
 
 impl<'ast> StatementFactoryExt<'ast> for Statement<'ast> {}
+
+/// `var <binding_name> = <wrapper_call>` or, hoisted,
+/// `function <binding_name>() { return (<binding_name> = <wrapper_call>)(); }`: the function is
+/// callable before its statement runs and replaces itself with the wrapper on the first call.
+fn wrapper_decl_stmt<'ast, B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
+  binding_name: &str,
+  wrapper_call: Expression<'ast>,
+  decl_kind: EsmWrapperDeclKind,
+  builder: &B,
+) -> Statement<'ast> {
+  if matches!(decl_kind, EsmWrapperDeclKind::Var) {
+    return Statement::new_var_decl(binding_name, wrapper_call, builder);
+  }
+  let assignment_expr = Expression::new_assignment_expression(
+    SPAN,
+    AssignmentOperator::Assign,
+    AssignmentTarget::new_assignment_target_identifier(
+      SPAN,
+      oxc::ast::ast::Str::from_str_in(binding_name, builder),
+      builder,
+    ),
+    wrapper_call,
+    builder,
+  );
+  let call_expr = Expression::new_call_expression(SPAN, assignment_expr, None, [], false, builder);
+  Statement::new_function_declaration(
+    SPAN,
+    FunctionType::FunctionDeclaration,
+    Some(BindingIdentifier::new(
+      SPAN,
+      oxc::ast::ast::Str::from_str_in(binding_name, builder),
+      builder,
+    )),
+    false,
+    false,
+    false,
+    None,
+    None,
+    FormalParameters::boxed(SPAN, FormalParameterKind::Signature, [], None, builder),
+    None,
+    Some(FunctionBody::boxed(
+      SPAN,
+      [],
+      [Statement::new_return_statement(SPAN, Some(call_expr), builder)],
+      builder,
+    )),
+    builder,
+  )
+}
 
 /// `<expr>.then(n => <return_expr>)`
 fn then_with_arrow_callback<'ast, B: GetAstBuilder<'ast> + GetAllocator<'ast>>(

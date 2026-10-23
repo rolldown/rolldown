@@ -13,11 +13,13 @@ var main_exports = /* @__PURE__ */ __exportAll({
 	foo: () => "foo"
 });
 var foo, main_default;
-var init_main = __esmMin((() => {
-	foo = "foo";
-	main_default = "main";
-	console.log((init_main(), __toCommonJS(main_exports)));
-}));
+function init_main() {
+	return (init_main = __esmMin((() => {
+		foo = "foo";
+		main_default = "main";
+		console.log((init_main(), __toCommonJS(main_exports)));
+	})))();
+}
 init_main();
 export { main_default as default, foo };
 

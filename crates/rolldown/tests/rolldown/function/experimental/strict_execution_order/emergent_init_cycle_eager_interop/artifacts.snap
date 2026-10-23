@@ -80,11 +80,13 @@ function init_s_first() {
 	})))();
 }
 // s/carrier.cjs.js
-var require_carrier_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = function carrier() {
-		return "CARRIED";
-	};
-}));
+function require_carrier_cjs() {
+	return (require_carrier_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = function carrier() {
+			return "CARRIED";
+		};
+	})))();
+}
 // s/barrel.js
 function makeBmark() {
 	return "B";
@@ -181,11 +183,13 @@ function init_s_first() {
 	})))();
 }
 // s/carrier.cjs.js
-var require_carrier_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = function carrier() {
-		return "CARRIED";
-	};
-}));
+function require_carrier_cjs() {
+	return (require_carrier_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = function carrier() {
+			return "CARRIED";
+		};
+	})))();
+}
 // s/barrel.js
 function makeBmark() {
 	return "B";

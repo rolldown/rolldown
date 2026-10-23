@@ -17,13 +17,19 @@ function myFunction() {
 	return "function value";
 }
 var moduleExports;
-var init_esm = __esmMin((() => {
-	moduleExports = { customExport: "custom" };
-}));
+function init_esm() {
+	return (init_esm = __esmMin((() => {
+		moduleExports = { customExport: "custom" };
+	})))();
+}
+// cjs.js
+function require_cjs() {
+	return (require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = (init_esm(), __toCommonJS(esm_exports));
+	})))();
+}
 // main.js
-var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = (init_esm(), __toCommonJS(esm_exports));
-})))());
+var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
 assert.deepStrictEqual(import_cjs.default, { customExport: "custom" });
 
 ```

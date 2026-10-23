@@ -8,18 +8,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // a.js
-var init_a = __esmMin((() => {
-	init_main();
-}));
+function init_a() {
+	return (init_a = __esmMin((() => {
+		init_main();
+	})))();
+}
 
 // data.json
 var data_default = [];
 
 // main.js
 var main_exports = /* @__PURE__ */ __exportAll({ default: () => data_default });
-var init_main = __esmMin((() => {
-	init_a();
-}));
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_a();
+	})))();
+}
 
 init_main();
 export { data_default as default };

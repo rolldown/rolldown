@@ -9,16 +9,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 // target.cjs
-var require_target = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = { existing: "existing" };
-}));
+function require_target() {
+	return (require_target = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = { existing: "existing" };
+	})))();
+}
 // augment.cjs
-var require_augment = /* @__PURE__ */ __commonJSMin((() => {
-	const target = require_target();
-	target.added = function added() {
-		return "added";
-	};
-}));
+function require_augment() {
+	return (require_augment = /* @__PURE__ */ __commonJSMin((() => {
+		const target = require_target();
+		target.added = function added() {
+			return "added";
+		};
+	})))();
+}
 // main.js
 var import_target = /* @__PURE__ */ __toESM(require_target());
 require_augment();

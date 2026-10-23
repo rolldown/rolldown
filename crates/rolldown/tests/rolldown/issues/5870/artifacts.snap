@@ -10,14 +10,20 @@ import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 // lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ constant: () => 1 });
-var init_lib = __esmMin((() => {}));
+function init_lib() {
+	return (init_lib = __esmMin((() => {})))();
+}
 // reexport.js
 init_lib();
 // log.js
 assert.strictEqual(1, 1);
-(/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = (init_lib(), __toCommonJS(lib_exports));
-})))();
+// commonjs.cjs
+function require_commonjs() {
+	return (require_commonjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = (init_lib(), __toCommonJS(lib_exports));
+	})))();
+}
+require_commonjs();
 
 ```
 
@@ -32,7 +38,9 @@ import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 // lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ constant: () => 1 });
-var init_lib = __esmMin((() => {}));
+function init_lib() {
+	return (init_lib = __esmMin((() => {})))();
+}
 // reexport.js
 function init_reexport() {
 	return (init_reexport = __esmMin((() => {
@@ -47,9 +55,11 @@ function init_log() {
 	})))();
 }
 // commonjs.cjs
-var require_commonjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = (init_lib(), __toCommonJS(lib_exports));
-}));
+function require_commonjs() {
+	return (require_commonjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = (init_lib(), __toCommonJS(lib_exports));
+	})))();
+}
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_log();

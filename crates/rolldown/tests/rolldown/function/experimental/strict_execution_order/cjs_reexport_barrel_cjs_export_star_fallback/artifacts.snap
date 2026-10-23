@@ -17,10 +17,12 @@ export { loadRoute };
 ```js
 import { a as __toESM, i as __reExport, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
 // node_modules/pure-barrel/extra.cjs
-var require_extra = /* @__PURE__ */ __commonJSMin(((exports) => {
-	globalThis.__events.push("extra");
-	exports.extraValue = "extra";
-}));
+function require_extra() {
+	return (require_extra = /* @__PURE__ */ __commonJSMin(((exports) => {
+		globalThis.__events.push("extra");
+		exports.extraValue = "extra";
+	})))();
+}
 // node_modules/pure-barrel/cn.js
 function cn(...values) {
 	return values.filter(Boolean).join(" ");
@@ -31,12 +33,14 @@ function init_cn() {
 	})))();
 }
 // node_modules/pure-barrel/clone-deep.cjs
-var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	globalThis.__events.push("clone-deep");
-	module.exports = function cloneDeep(value) {
-		return JSON.parse(JSON.stringify(value));
-	};
-}));
+function require_clone_deep() {
+	return (require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		globalThis.__events.push("clone-deep");
+		module.exports = function cloneDeep(value) {
+			return JSON.parse(JSON.stringify(value));
+		};
+	})))();
+}
 // node_modules/pure-barrel/index.js
 var pure_barrel_exports = /* @__PURE__ */ __exportAll({
 	cloneDeep: () => import_clone_deep.default,
@@ -109,10 +113,12 @@ export { loadRoute };
 ```js
 import { a as __toESM, i as __reExport, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
 // node_modules/pure-barrel/extra.cjs
-var require_extra = /* @__PURE__ */ __commonJSMin(((exports) => {
-	globalThis.__events.push("extra");
-	exports.extraValue = "extra";
-}));
+function require_extra() {
+	return (require_extra = /* @__PURE__ */ __commonJSMin(((exports) => {
+		globalThis.__events.push("extra");
+		exports.extraValue = "extra";
+	})))();
+}
 // node_modules/pure-barrel/cn.js
 function cn(...values) {
 	return values.filter(Boolean).join(" ");
@@ -123,12 +129,14 @@ function init_cn() {
 	})))();
 }
 // node_modules/pure-barrel/clone-deep.cjs
-var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	globalThis.__events.push("clone-deep");
-	module.exports = function cloneDeep(value) {
-		return JSON.parse(JSON.stringify(value));
-	};
-}));
+function require_clone_deep() {
+	return (require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		globalThis.__events.push("clone-deep");
+		module.exports = function cloneDeep(value) {
+			return JSON.parse(JSON.stringify(value));
+		};
+	})))();
+}
 // node_modules/pure-barrel/index.js
 var pure_barrel_exports = /* @__PURE__ */ __exportAll({
 	cloneDeep: () => import_clone_deep.default,

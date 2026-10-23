@@ -16,14 +16,20 @@ var esm_exports = /* @__PURE__ */ __exportAll({
 	foo: () => "foo",
 	"module.exports": () => moduleExports
 }), esm_default, moduleExports;
-var init_esm = __esmMin((() => {
-	esm_default = { default: "default-value" };
-	moduleExports = { foo: "foo" };
-}));
+function init_esm() {
+	return (init_esm = __esmMin((() => {
+		esm_default = { default: "default-value" };
+		moduleExports = { foo: "foo" };
+	})))();
+}
+// cjs.js
+function require_cjs() {
+	return (require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = (init_esm(), __toCommonJS(esm_exports));
+	})))();
+}
 // main.js
-var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = (init_esm(), __toCommonJS(esm_exports));
-})))());
+var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
 assert.deepStrictEqual(import_cjs.default, { foo: "foo" });
 
 ```

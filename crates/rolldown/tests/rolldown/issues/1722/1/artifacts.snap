@@ -25,10 +25,14 @@ export { main, sub };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+// sub.cjs
+function require_sub() {
+	return (require_sub = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports.sub = "sub";
+	})))();
+}
 // main.js
-var import_sub = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports.sub = "sub";
-})))();
+var import_sub = require_sub();
 const main = "main";
 export { main as n, import_sub as t };
 

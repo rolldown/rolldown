@@ -8,9 +8,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // main.cjs
-var require_main = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.foo = "foo";
-}));
+function require_main() {
+	return (require_main = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.foo = "foo";
+	})))();
+}
 
 export default require_main();
 

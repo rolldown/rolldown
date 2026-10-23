@@ -14,13 +14,19 @@ var esm_exports = /* @__PURE__ */ __exportAll({
 	default: () => esm_default,
 	foo: () => "foo"
 }), esm_default;
-var init_esm = __esmMin((() => {
-	esm_default = { defaultValue: "default" };
-}));
+function init_esm() {
+	return (init_esm = __esmMin((() => {
+		esm_default = { defaultValue: "default" };
+	})))();
+}
+// cjs.js
+function require_cjs() {
+	return (require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = (init_esm(), __toCommonJS(esm_exports));
+	})))();
+}
 // main.js
-var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = (init_esm(), __toCommonJS(esm_exports));
-})))());
+var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
 assert.deepStrictEqual(import_cjs.__esModule, true);
 assert.deepStrictEqual(import_cjs.foo, "foo");
 assert.deepStrictEqual(import_cjs.bar, "bar");

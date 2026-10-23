@@ -9,20 +9,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 // in_if.cjs
-var require_in_if = /* @__PURE__ */ __commonJSMin(((exports) => {
-	if (typeof window === "undefined") {
-		exports.unused = 1;
-		globalThis.effectInIf = true;
-	}
-}));
+function require_in_if() {
+	return (require_in_if = /* @__PURE__ */ __commonJSMin(((exports) => {
+		if (typeof window === "undefined") {
+			exports.unused = 1;
+			globalThis.effectInIf = true;
+		}
+	})))();
+}
 // return_in_if.cjs
-var require_return_in_if = /* @__PURE__ */ __commonJSMin(((exports) => {
-	if (typeof process !== "undefined") {
-		exports.unused = 1;
-		if (typeof window === "undefined") return;
-	}
-	globalThis.afterReturn = true;
-}));
+function require_return_in_if() {
+	return (require_return_in_if = /* @__PURE__ */ __commonJSMin(((exports) => {
+		if (typeof process !== "undefined") {
+			exports.unused = 1;
+			if (typeof window === "undefined") return;
+		}
+		globalThis.afterReturn = true;
+	})))();
+}
 require_in_if();
 require_return_in_if();
 assert.strictEqual(globalThis.effectInIf, true);

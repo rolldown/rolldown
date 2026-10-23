@@ -15,10 +15,14 @@ console.log(123, "no identifier in this file should be named W, X, Y, or Z");
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+// AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD.js
+function require_AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD() {
+	return (require_AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = 123;
+	})))();
+}
 // require.js
-const foo = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = 123;
-})))();
+const foo = require_AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD();
 console.log(foo, "no identifier in this file should be named A, B, C, or D");
 
 ```

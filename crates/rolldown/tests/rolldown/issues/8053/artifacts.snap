@@ -19,11 +19,15 @@ assert(typeof import_lodash.noop === "function");
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
+// lodash.cjs
+function require_lodash() {
+	return (require_lodash = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.noop = function noop() {};
+		exports.debounce = function debounce() {};
+	})))();
+}
 // utils.js
-var import_lodash = (/* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.noop = function noop() {};
-	exports.debounce = function debounce() {};
-})))();
+var import_lodash = require_lodash();
 // main.js
 assert(typeof import_lodash.debounce === "function");
 assert(typeof import_lodash.noop === "function");

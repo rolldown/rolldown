@@ -12,10 +12,13 @@ const shared = "shared-initial";
 // required.js
 var required_exports = /* @__PURE__ */ __exportAll({ required: () => required$1 });
 var required$1;
+function init_required() {
+	return (init_required = __esmMin((() => {
+		required$1 = "required-value";
+	})))();
+}
 // main.js
-const required = (__esmMin((() => {
-	required$1 = "required-value";
-}))(), __toCommonJS(required_exports));
+const required = (init_required(), __toCommonJS(required_exports));
 const lazy = import("./lazy.js");
 export { required as n, shared as r, lazy as t };
 

@@ -8,27 +8,35 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // c.js
-var require_c = /* @__PURE__ */ __commonJSMin((async () => {
-	await 0;
-}));
+function require_c() {
+	return (require_c = /* @__PURE__ */ __commonJSMin((async () => {
+		await 0;
+	})))();
+}
 // b.js
 var b_exports = /* @__PURE__ */ __exportAll({});
-var init_b = __esmMin((async () => {
-	require_c();
-}));
+function init_b() {
+	return (init_b = __esmMin((async () => {
+		require_c();
+	})))();
+}
 // a.js
 var a_exports = /* @__PURE__ */ __exportAll({});
-var init_a = __esmMin((async () => {
-	await init_b();
-}));
+function init_a() {
+	return (init_a = __esmMin((async () => {
+		await init_b();
+	})))();
+}
 // entry.js
-var require_entry = /* @__PURE__ */ __commonJSMin((async () => {
-	init_a().then(() => a_exports);
-	init_b().then(() => b_exports);
-	Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_c()));
-	Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_entry()));
-	await 0;
-}));
+function require_entry() {
+	return (require_entry = /* @__PURE__ */ __commonJSMin((async () => {
+		init_a().then(() => a_exports);
+		init_b().then(() => b_exports);
+		Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_c()));
+		Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_entry()));
+		await 0;
+	})))();
+}
 export default require_entry();
 
 ```

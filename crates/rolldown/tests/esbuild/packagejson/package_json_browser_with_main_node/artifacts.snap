@@ -8,12 +8,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
+// node_modules/demo-pkg/main.js
+function require_main() {
+	return (require_main = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = function() {
+			return 123;
+		};
+	})))();
+}
 // src/entry.js
-var import_main = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = function() {
-		return 123;
-	};
-})))());
+var import_main = /* @__PURE__ */ __toESM(require_main());
 assert.equal((0, import_main.default)(), 123);
 export {};
 

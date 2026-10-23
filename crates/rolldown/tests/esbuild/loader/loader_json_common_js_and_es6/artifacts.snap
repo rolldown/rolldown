@@ -15,10 +15,14 @@ var y_default = {
 // z.json
 var small = "some small text";
 var _if = "test keyword imports";
+// x.json
+function require_x() {
+	return (require_x = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = { "x": true };
+	})))();
+}
 // entry.js
-const x_json = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = { "x": true };
-})))();
+const x_json = require_x();
 console.log(x_json, y_default, small, _if);
 
 ```

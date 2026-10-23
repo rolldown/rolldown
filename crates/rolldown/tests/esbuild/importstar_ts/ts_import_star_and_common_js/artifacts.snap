@@ -9,7 +9,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 // foo.ts
 var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => 123 });
-var init_foo = __esmMin((() => {}));
+function init_foo() {
+	return (init_foo = __esmMin((() => {})))();
+}
 // entry.js
 init_foo();
 const ns2 = (init_foo(), __toCommonJS(foo_exports));

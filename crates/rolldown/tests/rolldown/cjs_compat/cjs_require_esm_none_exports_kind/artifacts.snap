@@ -10,17 +10,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 // aligner.js
 var aligner_exports = /* @__PURE__ */ __exportAll({});
 var Aligner;
-var init_aligner = __esmMin((() => {
-	Aligner = function() {};
-	Aligner.prototype.align = function() {};
-}));
+function init_aligner() {
+	return (init_aligner = __esmMin((() => {
+		Aligner = function() {};
+		Aligner.prototype.align = function() {};
+	})))();
+}
 // default_aligner.js
-var require_default_aligner = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	var Aligner = (init_aligner(), __toCommonJS(aligner_exports));
-	var DefaultAligner = function() {};
-	DefaultAligner.prototype = Object.create(Aligner);
-	module.exports = DefaultAligner;
-}));
+function require_default_aligner() {
+	return (require_default_aligner = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		var Aligner = (init_aligner(), __toCommonJS(aligner_exports));
+		var DefaultAligner = function() {};
+		DefaultAligner.prototype = Object.create(Aligner);
+		module.exports = DefaultAligner;
+	})))();
+}
 // main.js
 init_aligner();
 var import_default_aligner = /* @__PURE__ */ __toESM(require_default_aligner());

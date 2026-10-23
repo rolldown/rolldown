@@ -10,10 +10,14 @@ import assert from "node:assert/strict";
 // HIDDEN [\0rolldown/runtime.js]
 // y.b64
 var y_default = "eQ==";
+// x.b64
+function require_x() {
+	return (require_x = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = "eA==";
+	})))();
+}
 // entry.js
-const x_b64 = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "eA==";
-})))();
+const x_b64 = require_x();
 assert.deepEqual(x_b64, "eA==");
 assert.equal(y_default, "eQ==");
 

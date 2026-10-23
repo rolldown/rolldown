@@ -62,7 +62,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // empty.cjs
-var require_empty = /* @__PURE__ */ __commonJSMin((() => {}));
+function require_empty() {
+	return (require_empty = /* @__PURE__ */ __commonJSMin((() => {})))();
+}
 export { __toESM as n, require_empty as t };
 
 ```

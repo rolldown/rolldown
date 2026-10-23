@@ -8,10 +8,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
 // node_modules/nested-effectful-clone/index.cjs
-var require_nested_effectful_clone = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	globalThis.__events.push("nested-effectful-clone");
-	module.exports = (value) => ({ ...value });
-}));
+function require_nested_effectful_clone() {
+	return (require_nested_effectful_clone = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		globalThis.__events.push("nested-effectful-clone");
+		module.exports = (value) => ({ ...value });
+	})))();
+}
 var import_nested_effectful_clone;
 function init_inner_effectful_barrel_cjs_0() {
 	return (init_inner_effectful_barrel_cjs_0 = __esmMin((() => {
@@ -81,10 +83,12 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
 import { r as init_inner_effectful_barrel_cjs_0, t as import_nested_effectful_clone } from "./inner-effectful-barrel.js";
 // node_modules/effectful-clone/index.cjs
-var require_effectful_clone = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	globalThis.__events.push("effectful-clone");
-	module.exports = (value) => ({ ...value });
-}));
+function require_effectful_clone() {
+	return (require_effectful_clone = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		globalThis.__events.push("effectful-clone");
+		module.exports = (value) => ({ ...value });
+	})))();
+}
 var import_effectful_clone;
 function init_pure_boundary_barrel_cjs_1() {
 	return (init_pure_boundary_barrel_cjs_1 = __esmMin((() => {
@@ -114,10 +118,12 @@ export { value };
 ```js
 import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
 // node_modules/nested-effectful-clone/index.cjs
-var require_nested_effectful_clone = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	globalThis.__events.push("nested-effectful-clone");
-	module.exports = (value) => ({ ...value });
-}));
+function require_nested_effectful_clone() {
+	return (require_nested_effectful_clone = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		globalThis.__events.push("nested-effectful-clone");
+		module.exports = (value) => ({ ...value });
+	})))();
+}
 var import_nested_effectful_clone;
 function init_inner_effectful_barrel_cjs_0() {
 	return (init_inner_effectful_barrel_cjs_0 = __esmMin((() => {
@@ -181,10 +187,12 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
 import { r as init_inner_effectful_barrel_cjs_0, t as import_nested_effectful_clone } from "./inner-effectful-barrel.js";
 // node_modules/effectful-clone/index.cjs
-var require_effectful_clone = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	globalThis.__events.push("effectful-clone");
-	module.exports = (value) => ({ ...value });
-}));
+function require_effectful_clone() {
+	return (require_effectful_clone = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		globalThis.__events.push("effectful-clone");
+		module.exports = (value) => ({ ...value });
+	})))();
+}
 var import_effectful_clone;
 function init_pure_boundary_barrel_cjs_1() {
 	return (init_pure_boundary_barrel_cjs_1 = __esmMin((() => {
@@ -213,11 +221,15 @@ export { value };
 
 ```js
 import { n as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+// node_modules/nested-effectful-clone/index.cjs
+function require_nested_effectful_clone() {
+	return (require_nested_effectful_clone = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		globalThis.__events.push("nested-effectful-clone");
+		module.exports = (value) => ({ ...value });
+	})))();
+}
 // node_modules/inner-effectful-barrel/index.js
-var import_nested_effectful_clone = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	globalThis.__events.push("nested-effectful-clone");
-	module.exports = (value) => ({ ...value });
-})))(), 1);
+var import_nested_effectful_clone = /* @__PURE__ */ __toESM(require_nested_effectful_clone(), 1);
 export { import_nested_effectful_clone as t };
 
 ```
@@ -252,11 +264,15 @@ export { __toESM as n, __commonJSMin as t };
 ```js
 import { n as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
 import { t as import_nested_effectful_clone } from "./inner-effectful-barrel.js";
+// node_modules/effectful-clone/index.cjs
+function require_effectful_clone() {
+	return (require_effectful_clone = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		globalThis.__events.push("effectful-clone");
+		module.exports = (value) => ({ ...value });
+	})))();
+}
 // node_modules/pure-boundary-barrel/index.js
-var import_effectful_clone = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	globalThis.__events.push("effectful-clone");
-	module.exports = (value) => ({ ...value });
-})))(), 1);
+var import_effectful_clone = /* @__PURE__ */ __toESM(require_effectful_clone(), 1);
 // route.js
 globalThis.__events.push("route");
 const value = [(0, import_effectful_clone.default)({ value: 1 }), (0, import_nested_effectful_clone.default)({ value: 2 })];

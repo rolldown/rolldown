@@ -8,13 +8,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // test.txt
-var require_test = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "test.txt";
-}));
+function require_test() {
+	return (require_test = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = "test.txt";
+	})))();
+}
 // test.base64.txt
-var require_test_base64 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "dGVzdC5iYXNlNjQudHh0";
-}));
+function require_test_base64() {
+	return (require_test_base64 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = "dGVzdC5iYXNlNjQudHh0";
+	})))();
+}
 // entry.js
 console.log(require_test(), require_test_base64());
 

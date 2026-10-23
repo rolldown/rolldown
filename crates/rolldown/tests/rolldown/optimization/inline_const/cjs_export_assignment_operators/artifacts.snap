@@ -8,25 +8,29 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
+// dep.cjs
+function require_dep() {
+	return (require_dep = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.add += 1;
+		exports.subtract -= 1;
+		exports.multiply *= 2;
+		exports.divide /= 2;
+		exports.remainder %= 2;
+		exports.exponent **= 2;
+		exports.shiftLeft <<= 1;
+		exports.shiftRight >>= 1;
+		exports.unsignedShiftRight >>>= 1;
+		exports.bitAnd &= 1;
+		exports.bitOr |= 1;
+		exports.bitXor ^= 1;
+		exports.logicalAnd &&= true;
+		exports.logicalOr ||= 2;
+		exports.nullish ??= 3;
+		exports.constant = true;
+	})))();
+}
 // main.js
-var import_dep = (/* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.add += 1;
-	exports.subtract -= 1;
-	exports.multiply *= 2;
-	exports.divide /= 2;
-	exports.remainder %= 2;
-	exports.exponent **= 2;
-	exports.shiftLeft <<= 1;
-	exports.shiftRight >>= 1;
-	exports.unsignedShiftRight >>>= 1;
-	exports.bitAnd &= 1;
-	exports.bitOr |= 1;
-	exports.bitXor ^= 1;
-	exports.logicalAnd &&= true;
-	exports.logicalOr ||= 2;
-	exports.nullish ??= 3;
-	exports.constant = true;
-})))();
+var import_dep = require_dep();
 assert.strictEqual(import_dep.add ? "truthy" : "falsy", "falsy");
 assert.strictEqual(import_dep.logicalAnd ? "truthy" : "falsy", "falsy");
 assert.strictEqual("truthy", "truthy");
@@ -58,25 +62,29 @@ assert.strictEqual(import_dep.constant, true);
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
+// dep.cjs
+function require_dep() {
+	return (require_dep = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.add += 1;
+		exports.subtract -= 1;
+		exports.multiply *= 2;
+		exports.divide /= 2;
+		exports.remainder %= 2;
+		exports.exponent **= 2;
+		exports.shiftLeft <<= 1;
+		exports.shiftRight >>= 1;
+		exports.unsignedShiftRight >>>= 1;
+		exports.bitAnd &= 1;
+		exports.bitOr |= 1;
+		exports.bitXor ^= 1;
+		exports.logicalAnd &&= true;
+		exports.logicalOr ||= 2;
+		exports.nullish ??= 3;
+		exports.constant = true;
+	})))();
+}
 // main.js
-var import_dep = (/* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.add += 1;
-	exports.subtract -= 1;
-	exports.multiply *= 2;
-	exports.divide /= 2;
-	exports.remainder %= 2;
-	exports.exponent **= 2;
-	exports.shiftLeft <<= 1;
-	exports.shiftRight >>= 1;
-	exports.unsignedShiftRight >>>= 1;
-	exports.bitAnd &= 1;
-	exports.bitOr |= 1;
-	exports.bitXor ^= 1;
-	exports.logicalAnd &&= true;
-	exports.logicalOr ||= 2;
-	exports.nullish ??= 3;
-	exports.constant = true;
-})))();
+var import_dep = require_dep();
 assert.strictEqual(import_dep.add ? "truthy" : "falsy", "falsy");
 assert.strictEqual(import_dep.logicalAnd ? "truthy" : "falsy", "falsy");
 assert.strictEqual("truthy", "truthy");

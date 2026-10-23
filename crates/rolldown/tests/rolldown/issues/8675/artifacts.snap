@@ -8,15 +8,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // react.cjs
-var require_react = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.x = 1;
-}));
+function require_react() {
+	return (require_react = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.x = 1;
+	})))();
+}
 
 // createStyled.cjs
-var require_createStyled = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.default = createStyled;
-	function createStyled() {}
-}));
+function require_createStyled() {
+	return (require_createStyled = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.default = createStyled;
+		function createStyled() {}
+	})))();
+}
 
 // bar.mjs
 var import_react = /* @__PURE__ */ __toESM(require_react(), 1);

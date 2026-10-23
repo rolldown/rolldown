@@ -7,10 +7,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+// cjs.js
+function require_cjs() {
+	return (require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = "cjs";
+	})))();
+}
 // main.js
-const cjs = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "cjs";
-})))();
+const cjs = require_cjs();
 export { cjs };
 
 ```

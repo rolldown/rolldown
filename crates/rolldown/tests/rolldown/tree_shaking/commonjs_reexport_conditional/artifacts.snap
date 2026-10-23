@@ -11,18 +11,26 @@ import assert from "node:assert";
 // esm-impl.mjs
 var esm_impl_exports = /* @__PURE__ */ __exportAll({ foo: () => foo$1 });
 var foo$1;
-var init_esm_impl = __esmMin((() => {
-	foo$1 = "from-esm";
-}));
+function init_esm_impl() {
+	return (init_esm_impl = __esmMin((() => {
+		foo$1 = "from-esm";
+	})))();
+}
 // cjs-impl.js
-var require_cjs_impl = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.foo = "from-cjs";
-}));
+function require_cjs_impl() {
+	return (require_cjs_impl = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.foo = "from-cjs";
+	})))();
+}
+// reexporter.js
+function require_reexporter() {
+	return (require_reexporter = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		if (process.env.USE_ESM) module.exports = (init_esm_impl(), __toCommonJS(esm_impl_exports));
+		else module.exports = require_cjs_impl();
+	})))();
+}
 // main.js
-var import_reexporter = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	if (process.env.USE_ESM) module.exports = (init_esm_impl(), __toCommonJS(esm_impl_exports));
-	else module.exports = require_cjs_impl();
-})))();
+var import_reexporter = require_reexporter();
 assert.strictEqual(import_reexporter.foo, "from-cjs");
 
 ```

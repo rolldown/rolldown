@@ -8,15 +8,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // fake-esmodule.cjs
-var require_fake_esmodule = /* @__PURE__ */ __commonJSMin(((exports) => {
-	Object.defineProperty(exports, "__esModule", { value: true });
-	exports.__extends = function() {
-		return "EXTENDS";
-	};
-	exports.__awaiter = function() {
-		return "AWAITER";
-	};
-}));
+function require_fake_esmodule() {
+	return (require_fake_esmodule = /* @__PURE__ */ __commonJSMin(((exports) => {
+		Object.defineProperty(exports, "__esModule", { value: true });
+		exports.__extends = function() {
+			return "EXTENDS";
+		};
+		exports.__awaiter = function() {
+			return "AWAITER";
+		};
+	})))();
+}
 export { __toESM as n, require_fake_esmodule as t };
 
 ```

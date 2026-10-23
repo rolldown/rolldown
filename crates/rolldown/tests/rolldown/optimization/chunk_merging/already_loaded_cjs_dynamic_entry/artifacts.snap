@@ -12,13 +12,17 @@ var shared_exports = /* @__PURE__ */ __exportAll({ compute: () => compute });
 function compute(x) {
 	return x * 2;
 }
-var init_shared = __esmMin((() => {}));
+function init_shared() {
+	return (init_shared = __esmMin((() => {})))();
+}
 // app.cjs
-var require_app = /* @__PURE__ */ __commonJSMin(((exports) => {
-	const { compute } = __toCommonJS(shared_exports);
-	exports.own = compute(21) + 1;
-	exports.done = import("./lazy.js").then((m) => m.lazyValue);
-}));
+function require_app() {
+	return (require_app = /* @__PURE__ */ __commonJSMin(((exports) => {
+		const { compute } = __toCommonJS(shared_exports);
+		exports.own = compute(21) + 1;
+		exports.done = import("./lazy.js").then((m) => m.lazyValue);
+	})))();
+}
 export default require_app();
 export { compute as n, init_shared as r, require_app as t };
 
@@ -31,10 +35,13 @@ import { n as __esmMin } from "./rolldown-runtime.js";
 import { n as compute, r as init_shared } from "./app.js";
 // lazy.js
 var lazyValue;
-__esmMin((() => {
-	init_shared();
-	lazyValue = compute(42);
-}))();
+function init_lazy() {
+	return (init_lazy = __esmMin((() => {
+		init_shared();
+		lazyValue = compute(42);
+	})))();
+}
+init_lazy();
 export { lazyValue };
 
 ```

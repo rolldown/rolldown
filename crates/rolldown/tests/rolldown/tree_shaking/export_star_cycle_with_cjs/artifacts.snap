@@ -12,9 +12,11 @@ import assert from "node:assert";
 var b_exports = /* @__PURE__ */ __exportAll({}, 2);
 __reExport(b_exports, a_exports);
 // cjs.cjs
-var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = {};
-}));
+function require_cjs() {
+	return (require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = {};
+	})))();
+}
 // a.js
 var a_exports = /* @__PURE__ */ __exportAll({}, 2);
 __reExport(a_exports, b_exports);

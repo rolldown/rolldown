@@ -25,10 +25,14 @@ export { foo };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+// foo.js
+function require_foo() {
+	return (require_foo = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports.foo = "foo";
+	})))();
+}
 // main.js
-var import_foo = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports.foo = "foo";
-})))();
+var import_foo = require_foo();
 export { import_foo as t };
 
 ```

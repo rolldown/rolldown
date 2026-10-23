@@ -8,12 +8,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
+// node_modules/demo-pkg/browser.js
+function require_browser() {
+	return (require_browser = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		module.exports = function() {
+			return 123;
+		};
+	})))();
+}
 // src/entry.js
-var import_browser = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = function() {
-		return 123;
-	};
-})))());
+var import_browser = /* @__PURE__ */ __toESM(require_browser());
 assert.equal((0, import_browser.default)(), 123);
 
 ```

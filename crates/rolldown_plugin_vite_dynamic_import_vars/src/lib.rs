@@ -69,55 +69,73 @@ impl Plugin for ViteDynamicImportVarsPlugin {
       return Ok(None);
     }
     if utils::has_dynamic_import(args.code) {
-      let allocator = oxc::allocator::Allocator::default();
-      let Some(parser_ret) = parse_program(&allocator, args.code, args.module_type, args.id)?
-      else {
-        return Ok(None);
-      };
-      let mut visitor = ast_visit::DynamicImportVarsVisit {
+      let rewrite = ast_visit::RewriteContext {
         ctx: &ctx,
         source_text: args.code,
         root: ctx.cwd(),
         importer: args.id.as_path(),
-        need_helper: false,
-        comments: &parser_ret.program.comments,
-        current_comment: 0,
-        async_imports: Vec::default(),
-        async_imports_addrs: Vec::default(),
-        magic_string: None,
       };
 
-      visitor.visit_program(&parser_ret.program);
+      // This scope parses the code. It then visits the AST. Only owned data
+      // leaves the scope. The code below therefore holds no reference to the
+      // AST arena.
+      let (mut edits, async_imports) = {
+        let allocator = oxc::allocator::Allocator::default();
+        let Some(parser_ret) = parse_program(&allocator, args.code, args.module_type, args.id)?
+        else {
+          return Ok(None);
+        };
+        let mut visitor = ast_visit::DynamicImportVarsVisit {
+          rewrite,
+          comments: &parser_ret.program.comments,
+          current_comment: 0,
+          async_imports: Vec::default(),
+          edits: Vec::default(),
+        };
 
-      if !visitor.async_imports.is_empty()
+        visitor.visit_program(&parser_ret.program);
+
+        (visitor.edits, visitor.async_imports)
+      };
+
+      if !async_imports.is_empty()
         && let Some(resolver) = &self.resolver
       {
-        let async_imports = std::mem::take(&mut visitor.async_imports);
         let task = async_imports
-          .into_iter()
-          .map(|glob| async { resolver(glob, args.id.to_string()).await.ok()? });
+          .iter()
+          .map(|pending| async { resolver(pending.glob.clone(), args.id.to_string()).await.ok()? });
 
         let importer = args.id.as_path().parent().unwrap();
         let result = block_on(block_on_spawn_all(task));
-        for (i, item) in result.into_iter().enumerate() {
+        for (pending, item) in async_imports.iter().zip(result) {
           if let Some(id) = item {
             let id = relative_path_as_js_specifier(id, importer);
             if id == "." {
               continue;
             }
 
-            let addr = visitor.async_imports_addrs[i];
-            visitor.rewrite_variable_dynamic_import(unsafe { &*addr }, Some(&id));
+            if let Some(edit) = rewrite.build_edit(
+              &id,
+              pending.import_span,
+              pending.source_span,
+              &pending.first_quasi_raw,
+            ) {
+              edits.push(edit);
+            }
           }
         }
       }
 
-      if let Some(mut magic_string) = visitor.magic_string {
-        if visitor.need_helper {
-          magic_string.prepend(format!(
-            "import __variableDynamicImportRuntimeHelper from \"{DYNAMIC_IMPORT_HELPER}\";"
-          ));
+      if !edits.is_empty() {
+        let mut magic_string = string_wizard::MagicString::new(args.code);
+        for edit in edits {
+          magic_string
+            .update(edit.start, edit.end, edit.replacement)
+            .expect("update should not fail in dynamic import vars plugin");
         }
+        magic_string.prepend(format!(
+          "import __variableDynamicImportRuntimeHelper from \"{DYNAMIC_IMPORT_HELPER}\";"
+        ));
         return Ok(Some(HookTransformOutput {
           code: Some(magic_string.to_string()),
           map: HookTransformOutputMap::from_if_enabled(self.sourcemap, || {

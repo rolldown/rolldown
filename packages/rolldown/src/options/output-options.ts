@@ -1047,6 +1047,10 @@ export type ExperimentalInlineCommonChunksOptions = {
    * Must be a non-negative safe integer or `Infinity`. `0` disables inlining.
    * `Infinity` removes the size limit.
    *
+   * With an explicit `output.strictExecutionOrder: false`, a common chunk is inlined only when
+   * each of its modules is wrapped or its own top-level effects do no more than initialize its
+   * bindings; see the guide's "Without strict execution order" section.
+   *
    * @default 0
    */
   maxSize?: number;

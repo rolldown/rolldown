@@ -1,6 +1,8 @@
 # Source Code Transformations
 
-If a plugin transforms source code, it should generate a sourcemap automatically, unless there's a specific `sourceMap: false` option. Rolldown only cares about the `mappings` property (everything else is handled automatically). [magic-string](https://github.com/Rich-Harris/magic-string) provides a simple way to generate such a map for elementary transformations like adding or removing code snippets.
+If a plugin transforms source code, it should generate a sourcemap automatically, unless there's a specific `sourceMap: false` option. For a map with one source, Rolldown only needs the `mappings` property: that source is the module itself, so Rolldown names it with the module id and fills a missing or empty `sourcesContent` with the code the hook received. [magic-string](https://github.com/Rich-Harris/magic-string) provides a simple way to generate such a map for elementary transformations like adding or removing code snippets.
+
+A map with more than one source, such as one that a tool chained from the input's own sourcemap, keeps its `sources` and `sourcesContent` as returned, `''` and `null` entries included. Rolldown only fills the content of a source named with the module id.
 
 If it doesn't make sense to generate a sourcemap, return an empty sourcemap:
 

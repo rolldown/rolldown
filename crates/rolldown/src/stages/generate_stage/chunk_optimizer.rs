@@ -1154,14 +1154,14 @@ impl GenerateStage<'_> {
     if runtime_chunk.modules.len() != 1 || runtime_chunk.modules[0] != runtime_module_idx {
       return;
     }
-    let runtime_chunk_bits = runtime_chunk.bits.clone();
-
     let consumer_chunks = self.collect_runtime_consumer_chunks(
       chunk_graph,
       runtime_chunk_idx,
       runtime_module_idx,
       additional_runtime_consumers,
     );
+    let runtime_chunk_bits =
+      self.runtime_bits_covering_consumers(chunk_graph, &runtime_chunk.bits, &consumer_chunks);
     let single_consumer = self.find_single_runtime_consumer(&consumer_chunks);
     let target_chunk_idx = match cascade {
       RuntimeMergeCascade::SingleConsumerOnly => single_consumer,
@@ -1335,6 +1335,89 @@ impl GenerateStage<'_> {
       }));
     }
     consumers
+  }
+
+  /// The bits a bitset host must have so that every runtime consumer runs only where the host is
+  /// loaded. The runtime module's bits cover the helper users known at link time. Facade
+  /// elimination can later make a chunk outside them a consumer, and a host matched by the
+  /// link-time bits would then be loaded by that chunk's entries just for helpers. So the bits are
+  /// widened with each consumer entry that a host with the link-time bits has not already loaded.
+  /// See internal-docs/code-splitting/implementation.md#runtime-module-placement.
+  fn runtime_bits_covering_consumers(
+    &self,
+    chunk_graph: &ChunkGraph,
+    runtime_bits: &BitSet,
+    consumer_chunks: &FxHashSet<ChunkIdx>,
+  ) -> BitSet {
+    // Byte-wise: the runtime bits, plus the consumer entries that are not already loaded.
+    let mut bits = runtime_bits.clone();
+    for &chunk_idx in consumer_chunks {
+      bits.union(&chunk_graph.chunk_table[chunk_idx].bits);
+    }
+    if bits == *runtime_bits {
+      return bits;
+    }
+    bits.subtract(&self.entries_loaded_after(chunk_graph, runtime_bits));
+    bits.union(runtime_bits);
+    bits
+  }
+
+  /// `entries`, plus every dynamic entry that can only start after one of them: each included
+  /// `import()` of it is in a chunk that only those entries load.
+  ///
+  /// Tree shaking lists dynamic entries in topological order of the `import()` graph
+  /// (`sort_dynamic_entries_by_topological_order`), so one pass covers every acyclic chain, and the
+  /// second pass only finds no change. A worklist with per-chunk counters avoids that second pass,
+  /// but its setup made it slower on synthetic graphs of up to 4,000 entries.
+  fn entries_loaded_after(&self, chunk_graph: &ChunkGraph, entries: &BitSet) -> BitSet {
+    // `None` when an importer has no chunk, which keeps that dynamic entry out.
+    let importer_chunks_by_dynamic_entry = self
+      .link_output
+      .entries
+      .iter()
+      .flat_map(|(&idx, entry_points)| entry_points.iter().map(move |entry| (idx, entry)))
+      .enumerate()
+      .filter(|(_, (_, entry_point))| entry_point.kind.is_dynamic_import())
+      .map(|(entry_bit, (entry_module_idx, entry_point))| {
+        let importer_chunks = entry_point
+          .related_stmt_infos
+          .iter()
+          .filter(|(importer_idx, stmt_info_idx, _, import_record_idx)| {
+            self.is_included_dynamic_import_record(
+              *importer_idx,
+              *stmt_info_idx,
+              *import_record_idx,
+              entry_module_idx,
+            )
+          })
+          .map(|(importer_idx, ..)| chunk_graph.module_to_chunk[*importer_idx])
+          .collect::<Option<Vec<_>>>();
+        let entry_bit = u32::try_from(entry_bit).expect("Too many entries, u32 overflowed.");
+        (entry_bit, importer_chunks)
+      })
+      .collect::<Vec<_>>();
+
+    let mut loaded = entries.clone();
+    loop {
+      let mut changed = false;
+      for (entry_bit, importer_chunks) in &importer_chunks_by_dynamic_entry {
+        let Some(importer_chunks) = importer_chunks else {
+          continue;
+        };
+        if !loaded.has_bit(*entry_bit)
+          && !importer_chunks.is_empty()
+          && importer_chunks
+            .iter()
+            .all(|&chunk_idx| chunk_graph.chunk_table[chunk_idx].bits.is_subset(&loaded))
+        {
+          loaded.set_bit(*entry_bit);
+          changed = true;
+        }
+      }
+      if !changed {
+        return loaded;
+      }
+    }
   }
 
   fn chunk_references_runtime_symbol(&self, chunk: &Chunk, runtime_module_idx: ModuleIdx) -> bool {

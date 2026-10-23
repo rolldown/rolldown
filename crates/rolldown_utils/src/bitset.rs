@@ -63,6 +63,20 @@ impl BitSet {
     }
   }
 
+  pub fn subtract(&mut self, other: &Self) {
+    for (left, right) in self.entries.iter_mut().zip(&other.entries) {
+      *left &= !right;
+    }
+  }
+
+  pub fn is_subset(&self, other: &Self) -> bool {
+    self
+      .entries
+      .iter()
+      .enumerate()
+      .all(|(i, &e)| e & !other.entries.get(i).copied().unwrap_or(0) == 0)
+  }
+
   // It is safe to convert `usize` to `u32` here because we ensure that the bitset is created with a maximum bit count that fits within `u32`.
   #[expect(clippy::cast_possible_truncation)]
   pub fn index_of_one(&self) -> impl Iterator<Item = u32> + '_ {
@@ -182,6 +196,39 @@ mod tests {
     bs2.set_bit(15);
     bs.intersect(&bs2);
     assert_eq!(bs.index_of_one().collect::<Vec<_>>(), vec![1, 8, 15]);
+  }
+
+  #[test]
+  fn subtract() {
+    let mut bs = BitSet::new(16);
+    bs.extend([1, 5, 8, 15]);
+    let mut other = BitSet::new(8);
+    other.extend([1, 2]);
+    bs.subtract(&other);
+    assert_eq!(bs.index_of_one().collect::<Vec<_>>(), vec![5, 8, 15]);
+
+    let mut wide = BitSet::new(16);
+    wide.extend([8, 15]);
+    bs.subtract(&wide);
+    assert_eq!(bs.index_of_one().collect::<Vec<_>>(), vec![5]);
+  }
+
+  #[test]
+  fn is_subset() {
+    let mut small = BitSet::new(16);
+    small.set_bit(1);
+    small.set_bit(9);
+    let mut large = small.clone();
+    large.set_bit(15);
+    assert!(small.is_subset(&large));
+    assert!(!large.is_subset(&small));
+    assert!(BitSet::new(16).is_subset(&small));
+
+    let mut wide = BitSet::new(16);
+    wide.set_bit(9);
+    let narrow = BitSet::new(8);
+    assert!(!wide.is_subset(&narrow));
+    assert!(narrow.is_subset(&wide));
   }
 
   #[test]

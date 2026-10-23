@@ -336,7 +336,7 @@ test(
       name: 'virtual-owner',
       resolveId(source) {
         seenByOwner.push(source);
-        if (source === 'virtual:lazy-me' || source === virtualId) {
+        if (source === 'virtual:lazy-me') {
           return virtualId;
         }
       },
@@ -386,7 +386,9 @@ test(
     expect(seenByOwner.some((id) => id.includes('?rolldown-lazy=1'))).toBe(false);
     expect(seenByObserver.some((id) => id.includes('?rolldown-lazy=1'))).toBe(false);
     expect(seenByOwner).toContain('virtual:lazy-me');
-    expect(seenByOwner).toContain(virtualId);
+    // The fetched proxy reuses the first resolve result, so the resolved id never comes
+    // back to the plugin as a specifier.
+    expect(seenByOwner).not.toContain(virtualId);
   },
 );
 

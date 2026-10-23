@@ -12,10 +12,7 @@ use rolldown_plugin::{
 };
 use rolldown_plugin_utils::parse_program;
 use rolldown_std_utils::relative_path_as_js_specifier;
-use rolldown_utils::{
-  futures::{block_on, block_on_spawn_all},
-  pattern_filter::StringOrRegex,
-};
+use rolldown_utils::pattern_filter::StringOrRegex;
 use sugar_path::SugarPath as _;
 
 pub const DYNAMIC_IMPORT_HELPER: &str = "\0rolldown_dynamic_import_helper.js";
@@ -79,6 +76,11 @@ impl Plugin for ViteDynamicImportVarsPlugin {
       // This scope parses the code. It then visits the AST. Only owned data
       // leaves the scope. The code below therefore holds no reference to the
       // AST arena.
+      //
+      // The scope also lets the hook await. The AST is `!Send`, and the hook
+      // future must be `Send`. The AST therefore cannot stay alive across the
+      // `await` below. The earlier code blocked the thread instead. That code
+      // deadlocked the runtime on machines with few cores (#10664).
       let (mut edits, async_imports) = {
         let allocator = oxc::allocator::Allocator::default();
         let Some(parser_ret) = parse_program(&allocator, args.code, args.module_type, args.id)?
@@ -106,7 +108,7 @@ impl Plugin for ViteDynamicImportVarsPlugin {
           .map(|pending| async { resolver(pending.glob.clone(), args.id.to_string()).await.ok()? });
 
         let importer = args.id.as_path().parent().unwrap();
-        let result = block_on(block_on_spawn_all(task));
+        let result = futures::future::join_all(task).await;
         for (pending, item) in async_imports.iter().zip(result) {
           if let Some(id) = item {
             let id = relative_path_as_js_specifier(id, importer);

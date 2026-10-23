@@ -268,3 +268,42 @@ test('`isBundled` defaults to `isBuild`', async () => {
 
   await expect(bundleNodeBuiltinNamedImport({ isBuild: false })).rejects.toThrow('MISSING_EXPORT');
 });
+
+test('an optional peer dep id is not externalized when lazy compilation resolves it again', async () => {
+  const root = await mkdtemp(nodePath.join(tmpdir(), 'rolldown-vite-resolve-'));
+  try {
+    const packageRoot = nodePath.join(root, 'node_modules/lib');
+    await mkdir(packageRoot, { recursive: true });
+    await Promise.all([
+      writeFile(
+        nodePath.join(packageRoot, 'index.js'),
+        `export const load = () => import('foobar');`,
+      ),
+      writeFile(
+        nodePath.join(packageRoot, 'package.json'),
+        JSON.stringify({
+          name: 'lib',
+          version: '1.0.0',
+          main: 'index.js',
+          peerDependencies: { foobar: '*' },
+          peerDependenciesMeta: { foobar: { optional: true } },
+        }),
+      ),
+    ]);
+    const resolveId = createResolveIdHook({ root, environmentConsumer: 'client' });
+
+    const resolved = await resolveId('foobar', nodePath.join(packageRoot, 'index.js'), {
+      kind: 'dynamic-import',
+    });
+    expect(resolved).toMatchObject({ id: '__vite-optional-peer-dep:foobar:lib' });
+
+    // Lazy compilation imports the resolved id from a proxy module and resolves it again.
+    const resolvedAgain = await resolveId(resolved!.id, `${resolved!.id}?rolldown-lazy=1`, {
+      kind: 'dynamic-import',
+    });
+    expect(resolvedAgain?.id).toBe(resolved!.id);
+    expect(resolvedAgain?.external).toBeFalsy();
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

@@ -275,7 +275,9 @@ impl Plugin for ViteResolvePlugin {
       }));
     }
 
-    if args.specifier.starts_with(BROWSER_EXTERNAL_ID) {
+    if args.specifier.starts_with(BROWSER_EXTERNAL_ID)
+      || args.specifier.starts_with(OPTIONAL_PEER_DEP_ID)
+    {
       return Ok(Some(HookResolveIdOutput { id: args.specifier.into(), ..Default::default() }));
     }
 

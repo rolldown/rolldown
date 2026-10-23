@@ -24,9 +24,8 @@ export * from "external";
 
 ```js
 import "./s_ac.js";
-//#region entry_c.js
+// entry_c.js
 const c = "c";
-//#endregion
 export { c };
 
 ```
@@ -34,17 +33,15 @@ export { c };
 ## re.js
 
 ```js
-//#region re.js
+// re.js
 console.log("re side effect");
-//#endregion
 
 ```
 
 ## s_ac.js
 
 ```js
-//#region s_ac.js
+// s_ac.js
 console.log("s_ac side effect");
-//#endregion
 
 ```

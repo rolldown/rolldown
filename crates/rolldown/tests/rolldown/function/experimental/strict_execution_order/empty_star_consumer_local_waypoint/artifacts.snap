@@ -43,7 +43,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 (function() {
 	// HIDDEN [\0rolldown/runtime.js]
-	//#region native.js
+	// native.js
 	var require_native = /* @__PURE__ */ __commonJSMin((() => {}));
 	var import_native;
 	function init_color_bridge_cjs_0() {
@@ -51,30 +51,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 			import_native = require_native();
 		})))();
 	}
-	//#endregion
-	//#region title.js
+	// title.js
 	var getHeaderTitle;
 	var init_title = __esmMin((() => {
 		getHeaderTitle = void 0;
 	}));
-	//#endregion
-	//#region color-bridge.js
-	//#endregion
-	//#region label.js
+	// label.js
 	var HeaderTitle;
 	var init_label = __esmMin((() => {
 		HeaderTitle = void 0;
 	}));
-	//#endregion
-	//#region empty.js
-	//#endregion
-	//#region ambiguous-left.js
-	//#endregion
-	//#region ambiguous-right.js
-	//#endregion
-	//#region elements.js
-	//#endregion
-	//#region color.js
+	// color.js
 	function Color(value) {
 		return value;
 	}
@@ -82,13 +69,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 		init_color_bridge_cjs_0();
 		Color.foreground = () => [import_native.PlatformColor, import_native.DynamicColorIOS];
 	}));
-	//#endregion
-	//#region internal.js
+	// internal.js
 	var init_internal = __esmMin((() => {
 		init_color();
 	}));
-	//#endregion
-	//#region config.js
+	// config.js
 	function useHeaderConfigProps() {
 		return [
 			getHeaderTitle,
@@ -102,8 +87,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 		init_internal();
 		processBarButtonItems = () => Color.foreground();
 	}));
-	//#endregion
-	//#region view.js
+	// view.js
 	function NativeStackView() {
 		return SceneView;
 	}
@@ -114,14 +98,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 			return useHeaderConfigProps();
 		});
 	}));
-	//#endregion
-	//#region stack.js
+	// stack.js
 	var stack_exports = /* @__PURE__ */ __exportAll({ NativeStackView: () => NativeStackView });
 	var init_stack = __esmMin((() => {
 		init_view();
 	}));
-	//#endregion
-	//#region main.js
+	// main.js
 	var _require;
 	function init_main() {
 		return (init_main = __esmMin((() => {
@@ -134,7 +116,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 			(init_stack(), __toCommonJS(stack_exports)).createNativeStackNavigator;
 		})))();
 	}
-	//#endregion
 	init_main();
 })();
 
@@ -184,7 +165,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 (function() {
 	// HIDDEN [\0rolldown/runtime.js]
-	//#region native.js
+	// native.js
 	var require_native = /* @__PURE__ */ __commonJSMin((() => {}));
 	var import_native;
 	function init_color_bridge_cjs_0() {
@@ -192,30 +173,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 			import_native = require_native();
 		})))();
 	}
-	//#endregion
-	//#region title.js
+	// title.js
 	var getHeaderTitle;
 	var init_title = __esmMin((() => {
 		getHeaderTitle = void 0;
 	}));
-	//#endregion
-	//#region color-bridge.js
-	//#endregion
-	//#region label.js
+	// label.js
 	var HeaderTitle;
 	var init_label = __esmMin((() => {
 		HeaderTitle = void 0;
 	}));
-	//#endregion
-	//#region empty.js
-	//#endregion
-	//#region ambiguous-left.js
-	//#endregion
-	//#region ambiguous-right.js
-	//#endregion
-	//#region elements.js
-	//#endregion
-	//#region color.js
+	// color.js
 	function Color(value) {
 		return value;
 	}
@@ -223,13 +191,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 		init_color_bridge_cjs_0();
 		Color.foreground = () => [import_native.PlatformColor, import_native.DynamicColorIOS];
 	}));
-	//#endregion
-	//#region internal.js
+	// internal.js
 	var init_internal = __esmMin((() => {
 		init_color();
 	}));
-	//#endregion
-	//#region config.js
+	// config.js
 	function useHeaderConfigProps() {
 		return [
 			getHeaderTitle,
@@ -243,8 +209,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 		init_internal();
 		processBarButtonItems = () => Color.foreground();
 	}));
-	//#endregion
-	//#region view.js
+	// view.js
 	function NativeStackView() {
 		return SceneView;
 	}
@@ -255,14 +220,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 			return useHeaderConfigProps();
 		});
 	}));
-	//#endregion
-	//#region stack.js
+	// stack.js
 	var stack_exports = /* @__PURE__ */ __exportAll({ NativeStackView: () => NativeStackView });
 	var init_stack = __esmMin((() => {
 		init_view();
 	}));
-	//#endregion
-	//#region main.js
+	// main.js
 	var _require;
 	function init_main() {
 		return (init_main = __esmMin((() => {
@@ -275,7 +238,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 			(init_stack(), __toCommonJS(stack_exports)).createNativeStackNavigator;
 		})))();
 	}
-	//#endregion
 	init_main();
 })();
 
@@ -325,37 +287,30 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 (function() {
 	// HIDDEN [\0rolldown/runtime.js]
-	//#region native.js
+	// native.js
 	var require_native = /* @__PURE__ */ __commonJSMin((() => {}));
-	//#endregion
-	//#region title.js
+	// title.js
 	var getHeaderTitle;
 	var init_title = __esmMin((() => {
 		getHeaderTitle = void 0;
 	}));
-	//#endregion
-	//#region color-bridge.js
+	// color-bridge.js
 	var import_native;
 	var init_color_bridge = __esmMin((() => {
 		import_native = require_native();
 	}));
-	//#endregion
-	//#region label.js
+	// label.js
 	var HeaderTitle;
 	var init_label = __esmMin((() => {
 		HeaderTitle = void 0;
 	}));
-	//#endregion
-	//#region empty.js
+	// empty.js
 	var init_empty = __esmMin((() => {}));
-	//#endregion
-	//#region ambiguous-left.js
+	// ambiguous-left.js
 	var init_ambiguous_left = __esmMin((() => {}));
-	//#endregion
-	//#region ambiguous-right.js
+	// ambiguous-right.js
 	var init_ambiguous_right = __esmMin((() => {}));
-	//#endregion
-	//#region elements.js
+	// elements.js
 	var init_elements = __esmMin((() => {
 		init_title();
 		init_color_bridge();
@@ -364,8 +319,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 		init_ambiguous_left();
 		init_ambiguous_right();
 	}));
-	//#endregion
-	//#region color.js
+	// color.js
 	function Color(value) {
 		return value;
 	}
@@ -373,13 +327,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 		init_color_bridge();
 		Color.foreground = () => [import_native.PlatformColor, import_native.DynamicColorIOS];
 	}));
-	//#endregion
-	//#region internal.js
+	// internal.js
 	var init_internal = __esmMin((() => {
 		init_color();
 	}));
-	//#endregion
-	//#region config.js
+	// config.js
 	function useHeaderConfigProps() {
 		return [
 			getHeaderTitle,
@@ -393,8 +345,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 		init_internal();
 		processBarButtonItems = () => Color.foreground();
 	}));
-	//#endregion
-	//#region view.js
+	// view.js
 	function NativeStackView() {
 		return SceneView;
 	}
@@ -405,14 +356,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 			return useHeaderConfigProps();
 		});
 	}));
-	//#endregion
-	//#region stack.js
+	// stack.js
 	var stack_exports = /* @__PURE__ */ __exportAll({ NativeStackView: () => NativeStackView });
 	var init_stack = __esmMin((() => {
 		init_view();
 	}));
-	//#endregion
-	//#region main.js
+	// main.js
 	var _require = require_native();
 	_require.FlatList;
 	_require.Pressable;
@@ -420,7 +369,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 	_require.Text;
 	_require.View;
 	(init_stack(), __toCommonJS(stack_exports)).createNativeStackNavigator;
-	//#endregion
 })();
 
 ```

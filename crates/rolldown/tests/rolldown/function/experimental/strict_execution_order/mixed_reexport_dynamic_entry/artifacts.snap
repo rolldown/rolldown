@@ -8,15 +8,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_shared = require("./shared.js");
-//#region b.js
+// b.js
 var B;
 function init_b() {
 	return (init_b = require_rolldown_runtime.__esmMin((() => {
 		B = { value: "b" };
 	})))();
 }
-//#endregion
-//#region lazy.js
+// lazy.js
 var lazy_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ read: () => read });
 function read() {
 	return B.value;
@@ -26,7 +25,6 @@ function init_lazy() {
 		init_b(), require_shared.init_shared();
 	})))();
 }
-//#endregion
 Object.defineProperty(exports, "init_b", {
 	enumerable: true,
 	get: function() {
@@ -54,7 +52,7 @@ Object.defineProperty(exports, "lazy_exports", {
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_shared = require("./shared.js");
-//#region main.js
+// main.js
 async function read() {
 	return [
 		require_shared.LOCAL,
@@ -67,7 +65,6 @@ function init_main() {
 		require_shared.init_shared();
 	})))();
 }
-//#endregion
 init_main();
 exports.read = read;
 
@@ -97,15 +94,14 @@ Object.defineProperty(exports, "__exportAll", {
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_lazy = require("./lazy.js");
-//#region a.js
+// a.js
 var A;
 function init_a() {
 	return (init_a = require_rolldown_runtime.__esmMin((() => {
 		A = { value: "a" };
 	})))();
 }
-//#endregion
-//#region shared.js
+// shared.js
 var shared_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ A: () => A });
 var LOCAL;
 function init_shared() {
@@ -114,7 +110,6 @@ function init_shared() {
 		LOCAL = "local";
 	})))();
 }
-//#endregion
 Object.defineProperty(exports, "LOCAL", {
 	enumerable: true,
 	get: function() {
@@ -177,14 +172,12 @@ const e=require("./rolldown-runtime.js"),t=require("./lazy.js");var n;function r
 ### lazy.js
 
 ```js
-//#region b.js
+// b.js
 const B = { value: "b" };
-//#endregion
-//#region lazy.js
+// lazy.js
 function read() {
 	return B.value;
 }
-//#endregion
 exports.read = read;
 
 ```
@@ -194,7 +187,7 @@ exports.read = read;
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_shared = require("./shared.js");
-//#region main.js
+// main.js
 async function read() {
 	return [
 		require_shared.LOCAL,
@@ -202,7 +195,6 @@ async function read() {
 		(await Promise.resolve().then(() => require("./lazy.js"))).read()
 	];
 }
-//#endregion
 exports.read = read;
 
 ```
@@ -224,16 +216,11 @@ Object.defineProperty(exports, "__exportAll", {
 
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
-//#region a.js
+// a.js
 const A = { value: "a" };
-//#endregion
-//#region shared.js
-var shared_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
-	A: () => A,
-	LOCAL: () => LOCAL
-});
+// shared.js
+var shared_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ A: () => A });
 const LOCAL = "local";
-//#endregion
 Object.defineProperty(exports, "LOCAL", {
 	enumerable: true,
 	get: function() {

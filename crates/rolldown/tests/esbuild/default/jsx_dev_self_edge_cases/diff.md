@@ -19,7 +19,7 @@ export {
 ### rolldown
 ```js
 import { jsxDEV } from "react/jsx-dev-runtime";
-//#region class-this.jsx
+// class-this.jsx
 var _jsxFileName = "class-this.jsx";
 var Foo = class {
 	foo() {
@@ -30,7 +30,6 @@ var Foo = class {
 		}, this);
 	}
 };
-//#endregion
 export { Foo };
 
 ```
@@ -74,7 +73,7 @@ export {
 ### rolldown
 ```js
 import { jsxDEV } from "react/jsx-dev-runtime";
-//#region derived-constructor-arg.jsx
+// derived-constructor-arg.jsx
 var _jsxFileName = "derived-constructor-arg.jsx";
 var Foo = class extends Object {
 	constructor(foo = /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
@@ -85,7 +84,6 @@ var Foo = class extends Object {
 		super();
 	}
 };
-//#endregion
 export { Foo };
 
 ```
@@ -129,7 +127,7 @@ export {
 ### rolldown
 ```js
 import { jsxDEV } from "react/jsx-dev-runtime";
-//#region derived-constructor-field.tsx
+// derived-constructor-field.tsx
 var _jsxFileName = "derived-constructor-field.tsx";
 var Foo = class extends Object {
 	constructor(..._args) {
@@ -141,7 +139,6 @@ var Foo = class extends Object {
 		});
 	}
 };
-//#endregion
 export { Foo };
 
 ```
@@ -196,7 +193,7 @@ export {
 ### rolldown
 ```js
 import { jsxDEV } from "react/jsx-dev-runtime";
-//#region derived-constructor.jsx
+// derived-constructor.jsx
 var _jsxFileName = "derived-constructor.jsx";
 var Foo = class extends Object {
 	constructor() {
@@ -212,7 +209,6 @@ var Foo = class extends Object {
 		});
 	}
 };
-//#endregion
 export { Foo };
 
 ```
@@ -260,7 +256,7 @@ export {
 ### rolldown
 ```js
 import { jsxDEV } from "react/jsx-dev-runtime";
-//#region function-this.jsx
+// function-this.jsx
 var _jsxFileName = "function-this.jsx";
 function Foo() {
 	return /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
@@ -269,7 +265,6 @@ function Foo() {
 		columnNumber: 32
 	}, this);
 }
-//#endregion
 export { Foo };
 
 ```
@@ -311,7 +306,7 @@ export {
 ### rolldown
 ```js
 import { jsxDEV } from "react/jsx-dev-runtime";
-//#region normal-constructor-arg.jsx
+// normal-constructor-arg.jsx
 var _jsxFileName = "normal-constructor-arg.jsx";
 var Foo = class {
 	constructor(foo = /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
@@ -320,7 +315,6 @@ var Foo = class {
 		columnNumber: 38
 	}, this)) {}
 };
-//#endregion
 export { Foo };
 
 ```
@@ -363,7 +357,7 @@ export {
 ### rolldown
 ```js
 import { jsxDEV } from "react/jsx-dev-runtime";
-//#region normal-constructor-field.tsx
+// normal-constructor-field.tsx
 var _jsxFileName = "normal-constructor-field.tsx";
 var Foo = class {
 	constructor() {
@@ -374,7 +368,6 @@ var Foo = class {
 		}, this);
 	}
 };
-//#endregion
 export { Foo };
 
 ```
@@ -418,7 +411,7 @@ export {
 ### rolldown
 ```js
 import { jsxDEV } from "react/jsx-dev-runtime";
-//#region normal-constructor.jsx
+// normal-constructor.jsx
 var _jsxFileName = "normal-constructor.jsx";
 var Foo = class {
 	constructor() {
@@ -429,7 +422,6 @@ var Foo = class {
 		}, this);
 	}
 };
-//#endregion
 export { Foo };
 
 ```
@@ -472,7 +464,7 @@ export {
 ### rolldown
 ```js
 import { jsxDEV } from "react/jsx-dev-runtime";
-//#region static-field.jsx
+// static-field.jsx
 var _jsxFileName = "static-field.jsx";
 var _Foo;
 var Foo = class {};
@@ -482,7 +474,6 @@ Foo.foo = /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
 	lineNumber: 1,
 	columnNumber: 33
 }, _Foo);
-//#endregion
 export { Foo };
 
 ```
@@ -530,7 +521,7 @@ export default require_top_level_this_cjs();
 ```js
 import { jsxDEV } from "react/jsx-dev-runtime";
 // HIDDEN [\0rolldown/runtime.js]
-//#region top-level-this-cjs.jsx
+// top-level-this-cjs.jsx
 var require_top_level_this_cjs = /* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
 	exports.foo = /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
 		fileName: "top-level-this-cjs.jsx",
@@ -538,7 +529,6 @@ var require_top_level_this_cjs = /* @__PURE__ */ __commonJSMin(((exports, module
 		columnNumber: 15
 	}, this$1);
 }));
-//#endregion
 export default require_top_level_this_cjs();
 
 ```
@@ -591,7 +581,7 @@ export {
 ### rolldown
 ```js
 import { jsxDEV } from "react/jsx-dev-runtime";
-//#region top-level-this-esm.jsx
+// top-level-this-esm.jsx
 var _jsxFileName = "top-level-this-esm.jsx";
 let foo = /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
 	fileName: _jsxFileName,
@@ -603,7 +593,6 @@ if (Foo) foo = /* @__PURE__ */ jsxDEV(Foo, { children: "nested top-level this" }
 	lineNumber: 1,
 	columnNumber: 43
 }, void 0);
-//#endregion
 export { foo };
 
 ```
@@ -654,10 +643,9 @@ export {
 ```
 ### rolldown
 ```js
-//#region tsconfig.json
+// tsconfig.json
 var compilerOptions = { "useDefineForClassFields": false };
 var tsconfig_default = { compilerOptions };
-//#endregion
 export { compilerOptions, tsconfig_default as default };
 
 ```
@@ -696,7 +684,7 @@ export {
 ### rolldown
 ```js
 import { jsxDEV } from "react/jsx-dev-runtime";
-//#region typescript-enum.tsx
+// typescript-enum.tsx
 var _jsxFileName = "typescript-enum.tsx";
 let Foo = /* @__PURE__ */ function(Foo) {
 	Foo[Foo["foo"] = /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
@@ -706,7 +694,6 @@ let Foo = /* @__PURE__ */ function(Foo) {
 	}, this)] = "foo";
 	return Foo;
 }({});
-//#endregion
 export { Foo };
 
 ```
@@ -755,7 +742,7 @@ export {
 ### rolldown
 ```js
 import { jsxDEV } from "react/jsx-dev-runtime";
-//#region typescript-namespace.tsx
+// typescript-namespace.tsx
 var _jsxFileName = "typescript-namespace.tsx";
 let Foo;
 (function(_Foo) {
@@ -765,7 +752,6 @@ let Foo;
 		columnNumber: 41
 	}, this);
 })(Foo || (Foo = {}));
-//#endregion
 export { Foo };
 
 ```

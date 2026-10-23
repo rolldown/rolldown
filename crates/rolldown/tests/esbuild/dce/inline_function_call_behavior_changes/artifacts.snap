@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 function id(x) {
 	return x;
 }
@@ -17,8 +17,8 @@ let shouldBeWrapped = [
 	id(foo?.[bar])(),
 	(0, foo.bar)(),
 	(0, foo[bar])(),
-	(foo?.bar)(),
-	(foo?.[bar])(),
+	(0, foo?.bar)(),
+	(0, foo?.[bar])(),
 	id(eval)(),
 	id(eval)?.(),
 	(0, eval)(),
@@ -29,8 +29,8 @@ let shouldBeWrapped = [
 	id(foo?.[bar])` + "``" + `,
 	(0, foo.bar)` + "``" + `,
 	(0, foo[bar])` + "``" + `,
-	(foo?.bar)` + "``" + `,
-	(foo?.[bar])` + "``" + `,
+	(0, foo?.bar)` + "``" + `,
+	(0, foo?.[bar])` + "``" + `,
 	(foo, true),
 	(foo.bar, true),
 	(foo[bar], true),
@@ -50,7 +50,6 @@ let shouldNotBeWrapped = [
 	foo` + "``" + `
 ];
 let shouldNotBeDoubleWrapped = [(foo(), bar(), true), (foo(), bar(), true)];
-//#endregion
 export { shouldBeWrapped, shouldNotBeDoubleWrapped, shouldNotBeWrapped };
 
 ```

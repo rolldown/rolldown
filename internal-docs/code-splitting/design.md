@@ -224,12 +224,13 @@ The routing decision is per record, so evaluating the local body cannot discharg
 consumer's demand for a forwarded binding. The existing module guards preserve one-time execution.
 If on-demand wrapping leaves the mixed module unwrapped, a consumer that imports a forwarded
 binding initializes that binding's defining module itself. A non-routed record whose definer is
-order-wrapped but has no binding consumer at startup has no initialization site in that mode: the
-unwrapped mixed module emits no `init_*` call for its excluded re-export, so the definer evaluates
-when a lazy consumer first imports it, later than under wrap-all, where the mixed module's wrapper
-initializes it. Pre-chunk init edges usually place such a definer in the startup chunk, where its
-body runs at load; `mixed_reexport_sensitive` pins the remaining gap under manual chunk groups with
-an expected-failure variant.
+order-wrapped has its only initialization site inside the mixed module's wrapper: an unwrapped
+mixed module emits no `init_*` call for an excluded re-export, so a definer that no startup
+consumer imports would evaluate when a lazy consumer first imports it, later than under wrap-all.
+The on-demand plan therefore wraps every eager module whose wrapper would forward initialization
+to a planned module (see [Emergent-cycle plan projection](#emergent-cycle-plan-projection-on-demand)).
+`mixed_reexport_sensitive` and `mixed_reexport_grouped_definer` isolate such a definer with a
+manual chunk group so placement cannot hide the hop.
 
 A routed target must be side-effect-free and have no `ExecutionOrderSensitive` module in its static
 or binding dependency closure, apart from the inert runtime helpers. Side-effect metadata alone is
@@ -332,6 +333,20 @@ static SCC (debug-asserted in the final link pass). The remaining over-approxima
 wrapping's own liveness suppression, and it keeps the records of a re-export-transparent wrapper,
 which registration skips) only ever wraps more, which is always legal — wrap-all is the standing
 proof.
+
+The same fixpoint closes the plan over **eager forwarders of planned modules**. The final metadata
+pass gives a wrapper the `init_*` calls of its tree-shaken re-export hops and retained re-export
+paths; an eager module emits none of them, so an eager forwarder gives a planned definer no
+initialization site at its own position (see
+[Tree-shaking parity across strict modes](#tree-shaking-parity-across-strict-modes)). Each
+eager-eligible module's would-be obligations are resolved once with that pass against a wrap-all
+probe on the same chunk graph — the frozen re-export evidence assigns a hop to the first wrapped
+barrel on its path, so only a probe that wraps the forwarder itself shows what its wrapper would
+forward. Each round traverses these obligations in reverse from the planned modules, wrapping
+every forwarder reached before rebuilding the plan. Forwarding chains therefore require no
+per-hop chunk projection. Routed records contribute nothing (their definers are
+time-independent by construction), and a transparent wrapper owns no calls, so a pure barrel is
+never wrapped by this rule.
 
 ## Non-Goals
 

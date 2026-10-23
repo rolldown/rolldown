@@ -7,23 +7,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region ../leaf.js
+// ../leaf.js
 var VALUE;
 function init_leaf() {
 	return (init_leaf = __esmMin((() => {
 		VALUE = "leaf";
 	})))();
 }
-//#endregion
-//#region ../mixed.js
+// ../mixed.js
 var LOCAL;
 function init_mixed() {
 	return (init_mixed = __esmMin((() => {
 		LOCAL = "local";
 	})))();
 }
-//#endregion
-//#region outer.js
+// outer.js
 var outer_exports = /* @__PURE__ */ __exportAll({
 	LOCAL: () => LOCAL,
 	OUTER: () => OUTER,
@@ -37,8 +35,7 @@ function init_outer() {
 		OUTER = "outer";
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 var entries;
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -46,7 +43,6 @@ function init_main() {
 		entries = Object.entries(outer_exports);
 	})))();
 }
-//#endregion
 init_main();
 export { entries };
 

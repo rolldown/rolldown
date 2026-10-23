@@ -44,7 +44,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region dep.js
+// dep.js
 var dep_exports = /* @__PURE__ */ __exportAll({
 	"a-b": () => a_b,
 	default: () => _default,
@@ -56,16 +56,14 @@ var a_b = void 0;
 var _default = void 0;
 var missing = void 0;
 var unused = void 0;
-//#endregion
-//#region barrel.js
+// barrel.js
 var barrel_exports = /* @__PURE__ */ __exportAll({
 	"a-b": () => a_b,
 	missing: () => missing,
 	unused: () => unused,
 	value: () => 1
 });
-//#endregion
-//#region main.js
+// main.js
 const values = [
 	_default,
 	a_b,
@@ -73,7 +71,6 @@ const values = [
 ];
 const keys = [Object.keys(dep_exports).sort(), Object.keys(barrel_exports).sort()];
 const load = () => Promise.resolve().then(() => barrel_exports);
-//#endregion
 export { keys, load, values };
 
 ```

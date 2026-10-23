@@ -1174,8 +1174,8 @@ export interface ModuleRunnerTransformResult {
    * This will be set if {@link TransformOptions#sourcemap} is `true`.
    */
   map?: SourceMap
-  deps: Array<string>
-  dynamicDeps: Array<string>
+  deps: string[]
+  dynamicDeps: string[]
   /**
    * Parse and transformation errors.
    *
@@ -3055,6 +3055,7 @@ export interface BindingViteResolvePluginConfig {
   tsconfig?: string
   environmentConsumer: string
   environmentName: string
+  convertExternalRequire?: boolean
   builtins: Array<BindingStringOrRegex>
   external: true | string[]
   noExternal: true | Array<string | RegExp>
@@ -3071,6 +3072,8 @@ export interface BindingViteResolvePluginConfig {
 
 export interface BindingViteResolvePluginResolveOptions {
   isBuild: boolean
+  /** Defaults to `isBuild`. */
+  isBundled?: boolean
   isProduction: boolean
   asSrc: boolean
   preferRelative: boolean

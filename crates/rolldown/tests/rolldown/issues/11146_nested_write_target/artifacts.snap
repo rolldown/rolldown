@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-//#region dep.js
+// dep.js
 const obj = {};
 const returned = {};
 const fn = () => returned;
@@ -19,8 +19,7 @@ var C = class {
 	}
 };
 const inst = new C();
-//#endregion
-//#region main.js
+// main.js
 function setKey(key) {
 	obj[key] = 1;
 }
@@ -29,6 +28,5 @@ fn().x = 1;
 assert.strictEqual(obj.k, 1);
 assert.strictEqual(fn().x, 1);
 assert.strictEqual(C.poke(), 1);
-//#endregion
 
 ```

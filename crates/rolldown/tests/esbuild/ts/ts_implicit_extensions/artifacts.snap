@@ -6,53 +6,37 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region pick-js.js
+// pick-js.js
 console.log("correct");
-//#endregion
-//#region pick-ts.ts
+// pick-ts.ts
 console.log("correct");
-//#endregion
-//#region pick-jsx.jsx
+// pick-jsx.jsx
 console.log("correct");
-//#endregion
-//#region pick-tsx.tsx
+// pick-tsx.tsx
 console.log("correct");
-//#endregion
-//#region order-js.ts
+// order-js.ts
 console.log("correct");
-//#endregion
-//#region order-jsx.ts
+// order-jsx.ts
 console.log("correct");
-//#endregion
-//#region node_modules/pkg/foo-js.ts
+// node_modules/pkg/foo-js.ts
 console.log("correct");
-//#endregion
-//#region node_modules/pkg/foo-jsx.tsx
+// node_modules/pkg/foo-jsx.tsx
 console.log("correct");
-//#endregion
-//#region node_modules/pkg-exports/abc-js.ts
+// node_modules/pkg-exports/abc-js.ts
 console.log("correct");
-//#endregion
-//#region node_modules/pkg-exports/abc-jsx.tsx
+// node_modules/pkg-exports/abc-jsx.tsx
 console.log("correct");
-//#endregion
-//#region node_modules/pkg-exports/lib/foo-js.ts
+// node_modules/pkg-exports/lib/foo-js.ts
 console.log("correct");
-//#endregion
-//#region node_modules/pkg-exports/lib/foo-jsx.tsx
+// node_modules/pkg-exports/lib/foo-jsx.tsx
 console.log("correct");
-//#endregion
-//#region node_modules/pkg-imports/abc-js.ts
+// node_modules/pkg-imports/abc-js.ts
 console.log("correct");
-//#endregion
-//#region node_modules/pkg-imports/abc-jsx.tsx
+// node_modules/pkg-imports/abc-jsx.tsx
 console.log("correct");
-//#endregion
-//#region node_modules/pkg-imports/lib/foo-js.ts
+// node_modules/pkg-imports/lib/foo-js.ts
 console.log("correct");
-//#endregion
-//#region node_modules/pkg-imports/lib/foo-jsx.tsx
+// node_modules/pkg-imports/lib/foo-jsx.tsx
 console.log("correct");
-//#endregion
 
 ```

@@ -89,6 +89,7 @@ impl GenerateStage<'_> {
             index_stmt_infos: &self.link_output.stmt_infos,
             modules: &self.link_output.module_table.modules,
             linking_infos: &self.link_output.metas,
+            dynamic_import_usage: self.link_output.dynamic_import_exports_usage_map.get(&idx),
             order_wrap_state: order_state,
             final_esm_init_metadata,
             used_symbol_refs,

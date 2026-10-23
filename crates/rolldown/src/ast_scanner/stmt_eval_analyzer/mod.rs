@@ -250,9 +250,9 @@ impl<'a> StmtEvalAnalyzer<'a> {
     let Expression::ImportMeta(_) = member_expr.object() else {
       return false;
     };
-    member_expr
-      .static_property_name()
-      .is_some_and(|name| name == "url" || utils::file_url::starts_with_file_url_prefix(name))
+    member_expr.static_property_name().is_some_and(|name| {
+      name == "url" || name.as_str().is_some_and(utils::file_url::starts_with_file_url_prefix)
+    })
   }
 
   fn analyze_member_expr(&self, member_expr: &ast::MemberExpression) -> StmtEvalFacts {

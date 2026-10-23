@@ -29,6 +29,7 @@ use super::events::import_is_undefined::ImportIsUndefined;
 use super::events::invalid_annotation::InvalidAnnotation;
 use super::events::invalid_define_config::InvalidDefineConfig;
 use super::events::invalid_option::{InvalidOption, InvalidOptionType};
+use super::events::invalid_tla_format::InvalidTlaFormat;
 use super::events::json_parse::JsonParse;
 use super::events::missing_global_name::MissingGlobalName;
 use super::events::missing_name_option_for_iife_export::MissingNameOptionForIifeExport;
@@ -280,6 +281,10 @@ impl BuildDiagnostic {
     error_message: String,
   ) -> Self {
     Self::new_inner(UnsupportedFeature { source, filename, span, error_message })
+  }
+
+  pub fn invalid_tla_format(filename: ArcStr, source: ArcStr, span: Span, format: ArcStr) -> Self {
+    Self::new_inner(InvalidTlaFormat { filename, source, span, format })
   }
 
   pub fn empty_import_meta(

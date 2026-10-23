@@ -32,7 +32,7 @@ function staticClosure(root) {
 
 // A TLA-tainted barrel rejects consumer-local routing, so the monolithic barrel init keeps the
 // unrelated CJS leaf in the eager entry closure.
-assert.match(staticClosure('main.js'), /clone-deep\.cjs/);
+assert.match(staticClosure('main.js'), /__events\.push\("clone-deep"\)/);
 
 globalThis.__events = [];
 

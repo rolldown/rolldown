@@ -86,7 +86,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## class.js
 
 ```js
-//#region class.ts
+// class.ts
 let x;
 (function(_x) {
 	class y {}
@@ -95,7 +95,6 @@ let x;
 (function(_x2) {
 	_x2.z = y;
 })(x || (x = {}));
-//#endregion
 export { x };
 
 ```
@@ -103,7 +102,7 @@ export { x };
 ## enum.js
 
 ```js
-//#region enum.ts
+// enum.ts
 let x;
 (function(_x) {
 	_x.y = /* @__PURE__ */ function(y) {
@@ -113,7 +112,6 @@ let x;
 (function(_x2) {
 	_x2.z = y;
 })(x || (x = {}));
-//#endregion
 export { x };
 
 ```
@@ -121,7 +119,7 @@ export { x };
 ## function.js
 
 ```js
-//#region function.ts
+// function.ts
 let x;
 (function(_x) {
 	function y() {}
@@ -130,7 +128,6 @@ let x;
 (function(_x2) {
 	_x2.z = y;
 })(x || (x = {}));
-//#endregion
 export { x };
 
 ```
@@ -138,7 +135,7 @@ export { x };
 ## let.js
 
 ```js
-//#region let.ts
+// let.ts
 let x;
 (function(_x) {
 	_x.y = 123;
@@ -146,7 +143,6 @@ let x;
 (function(_x2) {
 	_x2.z = y;
 })(x || (x = {}));
-//#endregion
 export { x };
 
 ```
@@ -154,7 +150,7 @@ export { x };
 ## namespace.js
 
 ```js
-//#region namespace.ts
+// namespace.ts
 let x;
 (function(_x) {
 	let y;
@@ -163,7 +159,6 @@ let x;
 (function(_x2) {
 	_x2.z = y;
 })(x || (x = {}));
-//#endregion
 export { x };
 
 ```

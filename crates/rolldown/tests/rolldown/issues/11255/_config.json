@@ -1,0 +1,12 @@
+{
+  "config": {
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "lazy",
+          "test": "foo"
+        }
+      ]
+    }
+  }
+}

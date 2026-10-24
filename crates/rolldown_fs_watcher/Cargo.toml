@@ -17,6 +17,7 @@ rolldown_common = { workspace = true }
 rolldown_error = { workspace = true }
 rolldown_utils = { workspace = true }
 rustc-hash = { workspace = true }
+smallvec = { workspace = true }
 tracing = { workspace = true }
 walkdir = { workspace = true }
 

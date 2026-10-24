@@ -113,10 +113,13 @@ export async function createWatcher(
   input: WatchOptions | WatchOptions[],
 ): Promise<void> {
   const options = arraify(input);
+  // Read each config's outputs once, as a copy: `options` hooks run later and may change
+  // `option.output`, and the binding's group sizes must match the flat list.
+  const outputGroups = options.map((option) => [...arraify(option.output || {})]);
   const bundlerOptions = await Promise.all(
     options
-      .map((option) =>
-        arraify(option.output || {}).map(async (output) => {
+      .map((option, index) =>
+        outputGroups[index].map(async (output) => {
           const inputOptions = await PluginDriver.callOptionsHook(option, true);
           return createBundlerOptions(inputOptions, output, true);
         }),
@@ -128,6 +131,8 @@ export async function createWatcher(
   const bindingWatcher = new BindingWatcher(
     bundlerOptions.map((option) => option.bundlerOptions),
     callback,
+    // Outputs per input config: each config's outputs share one fs watcher.
+    outputGroups.map((outputs) => outputs.length),
   );
   new Watcher(
     emitter,

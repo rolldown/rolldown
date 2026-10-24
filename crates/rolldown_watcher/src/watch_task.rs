@@ -7,7 +7,7 @@ use rolldown_error::{
   BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Diagnostic, DiagnosticOptions,
   filter_out_disabled_diagnostics,
 };
-use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig};
+use rolldown_fs_watcher::FsWatcher;
 use rolldown_utils::pattern_filter;
 use std::path::Path;
 use std::sync::Arc;
@@ -16,17 +16,24 @@ use std::time::Instant;
 use tokio::sync::Mutex as TokioMutex;
 
 use crate::event::{BundleEndEventData, BundleStartEventData, WatchErrorEventData};
-use crate::task_fs_event_handler::TaskFsEventHandler;
 
 oxc_index::define_index_type! {
   pub struct WatchTaskIdx = u32;
 }
 
-/// Per-task data container that owns a bundler and its file-system watcher.
+oxc_index::define_index_type! {
+  /// One input config; its output tasks share one file-system watcher.
+  pub struct WatchGroupIdx = u32;
+}
+
+/// Per-task data container that owns a bundler and shares its config group's file-system watcher.
 pub struct WatchTask {
   bundler: Arc<TokioMutex<Bundler>>,
   options: Arc<NormalizedBundlerOptions>,
-  fs_watcher: std::sync::Mutex<FsWatcher>,
+  /// This task's owner id in the group's shared `fs_watcher`.
+  index: WatchTaskIdx,
+  /// Shared by the group; records which member watches each path.
+  fs_watcher: Arc<std::sync::Mutex<FsWatcher>>,
   pub(crate) needs_rebuild: bool,
   closed: Arc<AtomicBool>,
 }
@@ -34,8 +41,8 @@ pub struct WatchTask {
 impl WatchTask {
   pub(crate) fn new(
     config: BundlerConfig,
-    fs_handler: TaskFsEventHandler,
-    fs_watcher_config: &FsWatcherConfig,
+    index: WatchTaskIdx,
+    fs_watcher: Arc<std::sync::Mutex<FsWatcher>>,
     closed: &Arc<AtomicBool>,
   ) -> BuildResult<Self> {
     // Validation: dev_mode not allowed with watch
@@ -57,18 +64,11 @@ impl WatchTask {
       .build()?;
 
     let options = Arc::clone(bundler.options());
-    let fs_watcher = FsWatcher::new(
-      fs_handler,
-      &FsWatcherConfig {
-        ignored: options.watch.exclude.clone(),
-        cwd: options.cwd.clone(),
-        ..fs_watcher_config.clone()
-      },
-    )?;
     Ok(Self {
       bundler: Arc::new(TokioMutex::new(bundler)),
       options,
-      fs_watcher: std::sync::Mutex::new(fs_watcher),
+      index,
+      fs_watcher,
       needs_rebuild: true,
       closed: Arc::clone(closed),
     })
@@ -86,7 +86,8 @@ impl WatchTask {
     let skip_write = self.options.watch.skip_write;
     // Use field-level borrows so the closure can capture fs_watcher/options
     // without conflicting with the &mut self borrow on bundler.
-    let fs_watcher_ref = &self.fs_watcher;
+    let fs_watcher_ref = &*self.fs_watcher;
+    let index = self.index;
     let options_ref = &*self.options;
 
     // Scope the bundler lock to minimize lock duration
@@ -116,7 +117,7 @@ impl WatchTask {
           // (so files are watched even on error — enables recovery when user fixes the issue)
           let watch_files: Vec<ArcStr> =
             bundle.get_watch_files().iter().map(|f| f.clone()).collect();
-          Self::update_watch_files_from(fs_watcher_ref, options_ref, &watch_files)?;
+          Self::update_watch_files_from(fs_watcher_ref, index, options_ref, &watch_files)?;
 
           let scan_output = scan_result?;
 
@@ -226,18 +227,20 @@ impl WatchTask {
 
   /// Update watched files by adding new ones to the fs watcher.
   fn update_watch_files(&self, files: &[ArcStr]) -> BuildResult<()> {
-    Self::update_watch_files_from(&self.fs_watcher, &self.options, files)
+    Self::update_watch_files_from(&self.fs_watcher, self.index, &self.options, files)
   }
 
   /// Static helper: update FS watcher with newly discovered files.
   /// Separated from `&self` to allow calling from closures during build.
   fn update_watch_files_from(
     fs_watcher: &std::sync::Mutex<FsWatcher>,
+    index: WatchTaskIdx,
     options: &NormalizedBundlerOptions,
     files: &[ArcStr],
   ) -> BuildResult<()> {
     let cwd = options.cwd.to_string_lossy();
-    fs_watcher.lock().expect("fs_watcher lock poisoned").watch_paths(
+    fs_watcher.lock().expect("fs_watcher lock poisoned").watch_paths_as(
+      index.index(),
       files.iter().map(ArcStr::as_str),
       |path| {
         path.exists()
@@ -304,7 +307,11 @@ impl WatchTask {
   }
 
   fn is_watched_file(&self, path: &str) -> bool {
-    self.fs_watcher.lock().expect("fs_watcher lock poisoned").is_watched(Path::new(path))
+    self
+      .fs_watcher
+      .lock()
+      .expect("fs_watcher lock poisoned")
+      .is_watched_by(self.index.index(), Path::new(path))
   }
 }
 

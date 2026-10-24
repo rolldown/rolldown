@@ -2836,6 +2836,7 @@ dependencies = [
  "rolldown_error",
  "rolldown_utils",
  "rustc-hash",
+ "smallvec",
  "tracing",
  "walkdir",
 ]
@@ -3352,6 +3353,7 @@ version = "1.2.15"
 dependencies = [
  "anyhow",
  "arcstr",
+ "dunce",
  "futures",
  "oxc_index",
  "rolldown",

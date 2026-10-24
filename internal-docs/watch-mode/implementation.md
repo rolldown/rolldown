@@ -58,7 +58,9 @@ running, and `watcher.close()` still waits for the complete close sequence.
 ### Rust API
 
 ```rust
-let watcher = Watcher::new(configs, handler, &watcher_config)?;
+// groups: Vec<Vec<BundlerConfig>> — one inner Vec per input config,
+// holding that config's per-output bundler configs.
+let watcher = Watcher::new(groups, handler, &watcher_config)?;
 watcher.run();       // spawns the coordinator (non-blocking)
 watcher.close().await?;  // sends Close, awaits completion
 ```
@@ -67,12 +69,13 @@ Follows the same `new → run → close` pattern as `DevEngine`. `new()` creates
 
 ### Known Divergences from Rollup
 
-| Aspect               | Rollup                     | Rolldown               | Reason                                                              |
-| -------------------- | -------------------------- | ---------------------- | ------------------------------------------------------------------- |
-| Bundler per output   | One build, multiple writes | One bundler per output | Architecture constraint — Rolldown's bundler owns the full pipeline |
-| `buildStart` calls   | Once per config            | Once per output        | Consequence of one-bundler-per-output                               |
-| Module graph sharing | Shared across outputs      | Separate per output    | May change in the future                                            |
-| `restart` event      | Per config change          | Per rebuild cycle      | Rolldown emits `restart` once per rebuild cycle                     |
+| Aspect               | Rollup                     | Rolldown               | Reason                                                                                                                                                                                                |
+| -------------------- | -------------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Bundler per output   | One build, multiple writes | One bundler per output | Architecture constraint — Rolldown's bundler owns the full pipeline                                                                                                                                   |
+| `buildStart` calls   | Once per config            | Once per output        | Consequence of one-bundler-per-output                                                                                                                                                                 |
+| Module graph sharing | Shared across outputs      | Separate per output    | May change in the future                                                                                                                                                                              |
+| `restart` event      | Per config change          | Per rebuild cycle      | Rolldown emits `restart` once per rebuild cycle                                                                                                                                                       |
+| `END` event          | Once per rebuild cycle     | Once per rebuild cycle | Parity. All outputs of a config rebuild inside one `START..END` envelope (they share one watch stream); configs watching the same file may still split into consecutive cycles, like Rollup's `rerun` |
 
 ## Architecture
 
@@ -84,15 +87,19 @@ Watcher (public API)
   └── close_notify ──────→ wakes the coordinator while it awaits a consumer callback
                                ├── handler: H (WatcherEventHandler impl)
                                ├── state: WatcherState
+                               ├── group_members: IndexVec<WatchGroupIdx, Vec<WatchTaskIdx>>
                                └── tasks: IndexVec<WatchTaskIdx, WatchTask>
-                                    ├── WatchTask 0
+                                    ├── WatchTask 0  ─┐ config group 0 shares
                                     │   ├── bundler: Arc<TokioMutex<Bundler>>
-                                    │   ├── fs_watcher: FsWatcher (owned, per-task, holds the watched paths)
+                                    │   ├── index: WatchTaskIdx (its owner id in the shared fs_watcher)
+                                    │   ├── fs_watcher: Arc<Mutex<FsWatcher>> (ONE per config group, records which member watches each path)
                                     │   └── needs_rebuild: bool
-                                    └── WatchTask N ...
+                                    ├── WatchTask 1  ─┘ the same fs_watcher Arc
+                                    └── WatchTask N ... (next group → next fs watcher)
 
 Data flow:
-  FsWatcher ──(FsEvent: path + WatcherChangeKind)──→ TaskFsEventHandler ──→ WatcherMsg::FileChanges ──→ WatchCoordinator
+  per-group FsWatcher ──(FsEvent: path + WatcherChangeKind)──→ GroupFsEventHandler ──→ WatcherMsg::FileChanges { group_index } ──→ WatchCoordinator
+  WatchCoordinator ──→ marks EVERY group member whose watch set contains the path
   WatchCoordinator ──→ dispatch_event / dispatch_change / dispatch_restart
                          └── await_handler_or_close()
                                ├── handler.on_*().await ──→ Consumer (NAPI/Rust)
@@ -103,7 +110,7 @@ Data flow:
 
 - `Watcher` only holds lifecycle state (`tx`, the close signal, and `coordinator_state`) — lightweight, no bundler access.
 - `WatchCoordinator` owns ALL mutable state. No external mutation.
-- Each `WatchTask` owns its `FsWatcher`. Per-task watchers mean isolated watch sets and simpler ownership.
+- ONE `FsWatcher` exists per config group, shared by that group's `WatchTask`s via `Arc<std::sync::Mutex<FsWatcher>>`, so a save of a file watched by several outputs of one config arrives once, tagged with the group. The `FsWatcher` records each watched path with the members that asked for it (the task's `WatchTaskIdx` is its owner id), so it answers both "is this path watched" and "does this member watch it" (see [File Watching](#file-watching)).
 - Bundler is `Arc<TokioMutex<>>` because event data structs carry a clone for consumer access (e.g. `BUNDLE_END.result`).
 
 ### Three-Layer Stack
@@ -128,9 +135,9 @@ Rust Core (crates/rolldown_watcher/)
 rolldown_watcher/
 ├── lib.rs                     // Public exports
 ├── watcher.rs                 // Watcher (public API) + WatcherConfig
-├── watch_coordinator.rs       // WatchCoordinator (actor + event loop)
-├── watch_task.rs              // WatchTask (bundler + fs watcher) + WatchTaskIdx + BuildOutcome
-├── task_fs_event_handler.rs   // TaskFsEventHandler (FsEvent → FileChangeEvent)
+├── watch_coordinator.rs       // WatchCoordinator (actor + event loop, group membership)
+├── watch_task.rs              // WatchTask (bundler + shared group fs watcher) + WatchTaskIdx + WatchGroupIdx + BuildOutcome
+├── task_fs_event_handler.rs   // GroupFsEventHandler (FsEvent → FileChangeEvent, one per config group)
 ├── handler.rs                 // WatcherEventHandler async trait
 ├── event.rs                   // WatchEvent, BundleStartEventData, BundleEndEventData, WatchErrorEventData
 ├── file_change_event.rs       // FileChangeEvent (path + kind)
@@ -142,7 +149,7 @@ rolldown_fs_watcher/
 ├── config.rs                  // FsWatcherConfig (enabled, use_polling, use_debounce, …)
 ├── filter.rs                  // IgnoreFilter: watch.exclude, also notify's ignore filter
 ├── event.rs                   // FsEvent (path + WatcherChangeKind), FsEventHandler
-├── watcher.rs                 // FsWatcher: the watched paths, on top of a WatcherBackend
+├── watcher.rs                 // FsWatcher: the watched paths and their owners, on top of a WatcherBackend
 └── notify/                    // everything that speaks notify
     ├── mod.rs                 // WatcherBackend + PathsMut traits, create_backend() — selects backend from config
     ├── immediate.rs           // recommended / poll, no debounce
@@ -241,11 +248,13 @@ Watcher spawns coordinator
 ### File Change → Rebuild
 
 ```
-File change detected by per-task FsWatcher
-  → TaskFsEventHandler sends WatcherMsg::FileChanges
-  → process_fs_event():
-      - task.invalidate(path) → sets needs_rebuild = true
-      - task.call_on_invalidate(path) → fires immediately, before debounce
+File change detected by the config group's shared FsWatcher
+  → GroupFsEventHandler sends WatcherMsg::FileChanges { group_index }
+  → process_file_changes():
+      - for EVERY member task of the group that watches the path or one of its
+        ancestor directories (addWatchFile of a directory), per FsWatcher::is_watched_by:
+          task.mark_needs_rebuild(path) → sets needs_rebuild = true
+          task.call_on_invalidate(path) → fires immediately, before debounce
       - State: Idle → Debouncing, or extends deadline
   → Debounce timer fires (tokio::select!)
   → run_build_sequence(changes):
@@ -314,21 +323,27 @@ Configured via `WatcherOptions`, fires **immediately** on file change (before de
 ## File Watching
 
 - After each build, `bundler.watch_files()` returns the current set.
-- `WatchTask::update_watch_files()` hands the set to the per-task `FsWatcher`, which registers the paths it does not watch yet. `FsWatcher::is_watched` answers whether a changed path is one of them, or lies below one.
+- `WatchTask::update_watch_files()` hands the set to the config group's shared `FsWatcher` with `watch_paths_as(owner, …)`, the owner being the task's index. The watcher maps each watched path to the owners that asked for it. A path another member already watches is recorded for this owner without a backend batch. On the FSEvents backend (macOS native, not polling), so is a path below a directory any member watches: a batch there restarts the group's stream, and the kernel reports everything below a watched root. On other backends such a path is still registered: a redundant add is harmless there, and an explicit watch survives a recursive watch the backend could not extend (inotify needs one watch per directory and cannot add one for a new subdirectory once its watch table is full). A path the backend refuses is not recorded, so it is tried again next build.
+- A changed path belongs to a task when `FsWatcher::is_watched_by(owner, path)` finds it, or one of its ancestors, recorded for that owner. `FsWatcher::is_watched` asks the same for any owner.
+- The dev engine has one caller per watcher and uses `watch_paths`, which records a single owner and registers every new path.
 - `exclude` becomes `FsWatcherConfig::ignored`, compiled once per watcher into an `IgnoreFilter` (`rolldown_fs_watcher/src/filter.rs`, globs via `globstar`). `FsWatcher::watch_paths` skips ignored paths, and notify gets the same filter through `Config::with_ignored`, so an ignored path is never scanned or reported. `map_notify_event` applies it too when it expands a created directory into its files.
 - `exclude` is about files, as in Rollup. The filter gets notify's `EntryKind`: a file is ignored if it matches (`Glob::is_match`). A directory is ignored only if everything below it matches (`DirMatch::matches_all_below`). A path of unknown kind (a missing path, or every event on Windows) could be either, so it is ignored if one of the two holds. So `dist/**` skips `dist` as a whole, and `**/*.log` does not hide `foo.log/a.js` below a directory named `foo.log`. A regex cannot tell whether it matches everything below a directory, so it never ignores one. Its files are still ignored one by one.
 - Why a directory that merely matches is not ignored: inotify, kqueue and poll never look below an ignored directory, while FSEvents and Windows ask about every path below it. The backends only agree if ignoring a directory and ignoring each path below it give the same result.
 - `include`/`exclude` still decide which discovered files are registered (via `pattern_filter`), so an excluded path is filtered twice: by the caller at registration and by the watcher.
-- Files are watched **non-recursively** (individual file watches).
+- Each path is added with `RecursiveMode::Recursive`: a file is watched by itself, a directory with everything below it.
 - `FsWatcher::watch_paths` filters and deduplicates new paths before opening a notify batch. If none remain, it leaves the backend untouched: on macOS, opening a batch stops the FSEvents stream, and committing even an empty batch restarts it from "now", potentially losing edits in between. A path is recorded only after registration and commit succeed, so a skipped path is tried again with the next build.
 
 ### Backend selection
 
-Each `WatchTask` builds its watcher with `FsWatcher::new(handler, &config)`.
+`Watcher::create_tasks` builds ONE watcher per config group with
+`FsWatcher::new(handler, &config)` and shares it among the group's tasks.
+A group with no outputs (`output: []`) keeps its empty `group_members` slot,
+so later group indices stay aligned, and gets no watcher.
 `FsWatcher` is a concrete type; the notify implementations stay crate-private.
 `WatcherConfig::to_fs_watcher_config()` maps watch options onto `FsWatcherConfig`,
-`WatchTask::new` adds the task's `ignored` and `cwd`, and construction picks the
-backend:
+`group_fs_watcher_config` adds the group's `ignored` and `cwd` from its first
+member (every member is an output of the same input config, and `watch` and
+`cwd` are input options), and construction picks the backend:
 
 | `use_polling` | `use_debounce` | Backend                               |
 | ------------- | -------------- | ------------------------------------- |
@@ -448,7 +463,7 @@ close() → inner.close()         // sends Close msg, awaits shared future
 
 ### Binding as Thin Wrapper
 
-`BindingWatcher` is intentionally a thin wrapper — it holds a `rolldown_watcher::Watcher` and delegates directly. No state machine, no locking, no logic beyond type conversion. All lifecycle management lives in the Rust core. The constructor takes both `options` and `listener`, creates the `NapiWatcherEventHandler`, and passes it to `Watcher::new()`. Each NAPI method (`run`, `waitForClose`, `close`) is a direct delegation to the inner watcher.
+`BindingWatcher` is intentionally a thin wrapper — it holds a `rolldown_watcher::Watcher` and delegates directly. No state machine, no locking, no logic beyond type conversion. All lifecycle management lives in the Rust core. The constructor takes `options` (the flat per-output configs), `listener`, and `groupSizes` (outputs per input config, from `createWatcher`), splits the flat list into config groups in contiguous chunks (`split_configs_into_groups`, which rejects a size mismatch but accepts an empty group and an empty list, so `output: []` and `watch([])` build nothing), creates the `NapiWatcherEventHandler`, and passes both to `Watcher::new()`. Each NAPI method (`run`, `waitForClose`, `close`) is a direct delegation to the inner watcher.
 
 ### Event Emitter
 

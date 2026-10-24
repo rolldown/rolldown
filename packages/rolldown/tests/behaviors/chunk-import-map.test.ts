@@ -223,4 +223,35 @@ describe('chunkImportMap', () => {
     expect(importMap(b)).toEqual(importMap(a));
     expect(fileNames(b)).toEqual(fileNames(a));
   });
+
+  test.each(['entry', 'common'])(
+    'path and non-path module IDs have distinct %s aliases',
+    async (kind) => {
+      const cwd = resolve('/project');
+      const members = ['a/shared.js', 'b/shared.js'].flatMap((id) => [id, join(cwd, id)]);
+      const entries = members.map((_, index) => join(cwd, `e${index}.js`));
+      const files: Record<string, string> = {};
+      for (const [index, id] of members.entries()) {
+        files[id] = `export const value = () => '${index}';`;
+        files[entries[index]] = `
+          import { value as left } from ${JSON.stringify(id)};
+          import { value as right } from ${JSON.stringify(members[(index + 1) % members.length])};
+          globalThis.log(left() + right());
+        `;
+      }
+      const bundle = await rolldown({
+        cwd,
+        input: kind === 'entry' ? [...entries, ...members] : entries,
+        preserveEntrySignatures: false,
+        experimental: { chunkImportMap: true },
+        plugins: [virtualPlugin(files)],
+      });
+      onTestFinished(() => bundle.close());
+      const output = await bundle.generate(options(false, { entryFileNames: '[name]-[hash].js' }));
+      expect(Object.keys(importMap(output))).toHaveLength(getOutputChunk(output).length);
+      for (let index = 0; index < members.length; index++) {
+        expect(execute(output, `e${index}`)).toEqual([`${index}${(index + 1) % members.length}`]);
+      }
+    },
+  );
 });

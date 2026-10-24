@@ -1,4 +1,6 @@
 import { pbkdf2 } from 'node:crypto';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import v8 from 'node:v8';
@@ -340,6 +342,40 @@ describe('enhanced transform', () => {
       expect(result2.code).toBe('export const a = 2;\n');
       // Same tsconfig resolved, cache should not grow
       expect(cache.size()).toBe(1);
+    });
+
+    it('should reuse the answer when no tsconfig owns the file', () => {
+      // A solution-style root whose projects only include `.ts` files, so nothing owns the `.svg`.
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rolldown-tsconfig-unowned-'));
+      try {
+        const write = (file: string, content: unknown) => {
+          fs.mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
+          fs.writeFileSync(path.join(dir, file), JSON.stringify(content));
+        };
+        write('tsconfig.json', {
+          files: [],
+          include: [],
+          references: [{ path: './a' }, { path: './b' }],
+        });
+        write('a/tsconfig.json', { include: ['src/**/*.ts'] });
+        write('b/tsconfig.json', { include: ['src/**/*.ts'] });
+        const id = path.join(dir, 'a/src/icon.svg');
+        const code = 'export default <svg />;';
+
+        const cache = new TsconfigCache();
+        const first = transformSync(id, code, { lang: 'jsx' }, cache);
+        expect(first.errors).toHaveLength(0);
+        expect(first.tsconfigFilePaths).toHaveLength(0);
+
+        // An unrelated project's tsconfig breaks. The cached "no owner" answer should still be
+        // used, rather than discovering again (and re-reading every reference) on each call.
+        fs.writeFileSync(path.join(dir, 'b/tsconfig.json'), '{ invalid');
+        const second = transformSync(id, code, { lang: 'jsx' }, cache);
+        expect(second.errors).toHaveLength(0);
+        expect(second.code).toBe(first.code);
+      } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
     });
 
     it.skipIf(isWasiTest)(

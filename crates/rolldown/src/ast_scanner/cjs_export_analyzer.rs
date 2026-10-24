@@ -115,6 +115,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       Some(CommonJsAstType::ExportsPropWrite(prop)) if prop == "*" => {
         self.result.ast_usage.remove(EcmaModuleAstUsage::AllStaticExportPropertyAccess);
       }
+      Some(CommonJsAstType::ExportsPropWrite(prop)) if prop == "then" || prop == "__proto__" => {
+        self.result.ast_usage.insert(EcmaModuleAstUsage::ThenableExportsWrite);
+      }
       Some(CommonJsAstType::Reexport(node_id)) => {
         self.result.ast_usage.insert(EcmaModuleAstUsage::IsCjsReexport);
         self.result.cjs_reexport_require_node_ids.push(*node_id);

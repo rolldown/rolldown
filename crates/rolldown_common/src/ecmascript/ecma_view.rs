@@ -233,6 +233,8 @@ bitflags! {
         const TopLevelReturn = 1 << 8;
         /// `import.meta.hot.acceptExports(...)` is called somewhere in the module
         const HmrAcceptExports = 1 << 9;
+        /// `exports.then` or `exports.__proto__` is written, so the exports object can be thenable.
+        const ThenableExportsWrite = 1 << 10;
         const ModuleOrExports = Self::ModuleRef.bits() | Self::ExportsRef.bits();
     }
 }

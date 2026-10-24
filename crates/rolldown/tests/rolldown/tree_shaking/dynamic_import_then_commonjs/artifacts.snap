@@ -1,0 +1,158 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## EVAL
+
+```text
+[EVAL] Use of direct `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
+   ╭─[ eval.cjs:2:1 ]
+   │
+ 2 │ eval("exports.then = function (resolve) { globalThis.thenCalled('eval'); resolve({}); };");
+   │ ──┬─  
+   │   ╰─── Use of direct `eval` here.
+   │ 
+   │ Help: Consider using indirect eval. For more information, check the documentation: https://rolldown.rs/guide/troubleshooting#avoiding-direct-eval
+───╯
+
+```
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] patched.cjs is dynamically imported by main.js but also statically imported by writer.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## eval.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+// eval.cjs
+var require_eval = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.value = "value";
+	eval("exports.then = function (resolve) { globalThis.thenCalled('eval'); resolve({}); };");
+}));
+export default require_eval();
+
+```
+
+## main.js
+
+```js
+import { n as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+// patched.cjs
+var require_patched = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.value = "value";
+}));
+// writer.js
+var import_patched = /* @__PURE__ */ __toESM(require_patched());
+function patch() {
+	import_patched.default.then = function(resolve) {
+		globalThis.thenCalled("patched");
+		resolve({});
+	};
+}
+// main.js
+patch();
+import("./module-exports.js").then((m) => /* @__PURE__ */ __toESM(m.default));
+import("./tsc-export-const.js").then((m) => /* @__PURE__ */ __toESM(m.default));
+import("./variable-key.js").then((m) => /* @__PURE__ */ __toESM(m.default));
+import("./proto.js").then((m) => /* @__PURE__ */ __toESM(m.default));
+import("./this-write.js").then((m) => /* @__PURE__ */ __toESM(m.default));
+import("./eval.js").then((m) => /* @__PURE__ */ __toESM(m.default));
+Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_patched()));
+Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
+
+```
+
+## module-exports.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+// module-exports.cjs
+var require_module_exports = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { then(resolve) {
+		globalThis.thenCalled("module-exports");
+		resolve({});
+	} };
+}));
+export default require_module_exports();
+
+```
+
+## proto.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+// proto.cjs
+var require_proto = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.__proto__ = { then(resolve) {
+		globalThis.thenCalled("proto");
+		resolve({});
+	} };
+}));
+export default require_proto();
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __toESM as n, __commonJSMin as t };
+
+```
+
+## this-write.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+// this-write.cjs
+var require_this_write = /* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
+	exports.value = "value";
+	this$1.then = function(resolve) {
+		globalThis.thenCalled("this-write");
+		resolve({});
+	};
+}));
+export default require_this_write();
+
+```
+
+## tsc-export-const.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+// tsc-export-const.js
+var require_tsc_export_const = /* @__PURE__ */ __commonJSMin(((exports) => {
+	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.then = void 0;
+	const then = function(resolve) {
+		globalThis.thenCalled("tsc-export-const");
+		resolve({});
+	};
+	exports.then = then;
+}));
+export default require_tsc_export_const();
+
+```
+
+## variable-key.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+// variable-key.cjs
+var require_variable_key = /* @__PURE__ */ __commonJSMin(((exports) => {
+	const key = "then";
+	exports[key] = function(resolve) {
+		globalThis.thenCalled("variable-key");
+		resolve({});
+	};
+}));
+export default require_variable_key();
+
+```

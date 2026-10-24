@@ -43,9 +43,24 @@ export var __exportAll = (all, no_symbols) => {
 };
 export var __copyProps = (to, from, except, desc) => {
   if ((from && typeof from === 'object') || typeof from === 'function') {
-    for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+    // Read `isArray` before the keys: an `ownKeys` trap can revoke the Proxy.
+    for (
+      var isArray = Array.isArray(from),
+        keys = __getOwnPropNames(from),
+        i = 0,
+        n = keys.length,
+        key;
+      i < n;
+      i++
+    ) {
       key = keys[i];
-      if (!__hasOwnProp.call(to, key) && key !== except) {
+      if (
+        // An array's indices and `length` are not exports; its named properties are (#11272).
+        // Match by name, as a Proxy can reorder keys; `'4294967295'` (2 ** 32 - 1) is not an index.
+        !(isArray && (key === 'length' || ((key >>> 0) + '' === key && key !== '4294967295'))) &&
+        !__hasOwnProp.call(to, key) &&
+        key !== except
+      ) {
         __defProp(to, key, {
           get: ((k) => from[k]).bind(null, key),
           enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable,
@@ -58,15 +73,15 @@ export var __copyProps = (to, from, except, desc) => {
 export var __reExport = (target, mod, secondTarget) => (
   __copyProps(target, mod, 'default'), secondTarget && __copyProps(secondTarget, mod, 'default')
 );
-export var __toESM = (mod, isNodeMode, target, isArray) => (
-  (isArray = Array.isArray(mod)),
-  (target = mod != null && !isArray ? __create(__getProtoOf(mod)) : {}),
+export var __toESM = (mod, isNodeMode, target) => (
+  // The namespace of an array does not inherit `Array.prototype`, like in Node (#11272).
+  (target = mod != null && !Array.isArray(mod) ? __create(__getProtoOf(mod)) : {}),
   __copyProps(
     // `__esModule` alone is not enough: the module must own a `default` (#10360).
     isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, 'default')
       ? __defProp(target, 'default', { value: mod, enumerable: true })
       : target,
-    isArray ? null : mod,
+    mod,
   )
 );
 export var __toCommonJS = (mod) =>

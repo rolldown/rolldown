@@ -27,18 +27,16 @@ export default require_pure_cjs();
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { n as read, t as init_reader } from "./reader.js";
-//#region e.js
+// e.js
 globalThis.__strict_order_value = "ready";
 console.log("E");
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_reader();
 		console.log(`MAIN:${read()}`);
 	})))();
 }
-//#endregion
 init_main();
 
 ```
@@ -47,11 +45,10 @@ init_main();
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
-//#region node_modules/pure-carrier/index.js
+// node_modules/pure-carrier/index.js
 function init_pure_carrier() {
 	return (init_pure_carrier = __esmMin((() => {})))();
 }
-//#endregion
 export { init_pure_carrier as t };
 
 ```
@@ -60,7 +57,7 @@ export { init_pure_carrier as t };
 
 ```js
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
-//#region node_modules/pure-cjs/index.cjs
+// node_modules/pure-cjs/index.cjs
 var require_pure_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { snapshot: globalThis.__strict_order_value ?? "stale" };
 }));
@@ -70,7 +67,6 @@ function init_pure_carrier_cjs_0() {
 		import_pure_cjs = require_pure_cjs();
 	})))();
 }
-//#endregion
 export { init_pure_carrier_cjs_0 as n, require_pure_cjs as r, import_pure_cjs as t };
 
 ```
@@ -81,7 +77,7 @@ export { init_pure_carrier_cjs_0 as n, require_pure_cjs as r, import_pure_cjs as
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { n as init_pure_carrier_cjs_0, t as import_pure_cjs } from "./pure-cjs.js";
 import "./pure-carrier.js";
-//#region reader.js
+// reader.js
 function read() {
 	return import_pure_cjs.snapshot;
 }
@@ -90,7 +86,6 @@ function init_reader() {
 		init_pure_carrier_cjs_0();
 	})))();
 }
-//#endregion
 export { read as n, init_reader as t };
 
 ```
@@ -98,7 +93,7 @@ export { read as n, init_reader as t };
 ## rolldown-runtime.js
 
 ```js
-//#region \0rolldown/runtime.js
+// \0rolldown/runtime.js
 var __esmMin = (fn, res, err) => () => {
 	if (err) throw err[0];
 	try {
@@ -108,7 +103,6 @@ var __esmMin = (fn, res, err) => () => {
 	}
 };
 var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
-//#endregion
 export { __esmMin as n, __commonJSMin as t };
 
 ```
@@ -118,14 +112,13 @@ export { __esmMin as n, __commonJSMin as t };
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { n as read, t as init_reader } from "./reader.js";
-//#region second.js
+// second.js
 function init_second() {
 	return (init_second = __esmMin((() => {
 		init_reader();
 		console.log(read());
 	})))();
 }
-//#endregion
 init_second();
 
 ```
@@ -134,13 +127,12 @@ init_second();
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
-//#region unused.js
+// unused.js
 function init_unused() {
 	return (init_unused = __esmMin((() => {
 		console.log("UNUSED");
 	})))();
 }
-//#endregion
 init_unused();
 
 ```
@@ -173,15 +165,14 @@ export default require_pure_cjs();
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { n as read, t as init_reader } from "./reader.js";
-//#region e.js
+// e.js
 function init_e() {
 	return (init_e = __esmMin((() => {
 		globalThis.__strict_order_value = "ready";
 		console.log("E");
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_e();
@@ -189,7 +180,6 @@ function init_main() {
 		console.log(`MAIN:${read()}`);
 	})))();
 }
-//#endregion
 init_main();
 
 ```
@@ -198,11 +188,10 @@ init_main();
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
-//#region node_modules/pure-carrier/index.js
+// node_modules/pure-carrier/index.js
 function init_pure_carrier() {
 	return (init_pure_carrier = __esmMin((() => {})))();
 }
-//#endregion
 export { init_pure_carrier as t };
 
 ```
@@ -211,7 +200,7 @@ export { init_pure_carrier as t };
 
 ```js
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
-//#region node_modules/pure-cjs/index.cjs
+// node_modules/pure-cjs/index.cjs
 var require_pure_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { snapshot: globalThis.__strict_order_value ?? "stale" };
 }));
@@ -221,7 +210,6 @@ function init_pure_carrier_cjs_0() {
 		import_pure_cjs = require_pure_cjs();
 	})))();
 }
-//#endregion
 export { init_pure_carrier_cjs_0 as n, require_pure_cjs as r, import_pure_cjs as t };
 
 ```
@@ -232,7 +220,7 @@ export { init_pure_carrier_cjs_0 as n, require_pure_cjs as r, import_pure_cjs as
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { n as init_pure_carrier_cjs_0, t as import_pure_cjs } from "./pure-cjs.js";
 import "./pure-carrier.js";
-//#region reader.js
+// reader.js
 function read() {
 	return import_pure_cjs.snapshot;
 }
@@ -241,7 +229,6 @@ function init_reader() {
 		init_pure_carrier_cjs_0();
 	})))();
 }
-//#endregion
 export { read as n, init_reader as t };
 
 ```
@@ -249,7 +236,7 @@ export { read as n, init_reader as t };
 ### rolldown-runtime.js
 
 ```js
-//#region \0rolldown/runtime.js
+// \0rolldown/runtime.js
 var __esmMin = (fn, res, err) => () => {
 	if (err) throw err[0];
 	try {
@@ -259,7 +246,6 @@ var __esmMin = (fn, res, err) => () => {
 	}
 };
 var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
-//#endregion
 export { __esmMin as n, __commonJSMin as t };
 
 ```
@@ -269,14 +255,13 @@ export { __esmMin as n, __commonJSMin as t };
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { n as read, t as init_reader } from "./reader.js";
-//#region second.js
+// second.js
 function init_second() {
 	return (init_second = __esmMin((() => {
 		init_reader();
 		console.log(read());
 	})))();
 }
-//#endregion
 init_second();
 
 ```
@@ -285,13 +270,12 @@ init_second();
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
-//#region unused.js
+// unused.js
 function init_unused() {
 	return (init_unused = __esmMin((() => {
 		console.log("UNUSED");
 	})))();
 }
-//#endregion
 init_unused();
 
 ```

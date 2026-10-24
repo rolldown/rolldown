@@ -8,12 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
-//#region target.js
+// target.js
 const target = "node:path";
-//#endregion
-//#region cjs-root.cjs
-//#endregion
-//#region main.js
+// main.js
 var import_cjs_root = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	var Object$2 = process.env.TEST_IMPORT_PATH || "node:path";
 	module.exports = {
@@ -25,7 +22,6 @@ const viaImport = () => Promise.resolve().then(() => /* @__PURE__ */ __toESM(req
 function viaParam(Object$1) {
 	return Promise.resolve().then(() => /* @__PURE__ */ __toESM(require(Object$1)));
 }
-//#endregion
 Object.defineProperty(exports, "cjsRoot", {
 	enumerable: true,
 	get: function() {

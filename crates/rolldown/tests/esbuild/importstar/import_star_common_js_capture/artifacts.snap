@@ -8,9 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert/strict";
 // HIDDEN [\0rolldown/runtime.js]
-//#region foo.js
-//#endregion
-//#region entry.js
+// entry.js
 var import_foo = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.foo = 123;
 })))());
@@ -21,6 +19,5 @@ assert.deepEqual(import_foo, {
 });
 assert.equal(123, 123);
 assert.equal(foo, 234);
-//#endregion
 
 ```

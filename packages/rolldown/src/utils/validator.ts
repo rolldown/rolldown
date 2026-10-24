@@ -447,6 +447,12 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warnings when multiple star re-exports provide the same name from different modules',
     ),
   ),
+  shimmedExport: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when a missing export is replaced with an undefined binding',
+    ),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof ChecksOptionsSchema, ChecksOptions>>();
 
@@ -933,6 +939,10 @@ const OutputOptionsSchema = v.strictObject({
     v.description('Output directory, defaults to `dist` if `file` is not set'),
   ),
   file: v.pipe(v.optional(v.string()), v.description('Single output file')),
+  charset: v.pipe(
+    v.optional(v.union([v.literal('ascii'), v.literal('utf8')])),
+    v.description('Character set to use in generated JavaScript'),
+  ),
   exports: v.pipe(
     v.optional(
       v.union([v.literal('auto'), v.literal('named'), v.literal('default'), v.literal('none')]),

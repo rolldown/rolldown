@@ -189,6 +189,16 @@
             "null"
           ]
         },
+        "charset": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OutputCharset"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "format": {
           "anyOf": [
             {
@@ -636,6 +646,13 @@
           "type": "string",
           "const": "node"
         }
+      ]
+    },
+    "OutputCharset": {
+      "type": "string",
+      "enum": [
+        "ascii",
+        "utf8"
       ]
     },
     "OutputFormat": {
@@ -1575,6 +1592,12 @@
           ]
         },
         "namespaceConflict": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "shimmedExport": {
           "type": [
             "boolean",
             "null"

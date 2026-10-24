@@ -52,6 +52,8 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   /// module's statement inclusion to tell whether an eager forwarder discharges its own hops.
   pub index_stmt_infos: &'me crate::type_alias::IndexStmtInfos,
   pub modules: &'me IndexModules,
+  pub dynamic_import_usage:
+    Option<&'me rolldown_common::dynamic_import_usage::DynamicImportExportsUsage>,
   pub linking_info: &'me LinkingMetadata,
   pub linking_infos: &'me LinkingMetadataVec,
   pub order_wrap_state: &'me OrderWrapState,

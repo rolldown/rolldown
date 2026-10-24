@@ -1,6 +1,6 @@
-use rolldown_common::UsedSymbolRefsBuilder;
 #[cfg(debug_assertions)]
 use rolldown_common::{ChunkIdx, ChunkKind, WrapKind};
+use rolldown_common::{UsedSymbolRefsBuilder, UsedSymbolRefsView};
 use rolldown_error::BuildResult;
 #[cfg(debug_assertions)]
 use rustc_hash::FxHashSet;
@@ -10,18 +10,25 @@ use crate::{
   utils::chunk::validate_options_for_multi_chunk_output::validate_options_for_multi_chunk_output,
 };
 
-use super::GenerateStage;
+use super::compute_cross_chunk_links::{CrossChunkLinkState, FinalEsmInitMetadataAvailability};
 #[cfg(debug_assertions)]
 use super::order_analysis::OrderWrapPlan;
 use super::order_wrap_state::OrderWrapState;
+use super::{FinalEsmInitMetadata, GenerateStage, Sealed};
+
+pub(super) struct FinalizedChunkPlan {
+  pub(super) order_state: OrderWrapState,
+  pub(super) final_esm_init_metadata: Sealed<FinalEsmInitMetadata>,
+  pub(super) link_state: CrossChunkLinkState,
+}
 
 impl GenerateStage<'_> {
-  /// Apply order wrapping and entry facades before deriving final output metadata.
+  /// Finalize entry facades, runtime liveness and the links for the completed chunk layout.
   pub(super) fn finalize_chunk_plan(
     &mut self,
     chunk_graph: &mut ChunkGraph,
     used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
-  ) -> BuildResult<OrderWrapState> {
+  ) -> BuildResult<FinalizedChunkPlan> {
     // The order analysis reuses cross-chunk linking logic, which reads finalized namespace and
     // external-export facts. Prepare those inputs on the provisional topology first.
     self.find_entry_level_external_module(chunk_graph);
@@ -72,17 +79,39 @@ impl GenerateStage<'_> {
       let runtime_chunk_before = chunk_graph.module_to_chunk[runtime_idx];
       self.sweep_unused_runtime_module(chunk_graph, used_symbol_refs_builder);
       if runtime_chunk_before.is_some() && chunk_graph.module_to_chunk[runtime_idx].is_none() {
-        // The sweep removed the runtime from its chunk. When that chunk is still live (the runtime
-        // co-hosted with user modules), its `modules[0]` changed, so the `exec_order` the
-        // provisional `assign_chunk_exec_orders` in `generate_chunks` derived from the runtime
-        // (`exec_order` 0) is now stale and would sort the chunk ahead of chunks it should follow.
-        // Re-derive every live chunk's `exec_order` from its current lead module before rebuilding
-        // the sorted list, which restores the ordering the pre-#10104 pipeline produced by sweeping
-        // before assignment. See `assign_chunk_exec_orders` for how this composes with the
-        // strict-only `renumber_live_chunks`.
+        // Removing a co-hosted runtime changes the chunk's lead module and its execution order.
         self.assign_chunk_exec_orders(chunk_graph);
         chunk_graph.rebuild_sorted_chunk_idx_vec(true);
       }
+    }
+
+    let (mut final_esm_init_metadata, mut link_state) =
+      self.compute_final_chunk_links(chunk_graph, used_symbol_refs_builder.view(), &order_state);
+    // See internal-docs/code-splitting/implementation.md: derived exports include generated
+    // bindings that strict entries must keep behind a public facade.
+    if self.preserve_strict_entry_signatures(
+      chunk_graph,
+      used_symbol_refs_builder.view(),
+      &link_state,
+    ) {
+      // The common implementation chunk can export helpers without extending the entry signature.
+      // Strict execution order leaves runtime placement to order lowering.
+      if !self.options.is_strict_execution_order_enabled() {
+        self.try_merge_runtime_chunk(
+          chunk_graph,
+          None,
+          super::chunk_optimizer::RuntimeMergeCascade::Full,
+        );
+      }
+      chunk_graph.sort_chunk_modules(self.link_output, self.options);
+      self.assign_chunk_exec_orders(chunk_graph);
+      chunk_graph.rebuild_sorted_chunk_idx_vec(true);
+      self.find_entry_level_external_module(chunk_graph);
+      self.finalized_module_namespace_ref_usage(chunk_graph, &order_state);
+      // Release the old tables before allocating their replacements.
+      drop((final_esm_init_metadata, link_state));
+      (final_esm_init_metadata, link_state) =
+        self.compute_final_chunk_links(chunk_graph, used_symbol_refs_builder.view(), &order_state);
     }
 
     let rendered_chunk_count = chunk_graph
@@ -93,7 +122,28 @@ impl GenerateStage<'_> {
       validate_options_for_multi_chunk_output(self.options)?;
     }
 
-    Ok(order_state)
+    Ok(FinalizedChunkPlan { order_state, final_esm_init_metadata, link_state })
+  }
+
+  fn compute_final_chunk_links(
+    &self,
+    chunk_graph: &ChunkGraph,
+    used_symbol_refs: UsedSymbolRefsView<'_>,
+    order_state: &OrderWrapState,
+  ) -> (Sealed<FinalEsmInitMetadata>, CrossChunkLinkState) {
+    let metadata = self.compute_wrapped_esm_init_metadata(
+      &self.ast_table,
+      chunk_graph,
+      order_state,
+      used_symbol_refs,
+    );
+    let links = self.compute_cross_chunk_link_state(
+      chunk_graph,
+      used_symbol_refs,
+      order_state,
+      FinalEsmInitMetadataAvailability::Sealed(&metadata),
+    );
+    (metadata, links)
   }
 
   #[cfg(debug_assertions)]

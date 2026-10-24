@@ -27,7 +27,7 @@ pub fn rewrite_hot_accept_deps<'ast>(
   let rewrite = |expr: &mut ast::Expression<'ast>| {
     let Some(request) = expr.as_static_module_request() else { return };
     let Some(record_idx) =
-      module.hmr_info.module_request_to_import_record_idx.get(request.as_str())
+      module.hmr_info.module_request_to_import_record_idx.get(request.as_ref())
     else {
       return;
     };

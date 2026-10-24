@@ -162,6 +162,25 @@ impl LinkingMetadata {
     }
   }
 
+  /// Export names observable through known dynamic imports, unless another consumer needs
+  /// the complete namespace. See internal-docs/code-splitting/implementation.md.
+  pub fn dynamically_read_export_names<'a>(
+    &self,
+    usage: Option<&'a DynamicImportExportsUsage>,
+  ) -> Option<&'a FxHashSet<CompactStr>> {
+    if self.module_namespace_included_reason.intersects(
+      ModuleNamespaceIncludedReason::Unknown
+        | ModuleNamespaceIncludedReason::ReExportDynamicExports,
+    ) {
+      return None;
+    }
+    match usage? {
+      DynamicImportExportsUsage::Complete => None,
+      DynamicImportExportsUsage::Partial(names) => Some(names),
+      DynamicImportExportsUsage::Single(_) => unreachable!(),
+    }
+  }
+
   pub fn referenced_canonical_exports_symbols<'b, 'a: 'b>(
     &'b self,
     module_idx: ModuleIdx,

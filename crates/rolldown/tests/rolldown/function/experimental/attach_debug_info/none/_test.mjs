@@ -6,3 +6,4 @@ const code = nodeFs.readFileSync(nodePath.join(import.meta.dirname, 'dist/main.j
 
 nodeAssert(!code.includes('//#region'), 'should not include #region');
 nodeAssert(!code.includes('//#endregion'), 'should not include #endregion');
+nodeAssert(!code.includes('// main.js'), 'should not include the module marker');

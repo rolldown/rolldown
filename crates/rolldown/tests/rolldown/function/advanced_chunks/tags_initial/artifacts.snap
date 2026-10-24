@@ -7,19 +7,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region shared.js
+// shared.js
 const shared = "shared-initial";
-//#endregion
-//#region required.js
+// required.js
 var required_exports = /* @__PURE__ */ __exportAll({ required: () => required$1 });
 var required$1;
-//#endregion
-//#region main.js
+// main.js
 const required = (__esmMin((() => {
 	required$1 = "required-value";
 }))(), __toCommonJS(required_exports));
 const lazy = import("./lazy.js");
-//#endregion
 export { required as n, shared as r, lazy as t };
 
 ```
@@ -27,9 +24,8 @@ export { required as n, shared as r, lazy as t };
 ## lazy.js
 
 ```js
-//#region lazy-dep.js
+// lazy-dep.js
 const lazyDep = "lazy-dep";
-//#endregion
 export { lazyDep };
 
 ```

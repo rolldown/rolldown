@@ -65,6 +65,7 @@ pub mod bundler_options {
         InlineConstConfig, InlineConstMode, InlineConstOption, OptimizationOption,
         normalize_optimization_option,
       },
+      output_charset::OutputCharset,
       output_exports::OutputExports,
       output_format::OutputFormat,
       output_option::{

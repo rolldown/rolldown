@@ -30,6 +30,8 @@ bitflags! {
         const TopExportedSideEffectsFreeFunction = 1 << 5;
         /// Module evaluation reads at least one imported binding.
         const TopLevelImportRead = 1 << 6;
+        /// Local initialization creates data and functions without observing outside state.
+        const IndependentInitialization = 1 << 7;
     }
 }
 
@@ -180,6 +182,9 @@ pub struct EcmaView {
   pub json_module_none_self_reference_included_symbol: Option<Box<FxHashSet<SymbolRef>>>,
   /// Import record indices for `module.exports = require(...)` patterns.
   pub cjs_reexport_import_record_ids: Vec<ImportRecordIdx>,
+  /// Members called on a dynamic import's namespace, e.g. `foo` in
+  /// `import('mod').then(ns => ns.foo())`.
+  pub dynamic_import_called_names: FxHashMap<ImportRecordIdx, FxHashSet<CompactStr>>,
 }
 
 impl EcmaView {

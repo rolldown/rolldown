@@ -1,0 +1,12 @@
+{
+  "config": {
+    "input": [
+      { "name": "main", "import": "./main.cjs" },
+      { "name": "consumer", "import": "./consumer.cjs" }
+    ],
+    "platform": "node",
+    "format": "cjs",
+    "preserveEntrySignatures": "strict",
+    "minifyInternalExports": false
+  }
+}

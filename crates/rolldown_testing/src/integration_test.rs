@@ -21,11 +21,11 @@ use rolldown_testing_config::{ExpectedExecutionFailure, TestMeta};
 use serde_json::{Map, Value};
 use sugar_path::SugarPath;
 
+use crate::hidden_module_markers::HiddenModuleMarkersPlugin;
 use crate::hmr_files::{
   apply_hmr_edit_files_to_hmr_temp_dir, collect_hmr_edit_files,
   copy_non_hmr_edit_files_to_hmr_temp_dir, get_changed_files_from_hmr_edit_files,
 };
-use crate::preserve_region_markers::PreserveRegionMarkersPlugin;
 use crate::types::{
   BuildArtifactsSnapshot, BuildRoundOutput, DevArtifactsSnapshot, DevRoundOutput, HmrStepOutput,
 };
@@ -636,9 +636,11 @@ impl IntegrationTest {
     mut multiple_options: Vec<NamedBundlerOptions>,
     mut plugins: Vec<SharedPluginable>,
   ) {
-    // Registered last so it runs right before the internal dce pass; see the module docs of
-    // `preserve_region_markers` for why snapshots need markers kept intact.
-    plugins.push(Plugin::new_shared(PreserveRegionMarkersPlugin));
+    // Registered last so it runs right before the internal minify pass; see the module docs of
+    // `hidden_module_markers` for why snapshots need it.
+    plugins.push(Plugin::new_shared(HiddenModuleMarkersPlugin {
+      hide_runtime_module: self.test_meta.hidden_runtime_module,
+    }));
 
     let test_folder_path = &self.test_folder_path;
 

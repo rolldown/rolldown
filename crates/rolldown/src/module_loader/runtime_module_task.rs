@@ -199,6 +199,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
         import_attribute_map: FxHashMap::default(),
         json_module_none_self_reference_included_symbol: None,
         cjs_reexport_import_record_ids: Vec::new(),
+        dynamic_import_called_names: FxHashMap::default(),
       },
       // TODO(hyf0/hmr): We might need to find a better way to handle this.
       originative_resolved_id: resolved_id,

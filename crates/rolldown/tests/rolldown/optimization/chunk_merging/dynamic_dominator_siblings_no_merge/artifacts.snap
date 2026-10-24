@@ -7,9 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import "./shared.js";
-//#region a.js
+// a.js
 console.log("a");
-//#endregion
 
 ```
 
@@ -17,28 +16,25 @@ console.log("a");
 
 ```js
 import "./shared.js";
-//#region b.js
+// b.js
 console.log("b");
-//#endregion
 
 ```
 
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 console.log("entry");
 import("./a.js");
 import("./b.js");
-//#endregion
 
 ```
 
 ## shared.js
 
 ```js
-//#region shared.js
+// shared.js
 console.log("shared");
-//#endregion
 
 ```

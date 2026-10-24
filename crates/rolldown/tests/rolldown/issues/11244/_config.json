@@ -1,0 +1,25 @@
+{
+  "_comment": "Regression test for https://github.com/rolldown/rolldown/issues/11244 - `hook.js` and `other.js` both import `memo` from the side-effect-free external `dep`. Tree-shaking drops the only use in `hook.js`, but `other.js` still uses it. The external binding is shared by both importers, so `hook.js` kept `import { memo } from \"dep\"`. Each chunk must only import the external symbols that its included statements reference.",
+  "config": {
+    "input": [
+      {
+        "name": "hook",
+        "import": "./hook.js"
+      },
+      {
+        "name": "other",
+        "import": "./other.js"
+      }
+    ],
+    "external": ["dep"],
+    "treeshake": {
+      "moduleSideEffects": false
+    }
+  },
+  "configVariants": [
+    {
+      "preserveModules": true
+    }
+  ],
+  "expectExecuted": false
+}

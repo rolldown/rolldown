@@ -1,0 +1,65 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { t as foo } from "./foo.js";
+// a.js
+const a = () => foo.value;
+export { a };
+
+```
+
+## b.js
+
+```js
+import { t as foo } from "./foo.js";
+import { t as Bar } from "./lib.js";
+// b.js
+const b = () => new Bar().value() + foo.value;
+export { b };
+
+```
+
+## foo.js
+
+```js
+// lib/foo.js
+const foo = { value: "foo" };
+export { foo as t };
+
+```
+
+## lib.js
+
+```js
+import { t as foo } from "./foo.js";
+// lib/heavy.js
+function heavy() {
+	return "HEAVY".repeat(3);
+}
+// lib/bar.js
+var Bar = class {
+	value() {
+		return heavy() + foo.value;
+	}
+};
+// lib/index.js
+const own = { bar: Bar };
+export { own, Bar as t };
+
+```
+
+## main.js
+
+```js
+// main.js
+const loadA = () => import("./a.js");
+const loadB = () => import("./b.js");
+const loadOwn = () => import("./lib.js").then((lib) => lib.own);
+export { loadA, loadB, loadOwn };
+
+```

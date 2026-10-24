@@ -42,7 +42,7 @@ export var __exportAll = (all, no_symbols) => {
   return target;
 };
 export var __copyProps = (to, from, except, desc) => {
-  if ((from && typeof from === 'object') || typeof from === 'function') {
+  if (!Array.isArray(from) && ((from && typeof from === 'object') || typeof from === 'function')) {
     for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
       key = keys[i];
       if (!__hasOwnProp.call(to, key) && key !== except) {
@@ -59,7 +59,7 @@ export var __reExport = (target, mod, secondTarget) => (
   __copyProps(target, mod, 'default'), secondTarget && __copyProps(secondTarget, mod, 'default')
 );
 export var __toESM = (mod, isNodeMode, target) => (
-  (target = mod != null ? __create(__getProtoOf(mod)) : {}),
+  (target = mod != null && !Array.isArray(mod) ? __create(__getProtoOf(mod)) : {}),
   __copyProps(
     // `__esModule` alone is not enough: the module must own a `default` (#10360).
     isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, 'default')

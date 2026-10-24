@@ -196,6 +196,38 @@ If you find an issue that seems to be caused by this incompatibility, try using 
 
 If the heuristic is not working for you, you can use the code in the section above that handles both interpretations. If the import is in a dependency, we recommend to raise an issue to the dependency. In the meantime, you can use [`patch-package`](https://github.com/ds300/patch-package) or [`pnpm patch`](https://pnpm.io/cli/patch) or alternatives as an escape hatch.
 
+### `module.exports` set to an array
+
+When a CJS module sets `module.exports` to an array, the namespace object of the module has these exports:
+
+- The `default` export.
+- One export for each own property name of the array, except the indices and `length`.
+
+The namespace object does not inherit from `Array.prototype`.
+
+The exception for the indices and `length` also applies when the module sets them with an assignment:
+
+::: code-group
+
+```js [index.js]
+import * as ns from './importee.cjs';
+console.log(ns.foo); // 'bar'
+console.log(ns.length); // undefined (Node.js prints 1)
+console.log(ns.default.length); // 1
+```
+
+```js [importee.cjs]
+module.exports = [1, 2];
+module.exports.length = 1;
+module.exports.foo = 'bar';
+```
+
+:::
+
+Node.js gets the export names from a static scan of the source code ([`cjs-module-lexer`](https://github.com/nodejs/cjs-module-lexer)). The scan finds the assignment to `length`, so the namespace object in Node.js has `length`. Rolldown gets the export names at runtime. At runtime, the array does not record which index or `length` came from an assignment.
+
+To read an index or `length`, use the `default` export.
+
 ### Strict Mode Applied to `.js` files
 
 For files ending with `.js`, Rolldown parses the file as ESM ([#7009](https://github.com/rolldown/rolldown/issues/7009)) without falling back to CJS. This means that syntaxes only allowed in non-strict mode (sloppy mode) will be rejected.

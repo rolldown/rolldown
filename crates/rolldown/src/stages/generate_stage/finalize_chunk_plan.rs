@@ -1,6 +1,6 @@
 #[cfg(debug_assertions)]
-use rolldown_common::{ChunkIdx, ChunkKind, WrapKind};
-use rolldown_common::{UsedSymbolRefsBuilder, UsedSymbolRefsView};
+use rolldown_common::{ChunkIdx, WrapKind};
+use rolldown_common::{ChunkKind, ChunkReasonType, UsedSymbolRefsBuilder, UsedSymbolRefsView};
 use rolldown_error::BuildResult;
 #[cfg(debug_assertions)]
 use rustc_hash::FxHashSet;
@@ -74,7 +74,18 @@ impl GenerateStage<'_> {
     // The runtime sweep must observe the final namespace/external facts above. Order wrappers
     // carry their runtime demand in `OrderWrapState`, outside the link-stage metadata inspected
     // by the sweep, so conservatively keep the runtime whenever that synthetic demand exists.
-    if order_state.required_runtime_helpers().is_empty() {
+    // `experimentalInlineCommonChunks` without strict execution order can select chunks whose
+    // members demand no helper, and its registry lives in the runtime chunk. Selection runs after
+    // liveness is sealed, so keep the runtime only when some common chunk could still be selected.
+    let inline_without_wrappers = self.options.inline_common_chunks.is_some()
+      && !self.options.is_strict_execution_order_enabled()
+      && chunk_graph.chunk_table.iter_enumerated().any(|(chunk_idx, chunk)| {
+        matches!(chunk.kind, ChunkKind::Common)
+          && matches!(*chunk.chunk_reason_type, ChunkReasonType::Common)
+          && !chunk_graph.post_chunk_optimization_operations.contains_key(&chunk_idx)
+          && self.prefers_inline_common_chunk(&chunk.modules)
+      });
+    if order_state.required_runtime_helpers().is_empty() && !inline_without_wrappers {
       let runtime_idx = self.link_output.runtime.id();
       let runtime_chunk_before = chunk_graph.module_to_chunk[runtime_idx];
       self.sweep_unused_runtime_module(chunk_graph, used_symbol_refs_builder);

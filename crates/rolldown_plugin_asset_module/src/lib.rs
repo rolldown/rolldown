@@ -73,13 +73,14 @@ impl AssetModulePlugin {
   ) -> HookLoadReturn {
     // Determine if this module should be treated as an asset:
     // 1. Via asserted_module_type (e.g. from `new URL('./file', import.meta.url)`)
-    // 2. Via file extension matching `moduleTypes` config
+    // 2. Via file extension matching `moduleTypes` config, unless a `type` import attribute
+    //    selects a built-in module type
     //
     // Strip query/fragment (e.g. `file.png?url`) before extension check and path operations,
     // consistent with CopyModulePlugin's handling.
     let clean_id = clean_url(args.id);
     let is_asset = args.asserted_module_type.is_some_and(|ty| matches!(ty, ModuleType::Asset))
-      || self.is_asset_by_extension(clean_id);
+      || (args.attributes.module_type().is_none() && self.is_asset_by_extension(clean_id));
 
     if !is_asset {
       return Ok(None);

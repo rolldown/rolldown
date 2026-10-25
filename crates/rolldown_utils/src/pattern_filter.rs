@@ -1,5 +1,8 @@
 use memchr::memmem;
-use std::{borrow::Cow, path::Path};
+use std::{
+  borrow::Cow,
+  path::{Path, PathBuf},
+};
 
 use crate::js_regex::HybridRegex;
 use fast_glob::glob_match;
@@ -109,11 +112,31 @@ pub(crate) fn glob_matcher_depends_on_cwd(glob: &str) -> bool {
 
 /// https://github.com/rollup/plugins/blob/e1a5ef99f1578eb38a8c87563cb9651db228f3bd/packages/pluginutils/src/createFilter.ts#L10
 pub fn get_matcher_string<'a>(glob: &'a str, cwd: &'a str) -> Cow<'a, str> {
-  if glob_matcher_depends_on_cwd(glob) {
-    Cow::Owned(normalize_path_buf_to_slash(Path::new(cwd).join(glob)))
-  } else {
-    normalize_path(glob)
+  if !glob_matcher_depends_on_cwd(glob) {
+    return normalize_path(glob);
   }
+  // Like Rollup, resolve a relative `cwd` against the process cwd.
+  let cwd = std::path::absolute(cwd).unwrap_or_else(|_| PathBuf::from(cwd));
+  let base = normalize_path_buf_to_slash(cwd.clone());
+  let joined = normalize_path_buf_to_slash(cwd.join(glob));
+  // `cwd` is a literal path, so escape glob syntax in the part of `joined` that comes from it.
+  // A leading `..` in `glob` leaves only an ancestor of `cwd`.
+  let is_dir_prefix = |prefix: &str| {
+    joined.strip_prefix(prefix).is_some_and(|rest| rest.is_empty() || rest.starts_with('/'))
+  };
+  let mut prefix = base.as_str();
+  while !prefix.is_empty() && !is_dir_prefix(prefix) {
+    prefix = prefix.rfind('/').map_or("", |i| &prefix[..i]);
+  }
+  let mut matcher = String::with_capacity(joined.len() + 8);
+  for c in prefix.chars() {
+    if matches!(c, '\\' | '*' | '?' | '[' | ']' | '{' | '}' | '!') {
+      matcher.push('\\');
+    }
+    matcher.push(c);
+  }
+  matcher.push_str(&joined[prefix.len()..]);
+  Cow::Owned(matcher)
 }
 
 pub fn normalize_path(path: &str) -> Cow<'_, str> {
@@ -337,6 +360,45 @@ filter: {:?}, id: {id}",
       assert_eq!(filter(Some(&pattern), None, matching_id, cwd), FilterResult::Match(false));
       assert_eq!(filter(Some(&pattern), None, nonmatching_id, cwd), FilterResult::NoneMatch(true),);
     }
+  }
+
+  #[test]
+  fn relative_globs_treat_cwd_as_a_literal_path() {
+    #[cfg(windows)]
+    let cwds = [r"C:\w\my[app]", r"C:\w\{client}", r"C:\w\a!b"];
+    #[cfg(not(windows))]
+    let cwds = ["/w/my[app]", "/w/{client}", "/w/a!b", "/w/a*b", "/w/q?", r"/w/back\slash"];
+
+    for cwd in cwds {
+      let src = format!("{cwd}/src/a.js");
+      let other = format!("{cwd}/other/a.js");
+      let include = [StringOrRegex::new("src/**".to_string(), None).unwrap()];
+      assert_eq!(filter(None, Some(&include), &src, cwd), FilterResult::Match(true), "{cwd}");
+      assert_eq!(
+        filter(None, Some(&include), &other, cwd),
+        FilterResult::NoneMatch(false),
+        "{cwd}"
+      );
+      assert_eq!(filter(Some(&include), None, &src, cwd), FilterResult::Match(false), "{cwd}");
+
+      // `..` may leave `cwd`; the remaining ancestors are still literal.
+      let sibling = [StringOrRegex::new("../shared/**".to_string(), None).unwrap()];
+      let shared = format!("{cwd}/shared/a.js");
+      assert_eq!(
+        filter(None, Some(&sibling), &shared, &format!("{cwd}/web")),
+        FilterResult::Match(true)
+      );
+    }
+  }
+
+  #[test]
+  fn relative_globs_resolve_a_relative_cwd_against_the_process_cwd() {
+    let id = std::env::current_dir().unwrap().join("proj").join("src").join("a.js");
+    let include = [StringOrRegex::new("src/**".to_string(), None).unwrap()];
+    assert_eq!(
+      filter(None, Some(&include), &id.to_string_lossy(), "proj"),
+      FilterResult::Match(true)
+    );
   }
 
   #[test]

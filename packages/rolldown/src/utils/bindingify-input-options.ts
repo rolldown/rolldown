@@ -93,6 +93,10 @@ export function bindingifyInputOptions(
     moduleTypes: inputOptions.moduleTypes,
     define: normalizedTransform.define,
     inject: bindingifyInject(normalizedTransform.inject),
+    injectFilter: normalizedTransform.injectFilter && {
+      include: normalizedStringOrRegex(normalizedTransform.injectFilter.include),
+      exclude: normalizedStringOrRegex(normalizedTransform.injectFilter.exclude),
+    },
     experimental: bindingifyExperimental(inputOptions.experimental),
     profilerNames: outputOptions.generatedCode?.profilerNames,
     transform: normalizedTransform.oxcTransformOptions,

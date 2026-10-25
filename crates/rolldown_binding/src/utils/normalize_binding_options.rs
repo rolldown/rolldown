@@ -753,6 +753,7 @@ pub fn normalize_binding_options(
     inject: input_options
       .inject
       .map(|inner| inner.into_iter().map(normalize_binding_inject_import).collect()),
+    inject_filter: input_options.inject_filter.map(Into::into),
     external_live_bindings: output_options.external_live_bindings,
     code_splitting: normalize_code_splitting(
       output_options.manual_code_splitting,

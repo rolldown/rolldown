@@ -1,4 +1,5 @@
 import type { JsxOptions, TransformOptions as OxcTransformOptions } from '../binding.cjs';
+import type { StringOrRegExp } from '../types/utils';
 
 export interface TransformOptions extends Omit<
   OxcTransformOptions,
@@ -77,6 +78,27 @@ export interface TransformOptions extends Omit<
    * ```
    */
   inject?: Record<string, string | [string, string]>;
+  /**
+   * Limit the modules {@linkcode inject} applies to.
+   *
+   * Works like the `include` and `exclude` options of `@rollup/plugin-inject`.
+   * Strings are treated as glob patterns.
+   *
+   * @example
+   * **Inject only into your own code**
+   * ```js [rolldown.config.js]
+   * export default defineConfig({
+   *   transform: {
+   *     inject: { $: 'jquery' },
+   *     injectFilter: { exclude: /node_modules/ },
+   *   }
+   * })
+   * ```
+   */
+  injectFilter?: {
+    include?: StringOrRegExp | StringOrRegExp[];
+    exclude?: StringOrRegExp | StringOrRegExp[];
+  };
   /**
    * Remove labeled statements with these label names.
    *

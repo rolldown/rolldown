@@ -62,6 +62,7 @@ Note it behaves differently from [`@rollup/plugin-replace`](https://github.com/r
 ## Inject
 
 - Configurable via the [`transform.inject`](/reference/InputOptions.transform#inject) option.
+- Limited to some modules via the [`transform.injectFilter`](/reference/InputOptions.transform#injectfilter) option.
 
 This feature provides a way to shim global variables with a specific value exported from a module. This feature is equivalent of [`@rollup/plugin-inject`](https://github.com/rollup/plugins/tree/master/packages/inject) and conceptually similar to [esbuild's `inject` option](https://esbuild.github.io/api/#inject).
 

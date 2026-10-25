@@ -40,6 +40,7 @@ pub mod bundler_options {
       filename_template::{FilenameTemplate, is_path_fragment},
       generated_code_options::GeneratedCodeOptions,
       hash_characters::HashCharacters,
+      inject_filter::InjectFilter,
       inject_import::InjectImport,
       inline_common_chunks_options::{
         InlineCommonChunksOptions, NormalizedInlineCommonChunksOptions,

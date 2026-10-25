@@ -256,6 +256,15 @@ const TransformOptionsSchema = v.object({
     v.optional(v.record(v.string(), v.union([v.string(), v.tuple([v.string(), v.string()])]))),
     v.description('Inject import statements on demand'),
   ),
+  injectFilter: v.pipe(
+    v.optional(
+      v.strictObject({
+        include: v.optional(v.union([StringOrRegExpSchema, v.array(StringOrRegExpSchema)])),
+        exclude: v.optional(v.union([StringOrRegExpSchema, v.array(StringOrRegExpSchema)])),
+      }),
+    ),
+    v.description('Limit the modules `inject` applies to'),
+  ),
   dropLabels: v.pipe(
     v.optional(v.array(v.string())),
     v.description('Remove labeled statements with these label names'),

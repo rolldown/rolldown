@@ -2442,6 +2442,11 @@ export interface BindingIndentOptions {
   exclude?: Array<Array<number>> | Array<number>
 }
 
+export interface BindingInjectFilter {
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
+}
+
 export type BindingInjectImport = BindingInjectImportNamed | BindingInjectImportNamespace
 
 export interface BindingInjectImportNamed {
@@ -2491,6 +2496,7 @@ export interface BindingInputOptions {
   define?: Array<[string, string]>
   dropLabels?: Array<string>
   inject?: Array<BindingInjectImport>
+  injectFilter?: BindingInjectFilter
   experimental?: BindingExperimentalOptions
   profilerNames?: boolean
   transform?: TransformOptions

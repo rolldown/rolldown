@@ -370,6 +370,7 @@ Runtime used to be placed by normal bitset grouping and later peeled out when a 
 - `crates/rolldown/tests/rolldown/issues/8989/` — facade elimination introduces helper consumers; runtime may merge only into a downstream dominator.
 - `crates/rolldown/tests/rolldown/issues/8920_2/` — fuzz-discovered shape where consumer-count heuristics produced a cycle.
 - `crates/rolldown/tests/rolldown/issues/9597/` — a static + dynamic import cycle that previously placed the runtime chunk inside the cycle, throwing `__exportAll is not a function`; standalone-first keeps the runtime out of the cycle.
+- `packages/rolldown/tests/behaviors/runtime-host-loading.test.ts` compares source execution with bundled output on seeded graphs. It checks effects, export values, live bindings, and namespace identity with each entry loaded alone and with forward/reverse entry sequences. The cases vary dynamic-import chains and cycles, re-export facades, multiple importers, CommonJS, top-level await, strict order, minification, manual groups, emitted/duplicate entries, and `preserveModules`. Set `RUNTIME_HOST_FUZZ_SEEDS` to increase the default 18 seeds.
 
 These fixtures assert structural invariants in `_test.mjs`, so runtime-placement regressions fail immediately rather than only showing up as snapshot drift.
 

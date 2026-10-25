@@ -32,8 +32,11 @@ import {
   DEFAULT_THROTTLE,
   deltaSection,
   lcpElementOf,
+  parseNetworkFlags,
   scaleThrottle,
   summarize,
+  throttleFromProfile,
+  throttleId,
   timedRun,
 } from './lib/measure.mjs';
 import {
@@ -59,8 +62,9 @@ import {
   reportDirFor,
   resolveModule,
   whatIf,
+  withRoots,
 } from './lib/module-graph.mjs';
-import { entryIdx, minCut } from './lib/min-cut.mjs';
+import { minCut } from './lib/min-cut.mjs';
 import { diffGraphs } from './lib/graph-diff.mjs';
 import {
   POLL_MS,
@@ -198,6 +202,24 @@ const TARGET_OPTS = {
   dist: { type: 'string' },
 };
 
+// `--bandwidth <Mbit/s> [--rtt <ms>] [--cpu <rate>]`: pin a network in real units - the
+// network a deployed environment measured (a record's model) - instead of a net-scale
+// step. Pinned like --net-scale; changing it makes the pinned baseline incomparable.
+const NETWORK_OPTS = {
+  bandwidth: { type: 'string' },
+  rtt: { type: 'string' },
+  cpu: { type: 'string' },
+};
+
+// The throttle identity a measurement will run under: the flag's, else the pinned
+// profile's; null before the first calibration (nothing to compare against yet).
+function expectedThrottleId(target, opts, networkFlag) {
+  if (networkFlag) return throttleId({ network: networkFlag });
+  if (opts['net-scale'] != null) return throttleId({ netScale: Number(opts['net-scale']) });
+  const profile = readJson(target.paths.throttleProfile);
+  return profile ? throttleId(profile) : null;
+}
+
 function targetSlug(dist) {
   return dist
     .toLowerCase()
@@ -324,12 +346,32 @@ function detectEntry(distDir) {
  * Resolve the target's PINNED throttle profile, calibrating on first use: walk
  * the net-scale ladder (one probe navigation per step) until the baseline LCP
  * fits under the ceiling, then pin the winning scale. Explicit --net-scale
- * pins without probing. Pinned means pinned: every later scan/measure/coverage/
+ * pins without probing; so does --bandwidth/--rtt/--cpu, which pins a network in
+ * real units (a deployed environment's measured network) instead of a scale step.
+ * Pinned means pinned: every later scan/measure/coverage/
  * profile - and the eval referee - inherits this value until the profile file
  * is deleted or explicitly overridden.
  */
-async function ensureThrottleProfile(target, { origin, cdp, netScaleFlag = null }) {
+async function ensureThrottleProfile(
+  target,
+  { origin, cdp, netScaleFlag = null, networkFlag = null },
+) {
   const existing = readJson(target.paths.throttleProfile);
+  if (networkFlag) {
+    const id = throttleId({ network: networkFlag });
+    if (!existing || throttleId(existing) !== id) {
+      writeJson(target.paths.throttleProfile, {
+        schemaVersion: 1,
+        network: networkFlag,
+        source: 'flag',
+        pinnedAtMs: Date.now(),
+      });
+      console.log(
+        `throttle profile pinned by flag: ${id}${existing ? ` (was ${throttleId(existing)} - the pinned baseline is now incomparable, re-pin with scan --pin)` : ''}`,
+      );
+    }
+    return readJson(target.paths.throttleProfile);
+  }
   if (netScaleFlag != null) {
     const netScale = Number(netScaleFlag);
     if (!CALIBRATE_LADDER.includes(netScale)) {
@@ -337,7 +379,7 @@ async function ensureThrottleProfile(target, { origin, cdp, netScaleFlag = null 
         `--net-scale must be one of ${CALIBRATE_LADDER.join('/')} (named, reproducible steps only)`,
       );
     }
-    if (existing?.netScale !== netScale) {
+    if (!existing || throttleId(existing) !== throttleId({ netScale })) {
       writeJson(target.paths.throttleProfile, {
         schemaVersion: 1,
         netScale,
@@ -345,7 +387,7 @@ async function ensureThrottleProfile(target, { origin, cdp, netScaleFlag = null 
         pinnedAtMs: Date.now(),
       });
       console.log(
-        `throttle profile pinned by flag: net x${netScale}${existing ? ` (was x${existing.netScale} - the pinned baseline is now incomparable, re-pin with scan --pin)` : ''}`,
+        `throttle profile pinned by flag: net x${netScale}${existing ? ` (was ${throttleId(existing)} - the pinned baseline is now incomparable, re-pin with scan --pin)` : ''}`,
       );
     }
     return readJson(target.paths.throttleProfile);
@@ -384,7 +426,12 @@ async function ensureThrottleProfile(target, { origin, cdp, netScaleFlag = null 
   return profile;
 }
 
-async function withServerAndBrowser(target, throttleOff, fn, { netScaleFlag = null } = {}) {
+async function withServerAndBrowser(
+  target,
+  throttleOff,
+  fn,
+  { netScaleFlag = null, networkFlag = null } = {},
+) {
   const distDir = target.dist;
   if (!fs.existsSync(path.join(distDir, 'index.html'))) {
     throw new Error(`no build at ${distDir} - build the app first`);
@@ -404,8 +451,9 @@ async function withServerAndBrowser(target, throttleOff, fn, { netScaleFlag = nu
         origin: server.origin,
         cdp: browser.cdp,
         netScaleFlag,
+        networkFlag,
       });
-      throttle = scaleThrottle(DEFAULT_THROTTLE, profile.netScale);
+      throttle = throttleFromProfile(profile);
     }
     return await fn({ origin: server.origin, cdp: browser.cdp, throttle });
   } finally {
@@ -471,10 +519,10 @@ function writeMeasureReport(
   const prev = readJson(target.paths.runtimeState);
   const baseline = readJson(target.paths.runtimeBaseline);
   // Deltas are only meaningful between measurements taken under the SAME pinned
-  // net scale - the scale is part of the measurement's identity. A mismatch
-  // suppresses the comparison and says so, instead of printing a wrong number.
-  const currScale = throttle ? (throttle.netScale ?? 1) : null;
-  const sameScale = (state) => state && currScale != null && (state.netScale ?? 1) === currScale;
+  // throttle (net scale or network) - it is part of the measurement's identity. A
+  // mismatch suppresses the comparison and says so, instead of printing a wrong number.
+  const currId = throttle ? throttleId(throttle) : null;
+  const sameScale = (state) => state && currId != null && throttleId(state) === currId;
   const chunkGraph = loadChunkGraph(
     target.dist,
     moduleGraphCandidates({
@@ -511,21 +559,22 @@ function writeMeasureReport(
       noiseFloorPct: NOISE_FLOOR_PCT,
     }),
     baselineScaleMismatch:
-      baseline && currScale != null && !sameScale(baseline)
-        ? { pinned: baseline.netScale ?? 1, current: currScale }
+      baseline && currId != null && !sameScale(baseline)
+        ? { pinned: throttleId(baseline), current: currId }
         : null,
     samples: summary.samples,
   };
   writeJson(target.paths.runtimeMetrics, report);
   // runs travels with the state so pinBaseline can refuse single-run pins
   // (quick probes and early-stopped scans - a 1-run baseline poisons deltas);
-  // netScale travels so future measurements refuse cross-scale comparisons.
+  // netScale / network travel so future measurements refuse cross-throttle comparisons.
   writeJson(target.paths.runtimeState, {
     schemaVersion: 1,
     tsMs: report.generatedAtMs,
     label: report.label,
     runs: report.runs,
-    netScale: currScale ?? undefined,
+    netScale: throttle && !throttle.network ? (throttle.netScale ?? 1) : undefined,
+    network: throttle?.network,
     metrics: report.metrics,
   });
   fs.appendFileSync(
@@ -572,12 +621,12 @@ function printMeasureSummary(
       `FCP ${ms(m['runtime.fcp_ms'])} | load ${ms(m['runtime.load_ms'])} | ` +
       `CLS ${m['runtime.cls']} | transfer ${kb(m['runtime.transfer_bytes'])} | ` +
       `${m['runtime.js_request_count']} js requests` +
-      `${(report.throttle?.netScale ?? 1) !== 1 ? ` | net x${report.throttle.netScale} (pinned)` : ''}`,
+      `${report.throttle && (report.throttle.network || (report.throttle.netScale ?? 1) !== 1) ? ` | ${throttleId(report.throttle)} (pinned)` : ''}`,
   );
   if (report.baselineScaleMismatch) {
     const mm = report.baselineScaleMismatch;
     console.log(
-      `vs pinned baseline: INCOMPARABLE - the baseline was pinned under net x${mm.pinned}, this measurement ran under net x${mm.current}.`,
+      `vs pinned baseline: INCOMPARABLE - the baseline was pinned under ${mm.pinned}, this measurement ran under ${mm.current}.`,
     );
     console.log('next: re-pin under the current profile (scan --pin) before judging any change.');
   }
@@ -1595,19 +1644,19 @@ async function cmdMeasure(argv) {
     pin: { type: 'boolean', default: false },
     'no-early-stop': { type: 'boolean', default: false },
     'net-scale': { type: 'string' },
+    ...NETWORK_OPTS,
   });
+  const networkFlag = parseNetworkFlags(opts);
   const target = resolveTarget(opts);
   const expectedFeatures = expectedFeaturesFor(target, opts);
   ensureAnchor(target);
   const baselineState = readJson(target.paths.runtimeBaseline);
   const pinnedLcp = baselineState?.metrics?.['runtime.lcp_ms'];
   // The early stop compares run 1 against the pinned baseline - only valid when
-  // both were measured under the SAME pinned net scale.
-  const expectedScale =
-    opts['net-scale'] != null
-      ? Number(opts['net-scale'])
-      : (readJson(target.paths.throttleProfile)?.netScale ?? null);
-  const scaleMatches = expectedScale != null && (baselineState?.netScale ?? 1) === expectedScale;
+  // both were measured under the SAME pinned throttle.
+  const expectedId = expectedThrottleId(target, opts, networkFlag);
+  const scaleMatches =
+    expectedId != null && baselineState != null && throttleId(baselineState) === expectedId;
   const earlyStop =
     !opts.pin && !opts['no-early-stop'] && typeof pinnedLcp === 'number' && scaleMatches
       ? {
@@ -1634,7 +1683,7 @@ async function cmdMeasure(argv) {
       })),
       throttle,
     }),
-    { netScaleFlag: opts['net-scale'] ?? null },
+    { netScaleFlag: opts['net-scale'] ?? null, networkFlag },
   );
   const { report, hadBaseline } = writeMeasureReport(target, samples, {
     expectedFeatures,
@@ -1738,6 +1787,8 @@ async function cmdScan(argv) {
     // Pin the target's net-scale explicitly (one of 1/2/4/8) instead of the
     // calibrated value. Changing it makes the pinned baseline incomparable.
     'net-scale': { type: 'string' },
+    // Or pin a network in real units (--bandwidth/--rtt/--cpu), same rules.
+    ...NETWORK_OPTS,
     // Rendered-output parity: pages beyond the build's discoverable entries (SPA
     // routes) and masks for regions the page renders differently on every load.
     pages: { type: 'string' },
@@ -1755,6 +1806,7 @@ async function cmdScan(argv) {
   if (opts.quick) {
     opts.runs = '1';
   }
+  const networkFlag = parseNetworkFlags(opts);
   const target = resolveTarget(opts);
   const expectedFeatures = expectedFeaturesFor(target, opts);
   const entry = requireEntry(target, opts);
@@ -1766,16 +1818,14 @@ async function cmdScan(argv) {
   // The first scan of a target saves the build as the original - before any change.
   ensureAnchor(target, { pages: parsePages(opts.pages), masks: opts.mask ?? [] });
   // Early stop needs a decision context (a pinned baseline measured under the
-  // SAME pinned net scale) and full-median exemptions: --pin measurements
+  // SAME pinned throttle) and full-median exemptions: --pin measurements
   // BECOME the baseline, so they always sample fully; quick mode is already a
   // single run.
   const baselineState = readJson(target.paths.runtimeBaseline);
   const pinnedLcp = baselineState?.metrics?.['runtime.lcp_ms'];
-  const expectedScale =
-    opts['net-scale'] != null
-      ? Number(opts['net-scale'])
-      : (readJson(target.paths.throttleProfile)?.netScale ?? null);
-  const scaleMatches = expectedScale != null && (baselineState?.netScale ?? 1) === expectedScale;
+  const expectedId = expectedThrottleId(target, opts, networkFlag);
+  const scaleMatches =
+    expectedId != null && baselineState != null && throttleId(baselineState) === expectedId;
   const earlyStop =
     !opts.quick &&
     !opts.pin &&
@@ -1841,7 +1891,7 @@ async function cmdScan(argv) {
         : null;
       return { samples, earlyStopped, cov, profile, throttle, parity };
     },
-    { netScaleFlag: opts['net-scale'] ?? null },
+    { netScaleFlag: opts['net-scale'] ?? null, networkFlag },
   );
 
   const { report, hadBaseline } = writeMeasureReport(target, gathered.samples, {
@@ -1969,7 +2019,7 @@ function parityStatus(target) {
   return { state: report.state, manifest, report };
 }
 
-const throttleKey = (throttle) => (throttle ? `net x${throttle.netScale ?? 1}` : 'unthrottled');
+const throttleKey = (throttle) => throttleId(throttle);
 
 /**
  * LCP-element bookkeeping on every measurement - free, the timed runs observed it.
@@ -2958,14 +3008,21 @@ async function cmdGraph(argv) {
 async function cmdWhatIf(argv) {
   const { values: opts, positionals } = parseArgs({
     args: argv,
-    options: { ...TARGET_OPTS, report: { type: 'string' }, keep: { type: 'string' } },
+    options: {
+      ...TARGET_OPTS,
+      report: { type: 'string' },
+      keep: { type: 'string' },
+      root: { type: 'string' },
+    },
     allowPositionals: true,
   });
   if (!positionals.length)
-    throw new Error(`usage: ${CLI} what-if <module> [<module> ...] [--keep a,b] [--report <dir>]`);
-  const graph = requireModuleGraph(opts);
+    throw new Error(
+      `usage: ${CLI} what-if <module> [<module> ...] [--keep a,b] [--root a,b] [--report <dir>]`,
+    );
+  const built = requireModuleGraph(opts);
   const resolve = (q) => {
-    const hit = resolveModule(graph, q);
+    const hit = resolveModule(built, q);
     if (!hit)
       throw new Error(`no module matches '${q}' (ids are project-relative, e.g. src/router.ts)`);
     if (hit.ambiguous) {
@@ -2977,12 +3034,21 @@ async function cmdWhatIf(argv) {
   };
   const resolved = positionals.map(resolve);
   const keep = (opts.keep ?? '').split(',').filter(Boolean).map(resolve);
+  // `--root`: modules that load on every start without a static import from an entry
+  // (see withRoots) - the initial load priced below is the entries + their closure.
+  const graph = withRoots(built, (opts.root ?? '').split(',').filter(Boolean).map(resolve));
+  printRootedLoad(graph);
   // Entries cannot be deferred - they ARE the initial load (no import edge to cut).
   // Filtered up front so single and group queries answer the same way.
   const entrySet = new Set(graph.entryModules);
+  const rootSet = new Set(graph.rootModules ?? []);
   const targets = [];
   for (const t of resolved) {
-    if (entrySet.has(graph.modules[t].id)) {
+    if (rootSet.has(graph.modules[t].id)) {
+      console.log(
+        `${graph.modules[t].id} is a --root - it stays eager with its closure, so there is no import edge to defer. Skipped.`,
+      );
+    } else if (entrySet.has(graph.modules[t].id)) {
       console.log(
         `${graph.modules[t].id} is an entry - it IS the initial load, so there is no import edge to defer. Skipped; \`${CLI} graph\` ranks its heavy children instead.`,
       );
@@ -3002,7 +3068,7 @@ async function cmdWhatIf(argv) {
   if (result.notStaticallyReachable) {
     console.log(
       result.alreadyLazy
-        ? 'already lazy: every path to this module crosses a dynamic import - it costs the initial load nothing.'
+        ? `already lazy: every path to this module crosses a dynamic import - it costs the initial load nothing.${rootSet.size ? '' : ROOT_HINT}`
         : 'not reachable from the entries at all in this build.',
     );
     return;
@@ -3047,6 +3113,22 @@ function keepProtectedEdges(graph, keep) {
   const edges = [];
   for (const s of keep) for (const p of graph.staticPreds[s]) edges.push({ from: p, to: s });
   return edges;
+}
+
+// "Already lazy" in the build can still be startup code: an app whose boot chain is a
+// row of dynamic imports (`import('./initReact')`) pays for them on every load.
+const ROOT_HINT =
+  ' If the app runs that dynamic import on every start, pass the module it loads as --root to price it as startup code.';
+
+// With --root, the "initial load" every line below prices is the startup load: the
+// static closure of the entries + the roots. Say so once, with its size.
+function printRootedLoad(graph) {
+  if (!graph.rootModules?.length) return;
+  const base = evalOverrides(graph, []);
+  console.log(`roots: ${graph.rootModules.join(', ')}`);
+  console.log(
+    `"initial load" below = the static closure of the entries + ${graph.rootModules.length} root(s): ${kb(base.eagerBytes)} / ${base.eager.size} module(s)\n`,
+  );
 }
 
 // Multiple targets = ONE combined deferral, priced with a single overlay. The payoff is
@@ -3121,11 +3203,15 @@ async function cmdCut(argv) {
   const target = resolve(query);
   const keep = (opts.keep ?? '').split(',').filter(Boolean).map(resolve);
   // `--root`: modules whose whole closure must stay eager because the runtime loads them
-  // by name, not by import - a Durable Object or Workflow class the entry exports. They
-  // become extra sources, so the cut lands on the edges BELOW them. `--keep` cannot say
-  // this: protecting a root's in-edges only pushes the cut up to the entry.
+  // without a static import from an entry - a Durable Object or Workflow class the
+  // entry exports and the runtime loads by name, or a dynamic import the app runs on
+  // every start. They join the entries (withRoots), so the cut lands on the edges BELOW
+  // them, and a module only a root reaches becomes cuttable. `--keep` cannot say this:
+  // protecting a root's in-edges only pushes the cut up to the entry.
   const roots = (opts.root ?? '').split(',').filter(Boolean).map(resolve);
-  const mod = graph.modules[target];
+  const rooted = withRoots(graph, roots);
+  const mod = rooted.modules[target];
+  printRootedLoad(rooted);
 
   // Trivial cases reuse what-if's flags: a module that costs the initial load nothing
   // has nothing to cut.
@@ -3133,17 +3219,18 @@ async function cmdCut(argv) {
     console.log(`min cut for ${mod.id}`);
     console.log(
       mod.dynamicOnly === true
-        ? 'already lazy: every path to this module crosses a dynamic import - nothing to cut.'
+        ? `already lazy: every path to this module crosses a dynamic import - nothing to cut.${roots.length ? '' : ROOT_HINT}`
         : 'not reachable from the entries at all in this build - nothing to cut.',
     );
     return;
   }
-  const sources = roots.length ? [...new Set([...entryIdx(graph), ...roots])] : null;
-  const cut = minCut(graph, target, keepProtectedEdges(graph, keep), sources);
+  const cut = minCut(rooted, target, keepProtectedEdges(rooted, keep));
   if (cut.hasUncuttableSink) {
     console.log(`min cut for ${mod.id}`);
     console.log(
-      'this module is an entry - it cannot be detached by cutting imports (you would delete the module itself).',
+      roots.includes(target)
+        ? 'this module is a --root - it stays eager with its closure; drop it from --root to cut it.'
+        : 'this module is an entry - it cannot be detached by cutting imports (you would delete the module itself).',
     );
     return;
   }
@@ -3159,17 +3246,16 @@ async function cmdCut(argv) {
     console.log('nothing to cut - it is already detached from the initial load.');
     return;
   }
-  const naive = whatIf(graph, target, [...keep, ...roots]).cutEdges.length;
+  const naive = whatIf(rooted, target, keep).cutEdges.length;
   const priced = evalOverrides(
-    graph,
+    rooted,
     cut.cutEdges.map((e) => ({ ...e, kind: 'defer' })),
-    roots.length ? roots : null,
   );
   console.log(
     `min cut for ${mod.id} - ${cut.flow} import edge(s) to make dynamic (naive what-if would touch ${naive}):`,
   );
   for (const e of cut.cutEdges) {
-    console.log(`  ${graph.modules[e.from].id}  ->  ${graph.modules[e.to].id}`);
+    console.log(`  ${rooted.modules[e.from].id}  ->  ${rooted.modules[e.to].id}`);
   }
   console.log(
     `make each import dynamic (import()) -> frees ${kb(priced.removedBytes)} / ${priced.removedCount} module(s) from the initial load` +
@@ -3227,11 +3313,16 @@ async function cmdBaseline(argv) {
 }
 
 async function cmdTarget(argv) {
-  const opts = parse(argv, {
-    demo: { type: 'boolean', default: false },
-    'net-scale': { type: 'string' },
+  const { values: opts, positionals: positional } = parseArgs({
+    args: argv,
+    options: {
+      demo: { type: 'boolean', default: false },
+      'net-scale': { type: 'string' },
+      ...NETWORK_OPTS,
+    },
+    allowPositionals: true,
   });
-  const positional = argv.filter((a) => !a.startsWith('--') && a !== opts['net-scale']);
+  const networkFlag = parseNetworkFlags(opts);
   if (opts.demo) {
     fs.rmSync(TARGET_FILE, { force: true });
     console.log('target cleared - commands now default to the demo app');
@@ -3248,7 +3339,23 @@ async function cmdTarget(argv) {
         ? `target: ${sticky.dist}`
         : 'no target set - commands default to the demo app (set one: node harness.mjs target <appDir>)',
     );
-    if (!sticky?.dist && !opts['net-scale']) return;
+    if (!sticky?.dist && !opts['net-scale'] && !networkFlag) return;
+  }
+  // Pin the network without a probe run - the operator declares the network a
+  // deployed environment measured; every later scan/measure inherits it.
+  if (networkFlag) {
+    const target = resolveTarget({});
+    const existing = readJson(target.paths.throttleProfile);
+    const id = throttleId({ network: networkFlag });
+    writeJson(target.paths.throttleProfile, {
+      schemaVersion: 1,
+      network: networkFlag,
+      source: 'target-cmd',
+      pinnedAtMs: Date.now(),
+    });
+    console.log(
+      `throttle profile pinned: ${id}${existing && throttleId(existing) !== id ? ` (was ${throttleId(existing)} - any pinned baseline is now incomparable, re-pin with scan --pin)` : ''}`,
+    );
   }
   // Pin the net-scale without a probe run - the operator (or eval prep) declares
   // it; every later scan/measure and the scoring legs inherit it.
@@ -3268,7 +3375,7 @@ async function cmdTarget(argv) {
       pinnedAtMs: Date.now(),
     });
     console.log(
-      `throttle profile pinned: net x${netScale}${existing && existing.netScale !== netScale ? ` (was x${existing.netScale} - any pinned baseline is now incomparable, re-pin with scan --pin)` : ''}`,
+      `throttle profile pinned: net x${netScale}${existing && throttleId(existing) !== throttleId({ netScale }) ? ` (was ${throttleId(existing)} - any pinned baseline is now incomparable, re-pin with scan --pin)` : ''}`,
     );
   }
 }
@@ -4376,6 +4483,11 @@ start here (the target is remembered after the first command):
                             leave x1; RTT and 4x CPU never change) and PINS it: the scale
                             is part of the measurement identity for the whole session.
                             Changing it makes the pinned baseline incomparable (re-pin).
+  scan --bandwidth <Mbit/s> [--rtt <ms>] [--cpu <rate>]   pin a network in real units instead
+                            of a scale step: the network a deployed environment measured (a
+                            record's model), e.g. --bandwidth 26 --rtt 120 --cpu 1 (1 = this
+                            machine's CPU). No calibration; RTT/CPU default to 150ms / 4x.
+                            Pinned and compared like --net-scale (re-pin after a change).
   verdict                   fuse the gathered signals -> OPEN/clear/UNKNOWN; the only "done" that counts
 
 rendered output (parity) - is it still the same page? Compared ONCE, when you finish.
@@ -4410,8 +4522,8 @@ individual commands (same target rules):
                                             deferring each module removes from the initial load) -
                                             needs a rolldown devtools report build (vite >= 8:
                                             build.rolldownOptions.devtools = { mode: "report" })
-  what-if <module> [<module>...] [--keep a,b]  exact modules+bytes one deferral frees; sentries
-                                            stay eager. TWO+ modules = one combined plan, priced
+  what-if <module> [<module>...] [--keep a,b] [--root a,b]  exact modules+bytes one deferral frees;
+                                            sentries stay eager. TWO+ modules = one combined plan, priced
                                             with a single overlay + a vs-summed-individually line
                                             (shared internals can make the combined free exceed the sum)
   cut <module> [--keep a,b] [--root a,b]    min edge cut: the FEWEST import statements to make dynamic
@@ -4420,6 +4532,9 @@ individual commands (same target rules):
                                             cut detaches a multi-path module; --keep edges are protected;
                                             --root modules stay eager with their closure (a Durable
                                             Object class loaded by name) so the cut lands below them
+  what-if|cut ... --root a,b                roots also price startup code no static import reaches: a
+                                            dynamic import the app runs on every start joins the
+                                            entries, so "initial load" = entries + roots + closure
   why <module>                              the module's direct static importers + one chain from the
                                             entry: where it enters the initial load, and who to edit
   graph-diff [--against <file>]             what a change did to the initial load (eager set): modules
@@ -4429,6 +4544,7 @@ individual commands (same target rules):
                                             snapshots the module graph for graph-diff)
   target [<appDir>] [--demo]                show / set / clear the remembered target
          [--net-scale <1|2|4|8>]            ...and/or pin its throttle net-scale without probing
+         [--bandwidth <Mbit/s> [--rtt <ms>] [--cpu <rate>]]   ...or pin a network in real units
   gen | build | defer <f> | undefer <f> | status | serve    demo-app helpers (README.md)
 
 field mode (a DEPLOYED site in your own logged-in Chrome - real data, network, server):

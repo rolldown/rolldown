@@ -154,6 +154,39 @@ export function eagerSet(graph, overrides = [], extraRoots = null) {
 }
 
 /**
+ * The graph as the runtime loads it when `roots` (module indices) always load at
+ * startup: a Durable Object class the runtime loads by name, or a dynamic import the
+ * app runs on every boot (`import('./initReact')`). The roots join the entries, so the
+ * initial load becomes the static closure of entries + roots, and `staticReachable`,
+ * `dynamicOnly` and the static predecessor lists are recomputed for it. Every query
+ * (`whatIf`, `evalOverrides`, `minCut`) then answers for that startup load, also for a
+ * module that only dynamic imports reach in the build. Module objects are copied, never
+ * mutated; `retainedBytes` / `idom` keep the build's entry-only values. Returns the
+ * graph itself when no root adds anything.
+ */
+export function withRoots(graph, roots) {
+  const entries = new Set(entryIndices(graph));
+  const extra = [...new Set(roots ?? [])].filter((r) => !entries.has(r));
+  if (!extra.length) return graph;
+  const eager = eagerSet(graph, [], extra);
+  const modules = graph.modules.map((mod, i) => ({
+    ...mod,
+    staticReachable: eager.has(i),
+    // Reachable at all = statically reachable or dynamic-only in the build; the roots
+    // are reachable themselves, so nothing new becomes reachable, only eager.
+    dynamicOnly: !eager.has(i) && (mod.staticReachable === true || mod.dynamicOnly === true),
+  }));
+  const { __entryIdx, __baseEager, ...rest } = graph;
+  return {
+    ...rest,
+    entryModules: [...(graph.entryModules ?? []), ...extra.map((r) => graph.modules[r].id)],
+    rootModules: extra.map((r) => graph.modules[r].id),
+    modules,
+    staticPreds: computeStaticPreds(modules),
+  };
+}
+
+/**
  * Price a batch of edge overrides against the base (current) eager set. Returns the
  * resulting eager set and its bytes, plus what LEFT the initial load: `removed` is the
  * module objects sorted `bytes desc, id asc` (matching the display order), with total

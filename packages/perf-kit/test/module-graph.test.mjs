@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { deferAllInto, eagerSet, evalOverrides, whatIf } from '../lib/module-graph.mjs';
+import { deferAllInto, eagerSet, evalOverrides, whatIf, withRoots } from '../lib/module-graph.mjs';
 import { indexOf, makeGraph } from './graph-fixtures.mjs';
 
 // --- oracle: the exact pre-refactor whatIf (grow-then-fixpoint-prune UR closure) -----
@@ -337,4 +337,88 @@ test("override kind 'remove' matches 'defer' on eager reachability", () => {
     asDefer.removed.map((m) => m.id),
   );
   assert.equal(asRemove.removedBytes, asDefer.removedBytes);
+});
+
+// --- --root: startup code that only dynamic imports reach -----------------------------
+// A SPA boot chain: the entry dynamically imports `boot` on every start, `boot` pulls the
+// app and its shell; a lazy route `later` shares `heavy` with the app. In the build all
+// of it is dynamic-only, so only a root can price it.
+const startupNodes = [
+  {
+    id: 'entry',
+    bytes: 5,
+    imports: [
+      [1, true],
+      [5, true],
+    ],
+  },
+  {
+    id: 'boot',
+    bytes: 20,
+    imports: [
+      [2, false],
+      [3, false],
+    ],
+  },
+  { id: 'app', bytes: 100, imports: [[4, false]] },
+  { id: 'shell', bytes: 50, imports: [] },
+  { id: 'heavy', bytes: 4000, imports: [[6, false]] },
+  { id: 'later', bytes: 30, imports: [[4, false]] },
+  { id: 'util', bytes: 200, imports: [] },
+];
+
+test('withRoots: a dynamic boot module answers like a real entry (independent oracle)', () => {
+  const built = makeGraph(startupNodes, ['entry']);
+  const boot = indexOf(built, 'boot');
+  const view = withRoots(built, [boot]);
+  // Oracle: the same nodes with `boot` declared as an entry, flags from makeGraph's own pass.
+  const oracle = makeGraph(startupNodes, ['entry', 'boot']);
+  assert.deepEqual(view.rootModules, ['boot']);
+  for (let i = 0; i < startupNodes.length; i++) {
+    assert.equal(
+      view.modules[i].staticReachable,
+      oracle.modules[i].staticReachable,
+      startupNodes[i].id,
+    );
+    assert.equal(view.modules[i].dynamicOnly, oracle.modules[i].dynamicOnly, startupNodes[i].id);
+  }
+  assert.deepEqual(view.staticPreds, oracle.staticPreds);
+  assert.deepEqual(
+    [...eagerSet(view)].sort((x, y) => x - y),
+    [...eagerSet(oracle)].sort((x, y) => x - y),
+  );
+  for (let t = 0; t < startupNodes.length; t++) {
+    if (t === indexOf(built, 'entry') || t === boot) continue;
+    for (const keep of [[], ...startupNodes.map((_, k) => [k])]) {
+      if (keep.includes(t)) continue;
+      assert.deepEqual(
+        observable(whatIf(view, t, keep)),
+        observable(whatIf(oracle, t, keep)),
+        `target=${startupNodes[t].id} keep=[${keep}]`,
+      );
+    }
+  }
+  // The point of the flag: heavy was "already lazy" in the build, under the root it is
+  // startup code whose deferral frees heavy + util.
+  const heavy = indexOf(built, 'heavy');
+  assert.equal(whatIf(built, heavy).notStaticallyReachable, true);
+  const r = whatIf(view, heavy);
+  assert.equal(r.removedBytes, 4200);
+  assert.deepEqual(r.cutEdges, ['app']);
+  // The lazy route stays lazy: no root reaches it.
+  assert.equal(view.modules[indexOf(built, 'later')].dynamicOnly, true);
+});
+
+test('withRoots never mutates the build graph or reuses its cached eager set', () => {
+  const built = makeGraph(startupNodes, ['entry']);
+  const boot = indexOf(built, 'boot');
+  const before = eagerSet(built); // populates the base-eager cache on `built`
+  const view = withRoots(built, [boot]);
+  assert.equal(built.modules[boot].staticReachable, false);
+  assert.deepEqual(built.entryModules, ['entry']);
+  assert.equal(eagerSet(built), before);
+  assert.equal(eagerSet(view).has(indexOf(built, 'heavy')), true);
+  // Nothing to add: no roots, or roots that are entries already.
+  assert.equal(withRoots(built, []), built);
+  assert.equal(withRoots(built, [indexOf(built, 'entry')]), built);
 });

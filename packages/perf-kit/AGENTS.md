@@ -23,6 +23,13 @@ bare — no paths. Each target app keeps its own state (baseline, history, repor
 Individual commands exist too (`measure [--pin]`, `coverage`, `profile`,
 `baseline`, `target [<appDir>] [--demo]`) plus demo-app helpers (README.md).
 
+The throttle is part of the measurement identity. The first scan calibrates a bandwidth
+scale (x1 to x8, with RTT 150 ms and a 4x CPU slowdown) and pins it. To judge the page on
+the network of a deployed environment instead, pin that network:
+`scan --bandwidth <Mbit/s> --rtt <ms> --cpu <rate>`, with the values that a calibrated
+`record` measured (`--cpu 1` = this machine's CPU). A change of either makes the pinned
+baseline incomparable: re-pin on the unchanged build before you judge a change.
+
 On rolldown devtools report builds (vite ≥ 8:
 `build.rolldownOptions.devtools = { mode: "report" }`) several static queries skip the
 import-chain archaeology entirely: `graph` ranks split candidates by **retained size**
@@ -36,7 +43,10 @@ import statements** to make dynamic to detach a module reached by several paths 
 last-hop edges nearest it, the exact files to edit — a min edge cut, which dominator
 retained-size can't answer once several paths reach the module; `--keep` edges are
 protected; `--root a,b` keeps class modules eager with their closure so the cut lands
-below them); and `graph-diff [--against <file>]` reports, deterministically and with no
+below them; on `what-if` and `cut`, `--root` also takes a module that only a dynamic import
+reaches but the app loads on every start (a boot chain of `import()` calls): it joins the
+entries, so both commands price that startup load); and `graph-diff [--against <file>]`
+reports, deterministically and with no
 browser run, what a change did to the initial load (the modules that ENTERED or LEFT the
 eager set with byte deltas) against the pinned baseline graph or any saved sidecar. Rank
 candidates statically with these, then verify the winner's real LCP effect with `scan`.
@@ -262,7 +272,9 @@ automatically; a shared chunk or stylesheet you change for `/` can break another
      active per session: keep the default in the entry, load the active one dynamically.
    - **statically retained imports** (rolldown builds only) — this view starts
      at build entries. It does not price dynamic imports that startup immediately
-     executes. Check coverage and CPU evidence for those imports. The module graph's
+     executes. Check coverage and CPU evidence for those imports, and pass the modules
+     they load as `--root` to `what-if` / `cut` to price that startup load.
+     The module graph's
      dominator view: any non-framework module retaining ≥100KB on the initial load
      is a priced split candidate; `what-if` shows the exact cut, `cut` the fewest
      import edits when several paths reach it, and `what-if <a> <b>` the combined

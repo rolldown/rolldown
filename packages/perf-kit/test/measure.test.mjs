@@ -5,7 +5,15 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { findChrome, launchBrowser } from '../lib/cdp.mjs';
-import { timedRun } from '../lib/measure.mjs';
+import {
+  DEFAULT_THROTTLE,
+  networkThrottle,
+  parseNetworkFlags,
+  scaleThrottle,
+  throttleFromProfile,
+  throttleId,
+  timedRun,
+} from '../lib/measure.mjs';
 import { startServer } from '../lib/serve.mjs';
 
 test('browser timing keeps more than 60 resources, including a tiny preload facade', async (t) => {
@@ -52,4 +60,56 @@ test('browser timing keeps more than 60 resources, including a tiny preload faca
   assert.ok(facade.bytes > 0 && facade.bytes < 100);
   assert.equal('headers' in facade.initiator, false);
   assert.equal(result.lcpElement.text, 'Synthetic load test');
+});
+
+test('networkThrottle converts Mbit/s (SI) to CDP bytes per second and keeps the upload ratio', () => {
+  const t = networkThrottle(DEFAULT_THROTTLE, { bandwidthMbps: 26, rttMs: 120, cpuRate: 1 });
+  assert.equal(t.downloadBps, 3_250_000);
+  assert.equal(t.uploadBps, Math.round((3_250_000 * 94_000) / 200_000));
+  assert.equal(t.latencyMs, 120);
+  assert.equal(t.cpuRate, 1);
+  assert.deepEqual(t.network, { bandwidthMbps: 26, rttMs: 120, cpuRate: 1 });
+});
+
+test('parseNetworkFlags fills the default RTT and CPU and rejects misuse', () => {
+  assert.equal(parseNetworkFlags({}), null);
+  assert.deepEqual(parseNetworkFlags({ bandwidth: '26' }), {
+    bandwidthMbps: 26,
+    rttMs: DEFAULT_THROTTLE.latencyMs,
+    cpuRate: DEFAULT_THROTTLE.cpuRate,
+  });
+  assert.deepEqual(parseNetworkFlags({ bandwidth: '26', rtt: '120', cpu: '1' }), {
+    bandwidthMbps: 26,
+    rttMs: 120,
+    cpuRate: 1,
+  });
+  assert.throws(() => parseNetworkFlags({ rtt: '120' }), /pass --bandwidth/);
+  assert.throws(() => parseNetworkFlags({ cpu: '1' }), /pass --bandwidth/);
+  assert.throws(
+    () => parseNetworkFlags({ bandwidth: '26', 'net-scale': '8' }),
+    /one of --bandwidth or --net-scale/,
+  );
+  for (const bad of [
+    { bandwidth: '0' },
+    { bandwidth: 'fast' },
+    { bandwidth: '26', rtt: '-1' },
+    { bandwidth: '26', cpu: '0.5' },
+  ]) {
+    assert.throws(() => parseNetworkFlags(bad), /must be a number/, JSON.stringify(bad));
+  }
+});
+
+test('throttleId gives one identity to a throttle, its pinned profile and a saved state', () => {
+  const network = { bandwidthMbps: 26, rttMs: 120, cpuRate: 1 };
+  const id = 'bw 26Mbit/s rtt 120ms cpu 1x';
+  assert.equal(throttleId(networkThrottle(DEFAULT_THROTTLE, network)), id);
+  assert.equal(throttleId({ schemaVersion: 1, network, source: 'flag' }), id);
+  assert.equal(throttleId({ runs: 5, network, metrics: {} }), id);
+  assert.equal(throttleId(throttleFromProfile({ network })), id);
+  // Net-scale identities keep their old spelling (parity manifests store it).
+  assert.equal(throttleId(scaleThrottle(DEFAULT_THROTTLE, 8)), 'net x8');
+  assert.equal(throttleId({ netScale: 8 }), 'net x8');
+  assert.equal(throttleId({ runs: 5, metrics: {} }), 'net x1');
+  assert.equal(throttleId(null), 'unthrottled');
+  assert.deepEqual(throttleFromProfile({ netScale: 8 }), scaleThrottle(DEFAULT_THROTTLE, 8));
 });

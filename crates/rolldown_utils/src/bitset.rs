@@ -72,7 +72,7 @@ impl BitSet {
   pub fn is_subset(&self, other: &Self) -> bool {
     let common = self.entries.len().min(other.entries.len());
     let (head, tail) = self.entries.split_at(common);
-    // No early exit, so the compiler can vectorize the loop.
+    // The loop has no early exit, so the compiler can vectorize it.
     head.iter().zip(&other.entries).fold(0, |acc, (&e, &o)| acc | (e & !o)) == 0
       && tail.iter().all(|&e| e == 0)
   }
@@ -215,7 +215,7 @@ mod tests {
 
   #[test]
   fn is_subset_lengths() {
-    // Byte lengths around the vector widths of the `is_subset` loop: 16, 32 and 64 bytes.
+    // Test byte lengths near the vector widths of the `is_subset` loop: 16, 32 and 64 bytes.
     for bytes in [1_u32, 15, 16, 17, 31, 32, 33, 63, 64, 65, 129] {
       let bits = bytes * 8;
       let mut other = BitSet::new(bits);
@@ -234,7 +234,8 @@ mod tests {
       }
     }
 
-    // Different lengths: the bytes past the shorter set must be empty on the left side.
+    // Test sets of different lengths. When the left set is longer, it is a subset only if all of
+    // its bytes after the end of the right set are zero.
     let mut short = BitSet::new(8);
     short.set_bit(3);
     let mut long = BitSet::new(300);

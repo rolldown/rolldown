@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 
-// `log.js` needs `__exportAll` only after its dynamic entry is merged into a common chunk. The
-// runtime must not go into the chunk of `ns.js`, which only `c.js` and `d.js` load.
+// `log.js` needs `__exportAll` only after facade elimination merges its dynamic entry into a
+// common chunk. The runtime must not go into the chunk of `ns.js`. Only `c.js` and `d.js` load
+// that chunk.
 const { a } = await import('./dist/a.js');
 assert.equal(a, 'log: a');
 assert.equal(globalThis.nsEvaluated, undefined);

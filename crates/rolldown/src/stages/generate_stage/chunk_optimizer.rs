@@ -1337,11 +1337,12 @@ impl GenerateStage<'_> {
     consumers
   }
 
-  /// The bits a bitset host must have so that every runtime consumer runs only where the host is
-  /// loaded. The runtime module's bits cover the helper users known at link time. Facade
-  /// elimination can later make a chunk outside them a consumer, and a host matched by the
-  /// link-time bits would then be loaded by that chunk's entries just for helpers. So the bits are
-  /// widened with each consumer entry that a host with the link-time bits has not already loaded.
+  /// Returns the entry bits that a bitset host must have, so that the host is always loaded when a
+  /// runtime consumer runs. The bits of the runtime module cover only the consumers that exist at
+  /// link time. Facade elimination can later make a chunk outside these bits a runtime consumer. If
+  /// the host has only the link-time bits, the entries of that chunk then load the host only to get
+  /// helpers. So this function adds each consumer entry that can start while the host is not
+  /// loaded.
   /// See internal-docs/code-splitting/implementation.md#runtime-module-placement.
   fn runtime_bits_covering_consumers(
     &self,
@@ -1349,7 +1350,8 @@ impl GenerateStage<'_> {
     runtime_bits: &BitSet,
     consumer_chunks: &FxHashSet<ChunkIdx>,
   ) -> BitSet {
-    // Byte-wise: the runtime bits, plus the consumer entries that are not already loaded.
+    // Calculate with byte-wise set operations. The result is the runtime bits, plus each consumer
+    // entry that is not in `entries_loaded_after(runtime_bits)`.
     let mut bits = runtime_bits.clone();
     for &chunk_idx in consumer_chunks {
       bits.union(&chunk_graph.chunk_table[chunk_idx].bits);
@@ -1362,15 +1364,20 @@ impl GenerateStage<'_> {
     bits
   }
 
-  /// `entries`, plus every dynamic entry that can only start after one of them: each included
-  /// `import()` of it is in a chunk that only those entries load.
+  /// Returns `entries`, plus each dynamic entry that can start only after one of the result entries
+  /// starts. A dynamic entry is in the result when these conditions are true:
   ///
-  /// Tree shaking lists dynamic entries in topological order of the `import()` graph
-  /// (`sort_dynamic_entries_by_topological_order`), so one pass covers every acyclic chain, and the
-  /// second pass only finds no change. A worklist with per-chunk counters avoids that second pass,
-  /// but its setup made it slower on synthetic graphs of up to 4,000 entries.
+  /// - It has at least one included `import()` site.
+  /// - Each of its included `import()` sites is in a chunk that only result entries load.
+  ///
+  /// Tree shaking sorts the dynamic entries in topological order of the `import()` graph
+  /// (`sort_dynamic_entries_by_topological_order`). Thus, when the `import()` graph has no cycle,
+  /// the first pass finds the full result, and the second pass finds no change. A worklist with a
+  /// counter for each chunk does not need the second pass. But its setup cost made it slower than
+  /// this loop on synthetic graphs of up to 4,000 entries.
   fn entries_loaded_after(&self, chunk_graph: &ChunkGraph, entries: &BitSet) -> BitSet {
-    // `None` when an importer has no chunk, which keeps that dynamic entry out.
+    // The value is `None` when an importer has no chunk. Such a dynamic entry is never in the
+    // result.
     let importer_chunks_by_dynamic_entry = self
       .link_output
       .entries

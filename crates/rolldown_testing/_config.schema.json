@@ -1067,6 +1067,12 @@
             "boolean",
             "null"
           ]
+        },
+        "importAttributes": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

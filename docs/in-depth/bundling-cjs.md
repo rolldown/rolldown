@@ -226,6 +226,13 @@ module.exports.foo = 'bar';
 
 Node.js gets the export names from a static scan of the source code ([`cjs-module-lexer`](https://github.com/nodejs/cjs-module-lexer)). The scan finds the assignment to `length`, so the namespace object in Node.js has `length`. Rolldown gets the export names at runtime. At runtime, the array does not record which index or `length` came from an assignment.
 
+A named import such as `import { length } from './importee.cjs'` does not always read the namespace object. Rolldown checks all `import` statements in the bundle that refer to `importee.cjs`:
+
+- If none of them has a default import or a namespace import, the named import reads `module.exports`. Then `length` is `1`, as in Node.js.
+- If at least one of them has a default import or a namespace import, all named imports read the namespace object. Then `length` is `undefined`.
+
+When [`strictExecutionOrder`](/reference/OutputOptions.strictExecutionOrder) is on, Rolldown checks each `import` statement separately. But when tree shaking is on, Rolldown can first combine the `import` statements in one module that refer to `importee.cjs`. Then Rolldown checks the combined statement.
+
 To read an index or `length`, use the `default` export.
 
 ### Strict Mode Applied to `.js` files

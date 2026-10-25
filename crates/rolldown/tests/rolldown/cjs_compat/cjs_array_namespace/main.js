@@ -5,6 +5,9 @@ import * as esModule from './es_module.cjs';
 import * as proxy from './proxy.cjs';
 import * as reexport from './reexport.js';
 import * as revoked from './revoked.cjs';
+import { length as namedLength } from './named_import.cjs';
+import mixed, { length as mixedLength } from './mixed_import.cjs';
+import { length as sharedLength } from './mixed_import.cjs';
 import './node_mode.mjs';
 
 // Indices and `length` are not exports, and the namespace does not inherit `Array.prototype`.
@@ -29,3 +32,9 @@ assert.deepStrictEqual(Object.keys(revoked), ['default']);
 
 // Babel interop keeps an explicit `default`.
 assert.equal(esModule.default, 'value');
+
+// A named import reads `module.exports`, unless an import of the same module needs the namespace.
+assert.equal(namedLength, 1);
+assert.equal(mixedLength, undefined);
+assert.equal(sharedLength, undefined);
+assert.equal(mixed.length, 1);

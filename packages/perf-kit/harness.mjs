@@ -326,6 +326,15 @@ function detectEntry(distDir) {
       module: tag.includes('type="module"'),
     });
   }
+  // Astro islands have no script tag: each <astro-island> names its chunks in
+  // component-url / renderer-url attributes. They load as modules.
+  if (!locals.length) {
+    for (const [, src] of html.matchAll(/\b(?:component|renderer)-url="([^"]+)"/g)) {
+      if (!src.startsWith('http')) {
+        locals.push({ src: src.split('?')[0].replace(/^\.?\//, ''), module: false });
+      }
+    }
+  }
   const moduleScript = locals.find((s) => s.module);
   if (moduleScript) return moduleScript.src;
   // webpack-style multi-script pages have no type="module": prefer the
@@ -1117,8 +1126,8 @@ function printProfileReport(report, { advice = true } = {}) {
 // while any lead is open or any signal is missing/stale, and states the tools'
 // blind-spot boundary even when everything is clear.
 
-function printVerdict(target) {
-  const entry = requireEntry(target);
+function printVerdict(target, opts = {}) {
+  const entry = requireEntry(target, opts);
   const entryFile = path.join(target.dist, entry);
   const builtAtMs = fs.statSync(entryFile).mtimeMs;
   // A report vouches only for the build it ran against: entry filename must match
@@ -1929,7 +1938,7 @@ async function cmdScan(argv) {
     printParityReport(gathered.parity, target);
     console.log('');
   }
-  printVerdict(target);
+  printVerdict(target, { entry });
 
   if (opts.pin) {
     pinBaseline(target);
@@ -1949,8 +1958,8 @@ async function cmdScan(argv) {
 }
 
 async function cmdVerdict(argv) {
-  const opts = parse(argv, { ...TARGET_OPTS });
-  printVerdict(resolveTarget(opts));
+  const opts = parse(argv, { ...TARGET_OPTS, entry: { type: 'string' } });
+  printVerdict(resolveTarget(opts), opts);
 }
 
 // --- rendered-output parity -------------------------------------------------------

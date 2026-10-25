@@ -1608,6 +1608,12 @@
             "boolean",
             "null"
           ]
+        },
+        "invalidImportAttribute": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

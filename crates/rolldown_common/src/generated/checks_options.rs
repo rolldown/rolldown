@@ -40,6 +40,7 @@ pub struct ChecksOptions {
   pub sourcemap_broken: Option<bool>,
   pub namespace_conflict: Option<bool>,
   pub shimmed_export: Option<bool>,
+  pub invalid_import_attribute: Option<bool>,
 }
 impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
   fn from(value: ChecksOptions) -> Self {
@@ -140,6 +141,10 @@ impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
     );
     flag
       .set(rolldown_error::EventKindSwitcher::ShimmedExport, value.shimmed_export.unwrap_or(true));
+    flag.set(
+      rolldown_error::EventKindSwitcher::InvalidImportAttribute,
+      value.invalid_import_attribute.unwrap_or(true),
+    );
     flag
   }
 }

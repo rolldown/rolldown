@@ -2016,6 +2016,7 @@ export interface BindingChecksOptions {
   sourcemapBroken?: boolean
   namespaceConflict?: boolean
   shimmedExport?: boolean
+  invalidImportAttribute?: boolean
 }
 
 export interface BindingChunkImportMap {

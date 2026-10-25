@@ -1,0 +1,40 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INVALID_IMPORT_ATTRIBUTE
+
+```text
+[INVALID_IMPORT_ATTRIBUTE] The legacy `assert` keyword in "main.js" is not supported, so its attributes are ignored. Use `with` instead.
+   ╭─[ main.js:1:24 ]
+   │
+ 1 │ import data from 'ext' assert { type: 'json' };
+   │                        ───────────┬───────────  
+   │                                   ╰───────────── replace `assert` with `with`
+───╯
+
+```
+
+## INVALID_IMPORT_ATTRIBUTE
+
+```text
+[INVALID_IMPORT_ATTRIBUTE] The legacy `assert` keyword in "main.js" is not supported, so its attributes are ignored. Use `with` instead.
+   ╭─[ main.js:2:21 ]
+   │
+ 2 │ export * from 'ext' assert { type: 'json' };
+   │                     ───────────┬───────────  
+   │                                ╰───────────── replace `assert` with `with`
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+export { default as data } from "ext";
+export * from "ext";
+
+```

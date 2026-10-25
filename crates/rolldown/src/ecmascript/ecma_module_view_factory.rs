@@ -91,7 +91,6 @@ pub async fn create_ecma_view(
     directive_range,
     dummy_record_set,
     constant_export_map,
-    import_attribute_map,
     cjs_reexport_require_node_ids: _,
     cjs_reexport_import_record_ids,
   } = scan_result;
@@ -155,7 +154,6 @@ pub async fn create_ecma_view(
     dummy_record_set,
     constant_export_map,
     enum_member_value_map,
-    import_attribute_map,
     json_module_none_self_reference_included_symbol: None,
     cjs_reexport_import_record_ids,
     dynamic_import_called_names,

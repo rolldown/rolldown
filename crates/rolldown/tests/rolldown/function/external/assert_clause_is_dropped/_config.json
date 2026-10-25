@@ -1,0 +1,7 @@
+{
+  "_comment": "The legacy `assert` keyword is not supported: its attributes are dropped from the output and warn, with or without `experimental.importAttributes`.",
+  "config": {
+    "external": ["ext"]
+  },
+  "expectExecuted": false
+}

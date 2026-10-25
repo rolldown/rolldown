@@ -1,11 +1,12 @@
 use std::{cmp::Ordering, sync::Arc};
 
 use itertools::Itertools as _;
+use oxc::ast::ast;
 use oxc_str::CompactStr;
 use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, percent_decode_str, utf8_percent_encode};
 use rolldown_utils::{
   concat_string,
-  ecmascript::{to_ecma_string_literal, to_module_import_export_name_with_ascii},
+  ecmascript::{to_ecma_string_literal, to_module_import_export_name_with_ascii, to_usv_str},
 };
 use rustc_hash::FxHashMap;
 
@@ -44,6 +45,23 @@ impl ImportAttributes {
       }
     }
     Self((!sorted.is_empty()).then(|| sorted.into()))
+  }
+
+  /// The attributes of a static `with` clause. The legacy `assert` keyword is not supported and
+  /// gives none.
+  pub fn from_with_clause(with_clause: &ast::WithClause<'_>) -> Self {
+    match with_clause.keyword {
+      ast::WithClauseKeyword::Assert => Self::default(),
+      ast::WithClauseKeyword::With => {
+        Self::from_entries(with_clause.with_entries.iter().map(|entry| {
+          let key: CompactStr = match &entry.key {
+            ast::ImportAttributeKey::Identifier(identifier) => identifier.name.into(),
+            ast::ImportAttributeKey::StringLiteral(literal) => to_usv_str(literal.value).into(),
+          };
+          (key, to_usv_str(entry.value.value))
+        }))
+      }
+    }
   }
 
   pub fn is_empty(&self) -> bool {

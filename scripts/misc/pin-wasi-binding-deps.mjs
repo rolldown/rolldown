@@ -1,7 +1,7 @@
 // `napi create-npm-dirs` gives `@rolldown/binding-wasm32-wasi` the range `~<latest>` of
-// `@napi-rs/wasm-runtime`. 1.2.6 needs `@emnapi/core` 2.0.0-beta.2 and fails to load with the
-// 2.0.0-alpha.5 the binding ships, so write the catalog version instead until emnapi moves.
-// Run it right after `napi create-npm-dirs`.
+// `@napi-rs/wasm-runtime`. Each wasm-runtime release loads with only one `@emnapi/core` 2.0
+// prerelease, so a newer patch breaks the emnapi version the binding ships. Write the catalog
+// version instead, and bump it together with emnapi. Run it right after `napi create-npm-dirs`.
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';

@@ -116,26 +116,44 @@ pub fn get_matcher_string<'a>(glob: &'a str, cwd: &'a str) -> Cow<'a, str> {
     return normalize_path(glob);
   }
   // Like Rollup, resolve a relative `cwd` against the process cwd.
-  let cwd = std::path::absolute(cwd).unwrap_or_else(|_| PathBuf::from(cwd));
-  let base = normalize_path_buf_to_slash(cwd.clone());
-  let joined = normalize_path_buf_to_slash(cwd.join(glob));
-  // `cwd` is a literal path, so escape glob syntax in the part of `joined` that comes from it.
-  // A leading `..` in `glob` leaves only an ancestor of `cwd`.
-  let is_dir_prefix = |prefix: &str| {
-    joined.strip_prefix(prefix).is_some_and(|rest| rest.is_empty() || rest.starts_with('/'))
+  let resolved =
+    if Path::new(cwd).has_root() { Ok(PathBuf::from(cwd)) } else { std::path::absolute(cwd) };
+  let Ok(cwd) = resolved else {
+    // An empty `cwd` can't be resolved; keep the glob relative.
+    return Cow::Owned(normalize_path_buf_to_slash(Path::new(cwd).join(glob)));
   };
-  let mut prefix = base.as_str();
-  while !prefix.is_empty() && !is_dir_prefix(prefix) {
-    prefix = prefix.rfind('/').map_or("", |i| &prefix[..i]);
-  }
-  let mut matcher = String::with_capacity(joined.len() + 8);
-  for c in prefix.chars() {
-    if matches!(c, '\\' | '*' | '?' | '[' | ']' | '{' | '}' | '!') {
-      matcher.push('\\');
+  // `cwd` is a literal path, so escape its glob syntax, then join `glob` onto it as
+  // `/`-separated text. The join can't go through `Path`: `\` is the escape
+  // character, and `Path` treats it as a separator on Windows.
+  let is_glob_syntax = |c: char| matches!(c, '\\' | '*' | '?' | '[' | ']' | '{' | '}' | '!');
+  let mut matcher = normalize_path_buf_to_slash(cwd);
+  if matcher.contains(is_glob_syntax) {
+    let mut escaped = String::with_capacity(matcher.len() + 8);
+    for c in matcher.chars() {
+      if is_glob_syntax(c) {
+        escaped.push('\\');
+      }
+      escaped.push(c);
     }
-    matcher.push(c);
+    matcher = escaped;
   }
-  matcher.push_str(&joined[prefix.len()..]);
+  matcher.truncate(matcher.trim_end_matches('/').len());
+  matcher.reserve(glob.len() + 1);
+  // `..` never climbs above the root: empty on Unix, `C:` on Windows.
+  let root_len = matcher.find('/').unwrap_or(matcher.len());
+  for segment in normalize_path(glob).split('/') {
+    match segment {
+      "" | "." => {}
+      ".." => matcher.truncate(matcher.rfind('/').map_or(root_len, |i| i.max(root_len))),
+      _ => {
+        matcher.push('/');
+        matcher.push_str(segment);
+      }
+    }
+  }
+  if matcher.len() == root_len {
+    matcher.push('/');
+  }
   Cow::Owned(matcher)
 }
 
@@ -389,6 +407,18 @@ filter: {:?}, id: {id}",
         FilterResult::Match(true)
       );
     }
+  }
+
+  #[cfg(not(windows))]
+  #[test]
+  fn relative_globs_keep_their_own_glob_syntax() {
+    let include = [StringOrRegex::new("../my[app]/**".to_string(), None).unwrap()];
+    assert_eq!(
+      filter(None, Some(&include), "/w/mya/a.js", "/w/my[app]"),
+      FilterResult::Match(true)
+    );
+    let include = [StringOrRegex::new("../../src/**".to_string(), None).unwrap()];
+    assert_eq!(filter(None, Some(&include), "/src/a.js", "/w"), FilterResult::Match(true));
   }
 
   #[test]

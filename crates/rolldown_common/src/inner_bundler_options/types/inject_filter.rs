@@ -27,11 +27,17 @@ pub struct InjectFilter {
 }
 
 impl InjectFilter {
+  /// Whether the filter lets every module through, so matching can be skipped.
   pub fn is_empty(&self) -> bool {
-    self.include.is_none() && self.exclude.is_none()
+    self.include.as_ref().is_none_or(Vec::is_empty)
+      && self.exclude.as_ref().is_none_or(Vec::is_empty)
   }
 
   pub fn matches(&self, id: &str, cwd: &str) -> bool {
+    // rollup `createFilter` always skips when id includes null byte
+    if id.contains('\0') {
+      return false;
+    }
     pattern_filter::filter(self.exclude.as_deref(), self.include.as_deref(), id, cwd).inner()
   }
 }

@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-// composable.js
+// node_modules/composable/index.js
 function useKey$1() {
 	return "composable";
 }

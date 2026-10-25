@@ -81,11 +81,15 @@ export interface TransformOptions extends Omit<
   /**
    * Limit the modules {@linkcode inject} applies to.
    *
-   * Works like the `include` and `exclude` options of `@rollup/plugin-inject`.
-   * Strings are treated as glob patterns.
+   * Takes the same `include` and `exclude` options as `@rollup/plugin-inject`:
+   * - A module matching `exclude` is skipped, even if it also matches `include`.
+   * - If `include` is set, only modules matching it are injected into.
+   * - Patterns are tested against the resolved module id, including any query string.
+   * - Strings are glob patterns. Relative globs are resolved against the `cwd` option.
+   * - Like Rollup's `createFilter`, ids containing a null byte (`\0`) are never injected into.
    *
    * @example
-   * **Inject only into your own code**
+   * **Skip dependencies**
    * ```js [rolldown.config.js]
    * export default defineConfig({
    *   transform: {

@@ -113,6 +113,8 @@ OPTIONS
   --transform.dropLabels <transform.dropLabels>Remove labeled statements with these label names.
   --transform.helpers.mode <transform.helpers.mode>.
   --transform.inject <transform.inject>Inject import statements on demand.
+  --transform.injectFilter.exclude <transform.injectFilter.exclude>Never inject into modules matching these patterns.
+  --transform.injectFilter.include <transform.injectFilter.include>Only inject into modules matching these patterns.
   --transform.jsx <transform.jsx>.
   --transform.plugins.styledComponents <transform.plugins.styledComponents>.
   --transform.plugins.taggedTemplateEscape .
@@ -267,6 +269,8 @@ OPTIONS
   --transform.dropLabels <transform.dropLabels>Remove labeled statements with these label names.
   --transform.helpers.mode <transform.helpers.mode>.
   --transform.inject <transform.inject>Inject import statements on demand.
+  --transform.injectFilter.exclude <transform.injectFilter.exclude>Never inject into modules matching these patterns.
+  --transform.injectFilter.include <transform.injectFilter.include>Only inject into modules matching these patterns.
   --transform.jsx <transform.jsx>.
   --transform.plugins.styledComponents <transform.plugins.styledComponents>.
   --transform.plugins.taggedTemplateEscape .
@@ -421,6 +425,8 @@ OPTIONS
   --transform.dropLabels <transform.dropLabels>Remove labeled statements with these label names.
   --transform.helpers.mode <transform.helpers.mode>.
   --transform.inject <transform.inject>Inject import statements on demand.
+  --transform.injectFilter.exclude <transform.injectFilter.exclude>Never inject into modules matching these patterns.
+  --transform.injectFilter.include <transform.injectFilter.include>Only inject into modules matching these patterns.
   --transform.jsx <transform.jsx>.
   --transform.plugins.styledComponents <transform.plugins.styledComponents>.
   --transform.plugins.taggedTemplateEscape .
@@ -575,6 +581,8 @@ OPTIONS
   --transform.dropLabels <transform.dropLabels>Remove labeled statements with these label names.
   --transform.helpers.mode <transform.helpers.mode>.
   --transform.inject <transform.inject>Inject import statements on demand.
+  --transform.injectFilter.exclude <transform.injectFilter.exclude>Never inject into modules matching these patterns.
+  --transform.injectFilter.include <transform.injectFilter.include>Only inject into modules matching these patterns.
   --transform.jsx <transform.jsx>.
   --transform.plugins.styledComponents <transform.plugins.styledComponents>.
   --transform.plugins.taggedTemplateEscape .

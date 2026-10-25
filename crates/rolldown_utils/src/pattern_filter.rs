@@ -139,19 +139,23 @@ pub fn get_matcher_string<'a>(glob: &'a str, cwd: &'a str) -> Cow<'a, str> {
   }
   matcher.truncate(matcher.trim_end_matches('/').len());
   matcher.reserve(glob.len() + 1);
-  // `..` never climbs above the root: empty on Unix, `C:` on Windows.
-  let root_len = matcher.find('/').unwrap_or(matcher.len());
   for segment in normalize_path(glob).split('/') {
     match segment {
       "" | "." => {}
-      ".." => matcher.truncate(matcher.rfind('/').map_or(root_len, |i| i.max(root_len))),
+      // At the root (empty on Unix, `C:` on Windows) no `/` is left, so `..` stops there.
+      ".." => {
+        if let Some(i) = matcher.rfind('/') {
+          matcher.truncate(i);
+        }
+      }
       _ => {
         matcher.push('/');
         matcher.push_str(segment);
       }
     }
   }
-  if matcher.len() == root_len {
+  // `glob` resolved to the root.
+  if !matcher.contains('/') {
     matcher.push('/');
   }
   Cow::Owned(matcher)
@@ -429,6 +433,37 @@ filter: {:?}, id: {id}",
       filter(None, Some(&include), &id.to_string_lossy(), "proj"),
       FilterResult::Match(true)
     );
+  }
+
+  #[test]
+  fn relative_glob_matcher_strings() {
+    // `C:` makes the paths absolute on Windows.
+    let root = if cfg!(windows) { "C:" } else { "" };
+    let mut cases = vec![
+      ("src/**", "/w/my[app]", r"/w/my\[app\]/src/**"),
+      ("src/**", "/w/{c},!/", r"/w/\{c\},\!/src/**"),
+      // `..` leaves `cwd`, and the glob keeps its own syntax.
+      ("../x[y]/**", "/w/my[app]/web", r"/w/my\[app\]/x[y]/**"),
+      ("../../../x", "/w", "/x"),
+      ("..", "/w", "/"),
+    ];
+    // Windows forbids `*` and `?` in names, and reads `\` as a separator.
+    if cfg!(not(windows)) {
+      cases.push(("src/**", r"/w/a*b?\c", r"/w/a\*b\?\\c/src/**"));
+    }
+    for (glob, cwd, expected) in cases {
+      assert_eq!(get_matcher_string(glob, &format!("{root}{cwd}")), format!("{root}{expected}"));
+    }
+    // An empty `cwd` keeps the glob relative, with `.` and `..` resolved.
+    assert_eq!(get_matcher_string("./foo/*.txt", ""), "foo/*.txt");
+    assert_eq!(get_matcher_string("src/../foo/*.txt", ""), "foo/*.txt");
+
+    // Before the fix, `[app]` was a character class, so `src/**` also matched in `/w/mya`.
+    let cwd = format!("{root}/w/my[app]");
+    let include = [StringOrRegex::new("src/**".to_string(), None).unwrap()];
+    let matches = |id: &str| filter(None, Some(&include), &format!("{root}{id}"), &cwd);
+    assert_eq!(matches("/w/my[app]/src/a.js"), FilterResult::Match(true));
+    assert_eq!(matches("/w/mya/src/a.js"), FilterResult::NoneMatch(false));
   }
 
   #[test]

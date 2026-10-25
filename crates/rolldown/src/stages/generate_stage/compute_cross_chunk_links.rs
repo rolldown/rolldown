@@ -182,6 +182,22 @@ impl GenerateStage<'_> {
       &order_live_symbols,
     );
 
+    // The strict path keeps the `exec_order` sort: its order analysis models chunk evaluation with
+    // that order, and the plan's wrappers fix the module order.
+    let index_importee_ranks = if self.options.is_strict_execution_order_enabled() {
+      vec![None; chunk_graph.chunk_table.len()]
+    } else {
+      chunk_graph
+        .chunk_table
+        .par_iter_enumerated()
+        .map(|(chunk_idx, chunk)| {
+          // Only a chunk with two or more importees has an order to choose.
+          (index_cross_chunk_imports[chunk_idx].len() + chunk.imports_from_other_chunks.len() > 1)
+            .then(|| self.chunk_importee_ranks(chunk_graph, chunk_idx))
+        })
+        .collect::<Vec<_>>()
+    };
+
     let index_sorted_cross_chunk_imports = index_cross_chunk_imports
       .par_iter_enumerated()
       .map(|(chunk_idx, cross_chunk_imports)| {
@@ -193,8 +209,11 @@ impl GenerateStage<'_> {
           .copied()
           .chain(chunk_graph.chunk_table[chunk_idx].imports_from_other_chunks.keys().copied())
           .collect::<Vec<_>>();
-        cross_chunk_imports
-          .sort_unstable_by_key(|chunk_id| chunk_graph.chunk_table[*chunk_id].exec_order);
+        sort_chunk_importees(
+          chunk_graph,
+          &mut cross_chunk_imports,
+          index_importee_ranks[chunk_idx.index()].as_ref(),
+        );
         cross_chunk_imports
       })
       .collect::<Vec<_>>();
@@ -205,10 +224,17 @@ impl GenerateStage<'_> {
         for (idx, items) in &chunk_graph.chunk_table[chunk_idx].imports_from_other_chunks {
           importee_map.entry(*idx).or_default().extend_from_slice(items);
         }
-        importee_map
+        let mut importees = importee_map.keys().copied().collect::<Vec<_>>();
+        sort_chunk_importees(
+          chunk_graph,
+          &mut importees,
+          index_importee_ranks[chunk_idx.index()].as_ref(),
+        );
+        importees
           .into_iter()
-          .sorted_unstable_by_key(|(importee_chunk_id, _)| {
-            chunk_graph.chunk_table[*importee_chunk_id].exec_order
+          .map(|importee| {
+            let items = importee_map.remove(&importee).expect("every key is in the map");
+            (importee, items)
           })
           .collect::<FxIndexMap<_, _>>()
       })
@@ -303,6 +329,75 @@ impl GenerateStage<'_> {
         }
       }
     }
+  }
+
+  /// Returns a rank for each other chunk that the code of a chunk reaches. The ranks follow a
+  /// depth-first walk of the static imports, in source order. A chunk gets its rank when the walk
+  /// first reaches it. The walk starts at the entry module. Then it starts at each module that no
+  /// other module of the chunk imports, in execution order. The walk goes through a module that is
+  /// in no chunk. It stops at a module of another chunk, because that chunk orders its own imports.
+  ///
+  /// `exec_order` comes from one walk over all entries. Thus a module that an earlier entry imports
+  /// can sort before a module that this chunk imports first.
+  /// See internal-docs/code-splitting/implementation.md#chunk-import-order.
+  fn chunk_importee_ranks(
+    &self,
+    chunk_graph: &ChunkGraph,
+    chunk_idx: ChunkIdx,
+  ) -> FxHashMap<ChunkIdx, u32> {
+    let chunk = &chunk_graph.chunk_table[chunk_idx];
+    let module_table = &self.link_output.module_table;
+    let static_importees = |module_idx: ModuleIdx| {
+      module_table[module_idx].as_normal().into_iter().flat_map(|module| {
+        module
+          .import_records
+          .iter()
+          .filter(|rec| rec.kind.is_static())
+          .filter_map(|rec| rec.resolved_module)
+      })
+    };
+    let imported_in_chunk = chunk
+      .modules
+      .iter()
+      .flat_map(|&module_idx| static_importees(module_idx))
+      .filter(|module_idx| chunk_graph.module_to_chunk[*module_idx] == Some(chunk_idx))
+      .collect::<FxHashSet<_>>();
+    let mut roots = chunk
+      .modules
+      .iter()
+      .copied()
+      .filter(|module_idx| !imported_in_chunk.contains(module_idx))
+      .collect::<Vec<_>>();
+    roots.sort_unstable_by_key(|module_idx| module_table[*module_idx].exec_order());
+    let entry_module = match chunk.kind {
+      ChunkKind::EntryPoint { module, .. } => Some(module),
+      ChunkKind::Common => None,
+    };
+    // The stack pops the entry module first and the roots next. The other modules of the chunk
+    // come last, for an import cycle that no root reaches.
+    let mut stack = chunk
+      .modules
+      .iter()
+      .rev()
+      .copied()
+      .chain(roots.into_iter().rev())
+      .chain(entry_module)
+      .collect::<Vec<_>>();
+    let mut visited = FxHashSet::default();
+    let mut ranks = FxHashMap::default();
+    while let Some(module_idx) = stack.pop() {
+      if !visited.insert(module_idx) {
+        continue;
+      }
+      match chunk_graph.module_to_chunk[module_idx] {
+        Some(importee) if importee != chunk_idx => {
+          let rank = u32::try_from(ranks.len()).expect("Too many chunks, u32 overflowed.");
+          ranks.entry(importee).or_insert(rank);
+        }
+        _ => stack.extend(static_importees(module_idx).rev()),
+      }
+    }
+    ranks
   }
 
   /// Compute provisional links for order analysis. Uses an empty order state and explicitly marks
@@ -1815,6 +1910,32 @@ impl GenerateStage<'_> {
     } else {
       used_symbol_refs.contains(&symbol_ref) || order_live_symbols.contains(&symbol_ref)
     }
+  }
+}
+
+/// Sorts the importees of a chunk by `exec_order`. Then the importees that `ranks` contains get
+/// rank order, in the positions that they already have. The other importees, for example the
+/// runtime chunk, keep their positions.
+/// See internal-docs/code-splitting/implementation.md#chunk-import-order.
+fn sort_chunk_importees(
+  chunk_graph: &ChunkGraph,
+  importees: &mut [ChunkIdx],
+  ranks: Option<&FxHashMap<ChunkIdx, u32>>,
+) {
+  importees.sort_unstable_by_key(|chunk_idx| chunk_graph.chunk_table[*chunk_idx].exec_order);
+  let Some(ranks) = ranks else {
+    return;
+  };
+  let mut ranked =
+    importees.iter().copied().filter(|chunk_idx| ranks.contains_key(chunk_idx)).collect::<Vec<_>>();
+  if ranked.len() < 2 {
+    return;
+  }
+  ranked.sort_unstable_by_key(|chunk_idx| ranks[chunk_idx]);
+  for (slot, chunk_idx) in
+    importees.iter_mut().filter(|chunk_idx| ranks.contains_key(*chunk_idx)).zip(ranked)
+  {
+    *slot = chunk_idx;
   }
 }
 

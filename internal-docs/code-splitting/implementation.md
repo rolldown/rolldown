@@ -354,6 +354,34 @@ Runtime used to be placed by normal bitset grouping and later peeled out when a 
 
 These fixtures assert structural invariants in `_test.mjs`, so runtime-placement regressions fail immediately rather than only showing up as snapshot drift.
 
+## Chunk Import Order
+
+A chunk loads its importee chunks with `import` statements (ESM) or `require()` calls (CJS) at the top of the chunk. These run before the body of the chunk, in the order in which they appear. `commit_cross_chunk_links` sets this order in `imports_from_other_chunks` and `cross_chunk_imports`. Both lists get the same order, because `inline_common_chunks` builds its import order from `cross_chunk_imports`.
+
+When `strictExecutionOrder` is off, `sort_chunk_importees` sets the order in two steps:
+
+1. It sorts the importees by chunk `exec_order`.
+2. It puts the importees that `chunk_importee_ranks` ranks in rank order, in the positions that they already have.
+
+The first step alone is not sufficient. `exec_order` comes from one depth-first walk over all entries (`sort_modules`). A module that an earlier entry imports gets an early `exec_order`, even when this chunk imports it after other modules. In `code_splitting/chunk_import_source_order`, entry `a` imports `read.js` first. Entry `b` imports `init.js` before `read.js`, and `init.js` sets a global that `read.js` reads. With the first step alone, `b` imports the `read.js` chunk first.
+
+`chunk_importee_ranks` walks the static imports depth-first, in source order. It follows the same edges as `sort_modules` (`ImportKind::is_static`). The walk starts at these modules, in this order:
+
+1. The entry module of an entry chunk.
+2. Each module that no other module of the chunk imports, in execution order.
+3. The other modules of the chunk, for an import cycle that no earlier start reaches.
+
+The walk goes through a module that is in no chunk, for example a re-export module that tree shaking removes. The walk stops at a module of another chunk and gives that chunk the next rank. That chunk orders its own imports.
+
+An importee that the walk does not reach keeps its `exec_order` position. Examples are the runtime chunk, which a chunk imports for helpers, and the imports that chunk merging adds. Thus the change moves only the chunks that the source code of the chunk imports.
+
+The strict path keeps the `exec_order` sort. Its order analysis models chunk evaluation with that order (see the sole-consumer fold above), and the order plan wraps the modules whose order matters.
+
+This does not fix every order difference of the default mode:
+
+- A chunk runs all of its imports before its own body. So a module of the chunk still runs after an imported chunk, also when the source runs it first (`docs/in-depth/automatic-code-splitting.md`).
+- The renderer writes the external imports after all chunk imports.
+
 ## Lazy Module Initialization Order
 
 `ensure_lazy_module_initialization_order()` runs after chunk creation as a post-processing step on the `ChunkGraph`. It fixes a correctness issue with lazy evaluation of wrapped modules.

@@ -313,6 +313,16 @@ So `runtime_bits_covering_consumers` adds to the bits each consumer entry that c
 
 The second condition keeps the dynamic-entry pruning of the [already-loaded analysis](#dynamic-already-loaded-analysis). Without it, a consumer chunk that the host's entries load only through `import()` would add its entries to the bits. The runtime would then go into a standalone chunk instead of a safe host (`code_splitting/issue_5276`).
 
+A bitset host can also change the evaluation order. A consumer that does not import the host yet must import it for the helpers. Then the host runs before that consumer, also when the source runs the consumer first. In `code_splitting/runtime_host_consumer_order`, the `common.js` chunk has the bits of all consumers. Entry `c` imports `namespace.js` before `common.js`, and `namespace.js` sets a global that `common.js` reads. If the runtime goes into the `common.js` chunk, the `namespace.js` chunk must import that chunk for `__exportAll`. Then `common.js` runs first and reads the global before `namespace.js` sets it.
+
+So when `strictExecutionOrder` is off, `runtime_host_keeps_consumer_order` accepts a bitset host only if each consumer agrees with one of these conditions:
+
+- The consumer is the host.
+- The code of the consumer already imports a module of the host. `chunk_importee_ranks` finds these chunks (see [Chunk Import Order](#chunk-import-order)). The helpers then join that import.
+- Only late dynamic entries load the consumer. A late entry is in the result of `entries_loaded_after` for the link-time runtime bits, but not in these bits. A late entry starts only after an entry in the link-time bits loads the host. So the host runs before the consumer.
+
+If no bitset host passes this check, the cascade tries the consumer dominator next. The strict path does not need this check, because the order plan wraps the modules whose order matters.
+
 The merge target must not create a static cycle or force unrelated entry chunks to execute just to access helpers. Candidate targets are tried in compactness-preserving order: a sole runtime consumer, a sole live chunk with the runtime bitset, a live common chunk with the same runtime bitset, then a consumer-set dominator. The caller selects how deep this cascade may go (`RuntimeMergeCascade`): both merge attempts during chunk optimization use the full cascade, while the post-order-lowering fold below stops after the sole-consumer step. Manual code splitting / advanced chunk group chunks may host runtime only when that chunk is the sole runtime consumer; otherwise their contents are user-directed grouping output, and absorbing the runtime would make unrelated chunks load the group for helpers. Safety is checked by following static chunk-loading edges through still-live chunks. Dynamic imports are not followed; static imports and `require()` records are both considered because either can become a static chunk import in generated output. Chunks containing top-level await, or a dependency on top-level await, are runtime hosts only when they are the sole runtime consumer; otherwise a dynamically imported chunk that statically imports its awaiting importer for helpers can produce an unsettled async module cycle.
 
 - **Safe target found** → runtime moves into that chunk, and the empty standalone runtime chunk is marked removed.

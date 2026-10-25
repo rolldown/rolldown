@@ -1167,22 +1167,40 @@ impl GenerateStage<'_> {
       RuntimeMergeCascade::SingleConsumerOnly => single_consumer,
       RuntimeMergeCascade::Full => single_consumer
         .or_else(|| {
-          self.find_single_runtime_bitset_host(
-            chunk_graph,
-            runtime_chunk_idx,
-            &runtime_chunk_bits,
-            &consumer_chunks,
-            module_table,
-          )
+          self
+            .find_single_runtime_bitset_host(
+              chunk_graph,
+              runtime_chunk_idx,
+              &runtime_chunk_bits,
+              &consumer_chunks,
+              module_table,
+            )
+            .filter(|&host| {
+              self.runtime_host_keeps_consumer_order(
+                chunk_graph,
+                host,
+                &consumer_chunks,
+                &runtime_chunk.bits,
+              )
+            })
         })
         .or_else(|| {
-          self.find_runtime_bitset_host(
-            chunk_graph,
-            runtime_chunk_idx,
-            &runtime_chunk_bits,
-            &consumer_chunks,
-            module_table,
-          )
+          self
+            .find_runtime_bitset_host(
+              chunk_graph,
+              runtime_chunk_idx,
+              &runtime_chunk_bits,
+              &consumer_chunks,
+              module_table,
+            )
+            .filter(|&host| {
+              self.runtime_host_keeps_consumer_order(
+                chunk_graph,
+                host,
+                &consumer_chunks,
+                &runtime_chunk.bits,
+              )
+            })
         })
         .or_else(|| {
           Self::find_consumer_dominator(&consumer_chunks, chunk_graph, module_table).filter(
@@ -1335,6 +1353,39 @@ impl GenerateStage<'_> {
       }));
     }
     consumers
+  }
+
+  /// Returns whether a bitset host keeps the evaluation order of each runtime consumer. A consumer
+  /// that does not import the host yet must import it for the helpers. Then the host runs before
+  /// that consumer, also when the source runs the consumer first. The new import is safe in these
+  /// conditions:
+  ///
+  /// - The consumer already imports a module of the host. The helpers then join that import.
+  /// - Only dynamic entries that start after the runtime entries load the consumer. The host is
+  ///   then evaluated before the consumer starts.
+  ///
+  /// The strict path does not need this check, because the order plan wraps the modules whose
+  /// order matters. See internal-docs/code-splitting/implementation.md#runtime-module-placement.
+  fn runtime_host_keeps_consumer_order(
+    &self,
+    chunk_graph: &ChunkGraph,
+    host: ChunkIdx,
+    consumer_chunks: &FxHashSet<ChunkIdx>,
+    runtime_bits: &BitSet,
+  ) -> bool {
+    if self.options.is_strict_execution_order_enabled() {
+      return true;
+    }
+    let mut late_entries = None;
+    consumer_chunks.iter().all(|&consumer| {
+      consumer == host
+        || self.chunk_importee_ranks(chunk_graph, consumer).contains_key(&host)
+        || chunk_graph.chunk_table[consumer].bits.is_subset(late_entries.get_or_insert_with(|| {
+          let mut entries = self.entries_loaded_after(chunk_graph, runtime_bits);
+          entries.subtract(runtime_bits);
+          entries
+        }))
+    })
   }
 
   /// Returns the entry bits that a bitset host must have, so that the host is always loaded when a

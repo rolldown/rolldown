@@ -356,7 +356,7 @@ impl GenerateStage<'_> {
   /// (`code_splitting/chunk_import_order_common_chunk_interleaving`). Rollup sorts the lead modules
   /// by execution order instead, which loses that order.
   /// See internal-docs/code-splitting/implementation.md#chunk-import-order.
-  fn chunk_importee_ranks(
+  pub(super) fn chunk_importee_ranks(
     &self,
     chunk_graph: &ChunkGraph,
     chunk_idx: ChunkIdx,

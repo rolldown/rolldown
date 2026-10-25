@@ -599,3 +599,84 @@ test(
     expect(runtime.loadExports(stableId('side-effect\\.js'))).toEqual({});
   },
 );
+
+// Config `external` is checked before plugins, so `import('./dep.mjs')` stays a
+// real import and the lazy plugin never builds a proxy. A plugin `resolveId`
+// that returns `{ id, external: true }` used to be wrapped anyway, and the
+// proxy then called `loadExports` on an id the dev runtime never registers
+// (#11273). Both paths should keep the same direct import.
+test(
+  'a plugin-resolved external dynamic import is not wrapped in a lazy proxy',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-plugin-external-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'dep.mjs'), `export const value = 1;\n`);
+    fs.writeFileSync(
+      path.join(dir, 'lazy.mjs'),
+      `export const load = () => import('./dep.mjs');\n`,
+    );
+
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const directImport = 'import("./dep.mjs").then(__unwrap_lazy_compilation_entry)';
+
+    async function entryCode(label: string, input: InputOptions): Promise<string> {
+      let code = '';
+      const engine = await dev(
+        input,
+        { format: 'esm', dir: path.join(dir, `dist-${label}`) },
+        {
+          // Nothing in this case edits files, and two engines must not watch the same dir.
+          watch: { enabled: false },
+          onOutput(result) {
+            if (result instanceof Error) {
+              return;
+            }
+            const chunk = result.output.find((item) => item.type === 'chunk' && item.isEntry);
+            if (chunk?.type === 'chunk') {
+              code = chunk.code;
+            }
+          },
+        },
+      );
+      try {
+        await engine.run();
+        // No proxy was registered, so the id the bug used to compile is unknown.
+        await expect(engine.compileEntry('./dep.mjs?rolldown-lazy=1', 'client')).rejects.toThrow(
+          'Lazy entry module not found in cache',
+        );
+        return code;
+      } finally {
+        await engine.close();
+      }
+    }
+
+    const shared: InputOptions = {
+      input: path.join(dir, 'lazy.mjs'),
+      experimental: { devMode: { lazy: true } },
+    };
+    const externalPlugin: Plugin = {
+      name: 'external',
+      resolveId(id) {
+        if (id === './dep.mjs') {
+          return { id, external: true };
+        }
+        return null;
+      },
+    };
+
+    const configCode = await entryCode('config', { ...shared, external: ['./dep.mjs'] });
+    const pluginCode = await entryCode('plugin', { ...shared, plugins: [externalPlugin] });
+
+    expect(configCode).toContain(directImport);
+    expect(pluginCode).toContain(directImport);
+    expect(pluginCode).not.toContain('rolldown-lazy');
+    expect(pluginCode).not.toContain('loadExports("./dep.mjs")');
+  },
+);

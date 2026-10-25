@@ -1,0 +1,18 @@
+{
+  "_comment": "A `type` attribute with a built-in meaning beats `moduleTypes`, including `asset` and `copy`. A `type` without one, like `css`, and the run without `experimental.importAttributes` leave the module to `moduleTypes`.",
+  "config": {
+    "moduleTypes": {
+      ".png": "asset",
+      ".txt": "copy"
+    },
+    "experimental": {
+      "importAttributes": true
+    }
+  },
+  "configVariants": [
+    {
+      "importAttributes": false
+    }
+  ],
+  "expectExecuted": false
+}

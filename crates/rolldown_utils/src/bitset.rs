@@ -265,6 +265,42 @@ mod tests {
   }
 
   #[test]
+  fn set_operations_match_btree_sets() {
+    use std::collections::BTreeSet;
+
+    // Empty sets, partial bytes, and lengths around SIMD boundaries, with unequal capacities.
+    let lengths = [0, 1, 7, 8, 9, 127, 128, 129, 255, 256, 257, 511, 512, 513, 1025];
+    let mut state = 1_u32;
+    for left_len in lengths {
+      for right_len in lengths {
+        for threshold in [0, 16, 128, 256] {
+          let mut make_set = |len| {
+            let mut bits = BitSet::new(len);
+            let mut reference = BTreeSet::new();
+            for bit in 0..len {
+              state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+              if state >> 24 < threshold {
+                bits.set_bit(bit);
+                reference.insert(bit);
+              }
+            }
+            (bits, reference)
+          };
+          let (mut left, left_set) = make_set(left_len);
+          let (right, right_set) = make_set(right_len);
+          assert_eq!(left.is_subset(&right), left_set.is_subset(&right_set));
+          assert_eq!(right.is_subset(&left), right_set.is_subset(&left_set));
+          left.subtract(&right);
+          assert_eq!(
+            left.index_of_one().collect::<BTreeSet<_>>(),
+            left_set.difference(&right_set).copied().collect::<BTreeSet<_>>()
+          );
+        }
+      }
+    }
+  }
+
+  #[test]
   fn index_of_one() {
     let mut bits = BitSet::new(16);
     bits.set_bit(1);

@@ -121,6 +121,7 @@ mod order_analysis;
 pub mod order_wrap_state;
 mod order_wrapping;
 mod post_banner_footer;
+mod reduced_chunk_graph;
 mod render_chunk_to_assets;
 mod resolve_file_urls;
 mod runtime_module_sweep;

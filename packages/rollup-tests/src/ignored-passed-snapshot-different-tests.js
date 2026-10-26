@@ -85,6 +85,7 @@ module.exports = [
     "rollup@form@recursive-literal-values: do not fail for literal values from recursive return values",
     "rollup@form@relative-external-with-global: applies globals to externalised relative imports@generates es",
     "rollup@form@optimization-in-operator: keep foo structure",
+    "rollup@form@namespace-optimization-in-operator: it does static optimization of internal namespaces when checking whether an export exists",
     "rollup@form@protect-cjs-globals: prevent conflicts with cjs module globals@generates es",
     "rollup@form@support-using-keyword: Support `using` keyword",
     "rollup@function@deprecated@sourcemap-true-generatebundle: emits sourcemaps before generateBundle hook",

@@ -1120,8 +1120,9 @@ impl GenerateStage<'_> {
   }
 
   /// Merge the standalone runtime chunk into a safe existing host. Prefer a
-  /// live chunk with the runtime's bitset to preserve pre-existing layouts;
-  /// otherwise use a runtime consumer that dominates all other consumers.
+  /// live chunk with the runtime's bitset to preserve pre-existing layouts, as
+  /// long as every consumer's entries load it; otherwise use a runtime consumer
+  /// that dominates all other consumers.
   pub(super) fn try_merge_runtime_chunk(
     &self,
     chunk_graph: &mut ChunkGraph,
@@ -1167,22 +1168,31 @@ impl GenerateStage<'_> {
       RuntimeMergeCascade::SingleConsumerOnly => single_consumer,
       RuntimeMergeCascade::Full => single_consumer
         .or_else(|| {
-          self.find_single_runtime_bitset_host(
-            chunk_graph,
-            runtime_chunk_idx,
-            &runtime_chunk_bits,
-            &consumer_chunks,
-            module_table,
-          )
-        })
-        .or_else(|| {
-          self.find_runtime_bitset_host(
-            chunk_graph,
-            runtime_chunk_idx,
-            &runtime_chunk_bits,
-            &consumer_chunks,
-            module_table,
-          )
+          // A bitset host is loaded only by the runtime's link-time entries, so every consumer
+          // must run under those entries. Facade elimination can add a consumer outside them, which
+          // would then load the host just for helpers (for the self-hosted `@rolldown/browser`
+          // build, that host was a `.d.mts` chunk).
+          if !self.runtime_bits_cover_consumers(chunk_graph, &runtime_chunk_bits, &consumer_chunks)
+          {
+            return None;
+          }
+          self
+            .find_single_runtime_bitset_host(
+              chunk_graph,
+              runtime_chunk_idx,
+              &runtime_chunk_bits,
+              &consumer_chunks,
+              module_table,
+            )
+            .or_else(|| {
+              self.find_runtime_bitset_host(
+                chunk_graph,
+                runtime_chunk_idx,
+                &runtime_chunk_bits,
+                &consumer_chunks,
+                module_table,
+              )
+            })
         })
         .or_else(|| {
           Self::find_consumer_dominator(&consumer_chunks, chunk_graph, module_table).filter(
@@ -1335,6 +1345,59 @@ impl GenerateStage<'_> {
       }));
     }
     consumers
+  }
+
+  /// Whether every entry that loads a consumer chunk is in `runtime_bits`, or is a dynamic entry
+  /// whose included `import()` sites all sit in chunks loaded only by such entries. The dynamic
+  /// already-loaded pass prunes those entries from the runtime bits, so they still count here.
+  /// See internal-docs/code-splitting/implementation.md#runtime-module-placement.
+  fn runtime_bits_cover_consumers(
+    &self,
+    chunk_graph: &ChunkGraph,
+    runtime_bits: &BitSet,
+    consumer_chunks: &FxHashSet<ChunkIdx>,
+  ) -> bool {
+    let chunk_is_loaded = |loaded_dynamic_entries: &[bool], chunk_idx: ChunkIdx| {
+      chunk_graph.chunk_table[chunk_idx].bits.index_of_one().all(|bit| {
+        runtime_bits.has_bit(bit) || loaded_dynamic_entries.get(bit as usize) == Some(&true)
+      })
+    };
+    if consumer_chunks.iter().all(|&chunk_idx| chunk_is_loaded(&[], chunk_idx)) {
+      return true;
+    }
+
+    let entries = self
+      .link_output
+      .entries
+      .iter()
+      .flat_map(|(&idx, entry_points)| entry_points.iter().map(move |entry| (idx, entry)));
+    let mut loaded_dynamic_entries = vec![false; entries.clone().count()];
+    // Dynamic entries are sorted in topological order of the `import()` graph, so one pass
+    // reaches every acyclic chain.
+    for (entry_idx, (entry_module_idx, entry_point)) in entries.enumerate() {
+      if !entry_point.kind.is_dynamic_import() {
+        continue;
+      }
+      let mut importer_chunks = entry_point
+        .related_stmt_infos
+        .iter()
+        .filter(|(importer_idx, stmt_info_idx, _, import_record_idx)| {
+          self.is_included_dynamic_import_record(
+            *importer_idx,
+            *stmt_info_idx,
+            *import_record_idx,
+            entry_module_idx,
+          )
+        })
+        .map(|(importer_idx, ..)| chunk_graph.module_to_chunk[*importer_idx])
+        .peekable();
+      loaded_dynamic_entries[entry_idx] = importer_chunks.peek().is_some()
+        && importer_chunks.all(|chunk_idx| {
+          chunk_idx.is_some_and(|chunk_idx| chunk_is_loaded(&loaded_dynamic_entries, chunk_idx))
+        });
+    }
+
+    consumer_chunks.iter().all(|&chunk_idx| chunk_is_loaded(&loaded_dynamic_entries, chunk_idx))
   }
 
   fn chunk_references_runtime_symbol(&self, chunk: &Chunk, runtime_module_idx: ModuleIdx) -> bool {

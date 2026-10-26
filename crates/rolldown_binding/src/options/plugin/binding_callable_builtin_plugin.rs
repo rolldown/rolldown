@@ -7,7 +7,7 @@ use napi::{
 };
 use napi_derive::napi;
 use rolldown::ModuleType;
-use rolldown_common::WatcherChangeKind;
+use rolldown_common::{ImportAttributes, WatcherChangeKind};
 use rolldown_plugin::{
   __inner::SharedPluginable, CustomField, HookLoadArgs, HookLoadOutput, HookResolveIdArgs,
   HookResolveIdOutput, HookTransformArgs, LoadPluginContext, PluginIdx, PluginOrder,
@@ -96,6 +96,11 @@ impl BindingCallableBuiltinPlugin {
     let context = Arc::clone(&self.context);
     crate::start_async_runtime();
     AsyncBlockBuilder::with(async move {
+      let (importer_raw_id, importer_attributes) =
+        match importer.as_deref().and_then(ImportAttributes::parse_module_id) {
+          Some((raw_id, attributes)) => (Some(raw_id), attributes),
+          None => (importer.as_deref(), ImportAttributes::default()),
+        };
       plugin
         .call_resolve_id(
           &context.inner,
@@ -105,6 +110,9 @@ impl BindingCallableBuiltinPlugin {
             is_entry: options.as_ref().is_some_and(|options| options.is_entry.unwrap_or_default()),
             kind,
             custom: options.map(Into::into).unwrap_or_default(),
+            attributes: &ImportAttributes::default(),
+            importer_raw_id,
+            importer_attributes: &importer_attributes,
           },
         )
         .await

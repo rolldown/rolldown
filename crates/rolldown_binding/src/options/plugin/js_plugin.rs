@@ -12,6 +12,7 @@ use super::{
   binding_load_context::BindingLoadPluginContext,
   binding_transform_context::BindingTransformPluginContext,
   types::{
+    binding_hook_resolve_dynamic_import_extra_args::BindingHookResolveDynamicImportExtraArgs,
     binding_hook_resolve_file_url_args::BindingHookResolveFileUrlArgs,
     binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
     binding_hot_update_args::BindingHotUpdateArgs,
@@ -122,6 +123,11 @@ impl Plugin for JsPlugin {
       }
     }
 
+    let BindingHookResolveDynamicImportExtraArgs {
+      attributes,
+      importer_raw_id,
+      importer_attributes,
+    } = args.into();
     let extra_args = BindingHookResolveIdExtraArgs {
       is_entry: args.is_entry,
       kind: args.kind.to_string(),
@@ -129,6 +135,9 @@ impl Plugin for JsPlugin {
         .custom
         .get::<JsPluginContextResolveCustomArgId>(&JsPluginContextResolveCustomArgId)
         .copied(),
+      attributes,
+      importer_raw_id,
+      importer_attributes,
     };
 
     let span =
@@ -175,7 +184,13 @@ impl Plugin for JsPlugin {
     );
     let result = cb
       .await_call(
-        (ctx.clone().into(), args.specifier.to_string(), args.importer.map(str::to_string)).into(),
+        (
+          ctx.clone().into(),
+          args.specifier.to_string(),
+          args.importer.map(str::to_string),
+          BindingHookResolveDynamicImportExtraArgs::from(args),
+        )
+          .into(),
       )
       .instrument(span.clone())
       .await?

@@ -860,8 +860,14 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     // see https://github.com/rolldown/rolldown/issues/5030 as an example
     idx_of_module_info_need_update.extend(extra_entry_points.iter().map(|item| item.idx));
     idx_of_module_info_need_update.into_par_iter().for_each(|idx| {
-      let module = module_table.get(idx);
-      let Some(module) = module.as_normal() else {
+      // A partial scan only holds re-scanned modules. A chunk emitted for an
+      // unchanged module (e.g. by `buildStart` on the rebuild after a lazy
+      // compile) is read from the last successful build's snapshot.
+      let module = match module_table.try_get(idx) {
+        Some(module) => Some(module),
+        None => self.cache.snapshot().and_then(|snapshot| snapshot.module_table.modules.get(idx)),
+      };
+      let Some(module) = module.and_then(Module::as_normal) else {
         return;
       };
       self.shared_context.plugin_driver.set_module_info(

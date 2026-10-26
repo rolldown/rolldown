@@ -45,7 +45,7 @@ const SUITES = {
   },
   'webcontainer-fallback': {
     command: 'just test-webcontainer-fallback',
-    checks: NODE_TARBALL_CHECKS,
+    checks: [...BROWSER_TARBALL_CHECKS, ...NODE_TARBALL_CHECKS],
   },
   browser: {
     command: 'just test-browser',

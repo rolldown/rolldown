@@ -9,7 +9,8 @@
 //   - @rolldown/browser, the single self-contained package the StackBlitz starter uses.
 //   - the plain `rolldown` package plus the separate @rolldown/binding-wasm32-wasi package.
 // webcontainer-fallback: the same `rolldown` and @rolldown/binding-wasm32-wasi tarballs, for the
-//   plain-Node suite that exercises the WebContainer download fallback.
+//   plain-Node suite that exercises the WebContainer download fallback, plus @rolldown/browser,
+//   whose packed files that suite also scans for imports Node cannot load.
 // browser: the same @rolldown/browser tarball, installed into tests/browser, the app the
 //   real-browser suite loads through Vite.
 import { execFileSync } from 'node:child_process';
@@ -122,7 +123,7 @@ if (shouldBuild) {
   run('pnpm', ['run', '--filter', 'rolldown', 'build-binding:wasi'], repoRoot);
 }
 
-if (suite === 'webcontainer' || suite === 'all') {
+if (suite === 'webcontainer' || suite === 'webcontainer-fallback' || suite === 'all') {
   packBrowserPackage();
 }
 

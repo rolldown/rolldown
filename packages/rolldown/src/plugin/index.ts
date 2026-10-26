@@ -285,6 +285,21 @@ export interface ResolveIdExtraOptions {
   importerAttributes: Record<string, string>;
 }
 
+/** @inline */
+export interface LoadExtraOptions {
+  /**
+   * The module id without import attributes. Read the file from it. Without
+   * {@linkcode InputOptions.experimental | experimental.importAttributes}, it equals `id`.
+   */
+  rawId: string;
+  /**
+   * The import attributes the module was imported with. `{}` means none. Without
+   * {@linkcode InputOptions.experimental | experimental.importAttributes}, it is always `{}`,
+   * even when the import has attributes.
+   */
+  attributes: Record<string, string>;
+}
+
 /** @inline @category Plugin APIs */
 export type ResolveIdResult = string | NullValue | false | PartialResolvedId;
 
@@ -468,7 +483,17 @@ export interface FunctionPluginHooks {
    * @kind async first
    * @group Build Hooks
    */
-  [DEFINED_HOOK_NAMES.load]: (this: PluginContext, id: string) => MaybePromise<LoadResult>;
+  [DEFINED_HOOK_NAMES.load]: (
+    this: PluginContext,
+    /**
+     * The module id. With
+     * {@linkcode InputOptions.experimental | experimental.importAttributes}, it contains the
+     * import attributes of the module, so read the file from
+     * {@linkcode LoadExtraOptions.rawId | options.rawId}.
+     */
+    id: string,
+    options: LoadExtraOptions,
+  ) => MaybePromise<LoadResult>;
 
   /**
    * Can be used to transform individual modules.

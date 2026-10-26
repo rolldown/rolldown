@@ -25,7 +25,13 @@ pub async fn load_source<Fs: FileSystem + 'static>(
     (Some(String::new()), Some(ModuleType::Empty))
   } else {
     plugin_driver
-      .load(&HookLoadArgs { id: &resolved_id.id, module_idx, asserted_module_type })
+      .load(&HookLoadArgs {
+        id: &resolved_id.id,
+        raw_id,
+        attributes: &resolved_id.attributes,
+        module_idx,
+        asserted_module_type,
+      })
       .await?
       .map(|load_hook_output| {
         sourcemap_chain.extend(load_hook_output.map.map(SourcemapChainElement::Load));

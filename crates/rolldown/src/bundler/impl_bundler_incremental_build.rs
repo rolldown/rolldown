@@ -18,6 +18,11 @@ impl Bundler {
     bundle_mode: BundleMode,
     with_fn: impl AsyncFnOnce(&mut Bundle) -> BuildResult<T>,
   ) -> BuildResult<T> {
+    // A failed scan skips bundle_up's cleanup. Load promises must not outlive the build
+    // whose native module infos they refer to, including on watch error recovery.
+    if let Some(invalidate_js_side_cache) = &self.options().invalidate_js_side_cache {
+      invalidate_js_side_cache.call().await?;
+    }
     let cache = mem::take(&mut self.cache);
     let mut bundle = self.bundle_factory.create_bundle(bundle_mode, Some(cache))?;
     // Do NOT `?` the build result here. The cache must be moved back into the

@@ -19,7 +19,7 @@ With `experimental.importAttributes`, the import attributes of an import (`with 
 
 - A plugin returning an already-composed id from `resolveId` without `attributes` gets the requested attributes appended a second time. Should `resolveId` output be parsed with `parseModuleId` first?
 - Formats other than ESM have no way to express attributes on externals; nothing warns about the dropped attributes.
-- Dev engine / HMR and Vite integration are not covered yet.
+- Dev engine / HMR and Vite integration are not covered yet. Lazy compilation skips an `import()` with attributes, so it is bundled as usual.
 
 ## Related
 

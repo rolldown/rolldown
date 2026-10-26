@@ -9,7 +9,7 @@ use std::{
 
 use arcstr::ArcStr;
 use rolldown::{Bundler, BundlerOptions, ExperimentalOptions, InputItem};
-use rolldown_common::{ModuleDefFormat, ResolvedExternal, ScanMode};
+use rolldown_common::{ImportAttributes, ModuleDefFormat, ResolvedExternal, ScanMode};
 use rolldown_error::EventKind;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
@@ -57,7 +57,7 @@ impl Plugin for LoadInvalidatedExternal {
   async fn load(&self, ctx: SharedLoadPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     let code = if args.id == self.entry_id {
       if self.is_partial_scan.load(Ordering::Relaxed) {
-        ctx.load(&self.lib_id, None, ModuleDefFormat::Unknown).await?;
+        ctx.load(&self.lib_id, ImportAttributes::default(), None, ModuleDefFormat::Unknown).await?;
         "import { value } from './lib.js'; console.log(value);"
       } else {
         "import { value } from 'external-lib'; console.log(value);"

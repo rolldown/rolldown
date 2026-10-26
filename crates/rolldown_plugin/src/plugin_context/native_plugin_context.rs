@@ -8,8 +8,8 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use derive_more::Debug;
 use rolldown_common::{
-  FilenameTemplate, ImportAttributes, LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleId,
-  ModuleLoaderMsg, PackageJson, PluginIdx, ResolvedId, SharedFileEmitter, SharedModuleInfoDashMap,
+  FilenameTemplate, ImportAttributes, LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleLoaderMsg,
+  PackageJson, PluginIdx, ResolvedId, SharedFileEmitter, SharedModuleInfoDashMap,
   SharedNormalizedBundlerOptions, WatchPath, side_effects::HookSideEffects,
 };
 use rolldown_resolver::{ResolveError, Resolver};
@@ -52,7 +52,8 @@ pub struct NativePluginContextImpl {
 impl NativePluginContextImpl {
   pub async fn load(
     &self,
-    specifier: &str,
+    raw_id: &str,
+    attributes: ImportAttributes,
     side_effects: Option<HookSideEffects>,
     module_def_format: ModuleDefFormat,
   ) -> anyhow::Result<()> {
@@ -61,19 +62,23 @@ impl NativePluginContextImpl {
       let guard = self.tx.lock().ok().context("Failed to acquire PluginDriver tx lock")?.clone();
       guard.context("The `PluginContext.load` only work at `resolveId/load/transform/moduleParsed` hooks. If you using it at resolveId hook, please make sure it could not load the entry module.")?
     };
+    let resolved_id = ResolvedId {
+      id: raw_id.into(),
+      side_effects,
+      module_def_format,
+      attributes,
+      ..Default::default()
+    }
+    .finalize_attributes(self.options.experimental.is_import_attributes_enabled());
+    let id = resolved_id.id.as_arc_str().clone();
     sender
-      .send(ModuleLoaderMsg::FetchModule(Box::new(ResolvedId {
-        id: ModuleId::new(specifier),
-        side_effects,
-        module_def_format,
-        ..Default::default()
-      })))
+      .send(ModuleLoaderMsg::FetchModule(Box::new(resolved_id)))
       .map_err(|e| anyhow::Error::new(e).context("PluginContext: failed to send FetchModule message - module loader shut down during plugin execution"))?;
     let plugin_driver = self
       .plugin_driver
       .upgrade()
       .ok_or_else(|| anyhow::anyhow!("Plugin driver is already dropped."))?;
-    plugin_driver.wait_for_module_load_completion(specifier).await;
+    plugin_driver.wait_for_module_load_completion(&id).await;
     Ok(())
   }
 
@@ -144,7 +149,7 @@ impl NativePluginContextImpl {
         normalized_extra_options.custom,
         false,
         &self.options,
-        &ImportAttributes::default(),
+        &normalized_extra_options.attributes,
         importer_raw_id,
         &importer_attributes,
       )

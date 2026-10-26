@@ -22,7 +22,7 @@ impl HookResolveIdOutput {
   pub fn from_resolved_id(resolved_id: ResolvedId) -> Self {
     Self {
       id: resolved_id.id.raw_id().into(),
-      attributes: None,
+      attributes: Some(resolved_id.attributes),
       external: Some(resolved_id.external),
       side_effects: resolved_id.side_effects,
       normalize_external_id: None,

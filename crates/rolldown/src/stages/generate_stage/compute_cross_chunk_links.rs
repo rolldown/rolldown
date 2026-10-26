@@ -332,10 +332,10 @@ impl GenerateStage<'_> {
   }
 
   /// Returns a rank for each other chunk that the code of a chunk reaches. The ranks follow a
-  /// depth-first walk of the static imports, in source order. A chunk gets its rank when the walk
-  /// first reaches it. The walk starts at the entry module. Then it starts at each module that no
-  /// other module of the chunk imports, in execution order. The walk goes through a module that is
-  /// in no chunk. It stops at a module of another chunk, because that chunk orders its own imports.
+  /// depth-first walk of the static imports that tree shaking keeps, in source order. A chunk gets
+  /// its rank when the walk first reaches it. The walk starts at the entry module. Then it starts at
+  /// each module that no other module of the chunk imports, in execution order. It stops at a module
+  /// of another chunk, because that chunk orders its own imports.
   ///
   /// `exec_order` comes from one walk over all entries. Thus a module that an earlier entry imports
   /// can sort before a module that this chunk imports first.
@@ -347,21 +347,16 @@ impl GenerateStage<'_> {
   ) -> FxHashMap<ChunkIdx, u32> {
     let chunk = &chunk_graph.chunk_table[chunk_idx];
     let module_table = &self.link_output.module_table;
-    let static_importees = |module_idx: ModuleIdx| {
-      module_table[module_idx].as_normal().into_iter().flat_map(|module| {
-        module
-          .import_records
-          .iter()
-          .filter(|rec| rec.kind.is_static())
-          .filter_map(|rec| rec.resolved_module)
-      })
-    };
-    let imported_in_chunk = chunk
-      .modules
-      .iter()
-      .flat_map(|&module_idx| static_importees(module_idx))
-      .filter(|module_idx| chunk_graph.module_to_chunk[*module_idx] == Some(chunk_idx))
-      .collect::<FxHashSet<_>>();
+    let mut importees = vec![];
+    let mut imported_in_chunk = FxHashSet::default();
+    for &module_idx in &chunk.modules {
+      self.push_kept_static_importees(module_idx, &mut importees);
+      imported_in_chunk.extend(
+        importees
+          .drain(..)
+          .filter(|importee_idx| chunk_graph.module_to_chunk[*importee_idx] == Some(chunk_idx)),
+      );
+    }
     let mut roots = chunk
       .modules
       .iter()
@@ -394,10 +389,86 @@ impl GenerateStage<'_> {
           let rank = u32::try_from(ranks.len()).expect("Too many chunks, u32 overflowed.");
           ranks.entry(importee).or_insert(rank);
         }
-        _ => stack.extend(static_importees(module_idx).rev()),
+        Some(_) => {
+          self.push_kept_static_importees(module_idx, &mut importees);
+          stack.extend(importees.drain(..).rev());
+        }
+        // An external module.
+        None => {}
       }
     }
     ranks
+  }
+
+  /// Pushes the modules that the static imports of a module lead to, in source order. Only the
+  /// imports that tree shaking keeps count, because the output does not have the other imports. An
+  /// import is kept when its module is in `load_dependencies`, the dependencies that survive tree
+  /// shaking. An import that is not kept can still get bindings that other modules declare, for
+  /// example through a re-export module that tree shaking removes. Such an import leads to the
+  /// modules that declare those bindings, because the output imports the bindings from there.
+  fn push_kept_static_importees(&self, module_idx: ModuleIdx, importees: &mut Vec<ModuleIdx>) {
+    let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
+      return;
+    };
+    let load_dependencies = &self.link_output.metas[module_idx].load_dependencies;
+    let mut symbol_owners = None;
+    let mut is_kept = |dependency: ModuleIdx| {
+      // `load_dependencies` also has each imported entry module that has no side effects, only to
+      // place the chunks (see `patch_module_dependencies`). The output imports such a module only
+      // when this module uses one of its bindings.
+      load_dependencies.contains(&dependency)
+        && (self.options.treeshake.is_none()
+          || !self.link_output.entries.contains_key(&dependency)
+          || self.link_output.module_table[dependency].side_effects().has_side_effects()
+          || symbol_owners
+            .get_or_insert_with(|| self.referenced_symbol_owners(module_idx))
+            .contains(&dependency))
+    };
+    let mut binding_owners = None;
+    for (record_idx, record) in module.import_records.iter_enumerated() {
+      if !record.kind.is_static() {
+        continue;
+      }
+      let Some(importee) = record.resolved_module else {
+        continue;
+      };
+      if is_kept(importee) {
+        importees.push(importee);
+        continue;
+      }
+      // The modules that declare the bindings of each import record, sorted by record. The runtime
+      // chunk is not ranked, so that it keeps its position.
+      let binding_owners = binding_owners.get_or_insert_with(|| {
+        let symbol_db = &self.link_output.symbol_db;
+        let runtime_idx = self.link_output.runtime.id();
+        let mut owners = module
+          .named_imports
+          .values()
+          .flat_map(|named_import| {
+            let canonical_ref = symbol_db.canonical_ref_for(named_import.imported_as);
+            let namespace_owner = symbol_db
+              .get(canonical_ref)
+              .namespace_alias
+              .as_ref()
+              .map(|ns| ns.namespace_ref.owner);
+            std::iter::once(canonical_ref.owner)
+              .chain(namespace_owner)
+              .map(|owner| (named_import.record_idx, owner))
+          })
+          .filter(|&(_, owner)| owner != module_idx && owner != runtime_idx)
+          .collect::<Vec<_>>();
+        owners.sort_by_key(|&(record_idx, _)| record_idx);
+        owners
+      });
+      let start = binding_owners.partition_point(|&(idx, _)| idx < record_idx);
+      importees.extend(
+        binding_owners[start..]
+          .iter()
+          .take_while(|&&(idx, _)| idx == record_idx)
+          .map(|&(_, owner)| owner)
+          .filter(|&owner| is_kept(owner)),
+      );
+    }
   }
 
   /// Compute provisional links for order analysis. Uses an empty order state and explicitly marks

@@ -544,7 +544,7 @@ impl GenerateStage<'_> {
     }
   }
 
-  fn referenced_symbol_owners(&self, module_idx: ModuleIdx) -> FxHashSet<ModuleIdx> {
+  pub(super) fn referenced_symbol_owners(&self, module_idx: ModuleIdx) -> FxHashSet<ModuleIdx> {
     let meta = &self.link_output.metas[module_idx];
     let mut owners = FxHashSet::default();
     let note = |symbol_ref: SymbolRef, owners: &mut FxHashSet<ModuleIdx>| {

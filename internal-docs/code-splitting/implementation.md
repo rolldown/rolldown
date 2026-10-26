@@ -365,15 +365,17 @@ When `strictExecutionOrder` is off, `sort_chunk_importees` sets the order in two
 
 The first step alone is not sufficient. `exec_order` comes from one depth-first walk over all entries (`sort_modules`). A module that an earlier entry imports gets an early `exec_order`, even when this chunk imports it after other modules. In `code_splitting/chunk_import_source_order`, entry `a` imports `read.js` first. Entry `b` imports `init.js` before `read.js`, and `init.js` sets a global that `read.js` reads. With the first step alone, `b` imports the `read.js` chunk first.
 
-`chunk_importee_ranks` walks the static imports depth-first, in source order. It follows the same edges as `sort_modules` (`ImportKind::is_static`). The walk starts at these modules, in this order:
+`chunk_importee_ranks` walks the static imports depth-first, in source order. The walk starts at these modules, in this order:
 
 1. The entry module of an entry chunk.
 2. Each module that no other module of the chunk imports, in execution order.
 3. The other modules of the chunk, for an import cycle that no earlier start reaches.
 
-The walk goes through a module that is in no chunk, for example a re-export module that tree shaking removes. The walk stops at a module of another chunk and gives that chunk the next rank. That chunk orders its own imports.
+The walk follows only the imports that tree shaking keeps (`push_kept_static_importees`). An import of module `M` is kept when the imported module is in the `load_dependencies` of `M`: a module that declares a binding that `M` uses, or a module with side effects. The output does not have the other imports, so they must not change the order. In `code_splitting/chunk_import_source_order_tree_shaken_import`, `dead.js` imports `data.js` only for a function that tree shaking removes. If the walk followed that import, entry `a` would import the chunk of `data.js` and `read.js` before the chunk of `init.js`, and `read.js` would read the global before `init.js` sets it. `load_dependencies` also has each imported entry module that has no side effects, only to place the chunks. The walk follows such an import only when `M` uses a binding of that entry module (`referenced_symbol_owners`).
 
-An importee that the walk does not reach keeps its `exec_order` position. Examples are the runtime chunk, which a chunk imports for helpers, and the imports that chunk merging adds. Thus the change moves only the chunks that the source code of the chunk imports.
+An import that is not kept can still get bindings that other modules declare, for example through a re-export module that tree shaking removes. Such an import leads to the modules that declare those bindings (the canonical owners of its named imports), because the output imports the bindings from there. In `code_splitting/chunk_import_source_order_barrel`, entry `b` imports `value` through the `barrel` package, which has no side effects, so the chunk of `read.js` takes the position of that import. The walk stops at a module of another chunk and gives that chunk the next rank. That chunk orders its own imports.
+
+An importee that the walk does not reach keeps its `exec_order` position. Examples are the runtime chunk, which a chunk imports for helpers, and the imports that chunk merging adds. Thus the change moves only the chunks that the source code of the chunk imports. The walk also does not reach every module that the chunk gets bindings from. Examples are a binding that the chunk reads through a namespace import (`ns.x`) or an `export *` of a re-export module that tree shaking removes, and a binding that a kept module re-exports but does not use. Such a chunk also keeps its `exec_order` position.
 
 The strict path keeps the `exec_order` sort. Its order analysis models chunk evaluation with that order (see the sole-consumer fold above), and the order plan wraps the modules whose order matters.
 

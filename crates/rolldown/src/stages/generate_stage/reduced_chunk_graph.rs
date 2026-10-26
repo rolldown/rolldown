@@ -7,13 +7,11 @@ use smallvec::SmallVec;
 /// (a chunk). A node depends on another node when one of its atoms depends on an atom of the
 /// other node, and through the facade edges (see `facade_edge`).
 ///
-/// While the graph is acyclic, it also keeps its nodes in a topological order. Only the node that
-/// receives the atom gets new edges, so a move can only close a cycle through a new edge that
-/// points backwards in the order. Besides one hash lookup of the new bits, a move without such an
-/// edge costs O(atom degree), and any other move searches only the nodes between the backward
-/// edges and the receiving node. A move only removes edges of the node that the atom leaves, so
-/// while the graph has a cycle, only a move out of a node on every cycle can make the graph
-/// acyclic, and only such a move needs a full check.
+/// Every edge that a move adds starts or ends at the node that receives the atom (see
+/// `reaches_itself`). So while the graph is acyclic, a move closes a cycle exactly when a path
+/// leads from that node back to itself, and the check is one search from that node. A move only
+/// removes edges of the node that the atom leaves, so while the graph has a cycle, only a move out
+/// of a node on every cycle can make the graph acyclic, and only such a move needs a full check.
 /// See internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
 pub(super) struct ReducedChunkGraph<'a> {
   atom_dependencies: &'a [Vec<usize>],
@@ -22,21 +20,19 @@ pub(super) struct ReducedChunkGraph<'a> {
   hosted_entry_bits_by_atom: Vec<SmallVec<[usize; 1]>>,
   node_by_bits: FxHashMap<BitSet, usize>,
   node_by_atom: Vec<usize>,
-  /// A node without atoms is not a chunk: it has no edges and no place in `order`.
+  /// A node without atoms is not a chunk: it has no edges.
   atom_count_by_node: Vec<usize>,
   /// The entry bit of a node whose bits hold only that entry, so the node is that entry's chunk.
   facade_entry_bit_by_node: Vec<Option<usize>>,
   facade_node_by_entry_bit: Vec<Option<usize>>,
   edges: NodeEdges,
-  /// `None` while the graph has a cycle.
-  order: Option<TopologicalOrder>,
+  is_acyclic: bool,
   /// While the graph has a cycle: the nodes of its only strongly connected component with more
   /// than one node, or no nodes if it has more such components. Each cycle lies in one such
   /// component, and a move removes only edges of the node that the atom leaves. So a move out of a
   /// node outside this set keeps a cycle.
   cyclic_component: FxHashSet<usize>,
-  /// The node edges that the current move creates. Every one of them touches the receiving node.
-  new_edges: Vec<(usize, usize)>,
+  /// Per node, the `mark` of the last search that visited it.
   marks: Vec<u32>,
   mark: u32,
 }
@@ -60,9 +56,8 @@ impl<'a> ReducedChunkGraph<'a> {
       facade_entry_bit_by_node: Vec::with_capacity(atom_count),
       facade_node_by_entry_bit: vec![None; host_atom_by_entry_bit.len()],
       edges: NodeEdges::default(),
-      order: None,
+      is_acyclic: false,
       cyclic_component: FxHashSet::default(),
-      new_edges: vec![],
       marks: Vec::with_capacity(atom_count),
       mark: 0,
     };
@@ -88,8 +83,8 @@ impl<'a> ReducedChunkGraph<'a> {
         graph.edges.add(facade, host);
       }
     }
-    graph.order = graph.topological_order();
-    if graph.order.is_none() {
+    graph.is_acyclic = !graph.has_cycle();
+    if !graph.is_acyclic {
       graph.cyclic_component = graph.only_cyclic_component();
     }
     graph
@@ -99,7 +94,7 @@ impl<'a> ReducedChunkGraph<'a> {
   /// Otherwise, it keeps the atom where it was and returns false.
   pub(super) fn try_move(&mut self, atom_idx: usize, bits: &BitSet) -> bool {
     let from = self.node_by_atom[atom_idx];
-    if self.order.is_none() && !self.cyclic_component.contains(&from) {
+    if !self.is_acyclic && !self.cyclic_component.contains(&from) {
       return false;
     }
     let to = match self.node_by_bits.get(bits) {
@@ -107,33 +102,17 @@ impl<'a> ReducedChunkGraph<'a> {
       None => self.add_node(bits),
     };
     debug_assert_ne!(from, to, "the reduced bits must differ from the current bits");
-    let to_was_empty = self.atom_count_by_node[to] == 0;
-    self.new_edges.clear();
     self.move_atom(atom_idx, from, to);
-
-    let moved = if let Some(mut order) = self.order.take() {
-      if to_was_empty {
-        // The atom's edges fit the place of `from` in the order, so `to` starts next to it.
-        order.insert_after(from, to);
-      }
-      let moved = self.reorder(&mut order, to);
-      if moved && self.atom_count_by_node[from] == 0 {
-        order.remove(from);
-      } else if !moved && to_was_empty {
-        order.remove(to);
-      }
-      self.order = Some(order);
-      moved
+    // While the graph has a cycle, the move can remove every old cycle, but it can also close new
+    // cycles through `to`, so only a full check is exact. A rejected move leaves
+    // `cyclic_component` correct.
+    let acyclic = if self.is_acyclic { !self.reaches_itself(to) } else { !self.has_cycle() };
+    if acyclic {
+      self.is_acyclic = true;
     } else {
-      // The move can remove every old cycle, but it can also close new cycles through `to`, so
-      // only a full check is exact. A rejected move leaves `cyclic_component` correct.
-      self.order = self.topological_order();
-      self.order.is_some()
-    };
-    if !moved {
       self.move_atom(atom_idx, to, from);
     }
-    moved
+    acyclic
   }
 
   fn add_node(&mut self, bits: &BitSet) -> usize {
@@ -148,9 +127,6 @@ impl<'a> ReducedChunkGraph<'a> {
     self.facade_entry_bit_by_node.push(facade_entry_bit);
     self.edges.add_node();
     self.marks.push(0);
-    if let Some(order) = &mut self.order {
-      order.add_node();
-    }
     node
   }
 
@@ -178,8 +154,7 @@ impl<'a> ReducedChunkGraph<'a> {
     (facade != host).then_some((facade, host))
   }
 
-  /// Moves the atom and its edges from node `from` to node `to`, and records the node edges that
-  /// the move creates in `new_edges`.
+  /// Moves the atom and its edges from node `from` to node `to`.
   fn move_atom(&mut self, atom_idx: usize, from: usize, to: usize) {
     // The facade edges that can change: those of the entries that the atom hosts, of the entry
     // whose chunk `from` stops being, and of the entry whose chunk `to` starts being.
@@ -217,106 +192,56 @@ impl<'a> ReducedChunkGraph<'a> {
 
     for &dependency in &self.atom_dependencies[atom_idx] {
       let node = self.node_by_atom[dependency];
-      if node != to && self.edges.add(to, node) {
-        self.new_edges.push((to, node));
+      if node != to {
+        self.edges.add(to, node);
       }
     }
     for &dependent in &self.atom_dependents[atom_idx] {
       let node = self.node_by_atom[dependent];
-      if node != to && self.edges.add(node, to) {
-        self.new_edges.push((node, to));
+      if node != to {
+        self.edges.add(node, to);
       }
     }
     for &entry_bit in &entry_bits {
       if let Some((facade, host)) = self.facade_edge(entry_bit) {
-        if self.edges.add(facade, host) {
-          self.new_edges.push((facade, host));
-        }
+        self.edges.add(facade, host);
       }
     }
   }
 
-  /// Puts `node`, which received the moved atom, in a valid place of `order`. `order` is valid
-  /// for all edges except `new_edges`, which all touch `node`. Dependents after `node` move in
-  /// front of it, with all nodes after `node` that reach them. Dependencies before `node` move
-  /// behind it, with all nodes before `node` that they reach. Returns false and keeps `order` as
-  /// it was if the new edges close a cycle.
-  fn reorder(&mut self, order: &mut TopologicalOrder, node: usize) -> bool {
-    let place = order.label(node);
-    if self.mark >= u32::MAX - 2 {
+  /// Whether a path leads from `node`, which received the moved atom, back to itself. This decides
+  /// the move when the graph was acyclic before it, because every edge the move added touches
+  /// `node`: the atom's own edges now start or end at `node`; the facade edges of the entries the
+  /// atom hosts now end at `node`, the new host; the facade edge of the entry whose chunk `node`
+  /// starts being starts at `node`; and the entry whose chunk `from` stops being only loses its
+  /// edge. A new cycle must use an added edge, so it passes through `node`.
+  fn reaches_itself(&mut self, node: usize) -> bool {
+    if self.mark == u32::MAX {
       self.marks.fill(0);
       self.mark = 0;
     }
-    self.mark += 2;
-    let (later_mark, earlier_mark) = (self.mark - 1, self.mark);
-
-    let mut later_dependents = vec![];
-    let mut earlier_dependencies = vec![];
-    for &(from, to) in &self.new_edges {
-      if to == node && order.label(from) > place && self.marks[from] != later_mark {
-        self.marks[from] = later_mark;
-        later_dependents.push(from);
-      } else if from == node && order.label(to) < place && self.marks[to] != earlier_mark {
-        self.marks[to] = earlier_mark;
-        earlier_dependencies.push(to);
+    self.mark += 1;
+    let mut stack: Vec<usize> = self.edges.dependencies[node].keys().copied().collect();
+    while let Some(next) = stack.pop() {
+      if next == node {
+        return true;
       }
+      if self.marks[next] == self.mark {
+        continue;
+      }
+      self.marks[next] = self.mark;
+      stack.extend(self.edges.dependencies[next].keys().copied());
     }
-    if later_dependents.is_empty() && earlier_dependencies.is_empty() {
-      return true;
-    }
-
-    // In a valid order, a path between two nodes after `node` stays after `node`, and a path
-    // between two nodes before `node` stays before it. So a cycle through `node` exists exactly
-    // when `node` reaches a later dependent, an earlier dependency reaches `node`, or an earlier
-    // dependency reaches a later dependent.
-    let mut idx = 0;
-    while let Some(&dependent) = later_dependents.get(idx) {
-      idx += 1;
-      if self.edges.dependencies[node].contains_key(&dependent) {
-        return false;
-      }
-      for &next in &self.edges.dependents[dependent] {
-        if order.label(next) > place && self.marks[next] != later_mark {
-          self.marks[next] = later_mark;
-          later_dependents.push(next);
-        }
-      }
-    }
-    let mut idx = 0;
-    while let Some(&dependency) = earlier_dependencies.get(idx) {
-      idx += 1;
-      if self.edges.dependents[node].contains(&dependency) {
-        return false;
-      }
-      for &next in self.edges.dependencies[dependency].keys() {
-        if order.label(next) > place {
-          if self.marks[next] == later_mark {
-            return false;
-          }
-        } else if self.marks[next] != earlier_mark {
-          self.marks[next] = earlier_mark;
-          earlier_dependencies.push(next);
-        }
-      }
-    }
-
-    later_dependents.sort_unstable_by_key(|&node| order.label(node));
-    earlier_dependencies.sort_unstable_by_key(|&node| order.label(node));
-    order.move_before(node, &later_dependents);
-    order.move_after(node, &earlier_dependencies);
-    true
+    false
   }
 
-  /// The nodes with atoms in topological order, or `None` if the graph has a cycle. A later root
-  /// comes first, so atoms of later dynamic entries come before the chunks of the entries that
-  /// load them, and a fold into such a chunk seldom adds a backward edge.
-  fn topological_order(&self) -> Option<TopologicalOrder> {
+  /// Whether the graph of the nodes with atoms has a cycle.
+  fn has_cycle(&self) -> bool {
     const NEW: u8 = 0;
     const ON_PATH: u8 = 1;
     const DONE: u8 = 2;
     let node_count = self.atom_count_by_node.len();
     let mut state = vec![NEW; node_count];
-    let mut post_order = Vec::with_capacity(node_count);
     let mut stack = vec![];
     for root in 0..node_count {
       if self.atom_count_by_node[root] == 0 || state[root] != NEW {
@@ -326,7 +251,6 @@ impl<'a> ReducedChunkGraph<'a> {
       while let Some((node, exiting)) = stack.pop() {
         if exiting {
           state[node] = DONE;
-          post_order.push(node);
           continue;
         }
         if state[node] != NEW {
@@ -337,14 +261,13 @@ impl<'a> ReducedChunkGraph<'a> {
         for &dependency in self.edges.dependencies[node].keys() {
           match state[dependency] {
             NEW => stack.push((dependency, false)),
-            ON_PATH => return None,
+            ON_PATH => return true,
             _ => {}
           }
         }
       }
     }
-    post_order.reverse();
-    Some(TopologicalOrder::new(post_order, node_count))
+    false
   }
 
   /// See `cyclic_component`. Kosaraju's algorithm: a post-order over the dependencies, then a
@@ -408,7 +331,8 @@ impl<'a> ReducedChunkGraph<'a> {
 
 #[derive(Default)]
 struct NodeEdges {
-  /// Per node: the dependency nodes and the number of atom and facade edges behind each one.
+  /// Per node: the dependency nodes and the number of atom and facade edges behind each one, so
+  /// that a rejected move can take its edges back.
   dependencies: Vec<FxHashMap<usize, u32>>,
   dependents: Vec<FxHashSet<usize>>,
 }
@@ -419,15 +343,12 @@ impl NodeEdges {
     self.dependents.push(FxHashSet::default());
   }
 
-  /// Adds one edge behind the node edge and returns true if the node edge is new.
-  fn add(&mut self, from: usize, to: usize) -> bool {
+  fn add(&mut self, from: usize, to: usize) {
     let count = self.dependencies[from].entry(to).or_insert(0);
     *count += 1;
-    if *count > 1 {
-      return false;
+    if *count == 1 {
+      self.dependents[to].insert(from);
     }
-    self.dependents[to].insert(from);
-    true
   }
 
   fn remove(&mut self, from: usize, to: usize) {
@@ -440,155 +361,12 @@ impl NodeEdges {
   }
 }
 
-const NO_NODE: usize = usize::MAX;
-
-/// A doubly linked list of nodes whose labels increase along the list, so two nodes compare by
-/// label in O(1), and a node moves in O(1) until the gap between two labels runs out.
-struct TopologicalOrder {
-  prev: Vec<usize>,
-  next: Vec<usize>,
-  labels: Vec<u64>,
-  head: usize,
-  len: usize,
-}
-
-impl TopologicalOrder {
-  fn new(nodes: Vec<usize>, node_count: usize) -> Self {
-    let mut order = Self {
-      prev: vec![NO_NODE; node_count],
-      next: vec![NO_NODE; node_count],
-      labels: vec![0; node_count],
-      head: NO_NODE,
-      len: 0,
-    };
-    let mut prev = NO_NODE;
-    for node in nodes {
-      order.link_after(prev, node);
-      prev = node;
-    }
-    order.relabel();
-    order
-  }
-
-  fn add_node(&mut self) {
-    self.prev.push(NO_NODE);
-    self.next.push(NO_NODE);
-    self.labels.push(0);
-  }
-
-  fn label(&self, node: usize) -> u64 {
-    self.labels[node]
-  }
-
-  fn insert_after(&mut self, anchor: usize, node: usize) {
-    self.link_after(anchor, node);
-    self.label_after(anchor, 1);
-  }
-
-  fn remove(&mut self, node: usize) {
-    let (prev, next) = (self.prev[node], self.next[node]);
-    if prev == NO_NODE {
-      self.head = next;
-    } else {
-      self.next[prev] = next;
-    }
-    if next != NO_NODE {
-      self.prev[next] = prev;
-    }
-    self.prev[node] = NO_NODE;
-    self.next[node] = NO_NODE;
-    self.len -= 1;
-  }
-
-  /// Moves `nodes`, which are sorted by label, to the place right before `anchor`.
-  fn move_before(&mut self, anchor: usize, nodes: &[usize]) {
-    if nodes.is_empty() {
-      return;
-    }
-    for &node in nodes {
-      self.remove(node);
-    }
-    let first_prev = self.prev[anchor];
-    let mut prev = first_prev;
-    for &node in nodes {
-      self.link_after(prev, node);
-      prev = node;
-    }
-    self.label_after(first_prev, nodes.len());
-  }
-
-  /// Moves `nodes`, which are sorted by label, to the place right after `anchor`.
-  fn move_after(&mut self, anchor: usize, nodes: &[usize]) {
-    if nodes.is_empty() {
-      return;
-    }
-    for &node in nodes {
-      self.remove(node);
-    }
-    let mut prev = anchor;
-    for &node in nodes {
-      self.link_after(prev, node);
-      prev = node;
-    }
-    self.label_after(anchor, nodes.len());
-  }
-
-  /// Links `node` after `prev`, or at the head for `NO_NODE`.
-  fn link_after(&mut self, prev: usize, node: usize) {
-    let next = if prev == NO_NODE { self.head } else { self.next[prev] };
-    self.prev[node] = prev;
-    self.next[node] = next;
-    if prev == NO_NODE {
-      self.head = node;
-    } else {
-      self.next[prev] = node;
-    }
-    if next != NO_NODE {
-      self.prev[next] = node;
-    }
-    self.len += 1;
-  }
-
-  /// Labels the `count` nodes after `prev` (or at the head for `NO_NODE`) evenly between the
-  /// labels of their neighbors. It relabels the full list if the gap is too small.
-  fn label_after(&mut self, prev: usize, count: usize) {
-    let first = if prev == NO_NODE { self.head } else { self.next[prev] };
-    let mut after = first;
-    for _ in 0..count {
-      after = self.next[after];
-    }
-    let low = if prev == NO_NODE { 0 } else { self.labels[prev] };
-    let high = if after == NO_NODE { u64::MAX } else { self.labels[after] };
-    let step = (high - low) / (count as u64 + 1);
-    if step == 0 {
-      self.relabel();
-      return;
-    }
-    let (mut node, mut label) = (first, low);
-    for _ in 0..count {
-      label += step;
-      self.labels[node] = label;
-      node = self.next[node];
-    }
-  }
-
-  fn relabel(&mut self) {
-    let step = u64::MAX / (self.len as u64 + 1);
-    let (mut node, mut label) = (self.head, 0);
-    while node != NO_NODE {
-      label += step;
-      self.labels[node] = label;
-      node = self.next[node];
-    }
-  }
-}
-
 #[cfg(test)]
 mod tests {
   use super::*;
 
   impl ReducedChunkGraph<'_> {
-    /// Recomputes the edges from the atoms and checks the order against them.
+    /// Recomputes the edges from the atoms and checks the cycle state against them.
     fn assert_consistent(&self) {
       let node_count = self.atom_count_by_node.len();
       let mut atom_count_by_node = vec![0; node_count];
@@ -620,28 +398,9 @@ mod tests {
       let dependent_count: usize = self.edges.dependents.iter().map(FxHashSet::len).sum();
       assert_eq!(dependent_count, dependencies.iter().map(FxHashMap::len).sum::<usize>());
 
-      let Some(order) = &self.order else {
+      assert_eq!(self.is_acyclic, !self.has_cycle());
+      if !self.is_acyclic {
         assert_eq!(self.cyclic_component, self.only_cyclic_component());
-        return;
-      };
-      let mut position = vec![None; node_count];
-      let (mut node, mut prev, mut idx) = (order.head, NO_NODE, 0);
-      while node != NO_NODE {
-        assert_eq!(order.prev[node], prev);
-        if prev != NO_NODE {
-          assert!(order.label(prev) < order.label(node));
-        }
-        position[node] = Some(idx);
-        (prev, node, idx) = (node, order.next[node], idx + 1);
-      }
-      assert_eq!(order.len, idx);
-      for (node, &atom_count) in self.atom_count_by_node.iter().enumerate() {
-        assert_eq!(position[node].is_some(), atom_count > 0, "only nodes with atoms are ordered");
-      }
-      for (from, node_dependencies) in dependencies.iter().enumerate() {
-        for &to in node_dependencies.keys() {
-          assert!(position[from] < position[to], "edge {from} -> {to} points backwards");
-        }
       }
     }
   }
@@ -779,7 +538,8 @@ mod tests {
   #[test]
   fn a_move_that_breaks_the_only_cycle_is_accepted() {
     // Atoms 1 and 2 depend on each other, so the graph starts with a cycle. A move that keeps the
-    // cycle is rejected. Merging the two atoms removes the cycle, and the order exists again.
+    // cycle is rejected. Merging the two atoms removes the cycle, and later moves get the local
+    // check again.
     check_moves(
       3,
       &[&[0], &[0, 1], &[1], &[1, 2]],
@@ -798,10 +558,11 @@ mod tests {
   }
 
   #[test]
-  fn a_backward_edge_reorders_the_nodes_it_passes() {
-    // The initial order is [3, 2, 1, 0]. Moving atom 0 into atom 3's chunk gives it the edge
-    // 1 -> 3 that points backwards, so 1 and its dependent 2 move in front of 3. A later move
-    // that needs the new order then closes a cycle.
+  fn accepted_moves_update_the_edges_that_later_moves_see() {
+    // Three accepted moves in a row: atom 0 joins atom 3's chunk, which gains atom 1's chunk as a
+    // dependent; atom 2 moves to a new chunk of its own; atom 3 then leaves the shared chunk for a
+    // new chunk while atom 0 stays behind. With atom 3 depending on atom 4, whose chunk reaches
+    // atom 1's chunk, the first move closes a cycle through the shared chunk instead.
     check_moves(
       4,
       &[&[0, 1], &[1], &[1, 2], &[0]],
@@ -850,7 +611,7 @@ mod tests {
       atom_bits.truncate(1 + rng.below(atom_bits.len().min(10)));
       let atom_count = atom_bits.len();
       let edge_chance = 1 + rng.below(4);
-      // Half of the graphs start acyclic, so that their moves use the order from the start.
+      // Half of the graphs start acyclic, so that their moves get the local check from the start.
       let mut rank = (0..atom_count).collect::<Vec<_>>();
       for idx in (1..atom_count).rev() {
         rank.swap(idx, rng.below(idx + 1));

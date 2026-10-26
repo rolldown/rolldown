@@ -5,8 +5,8 @@ use oxc::ast_visit::VisitJsMut;
 use oxc::span::SourceType;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  EcmaView, ExportsKind, FlatOptions, ModuleDefFormat, ModuleIdx, ModuleType, NormalModule,
-  StableModuleId, StmtEvalFlags, side_effects::DeterminedSideEffects,
+  EcmaView, ExportsKind, FlatOptions, ImportAttributes, ModuleDefFormat, ModuleIdx, ModuleType,
+  NormalModule, StableModuleId, StmtEvalFlags, side_effects::DeterminedSideEffects,
   side_effects::HookSideEffects,
 };
 use rolldown_common::{
@@ -85,7 +85,8 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
       .ctx
       .plugin_driver
       .transform(
-        RUNTIME_MODULE_KEY,
+        &RUNTIME_MODULE_ID,
+        &ImportAttributes::default(),
         self.module_idx,
         source,
         &mut sourcemap_chain,

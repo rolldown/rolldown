@@ -515,6 +515,17 @@ export interface FunctionPluginHooks {
       moduleType: ModuleType;
       magicString?: RolldownMagicString;
       ast?: Program;
+      /**
+       * The module id without import attributes. Without
+       * {@linkcode InputOptions.experimental | experimental.importAttributes}, it equals `id`.
+       */
+      rawId: string;
+      /**
+       * The import attributes the module was imported with. `{}` means none. Without
+       * {@linkcode InputOptions.experimental | experimental.importAttributes}, it is always `{}`,
+       * even when the import has attributes.
+       */
+      attributes: Record<string, string>;
     },
   ) => TransformResult;
 

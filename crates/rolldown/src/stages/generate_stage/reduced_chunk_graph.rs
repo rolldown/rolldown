@@ -2,16 +2,17 @@ use rolldown_utils::BitSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
 
-/// The chunk graph that the atoms' current dependent-entry bits produce, kept up to date while
-/// `optimize_dynamic_entry_bits` moves atoms to reduced bits. Atoms with equal bits form one node
-/// (a chunk). A node depends on another node when one of its atoms depends on an atom of the
-/// other node, and through the facade edges (see `facade_edge`).
+/// The chunk graph that the current dependent-entry bits of the atoms produce.
+/// `optimize_dynamic_entry_bits` moves atoms to reduced bits, and the graph follows each move.
+/// Atoms with equal bits form one node (a chunk). A node depends on another node when one of its
+/// atoms depends on an atom of the other node. A node also depends on another node through a
+/// facade edge (see `facade_edge`).
 ///
 /// Every edge that a move adds starts or ends at the node that receives the atom (see
 /// `reaches_itself`). So while the graph is acyclic, a move closes a cycle exactly when a path
-/// leads from that node back to itself, and the check is one search from that node. A move only
-/// removes edges of the node that the atom leaves, so while the graph has a cycle, only a move out
-/// of a node on every cycle can make the graph acyclic, and only such a move needs a full check.
+/// leads from that node back to itself. The check is one search from that node. A move removes
+/// only edges of the node that the atom leaves. So while the graph has a cycle, only a move out of
+/// a node that lies on every cycle can make the graph acyclic. Only such a move gets a full check.
 /// See internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
 pub(super) struct ReducedChunkGraph<'a> {
   atom_dependencies: &'a [Vec<usize>],
@@ -20,17 +21,17 @@ pub(super) struct ReducedChunkGraph<'a> {
   hosted_entry_bits_by_atom: Vec<SmallVec<[usize; 1]>>,
   node_by_bits: FxHashMap<BitSet, usize>,
   node_by_atom: Vec<usize>,
-  /// A node without atoms is not a chunk: it has no edges.
+  /// A node without atoms is not a chunk. It has no edges.
   atom_count_by_node: Vec<usize>,
-  /// The entry bit of a node whose bits hold only that entry, so the node is that entry's chunk.
+  /// The entry bit of a node whose bits hold only that bit. Such a node is that entry's chunk.
   facade_entry_bit_by_node: Vec<Option<usize>>,
   facade_node_by_entry_bit: Vec<Option<usize>>,
   edges: NodeEdges,
   is_acyclic: bool,
-  /// While the graph has a cycle: the nodes of its only strongly connected component with more
-  /// than one node, or no nodes if it has more such components. Each cycle lies in one such
-  /// component, and a move removes only edges of the node that the atom leaves. So a move out of a
-  /// node outside this set keeps a cycle.
+  /// While the graph has a cycle, the nodes of its only strongly connected component with more
+  /// than one node. If the graph has two or more such components, this set is empty. Each cycle
+  /// lies in one such component, and a move removes only edges of the node that the atom leaves.
+  /// So a move out of a node outside this set keeps a cycle.
   cyclic_component: FxHashSet<usize>,
   /// Per node, the `mark` of the last search that visited it.
   marks: Vec<u32>,
@@ -38,7 +39,7 @@ pub(super) struct ReducedChunkGraph<'a> {
 }
 
 impl<'a> ReducedChunkGraph<'a> {
-  /// `atom_bits` are the initial dependent-entry bits of the atoms, which are all different.
+  /// `atom_bits` holds the initial dependent-entry bits of each atom. No two atoms have equal bits.
   pub(super) fn new<'b>(
     atom_bits: impl IntoIterator<Item = &'b BitSet>,
     atom_dependencies: &'a [Vec<usize>],
@@ -103,8 +104,8 @@ impl<'a> ReducedChunkGraph<'a> {
     };
     debug_assert_ne!(from, to, "the reduced bits must differ from the current bits");
     self.move_atom(atom_idx, from, to);
-    // While the graph has a cycle, the move can remove every old cycle, but it can also close new
-    // cycles through `to`, so only a full check is exact. A rejected move leaves
+    // While the graph has a cycle, the move can remove every old cycle. It can also close new
+    // cycles through `to`. So only a full check is exact. A rejected move leaves
     // `cyclic_component` correct.
     let acyclic = if self.is_acyclic { !self.reaches_itself(to) } else { !self.has_cycle() };
     if acyclic {
@@ -131,33 +132,34 @@ impl<'a> ReducedChunkGraph<'a> {
   }
 
   /// The facade edge of an entry. An entry whose module lands in a shared chunk keeps its own entry
-  /// chunk as a facade, and `compute_chunk_imports` makes that facade import the host chunk, to
-  /// run the module and to re-export its interface. No module in the facade imports the entry
-  /// module, so the atom edges cannot express this edge. Without it, folding an atom into a facade
-  /// whose host statically depends on that atom yields a chunk cycle that evaluates in the wrong
-  /// order (rolldown#10734). The cycle graph over-approximates, so a redundant facade edge only
-  /// costs a missed merge.
+  /// chunk as a facade. `compute_chunk_imports` makes that facade import the host chunk, to run
+  /// the module and to re-export its interface. No module in the facade imports the entry module,
+  /// so the atom edges cannot express this edge. Without this edge, a fold of an atom into a facade
+  /// whose host statically depends on that atom yields a chunk cycle. That cycle evaluates in the
+  /// wrong order (rolldown#10734). The cycle graph over-approximates, so a redundant facade edge
+  /// costs only a missed merge.
   fn facade_edge(&self, entry_bit: usize) -> Option<(usize, usize)> {
-    // No facade node with atoms means the entry chunk holds nothing: a module-less facade declares
-    // no symbol, so nothing can depend back on it and the omitted node cannot sit on a cycle.
+    // If the facade node has no atoms, the entry chunk holds nothing. A facade without modules
+    // declares no symbol, so nothing can depend on it, and the omitted node cannot lie on a cycle.
     let facade = self.facade_node_by_entry_bit[entry_bit]?;
     if self.atom_count_by_node[facade] == 0 {
       return None;
     }
-    // A `None` host means the entry module is external or excluded. Skipping is not a safe
-    // approximation in general — the cycle graph may never miss an edge — but it drops no real
+    // A `None` host means that the entry module is external or excluded. In general, to skip an
+    // edge is not safe, because the cycle graph may never miss an edge. Here the skip drops no real
     // edge: `split_chunks` assigns such a module to no chunk, so the facade has no host to import.
-    // An included normal entry module always has an atom — `determine_reachable_modules_for_entry`
-    // sets the entry's own bit on its module, and `split_chunks` asserts that an included module's
-    // bits are non-empty.
+    // An included normal entry module always has an atom. `determine_reachable_modules_for_entry`
+    // sets the entry's own bit on its module, and `split_chunks` asserts that the bits of an
+    // included module are not empty.
     let host = self.node_by_atom[self.host_atom_by_entry_bit[entry_bit]?];
     (facade != host).then_some((facade, host))
   }
 
   /// Moves the atom and its edges from node `from` to node `to`.
   fn move_atom(&mut self, atom_idx: usize, from: usize, to: usize) {
-    // The facade edges that can change: those of the entries that the atom hosts, of the entry
-    // whose chunk `from` stops being, and of the entry whose chunk `to` starts being.
+    // Three kinds of facade edge can change: the edges of the entries that the atom hosts, the edge
+    // of the entry whose chunk is `from` if `from` loses its last atom, and the edge of the entry
+    // whose chunk is `to` if `to` gets its first atom.
     let mut entry_bits = self.hosted_entry_bits_by_atom[atom_idx].clone();
     if self.atom_count_by_node[from] == 1 {
       entry_bits.extend(self.facade_entry_bit_by_node[from]);
@@ -210,11 +212,15 @@ impl<'a> ReducedChunkGraph<'a> {
   }
 
   /// Whether a path leads from `node`, which received the moved atom, back to itself. This decides
-  /// the move when the graph was acyclic before it, because every edge the move added touches
-  /// `node`: the atom's own edges now start or end at `node`; the facade edges of the entries the
-  /// atom hosts now end at `node`, the new host; the facade edge of the entry whose chunk `node`
-  /// starts being starts at `node`; and the entry whose chunk `from` stops being only loses its
-  /// edge. A new cycle must use an added edge, so it passes through `node`.
+  /// the move when the graph was acyclic before the move, because every edge that the move added
+  /// touches `node`:
+  ///
+  /// - The edges of the atom now start or end at `node`.
+  /// - The facade edges of the entries that the atom hosts now end at `node`, the new host.
+  /// - If `node` got its first atom, the facade edge of its entry starts at `node`.
+  /// - If `from` lost its last atom, the move removed the facade edge of its entry. It added none.
+  ///
+  /// A new cycle must use an added edge, so it passes through `node`.
   fn reaches_itself(&mut self, node: usize) -> bool {
     if self.mark == u32::MAX {
       self.marks.fill(0);
@@ -270,8 +276,9 @@ impl<'a> ReducedChunkGraph<'a> {
     false
   }
 
-  /// See `cyclic_component`. Kosaraju's algorithm: a post-order over the dependencies, then a
-  /// search over the dependents from each node in reverse post-order collects one component.
+  /// See `cyclic_component`. This is Kosaraju's algorithm: a post-order over the dependencies,
+  /// then a search over the dependents from each node in reverse post-order. Each such search
+  /// collects one component.
   fn only_cyclic_component(&self) -> FxHashSet<usize> {
     let node_count = self.atom_count_by_node.len();
     let mut visited = vec![false; node_count];
@@ -331,8 +338,8 @@ impl<'a> ReducedChunkGraph<'a> {
 
 #[derive(Default)]
 struct NodeEdges {
-  /// Per node: the dependency nodes and the number of atom and facade edges behind each one, so
-  /// that a rejected move can take its edges back.
+  /// Per node, the dependency nodes and the number of atom edges and facade edges behind each one.
+  /// The counts let a rejected move take its edges back.
   dependencies: Vec<FxHashMap<usize, u32>>,
   dependents: Vec<FxHashSet<usize>>,
 }
@@ -405,7 +412,7 @@ mod tests {
     }
   }
 
-  /// The previous global check: rebuilds the chunk graph from the atoms' bits and searches it.
+  /// The old global check. It rebuilds the chunk graph from the bits of the atoms and searches it.
   fn has_cycle(
     atom_bits: &[BitSet],
     atom_dependencies: &[Vec<usize>],
@@ -445,8 +452,9 @@ mod tests {
         }
       }
     }
-    // Kahn's algorithm keeps the oracle independent of both production DFS checks and the SCC
-    // shortcut. Rebuild every edge, including facade edges, without using production helpers.
+    // Kahn's algorithm keeps the oracle independent of the two searches and the component shortcut
+    // in the module. The oracle rebuilds every edge, with the facade edges, without the module's
+    // helpers.
     let mut in_degree = vec![0; dependencies.len()];
     for targets in &dependencies {
       for &target in targets {
@@ -501,8 +509,8 @@ mod tests {
 
   #[test]
   fn a_fold_into_a_chunk_that_the_atom_reaches_is_rejected() {
-    // Entry 0 loads atom 1, which entry 1 (atom 2) also loads. Folding atom 1 into entry 0 is
-    // safe until atom 1 also depends on entry 1's chunk.
+    // Entry 0 loads atom 1, and entry 1 (atom 2) also loads it. A fold of atom 1 into entry 0 is
+    // safe. It is not safe when atom 1 also depends on the chunk of entry 1.
     check_moves(
       2,
       &[&[0], &[0, 1], &[1]],
@@ -521,8 +529,9 @@ mod tests {
 
   #[test]
   fn a_fold_into_a_facade_whose_host_reaches_the_atom_is_rejected() {
-    // Entry 1's module is in atom 0, a chunk shared with entry 0. Atom 0 depends on atom 1, so
-    // folding atom 1 into entry 1's chunk makes that facade import its host, which imports it.
+    // The module of entry 1 is in atom 0, a chunk that entry 0 shares. Atom 0 depends on atom 1.
+    // So a fold of atom 1 into the chunk of entry 1 makes that facade import its host, and the
+    // host imports the facade.
     check_moves(
       3,
       &[&[0, 1], &[1, 2]],
@@ -541,9 +550,9 @@ mod tests {
 
   #[test]
   fn a_move_that_breaks_the_only_cycle_is_accepted() {
-    // Atoms 1 and 2 depend on each other, so the graph starts with a cycle. A move that keeps the
-    // cycle is rejected. Merging the two atoms removes the cycle, and later moves get the local
-    // check again.
+    // Atoms 1 and 2 depend on each other, so the graph starts with a cycle. The check rejects a
+    // move that keeps the cycle. A merge of the two atoms removes the cycle, and later moves get
+    // the local check again.
     check_moves(
       3,
       &[&[0], &[0, 1], &[1], &[1, 2]],
@@ -563,10 +572,11 @@ mod tests {
 
   #[test]
   fn accepted_moves_update_the_edges_that_later_moves_see() {
-    // Three accepted moves in a row: atom 0 joins atom 3's chunk, which gains atom 1's chunk as a
-    // dependent; atom 2 moves to a new chunk of its own; atom 3 then leaves the shared chunk for a
-    // new chunk while atom 0 stays behind. With atom 3 depending on atom 4, whose chunk reaches
-    // atom 1's chunk, the first move closes a cycle through the shared chunk instead.
+    // Three accepted moves in a row. Atom 0 joins the chunk of atom 3, and that chunk gains the
+    // chunk of atom 1 as a dependent. Atom 2 moves to a new chunk of its own. Atom 3 then leaves
+    // the shared chunk for a new chunk, and atom 0 stays behind. In the second case, atom 3 depends
+    // on atom 4, whose chunk reaches the chunk of atom 1, so the first move closes a cycle through
+    // the shared chunk.
     check_moves(
       4,
       &[&[0, 1], &[1], &[1, 2], &[0]],
@@ -617,9 +627,9 @@ mod tests {
 
   #[test]
   fn exhaustive_small_graphs_match_a_full_cycle_check() {
-    // All graphs on the three nonempty bitsets of two entries, all host assignments (including
-    // absent hosts), and all pairs of moves. The second move checks both accepted state and
-    // rollback, including reusing a node emptied by the first move.
+    // All graphs on the three non-empty bitsets of two entries, all host assignments (with absent
+    // hosts), and all pairs of moves. The second move checks the state after an accepted move and
+    // after a rollback. It also reuses a node that the first move emptied.
     let initial = vec![bits(2, &[0]), bits(2, &[1]), bits(2, &[0, 1])];
     let edges = [(0, 1), (0, 2), (1, 0), (1, 2), (2, 0), (2, 1)];
     for edge_mask in 0..1 << edges.len() {
@@ -651,8 +661,9 @@ mod tests {
 
   #[test]
   fn long_move_sequences_with_wide_bitsets_match_a_full_cycle_check() {
-    // Cross byte and word boundaries. The old fuzzer uses at most five entry bits and sixteen
-    // moves, which rarely creates and reuses empty nodes or combines many edge contributions.
+    // Bitsets wider than a byte and wider than a word. The random test uses at most five entry bits
+    // and sixteen moves, so it seldom creates and reuses empty nodes, and it seldom puts many atom
+    // edges behind one node edge.
     for seed in 1..=128 {
       let mut rng = Rng(seed * 0x9E37_79B9);
       let entry_count = [9, 65, 129][rng.below(3)];
@@ -672,7 +683,7 @@ mod tests {
           (0..atom_count)
             .flat_map(|dep| {
               let count = if dep != atom && (seed % 2 == 0 || dep < atom) && rng.below(8) == 0 {
-                // Parallel atom edges exercise reference counts independently of facade edges.
+                // Parallel atom edges test the edge counts without facade edges.
                 1 + rng.below(3)
               } else {
                 0
@@ -701,7 +712,7 @@ mod tests {
           }
           _ => bits(entry_count, &[u32::try_from(rng.below(entry_count as usize)).unwrap()]),
         };
-        // Exercise the search-generation wraparound without billions of preceding searches.
+        // Test the wraparound of the search mark without billions of searches before it.
         if step == 128 {
           graph.mark = u32::MAX;
         }

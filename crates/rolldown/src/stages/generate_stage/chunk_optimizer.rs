@@ -1360,7 +1360,8 @@ impl GenerateStage<'_> {
   /// that consumer, also when the source runs the consumer first. The new import is safe in these
   /// conditions:
   ///
-  /// - The consumer already imports a module of the host. The helpers then join that import.
+  /// - The consumer already imports a module of the host, with an import that tree shaking keeps.
+  ///   The helpers then join that import.
   /// - Only dynamic entries that start after the runtime entries load the consumer. The host is
   ///   then evaluated before the consumer starts.
   ///

@@ -318,7 +318,7 @@ A bitset host can also change the evaluation order. A consumer that does not imp
 So when `strictExecutionOrder` is off, `runtime_host_keeps_consumer_order` accepts a bitset host only if each consumer agrees with one of these conditions:
 
 - The consumer is the host.
-- The code of the consumer already imports a module of the host. `chunk_importee_ranks` finds these chunks (see [Chunk Import Order](#chunk-import-order)). The helpers then join that import.
+- The code of the consumer already imports a module of the host. `chunk_importee_ranks` finds these chunks (see [Chunk Import Order](#chunk-import-order)). The helpers then join that import. Only an import that tree shaking keeps counts. In `code_splitting/runtime_host_consumer_order_tree_shaken_import`, `dead.js` in the `namespace.js` chunk imports `marker.js` of the `common.js` chunk, but only for a function that tree shaking removes. The `namespace.js` chunk does not import the `common.js` chunk, so the runtime must not go there.
 - Only late dynamic entries load the consumer. A late entry is in the result of `entries_loaded_after` for the link-time runtime bits, but not in these bits. A late entry starts only after an entry in the link-time bits loads the host. So the host runs before the consumer.
 
 If no bitset host passes this check, the cascade tries the consumer dominator next. The strict path does not need this check, because the order plan wraps the modules whose order matters.

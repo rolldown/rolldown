@@ -175,8 +175,13 @@ export function bindingifyTransform(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['transform'], BindingHookFilter | undefined> {
   return bindingifyHook(args.plugin.transform, ({ handler, options }) => ({
-    plugin: async (ctx, code, id, meta) => {
+    plugin: async (ctx, code, id, bindingMeta) => {
       let magicStringInstance: RolldownMagicString, astInstance: Program;
+      const meta = {
+        ...bindingMeta,
+        rawId: bindingMeta.rawId ?? id,
+        attributes: bindingMeta.attributes ?? {},
+      };
       Object.defineProperties(meta, {
         magicString: {
           get() {

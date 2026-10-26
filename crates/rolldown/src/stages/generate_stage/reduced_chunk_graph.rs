@@ -445,22 +445,26 @@ mod tests {
         }
       }
     }
-    let mut state = vec![0; dependencies.len()];
-    (0..dependencies.len())
-      .any(|chunk| state[chunk] == 0 && reaches_cycle(chunk, &dependencies, &mut state))
-  }
-
-  fn reaches_cycle(chunk: usize, dependencies: &[FxHashSet<usize>], state: &mut [u8]) -> bool {
-    state[chunk] = 1;
-    for &dependency in &dependencies[chunk] {
-      if state[dependency] == 1
-        || (state[dependency] == 0 && reaches_cycle(dependency, dependencies, state))
-      {
-        return true;
+    // Kahn's algorithm keeps the oracle independent of both production DFS checks and the SCC
+    // shortcut. Rebuild every edge, including facade edges, without using production helpers.
+    let mut in_degree = vec![0; dependencies.len()];
+    for targets in &dependencies {
+      for &target in targets {
+        in_degree[target] += 1;
       }
     }
-    state[chunk] = 2;
-    false
+    let mut ready: Vec<_> = (0..dependencies.len()).filter(|&node| in_degree[node] == 0).collect();
+    let mut removed = 0;
+    while let Some(node) = ready.pop() {
+      removed += 1;
+      for &target in &dependencies[node] {
+        in_degree[target] -= 1;
+        if in_degree[target] == 0 {
+          ready.push(target);
+        }
+      }
+    }
+    removed != dependencies.len()
   }
 
   fn bits(entry_count: u32, entry_bits: &[u32]) -> BitSet {
@@ -590,10 +594,128 @@ mod tests {
     }
   }
 
+  fn check_move(
+    graph: &mut ReducedChunkGraph<'_>,
+    current: &mut [BitSet],
+    atom: usize,
+    to: &BitSet,
+  ) {
+    if current[atom] == *to {
+      return;
+    }
+    let previous = std::mem::replace(&mut current[atom], to.clone());
+    let expected = !has_cycle(current, graph.atom_dependencies, graph.host_atom_by_entry_bit);
+    assert_eq!(graph.try_move(atom, to), expected, "atom {atom}, from {previous:?}, to {to:?}");
+    if !expected {
+      current[atom] = previous;
+    }
+    graph.assert_consistent();
+    for (atom, bits) in current.iter().enumerate() {
+      assert_eq!(graph.node_by_atom[atom], graph.node_by_bits[bits]);
+    }
+  }
+
+  #[test]
+  fn exhaustive_small_graphs_match_a_full_cycle_check() {
+    // All graphs on the three nonempty bitsets of two entries, all host assignments (including
+    // absent hosts), and all pairs of moves. The second move checks both accepted state and
+    // rollback, including reusing a node emptied by the first move.
+    let initial = vec![bits(2, &[0]), bits(2, &[1]), bits(2, &[0, 1])];
+    let edges = [(0, 1), (0, 2), (1, 0), (1, 2), (2, 0), (2, 1)];
+    for edge_mask in 0..1 << edges.len() {
+      let mut dependencies = vec![vec![]; 3];
+      for (bit, &(from, to)) in edges.iter().enumerate() {
+        if edge_mask & (1 << bit) != 0 {
+          dependencies[from].push(to);
+        }
+      }
+      for host0 in 0..4 {
+        for host1 in 0..4 {
+          let hosts = [host0, host1].map(|host| (host < 3).then_some(host));
+          for first_atom in 0..3 {
+            for first_bits in &initial {
+              for second_atom in 0..3 {
+                for second_bits in &initial {
+                  let mut current = initial.clone();
+                  let mut graph = ReducedChunkGraph::new(&current, &dependencies, &hosts);
+                  check_move(&mut graph, &mut current, first_atom, first_bits);
+                  check_move(&mut graph, &mut current, second_atom, second_bits);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  #[test]
+  fn long_move_sequences_with_wide_bitsets_match_a_full_cycle_check() {
+    // Cross byte and word boundaries. The old fuzzer uses at most five entry bits and sixteen
+    // moves, which rarely creates and reuses empty nodes or combines many edge contributions.
+    for seed in 1..=128 {
+      let mut rng = Rng(seed * 0x9E37_79B9);
+      let entry_count = [9, 65, 129][rng.below(3)];
+      let atom_count = 8 + rng.below(25);
+      let mut current = Vec::new();
+      while current.len() < atom_count {
+        let mut set = BitSet::new(entry_count);
+        for _ in 0..=rng.below(12) {
+          set.set_bit(u32::try_from(rng.below(entry_count as usize)).unwrap());
+        }
+        if !current.contains(&set) {
+          current.push(set);
+        }
+      }
+      let dependencies = (0..atom_count)
+        .map(|atom| {
+          (0..atom_count)
+            .flat_map(|dep| {
+              let count = if dep != atom && (seed % 2 == 0 || dep < atom) && rng.below(8) == 0 {
+                // Parallel atom edges exercise reference counts independently of facade edges.
+                1 + rng.below(3)
+              } else {
+                0
+              };
+              std::iter::repeat_n(dep, count)
+            })
+            .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+      let hosts = (0..entry_count)
+        .map(|_| (rng.below(3) != 0).then(|| rng.below(atom_count)))
+        .collect::<Vec<_>>();
+      let mut graph = ReducedChunkGraph::new(&current, &dependencies, &hosts);
+      for step in 0..256 {
+        let atom = rng.below(atom_count);
+        let to = match step % 3 {
+          0 => current[rng.below(atom_count)].clone(),
+          1 => {
+            let mut reduced = current[atom].clone();
+            for bit in current[atom].index_of_one() {
+              if reduced.bit_count() > 1 && rng.below(2) == 0 {
+                reduced.clear_bit(bit);
+              }
+            }
+            reduced
+          }
+          _ => bits(entry_count, &[u32::try_from(rng.below(entry_count as usize)).unwrap()]),
+        };
+        // Exercise the search-generation wraparound without billions of preceding searches.
+        if step == 128 {
+          graph.mark = u32::MAX;
+        }
+        check_move(&mut graph, &mut current, atom, &to);
+      }
+    }
+  }
+
   #[test]
   fn random_moves_match_a_full_cycle_check() {
     let mut rng = Rng(0x9E37_79B9_7F4A_7C15);
-    for _ in 0..4000 {
+    let cases = std::env::var("ROLLDOWN_CYCLE_FUZZ_CASES")
+      .map_or(4000, |value| value.parse::<usize>().expect("a positive case count"));
+    for case in 0..cases {
       let entry_count = 1 + rng.below(5);
       let all_bits = (1..1_u32 << entry_count)
         .map(|mask| {
@@ -635,7 +757,7 @@ mod tests {
       let mut graph =
         ReducedChunkGraph::new(&atom_bits, &atom_dependencies, &host_atom_by_entry_bit);
       graph.assert_consistent();
-      for _ in 0..16 {
+      for step in 0..16 {
         let atom_idx = rng.below(atom_count);
         let reduced = &all_bits[rng.below(all_bits.len())];
         if *reduced == atom_bits[atom_idx] {
@@ -644,7 +766,7 @@ mod tests {
         let mut next = atom_bits.clone();
         next[atom_idx] = reduced.clone();
         let expected = !has_cycle(&next, &atom_dependencies, &host_atom_by_entry_bit);
-        assert_eq!(graph.try_move(atom_idx, reduced), expected);
+        assert_eq!(graph.try_move(atom_idx, reduced), expected, "case {case}, step {step}");
         graph.assert_consistent();
         if expected {
           atom_bits = next;

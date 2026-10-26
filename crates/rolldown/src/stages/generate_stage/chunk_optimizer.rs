@@ -1397,20 +1397,36 @@ impl GenerateStage<'_> {
     // Start with every candidate counted and drop each one with an `import()` site in a chunk that
     // an uncounted entry loads, until nothing changes. Like the already-loaded pass, this keeps an
     // `import()` cycle counted when only counted entries can start it, whatever the entry order.
+    // A dropped entry drops, through a worklist, every candidate whose site chunks carry its bit
+    // outside `runtime_bits`. Work: one bit scan per site chunk plus one visit per (bit, entry) edge.
     let mut loaded_dynamic_entries =
       importer_chunks_by_entry.iter().map(Option::is_some).collect::<Vec<_>>();
-    let mut dropped_any = true;
-    while dropped_any {
-      dropped_any = false;
-      for (entry_idx, importer_chunks) in importer_chunks_by_entry.iter().enumerate() {
-        if loaded_dynamic_entries[entry_idx]
-          && !importer_chunks
-            .iter()
-            .flatten()
-            .all(|&chunk_idx| chunk_is_loaded(&loaded_dynamic_entries, chunk_idx))
-        {
-          loaded_dynamic_entries[entry_idx] = false;
-          dropped_any = true;
+    let mut dependents_by_entry_bit = vec![Vec::new(); importer_chunks_by_entry.len()];
+    let mut dropped = Vec::new();
+    for (entry_idx, importer_chunks) in importer_chunks_by_entry.iter().enumerate() {
+      let site_bits = importer_chunks
+        .iter()
+        .flatten()
+        .flat_map(|&chunk_idx| chunk_graph.chunk_table[chunk_idx].bits.index_of_one())
+        .filter(|&bit| !runtime_bits.has_bit(bit));
+      for bit in site_bits {
+        match dependents_by_entry_bit.get_mut(bit as usize) {
+          Some(dependents) if importer_chunks_by_entry[bit as usize].is_some() => {
+            dependents.push(entry_idx);
+          }
+          // A bit that never counts drops the entry for good.
+          _ => {
+            if std::mem::replace(&mut loaded_dynamic_entries[entry_idx], false) {
+              dropped.push(entry_idx);
+            }
+          }
+        }
+      }
+    }
+    while let Some(entry_idx) = dropped.pop() {
+      for &dependent in &dependents_by_entry_bit[entry_idx] {
+        if std::mem::replace(&mut loaded_dynamic_entries[dependent], false) {
+          dropped.push(dependent);
         }
       }
     }

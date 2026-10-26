@@ -4,7 +4,9 @@ import fs from 'node:fs';
 // `b.js` and `c.js` import each other through `import()`, so they are not in topological order.
 // `b.js` still loads only after `main.js`, so the runtime is hosted in `shared.js`.
 assert.deepEqual(
-  fs.readdirSync(new URL('./dist', import.meta.url)).filter((file) => file.startsWith('rolldown-runtime')),
+  fs
+    .readdirSync(new URL('./dist', import.meta.url))
+    .filter((file) => file.startsWith('rolldown-runtime')),
   [],
 );
 

@@ -1,0 +1,73 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## b.js
+
+```js
+import { t as __exportAll } from "./shared.js";
+import "./z.js";
+// b.js
+const keys = Object.keys(/* @__PURE__ */ __exportAll({
+	vB: () => 1,
+	wB: () => 2
+}));
+export { keys };
+
+```
+
+## c.js
+
+```js
+// c.js
+const loadB = () => import("./b.js");
+export { loadB };
+
+```
+
+## f.js
+
+```js
+import { t as __exportAll } from "./shared.js";
+// f.js
+const keys = Object.keys(/* @__PURE__ */ __exportAll({
+	vF: () => 1,
+	wF: () => 2
+}));
+export { keys };
+
+```
+
+## main.js
+
+```js
+import { t as __exportAll } from "./shared.js";
+import { t as loadC } from "./z.js";
+// main.js
+const keys = Object.keys(/* @__PURE__ */ __exportAll({
+	vE: () => 1,
+	wE: () => 2
+}));
+export { keys, loadC };
+
+```
+
+## shared.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// shared.js
+globalThis.sharedEvaluated = (globalThis.sharedEvaluated ?? 0) + 1;
+export { __exportAll as t };
+
+```
+
+## z.js
+
+```js
+// z.js
+const loadC = () => import("./c.js");
+export { loadC as t };
+
+```

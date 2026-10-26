@@ -1347,8 +1347,9 @@ impl GenerateStage<'_> {
     consumers
   }
 
-  /// Whether every entry that loads a consumer chunk is in `runtime_bits`, or is a dynamic entry
-  /// whose included `import()` sites all sit in chunks loaded only by such entries. The dynamic
+  /// Whether every entry that loads a consumer chunk counts as loaded with the runtime. An entry
+  /// counts when it is in `runtime_bits`, or when it is a dynamic entry and every included
+  /// `import()` site that starts it sits in a chunk loaded only by counted entries. The dynamic
   /// already-loaded pass prunes those entries from the runtime bits, so they still count here.
   /// See internal-docs/code-splitting/implementation.md#runtime-module-placement.
   fn runtime_bits_cover_consumers(
@@ -1366,35 +1367,52 @@ impl GenerateStage<'_> {
       return true;
     }
 
-    let entries = self
+    // `None` for an entry that never counts: a static entry, or a dynamic entry without included
+    // `import()` sites or with a site outside every chunk.
+    let importer_chunks_by_entry = self
       .link_output
       .entries
       .iter()
-      .flat_map(|(&idx, entry_points)| entry_points.iter().map(move |entry| (idx, entry)));
-    let mut loaded_dynamic_entries = vec![false; entries.clone().count()];
-    // Dynamic entries are sorted in topological order of the `import()` graph, so one pass
-    // reaches every acyclic chain.
-    for (entry_idx, (entry_module_idx, entry_point)) in entries.enumerate() {
-      if !entry_point.kind.is_dynamic_import() {
-        continue;
+      .flat_map(|(&idx, entry_points)| entry_points.iter().map(move |entry| (idx, entry)))
+      .map(|(entry_module_idx, entry_point)| {
+        if !entry_point.kind.is_dynamic_import() {
+          return None;
+        }
+        let importer_chunks = entry_point
+          .related_stmt_infos
+          .iter()
+          .filter(|(importer_idx, stmt_info_idx, _, import_record_idx)| {
+            self.is_included_dynamic_import_record(
+              *importer_idx,
+              *stmt_info_idx,
+              *import_record_idx,
+              entry_module_idx,
+            )
+          })
+          .map(|(importer_idx, ..)| chunk_graph.module_to_chunk[*importer_idx])
+          .collect::<Option<Vec<_>>>()?;
+        (!importer_chunks.is_empty()).then_some(importer_chunks)
+      })
+      .collect::<Vec<_>>();
+    // Start with every candidate counted and drop each one with an `import()` site in a chunk that
+    // an uncounted entry loads, until nothing changes. Like the already-loaded pass, this keeps an
+    // `import()` cycle counted when only counted entries can start it, whatever the entry order.
+    let mut loaded_dynamic_entries =
+      importer_chunks_by_entry.iter().map(Option::is_some).collect::<Vec<_>>();
+    let mut dropped_any = true;
+    while dropped_any {
+      dropped_any = false;
+      for (entry_idx, importer_chunks) in importer_chunks_by_entry.iter().enumerate() {
+        if loaded_dynamic_entries[entry_idx]
+          && !importer_chunks
+            .iter()
+            .flatten()
+            .all(|&chunk_idx| chunk_is_loaded(&loaded_dynamic_entries, chunk_idx))
+        {
+          loaded_dynamic_entries[entry_idx] = false;
+          dropped_any = true;
+        }
       }
-      let mut importer_chunks = entry_point
-        .related_stmt_infos
-        .iter()
-        .filter(|(importer_idx, stmt_info_idx, _, import_record_idx)| {
-          self.is_included_dynamic_import_record(
-            *importer_idx,
-            *stmt_info_idx,
-            *import_record_idx,
-            entry_module_idx,
-          )
-        })
-        .map(|(importer_idx, ..)| chunk_graph.module_to_chunk[*importer_idx])
-        .peekable();
-      loaded_dynamic_entries[entry_idx] = importer_chunks.peek().is_some()
-        && importer_chunks.all(|chunk_idx| {
-          chunk_idx.is_some_and(|chunk_idx| chunk_is_loaded(&loaded_dynamic_entries, chunk_idx))
-        });
     }
 
     consumer_chunks.iter().all(|&chunk_idx| chunk_is_loaded(&loaded_dynamic_entries, chunk_idx))

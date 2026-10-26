@@ -31,11 +31,11 @@ catalog:
   '@babel/core': ^7.29.7
   '@babel/preset-env': ^7.29.7
   '@babel/preset-typescript': ^7.29.7
-  '@emnapi/core': 2.0.0-alpha.5
-  '@emnapi/runtime': 2.0.0-alpha.5
+  '@emnapi/core': 2.0.0-beta.2
+  '@emnapi/runtime': 2.0.0-beta.2
   '@jridgewell/trace-mapping': ^0.3.31
   '@napi-rs/cli': ^3.10.0
-  '@napi-rs/wasm-runtime': ~1.2.5
+  '@napi-rs/wasm-runtime': 1.2.6
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0
   '@oxc-project/runtime': '=0.155.0'
@@ -61,7 +61,7 @@ catalog:
   consola: ^3.4.2
   dedent: ^1.5.3
   diff: ^9.0.0
-  emnapi: 2.0.0-alpha.5
+  emnapi: 2.0.0-beta.2
   esbuild: ^0.28.0
   estree-toolkit: ^1.7.8
   execa: ^9.2.0

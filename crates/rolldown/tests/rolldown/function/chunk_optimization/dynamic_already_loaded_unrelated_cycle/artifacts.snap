@@ -1,0 +1,58 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## barrel.js
+
+```js
+export { t as service } from "./barrel2.js";
+import "./splash.js";
+
+```
+
+## barrel2.js
+
+```js
+// barrel.js
+const service = "service";
+export { service as t };
+
+```
+
+## lazy.js
+
+```js
+import { t as shared } from "./main.js";
+// lazy.js
+const lazy = "lazy" + shared;
+export { lazy };
+
+```
+
+## main.js
+
+```js
+import { t as service } from "./barrel2.js";
+// shared.js
+const shared = "shared";
+// main.js
+const value = shared + service;
+const loadLazy = () => import("./lazy.js");
+const loadSplash = () => import("./splash.js");
+const loadBarrel = () => import("./barrel.js").then((m) => m.service);
+export { loadBarrel, loadLazy, loadSplash, shared as t, value };
+
+```
+
+## splash.js
+
+```js
+import { t as service } from "./barrel2.js";
+// slug.js
+const slug = "slug";
+// splash.js
+const splash = service + slug;
+export { splash, slug as t };
+
+```

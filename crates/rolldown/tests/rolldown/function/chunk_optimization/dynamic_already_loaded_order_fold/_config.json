@@ -1,0 +1,13 @@
+{
+  "_comment": "`setup.js` runs before `read.js` in `main.js`. Without strict execution order its fold into `main.js` would run it in the entry's body, after the `read.js` chunk the entry keeps importing (that fold is vetoed by the cycle through `consumer.js`), so `setup.js` stays a file. `consumer.js` runs after everything the entry imports and folds.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "preserveEntrySignatures": "allow-extension",
+    "experimental": {
+      "chunkOptimization": {
+        "mergeCommonChunks": false,
+        "avoidRedundantChunkLoads": true
+      }
+    }
+  }
+}

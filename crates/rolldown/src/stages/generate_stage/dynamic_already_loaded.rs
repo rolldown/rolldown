@@ -3,9 +3,9 @@ use std::collections::VecDeque;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx,
-  PreserveEntrySignatures, RuntimeHelper, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef,
-  UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
-  dynamic_import_usage::DynamicImportExportsUsage,
+  NormalModule, PreserveEntrySignatures, RuntimeHelper, StmtInfo, StmtInfoIdx, StmtInfoMeta,
+  SymbolOrMemberExprRef, SymbolRef, UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
+  dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
 };
 use rolldown_utils::BitSet;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -14,7 +14,7 @@ use crate::chunk_graph::ChunkGraph;
 use crate::esm_init_obligations::collect_entry_reexported_wrapper_inits;
 
 use super::{
-  GenerateStage, code_splitting::IndexSplittingInfo,
+  GenerateStage, chunk_optimizer::side_effect_exec_order_range, code_splitting::IndexSplittingInfo,
   simulated_facade_inclusion::include_simulated_facade_namespace,
 };
 
@@ -29,6 +29,97 @@ struct ChunkAtom {
 struct AtomDependencyGraphs {
   reachability: Vec<Vec<usize>>,
   cycle: Vec<Vec<usize>>,
+}
+
+/// The chunk graph the reduced bitsets would produce: atoms grouped by their current
+/// dependent-entry bits, with the facade edges the atom graph cannot express. Built once per fold
+/// candidate, so the cycle and the execution-order checks read the same graph.
+struct ReducedChunkGraph {
+  atom_to_chunk: Vec<usize>,
+  /// Chunk edges from the over-approximated `cycle` atom graph plus the facade edges.
+  chunk_dependencies: Vec<FxHashSet<usize>>,
+  /// Chunk edges from the under-approximated `reachability` atom graph: imports the emitted
+  /// chunks are certain to have.
+  certain_chunk_dependencies: Vec<FxHashSet<usize>>,
+  /// The latest execution order among each chunk's side-effectful modules.
+  chunk_latest_side_effect: Vec<Option<u32>>,
+}
+
+impl ReducedChunkGraph {
+  /// Whether `start_chunk_idx` sits on a cycle. Moving one atom only adds edges at its new chunk,
+  /// so every cycle a fold can create runs through that chunk. A cycle elsewhere in the
+  /// over-approximated graph predates the fold and must not veto it.
+  fn chunk_reaches_itself(&self, start_chunk_idx: usize) -> bool {
+    let mut visited = vec![false; self.chunk_dependencies.len()];
+    let mut stack = self.chunk_dependencies[start_chunk_idx].iter().copied().collect::<Vec<_>>();
+    while let Some(chunk_idx) = stack.pop() {
+      if chunk_idx == start_chunk_idx {
+        return true;
+      }
+      if !std::mem::replace(&mut visited[chunk_idx], true) {
+        stack.extend(self.chunk_dependencies[chunk_idx].iter().copied());
+      }
+    }
+    false
+  }
+
+  /// Whether folding `folded_atom_idx` runs one of its side effects after a side effect that used
+  /// to run later. The atom's modules now run in the body of their new chunk, after every chunk
+  /// that chunk imports; a side-effectful module in that import closure with a later execution
+  /// order than the atom's earliest side effect ran after the atom before the fold. Chunks the
+  /// atom is certain to import itself are exempt: they ran before the atom's chunk already. The
+  /// exemption reads the under-approximated edges, so an invented import never excuses a chunk,
+  /// while the closure reads the over-approximated ones, so no real import is missed.
+  fn fold_runs_side_effects_late(
+    &self,
+    certain_atom_dependencies: &[Vec<usize>],
+    atom_side_effect_exec_orders: &[Option<(u32, u32)>],
+    folded_atom_idx: usize,
+  ) -> bool {
+    let Some((earliest_side_effect, _)) = atom_side_effect_exec_orders[folded_atom_idx] else {
+      return false;
+    };
+    let folded_chunk_idx = self.atom_to_chunk[folded_atom_idx];
+    let already_before = Self::reachable_from(
+      &self.certain_chunk_dependencies,
+      certain_atom_dependencies[folded_atom_idx]
+        .iter()
+        .map(|&dep_atom_idx| self.atom_to_chunk[dep_atom_idx]),
+      folded_chunk_idx,
+    );
+    let mut visited = vec![false; self.chunk_dependencies.len()];
+    let mut stack = self.chunk_dependencies[folded_chunk_idx].iter().copied().collect::<Vec<_>>();
+    while let Some(chunk_idx) = stack.pop() {
+      if chunk_idx == folded_chunk_idx || std::mem::replace(&mut visited[chunk_idx], true) {
+        continue;
+      }
+      if !already_before[chunk_idx]
+        && self.chunk_latest_side_effect[chunk_idx]
+          .is_some_and(|latest_side_effect| latest_side_effect > earliest_side_effect)
+      {
+        return true;
+      }
+      stack.extend(self.chunk_dependencies[chunk_idx].iter().copied());
+    }
+    false
+  }
+
+  /// The chunks reachable from `roots` through `dependencies`, `skip` excluded.
+  fn reachable_from(
+    dependencies: &[FxHashSet<usize>],
+    roots: impl Iterator<Item = usize>,
+    skip: usize,
+  ) -> Vec<bool> {
+    let mut reached = vec![false; dependencies.len()];
+    let mut stack = roots.filter(|&chunk_idx| chunk_idx != skip).collect::<Vec<_>>();
+    while let Some(chunk_idx) = stack.pop() {
+      if chunk_idx == skip || std::mem::replace(&mut reached[chunk_idx], true) {
+        continue;
+      }
+      stack.extend(dependencies[chunk_idx].iter().copied());
+    }
+    reached
+  }
 }
 
 struct DynamicEntryAnalysis {
@@ -59,6 +150,7 @@ impl GenerateStage<'_> {
     chunk_graph: &mut ChunkGraph,
     entries_len: u32,
     used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
+    own_side_effect_exec_orders: &IndexVec<ModuleIdx, Option<u32>>,
   ) {
     let mut namespace_extractions = FxHashSet::default();
     let DynamicEntryAnalysis {
@@ -83,8 +175,8 @@ impl GenerateStage<'_> {
       &flattened_entry_modules,
       used_symbol_refs_builder,
     );
-    // Indexed by entry bit, so `reduced_atom_graph_has_static_cycle` can pair each facade chunk
-    // with its entry module's host atom by index instead of hashing a synthesized `BitSet`.
+    // Indexed by entry bit, so `reduced_chunk_graph` can pair each facade chunk with its entry
+    // module's host atom by index instead of hashing a synthesized `BitSet`.
     let host_atom_by_entry_bit: Vec<Option<usize>> =
       flattened_entry_modules.iter().map(|&module_idx| module_to_atom_idx[module_idx]).collect();
 
@@ -102,45 +194,83 @@ impl GenerateStage<'_> {
       atoms.len(),
     );
 
+    let strict_execution_order = self.options.is_strict_execution_order_enabled();
+    let atom_side_effect_exec_orders: Vec<Option<(u32, u32)>> = atoms
+      .iter()
+      .map(|atom| {
+        side_effect_exec_order_range(atom.modules.iter().copied(), own_side_effect_exec_orders)
+      })
+      .collect();
+
     let mut changed = false;
-    for atom_idx in 0..atoms.len() {
-      let original_dependent_entries = atoms[atom_idx].dependent_entries.clone();
-      let dependent_entries = atoms[atom_idx].dependent_entries.index_of_one().collect::<Vec<_>>();
-      let atom_bit: u32 = atom_idx.try_into().expect("Too many atoms, u32 overflowed.");
-      for entry_idx in dependent_entries {
-        if already_loaded_atoms_by_entry[entry_idx as usize].has_bit(atom_bit) {
-          atoms[atom_idx].dependent_entries.clear_bit(entry_idx);
+    let mut pending_atoms: Vec<usize> = (0..atoms.len()).collect();
+    loop {
+      let mut folded_this_round = false;
+      let mut deferred_atoms = vec![];
+      for atom_idx in pending_atoms {
+        let original_dependent_entries = atoms[atom_idx].dependent_entries.clone();
+        let dependent_entries =
+          atoms[atom_idx].dependent_entries.index_of_one().collect::<Vec<_>>();
+        let atom_bit: u32 = atom_idx.try_into().expect("Too many atoms, u32 overflowed.");
+        for entry_idx in dependent_entries {
+          if already_loaded_atoms_by_entry[entry_idx as usize].has_bit(atom_bit) {
+            atoms[atom_idx].dependent_entries.clear_bit(entry_idx);
+          }
+        }
+        let action = if atoms[atom_idx].dependent_entries == original_dependent_entries {
+          ReducedEntriesAction::Avoid
+        } else {
+          self.can_use_reduced_dependent_entries(
+            &atoms[atom_idx],
+            &original_dependent_entries,
+            &atoms[atom_idx].dependent_entries,
+            chunk_graph,
+            &dynamic_entry_modules_by_entry,
+          )
+        };
+        let reduced_graph = (!matches!(action, ReducedEntriesAction::Avoid)).then(|| {
+          Self::reduced_chunk_graph(
+            &atoms,
+            &atom_dependencies,
+            &host_atom_by_entry_bit,
+            &atom_side_effect_exec_orders,
+          )
+        });
+        let acyclic = reduced_graph
+          .as_ref()
+          .is_some_and(|graph| !graph.chunk_reaches_itself(graph.atom_to_chunk[atom_idx]));
+        let runs_side_effects_late = acyclic
+          && !strict_execution_order
+          && reduced_graph.as_ref().is_some_and(|graph| {
+            graph.fold_runs_side_effects_late(
+              &atom_dependencies.reachability,
+              &atom_side_effect_exec_orders,
+              atom_idx,
+            )
+          });
+        if acyclic && !runs_side_effects_late {
+          changed = true;
+          folded_this_round = true;
+          if let ReducedEntriesAction::ApplyWithNamespaceExtraction {
+            entry_chunk_idx,
+            entry_module_idx,
+          } = action
+          {
+            namespace_extractions.insert((entry_chunk_idx, entry_module_idx));
+          }
+        } else {
+          atoms[atom_idx].dependent_entries = original_dependent_entries;
+          // The chunk whose side effect would overtake this atom may itself fold into the same
+          // body later in the round, which removes the hazard; such an atom gets another look.
+          if runs_side_effects_late {
+            deferred_atoms.push(atom_idx);
+          }
         }
       }
-      let action = if atoms[atom_idx].dependent_entries == original_dependent_entries {
-        ReducedEntriesAction::Avoid
-      } else {
-        self.can_use_reduced_dependent_entries(
-          &atoms[atom_idx],
-          &original_dependent_entries,
-          &atoms[atom_idx].dependent_entries,
-          chunk_graph,
-          &dynamic_entry_modules_by_entry,
-        )
-      };
-      if !matches!(action, ReducedEntriesAction::Avoid)
-        && !Self::reduced_atom_graph_has_static_cycle(
-          &atoms,
-          &atom_dependencies.cycle,
-          &host_atom_by_entry_bit,
-        )
-      {
-        changed = true;
-        if let ReducedEntriesAction::ApplyWithNamespaceExtraction {
-          entry_chunk_idx,
-          entry_module_idx,
-        } = action
-        {
-          namespace_extractions.insert((entry_chunk_idx, entry_module_idx));
-        }
-      } else {
-        atoms[atom_idx].dependent_entries = original_dependent_entries;
+      if deferred_atoms.is_empty() || !folded_this_round {
+        break;
       }
+      pending_atoms = deferred_atoms;
     }
 
     if !changed {
@@ -368,7 +498,7 @@ impl GenerateStage<'_> {
   // emission.
   //
   // Hosting-atom attribution over-approximates rather than misses only because of the facade edges
-  // `reduced_atom_graph_has_static_cycle` adds: the facade depends on the host, which is where
+  // `reduced_chunk_graph` adds: the facade depends on the host, which is where
   // these edges land, so anything emission hangs on the facade stays reachable as facade -> host ->
   // target. Before rolldown#10734 this rested on facades having zero static in-degree, which a
   // fold moving an atom into a facade broke — re-derive it before attributing them elsewhere.
@@ -577,11 +707,61 @@ impl GenerateStage<'_> {
     owners
   }
 
-  fn reduced_atom_graph_has_static_cycle(
+  /// The execution order of every module with a side effect of its own, `None` for the others.
+  /// Only such a module can observe, or be observed through, a change of execution order: a side
+  /// effect a module merely reaches through an import runs at the imported module's own position,
+  /// so where the importer runs does not matter. Both passes that move modules into another
+  /// chunk's body read this table.
+  pub(super) fn own_side_effect_exec_orders(&self) -> IndexVec<ModuleIdx, Option<u32>> {
+    self
+      .link_output
+      .module_table
+      .modules
+      .iter()
+      .map(|module| self.module_has_own_side_effects(module.idx()).then(|| module.exec_order()))
+      .collect()
+  }
+
+  fn module_has_own_side_effects(&self, module_idx: ModuleIdx) -> bool {
+    let module = &self.link_output.module_table[module_idx];
+    match module.side_effects() {
+      DeterminedSideEffects::UserDefined(user_defined) => *user_defined,
+      DeterminedSideEffects::NoTreeshake => true,
+      DeterminedSideEffects::Analyzed(false) => false,
+      // The analyzed verdict is propagated from the module's dependencies, so an importer of an
+      // effectful module carries it without an effectful statement of its own.
+      DeterminedSideEffects::Analyzed(true) => {
+        let Some(normal_module) = module.as_normal() else {
+          return true;
+        };
+        let meta = &self.link_output.metas[module_idx];
+        self.link_output.stmt_infos[module_idx].iter_enumerated().any(|(stmt_idx, stmt_info)| {
+          meta.stmt_info_included.has_bit(stmt_idx)
+            && stmt_info.eval_flags.has_side_effect_for_tree_shaking()
+            && !Self::is_plain_esm_import(stmt_info, normal_module)
+        })
+      }
+    }
+  }
+
+  /// An `import` or `export … from` declaration runs its target at the target's own position, so
+  /// it is no side effect of the module that holds it. A re-export that merges dynamic exports
+  /// keeps a `__reExport` call of its own, and a `require` runs its target in place.
+  fn is_plain_esm_import(stmt_info: &StmtInfo, module: &NormalModule) -> bool {
+    !stmt_info.import_records.is_empty()
+      && !stmt_info.meta.contains(StmtInfoMeta::ReExportDynamicExports)
+      && stmt_info
+        .import_records
+        .iter()
+        .all(|&record_idx| module.import_records[record_idx].kind == ImportKind::Import)
+  }
+
+  fn reduced_chunk_graph(
     atoms: &[ChunkAtom],
-    atom_dependencies: &[Vec<usize>],
+    atom_dependencies: &AtomDependencyGraphs,
     host_atom_by_entry_bit: &[Option<usize>],
-  ) -> bool {
+    atom_side_effect_exec_orders: &[Option<(u32, u32)>],
+  ) -> ReducedChunkGraph {
     let mut chunk_idx_by_bits = FxHashMap::default();
     let mut atom_to_chunk = Vec::with_capacity(atoms.len());
     let mut facade_chunk_by_entry_bit = vec![None; host_atom_by_entry_bit.len()];
@@ -606,16 +786,21 @@ impl GenerateStage<'_> {
       }
     }
 
-    let mut chunk_dependencies = vec![FxHashSet::default(); chunk_idx_by_bits.len()];
-    for (atom_idx, dependencies) in atom_dependencies.iter().enumerate() {
-      let from_chunk_idx = atom_to_chunk[atom_idx];
-      for &dep_atom_idx in dependencies {
-        let to_chunk_idx = atom_to_chunk[dep_atom_idx];
-        if from_chunk_idx != to_chunk_idx {
-          chunk_dependencies[from_chunk_idx].insert(to_chunk_idx);
+    let chunk_edges = |atom_edges: &[Vec<usize>]| {
+      let mut chunk_dependencies = vec![FxHashSet::default(); chunk_idx_by_bits.len()];
+      for (atom_idx, dependencies) in atom_edges.iter().enumerate() {
+        let from_chunk_idx = atom_to_chunk[atom_idx];
+        for &dep_atom_idx in dependencies {
+          let to_chunk_idx = atom_to_chunk[dep_atom_idx];
+          if from_chunk_idx != to_chunk_idx {
+            chunk_dependencies[from_chunk_idx].insert(to_chunk_idx);
+          }
         }
       }
-    }
+      chunk_dependencies
+    };
+    let certain_chunk_dependencies = chunk_edges(&atom_dependencies.reachability);
+    let mut chunk_dependencies = chunk_edges(&atom_dependencies.cycle);
 
     // The facade edges the atom graph cannot express: an entry whose module lands in a shared chunk
     // keeps its own entry chunk as a facade, and `compute_chunk_imports` makes that facade import
@@ -646,42 +831,20 @@ impl GenerateStage<'_> {
       }
     }
 
-    Self::chunk_dependency_graph_has_cycle(&chunk_dependencies)
-  }
-
-  fn chunk_dependency_graph_has_cycle(chunk_dependencies: &[FxHashSet<usize>]) -> bool {
-    let mut state = vec![0_u8; chunk_dependencies.len()];
-    for start_chunk_idx in 0..chunk_dependencies.len() {
-      if state[start_chunk_idx] != 0 {
-        continue;
-      }
-
-      let mut stack = vec![(start_chunk_idx, false)];
-      while let Some((chunk_idx, exiting)) = stack.pop() {
-        if exiting {
-          state[chunk_idx] = 2;
-          continue;
-        }
-
-        match state[chunk_idx] {
-          1 => return true,
-          2 => continue,
-          _ => {}
-        }
-
-        state[chunk_idx] = 1;
-        stack.push((chunk_idx, true));
-        for &dep_chunk_idx in &chunk_dependencies[chunk_idx] {
-          match state[dep_chunk_idx] {
-            1 => return true,
-            0 => stack.push((dep_chunk_idx, false)),
-            _ => {}
-          }
-        }
+    let mut chunk_latest_side_effect = vec![None; chunk_idx_by_bits.len()];
+    for (atom_idx, range) in atom_side_effect_exec_orders.iter().enumerate() {
+      if let Some((_, latest)) = *range {
+        let known = &mut chunk_latest_side_effect[atom_to_chunk[atom_idx]];
+        *known = Some(known.map_or(latest, |known: u32| known.max(latest)));
       }
     }
 
-    false
+    ReducedChunkGraph {
+      atom_to_chunk,
+      chunk_dependencies,
+      certain_chunk_dependencies,
+      chunk_latest_side_effect,
+    }
   }
 
   fn analyze_dynamic_entries(

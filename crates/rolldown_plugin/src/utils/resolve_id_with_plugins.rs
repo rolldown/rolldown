@@ -67,7 +67,7 @@ fn resolved_id_from_hook_output<Fs: FileSystem>(
     normalize_external_id: r.normalize_external_id,
     side_effects: r.side_effects,
     package_json,
-    attributes: attributes.clone(),
+    attributes: r.attributes.unwrap_or_else(|| attributes.clone()),
     ..Default::default()
   })
 }
@@ -87,8 +87,18 @@ pub async fn resolve_id_with_plugins<Fs: FileSystem>(
   is_user_defined_entry: bool,
   attributes: &ImportAttributes,
   importer_raw_id: Option<&str>,
+  importer_attributes: &ImportAttributes,
 ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
-  let args = HookResolveIdArgs { specifier, importer, is_entry, kind: import_kind, custom };
+  let args = HookResolveIdArgs {
+    specifier,
+    importer,
+    is_entry,
+    kind: import_kind,
+    custom,
+    attributes,
+    importer_raw_id,
+    importer_attributes,
+  };
   if matches!(import_kind, ImportKind::DynamicImport) {
     if let Some(r) =
       plugin_driver.resolve_dynamic_import(&args, skipped_resolve_calls.as_ref()).await?

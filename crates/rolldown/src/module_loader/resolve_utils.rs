@@ -50,6 +50,7 @@ pub async fn resolve_id<Fs: FileSystem>(
     bundle_options,
     attributes,
     Some(importer.id.raw_id()),
+    &importer.attributes,
   )
   .await
 }

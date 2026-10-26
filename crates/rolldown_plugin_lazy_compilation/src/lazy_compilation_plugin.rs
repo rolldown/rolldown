@@ -63,6 +63,7 @@ impl Plugin for LazyCompilationPlugin {
         normalize_external_id: None,
         side_effects: None,
         package_json_path: None,
+        attributes: None,
       }));
     }
 
@@ -111,6 +112,7 @@ impl Plugin for LazyCompilationPlugin {
         normalize_external_id: None,
         side_effects: None,
         package_json_path: None,
+        attributes: None,
       }));
     }
 

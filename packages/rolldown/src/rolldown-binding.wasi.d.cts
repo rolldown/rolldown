@@ -2389,6 +2389,19 @@ export interface BindingHookRenderChunkOutput {
   map?: BindingSourcemap | null
 }
 
+/**
+ * The extra arguments of `resolveDynamicImport`. Empty attributes and a raw id equal to the
+ * importer are left out, and `bindingify-build-hooks.ts` fills them in.
+ */
+export interface BindingHookResolveDynamicImportExtraArgs {
+  /** The import attributes of the import being resolved. Omitted when empty. */
+  attributes?: Record<string, string>
+  /** The importer without its import attributes. Omitted when equal to the importer. */
+  importerRawId?: string
+  /** The import attributes of the importer itself. Omitted when empty. */
+  importerAttributes?: Record<string, string>
+}
+
 export interface BindingHookResolveFileUrlArgs {
   /** Preliminary filename of the chunk containing the reference. */
   chunkId: string
@@ -2420,6 +2433,12 @@ export interface BindingHookResolveIdExtraArgs {
    * - `hot-accept`: `import.meta.hot.accept('./lib.js', () => {})`
    */
   kind: 'import-statement' | 'dynamic-import' | 'require-call' | 'import-rule' | 'url-token' | 'new-url' | 'hot-accept'
+  /** The import attributes of the import being resolved. Omitted when empty. */
+  attributes?: Record<string, string>
+  /** The importer without its import attributes. Omitted when equal to the importer. */
+  importerRawId?: string
+  /** The import attributes of the importer itself. Omitted when empty. */
+  importerAttributes?: Record<string, string>
 }
 
 export interface BindingHookResolveIdOutput {
@@ -2432,6 +2451,8 @@ export interface BindingHookResolveIdOutput {
    * we could get the related package json object via the path string.
    */
   packageJsonPath?: string | null
+  /** Replaces the import attributes of the import. `{}` removes them. */
+  attributes?: Record<string, string>
 }
 
 export type BindingHookSideEffects = boolean | string
@@ -2763,7 +2784,7 @@ export interface BindingPluginOptions {
   resolveId?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraArgs) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   resolveIdMeta?: BindingPluginHookMeta
   resolveIdFilter?: BindingHookFilter
-  resolveDynamicImport?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
+  resolveDynamicImport?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveDynamicImportExtraArgs) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   resolveDynamicImportMeta?: BindingPluginHookMeta
   load?: (ctx: BindingLoadPluginContext, id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
   loadMeta?: BindingPluginHookMeta

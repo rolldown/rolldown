@@ -1,0 +1,100 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## f.js
+
+```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+import "./shared.js";
+// f.js
+const keys = Object.keys(/* @__PURE__ */ __exportAll({
+	vF: () => 1,
+	wF: () => 2
+}));
+export { keys };
+
+```
+
+## logger.js
+
+```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+// logger.js
+var logger_exports = /* @__PURE__ */ __exportAll({ log: () => log });
+function log(message) {
+	return `log: ${message}`;
+}
+export { logger_exports as n, log as t };
+
+```
+
+## main.js
+
+```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+import "./shared.js";
+import { t as log } from "./logger.js";
+// main.js
+const keys = Object.keys(/* @__PURE__ */ __exportAll({
+	vE: () => 1,
+	wE: () => 2
+}));
+const message = log("main");
+export { keys, message };
+
+```
+
+## p1.js
+
+```js
+// p1.js
+const loadP3 = () => import("./p3.js");
+const lazyLog = () => import("./logger.js").then((n) => n.n).then((m) => m.log("p1"));
+export { lazyLog, loadP3 };
+
+```
+
+## p2.js
+
+```js
+// p2.js
+const loadP1 = () => import("./p1.js");
+export { loadP1 };
+
+```
+
+## p3.js
+
+```js
+// p3.js
+const loadP2 = () => import("./p2.js");
+export { loadP2 };
+
+```
+
+## r.js
+
+```js
+// r.js
+const loadP3 = () => import("./p3.js");
+export { loadP3 };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as t };
+
+```
+
+## shared.js
+
+```js
+// shared.js
+globalThis.sharedEvaluated = (globalThis.sharedEvaluated ?? 0) + 1;
+
+```

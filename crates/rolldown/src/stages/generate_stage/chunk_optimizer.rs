@@ -1378,7 +1378,7 @@ impl GenerateStage<'_> {
         if !entry_point.kind.is_dynamic_import() {
           return None;
         }
-        let importer_chunks = entry_point
+        let mut importer_chunks = entry_point
           .related_stmt_infos
           .iter()
           .filter(|(importer_idx, stmt_info_idx, _, import_record_idx)| {
@@ -1391,6 +1391,9 @@ impl GenerateStage<'_> {
           })
           .map(|(importer_idx, ..)| chunk_graph.module_to_chunk[*importer_idx])
           .collect::<Option<Vec<_>>>()?;
+        // Many `import()` sites of one entry can share a chunk; its bits are read once.
+        importer_chunks.sort_unstable();
+        importer_chunks.dedup();
         (!importer_chunks.is_empty()).then_some(importer_chunks)
       })
       .collect::<Vec<_>>();
@@ -1398,7 +1401,8 @@ impl GenerateStage<'_> {
     // an uncounted entry loads, until nothing changes. Like the already-loaded pass, this keeps an
     // `import()` cycle counted when only counted entries can start it, whatever the entry order.
     // A dropped entry drops, through a worklist, every candidate whose site chunks carry its bit
-    // outside `runtime_bits`. Work: one bit scan per site chunk plus one visit per (bit, entry) edge.
+    // outside `runtime_bits`. Work: one bit scan per distinct site chunk of each candidate, plus one
+    // visit per bit that scan finds.
     let mut loaded_dynamic_entries =
       importer_chunks_by_entry.iter().map(Option::is_some).collect::<Vec<_>>();
     let mut dependents_by_entry_bit = vec![Vec::new(); importer_chunks_by_entry.len()];
@@ -1414,11 +1418,11 @@ impl GenerateStage<'_> {
           Some(dependents) if importer_chunks_by_entry[bit as usize].is_some() => {
             dependents.push(entry_idx);
           }
-          // A bit that never counts drops the entry for good.
+          // A bit that never counts drops the entry for good, so its other bits need no edges.
           _ => {
-            if std::mem::replace(&mut loaded_dynamic_entries[entry_idx], false) {
-              dropped.push(entry_idx);
-            }
+            loaded_dynamic_entries[entry_idx] = false;
+            dropped.push(entry_idx);
+            break;
           }
         }
       }

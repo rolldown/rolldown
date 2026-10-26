@@ -56,6 +56,12 @@ To build the WASI version, you can run the following command:
 - `just build-browser`
 - `just build-browser-release` (**important if running benchmarks**)
 
+The WASI release profile inherits the native release profile's speed optimization
+(`opt-level = 3`). This favors repeated compilation throughput over download size.
+To compare a size-optimized build, set `CARGO_PROFILE_RELEASE_WASI_OPT_LEVEL=s`
+when running the release build command. Use the same profile for both sides of a
+benchmark unless the optimization level itself is what you are measuring.
+
 Building the WASI version will remove the native version of Rolldown. We designed the local build process on purpose that is you either build the native version or the WASI version. You can't mix them together, though NAPI-RS supports it.
 
 ## Running

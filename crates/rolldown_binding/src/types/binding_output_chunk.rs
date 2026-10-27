@@ -108,6 +108,14 @@ impl BindingOutputChunk {
     Ok(&self.try_get_inner()?.code)
   }
 
+  /// Identity of the immutable chunk data behind this object. Two `BindingOutputChunk` objects with the same
+  /// identity share the same data, so a JavaScript string made from `getCode()` of one is valid for the other.
+  /// Prototype: the identity is the address of the shared data; it stays unique while a holder keeps it alive.
+  #[napi]
+  pub fn get_code_identity(&self) -> napi::Result<f64> {
+    Ok(Arc::as_ptr(self.try_get_inner()?) as usize as f64)
+  }
+
   #[napi]
   // TODO: claude code - Cannot change to Option<&str>: performs JSON serialization via to_json_string()
   pub fn get_map(&self) -> napi::Result<Option<String>> {

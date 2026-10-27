@@ -211,6 +211,7 @@ pub enum CoordinatorMsg {
   ModuleChanged {                            // programmatic module change
     module_id: String,
     watch_files: Arc<FxDashSet<ArcStr>>,     // the lazy compile's watch list; see §15
+    rebuild: bool,                           // the compile scanned, so queue a Rebuild
   },
   Close,                                     // shut the coordinator down
 }
@@ -218,17 +219,17 @@ pub enum CoordinatorMsg {
 
 Routing happens in `BundleCoordinator::run` (`bundle_coordinator.rs:98-150`):
 
-| Message                    | Handler                                      |
-| -------------------------- | -------------------------------------------- |
-| `WatchEvent`               | `handle_watch_event` → `handle_file_changes` |
-| `BundleCompleted`          | `handle_bundle_completed`                    |
-| `ScheduleBuildIfStale`     | `schedule_build_if_stale`, reply with result |
-| `GetState`                 | `create_state_snapshot`, reply               |
-| `EnsureLatestBundleOutput` | `ensure_latest_bundle_output`, reply         |
-| `TriggerFullBuild`         | `trigger_full_build` (no reply)              |
-| `GetWatchedFiles`          | reply with the watched paths of the watcher  |
-| `ModuleChanged`            | watch its files, queue a `Rebuild`, schedule |
-| `Close`                    | await running task, then `break` the loop    |
+| Message                    | Handler                                                       |
+| -------------------------- | ------------------------------------------------------------- |
+| `WatchEvent`               | `handle_watch_event` → `handle_file_changes`                  |
+| `BundleCompleted`          | `handle_bundle_completed`                                     |
+| `ScheduleBuildIfStale`     | `schedule_build_if_stale`, reply with result                  |
+| `GetState`                 | `create_state_snapshot`, reply                                |
+| `EnsureLatestBundleOutput` | `ensure_latest_bundle_output`, reply                          |
+| `TriggerFullBuild`         | `trigger_full_build` (no reply)                               |
+| `GetWatchedFiles`          | reply with the watched paths of the watcher                   |
+| `ModuleChanged`            | watch its files; if `rebuild`, queue a `Rebuild` and schedule |
+| `Close`                    | await running task, then `break` the loop                     |
 
 The producers:
 
@@ -314,7 +315,7 @@ stateDiagram-v2
 
     %% rebuild triggers (no file change)
     Idle --> InProgress : EnsureLatestBundleOutput when stale<br/>queue empty Rebuild
-    Idle --> InProgress : ModuleChanged<br/>queue Rebuild
+    Idle --> InProgress : ModuleChanged with rebuild<br/>queue Rebuild
     Idle --> FullBuildInProgress : TriggerFullBuild<br/>clear queue + FullBuild
     Failed --> FullBuildInProgress : TriggerFullBuild
     FullBuildFailed --> FullBuildInProgress : TriggerFullBuild
@@ -341,13 +342,13 @@ the state mutation itself is the `schedule_build_if_stale` row above. They
 are the distinct ways a build gets initiated — a file change is only one
 of them.
 
-| Trigger                                                      | Enqueues                       | Resulting state       | Site                                                |
-| ------------------------------------------------------------ | ------------------------------ | --------------------- | --------------------------------------------------- |
-| File change, steady state (`Idle` / `InProgress` / `Failed`) | `Hmr` or `HmrRebuild`          | `InProgress`          | `handle_file_changes`, `:202`                       |
-| File change, `FullBuildFailed`                               | `FullBuild` (clears the stash) | `FullBuildInProgress` | `handle_file_changes`, `:248`                       |
-| Browser access while stale (`EnsureLatestBundleOutput`)      | empty-files `Rebuild`          | `InProgress`          | `ensure_latest_bundle_output`, `:401` (push `:419`) |
-| Programmatic module change (`ModuleChanged`)                 | `Rebuild`                      | `InProgress`          | run loop, `:138-155`                                |
-| Manual full build (`TriggerFullBuild`)                       | clears queue, `FullBuild`      | `FullBuildInProgress` | `trigger_full_build`, `:457`                        |
+| Trigger                                                       | Enqueues                       | Resulting state       | Site                                                |
+| ------------------------------------------------------------- | ------------------------------ | --------------------- | --------------------------------------------------- |
+| File change, steady state (`Idle` / `InProgress` / `Failed`)  | `Hmr` or `HmrRebuild`          | `InProgress`          | `handle_file_changes`, `:202`                       |
+| File change, `FullBuildFailed`                                | `FullBuild` (clears the stash) | `FullBuildInProgress` | `handle_file_changes`, `:248`                       |
+| Browser access while stale (`EnsureLatestBundleOutput`)       | empty-files `Rebuild`          | `InProgress`          | `ensure_latest_bundle_output`, `:401` (push `:419`) |
+| Lazy compile that scanned (`ModuleChanged { rebuild: true }`) | `Rebuild`                      | `InProgress`          | run loop, `:138-155`                                |
+| Manual full build (`TriggerFullBuild`)                        | clears queue, `FullBuild`      | `FullBuildInProgress` | `trigger_full_build`, `:457`                        |
 
 ---
 
@@ -596,7 +597,7 @@ started it:
 | Trigger                                                                   | Task                   |
 | ------------------------------------------------------------------------- | ---------------------- |
 | A file change                                                             | `Hmr` / `HmrRebuild`   |
-| A tab opens a lazy route (`ModuleChanged`, `bundle_coordinator.rs:138`)   | `Rebuild { proxy id }` |
+| A lazy compile that scans (`ModuleChanged { rebuild: true }`)             | `Rebuild { proxy id }` |
 | Vite page access while `Failed{Hmr}` (`triggerBundleRegenerationIfStale`) | `FullBuild`            |
 | Manual retry (`trigger_full_build`, `bundle_coordinator.rs:427`)          | `FullBuild`            |
 
@@ -1012,7 +1013,7 @@ output on disk / in memory may not reflect the latest source."
 | Successful task that rebuilt (`Rebuild`/`HmrRebuild`) | `false`                           |
 | Successful `Hmr`-only task (no rebuild)               | `true`                            |
 | Failed incremental task                               | `true`                            |
-| `ModuleChanged` received                              | `true`                            |
+| `ModuleChanged { rebuild: true }` received            | `true`                            |
 
 It is consumed by `ensure_latest_bundle_output` (§13) to decide whether
 a lazy rebuild is needed before serving the full bundle. It is also
@@ -1311,8 +1312,12 @@ Beyond `ensure_latest_bundle_output`, the public methods on `DevEngine`
 | `is_closed()` / `bundler_options()`              | accessors                                                                                      |
 
 `ModuleChanged` handling (`bundle_coordinator.rs:148-165`): registers the
-watch files the message carries, queues a `TaskInput::Rebuild` for the
-changed module, sets `has_stale_bundle_output = true`, schedules.
+watch files the message carries. When `rebuild` is true (the compile
+scanned), it also queues a `TaskInput::Rebuild` for the changed module,
+sets `has_stale_bundle_output = true`, and schedules. A repeat visit sends
+`rebuild: false`: it changed nothing in the graph, so only its watch files
+are registered (see
+[Repeat Visits](../lazy-compilation/design.md#6-repeat-visits)).
 
 Why the message carries the watch files: each build starts with a new,
 empty watch list (`PluginDriverFactory::create_plugin_driver`), and
@@ -1669,7 +1674,7 @@ flowchart TD
   T1([initial load]) --> FULL["TaskInput: FullBuild"]
   T2([file edit]) --> D{"rebuild_strategy?"}
   T3([dynamic import]) --> LAZY["compileEntry (DevEngine)"]
-  T4([stale page load / ModuleChanged]) --> REB["TaskInput: Rebuild"]
+  T4([stale page load / ModuleChanged with rebuild]) --> REB["TaskInput: Rebuild"]
 
   %% ===== dispatch (handle_file_changes) =====
   D -->|"Never (default)"| HMR["TaskInput: Hmr"]

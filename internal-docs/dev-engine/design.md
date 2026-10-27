@@ -62,11 +62,14 @@ Inside rolldown_dev, two things count:
 
 - **A file change.** Both Vite config edits and user-land source edits
   are valid triggers.
-- **A tab opening a lazy route.** Its lazy compile changes the proxy
-  module's content, and the background `Rebuild` it queues
-  (`ModuleChanged`) runs in failed states too. While a lost HMR update is
-  pending, that rebuild also reloads every tab (see
-  [Lost HMR updates](#lost-hmr-updates)).
+- **A tab opening a lazy route that needs a scan.** A first visit, or a
+  retry after a failed compile, scans the route and changes the proxy
+  module's content. The background `Rebuild` it queues
+  (`ModuleChanged { rebuild: true }`) runs in failed states too. A repeat
+  visit skips the scan and queues nothing, so it does not count (see
+  [Repeat Visits](../lazy-compilation/design.md#6-repeat-visits)). While a
+  lost HMR update is pending, every compile scans, and that rebuild also
+  reloads every tab (see [Lost HMR updates](#lost-hmr-updates)).
 
 Nothing else counts as recovery — not page refresh, not elapsed time,
 not manual UI dismissal: `ensure_latest_bundle_output` no-ops in every

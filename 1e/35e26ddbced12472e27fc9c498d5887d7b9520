@@ -1,0 +1,42 @@
+internal-docs/inline-common-chunks/design.md
+  s_1349f77e095742::t_2cd452ee77a87a 104-111,124,126
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode/other.js
+  s_1349f77e095742::t_8d331c1196cfdc 1-5
+internal-docs/inline-common-chunks/implementation.md
+  s_1349f77e095742::t_07c31612cd3098 11-16,142-143,152
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode/main.js
+  s_1349f77e095742::t_cdff36d961fadd 1-18
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode/leaf.js
+  s_1349f77e095742::t_6354fc8065f4b2 1-3
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode/_config.json
+  s_1349f77e095742::t_2fe50f2c638509 4-11,14-16,18-20,22
+internal-docs/hmr/design.md
+  s_1349f77e095742::t_07c8c0b5ad05f1 191-192
+  s_1349f77e095742::t_79eee6dc8e48be 193
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode/leaf.hmr-0.js
+  s_1349f77e095742::t_a10236eb00a2cd 1-3
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode/artifacts.snap
+  s_1349f77e095742::t_60140fd111b834 4,6,8-72,75-187
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode/shared.js
+  s_1349f77e095742::t_87f1b0ac9d535e 1-5
+crates/rolldown/src/ecmascript/format/share_factory.rs
+  s_1349f77e095742::t_bb5a38ef2f65d7 84-95
+packages/rolldown/tests/dev/dev-lazy-compile.test.ts
+  s_1349f77e095742::t_c2052c1e7f66c7 6,602-669
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "1e35e26ddbced12472e27fc9c498d5887d7b9520",
+  "prompts": {},
+  "sessions": {
+    "s_1349f77e095742": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01434bb7-a487-49c7-8ef1-e905252e7907",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

@@ -6,7 +6,8 @@ use std::{
 
 use oxc_resolver::{FileMetadata, FileSystem as OxcResolverFileSystem, FileSystemOs, ResolveError};
 
-use crate::file_system::FileSystem;
+use crate::{file_system::FileSystem, profile as P};
+use std::time::Instant;
 
 /// Operating System
 #[derive(Clone)]
@@ -24,15 +25,27 @@ impl FileSystem for OsFileSystem {
   }
 
   fn create_dir_all(&self, path: &Path) -> io::Result<()> {
-    std::fs::create_dir_all(path)
+    let __t = Instant::now();
+    let __r = std::fs::create_dir_all(path);
+    P::OTHER.add(__t, 0);
+    P::record_any_interval(__t);
+    __r
   }
 
   fn write(&self, path: &Path, content: &[u8]) -> io::Result<()> {
-    std::fs::write(path, content)
+    let __t = Instant::now();
+    let __r = std::fs::write(path, content);
+    P::WRITE.add(__t, content.len());
+    P::record_any_interval(__t);
+    __r
   }
 
   fn exists(&self, path: &Path) -> bool {
-    path.exists()
+    let __t = Instant::now();
+    let __r = path.exists();
+    P::OTHER.add(__t, 0);
+    P::record_any_interval(__t);
+    __r
   }
 
   fn read_dir(&self, path: &Path) -> io::Result<Vec<PathBuf>> {
@@ -56,26 +69,114 @@ impl OxcResolverFileSystem for OsFileSystem {
   }
 
   fn read(&self, path: &Path) -> io::Result<Vec<u8>> {
-    self.0.read(path)
+    if P::dircache_says_missing(path) {
+      return Err(io::Error::from(io::ErrorKind::NotFound));
+    }
+    if P::content_cache_enabled() {
+      if let Some(v) = P::content_cache_get_bytes(path) {
+        return Ok(v);
+      }
+      let r = P::content_cache_read_bytes(path);
+      if matches!(&r, Err(e) if e.kind() == io::ErrorKind::NotFound) {
+        P::dircache_note_missing(path);
+      }
+      return r;
+    }
+    let __t = Instant::now();
+    let __r = {
+      let _permit = P::fs_permit();
+      self.0.read(path)
+    };
+    P::READ.add(__t, __r.as_ref().map_or(0, Vec::len));
+    P::record_any_interval(__t);
+    if matches!(&__r, Err(e) if e.kind() == io::ErrorKind::NotFound) {
+      P::dircache_note_missing(path);
+    }
+    __r
   }
 
   fn read_to_string(&self, path: &Path) -> io::Result<String> {
-    self.0.read_to_string(path)
+    if P::cache_enabled() {
+      if let Some(s) = P::cache_get(path) {
+        return Ok(s);
+      }
+    }
+    let __t = Instant::now();
+    let __r = {
+      let _permit = P::fs_permit();
+      self.0.read_to_string(path)
+    };
+    P::READ_TO_STRING.add(__t, __r.as_ref().map_or(0, String::len));
+    P::record_any_interval(__t);
+    if P::cache_enabled() {
+      if let Ok(s) = &__r {
+        P::cache_put(path, s);
+      }
+    }
+    __r
   }
 
   fn metadata(&self, path: &Path) -> io::Result<FileMetadata> {
-    self.0.metadata(path)
+    let __t = Instant::now();
+    let __r = {
+      let _permit = P::fs_permit();
+      self.0.metadata(path)
+    };
+    P::METADATA.add(__t, 0);
+    P::record_any_interval(__t);
+    __r
   }
 
   fn symlink_metadata(&self, path: &Path) -> io::Result<FileMetadata> {
-    self.0.symlink_metadata(path)
+    if let Some(m) = P::prefetch_get_meta(path) {
+      return m.ok_or_else(|| io::Error::from(io::ErrorKind::NotFound));
+    }
+    if P::dircache_enabled() {
+      let __t = Instant::now();
+      let __r = P::dircache_symlink_metadata(path);
+      P::SYMLINK_METADATA.add(__t, 0);
+      return __r;
+    }
+    if P::meta_cache_enabled() {
+      if let Some(m) = P::meta_get(path) {
+        return m.ok_or_else(|| io::Error::from(io::ErrorKind::NotFound));
+      }
+      let __r = {
+        let _permit = P::fs_permit();
+        self.0.symlink_metadata(path)
+      };
+      P::meta_put(path, __r.as_ref().ok().copied());
+      return __r;
+    }
+    let __t = Instant::now();
+    let __r = {
+      let _permit = P::fs_permit();
+      self.0.symlink_metadata(path)
+    };
+    P::SYMLINK_METADATA.add(__t, 0);
+    P::record_any_interval(__t);
+    __r
   }
 
   fn read_link(&self, path: &Path) -> Result<PathBuf, ResolveError> {
-    self.0.read_link(path)
+    let __t = Instant::now();
+    let __r = {
+      let _permit = P::fs_permit();
+      self.0.read_link(path)
+    };
+    P::READ_LINK.add(__t, 0);
+    P::record_any_interval(__t);
+    __r
   }
 
   fn canonicalize(&self, path: &Path) -> io::Result<PathBuf> {
-    self.0.canonicalize(path)
+    let __t = Instant::now();
+    let __r = {
+      let _permit = P::fs_permit();
+      self.0.canonicalize(path)
+    };
+    P::CANONICALIZE.add(__t, 0);
+    P::record_any_interval(__t);
+    __r
   }
 }

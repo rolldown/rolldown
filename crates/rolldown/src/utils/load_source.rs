@@ -62,10 +62,7 @@ pub async fn load_source<Fs: FileSystem + 'static>(
             StrOrBytes::Str({
               #[cfg(not(target_family = "wasm"))]
               {
-                let id = resolved_id.id.clone();
-                tokio::runtime::Handle::current()
-                  .spawn_blocking(move || fs.read_to_string(Path::new(id.as_str())))
-                  .await??
+                read_text_native(resolved_id, fs).await?
               }
               #[cfg(target_family = "wasm")]
               {
@@ -119,10 +116,7 @@ pub async fn load_source<Fs: FileSystem + 'static>(
               } else {
                 #[cfg(not(target_family = "wasm"))]
                 {
-                  let id = resolved_id.id.clone();
-                  tokio::runtime::Handle::current()
-                    .spawn_blocking(move || fs.read_to_string(Path::new(id.as_str())))
-                    .await??
+                  read_text_native(resolved_id, fs).await?
                 }
                 #[cfg(target_family = "wasm")]
                 {
@@ -141,6 +135,44 @@ pub async fn load_source<Fs: FileSystem + 'static>(
       Ok((read_file_by_module_type(Path::new(resolved_id.id.as_str()), &ty, fs).await?, ty))
     }
   }
+}
+
+/// TEMPORARY fs experiments: prefetch store, then the content cache, then the normal blocking read.
+#[cfg(not(target_family = "wasm"))]
+async fn read_text_native<Fs: FileSystem + 'static>(
+  resolved_id: &ResolvedId,
+  fs: Fs,
+) -> anyhow::Result<String> {
+  use rolldown_fs::profile as P;
+  let path = Path::new(resolved_id.id.as_str());
+  if let Some(s) = P::prefetch_take_text(path) {
+    return Ok(s);
+  }
+  // Inline check: a hit costs one `stat` on this tokio worker and skips the blocking pool.
+  if P::content_cache_enabled()
+    && !P::content_cache_in_pool()
+    && let Some(s) = P::content_cache_get_text(path)
+  {
+    return Ok(s);
+  }
+  let id = resolved_id.id.clone();
+  let t = std::time::Instant::now();
+  let s = tokio::runtime::Handle::current()
+    .spawn_blocking(move || {
+      let path = Path::new(id.as_str());
+      if P::content_cache_enabled() {
+        if P::content_cache_in_pool()
+          && let Some(s) = P::content_cache_get_text(path)
+        {
+          return Ok(s);
+        }
+        return P::timed_load_read(|| P::content_cache_read_text(path), String::len);
+      }
+      P::timed_load_read(|| fs.read_to_string(path), String::len)
+    })
+    .await??;
+  P::LOAD_AWAIT.add(t, 0);
+  Ok(s)
 }
 
 /// ref: https://github.com/evanw/esbuild/blob/9c13ae1f06dfa909eb4a53882e3b7e4216a503fe/internal/bundler/bundler.go#L1161-L1183

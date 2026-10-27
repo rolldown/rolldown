@@ -24,3 +24,6 @@ os = []
 [dependencies]
 oxc_resolver = { workspace = true }
 vfs = { workspace = true }
+
+[target.'cfg(unix)'.dependencies]
+libc = { workspace = true }

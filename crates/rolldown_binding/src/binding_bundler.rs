@@ -32,6 +32,8 @@ pub struct BindingBundler {
 impl BindingBundler {
   #[napi(constructor)]
   pub fn new() -> Self {
+    rolldown::fs_profile::prefetch_start_from_env();
+    rolldown::fs_profile::warm_start_early();
     let inner = ClassicBundler::new();
     Self { inner, bundle_handles: Vec::new() }
   }

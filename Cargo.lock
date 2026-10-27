@@ -2821,6 +2821,7 @@ dependencies = [
 name = "rolldown_fs"
 version = "1.2.15"
 dependencies = [
+ "libc",
  "oxc_resolver",
  "vfs",
 ]

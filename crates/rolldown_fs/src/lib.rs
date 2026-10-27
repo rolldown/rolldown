@@ -1,6 +1,7 @@
 mod file_system;
 #[cfg(feature = "memory")]
 mod memory;
+pub mod profile;
 #[cfg(feature = "memory")]
 pub use memory::MemoryFileSystem;
 #[cfg(feature = "os")]

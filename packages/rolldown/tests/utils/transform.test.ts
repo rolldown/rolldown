@@ -375,6 +375,54 @@ describe('enhanced transform', () => {
         }
       },
     );
+
+    it('should report tsconfigFilePaths for a tsconfig resolved through the cache', async () => {
+      const filename = path.join(fixtures, 'test1.ts');
+      const code = `class Foo { bar = 'bar' }`;
+      const options = { target: 'esnext' } as const;
+      const expected = transformSync(filename, code, options);
+      expect(expected.tsconfigFilePaths).toHaveLength(1);
+      // The fixture sets `useDefineForClassFields: false`, so its output shows the tsconfig was applied.
+      expect(expected.code).not.toBe(
+        transformSync(filename, code, { ...options, tsconfig: false }).code,
+      );
+
+      const cache = new TsconfigCache();
+      // The first call fills the cache, the later ones are served from it.
+      const results = [
+        transformSync(filename, code, options, cache),
+        transformSync(filename, code, options, cache),
+        await transform(filename, code, options, cache),
+      ];
+      for (const result of results) {
+        expect(result.code).toBe(expected.code);
+        expect(result.tsconfigFilePaths).toStrictEqual(expected.tsconfigFilePaths);
+      }
+      expect(cache.size()).toBe(1);
+    });
+
+    it('should report tsconfigFilePaths for a tsconfig path resolved through the cache', () => {
+      const filename = path.resolve('/nonexistent/path/test.ts');
+      const code = `class Foo { bar = 'bar' }`;
+      const explicitTsconfig = path.join(fixtures, 'tsconfig.json');
+      const options = { target: 'esnext', tsconfig: explicitTsconfig } as const;
+      const expected = transformSync(filename, code, options);
+      expect(expected.code).not.toBe(
+        transformSync(filename, code, { ...options, tsconfig: false }).code,
+      );
+
+      const cache = new TsconfigCache(explicitTsconfig);
+      // The first call fills the cache, the second is served from it.
+      for (const result of [
+        transformSync(filename, code, options, cache),
+        transformSync(filename, code, options, cache),
+      ]) {
+        expect(result.errors).toHaveLength(0);
+        expect(result.code).toBe(expected.code);
+        expect(result.tsconfigFilePaths).toStrictEqual([explicitTsconfig]);
+      }
+      expect(cache.size()).toBe(1);
+    });
   });
 
   describe('result properties', () => {

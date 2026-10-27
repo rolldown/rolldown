@@ -108,9 +108,9 @@ impl BindingOutputChunk {
     Ok(&self.try_get_inner()?.code)
   }
 
-  /// Identity of the immutable chunk data behind this object. Two `BindingOutputChunk` objects with the same
+  /// Identity of the shared chunk data behind this object. Two `BindingOutputChunk` objects with the same
   /// identity share the same data, so a JavaScript string made from `getCode()` of one is valid for the other.
-  /// Prototype: the identity is the address of the shared data; it stays unique while a holder keeps it alive.
+  /// The identity is the address of that data. It stays unique while a `BindingOutputChunk` keeps the data alive.
   #[napi]
   pub fn get_code_identity(&self) -> napi::Result<i64> {
     let address = Arc::as_ptr(self.try_get_inner()?).addr();

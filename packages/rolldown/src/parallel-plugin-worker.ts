@@ -20,11 +20,15 @@ const { registryId, pluginInfos, threadNumber } = workerData as WorkerData;
           threadNumber,
         });
         // TODO need to find a way to share pluginContextData
-        const pluginContextData = new PluginContextData(() => {}, {} as OutputOptions, [], []);
-        // Every plugin here has its own context and each hook call goes to whichever worker is
-        // free, so a `chunk.code` cache never hits in a worker. It would only keep the chunks of
-        // every build alive, because nothing clears it between watch rebuilds.
-        pluginContextData.outputCodeCache = null;
+        // Hook calls spread across workers and each plugin has its own context, so a `chunk.code`
+        // cache never hits here and would only keep every build's chunks alive across rebuilds.
+        const pluginContextData = new PluginContextData(
+          () => {},
+          {} as OutputOptions,
+          [],
+          [],
+          /* cacheOutputCode */ false,
+        );
         return {
           index: pluginInfo.index,
           // TODO(sapphi-red): support inputOptions and outputOptions

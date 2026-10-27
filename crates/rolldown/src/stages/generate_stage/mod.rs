@@ -688,9 +688,9 @@ impl<'a> GenerateStage<'a> {
             continue;
           };
 
-          let rendered_length =
-            u32::try_from(rendered_module.rendered_length()).unwrap_or(u32::MAX);
-          package_info.size = package_info.size.saturating_add(rendered_length);
+          let rendered_byte_length =
+            u32::try_from(rendered_module.rendered_byte_length()).unwrap_or(u32::MAX);
+          package_info.size = package_info.size.saturating_add(rendered_byte_length);
         }
       }
 

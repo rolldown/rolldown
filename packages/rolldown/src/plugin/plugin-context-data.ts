@@ -27,7 +27,7 @@ export interface OutputCodeCacheEntry {
 export class PluginContextData {
   moduleOptionMap: Map<string, ModuleOptions> = new Map();
   /** `null` where no plugin can share a string, see `parallel-plugin-worker.ts`. */
-  outputCodeCache: Map<string, OutputCodeCacheEntry> | null = new Map();
+  outputCodeCache: Map<string, OutputCodeCacheEntry> | null;
   resolveOptionsMap: Map<number, PluginContextResolveOptions> = new Map();
   loadModulePromiseMap: Map<string, Promise<void>> = new Map();
   renderedChunkMeta: RenderedChunkMeta | null = null;
@@ -39,7 +39,10 @@ export class PluginContextData {
     private outputOptions: OutputOptions,
     private normalizedInputPlugins: RolldownPlugin[],
     private normalizedOutputPlugins: RolldownPlugin[],
-  ) {}
+    cacheOutputCode = true,
+  ) {
+    this.outputCodeCache = cacheOutputCode ? new Map() : null;
+  }
 
   updateModuleOption(id: string, option: ModuleOptions): ModuleOptions {
     const existing = this.moduleOptionMap.get(id);

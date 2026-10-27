@@ -26,7 +26,8 @@ export interface OutputCodeCacheEntry {
 
 export class PluginContextData {
   moduleOptionMap: Map<string, ModuleOptions> = new Map();
-  outputCodeCache: Map<string, OutputCodeCacheEntry> = new Map();
+  /** `null` where no plugin can share a string, see `parallel-plugin-worker.ts`. */
+  outputCodeCache: Map<string, OutputCodeCacheEntry> | null = new Map();
   resolveOptionsMap: Map<number, PluginContextResolveOptions> = new Map();
   loadModulePromiseMap: Map<string, Promise<void>> = new Map();
   renderedChunkMeta: RenderedChunkMeta | null = null;
@@ -148,6 +149,6 @@ export class PluginContextData {
     this.renderedChunkMeta = null;
     this.loadModulePromiseMap.clear();
     // Watch mode reuses this object across rebuilds; entries hold the previous build's chunk data.
-    this.outputCodeCache.clear();
+    this.outputCodeCache?.clear();
   }
 }

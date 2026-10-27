@@ -1672,8 +1672,8 @@ impl GenerateStage<'_> {
   ///    reaches the dominator only through a dropped import does not load it yet, and the helper
   ///    import then loads it for real. In `issues/10543`, `lab` reaches `w.js` only through a
   ///    dropped import, but the `w.js` chunk runs nothing at load time, so the runtime stays there.
-  ///    In `code_splitting/runtime_host_dominator_tree_shaken_import`, the dominator imports the
-  ///    external `server-only`, so the runtime stays standalone.
+  ///    In `code_splitting/runtime_host_dominator_tree_shaken_entry_import`, the dominator
+  ///    imports the external `server-only`, so the runtime stays standalone.
   ///
   /// See internal-docs/code-splitting/implementation.md.
   fn find_consumer_dominator(

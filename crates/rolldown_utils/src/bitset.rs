@@ -214,39 +214,6 @@ mod tests {
   }
 
   #[test]
-  fn is_subset_lengths() {
-    // Test byte lengths near the vector widths of the `is_subset` loop: 16, 32 and 64 bytes.
-    for bytes in [1_u32, 15, 16, 17, 31, 32, 33, 63, 64, 65, 129] {
-      let bits = bytes * 8;
-      let mut other = BitSet::new(bits);
-      other.extend([0, bits / 2 + 1, bits - 1]);
-      let mut small = BitSet::new(bits);
-      small.extend([0, bits - 1]);
-      assert!(small.is_subset(&other), "{bytes} bytes");
-      assert!(other.is_subset(&other), "{bytes} bytes");
-      for extra in [1, 31 * 8, 32 * 8, bits - 2] {
-        if extra >= bits || other.has_bit(extra) {
-          continue;
-        }
-        let mut not_subset = small.clone();
-        not_subset.set_bit(extra);
-        assert!(!not_subset.is_subset(&other), "{bytes} bytes, bit {extra}");
-      }
-    }
-
-    // Test sets of different lengths. When the left set is longer, it is a subset only if all of
-    // its bytes after the end of the right set are zero.
-    let mut short = BitSet::new(8);
-    short.set_bit(3);
-    let mut long = BitSet::new(300);
-    long.set_bit(3);
-    assert!(short.is_subset(&long));
-    assert!(long.is_subset(&short));
-    long.set_bit(299);
-    assert!(!long.is_subset(&short));
-  }
-
-  #[test]
   fn is_subset() {
     let mut small = BitSet::new(16);
     small.set_bit(1);

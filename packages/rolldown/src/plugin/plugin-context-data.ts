@@ -5,7 +5,7 @@ import type {
   OutputOptions,
   RolldownPlugin,
 } from '..';
-import type { BindingPluginContext } from '../binding.cjs';
+import type { BindingOutputChunk, BindingPluginContext } from '../binding.cjs';
 import { type BindingNormalizedOptions } from '../binding.cjs';
 import type { LogHandler } from '../log/log-handler';
 import { NormalizedInputOptionsImpl } from '../options/normalized-input-options';
@@ -15,8 +15,18 @@ import { transformModuleInfo } from '../utils/transform-module-info';
 import type { RenderedChunkMeta } from '.';
 import type { PluginContextResolveOptions } from './plugin-context';
 
+/** One JavaScript string per output chunk, shared by every plugin that reads `chunk.code` in the same build. */
+export interface OutputCodeCacheEntry {
+  /** `BindingOutputChunk.getCodeIdentity()` of the chunk data the string was made from. */
+  identity: number;
+  /** Keeps that chunk data alive while the entry exists, so the identity cannot be reused. */
+  holder: BindingOutputChunk;
+  code: string;
+}
+
 export class PluginContextData {
   moduleOptionMap: Map<string, ModuleOptions> = new Map();
+  outputCodeCache: Map<string, OutputCodeCacheEntry> = new Map();
   resolveOptionsMap: Map<number, PluginContextResolveOptions> = new Map();
   loadModulePromiseMap: Map<string, Promise<void>> = new Map();
   renderedChunkMeta: RenderedChunkMeta | null = null;

@@ -177,9 +177,12 @@
   "rollup@form@external-namespace-optimzation-in-operator: disables optimization for external namespace when using the in operator",
   "rollup@form@namespace-optimization-in-operator: it does static optimization of internal namespaces when checking whether an export exists",
   "rollup@form@paths-drive-root: does not let \"..\" climb above a drive root when rendering the import path of an external remapped via output.paths",
+  "rollup@form@using-statement-disposal-usage: retains disposal methods according to all uses of an object and its aliases",
   "rollup@function@catch-scope-nested-deconflicting: deconflicts nested catch scope parameters correctly",
   "rollup@function@emit-file@no-input: It is not necessary to provide an input if a dynamic entry is emitted",
   "rollup@function@external-regex-stateful@sticky: matches sticky external regexes at the start without changing their lastIndex",
   "rollup@function@logging@transform-log-at-position-zero: includes source locations for transform logs at position zero",
-  "rollup@function@plugin-error-transform-pos-zero: includes the current source location for transform errors at position zero"
+  "rollup@function@plugin-error-transform-pos-zero: includes the current source location for transform errors at position zero",
+  "rollup@function@synthetic-named-exports@preserve-modules-static-namespace: includes synthetic named exports in static namespace imports in preserveModules mode",
+  "rollup@function@warning-location-after-last-sourcemap-segment: uses the last sourcemap segment of a line for a location after the start of that segment"
 ]

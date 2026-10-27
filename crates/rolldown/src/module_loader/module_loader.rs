@@ -237,6 +237,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       return;
     }
     for module_id in std::mem::take(&mut self.new_module_ids) {
+      // The next scan loads this module as new again and marks its load complete once more.
+      self.shared_context.plugin_driver.invalidate_context_load_module(&module_id);
       self.cache.module_id_to_idx.remove(&module_id);
     }
     // New indices are freed for reuse above; drop the `ModuleIdx`-keyed

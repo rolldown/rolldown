@@ -25,6 +25,7 @@ use rolldown_utils::{
   indexmap::{FxIndexMap, FxIndexSet},
 };
 use rustc_hash::FxHashMap;
+use std::fmt::Write as _;
 
 use crate::hmr::utils::{HmrAstBuilder, MODULE_EXPORTS_NAME_FOR_ESM, create_request_lazy_call};
 
@@ -34,9 +35,6 @@ pub struct HmrAstFinalizer<'me, 'ast> {
   pub modules: &'me IndexModules,
   pub module: &'me NormalModule,
   pub use_pife_for_module_wrappers: bool,
-
-  // Each module has a unique index, which is used to generate something that needs to be unique.
-  pub unique_index: usize,
   pub stamp: u32,
 
   // --- Internal state
@@ -317,9 +315,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     rec_id: ImportRecordIdx,
   ) -> &str {
     self.generated_static_import_infos.entry(importee_idx).or_insert_with(|| {
-      let importee = &self.modules[importee_idx];
-
-      format!("import_{}_{}{}", importee.repr_name(), self.unique_index, rec_id.raw())
+      hmr_import_binding_name(self.module.stable_id.as_str(), &self.modules[importee_idx], rec_id)
     })
   }
 
@@ -768,4 +764,65 @@ impl<'ast> GetAllocator<'ast> for HmrAstFinalizer<'_, 'ast> {
 
 pub struct NamedExport {
   pub local_binding: SymbolId,
+}
+
+/// The name that holds an importee's namespace in an HMR factory.
+///
+/// The name must not depend on the module's place in the payload, because the same factory
+/// code goes into many payloads:
+///
+/// - A normal importee is a `var` inside the importer's factory. The map that calls this is
+///   keyed by importee, so the first record id alone keeps the name unique there.
+/// - An external importee is an `import * as` at the payload top level, which all modules of
+///   the payload share. So its name also holds the importer's stable id, escaped with no `_`,
+///   so the first `_` ends it. The `import$` prefix keeps it apart from the `var` names.
+fn hmr_import_binding_name(
+  importer_stable_id: &str,
+  importee: &Module,
+  rec_id: ImportRecordIdx,
+) -> String {
+  match importee {
+    Module::Normal(_) => format!("import_{}_{}", importee.repr_name(), rec_id.raw()),
+    Module::External(_) => {
+      external_import_binding_name(importer_stable_id, rec_id.raw(), importee.repr_name())
+    }
+  }
+}
+
+/// `import$<escaped importer id>_<rec>_<importee repr>`. The escape keeps ASCII letters and
+/// digits and writes every other byte as `$` plus two hex digits. `$` itself is escaped too,
+/// so two different importer ids never give the same text.
+fn external_import_binding_name(importer_stable_id: &str, rec: u32, importee_repr: &str) -> String {
+  let mut name = String::from("import$");
+  for byte in importer_stable_id.bytes() {
+    if byte.is_ascii_alphanumeric() {
+      name.push(char::from(byte));
+    } else {
+      write!(name, "${byte:02x}").unwrap();
+    }
+  }
+  write!(name, "_{rec}_{importee_repr}").unwrap();
+  name
+}
+
+#[cfg(test)]
+mod tests {
+  use super::external_import_binding_name;
+
+  fn external_binding_name(importer: &str, rec: u32) -> String {
+    external_import_binding_name(importer, rec, "react")
+  }
+
+  #[test]
+  fn hmr_import_binding_name_escapes_the_importer_id() {
+    assert_eq!(external_binding_name("src/a.js", 0), "import$src$2fa$2ejs_0_react");
+    assert_eq!(external_binding_name("a_$b", 3), "import$a$5f$24b_3_react");
+  }
+
+  #[test]
+  fn hmr_import_binding_name_is_unique_per_importer_and_record() {
+    assert_ne!(external_binding_name("src/a.js", 12), external_binding_name("src/a1.js", 2));
+    assert_ne!(external_binding_name("a$2e", 0), external_binding_name("a.", 0));
+    assert_ne!(external_binding_name("a_1", 2), external_binding_name("a", 12));
+  }
 }

@@ -23,7 +23,7 @@ Data shared across all connected browser tabs:
 | Build Output      | Bundled JS files on disk/memory                                         |
 | Watched Files     | Files monitored for changes                                             |
 
-**Key behavior**: Once a lazy module is fetched by any client, the graph keeps the proxy in fetched form and holds the route's modules. The build output is refreshed after lazy compilation, but pages still load every lazy route through a `/lazy` request: the full build emits `requestLazy` for every proxy.
+**Key behavior**: Once a lazy module is fetched by any client, the graph keeps the proxy in fetched form and holds the route's modules. Pages still load every lazy route through a `/lazy` request (the full build emits `requestLazy` for every proxy), but a later compile of a fetched route skips the scan and the rebuild (see [design.md](./design.md#6-repeat-visits)).
 
 ### Client Scope
 
@@ -48,7 +48,7 @@ The HMR model behind these records — why the server tracks possession, not exe
 
 These are distinct concepts at different scopes:
 
-- **Fetched** (session-level): The browser sent a `/lazy` request for this proxy module. The server has compiled the actual module and its dependencies, and the graph holds them.
+- **Fetched** (session-level): The browser sent a `/lazy` request for this proxy module. The server has compiled the actual module and its dependencies, and the graph holds them. A later compile of this route, for any client, skips the scan (see [design.md](./design.md#6-repeat-visits)).
 
 - **Held** (client-level): The client's ship map or boot-evaluated map says this client has the module's current copy. Used to size the lazy chunk for a specific client. Whether a module has **executed** is known only in the browser (`isExecuted` = module cache lookup), and the HMR boundary decision runs there (Vite `BundledDevHMRClient`).
 
@@ -63,9 +63,9 @@ Per-client outcomes when a fetched lazy module is later edited (see "Editing a f
 
 After successful lazy compilation:
 
-1. `DevEngine` notifies the coordinator via `ModuleChanged` (carrying the **raw proxy id**, `?rolldown-lazy=1` included, and the watch list the compile wrote to)
+1. `DevEngine` notifies the coordinator via `ModuleChanged` (carrying the **raw proxy id**, `?rolldown-lazy=1` included, the watch list the compile wrote to, and `rebuild`, which is the compile's `scanned`)
 2. Coordinator first registers that watch list — it holds the files the compile loaded. The latest build's list can miss them, because a build that starts before the coordinator handles the message begins with an empty list (see [dev-engine §15](../dev-engine/implementation.md)); this step is what makes later edits to the lazy module trigger rebuilds at all
-3. Coordinator queues a `Rebuild` task with the proxy id as the changed file and marks output as stale
+3. Only when `rebuild` is true: the coordinator queues a `Rebuild` task with the proxy id as the changed file and marks output as stale. A repeat visit did not scan, so the graph and the output did not change
 4. The rebuild swaps the stub for the fetched template in the build output, so the output matches the graph again. No page loads the route from it: every lazy `import()` calls `requestLazy`
 
 The raw proxy id is deliberately **not** normalized: during the partial rebuild it resolves back to itself (the resolver preserves the query), string-matches the proxy module's key in the incremental cache, and forces the proxy's `load` hook to re-run — which now returns the fetched template. Normalizing to the real module id would invalidate the wrong module and leave the cached stub proxy in place.
@@ -171,7 +171,7 @@ When `load` is called for a proxy module:
 
 `Bundler::compile_lazy_entry(module_id, client_id, shipped, evaluated, stamp_table, next_hmr_patch_id)` (`impl_bundler_hmr.rs`) → `HmrStage::compile_lazy_entry(module_id, client_id, shipped, evaluated, stamp_table)` (the `client_id` param is unused at this layer — per-client tailoring comes solely from the two maps):
 
-1. Look the proxy up in the module cache (the #9969 gate), then run `ScanMode::Partial([proxy's resolved id])`
+1. Look the proxy up in the module cache (the #9969 gate), then run `ScanMode::Partial([proxy's resolved id])`, `merge` and `update_defer_sync_data`. A repeat visit skips all three: the proxy already has a resolved `import()` record (only the fetched template has one), no earlier compile failed after its `merge` (`ScanStageCache::unfinished_lazy_merge`), `pending_rescans` is empty, and no HMR update is lost (see [design.md](./design.md#6-repeat-visits))
 2. `collect_unheld_sync_deps` walks the proxy's static deps plus the proxy's own dynamic import. A module whose current copy is in `evaluated` (a stamp that `stamp_table.is_stale` reports as current) **stops** the walk. A module whose current copy is in `shipped` is not carried, but the walk goes through it: a patch may have carried it to a client that never ran it, so its deps may be missing (see [hmr/design.md](../hmr/design.md), principle 2). Every other module is carried; external modules are dropped and the rest sorted by id. The proxy is only the walk root and is never carried: it never runs in the client, because `requestLazy` runs the real module
 3. Each module is rendered by `HmrAstFinalizer` into a factory registration (`impl_traverse_for_hmr_ast_finalizer.rs`):
 
@@ -188,11 +188,15 @@ When `load` is called for a proxy module:
 
    (CJS modules get `var __rolldown_module__ = { exports: {} }` / `var __rolldown_exports__ = __rolldown_module__.exports` locals at the top of the body.) The same shape serves lazy chunks and HMR patches; re-execution is decided by the module cache, not by the wrapper.
 
+   A module prints the same factory code in every payload, wherever it sits in the payload. So the binding names do not use the payload position (`hmr_import_binding_name` in `hmr_ast_finalizer.rs`):
+   - a normal importee is a `var` inside the factory: `import_<importee repr>_<record id>`
+   - an external importee is an `import * as` at the payload top level, shared by every module in the payload: `import$<escaped importer stable id>_<record id>_<importee repr>`. The escape keeps ASCII letters and digits and writes every other byte as `$` plus two hex digits, so two importers never get the same name
+
 4. Dynamic imports inside the rendered modules are rewritten:
    - importee id contains `?rolldown-lazy=1` (a nested lazy proxy) → `__rolldown_runtime__.requestLazy("<stableRealId>", "<absProxyId>"[, 1])` — the same shape the full build emits, built by `create_request_lazy_call` in `crates/rolldown/src/hmr/utils.rs` (pinned by the nested-dynamic-import spec). The emitted code carries ids only; `DevRuntime#loadLazyChunk` builds the URL (see [design.md](./design.md#4-dev-server-integration)). The trailing `1` is the importer's node-mode interop flag; whether the importee is CommonJS is decided in the runtime from the module's own registration (see design.md "CommonJS interop happens in the runtime")
    - ordinary `import()` → `(__rolldown_runtime__.initModule("<stableId>"), Promise.resolve().then(() => __rolldown_runtime__.loadExports("<stableId>")))` (`try_rewrite_dynamic_import` in `hmr_ast_finalizer.rs`); `initModule` returns at once for a module already in the module cache. A CommonJS importee is known here, so the `loadExports` call is wrapped in `__rolldown_runtime__.__toESM(...[, 1])` directly
 5. The chunk starts with one `registerGraph(delta)` statement (`render_register_graph_source`, `module_graph_delta.rs`) and then carries registrations only — no execute-entry tail. `requestLazy` runs the module once the chunk has evaluated, so a throw from the module body reaches the importer's `await import(...)` instead of becoming a floating rejection inside the proxy's async wrapper
-6. The result is post-processed under a synthetic name `lazy_compile_{n}.js` (n from the engine's `next_hmr_patch_id` counter, the same counter that names `hmr_patch_{n}.js`, so the two payload kinds never collide as pending-payload keys — see the field doc in `dev_engine.rs`) and returned as `HmrLazyChunkOutput`: `code`, `filename`, the optional sourcemap, and `carried` — the `(stable id, render-time stamp)` list that `DevEngine::compile_lazy_entry` stores as the chunk's `PendingPayload`
+6. The result is post-processed under a synthetic name `lazy_compile_{n}.js` (n from the engine's `next_hmr_patch_id` counter, the same counter that names `hmr_patch_{n}.js`, so the two payload kinds never collide as pending-payload keys — see the field doc in `dev_engine.rs`) and returned as `HmrLazyChunkOutput`: `code`, `filename`, the optional sourcemap, `carried` — the `(stable id, render-time stamp)` list that `DevEngine::compile_lazy_entry` stores as the chunk's `PendingPayload` — and `scanned`. One `tracing::debug!` line (target `hmr`, message `compile_lazy_entry: done`) logs `scanned`, `modules` (the payload size), and the time of scan + merge, `update_defer_sync_data`, the walk, the render, and join + sourcemap
 
 ### Emitted Assets (#9815)
 
@@ -209,17 +213,18 @@ After successful lazy compilation, the dev engine's success branch does two thin
 if result.is_ok() {
   // 1. deliver assets emitted during the compile (before the code returns)
   if let Some(on_additional_assets) = ... { ... }
-  // 2. queue the background rebuild, with the watch list the compile wrote to
-  self.notify_module_changed(proxy_module_id, Arc::clone(bundler.watch_files()));
+  // 2. watch the compile's files, and queue the background rebuild if the compile scanned
+  self.notify_module_changed(proxy_module_id, Arc::clone(bundler.watch_files()), output.scanned);
 }
 ```
 
 The coordinator handles `ModuleChanged`:
 
 1. Register the watch list the message carries (see "Data Lifecycle → Build Output Refresh" for why)
-2. Queue a `TaskInput::Rebuild` with the raw proxy id as the changed file
-3. Set `has_stale_bundle_output = true`
-4. Schedule build if stale (runs immediately only when the coordinator is Idle/Failed; otherwise waits in the queue)
+2. Stop here when `rebuild` is false (a repeat visit)
+3. Queue a `TaskInput::Rebuild` with the raw proxy id as the changed file
+4. Set `has_stale_bundle_output = true`
+5. Schedule build if stale (runs immediately only when the coordinator is Idle/Failed; otherwise waits in the queue)
 
 On **failure**, neither step runs: a failed lazy compile queues no rebuild and the stub template stays in the build output (but the proxy remains marked fetched). If the background rebuild itself fails, the consumer caches the error, broadcasts an error overlay to every client, and cancels any pending full reload so the page never reloads onto a broken bundle (#9903); the coordinator enters `Failed { Rebuild }` with stale output, recovered by the next file change or page access.
 
@@ -296,7 +301,7 @@ After `/lazy`, the real module and its sync deps are ordinary watched graph modu
 ┌─────────────────────────────────────────────────────────────────────────┐
 │ 5. PARTIAL SCAN + RENDER                                                │
 ├─────────────────────────────────────────────────────────────────────────┤
-│  - ScanMode::Partial([proxyModuleId])                                   │
+│  - ScanMode::Partial([proxyModuleId]), skipped on a repeat visit        │
 │  - Plugin's load hook sees proxy is fetched → returns FETCHED template  │
 │  - Fetched template: import("/abs/path/lazy-module.js")                 │
 │  - resolve_id sees importer is a fetched proxy → returns None           │
@@ -323,8 +328,9 @@ After `/lazy`, the real module and its sync deps are ordinary watched graph modu
 ┌─────────────────────────────────────────────────────────────────────────┐
 │ 7. BUILD OUTPUT REFRESH (Background)                                    │
 ├─────────────────────────────────────────────────────────────────────────┤
-│  - DevEngine sends CoordinatorMsg::ModuleChanged { proxyModuleId }      │
-│  - Coordinator: watch compile's files → queue Rebuild → mark stale      │
+│  - DevEngine sends ModuleChanged { proxyModuleId, rebuild = scanned }   │
+│  - Coordinator: watch compile's files; if the compile scanned, also     │
+│    queue Rebuild → mark stale                                           │
 │  - Rebuild updates build output with fetched template                   │
 │  - Silent to connected clients; a reload still loads the route via /lazy│
 └─────────────────────────────────────────────────────────────────────────┘
@@ -388,13 +394,13 @@ This allows the fetched template's dynamic import to resolve to the actual modul
 
 **Problem**: After the first lazy load, the build output on disk still had the stub template, so the output no longer matched the graph that later builds and HMR steps start from.
 
-**Solution**: Notify the coordinator to trigger a rebuild after a successful lazy compile:
+**Solution**: Notify the coordinator to trigger a rebuild after a successful lazy compile that scanned:
 
 ```rust
 // In DevEngine::compile_lazy_entry
 if let Ok(output) = &mut result {
   // (assets delivered via on_additional_assets first — see "Emitted Assets")
-  self.notify_module_changed(proxy_module_id, watch_files);
+  self.notify_module_changed(proxy_module_id, watch_files, output.scanned);
 }
 ```
 
@@ -493,22 +499,22 @@ The injected helper function is inserted **after** any directive prologues (e.g.
 
 E2E playground: `packages/test-dev-server/tests/playground/lazy-compilation/` (one dev server config with `experimental.devMode.lazy: true` + an alias plugin):
 
-| Spec                        | Pins                                                                                                                                                      |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `basic`                     | lazy module arrives in exactly one JS request (`/@vite/lazy`), no stub chunk                                                                              |
-| `aliased-import`            | idempotent proxy-id creation under alias re-entrancy (vite#22454)                                                                                         |
-| `emitted-asset`             | assets emitted during lazy compile are servable on first load (vite#22596)                                                                                |
-| `late-lazy-chunk`           | a lazy chunk that lands after a newer HMR patch does not replace its code                                                                                 |
-| `lazy-init-error`           | init errors catchable with try/catch — cold and warm paths (#9975/#9981)                                                                                  |
-| `lazy-init-error-unhandled` | exactly one `unhandledrejection` without a handler — cold and warm paths                                                                                  |
-| `nested-dynamic-import`     | nested lazy `import()` inside a lazy chunk resolves on first click                                                                                        |
-| `shared-module`             | export-name preservation in shared chunks (#9132) + watch/auto-reload after fetch + a module shared by a visited and a new route runs once after a reload |
-| `walk-through-shipped`      | a lazy chunk carries the deps of a module that a patch shipped but never ran                                                                              |
-| `top-level-await`           | a lazy module with top-level await parses and runs (#11110); its importer gets a TDZ error                                                                |
+| Spec                        | Pins                                                                                                                                                                                                              |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `basic`                     | lazy module arrives in exactly one JS request (`/@vite/lazy`), no stub chunk                                                                                                                                      |
+| `aliased-import`            | idempotent proxy-id creation under alias re-entrancy (vite#22454)                                                                                                                                                 |
+| `emitted-asset`             | assets emitted during lazy compile are servable on first load (vite#22596)                                                                                                                                        |
+| `late-lazy-chunk`           | a lazy chunk that lands after a newer HMR patch does not replace its code                                                                                                                                         |
+| `lazy-init-error`           | init errors catchable with try/catch — cold and warm paths (#9975/#9981)                                                                                                                                          |
+| `lazy-init-error-unhandled` | exactly one `unhandledrejection` without a handler — cold and warm paths                                                                                                                                          |
+| `nested-dynamic-import`     | nested lazy `import()` inside a lazy chunk resolves on first click                                                                                                                                                |
+| `shared-module`             | export-name preservation in shared chunks (#9132) + watch/auto-reload after fetch + a module shared by a visited and a new route runs once after a reload, and the visited route's second compile starts no build |
+| `walk-through-shipped`      | a lazy chunk carries the deps of a module that a patch shipped but never ran                                                                                                                                      |
+| `top-level-await`           | a lazy module with top-level await parses and runs (#11110); its importer gets a TDZ error                                                                                                                        |
 
 Separate playground: `inline-common-chunks-lazy` runs lazy compilation with `experimentalInlineCommonChunks`. Two lazy routes share modules: they run once, also after a reload, the page loads no built route chunk, and an edit of a shared module hot-updates both routes.
 
-Several specs use `retry: 0` because the bugs only reproduce on the first interaction with a fresh server. Unit test: `packages/rolldown/tests/dev/dev-lazy-compile.test.ts` pins the unknown-id rejection (#9969), the `requestLazy` rewrite, that both emitters carry ids only and load the chunk through `DevRuntime#loadLazyChunk`, and that a lazy chunk carries no factory for its proxy. `packages/rolldown/tests/dev/dev-watch.test.ts` pins that an HMR patch carries no factory for a proxy. `hmr_patch_carries_the_import_importer_of_an_unfetched_proxy` in `crates/rolldown_dev/src/dev_engine.rs` pins that a patch carries the module that calls `import()` on the edited module, also when no client fetched that proxy.
+Several specs use `retry: 0` because the bugs only reproduce on the first interaction with a fresh server. Unit test: `packages/rolldown/tests/dev/dev-lazy-compile.test.ts` pins the unknown-id rejection (#9969), the `requestLazy` rewrite, that both emitters carry ids only and load the chunk through `DevRuntime#loadLazyChunk`, that external import names do not clash when factories from different payloads meet in one payload, and that a lazy chunk carries no factory for its proxy. `crates/rolldown/src/hmr/hmr_ast_finalizer.rs` (`cargo test -p rolldown hmr_import_binding_name`) pins the escape in external import names, and that the names differ for each importer id and record number. `packages/rolldown/tests/dev/dev-watch.test.ts` pins that an HMR patch carries no factory for a proxy. `hmr_patch_carries_the_import_importer_of_an_unfetched_proxy` in `crates/rolldown_dev/src/dev_engine.rs` pins that a patch carries the module that calls `import()` on the edited module, also when no client fetched that proxy. `crates/rolldown_dev/src/dev_engine.rs` (`cargo test -p rolldown_dev --features testing lazy_`) pins the repeat-visit rule: a repeat visit does not scan, queues no rebuild, and serves the same code and sourcemap; a retry after a failed scan, a retry after a compile that failed past its `merge`, a queued rescan, and a deleted route file all scan again.
 
 ## Files Changed (Reference)
 

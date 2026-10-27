@@ -39,6 +39,10 @@ pub struct ScanStageCache {
   pub module_idx_by_abs_path: FxHashMap<ArcStr, ModuleIdx>,
   // Usage: Map module stable id injected to client code to corresponding module index
   pub module_idx_by_stable_id: FxHashMap<StableModuleId, ModuleIdx>,
+  /// A lazy compile merged its route and then failed, so no rebuild was queued for that
+  /// merge. The next lazy compile scans again, which queues the rebuild.
+  /// See internal-docs/lazy-compilation/design.md ("Repeat Visits").
+  pub unfinished_lazy_merge: bool,
 }
 
 impl ScanStageCache {

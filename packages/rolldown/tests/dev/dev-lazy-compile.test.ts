@@ -6,6 +6,7 @@ import vm from 'node:vm';
 import type { InputOptions, OutputOptions, Plugin } from 'rolldown';
 import type { DevEngine, DevOptions } from 'rolldown/experimental';
 import { dev as _dev } from 'rolldown/experimental';
+import { parseSync } from 'rolldown/utils';
 import type * as DevRuntimeModule from 'rolldown/experimental/runtime';
 import { SourceMapConsumer, SourceMapGenerator } from 'source-map';
 import { expect, test } from 'vitest';
@@ -539,14 +540,93 @@ test(
       'reexport-external-client',
     );
 
-    const bindings = [...chunk.code.matchAll(/import \* as (\w+) from "external-dep"/g)].map(
-      (match) => match[1],
-    );
+    const bindings = externalBindings(chunk.code);
     expect(bindings).toHaveLength(1);
     // the registry never holds an external, so nothing may look it up there
     expect(chunk.code).not.toMatch(/loadExports\("external-dep"\)/);
     // and the one binding is declared once, so the import is not shadowed
-    expect(chunk.code).not.toMatch(new RegExp(`var\\s+${bindings[0]}\\b`));
+    expect(chunk.code).not.toMatch(new RegExp(`var\\s+${escapeRegExp(bindings[0])}\\b`));
+  },
+);
+
+function externalBindings(code: string): string[] {
+  return [...code.matchAll(/import \* as ([\w$]+) from "external-dep"/g)].map((match) => match[1]);
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[$()*+.?[\\\]^{|}]/g, '\\$&');
+}
+
+function semanticErrors(filename: string, code: string) {
+  return parseSync(filename, code, { sourceType: 'module', showSemanticErrors: true }).errors;
+}
+
+// The same factory code goes into every payload that carries the module. So the name of an
+// external's `import * as` binding, which sits at the payload top level, holds the importer's
+// id, not the module's place in the payload. Two importers of one external then never declare
+// the same name, in whatever payload their factories meet.
+test(
+  'a lazy chunk gives each importer of an external its own top-level binding',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    // `semanticErrors` must report a duplicate import binding, or the checks below prove nothing
+    expect(
+      semanticErrors('self-check.js', `import * as a from 'x';\nimport * as a from 'y';\n`),
+    ).not.toHaveLength(0);
+
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-external-names-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, 'main.js'),
+      `import('./a.js');\nimport('./b.js');\nimport('./c.js');\n`,
+    );
+    fs.writeFileSync(
+      path.join(dir, 'a.js'),
+      `import { helper } from 'external-dep';\nexport const a = helper;\n`,
+    );
+    fs.writeFileSync(
+      path.join(dir, 'b.js'),
+      `import { helper } from 'external-dep';\nexport const b = helper;\n`,
+    );
+    fs.writeFileSync(
+      path.join(dir, 'c.js'),
+      `export { a } from './a.js';\nexport { b } from './b.js';\n`,
+    );
+
+    const engine = await dev(
+      {
+        input: path.join(dir, 'main.js'),
+        external: ['external-dep'],
+        experimental: { devMode: { lazy: true } },
+      },
+      { dir: path.join(dir, 'dist') },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+
+    // one client per route, so each payload carries its whole route
+    const compile = (name: string, clientId: string) =>
+      engine.compileEntry(`${path.join(dir, name)}?rolldown-lazy=1`, clientId);
+    const chunkA = await compile('a.js', 'external-names-x');
+    const chunkB = await compile('b.js', 'external-names-y');
+    const chunkC = await compile('c.js', 'external-names-z');
+
+    // a.js and b.js both sit first in their own payloads, and still get different names
+    const [bindingA] = externalBindings(chunkA.code);
+    const [bindingB] = externalBindings(chunkB.code);
+    expect(bindingA).not.toBe(bindingB);
+    // c.js's payload carries a.js and b.js again, with the same names
+    expect(externalBindings(chunkC.code).sort()).toEqual([bindingA, bindingB].sort());
+    expect(semanticErrors('c.js', chunkC.code)).toEqual([]);
   },
 );
 

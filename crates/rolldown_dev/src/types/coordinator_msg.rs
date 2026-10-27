@@ -44,6 +44,8 @@ pub enum CoordinatorMsg {
     /// The watch list of the build the lazy compile ran against. It holds the files
     /// the compile loaded. See `DevEngine::compile_lazy_entry`.
     watch_files: Arc<FxDashSet<ArcStr>>,
+    /// Whether the compile changed the graph, so the build output needs a `Rebuild`.
+    rebuild: bool,
   },
   Close,
 }

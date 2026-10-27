@@ -11,7 +11,7 @@
 5. **Dev server returns JS directly** - `/@vite/lazy` returns the compiled code as a single JS string; the browser loads it as an ES module (only inline sourcemaps survive — see implementation.md)
 6. **Module IDs** - runtime module-map lookups use **stable IDs** (cwd-relative); absolute paths appear only in the proxy id that `requestLazy` passes to `loadLazyChunk` (sent as the `/@vite/lazy?id=` param) and the fetched template's `import($MODULE_ID)`
 7. **Proxy module states** - a proxy is a server-side graph node, never fetched as a chunk. Two states: **not fetched** (empty body, keeps the real module out of the build) and **fetched** (imports the real module, rooting the partial scan)
-8. **Build output refresh** - after lazy compilation, the dev engine triggers a background rebuild to update build output; the rebuild is silent to connected clients
+8. **Build output refresh** - a lazy compile that scans queues a background rebuild, so the build output matches the graph again; the rebuild is silent to connected clients. A repeat visit of a fetched route skips both the scan and the rebuild (see [Repeat Visits](#6-repeat-visits))
 9. **Dedup** - the server skips modules whose current copy the client already holds (its ship map + boot-evaluated map, `HmrStage::compile_lazy_entry`); in the browser `initModule` runs a factory only when the module is not yet in the module cache — a shared module never executes twice
 10. **Error handling** - unknown module ids are rejected (security gate, #9969); init errors in lazy modules reject the consumer's `await import()` catchably (#9981)
 11. **ClientId** - browser-generated id per tab (Vite's `bundledDevClient.ts`); selects the per-client `ClientSession` (`crates/rolldown_dev/src/types/client_session.rs`) whose ship map and boot-evaluated map size the lazy chunk
@@ -112,7 +112,7 @@ sequenceDiagram
   R-->>P: exports
 ```
 
-A route whose factories the page does not hold always takes the request path, also after a reload and also when the server compiled the route before.
+A route whose factories the page does not hold always takes the request path, also after a reload and also when the server compiled the route before. What the server skips on such a repeat visit is in [Repeat Visits](#6-repeat-visits).
 
 The first argument is the **real** module's stable id, known at compile time. `requestLazy` memoizes the promise under that id, which is the dedup point: one request no matter how many places import the module. `removeModuleCache` drops the memo, so a module edited after being lazily loaded is re-run rather than served stale.
 
@@ -170,10 +170,10 @@ The dev server handles these requests:
 2. Call `DevEngine.compileEntry(moduleId, clientId)` (TS) / `DevEngine::compile_lazy_entry` (Rust)
 3. `DevEngine::compile_lazy_entry` copies that client's ship map and boot-evaluated map out of its `ClientSession` and marks the proxy as fetched
 4. **Security gate**: the id is only a lookup key into the build cache — an id not already in the module graph is rejected with `Lazy entry module not found in cache` (never resolved from the filesystem, so a malicious request cannot bundle arbitrary files; analogous to Vite's `server.fs.strict`, pinned by test, #9969)
-5. Partial scan from the proxy module - plugin returns the fetched template, whose `import($MODULE_ID)` triggers compilation of the actual module. The chunk carries `registerFactory` calls only; `requestLazy` runs the module once the chunk has evaluated
+5. Partial scan from the proxy module - plugin returns the fetched template, whose `import($MODULE_ID)` triggers compilation of the actual module. A repeat visit skips this scan (see [Repeat Visits](#6-repeat-visits)). The chunk carries `registerFactory` calls only; `requestLazy` runs the module once the chunk has evaluated
 6. Assets emitted during the compile are delivered via the `onAdditionalAssets` callback **before** the code is returned, so they are servable when the chunk executes (#9815)
 7. **Return compiled JS directly** (`Content-Type: application/javascript`) - the browser loads it as an ES module; compile failures answer HTTP 500. Vite appends a `__rolldown_runtime__.payloadDelivered(filename)` line to the chunk (`payloadDeliveredAck` in `bundledDev.ts`); when the client runs it, `DevEngine::notify_payload_delivered` records the chunk's modules in that client's ship map
-8. **Notify coordinator** - the coordinator watches the files the compile loaded and queues a background rebuild, so the build output matches the graph again. No page loads the route from that output: every lazy `import()` calls `requestLazy`
+8. **Notify coordinator** - the coordinator watches the files the compile loaded. When the compile scanned, it also queues a background rebuild, so the build output matches the graph again. No page loads the route from that output: every lazy `import()` calls `requestLazy`
 
 ### 5. After Boot, Only Factories
 
@@ -194,6 +194,46 @@ Rejected options for making a repeat visit cheaper:
 
 - **Redirect `/@vite/lazy` to a built chunk** (vitejs/vite#23502). It brings built chunks back after boot, so it mixes the shapes. It also needs server-side guesses: the build generation is known at WebSocket connect, not at page load; the redirect must stop after the first payload; and Vite would copy state that `DevEngine` already has.
 - **A loader made by the build** (`requestLazy(id, proxyId, () => import('./x-HASH.js'))`). It mixes the shapes too, and needs page-side rules (no payload and no push since load) plus checks for timing cases.
+
+### 6. Repeat Visits
+
+A page that reloads loses its factories, so a visited route costs one `/@vite/lazy` request again. That compile does not need to scan:
+
+```mermaid
+flowchart TD
+  R["/@vite/lazy?id=P&clientId=C"] --> F{"P has a resolved import() record<br/>AND no unfinished lazy merge<br/>AND pending_rescans is empty<br/>AND no lost HMR update?"}
+  F -- "no (first visit, or a retry)" --> Scan["partial scan of P, merge, update_defer_sync_data"]
+  F -- "yes (repeat visit)" --> Sel
+  Scan --> Sel["walk, render, join"]
+  Sel --> Q{scanned?}
+  Q -- yes --> MC["ModuleChanged { rebuild: true }: watch files + Rebuild"]
+  Q -- no --> W["ModuleChanged { rebuild: false }: watch files only"]
+```
+
+The rule, in `HmrStage::compile_lazy_entry`:
+
+1. **The proxy is in fetched form.** Only the fetched template has an `import()`, so a resolved `import()` record on the proxy means the route's closure is already in the graph. This reads the graph, not `fetched_entries`: `mark_as_fetched` runs before every compile, so a retry after a failed first compile would look like a repeat visit. A failed scan is reverted and never reaches `merge`, so after a failed scan the proxy stays a stub, and the next compile scans again.
+2. **No unfinished lazy merge.** A compile can fail after its `merge`, in `update_defer_sync_data` or in the sourcemap step (a user callback such as `sourcemapIgnoreList` can throw). The route is then in the graph, but no `ModuleChanged` was sent, so no `Rebuild` was queued. The compile sets `ScanStageCache::unfinished_lazy_merge` right after its `merge`, and only a compile that returns clears it. While it is set, the next compile scans again and queues the `Rebuild`. A full scan replaces the cache, so it clears the flag too.
+3. **`pending_rescans` is empty.** Files that failed an earlier scan are retried only by a scan.
+4. **No lost HMR update.** A lost update needs the `Rebuild` that follows a scan. It becomes a full build that reloads every client.
+
+Why skipping is safe: with no scan, `merge` does not run and the graph does not change, so a `Rebuild` would write the output that already exists. A scan of the proxy would not reload the real module either, because a partial scan invalidates only the ids it lists.
+
+A deleted route file goes through the HMR stage. The delete event rescans the proxy (an importer of the deleted module), and that scan fails to resolve the file. The failed scan queues the proxy in `pending_rescans`, so the next compile scans and reports the same error, as a scan-first compile would.
+
+The compile returns `scanned` in `HmrLazyChunkOutput`, and logs it with the payload size (`modules`) and per-phase timings (`tracing` target `hmr`, message `compile_lazy_entry: done`).
+
+**Rejected option: a factory cache.** A repeat visit skips the scan, but it still renders every module of the route. A cache of rendered factories (one entry per module, checked against the module's stamp, dropped by `merge` when a render input changes) would let a repeat visit join the cached factories instead of rendering them. Measured on a route of about 1500 modules:
+
+- A repeat click goes from about 10 ms to about 2.8 ms. Skipping the scan alone already brings a repeat click from about 60 ms to about 10 ms.
+- The cache holds about 12 MB per 1500 modules with sourcemaps on, and about 3 MB without. Each entry keeps the code and the sourcemap, and the sourcemap's `sourcesContent` is a second copy of the module's text. It grows with every module rendered into a lazy chunk until the next full scan.
+- Only lazy payloads after the first one read it. The first visit of a route, HMR patches, and the initial build gain nothing.
+
+It was rejected because about 7 ms per repeat click does not pay for that memory. It also adds rules that must stay correct: `merge` must drop every entry whose render read a changed module, the module itself or an importee reached through its import records.
+
+## Unresolved Questions
+
+- **Lazy barrels get no new stamp.** A barrel record that a later route resolves changes the barrel's factory without a new stamp. Recorded with an example in [hmr/design.md](../hmr/design.md#unresolved-questions); not fixed.
 
 ## Related
 

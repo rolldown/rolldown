@@ -415,13 +415,34 @@ impl GenerateStage<'_> {
     ranks
   }
 
+  /// Whether the code of a chunk imports another chunk: a module of the chunk has a static import
+  /// that tree shaking keeps, and the import leads to a module of the other chunk.
+  pub(super) fn chunk_imports_chunk(
+    &self,
+    chunk_graph: &ChunkGraph,
+    chunk_idx: ChunkIdx,
+    importee_chunk_idx: ChunkIdx,
+  ) -> bool {
+    let mut importees = vec![];
+    chunk_graph.chunk_table[chunk_idx].modules.iter().any(|&module_idx| {
+      self.push_kept_static_importees(module_idx, &mut importees);
+      importees
+        .drain(..)
+        .any(|importee| chunk_graph.module_to_chunk[importee] == Some(importee_chunk_idx))
+    })
+  }
+
   /// Pushes the modules that the static imports of a module lead to, in source order. Only the
   /// imports that tree shaking keeps count, because the output does not have the other imports. An
   /// import is kept when its module is in `load_dependencies`, the dependencies that survive tree
   /// shaking. An import that is not kept can still get bindings that other modules declare, for
   /// example through a re-export module that tree shaking removes. Such an import leads to the
   /// modules that declare those bindings, because the output imports the bindings from there.
-  fn push_kept_static_importees(&self, module_idx: ModuleIdx, importees: &mut Vec<ModuleIdx>) {
+  pub(super) fn push_kept_static_importees(
+    &self,
+    module_idx: ModuleIdx,
+    importees: &mut Vec<ModuleIdx>,
+  ) {
     let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
       return;
     };

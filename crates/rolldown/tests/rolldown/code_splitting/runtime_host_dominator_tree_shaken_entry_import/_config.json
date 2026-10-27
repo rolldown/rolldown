@@ -1,0 +1,16 @@
+{
+  "_comment": "Same graph as `runtime_host_dominator_tree_shaken_import`, but `consumer.js` is also an entry. An imported entry module without side effects is in `load_dependencies` only to place the chunks. So `predicted_static_import_targets` follows the removed imports of `consumer.js` in `c.js` and `logger.js`, and a dominator search on those edges merges the runtime into the chunk of `consumer.js`. The kept-import rule counts such an entry only when the importer uses one of its bindings.",
+  "config": {
+    "input": [
+      { "name": "a", "import": "a.js" },
+      { "name": "b", "import": "b.js" },
+      { "name": "c", "import": "c.js" },
+      { "name": "d", "import": "d.js" },
+      { "name": "consumer", "import": "consumer.js" }
+    ],
+    "external": ["server-only"],
+    "treeshake": {
+      "moduleSideEffects": false
+    }
+  }
+}

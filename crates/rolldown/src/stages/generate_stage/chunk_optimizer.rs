@@ -1213,7 +1213,7 @@ impl GenerateStage<'_> {
             )
           })
           .or_else(|| {
-            Self::find_consumer_dominator(&consumer_chunks, chunk_graph, module_table).filter(
+            self.find_consumer_dominator(&consumer_chunks, chunk_graph, module_table).filter(
               |&target_chunk_idx| {
                 Self::runtime_merge_target_is_allowed(chunk_graph, target_chunk_idx)
                   && self.runtime_target_is_tla_safe(
@@ -1392,7 +1392,7 @@ impl GenerateStage<'_> {
     }
     consumer_chunks.iter().all(|&consumer| {
       consumer == host
-        || self.chunk_importee_ranks(chunk_graph, consumer).contains_key(&host)
+        || self.chunk_imports_chunk(chunk_graph, consumer, host)
         || chunk_graph.chunk_table[consumer].bits.is_subset(
           late_entries.get_or_insert_with(|| self.late_runtime_entries(chunk_graph, runtime_bits)),
         )
@@ -1619,6 +1619,9 @@ impl GenerateStage<'_> {
     }
   }
 
+  /// The cycle check follows every static import record, also a record that tree shaking drops. A
+  /// cycle check must not miss an edge that the output has. An extra edge only rejects a target,
+  /// and the runtime then stays standalone.
   fn runtime_target_would_create_static_cycle(
     target_chunk_idx: ChunkIdx,
     consumer_chunks: &FxHashSet<ChunkIdx>,
@@ -1631,9 +1634,27 @@ impl GenerateStage<'_> {
           target_chunk_idx,
           consumer_chunk_idx,
           chunk_graph,
-          module_table,
+          |module_idx, targets| Self::push_static_import_targets(module_table, module_idx, targets),
         )
     })
+  }
+
+  /// Pushes the target of every static import record of a module, also a record that tree shaking
+  /// drops.
+  fn push_static_import_targets(
+    module_table: &ModuleTable,
+    module_idx: ModuleIdx,
+    targets: &mut Vec<ModuleIdx>,
+  ) {
+    if let Some(module) = module_table[module_idx].as_normal() {
+      targets.extend(
+        module
+          .import_records
+          .iter()
+          .filter(|rec| rec.kind.is_static())
+          .filter_map(|rec| rec.resolved_module),
+      );
+    }
   }
 
   /// Return the unique `consumers` member that every other member reaches
@@ -1641,7 +1662,22 @@ impl GenerateStage<'_> {
   /// chunk is a "downstream sink" of the consumer set — placing the runtime
   /// there adds no new back-edges, so no cycle can form. Returns `None` when
   /// the set has no dominator (e.g. consumers sit in parallel sub-graphs).
+  ///
+  /// Every consumer imports the dominator for helpers. The search has two steps:
+  /// 1. Follow only the imports that the output keeps (`push_kept_static_importees`, the rule of
+  ///    `chunk_importee_ranks`). Every consumer already loads such a dominator, so the helper
+  ///    import adds no chunk load.
+  /// 2. Follow every static import record, also a record that tree shaking drops, and accept the
+  ///    dominator only when its load is harmless (`runtime_host_load_is_harmless`). A consumer that
+  ///    reaches the dominator only through a dropped import does not load it yet, and the helper
+  ///    import then loads it for real. In `issues/10543`, `lab` reaches `w.js` only through a
+  ///    dropped import, but the `w.js` chunk runs nothing at load time, so the runtime stays there.
+  ///    In `code_splitting/runtime_host_dominator_tree_shaken_import`, the dominator imports the
+  ///    external `server-only`, so the runtime stays standalone.
+  ///
+  /// See internal-docs/code-splitting/implementation.md.
   fn find_consumer_dominator(
+    &self,
     consumers: &FxHashSet<ChunkIdx>,
     chunk_graph: &ChunkGraph,
     module_table: &ModuleTable,
@@ -1649,16 +1685,120 @@ impl GenerateStage<'_> {
     if consumers.len() <= 1 {
       return consumers.iter().copied().next();
     }
-    consumers.iter().copied().find(|&candidate| {
-      consumers.iter().all(|&other| {
-        other == candidate
-          || Self::chunk_reaches_via_static_import(other, candidate, chunk_graph, module_table)
+    let dominates =
+      |candidate: ChunkIdx, module_targets: &mut dyn FnMut(ModuleIdx, &mut Vec<ModuleIdx>)| {
+        consumers.iter().all(|&other| {
+          other == candidate
+            || Self::chunk_reaches_via_static_import(
+              other,
+              candidate,
+              chunk_graph,
+              &mut *module_targets,
+            )
+        })
+      };
+    consumers
+      .iter()
+      .copied()
+      .find(|&candidate| {
+        dominates(candidate, &mut |module_idx, targets| {
+          self.push_kept_static_importees(module_idx, targets);
+        })
       })
-    })
+      .or_else(|| {
+        consumers
+          .iter()
+          .copied()
+          .filter(|&candidate| {
+            self.runtime_host_load_is_harmless(candidate, chunk_graph, module_table)
+          })
+          .find(|&candidate| {
+            dominates(candidate, &mut |module_idx, targets| {
+              Self::push_static_import_targets(module_table, module_idx, targets);
+            })
+          })
+      })
+  }
+
+  /// Whether a consumer may import `target_chunk_idx` for helpers although it does not load the
+  /// chunk yet. The load is harmless when it runs nothing observable. In the chunk, and in every
+  /// chunk that it imports through kept edges, each module must be the runtime, be wrapped (its
+  /// body runs only in `init_*()`), or have no side effects. No module there may keep an import of
+  /// an external module: external imports run at load time also for wrapped modules. In an entry
+  /// chunk the entry module runs at load time and can call the wrappers, so wrapping does not count
+  /// there. A module without side effects by the `moduleSideEffects` option counts as harmless:
+  /// that is the contract of the option.
+  fn runtime_host_load_is_harmless(
+    &self,
+    target_chunk_idx: ChunkIdx,
+    chunk_graph: &ChunkGraph,
+    module_table: &ModuleTable,
+  ) -> bool {
+    let runtime_idx = self.link_output.runtime.id();
+    let mut visited = FxHashSet::default();
+    let mut queue = VecDeque::from([target_chunk_idx]);
+    let mut targets = vec![];
+    while let Some(current) = queue.pop_front() {
+      if !visited.insert(current) {
+        continue;
+      }
+      let chunk = &chunk_graph.chunk_table[current];
+      let mut is_entry_chunk = false;
+      if let ChunkKind::EntryPoint { module: entry_module_idx, .. } = chunk.kind {
+        is_entry_chunk = true;
+        if module_table[entry_module_idx].side_effects().has_side_effects() {
+          return false;
+        }
+        if let Some(entry_module_chunk) = chunk_graph.module_to_chunk[entry_module_idx]
+          && entry_module_chunk != current
+          && !chunk_graph.post_chunk_optimization_operations.contains_key(&entry_module_chunk)
+        {
+          queue.push_back(entry_module_chunk);
+        }
+      }
+      for &module_idx in &chunk.modules {
+        if module_idx == runtime_idx {
+          continue;
+        }
+        let meta = &self.link_output.metas[module_idx];
+        let wrapped = !is_entry_chunk && !matches!(meta.wrap_kind(), WrapKind::None);
+        if !wrapped && module_table[module_idx].side_effects().has_side_effects() {
+          return false;
+        }
+        let Some(module) = module_table[module_idx].as_normal() else {
+          continue;
+        };
+        let keeps_external_import = module
+          .import_records
+          .iter()
+          .filter(|rec| rec.kind.is_static())
+          .filter_map(|rec| rec.resolved_module)
+          .any(|dep_idx| {
+            module_table[dep_idx].is_external() && meta.load_dependencies.contains(&dep_idx)
+          });
+        if keeps_external_import {
+          return false;
+        }
+        self.push_kept_static_importees(module_idx, &mut targets);
+        queue.extend(
+          targets.drain(..).filter_map(|target| chunk_graph.module_to_chunk[target]).filter(
+            |&target_chunk| {
+              target_chunk != current
+                && !chunk_graph.post_chunk_optimization_operations.contains_key(&target_chunk)
+            },
+          ),
+        );
+      }
+    }
+    true
   }
 
   /// BFS from `from` across chunks, following only import records that become
   /// static chunk-loading edges through still-live target chunks.
+  ///
+  /// `module_targets` pushes the modules that a module of the current chunk imports statically.
+  /// The caller chooses the edges: the dominator search follows only the imports that the output
+  /// keeps, and the cycle check follows every static import record.
   ///
   /// Edge filtering rationale:
   /// - Dynamic imports are not followed. Static imports and `require()` can
@@ -1678,10 +1818,11 @@ impl GenerateStage<'_> {
     from: ChunkIdx,
     to: ChunkIdx,
     chunk_graph: &ChunkGraph,
-    module_table: &ModuleTable,
+    mut module_targets: impl FnMut(ModuleIdx, &mut Vec<ModuleIdx>),
   ) -> bool {
     let mut visited = FxHashSet::default();
     let mut queue = VecDeque::from([from]);
+    let mut targets = vec![];
     while let Some(current) = queue.pop_front() {
       if !visited.insert(current) {
         continue;
@@ -1698,19 +1839,14 @@ impl GenerateStage<'_> {
         queue.push_back(entry_module_chunk);
       }
       for &module_idx in &chunk_graph.chunk_table[current].modules {
-        let Some(module) = module_table[module_idx].as_normal() else {
-          continue;
-        };
+        module_targets(module_idx, &mut targets);
         queue.extend(
-          module
-            .import_records
-            .iter()
-            .filter(|rec| rec.kind.is_static())
-            .filter_map(|rec| chunk_graph.module_to_chunk[rec.resolved_module?])
-            .filter(|&target_chunk| {
+          targets.drain(..).filter_map(|target| chunk_graph.module_to_chunk[target]).filter(
+            |&target_chunk| {
               target_chunk != current
                 && !chunk_graph.post_chunk_optimization_operations.contains_key(&target_chunk)
-            }),
+            },
+          ),
         );
       }
     }

@@ -64,7 +64,61 @@ export function loadModuleGraph(candidates) {
   const file = candidates.find((candidate) => fs.existsSync(candidate));
   if (!file) return null;
   const data = JSON.parse(fs.readFileSync(file, 'utf8'));
-  return { file, ...data, staticPreds: computeStaticPreds(data.modules) };
+  return {
+    file,
+    ...data,
+    staticPreds: computeStaticPreds(data.modules),
+    buildReport: readBuildReport(file),
+  };
+}
+
+/**
+ * The build report (`metrics.json`) next to a report-directory `module-graph.json`:
+ * the platform of the build and the output file of each entry. Null for a saved
+ * sidecar (a baseline snapshot has no sibling) or when the report is unreadable.
+ */
+function readBuildReport(graphFile) {
+  if (path.basename(graphFile) !== 'module-graph.json') return null;
+  const file = path.join(path.dirname(graphFile), 'metrics.json');
+  if (!fs.existsSync(file)) return null;
+  let report;
+  try {
+    report = JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return null;
+  }
+  return {
+    file,
+    platform: report.session?.platform ?? null,
+    format: report.session?.format ?? null,
+    entryChunks: (report.entries ?? [])
+      .map((entry) => entry?.chunk)
+      .filter((chunk) => typeof chunk === 'string' && chunk !== ''),
+  };
+}
+
+/**
+ * Why a report discovered next to `dist` does not describe the build in `dist`, or
+ * null when it does (or when nothing can be checked). Vite's client and SSR builds
+ * write the same report directory, so the last build wins; a rebuild without the
+ * report also leaves hashed chunk names behind. The entry chunks decide: when none
+ * of them exists in `dist`, the report is another build's.
+ */
+export function reportDistMismatch(graph, dist) {
+  const report = graph?.buildReport;
+  if (!report || !dist || report.entryChunks.length === 0) return null;
+  if (report.entryChunks.some((chunk) => fs.existsSync(path.join(dist, chunk)))) return null;
+  const shown =
+    report.entryChunks.slice(0, 3).join(', ') + (report.entryChunks.length > 3 ? ', ...' : '');
+  let why = `the report at ${report.file} is not the build in ${dist}: none of its entry chunks (${shown}) exists there.`;
+  if (report.platform === 'node') {
+    // A client build (SSR frameworks write no index.html) is the usual victim, so the
+    // hint does not depend on the dist's layout.
+    why +=
+      '\nThe report comes from a node-platform build (a server). Vite builds the client and the SSR ' +
+      'environments into the same report directory, and the last build wins.';
+  }
+  return why;
 }
 
 /**

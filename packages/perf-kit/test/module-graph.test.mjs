@@ -6,8 +6,19 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
-import { deferAllInto, eagerSet, evalOverrides, whatIf, withRoots } from '../lib/module-graph.mjs';
+import {
+  deferAllInto,
+  eagerSet,
+  evalOverrides,
+  loadModuleGraph,
+  reportDistMismatch,
+  whatIf,
+  withRoots,
+} from '../lib/module-graph.mjs';
 import { indexOf, makeGraph } from './graph-fixtures.mjs';
 
 // --- oracle: the exact pre-refactor whatIf (grow-then-fixpoint-prune UR closure) -----
@@ -421,4 +432,86 @@ test('withRoots never mutates the build graph or reuses its cached eager set', (
   // Nothing to add: no roots, or roots that are entries already.
   assert.equal(withRoots(built, []), built);
   assert.equal(withRoots(built, [indexOf(built, 'entry')]), built);
+});
+
+// --- a discovered report must describe the dist it sits next to ---------------------
+// Vite's client and SSR builds write the same report directory (the last build wins),
+// and a rebuild without the report leaves stale hashed chunk names behind.
+
+function reportDir(t, { metrics, graph = { entryModules: ['src/main.ts'], modules: [] } }) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'metrics-report-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  fs.mkdirSync(path.join(dir, 'report'));
+  fs.writeFileSync(path.join(dir, 'report', 'module-graph.json'), JSON.stringify(graph));
+  if (metrics) fs.writeFileSync(path.join(dir, 'report', 'metrics.json'), JSON.stringify(metrics));
+  fs.mkdirSync(path.join(dir, 'dist', 'assets'), { recursive: true });
+  return {
+    reportFile: path.join(dir, 'report', 'module-graph.json'),
+    dist: path.join(dir, 'dist'),
+  };
+}
+
+const clientMetrics = {
+  session: { platform: 'browser', format: 'es' },
+  entries: [{ entry: 'index.html', chunk: 'assets/index-Ab12Cd34.js' }],
+};
+
+test('loadModuleGraph reads the platform and entry chunks of the sibling metrics.json', (t) => {
+  const { reportFile } = reportDir(t, { metrics: clientMetrics });
+  const graph = loadModuleGraph([reportFile]);
+  assert.deepEqual(graph.buildReport, {
+    file: path.join(path.dirname(reportFile), 'metrics.json'),
+    platform: 'browser',
+    format: 'es',
+    entryChunks: ['assets/index-Ab12Cd34.js'],
+  });
+});
+
+test('a report whose entry chunk exists in the dist matches it', (t) => {
+  const { reportFile, dist } = reportDir(t, { metrics: clientMetrics });
+  fs.writeFileSync(path.join(dist, 'assets', 'index-Ab12Cd34.js'), '');
+  assert.equal(reportDistMismatch(loadModuleGraph([reportFile]), dist), null);
+});
+
+test('a report with no entry chunk in the dist is another build, with the server hint', (t) => {
+  const { reportFile, dist } = reportDir(t, {
+    metrics: {
+      session: { platform: 'node', format: 'es' },
+      entries: [
+        { entry: '\0virtual:server-build', chunk: 'index.js' },
+        { entry: 'app/routes/home.tsx', chunk: 'assets/home-Ef56Gh78.js' },
+      ],
+    },
+  });
+  fs.writeFileSync(path.join(dist, 'index.html'), '<!doctype html>');
+  fs.writeFileSync(path.join(dist, 'assets', 'index-Ab12Cd34.js'), '');
+  const why = reportDistMismatch(loadModuleGraph([reportFile]), dist);
+  assert.match(
+    why,
+    /none of its entry chunks \(index\.js, assets\/home-Ef56Gh78\.js\) exists there/,
+  );
+  assert.match(why, /node-platform build \(a server\)/);
+});
+
+test('a stale browser report after a rebuild is another build, without the server hint', (t) => {
+  const { reportFile, dist } = reportDir(t, { metrics: clientMetrics });
+  fs.writeFileSync(path.join(dist, 'assets', 'index-Zz99Yy88.js'), '');
+  const why = reportDistMismatch(loadModuleGraph([reportFile]), dist);
+  assert.match(why, /none of its entry chunks/);
+  assert.doesNotMatch(why, /the server/);
+});
+
+test('no sibling metrics.json, a saved sidecar or no dist: nothing to check', (t) => {
+  const { reportFile, dist } = reportDir(t, { metrics: null });
+  const bare = loadModuleGraph([reportFile]);
+  assert.equal(bare.buildReport, null);
+  assert.equal(reportDistMismatch(bare, dist), null);
+
+  const sidecar = path.join(path.dirname(dist), 'baseline-module-graph.json');
+  fs.copyFileSync(reportFile, sidecar);
+  fs.writeFileSync(path.join(path.dirname(dist), 'metrics.json'), JSON.stringify(clientMetrics));
+  assert.equal(loadModuleGraph([sidecar]).buildReport, null);
+
+  const { reportFile: withReport } = reportDir(t, { metrics: clientMetrics });
+  assert.equal(reportDistMismatch(loadModuleGraph([withReport]), null), null);
 });

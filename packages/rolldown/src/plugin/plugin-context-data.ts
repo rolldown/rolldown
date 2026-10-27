@@ -147,5 +147,7 @@ export class PluginContextData {
   clear(): void {
     this.renderedChunkMeta = null;
     this.loadModulePromiseMap.clear();
+    // Watch mode reuses this object across rebuilds; entries hold the previous build's chunk data.
+    this.outputCodeCache.clear();
   }
 }

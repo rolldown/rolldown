@@ -10,12 +10,6 @@ Chrome/Edge), so it works three ways:
   (the `bin` shim replaces any `node node_modules/…` path-typing). When installed,
   state lives in the consumer project at `.perf-kit/` (add it to your
   `.gitignore`), never inside `node_modules`; override with `ROLLDOWN_PERF_KIT_STATE`.
-- **Via a linked rolldown checkout**: if your project has
-  `"rolldown": "link:<checkout>/packages/rolldown"`, the rolldown package's
-  `rolldown-metrics` bin launches this harness from the sibling package —
-  `npx rolldown-metrics scan --app .` with nothing else installed. State goes to
-  your project's `.perf-kit/`; on a registry-installed rolldown the launcher
-  explains that the lab isn't bundled and points at `@rolldown/perf-kit`.
 - **Once published**: `npx @rolldown/perf-kit scan --app .` with no install step.
 
 Prototype of the metrics plan's **Phase 3b (lab runner)** and **3c (code coverage)**:

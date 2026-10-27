@@ -21,8 +21,7 @@
     "directory": "packages/rolldown"
   },
   "bin": {
-    "rolldown": "./bin/cli.mjs",
-    "rolldown-metrics": "./bin/perf-kit.mjs"
+    "rolldown": "./bin/cli.mjs"
   },
   "files": [
     "bin",

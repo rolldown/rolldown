@@ -96,7 +96,7 @@ const CALIBRATE_CEILING_MS = 8000;
 const CANDIDATE_MIN_BYTES = 3 * 1024;
 const CANDIDATE_MAX_PAINT_RATIO = 0.02;
 
-// How to spell an invocation in hints: a launcher can dictate it (rolldown-metrics),
+// How to spell an invocation in hints: a launcher can dictate it via ROLLDOWN_PERF_KIT_CLI,
 // otherwise the bin name when installed, the script when run from the repo.
 const CLI =
   process.env.ROLLDOWN_PERF_KIT_CLI ??

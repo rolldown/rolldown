@@ -19,7 +19,7 @@ use crate::{
 
 use super::{
   GenerateStage, chunk_ext::ChunkCreationReason, chunk_ext::ChunkDebugExt,
-  code_splitting::IndexSplittingInfo,
+  code_splitting::IndexSplittingInfo, compute_cross_chunk_links::sort_chunk_importees_by,
   simulated_facade_inclusion::include_simulated_facade_namespace,
 };
 
@@ -1116,17 +1116,21 @@ impl GenerateStage<'_> {
       chunk_graph,
       Some(&runtime_dependent_chunks),
       RuntimeMergeCascade::Full,
+      used_symbol_refs_builder,
     );
   }
 
   /// Merge the standalone runtime chunk into a safe existing host. Prefer a
   /// live chunk with the runtime's bitset to preserve pre-existing layouts;
   /// otherwise use a runtime consumer that dominates all other consumers.
+  /// Every host of the full cascade must also keep the import order of the
+  /// chunks that import it (`runtime_host_keeps_import_order`).
   pub(super) fn try_merge_runtime_chunk(
     &self,
     chunk_graph: &mut ChunkGraph,
     additional_runtime_consumers: Option<&FxHashSet<ChunkIdx>>,
     cascade: RuntimeMergeCascade,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
   ) {
     // `experimentalInlineCommonChunks` registers registry demand on the files that read records
     // after every merge proof below has run, so a merged runtime could end up imported by files
@@ -1154,6 +1158,18 @@ impl GenerateStage<'_> {
     if runtime_chunk.modules.len() != 1 || runtime_chunk.modules[0] != runtime_module_idx {
       return;
     }
+    // `runtime_host_keeps_import_order` needs the chunk `exec_order` of the standalone layout.
+    // `generate_chunks` assigns the orders after this merge, so assign them here first. Both calls
+    // run again on the final layout. The strict path and the post-order-lowering fold skip the
+    // check, so they keep their orders.
+    if cascade == RuntimeMergeCascade::Full && !self.options.is_strict_execution_order_enabled() {
+      chunk_graph.sort_chunk_modules(self.link_output, self.options);
+      self.assign_chunk_exec_orders(chunk_graph);
+    }
+    let runtime_chunk = &chunk_graph.chunk_table[runtime_chunk_idx];
+    // The predicted import edges for `runtime_host_keeps_import_order`. The cascade calculates them
+    // at most once, and only for a common chunk host.
+    let mut import_edges = None;
     let consumer_chunks = self.collect_runtime_consumer_chunks(
       chunk_graph,
       runtime_chunk_idx,
@@ -1171,7 +1187,16 @@ impl GenerateStage<'_> {
       // `runtime_bits_covering_consumers` returns the runtime bits plus some bits of the sole
       // consumer. The host already has the bits of the consumer, so the runtime bits are sufficient.
       (RuntimeMergeCascade::Full, Some(consumer)) => {
-        (Some(consumer), Some(runtime_chunk.bits.clone()))
+        let host = Some(consumer).filter(|&consumer| {
+          self.runtime_host_keeps_import_order(
+            chunk_graph,
+            consumer,
+            runtime_chunk_idx,
+            used_symbol_refs_builder,
+            &mut import_edges,
+          )
+        });
+        (host, Some(runtime_chunk.bits.clone()))
       }
       (RuntimeMergeCascade::Full, None) => {
         // The two checks below can both need the late entries. `late_entries` keeps them, so the
@@ -1212,6 +1237,15 @@ impl GenerateStage<'_> {
               &mut late_entries,
             )
           })
+          .filter(|&host| {
+            self.runtime_host_keeps_import_order(
+              chunk_graph,
+              host,
+              runtime_chunk_idx,
+              used_symbol_refs_builder,
+              &mut import_edges,
+            )
+          })
           .or_else(|| {
             self.find_consumer_dominator(&consumer_chunks, chunk_graph, module_table).filter(
               |&target_chunk_idx| {
@@ -1231,6 +1265,13 @@ impl GenerateStage<'_> {
                     &consumer_chunks,
                     chunk_graph,
                     module_table,
+                  )
+                  && self.runtime_host_keeps_import_order(
+                    chunk_graph,
+                    target_chunk_idx,
+                    runtime_chunk_idx,
+                    used_symbol_refs_builder,
+                    &mut import_edges,
                   )
               },
             )
@@ -1396,6 +1437,65 @@ impl GenerateStage<'_> {
         || chunk_graph.chunk_table[consumer].bits.is_subset(
           late_entries.get_or_insert_with(|| self.late_runtime_entries(chunk_graph, runtime_bits)),
         )
+    })
+  }
+
+  /// Whether the runtime can move into `host` without a change to the import order of a chunk
+  /// that imports `host`. A chunk that hosts the runtime module gets chunk `exec_order` 0, because
+  /// `assign_chunk_exec_orders` keys a common chunk on its first module, and the runtime module
+  /// has `exec_order` 0. `sort_chunk_importees` then puts the host first in every import list, and
+  /// the source order walk moves back only the importees that it ranks. An importee that the walk
+  /// does not reach, for example a chunk that the importer reads through a namespace import of a
+  /// re-export module without side effects, keeps its position and runs after the host. In
+  /// `code_splitting/runtime_host_import_order_namespace_import`, `c` would import the chunk of
+  /// `common.js` before the chunk of `init.js`, and `common.js` would read a global before
+  /// `init.js` sets it.
+  ///
+  /// The check sorts the imports of each importer of the host twice, with the `exec_order` of the
+  /// standalone layout and with the host first, and accepts the host when both sorts agree. The
+  /// importers come from the predicted static import edges, which also have the imports that the
+  /// walk does not reach. An entry chunk keys on its entry module, so it never moves. The strict
+  /// path models the chunk `exec_order` in its order analysis, so it needs no check.
+  /// See internal-docs/code-splitting/implementation.md#runtime-module-placement.
+  fn runtime_host_keeps_import_order(
+    &self,
+    chunk_graph: &ChunkGraph,
+    host: ChunkIdx,
+    runtime_chunk_idx: ChunkIdx,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
+    import_edges: &mut Option<IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>>,
+  ) -> bool {
+    if self.options.is_strict_execution_order_enabled()
+      || !matches!(chunk_graph.chunk_table[host].kind, ChunkKind::Common)
+    {
+      return true;
+    }
+    let import_edges = import_edges.get_or_insert_with(|| {
+      self.predicted_static_import_edges(chunk_graph, used_symbol_refs_builder)
+    });
+    import_edges.iter_enumerated().all(|(importer, importees)| {
+      if importer == host || !importees.contains(&host) || !chunk_graph.chunk_is_live(importer) {
+        return true;
+      }
+      // The runtime chunk is not in the output when the runtime moves into the host.
+      let mut standalone = importees
+        .iter()
+        .copied()
+        .filter(|&importee| importee != runtime_chunk_idx)
+        .collect::<Vec<_>>();
+      if standalone.len() < 2 {
+        return true;
+      }
+      let ranks = self.chunk_importee_ranks(chunk_graph, importer);
+      let mut hosted = standalone.clone();
+      let exec_order = |chunk_idx: ChunkIdx| chunk_graph.chunk_table[chunk_idx].exec_order;
+      sort_chunk_importees_by(&mut standalone, exec_order, Some(&ranks));
+      sort_chunk_importees_by(
+        &mut hosted,
+        |chunk_idx| (chunk_idx != host, exec_order(chunk_idx)),
+        Some(&ranks),
+      );
+      standalone == hosted
     })
   }
 

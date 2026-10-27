@@ -218,6 +218,13 @@ impl GenerateStage<'_> {
       })
       .collect::<Vec<_>>();
 
+    #[cfg(debug_assertions)]
+    self.debug_assert_runtime_host_keeps_import_order(
+      chunk_graph,
+      &index_sorted_cross_chunk_imports,
+      &index_importee_ranks,
+    );
+
     let index_sorted_imports_from_other_chunks = index_imports_from_other_chunks
       .into_iter_enumerated()
       .map(|(chunk_idx, mut importee_map)| {
@@ -597,6 +604,64 @@ impl GenerateStage<'_> {
   /// state — the fold's decision-time snapshot predates the inclusion replays, which is why the
   /// fold's own cycle graph over-approximates liveness instead of trusting it.
   #[cfg(debug_assertions)]
+  /// Asserts the rule of `runtime_host_keeps_import_order` on the final links: a chunk that hosts
+  /// the runtime module has chunk `exec_order` 0, and that must not change the import order of a
+  /// chunk that imports it. The host check predicts the import edges before the merge, so a gap in
+  /// that prediction shows up here in the test suite.
+  #[cfg(debug_assertions)]
+  fn debug_assert_runtime_host_keeps_import_order(
+    &self,
+    chunk_graph: &ChunkGraph,
+    index_sorted_cross_chunk_imports: &[Vec<ChunkIdx>],
+    index_importee_ranks: &[Option<FxHashMap<ChunkIdx, u32>>],
+  ) {
+    if self.options.is_strict_execution_order_enabled() {
+      return;
+    }
+    let runtime_idx = self.link_output.runtime.id();
+    let Some(host) = chunk_graph.module_to_chunk[runtime_idx] else {
+      return;
+    };
+    let host_chunk = &chunk_graph.chunk_table[host];
+    if !matches!(host_chunk.kind, ChunkKind::Common) || host_chunk.modules.len() < 2 {
+      return;
+    }
+    // The key of `assign_chunk_exec_orders`, with the host keyed on its first module that is not
+    // the runtime module: the order that the host has with a standalone runtime.
+    let module_table = &self.link_output.module_table;
+    let standalone_key = |chunk_idx: ChunkIdx| {
+      let chunk = &chunk_graph.chunk_table[chunk_idx];
+      match chunk.kind {
+        ChunkKind::EntryPoint { module, .. } => (module_table[module].exec_order(), false),
+        ChunkKind::Common => {
+          let lead = chunk
+            .modules
+            .iter()
+            .copied()
+            .find(|&module_idx| module_idx != runtime_idx)
+            .unwrap_or(chunk.modules[0]);
+          (module_table[lead].exec_order(), true)
+        }
+      }
+    };
+    for (chunk_idx, _) in chunk_graph.chunk_table.iter_enumerated() {
+      let sorted = &index_sorted_cross_chunk_imports[chunk_idx.index()];
+      if chunk_idx == host || sorted.len() < 2 || !sorted.contains(&host) {
+        continue;
+      }
+      let mut standalone = sorted.clone();
+      sort_chunk_importees_by(
+        &mut standalone,
+        standalone_key,
+        index_importee_ranks[chunk_idx.index()].as_ref(),
+      );
+      debug_assert!(
+        standalone == *sorted,
+        "the runtime host {host:?} changes the import order of chunk {chunk_idx:?}: {sorted:?} instead of {standalone:?}"
+      );
+    }
+  }
+
   fn debug_assert_module_level_static_import_prediction(
     &self,
     chunk_graph: &ChunkGraph,
@@ -2029,7 +2094,21 @@ fn sort_chunk_importees(
   importees: &mut [ChunkIdx],
   ranks: Option<&FxHashMap<ChunkIdx, u32>>,
 ) {
-  importees.sort_unstable_by_key(|chunk_idx| chunk_graph.chunk_table[*chunk_idx].exec_order);
+  sort_chunk_importees_by(
+    importees,
+    |chunk_idx| chunk_graph.chunk_table[chunk_idx].exec_order,
+    ranks,
+  );
+}
+
+/// The sort of `sort_chunk_importees` with any order key in the place of `exec_order`. The runtime
+/// host check `runtime_host_keeps_import_order` sorts with the key that a host would get.
+pub(super) fn sort_chunk_importees_by<K: Ord>(
+  importees: &mut [ChunkIdx],
+  key: impl Fn(ChunkIdx) -> K,
+  ranks: Option<&FxHashMap<ChunkIdx, u32>>,
+) {
+  importees.sort_unstable_by_key(|chunk_idx| key(*chunk_idx));
   let Some(ranks) = ranks else {
     return;
   };

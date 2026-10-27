@@ -1,0 +1,31 @@
+crates/rolldown/src/stages/generate_stage/compute_wrapped_esm_init_metadata.rs
+  s_1349f77e095742::t_338174c85d5763 108-110
+crates/rolldown/tests/rolldown/topics/hmr/wrapped_module_with_only_functions/_config.json
+  s_1349f77e095742::t_a94db98df5b7b6 1-13
+crates/rolldown/tests/rolldown/topics/hmr/wrapped_module_with_only_functions/artifacts.snap
+  s_1349f77e095742::t_9d76a64d188008 1-108
+crates/rolldown/tests/rolldown/topics/hmr/wrapped_module_with_only_functions/imported.js
+  s_1349f77e095742::t_d51dd09ee3a5fd 1-3
+crates/rolldown/tests/rolldown/topics/hmr/wrapped_module_with_only_functions/main.js
+  s_1349f77e095742::t_dce43f47b433df 1-7
+crates/rolldown/tests/rolldown/topics/hmr/wrapped_module_with_only_functions/required.js
+  s_1349f77e095742::t_486f2e45d9a16a 1-3
+internal-docs/code-splitting/design.md
+  s_1349f77e095742::t_48d88708e7f12b 508
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "bbb45f7f9da0227639aca3547ce462b4408a4590",
+  "prompts": {},
+  "sessions": {
+    "s_1349f77e095742": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01434bb7-a487-49c7-8ef1-e905252e7907",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

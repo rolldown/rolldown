@@ -1,10 +1,13 @@
 import { viteJsonPlugin } from 'rolldown/experimental';
+import { isWasiTest } from 'rolldown-tests/utils';
 import { expect, test } from 'vitest';
 import type { BindingCallableBuiltinPlugin } from '../../src/binding.cjs';
 
 type CallableJsonPlugin = ReturnType<typeof viteJsonPlugin> & BindingCallableBuiltinPlugin;
 
-test('a native hook error gets the caller frames', async () => {
+// With the WASI binding, emnapi creates the error with a frame of its own, so the hook wrapper
+// keeps that stack and the caller frame is not first.
+test.skipIf(isWasiTest)('a native hook error gets the caller frames', async () => {
   const plugin = viteJsonPlugin({}) as CallableJsonPlugin;
 
   async function callTransform() {

@@ -1,0 +1,223 @@
+crates/rolldown/src/ast_scanner/impl_visit.rs
+  s_6dcd9a0d0643d8::t_6dc374710c9f29 15-18,253-256,798-823
+crates/rolldown/src/ast_scanner/mod.rs
+  s_6dcd9a0d0643d8::t_1f4ab64a172934 532-537,723,763,929
+crates/rolldown/src/ecmascript/format/esm.rs
+  s_6dcd9a0d0643d8::t_e25285d831a168 6,84-89,95,455-470,475,563-568,606
+crates/rolldown/src/module_loader/external_module_task.rs
+  s_6dcd9a0d0643d8::t_b57b0e66606daf 73-74,77,80,83,87,90,100
+crates/rolldown/src/module_loader/module_loader.rs
+  s_6dcd9a0d0643d8::t_60f7b5b0ee7d1d 547,662,678,732,941
+crates/rolldown/src/module_loader/module_task.rs
+  s_6dcd9a0d0643d8::t_23b1c19498b709 269-270,273-274
+crates/rolldown/src/module_loader/resolve_utils.rs
+  s_6dcd9a0d0643d8::t_390c1533e45b98 7,26,29,44,51-53,67-68,70,76-86,95,145-153
+crates/rolldown/src/module_loader/runtime_module_task.rs
+  s_6dcd9a0d0643d8::t_03d60a35b8771f 8-9,88-89
+crates/rolldown/src/stages/generate_stage/code_splitting.rs
+  s_6dcd9a0d0643d8::t_047321a44a5156 772,774
+crates/rolldown/src/stages/generate_stage/mod.rs
+  s_6dcd9a0d0643d8::t_317559b2acee35 322-323,378
+crates/rolldown/src/stages/scan_stage.rs
+  s_6dcd9a0d0643d8::t_b70d097436a903 308,313
+crates/rolldown/src/utils/load_entry_module.rs
+  s_6dcd9a0d0643d8::t_50fa07bd6f5ce6 5,13,19-23,34-36,42
+crates/rolldown/src/utils/load_source.rs
+  s_6dcd9a0d0643d8::t_6f8dc8242b7248 23,28-34,55-59,67,77,79,84,97,99,101,134,136,141,152-153,158-168
+crates/rolldown/src/utils/parse_to_ecma_ast.rs
+  s_6dcd9a0d0643d8::t_3c893eec3cc86c 65,124
+crates/rolldown/src/utils/pre_process_ecma_ast.rs
+  s_6dcd9a0d0643d8::t_3bb6401cdfbd6f 18,41,48,183
+crates/rolldown/src/utils/transform_source.rs
+  s_6dcd9a0d0643d8::t_4c8b15cd68406f 27
+crates/rolldown/tests/rolldown/topics/import_attributes/builtin_type/_config.json
+  s_6dcd9a0d0643d8::t_ad69180cc74c4e 1-8
+crates/rolldown/tests/rolldown/topics/import_attributes/builtin_type/artifacts.snap
+  s_6dcd9a0d0643d8::t_19238583c0c456 1-39
+crates/rolldown/tests/rolldown/topics/import_attributes/builtin_type/config.json
+  s_6dcd9a0d0643d8::t_5ed1aa95f94b94 1
+crates/rolldown/tests/rolldown/topics/import_attributes/builtin_type/data.bin
+  s_6dcd9a0d0643d8::t_d56cb1cafebfb7 1
+crates/rolldown/tests/rolldown/topics/import_attributes/builtin_type/data.txt
+  s_6dcd9a0d0643d8::t_aa761da5737676 1
+crates/rolldown/tests/rolldown/topics/import_attributes/builtin_type/main.js
+  s_6dcd9a0d0643d8::t_ed7ee69151a5ef 1-15
+crates/rolldown/tests/rolldown/topics/import_attributes/builtin_type/shader.glsl
+  s_6dcd9a0d0643d8::t_b84845b53d4abe 1
+crates/rolldown/tests/rolldown/topics/import_attributes/data_url/_config.json
+  s_6dcd9a0d0643d8::t_40158efe207c41 1-8
+crates/rolldown/tests/rolldown/topics/import_attributes/data_url/artifacts.snap
+  s_6dcd9a0d0643d8::t_be3f74bcb8c7aa 1-17
+crates/rolldown/tests/rolldown/topics/import_attributes/data_url/main.js
+  s_6dcd9a0d0643d8::t_2d9e3b57682cef 1-6
+crates/rolldown/tests/rolldown/topics/import_attributes/dynamic_import/_config.json
+  s_6dcd9a0d0643d8::t_68c4cdfca05bb1 1-8
+crates/rolldown/tests/rolldown/topics/import_attributes/dynamic_import/artifacts.snap
+  s_6dcd9a0d0643d8::t_746cdf1a8271bf 1-47
+crates/rolldown/tests/rolldown/topics/import_attributes/dynamic_import/dep.js
+  s_6dcd9a0d0643d8::t_3f0a8dd37b8ee9 1
+crates/rolldown/tests/rolldown/topics/import_attributes/dynamic_import/main.js
+  s_6dcd9a0d0643d8::t_1f106155a1e0ee 1-10
+crates/rolldown/tests/rolldown/topics/import_attributes/external/_config.json
+  s_6dcd9a0d0643d8::t_4182d633f705e5 1-10
+crates/rolldown/tests/rolldown/topics/import_attributes/external/artifacts.snap
+  s_6dcd9a0d0643d8::t_38de6cc33ae655 1-16
+crates/rolldown/tests/rolldown/topics/import_attributes/external/main.js
+  s_6dcd9a0d0643d8::t_6bf468ac49ad9a 1-8
+crates/rolldown/tests/rolldown/topics/import_attributes/module_identity/_config.json
+  s_6dcd9a0d0643d8::t_e66158163704fb 1-8
+crates/rolldown/tests/rolldown/topics/import_attributes/module_identity/artifacts.snap
+  s_6dcd9a0d0643d8::t_401b3f9828c752 1-38
+crates/rolldown/tests/rolldown/topics/import_attributes/module_identity/counter.js
+  s_6dcd9a0d0643d8::t_8bac24dce8d238 1-2
+crates/rolldown/tests/rolldown/topics/import_attributes/module_identity/dep.js
+  s_6dcd9a0d0643d8::t_8a7b24eba0237c 1-2
+crates/rolldown/tests/rolldown/topics/import_attributes/module_identity/main.js
+  s_6dcd9a0d0643d8::t_ebc8505ddd14c1 1-8
+crates/rolldown_binding/src/options/binding_input_options/binding_experimental_options.rs
+  s_6dcd9a0d0643d8::t_0b4d6ab9c5c911 17,42
+crates/rolldown_binding/src/options/plugin/binding_callable_builtin_plugin.rs
+  s_6dcd9a0d0643d8::t_5b6bb41746037f 10,99,109-115,141-142,144-153,179-180,184-190,332-337
+crates/rolldown_binding/src/options/plugin/binding_plugin_context.rs
+  s_6dcd9a0d0643d8::t_697e9151fa1f25 10-11,14-16,30,32,36-37,40,45,48-53,55-56,79-80,162,164-165
+crates/rolldown_binding/src/options/plugin/binding_plugin_options.rs
+  s_6dcd9a0d0643d8::t_b953c44c115979 22,76,79-82
+crates/rolldown_binding/src/options/plugin/js_plugin.rs
+  s_6dcd9a0d0643d8::t_286f3561a41d03 15,19,134-136,227-230,232,266-270
+crates/rolldown_binding/src/options/plugin/types/binding_hook_load_extra_args.rs
+  s_6dcd9a0d0643d8::t_9b98ad828a7e6d 1-10
+crates/rolldown_binding/src/options/plugin/types/binding_hook_resolve_id_extra_args.rs
+  s_6dcd9a0d0643d8::t_9b2d0c00d9f7ae 1-2,23-30
+crates/rolldown_binding/src/options/plugin/types/binding_hook_resolve_id_output.rs
+  s_6dcd9a0d0643d8::t_817fd3b11511a3 3,22-24,37
+crates/rolldown_binding/src/options/plugin/types/binding_import_attributes.rs
+  s_6dcd9a0d0643d8::t_43ac17a693b57b 1-13
+crates/rolldown_binding/src/options/plugin/types/binding_plugin_context_resolve_options.rs
+  s_6dcd9a0d0643d8::t_c408be2a76a9f5 7-11,33-35,57
+crates/rolldown_binding/src/options/plugin/types/binding_plugin_transform_extra_args.rs
+  s_6dcd9a0d0643d8::t_b2a4292327db90 1-2,10-13
+crates/rolldown_binding/src/options/plugin/types/mod.rs
+  s_6dcd9a0d0643d8::t_064ff1b2bc3f2b 8,17
+crates/rolldown_common/src/inner_bundler_options/types/experimental_options.rs
+  s_6dcd9a0d0643d8::t_5cde961a6eed6a 83,129-134
+crates/rolldown_common/src/lib.rs
+  s_6dcd9a0d0643d8::t_d83470d0404a2a 175
+crates/rolldown_common/src/module/external_module.rs
+  s_6dcd9a0d0643d8::t_319cde7c6a8fe8 6-7,32-34,38,47,61,68
+crates/rolldown_common/src/module_loader/task_result.rs
+  s_6dcd9a0d0643d8::t_e452b64b361fbb 2-3,33
+crates/rolldown_common/src/types/import_attribute.rs
+  s_6dcd9a0d0643d8::t_19e8409e7185fe 8-9,30-43
+crates/rolldown_common/src/types/import_attributes.rs
+  s_6dcd9a0d0643d8::t_786a392911c4c2 1-286
+crates/rolldown_common/src/types/import_record.rs
+  s_6dcd9a0d0643d8::t_8dfd6fb9a8bce1 9,33-34,147
+crates/rolldown_common/src/types/mod.rs
+  s_6dcd9a0d0643d8::t_1c3a40b495e9e3 21
+crates/rolldown_common/src/types/module_id.rs
+  s_6dcd9a0d0643d8::t_f787d6f652b851 12,44-48,51-52,56-69,77,87,89-91,93,98,103-114,131,137,139,154,157,159,167,173
+crates/rolldown_common/src/types/resolved_id.rs
+  s_6dcd9a0d0643d8::t_44118899e8823c 7,47-49,53-71,83,111
+crates/rolldown_common/src/types/stable_module_id.rs
+  s_6dcd9a0d0643d8::t_f0947b847d1e61 32-40
+crates/rolldown_plugin/src/plugin_context/native_plugin_context.rs
+  s_6dcd9a0d0643d8::t_7a640d936c8c87 11,53,56-57,60,66-74,76,82-83,123-128,141-143
+crates/rolldown_plugin/src/plugin_context/plugin_context.rs
+  s_6dcd9a0d0643d8::t_a0674d18df1f15 71,74-75,78-79
+crates/rolldown_plugin/src/plugin_driver/build_hooks.rs
+  s_6dcd9a0d0643d8::t_bb8b7ce36308a3 281-282,291,329-335
+crates/rolldown_plugin/src/types/hook_load_args.rs
+  s_6dcd9a0d0643d8::t_65da3ec0cba1f3 1,6-8
+crates/rolldown_plugin/src/types/hook_resolve_id_args.rs
+  s_6dcd9a0d0643d8::t_d2bfe84710e38b 3,16-21
+crates/rolldown_plugin/src/types/hook_resolve_id_output.rs
+  s_6dcd9a0d0643d8::t_0a73da272d23e2 2-4,13-14,24-25
+crates/rolldown_plugin/src/types/hook_transform_args.rs
+  s_6dcd9a0d0643d8::t_622f02aaf0a8f6 2,7-9
+crates/rolldown_plugin/src/types/plugin_context_resolve_options.rs
+  s_6dcd9a0d0643d8::t_367b2bcefd6def 3,13-14,24
+crates/rolldown_plugin/src/utils/resolve_id_check_external.rs
+  s_6dcd9a0d0643d8::t_f60839552b2093 8-9,22-24,37-39,41-45,47-49,62-64,71-75,102,108,110,122,126
+crates/rolldown_plugin/src/utils/resolve_id_with_plugins.rs
+  s_6dcd9a0d0643d8::t_da8db5ef0d2b3f 6-8,56,70,75-76,88-90,92-101,103-104,106,110-111,115-121
+crates/rolldown_plugin_data_url/src/lib.rs
+  s_6dcd9a0d0643d8::t_6a70b837d015da 85
+crates/rolldown_plugin_isolated_declaration/src/lib.rs
+  s_6dcd9a0d0643d8::t_075f7538fad0e1 43-50
+crates/rolldown_plugin_lazy_compilation/src/lazy_compilation_plugin.rs
+  s_6dcd9a0d0643d8::t_8a07eccbb7ecaf 93,116,142
+crates/rolldown_plugin_vite_alias/src/lib.rs
+  s_6dcd9a0d0643d8::t_be026515794d77 59
+internal-docs/import-attributes/design.md
+  s_6dcd9a0d0643d8::t_0b09e12cc28cfd 1-26
+internal-docs/import-attributes/implementation.md
+  s_6dcd9a0d0643d8::t_025f049fa8c8c9 1-52
+internal-docs/module-id/implementation.md
+  s_6dcd9a0d0643d8::t_a9928c3edf0466 41,43-46,50-51
+packages/rolldown/src/index.ts
+  s_6dcd9a0d0643d8::t_c1b64f3d51bc7d 68,86,172,236
+packages/rolldown/src/options/input-options.ts
+  s_6dcd9a0d0643d8::t_37a154631f06bb 730-743
+packages/rolldown/src/plugin/bindingify-build-hooks.ts
+  s_6dcd9a0d0643d8::t_063c07e45a8a24 72,90-97,105,162,164-168,272,286,303
+packages/rolldown/src/plugin/index.ts
+  s_6dcd9a0d0643d8::t_8812806cdd0dd6 35-36,126,128-135,175,177-183,267-285,467-477,499-502
+packages/rolldown/src/plugin/plugin-context-data.ts
+  s_6dcd9a0d0643d8::t_737bee7331e4ef 15,26-27,36-40
+packages/rolldown/src/plugin/plugin-context.ts
+  s_6dcd9a0d0643d8::t_db12b3683a1cc4 25-29,180-187,260-272,297-300,323-327,329-333,352-358,373,376-378,398,405-407
+packages/rolldown/src/utils-index.ts
+  s_6dcd9a0d0643d8::t_21464eb709de53 14
+packages/rolldown/src/utils/bindingify-input-options.ts
+  s_6dcd9a0d0643d8::t_7a952f3a810d8a 208
+packages/rolldown/src/utils/create-bundler-option.ts
+  s_6dcd9a0d0643d8::t_9398d6733caa74 118
+packages/rolldown/src/utils/module-id.ts
+  s_6dcd9a0d0643d8::t_ea315d35af1d7b 1-88
+packages/rolldown/src/utils/validator.ts
+  s_6dcd9a0d0643d8::t_8781f3e2524e9c 710
+packages/rolldown/tests/fixtures/topics/import-attributes/context-resolve-load/_config.ts
+  s_6dcd9a0d0643d8::t_488afc73d9a633 1-66
+packages/rolldown/tests/fixtures/topics/import-attributes/context-resolve-load/data.js
+  s_6dcd9a0d0643d8::t_2ba52249923bd9 1
+packages/rolldown/tests/fixtures/topics/import-attributes/context-resolve-load/main.js
+  s_6dcd9a0d0643d8::t_770fbdec4e04fd 1
+packages/rolldown/tests/fixtures/topics/import-attributes/disabled/_config.ts
+  s_6dcd9a0d0643d8::t_31900973d401b1 1-30
+packages/rolldown/tests/fixtures/topics/import-attributes/disabled/data.json
+  s_6dcd9a0d0643d8::t_16d4be08c59c93 1
+packages/rolldown/tests/fixtures/topics/import-attributes/disabled/main.js
+  s_6dcd9a0d0643d8::t_b1eaf47ee53de9 1-3
+packages/rolldown/tests/fixtures/topics/import-attributes/hook-args/_config.ts
+  s_6dcd9a0d0643d8::t_eb0d52e5735388 1-71
+packages/rolldown/tests/fixtures/topics/import-attributes/hook-args/data.json
+  s_6dcd9a0d0643d8::t_2a160ed1d40c05 1
+packages/rolldown/tests/fixtures/topics/import-attributes/hook-args/dep.js
+  s_6dcd9a0d0643d8::t_1fb5f0ec9fdd7e 1-3
+packages/rolldown/tests/fixtures/topics/import-attributes/hook-args/leaf.js
+  s_6dcd9a0d0643d8::t_7246a9fa51561b 1
+packages/rolldown/tests/fixtures/topics/import-attributes/hook-args/main.js
+  s_6dcd9a0d0643d8::t_396bcba6dc35bb 1-4
+packages/rolldown/tests/fixtures/topics/import-attributes/resolve-id-override/_config.ts
+  s_6dcd9a0d0643d8::t_528a3930f9c497 1-35
+packages/rolldown/tests/fixtures/topics/import-attributes/resolve-id-override/main.js
+  s_6dcd9a0d0643d8::t_85aa1b1bfe43d6 1-5
+packages/rolldown/tests/utils/module-id.test.ts
+  s_6dcd9a0d0643d8::t_430b8c2719afb0 1-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "886fb81d1d050f732d028689fcfc71649a05d91a",
+  "prompts": {},
+  "sessions": {
+    "s_6dcd9a0d0643d8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "27e15328-e173-4b4f-8871-bce092399bb1",
+        "model": "unknown"
+      },
+      "human_author": "shulaoda <165626830+shulaoda@users.noreply.github.com>"
+    }
+  }
+}

@@ -1,0 +1,505 @@
+.cargo/config.toml
+  s_53a39cc4df8b06::t_125ec63196436c 29-33
+.github/ISSUE_TEMPLATE/panic_report.yml
+  s_53a39cc4df8b06::t_1648e335187dd2 23
+.github/workflows/ci.yml
+  s_53a39cc4df8b06::t_6da47259ec1b9a 200-281,463,470-507
+.github/workflows/publish-to-npm.yml
+  s_53a39cc4df8b06::t_44cd765ffcc4a0 116-124
+.github/workflows/publish-to-pkg.pr.new.yml
+  s_53a39cc4df8b06::t_0bca6b5bbf6b2e 16-17,21,82-91,120,123-124,126-129,132-133,135-136
+.github/workflows/reusable-browser.yml
+  s_53a39cc4df8b06::t_fae0ad6829e88b 46-50
+.github/workflows/reusable-native-build.yml
+  s_53a39cc4df8b06::t_391c43ae77f459 51-53
+.github/workflows/reusable-release-build.yml
+  s_53a39cc4df8b06::t_d102e5eeda8118 84-88,268-270,325,329-330,345-350,359-366
+.github/workflows/reusable-wasi.yml
+  s_53a39cc4df8b06::t_ac57c786e5c974 37-38,42-44,47-63,67-84,87,92,94,99-141,143-145,147-185,188-263
+.gitignore
+  s_53a39cc4df8b06::t_a435df5f75253c 173
+Cargo.lock
+  s_53a39cc4df8b06::t_310aa4c86fd4ac 61-69,88-99,113-114,116,118-120,123-128,170,630,632,1375-1389,2233,2691,2715,2748,2865,2869,3346,3369-3370
+Cargo.toml
+  s_53a39cc4df8b06::t_5611311f2e2722 181,183,193,214,272-275,343-345
+THIRD-PARTY-LICENSE
+  s_53a39cc4df8b06::t_1f551d2fbf65dc 33-613
+crates/bench/Cargo.toml
+  s_53a39cc4df8b06::t_cfcb53e566a969 18,23
+crates/bench/src/lib.rs
+  s_53a39cc4df8b06::t_344ced5a51d033 86-87,108,131-132,170-183,192-202,208,211-221,223-225
+crates/rolldown/src/bundle/bundle.rs
+  s_53a39cc4df8b06::t_aa988037f4ba6d 298-299
+crates/rolldown/src/bundle/bundle_factory.rs
+  s_53a39cc4df8b06::t_63bf7c0d0678cf 163-164
+crates/rolldown/src/bundle/bundle_handle.rs
+  s_53a39cc4df8b06::t_11c813a4e5dc34 1-6,9,12,76-77,82-92,94-220
+crates/rolldown/src/module_loader/external_module_task.rs
+  s_53a39cc4df8b06::t_695bf409bca840 41-42,45,99-100
+crates/rolldown/src/module_loader/module_loader.rs
+  s_53a39cc4df8b06::t_4be5a07c54f58c 3,7,29-30,114,161-216,260,411,414,426,457-460,545,1236-1295
+crates/rolldown/src/module_loader/module_task.rs
+  s_53a39cc4df8b06::t_19d08701213f0e 83-84,87,239-240
+crates/rolldown/src/module_loader/runtime_module_task.rs
+  s_53a39cc4df8b06::t_1427255d0836b4 65-68,224
+crates/rolldown/src/module_loader/task_context.rs
+  s_53a39cc4df8b06::t_1711e54d238c68 11
+crates/rolldown/src/stages/scan_stage.rs
+  s_53a39cc4df8b06::t_74cf38e2da52ed 209-216,221-223
+crates/rolldown/src/utils/defer_drop.rs
+  s_53a39cc4df8b06::t_b0749903deace6 1-2,4,6-16,19-25,27,33-62,77,81-83,88-100,104-105,117-157
+crates/rolldown/src/utils/load_source.rs
+  s_53a39cc4df8b06::t_de15133aab0ff0 9,67,87,120,175,186
+crates/rolldown/tests/rolldown/plugin/plugin_context/info_warn_debug/mod.rs
+  s_53a39cc4df8b06::t_d6d3b4473a5b26 3-8,42-45,48-49,52-55,57-60,71,96-108
+crates/rolldown_binding/Cargo.toml
+  s_53a39cc4df8b06::t_bb3d7c484b5160 27-29,67,103
+crates/rolldown_binding/build.rs
+  s_53a39cc4df8b06::t_509b6c7bd34b2e 3-13
+crates/rolldown_binding/src/async_runtime.rs
+  s_53a39cc4df8b06::t_8941ed8a518330 1-1598
+crates/rolldown_binding/src/classic_bundler.rs
+  s_53a39cc4df8b06::t_ac686defc7e786 66-70,118,121-124,137-144,148,153-156,245-253,325-367
+crates/rolldown_binding/src/env_config.rs
+  s_53a39cc4df8b06::t_2bad76e64e8d1a 1-38
+crates/rolldown_binding/src/lib.rs
+  s_53a39cc4df8b06::t_7d3e7881209848 23-25,69-71,74-76,80-81
+crates/rolldown_binding/src/options/binding_output_options/binding_manual_code_splitting_options.rs
+  s_53a39cc4df8b06::t_9202a193e988d8 10,74,79-87,93-104,106-107
+crates/rolldown_binding/src/options/plugin/binding_callable_builtin_plugin.rs
+  s_53a39cc4df8b06::t_ff0704b3e18856 1,6,38-45,105,131,153,176
+crates/rolldown_binding/src/options/plugin/binding_load_context.rs
+  s_53a39cc4df8b06::t_33a062de72fcda 6,10,16-29,33-34,38-40
+crates/rolldown_binding/src/options/plugin/binding_plugin_context.rs
+  s_53a39cc4df8b06::t_03fe815928f2aa 17-23,27,32-44,54,57,60,73-74,104,118,128,138,143-144,149,153-155,163
+crates/rolldown_binding/src/options/plugin/binding_transform_context.rs
+  s_53a39cc4df8b06::t_80caa7d198d7ba 7,11,17-30,35-36,40-41,45-47,60
+crates/rolldown_binding/src/options/plugin/types/binding_render_chunk_meta_chunks.rs
+  s_53a39cc4df8b06::t_cfd5172f7a50bd 10,15,21-34,38-47
+crates/rolldown_binding/src/types/binding_magic_string.rs
+  s_53a39cc4df8b06::t_f87a88b0927675 13-14,107-109,259-264,271-281,286-297,306-307,312-313,318-319,324-325,330-331,336-337,342-343,346-351,353,358-359,361-371,377-388,397-398,403-404,409-410,415-416,422,425,448,453-454,465-467,482-483,487-490,518-536,1343,1386
+crates/rolldown_binding/src/types/binding_module_info.rs
+  s_53a39cc4df8b06::t_8f185994f4ab78 8-9,12,62,66-86,88-89
+crates/rolldown_binding/src/types/binding_normalized_options.rs
+  s_53a39cc4df8b06::t_fd0e0216ceb165 17-18,21,27-40,45-47,49,51,65-66,70-71,75-76,80,84-85,89-90,94-95,98,102-103,106,110-111,114,118-119,122,126-127,131-132,136-137,140,144-145,149-150,155,159-160,164,168,172,175,179-180,184-185,190,194-195,199-200,204,208-209,213,217-218,222,226-227,231,235-236,240,244-245,249,253-254,258-259,263-264,267,271-272,276,280-281,285-286,290-291,295-298,327,331-332,335,339-345,349-350,354-355,359-360,364-365,369-370,374-375,377-378,381
+crates/rolldown_binding/src/types/binding_output_asset.rs
+  s_53a39cc4df8b06::t_2437d11de46795 3-4,7,13,37,63-71,88-166
+crates/rolldown_binding/src/types/binding_output_chunk.rs
+  s_53a39cc4df8b06::t_0ee794b56d0ba9 8-11,35
+crates/rolldown_binding/src/types/binding_outputs.rs
+  s_53a39cc4df8b06::t_4926bf0d2d0d9e 107
+crates/rolldown_binding/src/types/binding_rendered_chunk.rs
+  s_53a39cc4df8b06::t_1948cb673a333d 7-8,12,18-31,35-36,40-41,45-46,50-51,55-56,60-61,65-66,70-71,75-76,80-81
+crates/rolldown_binding/src/types/binding_rendered_module.rs
+  s_53a39cc4df8b06::t_7c00e52ae07938 6-7,11,17-30,34-35,39-40,55
+crates/rolldown_binding/src/types/error/mod.rs
+  s_53a39cc4df8b06::t_3b7374ae164265 12-20
+crates/rolldown_binding/src/types/external_memory_status.rs
+  s_53a39cc4df8b06::t_3b36d3a67826e4 1-2,10-41
+crates/rolldown_binding/src/types/js_callback.rs
+  s_53a39cc4df8b06::t_1abf817ad56857 8,112-118,133-162
+crates/rolldown_binding/src/utils/normalize_binding_options.rs
+  s_53a39cc4df8b06::t_90bb73a5da6c5c 344-346
+crates/rolldown_binding/src/watcher.rs
+  s_53a39cc4df8b06::t_ff6ffdc7bc707f 12,22-25,107-113
+crates/rolldown_common/Cargo.toml
+  s_53a39cc4df8b06::t_e18d309b5ca694 23
+crates/rolldown_common/src/file_emitter.rs
+  s_53a39cc4df8b06::t_9688cac8e189ec 76,147,444
+crates/rolldown_common/src/inner_bundler_options/types/on_log.rs
+  s_53a39cc4df8b06::t_3adb4dfa1875b0 22-28
+crates/rolldown_dev/Cargo.toml
+  s_53a39cc4df8b06::t_913337d646791f 26,41-42
+crates/rolldown_dev/src/bundle_coordinator.rs
+  s_53a39cc4df8b06::t_41c13d40a1bad0 9-10,14-16,104,372
+crates/rolldown_dev/src/bundling_task.rs
+  s_53a39cc4df8b06::t_44502c60b1a3d1 10,117
+crates/rolldown_dev/src/dev_context.rs
+  s_53a39cc4df8b06::t_3a9a0eaa6a0feb 8
+crates/rolldown_dev/src/dev_engine.rs
+  s_53a39cc4df8b06::t_94676d6cddd622 8-9,16,41-42,45,89,159-160,163-172,188-190,203-205,232,235,267,270,309,462-464,473,489-491,522,527-530,547,550,623-656,661,663-681,689-723,728-732,734,736-744,746-750
+crates/rolldown_dev/src/lib.rs
+  s_53a39cc4df8b06::t_bd3bb749d181b7 11
+crates/rolldown_dev/src/type_aliases.rs
+  s_53a39cc4df8b06::t_2aef9e21a4901e 1-2
+crates/rolldown_dev/src/watcher_event_handler.rs
+  s_53a39cc4df8b06::t_9a1f652d5b4cd1 10
+crates/rolldown_devtools/build.rs
+  s_53a39cc4df8b06::t_ef9511aed85536 1-9
+crates/rolldown_devtools/src/writer.rs
+  s_53a39cc4df8b06::t_e3d26e47f9eef4 13-15,33-80,82-89,91,100-106,108,180,245-271
+crates/rolldown_plugin/Cargo.toml
+  s_53a39cc4df8b06::t_0977d2c39381ef 27,31
+crates/rolldown_plugin/src/plugin_context/native_plugin_context.rs
+  s_53a39cc4df8b06::t_0d353aaa5027a2 43,65,201-203,205
+crates/rolldown_plugin/src/plugin_driver/mod.rs
+  s_53a39cc4df8b06::t_1072ed18eaa8f3 45,67,123,131,136,161
+crates/rolldown_plugin_utils/src/asset_emission.rs
+  s_53a39cc4df8b06::t_f377609dc6778a 1-4,13,22-26
+crates/rolldown_plugin_vite_dynamic_import_vars/src/ast_visit.rs
+  s_53a39cc4df8b06::t_6e21f6f847d8ab 35-71
+crates/rolldown_plugin_vite_dynamic_import_vars/src/lib.rs
+  s_53a39cc4df8b06::t_a40c2410cb0618 7,11-13,17,35-98,135-152,157,159-169,172-177
+crates/rolldown_plugin_vite_import_glob/src/lib.rs
+  s_53a39cc4df8b06::t_1b1ffb0cdb7f9f 4,7,11-16,31-73,89-100,102-116,118-148,150-159
+crates/rolldown_plugin_vite_import_glob/src/utils.rs
+  s_53a39cc4df8b06::t_6650e19a70807b 2,12,29,34-106,230-233,250,369-370,389-391,393,471,489,522-523,531-532,539
+crates/rolldown_std_utils/src/lib.rs
+  s_53a39cc4df8b06::t_48eebf4c97a69f 4,11
+crates/rolldown_std_utils/src/panic_payload.rs
+  s_53a39cc4df8b06::t_842136ae885571 1-89
+crates/rolldown_utils/Cargo.toml
+  s_53a39cc4df8b06::t_2c0984389d9c88 41-42
+crates/rolldown_utils/src/futures.rs
+  s_53a39cc4df8b06::t_a65a88b67c59dc 3-26,28,33,36,43-44,56-66
+crates/rolldown_utils/src/lib.rs
+  s_53a39cc4df8b06::t_31a4f814cdf40e 3-7,23
+crates/rolldown_utils/src/time.rs
+  s_53a39cc4df8b06::t_6261ae4bf4bea8 1-3
+crates/rolldown_watcher/Cargo.toml
+  s_53a39cc4df8b06::t_7dba59a8e537c3 20-21,34-42
+crates/rolldown_watcher/examples/watch.rs
+  s_53a39cc4df8b06::t_179376c71ecf0a 49
+crates/rolldown_watcher/src/lib.rs
+  s_53a39cc4df8b06::t_7158781e1ad2f4 14
+crates/rolldown_watcher/src/task_fs_event_handler.rs
+  s_53a39cc4df8b06::t_32ee2615df7cef 4,20-21
+crates/rolldown_watcher/src/watch_coordinator.rs
+  s_53a39cc4df8b06::t_1d0232f5fdbbed 8-10,19-37,47,57,81,94,96-97,108-110,112-117,261-262,264,266,268-271,273-274,310-311,349-473
+crates/rolldown_watcher/src/watch_task.rs
+  s_53a39cc4df8b06::t_9382a0dead8e0b 2
+crates/rolldown_watcher/src/watcher.rs
+  s_53a39cc4df8b06::t_6d423a81257b0c 7,9,15-16,66-92,96,108,119,121,131,144-146,148-156,167-172,175-186
+crates/rolldown_watcher/src/watcher_state.rs
+  s_53a39cc4df8b06::t_e6ba67a51c353a 6-15,54,61,131-136,213-246
+crates/rolldown_watcher/tests/close_with_stopped_runtime.rs
+  s_53a39cc4df8b06::t_c9e45f9458b415 1-75
+crates/rolldown_workspace/src/lib.rs
+  s_53a39cc4df8b06::t_0c23992a9c5563 3-6
+crates/rolldown_workspace/src/test_dir.rs
+  s_53a39cc4df8b06::t_c9ad3b31385e3d 1-45
+docs/.vitepress/config.ts
+  s_53a39cc4df8b06::t_51f448a3f30bcd 17
+docs/guide/getting-started.md
+  s_53a39cc4df8b06::t_96ddadfcfea24d 59-61,66-68
+docs/guide/wasi.md
+  s_53a39cc4df8b06::t_e5a55a39010838 1-144
+internal-docs/async-runtime/design.md
+  s_53a39cc4df8b06::t_5ab95e0cff43fd 1-193
+internal-docs/async-runtime/implementation.md
+  s_53a39cc4df8b06::t_2c03b0c56054cd 1-437
+internal-docs/bundler-data-lifecycle/implementation.md
+  s_53a39cc4df8b06::t_f982e0715cf7f1 61-64
+internal-docs/dev-engine/implementation.md
+  s_53a39cc4df8b06::t_8f0f43e710a6a1 163-167,176-178,353,496,1341-1348,1412,1559,1593-1598,1603-1607
+internal-docs/devtools/design.md
+  s_53a39cc4df8b06::t_f8c6eaa96b317b 117,145,148,153,162-167,169
+internal-docs/devtools/implementation.md
+  s_53a39cc4df8b06::t_ce1fd09a6bed95 37,45,170
+internal-docs/rust-bundler/implementation.md
+  s_53a39cc4df8b06::t_97d45e7191060e 22,74,76-78,80-83,87,91-92,100,102-103,105-106
+internal-docs/rust-classic-bundler/implementation.md
+  s_53a39cc4df8b06::t_6fc61e4832dec1 71,73-79
+internal-docs/watch-mode/design.md
+  s_53a39cc4df8b06::t_35ae26761450d0 24
+internal-docs/watch-mode/implementation.md
+  s_53a39cc4df8b06::t_e7c7d7494d9f90 62,66,83-84,107,163,203,209-213,231,255,297-300,331,452,460,545
+internal-docs/workerd-managed-instance/implementation.md
+  s_53a39cc4df8b06::t_c21915a84d39e2 1-115
+justfile
+  s_53a39cc4df8b06::t_2a062274c9ca55 122-138,195-223,252-257,269-284
+knip.jsonc
+  s_53a39cc4df8b06::t_aaabdfda023f53 3,46-48,52-68,116-122,124
+packages/browser-tests/runtime-contract.mjs
+  s_53a39cc4df8b06::t_c9b92a063bd23d 1-225
+packages/browser-tests/scripts/check-fixture-freshness.mjs
+  s_53a39cc4df8b06::t_831a5663a140f6 21-22
+packages/browser-tests/scripts/prepare-fixture.mjs
+  s_53a39cc4df8b06::t_eba396b567826b 16,120-147,149-154,168
+packages/browser/package.json
+  s_53a39cc4df8b06::t_6f9f3f6d6a740d 61-72
+packages/rolldown/build-binding.ts
+  s_53a39cc4df8b06::t_5bde410c9722f3 1-3,10-14,16,22,32-36,42-46,50-52,56,59,61-65,67-120,122-136
+packages/rolldown/build.ts
+  s_53a39cc4df8b06::t_aebee68fcaeb20 14,26-28,30,32-51,62-69,74-88,141-145,178,189-190,202,209-480,548-554
+packages/rolldown/copy-addon-plugin.ts
+  s_53a39cc4df8b06::t_dae64752b83d0a 10-11,14-17,25-30,35-36,42-43,46-48
+packages/rolldown/package.json
+  s_53a39cc4df8b06::t_cb9744df384b27 118-119,130-131,143,147,169,181,190,192-193,197
+packages/rolldown/src/api/dev/dev-engine.ts
+  s_53a39cc4df8b06::t_3965feeba45415 18,71,73,197
+packages/rolldown/src/api/experimental.ts
+  s_53a39cc4df8b06::t_74f62740d5c72f 1,47-49
+packages/rolldown/src/api/rolldown/index.ts
+  s_53a39cc4df8b06::t_8994922bd8923c 2,4,43-51
+packages/rolldown/src/api/rolldown/rolldown-build.ts
+  s_53a39cc4df8b06::t_192c53adca8f2e 1,10,94-97,110-112,114-116,148-150,159-165,167-172,176-177
+packages/rolldown/src/api/watch/index.ts
+  s_53a39cc4df8b06::t_8dd611d4ecbb29 2,39
+packages/rolldown/src/api/watch/watcher.ts
+  s_53a39cc4df8b06::t_5cdfe7f7c23488 1,63,69,80,97-98,134
+packages/rolldown/src/binding-workerd-proxy.ts
+  s_53a39cc4df8b06::t_5812504a2a5131 1-121
+packages/rolldown/src/cli/index.ts
+  s_53a39cc4df8b06::t_a5dec823c200bd 31-37
+packages/rolldown/src/experimental-index.ts
+  s_53a39cc4df8b06::t_0f2e5b6a47f0ba 9-10,23-28
+packages/rolldown/src/options/normalized-input-options.ts
+  s_53a39cc4df8b06::t_3ed2c448bb100d 5-6,25-26,34-65,70,75,80,85,90
+packages/rolldown/src/options/normalized-output-options.ts
+  s_53a39cc4df8b06::t_b70a3b1484ad89 5,7,117-144,149-156,158,163-210,215,220,225-228,233-236,241-244,249,254,259,264-267,271,276,281,286,291,299,304,309,344,349,354,364,369,374,389,401,406,416,426,431,436,441,446
+packages/rolldown/src/parse-ast-index.ts
+  s_53a39cc4df8b06::t_bdd6510e340883 22-23
+packages/rolldown/src/plugin/bindingify-build-hooks.ts
+  s_53a39cc4df8b06::t_f5b8e190c8b593 12-13,30-36,42-47,56-61,72-106,109-113,115-116,128-147,149-153,155-157,159-163,165-168,178-200,202,204-223,225,227-240,242-244,246-248,250-254,256-276,279-301,312-326,328,330-332,334-336,338-342,344,346-358,387-400
+packages/rolldown/src/plugin/bindingify-output-hooks.ts
+  s_53a39cc4df8b06::t_41a0bc27795b4b 8,11-16,20,29,35-43,52-95,97-100,102-108,110-112,114-118,124-130,132-133,135-147,153-161,164-168,170,173-182,194-203,213-219,229-233,241,248-266,274-286,296-308,318-325,337-341,345-352
+packages/rolldown/src/plugin/parallel-plugin.ts
+  s_53a39cc4df8b06::t_c0de86ca040081 2,14-18,23-24,26
+packages/rolldown/src/plugin/plugin-context-data.ts
+  s_53a39cc4df8b06::t_ea15015af95258 14-19,23-48,54-68,112-117,169-178,183-192,196-225,229-305
+packages/rolldown/src/plugin/plugin-context.ts
+  s_53a39cc4df8b06::t_91d83c26ed9bea 25,281-282,285,294-319,329-346,348-358,360-364,372-373,387-401,403-417,440,461,471,496,500,504
+packages/rolldown/src/rolldown-binding.wasip1.d.cts
+  s_53a39cc4df8b06::t_a3851e9839d388 1-3319
+packages/rolldown/src/runtime-support.ts
+  s_53a39cc4df8b06::t_80403657b86067 1-84
+packages/rolldown/src/types.d.ts
+  s_53a39cc4df8b06::t_828c50a713c9ed 4
+packages/rolldown/src/types/chunking-context.ts
+  s_53a39cc4df8b06::t_07aa603799fdbb 3-4,8-15,18,20-41,44-54,58,62,65-73,81
+packages/rolldown/src/types/output-asset-impl.ts
+  s_53a39cc4df8b06::t_2bc4e32006852c 11-14,16-24,29,34,39,44,49,54,61-63,67-73
+packages/rolldown/src/types/output-chunk-impl.ts
+  s_53a39cc4df8b06::t_29c12b6b0f04e2 1,3,12-20,22-30,35,40,45,50,55,60,65,70,75,80-82,87,92,97,102,109-115,120-127,134-155
+packages/rolldown/src/types/rolldown-output-impl.ts
+  s_53a39cc4df8b06::t_afabb2480f97b4 5-6,15-16,18,20,28-30,34-44
+packages/rolldown/src/types/rolldown-output.ts
+  s_53a39cc4df8b06::t_d09e885c4998aa 69-71
+packages/rolldown/src/utils/bindingify-input-options.ts
+  s_53a39cc4df8b06::t_c3779d66d8c185 23,54-57,87
+packages/rolldown/src/utils/bindingify-output-options.ts
+  s_53a39cc4df8b06::t_82b99e42a5423b 15-16,169,173,183-191,388-397,478,528,536-551,553-554
+packages/rolldown/src/utils/create-bundler-option.ts
+  s_53a39cc4df8b06::t_e536ce6e40a6a4 149,162-167
+packages/rolldown/src/utils/error.ts
+  s_53a39cc4df8b06::t_3108d3bc25f404 89-96
+packages/rolldown/src/utils/initialize-parallel-plugins.ts
+  s_53a39cc4df8b06::t_decf1a0c02a48d 5,39-42
+packages/rolldown/src/utils/load-config.ts
+  s_53a39cc4df8b06::t_36f78956a9f800 48-65
+packages/rolldown/src/utils/parse.ts
+  s_53a39cc4df8b06::t_0c2e02430a7024 1,8,25-67,88,108
+packages/rolldown/src/utils/threadless-free.ts
+  s_53a39cc4df8b06::t_e437d3766ba61f 1-95
+packages/rolldown/src/utils/transform-module-info.ts
+  s_53a39cc4df8b06::t_af0a688d963076 25-51
+packages/rolldown/src/utils/transform-rendered-chunk.ts
+  s_53a39cc4df8b06::t_7ae28ddd869879 56-102
+packages/rolldown/src/utils/transform-to-rollup-output.ts
+  s_53a39cc4df8b06::t_751fdbcba032f7 16-17,27-40,53,69-75,107,109-111,121,150,152-154,162-164,166,171-178,228-260
+packages/rolldown/src/workerd-build.ts
+  s_53a39cc4df8b06::t_d771e60d0adc10 1-123
+packages/rolldown/src/workerd-managed-instance.ts
+  s_53a39cc4df8b06::t_b5c83abd5b443c 1-197
+packages/rolldown/src/workerd-stubs/binding-magic-string.ts
+  s_53a39cc4df8b06::t_f66c4d5bfbfc33 1-21
+packages/rolldown/src/workerd-wasm.d.ts
+  s_53a39cc4df8b06::t_f475f2a18fd2db 1-3
+packages/rolldown/src/workerd.ts
+  s_53a39cc4df8b06::t_c5ce3a84fdc626 1-22
+packages/rolldown/tests/async-runtime-worker-teardown.test.ts
+  s_53a39cc4df8b06::t_8a0e02e8521738 1-54
+packages/rolldown/tests/behaviors/many-warnings.test.ts
+  s_53a39cc4df8b06::t_f446b01058f9d5 1,16-21,23-39,41-43,45-47,49-51
+packages/rolldown/tests/build-api/build-api.test.ts
+  s_53a39cc4df8b06::t_8b35aed2cafedd 6,155-156
+packages/rolldown/tests/build-api/parallel-close-plugin.mjs
+  s_53a39cc4df8b06::t_381be843b16e27 1-16
+packages/rolldown/tests/cli/cli-e2e.test.ts
+  s_53a39cc4df8b06::t_c4e93853627e08 1,429,511-527,538-602,617-624,626,642-644
+packages/rolldown/tests/cli/fixtures/cli-environment-option/rolldown.config.js
+  s_53a39cc4df8b06::t_8ce8ae3e7df0cf 3,10-18
+packages/rolldown/tests/code-splitting-group-timings.test.ts
+  s_53a39cc4df8b06::t_6ea3db80f191f4 7,41-58,62,294-312
+packages/rolldown/tests/dev-setup-cleanup.test.ts
+  s_53a39cc4df8b06::t_a49eda8d416ace 1-76
+packages/rolldown/tests/dev/dev-close-ensure-latest.test.ts
+  s_53a39cc4df8b06::t_b405c1da7442e7 10,37
+packages/rolldown/tests/dev/dev-close.test.ts
+  s_53a39cc4df8b06::t_b6ba786800bdfb 2,40-41
+packages/rolldown/tests/dev/dev-lazy-compile.test.ts
+  s_53a39cc4df8b06::t_c6df6648e40146 2,35-36,80-81,188,228,298,375,422,473,537
+packages/rolldown/tests/dev/dev-module-info.test.ts
+  s_53a39cc4df8b06::t_e0c4d4060939f5 6,11
+packages/rolldown/tests/dev/dev-runtime.test.ts
+  s_53a39cc4df8b06::t_a0ba5e1a730e02 6,57-58
+packages/rolldown/tests/dev/dev-watch.test.ts
+  s_53a39cc4df8b06::t_8f8dfd352d69cc 8,15-16,41-63,65-112,114-206,208-223,230-285,294-352,365-396,398-405,408-430
+packages/rolldown/tests/error/error.test.ts
+  s_53a39cc4df8b06::t_b54f8c3318be8a 1,6-13,27-100,119-192,363-396
+packages/rolldown/tests/exports-consistency.test.ts
+  s_53a39cc4df8b06::t_5b78e34d10ab5c 13-16,20-25
+packages/rolldown/tests/fixtures/async-runtime-worker-teardown/loader-cancellation-child.mjs
+  s_53a39cc4df8b06::t_c455ef880e63b6 1-154
+packages/rolldown/tests/fixtures/async-runtime-worker-teardown/loader-cancellation-worker.mjs
+  s_53a39cc4df8b06::t_a2e4dd2bcaca69 1-52
+packages/rolldown/tests/fixtures/builtin-plugin/import-glob/async-resolve-grouped/_config.ts
+  s_53a39cc4df8b06::t_085103e5eebac8 1-32
+packages/rolldown/tests/fixtures/builtin-plugin/import-glob/async-resolve-grouped/assert.mjs
+  s_53a39cc4df8b06::t_e9849a46ed12a1 1-7
+packages/rolldown/tests/fixtures/builtin-plugin/import-glob/async-resolve-grouped/features/a.js
+  s_53a39cc4df8b06::t_22159bed33b22d 1
+packages/rolldown/tests/fixtures/builtin-plugin/import-glob/async-resolve-grouped/main.js
+  s_53a39cc4df8b06::t_dd6e9beab0e423 1-2
+packages/rolldown/tests/fixtures/builtin-plugin/import-glob/async-resolve-grouped/other/b.js
+  s_53a39cc4df8b06::t_a1d92389b00bdf 1
+packages/rolldown/tests/fixtures/builtin-plugin/import-glob/async-resolve/_config.ts
+  s_53a39cc4df8b06::t_104f6f7465d744 1-31
+packages/rolldown/tests/fixtures/builtin-plugin/import-glob/async-resolve/assert.mjs
+  s_53a39cc4df8b06::t_7db73164a24835 1-7
+packages/rolldown/tests/fixtures/builtin-plugin/import-glob/async-resolve/features/a.js
+  s_53a39cc4df8b06::t_1d738e40477ebe 1
+packages/rolldown/tests/fixtures/builtin-plugin/import-glob/async-resolve/main.js
+  s_53a39cc4df8b06::t_8d869c18aaaaa5 1-2
+packages/rolldown/tests/fixtures/builtin-plugin/import-glob/async-resolve/other/b.js
+  s_53a39cc4df8b06::t_80ffbaab191633 1
+packages/rolldown/tests/fixtures/builtin-plugin/import-glob/follow-symlinks/_config.ts
+  s_53a39cc4df8b06::t_8630dc61d05907 1,15
+packages/rolldown/tests/fixtures/plugin/kept-output-bundle/_config.ts
+  s_53a39cc4df8b06::t_6ca78c59239479 1-72
+packages/rolldown/tests/fixtures/plugin/kept-output-bundle/dep.js
+  s_53a39cc4df8b06::t_69d0d5b32823f8 1
+packages/rolldown/tests/fixtures/plugin/kept-output-bundle/lazy.js
+  s_53a39cc4df8b06::t_298d4a12b7c410 1
+packages/rolldown/tests/fixtures/plugin/kept-output-bundle/main.js
+  s_53a39cc4df8b06::t_f76446291e14a5 1-4
+packages/rolldown/tests/fixtures/plugin/native-magic-string-eager-release/_config.ts
+  s_53a39cc4df8b06::t_c34aff0192d1e4 1-114
+packages/rolldown/tests/fixtures/plugin/native-magic-string-eager-release/main.js
+  s_53a39cc4df8b06::t_4827a6b34a4549 1
+packages/rolldown/tests/fixtures/sourcemap-offload-thread/child.mjs
+  s_53a39cc4df8b06::t_6ae579a987fcec 1-61
+packages/rolldown/tests/fixtures/topics/free-external-memory/_config.ts
+  s_53a39cc4df8b06::t_036738e1a71ad9 1,6-19,45,53-61,68-71,75
+packages/rolldown/tests/magic-string-eager-release.test.ts
+  s_53a39cc4df8b06::t_6b0eb70651ecd9 1-86
+packages/rolldown/tests/output-ignored-eager-release.test.ts
+  s_53a39cc4df8b06::t_c91d5377134266 1-116
+packages/rolldown/tests/package.json
+  s_53a39cc4df8b06::t_cb753f332dfa31 20,24-33
+packages/rolldown/tests/parallel-plugin-runtime-support.test.ts
+  s_53a39cc4df8b06::t_6c7e20d821ded4 1-103
+packages/rolldown/tests/parse-eager-free.test.ts
+  s_53a39cc4df8b06::t_2e448b20da43b9 1-46
+packages/rolldown/tests/retained-build-context.test.ts
+  s_53a39cc4df8b06::t_f3b6807611512c 1-103
+packages/rolldown/tests/rolldown-setup-cleanup.test.ts
+  s_53a39cc4df8b06::t_75f4feb76f59f6 1-91
+packages/rolldown/tests/runtime-support-compatibility.test.ts
+  s_53a39cc4df8b06::t_70aaa1a9279230 1-32
+packages/rolldown/tests/runtime-support.test.ts
+  s_53a39cc4df8b06::t_775982c4911101 1-95
+packages/rolldown/tests/sourcemap-offload-thread.test.ts
+  s_53a39cc4df8b06::t_068ecc7e2d3bb7 1-37
+packages/rolldown/tests/src/load-binding.ts
+  s_53a39cc4df8b06::t_bb15d46c129662 8-16
+packages/rolldown/tests/src/runtime-flavor.ts
+  s_53a39cc4df8b06::t_d6790da91e3407 1-16
+packages/rolldown/tests/src/stage-native-binding.ts
+  s_53a39cc4df8b06::t_2021bcfbc5ee3a 2-3,6-26,29-39,42-43
+packages/rolldown/tests/threaded-wasi.test.ts
+  s_53a39cc4df8b06::t_bb0ea91dbe2fcd 1-190
+packages/rolldown/tests/tsconfig.json
+  s_53a39cc4df8b06::t_acabcaf3f31509 19-25
+packages/rolldown/tests/vitest.config.mts
+  s_53a39cc4df8b06::t_e6d8824ff0e0f6 9
+packages/rolldown/tests/wasi-declaration-consistency.test.ts
+  s_53a39cc4df8b06::t_c14fc9306cea98 1-106
+packages/rolldown/tests/wasi-loader-behavior.test.ts
+  s_53a39cc4df8b06::t_0f5eabc43a6177 1-229
+packages/rolldown/tests/wasi-loader-context-lifecycle.mjs
+  s_53a39cc4df8b06::t_cf0f0a7d268f4c 1,3-4,7-12,14-15,17-20,22-23,25-27,29-46,48-49,51-55,57-91,94-109
+packages/rolldown/tests/wasi-runtime-lifecycle-case.mjs
+  s_53a39cc4df8b06::t_a2b9be4d8ba626 1-527
+packages/rolldown/tests/wasi-runtime-lifecycle.mjs
+  s_53a39cc4df8b06::t_2a0ebc4420d4ca 1-50
+packages/rolldown/tests/wasi/crash-injector-preload.mjs
+  s_53a39cc4df8b06::t_23c993643ba3cd 1-43
+packages/rolldown/tests/wasi/crash-injector-worker.mjs
+  s_53a39cc4df8b06::t_5a30bc995621e9 1-76
+packages/rolldown/tests/wasi/pool-preload-load-failure-worker.mjs
+  s_53a39cc4df8b06::t_372c49546e0985 1-12
+packages/rolldown/tests/wasi/pool-worker-preload.mjs
+  s_53a39cc4df8b06::t_121e157c602b5e 1-449
+packages/rolldown/tests/wasi/threaded-memory-stress.mjs
+  s_53a39cc4df8b06::t_be80c4fb37f8a0 1-390
+packages/rolldown/tests/wasi/wasm-sections.mjs
+  s_53a39cc4df8b06::t_1abfc4f8975342 1-162
+packages/rolldown/tests/wasi/worker-crash-latch.mjs
+  s_53a39cc4df8b06::t_29115fe22e6447 1-488
+packages/rolldown/tests/watch/watch.test.ts
+  s_53a39cc4df8b06::t_06691803a3b865 714-719,724-729,743,745,748-751,1550-1578
+packages/rolldown/tests/workerd-build.test.ts
+  s_53a39cc4df8b06::t_998fd2c9a5c006 1-1107
+packages/rolldown/tests/workerd-loader.test.ts
+  s_53a39cc4df8b06::t_5f7c81d6747107 1-746
+packages/rolldown/tests/workerd-output-ownership.test.ts
+  s_53a39cc4df8b06::t_ebf08dd356af4d 1-215
+packages/workerd-tests/memory.mjs
+  s_53a39cc4df8b06::t_05ef0dc23c7639 1-106
+packages/workerd-tests/package.json
+  s_53a39cc4df8b06::t_b942f5c218529a 1-13
+packages/workerd-tests/suite.mjs
+  s_53a39cc4df8b06::t_6c3cc3c618d998 1-595
+packages/workerd-tests/worker.js
+  s_53a39cc4df8b06::t_0618a53453f292 1-906
+pnpm-lock.yaml
+  s_53a39cc4df8b06::t_8c0d4a0c3dbc26 177-178,180-181,185-187,189,248-250,302-304,435,713,716,719,753,756-759,762,765,769-771,779-780,1260-1265,1311-1313,1997-2002,2021-2026,2045-2050,2069-2074,2093-2098,2170-2171,2182-2183,2191-2192,2863-2868,2881-2886,2893-2897,2908-2912,2923-2927,2939-2944,2957-2962,2975-2980,2993-2998,3011-3016,3029-3034,3047-3052,3065-3070,3084-3090,3105-3111,3126-3132,3147-3153,3168-3174,3189-3195,3210-3216,3231-3237,3250-3253,3258-3262,3274-3279,3292-3297,3310-3315,3492-3495,3503,6604-6606,7030-7031,7944-7948,8677-8680,9022-9025,9476-9480,10452-10454,10464-10466,10476-10478,10488-10490,10500-10502,10559,10561,10579,10593,10979-10983,10994-10998,11004-11008,11017-11019,11026-11028,11035-11037,11044-11046,11053-11055,11062-11064,11071-11073,11080-11082,11089-11091,11098-11100,11109-11113,11124-11128,11139-11143,11154-11158,11169-11173,11184-11188,11199-11203,11214-11218,11229-11233,11239-11243,11252-11254,11261-11263,11270-11272,11443-11445,11460-11462,11696,11698-11699,13836-13840,14117,15128-15139,16085-16116,16434-16435,16974-16981
+pnpm-workspace.yaml
+  s_53a39cc4df8b06::t_880f37d9fed5af 29-31,37-39,41-45,65,73-74,85,146
+scripts/package.json
+  s_53a39cc4df8b06::t_0642641e710523 28
+scripts/wasi/bare-runtime-imports.mjs
+  s_53a39cc4df8b06::t_ec6cb55baf0cc9 1-93
+scripts/wasi/stage-wasi-packages.mjs
+  s_53a39cc4df8b06::t_249e70f9b84d82 1-468
+vite.config.ts
+  s_53a39cc4df8b06::t_1ccc854bd0c6a0 139,142-146
+packages/rolldown/src/binding.cjs
+  s_53a39cc4df8b06::t_414ecfb1b12366 565,655-675,703-729,887,892,894,896-897,899-900,905-906
+packages/rolldown/src/binding.d.cts
+  s_53a39cc4df8b06::t_eb7308dcbf5b71 1587,1593,1650,1657-1661,1756,1761,1834,1847,1861,1866,1873,1895,2449-2453,2903-2938,3193-3198,3206-3208,3211-3216,3275-3280,3283-3294,3305-3306,3310-3313,3316-3321
+packages/rolldown/src/browser.js
+  s_53a39cc4df8b06::t_d3a6db2e423615 1
+packages/rolldown/src/rolldown-binding.wasi-browser.js
+  s_53a39cc4df8b06::t_b0e7b67ab8a7a3 9-10,161-190,843,1422-1423,1485-1487,1557,1562,1564,1566-1567,1569-1570,1575-1576
+packages/rolldown/src/rolldown-binding.wasi.cjs
+  s_53a39cc4df8b06::t_ac11908de8fe91 1,67-69,405,616-645,750-870,1533,2245,2423-2426,2519,2524,2526,2528-2529,2531-2532,2537-2538
+packages/rolldown/src/rolldown-binding.wasi.d.cts
+  s_53a39cc4df8b06::t_dd28dbeaed1969 1582,1588,1645,1652-1656,1751,1756,1829,1842,1856,1861,1868,1890,2444-2448,2898-2933,3188-3193,3201-3203,3206-3211,3270-3275,3278-3289,3300-3301,3305-3308,3311-3316
+packages/rolldown/src/rolldown-binding.wasip1-browser.js
+  s_53a39cc4df8b06::t_5a8bec29e4e664 1-1509
+packages/rolldown/src/rolldown-binding.wasip1-deferred.d.ts
+  s_53a39cc4df8b06::t_03fa24c9f47c81 1-83
+packages/rolldown/src/rolldown-binding.wasip1-deferred.js
+  s_53a39cc4df8b06::t_c369acca537e3a 1-1919
+packages/rolldown/src/rolldown-binding.wasip1.cjs
+  s_53a39cc4df8b06::t_f038b093c8d476 1-1726
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "22d98bd1d8af81845fdb02775d412c971f3e6f80",
+  "prompts": {},
+  "sessions": {
+    "s_53a39cc4df8b06": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "837f94ba-d352-49f0-a5fb-8785e92ae830",
+        "model": "unknown"
+      },
+      "human_author": "unknown"
+    }
+  }
+}

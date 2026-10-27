@@ -57,12 +57,11 @@ async function invokeBuiltinHook(this: CallableBuiltinPluginContext, key: string
     // @ts-expect-error
     return await this.native[key](...args);
   } catch (e: any) {
-    if (e instanceof Error && !e.stack?.includes('at ')) {
-      Error.captureStackTrace(
-        e,
-        // @ts-expect-error
-        this.plugin[key],
-      );
+    if (e instanceof Error && !/^\s+at /m.test(e.stack ?? '')) {
+      // Native errors carry no frames. Capture them here and trim this wrapper
+      // frame so the stack starts at the caller. The hook on the plugin is a
+      // bound function, which V8 never matches against a frame.
+      Error.captureStackTrace(e, invokeBuiltinHook);
     }
     return error(
       logPluginError(e, this.plugin.name, {

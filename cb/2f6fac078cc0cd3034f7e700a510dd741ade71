@@ -1,0 +1,21 @@
+crates/rolldown/src/ecmascript/format/share_factory.rs
+  s_1349f77e095742::t_a88174d0878310 84-95
+crates/rolldown/src/stages/generate_stage/compute_wrapped_esm_init_metadata.rs
+  s_1349f77e095742::t_7b8dfb6801b2ba 108-110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "cb2f6fac078cc0cd3034f7e700a510dd741ade71",
+  "prompts": {},
+  "sessions": {
+    "s_1349f77e095742": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01434bb7-a487-49c7-8ef1-e905252e7907",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

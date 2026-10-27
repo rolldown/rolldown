@@ -46,18 +46,32 @@ test('a plugin reads the code and file name that an earlier plugin assigned', as
         },
       },
       {
-        name: 'writer',
+        name: 'writer-code',
         generateBundle(_options, bundle) {
           for (const chunk of chunksOf(bundle)) {
             chunk.code = chunk.code + MARKER;
+          }
+        },
+      },
+      {
+        // Same file name as the cached string, so this read must notice the new code.
+        name: 'reader-after-code',
+        generateBundle(_options, bundle) {
+          record('afterCode', bundle);
+        },
+      },
+      {
+        name: 'writer-rename',
+        generateBundle(_options, bundle) {
+          for (const chunk of chunksOf(bundle)) {
             chunk.fileName = 'renamed.js';
           }
         },
       },
       {
-        name: 'reader-after',
+        name: 'reader-after-rename',
         generateBundle(_options, bundle) {
-          record('generateBundle', bundle);
+          record('afterRename', bundle);
         },
         writeBundle(_options, bundle) {
           record('writeBundle', bundle);
@@ -69,7 +83,8 @@ test('a plugin reads the code and file name that an earlier plugin assigned', as
     const { output } = await bundle.write({ dir });
     expect(seen).toStrictEqual([
       'before:entry.js:false',
-      'generateBundle:renamed.js:true',
+      'afterCode:entry.js:true',
+      'afterRename:renamed.js:true',
       'writeBundle:renamed.js:true',
     ]);
     expect(output.map((item) => item.fileName)).toStrictEqual(['renamed.js']);

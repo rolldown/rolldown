@@ -333,12 +333,28 @@ impl GenerateStage<'_> {
 
   /// Returns a rank for each other chunk that the code of a chunk reaches. The ranks follow a
   /// depth-first walk of the static imports that tree shaking keeps, in source order. A chunk gets
-  /// its rank when the walk first reaches it. The walk starts at the entry module. Then it starts at
-  /// each module that no other module of the chunk imports, in execution order. It stops at a module
-  /// of another chunk, because that chunk orders its own imports.
+  /// its rank when the walk first reaches it. The walk stops at a module of another chunk, because
+  /// that chunk orders its own imports.
   ///
-  /// `exec_order` comes from one walk over all entries. Thus a module that an earlier entry imports
-  /// can sort before a module that this chunk imports first.
+  /// The walk starts at the module that leads the chunk. For an entry chunk, that is the entry
+  /// module. The other modules of the chunk come last, for a module that the entry module does not
+  /// reach. For a common chunk, that is the module that runs last. When one module leads a common
+  /// chunk, every other module of the chunk runs because the lead module imports it, directly or
+  /// indirectly. So the lead module runs last, also when the chunk has an import cycle
+  /// (`code_splitting/chunk_import_order_common_chunk_cycle`). This is not the module that
+  /// `assign_chunk_exec_orders` keys the chunk `exec_order` on: that is `modules[0]`, the module
+  /// that runs first.
+  ///
+  /// The code of the lead module defines the order of its imports, as in Rollup. `exec_order` comes
+  /// from one walk over all entries. Thus a module that an earlier entry imports can sort before a
+  /// module that this chunk imports first (`code_splitting/chunk_import_source_order`).
+  ///
+  /// When the module that runs last does not reach every other module of a common chunk, several
+  /// modules lead the chunk. The result is then empty and the chunk keeps the `exec_order` sort. The
+  /// code of the lead modules does not say which of their imports comes first. The entries do:
+  /// `exec_order` has the order in which the entries first reached those imports
+  /// (`code_splitting/chunk_import_order_common_chunk_interleaving`). Rollup sorts the lead modules
+  /// by execution order instead, which loses that order.
   /// See internal-docs/code-splitting/implementation.md#chunk-import-order.
   fn chunk_importee_ranks(
     &self,
@@ -347,39 +363,30 @@ impl GenerateStage<'_> {
   ) -> FxHashMap<ChunkIdx, u32> {
     let chunk = &chunk_graph.chunk_table[chunk_idx];
     let module_table = &self.link_output.module_table;
-    let mut importees = vec![];
-    let mut imported_in_chunk = FxHashSet::default();
-    for &module_idx in &chunk.modules {
-      self.push_kept_static_importees(module_idx, &mut importees);
-      imported_in_chunk.extend(
-        importees
-          .drain(..)
-          .filter(|importee_idx| chunk_graph.module_to_chunk[*importee_idx] == Some(chunk_idx)),
-      );
-    }
-    let mut roots = chunk
-      .modules
-      .iter()
-      .copied()
-      .filter(|module_idx| !imported_in_chunk.contains(module_idx))
-      .collect::<Vec<_>>();
-    roots.sort_unstable_by_key(|module_idx| module_table[*module_idx].exec_order());
-    let entry_module = match chunk.kind {
-      ChunkKind::EntryPoint { module, .. } => Some(module),
-      ChunkKind::Common => None,
-    };
-    // The stack pops the entry module first and the roots next. The other modules of the chunk
-    // come last, for an import cycle that no root reaches.
-    let mut stack = chunk
-      .modules
-      .iter()
-      .rev()
-      .copied()
-      .chain(roots.into_iter().rev())
-      .chain(entry_module)
-      .collect::<Vec<_>>();
-    let mut visited = FxHashSet::default();
+    let runtime_idx = self.link_output.runtime.id();
     let mut ranks = FxHashMap::default();
+    // The stack pops the lead module first.
+    let mut stack = match chunk.kind {
+      ChunkKind::EntryPoint { module, .. } => {
+        chunk.modules.iter().rev().copied().chain(std::iter::once(module)).collect::<Vec<_>>()
+      }
+      ChunkKind::Common => {
+        // The runtime module has no import records, so no module of the chunk imports it.
+        let Some(lead_module) = chunk
+          .modules
+          .iter()
+          .copied()
+          .filter(|&module_idx| module_idx != runtime_idx)
+          .max_by_key(|&module_idx| module_table[module_idx].exec_order())
+        else {
+          return ranks;
+        };
+        vec![lead_module]
+      }
+    };
+    let mut importees = vec![];
+    let mut visited = FxHashSet::default();
+    let mut walked = 0;
     while let Some(module_idx) = stack.pop() {
       if !visited.insert(module_idx) {
         continue;
@@ -390,11 +397,19 @@ impl GenerateStage<'_> {
           ranks.entry(importee).or_insert(rank);
         }
         Some(_) => {
+          walked += 1;
           self.push_kept_static_importees(module_idx, &mut importees);
           stack.extend(importees.drain(..).rev());
         }
         // An external module.
         None => {}
+      }
+    }
+    if matches!(chunk.kind, ChunkKind::Common) {
+      let module_count =
+        chunk.modules.iter().filter(|&&module_idx| module_idx != runtime_idx).count();
+      if walked < module_count {
+        return FxHashMap::default();
       }
     }
     ranks

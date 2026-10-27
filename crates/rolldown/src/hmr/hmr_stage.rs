@@ -5,6 +5,7 @@ use std::{
     Arc,
     atomic::{AtomicU32, Ordering},
   },
+  time::Instant,
 };
 
 use arcstr::ArcStr;
@@ -21,8 +22,6 @@ use rolldown_error::BuildResult;
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_sourcemap::{Source, SourceJoiner, SourceMap, SourceMapSource};
-#[cfg(not(target_family = "wasm"))]
-use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
   concat_string,
   indexmap::{FxIndexMap, FxIndexSet},
@@ -281,7 +280,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         .into_par_iter()
         .map(|render_input| {
           let module_idx = render_input.idx;
-          (module_idx, self.render_module_code(render_input, 0, 0, false).0)
+          (module_idx, self.render_module_code(render_input, 0, false).0)
         })
         .collect::<Vec<_>>()
         .into_iter()
@@ -382,7 +381,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       .into_par_iter()
       .filter_map(|render_input| {
         let module_idx = render_input.idx;
-        let (code, _) = self.render_module_code(render_input, 0, 0, false);
+        let (code, _) = self.render_module_code(render_input, 0, false);
         (pre_rebuild_renders[&module_idx] == code).then_some(module_idx)
       })
       .collect::<Vec<_>>()
@@ -682,31 +681,58 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         vec![anyhow::anyhow!("Lazy entry module not found in cache. module_id={module_id}").into()]
       })?;
 
-    // 2. Trigger a partial scan to fetch the module and its dependencies
-    let fetch_mode = ScanMode::Partial(vec![resolved_id]);
+    // 2. Scan the route into the graph, unless this is a repeat visit.
+    // Only the fetched template has an `import()`, and a failed scan never reaches `merge`. So a
+    // resolved `import()` on the proxy means an earlier compile already merged the route, and a
+    // retry after a failed scan still scans. A compile that failed after its `merge` queued no
+    // Rebuild, so the next compile scans again to queue it. Queued rescans need a scan to retry
+    // the broken files. A lost update needs the Rebuild that follows a scan: it becomes a full
+    // build that reloads every client.
+    // See internal-docs/lazy-compilation/design.md ("Repeat Visits").
+    let is_repeat_visit = !*self.lost_hmr_update
+      && !self.cache.unfinished_lazy_merge
+      && self.cache.pending_rescans.is_empty()
+      && self.module_table().modules[entry_module_idx].as_normal().is_some_and(|proxy| {
+        proxy
+          .import_records
+          .iter()
+          .any(|rec| rec.kind == ImportKind::DynamicImport && rec.resolved_module.is_some())
+      });
 
-    let mut module_loader = ModuleLoader::new(
-      self.fs.clone(),
-      Arc::clone(&self.options),
-      Arc::clone(&self.resolver),
-      Arc::clone(&self.plugin_driver),
-      self.cache,
-      fetch_mode.is_full(),
-      None,
-    )?;
+    let phase_start = Instant::now();
+    if !is_repeat_visit {
+      let fetch_mode = ScanMode::Partial(vec![resolved_id]);
 
-    let module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
-    drop(module_loader);
+      let mut module_loader = ModuleLoader::new(
+        self.fs.clone(),
+        Arc::clone(&self.options),
+        Arc::clone(&self.resolver),
+        Arc::clone(&self.plugin_driver),
+        self.cache,
+        fetch_mode.is_full(),
+        None,
+      )?;
 
-    let plugin_driver = Arc::clone(&self.plugin_driver);
-    self
-      .cache
-      .merge(module_loader_output.into(), &plugin_driver)
-      .map_err(|e| vec![anyhow::anyhow!(e).into()])?;
+      let module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
+      drop(module_loader);
 
-    let options = Arc::clone(&self.options);
-    self.cache.update_defer_sync_data(&options).await?;
+      let plugin_driver = Arc::clone(&self.plugin_driver);
+      self
+        .cache
+        .merge(module_loader_output.into(), &plugin_driver)
+        .map_err(|e| vec![anyhow::anyhow!(e).into()])?;
+      self.cache.unfinished_lazy_merge = true;
+    }
+    let scan_time = phase_start.elapsed();
 
+    let phase_start = Instant::now();
+    if !is_repeat_visit {
+      let options = Arc::clone(&self.options);
+      self.cache.update_defer_sync_data(&options).await?;
+    }
+    let defer_sync_time = phase_start.elapsed();
+
+    let phase_start = Instant::now();
     // The proxy is only the walk root: it never runs in the client, so the payload does not
     // carry it.
     let mut modules_to_be_updated = FxIndexSet::default();
@@ -724,30 +750,29 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     // Sort for stable output
     modules_to_be_updated
       .sort_by_cached_key(|module_idx| self.module_table().modules[*module_idx].id());
+    let walk_time = phase_start.elapsed();
 
-    // Prepare module render inputs
-    let index_ecma_ast = self.index_ecma_ast();
-    let module_render_inputs = modules_to_be_updated
+    let phase_start = Instant::now();
+    let rendered = modules_to_be_updated
       .iter()
-      .copied()
-      .map(|affected_module_idx| {
-        let affected_module = &self.module_table().modules[affected_module_idx];
-        let Module::Normal(affected_module) = affected_module else {
-          unreachable!("Only normal modules should be rendered");
-        };
-
-        debug_assert_eq!(affected_module_idx, affected_module.idx);
-        let ecma_ast =
-          index_ecma_ast[affected_module_idx].as_ref().expect("Normal module should have an AST");
-
-        ModuleRenderInput {
-          idx: affected_module.idx,
-          ecma_ast: ecma_ast.clone_with_another_arena(),
-        }
+      .map(|&idx| {
+        let stamp =
+          stamp_table.render_time_stamp(self.module_table().modules[idx].stable_id().as_str());
+        (idx, stamp, self.module_render_input(idx))
+      })
+      .collect::<Vec<_>>()
+      .into_par_iter()
+      .map(|(idx, stamp, render_input)| {
+        let (code, map) = self.render_module_code(render_input, stamp, true);
+        (idx, stamp, code, map)
       })
       .collect::<Vec<_>>();
+    let render_time = phase_start.elapsed();
 
-    // Render all modules
+    // Registrations only — deliberately no execute-entry tail; `requestLazy` runs the module.
+    // Executing here would run it inside the proxy's async wrapper, turning a throw from its
+    // body into a floating rejection instead of one that reaches the importer.
+    let phase_start = Instant::now();
     let mut source_joiner = SourceJoiner::default();
     // Rows first, so the client graph is in place before any factory registers.
     if let Some(prelude) = crate::hmr::module_graph_delta::render_register_graph_source(
@@ -758,41 +783,20 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     ) {
       source_joiner.append_source(prelude);
     }
-    let rendered_sources = module_render_inputs
-      .into_par_iter()
-      .enumerate()
-      .flat_map(|(index, render_input)| {
-        let affected_module_idx = render_input.idx;
-        let stamp = stamp_table
-          .render_time_stamp(self.module_table().modules[affected_module_idx].stable_id().as_str());
-        let (code, map) = self.render_module_code(render_input, index, stamp, true);
-
-        let affected_module = &self.module_table().modules[affected_module_idx];
-        let Module::Normal(affected_module) = affected_module else {
-          unreachable!("Only normal modules should be rendered");
-        };
-
-        let intro_comment: Box<dyn Source + Send> =
-          Box::new(concat_string!("//#region ", affected_module.debug_id));
-        let outro_comment: Box<dyn Source + Send> = Box::new(concat_string!("//#endregion"));
-
-        let code_source: Box<dyn Source + Send> = if let Some(map) = map {
-          Box::new(SourceMapSource::new(code, map))
-        } else {
-          Box::new(code)
-        };
-
-        [intro_comment, code_source, outro_comment]
-      })
-      .collect::<Vec<_>>();
-
-    for source in rendered_sources {
-      source_joiner.append_source_dyn(source);
+    let mut carried = Vec::with_capacity(rendered.len());
+    for (idx, stamp, code, map) in rendered {
+      let Module::Normal(module) = &self.module_table().modules[idx] else {
+        unreachable!("Only normal modules should be rendered");
+      };
+      carried.push((module.stable_id.as_arc_str().clone(), stamp));
+      source_joiner.append_source(concat_string!("//#region ", module.debug_id));
+      if let Some(map) = map {
+        source_joiner.append_source(SourceMapSource::new(code, map));
+      } else {
+        source_joiner.append_source(code);
+      }
+      source_joiner.append_source("//#endregion");
     }
-
-    // Registrations only — deliberately no execute-entry tail; `requestLazy` runs the module.
-    // Executing here would run it inside the proxy's async wrapper, turning a throw from its
-    // body into a floating rejection instead of one that reaches the importer.
     let (mut code, mut map) = source_joiner.join();
 
     let lazy_patch_id = self.next_hmr_patch_id.fetch_add(1, Ordering::Relaxed);
@@ -815,22 +819,26 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     } else {
       None
     };
+    let join_time = phase_start.elapsed();
 
-    let carried = modules_to_be_updated
-      .iter()
-      .map(|module_idx| {
-        let stable_id = self.module_table().modules[*module_idx].stable_id();
-        (stable_id.as_arc_str().clone(), stamp_table.render_time_stamp(stable_id.as_str()))
-      })
-      .collect();
+    let sourcemap_filename = sourcemap_asset.as_ref().map(|asset| asset.filename.to_string());
+    let sourcemap = sourcemap_asset.map(|asset| asset.source.try_into_string()).transpose()?;
+    self.cache.unfinished_lazy_merge = false;
 
-    Ok(HmrLazyChunkOutput {
-      code,
-      filename,
-      sourcemap_filename: sourcemap_asset.as_ref().map(|asset| asset.filename.to_string()),
-      sourcemap: sourcemap_asset.map(|asset| asset.source.try_into_string()).transpose()?,
-      carried,
-    })
+    let scanned = !is_repeat_visit;
+    tracing::debug!(
+      target: "hmr",
+      scanned,
+      modules = modules_to_be_updated.len(),
+      ?scan_time,
+      ?defer_sync_time,
+      ?walk_time,
+      ?render_time,
+      ?join_time,
+      "compile_lazy_entry: done"
+    );
+
+    Ok(HmrLazyChunkOutput { code, filename, sourcemap_filename, sourcemap, carried, scanned })
   }
 
   async fn render_hmr_patch(
@@ -888,12 +896,11 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     }
     let rendered_sources = module_render_inputs
       .into_par_iter()
-      .enumerate()
-      .flat_map(|(index, render_input)| {
+      .flat_map(|render_input| {
         let affected_module_idx = render_input.idx;
         let stamp = stamp_table
           .render_time_stamp(self.module_table().modules[affected_module_idx].stable_id().as_str());
-        let (code, map) = self.render_module_code(render_input, index, stamp, true);
+        let (code, map) = self.render_module_code(render_input, stamp, true);
 
         let affected_module = &self.module_table().modules[affected_module_idx];
         let Module::Normal(affected_module) = affected_module else {
@@ -968,14 +975,11 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
   /// Finalize and print one module into its HMR payload form (factory-registration
   /// snippet, without the `//#region` framing).
   ///
-  /// `unique_index` seeds the payload-position-dependent binding suffixes, so two
-  /// renders of the same module compare equal only when they pin it to the same
-  /// value, and likewise the same `stamp`. `with_sourcemap: false` skips sourcemap
-  /// generation even when the options ask for one.
+  /// Two renders of the same module compare equal only when they use the same `stamp`.
+  /// `with_sourcemap: false` skips sourcemap generation even when the options ask for one.
   fn render_module_code(
     &self,
     render_input: ModuleRenderInput,
-    unique_index: usize,
     stamp: u32,
     with_sourcemap: bool,
   ) -> (String, Option<SourceMap>) {
@@ -1009,7 +1013,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         generated_static_import_infos: FxHashMap::default(),
         re_export_all_dependencies: FxIndexSet::default(),
         generated_static_import_stmts_from_external: FxIndexMap::default(),
-        unique_index,
         stamp,
         named_exports: FxHashMap::default(),
       };
@@ -1060,6 +1063,11 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       .flatten();
 
     (code, map)
+  }
+
+  fn module_render_input(&self, idx: ModuleIdx) -> ModuleRenderInput {
+    let ecma_ast = self.index_ecma_ast()[idx].as_ref().expect("Normal module should have an AST");
+    ModuleRenderInput { idx, ecma_ast: ecma_ast.clone_with_another_arena() }
   }
 }
 

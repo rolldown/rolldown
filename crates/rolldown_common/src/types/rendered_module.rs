@@ -53,5 +53,15 @@ impl RenderedModule {
 /// Number of UTF-16 code units needed for `s`: one per lead byte, two for a 4-byte sequence, none for
 /// continuation bytes.
 fn utf16_len(s: &str) -> usize {
-  s.bytes().map(|b| if b & 0xC0 == 0x80 { 0 } else if b >= 0xF0 { 2 } else { 1 }).sum()
+  s.bytes()
+    .map(|b| {
+      if b & 0xC0 == 0x80 {
+        0
+      } else if b >= 0xF0 {
+        2
+      } else {
+        1
+      }
+    })
+    .sum()
 }

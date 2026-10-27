@@ -5,8 +5,8 @@ import type { BindingCallableBuiltinPlugin } from '../../src/binding.cjs';
 
 type CallableJsonPlugin = ReturnType<typeof viteJsonPlugin> & BindingCallableBuiltinPlugin;
 
-// With the WASI binding, emnapi creates the error with a frame of its own, so the hook wrapper
-// keeps that stack and the caller frame is not first.
+// With the WASI binding, emnapi creates the error with its own stack frame. The hook wrapper
+// keeps that stack. Then the caller frame is not the first frame.
 test.skipIf(isWasiTest)('a native hook error gets the caller frames', async () => {
   const plugin = viteJsonPlugin({}) as CallableJsonPlugin;
 
@@ -18,7 +18,8 @@ test.skipIf(isWasiTest)('a native hook error gets the caller frames', async () =
     (e: Error) => e,
   );
   expect(error?.message).toContain('EOF while parsing');
-  // The native error has no frames. The hook wrapper captures them and trims its own frame.
+  // The native error has no stack frames. The hook wrapper captures the frames and removes
+  // its own frame.
   const frames = error?.stack?.split('\n').filter((line) => /^\s+at /.test(line)) ?? [];
   expect(frames[0]).toContain('callTransform');
   expect(error?.stack).not.toContain('invokeBuiltinHook');

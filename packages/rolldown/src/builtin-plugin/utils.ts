@@ -58,9 +58,10 @@ async function invokeBuiltinHook(this: CallableBuiltinPluginContext, key: string
     return await this.native[key](...args);
   } catch (e: any) {
     if (e instanceof Error && !/^\s+at /m.test(e.stack ?? '')) {
-      // Native errors carry no frames. Capture them here and trim this wrapper
-      // frame so the stack starts at the caller. The hook on the plugin is a
-      // bound function, which V8 never matches against a frame.
+      // An error from the native side has no stack frames. Capture the frames
+      // here. Pass this function so that V8 removes the frames of this wrapper.
+      // Do not pass the hook on the plugin: it is a bound function, and V8 does
+      // not match a bound function to a frame.
       Error.captureStackTrace(e, invokeBuiltinHook);
     }
     return error(

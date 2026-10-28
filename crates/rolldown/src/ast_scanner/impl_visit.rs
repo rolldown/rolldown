@@ -407,6 +407,11 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
   }
 
   fn visit_expression(&mut self, it: &Expression<'ast>) {
+    // Exactly the expressions `rewrite_import_meta_hot` rewrites. Returning keeps the inner
+    // `import.meta` from setting `ImportMeta`; the expression has nothing else to scan.
+    if it.is_import_meta_hot() && self.immutable_ctx.options.is_dev_mode_enabled() {
+      return;
+    }
     if matches!(it, Expression::ImportMeta(_)) {
       self.current_stmt_info.meta.insert(StmtInfoMeta::ImportMeta);
     }

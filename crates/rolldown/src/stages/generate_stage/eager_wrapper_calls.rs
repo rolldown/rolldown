@@ -7,11 +7,14 @@ use super::GenerateStage;
 use crate::chunk_graph::ChunkGraph;
 
 impl GenerateStage<'_> {
-  /// With `preserveModules` and ESM output, a wrapped module runs at its chunk's tail call
-  /// (`export default require_x();` or `init_x();`). ESM evaluates the deepest member of an import
-  /// cycle first, so only the single way into a cycle keeps that call (#11348).
+  /// With `preserveModules` and ESM output, each wrapped module has an eager wrapper call in its
+  /// chunk: `export default require_x();` or `init_x();`. This call runs the module when ESM
+  /// evaluates the chunk. In an import cycle, ESM evaluates the deepest member first. Its eager
+  /// wrapper call can then run the wrapper of a different member before that member defines the
+  /// wrapper (#11348). So a member keeps its eager wrapper call only if it is the single way into
+  /// the cycle or it loads on its own.
   /// See internal-docs/linking/module-execution-order/implementation.md.
-  pub(super) fn compute_chunks_without_tail_wrapper_call(&self, chunk_graph: &mut ChunkGraph) {
+  pub(super) fn compute_chunks_without_eager_wrapper_call(&self, chunk_graph: &mut ChunkGraph) {
     if !self.options.preserve_modules || !matches!(self.options.format, OutputFormat::Esm) {
       return;
     }
@@ -42,7 +45,8 @@ impl GenerateStage<'_> {
         cycle_of[member] = Some(cycle_idx);
       }
     }
-    // ESM enters a cycle at a member imported from outside it, or at one loaded on its own.
+    // A way in is a member where ESM enters the cycle. A chunk outside the cycle imports it, or it
+    // loads on its own.
     let mut is_way_in =
       chunk_table.iter().map(is_loaded_on_its_own).collect::<IndexVec<ChunkIdx, _>>();
     for edge in graph.raw_edges() {
@@ -53,7 +57,7 @@ impl GenerateStage<'_> {
       }
     }
 
-    let mut chunks_without_tail_wrapper_call = FxHashSet::default();
+    let mut chunks_without_eager_wrapper_call = FxHashSet::default();
     for cycle in &cycles {
       let mut ways_in = cycle.iter().copied().filter(|member| is_way_in[*member]);
       let single_way_in = match (ways_in.next(), ways_in.next()) {
@@ -62,22 +66,24 @@ impl GenerateStage<'_> {
       };
       for &member in cycle {
         let chunk = &chunk_table[member];
-        // A chunk loaded on its own keeps the call even with more ways in: its importers read the
-        // `default` export or rely on the call to run the module.
+        // A chunk that loads on its own keeps its eager wrapper call, even if the cycle has more
+        // ways in. Its importers read the `default` export, or they need the call to run the
+        // module.
         if Some(member) == single_way_in || is_loaded_on_its_own(chunk) {
           continue;
         }
         let ChunkKind::EntryPoint { module, .. } = chunk.kind else { continue };
         if matches!(self.link_output.metas[module].wrap_kind(), WrapKind::Cjs | WrapKind::Esm) {
-          chunks_without_tail_wrapper_call.insert(member);
+          chunks_without_eager_wrapper_call.insert(member);
         }
       }
     }
-    chunk_graph.chunks_without_tail_wrapper_call = chunks_without_tail_wrapper_call;
+    chunk_graph.chunks_without_eager_wrapper_call = chunks_without_eager_wrapper_call;
   }
 }
 
-/// A user-defined entry, an emitted chunk, or a dynamically imported chunk.
+/// Returns `true` if the chunk is a user-defined entry, an emitted chunk, or the target of a
+/// dynamic `import()`. Such a chunk loads on its own.
 fn is_loaded_on_its_own(chunk: &Chunk) -> bool {
   matches!(chunk.kind, ChunkKind::EntryPoint { meta, .. } if !meta.is_empty())
 }

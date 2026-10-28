@@ -25,7 +25,14 @@ The order is defined by a small set of rules, in precedence order:
 
 The link-time constant lookup in `refine_stmt_side_effects.rs` therefore rejects imported constants within the same static-import strongly connected component, even if the exporter has a lower `exec_order`. With multiple entries or preserved modules, loading a different entry can reverse the order within the cycle and expose a `const` TDZ failure. These components are computed lazily once and shared with the analyzer reruns in cross-module optimization. An exporter outside the importer's component can still supply a constant when it precedes the importer.
 
-Under `preserveModules`, ESM evaluates the output files instead. A wrapped CJS or interop ESM module runs at its chunk's tail call (`export default require_x();` or `init_x();`), and ESM evaluates the deepest file of a cycle first, so that call can run before the wrappers it calls exist (#11348). `compute_chunks_without_tail_wrapper_call` (`generate_stage/tail_wrapper_calls.rs`) keeps the tail call only on the single way into a cycle. The other members run at the `require_x()` or `init_x()` call that reaches them, so a cycle with two or more ways in runs after the importer's imports.
+With `preserveModules` and ESM output, each module has its own chunk. At runtime, ESM evaluates each chunk as a separate file. Each wrapped module, CJS or ESM, has an **eager wrapper call** in its chunk: `export default require_x();` or `init_x();`. The wrapper is lazy: the module runs at the first call. The eager wrapper call makes that first call when ESM evaluates the chunk. So the module runs at the position of its `import` statement.
+
+In an import cycle, ESM evaluates the deepest chunk first. Its eager wrapper call can then run the wrapper of a different member before that member defines the wrapper (#11348). So `compute_chunks_without_eager_wrapper_call` (`generate_stage/eager_wrapper_calls.rs`) removes the eager wrapper call from each wrapped member of a cycle, with two exceptions:
+
+- The single way into the cycle keeps its call. A way in is a member that a chunk outside the cycle imports, or a member that loads on its own.
+- A member that loads on its own keeps its call, even if the cycle has two or more ways in. Such a member is an entry, an emitted chunk, or the target of a dynamic `import()`.
+
+The other members run at the first `require_x()` or `init_x()` call that reaches them. So a cycle with two or more ways in runs in the body of its importer, after the modules that the importer imports.
 
 ## Algorithm
 

@@ -1,5 +1,5 @@
 {
-  "_comment": "main-a.js enters the cycle at a.cjs and main-b.js at b.cjs. No member keeps a tail call, so each entry enters the cycle through its own `require_*()` call.",
+  "_comment": "main-a.js enters the cycle at a.cjs, and main-b.js enters it at b.cjs. So the cycle has two ways in, and no member keeps its eager wrapper call. Each entry enters the cycle through its own `require_*()` call.",
   "config": {
     "input": [
       { "name": "main-a", "import": "./main-a.js" },

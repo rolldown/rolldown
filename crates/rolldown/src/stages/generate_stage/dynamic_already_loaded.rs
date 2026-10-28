@@ -31,33 +31,289 @@ struct AtomDependencyGraphs {
   cycle: Vec<Vec<usize>>,
 }
 
-/// The chunk graph the reduced bitsets would produce: atoms grouped by their current
-/// dependent-entry bits, with the facade edges the atom graph cannot express. Built once per fold
-/// candidate, so the cycle and the execution-order checks read the same graph.
-struct ReducedChunkGraph {
+/// Chunk edges with the number of atom (or facade) edges behind each, so that moving one atom
+/// adds and removes exactly the edges it contributes.
+type CountedChunkEdges = Vec<FxHashMap<usize, u32>>;
+
+/// The chunk graph the atoms' current dependent-entry bits produce: atoms grouped by bits, with
+/// the facade edges the atom graph cannot express. Built once per pass and kept in step with the
+/// folds as they are tried (see `move_atom`), so the cycle and the execution-order checks read
+/// one graph and no candidate pays for rebuilding it: a rebuild hashes every atom's `BitSet`,
+/// which made the pass quadratic in the atoms with a factor of the entry count.
+struct ReducedChunkGraph<'a> {
+  atom_dependencies: &'a AtomDependencyGraphs,
+  host_atom_by_entry_bit: &'a [Option<usize>],
+  atom_side_effect_exec_orders: &'a [Option<(u32, u32)>],
   atom_to_chunk: Vec<usize>,
+  chunk_idx_by_bits: FxHashMap<BitSet, usize>,
+  /// The atoms of every chunk. A chunk every atom has left stays as a node without edges.
+  chunk_atoms: Vec<Vec<usize>>,
+  /// The entry bit of a chunk whose bits are that one bit: the entry's own chunk, a facade when
+  /// its module is hosted elsewhere.
+  chunk_entry_bit: Vec<Option<u32>>,
+  /// The chunk whose bits are exactly each entry's bit, once an atom has had those bits.
+  facade_chunk_by_entry_bit: Vec<Option<usize>>,
   /// Chunk edges from the over-approximated `cycle` atom graph plus the facade edges.
-  chunk_dependencies: Vec<FxHashSet<usize>>,
+  chunk_dependencies: CountedChunkEdges,
   /// Chunk edges from the under-approximated `reachability` atom graph: imports the emitted
   /// chunks are certain to have.
-  certain_chunk_dependencies: Vec<FxHashSet<usize>>,
+  certain_chunk_dependencies: CountedChunkEdges,
   /// The latest execution order among each chunk's side-effectful modules.
   chunk_latest_side_effect: Vec<Option<u32>>,
+  /// The atoms with an edge to each atom, per graph, so a move re-points the edges into it.
+  cycle_dependents: Vec<Vec<usize>>,
+  reachability_dependents: Vec<Vec<usize>>,
+  /// The entry bits each atom hosts (it holds the entry module), whose facade edges point at it.
+  hosted_entry_bits: Vec<Vec<u32>>,
 }
 
-impl ReducedChunkGraph {
+fn add_chunk_edge(edges: &mut CountedChunkEdges, from_chunk_idx: usize, to_chunk_idx: usize) {
+  if from_chunk_idx != to_chunk_idx {
+    *edges[from_chunk_idx].entry(to_chunk_idx).or_insert(0) += 1;
+  }
+}
+
+fn remove_chunk_edge(edges: &mut CountedChunkEdges, from_chunk_idx: usize, to_chunk_idx: usize) {
+  if from_chunk_idx == to_chunk_idx {
+    return;
+  }
+  let count = edges[from_chunk_idx]
+    .get_mut(&to_chunk_idx)
+    .expect("every chunk edge removed was added for the same atom or facade");
+  *count -= 1;
+  if *count == 0 {
+    edges[from_chunk_idx].remove(&to_chunk_idx);
+  }
+}
+
+fn dependents_of(dependencies: &[Vec<usize>]) -> Vec<Vec<usize>> {
+  let mut dependents = vec![vec![]; dependencies.len()];
+  for (atom_idx, atom_dependencies) in dependencies.iter().enumerate() {
+    for &dep_atom_idx in atom_dependencies {
+      dependents[dep_atom_idx].push(atom_idx);
+    }
+  }
+  dependents
+}
+
+impl<'a> ReducedChunkGraph<'a> {
+  fn new(
+    atoms: &[ChunkAtom],
+    atom_dependencies: &'a AtomDependencyGraphs,
+    host_atom_by_entry_bit: &'a [Option<usize>],
+    atom_side_effect_exec_orders: &'a [Option<(u32, u32)>],
+  ) -> Self {
+    let mut hosted_entry_bits = vec![vec![]; atoms.len()];
+    for (entry_bit, host_atom_idx) in host_atom_by_entry_bit.iter().enumerate() {
+      if let Some(host_atom_idx) = *host_atom_idx {
+        hosted_entry_bits[host_atom_idx]
+          .push(entry_bit.try_into().expect("Too many entries, u32 overflowed."));
+      }
+    }
+    let mut graph = Self {
+      atom_dependencies,
+      host_atom_by_entry_bit,
+      atom_side_effect_exec_orders,
+      atom_to_chunk: Vec::with_capacity(atoms.len()),
+      chunk_idx_by_bits: FxHashMap::default(),
+      chunk_atoms: vec![],
+      chunk_entry_bit: vec![],
+      facade_chunk_by_entry_bit: vec![None; host_atom_by_entry_bit.len()],
+      chunk_dependencies: vec![],
+      certain_chunk_dependencies: vec![],
+      chunk_latest_side_effect: vec![],
+      cycle_dependents: dependents_of(&atom_dependencies.cycle),
+      reachability_dependents: dependents_of(&atom_dependencies.reachability),
+      hosted_entry_bits,
+    };
+    for (atom_idx, atom) in atoms.iter().enumerate() {
+      let chunk_idx = graph.chunk_for(&atom.dependent_entries);
+      graph.atom_to_chunk.push(chunk_idx);
+      graph.chunk_atoms[chunk_idx].push(atom_idx);
+      graph.widen_latest_side_effect(chunk_idx, atom_idx);
+    }
+    for (atom_idx, dependencies) in atom_dependencies.cycle.iter().enumerate() {
+      for &dep_atom_idx in dependencies {
+        add_chunk_edge(
+          &mut graph.chunk_dependencies,
+          graph.atom_to_chunk[atom_idx],
+          graph.atom_to_chunk[dep_atom_idx],
+        );
+      }
+    }
+    for (atom_idx, dependencies) in atom_dependencies.reachability.iter().enumerate() {
+      for &dep_atom_idx in dependencies {
+        add_chunk_edge(
+          &mut graph.certain_chunk_dependencies,
+          graph.atom_to_chunk[atom_idx],
+          graph.atom_to_chunk[dep_atom_idx],
+        );
+      }
+    }
+    // The facade edges the atom graph cannot express: an entry whose module lands in a shared chunk
+    // keeps its own entry chunk as a facade, and `compute_chunk_imports` makes that facade import
+    // the host chunk — to run the module and to re-export its interface — but no module in the
+    // facade imports the entry module. Without them, folding an atom into a facade whose host
+    // statically depends on that atom yields a chunk cycle that evaluates in the wrong order
+    // (rolldown#10734). `cycle` over-approximates, so a redundant facade edge only costs a missed
+    // merge.
+    for chunk_idx in 0..graph.chunk_atoms.len() {
+      if let Some(entry_bit) = graph.chunk_entry_bit[chunk_idx] {
+        graph.add_facade_edge(entry_bit);
+      }
+    }
+    graph
+  }
+
+  /// The chunk of `bits`, created as an empty node when no atom has had these bits yet.
+  fn chunk_for(&mut self, bits: &BitSet) -> usize {
+    if let Some(&chunk_idx) = self.chunk_idx_by_bits.get(bits) {
+      return chunk_idx;
+    }
+    let chunk_idx = self.chunk_atoms.len();
+    self.chunk_idx_by_bits.insert(bits.clone(), chunk_idx);
+    self.chunk_atoms.push(vec![]);
+    let entry_bit = if bits.bit_count() == 1 { bits.index_of_one().next() } else { None };
+    if let Some(entry_bit) = entry_bit {
+      self.facade_chunk_by_entry_bit[entry_bit as usize] = Some(chunk_idx);
+    }
+    self.chunk_entry_bit.push(entry_bit);
+    self.chunk_dependencies.push(FxHashMap::default());
+    self.certain_chunk_dependencies.push(FxHashMap::default());
+    self.chunk_latest_side_effect.push(None);
+    chunk_idx
+  }
+
+  /// The entry's own chunk when it holds an atom. A module-less facade declares no symbol, so
+  /// nothing can depend back on it and the omitted node cannot sit on a cycle.
+  fn facade_chunk(&self, entry_bit: u32) -> Option<usize> {
+    self.facade_chunk_by_entry_bit[entry_bit as usize]
+      .filter(|&chunk_idx| !self.chunk_atoms[chunk_idx].is_empty())
+  }
+
+  /// The chunk hosting the entry's module. A `None` host means the entry module is external or
+  /// excluded. Skipping is not a safe approximation in general — `cycle` may never miss an edge —
+  /// but it drops no real edge: `split_chunks` assigns such a module to no chunk, so the facade has
+  /// no host to import. An included normal entry module always has an atom —
+  /// `determine_reachable_modules_for_entry` sets the entry's own bit on its module, and
+  /// `split_chunks` asserts that an included module's bits are non-empty.
+  fn host_chunk(&self, entry_bit: u32) -> Option<usize> {
+    self.host_atom_by_entry_bit[entry_bit as usize]
+      .map(|host_atom_idx| self.atom_to_chunk[host_atom_idx])
+  }
+
+  fn add_facade_edge(&mut self, entry_bit: u32) {
+    if let (Some(facade_chunk_idx), Some(host_chunk_idx)) =
+      (self.facade_chunk(entry_bit), self.host_chunk(entry_bit))
+    {
+      add_chunk_edge(&mut self.chunk_dependencies, facade_chunk_idx, host_chunk_idx);
+    }
+  }
+
+  fn remove_facade_edge(&mut self, entry_bit: u32) {
+    if let (Some(facade_chunk_idx), Some(host_chunk_idx)) =
+      (self.facade_chunk(entry_bit), self.host_chunk(entry_bit))
+    {
+      remove_chunk_edge(&mut self.chunk_dependencies, facade_chunk_idx, host_chunk_idx);
+    }
+  }
+
+  fn widen_latest_side_effect(&mut self, chunk_idx: usize, atom_idx: usize) {
+    if let Some((_, latest)) = self.atom_side_effect_exec_orders[atom_idx] {
+      let known = &mut self.chunk_latest_side_effect[chunk_idx];
+      *known = Some(known.map_or(latest, |known: u32| known.max(latest)));
+    }
+  }
+
+  /// Moves `atom_idx` to the chunk of `bits`: a fold being tried, or taken back when vetoed. The
+  /// atom's own edges, the edges into it and the facade edges that point at or leave its chunks
+  /// are re-pointed; the chunks' latest side effects follow.
+  fn move_atom(&mut self, atom_idx: usize, bits: &BitSet) {
+    let from_chunk_idx = self.atom_to_chunk[atom_idx];
+    let to_chunk_idx = self.chunk_for(bits);
+    if from_chunk_idx == to_chunk_idx {
+      return;
+    }
+    // The facade edges the move retires, read while the atom is still in its chunk: those pointing
+    // at the chunk as the host of an entry the atom holds, and the one leaving the chunk when the
+    // atom is the last member of a facade.
+    for entry_bit in self.hosted_entry_bits[atom_idx].clone() {
+      self.remove_facade_edge(entry_bit);
+    }
+    if self.chunk_atoms[from_chunk_idx].len() == 1
+      && let Some(entry_bit) = self.chunk_entry_bit[from_chunk_idx]
+    {
+      self.remove_facade_edge(entry_bit);
+    }
+    let to_chunk_was_empty = self.chunk_atoms[to_chunk_idx].is_empty();
+    let position = self.chunk_atoms[from_chunk_idx]
+      .iter()
+      .position(|&member| member == atom_idx)
+      .expect("an atom is a member of its chunk");
+    self.chunk_atoms[from_chunk_idx].swap_remove(position);
+    self.chunk_atoms[to_chunk_idx].push(atom_idx);
+    self.atom_to_chunk[atom_idx] = to_chunk_idx;
+
+    self.retarget_atom_edges(atom_idx, from_chunk_idx, to_chunk_idx, false);
+    self.retarget_atom_edges(atom_idx, from_chunk_idx, to_chunk_idx, true);
+
+    self.widen_latest_side_effect(to_chunk_idx, atom_idx);
+    self.chunk_latest_side_effect[from_chunk_idx] = None;
+    for member in self.chunk_atoms[from_chunk_idx].clone() {
+      self.widen_latest_side_effect(from_chunk_idx, member);
+    }
+
+    // The facade edges the move creates: those pointing at the new chunk as the host of an entry
+    // the atom holds, and the one leaving a facade the atom is the first member of.
+    for entry_bit in self.hosted_entry_bits[atom_idx].clone() {
+      self.add_facade_edge(entry_bit);
+    }
+    if to_chunk_was_empty && let Some(entry_bit) = self.chunk_entry_bit[to_chunk_idx] {
+      self.add_facade_edge(entry_bit);
+    }
+  }
+
+  /// Re-points the edges `atom_idx` contributes to one chunk graph after its move. An edge between
+  /// two atoms of one chunk is no chunk edge, so the count only changes where the move separates
+  /// or joins the two ends.
+  fn retarget_atom_edges(
+    &mut self,
+    atom_idx: usize,
+    from_chunk_idx: usize,
+    to_chunk_idx: usize,
+    certain: bool,
+  ) {
+    let (dependencies, dependents) = if certain {
+      (&self.atom_dependencies.reachability, &self.reachability_dependents)
+    } else {
+      (&self.atom_dependencies.cycle, &self.cycle_dependents)
+    };
+    let edges =
+      if certain { &mut self.certain_chunk_dependencies } else { &mut self.chunk_dependencies };
+    for &dep_atom_idx in &dependencies[atom_idx] {
+      let dep_chunk_idx = self.atom_to_chunk[dep_atom_idx];
+      remove_chunk_edge(edges, from_chunk_idx, dep_chunk_idx);
+      add_chunk_edge(edges, to_chunk_idx, dep_chunk_idx);
+    }
+    for &dependent_atom_idx in &dependents[atom_idx] {
+      let dependent_chunk_idx = self.atom_to_chunk[dependent_atom_idx];
+      remove_chunk_edge(edges, dependent_chunk_idx, from_chunk_idx);
+      add_chunk_edge(edges, dependent_chunk_idx, to_chunk_idx);
+    }
+  }
+
   /// Whether `start_chunk_idx` sits on a cycle. Moving one atom only adds edges at its new chunk,
   /// so every cycle a fold can create runs through that chunk. A cycle elsewhere in the
   /// over-approximated graph predates the fold and must not veto it.
   fn chunk_reaches_itself(&self, start_chunk_idx: usize) -> bool {
     let mut visited = vec![false; self.chunk_dependencies.len()];
-    let mut stack = self.chunk_dependencies[start_chunk_idx].iter().copied().collect::<Vec<_>>();
+    let mut stack = self.chunk_dependencies[start_chunk_idx].keys().copied().collect::<Vec<_>>();
     while let Some(chunk_idx) = stack.pop() {
       if chunk_idx == start_chunk_idx {
         return true;
       }
       if !std::mem::replace(&mut visited[chunk_idx], true) {
-        stack.extend(self.chunk_dependencies[chunk_idx].iter().copied());
+        stack.extend(self.chunk_dependencies[chunk_idx].keys().copied());
       }
     }
     false
@@ -70,25 +326,20 @@ impl ReducedChunkGraph {
   /// atom is certain to import itself are exempt: they ran before the atom's chunk already. The
   /// exemption reads the under-approximated edges, so an invented import never excuses a chunk,
   /// while the closure reads the over-approximated ones, so no real import is missed.
-  fn fold_runs_side_effects_late(
-    &self,
-    certain_atom_dependencies: &[Vec<usize>],
-    atom_side_effect_exec_orders: &[Option<(u32, u32)>],
-    folded_atom_idx: usize,
-  ) -> bool {
-    let Some((earliest_side_effect, _)) = atom_side_effect_exec_orders[folded_atom_idx] else {
+  fn fold_runs_side_effects_late(&self, folded_atom_idx: usize) -> bool {
+    let Some((earliest_side_effect, _)) = self.atom_side_effect_exec_orders[folded_atom_idx] else {
       return false;
     };
     let folded_chunk_idx = self.atom_to_chunk[folded_atom_idx];
     let already_before = Self::reachable_from(
       &self.certain_chunk_dependencies,
-      certain_atom_dependencies[folded_atom_idx]
+      self.atom_dependencies.reachability[folded_atom_idx]
         .iter()
         .map(|&dep_atom_idx| self.atom_to_chunk[dep_atom_idx]),
       folded_chunk_idx,
     );
     let mut visited = vec![false; self.chunk_dependencies.len()];
-    let mut stack = self.chunk_dependencies[folded_chunk_idx].iter().copied().collect::<Vec<_>>();
+    let mut stack = self.chunk_dependencies[folded_chunk_idx].keys().copied().collect::<Vec<_>>();
     while let Some(chunk_idx) = stack.pop() {
       if chunk_idx == folded_chunk_idx || std::mem::replace(&mut visited[chunk_idx], true) {
         continue;
@@ -99,14 +350,14 @@ impl ReducedChunkGraph {
       {
         return true;
       }
-      stack.extend(self.chunk_dependencies[chunk_idx].iter().copied());
+      stack.extend(self.chunk_dependencies[chunk_idx].keys().copied());
     }
     false
   }
 
   /// The chunks reachable from `roots` through `dependencies`, `skip` excluded.
   fn reachable_from(
-    dependencies: &[FxHashSet<usize>],
+    dependencies: &CountedChunkEdges,
     roots: impl Iterator<Item = usize>,
     skip: usize,
   ) -> Vec<bool> {
@@ -116,7 +367,7 @@ impl ReducedChunkGraph {
       if chunk_idx == skip || std::mem::replace(&mut reached[chunk_idx], true) {
         continue;
       }
-      stack.extend(dependencies[chunk_idx].iter().copied());
+      stack.extend(dependencies[chunk_idx].keys().copied());
     }
     reached
   }
@@ -175,7 +426,7 @@ impl GenerateStage<'_> {
       &flattened_entry_modules,
       used_symbol_refs_builder,
     );
-    // Indexed by entry bit, so `reduced_chunk_graph` can pair each facade chunk with its entry
+    // Indexed by entry bit, so `ReducedChunkGraph` can pair each facade chunk with its entry
     // module's host atom by index instead of hashing a synthesized `BitSet`.
     let host_atom_by_entry_bit: Vec<Option<usize>> =
       flattened_entry_modules.iter().map(|&module_idx| module_to_atom_idx[module_idx]).collect();
@@ -202,6 +453,12 @@ impl GenerateStage<'_> {
       })
       .collect();
 
+    let mut reduced_graph = ReducedChunkGraph::new(
+      &atoms,
+      &atom_dependencies,
+      &host_atom_by_entry_bit,
+      &atom_side_effect_exec_orders,
+    );
     let mut changed = false;
     let mut pending_atoms: Vec<usize> = (0..atoms.len()).collect();
     loop {
@@ -228,26 +485,15 @@ impl GenerateStage<'_> {
             &dynamic_entry_modules_by_entry,
           )
         };
-        let reduced_graph = (!matches!(action, ReducedEntriesAction::Avoid)).then(|| {
-          Self::reduced_chunk_graph(
-            &atoms,
-            &atom_dependencies,
-            &host_atom_by_entry_bit,
-            &atom_side_effect_exec_orders,
-          )
-        });
-        let acyclic = reduced_graph
-          .as_ref()
-          .is_some_and(|graph| !graph.chunk_reaches_itself(graph.atom_to_chunk[atom_idx]));
-        let runs_side_effects_late = acyclic
-          && !strict_execution_order
-          && reduced_graph.as_ref().is_some_and(|graph| {
-            graph.fold_runs_side_effects_late(
-              &atom_dependencies.reachability,
-              &atom_side_effect_exec_orders,
-              atom_idx,
-            )
-          });
+        if matches!(action, ReducedEntriesAction::Avoid) {
+          atoms[atom_idx].dependent_entries = original_dependent_entries;
+          continue;
+        }
+        // The fold is tried on the graph and taken back below when a check vetoes it.
+        reduced_graph.move_atom(atom_idx, &atoms[atom_idx].dependent_entries);
+        let acyclic = !reduced_graph.chunk_reaches_itself(reduced_graph.atom_to_chunk[atom_idx]);
+        let runs_side_effects_late =
+          acyclic && !strict_execution_order && reduced_graph.fold_runs_side_effects_late(atom_idx);
         if acyclic && !runs_side_effects_late {
           changed = true;
           folded_this_round = true;
@@ -259,6 +505,7 @@ impl GenerateStage<'_> {
             namespace_extractions.insert((entry_chunk_idx, entry_module_idx));
           }
         } else {
+          reduced_graph.move_atom(atom_idx, &original_dependent_entries);
           atoms[atom_idx].dependent_entries = original_dependent_entries;
           // The chunk whose side effect would overtake this atom may itself fold into the same
           // body later in the round, which removes the hazard; such an atom gets another look.
@@ -498,7 +745,7 @@ impl GenerateStage<'_> {
   // emission.
   //
   // Hosting-atom attribution over-approximates rather than misses only because of the facade edges
-  // `reduced_chunk_graph` adds: the facade depends on the host, which is where
+  // `ReducedChunkGraph` adds: the facade depends on the host, which is where
   // these edges land, so anything emission hangs on the facade stays reachable as facade -> host ->
   // target. Before rolldown#10734 this rested on facades having zero static in-degree, which a
   // fold moving an atom into a facade broke — re-derive it before attributing them elsewhere.
@@ -754,97 +1001,6 @@ impl GenerateStage<'_> {
         .import_records
         .iter()
         .all(|&record_idx| module.import_records[record_idx].kind == ImportKind::Import)
-  }
-
-  fn reduced_chunk_graph(
-    atoms: &[ChunkAtom],
-    atom_dependencies: &AtomDependencyGraphs,
-    host_atom_by_entry_bit: &[Option<usize>],
-    atom_side_effect_exec_orders: &[Option<(u32, u32)>],
-  ) -> ReducedChunkGraph {
-    let mut chunk_idx_by_bits = FxHashMap::default();
-    let mut atom_to_chunk = Vec::with_capacity(atoms.len());
-    let mut facade_chunk_by_entry_bit = vec![None; host_atom_by_entry_bit.len()];
-    for atom in atoms {
-      let next_chunk_idx = chunk_idx_by_bits.len();
-      let chunk_idx = match chunk_idx_by_bits.entry(atom.dependent_entries.clone()) {
-        std::collections::hash_map::Entry::Occupied(occupied) => *occupied.get(),
-        std::collections::hash_map::Entry::Vacant(vacant) => {
-          vacant.insert(next_chunk_idx);
-          next_chunk_idx
-        }
-      };
-      atom_to_chunk.push(chunk_idx);
-      // An entry chunk's bits are exactly its own entry bit, so the singleton atoms seen here are
-      // the only facade candidates. Recording them keeps the facade lookup below an array index —
-      // this runs once per fold candidate, and hashing a `BitSet` per entry on every call would
-      // add `atoms * entries * entries / 8` bytes of hashing to the pass's quadratic hot spot.
-      if atom.dependent_entries.bit_count() == 1
-        && let Some(entry_bit) = atom.dependent_entries.index_of_one().next()
-      {
-        facade_chunk_by_entry_bit[entry_bit as usize] = Some(chunk_idx);
-      }
-    }
-
-    let chunk_edges = |atom_edges: &[Vec<usize>]| {
-      let mut chunk_dependencies = vec![FxHashSet::default(); chunk_idx_by_bits.len()];
-      for (atom_idx, dependencies) in atom_edges.iter().enumerate() {
-        let from_chunk_idx = atom_to_chunk[atom_idx];
-        for &dep_atom_idx in dependencies {
-          let to_chunk_idx = atom_to_chunk[dep_atom_idx];
-          if from_chunk_idx != to_chunk_idx {
-            chunk_dependencies[from_chunk_idx].insert(to_chunk_idx);
-          }
-        }
-      }
-      chunk_dependencies
-    };
-    let certain_chunk_dependencies = chunk_edges(&atom_dependencies.reachability);
-    let mut chunk_dependencies = chunk_edges(&atom_dependencies.cycle);
-
-    // The facade edges the atom graph cannot express: an entry whose module lands in a shared chunk
-    // keeps its own entry chunk as a facade, and `compute_chunk_imports` makes that facade import
-    // the host chunk — to run the module and to re-export its interface — but no module in the
-    // facade imports the entry module. Without them, folding an atom into a facade whose host
-    // statically depends on that atom yields a chunk cycle that evaluates in the wrong order
-    // (rolldown#10734). `cycle` over-approximates, so a redundant facade edge only costs a missed
-    // merge.
-    for (entry_bit, &host_atom_idx) in host_atom_by_entry_bit.iter().enumerate() {
-      // A `None` host means the entry module is external or excluded. Skipping is not a safe
-      // approximation in general — `cycle` may never miss an edge — but it drops no real edge:
-      // `split_chunks` assigns such a module to no chunk, so the facade has no host to import. An
-      // included normal entry module always has an atom — `determine_reachable_modules_for_entry`
-      // sets the entry's own bit on its module, and `split_chunks` asserts that an included
-      // module's bits are non-empty.
-      let Some(host_atom_idx) = host_atom_idx else {
-        continue;
-      };
-      // No facade chunk for this bit means the entry chunk holds nothing: a module-less facade
-      // declares no symbol, so nothing can depend back on it and the omitted node cannot sit on a
-      // cycle.
-      let Some(facade_chunk_idx) = facade_chunk_by_entry_bit[entry_bit] else {
-        continue;
-      };
-      let host_chunk_idx = atom_to_chunk[host_atom_idx];
-      if facade_chunk_idx != host_chunk_idx {
-        chunk_dependencies[facade_chunk_idx].insert(host_chunk_idx);
-      }
-    }
-
-    let mut chunk_latest_side_effect = vec![None; chunk_idx_by_bits.len()];
-    for (atom_idx, range) in atom_side_effect_exec_orders.iter().enumerate() {
-      if let Some((_, latest)) = *range {
-        let known = &mut chunk_latest_side_effect[atom_to_chunk[atom_idx]];
-        *known = Some(known.map_or(latest, |known: u32| known.max(latest)));
-      }
-    }
-
-    ReducedChunkGraph {
-      atom_to_chunk,
-      chunk_dependencies,
-      certain_chunk_dependencies,
-      chunk_latest_side_effect,
-    }
   }
 
   fn analyze_dynamic_entries(

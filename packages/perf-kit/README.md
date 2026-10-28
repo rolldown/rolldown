@@ -10,6 +10,8 @@ Chrome/Edge), so it works three ways:
   (the `bin` shim replaces any `node node_modules/…` path-typing). When installed,
   state lives in the consumer project at `.perf-kit/` (add it to your
   `.gitignore`), never inside `node_modules`; override with `ROLLDOWN_PERF_KIT_STATE`.
+  The hints print the spelling that applies. No rolldown checkout sits next to an
+  installed copy, so `rolldown-install` needs `--from <a built packages/rolldown>`.
 - **Once published**: `npx @rolldown/perf-kit scan --app .` with no install step.
 
 Prompts for an agent, one per target (browser page load, node or deno server startup,
@@ -294,20 +296,21 @@ a floor-corrected number per run, what executed, and what each deferral would fr
 ```bash
 node harness.mjs worker-config --app <appDir>          # writes perf-kit.vite.config.ts, prints the build commands
 (cd <appDir> && npx vite build --config perf-kit.vite.config.ts)
-node harness.mjs worker-scan --app <appDir> --request / --request /api/health
+node harness.mjs worker-scan --app <appDir> --request / --request /api/health   # routes the app answers (2xx)
 node harness.mjs worker-scan                           # target, requests and --tools are remembered
 node harness.mjs worker-scan --pin                     # make this the fixed reference
 ```
 
-| Command                            | What it does                                                                                                                                                                                                                                                                                                                                                                                                          |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `worker-config`                    | Writes a Vite config that wraps the app's own: the rolldown metrics report on **every** environment (one directory per output dir), sourcemaps on the worker, a worker-only rebuild (`ROLLDOWN_PERF_KIT_WORKER_ONLY=1`) and the attribution build (`ROLLDOWN_PERF_KIT_ATTRIB=1`, `preserveModules` into `dist-attrib/`).                                                                                              |
-| `worker-scan`                      | N cold runs, a fresh workerd each: the main module's import timed from the host minus an empty-import floor = **app startup**. Then the first requests on the real entry, a CPU profile of the import attributed through every chunk's sourcemap, precise coverage of the import taken from inside the isolate, and the leads: cold and idle bytes per module and per package, runtime modules loaded, class exports. |
-| `worker-measure`                   | Timing and first requests only.                                                                                                                                                                                                                                                                                                                                                                                       |
-| `worker-attrib`                    | CPU by **evaluating module** from the attribution build, each row with its import chain: the only view that charges a library's top-level work (zod schemas built at import, a YAML parse) to the module whose evaluation runs it.                                                                                                                                                                                    |
-| `why <module>`                     | Direct static importers and one chain from the entry.                                                                                                                                                                                                                                                                                                                                                                 |
-| `cut <module> --root a,b`          | The fewest imports to make dynamic, with the Durable Object / Workflow class modules as roots: their closure stays eager, so the cut lands below them instead of at the entry.                                                                                                                                                                                                                                        |
-| `graph` / `what-if` / `graph-diff` | Unchanged on the Worker's report (`node_modules/.rolldown/report/dist/<worker>`).                                                                                                                                                                                                                                                                                                                                     |
+| Command                            | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `rolldown-install --app <dir>`     | Copies a built rolldown package (with its native binding) over the copy the app's vite resolves; the default source is the rolldown package next to the lab, `--from <packages/rolldown>` names another. The npm release has no report mode; `worker-config` and the config shim refuse to build on it, because such a build writes the full event log (hundreds of MB) instead of the report. `<package manager> install --force` restores the release. |
+| `worker-config`                    | Writes a Vite config that wraps the app's own: the rolldown metrics report on **every** environment (one directory per output dir), sourcemaps on the worker, a worker-only rebuild (`ROLLDOWN_PERF_KIT_WORKER_ONLY=1`) and the attribution build (`ROLLDOWN_PERF_KIT_ATTRIB=1`, `preserveModules` into `dist-attrib/`).                                                                                                                                 |
+| `worker-scan`                      | N cold runs, a fresh workerd each: the main module's import timed from the host minus an empty-import floor = **app startup**. Then the first requests on the real entry, a CPU profile of the import attributed through every chunk's sourcemap, precise coverage of the import taken from inside the isolate, and the leads: cold and idle bytes per module and per package, runtime modules loaded, class exports.                                    |
+| `worker-measure`                   | Timing and first requests only.                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `worker-attrib`                    | CPU by **evaluating module** from the attribution build, each row with its import chain: the only view that charges a library's top-level work (zod schemas built at import, a YAML parse) to the module whose evaluation runs it.                                                                                                                                                                                                                       |
+| `why <module>`                     | Direct static importers and one chain from the entry.                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `cut <module> --root a,b`          | The fewest imports to make dynamic, with the Durable Object / Workflow class modules as roots: their closure stays eager, so the cut lands below them instead of at the entry.                                                                                                                                                                                                                                                                           |
+| `graph` / `what-if` / `graph-diff` | Unchanged on the Worker's report (`node_modules/.rolldown/report/dist/<worker>`).                                                                                                                                                                                                                                                                                                                                                                        |
 
 **Why the startup sits inside a request.** workerd evaluates a Worker's main module when
 it loads the worker, before any request or inspector can observe it. The lab therefore
@@ -328,15 +331,15 @@ app that pins an older one, `--tools <dir>` borrows a newer wrangler for that ru
 
 **Requirements the scan checks for and names when unmet**
 
-| Need                  | Requirement                                                                                                      |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| the target            | a `@cloudflare/vite-plugin` build: `dist/<worker>/wrangler.json` next to `index.js`                              |
-| the runtime           | `wrangler` as a dev dependency of the app (brings miniflare and workerd)                                         |
-| the report            | the `worker-config` build, or `devtools: { mode: 'report' }` on every environment by hand                        |
-| sourcemaps            | `build.sourcemap: true` on the worker environment (the config shim sets it)                                      |
-| precise coverage      | Wrangler >= 4.108.0, or `--tools <dir>`                                                                          |
-| first-request numbers | the app's variables (a `.dev.vars` next to the config); without them both real apps answered 500                 |
-| the number for a PR   | `wrangler check startup` (Wrangler >= 4.116.0), before and after; its dry-run build runs Docker for `containers` |
+| Need                  | Requirement                                                                                                                                                                                          |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| the target            | a `@cloudflare/vite-plugin` build: `dist/<worker>/wrangler.json` next to `index.js`                                                                                                                  |
+| the runtime           | `wrangler` as a dev dependency of the app (brings miniflare and workerd)                                                                                                                             |
+| the report            | the `worker-config` build, or `devtools: { mode: 'report' }` on every environment by hand, on a rolldown with the report mode: the npm release has none yet, so `rolldown-install --app <dir>` first |
+| sourcemaps            | `build.sourcemap: true` on the worker environment (the config shim sets it)                                                                                                                          |
+| precise coverage      | Wrangler >= 4.108.0, or `--tools <dir>`                                                                                                                                                              |
+| first-request numbers | the app's variables (a `.dev.vars` next to the config); without them both real apps answered 500                                                                                                     |
+| the number for a PR   | `wrangler check startup` (Wrangler >= 4.116.0), before and after; its dry-run build runs Docker for `containers`                                                                                     |
 
 Metrics are `worker.startup_ms`, `worker.boot_floor_ms`, `worker.app_startup_ms` (the part a
 bundle change can move), `worker.instance_boot_ms` (reported, never counted) and
@@ -354,6 +357,11 @@ deferral **moved** into that route; the summary prints it next to the startup ga
 - **No timing from inside the Worker.** Timers in workerd advance only on I/O.
 - **No response parity yet.** The first requests report status and size; a replayed
   request set against the frozen original is not built.
+- **The attribution build works around a rolldown limit (rolldown#11348).** With `preserveModules` every
+  CommonJS file ends with an eager `export default require_x()`, and a require cycle reaches
+  a wrapper before its own file ran (`require_x is not a function`). The config shim drops
+  that line in the attribution build only; its importers use the named wrapper. If an import
+  still fails, `worker-attrib` says so and marks its rows partial.
 
 ## Field mode (a deployed site)
 

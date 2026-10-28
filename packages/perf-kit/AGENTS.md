@@ -8,6 +8,12 @@ All commands work from any working directory (`node <this dir>/harness.mjs ...`)
 The first `--app <appDir>` is remembered, so afterwards every command can be run
 bare — no paths. Each target app keeps its own state (baseline, history, reports).
 
+Installed from npm, the lab runs as `npx <package name> ...` with no install into the
+project; `help` prints the exact spelling and the path of this file. The state then
+goes to `.perf-kit/` under the directory you run it from: keep that directory out of
+commits. No rolldown checkout sits next to an installed copy, so `rolldown-install`
+needs `--from <a built packages/rolldown>` (see the Worker section).
+
 ## The two commands that matter
 
 - `node harness.mjs scan --app <appDir>` — one browser session that does it all:
@@ -95,8 +101,9 @@ on the worker). The loop below is unchanged, with these differences:
 
 - **Startup is the global scope.** `worker.app_startup_ms` is the import of the main module
   and its static closure, timed from the host minus an empty-import floor. Isolate boot
-  sits outside it. Cloudflare's startup limit counts the same scope; the number to quote
-  in a PR comes from `wrangler check startup` on the same build, before and after.
+  sits outside it. `worker-scan` against the pinned baseline is the keep-or-revert signal.
+  Cloudflare's startup limit counts the same scope; the number to quote in a PR comes
+  from `wrangler check startup` on the same build, before and after.
 - **A deferral moves work, it does not delete it.** The first request that needs a deferred
   module pays its load, once per isolate. Pin the routes that matter with `--request` and
   read the "cost MOVED here" line next to the startup gain. The lab does not know the
@@ -114,6 +121,25 @@ on the worker). The loop below is unchanged, with these differences:
 - **Library top-level work is charged by the attribution build.** When the profile leaves
   milliseconds in "(unmapped)" or in zod, run `worker-attrib` on the `ROLLDOWN_PERF_KIT_ATTRIB=1`
   build: it names the module whose evaluation runs the library code, with the import chain.
+- **The report needs a rolldown with the report mode.** The npm release has none, so with it
+  no build writes `module-graph.json` and `graph`, `what-if`, `cut`, `why` and `graph-diff`
+  have nothing to read. `worker-config` names the app's rolldown when it lacks the mode;
+  `rolldown-install --app <appDir>` copies a built package over the copy the app's vite
+  resolves: the one next to the lab in a rolldown checkout, or `--from <packages/rolldown>`
+  of a checkout built with `just build-rolldown-release` (an installed lab has no package
+  next to it, so `--from` is required there). The swap is not a config change;
+  `<package manager> install --force` restores the release. Rebuild and re-pin the
+  baseline after it: the bundler changed.
+- **Read the two delta lines.** `worker-scan` prints `vs pinned baseline` (every change since
+  the pin, added up) and `vs previous scan` (the last change alone). Judge a change by the
+  second line, or re-pin with `--pin` after each kept change so the first line means the same.
+- **The pinned routes must answer 2xx.** A 404 or 5xx never ran the handler, so no moved load
+  can show on it, and the scan says so. Pin routes the app serves. Do not invent a `.dev.vars`
+  to get past a 5xx: without the real variables the first-request numbers stay invalid.
+- **The functional check is the app's own test suite, run the way the repo documents it.** When
+  the test pool fails for environment reasons (port exhaustion, `EADDRNOTAVAIL`), run it serially
+  or in batches. Never reinstall dependencies inside the loop: that undoes `rolldown-install`,
+  and the config shim then refuses to build. Never move or symlink packages inside `node_modules`.
 - **Coverage comes from inside the isolate** and needs Wrangler 4.108.0 or later. When the
   scan reports it unavailable, pass `--tools <dir>` with a newer wrangler for that run, or
   work from the profile and the static graph; do not add the compatibility flags to the app.

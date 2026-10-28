@@ -17,10 +17,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
+import { spawnSync } from 'node:child_process';
 
 import { launchBrowser } from './lib/cdp.mjs';
 import { startServer } from './lib/serve.mjs';
 import { buildApp } from './lib/build.mjs';
+import { installCheckoutRolldown, reportSupportNote } from './lib/rolldown-support.mjs';
 import {
   FEATURES,
   FEATURE_NAMES,
@@ -159,11 +161,19 @@ const CALIBRATE_CEILING_MS = 8000;
 const CANDIDATE_MIN_BYTES = 3 * 1024;
 const CANDIDATE_MAX_PAINT_RATIO = 0.02;
 
-// How to spell an invocation in hints: a launcher can dictate it via ROLLDOWN_PERF_KIT_CLI,
-// otherwise the bin name when installed, the script when run from the repo.
+// How to spell an invocation in hints: a launcher can dictate it via ROLLDOWN_PERF_KIT_CLI;
+// installed, `npx <package name>` when a bin carries the package's bare name (npx runs that
+// bin, with or without a local install), else the first bin; from the repo, the script.
 const CLI =
   process.env.ROLLDOWN_PERF_KIT_CLI ??
-  (/[\\/]node_modules[\\/]/.test(ROOT) ? 'npx perf-kit' : 'node harness.mjs');
+  (/[\\/]node_modules[\\/]/.test(ROOT) ? installedCli() : 'node harness.mjs');
+
+function installedCli() {
+  const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+  const bins = Object.keys(pkg.bin ?? {});
+  const bare = pkg.name.split('/').pop();
+  return `npx ${bins.includes(bare) ? pkg.name : (bins[0] ?? bare)}`;
+}
 
 const kb = (n) => `${(n / 1024).toFixed(1)}KB`;
 const kib = (n) => `${(n / 1024).toFixed(1)}KiB`;
@@ -2952,8 +2962,10 @@ function requireModuleGraph(opts) {
   const workerCandidates = opts.report ? null : workerReportCandidates(opts);
   let candidates;
   let target = null;
+  let appHint = null; // where the app's rolldown resolves from, for the missing-report cause
   if (workerCandidates) {
     candidates = workerCandidates;
+    appHint = readJson(WORKER_TARGET_FILE)?.app ?? null;
   } else {
     target = resolveTarget(opts);
     candidates = moduleGraphCandidates({
@@ -2961,11 +2973,14 @@ function requireModuleGraph(opts) {
       demoMetricsDir: target.isDemo ? BUILD_METRICS_DIR : null,
       dist: target.dist,
     });
+    appHint = target.isDemo ? null : path.dirname(target.dist);
   }
   const graph = loadModuleGraph(candidates);
   if (!graph) {
+    const cause = appHint && !opts.report ? reportSupportNote(appHint, CLI) : null;
     throw new Error(
-      'no module-graph.json found - it is written by rolldown devtools report builds.\n' +
+      (cause ? `${cause}\n\n` : '') +
+        'no module-graph.json found - it is written by rolldown devtools report builds.\n' +
         'vite >= 8: add `build.rolldownOptions.devtools = { mode: "report" }` to the vite config\n' +
         '(report lands in node_modules/.rolldown/report/<output dir>), rebuild, then re-run.\n' +
         `For a Cloudflare Worker: \`${CLI} worker-config --app <appDir>\` writes a config that puts the report\n` +
@@ -3310,8 +3325,11 @@ async function cmdGraphDiff(argv) {
     }),
   );
   if (!current) {
+    const cause =
+      target.isDemo || opts.report ? null : reportSupportNote(path.dirname(target.dist), CLI);
     throw new Error(
-      'no current module-graph.json found - it is written by rolldown devtools report builds.\n' +
+      (cause ? `${cause}\n\n` : '') +
+        'no current module-graph.json found - it is written by rolldown devtools report builds.\n' +
         'vite >= 8: add `build.rolldownOptions.devtools = { mode: "report" }` to the vite config,\n' +
         'rebuild, then re-run. Or point at an existing report with --report <dir>.',
     );
@@ -4155,23 +4173,49 @@ function printWorkerSummary(report, hadBaseline) {
   } else if (!hadBaseline) {
     console.log('no pinned baseline yet - pass --pin to make this the fixed reference');
   }
+  // The pinned line adds up every change since the pin. The last change alone is the
+  // delta against the previous scan, so a kept-but-not-pinned change does not hide it.
+  const prevScan = report.delta?.['worker.app_startup_ms'];
+  if (base && prevScan && prevScan.prev !== base.prev) {
+    console.log(
+      `vs previous scan: app startup ${prevScan.delta >= 0 ? '+' : ''}${Math.round(prevScan.delta)}ms (${prevScan.pct}%) - ` +
+        noiseCall(prevScan.delta, prevScan.prev, WORKER_NOISE_FLOOR_MS, WORKER_NOISE_FLOOR_PCT) +
+        ' (the last change alone)',
+    );
+  }
   if (report.requests?.length) {
     console.log(
       '\nfirst requests on the real entry (startup already done; a deferred module loads on its first hit):',
     );
+    const gain = base && base.delta < 0 ? -base.delta : 0;
+    const movedRoutes = [];
     for (const r of report.requests) {
       const d = report.baselineDelta?.[`worker.request_ms:${r.path}`];
+      // A 4xx or 5xx answer never reached the app's handler: its time says nothing about a moved load.
+      const answered = r.status < 400;
       const moved =
-        d && Math.abs(d.delta) >= WORKER_NOISE_FLOOR_MS
+        answered && d && Math.abs(d.delta) >= WORKER_NOISE_FLOOR_MS
           ? `  vs baseline ${d.delta >= 0 ? '+' : ''}${Math.round(d.delta)}ms${d.delta > 0 ? ' - cost MOVED here from startup' : ''}`
           : '';
+      if (answered && d && gain && d.delta >= gain / 2)
+        movedRoutes.push({ path: r.path, delta: d.delta });
       console.log(
         `  ${r.path.padEnd(28)} ${String(r.status).padStart(3)}  ${ms(r.ms).padStart(7)}  ${r.bytes} bytes${r.error ? `  :: ${r.error}` : ''}${moved}`,
+      );
+    }
+    if (report.requests.every((r) => r.status >= 400)) {
+      console.log(
+        '  every pinned route answered 4xx/5xx: the handler never ran, so a moved load cannot show here - pin routes the app answers (--request /path)',
       );
     }
     if (report.requests.some((r) => r.status >= 500)) {
       console.log(
         '  a 5xx here usually means the app needs its variables (a .dev.vars next to the config) - startup is unaffected, first-request numbers are not valid',
+      );
+    }
+    for (const r of movedRoutes) {
+      console.log(
+        `  ${r.path}: +${Math.round(r.delta)}ms moved into this route against ${Math.round(gain)}ms gained at startup - an isolate whose first request is ${r.path} gains little or nothing`,
       );
     }
   }
@@ -4245,8 +4289,11 @@ function printWorkerLeads(report, cov, prof, graph, top) {
   }
 
   if (!graph) {
+    const cause = reportSupportNote(ctx.appDir, CLI);
     console.log(
-      `\n(no module-graph.json for this worker: \`${CLI} worker-config --app <appDir>\` writes a build config that collects it; then graph / what-if / cut / why price every candidate)`,
+      cause
+        ? `\n(no module-graph.json for this worker)\n${cause}`
+        : `\n(no module-graph.json for this worker: \`${CLI} worker-config --app <appDir>\` writes a build config that collects it; then graph / what-if / cut / why price every candidate)`,
     );
   } else {
     console.log(
@@ -4412,13 +4459,27 @@ async function cmdWorkerAttrib(argv) {
   const { profile, importRan, importText } = await cpuProfileRun(ctx, {
     intervalUs: Number(opts.interval),
   });
-  if (!importRan) console.log(`note: the import did not complete: ${importText.slice(0, 200)}`);
+  if (!importRan) {
+    const first = importText
+      .replace(/^startup threw: /, '')
+      .split('\n')[0]
+      .slice(0, 200);
+    console.log(`\nthe attribution build did not finish its import: ${first}`);
+    console.log('  the rows below cover only the modules that evaluated before that point.');
+    if (/\brequire_\w+ is not a function/.test(importText)) {
+      console.log(
+        '  (a CommonJS module in an import cycle: with preserveModules every file evaluates\n' +
+          '  `export default require_x()` eagerly, and a cycle reaches a wrapper before its own file ran.\n' +
+          `  That is the bundler's output, not the app; the bundled profile of \`${CLI} worker-scan\` is the fallback.)`,
+      );
+    }
+  }
   fs.mkdirSync(ctx.paths.dir, { recursive: true });
   fs.writeFileSync(ctx.paths.attribProfile, JSON.stringify(profile));
   const graph = loadModuleGraph(workerReportDirs(target.appDir, outDir, opts.report));
   const { rows, pairs } = evaluatingModules(profile, { outDir, graph, top: Number(opts.top) });
   console.log(
-    '\nstartup CPU by evaluating module (its own top level plus the library calls it makes):',
+    `\nstartup CPU by evaluating module${importRan ? '' : ' (partial)'} (its own top level plus the library calls it makes):`,
   );
   for (const r of rows) {
     console.log(`  ${String(r.ms).padStart(7)}ms  ${r.module}`);
@@ -4435,6 +4496,12 @@ async function cmdWorkerAttrib(argv) {
   console.log(`\nprofile: ${ctx.paths.attribProfile}`);
 }
 
+/** How to name an app directory in a hint: relative when it is below cwd, absolute otherwise. */
+function appArgFor(appDir) {
+  const rel = path.relative(process.cwd(), appDir);
+  return !rel ? '.' : rel.startsWith('..') ? appDir : rel;
+}
+
 /** Write the Vite config shim and print the three build commands. */
 async function cmdWorkerConfig(argv) {
   const opts = parse(argv, { app: { type: 'string' }, force: { type: 'boolean', default: false } });
@@ -4444,6 +4511,8 @@ async function cmdWorkerConfig(argv) {
   console.log(
     `${existed && !opts.force ? 'kept' : 'wrote'} ${file} (wraps ${baseConfigFile}; --force rewrites)`,
   );
+  const cause = reportSupportNote(appDir, CLI);
+  if (cause) console.log(`\nbefore you build:\n${cause}`);
   console.log(`\nbuild commands (run in ${appDir}):`);
   console.log(
     `  npx vite build --config ${SHIM_FILE}                            full build; report per environment, sourcemaps on the worker`,
@@ -4455,7 +4524,40 @@ async function cmdWorkerConfig(argv) {
     `  ROLLDOWN_PERF_KIT_ATTRIB=1 npx vite build --config ${SHIM_FILE}       attribution build into ${ATTRIB_DIR}/ for \`${CLI} worker-attrib\``,
   );
   console.log(
-    `\nthen: ${CLI} worker-scan --app ${path.relative(process.cwd(), appDir) || '.'} [--request /path ...] [--tools <dir with wrangler >= ${COVERAGE_MIN_WRANGLER}>]`,
+    `\nthen: ${CLI} worker-scan --app ${appArgFor(appDir)} [--request /path ...] [--tools <dir with wrangler >= ${COVERAGE_MIN_WRANGLER}>]`,
+  );
+}
+
+/** Copy this checkout's built rolldown over the copy the app's vite resolves. */
+async function cmdRolldownInstall(argv) {
+  const opts = parse(argv, { app: { type: 'string' }, from: { type: 'string' } });
+  const sticky = readJson(WORKER_TARGET_FILE);
+  const appDir = path.resolve(opts.app ?? sticky?.app ?? '.');
+  const { from, dir, before, after } = installCheckoutRolldown(
+    appDir,
+    opts.from ? { checkout: path.resolve(opts.from) } : {},
+  );
+  console.log(
+    `copied ${from.dir} (rolldown ${from.version}, ${from.binding}) over ${dir} (was rolldown ${before})`,
+  );
+  const loaded = spawnSync(
+    process.execPath,
+    ['-e', "import('rolldown').then((m) => console.log(m.VERSION))"],
+    { cwd: appDir, encoding: 'utf8' },
+  );
+  const version = loaded.status === 0 ? loaded.stdout.trim() : null;
+  if (!version) {
+    throw new Error(
+      `the copy does not load from ${appDir}: ${(loaded.stderr || '').split('\n').find(Boolean) ?? 'no output'}`,
+    );
+  }
+  console.log(
+    after.reportMode
+      ? `rolldown ${version} with the report mode now loads from the app`
+      : `rolldown ${version} loads from the app but still has no report mode - is the checkout on this branch?`,
+  );
+  console.log(
+    '\nrebuild the app, then re-pin the baseline (the bundler changed). `<package manager> install --force` in the app restores the release.',
   );
 }
 
@@ -4655,6 +4757,15 @@ Cloudflare Worker startup mode (a V8 isolate coming up under the app's own worke
                             startup to the module whose top level runs it, with the import
                             chain. The bundled profile cannot (no line ticks for chunk
                             top-level code; ESM evaluation is not a call stack).
+  rolldown-install --app <appDir> [--from <packages/rolldown>]
+                            copy a built rolldown package (dist with its native binding) over
+                            the copy the app's vite resolves; the default source is the
+                            rolldown package next to this lab (an installed lab has none:
+                            pass --from a checkout built with \`just build-rolldown-release\`).
+                            The npm release has no report mode, so without this no build
+                            writes the report; worker-config says when that is the case. The
+                            swap is not a config change. Rebuild and re-pin afterwards.
+                            \`<package manager> install --force\` restores the release.
   --request <path>          a route to hit after startup on the real entry; the first hit
                             of a route that imports a deferred module pays that load, and
                             the report prints it next to the startup gain (a deferral MOVES
@@ -4697,7 +4808,7 @@ the loop:
      summary and every OPEN lead justified (sub-noise measurement or concrete constraint)
 
 judge only by "vs pinned baseline".
-full contract: ${path.join(ROOT, 'AGENTS.md')}
+${CLI.startsWith('npx ') ? `state for this directory: ${STATE_DIR} (keep it out of commits)\n` : ''}full contract: ${path.join(ROOT, 'AGENTS.md')}
 demo-app details: ${path.join(ROOT, 'README.md')}
 (read them at those exact paths - never search the filesystem for them: a
 \`find / -iname ...\` grinds a full CPU core for hours on a large machine)`);
@@ -4726,6 +4837,7 @@ const commands = {
   'worker-measure': cmdWorkerMeasure,
   'worker-attrib': cmdWorkerAttrib,
   'worker-config': cmdWorkerConfig,
+  'rolldown-install': cmdRolldownInstall,
   why: cmdWhy,
   field: cmdField,
   record: cmdRecord,

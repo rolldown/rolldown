@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // perf-kit-replay - record a deployed page once, replay it against local builds.
-// Standalone: no harness target, no lab state. The archive folder is the whole
+// Standalone: no harness target, no perf-kit state. The archive folder is the whole
 // interface between the agent that records and the agent that replays.
 
 import { cmdInspect, cmdRecord, cmdReplay } from './lib/replay/run.mjs';

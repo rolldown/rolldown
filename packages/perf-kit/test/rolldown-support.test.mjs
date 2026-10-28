@@ -13,7 +13,7 @@ import {
   reportSupportNote,
 } from '../lib/rolldown-support.mjs';
 
-const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'lab-rolldown-'));
+const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'perf-kit-rolldown-'));
 const write = (file, text) => {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, text);
@@ -104,10 +104,10 @@ test('reportSupportNote asks for a build when the checkout has none', () => {
   assert.equal(checkoutRolldown(checkout).built, false);
 });
 
-test('reportSupportNote points at --from when no package sits next to the lab', () => {
+test('reportSupportNote points at --from when no package sits next to perf-kit', () => {
   const app = fakeApp({ hoisted: { version: '1.1.5', report: false } });
   const note = reportSupportNote(app, 'node harness.mjs', { checkout: path.join(tmp(), 'absent') });
-  assert.match(note, /No rolldown package sits next to the lab/);
+  assert.match(note, /No rolldown package sits next to perf-kit/);
   assert.match(note, /--from <that packages\/rolldown>/);
 });
 
@@ -134,8 +134,8 @@ test('installCheckoutRolldown refuses an unbuilt checkout', () => {
   assert.throws(() => installCheckoutRolldown(app, { checkout }), /is not built/);
 });
 
-test('an installed lab (under node_modules) has no checkout next to it', async () => {
-  const lib = path.join(tmp(), 'node_modules', 'rolldown-metric-lab', 'lib');
+test('an installed perf-kit (under node_modules) has no checkout next to it', async () => {
+  const lib = path.join(tmp(), 'node_modules', 'rolldown-perf-kit', 'lib');
   fs.mkdirSync(lib, { recursive: true });
   fs.copyFileSync(
     new URL('../lib/rolldown-support.mjs', import.meta.url),

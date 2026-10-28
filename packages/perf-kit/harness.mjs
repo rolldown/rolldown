@@ -1981,7 +1981,7 @@ async function cmdVerdict(argv) {
 // accepts a change: the keep/revert line, pinning, and the verdict's "done".
 // See README.md "Rendered-output parity" for the design.
 
-// The lab's own state can sit inside the build dir (--dist . with ./.perf-kit):
+// perf-kit's own state can sit inside the build dir (--dist . with ./.perf-kit):
 // never copy, hash or crawl it as part of the app.
 const PARITY_EXCLUDE = [STATE_DIR];
 
@@ -2330,8 +2330,8 @@ function recordCheck(target, report, { label, captured }) {
 /** What to do once a check found a difference - printed with it, and by `parity recover`. */
 function printRecoverGuide(target) {
   const strategy = readJson(target.paths.parity.recover)?.strategy ?? 'on-demand';
-  // bisect runs from the app's repo: spell the lab by absolute path
-  const lab = CLI === 'node harness.mjs' ? `node ${path.join(ROOT, 'harness.mjs')}` : CLI;
+  // bisect runs from the app's repo: spell perf-kit by absolute path
+  const kit = CLI === 'node harness.mjs' ? `node ${path.join(ROOT, 'harness.mjs')}` : CLI;
   const say = (line = '') => console.log(line);
   say(
     'RECOVER MODE - this build renders differently from the original, so its LCP numbers do not count',
@@ -2351,7 +2351,7 @@ function printRecoverGuide(target) {
   say(`       ${CLI} parity strategy each-tweak   every scan re-checks and records a snapshot`);
   say('  3. Not sure which kept change broke it? Bisect your commits - the check exits 1 while a');
   say('     page differs:');
-  say(`       git bisect run sh -c '<build command> && ${lab} parity --only <page> --exit-code'`);
+  say(`       git bisect run sh -c '<build command> && ${kit} parity --only <page> --exit-code'`);
   say(`  4. ${CLI} parity history   every check of this recovery, with its snapshot images`);
   say(
     '  A fix may give back part of the gain: the number you report must come from a build that matches',
@@ -2991,7 +2991,7 @@ function requireModuleGraph(opts) {
   return graph;
 }
 
-// A report the lab discovered for the dist must describe that dist. Seen in the field:
+// A report perf-kit discovered for the dist must describe that dist. Seen in the field:
 // an agent ranked a server build's graph against the client dist, because the SSR build
 // ran last and overwrote the one shared report directory. Report mode now writes one
 // directory per output dir, but a rebuild without the report still leaves a stale one.
@@ -3900,7 +3900,7 @@ const round = (v) => (v == null ? 0 : Math.round(v));
 // --- Cloudflare Worker startup mode ----------------------------------------------
 // The question is the server one ("what does startup pay for, and what can leave it?")
 // asked of a V8 isolate coming up under workerd. The target is a Vite-built Worker: the
-// output directory that holds the plugin's `wrangler.json` next to `index.js`. The lab
+// output directory that holds the plugin's `wrangler.json` next to `index.js`. perf-kit
 // runs the app's own workerd through its miniflare; see lib/worker/launch.mjs for why
 // startup is moved inside a request. Requirements and rules: AGENTS.md.
 
@@ -4023,7 +4023,7 @@ function resolveWorkerTarget(opts) {
 /** Load the runtime and the Worker's options; `outDir` may be an attribution build's. */
 async function loadWorkerContext(target, { outDir = target.outDir, main = null } = {}) {
   // Miniflare caches the `cf` object under the cwd (.wrangler/cache) unless told where;
-  // the lab's state dir keeps that out of the package and out of the user's project.
+  // perf-kit's state dir keeps that out of the package and out of the user's project.
   process.env.MINIFLARE_CACHE_DIR ??= path.join(STATE_DIR, 'worker', 'cache');
   const tools = await resolveWorkerTools(target.appDir).load();
   const configPath = path.join(outDir, 'wrangler.json');
@@ -4760,7 +4760,7 @@ Cloudflare Worker startup mode (a V8 isolate coming up under the app's own worke
   rolldown-install --app <appDir> [--from <packages/rolldown>]
                             copy a built rolldown package (dist with its native binding) over
                             the copy the app's vite resolves; the default source is the
-                            rolldown package next to this lab (an installed lab has none:
+                            rolldown package next to this one (an installed perf-kit has none:
                             pass --from a checkout built with \`just build-rolldown-release\`).
                             The npm release has no report mode, so without this no build
                             writes the report; worker-config says when that is the case. The

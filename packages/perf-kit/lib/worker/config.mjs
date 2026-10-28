@@ -42,7 +42,7 @@ function assertReportMode() {
     }
   }
   throw new Error(
-    \`perf-kit: rolldown \${pkg.version} at \${dist} has no devtools report mode; a build with this config would write the full event log instead of the report. Run \\\`rolldown-install --app <appDir>\\\` first (\\\`--from <built packages/rolldown>\\\` when no checkout sits next to the lab).\`,
+    \`perf-kit: rolldown \${pkg.version} at \${dist} has no devtools report mode; a build with this config would write the full event log instead of the report. Run \\\`rolldown-install --app <appDir>\\\` first (\\\`--from <built packages/rolldown>\\\` when no checkout sits next to perf-kit).\`,
   );
 }
 
@@ -73,7 +73,7 @@ export default async (env: any) => {
           // throws at import (rolldown#11348). Its importers use the named wrapper, so this build drops the eager
           // line; the cycle then resolves at the require site, as in node. The line is the last
           // one of the file, so the sourcemap of the lines above stays right. The entry keeps
-          // its default export: that is the Worker's interface, and the lab imports it.
+          // its default export: that is the Worker's interface, and perf-kit imports it.
           if (!attrib) return;
           for (const chunk of Object.values(bundle)) {
             if (chunk.type !== 'chunk' || chunk.isEntry) continue;

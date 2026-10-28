@@ -8,11 +8,13 @@ All commands work from any working directory (`node <this dir>/harness.mjs ...`)
 The first `--app <appDir>` is remembered, so afterwards every command can be run
 bare — no paths. Each target app keeps its own state (baseline, history, reports).
 
-Installed from npm, the lab runs as `npx <package name> ...` with no install into the
+Installed from npm, perf-kit runs as `npx <package name> ...` with no install into the
 project; `help` prints the exact spelling and the path of this file. The state then
 goes to `.perf-kit/` under the directory you run it from: keep that directory out of
-commits. No rolldown checkout sits next to an installed copy, so `rolldown-install`
-needs `--from <a built packages/rolldown>` (see the Worker section).
+commits. In the repository, `packages/rolldown` sits next to perf-kit and is the default
+source of `rolldown-install`. An installed copy has no such neighbour, so pass
+`--from <packages/rolldown of a checkout built with just build-rolldown-release>`
+(see the Worker section).
 
 ## The two commands that matter
 
@@ -106,7 +108,7 @@ on the worker). The loop below is unchanged, with these differences:
   from `wrangler check startup` on the same build, before and after.
 - **A deferral moves work, it does not delete it.** The first request that needs a deferred
   module pays its load, once per isolate. Pin the routes that matter with `--request` and
-  read the "cost MOVED here" line next to the startup gain. The lab does not know the
+  read the "cost MOVED here" line next to the startup gain. perf-kit does not know the
   route mix; an isolate whose first request needs the module gains nothing.
 - **Durable Object and Workflow classes are roots.** The runtime loads them by name, so their
   modules stay eager with their whole closure. `cut <module> --root <class modules>` lands
@@ -125,8 +127,8 @@ on the worker). The loop below is unchanged, with these differences:
   no build writes `module-graph.json` and `graph`, `what-if`, `cut`, `why` and `graph-diff`
   have nothing to read. `worker-config` names the app's rolldown when it lacks the mode;
   `rolldown-install --app <appDir>` copies a built package over the copy the app's vite
-  resolves: the one next to the lab in a rolldown checkout, or `--from <packages/rolldown>`
-  of a checkout built with `just build-rolldown-release` (an installed lab has no package
+  resolves: the one next to perf-kit in a rolldown checkout, or `--from <packages/rolldown>`
+  of a checkout built with `just build-rolldown-release` (an installed perf-kit has no package
   next to it, so `--from` is required there). The swap is not a config change;
   `<package manager> install --force` restores the release. Rebuild and re-pin the
   baseline after it: the bundler changed.

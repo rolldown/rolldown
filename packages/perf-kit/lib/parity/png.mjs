@@ -1,4 +1,4 @@
-// Minimal PNG codec for screenshot comparison. The lab has no dependencies, and the
+// Minimal PNG codec for screenshot comparison. perf-kit has no dependencies, and the
 // only PNG files it ever reads are its own CDP screenshots (8-bit, non-interlaced),
 // so a full decoder is ~100 lines of zlib + scanline unfiltering. Everything decodes
 // to RGBA so the comparison loop never branches on color type.

@@ -10,12 +10,12 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
-const LAB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-// The sibling package is this checkout's packages/rolldown only when the lab runs from the
+const KIT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+// The sibling package is this checkout's packages/rolldown only when perf-kit runs from the
 // repo. An installed copy sits under node_modules, where the sibling is the app's own release.
-export const CHECKOUT_ROLLDOWN = /[\\/]node_modules[\\/]/.test(LAB_DIR)
+export const CHECKOUT_ROLLDOWN = /[\\/]node_modules[\\/]/.test(KIT_DIR)
   ? null
-  : path.resolve(LAB_DIR, '..', 'rolldown');
+  : path.resolve(KIT_DIR, '..', 'rolldown');
 // What a built package carries (the npm tarball leaves dist/*.node out; the install keeps it,
 // because the loader tries dist/rolldown-binding.<platform>.node before the binding package).
 const PACKAGE_PARTS = ['dist', 'bin', 'cli', 'package.json', 'LICENSE'];
@@ -108,18 +108,18 @@ export function reportSupportNote(appDir, cli, { checkout = CHECKOUT_ROLLDOWN } 
   ];
   if (src?.built && src.binding) {
     lines.push(
-      `Install the build next to the lab (rolldown ${src.version}) over it, then rebuild:`,
+      `Install the build next to perf-kit (rolldown ${src.version}) over it, then rebuild:`,
       `  ${cli} rolldown-install --app ${appRel}`,
       '(`<package manager> install --force` in the app restores the release later.)',
     );
   } else if (src) {
     lines.push(
-      `The rolldown package next to the lab, ${src.dir}, is not built: run \`just build-rolldown-release\` there,`,
+      `The rolldown package next to perf-kit, ${src.dir}, is not built: run \`just build-rolldown-release\` there,`,
       `then \`${cli} rolldown-install --app ${appRel}\` copies it over the app's copy.`,
     );
   } else {
     lines.push(
-      'No rolldown package sits next to the lab. Build one in a rolldown checkout (`just build-rolldown-release`',
+      'No rolldown package sits next to perf-kit. Build one in a rolldown checkout (`just build-rolldown-release`',
       `writes packages/rolldown), then \`${cli} rolldown-install --app ${appRel} --from <that packages/rolldown>\`.`,
     );
   }
@@ -142,7 +142,7 @@ export function installCheckoutRolldown(appDir, { checkout = CHECKOUT_ROLLDOWN }
     throw new Error(
       checkout
         ? `no rolldown package at ${checkout}`
-        : 'no rolldown package sits next to the lab: pass --from <a built packages/rolldown>.',
+        : 'no rolldown package sits next to perf-kit: pass --from <a built packages/rolldown>.',
     );
   }
   if (!src.built || !src.binding) {

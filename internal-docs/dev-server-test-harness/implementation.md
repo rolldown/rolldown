@@ -117,7 +117,7 @@ serving. What the harness does own lives in `src/vite-server.ts`:
   `experimental.bundledDev: true`, the playground copy as `root` (its
   `index.html` module script is the entry), fixture plugins passed through
   (Vite 8 runs rolldown natively), `assetsInlineLimit: 0` for asset-request
-  assertions, `treeshake` forwarded. Full bundle mode forces
+  assertions, `treeshake` and `output` forwarded. Full bundle mode forces
   `devMode.lazy: true`, so lazy compilation is always on in browser runs.
 - **`vite` is not a package dependency.** It is dynamic-imported by file URL
   from the checkout's built dist (`loadVite()`), with local structural types

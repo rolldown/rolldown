@@ -237,13 +237,13 @@ catalogs:
       specifier: ^8.18.0
       version: 8.18.2
     acorn:
-      specifier: ^8.17.0
+      specifier: ^8.19.0
       version: 8.19.0
     astring:
       specifier: ^1.9.0
       version: 1.9.0
     cac:
-      specifier: ^7.0.0
+      specifier: ^7.1.0
       version: 7.1.0
     chalk:
       specifier: ^5.3.0
@@ -315,7 +315,7 @@ catalogs:
       specifier: ^11.0.0
       version: 11.0.0
     remeda:
-      specifier: ^2.50.0
+      specifier: ^2.53.0
       version: 2.53.0
     rolldown-plugin-dts:
       specifier: ^0.28.0
@@ -441,7 +441,7 @@ importers:
         specifier: 'catalog:'
         version: 24.10.3
       cjs-module-lexer:
-        specifier: ^2.1.0
+        specifier: ^2.3.0
         version: 2.3.0
       knip:
         specifier: ^6.39.0
@@ -520,7 +520,7 @@ importers:
         specifier: ^0.28.0
         version: 0.28.0(@types/node@24.10.3)(arktype@2.2.0)(kysely@0.29.5)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(valibot@1.5.0(typescript@6.0.3))(vite@8.3.5(@types/node@24.10.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(vitest@4.1.11)(vue@3.5.44(typescript@6.0.3))(workerd@1.20261019.1)(wrangler@4.152.0(@cloudflare/workers-types@5.20261024.1)(@types/node@24.10.3))(zod@4.6.5)
       wrangler:
-        specifier: ^4.146.0
+        specifier: ^4.152.0
         version: 4.152.0(@cloudflare/workers-types@5.20261024.1)(@types/node@24.10.3)
 
   examples/basic-typescript:

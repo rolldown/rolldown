@@ -16,6 +16,8 @@ impl ViteImportGlobPlugin {
 
 /// Tells whether a file is matched by one `import.meta.glob` call, like the matcher vite builds
 /// with picomatch in its `vite:import-glob` plugin.
+///
+/// See `internal-docs/import-meta-glob/design.md`.
 #[derive(Debug)]
 pub struct GlobMatcher {
   affirmed: Glob,

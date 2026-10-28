@@ -3732,13 +3732,11 @@ function workerTargetPaths(outDir) {
   };
 }
 
-/** Where the Worker's build report lands: one directory per Vite environment. */
-function workerReportDirs(appDir, workerName, report = null, { attrib = false } = {}) {
+/** Where the Worker's build report lands: report mode writes one directory per output dir. */
+function workerReportDirs(appDir, outDir, report = null) {
   const dirs = [];
   if (report) dirs.push(path.resolve(report));
-  const base = path.join(appDir, 'node_modules', '.rolldown');
-  dirs.push(path.join(base, `report${attrib ? '-attrib' : ''}-${workerName}`));
-  if (!attrib) dirs.push(path.join(base, 'report'));
+  dirs.push(reportDirFor(appDir, outDir));
   return dirs.map((d) => path.join(d, 'module-graph.json'));
 }
 
@@ -3750,7 +3748,10 @@ function workerReportCandidates(opts) {
   if (opts.dist) return null;
   const browser = readJson(TARGET_FILE);
   if (!opts.app && browser?.dist && fs.existsSync(browser.dist)) return null;
-  return workerReportDirs(sticky.app, sticky.worker);
+  return workerReportDirs(
+    sticky.app,
+    path.resolve(sticky.app, sticky.dist ?? 'dist', sticky.worker),
+  );
 }
 
 /**
@@ -3797,7 +3798,7 @@ function resolveWorkerTarget(opts) {
     configPath: path.join(outDir, 'wrangler.json'),
     requests,
     toolsDir,
-    reportDirs: workerReportDirs(appDir, workerName, opts.report),
+    reportDirs: workerReportDirs(appDir, outDir, opts.report),
     paths: workerTargetPaths(outDir),
   };
   const changed =
@@ -4235,9 +4236,7 @@ async function cmdWorkerAttrib(argv) {
   if (!importRan) console.log(`note: the import did not complete: ${importText.slice(0, 200)}`);
   fs.mkdirSync(ctx.paths.dir, { recursive: true });
   fs.writeFileSync(ctx.paths.attribProfile, JSON.stringify(profile));
-  const graph = loadModuleGraph(
-    workerReportDirs(target.appDir, target.workerName, opts.report, { attrib: true }),
-  );
+  const graph = loadModuleGraph(workerReportDirs(target.appDir, outDir, opts.report));
   const { rows, pairs } = evaluatingModules(profile, { outDir, graph, top: Number(opts.top) });
   console.log(
     '\nstartup CPU by evaluating module (its own top level plus the library calls it makes):',
@@ -4250,7 +4249,7 @@ async function cmdWorkerAttrib(argv) {
   for (const p of pairs.slice(0, 12)) console.log(`  ${String(p.ms).padStart(7)}ms  ${p.pair}`);
   if (!graph) {
     console.log(
-      `\n(no report for the attribution build - the chains need node_modules/.rolldown/report-attrib-${target.workerName})`,
+      `\n(no report for the attribution build - the chains need ${path.relative(target.appDir, reportDirFor(target.appDir, outDir))})`,
     );
   }
   printRuntimeStderr(ctx);
@@ -4438,7 +4437,7 @@ Cloudflare Worker startup mode (a V8 isolate coming up under the app's own worke
                             coverage run only (the in-process inspector session landed in
                             workerd 1.20260706.1). Timing and the profile keep the app's own workerd.
   graph | what-if | cut --root | why   work on the Worker's report (node_modules/.rolldown/
-                            report-<worker>) once worker-scan remembered the target.
+                            report/dist/<worker>) once worker-scan remembered the target.
   Requirements, the coverage difference per mode, and the rules: AGENTS.md.
 
 the loop:

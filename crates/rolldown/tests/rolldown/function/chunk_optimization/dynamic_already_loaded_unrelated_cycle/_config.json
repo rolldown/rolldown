@@ -1,0 +1,18 @@
+{
+  "_comment": "The already-loaded fold of `shared.js` into `main.js` has nothing to do with the over-approximated cycle between `splash.js` and the `barrel.js` atom (the barrel's re-export of `slug.js` is counted as an import). The fold must not be vetoed by that cycle.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "preserveEntrySignatures": "allow-extension",
+    "experimental": {
+      "chunkOptimization": {
+        "mergeCommonChunks": false,
+        "avoidRedundantChunkLoads": true
+      }
+    }
+  }
+}

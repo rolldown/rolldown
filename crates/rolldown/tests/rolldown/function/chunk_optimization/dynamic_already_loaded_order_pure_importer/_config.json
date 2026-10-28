@@ -1,0 +1,13 @@
+{
+  "_comment": "When `setup.js` is folded into `main.js`, the chunk holding `effect.js` and `barrel.js` is still a separate import of the entry. `barrel.js` runs after `setup.js` but has no side effect of its own, and `effect.js`, whose side effect it reaches, ran before it, so the fold keeps every side effect in order. Judged by the module-level verdict alone, `barrel.js` would count as side-effectful and the fold would be vetoed; both chunks would then stay files.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "preserveEntrySignatures": "allow-extension",
+    "experimental": {
+      "chunkOptimization": {
+        "mergeCommonChunks": false,
+        "avoidRedundantChunkLoads": true
+      }
+    }
+  }
+}

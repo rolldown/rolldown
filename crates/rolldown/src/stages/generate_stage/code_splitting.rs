@@ -951,6 +951,12 @@ impl GenerateStage<'_> {
     let allow_avoid_redundant_chunk_loads =
       self.options.experimental.is_avoid_redundant_chunk_loads_enabled()
         && !has_tla_or_tla_dependency;
+    let own_side_effect_exec_orders =
+      if allow_merge_common_chunks || allow_avoid_redundant_chunk_loads {
+        self.own_side_effect_exec_orders()
+      } else {
+        IndexVec::new()
+      };
     // See internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
     if allow_avoid_redundant_chunk_loads {
       let entries_len: u32 = self
@@ -966,6 +972,7 @@ impl GenerateStage<'_> {
         chunk_graph,
         entries_len,
         used_symbol_refs_builder,
+        &own_side_effect_exec_orders,
       );
     }
     self.extract_standalone_runtime_chunk(
@@ -993,6 +1000,7 @@ impl GenerateStage<'_> {
       chunk_graph,
       bits_to_chunk,
       &self.link_output.module_table,
+      &own_side_effect_exec_orders,
     );
 
     // 1. Assign modules to corresponding chunks
@@ -1028,6 +1036,7 @@ impl GenerateStage<'_> {
             normal_module.idx,
             chunk_id,
             &self.link_output.module_table,
+            &own_side_effect_exec_orders,
           );
         }
       } else if allow_merge_common_chunks {
@@ -1035,6 +1044,7 @@ impl GenerateStage<'_> {
           normal_module.idx,
           bits,
           &self.link_output.module_table,
+          &own_side_effect_exec_orders,
         );
       } else {
         let mut chunk =
@@ -1054,7 +1064,9 @@ impl GenerateStage<'_> {
     }
 
     if allow_merge_common_chunks {
-      temp_chunk_graph.calc_chunk_dependencies(&self.link_output.metas);
+      temp_chunk_graph.calc_chunk_dependencies(&self.link_output.metas, |module_idx| {
+        self.predicted_static_import_targets(module_idx)
+      });
       self.try_insert_common_module_to_exist_chunk(
         chunk_graph,
         bits_to_chunk,

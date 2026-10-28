@@ -32,6 +32,9 @@ pub struct ChunkGraph {
   ///
   /// We use the second approach to avoid the overhead of re-indexing at the cost of some extra memory.
   pub post_chunk_optimization_operations: FxHashMap<ChunkIdx, PostChunkOptimizationOperation>,
+  /// `preserveModules` chunks in an import cycle that must not call their module wrapper at the
+  /// chunk tail. See `GenerateStage::compute_chunks_without_tail_wrapper_call`.
+  pub chunks_without_tail_wrapper_call: FxHashSet<ChunkIdx>,
 }
 
 impl ChunkGraph {
@@ -46,6 +49,7 @@ impl ChunkGraph {
       common_chunk_exported_facade_chunk_namespace: FxHashMap::default(),
       common_chunk_preserve_export_names_modules: FxHashMap::default(),
       post_chunk_optimization_operations: FxHashMap::default(),
+      chunks_without_tail_wrapper_call: FxHashSet::default(),
     }
   }
 

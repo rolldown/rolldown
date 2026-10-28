@@ -1,0 +1,75 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## _virtual/_rolldown/runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __commonJSMin, __toESM };
+
+```
+
+## a.js
+
+```js
+import { __commonJSMin } from "./_virtual/_rolldown/runtime.js";
+import { require_b } from "./b.js";
+// a.cjs
+var require_a = /* @__PURE__ */ __commonJSMin(((exports) => {
+	(globalThis.__events ??= []).push("a");
+	const b = require_b();
+	exports.name = "a";
+	exports.seen = "a saw b.name=" + b.name;
+}));
+export { require_a };
+
+```
+
+## after.js
+
+```js
+// after.js
+(globalThis.__events ??= []).push("after");
+
+```
+
+## b.js
+
+```js
+import { __commonJSMin } from "./_virtual/_rolldown/runtime.js";
+import { require_a } from "./a.js";
+// b.cjs
+var require_b = /* @__PURE__ */ __commonJSMin(((exports) => {
+	(globalThis.__events ??= []).push("b");
+	const a = require_a();
+	exports.name = "b";
+	exports.seen = "b saw a.name=" + a.name;
+}));
+export { require_b };
+
+```
+
+## main-a.js
+
+```js
+import { __toESM } from "./_virtual/_rolldown/runtime.js";
+import { require_a } from "./a.js";
+import "./after.js";
+// main-a.js
+var import_a = /* @__PURE__ */ __toESM(require_a());
+console.log(globalThis.__events.join(), import_a.seen);
+
+```
+
+## main-b.js
+
+```js
+import { __toESM } from "./_virtual/_rolldown/runtime.js";
+import { require_b } from "./b.js";
+// main-b.js
+var import_b = /* @__PURE__ */ __toESM(require_b());
+console.log(globalThis.__events.join(), import_b.seen);
+
+```

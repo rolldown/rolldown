@@ -1,0 +1,70 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## _virtual/_rolldown/runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __commonJSMin, __esmMin, __exportAll, __toCommonJS, __toESM };
+
+```
+
+## a.js
+
+```js
+import { __commonJSMin, __toCommonJS } from "./_virtual/_rolldown/runtime.js";
+import { e_exports, init_e } from "./e.js";
+// a.cjs
+var require_a = /* @__PURE__ */ __commonJSMin(((exports) => {
+	const e = (init_e(), __toCommonJS(e_exports));
+	exports.name = "a";
+	exports.other = () => e.v();
+}));
+export default require_a();
+export { require_a };
+
+```
+
+## b.js
+
+```js
+import { __commonJSMin } from "./_virtual/_rolldown/runtime.js";
+import { require_a } from "./a.js";
+// b.cjs
+var require_b = /* @__PURE__ */ __commonJSMin(((exports) => {
+	require_a();
+	exports.name = "b";
+}));
+export { require_b };
+
+```
+
+## e.js
+
+```js
+import { __esmMin, __exportAll } from "./_virtual/_rolldown/runtime.js";
+import { require_b } from "./b.js";
+// e.js
+var e_exports = /* @__PURE__ */ __exportAll({ v: () => v }), v;
+var init_e = __esmMin((() => {
+	require_b();
+	v = () => "e+b";
+}));
+export { e_exports, init_e, v };
+
+```
+
+## main.js
+
+```js
+import { __toESM } from "./_virtual/_rolldown/runtime.js";
+import { require_a } from "./a.js";
+import assert from "node:assert";
+// main.js
+var import_a = /* @__PURE__ */ __toESM(require_a());
+assert.strictEqual("a", "a");
+assert.strictEqual(import_a.other(), "e+b");
+
+```

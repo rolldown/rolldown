@@ -1,0 +1,8 @@
+{
+  "_comment": "ESM evaluates b.js before a.js. An eager `require_b()` at the tail of b.js would call `require_a` before a.js defines it.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "preserveModules": true
+  },
+  "configVariants": [{ "strictExecutionOrder": true }]
+}

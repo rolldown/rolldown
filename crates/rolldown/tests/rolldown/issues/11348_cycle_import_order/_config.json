@@ -1,0 +1,8 @@
+{
+  "_comment": "The cycle has one way in, so a.js keeps its tail call and the cycle runs before after.js, as in Node.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "preserveModules": true
+  },
+  "configVariants": [{ "strictExecutionOrder": true }]
+}

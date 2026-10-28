@@ -1,0 +1,7 @@
+{
+  "_comment": "a.cjs requires e.js, so e.js is wrapped. Its tail `init_e()` would run b.cjs before a.js defines `require_a`.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "preserveModules": true
+  }
+}

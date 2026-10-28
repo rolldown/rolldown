@@ -25,7 +25,13 @@ pub fn render_wrapped_entry_chunk(
 ) -> Option<String> {
   if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
     let entry_meta = &ctx.link_output.metas[entry_id];
+    // A `preserveModules` chunk in an import cycle can run its module too early at the tail.
+    let without_tail_wrapper_call =
+      ctx.chunk_graph.chunks_without_tail_wrapper_call.contains(&ctx.chunk_idx);
     if matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
+      if without_tail_wrapper_call {
+        return None;
+      }
       let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
 
       let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
@@ -98,7 +104,7 @@ pub fn render_wrapped_entry_chunk(
 
     let reexport_init_calls = render_entry_reexported_wrapper_init_calls(ctx, entry_id, entry_meta);
 
-    match ctx.esm_init_target(entry_id) {
+    match ctx.esm_init_target(entry_id).filter(|_| !without_tail_wrapper_call) {
       Some(target) => {
         let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
           target.wrapper_ref,
@@ -506,10 +512,15 @@ pub fn get_export_items(chunk: &Chunk) -> Vec<(CompactStr, SymbolRef)> {
   export_items
 }
 
-pub fn get_chunk_export_names(chunk: &Chunk, graph: &LinkStageOutput) -> Vec<CompactStr> {
+pub fn get_chunk_export_names(
+  chunk: &Chunk,
+  graph: &LinkStageOutput,
+  without_tail_wrapper_call: bool,
+) -> Vec<CompactStr> {
   if let ChunkKind::EntryPoint { module: entry_id, .. } = &chunk.kind {
     let entry_meta = &graph.metas[*entry_id];
-    if matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
+    // Without the tail call, a CJS chunk has no `default` export (#11348).
+    if !without_tail_wrapper_call && matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
       return vec![CompactStr::new("default")];
     }
   }

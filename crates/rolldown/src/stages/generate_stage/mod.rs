@@ -126,6 +126,7 @@ mod render_chunk_to_assets;
 mod resolve_file_urls;
 mod runtime_module_sweep;
 mod simulated_facade_inclusion;
+mod tail_wrapper_calls;
 
 pub use compute_wrapped_esm_init_metadata::{FinalEsmInitMetadata, Sealed};
 pub use inline_common_chunks::{
@@ -211,6 +212,9 @@ impl<'a> GenerateStage<'a> {
     self.ensure_lazy_module_initialization_order(&mut chunk_graph);
 
     self.merge_cjs_namespace(&mut chunk_graph, &order_state);
+
+    // Runs before chunk naming, because the result changes `chunk.exports`.
+    self.compute_chunks_without_tail_wrapper_call(&mut chunk_graph);
 
     self.trace_action_chunks_infos(&chunk_graph);
 
@@ -481,8 +485,12 @@ impl<'a> GenerateStage<'a> {
         chunk.name = Some(chunk_name);
         continue;
       }
-      let mut pre_rendered_chunk =
-        generate_pre_rendered_chunk(chunk, &pre_generated_chunk_name.chunk_name, self.link_output);
+      let mut pre_rendered_chunk = generate_pre_rendered_chunk(
+        chunk,
+        &pre_generated_chunk_name.chunk_name,
+        self.link_output,
+        chunk_graph.chunks_without_tail_wrapper_call.contains(chunk_id),
+      );
       // The modules of every carried record are printed into this file, so `chunkFileNames` and
       // the rendered chunk see them among `moduleIds`.
       for record_idx in self.inline_state.carried_by(*chunk_id) {
@@ -534,7 +542,11 @@ impl<'a> GenerateStage<'a> {
     let mut chunk_export_data = Vec::new();
     for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
       if let Some(entry_module) = chunk.user_defined_entry_module(&self.link_output.module_table) {
-        let export_names = get_chunk_export_names(chunk, self.link_output);
+        let export_names = get_chunk_export_names(
+          chunk,
+          self.link_output,
+          chunk_graph.chunks_without_tail_wrapper_call.contains(&chunk_idx),
+        );
         chunk_export_data.push((chunk_idx, entry_module, export_names));
       }
     }

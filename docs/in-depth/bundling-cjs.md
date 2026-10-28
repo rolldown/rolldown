@@ -202,6 +202,33 @@ For files ending with `.js`, Rolldown parses the file as ESM ([#7009](https://gi
 
 For now, you can change the file extension to `.cjs` as a workaround.
 
+### `require` Cycles with `preserveModules`
+
+With [`output.preserveModules`](/reference/OutputOptions.preserveModules) and ESM output, a CJS module runs when ESM evaluates its output file, so it keeps its place among the imports. In a `require` cycle, ESM evaluates the files in a different order than Node.js runs the `require` calls. If the cycle has only one way in, Rolldown starts the cycle there, and the order is the same as in Node.js. If the cycle has two or more ways in, like `a.cjs` and `b.cjs` below, the cycle runs at the first `require` call that reaches it. That call is in the body of the importer, so it runs after the importer's imports:
+
+::: code-group
+
+```js [main-a.js]
+import a from './a.cjs';
+import './after.js'; // runs before a.cjs and b.cjs
+```
+
+```js [main-b.js]
+import b from './b.cjs';
+```
+
+```js [a.cjs]
+const b = require('./b.cjs');
+```
+
+```js [b.cjs]
+const a = require('./a.cjs');
+```
+
+:::
+
+A cycle member that is an entry or is dynamically imported still runs when ESM evaluates its file. If the cycle has two or more ways in, that member can run before the modules it requires and throw `TypeError: require_a is not a function`. Use `output.format: 'cjs'` for such a build.
+
 ## Future Plans
 
 Rolldown's first-class support for CommonJS modules enables several potential optimizations:

@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
-//#region main.js
+// main.js
 function init() {
 	const url = require("url").pathToFileURL(__filename).href;
 	var __filename$1 = "SENTINEL";
@@ -24,6 +24,5 @@ const [url, , filename] = init();
 node_assert.default.ok(url.startsWith("file://"));
 node_assert.default.ok(!url.includes("SENTINEL"));
 node_assert.default.equal(filename, "SENTINEL");
-//#endregion
 
 ```

@@ -167,6 +167,17 @@ export interface OutputOptions {
    */
   file?: string;
   /**
+   * Controls how non-ASCII characters are represented in generated JavaScript.
+   *
+   * - `'utf8'`: Preserve non-ASCII characters.
+   * - `'ascii'`: Escape non-ASCII characters where possible.
+   *
+   * {@include ./docs/output-charset.md}
+   *
+   * @default 'utf8'
+   */
+  charset?: 'ascii' | 'utf8';
+  /**
    * Which exports mode to use.
    *
    * {@include ./docs/output-exports.md}
@@ -1018,35 +1029,10 @@ export type CodeSplittingGroup = {
 export type AdvancedChunksGroup = CodeSplittingGroup;
 
 /**
- * Options for `codeSplitting.experimentalInlineCommonChunks`.
+ * Options for [`output.codeSplitting.experimentalInlineCommonChunks`](https://rolldown.rs/reference/OutputOptions.codeSplitting#experimentalinlinecommonchunks).
  *
- * Small common chunks produced by automatic code splitting are replaced by a factory function
- * that is copied into the chunks reading them (a chunk whose static dependency already carries the
- * factory uses that copy). A registry in the runtime chunk makes sure the chunk's modules keep one
- * state, one execution and one set of export identities across all copies, so no entry downloads
- * code it could not reach with the option off.
- *
- * Before enabling it, check the plugins and code shapes that see a chunk's modules as one file:
- *
- * - A module of an inlined chunk appears in the `moduleIds` and `modules` of every chunk that
- *   prints a copy, so a plugin that asks which chunk owns a module gets several answers. Vite's
- *   CSS plugin, for example, emits a style module's CSS from every chunk whose `moduleIds` list
- *   it; a Vite build passes `exclude: /\.(css|scss|sass|less|styl|stylus|pcss|postcss|sss)(\?|$)/`
- *   so chunks holding styles stay files.
- * - A `renderChunk` hook whose rewrite yields different values in different directories makes
- *   the copies differ, and the first chunk to run decides which text every reader sees; exclude
- *   the modules concerned. Vite's asset URLs under a relative `base` resolve through
- *   `import.meta.url` to the same URL from every copy and are not affected.
- * - The option turns `strictExecutionOrder` on when it is omitted. Strict execution order has an
- *   open issue with top-level await inside static import cycles (rolldown/rolldown#9548), so run
- *   the application under `strictExecutionOrder: true` before adding this option.
- * - Addons (`banner`, `intro`, `outro` and `footer`), including plugin hooks, apply to emitted
- *   files. An inlined chunk shares the addon bindings of the file that registers its factory
- *   first. Exclude modules that depend on separate file-local bindings or addon initialization order.
- * - A chunk that prints an inlined chunk names both sets of modules together, so a function or
- *   class in either can get a `$1`-style suffix when the other declares the same name, and the
- *   `.name` of an inlined chunk's function or class depends on which chunk loads first (under
- *   `minify`, the mangled name does too). `output.keepNames` keeps every name.
+ * See the [Inline Common Chunks guide](https://rolldown.rs/in-depth/inline-common-chunks)
+ * for how inlining works, its tradeoffs, and compatibility with plugins.
  *
  * @experimental This feature is experimental. Its behavior and option shape may change in any release.
  *
@@ -1054,15 +1040,12 @@ export type AdvancedChunksGroup = CodeSplittingGroup;
  */
 export type ExperimentalInlineCommonChunksOptions = {
   /**
-   * Common chunks whose pre-render size (the sum of the transformed source sizes of their modules,
-   * in bytes) is strictly smaller than this value are candidates for inlining.
-   * Use `Infinity` to remove the size limit.
+   * Inline eligible automatic common chunks whose size is strictly smaller than this value.
+   * Size is the sum of their modules' transformed source sizes in bytes, before rendering,
+   * minification and compression.
    *
-   * A value greater than `0` requires `output.format: 'es'`, an explicit
-   * `preserveEntrySignatures: false` and code splitting, and it turns on
-   * {@linkcode OutputOptions.strictExecutionOrder | strictExecutionOrder} when that option is
-   * omitted. `output.strictExecutionOrder: false` is an error, `output.preserveModules`,
-   * `experimental.devMode` and `experimental.onDemandWrapping` must be off.
+   * Must be a non-negative safe integer or `Infinity`. `0` disables inlining.
+   * `Infinity` removes the size limit.
    *
    * @default 0
    */
@@ -1070,7 +1053,7 @@ export type ExperimentalInlineCommonChunksOptions = {
   /**
    * A matcher for module ids, or an array of them: a string (matched as a regular expression), a
    * RegExp, or a function, each applied like {@linkcode CodeSplittingGroup.test | test}. A common
-   * chunk is kept as a file when any of its modules matches any matcher.
+   * chunk is not inlined when any of its modules matches any matcher.
    */
   exclude?:
     | StringOrRegExp
@@ -1113,7 +1096,35 @@ export type CodeSplittingOptions = {
    */
   groups?: CodeSplittingGroup[];
   /**
-   * Replace small automatic common chunks with factory copies in their consumers.
+   * Inline small automatic common chunks into their consumers to reduce the chunk count.
+   * This duplicates code and adds runtime overhead.
+   *
+   * Set `maxSize` above `0` to enable it. Requires {@linkcode OutputOptions.format | output.format: 'es'}
+   * and an explicit {@linkcode InputOptions.preserveEntrySignatures | preserveEntrySignatures: false}.
+   * Requires {@linkcode OutputOptions.strictExecutionOrder | strictExecutionOrder},
+   * which is enabled automatically when omitted.
+   * Incompatible with {@linkcode OutputOptions.preserveModules | output.preserveModules}.
+   *
+   * Plugins must support modules appearing in multiple output chunks. See the
+   * [Inline Common Chunks guide](https://rolldown.rs/in-depth/inline-common-chunks)
+   * for behavior, tradeoffs and plugin compatibility.
+   *
+   * @example
+   * ```js
+   * import { defineConfig } from 'rolldown';
+   *
+   * export default defineConfig({
+   *   preserveEntrySignatures: false,
+   *   output: {
+   *     format: 'es',
+   *     codeSplitting: {
+   *       experimentalInlineCommonChunks: {
+   *         maxSize: 10 * 1024, // Example threshold in bytes.
+   *       },
+   *     },
+   *   },
+   * });
+   * ```
    *
    * @experimental This feature is experimental. Its behavior and option shape may change in any release.
    */

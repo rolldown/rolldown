@@ -23,27 +23,23 @@ allowBuilds:
   vue-demi: true
   workerd: true
 
-# Kept for pnpm 10 (used on Node 20 in CI). pnpm 11 reads `allowBuilds` instead.
-onlyBuiltDependencies:
-  - '@parcel/watcher'
-  - esbuild
-  - oxc-resolver
-  - sharp
-  - tree-sitter
+overrides:
+  # 12.10 dropped the Node 20 prebuilds, which the CI matrix still covers
+  better-sqlite3: 12.9.0
 
 catalog:
   '@babel/core': ^7.29.7
   '@babel/preset-env': ^7.29.7
   '@babel/preset-typescript': ^7.29.7
-  '@emnapi/core': 2.0.0-alpha.5
-  '@emnapi/runtime': 2.0.0-alpha.5
+  '@emnapi/core': 2.0.0-beta.2
+  '@emnapi/runtime': 2.0.0-beta.2
   '@jridgewell/trace-mapping': ^0.3.31
   '@napi-rs/cli': ^3.10.0
-  '@napi-rs/wasm-runtime': ~1.2.2
+  '@napi-rs/wasm-runtime': 1.2.6
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0
-  '@oxc-project/runtime': '=0.152.0'
-  '@oxc-project/types': '=0.152.0'
+  '@oxc-project/runtime': '=0.156.0'
+  '@oxc-project/types': '=0.156.0'
   '@pnpm/find-workspace-packages': ^6.0.9
   '@rolldown/pluginutils': ^1.0.0
   '@rollup/plugin-commonjs': ^29.0.0
@@ -56,16 +52,16 @@ catalog:
   '@types/semver': ^7.8.0
   '@types/serve-static': ^2.0.0
   '@types/ws': ^8.18.0
-  acorn: ^8.17.0
+  acorn: ^8.19.0
   astring: ^1.9.0
-  cac: ^7.0.0
+  cac: ^7.1.0
   chalk: ^5.3.0
   change-case: ^5.4.4
   connect: ^3.7.0
   consola: ^3.4.2
   dedent: ^1.5.3
   diff: ^9.0.0
-  emnapi: 2.0.0-alpha.5
+  emnapi: 2.0.0-beta.2
   esbuild: ^0.28.0
   estree-toolkit: ^1.7.8
   execa: ^9.2.0
@@ -76,13 +72,13 @@ catalog:
   glob: ^13.0.0
   lodash-es: ^4.17.21
   micromatch: ^4.0.8
-  oxc-parser: '=0.152.0'
-  oxc-transform: '=0.152.0'
+  oxc-parser: '=0.156.0'
+  oxc-transform: '=0.156.0'
   pathe: ^2.0.3
   react: ^19.0.0
   react-dom: ^19.0.0
   remark-parse: ^11.0.0
-  remeda: ^2.50.0
+  remeda: ^2.53.0
   rolldown-plugin-dts: ^0.28.0
   rollup: ^4.63.0
   semver: ^7.8.0
@@ -99,7 +95,8 @@ catalog:
   vitest: ^4.1.6
   vue: ^3.5.35
   web-tree-sitter: ^0.27.0
-  ws: ^8.20.1
+  ws: ^8.22.0
+  yaml: ^2.9.1
   zx: ^8.1.2
 
 catalogs:
@@ -126,20 +123,20 @@ shellEmulator: true
 
 trustPolicy: no-downgrade
 
+trustPolicyExcludePrune: true
 trustPolicyExclude:
   - chokidar@4.0.3
   - semver@6.3.1
   - rxjs@7.8.2
 
 verifyDepsBeforeRun: install
-
+minimumReleaseAgeExcludePrune: true
 minimumReleaseAgeExclude:
   - '@napi-rs/cli'
   - '@oxc-minify/*'
   - '@oxc-parser/*'
   - '@oxc-transform/*'
   - '@oxc-project/*'
-  - oxc-minify
   - oxc-parser
   - oxc-transform
   - '@voidzero-dev/*'

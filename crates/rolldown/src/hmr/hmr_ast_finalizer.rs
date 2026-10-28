@@ -20,7 +20,7 @@ use rolldown_ecmascript_utils::{
   StatementFactoryExt as _,
 };
 use rolldown_utils::{
-  ecmascript::is_validate_identifier_name,
+  ecmascript::{is_validate_identifier_name, property_access_str},
   indexmap::{FxIndexMap, FxIndexSet},
 };
 use rustc_hash::FxHashMap;
@@ -36,6 +36,7 @@ pub struct HmrAstFinalizer<'me, 'ast> {
 
   // Each module has a unique index, which is used to generate something that needs to be unique.
   pub unique_index: usize,
+  pub stamp: u32,
 
   // --- Internal state
   /// For
@@ -95,7 +96,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
             ast::ImportDeclarationSpecifier::ImportSpecifier(import_specifier) => {
               self.import_bindings.insert(
                 import_specifier.local.symbol_id(),
-                format!("{binding_name}.{}", import_specifier.imported.name()),
+                property_access_str(&binding_name, &import_specifier.imported.name()),
               );
             }
             ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(import_default_specifier) => {

@@ -140,6 +140,7 @@ rolldown_watcher/
 rolldown_fs_watcher/
 ├── lib.rs                     // Public exports: FsWatcher, FsWatcherConfig, FsEvent*
 ├── config.rs                  // FsWatcherConfig (enabled, use_polling, use_debounce, …)
+├── filter.rs                  // IgnoreFilter: watch.exclude, also notify's ignore filter
 ├── event.rs                   // FsEvent (path + WatcherChangeKind), FsEventHandler
 ├── watcher.rs                 // FsWatcher: the watched paths, on top of a WatcherBackend
 └── notify/                    // everything that speaks notify
@@ -314,7 +315,10 @@ Configured via `WatcherOptions`, fires **immediately** on file change (before de
 
 - After each build, `bundler.watch_files()` returns the current set.
 - `WatchTask::update_watch_files()` hands the set to the per-task `FsWatcher`, which registers the paths it does not watch yet. `FsWatcher::is_watched` answers whether a changed path is one of them, or lies below one.
-- `include`/`exclude` patterns filter which files are watched (via `pattern_filter`).
+- `exclude` becomes `FsWatcherConfig::ignored`, compiled once per watcher into an `IgnoreFilter` (`rolldown_fs_watcher/src/filter.rs`, globs via `globstar`). `FsWatcher::watch_paths` skips ignored paths, and notify gets the same filter through `Config::with_ignored`, so an ignored path is never scanned or reported. `map_notify_event` applies it too when it expands a created directory into its files.
+- `exclude` is about files, as in Rollup. The filter gets notify's `EntryKind`: a file is ignored if it matches (`Glob::is_match`). A directory is ignored only if everything below it matches (`DirMatch::matches_all_below`). A path of unknown kind (a missing path, or every event on Windows) could be either, so it is ignored if one of the two holds. So `dist/**` skips `dist` as a whole, and `**/*.log` does not hide `foo.log/a.js` below a directory named `foo.log`. A regex cannot tell whether it matches everything below a directory, so it never ignores one. Its files are still ignored one by one.
+- Why a directory that merely matches is not ignored: inotify, kqueue and poll never look below an ignored directory, while FSEvents and Windows ask about every path below it. The backends only agree if ignoring a directory and ignoring each path below it give the same result.
+- `include`/`exclude` still decide which discovered files are registered (via `pattern_filter`), so an excluded path is filtered twice: by the caller at registration and by the watcher.
 - Files are watched **non-recursively** (individual file watches).
 - `FsWatcher::watch_paths` filters and deduplicates new paths before opening a notify batch. If none remain, it leaves the backend untouched: on macOS, opening a batch stops the FSEvents stream, and committing even an empty batch restarts it from "now", potentially losing edits in between. A path is recorded only after registration and commit succeed, so a skipped path is tried again with the next build.
 
@@ -323,7 +327,8 @@ Configured via `WatcherOptions`, fires **immediately** on file change (before de
 Each `WatchTask` builds its watcher with `FsWatcher::new(handler, &config)`.
 `FsWatcher` is a concrete type; the notify implementations stay crate-private.
 `WatcherConfig::to_fs_watcher_config()` maps watch options onto `FsWatcherConfig`,
-and construction picks the backend:
+`WatchTask::new` adds the task's `ignored` and `cwd`, and construction picks the
+backend:
 
 | `use_polling` | `use_debounce` | Backend                               |
 | ------------- | -------------- | ------------------------------------- |

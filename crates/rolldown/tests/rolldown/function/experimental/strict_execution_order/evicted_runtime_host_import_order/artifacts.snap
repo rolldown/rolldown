@@ -8,20 +8,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 import "ext-a";
-//#region c.js
+// c.js
 var c_exports = /* @__PURE__ */ __exportAll({ c: () => 1 });
 function init_c() {
 	return (init_c = __esmMin((() => {})))();
 }
-//#endregion
-//#region a.js
+// a.js
 function init_a() {
 	return (init_a = __esmMin((() => {
 		init_c();
 		console.log("A", Object.keys(c_exports).join());
 	})))();
 }
-//#endregion
 export { init_a as t };
 
 ```
@@ -31,13 +29,12 @@ export { init_a as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import "ext-b";
-//#region b.js
+// b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
 		console.log("B");
 	})))();
 }
-//#endregion
 export { init_b as t };
 
 ```
@@ -48,7 +45,7 @@ export { init_b as t };
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_b } from "./b.js";
 import { t as init_a } from "./a.js";
-//#region e0.js
+// e0.js
 function init_e0() {
 	return (init_e0 = __esmMin((() => {
 		init_b();
@@ -56,7 +53,6 @@ function init_e0() {
 		console.log("E0");
 	})))();
 }
-//#endregion
 init_e0();
 
 ```
@@ -66,14 +62,13 @@ init_e0();
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_a } from "./a.js";
-//#region e1.js
+// e1.js
 function init_e1() {
 	return (init_e1 = __esmMin((() => {
 		init_a();
 		console.log("E1");
 	})))();
 }
-//#endregion
 init_e1();
 
 ```
@@ -84,7 +79,7 @@ init_e1();
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_b } from "./b.js";
 import { t as init_a } from "./a.js";
-//#region e2.js
+// e2.js
 function init_e2() {
 	return (init_e2 = __esmMin((() => {
 		init_b();
@@ -92,7 +87,6 @@ function init_e2() {
 		console.log("E2");
 	})))();
 }
-//#endregion
 init_e2();
 
 ```
@@ -100,7 +94,7 @@ init_e2();
 ## rolldown-runtime.js
 
 ```js
-//#region \0rolldown/runtime.js
+// \0rolldown/runtime.js
 var __defProp = Object.defineProperty;
 var __esmMin = (fn, res, err) => () => {
 	if (err) throw err[0];
@@ -119,7 +113,6 @@ var __exportAll = (all, no_symbols) => {
 	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
 	return target;
 };
-//#endregion
 export { __exportAll as n, __esmMin as t };
 
 ```

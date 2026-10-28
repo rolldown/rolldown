@@ -1,7 +1,7 @@
 use json_escape_simd::escape;
 use rolldown_common::{
-  ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable, NormalModule,
-  RUNTIME_MODULE_KEY, Specifier,
+  HmrStampTable, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable,
+  NormalModule, RUNTIME_MODULE_KEY, Specifier,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -86,11 +86,19 @@ fn edge_bindings<'a>(
 /// dynamic edges. `edges` stays a dense array: most modules import something, and an empty
 /// row (`[]`) is shorter than a row key.
 ///
+/// `stamps` (patches and lazy chunks only) is sparse like `dynamicEdges`; a missing row means
+/// stamp 0.
+///
+/// `entries` lists the rows whose module is in `entry_modules`, and is left out when no row
+/// is one.
+///
 /// `ids[0, local_count)` are the carried modules in input order; `ids[local_count, ..)` are
 /// foreign edge targets interned on first use. Returns `None` when the payload carries no rows.
 pub fn render_register_graph_source(
   module_table: &ModuleTable,
   carried_modules: impl IntoIterator<Item = ModuleIdx>,
+  entry_modules: &FxHashSet<ModuleIdx>,
+  stamp_table: Option<&HmrStampTable>,
 ) -> Option<String> {
   let mut ids: Vec<ModuleIdx> = Vec::new();
   let mut id_to_index: FxHashMap<ModuleIdx, usize> = FxHashMap::default();
@@ -237,6 +245,35 @@ pub fn render_register_graph_source(
       source.push(']');
     }
     source.push('}');
+  }
+  if let Some(stamp_table) = stamp_table {
+    source.push_str(",stamps:{");
+    let mut first = true;
+    for (row, idx) in ids[..local_count].iter().enumerate() {
+      let stamp = stamp_table.render_time_stamp(module_table.modules[*idx].stable_id().as_str());
+      if stamp == 0 {
+        continue;
+      }
+      if !first {
+        source.push(',');
+      }
+      first = false;
+      source.push_str(itoa::Buffer::new().format(row));
+      source.push(':');
+      source.push_str(itoa::Buffer::new().format(stamp));
+    }
+    source.push('}');
+  }
+  let mut entry_rows =
+    ids[..local_count].iter().enumerate().filter(|(_, idx)| entry_modules.contains(idx));
+  if let Some((first_row, _)) = entry_rows.next() {
+    source.push_str(",entries:[");
+    source.push_str(itoa::Buffer::new().format(first_row));
+    for (row, _) in entry_rows {
+      source.push(',');
+      source.push_str(itoa::Buffer::new().format(row));
+    }
+    source.push(']');
   }
   source.push_str("});");
 

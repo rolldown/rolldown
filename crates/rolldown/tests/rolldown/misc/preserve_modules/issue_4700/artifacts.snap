@@ -6,11 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## child.js
 
 ```js
-//#region child.js
+// child.js
 const childFn = () => {
 	console.log("child");
 };
-//#endregion
 exports.childFn = childFn;
 
 ```
@@ -18,8 +17,7 @@ exports.childFn = childFn;
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 require("./child.js").childFn();
-//#endregion
 
 ```

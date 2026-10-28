@@ -1,0 +1,23 @@
+{
+  "config": {
+    "strictExecutionOrder": true
+  },
+  "configVariants": [
+    {
+      "_configName": "no-optimization",
+      "_snapshot": false,
+      "chunkOptimization": false
+    },
+    {
+      "_configName": "on-demand",
+      "_snapshot": false,
+      "onDemandWrapping": true
+    },
+    {
+      "_configName": "minified-cjs",
+      "_snapshot": false,
+      "format": "cjs",
+      "minify": true
+    }
+  ]
+}

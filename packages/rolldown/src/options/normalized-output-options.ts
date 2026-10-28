@@ -32,6 +32,8 @@ export interface NormalizedOutputOptions {
   file: string | undefined;
   /** @see {@linkcode OutputOptions.dir | dir} */
   dir: string | undefined;
+  /** @see {@linkcode OutputOptions.charset | charset} */
+  charset: NonNullable<OutputOptions['charset']>;
   /** @see {@linkcode OutputOptions.entryFileNames | entryFileNames} */
   entryFileNames: string | ChunkFileNamesFunction;
   /** @see {@linkcode OutputOptions.sourcemapFileNames | sourcemapFileNames} */
@@ -126,6 +128,11 @@ export class NormalizedOutputOptionsImpl
   @lazyProp
   get dir(): string | undefined {
     return this.inner.dir ?? undefined;
+  }
+
+  @lazyProp
+  get charset(): NonNullable<OutputOptions['charset']> {
+    return this.inner.charset;
   }
 
   @lazyProp

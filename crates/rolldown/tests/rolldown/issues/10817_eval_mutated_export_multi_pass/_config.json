@@ -1,0 +1,10 @@
+{
+  "_comment": "Direct `eval` can assign an exported `let` without a write reference. Constant inlining must not record it in any pass, so `main.js` logs the values after the `eval` runs.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "minify": false,
+    "optimization": { "inlineConst": { "mode": "smart", "pass": 3 } }
+  },
+  "configVariants": [{ "_configName": "allPass2", "inlineConst": { "mode": "all", "pass": 2 } }],
+  "snapshot": false
+}

@@ -14,6 +14,7 @@ impl From<BindingViteImportGlobPluginConfig> for ViteImportGlobPlugin {
       root: value.root,
       sourcemap: value.sourcemap.unwrap_or_default(),
       restore_query_extension: value.restore_query_extension.unwrap_or_default(),
+      ..Default::default()
     }
   }
 }

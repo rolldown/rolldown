@@ -1,10 +1,12 @@
 //! Rendering for `experimentalInlineCommonChunks`: the registrations and bridges a file prints
 //! right after its imports. See internal-docs/inline-common-chunks/implementation.md.
 
-use json_escape_simd::escape;
 use rolldown_common::ChunkIdx;
 use rolldown_sourcemap::SourceJoiner;
-use rolldown_utils::{concat_string, ecmascript::to_module_import_export_name};
+use rolldown_utils::{
+  concat_string,
+  ecmascript::{escape_non_ascii, to_ecma_string_literal, to_module_import_export_name_with_ascii},
+};
 
 use crate::{
   ecmascript::ecma_generator::RenderedModuleSources, types::generator::GenerateContext,
@@ -20,11 +22,11 @@ fn runtime_helper_name<'a>(ctx: &'a GenerateContext<'_>, name: &str) -> &'a str 
 
 /// The getter table is an object literal, where `__proto__: value` sets the prototype; a computed
 /// key defines the property, as `__exportAll` tables do.
-fn object_key(name: &str) -> String {
+fn object_key(name: &str, ascii_only: bool) -> String {
   if name == "__proto__" {
     "[\"__proto__\"]".to_string()
   } else {
-    to_module_import_export_name(name)
+    to_module_import_export_name_with_ascii(name, ascii_only)
   }
 }
 
@@ -44,9 +46,11 @@ pub fn render_inline_records<'code>(
     .inline_state
     .file_names(ctx.chunk_idx)
     .expect("a file that reads records is named before it is rendered");
-  let share_name = runtime_helper_name(ctx, "__share");
-  let require_name = runtime_helper_name(ctx, "__share_require");
-  let export_name = runtime_helper_name(ctx, "__share_export");
+  let ascii_only = ctx.options.charset.is_ascii();
+  let share_name = escape_non_ascii(runtime_helper_name(ctx, "__share"), ascii_only);
+  let require_name = escape_non_ascii(runtime_helper_name(ctx, "__share_require"), ascii_only);
+  let export_name = escape_non_ascii(runtime_helper_name(ctx, "__share_export"), ascii_only);
+  let exports_param = escape_non_ascii(&names.exports_param, ascii_only);
   let record_id = |record_idx: ChunkIdx| {
     &ctx.inline_state.record(record_idx).expect("chunk should be a record").id
   };
@@ -54,11 +58,11 @@ pub fn render_inline_records<'code>(
   for (record_idx, module_sources) in carried {
     // `__share("id", (exports) => {` and the bridges to the records this record reads.
     let mut head = concat_string!(
-      share_name,
+      share_name.as_ref(),
       "(",
-      escape(record_id(*record_idx)),
+      to_ecma_string_literal(record_id(*record_idx), ascii_only),
       ", (",
-      names.exports_param,
+      exports_param.as_ref(),
       ") => {"
     );
     for other in ctx.inline_state.readers_of(*record_idx) {
@@ -69,13 +73,25 @@ pub fn render_inline_records<'code>(
         .expect("a factory has a bridge for every record it reads");
       head.push_str(&concat_string!(
         "\n\tvar ",
-        bridge,
+        escape_non_ascii(bridge, ascii_only),
         " = ",
-        require_name,
+        require_name.as_ref(),
         "(",
-        escape(record_id(*other)),
+        to_ecma_string_literal(record_id(*other), ascii_only),
         ");"
       ));
+    }
+    // Dev mode: the record's graph rows ship from inside its factory, which runs once per page;
+    // a carrier's own prelude lists only its chunk's modules.
+    if ctx.options.is_dev_mode_enabled()
+      && let Some(rows) = crate::hmr::module_graph_delta::render_register_graph_source(
+        &ctx.link_output.module_table,
+        ctx.chunk_graph.chunk_table[*record_idx].modules.iter().copied(),
+        &ctx.link_output.user_defined_entry_modules,
+        None,
+      )
+    {
+      head.push_str(&concat_string!("\n\t", rows));
     }
     source_joiner.append_source(head);
     for module_source in module_sources {
@@ -89,7 +105,13 @@ pub fn render_inline_records<'code>(
     let mut tail = String::new();
     let export_items = get_export_items(&ctx.chunk_graph.chunk_table[*record_idx]);
     if !export_items.is_empty() {
-      tail.push_str(&concat_string!("\t", export_name, "(", names.exports_param, ", {"));
+      tail.push_str(&concat_string!(
+        "\t",
+        export_name.as_ref(),
+        "(",
+        exports_param.as_ref(),
+        ", {"
+      ));
       for (index, (exported_name, symbol_ref)) in export_items.iter().enumerate() {
         if index > 0 {
           tail.push(',');
@@ -100,7 +122,12 @@ pub fn render_inline_records<'code>(
           *record_idx,
           &ctx.chunk.canonical_names,
         );
-        tail.push_str(&concat_string!("\n\t\t", object_key(exported_name), ": () => ", value));
+        tail.push_str(&concat_string!(
+          "\n\t\t",
+          object_key(exported_name, ascii_only),
+          ": () => ",
+          escape_non_ascii(&value, ascii_only)
+        ));
       }
       tail.push_str("\n\t});\n");
     }
@@ -118,11 +145,11 @@ pub fn render_inline_records<'code>(
       }
       bridges.push_str(&concat_string!(
         "var ",
-        bridge,
+        escape_non_ascii(bridge, ascii_only),
         " = ",
-        require_name,
+        require_name.as_ref(),
         "(",
-        escape(record_id(*record_idx)),
+        to_ecma_string_literal(record_id(*record_idx), ascii_only),
         ");"
       ));
     }

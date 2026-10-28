@@ -6,13 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 __commonJS({ "..."(exports) {
 	exports.xxx = void 0;
 } });
 __commonJS({ "..."(module, exports) {
 	module.exports = void 0;
 } });
-//#endregion
 
 ```

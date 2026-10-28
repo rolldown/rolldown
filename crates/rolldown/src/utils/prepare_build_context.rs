@@ -219,10 +219,6 @@ fn verify_inline_common_chunks_options(
   require(raw_options.preserve_modules != Some(true), "`output.preserveModules` to be off");
   let experimental = raw_options.experimental.as_ref();
   require(
-    experimental.is_none_or(|experimental| experimental.dev_mode.is_none()),
-    "`experimental.devMode` to be off",
-  );
-  require(
     experimental.is_none_or(|experimental| !experimental.is_on_demand_wrapping_enabled()),
     "`experimental.onDemandWrapping` to be off",
   );
@@ -503,6 +499,7 @@ pub fn prepare_build_context(
     dir: raw_options.dir,
     out_dir,
     file: raw_options.file,
+    charset: raw_options.charset.unwrap_or_default(),
     format,
     exports: raw_options.exports.unwrap_or(crate::OutputExports::Auto),
     hash_characters: raw_options.hash_characters.unwrap_or(crate::HashCharacters::Base64),

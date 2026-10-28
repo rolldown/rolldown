@@ -11,16 +11,16 @@ import assert from "node:assert";
 __rolldown_runtime__.registerGraph({
 	ids: ["hmr.js", "main.js"],
 	localCount: 2,
-	edges: [[], [0]]
+	edges: [[], [0]],
+	entries: [1]
 });
-//#region hmr.js
+// hmr.js
 var hmr_exports = /* @__PURE__ */ __exportAll({ value: () => "v1" });
 const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
 __rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
 globalThis.__reload_after_failed_full_build_value = "v1";
 hmr_hot.accept();
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
@@ -28,7 +28,6 @@ process.on("beforeExit", (code) => {
 	if (code !== 0) return;
 	assert.strictEqual(globalThis.__reload_after_failed_full_build_value, "v3");
 });
-//#endregion
 
 //# sourceMappingURL=main.js.map
 ```
@@ -76,16 +75,16 @@ import assert from "node:assert";
 __rolldown_runtime__.registerGraph({
 	ids: ["hmr.js", "main.js"],
 	localCount: 2,
-	edges: [[], [0]]
+	edges: [[], [0]],
+	entries: [1]
 });
-//#region hmr.js
+// hmr.js
 var hmr_exports = /* @__PURE__ */ __exportAll({ value: () => "v3" });
 const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
 __rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
 globalThis.__reload_after_failed_full_build_value = "v3";
 hmr_hot.accept();
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
@@ -93,7 +92,6 @@ process.on("beforeExit", (code) => {
 	if (code !== 0) return;
 	assert.strictEqual(globalThis.__reload_after_failed_full_build_value, "v3");
 });
-//#endregion
 
 //# sourceMappingURL=main.js.map
 ```

@@ -7,24 +7,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region lib.prod.js
+// lib.prod.js
 var lib_prod_exports = /* @__PURE__ */ __exportAll({ default: () => lib_prod_default });
 var lib_prod_default;
 var init_lib_prod = __esmMin((() => {
 	lib_prod_default = "prod";
 }));
 
-//#endregion
-//#region lib.js
+// lib.js
 var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = (init_lib_prod(), __toCommonJS(lib_prod_exports));
 }));
 
-//#endregion
-//#region main.js
+// main.js
 var import_lib = /* @__PURE__ */ __toESM(require_lib());
 
-//#endregion
 var lib = import_lib.default;
 export { lib };
 ```

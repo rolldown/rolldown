@@ -36,6 +36,7 @@ pub mod invalid_annotation;
 pub mod invalid_define_config;
 pub mod invalid_export_option;
 pub mod invalid_option;
+pub mod invalid_tla_format;
 pub mod json_parse;
 pub mod large_barrel_modules;
 pub mod missing_export;
@@ -51,6 +52,7 @@ pub mod prefer_builtin_feature;
 pub mod require_tla;
 pub mod resolve_error;
 pub mod runtime_module_symbol_not_found;
+pub mod shimmed_export;
 pub mod sourcemap_broken;
 pub mod tsconfig_error;
 pub mod unhandleable_error;
@@ -78,6 +80,10 @@ pub trait BuildEvent: Sync + Send + AsAny + AsAnyMut {
   }
 
   fn exporter(&self) -> Option<String> {
+    None
+  }
+
+  fn binding(&self) -> Option<String> {
     None
   }
 

@@ -7,10 +7,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "assert";
-//#region a.js
+// a.js
 const a$1 = "from-a-module";
-//#endregion
-//#region main.js
+// main.js
 const a = "from-main";
 function testGeneratedNameConflict(a$1$1) {
 	return {
@@ -24,7 +23,6 @@ console.log(`aFromModule: `, a$1);
 assert.strictEqual(result.param, "param-value");
 assert.strictEqual(result.topLevelA, "from-main");
 assert.strictEqual(result.importedA, "from-a-module");
-//#endregion
 export { a, testGeneratedNameConflict };
 
 ```

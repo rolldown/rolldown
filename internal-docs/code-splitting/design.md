@@ -14,7 +14,7 @@ The order decision can only be made after provisional chunk placement. Reusing `
 - User module and statement liveness are fixed before order planning starts.
 - Order lowering may add only synthetic wrapper, init, runtime, facade, symbol, and topology state.
 - Finalization and cross-chunk linking consume interop wrappers and order wrappers through an explicit shared read interface.
-- Flag-off builds leave order-wrapper state empty and create no strict-only facades.
+- Disabling `strictExecutionOrder` leaves order-wrapper state empty and disables execution-order facades.
 - The external differential fuzzer remains the semantic verifier. Rolldown does not add a test-only execution model or assertions that merely turn lowering bugs into build failures.
 
 ## Modes
@@ -136,6 +136,31 @@ is marked re-export-transparent when it has no local executable body, generated 
 assignment, unconditional execution dependency, or `keepNames` work. Each consumer then routes
 through it only to the leaf bindings that consumer retained.
 
+A barrel whose retained statements are direct re-exports can have an interop ESM wrapper that
+initializes all retained exports together, including bindings used only by a dynamic consumer. ESM-only consumer-local
+routing bypasses that shared initializer only when the entire static dependency graph can
+initialize independently of outside state. This proof is stronger than `moduleSideEffects: false`:
+an initializer such as `export const snapshot = importedValue` has no write side effect, but
+delaying it past a mutation changes its exported value. Calls annotated pure, getter reads and
+coercions can observe the same timing difference.
+
+The scanner proves a restricted set of local initializations: literal data, inert functions and
+classes, and reads of already initialized local bindings. Function bodies and instance field
+initializers are deferred; imported/global eager reads, calls, spreads, destructuring, computed
+keys, class definition-time work and possible local TDZ reads reject the proof. A reverse
+static-import worklist rejects every module depending on an unproven module, an external, a
+synchronous cycle, TLA, a missing-export shim, a concatenated wrapper or an explicit effectful
+module contract. Ordinary tree-shaking analysis remains separate: generated star-re-export glue
+can mark a module effectful even when this source-level proof succeeds.
+
+Eager consumers then initialize only the leaf bindings they use; a dynamic consumer initializes
+its own leaves when loaded. The leaves retain their existing memoized module initializers, live
+bindings and shared object identities. ESM-only route seeds require an interop `WrapKind::Esm`;
+every ESM-only outer forwarder must satisfy the same complete dependency proof. CJS carrier
+routes keep their separate record-based eligibility in the routing fixpoint. Direct `require()`
+targets, inlined dynamic imports with code splitting disabled, and unproven graphs keep their
+guarded module initialization.
+
 A direct CJS re-export used to disqualify an otherwise pure barrel because the ordinary CJS
 finalizer generated `namespace = __toESM(require_cjs())` inside the shared barrel wrapper. Strict
 lowering now represents that generated body as one `OrderCjsCarrier` per import record. The barrel
@@ -167,9 +192,9 @@ inline mode as tree shaking. Module-global leaf or namespace liveness is deliber
 because another importer can make the same canonical symbol live without retaining it for this
 consumer.
 
-The optimization is deliberately restricted to source modules whose body consists entirely of
-direct re-exports. Tree shaking must be enabled, and the module must not be in a synchronous
-`import`/`require` SCC, be the target of an opaque CommonJS `require()`, carry top-level await or a
+The CJS-carrier optimization is restricted to modules whose retained body consists entirely of
+direct re-exports. Tree shaking must be enabled, and the module must not be in a
+synchronous `import`/`require` SCC, be the target of an opaque CommonJS `require()`, carry top-level await or a
 TLA dependency, expose dynamic exports, require a missing-export shim, or be a concatenated
 wrapper. CJS `export *` is also excluded because its namespace is dynamic. These shapes keep the
 existing monolithic initialization path. Rejecting a synchronous SCC is the first-line cycle
@@ -183,12 +208,60 @@ namespace getters.
 Code-splitting placement makes the same consumer-local decision before chunks exist. A probe
 `OrderWrapState` is built from the wrap-all structural plan, and entry reachability routes an
 incoming record through the shared resolver. Once a non-entry consumer-local barrel is reached,
-its module-wide `load_dependencies` union is not traversed; only recursively eager carriers and
-consumer-local waypoint modules are unconditional. Named leaves and pure carriers get bits only
-from the incoming consumer that chose them. Preserving waypoint modules keeps every included
-routing barrel reachable without reopening its union of unrelated leaves. A barrel that is itself
-a user or dynamic entry exposes its complete namespace and therefore uses the conservative full
+its module-wide `load_dependencies` union is not traversed. The resolver selects leaves and pure
+carriers for each incoming consumer. The unconditional waypoint walk retains recursively eager
+carriers and inner routes without opaque namespace use. Symbol-derived dependencies and retained
+namespace getters keep namespace owners reachable even when forwarding statements are removed.
+Opaque namespace use can place leaf modules in a statically loaded shared chunk. A barrel that is
+itself a user or dynamic entry exposes its complete namespace and uses the conservative full
 traversal and an entry prologue containing every statically known target.
+
+A wrapped mixed ESM module keeps its own guarded initializer for local code and mandatory dependencies.
+Eligible direct re-export records route initialization from the binding consumer instead: importing
+`LOCAL` from `export * from './values.js'; export const LOCAL = 'local'` calls only the mixed
+module's initializer, while importing a forwarded binding also initializes its defining module.
+The routing decision is per record, so evaluating the local body cannot discharge a later
+consumer's demand for a forwarded binding. The existing module guards preserve one-time execution.
+If on-demand wrapping leaves the mixed module unwrapped, a consumer that imports a forwarded
+binding initializes that binding's defining module itself. A non-routed record whose definer is
+order-wrapped has its only initialization site inside the mixed module's wrapper: an unwrapped
+mixed module emits no `init_*` call for an excluded re-export, so a definer that no startup
+consumer imports would evaluate when a lazy consumer first imports it, later than under wrap-all.
+The on-demand plan therefore wraps every eager module whose wrapper would forward initialization
+to a planned module (see [Emergent-cycle plan projection](#emergent-cycle-plan-projection-on-demand)).
+`mixed_reexport_sensitive` and `mixed_reexport_grouped_definer` isolate such a definer with a
+manual chunk group so placement cannot hide the hop.
+
+A routed target must be side-effect-free and have no `ExecutionOrderSensitive` module in its static
+or binding dependency closure, apart from the inert runtime helpers. Side-effect metadata alone is
+insufficient: a pure initializer can snapshot an imported mutable value, and postponing that read changes the exported value. The
+closure includes excluded forwarding modules and conservatively includes unused static records.
+Interop wrappers, synchronous cycles, require targets, TLA, dynamic exports, missing-export shims,
+concatenated modules, and no-treeshake contracts retain their current initialization. Namespace-valued
+re-exports and mixed modules with an opaque namespace consumer also retain the monolithic path;
+namespace getters have their own static loading dependencies. A statically resolved namespace member
+read can still select an ordinary forwarded binding.
+
+Mixed modules keep their complete `load_dependencies` traversal. Their local bodies may depend on
+imports even when forwarding work is consumer-local, so the empty-barrel shortcut does not apply.
+Entry activation includes the retained forwarded targets followed by the mixed module's local
+initializer, including activation at a collapsed dynamic-entry call site.
+
+Monolithic initialization also participates in pre-chunk reachability. A binding flattened to its
+defining module can leave an initializer dependency absent from `load_dependencies`; registering
+that dependency after placement imports whichever lazy entry happens to host the target. The
+pre-chunk pass uses Register's included-record gate and the final metadata pass's excluded-statement
+collector to add the retained targets to the consuming entry's bits. Frozen re-export paths,
+overlays, namespace demand, and transparent-wrapper ownership apply before placement as well as
+during final emission. Cycle projection's broader record gate is unsuitable for these loading
+edges: retaining an unused forwarding hop can load and execute a pure initializer too early in
+on-demand mode. Link-owned liveness and interop decisions remain fixed.
+
+The pass runs against the wrap-all probe in both modes. Under on-demand wrapping that plan is a
+superset of the final one: a pure mixed module that ends up unwrapped still receives the bits of
+every consumer that would call its wrapper under wrap-all, so two lazy entries that share only its
+forwarded bindings load one common chunk that also carries its local body (`issues/11033`,
+on-demand variant). Wrap-all placement is exact.
 
 A namespace synthesized only to replace a collapsed dynamic-entry facade is not an opaque namespace
 consumer. Its getters are restricted to the export interface already retained by link-time
@@ -257,8 +330,23 @@ nested/consumption-gated hops (owned by a wrapped ancestor, tree-shaken for an e
 skipped so the projection never over-wraps a tree-shaking-equivalent graph; entry-facade edges are
 omitted because a facade holds zero modules, hence zero static indegree, and can never sit in a
 static SCC (debug-asserted in the final link pass). The remaining over-approximation (it omits the
-wrapping's own liveness suppression) only ever wraps more, which is always legal — wrap-all is the
-standing proof.
+wrapping's own liveness suppression, and it keeps the records of a re-export-transparent wrapper,
+which registration skips) only ever wraps more, which is always legal — wrap-all is the standing
+proof.
+
+The same fixpoint closes the plan over **eager forwarders of planned modules**. The final metadata
+pass gives a wrapper the `init_*` calls of its tree-shaken re-export hops and retained re-export
+paths; an eager module emits none of them, so an eager forwarder gives a planned definer no
+initialization site at its own position (see
+[Tree-shaking parity across strict modes](#tree-shaking-parity-across-strict-modes)). Each
+eager-eligible module's would-be obligations are resolved once with that pass against a wrap-all
+probe on the same chunk graph — the frozen re-export evidence assigns a hop to the first wrapped
+barrel on its path, so only a probe that wraps the forwarder itself shows what its wrapper would
+forward. Each round traverses these obligations in reverse from the planned modules, wrapping
+every forwarder reached before rebuilding the plan. Forwarding chains therefore require no
+per-hop chunk projection. Routed records contribute nothing (their definers are
+time-independent by construction), and a transparent wrapper owns no calls, so a pure barrel is
+never wrapped by this rule.
 
 ## Non-Goals
 
@@ -311,6 +399,7 @@ pub struct OrderWrapState {
   modules: FxHashMap<ModuleIdx, OrderWrappedModule>,
   reexport_init_transparent: FxHashSet<ModuleIdx>,
   consumer_local_reexport_routes: FxHashSet<ModuleIdx>,
+  consumer_local_reexport_records: FxHashMap<ModuleIdx, FxHashSet<ImportRecordIdx>>,
   consumer_local_namespace_targets: FxHashMap<ModuleIdx, Vec<WrappedEsmInitTarget>>,
   cjs_carriers: FxHashMap<OrderCjsCarrierKey, OrderCjsCarrier>,
   cjs_carriers_by_importee: FxHashMap<ModuleIdx, Vec<OrderCjsCarrierKey>>,
@@ -383,7 +472,7 @@ pub struct OrderImportOverlay {
 - entry facades are explicit chunk-graph changes made by the caller after lowering, while required runtime symbols are derived from synthetic statements and import overlays;
 - namespace requirements retain the live importer modules that require each namespace, so a dead overlay cannot keep a namespace alive;
 - nested re-export records and consumed facades preserve the frozen tree-shaking decisions used by re-export init routing;
-- the table stays empty when no wrappers or import overlays are needed.
+- consumer-local re-export records can remain in the table even when no wrappers or import overlays are needed.
 
 ### Lowering API boundary
 
@@ -416,7 +505,7 @@ The API does not expose mutable `LinkingMetadata`, `StmtInfos`, or the chunk gra
 
 ### Final ESM init metadata
 
-After wrapper selection and final chunk topology are fixed, `compute_wrapped_esm_init_metadata` derives the two facts that depend on both link and order state: whether an `init_*()` call is a no-op, and which wrapped modules must be initialized at each excluded statement. Interop and execution-order wrappers share one sealed result instead of writing the same kind of final fact back into either owner's mutable state:
+After wrapper selection, `compute_wrapped_esm_init_metadata` derives the two facts that depend on both link and order state: whether an `init_*()` call is a no-op, and which wrapped modules must be initialized at each excluded statement. Interop and execution-order wrappers share one sealed result for a chunk layout. `finalize_chunk_plan` sweeps unused runtime helpers before deriving this result and replaces it if signature-facade creation changes the layout:
 
 ```rust
 pub struct Sealed<T>(T); // private field and constructor; Deref only, never DerefMut or unwrap
@@ -504,7 +593,7 @@ Removed user import/re-export statements are finalized with any matching `OrderI
 
 ### Complete consumer-local namespaces and entry prologues
 
-Lowering precomputes the complete, source-ordered namespace target list for every consumer-local route. Included import/re-export records route through the importer-local resolver even when the route also has a link-stage interop wrapper; excluded `export *` records whose namespace is materialized use the cached complete list from final metadata. Both paths keep the calls inside the consuming monolithic wrapper's evaluating guard and at the re-export record's source position. Entry rendering and collapsed dynamic-entry call-site activation consume the same list: a consumer-local barrel entry cannot call its intentionally empty shared wrapper, so its prologue or rewritten `import()` calls every namespace target instead. For a cross-chunk rewrite, the host chunk imports and re-exports every target wrapper/carrier beside the simulated namespace; the callback invokes them in list order before returning that namespace. Other order-wrapped entries emit an explicit init call, and interop entries used internally keep an inert implementation chunk behind their public facade.
+Lowering precomputes the complete, source-ordered namespace target list for every consumer-local route. Included import/re-export records and namespace-retained excluded `export *` records use the same importer-local resolver, including routes with a link-stage interop wrapper. Each star record selects only names it contributes to the importer's non-ambiguous export surface; `default`, shadowed names, and conflicting names create no forwarded initialization demand. A mixed module's own initializer covers its local body and mandatory dependencies, so an opaque outer namespace consumer must also initialize the forwarded bindings it exposes. Calls stay inside the consuming wrapper's evaluating guard and at the re-export record's source position. Entry rendering and collapsed dynamic-entry call-site activation consume the cached complete list: a consumer-local barrel entry's prologue or rewritten `import()` calls every namespace target. For a cross-chunk rewrite, the host chunk imports and re-exports every target wrapper/carrier beside the simulated namespace; the callback invokes them in list order before returning that namespace. Other order-wrapped entries emit an explicit init call, and interop entries used internally keep an inert implementation chunk behind their public facade.
 
 ### Topology
 
@@ -515,12 +604,15 @@ Lowering precomputes the complete, source-ordered namespace target list for ever
 ```text
 link + tree shaking
   -> immutable LinkingMetadata and execution dependencies
-  -> pre-chunk consumer-local probe + importer-local entry-bit propagation
+  -> pre-chunk order probe + retained init edges + importer-local entry-bit propagation
   -> provisional ChunkGraph
   -> OrderAnalysis / OrderWrapPlan
-  -> lower plan into OrderWrapState + final ChunkGraph
-  -> compute Sealed<FinalEsmInitMetadata> using LinkingMetadata + OrderWrapState
-  -> compute cross-chunk links using EsmInitTarget + Sealed<FinalEsmInitMetadata>
+  -> lower plan into OrderWrapState
+  -> sweep unused runtime
+  -> derive sealed init metadata and cross-chunk links
+  -> preserve strict entry signatures with public facades
+  -> rederive init metadata and links if facades changed topology
+  -> seal liveness and commit cross-chunk links
   -> finalize modules using explicit interop/order wrapper cases + Sealed<FinalEsmInitMetadata>
   -> render entry prologues using the shared EsmInitTarget view
 ```
@@ -541,7 +633,7 @@ link + tree shaking
 - Wrap-all and on-demand preserve the same link-stage statement and binding liveness; only their wrapper plans may differ.
 - Emit, Register, Project, and pre-chunk placement resolve consumer-local records through the same target model.
 - Every order-wrapped entry has an explicit entry trigger.
-- Flag-off builds create no order wrappers or strict-only entry facades.
+- Execution-order wrappers and facades require `strictExecutionOrder`; signature facades obey `preserveEntrySignatures` independently.
 
 ## Verification
 

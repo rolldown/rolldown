@@ -20,6 +20,8 @@ macro_rules! abs_file_dir {
   };
 }
 
+// Default builds mark only where a module starts. `HiddenModuleMarkersPlugin` adds the
+// `//#region` pairs these patterns match.
 pub(crate) static RUNTIME_MODULE_OUTPUT_RE: LazyLock<Regex> = LazyLock::new(|| {
   Regex::new(r"(//#region \\0rolldown/runtime\.js[\s\S]*?//#endregion)")
     .expect("invalid runtime module output regex")

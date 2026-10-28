@@ -6,8 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 a ** b ** c, (a ** b) ** c, a **= b, a.b **= c, a[b] **= c, a().b **= c, a()[b] **= c, a[b()] **= c, a()[b()] **= c, a[0] **= b, a[false] **= b, a[null] **= b, a[void 0] **= b, a[123n] **= b, a[void 0] **= b, a[/x/] **= b, a[{}] **= b, a[[]] **= b, a[() => {}] **= b, a[function() {}] **= b;
-//#endregion
 
 ```

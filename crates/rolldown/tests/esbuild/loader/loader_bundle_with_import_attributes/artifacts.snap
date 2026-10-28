@@ -6,11 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region data.json
+// data.json
 var data_default = { works: true };
-//#endregion
-//#region entry.js
+// entry.js
 console.log(data_default === data_default, data_default !== data_default);
-//#endregion
 
 ```

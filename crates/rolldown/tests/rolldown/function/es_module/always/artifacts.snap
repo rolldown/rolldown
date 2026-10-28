@@ -11,10 +11,9 @@ var module = (function(exports) {
 		__esModule: { value: true },
 		[Symbol.toStringTag]: { value: "Module" }
 	});
-	//#region main.js
+	// main.js
 	const validator = "if_default_prop_false";
 	const value = true;
-	//#endregion
 	exports.validator = validator;
 	exports.value = value;
 	return exports;

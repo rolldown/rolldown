@@ -19,14 +19,13 @@ Object.defineProperties(exports, {
 	__esModule: { value: true },
 	[Symbol.toStringTag]: { value: "Module" }
 });
-//#region test.json
+// test.json
 var test = 123;
 var invalid_identifier = true;
 var test_default = {
 	test,
 	"invalid-identifier": invalid_identifier
 };
-//#endregion
 Object.defineProperty(exports, "default", {
 	enumerable: true,
 	get: function() {

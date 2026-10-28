@@ -1,4 +1,167 @@
 
+## [1.2.15] - 2026-10-21
+
+### 🚀 Features
+
+- rolldown_plugin_vite_resolve: add `isBundled` to pick the browser-external stub format (#11260) by @h-a-n-a
+- dev: mark entry modules in the HMR module graph (#11252) by @h-a-n-a
+- mark module starts with `// <id>` comments instead of `#region` pairs (#11235) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- plugin: stop `this.resolve` recursion between plugins with `skipSelf: true` (#11181) by @anzal1
+- rolldown_plugin_vite_resolve: handle external `require` for `ssr.target: 'webworker'` (#11205) by @sapphi-red
+- rolldown_plugin_vite_build_import_analysis: only wrap dynamic imports with static specifiers in __vitePreload (#10879) by @smeng9
+- strict-execution-order: wrap eager modules that forward wrapped definers (#11186) by @hyfdev
+- chunk-import-map: keep common chunk keys unique when enabling inline common chunks (#11230) by @hyfdev
+- only register signal-exit handler when a trace subscriber is active (#11208) by @DaniilIsupov
+
+### 🧪 Testing
+
+- fold hand-unrolled Rust test tables (#11212) by @Brooooooklyn
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: upgrade oxc to 0.155.0 (#11228) by @Dunqing
+- rollup-tests: retriage failed tests (#11251) by @sapphi-red
+- deps: update rollup submodule for tests to v4.64.12 (#11249) by @rolldown-guard[bot]
+- deps: update test262 submodule for tests (#11242) by @rolldown-guard[bot]
+
+### ❤️ New Contributors
+
+* @anzal1 made their first contribution in [#11181](https://github.com/rolldown/rolldown/pull/11181)
+* @smeng9 made their first contribution in [#10879](https://github.com/rolldown/rolldown/pull/10879)
+* @DaniilIsupov made their first contribution in [#11208](https://github.com/rolldown/rolldown/pull/11208)
+
+
+## [1.2.14] - 2026-10-14
+
+### 🚀 Features
+
+- add `output.charset` option (#11194) by @sapphi-red
+- code-splitting: route independent ESM re-exports per consumer (#11177) by @hyfdev
+
+### 🐛 Bug Fixes
+
+- handle `output.charset: 'ascii'` + `output.minify: false` (#11207) by @sapphi-red
+- tree-shaking: preserve initialization of wrapped ESM re-exports (#11167) by @hyfdev
+- sourcemap: preserve boundaries when tracing has no mapping (#11170) by @sapphi-red
+- strict-execution-order: account for init imports during code splitting (#11162) by @hyfdev
+- strict-execution-order: avoid eager loading through mixed re-exports (#11151) by @hyfdev
+- tree-shake expression statements that coerce known constants (#10825) by @IWANABETHATGUY
+- shim-missing-exports: shim deep namespace reads through default imports (#11184) by @IWANABETHATGUY
+- shim-missing-exports: shim missing static namespace members (#11179) by @hyfdev
+- preserve-entry-signatures: keep internal bindings out of entry exports (#11094) by @hyfdev
+- report ASSIGN_TO_IMPORT for writes to re-exported namespace members (#11148) by @IWANABETHATGUY
+- dev: keep files loaded by the HMR stage watched when the same task rebuilds (#11154) by @Brooooooklyn
+- dev: watch lazily compiled files even when a build starts first (#11152) by @Brooooooklyn
+- cjs: print a CommonJS module's top-level `this` as a wrapper parameter rolldown names (#11135) by @IWANABETHATGUY
+- renamer: keep fixed names off the bindings that would capture them (#11134) by @IWANABETHATGUY
+- renamer: keep an external `require()` local in a CJS module off the top-level names (#11133) by @IWANABETHATGUY
+- rolldown: make a repeated `close()` a no-op (#11142) by @Brooooooklyn
+- avoid renaming entry top-level bindings onto their nested bindings (#11122) by @IWANABETHATGUY
+- renamer: keep generated top-level names off inner bindings (#11121) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- renamer: treat a CJS-wrapped module's root scope as an inner scope (#11130) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- add renaming design and implementation docs (#11131) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- ci: overlap independent setup, checks, and artifacts (#11169) by @hyfdev
+
+### 🧪 Testing
+
+- dev: use dunce::canonicalize so dev engine tests pass on Windows (#11192) by @shulaoda
+- preserve-entry-signatures: cover nested dynamic imports (#11164) by @hyfdev
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: upgrade oxc to 0.154.0 (#11209) by @shulaoda
+- make Security Analysis pass again (security-action v1.0.10, serde_yaml -> saphyr) (#11197) by @Brooooooklyn
+- deps: update rollup submodule for tests to v4.64.5 (#11190) by @rolldown-guard[bot]
+- deps: update test262 submodule for tests (#11191) by @rolldown-guard[bot]
+- deps: update crate-ci/typos action to v1.51.1 (#11174) by @renovate[bot]
+- vite-tests: link the workspace rolldown into the Vite clone again (#11147) by @Brooooooklyn
+
+
+## [1.2.13] - 2026-10-07
+
+### 🚀 Features
+
+- rolldown_plugin_vite_import_glob: follow file creation and deletion via hotUpdate (#10550) by @shulaoda
+- inline-common-chunks: deduplicate shared code along known loading paths (#11093) by @hyfdev
+- rolldown_plugin_vite_import_glob: record a matcher per glob call in dev (#10592) by @shulaoda
+- rolldown_plugin_vite_import_glob: watch the directory each glob reads (#10549) by @shulaoda
+- watch: hand watch.exclude to notify as its ignore filter (#11008) by @shulaoda
+- dev: add `experimental.devMode.hotUpdate` option (#11123) by @h-a-n-a
+
+### 🐛 Bug Fixes
+
+- renamer: check the printed name of namespace-alias imports for captures (#11129) by @IWANABETHATGUY
+- devtools: honor `devtools.sessionId` by @Brooooooklyn
+- renamer: keep a renamed nested binding off its module's top-level bindings (#11128) by @IWANABETHATGUY
+- dev: keep `this` undefined when calling an imported function in HMR patches and lazy chunks (#11126) by @h-a-n-a
+- dev: read string-named imports correctly in HMR patches and lazy chunks (#11127) by @h-a-n-a
+- sanitize preserveModules chunk names after resolving the relative path (#11087) by @waltuov
+- keep the `with` clause on bare external imports (#11100) by @IWANABETHATGUY
+- generator: filter DISABLE_JS_HOOK bits from generated HookUsage (#10346) by @Brooooooklyn
+- dev: make the module factory async for top-level await (#11118) by @h-a-n-a
+- node: give each renderChunk call its own meta object (#11115) by @Brooooooklyn
+- honor `externalLiveBindings` for imported exports (#11048) by @camc314
+- dev: keep a late payload from replacing newer module code (#11030) by @h-a-n-a
+- binding: use-after-free in async `transform` with a `TsconfigCache` (#11080) by @shulaoda
+- fail on chunk syntax errors and escape export names once (#11051) by @hyfdev
+- dev: ship newly imported modules the client never received (#11029) by @h-a-n-a
+- code-splitting: avoid cycles from redundant re-export initialization (#11073) by @hyfdev
+- link: treat re-exports of the same external binding as one export (#11069) by @IWANABETHATGUY
+- escape namespace properties in IIFE and UMD output (#11085) by @hyfdev
+- escape dependency paths in CJS and UMD output (#11084) by @hyfdev
+- use computed access for arbitrary import names (#11083) by @hyfdev
+- generate valid bindings for shimmed exports (#11082) by @hyfdev
+- dev: reload the page when an HMR update fails after merging its edit (#11031) by @h-a-n-a
+- dev/lazy: ship the deps of a module that a patch shipped but never ran (#11028) by @h-a-n-a
+- code-splitting: don't move init calls in front of unwrapped JSON modules (#11062) by @IWANABETHATGUY
+- escape export names in `defineProperty` calls (#11047) by @camc314
+
+### 📚 Documentation
+
+- say the CLI bundles multiple configs one after another (#11111) by @Brooooooklyn
+- add `renderChunk` hook filter docs (#11065) by @sapphi-red
+
+### ⚡ Performance
+
+- use `concat_string!` instead of `format!` for plain string joins (#11139) by @IWANABETHATGUY
+- utils: evaluate each `concat_string!` argument once (#11105) by @IWANABETHATGUY
+- json: escape `JSON.parse` string with `json-escape-simd` (#11104) by @IWANABETHATGUY
+- unwrap JSON modules with a non-object root (#11066) by @IWANABETHATGUY
+
+### 🧪 Testing
+
+- inline-common-chunks: fix flaky inlineCommonChunks concurrent imports (#11088) by @hyfdev
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: upgrade oxc to 0.153.0 (#11109) by @camc314
+- update pnpm to v12 (#10876) by @btea
+- deps: update pnpm to v11.28.0 (#11049) by @renovate[bot]
+- deps: update rollup submodule for tests to v4.64.0 (#11116) by @rolldown-guard[bot]
+- deps: update napi (#11137) by @renovate[bot]
+- scripts: spawn the rolldown CLI without a shell in setup-vite (#10875) by @Brooooooklyn
+- deps: bump `@napi-rs/wasm-runtime` to `~1.2.5` (#11117) by @shulaoda
+- deps: update napi (#11108) by @renovate[bot]
+- deps: update taiki-e/install-action action to v2.87.22 (#11096) by @renovate[bot]
+- deps: update npm packages (#11095) by @renovate[bot]
+- deps: update rust crates (#11097) by @renovate[bot]
+- deps: update napi (#11063) by @renovate[bot]
+- deps: update dependency rust to v1.99.0 (#11071) by @renovate[bot]
+- deps: update dependency vite-plus to v1 (#11056) by @renovate[bot]
+
+
 ## [1.2.12] - 2026-09-30
 
 ### 🚀 Features

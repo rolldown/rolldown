@@ -7,15 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import nodeAssert from "node:assert";
-//#region dep.js
+// dep.js
 function foo() {
 	globalThis.value = 1;
 }
 var dep_default = /*#__PURE__*/ foo();
-//#endregion
-//#region main.js
+// main.js
 nodeAssert.strictEqual(globalThis.value, 1);
-//#endregion
 export { dep_default as dep };
 
 ```
@@ -29,7 +27,7 @@ export { dep_default as dep };
 ```js
 import nodeAssert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
-//#region dep.js
+// dep.js
 function foo() {
 	globalThis.value = 1;
 }
@@ -39,15 +37,13 @@ function init_dep() {
 		dep_default = /*#__PURE__*/ foo();
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_dep();
 		nodeAssert.strictEqual(globalThis.value, 1);
 	})))();
 }
-//#endregion
 init_main();
 export { dep_default as dep };
 

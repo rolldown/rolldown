@@ -10,13 +10,12 @@ await 0;
 ```
 ### rolldown
 ```js
-//#region entry.js
+// entry.js
 import("./a.js");
 import("./b.js");
 import("./c.js");
 import("./entry.js");
 await 0;
-//#endregion
 
 ```
 ### diff

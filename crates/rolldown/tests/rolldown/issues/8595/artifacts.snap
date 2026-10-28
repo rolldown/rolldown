@@ -22,9 +22,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## acorn.js
 
 ```js
-//#region plugins/acorn.mjs
+// plugins/acorn.mjs
 var acorn_default = {};
-//#endregion
 export { acorn_default as default };
 
 ```
@@ -39,9 +38,8 @@ import "./tt.js";
 ## flow.js
 
 ```js
-//#region plugins/flow.mjs
+// plugins/flow.mjs
 var flow_default = {};
-//#endregion
 export { flow_default as default };
 
 ```
@@ -49,9 +47,8 @@ export { flow_default as default };
 ## glimmer.js
 
 ```js
-//#region plugins/glimmer.mjs
+// plugins/glimmer.mjs
 var glimmer_default = {};
-//#endregion
 export { glimmer_default as default };
 
 ```
@@ -59,9 +56,8 @@ export { glimmer_default as default };
 ## html.js
 
 ```js
-//#region plugins/html.mjs
+// plugins/html.mjs
 var html_default = {};
-//#endregion
 export { html_default as default };
 
 ```
@@ -69,11 +65,10 @@ export { html_default as default };
 ## index1.js
 
 ```js
-//#region index1.js
+// index1.js
 function a() {
 	import("./tt.js");
 }
-//#endregion
 export { a };
 
 ```
@@ -81,17 +76,15 @@ export { a };
 ## index2.js
 
 ```js
-import { a } from "./index1.js";
-export { a };
+export { a } from "./index1.js";
 
 ```
 
 ## meriyah.js
 
 ```js
-//#region plugins/meriyah.mjs
+// plugins/meriyah.mjs
 var meriyah_default = {};
-//#endregion
 export { meriyah_default as default };
 
 ```
@@ -107,7 +100,7 @@ import "./tt.js";
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region plugins/babel.mjs
+// plugins/babel.mjs
 var babel_exports = /* @__PURE__ */ __exportAll({
 	default: () => Ks,
 	parsers: () => ra
@@ -115,13 +108,11 @@ var babel_exports = /* @__PURE__ */ __exportAll({
 var Ks = {};
 var ra = {};
 Ks.parsers = ra;
-//#endregion
-//#region plugins/postcss.mjs
+// plugins/postcss.mjs
 var postcss_exports = /* @__PURE__ */ __exportAll({ default: () => _l });
 var _l = {};
 _l.parsers = {};
-//#endregion
-//#region tt.mjs
+// tt.mjs
 import("./babel.js");
 import("./flow.js");
 import("./glimmer.js");
@@ -139,7 +130,6 @@ import("@prettier/plugin-hermes");
 import("prettier-plugin-astro");
 import("prettier-plugin-marko");
 const options = [postcss_exports, babel_exports];
-//#endregion
 export { a, Ks as n, options, ra as r, _l as t };
 
 ```

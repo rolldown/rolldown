@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-//#region token.js
+// token.js
 var character = 0;
 function next() {
 	character++;
@@ -15,15 +15,13 @@ function next() {
 }
 let mutable_let = "mutable_let";
 mutable_let = "mutable_let1";
-//#endregion
-//#region main.js
+// main.js
 console.log(character);
 assert.strictEqual(character, 0);
 next();
 assert.strictEqual(character, 1);
 assert.strictEqual("immutable_let", "immutable_let");
 assert.strictEqual(mutable_let, "mutable_let1");
-//#endregion
 
 ```
 
@@ -35,7 +33,7 @@ assert.strictEqual(mutable_let, "mutable_let1");
 
 ```js
 import assert from "node:assert";
-//#region token.js
+// token.js
 var character = 0;
 function next() {
 	character++;
@@ -43,14 +41,12 @@ function next() {
 }
 let mutable_let = "mutable_let";
 mutable_let = "mutable_let1";
-//#endregion
-//#region main.js
+// main.js
 console.log(character);
 assert.strictEqual(character, 0);
 next();
 assert.strictEqual(character, 1);
 assert.strictEqual("immutable_let", "immutable_let");
 assert.strictEqual(mutable_let, "mutable_let1");
-//#endregion
 
 ```

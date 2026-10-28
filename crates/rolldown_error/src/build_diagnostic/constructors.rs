@@ -29,6 +29,7 @@ use super::events::import_is_undefined::ImportIsUndefined;
 use super::events::invalid_annotation::InvalidAnnotation;
 use super::events::invalid_define_config::InvalidDefineConfig;
 use super::events::invalid_option::{InvalidOption, InvalidOptionType};
+use super::events::invalid_tla_format::InvalidTlaFormat;
 use super::events::json_parse::JsonParse;
 use super::events::missing_global_name::MissingGlobalName;
 use super::events::missing_name_option_for_iife_export::MissingNameOptionForIifeExport;
@@ -37,6 +38,7 @@ use super::events::plugin_timings::PluginTimings;
 use super::events::prefer_builtin_feature::PreferBuiltinFeature;
 use super::events::require_tla::RequireTla;
 use super::events::resolve_error::DiagnosableResolveError;
+use super::events::shimmed_export::ShimmedExport;
 use super::events::sourcemap_broken::SourcemapBroken;
 
 use super::events::tsconfig_error::TsConfigError;
@@ -268,6 +270,10 @@ impl BuildDiagnostic {
     Self::new_inner(ImportIsUndefined { filename, source, span, name, stable_importer })
   }
 
+  pub fn shimmed_export(exporter: String, binding: String) -> Self {
+    Self::new_inner(ShimmedExport { exporter, binding }).with_severity_warning()
+  }
+
   pub fn unsupported_feature(
     filename: ArcStr,
     source: ArcStr,
@@ -275,6 +281,10 @@ impl BuildDiagnostic {
     error_message: String,
   ) -> Self {
     Self::new_inner(UnsupportedFeature { source, filename, span, error_message })
+  }
+
+  pub fn invalid_tla_format(filename: ArcStr, source: ArcStr, span: Span, format: ArcStr) -> Self {
+    Self::new_inner(InvalidTlaFormat { filename, source, span, format })
   }
 
   pub fn empty_import_meta(

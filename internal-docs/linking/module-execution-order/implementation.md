@@ -44,6 +44,8 @@ The `compute_chunks_without_eager_wrapper_call` pass (`generate_stage/eager_wrap
 
 The other members run at the first `require_x()` or `init_x()` call that reaches them. So a cycle with two or more ways in runs in the body of its importer, after the modules that the importer imports.
 
+When an ESM member has no eager wrapper call, its namespace-alias exports must also wait for initialization. The chunk renderer declares each export binding without an initializer. The finalizer assigns the binding at the end of the ESM wrapper, after the namespace initializes. Otherwise, a re-export such as `export { value } from './b.cjs'` reads `import_b.value` while `import_b` is undefined.
+
 ## Algorithm
 
 The pass is an **iterative post-order DFS** with an explicit `execution_stack: Vec<Status>`. Using an explicit stack (rather than recursion) avoids stack overflow on deep module graphs, which are common in real-world codebases.

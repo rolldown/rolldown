@@ -233,6 +233,11 @@ pub fn render_chunk_exports(
       if export_items.is_empty() && !matches!(ctx.options.platform, Platform::Node) {
         return None;
       }
+      let defer_namespace_aliases = ctx
+        .chunk_graph
+        .chunks_without_eager_wrapper_call
+        .contains(&ctx.chunk_idx)
+        && chunk.entry_module_idx().is_some_and(|entry_id| ctx.esm_init_target(entry_id).is_some());
       let mut s = String::new();
       let rendered_items = export_items
         .into_iter()
@@ -255,18 +260,20 @@ pub fn render_chunk_exports(
             .canonical_name_for_or_original(canonical_ref, &chunk.canonical_names);
           let rendered_canonical_name = escape_non_ascii(canonical_name, ascii_only);
           if let Some(ns_alias) = &symbol.namespace_alias {
-            let canonical_ns_name = link_output
-              .symbol_db
-              .canonical_name_for_or_original(ns_alias.namespace_ref, &chunk.canonical_names);
-            let property_name = &ns_alias.property_name;
             s.push_str("var ");
             s.push_str(&rendered_canonical_name);
-            s.push_str(" = ");
-            s.push_str(&property_access_str_with_ascii(
-              &escape_non_ascii(canonical_ns_name, ascii_only),
-              property_name,
-              ascii_only,
-            ));
+            if !defer_namespace_aliases {
+              let canonical_ns_name = link_output
+                .symbol_db
+                .canonical_name_for_or_original(ns_alias.namespace_ref, &chunk.canonical_names);
+              s.push_str(" = ");
+              s.push_str(&property_access_str_with_ascii(
+                &escape_non_ascii(canonical_ns_name, ascii_only),
+                &ns_alias.property_name,
+                ascii_only,
+              ));
+            }
+            // The finalizer assigns deferred exports inside their ESM wrapper.
             s.push_str(";\n");
           }
 

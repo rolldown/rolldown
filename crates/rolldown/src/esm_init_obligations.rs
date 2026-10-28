@@ -329,6 +329,22 @@ pub fn collect_wrapped_esm_init_targets_for_import_record(
   )
 }
 
+pub fn module_has_required_reexport_importer(
+  modules: &IndexModules,
+  order_wrap_state: &OrderWrapState,
+  module_idx: ModuleIdx,
+) -> bool {
+  modules[module_idx].as_normal().is_some_and(|module| {
+    let is_reexporting = module.star_export_records().next().is_some()
+      || module
+        .named_exports
+        .values()
+        .any(|export| module.named_imports.contains_key(&export.referenced));
+    is_reexporting
+      && module.importers_idx.iter().any(|idx| order_wrap_state.is_required_module(*idx))
+  })
+}
+
 /// Resolve the complete namespace initialization targets. Re-export-only barrels use their leaf
 /// and CJS-carrier targets; mixed modules append their local initializer after the forwarded
 /// targets. Lowering caches the result for entry activation and namespace consumers.
@@ -420,6 +436,14 @@ fn collect_esm_init_targets_for_record(
     return targets;
   }
 
+  let importee_owns_initialization = forwarding_module_owns_initialization(importee_idx);
+  // A barrel wrapper reached through a required intermediary cannot initialize leaves that code
+  // splitting placed in this importer. Follow bindings only for that cross-chunk require path.
+  let importee_has_required_importer = ctx.strict_execution_order
+    && !importee_owns_initialization
+    && module_has_required_reexport_importer(ctx.modules, ctx.order_wrap_state, importee_idx);
+  let trace_cross_chunk_required_reexports = importee_has_required_importer;
+
   let own_wrapper_is_reachable = wrapped_esm_target_is_reachable(
     importee_idx,
     importee_meta,
@@ -430,7 +454,9 @@ fn collect_esm_init_targets_for_record(
   if own_wrapper_is_reachable {
     if !route_through_transparent_wrapper && !routes_reexport_records {
       targets.push(WrappedEsmInitTarget::Module(importee_idx));
-      return targets;
+      if !trace_cross_chunk_required_reexports {
+        return targets;
+      }
     }
   }
 
@@ -534,6 +560,14 @@ fn collect_esm_init_targets_for_record(
       visited_forwarders,
     );
     targets.retain(|target| !discharged.contains(target));
+  }
+
+  if trace_cross_chunk_required_reexports {
+    targets.retain(|target| {
+      target.owner() == importee_idx
+        || matches!(target, WrappedEsmInitTarget::Module(module_idx)
+          if forwarding_module_owns_initialization(*module_idx))
+    });
   }
 
   if route_through_transparent_wrapper || routes_reexport_records {

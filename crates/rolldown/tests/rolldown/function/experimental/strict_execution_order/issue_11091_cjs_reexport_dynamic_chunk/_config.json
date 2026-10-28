@@ -1,0 +1,16 @@
+{
+  "_comment": "Regression for #11091: a require-loaded re-export barrel must not suppress initialization of a leaf only loaded by a dynamic entry.",
+  "configName": "strict-execution-order",
+  "snapshot": false,
+  "config": {
+    "input": [{ "name": "entry", "import": "./entry.js" }],
+    "format": "esm",
+    "strictExecutionOrder": true
+  },
+  "configVariants": [
+    {
+      "_configName": "flag-off",
+      "strictExecutionOrder": false
+    }
+  ]
+}

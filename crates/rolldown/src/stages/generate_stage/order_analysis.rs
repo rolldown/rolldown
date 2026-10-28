@@ -107,7 +107,9 @@ impl GenerateStage<'_> {
     used_symbol_refs_builder: &UsedSymbolRefsBuilder,
   ) -> super::order_wrap_state::OrderWrapState {
     if !self.options.is_strict_execution_order_enabled() {
-      return super::order_wrap_state::OrderWrapState::default();
+      let mut state = super::order_wrap_state::OrderWrapState::default();
+      state.set_required_modules(&self.link_output.module_table.modules);
+      return state;
     }
     let plan = self.wrap_all_order_analysis().plan;
     let reverse_static_imports =
@@ -672,6 +674,7 @@ impl GenerateStage<'_> {
     reverse_static_imports: &IndexVec<ModuleIdx, Vec<ModuleIdx>>,
   ) -> super::order_wrap_state::OrderWrapState {
     let mut probe_state = super::order_wrap_state::OrderWrapState::default();
+    probe_state.set_required_modules(&self.link_output.module_table.modules);
     for module_idx in plan.modules() {
       if !self.is_order_wrap_eligible(module_idx) {
         // Only `WrapKind::None` ESM/None modules become order wrappers (mirrors `lower_order_state`);

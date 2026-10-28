@@ -29,7 +29,7 @@ pub enum LogCommand {
   /// flushed to the OS, so callers can establish a happens-before relationship
   /// between "build finished" and "log file is readable".
   CloseSession { session_id: String, ack: Option<Sender<()>> },
-  /// Mark a session as metrics-mode: subsequent `Write`s are folded into an in-memory
+  /// Mark a session as report-mode: subsequent `Write`s are folded into an in-memory
   /// aggregator (no JSON-lines log for this session) and a metrics report is rendered on
   /// `CloseSession`.
   OpenMetricsSession { session_id: String, config: MetricsConfig },
@@ -68,7 +68,7 @@ pub fn flush_session(session_id: String) -> std::sync::mpsc::Receiver<()> {
   rx
 }
 
-/// Register a metrics-mode session before its build emits events. Must be sent before any
+/// Register a report-mode session before its build emits events. Must be sent before any
 /// `Write` for this session so the writer aggregates (rather than writes files) those events.
 pub fn open_metrics_session(session_id: String, config: MetricsConfig) {
   send(LogCommand::OpenMetricsSession { session_id, config });

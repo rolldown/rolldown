@@ -788,7 +788,8 @@ export interface InputOptions {
    *
    * In `'report'` mode, Rolldown aggregates the same internal event stream in-memory and
    * writes a small, agent-readable report instead of the multi-GB `logs.json`: a canonical
-   * `metrics.json` (schema-versioned, with a build-over-build `delta`), progressive markdown
+   * `metrics.json` (schema-versioned, with a build-over-build `delta`), `module-graph.json`
+   * (the full module graph with retained sizes), progressive markdown
    * views (`entry.md` + on-demand detail files), one `history.jsonl` line per build, and an
    * `AGENTS.md` describing the directory contract.
    *

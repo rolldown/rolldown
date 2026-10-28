@@ -1,7 +1,7 @@
 //! In-memory aggregation of Rolldown's devtools event stream into a small, agent-readable
 //! metrics report.
 //!
-//! This is the metrics sink for build data: instead of (or alongside) the multi-GB JSON-lines
+//! This is the metrics sink for build data: instead of the multi-GB JSON-lines
 //! devtools log, the writer thread folds the exact same `trace_action!` events (module graph,
 //! chunk graph, package graph, assets, per-hook calls) into bounded top-N aggregates, then
 //! renders at session close:

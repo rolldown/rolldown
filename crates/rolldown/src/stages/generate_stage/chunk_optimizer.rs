@@ -1286,6 +1286,16 @@ impl GenerateStage<'_> {
     if target_chunk_idx == runtime_chunk_idx {
       return;
     }
+    // Declaration plugins discard generated runtime statements in `renderChunk`, so these
+    // chunks cannot host executable helpers. Check every merge path, including a sole consumer.
+    // See internal-docs/code-splitting/implementation.md
+    if chunk_graph.chunk_table[target_chunk_idx].modules.iter().any(|&module_idx| {
+      module_table[module_idx].as_normal().is_some_and(|module| {
+        [".d.ts", ".d.mts", ".d.cts"].iter().any(|suffix| module.id.as_str().ends_with(suffix))
+      })
+    }) {
+      return;
+    }
     let runtime_chunk_helpers =
       std::mem::take(&mut chunk_graph.chunk_table[runtime_chunk_idx].depended_runtime_helper);
     chunk_graph.chunk_table[runtime_chunk_idx].modules.clear();

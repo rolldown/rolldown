@@ -338,6 +338,8 @@ Every consumer imports the dominator for helpers, so the dominator search has tw
 
 The cycle check follows every static import record, also `require()` records and the records that tree shaking removes. A cycle check must not miss an edge that the output has, and an extra edge only keeps the runtime standalone.
 
+Before moving the runtime, every candidate path rejects a host containing a module whose ID ends in `.d.ts`, `.d.mts`, or `.d.cts`, including the sole-consumer path. Declaration plugins such as `rolldown-plugin-dts` reconstruct types from fake JavaScript in `renderChunk` and discard unrecognized generated statements. Hosting runtime there would delete the helper definitions and could make ordinary JavaScript chunks import a declaration file. If the selected host contains a declaration module, the runtime stays standalone; this matches the declaration exclusion for inline common chunks. `packages/rolldown/tests/behaviors/runtime-declaration-host.test.ts` covers all three suffixes with sole and multiple runtime consumers.
+
 - **Safe target found** → runtime moves into that chunk, and the empty standalone runtime chunk is marked removed.
 - **No safe target** → keep the standalone runtime chunk. Runtime imports that resolve only to externals are ignored for chunk-cycle checks; live internal runtime imports keep the runtime standalone instead.
 

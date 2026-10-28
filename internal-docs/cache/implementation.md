@@ -114,6 +114,7 @@ pub struct ScanStageCache {
   pub user_defined_entry: FxHashSet<ModuleId>,
   pub module_idx_by_abs_path: FxHashMap<ArcStr, ModuleIdx>,
   pub module_idx_by_stable_id: FxHashMap<StableModuleId, ModuleIdx>,
+  pub unfinished_lazy_merge: bool,
 }
 ```
 
@@ -128,9 +129,10 @@ pub struct ScanStageCache {
 | `user_defined_entry`             | The set of configured root entry `ModuleId`s.                                                                                                                                         |
 | `module_idx_by_abs_path`         | Absolute-path → `ModuleIdx`, used by the watcher. Paths are slash-normalized.                                                                                                         |
 | `module_idx_by_stable_id`        | `StableModuleId` → `ModuleIdx`, used by HMR.                                                                                                                                          |
+| `unfinished_lazy_merge`          | A lazy compile merged its route and then failed, so the next lazy compile scans again; see [lazy-compilation/design.md](../lazy-compilation/design.md#6-repeat-visits).               |
 
 `module_idx_by_abs_path` and `module_idx_by_stable_id` are **derived** —
-`build_module_index_maps` (`scan_stage_cache.rs:297`) clears and rebuilds both
+`ScanStageCache::build_module_index_maps` clears and rebuilds both
 from the snapshot whenever `set_snapshot` runs.
 
 Snapshot accessors (`scan_stage_cache.rs`):
@@ -140,7 +142,7 @@ Snapshot accessors (`scan_stage_cache.rs`):
 - `get_snapshot_mut` (`:51`) — `&mut`; **panics if `None`**.
 - `take_snapshot` (`:56`) — moves the snapshot out, leaving `None`.
 - `update_defer_sync_data` (`:60`) — takes the snapshot, runs `defer_sync_scan_data`, restores it on every outcome, then propagates any error.
-- `merge` (`:80`) — splices a scan output into the snapshot (see below).
+- `merge` — splices a scan output into the snapshot (see below).
 - `create_output` (`:313`) — produces a `NormalizedScanStageOutput` for the build to consume.
 
 ### `BundleMode`
@@ -296,13 +298,14 @@ Consequence: every module present in a scan output was registered in
 
 ## `ScanStageCache::merge` — the write path
 
-`scan_stage_cache.rs:80`. Signature: `merge(&mut self, scan_stage_output: ScanStageOutput, plugin_driver: &PluginDriver) -> BuildResult<()>`.
+`ScanStageCache::merge` in `scan_stage_cache.rs`. Signature: `merge(&mut self, scan_stage_output: ScanStageOutput, plugin_driver: &PluginDriver) -> BuildResult<()>`.
 
 ### Callers
 
-- `bundle.rs:256` — in `normalize_scan_stage_output_and_update_cache`, the
-  non-full-scan branch.
-- `hmr_stage.rs:299`, `:410` — the HMR update and lazy-compile paths.
+- `Bundle::normalize_scan_stage_output_and_update_cache` — the non-full-scan
+  branch.
+- `HmrStage::compute_hmr_update_for_file_changes` and
+  `HmrStage::compile_lazy_entry` — the HMR update and lazy-compile paths.
 
 The full-scan build path does not call `merge`; it uses `set_snapshot` instead
 (`bundle.rs:250`). All current callers pass a partial-scan output, whose
@@ -311,14 +314,14 @@ arm is `unreachable!()`.
 
 ### Algorithm
 
-1. **First-build escape hatch** (`:91`–`:96`) — if `snapshot` is `None`,
+1. **First-build escape hatch** — if `snapshot` is `None`,
    convert the whole output via `try_into` and return.
-2. **Extract `modules`** (`:97`–`:106`) — the `module_table` is matched: the
+2. **Extract `modules`** — the `module_table` is matched: the
    `IndexVec` arm is `unreachable!()`; the `Map` arm is collected into a `Vec`
    and **sorted by idx**. The sort places existing modules (idx < cache length)
    before new ones (idx ≥ cache length), and orders new modules ascending so
    that `push` lands each at its allocated slot.
-3. **Per-module loop** (`:108`–`:172`):
+3. **Per-module loop**:
    - `new_idx` is the `Map` key (indexes the scan output); `idx` is
      `module_id_to_idx[new_module.id()].idx()` (indexes the cache). By
      invariant 6 they are equal.
@@ -331,7 +334,7 @@ arm is `unreachable!()`.
      count by the old↔new delta; replace or remove the TLA span.
    - All payload is moved (`mem::take` / `take` / `mem::replace` / `mem::swap`)
      out of the scan output — never cloned.
-4. **Re-derive importer sets of affected cached modules** (`:171`–`:182`) —
+4. **Re-derive importer sets of affected cached modules** —
    drain `modules_with_changed_importers` (filled by
    `ModuleLoader::mark_module_importers_changed` next to every mutation of the
    `importers` edge list) and rebuild each listed module's materialized
@@ -371,10 +374,10 @@ as the `module_id_to_idx` lookup and is infallible.
 | -------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `ScanStage::scan(scan_mode, &mut self.cache)`            | called at `bundle.rs:104`                                                               | Non-snapshot fields via the loader.                                                                                                                                                                                                                    |
 | `ModuleLoader` (`cache: &'a mut ScanStageCache`)         | `module_loader.rs:117` and methods                                                      | `module_id_to_idx`, `barrel_state` (e.g. removes `barrel_infos` on invalidate), `importers`, `modules_with_changed_importers`, `user_defined_entry` (full incremental scan).                                                                           |
-| `ScanStageCache::merge`                                  | `scan_stage_cache.rs:80`; called at `bundle.rs:256`, `hmr_stage.rs:299/410`             | `snapshot`, `module_idx_by_abs_path`, `module_idx_by_stable_id`, `barrel_state.resolved_barrel_modules` (drained), `modules_with_changed_importers` (drained), `tla_*` fields in the snapshot; refreshes plugin `module_infos` for re-derived modules. |
+| `ScanStageCache::merge`                                  | called in `Bundle::normalize_scan_stage_output_and_update_cache` and `HmrStage`         | `snapshot`, `module_idx_by_abs_path`, `module_idx_by_stable_id`, `barrel_state.resolved_barrel_modules` (drained), `modules_with_changed_importers` (drained), `tla_*` fields in the snapshot; refreshes plugin `module_infos` for re-derived modules. |
 | `ModuleLoader::revert_partial_scan`                      | `module_loader.rs` scan error exit                                                      | Restores `module_id_to_idx` / `importers` / `barrel_state` / importer marks to their pre-scan state and fills `pending_rescans`.                                                                                                                       |
 | `ScanStageCache::set_snapshot`                           | `scan_stage_cache.rs:44`; called at `bundle.rs:250` and inside `update_defer_sync_data` | `snapshot` + rebuilds `module_idx_by_abs_path` / `module_idx_by_stable_id`.                                                                                                                                                                            |
-| `ScanStageCache::update_defer_sync_data`                 | `scan_stage_cache.rs:60`; called at `bundle.rs:257`, `hmr_stage.rs:302/414`             | Takes and restores `snapshot`; `defer_sync_scan_data` mutates per-module `side_effects` inside it.                                                                                                                                                     |
+| `ScanStageCache::update_defer_sync_data`                 | called next to each `merge`                                                             | Takes and restores `snapshot`; `defer_sync_scan_data` mutates per-module `side_effects` inside it.                                                                                                                                                     |
 | `ScanStageCache::create_output`                          | `scan_stage_cache.rs:313`; called at `bundle.rs:258`                                    | Mutates `snapshot.symbol_ref_db` (clones it without scoping, swaps); returns a `NormalizedScanStageOutput`.                                                                                                                                            |
 | `merge_immutable_fields_for_cache`                       | `bundle.rs:315`, called at `bundle.rs:279`                                              | `get_snapshot_mut()`; reinstates symbol-table scoping after the link stage.                                                                                                                                                                            |
 | `with_cached_bundle` / `with_cached_bundle_experimental` | `impl_bundler_incremental_build.rs:9` / `:27`                                           | Moves the whole `ScanStageCache` between `Bundler` and `Bundle`.                                                                                                                                                                                       |
@@ -386,7 +389,7 @@ as the `module_id_to_idx` lookup and is infallible.
 | `HmrStage`             | `hmr_stage.rs:48`, `:52`              | `get_snapshot().module_table`, `get_snapshot().index_ecma_ast`; also uses the module index maps. HMR is also a writer (it calls `merge` / `update_defer_sync_data`). |
 | `ModuleLoader`         | `module_loader.rs:410`, `:983`        | `get_snapshot()` (e.g. `module_table.modules.get(..)`). Also reads `module_id_to_idx` (`:229`, `:869`), `barrel_state`, `user_defined_entry`.                        |
 | `defer_sync_scan_data` | `module_loader/deferred_scan_data.rs` | Reads `module_id_to_idx` (passed as `&FxHashMap<ModuleId, VisitState>`); mutates the snapshot's per-module side effects.                                             |
-| `merge`                | `scan_stage_cache.rs:80`              | Reads `module_id_to_idx`, `user_defined_entry`, and `importers` (re-derives importer sets).                                                                          |
+| `merge`                | `ScanStageCache::merge`               | Reads `module_id_to_idx`, `user_defined_entry`, and `importers` (re-derives importer sets).                                                                          |
 
 ---
 

@@ -13,6 +13,7 @@ readme = "../../README.md"
 doctest = false
 
 [dependencies]
+rolldown_std_utils = { workspace = true }
 rustc-hash = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }

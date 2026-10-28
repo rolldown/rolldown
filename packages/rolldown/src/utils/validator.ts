@@ -738,18 +738,6 @@ const InputOptionsSchema = v.strictObject({
             "'full' (default): write JSON-lines devtools logs. 'report': aggregate the same event stream in-memory and emit an agent-readable report (metrics.json + markdown views) instead.",
           ),
         ),
-        reportDir: v.pipe(
-          v.optional(v.string()),
-          v.description('Report mode: output directory (default node_modules/.rolldown/report).'),
-        ),
-        reportTopN: v.pipe(
-          v.optional(v.number()),
-          v.description('Report mode: upper bound for every top-N list (default 20).'),
-        ),
-        reportDelta: v.pipe(
-          v.optional(v.boolean()),
-          v.description('Report mode: emit a build-over-build delta (default true).'),
-        ),
       }),
     ),
     v.description(

@@ -2824,6 +2824,7 @@ name = "rolldown_devtools_metrics"
 version = "1.2.15"
 dependencies = [
  "insta",
+ "rolldown_std_utils",
  "rustc-hash",
  "serde",
  "serde_json",

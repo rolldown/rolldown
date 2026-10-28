@@ -25,15 +25,22 @@ mod report;
 #[cfg(test)]
 mod tests;
 
-use std::time::Instant;
+use std::{
+  path::{Path, PathBuf},
+  time::Instant,
+};
 
+use rolldown_std_utils::{absolutize_path_buf, normalize_path_buf, relative_path_to_slash};
 use rustc_hash::FxHashMap;
 use serde::Deserialize;
+
+/// Root of every report folder, relative to cwd.
+pub const REPORT_ROOT: &str = "node_modules/.rolldown/report";
 
 /// Configuration for a metrics session, supplied when the session is opened.
 #[derive(Debug, Clone)]
 pub struct MetricsConfig {
-  /// Output directory for the report, relative to cwd (or absolute).
+  /// Output directory for the report, relative to cwd (or absolute). See [`report_dir_for`].
   pub dir: String,
   /// Upper bound for every "top-N" list so output stays small regardless of app size.
   pub top_n: usize,
@@ -43,21 +50,45 @@ pub struct MetricsConfig {
 
 impl Default for MetricsConfig {
   fn default() -> Self {
-    Self { dir: "node_modules/.rolldown/report".to_string(), top_n: 20, delta: true }
+    Self { dir: REPORT_ROOT.to_string(), top_n: 20, delta: true }
   }
 }
 
 impl MetricsConfig {
-  /// Build a config, falling back to defaults for any unset option.
+  /// A config that writes the report to `dir`, with the default top-N bound and delta.
   #[must_use]
-  pub fn new(dir: Option<String>, top_n: Option<usize>, delta: Option<bool>) -> Self {
-    let defaults = Self::default();
-    Self {
-      dir: dir.unwrap_or(defaults.dir),
-      top_n: top_n.unwrap_or(defaults.top_n),
-      delta: delta.unwrap_or(defaults.delta),
+  pub fn new(dir: String) -> Self {
+    Self { dir, ..Self::default() }
+  }
+}
+
+/// The report folder of one build output, relative to `cwd`:
+/// `node_modules/.rolldown/report/<output dir>`.
+///
+/// `<output dir>` is the output folder relative to `cwd`. So the client and the SSR build of one
+/// Vite run write separate reports, and the next build of the same output finds the previous
+/// report for the delta. An output folder outside `cwd` keeps its relative path, with each `..`
+/// written as `__` and no `:` in a drive prefix, so the report never leaves [`REPORT_ROOT`].
+#[must_use]
+pub fn report_dir_for(cwd: &Path, dir: Option<&str>, file: Option<&str>) -> String {
+  // The same output-folder rule as `out_dir` in crates/rolldown/src/utils/prepare_build_context.rs:
+  // the folder of `file`, else `dir`, else `dist`.
+  let out_dir = match file {
+    Some(file) => Path::new(file).parent().map(Path::to_path_buf).unwrap_or_default(),
+    None => PathBuf::from(dir.unwrap_or("dist")),
+  };
+  let cwd = absolutize_path_buf(cwd.to_path_buf());
+  let relative = relative_path_to_slash(normalize_path_buf(cwd.join(out_dir)), &cwd);
+  let mut report = String::from(REPORT_ROOT);
+  for segment in relative.split('/').filter(|segment| !segment.is_empty() && *segment != ".") {
+    report.push('/');
+    if segment == ".." {
+      report.push_str("__");
+    } else {
+      report.extend(segment.chars().filter(|c| *c != ':'));
     }
   }
+  report
 }
 
 #[derive(Default)]

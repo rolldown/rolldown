@@ -793,9 +793,6 @@ pub fn normalize_binding_options(
     devtools: input_options.devtools.map(|inner| rolldown::DevtoolsOptions {
       session_id: inner.session_id,
       mode: inner.mode,
-      report_dir: inner.report_dir,
-      report_top_n: inner.report_top_n,
-      report_delta: inner.report_delta,
     }),
     invalidate_js_side_cache,
     log_level: Some(input_options.log_level.into()),

@@ -38,7 +38,7 @@ mod utils;
 mod writer;
 
 pub use rolldown_devtools_action as action;
-pub use rolldown_devtools_metrics::MetricsConfig;
+pub use rolldown_devtools_metrics::{MetricsConfig, report_dir_for};
 
 pub use {
   init_tracing::{DebugTracer, Session},

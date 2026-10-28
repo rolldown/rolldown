@@ -2092,15 +2092,9 @@ export interface BindingDevtoolsOptions {
   /**
    * `"full"` (default): write JSON-lines devtools logs. `"report"`: aggregate the same
    * event stream in-memory and emit an agent-readable report (`metrics.json` + markdown)
-   * instead.
+   * under `node_modules/.rolldown/report/<output dir>` instead.
    */
   mode?: 'full' | 'report'
-  /** Report mode: output directory, relative to cwd (default: "node_modules/.rolldown/report"). */
-  reportDir?: string
-  /** Report mode: upper bound for every "top-N" list (default: 20). */
-  reportTopN?: number
-  /** Report mode: whether to emit a build-over-build delta (default: true). */
-  reportDelta?: boolean
 }
 
 export interface BindingDevWatchOptions {

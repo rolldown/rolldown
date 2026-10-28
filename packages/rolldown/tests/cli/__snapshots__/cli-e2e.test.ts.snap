@@ -60,9 +60,6 @@ OPTIONS
   --context <context>         The entity top-level \`this\` represents.
   --cwd <cwd>                 Current working directory.
   --devtools.mode <devtools.mode>'full' (default): write JSON-lines devtools logs. 'report': aggregate the same event stream in-memory and emit an agent-readable report (metrics.json + markdown views) instead.
-  --devtools.reportDelta      Report mode: emit a build-over-build delta (default true).
-  --devtools.reportDir <devtools.reportDir>Report mode: output directory (default node_modules/.rolldown/report).
-  --devtools.reportTopN <devtools.reportTopN>Report mode: upper bound for every top-N list (default 20).
   --devtools.sessionId <devtools.sessionId>Used to name the build.
   --dynamicImportInCjs        Dynamic import in CJS output.
   --entryFileNames <name>     Name pattern for emitted entry chunks.
@@ -218,9 +215,6 @@ OPTIONS
   --context <context>         The entity top-level \`this\` represents.
   --cwd <cwd>                 Current working directory.
   --devtools.mode <devtools.mode>'full' (default): write JSON-lines devtools logs. 'report': aggregate the same event stream in-memory and emit an agent-readable report (metrics.json + markdown views) instead.
-  --devtools.reportDelta      Report mode: emit a build-over-build delta (default true).
-  --devtools.reportDir <devtools.reportDir>Report mode: output directory (default node_modules/.rolldown/report).
-  --devtools.reportTopN <devtools.reportTopN>Report mode: upper bound for every top-N list (default 20).
   --devtools.sessionId <devtools.sessionId>Used to name the build.
   --dynamicImportInCjs        Dynamic import in CJS output.
   --entryFileNames <name>     Name pattern for emitted entry chunks.
@@ -376,9 +370,6 @@ OPTIONS
   --context <context>         The entity top-level \`this\` represents.
   --cwd <cwd>                 Current working directory.
   --devtools.mode <devtools.mode>'full' (default): write JSON-lines devtools logs. 'report': aggregate the same event stream in-memory and emit an agent-readable report (metrics.json + markdown views) instead.
-  --devtools.reportDelta      Report mode: emit a build-over-build delta (default true).
-  --devtools.reportDir <devtools.reportDir>Report mode: output directory (default node_modules/.rolldown/report).
-  --devtools.reportTopN <devtools.reportTopN>Report mode: upper bound for every top-N list (default 20).
   --devtools.sessionId <devtools.sessionId>Used to name the build.
   --dynamicImportInCjs        Dynamic import in CJS output.
   --entryFileNames <name>     Name pattern for emitted entry chunks.
@@ -534,9 +525,6 @@ OPTIONS
   --context <context>         The entity top-level \`this\` represents.
   --cwd <cwd>                 Current working directory.
   --devtools.mode <devtools.mode>'full' (default): write JSON-lines devtools logs. 'report': aggregate the same event stream in-memory and emit an agent-readable report (metrics.json + markdown views) instead.
-  --devtools.reportDelta      Report mode: emit a build-over-build delta (default true).
-  --devtools.reportDir <devtools.reportDir>Report mode: output directory (default node_modules/.rolldown/report).
-  --devtools.reportTopN <devtools.reportTopN>Report mode: upper bound for every top-N list (default 20).
   --devtools.sessionId <devtools.sessionId>Used to name the build.
   --dynamicImportInCjs        Dynamic import in CJS output.
   --entryFileNames <name>     Name pattern for emitted entry chunks.

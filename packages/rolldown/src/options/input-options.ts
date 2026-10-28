@@ -787,10 +787,16 @@ export interface InputOptions {
    * The name `unknown-session` is reserved regardless of case.
    *
    * In `'report'` mode, Rolldown aggregates the same internal event stream in-memory and
-   * writes a small, agent-readable report under `reportDir` instead of the multi-GB
-   * `logs.json`: a canonical `metrics.json` (schema-versioned, with a build-over-build
-   * `delta`), progressive markdown views (`entry.md` + on-demand detail files), one
-   * `history.jsonl` line per build, and an `AGENTS.md` describing the directory contract.
+   * writes a small, agent-readable report instead of the multi-GB `logs.json`: a canonical
+   * `metrics.json` (schema-versioned, with a build-over-build `delta`), progressive markdown
+   * views (`entry.md` + on-demand detail files), one `history.jsonl` line per build, and an
+   * `AGENTS.md` describing the directory contract.
+   *
+   * The report goes to `node_modules/.rolldown/report/<output dir>`, resolved against
+   * {@linkcode cwd}. `<output dir>` is the output folder (`output.dir`, the folder of
+   * `output.file`, or `dist`) relative to `cwd`, so each build output keeps its own report and
+   * finds its previous one for the delta. Each `..` of an output folder outside `cwd` is written
+   * as `__`. A bundler opens one report, so its first output picks the folder.
    *
    * @experimental
    */
@@ -803,12 +809,6 @@ export interface InputOptions {
      * Any other value fails the build.
      */
     mode?: 'full' | 'report';
-    /** Report mode: output directory, relative to cwd (default `node_modules/.rolldown/report`). */
-    reportDir?: string;
-    /** Report mode: upper bound for every "top-N" list (default `20`). */
-    reportTopN?: number;
-    /** Report mode: emit a build-over-build delta (default `true`). */
-    reportDelta?: boolean;
   };
   /**
    * Controls how entry chunk exports are preserved.

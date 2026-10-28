@@ -413,3 +413,37 @@ fn state_survives_roundtrip_and_self_delta_is_zero() {
   let delta = report.delta.as_ref().unwrap();
   assert!(delta.metrics.values().all(|d| d.delta == 0.0));
 }
+
+#[test]
+fn report_dir_is_one_folder_per_output() {
+  use crate::report_dir_for;
+  let cwd = std::env::current_dir().unwrap().join("app");
+  let cwd = cwd.as_path();
+  let absolute = cwd.join("build").join("server");
+  // Rolldown's default output folder.
+  assert_eq!(report_dir_for(cwd, None, None), "node_modules/.rolldown/report/dist");
+  // One folder per output: a client and an SSR build stay apart.
+  assert_eq!(
+    report_dir_for(cwd, Some("dist/client"), None),
+    "node_modules/.rolldown/report/dist/client"
+  );
+  assert_eq!(report_dir_for(cwd, Some("./dist/"), None), "node_modules/.rolldown/report/dist");
+  // An absolute output folder under cwd is made relative (Vite passes absolute paths).
+  assert_eq!(
+    report_dir_for(cwd, Some(absolute.to_str().unwrap()), None),
+    "node_modules/.rolldown/report/build/server"
+  );
+  // `file` wins over `dir`, and its folder is the output folder.
+  assert_eq!(
+    report_dir_for(cwd, Some("ignored"), Some("out/bundle.js")),
+    "node_modules/.rolldown/report/out"
+  );
+  // Output in cwd itself: the report root.
+  assert_eq!(report_dir_for(cwd, None, Some("bundle.js")), "node_modules/.rolldown/report");
+  assert_eq!(report_dir_for(cwd, Some("."), None), "node_modules/.rolldown/report");
+  // Outside cwd: `..` becomes `__`, so the report never leaves the report root.
+  assert_eq!(
+    report_dir_for(cwd, Some("../shared/dist"), None),
+    "node_modules/.rolldown/report/__/shared/dist"
+  );
+}

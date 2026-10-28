@@ -175,6 +175,15 @@ impl ClassicBundler {
         .cwd
         .clone()
         .unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir"));
+      // Report mode: one folder per build output. A bundler opens one report, so its first
+      // output picks the folder.
+      let report_dir = options
+        .devtools
+        .as_ref()
+        .is_some_and(|devtools| devtools.mode.as_deref() == Some("report"))
+        .then(|| {
+          rolldown_devtools::report_dir_for(&cwd, options.dir.as_deref(), options.file.as_deref())
+        });
       self.debug_tracer =
         Some(rolldown_devtools::DebugTracer::init(Arc::clone(&self.session_id), cwd));
       // Caveat: `Span` must be created after initialization of `DebugTracer`, we need it to inject data to the tracking system.
@@ -185,15 +194,9 @@ impl ClassicBundler {
 
       // Report mode: aggregate the event stream in-memory and emit an agent-readable report
       // instead of the JSON-lines log. Registered before the build emits any events.
-      if let Some(devtools) = &options.devtools {
-        if devtools.mode.as_deref() == Some("report") {
-          let config = rolldown_devtools::MetricsConfig::new(
-            devtools.report_dir.clone(),
-            devtools.report_top_n.and_then(|n| usize::try_from(n).ok()),
-            devtools.report_delta,
-          );
-          rolldown_devtools::open_metrics_session(self.session_id.as_ref().to_string(), config);
-        }
+      if let Some(report_dir) = report_dir {
+        let config = rolldown_devtools::MetricsConfig::new(report_dir);
+        rolldown_devtools::open_metrics_session(self.session_id.as_ref().to_string(), config);
       }
     }
     Ok(())

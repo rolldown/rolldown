@@ -7,12 +7,18 @@ use super::GenerateStage;
 use crate::chunk_graph::ChunkGraph;
 
 impl GenerateStage<'_> {
-  /// With `preserveModules` and ESM output, each wrapped module has an eager wrapper call in its
-  /// chunk: `export default require_x();` or `init_x();`. This call runs the module when ESM
-  /// evaluates the chunk. In an import cycle, ESM evaluates the deepest member first. Its eager
-  /// wrapper call can then run the wrapper of a different member before that member defines the
-  /// wrapper (#11348). So a member keeps its eager wrapper call only if it is the single way into
-  /// the cycle or it loads on its own.
+  /// This pass applies to `preserveModules` with ESM output.
+  /// Rolldown normally writes an eager wrapper call in each wrapped module's chunk.
+  /// This call is `export default require_x();` or `init_x();`.
+  /// The call runs the module when ESM evaluates the chunk.
+  ///
+  /// In an import cycle, ESM evaluates the deepest member first.
+  /// Its eager wrapper call can run another member's wrapper before that member defines the wrapper
+  /// (#11348). A member keeps its eager wrapper call only in these cases:
+  ///
+  /// - It is the single way into the cycle.
+  /// - It loads on its own.
+  ///
   /// See internal-docs/linking/module-execution-order/implementation.md.
   pub(super) fn compute_chunks_without_eager_wrapper_call(&self, chunk_graph: &mut ChunkGraph) {
     if !self.options.preserve_modules || !matches!(self.options.format, OutputFormat::Esm) {
@@ -82,8 +88,13 @@ impl GenerateStage<'_> {
   }
 }
 
-/// Returns `true` if the chunk is a user-defined entry, an emitted chunk, or the target of a
-/// dynamic `import()`. Such a chunk loads on its own.
+/// This function returns `true` for a chunk of any of these types:
+///
+/// - A user-defined entry.
+/// - An emitted chunk.
+/// - The target of a dynamic `import()`.
+///
+/// Such a chunk loads on its own.
 fn is_loaded_on_its_own(chunk: &Chunk) -> bool {
   matches!(chunk.kind, ChunkKind::EntryPoint { meta, .. } if !meta.is_empty())
 }

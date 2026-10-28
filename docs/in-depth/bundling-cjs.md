@@ -204,7 +204,7 @@ For now, you can change the file extension to `.cjs` as a workaround.
 
 ### `require` Cycles with `preserveModules`
 
-With [`output.preserveModules`](/reference/OutputOptions.preserveModules) and ESM output, a CJS module runs when ESM evaluates its output file. So the module runs at the position of its `import` statement. In a `require` cycle, ESM evaluates the files in a different order than the order in which Node.js runs the `require` calls.
+With [`output.preserveModules`](/reference/OutputOptions.preserveModules) and ESM output, a CJS module runs when ESM evaluates its output file. So the module runs at the position of its `import` statement. In a `require` cycle, ESM file evaluation and the `require` calls in Node.js follow different orders.
 
 The result depends on the number of ways into the cycle. A way in is a module of the cycle with one of these properties:
 
@@ -220,7 +220,7 @@ If the cycle has two or more ways in, the cycle starts in the code of the module
 
 ```js [main-a.js]
 import a from './a.cjs';
-import './after.js'; // runs before a.cjs and b.cjs
+import './after.js'; // after.js runs before a.cjs and b.cjs.
 ```
 
 ```js [main-b.js]
@@ -237,7 +237,7 @@ const a = require('./a.cjs');
 
 :::
 
-If the cycle has two or more ways in, an entry or a dynamic `import()` target in the cycle still runs when ESM evaluates its file. This module can run before the other modules of the cycle are ready. Then the output code throws `TypeError: require_a is not a function`. Use `output.format: 'cjs'` for such a build.
+If the cycle has two or more ways in, an entry in the cycle still runs when ESM evaluates its file. The same rule applies to a target of a dynamic `import()` in the cycle. Either type of module can run before the other modules of the cycle are ready. Then the output code throws `TypeError: require_a is not a function`. Use `output.format: 'cjs'` for such a build.
 
 ## Future Plans
 

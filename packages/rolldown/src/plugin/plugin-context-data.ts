@@ -15,18 +15,39 @@ import { transformModuleInfo } from '../utils/transform-module-info';
 import type { RenderedChunkMeta } from '.';
 import type { PluginContextResolveOptions } from './plugin-context';
 
-/** One JavaScript string per output chunk, shared by every plugin that reads `chunk.code` in the same build. */
+/**
+ * This entry keeps the `chunk.code` string of one output chunk. All plugins of a build use this
+ * one string. Each call of a `generateBundle` or `writeBundle` hook gets new `BindingOutputChunk`
+ * objects. Without this cache, each plugin that reads `chunk.code` copies the code from Rust again.
+ */
 export interface OutputCodeCacheEntry {
-  /** `BindingOutputChunk.getCodeIdentity()` of the chunk data the string was made from. */
+  /**
+   * This is the `BindingOutputChunk.getCodeIdentity()` value of the chunk data that `code` came
+   * from. The identity is the address of that chunk data in Rust memory. The `chunk.code` getter in
+   * `transformToMutableRollupOutputChunk` compares only the identity, never the code. When the
+   * identity is the same, the getter returns `code`. Otherwise, the getter copies the code again
+   * and replaces this entry.
+   */
   identity: number;
-  /** Keeps that chunk data alive while the entry exists, so the identity cannot be reused. */
+  /**
+   * This reference to the chunk data keeps `identity` correct while this entry exists:
+   * - Rust does not free the chunk data, so new chunk data cannot get the same address.
+   * - `update_output_chunk` (`crates/rolldown_binding/src/types/binding_output_chunk.rs:163`)
+   *   cannot write a plugin change into this chunk data, because `Arc::get_mut` fails while this
+   *   second reference exists. The function writes the change into new chunk data at a new
+   *   address. So the getter sees a new identity and copies the new code. It does not return the
+   *   old `code`.
+   */
   holder: BindingOutputChunk;
   code: string;
 }
 
 export class PluginContextData {
   moduleOptionMap: Map<string, ModuleOptions> = new Map();
-  /** `null` where no plugin can share a string, see `parallel-plugin-worker.ts`. */
+  /**
+   * The cache is `null` in parallel plugin workers. In a worker, each plugin has its own
+   * `PluginContextData`, so the cache never finds a match. See `parallel-plugin-worker.ts`.
+   */
   outputCodeCache: Map<string, OutputCodeCacheEntry> | null;
   resolveOptionsMap: Map<number, PluginContextResolveOptions> = new Map();
   loadModulePromiseMap: Map<string, Promise<void>> = new Map();

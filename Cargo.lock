@@ -2756,6 +2756,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "simd-utf16-len",
  "simdutf8",
  "smallvec",
  "string_wizard",

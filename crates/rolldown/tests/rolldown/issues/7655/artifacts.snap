@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // a.js
-var require_a = /* @__PURE__ */ require("./main.js").__commonJSMin(((exports, module) => {
+var require_a = /* @__PURE__ */ require("./rolldown-runtime.js").__commonJSMin(((exports, module) => {
 	module.exports = {
 		value: 42,
 		hello: "world"
@@ -25,9 +25,27 @@ Object.defineProperty(exports, "default", {
 ## main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+const require_rolldown_runtime = require("./rolldown-runtime.js");
 // main.js
-Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("./a.js").default)).then((m) => console.log(m.default));
-exports.__commonJSMin = __commonJSMin;
+Promise.resolve().then(() => /* @__PURE__ */ require_rolldown_runtime.__toESM(require("./a.js").default)).then((m) => console.log(m.default));
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__commonJSMin", {
+	enumerable: true,
+	get: function() {
+		return __commonJSMin;
+	}
+});
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
 
 ```

@@ -10,7 +10,7 @@ import { createRequire } from "node:module";
 // HIDDEN [\0rolldown/runtime.js]
 // main.cjs
 var require_main = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const Promise = __require("node:events");
+	const Promise = __require(import.meta.url)("node:events");
 	const Promise$2 = "sibling";
 	function param(Promise$1) {
 		return Promise$1;

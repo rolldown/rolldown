@@ -8,10 +8,7 @@ use crate::{
     collect_wrapped_esm_init_targets_for_import_record, import_record_has_live_binding_consumer,
     record_is_init_obligation,
   },
-  stages::generate_stage::{
-    chunk_ext::ChunkDebugExt,
-    chunk_optimizer::{ChunkOptimizationGraph, RuntimeMergeCascade},
-  },
+  stages::generate_stage::{chunk_ext::ChunkDebugExt, chunk_optimizer::ChunkOptimizationGraph},
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
   utils::chunk::normalize_preserve_entry_signature,
 };
@@ -1071,8 +1068,6 @@ impl GenerateStage<'_> {
         used_symbol_refs_builder,
       );
     }
-
-    self.try_merge_runtime_chunk(chunk_graph, None, RuntimeMergeCascade::Full);
 
     Ok(())
   }

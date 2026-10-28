@@ -6,6 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## file.js
 
 ```js
+import { t as require_file } from "./file2.js";
+export default require_file();
+
+```
+
+## file2.js
+
+```js
 // HIDDEN [\0rolldown/runtime.js]
 // file.json
 var require_file = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -15,22 +23,14 @@ export { __toESM as n, require_file as t };
 
 ```
 
-## file2.js
-
-```js
-import { t as require_file } from "./file.js";
-export default require_file();
-
-```
-
 ## main.js
 
 ```js
-import { n as __toESM, t as require_file } from "./file.js";
+import { n as __toESM, t as require_file } from "./file2.js";
 import assert from "node:assert";
 // main.js
 const required = require_file();
-const dynamicRes = await import("./file2.js").then((m) => /* @__PURE__ */ __toESM(m.default));
+const dynamicRes = await import("./file.js").then((m) => /* @__PURE__ */ __toESM(m.default));
 assert.strictEqual(required.foo, "bar");
 assert.strictEqual(dynamicRes.default.foo, "bar");
 

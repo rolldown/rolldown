@@ -15,7 +15,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## clone-deep.js
 
 ```js
-import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+import { c as __esmMin, l as __toESM, s as __commonJSMin } from "./main2.js";
 // node_modules/pure-barrel/stack.js
 var Stack;
 function init_stack() {
@@ -58,7 +58,7 @@ export { loadNamespace, loadRoute };
 ## main2.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // node_modules/pure-barrel/cn.js
 function cn(...values) {
 	return values.filter(Boolean).join(" ");
@@ -85,7 +85,7 @@ function init_main() {
 		globalThis.__events.push(`main:${cn("a", "b")}`);
 	})))();
 }
-export { cn as a, init_pure_barrel as i, loadNamespace as n, init_cn as o, loadRoute as r, init_main as t };
+export { cn as a, __esmMin as c, init_pure_barrel as i, __toESM as l, loadNamespace as n, init_cn as o, loadRoute as r, __commonJSMin as s, init_main as t };
 
 ```
 
@@ -102,20 +102,11 @@ export { Stack, cloneDeep, cn };
 
 ```
 
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as n, __toESM as r, __commonJSMin as t };
-
-```
-
 ## route.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
+import { c as __esmMin } from "./main2.js";
 import { i as init_stack, n as init_pure_barrel_cjs_0, r as Stack, t as import_clone_deep } from "./clone-deep.js";
-import "./main2.js";
 // route.js
 var stack, value;
 function init_route() {
@@ -148,7 +139,7 @@ export { value };
 ### clone-deep.js
 
 ```js
-import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+import { c as __esmMin, l as __toESM, s as __commonJSMin } from "./main2.js";
 // node_modules/pure-barrel/stack.js
 var Stack;
 function init_stack() {
@@ -191,7 +182,7 @@ export { loadNamespace, loadRoute };
 ### main2.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // node_modules/pure-barrel/cn.js
 function cn(...values) {
 	return values.filter(Boolean).join(" ");
@@ -218,7 +209,7 @@ function init_main() {
 		globalThis.__events.push(`main:${cn("a", "b")}`);
 	})))();
 }
-export { cn as a, init_pure_barrel as i, loadNamespace as n, init_cn as o, loadRoute as r, init_main as t };
+export { cn as a, __esmMin as c, init_pure_barrel as i, __toESM as l, loadNamespace as n, init_cn as o, loadRoute as r, __commonJSMin as s, init_main as t };
 
 ```
 
@@ -235,20 +226,11 @@ export { Stack, cloneDeep, cn };
 
 ```
 
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as n, __toESM as r, __commonJSMin as t };
-
-```
-
 ### route.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
+import { c as __esmMin } from "./main2.js";
 import { i as init_stack, n as init_pure_barrel_cjs_0, r as Stack, t as import_clone_deep } from "./clone-deep.js";
-import "./main2.js";
 // route.js
 var stack, value;
 function init_route() {
@@ -414,11 +396,11 @@ export { value };
 ### clone-deep.js
 
 ```js
-const require_rolldown_runtime = require("./rolldown-runtime.js");
+const require_main = require("./main2.js");
 // node_modules/pure-barrel/stack.js
 var Stack;
 function init_stack() {
-	return (init_stack = require_rolldown_runtime.__esmMin((() => {
+	return (init_stack = require_main.__esmMin((() => {
 		globalThis.__events.push("stack");
 		Stack = class {
 			items = [];
@@ -429,7 +411,7 @@ function init_stack() {
 	})))();
 }
 // node_modules/pure-barrel/clone-deep.cjs
-var require_clone_deep = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports, module) => {
+var require_clone_deep = /* @__PURE__ */ require_main.__commonJSMin(((exports, module) => {
 	globalThis.__events.push("clone-deep");
 	module.exports = function cloneDeep(value) {
 		return JSON.parse(JSON.stringify(value));
@@ -437,8 +419,8 @@ var require_clone_deep = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(
 }));
 var import_clone_deep;
 function init_pure_barrel_cjs_0() {
-	return (init_pure_barrel_cjs_0 = require_rolldown_runtime.__esmMin((() => {
-		import_clone_deep = /* @__PURE__ */ require_rolldown_runtime.__toESM(require_clone_deep(), 1);
+	return (init_pure_barrel_cjs_0 = require_main.__esmMin((() => {
+		import_clone_deep = /* @__PURE__ */ require_main.__toESM(require_clone_deep(), 1);
 	})))();
 }
 Object.defineProperty(exports, "Stack", {
@@ -482,19 +464,19 @@ exports.loadRoute = require_main.loadRoute;
 ### main2.js
 
 ```js
-const require_rolldown_runtime = require("./rolldown-runtime.js");
+// HIDDEN [\0rolldown/runtime.js]
 // node_modules/pure-barrel/cn.js
 function cn(...values) {
 	return values.filter(Boolean).join(" ");
 }
 function init_cn() {
-	return (init_cn = require_rolldown_runtime.__esmMin((() => {
+	return (init_cn = __esmMin((() => {
 		globalThis.__events.push("cn");
 	})))();
 }
 // node_modules/pure-barrel/index.js
 function init_pure_barrel() {
-	return (init_pure_barrel = require_rolldown_runtime.__esmMin((() => {})))();
+	return (init_pure_barrel = __esmMin((() => {})))();
 }
 // main.js
 function loadRoute() {
@@ -504,11 +486,29 @@ function loadNamespace() {
 	return Promise.resolve().then(() => require("./pure-barrel.js"));
 }
 function init_main() {
-	return (init_main = require_rolldown_runtime.__esmMin((() => {
+	return (init_main = __esmMin((() => {
 		init_cn();
 		globalThis.__events.push(`main:${cn("a", "b")}`);
 	})))();
 }
+Object.defineProperty(exports, "__commonJSMin", {
+	enumerable: true,
+	get: function() {
+		return __commonJSMin;
+	}
+});
+Object.defineProperty(exports, "__esmMin", {
+	enumerable: true,
+	get: function() {
+		return __esmMin;
+	}
+});
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
 Object.defineProperty(exports, "cn", {
 	enumerable: true,
 	get: function() {
@@ -567,41 +567,15 @@ exports.cn = require_main.cn;
 
 ```
 
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-Object.defineProperty(exports, "__commonJSMin", {
-	enumerable: true,
-	get: function() {
-		return __commonJSMin;
-	}
-});
-Object.defineProperty(exports, "__esmMin", {
-	enumerable: true,
-	get: function() {
-		return __esmMin;
-	}
-});
-Object.defineProperty(exports, "__toESM", {
-	enumerable: true,
-	get: function() {
-		return __toESM;
-	}
-});
-
-```
-
 ### route.js
 
 ```js
-const require_rolldown_runtime = require("./rolldown-runtime.js");
+const require_main = require("./main2.js");
 const require_clone_deep = require("./clone-deep.js");
-require("./main2.js");
 // route.js
 var stack, value;
 function init_route() {
-	return (init_route = require_rolldown_runtime.__esmMin((() => {
+	return (init_route = require_main.__esmMin((() => {
 		require_clone_deep.init_stack(), require_clone_deep.init_pure_barrel_cjs_0();
 		stack = new require_clone_deep.Stack();
 		stack.push((0, require_clone_deep.import_clone_deep.default)(1));
@@ -639,7 +613,7 @@ export { loadNamespace, loadRoute };
 ### main2.js
 
 ```js
-import { i as __toESM, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // node_modules/pure-barrel/cn.js
 function cn(...values) {
 	return values.filter(Boolean).join(" ");
@@ -696,23 +670,14 @@ function init_main() {
 		globalThis.__events.push(`main:${cn("a", "b")}`);
 	})))();
 }
-export { init_pure_barrel as a, import_clone_deep as i, loadNamespace as n, Stack as o, loadRoute as r, init_stack as s, init_main as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __toESM as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
+export { init_pure_barrel as a, __esmMin as c, import_clone_deep as i, loadNamespace as n, Stack as o, loadRoute as r, init_stack as s, init_main as t };
 
 ```
 
 ### route.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
-import { a as init_pure_barrel, i as import_clone_deep, o as Stack } from "./main2.js";
+import { a as init_pure_barrel, c as __esmMin, i as import_clone_deep, o as Stack } from "./main2.js";
 // route.js
 var stack, value;
 function init_route() {

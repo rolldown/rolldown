@@ -72,8 +72,7 @@ export { aTargetPromise };
 ### b.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { a as unrelated, i as setValue, o as value, r as init_leaf } from "./ga.js";
+import { a as unrelated, i as setValue, l as __esmMin, o as value, r as init_leaf } from "./ga.js";
 // b.js
 var bTargetPromise;
 function init_b() {
@@ -93,7 +92,7 @@ export { bTargetPromise };
 ### ga.js
 
 ```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // a.js
 var aTargetPromise;
 function init_a() {
@@ -122,14 +121,6 @@ function init_target() {
 		(globalThis.log ??= []).push("target");
 	})))();
 }
-export { unrelated as a, init_a as c, setValue as i, target_exports as n, value as o, init_leaf as r, aTargetPromise as s, init_target as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __esmMin as t };
+export { unrelated as a, init_a as c, setValue as i, __esmMin as l, target_exports as n, value as o, init_leaf as r, aTargetPromise as s, init_target as t };
 
 ```

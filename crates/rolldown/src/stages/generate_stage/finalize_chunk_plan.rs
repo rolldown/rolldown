@@ -20,6 +20,7 @@ pub(super) struct FinalizedChunkPlan {
   pub(super) order_state: OrderWrapState,
   pub(super) final_esm_init_metadata: Sealed<FinalEsmInitMetadata>,
   pub(super) link_state: CrossChunkLinkState,
+  pub(super) import_order: Option<super::compute_cross_chunk_links::ChunkImportOrder>,
 }
 
 impl GenerateStage<'_> {
@@ -35,24 +36,7 @@ impl GenerateStage<'_> {
     let mut order_state = OrderWrapState::default();
     self.finalized_module_namespace_ref_usage(chunk_graph, &order_state);
 
-    let mut order_analysis = self.analyze_execution_order(chunk_graph, used_symbol_refs_builder);
-    let runtime_evicted_for_analysis = self.options.experimental.is_on_demand_wrapping_enabled()
-      && !self.options.code_splitting.is_disabled()
-      && chunk_graph.module_to_chunk[self.link_output.runtime.id()]
-        .is_some_and(|chunk_idx| chunk_graph.chunk_table[chunk_idx].modules.len() > 1)
-      && order_analysis.as_ref().is_some_and(|analysis| {
-        !analysis.plan.is_empty()
-          || self
-            .pre_chunk_order_state(used_symbol_refs_builder)
-            .has_consumer_local_reexport_routes()
-      });
-    if runtime_evicted_for_analysis {
-      self.ensure_runtime_module_for_order_wraps(chunk_graph);
-      chunk_graph.rebuild_sorted_chunk_idx_vec(true);
-      self.find_entry_level_external_module(chunk_graph);
-      self.finalized_module_namespace_ref_usage(chunk_graph, &order_state);
-      order_analysis = self.analyze_execution_order(chunk_graph, used_symbol_refs_builder);
-    }
+    let order_analysis = self.analyze_execution_order(chunk_graph, used_symbol_refs_builder);
     if let Some(analysis) = &order_analysis
       && self.apply_order_wraps(chunk_graph, analysis, used_symbol_refs_builder, &mut order_state)
     {
@@ -60,15 +44,6 @@ impl GenerateStage<'_> {
       self.assert_order_wrap_plan_applied(chunk_graph, &analysis.plan, &order_state);
       self.find_entry_level_external_module(chunk_graph);
       self.finalized_module_namespace_ref_usage(chunk_graph, &order_state);
-    }
-
-    if runtime_evicted_for_analysis
-      && order_analysis.as_ref().is_some_and(|analysis| analysis.plan.is_empty())
-      && !order_state.has_consumer_local_reexport_routes()
-    {
-      self.fold_runtime_chunk_after_order_lowering(chunk_graph, &order_state);
-      chunk_graph.sort_chunk_modules(self.link_output, self.options);
-      self.renumber_live_chunks(chunk_graph);
     }
 
     // The runtime sweep must observe the final namespace/external facts above. Order wrappers
@@ -94,15 +69,6 @@ impl GenerateStage<'_> {
       used_symbol_refs_builder.view(),
       &link_state,
     ) {
-      // The common implementation chunk can export helpers without extending the entry signature.
-      // Strict execution order leaves runtime placement to order lowering.
-      if !self.options.is_strict_execution_order_enabled() {
-        self.try_merge_runtime_chunk(
-          chunk_graph,
-          None,
-          super::chunk_optimizer::RuntimeMergeCascade::Full,
-        );
-      }
       chunk_graph.sort_chunk_modules(self.link_output, self.options);
       self.assign_chunk_exec_orders(chunk_graph);
       chunk_graph.rebuild_sorted_chunk_idx_vec(true);
@@ -114,6 +80,61 @@ impl GenerateStage<'_> {
         self.compute_final_chunk_links(chunk_graph, used_symbol_refs_builder.view(), &order_state);
     }
 
+    // Selection can add registry helpers, but it does not change user-code liveness.
+    // Keep runtime separate when records will be copied into multiple files.
+    let has_inline_records =
+      self.select_inline_common_chunks(chunk_graph, &link_state, &mut order_state);
+    if has_inline_records {
+      link_state = self.compute_cross_chunk_link_state(
+        chunk_graph,
+        used_symbol_refs_builder.view(),
+        &order_state,
+        FinalEsmInitMetadataAvailability::Sealed(&final_esm_init_metadata),
+      );
+    }
+
+    // The consumer set is now complete, including CJS interop and order wrappers. Select a
+    // host against these links, then retain the approved order when ownership changes.
+    #[cfg(debug_assertions)]
+    let imports_before_fold = link_state.static_importee_table(chunk_graph);
+    // Inlining changes physical imports later. Otherwise compute their order once, even
+    // when the runtime cannot merge, and reuse it when committing the final links.
+    let mut import_order =
+      (!has_inline_records).then(|| self.compute_chunk_import_order(chunk_graph, &link_state));
+    let placement = import_order.as_mut().and_then(|import_order| {
+      self.fold_final_runtime_chunk(chunk_graph, &link_state, &order_state, import_order)
+    });
+    if let Some(placement) = placement {
+      #[cfg(not(debug_assertions))]
+      let _ = placement;
+      drop((final_esm_init_metadata, link_state));
+      (final_esm_init_metadata, link_state) =
+        self.compute_final_chunk_links(chunk_graph, used_symbol_refs_builder.view(), &order_state);
+      #[cfg(debug_assertions)]
+      {
+        let imports_after_fold = link_state.static_importee_table(chunk_graph);
+        for (idx, imports) in imports_after_fold.iter_enumerated() {
+          if !chunk_graph.chunk_is_live(idx) {
+            continue;
+          }
+          let mut expected = imports_before_fold[idx].clone();
+          expected.remove(&placement.runtime_chunk);
+          if idx != placement.host && placement.consumers.contains(&idx) {
+            expected.insert(placement.host);
+          }
+          debug_assert_eq!(
+            imports, &expected,
+            "runtime folding changed an unapproved user-chunk edge"
+          );
+        }
+        link_state.assert_runtime_importers(
+          self.link_output.runtime.id(),
+          &self.link_output.symbol_db,
+          &placement.consumers,
+        );
+      }
+    }
+
     let rendered_chunk_count = chunk_graph
       .chunk_table
       .len()
@@ -122,7 +143,7 @@ impl GenerateStage<'_> {
       validate_options_for_multi_chunk_output(self.options)?;
     }
 
-    Ok(FinalizedChunkPlan { order_state, final_esm_init_metadata, link_state })
+    Ok(FinalizedChunkPlan { order_state, final_esm_init_metadata, link_state, import_order })
   }
 
   fn compute_final_chunk_links(

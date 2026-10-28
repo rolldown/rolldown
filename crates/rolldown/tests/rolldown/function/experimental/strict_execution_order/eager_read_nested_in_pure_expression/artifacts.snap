@@ -21,8 +21,7 @@ To fix:
 ## main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as value, t as init_reader } from "./reader.js";
+import { n as value, r as __esmMin, t as init_reader } from "./reader.js";
 // patch.js
 globalThis.__orderRead = () => 42;
 // main.js
@@ -39,7 +38,7 @@ init_main();
 ## reader.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // reader.js
 var value;
 function init_reader() {
@@ -47,15 +46,7 @@ function init_reader() {
 		value = (() => /* @__PURE__ */ globalThis.__orderRead?.() ?? 5)();
 	})))();
 }
-export { value as n, init_reader as t };
-
-```
-
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
+export { value as n, __esmMin as r, init_reader as t };
 
 ```
 
@@ -81,8 +72,7 @@ To fix:
 ### main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as value, t as init_reader } from "./reader.js";
+import { n as value, r as __esmMin, t as init_reader } from "./reader.js";
 // patch.js
 function init_patch() {
 	return (init_patch = __esmMin((() => {
@@ -104,7 +94,7 @@ init_main();
 ### reader.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // reader.js
 var value;
 function init_reader() {
@@ -112,14 +102,6 @@ function init_reader() {
 		value = (() => /* @__PURE__ */ globalThis.__orderRead?.() ?? 5)();
 	})))();
 }
-export { value as n, init_reader as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
+export { value as n, __esmMin as r, init_reader as t };
 
 ```

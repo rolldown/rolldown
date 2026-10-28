@@ -90,10 +90,7 @@ fn ensure_devtools_package_info<'a>(
 use crate::{
   BundleOutput, SharedOptions,
   chunk_graph::ChunkGraph,
-  stages::{
-    generate_stage::compute_cross_chunk_links::FinalEsmInitMetadataAvailability,
-    link_stage::LinkStageOutput,
-  },
+  stages::link_stage::LinkStageOutput,
   type_alias::IndexEcmaAst,
   types::generator::GenerateContext,
   utils::chunk::{
@@ -124,6 +121,7 @@ mod post_banner_footer;
 mod render_chunk_to_assets;
 mod resolve_file_urls;
 mod runtime_module_sweep;
+mod runtime_placement;
 mod simulated_facade_inclusion;
 
 pub use compute_wrapped_esm_init_metadata::{FinalEsmInitMetadata, Sealed};
@@ -178,9 +176,10 @@ impl<'a> GenerateStage<'a> {
     let mut chunk_graph = self.generate_chunks(&mut used_symbol_refs_builder).await?;
 
     let finalize_chunk_plan::FinalizedChunkPlan {
-      mut order_state,
+      order_state,
       final_esm_init_metadata,
-      mut link_state,
+      link_state,
+      import_order,
     } = self.finalize_chunk_plan(&mut chunk_graph, &mut used_symbol_refs_builder)?;
 
     // Order lowering and the unused-runtime sweep have had their last chance to update liveness.
@@ -190,21 +189,10 @@ impl<'a> GenerateStage<'a> {
 
     let mut ast_table = std::mem::take(&mut self.ast_table);
 
-    // Cross-chunk linking in two halves. `experimentalInlineCommonChunks` decides on the derived
-    // final edges and registers the registry's runtime demand; a second derivation then carries
-    // that demand (it only adds edges to the runtime chunk) into the one commit. Records stay
-    // live chunks throughout, so their own edges are derived like any other chunk's, and the
-    // projection afterwards turns the logical edges into the physical file graph.
+    // Finalization selected inline records and registered their runtime demand. Commit the
+    // completed links, then project logical records onto their physical carrying files.
     // See internal-docs/inline-common-chunks/implementation.md.
-    if self.select_inline_common_chunks(&chunk_graph, &link_state, &mut order_state) {
-      link_state = self.compute_cross_chunk_link_state(
-        &chunk_graph,
-        used_symbol_refs.view(),
-        &order_state,
-        FinalEsmInitMetadataAvailability::Sealed(&final_esm_init_metadata),
-      );
-    }
-    self.commit_cross_chunk_links(&mut chunk_graph, link_state, &used_symbol_refs);
+    self.commit_cross_chunk_links(&mut chunk_graph, link_state, &used_symbol_refs, import_order);
     self.apply_inline_common_chunks_links(&mut chunk_graph);
 
     self.ensure_lazy_module_initialization_order(&mut chunk_graph);

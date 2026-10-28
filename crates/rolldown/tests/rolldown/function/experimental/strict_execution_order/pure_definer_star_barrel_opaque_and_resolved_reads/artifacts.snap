@@ -57,8 +57,7 @@ export { vDef as n, barrel_exports as t };
 ### a.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { i as vDef, n as init_barrel, t as barrel_exports } from "./barrel.js";
+import { a as __esmMin, i as vDef, n as init_barrel, t as barrel_exports } from "./barrel.js";
 // a.js
 var defValue, nsObject;
 function init_a() {
@@ -77,8 +76,7 @@ export { defValue, nsObject };
 ### b.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { i as vDef, n as init_barrel } from "./barrel.js";
+import { a as __esmMin, i as vDef, n as init_barrel } from "./barrel.js";
 // b.js
 var sharedDef;
 function init_b() {
@@ -96,7 +94,7 @@ export { sharedDef };
 ### barrel.js
 
 ```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // definer1.js
 function build$1() {
 	return { value: 7 };
@@ -129,14 +127,6 @@ function init_barrel() {
 		(globalThis.__events ??= []).push("barrel");
 	})))();
 }
-export { vDef as i, init_barrel as n, init_definer1 as r, barrel_exports as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __esmMin as t };
+export { __esmMin as a, vDef as i, init_barrel as n, init_definer1 as r, barrel_exports as t };
 
 ```

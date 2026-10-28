@@ -16,7 +16,7 @@ use oxc::ast::ast::{Declaration, ExportDefaultDeclarationKind, Statement};
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, EcmaViewMeta, EntryPointKind, ImportKind, ImportRecordIdx,
-  ImportRecordMeta, IndexModules, ModuleIdx, ModuleNamespaceIncludedReason, OutputFormat,
+  ImportRecordMeta, IndexModules, ModuleIdx, ModuleNamespaceIncludedReason,
   PostChunkOptimizationOperation, RuntimeHelper, StmtInfoIdx, SymbolRef, SymbolRefDb,
   UsedSymbolRefsBuilder, WrapKind,
 };
@@ -28,7 +28,6 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use super::{
   GenerateStage,
   chunk_ext::{ChunkCreationReason, ChunkDebugExt},
-  chunk_optimizer::RuntimeMergeCascade,
   order_analysis::{OrderAnalysis, OrderWrapPlan},
   order_wrap_state::{
     OrderCjsCarrierKey, OrderCjsCarrierSpec, OrderImportKey, OrderImportOverlay, OrderWrapState,
@@ -706,14 +705,13 @@ impl GenerateStage<'_> {
         &self.link_output.symbol_db,
       );
     }
-    // Placement runs before the facade decision so that decision can ask the real link computation
-    // which chunks import which: the order wrappers demand runtime helpers, and resolving a
-    // depended symbol to its chunk requires the runtime module to already sit in one. The merge
-    // re-proof this normalizes for is deferred to `fold_runtime_chunk_after_order_lowering` below,
-    // because it counts the runtime chunk's consumers and must see the final facade topology.
-    let fold_runtime_chunk = (self.link_output.metas[runtime_idx].is_included
-      || !order_state.required_runtime_helpers().is_empty())
-      && self.ensure_runtime_module_for_order_wraps(chunk_graph);
+    // Namespace/facade queries need a runtime chunk for every newly introduced helper. Runtime
+    // folding happens only after the final links are available.
+    if self.link_output.metas[runtime_idx].is_included
+      || !order_state.required_runtime_helpers().is_empty()
+    {
+      self.ensure_runtime_module_for_order_wraps(chunk_graph);
+    }
     // Refresh the namespace facts against the lowered order state before querying the edges.
     // `finalize_chunk_plan` re-runs this once more after lowering anyway; doing it here too means
     // the query sees the namespaces the final link pass will see, instead of the provisional
@@ -738,9 +736,6 @@ impl GenerateStage<'_> {
         &self.link_output.stmt_infos[runtime_idx],
         &self.link_output.symbol_db,
       );
-    }
-    if fold_runtime_chunk {
-      self.fold_runtime_chunk_after_order_lowering(chunk_graph, order_state);
     }
     chunk_graph.sort_chunk_modules(self.link_output, self.options);
     self.renumber_live_chunks(chunk_graph);
@@ -1359,89 +1354,30 @@ impl GenerateStage<'_> {
     host_chunk.modules.iter().copied().any(module_can_expose_then)
   }
 
-  /// Normalize the runtime module onto a standalone chunk. Returns whether the caller still owes
-  /// the runtime-chunk merge re-proof (`fold_runtime_chunk_after_order_lowering`).
-  ///
-  /// Eviction changes chunk order and helper-import edges, so on-demand analysis must observe
-  /// the standalone runtime before selecting wrappers. The entry-facade edge query also needs
-  /// the runtime placed so it can resolve helper symbols to their chunk.
-  ///
-  /// The caller folds the runtime after lowering and facade creation, when [`OrderWrapState`]
-  /// contains the complete helper demand and the runtime's consumer set is final.
-  pub(super) fn ensure_runtime_module_for_order_wraps(
-    &mut self,
-    chunk_graph: &mut ChunkGraph,
-  ) -> bool {
+  /// Materialize helpers introduced by order lowering. Split builds keep the runtime isolated
+  /// until final linking, so this pass never needs to evict it from a user chunk.
+  pub(super) fn ensure_runtime_module_for_order_wraps(&mut self, chunk_graph: &mut ChunkGraph) {
     let runtime_idx = self.link_output.runtime.id();
     if let Some(runtime_chunk_idx) = chunk_graph.module_to_chunk[runtime_idx] {
-      if self.options.code_splitting.is_disabled() {
-        return false;
-      }
-      let runtime_chunk = &chunk_graph.chunk_table[runtime_chunk_idx];
-      if runtime_chunk.modules.len() == 1 {
-        self.clear_module_symbol_chunk_indices(runtime_idx);
-        // Facade restoration can tombstone chunks the pre-lowering merge counted as consumers, so
-        // a standalone runtime may only now have a sole consumer left.
-        return true;
-      }
-      let mut bits = runtime_chunk.bits.clone();
-      for chunk_idx in self.live_chunks(chunk_graph) {
-        bits.union(&chunk_graph.chunk_table[chunk_idx].bits);
-      }
-      let input_base = runtime_chunk.input_base.clone();
-      chunk_graph.chunk_table[runtime_chunk_idx]
-        .modules
-        .retain(|module_idx| *module_idx != runtime_idx);
-      self.update_chunk_runtime_helpers_after_module_removal(
-        chunk_graph,
-        runtime_chunk_idx,
-        runtime_idx,
+      debug_assert!(
+        self.options.code_splitting.is_disabled()
+          || chunk_graph.chunk_table[runtime_chunk_idx].modules == [runtime_idx]
       );
-      let mut new_runtime_chunk = Chunk::new(
-        Some("rolldown-runtime".into()),
-        None,
-        bits,
-        vec![],
-        ChunkKind::Common,
-        input_base,
-        None,
-      );
-      let runtime_chunk_bits = new_runtime_chunk.bits.clone();
-      new_runtime_chunk.add_creation_reason(
-        ChunkCreationReason::CommonChunk {
-          bits: &runtime_chunk_bits,
-          link_output: self.link_output,
-        },
-        self.options,
-      );
-      let new_runtime_chunk_idx = chunk_graph.add_chunk(new_runtime_chunk);
-      chunk_graph.add_module_to_chunk(
-        runtime_idx,
-        new_runtime_chunk_idx,
-        self.link_output.metas[runtime_idx].depended_runtime_helper,
-      );
-      // The former host derived its `exec_order` from the runtime module (`exec_order` 0) that
-      // the move above took out of it, so it would sort ahead of chunks it follows and its
-      // importers would evaluate it, and the externals it imports, too early. Re-derive every
-      // live chunk's order from its current lead module, as `finalize_chunk_plan` does after the
-      // runtime sweep.
-      chunk_graph.sort_chunk_modules(self.link_output, self.options);
-      self.assign_chunk_exec_orders(chunk_graph);
       self.clear_module_symbol_chunk_indices(runtime_idx);
-      return true;
+      return;
     }
 
     let live_chunk_indices = self.live_chunks(chunk_graph);
     let Some(first_chunk_idx) = live_chunk_indices.first().copied() else {
-      return false;
+      return;
     };
 
-    if self.options.code_splitting.is_disabled() || live_chunk_indices.len() == 1 {
+    if self.options.code_splitting.is_disabled() {
       let chunk = &mut chunk_graph.chunk_table[first_chunk_idx];
       chunk.modules.insert(0, runtime_idx);
       chunk_graph.module_to_chunk[runtime_idx] = Some(first_chunk_idx);
       self.clear_module_symbol_chunk_indices(runtime_idx);
-      return false;
+      return;
     }
 
     let mut bits = chunk_graph.chunk_table[first_chunk_idx].bits.clone();
@@ -1472,54 +1408,9 @@ impl GenerateStage<'_> {
     );
     self.assign_chunk_exec_orders(chunk_graph);
     self.clear_module_symbol_chunk_indices(runtime_idx);
-    true
   }
 
-  /// Re-run the runtime-chunk merge proof against the post-lowering consumer set: the
-  /// order-introduced consumers from [`OrderWrapState`] plus the merge's own re-scan of every
-  /// pre-lowering consumer. Restricted to a sole-consumer host — see
-  /// [`RuntimeMergeCascade::SingleConsumerOnly`].
-  ///
-  /// Esm output only. Under cjs output, `compute_cross_chunk_links` later gives every ESM-exports
-  /// entry chunk — including the zero-module facades minted above — a `__toCommonJS` demand that
-  /// is invisible here, so a fold could hand an entry chunk with no demand at all a brand-new
-  /// require edge into a user chunk. Other formats keep the standalone/evicted layout.
-  pub(super) fn fold_runtime_chunk_after_order_lowering(
-    &self,
-    chunk_graph: &mut ChunkGraph,
-    order_state: &OrderWrapState,
-  ) {
-    if !matches!(self.options.format, OutputFormat::Esm) {
-      return;
-    }
-    let order_consumers = order_state.runtime_helper_consumer_chunks(&chunk_graph.module_to_chunk);
-    self.try_merge_runtime_chunk(
-      chunk_graph,
-      Some(&order_consumers),
-      RuntimeMergeCascade::SingleConsumerOnly,
-    );
-  }
-
-  fn update_chunk_runtime_helpers_after_module_removal(
-    &self,
-    chunk_graph: &mut ChunkGraph,
-    chunk_idx: ChunkIdx,
-    removed_module_idx: ModuleIdx,
-  ) {
-    let mut helpers = chunk_graph.chunk_table[chunk_idx].depended_runtime_helper;
-    helpers.remove(self.link_output.metas[removed_module_idx].depended_runtime_helper);
-    helpers.insert(
-      chunk_graph.chunk_table[chunk_idx]
-        .modules
-        .iter()
-        .fold(RuntimeHelper::default(), |helpers, module_idx| {
-          helpers | self.link_output.metas[*module_idx].depended_runtime_helper
-        }),
-    );
-    chunk_graph.chunk_table[chunk_idx].depended_runtime_helper = helpers;
-  }
-
-  fn clear_module_symbol_chunk_indices(&mut self, module_idx: ModuleIdx) {
+  pub(super) fn clear_module_symbol_chunk_indices(&mut self, module_idx: ModuleIdx) {
     let Some(local_db) = self.link_output.symbol_db[module_idx].as_mut() else {
       return;
     };

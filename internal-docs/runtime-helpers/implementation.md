@@ -48,3 +48,11 @@ They agree because the wrap arrives through exactly **two channels**, each carry
 So the invariant is pairwise, not one source answering both questions. Narrowing a channel's wrap without its edge — or the more tempting inverse, registering `ToEsm` only for imports tree-shaking kept alive — reopens the panic for the cases the other channel does not cover.
 
 Chunks do not exist yet when `patch_module_dependencies` runs, so `is_included` stands in for "will have a chunk". An observer that is not included cannot be attributed to one, and rendering falls back to wrapping every chunk emitting the external — so every referencing module keeps the edge, matching that fallback.
+
+## Node `__require`: bind to the caller URL
+
+For Node ESM output, `__require(url)` returns a native require function for that output chunk. The helper captures `createRequire` and caches the resulting function by URL. Repeated references from one chunk have the same identity and expose native properties such as `resolve` and `cache`.
+
+The finalizer passes `import.meta.url` for every rewritten require reference, including property access and references passed as values. Browser and non-ESM runtime variants use their existing direct helper. Runtime placement must not select the base directory for a caller's relative requires.
+
+Common-chunk inlining rejects a Node ESM module with a retained dummy require record. Copying it into a carrier would change the URL and require identity. Statically external require records already prevent inlining. The fixtures `runtime_require_uses_consumer_url` and `runtime_require_stays_in_shared_file` cover both constraints. See [runtime placement](../code-splitting/implementation.md#runtime-module-placement).

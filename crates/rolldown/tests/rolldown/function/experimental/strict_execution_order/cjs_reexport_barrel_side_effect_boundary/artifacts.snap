@@ -212,13 +212,13 @@ export { value };
 ### inner-effectful-barrel.js
 
 ```js
-import { n as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // node_modules/inner-effectful-barrel/index.js
 var import_nested_effectful_clone = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("nested-effectful-clone");
 	module.exports = (value) => ({ ...value });
 })))(), 1);
-export { import_nested_effectful_clone as t };
+export { __commonJSMin as n, __toESM as r, import_nested_effectful_clone as t };
 
 ```
 
@@ -239,19 +239,10 @@ export { loadRoute };
 
 ```
 
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __toESM as n, __commonJSMin as t };
-
-```
-
 ### route.js
 
 ```js
-import { n as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
-import { t as import_nested_effectful_clone } from "./inner-effectful-barrel.js";
+import { n as __commonJSMin, r as __toESM, t as import_nested_effectful_clone } from "./inner-effectful-barrel.js";
 // node_modules/pure-boundary-barrel/index.js
 var import_effectful_clone = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("effectful-clone");

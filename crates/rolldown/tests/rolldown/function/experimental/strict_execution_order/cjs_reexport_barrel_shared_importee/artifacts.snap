@@ -107,19 +107,10 @@ export { loadA, loadB };
 
 ```
 
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as n, __toESM as r, __commonJSMin as t };
-
-```
-
 ### route-a.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
-import { i as init_barrel_a_cjs_0, r as import_shared } from "./shared.js";
+import { a as __esmMin, i as init_barrel_a_cjs_0, r as import_shared } from "./shared.js";
 // route-a.js
 var value;
 function init_route_a() {
@@ -137,8 +128,7 @@ export { value };
 ### route-b.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
-import { n as init_barrel_b_cjs_1, t as import_shared } from "./shared.js";
+import { a as __esmMin, n as init_barrel_b_cjs_1, t as import_shared } from "./shared.js";
 // route-b.js
 var value;
 function init_route_b() {
@@ -156,7 +146,7 @@ export { value };
 ### shared.js
 
 ```js
-import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // node_modules/shared-importee-barrel/shared.cjs
 var require_shared = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("shared-cjs");
@@ -174,6 +164,6 @@ function init_barrel_b_cjs_1() {
 		import_shared = /* @__PURE__ */ __toESM(require_shared(), 1);
 	})))();
 }
-export { init_barrel_a_cjs_0 as i, init_barrel_b_cjs_1 as n, import_shared$1 as r, import_shared as t };
+export { __esmMin as a, init_barrel_a_cjs_0 as i, init_barrel_b_cjs_1 as n, __toESM as o, import_shared$1 as r, import_shared as t };
 
 ```

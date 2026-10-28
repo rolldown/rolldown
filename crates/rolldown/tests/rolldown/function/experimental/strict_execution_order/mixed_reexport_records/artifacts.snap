@@ -6,8 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## lazy-a.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_shared } from "./shared.js";
+import { n as init_shared, r as __esmMin } from "./shared.js";
 // a.js
 var A;
 function init_a() {
@@ -32,8 +31,7 @@ export { read };
 ## lazy-b.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_shared } from "./shared.js";
+import { n as init_shared, r as __esmMin } from "./shared.js";
 // b.js
 var B;
 function init_b() {
@@ -58,8 +56,7 @@ export { read };
 ## main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_shared, t as LOCAL } from "./shared.js";
+import { n as init_shared, r as __esmMin, t as LOCAL } from "./shared.js";
 // main.js
 var local, loadA, loadB;
 function init_main() {
@@ -75,18 +72,10 @@ export { loadA, loadB, local };
 
 ```
 
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
-
-```
-
 ## shared.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // required.js
 var REQUIRED;
 function init_required() {
@@ -104,7 +93,7 @@ function init_shared() {
 		LOCAL = REQUIRED;
 	})))();
 }
-export { init_shared as n, LOCAL as t };
+export { init_shared as n, __esmMin as r, LOCAL as t };
 
 ```
 
@@ -115,8 +104,7 @@ export { init_shared as n, LOCAL as t };
 ### lazy-a.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_shared } from "./shared.js";
+import { n as init_shared, r as __esmMin } from "./shared.js";
 // a.js
 var A;
 function init_a() {
@@ -141,8 +129,7 @@ export { read };
 ### lazy-b.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_shared } from "./shared.js";
+import { n as init_shared, r as __esmMin } from "./shared.js";
 // b.js
 var B;
 function init_b() {
@@ -167,8 +154,7 @@ export { read };
 ### main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_shared, t as LOCAL } from "./shared.js";
+import { n as init_shared, r as __esmMin, t as LOCAL } from "./shared.js";
 // main.js
 var local, loadA, loadB;
 function init_main() {
@@ -184,18 +170,10 @@ export { loadA, loadB, local };
 
 ```
 
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
-
-```
-
 ### shared.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // required.js
 var REQUIRED;
 function init_required() {
@@ -213,7 +191,7 @@ function init_shared() {
 		LOCAL = REQUIRED;
 	})))();
 }
-export { init_shared as n, LOCAL as t };
+export { init_shared as n, __esmMin as r, LOCAL as t };
 
 ```
 
@@ -281,29 +259,23 @@ export { LOCAL as t };
 ### lazy-a.js
 
 ```js
-const e=require("./rolldown-runtime.js"),t=require("./shared.js");var n;function r(){return(r=e.t((()=>{n={value:`a`}})))()}function i(){return n}function a(){return(a=e.t((()=>{r(),t.n()})))()}a(),exports.read=i;
+const e=require("./shared.js");var t;function n(){return(n=e.r((()=>{t={value:`a`}})))()}function r(){return t}function i(){return(i=e.r((()=>{n(),e.n()})))()}i(),exports.read=r;
 ```
 
 ### lazy-b.js
 
 ```js
-const e=require("./rolldown-runtime.js"),t=require("./shared.js");var n;function r(){return(r=e.t((()=>{n={value:`b`}})))()}function i(){return n}function a(){return(a=e.t((()=>{r(),t.n()})))()}a(),exports.read=i;
+const e=require("./shared.js");var t;function n(){return(n=e.r((()=>{t={value:`b`}})))()}function r(){return t}function i(){return(i=e.r((()=>{n(),e.n()})))()}i(),exports.read=r;
 ```
 
 ### main.js
 
 ```js
-Object.defineProperty(exports,Symbol.toStringTag,{value:`Module`});const e=require("./rolldown-runtime.js"),t=require("./shared.js");var n,r,i;function a(){return(a=e.t((()=>{t.n(),n=t.t,r=()=>Promise.resolve().then(()=>require("./lazy-a.js")).then(e=>e.read()),i=()=>Promise.resolve().then(()=>require("./lazy-b.js")).then(e=>e.read())})))()}a(),exports.loadA=r,exports.loadB=i,exports.local=n;
-```
-
-### rolldown-runtime.js
-
-```js
-var e=(e,t,n)=>()=>{if(n)throw n[0];try{return e&&(t=e(e=0)),t}catch(e){throw n=[e],e}};Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return e}});
+Object.defineProperty(exports,Symbol.toStringTag,{value:`Module`});const e=require("./shared.js");var t,n,r;function i(){return(i=e.r((()=>{e.n(),t=e.t,n=()=>Promise.resolve().then(()=>require("./lazy-a.js")).then(e=>e.read()),r=()=>Promise.resolve().then(()=>require("./lazy-b.js")).then(e=>e.read())})))()}i(),exports.loadA=n,exports.loadB=r,exports.local=t;
 ```
 
 ### shared.js
 
 ```js
-const e=require("./rolldown-runtime.js");var t;function n(){return(n=e.t((()=>{globalThis.events.push(`required`),t=`required`})))()}var r;function i(){return(i=e.t((()=>{n(),globalThis.events.push(`shared`),r=t})))()}Object.defineProperty(exports,"n",{enumerable:!0,get:function(){return i}}),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return r}});
+var e=(e,t,n)=>()=>{if(n)throw n[0];try{return e&&(t=e(e=0)),t}catch(e){throw n=[e],e}},t;function n(){return(n=e((()=>{globalThis.events.push(`required`),t=`required`})))()}var r;function i(){return(i=e((()=>{n(),globalThis.events.push(`shared`),r=t})))()}Object.defineProperty(exports,"n",{enumerable:!0,get:function(){return i}}),Object.defineProperty(exports,"r",{enumerable:!0,get:function(){return e}}),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return r}});
 ```

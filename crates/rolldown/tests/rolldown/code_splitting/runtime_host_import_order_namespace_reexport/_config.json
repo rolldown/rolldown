@@ -1,0 +1,12 @@
+{
+  "_comment": "Reduced from runtime-host import-form case 15. A namespace re-export adds a symbol import that the old rank gate did not count. The final sort must keep init.js before the chunk that captures the global.",
+  "config": {
+    "input": [
+      { "name": "c", "import": "c.js" },
+      { "name": "a", "import": "a.js" },
+      { "name": "b", "import": "b.js" },
+      { "name": "init", "import": "init.js" }
+    ]
+  },
+  "snapshot": false
+}

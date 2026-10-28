@@ -1,0 +1,19 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "a",
+        "import": "a.cjs"
+      },
+      {
+        "name": "b",
+        "import": "b.cjs"
+      }
+    ],
+    "platform": "node",
+    "format": "esm",
+    "entryFilenames": "[name]/entry.js",
+    "chunkFilenames": "shared/[name].js"
+  },
+  "snapshot": false
+}

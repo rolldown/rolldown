@@ -31,20 +31,12 @@ module.exports = plugin;
 
 ## Assets
 
-### _virtual/_rolldown/runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-exports.__commonJSMin = __commonJSMin;
-exports.__toESM = __toESM;
-
-```
-
 ### lib.js
 
 ```js
+// HIDDEN [\0rolldown/runtime.js]
 // lib.js
-var require_lib = /* @__PURE__ */ require("./_virtual/_rolldown/runtime.js").__commonJSMin(((exports, module) => {
+var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = {};
 }));
 Object.defineProperty(exports, "default", {
@@ -53,17 +45,19 @@ Object.defineProperty(exports, "default", {
 		return require_lib();
 	}
 });
+exports.__commonJSMin = __commonJSMin;
+exports.__toESM = __toESM;
 
 ```
 
 ### main.js
 
 ```js
-const require_runtime = require("./_virtual/_rolldown/runtime.js");
 const require_rule$1 = require("./rule.js");
+const require_lib = require("./lib.js");
 let node_assert = require("node:assert");
-node_assert = require_runtime.__toESM(node_assert);
-const plugin = { mod: (/* @__PURE__ */ require_runtime.__toESM(require_rule$1.default)).default };
+node_assert = require_lib.__toESM(node_assert);
+const plugin = { mod: (/* @__PURE__ */ require_lib.__toESM(require_rule$1.default)).default };
 node_assert.default.strictEqual(plugin.mod.meta, 19);
 module.exports = plugin;
 
@@ -72,10 +66,9 @@ module.exports = plugin;
 ### rule.js
 
 ```js
-const require_runtime = require("./_virtual/_rolldown/runtime.js");
 const require_lib$1 = require("./lib.js");
 // rule.js
-var require_rule = /* @__PURE__ */ require_runtime.__commonJSMin(((exports, module) => {
+var require_rule = /* @__PURE__ */ require_lib$1.__commonJSMin(((exports, module) => {
 	const mod = require_lib$1.default;
 	module.exports = {
 		meta: 4 + String(mod).length,

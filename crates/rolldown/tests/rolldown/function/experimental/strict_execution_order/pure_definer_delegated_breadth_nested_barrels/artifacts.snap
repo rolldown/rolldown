@@ -58,8 +58,7 @@ export { vDef as n, outer_exports as t };
 ### a.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { i as vDef, n as outer_exports, t as init_outer } from "./outer.js";
+import { a as __esmMin, i as vDef, n as outer_exports, t as init_outer } from "./outer.js";
 // a.js
 var defValue, nsObject;
 function init_a() {
@@ -78,8 +77,7 @@ export { defValue, nsObject };
 ### b.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { i as vDef, t as init_outer } from "./outer.js";
+import { a as __esmMin, i as vDef, t as init_outer } from "./outer.js";
 // b.js
 var sharedDef;
 function init_b() {
@@ -97,7 +95,7 @@ export { sharedDef };
 ### outer.js
 
 ```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // definer1.js
 function build$1() {
 	return { value: 7 };
@@ -136,14 +134,6 @@ function init_outer() {
 		init_mid();
 	})))();
 }
-export { vDef as i, outer_exports as n, init_definer1 as r, init_outer as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __esmMin as t };
+export { __esmMin as a, vDef as i, outer_exports as n, init_definer1 as r, init_outer as t };
 
 ```

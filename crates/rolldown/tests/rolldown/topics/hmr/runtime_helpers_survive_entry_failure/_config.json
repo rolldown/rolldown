@@ -1,0 +1,13 @@
+{
+  "config": {
+    "experimental": {
+      "devMode": {}
+    }
+  },
+  "snapshot": false,
+  "configVariants": [
+    {
+      "minify": true
+    }
+  ]
+}

@@ -16,8 +16,7 @@ export { targetPromise };
 ## b.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { r as init_observer } from "./dyn.js";
+import { i as __esmMin, r as init_observer } from "./dyn.js";
 // b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
@@ -31,7 +30,7 @@ init_b();
 ## dyn.js
 
 ```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // observer.js
 function init_observer() {
 	return (init_observer = __esmMin((() => {
@@ -46,14 +45,6 @@ function init_target() {
 		globalThis.ready = true;
 	})))();
 }
-export { target_exports as n, init_observer as r, init_target as t };
-
-```
-
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __esmMin as t };
+export { __esmMin as i, target_exports as n, init_observer as r, init_target as t };
 
 ```

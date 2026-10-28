@@ -107,7 +107,7 @@ export { __share_require as i, __share as n, __share_export as r, __esmMin as t 
 ### a.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+import { r as __esmMin } from "./c2.js";
 import { n as s1, t as init_s1 } from "./s1.js";
 // a.js
 var helper;
@@ -126,7 +126,7 @@ init_a();
 ### b.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+import { r as __esmMin } from "./c2.js";
 import { n as s1, t as init_s1 } from "./s1.js";
 // b.js
 function init_b() {
@@ -150,7 +150,7 @@ init_c();
 ### c2.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // c.js
 var helper;
 function init_c() {
@@ -159,23 +159,14 @@ function init_c() {
 		globalThis.events.push("C body");
 	})))();
 }
-export { init_c as n, helper as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
+export { init_c as n, __esmMin as r, helper as t };
 
 ```
 
 ### s1.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_c, t as helper } from "./c2.js";
+import { n as init_c, r as __esmMin, t as helper } from "./c2.js";
 // s1.js
 var s1;
 function init_s1() {

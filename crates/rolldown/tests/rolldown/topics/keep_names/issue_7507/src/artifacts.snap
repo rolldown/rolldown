@@ -24,7 +24,7 @@ function test() {
 var init_foo = __esmMin((() => {}));
 // index.cjs
 var require_src = /* @__PURE__ */ __commonJSMin((() => {
-	const assert = __require("node:assert");
+	const assert = __require(import.meta.url)("node:assert");
 	const { test: barTest } = (init_bar(), __toCommonJS(bar_exports));
 	const { default: test } = (init_foo(), __toCommonJS(foo_exports));
 	assert.strictEqual(barTest.name, "test");

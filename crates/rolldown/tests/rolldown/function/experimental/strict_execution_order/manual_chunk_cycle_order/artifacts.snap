@@ -23,8 +23,7 @@ init_m1();
 ## g.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as init_m0 } from "./m0.js";
+import { n as __esmMin, t as init_m0 } from "./m0.js";
 import { t as init_m3 } from "./m3.js";
 // m2.js
 function init_m2() {
@@ -48,36 +47,6 @@ export { init_m2 as n, init_m1 as t };
 ## m0.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-// m0.js
-function init_m0() {
-	return (init_m0 = __esmMin((() => {
-		globalThis.logs.push("m0");
-	})))();
-}
-export { init_m0 as t };
-
-```
-
-## m3.js
-
-```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_m2 } from "./g.js";
-// m3.js
-function init_m3() {
-	return (init_m3 = __esmMin((() => {
-		init_m2();
-		globalThis.logs.push("m3");
-	})))();
-}
-export { init_m3 as t };
-
-```
-
-## rolldown-runtime.js
-
-```js
 // \0rolldown/runtime.js
 var __esmMin = (fn, res, err) => () => {
 	if (err) throw err[0];
@@ -87,7 +56,29 @@ var __esmMin = (fn, res, err) => () => {
 		throw err = [e], e;
 	}
 };
-export { __esmMin as t };
+// m0.js
+function init_m0() {
+	return (init_m0 = __esmMin((() => {
+		globalThis.logs.push("m0");
+	})))();
+}
+export { __esmMin as n, init_m0 as t };
+
+```
+
+## m3.js
+
+```js
+import { n as __esmMin } from "./m0.js";
+import { n as init_m2 } from "./g.js";
+// m3.js
+function init_m3() {
+	return (init_m3 = __esmMin((() => {
+		init_m2();
+		globalThis.logs.push("m3");
+	})))();
+}
+export { init_m3 as t };
 
 ```
 
@@ -115,8 +106,7 @@ init_m1();
 ### g.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as init_m0 } from "./m0.js";
+import { n as __esmMin, t as init_m0 } from "./m0.js";
 import { t as init_m3 } from "./m3.js";
 // m2.js
 function init_m2() {
@@ -140,36 +130,6 @@ export { init_m2 as n, init_m1 as t };
 ### m0.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-// m0.js
-function init_m0() {
-	return (init_m0 = __esmMin((() => {
-		globalThis.logs.push("m0");
-	})))();
-}
-export { init_m0 as t };
-
-```
-
-### m3.js
-
-```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_m2 } from "./g.js";
-// m3.js
-function init_m3() {
-	return (init_m3 = __esmMin((() => {
-		init_m2();
-		globalThis.logs.push("m3");
-	})))();
-}
-export { init_m3 as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
 // \0rolldown/runtime.js
 var __esmMin = (fn, res, err) => () => {
 	if (err) throw err[0];
@@ -179,6 +139,28 @@ var __esmMin = (fn, res, err) => () => {
 		throw err = [e], e;
 	}
 };
-export { __esmMin as t };
+// m0.js
+function init_m0() {
+	return (init_m0 = __esmMin((() => {
+		globalThis.logs.push("m0");
+	})))();
+}
+export { __esmMin as n, init_m0 as t };
+
+```
+
+### m3.js
+
+```js
+import { n as __esmMin } from "./m0.js";
+import { n as init_m2 } from "./g.js";
+// m3.js
+function init_m3() {
+	return (init_m3 = __esmMin((() => {
+		init_m2();
+		globalThis.logs.push("m3");
+	})))();
+}
+export { init_m3 as t };
 
 ```

@@ -35,8 +35,7 @@ export { foo as t };
 ### lazy-chunk.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as foo, r as init_user_lib } from "./main2.js";
+import { a as __esmMin, n as foo, r as init_user_lib } from "./main2.js";
 // lazy-chunk.js
 function init_lazy_chunk() {
 	return (init_lazy_chunk = __esmMin((() => {
@@ -59,7 +58,7 @@ init_main();
 ### main2.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // polyfill.js
 function init_polyfill() {
 	return (init_polyfill = __esmMin((() => {
@@ -83,15 +82,7 @@ function init_main() {
 		foo();
 	})))();
 }
-export { init_polyfill as i, foo as n, init_user_lib as r, init_main as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
+export { __esmMin as a, init_polyfill as i, foo as n, init_user_lib as r, init_main as t };
 
 ```
 
@@ -102,8 +93,7 @@ export { __esmMin as t };
 ### lazy-chunk.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as foo, r as init_user_lib } from "./main2.js";
+import { a as __esmMin, n as foo, r as init_user_lib } from "./main2.js";
 // lazy-chunk.js
 function init_lazy_chunk() {
 	return (init_lazy_chunk = __esmMin((() => {
@@ -126,7 +116,7 @@ init_main();
 ### main2.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // polyfill.js
 function init_polyfill() {
 	return (init_polyfill = __esmMin((() => {
@@ -150,14 +140,6 @@ function init_main() {
 		foo();
 	})))();
 }
-export { init_polyfill as i, foo as n, init_user_lib as r, init_main as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
+export { __esmMin as a, init_polyfill as i, foo as n, init_user_lib as r, init_main as t };
 
 ```

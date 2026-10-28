@@ -6,8 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { n as __esmMin } from "./chunks/rolldown-runtime.js";
-import { n as url, t as init_shared } from "./chunks/shared.js";
+import { n as url, r as __esmMin, t as init_shared } from "./chunks/shared.js";
 // a.js
 function init_a() {
 	return (init_a = __esmMin((() => {
@@ -24,8 +23,7 @@ init_a();
 ## b.js
 
 ```js
-import { n as __esmMin } from "./chunks/rolldown-runtime.js";
-import { n as url, t as init_shared } from "./chunks/shared.js";
+import { n as url, r as __esmMin, t as init_shared } from "./chunks/shared.js";
 // b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
@@ -37,18 +35,10 @@ init_b();
 
 ```
 
-## chunks/rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as n, __toESM as r, __commonJSMin as t };
-
-```
-
 ## chunks/shared.js
 
 ```js
-import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // logo.png
 var require_logo = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "../assets/logo-Byt54u-j.png";
@@ -61,6 +51,6 @@ function init_shared() {
 		url = import_logo.default;
 	})))();
 }
-export { url as n, init_shared as t };
+export { url as n, __esmMin as r, init_shared as t };
 
 ```

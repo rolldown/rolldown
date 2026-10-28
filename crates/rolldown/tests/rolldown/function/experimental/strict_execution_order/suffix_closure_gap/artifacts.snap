@@ -50,8 +50,7 @@ export { setup as n, init_main as t };
 ### dyn.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { i as setup, n as init_intermediate, r as init_setup } from "./main2.js";
+import { a as __esmMin, i as setup, n as init_intermediate, r as init_setup } from "./main2.js";
 // dyn.js
 function init_dyn() {
 	return (init_dyn = __esmMin((() => {
@@ -75,7 +74,7 @@ init_main();
 ### main2.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // setup.js
 var setup;
 function init_setup() {
@@ -109,14 +108,6 @@ function init_main() {
 		import("./dyn.js");
 	})))();
 }
-export { setup as i, init_intermediate as n, init_setup as r, init_main as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
+export { __esmMin as a, setup as i, init_intermediate as n, init_setup as r, init_main as t };
 
 ```

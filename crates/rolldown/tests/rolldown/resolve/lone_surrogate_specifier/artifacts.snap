@@ -17,9 +17,9 @@ export { d };
 ## main.js
 
 ```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
 import fs from "node:fs";
-// HIDDEN [\0rolldown/runtime.js]
 // b�.js
 const b = "b";
 // c�.js
@@ -53,5 +53,13 @@ const ignoredUrl = new URL(
 );
 const dataUrl = new URL("data:text/plain,\ud800", import.meta.url);
 export { b, c, dataUrl, ignored, ignoredUrl };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __commonJSMin as t };
 
 ```

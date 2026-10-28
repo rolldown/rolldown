@@ -44,9 +44,9 @@ impl GenerateStage<'_> {
       return false;
     };
 
-    // The registry lives in the runtime module. `try_merge_runtime_chunk` never merges the
-    // runtime while the option is on, and any candidate's members demand a helper (`__esmMin` for
-    // an order-wrapped module, `__commonJS` for a CommonJS one), so the sweep keeps the runtime
+    // The registry lives in the runtime module. Runtime folding runs after selection and only
+    // when no records were selected. Every candidate demands a helper (`__esmMin` for an
+    // order-wrapped module, `__commonJS` for a CommonJS one), so the sweep keeps the runtime
     // whenever there is something to select. A build that still has no standalone runtime chunk
     // has no candidate either.
     let runtime_idx = self.link_output.runtime.id();
@@ -339,6 +339,13 @@ impl GenerateStage<'_> {
       }
       if stmt_info.meta.contains(StmtInfoMeta::ImportMeta) {
         return Some("member uses import.meta");
+      }
+      if self.options.is_esm_format_with_node_platform()
+        && stmt_info.meta.contains(StmtInfoMeta::HasDummyRecord)
+      {
+        // The require polyfill receives this module's output URL. A copy in another file would
+        // change relative resolution and the identity of its cached require function.
+        return Some("member uses a caller-relative require polyfill");
       }
       if stmt_info.meta.contains(StmtInfoMeta::NonStaticDynamicImport) {
         return Some("member uses dynamic import");

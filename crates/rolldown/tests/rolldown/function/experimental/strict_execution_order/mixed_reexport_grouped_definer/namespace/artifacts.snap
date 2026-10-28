@@ -6,8 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## lazy.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as SNAPSHOT } from "./snapshot.js";
+import { r as __esmMin, t as SNAPSHOT } from "./snapshot.js";
 import { n as init_shared } from "./shared.js";
 // ../pure.js
 const PURE = "pure";
@@ -28,7 +27,7 @@ export { read };
 ## main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+import { r as __esmMin } from "./snapshot.js";
 import { n as init_shared, t as LOCAL } from "./shared.js";
 // main.js
 var local, load;
@@ -45,19 +44,10 @@ export { load, local };
 
 ```
 
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
-
-```
-
 ## shared.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_value } from "./snapshot.js";
+import { n as init_value, r as __esmMin } from "./snapshot.js";
 // ../shared.js
 var LOCAL;
 function init_shared() {
@@ -73,7 +63,7 @@ export { init_shared as n, LOCAL as t };
 ## snapshot.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // ../snapshots/value.js
 var SNAPSHOT;
 function init_value() {
@@ -81,7 +71,7 @@ function init_value() {
 		SNAPSHOT = globalThis.__seed ?? 0;
 	})))();
 }
-export { init_value as n, SNAPSHOT as t };
+export { init_value as n, __esmMin as r, SNAPSHOT as t };
 
 ```
 
@@ -92,8 +82,7 @@ export { init_value as n, SNAPSHOT as t };
 ### lazy.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as SNAPSHOT } from "./snapshot.js";
+import { r as __esmMin, t as SNAPSHOT } from "./snapshot.js";
 import { n as init_shared } from "./shared.js";
 // ../pure.js
 const PURE = "pure";
@@ -114,7 +103,7 @@ export { read };
 ### main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+import { r as __esmMin } from "./snapshot.js";
 import { n as init_shared, t as LOCAL } from "./shared.js";
 // main.js
 var local, load;
@@ -131,19 +120,10 @@ export { load, local };
 
 ```
 
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
-
-```
-
 ### shared.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_value } from "./snapshot.js";
+import { n as init_value, r as __esmMin } from "./snapshot.js";
 // ../shared.js
 var LOCAL;
 function init_shared() {
@@ -159,7 +139,7 @@ export { init_shared as n, LOCAL as t };
 ### snapshot.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // ../snapshots/value.js
 var SNAPSHOT;
 function init_value() {
@@ -167,6 +147,6 @@ function init_value() {
 		SNAPSHOT = globalThis.__seed ?? 0;
 	})))();
 }
-export { init_value as n, SNAPSHOT as t };
+export { init_value as n, __esmMin as r, SNAPSHOT as t };
 
 ```

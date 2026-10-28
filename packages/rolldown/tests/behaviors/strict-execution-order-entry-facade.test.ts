@@ -126,6 +126,7 @@ test.each<Mode>(['wrap-all', 'on-demand'])(
     expect(implementation?.isEntry).toBe(false);
     expect(implementation?.moduleIds.map((id) => id.replace(/^.*[\\/]/, '')).sort()).toEqual([
       'e.js',
+      'runtime.js',
       'shared.js',
     ]);
   },

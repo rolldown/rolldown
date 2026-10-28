@@ -29,8 +29,7 @@ export { foo as t };
 ### main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_foo, t as foo } from "./vendor.js";
+import { n as init_foo, r as __esmMin, t as foo } from "./vendor.js";
 import nodeAssert from "node:assert";
 // main.js
 function init_main() {
@@ -43,18 +42,10 @@ init_main();
 
 ```
 
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
-
-```
-
 ### vendor.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // foo.js
 var foo;
 function init_foo() {
@@ -62,6 +53,6 @@ function init_foo() {
 		foo = "foo bar";
 	})))();
 }
-export { init_foo as n, foo as t };
+export { init_foo as n, __esmMin as r, foo as t };
 
 ```

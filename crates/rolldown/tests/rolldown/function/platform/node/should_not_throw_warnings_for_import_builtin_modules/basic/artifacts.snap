@@ -11,7 +11,7 @@ import * as fs from "fs";
 import * as nodeFs from "node:fs";
 // HIDDEN [\0rolldown/runtime.js]
 // main.js
-console.log(fs, nodeFs, __require("path"), __require("node:path"));
+console.log(fs, nodeFs, __require(import.meta.url)("path"), __require(import.meta.url)("node:path"));
 export {};
 
 ```

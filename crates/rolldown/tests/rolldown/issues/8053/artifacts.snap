@@ -17,8 +17,8 @@ assert(typeof import_lodash.noop === "function");
 ## main.js
 
 ```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
-// HIDDEN [\0rolldown/runtime.js]
 // utils.js
 var import_lodash = (/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.noop = function noop() {};
@@ -29,6 +29,14 @@ assert(typeof import_lodash.debounce === "function");
 assert(typeof import_lodash.noop === "function");
 import("./lazy-a.js");
 export { import_lodash as n, import_lodash as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __commonJSMin as t };
 
 ```
 

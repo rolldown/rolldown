@@ -6,8 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_facade, t as getPref } from "./pref.js";
+import { n as init_facade, r as __esmMin, t as getPref } from "./pref.js";
 // first.js
 function init_first() {
 	return (init_first = __esmMin((() => {
@@ -41,7 +40,7 @@ init_main();
 ## pref.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // node_modules/pref-pkg/manager.js
 function makePref() {
 	return () => "PREF_OK";
@@ -59,15 +58,7 @@ function init_facade() {
 		getPref = makePref();
 	})))();
 }
-export { init_facade as n, getPref as t };
-
-```
-
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
+export { init_facade as n, __esmMin as r, getPref as t };
 
 ```
 
@@ -78,8 +69,7 @@ export { __esmMin as t };
 ### main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_facade, t as getPref } from "./pref.js";
+import { n as init_facade, r as __esmMin, t as getPref } from "./pref.js";
 // first.js
 (globalThis.__events ??= []).push("first");
 // node_modules/pref-pkg/index.js
@@ -108,7 +98,7 @@ init_main();
 ### pref.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // node_modules/pref-pkg/manager.js
 function makePref() {
 	return () => "PREF_OK";
@@ -126,14 +116,6 @@ function init_facade() {
 		getPref = makePref();
 	})))();
 }
-export { init_facade as n, getPref as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
+export { init_facade as n, __esmMin as r, getPref as t };
 
 ```

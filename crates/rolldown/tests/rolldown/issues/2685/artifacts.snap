@@ -7,8 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { createRequire } from "node:module";
+// \0rolldown/runtime.js
+var __create = Object.create;
+var __nodeCreateRequire = createRequire;
+var __nodeRequireCache = /* @__PURE__ */ __create(null);
+var __require = (url) => __nodeRequireCache[url] || (__nodeRequireCache[url] = __nodeCreateRequire(url));
 // main.js
-var main_default = (/* @__PURE__ */ (() => createRequire(import.meta.url))())("path").join;
+var main_default = __require(import.meta.url)("path").join;
 export { main_default as default };
 
 ```

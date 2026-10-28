@@ -612,6 +612,9 @@ link + tree shaking
   -> derive sealed init metadata and cross-chunk links
   -> preserve strict entry signatures with public facades
   -> rederive init metadata and links if facades changed topology
+  -> select inline records and derive any registry-helper imports
+  -> fold runtime when no records were selected, using final ordered imports
+  -> rederive links after the fold
   -> seal liveness and commit cross-chunk links
   -> finalize modules using explicit interop/order wrapper cases + Sealed<FinalEsmInitMetadata>
   -> render entry prologues using the shared EsmInitTarget view
@@ -646,3 +649,17 @@ Verification stays at observable compiler boundaries rather than reaching into p
 5. Full Rust, Node, WASI, Vite, formatting, lint, and repository validation remain the merge gate.
 
 The migration is complete only after `override_wrap_kind()`, `hoist_esm_wrapper`, and order-specific reads of interop wrapper fields are removed.
+
+## Runtime placement
+
+Runtime placement uses the final import tables. The runtime stays separate while chunk optimization, namespace forwarding, and order lowering can add consumers. One final fold selects its owner. A single-file bundle keeps its ordinary inline runtime.
+
+Safe merging remains an optimization. A host must preserve helper availability, user execution order, lazy-loading boundaries, and entry signatures. The proof also preserves runtime initialization before observable dependencies. Runtime helpers capture intrinsics such as `Object.defineProperty`; delaying that capture can change behavior.
+
+The implementation allows a sole consumer, an inert dependency, or a common first observable dependency to host helpers. These proofs use the completed, ordered chunk graph. The fold retains that order across ownership changes. Entry bits can rank candidates, but only final imports establish loading paths. See [implementation.md](./implementation.md#runtime-module-placement) for the exact checks.
+
+Earlier placement selected hosts before facade elimination and order lowering completed the consumer set. Later passes then needed eviction, repeated host selection, and separate predictions of import order. A removed source import or a newly generated helper could invalidate those predictions. Final placement removes that feedback loop.
+
+Some bundles retain an extra runtime file. This cost preserves one helper instance and keeps lazy chunks independent of failed application entries. Loading an entry before a dynamic import does not prove that the entry completes successfully. A static import of a failed entry rejects, even when its helper definitions ran before the failure.
+
+Copying helpers can avoid that file, but it changes instance sharing and increases duplicated code. A global helper registry requires another lifetime, naming, and hashing protocol. Neither mechanism belongs in this placement pass. Dev mode also uses ordinary runtime imports.

@@ -1,0 +1,19 @@
+{
+  "snapshot": false,
+  "config": {},
+  "configVariants": [
+    {
+      "minify": true
+    },
+    {
+      "format": "cjs"
+    },
+    {
+      "strictExecutionOrder": true
+    },
+    {
+      "strictExecutionOrder": true,
+      "onDemandWrapping": true
+    }
+  ]
+}

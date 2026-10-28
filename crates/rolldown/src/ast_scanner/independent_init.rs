@@ -10,7 +10,7 @@ use rustc_hash::FxHashSet;
 
 /// Prove that the local body can initialize at its first binding consumer. Static dependencies
 /// need a separate graph-wide proof. See internal-docs/code-splitting/design.md.
-pub(super) fn has_independent_initialization(
+pub fn has_independent_initialization(
   program: &Program<'_>,
   scopes: &AstScopes,
   keep_names: bool,

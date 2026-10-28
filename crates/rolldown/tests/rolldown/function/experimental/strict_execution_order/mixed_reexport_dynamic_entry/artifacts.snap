@@ -199,27 +199,14 @@ exports.read = read;
 
 ```
 
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-Object.defineProperty(exports, "__exportAll", {
-	enumerable: true,
-	get: function() {
-		return __exportAll;
-	}
-});
-
-```
-
 ### shared.js
 
 ```js
-const require_rolldown_runtime = require("./rolldown-runtime.js");
+// HIDDEN [\0rolldown/runtime.js]
 // a.js
 const A = { value: "a" };
 // shared.js
-var shared_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ A: () => A });
+var shared_exports = /* @__PURE__ */ __exportAll({ A: () => A });
 const LOCAL = "local";
 Object.defineProperty(exports, "LOCAL", {
 	enumerable: true,

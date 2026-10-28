@@ -6,8 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## b.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_shared, r as s } from "./e2.js";
+import { i as __esmMin, n as init_shared, r as s } from "./e2.js";
 // b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
@@ -30,7 +29,7 @@ init_e();
 ## e2.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // shared.js
 var s;
 function init_shared() {
@@ -45,14 +44,6 @@ function init_e() {
 		globalThis.events.push("E body");
 	})))();
 }
-export { init_shared as n, s as r, init_e as t };
-
-```
-
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
+export { __esmMin as i, init_shared as n, s as r, init_e as t };
 
 ```

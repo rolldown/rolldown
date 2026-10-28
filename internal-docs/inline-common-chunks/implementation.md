@@ -4,7 +4,7 @@
 
 ## Summary
 
-`output.codeSplitting.experimentalInlineCommonChunks` adds one struct, `InlineCommonChunksState` (`crates/rolldown/src/stages/generate_stage/inline_common_chunks/`), and threads it through the generate stage. Selection and placement happen inside the cross-chunk link step, on the derived final edges; the physical file graph is projected right after the links are committed; naming, module finalization and the ESM renderer treat a carried record's modules as part of the carrying file. Three runtime helpers (`__share`, `__share_require`, `__share_export`) implement the registry.
+`output.codeSplitting.experimentalInlineCommonChunks` adds one struct, `InlineCommonChunksState` (`crates/rolldown/src/stages/generate_stage/inline_common_chunks/`), and threads it through the generate stage. Selection and placement happen at the end of chunk-plan finalization, on the derived final edges; the physical file graph is projected right after the links are committed; naming, module finalization and the ESM renderer treat a carried record's modules as part of the carrying file. Three runtime helpers (`__share`, `__share_require`, `__share_export`) implement the registry.
 
 ## Options
 
@@ -22,12 +22,14 @@ A fixture's `configVariants` entry with `codeSplitting: { experimentalInlineComm
 ```
 generate()
   ├─ prepare_inline_common_chunks()          evaluates `exclude` once (async), marks `.d.ts`
-  ├─ generate_chunks()                        try_merge_runtime_chunk() returns early while on
-  ├─ finalize_chunk_plan()                    order lowering, sweep, signature facades; returns final init metadata and derived logical links
+  ├─ generate_chunks()                        runtime stays separate
+  ├─ finalize_chunk_plan()
+  │    ├─ order lowering, runtime sweep, signature facades
+  │    ├─ select_inline_common_chunks()       records, placement, registry demand
+  │    ├─ compute_cross_chunk_link_state()    again when selected: the demand
+  │    │                                       adds the runtime chunk's `__share*` imports/exports
+  │    └─ fold_final_runtime_chunk()          only when selection found no records
   ├─ used_symbol_refs.seal()
-  ├─ select_inline_common_chunks()            <- selection point: records, placement, registry demand
-  ├─ compute_cross_chunk_link_state()         again, only when something was selected: the demand
-  │                                            adds the runtime chunk's `__share*` imports/exports
   ├─ commit_cross_chunk_links()               the single writer of the chunk graph's link fields
   ├─ apply_inline_common_chunks_links()       <- physical projection
   ├─ generate_chunk_name_and_preliminary_filenames()   record id; carriers' moduleIds
@@ -58,13 +60,13 @@ pub struct InlineReader { pub file: ChunkIdx, pub reader: ChunkIdx }   // whose 
 
 ## Selection (`inline_common_chunks/select.rs`)
 
-Runs on the `CrossChunkLinkState` of the final link derivation: every module is in its final chunk, liveness is sealed, order lowering and the unused-runtime sweep are done. The runtime chunk must exist and be standalone (`try_merge_runtime_chunk` returns early while the option is on; the sweep keeps the runtime whenever a candidate exists, because a candidate's members demand `__esmMin`/`__esm` or `__commonJS`); otherwise nothing is selected. The static importee table is `index_imports_from_other_chunks` plus the edges chunk merging pre-populated on `Chunk::imports_from_other_chunks`, the same union `commit_cross_chunk_links` writes.
+Runs on the `CrossChunkLinkState` of the final link derivation: every module is in its final chunk, liveness is final, order lowering and the unused-runtime sweep are done. The runtime chunk must exist and be standalone (runtime folding follows selection; the sweep keeps the runtime whenever a candidate exists, because a candidate's members demand `__esmMin`/`__esm` or `__commonJS`); otherwise nothing is selected. The static importee table is `index_imports_from_other_chunks` plus the edges chunk merging pre-populated on `Chunk::imports_from_other_chunks`, the same union `commit_cross_chunk_links` writes.
 
 `prefers_inline_common_chunk` lets dynamic already-loaded reduction and common-chunk merging preserve small, eligible module groups before entry assignment. It shares `inline_common_chunk_module_bailout` with final selection and ignores runtime modules, whose placement is separate.
 
 The rule list from `design.md` is applied to every live chunk in `sorted_chunk_idx_vec` order (`keep_as_file_reason`). Two rules need whole-graph facts: chunks declaring a symbol another chunk exports (`foreign_exported_owner_chunks`: ownership from the derivation's `symbol_chunk` table, because an order wrapper's CommonJS interop symbols are declared in the CommonJS module's chunk while the importing module owns them, and for an exported namespace alias also the chunk declaring the namespace binding, since the file prints `var x = ns.prop` for it) and chunks whose symbols a direct-`eval` module references (`eval_read_chunks`). `import.meta` is the scanner's per-statement `StmtInfoMeta::ImportMeta` flag, checked only on included statements; an emitted asset is a module the file emitter associates with a file reference (`file_ref_for_module`), as the builtin asset and copy module types do; a star re-export of an external is `star_exports_from_external_modules`, for which the finalizer prints an import declaration inside the module body. After the per-chunk rules, a Tarjan SCC over the static chunk graph (runtime chunk excluded) drops every candidate that shares a component with a non-candidate. The placement loop then drops a record no file carries and a record that a file holding a direct-`eval` module would print (`eval_files`), recomputing the placement until every record passes: a carrier names its own modules and its records' in one pass, and a binding an `eval` reads by its source name must not be renamed.
 
-Selecting registers the registry demand on the reading files: `ShareRequire` for every file that reads a record, plus `Share` and `ShareExport` when it carries one. Records register nothing: their modules' own helper demand (`__esmMin`, `__commonJS`) is on the record chunk's synthetic statements and is taken over by the carriers in the projection. `compute_runtime_symbol_closure` then pulls `__share_factories`, `__share_records`, `__create` and `__defProp` in. `generate()` derives the link state once more so the runtime chunk exports the helpers and the reading files import them; the placement computed from the second derivation's non-runtime edges must equal the first (asserted in the projection).
+Selecting registers the registry demand on the reading files: `ShareRequire` for every file that reads a record, plus `Share` and `ShareExport` when it carries one. Records register nothing: their modules' own helper demand (`__esmMin`, `__commonJS`) is on the record chunk's synthetic statements and is taken over by the carriers in the projection. `compute_runtime_symbol_closure` then pulls `__share_factories`, `__share_records`, `__create` and `__defProp` in. `finalize_chunk_plan()` derives the link state once more so the runtime chunk exports the helpers and the reading files import them; the placement computed from the second derivation's non-runtime edges must equal the first (asserted in the projection).
 
 Every decision is logged: `RD_LOG=rolldown::inline_common_chunks=debug` prints `kept as file` with the rule, `selected as record` with size and readers, and each carrier's takeover.
 

@@ -6,8 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## group-0.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as init_leafhost } from "./group-l.js";
+import { n as __esmMin, t as init_leafhost } from "./group-l.js";
 import { t as init_x } from "./x.js";
 // y.js
 function init_y() {
@@ -30,7 +29,7 @@ export { init_y as n, init_main as t };
 ## group-l.js
 
 ```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // leafhost.js
 function init_leafhost() {
 	return (init_leafhost = __esmMin((() => {
@@ -45,7 +44,7 @@ function init_m6() {
 		console.log("M6");
 	})))();
 }
-export { init_leafhost as t };
+export { __esmMin as n, init_leafhost as t };
 
 ```
 
@@ -59,18 +58,10 @@ init_main();
 
 ```
 
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __esmMin as t };
-
-```
-
 ## x.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as __esmMin } from "./group-l.js";
 import { n as init_y } from "./group-0.js";
 // x.js
 function init_x() {
@@ -90,8 +81,7 @@ export { init_x as t };
 ### group-0.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as init_leafhost } from "./group-l.js";
+import { n as __esmMin, t as init_leafhost } from "./group-l.js";
 import { t as init_x } from "./x.js";
 // y.js
 function init_y() {
@@ -114,7 +104,7 @@ export { init_y as n, init_main as t };
 ### group-l.js
 
 ```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // leafhost.js
 function init_leafhost() {
 	return (init_leafhost = __esmMin((() => {
@@ -129,7 +119,7 @@ function init_m6() {
 		console.log("M6");
 	})))();
 }
-export { init_leafhost as t };
+export { __esmMin as n, init_leafhost as t };
 
 ```
 
@@ -143,18 +133,10 @@ init_main();
 
 ```
 
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __esmMin as t };
-
-```
-
 ### x.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as __esmMin } from "./group-l.js";
 import { n as init_y } from "./group-0.js";
 // x.js
 function init_x() {

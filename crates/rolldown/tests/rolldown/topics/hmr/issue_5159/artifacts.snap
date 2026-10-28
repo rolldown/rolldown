@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## bar.js
 
 ```js
-import { t as __exportAll } from "./main.js";
+import { t as __exportAll } from "./rolldown-runtime.js";
 import { t as trim } from "./string.js";
 __rolldown_runtime__.registerGraph({
 	ids: ["bar.js", "utils/string.js"],
@@ -27,7 +27,7 @@ export { bar_default as default };
 ## foo.js
 
 ```js
-import { t as __exportAll } from "./main.js";
+import { t as __exportAll } from "./rolldown-runtime.js";
 import { n as unused, t as trim } from "./string.js";
 __rolldown_runtime__.registerGraph({
 	ids: [
@@ -59,7 +59,7 @@ export { foo_default as default };
 ## main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+import "./rolldown-runtime.js";
 __rolldown_runtime__.registerGraph({
 	ids: [
 		"main.js",
@@ -74,6 +74,13 @@ __rolldown_runtime__.registerGraph({
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js");
 import("./foo.js"), import("./bar.js");
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
 export { __exportAll as t };
 
 ```
@@ -81,7 +88,7 @@ export { __exportAll as t };
 ## string.js
 
 ```js
-import { t as __exportAll } from "./main.js";
+import { t as __exportAll } from "./rolldown-runtime.js";
 __rolldown_runtime__.registerGraph({
 	ids: ["utils/string.js"],
 	localCount: 1,

@@ -42,7 +42,7 @@ export { read as n, init_reader as t };
 ## rolldown-runtime.js
 
 ```js
-//! Common Chunk: [Shared-By: main.js, target.js]
+//! Common Chunk: [Shared-By: target.js]
 // \0rolldown/runtime.js
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;

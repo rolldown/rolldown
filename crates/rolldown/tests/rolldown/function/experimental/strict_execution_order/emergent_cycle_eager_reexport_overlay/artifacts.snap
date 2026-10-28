@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { t as __commonJSMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // a/a-first.js
 (globalThis.__events ??= []).push("a-first");
 // a/carrier.cjs.js
@@ -19,15 +19,14 @@ var require_carrier_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 function marker() {
 	return "F";
 }
-export { require_carrier_cjs as n, marker as t };
+export { __toESM as i, require_carrier_cjs as n, __esmMin as r, marker as t };
 
 ```
 
 ## b.js
 
 ```js
-import { n as __esmMin, r as __toESM } from "./rolldown-runtime.js";
-import { n as require_carrier_cjs } from "./a.js";
+import { i as __toESM, n as require_carrier_cjs, r as __esmMin } from "./a.js";
 // b/eagerhaz.js
 var import_carrier_cjs = /* @__PURE__ */ __toESM(require_carrier_cjs());
 globalThis.__carried = (0, import_carrier_cjs.default)();
@@ -48,8 +47,7 @@ export { pv as n, init_definer as t };
 ## main.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
-import { t as marker } from "./a.js";
+import { r as __esmMin, t as marker } from "./a.js";
 import { n as pv, t as init_definer } from "./b.js";
 // e-first.js
 (globalThis.__events ??= []).push("e-first");
@@ -68,14 +66,6 @@ init_main();
 
 ```
 
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as n, __toESM as r, __commonJSMin as t };
-
-```
-
 # Variant: wrap-all: [on_demand_wrapping: false]
 
 ## Assets
@@ -83,7 +73,7 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 ### a.js
 
 ```js
-import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // a/a-first.js
 function init_a_first() {
 	return (init_a_first = __esmMin((() => {
@@ -103,15 +93,14 @@ function marker() {
 function init_forwarder() {
 	return (init_forwarder = __esmMin((() => {})))();
 }
-export { init_a_first as i, marker as n, require_carrier_cjs as r, init_forwarder as t };
+export { __esmMin as a, init_a_first as i, marker as n, __toESM as o, require_carrier_cjs as r, init_forwarder as t };
 
 ```
 
 ### b.js
 
 ```js
-import { n as __esmMin, r as __toESM } from "./rolldown-runtime.js";
-import { r as require_carrier_cjs } from "./a.js";
+import { a as __esmMin, o as __toESM, r as require_carrier_cjs } from "./a.js";
 // b/eagerhaz.js
 var import_carrier_cjs;
 function init_eagerhaz() {
@@ -137,8 +126,7 @@ export { pv as n, init_eagerhaz as r, init_definer as t };
 ### main.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
-import { i as init_a_first, n as marker } from "./a.js";
+import { a as __esmMin, i as init_a_first, n as marker } from "./a.js";
 import { n as pv, r as init_eagerhaz, t as init_definer } from "./b.js";
 // e-first.js
 function init_e_first() {
@@ -161,13 +149,5 @@ function init_main() {
 	})))();
 }
 init_main();
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as n, __toESM as r, __commonJSMin as t };
 
 ```

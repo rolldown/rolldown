@@ -169,11 +169,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     );
   }
 
-  pub fn canonical_name_for_runtime(&self, name: &str) -> &'me str {
-    let sym_ref = self.ctx.runtime.resolve_symbol(name);
-    self.canonical_name_for(sym_ref)
-  }
-
   pub fn canonical_ref_for_runtime(&self, name: &str) -> SymbolRef {
     self.ctx.runtime.resolve_symbol(name)
   }
@@ -181,7 +176,25 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   pub fn finalized_expr_for_runtime_symbol(&self, name: &str) -> ast::Expression<'ast> {
     let (expr, _) =
       self.finalized_expr_for_symbol_ref(self.ctx.runtime.resolve_symbol(name), false, false);
-    expr
+    if name == "__require" && self.ctx.options.is_esm_format_with_node_platform() {
+      // __require(import.meta.url) returns the cached require for this output chunk.
+      ast::Expression::new_call_expression(
+        SPAN,
+        expr,
+        None,
+        [ast::Argument::new_static_member_expression(
+          SPAN,
+          ast::Expression::new_import_meta(SPAN, self),
+          ast::IdentifierName::new(SPAN, "url", self),
+          false,
+          self,
+        )],
+        false,
+        self,
+      )
+    } else {
+      expr
+    }
   }
 
   /// Build the `init_x()` call expression for a wrapped (`WrapKind::Esm`) importee.
@@ -1175,7 +1188,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if !export_all_externals_rec_ids.is_empty() {
       match self.ctx.options.format {
         OutputFormat::Esm => {
-          let re_export_name = self.canonical_name_for_runtime("__reExport");
           let stmts = export_all_externals_rec_ids.iter().copied().flat_map(|idx| {
             let rec = &self.ctx.module.import_records[idx];
             if !self
@@ -1195,7 +1207,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             let importee_name = &module.get_import_path(self.ctx.chunk, self.ctx.resolved_paths);
             // construct `__reExport(importer_exports, importee_exports)`
             let call_expr = CallExpression::new_re_export_call(
-              Expression::new_id_ref_expr(SPAN, re_export_name, self),
+              self.finalized_expr_for_runtime_symbol("__reExport"),
               Expression::new_id_ref_expr(SPAN, binding_name_for_namespace_object_ref, self),
               Expression::new_id_ref_expr(SPAN, importee_namespace_name, self),
               self,
@@ -1953,12 +1965,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             }
             WrapKind::Cjs => {
               //  `__toESM(require_foo())`
-              let to_esm_fn_name = self.canonical_name_for_runtime("__toESM");
               let importee_wrapper_ref_name =
                 self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
               Some(Expression::new_promise_resolve_then(
                 Expression::new_to_esm_wrapper(
-                  Expression::new_id_ref_expr(SPAN, to_esm_fn_name, self),
+                  self.finalized_expr_for_runtime_symbol("__toESM"),
                   ast::Expression::new_call_expression(
                     SPAN,
                     Expression::new_id_ref_expr(SPAN, importee_wrapper_ref_name, self),

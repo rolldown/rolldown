@@ -56,7 +56,7 @@ export { render };
 ### constants.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // constants.js
 function mark() {
 	globalThis.inlineNamespaceValue = 0;
@@ -67,7 +67,7 @@ function init_constants() {
 		y = /* @__PURE__ */ mark();
 	})))();
 }
-export { y as n, init_constants as t };
+export { y as n, __esmMin as r, init_constants as t };
 
 ```
 
@@ -83,8 +83,7 @@ await import("./page-a.js").then(console.log);
 ### page-a.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as y, t as init_constants } from "./constants.js";
+import { n as y, r as __esmMin, t as init_constants } from "./constants.js";
 import assert from "node:assert";
 // page-a.js
 function render() {
@@ -104,8 +103,7 @@ export { render };
 ### page-b.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import "./constants.js";
+import { r as __esmMin } from "./constants.js";
 import assert from "node:assert";
 // page-b.js
 function render() {}
@@ -117,14 +115,6 @@ function init_page_b() {
 }
 init_page_b();
 export { render };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
 
 ```
 

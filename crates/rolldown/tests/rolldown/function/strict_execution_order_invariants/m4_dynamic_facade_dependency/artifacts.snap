@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## e0.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as __esmMin } from "./m31.js";
 import { r as init_m13 } from "./gb.js";
 // e0.js
 var reg;
@@ -24,8 +24,7 @@ init_e0();
 ## gb.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as init_m31 } from "./m31.js";
+import { n as __esmMin, t as init_m31 } from "./m31.js";
 // m13.js
 function init_m13() {
 	return (init_m13 = __esmMin((() => {
@@ -58,22 +57,14 @@ export { cf_m29 };
 ## m31.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // m31.js
 function init_m31() {
 	return (init_m31 = __esmMin((() => {
 		console.log("sfx-m31-0");
 	})))();
 }
-export { init_m31 as t };
-
-```
-
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
+export { __esmMin as n, init_m31 as t };
 
 ```
 
@@ -84,7 +75,7 @@ export { __esmMin as t };
 ### e0.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as __esmMin } from "./m31.js";
 import { r as init_m13 } from "./gb.js";
 // e0.js
 var reg;
@@ -102,8 +93,7 @@ init_e0();
 ### gb.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as init_m31 } from "./m31.js";
+import { n as __esmMin, t as init_m31 } from "./m31.js";
 // m13.js
 function init_m13() {
 	return (init_m13 = __esmMin((() => {
@@ -136,21 +126,13 @@ export { cf_m29 };
 ### m31.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // m31.js
 function init_m31() {
 	return (init_m31 = __esmMin((() => {
 		console.log("sfx-m31-0");
 	})))();
 }
-export { init_m31 as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
+export { __esmMin as n, init_m31 as t };
 
 ```

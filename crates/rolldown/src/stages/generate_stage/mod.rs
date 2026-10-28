@@ -633,7 +633,7 @@ impl<'a> GenerateStage<'a> {
           .zip(ecma_meta.rendered_chunk.modules.values.iter())
         {
           *bytes_by_module.entry(module_id.as_str()).or_default() +=
-            rendered_module.rendered_length() as u64;
+            rendered_module.rendered_byte_length() as u64;
         }
       }
       let mut modules: Vec<action::ModuleRendered> = bytes_by_module

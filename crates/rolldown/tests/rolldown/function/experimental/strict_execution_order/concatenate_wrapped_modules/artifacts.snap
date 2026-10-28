@@ -7,18 +7,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-//#region setup.js
+// setup.js
 globalThis.globalValue = "foo";
-//#endregion
-//#region foo_inner.js
+// foo_inner.js
 var foo_inner_default = { foo: /* #__PURE__ */ (() => globalValue)() };
-//#endregion
-//#region foo.js
+// foo.js
 assert.strictEqual(foo_inner_default.foo, "foo");
-//#endregion
-//#region main.js
+// main.js
 assert.equal(foo_inner_default.foo, "foo");
-//#endregion
 
 ```
 
@@ -31,30 +27,27 @@ assert.equal(foo_inner_default.foo, "foo");
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
-//#region setup.js
+// setup.js
 function init_setup() {
 	return (init_setup = __esmMin((() => {
 		globalThis.globalValue = "foo";
 	})))();
 }
-//#endregion
-//#region foo_inner.js
+// foo_inner.js
 var foo_inner_default;
 function init_foo_inner() {
 	return (init_foo_inner = __esmMin((() => {
 		foo_inner_default = { foo: /* #__PURE__ */ (() => globalValue)() };
 	})))();
 }
-//#endregion
-//#region foo.js
+// foo.js
 function init_foo() {
 	return (init_foo = __esmMin((() => {
 		init_foo_inner();
 		assert.strictEqual(foo_inner_default.foo, "foo");
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_setup();
@@ -63,7 +56,6 @@ function init_main() {
 		assert.equal(foo_inner_default.foo, "foo");
 	})))();
 }
-//#endregion
 init_main();
 
 ```

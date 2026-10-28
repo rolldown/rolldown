@@ -19,6 +19,15 @@ struct EventKindInfo {
   doc_comments: Option<String>,
 }
 
+impl EventKindInfo {
+  fn check_names(&self) -> (&str, Option<&str>) {
+    match self.variant.as_str() {
+      "PluginTimings" => ("BundlerTimings", Some("pluginTimings")),
+      variant => (variant, None),
+    }
+  }
+}
+
 pub struct CheckOptionsGenerator {
   pub disabled_event: Vec<&'static str>,
 }
@@ -147,11 +156,13 @@ fn generate_check_inner_options_and_binding(
   let mut struct_fields = vec![];
   let mut field_initializer_list = vec![];
   let mut event_kind_switcher_initializer = vec![];
-  for EventKindInfo { variant, .. } in variant_and_number_pairs {
+  for event in variant_and_number_pairs {
+    let variant = &event.variant;
     if variant.ends_with("Error") {
       continue;
     }
-    let snake_case = quote::format_ident!("{}", variant.to_snake_case());
+    let (name, alias) = event.check_names();
+    let snake_case = quote::format_ident!("{}", name.to_snake_case());
     let ident = quote::format_ident!("{}", variant);
     let default_status = !generator.disabled_event.contains(&variant.as_str());
     struct_fields.push(quote! {
@@ -160,8 +171,28 @@ fn generate_check_inner_options_and_binding(
     field_initializer_list.push(quote! {
       #snake_case: value.#snake_case,
     });
+    let resolved_value = if let Some(alias) = alias {
+      let alias_ident = quote::format_ident!("{}", alias.to_snake_case());
+      // The doc comment is reused verbatim by the JSON schema and the NAPI typings, where
+      // serde and napi rename every field to camelCase. Name the camelCase spelling, which
+      // is the one two of those three surfaces actually use.
+      let camel_case = name.to_lower_camel_case();
+      let description = format!(
+        " Deprecated alias for `{camel_case}`. Rolldown uses `{camel_case}` if both options have values."
+      );
+      struct_fields.push(quote! {
+        #[doc = #description]
+        pub #alias_ident: Option<bool>,
+      });
+      field_initializer_list.push(quote! {
+        #alias_ident: value.#alias_ident,
+      });
+      quote! { value.#snake_case.or(value.#alias_ident) }
+    } else {
+      quote! { value.#snake_case }
+    };
     event_kind_switcher_initializer.push(quote! {
-        flag.set(rolldown_error::EventKindSwitcher::#ident, value.#snake_case.unwrap_or(#default_status));
+        flag.set(rolldown_error::EventKindSwitcher::#ident, #resolved_value.unwrap_or(#default_status));
     });
   }
   let check_options_struct = quote! {
@@ -217,11 +248,13 @@ fn generate_check_options(
   generator: &CheckOptionsGenerator,
 ) -> String {
   let mut fields = vec![];
-  for EventKindInfo { variant, doc_comments, .. } in variant_and_number_pairs {
+  for event in variant_and_number_pairs {
+    let EventKindInfo { variant, doc_comments, .. } = event;
     if variant.ends_with("Error") {
       continue;
     }
-    let camel_case = variant.to_lower_camel_case();
+    let (name, alias) = event.check_names();
+    let camel_case = name.to_lower_camel_case();
     let related_comments = doc_comments
       .clone()
       .unwrap_or(format!(
@@ -238,6 +271,15 @@ fn generate_check_options(
      * */
     {camel_case}?: boolean",
     ));
+    if let Some(alias) = alias {
+      fields.push(format!(
+        r"
+    /**
+     * @deprecated Use {{@linkcode {camel_case}}}. If `{camel_case}` and `{alias}` have values, Rolldown uses `{camel_case}`.
+     */
+    {alias}?: boolean",
+      ));
+    }
   }
   format!(
     r"
@@ -256,12 +298,14 @@ fn generate_validate_check_options(
   path: &str,
 ) -> (String, Span) {
   let mut fields = vec![];
-  for EventKindInfo { variant, doc_comments, .. } in variant_and_number_pairs {
+  for event in variant_and_number_pairs {
+    let EventKindInfo { variant, doc_comments, .. } = event;
     if variant.ends_with("Error") {
       continue;
     }
 
-    let camel_case = variant.to_lower_camel_case();
+    let (name, alias) = event.check_names();
+    let camel_case = name.to_lower_camel_case();
     let mut related_comments = doc_comments.clone().unwrap_or(format!(
       "Whether to emit warnings when detecting {}",
       variant.to_title_case().to_lowercase()
@@ -279,6 +323,14 @@ fn generate_validate_check_options(
     ),
   ),",
     ));
+    if let Some(alias) = alias {
+      fields.push(format!(
+        r#"{alias}: v.pipe(
+    v.optional(v.boolean()),
+    v.description("Deprecated alias for {camel_case}. Rolldown uses {camel_case} if both options have values."),
+  ),"#,
+      ));
+    }
   }
   let replaced_code = format!(
     r"

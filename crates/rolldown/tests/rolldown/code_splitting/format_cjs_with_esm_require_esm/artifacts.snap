@@ -13,11 +13,7 @@ require("./rolldown-runtime.js");
 ## main2.js
 
 ```js
-//#region esm.js
 require("./rolldown-runtime.js").__esmMin((() => {}));
-//#endregion
-//#region main2.js
-//#endregion
 
 ```
 

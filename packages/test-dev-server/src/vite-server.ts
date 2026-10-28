@@ -346,6 +346,7 @@ function toViteConfig(
     },
     experimental: {
       bundledDev: true,
+      hmrPartialAccept: true,
     },
     // Vite 8 runs rolldown natively, so the fixtures' rolldown-style plugins
     // (transform/generateBundle hooks, rolldown builtin plugins) pass through
@@ -366,6 +367,9 @@ function toViteConfig(
         // builds `{ lazy: true, ...resolvedDevMode, implement }`, spreading the resolved
         // devMode AFTER the default, so an explicit `lazy: false` here wins.
         ...(build.experimental !== undefined ? { experimental: build.experimental } : {}),
+        // Forward the fixture's rolldown `output` (e.g. `codeSplitting`); bundled dev mode
+        // still overrides file names, `minify` and `sourcemap`.
+        ...(build.output !== undefined ? { output: build.output } : {}),
       },
     },
   };

@@ -19,6 +19,7 @@ pub struct OrderWrapState {
   modules: FxHashMap<ModuleIdx, OrderWrappedModule>,
   reexport_init_transparent: FxHashSet<ModuleIdx>,
   consumer_local_reexport_routes: FxHashSet<ModuleIdx>,
+  consumer_local_reexport_records: FxHashMap<ModuleIdx, FxHashSet<ImportRecordIdx>>,
   consumer_local_namespace_targets: FxHashMap<ModuleIdx, Vec<WrappedEsmInitTarget>>,
   cjs_carriers: FxHashMap<OrderCjsCarrierKey, OrderCjsCarrier>,
   cjs_carriers_by_importee: FxHashMap<ModuleIdx, Vec<OrderCjsCarrierKey>>,
@@ -171,6 +172,8 @@ impl OrderWrapState {
     self.consumed_reexport_facades.contains(&symbol_ref)
   }
 
+  /// The wrapper evaluates the module-owned body. Consumer-local re-exports require the
+  /// additional targets selected by the import-record or complete-namespace resolver.
   pub(crate) fn esm_init_target(
     &self,
     module_idx: ModuleIdx,
@@ -197,8 +200,8 @@ impl OrderWrapState {
     wrapper_ref: SymbolRef,
     runtime_helper: RuntimeHelper,
   ) {
+    debug_assert_eq!(wrapper_ref.owner, module_idx);
     let wrapper_statement = self.add_synthetic_statement(OrderSyntheticStmt {
-      owner: module_idx,
       declared_symbols: vec![TaggedSymbolRef::normal(wrapper_ref)],
       referenced_symbols: vec![],
       runtime_helpers: runtime_helper,
@@ -226,8 +229,9 @@ impl OrderWrapState {
     referenced_symbols: Vec<SymbolRef>,
     runtime_helpers: RuntimeHelper,
   ) {
+    debug_assert_eq!(spec.wrapper_ref.owner, key.importer);
+    debug_assert_eq!(spec.namespace_ref.owner, key.importer);
     let wrapper_statement = self.add_synthetic_statement(OrderSyntheticStmt {
-      owner: key.importer,
       declared_symbols: vec![
         TaggedSymbolRef::normal(spec.wrapper_ref),
         TaggedSymbolRef::normal(spec.namespace_ref),
@@ -303,6 +307,25 @@ impl OrderWrapState {
     );
   }
 
+  /// Register a runtime-helper demand that no module statement carries: the registry calls a
+  /// reading file prints for `experimentalInlineCommonChunks`. The synthetic statement
+  /// declares and references nothing; it only makes the helpers reach `required_runtime_helpers`
+  /// (the sweep gate and the finalizer's runtime filter), the chunk's depended symbols (the import
+  /// from the runtime chunk), and the runtime symbol closure.
+  pub(crate) fn insert_runtime_helper_demand(
+    &mut self,
+    chunk_idx: ChunkIdx,
+    helpers: RuntimeHelper,
+  ) {
+    let stmt_idx = self.add_synthetic_statement(OrderSyntheticStmt {
+      declared_symbols: vec![],
+      referenced_symbols: vec![],
+      runtime_helpers: helpers,
+      chunk: None,
+    });
+    self.assign_synthetic_statement_chunk(stmt_idx, chunk_idx);
+  }
+
   pub(crate) fn add_synthetic_statement(
     &mut self,
     stmt: OrderSyntheticStmt,
@@ -321,7 +344,6 @@ impl OrderWrapState {
   /// See `internal-docs/code-splitting/design.md` ("Trigger placement").
   pub(super) fn insert_simulated_facade_namespace(
     &mut self,
-    owner: ModuleIdx,
     namespace_ref: SymbolRef,
     chunk_idx: ChunkIdx,
     runtime_helpers: RuntimeHelper,
@@ -339,7 +361,6 @@ impl OrderWrapState {
     }
     requirement.live_importers.extend(live_importers);
     let stmt_idx = self.add_synthetic_statement(OrderSyntheticStmt {
-      owner,
       declared_symbols: vec![TaggedSymbolRef::normal(namespace_ref)],
       referenced_symbols,
       runtime_helpers,
@@ -413,6 +434,30 @@ impl OrderWrapState {
 
   pub(crate) fn has_consumer_local_reexport_routes(&self) -> bool {
     !self.consumer_local_reexport_routes.is_empty()
+      || !self.consumer_local_reexport_records.is_empty()
+  }
+
+  pub(crate) fn insert_consumer_local_reexport_record(
+    &mut self,
+    module_idx: ModuleIdx,
+    rec_idx: ImportRecordIdx,
+  ) {
+    self.consumer_local_reexport_records.entry(module_idx).or_default().insert(rec_idx);
+  }
+
+  pub(crate) fn has_consumer_local_reexport_records(&self, module_idx: ModuleIdx) -> bool {
+    self.consumer_local_reexport_records.contains_key(&module_idx)
+  }
+
+  pub(crate) fn is_consumer_local_reexport_record(
+    &self,
+    module_idx: ModuleIdx,
+    rec_idx: ImportRecordIdx,
+  ) -> bool {
+    self
+      .consumer_local_reexport_records
+      .get(&module_idx)
+      .is_some_and(|records| records.contains(&rec_idx))
   }
 
   pub(crate) fn set_consumer_local_namespace_targets(
@@ -432,6 +477,16 @@ impl OrderWrapState {
 
   pub(crate) fn order_cjs_carrier(&self, key: OrderCjsCarrierKey) -> Option<&OrderCjsCarrier> {
     self.cjs_carriers.get(&key)
+  }
+
+  /// Every wrapper the lowering declares: the `init_*` of each order-wrapped module and the
+  /// wrapper of each CommonJS carrier.
+  pub(crate) fn wrapper_refs(&self) -> impl Iterator<Item = SymbolRef> + '_ {
+    self
+      .modules
+      .values()
+      .map(|module| module.wrapper_ref)
+      .chain(self.cjs_carrier_wrapper_refs.iter().copied())
   }
 
   pub(crate) fn has_order_cjs_carrier(&self, key: OrderCjsCarrierKey) -> bool {
@@ -721,7 +776,6 @@ pub struct EsmInitTarget {
 
 #[derive(Debug)]
 pub struct OrderSyntheticStmt {
-  pub(crate) owner: ModuleIdx,
   pub(crate) declared_symbols: Vec<TaggedSymbolRef>,
   pub(crate) referenced_symbols: Vec<SymbolRef>,
   pub(crate) runtime_helpers: RuntimeHelper,

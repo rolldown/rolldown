@@ -26,7 +26,11 @@
         ".vitepress/scripts/extract-options-plugin.ts", // used as a string path in TypeDoc plugin config
         ".vitepress/scripts/custom-theme-plugin.ts", // used as a string path in TypeDoc plugin config
       ],
-      "ignoreDependencies": ["typedoc-plugin-merge-modules", "typedoc-vitepress-theme"],
+      "ignoreDependencies": [
+        "typedoc-plugin-merge-modules",
+        "typedoc-vitepress-theme",
+        "wrangler", // used by the external Cloudflare Workers Builds deploy command
+      ],
     },
     "packages/bench": {
       "entry": ["vue-entry.js"],
@@ -89,6 +93,9 @@
         "playground/test-utils.ts", // suppress the unused exports errors
         "src/dev-engine-close-child.mjs", // spawned by dev-engine-close.test.ts via execa
       ],
+    },
+    "packages/browser-tests": {
+      "ignore": ["tests/fixtures/**"], // mounted into the container and built there, not here
     },
     "scripts": {
       "entry": ["misc/**", "lint/index.ts"],

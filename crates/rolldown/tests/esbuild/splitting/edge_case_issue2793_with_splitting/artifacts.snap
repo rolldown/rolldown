@@ -6,12 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## index.js
 
 ```js
-//#region a.js
+// a.js
 const A = 42;
-//#endregion
-//#region b.js
+// b.js
 const B = async () => (await import("./index.js")).A;
-//#endregion
 export { A, B };
 
 ```

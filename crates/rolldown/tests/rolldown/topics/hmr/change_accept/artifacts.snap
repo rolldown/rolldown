@@ -36,18 +36,13 @@ __rolldown_runtime__.registerGraph({
 		[0],
 		[1]
 	],
-	dynamicEdges: [
-		[],
-		[],
-		[]
-	]
+	entries: [2]
 });
-//#region child.js
+// child.js
 var child_exports = /* @__PURE__ */ __exportAll({ foo: () => 0 });
 __rolldown_runtime__.createModuleHotContext("child.js");
 __rolldown_runtime__.registerModule("child.js", { exports: child_exports });
-//#endregion
-//#region parent.js
+// parent.js
 var parent_exports = /* @__PURE__ */ __exportAll({});
 const parent_hot = __rolldown_runtime__.createModuleHotContext("parent.js");
 __rolldown_runtime__.registerModule("parent.js", { exports: parent_exports });
@@ -58,13 +53,11 @@ process.on("beforeExit", (code) => {
 	if (code !== 0) return;
 	assert(!globalThis.oldAcceptWasCalled);
 });
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 main_hot.accept("parent.js", () => {});
-//#endregion
 
 ```
 
@@ -73,25 +66,25 @@ main_hot.accept("parent.js", () => {});
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["parent.js","child.js"],localCount:1,edges:[[1]],dynamicEdges:[[]]});
+__rolldown_runtime__.registerGraph({ids:["parent.js","child.js"],localCount:1,edges:[[1]],stamps:{0:1}});
 //#region parent.js
 import * as import_node_assert_00 from "node:assert";
-__rolldown_runtime__.registerFactory("parent.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("parent.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("child.js");
-		const hot_parent = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_child_01 = __rolldown_runtime__.loadExports("child.js");
+		const hot_parent = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		hot_parent.accept("child.js", () => {
 			globalThis.newAcceptWasCalled = true;
 		});
 		process.on("beforeExit", (code) => {
 			if (code !== 0) return;
-			import_node_assert_00.default(globalThis.newAcceptWasCalled);
+			(0, import_node_assert_00.default)(globalThis.newAcceptWasCalled);
 		});
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 ```
@@ -109,16 +102,16 @@ __rolldown_runtime__.registerFactory("parent.js", "esm", (function(__rolldown_mo
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["child.js"],localCount:1,edges:[[]],dynamicEdges:[[]]});
+__rolldown_runtime__.registerGraph({ids:["child.js"],localCount:1,edges:[[]],stamps:{0:2}});
 //#region child.js
-__rolldown_runtime__.registerFactory("child.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("child.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ foo: () => foo });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		const hot_child = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const foo = 1;
 	} finally {}
-}));
+}), 2);
 
 //#endregion
 ```

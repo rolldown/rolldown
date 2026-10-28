@@ -63,7 +63,7 @@ impl BindingBundler {
       })?;
       let cwd = bundle.options().cwd.clone();
       let options = Arc::clone(bundle.options());
-      let bundle_output = match bundle.generate().await {
+      let mut bundle_output = match bundle.generate().await {
         Ok(output) => output,
         Err(errs) => {
           let errors: Vec<BindingError> = errs
@@ -75,12 +75,13 @@ impl BindingBundler {
         }
       };
 
-      if let Err(err) = handle_warnings(bundle_output.warnings, &options).await {
+      if let Err(err) = handle_warnings(std::mem::take(&mut bundle_output.warnings), &options).await
+      {
         let error = to_binding_error(&err.into(), cwd.clone());
         return Ok(napi::Either::A(BindingErrors::new(vec![error])));
       }
 
-      Ok(napi::Either::B(bundle_output.assets.into()))
+      Ok(napi::Either::B(bundle_output.into()))
     };
     spawn_boxed_future(env, fut)
   }
@@ -111,7 +112,7 @@ impl BindingBundler {
       })?;
       let cwd = bundle.options().cwd.clone();
       let options = Arc::clone(bundle.options());
-      let bundle_output = match bundle.write().await {
+      let mut bundle_output = match bundle.write().await {
         Ok(output) => output,
         Err(errs) => {
           let errors: Vec<BindingError> = errs
@@ -123,12 +124,13 @@ impl BindingBundler {
         }
       };
 
-      if let Err(err) = handle_warnings(bundle_output.warnings, &options).await {
+      if let Err(err) = handle_warnings(std::mem::take(&mut bundle_output.warnings), &options).await
+      {
         let error = to_binding_error(&err.into(), cwd.clone());
         return Ok(napi::Either::A(BindingErrors::new(vec![error])));
       }
 
-      Ok(napi::Either::B(bundle_output.assets.into()))
+      Ok(napi::Either::B(bundle_output.into()))
     };
     spawn_boxed_future(env, fut)
   }
@@ -213,7 +215,7 @@ impl BindingBundler {
 ///
 /// The gate lives here because the clocks it needs — the build and the link stage — are only
 /// visible on this side; what the callbacks actually cost is only visible on the other. The
-/// diagnostic then goes out through the usual path, so `checks.pluginTimings` filters it
+/// diagnostic then goes out through the usual path, so `checks.bundlerTimings` filters it
 /// like any other.
 async fn report_plugin_timings(handles: &[BundleHandle]) -> anyhow::Result<()> {
   let Some(last) = handles.last() else {
@@ -248,6 +250,11 @@ async fn report_plugin_timings(handles: &[BundleHandle]) -> anyhow::Result<()> {
 impl BindingBundler {
   fn normalize_binding_options(option: BindingBundlerOptions) -> napi::Result<BundlerConfig> {
     let BindingBundlerOptions { input_options, output_options, parallel_plugins_registry } = option;
+    // Only the parallel-plugin worker pool reads the registry, and wasm has no
+    // threads for that pool. Borrow it so the binding counts as used. Do not
+    // bind it to `_`: that would drop it here instead of at the end of scope.
+    #[cfg(target_family = "wasm")]
+    let _ = &parallel_plugins_registry;
 
     #[cfg(not(target_family = "wasm"))]
     let worker_count =

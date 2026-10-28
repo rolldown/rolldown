@@ -8,10 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 var module = (function(exports) {
 	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-	//#region main.js
+	// main.js
 	const validator = "if_default_prop_false";
 	const value = true;
-	//#endregion
 	exports.validator = validator;
 	exports.value = value;
 	return exports;

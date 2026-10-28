@@ -33,10 +33,10 @@ use self::types::treeshake::TreeshakeOptions;
 use self::types::{
   defer_sync_scan_data_option::DeferSyncScanDataOption, es_module_flag::EsModuleFlag,
   hash_characters::HashCharacters, input_item::InputItem, is_external::IsExternal,
-  output_exports::OutputExports, output_format::OutputFormat, output_option::AddonOutputOption,
-  platform::Platform, plugin_timings_option::PluginTimingsOption, resolve_options::ResolveOptions,
-  source_map_type::SourceMapType, sourcemap_path_transform::SourceMapPathTransform,
-  strict_mode::StrictMode, tsconfig::TsConfig,
+  output_charset::OutputCharset, output_exports::OutputExports, output_format::OutputFormat,
+  output_option::AddonOutputOption, platform::Platform, plugin_timings_option::PluginTimingsOption,
+  resolve_options::ResolveOptions, source_map_type::SourceMapType,
+  sourcemap_path_transform::SourceMapPathTransform, strict_mode::StrictMode, tsconfig::TsConfig,
 };
 
 use crate::{
@@ -92,6 +92,7 @@ pub struct BundlerOptions {
   pub sanitize_filename: Option<SanitizeFilename>,
   pub dir: Option<String>,
   pub file: Option<String>,
+  pub charset: Option<OutputCharset>,
   pub format: Option<OutputFormat>,
   pub exports: Option<OutputExports>,
   #[cfg_attr(
@@ -334,7 +335,7 @@ where
       Ok(Some(RawMinifyOptions::DeadCodeEliminationOnly))
     }
     None => Ok(None),
-    _ => unreachable!("Unexpected value for minify {:?}", deserialized),
+    _ => unreachable!("Unexpected value for minify"),
   }
 }
 

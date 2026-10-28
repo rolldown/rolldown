@@ -6,28 +6,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { n as a } from "./common.js";
-export { a };
+export { n as a } from "./common.js";
 
 ```
 
 ## b.js
 
 ```js
-import { t as b } from "./common.js";
-export { b };
+export { t as b } from "./common.js";
 
 ```
 
 ## common.js
 
 ```js
-//#region a.js
+// a.js
 const a = "a";
-//#endregion
-//#region b.js
+// b.js
 const b = "a";
-//#endregion
 export { a as n, b as t };
 
 ```
@@ -39,28 +35,24 @@ export { a as n, b as t };
 ### a.js
 
 ```js
-import { n as a } from "./common.js";
-export { a };
+export { n as a } from "./common.js";
 
 ```
 
 ### b.js
 
 ```js
-import { t as b } from "./common.js";
-export { b };
+export { t as b } from "./common.js";
 
 ```
 
 ### common.js
 
 ```js
-//#region a.js
+// a.js
 const a = "a";
-//#endregion
-//#region b.js
+// b.js
 const b = "a";
-//#endregion
 export { a as n, b as t };
 
 ```

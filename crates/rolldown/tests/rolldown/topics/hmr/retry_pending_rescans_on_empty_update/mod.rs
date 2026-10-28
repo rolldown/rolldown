@@ -1,4 +1,4 @@
-use std::{borrow::Cow, sync::Arc};
+use std::borrow::Cow;
 
 use rolldown::{BundlerOptions, DevModeOptions, ExperimentalOptions, InputItem};
 use rolldown_plugin::{HookUsage, Plugin, PluginContext};
@@ -63,7 +63,7 @@ async fn retry_pending_rescans_on_empty_update() {
         }),
         ..Default::default()
       },
-      vec![Arc::new(WatchSideFilePlugin)],
+      vec![Plugin::new_shared(WatchSideFilePlugin)],
     )
     .await;
 }

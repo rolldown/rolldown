@@ -23,6 +23,8 @@ The order is defined by a small set of rules, in precedence order:
 5. **Dynamic imports are skipped by default.** They participate in sorting only when `code_splitting` is disabled (inline dynamic imports mode); otherwise they become separate chunk roots and their subgraphs are walked from their own entry status.
 6. **Order is relative, not global.** `sort_modules` only guarantees that dependencies precede their dependents along traversed edges. It does not claim a canonical topological order across unrelated subtrees — the order is a function of the DFS traversal rooted at entries.
 
+The link-time constant lookup in `refine_stmt_side_effects.rs` therefore rejects imported constants within the same static-import strongly connected component, even if the exporter has a lower `exec_order`. With multiple entries or preserved modules, loading a different entry can reverse the order within the cycle and expose a `const` TDZ failure. These components are computed lazily once and shared with the analyzer reruns in cross-module optimization. An exporter outside the importer's component can still supply a constant when it precedes the importer.
+
 ## Algorithm
 
 The pass is an **iterative post-order DFS** with an explicit `execution_stack: Vec<Status>`. Using an explicit stack (rather than recursion) avoids stack overflow on deep module graphs, which are common in real-world codebases.

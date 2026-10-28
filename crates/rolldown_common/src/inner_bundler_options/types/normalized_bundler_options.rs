@@ -14,6 +14,7 @@ use super::code_splitting_mode::CodeSplittingMode;
 use super::comments::CommentsOptions;
 use super::experimental_options::ExperimentalOptions;
 use super::generated_code_options::GeneratedCodeOptions;
+use super::inline_common_chunks_options::NormalizedInlineCommonChunksOptions;
 use super::legal_comments::LegalComments;
 use super::manual_code_splitting_options::ManualCodeSplittingOptions;
 use super::minify_options::MinifyOptions;
@@ -25,9 +26,10 @@ use super::sanitize_filename::SanitizeFilename;
 use super::treeshake::NormalizedTreeshakeOptions;
 use super::watch_option::WatchOption;
 use super::{
-  is_external::IsExternal, output_exports::OutputExports, output_format::OutputFormat,
-  output_option::AddonOutputOption, platform::Platform, source_map_type::SourceMapType,
-  sourcemap_ignore_list::SourceMapIgnoreList, sourcemap_path_transform::SourceMapPathTransform,
+  is_external::IsExternal, output_charset::OutputCharset, output_exports::OutputExports,
+  output_format::OutputFormat, output_option::AddonOutputOption, platform::Platform,
+  source_map_type::SourceMapType, sourcemap_ignore_list::SourceMapIgnoreList,
+  sourcemap_path_transform::SourceMapPathTransform,
 };
 use crate::inner_bundler_options::types::optimization::NormalizedOptimizationConfig;
 use crate::{
@@ -62,6 +64,7 @@ pub struct NormalizedBundlerOptions {
   // The rolldown resolved output directory from `dir` or `file`.
   pub out_dir: String,
   pub file: Option<String>,
+  pub charset: OutputCharset,
   pub format: OutputFormat,
   pub exports: OutputExports,
   pub es_module: EsModuleFlag,
@@ -93,6 +96,8 @@ pub struct NormalizedBundlerOptions {
   pub code_splitting: CodeSplittingMode,
   pub dynamic_import_in_cjs: bool,
   pub manual_code_splitting: Option<ManualCodeSplittingOptions>,
+  /// See internal-docs/inline-common-chunks/implementation.md.
+  pub inline_common_chunks: Option<NormalizedInlineCommonChunksOptions>,
   pub checks: EventKindSwitcher,
   pub profiler_names: bool,
   pub watch: WatchOption,
@@ -143,6 +148,7 @@ impl Default for NormalizedBundlerOptions {
       dir: Default::default(),
       out_dir: Default::default(),
       file: Default::default(),
+      charset: Default::default(),
       format: OutputFormat::Esm,
       exports: Default::default(),
       es_module: Default::default(),
@@ -174,6 +180,7 @@ impl Default for NormalizedBundlerOptions {
       code_splitting: CodeSplittingMode::default(),
       dynamic_import_in_cjs: true,
       manual_code_splitting: Default::default(),
+      inline_common_chunks: Default::default(),
       checks: Default::default(),
       profiler_names: Default::default(),
       watch: Default::default(),

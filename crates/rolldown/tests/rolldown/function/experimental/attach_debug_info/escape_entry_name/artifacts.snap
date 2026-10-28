@@ -1,0 +1,13 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+//! User-defined Entry: [Entry-Module-Id: main.js] [Name: entry\nconsole.log(\"injected\")]
+// main.js
+console.log("main");
+
+```

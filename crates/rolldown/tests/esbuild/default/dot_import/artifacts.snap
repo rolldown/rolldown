@@ -8,13 +8,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
-//#region index.js
-//#endregion
-//#region entry.js
+// entry.js
 var import_dot_import = (/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.x = 123;
 })))();
 assert.equal(import_dot_import.x, 123);
-//#endregion
 
 ```

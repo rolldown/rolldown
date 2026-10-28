@@ -144,7 +144,7 @@
     "reason": "Rolldown does not support preserving TLA semantics perfectly"
   },
   "language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-import-source-and-export.js": {
-    "reason": "Incorrect ambiguous export detection in Rolldown"
+    "reason": "source phase imports are not supported in Rolldown"
   },
   "language/module-code/instn-named-bndng-dflt-fun-anon.js": {
     "reason": "keepNames feature in Rolldown does not work for accesses requiring the function to be hoisted"

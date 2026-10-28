@@ -58,6 +58,9 @@ bitflags::bitflags! {
     /// for facade (generated) symbols — user-defined names are left unchanged
     /// because `<obj.Foo>` is already a valid component reference in JSX.
     const UsedAsJSXMemberExprRoot = 1 << 6;
+    /// A binding that always holds a top-level function that never reads `this`, so calling it as
+    /// a namespace member cannot observe the namespace.
+    const NeverReadsThis = 1 << 7;
   }
 }
 

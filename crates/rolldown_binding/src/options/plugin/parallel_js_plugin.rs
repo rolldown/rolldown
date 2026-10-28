@@ -1,62 +1,39 @@
 #![cfg(not(target_family = "wasm"))]
 
-#[cfg(not(target_family = "wasm"))]
-use std::borrow::Cow;
-use std::sync::Arc;
+use std::{borrow::Cow, sync::Arc};
 
-#[cfg(not(target_family = "wasm"))]
 use futures::future::{self, BoxFuture};
-#[cfg(not(target_family = "wasm"))]
-use rolldown_plugin::__inner::Pluginable;
-use rolldown_plugin::HookUsage;
-#[cfg(not(target_family = "wasm"))]
-use rolldown_plugin::Plugin;
+use rolldown_plugin::{__inner::SharedPluginable, HookUsage, Plugin};
 
+use super::{BindingPluginOptions, JsPlugin};
 use crate::worker_manager::WorkerManager;
 
-#[cfg(not(target_family = "wasm"))]
-use super::BindingPluginOptions;
-use super::JsPlugin;
-
 #[derive(Debug)]
-#[cfg_attr(target_family = "wasm", allow(unused))]
 pub struct ParallelJsPlugin {
   plugins: Box<[JsPlugin]>,
   worker_manager: Arc<WorkerManager>,
 }
 
-#[cfg(not(target_family = "wasm"))]
 impl ParallelJsPlugin {
-  pub fn new_boxed(
-    plugins: Vec<BindingPluginOptions>,
-    worker_manager: Arc<WorkerManager>,
-  ) -> napi::Result<Box<dyn Pluginable>> {
-    let plugins =
-      plugins.into_iter().map(JsPlugin::new).collect::<napi::Result<Vec<_>>>()?.into_boxed_slice();
-    Ok(Box::new(Self { plugins, worker_manager }))
-  }
-
   pub fn new_shared(
     plugins: Vec<BindingPluginOptions>,
     worker_manager: Arc<WorkerManager>,
-  ) -> napi::Result<Arc<dyn Pluginable>> {
+  ) -> napi::Result<SharedPluginable> {
     let plugins =
       plugins.into_iter().map(JsPlugin::new).collect::<napi::Result<Vec<_>>>()?.into_boxed_slice();
-    Ok(Arc::new(Self { plugins, worker_manager }))
+    Ok(Plugin::new_shared(Self { plugins, worker_manager }))
   }
 
   fn first_plugin(&self) -> &JsPlugin {
     &self.plugins[0]
   }
 
-  #[cfg(not(target_family = "wasm"))]
   async fn run_single<'a, R, F: FnOnce(&'a JsPlugin) -> BoxFuture<'a, R>>(&'a self, f: F) -> R {
     let permit = self.worker_manager.acquire().await;
     let plugin = &self.plugins[permit.worker_index() as usize];
     f(plugin).await
   }
 
-  #[cfg(not(target_family = "wasm"))]
   async fn run_all<
     'a,
     R,
@@ -76,10 +53,9 @@ impl ParallelJsPlugin {
   }
 }
 
-#[cfg(not(target_family = "wasm"))]
 impl Plugin for ParallelJsPlugin {
   fn name(&self) -> Cow<'static, str> {
-    self.first_plugin().call_name()
+    Plugin::name(self.first_plugin())
   }
 
   // --- Build hooks ---

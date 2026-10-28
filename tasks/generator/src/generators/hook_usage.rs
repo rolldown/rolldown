@@ -37,6 +37,7 @@ const HOOK_KIND: [&str; 23] = [
   "hot_update",
 ];
 
+/// Hooks that JS plugins cannot register.
 const DISABLE_JS_HOOK: [&str; 1] = ["transform_ast"];
 
 impl Generator for HookUsageGenerator {
@@ -54,21 +55,31 @@ impl Generator for HookUsageGenerator {
   }
 }
 
+/// The order that assigns bit positions, shared by the Rust bitflags and the TS enum:
+/// hooks JS plugins can register first, in `HOOK_KIND` order, then the `DISABLE_JS_HOOK` ones.
+/// The TS enum is the prefix of this order, so its bits stay contiguous from `1 << 0`
+/// and each one matches the Rust bit of the same hook.
+fn hook_bit_order() -> Vec<&'static str> {
+  let (js_hooks, rust_only_hooks): (Vec<_>, Vec<_>) =
+    HOOK_KIND.iter().copied().partition(|kind| !DISABLE_JS_HOOK.contains(kind));
+  assert_eq!(rust_only_hooks.len(), DISABLE_JS_HOOK.len(), "DISABLE_JS_HOOK lists an unknown hook");
+  js_hooks.into_iter().chain(rust_only_hooks).collect()
+}
+
 fn generate_hook_usage_ts() -> String {
-  let hook_usage_kind_list = HOOK_KIND
+  let order = hook_bit_order();
+  let js_hooks = &order[..HOOK_KIND.len() - DISABLE_JS_HOOK.len()];
+  let hook_usage_kind_list = js_hooks
     .iter()
     .enumerate()
-    .map(|(i, &kind)| format!("  {} = 1 << {},", kind.to_lower_camel_case(), i))
+    .map(|(i, kind)| format!("  {} = 1 << {},", kind.to_lower_camel_case(), i))
     .collect::<Vec<_>>()
     .join("\n");
 
-  let union_hook_usage_list = HOOK_KIND
+  let union_hook_usage_list = js_hooks
     .iter()
-    .filter_map(|kind| {
-      if DISABLE_JS_HOOK.contains(kind) {
-        return None;
-      }
-      Some(format!(
+    .map(|kind| {
+      format!(
         r"
       if (plugin.{}) {{
         hookUsage.union(HookUsageKind.{});
@@ -77,7 +88,7 @@ fn generate_hook_usage_ts() -> String {
       ",
         kind.to_lower_camel_case(),
         kind.to_lower_camel_case()
-      ))
+      )
     })
     .collect::<Vec<_>>()
     .join("\n");
@@ -124,7 +135,7 @@ fn generate_hook_usage_rs() -> String {
     65..=128 => 128,
     _ => panic!("Too many variants"),
   };
-  for (i, item) in HOOK_KIND.iter().enumerate() {
+  for (i, item) in hook_bit_order().iter().enumerate() {
     fields.push(format!("const {} = 1 << {};", item.to_upper_camel_case(), i));
   }
   format!(
@@ -139,4 +150,55 @@ bitflags! {{
   ",
     fields.join("\n    "),
   )
+}
+
+#[cfg(test)]
+mod tests {
+  use heck::{ToLowerCamelCase, ToUpperCamelCase};
+
+  use super::{DISABLE_JS_HOOK, HOOK_KIND, generate_hook_usage_rs, generate_hook_usage_ts};
+
+  /// Reads `<name> = 1 << <bit><terminator>` lines out of generated code.
+  fn bits(generated: &str, prefix: &str, terminator: char) -> Vec<(String, u32)> {
+    generated
+      .lines()
+      .filter_map(|line| line.trim().strip_prefix(prefix)?.strip_suffix(terminator))
+      .map(|entry| {
+        let (name, bit) = entry.split_once(" = 1 << ").unwrap();
+        (name.to_string(), bit.parse().unwrap())
+      })
+      .collect()
+  }
+
+  #[test]
+  fn ts_enum_is_contiguous_and_matches_rust_bits() {
+    let ts = bits(&generate_hook_usage_ts(), "", ',');
+    let rust = bits(&generate_hook_usage_rs(), "const ", ';');
+    assert_eq!(rust.len(), HOOK_KIND.len());
+    assert_eq!(ts.len(), HOOK_KIND.len() - DISABLE_JS_HOOK.len());
+
+    // No hook that JS plugins cannot register appears in the TS enum.
+    for disabled in DISABLE_JS_HOOK {
+      assert!(ts.iter().all(|(name, _)| *name != disabled.to_lower_camel_case()));
+    }
+
+    // TS bits run from `1 << 0` with no gap.
+    for (i, (name, bit)) in ts.iter().enumerate() {
+      assert_eq!(*bit as usize, i, "`{name}` leaves a gap in HookUsageKind");
+    }
+
+    // Every TS hook has the same bit as the Rust flag of the same hook.
+    for (name, bit) in &ts {
+      let rust_name = name.to_upper_camel_case();
+      let rust_bit = rust.iter().find(|(n, _)| *n == rust_name).map(|(_, b)| *b);
+      assert_eq!(rust_bit, Some(*bit), "`{name}` differs between TS and Rust");
+    }
+
+    // The hooks JS cannot register hold the highest Rust bits.
+    let highest = &rust[ts.len()..];
+    for disabled in DISABLE_JS_HOOK {
+      assert!(highest.iter().any(|(name, _)| *name == disabled.to_upper_camel_case()));
+    }
+    assert!(highest.iter().all(|(_, bit)| *bit as usize >= ts.len()));
+  }
 }

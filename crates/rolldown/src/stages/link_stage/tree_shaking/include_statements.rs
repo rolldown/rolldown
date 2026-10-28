@@ -16,7 +16,7 @@ use rolldown_utils::rayon::{
 };
 
 use rolldown_utils::IndexBitSet;
-use rolldown_utils::indexmap::FxIndexMap;
+use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
@@ -73,7 +73,7 @@ pub struct IncludeContext<'a> {
   pub inline_const_smart: bool,
   pub runtime_idx: ModuleIdx,
   pub metas: &'a LinkingMetadataVec,
-  pub used_symbol_refs: &'a mut UsedSymbolRefsBuilder,
+  pub used_symbol_refs_builder: &'a mut UsedSymbolRefsBuilder,
   pub used_external_symbols: &'a mut UsedExternalSymbols,
   pub constant_symbol_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
   pub options: &'a NormalizedBundlerOptions,
@@ -102,6 +102,10 @@ pub struct IncludeContext<'a> {
   /// inclusion), which deliberately skips those statements for
   /// [`side_effects_included_on_demand`] modules.
   pub body_demand_swept: FxHashSet<ModuleIdx>,
+  /// Forwarding declarations (see [`retain_forwarding_declarations`]) whose owner module is not
+  /// included yet, keyed by that owner; [`handle_include_module`] drains them when it includes
+  /// the module.
+  pub deferred_forwarding_refs: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
   /// Work queue of the inclusion engine (see [`drain_work_items`]). Edge producers push typed
   /// work items here instead of recursing; the public `include_*` entry points drain it to
   /// empty before returning. Invariant (debug-asserted at every public entry point): empty
@@ -121,7 +125,7 @@ impl<'a> IncludeContext<'a> {
     is_module_included_vec: &'a mut ModuleInclusionVec,
     runtime_idx: ModuleIdx,
     metas: &'a LinkingMetadataVec,
-    used_symbol_refs: &'a mut UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &'a mut UsedSymbolRefsBuilder,
     used_external_symbols: &'a mut UsedExternalSymbols,
     constant_symbol_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
     options: &'a NormalizedBundlerOptions,
@@ -140,7 +144,7 @@ impl<'a> IncludeContext<'a> {
       inline_const_smart: options.optimization.is_inline_const_smart_mode(),
       runtime_idx,
       metas,
-      used_symbol_refs,
+      used_symbol_refs_builder,
       used_external_symbols,
       constant_symbol_map,
       options,
@@ -153,6 +157,7 @@ impl<'a> IncludeContext<'a> {
       entry_module_idxs,
       body_demand_keys,
       body_demand_swept: FxHashSet::default(),
+      deferred_forwarding_refs: FxHashMap::default(),
       pending: Vec::new(),
     }
   }
@@ -266,7 +271,7 @@ impl LinkStage<'_> {
         m.as_normal().map_or(IndexBitSet::default(), |_| IndexBitSet::new(stmt_infos.len()))
       })
       .collect::<IndexVec<ModuleIdx, _>>();
-    let mut used_symbol_refs = UsedSymbolRefsBuilder::default();
+    let mut used_symbol_refs_builder = UsedSymbolRefsBuilder::default();
     let mut used_external_symbols = UsedExternalSymbols::default();
     let mut is_module_included_vec: ModuleInclusionVec =
       IndexBitSet::new(self.module_table.modules.len());
@@ -293,7 +298,7 @@ impl LinkStage<'_> {
       &mut is_module_included_vec,
       self.runtime.id(),
       &self.metas,
-      &mut used_symbol_refs,
+      &mut used_symbol_refs_builder,
       &mut used_external_symbols,
       &self.global_constant_symbol_map,
       self.options,
@@ -454,7 +459,7 @@ impl LinkStage<'_> {
       &mut is_module_included_vec,
       self.runtime.id(),
       &self.metas,
-      &mut used_symbol_refs,
+      &mut used_symbol_refs_builder,
       &mut used_external_symbols,
       &self.global_constant_symbol_map,
       self.options,
@@ -465,7 +470,7 @@ impl LinkStage<'_> {
     );
     include_runtime_symbol(context, &self.runtime, depended_runtime_helper);
 
-    self.used_symbol_refs = used_symbol_refs;
+    self.used_symbol_refs_builder = used_symbol_refs_builder;
     self.used_external_symbols = used_external_symbols;
     // Store the final statement inclusion results back to metas.
     is_stmt_info_included_vec.into_iter_enumerated().for_each(|(module_idx, stmt_included_vec)| {
@@ -477,18 +482,10 @@ impl LinkStage<'_> {
     }
 
     tracing::trace!(
-      "included statements {:#?}",
-      self
-        .module_table
-        .modules
-        .iter()
-        .filter_map(Module::as_normal)
-        .map(|m| m.to_debug_normal_module_for_tree_shaking(
-          &self.stmt_infos[m.idx],
-          self.metas[m.idx].is_included,
-          &self.metas[m.idx].stmt_info_included
-        ))
-        .collect::<Vec<_>>()
+      included_modules = self.metas.iter().filter(|meta| meta.is_included).count(),
+      included_statements =
+        self.metas.iter().map(|meta| meta.stmt_info_included.bit_count()).sum::<u32>(),
+      "tree shaking inclusion ready"
     );
   }
 }
@@ -517,6 +514,27 @@ fn enqueue_declaring_statements(ctx: &mut IncludeContext, symbol_ref: &SymbolRef
   }
 }
 
+/// Retain the statements that forward `symbol_ref` from its canonical owner: its own import or
+/// re-export declaration and the intermediates in `normal_symbol_exports_chain_map`. A statement is
+/// retained only once its owner module is included; until then it waits in
+/// `deferred_forwarding_refs`. See internal-docs/linking/reference-needed-symbols/implementation.md.
+fn retain_forwarding_declarations(ctx: &mut IncludeContext, symbol_ref: SymbolRef) {
+  retain_forwarding_declaration(ctx, symbol_ref);
+  if let Some(forwarding_refs) = ctx.normal_symbol_exports_chain_map.get(&symbol_ref) {
+    for forwarding_ref in forwarding_refs {
+      retain_forwarding_declaration(ctx, *forwarding_ref);
+    }
+  }
+}
+
+fn retain_forwarding_declaration(ctx: &mut IncludeContext, forwarding_ref: SymbolRef) {
+  if ctx.is_module_included_vec.has_bit(forwarding_ref.owner) {
+    enqueue_declaring_statements(ctx, &forwarding_ref);
+  } else {
+    ctx.deferred_forwarding_refs.entry(forwarding_ref.owner).or_default().insert(forwarding_ref);
+  }
+}
+
 pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
   debug_assert!(ctx.pending.is_empty(), "engine queue must be empty between public entry points");
   ctx.pending.push(WorkItem::Module(module.idx));
@@ -532,6 +550,11 @@ fn handle_include_module(ctx: &mut IncludeContext, module_idx: ModuleIdx) {
     return;
   }
   ctx.module_inclusion_changed = true;
+  if let Some(forwarding_refs) = ctx.deferred_forwarding_refs.remove(&module_idx) {
+    for forwarding_ref in &forwarding_refs {
+      enqueue_declaring_statements(ctx, forwarding_ref);
+    }
+  }
 
   if module.idx == ctx.runtime_idx && !module.side_effects.has_side_effects() {
     // Unmodified runtime: statements included only via references.
@@ -641,9 +664,13 @@ fn include_side_effectful_dependencies(ctx: &mut IncludeContext, module: &Normal
     }
   });
   tracing::trace!(
-    "{}:\n module_meta dependencies: {:#?}",
-    module.stable_id,
-    module_meta.dependencies.iter().map(|idx| { ctx.modules[*idx].id().to_string() }).collect_vec()
+    module = %module.stable_id,
+    dependencies = %module_meta
+      .dependencies
+      .iter()
+      .map(|idx| ctx.modules[*idx].id())
+      .join(", "),
+    "module dependencies"
   );
 }
 
@@ -679,7 +706,7 @@ fn handle_include_symbol(
   }
 
   // Also include the symbol that points to the canonical ref.
-  ctx.used_symbol_refs.insert(symbol_ref);
+  ctx.used_symbol_refs_builder.insert(symbol_ref);
   if ctx.modules[symbol_ref.owner].is_external() {
     ctx.used_external_symbols.insert(symbol_ref);
   }
@@ -695,13 +722,13 @@ fn handle_include_symbol(
   let is_simulated_facade_chunk =
     note_namespace_inclusion_reason(ctx, canonical_ref, include_reason);
 
-  ctx.used_symbol_refs.insert(canonical_ref);
+  ctx.used_symbol_refs_builder.insert(canonical_ref);
   if ctx.modules[canonical_ref.owner].is_external() {
     ctx.used_external_symbols.insert(canonical_ref);
     note_external_interop_use(ctx, symbol_ref, alias_holder_ref, canonical_ref);
   }
   if let Module::Normal(module) = &ctx.modules[canonical_ref.owner] {
-    demand_esm_init_wrapper(ctx, canonical_ref);
+    demand_esm_initialization(ctx, symbol_ref, canonical_ref);
     note_json_self_reference(ctx, module, canonical_ref, include_reason);
     enqueue_declaring_statements(ctx, &canonical_ref);
     if !is_simulated_facade_chunk {
@@ -923,9 +950,13 @@ fn note_namespace_inclusion_reason(
   }
 }
 
-/// Using any binding of a `WrapKind::Esm` module demands its `init_*` wrapper: the binding is
-/// only initialized once the wrapper runs.
-fn demand_esm_init_wrapper(ctx: &mut IncludeContext, canonical_ref: SymbolRef) {
+/// A wrapped ESM binding needs its wrapper and the forwarding declarations that call it.
+/// See internal-docs/linking/reference-needed-symbols/implementation.md.
+fn demand_esm_initialization(
+  ctx: &mut IncludeContext,
+  symbol_ref: SymbolRef,
+  canonical_ref: SymbolRef,
+) {
   let wrapper_ref = {
     let meta = &ctx.metas[canonical_ref.owner];
     matches!(meta.wrap_kind(), WrapKind::Esm)
@@ -935,6 +966,7 @@ fn demand_esm_init_wrapper(ctx: &mut IncludeContext, canonical_ref: SymbolRef) {
   };
   if let Some(wrapper_ref) = wrapper_ref {
     ctx.pending.push(WorkItem::Symbol(wrapper_ref, SymbolIncludeReason::Normal));
+    retain_forwarding_declarations(ctx, symbol_ref);
   }
 }
 
@@ -1028,7 +1060,7 @@ fn handle_include_statement(
       // it means this member expr definitely contains module namespace ref.
       if let Some(resolved_ref) = member_expr_resolution.resolved {
         member_expr_resolution.depended_refs.iter().for_each(|sym_ref| {
-          enqueue_declaring_statements(ctx, sym_ref);
+          retain_forwarding_declaration(ctx, *sym_ref);
         });
         ctx.pending.push(WorkItem::Symbol(resolved_ref, include_kind));
         // When the member expression resolves to a specific CJS export property
@@ -1050,15 +1082,9 @@ fn handle_include_statement(
           return;
         }
       }
-      let original_ref = reference_ref.symbol_ref();
-      std::iter::once(original_ref)
-        .chain(
-          ctx.normal_symbol_exports_chain_map.get(original_ref).map(Vec::as_slice).unwrap_or(&[]),
-        )
-        .for_each(|sym_ref| {
-          enqueue_declaring_statements(ctx, sym_ref);
-        });
-      push_symbol_and_check_cjs_bailout(ctx, *original_ref, include_kind);
+      let original_ref = *reference_ref.symbol_ref();
+      retain_forwarding_declarations(ctx, original_ref);
+      push_symbol_and_check_cjs_bailout(ctx, original_ref, include_kind);
     }
   });
 }

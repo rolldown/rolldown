@@ -40,7 +40,9 @@ impl GenerateStage<'_> {
     // do not depend on module discovery order.
     for chunk_idx in &chunk_graph.sorted_chunk_idx_vec {
       let chunk = &chunk_graph.chunk_table[*chunk_idx];
-      if chunk.modules.is_empty() {
+      // An inline common chunk record has no file, and selection keeps every module with a file
+      // URL reference out of records.
+      if chunk.modules.is_empty() || self.inline_state.is_record(*chunk_idx) {
         continue;
       }
       let chunk_id = chunk

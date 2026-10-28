@@ -1,4 +1,4 @@
-use std::{fs, path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 
 use rolldown_common::PackageJson;
 use rolldown_utils::dashmap::FxDashMap;
@@ -29,12 +29,13 @@ impl PackageJsonCache {
   pub fn cached_package_json_optional_peer_dep(
     &self,
     oxc_pkg_json: &oxc_resolver::PackageJson,
+    file_system: &impl oxc_resolver::FileSystem,
   ) -> Arc<PackageJsonWithOptionalPeerDependencies> {
     match self.optional_peer_dep_cache.get(&oxc_pkg_json.realpath) {
       Some(v) => Arc::clone(v.value()),
       _ => {
         let package_json_with_optional_peer_deps = {
-          let Ok(package_json_string) = fs::read_to_string(&oxc_pkg_json.realpath) else {
+          let Ok(package_json_string) = file_system.read_to_string(&oxc_pkg_json.realpath) else {
             return Default::default();
           };
           let package_json_string = package_json_string.trim_start_matches("\u{feff}"); // strip bom

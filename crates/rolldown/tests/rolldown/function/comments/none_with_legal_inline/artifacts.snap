@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 /**
 * @license MIT
 */
@@ -15,7 +15,6 @@ function hello(name) {
 }
 //! Legal bang comment
 const foo = "bar";
-//#endregion
 export { foo, hello };
 
 ```

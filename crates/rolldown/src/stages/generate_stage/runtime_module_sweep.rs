@@ -38,7 +38,7 @@ impl GenerateStage<'_> {
   pub fn sweep_unused_runtime_module(
     &mut self,
     chunk_graph: &mut ChunkGraph,
-    used_symbol_refs: &mut UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
   ) {
     // Without tree-shaking, inclusion is not demand-based; leave everything in place.
     if self.options.treeshake.is_none() {
@@ -68,9 +68,9 @@ impl GenerateStage<'_> {
     // Stale references to runtime symbols may survive on included statements (e.g. a namespace
     // statement that `finalized_module_namespace_ref_usage` decided not to render keeps its
     // `__exportAll` reference, and chunk-level `depended_runtime_helper` flags keep their bits).
-    // Downstream passes filter those against `used_symbol_refs`, so purging the runtime's
+    // Downstream passes filter those against `used_symbol_refs_builder`, so purging the runtime's
     // symbols here is what actually severs every cross-chunk edge to it.
-    used_symbol_refs.remove_owned_by(runtime_idx);
+    used_symbol_refs_builder.remove_owned_by(runtime_idx);
 
     if let Some(chunk_idx) = chunk_graph.module_to_chunk[runtime_idx] {
       chunk_graph.module_to_chunk[runtime_idx] = None;

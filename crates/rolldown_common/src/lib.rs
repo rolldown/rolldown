@@ -41,6 +41,9 @@ pub mod bundler_options {
       generated_code_options::GeneratedCodeOptions,
       hash_characters::HashCharacters,
       inject_import::InjectImport,
+      inline_common_chunks_options::{
+        InlineCommonChunksOptions, NormalizedInlineCommonChunksOptions,
+      },
       input_item::InputItem,
       invalidate_js_side_cache::InvalidateJsSideCache,
       is_external::IsExternal,
@@ -51,7 +54,8 @@ pub mod bundler_options {
         ChunkingContext, ManualCodeSplittingOptions, MatchGroup, MatchGroupName, MatchGroupTest,
       },
       minify_options::{
-        MinifyOptions, RawCompressOptions, RawMangleOptions, RawMinifyOptions,
+        EnabledMinifyOptions, ManglePropertiesPattern, ManglePropertiesPatterns, MinifyOptions,
+        RawCompressOptions, RawMangleOptions, RawManglePropertiesOptions, RawMinifyOptions,
         RawMinifyOptionsDetailed,
       },
       module_type::ModuleType,
@@ -61,6 +65,7 @@ pub mod bundler_options {
         InlineConstConfig, InlineConstMode, InlineConstOption, OptimizationOption,
         normalize_optimization_option,
       },
+      output_charset::OutputCharset,
       output_exports::OutputExports,
       output_format::OutputFormat,
       output_option::{
@@ -180,7 +185,9 @@ pub use crate::{
     BarrelInfo, BarrelState, ExportSource, ImportedExports, LazyBarrelInfo,
     try_extract_lazy_barrel_info,
   },
-  types::member_expr_ref::{MemberExprObjectReferencedType, MemberExprProp, MemberExprRef},
+  types::member_expr_ref::{
+    MemberExprObjectReferencedType, MemberExprProp, MemberExprRef, MemberExprWriteKind,
+  },
   types::member_expr_ref_resolution::MemberExprRefResolution,
   types::module_def_format::ModuleDefFormat,
   types::module_id::{ModuleId, ModuleIdKind},
@@ -220,8 +227,8 @@ pub use crate::{
     GetLocalDb, GetLocalDbMut, SymbolRefDb, SymbolRefDbForModule, SymbolRefFlags,
   },
   types::used_external_symbols::{ExternalInteropUse, UsedExternalSymbols},
-  types::used_symbol_refs::{UsedSymbolRefs, UsedSymbolRefsBuilder},
-  types::watch::WatcherChangeKind,
+  types::used_symbol_refs::{UsedSymbolRefs, UsedSymbolRefsBuilder, UsedSymbolRefsView},
+  types::watch::{WatchPath, WatcherChangeKind},
   types::wrap_kind::WrapKind,
 };
 pub use bundler_options::*;

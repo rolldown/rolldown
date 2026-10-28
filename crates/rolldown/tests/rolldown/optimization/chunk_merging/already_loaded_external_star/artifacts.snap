@@ -1,0 +1,46 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## app.js
+
+```js
+import { t as compute } from "./shared.js";
+export * from "ext";
+// app.js
+const own = compute(21) + 1;
+const done = import("./lazy.js").then((m) => m.lazyValue);
+export { done, own };
+
+```
+
+## lazy.js
+
+```js
+import { t as compute } from "./shared.js";
+// lazy.js
+const lazyValue = compute(42);
+export { lazyValue };
+
+```
+
+## main.js
+
+```js
+// main.js
+const app = import("./app.js");
+export { app };
+
+```
+
+## shared.js
+
+```js
+// shared.js
+function compute(x) {
+	return x * 2;
+}
+export { compute as t };
+
+```

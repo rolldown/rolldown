@@ -59,7 +59,7 @@ pub fn empty_sourcemap() -> SourceMap {
 // <https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts>
 //
 // Input maps may borrow their strings (e.g. a codegen map borrowing the source it was
-// printed from) — the output is always owned, since it only copies from the first map.
+// printed from) — the output is always owned, since it copies every string it keeps.
 // This lets callers collapse a freshly generated map without `into_owned`-ing it first.
 pub fn collapse_sourcemaps(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) -> SourceMap {
   debug_assert!(sourcemap_chain.len() > 1);
@@ -72,31 +72,82 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) ->
   let first_map = sourcemap_chain.first().expect("sourcemap_chain should not be empty");
   let chain_without_last = &sourcemap_chain[..sourcemap_chain.len() - 1];
 
-  // Pre-compute lookup tables in reverse order so we avoid reversing on every token lookup.
-  let sourcemap_and_lookup_table: Vec<_> = chain_without_last
-    .iter()
-    .rev()
-    .map(|sourcemap| (*sourcemap, sourcemap.generate_lookup_table()))
-    .collect();
+  // Concatenate each map's names into one pool, in chain order. A token's merged name_id is then
+  // `local_id + offset`, where `offset` is the pool index of that map's first name.
+  let mut merged_names: Vec<Cow<'static, str>> = Vec::new();
+  let mut append_names = |map: &oxc_sourcemap::SourceMap<'_>| {
+    #[expect(clippy::cast_possible_truncation)]
+    let offset = merged_names.len() as u32;
+    merged_names.extend(map.get_names().map(|n| Cow::Owned(n.to_owned())));
+    offset
+  };
 
-  let tokens: Box<[Token]> = last_map
-    .get_source_view_tokens()
-    .filter_map(|token| {
-      let unmapped_token =
-        || Token::new(token.get_dst_line(), token.get_dst_col(), 0, 0, None, None);
-      if token.get_source_id().is_none() {
-        return Some(unmapped_token());
-      }
+  // Pre-compute lookup tables paired with their offsets in reverse order so we avoid reversing
+  // on every token lookup.
+  let mut chain_with_offsets: Vec<_> = chain_without_last
+    .iter()
+    .map(|sourcemap| (*sourcemap, sourcemap.generate_lookup_table(), append_names(sourcemap)))
+    .collect();
+  chain_with_offsets.reverse();
+  let last_offset = append_names(last_map);
+
+  // `last_offset` counts the names of every map before the last one. When it is 0, no traced
+  // token can carry a name, so the remap loop skips the per-step name tracking.
+  let tokens = if last_offset == 0 {
+    remap_tokens::<false>(last_map, &chain_with_offsets, last_offset)
+  } else {
+    remap_tokens::<true>(last_map, &chain_with_offsets, last_offset)
+  };
+
+  SourceMap::new(
+    None,
+    merged_names,
+    None,
+    first_map.get_sources().map(|s| Cow::Owned(s.to_owned())).collect(),
+    first_map.get_source_contents().map(|x| x.map(|s| Cow::Owned(s.to_owned()))).collect(),
+    tokens,
+    None,
+  )
+}
+
+/// Remaps `last_map`'s tokens through `chain`, the earlier maps with the nearest one first.
+/// `TRACK_NAMES` is a const so that a chain without names compiles without the name work.
+fn remap_tokens<const TRACK_NAMES: bool>(
+  last_map: &oxc_sourcemap::SourceMap<'_>,
+  chain: &[(&oxc_sourcemap::SourceMap<'_>, Vec<&[Token]>, u32)],
+  last_offset: u32,
+) -> Box<[Token]> {
+  let source_view_tokens = last_map.get_source_view_tokens();
+  let mut remapped = Vec::with_capacity(source_view_tokens.size_hint().0);
+  let mut dst_line = None;
+  let mut has_mapping = false;
+  let mut is_mapped = false;
+  let mut leading_unmapped = None;
+
+  for token in source_view_tokens {
+    if dst_line != Some(token.get_dst_line()) {
+      dst_line = Some(token.get_dst_line());
+      has_mapping = false;
+      is_mapped = false;
+      leading_unmapped = None;
+    }
+
+    let unmapped_token = || Token::new(token.get_dst_line(), token.get_dst_col(), 0, 0, None, None);
+    let mapped_token = (|| {
+      token.get_source_id()?;
 
       let mut original_token = token;
-      for (sourcemap, lookup_table) in &sourcemap_and_lookup_table {
+      let mut name_id = token.get_name_id().map(|id| id + last_offset);
+      for (sourcemap, lookup_table, offset) in chain {
         let traced = sourcemap.lookup_source_view_token_approx(
           lookup_table,
           original_token.get_src_line(),
           original_token.get_src_col(),
         )?;
-        if traced.get_source_id().is_none() {
-          return Some(unmapped_token());
+        traced.get_source_id()?;
+        if TRACK_NAMES {
+          // Prefer the name from this (earlier) map; otherwise carry forward the downstream one.
+          name_id = traced.get_name_id().map(|id| id + offset).or(name_id);
         }
         original_token = traced;
       }
@@ -107,20 +158,35 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) ->
         original_token.get_src_line(),
         original_token.get_src_col(),
         original_token.get_source_id(),
-        original_token.get_name_id(),
+        name_id,
       ))
-    })
-    .collect();
+    })();
 
-  SourceMap::new(
-    None,
-    first_map.get_names().map(|n| Cow::Owned(n.to_owned())).collect(),
-    None,
-    first_map.get_sources().map(|s| Cow::Owned(s.to_owned())).collect(),
-    first_map.get_source_contents().map(|x| x.map(|s| Cow::Owned(s.to_owned()))).collect(),
-    tokens,
-    None,
-  )
+    if let Some(mapped_token) = mapped_token {
+      if !has_mapping {
+        // Keep a leading unmapped segment when this line later becomes mapped. Approximate
+        // lookups clamp positions before the first segment, so dropping it would extend the
+        // first mapping backwards during another composition.
+        if let Some(leading_unmapped) = leading_unmapped.take() {
+          remapped.push(leading_unmapped);
+        }
+        has_mapping = true;
+      }
+      remapped.push(mapped_token);
+      is_mapped = true;
+    } else if is_mapped {
+      // One segment is enough to terminate the mapped range. Further misses on this line remain
+      // unmapped without additional tokens.
+      remapped.push(unmapped_token());
+      is_mapped = false;
+    } else if !has_mapping && leading_unmapped.is_none() {
+      // Defer this segment until the line produces a mapping. A wholly unmapped line needs no
+      // tokens, but a leading unmapped range before a later mapping must remain explicit.
+      leading_unmapped = Some(unmapped_token());
+    }
+  }
+
+  remapped.into_boxed_slice()
 }
 
 #[test]
@@ -284,6 +350,58 @@ fn test_collapse_sourcemaps_preserves_an_explicitly_unmapped_intermediate_bounda
   assert_eq!(collapsed.lookup_token(&lookup_table, 0, 9).unwrap().get_source_id(), None);
 }
 
+/// Test for https://github.com/vitejs/vite/issues/20721
+#[test]
+fn test_collapse_sourcemaps_preserves_boundary_when_trace_has_no_mapping() {
+  use oxc_sourcemap::SourceMapBuilder;
+
+  let mut detailed_builder = SourceMapBuilder::default();
+  let original_source = detailed_builder.add_source_and_content("original.js", "mapped\n");
+  detailed_builder.add_token(0, 0, 0, 0, Some(original_source), None);
+  let detailed_map = detailed_builder.into_sourcemap().into_owned();
+
+  let mut outer_builder = SourceMapBuilder::default();
+  let intermediate_source =
+    outer_builder.add_source_and_content("intermediate.js", "mapped\ngenerated\n");
+  outer_builder.add_token(0, 0, 0, 0, Some(intermediate_source), None);
+  outer_builder.add_token(0, 5, 1, 0, Some(intermediate_source), None);
+  outer_builder.add_token(0, 6, 1, 1, Some(intermediate_source), None);
+  let outer_map = outer_builder.into_sourcemap().into_owned();
+
+  let collapsed = collapse_sourcemaps(&[&detailed_map, &outer_map]);
+  let lookup_table = collapsed.generate_lookup_table();
+
+  assert_eq!(collapsed.get_tokens().count(), 2);
+  assert_eq!(collapsed.lookup_token(&lookup_table, 0, 4).unwrap().get_source_id(), Some(0));
+  assert_eq!(collapsed.lookup_token(&lookup_table, 0, 5).unwrap().get_source_id(), None);
+  assert_eq!(collapsed.lookup_token(&lookup_table, 0, 9).unwrap().get_source_id(), None);
+}
+
+#[test]
+fn test_collapse_sourcemaps_preserves_leading_unmapped_range_before_mapping() {
+  use oxc_sourcemap::SourceMapBuilder;
+
+  let mut detailed_builder = SourceMapBuilder::default();
+  let original_source = detailed_builder.add_source_and_content("original.js", "mapped\n");
+  detailed_builder.add_token(0, 0, 0, 0, None, None);
+  detailed_builder.add_token(0, 5, 0, 0, Some(original_source), None);
+  let detailed_map = detailed_builder.into_sourcemap().into_owned();
+
+  let mut outer_builder = SourceMapBuilder::default();
+  let intermediate_source =
+    outer_builder.add_source_and_content("intermediate.js", "unmapped mapped\n");
+  outer_builder.add_token(0, 0, 0, 0, Some(intermediate_source), None);
+  outer_builder.add_token(0, 5, 0, 5, Some(intermediate_source), None);
+  let outer_map = outer_builder.into_sourcemap().into_owned();
+
+  let collapsed = collapse_sourcemaps(&[&detailed_map, &outer_map]);
+  let lookup_table = collapsed.generate_lookup_table();
+
+  assert_eq!(collapsed.get_tokens().count(), 2);
+  assert_eq!(collapsed.lookup_token(&lookup_table, 0, 0).unwrap().get_source_id(), None);
+  assert_eq!(collapsed.lookup_token(&lookup_table, 0, 5).unwrap().get_source_id(), Some(0));
+}
+
 /// Test for https://github.com/rollup/rollup/issues/5955
 #[test]
 fn test_collapse_sourcemaps_with_coarse_segments() {
@@ -346,4 +464,86 @@ export function App() {
     Some(get_loc(original_code.find("return").unwrap(), original_code)),
     "collapsed sourcemap should map 'return' in transformed code back to original source"
   );
+}
+
+/// Names introduced only by the last map in the chain must survive collapsing.
+#[test]
+fn test_collapse_sourcemaps_preserves_last_map_names() {
+  use oxc_sourcemap::SourceMapBuilder;
+
+  let mut first_builder = SourceMapBuilder::default();
+  let first_source_id =
+    first_builder.set_source_and_content("source.ts", "function topLevelDemo() {}");
+  first_builder.add_token(0, 0, 0, 0, Some(first_source_id), None);
+  first_builder.add_token(0, 9, 0, 9, Some(first_source_id), None);
+  let first_map = first_builder.into_sourcemap();
+
+  let mut last_builder = SourceMapBuilder::default();
+  let last_source_id =
+    last_builder.set_source_and_content("bundle.js", "function topLevelDemo() {}");
+  let top_level_demo = last_builder.add_name("topLevelDemo");
+  last_builder.add_token(0, 0, 0, 0, Some(last_source_id), None);
+  last_builder.add_token(0, 9, 0, 9, Some(last_source_id), Some(top_level_demo));
+  let last_map = last_builder.into_sourcemap();
+
+  let collapsed = collapse_sourcemaps(&[&first_map, &last_map]);
+  let lookup = collapsed.generate_lookup_table();
+  let token =
+    collapsed.lookup_source_view_token(&lookup, 0, 9).expect("token at generated position (0:9)");
+  assert_eq!(token.get_name().map(AsRef::as_ref), Some("topLevelDemo"));
+}
+
+/// In a 3-map chain, a name from a middle map (e.g. an intermediate transform) must survive
+/// when neither the first nor the last map names the corresponding position.
+#[test]
+fn test_collapse_sourcemaps_preserves_middle_map_names() {
+  use oxc_sourcemap::SourceMapBuilder;
+
+  let mut first_builder = SourceMapBuilder::default();
+  let first_source_id = first_builder.set_source_and_content("source.ts", "const foo = 1");
+  first_builder.add_token(0, 6, 0, 6, Some(first_source_id), None);
+  let first_map = first_builder.into_sourcemap();
+
+  let mut middle_builder = SourceMapBuilder::default();
+  let middle_source_id = middle_builder.set_source_and_content("first.js", "const foo = 1");
+  let foo = middle_builder.add_name("foo");
+  middle_builder.add_token(0, 6, 0, 6, Some(middle_source_id), Some(foo));
+  let middle_map = middle_builder.into_sourcemap();
+
+  let mut last_builder = SourceMapBuilder::default();
+  let last_source_id = last_builder.set_source_and_content("middle.js", "const foo = 1");
+  last_builder.add_token(0, 6, 0, 6, Some(last_source_id), None);
+  let last_map = last_builder.into_sourcemap();
+
+  let collapsed = collapse_sourcemaps(&[&first_map, &middle_map, &last_map]);
+  let lookup = collapsed.generate_lookup_table();
+  let token =
+    collapsed.lookup_source_view_token(&lookup, 0, 6).expect("token at generated position (0:6)");
+  assert_eq!(token.get_name().map(AsRef::as_ref), Some("foo"));
+}
+
+/// When both maps name a position, prefer the first map's (the earlier original).
+#[test]
+fn test_collapse_sourcemaps_prefers_first_map_name() {
+  use oxc_sourcemap::SourceMapBuilder;
+
+  let mut first_builder = SourceMapBuilder::default();
+  let first_source_id =
+    first_builder.set_source_and_content("source.ts", "const DEBUG_BUILD = true");
+  let debug_build = first_builder.add_name("DEBUG_BUILD");
+  first_builder.add_token(0, 6, 0, 6, Some(first_source_id), Some(debug_build));
+  let first_map = first_builder.into_sourcemap();
+
+  let mut last_builder = SourceMapBuilder::default();
+  let last_source_id =
+    last_builder.set_source_and_content("bundle.js", "const DEBUG_BUILD$1 = true");
+  let intermediate = last_builder.add_name("DEBUG_BUILD$1");
+  last_builder.add_token(0, 6, 0, 6, Some(last_source_id), Some(intermediate));
+  let last_map = last_builder.into_sourcemap();
+
+  let collapsed = collapse_sourcemaps(&[&first_map, &last_map]);
+  let lookup = collapsed.generate_lookup_table();
+  let token =
+    collapsed.lookup_source_view_token(&lookup, 0, 6).expect("token at generated position (0:6)");
+  assert_eq!(token.get_name().map(AsRef::as_ref), Some("DEBUG_BUILD"));
 }

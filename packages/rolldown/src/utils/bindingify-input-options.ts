@@ -316,11 +316,7 @@ function bindingifyInput(input: InputOptions['input']): BindingInputOptions['inp
 
 function bindingifyWatch(watch: InputOptions['watch']): BindingInputOptions['watch'] {
   if (watch) {
-    if (watch.notify) {
-      console.warn('The "watch.notify" option is deprecated. Please use "watch.watcher" instead.');
-    }
-    // Merge deprecated `notify` into `watcher`, with `watcher` taking precedence
-    const watcher = { ...watch.notify, ...watch.watcher };
+    const watcher = watch.watcher ?? {};
     return {
       buildDelay: watch.buildDelay,
       skipWrite: watch.skipWrite,

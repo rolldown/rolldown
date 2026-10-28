@@ -12,7 +12,10 @@ use rustc_hash::FxHashMap;
 use crate::{
   chunk_graph::ChunkGraph,
   stages::{
-    generate_stage::order_wrap_state::{EsmInitTarget, OrderWrapState},
+    generate_stage::{
+      CarriedRender, InlineCommonChunksState, InlineReader,
+      order_wrap_state::{EsmInitTarget, OrderWrapState},
+    },
     link_stage::LinkStageOutput,
   },
 };
@@ -39,6 +42,11 @@ pub struct GenerateContext<'a> {
   /// Pre-resolved paths for external modules (always a `FxHashMap` variant).
   /// Used instead of `options.paths` in sync rendering code to avoid deadlocks.
   pub resolved_paths: Option<&'a PathsOutputOption>,
+  /// `experimentalInlineCommonChunks` decisions: which chunks are records, who carries and reads
+  /// them, and the bridge names.
+  pub inline_state: &'a InlineCommonChunksState,
+  /// The records this file carries, each finalized and printed for this file, dependencies first.
+  pub carried_renders: Vec<CarriedRender>,
 }
 
 impl GenerateContext<'_> {
@@ -68,8 +76,11 @@ impl GenerateContext<'_> {
       // namespace beside the CJS importee while its re-export facade stays owned by the barrel.
       // Resolve the namespace through the same cross-chunk path as an ordinary symbol before
       // appending the property; otherwise CJS output renders a bare, undeclared local identifier.
+      // The same applies to a namespace owned by an inline common chunk record.
       let canonical_ns_name =
-        if self.order_wrap_state.is_order_cjs_carrier_namespace(ns_alias.namespace_ref) {
+        if self.order_wrap_state.is_order_cjs_carrier_namespace(ns_alias.namespace_ref)
+          || self.inline_bridge_pattern(ns_alias.namespace_ref, cur_chunk_idx).is_some()
+        {
           self.finalized_string_pattern_for_symbol_ref(
             ns_alias.namespace_ref,
             cur_chunk_idx,
@@ -89,13 +100,20 @@ impl GenerateContext<'_> {
       return namespace.to_string();
     }
 
+    if let Some(bridged) = self.inline_bridge_pattern(canonical_ref, cur_chunk_idx) {
+      return bridged;
+    }
+
     match self.options.format {
       rolldown_common::OutputFormat::Cjs => {
         let chunk_idx_of_canonical_symbol = canonical_symbol.chunk_idx.unwrap_or_else(|| {
           // Scoped symbols don't get assigned a `ChunkIdx`. There are skipped for performance reason, because they are surely
           // belong to the chunk they are declared in and won't link to other chunks.
           let symbol_name = canonical_ref.name(symbol_db);
-          panic!("{canonical_ref:?} {symbol_name:?} is not in any chunk, which is unexpected");
+          let module_id = self.link_output.module_table[canonical_ref.owner].stable_id();
+          panic!(
+            "Symbol `{symbol_name}` in module `{module_id}` is not in any chunk, which is unexpected"
+          );
         });
 
         let is_symbol_in_other_chunk = cur_chunk_idx != chunk_idx_of_canonical_symbol;
@@ -137,6 +155,24 @@ impl GenerateContext<'_> {
       }
       _ => self.canonical_name_for(canonical_names, canonical_ref).to_string(),
     }
+  }
+
+  /// `bridge.name` when `canonical_ref` is owned by an inline common chunk record that
+  /// `cur_chunk_idx` (this file, or a record printed in it) reads through a bridge.
+  fn inline_bridge_pattern(
+    &self,
+    canonical_ref: SymbolRef,
+    cur_chunk_idx: ChunkIdx,
+  ) -> Option<String> {
+    let canonical_ref = self.link_output.symbol_db.canonical_ref_for(canonical_ref);
+    let reader = InlineReader { file: self.chunk_idx, reader: cur_chunk_idx };
+    let (bridge, export_name) = self.inline_state.bridge_read(
+      reader,
+      canonical_ref,
+      &self.link_output.symbol_db,
+      self.chunk_graph,
+    )?;
+    Some(property_access_str(bridge, export_name))
   }
 
   fn canonical_name_for<'name>(

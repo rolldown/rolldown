@@ -158,7 +158,7 @@ pub struct BindingPluginOptions {
   pub render_error_meta: Option<BindingPluginHookMeta>,
 
   #[napi(
-    ts_type = "(ctx: BindingPluginContext, bundle: BindingErrorsOr<BindingOutputs>, isWrite: boolean, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>"
+    ts_type = "(ctx: BindingPluginContext, bundle: BindingResult<BindingOutputs>, isWrite: boolean, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>"
   )]
   pub generate_bundle: Option<
     MaybeAsyncJsCallback<
@@ -169,7 +169,7 @@ pub struct BindingPluginOptions {
   pub generate_bundle_meta: Option<BindingPluginHookMeta>,
 
   #[napi(
-    ts_type = "(ctx: BindingPluginContext, bundle: BindingErrorsOr<BindingOutputs>, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>"
+    ts_type = "(ctx: BindingPluginContext, bundle: BindingResult<BindingOutputs>, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>"
   )]
   pub write_bundle: Option<
     MaybeAsyncJsCallback<
@@ -256,8 +256,8 @@ impl BindingPluginOptions {
         .iter()
         .cloned()
         .map(|tokens| {
-          let normalized = normalized_tokens(tokens).map_err(&make_err)?;
-          filter_expression::parse(normalized).map_err(&make_err)
+          let normalized = normalized_tokens(tokens).map_err(make_err)?;
+          filter_expression::parse(normalized).map_err(make_err)
         })
         .collect()
     };

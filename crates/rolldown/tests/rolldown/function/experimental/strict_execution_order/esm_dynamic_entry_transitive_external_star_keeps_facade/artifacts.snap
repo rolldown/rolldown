@@ -6,16 +6,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//! User-defined Entry: [Entry-Module-Id: main.js] [Name: Some("main")]
+//! User-defined Entry: [Entry-Module-Id: main.js] [Name: main]
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region main.js
+// main.js
 var loaded;
 function init_main() {
 	return (init_main = __esmMin((() => {
 		loaded = import("./target2.js").then((namespace) => namespace);
 	})))();
 }
-//#endregion
 init_main();
 export { loaded };
 
@@ -25,9 +24,9 @@ export { loaded };
 
 ```js
 //! ManualCodeSplitting: [Group-Name: reader]
-import { t as init_target } from "./target.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region reader.js
+import { t as init_target } from "./target.js";
+// reader.js
 function read() {
 	globalThis.__externalStarLog.push(`reader:1`);
 }
@@ -36,7 +35,6 @@ function init_reader() {
 		init_target();
 	})))();
 }
-//#endregion
 export { read as n, init_reader as t };
 
 ```
@@ -45,7 +43,7 @@ export { read as n, init_reader as t };
 
 ```js
 //! Common Chunk: [Shared-By: main.js, target.js]
-//#region \0rolldown/runtime.js
+// \0rolldown/runtime.js
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
@@ -78,7 +76,6 @@ var __copyProps = (to, from, except, desc) => {
 	return to;
 };
 var __reExport = (target, mod, secondTarget) => (__copyProps(target, mod, "default"), secondTarget && __copyProps(secondTarget, mod, "default"));
-//#endregion
 export { __exportAll as n, __reExport as r, __esmMin as t };
 
 ```
@@ -86,16 +83,15 @@ export { __exportAll as n, __reExport as r, __esmMin as t };
 ## target.js
 
 ```js
-//! Dynamic Entry: [Entry-Module-Id: target.js] [Name: None]
+//! Dynamic Entry: [Entry-Module-Id: target.js] [Name: <none>]
 //! Common Chunk: [Shared-By: target.js]
-import { n as read, t as init_reader } from "./reader.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region barrel.js
+import { n as read, t as init_reader } from "./reader.js";
+// barrel.js
 function init_barrel() {
 	return (init_barrel = __esmMin((() => {})))();
 }
-//#endregion
-//#region target.js
+// target.js
 var x;
 function init_target() {
 	return (init_target = __esmMin((() => {
@@ -106,7 +102,6 @@ function init_target() {
 		read();
 	})))();
 }
-//#endregion
 export { x as n, init_target as t };
 
 ```
@@ -114,7 +109,7 @@ export { x as n, init_target as t };
 ## target2.js
 
 ```js
-//! Dynamic Entry: [Entry-Module-Id: target.js] [Name: None]
+//! Dynamic Entry: [Entry-Module-Id: target.js] [Name: <none>]
 import { n as x, t as init_target } from "./target.js";
 export * from "external";
 init_target();

@@ -8,6 +8,20 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+/**
+ * The report dir of one build output: `<cwd>/node_modules/.rolldown/report/<output dir>`.
+ * The same rule as `report_dir_for` in crates/rolldown_devtools_metrics/src/lib.rs: the
+ * output dir relative to cwd, each `..` written as `__`, every `:` removed.
+ */
+export function reportDirFor(cwd, outDir) {
+  const segments = path
+    .relative(cwd, path.resolve(cwd, outDir))
+    .split(/[\\/]/)
+    .filter((segment) => segment !== '' && segment !== '.')
+    .map((segment) => (segment === '..' ? '__' : segment.replaceAll(':', '')));
+  return path.join(cwd, 'node_modules', '.rolldown', 'report', ...segments);
+}
+
 /** Candidate report dirs, most specific first. Each is checked for module-graph.json. */
 export function moduleGraphCandidates({ reportDir, demoMetricsDir, dist }) {
   const candidates = [];
@@ -23,10 +37,7 @@ export function moduleGraphCandidates({ reportDir, demoMetricsDir, dist }) {
     // dirs) - walk up a few levels rather than assuming dist's direct parent.
     let dir = path.dirname(dist);
     for (let i = 0; i < 3; i++) {
-      candidates.push(
-        path.join(dir, '.rolldown', 'report', 'module-graph.json'),
-        path.join(dir, 'node_modules', '.rolldown', 'report', 'module-graph.json'),
-      );
+      candidates.push(path.join(reportDirFor(dir, dist), 'module-graph.json'));
       const parent = path.dirname(dir);
       if (parent === dir) break;
       dir = parent;

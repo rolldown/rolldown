@@ -50,6 +50,7 @@ import {
   evalOverrides,
   loadModuleGraph,
   moduleGraphCandidates,
+  reportDirFor,
   resolveModule,
   whatIf,
 } from './lib/module-graph.mjs';
@@ -67,7 +68,8 @@ const STATE_DIR =
     ? path.join(process.cwd(), '.perf-kit')
     : path.join(ROOT, 'state'));
 const TARGET_FILE = path.join(STATE_DIR, 'target.json');
-const BUILD_METRICS_DIR = path.join(STATE_DIR, 'rolldown-metrics');
+// The demo build's report: report mode writes one dir per output dir, under the build cwd.
+const BUILD_METRICS_DIR = reportDirFor(APP_DIR, 'dist');
 const CHROME_PROFILE_DIR = path.join(STATE_DIR, 'chrome-profile');
 
 // Decision thresholds the runbook references. The harness only REPORTS against
@@ -628,7 +630,7 @@ function pinBaseline(target) {
     const buildState = path.join(BUILD_METRICS_DIR, '.state.json');
     if (fs.existsSync(buildState)) {
       fs.copyFileSync(buildState, path.join(BUILD_METRICS_DIR, 'baseline.json'));
-      console.log('build baseline pinned (rolldown-metrics/baseline.json)');
+      console.log(`build baseline pinned (${path.join(BUILD_METRICS_DIR, 'baseline.json')})`);
     }
   }
   snapshotBaselineGraph(target);
@@ -1300,7 +1302,7 @@ async function cmdBuild() {
     throw new Error('no app yet - run `node harness.mjs gen` first');
   }
   guardStateDir();
-  const result = await buildApp({ appDir: APP_DIR, reportDir: BUILD_METRICS_DIR });
+  const result = await buildApp({ appDir: APP_DIR });
   console.log(`built in ${result.wallMs}ms`);
   console.log(`entry main.js: ${kb(result.entryBytes)}`);
   for (const chunk of result.chunks) console.log(`async ${chunk.file}: ${kb(chunk.bytes)}`);
@@ -1837,7 +1839,7 @@ function requireModuleGraph(opts) {
     throw new Error(
       'no module-graph.json found - it is written by rolldown devtools metrics builds.\n' +
         'vite >= 8: add `build.rolldownOptions.devtools = { mode: "report" }` to the vite config\n' +
-        '(report lands in node_modules/.rolldown/report), rebuild, then re-run.\n' +
+        '(report lands in node_modules/.rolldown/report/<output dir>), rebuild, then re-run.\n' +
         'Or point at an existing report with --report <dir>.',
     );
   }

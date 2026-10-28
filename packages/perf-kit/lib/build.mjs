@@ -1,16 +1,19 @@
 // Builds the demo app with the repo's rolldown (packages/rolldown/dist), devtools
 // report mode on, so every build also refreshes the build-side metrics report
 // (entry bytes, initial-load bytes, delta/baselineDelta) next to the runtime numbers.
+// The report lands in the app's node_modules/.rolldown/report/dist.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import { reportDirFor } from './module-graph.mjs';
+
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const ROLLDOWN_DIST =
   process.env.ROLLDOWN_DIST ?? path.join(REPO_ROOT, 'packages', 'rolldown', 'dist', 'index.mjs');
 
-export async function buildApp({ appDir, reportDir }) {
+export async function buildApp({ appDir }) {
   if (!fs.existsSync(ROLLDOWN_DIST)) {
     throw new Error(
       `rolldown dist not found at ${ROLLDOWN_DIST} - run \`just build-rolldown\` first (or set ROLLDOWN_DIST).`,
@@ -23,7 +26,7 @@ export async function buildApp({ appDir, reportDir }) {
   await build({
     cwd: appDir,
     input: { main: './src/main.ts' },
-    devtools: { mode: 'report', reportDir },
+    devtools: { mode: 'report' },
     output: {
       dir: 'dist',
       format: 'esm',
@@ -45,6 +48,7 @@ export async function buildApp({ appDir, reportDir }) {
     : [];
   let buildMetrics = null;
   try {
+    const reportDir = reportDirFor(appDir, 'dist');
     buildMetrics = JSON.parse(fs.readFileSync(path.join(reportDir, 'metrics.json'), 'utf8'));
   } catch {
     // metrics report is best-effort; the harness still works without it

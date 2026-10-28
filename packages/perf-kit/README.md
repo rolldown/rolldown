@@ -22,7 +22,8 @@ agent's job; every command here is one loop step with machine-readable output.
 No dependencies: raw CDP over Node's built-in `WebSocket` (Node >= 22) against a
 system Chrome/Edge, and the repo's own rolldown (`packages/rolldown/dist`, so run
 `just build-rolldown` first). Builds run with `devtools: { mode: 'report' }`, so
-every build also refreshes the build-side report under `state/rolldown-metrics/`.
+every build also refreshes the build-side report under
+`app/node_modules/.rolldown/report/dist/`.
 
 ## Commands
 
@@ -81,7 +82,7 @@ Log the decision trail with `--label`; every measure also appends to
 - `state/coverage.json` — per-module `totalBytes` / `paintBytes` / `settleBytes`
   (+ ratios), the sorted `candidates` list, and `coldAtPaint` (top modules by
   `totalBytes − paintBytes`, framework runtimes flagged).
-- `state/rolldown-metrics/` — the build-side report (`output.max_initial_load_bytes`
+- `app/node_modules/.rolldown/report/dist/` — the build-side report (`output.max_initial_load_bytes`
   should drop with every accepted defer while `output.total_bytes` stays flat).
 
 ## The demo app

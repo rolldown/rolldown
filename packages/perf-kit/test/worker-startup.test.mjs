@@ -402,7 +402,7 @@ test('the config shim puts the report on every environment and keeps the attribu
   const shim = viteConfigShim('vite.config.ts');
   assert.ok(shim.includes("import base from './vite.config';"));
   assert.ok(shim.includes("mode: 'report'"));
-  assert.ok(shim.includes('reportDir'));
+  assert.ok(!shim.includes('reportDir'));
   assert.ok(shim.includes("name !== 'client'"));
   assert.ok(shim.includes('preserveModules: true'));
   assert.ok(shim.includes('dist-attrib/${name}'));

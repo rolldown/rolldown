@@ -1,5 +1,5 @@
 // The Vite config shim: builds the app with the rolldown metrics report on EVERY
-// environment (one directory each), sourcemaps on the worker environment, and two
+// environment (one directory per output dir), sourcemaps on the worker environment, and two
 // variants behind environment variables - a worker-only rebuild for the loop and the
 // preserveModules attribution build. It wraps the app's own config without editing it.
 //
@@ -50,10 +50,7 @@ export default async (env: any) => {
                 ...(attrib && worker
                   ? { output: { preserveModules: true, preserveModulesRoot: '.', entryFileNames: '[name].js', chunkFileNames: '[name].js' } }
                   : {}),
-                devtools: {
-                  mode: 'report',
-                  reportDir: \`node_modules/.rolldown/report\${attrib ? '-attrib' : ''}-\${name}\`,
-                },
+                devtools: { mode: 'report' },
               },
             },
           };

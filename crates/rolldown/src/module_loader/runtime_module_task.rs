@@ -187,6 +187,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
         meta: ecma_view_meta,
         mutations: vec![],
         new_url_references,
+        namespace_in_checks: FxHashMap::default(),
         rolldown_file_url_references,
         this_expr_replace_map: FxHashMap::default(),
         cjs_this_ref: None,

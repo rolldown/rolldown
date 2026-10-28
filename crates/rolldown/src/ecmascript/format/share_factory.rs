@@ -81,6 +81,18 @@ pub fn render_inline_records<'code>(
         ");"
       ));
     }
+    // Dev mode: the record's graph rows ship from inside its factory, which runs once per page;
+    // a carrier's own prelude lists only its chunk's modules.
+    if ctx.options.is_dev_mode_enabled()
+      && let Some(rows) = crate::hmr::module_graph_delta::render_register_graph_source(
+        &ctx.link_output.module_table,
+        ctx.chunk_graph.chunk_table[*record_idx].modules.iter().copied(),
+        &ctx.link_output.user_defined_entry_modules,
+        None,
+      )
+    {
+      head.push_str(&concat_string!("\n\t", rows));
+    }
     source_joiner.append_source(head);
     for module_source in module_sources {
       if let Some(sources) = &module_source.sources {

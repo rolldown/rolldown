@@ -1197,6 +1197,10 @@
         {
           "type": "object",
           "properties": {
+            "type": {
+              "type": "string",
+              "const": "named"
+            },
             "imported": {
               "type": "string"
             },
@@ -1208,10 +1212,6 @@
             },
             "from": {
               "type": "string"
-            },
-            "type": {
-              "type": "string",
-              "const": "named"
             }
           },
           "additionalProperties": false,
@@ -1224,15 +1224,15 @@
         {
           "type": "object",
           "properties": {
+            "type": {
+              "type": "string",
+              "const": "namespace"
+            },
             "alias": {
               "type": "string"
             },
             "from": {
               "type": "string"
-            },
-            "type": {
-              "type": "string",
-              "const": "namespace"
             }
           },
           "additionalProperties": false,

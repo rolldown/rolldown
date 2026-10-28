@@ -1712,19 +1712,28 @@ impl GenerateStage<'_> {
       || (consumer_chunks.len() == 1 && consumer_chunks.contains(&target_chunk_idx))
   }
 
-  /// Whether folding the runtime module into `target_chunk_idx` keeps the
-  /// target's public export signature intact.
+  /// Returns `false` when a merge of the runtime module into `target_chunk_idx` adds helper exports
+  /// to a fixed entry signature.
   ///
-  /// When another consumer reads helpers from the host cross-chunk, the host has
-  /// to *export* those helper symbols. On a user-defined entry whose
-  /// `preserveEntrySignatures` fixes its surface, that leaks internal helper
-  /// names onto the declared signature, so the runtime must not merge there.
+  /// After the merge, the target chunk is the host of the runtime. When a consumer other than the
+  /// host uses helpers, the host must export these helpers. These exports add internal helper names
+  /// to the signature of the host. So the runtime must not go into a user-defined entry with a
+  /// fixed signature.
   ///
-  /// Safe when any of:
-  /// - the target is the only consumer (helpers stay internal — no re-export),
-  /// - the target is not a user-defined entry (a common chunk has no signature),
-  /// - `preserveEntrySignatures` allows extra exports: `allow-extension`/`false`,
-  ///   or `exports-only` for an entry that declares no exports.
+  /// An entry from `this.emitFile({ type: 'chunk' })` is a user-defined entry too. Its signature
+  /// comes from its `preserveSignature` option, or from `preserveEntrySignatures` when the plugin
+  /// does not set that option. When the helpers change the signature of this entry,
+  /// `preserve_strict_entry_signatures` gives it a facade (`issues/11351_dynamic_import`).
+  ///
+  /// The function returns `true` in each of these conditions:
+  /// - The target is the only consumer. Then the helpers stay internal, and the host does not
+  ///   export them.
+  /// - The target is not a user-defined or emitted entry. Only these entries can have a fixed
+  ///   signature.
+  /// - The signature is not fixed. Its setting (`preserveEntrySignatures` or `preserveSignature`)
+  ///   is `allow-extension` or `false`, or it is `exports-only` and the entry has no exports.
+  ///
+  /// See internal-docs/code-splitting/implementation.md#runtime-module-placement.
   fn runtime_merge_preserves_target_signature(
     &self,
     chunk_graph: &ChunkGraph,
@@ -1740,7 +1749,7 @@ impl GenerateStage<'_> {
     let ChunkKind::EntryPoint { meta, module: entry_module_idx, .. } = target_chunk.kind else {
       return true;
     };
-    if !meta.contains(ChunkMeta::UserDefinedEntry) {
+    if !meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk) {
       return true;
     }
     match target_chunk.preserve_entry_signature {

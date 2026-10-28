@@ -219,7 +219,7 @@ impl GenerateStage<'_> {
       .collect::<Vec<_>>();
 
     #[cfg(debug_assertions)]
-    self.debug_assert_runtime_host_keeps_import_order(
+    self.debug_assert_runtime_host_keeps_evaluation_order(
       chunk_graph,
       &index_sorted_cross_chunk_imports,
       &index_importee_ranks,
@@ -573,43 +573,14 @@ impl GenerateStage<'_> {
     Self::static_import_edges_of(chunk_graph, state)
   }
 
-  /// Reconciles the module-level prediction (`predicted_static_import_targets` plus
-  /// `entry_export_service_targets`) against the static chunk imports this pass just derived.
-  /// The already-loaded fold consumed that prediction before chunks existed, with two
-  /// obligations: the fold's cycle check must see every emitted edge, and its entry reachability
-  /// must not claim a side effect the emitted graph never runs. The contract is therefore
-  /// one-and-a-half-sided:
-  /// - every edge this pass derives must be predicted (a miss is the cycle-check bug class
-  ///   pinned by `optimization/chunk_merging/already_loaded_entry_reexport_service_edge`),
-  ///   except edges whose every import item is a runtime-owned symbol: per-chunk runtime-helper
-  ///   demands and CJS-format interop request those at emission time and the module-level walk
-  ///   does not model them;
-  /// - a predicted *entry-export service* edge with a side-effectful target must be emitted.
-  ///   Those targets exceed `load_dependencies`, so nothing but their liveness gate keeps entry
-  ///   reachability truthful; this direction validates that the gate mirrors emission. The base
-  ///   prediction is exempt from this direction: it filters `load_dependencies`, the same edges
-  ///   the pre-prediction bits reachability trusted, so its over-predictions are exactly
-  ///   main-parity — e.g. constant inlining drops a symbol's import (and can even orphan an
-  ///   annotated-side-effectful chunk, see `rollup@chunking form@namespace-reexport-side-effect-cache`)
-  ///   without touching `load_dependencies`, on main just as here.
-  ///
-  /// Service imports hang on the entry (possibly facade) chunk, so entry chunks predict them via
-  /// their `entry_module_idx` — hosted or not — plus the facade edge to the chunk hosting a
-  /// moved-away entry module.
-  ///
-  /// Scope: the hard direction covers the edges derived here (`index_imports_from_other_chunks`).
-  /// Edges pre-populated on `Chunk::imports_from_other_chunks` by chunk merging postdate the fold
-  /// and answer to `would_create_circular_dependency`, not to this prediction; they only join the
-  /// union used by the soft direction. This validates the prediction *function* on the final
-  /// state — the fold's decision-time snapshot predates the inclusion replays, which is why the
-  /// fold's own cycle graph over-approximates liveness instead of trusting it.
+  /// Asserts the rule of `runtime_host_keeps_evaluation_order` on the final links. A chunk that
+  /// hosts the runtime module has chunk `exec_order` 0, so a chunk that imports the host can list its
+  /// imports in a different order than with a standalone runtime. This is harmless only when the
+  /// chunks still evaluate in the same order. The host check predicts the import edges before the
+  /// merge, and `preserve_strict_entry_signatures` can turn an entry chunk host into a common chunk
+  /// after the check. So a change of the evaluation order shows up here in the test suite.
   #[cfg(debug_assertions)]
-  /// Asserts the rule of `runtime_host_keeps_import_order` on the final links: a chunk that hosts
-  /// the runtime module has chunk `exec_order` 0, and that must not change the import order of a
-  /// chunk that imports it. The host check predicts the import edges before the merge, so a gap in
-  /// that prediction shows up here in the test suite.
-  #[cfg(debug_assertions)]
-  fn debug_assert_runtime_host_keeps_import_order(
+  fn debug_assert_runtime_host_keeps_evaluation_order(
     &self,
     chunk_graph: &ChunkGraph,
     index_sorted_cross_chunk_imports: &[Vec<ChunkIdx>],
@@ -644,24 +615,71 @@ impl GenerateStage<'_> {
         }
       }
     };
+    // The imports of a chunk in the order that they have with a standalone runtime. Only a list
+    // with the host can change.
+    let standalone_importees = |chunk_idx: ChunkIdx| {
+      let mut importees = index_sorted_cross_chunk_imports[chunk_idx.index()].clone();
+      if importees.contains(&host) {
+        sort_chunk_importees_by(
+          &mut importees,
+          standalone_key,
+          index_importee_ranks[chunk_idx.index()].as_ref(),
+        );
+      }
+      importees
+    };
+    let hosted_importees =
+      |chunk_idx: ChunkIdx| index_sorted_cross_chunk_imports[chunk_idx.index()].clone();
     for (chunk_idx, _) in chunk_graph.chunk_table.iter_enumerated() {
       let sorted = &index_sorted_cross_chunk_imports[chunk_idx.index()];
-      if chunk_idx == host || sorted.len() < 2 || !sorted.contains(&host) {
+      if chunk_idx == host
+        || sorted.len() < 2
+        || !sorted.contains(&host)
+        || !chunk_graph.chunk_is_live(chunk_idx)
+        || standalone_importees(chunk_idx) == *sorted
+      {
         continue;
       }
-      let mut standalone = sorted.clone();
-      sort_chunk_importees_by(
-        &mut standalone,
-        standalone_key,
-        index_importee_ranks[chunk_idx.index()].as_ref(),
-      );
+      let standalone = chunk_evaluation_order(chunk_idx, &standalone_importees);
+      let hosted = chunk_evaluation_order(chunk_idx, &hosted_importees);
       debug_assert!(
-        standalone == *sorted,
-        "the runtime host {host:?} changes the import order of chunk {chunk_idx:?}: {sorted:?} instead of {standalone:?}"
+        standalone == hosted,
+        "the runtime host {host:?} changes the evaluation order of chunk {chunk_idx:?}: {hosted:?} instead of {standalone:?}"
       );
     }
   }
 
+  /// Reconciles the module-level prediction (`predicted_static_import_targets` plus
+  /// `entry_export_service_targets`) against the static chunk imports this pass just derived.
+  /// The already-loaded fold consumed that prediction before chunks existed, with two
+  /// obligations: the fold's cycle check must see every emitted edge, and its entry reachability
+  /// must not claim a side effect the emitted graph never runs. The contract is therefore
+  /// one-and-a-half-sided:
+  /// - every edge this pass derives must be predicted (a miss is the cycle-check bug class
+  ///   pinned by `optimization/chunk_merging/already_loaded_entry_reexport_service_edge`),
+  ///   except edges whose every import item is a runtime-owned symbol: per-chunk runtime-helper
+  ///   demands and CJS-format interop request those at emission time and the module-level walk
+  ///   does not model them;
+  /// - a predicted *entry-export service* edge with a side-effectful target must be emitted.
+  ///   Those targets exceed `load_dependencies`, so nothing but their liveness gate keeps entry
+  ///   reachability truthful; this direction validates that the gate mirrors emission. The base
+  ///   prediction is exempt from this direction: it filters `load_dependencies`, the same edges
+  ///   the pre-prediction bits reachability trusted, so its over-predictions are exactly
+  ///   main-parity — e.g. constant inlining drops a symbol's import (and can even orphan an
+  ///   annotated-side-effectful chunk, see `rollup@chunking form@namespace-reexport-side-effect-cache`)
+  ///   without touching `load_dependencies`, on main just as here.
+  ///
+  /// Service imports hang on the entry (possibly facade) chunk, so entry chunks predict them via
+  /// their `entry_module_idx` — hosted or not — plus the facade edge to the chunk hosting a
+  /// moved-away entry module.
+  ///
+  /// Scope: the hard direction covers the edges derived here (`index_imports_from_other_chunks`).
+  /// Edges pre-populated on `Chunk::imports_from_other_chunks` by chunk merging postdate the fold
+  /// and answer to `would_create_circular_dependency`, not to this prediction; they only join the
+  /// union used by the soft direction. This validates the prediction *function* on the final
+  /// state — the fold's decision-time snapshot predates the inclusion replays, which is why the
+  /// fold's own cycle graph over-approximates liveness instead of trusting it.
+  #[cfg(debug_assertions)]
   fn debug_assert_module_level_static_import_prediction(
     &self,
     chunk_graph: &ChunkGraph,
@@ -2102,7 +2120,7 @@ fn sort_chunk_importees(
 }
 
 /// The sort of `sort_chunk_importees` with any order key in the place of `exec_order`. The runtime
-/// host check `runtime_host_keeps_import_order` sorts with the key that a host would get.
+/// host check `runtime_host_keeps_evaluation_order` sorts with the key that a host would get.
 pub(super) fn sort_chunk_importees_by<K: Ord>(
   importees: &mut [ChunkIdx],
   key: impl Fn(ChunkIdx) -> K,
@@ -2123,6 +2141,37 @@ pub(super) fn sort_chunk_importees_by<K: Ord>(
   {
     *slot = chunk_idx;
   }
+}
+
+/// The chunks in the order in which they evaluate when `root` loads and no other chunk has run: a
+/// depth-first walk that follows the importees of each chunk in the order that `importees` gives
+/// and lists a chunk after its importees. A chunk that the walk reaches again, also through a
+/// cycle, keeps its first position. The runtime host check compares this order with the runtime
+/// in its own chunk and in the host.
+pub(super) fn chunk_evaluation_order(
+  root: ChunkIdx,
+  mut importees: impl FnMut(ChunkIdx) -> Vec<ChunkIdx>,
+) -> Vec<ChunkIdx> {
+  let mut order = vec![];
+  let mut visited = FxHashSet::default();
+  visited.insert(root);
+  // Each entry has a chunk and the importees that the walk did not enter yet, in reverse order.
+  let mut root_importees = importees(root);
+  root_importees.reverse();
+  let mut stack = vec![(root, root_importees)];
+  while let Some((chunk_idx, pending)) = stack.last_mut() {
+    if let Some(importee) = pending.pop() {
+      if visited.insert(importee) {
+        let mut next = importees(importee);
+        next.reverse();
+        stack.push((importee, next));
+      }
+    } else {
+      order.push(*chunk_idx);
+      stack.pop();
+    }
+  }
+  order
 }
 
 // The same implementation with https://github.com/oxc-project/oxc/blob/crates_v0.86.0/crates/oxc_mangler/src/base54.rs#L30-L31

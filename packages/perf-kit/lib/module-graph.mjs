@@ -98,11 +98,12 @@ function readBuildReport(graphFile) {
 }
 
 /**
- * Why a report discovered next to `dist` does not describe the build in `dist`, or
- * null when it does (or when nothing can be checked). Vite's client and SSR builds
- * write the same report directory, so the last build wins; a rebuild without the
- * report also leaves hashed chunk names behind. The entry chunks decide: when none
- * of them exists in `dist`, the report is another build's.
+ * Why a report discovered for `dist` does not describe the build in `dist`, or null
+ * when it does (or when nothing can be checked). Report mode writes one directory per
+ * output dir, so the report is the last report-mode build into that dir: a rebuild
+ * without the report leaves the old report behind, and a build that shares the outDir
+ * replaces it. The entry chunks decide: when none of them exists in `dist`, the report
+ * is another build's.
  */
 export function reportDistMismatch(graph, dist) {
   const report = graph?.buildReport;
@@ -115,8 +116,8 @@ export function reportDistMismatch(graph, dist) {
     // A client build (SSR frameworks write no index.html) is the usual victim, so the
     // hint does not depend on the dist's layout.
     why +=
-      '\nThe report comes from a node-platform build (a server). Vite builds the client and the SSR ' +
-      'environments into the same report directory, and the last build wins.';
+      '\nThe report comes from a node-platform build (a server), so the last report-mode build ' +
+      'into this output dir was a server build.';
   }
   return why;
 }

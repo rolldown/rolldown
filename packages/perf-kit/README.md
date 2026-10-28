@@ -135,13 +135,11 @@ FCP and LCP when those paints differ.
 `--features a,b`) to point at any other built app; candidates are then advisory
 per-module (the agent finds the import seams itself).
 
-`graph`, `what-if`, `cut`, `why` and `graph-diff` read the report they discover next
-to the target dist, and stop with an error when none of the report's entry chunks
-exists in that dist: a client + SSR app's last build wins in
-`node_modules/.rolldown/report`, and a rebuild without the report leaves stale
-hashed chunk names behind. Rebuild with the report on, give each environment its own
-`reportDir` (`worker-config` writes such a config), or pass `--report <dir>`, which
-is never checked.
+`graph`, `what-if`, `cut`, `why` and `graph-diff` read the report of the target dist
+(`node_modules/.rolldown/report/<output dir>`), and stop with an error when none of
+the report's entry chunks exists in that dist: a rebuild without the report leaves
+the old report behind, and builds that share an outDir share a report. Rebuild with
+the report on, or pass `--report <dir>`, which is never checked.
 
 ## Rendered-output parity
 

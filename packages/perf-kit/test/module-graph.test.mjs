@@ -434,9 +434,9 @@ test('withRoots never mutates the build graph or reuses its cached eager set', (
   assert.equal(withRoots(built, [indexOf(built, 'entry')]), built);
 });
 
-// --- a discovered report must describe the dist it sits next to ---------------------
-// Vite's client and SSR builds write the same report directory (the last build wins),
-// and a rebuild without the report leaves stale hashed chunk names behind.
+// --- a discovered report must describe the dist it was found for --------------------
+// A rebuild without the report leaves the old report behind, and a build that shares
+// the outDir replaces it.
 
 function reportDir(t, { metrics, graph = { entryModules: ['src/main.ts'], modules: [] } }) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'metrics-report-'));

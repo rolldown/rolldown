@@ -2976,19 +2976,19 @@ function requireModuleGraph(opts) {
   return graph;
 }
 
-// A report the lab discovered next to the dist must describe that dist. Seen in the
-// field: an agent ranked a server build's graph against the client dist, because the
-// SSR build ran last and overwrote node_modules/.rolldown/report. An explicit
-// --report is the user's choice and is not checked.
+// A report the lab discovered for the dist must describe that dist. Seen in the field:
+// an agent ranked a server build's graph against the client dist, because the SSR build
+// ran last and overwrote the one shared report directory. Report mode now writes one
+// directory per output dir, but a rebuild without the report still leaves a stale one.
+// An explicit --report is the user's choice and is not checked.
 function assertReportMatchesDist(graph, dist) {
   const why = reportDistMismatch(graph, dist);
   if (!why) return;
   throw new Error(
     `${why}\n` +
       'Rebuild with the report on, so the report and the dist come from the same build.\n' +
-      'For a client + SSR app give each environment its own report directory: a `configEnvironment` hook that sets\n' +
-      '`build.rolldownOptions.devtools = { mode: "report", reportDir: "node_modules/.rolldown/report-" + name }`\n' +
-      `(\`${CLI} worker-config\` writes such a config). Or point at the client report with --report <dir>.`,
+      'Report mode writes one report per output dir: builds that share an outDir share a report.\n' +
+      'Or point at the client report with --report <dir>.',
   );
 }
 

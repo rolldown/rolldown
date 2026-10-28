@@ -18,7 +18,7 @@ test.each(['generate', 'write'])(
       bundle = await rolldown({
         cwd,
         input: { main: 'main', shared: 'shared' },
-        devtools: { mode: 'report', reportDir: 'metrics', reportTopN: 1 },
+        devtools: { mode: 'report' },
         plugins: [
           {
             name: 'change-output',
@@ -49,7 +49,9 @@ test.each(['generate', 'write'])(
         chunkFileNames: '[name].js',
       });
       await bundle.close();
-      const graph = JSON.parse(readFileSync(join(cwd, 'metrics/chunk-graph.json'), 'utf8'));
+      const graph = JSON.parse(
+        readFileSync(join(cwd, 'node_modules/.rolldown/report/dist/chunk-graph.json'), 'utf8'),
+      );
       expect(graph.chunks).toEqual(
         output
           .filter((chunk) => chunk.type === 'chunk')

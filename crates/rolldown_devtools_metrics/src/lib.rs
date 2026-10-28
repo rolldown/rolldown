@@ -43,7 +43,7 @@ pub struct MetricsConfig {
 
 impl Default for MetricsConfig {
   fn default() -> Self {
-    Self { dir: "node_modules/.rolldown/metrics".to_string(), top_n: 20, delta: true }
+    Self { dir: "node_modules/.rolldown/report".to_string(), top_n: 20, delta: true }
   }
 }
 

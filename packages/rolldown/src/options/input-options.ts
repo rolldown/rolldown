@@ -786,8 +786,8 @@ export interface InputOptions {
    * bundler that runs at the same time its own `sessionId`, or their devtools output mixes.
    * The name `unknown-session` is reserved regardless of case.
    *
-   * In `'metrics'` mode, Rolldown aggregates the same internal event stream in-memory and
-   * writes a small, agent-readable report under `metricsDir` instead of the multi-GB
+   * In `'report'` mode, Rolldown aggregates the same internal event stream in-memory and
+   * writes a small, agent-readable report under `reportDir` instead of the multi-GB
    * `logs.json`: a canonical `metrics.json` (schema-versioned, with a build-over-build
    * `delta`), progressive markdown views (`entry.md` + on-demand detail files), one
    * `history.jsonl` line per build, and an `AGENTS.md` describing the directory contract.
@@ -798,16 +798,17 @@ export interface InputOptions {
     sessionId?: string;
     /**
      * `'full'` (default): write JSON-lines devtools logs.
-     * `'metrics'`: aggregate the same event stream in-memory and emit an agent-readable
+     * `'report'`: aggregate the same event stream in-memory and emit an agent-readable
      * report (`metrics.json` + markdown views + `history.jsonl`) instead.
+     * Any other value fails the build.
      */
-    mode?: 'full' | 'metrics';
-    /** Metrics mode: output directory, relative to cwd (default `node_modules/.rolldown/metrics`). */
-    metricsDir?: string;
-    /** Metrics mode: upper bound for every "top-N" list (default `20`). */
-    metricsTopN?: number;
-    /** Metrics mode: emit a build-over-build delta (default `true`). */
-    metricsDelta?: boolean;
+    mode?: 'full' | 'report';
+    /** Report mode: output directory, relative to cwd (default `node_modules/.rolldown/report`). */
+    reportDir?: string;
+    /** Report mode: upper bound for every "top-N" list (default `20`). */
+    reportTopN?: number;
+    /** Report mode: emit a build-over-build delta (default `true`). */
+    reportDelta?: boolean;
   };
   /**
    * Controls how entry chunk exports are preserved.

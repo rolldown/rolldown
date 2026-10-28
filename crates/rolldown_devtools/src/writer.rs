@@ -81,7 +81,7 @@ struct WriterState {
   exist_hash_by_session: FxHashMap<String, FxHashSet<String>>,
   cwd_by_session: FxHashMap<String, PathBuf>,
   unopenable_files_by_session: FxHashMap<String, FxHashSet<Arc<str>>>,
-  /// Sessions opened in metrics mode: events are aggregated here instead of written to disk.
+  /// Sessions opened in report mode: events are aggregated here instead of written to disk.
   metrics: FxHashMap<String, MetricsAggregator>,
 }
 
@@ -134,7 +134,7 @@ impl WriterState {
         self.metrics.insert(session_id, MetricsAggregator::new(config));
       }
       LogCommand::CloseSession { session_id, ack } => {
-        // Metrics mode: render the report before acking, so the report is on disk
+        // Report mode: render the report before acking, so the report is on disk
         // by the time `bundle.close()` resolves (same contract as the log-file path).
         if let Some(aggregator) = self.metrics.remove(&session_id) {
           let _ = aggregator.render();

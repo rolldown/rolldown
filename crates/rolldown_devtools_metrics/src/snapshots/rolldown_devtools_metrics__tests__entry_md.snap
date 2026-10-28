@@ -2,7 +2,7 @@
 source: crates/rolldown_devtools_metrics/src/tests.rs
 expression: "render::render_entry(&report)"
 ---
-# Build Metrics (devtools metrics mode)
+# Build Metrics (devtools report mode)
 
 Build 100.0 ms · output 5.6 kB · 6 modules (1 external) / 4 chunks / 5 assets / 3 packages · node / esm · build #1
 

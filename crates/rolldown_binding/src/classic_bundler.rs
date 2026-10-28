@@ -168,6 +168,7 @@ impl ClassicBundler {
   }
 
   fn enable_debug_tracing_if_needed(&mut self, options: &BundlerOptions) -> BuildResult<()> {
+    check_devtools_mode(options)?;
     if self.debug_tracer.is_none() && self.configure_devtools_session_id(options)? {
       // Mirrors the `cwd` default in `prepare_build_context`; the wasm binding always supplies one because it has no process working directory.
       let cwd = options
@@ -182,14 +183,14 @@ impl ClassicBundler {
       // Update the `session` with the actual session span
       self.session = rolldown_devtools::Session::new(Arc::clone(&self.session_id), session_span);
 
-      // Metrics mode: aggregate the event stream in-memory and emit an agent-readable report
+      // Report mode: aggregate the event stream in-memory and emit an agent-readable report
       // instead of the JSON-lines log. Registered before the build emits any events.
       if let Some(devtools) = &options.devtools {
-        if devtools.mode.as_deref() == Some("metrics") {
+        if devtools.mode.as_deref() == Some("report") {
           let config = rolldown_devtools::MetricsConfig::new(
-            devtools.metrics_dir.clone(),
-            devtools.metrics_top_n.and_then(|n| usize::try_from(n).ok()),
-            devtools.metrics_delta,
+            devtools.report_dir.clone(),
+            devtools.report_top_n.and_then(|n| usize::try_from(n).ok()),
+            devtools.report_delta,
           );
           rolldown_devtools::open_metrics_session(self.session_id.as_ref().to_string(), config);
         }
@@ -233,6 +234,26 @@ impl ClassicBundler {
     self.session_id = session_id;
     Ok(true)
   }
+}
+
+/// Any `devtools.mode` other than `"full"` or `"report"` would silently fall back to the full
+/// JSON-lines log, which can be several GB. The TS validator only warns, so Rust rejects it.
+fn check_devtools_mode(options: &BundlerOptions) -> BuildResult<()> {
+  let Some(mode) = options.devtools.as_ref().and_then(|devtools| devtools.mode.as_deref()) else {
+    return Ok(());
+  };
+  if matches!(mode, "full" | "report") {
+    return Ok(());
+  }
+  Err(
+    BuildDiagnostic::bundler_initialize_error(
+      format!(
+        "Invalid value for option \"devtools.mode\" - expected \"full\" or \"report\", got {mode:?}."
+      ),
+      None,
+    )
+    .into(),
+  )
 }
 
 fn invalid_session_id(reason: String) -> BuildDiagnostic {
@@ -297,6 +318,31 @@ mod tests {
       assert!(message.contains("must be one path segment"), "{message}");
     }
     assert!(Arc::ptr_eq(&bundler.session_id, &generated_session_id));
+  }
+
+  fn options_with_mode(mode: Option<&str>) -> BundlerOptions {
+    BundlerOptions {
+      devtools: Some(rolldown::DevtoolsOptions {
+        mode: mode.map(str::to_string),
+        ..Default::default()
+      }),
+      ..Default::default()
+    }
+  }
+
+  #[test]
+  fn devtools_mode_must_be_full_or_report() {
+    check_devtools_mode(&BundlerOptions::default()).unwrap();
+    for mode in [None, Some("full"), Some("report")] {
+      check_devtools_mode(&options_with_mode(mode)).unwrap();
+    }
+    // `"metrics"` was the old name of `"report"`.
+    for mode in ["metrics", "Report", "markdown", ""] {
+      let err = check_devtools_mode(&options_with_mode(Some(mode))).unwrap_err();
+      let message: String = err.iter().map(|e| e.to_diagnostic().to_string()).collect();
+      assert!(message.contains("\"devtools.mode\""), "{message}");
+      assert!(message.contains(&format!("got {mode:?}")), "{message}");
+    }
   }
 
   #[test]

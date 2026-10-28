@@ -2095,17 +2095,17 @@ export interface BindingDevOptions {
 export interface BindingDevtoolsOptions {
   sessionId?: string
   /**
-   * `"full"` (default): write JSON-lines devtools logs. `"metrics"`: aggregate the same
+   * `"full"` (default): write JSON-lines devtools logs. `"report"`: aggregate the same
    * event stream in-memory and emit an agent-readable report (`metrics.json` + markdown)
    * instead.
    */
-  mode?: 'full' | 'metrics'
-  /** Metrics mode: output directory, relative to cwd (default: "node_modules/.rolldown/metrics"). */
-  metricsDir?: string
-  /** Metrics mode: upper bound for every "top-N" list (default: 20). */
-  metricsTopN?: number
-  /** Metrics mode: whether to emit a build-over-build delta (default: true). */
-  metricsDelta?: boolean
+  mode?: 'full' | 'report'
+  /** Report mode: output directory, relative to cwd (default: "node_modules/.rolldown/report"). */
+  reportDir?: string
+  /** Report mode: upper bound for every "top-N" list (default: 20). */
+  reportTopN?: number
+  /** Report mode: whether to emit a build-over-build delta (default: true). */
+  reportDelta?: boolean
 }
 
 export interface BindingDevWatchOptions {

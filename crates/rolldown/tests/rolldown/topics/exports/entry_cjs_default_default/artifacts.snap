@@ -7,11 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region lib.js
+// lib.js
 var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { value: 42 };
 }));
-//#endregion
 module.exports = require_lib();
 module.exports = __toESM;
 
@@ -23,11 +22,10 @@ module.exports = __toESM;
 const require_lib$1 = require("./lib.js");
 let node_assert = require("node:assert");
 node_assert = require_lib$1.__toESM(node_assert);
-//#region main.js
+// main.js
 var import_lib = /* @__PURE__ */ require_lib$1.__toESM(require_lib$1);
 node_assert.default.strictEqual(import_lib.default.value, 42);
 var main_default = import_lib.default;
-//#endregion
 module.exports = main_default;
 
 ```

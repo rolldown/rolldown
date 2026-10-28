@@ -63,34 +63,20 @@ init_e();
 ```
 ### rolldown
 ```js
-import "x";
-import "x";
-// HIDDEN [\0rolldown/runtime.js]
-//#region a.js
-var init_a = __esmMin((() => {}));
-//#endregion
-//#region b.js
-var init_b = __esmMin((() => {}));
-//#endregion
-//#region c.js
-var init_c = __esmMin((() => {}));
-//#endregion
-//#region d.js
-var init_d = __esmMin((() => {}));
-//#endregion
-//#region e.js
-var e_exports = /* @__PURE__ */ __exportAll({});
 import * as import_x from "x";
-__reExport(e_exports, import_x);
+// HIDDEN [\0rolldown/runtime.js]
+var init_a = __esmMin((() => {}));
+var init_b = __esmMin((() => {}));
+var init_c = __esmMin((() => {}));
+var init_d = __esmMin((() => {}));
+__reExport(/* @__PURE__ */ __exportAll({}), import_x);
 var init_e = __esmMin((() => {}));
-//#endregion
-//#region entry.js
+// entry.js
 init_a();
 init_b();
 init_c();
 init_d();
 init_e();
-//#endregion
 
 ```
 ### diff
@@ -98,7 +84,7 @@ init_e();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,43 +1,14 @@
+@@ -1,43 +1,11 @@
 -var a_exports = {};
 -__export(a_exports, {
 -    ns: () => ns
@@ -138,15 +124,12 @@ init_e();
 -        __reExport(e_exports, x_star);
 -    }
 -});
-+import "x";
-+import "x";
++import * as import_x from "x";
 +var init_a = __esmMin(() => {});
 +var init_b = __esmMin(() => {});
 +var init_c = __esmMin(() => {});
 +var init_d = __esmMin(() => {});
-+var e_exports = __exportAll({});
-+import * as import_x from "x";
-+__reExport(e_exports, import_x);
++__reExport(__exportAll({}), import_x);
 +var init_e = __esmMin(() => {});
  init_a();
  init_b();

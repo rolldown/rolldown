@@ -256,8 +256,8 @@ impl BindingPluginOptions {
         .iter()
         .cloned()
         .map(|tokens| {
-          let normalized = normalized_tokens(tokens).map_err(&make_err)?;
-          filter_expression::parse(normalized).map_err(&make_err)
+          let normalized = normalized_tokens(tokens).map_err(make_err)?;
+          filter_expression::parse(normalized).map_err(make_err)
         })
         .collect()
     };

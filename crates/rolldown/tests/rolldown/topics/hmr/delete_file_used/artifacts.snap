@@ -20,19 +20,14 @@ __rolldown_runtime__.registerGraph({
 		[0],
 		[1]
 	],
-	dynamicEdges: [
-		[],
-		[],
-		[]
-	]
+	entries: [2]
 });
-//#region child.js
+// child.js
 var child_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 __rolldown_runtime__.createModuleHotContext("child.js");
 __rolldown_runtime__.registerModule("child.js", { exports: child_exports });
 const value = "child";
-//#endregion
-//#region parent.js
+// parent.js
 var parent_exports = /* @__PURE__ */ __exportAll({
 	childValue: () => value,
 	parentValue: () => parentValue
@@ -46,8 +41,7 @@ parent_hot.accept((newMod) => {
 	assert.strictEqual(childValue, "child");
 	globalThis.__delete_file_used_parent_reran = true;
 });
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
@@ -55,24 +49,38 @@ process.on("beforeExit", (code) => {
 	if (code !== 0) return;
 	assert$1.strictEqual(globalThis.__delete_file_used_parent_reran, true, "step 1 (recreate child.js with changed content) should have re-run parent.js");
 });
-//#endregion
 
 ```
 
 # HMR Step 0
 
-## Meta
+## Errors
 
-- update type: noop
+### UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Could not resolve './child.js' in parent.js
+   ╭─[ parent.js:1:37 ]
+   │
+ 1 │ import { value as childValue } from './child.js';
+   │                                     ──────┬─────  
+   │                                           ╰─────── Module not found.
+   │ 
+   │ Help: 'parent.js' is imported by the following path:
+   │         - parent.js
+   │         - main.js
+───╯
+
+```
 
 # HMR Step 1
 
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["child.js","parent.js"],localCount:2,edges:[[],[0]],dynamicEdges:[[],[]]});
+__rolldown_runtime__.registerGraph({ids:["child.js","parent.js"],localCount:2,edges:[[],[0]],stamps:{0:1,1:1}});
 //#region child.js
-__rolldown_runtime__.registerFactory("child.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("child.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
 			value: () => value,
@@ -83,11 +91,11 @@ __rolldown_runtime__.registerFactory("child.js", "esm", (function(__rolldown_mod
 		const value = "child";
 		const recreated = true;
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 //#region parent.js
-__rolldown_runtime__.registerFactory("parent.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("parent.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
 			parentValue: () => parentValue,
@@ -105,7 +113,7 @@ __rolldown_runtime__.registerFactory("parent.js", "esm", (function(__rolldown_mo
 			globalThis.__delete_file_used_parent_reran = true;
 		});
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 ```
@@ -117,3 +125,4 @@ __rolldown_runtime__.registerFactory("parent.js", "esm", (function(__rolldown_mo
 ### Changed Ids
 
 - child.js
+- parent.js

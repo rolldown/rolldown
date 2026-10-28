@@ -2,12 +2,12 @@
 // To edit this generated file you have to edit `tasks/generator/src/generators/oxc_runtime_helper.rs`
 
 // This file contains embedded @oxc-project/runtime helpers (both ESM and CJS variants).
-// @oxc-project/runtime version: 0.150.0
+// @oxc-project/runtime version: 0.155.0
 
 use arcstr::ArcStr;
 use phf::{Map, phf_map};
 
-pub const RUNTIME_HELPER_PREFIX: &str = "@oxc-project+runtime@0.150.0/helpers/";
+pub const RUNTIME_HELPER_PREFIX: &str = "@oxc-project+runtime@0.155.0/helpers/";
 pub const RUNTIME_HELPER_UNVERSIONED_PREFIX: &str = "@oxc-project/runtime/helpers/";
 
 /// Map of all helpers from `@oxc-project/runtime/src/helpers/esm/`.
@@ -2246,7 +2246,7 @@ function _set(e, r, t, o, f) {
 export { _set as default };"#),
   "setFunctionName" => arcstr::literal!(r#"import _typeof from "./typeof.js";
 function setFunctionName(e, t, n) {
-  "symbol" == _typeof(t) && (t = (t = t.description) ? "[" + t + "]" : "");
+  "symbol" == _typeof(t) && (t = void 0 === (t = t.description) ? "" : "[" + t + "]");
   try {
     Object.defineProperty(e, "name", {
       configurable: !0,
@@ -4852,7 +4852,7 @@ function _set(e, r, t, o, f) {
 module.exports = _set, module.exports.__esModule = true, module.exports["default"] = module.exports;"#),
   "setFunctionName" => arcstr::literal!(r#"var _typeof = require("./typeof.js")["default"];
 function setFunctionName(e, t, n) {
-  "symbol" == _typeof(t) && (t = (t = t.description) ? "[" + t + "]" : "");
+  "symbol" == _typeof(t) && (t = void 0 === (t = t.description) ? "" : "[" + t + "]");
   try {
     Object.defineProperty(e, "name", {
       configurable: !0,

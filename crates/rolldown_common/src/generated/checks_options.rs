@@ -30,6 +30,8 @@ pub struct ChecksOptions {
   pub configuration_field_conflict: Option<bool>,
   pub prefer_builtin_feature: Option<bool>,
   pub could_not_clean_directory: Option<bool>,
+  pub bundler_timings: Option<bool>,
+  /// Deprecated alias for `bundlerTimings`. Rolldown uses `bundlerTimings` if both options have values.
   pub plugin_timings: Option<bool>,
   pub duplicate_shebang: Option<bool>,
   pub unsupported_tsconfig_option: Option<bool>,
@@ -37,6 +39,7 @@ pub struct ChecksOptions {
   pub large_barrel_modules: Option<bool>,
   pub sourcemap_broken: Option<bool>,
   pub namespace_conflict: Option<bool>,
+  pub shimmed_export: Option<bool>,
 }
 impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
   fn from(value: ChecksOptions) -> Self {
@@ -107,8 +110,10 @@ impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
       rolldown_error::EventKindSwitcher::CouldNotCleanDirectory,
       value.could_not_clean_directory.unwrap_or(true),
     );
-    flag
-      .set(rolldown_error::EventKindSwitcher::PluginTimings, value.plugin_timings.unwrap_or(true));
+    flag.set(
+      rolldown_error::EventKindSwitcher::PluginTimings,
+      value.bundler_timings.or(value.plugin_timings).unwrap_or(true),
+    );
     flag.set(
       rolldown_error::EventKindSwitcher::DuplicateShebang,
       value.duplicate_shebang.unwrap_or(true),
@@ -133,6 +138,8 @@ impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
       rolldown_error::EventKindSwitcher::NamespaceConflict,
       value.namespace_conflict.unwrap_or(true),
     );
+    flag
+      .set(rolldown_error::EventKindSwitcher::ShimmedExport, value.shimmed_export.unwrap_or(true));
     flag
   }
 }

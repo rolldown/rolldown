@@ -77,3 +77,86 @@ test('give a warning for hoistTransitiveImports: true', async () => {
     `\x1b[33mWarning: Invalid output options (1 issue found)\n- For the "hoistTransitiveImports". Invalid type: Expected false but received true. \x1b[0m`,
   );
 });
+
+test('requires a string for codeSplitting group debugName', async () => {
+  const consoleSpy = vi.spyOn(console, 'warn');
+  const bundle = await rolldown({
+    input: './build-api/main.js',
+    cwd: import.meta.dirname,
+  });
+  try {
+    await bundle.generate({
+      codeSplitting: {
+        groups: [
+          {
+            // @ts-ignore invalid value
+            debugName: 1,
+            name: 'group',
+          },
+        ],
+      },
+    });
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('For the "codeSplitting.groups,0,debugName"'),
+    );
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Invalid type: Expected string but received 1'),
+    );
+  } finally {
+    await bundle.close();
+  }
+});
+
+test('requires devtools.sessionId to be one path segment', async () => {
+  const consoleSpy = vi.spyOn(console, 'warn');
+  for (const sessionId of ['../x', 'a/b', '', '.']) {
+    consoleSpy.mockClear();
+    const bundle = await rolldown({
+      input: './build-api/main.js',
+      cwd: import.meta.dirname,
+      devtools: { sessionId },
+    });
+    try {
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('For the "devtools.sessionId". Expected one path segment'),
+      );
+      // The warning alone would still let the build write outside `node_modules/.rolldown`.
+      await expect(bundle.generate()).rejects.toThrow(
+        'Invalid value for option "devtools.sessionId"',
+      );
+    } finally {
+      await bundle.close();
+    }
+  }
+});
+
+test('rejects the reserved devtools.sessionId', async () => {
+  const consoleSpy = vi.spyOn(console, 'warn');
+  for (const sessionId of [
+    'unknown-session',
+    'UNKNOWN-SESSION',
+    'unKnown-session',
+    'unknown-ſession',
+    'unknown-seßion',
+    'unknown-seẞion',
+  ]) {
+    consoleSpy.mockClear();
+    const bundle = await rolldown({
+      input: './build-api/main.js',
+      cwd: import.meta.dirname,
+      devtools: { sessionId },
+    });
+    try {
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'For the "devtools.sessionId". "unknown-session" is reserved for devtools events without a session context',
+        ),
+      );
+      await expect(bundle.generate()).rejects.toThrow(
+        'is reserved for devtools events without a session context',
+      );
+    } finally {
+      await bundle.close();
+    }
+  }
+});

@@ -10,7 +10,7 @@ use derive_more::Debug;
 use rolldown_common::{
   FilenameTemplate, LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleId, ModuleLoaderMsg,
   PackageJson, PluginIdx, ResolvedId, SharedFileEmitter, SharedModuleInfoDashMap,
-  SharedNormalizedBundlerOptions, side_effects::HookSideEffects,
+  SharedNormalizedBundlerOptions, WatchPath, side_effects::HookSideEffects,
 };
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dashmap::FxDashSet;
@@ -93,6 +93,17 @@ impl NativePluginContextImpl {
       .ok_or_else(|| anyhow::anyhow!("Plugin driver is already dropped."))?;
 
     let normalized_extra_options = extra_options.unwrap_or_default();
+    if normalized_extra_options.skip_self
+      && self.skipped_resolve_calls.iter().any(|call| {
+        call.plugin_idx == self.plugin_idx
+          && call.specifier == specifier
+          && call.importer.as_deref() == importer
+      })
+    {
+      // This means that the plugin recursively called itself
+      return Ok(Err(ResolveError::NotFound(specifier.to_string())));
+    }
+
     let skipped_resolve_calls = if normalized_extra_options.skip_self {
       let mut skipped_resolve_calls = Vec::with_capacity(self.skipped_resolve_calls.len() + 1);
       skipped_resolve_calls.extend(self.skipped_resolve_calls.clone());
@@ -190,8 +201,9 @@ impl NativePluginContextImpl {
     self.resolver.cwd()
   }
 
+  /// The path is resolved against `cwd`, so the watch files are absolute and normalized.
   pub fn add_watch_file(&self, file: &str) {
-    self.watch_files.insert(file.into());
+    self.watch_files.insert(WatchPath::new(file, &self.options.cwd).to_string().into());
   }
 
   fn log(&self, level: LogLevel, log: LogWithoutPlugin) {

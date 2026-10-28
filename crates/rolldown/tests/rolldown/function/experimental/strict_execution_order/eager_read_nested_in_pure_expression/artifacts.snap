@@ -21,19 +21,17 @@ To fix:
 ## main.js
 
 ```js
-import { n as value, t as init_reader } from "./reader.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region patch.js
+import { n as value, t as init_reader } from "./reader.js";
+// patch.js
 globalThis.__orderRead = () => 42;
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_reader();
 		if (value !== 42) throw new Error(`reader evaluated before patch: value = ${value}`);
 	})))();
 }
-//#endregion
 init_main();
 
 ```
@@ -42,14 +40,13 @@ init_main();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region reader.js
+// reader.js
 var value;
 function init_reader() {
 	return (init_reader = __esmMin((() => {
 		value = (() => /* @__PURE__ */ globalThis.__orderRead?.() ?? 5)();
 	})))();
 }
-//#endregion
 export { value as n, init_reader as t };
 
 ```
@@ -84,16 +81,15 @@ To fix:
 ### main.js
 
 ```js
-import { n as value, t as init_reader } from "./reader.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region patch.js
+import { n as value, t as init_reader } from "./reader.js";
+// patch.js
 function init_patch() {
 	return (init_patch = __esmMin((() => {
 		globalThis.__orderRead = () => 42;
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_patch();
@@ -101,7 +97,6 @@ function init_main() {
 		if (value !== 42) throw new Error(`reader evaluated before patch: value = ${value}`);
 	})))();
 }
-//#endregion
 init_main();
 
 ```
@@ -110,14 +105,13 @@ init_main();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region reader.js
+// reader.js
 var value;
 function init_reader() {
 	return (init_reader = __esmMin((() => {
 		value = (() => /* @__PURE__ */ globalThis.__orderRead?.() ?? 5)();
 	})))();
 }
-//#endregion
 export { value as n, init_reader as t };
 
 ```

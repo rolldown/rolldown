@@ -144,7 +144,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## expr-arrow.js
 
 ```js
-//#region expr-arrow.js
+// expr-arrow.js
 //! These should all have "no side effects"
 x([
 	/* #__NO_SIDE_EFFECTS__ */ (y) => y,
@@ -154,14 +154,13 @@ x([
 	/* #__NO_SIDE_EFFECTS__ */ async () => {},
 	/* #__NO_SIDE_EFFECTS__ */ async (y) => y
 ]);
-//#endregion
 
 ```
 
 ## expr-fn.js
 
 ```js
-//#region expr-fn.js
+// expr-fn.js
 //! These should all have "no side effects"
 x([
 	/* #__NO_SIDE_EFFECTS__ */ function() {},
@@ -173,17 +172,15 @@ x([
 	/* #__NO_SIDE_EFFECTS__ */ async function* () {},
 	/* #__NO_SIDE_EFFECTS__ */ async function* y() {}
 ]);
-//#endregion
 
 ```
 
 ## stmt-export-default-after-async-fn-anon.js
 
 ```js
-//#region stmt-export-default-after-async-fn-anon.js
+// stmt-export-default-after-async-fn-anon.js
 /*! This should have "no side effects" */ /* @__NO_SIDE_EFFECTS__ */
 async function stmt_export_default_after_async_fn_anon_default() {}
-//#endregion
 export { stmt_export_default_after_async_fn_anon_default as default };
 
 ```
@@ -191,10 +188,9 @@ export { stmt_export_default_after_async_fn_anon_default as default };
 ## stmt-export-default-after-async-fn-name.js
 
 ```js
-//#region stmt-export-default-after-async-fn-name.js
+// stmt-export-default-after-async-fn-name.js
 /*! This should have "no side effects" */ /* @__NO_SIDE_EFFECTS__ */
 async function f() {}
-//#endregion
 export { f as default };
 
 ```
@@ -202,10 +198,9 @@ export { f as default };
 ## stmt-export-default-after-async-gen-fn-anon.js
 
 ```js
-//#region stmt-export-default-after-async-gen-fn-anon.js
+// stmt-export-default-after-async-gen-fn-anon.js
 /*! This should have "no side effects" */ /* @__NO_SIDE_EFFECTS__ */
 async function* stmt_export_default_after_async_gen_fn_anon_default() {}
-//#endregion
 export { stmt_export_default_after_async_gen_fn_anon_default as default };
 
 ```
@@ -213,10 +208,9 @@ export { stmt_export_default_after_async_gen_fn_anon_default as default };
 ## stmt-export-default-after-async-gen-fn-name.js
 
 ```js
-//#region stmt-export-default-after-async-gen-fn-name.js
+// stmt-export-default-after-async-gen-fn-name.js
 /*! This should have "no side effects" */ /* @__NO_SIDE_EFFECTS__ */
 async function* f() {}
-//#endregion
 export { f as default };
 
 ```
@@ -224,10 +218,9 @@ export { f as default };
 ## stmt-export-default-after-fn-anon.js
 
 ```js
-//#region stmt-export-default-after-fn-anon.js
+// stmt-export-default-after-fn-anon.js
 /*! This should have "no side effects" */ /* @__NO_SIDE_EFFECTS__ */
 function stmt_export_default_after_fn_anon_default() {}
-//#endregion
 export { stmt_export_default_after_fn_anon_default as default };
 
 ```
@@ -235,10 +228,9 @@ export { stmt_export_default_after_fn_anon_default as default };
 ## stmt-export-default-after-fn-name.js
 
 ```js
-//#region stmt-export-default-after-fn-name.js
+// stmt-export-default-after-fn-name.js
 /*! This should have "no side effects" */ /* @__NO_SIDE_EFFECTS__ */
 function f() {}
-//#endregion
 export { f as default };
 
 ```
@@ -246,10 +238,9 @@ export { f as default };
 ## stmt-export-default-after-gen-fn-anon.js
 
 ```js
-//#region stmt-export-default-after-gen-fn-anon.js
+// stmt-export-default-after-gen-fn-anon.js
 /*! This should have "no side effects" */ /* @__NO_SIDE_EFFECTS__ */
 function* stmt_export_default_after_gen_fn_anon_default() {}
-//#endregion
 export { stmt_export_default_after_gen_fn_anon_default as default };
 
 ```
@@ -257,10 +248,9 @@ export { stmt_export_default_after_gen_fn_anon_default as default };
 ## stmt-export-default-after-gen-fn-name.js
 
 ```js
-//#region stmt-export-default-after-gen-fn-name.js
+// stmt-export-default-after-gen-fn-name.js
 /*! This should have "no side effects" */ /* @__NO_SIDE_EFFECTS__ */
 function* f() {}
-//#endregion
 export { f as default };
 
 ```
@@ -268,10 +258,9 @@ export { f as default };
 ## stmt-export-default-before-async-fn-anon.js
 
 ```js
-//#region stmt-export-default-before-async-fn-anon.js
+// stmt-export-default-before-async-fn-anon.js
 /*! This should have "no side effects" */ /* #__NO_SIDE_EFFECTS__ */
 async function stmt_export_default_before_async_fn_anon_default() {}
-//#endregion
 export { stmt_export_default_before_async_fn_anon_default as default };
 
 ```
@@ -279,10 +268,9 @@ export { stmt_export_default_before_async_fn_anon_default as default };
 ## stmt-export-default-before-async-fn-name.js
 
 ```js
-//#region stmt-export-default-before-async-fn-name.js
+// stmt-export-default-before-async-fn-name.js
 /*! This should have "no side effects" */ /* #__NO_SIDE_EFFECTS__ */
 async function f() {}
-//#endregion
 export { f as default };
 
 ```
@@ -290,10 +278,9 @@ export { f as default };
 ## stmt-export-default-before-async-gen-fn-anon.js
 
 ```js
-//#region stmt-export-default-before-async-gen-fn-anon.js
+// stmt-export-default-before-async-gen-fn-anon.js
 /*! This should have "no side effects" */ /* #__NO_SIDE_EFFECTS__ */
 async function* stmt_export_default_before_async_gen_fn_anon_default() {}
-//#endregion
 export { stmt_export_default_before_async_gen_fn_anon_default as default };
 
 ```
@@ -301,10 +288,9 @@ export { stmt_export_default_before_async_gen_fn_anon_default as default };
 ## stmt-export-default-before-async-gen-fn-name.js
 
 ```js
-//#region stmt-export-default-before-async-gen-fn-name.js
+// stmt-export-default-before-async-gen-fn-name.js
 /*! This should have "no side effects" */ /* #__NO_SIDE_EFFECTS__ */
 async function* f() {}
-//#endregion
 export { f as default };
 
 ```
@@ -312,10 +298,9 @@ export { f as default };
 ## stmt-export-default-before-fn-anon.js
 
 ```js
-//#region stmt-export-default-before-fn-anon.js
+// stmt-export-default-before-fn-anon.js
 /*! This should have "no side effects" */ /* #__NO_SIDE_EFFECTS__ */
 function stmt_export_default_before_fn_anon_default() {}
-//#endregion
 export { stmt_export_default_before_fn_anon_default as default };
 
 ```
@@ -323,10 +308,9 @@ export { stmt_export_default_before_fn_anon_default as default };
 ## stmt-export-default-before-fn-name.js
 
 ```js
-//#region stmt-export-default-before-fn-name.js
+// stmt-export-default-before-fn-name.js
 /*! This should have "no side effects" */ /* #__NO_SIDE_EFFECTS__ */
 function f() {}
-//#endregion
 export { f as default };
 
 ```
@@ -334,10 +318,9 @@ export { f as default };
 ## stmt-export-default-before-gen-fn-anon.js
 
 ```js
-//#region stmt-export-default-before-gen-fn-anon.js
+// stmt-export-default-before-gen-fn-anon.js
 /*! This should have "no side effects" */ /* #__NO_SIDE_EFFECTS__ */
 function* stmt_export_default_before_gen_fn_anon_default() {}
-//#endregion
 export { stmt_export_default_before_gen_fn_anon_default as default };
 
 ```
@@ -345,10 +328,9 @@ export { stmt_export_default_before_gen_fn_anon_default as default };
 ## stmt-export-default-before-gen-fn-name.js
 
 ```js
-//#region stmt-export-default-before-gen-fn-name.js
+// stmt-export-default-before-gen-fn-name.js
 /*! This should have "no side effects" */ /* #__NO_SIDE_EFFECTS__ */
 function* f() {}
-//#endregion
 export { f as default };
 
 ```
@@ -356,7 +338,7 @@ export { f as default };
 ## stmt-export-fn.js
 
 ```js
-//#region stmt-export-fn.js
+// stmt-export-fn.js
 //! These should all have "no side effects"
 /* @__NO_SIDE_EFFECTS__ */
 function a() {}
@@ -366,7 +348,6 @@ function* b() {}
 async function c() {}
 /* @__NO_SIDE_EFFECTS__ */
 async function* d() {}
-//#endregion
 export { a, b, c, d };
 
 ```
@@ -374,7 +355,7 @@ export { a, b, c, d };
 ## stmt-export-local.js
 
 ```js
-//#region stmt-export-local.js
+// stmt-export-local.js
 //! Only "c0" and "c2" should have "no side effects" (Rollup only respects "const" and only for the first one)
 /* #__NO_SIDE_EFFECTS__ */ var v0 = function() {};
 var v1 = function() {};
@@ -388,7 +369,6 @@ var v3 = () => {};
 let l3 = () => {};
 const c2 = /* @__NO_SIDE_EFFECTS__ */ () => {};
 const c3 = () => {};
-//#endregion
 export { c0, c1, c2, c3, l0, l1, l2, l3, v0, v1, v2, v3 };
 
 ```
@@ -396,17 +376,13 @@ export { c0, c1, c2, c3, l0, l1, l2, l3, v0, v1, v2, v3 };
 ## stmt-fn.js
 
 ```js
-//#region stmt-fn.js
 //! These should all have "no side effects"
-//#endregion
 
 ```
 
 ## stmt-local.js
 
 ```js
-//#region stmt-local.js
 //! Only "c0" and "c2" should have "no side effects" (Rollup only respects "const" and only for the first one)
-//#endregion
 
 ```

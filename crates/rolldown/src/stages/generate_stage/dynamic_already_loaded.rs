@@ -184,6 +184,11 @@ impl GenerateStage<'_> {
       return ReducedEntriesAction::Avoid;
     };
 
+    // See internal-docs/inline-common-chunks/design.md#keeping-shared-code-available-for-inlining.
+    if self.prefers_inline_common_chunk(&atom.modules) {
+      return ReducedEntriesAction::Avoid;
+    }
+
     let can_merge_without_changing_entry_signature =
       self.can_merge_without_changing_entry_signature(chunk, &atom.modules);
     let is_runtime_only_atom = self.is_runtime_only_atom(atom);
@@ -539,7 +544,7 @@ impl GenerateStage<'_> {
     }
   }
 
-  fn referenced_symbol_owners(&self, module_idx: ModuleIdx) -> FxHashSet<ModuleIdx> {
+  pub(super) fn referenced_symbol_owners(&self, module_idx: ModuleIdx) -> FxHashSet<ModuleIdx> {
     let meta = &self.link_output.metas[module_idx];
     let mut owners = FxHashSet::default();
     let note = |symbol_ref: SymbolRef, owners: &mut FxHashSet<ModuleIdx>| {

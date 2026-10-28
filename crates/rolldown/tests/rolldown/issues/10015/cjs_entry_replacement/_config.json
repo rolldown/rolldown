@@ -1,0 +1,27 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.cjs"
+      }
+    ],
+    "platform": "node",
+    "format": "cjs",
+    "preserveEntrySignatures": "strict",
+    "minifyInternalExports": false
+  },
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "strictExecutionOrder": true,
+      "_snapshot": false
+    },
+    {
+      "_configName": "on-demand",
+      "strictExecutionOrder": true,
+      "onDemandWrapping": true,
+      "_snapshot": false
+    }
+  ]
+}

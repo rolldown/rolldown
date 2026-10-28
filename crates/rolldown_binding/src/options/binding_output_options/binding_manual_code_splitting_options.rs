@@ -20,15 +20,27 @@ pub struct BindingManualCodeSplittingOptions {
   pub max_size: Option<f64>,
   pub min_module_size: Option<f64>,
   pub max_module_size: Option<f64>,
+  pub experimental_inline_common_chunks: Option<BindingInlineCommonChunksOptions>,
   #[debug("InternalInvalidateModuleInfoCache(...)")]
   #[napi(ts_type = "() => void")]
   pub internal_invalidate_module_info_cache: Option<JsCallback>,
 }
 
+/// `output.codeSplitting.experimentalInlineCommonChunks`. `exclude` entries use the same shape
+/// as `BindingMatchGroup.test`, including the batched function shim.
+#[napi_derive::napi(object, object_to_js = false)]
+#[derive(Debug)]
+pub struct BindingInlineCommonChunksOptions {
+  pub max_size: Option<f64>,
+  #[napi(ts_type = "Array<string | RegExp | ((ids: Array<string>) => Uint8Array)>")]
+  #[debug("InlineCommonChunksExclude(...)")]
+  pub exclude: Option<Vec<BindingMatchGroupTest>>,
+}
+
 /// The JS side wraps the user's per-id function in one shim per group. The result holds one byte
 /// per id, and a nonzero byte captures the module. See
 /// `packages/rolldown/src/utils/bindingify-output-options.ts`.
-type BindingMatchGroupTest =
+pub type BindingMatchGroupTest =
   Either<BindingStringOrRegex, JsCallback<FnArgs<(/*module ids*/ Vec<String>,)>, Uint8Array>>;
 
 #[napi_derive::napi(object, object_to_js = false)]

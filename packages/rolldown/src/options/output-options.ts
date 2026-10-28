@@ -167,6 +167,17 @@ export interface OutputOptions {
    */
   file?: string;
   /**
+   * Controls how non-ASCII characters are represented in generated JavaScript.
+   *
+   * - `'utf8'`: Preserve non-ASCII characters.
+   * - `'ascii'`: Escape non-ASCII characters where possible.
+   *
+   * {@include ./docs/output-charset.md}
+   *
+   * @default 'utf8'
+   */
+  charset?: 'ascii' | 'utf8';
+  /**
    * Which exports mode to use.
    *
    * {@include ./docs/output-exports.md}
@@ -769,6 +780,10 @@ export interface OutputOptions {
    *
    * > [!WARNING]
    * > Enabling this option increases bundle size because wrapped modules need runtime init helpers.
+   *
+   * {@linkcode CodeSplittingOptions.experimentalInlineCommonChunks | experimentalInlineCommonChunks}
+   * with a `maxSize` above `0` turns this option on when it is omitted.
+   *
    * @default false
    */
   strictExecutionOrder?: boolean;
@@ -797,6 +812,12 @@ export type BuiltinModuleTag = '$initial';
 
 /** @category Code Splitting */
 export type CodeSplittingGroup = {
+  /**
+   * `debugName` gives this group a label in the bundler timing report.
+   *
+   * Set this option when `name` is a function. This option does not change the chunk name.
+   */
+  debugName?: string;
   /**
    * Name of the group. It will be also used as the name of the chunk and replace the `[name]` placeholder in the {@linkcode OutputOptions.chunkFileNames | output.chunkFileNames} option.
    *
@@ -1008,6 +1029,39 @@ export type CodeSplittingGroup = {
 export type AdvancedChunksGroup = CodeSplittingGroup;
 
 /**
+ * Options for [`output.codeSplitting.experimentalInlineCommonChunks`](https://rolldown.rs/reference/OutputOptions.codeSplitting#experimentalinlinecommonchunks).
+ *
+ * See the [Inline Common Chunks guide](https://rolldown.rs/in-depth/inline-common-chunks)
+ * for how inlining works, its tradeoffs, and compatibility with plugins.
+ *
+ * @experimental This feature is experimental. Its behavior and option shape may change in any release.
+ *
+ * @category Code Splitting
+ */
+export type ExperimentalInlineCommonChunksOptions = {
+  /**
+   * Inline eligible automatic common chunks whose size is strictly smaller than this value.
+   * Size is the sum of their modules' transformed source sizes in bytes, before rendering,
+   * minification and compression.
+   *
+   * Must be a non-negative safe integer or `Infinity`. `0` disables inlining.
+   * `Infinity` removes the size limit.
+   *
+   * @default 0
+   */
+  maxSize?: number;
+  /**
+   * A matcher for module ids, or an array of them: a string (matched as a regular expression), a
+   * RegExp, or a function, each applied like {@linkcode CodeSplittingGroup.test | test}. A common
+   * chunk is not inlined when any of its modules matches any matcher.
+   */
+  exclude?:
+    | StringOrRegExp
+    | CodeSplittingTestFunction
+    | Array<StringOrRegExp | CodeSplittingTestFunction>;
+};
+
+/**
  * Configuration options for advanced code splitting.
  *
  * @category Code Splitting
@@ -1041,6 +1095,40 @@ export type CodeSplittingOptions = {
    * Groups to be used for code splitting.
    */
   groups?: CodeSplittingGroup[];
+  /**
+   * Inline small automatic common chunks into their consumers to reduce the chunk count.
+   * This duplicates code and adds runtime overhead.
+   *
+   * Set `maxSize` above `0` to enable it. Requires {@linkcode OutputOptions.format | output.format: 'es'}
+   * and an explicit {@linkcode InputOptions.preserveEntrySignatures | preserveEntrySignatures: false}.
+   * Requires {@linkcode OutputOptions.strictExecutionOrder | strictExecutionOrder},
+   * which is enabled automatically when omitted.
+   * Incompatible with {@linkcode OutputOptions.preserveModules | output.preserveModules}.
+   *
+   * Plugins must support modules appearing in multiple output chunks. See the
+   * [Inline Common Chunks guide](https://rolldown.rs/in-depth/inline-common-chunks)
+   * for behavior, tradeoffs and plugin compatibility.
+   *
+   * @example
+   * ```js
+   * import { defineConfig } from 'rolldown';
+   *
+   * export default defineConfig({
+   *   preserveEntrySignatures: false,
+   *   output: {
+   *     format: 'es',
+   *     codeSplitting: {
+   *       experimentalInlineCommonChunks: {
+   *         maxSize: 10 * 1024, // Example threshold in bytes.
+   *       },
+   *     },
+   *   },
+   * });
+   * ```
+   *
+   * @experimental This feature is experimental. Its behavior and option shape may change in any release.
+   */
+  experimentalInlineCommonChunks?: ExperimentalInlineCommonChunksOptions;
 };
 
 /**

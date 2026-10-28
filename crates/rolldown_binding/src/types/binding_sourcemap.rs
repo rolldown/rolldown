@@ -37,6 +37,8 @@ pub struct BindingJsonSourcemap {
   pub sources_content: Option<Vec<Option<String>>>,
   pub names: Option<Vec<String>>,
   pub debug_id: Option<String>,
+  #[napi(js_name = "ignoreList")]
+  pub ignore_list: Option<Vec<u32>>,
   #[napi(js_name = "x_google_ignoreList")]
   pub x_google_ignore_list: Option<Vec<u32>>,
 }
@@ -59,7 +61,7 @@ impl TryFrom<BindingJsonSourcemap> for rolldown_sourcemap::SourceMap {
       sources_content: value.sources_content,
       names: value.names.unwrap_or_default(),
       debug_id: value.debug_id,
-      x_google_ignore_list: value.x_google_ignore_list,
+      ignore_list: value.ignore_list.or(value.x_google_ignore_list),
     })
     .context("Failed to convert json sourcemap to struct")
   }
@@ -75,7 +77,8 @@ impl From<rolldown_sourcemap::JSONSourceMap> for BindingJsonSourcemap {
       sources_content: value.sources_content,
       names: Some(value.names),
       debug_id: value.debug_id,
-      x_google_ignore_list: value.x_google_ignore_list,
+      ignore_list: value.ignore_list.clone(),
+      x_google_ignore_list: value.ignore_list,
     }
   }
 }

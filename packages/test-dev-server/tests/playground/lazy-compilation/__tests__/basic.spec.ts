@@ -23,11 +23,9 @@ describe('lazy-compilation: basic', () => {
     await page.click('#basic-btn');
     await expect.poll(() => page.textContent('#basic-status')).toBe('lazy-loaded');
 
-    // 3. The lazy module was fetched on demand, in exactly one request — the
-    // `/@vite/lazy` call that compiles it. Eager bundling would have shipped it
-    // inside the entry and made no request at all; a stub chunk standing in for
-    // it would have made two.
+    // 3. The lazy module came as two separate requests (proxy chunk + real
+    // chunk) — eager bundling would not do that.
     const lazyModuleChunks = jsRequests.filter((url) => url.includes('lazy-module'));
-    expect(lazyModuleChunks.length).toBe(1);
+    expect(lazyModuleChunks.length).toBe(2);
   });
 });

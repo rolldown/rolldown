@@ -1,9 +1,9 @@
 import cac from 'cac';
-import { getCliSchemaInfo } from '../../utils/validator';
-import { logger } from '../logger';
-import { alias, type CliOptions } from './alias';
-import { normalizeCliOptions, type NormalizedCliOptions } from './normalize';
-import { camelCaseToKebabCase } from './utils';
+import { getCliSchemaInfo } from '../../utils/validator.ts';
+import { logger } from '../logger.ts';
+import { alias, type CliOptions } from './alias.ts';
+import { normalizeCliOptions, type NormalizedCliOptions } from './normalize.ts';
+import { camelCaseToKebabCase } from './utils.ts';
 
 const schemaInfo = getCliSchemaInfo();
 

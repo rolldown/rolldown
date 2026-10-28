@@ -54,6 +54,14 @@
       <pre id="lazy-init-error-unhandled"></pre>
     </section>
 
+    <section id="late-lazy-chunk">
+      <h2>late-lazy-chunk</h2>
+      <button id="late-lazy-chunk-a-btn">load a</button>
+      <button id="late-lazy-chunk-b-btn">load b</button>
+      <div id="late-lazy-chunk-lib"></div>
+      <div id="late-lazy-chunk-b"></div>
+    </section>
+
     <section id="circular-named-reexport">
       <h2>circular-named-reexport</h2>
       <button id="circular-named-reexport-btn">load</button>
@@ -82,6 +90,22 @@
       <h2>star-reexport-order</h2>
       <button id="star-reexport-order-btn">load</button>
       <div id="star-reexport-order-status">pending</div>
+    </section>
+
+    <section id="walk-through-shipped">
+      <h2>walk-through-shipped</h2>
+      <button id="walk-through-shipped-holder-btn">load holder</button>
+      <button id="walk-through-shipped-route-btn">load route</button>
+      <div id="walk-through-shipped-holder"></div>
+      <div id="walk-through-shipped-route"></div>
+    </section>
+
+    <section id="top-level-await">
+      <h2>top-level-await</h2>
+      <button id="top-level-await-btn">load</button>
+      <div id="top-level-await-status">pending</div>
+      <button id="top-level-await-tdz-btn">load importer</button>
+      <div id="top-level-await-tdz-status">pending</div>
     </section>
 
     <script type="module" src="/main.js"></script>

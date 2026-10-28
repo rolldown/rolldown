@@ -1,0 +1,167 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+const load = () => import("./story.js");
+const loadOther = () => import("./other.js");
+export { load, loadOther };
+
+```
+
+## other.js
+
+```js
+import { t as motion } from "./react.js";
+// other.js
+const check = () => motion;
+export { check };
+
+```
+
+## react.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// group.js
+const Group = { name: "Group" };
+// item.js
+const Item = { name: "Item" };
+// namespace.js
+var namespace_exports = /* @__PURE__ */ __exportAll({
+	Group: () => Group,
+	Item: () => Item
+});
+// react.js
+const motion = {};
+export { namespace_exports as n, motion as t };
+
+```
+
+## story.js
+
+```js
+import { n as namespace_exports } from "./react.js";
+// story.js
+const check = () => Object.keys(namespace_exports).map((key) => namespace_exports[key]);
+export { check };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+// main.js
+var load, loadOther;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		load = () => import("./story.js");
+		loadOther = () => import("./other.js");
+	})))();
+}
+init_main();
+export { load, loadOther };
+
+```
+
+### other.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as motion, t as init_react } from "./react.js";
+// other.js
+var check;
+function init_other() {
+	return (init_other = __esmMin((() => {
+		init_react();
+		check = () => motion;
+	})))();
+}
+init_other();
+export { check };
+
+```
+
+### react.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+// group.js
+var Group;
+function init_group() {
+	return (init_group = __esmMin((() => {
+		Group = { name: "Group" };
+	})))();
+}
+// item.js
+var Item;
+function init_item() {
+	return (init_item = __esmMin((() => {
+		Item = { name: "Item" };
+	})))();
+}
+// namespace.js
+var namespace_exports = /* @__PURE__ */ __exportAll({
+	Group: () => Group,
+	Item: () => Item
+});
+function init_namespace() {
+	return (init_namespace = __esmMin((() => {
+		init_group();
+		init_item();
+	})))();
+}
+// motion.js
+var motion$1;
+function init_motion() {
+	return (init_motion = __esmMin((() => {
+		motion$1 = {};
+	})))();
+}
+// react.js
+var motion;
+function init_react() {
+	return (init_react = __esmMin((() => {
+		init_motion();
+		init_namespace();
+		motion = motion$1;
+	})))();
+}
+export { namespace_exports as i, motion as n, init_namespace as r, init_react as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```
+
+### story.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as namespace_exports, t as init_react } from "./react.js";
+// story.js
+var check;
+function init_story() {
+	return (init_story = __esmMin((() => {
+		init_react();
+		check = () => Object.keys(namespace_exports).map((key) => namespace_exports[key]);
+	})))();
+}
+init_story();
+export { check };
+
+```

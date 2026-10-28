@@ -406,14 +406,16 @@ impl GenerateStage<'_> {
         }
         let chunk_idxs: Vec<_> = bits.index_of_one().map(ChunkIdx::from_raw).collect();
 
-        let merge_target = self.try_insert_into_existing_chunk(
-          &chunk_idxs,
-          &static_entry_chunk_reference,
-          chunk_graph,
-          &dynamic_entry_to_dynamic_importers,
-          temp_chunk,
-          temp_chunk_graph,
-        );
+        let merge_target = self
+          .try_insert_into_existing_chunk(
+            &chunk_idxs,
+            &static_entry_chunk_reference,
+            chunk_graph,
+            &dynamic_entry_to_dynamic_importers,
+            temp_chunk,
+            temp_chunk_graph,
+          )
+          .filter(|_| !self.prefers_inline_common_chunk(&temp_chunk.modules));
 
         Some((bits.clone(), *temp_chunk_idx, chunk_idxs, merge_target))
       })
@@ -1126,6 +1128,12 @@ impl GenerateStage<'_> {
     additional_runtime_consumers: Option<&FxHashSet<ChunkIdx>>,
     cascade: RuntimeMergeCascade,
   ) {
+    // `experimentalInlineCommonChunks` registers registry demand on the files that read records
+    // after every merge proof below has run, so a merged runtime could end up imported by files
+    // the proof never counted. The runtime stays a standalone chunk while the feature is on.
+    if self.options.inline_common_chunks.is_some() {
+      return;
+    }
     let runtime_module_idx = self.link_output.runtime.id();
     let Some(runtime_chunk_idx) = chunk_graph.module_to_chunk[runtime_module_idx] else {
       return;

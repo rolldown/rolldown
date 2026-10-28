@@ -9,9 +9,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 let node_https = require("node:https");
 node_https = __toESM(node_https);
-//#region entry-a.js
+// entry-a.js
 console.log(node_https.default.Agent.name);
-//#endregion
 
 ```
 
@@ -20,6 +19,11 @@ console.log(node_https.default.Agent.name);
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 let node_https = require("node:https");
-exports.foo = node_https.request;
+Object.defineProperty(exports, "foo", {
+	enumerable: true,
+	get: function() {
+		return node_https.request;
+	}
+});
 
 ```

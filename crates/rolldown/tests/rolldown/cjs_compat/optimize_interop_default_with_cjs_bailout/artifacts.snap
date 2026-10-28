@@ -8,18 +8,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert/strict";
 // HIDDEN [\0rolldown/runtime.js]
-//#region json.js
+// json.js
 var json_exports = /* @__PURE__ */ __exportAll({ default: () => json_default });
 var json_default;
 var init_json = __esmMin((() => {
 	json_default = JSON.parse("[1, 2, 3]");
 }));
-//#endregion
-//#region commonjs.js
-//#endregion
-//#region main.js
-var import_commonjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {
-	var __importDefault = exports && exports.__importDefault || function(mod) {
+// main.js
+var import_commonjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
+	var __importDefault = this$1 && this$1.__importDefault || function(mod) {
 		return mod && mod.__esModule ? mod : { default: mod };
 	};
 	Object.defineProperty(exports, "__esModule", { value: true });
@@ -28,6 +25,5 @@ var import_commonjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((e
 })))());
 assert.deepEqual(import_commonjs.default.slice(1), [2, 3], "should import JSON file as expected");
 assert.equal(1, 1);
-//#endregion
 
 ```

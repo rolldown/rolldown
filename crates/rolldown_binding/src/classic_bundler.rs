@@ -61,7 +61,7 @@
 /// - Development is more maintainable as changes are made at the appropriate abstraction level
 use rolldown::{Bundle, BundleFactory, BundleFactoryOptions, BundleHandle, BundlerOptions};
 use rolldown_common::BundleMode;
-use rolldown_error::BuildResult;
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::__inner::SharedPluginable;
 use std::sync::Arc;
 
@@ -93,7 +93,7 @@ impl ClassicBundler {
     if self.closed {
       return Err(rolldown_error::BuildDiagnostic::already_closed().into());
     }
-    self.enable_debug_tracing_if_needed(&bundler_options);
+    self.enable_debug_tracing_if_needed(&bundler_options)?;
 
     let mut bundle_factory = BundleFactory::new(BundleFactoryOptions {
       bundler_options,
@@ -167,8 +167,8 @@ impl ClassicBundler {
     self.closed
   }
 
-  fn enable_debug_tracing_if_needed(&mut self, options: &BundlerOptions) {
-    if self.debug_tracer.is_none() && options.devtools.is_some() {
+  fn enable_debug_tracing_if_needed(&mut self, options: &BundlerOptions) -> BuildResult<()> {
+    if self.debug_tracer.is_none() && self.configure_devtools_session_id(options)? {
       // Mirrors the `cwd` default in `prepare_build_context`; the wasm binding always supplies one because it has no process working directory.
       let cwd = options
         .cwd
@@ -181,6 +181,125 @@ impl ClassicBundler {
         tracing::debug_span!("session", CONTEXT_session_id = self.session_id.as_ref());
       // Update the `session` with the actual session span
       self.session = rolldown_devtools::Session::new(Arc::clone(&self.session_id), session_span);
+    }
+    Ok(())
+  }
+
+  /// Returns whether devtools is enabled. When it is, a requested `devtools.sessionId` replaces the generated id.
+  fn configure_devtools_session_id(&mut self, options: &BundlerOptions) -> BuildResult<bool> {
+    let Some(devtools) = options.devtools.as_ref() else {
+      return Ok(false);
+    };
+    let session_id: Arc<str> = if let Some(session_id) = devtools.session_id.as_deref() {
+      // Uppercasing folds ſ and ß; lowercasing first also handles K and ẞ.
+      if session_id
+        .to_lowercase()
+        .to_uppercase()
+        .eq_ignore_ascii_case(rolldown_devtools::DEFAULT_SESSION_ID)
+      {
+        return Err(
+          invalid_session_id(format!(
+            "{session_id:?} is reserved for devtools events without a session context"
+          ))
+          .into(),
+        );
+      }
+      // The id names the `node_modules/.rolldown/{session_id}` directory.
+      if matches!(session_id, "" | "." | "..") || session_id.contains(['/', '\\', '\0']) {
+        return Err(
+          invalid_session_id(format!(
+            "{session_id:?} must be one path segment: not empty, not \".\" or \"..\", and without \"/\", \"\\\" or NUL"
+          ))
+          .into(),
+        );
+      }
+      Arc::from(session_id)
+    } else {
+      Arc::clone(&self.session_id)
+    };
+    self.session_id = session_id;
+    Ok(true)
+  }
+}
+
+fn invalid_session_id(reason: String) -> BuildDiagnostic {
+  BuildDiagnostic::bundler_initialize_error(
+    format!("Invalid value for option \"devtools.sessionId\" - {reason}."),
+    None,
+  )
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn devtools_session_id_uses_the_requested_value_or_generated_fallback() {
+    let mut bundler = ClassicBundler::new();
+    let generated_session_id = Arc::clone(&bundler.session_id);
+
+    let disabled_options = BundlerOptions::default();
+    assert!(!bundler.configure_devtools_session_id(&disabled_options).unwrap());
+    assert!(Arc::ptr_eq(&bundler.session_id, &generated_session_id));
+
+    let fallback_options =
+      BundlerOptions { devtools: Some(rolldown::DevtoolsOptions::default()), ..Default::default() };
+    assert!(bundler.configure_devtools_session_id(&fallback_options).unwrap());
+    assert!(Arc::ptr_eq(&bundler.session_id, &generated_session_id));
+
+    let requested_options = BundlerOptions {
+      devtools: Some(rolldown::DevtoolsOptions {
+        session_id: Some("requested-session".to_string()),
+      }),
+      ..Default::default()
+    };
+    assert!(bundler.configure_devtools_session_id(&requested_options).unwrap());
+    assert_eq!(bundler.session_id.as_ref(), "requested-session");
+  }
+
+  fn options_with_session_id(session_id: &str) -> BundlerOptions {
+    BundlerOptions {
+      devtools: Some(rolldown::DevtoolsOptions { session_id: Some(session_id.to_string()) }),
+      ..Default::default()
+    }
+  }
+
+  fn configure_error(bundler: &mut ClassicBundler, session_id: &str) -> String {
+    let err =
+      bundler.configure_devtools_session_id(&options_with_session_id(session_id)).unwrap_err();
+    err.iter().map(|e| e.to_diagnostic().to_string()).collect()
+  }
+
+  #[test]
+  fn devtools_session_id_must_be_one_path_segment() {
+    let mut bundler = ClassicBundler::new();
+    let generated_session_id = Arc::clone(&bundler.session_id);
+    for session_id in ["", ".", "..", "../x", "a/b", "a\\b", "a\0b"] {
+      let message = configure_error(&mut bundler, session_id);
+      assert!(message.contains("\"devtools.sessionId\""), "{message}");
+      assert!(message.contains("must be one path segment"), "{message}");
+    }
+    assert!(Arc::ptr_eq(&bundler.session_id, &generated_session_id));
+  }
+
+  #[test]
+  #[expect(clippy::unicode_not_nfc)]
+  fn devtools_session_id_cannot_use_the_fallback_id() {
+    let mut bundler = ClassicBundler::new();
+    for session_id in [
+      rolldown_devtools::DEFAULT_SESSION_ID,
+      "UNKNOWN-SESSION",
+      "unKnown-session",
+      "unknown-ſession",
+      "unknown-seßion",
+      "unknown-seẞion",
+    ] {
+      let message = configure_error(&mut bundler, session_id);
+      assert!(message.contains("\"devtools.sessionId\""), "{message}");
+      assert!(
+        message.contains("is reserved for devtools events without a session context"),
+        "{message}"
+      );
     }
   }
 }

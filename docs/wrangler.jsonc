@@ -2,6 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "rolldown-rs",
   "compatibility_date": "2026-09-04",
+  "previews": {},
   "assets": {
     "directory": "./.vitepress/dist",
     "html_handling": "auto-trailing-slash",

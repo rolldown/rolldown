@@ -17,6 +17,7 @@ import {
 import { bindingifyRenderChunkFilter } from './bindingify-hook-filter';
 import type { BindingifyPluginArgs } from './bindingify-plugin';
 import { bindingifyHook, type PluginHookWithBindingExt } from './bindingify-plugin-hook-meta';
+import type { RenderedChunkMeta } from './index';
 import { createPluginContext } from './plugin-context';
 
 export function bindingifyRenderStart(
@@ -45,7 +46,14 @@ export function bindingifyRenderChunk(
           ),
         });
       }
-      const renderChunkMeta = args.pluginContextData.getRenderChunkMeta()!;
+      // Per-chunk calls of this hook run concurrently, so only the chunks map
+      // is shared through the cache; each call gets its own meta object. A
+      // getter defined on one shared object would be replaced by whichever
+      // call started last, and a hook reading `meta.magicString` after an
+      // `await` would get another chunk's code.
+      const renderChunkMeta: RenderedChunkMeta = {
+        chunks: args.pluginContextData.getRenderChunkMeta()!.chunks,
+      };
 
       // Add lazy-loaded magicString if nativeMagicString is enabled
       let magicStringInstance: RolldownMagicString;

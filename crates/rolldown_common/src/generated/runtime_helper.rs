@@ -23,9 +23,14 @@ bitflags! {
     const ReExport = 1 << 13;
     const ToEsm = 1 << 14;
     const ToCommonJs = 1 << 15;
-    const ToBinaryNode = 1 << 16;
-    const ToBinary = 1 << 17;
-    const Require = 1 << 18;
+    const ShareFactories = 1 << 16;
+    const ShareRecords = 1 << 17;
+    const Share = 1 << 18;
+    const ShareRequire = 1 << 19;
+    const ShareExport = 1 << 20;
+    const ToBinaryNode = 1 << 21;
+    const ToBinary = 1 << 22;
+    const Require = 1 << 23;
   }
 }
 
@@ -72,7 +77,7 @@ impl DependedRuntimeHelperMap {
   }
 }
 
-pub const RUNTIME_HELPER_NAMES: [&str; 19] = [
+pub const RUNTIME_HELPER_NAMES: [&str; 24] = [
   "__create",
   "__defProp",
   "__name",
@@ -89,6 +94,11 @@ pub const RUNTIME_HELPER_NAMES: [&str; 19] = [
   "__reExport",
   "__toESM",
   "__toCommonJS",
+  "__share_factories",
+  "__share_records",
+  "__share",
+  "__share_require",
+  "__share_export",
   "__toBinaryNode",
   "__toBinary",
   "__require",

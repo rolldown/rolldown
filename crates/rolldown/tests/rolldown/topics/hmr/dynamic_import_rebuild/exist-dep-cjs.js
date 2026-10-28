@@ -1,1 +1,1 @@
-exports.value = 'exist-cjs'
+exports.value = 'exist-cjs';

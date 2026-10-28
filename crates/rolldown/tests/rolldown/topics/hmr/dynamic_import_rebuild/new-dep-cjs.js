@@ -1,1 +1,1 @@
-exports.value = 'new-cjs'
+exports.value = 'new-cjs';

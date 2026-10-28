@@ -27,14 +27,55 @@ export class BuiltinPlugin {
 type CallableBuiltinPluginContext = {
   plugin: BuiltinPlugin;
   native: BindingCallableBuiltinPlugin;
+  callbacks: Function[];
 };
 
+// Ownership of the option callbacks. See https://github.com/rolldown/rolldown/issues/10887.
+//
+// The native plugin keeps each option callback in a ThreadsafeFunction. A ThreadsafeFunction
+// is a GC root. If it held the user's callback, the callback would keep its owner alive until
+// the native plugin is released. So the native plugin gets a forwarder that holds only a
+// `WeakRef` to the callback. The real callbacks stay in `callbacks`. The JS plugin owns
+// `callbacks` through the hooks that are bound to the context.
+//
+// These three parts are necessary for the fix. Do not remove them:
+// - `callbacks` is the only strong reference that has the lifetime of the plugin. Without it,
+//   the forwarders fail when the caller replaces or deletes `plugin._options`.
+// - The Proxy target is `{}`, and only the `get` trap is set. napi-rs reads each option field
+//   with `napi_get_named_property`, so the `get` trap is sufficient. An empty target also
+//   prevents the invariant checks of a frozen `options` object. The Proxy wraps only
+//   top-level function options. A callback in a nested object goes to the native plugin as a
+//   strong reference and leaks again.
+// - `invokeBuiltinHook` must use `return await`. The suspended frame keeps the context alive
+//   while the native hook runs, and the context keeps the callbacks alive. So a forwarder does
+//   not find an empty `WeakRef` during a hook call.
 export function makeBuiltinPluginCallable(
   plugin: BuiltinPlugin,
 ): BuiltinPlugin & BindingCallableBuiltinPluginLike {
+  const callbacks: Function[] = [];
+  const binding = bindingifyBuiltInPlugin(plugin);
+  const options = binding.options;
+  if (options !== null && (typeof options === 'object' || typeof options === 'function')) {
+    binding.options = new Proxy(
+      {},
+      {
+        get(_target, key) {
+          const value = Reflect.get(options, key);
+          if (typeof value !== 'function') return value;
+          callbacks.push(value);
+          return invokeWeakCallback.bind(
+            undefined,
+            new WeakRef(value),
+            `${plugin.name}.${String(key)}`,
+          );
+        },
+      },
+    );
+  }
   const context: CallableBuiltinPluginContext = {
     plugin,
-    native: new BindingCallableBuiltinPlugin(bindingifyBuiltInPlugin(plugin)),
+    native: new BindingCallableBuiltinPlugin(binding),
+    callbacks,
   };
 
   const wrappedPlugin: Partial<BindingCallableBuiltinPluginLike> & BuiltinPlugin = plugin;
@@ -71,6 +112,16 @@ async function invokeBuiltinHook(this: CallableBuiltinPluginContext, key: string
       }),
     );
   }
+}
+
+function invokeWeakCallback(reference: WeakRef<Function>, name: string, ...args: unknown[]) {
+  const callback = reference.deref();
+  if (!callback) {
+    // This path is not possible during a hook call. See the ownership note on
+    // `makeBuiltinPluginCallable`.
+    throw new Error(`The callback for ${name} was released`);
+  }
+  return Reflect.apply(callback, undefined, args);
 }
 
 export function bindingifyBuiltInPlugin(plugin: BuiltinPlugin): BindingBuiltinPlugin {

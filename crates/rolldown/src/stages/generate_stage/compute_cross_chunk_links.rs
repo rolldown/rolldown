@@ -218,6 +218,13 @@ impl GenerateStage<'_> {
       })
       .collect::<Vec<_>>();
 
+    #[cfg(debug_assertions)]
+    self.debug_assert_runtime_host_keeps_evaluation_order(
+      chunk_graph,
+      &index_sorted_cross_chunk_imports,
+      &index_importee_ranks,
+    );
+
     let index_sorted_imports_from_other_chunks = index_imports_from_other_chunks
       .into_iter_enumerated()
       .map(|(chunk_idx, mut importee_map)| {
@@ -356,7 +363,7 @@ impl GenerateStage<'_> {
   /// (`code_splitting/chunk_import_order_common_chunk_interleaving`). Rollup sorts the lead modules
   /// by execution order instead, which loses that order.
   /// See internal-docs/code-splitting/implementation.md#chunk-import-order.
-  fn chunk_importee_ranks(
+  pub(super) fn chunk_importee_ranks(
     &self,
     chunk_graph: &ChunkGraph,
     chunk_idx: ChunkIdx,
@@ -415,13 +422,34 @@ impl GenerateStage<'_> {
     ranks
   }
 
+  /// Whether the code of a chunk imports another chunk: a module of the chunk has a static import
+  /// that tree shaking keeps, and the import leads to a module of the other chunk.
+  pub(super) fn chunk_imports_chunk(
+    &self,
+    chunk_graph: &ChunkGraph,
+    chunk_idx: ChunkIdx,
+    importee_chunk_idx: ChunkIdx,
+  ) -> bool {
+    let mut importees = vec![];
+    chunk_graph.chunk_table[chunk_idx].modules.iter().any(|&module_idx| {
+      self.push_kept_static_importees(module_idx, &mut importees);
+      importees
+        .drain(..)
+        .any(|importee| chunk_graph.module_to_chunk[importee] == Some(importee_chunk_idx))
+    })
+  }
+
   /// Pushes the modules that the static imports of a module lead to, in source order. Only the
   /// imports that tree shaking keeps count, because the output does not have the other imports. An
   /// import is kept when its module is in `load_dependencies`, the dependencies that survive tree
   /// shaking. An import that is not kept can still get bindings that other modules declare, for
   /// example through a re-export module that tree shaking removes. Such an import leads to the
   /// modules that declare those bindings, because the output imports the bindings from there.
-  fn push_kept_static_importees(&self, module_idx: ModuleIdx, importees: &mut Vec<ModuleIdx>) {
+  pub(super) fn push_kept_static_importees(
+    &self,
+    module_idx: ModuleIdx,
+    importees: &mut Vec<ModuleIdx>,
+  ) {
     let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
       return;
     };
@@ -543,6 +571,82 @@ impl GenerateStage<'_> {
       FinalEsmInitMetadataAvailability::Sealed(final_esm_init_metadata),
     );
     Self::static_import_edges_of(chunk_graph, state)
+  }
+
+  /// Asserts the rule of `runtime_host_keeps_evaluation_order` on the final links. A chunk that
+  /// hosts the runtime module has chunk `exec_order` 0, so a chunk that imports the host can list its
+  /// imports in a different order than with a standalone runtime. This is harmless only when the
+  /// chunks still evaluate in the same order. The host check predicts the import edges before the
+  /// merge, and `preserve_strict_entry_signatures` can turn an entry chunk host into a common chunk
+  /// after the check. So a change of the evaluation order shows up here in the test suite.
+  #[cfg(debug_assertions)]
+  fn debug_assert_runtime_host_keeps_evaluation_order(
+    &self,
+    chunk_graph: &ChunkGraph,
+    index_sorted_cross_chunk_imports: &[Vec<ChunkIdx>],
+    index_importee_ranks: &[Option<FxHashMap<ChunkIdx, u32>>],
+  ) {
+    if self.options.is_strict_execution_order_enabled() {
+      return;
+    }
+    let runtime_idx = self.link_output.runtime.id();
+    let Some(host) = chunk_graph.module_to_chunk[runtime_idx] else {
+      return;
+    };
+    let host_chunk = &chunk_graph.chunk_table[host];
+    if !matches!(host_chunk.kind, ChunkKind::Common) || host_chunk.modules.len() < 2 {
+      return;
+    }
+    // The key of `assign_chunk_exec_orders`, with the host keyed on its first module that is not
+    // the runtime module: the order that the host has with a standalone runtime.
+    let module_table = &self.link_output.module_table;
+    let standalone_key = |chunk_idx: ChunkIdx| {
+      let chunk = &chunk_graph.chunk_table[chunk_idx];
+      match chunk.kind {
+        ChunkKind::EntryPoint { module, .. } => (module_table[module].exec_order(), false),
+        ChunkKind::Common => {
+          let lead = chunk
+            .modules
+            .iter()
+            .copied()
+            .find(|&module_idx| module_idx != runtime_idx)
+            .unwrap_or(chunk.modules[0]);
+          (module_table[lead].exec_order(), true)
+        }
+      }
+    };
+    // The imports of a chunk in the order that they have with a standalone runtime. Only a list
+    // with the host can change.
+    let standalone_importees = |chunk_idx: ChunkIdx| {
+      let mut importees = index_sorted_cross_chunk_imports[chunk_idx.index()].clone();
+      if importees.contains(&host) {
+        sort_chunk_importees_by(
+          &mut importees,
+          standalone_key,
+          index_importee_ranks[chunk_idx.index()].as_ref(),
+        );
+      }
+      importees
+    };
+    let hosted_importees =
+      |chunk_idx: ChunkIdx| index_sorted_cross_chunk_imports[chunk_idx.index()].clone();
+    for (chunk_idx, _) in chunk_graph.chunk_table.iter_enumerated() {
+      let sorted = &index_sorted_cross_chunk_imports[chunk_idx.index()];
+      if chunk_idx == host
+        || sorted.len() < 2
+        || !sorted.contains(&host)
+        || !chunk_graph.chunk_is_live(chunk_idx)
+        || standalone_importees(chunk_idx) == *sorted
+      {
+        continue;
+      }
+      let standalone = chunk_evaluation_order(chunk_idx, &standalone_importees);
+      let hosted = chunk_evaluation_order(chunk_idx, &hosted_importees);
+      debug_assert!(
+        standalone == hosted,
+        "the runtime host {host:?} changes the evaluation order of chunk {chunk_idx:?}: {hosted:?} instead of {standalone:?}"
+      );
+    }
   }
 
   /// Reconciles the module-level prediction (`predicted_static_import_targets` plus
@@ -2008,7 +2112,21 @@ fn sort_chunk_importees(
   importees: &mut [ChunkIdx],
   ranks: Option<&FxHashMap<ChunkIdx, u32>>,
 ) {
-  importees.sort_unstable_by_key(|chunk_idx| chunk_graph.chunk_table[*chunk_idx].exec_order);
+  sort_chunk_importees_by(
+    importees,
+    |chunk_idx| chunk_graph.chunk_table[chunk_idx].exec_order,
+    ranks,
+  );
+}
+
+/// The sort of `sort_chunk_importees` with any order key in the place of `exec_order`. The runtime
+/// host check `runtime_host_keeps_evaluation_order` sorts with the key that a host would get.
+pub(super) fn sort_chunk_importees_by<K: Ord>(
+  importees: &mut [ChunkIdx],
+  key: impl Fn(ChunkIdx) -> K,
+  ranks: Option<&FxHashMap<ChunkIdx, u32>>,
+) {
+  importees.sort_unstable_by_key(|chunk_idx| key(*chunk_idx));
   let Some(ranks) = ranks else {
     return;
   };
@@ -2023,6 +2141,37 @@ fn sort_chunk_importees(
   {
     *slot = chunk_idx;
   }
+}
+
+/// The chunks in the order in which they evaluate when `root` loads and no other chunk has run: a
+/// depth-first walk that follows the importees of each chunk in the order that `importees` gives
+/// and lists a chunk after its importees. A chunk that the walk reaches again, also through a
+/// cycle, keeps its first position. The runtime host check compares this order with the runtime
+/// in its own chunk and in the host.
+pub(super) fn chunk_evaluation_order(
+  root: ChunkIdx,
+  mut importees: impl FnMut(ChunkIdx) -> Vec<ChunkIdx>,
+) -> Vec<ChunkIdx> {
+  let mut order = vec![];
+  let mut visited = FxHashSet::default();
+  visited.insert(root);
+  // Each entry has a chunk and the importees that the walk did not enter yet, in reverse order.
+  let mut root_importees = importees(root);
+  root_importees.reverse();
+  let mut stack = vec![(root, root_importees)];
+  while let Some((chunk_idx, pending)) = stack.last_mut() {
+    if let Some(importee) = pending.pop() {
+      if visited.insert(importee) {
+        let mut next = importees(importee);
+        next.reverse();
+        stack.push((importee, next));
+      }
+    } else {
+      order.push(*chunk_idx);
+      stack.pop();
+    }
+  }
+  order
 }
 
 // The same implementation with https://github.com/oxc-project/oxc/blob/crates_v0.86.0/crates/oxc_mangler/src/base54.rs#L30-L31

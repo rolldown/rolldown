@@ -584,6 +584,14 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       ast::Expression::NewExpression(new_expr) => {
         self.handle_new_url_with_string_literal_and_import_meta_url(new_expr);
       }
+      ast::Expression::BinaryExpression(binary_expr) => {
+        if let Some(&value) =
+          self.ctx.linking_info.folded_namespace_in_checks.get(&binary_expr.node_id())
+        {
+          *expr = Expression::new_boolean_literal(binary_expr.span, value, self);
+          return;
+        }
+      }
       ast::Expression::Identifier(ident_ref) => {
         if let Some(new_expr) = self.try_rewrite_identifier_reference_expr(ident_ref, false) {
           *expr = new_expr;

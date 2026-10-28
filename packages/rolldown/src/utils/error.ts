@@ -75,12 +75,13 @@ export function aggregateBindingErrorsIntoJsError(rawErrors: BindingError[]): Bu
     configurable: true,
     enumerable: true,
     get: () => errors,
-    set: (value) =>
+    set: (value) => {
       Object.defineProperty(wrapper, 'errors', {
         configurable: true,
         enumerable: true,
         value,
-      }),
+      });
+    },
   });
   return wrapper;
 }

@@ -1,11 +1,10 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import path from 'node:path';
 
 // Entry `a` does not import `namespace.js`. The chunk of `logger.js` needs helpers, and it must not
 // import the chunk of `namespace.js` to get them, or `a` runs the side effect of `namespace.js`.
 // A fresh process, because the check below must load `common.js` after `namespace.js`.
-const entry = JSON.stringify(path.join(import.meta.dirname, 'dist/a.js'));
+const entry = JSON.stringify(new URL('./dist/a.js', import.meta.url).href);
 const script = [
   `const { a } = await import(${entry});`,
   'console.log(JSON.stringify([a, globalThis.ready ?? null]));',

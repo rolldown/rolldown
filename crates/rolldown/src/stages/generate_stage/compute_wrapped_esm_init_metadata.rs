@@ -105,7 +105,9 @@ impl GenerateStage<'_> {
           return None;
         }
         let init_target = order_state.esm_init_target(module_idx, meta)?;
-        let is_noop = init_is_noop(meta, ast_table[module_idx].as_ref(), keep_names);
+        // In dev mode every wrapper's closure holds the module's HMR header.
+        let is_noop = !self.options.is_dev_mode_enabled()
+          && init_is_noop(meta, ast_table[module_idx].as_ref(), keep_names);
         let targets_by_stmt = modules[module_idx]
           .as_normal()
           .zip(module_to_chunk[module_idx])

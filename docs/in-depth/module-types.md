@@ -18,6 +18,8 @@ export default {
 };
 ```
 
+A `type` import attribute can also select the module type of a single import, for example `import data from './data.txt' with { type: 'json' }`. See [Import Attributes](/in-depth/import-attributes).
+
 ## Module types and plugins
 
 Plugins can specify the module type of a specific file via the `load` hook and the `transform` hook:

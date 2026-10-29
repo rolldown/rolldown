@@ -205,6 +205,7 @@ function bindingifyExperimental(
     nativeMagicString: experimental?.nativeMagicString,
     chunkOptimization: experimental?.chunkOptimization,
     lazyBarrel: experimental?.lazyBarrel,
+    importAttributes: experimental?.importAttributes,
   };
 }
 

@@ -23,7 +23,7 @@ bare — no paths. Each target app keeps its own state (baseline, history, repor
 Individual commands exist too (`measure [--pin]`, `coverage`, `profile`,
 `baseline`, `target [<appDir>] [--demo]`) plus demo-app helpers (README.md).
 
-On rolldown devtools-metrics builds (vite ≥ 8:
+On rolldown devtools report builds (vite ≥ 8:
 `build.rolldownOptions.devtools = { mode: "report" }`) several static queries skip the
 import-chain archaeology entirely: `graph` ranks split candidates by **retained size**
 (the dominator subtree a deferral removes from the initial load, with `via` naming the

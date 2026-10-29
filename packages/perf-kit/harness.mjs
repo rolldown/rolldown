@@ -659,7 +659,7 @@ function snapshotBaselineGraph(target) {
     );
   } else if (mg.state === 'absent-rolldown') {
     console.log(
-      'note: no module graph collected - enable devtools metrics to pin one for graph-diff.',
+      'note: no module graph collected - enable the devtools report mode to pin one for graph-diff.',
     );
   }
 }
@@ -1606,7 +1606,7 @@ async function cmdVerdict(argv) {
   printVerdict(resolveTarget(opts));
 }
 
-// --- module-graph analysis (rolldown devtools metrics builds) ---------------------
+// --- module-graph analysis (rolldown devtools report builds) ----------------------
 
 // Scan/verdict integration thresholds: a non-framework module retaining >=100KB on
 // the initial load is always worth pricing with what-if; the 30s slack absorbs the
@@ -1837,7 +1837,7 @@ function requireModuleGraph(opts) {
   );
   if (!graph) {
     throw new Error(
-      'no module-graph.json found - it is written by rolldown devtools metrics builds.\n' +
+      'no module-graph.json found - it is written by rolldown devtools report builds.\n' +
         'vite >= 8: add `build.rolldownOptions.devtools = { mode: "report" }` to the vite config\n' +
         '(report lands in node_modules/.rolldown/report/<output dir>), rebuild, then re-run.\n' +
         'Or point at an existing report with --report <dir>.',
@@ -2114,7 +2114,7 @@ async function cmdGraphDiff(argv) {
   );
   if (!current) {
     throw new Error(
-      'no current module-graph.json found - it is written by rolldown devtools metrics builds.\n' +
+      'no current module-graph.json found - it is written by rolldown devtools report builds.\n' +
         'vite >= 8: add `build.rolldownOptions.devtools = { mode: "report" }` to the vite config,\n' +
         'rebuild, then re-run. Or point at an existing report with --report <dir>.',
     );
@@ -2273,7 +2273,7 @@ individual commands (same target rules):
   coverage | profile                        one signal each
   graph                                     STATIC split candidates ranked by retained size (what
                                             deferring each module removes from the initial load) -
-                                            needs a rolldown devtools-metrics build (vite >= 8:
+                                            needs a rolldown devtools report build (vite >= 8:
                                             build.rolldownOptions.devtools = { mode: "report" })
   what-if <module> [<module>...] [--keep a,b]  exact modules+bytes one deferral frees; sentries
                                             stay eager. TWO+ modules = one combined plan, priced
@@ -2307,7 +2307,7 @@ the loop:
      prices every split candidate - if the verdict says the graph is not collected,
      enable it, it is one config line)
   3. read the app source; find why the landing page pays for each finding. On rolldown
-     devtools-metrics builds, \`graph\` + \`what-if <module>\` answer this statically: the
+     devtools report builds, \`graph\` + \`what-if <module>\` answer this statically: the
      exact import chain (via/idom) and the bytes a deferral frees; \`cut <module>\` gives the
      fewest import edits to detach a multi-path module - no chain-tracing by hand
   4. change the app (never remove features); one change at a time

@@ -1,0 +1,8 @@
+{
+  "_comment": "`type: 'json' | 'text' | 'bytes'` picks a built-in module type, even against the file extension.",
+  "config": {
+    "experimental": {
+      "importAttributes": true
+    }
+  }
+}

@@ -305,11 +305,12 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
   async fn resolve_absolute_path(&self, ids: &[ArcStr]) -> BuildResult<Vec<ResolvedId>> {
     let resolver = &self.resolver;
     let plugin_driver = &self.plugin_driver;
+    let options = &self.options;
 
     let resolved_ids = join_all(ids.iter().map(|input_item| async move {
       // The importer is useless, since all path is absolute path
 
-      load_entry_module(resolver, plugin_driver, input_item, None).await
+      load_entry_module(options, resolver, plugin_driver, input_item, None).await
     }))
     .await;
 

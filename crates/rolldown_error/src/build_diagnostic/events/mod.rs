@@ -36,6 +36,7 @@ pub mod ineffective_dynamic_import;
 pub mod invalid_annotation;
 pub mod invalid_define_config;
 pub mod invalid_export_option;
+pub mod invalid_import_attribute;
 pub mod invalid_option;
 pub mod invalid_tla_format;
 pub mod json_parse;

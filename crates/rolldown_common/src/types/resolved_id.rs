@@ -83,12 +83,17 @@ impl ResolvedId {
   /// 2. relative to the cwd, so it could show stable path across different machines
   /// 3. has its line terminators escaped, so it can go in a `//` comment
   pub fn debug_id(&self, cwd: impl AsRef<Path>) -> String {
-    let debug_id = if is_data_url(&self.id) {
-      concat_string!("<", self.id.as_str(), ">")
+    let raw_id = self.id.raw_id();
+    let debug_id = if is_data_url(raw_id) {
+      concat_string!("<", raw_id, ">")
     } else if let Some(original) = self.id.strip_empty_prefix() {
       concat_string!("(ignored) ", stabilize_id(original, cwd.as_ref()))
     } else {
-      stabilize_id(&self.id, cwd.as_ref())
+      stabilize_id(raw_id, cwd.as_ref())
+    };
+    let debug_id = match self.attributes.to_with_clause(false) {
+      Some(with_clause) => concat_string!(debug_id, " ", with_clause),
+      None => debug_id,
     };
     escape_line_terminators(debug_id)
   }

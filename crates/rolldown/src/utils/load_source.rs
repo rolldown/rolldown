@@ -20,6 +20,7 @@ pub async fn load_source<Fs: FileSystem + 'static>(
   is_read_from_disk: &mut bool,
   module_idx: ModuleIdx,
 ) -> anyhow::Result<(StrOrBytes, ModuleType)> {
+  let raw_id = resolved_id.id.raw_id();
   let (maybe_source, mut maybe_module_type) = if resolved_id.id.is_empty_module() {
     (Some(String::new()), Some(ModuleType::Empty))
   } else {
@@ -45,6 +46,11 @@ pub async fn load_source<Fs: FileSystem + 'static>(
       maybe_module_type = Some(asserted.clone());
     }
   }
+  // A `type` attribute with a built-in meaning beats the file extension, but not the plugin.
+  let attributes_module_type = resolved_id.attributes.module_type();
+  if maybe_module_type.is_none() {
+    maybe_module_type = attributes_module_type.clone();
+  }
   if maybe_source.is_some() {
     *is_read_from_disk = false;
   }
@@ -52,7 +58,7 @@ pub async fn load_source<Fs: FileSystem + 'static>(
   match (maybe_source, maybe_module_type) {
     (Some(source), Some(module_type)) => Ok((source.into(), module_type)),
     (source, None) => {
-      let guessed = get_module_loader_from_file_extension(&resolved_id.id, &options.module_types);
+      let guessed = get_module_loader_from_file_extension(raw_id, &options.module_types);
       match (source, guessed) {
         (None, None) => {
           // - Unknown module type,
@@ -62,14 +68,14 @@ pub async fn load_source<Fs: FileSystem + 'static>(
             StrOrBytes::Str({
               #[cfg(not(target_family = "wasm"))]
               {
-                let id = resolved_id.id.clone();
+                let raw_id = raw_id.to_owned();
                 tokio::runtime::Handle::current()
-                  .spawn_blocking(move || fs.read_to_string(Path::new(id.as_str())))
+                  .spawn_blocking(move || fs.read_to_string(Path::new(&raw_id)))
                   .await??
               }
               #[cfg(target_family = "wasm")]
               {
-                fs.read_to_string(Path::new(resolved_id.id.as_str()))?
+                fs.read_to_string(Path::new(raw_id))?
               }
             }),
             ModuleType::Js,
@@ -82,11 +88,11 @@ pub async fn load_source<Fs: FileSystem + 'static>(
                 Some(s) => s.into_bytes(),
                 None => {
                   if cfg!(target_family = "wasm") {
-                    fs.read(Path::new(resolved_id.id.as_str()))?
+                    fs.read(Path::new(raw_id))?
                   } else {
-                    let id = resolved_id.id.clone();
+                    let raw_id = raw_id.to_owned();
                     tokio::runtime::Handle::current()
-                      .spawn_blocking(move || fs.read(Path::new(id.as_str())))
+                      .spawn_blocking(move || fs.read(Path::new(&raw_id)))
                       .await??
                   }
                 }
@@ -119,14 +125,14 @@ pub async fn load_source<Fs: FileSystem + 'static>(
               } else {
                 #[cfg(not(target_family = "wasm"))]
                 {
-                  let id = resolved_id.id.clone();
+                  let raw_id = raw_id.to_owned();
                   tokio::runtime::Handle::current()
-                    .spawn_blocking(move || fs.read_to_string(Path::new(id.as_str())))
+                    .spawn_blocking(move || fs.read_to_string(Path::new(&raw_id)))
                     .await??
                 }
                 #[cfg(target_family = "wasm")]
                 {
-                  fs.read_to_string(Path::new(resolved_id.id.as_str()))?
+                  fs.read_to_string(Path::new(raw_id))?
                 }
               }
             }),
@@ -137,8 +143,8 @@ pub async fn load_source<Fs: FileSystem + 'static>(
       }
     }
     (None, Some(ty)) => {
-      assert!(asserted_module_type.is_some(), "Invalid state");
-      Ok((read_file_by_module_type(Path::new(resolved_id.id.as_str()), &ty, fs).await?, ty))
+      assert!(asserted_module_type.is_some() || attributes_module_type.is_some(), "Invalid state");
+      Ok((read_file_by_module_type(Path::new(raw_id), &ty, fs).await?, ty))
     }
   }
 }

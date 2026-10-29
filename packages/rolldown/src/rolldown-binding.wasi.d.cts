@@ -2020,6 +2020,7 @@ export interface BindingChecksOptions {
   namespaceConflict?: boolean
   shimmedExport?: boolean
   deprecatedImportAssertion?: boolean
+  invalidImportAttribute?: boolean
 }
 
 export interface BindingChunkImportMap {

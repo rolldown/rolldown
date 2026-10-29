@@ -118,7 +118,7 @@ impl ModuleId {
 
   /// For an id created via `new_empty`, returns the original id portion.
   pub fn strip_empty_prefix(&self) -> Option<&str> {
-    self.as_str().strip_prefix(EMPTY_MODULE_PREFIX)
+    self.raw_id().strip_prefix(EMPTY_MODULE_PREFIX)
   }
 
   pub fn as_str(&self) -> &str {

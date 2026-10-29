@@ -1,104 +1,84 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# warnings
-
-## SHIMMED_EXPORT
-
-```text
-[SHIMMED_EXPORT] Missing export "default" has been shimmed in module "foo.js".
-
-```
-
-## SHIMMED_EXPORT
-
-```text
-[SHIMMED_EXPORT] Missing export "x" has been shimmed in module "foo.js".
-
-```
-
-## SHIMMED_EXPORT
-
-```text
-[SHIMMED_EXPORT] Missing export "y" has been shimmed in module "foo.js".
-
-```
-
 # Assets
 
 ## bare.js
 
 ```js
-import { r as init_foo } from "./foo.js";
-// bare.js
-init_foo();
+import "./rolldown-runtime.js";
+import { t as require_foo } from "./foo.js";
+require_foo();
 
 ```
 
 ## foo.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+import { t as __commonJSMin } from "./rolldown-runtime.js";
 // foo.js
-var foo_exports = /* @__PURE__ */ __exportAll({
-	default: () => _default,
-	x: () => x,
-	y: () => y
-});
-var _default, x, y;
-var init_foo = __esmMin((() => {
+var require_foo = /* @__PURE__ */ __commonJSMin((() => {
 	console.log("no exports here");
-	_default = void 0;
-	x = void 0;
-	y = void 0;
 }));
-export { y as a, x as i, foo_exports as n, __toCommonJS as o, init_foo as r, _default as t };
+export { require_foo as t };
 
 ```
 
 ## import.js
 
 ```js
+import { n as __toESM } from "./rolldown-runtime.js";
 // import.js
-console.log(import("./foo.js").then((n) => (n.r(), n.n)));
+console.log(import("./foo.js").then((n) => /* @__PURE__ */ __toESM(n.t())));
 
 ```
 
 ## named.js
 
 ```js
-import { a as y, i as x, r as init_foo, t as _default } from "./foo.js";
+import { n as __toESM } from "./rolldown-runtime.js";
+import { t as require_foo } from "./foo.js";
 // named.js
-init_foo();
-console.log(_default(x, y));
+var import_foo = /* @__PURE__ */ __toESM(require_foo());
+console.log((0, import_foo.default)(import_foo.x, import_foo.y));
 
 ```
 
 ## require.js
 
 ```js
-import { n as foo_exports, o as __toCommonJS, r as init_foo } from "./foo.js";
+import { t as require_foo } from "./foo.js";
 // require.js
-console.log((init_foo(), __toCommonJS(foo_exports)));
+console.log(require_foo());
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __toESM as n, __commonJSMin as t };
 
 ```
 
 ## star-capture.js
 
 ```js
-import { n as foo_exports, r as init_foo } from "./foo.js";
+import { n as __toESM } from "./rolldown-runtime.js";
+import { t as require_foo } from "./foo.js";
 // star-capture.js
-init_foo();
-console.log(foo_exports);
+var import_foo = /* @__PURE__ */ __toESM(require_foo());
+console.log(import_foo);
 
 ```
 
 ## star.js
 
 ```js
-import { a as y, i as x, r as init_foo, t as _default } from "./foo.js";
+import { n as __toESM } from "./rolldown-runtime.js";
+import { t as require_foo } from "./foo.js";
 // star.js
-init_foo();
-console.log(_default(x, y));
+var import_foo = /* @__PURE__ */ __toESM(require_foo());
+console.log(import_foo.default(import_foo.x, import_foo.y));
 
 ```

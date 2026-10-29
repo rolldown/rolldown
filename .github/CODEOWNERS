@@ -1,2 +1,103 @@
-AGENTS.md @hyf0 @IWANABETHATGUY @shulaoda @sapphi-red
-CLAUDE.md @hyf0 @IWANABETHATGUY @shulaoda @sapphi-red
+# ============================================================================
+# CODEOWNERS for the rolldown monorepo
+# ============================================================================
+#
+# Ownership is tracked at the crate / package level and was derived from git
+# history (all-time plus recent commit activity). Every area has AT LEAST TWO
+# owners so changes can be cross-reviewed by another maintainer familiar with
+# the code.
+#
+# Owners can approve pull requests that touch their areas. When a rule lists
+# multiple owners, a review from ANY ONE of them satisfies the CODEOWNERS
+# requirement (GitHub requests review from all listed owners, but only one
+# approval is needed).
+#
+# Precedence: GitHub uses LAST-MATCH-WINS. There is intentionally NO global
+# default (`*`) rule, so a file that matches none of the specific rules below
+# has no owners and won't auto-request reviews from everyone. This keeps small
+# or cross-cutting changes (e.g. root lockfile/dependency bumps) from spamming
+# every maintainer's GitHub review inbox; request the right reviewers manually
+# for those. Rules are grouped general -> specific within each section.
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# Core engine
+# ----------------------------------------------------------------------------
+/crates/rolldown/                                       @hyfdev @IWANABETHATGUY @shulaoda
+/crates/rolldown_common/                                @IWANABETHATGUY @hyfdev @shulaoda
+/crates/rolldown_binding/                               @hyfdev @shulaoda @IWANABETHATGUY
+/crates/rolldown_plugin/                                @hyfdev @shulaoda @IWANABETHATGUY
+/crates/rolldown_resolver/                              @hyfdev @shulaoda @IWANABETHATGUY
+/crates/rolldown_watcher/                               @hyfdev @IWANABETHATGUY
+/crates/rolldown_fs/                                    @hyfdev @shulaoda @IWANABETHATGUY
+/crates/rolldown_fs_watcher/                            @hyfdev @IWANABETHATGUY
+/crates/rolldown_sourcemap/                             @hyfdev @shulaoda @IWANABETHATGUY
+
+# ----------------------------------------------------------------------------
+# ECMAScript & string tooling
+# ----------------------------------------------------------------------------
+/crates/rolldown_ecmascript/                            @IWANABETHATGUY @hyfdev
+/crates/rolldown_ecmascript_utils/                      @IWANABETHATGUY @hyfdev
+/crates/string_wizard/                                  @hyfdev @IWANABETHATGUY
+
+# ----------------------------------------------------------------------------
+# Vite plugin suite
+# (shulaoda and sapphi-red are the two contributors active across every vite_*
+#  crate; * does not cross '/', so this matches each vite plugin crate dir)
+# ----------------------------------------------------------------------------
+/crates/rolldown_plugin_vite_*/                         @shulaoda @sapphi-red
+
+# ----------------------------------------------------------------------------
+# Standalone plugins
+# ----------------------------------------------------------------------------
+/crates/rolldown_plugin_utils/                          @shulaoda @sapphi-red
+/crates/rolldown_plugin_oxc_runtime/                    @shulaoda @IWANABETHATGUY
+/crates/rolldown_plugin_chunk_import_map/               @shulaoda @hyfdev
+/crates/rolldown_plugin_esm_external_require/           @shulaoda @sapphi-red
+/crates/rolldown_plugin_isolated_declaration/           @shulaoda @IWANABETHATGUY
+/crates/rolldown_plugin_replace/                        @IWANABETHATGUY @shulaoda
+/crates/rolldown_plugin_bundle_analyzer/                @IWANABETHATGUY @shulaoda
+/crates/rolldown_plugin_asset_module/                   @hyfdev @IWANABETHATGUY
+/crates/rolldown_plugin_copy_module/                    @hyfdev @shulaoda
+/crates/rolldown_plugin_data_url/                       @hyfdev @shulaoda
+
+# ----------------------------------------------------------------------------
+# Dev / HMR
+# ----------------------------------------------------------------------------
+/crates/rolldown_plugin_hmr/                            @hyfdev @sapphi-red
+/crates/rolldown_plugin_lazy_compilation/               @h-a-n-a @hyfdev
+/crates/rolldown_dev/                                   @hyfdev @h-a-n-a
+/crates/rolldown_dev_common/                            @hyfdev @h-a-n-a
+/crates/rolldown_devtools/                              @hyfdev @IWANABETHATGUY
+/crates/rolldown_devtools_action/                       @hyfdev @IWANABETHATGUY
+/packages/test-dev-server/                              @hyfdev @sapphi-red @h-a-n-a
+
+# ----------------------------------------------------------------------------
+# Tooling & infra
+# ----------------------------------------------------------------------------
+/crates/bench/                                          @hyfdev @IWANABETHATGUY
+/crates/rolldown_error/                                 @IWANABETHATGUY @hyfdev @shulaoda
+/crates/rolldown_utils/                                 @IWANABETHATGUY @hyfdev @shulaoda
+/crates/rolldown_std_utils/                             @IWANABETHATGUY @shulaoda
+/crates/rolldown_tracing/                               @hyfdev @IWANABETHATGUY
+/crates/rolldown_workspace/                             @IWANABETHATGUY @hyfdev
+/crates/rolldown_testing/                               @hyfdev @IWANABETHATGUY
+/crates/rolldown_testing_config/                        @IWANABETHATGUY @hyfdev
+
+# ----------------------------------------------------------------------------
+# JS/TS packages
+# ----------------------------------------------------------------------------
+/packages/rolldown/                                     @IWANABETHATGUY @shulaoda @hyfdev
+/packages/bench/                                        @hyfdev @shulaoda
+/packages/browser/                                      @shulaoda @hyfdev
+/packages/debug/                                        @hyfdev @IWANABETHATGUY
+/packages/rollup-tests/                                 @sapphi-red @hyfdev
+/packages/vite-tests/                                   @sapphi-red @shulaoda
+
+# ----------------------------------------------------------------------------
+# Meta files
+# (unanchored so they match agent-instruction files at any depth -- e.g. the
+#  root AGENTS.md, .claude/CLAUDE.md, rollup/AGENTS.md. Kept last so they win.)
+# ----------------------------------------------------------------------------
+AGENTS.md                                               @hyfdev @IWANABETHATGUY @shulaoda @h-a-n-a @sapphi-red
+CLAUDE.md                                               @hyfdev @IWANABETHATGUY @shulaoda @h-a-n-a @sapphi-red

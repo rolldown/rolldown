@@ -1,14 +1,14 @@
 use arcstr::ArcStr;
 use rolldown::{Bundler, BundlerBuilder, BundlerConfig};
 use rolldown_common::{
-  BundleMode, LogLevel, NormalizedBundlerOptions, ScanMode, WatcherChangeKind,
+  BundleMode, Log, LogLevel, NormalizedBundlerOptions, ScanMode, WatcherChangeKind,
 };
 use rolldown_error::{
-  BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, DiagnosticOptions, ResultExt,
+  BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Diagnostic, DiagnosticOptions,
   filter_out_disabled_diagnostics,
 };
-use rolldown_fs_watcher::{DynFsWatcher, RecursiveMode};
-use rolldown_utils::{dashmap::FxDashSet, pattern_filter};
+use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig};
+use rolldown_utils::pattern_filter;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -16,6 +16,7 @@ use std::time::Instant;
 use tokio::sync::Mutex as TokioMutex;
 
 use crate::event::{BundleEndEventData, BundleStartEventData, WatchErrorEventData};
+use crate::task_fs_event_handler::TaskFsEventHandler;
 
 oxc_index::define_index_type! {
   pub struct WatchTaskIdx = u32;
@@ -25,8 +26,7 @@ oxc_index::define_index_type! {
 pub struct WatchTask {
   bundler: Arc<TokioMutex<Bundler>>,
   options: Arc<NormalizedBundlerOptions>,
-  fs_watcher: std::sync::Mutex<DynFsWatcher>,
-  watched_files: FxDashSet<ArcStr>,
+  fs_watcher: std::sync::Mutex<FsWatcher>,
   pub(crate) needs_rebuild: bool,
   closed: Arc<AtomicBool>,
 }
@@ -34,7 +34,8 @@ pub struct WatchTask {
 impl WatchTask {
   pub(crate) fn new(
     config: BundlerConfig,
-    fs_watcher: DynFsWatcher,
+    fs_handler: TaskFsEventHandler,
+    fs_watcher_config: &FsWatcherConfig,
     closed: &Arc<AtomicBool>,
   ) -> BuildResult<Self> {
     // Validation: dev_mode not allowed with watch
@@ -56,12 +57,18 @@ impl WatchTask {
       .build()?;
 
     let options = Arc::clone(bundler.options());
-
+    let fs_watcher = FsWatcher::new(
+      fs_handler,
+      &FsWatcherConfig {
+        ignored: options.watch.exclude.clone(),
+        cwd: options.cwd.clone(),
+        ..fs_watcher_config.clone()
+      },
+    )?;
     Ok(Self {
       bundler: Arc::new(TokioMutex::new(bundler)),
       options,
       fs_watcher: std::sync::Mutex::new(fs_watcher),
-      watched_files: FxDashSet::default(),
       needs_rebuild: true,
       closed: Arc::clone(closed),
     })
@@ -77,10 +84,9 @@ impl WatchTask {
     let start_time = Instant::now();
 
     let skip_write = self.options.watch.skip_write;
-    // Use field-level borrows so the closure can capture fs_watcher/watched_files/options
+    // Use field-level borrows so the closure can capture fs_watcher/options
     // without conflicting with the &mut self borrow on bundler.
     let fs_watcher_ref = &self.fs_watcher;
-    let watched_files_ref = &self.watched_files;
     let options_ref = &*self.options;
 
     // Scope the bundler lock to minimize lock duration
@@ -93,9 +99,11 @@ impl WatchTask {
         last_bundle_handle.plugin_driver().clear();
       }
 
-      // Always clear resolver cache before each rebuild in watch mode to avoid
-      // stale resolution results from modified package.json/tsconfig/export maps.
+      // Always clear the resolver and tsconfig caches before each rebuild in
+      // watch mode to avoid stale resolution and transform results from
+      // modified package.json/tsconfig/export maps.
       bundler.clear_resolver_cache();
+      bundler.clear_transform_tsconfig_cache();
 
       // Use with_cached_bundle_experimental to register FS watches between scan and write phases.
       // This ensures changes made during render hooks (e.g. renderStart modifying a file)
@@ -108,12 +116,7 @@ impl WatchTask {
           // (so files are watched even on error — enables recovery when user fixes the issue)
           let watch_files: Vec<ArcStr> =
             bundle.get_watch_files().iter().map(|f| f.clone()).collect();
-          Self::update_watch_files_from(
-            fs_watcher_ref,
-            watched_files_ref,
-            options_ref,
-            &watch_files,
-          )?;
+          Self::update_watch_files_from(fs_watcher_ref, options_ref, &watch_files)?;
 
           let scan_output = scan_result?;
 
@@ -189,43 +192,29 @@ impl WatchTask {
     if warnings.is_empty() || options.log_level == Some(LogLevel::Silent) {
       return Ok(());
     }
-    if let Some(on_log) = options.on_log.as_ref() {
-      for warning in filter_out_disabled_diagnostics(warnings, &options.checks) {
-        let diag = warning.to_diagnostic_with(&DiagnosticOptions { cwd: options.cwd.clone() });
-        let code = warning.kind().to_string();
-        #[expect(
-          clippy::cast_possible_truncation,
-          reason = "line/column/position values are unlikely to exceed u32::MAX in practical use"
-        )]
-        let (loc, pos) = if let Some((_file, line, column, position)) = diag.get_primary_location()
-        {
-          (
-            Some(rolldown_common::LogLocation {
-              line: line as u32,
-              column: column as u32,
-              file: warning.id(),
-            }),
-            Some(position as u32),
-          )
-        } else {
-          (None, None)
-        };
-        on_log
-          .call(
-            LogLevel::Warn,
-            rolldown_common::Log {
-              id: warning.id(),
-              exporter: warning.exporter(),
-              code: Some(code),
-              message: diag.to_color_string(),
-              plugin: None,
-              loc,
-              pos,
-              ids: warning.ids(),
-            },
-          )
-          .await?;
-      }
+    let Some(on_log) = options.on_log.as_ref() else {
+      return Ok(());
+    };
+
+    let warnings: Vec<BuildDiagnostic> =
+      filter_out_disabled_diagnostics(warnings, &options.checks).collect();
+    if warnings.is_empty() {
+      return Ok(());
+    }
+
+    // Render all warnings through the batch API so the per-source line index /
+    // ariadne `Source` is built once and shared, rather than rebuilt for every
+    // warning (O(N^2) for many warnings in one large file, see #9748).
+    let diagnostic_options = DiagnosticOptions { cwd: options.cwd.clone() };
+    let diagnostics: Vec<Diagnostic> =
+      warnings.iter().map(|warning| warning.to_diagnostic_with(&diagnostic_options)).collect();
+    let rendered = Diagnostic::render_batch(&diagnostics, true);
+
+    // Dispatch sequentially, awaiting each callback before the next, so a handler
+    // that throws to abort the build stops at the first failure without invoking
+    // later handlers. Mirrors `handle_warnings` in the binding. See #9748.
+    for (warning, rendered) in warnings.into_iter().zip(rendered) {
+      on_log.call(LogLevel::Warn, Log::from_rendered(&warning, rendered)).await?;
     }
     Ok(())
   }
@@ -237,52 +226,30 @@ impl WatchTask {
 
   /// Update watched files by adding new ones to the fs watcher.
   fn update_watch_files(&self, files: &[ArcStr]) -> BuildResult<()> {
-    Self::update_watch_files_from(&self.fs_watcher, &self.watched_files, &self.options, files)
+    Self::update_watch_files_from(&self.fs_watcher, &self.options, files)
   }
 
   /// Static helper: update FS watcher with newly discovered files.
   /// Separated from `&self` to allow calling from closures during build.
   fn update_watch_files_from(
-    fs_watcher: &std::sync::Mutex<DynFsWatcher>,
-    watched_files: &FxDashSet<ArcStr>,
+    fs_watcher: &std::sync::Mutex<FsWatcher>,
     options: &NormalizedBundlerOptions,
     files: &[ArcStr],
   ) -> BuildResult<()> {
-    let mut fs_watcher = fs_watcher.lock().expect("fs_watcher lock poisoned");
-    let mut watcher_paths = fs_watcher.paths_mut();
-
-    for file in files {
-      let file_str = file.as_str();
-      if watched_files.contains(file_str) {
-        continue;
-      }
-      let path = Path::new(file_str);
-      if !path.exists() {
-        continue;
-      }
-      if pattern_filter::filter(
-        options.watch.exclude.as_deref(),
-        options.watch.include.as_deref(),
-        file_str,
-        options.cwd.to_string_lossy().as_ref(),
-      )
-      .inner()
-      {
-        match watcher_paths.add(path, RecursiveMode::NonRecursive) {
-          Ok(()) => {
-            tracing::debug!(name = "notify watch", path = ?path);
-            watched_files.insert(file.clone());
-          }
-          Err(e) => {
-            tracing::debug!(name = "notify watch skipped", path = ?path, error = ?e);
-          }
-        }
-      }
-    }
-
-    watcher_paths.commit().map_err_to_unhandleable()?;
-
-    Ok(())
+    let cwd = options.cwd.to_string_lossy();
+    fs_watcher.lock().expect("fs_watcher lock poisoned").watch_paths(
+      files.iter().map(ArcStr::as_str),
+      |path| {
+        path.exists()
+          && pattern_filter::filter(
+            options.watch.exclude.as_deref(),
+            options.watch.include.as_deref(),
+            &path.to_string_lossy(),
+            &cwd,
+          )
+          .inner()
+      },
+    )
   }
 
   /// Mark this task as needing rebuild if the changed file is in our watch list.
@@ -337,17 +304,7 @@ impl WatchTask {
   }
 
   fn is_watched_file(&self, path: &str) -> bool {
-    if self.watched_files.contains(path) {
-      return true;
-    }
-
-    // Windows path normalization
-    #[cfg(windows)]
-    if self.watched_files.contains(path.replace('\\', "/").as_str()) {
-      return true;
-    }
-
-    false
+    self.fs_watcher.lock().expect("fs_watcher lock poisoned").is_watched(Path::new(path))
   }
 }
 

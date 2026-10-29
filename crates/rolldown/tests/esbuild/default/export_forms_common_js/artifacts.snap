@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-var __esmMin = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
+// HIDDEN [\0rolldown/runtime.js]
 var init_a = __esmMin((() => {})), init_b = __esmMin((() => {}));
 var init_commonjs = __esmMin((() => {
 	init_a();
@@ -28,8 +28,7 @@ async function foo() {}
 var init_h = __esmMin((() => {
 	foo.prop = 123;
 }));
-//#endregion
-//#region entry.js
+// entry.js
 init_commonjs();
 init_c();
 init_d();
@@ -37,6 +36,5 @@ init_e();
 init_f();
 init_g();
 init_h();
-//#endregion
 
 ```

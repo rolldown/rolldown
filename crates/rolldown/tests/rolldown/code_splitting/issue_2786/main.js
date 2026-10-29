@@ -1,18 +1,34 @@
 import shared from './share';
 import sharedJson from './share.json';
-import assert from 'node:assert';
+import assert from 'node:assert/strict';
 
 assert.strictEqual(shared, 'shared');
 assert.deepStrictEqual(sharedJson, {});
 console.log(shared, sharedJson);
 
 import('./share').then((mod) => {
-  // workaround for the String tag `Module`
-  assert.deepEqual(JSON.parse(JSON.stringify(mod)), { default: 'shared' });
+  assert.deepEqual(
+    mod,
+    Object.defineProperty(
+      {
+        default: 'shared',
+      },
+      Symbol.toStringTag,
+      { value: 'Module' },
+    ),
+  );
   console.log(mod);
 });
 import('./share.json').then((mod) => {
-  // workaround for the String tag `Module`
-  assert.deepEqual(JSON.parse(JSON.stringify(mod)), { default: {} });
+  assert.deepEqual(
+    mod,
+    Object.defineProperty(
+      {
+        default: {},
+      },
+      Symbol.toStringTag,
+      { value: 'Module' },
+    ),
+  );
   console.log(mod);
 });

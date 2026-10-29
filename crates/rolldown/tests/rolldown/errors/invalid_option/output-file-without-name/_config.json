@@ -1,0 +1,6 @@
+{
+  "config": {
+    "file": "."
+  },
+  "expectError": true
+}

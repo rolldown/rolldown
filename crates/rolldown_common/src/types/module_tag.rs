@@ -1,7 +1,7 @@
 #[cfg(feature = "deserialize_bundler_options")]
 use serde::{Deserialize, Deserializer};
 
-// See meta/design/module-tags.md
+// See internal-docs/module-tags/implementation.md
 
 /// A `u64`-based bitset for module tags.
 ///

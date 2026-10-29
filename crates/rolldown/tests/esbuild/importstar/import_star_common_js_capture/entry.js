@@ -1,4 +1,4 @@
-import assert from 'node:assert'
+import assert from 'node:assert/strict'
 import * as ns from './foo'
 let foo = 234
 assert.deepEqual(ns, {

@@ -4,10 +4,11 @@ use arcstr::ArcStr;
 use itertools::Either;
 use oxc::{transformer::EngineTargets, transformer_plugins::InjectGlobalVariablesConfig};
 use rolldown_common::{
-  AttachDebugInfo, CodeSplittingMode, GlobalsOutputOption, InjectImport, JsxOptions, JsxPreset,
-  LegalComments, ManualCodeSplittingOptions, MinifyOptions, ModuleType, NormalizedBundlerOptions,
-  OutputFormat, Platform, PreserveEntrySignatures, RawTransformOptions, TransformOptions,
-  TreeshakeOptions, TsConfig, merge_transform_options_with_tsconfig, normalize_optimization_option,
+  AttachDebugInfo, CodeSplittingMode, GlobalsOutputOption, InjectImport, InlineCommonChunksOptions,
+  JsxOptions, JsxPreset, LegalComments, ManualCodeSplittingOptions, MinifyOptions, ModuleType,
+  NormalizedBundlerOptions, NormalizedInlineCommonChunksOptions, OutputFormat, Platform,
+  PreserveEntrySignatures, RawTransformOptions, TransformOptions, TreeshakeOptions, TsConfig,
+  merge_transform_options_with_tsconfig, normalize_optimization_option,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, InvalidOptionType};
 use rolldown_fs::{OsFileSystem, OxcResolverFileSystem as _};
@@ -49,6 +50,17 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
     );
   }
 
+  // `output.file` must contain a final file-name component. Values like `""`, `"/"`,
+  // `"."`, `".."`, or any path ending in `..` make `Path::file_name()` return `None`,
+  // which would otherwise panic later when deriving the chunk basename.
+  if let Some(file) = raw_options.file.as_ref()
+    && Path::new(file).file_name().is_none()
+  {
+    errors.push(BuildDiagnostic::invalid_option(InvalidOptionType::OutputFileWithoutName(
+      file.clone(),
+    )));
+  }
+
   if let Some(entity) = raw_options.context.as_ref() {
     if !is_validate_identifier_name(entity) {
       warnings.push(
@@ -58,8 +70,21 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
     }
   }
 
+  // Dev mode only supports ESM output. See internal-docs/dev-engine/implementation.md.
+  if let Some(format @ (OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd)) =
+    raw_options.format
+    && raw_options.experimental.as_ref().is_some_and(|experimental| experimental.dev_mode.is_some())
+  {
+    errors.push(BuildDiagnostic::invalid_option(InvalidOptionType::UnsupportedDevModeFormat(
+      format.to_string(),
+    )));
+  }
+
   if let Some(format @ (OutputFormat::Umd | OutputFormat::Iife)) = raw_options.format {
-    if matches!(raw_options.code_splitting, Some(CodeSplittingMode::Bool(true))) {
+    if matches!(
+      &raw_options.code_splitting,
+      Some(CodeSplittingMode::Bool(true) | CodeSplittingMode::Advanced(_))
+    ) {
       warnings.push(
         BuildDiagnostic::invalid_option(InvalidOptionType::UnsupportedCodeSplittingFormat(
           format.to_string(),
@@ -69,7 +94,7 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
     }
   }
 
-  if matches!(raw_options.code_splitting, Some(CodeSplittingMode::Bool(false))) {
+  if matches!(&raw_options.code_splitting, Some(CodeSplittingMode::Bool(false))) {
     if let Some(input) = &raw_options.input
       && input.len() > 1
     {
@@ -82,14 +107,16 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
         InvalidOptionType::CodeSplittingDisabledWithPreserveModules,
       ));
     }
-    if raw_options.manual_code_splitting.is_some() {
-      errors.push(BuildDiagnostic::invalid_option(
-        InvalidOptionType::CodeSplittingDisabledWithManualCodeSplitting,
-      ));
-    }
+    // `codeSplitting: false` and the object form (manual groups) are mutually exclusive
+    // by construction, so a "disabled + groups" conflict can no longer be expressed.
   }
 
-  if let Some(manual_code_splitting) = &raw_options.manual_code_splitting {
+  // Manual chunk grouping arrives via the merged `codeSplitting` object form (`Advanced`).
+  let manual_code_splitting = match &raw_options.code_splitting {
+    Some(CodeSplittingMode::Advanced(options)) => Some(options),
+    _ => None,
+  };
+  if let Some(manual_code_splitting) = manual_code_splitting {
     let has_groups = manual_code_splitting.groups.as_ref().is_some_and(|groups| !groups.is_empty());
 
     if !has_groups {
@@ -138,9 +165,74 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
         }
       }
     }
+
+    if let Some(inline_common_chunks) = &manual_code_splitting.experimental_inline_common_chunks {
+      verify_inline_common_chunks_options(raw_options, inline_common_chunks, &mut errors);
+    }
   }
 
   if errors.is_empty() { Ok(warnings) } else { Err(errors.into()) }
+}
+
+/// `experimentalInlineCommonChunks` only works on one output shape. Any other shape is a
+/// configuration error, so `maxSize > 0` either applies the selection rules or fails, never
+/// silently does nothing. See internal-docs/inline-common-chunks/design.md.
+fn verify_inline_common_chunks_options(
+  raw_options: &crate::BundlerOptions,
+  options: &InlineCommonChunksOptions,
+  errors: &mut Vec<BuildDiagnostic>,
+) {
+  let max_size = match options.max_size {
+    None => return,
+    Some(max_size) => {
+      if !inline_common_chunks_max_size_is_valid(max_size) {
+        errors.push(BuildDiagnostic::invalid_option(
+          InvalidOptionType::InlineCommonChunksInvalidMaxSize(max_size.to_string()),
+        ));
+        return;
+      }
+      max_size
+    }
+  };
+  if max_size == 0.0 {
+    return;
+  }
+  let mut require = |condition: bool, requirement: &'static str| {
+    if !condition {
+      errors.push(BuildDiagnostic::invalid_option(
+        InvalidOptionType::InlineCommonChunksRequirement(requirement),
+      ));
+    }
+  };
+  require(
+    matches!(raw_options.format.unwrap_or(OutputFormat::Esm), OutputFormat::Esm),
+    "`output.format` to be `'es'`",
+  );
+  require(
+    raw_options.strict_execution_order != Some(false),
+    "`output.strictExecutionOrder` not to be `false` (when omitted, it is turned on)",
+  );
+  require(
+    matches!(raw_options.preserve_entry_signatures, Some(PreserveEntrySignatures::False)),
+    "`preserveEntrySignatures` to be explicitly set to `false`",
+  );
+  require(raw_options.preserve_modules != Some(true), "`output.preserveModules` to be off");
+  let experimental = raw_options.experimental.as_ref();
+  require(
+    experimental.is_none_or(|experimental| !experimental.is_on_demand_wrapping_enabled()),
+    "`experimental.onDemandWrapping` to be off",
+  );
+}
+
+/// A non-negative safe integer or positive infinity. `f64` is what the
+/// binding hands over, so the check is done on the raw number rather than after a lossy cast.
+fn inline_common_chunks_max_size_is_valid(max_size: f64) -> bool {
+  const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
+  max_size == f64::INFINITY
+    || (max_size.is_finite()
+      && max_size >= 0.0
+      && max_size.fract() == 0.0
+      && max_size <= MAX_SAFE_INTEGER)
 }
 
 #[expect(clippy::too_many_lines)] // This function is long, but it's mostly just mapping values
@@ -151,8 +243,34 @@ pub fn prepare_build_context(
 
   let format = raw_options.format.unwrap_or(crate::OutputFormat::Esm);
 
-  let preserve_entry_signatures = if let Some(manual_code_splitting) =
-    &raw_options.manual_code_splitting
+  // Decompose the merged `codeSplitting` option into the gate (`code_splitting`) and the
+  // grouping config (`manual_code_splitting`). The raw option may carry the object form
+  // (`Advanced`) mirroring the public JS `codeSplitting: { groups, ... }`; the normalized
+  // layer keeps them as two separate fields.
+  let (raw_code_splitting_mode, manual_code_splitting) = match raw_options.code_splitting.take() {
+    Some(CodeSplittingMode::Advanced(options)) => (CodeSplittingMode::Bool(true), Some(options)),
+    Some(mode @ CodeSplittingMode::Bool(_)) => (mode, None),
+    None => (CodeSplittingMode::default(), None),
+  };
+
+  // `verify_raw_options` already rejected an invalid `maxSize` and every unmet precondition, so
+  // cast below only sees a non-negative safe integer or positive infinity, which saturates to
+  // `usize::MAX` (unlimited). `maxSize: 0` normalizes to `None`.
+  #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+  let inline_common_chunks = manual_code_splitting
+    .as_ref()
+    .and_then(|options| options.experimental_inline_common_chunks.as_ref())
+    .filter(|options| options.max_size.unwrap_or(0.0) > 0.0)
+    .map(|options| NormalizedInlineCommonChunksOptions {
+      max_size: options.max_size.unwrap_or(0.0) as usize,
+      exclude: options.exclude.clone().unwrap_or_default(),
+    });
+  // `experimentalInlineCommonChunks` needs wrap-all strict execution order, so it turns the option
+  // on when the user left it out; `verify_raw_options` rejected an explicit `false`.
+  let strict_execution_order =
+    raw_options.strict_execution_order.unwrap_or_else(|| inline_common_chunks.is_some());
+
+  let preserve_entry_signatures = if let Some(manual_code_splitting) = &manual_code_splitting
     && has_non_recursive_dependency_capture(manual_code_splitting)
     && raw_options.preserve_entry_signatures.is_none()
   {
@@ -247,9 +365,19 @@ pub fn prepare_build_context(
       .unwrap_or_default(),
   );
 
+  let mut clean_dir = raw_options.clean_dir.unwrap_or(false);
+
+  let mut raw_treeshake = raw_options.treeshake;
   let mut experimental = raw_options.experimental.unwrap_or_default();
   if experimental.dev_mode.is_some() {
     experimental.incremental_build = Some(true);
+    // Dev mode requires treeshaking to be disabled, and lazy barrel relies on
+    // treeshaking, so it must be disabled as well.
+    raw_treeshake = TreeshakeOptions::Boolean(false);
+    experimental.lazy_barrel = Some(false);
+    // Dev rebuilds write only the changed chunks, so cleaning the output
+    // directory would delete chunks the browser can still ask for.
+    clean_dir = false;
   }
 
   if experimental.attach_debug_info.is_none() {
@@ -258,7 +386,7 @@ pub fn prepare_build_context(
 
   let code_splitting = match format {
     OutputFormat::Umd | OutputFormat::Iife => CodeSplittingMode::Bool(false),
-    _ => raw_options.code_splitting.unwrap_or_default(),
+    _ => raw_code_splitting_mode,
   };
 
   // If the `file` is provided, use the parent directory of the file as the `out_dir`.
@@ -274,12 +402,7 @@ pub fn prepare_build_context(
   );
   let cwd =
     raw_options.cwd.unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir"));
-
-  let mut raw_treeshake = raw_options.treeshake;
-  if experimental.dev_mode.is_some() {
-    // Dev mode requires treeshaking to be disabled
-    raw_treeshake = TreeshakeOptions::Boolean(false);
-  }
+  let normalized_cwd = cwd.normalize().into_owned();
 
   let tsconfig = raw_options.tsconfig.map(|tsconfig| tsconfig.with_base(&cwd)).unwrap_or_default();
   let yarn_pnp = raw_resolve.yarn_pnp.unwrap_or(false);
@@ -333,49 +456,22 @@ pub fn prepare_build_context(
     }
 
     // Create TransformOptions based on tsconfig mode:
-    // - Auto: Create Raw mode (will resolve tsconfig per file)
-    // - None/Manual: Create Normal mode (resolve tsconfig once now)
+    // - Manual/Auto(true): Raw mode, resolves the tsconfig per file
+    // - Auto(false): Normal mode without tsconfig
     match tsconfig {
-      ref v @ TsConfig::Manual(ref path) => {
-        // Manual mode: Resolve tsconfig now and create Normal mode
-        let resolved_tsconfig = resolver
-          .resolve_tsconfig(&path)
-          .map_err(|err| BuildDiagnostic::tsconfig_error(path.display().to_string(), err))?;
-        Box::new(if resolved_tsconfig.references_resolved.is_empty() {
-          TransformOptions::new(
-            merge_transform_options_with_tsconfig(
-              raw_transform_options,
-              Some(&resolved_tsconfig),
-              &mut warnings,
-            )?,
-            target,
-            jsx_preset,
-          )
-        } else {
-          TransformOptions::new_raw(
-            RawTransformOptions::new(raw_transform_options, v.clone(), yarn_pnp),
-            target,
-            jsx_preset,
-          )
-        })
-      }
-      v @ TsConfig::Auto(is_auto) => {
-        Box::new(if is_auto {
-          // Auto mode: Create Raw mode TransformOptions
-          // Each file will find its nearest tsconfig during compilation
-          TransformOptions::new_raw(
-            RawTransformOptions::new(raw_transform_options, v, yarn_pnp),
-            target,
-            jsx_preset,
-          )
-        } else {
-          TransformOptions::new(
-            merge_transform_options_with_tsconfig(raw_transform_options, None, &mut warnings)?,
-            target,
-            jsx_preset,
-          )
-        })
-      }
+      TsConfig::Manual(_) | TsConfig::Auto(true) => Box::new(TransformOptions::new_raw(
+        RawTransformOptions::new(
+          raw_transform_options,
+          Arc::new(resolver.clone_default_resolver()),
+        ),
+        target,
+        jsx_preset,
+      )),
+      TsConfig::Auto(false) => Box::new(TransformOptions::new(
+        merge_transform_options_with_tsconfig(raw_transform_options, None, &mut warnings)?,
+        target,
+        jsx_preset,
+      )),
     }
   };
 
@@ -403,6 +499,7 @@ pub fn prepare_build_context(
     dir: raw_options.dir,
     out_dir,
     file: raw_options.file,
+    charset: raw_options.charset.unwrap_or_default(),
     format,
     exports: raw_options.exports.unwrap_or(crate::OutputExports::Auto),
     hash_characters: raw_options.hash_characters.unwrap_or(crate::HashCharacters::Base64),
@@ -415,6 +512,7 @@ pub fn prepare_build_context(
     sourcemap_path_transform: raw_options.sourcemap_path_transform,
     sourcemap_debug_ids: raw_options.sourcemap_debug_ids.unwrap_or(false),
     sourcemap_exclude_sources: raw_options.sourcemap_exclude_sources.unwrap_or(false),
+    sourcemap_filenames: raw_options.sourcemap_filenames,
     shim_missing_exports: raw_options.shim_missing_exports.unwrap_or(false),
     module_types,
     experimental,
@@ -428,7 +526,8 @@ pub fn prepare_build_context(
     external_live_bindings: raw_options.external_live_bindings.unwrap_or(true),
     code_splitting,
     dynamic_import_in_cjs: raw_options.dynamic_import_in_cjs.unwrap_or(true),
-    manual_code_splitting: raw_options.manual_code_splitting,
+    manual_code_splitting,
+    inline_common_chunks,
     checks: raw_options.checks.unwrap_or_default().into(),
     watch: raw_options.watch.unwrap_or_default(),
     legal_comments: raw_options.legal_comments.unwrap_or(LegalComments::Inline),
@@ -446,6 +545,7 @@ pub fn prepare_build_context(
     keep_names: raw_options.keep_names.unwrap_or_default(),
     polyfill_require: raw_options.polyfill_require.unwrap_or(true),
     defer_sync_scan_data: raw_options.defer_sync_scan_data,
+    plugin_timings: raw_options.plugin_timings,
     transform_options,
     make_absolute_externals_relative: raw_options
       .make_absolute_externals_relative
@@ -463,6 +563,7 @@ pub fn prepare_build_context(
       cwd.join(p).normalize().to_string_lossy().to_string()
     }),
     cwd,
+    normalized_cwd,
     preserve_entry_signatures,
     devtools: raw_options.devtools.is_some(),
     optimization: normalize_optimization_option(raw_options.optimization, platform),
@@ -470,13 +571,35 @@ pub fn prepare_build_context(
     minify_internal_exports: raw_options
       .minify_internal_exports
       .unwrap_or_else(|| determine_minify_internal_exports_default(Some(format), &raw_minify)),
-    clean_dir: raw_options.clean_dir.unwrap_or(false),
+    clean_dir,
     context: raw_options.context.unwrap_or_default(),
-    strict_execution_order: raw_options.strict_execution_order.unwrap_or(false),
+    strict_execution_order,
     strict: raw_options.strict.unwrap_or_default(),
   };
 
   normalized.minify = raw_minify.normalize(&normalized);
 
   Ok(PrepareBuildContext { fs, resolver, options: Arc::new(normalized), warnings })
+}
+
+#[cfg(test)]
+mod tests {
+  use rolldown_common::{DevModeOptions, ExperimentalOptions};
+
+  #[test]
+  fn dev_mode_forces_incompatible_options_off() {
+    let ctx = super::prepare_build_context(crate::BundlerOptions {
+      clean_dir: Some(true),
+      experimental: Some(ExperimentalOptions {
+        dev_mode: Some(DevModeOptions::default()),
+        ..Default::default()
+      }),
+      ..Default::default()
+    })
+    .unwrap();
+    assert!(!ctx.options.clean_dir);
+    assert!(ctx.options.experimental.is_incremental_build_enabled());
+    assert!(!ctx.options.experimental.is_lazy_barrel_enabled());
+    assert!(ctx.options.treeshake.is_none());
+  }
 }

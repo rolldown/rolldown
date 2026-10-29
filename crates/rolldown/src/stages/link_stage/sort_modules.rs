@@ -95,12 +95,12 @@ impl LinkStage<'_> {
         Status::WaitForExit(id) => {
           match &mut self.module_table[id] {
             Module::Normal(module) => {
-              debug_assert!(module.exec_order == u32::MAX);
+              debug_assert_eq!(module.exec_order, u32::MAX);
               module.exec_order = next_exec_order;
               sorted_modules.push(id);
             }
             Module::External(module) => {
-              debug_assert!(module.exec_order == u32::MAX);
+              debug_assert_eq!(module.exec_order, u32::MAX);
               module.exec_order = next_exec_order;
             }
           }
@@ -117,7 +117,7 @@ impl LinkStage<'_> {
           .iter()
           .filter_map(|id| self.module_table[*id].as_normal().map(|module| module.id.to_string()))
           .collect::<Vec<_>>();
-        self.warnings.push(BuildDiagnostic::circular_dependency(paths).with_severity_warning());
+        self.diagnostics.push(BuildDiagnostic::circular_dependency(paths).with_severity_warning());
       }
     }
 

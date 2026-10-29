@@ -151,6 +151,36 @@ pub fn merge_transform_options_with_tsconfig(
     }
   }
 
+  // `strictNullChecks` (falling back to `strict`, mirroring tsc's `strictNullChecks ?? strict`)
+  // controls whether `null`/`undefined` are elided from union `design:type` metadata. It only
+  // has an effect when decorator metadata is emitted, so only forward it then. Otherwise we
+  // would attach it to a `decorator` option for every TS project that sets `strict`/
+  // `strictNullChecks` (i.e. almost all of them) without using decorators.
+  //
+  // The explicit `transform.decorator.strictNullChecks` option wins over tsconfig. When
+  // tsconfig sets neither flag we keep the transformer default (`true`), aligning with
+  // TypeScript 6.0+, where `strict` (and thus `strictNullChecks`) is enabled by default.
+  if let Some(decorator) =
+    transform_options.decorator.as_mut().filter(|d| d.emit_decorator_metadata == Some(true))
+  {
+    if decorator.strict_null_checks.is_none() {
+      decorator.strict_null_checks =
+        compiler_options.strict_null_checks.or(compiler_options.strict);
+    } else if warn_on_conflict
+      && (compiler_options.strict_null_checks.is_some() || compiler_options.strict.is_some())
+    {
+      warnings.push(
+        BuildDiagnostic::configuration_field_conflict(
+          "transform.decorator",
+          "strictNullChecks",
+          "tsconfig.json",
+          "compilerOptions.strictNullChecks",
+        )
+        .with_severity_warning(),
+      );
+    }
+  }
+
   // | preserveValueImports | importsNotUsedAsValues | verbatimModuleSyntax | onlyRemoveTypeImports |
   // | -------------------- | ---------------------- | -------------------- |---------------------- |
   // | false                | remove                 | false                | false                 |

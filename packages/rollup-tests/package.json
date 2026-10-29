@@ -3,26 +3,34 @@
   "private": true,
   "scripts": {
     "test": "ROLLUP_TEST=1 mocha --file ./src/intercept/main.js test/test.js",
-    "update-treeshaking-failures": "mocha ./test/form/found-tree-shaking-not-align.js"
+    "update-treeshaking-failures": "mocha --file ./src/intercept/setup-node-modules.js ./test/form/found-tree-shaking-not-align.js"
   },
   "keywords": [],
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "acorn-import-assertions": "catalog:",
-    "acorn-import-phases": "^1.0.4",
-    "fixturify": "catalog:",
+    "@jridgewell/sourcemap-codec": "catalog:rollup-tests",
+    "@rollup/plugin-commonjs": "catalog:rollup-tests",
+    "@rollup/plugin-json": "catalog:rollup-tests",
+    "@rollup/plugin-node-resolve": "catalog:rollup-tests",
+    "acorn-import-assertions": "catalog:rollup-tests",
+    "acorn-import-phases": "catalog:rollup-tests",
+    "acorn-jsx": "catalog:rollup-tests",
+    "buble": "catalog:rollup-tests",
+    "fixturify": "catalog:rollup-tests",
     "fs-extra": "catalog:",
-    "mocha": "catalog:",
+    "magic-string": "catalog:rollup-tests",
+    "mocha": "catalog:rollup-tests",
     "oxc-transform": "catalog:",
-    "source-map-support": "catalog:"
+    "source-map-support": "catalog:rollup-tests"
   },
   "devDependencies": {
-    "@types/mocha": "catalog:",
+    "@types/mocha": "catalog:rollup-tests",
     "@types/node": "catalog:",
-    "@types/strip-comments": "catalog:",
+    "@types/strip-comments": "catalog:rollup-tests",
+    "acorn": "catalog:",
     "source-map": "catalog:",
-    "strip-comments": "catalog:",
-    "terser": "catalog:"
+    "strip-comments": "catalog:rollup-tests",
+    "terser": "catalog:rollup-tests"
   }
 }

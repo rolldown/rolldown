@@ -11,7 +11,10 @@ use rolldown_common::{
 use rolldown_fs::FileSystem;
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dataurl::is_data_url;
-use std::{path::Path, sync::Arc};
+use std::{
+  path::{Path, PathBuf},
+  sync::Arc,
+};
 use sugar_path::SugarPath;
 
 use crate::__inner::resolve_id_with_plugins;
@@ -150,7 +153,7 @@ fn normalize_relative_external_id(cwd: &Path, specifier: &str, importer: Option<
   } else {
     cwd.join(specifier)
   };
-  path.normalize().to_string_lossy().into()
+  path.normalize().components().collect::<PathBuf>().to_string_lossy().into()
 }
 
 #[inline]
@@ -177,5 +180,14 @@ mod tests {
   #[test]
   fn test_is_absolute() {
     assert!(is_absolute("/a.js")); // make sure it is true at windows
+  }
+
+  #[test]
+  fn normalized_external_id_drops_trailing_separator() {
+    let cwd = std::env::current_dir().unwrap();
+    assert_eq!(
+      normalize_relative_external_id(&cwd, "./external", None),
+      normalize_relative_external_id(&cwd, "./external/", None)
+    );
   }
 }

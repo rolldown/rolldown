@@ -41,7 +41,7 @@ pub fn rust_fmt(source_text: &str) -> String {
 }
 
 pub fn ecma_fmt(source_text: &str, path: &str) -> String {
-  let vp = if cfg!(target_os = "windows") { "vp.cmd" } else { "vp" };
+  let vp = if cfg!(target_os = "windows") { "vp.exe" } else { "vp" };
   let mut vp = Command::new(vp)
     .args(["fmt", "--stdin-filepath", path])
     .stdin(Stdio::piped())

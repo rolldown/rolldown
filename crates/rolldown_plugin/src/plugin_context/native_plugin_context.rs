@@ -10,7 +10,7 @@ use derive_more::Debug;
 use rolldown_common::{
   FilenameTemplate, LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleId, ModuleLoaderMsg,
   PackageJson, PluginIdx, ResolvedId, SharedFileEmitter, SharedModuleInfoDashMap,
-  SharedNormalizedBundlerOptions, side_effects::HookSideEffects,
+  SharedNormalizedBundlerOptions, WatchPath, side_effects::HookSideEffects,
 };
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dashmap::FxDashSet;
@@ -42,11 +42,11 @@ pub struct NativePluginContextImpl {
   pub(crate) module_infos: SharedModuleInfoDashMap,
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
   pub(crate) session: rolldown_devtools::Session,
-  pub(crate) bundle_span: Arc<tracing::Span>,
+  pub(crate) bundle_span: tracing::Span,
   // `resolve_id` hook not only will be triggered by the rolldown's resolve process, but also could be triggered
   // by manual calls of `PluginContext.resolve()`. We use a dedicated span here to distinguish whether the call is
   // - automatic (by rolldown) or manual (by `PluginContext.resolve()`)
-  pub(crate) manual_resolve_span: Arc<tracing::Span>,
+  pub(crate) manual_resolve_span: tracing::Span,
 }
 
 impl NativePluginContextImpl {
@@ -93,6 +93,17 @@ impl NativePluginContextImpl {
       .ok_or_else(|| anyhow::anyhow!("Plugin driver is already dropped."))?;
 
     let normalized_extra_options = extra_options.unwrap_or_default();
+    if normalized_extra_options.skip_self
+      && self.skipped_resolve_calls.iter().any(|call| {
+        call.plugin_idx == self.plugin_idx
+          && call.specifier == specifier
+          && call.importer.as_deref() == importer
+      })
+    {
+      // This means that the plugin recursively called itself
+      return Ok(Err(ResolveError::NotFound(specifier.to_string())));
+    }
+
     let skipped_resolve_calls = if normalized_extra_options.skip_self {
       let mut skipped_resolve_calls = Vec::with_capacity(self.skipped_resolve_calls.len() + 1);
       skipped_resolve_calls.extend(self.skipped_resolve_calls.clone());
@@ -129,7 +140,7 @@ impl NativePluginContextImpl {
       )
       .await
     }
-    .instrument(self.manual_resolve_span.as_ref().clone())
+    .instrument(self.manual_resolve_span.clone())
     .await
   }
 
@@ -149,7 +160,10 @@ impl NativePluginContextImpl {
   ) -> anyhow::Result<ArcStr> {
     let file_name_is_none = file.file_name.is_none();
     let asset_filename_template = file_name_is_none.then(|| {
-      FilenameTemplate::new(self.options.asset_filenames.value(fn_asset_filename), "assetFileNames")
+      FilenameTemplate::new(
+        self.options.asset_filenames.value(fn_asset_filename),
+        "output.assetFileNames",
+      )
     });
     let sanitized_file_name = file_name_is_none.then(|| {
       self.options.sanitize_filename.value(file.name_for_sanitize(), fn_sanitized_file_name)
@@ -187,8 +201,9 @@ impl NativePluginContextImpl {
     self.resolver.cwd()
   }
 
+  /// The path is resolved against `cwd`, so the watch files are absolute and normalized.
   pub fn add_watch_file(&self, file: &str) {
-    self.watch_files.insert(file.into());
+    self.watch_files.insert(WatchPath::new(file, &self.options.cwd).to_string().into());
   }
 
   fn log(&self, level: LogLevel, log: LogWithoutPlugin) {

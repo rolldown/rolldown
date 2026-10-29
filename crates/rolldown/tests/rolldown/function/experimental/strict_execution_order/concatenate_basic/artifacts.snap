@@ -6,15 +6,42 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-	//#region main.js
-	console.log("main");
-	//#endregion
-}))();
+// setup.js
+globalThis.globalValue = "foo";
+// main.js
+console.log("main");
 
 ```
 
-# Variant: [profiler_names: false]
+# Variant: profiler-names-disabled-on-demand: [profiler_names: false]
+
+## Assets
+
+### main.js
+
+```js
+// setup.js
+globalThis.globalValue = "foo";
+// main.js
+console.log("main");
+
+```
+
+# Variant: pife-for-module-wrappers-disabled-on-demand: [pife_for_module_wrappers: false]
+
+## Assets
+
+### main.js
+
+```js
+// setup.js
+globalThis.globalValue = "foo";
+// main.js
+console.log("main");
+
+```
+
+# Variant: profiler-names-wrap-all: [on_demand_wrapping: false] [profiler_names: false]
 
 ## Assets
 
@@ -22,14 +49,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-	//#region main.js
-	console.log("main");
-	//#endregion
-}))();
+// setup.js
+function init_setup() {
+	return (init_setup = __esmMin((() => {
+		globalThis.globalValue = "foo";
+	})))();
+}
+// main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_setup();
+		console.log("main");
+	})))();
+}
+init_main();
 
 ```
 
-# Variant: [pife_for_module_wrappers: false]
+# Variant: pife-for-module-wrappers-wrap-all: [on_demand_wrapping: false] [pife_for_module_wrappers: false]
 
 ## Assets
 
@@ -37,9 +74,44 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-	//#region main.js
-	console.log("main");
-	//#endregion
-})();
+// setup.js
+function init_setup() {
+	return (init_setup = __esmMin(() => {
+		globalThis.globalValue = "foo";
+	}))();
+}
+// main.js
+function init_main() {
+	return (init_main = __esmMin(() => {
+		init_setup();
+		console.log("main");
+	}))();
+}
+init_main();
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// setup.js
+function init_setup() {
+	return (init_setup = __esmMin((() => {
+		globalThis.globalValue = "foo";
+	})))();
+}
+// main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_setup();
+		console.log("main");
+	})))();
+}
+init_main();
 
 ```

@@ -1,0 +1,8 @@
+{
+  "_comment": "Without an import record the target is unknown, so a second argument cannot be dropped: `require()` takes no attributes and the callee may well be external. A one-argument call still lowers to `Promise.resolve().then(() => __toESM(require(...)))` under `dynamicImportInCjs: false`; a two-argument one keeps the native `import()`.",
+  "config": {
+    "format": "cjs",
+    "dynamicImportInCjs": false
+  },
+  "expectExecuted": false
+}

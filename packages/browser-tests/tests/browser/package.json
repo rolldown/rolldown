@@ -1,0 +1,8 @@
+{
+  "name": "rolldown-browser-page",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@rolldown/browser": "file:../fixtures/browser/rolldown-browser.tgz"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "snapshot": false,
+  "expectExecutionFailure": {
+    "reason": "exercise the expected-execution-failure test harness",
+    "outputContains": ["known expected execution failure"]
+  }
+}

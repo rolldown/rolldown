@@ -1,22 +1,28 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## SHIMMED_EXPORT
+
+```text
+[SHIMMED_EXPORT] Missing export "Test" has been shimmed in module "test.ts".
+
+```
+
 # Assets
 
 ## entry.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region a.ts
+// a.ts
 var a_exports = /* @__PURE__ */ __exportAll({ foo: () => 123 });
-//#endregion
-//#region b.ts
+// b.ts
 var b_exports = /* @__PURE__ */ __exportAll({ foo: () => 123 });
-//#endregion
-//#region test.ts
+// test.ts
 var Test = void 0;
-//#endregion
-//#region entry.ts
+// entry.ts
 console.log(a_exports, b_exports, /* @__PURE__ */ __exportAll({
 	Test: () => Test,
 	foo: () => 123
@@ -24,6 +30,5 @@ console.log(a_exports, b_exports, /* @__PURE__ */ __exportAll({
 	Test: () => Test,
 	foo: () => 123
 }));
-//#endregion
 
 ```

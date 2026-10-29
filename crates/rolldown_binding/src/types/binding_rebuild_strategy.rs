@@ -4,7 +4,6 @@ use napi_derive::napi;
 #[napi]
 pub enum BindingRebuildStrategy {
   Always,
-  Auto,
   Never,
 }
 
@@ -12,7 +11,6 @@ impl From<BindingRebuildStrategy> for rolldown_dev::RebuildStrategy {
   fn from(value: BindingRebuildStrategy) -> Self {
     match value {
       BindingRebuildStrategy::Always => Self::Always,
-      BindingRebuildStrategy::Auto => Self::Auto,
       BindingRebuildStrategy::Never => Self::Never,
     }
   }

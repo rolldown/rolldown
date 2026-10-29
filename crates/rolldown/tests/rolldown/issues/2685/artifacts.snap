@@ -7,10 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { createRequire } from "node:module";
-//#endregion
-//#region main.js
-var main_default = (/* @__PURE__ */ createRequire(import.meta.url))("path").join;
-//#endregion
+// main.js
+var main_default = (/* @__PURE__ */ (() => createRequire(import.meta.url))())("path").join;
 export { main_default as default };
 
 ```

@@ -1,0 +1,6 @@
+{
+  "_comment": "The specifier of a two-argument `import()` has to be rewritten like any other: with rolldown's default `[name]-[hash].js` chunk names the file the source wrote never exists in the output, so emitting the call verbatim fails at runtime with ERR_MODULE_NOT_FOUND. Nothing is merged here — no manual group, no facade elimination — so only the finalizer's specifier rewrite can make this resolve.",
+  "config": {
+    "chunkFilenames": "[name]-[hash].js"
+  }
+}

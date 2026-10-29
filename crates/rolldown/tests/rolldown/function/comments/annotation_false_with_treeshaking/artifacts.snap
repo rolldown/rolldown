@@ -6,12 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#endregion
-//#region main.js
+// main.js
 console.log(window.bar(function() {
 	return 1;
 }));
-//#endregion
 
 ```
 
@@ -22,11 +20,9 @@ console.log(window.bar(function() {
 ### main.js
 
 ```js
-//#endregion
-//#region main.js
+// main.js
 console.log(/* @__PURE__ */ window.bar(function() {
 	return 1;
 }));
-//#endregion
 
 ```

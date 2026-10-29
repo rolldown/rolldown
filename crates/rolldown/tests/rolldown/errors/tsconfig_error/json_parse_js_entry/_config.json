@@ -1,0 +1,6 @@
+{
+  "config": {
+    "tsconfig": "./tsconfig.json"
+  },
+  "expectError": true
+}

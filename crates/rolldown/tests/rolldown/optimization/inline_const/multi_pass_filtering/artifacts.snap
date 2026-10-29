@@ -10,6 +10,5 @@ function unrelatedFn() {
 	return "hello";
 }
 console.log(unrelatedFn());
-//#endregion
 
 ```

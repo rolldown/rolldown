@@ -1,6 +1,6 @@
 [package]
 name = "rolldown_common"
-version = "1.1.0"
+version = "1.2.15"
 publish = true
 description = "This crate is mostly for sharing code between rolldwon crates."
 readme = "../../README.md"
@@ -21,13 +21,16 @@ dashmap = { workspace = true }
 derive_more = { workspace = true }
 fast-glob = { workspace = true }
 itertools = { workspace = true }
+json-escape-simd = { workspace = true }
 oxc = { workspace = true }
 oxc_ecmascript = { workspace = true }
 oxc_index = { workspace = true }
 oxc_str = { workspace = true }
 oxc_resolver = { workspace = true }
+oxc_sourcemap = { workspace = true }
 rolldown_ecmascript = { workspace = true }
 rolldown_error = { workspace = true }
+rolldown_fs = { workspace = true, features = ["os"] }
 rolldown_sourcemap = { workspace = true }
 rolldown_std_utils = { workspace = true }
 rolldown_utils = { workspace = true }
@@ -35,7 +38,9 @@ rustc-hash = { workspace = true }
 schemars = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"], optional = true }
 serde_json = { workspace = true, features = ["arbitrary_precision"] }
+simd-utf16-len = { workspace = true }
 simdutf8 = { workspace = true }
+smallvec = { workspace = true }
 string_wizard = { workspace = true }
 sugar_path = { workspace = true }
 tokio = { workspace = true }

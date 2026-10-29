@@ -82,3 +82,27 @@ Specifiers starting with `http://`, `https://`, or `//` are **automatically trea
 import lib from 'https://cdn.example.com/lib.js';
 // Always external, emitted as-is
 ```
+
+## Unused Imports Are Removed
+
+If nothing uses an import from an external module, Rolldown removes it.
+
+```js
+// input
+import { used, unused } from 'ext-pkg';
+console.log(used);
+
+// output
+import { used } from 'ext-pkg';
+console.log(used);
+```
+
+Note that even if every import is removed, the statement itself usually stays. External modules are assumed to have side effects, so it becomes a bare `import 'ext-pkg';`. The statement goes away completely only when the external module is also marked side-effect-free.
+
+::: warning Difference from bundled modules
+
+If a bundled module does not actually export `unused`, Rolldown emits a `MISSING_EXPORT` error at build time, whether or not the import is used.
+
+For external modules, Rolldown does not know what exports exist, so it cannot check. If `unused` does not exist, importing it would throw at runtime, and removing the import removes that error along with it. Causing a semantic change without any message is normally a bad idea, but Rolldown makes an exception here. An unused import usually comes from dead code elimination, either Rolldown's own or a plugin's, rather than being written by hand, so the error is rarely the one you intended to see.
+
+:::

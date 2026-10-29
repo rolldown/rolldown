@@ -6,17 +6,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import assert from "node:assert";
+import assert from "node:assert/strict";
 // HIDDEN [\0rolldown/runtime.js]
-//#region y.b64
+// y.b64
 var y_default = "eQ==";
-//#endregion
-//#region entry.js
+// entry.js
 const x_b64 = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "eA==";
 })))();
 assert.deepEqual(x_b64, "eA==");
 assert.equal(y_default, "eQ==");
-//#endregion
 
 ```

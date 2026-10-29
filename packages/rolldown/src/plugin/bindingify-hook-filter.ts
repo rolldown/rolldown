@@ -138,6 +138,33 @@ function assertNoImporterId(
   }
 }
 
+function containsStringId(expr: FilterExpression | TopLevelFilterExpression): boolean {
+  switch (expr.kind) {
+    case 'and':
+    case 'or':
+      return expr.args.some(containsStringId);
+    case 'not':
+    case 'include':
+    case 'exclude':
+      return containsStringId(expr.expr);
+    case 'id':
+      return typeof expr.pattern === 'string';
+    default:
+      return false;
+  }
+}
+
+function assertNoStringId(
+  filterExprs: filter.TopLevelFilterExpression[] | undefined,
+  hookName: string,
+): void {
+  if (filterExprs?.some(containsStringId)) {
+    throw new Error(
+      `A string \`id\` filter is not supported for the \`${hookName}\` hook, because its \`id\` is the import specifier rather than a resolved path. Use a RegExp instead.`,
+    );
+  }
+}
+
 function bindingifyFilterExprImpl(
   expr: FilterExpression | TopLevelFilterExpression,
   list: BindingFilterToken[],
@@ -220,12 +247,20 @@ export function bindingifyResolveIdFilter(
   if (!filterOption) {
     return undefined;
   }
-  if (Array.isArray(filterOption)) {
-    return {
-      value: filterOption.map(bindingifyFilterExpr),
-    };
+  const filterExprs = Array.isArray(filterOption)
+    ? filterOption
+    : filterOption.id
+      ? generalHookFilterMatcherToFilterExprs(filterOption.id, 'id')
+      : undefined;
+  // In `resolveId`, `id` is the raw import specifier, not a resolved path, so a
+  // string (glob) `id` is meaningless there -- it must be a RegExp. (`importerId`
+  // may still be a string: it matches the importer's resolved id, which is a path.)
+  assertNoStringId(filterExprs, 'resolveId');
+  if (!filterExprs) {
+    return undefined;
   }
-  return filterOption.id ? bindingifyGeneralHookFilter('id', filterOption.id) : undefined;
+  const value = filterExprs.map(bindingifyFilterExpr);
+  return value.length > 0 ? { value } : undefined;
 }
 
 export function bindingifyLoadFilter(

@@ -23,6 +23,7 @@ insta = { workspace = true }
 json-strip-comments = { workspace = true }
 jsonschema = { workspace = true }
 oxc = { workspace = true }
+percent-encoding = { workspace = true }
 regex = { workspace = true }
 rolldown = { workspace = true, features = ["testing"] }
 rolldown_common = { workspace = true }
@@ -35,7 +36,6 @@ rustc-hash = { workspace = true }
 serde_json = { workspace = true }
 sugar_path = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
-urlencoding = { workspace = true }
 
 [build-dependencies]
 rolldown_testing_config = { workspace = true }

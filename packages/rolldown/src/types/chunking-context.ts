@@ -1,17 +1,37 @@
 import type { BindingChunkingContext } from '../binding.cjs';
+import type { PluginContextData } from '../plugin/plugin-context-data';
 import { transformModuleInfo } from '../utils/transform-module-info';
 import type { ModuleInfo } from './module-info';
 
 export class ChunkingContextImpl {
-  constructor(private context: BindingChunkingContext) {}
+  private moduleInfoCache: Map<string, ModuleInfo> | undefined = new Map();
+
+  constructor(
+    private context: BindingChunkingContext,
+    private pluginContextData: PluginContextData,
+  ) {}
+
+  clearModuleInfoCache(): void {
+    this.moduleInfoCache = undefined;
+  }
+
   getModuleInfo(moduleId: string): ModuleInfo | null {
+    const cached = this.moduleInfoCache?.get(moduleId);
+    if (cached) {
+      return cached;
+    }
     const bindingInfo = this.context.getModuleInfo(moduleId);
     if (bindingInfo) {
-      const info = transformModuleInfo(bindingInfo, {
-        // TODO(hyf0): I don't know why we have to need these to transform the module info.
-        moduleSideEffects: null,
-        meta: {},
+      const option = this.pluginContextData.getModuleOption(moduleId);
+      const info = transformModuleInfo(bindingInfo, option);
+      Object.defineProperty(info, 'moduleSideEffects', {
+        get: () => option.moduleSideEffects,
+        set: (moduleSideEffects: ModuleInfo['moduleSideEffects']) => {
+          option.moduleSideEffects = moduleSideEffects;
+          option.invalidate = true;
+        },
       });
+      this.moduleInfoCache?.set(moduleId, info);
       return info;
     }
     return null;

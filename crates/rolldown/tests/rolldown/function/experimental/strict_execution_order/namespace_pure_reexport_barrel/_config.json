@@ -1,0 +1,26 @@
+{
+  "configName": "wrap-all",
+  "config": {
+    "strictExecutionOrder": true,
+    "preserveEntrySignatures": "allow-extension",
+    "codeSplitting": {
+      "includeDependenciesRecursively": false,
+      "groups": [
+        {
+          "name": "ca",
+          "test": "[\\\\/]cyc-a\\.js$"
+        },
+        {
+          "name": "cb",
+          "test": "[\\\\/]cyc-b\\.js$"
+        }
+      ]
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "on-demand",
+      "onDemandWrapping": true
+    }
+  ]
+}

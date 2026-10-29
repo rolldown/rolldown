@@ -1,10 +1,14 @@
 use oxc::{
-  allocator::Allocator,
+  allocator::{Allocator, GetAllocator},
   ast::{
-    AstBuilder, NONE,
-    ast::{Argument, Expression, FormalParameterKind, Statement},
+    ast::{
+      Argument, BindingIdentifier, BindingPattern, Expression, FormalParameter,
+      FormalParameterKind, FormalParameters, FunctionBody, IdentifierName, Statement,
+      VariableDeclarator,
+    },
+    builder::{AstBuilder, GetAstBuilder},
   },
-  ast_visit::{VisitMut, walk_mut},
+  ast_visit::{VisitJsMut, walk_js_mut},
   span::SPAN,
 };
 
@@ -21,34 +25,50 @@ impl<'ast> LazyCompilationRuntimeInjector<'ast> {
   }
 }
 
-impl<'ast> VisitMut<'ast> for LazyCompilationRuntimeInjector<'ast> {
+impl<'ast> VisitJsMut<'ast> for LazyCompilationRuntimeInjector<'ast> {
   fn visit_expression(&mut self, expr: &mut Expression<'ast>) {
     // First visit children
-    walk_mut::walk_expression(self, expr);
+    walk_js_mut::walk_expression(self, expr);
 
     // Then transform import expressions
     if matches!(expr, Expression::ImportExpression(_)) {
       // Transform: import(x) -> import(x).then(__unwrap_lazy_compilation_entry)
-      let import_expr = std::mem::replace(expr, self.ast_builder.expression_null_literal(SPAN));
+      let import_expr = std::mem::replace(expr, Expression::new_null_literal(SPAN, self));
 
       // Build: import_expr.then(__unwrap_lazy_compilation_entry)
-      *expr = self.ast_builder.expression_call(
+      *expr = Expression::new_call_expression(
         SPAN,
-        Expression::from(self.ast_builder.member_expression_static(
+        Expression::new_static_member_expression(
           SPAN,
           import_expr,
-          self.ast_builder.identifier_name(SPAN, "then"),
+          IdentifierName::new(SPAN, "then", self),
           false,
-        )),
-        NONE,
-        self
-          .ast_builder
-          .vec1(Argument::from(self.ast_builder.expression_identifier(SPAN, HELPER_NAME))),
+          self,
+        ),
+        None,
+        [Argument::new_identifier(SPAN, HELPER_NAME, self)],
         false,
+        self,
       );
 
       self.transformed_count += 1;
     }
+  }
+}
+
+impl<'ast> GetAstBuilder<'ast> for LazyCompilationRuntimeInjector<'ast> {
+  type Builder = AstBuilder<'ast>;
+
+  #[inline]
+  fn builder(&self) -> &AstBuilder<'ast> {
+    &self.ast_builder
+  }
+}
+
+impl<'ast> GetAllocator<'ast> for LazyCompilationRuntimeInjector<'ast> {
+  #[inline]
+  fn allocator(&self) -> &'ast Allocator {
+    self.ast_builder.allocator()
   }
 }
 
@@ -63,72 +83,79 @@ pub fn create_unwrap_lazy_compilation_entry_helper(allocator: &Allocator) -> Sta
   let ast_builder = AstBuilder::new(allocator);
 
   // Parameter: m
-  let params = ast_builder.formal_parameters(
+  let params = FormalParameters::boxed(
     SPAN,
     FormalParameterKind::FormalParameter,
-    ast_builder.vec1(ast_builder.formal_parameter(
+    [FormalParameter::new(
       SPAN,
-      ast_builder.vec(),
-      ast_builder.binding_pattern_binding_identifier(SPAN, "m"),
-      NONE,
-      NONE,
+      [],
+      BindingPattern::new_binding_identifier(SPAN, "m", &ast_builder),
+      None,
+      None,
       false,
       None,
       false,
       false,
-    )),
-    NONE,
+      &ast_builder,
+    )],
+    None,
+    &ast_builder,
   );
 
   // var e = m['rolldown:exports'];
-  let var_decl_stmt = Statement::from(ast_builder.declaration_variable(
+  let var_decl_stmt = Statement::new_variable_declaration(
     SPAN,
     oxc::ast::ast::VariableDeclarationKind::Var,
-    ast_builder.vec1(ast_builder.variable_declarator(
+    [VariableDeclarator::new(
       SPAN,
-      oxc::ast::ast::VariableDeclarationKind::Var,
-      ast_builder.binding_pattern_binding_identifier(SPAN, "e"),
-      NONE,
-      Some(Expression::from(ast_builder.member_expression_computed(
+      BindingPattern::new_binding_identifier(SPAN, "e", &ast_builder),
+      None,
+      Some(Expression::new_computed_member_expression(
         SPAN,
-        ast_builder.expression_identifier(SPAN, "m"),
-        ast_builder.expression_string_literal(SPAN, "rolldown:exports", None),
+        Expression::new_identifier(SPAN, "m", &ast_builder),
+        Expression::new_string_literal(SPAN, "rolldown:exports", None, &ast_builder),
         false,
-      ))),
+        &ast_builder,
+      )),
       false,
-    )),
+      &ast_builder,
+    )],
     false,
-  ));
+    &ast_builder,
+  );
 
   // return e ? e : m;
-  let return_stmt = ast_builder.statement_return(
+  let return_stmt = Statement::new_return_statement(
     SPAN,
-    Some(ast_builder.expression_conditional(
+    Some(Expression::new_conditional_expression(
       SPAN,
-      ast_builder.expression_identifier(SPAN, "e"),
-      ast_builder.expression_identifier(SPAN, "e"),
-      ast_builder.expression_identifier(SPAN, "m"),
+      Expression::new_identifier(SPAN, "e", &ast_builder),
+      Expression::new_identifier(SPAN, "e", &ast_builder),
+      Expression::new_identifier(SPAN, "m", &ast_builder),
+      &ast_builder,
     )),
+    &ast_builder,
   );
 
   // Function body with both statements
-  let mut body_stmts = ast_builder.vec_with_capacity(2);
+  let mut body_stmts = oxc::allocator::Vec::with_capacity_in(2, &ast_builder);
   body_stmts.push(var_decl_stmt);
   body_stmts.push(return_stmt);
-  let body = ast_builder.function_body(SPAN, ast_builder.vec(), body_stmts);
+  let body = FunctionBody::boxed(SPAN, [], body_stmts, &ast_builder);
 
   // function __unwrap_lazy_compilation_entry(m) { ... }
-  Statement::FunctionDeclaration(ast_builder.alloc_function(
+  Statement::new_function_declaration(
     SPAN,
     oxc::ast::ast::FunctionType::FunctionDeclaration,
-    Some(ast_builder.binding_identifier(SPAN, HELPER_NAME)),
+    Some(BindingIdentifier::new(SPAN, HELPER_NAME, &ast_builder)),
     false, // generator
     false, // async
     false, // declare
-    NONE,  // type_parameters
-    NONE,  // this_param
+    None,  // type_parameters
+    None,  // this_param
     params,
-    NONE, // return_type
+    None, // return_type
     Some(body),
-  ))
+    &ast_builder,
+  )
 }

@@ -1,0 +1,279 @@
+# Trigger the Vite ecosystem CI for a rolldown PR by commenting `/ecosystem-ci run [suite]`.
+# Ensures a pkg.pr.new preview of the PR exists, then dispatches
+# vitejs/vite-ecosystem-ci to build vite@main with rolldown overridden to it.
+name: vite-ecosystem-ci-trigger
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    if: github.repository == 'rolldown/rolldown' && github.event.issue.pull_request && startsWith(github.event.comment.body, '/ecosystem-ci run')
+    permissions:
+      issues: write # to add / delete reactions, post comments
+      pull-requests: write # to read PR data, and to add labels
+      actions: read # to check workflow status
+    steps:
+      - name: Check User Permissions
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        id: check-permissions
+        with:
+          script: |
+            const user = context.payload.sender.login
+            console.log(`Validate user: ${user}`)
+
+            const additionalAllowedUsers = []
+
+            let hasTriagePermission = false
+            try {
+              const { data } = await github.rest.repos.getCollaboratorPermissionLevel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                username: user,
+              });
+              hasTriagePermission = data.user.permissions.triage
+            } catch (e) {
+              console.warn(e)
+            }
+
+            if (hasTriagePermission || additionalAllowedUsers.includes(user)) {
+              console.log('User is allowed. Adding +1 reaction.')
+              await github.rest.reactions.createForIssueComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: context.payload.comment.id,
+                content: '+1',
+              })
+            } else {
+              console.log('User is not allowed. Adding -1 reaction.')
+              await github.rest.reactions.createForIssueComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: context.payload.comment.id,
+                content: '-1',
+              })
+              throw new Error('User does not have the necessary permissions.')
+            }
+
+      - name: Get PR Data
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        id: get-pr-data
+        with:
+          script: |
+            console.log(`Get PR info: ${context.repo.owner}/${context.repo.repo}#${context.issue.number}`)
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            })
+
+            const commentCreatedAt = new Date(context.payload.comment.created_at)
+
+            const { data: headCommit } = await github.rest.repos.getCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: pr.head.sha,
+            })
+            const commitPushedAt = new Date(headCommit.commit.committer.date)
+
+            console.log(`Comment created at: ${commentCreatedAt.toISOString()}`)
+            console.log(`Head commit (${pr.head.sha}) date: ${commitPushedAt.toISOString()}`)
+
+            // Check if any commits were pushed after the comment was created
+            if (commitPushedAt > commentCreatedAt) {
+              const errorMsg = [
+                '⚠️ Security warning: PR was updated after the trigger command was posted.',
+                '',
+                `Comment posted at: ${commentCreatedAt.toISOString()}`,
+                `Head commit (${pr.head.sha}) date: ${commitPushedAt.toISOString()}`,
+                '',
+                'This could indicate an attempt to inject code after approval.',
+                'Please review the latest changes and re-run /ecosystem-ci run if they are acceptable.'
+              ].join('\n')
+
+              core.setFailed(errorMsg)
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: errorMsg
+              })
+
+              throw new Error('PR was pushed to after comment was created')
+            }
+
+            core.setOutput('head_sha', pr.head.sha)
+            return {
+              num: context.issue.number,
+              commit: pr.head.sha,
+            }
+
+      - name: Check Package Existence
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        id: check-package
+        env:
+          PR_DATA: ${{ steps.get-pr-data.outputs.result }}
+        with:
+          script: |
+            const prData = JSON.parse(process.env.PR_DATA)
+            const url = `https://pkg.pr.new/rolldown@${prData.commit}`
+            const response = await fetch(url)
+            console.log(`Package check URL: ${url}, Status: ${response.status}`)
+
+            // Add 'rocket' reaction to the issue comment
+            if (response.status === 404) {
+              const { data: reaction } = await github.rest.reactions.createForIssueComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: context.payload.comment.id,
+                content: 'rocket',
+              })
+              return { exists: false, reaction: reaction.id }
+            }
+
+            return { exists: true, reaction: null }
+
+      # Cross-org: the app has a separate installation on each org, so mint one
+      # token per target. This one adds the `trigger: preview` label on rolldown;
+      # using the app token (not GITHUB_TOKEN) so the label event triggers
+      # publish-to-pkg.pr.new.yml.
+      - name: Generate Rolldown Token
+        id: generate-rolldown-token
+        if: fromJSON(steps.check-package.outputs.result).exists == false
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.ECOSYSTEM_CI_GITHUB_APP_ID }}
+          private-key: ${{ secrets.ECOSYSTEM_CI_GITHUB_APP_PRIVATE_KEY }}
+          owner: rolldown
+          repositories: rolldown
+          permission-pull-requests: write # to add pr labels
+
+      - name: Trigger Preview Release (if Package Not Found)
+        if: fromJSON(steps.check-package.outputs.result).exists == false
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        env:
+          PR_DATA: ${{ steps.get-pr-data.outputs.result }}
+        with:
+          github-token: ${{ steps.generate-rolldown-token.outputs.token }}
+          script: |
+            const prData = JSON.parse(process.env.PR_DATA)
+            console.log('Package not found, triggering preview release...')
+
+            // Add label "trigger: preview" to the PR to run publish-to-pkg.pr.new.yml
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prData.num,
+              labels: ['trigger: preview']
+            })
+            console.log('Added "trigger: preview" label.')
+
+      - name: Wait for Preview Release Completion (if Package Not Found)
+        if: fromJSON(steps.check-package.outputs.result).exists == false
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        env:
+          PR_DATA: ${{ steps.get-pr-data.outputs.result }}
+          REACTION: ${{ fromJSON(steps.check-package.outputs.result).reaction }}
+        with:
+          script: |
+            const prData = JSON.parse(process.env.PR_DATA)
+            const reaction = +process.env.REACTION
+            const workflowFileName = 'publish-to-pkg.pr.new.yml'
+            const workflow = await github.rest.actions.getWorkflow({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: workflowFileName,
+            })
+            const workflowId = workflow.data.id
+            console.log(`Waiting for workflow ID ${workflowId} to complete...`)
+
+            const maxRetries = 120 // wait up to 60 minutes (native builds are slow)
+            const delay = 30000 // 30 seconds
+            let completed = false
+
+            for (let i = 0; i < maxRetries; i++) {
+              const runsData = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: workflowId,
+                head_sha: prData.commit,
+                per_page: 100,
+                page: 1,
+              })
+
+              const runs = runsData.data.workflow_runs
+
+              if (runs.length > 0) {
+                const latestRun = runs[0]
+                console.log(`Latest run status: ${latestRun.status}, conclusion: ${latestRun.conclusion}`)
+                if (latestRun.status === 'completed') {
+                  if (latestRun.conclusion === 'success') {
+                    console.log('Preview release workflow completed successfully.')
+                    completed = true
+                    break
+                  } else if (latestRun.conclusion === 'skipped') {
+                   // noop
+                  } else {
+                    throw new Error('Preview Release workflow failed.')
+                  }
+                }
+              }
+
+              console.log(`Retrying... (${i + 1}/${maxRetries})`)
+              await new Promise(resolve => setTimeout(resolve, delay))
+            }
+
+            if (!completed) {
+              throw new Error('Preview Release workflow did not complete in time.')
+            }
+
+            // Remove the 'rocket' reaction
+            if (reaction) {
+              await github.rest.reactions.deleteForIssueComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: context.payload.comment.id,
+                reaction_id: reaction,
+              })
+              console.log('Removed "rocket" reaction.')
+            }
+
+      # Cross-org: scope this token to vitejs/vite-ecosystem-ci to dispatch it.
+      - name: Generate Ecosystem CI Token
+        id: generate-ecosystem-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.ECOSYSTEM_CI_GITHUB_APP_ID }}
+          private-key: ${{ secrets.ECOSYSTEM_CI_GITHUB_APP_PRIVATE_KEY }}
+          owner: vitejs
+          repositories: vite-ecosystem-ci
+          permission-actions: write # to dispatch workflows
+
+      - name: Trigger Downstream Workflow
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        id: trigger
+        env:
+          COMMENT: ${{ github.event.comment.body }}
+          PR_DATA: ${{ steps.get-pr-data.outputs.result }}
+        with:
+          github-token: ${{ steps.generate-ecosystem-token.outputs.token }}
+          script: |
+            const comment = process.env.COMMENT.trim()
+            const prData = JSON.parse(process.env.PR_DATA)
+
+            const suite = comment.split('\n')[0].replace(/^\/ecosystem-ci run/, '').trim()
+
+            await github.rest.actions.createWorkflowDispatch({
+              owner: 'vitejs',
+              repo: 'vite-ecosystem-ci',
+              workflow_id: 'ecosystem-ci-from-pr-rolldown.yml',
+              ref: 'main',
+              inputs: {
+                prNumber: '' + prData.num,
+                rolldownRef: prData.commit,
+                suite: suite === '' ? '-' : suite
+              }
+            })

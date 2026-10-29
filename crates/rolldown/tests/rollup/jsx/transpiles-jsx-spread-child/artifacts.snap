@@ -7,17 +7,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 console.log(["spread 1"]);
-//#endregion
-//#region dep2.js
+// dep2.js
 const spread$1 = ["spread 2"];
 console.log(spread$1);
 console.log(["spread 3"]);
-//#endregion
-//#region main.js
+// main.js
 const Foo = () => {};
 const element = /* @__PURE__ */ React.createElement(Foo, null, ...spread$1);
 const fragment = /* @__PURE__ */ React.createElement(React.Fragment, null, ...spread$1);
-//#endregion
 export { element, fragment };
 
 ```

@@ -1,4 +1,4 @@
-use std::{any::Any, fmt::Debug};
+use std::any::Any;
 
 use arcstr::ArcStr;
 use oxc::span::Span;
@@ -25,6 +25,7 @@ pub mod duplicate_shebang;
 pub mod empty_import_meta;
 pub mod eval;
 pub mod external_entry;
+pub mod file_not_found;
 pub mod filename_conflict;
 pub mod filename_outside_output_directory;
 pub mod forbid_const_assign;
@@ -35,12 +36,15 @@ pub mod invalid_annotation;
 pub mod invalid_define_config;
 pub mod invalid_export_option;
 pub mod invalid_option;
+pub mod invalid_tla_format;
 pub mod json_parse;
 pub mod large_barrel_modules;
 pub mod missing_export;
 pub mod missing_global_name;
 pub mod missing_name_option_for_iife_export;
 pub mod mixed_exports;
+pub mod module_level_directive;
+pub mod namespace_conflict;
 pub mod oxc_error;
 pub mod plugin_error;
 pub mod plugin_timings;
@@ -48,6 +52,7 @@ pub mod prefer_builtin_feature;
 pub mod require_tla;
 pub mod resolve_error;
 pub mod runtime_module_symbol_not_found;
+pub mod shimmed_export;
 pub mod sourcemap_broken;
 pub mod tsconfig_error;
 pub mod unhandleable_error;
@@ -57,7 +62,7 @@ pub mod unsupported_feature;
 pub mod unsupported_tsconfig_option;
 pub mod untranspiled_syntax;
 
-pub trait BuildEvent: Debug + Sync + Send + AsAny + AsAnyMut {
+pub trait BuildEvent: Sync + Send + AsAny + AsAnyMut {
   fn kind(&self) -> EventKind;
 
   fn message(&self, opts: &DiagnosticOptions) -> String;
@@ -75,6 +80,10 @@ pub trait BuildEvent: Debug + Sync + Send + AsAny + AsAnyMut {
   }
 
   fn exporter(&self) -> Option<String> {
+    None
+  }
+
+  fn binding(&self) -> Option<String> {
     None
   }
 
@@ -117,18 +126,15 @@ impl<T: 'static + BuildEvent> AsAnyMut for T {
   }
 }
 
-/// A Hybrid string type used for diagnostic, e.g.
-/// for `UnresolvedError`, a specifier could be either a slice from raw source, or
-/// created during ast transformation. When the specifier came from raw source, we could
-/// use the `Span` information to give user better DX, otherwise, we could just use the string to
-/// create a fallback message.
-/// ## Panic
-/// they type is only used for store information, user should check the span could be referenced
-/// the raw source, or the user side may panic.
+/// Specifier text for a resolve diagnostic, with an optional source span for the label.
+///
+/// `String` is an import inserted during transformation, so it has no span in the original
+/// source. `Span.text` is the specifier that was resolved. The span only locates the import
+/// and may cover an identifier rather than a quoted literal.
 #[derive(Debug)]
 pub enum DiagnosableArcstr {
   String(ArcStr),
-  Span(Span),
+  Span { span: Span, text: ArcStr },
 }
 
 // --- end

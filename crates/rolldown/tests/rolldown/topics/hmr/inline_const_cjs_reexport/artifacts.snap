@@ -8,7 +8,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
-//#region jsx-dev-runtime.development.js
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"jsx-dev-runtime.production.js",
+		"jsx-dev-runtime.development.js",
+		"jsx-dev-runtime.js",
+		"main.js"
+	],
+	localCount: 4,
+	edges: [
+		[],
+		[],
+		[0, 1],
+		[2]
+	],
+	entries: [3]
+});
+// jsx-dev-runtime.development.js
 var require_jsx_dev_runtime_development = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	__rolldown_runtime__.createModuleHotContext("jsx-dev-runtime.development.js");
 	__rolldown_runtime__.registerModule("jsx-dev-runtime.development.js", module);
@@ -19,15 +35,13 @@ var require_jsx_dev_runtime_development = /* @__PURE__ */ __commonJSMin(((export
 		};
 	};
 }));
-//#endregion
-//#region jsx-dev-runtime.js
+// jsx-dev-runtime.js
 var require_jsx_dev_runtime = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	__rolldown_runtime__.createModuleHotContext("jsx-dev-runtime.js");
 	__rolldown_runtime__.registerModule("jsx-dev-runtime.js", module);
 	module.exports = require_jsx_dev_runtime_development();
 }));
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 var import_jsx_dev_runtime = require_jsx_dev_runtime();
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
@@ -38,6 +52,5 @@ assert.deepStrictEqual(result, {
 	props: { children: "hello" }
 });
 main_hot.accept();
-//#endregion
 
 ```

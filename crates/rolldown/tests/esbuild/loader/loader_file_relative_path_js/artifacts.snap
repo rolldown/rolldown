@@ -7,12 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region entries/entry.js
+// entries/entry.js
 var import_image = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "../image-RzbKAZGz.png";
 })))());
 console.log(import_image.default);
-//#endregion
 
 ```
 

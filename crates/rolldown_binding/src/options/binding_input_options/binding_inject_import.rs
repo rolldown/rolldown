@@ -1,6 +1,7 @@
 use napi::Either;
 use rolldown::InjectImport;
 
+#[napi_derive::napi]
 pub type BindingInjectImport = Either<BindingInjectImportNamed, BindingInjectImportNamespace>;
 
 #[napi_derive::napi(object, object_to_js = false)]

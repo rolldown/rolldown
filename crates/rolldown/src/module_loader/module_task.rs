@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use arcstr::ArcStr;
 use oxc::span::Span;
-use sugar_path::SugarPath as _;
 
 use rolldown_common::{
   ExportsKind, FlatOptions, ImportKind, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleType,
@@ -13,7 +12,6 @@ use rolldown_error::{
   BuildDiagnostic, BuildResult, DiagnosticOptions, EventKindSwitcher, UnloadableDependencyContext,
   downcast_napi_error_diagnostics,
 };
-use rolldown_std_utils::PathExt as _;
 use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
 
 use rolldown_fs::FileSystem;
@@ -51,7 +49,7 @@ pub struct ModuleTask<Fs: FileSystem + Clone + 'static> {
   /// The module is asserted to be this specific module type.
   asserted_module_type: Option<ModuleType>,
   flat_options: FlatOptions,
-  magic_string_tx: Option<std::sync::Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
+  magic_string_tx: Option<std::sync::mpsc::Sender<SourceMapGenMsg>>,
 }
 
 impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
@@ -64,7 +62,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     is_user_defined_entry: bool,
     assert_module_type: Option<ModuleType>,
     flat_options: FlatOptions,
-    magic_string_tx: Option<std::sync::Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
+    magic_string_tx: Option<std::sync::mpsc::Sender<SourceMapGenMsg>>,
   ) -> Self {
     Self {
       ctx,
@@ -78,7 +76,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     }
   }
 
-  #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_id = ?self.resolved_id.id))]
+  #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_id = %self.resolved_id.id))]
   pub async fn run(mut self) {
     if let Err(errs) = self.run_inner().await {
       self.ctx.plugin_driver.mark_context_load_modules_loaded(self.resolved_id.id.clone());
@@ -153,7 +151,6 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       &raw_import_records,
       ecma_view.source.clone(),
       &mut warnings,
-      &module_type,
     )
     .await?;
 
@@ -173,7 +170,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       }
     }
 
-    let repr_name = self.resolved_id.id.as_path().representative_file_name();
+    let repr_name = self.resolved_id.id.representative_name();
     let repr_name = legitimize_identifier_name(&repr_name).into_owned();
 
     // Build lazy barrel info if the experimental flag is enabled
@@ -251,7 +248,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     &self,
     sourcemap_chain: &mut Vec<SourcemapChainElement>,
     hook_side_effects: &mut Option<rolldown_common::side_effects::HookSideEffects>,
-    magic_string_tx: Option<std::sync::Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
+    magic_string_tx: Option<std::sync::mpsc::Sender<SourceMapGenMsg>>,
   ) -> BuildResult<(StrOrBytes, ModuleType)> {
     let mut is_read_from_disk = true;
     let result = load_source(
@@ -270,6 +267,16 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       // - Only add watch files for files read from disk.
       // - Add watch files as early as possible for we might be able to recover from build errors.
       self.ctx.plugin_driver.watch_files.insert(self.resolved_id.id.as_arc_str().clone());
+      // The tsconfig governing this module affects its transform and
+      // resolution results, so watch it as well (#9598).
+      if let Some(tsconfig_path) = self
+        .ctx
+        .options
+        .transform_options
+        .discover_tsconfig_file(std::path::Path::new(self.resolved_id.id.as_str()))
+      {
+        self.ctx.plugin_driver.watch_files.insert(tsconfig_path.to_string_lossy().as_ref().into());
+      }
     }
     let (source, mut module_type) = result.map_err(|err| {
       downcast_napi_error_diagnostics(err).unwrap_or_else(|e| {
@@ -308,7 +315,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       // e.g.
       // sass -> recommended npm install `sass` etc
       Err(anyhow::anyhow!(
-        "`{:?}` is not specified module type,  rolldown can't handle this asset correctly. Please use the load/transform hook to transform the resource",
+        "`{}` is not specified module type,  rolldown can't handle this asset correctly. Please use the load/transform hook to transform the resource",
         self.resolved_id.id
       ))?;
     }

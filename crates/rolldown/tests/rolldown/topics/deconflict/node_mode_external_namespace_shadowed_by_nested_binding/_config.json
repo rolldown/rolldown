@@ -1,0 +1,7 @@
+{
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "external": ["node:https"],
+    "format": "cjs"
+  }
+}

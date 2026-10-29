@@ -29,15 +29,6 @@ impl TaskInput {
     }
   }
 
-  pub fn changed_files_mut(&mut self) -> Option<&mut FxIndexMap<PathBuf, WatcherChangeKind>> {
-    match self {
-      Self::FullBuild => None,
-      Self::Rebuild { changed_files }
-      | Self::Hmr { changed_files }
-      | Self::HmrRebuild { changed_files } => Some(changed_files),
-    }
-  }
-
   pub fn requires_full_rebuild(&self) -> bool {
     matches!(self, Self::FullBuild)
   }

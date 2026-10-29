@@ -8,17 +8,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
-//#region src/basic_ns/index.js
+// src/basic_ns/index.js
 var require_basic_ns = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = "basic-a";
 }));
-//#endregion
-//#region src/basic_ref_with_named_default/index.js
+// src/basic_ref_with_named_default/index.js
 var require_basic_ref_with_named_default = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = "basic-ref-with-named-default-a";
 }));
-//#endregion
-//#region src/export_star_from_cjs/cjs.js
+// src/export_star_from_cjs/cjs.js
 var require_cjs$2 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = "export-star-from-cjs-a";
 }));
@@ -31,8 +29,7 @@ __reExport(/* @__PURE__ */ __exportAll({}), /* @__PURE__ */ __toESM((/* @__PURE_
 __reExport(/* @__PURE__ */ __exportAll({}), /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = "nested-export-star-from-cjs-a";
 })))()));
-//#endregion
-//#region src/indirect_common_js/lib.js
+// src/indirect_common_js/lib.js
 var require_lib = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = "react-like-a";
 }));
@@ -51,6 +48,5 @@ assert.equal("nested-export-star-from-cjs-a", "nested-export-star-from-cjs-a");
 assert.equal("nested-export-star-from-cjs-a".startsWith("n"), true);
 assert.equal("react-like-a", "react-like-a");
 assert.equal("react-like-a".startsWith("r"), true);
-//#endregion
 
 ```

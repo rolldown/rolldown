@@ -6,6 +6,7 @@ WORKSPACE_DIR = { value = "", relative = true }
 ck = "check --workspace --all-features --all-targets --locked"
 ls-lint = "run --bin ls-lint"
 run-fixture = "run --bin run-fixture"
+allocs = "run -p track_memory_allocations"
 
 [target.x86_64-pc-windows-msvc]
 rustflags = ["-C", "target-feature=+crt-static"]
@@ -23,11 +24,6 @@ rustflags = [
   "-C",
   "link-args=/DEFAULTLIB:ucrt.lib",
 ]
-
-# LLD linker is currently broken for us, opt out.
-# https://blog.rust-lang.org/2025/09/18/Rust-1.90.0/#what-s-in-1-90-0-stable
-[target.x86_64-unknown-linux-gnu]
-rustflags = ["-C", "linker-features=-lld"]
 
 [target.wasm32-wasip1-threads]
 rustflags = ["-C", "target-feature=+simd128", "--cfg", "tokio_unstable"]

@@ -6,19 +6,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 import("./mod1.js").then(console.log);
 import("./mod2.js").then(console.log);
-//#endregion
 
 ```
 
 ## mod1.js
 
 ```js
-//#region mod1.js
+// mod1.js
 const x = 1;
-//#endregion
 export { x };
 
 ```
@@ -27,9 +25,8 @@ export { x };
 
 ```js
 import "./mod1.js";
-//#region mod2.js
+// mod2.js
 const y = 2;
-//#endregion
 export { y };
 
 ```

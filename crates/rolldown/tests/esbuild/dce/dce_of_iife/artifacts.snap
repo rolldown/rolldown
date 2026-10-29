@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## keep-these.js
 
 ```js
-//#region keep-these.js
+// keep-these.js
 undef = void 0;
 (() => {
 	keepMe();
@@ -29,16 +29,13 @@ use(isNotPure);
 		notPure();
 	} };
 })();
-//#endregion
 
 ```
 
 ## remove-these.js
 
 ```js
-//#region remove-these.js
+// remove-these.js
 keepThisButRemoveTheIIFE;
-(() => 123)();
-//#endregion
 
 ```

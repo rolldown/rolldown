@@ -6,9 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## silent1.js
 
 ```js
-//#region silent1.ts
+// silent1.ts
 var foo = void 0;
-//#endregion
 export { foo };
 
 ```
@@ -16,9 +15,8 @@ export { foo };
 ## silent2.js
 
 ```js
-//#region silent2.ts
+// silent2.ts
 var foo = void 0;
-//#endregion
 export { foo };
 
 ```
@@ -26,9 +24,8 @@ export { foo };
 ## warning1.js
 
 ```js
-//#region warning1.ts
+// warning1.ts
 var foo = void 0;
-//#endregion
 export { foo };
 
 ```
@@ -36,9 +33,8 @@ export { foo };
 ## warning2.js
 
 ```js
-//#region warning2.ts
+// warning2.ts
 var foo = (void 0).foo;
-//#endregion
 export { foo };
 
 ```
@@ -46,9 +42,8 @@ export { foo };
 ## warning3.js
 
 ```js
-//#region warning3.ts
+// warning3.ts
 var foo = null;
-//#endregion
 export { foo };
 
 ```

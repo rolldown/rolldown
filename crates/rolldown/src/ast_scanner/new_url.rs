@@ -4,7 +4,7 @@ use oxc::ast::{
 };
 use rolldown_common::{ImportKind, ImportRecordMeta, ModuleType, get_leading_comment};
 use rolldown_ecmascript_utils::ExpressionExt;
-use rolldown_utils::dataurl::is_data_url;
+use rolldown_utils::{dataurl::is_data_url, ecmascript::to_usv_str};
 
 use super::AstScanner;
 
@@ -34,12 +34,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     };
 
     let (path, first_arg_span) = match first_arg {
-      Expression::StringLiteral(lit) => (&lit.value, lit.span),
+      Expression::StringLiteral(lit) => (to_usv_str(lit.value), lit.span),
       Expression::TemplateLiteral(tpl) if tpl.is_no_substitution_template() => {
-        let Some(value) = &tpl.quasis[0].value.cooked else {
+        let Some(value) = tpl.quasis[0].value.cooked else {
           return;
         };
-        (value, tpl.span)
+        (to_usv_str(value), tpl.span)
       }
       _ => return,
     };
@@ -54,18 +54,19 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       return;
     }
 
-    if is_data_url(path) {
+    if is_data_url(&path) {
       return;
     }
 
     let idx = self.add_import_record(
-      path,
+      &path,
       ImportKind::NewUrl,
       first_arg_span,
+      expr.span,
       ImportRecordMeta::empty(),
       None,
     );
     self.result.import_records[idx].asserted_module_type = Some(ModuleType::Asset);
-    self.result.new_url_references.insert(expr.span, idx);
+    self.result.new_url_references.insert(expr.node_id(), idx);
   }
 }

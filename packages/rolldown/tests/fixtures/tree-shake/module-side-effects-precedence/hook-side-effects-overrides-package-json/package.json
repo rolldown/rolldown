@@ -1,0 +1,8 @@
+{
+  "name": "hook-side-effects-overrides-package-json",
+  "private": true,
+  "sideEffects": false,
+  "dependencies": {
+    "rolldown-tests": "workspace:*"
+  }
+}

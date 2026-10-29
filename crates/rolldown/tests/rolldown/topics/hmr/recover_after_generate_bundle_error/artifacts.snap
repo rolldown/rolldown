@@ -7,18 +7,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region dep.js
+__rolldown_runtime__.registerGraph({
+	ids: ["dep.js", "main.js"],
+	localCount: 2,
+	edges: [[], [0]],
+	entries: [1]
+});
+// dep.js
 var dep_exports = /* @__PURE__ */ __exportAll({ value: () => "dep" });
 const dep_hot = __rolldown_runtime__.createModuleHotContext("dep.js");
 __rolldown_runtime__.registerModule("dep.js", { exports: dep_exports });
 if (dep_hot) dep_hot.accept();
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 console.log("dep");
-//#endregion
 
 ```
 
@@ -27,8 +31,9 @@ console.log("dep");
 ## Code
 
 ```js
+__rolldown_runtime__.registerGraph({ids:["dep.js"],localCount:1,edges:[[]],stamps:{0:1}});
 //#region dep.js
-var init_dep_0 = __rolldown_runtime__.createEsmInitializer("dep.js", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("dep.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -38,20 +43,18 @@ var init_dep_0 = __rolldown_runtime__.createEsmInitializer("dep.js", (function(_
 			hot_dep.accept();
 		}
 	} finally {}
-}));
+}), 1);
 
 //#endregion
-__rolldown_runtime__.runModuleInitializerIfLoaded("dep.js", init_dep_0);
-__rolldown_runtime__.applyUpdates([['dep.js', 'dep.js']]);
 ```
 
 ## Meta
 
 - update type: patch
 
-### Hmr Boundaries
+### Changed Ids
 
-- boundary: dep.js, accepted_via: dep.js
+- dep.js
 
 ## Build Output
 
@@ -70,8 +73,9 @@ simulated post-link generate_bundle failure
 ## Code
 
 ```js
+__rolldown_runtime__.registerGraph({ids:["dep.js"],localCount:1,edges:[[]],stamps:{0:2}});
 //#region dep.js
-var init_dep_0 = __rolldown_runtime__.createEsmInitializer("dep.js", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("dep.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -81,20 +85,18 @@ var init_dep_0 = __rolldown_runtime__.createEsmInitializer("dep.js", (function(_
 			hot_dep.accept();
 		}
 	} finally {}
-}));
+}), 2);
 
 //#endregion
-__rolldown_runtime__.runModuleInitializerIfLoaded("dep.js", init_dep_0);
-__rolldown_runtime__.applyUpdates([['dep.js', 'dep.js']]);
 ```
 
 ## Meta
 
 - update type: patch
 
-### Hmr Boundaries
+### Changed Ids
 
-- boundary: dep.js, accepted_via: dep.js
+- dep.js
 
 ## Build Output
 
@@ -104,18 +106,22 @@ __rolldown_runtime__.applyUpdates([['dep.js', 'dep.js']]);
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region dep.js
+__rolldown_runtime__.registerGraph({
+	ids: ["dep.js", "main.js"],
+	localCount: 2,
+	edges: [[], [0]],
+	entries: [1]
+});
+// dep.js
 var dep_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 const dep_hot = __rolldown_runtime__.createModuleHotContext("dep.js");
 __rolldown_runtime__.registerModule("dep.js", { exports: dep_exports });
 const value = "recovered";
 if (dep_hot) dep_hot.accept();
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 console.log(value);
-//#endregion
 
 ```

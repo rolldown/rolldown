@@ -8,13 +8,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "assert";
 // HIDDEN [\0rolldown/runtime.js]
-//#region import.js
+// import.js
 var import_exports = /* @__PURE__ */ __exportAll({ default: () => "hi" });
-//#endregion
-//#region main.js
+// main.js
 assert.deepStrictEqual(Object.getOwnPropertyNames(import_exports), ["default"]);
 assert.equal(String(import_exports), "[object Module]");
-//#endregion
 
 ```
 
@@ -28,13 +26,11 @@ assert.equal(String(import_exports), "[object Module]");
 // HIDDEN [\0rolldown/runtime.js]
 let assert = require("assert");
 assert = __toESM(assert);
-//#region import.js
+// import.js
 var import_exports = /* @__PURE__ */ __exportAll({ default: () => "hi" });
-//#endregion
-//#region main.js
+// main.js
 assert.default.deepStrictEqual(Object.getOwnPropertyNames(import_exports), ["default"]);
 assert.default.equal(String(import_exports), "[object Module]");
-//#endregion
 
 ```
 
@@ -57,13 +53,11 @@ assert.default.equal(String(import_exports), "[object Module]");
 (function(assert) {
 	// HIDDEN [\0rolldown/runtime.js]
 	assert = __toESM(assert);
-	//#region import.js
+	// import.js
 	var import_exports = /* @__PURE__ */ __exportAll({ default: () => "hi" });
-	//#endregion
-	//#region main.js
+	// main.js
 	assert.default.deepStrictEqual(Object.getOwnPropertyNames(import_exports), ["default"]);
 	assert.default.equal(String(import_exports), "[object Module]");
-	//#endregion
 })(assert);
 
 ```

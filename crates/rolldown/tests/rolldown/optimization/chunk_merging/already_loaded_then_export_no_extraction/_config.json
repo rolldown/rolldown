@@ -1,0 +1,11 @@
+{
+  "_comment": "`app.js` exports a callable `then`, so its `import()` namespace is thenable. We cannot inline multiple modules in the dynamic entry because of that.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ]
+  }
+}

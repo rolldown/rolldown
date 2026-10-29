@@ -1,6 +1,12 @@
+import { pbkdf2 } from 'node:crypto';
 import path from 'node:path';
+import { promisify } from 'node:util';
+import v8 from 'node:v8';
+import vm from 'node:vm';
+import { isWasiTest } from 'rolldown-tests/utils';
 import { transform, transformSync, TsconfigCache } from 'rolldown/utils';
 import { expect, describe, it } from 'vitest';
+import { loadBinding } from '../src/load-binding';
 
 describe('enhanced transform', () => {
   describe('basic transformation', () => {
@@ -70,6 +76,63 @@ describe('enhanced transform', () => {
     });
   });
 
+  describe('decorator metadata strictNullChecks from tsconfig', () => {
+    const code = `
+      function dec(_target: any, _key: string) {}
+      class MyClass {
+        @dec
+        field: string | null = null;
+      }
+    `;
+
+    it('infers strictNullChecks: false from tsconfig (emits the primitive)', () => {
+      const result = transformSync('test.ts', code, {
+        tsconfig: {
+          compilerOptions: {
+            experimentalDecorators: true,
+            emitDecoratorMetadata: true,
+            strictNullChecks: false,
+          },
+        },
+      });
+      expect(result.errors).toHaveLength(0);
+      expect(result.code).toMatch(/design:type",\s*String/);
+    });
+
+    it('falls back to tsconfig `strict` when strictNullChecks is unset', () => {
+      const result = transformSync('test.ts', code, {
+        tsconfig: {
+          compilerOptions: {
+            experimentalDecorators: true,
+            emitDecoratorMetadata: true,
+            strict: false,
+          },
+        },
+      });
+      expect(result.errors).toHaveLength(0);
+      expect(result.code).toMatch(/design:type",\s*String/);
+    });
+
+    it('keeps the strict default (Object) when tsconfig sets neither', () => {
+      const result = transformSync('test.ts', code, {
+        tsconfig: {
+          compilerOptions: { experimentalDecorators: true, emitDecoratorMetadata: true },
+        },
+      });
+      expect(result.errors).toHaveLength(0);
+      expect(result.code).toMatch(/design:type",\s*Object/);
+    });
+
+    it('explicit transform.decorator.strictNullChecks overrides tsconfig', () => {
+      const result = transformSync('test.ts', code, {
+        decorator: { legacy: true, emitDecoratorMetadata: true, strictNullChecks: true },
+        tsconfig: { compilerOptions: { strictNullChecks: false } },
+      });
+      expect(result.errors).toHaveLength(0);
+      expect(result.code).toMatch(/design:type",\s*Object/);
+    });
+  });
+
   describe('tsconfig - raw options', () => {
     it('should use raw tsconfig JSX options', async () => {
       const result = await transform('test.tsx', '<div />', {
@@ -115,6 +178,28 @@ describe('enhanced transform', () => {
 
   describe('tsconfig - auto-discovery', () => {
     const fixtures = path.join(import.meta.dirname, 'fixtures');
+
+    it('should use a tsconfig path', () => {
+      // Must be a real absolute path. `/foo` is not absolute on Windows, so
+      // oxc_resolver treats it as a virtual module and skips tsconfig.
+      const filename = path.resolve('/nonexistent/path/test.ts');
+      const code = `class Foo { bar = 'bar' }`;
+      const explicitTsconfig = path.join(fixtures, 'tsconfig.json');
+      const expected = transformSync(filename, code, {
+        target: 'esnext',
+        tsconfig: {
+          compilerOptions: { useDefineForClassFields: false },
+        },
+      });
+      const result = transformSync(filename, code, {
+        target: 'esnext',
+        tsconfig: explicitTsconfig,
+      });
+
+      expect(result.code).toBe(expected.code);
+      expect(result.errors).toHaveLength(0);
+      expect(result.tsconfigFilePaths).toStrictEqual([explicitTsconfig]);
+    });
 
     it('should auto-discover tsconfig by default (no tsconfig option)', async () => {
       const result = await transform(
@@ -256,6 +341,40 @@ describe('enhanced transform', () => {
       // Same tsconfig resolved, cache should not grow
       expect(cache.size()).toBe(1);
     });
+
+    it.skipIf(isWasiTest)(
+      'should survive the cache being collected while a transform is pending',
+      async () => {
+        // The `transform` wrapper keeps `cache` reachable, so call the binding directly.
+        const binding = loadBinding();
+        v8.setFlagsFromString('--expose-gc');
+        const gc: () => void = vm.runInNewContext('gc');
+
+        // Occupy the libuv thread pool so that the transforms below stay queued.
+        const blockers = Array.from({ length: 4 }, () =>
+          promisify(pbkdf2)('', '', 500_000, 64, 'sha512'),
+        );
+        const pending = Array.from({ length: 32 }, () =>
+          binding.enhancedTransform(
+            path.join(fixtures, 'test1.ts'),
+            'export const a: number = 1;',
+            { tsconfig: true },
+            new binding.TsconfigCache(false),
+            false,
+          ),
+        );
+        for (let i = 0; i < 4; i++) {
+          gc();
+          await new Promise((resolve) => setImmediate(resolve));
+        }
+        await Promise.all(blockers);
+
+        for (const result of await Promise.all(pending)) {
+          expect(result.code).toBe('export const a = 1;\n');
+          expect(result.errors).toHaveLength(0);
+        }
+      },
+    );
   });
 
   describe('result properties', () => {

@@ -20,109 +20,116 @@ OPTIONS
   --sourcemap -s, <sourcemap> Generate sourcemap (\`-s inline\` for inline, or \`-s\` for \`.map\` file).
   --version -v,               Show version number.
   --watch -w,                 Watch files in bundle and rebuild on changes.
-  --advanced-chunks.min-share-count <advanced-chunks.min-share-count>Minimum share count of the chunk.
-  --advanced-chunks.min-size <advanced-chunks.min-size>Minimum size of the chunk.
-  --asset-file-names <name>   Name pattern for asset files.
+  --advancedChunks.minShareCount <advancedChunks.minShareCount>Minimum share count of the chunk.
+  --advancedChunks.minSize <advancedChunks.minSize>Minimum size of the chunk.
+  --assetFileNames <name>     Name pattern for asset files.
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
-  --checks.cannot-call-namespace Whether to emit warnings when a namespace is called as a function.
-  --checks.circular-dependency Whether to emit warnings when detecting circular dependency.
-  --checks.common-js-variable-in-esm Whether to emit warnings when a CommonJS variable is used in an ES module.
-  --checks.configuration-field-conflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
-  --checks.could-not-clean-directory Whether to emit warnings when Rolldown could not clean the output directory.
-  --checks.duplicate-shebang  Whether to emit warnings when both the code and postBanner contain shebang.
-  --checks.empty-import-meta  Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
+  --charset <charset>         Character set to use in generated JavaScript.
+  --checks.bundlerTimings     Whether to emit warnings when plugins and option callbacks take significant time during the build process.
+  --checks.cannotCallNamespace Whether to emit warnings when a namespace is called as a function.
+  --checks.circularDependency Whether to emit warnings when detecting circular dependency.
+  --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.
+  --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
+  --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
+  --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
+  --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.
-  --checks.filename-conflict  Whether to emit warnings when files generated have the same name with different contents.
-  --checks.import-is-undefined Whether to emit warnings when an imported variable is not exported.
-  --checks.ineffective-dynamic-import Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
-  --checks.invalid-annotation Whether to emit warnings when a \`#__PURE__\` / \`@__PURE__\` annotation has no effect due to its position.
-  --checks.large-barrel-modules Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000).
-  --checks.missing-global-name Whether to emit warnings when the \`output.globals\` option is missing when needed.
-  --checks.missing-name-option-for-iife-export Whether to emit warnings when the \`output.name\` option is missing when needed.
-  --checks.mixed-exports      Whether to emit warnings when the way to export values is ambiguous.
-  --checks.plugin-timings     Whether to emit warnings when plugins take significant time during the build process.
-  --checks.prefer-builtin-feature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
-  --checks.sourcemap-broken   Whether to emit warnings when a plugin transforms code without generating a sourcemap.
-  --checks.tolerated-transform Whether to emit warnings when detecting tolerated transform.
-  --checks.unresolved-entry   Whether to emit warnings when an entrypoint cannot be resolved.
-  --checks.unresolved-import  Whether to emit warnings when an import cannot be resolved.
-  --checks.unsupported-tsconfig-option Whether to emit warnings when a tsconfig option or combination of options is not supported.
-  --chunk-file-names <name>   Name pattern for emitted secondary chunks.
-  --clean-dir                 Clean output directory before emitting output.
-  --code-splitting <code-splitting>Code splitting options (true, false, or object).
+  --checks.filenameConflict   Whether to emit warnings when files generated have the same name with different contents.
+  --checks.importIsUndefined  Whether to emit warnings when an imported variable is not exported.
+  --checks.ineffectiveDynamicImport Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
+  --checks.invalidAnnotation  Whether to emit warnings when a \`#__PURE__\` / \`@__PURE__\` annotation has no effect due to its position.
+  --checks.largeBarrelModules Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000).
+  --checks.missingGlobalName  Whether to emit warnings when the \`output.globals\` option is missing when needed.
+  --checks.missingNameOptionForIifeExport Whether to emit warnings when the \`output.name\` option is missing when needed.
+  --checks.mixedExports       Whether to emit warnings when the way to export values is ambiguous.
+  --checks.moduleLevelDirective Whether to emit warnings for module-level directives other than \`use strict\`.
+  --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
+  --checks.pluginTimings      Deprecated alias for bundlerTimings. Rolldown uses bundlerTimings if both options have values.
+  --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
+  --checks.shimmedExport      Whether to emit warnings when a missing export is replaced with an undefined binding.
+  --checks.sourcemapBroken    Whether to emit warnings when a plugin transforms code without generating a sourcemap.
+  --checks.toleratedTransform Whether to emit warnings when detecting tolerated transform.
+  --checks.unresolvedEntry    Whether to emit warnings when an entrypoint cannot be resolved.
+  --checks.unresolvedImport   Whether to emit warnings when an import cannot be resolved.
+  --checks.unsupportedTsconfigOption Whether to emit warnings when a tsconfig option or combination of options is not supported.
+  --chunkFileNames <name>     Name pattern for emitted secondary chunks.
+  --cleanDir                  Clean output directory before emitting output.
+  --codeSplitting <codeSplitting>Code splitting options. Enabled by default; use \`--no-codeSplitting\` to disable, or \`--codeSplitting.minSize\` / \`--codeSplitting.minShareCount\` to configure.
   --comments <comments>       Control comments in the output.
+  --configLoader <loader>     How to load the config file (bundle, native).
   --context <context>         The entity top-level \`this\` represents.
   --cwd <cwd>                 Current working directory.
-  --devtools.session-id <devtools.session-id>Used to name the build.
-  --dynamic-import-in-cjs     Dynamic import in CJS output.
-  --entry-file-names <name>   Name pattern for emitted entry chunks.
+  --devtools.sessionId <devtools.sessionId>Used to name the build.
+  --dynamicImportInCjs        Dynamic import in CJS output.
+  --entryFileNames <name>     Name pattern for emitted entry chunks.
   --environment <environment> Pass additional settings to the config file via process.ENV.
-  --es-module                 Always generate \`__esModule\` marks in non-ESM formats, defaults to \`if-default-prop\` (use \`--no-esModule\` to always disable).
+  --esModule                  Always generate \`__esModule\` marks in non-ESM formats, defaults to \`if-default-prop\` (use \`--no-esModule\` to always disable).
   --exports <exports>         Specify a export mode (auto, named, default, none).
   --extend                    Extend global variable defined by name in IIFE / UMD formats.
   --footer <footer>           Code to insert the bottom of the bundled file (outside the wrapper function).
-  --generated-code.preset <generated-code.preset>.
-  --generated-code.profiler-names Whether to add readable names to internal variables for profiling purposes.
-  --generated-code.symbols    Whether to use Symbol.toStringTag for namespace objects.
-  --hash-characters <hash-characters>Use the specified character set for file hashes.
-  --inline-dynamic-imports    Inline dynamic imports.
+  --generatedCode.preset <generatedCode.preset>.
+  --generatedCode.profilerNames Whether to add readable names to internal variables for profiling purposes.
+  --generatedCode.symbols     Whether to use Symbol.toStringTag for namespace objects.
+  --hashCharacters <hashCharacters>Use the specified character set for file hashes.
+  --inlineDynamicImports      Inline dynamic imports.
   --input <input>             Entry file.
   --intro <intro>             Code to insert the top of the bundled file (inside the wrapper function).
-  --keep-names                Keep function and class names after bundling.
-  --legal-comments <legal-comments>Control legal comments in the output.
-  --log-level <log-level>     Log level (silent, info, debug, warn).
-  --make-absolute-externals-relative Prevent normalization of external imports.
-  --minify-internal-exports   Minify internal exports.
-  --module-types <types>      Module types for customized extensions.
-  --no-external-live-bindings Disable external live bindings.
-  --no-preserve-entry-signatures Avoid facade chunks for entry points.
+  --keepNames                 Keep function and class names after bundling.
+  --legalComments <legalComments>Control legal comments in the output.
+  --logLevel <logLevel>       Log level (silent, info, debug, warn).
+  --makeAbsoluteExternalsRelative Prevent normalization of external imports.
+  --minifyInternalExports     Minify internal exports.
+  --moduleTypes <types>       Module types for customized extensions.
+  --no-externalLiveBindings   Disable external live bindings.
+  --no-preserveEntrySignatures Avoid facade chunks for entry points.
   --no-treeshake              Disable treeshaking.
-  --optimization.inline-const <optimization.inline-const>Enable crossmodule constant inlining.
-  --optimization.pife-for-module-wrappers Use PIFE pattern for module wrappers.
+  --optimization.inlineConst <optimization.inlineConst>Enable crossmodule constant inlining.
+  --optimization.pifeForModuleWrappers Use PIFE pattern for module wrappers.
   --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
   --paths <paths>             Maps external module IDs to paths.
-  --polyfill-require          Disable require polyfill injection.
-  --post-banner <post-banner> A string to prepend to the top of each chunk. Applied after the \`renderChunk\` hook and minification.
-  --post-footer <post-footer> A string to append to the bottom of each chunk. Applied after the \`renderChunk\` hook and minification.
-  --preserve-modules          Preserve module structure.
-  --preserve-modules-root <preserve-modules-root>Put preserved modules under this path at root level.
-  --sanitize-file-name        Sanitize file name.
-  --shim-missing-exports      Create shim variables for missing exports.
-  --sourcemap-base-url <sourcemap-base-url>Base URL used to prefix sourcemap paths.
-  --sourcemap-debug-ids       Inject sourcemap debug IDs.
-  --sourcemap-exclude-sources Exclude source content from sourcemaps.
+  --polyfillRequire           Disable require polyfill injection.
+  --postBanner <postBanner>   A string to prepend to the top of each chunk. Applied after the \`renderChunk\` hook and minification.
+  --postFooter <postFooter>   A string to append to the bottom of each chunk. Applied after the \`renderChunk\` hook and minification.
+  --preserveModules           Preserve module structure.
+  --preserveModulesRoot <preserveModulesRoot>Put preserved modules under this path at root level.
+  --sanitizeFileName          Sanitize file name.
+  --shimMissingExports        Create shim variables for missing exports.
+  --sourcemapBaseUrl <sourcemapBaseUrl>Base URL used to prefix sourcemap paths.
+  --sourcemapDebugIds         Inject sourcemap debug IDs.
+  --sourcemapExcludeSources   Exclude source content from sourcemaps.
+  --sourcemapFileNames <sourcemapFileNames>Name pattern for emitted sourcemaps.
   --strict <strict>           Whether to always output \`"use strict"\` directive in non-ES module outputs.
-  --strict-execution-order    Lets modules be executed in the order they are declared.
-  --top-level-var             Rewrite top-level declarations to use \`var\`.
-  --transform.assumptions.ignore-function-length .
-  --transform.assumptions.no-document-all .
-  --transform.assumptions.object-rest-no-symbols .
-  --transform.assumptions.pure-getters .
-  --transform.assumptions.set-public-class-fields .
-  --transform.decorator.emit-decorator-metadata .
+  --strictExecutionOrder      Preserve source module execution order across generated chunks.
+  --topLevelVar               Rewrite top-level declarations to use \`var\`.
+  --transform.assumptions.ignoreFunctionLength .
+  --transform.assumptions.noDocumentAll .
+  --transform.assumptions.objectRestNoSymbols .
+  --transform.assumptions.pureGetters .
+  --transform.assumptions.setPublicClassFields .
+  --transform.decorator.emitDecoratorMetadata .
   --transform.decorator.legacy .
-  --transform.decorator.strict-null-checks .
+  --transform.decorator.strictNullChecks .
   --transform.define <transform.define>Define global variables (syntax: key:value,key2:value2).
-  --transform.drop-labels <transform.drop-labels>Remove labeled statements with these label names.
+  --transform.dropLabels <transform.dropLabels>Remove labeled statements with these label names.
   --transform.helpers.mode <transform.helpers.mode>.
   --transform.inject <transform.inject>Inject import statements on demand.
   --transform.jsx <transform.jsx>.
-  --transform.plugins.styled-components <transform.plugins.styled-components>.
-  --transform.plugins.tagged-template-escape .
+  --transform.plugins.styledComponents <transform.plugins.styledComponents>.
+  --transform.plugins.taggedTemplateEscape .
   --transform.target <transform.target>The JavaScript target environment.
-  --transform.typescript.allow-declare-fields .
-  --transform.typescript.allow-namespaces .
+  --transform.typescript.allowDeclareFields .
+  --transform.typescript.allowNamespaces .
   --transform.typescript.declaration.sourcemap .
-  --transform.typescript.declaration.strip-internal .
-  --transform.typescript.jsx-pragma <transform.typescript.jsx-pragma>.
-  --transform.typescript.jsx-pragma-frag <transform.typescript.jsx-pragma-frag>.
-  --transform.typescript.only-remove-type-imports .
-  --transform.typescript.optimize-const-enums .
-  --transform.typescript.optimize-enums .
-  --transform.typescript.remove-class-fields-without-initializer .
-  --transform.typescript.rewrite-import-extensions <transform.typescript.rewrite-import-extensions>.
+  --transform.typescript.declaration.stripInternal .
+  --transform.typescript.jsxPragma <transform.typescript.jsxPragma>.
+  --transform.typescript.jsxPragmaFrag <transform.typescript.jsxPragmaFrag>.
+  --transform.typescript.onlyRemoveTypeImports .
+  --transform.typescript.optimizeConstEnums .
+  --transform.typescript.optimizeEnums .
+  --transform.typescript.removeClassFieldsWithoutInitializer .
+  --transform.typescript.rewriteImportExtensions <transform.typescript.rewriteImportExtensions>.
   --tsconfig <tsconfig>       Path to the tsconfig.json file.
-  --virtual-dirname <virtual-dirname>.
+  --virtualDirname <virtualDirname>.
 
 EXAMPLES
 
@@ -167,109 +174,116 @@ OPTIONS
   --sourcemap -s, <sourcemap> Generate sourcemap (\`-s inline\` for inline, or \`-s\` for \`.map\` file).
   --version -v,               Show version number.
   --watch -w,                 Watch files in bundle and rebuild on changes.
-  --advanced-chunks.min-share-count <advanced-chunks.min-share-count>Minimum share count of the chunk.
-  --advanced-chunks.min-size <advanced-chunks.min-size>Minimum size of the chunk.
-  --asset-file-names <name>   Name pattern for asset files.
+  --advancedChunks.minShareCount <advancedChunks.minShareCount>Minimum share count of the chunk.
+  --advancedChunks.minSize <advancedChunks.minSize>Minimum size of the chunk.
+  --assetFileNames <name>     Name pattern for asset files.
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
-  --checks.cannot-call-namespace Whether to emit warnings when a namespace is called as a function.
-  --checks.circular-dependency Whether to emit warnings when detecting circular dependency.
-  --checks.common-js-variable-in-esm Whether to emit warnings when a CommonJS variable is used in an ES module.
-  --checks.configuration-field-conflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
-  --checks.could-not-clean-directory Whether to emit warnings when Rolldown could not clean the output directory.
-  --checks.duplicate-shebang  Whether to emit warnings when both the code and postBanner contain shebang.
-  --checks.empty-import-meta  Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
+  --charset <charset>         Character set to use in generated JavaScript.
+  --checks.bundlerTimings     Whether to emit warnings when plugins and option callbacks take significant time during the build process.
+  --checks.cannotCallNamespace Whether to emit warnings when a namespace is called as a function.
+  --checks.circularDependency Whether to emit warnings when detecting circular dependency.
+  --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.
+  --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
+  --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
+  --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
+  --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.
-  --checks.filename-conflict  Whether to emit warnings when files generated have the same name with different contents.
-  --checks.import-is-undefined Whether to emit warnings when an imported variable is not exported.
-  --checks.ineffective-dynamic-import Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
-  --checks.invalid-annotation Whether to emit warnings when a \`#__PURE__\` / \`@__PURE__\` annotation has no effect due to its position.
-  --checks.large-barrel-modules Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000).
-  --checks.missing-global-name Whether to emit warnings when the \`output.globals\` option is missing when needed.
-  --checks.missing-name-option-for-iife-export Whether to emit warnings when the \`output.name\` option is missing when needed.
-  --checks.mixed-exports      Whether to emit warnings when the way to export values is ambiguous.
-  --checks.plugin-timings     Whether to emit warnings when plugins take significant time during the build process.
-  --checks.prefer-builtin-feature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
-  --checks.sourcemap-broken   Whether to emit warnings when a plugin transforms code without generating a sourcemap.
-  --checks.tolerated-transform Whether to emit warnings when detecting tolerated transform.
-  --checks.unresolved-entry   Whether to emit warnings when an entrypoint cannot be resolved.
-  --checks.unresolved-import  Whether to emit warnings when an import cannot be resolved.
-  --checks.unsupported-tsconfig-option Whether to emit warnings when a tsconfig option or combination of options is not supported.
-  --chunk-file-names <name>   Name pattern for emitted secondary chunks.
-  --clean-dir                 Clean output directory before emitting output.
-  --code-splitting <code-splitting>Code splitting options (true, false, or object).
+  --checks.filenameConflict   Whether to emit warnings when files generated have the same name with different contents.
+  --checks.importIsUndefined  Whether to emit warnings when an imported variable is not exported.
+  --checks.ineffectiveDynamicImport Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
+  --checks.invalidAnnotation  Whether to emit warnings when a \`#__PURE__\` / \`@__PURE__\` annotation has no effect due to its position.
+  --checks.largeBarrelModules Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000).
+  --checks.missingGlobalName  Whether to emit warnings when the \`output.globals\` option is missing when needed.
+  --checks.missingNameOptionForIifeExport Whether to emit warnings when the \`output.name\` option is missing when needed.
+  --checks.mixedExports       Whether to emit warnings when the way to export values is ambiguous.
+  --checks.moduleLevelDirective Whether to emit warnings for module-level directives other than \`use strict\`.
+  --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
+  --checks.pluginTimings      Deprecated alias for bundlerTimings. Rolldown uses bundlerTimings if both options have values.
+  --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
+  --checks.shimmedExport      Whether to emit warnings when a missing export is replaced with an undefined binding.
+  --checks.sourcemapBroken    Whether to emit warnings when a plugin transforms code without generating a sourcemap.
+  --checks.toleratedTransform Whether to emit warnings when detecting tolerated transform.
+  --checks.unresolvedEntry    Whether to emit warnings when an entrypoint cannot be resolved.
+  --checks.unresolvedImport   Whether to emit warnings when an import cannot be resolved.
+  --checks.unsupportedTsconfigOption Whether to emit warnings when a tsconfig option or combination of options is not supported.
+  --chunkFileNames <name>     Name pattern for emitted secondary chunks.
+  --cleanDir                  Clean output directory before emitting output.
+  --codeSplitting <codeSplitting>Code splitting options. Enabled by default; use \`--no-codeSplitting\` to disable, or \`--codeSplitting.minSize\` / \`--codeSplitting.minShareCount\` to configure.
   --comments <comments>       Control comments in the output.
+  --configLoader <loader>     How to load the config file (bundle, native).
   --context <context>         The entity top-level \`this\` represents.
   --cwd <cwd>                 Current working directory.
-  --devtools.session-id <devtools.session-id>Used to name the build.
-  --dynamic-import-in-cjs     Dynamic import in CJS output.
-  --entry-file-names <name>   Name pattern for emitted entry chunks.
+  --devtools.sessionId <devtools.sessionId>Used to name the build.
+  --dynamicImportInCjs        Dynamic import in CJS output.
+  --entryFileNames <name>     Name pattern for emitted entry chunks.
   --environment <environment> Pass additional settings to the config file via process.ENV.
-  --es-module                 Always generate \`__esModule\` marks in non-ESM formats, defaults to \`if-default-prop\` (use \`--no-esModule\` to always disable).
+  --esModule                  Always generate \`__esModule\` marks in non-ESM formats, defaults to \`if-default-prop\` (use \`--no-esModule\` to always disable).
   --exports <exports>         Specify a export mode (auto, named, default, none).
   --extend                    Extend global variable defined by name in IIFE / UMD formats.
   --footer <footer>           Code to insert the bottom of the bundled file (outside the wrapper function).
-  --generated-code.preset <generated-code.preset>.
-  --generated-code.profiler-names Whether to add readable names to internal variables for profiling purposes.
-  --generated-code.symbols    Whether to use Symbol.toStringTag for namespace objects.
-  --hash-characters <hash-characters>Use the specified character set for file hashes.
-  --inline-dynamic-imports    Inline dynamic imports.
+  --generatedCode.preset <generatedCode.preset>.
+  --generatedCode.profilerNames Whether to add readable names to internal variables for profiling purposes.
+  --generatedCode.symbols     Whether to use Symbol.toStringTag for namespace objects.
+  --hashCharacters <hashCharacters>Use the specified character set for file hashes.
+  --inlineDynamicImports      Inline dynamic imports.
   --input <input>             Entry file.
   --intro <intro>             Code to insert the top of the bundled file (inside the wrapper function).
-  --keep-names                Keep function and class names after bundling.
-  --legal-comments <legal-comments>Control legal comments in the output.
-  --log-level <log-level>     Log level (silent, info, debug, warn).
-  --make-absolute-externals-relative Prevent normalization of external imports.
-  --minify-internal-exports   Minify internal exports.
-  --module-types <types>      Module types for customized extensions.
-  --no-external-live-bindings Disable external live bindings.
-  --no-preserve-entry-signatures Avoid facade chunks for entry points.
+  --keepNames                 Keep function and class names after bundling.
+  --legalComments <legalComments>Control legal comments in the output.
+  --logLevel <logLevel>       Log level (silent, info, debug, warn).
+  --makeAbsoluteExternalsRelative Prevent normalization of external imports.
+  --minifyInternalExports     Minify internal exports.
+  --moduleTypes <types>       Module types for customized extensions.
+  --no-externalLiveBindings   Disable external live bindings.
+  --no-preserveEntrySignatures Avoid facade chunks for entry points.
   --no-treeshake              Disable treeshaking.
-  --optimization.inline-const <optimization.inline-const>Enable crossmodule constant inlining.
-  --optimization.pife-for-module-wrappers Use PIFE pattern for module wrappers.
+  --optimization.inlineConst <optimization.inlineConst>Enable crossmodule constant inlining.
+  --optimization.pifeForModuleWrappers Use PIFE pattern for module wrappers.
   --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
   --paths <paths>             Maps external module IDs to paths.
-  --polyfill-require          Disable require polyfill injection.
-  --post-banner <post-banner> A string to prepend to the top of each chunk. Applied after the \`renderChunk\` hook and minification.
-  --post-footer <post-footer> A string to append to the bottom of each chunk. Applied after the \`renderChunk\` hook and minification.
-  --preserve-modules          Preserve module structure.
-  --preserve-modules-root <preserve-modules-root>Put preserved modules under this path at root level.
-  --sanitize-file-name        Sanitize file name.
-  --shim-missing-exports      Create shim variables for missing exports.
-  --sourcemap-base-url <sourcemap-base-url>Base URL used to prefix sourcemap paths.
-  --sourcemap-debug-ids       Inject sourcemap debug IDs.
-  --sourcemap-exclude-sources Exclude source content from sourcemaps.
+  --polyfillRequire           Disable require polyfill injection.
+  --postBanner <postBanner>   A string to prepend to the top of each chunk. Applied after the \`renderChunk\` hook and minification.
+  --postFooter <postFooter>   A string to append to the bottom of each chunk. Applied after the \`renderChunk\` hook and minification.
+  --preserveModules           Preserve module structure.
+  --preserveModulesRoot <preserveModulesRoot>Put preserved modules under this path at root level.
+  --sanitizeFileName          Sanitize file name.
+  --shimMissingExports        Create shim variables for missing exports.
+  --sourcemapBaseUrl <sourcemapBaseUrl>Base URL used to prefix sourcemap paths.
+  --sourcemapDebugIds         Inject sourcemap debug IDs.
+  --sourcemapExcludeSources   Exclude source content from sourcemaps.
+  --sourcemapFileNames <sourcemapFileNames>Name pattern for emitted sourcemaps.
   --strict <strict>           Whether to always output \`"use strict"\` directive in non-ES module outputs.
-  --strict-execution-order    Lets modules be executed in the order they are declared.
-  --top-level-var             Rewrite top-level declarations to use \`var\`.
-  --transform.assumptions.ignore-function-length .
-  --transform.assumptions.no-document-all .
-  --transform.assumptions.object-rest-no-symbols .
-  --transform.assumptions.pure-getters .
-  --transform.assumptions.set-public-class-fields .
-  --transform.decorator.emit-decorator-metadata .
+  --strictExecutionOrder      Preserve source module execution order across generated chunks.
+  --topLevelVar               Rewrite top-level declarations to use \`var\`.
+  --transform.assumptions.ignoreFunctionLength .
+  --transform.assumptions.noDocumentAll .
+  --transform.assumptions.objectRestNoSymbols .
+  --transform.assumptions.pureGetters .
+  --transform.assumptions.setPublicClassFields .
+  --transform.decorator.emitDecoratorMetadata .
   --transform.decorator.legacy .
-  --transform.decorator.strict-null-checks .
+  --transform.decorator.strictNullChecks .
   --transform.define <transform.define>Define global variables (syntax: key:value,key2:value2).
-  --transform.drop-labels <transform.drop-labels>Remove labeled statements with these label names.
+  --transform.dropLabels <transform.dropLabels>Remove labeled statements with these label names.
   --transform.helpers.mode <transform.helpers.mode>.
   --transform.inject <transform.inject>Inject import statements on demand.
   --transform.jsx <transform.jsx>.
-  --transform.plugins.styled-components <transform.plugins.styled-components>.
-  --transform.plugins.tagged-template-escape .
+  --transform.plugins.styledComponents <transform.plugins.styledComponents>.
+  --transform.plugins.taggedTemplateEscape .
   --transform.target <transform.target>The JavaScript target environment.
-  --transform.typescript.allow-declare-fields .
-  --transform.typescript.allow-namespaces .
+  --transform.typescript.allowDeclareFields .
+  --transform.typescript.allowNamespaces .
   --transform.typescript.declaration.sourcemap .
-  --transform.typescript.declaration.strip-internal .
-  --transform.typescript.jsx-pragma <transform.typescript.jsx-pragma>.
-  --transform.typescript.jsx-pragma-frag <transform.typescript.jsx-pragma-frag>.
-  --transform.typescript.only-remove-type-imports .
-  --transform.typescript.optimize-const-enums .
-  --transform.typescript.optimize-enums .
-  --transform.typescript.remove-class-fields-without-initializer .
-  --transform.typescript.rewrite-import-extensions <transform.typescript.rewrite-import-extensions>.
+  --transform.typescript.declaration.stripInternal .
+  --transform.typescript.jsxPragma <transform.typescript.jsxPragma>.
+  --transform.typescript.jsxPragmaFrag <transform.typescript.jsxPragmaFrag>.
+  --transform.typescript.onlyRemoveTypeImports .
+  --transform.typescript.optimizeConstEnums .
+  --transform.typescript.optimizeEnums .
+  --transform.typescript.removeClassFieldsWithoutInitializer .
+  --transform.typescript.rewriteImportExtensions <transform.typescript.rewriteImportExtensions>.
   --tsconfig <tsconfig>       Path to the tsconfig.json file.
-  --virtual-dirname <virtual-dirname>.
+  --virtualDirname <virtualDirname>.
 
 EXAMPLES
 
@@ -314,109 +328,116 @@ OPTIONS
   --sourcemap -s, <sourcemap> Generate sourcemap (\`-s inline\` for inline, or \`-s\` for \`.map\` file).
   --version -v,               Show version number.
   --watch -w,                 Watch files in bundle and rebuild on changes.
-  --advanced-chunks.min-share-count <advanced-chunks.min-share-count>Minimum share count of the chunk.
-  --advanced-chunks.min-size <advanced-chunks.min-size>Minimum size of the chunk.
-  --asset-file-names <name>   Name pattern for asset files.
+  --advancedChunks.minShareCount <advancedChunks.minShareCount>Minimum share count of the chunk.
+  --advancedChunks.minSize <advancedChunks.minSize>Minimum size of the chunk.
+  --assetFileNames <name>     Name pattern for asset files.
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
-  --checks.cannot-call-namespace Whether to emit warnings when a namespace is called as a function.
-  --checks.circular-dependency Whether to emit warnings when detecting circular dependency.
-  --checks.common-js-variable-in-esm Whether to emit warnings when a CommonJS variable is used in an ES module.
-  --checks.configuration-field-conflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
-  --checks.could-not-clean-directory Whether to emit warnings when Rolldown could not clean the output directory.
-  --checks.duplicate-shebang  Whether to emit warnings when both the code and postBanner contain shebang.
-  --checks.empty-import-meta  Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
+  --charset <charset>         Character set to use in generated JavaScript.
+  --checks.bundlerTimings     Whether to emit warnings when plugins and option callbacks take significant time during the build process.
+  --checks.cannotCallNamespace Whether to emit warnings when a namespace is called as a function.
+  --checks.circularDependency Whether to emit warnings when detecting circular dependency.
+  --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.
+  --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
+  --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
+  --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
+  --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.
-  --checks.filename-conflict  Whether to emit warnings when files generated have the same name with different contents.
-  --checks.import-is-undefined Whether to emit warnings when an imported variable is not exported.
-  --checks.ineffective-dynamic-import Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
-  --checks.invalid-annotation Whether to emit warnings when a \`#__PURE__\` / \`@__PURE__\` annotation has no effect due to its position.
-  --checks.large-barrel-modules Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000).
-  --checks.missing-global-name Whether to emit warnings when the \`output.globals\` option is missing when needed.
-  --checks.missing-name-option-for-iife-export Whether to emit warnings when the \`output.name\` option is missing when needed.
-  --checks.mixed-exports      Whether to emit warnings when the way to export values is ambiguous.
-  --checks.plugin-timings     Whether to emit warnings when plugins take significant time during the build process.
-  --checks.prefer-builtin-feature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
-  --checks.sourcemap-broken   Whether to emit warnings when a plugin transforms code without generating a sourcemap.
-  --checks.tolerated-transform Whether to emit warnings when detecting tolerated transform.
-  --checks.unresolved-entry   Whether to emit warnings when an entrypoint cannot be resolved.
-  --checks.unresolved-import  Whether to emit warnings when an import cannot be resolved.
-  --checks.unsupported-tsconfig-option Whether to emit warnings when a tsconfig option or combination of options is not supported.
-  --chunk-file-names <name>   Name pattern for emitted secondary chunks.
-  --clean-dir                 Clean output directory before emitting output.
-  --code-splitting <code-splitting>Code splitting options (true, false, or object).
+  --checks.filenameConflict   Whether to emit warnings when files generated have the same name with different contents.
+  --checks.importIsUndefined  Whether to emit warnings when an imported variable is not exported.
+  --checks.ineffectiveDynamicImport Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
+  --checks.invalidAnnotation  Whether to emit warnings when a \`#__PURE__\` / \`@__PURE__\` annotation has no effect due to its position.
+  --checks.largeBarrelModules Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000).
+  --checks.missingGlobalName  Whether to emit warnings when the \`output.globals\` option is missing when needed.
+  --checks.missingNameOptionForIifeExport Whether to emit warnings when the \`output.name\` option is missing when needed.
+  --checks.mixedExports       Whether to emit warnings when the way to export values is ambiguous.
+  --checks.moduleLevelDirective Whether to emit warnings for module-level directives other than \`use strict\`.
+  --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
+  --checks.pluginTimings      Deprecated alias for bundlerTimings. Rolldown uses bundlerTimings if both options have values.
+  --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
+  --checks.shimmedExport      Whether to emit warnings when a missing export is replaced with an undefined binding.
+  --checks.sourcemapBroken    Whether to emit warnings when a plugin transforms code without generating a sourcemap.
+  --checks.toleratedTransform Whether to emit warnings when detecting tolerated transform.
+  --checks.unresolvedEntry    Whether to emit warnings when an entrypoint cannot be resolved.
+  --checks.unresolvedImport   Whether to emit warnings when an import cannot be resolved.
+  --checks.unsupportedTsconfigOption Whether to emit warnings when a tsconfig option or combination of options is not supported.
+  --chunkFileNames <name>     Name pattern for emitted secondary chunks.
+  --cleanDir                  Clean output directory before emitting output.
+  --codeSplitting <codeSplitting>Code splitting options. Enabled by default; use \`--no-codeSplitting\` to disable, or \`--codeSplitting.minSize\` / \`--codeSplitting.minShareCount\` to configure.
   --comments <comments>       Control comments in the output.
+  --configLoader <loader>     How to load the config file (bundle, native).
   --context <context>         The entity top-level \`this\` represents.
   --cwd <cwd>                 Current working directory.
-  --devtools.session-id <devtools.session-id>Used to name the build.
-  --dynamic-import-in-cjs     Dynamic import in CJS output.
-  --entry-file-names <name>   Name pattern for emitted entry chunks.
+  --devtools.sessionId <devtools.sessionId>Used to name the build.
+  --dynamicImportInCjs        Dynamic import in CJS output.
+  --entryFileNames <name>     Name pattern for emitted entry chunks.
   --environment <environment> Pass additional settings to the config file via process.ENV.
-  --es-module                 Always generate \`__esModule\` marks in non-ESM formats, defaults to \`if-default-prop\` (use \`--no-esModule\` to always disable).
+  --esModule                  Always generate \`__esModule\` marks in non-ESM formats, defaults to \`if-default-prop\` (use \`--no-esModule\` to always disable).
   --exports <exports>         Specify a export mode (auto, named, default, none).
   --extend                    Extend global variable defined by name in IIFE / UMD formats.
   --footer <footer>           Code to insert the bottom of the bundled file (outside the wrapper function).
-  --generated-code.preset <generated-code.preset>.
-  --generated-code.profiler-names Whether to add readable names to internal variables for profiling purposes.
-  --generated-code.symbols    Whether to use Symbol.toStringTag for namespace objects.
-  --hash-characters <hash-characters>Use the specified character set for file hashes.
-  --inline-dynamic-imports    Inline dynamic imports.
+  --generatedCode.preset <generatedCode.preset>.
+  --generatedCode.profilerNames Whether to add readable names to internal variables for profiling purposes.
+  --generatedCode.symbols     Whether to use Symbol.toStringTag for namespace objects.
+  --hashCharacters <hashCharacters>Use the specified character set for file hashes.
+  --inlineDynamicImports      Inline dynamic imports.
   --input <input>             Entry file.
   --intro <intro>             Code to insert the top of the bundled file (inside the wrapper function).
-  --keep-names                Keep function and class names after bundling.
-  --legal-comments <legal-comments>Control legal comments in the output.
-  --log-level <log-level>     Log level (silent, info, debug, warn).
-  --make-absolute-externals-relative Prevent normalization of external imports.
-  --minify-internal-exports   Minify internal exports.
-  --module-types <types>      Module types for customized extensions.
-  --no-external-live-bindings Disable external live bindings.
-  --no-preserve-entry-signatures Avoid facade chunks for entry points.
+  --keepNames                 Keep function and class names after bundling.
+  --legalComments <legalComments>Control legal comments in the output.
+  --logLevel <logLevel>       Log level (silent, info, debug, warn).
+  --makeAbsoluteExternalsRelative Prevent normalization of external imports.
+  --minifyInternalExports     Minify internal exports.
+  --moduleTypes <types>       Module types for customized extensions.
+  --no-externalLiveBindings   Disable external live bindings.
+  --no-preserveEntrySignatures Avoid facade chunks for entry points.
   --no-treeshake              Disable treeshaking.
-  --optimization.inline-const <optimization.inline-const>Enable crossmodule constant inlining.
-  --optimization.pife-for-module-wrappers Use PIFE pattern for module wrappers.
+  --optimization.inlineConst <optimization.inlineConst>Enable crossmodule constant inlining.
+  --optimization.pifeForModuleWrappers Use PIFE pattern for module wrappers.
   --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
   --paths <paths>             Maps external module IDs to paths.
-  --polyfill-require          Disable require polyfill injection.
-  --post-banner <post-banner> A string to prepend to the top of each chunk. Applied after the \`renderChunk\` hook and minification.
-  --post-footer <post-footer> A string to append to the bottom of each chunk. Applied after the \`renderChunk\` hook and minification.
-  --preserve-modules          Preserve module structure.
-  --preserve-modules-root <preserve-modules-root>Put preserved modules under this path at root level.
-  --sanitize-file-name        Sanitize file name.
-  --shim-missing-exports      Create shim variables for missing exports.
-  --sourcemap-base-url <sourcemap-base-url>Base URL used to prefix sourcemap paths.
-  --sourcemap-debug-ids       Inject sourcemap debug IDs.
-  --sourcemap-exclude-sources Exclude source content from sourcemaps.
+  --polyfillRequire           Disable require polyfill injection.
+  --postBanner <postBanner>   A string to prepend to the top of each chunk. Applied after the \`renderChunk\` hook and minification.
+  --postFooter <postFooter>   A string to append to the bottom of each chunk. Applied after the \`renderChunk\` hook and minification.
+  --preserveModules           Preserve module structure.
+  --preserveModulesRoot <preserveModulesRoot>Put preserved modules under this path at root level.
+  --sanitizeFileName          Sanitize file name.
+  --shimMissingExports        Create shim variables for missing exports.
+  --sourcemapBaseUrl <sourcemapBaseUrl>Base URL used to prefix sourcemap paths.
+  --sourcemapDebugIds         Inject sourcemap debug IDs.
+  --sourcemapExcludeSources   Exclude source content from sourcemaps.
+  --sourcemapFileNames <sourcemapFileNames>Name pattern for emitted sourcemaps.
   --strict <strict>           Whether to always output \`"use strict"\` directive in non-ES module outputs.
-  --strict-execution-order    Lets modules be executed in the order they are declared.
-  --top-level-var             Rewrite top-level declarations to use \`var\`.
-  --transform.assumptions.ignore-function-length .
-  --transform.assumptions.no-document-all .
-  --transform.assumptions.object-rest-no-symbols .
-  --transform.assumptions.pure-getters .
-  --transform.assumptions.set-public-class-fields .
-  --transform.decorator.emit-decorator-metadata .
+  --strictExecutionOrder      Preserve source module execution order across generated chunks.
+  --topLevelVar               Rewrite top-level declarations to use \`var\`.
+  --transform.assumptions.ignoreFunctionLength .
+  --transform.assumptions.noDocumentAll .
+  --transform.assumptions.objectRestNoSymbols .
+  --transform.assumptions.pureGetters .
+  --transform.assumptions.setPublicClassFields .
+  --transform.decorator.emitDecoratorMetadata .
   --transform.decorator.legacy .
-  --transform.decorator.strict-null-checks .
+  --transform.decorator.strictNullChecks .
   --transform.define <transform.define>Define global variables (syntax: key:value,key2:value2).
-  --transform.drop-labels <transform.drop-labels>Remove labeled statements with these label names.
+  --transform.dropLabels <transform.dropLabels>Remove labeled statements with these label names.
   --transform.helpers.mode <transform.helpers.mode>.
   --transform.inject <transform.inject>Inject import statements on demand.
   --transform.jsx <transform.jsx>.
-  --transform.plugins.styled-components <transform.plugins.styled-components>.
-  --transform.plugins.tagged-template-escape .
+  --transform.plugins.styledComponents <transform.plugins.styledComponents>.
+  --transform.plugins.taggedTemplateEscape .
   --transform.target <transform.target>The JavaScript target environment.
-  --transform.typescript.allow-declare-fields .
-  --transform.typescript.allow-namespaces .
+  --transform.typescript.allowDeclareFields .
+  --transform.typescript.allowNamespaces .
   --transform.typescript.declaration.sourcemap .
-  --transform.typescript.declaration.strip-internal .
-  --transform.typescript.jsx-pragma <transform.typescript.jsx-pragma>.
-  --transform.typescript.jsx-pragma-frag <transform.typescript.jsx-pragma-frag>.
-  --transform.typescript.only-remove-type-imports .
-  --transform.typescript.optimize-const-enums .
-  --transform.typescript.optimize-enums .
-  --transform.typescript.remove-class-fields-without-initializer .
-  --transform.typescript.rewrite-import-extensions <transform.typescript.rewrite-import-extensions>.
+  --transform.typescript.declaration.stripInternal .
+  --transform.typescript.jsxPragma <transform.typescript.jsxPragma>.
+  --transform.typescript.jsxPragmaFrag <transform.typescript.jsxPragmaFrag>.
+  --transform.typescript.onlyRemoveTypeImports .
+  --transform.typescript.optimizeConstEnums .
+  --transform.typescript.optimizeEnums .
+  --transform.typescript.removeClassFieldsWithoutInitializer .
+  --transform.typescript.rewriteImportExtensions <transform.typescript.rewriteImportExtensions>.
   --tsconfig <tsconfig>       Path to the tsconfig.json file.
-  --virtual-dirname <virtual-dirname>.
+  --virtualDirname <virtualDirname>.
 
 EXAMPLES
 
@@ -461,109 +482,116 @@ OPTIONS
   --sourcemap -s, <sourcemap> Generate sourcemap (\`-s inline\` for inline, or \`-s\` for \`.map\` file).
   --version -v,               Show version number.
   --watch -w,                 Watch files in bundle and rebuild on changes.
-  --advanced-chunks.min-share-count <advanced-chunks.min-share-count>Minimum share count of the chunk.
-  --advanced-chunks.min-size <advanced-chunks.min-size>Minimum size of the chunk.
-  --asset-file-names <name>   Name pattern for asset files.
+  --advancedChunks.minShareCount <advancedChunks.minShareCount>Minimum share count of the chunk.
+  --advancedChunks.minSize <advancedChunks.minSize>Minimum size of the chunk.
+  --assetFileNames <name>     Name pattern for asset files.
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
-  --checks.cannot-call-namespace Whether to emit warnings when a namespace is called as a function.
-  --checks.circular-dependency Whether to emit warnings when detecting circular dependency.
-  --checks.common-js-variable-in-esm Whether to emit warnings when a CommonJS variable is used in an ES module.
-  --checks.configuration-field-conflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
-  --checks.could-not-clean-directory Whether to emit warnings when Rolldown could not clean the output directory.
-  --checks.duplicate-shebang  Whether to emit warnings when both the code and postBanner contain shebang.
-  --checks.empty-import-meta  Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
+  --charset <charset>         Character set to use in generated JavaScript.
+  --checks.bundlerTimings     Whether to emit warnings when plugins and option callbacks take significant time during the build process.
+  --checks.cannotCallNamespace Whether to emit warnings when a namespace is called as a function.
+  --checks.circularDependency Whether to emit warnings when detecting circular dependency.
+  --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.
+  --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
+  --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
+  --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
+  --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.
-  --checks.filename-conflict  Whether to emit warnings when files generated have the same name with different contents.
-  --checks.import-is-undefined Whether to emit warnings when an imported variable is not exported.
-  --checks.ineffective-dynamic-import Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
-  --checks.invalid-annotation Whether to emit warnings when a \`#__PURE__\` / \`@__PURE__\` annotation has no effect due to its position.
-  --checks.large-barrel-modules Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000).
-  --checks.missing-global-name Whether to emit warnings when the \`output.globals\` option is missing when needed.
-  --checks.missing-name-option-for-iife-export Whether to emit warnings when the \`output.name\` option is missing when needed.
-  --checks.mixed-exports      Whether to emit warnings when the way to export values is ambiguous.
-  --checks.plugin-timings     Whether to emit warnings when plugins take significant time during the build process.
-  --checks.prefer-builtin-feature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
-  --checks.sourcemap-broken   Whether to emit warnings when a plugin transforms code without generating a sourcemap.
-  --checks.tolerated-transform Whether to emit warnings when detecting tolerated transform.
-  --checks.unresolved-entry   Whether to emit warnings when an entrypoint cannot be resolved.
-  --checks.unresolved-import  Whether to emit warnings when an import cannot be resolved.
-  --checks.unsupported-tsconfig-option Whether to emit warnings when a tsconfig option or combination of options is not supported.
-  --chunk-file-names <name>   Name pattern for emitted secondary chunks.
-  --clean-dir                 Clean output directory before emitting output.
-  --code-splitting <code-splitting>Code splitting options (true, false, or object).
+  --checks.filenameConflict   Whether to emit warnings when files generated have the same name with different contents.
+  --checks.importIsUndefined  Whether to emit warnings when an imported variable is not exported.
+  --checks.ineffectiveDynamicImport Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
+  --checks.invalidAnnotation  Whether to emit warnings when a \`#__PURE__\` / \`@__PURE__\` annotation has no effect due to its position.
+  --checks.largeBarrelModules Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000).
+  --checks.missingGlobalName  Whether to emit warnings when the \`output.globals\` option is missing when needed.
+  --checks.missingNameOptionForIifeExport Whether to emit warnings when the \`output.name\` option is missing when needed.
+  --checks.mixedExports       Whether to emit warnings when the way to export values is ambiguous.
+  --checks.moduleLevelDirective Whether to emit warnings for module-level directives other than \`use strict\`.
+  --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
+  --checks.pluginTimings      Deprecated alias for bundlerTimings. Rolldown uses bundlerTimings if both options have values.
+  --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
+  --checks.shimmedExport      Whether to emit warnings when a missing export is replaced with an undefined binding.
+  --checks.sourcemapBroken    Whether to emit warnings when a plugin transforms code without generating a sourcemap.
+  --checks.toleratedTransform Whether to emit warnings when detecting tolerated transform.
+  --checks.unresolvedEntry    Whether to emit warnings when an entrypoint cannot be resolved.
+  --checks.unresolvedImport   Whether to emit warnings when an import cannot be resolved.
+  --checks.unsupportedTsconfigOption Whether to emit warnings when a tsconfig option or combination of options is not supported.
+  --chunkFileNames <name>     Name pattern for emitted secondary chunks.
+  --cleanDir                  Clean output directory before emitting output.
+  --codeSplitting <codeSplitting>Code splitting options. Enabled by default; use \`--no-codeSplitting\` to disable, or \`--codeSplitting.minSize\` / \`--codeSplitting.minShareCount\` to configure.
   --comments <comments>       Control comments in the output.
+  --configLoader <loader>     How to load the config file (bundle, native).
   --context <context>         The entity top-level \`this\` represents.
   --cwd <cwd>                 Current working directory.
-  --devtools.session-id <devtools.session-id>Used to name the build.
-  --dynamic-import-in-cjs     Dynamic import in CJS output.
-  --entry-file-names <name>   Name pattern for emitted entry chunks.
+  --devtools.sessionId <devtools.sessionId>Used to name the build.
+  --dynamicImportInCjs        Dynamic import in CJS output.
+  --entryFileNames <name>     Name pattern for emitted entry chunks.
   --environment <environment> Pass additional settings to the config file via process.ENV.
-  --es-module                 Always generate \`__esModule\` marks in non-ESM formats, defaults to \`if-default-prop\` (use \`--no-esModule\` to always disable).
+  --esModule                  Always generate \`__esModule\` marks in non-ESM formats, defaults to \`if-default-prop\` (use \`--no-esModule\` to always disable).
   --exports <exports>         Specify a export mode (auto, named, default, none).
   --extend                    Extend global variable defined by name in IIFE / UMD formats.
   --footer <footer>           Code to insert the bottom of the bundled file (outside the wrapper function).
-  --generated-code.preset <generated-code.preset>.
-  --generated-code.profiler-names Whether to add readable names to internal variables for profiling purposes.
-  --generated-code.symbols    Whether to use Symbol.toStringTag for namespace objects.
-  --hash-characters <hash-characters>Use the specified character set for file hashes.
-  --inline-dynamic-imports    Inline dynamic imports.
+  --generatedCode.preset <generatedCode.preset>.
+  --generatedCode.profilerNames Whether to add readable names to internal variables for profiling purposes.
+  --generatedCode.symbols     Whether to use Symbol.toStringTag for namespace objects.
+  --hashCharacters <hashCharacters>Use the specified character set for file hashes.
+  --inlineDynamicImports      Inline dynamic imports.
   --input <input>             Entry file.
   --intro <intro>             Code to insert the top of the bundled file (inside the wrapper function).
-  --keep-names                Keep function and class names after bundling.
-  --legal-comments <legal-comments>Control legal comments in the output.
-  --log-level <log-level>     Log level (silent, info, debug, warn).
-  --make-absolute-externals-relative Prevent normalization of external imports.
-  --minify-internal-exports   Minify internal exports.
-  --module-types <types>      Module types for customized extensions.
-  --no-external-live-bindings Disable external live bindings.
-  --no-preserve-entry-signatures Avoid facade chunks for entry points.
+  --keepNames                 Keep function and class names after bundling.
+  --legalComments <legalComments>Control legal comments in the output.
+  --logLevel <logLevel>       Log level (silent, info, debug, warn).
+  --makeAbsoluteExternalsRelative Prevent normalization of external imports.
+  --minifyInternalExports     Minify internal exports.
+  --moduleTypes <types>       Module types for customized extensions.
+  --no-externalLiveBindings   Disable external live bindings.
+  --no-preserveEntrySignatures Avoid facade chunks for entry points.
   --no-treeshake              Disable treeshaking.
-  --optimization.inline-const <optimization.inline-const>Enable crossmodule constant inlining.
-  --optimization.pife-for-module-wrappers Use PIFE pattern for module wrappers.
+  --optimization.inlineConst <optimization.inlineConst>Enable crossmodule constant inlining.
+  --optimization.pifeForModuleWrappers Use PIFE pattern for module wrappers.
   --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
   --paths <paths>             Maps external module IDs to paths.
-  --polyfill-require          Disable require polyfill injection.
-  --post-banner <post-banner> A string to prepend to the top of each chunk. Applied after the \`renderChunk\` hook and minification.
-  --post-footer <post-footer> A string to append to the bottom of each chunk. Applied after the \`renderChunk\` hook and minification.
-  --preserve-modules          Preserve module structure.
-  --preserve-modules-root <preserve-modules-root>Put preserved modules under this path at root level.
-  --sanitize-file-name        Sanitize file name.
-  --shim-missing-exports      Create shim variables for missing exports.
-  --sourcemap-base-url <sourcemap-base-url>Base URL used to prefix sourcemap paths.
-  --sourcemap-debug-ids       Inject sourcemap debug IDs.
-  --sourcemap-exclude-sources Exclude source content from sourcemaps.
+  --polyfillRequire           Disable require polyfill injection.
+  --postBanner <postBanner>   A string to prepend to the top of each chunk. Applied after the \`renderChunk\` hook and minification.
+  --postFooter <postFooter>   A string to append to the bottom of each chunk. Applied after the \`renderChunk\` hook and minification.
+  --preserveModules           Preserve module structure.
+  --preserveModulesRoot <preserveModulesRoot>Put preserved modules under this path at root level.
+  --sanitizeFileName          Sanitize file name.
+  --shimMissingExports        Create shim variables for missing exports.
+  --sourcemapBaseUrl <sourcemapBaseUrl>Base URL used to prefix sourcemap paths.
+  --sourcemapDebugIds         Inject sourcemap debug IDs.
+  --sourcemapExcludeSources   Exclude source content from sourcemaps.
+  --sourcemapFileNames <sourcemapFileNames>Name pattern for emitted sourcemaps.
   --strict <strict>           Whether to always output \`"use strict"\` directive in non-ES module outputs.
-  --strict-execution-order    Lets modules be executed in the order they are declared.
-  --top-level-var             Rewrite top-level declarations to use \`var\`.
-  --transform.assumptions.ignore-function-length .
-  --transform.assumptions.no-document-all .
-  --transform.assumptions.object-rest-no-symbols .
-  --transform.assumptions.pure-getters .
-  --transform.assumptions.set-public-class-fields .
-  --transform.decorator.emit-decorator-metadata .
+  --strictExecutionOrder      Preserve source module execution order across generated chunks.
+  --topLevelVar               Rewrite top-level declarations to use \`var\`.
+  --transform.assumptions.ignoreFunctionLength .
+  --transform.assumptions.noDocumentAll .
+  --transform.assumptions.objectRestNoSymbols .
+  --transform.assumptions.pureGetters .
+  --transform.assumptions.setPublicClassFields .
+  --transform.decorator.emitDecoratorMetadata .
   --transform.decorator.legacy .
-  --transform.decorator.strict-null-checks .
+  --transform.decorator.strictNullChecks .
   --transform.define <transform.define>Define global variables (syntax: key:value,key2:value2).
-  --transform.drop-labels <transform.drop-labels>Remove labeled statements with these label names.
+  --transform.dropLabels <transform.dropLabels>Remove labeled statements with these label names.
   --transform.helpers.mode <transform.helpers.mode>.
   --transform.inject <transform.inject>Inject import statements on demand.
   --transform.jsx <transform.jsx>.
-  --transform.plugins.styled-components <transform.plugins.styled-components>.
-  --transform.plugins.tagged-template-escape .
+  --transform.plugins.styledComponents <transform.plugins.styledComponents>.
+  --transform.plugins.taggedTemplateEscape .
   --transform.target <transform.target>The JavaScript target environment.
-  --transform.typescript.allow-declare-fields .
-  --transform.typescript.allow-namespaces .
+  --transform.typescript.allowDeclareFields .
+  --transform.typescript.allowNamespaces .
   --transform.typescript.declaration.sourcemap .
-  --transform.typescript.declaration.strip-internal .
-  --transform.typescript.jsx-pragma <transform.typescript.jsx-pragma>.
-  --transform.typescript.jsx-pragma-frag <transform.typescript.jsx-pragma-frag>.
-  --transform.typescript.only-remove-type-imports .
-  --transform.typescript.optimize-const-enums .
-  --transform.typescript.optimize-enums .
-  --transform.typescript.remove-class-fields-without-initializer .
-  --transform.typescript.rewrite-import-extensions <transform.typescript.rewrite-import-extensions>.
+  --transform.typescript.declaration.stripInternal .
+  --transform.typescript.jsxPragma <transform.typescript.jsxPragma>.
+  --transform.typescript.jsxPragmaFrag <transform.typescript.jsxPragmaFrag>.
+  --transform.typescript.onlyRemoveTypeImports .
+  --transform.typescript.optimizeConstEnums .
+  --transform.typescript.optimizeEnums .
+  --transform.typescript.removeClassFieldsWithoutInitializer .
+  --transform.typescript.rewriteImportExtensions <transform.typescript.rewriteImportExtensions>.
   --tsconfig <tsconfig>       Path to the tsconfig.json file.
-  --virtual-dirname <virtual-dirname>.
+  --virtualDirname <virtualDirname>.
 
 EXAMPLES
 
@@ -600,7 +628,7 @@ exports[`cli options for bundling > cli default options 1`] = `
   ]
 }
 output cli default options {}
-<DIR>/index.js  chunk │ size: 0.13 kB
+<DIR>/index.js  chunk │ size: 0.11 kB
 
 "
 `;
@@ -609,46 +637,44 @@ exports[`cli options for bundling > should handle \`--input\` and positional arg
 "
 |→ 1.js:
 
-//#region 1.ts
+// 1.ts
 console.log("1");
-//#endregion
 
 
 |→ 2.js:
 
-//#region 2.js
+// 2.js
 console.log("2");
-//#endregion
 "
 `;
 
 exports[`cli options for bundling > should handle camelCase options (e.g. --moduleTypes) (#8410) 1`] = `
-"<DIR>/index.js  chunk │ size: 0.09 kB
+"<DIR>/index.js  chunk │ size: 0.06 kB
 
 "
 `;
 
 exports[`cli options for bundling > should handle comma-separated object options 1`] = `
-"<DIR>/index.js  chunk │ size: 0.09 kB
+"<DIR>/index.js  chunk │ size: 0.06 kB
 
 "
 `;
 
 exports[`cli options for bundling > should handle comma-separated object options mixed with single object 1`] = `
-"<DIR>/index.js  chunk │ size: 0.09 kB
+"<DIR>/index.js  chunk │ size: 0.06 kB
 
 "
 `;
 
 exports[`cli options for bundling > should handle deprecated key=value syntax with warning 1`] = `
 "Using \`key=value\` syntax for \`--module-types\` is deprecated. Use \`key:value\` instead.
-<DIR>/index.js  chunk │ size: 0.09 kB
+<DIR>/index.js  chunk │ size: 0.06 kB
 
 "
 `;
 
 exports[`cli options for bundling > should handle multiple define arguments with comma-separated syntax 1`] = `
-"<DIR>/index.js  chunk │ size: 0.10 kB
+"<DIR>/index.js  chunk │ size: 0.08 kB
 
 "
 `;
@@ -656,7 +682,6 @@ exports[`cli options for bundling > should handle multiple define arguments with
 exports[`cli options for bundling > should handle negative boolean options 1`] = `
 "(function(exports, node_fs) {
 	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-	//#endregion
 	exports.nonExternal = "nonExternal";
 	exports.read = node_fs.read;
 	exports.readFile = node_fs.readFile;
@@ -668,15 +693,14 @@ exports[`cli options for bundling > should handle negative boolean options 1`] =
 `;
 
 exports[`cli options for bundling > should handle nested options 1`] = `
-"//#region index.js
+"// index.js
 var cli_option_nested_default = defined;
-//#endregion
 export { cli_option_nested_default as default };
 "
 `;
 
 exports[`cli options for bundling > should handle single array options 1`] = `
-"<DIR>/index.js  chunk │ size: 0.14 kB
+"<DIR>/index.js  chunk │ size: 0.12 kB
 
 "
 `;
@@ -694,13 +718,13 @@ exports[`cli options for bundling > should handle single boolean short options 1
 `;
 
 exports[`cli options for bundling > should handle single object options 1`] = `
-"<DIR>/index.js  chunk │ size: 0.09 kB
+"<DIR>/index.js  chunk │ size: 0.06 kB
 
 "
 `;
 
 exports[`cli options for bundling > should handle single string options 1`] = `
-"<DIR>/index.js  chunk │ size: 0.12 kB
+"<DIR>/index.js  chunk │ size: 0.10 kB
 
 "
 `;
@@ -712,44 +736,44 @@ Invalid value for option format: Invalid type: Expected ("es" | "cjs" | "esm" | 
 `;
 
 exports[`config > should allow loading cts config 1`] = `
-"<DIR>/index.js  chunk │ size: 0.11 kB
+"<DIR>/index.js  chunk │ size: 0.09 kB
 
 "
 `;
 
 exports[`config > should allow loading mts config 1`] = `
-"<DIR>/index.js  chunk │ size: 0.11 kB
+"<DIR>/index.js  chunk │ size: 0.09 kB
 
 "
 `;
 
 exports[`config > should allow loading ts config 1`] = `
-"<DIR>/index.js  chunk │ size: 0.11 kB
+"<DIR>/index.js  chunk │ size: 0.09 kB
 
 "
 `;
 
 exports[`config > should allow loading ts config from non-working dir 1`] = `
-"<DIR>/index.js  chunk │ size: 0.11 kB
+"<DIR>/index.js  chunk │ size: 0.09 kB
 
 "
 `;
 
 exports[`config > should allow loading ts config with oxnode 1`] = `
-"<DIR>/index.js  chunk │ size: 0.11 kB
+"<DIR>/index.js  chunk │ size: 0.09 kB
 
 "
 `;
 
 exports[`config > should allow loading ts config with tsx 1`] = `
-"<DIR>/index.js  chunk │ size: 0.11 kB
+"<DIR>/index.js  chunk │ size: 0.09 kB
 
 "
 `;
 
 exports[`config > should allow multiply options 1`] = `
-"<DIR>/esm.js  chunk │ size: 0.14 kB
-<DIR>/cjs.js  chunk │ size: 0.14 kB
+"<DIR>/esm.js  chunk │ size: 0.12 kB
+<DIR>/cjs.js  chunk │ size: 0.12 kB
 
 "
 `;
@@ -758,40 +782,52 @@ exports[`config > should allow multiply output + call options hook once  + call 
 "called options hook
 called output options hook
 called output options hook
-<DIR>/esm.js  chunk │ size: 0.18 kB
-<DIR>/cjs.js  chunk │ size: 0.17 kB
+<DIR>/esm.js  chunk │ size: 0.16 kB
+<DIR>/cjs.js  chunk │ size: 0.15 kB
 
 "
 `;
 
 exports[`config > should allow multiply output 1`] = `
-"<DIR>/esm.js  chunk │ size: 0.14 kB
-<DIR>/cjs.js  chunk │ size: 0.14 kB
+"<DIR>/esm.js  chunk │ size: 0.12 kB
+<DIR>/cjs.js  chunk │ size: 0.12 kB
 
 "
 `;
 
 exports[`config > should bundle in ext-js-syntax-cjs 1`] = `
-"<DIR>/index.js  chunk │ size: 0.13 kB
+"<DIR>/index.js  chunk │ size: 0.11 kB
+
+"
+`;
+
+exports[`config > should load config with --configLoader native (mjs) 1`] = `
+"<DIR>/index.js  chunk │ size: 0.09 kB
+
+"
+`;
+
+exports[`config > should load ts config with --configLoader native 1`] = `
+"<DIR>/index.js  chunk │ size: 0.09 kB
 
 "
 `;
 
 exports[`config > should resolve rolldown.config.cjs 1`] = `
-"<DIR>/index.js  chunk │ size: 0.13 kB
+"<DIR>/index.js  chunk │ size: 0.11 kB
 
 "
 `;
 
 exports[`config > should support custom cli arguments 1`] = `
 "Option \`customArg\` is unrecognized. We will ignore this option.
-<DIR>/index.js  chunk │ size: 0.14 kB
+<DIR>/index.js  chunk │ size: 0.12 kB
 
 "
 `;
 
 exports[`config > should support environment option 1`] = `
-"<DIR>/index.js  chunk │ size: 0.14 kB
+"<DIR>/index.js  chunk │ size: 0.12 kB
 
 "
 `;
@@ -800,8 +836,8 @@ exports[`watch cli > should allow multiply output + call options hook once + cal
 "called options hook
 called output options hook
 called output options hook
-<DIR>/esm.js  chunk │ size: 0.18 kB
-<DIR>/cjs.js  chunk │ size: 0.17 kB
+<DIR>/esm.js  chunk │ size: 0.16 kB
+<DIR>/cjs.js  chunk │ size: 0.15 kB
 
 "
 `;

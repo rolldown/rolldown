@@ -8,19 +8,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
-//#region lib.js
+__rolldown_runtime__.registerGraph({
+	ids: ["lib.js", "main.js"],
+	localCount: 2,
+	edges: [[], [0]],
+	entries: [1]
+});
+// lib.js
 var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	__rolldown_runtime__.createModuleHotContext("lib.js");
 	__rolldown_runtime__.registerModule("lib.js", module);
 	exports.a = 1;
 }));
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 var import_lib = require_lib();
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 assert.strictEqual(import_lib.a, 1);
-//#endregion
 
 ```

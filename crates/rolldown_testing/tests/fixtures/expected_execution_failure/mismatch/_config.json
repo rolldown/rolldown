@@ -1,0 +1,7 @@
+{
+  "snapshot": false,
+  "expectExecutionFailure": {
+    "reason": "an unrelated nonzero exit must not satisfy the marker",
+    "outputContains": ["the intended failure signature"]
+  }
+}

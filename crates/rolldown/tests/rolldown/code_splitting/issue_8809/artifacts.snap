@@ -6,11 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## completion.js
 
 ```js
-//#region completion.js
+// completion.js
 async function complete() {
-	return (await import("./daemon2.js")).start();
+	return (await import("./daemon.js").then((n) => n.t)).start();
 }
-//#endregion
 export { complete };
 
 ```
@@ -18,32 +17,25 @@ export { complete };
 ## daemon.js
 
 ```js
-//#region daemon-impl.js
+// HIDDEN [\0rolldown/runtime.js]
+// daemon-impl.js
 function start() {
 	return "start";
 }
 function stop() {
 	return "stop";
 }
-//#endregion
-export { stop as n, start as t };
-
-```
-
-## daemon2.js
-
-```js
-import { t as start } from "./daemon.js";
-export { start };
+// daemon.js
+var daemon_exports = /* @__PURE__ */ __exportAll({ start: () => start });
+export { __commonJSMin as i, start as n, stop as r, daemon_exports as t };
 
 ```
 
 ## entry.js
 
 ```js
-import { n as stop, t as start } from "./daemon.js";
-// HIDDEN [\0rolldown/runtime.js]
-//#region gateway.js
+import { i as __commonJSMin, n as start, r as stop } from "./daemon.js";
+// gateway.js
 var import_cjs_dep = (/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.helper = function() {
 		return "cjs-helper";
@@ -52,12 +44,10 @@ var import_cjs_dep = (/* @__PURE__ */ __commonJSMin(((exports) => {
 function gateway() {
 	return start() + stop();
 }
-//#endregion
-//#region entry.js
+// entry.js
 function main() {
 	return (0, import_cjs_dep.helper)() + gateway();
 }
-//#endregion
 export { main };
 
 ```

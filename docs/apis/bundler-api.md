@@ -37,9 +37,7 @@ See [its reference](/reference/Function.rolldown) for more details.
 ```js
 import { watch } from 'rolldown';
 
-const watcher = watch({
-  /* ... */
-});
+const watcher = watch({/* ... */});
 watcher.on('event', (event) => {
   if (event.code === 'BUNDLE_END') {
     console.log(event.duration);

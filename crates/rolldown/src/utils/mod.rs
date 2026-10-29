@@ -1,10 +1,13 @@
 pub mod apply_inner_plugins;
 pub mod augment_chunk_hash;
 pub mod chunk;
+pub mod defer_drop;
 pub mod external_import_interop;
+pub mod file_url;
 pub mod fs_utils;
 pub mod load_entry_module;
 pub mod load_source;
+pub mod module_id_matcher;
 pub mod parse_to_ecma_ast;
 pub mod pre_process_ecma_ast;
 pub mod prepare_build_context;

@@ -6,7 +6,7 @@
         "import": "main.js"
       }
     ],
-    "manualCodeSplitting": {
+    "codeSplitting": {
       "includeDependenciesRecursively": false,
       "groups": [
         {

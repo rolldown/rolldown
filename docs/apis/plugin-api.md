@@ -13,12 +13,12 @@ Plugins allow you to customize Rolldown's behavior by, for example, transpiling 
 
 ### Example
 
-The following example shows a Rolldown plugin that intercepts import requests to `example-virtual-module` and returns a custom content for it.
+The following example shows a Rolldown plugin that intercepts import requests to `virtual:example` and returns a custom content for it.
 
 ::: code-group
 
 ```js [rolldown-plugin-example.js]
-const id = 'example-virtual-module';
+const id = 'virtual:example';
 const resolvedId = '\0' + id;
 
 export default function examplePlugin() {
@@ -26,14 +26,14 @@ export default function examplePlugin() {
     name: 'example-plugin', // this name will show up in logs and errors
     resolveId(source) {
       if (source === id) {
-        // this signals to Rolldown that this import should resolve to a module named `\0example-virtual-module`
+        // this signals to Rolldown that this import should resolve to a module named `\0virtual:example`
         return resolvedId;
       }
       return null; // other ids should be handled as usual
     },
     load(id) {
       if (id === resolvedId) {
-        // the source code for `\0example-virtual-module`
+        // the source code for `\0virtual:example`
         return `export default 'Hello from ${id}';`;
       }
       return null; // other ids should be handled as usual
@@ -53,15 +53,6 @@ export default defineConfig({
 
 :::
 
-::: tip Virtual Modules {#virtual-modules}
-
-This plugin implements a pattern which is commonly called "virtual modules".
-A virtual module is a module that does not exist on the file system and is instead resolved and provided by a plugin.
-In the example above, `example-virtual-module` is never read from disk because the plugin intercepts the import in `resolveId` and supplies the module’s source code in `load`.
-This pattern is useful for injecting helper functions.
-
-:::
-
 ::: warning Hook Filters
 
 This example plugin does not use [Hook Filters](/apis/plugin-api/hook-filters) for simplicity.
@@ -74,11 +65,27 @@ To improve performance, it is recommended to use them when possible.
 - Plugins should have a clear name with `rolldown-plugin-` prefix.
 - Include `rolldown-plugin` keyword in the package.json `keywords` field.
 - Make sure your plugin outputs correct source mappings if appropriate.
-- If your plugin uses ["virtual modules"](#virtual-modules), prefix the module ID with `\0`. This prevents other plugins from trying to process it.
+- If your plugin uses [virtual modules](#virtual-modules), follow the [Virtual Modules Convention](#virtual-modules).
 - (recommended) Plugins should be tested.
 - (recommended) Plugins should be documented in English.
 
 <!-- TODO: add a guide how to test a plugin -->
+
+### Virtual Modules Convention {#virtual-modules}
+
+Virtual modules are a useful scheme that allows you to pass build time information or helper functions to source files using normal ESM import syntax. A virtual module is a module that does not exist on the file system and is instead resolved and provided by a plugin, as shown in the [example above](#example).
+
+Once such a plugin is registered, the virtual module can be imported in JavaScript through its user-facing id:
+
+```js
+import msg from 'virtual:example';
+
+console.log(msg);
+```
+
+Virtual modules in Rolldown are prefixed with `virtual:` for the user-facing path by convention. If possible the plugin name should be used as a namespace to avoid collisions with other plugins in the ecosystem. For example, a `rolldown-plugin-posts` could ask users to import a `virtual:posts` or `virtual:posts/helpers` virtual module to get build time information. Internally, plugins that use virtual modules should prefix the module ID with `\0` while resolving the id, a convention from the Rollup ecosystem. This prevents other plugins from trying to process the id (like node resolution), and core features like sourcemaps can use this info to differentiate between virtual modules and regular files.
+
+Note that modules directly derived from a real file, as in the case of a script module in a Single File Component (like a `.vue` or `.svelte` SFC), don't need to follow this convention. SFCs generally generate a set of submodules when processed, but the code in these can be mapped back to the filesystem. Using `\0` for these submodules would prevent sourcemaps from working correctly.
 
 ## Plugin Interface
 
@@ -177,6 +184,7 @@ async: color="#ff7e17", dark$color="#cc5f1a", penwidth=1
 
 # nodes
 renderStart(/reference/Interface.Plugin#renderstart): parallel, sync
+resolveFileUrl(/reference/Interface.Plugin#resolvefileurl): first, sync
 banner(/reference/Interface.Plugin#banner): sequential, sync
 footer(/reference/Interface.Plugin#footer): sequential, sync
 intro(/reference/Interface.Plugin#intro): sequential, sync
@@ -190,6 +198,7 @@ generateBundle(/reference/Interface.Plugin#generatebundle): sequential, sync
 writeBundle(/reference/Interface.Plugin#writebundle): parallel, sync
 renderError(/reference/Interface.Plugin#rendererror): parallel, sync
 closeBundle(/reference/Interface.Plugin#closebundle): parallel, sync
+beforeImportMeta: invisible
 beforeAddons: invisible
 afterAddons: invisible
 
@@ -197,7 +206,10 @@ afterAddons: invisible
 generateChunks: beforeAddons, banner, footer, intro, outro, afterAddons
 
 # edges
-renderStart -> beforeAddons: each chunk
+renderStart -> beforeImportMeta: each chunk
+beforeImportMeta -> resolveFileUrl: each import.meta.ROLLDOWN_FILE_URL_*
+resolveFileUrl -> beforeImportMeta
+beforeImportMeta -> beforeAddons
 augmentChunkHash -> generateBundle
 generateBundle -> writeBundle
 writeBundle .-> closeBundle
@@ -209,7 +221,7 @@ banner -> afterAddons
 footer -> afterAddons
 intro -> afterAddons
 outro -> afterAddons
-afterAddons .-> beforeAddons: next chunk, constraint=false
+afterAddons .-> beforeImportMeta: next chunk, constraint=false
 afterAddons -> renderChunk: each chunk
 renderChunk -> minify
 minify -> postBanner
@@ -227,7 +239,6 @@ Note that `minify` in the graph above is not a plugin hook and is the step where
 The following Output Generation Hooks are supported by Rollup, but not by Rolldown:
 
 - `resolveImportMeta` ([#1010](https://github.com/rolldown/rolldown/issues/1010))
-- `resolveFileUrl`
 - `renderDynamicImport` ([#4532](https://github.com/rolldown/rolldown/issues/4532))
 
 :::
@@ -271,3 +282,12 @@ In Rollup, the [`options`](/reference/Interface.Plugin#options) hook is called o
 In Rollup, certain hooks like [`writeBundle`](/reference/Interface.FunctionPluginHooks#writebundle) are "parallel" by default, meaning they run concurrently across multiple plugins. This requires plugins to explicitly set `sequential: true` if they need their hooks to run one after another.
 
 In Rolldown, the [`writeBundle`](/reference/Interface.FunctionPluginHooks#writebundle) hook is already sequential by default, so plugins do not need to specify `sequential: true` for this hook.
+
+### Sourcemap Validation
+
+Rollup does not check a plugin's sourcemap against its own `sources` and `names`. A mapping that points at a missing source is dropped. A mapping that points at a missing name is kept without the name. Rolldown checks every index while converting the map to the internal representation. So an invalid map that Rollup accepts can fail the build here. For example:
+
+```
+Failed to convert json sourcemap to struct
+Reference to non-existing source at position 1
+```

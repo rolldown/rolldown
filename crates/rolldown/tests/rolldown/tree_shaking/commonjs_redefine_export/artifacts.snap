@@ -8,13 +8,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
-//#region main.js
+// main.js
 var import_scope = (/* @__PURE__ */ __commonJSMin(((exports) => {
 	Object.defineProperty(exports, "__esModule", { value: true });
 	exports.scope = exports.path = void 0;
 	exports.scope = /* @__PURE__ */ new WeakMap();
 })))();
 assert.ok(import_scope.scope instanceof WeakMap);
-//#endregion
 
 ```

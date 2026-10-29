@@ -1,0 +1,12 @@
+{
+  "config": {
+    "input": [
+      {
+        "import": "./main.js",
+        "name": "main"
+      }
+    ],
+    "external": ["node:assert"],
+    "keepNames": true
+  }
+}

@@ -6,9 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import assert from "node:assert";
+import assert from "node:assert/strict";
 // HIDDEN [\0rolldown/runtime.js]
-//#region lib.json
+// lib.json
 var lib_exports = /* @__PURE__ */ __exportAll({
 	a: () => a,
 	b: () => b,
@@ -23,13 +23,11 @@ var lib_default = {
 	b,
 	c
 };
-//#endregion
-//#region main.js
+// main.js
 assert.deepEqual(JSON.parse(JSON.stringify(lib_exports)).default, {
 	a: 1,
 	b: 2,
 	c: "example"
 });
-//#endregion
 
 ```

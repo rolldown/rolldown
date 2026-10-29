@@ -99,8 +99,8 @@ unsafe impl Send for EcmaAst {}
 // This invariant is *not* fully enforced by the type system: `EcmaAst.program`
 // is `pub`, and `ProgramCell::borrow_owner` / `with_dependent` expose
 // `&ProgramCellOwner`, whose `allocator` field is `pub` — so safe code
-// holding `&EcmaAst` can construct an `oxc::ast::AstBuilder` that allocates
-// into the arena.
+// holding `&EcmaAst` can construct an `oxc::ast::builder::AstBuilder` that
+// allocates into the arena.
 //
 // [`ProgramCell::with_mut`] is the preferred access pattern because its
 // `&mut self` receiver makes the invariant statically checkable. Code that

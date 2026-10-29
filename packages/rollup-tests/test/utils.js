@@ -6,7 +6,7 @@
  * @typedef {import('./types').TestConfigBase} TestConfigBase
  */
 
-const assert = require('node:assert');
+const assert = require('node:assert/strict');
 const {
 	closeSync,
 	fsyncSync,
@@ -88,6 +88,11 @@ function normalizeError(error, locExpected) {
 		// `logSourcemapBroken` is emitted at chunk-collapse time and carries no id.
 		delete clone.id;
 	}
+	if (clone.code === 'FILE_NOT_FOUND') {
+		// Rolldown points at the module containing the `import.meta.ROLLUP_FILE_URL_*` access,
+		// but Rollup's `logFileNotFound` is thrown from the plugin driver and carries no id.
+		delete clone.id;
+	}
 	for (const key in clone) {
 		if (clone[key] === undefined) {
 			delete clone[key];
@@ -111,7 +116,7 @@ function normalizeExpectedError(error) {
 	delete clone.frame;
 	delete clone.watchFiles;
 	delete clone.url;
-	delete clone.binding;
+	if (clone.code !== 'SHIMMED_EXPORT') delete clone.binding;
 	if (parseErrorRollupErrorCodes.has(clone.code)) {
 		clone.code = 'PARSE_ERROR';
 	}
@@ -381,7 +386,7 @@ function loadConfigAndRunTest(directory, runTest) {
 		(!config.onlyWindows || platform === 'win32') &&
 		(!config.minNodeVersion || config.minNodeVersion <= Number(/^v(\d+)/.exec(version)[1]))
 	) {
-    if (!config.options?.checks?.pluginTimings) {
+    if (!(config.options?.checks?.bundlerTimings ?? config.options?.checks?.pluginTimings)) {
       config.expectedWarnings ??= [];
       config.expectedWarnings.push("PLUGIN_TIMINGS");
     }

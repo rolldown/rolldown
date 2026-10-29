@@ -16,6 +16,5 @@ let foo = 234;
 node_assert.default.equal(123, 123);
 node_assert.default.equal(123, 123);
 node_assert.default.equal(foo, 234);
-//#endregion
 
 ```

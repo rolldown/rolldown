@@ -1,0 +1,30 @@
+{
+  "configName": "on-demand",
+  "config": {
+    "input": [
+      {
+        "name": "e1",
+        "import": "./e1.cjs"
+      },
+      {
+        "name": "e2",
+        "import": "./e2.cjs"
+      },
+      {
+        "name": "m2",
+        "import": "./m2.js"
+      }
+    ],
+    "strictExecutionOrder": true,
+    "experimental": {
+      "onDemandWrapping": true
+    }
+  },
+  "hiddenRuntimeModule": false,
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
+    }
+  ]
+}

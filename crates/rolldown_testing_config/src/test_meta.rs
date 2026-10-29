@@ -3,6 +3,18 @@ use serde::Deserialize;
 
 use crate::{dev_test_meta::DevTestMeta, extended_tests::ExtendedTests, utils::true_by_default};
 
+#[derive(Clone, Debug, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ExpectedExecutionFailure {
+  /// Why this failure is temporarily accepted, normally an issue or PR reference.
+  #[schemars(length(min = 1))]
+  pub reason: String,
+  /// Every string must occur in the spawned process output. This prevents an unrelated runtime
+  /// failure from satisfying the marker.
+  #[schemars(length(min = 1), inner(length(min = 1)))]
+  pub output_contains: Vec<String>,
+}
+
 #[derive(Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 #[expect(clippy::struct_excessive_bools, clippy::pub_underscore_fields)]
@@ -13,6 +25,10 @@ pub struct TestMeta {
   #[serde(default)]
   /// If `true`, the fixture are expected to fail to compile/build.
   pub expect_error: bool,
+  #[serde(default)]
+  /// If set, the base configuration must fail while executing its generated output. A successful
+  /// execution is treated as an unexpected pass so stale markers cannot hide a fix.
+  pub expect_execution_failure: Option<ExpectedExecutionFailure>,
   #[serde(default)]
   /// If `true`, the fixture are expected to produce warnings. If `false`, the fixture are expected
   /// to produce no warnings. If not set, no assertion is made on warnings.

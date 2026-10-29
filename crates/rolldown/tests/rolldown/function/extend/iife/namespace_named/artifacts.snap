@@ -13,12 +13,10 @@ this.test = this.test || {};
 (function(exports) {
 
 Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-
-//#region main.js
+// main.js
 	const a = 1;
 	const b = 2;
 
-//#endregion
 exports.a = a;
 exports.b = b;
 })(this.test.module = this.test.module || {});

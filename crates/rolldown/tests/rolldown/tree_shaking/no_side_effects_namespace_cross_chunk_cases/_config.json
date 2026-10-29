@@ -1,0 +1,15 @@
+{
+  "_comment": "Companion to `no_side_effects_namespace_cross_chunk` (#9956). Covers the boundaries of the namespace-member `@__NO_SIDE_EFFECTS__` optimization: computed access and the function-expression form are eliminated; calls whose result is used, and `ns.fn.call(...)` (a trailing property access, not a direct call to `fn`), must be preserved. Two entries keep `shared.js` a shared chunk.",
+  "config": {
+    "input": [
+      {
+        "name": "entry-a",
+        "import": "./entry-a.js"
+      },
+      {
+        "name": "entry-b",
+        "import": "./entry-b.js"
+      }
+    ]
+  }
+}

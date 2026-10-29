@@ -1,0 +1,8 @@
+{
+  "_comment": "An edit adds a static import of a module that is already in the graph but was never executed or shipped (it is reachable only through a never-called import()). The patch must also carry heavy.js, or the re-run of hmr.js hits initModule('heavy.js') with no factory. The browser counterpart (lazy compilation, multi-tab) is the `hmr-new-static-dep-unloaded-chunk` playground in packages/test-dev-server.",
+  "config": {
+    "experimental": {
+      "devMode": {}
+    }
+  }
+}

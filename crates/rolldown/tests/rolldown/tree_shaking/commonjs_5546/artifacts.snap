@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
-//#region lib/cjs.js
+// lib/cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.default = "default";
 	exports.foo = "foo";
@@ -18,6 +18,5 @@ let indirect = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports
 })))())).default;
 assert.strictEqual(indirect.default, "default");
 assert.strictEqual(indirect.foo, "foo");
-//#endregion
 
 ```

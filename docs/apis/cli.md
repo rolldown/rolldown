@@ -48,6 +48,18 @@ export default defineConfig((commandLineArgs) => {
 });
 ```
 
+### Config Loaders
+
+By default Rolldown loads a config file by bundling it with Rolldown first (`configLoader: 'bundle'`). This works on any supported runtime, including for TypeScript configs.
+
+If your runtime can import the config directly (Node.js 22.18+ (native TypeScript type stripping), Bun, Deno, or a loader registered via `--import` (e.g. `tsx`, `jiti`)), you can skip the bundling step with the `native` loader:
+
+```shell
+rolldown -c rolldown.config.ts --configLoader native
+```
+
+The `native` loader is more simple and is planned to be the default in the future.
+
 ### Config Intellisense
 
 Since Rolldown ships with TypeScript typings, you can leverage your IDE's intellisense with JSDoc type hints:
@@ -110,6 +122,18 @@ export default defineConfig({
 
 Flags can be passed as `--foo`, `--foo <value>`, or `--foo=<value>`. Boolean flags like `--minify` don't need a value, while key-value options like `--transform.define` use comma-separated syntax: `--transform.define key:value,key2:value2`. Many flags have short aliases (e.g., `-m` for `--minify`, `-f` for `--format`).
 
+::: warning Disabling boolean flags
+
+To turn a boolean flag _off_, prefix it with `--no-`, e.g. `--no-minify` or `--no-codeSplitting`. Passing `false` as a value—`--minify false` or `--codeSplitting=false`—is **not** supported and will error, because the value is read as the string `"false"` rather than a boolean. This matches [Rollup's CLI behavior](https://rollupjs.org/command-line-interface/) (`--no-treeshake`, etc.).
+
+Some flags accept either a boolean or an object (e.g. `codeSplitting`). For those you can:
+
+- enable with defaults: `--codeSplitting`
+- disable: `--no-codeSplitting`
+- set nested fields with dot-notation: `--codeSplitting.minSize 30000`
+
+:::
+
 ::: info Integration into other tools
 
 Note that your shell interprets arguments before Rolldown sees them—quotes and wildcards may behave unexpectedly. For advanced build processes or integration into other tools, consider using the [JavaScript API](/apis/bundler-api) instead. Key differences when switching from config files to the API:
@@ -138,6 +162,13 @@ The flags listed below are only available via the command line interface.
 ### `-c, --config <filename>`
 
 Use the specified config file. If the argument is used but no filename is specified, Rolldown will look for a default config file. See [Configuration Files](#configuration-files) for more details.
+
+### `--configLoader <loader>`
+
+How to load the config file. One of:
+
+- `bundle` (default): bundle the config with Rolldown before importing it.
+- `native`: import the config directly, relying on the runtime for TypeScript and loader support. See [Config Loaders](#config-loaders).
 
 ### `-h` / `--help`
 

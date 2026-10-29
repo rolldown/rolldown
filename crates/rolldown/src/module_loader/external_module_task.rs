@@ -6,7 +6,7 @@ use rolldown_common::{
   ResolvedId,
 };
 use rolldown_error::BuildResult;
-use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
+use rolldown_utils::{commondir, ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
 use sugar_path::SugarPath;
 
 use rolldown_fs::FileSystem;
@@ -35,7 +35,7 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
     Self { ctx, module_idx: idx, resolved_id, user_defined_entries }
   }
 
-  #[tracing::instrument(name="ExternalModuleTask::run", level = "trace", skip_all, fields(module_id = ?self.resolved_id.id))]
+  #[tracing::instrument(name="ExternalModuleTask::run", level = "trace", skip_all, fields(module_id = %self.resolved_id.id))]
   pub async fn run(self) {
     if let Err(errs) = self.run_inner().await {
       self
@@ -67,27 +67,23 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
       }),
     );
 
-    let need_renormalize_render_path = !matches!(resolved_id.external, ResolvedExternal::Absolute)
-      && Path::new(resolved_id.id.as_str()).is_absolute();
+    let need_renormalize_render_path =
+      !matches!(resolved_id.external, ResolvedExternal::Absolute) && resolved_id.id.is_path();
 
     let file_name: ArcStr = if need_renormalize_render_path {
-      let entries_common_dir = commondir::CommonDir::try_new(
+      let entries_common_dir = commondir::common_dir(
         self.user_defined_entries.iter().map(|(_, resolved_id)| resolved_id.id.as_str()),
       )
       .expect("should have common dir for entries");
-      let relative_path =
-        Path::new(resolved_id.id.as_str()).relative(entries_common_dir.common_root());
-      relative_path.to_slash_lossy().into()
+      let relative_path = Path::new(resolved_id.id.as_str()).relative(&entries_common_dir);
+      ArcStr::from(relative_path.to_slash())
     } else {
       resolved_id.id.as_arc_str().clone()
     };
 
     let identifier_name: ArcStr = if need_renormalize_render_path {
-      Path::new(resolved_id.id.as_str())
-        .relative(&self.ctx.options.cwd)
-        .normalize()
-        .to_slash_lossy()
-        .into()
+      let relative_path = Path::new(resolved_id.id.as_str()).relative(&self.ctx.options.cwd);
+      ArcStr::from(relative_path.to_slash())
     } else {
       resolved_id.id.as_arc_str().clone()
     };

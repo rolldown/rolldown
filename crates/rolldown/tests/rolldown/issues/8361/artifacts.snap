@@ -23,7 +23,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region cjs.js
+// cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 42;
 }));
@@ -31,6 +31,5 @@ require_cjs();
 var b_exports = /* @__PURE__ */ __exportAll({});
 Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_cjs()));
 Promise.resolve().then(() => b_exports);
-//#endregion
 
 ```

@@ -23,9 +23,27 @@ class Module {
 }
 
 /**
- * @typedef {{ type: 'hmr:module-registered', modules: string[] }} DevRuntimeMessage
- * @typedef {{ send(message: DevRuntimeMessage): void }} Messenger
+ * Compiler-emitted module-graph delta — topology (static + dynamic edges).
+ * `ids[0, localCount)` are the modules this payload carries; `ids[localCount, …)` are foreign edge targets.
+ * `edges[i]` / `dynamicEdges[i]` are the static / dynamic-`import()` out-edges of `ids[i]`.
+ * `bindings[i][j]` are the export names `ids[i]` imports through `edges[i][j]`. `bindings` holds
+ * only some rows; a missing row, or a missing or `null` entry, means the whole namespace.
+ * `dynamicEdges` also holds only some rows; a missing row means no dynamic edges.
+ * `stamps[i]` is the rebuild stamp of `ids[i]`; a missing row means 0.
+ * `entries` lists the rows whose module is an entry.
+ * @typedef {{ ids: string[], localCount: number, edges: number[][], bindings?: Record<number, (string[] | null)[]>, dynamicEdges?: Record<number, number[]>, stamps?: Record<number, number>, entries?: number[] }} ModuleGraphDelta
+ * @typedef {{ createModuleHotContext(moduleId: string): any, onModuleCacheRemoval(moduleId: string): void }} DevRuntimeHooks
  */
+
+export class MissingFactoryError extends Error {
+  /**
+   * @param {string} id
+   */
+  constructor(id) {
+    super(`No factory registered for module ${id}`);
+    this.id = id;
+  }
+}
 
 export class DevRuntime {
   /**
@@ -35,45 +53,226 @@ export class DevRuntime {
   clientId;
 
   /**
-   * @param {Messenger} messenger
    * @param {string} clientId
    */
-  constructor(messenger, clientId) {
-    this.messenger = messenger;
+  constructor(clientId) {
     this.clientId = clientId;
   }
 
   /**
-   * @type {Record<string, Module>}
+   * Static import edges from `registerGraph` — entries persist across `removeModuleCache`
+   * and change only by replacement from a newer payload (last write wins).
+   * `bindings` is the payload row as sent; `getImportedBindings` resolves a missing entry.
+   * @type {Map<string, { edges: string[], bindings: (string[] | null)[] | undefined }>}
    */
-  modules = {};
+  staticImports = new Map();
   /**
-   * @param {string} _moduleId
+   * Reverse index over the static imports.
+   * @type {Map<string, Set<string>>}
    */
-  createModuleHotContext(_moduleId) {
-    throw new Error('createModuleHotContext should be implemented');
-  }
+  importers = new Map();
   /**
-   * @param {[string, string][]} _boundaries
+   * Dynamic `import()` edges from `registerGraph`, keyed by importer — mirror of
+   * `staticImports` for the dynamic reverse index.
+   * @type {Map<string, { edges: string[] }>}
    */
-  applyUpdates(_boundaries) {
-    throw new Error('applyUpdates should be implemented');
+  dynamicImports = new Map();
+  /**
+   * Reverse index over the dynamic imports.
+   * @type {Map<string, Set<string>>}
+   */
+  dynamicImporters = new Map();
+  /** @type {Set<string>} */
+  entries = new Set();
+  /**
+   * The module cache. Membership means "this module's side effects ran in this tab" —
+   * registration is emitted ahead of every module body, and nothing un-registers on
+   * unwind, so a factory that throws mid-body stays registered. A `Map` rather than a
+   * plain object: HMR eviction deletes entries, and a `delete` on an object drops V8
+   * into dictionary mode, taxing every later lookup on the hottest read path.
+   * @type {Map<string, Module>}
+   */
+  moduleCache = new Map();
+  /**
+   * Re-runnable factories from HMR patches and lazy chunks. The initial bundle stays
+   * scope-hoisted and contributes none.
+   * @type {Map<string, (id: string) => void>}
+   */
+  factories = new Map();
+  /**
+   * A late payload (a slow lazy chunk after an HMR patch) must not replace newer rows or
+   * factories.
+   * @type {Map<string, number>}
+   */
+  rowStamps = new Map();
+  /** @type {Map<string, number>} */
+  factoryStamps = new Map();
+  /**
+   * Installed by the dev client at boot. The runtime is a store + executor and makes
+   * no HMR decisions; accepting, disposing, and reloading live behind these hooks.
+   * @type {DevRuntimeHooks | null}
+   */
+  hooks = null;
+
+  /**
+   * @param {ModuleGraphDelta} delta
+   */
+  registerGraph(delta) {
+    for (let i = 0; i < delta.localCount; i++) {
+      const id = delta.ids[i];
+      if (delta.stamps) {
+        const stamp = delta.stamps[i] ?? 0;
+        if (stamp < (this.rowStamps.get(id) ?? 0)) continue;
+        this.rowStamps.set(id, stamp);
+      } else {
+        // A full-build chunk has no stamps. It runs its code right away, so its row always
+        // replaces the old one.
+        this.rowStamps.delete(id);
+      }
+      const edges = delta.edges[i].map((j) => delta.ids[j]);
+      for (const target of this.staticImports.get(id)?.edges ?? []) {
+        this.importers.get(target)?.delete(id);
+      }
+      for (const target of edges) {
+        let importerSet = this.importers.get(target);
+        if (!importerSet) {
+          importerSet = new Set();
+          this.importers.set(target, importerSet);
+        }
+        importerSet.add(id);
+      }
+      this.staticImports.set(id, { edges, bindings: delta.bindings?.[i] });
+
+      // Dynamic `import()` edges are maintained in a parallel reverse index with the same
+      // last-write-wins bookkeeping; `getImporters` unions the two.
+      const dynamicEdges = (delta.dynamicEdges?.[i] ?? []).map((j) => delta.ids[j]);
+      for (const target of this.dynamicImports.get(id)?.edges ?? []) {
+        this.dynamicImporters.get(target)?.delete(id);
+      }
+      for (const target of dynamicEdges) {
+        let importerSet = this.dynamicImporters.get(target);
+        if (!importerSet) {
+          importerSet = new Set();
+          this.dynamicImporters.set(target, importerSet);
+        }
+        importerSet.add(id);
+      }
+      this.dynamicImports.set(id, { edges: dynamicEdges });
+
+      if (delta.entries?.includes(i)) {
+        this.entries.add(id);
+      } else {
+        this.entries.delete(id);
+      }
+    }
   }
+
   /**
    * @param {string} id
-   * @param {{ exports: any }} exportsHolder
+   * @param {(id: string) => void} fn
+   * @param {number} [stamp]
    */
-  registerModule(id, exportsHolder) {
+  registerFactory(id, fn, stamp = 0) {
+    if (stamp < (this.factoryStamps.get(id) ?? 0)) return;
+    this.factoryStamps.set(id, stamp);
+    this.factories.set(id, fn);
+  }
+
+  /**
+   * @param {string} id
+   * @param {{ exports: any }} [exportsHolder]
+   */
+  registerModule(id, exportsHolder = { exports: {} }) {
     const module = new Module(id);
     module.exportsHolder = exportsHolder;
-    this.modules[id] = module;
-    this.sendModuleRegisteredMessage(id);
+    this.moduleCache.set(id, module);
   }
+
+  /**
+   * @param {string} id
+   * @returns {string[]}
+   */
+  getImporters(id) {
+    // Static ∪ dynamic importers — the boundary walk treats both kinds the same (parity
+    // with Vite `node.importers` / webpack `module.parents`). Deduped so a module that
+    // imports `id` both statically and via `import()` appears once.
+    const dynamic = this.dynamicImporters.get(id);
+    if (!dynamic || dynamic.size === 0) {
+      return [...(this.importers.get(id) ?? [])];
+    }
+    return [...new Set([...(this.importers.get(id) ?? []), ...dynamic])];
+  }
+
+  /**
+   * `"*"` means the whole namespace, an empty list a side-effect-only import, `undefined` no edge.
+   * @param {string} importer
+   * @param {string} id
+   * @returns {string[] | undefined}
+   */
+  getImportedBindings(importer, id) {
+    const record = this.staticImports.get(importer);
+    const j = record ? record.edges.indexOf(id) : -1;
+    const names = j === -1 ? undefined : (record?.bindings?.[j] ?? ['*']);
+    if (!this.dynamicImports.get(importer)?.edges.includes(id)) {
+      return names;
+    }
+    if (!names) return ['*'];
+    return names.includes('*') ? names : [...names, '*'];
+  }
+
+  /**
+   * @param {string} id
+   */
+  isEntry(id) {
+    return this.entries.has(id);
+  }
+
+  /**
+   * @param {string} id
+   */
+  isExecuted(id) {
+    return this.moduleCache.has(id);
+  }
+
+  /**
+   * @param {string} id
+   */
+  hasFactory(id) {
+    return this.factories.has(id);
+  }
+
+  /**
+   * Module-cache delete only — static imports and factories persist. Removal is what
+   * re-arms a cache-gated factory for `initModule`.
+   * @param {string} id
+   */
+  removeModuleCache(id) {
+    this.moduleCache.delete(id);
+    this.hooks?.onModuleCacheRemoval(id);
+  }
+
+  /**
+   * The one re-execution gate: registered → return the live exports; otherwise run the
+   * mapped factory (which registers itself first, then runs the body).
+   * @param {string} id
+   */
+  initModule(id) {
+    if (this.moduleCache.has(id)) {
+      return this.loadExports(id);
+    }
+    const factory = this.factories.get(id);
+    if (!factory) {
+      throw new MissingFactoryError(id);
+    }
+    factory(id);
+    return this.loadExports(id);
+  }
+
   /**
    * @param {string} id
    */
   loadExports(id) {
-    const module = this.modules[id];
+    const module = this.moduleCache.get(id);
     if (module) {
       return module.exportsHolder.exports;
     } else {
@@ -81,45 +280,17 @@ export class DevRuntime {
       return {};
     }
   }
-  /**
-   * Re-execute a real HMR update only if this client already loaded the module.
-   *
-   * @param {string} id
-   * @param {() => any} initializer
-   */
-  runModuleInitializerIfLoaded(id, initializer) {
-    if (this.modules[id]) initializer();
-  }
 
   /**
-   * __esmMin
-   *
-   * When `dedup` is truthy and `id` is already registered on the runtime,
-   * skip the factory.
-   *
-   * @type {<T>(id: string, fn: any, dedup: any, res: T) => () => T}
-   * @internal
+   * @param {string} moduleId
    */
-  createEsmInitializer = (id, fn, dedup, res) => () => (
-    fn && (dedup && this.modules[id] ? (fn = 0) : (res = fn((fn = 0, id)))),
-    res
-  );
-  /**
-   * __commonJSMin
-   *
-   * Same dedup gate as createEsmInitializer.
-   *
-   * @type {<T extends { exports: any }>(id: string, cb: any, dedup: any, mod: { exports: any }, registered: any) => () => T}
-   * @internal
-   */
-  createCjsInitializer = (id, cb, dedup, mod, registered) => () => (
-    mod || (
-      dedup && (registered = this.modules[id])
-        ? (mod = { exports: registered.exports })
-        : cb((mod = { exports: {} }).exports, mod, id)
-    ),
-    mod.exports
-  );
+  createModuleHotContext(moduleId) {
+    if (this.hooks) {
+      return this.hooks.createModuleHotContext(moduleId);
+    }
+    throw new Error('createModuleHotContext requires installed hooks or an override');
+  }
+
   /** @internal */
   // @ts-expect-error The variable will be injected at build time.
   __toESM = __toESM;
@@ -139,42 +310,4 @@ export class DevRuntime {
   /** @internal */
   // @ts-expect-error The variable will be injected at build time.
   __reExport = __reExport;
-
-  sendModuleRegisteredMessage = (() => {
-    const cache = /** @type {string[]} */ ([]);
-    let timeout = /** @type {NodeJS.Timeout | null} */ (null);
-    let timeoutSetLength = 0;
-    const self = this;
-
-    /**
-     * @param {string} module
-     */
-    return function sendModuleRegisteredMessage(module) {
-      if (!self.messenger) {
-        return;
-      }
-      cache.push(module);
-      if (!timeout) {
-        timeout = setTimeout(
-          /** @returns void */
-          function flushCache() {
-            if (cache.length > timeoutSetLength) {
-              timeout = setTimeout(flushCache);
-              timeoutSetLength = cache.length;
-              return;
-            }
-
-            self.messenger.send({
-              type: 'hmr:module-registered',
-              modules: cache,
-            });
-            cache.length = 0;
-            timeout = null;
-            timeoutSetLength = 0;
-          },
-        );
-        timeoutSetLength = cache.length;
-      }
-    };
-  })();
 }

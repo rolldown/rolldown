@@ -7,14 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "assert";
-//#region foo.js
+// foo.js
 const a$2 = 1;
 function foo$1(a$1) {
 	console.log(a$1, a$2);
 }
 const { foo } = { foo: foo$1 };
 assert.strictEqual(typeof foo, "function");
-//#endregion
 
 //# sourceMappingURL=main.js.map
 ```

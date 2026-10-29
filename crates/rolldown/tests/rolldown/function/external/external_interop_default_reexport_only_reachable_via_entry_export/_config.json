@@ -1,0 +1,11 @@
+{
+  "_comment": "Pins the *observer* channel of the `__toESM` wrap/edge invariant on the one path that reaches neither the inclusion pass's statement walk nor any `named_imports` (see internal-docs/runtime-helpers/implementation.md). `entry-reexport` re-exports the external's default through shims tree-shaking drops, so its sole live reference lives in `referenced_symbols_by_entry_point_chunk`; the observer recorded there lands in this chunk, so the chunk wraps. Its runtime edge exists only because `patch_module_dependencies` runs `note_external_interop` over the entry-export references too — drop that call and the chunk wraps against a `__toESM` it never imported, and finalization panics looking up the missing cross-chunk binding. The `barrel` hop is load-bearing: with `shim-default` a *direct* dependency of the entry, the edge would also arrive through the eliminated-dependency inheritance below (`needs_inherit_to_esm_runtime`, issue #4585) and the fixture would pin nothing. `entry-reader` keeps the runtime a separate chunk so the binding really is cross-chunk. The named-only counterpart of this path is `external_interop_only_reachable_via_entry_export`; the static-import channel is `external_interop_dead_default_import_keeps_helper`.",
+  "config": {
+    "input": [
+      { "name": "entry-reexport", "import": "./entry-reexport.js" },
+      { "name": "entry-reader", "import": "./entry-reader.js" }
+    ],
+    "external": ["node:https"],
+    "format": "cjs"
+  }
+}

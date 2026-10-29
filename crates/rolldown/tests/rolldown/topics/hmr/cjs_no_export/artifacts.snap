@@ -7,23 +7,35 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region a.js
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"a.js",
+		"b.js",
+		"main.js"
+	],
+	localCount: 3,
+	edges: [
+		[],
+		[],
+		[0, 1]
+	],
+	entries: [2]
+});
+// a.js
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	__rolldown_runtime__.createModuleHotContext("a.js");
 	__rolldown_runtime__.registerModule("a.js", module);
 	console.log("a");
 }));
-//#endregion
-//#region b.js
+// b.js
 var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	__rolldown_runtime__.createModuleHotContext("b.js");
 	__rolldown_runtime__.registerModule("b.js", module);
 	console.log("b");
 }));
 __rolldown_runtime__.createModuleHotContext("main.js");
-__rolldown_runtime__.registerModule("main.js", {});
+__rolldown_runtime__.registerModule("main.js");
 require_a();
 require_b();
-//#endregion
 
 ```

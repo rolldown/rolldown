@@ -62,8 +62,8 @@ impl PluginContext {
         module_infos: Arc::clone(&ctx.module_infos),
         tx: Arc::clone(&ctx.tx),
         session: ctx.session.clone(),
-        bundle_span: Arc::clone(&ctx.bundle_span),
-        manual_resolve_span: Arc::clone(&ctx.manual_resolve_span),
+        bundle_span: ctx.bundle_span.clone(),
+        manual_resolve_span: ctx.manual_resolve_span.clone(),
       })),
     }
   }
@@ -126,9 +126,7 @@ impl PluginContext {
     call_native_only!(self, "cwd", ctx => ctx.cwd())
   }
 
-  /// Add a file as a dependency.
-  ///
-  /// * file - The file to add as a watch dependency. This should be a normalized absolute path.
+  /// Add a file or a directory as a watch dependency.
   pub fn add_watch_file(&self, file: &str) {
     call_native_only!(self, "add_watch_file", ctx => ctx.add_watch_file(file));
   }

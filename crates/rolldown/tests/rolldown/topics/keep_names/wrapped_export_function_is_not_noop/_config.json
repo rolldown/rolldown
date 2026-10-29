@@ -1,0 +1,9 @@
+{
+  "config": {
+    "external": ["node:assert"],
+    "format": "esm",
+    "keepNames": true,
+    "platform": "node"
+  },
+  "snapshot": false
+}

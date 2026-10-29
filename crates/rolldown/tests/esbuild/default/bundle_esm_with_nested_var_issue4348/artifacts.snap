@@ -6,18 +6,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry_js.js
 
 ```js
-var __esmMin = (fn, res) => () => (fn && (res = fn(fn = 0)), res), x;
-//#endregion
-//#region entry.js
+// HIDDEN [\0rolldown/runtime.js]
+// entry.js
 __esmMin((() => {
 	x = 1;
 	while (x--);
-	do	;
-while (0);
+	do;
+	while (0);
 	for (; x++;);
 	for (var y in "y");
 	for (var y of "y");
 }))();
-//#endregion
 
 ```

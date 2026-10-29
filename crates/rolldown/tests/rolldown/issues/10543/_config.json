@@ -1,0 +1,22 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "styles",
+        "import": "./styles.js"
+      },
+      {
+        "name": "icon",
+        "import": "./icon.js"
+      },
+      {
+        "name": "lab",
+        "import": "./lab.cjs"
+      }
+    ],
+    "treeshake": {
+      "moduleSideEffects": false
+    }
+  },
+  "_comment": "An entry re-exports bindings from an ESM module wrapped by a separate CommonJS entry. Another ESM entry places the defining module in a wider shared chunk. The re-exporting entry must initialize its dependencies before evaluating its body, including when all modules are declared side-effect-free."
+}

@@ -4,10 +4,6 @@ export interface HmrUpdateMessage {
   path: string;
 }
 
-export interface HmrReloadMessage {
-  type: 'hmr:reload';
-}
-
 export interface ConnectedMessage {
   type: 'connected';
 }

@@ -3,8 +3,6 @@
   oxc minifier does not support JSX (https://github.com/oxc-project/oxc/issues/13248)
 ## [jsx_preserve_capital_letter_minify_nested](../../../../../crates/rolldown/tests/esbuild/loader/jsx_preserve_capital_letter_minify_nested/diff.md)
   oxc minifier does not support JSX (https://github.com/oxc-project/oxc/issues/13248)
-## [loader_data_url_base64_invalid_utf8](../../../../../crates/rolldown/tests/esbuild/loader/loader_data_url_base64_invalid_utf8/diff.md)
-  mime type should be `data:text/plain`
 ## [loader_file_one_source_two_different_output_paths_css](../../../../../crates/rolldown/tests/esbuild/loader/loader_file_one_source_two_different_output_paths_css/diff.md)
   generate wrong output when css as entry and has shared css
 # Passed Cases
@@ -45,6 +43,8 @@
 ## [require_custom_extension_string](../../../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_string)
 ## [with_type_json_override_loader_glob](../../../../../crates/rolldown/tests/esbuild/loader/with_type_json_override_loader_glob)
 # Ignored Cases
+## [loader_data_url_base64_invalid_utf8](../../../../../crates/rolldown/tests/esbuild/loader/loader_data_url_base64_invalid_utf8)
+  esbuild's `charset=utf-8` comes from Go's `http.DetectContentType` and is applied to invalid UTF-8; Rolldown only adds it after validating the data as UTF-8
 ## [loader_data_url_hash_suffix_issue4370](../../../../../crates/rolldown/tests/esbuild/loader/loader_data_url_hash_suffix_issue4370)
   CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)
 ## [loader_data_url_text_css](../../../../../crates/rolldown/tests/esbuild/loader/loader_data_url_text_css)

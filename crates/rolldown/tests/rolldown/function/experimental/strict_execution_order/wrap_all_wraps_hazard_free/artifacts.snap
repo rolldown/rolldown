@@ -1,0 +1,39 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// dep.js
+function init_dep() {
+	return (init_dep = __esmMin((() => {
+		console.log("dep");
+	})))();
+}
+// main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_dep();
+		console.log("main", "v");
+	})))();
+}
+init_main();
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### main.js
+
+```js
+// dep.js
+console.log("dep");
+// main.js
+console.log("main", "v");
+
+```

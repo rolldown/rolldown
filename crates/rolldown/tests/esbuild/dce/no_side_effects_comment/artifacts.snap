@@ -1,12 +1,150 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## INVALID_ANNOTATION
+
+```text
+[INVALID_ANNOTATION] A comment "/* #__NO_SIDE_EFFECTS__ */" in "stmt-export-local.js" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+   ╭─[ stmt-export-local.js:2:1 ]
+   │
+ 2 │ /* #__NO_SIDE_EFFECTS__ */ export var v0 = function() {}, v1 = function() {}
+   │ ─────────────┬────────────  
+   │              ╰────────────── comment ignored due to position
+   │ 
+   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#no-side-effects
+   │ 
+   │ Help 2: Disable with `checks.invalidAnnotation: false`.
+───╯
+
+```
+
+## INVALID_ANNOTATION
+
+```text
+[INVALID_ANNOTATION] A comment "/* #__NO_SIDE_EFFECTS__ */" in "stmt-export-local.js" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+   ╭─[ stmt-export-local.js:3:1 ]
+   │
+ 3 │ /* #__NO_SIDE_EFFECTS__ */ export let l0 = function() {}, l1 = function() {}
+   │ ─────────────┬────────────  
+   │              ╰────────────── comment ignored due to position
+   │ 
+   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#no-side-effects
+   │ 
+   │ Help 2: Disable with `checks.invalidAnnotation: false`.
+───╯
+
+```
+
+## INVALID_ANNOTATION
+
+```text
+[INVALID_ANNOTATION] A comment "/* #__NO_SIDE_EFFECTS__ */" in "stmt-export-local.js" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+   ╭─[ stmt-export-local.js:5:1 ]
+   │
+ 5 │ /* #__NO_SIDE_EFFECTS__ */ export var v2 = () => {}, v3 = () => {}
+   │ ─────────────┬────────────  
+   │              ╰────────────── comment ignored due to position
+   │ 
+   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#no-side-effects
+   │ 
+   │ Help 2: Disable with `checks.invalidAnnotation: false`.
+───╯
+
+```
+
+## INVALID_ANNOTATION
+
+```text
+[INVALID_ANNOTATION] A comment "/* #__NO_SIDE_EFFECTS__ */" in "stmt-export-local.js" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+   ╭─[ stmt-export-local.js:6:1 ]
+   │
+ 6 │ /* #__NO_SIDE_EFFECTS__ */ export let l2 = () => {}, l3 = () => {}
+   │ ─────────────┬────────────  
+   │              ╰────────────── comment ignored due to position
+   │ 
+   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#no-side-effects
+   │ 
+   │ Help 2: Disable with `checks.invalidAnnotation: false`.
+───╯
+
+```
+
+## INVALID_ANNOTATION
+
+```text
+[INVALID_ANNOTATION] A comment "/* #__NO_SIDE_EFFECTS__ */" in "stmt-local.js" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+   ╭─[ stmt-local.js:2:1 ]
+   │
+ 2 │ /* #__NO_SIDE_EFFECTS__ */ var v0 = function() {}, v1 = function() {}
+   │ ─────────────┬────────────  
+   │              ╰────────────── comment ignored due to position
+   │ 
+   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#no-side-effects
+   │ 
+   │ Help 2: Disable with `checks.invalidAnnotation: false`.
+───╯
+
+```
+
+## INVALID_ANNOTATION
+
+```text
+[INVALID_ANNOTATION] A comment "/* #__NO_SIDE_EFFECTS__ */" in "stmt-local.js" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+   ╭─[ stmt-local.js:3:1 ]
+   │
+ 3 │ /* #__NO_SIDE_EFFECTS__ */ let l0 = function() {}, l1 = function() {}
+   │ ─────────────┬────────────  
+   │              ╰────────────── comment ignored due to position
+   │ 
+   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#no-side-effects
+   │ 
+   │ Help 2: Disable with `checks.invalidAnnotation: false`.
+───╯
+
+```
+
+## INVALID_ANNOTATION
+
+```text
+[INVALID_ANNOTATION] A comment "/* #__NO_SIDE_EFFECTS__ */" in "stmt-local.js" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+   ╭─[ stmt-local.js:5:1 ]
+   │
+ 5 │ /* #__NO_SIDE_EFFECTS__ */ var v2 = () => {}, v3 = () => {}
+   │ ─────────────┬────────────  
+   │              ╰────────────── comment ignored due to position
+   │ 
+   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#no-side-effects
+   │ 
+   │ Help 2: Disable with `checks.invalidAnnotation: false`.
+───╯
+
+```
+
+## INVALID_ANNOTATION
+
+```text
+[INVALID_ANNOTATION] A comment "/* #__NO_SIDE_EFFECTS__ */" in "stmt-local.js" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+   ╭─[ stmt-local.js:6:1 ]
+   │
+ 6 │ /* #__NO_SIDE_EFFECTS__ */ let l2 = () => {}, l3 = () => {}
+   │ ─────────────┬────────────  
+   │              ╰────────────── comment ignored due to position
+   │ 
+   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#no-side-effects
+   │ 
+   │ Help 2: Disable with `checks.invalidAnnotation: false`.
+───╯
+
+```
+
 # Assets
 
 ## expr-arrow.js
 
 ```js
-//#region expr-arrow.js
+// expr-arrow.js
 //! These should all have "no side effects"
 x([
 	/* #__NO_SIDE_EFFECTS__ */ (y) => y,
@@ -16,14 +154,13 @@ x([
 	/* #__NO_SIDE_EFFECTS__ */ async () => {},
 	/* #__NO_SIDE_EFFECTS__ */ async (y) => y
 ]);
-//#endregion
 
 ```
 
 ## expr-fn.js
 
 ```js
-//#region expr-fn.js
+// expr-fn.js
 //! These should all have "no side effects"
 x([
 	/* #__NO_SIDE_EFFECTS__ */ function() {},
@@ -35,17 +172,15 @@ x([
 	/* #__NO_SIDE_EFFECTS__ */ async function* () {},
 	/* #__NO_SIDE_EFFECTS__ */ async function* y() {}
 ]);
-//#endregion
 
 ```
 
 ## stmt-export-default-after-async-fn-anon.js
 
 ```js
-//#region stmt-export-default-after-async-fn-anon.js
+// stmt-export-default-after-async-fn-anon.js
 /*! This should have "no side effects" */ /* @__NO_SIDE_EFFECTS__ */
 async function stmt_export_default_after_async_fn_anon_default() {}
-//#endregion
 export { stmt_export_default_after_async_fn_anon_default as default };
 
 ```
@@ -53,10 +188,9 @@ export { stmt_export_default_after_async_fn_anon_default as default };
 ## stmt-export-default-after-async-fn-name.js
 
 ```js
-//#region stmt-export-default-after-async-fn-name.js
+// stmt-export-default-after-async-fn-name.js
 /*! This should have "no side effects" */ /* @__NO_SIDE_EFFECTS__ */
 async function f() {}
-//#endregion
 export { f as default };
 
 ```
@@ -64,10 +198,9 @@ export { f as default };
 ## stmt-export-default-after-async-gen-fn-anon.js
 
 ```js
-//#region stmt-export-default-after-async-gen-fn-anon.js
+// stmt-export-default-after-async-gen-fn-anon.js
 /*! This should have "no side effects" */ /* @__NO_SIDE_EFFECTS__ */
 async function* stmt_export_default_after_async_gen_fn_anon_default() {}
-//#endregion
 export { stmt_export_default_after_async_gen_fn_anon_default as default };
 
 ```
@@ -75,10 +208,9 @@ export { stmt_export_default_after_async_gen_fn_anon_default as default };
 ## stmt-export-default-after-async-gen-fn-name.js
 
 ```js
-//#region stmt-export-default-after-async-gen-fn-name.js
+// stmt-export-default-after-async-gen-fn-name.js
 /*! This should have "no side effects" */ /* @__NO_SIDE_EFFECTS__ */
 async function* f() {}
-//#endregion
 export { f as default };
 
 ```
@@ -86,10 +218,9 @@ export { f as default };
 ## stmt-export-default-after-fn-anon.js
 
 ```js
-//#region stmt-export-default-after-fn-anon.js
+// stmt-export-default-after-fn-anon.js
 /*! This should have "no side effects" */ /* @__NO_SIDE_EFFECTS__ */
 function stmt_export_default_after_fn_anon_default() {}
-//#endregion
 export { stmt_export_default_after_fn_anon_default as default };
 
 ```
@@ -97,10 +228,9 @@ export { stmt_export_default_after_fn_anon_default as default };
 ## stmt-export-default-after-fn-name.js
 
 ```js
-//#region stmt-export-default-after-fn-name.js
+// stmt-export-default-after-fn-name.js
 /*! This should have "no side effects" */ /* @__NO_SIDE_EFFECTS__ */
 function f() {}
-//#endregion
 export { f as default };
 
 ```
@@ -108,10 +238,9 @@ export { f as default };
 ## stmt-export-default-after-gen-fn-anon.js
 
 ```js
-//#region stmt-export-default-after-gen-fn-anon.js
+// stmt-export-default-after-gen-fn-anon.js
 /*! This should have "no side effects" */ /* @__NO_SIDE_EFFECTS__ */
 function* stmt_export_default_after_gen_fn_anon_default() {}
-//#endregion
 export { stmt_export_default_after_gen_fn_anon_default as default };
 
 ```
@@ -119,10 +248,9 @@ export { stmt_export_default_after_gen_fn_anon_default as default };
 ## stmt-export-default-after-gen-fn-name.js
 
 ```js
-//#region stmt-export-default-after-gen-fn-name.js
+// stmt-export-default-after-gen-fn-name.js
 /*! This should have "no side effects" */ /* @__NO_SIDE_EFFECTS__ */
 function* f() {}
-//#endregion
 export { f as default };
 
 ```
@@ -130,10 +258,9 @@ export { f as default };
 ## stmt-export-default-before-async-fn-anon.js
 
 ```js
-//#region stmt-export-default-before-async-fn-anon.js
+// stmt-export-default-before-async-fn-anon.js
 /*! This should have "no side effects" */ /* #__NO_SIDE_EFFECTS__ */
 async function stmt_export_default_before_async_fn_anon_default() {}
-//#endregion
 export { stmt_export_default_before_async_fn_anon_default as default };
 
 ```
@@ -141,10 +268,9 @@ export { stmt_export_default_before_async_fn_anon_default as default };
 ## stmt-export-default-before-async-fn-name.js
 
 ```js
-//#region stmt-export-default-before-async-fn-name.js
+// stmt-export-default-before-async-fn-name.js
 /*! This should have "no side effects" */ /* #__NO_SIDE_EFFECTS__ */
 async function f() {}
-//#endregion
 export { f as default };
 
 ```
@@ -152,10 +278,9 @@ export { f as default };
 ## stmt-export-default-before-async-gen-fn-anon.js
 
 ```js
-//#region stmt-export-default-before-async-gen-fn-anon.js
+// stmt-export-default-before-async-gen-fn-anon.js
 /*! This should have "no side effects" */ /* #__NO_SIDE_EFFECTS__ */
 async function* stmt_export_default_before_async_gen_fn_anon_default() {}
-//#endregion
 export { stmt_export_default_before_async_gen_fn_anon_default as default };
 
 ```
@@ -163,10 +288,9 @@ export { stmt_export_default_before_async_gen_fn_anon_default as default };
 ## stmt-export-default-before-async-gen-fn-name.js
 
 ```js
-//#region stmt-export-default-before-async-gen-fn-name.js
+// stmt-export-default-before-async-gen-fn-name.js
 /*! This should have "no side effects" */ /* #__NO_SIDE_EFFECTS__ */
 async function* f() {}
-//#endregion
 export { f as default };
 
 ```
@@ -174,10 +298,9 @@ export { f as default };
 ## stmt-export-default-before-fn-anon.js
 
 ```js
-//#region stmt-export-default-before-fn-anon.js
+// stmt-export-default-before-fn-anon.js
 /*! This should have "no side effects" */ /* #__NO_SIDE_EFFECTS__ */
 function stmt_export_default_before_fn_anon_default() {}
-//#endregion
 export { stmt_export_default_before_fn_anon_default as default };
 
 ```
@@ -185,10 +308,9 @@ export { stmt_export_default_before_fn_anon_default as default };
 ## stmt-export-default-before-fn-name.js
 
 ```js
-//#region stmt-export-default-before-fn-name.js
+// stmt-export-default-before-fn-name.js
 /*! This should have "no side effects" */ /* #__NO_SIDE_EFFECTS__ */
 function f() {}
-//#endregion
 export { f as default };
 
 ```
@@ -196,10 +318,9 @@ export { f as default };
 ## stmt-export-default-before-gen-fn-anon.js
 
 ```js
-//#region stmt-export-default-before-gen-fn-anon.js
+// stmt-export-default-before-gen-fn-anon.js
 /*! This should have "no side effects" */ /* #__NO_SIDE_EFFECTS__ */
 function* stmt_export_default_before_gen_fn_anon_default() {}
-//#endregion
 export { stmt_export_default_before_gen_fn_anon_default as default };
 
 ```
@@ -207,10 +328,9 @@ export { stmt_export_default_before_gen_fn_anon_default as default };
 ## stmt-export-default-before-gen-fn-name.js
 
 ```js
-//#region stmt-export-default-before-gen-fn-name.js
+// stmt-export-default-before-gen-fn-name.js
 /*! This should have "no side effects" */ /* #__NO_SIDE_EFFECTS__ */
 function* f() {}
-//#endregion
 export { f as default };
 
 ```
@@ -218,7 +338,7 @@ export { f as default };
 ## stmt-export-fn.js
 
 ```js
-//#region stmt-export-fn.js
+// stmt-export-fn.js
 //! These should all have "no side effects"
 /* @__NO_SIDE_EFFECTS__ */
 function a() {}
@@ -228,7 +348,6 @@ function* b() {}
 async function c() {}
 /* @__NO_SIDE_EFFECTS__ */
 async function* d() {}
-//#endregion
 export { a, b, c, d };
 
 ```
@@ -236,21 +355,20 @@ export { a, b, c, d };
 ## stmt-export-local.js
 
 ```js
-//#region stmt-export-local.js
+// stmt-export-local.js
 //! Only "c0" and "c2" should have "no side effects" (Rollup only respects "const" and only for the first one)
-var v0 = function() {};
+/* #__NO_SIDE_EFFECTS__ */ var v0 = function() {};
 var v1 = function() {};
-let l0 = function() {};
+/* #__NO_SIDE_EFFECTS__ */ let l0 = function() {};
 let l1 = function() {};
 const c0 = /* @__NO_SIDE_EFFECTS__ */ function() {};
 const c1 = function() {};
-var v2 = () => {};
+/* #__NO_SIDE_EFFECTS__ */ var v2 = () => {};
 var v3 = () => {};
-let l2 = () => {};
+/* #__NO_SIDE_EFFECTS__ */ let l2 = () => {};
 let l3 = () => {};
 const c2 = /* @__NO_SIDE_EFFECTS__ */ () => {};
 const c3 = () => {};
-//#endregion
 export { c0, c1, c2, c3, l0, l1, l2, l3, v0, v1, v2, v3 };
 
 ```
@@ -259,7 +377,6 @@ export { c0, c1, c2, c3, l0, l1, l2, l3, v0, v1, v2, v3 };
 
 ```js
 //! These should all have "no side effects"
-//#endregion
 
 ```
 
@@ -267,6 +384,5 @@ export { c0, c1, c2, c3, l0, l1, l2, l3, v0, v1, v2, v3 };
 
 ```js
 //! Only "c0" and "c2" should have "no side effects" (Rollup only respects "const" and only for the first one)
-//#endregion
 
 ```

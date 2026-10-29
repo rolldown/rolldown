@@ -1,0 +1,15 @@
+{
+  "_comment": "b.js's only dynamic import of t.js is a top-level pure dynamic import with an unused result, so tree shaking drops the dynamic entry and the finalizer emits an inert `Promise.resolve().then(...)` stub - the emitted code can never load t.js's chunk through it. t.js stays included because entry e uses it statically, so it shares e's chunk. A dead record must not count as a dynamic-import load of e's chunk, so e keeps its inline trigger and no facade is emitted.",
+  "configName": "wrap-all",
+  "config": {
+    "input": [
+      { "name": "b", "import": "./b.js" },
+      { "name": "e", "import": "./e.js" }
+    ],
+    "strictExecutionOrder": true,
+    "treeshake": {
+      "moduleSideEffects": false
+    }
+  },
+  "configVariants": [{ "_configName": "on-demand", "onDemandWrapping": true }]
+}

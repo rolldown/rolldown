@@ -8,12 +8,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
-//#region main.js
+// main.js
 var import_lib = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = {};
 })))());
 console.log(import_lib.default);
-//#endregion
 Object.defineProperty(exports, "dayjs2", {
 	enumerable: true,
 	get: function() {
@@ -35,12 +34,11 @@ Object.defineProperty(exports, "dayjs2", {
 })(this, function(exports) {
 	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 	// HIDDEN [\0rolldown/runtime.js]
-	//#region main.js
+	// main.js
 	var import_lib = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 		module.exports = {};
 	})))());
 	console.log(import_lib.default);
-	//#endregion
 	Object.defineProperty(exports, "dayjs2", {
 		enumerable: true,
 		get: function() {

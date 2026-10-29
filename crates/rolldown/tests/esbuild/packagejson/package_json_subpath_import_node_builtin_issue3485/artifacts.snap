@@ -8,10 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import fs from "fs";
 import http from "node:http";
-//#region entry.js
+// entry.js
 fs.readFileSync();
 http.createServer();
-//#endregion
 export {};
 
 ```

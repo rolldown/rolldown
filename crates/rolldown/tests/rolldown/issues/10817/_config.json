@@ -1,0 +1,7 @@
+{
+  "_comment": "Regression test for https://github.com/rolldown/rolldown/issues/10817. A top-level expression that only coerces a constant binding is side-effect free. `minify: false` stops the chunk-level DCE from hiding rolldown's own tree shaking.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "minify": false
+  }
+}

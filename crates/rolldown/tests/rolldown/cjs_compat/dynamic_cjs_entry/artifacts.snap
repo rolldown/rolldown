@@ -6,12 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## cjs.js
 
 ```js
-import { t as __commonJSMin } from "./main.js";
-//#region cjs.js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+// cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "cjs";
 }));
-//#endregion
 export default require_cjs();
 
 ```
@@ -19,10 +18,17 @@ export default require_cjs();
 ## main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-//#region main.js
+import { n as __toESM } from "./rolldown-runtime.js";
+// main.js
 var main_default = import("./cjs.js").then((m) => /* @__PURE__ */ __toESM(m.default));
-//#endregion
-export { main_default as default, __commonJSMin as t };
+export { main_default as default };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __toESM as n, __commonJSMin as t };
 
 ```

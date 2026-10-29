@@ -1,17 +1,24 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## SHIMMED_EXPORT
+
+```text
+[SHIMMED_EXPORT] Missing export "nope" has been shimmed in module "bar.js".
+
+```
+
 # Assets
 
 ## entry.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region bar.js
+// bar.js
 var nope = void 0;
-//#endregion
-//#region entry.js
+// entry.js
 console.log(/* @__PURE__ */ __exportAll({ nope: () => nope }));
-//#endregion
 
 ```

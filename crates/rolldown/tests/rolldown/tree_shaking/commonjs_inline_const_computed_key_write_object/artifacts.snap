@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
+// HIDDEN [\0rolldown/runtime.js]
 (/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = "cjs-a";
 })))();
@@ -17,6 +17,5 @@ obj["cjs-a"] = 2;
 assert.equal("cjs-a", "cjs-a");
 assert.equal("cjs-a", "cjs-a");
 assert.equal(obj["cjs-a"], 2);
-//#endregion
 
 ```

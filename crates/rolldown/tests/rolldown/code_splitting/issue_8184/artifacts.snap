@@ -15,16 +15,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-//#region c.js
-import("./a2.js");
-//#endregion
-
-```
-
-## a2.js
-
-```js
-import "./a.js";
+// HIDDEN [\0rolldown/runtime.js]
+// c.js
+Promise.resolve().then(() => a_exports);
+// a.js
+var a_exports = /* @__PURE__ */ __exportAll({});
+export { __commonJSMin as t };
 
 ```
 
@@ -38,16 +34,17 @@ import "./a.js";
 ## dbp-2.js
 
 ```js
-import "./a.js";
-// HIDDEN [\0rolldown/runtime.js]
+import { t as __commonJSMin } from "./a.js";
+(/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = 42;
+})))();
 
 ```
 
 ## dbp-activity-showcase.js
 
 ```js
-//#region dbp-activity-showcase.js
+// dbp-activity-showcase.js
 import("./dbp-2.js");
-//#endregion
 
 ```

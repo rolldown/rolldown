@@ -1,0 +1,13 @@
+{
+  "_comment": "The dynamic entry does `export * from 'ext-then'` where the external supplies a callable `then` at runtime, so `import()` of the entry must assimilate through it exactly like the unbundled module. `minifyInternalExports` is set explicitly so the harness does not add its own opposite variant, keeping the emitted chunk count deterministic.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "external": ["ext-then"],
+    "minifyInternalExports": true
+  }
+}

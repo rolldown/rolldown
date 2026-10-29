@@ -25,11 +25,10 @@ export { foo };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region main.js
+// main.js
 var import_foo = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports.foo = "foo";
 })))();
-//#endregion
 export { import_foo as t };
 
 ```

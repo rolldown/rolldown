@@ -5,8 +5,8 @@ use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkDebugInfo, ChunkIdx, ChunkKind, ChunkMeta, ChunkReasonType,
-  FacadeChunkEliminationReason, ImportKind, Module, ModuleIdx, ModuleNamespaceIncludedReason,
-  ModuleTable, PostChunkOptimizationOperation, PreserveEntrySignatures, RuntimeHelper, StmtInfos,
+  FacadeChunkEliminationReason, Module, ModuleIdx, ModuleTable, NormalModule,
+  PostChunkOptimizationOperation, PreserveEntrySignatures, RuntimeHelper, UsedSymbolRefsBuilder,
   WrapKind,
 };
 use rolldown_utils::{BitSet, IndexBitSet, indexmap::FxIndexMap};
@@ -14,19 +14,28 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   chunk_graph::ChunkGraph,
-  stages::link_stage::{
-    IncludeContext, SymbolIncludeReason, include_runtime_symbol, include_symbol,
-  },
-  types::linking_metadata::{
-    LinkingMetadata, LinkingMetadataVec, included_info_to_linking_metadata_vec,
-    linking_metadata_vec_to_included_info,
-  },
+  types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
 };
 
 use super::{
   GenerateStage, chunk_ext::ChunkCreationReason, chunk_ext::ChunkDebugExt,
-  code_splitting::IndexSplittingInfo,
+  code_splitting::IndexSplittingInfo, compute_cross_chunk_links::chunk_evaluation_order,
+  compute_cross_chunk_links::sort_chunk_importees_by,
+  simulated_facade_inclusion::include_simulated_facade_namespace,
 };
+
+/// Which hosts [`GenerateStage::try_merge_runtime_chunk`] may fold the runtime chunk into.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(super) enum RuntimeMergeCascade {
+  /// The full host cascade: sole consumer, then bitset hosts, then a consumer dominator.
+  Full,
+  /// Only a sole consumer. The post-order-lowering fold uses this: any other host creates or
+  /// reorders chunk-evaluation edges the order analysis never modeled — a dominator merge turns
+  /// transitive reachability into a direct import whose exec-order sort position can hoist the
+  /// host past sibling imports, and a bitset host can gain a brand-new consumer edge — while a
+  /// sole-consumer merge only removes that consumer's edge to the runtime-only chunk.
+  SingleConsumerOnly,
+}
 
 struct FacadeChunkElimination {
   reason: FacadeChunkEliminationReason,
@@ -398,14 +407,16 @@ impl GenerateStage<'_> {
         }
         let chunk_idxs: Vec<_> = bits.index_of_one().map(ChunkIdx::from_raw).collect();
 
-        let merge_target = self.try_insert_into_existing_chunk(
-          &chunk_idxs,
-          &static_entry_chunk_reference,
-          chunk_graph,
-          &dynamic_entry_to_dynamic_importers,
-          temp_chunk,
-          temp_chunk_graph,
-        );
+        let merge_target = self
+          .try_insert_into_existing_chunk(
+            &chunk_idxs,
+            &static_entry_chunk_reference,
+            chunk_graph,
+            &dynamic_entry_to_dynamic_importers,
+            temp_chunk,
+            temp_chunk_graph,
+          )
+          .filter(|_| !self.prefers_inline_common_chunk(&temp_chunk.modules));
 
         Some((bits.clone(), *temp_chunk_idx, chunk_idxs, merge_target))
       })
@@ -603,7 +614,7 @@ impl GenerateStage<'_> {
       // entry's exports pollute the target dynamic-import namespace observed
       // by callers (issue #9320).
       //
-      // See meta/design/code-splitting.md for the merge-safety invariant.
+      // See internal-docs/code-splitting/implementation.md for the merge-safety invariant.
       // The selected target may own its own exports, but no other pending
       // dynamic-entry module may contribute observable exports to the target
       // chunk's file-level export list.
@@ -718,6 +729,7 @@ impl GenerateStage<'_> {
     };
     let metas = &self.link_output.metas;
     let module_table = &self.link_output.module_table;
+    let merged: FxHashSet<ModuleIdx> = modules.iter().copied().collect();
 
     let entry_exports = &metas[entry_module_idx].resolved_exports;
 
@@ -734,6 +746,15 @@ impl GenerateStage<'_> {
       // 1. The module has no exports (empty resolved_exports)
       // 2. All of the module's exports point to symbols that the entry also exports
       module_meta.resolved_exports.iter().all(|(export_name, resolved_export)| {
+        // Judge by the symbol consumers are actually served: `canonical_ref_resolving_namespace`
+        // redirects a CJS re-export facade to the namespace it aliases. Stopping at
+        // `canonical_ref_for` would let an alias whose namespace lives inside the merged set slip
+        // past as "owned elsewhere" while the merge does move that namespace into the entry chunk.
+        let canonical_ref =
+          self.link_output.symbol_db.canonical_ref_resolving_namespace(resolved_export.symbol_ref);
+        if !merged.contains(&canonical_ref.owner) {
+          return true;
+        }
         // Check if the entry has an export with the same name that resolves to the same symbol
         entry_exports
           .get(export_name)
@@ -813,12 +834,33 @@ impl GenerateStage<'_> {
 
       if meta.intersects(ChunkMeta::UserDefinedEntry) {
         if matches!(target_chunk.kind, ChunkKind::Common) {
-          let can_merge = match chunk.preserve_entry_signature {
-            Some(PreserveEntrySignatures::Strict) => {
-              self.can_merge_without_changing_entry_signature(chunk, &target_chunk.modules)
-            }
-            _ => true,
-          };
+          // Execution-isolation guard (issue #9463).
+          //
+          // Folding the common chunk *into* this user-defined entry chunk makes the
+          // entry chunk eagerly run this entry's top-level (its `init_*` call)
+          // whenever the chunk is loaded. If the common chunk also holds *another*
+          // user-defined entry's module, that other entry would be forced to import
+          // this entry chunk just to reach its own module — and would then run this
+          // entry's side effects. e.g. loading entry `b` would trigger entry `a`'s
+          // side effects. This happens when manual code splitting (a `codeSplitting`
+          // group, possibly via `entriesAware` subgroup merging) lumps several
+          // entries' modules into one shared chunk.
+          //
+          // Keep the thin facade in that case, so each entry imports the (wrapped)
+          // shared chunk and runs only its own `init_*`. A shared chunk that holds
+          // just this entry's module (plus non-entry deps a sibling genuinely
+          // depends on) is still folded in, preserving the #5726 facade-elimination.
+          let holds_other_user_entry = target_chunk.modules.iter().any(|&module_idx| {
+            module_idx != module
+              && self.link_output.user_defined_entry_modules.contains(&module_idx)
+          });
+          let can_merge = !holds_other_user_entry
+            && match chunk.preserve_entry_signature {
+              Some(PreserveEntrySignatures::Strict) => {
+                self.can_merge_without_changing_entry_signature(chunk, &target_chunk.modules)
+              }
+              _ => true,
+            };
           if can_merge {
             // merge all common chunk modules into entry chunk
             // swap original from_chunk_idx and target_chunk_idx
@@ -952,6 +994,7 @@ impl GenerateStage<'_> {
     input_base: &ArcStr,
     module_is_assigned: &mut IndexBitSet<ModuleIdx>,
     temp_chunk_opt_graph: &ChunkOptimizationGraph,
+    used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
   ) {
     // Find empty dynamic entry chunks that should be merged with their target common chunks
     let (mut facade_eliminations, common_chunk_merges, emitted_chunk_groups) =
@@ -964,152 +1007,99 @@ impl GenerateStage<'_> {
       return;
     }
 
-    let runtime_module_idx = self.link_output.runtime.id();
     self.resolve_emitted_chunk_group_conflicts(
       chunk_graph,
       emitted_chunk_groups,
       &mut facade_eliminations,
     );
 
-    // Namespace symbols by default reference all exported symbols from the module.
-    // To preserve dynamic import tree shaking, we should only include symbols that were actually used during the linking stage.
-    // This ensures that including a namespace symbol doesn't inadvertently add unused exported symbols.
     for elimination in &facade_eliminations {
-      let entry_module_idx = elimination.entry_module_idx;
-      let wrap_kind = self.link_output.metas[entry_module_idx].wrap_kind();
-      if self.link_output.module_table[entry_module_idx].as_normal().is_none() {
-        continue;
-      }
-      // For CJS modules, we don't need to include `__exportAll` and the namespace symbols.
-      // Instead, we should include the wrapper_ref (`require_xxx`), which will be handled
-      // in the include_symbol call below.
-      if !matches!(wrap_kind, WrapKind::Cjs) {
-        // Filter in place to avoid cloning
-        self.link_output.stmt_infos[entry_module_idx][StmtInfos::NAMESPACE_STMT_IDX]
-          .referenced_symbols
-          .retain(|item| match item {
-            rolldown_common::SymbolOrMemberExprRef::Symbol(symbol_ref) => {
-              // module namespace symbol requires `__exportAll` runtime helper
-              self.link_output.used_symbol_refs.contains(symbol_ref)
-                || symbol_ref.owner == runtime_module_idx
-            }
-            rolldown_common::SymbolOrMemberExprRef::MemberExpr(_member_expr_ref) => true,
-          });
-      }
+      self.narrow_namespace_stmt_to_used_symbols(
+        elimination.entry_module_idx,
+        used_symbol_refs_builder,
+      );
     }
-
-    let (mut stmt_info_included_vec, mut module_included_vec, mut module_namespace_reason_vec) =
-      linking_metadata_vec_to_included_info(&mut self.link_output.metas);
-
-    let runtime = &self.link_output.runtime;
-    let context = &mut IncludeContext {
-      modules: &self.link_output.module_table.modules,
-      stmt_infos: &self.link_output.stmt_infos,
-      symbols: &self.link_output.symbol_db,
-      is_included_vec: &mut stmt_info_included_vec,
-      is_module_included_vec: &mut module_included_vec,
-      tree_shaking: self.options.treeshake.is_some(),
-      runtime_idx: self.link_output.runtime.id(),
-      metas: &self.link_output.metas,
-      used_symbol_refs: &mut self.link_output.used_symbol_refs,
-      constant_symbol_map: &self.link_output.global_constant_symbol_map,
-      options: self.options,
-      normal_symbol_exports_chain_map: &self.link_output.normal_symbol_exports_chain_map,
-      bailout_cjs_tree_shaking_modules: FxHashSet::default(),
-      module_inclusion_changed: false,
-      module_namespace_included_reason: &mut module_namespace_reason_vec,
-      inline_const_smart: self.options.optimization.is_inline_const_smart_mode(),
-      json_module_none_self_reference_included_symbol: FxHashMap::default(),
-    };
 
     let mut runtime_dependent_chunks = FxHashSet::default();
 
-    let mut needs_export_all_helper = false;
-    for elimination in &facade_eliminations {
-      let FacadeChunkElimination { reason, entry_module_idx, from_chunk_idx, to_chunk_idx } =
-        elimination;
-      // Point the entry module to related common chunk
-      chunk_graph.entry_module_to_entry_chunk.remove(entry_module_idx);
+    self.replay_link_stage_inclusion(used_symbol_refs_builder, |context| {
+      let mut needs_export_all_helper = false;
+      for elimination in &facade_eliminations {
+        let FacadeChunkElimination { reason, entry_module_idx, from_chunk_idx, to_chunk_idx } =
+          elimination;
+        // Point the entry module to related common chunk
+        chunk_graph.entry_module_to_entry_chunk.remove(entry_module_idx);
 
-      let Some(module) = context.modules[*entry_module_idx].as_normal() else {
-        continue;
-      };
+        let Some(module) = context.modules[*entry_module_idx].as_normal() else {
+          continue;
+        };
 
-      let wrap_kind = self.link_output.metas[*entry_module_idx].wrap_kind();
+        let wrap_kind = context.metas[*entry_module_idx].wrap_kind();
 
-      chunk_graph.entry_module_to_entry_chunk.insert(*entry_module_idx, *to_chunk_idx);
-      let from_chunk = &chunk_graph.chunk_table[*from_chunk_idx];
-      let ChunkKind::EntryPoint { meta: chunk_meta, .. } = from_chunk.kind else {
-        // We don't have any optimization to merge common chunks into other chunks.
-        continue;
-      };
+        chunk_graph.entry_module_to_entry_chunk.insert(*entry_module_idx, *to_chunk_idx);
+        let from_chunk = &chunk_graph.chunk_table[*from_chunk_idx];
+        let ChunkKind::EntryPoint { meta: chunk_meta, .. } = from_chunk.kind else {
+          // We don't have any optimization to merge common chunks into other chunks.
+          continue;
+        };
 
-      chunk_graph.post_chunk_optimization_operations.insert(
-        *from_chunk_idx,
+        chunk_graph.post_chunk_optimization_operations.insert(
+          *from_chunk_idx,
+          if chunk_meta.contains(ChunkMeta::EmittedChunk) {
+            PostChunkOptimizationOperation::RemovedWithPreservedExports
+          } else {
+            PostChunkOptimizationOperation::Removed
+          },
+        );
+
+        // Track emitted chunks so their export names are preserved (not minified)
         if chunk_meta.contains(ChunkMeta::EmittedChunk) {
-          PostChunkOptimizationOperation::RemovedWithPreservedExports
-        } else {
-          PostChunkOptimizationOperation::Removed
-        },
-      );
+          chunk_graph
+            .common_chunk_preserve_export_names_modules
+            .entry(*to_chunk_idx)
+            .or_default()
+            .insert(*entry_module_idx);
+        }
 
-      // Track emitted chunks so their export names are preserved (not minified)
-      if chunk_meta.contains(ChunkMeta::EmittedChunk) {
+        // If a chunk is not dynamically imported, we don't need to simulate a facade chunk.
+        if !chunk_meta.contains(ChunkMeta::DynamicImported) {
+          continue;
+        }
         chunk_graph
-          .common_chunk_preserve_export_names_modules
+          .common_chunk_exported_facade_chunk_namespace
           .entry(*to_chunk_idx)
           .or_default()
           .insert(*entry_module_idx);
-      }
 
-      // If a chunk is not dynamically imported, we don't need to simulate a facade chunk.
-      if !chunk_meta.contains(ChunkMeta::DynamicImported) {
-        continue;
-      }
-      chunk_graph
-        .common_chunk_exported_facade_chunk_namespace
-        .entry(*to_chunk_idx)
-        .or_default()
-        .insert(*entry_module_idx);
-
-      // Add debug info about eliminated facade chunk to target chunk
-      if self.options.experimental.is_attach_debug_info_full() || self.options.devtools {
-        let eliminated_chunk_name = chunk_graph.chunk_table[*from_chunk_idx]
-          .name
-          .as_ref()
-          .map_or_else(|| "unnamed".to_string(), ArcStr::to_string);
-        let module_stable_id = module.stable_id.to_string();
-        chunk_graph.chunk_table[*to_chunk_idx].debug_info.push(
-          ChunkDebugInfo::EliminatedFacadeChunk {
-            chunk_name: eliminated_chunk_name,
-            entry_module_id: module_stable_id,
-            reason: *reason,
-          },
-        );
-      }
-
-      // For CJS modules, include the wrapper_ref (require_xxx) instead of namespace
-      // and use ToEsm runtime helper instead of ExportAll
-      if matches!(wrap_kind, WrapKind::Cjs | WrapKind::Esm) {
-        if let Some(wrapper_ref) = self.link_output.metas[*entry_module_idx].wrapper_ref {
-          include_symbol(context, wrapper_ref, SymbolIncludeReason::SimulatedFacadeChunk);
+        // Add debug info about eliminated facade chunk to target chunk
+        if context.options.experimental.is_attach_debug_info_full() || context.options.devtools {
+          let eliminated_chunk_name = chunk_graph.chunk_table[*from_chunk_idx]
+            .name
+            .as_ref()
+            .map_or_else(|| "unnamed".to_string(), ArcStr::to_string);
+          let module_stable_id = module.stable_id.to_string();
+          chunk_graph.chunk_table[*to_chunk_idx].debug_info.push(
+            ChunkDebugInfo::EliminatedFacadeChunk {
+              chunk_name: eliminated_chunk_name,
+              entry_module_id: module_stable_id,
+              reason: *reason,
+            },
+          );
         }
-        runtime_dependent_chunks.insert(*to_chunk_idx);
+
+        // Wrapped modules make the target chunk depend on the runtime (wrapper/`__toESM` helpers).
+        if matches!(wrap_kind, WrapKind::Cjs | WrapKind::Esm) {
+          runtime_dependent_chunks.insert(*to_chunk_idx);
+        }
+        if include_simulated_facade_namespace(context, *entry_module_idx) {
+          let target_chunk = &mut chunk_graph.chunk_table[*to_chunk_idx];
+          target_chunk.depended_runtime_helper.insert(RuntimeHelper::ExportAll);
+          runtime_dependent_chunks.insert(*to_chunk_idx);
+          needs_export_all_helper = true;
+        }
       }
-      if matches!(wrap_kind, WrapKind::Esm | WrapKind::None) {
-        include_symbol(
-          context,
-          module.namespace_object_ref,
-          SymbolIncludeReason::SimulatedFacadeChunk,
-        );
-        context.module_namespace_included_reason[*entry_module_idx]
-          .insert(ModuleNamespaceIncludedReason::SimulateFacadeChunk);
-        let target_chunk = &mut chunk_graph.chunk_table[*to_chunk_idx];
-        target_chunk.depended_runtime_helper.insert(RuntimeHelper::ExportAll);
-        runtime_dependent_chunks.insert(*to_chunk_idx);
-        needs_export_all_helper = true;
-      }
-    }
+      needs_export_all_helper
+    });
 
     Self::apply_common_chunk_merges(
       chunk_graph,
@@ -1117,117 +1107,721 @@ impl GenerateStage<'_> {
       &mut runtime_dependent_chunks,
     );
 
-    if needs_export_all_helper {
-      include_runtime_symbol(context, runtime, RuntimeHelper::ExportAll);
-    }
-
-    if !runtime_dependent_chunks.is_empty() {
-      self.rehome_runtime_module(
-        chunk_graph,
-        runtime_module_idx,
-        &runtime_dependent_chunks,
-        index_splitting_info,
-        input_base,
-        module_is_assigned,
-      );
-    }
-
-    // Restore the included info back to metas
-    included_info_to_linking_metadata_vec(
-      &mut self.link_output.metas,
-      stmt_info_included_vec,
-      &module_included_vec,
-      &module_namespace_reason_vec,
+    self.extract_standalone_runtime_chunk(
+      index_splitting_info,
+      module_is_assigned,
+      chunk_graph,
+      input_base,
+    );
+    self.try_merge_runtime_chunk(
+      chunk_graph,
+      Some(&runtime_dependent_chunks),
+      RuntimeMergeCascade::Full,
+      used_symbol_refs_builder,
     );
   }
 
-  /// Re-home the runtime module to avoid closing a static import cycle when
-  /// facade elimination introduces new helper consumers.
-  ///
-  /// If the runtime's current host has a static forward path to any new
-  /// consumer, that consumer's helper-import back-edge would close a cycle.
-  /// Peel the runtime out and re-home it in the *dominator* of the consumer
-  /// set — a chunk every other consumer already reaches via static forward
-  /// edges. With no dominator, fall back to a dedicated leaf
-  /// `rolldown-runtime.js` chunk. Absent any cycle risk, leave the runtime
-  /// where the merge phase placed it (most compact layout).
-  fn rehome_runtime_module(
+  /// Merge the standalone runtime chunk into a safe existing host. Prefer a
+  /// live chunk with the runtime's bitset to preserve pre-existing layouts;
+  /// otherwise use a runtime consumer that dominates all other consumers.
+  /// Every host of the full cascade must also keep the evaluation order of the
+  /// chunks that import it (`runtime_host_keeps_evaluation_order`).
+  pub(super) fn try_merge_runtime_chunk(
     &self,
     chunk_graph: &mut ChunkGraph,
-    runtime_module_idx: ModuleIdx,
-    runtime_dependent_chunks: &FxHashSet<ChunkIdx>,
-    index_splitting_info: &IndexSplittingInfo,
-    input_base: &ArcStr,
-    module_is_assigned: &mut IndexBitSet<ModuleIdx>,
+    additional_runtime_consumers: Option<&FxHashSet<ChunkIdx>>,
+    cascade: RuntimeMergeCascade,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
   ) {
-    let original_host = chunk_graph.module_to_chunk[runtime_module_idx];
-    let module_table = &self.link_output.module_table;
-
-    let cycle_risk = original_host.is_some_and(|host| {
-      runtime_dependent_chunks.iter().any(|&c| {
-        c != host && Self::chunk_reaches_via_static_import(host, c, chunk_graph, module_table)
-      })
-    });
-
-    if cycle_risk && let Some(host_idx) = original_host {
-      let host_chunk = &chunk_graph.chunk_table[host_idx];
-      if host_chunk.modules.len() > 1
-        && let Some(pos) = host_chunk.modules.iter().position(|m| *m == runtime_module_idx)
-      {
-        let host_chunk = &mut chunk_graph.chunk_table[host_idx];
-        host_chunk.modules.swap_remove(pos);
-        chunk_graph.module_to_chunk[runtime_module_idx] = None;
-      }
+    // `experimentalInlineCommonChunks` registers registry demand on the files that read records
+    // after every merge proof below has run, so a merged runtime could end up imported by files
+    // the proof never counted. The runtime stays a standalone chunk while the feature is on.
+    if self.options.inline_common_chunks.is_some() {
+      return;
     }
-
-    if chunk_graph.module_to_chunk[runtime_module_idx].is_some() {
+    let runtime_module_idx = self.link_output.runtime.id();
+    let Some(runtime_chunk_idx) = chunk_graph.module_to_chunk[runtime_module_idx] else {
+      return;
+    };
+    if chunk_graph.post_chunk_optimization_operations.contains_key(&runtime_chunk_idx) {
       return;
     }
 
-    let removed_chunks = &chunk_graph.post_chunk_optimization_operations;
-    let mut consumer_chunks: FxHashSet<ChunkIdx> = chunk_graph
-      .chunk_table
-      .iter_enumerated()
-      .filter_map(|(idx, chunk)| {
-        (!removed_chunks.contains_key(&idx) && !chunk.depended_runtime_helper.is_empty())
-          .then_some(idx)
-      })
-      .collect();
-    consumer_chunks.extend(runtime_dependent_chunks.iter().copied());
-    // The original host was an implicit consumer: the merge phase put the
-    // runtime there because the chunk's bitset required it.
-    if let Some(host) = original_host
-      && !removed_chunks.contains_key(&host)
-    {
-      consumer_chunks.insert(host);
+    let module_table = &self.link_output.module_table;
+    let Some(runtime_module) = module_table[runtime_module_idx].as_normal() else {
+      return;
+    };
+    if Self::runtime_has_live_internal_import(runtime_module, runtime_chunk_idx, chunk_graph) {
+      return;
     }
 
-    let dominator = Self::find_consumer_dominator(&consumer_chunks, chunk_graph, module_table);
-    let runtime_chunk_idx = dominator.unwrap_or_else(|| {
-      chunk_graph.add_chunk(Chunk::new(
-        Some("rolldown-runtime".into()),
-        None,
-        index_splitting_info[runtime_module_idx].bits.clone(),
-        vec![],
-        ChunkKind::Common,
-        input_base.clone(),
-        None,
-      ))
-    });
+    let runtime_chunk = &chunk_graph.chunk_table[runtime_chunk_idx];
+    if runtime_chunk.modules.len() != 1 || runtime_chunk.modules[0] != runtime_module_idx {
+      return;
+    }
+    // `runtime_host_keeps_evaluation_order` needs the chunk `exec_order` of the standalone layout.
+    // `generate_chunks` assigns the orders after this merge, so assign them here first. Both calls
+    // run again on the final layout. The strict path and the post-order-lowering fold skip the
+    // check, so they keep their orders.
+    if cascade == RuntimeMergeCascade::Full && !self.options.is_strict_execution_order_enabled() {
+      chunk_graph.sort_chunk_modules(self.link_output, self.options);
+      self.assign_chunk_exec_orders(chunk_graph);
+    }
+    let runtime_chunk = &chunk_graph.chunk_table[runtime_chunk_idx];
+    // The predicted import edges for `runtime_host_keeps_evaluation_order`. The cascade calculates
+    // them at most once, and only for a common chunk host.
+    let mut import_edges = None;
+    let consumer_chunks = self.collect_runtime_consumer_chunks(
+      chunk_graph,
+      runtime_chunk_idx,
+      runtime_module_idx,
+      additional_runtime_consumers,
+    );
+    let single_consumer = self.find_single_runtime_consumer(&consumer_chunks);
+    // `host_bits` are the entry bits that the merge adds to the host.
+    let (target_chunk_idx, host_bits) = match (cascade, single_consumer) {
+      // A sole-consumer host already has exact bits: the runtime becomes internal to it, so nobody
+      // else loads it through this chunk. The post-order-lowering standalone runtime chunk carries
+      // synthetic all-live-union bits (minted as a universal source), and folding those in would
+      // widen the host's bits — visible through bits-derived chunk names.
+      (RuntimeMergeCascade::SingleConsumerOnly, _) => (single_consumer, None),
+      // `runtime_bits_covering_consumers` returns the runtime bits plus some bits of the sole
+      // consumer. The host already has the bits of the consumer, so the runtime bits are sufficient.
+      (RuntimeMergeCascade::Full, Some(consumer)) => {
+        let host = Some(consumer).filter(|&consumer| {
+          self.runtime_host_keeps_evaluation_order(
+            chunk_graph,
+            consumer,
+            runtime_chunk_idx,
+            used_symbol_refs_builder,
+            &mut import_edges,
+          )
+        });
+        (host, Some(runtime_chunk.bits.clone()))
+      }
+      (RuntimeMergeCascade::Full, None) => {
+        // The two checks below can both need the late entries. `late_entries` keeps them, so the
+        // cascade calculates them at most once.
+        let mut late_entries = None;
+        let runtime_chunk_bits = self.runtime_bits_covering_consumers(
+          chunk_graph,
+          &runtime_chunk.bits,
+          &consumer_chunks,
+          &mut late_entries,
+        );
+        // When `find_single_runtime_bitset_host` finds a host, no other live chunk has these bits.
+        // Then `find_runtime_bitset_host` can only find the same host. So the order check runs only
+        // on the first host that the two searches find.
+        let target_chunk_idx = self
+          .find_single_runtime_bitset_host(
+            chunk_graph,
+            runtime_chunk_idx,
+            &runtime_chunk_bits,
+            &consumer_chunks,
+            module_table,
+          )
+          .or_else(|| {
+            self.find_runtime_bitset_host(
+              chunk_graph,
+              runtime_chunk_idx,
+              &runtime_chunk_bits,
+              &consumer_chunks,
+              module_table,
+            )
+          })
+          .filter(|&host| {
+            self.runtime_host_keeps_consumer_order(
+              chunk_graph,
+              host,
+              &consumer_chunks,
+              &runtime_chunk.bits,
+              &mut late_entries,
+            )
+          })
+          .filter(|&host| {
+            self.runtime_host_keeps_evaluation_order(
+              chunk_graph,
+              host,
+              runtime_chunk_idx,
+              used_symbol_refs_builder,
+              &mut import_edges,
+            )
+          })
+          .or_else(|| {
+            self.find_consumer_dominator(&consumer_chunks, chunk_graph, module_table).filter(
+              |&target_chunk_idx| {
+                Self::runtime_merge_target_is_allowed(chunk_graph, target_chunk_idx)
+                  && self.runtime_target_is_tla_safe(
+                    chunk_graph,
+                    target_chunk_idx,
+                    &consumer_chunks,
+                  )
+                  && self.runtime_merge_preserves_target_signature(
+                    chunk_graph,
+                    target_chunk_idx,
+                    &consumer_chunks,
+                  )
+                  && !Self::runtime_target_would_create_static_cycle(
+                    target_chunk_idx,
+                    &consumer_chunks,
+                    chunk_graph,
+                    module_table,
+                  )
+                  && self.runtime_host_keeps_evaluation_order(
+                    chunk_graph,
+                    target_chunk_idx,
+                    runtime_chunk_idx,
+                    used_symbol_refs_builder,
+                    &mut import_edges,
+                  )
+              },
+            )
+          });
+        (target_chunk_idx, Some(runtime_chunk_bits))
+      }
+    };
+    let Some(target_chunk_idx) = target_chunk_idx else {
+      return;
+    };
+    if target_chunk_idx == runtime_chunk_idx {
+      return;
+    }
+    // Declaration plugins discard generated runtime statements in `renderChunk`, so these
+    // chunks cannot host executable helpers. Check every merge path, including a sole consumer.
+    // See internal-docs/code-splitting/implementation.md
+    if chunk_graph.chunk_table[target_chunk_idx].modules.iter().any(|&module_idx| {
+      module_table[module_idx].as_normal().is_some_and(|module| {
+        [".d.ts", ".d.mts", ".d.cts"].iter().any(|suffix| module.id.as_str().ends_with(suffix))
+      })
+    }) {
+      return;
+    }
+    let runtime_chunk_helpers =
+      std::mem::take(&mut chunk_graph.chunk_table[runtime_chunk_idx].depended_runtime_helper);
+    chunk_graph.chunk_table[runtime_chunk_idx].modules.clear();
     chunk_graph.add_module_to_chunk(
       runtime_module_idx,
-      runtime_chunk_idx,
+      target_chunk_idx,
       self.link_output.metas[runtime_module_idx].depended_runtime_helper,
     );
-    module_is_assigned.set_bit(runtime_module_idx);
+    let target_chunk = &mut chunk_graph.chunk_table[target_chunk_idx];
+    target_chunk.depended_runtime_helper.insert(runtime_chunk_helpers);
+    if let Some(host_bits) = host_bits {
+      target_chunk.bits.union(&host_bits);
+    }
+    chunk_graph
+      .post_chunk_optimization_operations
+      .insert(runtime_chunk_idx, PostChunkOptimizationOperation::Removed);
+  }
+
+  fn find_single_runtime_consumer(
+    &self,
+    consumer_chunks: &FxHashSet<ChunkIdx>,
+  ) -> Option<ChunkIdx> {
+    if consumer_chunks.len() != 1 {
+      return None;
+    }
+    // A manual/advanced chunk is a valid runtime host when it is the only
+    // runtime consumer. In that case the merge is local to the chunk that
+    // already needs helpers, and does not make unrelated chunks load the group.
+    consumer_chunks.iter().copied().next()
+  }
+
+  fn find_single_runtime_bitset_host(
+    &self,
+    chunk_graph: &ChunkGraph,
+    runtime_chunk_idx: ChunkIdx,
+    runtime_chunk_bits: &BitSet,
+    consumer_chunks: &FxHashSet<ChunkIdx>,
+    module_table: &ModuleTable,
+  ) -> Option<ChunkIdx> {
+    let mut hosts = chunk_graph.chunk_table.iter_enumerated().filter_map(|(chunk_idx, chunk)| {
+      (chunk_idx != runtime_chunk_idx
+        && !chunk.modules.is_empty()
+        && !chunk_graph.post_chunk_optimization_operations.contains_key(&chunk_idx)
+        && chunk.bits == *runtime_chunk_bits)
+        .then_some(chunk_idx)
+    });
+    let host = hosts.next()?;
+    (hosts.next().is_none()
+      && Self::runtime_merge_target_is_allowed(chunk_graph, host)
+      && self.runtime_target_is_tla_safe(chunk_graph, host, consumer_chunks)
+      && self.runtime_merge_preserves_target_signature(chunk_graph, host, consumer_chunks)
+      && !Self::runtime_target_would_create_static_cycle(
+        host,
+        consumer_chunks,
+        chunk_graph,
+        module_table,
+      ))
+    .then_some(host)
+  }
+
+  fn runtime_has_live_internal_import(
+    runtime_module: &NormalModule,
+    runtime_chunk_idx: ChunkIdx,
+    chunk_graph: &ChunkGraph,
+  ) -> bool {
+    runtime_module
+      .import_records
+      .iter()
+      .filter_map(|rec| chunk_graph.module_to_chunk[rec.resolved_module?])
+      .any(|target_chunk_idx| {
+        target_chunk_idx != runtime_chunk_idx
+          && !chunk_graph.post_chunk_optimization_operations.contains_key(&target_chunk_idx)
+      })
+  }
+
+  fn runtime_merge_target_is_allowed(chunk_graph: &ChunkGraph, target_chunk_idx: ChunkIdx) -> bool {
+    !matches!(
+      chunk_graph.chunk_table[target_chunk_idx].chunk_reason_type.as_ref(),
+      ChunkReasonType::ManualCodeSplitting { .. }
+    )
+  }
+
+  fn collect_runtime_consumer_chunks(
+    &self,
+    chunk_graph: &ChunkGraph,
+    runtime_chunk_idx: ChunkIdx,
+    runtime_module_idx: ModuleIdx,
+    additional_runtime_consumers: Option<&FxHashSet<ChunkIdx>>,
+  ) -> FxHashSet<ChunkIdx> {
+    let mut consumers = chunk_graph
+      .chunk_table
+      .iter_enumerated()
+      .filter_map(|(chunk_idx, chunk)| {
+        if chunk_idx == runtime_chunk_idx
+          || chunk_graph.post_chunk_optimization_operations.contains_key(&chunk_idx)
+        {
+          return None;
+        }
+
+        // Cheap-first ordering: the per-module checks below are O(modules) with
+        // hashset lookups, whereas `chunk_references_runtime_symbol` resolves a
+        // canonical ref per referenced symbol. `||` short-circuits, so keeping the
+        // scan last skips it whenever a cheaper signal already proves consumption.
+        let consumes_runtime = !chunk.depended_runtime_helper.is_empty()
+          || chunk.modules.iter().any(|&module_idx| {
+            module_idx != runtime_module_idx
+              && (self.link_output.metas[module_idx].wrapper_ref.is_some()
+                || self.link_output.metas[module_idx].dependencies.contains(&runtime_module_idx)
+                || self.link_output.metas[module_idx].has_side_effectful_runtime_dep)
+          })
+          || self.chunk_references_runtime_symbol(chunk, runtime_module_idx);
+        consumes_runtime.then_some(chunk_idx)
+      })
+      .collect::<FxHashSet<_>>();
+    if let Some(additional_runtime_consumers) = additional_runtime_consumers {
+      consumers.extend(additional_runtime_consumers.iter().copied().filter(|&chunk_idx| {
+        chunk_idx != runtime_chunk_idx
+          && !chunk_graph.post_chunk_optimization_operations.contains_key(&chunk_idx)
+      }));
+    }
+    consumers
+  }
+
+  /// Returns whether a bitset host keeps the evaluation order of each runtime consumer. A consumer
+  /// that does not import the host yet must import it for the helpers. Then the host runs before
+  /// that consumer, also when the source runs the consumer first. The new import is safe in these
+  /// conditions:
+  ///
+  /// - The consumer already imports a module of the host, with an import that tree shaking keeps.
+  ///   The helpers then join that import.
+  /// - Only dynamic entries that start after the runtime entries load the consumer. The host is
+  ///   then evaluated before the consumer starts.
+  ///
+  /// The strict path does not need this check, because the order plan wraps the modules whose
+  /// order matters. See internal-docs/code-splitting/implementation.md#runtime-module-placement.
+  fn runtime_host_keeps_consumer_order(
+    &self,
+    chunk_graph: &ChunkGraph,
+    host: ChunkIdx,
+    consumer_chunks: &FxHashSet<ChunkIdx>,
+    runtime_bits: &BitSet,
+    late_entries: &mut Option<BitSet>,
+  ) -> bool {
+    if self.options.is_strict_execution_order_enabled() {
+      return true;
+    }
+    consumer_chunks.iter().all(|&consumer| {
+      consumer == host
+        || self.chunk_imports_chunk(chunk_graph, consumer, host)
+        || chunk_graph.chunk_table[consumer].bits.is_subset(
+          late_entries.get_or_insert_with(|| self.late_runtime_entries(chunk_graph, runtime_bits)),
+        )
+    })
+  }
+
+  /// Whether the runtime can move into `host` and every chunk that imports `host` still evaluates
+  /// the chunks in the same order. A chunk that hosts the runtime module gets chunk `exec_order` 0,
+  /// because `assign_chunk_exec_orders` keys a common chunk on its first module, and the runtime
+  /// module has `exec_order` 0. `sort_chunk_importees` then puts the host first in every import
+  /// list, and the source order walk moves back only the importees that it ranks. An importee that
+  /// the walk does not reach, for example a chunk that the importer reads through a namespace import
+  /// of a re-export module without side effects, keeps its position and runs after the host. In
+  /// `code_splitting/runtime_host_import_order_namespace_import`, `c` would import the chunk of
+  /// `common.js` before the chunk of `init.js`, and `common.js` would read a global before
+  /// `init.js` sets it.
+  ///
+  /// The check sorts the imports of each importer of the host twice, with the `exec_order` of the
+  /// standalone layout and with the host first. When the two sorts differ, the check walks the
+  /// imports from the importer depth first with each sort (`chunk_evaluation_order`), and accepts
+  /// the host only when both walks give the same order. For example, a host that moves before a
+  /// chunk that it imports itself still evaluates after that chunk. The importers come from the
+  /// predicted static import edges, which also have the imports that the walk does not reach.
+  ///
+  /// An entry chunk keys on its entry module, so it does not move while it stays an entry chunk.
+  /// But `preserve_strict_entry_signatures` can later turn an entry chunk host into a common chunk
+  /// behind an entry facade, and nothing checks that host again. The debug assertion in
+  /// `compute_cross_chunk_links` checks the final layout in the test suite. The strict path models
+  /// the chunk `exec_order` in its order analysis, so it needs no check.
+  /// See internal-docs/code-splitting/implementation.md#runtime-module-placement.
+  fn runtime_host_keeps_evaluation_order(
+    &self,
+    chunk_graph: &ChunkGraph,
+    host: ChunkIdx,
+    runtime_chunk_idx: ChunkIdx,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
+    import_edges: &mut Option<IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>>,
+  ) -> bool {
+    if self.options.is_strict_execution_order_enabled()
+      || !matches!(chunk_graph.chunk_table[host].kind, ChunkKind::Common)
+    {
+      return true;
+    }
+    let import_edges = &*import_edges.get_or_insert_with(|| {
+      self.predicted_static_import_edges(chunk_graph, used_symbol_refs_builder)
+    });
+    let exec_order = |chunk_idx: ChunkIdx| chunk_graph.chunk_table[chunk_idx].exec_order;
+    // `chunk_importee_ranks` walks the modules of a chunk, so each chunk gets its ranks only once.
+    let mut ranks = FxHashMap::default();
+    // The imports of a chunk in the order that `sort_chunk_importees` gives, with the runtime in its
+    // own chunk or in the host. The runtime chunk is not in the output when the runtime moves into
+    // the host, so neither order has it.
+    let mut sorted_importees = |chunk_idx: ChunkIdx, hosted: bool| {
+      let mut importees = import_edges[chunk_idx]
+        .iter()
+        .copied()
+        .filter(|&importee| importee != runtime_chunk_idx)
+        .collect::<Vec<_>>();
+      if importees.len() > 1 {
+        let ranks = ranks
+          .entry(chunk_idx)
+          .or_insert_with(|| self.chunk_importee_ranks(chunk_graph, chunk_idx));
+        if hosted {
+          sort_chunk_importees_by(
+            &mut importees,
+            |chunk_idx| (chunk_idx != host, exec_order(chunk_idx)),
+            Some(ranks),
+          );
+        } else {
+          sort_chunk_importees_by(&mut importees, exec_order, Some(ranks));
+        }
+      }
+      importees
+    };
+    import_edges.iter_enumerated().all(|(importer, importees)| {
+      if importer == host || !importees.contains(&host) || !chunk_graph.chunk_is_live(importer) {
+        return true;
+      }
+      let standalone = sorted_importees(importer, false);
+      if standalone.len() < 2 || standalone == sorted_importees(importer, true) {
+        return true;
+      }
+      let standalone =
+        chunk_evaluation_order(importer, |chunk_idx| sorted_importees(chunk_idx, false));
+      let hosted = chunk_evaluation_order(importer, |chunk_idx| sorted_importees(chunk_idx, true));
+      standalone == hosted
+    })
+  }
+
+  /// Returns the entry bits that a bitset host must have, so that the host is always loaded when a
+  /// runtime consumer runs. The bits of the runtime module cover only the consumers that exist at
+  /// link time. Facade elimination can later make a chunk outside these bits a runtime consumer. If
+  /// the host has only the link-time bits, the entries of that chunk then load the host only to get
+  /// helpers. So this function adds each consumer entry that can start while the host is not
+  /// loaded.
+  /// See internal-docs/code-splitting/implementation.md#runtime-module-placement.
+  fn runtime_bits_covering_consumers(
+    &self,
+    chunk_graph: &ChunkGraph,
+    runtime_bits: &BitSet,
+    consumer_chunks: &FxHashSet<ChunkIdx>,
+    late_entries: &mut Option<BitSet>,
+  ) -> BitSet {
+    // Calculate with byte-wise set operations. The result is the runtime bits, plus each consumer
+    // entry that is not a late entry. No late entry is in the runtime bits, so the subtraction
+    // keeps all of the runtime bits.
+    let mut bits = runtime_bits.clone();
+    for &chunk_idx in consumer_chunks {
+      bits.union(&chunk_graph.chunk_table[chunk_idx].bits);
+    }
+    if bits != *runtime_bits {
+      bits.subtract(
+        late_entries.get_or_insert_with(|| self.late_runtime_entries(chunk_graph, runtime_bits)),
+      );
+    }
+    bits
+  }
+
+  /// Returns the late entries: the entries in `entries_loaded_after(runtime_bits)` that are not in
+  /// `runtime_bits`. A late entry starts only after an entry in `runtime_bits` loads the host.
+  fn late_runtime_entries(&self, chunk_graph: &ChunkGraph, runtime_bits: &BitSet) -> BitSet {
+    let mut entries = self.entries_loaded_after(chunk_graph, runtime_bits);
+    entries.subtract(runtime_bits);
+    entries
+  }
+
+  /// Returns `entries`, plus each dynamic entry that can start only after one of the result entries
+  /// starts. A dynamic entry is in the result when these conditions are true:
+  ///
+  /// - It has at least one included `import()` site.
+  /// - Each of its included `import()` sites is in a chunk that only result entries load.
+  ///
+  /// Tree shaking sorts the dynamic entries in topological order of the `import()` graph
+  /// (`sort_dynamic_entries_by_topological_order`). Thus, when the `import()` graph has no cycle,
+  /// the first pass finds the full result, and the second pass finds no change. A worklist with a
+  /// counter for each chunk does not need the second pass. But its setup cost made it slower than
+  /// this loop on synthetic graphs of up to 4,000 entries.
+  fn entries_loaded_after(&self, chunk_graph: &ChunkGraph, entries: &BitSet) -> BitSet {
+    // The value is `None` when an importer has no chunk. Such a dynamic entry is never in the
+    // result.
+    let importer_chunks_by_dynamic_entry = self
+      .link_output
+      .entries
+      .iter()
+      .flat_map(|(&idx, entry_points)| entry_points.iter().map(move |entry| (idx, entry)))
+      .enumerate()
+      .filter(|(_, (_, entry_point))| entry_point.kind.is_dynamic_import())
+      .map(|(entry_bit, (entry_module_idx, entry_point))| {
+        let importer_chunks = entry_point
+          .related_stmt_infos
+          .iter()
+          .filter(|(importer_idx, stmt_info_idx, _, import_record_idx)| {
+            self.is_included_dynamic_import_record(
+              *importer_idx,
+              *stmt_info_idx,
+              *import_record_idx,
+              entry_module_idx,
+            )
+          })
+          .map(|(importer_idx, ..)| chunk_graph.module_to_chunk[*importer_idx])
+          .collect::<Option<Vec<_>>>();
+        let entry_bit = u32::try_from(entry_bit).expect("Too many entries, u32 overflowed.");
+        (entry_bit, importer_chunks)
+      })
+      .collect::<Vec<_>>();
+
+    let mut loaded = entries.clone();
+    loop {
+      let mut changed = false;
+      for (entry_bit, importer_chunks) in &importer_chunks_by_dynamic_entry {
+        let Some(importer_chunks) = importer_chunks else {
+          continue;
+        };
+        if !loaded.has_bit(*entry_bit)
+          && !importer_chunks.is_empty()
+          && importer_chunks
+            .iter()
+            .all(|&chunk_idx| chunk_graph.chunk_table[chunk_idx].bits.is_subset(&loaded))
+        {
+          loaded.set_bit(*entry_bit);
+          changed = true;
+        }
+      }
+      if !changed {
+        return loaded;
+      }
+    }
+  }
+
+  fn chunk_references_runtime_symbol(&self, chunk: &Chunk, runtime_module_idx: ModuleIdx) -> bool {
+    chunk.modules.iter().copied().any(|module_idx| {
+      if module_idx == runtime_module_idx {
+        return false;
+      }
+      let meta = &self.link_output.metas[module_idx];
+      if meta.referenced_symbols_by_entry_point_chunk.iter().any(|(symbol_ref, _)| {
+        self.link_output.symbol_db.canonical_ref_resolving_namespace(*symbol_ref).owner
+          == runtime_module_idx
+      }) {
+        return true;
+      }
+      self.link_output.stmt_infos[module_idx].iter_enumerated().any(|(stmt_info_idx, stmt_info)| {
+        if !meta.stmt_info_included.has_bit(stmt_info_idx) {
+          return false;
+        }
+        stmt_info.referenced_symbols.iter().any(|reference_ref| match reference_ref {
+          rolldown_common::SymbolOrMemberExprRef::Symbol(symbol_ref) => {
+            self.link_output.symbol_db.canonical_ref_resolving_namespace(*symbol_ref).owner
+              == runtime_module_idx
+          }
+          rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr_ref) => member_expr_ref
+            .represent_symbol_ref(&meta.resolved_member_expr_refs)
+            .is_some_and(|symbol_ref| {
+              self.link_output.symbol_db.canonical_ref_resolving_namespace(symbol_ref).owner
+                == runtime_module_idx
+            }),
+        })
+      })
+    })
+  }
+
+  fn find_runtime_bitset_host(
+    &self,
+    chunk_graph: &ChunkGraph,
+    runtime_chunk_idx: ChunkIdx,
+    runtime_chunk_bits: &BitSet,
+    consumer_chunks: &FxHashSet<ChunkIdx>,
+    module_table: &ModuleTable,
+  ) -> Option<ChunkIdx> {
+    chunk_graph.chunk_table.iter_enumerated().find_map(|(chunk_idx, chunk)| {
+      if chunk_idx == runtime_chunk_idx
+        || chunk.modules.is_empty()
+        || chunk_graph.post_chunk_optimization_operations.contains_key(&chunk_idx)
+        || !matches!(chunk.kind, ChunkKind::Common)
+        || chunk.bits != *runtime_chunk_bits
+        || !Self::runtime_merge_target_is_allowed(chunk_graph, chunk_idx)
+      {
+        return None;
+      }
+
+      (!Self::runtime_target_would_create_static_cycle(
+        chunk_idx,
+        consumer_chunks,
+        chunk_graph,
+        module_table,
+      ) && self.runtime_target_is_tla_safe(chunk_graph, chunk_idx, consumer_chunks))
+      .then_some(chunk_idx)
+    })
+  }
+
+  fn chunk_has_tla_or_tla_dependency(&self, chunk_graph: &ChunkGraph, chunk_idx: ChunkIdx) -> bool {
+    chunk_graph.chunk_table[chunk_idx]
+      .modules
+      .iter()
+      .any(|&module_idx| self.link_output.metas[module_idx].is_tla_or_contains_tla_dependency)
+  }
+
+  fn runtime_target_is_tla_safe(
+    &self,
+    chunk_graph: &ChunkGraph,
+    target_chunk_idx: ChunkIdx,
+    consumer_chunks: &FxHashSet<ChunkIdx>,
+  ) -> bool {
+    !self.chunk_has_tla_or_tla_dependency(chunk_graph, target_chunk_idx)
+      || (consumer_chunks.len() == 1 && consumer_chunks.contains(&target_chunk_idx))
+  }
+
+  /// Returns `false` when a merge of the runtime module into `target_chunk_idx` adds helper exports
+  /// to a fixed entry signature.
+  ///
+  /// After the merge, the target chunk is the host of the runtime. When a consumer other than the
+  /// host uses helpers, the host must export these helpers. These exports add internal helper names
+  /// to the signature of the host. So the runtime must not go into a user-defined entry with a
+  /// fixed signature.
+  ///
+  /// An entry from `this.emitFile({ type: 'chunk' })` is a user-defined entry too. Its signature
+  /// comes from its `preserveSignature` option, or from `preserveEntrySignatures` when the plugin
+  /// does not set that option. When the helpers change the signature of this entry,
+  /// `preserve_strict_entry_signatures` gives it a facade (`issues/11351_dynamic_import`).
+  ///
+  /// The function returns `true` in each of these conditions:
+  /// - The target is the only consumer. Then the helpers stay internal, and the host does not
+  ///   export them.
+  /// - The target is not a user-defined or emitted entry. Only these entries can have a fixed
+  ///   signature.
+  /// - The signature is not fixed. Its setting (`preserveEntrySignatures` or `preserveSignature`)
+  ///   is `allow-extension` or `false`, or it is `exports-only` and the entry has no exports.
+  ///
+  /// See internal-docs/code-splitting/implementation.md#runtime-module-placement.
+  fn runtime_merge_preserves_target_signature(
+    &self,
+    chunk_graph: &ChunkGraph,
+    target_chunk_idx: ChunkIdx,
+    consumer_chunks: &FxHashSet<ChunkIdx>,
+  ) -> bool {
+    // Helpers are only re-exported when a consumer *other than* the host reads
+    // them. If every consumer is the host itself, they stay internal.
+    if consumer_chunks.iter().all(|&chunk_idx| chunk_idx == target_chunk_idx) {
+      return true;
+    }
+    let target_chunk = &chunk_graph.chunk_table[target_chunk_idx];
+    let ChunkKind::EntryPoint { meta, module: entry_module_idx, .. } = target_chunk.kind else {
+      return true;
+    };
+    if !meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk) {
+      return true;
+    }
+    match target_chunk.preserve_entry_signature {
+      Some(PreserveEntrySignatures::AllowExtension | PreserveEntrySignatures::False) => true,
+      Some(PreserveEntrySignatures::Strict) => false,
+      // `exports-only` (the default) only fixes the signature of entries that
+      // actually declare exports; an export-less entry behaves like `false`.
+      Some(PreserveEntrySignatures::ExportsOnly) | None => {
+        self.link_output.metas[entry_module_idx].resolved_exports.is_empty()
+      }
+    }
+  }
+
+  /// The cycle check follows every static import record, also a record that tree shaking drops. A
+  /// cycle check must not miss an edge that the output has. An extra edge only rejects a target,
+  /// and the runtime then stays standalone.
+  fn runtime_target_would_create_static_cycle(
+    target_chunk_idx: ChunkIdx,
+    consumer_chunks: &FxHashSet<ChunkIdx>,
+    chunk_graph: &ChunkGraph,
+    module_table: &ModuleTable,
+  ) -> bool {
+    consumer_chunks.iter().any(|&consumer_chunk_idx| {
+      consumer_chunk_idx != target_chunk_idx
+        && Self::chunk_reaches_via_static_import(
+          target_chunk_idx,
+          consumer_chunk_idx,
+          chunk_graph,
+          |module_idx, targets| Self::push_static_import_targets(module_table, module_idx, targets),
+        )
+    })
+  }
+
+  /// Pushes the target of every static import record of a module, also a record that tree shaking
+  /// drops.
+  fn push_static_import_targets(
+    module_table: &ModuleTable,
+    module_idx: ModuleIdx,
+    targets: &mut Vec<ModuleIdx>,
+  ) {
+    if let Some(module) = module_table[module_idx].as_normal() {
+      targets.extend(
+        module
+          .import_records
+          .iter()
+          .filter(|rec| rec.kind.is_static())
+          .filter_map(|rec| rec.resolved_module),
+      );
+    }
   }
 
   /// Return the unique `consumers` member that every other member reaches
-  /// through static forward chunk edges (an ES `import`, not dynamic). Such a
+  /// through static forward chunk-loading edges (not dynamic imports). Such a
   /// chunk is a "downstream sink" of the consumer set — placing the runtime
   /// there adds no new back-edges, so no cycle can form. Returns `None` when
   /// the set has no dominator (e.g. consumers sit in parallel sub-graphs).
+  ///
+  /// Every consumer imports the dominator for helpers. The search has two steps:
+  /// 1. Follow only the imports that the output keeps (`push_kept_static_importees`, the rule of
+  ///    `chunk_importee_ranks`). Every consumer already loads such a dominator, so the helper
+  ///    import adds no chunk load.
+  /// 2. Follow every static import record, also a record that tree shaking drops, and accept the
+  ///    dominator only when its load is harmless (`runtime_host_load_is_harmless`). A consumer that
+  ///    reaches the dominator only through a dropped import does not load it yet, and the helper
+  ///    import then loads it for real. In `issues/10543`, `lab` reaches `w.js` only through a
+  ///    dropped import, but the `w.js` chunk runs nothing at load time, so the runtime stays there.
+  ///    In `code_splitting/runtime_host_dominator_tree_shaken_entry_import`, the dominator
+  ///    imports the external `server-only`, so the runtime stays standalone.
+  ///
+  /// See internal-docs/code-splitting/implementation.md.
   fn find_consumer_dominator(
+    &self,
     consumers: &FxHashSet<ChunkIdx>,
     chunk_graph: &ChunkGraph,
     module_table: &ModuleTable,
@@ -1235,35 +1829,144 @@ impl GenerateStage<'_> {
     if consumers.len() <= 1 {
       return consumers.iter().copied().next();
     }
-    consumers.iter().copied().find(|&candidate| {
-      consumers.iter().all(|&other| {
-        other == candidate
-          || Self::chunk_reaches_via_static_import(other, candidate, chunk_graph, module_table)
+    let dominates =
+      |candidate: ChunkIdx, module_targets: &mut dyn FnMut(ModuleIdx, &mut Vec<ModuleIdx>)| {
+        consumers.iter().all(|&other| {
+          other == candidate
+            || Self::chunk_reaches_via_static_import(
+              other,
+              candidate,
+              chunk_graph,
+              &mut *module_targets,
+            )
+        })
+      };
+    consumers
+      .iter()
+      .copied()
+      .find(|&candidate| {
+        dominates(candidate, &mut |module_idx, targets| {
+          self.push_kept_static_importees(module_idx, targets);
+        })
       })
-    })
+      .or_else(|| {
+        consumers
+          .iter()
+          .copied()
+          .filter(|&candidate| {
+            self.runtime_host_load_is_harmless(candidate, chunk_graph, module_table)
+          })
+          .find(|&candidate| {
+            dominates(candidate, &mut |module_idx, targets| {
+              Self::push_static_import_targets(module_table, module_idx, targets);
+            })
+          })
+      })
   }
 
-  /// BFS from `from` across chunks, following only static ES `import` edges
-  /// through still-live target chunks. Returns whether `to` is reachable.
+  /// Whether a consumer may import `target_chunk_idx` for helpers although it does not load the
+  /// chunk yet. The load is harmless when it runs nothing observable. In the chunk, and in every
+  /// chunk that it imports through kept edges, each module must be the runtime, be wrapped (its
+  /// body runs only in `init_*()`), or have no side effects. No module there may keep an import of
+  /// an external module: external imports run at load time also for wrapped modules. In an entry
+  /// chunk the entry module runs at load time and can call the wrappers, so wrapping does not count
+  /// there. A module without side effects by the `moduleSideEffects` option counts as harmless:
+  /// that is the contract of the option.
+  fn runtime_host_load_is_harmless(
+    &self,
+    target_chunk_idx: ChunkIdx,
+    chunk_graph: &ChunkGraph,
+    module_table: &ModuleTable,
+  ) -> bool {
+    let runtime_idx = self.link_output.runtime.id();
+    let mut visited = FxHashSet::default();
+    let mut queue = VecDeque::from([target_chunk_idx]);
+    let mut targets = vec![];
+    while let Some(current) = queue.pop_front() {
+      if !visited.insert(current) {
+        continue;
+      }
+      let chunk = &chunk_graph.chunk_table[current];
+      let mut is_entry_chunk = false;
+      if let ChunkKind::EntryPoint { module: entry_module_idx, .. } = chunk.kind {
+        is_entry_chunk = true;
+        if module_table[entry_module_idx].side_effects().has_side_effects() {
+          return false;
+        }
+        if let Some(entry_module_chunk) = chunk_graph.module_to_chunk[entry_module_idx]
+          && entry_module_chunk != current
+          && !chunk_graph.post_chunk_optimization_operations.contains_key(&entry_module_chunk)
+        {
+          queue.push_back(entry_module_chunk);
+        }
+      }
+      for &module_idx in &chunk.modules {
+        if module_idx == runtime_idx {
+          continue;
+        }
+        let meta = &self.link_output.metas[module_idx];
+        let wrapped = !is_entry_chunk && !matches!(meta.wrap_kind(), WrapKind::None);
+        if !wrapped && module_table[module_idx].side_effects().has_side_effects() {
+          return false;
+        }
+        let Some(module) = module_table[module_idx].as_normal() else {
+          continue;
+        };
+        let keeps_external_import = module
+          .import_records
+          .iter()
+          .filter(|rec| rec.kind.is_static())
+          .filter_map(|rec| rec.resolved_module)
+          .any(|dep_idx| {
+            module_table[dep_idx].is_external() && meta.load_dependencies.contains(&dep_idx)
+          });
+        if keeps_external_import {
+          return false;
+        }
+        self.push_kept_static_importees(module_idx, &mut targets);
+        queue.extend(
+          targets.drain(..).filter_map(|target| chunk_graph.module_to_chunk[target]).filter(
+            |&target_chunk| {
+              target_chunk != current
+                && !chunk_graph.post_chunk_optimization_operations.contains_key(&target_chunk)
+            },
+          ),
+        );
+      }
+    }
+    true
+  }
+
+  /// BFS from `from` across chunks, following only import records that become
+  /// static chunk-loading edges through still-live target chunks.
+  ///
+  /// `module_targets` pushes the modules that a module of the current chunk imports statically.
+  /// The caller chooses the edges: the dominator search follows only the imports that the output
+  /// keeps, and the cycle check follows every static import record.
   ///
   /// Edge filtering rationale:
-  /// - Only `ImportKind::Import` is followed. Dynamic imports and `require`
-  ///   don't force load-time ordering between chunks, so they can't close the
-  ///   helper-import cycle this check is guarding against.
+  /// - Dynamic imports are not followed. Static imports and `require()` can
+  ///   both become static chunk imports in the generated output, so both can
+  ///   close the helper-import cycle this check is guarding against.
   /// - Targets present in `post_chunk_optimization_operations` are skipped.
   ///   Those chunks are already slated for removal/redirection by the
   ///   surrounding facade-elimination pass, so their edges aren't part of the
   ///   post-optimization graph.
   /// - Self-edges (`target_chunk == current`) are skipped — an intra-chunk
   ///   import can't form an inter-chunk cycle.
+  /// - Besides module import records, an entry-point chunk whose entry module
+  ///   was captured into another chunk (e.g. by a `codeSplitting` group) gets a
+  ///   render-time static import of that module's wrapper/namespace from the
+  ///   capturing chunk, so that facade edge is followed too (#9993).
   fn chunk_reaches_via_static_import(
     from: ChunkIdx,
     to: ChunkIdx,
     chunk_graph: &ChunkGraph,
-    module_table: &ModuleTable,
+    mut module_targets: impl FnMut(ModuleIdx, &mut Vec<ModuleIdx>),
   ) -> bool {
     let mut visited = FxHashSet::default();
     let mut queue = VecDeque::from([from]);
+    let mut targets = vec![];
     while let Some(current) = queue.pop_front() {
       if !visited.insert(current) {
         continue;
@@ -1271,20 +1974,23 @@ impl GenerateStage<'_> {
       if current == to {
         return true;
       }
+      if let ChunkKind::EntryPoint { module: entry_module_idx, .. } =
+        chunk_graph.chunk_table[current].kind
+        && let Some(entry_module_chunk) = chunk_graph.module_to_chunk[entry_module_idx]
+        && entry_module_chunk != current
+        && !chunk_graph.post_chunk_optimization_operations.contains_key(&entry_module_chunk)
+      {
+        queue.push_back(entry_module_chunk);
+      }
       for &module_idx in &chunk_graph.chunk_table[current].modules {
-        let Some(module) = module_table[module_idx].as_normal() else {
-          continue;
-        };
+        module_targets(module_idx, &mut targets);
         queue.extend(
-          module
-            .import_records
-            .iter()
-            .filter(|rec| matches!(rec.kind, ImportKind::Import))
-            .filter_map(|rec| chunk_graph.module_to_chunk[rec.resolved_module?])
-            .filter(|&target_chunk| {
+          targets.drain(..).filter_map(|target| chunk_graph.module_to_chunk[target]).filter(
+            |&target_chunk| {
               target_chunk != current
                 && !chunk_graph.post_chunk_optimization_operations.contains_key(&target_chunk)
-            }),
+            },
+          ),
         );
       }
     }

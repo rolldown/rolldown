@@ -58,6 +58,9 @@ bitflags::bitflags! {
     /// for facade (generated) symbols — user-defined names are left unchanged
     /// because `<obj.Foo>` is already a valid component reference in JSX.
     const UsedAsJSXMemberExprRoot = 1 << 6;
+    /// A binding that always holds a top-level function that never reads `this`, so calling it as
+    /// a namespace member cannot observe the namespace.
+    const NeverReadsThis = 1 << 7;
   }
 }
 
@@ -321,6 +324,28 @@ impl SymbolRefDb {
     canonical_names.get(&canonical_ref).map_or_else(|| canonical_ref.name(self), CompactStr::as_str)
   }
 
+  /// The owned pre-deconfliction name for an already-canonical symbol: its name,
+  /// but with the first character upper-cased when `module.preserve_jsx` is enabled
+  /// and the symbol is a JSX component binding that must start with a capital letter
+  /// (e.g. `foo` -> `Foo`). This is the base name the renamer feeds into conflict
+  /// resolution.
+  pub fn original_name(&self, canonical_ref: SymbolRef) -> CompactStr {
+    let name = canonical_ref.name(self);
+    if self.has_module_preserve_jsx
+      && name.as_bytes()[0].is_ascii_lowercase()
+      && canonical_ref
+        .flags(self)
+        .is_some_and(|flags| flags.contains(SymbolRefFlags::MustStartWithCapitalLetterForJSX))
+    {
+      let mut s = String::with_capacity(name.len());
+      s.push(name.as_bytes()[0].to_ascii_uppercase() as char);
+      s.push_str(&name[1..]);
+      CompactStr::from(s)
+    } else {
+      CompactStr::new(name)
+    }
+  }
+
   pub fn get(&self, refer: SymbolRef) -> &SymbolRefDataClassic {
     self.inner[refer.owner].unpack_ref().get_classic_data(refer.symbol)
   }
@@ -348,7 +373,7 @@ impl SymbolRefDb {
   pub fn canonical_ref_for(&self, target: SymbolRef) -> SymbolRef {
     let mut canonical = target;
     while let Some(founded) = self.get(canonical).link {
-      debug_assert!(founded != target);
+      debug_assert_ne!(founded, target);
       canonical = founded;
     }
     canonical
@@ -402,14 +427,14 @@ impl GetLocalDbMut for SymbolRefDb {
 
 impl GetLocalDb for SymbolRefDbForModule {
   fn local_db(&self, owner: ModuleIdx) -> &SymbolRefDbForModule {
-    debug_assert!(self.owner_idx == owner);
+    debug_assert_eq!(self.owner_idx, owner);
     self
   }
 }
 
 impl GetLocalDbMut for SymbolRefDbForModule {
   fn local_db_mut(&mut self, owner: ModuleIdx) -> &mut SymbolRefDbForModule {
-    debug_assert!(self.owner_idx == owner);
+    debug_assert_eq!(self.owner_idx, owner);
     self
   }
 }

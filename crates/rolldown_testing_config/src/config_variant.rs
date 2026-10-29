@@ -7,6 +7,8 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use std::fmt::Write;
 
+use crate::test_meta::ExpectedExecutionFailure;
+
 #[derive(Deserialize, JsonSchema, Default)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ConfigVariant {
@@ -18,7 +20,7 @@ pub struct ConfigVariant {
   pub strict_execution_order: Option<bool>,
   pub strict: Option<StrictMode>,
   pub entry_filenames: Option<String>,
-  pub inline_dynamic_imports: Option<bool>,
+  pub code_splitting: Option<CodeSplittingMode>,
   pub dynamic_import_in_cjs: Option<bool>,
   pub preserve_entry_signatures: Option<PreserveEntrySignatures>,
   pub treeshake: Option<TreeshakeOptions>,
@@ -43,6 +45,10 @@ pub struct ConfigVariant {
   pub snapshot: Option<bool>,
   #[serde(rename = "_configName")]
   pub config_name: Option<String>,
+  /// If set, this configuration must fail while executing its generated output. This is not
+  /// inherited from the base configuration so each variant's known failure stays explicit.
+  #[serde(rename = "_expectExecutionFailure")]
+  pub expect_execution_failure: Option<ExpectedExecutionFailure>,
 }
 
 impl ConfigVariant {
@@ -69,8 +75,8 @@ impl ConfigVariant {
     if let Some(entry_filenames) = &self.entry_filenames {
       config.entry_filenames = Some(entry_filenames.clone().into());
     }
-    if let Some(inline_dynamic_imports) = &self.inline_dynamic_imports {
-      config.code_splitting = Some(CodeSplittingMode::Bool(!*inline_dynamic_imports));
+    if let Some(code_splitting) = &self.code_splitting {
+      config.code_splitting = Some(code_splitting.clone());
     }
     if let Some(dynamic_import_in_cjs) = &self.dynamic_import_in_cjs {
       config.dynamic_import_in_cjs = Some(*dynamic_import_in_cjs);
@@ -160,8 +166,8 @@ impl ConfigVariant {
     if let Some(strict) = &self.strict {
       fields.push(format!("strict: {strict:?}"));
     }
-    if let Some(inline_dynamic_imports) = &self.inline_dynamic_imports {
-      fields.push(format!("inline_dynamic_imports: {inline_dynamic_imports:?}"));
+    if let Some(code_splitting) = &self.code_splitting {
+      fields.push(format!("code_splitting: {code_splitting}"));
     }
     if let Some(dynamic_import_in_cjs) = &self.dynamic_import_in_cjs {
       fields.push(format!("dynamic_import_in_cjs: {dynamic_import_in_cjs:?}"));

@@ -6,12 +6,19 @@ use std::sync::Arc;
 use oxc::ast::ast::{
   self, Argument, ArrayExpressionElement, Expression, ObjectPropertyKind, PropertyKey, PropertyKind,
 };
-use oxc::ast_visit::{Visit, walk};
+use oxc::ast_visit::{VisitJs, walk_js};
 use rolldown_ecmascript_utils::ExpressionExt;
 use rolldown_plugin::{LogWithoutPlugin, PluginContext};
-use rolldown_plugin_utils::constants::{ViteImportGlob, ViteImportGlobValue};
+use rolldown_plugin_utils::{
+  constants::{ViteImportGlob, ViteImportGlobValue},
+  to_string_literal,
+};
+use rolldown_std_utils::relative_path_to_slash;
+use rolldown_utils::ecmascript::to_usv_str;
 use string_wizard::MagicString;
 use sugar_path::SugarPath;
+
+use crate::matcher::GlobMatcher;
 
 pub struct GlobImportVisit<'a> {
   pub ctx: &'a PluginContext,
@@ -23,11 +30,13 @@ pub struct GlobImportVisit<'a> {
   pub magic_string: Option<MagicString<'a>>,
   pub import_decls: Vec<String>,
   pub errors: Vec<anyhow::Error>,
+  pub is_dev_mode: bool,
+  pub matchers: Vec<GlobMatcher>,
 }
 
-impl<'ast> Visit<'ast> for GlobImportVisit<'_> {
+impl<'ast> VisitJs<'ast> for GlobImportVisit<'_> {
   fn visit_program(&mut self, it: &ast::Program<'ast>) {
-    walk::walk_program(self, it);
+    walk_js::walk_program(self, it);
     if !self.import_decls.is_empty() {
       self
         .magic_string
@@ -39,7 +48,7 @@ impl<'ast> Visit<'ast> for GlobImportVisit<'_> {
     if self.transform_glob_import(expr, ImportGlobOmitType::None) {
       return;
     }
-    walk::walk_expression(self, expr);
+    walk_js::walk_expression(self, expr);
   }
 }
 
@@ -72,12 +81,25 @@ impl<'a> PathWithGlob<'a> {
     Self { path, glob: &glob[glob.len() - i..] }
   }
 
+  /// `path` is literal, so its glob syntax is escaped, like vite's `globSafeResolvedPath`.
+  fn to_absolute_glob(&self) -> String {
+    let mut glob = String::with_capacity(self.path.len() + self.glob.len());
+    for char in self.path.chars() {
+      if matches!(char, '\\' | '*' | '?' | '[' | ']' | '{' | '}') {
+        glob.push('\\');
+      }
+      glob.push(char);
+    }
+    glob.push_str(self.glob);
+    glob
+  }
+
   fn find_glob_syntax(path: &str) -> usize {
     let mut last_slash = 0;
     for (i, b) in path.as_bytes().iter().enumerate() {
       if *b == b'/' {
         last_slash = i;
-      } else if [b'\\', b'*', b'?', b'[', b']', b'{', b'}'].contains(b) {
+      } else if b"\\*?[]{}".contains(b) {
         return path.len() - last_slash;
       }
     }
@@ -134,11 +156,7 @@ impl<'ast> GlobImportVisit<'_> {
         let Some(arg_expr) = arg.as_expression() else { return false };
         self.transform_glob_import(arg_expr, omit_type)
       }
-      Expression::MetaProperty(p)
-        if mem_expr.property.name == "glob"
-          && p.meta.name == "import"
-          && p.property.name == "meta" =>
-      {
+      Expression::ImportMeta(_) if mem_expr.property.name == "glob" => {
         let mut files: Vec<ImportGlobFileData> = vec![];
         let mut options = ImportGlobOptions::default();
 
@@ -188,6 +206,7 @@ impl<'ast> GlobImportVisit<'_> {
         Cow::Borrowed(import_path)
       };
 
+      let formatted_file = to_string_literal(&formatted_file);
       let value: Cow<'_, str> = if matches!(omit_type, ImportGlobOmitType::Values) {
         Cow::Borrowed("0")
       } else if options.eager {
@@ -208,16 +227,16 @@ impl<'ast> GlobImportVisit<'_> {
           Some(import) => format!("{{ {import} as {name} }}"),
         };
 
-        self.import_decls.push(format!("import {module_specifier} from \"{formatted_file}\";"));
+        self.import_decls.push(format!("import {module_specifier} from {formatted_file};"));
 
         Cow::Owned(name)
       } else {
         // () => import('./dir/bar.js') or () => import('./dir/foo.js').then((m) => m.setup)
         Cow::Owned(match options.import.as_deref() {
           Some(import) if import != "*" => {
-            format!("() => import(\"{formatted_file}\").then((m) => m[\"{import}\"])")
+            format!("() => import({formatted_file}).then((m) => m[{}])", to_string_literal(import))
           }
-          _ => format!("() => import(\"{formatted_file}\")"),
+          _ => format!("() => import({formatted_file})"),
         })
       };
 
@@ -240,14 +259,14 @@ impl<'ast> GlobImportVisit<'_> {
       ImportGlobOmitType::Values => format!(
         "{{{}{line_breaks}}}",
         properties
-          .map(|(file, value)| format!("\"{file}\": {value}"))
+          .map(|(file, value)| format!("{}: {value}", to_string_literal(file)))
           .collect::<Vec<_>>()
           .join(",")
       ),
       ImportGlobOmitType::None => format!(
         "/* #__PURE__ */ Object.assign({{{}{line_breaks}}})",
         properties
-          .map(|(file, value)| format!("\"{file}\": {value}"))
+          .map(|(file, value)| format!("{}: {value}", to_string_literal(file)))
           .collect::<Vec<_>>()
           .join(",")
       ),
@@ -291,16 +310,14 @@ impl GlobImportVisit<'_> {
       path_posix::join(&[&dir, glob])
     } else {
       let is_sub_imports_pattern = glob.starts_with('#') && glob.contains('*');
+      let mut custom = rolldown_plugin::CustomField::new();
+      custom.insert(ViteImportGlob, ViteImportGlobValue(is_sub_imports_pattern));
       let future = self.ctx.resolve(
         glob,
         Some(self.id),
-        is_sub_imports_pattern.then(|| {
-          let mut custom = rolldown_plugin::CustomField::new();
-          custom.insert(ViteImportGlob, ViteImportGlobValue(true));
-          rolldown_plugin::PluginContextResolveOptions {
-            custom: Arc::new(custom),
-            ..Default::default()
-          }
+        Some(rolldown_plugin::PluginContextResolveOptions {
+          custom: Arc::new(custom),
+          ..Default::default()
         }),
       );
 
@@ -335,10 +352,9 @@ impl GlobImportVisit<'_> {
   }
 
   fn relative_path(&self, path: &Path, to: Option<&Path>) -> String {
-    let path = path.relative(to.unwrap_or(self.root));
-    let path = path.to_slash_lossy();
+    let path = relative_path_to_slash(path, to.unwrap_or(self.root));
     if path.starts_with("./") || path.starts_with("../") {
-      path.to_string()
+      path
     } else {
       let prefix = if to.is_none() { "/" } else { "./" };
       format!("{prefix}{path}")
@@ -409,19 +425,19 @@ impl GlobImportVisit<'_> {
 
     let mut values = vec![];
     match arg {
-      Argument::StringLiteral(str) => values.push(str.value.as_str()),
+      Argument::StringLiteral(str) => values.push(to_usv_str(str.value)),
       Argument::TemplateLiteral(lit) => {
         if let Some(str) = lit.single_quasi() {
-          values.push(str.as_str());
+          values.push(to_usv_str(str));
         }
       }
       Argument::ArrayExpression(array_expr) => {
         for expr in &array_expr.elements {
           match expr {
-            ArrayExpressionElement::StringLiteral(str) => values.push(&str.value),
+            ArrayExpressionElement::StringLiteral(str) => values.push(to_usv_str(str.value)),
             ArrayExpressionElement::TemplateLiteral(lit) => {
               if let Some(str) = lit.single_quasi() {
-                values.push(str.as_str());
+                values.push(to_usv_str(str));
               }
             }
             _ => {}
@@ -431,7 +447,7 @@ impl GlobImportVisit<'_> {
       _ => {}
     }
 
-    for value in values {
+    for value in &values {
       if let Some(glob) = value.strip_prefix('!') {
         negated_globs.push(self.to_absolute_glob(
           glob,
@@ -476,8 +492,30 @@ impl GlobImportVisit<'_> {
       return None;
     }
 
-    let common = self.get_common_base(&positive_globs);
-    let entries = walkdir::WalkDir::new(common.as_ref())
+    // Nothing can match, and the common base would be the whole root.
+    if positive_globs.is_empty() {
+      return Some(());
+    }
+
+    let common = self.get_common_base(&positive_globs).into_owned();
+    let common_path = Path::new(&common);
+
+    if self.is_dev_mode {
+      self.watch_walk_root(common_path);
+      let to_absolute_globs =
+        |globs: &[PathWithGlob]| globs.iter().map(PathWithGlob::to_absolute_glob).collect();
+      // A glob that globstar rejects gets no matcher. The walk does not fail on it either.
+      if let Ok(matcher) = GlobMatcher::new(
+        to_absolute_globs(&positive_globs),
+        to_absolute_globs(&negated_globs),
+        options.exhaustive,
+        case_sensitive,
+      ) {
+        self.matchers.push(matcher);
+      }
+    }
+
+    let entries = walkdir::WalkDir::new(common_path)
       .follow_links(true)
       .sort_by(|a, b| a.file_name().cmp(b.file_name()))
       .into_iter()
@@ -549,7 +587,19 @@ impl GlobImportVisit<'_> {
 
       files.push(ImportGlobFileData { file_path, import_path });
     }
+
     Some(())
+  }
+
+  /// A directory is watched with everything below it, so the walk root covers all the walk
+  /// reads. The watcher can only wait for a missing path whose parent exists.
+  fn watch_walk_root(&self, walk_root: &Path) {
+    // The id of a virtual module can make it relative.
+    if walk_root.is_absolute() {
+      let path =
+        walk_root.ancestors().take_while(|path| !path.exists()).last().unwrap_or(walk_root);
+      self.ctx.add_watch_file(&path.to_slash_lossy());
+    }
   }
 
   fn update_options(arg: &Argument, options: &mut ImportGlobOptions) {
@@ -566,8 +616,8 @@ impl GlobImportVisit<'_> {
         continue;
       };
 
-      let key = match &p.key {
-        PropertyKey::StringLiteral(str) => str.value.as_str(),
+      let key: &str = match &p.key {
+        PropertyKey::StringLiteral(str) => &to_usv_str(str.value),
         PropertyKey::StaticIdentifier(id) => id.name.as_str(),
         _ => continue,
       };
@@ -575,7 +625,7 @@ impl GlobImportVisit<'_> {
       match key {
         "base" => match &p.value {
           Expression::StringLiteral(str) if !str.value.is_empty() => {
-            options.base = Some(str.value.as_str().to_string());
+            options.base = Some(to_usv_str(str.value).into_owned());
           }
           Expression::TemplateLiteral(str)
             if str.is_no_substitution_template() && !str.quasis[0].value.raw.is_empty() =>
@@ -586,7 +636,7 @@ impl GlobImportVisit<'_> {
         },
         "import" => {
           if let Expression::StringLiteral(str) = &p.value {
-            options.import = Some(str.value.as_str().to_string());
+            options.import = Some(to_usv_str(str.value).into_owned());
           }
         }
         "eager" => {
@@ -606,10 +656,11 @@ impl GlobImportVisit<'_> {
         }
         "query" => match &p.value {
           Expression::StringLiteral(str) => {
-            options.query = if str.value.starts_with('?') {
-              Some(str.value.to_string())
+            let query = to_usv_str(str.value);
+            options.query = if query.starts_with('?') {
+              Some(query.into_owned())
             } else {
-              Some(format!("?{}", str.value))
+              Some(format!("?{query}"))
             }
           }
           Expression::ObjectExpression(expr) => {
@@ -617,14 +668,14 @@ impl GlobImportVisit<'_> {
             for prop in &expr.properties {
               let ObjectPropertyKind::ObjectProperty(p) = prop else { continue };
 
-              let key = match &p.key {
-                PropertyKey::StringLiteral(key) => key.value.as_str(),
+              let key: &str = match &p.key {
+                PropertyKey::StringLiteral(key) => &to_usv_str(key.value),
                 PropertyKey::StaticIdentifier(ident) => ident.name.as_str(),
                 _ => continue,
               };
 
-              let value = match &p.value {
-                Expression::StringLiteral(v) => v.value.as_str(),
+              let value: &str = match &p.value {
+                Expression::StringLiteral(v) => &to_usv_str(v.value),
                 Expression::BooleanLiteral(v) => {
                   if v.value {
                     "true"

@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use itertools::Itertools;
 use rolldown_common::{
-  AddonRenderContext, ChunkIdx, ExportsKind, ExternalModule, ImportAttribute, ImportKind,
+  AddonRenderContext, ChunkIdx, ExportsKind, ExternalModule, ImportAttributes, ImportKind,
   ImportRecordIdx, ImportRecordMeta, ModuleIdx, ModuleTable, RUNTIME_MODULE_KEY, Specifier,
   SymbolRef,
 };
@@ -89,7 +89,10 @@ pub fn render_esm<'code>(
           source_joiner.append_source(concat_string!(
             "export * from ",
             to_ecma_string_literal(&ext_name, ctx.options.charset.is_ascii()),
-            with_clause.map(|attr| concat_string!(" ", attr.to_string())).unwrap_or_default(),
+            with_clause
+              .and_then(|attributes| attributes.to_with_clause(ctx.options.charset.is_ascii()))
+              .map(|clause| concat_string!(" ", clause))
+              .unwrap_or_default(),
             "\n"
           ));
         }
@@ -123,7 +126,7 @@ fn find_entry_level_external_import_attribute<'a>(
   ctx: &'a GenerateContext<'_>,
   entry_module_idx: ModuleIdx,
   external_module_idx: ModuleIdx,
-) -> Option<&'a ImportAttribute> {
+) -> Option<&'a ImportAttributes> {
   let module_table = &ctx.link_output.module_table;
   // Order-wrap entry facades render entry-level re-exports while the owning record lives in
   // another chunk, so strict follows the export-star chain from the entry. Flag-off keeps
@@ -131,11 +134,11 @@ fn find_entry_level_external_import_attribute<'a>(
   if !ctx.options.is_strict_execution_order_enabled() {
     return ctx.chunk.modules.iter().find_map(|module_idx| {
       let module = module_table[*module_idx].as_normal()?;
-      module.import_records.iter_enumerated().find_map(|(rec_idx, rec)| {
+      module.import_records.iter().find_map(|rec| {
         (rec.resolved_module == Some(external_module_idx)
           && rec.meta.contains(ImportRecordMeta::IsExportStar)
           && rec.meta.contains(ImportRecordMeta::EntryLevelExternal))
-        .then(|| module.import_attribute_map.get(&rec_idx))
+        .then(|| (!rec.attributes.is_empty()).then_some(&rec.attributes))
         .flatten()
       })
     });
@@ -152,7 +155,7 @@ fn find_entry_level_external_import_attribute<'a>(
       continue;
     };
 
-    for (rec_idx, rec) in module.import_records.iter_enumerated() {
+    for rec in &module.import_records {
       if !rec.meta.contains(ImportRecordMeta::IsExportStar) {
         continue;
       }
@@ -162,8 +165,8 @@ fn find_entry_level_external_import_attribute<'a>(
       if importee_idx == external_module_idx
         && rec.meta.contains(ImportRecordMeta::EntryLevelExternal)
       {
-        if let Some(import_attribute) = module.import_attribute_map.get(&rec_idx) {
-          return Some(import_attribute);
+        if !rec.attributes.is_empty() {
+          return Some(&rec.attributes);
         }
         continue;
       }
@@ -405,7 +408,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
     // TODO: Warning same import record has different import attributes. https://tinyurl.com/2ddnbbc8
     named_imports.iter().for_each(|(idx, named_import)| {
       let module = ctx.link_output.module_table[*idx].as_normal().unwrap();
-      if module.import_attribute_map.contains_key(&named_import.record_idx) {
+      if !module.import_records[named_import.record_idx].attributes.is_empty() {
         if import_attribute.is_none() {
           import_attribute = Some((module.idx, named_import.record_idx));
         }
@@ -434,11 +437,8 @@ fn bare_import_attributes(
     let Some(module) = ctx.link_output.module_table[*module_idx].as_normal() else {
       continue;
     };
-    if module.import_attribute_map.is_empty() {
-      continue;
-    }
     for (rec_idx, rec) in module.import_records.iter_enumerated() {
-      if rec.kind != ImportKind::Import || !module.import_attribute_map.contains_key(&rec_idx) {
+      if rec.kind != ImportKind::Import || rec.attributes.is_empty() {
         continue;
       }
       if let Some(importee_idx) = rec.resolved_module
@@ -462,8 +462,7 @@ fn create_import_declaration(
   let mut ret = String::new();
   let with_clause_string = with_clause.and_then(|(module_idx, record_idx)| {
     let module = module_table[module_idx].as_normal()?;
-    let import_attribute = module.import_attribute_map.get(&record_idx)?;
-    Some(import_attribute.to_string())
+    module.import_records[record_idx].attributes.to_with_clause(ascii_only)
   });
   let first_default_alias = match &default_alias {
     [] => None,

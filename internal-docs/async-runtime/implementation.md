@@ -121,12 +121,13 @@ contract holds) and never calls `schedule` / `cancel`. A CurrentThread
 `sleep_until` hits the crate's "no live timer driver" panic. Why: design.md,
 "Threads follow the artifact".
 
-## Deferred drops
+## Deferred drop worker
 
-`crates/rolldown/src/utils/defer_drop.rs` frees heavy post-build values on Rayon
-workers instead of the calling thread; its module doc lists the call-site rules.
-On wasm the drop runs inline. A guard retires the pending count even if a
-destructor panics, so `drain()` cannot wedge.
+`crates/rolldown/src/utils/defer_drop.rs` frees heavy post-build values on one
+plain `std::thread`, off the shared pool; its module doc lists the call-site
+rules. On wasm the drop runs inline. If the thread cannot be created, drops run
+synchronously. A panicking destructor is contained and a guard retires the
+pending count, so `drain()` cannot wedge.
 
 ## TypeScript host layer
 
@@ -436,6 +437,6 @@ When napi-rs drops the workaround (its design doc, "When to remove"), delete:
   — the threaded WASI memory-size bug and its fix
 - [bundler-data-lifecycle](../bundler-data-lifecycle/implementation.md) —
   rebuild ownership and `ScanStageCache`; deferred drops are in
-  [Deferred drops](#deferred-drops)
+  [Deferred drop worker](#deferred-drop-worker)
 - [watch-mode](../watch-mode/implementation.md) — the `sleep_until` consumer
 - `docs/guide/wasi.md` — flavors, environment variables, support matrix

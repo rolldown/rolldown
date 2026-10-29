@@ -46,6 +46,21 @@ const ignoreTests = [
   "rollup@function@jsx@automatic-string-attribute-values: uses the decoded value of JSX string attributes and keys in automatic mode",
   "rollup@function@jsx@classic-string-attribute-values: uses the decoded value of JSX string attributes in classic mode",
 
+  // ## Rollup 5 changed these tests, so their Rollup 5 versions are ported to
+  // ## packages/rolldown/tests/fixtures/topics/import-attributes/rollup-5
+  "rollup@form@import-attributes@escapes-attribute-values: serializes quotes, backslashes and line terminators in import attribute values",
+  "rollup@form@import-attributes@keeps-static-assertions: keeps any import assertions on input@generates es",
+  "rollup@form@import-attributes@keeps-static-attributes: keeps any import attributes on input@generates es",
+  "rollup@form@import-attributes@plugin-attributes-resolveid: allows plugins to read and write import attributes in resolveId",
+  "rollup@function@import-assertions@plugin-assertions-this-resolve: allows plugins to provide attributes for this.resolve",
+  // Replaced by `does-not-warn-assertion-conflicts`
+  "rollup@function@import-assertions@warn-assertion-conflicts: warns for conflicting import attributes",
+  // Rollup 5 turned these into copies of `keeps-static-attributes`
+  "rollup@form@import-attributes@keeps-static-attributes-key-default: keeps any import attributes on input using import attributes with \"with\" key@generates es",
+  "rollup@form@import-attributes@keeps-static-attributes-key-with: keeps any import attributes on input using import attributes with \"with\" key@generates es",
+  // Needs `experimental.importAttributes`
+  "rollup@function@import-assertions@warn-unresolvable-assertions: warns for dynamic import attributes that cannot be resolved",
+
   // --------------------------------------------------------------------------------------
   // # Test infraructure related ignores
   // ## Ignore skipIfWindows test avoid test status error

@@ -1,0 +1,30 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] "foo" is not exported by "a.js".
+   ╭─[ b.js:1:10 ]
+   │
+ 1 │ export { foo } from './a.js';
+   │          ─┬─  
+   │           ╰─── Missing export
+───╯
+
+```
+
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] "foo" is not exported by "a.js".
+   ╭─[ index.js:1:10 ]
+   │
+ 1 │ import { foo } from './a.js';
+   │          ─┬─  
+   │           ╰─── Missing export
+───╯
+
+```

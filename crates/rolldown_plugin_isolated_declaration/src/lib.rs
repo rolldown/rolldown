@@ -3,13 +3,14 @@ use std::{borrow::Cow, path::Path};
 use arcstr::ArcStr;
 use oxc::{
   allocator::IntoIn,
-  ast_visit::VisitMut,
+  ast_visit::VisitJsMut,
   codegen::Codegen,
   isolated_declarations::{IsolatedDeclarations, IsolatedDeclarationsOptions},
 };
 use rolldown_common::{ModuleType, ResolvedExternal};
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, EventKind, Severity};
 use rolldown_plugin::{HookUsage, Plugin, PluginHookMeta, PluginOrder};
+use rolldown_utils::ecmascript::to_usv_str;
 use sugar_path::SugarPath;
 use type_import_visitor::TypeImportVisitor;
 
@@ -38,7 +39,7 @@ impl Plugin for IsolatedDeclarationPlugin {
       });
 
       for specifier in type_import_specifiers {
-        let resolved_id = ctx.resolve(&specifier, Some(args.id), None).await??;
+        let resolved_id = ctx.resolve(&to_usv_str(specifier), Some(args.id), None).await??;
         if matches!(resolved_id.external, ResolvedExternal::Bool(false)) {
           ctx.load(&resolved_id.id, None, resolved_id.module_def_format).await?;
         }

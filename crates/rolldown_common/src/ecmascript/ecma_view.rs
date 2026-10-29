@@ -30,6 +30,8 @@ bitflags! {
         const TopExportedSideEffectsFreeFunction = 1 << 5;
         /// Module evaluation reads at least one imported binding.
         const TopLevelImportRead = 1 << 6;
+        /// Local initialization creates data and functions without observing outside state.
+        const IndependentInitialization = 1 << 7;
     }
 }
 
@@ -52,6 +54,11 @@ pub struct RolldownFileUrlReference {
 pub enum ThisExprReplaceKind {
   /// It depends on `context` set by the user. If it's unset, replace it with `undefined`.
   Context,
+  /// The top-level `this` of a CommonJS module, which is the initial exports object of the module.
+  /// If the finalizer prints the module inside a CJS closure, it prints `this` as
+  /// `EcmaView::cjs_this_ref`. If the module is an unwrapped CommonJS entry, the finalizer keeps
+  /// `this`, which is the module `this` of Node. The HMR finalizer prints its own exports reference
+  /// instead.
   Exports,
 }
 
@@ -122,7 +129,8 @@ pub struct EcmaView {
   pub import_records: IndexVec<ImportRecordIdx, ResolvedImportRecord>,
   /// Cross-pass AST-node side tables use post-semantic `NodeId`. See internal-docs/ast-mutation/implementation.md.
   ///
-  /// The key is the `NodeId` of `ImportDeclaration`, `ImportExpression`, `ExportNamedDeclaration`, `ExportAllDeclaration`
+  /// The key is the `NodeId` of `ImportDeclaration`, `ImportExpression`,
+  /// `ExportFromDeclaration`, or `ExportAllDeclaration`.
   /// and `CallExpression`(only when the callee is `require`).
   pub imports: FxHashMap<NodeId, ImportRecordIdx>,
   pub exports_kind: ExportsKind,
@@ -149,11 +157,20 @@ pub struct EcmaView {
   pub mutations: Vec<ArcSourceMutation>,
   /// `NodeId` of `new URL('path', import.meta.url)` -> `ImportRecordIdx`
   pub new_url_references: FxHashMap<NodeId, ImportRecordIdx>,
+  /// `NodeId` of `'key' in ns`, where `ns` is a namespace import -> `key`.
+  pub namespace_in_checks: FxHashMap<NodeId, CompactStr>,
   /// Occurrences of `import.meta.ROLLDOWN_FILE_URL_<referenceId>[_<urlId>]`, in source order.
   /// One entry per occurrence: the `resolveFileUrl` hook is called per occurrence,
   /// matching Rollup, so duplicates are meaningful.
   pub rolldown_file_url_references: Vec<RolldownFileUrlReference>,
   pub this_expr_replace_map: FxHashMap<NodeId, ThisExprReplaceKind>,
+  /// The facade symbol for the top-level `this` of a CommonJS module. The scanner makes it for each
+  /// CommonJS module that reads its top-level `this`. If the finalizer prints the module inside a
+  /// CJS closure, the renamer gives the symbol a name, and the finalizer prints it as the third
+  /// parameter of the closure. The runtime passes the initial exports object of the module to that
+  /// parameter. The name is synthesized, so no binding of the module can capture it. An unwrapped
+  /// CommonJS entry does not use this symbol. See internal-docs/renaming/design.md.
+  pub cjs_this_ref: Option<SymbolRef>,
 
   pub hmr_hot_ref: Option<SymbolRef>,
   pub hmr_info: HmrInfo,
@@ -167,6 +184,9 @@ pub struct EcmaView {
   pub json_module_none_self_reference_included_symbol: Option<Box<FxHashSet<SymbolRef>>>,
   /// Import record indices for `module.exports = require(...)` patterns.
   pub cjs_reexport_import_record_ids: Vec<ImportRecordIdx>,
+  /// Members called on a dynamic import's namespace, e.g. `foo` in
+  /// `import('mod').then(ns => ns.foo())`.
+  pub dynamic_import_called_names: FxHashMap<ImportRecordIdx, FxHashSet<CompactStr>>,
 }
 
 impl EcmaView {
@@ -213,6 +233,8 @@ bitflags! {
         const UnknownExportsRead = 1 << 7;
         /// Top-level return statement (only valid in CommonJS)
         const TopLevelReturn = 1 << 8;
+        /// `import.meta.hot.acceptExports(...)` is called somewhere in the module
+        const HmrAcceptExports = 1 << 9;
         const ModuleOrExports = Self::ModuleRef.bits() | Self::ExportsRef.bits();
     }
 }

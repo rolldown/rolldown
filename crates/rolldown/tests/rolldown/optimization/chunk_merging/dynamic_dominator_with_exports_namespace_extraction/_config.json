@@ -1,0 +1,11 @@
+{
+  "_comment": "`sharedDynamic.js` has exports and is guaranteed to already be loaded whenever `dynamic2.js` loads (its only dynamic importer chain runs through `dynamic1.js`), so the already-loaded analysis groups it into `dynamic1.js`'s chunk. Because that extends the namespace observed through `import('./dynamic1.js')`, the entry's true namespace is extracted: exported from the chunk and read back via `.then((n) => n.<ns>)`. This fixture used to pin the opposite (no merge) before namespace extraction made the grouping semantics-preserving.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "main.js"
+      }
+    ]
+  }
+}

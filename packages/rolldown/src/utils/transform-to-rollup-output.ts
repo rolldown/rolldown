@@ -7,6 +7,7 @@ import type {
   JsOutputChunk,
 } from '../binding.cjs';
 import type { MinimalPluginContext } from '../plugin/minimal-plugin-context';
+import type { OutputCodeCacheEntry } from '../plugin/plugin-context-data';
 import { OutputAssetImpl } from '../types/output-asset-impl';
 import type { OutputBundle } from '../types/output-bundle';
 import { OutputChunkImpl } from '../types/output-chunk-impl';
@@ -29,6 +30,13 @@ export function transformToRollupSourceMap(map: string): SourceMap {
       ).toString('base64')}`;
     },
   };
+  // Preserve Rollup's legacy property for plugins while serializing the standard `ignoreList`.
+  Object.defineProperty(obj, 'x_google_ignoreList', {
+    get: () => obj.ignoreList,
+    set: (value: number[] | undefined) => {
+      obj.ignoreList = value;
+    },
+  });
   return obj;
 }
 
@@ -39,13 +47,21 @@ function transformToRollupOutputChunk(bindingChunk: BindingOutputChunk): OutputC
 function transformToMutableRollupOutputChunk(
   bindingChunk: BindingOutputChunk,
   changed: ChangedOutputs,
+  codeCache?: Map<string, OutputCodeCacheEntry>,
 ): OutputChunk {
+  const fileName = bindingChunk.getFileName();
   const chunk = {
     type: 'chunk',
     get code() {
-      return bindingChunk.getCode();
+      if (!codeCache) return bindingChunk.getCode();
+      const identity = bindingChunk.getCodeIdentity();
+      const hit = codeCache.get(fileName);
+      if (hit && hit.identity === identity) return hit.code;
+      const code = bindingChunk.getCode();
+      codeCache.set(fileName, { identity, holder: bindingChunk, code });
+      return code;
     },
-    fileName: bindingChunk.getFileName(),
+    fileName,
     name: bindingChunk.getName(),
     get modules() {
       return transformChunkModules(bindingChunk.getModules());
@@ -131,22 +147,27 @@ function transformToMutableRollupOutputAsset(
 
 export function transformToRollupOutput(output: BindingOutputs): RolldownOutput {
   const { chunks, assets } = output;
-  return {
+  const transformed = {
     output: [
       ...chunks.map((chunk) => transformToRollupOutputChunk(chunk)),
       ...assets.map((asset) => transformToRollupOutputAsset(asset)),
     ],
   } as RolldownOutput;
+  if (output.mangleCache !== undefined) {
+    transformed.mangleCache = output.mangleCache;
+  }
+  return transformed;
 }
 
 function transformToMutableRollupOutput(
   output: BindingOutputs,
   changed: ChangedOutputs,
+  codeCache?: Map<string, OutputCodeCacheEntry>,
 ): RolldownOutput {
   const { chunks, assets } = output;
   return {
     output: [
-      ...chunks.map((chunk) => transformToMutableRollupOutputChunk(chunk, changed)),
+      ...chunks.map((chunk) => transformToMutableRollupOutputChunk(chunk, changed, codeCache)),
       ...assets.map((asset) => transformToMutableRollupOutputAsset(asset, changed)),
     ],
   } as RolldownOutput;
@@ -156,9 +177,13 @@ export function transformToOutputBundle(
   context: MinimalPluginContext,
   output: BindingOutputs,
   changed: ChangedOutputs,
+  codeCache?: Map<string, OutputCodeCacheEntry>,
 ): OutputBundle {
   const bundle = Object.fromEntries(
-    transformToMutableRollupOutput(output, changed).output.map((item) => [item.fileName, item]),
+    transformToMutableRollupOutput(output, changed, codeCache).output.map((item) => [
+      item.fileName,
+      item,
+    ]),
   );
   return new Proxy(bundle, {
     set(_target, _p, _newValue, _receiver) {
@@ -179,6 +204,7 @@ export function transformToOutputBundle(
       if (typeof property === 'string') {
         changed.deleted.add(property);
       }
+      delete target[property as keyof typeof target];
       return true;
     },
   });

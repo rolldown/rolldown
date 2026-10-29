@@ -1,0 +1,6 @@
+{
+  "_comment": "`data-a` is a JSON module, which Node loads only with `type: 'json'`. A bare import of an external used to lose its `with` clause.",
+  "config": {
+    "external": ["data-a"]
+  }
+}

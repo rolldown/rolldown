@@ -1,4 +1,5 @@
 use crate::stages::link_stage::{ModuleInclusionVec, ModuleNamespaceReasonVec, StmtInclusionVec};
+use oxc::semantic::NodeId;
 use oxc_index::IndexVec;
 use oxc_str::CompactStr;
 use rolldown_common::{
@@ -84,6 +85,9 @@ pub struct LinkingMetadata {
   pub execution_dependencies: FxIndexSet<ModuleIdx>,
   // `None` the member expression resolve to a ambiguous export.
   pub resolved_member_expr_refs: MemberExprRefResolutionMap,
+  /// Results of the `'key' in ns` checks (see `EcmaView::namespace_in_checks`) that are known at
+  /// link time.
+  pub folded_namespace_in_checks: FxHashMap<NodeId, bool>,
   pub star_exports_from_external_modules: Vec<ImportRecordIdx>,
   pub is_tla_or_contains_tla_dependency: bool,
   pub concatenated_wrapped_module_kind: ConcatenateWrappedModuleKind,
@@ -159,6 +163,25 @@ impl LinkingMetadata {
           || self.module_namespace_included_reason.contains(ModuleNamespaceIncludedReason::Unknown)
       }
       OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => true,
+    }
+  }
+
+  /// Export names observable through known dynamic imports, unless another consumer needs
+  /// the complete namespace. See internal-docs/code-splitting/implementation.md.
+  pub fn dynamically_read_export_names<'a>(
+    &self,
+    usage: Option<&'a DynamicImportExportsUsage>,
+  ) -> Option<&'a FxHashSet<CompactStr>> {
+    if self.module_namespace_included_reason.intersects(
+      ModuleNamespaceIncludedReason::Unknown
+        | ModuleNamespaceIncludedReason::ReExportDynamicExports,
+    ) {
+      return None;
+    }
+    match usage? {
+      DynamicImportExportsUsage::Complete => None,
+      DynamicImportExportsUsage::Partial(names) => Some(names),
+      DynamicImportExportsUsage::Single(_) => unreachable!(),
     }
   }
 

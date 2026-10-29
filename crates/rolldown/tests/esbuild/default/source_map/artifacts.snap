@@ -6,20 +6,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region bar.js
+// bar.js
 function bar() {
 	throw new Error("test");
 }
-//#endregion
-//#region data.txt
+// data.txt
 var data_default = "#2041";
-//#endregion
-//#region entry.js
+// entry.js
 function foo() {
 	bar();
 }
 foo();
 console.log(data_default);
-//#endregion
 
 ```

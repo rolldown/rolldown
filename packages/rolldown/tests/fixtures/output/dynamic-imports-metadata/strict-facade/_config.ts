@@ -1,9 +1,11 @@
 import { defineTest } from 'rolldown-tests';
 import { expect } from 'vitest';
 
-// An order-wrap entry facade keeps `entry_module_to_entry_chunk` pointing at the
-// facade chunk while the manual group hosts the entry module's body. The emitted
-// `import()` names the facade, and `dynamicImports` must name the same file.
+// A merged-away order-wrap entry needs no facade: the emitted `import()` names the
+// chunk hosting the entry's body and carries the trigger in its `.then`
+// (`import("./chunks/dyn.js").then((n) => (n.init(), n.ns))`), and `dynamicImports`
+// must name that same file. See internal-docs/code-splitting/design.md
+// ("Trigger placement").
 export default defineTest({
   config: {
     input: ['a.js', 'b.js'],
@@ -24,7 +26,8 @@ export default defineTest({
     if (a?.type !== 'chunk') {
       throw new Error('a.js should be emitted as a chunk');
     }
-    expect(a.code).toContain('import("./chunks/target.js")');
-    expect(a.dynamicImports).toStrictEqual(['chunks/target.js']);
+    expect(a.code).toContain('import("./chunks/dyn.js")');
+    expect(a.dynamicImports).toStrictEqual(['chunks/dyn.js']);
+    expect(output.output.some((item) => item.fileName === 'chunks/target.js')).toBe(false);
   },
 });

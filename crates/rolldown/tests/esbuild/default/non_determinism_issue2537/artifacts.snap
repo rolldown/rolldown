@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.ts
+// entry.ts
 function aap(noot, wim) {
 	let mies = "teun";
 	if (noot) {
@@ -20,7 +20,6 @@ function aap(noot, wim) {
 	}
 	return mies;
 }
-//#endregion
 export { aap };
 
 ```

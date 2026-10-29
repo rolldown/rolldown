@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
 (class A {
 	static {}
 	static {
@@ -16,14 +15,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 		super.superField++;
 	}
 });
-(class {
+let B = class {
 	static {}
 	static {
 		this.thisField++;
 		super.superField = super.superField + 1;
 		super.superField++;
 	}
-});
-//#endregion
+};
 
 ```

@@ -1,0 +1,12 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## index.js
+
+```js
+// index.js
+console.log(42, 42);
+
+```

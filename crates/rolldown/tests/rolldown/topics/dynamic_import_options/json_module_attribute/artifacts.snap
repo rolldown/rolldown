@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## data-C7fiTSs-.js
+
+```js
+// data.json
+var data_default = { value: 7 };
+export { data_default as default };
+
+```
+
+## main.js
+
+```js
+// main.js
+const loaded = import("./data-C7fiTSs-.js").then((mod) => mod.default.value);
+export { loaded };
+
+```

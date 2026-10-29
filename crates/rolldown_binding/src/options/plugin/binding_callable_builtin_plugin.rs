@@ -9,8 +9,8 @@ use napi_derive::napi;
 use rolldown::ModuleType;
 use rolldown_common::WatcherChangeKind;
 use rolldown_plugin::{
-  CustomField, HookLoadArgs, HookLoadOutput, HookResolveIdArgs, HookResolveIdOutput,
-  HookTransformArgs, LoadPluginContext, PluginIdx, PluginOrder, Pluginable,
+  __inner::SharedPluginable, CustomField, HookLoadArgs, HookLoadOutput, HookResolveIdArgs,
+  HookResolveIdOutput, HookTransformArgs, LoadPluginContext, PluginIdx, PluginOrder,
   SharedTransformPluginContext, TransformPluginContext,
 };
 use rolldown_plugin_vite_resolve::ResolveIdOptionsScan;
@@ -31,7 +31,7 @@ use super::{
 
 #[napi]
 pub struct BindingCallableBuiltinPlugin {
-  inner: Arc<dyn Pluginable>,
+  inner: SharedPluginable,
   context: SharedTransformPluginContext,
 }
 
@@ -39,7 +39,7 @@ pub struct BindingCallableBuiltinPlugin {
 impl BindingCallableBuiltinPlugin {
   #[napi(constructor)]
   pub fn new(plugin: BindingBuiltinPlugin) -> napi::Result<Self> {
-    let inner: Arc<dyn Pluginable> = plugin.try_into()?;
+    let inner: SharedPluginable = plugin.try_into()?;
 
     Ok(Self {
       inner,

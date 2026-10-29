@@ -2,18 +2,20 @@ use std::{any::Any, borrow::Cow, fmt::Debug, sync::Arc};
 
 use super::plugin_context::PluginContext;
 use crate::{
+  __inner::{Pluginable, SharedPluginable},
   HookAddonArgs, HookBuildEndArgs, HookCloseBundleArgs, HookGenerateBundleArgs, HookLoadArgs,
   HookLoadOutput, HookRenderChunkArgs, HookRenderChunkOutput, HookResolveIdArgs,
   HookResolveIdOutput, HookTransformArgs, HookUsage, HookWriteBundleArgs, PluginHookMeta,
   SharedLoadPluginContext, SharedTransformPluginContext,
   types::{
-    hook_build_start_args::HookBuildStartArgs, hook_render_error::HookRenderErrorArgs,
-    hook_render_start_args::HookRenderStartArgs,
+    hook_build_start_args::HookBuildStartArgs, hook_hot_update_args::HookHotUpdateArgs,
+    hook_render_error::HookRenderErrorArgs, hook_render_start_args::HookRenderStartArgs,
     hook_resolve_file_url_args::HookResolveFileUrlArgs,
     hook_transform_ast_args::HookTransformAstArgs, hook_transform_output::HookTransformOutput,
   },
 };
 use anyhow::Result;
+use arcstr::ArcStr;
 use rolldown_common::{ModuleInfo, NormalModule, RollupRenderedChunk, WatcherChangeKind};
 use rolldown_ecmascript::EcmaAst;
 
@@ -26,8 +28,16 @@ pub type HookRenderChunkReturn = Result<Option<HookRenderChunkOutput>>;
 pub type HookAugmentChunkHashReturn = Result<Option<String>>;
 pub type HookResolveFileUrlReturn = Result<Option<String>>;
 pub type HookInjectionOutputReturn = Result<Option<String>>;
+pub type HookHotUpdateReturn = Result<Option<Vec<ArcStr>>>;
 
 pub trait Plugin: Any + Debug + Send + Sync + 'static {
+  fn new_shared(plugin: Self) -> SharedPluginable
+  where
+    Self: Sized,
+  {
+    Pluginable::new_shared(plugin)
+  }
+
   fn name(&self) -> Cow<'static, str>;
 
   // The `option` hook consider call at node side.
@@ -280,6 +290,18 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   }
 
   fn watch_change_meta(&self) -> Option<PluginHookMeta> {
+    None
+  }
+
+  fn hot_update(
+    &self,
+    _ctx: &PluginContext,
+    _args: &HookHotUpdateArgs,
+  ) -> impl std::future::Future<Output = HookHotUpdateReturn> + Send {
+    async { Ok(None) }
+  }
+
+  fn hot_update_meta(&self) -> Option<PluginHookMeta> {
     None
   }
 

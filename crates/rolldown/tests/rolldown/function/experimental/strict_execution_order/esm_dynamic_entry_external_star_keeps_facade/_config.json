@@ -1,0 +1,22 @@
+{
+  "_comment": "An ESM dynamic entry whose implementation chunk is imported elsewhere must keep its facade when it directly re-exports an external star. The facade carries the chunk-level export star that cannot be represented by the simulated namespace after collapse.",
+  "configName": "wrap-all",
+  "config": {
+    "external": ["external"],
+    "preserveEntrySignatures": "allow-extension",
+    "strictExecutionOrder": true,
+    "codeSplitting": {
+      "includeDependenciesRecursively": false,
+      "groups": [
+        {
+          "name": "reader",
+          "test": "[\\\\/]reader\\.js$"
+        }
+      ]
+    },
+    "experimental": {
+      "attachDebugInfo": "full"
+    }
+  },
+  "hiddenRuntimeModule": false
+}

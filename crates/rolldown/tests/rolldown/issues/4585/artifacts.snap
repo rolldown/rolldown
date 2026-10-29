@@ -7,17 +7,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
 let node_process = require("node:process");
-//#region lib.js
+node_process = __toESM(node_process);
+// lib.js
 var VFile = class {
 	constructor() {
 		console.log(node_process.default);
 	}
 };
-//#endregion
-//#region main.js
+// main.js
 const file = new VFile();
-//#endregion
 exports.file = file;
 
 ```

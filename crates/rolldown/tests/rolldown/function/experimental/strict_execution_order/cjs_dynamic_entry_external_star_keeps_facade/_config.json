@@ -1,0 +1,23 @@
+{
+  "_comment": "A wrapped CJS dynamic entry with an external star keeps its facade because the chunk-level merge deduplicates external modules and uses Object.keys, while a simulated namespace would emit one __reExport per direct record and ignore primitive module values.",
+  "configName": "wrap-all",
+  "config": {
+    "external": ["external", "primitive"],
+    "format": "cjs",
+    "preserveEntrySignatures": "allow-extension",
+    "strictExecutionOrder": true,
+    "codeSplitting": {
+      "includeDependenciesRecursively": false,
+      "groups": [
+        {
+          "name": "reader",
+          "test": "[\\\\/]reader\\.js$"
+        }
+      ]
+    },
+    "experimental": {
+      "attachDebugInfo": "full"
+    }
+  },
+  "hiddenRuntimeModule": false
+}

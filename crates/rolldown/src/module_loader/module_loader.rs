@@ -897,7 +897,11 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     // if it is in incremental mode, we skip the runtime module, since it is always there
     // so use a dummy runtime_brief as a placeholder
     let runtime = if self.is_full_scan {
-      tracing::debug!("changed_resolved_ids: {fetch_mode:#?}");
+      tracing::debug!(
+        scan_mode = if fetch_mode.is_full() { "full" } else { "partial" },
+        changed_resolved_ids = %changed_resolved_ids.iter().map(|id| &id.id).join(", "),
+        "module fetch completed"
+      );
       runtime_brief.expect("Failed to find runtime module. This should not happen")
     } else {
       RuntimeModuleBrief::dummy()

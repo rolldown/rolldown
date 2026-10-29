@@ -7,11 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 if (import.meta.url.endsWith("/dyn.js")) queueMicrotask(() => (globalThis.events ??= []).push("checkpoint:" + Boolean(globalThis.ready)));
-//#region a.js
+// a.js
 globalThis.events = [];
-const targetPromise = import("./target.js");
+const targetPromise = import("./dyn.js").then((n) => (n.t(), n.n));
 console.log("a done");
-//#endregion
 export { targetPromise };
 
 ```
@@ -20,16 +19,15 @@ export { targetPromise };
 
 ```js
 if (import.meta.url.endsWith("/dyn.js")) queueMicrotask(() => (globalThis.events ??= []).push("checkpoint:" + Boolean(globalThis.ready)));
-import { r as init_observer } from "./dyn.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region b.js
+import { r as init_observer } from "./dyn.js";
+// b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
 		init_observer();
 		console.log("b done");
 	})))();
 }
-//#endregion
 init_b();
 
 ```
@@ -38,8 +36,8 @@ init_b();
 
 ```js
 if (import.meta.url.endsWith("/dyn.js")) queueMicrotask(() => (globalThis.events ??= []).push("checkpoint:" + Boolean(globalThis.ready)));
-import { t as __esmMin } from "./rolldown-runtime.js";
-//#region observer.js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+// observer.js
 function init_observer() {
 	return (init_observer = __esmMin((() => {
 		globalThis.events ??= [];
@@ -47,20 +45,17 @@ function init_observer() {
 		console.log("observer eval", Boolean(globalThis.ready));
 	})))();
 }
-//#endregion
-//#region target.js
-var value;
+// target.js
+var target_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
 function init_target() {
 	return (init_target = __esmMin((() => {
 		globalThis.events ??= [];
 		globalThis.events.push("target");
 		globalThis.ready = true;
 		console.log("target eval");
-		value = 1;
 	})))();
 }
-//#endregion
-export { value as n, init_observer as r, init_target as t };
+export { target_exports as n, init_observer as r, init_target as t };
 
 ```
 
@@ -73,16 +68,6 @@ export { __exportAll as n, __esmMin as t };
 
 ```
 
-## target.js
-
-```js
-if (import.meta.url.endsWith("/dyn.js")) queueMicrotask(() => (globalThis.events ??= []).push("checkpoint:" + Boolean(globalThis.ready)));
-import { n as value, t as init_target } from "./dyn.js";
-init_target();
-export { value };
-
-```
-
 # Variant: wrap-all: [on_demand_wrapping: false]
 
 ## Assets
@@ -92,16 +77,15 @@ export { value };
 ```js
 if (import.meta.url.endsWith("/dyn.js")) queueMicrotask(() => (globalThis.events ??= []).push("checkpoint:" + Boolean(globalThis.ready)));
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region a.js
+// a.js
 var targetPromise;
 function init_a() {
 	return (init_a = __esmMin((() => {
 		globalThis.events = [];
-		targetPromise = import("./target.js");
+		targetPromise = import("./dyn.js").then((n) => (n.t(), n.n));
 		console.log("a done");
 	})))();
 }
-//#endregion
 init_a();
 export { targetPromise };
 
@@ -111,16 +95,15 @@ export { targetPromise };
 
 ```js
 if (import.meta.url.endsWith("/dyn.js")) queueMicrotask(() => (globalThis.events ??= []).push("checkpoint:" + Boolean(globalThis.ready)));
-import { r as init_observer } from "./dyn.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region b.js
+import { r as init_observer } from "./dyn.js";
+// b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
 		init_observer();
 		console.log("b done");
 	})))();
 }
-//#endregion
 init_b();
 
 ```
@@ -129,8 +112,8 @@ init_b();
 
 ```js
 if (import.meta.url.endsWith("/dyn.js")) queueMicrotask(() => (globalThis.events ??= []).push("checkpoint:" + Boolean(globalThis.ready)));
-import { t as __esmMin } from "./rolldown-runtime.js";
-//#region observer.js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+// observer.js
 function init_observer() {
 	return (init_observer = __esmMin((() => {
 		globalThis.events ??= [];
@@ -138,20 +121,17 @@ function init_observer() {
 		console.log("observer eval", Boolean(globalThis.ready));
 	})))();
 }
-//#endregion
-//#region target.js
-var value;
+// target.js
+var target_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
 function init_target() {
 	return (init_target = __esmMin((() => {
 		globalThis.events ??= [];
 		globalThis.events.push("target");
 		globalThis.ready = true;
 		console.log("target eval");
-		value = 1;
 	})))();
 }
-//#endregion
-export { value as n, init_observer as r, init_target as t };
+export { target_exports as n, init_observer as r, init_target as t };
 
 ```
 
@@ -161,15 +141,5 @@ export { value as n, init_observer as r, init_target as t };
 if (import.meta.url.endsWith("/dyn.js")) queueMicrotask(() => (globalThis.events ??= []).push("checkpoint:" + Boolean(globalThis.ready)));
 // HIDDEN [\0rolldown/runtime.js]
 export { __exportAll as n, __esmMin as t };
-
-```
-
-### target.js
-
-```js
-if (import.meta.url.endsWith("/dyn.js")) queueMicrotask(() => (globalThis.events ??= []).push("checkpoint:" + Boolean(globalThis.ready)));
-import { n as value, t as init_target } from "./dyn.js";
-init_target();
-export { value };
 
 ```

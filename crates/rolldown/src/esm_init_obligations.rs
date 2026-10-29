@@ -2,11 +2,8 @@
 //! answers "which wrapped modules must this importer's record initialize, and does this record
 //! carry that obligation at all?".
 //!
-//! Three consumers enumerate the same module-level obligations for three purposes
-//! ([`ObligationPurpose`]), and historically each carried its own copy of the record gating and
-//! (before the emergent-cycle projection repair) its own route traversal, which let them drift
-//! apart — the C-class under-projection holes were exactly such drift. Everything they share now
-//! lives here:
+//! Final emission, cross-chunk registration, cycle projection, and pre-chunk reachability share
+//! these record gates and target collectors. Their record contracts use [`ObligationPurpose`]:
 //!
 //! - **Emit** — the finalizer replaces each *included* static-import statement with the `init_*()`
 //!   calls of the targets that record must initialize
@@ -21,28 +18,35 @@
 //!   reachable (registration is what *makes* it reachable).
 //! - **Project** — the on-demand emergent-cycle fixpoint (`order_analysis`) predicts the chunk
 //!   edges a wrap plan's lowering will add, before anything is minted. It drives the same
-//!   enumerator/collector against a probe [`OrderWrapState`], extended to the excluded re-export
-//!   hops whose registration flows through the metadata pass rather than the included-record path.
+//!   enumerator/collector against a probe [`OrderWrapState`], extended to the excluded records
+//!   whose registration flows through the metadata pass rather than the included-record path.
+//!
+//! Pre-chunk reachability uses Register for initialization loading edges and Project for
+//! consumer-local routes. Target liveness uses included declarations before chunks exist, and
+//! same-chunk delegation is unavailable. See internal-docs/code-splitting/implementation.md.
 //!
 //! Excluded statements are the one structural asymmetry: for Emit and Register their targets are
 //! precomputed once by `compute_wrapped_esm_init_metadata` (post-convergence, returned as
 //! `Sealed<FinalEsmInitMetadata>`), while Project must recompute them per fixpoint round from the
-//! current plan — both through the shared excluded-hop router
-//! [`collect_order_wrap_esm_init_targets`], so the routing itself cannot drift.
+//! current plan — both through the same routers (the excluded-hop router
+//! [`collect_order_wrap_esm_init_targets`] for re-export hops, the shared per-record collector
+//! [`collect_wrapped_esm_init_targets_for_import_record`] for namespace-retained star records and
+//! binding-demand plain imports), so
+//! the routing itself cannot drift.
 //!
 //! Purpose contracts are deliberately *not* identical, and each divergence is encoded (and
 //! justified) on [`ObligationPurpose`] rather than re-derived at call sites.
 
+use oxc_str::CompactStr;
 use rolldown_common::{
-  ChunkIdx, ConstExportMeta, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta,
-  IndexModules, InlineConstMode, Module, ModuleIdx, NormalModule, ResolvedImportRecord, Specifier,
-  SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, WrapKind,
+  ConcatenateWrappedModuleKind, ConstExportMeta, ExportsKind, ImportKind, ImportRecordIdx,
+  ImportRecordMeta, IndexModules, InlineConstMode, Module, ModuleIdx, NormalModule,
+  ResolvedImportRecord, Specifier, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, WrapKind,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
-  chunk_graph::ChunkGraph,
-  stages::generate_stage::order_wrap_state::{EsmInitOrigin, OrderWrapState},
+  stages::generate_stage::order_wrap_state::{EsmInitOrigin, OrderCjsCarrierKey, OrderWrapState},
   type_alias::IndexStmtInfos,
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
 };
@@ -55,27 +59,35 @@ pub enum ObligationPurpose {
   /// Finalizer emission at AST statement positions. Only *included* statements are visited (the
   /// finalizer's excluded statements consume the precomputed transitive metadata instead), and a
   /// nested re-export record emits nothing — a wrapped ancestor barrel walks through it and owns
-  /// that init itself.
+  /// that init itself. A re-export-transparent wrapper emits nothing at all: its consumers route
+  /// through it to the leaves they read
+  /// (internal-docs/code-splitting/design.md#tree-shaking-parity-across-strict-modes).
   Emit,
   /// Cross-chunk `init_*` symbol registration. Same contract as [`ObligationPurpose::Emit`]:
   /// included statements only, nested records skipped — registration and emission must stay in
   /// lockstep or a registered-but-never-emitted wrapper import (or vice versa) appears.
   Register,
-  /// Emergent-cycle edge projection. Included statements *plus* excluded re-export hops (their
-  /// real registration flows through the excluded-statement metadata, which does not exist yet at
-  /// projection time), and nested records are *kept*: projection may over-approximate — an extra
-  /// edge only ever wraps more, and wrapping more is always legal — but must never drop an edge
-  /// source, so it declines the nested-ownership refinement Emit/Register apply.
+  /// Emergent-cycle edge projection. Included statements *plus* excluded re-export hops and
+  /// excluded plain imports that declare bindings (their real registration flows through the
+  /// excluded-statement metadata, which does not exist yet at projection time — re-export hops
+  /// through the hop router, binding-demand plain imports through the shared collector), and
+  /// nested records are *kept*: projection may over-approximate — an extra edge only ever wraps
+  /// more, and wrapping more is always legal — but must never drop an edge source, so it declines
+  /// the nested-ownership refinement Emit/Register apply. A binding-less excluded plain import
+  /// stays out on every purpose: tree shaking stripped that side-effect edge deliberately. The
+  /// records of a re-export-transparent wrapper are kept too: chunk placement resolves a
+  /// consumer-local route from the record that imports it, and for a route behind the wrapper
+  /// that record is the wrapper's own.
   Project,
 }
 
 /// THE record gate: whether `rec` carries an init-forwarding obligation of the importer for this
-/// purpose. All three consumers consult this one predicate (Emit per record at its included
+/// purpose. Each consumer consults this predicate (Emit per record at its included
 /// statement position; Register/Project through [`for_each_init_obligation_record`]).
 pub fn record_is_init_obligation(
   purpose: ObligationPurpose,
   order_state: &OrderWrapState,
-  importer_idx: ModuleIdx,
+  importer: &NormalModule,
   rec: &ResolvedImportRecord,
   rec_idx: ImportRecordIdx,
   stmt_is_included: bool,
@@ -83,13 +95,26 @@ pub fn record_is_init_obligation(
   if rec.kind != ImportKind::Import {
     return false;
   }
+  if order_state.is_consumer_local_reexport_record(importer.idx, rec_idx) {
+    return false;
+  }
+  if order_state.is_consumer_local_reexport_route(importer.idx) {
+    return false;
+  }
   match purpose {
     ObligationPurpose::Emit | ObligationPurpose::Register => {
-      stmt_is_included && !order_state.is_nested_reexport_record(importer_idx, rec_idx)
+      stmt_is_included
+        && !order_state.reexport_init_is_transparent(importer.idx)
+        && !order_state.is_nested_reexport_record(importer.idx, rec_idx)
     }
     ObligationPurpose::Project => {
       stmt_is_included
         || rec.meta.intersects(ImportRecordMeta::IsExportStar | ImportRecordMeta::IsReExportOnly)
+        // An excluded plain import that declares bindings can still carry binding demand (folded
+        // member reads, re-exported facades) that the excluded-statement metadata routes for
+        // Emit/Register, so projection must keep the same edge sources (issue #10690). The
+        // collector refines actual demand per binding.
+        || importer.named_imports.values().any(|import| import.record_idx == rec_idx)
     }
   }
 }
@@ -112,7 +137,7 @@ pub fn for_each_init_obligation_record(
       if record_is_init_obligation(
         purpose,
         order_state,
-        importer.idx,
+        importer,
         &importer.import_records[rec_idx],
         rec_idx,
         stmt_is_included,
@@ -134,7 +159,109 @@ pub fn reexport_record_owns_hop(
   rec_idx: ImportRecordIdx,
   is_reexport: bool,
 ) -> bool {
-  is_reexport && !order_state.is_nested_reexport_record(importer_idx, rec_idx)
+  is_reexport
+    && !order_state.is_nested_reexport_record(importer_idx, rec_idx)
+    && !order_state.is_consumer_local_reexport_record(importer_idx, rec_idx)
+}
+
+/// An ESM-wrapped module whose `init_*` an entry must run because the entry re-exports one of its
+/// bindings (issue #10543).
+pub struct EntryReexportedWrapperInit {
+  pub owner: ModuleIdx,
+  pub wrapper_ref: SymbolRef,
+  /// A TLA-tainted wrapper renders as `await init_*()`. This can only surface in `esm` output:
+  /// the scanner rejects top-level await under every other format
+  /// (`AstScanner::handle_top_level_await`), so a TLA-tainted module never reaches emission
+  /// there.
+  pub tla_tainted: bool,
+}
+
+/// The record-less, off-strict obligation surface: the ESM-wrapped modules backing an entry's
+/// re-exported bindings. Named re-exports resolve symbol-to-symbol, so when every forwarding
+/// statement between the entry and such a module is tree-shaken, none of the record-scoped
+/// consumers above ever sees the obligation — yet ESM semantics require the module to be
+/// evaluated before the entry's bindings are read (issue #10543).
+///
+/// This is the single copy of the walk. Cross-chunk registration
+/// (`collect_depended_symbols`'s entry branch) consumes it with `canonical_names: None` to import
+/// every wrapper the entry may need; emission (the finalizer's entry body prelude and
+/// `render_wrapped_entry_chunk`'s tail path) consumes it with the chunk's assigned names to call
+/// exactly the reachable ones — so "everything emission calls, registration imported" is a fact
+/// about the code rather than two enumerations kept in sync by hand.
+///
+/// Same-chunk owners are deliberately kept: an unwrapped barrel gets no excluded-statement init
+/// metadata at all, so a fully tree-shaken same-chunk chain has no other call site. The one shape
+/// where same-chunk owners are always covered — an entry wrapped by propagation, whose whole
+/// static graph is wrapped with it — is filtered at its call site instead.
+///
+/// Results are in module execution order (dependencies before dependents). Both emission callers
+/// gate on `!is_strict_execution_order_enabled()`: strict execution order routes entry
+/// initialization through order-wrap lowering instead.
+pub fn collect_entry_reexported_wrapper_inits(
+  entry_id: ModuleIdx,
+  entry_meta: &LinkingMetadata,
+  metas: &LinkingMetadataVec,
+  modules: &IndexModules,
+  symbol_db: &SymbolRefDb,
+  canonical_names: Option<&FxHashMap<SymbolRef, CompactStr>>,
+) -> Vec<EntryReexportedWrapperInit> {
+  // Filter before sorting: entries whose exports resolve to no wrapped module at all — the
+  // overwhelmingly common case — should not pay for sorting their whole export map (a dep
+  // optimizer barrel entry can have thousands of exports).
+  let mut qualifying = entry_meta
+    .resolved_exports
+    .iter()
+    .filter_map(|(name, resolved_export)| {
+      if resolved_export.came_from_commonjs {
+        return None;
+      }
+      let canonical_ref = symbol_db.canonical_ref_resolving_namespace(resolved_export.symbol_ref);
+      if canonical_ref.owner == entry_id {
+        return None;
+      }
+      let owner_meta = &metas[canonical_ref.owner];
+      if !matches!(owner_meta.wrap_kind(), WrapKind::Esm)
+        // An inner concatenated module's body runs via its group's shared wrapper; its own
+        // `wrapper_ref` is not a callable declaration (mirrors the finalizer's emission skip).
+        || matches!(
+          owner_meta.concatenated_wrapped_module_kind,
+          ConcatenateWrappedModuleKind::Inner
+        )
+      {
+        return None;
+      }
+      let wrapper_ref = owner_meta.wrapper_ref?;
+      if wrapper_ref == canonical_ref {
+        return None;
+      }
+      let canonical_wrapper_ref = symbol_db.canonical_ref_for(wrapper_ref);
+      // Emission may only call a wrapper the chunk declares or imports; anything else would
+      // render as a dangling identifier. Registration passes `None`: it runs before chunk names
+      // exist and is what makes a wrapper reachable in the first place.
+      if let Some(canonical_names) = canonical_names
+        && !canonical_names.contains_key(&canonical_wrapper_ref)
+      {
+        return None;
+      }
+      Some((name, canonical_ref.owner, wrapper_ref, canonical_wrapper_ref, owner_meta))
+    })
+    .collect::<Vec<_>>();
+  // The export map iterates in hash order; sort the (rare) survivors by export name so the
+  // first-export-wins dedup below is deterministic.
+  qualifying.sort_unstable_by_key(|(name, ..)| *name);
+  let mut seen_wrappers = FxHashSet::default();
+  let mut inits = qualifying
+    .into_iter()
+    .filter_map(|(_, owner, wrapper_ref, canonical_wrapper_ref, owner_meta)| {
+      seen_wrappers.insert(canonical_wrapper_ref).then_some(EntryReexportedWrapperInit {
+        owner,
+        wrapper_ref,
+        tla_tainted: owner_meta.is_tla_or_contains_tla_dependency,
+      })
+    })
+    .collect::<Vec<_>>();
+  inits.sort_unstable_by_key(|init| modules[init.owner].exec_order());
+  inits
 }
 
 pub struct WrappedEsmInitTargetContext<'a> {
@@ -149,6 +276,26 @@ pub struct WrappedEsmInitTargetContext<'a> {
   pub order_wrap_state: &'a OrderWrapState,
   /// Strict-gates the forwarder discharge check so flag-off output stays byte-identical to main.
   pub strict_execution_order: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum WrappedEsmInitTarget {
+  Module(ModuleIdx),
+  CjsCarrier(OrderCjsCarrierKey),
+}
+
+impl WrappedEsmInitTarget {
+  pub fn owner(self) -> ModuleIdx {
+    match self {
+      Self::Module(module_idx) => module_idx,
+      Self::CjsCarrier(key) => key.importer,
+    }
+  }
+}
+
+enum OrderInitTraversalItem {
+  Module(ModuleIdx),
+  Target(WrappedEsmInitTarget),
 }
 
 /// Resolve direct and forwarded ESM init targets for one static import record.
@@ -170,7 +317,7 @@ pub fn collect_wrapped_esm_init_targets_for_import_record(
   symbol_is_used: impl Fn(SymbolRef) -> bool,
   wrapper_is_reachable: impl Fn(SymbolRef) -> bool,
   forwarding_module_owns_initialization: impl Fn(ModuleIdx) -> bool,
-) -> Vec<ModuleIdx> {
+) -> Vec<WrappedEsmInitTarget> {
   let mut visited_forwarders = FxHashSet::default();
   collect_esm_init_targets_for_record(
     ctx,
@@ -182,6 +329,60 @@ pub fn collect_wrapped_esm_init_targets_for_import_record(
   )
 }
 
+/// Resolve the complete namespace initialization targets. Re-export-only barrels use their leaf
+/// and CJS-carrier targets; mixed modules append their local initializer after the forwarded
+/// targets. Lowering caches the result for entry activation and namespace consumers.
+pub fn collect_wrapped_esm_init_targets_for_module_namespace(
+  ctx: &WrappedEsmInitTargetContext<'_>,
+  wrapper_is_reachable: impl Fn(SymbolRef) -> bool,
+) -> Vec<WrappedEsmInitTarget> {
+  let mut targets = collect_eager_order_cjs_carriers_for_consumer_local_route(
+    ctx,
+    ctx.importer.idx,
+    &wrapper_is_reachable,
+  );
+  let owns_non_routed_init =
+    mixed_module_owns_non_routed_init(ctx, ctx.importer.idx, &wrapper_is_reachable);
+  let mut visited_symbols = FxHashSet::default();
+  for export_name in ctx.importer_meta.sorted_and_non_ambiguous_resolved_exports.keys() {
+    if owns_non_routed_init && !export_has_consumer_local_init(ctx, ctx.importer.idx, export_name) {
+      continue;
+    }
+    let resolved_export = &ctx.importer_meta.resolved_exports[export_name];
+    add_wrapped_esm_init_target_for_symbol(
+      ctx,
+      resolved_export.symbol_ref,
+      &wrapper_is_reachable,
+      &mut targets,
+      &mut visited_symbols,
+    );
+  }
+  sort_consumer_local_targets(ctx, ctx.importer.idx, &mut targets);
+  let mut seen = FxHashSet::default();
+  targets.retain(|target| seen.insert(*target));
+  if owns_non_routed_init {
+    targets.push(WrappedEsmInitTarget::Module(ctx.importer.idx));
+  }
+  targets
+}
+
+pub fn collect_eager_order_cjs_carriers_for_consumer_local_route(
+  ctx: &WrappedEsmInitTargetContext<'_>,
+  module_idx: ModuleIdx,
+  wrapper_is_reachable: impl Fn(SymbolRef) -> bool,
+) -> Vec<WrappedEsmInitTarget> {
+  let mut targets = Vec::new();
+  let mut visited = FxHashSet::default();
+  add_eager_order_cjs_carriers_for_consumer_local_route(
+    ctx,
+    module_idx,
+    &wrapper_is_reachable,
+    &mut targets,
+    &mut visited,
+  );
+  targets
+}
+
 fn collect_esm_init_targets_for_record(
   ctx: &WrappedEsmInitTargetContext<'_>,
   rec_idx: ImportRecordIdx,
@@ -189,15 +390,17 @@ fn collect_esm_init_targets_for_record(
   wrapper_is_reachable: &impl Fn(SymbolRef) -> bool,
   forwarding_module_owns_initialization: &impl Fn(ModuleIdx) -> bool,
   visited_forwarders: &mut FxHashSet<ModuleIdx>,
-) -> Vec<ModuleIdx> {
+) -> Vec<WrappedEsmInitTarget> {
   let mut targets = Vec::new();
   let record = &ctx.importer.import_records[rec_idx];
   let Some(importee_idx) = record.resolved_module else { return targets };
   let importee_meta = &ctx.metas[importee_idx];
+  let routes_reexport_records =
+    ctx.order_wrap_state.has_consumer_local_reexport_records(importee_idx);
   let route_through_transparent_wrapper =
     ctx.order_wrap_state.reexport_init_is_transparent(importee_idx)
-      && !importee_meta.has_dynamic_exports
-      && record_consumes_static_bindings(ctx.importer, record, rec_idx);
+      && (record_consumes_static_bindings(ctx.importer, record, rec_idx)
+        || ctx.order_wrap_state.is_consumer_local_reexport_route(importee_idx));
 
   // An eager, unwrapped, included forwarder hosted in the importer's own chunk: it runs before the
   // importer in the shared chunk, so its own `init_*()` emission can be delegated to.
@@ -217,21 +420,44 @@ fn collect_esm_init_targets_for_record(
     return targets;
   }
 
-  if wrapped_esm_target_is_reachable(
+  let own_wrapper_is_reachable = wrapped_esm_target_is_reachable(
     importee_idx,
     importee_meta,
     ctx.order_wrap_state,
     wrapper_is_reachable,
-  ) {
-    if !route_through_transparent_wrapper {
-      targets.push(importee_idx);
+  );
+  let owns_non_routed_init = routes_reexport_records && own_wrapper_is_reachable;
+  if own_wrapper_is_reachable {
+    if !route_through_transparent_wrapper && !routes_reexport_records {
+      targets.push(WrappedEsmInitTarget::Module(importee_idx));
       return targets;
     }
+  }
+
+  if route_through_transparent_wrapper
+    && ctx.order_wrap_state.is_consumer_local_reexport_route(importee_idx)
+  {
+    targets.extend(collect_eager_order_cjs_carriers_for_consumer_local_route(
+      ctx,
+      importee_idx,
+      wrapper_is_reachable,
+    ));
   }
 
   let mut visited_symbols = FxHashSet::default();
   if record.meta.contains(ImportRecordMeta::IsExportStar) {
     for export_name in importee_meta.sorted_and_non_ambiguous_resolved_exports.keys() {
+      // A star record initializes only names visible through that record in the importer's
+      // namespace. Other consumers can keep a shadowed or ambiguous export's wrapper live.
+      if ctx.strict_execution_order
+        && (ctx.importer_meta.star_export_record_by_name.get(export_name) != Some(&rec_idx)
+          || !ctx.importer_meta.sorted_and_non_ambiguous_resolved_exports.contains_key(export_name))
+      {
+        continue;
+      }
+      if owns_non_routed_init && !export_has_consumer_local_init(ctx, importee_idx, export_name) {
+        continue;
+      }
       let resolved_export = &importee_meta.resolved_exports[export_name];
       add_wrapped_esm_init_target_for_symbol(
         ctx,
@@ -250,7 +476,7 @@ fn collect_esm_init_targets_for_record(
           add_wrapped_esm_init_targets_for_namespace_consumer(
             ctx,
             *imported_as_ref,
-            importee_meta,
+            importee_idx,
             symbol_is_used,
             wrapper_is_reachable,
             &mut targets,
@@ -258,6 +484,9 @@ fn collect_esm_init_targets_for_record(
           );
         }
         Specifier::Literal(name) => {
+          if owns_non_routed_init && !export_has_consumer_local_init(ctx, importee_idx, name) {
+            continue;
+          }
           let symbol_ref = importee_meta
             .resolved_exports
             .get(name)
@@ -265,9 +494,12 @@ fn collect_esm_init_targets_for_record(
           // Liveness is importer-local. A named binding can itself hold a namespace object, so a
           // statically resolved `binding.member` read routes only that member even when the local
           // facade is absent from UsedSymbolRefs. Filtering by the canonical export would let a
-          // different importer that consumes the same leaf resurrect this dead specifier.
+          // different importer that consumes the same leaf resurrect this dead specifier. A
+          // re-exported binding is opaque like a re-exported namespace: it can canonically resolve
+          // to a namespace whose downstream member reads were statically folded (issue #10690).
           let binding_is_opaque = symbol_is_used(*imported_as_ref)
             || ctx.order_wrap_state.is_consumed_reexport_facade(*imported_as_ref)
+            || importer_reexports_binding(ctx.importer, *imported_as_ref)
             || add_wrapped_esm_init_targets_for_static_member_reads(
               ctx,
               *imported_as_ref,
@@ -304,7 +536,190 @@ fn collect_esm_init_targets_for_record(
     targets.retain(|target| !discharged.contains(target));
   }
 
+  if route_through_transparent_wrapper || routes_reexport_records {
+    sort_consumer_local_targets(ctx, importee_idx, &mut targets);
+  }
+  if owns_non_routed_init {
+    targets.push(WrappedEsmInitTarget::Module(importee_idx));
+  }
+
   targets
+}
+
+fn mixed_module_owns_non_routed_init(
+  ctx: &WrappedEsmInitTargetContext<'_>,
+  module_idx: ModuleIdx,
+  wrapper_is_reachable: &impl Fn(SymbolRef) -> bool,
+) -> bool {
+  ctx.order_wrap_state.has_consumer_local_reexport_records(module_idx)
+    && wrapped_esm_target_is_reachable(
+      module_idx,
+      &ctx.metas[module_idx],
+      ctx.order_wrap_state,
+      wrapper_is_reachable,
+    )
+}
+
+fn export_has_consumer_local_init(
+  ctx: &WrappedEsmInitTargetContext<'_>,
+  module_idx: ModuleIdx,
+  name: &str,
+) -> bool {
+  let Some(module) = ctx.modules[module_idx].as_normal() else { return false };
+  let record = module
+    .named_exports
+    .get(name)
+    .and_then(|export| module.named_imports.get(&export.referenced).map(|import| import.record_idx))
+    .or_else(|| ctx.metas[module_idx].star_export_record_by_name.get(name).copied());
+  record.is_some_and(|rec_idx| {
+    ctx.order_wrap_state.is_consumer_local_reexport_record(module_idx, rec_idx)
+  })
+}
+
+fn sort_consumer_local_targets(
+  ctx: &WrappedEsmInitTargetContext<'_>,
+  forwarder_idx: ModuleIdx,
+  targets: &mut [WrappedEsmInitTarget],
+) {
+  if targets.len() < 2 {
+    return;
+  }
+  let mut targets_by_owner = FxHashMap::<ModuleIdx, Vec<WrappedEsmInitTarget>>::default();
+  let mut ranks = FxHashMap::default();
+  for &target in targets.iter() {
+    targets_by_owner.entry(target.owner()).or_default().push(target);
+    ranks.insert(target, usize::MAX);
+  }
+  let mut visited = FxHashSet::default();
+  let mut next_rank = 0;
+  collect_consumer_local_target_order(
+    ctx,
+    forwarder_idx,
+    &targets_by_owner,
+    &mut ranks,
+    &mut visited,
+    &mut next_rank,
+  );
+  targets.sort_by_key(|target| ranks[target]);
+}
+
+fn collect_consumer_local_target_order(
+  ctx: &WrappedEsmInitTargetContext<'_>,
+  forwarder_idx: ModuleIdx,
+  targets_by_owner: &FxHashMap<ModuleIdx, Vec<WrappedEsmInitTarget>>,
+  ranks: &mut FxHashMap<WrappedEsmInitTarget, usize>,
+  visited: &mut FxHashSet<ModuleIdx>,
+  next_rank: &mut usize,
+) {
+  if !visited.insert(forwarder_idx) {
+    return;
+  }
+  let Some(forwarder) = ctx.modules[forwarder_idx].as_normal() else {
+    return;
+  };
+  let mut named_owners = FxHashMap::<ImportRecordIdx, FxHashSet<ModuleIdx>>::default();
+  for (symbol_ref, import) in &forwarder.named_imports {
+    named_owners
+      .entry(import.record_idx)
+      .or_default()
+      .insert(ctx.symbol_db.canonical_ref_resolving_namespace(*symbol_ref).owner);
+  }
+
+  for (rec_idx, rec) in forwarder.import_records.iter_enumerated() {
+    // Reserve the parent rank before descending. Resolve child routes before fallback owners,
+    // so a target found in a child keeps its full source path rather than the parent's prefix.
+    let rank = *next_rank;
+    *next_rank += 1;
+    assign_consumer_local_target_rank(
+      ranks,
+      WrappedEsmInitTarget::CjsCarrier(OrderCjsCarrierKey {
+        importer: forwarder_idx,
+        record: rec_idx,
+      }),
+      rank,
+    );
+    if let Some(importee_idx) = rec.resolved_module {
+      assign_consumer_local_target_rank(ranks, WrappedEsmInitTarget::Module(importee_idx), rank);
+      if ctx.order_wrap_state.is_consumer_local_reexport_route(importee_idx)
+        || ctx.order_wrap_state.reexport_init_is_transparent(importee_idx)
+        || ctx.order_wrap_state.has_consumer_local_reexport_records(importee_idx)
+      {
+        collect_consumer_local_target_order(
+          ctx,
+          importee_idx,
+          targets_by_owner,
+          ranks,
+          visited,
+          next_rank,
+        );
+      }
+    }
+    let mut owners = named_owners.remove(&rec_idx).unwrap_or_default();
+    if rec.meta.contains(ImportRecordMeta::IsExportStar)
+      && let Some(importee_idx) = rec.resolved_module
+    {
+      owners.extend(ctx.metas[importee_idx].resolved_exports.values().map(|resolved_export| {
+        ctx.symbol_db.canonical_ref_resolving_namespace(resolved_export.symbol_ref).owner
+      }));
+    }
+    for owner in owners {
+      for &target in targets_by_owner.get(&owner).into_iter().flatten() {
+        if !matches!(target, WrappedEsmInitTarget::CjsCarrier(key) if key.importer == forwarder_idx)
+        {
+          assign_consumer_local_target_rank(ranks, target, rank);
+        }
+      }
+    }
+  }
+}
+
+fn assign_consumer_local_target_rank(
+  ranks: &mut FxHashMap<WrappedEsmInitTarget, usize>,
+  target: WrappedEsmInitTarget,
+  rank: usize,
+) {
+  if let Some(target_rank) = ranks.get_mut(&target)
+    && *target_rank == usize::MAX
+  {
+    *target_rank = rank;
+  }
+}
+
+fn add_eager_order_cjs_carriers_for_consumer_local_route(
+  ctx: &WrappedEsmInitTargetContext<'_>,
+  module_idx: ModuleIdx,
+  wrapper_is_reachable: &impl Fn(SymbolRef) -> bool,
+  targets: &mut Vec<WrappedEsmInitTarget>,
+  visited: &mut FxHashSet<ModuleIdx>,
+) {
+  if !visited.insert(module_idx) {
+    return;
+  }
+  let Some(module) = ctx.modules[module_idx].as_normal() else {
+    return;
+  };
+  for (rec_idx, rec) in module.import_records.iter_enumerated() {
+    let key = OrderCjsCarrierKey { importer: module_idx, record: rec_idx };
+    if ctx.order_wrap_state.order_cjs_carrier(key).is_some_and(|carrier| carrier.eager) {
+      add_order_cjs_carrier_target(ctx, key, wrapper_is_reachable, targets);
+      continue;
+    }
+    if let Some(importee_idx) = rec.resolved_module
+      && ctx.order_wrap_state.is_consumer_local_reexport_route(importee_idx)
+      // Every forwarding hop must retain side effects. Without this per-hop gate, a deeper eager
+      // carrier would leak through an outer `moduleSideEffects: false` barrel.
+      && module.side_effects.has_side_effects()
+      && ctx.modules[importee_idx].side_effects().has_side_effects()
+    {
+      add_eager_order_cjs_carriers_for_consumer_local_route(
+        ctx,
+        importee_idx,
+        wrapper_is_reachable,
+        targets,
+        visited,
+      );
+    }
+  }
 }
 
 /// Route a namespace import through only the members this importer actually reads. A statically
@@ -316,13 +731,18 @@ fn collect_esm_init_targets_for_record(
 fn add_wrapped_esm_init_targets_for_namespace_consumer(
   ctx: &WrappedEsmInitTargetContext<'_>,
   namespace_ref: SymbolRef,
-  importee_meta: &LinkingMetadata,
+  importee_idx: ModuleIdx,
   symbol_is_used: &impl Fn(SymbolRef) -> bool,
   wrapper_is_reachable: &impl Fn(SymbolRef) -> bool,
-  targets: &mut Vec<ModuleIdx>,
+  targets: &mut Vec<WrappedEsmInitTarget>,
   visited_symbols: &mut FxHashSet<SymbolRef>,
 ) {
+  // A re-exported namespace binding is opaque to this importer: downstream consumers can read any
+  // member through the importer's export surface, and a statically folded `ns.x` read leaves no
+  // importer-local reference behind for the member-read scan below (issue #10690). Dead leaves
+  // stay pruned by the per-target reachability gates.
   let opaque_namespace_use = symbol_is_used(namespace_ref)
+    || importer_reexports_binding(ctx.importer, namespace_ref)
     || add_wrapped_esm_init_targets_for_static_member_reads(
       ctx,
       namespace_ref,
@@ -332,7 +752,13 @@ fn add_wrapped_esm_init_targets_for_namespace_consumer(
     );
 
   if opaque_namespace_use {
+    let importee_meta = &ctx.metas[importee_idx];
+    let owns_non_routed_init =
+      mixed_module_owns_non_routed_init(ctx, importee_idx, wrapper_is_reachable);
     for export_name in importee_meta.sorted_and_non_ambiguous_resolved_exports.keys() {
+      if owns_non_routed_init && !export_has_consumer_local_init(ctx, importee_idx, export_name) {
+        continue;
+      }
       let resolved_export = &importee_meta.resolved_exports[export_name];
       add_wrapped_esm_init_target_for_symbol(
         ctx,
@@ -345,16 +771,31 @@ fn add_wrapped_esm_init_targets_for_namespace_consumer(
   }
 }
 
+/// Whether the importer re-exports this local import binding. Membership is scan-time export
+/// surface data, deliberately not consumption-gated: a statically folded downstream read leaves no
+/// liveness trace on the facade chain, and a genuinely dead re-export routes nothing anyway
+/// because every target is gated on an included wrapper in a live chunk (issue #10690).
+pub fn importer_reexports_binding(importer: &NormalModule, local_ref: SymbolRef) -> bool {
+  importer.named_exports.values().any(|export| export.referenced == local_ref)
+}
+
 /// Route statically resolved member reads of one local import facade and report whether any use is
 /// opaque, in which case the caller must also initialize the imported binding as a whole.
 fn add_wrapped_esm_init_targets_for_static_member_reads(
   ctx: &WrappedEsmInitTargetContext<'_>,
   local_ref: SymbolRef,
   wrapper_is_reachable: &impl Fn(SymbolRef) -> bool,
-  targets: &mut Vec<ModuleIdx>,
+  targets: &mut Vec<WrappedEsmInitTarget>,
   visited_symbols: &mut FxHashSet<SymbolRef>,
 ) -> bool {
   let mut opaque_use = false;
+  let consumer_local_namespace = ctx
+    .importer
+    .named_imports
+    .get(&local_ref)
+    .filter(|import| matches!(import.imported, Specifier::Star))
+    .and_then(|import| ctx.importer.import_records[import.record_idx].resolved_module)
+    .filter(|module_idx| mixed_module_owns_non_routed_init(ctx, *module_idx, wrapper_is_reachable));
 
   for (stmt_idx, stmt_info) in ctx.stmt_infos[ctx.importer.idx].iter_enumerated() {
     if !ctx.importer_meta.stmt_info_included.has_bit(stmt_idx) {
@@ -366,6 +807,12 @@ fn add_wrapped_esm_init_targets_for_static_member_reads(
           opaque_use = true;
         }
         SymbolOrMemberExprRef::MemberExpr(member_expr) if member_expr.object_ref == local_ref => {
+          if let Some(module_idx) = consumer_local_namespace
+            && let Some(property) = member_expr.prop_and_span_list.first()
+            && !export_has_consumer_local_init(ctx, module_idx, &property.name)
+          {
+            continue;
+          }
           match member_expr.resolution(&ctx.importer_meta.resolved_member_expr_refs) {
             Some(resolution) => {
               if let Some(symbol_ref) = resolution.resolved
@@ -404,9 +851,7 @@ fn symbol_is_always_inlined(ctx: &WrappedEsmInitTargetContext<'_>, symbol_ref: S
 }
 
 /// Whether this record has a statically resolvable binding consumer. A side-effect-only import has
-/// no binding path to route and must keep calling a transparent wrapper directly. Dynamic-export
-/// namespaces are filtered by the caller because their runtime re-export glue is not statically
-/// replaceable with canonical leaf targets.
+/// no binding path to route and must keep calling a transparent wrapper directly.
 fn record_consumes_static_bindings(
   importer: &NormalModule,
   record: &ResolvedImportRecord,
@@ -420,10 +865,20 @@ fn add_wrapped_esm_init_target_for_symbol(
   ctx: &WrappedEsmInitTargetContext<'_>,
   symbol_ref: SymbolRef,
   wrapper_is_reachable: &impl Fn(SymbolRef) -> bool,
-  targets: &mut Vec<ModuleIdx>,
+  targets: &mut Vec<WrappedEsmInitTarget>,
   visited_symbols: &mut FxHashSet<SymbolRef>,
 ) {
   let canonical_ref = ctx.symbol_db.canonical_ref_resolving_namespace(symbol_ref);
+  let mut carrier_keys = ctx.order_wrap_state.order_cjs_carriers_for_symbol(symbol_ref);
+  if carrier_keys.is_empty() && canonical_ref != symbol_ref {
+    carrier_keys = ctx.order_wrap_state.order_cjs_carriers_for_symbol(canonical_ref);
+  }
+  if !carrier_keys.is_empty() {
+    for &key in carrier_keys {
+      add_order_cjs_carrier_target(ctx, key, wrapper_is_reachable, targets);
+    }
+    return;
+  }
   if !visited_symbols.insert(canonical_ref) {
     return;
   }
@@ -437,7 +892,7 @@ fn add_wrapped_esm_init_target_for_symbol(
     wrapper_is_reachable,
   ) && !transparent_order_wrapper
   {
-    targets.push(canonical_ref.owner);
+    targets.push(WrappedEsmInitTarget::Module(canonical_ref.owner));
     return;
   }
 
@@ -467,6 +922,47 @@ fn add_wrapped_esm_init_target_for_symbol(
   }
 }
 
+/// Whether a static import record has importer-local binding demand even when tree shaking removes
+/// the import declaration itself. Re-export flattening commonly excludes the declaration after its
+/// binding resolves to a leaf; code-splitting placement must still route that consumer to the same
+/// leaf/carrier that Emit/Register will use after wrapping.
+pub fn import_record_has_live_binding_consumer(
+  ctx: &WrappedEsmInitTargetContext<'_>,
+  rec_idx: ImportRecordIdx,
+  symbol_is_used: impl Fn(SymbolRef) -> bool,
+) -> bool {
+  ctx.importer.named_imports.iter().filter(|(_, import)| import.record_idx == rec_idx).any(
+    |(local_ref, _)| {
+      symbol_is_used(*local_ref)
+        || ctx.order_wrap_state.is_consumed_reexport_facade(*local_ref)
+        || ctx.stmt_infos[ctx.importer.idx].iter_enumerated().any(|(stmt_idx, stmt_info)| {
+          ctx.importer_meta.stmt_info_included.has_bit(stmt_idx)
+            && stmt_info.referenced_symbols.iter().any(|reference| match reference {
+              SymbolOrMemberExprRef::Symbol(symbol_ref) => symbol_ref == local_ref,
+              SymbolOrMemberExprRef::MemberExpr(member_expr) => {
+                member_expr.object_ref == *local_ref
+              }
+            })
+        })
+    },
+  )
+}
+
+fn add_order_cjs_carrier_target(
+  ctx: &WrappedEsmInitTargetContext<'_>,
+  key: OrderCjsCarrierKey,
+  wrapper_is_reachable: &impl Fn(SymbolRef) -> bool,
+  targets: &mut Vec<WrappedEsmInitTarget>,
+) {
+  let Some(carrier) = ctx.order_wrap_state.order_cjs_carrier(key) else {
+    return;
+  };
+  let target = WrappedEsmInitTarget::CjsCarrier(key);
+  if wrapper_is_reachable(carrier.wrapper_ref) && !targets.contains(&target) {
+    targets.push(target);
+  }
+}
+
 fn wrapped_esm_target_is_reachable(
   module_idx: ModuleIdx,
   meta: &LinkingMetadata,
@@ -483,28 +979,9 @@ fn wrapped_esm_target_is_reachable(
     )
 }
 
-/// Whether an included, unwrapped forwarder discharges *all* its downstream initialization through
-/// its own finalized statements — the full-delegation fast path. Its *included*, non-nested import
-/// statements do — the finalizer emits their `init_*()` calls at each statement's position — but a
-/// static-import statement that tree-shaking excluded emits nothing there (a pure package barrel's
-/// `export * from` hop whose bindings resolve through it is the canonical case). When every
-/// static-import record clears the finalizer's own record gate the forwarder owns every hop, so the
-/// caller can delegate wholesale; when only some do, the caller delegates per obligation (see
-/// [`forwarder_discharged_targets`]) rather than re-owning everything.
-///
-/// The record test mirrors Emit's gate ([`record_is_init_obligation`] for
-/// [`ObligationPurpose::Emit`]) exactly: a static-import (`ImportKind::Import`) record discharges
-/// only when its statement is *included* **and** the record is *not* a nested re-export
-/// walk-through. Both conditions are precisely what the finalizer checks before emitting an
-/// `init_*()` for a record, so full delegation can never count a record the finalizer actually
-/// suppresses. A nested-but-included hop emits nothing at the forwarder — a wrapped ancestor's
-/// traversal owns that init instead — yet the inclusion-bit-only predicate this replaced would have
-/// treated it as discharged, delegating wholesale to a silent forwarder and dropping the init
-/// altogether (the #10236 bug class). Any excluded or nested hop now fails this predicate and routes
-/// the caller into the per-obligation partial-delegation path ([`forwarder_discharged_targets`]),
-/// which enumerates through the same Emit gate and owns exactly the hops the forwarder leaves
-/// silent. The direction is strictly conservative: tightening the gate can only keep a redundant
-/// memoized `init_*` call, never drop a needed one.
+/// Whether an included, unwrapped forwarder discharges every static-import obligation.
+/// An import must be included, non-nested, and non-consumer-local to discharge its targets.
+/// Otherwise, the caller delegates only the targets collected by [`forwarder_discharged_targets`].
 fn eager_forwarder_discharges_own_hops(
   ctx: &WrappedEsmInitTargetContext<'_>,
   module_idx: ModuleIdx,
@@ -518,7 +995,8 @@ fn eager_forwarder_discharges_own_hops(
       stmt_info.import_records.iter().all(|rec_idx| {
         module.import_records[*rec_idx].kind != ImportKind::Import
           || (meta.stmt_info_included.has_bit(stmt_idx)
-            && !ctx.order_wrap_state.is_nested_reexport_record(module_idx, *rec_idx))
+            && !ctx.order_wrap_state.is_nested_reexport_record(module_idx, *rec_idx)
+            && !ctx.order_wrap_state.is_consumer_local_reexport_record(module_idx, *rec_idx))
       })
     },
   )
@@ -543,7 +1021,7 @@ fn forwarder_discharged_targets(
   wrapper_is_reachable: &impl Fn(SymbolRef) -> bool,
   forwarding_module_owns_initialization: &impl Fn(ModuleIdx) -> bool,
   visited_forwarders: &mut FxHashSet<ModuleIdx>,
-) -> FxHashSet<ModuleIdx> {
+) -> FxHashSet<WrappedEsmInitTarget> {
   let mut discharged = FxHashSet::default();
   if !visited_forwarders.insert(forwarder_idx) {
     return discharged;
@@ -587,30 +1065,51 @@ fn forwarder_discharged_targets(
 }
 
 /// Follow excluded re-exports through barrels to included wrapped importees — the excluded-hop
-/// router shared by the metadata pass (Emit/Register's precompute) and the fixpoint projector.
+/// router shared by final metadata, cycle projection, and pre-chunk reachability.
 ///
 /// Called with `retained_reexport_path: None` on a *non-included* forwarder, it walks the
-/// forwarder's every static import to the wrapped modules they reach — the excluded-hop routing the
-/// real metadata pass performs, and the edge source the resolved-exports-only projection missed
-/// (Hole 2). The real pass can pass `Some(path)` even through a non-included forwarder (retained
-/// star paths are recorded pre-tree-shaking); the projector's `None` differs from that only at the
-/// same-chunk prune below, and every retained-path target is a resolved export of the importer that
-/// the projector already covers through its collector source — see
-/// `project_excluded_forwarder_edges`.
+/// forwarder's static imports to the wrapped modules they reach. `Some(path)` follows retained
+/// re-export records and their required eager carriers. Callers supply target liveness and ownership:
+/// pre-chunk reachability uses included declarations, while final metadata and cycle projection
+/// use live chunks and same-chunk delegation.
 #[expect(clippy::too_many_arguments)]
 pub fn collect_order_wrap_esm_init_targets(
   modules: &IndexModules,
   metas: &LinkingMetadataVec,
-  chunk_graph: &ChunkGraph,
   order_state: &OrderWrapState,
-  importer_chunk_idx: ChunkIdx,
   root: ModuleIdx,
   retained_reexport_path: Option<&[(ModuleIdx, ImportRecordIdx)]>,
   visited: &mut FxHashSet<ModuleIdx>,
-  targets: &mut Vec<ModuleIdx>,
+  targets: &mut Vec<WrappedEsmInitTarget>,
+  target_is_reachable: &impl Fn(WrappedEsmInitTarget) -> bool,
+  forwarding_module_owns_initialization: &impl Fn(ModuleIdx) -> bool,
 ) {
-  let mut stack = vec![root];
-  while let Some(module_idx) = stack.pop() {
+  if retained_reexport_path.is_none() && order_state.is_consumer_local_reexport_route(root) {
+    collect_live_eager_carriers_for_consumer_local_route(
+      modules,
+      order_state,
+      root,
+      visited,
+      targets,
+      target_is_reachable,
+    );
+    return;
+  }
+
+  let retained_reexport_records = retained_reexport_path
+    .map(|path| path.iter().copied().collect::<FxHashSet<(ModuleIdx, ImportRecordIdx)>>());
+  let eager_retained_path_modules = retained_reexport_records
+    .as_ref()
+    .map(|path| collect_eager_retained_path_modules(modules, root, path));
+  let mut stack = vec![OrderInitTraversalItem::Module(root)];
+  while let Some(item) = stack.pop() {
+    let module_idx = match item {
+      OrderInitTraversalItem::Module(module_idx) => module_idx,
+      OrderInitTraversalItem::Target(target) => {
+        targets.push(target);
+        continue;
+      }
+    };
     let Module::Normal(importee) = &modules[module_idx] else { continue };
     let importee_linking_info = &metas[importee.idx];
 
@@ -618,42 +1117,160 @@ pub fn collect_order_wrap_esm_init_targets(
       continue;
     }
 
-    // Only collect modules whose wrapper is declared (i.e. the module is included in the output)
-    // and assigned to a chunk. Cross-chunk wrapper imports are registered after this pass.
-    let transparent_retained_waypoint =
-      retained_reexport_path.is_some() && order_state.reexport_init_is_transparent(importee.idx);
-    if importee_linking_info.is_included
-      && order_state.esm_init_included_in_live_chunk(
-        importee_linking_info,
-        importee.idx,
-        chunk_graph,
-      )
-      && !transparent_retained_waypoint
-    {
-      targets.push(importee.idx);
-      continue;
+    // The caller supplies declaration liveness before placement and live-chunk liveness after it.
+    let transparent_retained_waypoint = (retained_reexport_path.is_some()
+      && order_state.reexport_init_is_transparent(importee.idx))
+      || order_state.is_consumer_local_reexport_route(importee.idx);
+    let routes_retained_records = retained_reexport_records.as_ref().is_some_and(|path| {
+      importee.import_records.iter_enumerated().any(|(rec_idx, _)| {
+        path.contains(&(importee.idx, rec_idx))
+          && order_state.is_consumer_local_reexport_record(importee.idx, rec_idx)
+      })
+    });
+    let owns_non_routed_init = importee_linking_info.is_included
+      && target_is_reachable(WrappedEsmInitTarget::Module(importee.idx))
+      && !transparent_retained_waypoint;
+    if owns_non_routed_init {
+      if !routes_retained_records {
+        targets.push(WrappedEsmInitTarget::Module(importee.idx));
+        continue;
+      }
+      stack.push(OrderInitTraversalItem::Target(WrappedEsmInitTarget::Module(importee.idx)));
     }
 
-    if (retained_reexport_path.is_none()
+    if (!routes_retained_records
+      && retained_reexport_path.is_none()
       && importee_linking_info.is_included
-      && chunk_graph.module_to_chunk[importee.idx] == Some(importer_chunk_idx))
+      && forwarding_module_owns_initialization(importee.idx))
       || !matches!(importee.exports_kind, ExportsKind::Esm | ExportsKind::None)
     {
       continue;
     }
 
-    // Importee is a non-included barrel module — traverse its static imports to find included
-    // wrapped importees transitively. Preserve recursive DFS order with an explicit LIFO stack:
-    // pushing children in reverse keeps source-order visitation left-to-right.
+    // Traverse static imports to included wrapped importees. Push children in reverse to preserve
+    // source-order visitation.
     for (rec_idx, rec) in importee.import_records.iter_enumerated().rev() {
-      if retained_reexport_path.is_some_and(|path| !path.contains(&(importee.idx, rec_idx))) {
+      if owns_non_routed_init
+        && routes_retained_records
+        && !order_state.is_consumer_local_reexport_record(importee.idx, rec_idx)
+      {
+        continue;
+      }
+      if retained_reexport_records
+        .as_ref()
+        .is_some_and(|path| !path.contains(&(importee.idx, rec_idx)))
+      {
+        if eager_retained_path_modules
+          .as_ref()
+          .is_some_and(|modules| modules.contains(&importee.idx))
+          && let Some(carrier) = order_state
+            .order_cjs_carrier(OrderCjsCarrierKey { importer: importee.idx, record: rec_idx })
+          && carrier.eager
+          && target_is_reachable(WrappedEsmInitTarget::CjsCarrier(OrderCjsCarrierKey {
+            importer: importee.idx,
+            record: rec_idx,
+          }))
+        {
+          stack.push(OrderInitTraversalItem::Target(WrappedEsmInitTarget::CjsCarrier(
+            OrderCjsCarrierKey { importer: importee.idx, record: rec_idx },
+          )));
+        }
         continue;
       }
       if rec.kind == ImportKind::Import
         && let Some(sub_importee_idx) = rec.resolved_module
       {
-        stack.push(sub_importee_idx);
+        let carrier_key = OrderCjsCarrierKey { importer: importee.idx, record: rec_idx };
+        if order_state.has_order_cjs_carrier(carrier_key) {
+          if target_is_reachable(WrappedEsmInitTarget::CjsCarrier(carrier_key)) {
+            stack
+              .push(OrderInitTraversalItem::Target(WrappedEsmInitTarget::CjsCarrier(carrier_key)));
+          }
+          continue;
+        }
+        stack.push(OrderInitTraversalItem::Module(sub_importee_idx));
       }
+    }
+  }
+}
+
+/// Modules reached by a retained re-export path without crossing a `moduleSideEffects: false`
+/// boundary. An eager carrier outside the selected binding path is an execution dependency only
+/// while every forwarding hop retains side effects. Compute the path-wide permission up front so
+/// a module reached by converging retained paths is allowed when any fully effectful path reaches
+/// it, independent of DFS visitation order. Carriers explicitly selected by the retained path do
+/// not consult this set: binding demand still has to initialize them across a pure boundary.
+fn collect_eager_retained_path_modules(
+  modules: &IndexModules,
+  root: ModuleIdx,
+  retained_records: &FxHashSet<(ModuleIdx, ImportRecordIdx)>,
+) -> FxHashSet<ModuleIdx> {
+  let mut eager_modules = FxHashSet::default();
+  eager_modules.insert(root);
+  let mut stack = vec![root];
+
+  while let Some(module_idx) = stack.pop() {
+    let Some(module) = modules[module_idx].as_normal() else {
+      continue;
+    };
+    if !module.side_effects.has_side_effects() {
+      continue;
+    }
+    for (rec_idx, rec) in module.import_records.iter_enumerated() {
+      if rec.kind != ImportKind::Import || !retained_records.contains(&(module_idx, rec_idx)) {
+        continue;
+      }
+      let Some(importee_idx) = rec.resolved_module else {
+        continue;
+      };
+      if modules[importee_idx].side_effects().has_side_effects()
+        && eager_modules.insert(importee_idx)
+      {
+        stack.push(importee_idx);
+      }
+    }
+  }
+
+  eager_modules
+}
+
+fn collect_live_eager_carriers_for_consumer_local_route(
+  modules: &IndexModules,
+  order_state: &OrderWrapState,
+  module_idx: ModuleIdx,
+  visited: &mut FxHashSet<ModuleIdx>,
+  targets: &mut Vec<WrappedEsmInitTarget>,
+  target_is_reachable: &impl Fn(WrappedEsmInitTarget) -> bool,
+) {
+  if !visited.insert(module_idx) {
+    return;
+  }
+  let Some(module) = modules[module_idx].as_normal() else {
+    return;
+  };
+  for (rec_idx, rec) in module.import_records.iter_enumerated() {
+    let key = OrderCjsCarrierKey { importer: module_idx, record: rec_idx };
+    if let Some(carrier) = order_state.order_cjs_carrier(key) {
+      if carrier.eager && target_is_reachable(WrappedEsmInitTarget::CjsCarrier(key)) {
+        targets.push(WrappedEsmInitTarget::CjsCarrier(key));
+      }
+      continue;
+    }
+    if let Some(importee_idx) = rec.resolved_module
+      && order_state.is_consumer_local_reexport_route(importee_idx)
+      // Keep the precomputed excluded-hop path under the same per-hop
+      // `moduleSideEffects` boundary as importer-local record routing.
+      && module.side_effects.has_side_effects()
+      && modules[importee_idx].side_effects().has_side_effects()
+    {
+      collect_live_eager_carriers_for_consumer_local_route(
+        modules,
+        order_state,
+        importee_idx,
+        visited,
+        targets,
+        target_is_reachable,
+      );
     }
   }
 }

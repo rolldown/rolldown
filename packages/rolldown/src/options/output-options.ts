@@ -1,4 +1,8 @@
-import type { MinifyOptions as BindingMinifyOptions, PreRenderedChunk } from '../binding.cjs';
+import type {
+  ManglePropertiesOptions as BindingManglePropertiesOptions,
+  MinifyOptions as BindingMinifyOptions,
+  PreRenderedChunk,
+} from '../binding.cjs';
 import type { RolldownOutputPluginOption } from '../plugin';
 import type { SourcemapIgnoreListOption, SourcemapPathTransformOption } from '../types/misc';
 import type { ModuleInfo } from '../types/module-info';
@@ -100,7 +104,26 @@ export type CodeSplittingNameFunction = (
 /** @inline @category Code Splitting */
 export type CodeSplittingTestFunction = (id: string) => boolean | undefined | void;
 
-export type MinifyOptions = Omit<BindingMinifyOptions, 'module' | 'sourcemap'>;
+export interface ManglePropertiesOptions extends Omit<BindingManglePropertiesOptions, 'cache'> {
+  /**
+   * Stable mappings from original names to output names. `false` reserves an original name.
+   * String targets must be valid identifiers and cannot be `__proto__`, `constructor`, or
+   * `prototype`. Generated mappings are returned as `RolldownOutput.mangleCache`.
+   */
+  cache?: Record<string, string | false>;
+}
+
+export type MinifyOptions = Omit<BindingMinifyOptions, 'module' | 'sourcemap' | 'mangleProps'> & {
+  /**
+   * Mangle matching property names. This currently requires a single JavaScript output chunk.
+   * Rolldown throws an error when this option is used with multiple JavaScript chunks.
+   *
+   * Reserve names accessed indirectly, through module namespace objects, or by code outside
+   * Rolldown's minification.
+   * Numeric spellings, `__proto__`, `constructor`, and `prototype` are never mangled.
+   */
+  mangleProps?: ManglePropertiesOptions;
+};
 
 export interface CommentsOptions {
   /**
@@ -119,6 +142,10 @@ export interface CommentsOptions {
 
 /** @inline @category Code Splitting */
 export interface ChunkingContext {
+  /**
+   * The returned object and its dependency arrays are reused within the current chunking pass.
+   * Treat graph fields as read-only. `meta` properties and the `moduleSideEffects` field remain mutable.
+   */
   getModuleInfo(moduleId: string): ModuleInfo | null;
 }
 
@@ -139,6 +166,17 @@ export interface OutputOptions {
    * The {@linkcode dir | output.dir} option should be used instead if multiple chunks are generated.
    */
   file?: string;
+  /**
+   * Controls how non-ASCII characters are represented in generated JavaScript.
+   *
+   * - `'utf8'`: Preserve non-ASCII characters.
+   * - `'ascii'`: Escape non-ASCII characters where possible.
+   *
+   * {@include ./docs/output-charset.md}
+   *
+   * @default 'utf8'
+   */
+  charset?: 'ascii' | 'utf8';
   /**
    * Which exports mode to use.
    *
@@ -742,6 +780,10 @@ export interface OutputOptions {
    *
    * > [!WARNING]
    * > Enabling this option increases bundle size because wrapped modules need runtime init helpers.
+   *
+   * {@linkcode CodeSplittingOptions.experimentalInlineCommonChunks | experimentalInlineCommonChunks}
+   * with a `maxSize` above `0` turns this option on when it is omitted.
+   *
    * @default false
    */
   strictExecutionOrder?: boolean;
@@ -770,6 +812,12 @@ export type BuiltinModuleTag = '$initial';
 
 /** @category Code Splitting */
 export type CodeSplittingGroup = {
+  /**
+   * `debugName` gives this group a label in the bundler timing report.
+   *
+   * Set this option when `name` is a function. This option does not change the chunk name.
+   */
+  debugName?: string;
   /**
    * Name of the group. It will be also used as the name of the chunk and replace the `[name]` placeholder in the {@linkcode OutputOptions.chunkFileNames | output.chunkFileNames} option.
    *
@@ -823,6 +871,10 @@ export type CodeSplittingGroup = {
    * :::warning
    * Constraints like `minSize`, `maxSize`, etc. are applied separately for different names returned by the function.
    * :::
+   *
+   * :::warning
+   * Rolldown calls a function `name` once for each captured module, in a deterministic order. It calls `test` for every candidate module of the group first. Do not read a "current module" variable that `test` wrote, because that variable holds the last module `test` saw. Store such state under the module id instead.
+   * :::
    */
   name: string | CodeSplittingNameFunction;
   /**
@@ -837,6 +889,10 @@ export type CodeSplittingGroup = {
    * When using regular expression, it's recommended to use `[\\/]` to match the path separator instead of `/` to avoid potential issues on Windows.
    * - ✅ Recommended: `/node_modules[\\/]react/`
    * - ❌ Not recommended: `/node_modules/react/`
+   * :::
+   *
+   * :::warning
+   * Rolldown calls a function `test` once for each candidate module, in a deterministic order. It makes every `test` call of a group before it makes the first `name` call of that group. Rolldown processes the groups in the order that you declare them.
    * :::
    */
   test?: StringOrRegExp | CodeSplittingTestFunction;
@@ -973,6 +1029,39 @@ export type CodeSplittingGroup = {
 export type AdvancedChunksGroup = CodeSplittingGroup;
 
 /**
+ * Options for [`output.codeSplitting.experimentalInlineCommonChunks`](https://rolldown.rs/reference/OutputOptions.codeSplitting#experimentalinlinecommonchunks).
+ *
+ * See the [Inline Common Chunks guide](https://rolldown.rs/in-depth/inline-common-chunks)
+ * for how inlining works, its tradeoffs, and compatibility with plugins.
+ *
+ * @experimental This feature is experimental. Its behavior and option shape may change in any release.
+ *
+ * @category Code Splitting
+ */
+export type ExperimentalInlineCommonChunksOptions = {
+  /**
+   * Inline eligible automatic common chunks whose size is strictly smaller than this value.
+   * Size is the sum of their modules' transformed source sizes in bytes, before rendering,
+   * minification and compression.
+   *
+   * Must be a non-negative safe integer or `Infinity`. `0` disables inlining.
+   * `Infinity` removes the size limit.
+   *
+   * @default 0
+   */
+  maxSize?: number;
+  /**
+   * A matcher for module ids, or an array of them: a string (matched as a regular expression), a
+   * RegExp, or a function, each applied like {@linkcode CodeSplittingGroup.test | test}. A common
+   * chunk is not inlined when any of its modules matches any matcher.
+   */
+  exclude?:
+    | StringOrRegExp
+    | CodeSplittingTestFunction
+    | Array<StringOrRegExp | CodeSplittingTestFunction>;
+};
+
+/**
  * Configuration options for advanced code splitting.
  *
  * @category Code Splitting
@@ -1006,6 +1095,40 @@ export type CodeSplittingOptions = {
    * Groups to be used for code splitting.
    */
   groups?: CodeSplittingGroup[];
+  /**
+   * Inline small automatic common chunks into their consumers to reduce the chunk count.
+   * This duplicates code and adds runtime overhead.
+   *
+   * Set `maxSize` above `0` to enable it. Requires {@linkcode OutputOptions.format | output.format: 'es'}
+   * and an explicit {@linkcode InputOptions.preserveEntrySignatures | preserveEntrySignatures: false}.
+   * Requires {@linkcode OutputOptions.strictExecutionOrder | strictExecutionOrder},
+   * which is enabled automatically when omitted.
+   * Incompatible with {@linkcode OutputOptions.preserveModules | output.preserveModules}.
+   *
+   * Plugins must support modules appearing in multiple output chunks. See the
+   * [Inline Common Chunks guide](https://rolldown.rs/in-depth/inline-common-chunks)
+   * for behavior, tradeoffs and plugin compatibility.
+   *
+   * @example
+   * ```js
+   * import { defineConfig } from 'rolldown';
+   *
+   * export default defineConfig({
+   *   preserveEntrySignatures: false,
+   *   output: {
+   *     format: 'es',
+   *     codeSplitting: {
+   *       experimentalInlineCommonChunks: {
+   *         maxSize: 10 * 1024, // Example threshold in bytes.
+   *       },
+   *     },
+   *   },
+   * });
+   * ```
+   *
+   * @experimental This feature is experimental. Its behavior and option shape may change in any release.
+   */
+  experimentalInlineCommonChunks?: ExperimentalInlineCommonChunksOptions;
 };
 
 /**

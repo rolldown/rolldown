@@ -1,0 +1,11 @@
+{
+  "_comment": "`app.js` does `export * from './thenable.js'` where `thenable.js` has a `then` export. We cannot inline multiple modules in the dynamic entry because it has a .then export.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ]
+  }
+}

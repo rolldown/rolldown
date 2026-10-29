@@ -43,7 +43,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
   #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn write(mut self) -> BuildResult<BundleOutput> {
-    let start = self.plugin_driver.start_timing();
+    let start = self.plugin_driver.build_timings.start();
     let result = async {
       self.trace_action_session_meta();
       trace_action!(action::BuildStart { action: "BuildStart" });
@@ -54,14 +54,14 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       ret
     }
     .await;
-    self.plugin_driver.set_total_build_time(start);
-    self.append_plugin_timings_warning(result)
+    self.plugin_driver.build_timings.record_total(start);
+    result
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn generate(mut self) -> BuildResult<BundleOutput> {
-    let start = self.plugin_driver.start_timing();
+    let start = self.plugin_driver.build_timings.start();
     let result = async {
       self.trace_action_session_meta();
       trace_action!(action::BuildStart { action: "BuildStart" });
@@ -75,8 +75,8 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       ret
     }
     .await;
-    self.plugin_driver.set_total_build_time(start);
-    self.append_plugin_timings_warning(result)
+    self.plugin_driver.build_timings.record_total(start);
+    result
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
@@ -169,6 +169,14 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,
   ) -> BuildResult<BundleOutput> {
+    let result = self.bundle_write_impl(scan_stage_output).await;
+    self.invalidate_js_side_cache(result).await
+  }
+
+  async fn bundle_write_impl(
+    &mut self,
+    scan_stage_output: NormalizedScanStageOutput,
+  ) -> BuildResult<BundleOutput> {
     let dist_dir = self.options.cwd.join(&self.options.out_dir);
 
     if self.options.clean_dir && self.options.file.is_none() {
@@ -195,12 +203,12 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
         let pattern_name = match chunk {
           rolldown_common::Output::Chunk(c) => {
             if c.is_entry {
-              "entryFileNames"
+              "output.entryFileNames"
             } else {
-              "chunkFileNames"
+              "output.chunkFileNames"
             }
           }
-          rolldown_common::Output::Asset(_) => "assetFileNames",
+          rolldown_common::Output::Asset(_) => "output.assetFileNames",
         };
         return Err(
           BuildDiagnostic::invalid_option(rolldown_error::InvalidOptionType::NulByteInFilename {
@@ -238,7 +246,25 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,
   ) -> BuildResult<BundleOutput> {
-    self.bundle_up(scan_stage_output, false).await
+    let result = self.bundle_up(scan_stage_output, false).await;
+    self.invalidate_js_side_cache(result).await
+  }
+
+  /// A plugin may read `chunk.code` in `generateBundle` or `writeBundle` before a later hook fails, so the
+  /// JS side must drop its per-build caches on every exit of the output stage, not only on success.
+  async fn invalidate_js_side_cache(
+    &self,
+    result: BuildResult<BundleOutput>,
+  ) -> BuildResult<BundleOutput> {
+    let Some(invalidate_js_side_cache) = &self.options.invalidate_js_side_cache else {
+      return result;
+    };
+    match (result, invalidate_js_side_cache.call().await) {
+      (Ok(output), Ok(())) => Ok(output),
+      // The build error is the one to report.
+      (Err(errors), _) => Err(errors),
+      (Ok(_), Err(err)) => Err(err.into()),
+    }
   }
 
   #[tracing::instrument(level = "debug", skip(self, output))]
@@ -276,14 +302,16 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     scan_stage_output: NormalizedScanStageOutput,
     is_write: bool,
   ) -> BuildResult<BundleOutput> {
-    let start = self.plugin_driver.start_timing();
-    let (mut link_stage_output, ast_table, used_symbol_refs) =
+    // The one stretch of a build with no plugin in it, which is what makes it a usable
+    // baseline for "was this build plugin-bound?" — see `BuildTimings`.
+    let link_start = self.plugin_driver.build_timings.start();
+    let (mut link_stage_output, ast_table, used_symbol_refs_builder) =
       LinkStage::new(scan_stage_output, &self.options).link();
-    self.plugin_driver.set_link_stage_time(start);
+    self.plugin_driver.build_timings.record_link_stage(link_start);
 
     let bundle_output =
       GenerateStage::new(&mut link_stage_output, ast_table, &self.options, &self.plugin_driver)
-        .generate(used_symbol_refs)
+        .generate(used_symbol_refs_builder)
         .await; // Notice we don't use `?` to break the control flow here.
 
     // `create_output`/`make_copy` strip symbol-table scoping from the cache for
@@ -316,6 +344,16 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       .generate_bundle(&mut output.assets, is_write, &self.options, &mut output.warnings)
       .await?;
 
+    if let Err(errors) =
+      GenerateStage::validate_mangle_properties_output(&self.options, &output.assets)
+    {
+      self
+        .plugin_driver
+        .render_error(&HookRenderErrorArgs { errors: &errors, cwd: &self.options.cwd })
+        .await?;
+      return Err(errors);
+    }
+
     for asset in &output.assets {
       if is_filename_outside_output_dir(asset.filename()) {
         return Err(
@@ -323,10 +361,6 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
             .into(),
         );
       }
-    }
-
-    if let Some(invalidate_js_side_cache) = &self.options.invalidate_js_side_cache {
-      invalidate_js_side_cache.call().await?;
     }
 
     Ok(output)
@@ -410,19 +444,6 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
         file: self.options.file.clone(),
       });
     }
-  }
-
-  /// Append plugin timings warning to result if applicable.
-  fn append_plugin_timings_warning(
-    &self,
-    result: BuildResult<BundleOutput>,
-  ) -> BuildResult<BundleOutput> {
-    result.map(|mut output| {
-      if let Some(plugins) = self.plugin_driver.get_plugin_timings_info() {
-        output.warnings.push(BuildDiagnostic::plugin_timings(plugins).with_severity_warning());
-      }
-      output
-    })
   }
 }
 

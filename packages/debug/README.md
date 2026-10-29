@@ -5,10 +5,12 @@ Utilities and generated TypeScript types for reading Rolldown devtools output.
 When `devtools` is enabled, Rolldown writes JSON-lines files to:
 
 ```text
-node_modules/.rolldown/<session_id>/
+<cwd>/node_modules/.rolldown/<session_id>/
   meta.json
   logs.json
 ```
+
+`<cwd>` is the build's `InputOptions#cwd`, which defaults to the working directory the build ran from. Resolve the files against it rather than your own working directory, which may differ.
 
 `logs.json` is complete after `await bundle.close()` resolves.
 
@@ -18,7 +20,7 @@ node_modules/.rolldown/<session_id>/
 import fs from 'node:fs';
 import { parseToEvents, type Event, type StringRef } from '@rolldown/debug';
 
-const data = fs.readFileSync('node_modules/.rolldown/<session_id>/logs.json', 'utf8');
+const data = fs.readFileSync('<cwd>/node_modules/.rolldown/<session_id>/logs.json', 'utf8');
 const events = parseToEvents(data.trim());
 
 type ActionEvent = Exclude<Event, StringRef> & { build_id: string };
@@ -41,7 +43,7 @@ function isActionEvent(event: Event): event is ActionEvent {
   return 'build_id' in event;
 }
 
-const data = fs.readFileSync('node_modules/.rolldown/<session_id>/logs.json', 'utf8');
+const data = fs.readFileSync('<cwd>/node_modules/.rolldown/<session_id>/logs.json', 'utf8');
 const actionEvents = parseToEvents(data.trim()).filter(isActionEvent);
 const buildId = actionEvents.at(-1)?.build_id;
 

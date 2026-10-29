@@ -23,16 +23,14 @@ export default require_b();
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region a.cjs
+// a.cjs
 var require_a = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = "a";
 }));
-//#endregion
-//#region b.cjs
+// b.cjs
 var require_b = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.b = "b";
 }));
-//#endregion
 export { require_a as n, require_b as t };
 
 ```
@@ -61,16 +59,14 @@ export default require_b();
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region a.cjs
+// a.cjs
 var require_a = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = "a";
 }));
-//#endregion
-//#region b.cjs
+// b.cjs
 var require_b = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.b = "b";
 }));
-//#endregion
 export { require_a as n, require_b as t };
 
 ```

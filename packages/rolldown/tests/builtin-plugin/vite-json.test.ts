@@ -1,33 +1,52 @@
 import { viteJsonPlugin } from 'rolldown/experimental';
+import { isWasiTest } from 'rolldown-tests/utils';
 import { expect, test } from 'vitest';
+import type { BindingCallableBuiltinPlugin } from '../../src/binding.cjs';
 
-type CallableTransformHook = (
-  code: string,
-  id: string,
-  options: { moduleType: string },
-) => Promise<{ code?: string } | null | undefined>;
+type CallableJsonPlugin = ReturnType<typeof viteJsonPlugin> & BindingCallableBuiltinPlugin;
 
-function createTransformHook(): CallableTransformHook {
-  const plugin = viteJsonPlugin({ minify: false, namedExports: true, stringify: false });
-  // `viteJsonPlugin` returns a callable builtin plugin, but its declared type
-  // does not carry the hook methods.
-  return (plugin as unknown as { transform: CallableTransformHook }).transform;
-}
+// With the WASI binding, emnapi creates the error with its own stack frame. The hook wrapper
+// keeps that stack. Then the caller frame is not the first frame.
+test.skipIf(isWasiTest)('a native hook error gets the caller frames', async () => {
+  const plugin = viteJsonPlugin({}) as CallableJsonPlugin;
+
+  async function callTransform() {
+    return await plugin.transform('{"x":', 'data.json', { moduleType: 'json' });
+  }
+  const error = await callTransform().then(
+    () => undefined,
+    (e: Error) => e,
+  );
+  expect(error?.message).toContain('EOF while parsing');
+  // The native error has no stack frames. The hook wrapper captures the frames and removes
+  // its own frame.
+  const frames = error?.stack?.split('\n').filter((line) => /^\s+at /.test(line)) ?? [];
+  expect(frames[0]).toContain('callTransform');
+  expect(error?.stack).not.toContain('invokeBuiltinHook');
+});
 
 test('transform parses JSON into an ES module', async () => {
-  const transform = createTransformHook();
+  const plugin = viteJsonPlugin({
+    minify: false,
+    namedExports: true,
+    stringify: false,
+  }) as CallableJsonPlugin;
 
-  const result = await transform('{ "answer": 42 }', '/virtual/answer.json', {
+  const result = await plugin.transform('{ "answer": 42 }', '/virtual/answer.json', {
     moduleType: 'json',
   });
   expect(result?.code).toContain('42');
 });
 
 test('transform attaches the module id to a plugin error', async () => {
-  const transform = createTransformHook();
+  const plugin = viteJsonPlugin({
+    minify: false,
+    namedExports: true,
+    stringify: false,
+  }) as CallableJsonPlugin;
 
   await expect(
-    transform('{ not json }', '/virtual/broken.json', { moduleType: 'json' }),
+    plugin.transform('{ not json }', '/virtual/broken.json', { moduleType: 'json' }),
   ).rejects.toMatchObject({
     plugin: 'builtin:vite-json',
     hook: 'transform',

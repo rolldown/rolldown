@@ -1,0 +1,11 @@
+{
+  "_comment": "https://github.com/rolldown/rolldown/issues/10734 - `service.js` is a dynamic entry whose module is shared with the `cyclic.js` entry, so it lands in a common chunk while its own entry chunk survives as a facade. Merging the `shared.js`/`chain-a.js` atom into that facade made the facade and the module's host chunk depend on each other.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ]
+  }
+}

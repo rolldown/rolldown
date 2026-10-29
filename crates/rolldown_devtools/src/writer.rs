@@ -1,7 +1,8 @@
 use std::{
+  collections::hash_map::Entry,
   fs::{File, OpenOptions},
   io::{BufWriter, Write},
-  path::Path,
+  path::PathBuf,
   sync::{
     Arc, LazyLock,
     mpsc::{Sender, channel},
@@ -15,6 +16,8 @@ use serde::ser::{SerializeMap, Serializer as _};
 
 /// Commands sent to the background devtools log-writer thread.
 pub enum LogCommand {
+  /// Bind a session to the directory its relative log paths resolve against; the wasm binding has no process working directory, so relying on one writes outside the project.
+  SetSessionCwd { session_id: String, cwd: PathBuf },
   /// Emit one event. Carries a fully resolved action payload plus the
   /// session/filename the producer has already decided on.
   Write { session_id: String, filename: Arc<str>, action_value: serde_json::Value },
@@ -63,26 +66,46 @@ struct WriterState {
   files: FxHashMap<Arc<str>, BufWriter<File>>,
   files_by_session: FxHashMap<String, FxHashSet<Arc<str>>>,
   exist_hash_by_session: FxHashMap<String, FxHashSet<String>>,
-  dir_ensured: FxHashSet<String>,
+  cwd_by_session: FxHashMap<String, PathBuf>,
+  unopenable_files_by_session: FxHashMap<String, FxHashSet<Arc<str>>>,
 }
 
 impl WriterState {
   fn handle(&mut self, cmd: LogCommand) {
     match cmd {
+      LogCommand::SetSessionCwd { session_id, cwd } => {
+        self.cwd_by_session.insert(session_id, cwd);
+      }
       LogCommand::Write { session_id, filename, action_value } => {
-        if self.dir_ensured.insert(session_id.clone()) {
-          if let Some(parent) = Path::new(filename.as_ref()).parent() {
-            let _ = std::fs::create_dir_all(parent);
-          }
+        let unopenable = self.unopenable_files_by_session.get(&session_id);
+        if unopenable.is_some_and(|files| files.contains(&filename)) {
+          return;
         }
-        let file = self.files.entry(Arc::clone(&filename)).or_insert_with(|| {
-          let f = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(filename.as_ref())
-            .unwrap_or_else(|e| panic!("devtools: failed to open log file {filename}: {e}"));
-          BufWriter::new(f)
-        });
+        let file = match self.files.entry(Arc::clone(&filename)) {
+          Entry::Occupied(entry) => entry.into_mut(),
+          Entry::Vacant(entry) => {
+            let path = self
+              .cwd_by_session
+              .get(&session_id)
+              .map_or_else(|| PathBuf::from(filename.as_ref()), |cwd| cwd.join(filename.as_ref()));
+            if let Some(parent) = path.parent() {
+              let _ = std::fs::create_dir_all(parent);
+            }
+            match OpenOptions::new().create(true).append(true).open(&path) {
+              Ok(file) => entry.insert(BufWriter::new(file)),
+              // Losing devtools output must not abort the build; on wasm a panic here traps the whole module.
+              Err(err) => {
+                #[expect(clippy::print_stderr, reason = "no diagnostics channel on this thread")]
+                {
+                  eprintln!("devtools: failed to open log file {}: {err}", path.display());
+                }
+                // Warn once and stop retrying the open for every later event on this file.
+                self.unopenable_files_by_session.entry(session_id).or_default().insert(filename);
+                return;
+              }
+            }
+          }
+        };
         self.files_by_session.entry(session_id.clone()).or_default().insert(Arc::clone(&filename));
         let hashes = self.exist_hash_by_session.entry(session_id).or_default();
         let _ = write_event(file, &action_value, hashes);
@@ -95,8 +118,10 @@ impl WriterState {
             }
           }
         }
+        // The session cwd outlives its files: `close()` queues this command before the `closeBundle` hooks run, so late events still have to resolve.
         self.exist_hash_by_session.remove(&session_id);
-        self.dir_ensured.remove(&session_id);
+        // A late event on a still-broken file warns once more and re-adds its entry, which the next close drops again.
+        self.unopenable_files_by_session.remove(&session_id);
         if let Some(ack) = ack {
           let _ = ack.send(());
         }

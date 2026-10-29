@@ -41,7 +41,7 @@ We use Rust's built-in test framework for writing and running tests. Test cases 
 
 A data-driven test case is a folder that contains a `_config.json` file. The test runner will read the configuration from `_config.json`, bundle the input files, and execute the output files to verify the behavior.
 
-`_config.json` contains the configuration for the test suite. If everything works right, you should be able to have auto-completion while editing `_config.json` due to the [config](https://github.com/rolldown/rolldown/blob/main/.vscode/settings.json#L36-L40).
+`_config.json` contains the configuration for the test suite. If everything works right, you should be able to have auto-completion while editing `_config.json` due to the [config](https://github.com/rolldown/rolldown/blob/main/.vscode/settings.json#L40-L43).
 
 For all available options, you could refer to
 
@@ -333,6 +333,7 @@ This will run only tests whose names match "function". For more filtering option
 Our Rust test infra is powerful enough to cover most of the case of JavaScript (plugin, passing function inside config).
 But since JavaScript side user is still our first class user, try to put tests in JavaScript side if possible.
 Here are some experience about what test technique you should use.
+
 :::tip TLDR
 Add test in JavaScript side if you don't want to wasting time on deciding which way to use.
 :::

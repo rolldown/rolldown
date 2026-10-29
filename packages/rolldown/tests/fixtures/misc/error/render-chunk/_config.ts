@@ -1,7 +1,10 @@
 import { defineTest } from 'rolldown-tests';
+import { isWasiTest } from 'rolldown-tests/utils';
 import { expect } from 'vitest';
 
 export default defineTest({
+  // Under the wasm binding the error arrives with a `wasm://` stack, without the `at errorFn1` / `at errorFn2` frames asserted below.
+  skip: isWasiTest,
   config: {
     plugins: [
       {

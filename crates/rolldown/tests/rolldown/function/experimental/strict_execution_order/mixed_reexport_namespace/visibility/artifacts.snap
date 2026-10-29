@@ -1,0 +1,138 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## NAMESPACE_CONFLICT
+
+```text
+[NAMESPACE_CONFLICT] Conflicting namespaces: "ambiguous.js" re-exports "VALUE" from one of the modules "../leaf.js" and "other.js" (will be ignored).
+   ╭─[ ../leaf.js:1:14 ]
+   │
+ 1 │ export const VALUE = 'leaf';
+   │              ──┬──  
+   │                ╰──── One matching export is here.
+   │
+   ├─[ other.js:1:14 ]
+   │
+ 1 │ export const VALUE = 'other';
+   │              ──┬──  
+   │                ╰──── One matching export is here.
+───╯
+
+```
+
+# Assets
+
+## lazy.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+// ../leaf.js
+var VALUE;
+function init_leaf() {
+	return (init_leaf = __esmMin((() => {
+		VALUE = "leaf";
+	})))();
+}
+// leaf-default.js
+var leaf_default_default;
+function init_leaf_default() {
+	return (init_leaf_default = __esmMin((() => {
+		leaf_default_default = "default";
+	})))();
+}
+// lazy.js
+function init_lazy() {
+	return (init_lazy = __esmMin((() => {
+		init_leaf();
+		init_leaf_default();
+	})))();
+}
+init_lazy();
+export { leaf_default_default as DEFAULT, VALUE };
+
+```
+
+## main.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+// ../mixed.js
+var LOCAL;
+function init_mixed() {
+	return (init_mixed = __esmMin((() => {
+		LOCAL = "local";
+	})))();
+}
+// shadowed.js
+var shadowed_exports = /* @__PURE__ */ __exportAll({
+	LOCAL: () => LOCAL,
+	VALUE: () => "own"
+});
+function init_shadowed() {
+	return (init_shadowed = __esmMin((() => {
+		init_mixed();
+	})))();
+}
+// other.js
+var OTHER;
+function init_other() {
+	return (init_other = __esmMin((() => {
+		OTHER = "other-local";
+	})))();
+}
+// ambiguous.js
+var ambiguous_exports = /* @__PURE__ */ __exportAll({
+	LOCAL: () => LOCAL,
+	OTHER: () => OTHER
+});
+function init_ambiguous() {
+	return (init_ambiguous = __esmMin((() => {
+		init_mixed();
+		init_other();
+	})))();
+}
+// mixed-default.js
+var LOCAL_DEFAULT;
+function init_mixed_default() {
+	return (init_mixed_default = __esmMin((() => {
+		LOCAL_DEFAULT = "local-default";
+	})))();
+}
+// defaulted.js
+var defaulted_exports = /* @__PURE__ */ __exportAll({ LOCAL_DEFAULT: () => LOCAL_DEFAULT });
+function init_defaulted() {
+	return (init_defaulted = __esmMin((() => {
+		init_mixed_default();
+	})))();
+}
+// main.js
+async function read() {
+	return Object.entries(await import("./lazy.js"));
+}
+var entries;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_shadowed();
+		init_ambiguous();
+		init_defaulted();
+		entries = {
+			shadowed: Object.entries(shadowed_exports),
+			ambiguous: Object.entries(ambiguous_exports),
+			defaulted: Object.entries(defaulted_exports)
+		};
+	})))();
+}
+init_main();
+export { entries, read };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```

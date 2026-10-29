@@ -155,9 +155,7 @@ impl Watcher {
     for (index, config) in configs.into_iter().enumerate() {
       let task_index = WatchTaskIdx::from_usize(index);
       let fs_handler = TaskFsEventHandler { task_index, tx: tx.clone() };
-      let fs_watcher =
-        rolldown_fs_watcher::create_fs_watcher(fs_handler, fs_watcher_config.clone())?;
-      let task = WatchTask::new(config, fs_watcher, closed)?;
+      let task = WatchTask::new(config, fs_handler, &fs_watcher_config, closed)?;
       tasks.push(task);
     }
     Ok(tasks)

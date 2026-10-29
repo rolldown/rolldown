@@ -208,11 +208,12 @@ impl NativePluginContextImpl {
 
   fn log(&self, level: LogLevel, log: LogWithoutPlugin) {
     if let Some(on_log) = &self.options.on_log {
-      let on_log = on_log.clone();
       let log = log.into_log(Some(self.plugin_name.to_string()));
+      // Call now so the log is enqueued before any later work; only its result is awaited.
+      let result = on_log.call(level, log);
       rolldown_utils::futures::spawn(async move {
         // FIXME: should collect error happened here and cause the build to fail later
-        let _ = on_log.call(level, log).await;
+        let _ = result.await;
       });
     }
   }

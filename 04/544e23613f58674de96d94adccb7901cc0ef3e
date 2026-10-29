@@ -1,0 +1,19 @@
+packages/rolldown/tests/utils/transform.test.ts
+  s_4f6c9baf4b3884::t_e3e574ac0c0b99 379,381,383-390,394,396,398,400-404
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "04544e23613f58674de96d94adccb7901cc0ef3e",
+  "prompts": {},
+  "sessions": {
+    "s_4f6c9baf4b3884": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a18221-f4b0-7913-9681-c2c919cdb5d3",
+        "model": "unknown"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

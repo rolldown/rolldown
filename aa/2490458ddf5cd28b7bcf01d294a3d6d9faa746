@@ -1,0 +1,57 @@
+crates/rolldown/tests/rolldown/function/inline_common_chunks/kept_as_file/dev_mode_import_meta_url/b.js
+  s_5e23c856412bb0::t_f48dd7d50847f0 1-2
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode_hot_accept/a.js
+  s_5e23c856412bb0::t_721f92011df44e 1-9
+crates/rolldown/tests/rolldown/function/inline_common_chunks/kept_as_file/import_meta_hot_outside_dev_mode/artifacts.snap
+  s_5e23c856412bb0::t_aa63d5a3270d79 1-59
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode_hot_accept/accept_dep.js
+  s_5e23c856412bb0::t_69b6f344556b61 1-11
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode_hot_accept/dep.js
+  s_5e23c856412bb0::t_6c4a91a0912705 1
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode_hot_accept/artifacts.snap
+  s_5e23c856412bb0::t_b6af43073173c8 1-284
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode_hot_accept/b.js
+  s_5e23c856412bb0::t_8342dae9b8d778 1-6
+crates/rolldown/tests/rolldown/function/inline_common_chunks/kept_as_file/import_meta_hot_outside_dev_mode/_config.json
+  s_5e23c856412bb0::t_97bf5755c2003c 1-22
+crates/rolldown/tests/rolldown/function/inline_common_chunks/kept_as_file/import_meta_hot_outside_dev_mode/b.js
+  s_5e23c856412bb0::t_8f7c98eb2bfaca 1-2
+crates/rolldown/tests/rolldown/function/inline_common_chunks/kept_as_file/dev_mode_import_meta_url/artifacts.snap
+  s_5e23c856412bb0::t_24a5ff7f7850f2 1-86
+crates/rolldown/tests/rolldown/function/inline_common_chunks/kept_as_file/import_meta_hot_outside_dev_mode/shared.js
+  s_5e23c856412bb0::t_655647e0e46802 1
+crates/rolldown/tests/rolldown/function/inline_common_chunks/kept_as_file/dev_mode_import_meta_url/a.js
+  s_5e23c856412bb0::t_cb0d5a8351668c 1-2
+crates/rolldown/tests/rolldown/function/inline_common_chunks/kept_as_file/import_meta_hot_outside_dev_mode/a.js
+  s_5e23c856412bb0::t_52e7e7f819afb0 1-2
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode_hot_accept/dep.hmr-1.js
+  s_5e23c856412bb0::t_7bacaf74e68636 1
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode_hot_accept/self_accept.hmr-0.js
+  s_5e23c856412bb0::t_3e20e531f7be4b 1-5
+crates/rolldown/tests/rolldown/function/inline_common_chunks/kept_as_file/dev_mode_import_meta_url/_config.json
+  s_5e23c856412bb0::t_3c113b76c07f72 1-24
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode_hot_accept/_config.json
+  s_5e23c856412bb0::t_0da945f3678502 1-28
+crates/rolldown/tests/rolldown/function/inline_common_chunks/kept_as_file/dev_mode_import_meta_url/shared.js
+  s_5e23c856412bb0::t_6d2332f4fc4d26 1-3
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode_hot_accept/self_accept.js
+  s_5e23c856412bb0::t_8ed8df72032f9f 1-5
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode_hot_accept/c.js
+  s_5e23c856412bb0::t_ed0e7db3212b4d 1-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "aa2490458ddf5cd28b7bcf01d294a3d6d9faa746",
+  "prompts": {},
+  "sessions": {
+    "s_5e23c856412bb0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "67fed95a-8f31-49a4-a7b7-36f248b4afdc",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

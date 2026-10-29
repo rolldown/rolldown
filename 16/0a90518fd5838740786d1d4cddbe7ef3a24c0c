@@ -1,0 +1,124 @@
+crates/rolldown/tests/rolldown/topics/hmr/wrapped_module_with_only_functions/imported.js
+  s_1349f77e095742::t_d51dd09ee3a5fd 1-3
+crates/rolldown/tests/rolldown/topics/hmr/wrapped_module_with_only_functions/main.js
+  s_1349f77e095742::t_dce43f47b433df 1-7
+crates/rolldown/tests/rolldown/topics/hmr/wrapped_module_with_only_functions/_config.json
+  s_1349f77e095742::t_a94db98df5b7b6 1-13
+crates/rolldown/tests/rolldown/topics/hmr/wrapped_module_with_only_functions/required.js
+  s_1349f77e095742::t_486f2e45d9a16a 1-3
+crates/rolldown/src/stages/generate_stage/compute_wrapped_esm_init_metadata.rs
+  s_1349f77e095742::t_338174c85d5763 108-110
+crates/rolldown/tests/rolldown/topics/hmr/wrapped_module_with_only_functions/artifacts.snap
+  s_1349f77e095742::t_9d76a64d188008 1-108
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode/leaf.js
+  s_1349f77e095742::t_6354fc8065f4b2 1-3
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode/shared.js
+  s_1349f77e095742::t_87f1b0ac9d535e 1-5
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode/_config.json
+  s_1349f77e095742::t_2fe50f2c638509 4-11,14-16,18-20,22
+internal-docs/inline-common-chunks/implementation.md
+  s_1349f77e095742::t_07c31612cd3098 11-16,142-143
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode/leaf.hmr-0.js
+  s_1349f77e095742::t_a10236eb00a2cd 1-3
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode/main.js
+  s_1349f77e095742::t_cdff36d961fadd 1-18
+crates/rolldown/src/ecmascript/format/share_factory.rs
+  s_1349f77e095742::t_bb5a38ef2f65d7 84-95
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode/other.js
+  s_1349f77e095742::t_8d331c1196cfdc 1-5
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode/artifacts.snap
+  s_1349f77e095742::t_60140fd111b834 4,6,8-72,75-187
+internal-docs/hmr/design.md
+  s_1349f77e095742::t_79eee6dc8e48be 193
+  s_1349f77e095742::t_07c8c0b5ad05f1 191-192
+internal-docs/inline-common-chunks/design.md
+  s_1349f77e095742::t_2cd452ee77a87a 104-105,107-108,110,123,125
+internal-docs/dev-server-test-harness/implementation.md
+  s_1349f77e095742::t_e3c68738289b51 120
+packages/test-dev-server/src/vite-server.ts
+  s_1349f77e095742::t_13cd4ebe3c780e 370-372
+packages/test-dev-server/tests/playground/inline-common-chunks/__tests__/inline-common-chunks.spec.ts
+  s_1349f77e095742::t_4590a47c47d21f 1-42
+packages/test-dev-server/tests/playground/inline-common-chunks/dev.config.mjs
+  s_1349f77e095742::t_1155f6db273a20 1-16
+packages/test-dev-server/tests/playground/inline-common-chunks/index.html
+  s_1349f77e095742::t_bd6d2b9f245cae 1-4
+packages/test-dev-server/tests/playground/inline-common-chunks/leaf.js
+  s_1349f77e095742::t_62d2c1c99f1ac3 1-3
+packages/test-dev-server/tests/playground/inline-common-chunks/main.js
+  s_1349f77e095742::t_77f2baa125ed51 1-2
+packages/test-dev-server/tests/playground/inline-common-chunks/package.json
+  s_1349f77e095742::t_901b01ac94c71e 1-12
+packages/test-dev-server/tests/playground/inline-common-chunks/route-a.js
+  s_1349f77e095742::t_946a825e150480 1-5
+packages/test-dev-server/tests/playground/inline-common-chunks/route-b.js
+  s_1349f77e095742::t_d63576d9f33656 1-5
+packages/test-dev-server/tests/playground/inline-common-chunks/shared.js
+  s_1349f77e095742::t_3c71e7dcbc0512 1-5
+pnpm-lock.yaml
+  s_1349f77e095742::t_3621094cbdc7de 1223-1228
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode_hot_accept/b.js
+  s_5e23c856412bb0::t_8342dae9b8d778 1-6
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode_hot_accept/self_accept.hmr-0.js
+  s_5e23c856412bb0::t_3e20e531f7be4b 1-5
+crates/rolldown/tests/rolldown/function/inline_common_chunks/kept_as_file/import_meta_hot_outside_dev_mode/artifacts.snap
+  s_5e23c856412bb0::t_aa63d5a3270d79 1-59
+crates/rolldown/tests/rolldown/function/inline_common_chunks/kept_as_file/import_meta_hot_outside_dev_mode/_config.json
+  s_5e23c856412bb0::t_97bf5755c2003c 1-22
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode_hot_accept/accept_dep.js
+  s_5e23c856412bb0::t_69b6f344556b61 1-11
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode_hot_accept/artifacts.snap
+  s_5e23c856412bb0::t_b6af43073173c8 1-284
+crates/rolldown/tests/rolldown/function/inline_common_chunks/kept_as_file/dev_mode_import_meta_url/artifacts.snap
+  s_5e23c856412bb0::t_24a5ff7f7850f2 1-86
+crates/rolldown/tests/rolldown/function/inline_common_chunks/kept_as_file/import_meta_hot_outside_dev_mode/shared.js
+  s_5e23c856412bb0::t_655647e0e46802 1
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode_hot_accept/a.js
+  s_5e23c856412bb0::t_721f92011df44e 1-9
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode_hot_accept/c.js
+  s_5e23c856412bb0::t_ed0e7db3212b4d 1-9
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode_hot_accept/_config.json
+  s_5e23c856412bb0::t_0da945f3678502 1-28
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode_hot_accept/dep.js
+  s_5e23c856412bb0::t_6c4a91a0912705 1
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode_hot_accept/dep.hmr-1.js
+  s_5e23c856412bb0::t_7bacaf74e68636 1
+crates/rolldown/tests/rolldown/function/inline_common_chunks/kept_as_file/import_meta_hot_outside_dev_mode/b.js
+  s_5e23c856412bb0::t_8f7c98eb2bfaca 1-2
+crates/rolldown/tests/rolldown/function/inline_common_chunks/kept_as_file/dev_mode_import_meta_url/shared.js
+  s_5e23c856412bb0::t_6d2332f4fc4d26 1-3
+crates/rolldown/tests/rolldown/function/inline_common_chunks/kept_as_file/dev_mode_import_meta_url/a.js
+  s_5e23c856412bb0::t_cb0d5a8351668c 1-2
+crates/rolldown/tests/rolldown/function/inline_common_chunks/dev_mode_hot_accept/self_accept.js
+  s_5e23c856412bb0::t_8ed8df72032f9f 1-5
+crates/rolldown/tests/rolldown/function/inline_common_chunks/kept_as_file/import_meta_hot_outside_dev_mode/a.js
+  s_5e23c856412bb0::t_52e7e7f819afb0 1-2
+crates/rolldown/tests/rolldown/function/inline_common_chunks/kept_as_file/dev_mode_import_meta_url/_config.json
+  s_5e23c856412bb0::t_3c113b76c07f72 1-24
+crates/rolldown/tests/rolldown/function/inline_common_chunks/kept_as_file/dev_mode_import_meta_url/b.js
+  s_5e23c856412bb0::t_f48dd7d50847f0 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "160a90518fd5838740786d1d4cddbe7ef3a24c0c",
+  "prompts": {},
+  "sessions": {
+    "s_1349f77e095742": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01434bb7-a487-49c7-8ef1-e905252e7907",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    },
+    "s_5e23c856412bb0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "67fed95a-8f31-49a4-a7b7-36f248b4afdc",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "__proto__": 0,
+  "object": { "__proto__": { "marker": 42 } },
+  "nil": { "__proto__": null },
+  "array": [{ "__proto__": "value" }]
+}

@@ -119,7 +119,8 @@ pub fn json_value_to_expression<'a>(
             value_expr,
             false, // method
             false, // shorthand
-            false, // computed
+            // JSON treats this as an own data property, not an object literal's prototype setter.
+            key == "__proto__", // computed
             builder,
           )
         }),

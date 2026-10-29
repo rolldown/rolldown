@@ -1,0 +1,6 @@
+{
+  "configVariants": [
+    { "format": "cjs" },
+    { "minify": true }
+  ]
+}

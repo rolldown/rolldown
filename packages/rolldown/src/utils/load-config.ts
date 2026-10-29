@@ -31,7 +31,7 @@ async function bundleTsConfig(configFile: string, isEsm: boolean): Promise<Bundl
   // A unique name per load: the counter defeats the process-wide module cache
   // (keyed by URL), the random part defeats other processes loading the same config.
   const outputDir = path.dirname(configFile);
-  const outputPrefix = `rolldown.config.${++configLoadCount}.${randomBytes(8).toString('hex')}.`;
+  const outputPrefix = `rolldown.config.${++configLoadCount}.${randomBytes(8).toString('hex')}`;
   const bundle = await rolldown({
     input: configFile,
     platform: 'node',
@@ -100,7 +100,7 @@ async function bundleTsConfig(configFile: string, isEsm: boolean): Promise<Bundl
   if (errors.length > 0) {
     try {
       generatedFiles ??= (await readdir(outputDir))
-        .filter((name) => name.startsWith(outputPrefix))
+        .filter((name) => name.startsWith(`${outputPrefix}.`))
         .map((name) => path.join(outputDir, name));
       errors.push(...(await removeFiles(generatedFiles)));
     } catch (error) {
@@ -136,7 +136,11 @@ async function loadTsConfig(configFile: string): Promise<ConfigExport> {
   } catch (error) {
     errors.push(error);
   }
-  errors.push(...(await removeFiles(generatedFiles)));
+  const cleanupErrors = await removeFiles(generatedFiles);
+  // A leftover file must not fail a config that loaded: Windows can briefly lock a fresh file.
+  if (errors.length > 0) {
+    errors.push(...cleanupErrors);
+  }
   throwCollectedErrors(errors, 'Config import and cleanup both failed');
   return config!;
 }

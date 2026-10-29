@@ -73,7 +73,11 @@ describe('loadConfig bundle cleanup', () => {
     await expect(loadConfig(configFile)).resolves.toStrictEqual({ input: './entry.js' });
 
     expect(write).toHaveBeenCalledWith(
-      expect.objectContaining({ codeSplitting: false, dir: configDir }),
+      expect.objectContaining({
+        codeSplitting: false,
+        dir: configDir,
+        entryFileNames: expect.stringMatching(/^rolldown\.config\.\d+\.[\da-f]{16}\.mjs$/),
+      }),
     );
     expect(close).toHaveBeenCalledOnce();
     expect(await readdir(configDir)).toStrictEqual([]);
@@ -139,6 +143,13 @@ describe('loadConfig bundle cleanup', () => {
 
     expect(cause).toBeInstanceOf(AggregateError);
     expect((cause as AggregateError).errors).toStrictEqual([writeError, closeError]);
+  });
+
+  it('still loads the config when removing the generated file fails', async () => {
+    write.mockImplementation(emit({ entry: 'export default { input: "./entry.js" }' }));
+    vi.spyOn(fs.promises, 'rm').mockRejectedValueOnce(new Error('config cleanup failed'));
+
+    await expect(loadConfig(configFile)).resolves.toStrictEqual({ input: './entry.js' });
   });
 
   it('keeps both errors when the import and the cleanup fail', async () => {

@@ -19,13 +19,8 @@ impl OnLog {
     Self(f)
   }
 
-  /// Invokes the callback now; the returned future only waits for its result.
-  pub fn call(
-    &self,
-    log_level: LogLevel,
-    log: Log,
-  ) -> Pin<Box<dyn Future<Output = anyhow::Result<()>> + Send + 'static>> {
-    self.0(log_level, log)
+  pub async fn call(&self, log_level: LogLevel, log: Log) -> anyhow::Result<()> {
+    self.0(log_level, log).await
   }
 }
 

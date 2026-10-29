@@ -9,10 +9,9 @@ Rayon workers, so `par_iter` splits stay in that pool.
 The scheduler is the external
 [`napi-async-runtime`](https://crates.io/crates/napi-async-runtime) crate; its
 README documents the executor internals. This doc records why rolldown uses it
-the way it does. Heavy post-build destruction runs on a separate serial
-maintenance thread, so a rebuild never waits on a drop queued behind itself in
-the shared pool. Every shipped artifact compiles this runtime, so no production
-build contains tokio.
+the way it does. Heavy post-build destruction runs on Rayon workers instead of
+the calling thread. Every shipped artifact compiles this runtime, so no
+production build contains tokio.
 
 The machinery: [implementation.md](./implementation.md).
 
@@ -79,10 +78,7 @@ The machinery: [implementation.md](./implementation.md).
    again. Drop a caught payload under its own `catch_unwind` and never let the
    nested panic out: `rolldown_std_utils::panic_payload` leaks the nested
    payload. Otherwise a second panic can escape a napi cleanup callback or
-   leave a close path stuck. The deferred-drop thread catches a panicking
-   `Drop` with one `catch_unwind` and drops the caught payload as is. It
-   retires its pending count from a guard built before the drop, so even a
-   panic that escapes cannot wedge `drain()`.
+   leave a close path stuck.
 
 8. **Detached tasks behave like tokio.** Dropping a `JoinHandle` detaches the
    task; runtime shutdown may cancel accepted work by dropping its future. The
@@ -191,4 +187,4 @@ admits one blocking task and runs it inline.
   the threaded WASI memory-size bug and its fix
 - [bundler-data-lifecycle](../bundler-data-lifecycle/implementation.md) —
   rebuild ownership and `ScanStageCache`; deferred drops are in
-  implementation.md, "Deferred drop worker"
+  implementation.md, "Deferred drops"

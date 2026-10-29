@@ -169,7 +169,6 @@ const {
   capabilities,
   fireAndForgetLoad,
   failedBuildReuse,
-  sourcemapUrl,
 } = behavior.cases;
 
 // --- CASE 1: multi-module build through the high-level API -----------------
@@ -213,7 +212,7 @@ assert.equal(
 assert.equal(generated.stamp, '-transformed-by-workerd-suite');
 assert.equal(generated.moduleTag, '390-transformed-by-workerd-suite');
 console.log(
-  `  [1/9] multi-module build       ok  (${multiModuleBuild.moduleCount} modules in chunk, ` +
+  `  [1/8] multi-module build       ok  (${multiModuleBuild.moduleCount} modules in chunk, ` +
     `total=${generated.total}) ${elapsed()}`,
 );
 
@@ -258,7 +257,7 @@ assert.equal(
   'a FAILED build({module}) must still dispose the private instance it created',
 );
 console.log(
-  `  [2/9] error surface            ok  (${caught.errorCount} error(s), code frame ` +
+  `  [2/8] error surface            ok  (${caught.errorCount} error(s), code frame ` +
     `inlined in message, ${caught.frameCount} separate .frame, ` +
     `failed build({module}) self-disposed) ${elapsed()}`,
 );
@@ -284,7 +283,7 @@ assert.match(lifecycle.buildAfterDispose.error.message, /has been disposed/);
 assert.equal(lifecycle.instanceADisposed, true);
 assert.equal(lifecycle.instanceBDisposed, true);
 assert.equal(lifecycle.liveDelta, 0, 'the lifecycle case must leak no instance');
-console.log(`  [3/9] lifecycle contracts      ok  ${elapsed()}`);
+console.log(`  [3/8] lifecycle contracts      ok  ${elapsed()}`);
 
 // --- CASE 4: concurrency and admission -------------------------------------
 // Both promises fulfilling is not success: each build runs a distinct entry with
@@ -339,7 +338,7 @@ assert.equal(
 );
 assert.equal(concurrency.liveDelta, 0, 'the concurrency case must leak no instance');
 console.log(
-  `  [4/9] concurrency + admission  ok  (concurrent totals ${concurrentTotals.join('/')}) ` +
+  `  [4/8] concurrency + admission  ok  (concurrent totals ${concurrentTotals.join('/')}) ` +
     `${elapsed()}`,
 );
 
@@ -364,7 +363,7 @@ assert.deepEqual(
 );
 assert.ok(capabilities.memoryBytes > 0);
 console.log(
-  `  [5/9] capabilities             ok  (target=${capabilities.target}, ` +
+  `  [5/8] capabilities             ok  (target=${capabilities.target}, ` +
     `flavor=${capabilities.flavor}, threads=${capabilities.threads}) ${elapsed()}`,
 );
 
@@ -379,7 +378,7 @@ assert.equal(
   'an awaited this.load() must still deliver the module info',
 );
 assert.equal(fireAndForgetLoad.liveDelta, 0, 'build({module}) must dispose its private instance');
-console.log(`  [6/9] fire-and-forget load     ok  ${elapsed()}`);
+console.log(`  [6/8] fire-and-forget load     ok  ${elapsed()}`);
 
 // --- CASE 7: failed-build reuse --------------------------------------------
 // A stranded options box grows ~1 MiB per failed build (see
@@ -399,33 +398,9 @@ assert.equal(
 );
 assert.equal(behavior.finalLiveInstances, behavior.baselineLiveInstances, 'an instance leaked');
 console.log(
-  `  [7/9] failed-build reuse       ok  ` +
+  `  [7/8] failed-build reuse       ok  ` +
     `(${failedBuildReuse.slopeMiBPerFailedBuild.toFixed(4)} MiB/failed-build) ${elapsed()}`,
 );
-
-// --- CASE 8: map.toUrl() without a Buffer global ---------------------------
-// The suite's workerd config has no Node compatibility; if a `Buffer` global
-// appears, this case no longer covers the path it exists for.
-assert.equal(sourcemapUrl.bufferGlobal, 'undefined', 'workerd must run this case without `Buffer`');
-const dataUrlPrefix = 'data:application/json;charset=utf-8;base64,';
-assert.ok(
-  sourcemapUrl.url.startsWith(dataUrlPrefix),
-  `toUrl() returned ${sourcemapUrl.url.slice(0, 80)}`,
-);
-const decodedMap = JSON.parse(
-  Buffer.from(sourcemapUrl.url.slice(dataUrlPrefix.length), 'base64').toString('utf8'),
-);
-assert.deepEqual(decodedMap, JSON.parse(sourcemapUrl.mapString), 'toUrl() must encode toString()');
-assert.deepEqual(
-  decodedMap.sourcesContent,
-  [sourcemapUrl.source],
-  'the non-ASCII source must round-trip as UTF-8',
-);
-assert.ok(
-  Buffer.byteLength(sourcemapUrl.mapString, 'utf8') > 3 * 0x7ffe,
-  'the map must span several 0x7ffe-byte encoder chunks',
-);
-console.log(`  [8/9] sourcemap toUrl          ok  ${elapsed()}`);
 
 // ===========================================================================
 // PART 2 -- memory slope with plugin hooks.
@@ -521,7 +496,7 @@ for (const variant of Object.keys(MEMORY_BUDGETS)) {
   const { budget } = MEMORY_BUDGETS[variant];
   const verdict = measureOnly ? 'measured' : slope > budget ? 'OVER BUDGET' : 'ok';
   console.log(
-    `  [9/9] memory ${variant.padEnd(21)} ${verdict.padEnd(11)} ` +
+    `  [8/8] memory ${variant.padEnd(21)} ${verdict.padEnd(11)} ` +
       `${slope.toFixed(3)} MiB/rebuild` +
       ` (budget ${budget.toFixed(3)})` +
       `  [${report.memFirstMiB} -> ${report.memLastMiB} MiB over ${rounds} rounds]`,

@@ -45,6 +45,12 @@ reports it UNKNOWN with the one config line that enables it — enable it and re
 rather than justifying the gap: it is the cheapest signal in the whole kit (no
 browser run, and it prices every candidate at once).
 
+The report folder, `node_modules/.rolldown/report/<output dir>`, carries its own guide.
+The static commands print the folder path. Its `AGENTS.md` lists the files, the metric ids
+and the delta workflow; its `entry.md` is the summary with a file index. Read them when
+you need a number the kit does not print, such as hook time per plugin or the build
+history.
+
 ## The optimization loop
 
 1. Build the app. `scan --app <appDir>` — the first scan is your baseline.

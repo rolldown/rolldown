@@ -1169,8 +1169,8 @@ export interface ModuleRunnerTransformResult {
    * This will be set if {@link TransformOptions#sourcemap} is `true`.
    */
   map?: SourceMap
-  deps: Array<string>
-  dynamicDeps: Array<string>
+  deps: string[]
+  dynamicDeps: string[]
   /**
    * Parse and transformation errors.
    *
@@ -1755,6 +1755,7 @@ export declare class BindingNormalizedOptions {
   get assetFilenames(): string | undefined
   get dir(): string | null
   get file(): string | null
+  get charset(): 'ascii' | 'utf8'
   get format(): 'es' | 'cjs' | 'iife' | 'umd'
   get exports(): 'default' | 'named' | 'none' | 'auto'
   get esModule(): boolean | 'if-default-prop'
@@ -1808,6 +1809,12 @@ export declare class BindingOutputChunk {
   getImports(): Array<string>
   getDynamicImports(): Array<string>
   getCode(): string
+  /**
+   * Identity of the shared chunk data behind this object. Two `BindingOutputChunk` objects with the same
+   * identity share the same data, so a JavaScript string made from `getCode()` of one is valid for the other.
+   * The identity is the address of that data. It stays unique while a `BindingOutputChunk` keeps the data alive.
+   */
+  getCodeIdentity(): number
   getMap(): string | null
   getSourcemapFileName(): string | null
   getPreliminaryFileName(): string
@@ -1845,6 +1852,8 @@ export declare class BindingRenderedChunkMeta {
 
 export declare class BindingRenderedModule {
   get code(): string | null
+  /** `code.length` without materializing `code`. */
+  get renderedLength(): number
   get renderedExports(): Array<string>
 }
 
@@ -2009,6 +2018,7 @@ export interface BindingChecksOptions {
   largeBarrelModules?: boolean
   sourcemapBroken?: boolean
   namespaceConflict?: boolean
+  shimmedExport?: boolean
 }
 
 export interface BindingChunkImportMap {
@@ -2543,6 +2553,7 @@ export interface BindingLog {
   id?: string
   code?: string
   exporter?: string
+  binding?: string
   plugin?: string
   /** Location information (line, column, file) */
   loc?: BindingLogLocation
@@ -2649,6 +2660,7 @@ export interface BindingOutputOptions {
   postFooter?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
   dir?: string
   file?: string
+  charset?: 'ascii' | 'utf8'
   esModule?: boolean | 'if-default-prop'
   exports?: 'default' | 'named' | 'none' | 'auto'
   extend?: boolean
@@ -3046,6 +3058,7 @@ export interface BindingViteResolvePluginConfig {
   tsconfig?: string
   environmentConsumer: string
   environmentName: string
+  convertExternalRequire?: boolean
   builtins: Array<BindingStringOrRegex>
   external: true | string[]
   noExternal: true | Array<string | RegExp>
@@ -3062,6 +3075,8 @@ export interface BindingViteResolvePluginConfig {
 
 export interface BindingViteResolvePluginResolveOptions {
   isBuild: boolean
+  /** Defaults to `isBuild`. */
+  isBundled?: boolean
   isProduction: boolean
   asSrc: boolean
   preferRelative: boolean

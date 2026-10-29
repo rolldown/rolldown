@@ -94,6 +94,9 @@ jobs:
       - name: Create rolldown/npm dirs
         run: vp exec --filter rolldown napi create-npm-dirs
 
+      - name: Pin @napi-rs/wasm-runtime in the wasm32-wasi binding
+        run: node scripts/misc/pin-wasi-binding-deps.mjs
+
       - name: Move Binding Artifacts
         run: vp run --filter rolldown artifacts
 

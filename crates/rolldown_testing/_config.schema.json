@@ -189,6 +189,16 @@
             "null"
           ]
         },
+        "charset": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OutputCharset"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "format": {
           "anyOf": [
             {
@@ -636,6 +646,13 @@
           "type": "string",
           "const": "node"
         }
+      ]
+    },
+    "OutputCharset": {
+      "type": "string",
+      "enum": [
+        "ascii",
+        "utf8"
       ]
     },
     "OutputFormat": {
@@ -1180,6 +1197,10 @@
         {
           "type": "object",
           "properties": {
+            "type": {
+              "type": "string",
+              "const": "named"
+            },
             "imported": {
               "type": "string"
             },
@@ -1191,10 +1212,6 @@
             },
             "from": {
               "type": "string"
-            },
-            "type": {
-              "type": "string",
-              "const": "named"
             }
           },
           "additionalProperties": false,
@@ -1207,15 +1224,15 @@
         {
           "type": "object",
           "properties": {
+            "type": {
+              "type": "string",
+              "const": "namespace"
+            },
             "alias": {
               "type": "string"
             },
             "from": {
               "type": "string"
-            },
-            "type": {
-              "type": "string",
-              "const": "namespace"
             }
           },
           "additionalProperties": false,
@@ -1575,6 +1592,12 @@
           ]
         },
         "namespaceConflict": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "shimmedExport": {
           "type": [
             "boolean",
             "null"

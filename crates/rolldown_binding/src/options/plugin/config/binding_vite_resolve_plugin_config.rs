@@ -25,6 +25,7 @@ pub struct BindingViteResolvePluginConfig {
   pub tsconfig: Option<String>,
   pub environment_consumer: String,
   pub environment_name: String,
+  pub convert_external_require: Option<bool>,
   pub builtins: Vec<BindingStringOrRegex>,
   #[napi(ts_type = "true | string[]")]
   pub external: napi::Either<BindingTrueValue, Vec<String>>,
@@ -75,6 +76,7 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
       tsconfig: value.tsconfig,
       environment_consumer: value.environment_consumer,
       environment_name: value.environment_name,
+      convert_external_require: value.convert_external_require.unwrap_or_default(),
       builtins: bindingify_string_or_regex_array(value.builtins),
       external,
       no_external,
@@ -162,6 +164,8 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
 #[expect(clippy::struct_excessive_bools)]
 pub struct BindingViteResolvePluginResolveOptions {
   pub is_build: bool,
+  /// Defaults to `isBuild`.
+  pub is_bundled: Option<bool>,
   pub is_production: bool,
   pub as_src: bool,
   pub prefer_relative: bool,
@@ -183,6 +187,7 @@ impl From<BindingViteResolvePluginResolveOptions> for ViteResolveResolveOptions 
   fn from(value: BindingViteResolvePluginResolveOptions) -> Self {
     Self {
       is_build: value.is_build,
+      is_bundled: value.is_bundled.unwrap_or(value.is_build),
       is_production: value.is_production,
       as_src: value.as_src,
       prefer_relative: value.prefer_relative,

@@ -6,17 +6,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 console.log(import("./file.js"));
-//#endregion
 
 ```
 
 ## file.js
 
 ```js
-//#region output-path/should-contain/this-text/file.js
+// output-path/should-contain/this-text/file.js
 console.log("file.js");
-//#endregion
 
 ```

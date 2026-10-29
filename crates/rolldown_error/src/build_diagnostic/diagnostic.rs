@@ -75,9 +75,7 @@ impl Diagnostic {
     content: impl Into<ArcStr>,
   ) -> DiagnosticFileId {
     let filename = DiagnosticFileId::from(filename.into());
-    let content = content.into();
-    debug_assert!(!self.files.contains_key(&filename));
-    self.files.insert(filename.clone(), content);
+    self.files.entry(filename.clone()).or_insert_with(|| content.into());
     filename
   }
 
@@ -184,27 +182,14 @@ impl Diagnostic {
   pub fn get_primary_location(&self) -> Option<(String, usize, usize, usize)> {
     let first_label = self.labels.first()?;
     let span = first_label.span();
-    let start = span.start();
     let source = self.files.get(span.source())?;
 
-    let mut line = 1; // 1-based
-    let mut column = 0; // 0-based
-    let mut utf16_pos = 0;
-    let mut byte_count = 0;
-
-    for ch in source.chars() {
-      if byte_count >= start {
-        break;
-      }
-      if ch == '\n' {
-        line += 1;
-        column = 0;
-      } else {
-        column += ch.len_utf16();
-      }
-      utf16_pos += ch.len_utf16();
-      byte_count += ch.len_utf8();
-    }
+    // A start inside a char counts that whole char, and a start past the end counts the file.
+    let prefix = &source[..source.ceil_char_boundary(span.start())];
+    let line_start = prefix.rfind('\n').map_or(0, |i| i + 1);
+    let line = 1 + memchr::memchr_iter(b'\n', &prefix.as_bytes()[..line_start]).count(); // 1-based
+    let column = simd_utf16_len::utf16_len(&prefix[line_start..]); // 0-based
+    let utf16_pos = simd_utf16_len::utf16_len(&prefix[..line_start]) + column;
 
     let file = span.source().to_string();
     Some((file, line, column, utf16_pos))
@@ -290,5 +275,49 @@ pub struct RenderedDiagnostic {
 impl Display for Diagnostic {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     self.convert_to_string(false).fmt(f)
+  }
+}
+
+#[cfg(test)]
+mod test_primary_location {
+  use super::{Diagnostic, Severity};
+
+  /// Char-by-char reference for [`Diagnostic::get_primary_location`]. Returns
+  /// `(line, column, utf16_position)`.
+  fn reference_location(source: &str, start: usize) -> (usize, usize, usize) {
+    let (mut line, mut column, mut utf16_pos, mut byte_count) = (1, 0, 0, 0);
+    for ch in source.chars() {
+      if byte_count >= start {
+        break;
+      }
+      if ch == '\n' {
+        line += 1;
+        column = 0;
+      } else {
+        column += ch.len_utf16();
+      }
+      utf16_pos += ch.len_utf16();
+      byte_count += ch.len_utf8();
+    }
+    (line, column, utf16_pos)
+  }
+
+  #[test]
+  fn get_primary_location_matches_reference() {
+    for source in ["", "a\nbc\n\ndef", "café\n😀xy\nz", "\n\n日本語\n💣"] {
+      // Every offset, including ones inside a char, plus out-of-range ones.
+      #[expect(clippy::cast_possible_truncation)]
+      for start in 0..=source.len() as u32 + 2 {
+        let mut diagnostic = Diagnostic::new("TEST".into(), String::new(), Severity::Error);
+        let file_id = diagnostic.add_file("test.js", source);
+        diagnostic.add_label(&file_id, start..start, String::new());
+        let (_, line, column, utf16_pos) = diagnostic.get_primary_location().unwrap();
+        assert_eq!(
+          (line, column, utf16_pos),
+          reference_location(source, start as usize),
+          "mismatch at start {start} of {source:?}"
+        );
+      }
+    }
   }
 }

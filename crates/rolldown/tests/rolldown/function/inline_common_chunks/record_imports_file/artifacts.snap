@@ -8,8 +8,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_c, t as helper$1 } from "./c2.js";
-__share("s1-PNXlmu-8", (exports) => {
-	//#region s1.js
+__share("s1-PNXlmu-8", ((exports) => {
+	// s1.js
 	var s1;
 	function init_s1() {
 		return (init_s1 = __esmMin((() => {
@@ -17,14 +17,13 @@ __share("s1-PNXlmu-8", (exports) => {
 			s1 = helper$1 + "!";
 		})))();
 	}
-	//#endregion
 	__share_export(exports, {
 		n: () => s1,
 		t: () => init_s1
 	});
-});
+}));
 var share_s1 = __share_require("s1-PNXlmu-8");
-//#region a.js
+// a.js
 var helper;
 function init_a() {
 	return (init_a = __esmMin((() => {
@@ -34,7 +33,6 @@ function init_a() {
 		globalThis.events.push("A " + helper + " " + share_s1.n);
 	})))();
 }
-//#endregion
 init_a();
 
 ```
@@ -44,8 +42,8 @@ init_a();
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_c, t as helper } from "./c2.js";
-__share("s1-PNXlmu-8", (exports) => {
-	//#region s1.js
+__share("s1-PNXlmu-8", ((exports) => {
+	// s1.js
 	var s1;
 	function init_s1() {
 		return (init_s1 = __esmMin((() => {
@@ -53,21 +51,19 @@ __share("s1-PNXlmu-8", (exports) => {
 			s1 = helper + "!";
 		})))();
 	}
-	//#endregion
 	__share_export(exports, {
 		n: () => s1,
 		t: () => init_s1
 	});
-});
+}));
 var share_s1 = __share_require("s1-PNXlmu-8");
-//#region b.js
+// b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
 		share_s1.t();
 		globalThis.events.push("B " + share_s1.n);
 	})))();
 }
-//#endregion
 init_b();
 
 ```
@@ -84,7 +80,7 @@ init_c();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region c.js
+// c.js
 var helper;
 function init_c() {
 	return (init_c = __esmMin((() => {
@@ -92,7 +88,6 @@ function init_c() {
 		globalThis.events.push("C body");
 	})))();
 }
-//#endregion
 export { init_c as n, helper as t };
 
 ```
@@ -114,7 +109,7 @@ export { __share_require as i, __share as n, __share_export as r, __esmMin as t 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as s1, t as init_s1 } from "./s1.js";
-//#region a.js
+// a.js
 var helper;
 function init_a() {
 	return (init_a = __esmMin((() => {
@@ -124,7 +119,6 @@ function init_a() {
 		globalThis.events.push("A " + helper + " " + s1);
 	})))();
 }
-//#endregion
 init_a();
 
 ```
@@ -134,14 +128,13 @@ init_a();
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as s1, t as init_s1 } from "./s1.js";
-//#region b.js
+// b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
 		init_s1();
 		globalThis.events.push("B " + s1);
 	})))();
 }
-//#endregion
 init_b();
 
 ```
@@ -158,7 +151,7 @@ init_c();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region c.js
+// c.js
 var helper;
 function init_c() {
 	return (init_c = __esmMin((() => {
@@ -166,7 +159,6 @@ function init_c() {
 		globalThis.events.push("C body");
 	})))();
 }
-//#endregion
 export { init_c as n, helper as t };
 
 ```
@@ -184,7 +176,7 @@ export { __esmMin as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_c, t as helper } from "./c2.js";
-//#region s1.js
+// s1.js
 var s1;
 function init_s1() {
 	return (init_s1 = __esmMin((() => {
@@ -192,7 +184,6 @@ function init_s1() {
 		s1 = helper + "!";
 	})))();
 }
-//#endregion
 export { s1 as n, init_s1 as t };
 
 ```

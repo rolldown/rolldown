@@ -595,8 +595,8 @@ export interface InputOptions {
      *
      * Available modes:
      * - `none`: No debug information is attached.
-     * - `simple`: Attach comments indicating which files the bundled code comes from. These comments could be removed by the minifier.
-     * - `full`: Attach detailed debug information to the output bundle. These comments are using legal comment syntax, so they won't be removed by the minifier.
+     * - `simple`: Attach a `// <module id>` comment where the code of each module starts, like esbuild and Bun. These comments could be removed by the minifier.
+     * - `full`: Same as `simple`, and also attach comments that tell why each chunk exists. These chunk comments use legal comment syntax, so they won't be removed by the minifier.
      *
      * @default 'simple'
      *
@@ -606,9 +606,13 @@ export interface InputOptions {
     /**
      * Enables automatic generation of a chunk import map asset during build.
      *
-     * This map only includes chunks with hashed filenames, where keys are derived from the facade module
-     * name or primary chunk name. It produces stable and unique hash-based filenames, effectively preventing
-     * cascading cache invalidation caused by content hashes and maximizing browser cache reuse.
+     * This map includes chunks with hashed filenames. Entry keys use their facade module ID. Common chunks
+     * use their name; later chunks with the same name use the smallest module key among their original members.
+     * Module keys distinguish cwd-relative filesystem paths from verbatim non-path IDs.
+     * Modules copied into a file by `experimentalInlineCommonChunks` remain in `moduleIds` but do not
+     * affect that file's key.
+     * Keeping these keys independent of content hashes reduces cascading cache invalidation when
+     * a dependency changes.
      *
      * The output defaults to `importmap.json` unless overridden via `fileName`. A base URL prefix
      * (default `"/"`) can be applied to all paths. The resulting JSON is a valid import map and can be

@@ -62,10 +62,11 @@ pub fn generate_rendered_chunk(
   chunk: &GenerateContext<'_>,
   render_modules: FxHashMap<ModuleId, RenderedModule>,
 ) -> RollupRenderedChunk {
-  let GenerateContext { chunk_graph, chunk, link_output, resolved_paths, .. } = chunk;
+  let GenerateContext { chunk_idx, chunk_graph, chunk, link_output, resolved_paths, .. } = chunk;
   let pre_rendered_chunk =
     chunk.pre_rendered_chunk.as_ref().expect("Should have pre-rendered chunk");
   RollupRenderedChunk {
+    originate_from: *chunk_idx,
     name: pre_rendered_chunk.name.clone(),
     is_entry: pre_rendered_chunk.is_entry,
     is_dynamic_entry: pre_rendered_chunk.is_dynamic_entry,

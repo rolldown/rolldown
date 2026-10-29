@@ -1,0 +1,29 @@
+{
+  "config": {
+    "strictExecutionOrder": true
+  },
+  "configVariants": [
+    {
+      "_configName": "no-optimization",
+      "chunkOptimization": false
+    },
+    {
+      "_configName": "on-demand",
+      "onDemandWrapping": true
+    },
+    {
+      "_configName": "on-demand-manual-groups",
+      "onDemandWrapping": true,
+      "preserveEntrySignatures": "allow-extension",
+      "codeSplitting": {
+        "includeDependenciesRecursively": false,
+        "groups": [
+          {
+            "name": "snapshot",
+            "test": "[\\\\/]snapshots[\\\\/]value\\.js$"
+          }
+        ]
+      }
+    }
+  ]
+}

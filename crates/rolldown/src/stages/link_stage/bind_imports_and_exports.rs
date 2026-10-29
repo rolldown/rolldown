@@ -8,9 +8,9 @@ use oxc_str::CompactStr;
 // if we want more enhancements related to exports.
 use rolldown_common::{
   EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, IndexModules, MemberExprObjectReferencedType,
-  MemberExprRefResolution, Module, ModuleIdx, ModuleType, NamespaceAlias, NormalModule,
-  OutputFormat, ResolvedExport, Specifier, StmtInfoIdx, StmtInfos, SymbolOrMemberExprRef,
-  SymbolRef, SymbolRefDb, SymbolRefFlags,
+  MemberExprRef, MemberExprRefResolution, MemberExprWriteKind, Module, ModuleIdx, ModuleType,
+  NamespaceAlias, NormalModule, OutputFormat, ResolvedExport, Specifier, StmtInfoIdx, StmtInfos,
+  SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, SymbolRefFlags,
 };
 use rolldown_error::{
   AmbiguousExternalNamespaceModule, BuildDiagnostic, Diagnostics, EventKindSwitcher,
@@ -33,7 +33,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   SharedOptions,
   types::{
-    linking_metadata::LinkingMetadataVec,
+    linking_metadata::{LinkingMetadata, LinkingMetadataVec},
     member_read_star_reexport_path::MemberReadStarReexportPath,
   },
 };
@@ -286,8 +286,7 @@ impl LinkStage<'_> {
         .collect::<FxHashMap<_, _>>();
 
       let mut module_stack = vec![];
-      // The star-export origin map only feeds `collect_star_reexport_path`, whose callers are all
-      // strict-only.
+      // Strict initialization routing and retained-path tracking share this star-export origin map.
       let mut star_export_record_by_name =
         self.options.is_strict_execution_order_enabled().then(FxHashMap::default);
       if module.has_star_export() || module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
@@ -297,6 +296,7 @@ impl LinkStage<'_> {
           star_export_record_by_name.as_mut(),
           module_id,
           &mut module_stack,
+          None,
           None,
         );
       }
@@ -371,6 +371,11 @@ impl LinkStage<'_> {
           self.symbols.link(*symbol_ref, target_symbol);
         }
       }
+    }
+
+    self.register_shimmed_exports();
+    if self.options.shim_missing_exports {
+      self.shim_missing_namespace_exports();
     }
 
     self.metas.par_iter_mut().for_each(|meta| {
@@ -563,6 +568,7 @@ impl LinkStage<'_> {
     module_idx: ModuleIdx,
     module_stack: &mut Vec<ModuleIdx>,
     root_record: Option<ImportRecordIdx>,
+    shimmed_exports: Option<&LinkingMetadataVec>,
   ) {
     if module_stack.contains(&module_idx) {
       return;
@@ -599,43 +605,56 @@ impl LinkStage<'_> {
       //   continue;
       // }
 
-      for (exported_name, named_export) in &dep_module.named_exports {
+      let exports = dep_module
+        .named_exports
+        .iter()
+        .filter(|_| shimmed_exports.is_none())
+        .map(|(name, export)| (name, export.referenced, export.came_from_commonjs))
+        .chain(shimmed_exports.into_iter().flat_map(|metas| {
+          metas[dep_id].shimmed_missing_exports.iter().map(|(name, &symbol)| (name, symbol, false))
+        }));
+      for (exported_name, referenced, came_from_commonjs) in exports {
         // ES6 export star statements ignore exports named "default"
-        if exported_name.as_str() == "default" && !named_export.came_from_commonjs {
+        if exported_name.as_str() == "default" && !came_from_commonjs {
           continue;
         }
         // This export star is shadowed if any file in the stack has a matching real named export
-        if module_stack
-          .iter()
-          .filter_map(|id| normal_modules[*id].as_normal())
-          .any(|module| module.named_exports.contains_key(exported_name))
-        {
+        if module_stack.iter().any(|id| {
+          normal_modules[*id].as_normal().is_some_and(|module| {
+            module.named_exports.contains_key(exported_name)
+              || shimmed_exports
+                .is_some_and(|metas| metas[*id].shimmed_missing_exports.contains_key(exported_name))
+          })
+        }) {
           continue;
         }
         // We have filled `resolve_exports` with `named_exports`. If the export is already exists, it means that the importer
         // has a named export with the same name. So the export from dep module is shadowed.
         if let Some(resolved_export) = resolve_exports.get_mut(exported_name) {
-          if named_export.referenced != resolved_export.symbol_ref {
-            if resolved_export.came_from_commonjs || named_export.came_from_commonjs {
+          // Shims are fallbacks: they cannot invalidate a real export or its ambiguity.
+          // See internal-docs/code-splitting/implementation.md.
+          if shimmed_exports.is_some() {
+            continue;
+          }
+          if referenced != resolved_export.symbol_ref {
+            if resolved_export.came_from_commonjs || came_from_commonjs {
               // CJS conflict: at least one side came from CJS (e.g., conditional re-exports
               // mixing ESM and CJS targets). Track these separately — they're expected runtime
               // branches, not static ambiguity errors.
               resolved_export
                 .cjs_conflicting_symbol_refs
                 .get_or_insert(Box::default())
-                .push(named_export.referenced);
+                .push(referenced);
             } else {
               resolved_export
                 .potentially_ambiguous_symbol_refs
                 .get_or_insert(Box::default())
-                .push(named_export.referenced);
+                .push(referenced);
             }
           }
         } else {
-          resolve_exports.insert(
-            exported_name.clone(),
-            ResolvedExport::new(named_export.referenced, named_export.came_from_commonjs),
-          );
+          resolve_exports
+            .insert(exported_name.clone(), ResolvedExport::new(referenced, came_from_commonjs));
           if let Some(root_record) = root_record
             && let Some(map) = star_export_record_by_name.as_deref_mut()
           {
@@ -651,10 +670,122 @@ impl LinkStage<'_> {
         dep_id,
         module_stack,
         root_record,
+        shimmed_exports,
       );
     }
 
     module_stack.pop();
+  }
+
+  fn register_shimmed_exports(&mut self) {
+    let mut has_shims = false;
+    for meta in &mut self.metas {
+      has_shims |= !meta.shimmed_missing_exports.is_empty();
+      meta.resolved_exports.extend(
+        meta
+          .shimmed_missing_exports
+          .iter()
+          .map(|(name, &symbol)| (name.clone(), ResolvedExport::new(symbol, false))),
+      );
+    }
+    if !has_shims {
+      return;
+    }
+    let exports = self
+      .module_table
+      .modules
+      .par_iter()
+      .filter_map(|module| {
+        let module = module.as_normal()?;
+        if !module.has_star_export() {
+          return None;
+        }
+        let meta = &self.metas[module.idx];
+        let mut exports = meta.resolved_exports.clone();
+        let mut records = meta.star_export_record_by_name.clone();
+        // Namespace requests can add earlier candidates, so select star shims afresh.
+        exports.retain(|name, export| {
+          let symbol = export.symbol_ref;
+          let is_propagated_shim = symbol.owner != module.idx
+            && self.metas[symbol.owner].shimmed_missing_exports.get(name) == Some(&symbol);
+          if is_propagated_shim {
+            records.remove(name);
+          }
+          !is_propagated_shim
+        });
+        Self::add_exports_for_export_star(
+          &self.module_table.modules,
+          &mut exports,
+          self.options.is_strict_execution_order_enabled().then_some(&mut records),
+          module.idx,
+          &mut vec![],
+          None,
+          Some(&self.metas),
+        );
+        Some((module.idx, exports, records))
+      })
+      .collect::<Vec<_>>();
+    for (idx, exports, records) in exports {
+      self.metas[idx].resolved_exports = exports;
+      self.metas[idx].star_export_record_by_name = records;
+    }
+  }
+
+  fn shim_missing_namespace_exports(&mut self) {
+    let mut requested = FxIndexSet::default();
+    for stmt_infos in &self.stmt_infos {
+      for stmt in stmt_infos.iter() {
+        for reference in &stmt.referenced_symbols {
+          let SymbolOrMemberExprRef::MemberExpr(member) = reference else { continue };
+          let mut symbol = self.symbols.canonical_ref_for(member.object_ref);
+          for (cursor, prop) in member.prop_and_span_list.iter().enumerate() {
+            if cursor + 1 == member.prop_and_span_list.len() && member.write_target.is_some() {
+              break;
+            }
+            let Some(module) = self.module_table[symbol.owner].as_normal() else { break };
+            if module.namespace_object_ref != symbol {
+              break;
+            }
+            let meta = &self.metas[module.idx];
+            let Some(export) = meta.resolved_exports.get(&prop.name) else {
+              if !meta.has_dynamic_exports {
+                requested.insert((module.idx, prop.name.clone()));
+              }
+              break;
+            };
+            if export.came_from_commonjs
+              || export.potentially_ambiguous_symbol_refs.as_ref().is_some_and(|others| {
+                others.iter().any(|&other| {
+                  ResolvedBinding::of(&self.module_table.modules, &self.symbols, other)
+                    != ResolvedBinding::of(
+                      &self.module_table.modules,
+                      &self.symbols,
+                      export.symbol_ref,
+                    )
+                })
+              })
+            {
+              break;
+            }
+            symbol = self.symbols.canonical_ref_for(export.symbol_ref);
+          }
+        }
+      }
+    }
+    if requested.is_empty() {
+      return;
+    }
+    for (idx, name) in requested {
+      shim_missing_export(
+        self.module_table[idx].as_normal().unwrap(),
+        &name,
+        &mut self.metas[idx],
+        &mut self.symbols,
+        &mut self.diagnostics,
+        self.options.checks.contains(EventKindSwitcher::ShimmedExport),
+      );
+    }
+    self.register_shimmed_exports();
   }
 
   /// Strict-execution-order only: record the star re-export paths behind every non-ambiguous
@@ -726,7 +857,7 @@ impl LinkStage<'_> {
     side_effects_modules: &FxHashSet<ModuleIdx>,
     normal_symbol_exports_chain_map: &FxHashMap<SymbolRef, Vec<SymbolRef>>,
   ) {
-    let warnings = append_only_vec::AppendOnlyVec::new();
+    let diagnostics = append_only_vec::AppendOnlyVec::new();
     // A JSON default object whose `data.key` accesses get rewritten to the statically split
     // per-key exports must stay un-split once it is mutated or escapes (see
     // `collect_non_splittable_json_defaults`). Such a mutation/escape in one module invalidates
@@ -762,6 +893,7 @@ impl LinkStage<'_> {
       .map(|(module, stmt_infos)| match module {
         Module::Normal(module) => {
           let mut resolved_map = FxHashMap::default();
+          let mut folded_namespace_in_checks = FxHashMap::default();
           let mut side_effects_dependency = vec![];
           let mut written_cjs_exports: Vec<SymbolRef> = vec![];
           let mut star_reexport_consumptions: Vec<MemberReadConsumption> = vec![];
@@ -775,6 +907,28 @@ impl LinkStage<'_> {
               let mut star_reexport_steps: Vec<(ModuleIdx, CompactStr)> = vec![];
 
               if let SymbolOrMemberExprRef::MemberExpr(member_expr_ref) = symbol_ref {
+                if member_expr_ref.prop_and_span_list.is_empty() {
+                  // `'key' in ns` with a known result reads nothing from `ns`. Without a
+                  // resolution, the reference falls back to `ns` itself.
+                  if let Some(key) =
+                    module.ecma_view.namespace_in_checks.get(&member_expr_ref.node_id)
+                    && let Some(value) =
+                      self.try_fold_namespace_in_check(member_expr_ref.object_ref, key)
+                  {
+                    folded_namespace_in_checks.insert(member_expr_ref.node_id, value);
+                    resolved_map.insert(
+                      member_expr_ref.node_id,
+                      MemberExprRefResolution {
+                        resolved: None,
+                        prop_and_related_span_list: vec![],
+                        depended_refs: vec![],
+                        target_commonjs_exported_symbol: None,
+                        reference_id: member_expr_ref.reference_id,
+                      },
+                    );
+                  }
+                  return;
+                }
                 // First get the canonical ref of `foo_ns`, then we get the `NormalModule#namespace_object_ref` of `foo.js`.
                 let mut canonical_ref = self.symbols.canonical_ref_for(member_expr_ref.object_ref);
                 let mut canonical_ref_owner: &NormalModule =
@@ -818,6 +972,18 @@ impl LinkStage<'_> {
                   let prop = &member_expr_ref.prop_and_span_list[cursor];
                   let name = &prop.name;
                   let meta = &self.metas[canonical_ref_owner.idx];
+                  // Stop before the written prop: the finalizer cannot write its bare binding into a
+                  // member write target.
+                  if let Some(error) = namespace_member_write_error(
+                    module,
+                    member_expr_ref,
+                    cursor,
+                    meta,
+                    &self.symbols,
+                  ) {
+                    diagnostics.push(error);
+                    break;
+                  }
                   let export_symbol = meta.resolved_exports.get(name).and_then(|resolved_export| {
                     (!resolved_export.came_from_commonjs).then_some(resolved_export)
                   });
@@ -841,7 +1007,7 @@ impl LinkStage<'_> {
                     if !self.metas[canonical_ref_owner.idx].has_dynamic_exports
                       && !is_json_import_ns
                     {
-                      warnings.push(
+                      diagnostics.push(
                         BuildDiagnostic::import_is_undefined(
                           module.id.as_arc_str().clone(),
                           module.source.clone(),
@@ -1053,14 +1219,20 @@ impl LinkStage<'_> {
             });
           });
 
-          (resolved_map, side_effects_dependency, written_cjs_exports, star_reexport_consumptions)
+          (
+            resolved_map,
+            folded_namespace_in_checks,
+            side_effects_dependency,
+            written_cjs_exports,
+            star_reexport_consumptions,
+          )
         }
-        Module::External(_) => (FxHashMap::default(), vec![], vec![], vec![]),
+        Module::External(_) => (FxHashMap::default(), FxHashMap::default(), vec![], vec![], vec![]),
       })
       .collect::<Vec<_>>();
 
     debug_assert_eq!(self.metas.len(), resolved_meta_data.len());
-    self.diagnostics.extend(warnings);
+    self.diagnostics.extend(diagnostics);
     // Remove CJS exported symbols that are written to by importers from the constant map
     // to prevent incorrect inlining of mutated values.
     // First, collect statically-known written symbols gathered during resolution above.
@@ -1068,7 +1240,9 @@ impl LinkStage<'_> {
     // `cjs[name] = value`, or writes through `ns.default`), bail out all CJS exports of the
     // target module since we can't determine which specific property is affected.
     let mut written_cjs_export_symbols: Vec<SymbolRef> = Vec::new();
-    for (meta, (_, _, written_cjs_exports, _)) in self.metas.iter().zip(resolved_meta_data.iter()) {
+    for (meta, (_, _, _, written_cjs_exports, _)) in
+      self.metas.iter().zip(resolved_meta_data.iter())
+    {
       written_cjs_export_symbols.extend(written_cjs_exports);
       for (import_symbol, cjs_module_idx) in
         meta.named_import_to_cjs_module.iter().chain(meta.import_record_ns_to_cjs_module.iter())
@@ -1097,7 +1271,7 @@ impl LinkStage<'_> {
     // retains each recorded path while its reading statement is included.
     if strict_execution_order {
       let mut recorded = FxHashSet::default();
-      for (module, (_, _, _, star_reexport_consumptions)) in
+      for (module, (_, _, _, _, star_reexport_consumptions)) in
         self.module_table.modules.iter().zip(&resolved_meta_data)
       {
         for (stmt_info_idx, resolved, steps) in star_reexport_consumptions {
@@ -1129,11 +1303,30 @@ impl LinkStage<'_> {
       }
     }
     self.metas.iter_mut().zip(resolved_meta_data).for_each(
-      |(meta, (resolved_map, side_effects_dependency, _, _))| {
+      |(meta, (resolved_map, folded_namespace_in_checks, side_effects_dependency, _, _))| {
         meta.resolved_member_expr_refs = resolved_map;
+        meta.folded_namespace_in_checks = folded_namespace_in_checks;
         meta.dependencies.extend(side_effects_dependency);
       },
     );
+  }
+
+  /// Returns the result of `'key' in ns` if `ns` is the namespace object of a module whose
+  /// exports are all known at link time.
+  fn try_fold_namespace_in_check(&self, namespace_ref: SymbolRef, key: &str) -> Option<bool> {
+    let canonical_ref = self.symbols.canonical_ref_for(namespace_ref);
+    let module = self.module_table[canonical_ref.owner].as_normal()?;
+    let meta = &self.metas[module.idx];
+    if module.namespace_object_ref != canonical_ref
+      || matches!(module.exports_kind, ExportsKind::CommonJs)
+      || meta.has_dynamic_exports
+    {
+      return None;
+    }
+    match meta.sorted_and_non_ambiguous_resolved_exports.get(key) {
+      Some(&came_from_commonjs) => (!came_from_commonjs).then_some(true),
+      None => Some(false),
+    }
   }
 
   /// Collect the JSON-module default exports in `stmt_infos` that must NOT be split into their
@@ -1792,18 +1985,17 @@ impl BindImportsAndExportsContext<'_> {
         match &tracker.imported {
           Specifier::Star => unreachable!("star should always exist, no need to shim"),
           Specifier::Literal(imported) => {
-            let shimmed_symbol_ref = self.metas[tracker.importee]
-              .shimmed_missing_exports
-              .entry(imported.clone())
-              .or_insert_with(|| {
-                let mut name = legitimize_identifier_name(imported);
-                if !none_preserved_keyword_or_global_object_ext(&name) {
-                  name = Cow::Owned(format!("_{name}"));
-                }
-                self.symbol_db.create_facade_root_symbol_ref(tracker.importee, &name)
-              });
+            let shimmed_symbol_ref = shim_missing_export(
+              importee,
+              imported,
+              &mut self.metas[tracker.importee],
+              self.symbol_db,
+              &mut self.diagnostics,
+              self.options.shim_missing_exports
+                && self.options.checks.contains(EventKindSwitcher::ShimmedExport),
+            );
             return MatchImportKind::Normal(MatchImportKindNormal {
-              symbol: *shimmed_symbol_ref,
+              symbol: shimmed_symbol_ref,
               reexports: vec![],
             });
           }
@@ -1813,6 +2005,27 @@ impl BindImportsAndExportsContext<'_> {
 
     ret
   }
+}
+
+fn shim_missing_export(
+  module: &NormalModule,
+  exported_name: &CompactStr,
+  meta: &mut LinkingMetadata,
+  symbols: &mut SymbolRefDb,
+  diagnostics: &mut Diagnostics,
+  warn: bool,
+) -> SymbolRef {
+  *meta.shimmed_missing_exports.entry(exported_name.clone()).or_insert_with(|| {
+    if warn {
+      diagnostics
+        .push(BuildDiagnostic::shimmed_export(module.id.to_string(), exported_name.to_string()));
+    }
+    let mut name = legitimize_identifier_name(exported_name);
+    if !none_preserved_keyword_or_global_object_ext(&name) {
+      name = Cow::Owned(format!("_{name}"));
+    }
+    symbols.create_facade_root_symbol_ref(module.idx, &name)
+  })
 }
 
 pub(super) fn record_star_reexport_path(
@@ -1871,4 +2084,41 @@ fn collect_star_reexport_path(
     return;
   };
   collect_star_reexport_path(importee_idx, &next_export_name, modules, metas, path, visited);
+}
+
+/// Returns the `ASSIGN_TO_IMPORT` error when the prop at `cursor` is the target of a namespace
+/// member write (`ns.foo = 1`). The scanner reports this only when `ns` comes from `import * as`.
+#[inline]
+fn namespace_member_write_error(
+  module: &NormalModule,
+  member_expr_ref: &MemberExprRef,
+  cursor: usize,
+  meta: &LinkingMetadata,
+  symbols: &SymbolRefDb,
+) -> Option<BuildDiagnostic> {
+  if cursor + 1 != member_expr_ref.prop_and_span_list.len() {
+    return None;
+  }
+  let prop = &member_expr_ref.prop_and_span_list[cursor];
+  match member_expr_ref.write_target? {
+    MemberExprWriteKind::Assign => {}
+    // Deleting a name that the namespace does not export is legal and returns `true`, so let the
+    // caller handle `delete ns.missing` like a read of a missing export.
+    MemberExprWriteKind::Delete => {
+      let is_exported =
+        meta.resolved_exports.get(&prop.name).is_some_and(|export| !export.came_from_commonjs)
+          && meta.sorted_and_non_ambiguous_resolved_exports.contains_key(&prop.name);
+      if !is_exported {
+        return None;
+      }
+    }
+  }
+  Some(BuildDiagnostic::assign_to_import(
+    module.id.as_arc_str().clone(),
+    module.source.clone(),
+    prop.span,
+    ArcStr::from(prop.name.as_str()),
+    module.named_imports.get(&member_expr_ref.object_ref).map(|import| import.span_imported),
+    Some(ArcStr::from(member_expr_ref.object_ref.name(symbols))),
+  ))
 }

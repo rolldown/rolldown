@@ -83,6 +83,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       .result
       .hmr_info
       .module_request_to_import_record_idx
-      .insert(request.as_str().into(), record_idx);
+      .insert(request.as_ref().into(), record_idx);
   }
 }

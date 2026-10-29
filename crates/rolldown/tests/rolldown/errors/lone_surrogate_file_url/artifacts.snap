@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## FILE_NOT_FOUND
+
+```text
+[FILE_NOT_FOUND] Plugin error - Unable to get file name for unknown file "\ud800".
+   ╭─[ main.js:2:13 ]
+   │
+ 2 │ console.log(import.meta['ROLLDOWN_FILE_URL_\uD800']);
+   │             ───────────────────┬───────────────────  
+   │                                ╰───────────────────── no emitted file has this reference id
+   │ 
+   │ Help: Reference ids come from `this.emitFile()`.
+───╯
+
+```

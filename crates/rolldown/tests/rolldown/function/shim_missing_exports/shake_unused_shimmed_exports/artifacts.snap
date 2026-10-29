@@ -1,14 +1,29 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## SHIMMED_EXPORT
+
+```text
+[SHIMMED_EXPORT] Missing export "missing" has been shimmed in module "foo.js".
+
+```
+
+## SHIMMED_EXPORT
+
+```text
+[SHIMMED_EXPORT] Missing export "unusedMissing" has been shimmed in module "foo.js".
+
+```
+
 # Assets
 
 ## main.js
 
 ```js
-//#region foo.js
+// foo.js
 var missing = void 0;
-//#endregion
 export { missing };
 
 ```

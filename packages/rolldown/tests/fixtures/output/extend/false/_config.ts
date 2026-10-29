@@ -15,7 +15,6 @@ export default defineTest({
     expect(output.output[0].code).toMatchInlineSnapshot(`
       "var module = (function(exports) {
       	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-      	//#endregion
       	exports.main = "main";
       	return exports;
       })({});

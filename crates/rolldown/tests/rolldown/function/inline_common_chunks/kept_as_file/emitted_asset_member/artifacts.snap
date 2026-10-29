@@ -8,14 +8,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { n as __esmMin } from "./chunks/rolldown-runtime.js";
 import { n as url, t as init_shared } from "./chunks/shared.js";
-//#region a.js
+// a.js
 function init_a() {
 	return (init_a = __esmMin((() => {
 		init_shared();
 		console.log("A", url);
 	})))();
 }
-//#endregion
 init_a();
 
 ```
@@ -27,14 +26,13 @@ init_a();
 ```js
 import { n as __esmMin } from "./chunks/rolldown-runtime.js";
 import { n as url, t as init_shared } from "./chunks/shared.js";
-//#region b.js
+// b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
 		init_shared();
 		console.log("B", url);
 	})))();
 }
-//#endregion
 init_b();
 
 ```
@@ -51,12 +49,11 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 
 ```js
 import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
-//#region logo.png
+// logo.png
 var require_logo = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "../assets/logo-Byt54u-j.png";
 }));
-//#endregion
-//#region shared.js
+// shared.js
 var import_logo, url;
 function init_shared() {
 	return (init_shared = __esmMin((() => {
@@ -64,7 +61,6 @@ function init_shared() {
 		url = import_logo.default;
 	})))();
 }
-//#endregion
 export { url as n, init_shared as t };
 
 ```

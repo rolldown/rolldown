@@ -16,7 +16,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { Fragment, jsx } from "react/jsx-runtime";
-//#region entry.jsx
+// entry.jsx
 let Foo = {
 	Bar_(props) {
 		return /* @__PURE__ */ jsx(Fragment, { children: props.text_ });
@@ -30,7 +30,6 @@ let Foo = {
 	}
 };
 var entry_default = /* @__PURE__ */ jsx(Foo.Bar_, { text_: Foo.hello_ });
-//#endregion
 export { entry_default as default };
 
 ```

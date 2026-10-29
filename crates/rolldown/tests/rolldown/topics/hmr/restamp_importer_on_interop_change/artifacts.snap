@@ -30,29 +30,27 @@ __rolldown_runtime__.registerGraph({
 		[0],
 		[0],
 		[1, 2]
-	]
+	],
+	entries: [3]
 });
-//#region dep.js
+// dep.js
 var dep_exports = /* @__PURE__ */ __exportAll({ default: () => dep_default });
 __rolldown_runtime__.createModuleHotContext("dep.js");
 __rolldown_runtime__.registerModule("dep.js", { exports: dep_exports });
 var dep_default = { v: 1 };
-//#endregion
-//#region importer.js
+// importer.js
 var importer_exports = /* @__PURE__ */ __exportAll({});
 const importer_hot = __rolldown_runtime__.createModuleHotContext("importer.js");
 __rolldown_runtime__.registerModule("importer.js", { exports: importer_exports });
 globalThis.__restamp_importer_value = dep_default;
 importer_hot.accept();
-//#endregion
-//#region watcher.js
+// watcher.js
 var watcher_exports = /* @__PURE__ */ __exportAll({ initial: () => initial });
 const watcher_hot = __rolldown_runtime__.createModuleHotContext("watcher.js");
 __rolldown_runtime__.registerModule("watcher.js", { exports: watcher_exports });
 watcher_hot.accept("dep.js", () => {});
 const initial = dep_default;
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
@@ -60,7 +58,6 @@ process.on("beforeExit", (code) => {
 	if (code !== 0) return;
 	assert.deepStrictEqual(globalThis.__restamp_importer_value, { v: 2 });
 });
-//#endregion
 
 ```
 

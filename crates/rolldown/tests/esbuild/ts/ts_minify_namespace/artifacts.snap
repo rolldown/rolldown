@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-//#region a.ts
+// a.ts
 let Foo;
 (function(_Foo) {
 	let Bar;
@@ -14,14 +14,13 @@ let Foo;
 		foo(Foo, Bar);
 	})(Bar || (Bar = _Foo.Bar || (_Foo.Bar = {})));
 })(Foo || (Foo = {}));
-//#endregion
 
 ```
 
 ## b.js
 
 ```js
-//#region b.ts
+// b.ts
 let Foo;
 (function(_Foo) {
 	let Bar;
@@ -29,7 +28,6 @@ let Foo;
 		foo(Foo, Bar);
 	})(Bar || (Bar = _Foo.Bar || (_Foo.Bar = {})));
 })(Foo || (Foo = {}));
-//#endregion
 export { Foo };
 
 ```

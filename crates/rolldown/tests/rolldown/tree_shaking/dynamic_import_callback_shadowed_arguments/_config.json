@@ -1,0 +1,9 @@
+{
+  "config": {
+    "input": [{ "import": "./main.cjs" }],
+    "format": "cjs",
+    "strict": "never",
+    "entryFilenames": "[name].cjs",
+    "chunkFilenames": "[name].cjs"
+  }
+}

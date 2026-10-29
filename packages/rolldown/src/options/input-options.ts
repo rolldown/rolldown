@@ -776,7 +776,7 @@ export interface InputOptions {
   /**
    * Devtools integration options.
    *
-   * When enabled, Rolldown writes JSON-lines devtools output under
+   * In the default `'full'` mode, Rolldown writes JSON-lines devtools output under
    * `node_modules/.rolldown/{session_id}/`, resolved against {@linkcode cwd}.
    * Consumers can parse the output with `@rolldown/debug` after
    * `await bundle.close()` resolves.
@@ -786,10 +786,30 @@ export interface InputOptions {
    * bundler that runs at the same time its own `sessionId`, or their devtools output mixes.
    * The name `unknown-session` is reserved regardless of case.
    *
+   * In `'report'` mode, Rolldown aggregates the same internal event stream in-memory and
+   * writes a small, agent-readable report instead of the multi-GB `logs.json`: a canonical
+   * `metrics.json` (schema-versioned, with a build-over-build `delta`), `module-graph.json`
+   * (the full module graph with retained sizes), progressive markdown
+   * views (`entry.md` + on-demand detail files), one `history.jsonl` line per build, and an
+   * `AGENTS.md` describing the directory contract.
+   *
+   * The report goes to `node_modules/.rolldown/report/<output dir>`, resolved against
+   * {@linkcode cwd}. `<output dir>` is the output folder (`output.dir`, the folder of
+   * `output.file`, or `dist`) relative to `cwd`, so each build output keeps its own report and
+   * finds its previous one for the delta. Each `..` of an output folder outside `cwd` is written
+   * as `__`. A bundler opens one report, so its first output picks the folder.
+   *
    * @experimental
    */
   devtools?: {
     sessionId?: string;
+    /**
+     * `'full'` (default): write JSON-lines devtools logs.
+     * `'report'`: aggregate the same event stream in-memory and emit an agent-readable
+     * report (`metrics.json` + markdown views + `history.jsonl`) instead.
+     * Any other value fails the build.
+     */
+    mode?: 'full' | 'report';
   };
   /**
    * Controls how entry chunk exports are preserved.

@@ -22,6 +22,11 @@ import type { PartialNull } from '../types/utils';
 import { type AssetSource, bindingAssetSource } from '../utils/asset-source';
 import { bindingifyPreserveEntrySignatures } from '../utils/bindingify-input-options';
 import { isPathFragment, unreachable } from '../utils/misc';
+import {
+  normalizeUniqueModuleId,
+  stringifyModuleId,
+  type UniqueModuleId,
+} from '../utils/module-id';
 import type { BindingifyPluginArgs } from './bindingify-plugin';
 import { fsModule, type RolldownFsModule } from './fs';
 import type { CustomPluginOptions, ModuleOptions, Plugin, ResolvedId } from './index';
@@ -172,6 +177,14 @@ export interface PluginContextResolveOptions {
    * See [Custom resolver options section](https://rolldown.rs/apis/plugin-api/inter-plugin-communication#custom-resolver-options) for more details.
    */
   custom?: CustomPluginOptions;
+  /**
+   * The import attributes of the simulated import, passed to
+   * {@linkcode Plugin.resolveId | resolveId} hooks as
+   * {@linkcode ResolveIdExtraOptions.attributes | attributes}.
+   *
+   * @default {}
+   */
+  attributes?: Record<string, string>;
 }
 
 /** @inline */
@@ -244,7 +257,19 @@ export interface PluginContext extends MinimalPluginContext {
    * {@include ./docs/plugin-context-load.md}
    */
   load(
-    options: { id: string; resolveDependencies?: boolean } & Partial<PartialNull<ModuleOptions>>,
+    options: {
+      /**
+       * The module id, or the raw id and import attributes it is built from. A module id that
+       * contains import attributes is split into them.
+       *
+       * Like in Rollup 5, the import attributes only come from `id`. The result of
+       * {@linkcode PluginContext.resolve | this.resolve} has the raw id in `id`, so passing it as
+       * is loads the module without its attributes. Pass
+       * `{ ...resolved, id: { rawId: resolved.id, attributes: resolved.attributes } }` instead.
+       */
+      id: UniqueModuleId;
+      resolveDependencies?: boolean;
+    } & Partial<PartialNull<ModuleOptions>>,
   ): Promise<ModuleInfo>;
   /**
    * Use Rolldown's internal parser to parse code to an [ESTree-compatible](https://github.com/estree/estree) AST.
@@ -269,7 +294,10 @@ export interface PluginContext extends MinimalPluginContext {
    */
   resolve(
     source: string,
-    importer?: string,
+    /**
+     * The id of the importing module, or the raw id and import attributes it is built from.
+     */
+    importer?: UniqueModuleId,
     options?: PluginContextResolveOptions,
   ): Promise<ResolvedId | null>;
 }
@@ -292,9 +320,13 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
   }
 
   public async load(
-    options: { id: string; resolveDependencies?: boolean } & Partial<PartialNull<ModuleOptions>>,
+    options: {
+      id: UniqueModuleId;
+      resolveDependencies?: boolean;
+    } & Partial<PartialNull<ModuleOptions>>,
   ): Promise<ModuleInfo> {
-    const id = options.id;
+    const { rawId, attributes } = normalizeUniqueModuleId(options.id);
+    const id = this.data.toModuleId(rawId, attributes);
     if (id === this.currentLoadingModule) {
       this.onLog(LOG_LEVEL_WARN, logCycleLoading(this.pluginName, this.currentLoadingModule));
     }
@@ -313,7 +345,12 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     let loadPromise = this.data.loadModulePromiseMap.get(id);
     if (!loadPromise) {
       loadPromise = this.context
-        .load(id, options.moduleSideEffects ?? undefined, options.packageJsonPath ?? undefined)
+        .load(
+          rawId,
+          attributes,
+          options.moduleSideEffects ?? undefined,
+          options.packageJsonPath ?? undefined,
+        )
         .catch(() => {
           // avoid reusing the promise if it's an error
           // because the error may happen only in non-supported hooks (e.g. `buildStart` hook)
@@ -328,9 +365,12 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
 
   public async resolve(
     source: string,
-    importer?: string,
+    importer?: UniqueModuleId,
     options?: PluginContextResolveOptions,
   ): Promise<ResolvedId | null> {
+    if (typeof importer === 'object' && importer !== null) {
+      importer = stringifyModuleId(importer.rawId, importer.attributes);
+    }
     let receipt: number | undefined = undefined;
     if (options != null) {
       receipt = this.data.saveResolveOptions(options);
@@ -350,13 +390,16 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
       isEntry: options?.isEntry,
       skipSelf: options?.skipSelf,
       vitePluginCustom,
+      attributes: options?.attributes,
     } satisfies Record<keyof BindingPluginContextResolveOptions, unknown>);
     if (receipt != null) {
       this.data.removeSavedResolveOptions(receipt);
     }
 
     if (res == null) return null;
-    const info = this.data.getModuleOption(res.id) || ({} as ModuleOptions);
+    const info =
+      this.data.getModuleOption(this.data.toModuleId(res.id, res.attributes, !!res.external)) ||
+      ({} as ModuleOptions);
     return {
       ...res,
       external:

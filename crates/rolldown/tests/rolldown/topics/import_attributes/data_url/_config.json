@@ -1,0 +1,8 @@
+{
+  "_comment": "A data URL imported with attributes is still loaded by the builtin data URL plugin.",
+  "config": {
+    "experimental": {
+      "importAttributes": true
+    }
+  }
+}

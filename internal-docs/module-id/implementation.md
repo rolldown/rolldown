@@ -38,14 +38,16 @@ Plugin APIs like `addWatchFile()` do **no normalization** — they trust the cal
 
 ```rust
 // rolldown_common/src/types/module_id.rs
-pub struct ModuleId { repr: Repr }
+pub struct ModuleId { inner: ArcStr, kind: ModuleIdKind, raw_len: u32 }
 
-enum Repr {
-  Path(ArcStr),    // absolute filesystem path — path operations are meaningful
-  Virtual(ArcStr), // virtual id, prefixed with `\0` (Rollup convention)
-  Bare(ArcStr),    // bare specifier (`react`), URL, data URI, relative specifier, …
+pub enum ModuleIdKind {
+  Path,    // absolute filesystem path — path operations are meaningful
+  Virtual, // virtual id, prefixed with `\0` (Rollup convention)
+  Bare,    // bare specifier (`react`), URL, data URI, relative specifier, …
 }
 ```
+
+`raw_len` marks where the raw id ends when the id carries import attributes (`rawId?attributes=...`); path operations work on `raw_id()`. See [import-attributes](../import-attributes/implementation.md).
 
 Equality, ordering, and hashing are still raw string comparison over `as_str()` (the kind discriminant is ignored), so path identity continues to depend on exact string equality, and a `ModuleId` hashes identically to its string — `&str` lookups into `HashMap<ModuleId, _>` keep working. The classification only gates _path_ logic: `as_path()` returns `Some(&Path)` only for the `Path` kind, and helpers like `is_in_node_modules()` / `representative_name()` build on it, so virtual ids and bare specifiers are no longer round-tripped through `Path` / `to_string_lossy`.
 

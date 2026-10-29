@@ -4,7 +4,11 @@ use rolldown_plugin::{CustomField, PluginContextResolveOptions};
 use rolldown_plugin_utils::constants::{ViteImportGlob, ViteImportGlobValue};
 
 use crate::options::plugin::{
-  JsPluginContextResolveCustomArgId, types::binding_vite_plugin_custom::BindingVitePluginCustom,
+  JsPluginContextResolveCustomArgId,
+  types::{
+    binding_import_attributes::{BindingImportAttributes, from_binding_import_attributes},
+    binding_vite_plugin_custom::BindingVitePluginCustom,
+  },
 };
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -26,6 +30,8 @@ pub struct BindingPluginContextResolveOptions {
   pub skip_self: Option<bool>,
   pub custom: Option<u32>,
   pub vite_plugin_custom: Option<BindingVitePluginCustom>,
+  #[napi(ts_type = "Record<string, string>")]
+  pub attributes: Option<BindingImportAttributes>,
 }
 
 impl TryFrom<BindingPluginContextResolveOptions> for PluginContextResolveOptions {
@@ -47,6 +53,7 @@ impl TryFrom<BindingPluginContextResolveOptions> for PluginContextResolveOptions
       is_entry: value.is_entry.unwrap_or_default(),
       skip_self: value.skip_self.unwrap_or(true),
       custom: Arc::new(custom),
+      attributes: value.attributes.map(from_binding_import_attributes).unwrap_or_default(),
     })
   }
 }

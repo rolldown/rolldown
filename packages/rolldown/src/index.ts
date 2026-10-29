@@ -65,6 +65,7 @@ import type {
   FunctionPluginHooks,
   HookFilterExtension,
   ImportKind,
+  LoadExtraOptions,
   LoadResult,
   ModuleOptions,
   ModuleType,
@@ -82,6 +83,7 @@ import type {
   SourceDescription,
   TransformResult,
 } from './plugin';
+import type { UniqueModuleId } from './utils/module-id';
 import type {
   BufferEncoding,
   RolldownDirectoryEntry,
@@ -167,6 +169,7 @@ export type {
   InputOption,
   InputOptions,
   InternalModuleFormat,
+  LoadExtraOptions,
   LoadResult,
   LoggingFunction,
   LogLevel,
@@ -230,6 +233,7 @@ export type {
   TransformPluginContext,
   TransformResult,
   TreeshakingOptions,
+  UniqueModuleId,
   WarningHandlerWithDefault,
   WatcherFileWatcherOptions,
   WatcherOptions,

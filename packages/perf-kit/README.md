@@ -12,6 +12,9 @@ Chrome/Edge), so it works three ways:
   `.gitignore`), never inside `node_modules`; override with `ROLLDOWN_PERF_KIT_STATE`.
 - **Once published**: `npx @rolldown/perf-kit scan --app .` with no install step.
 
+Prompts for an agent, one per target (browser page load, node or deno server startup,
+Cloudflare Worker startup): `PROMPTS.md`.
+
 Prototype of the metrics plan's **Phase 3b (lab runner)** and **3c (code coverage)**:
 the measurement and mutation primitives an agent needs to run a
 "measure → find unused-at-paint code → lazy-load it → re-measure → accept or revert"

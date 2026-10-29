@@ -63,11 +63,8 @@ use rolldown::{Bundle, BundleFactory, BundleFactoryOptions, BundleHandle, Bundle
 use rolldown_common::BundleMode;
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::__inner::SharedPluginable;
-use rolldown_std_utils::{discard_panic_payload, panic_payload_message};
 use rolldown_utils::futures::spawn_blocking;
-use std::{panic::AssertUnwindSafe, sync::Arc};
-
-use futures::FutureExt;
+use std::sync::Arc;
 
 pub struct ClassicBundler {
   session_id: Arc<str>,
@@ -134,14 +131,8 @@ impl ClassicBundler {
     // - Read `BindingBundler#close` in `crates/rolldown_binding/src/binding_bundler.rs` for more details.
     async move {
       if let Some(handle) = last_bundle_handle {
-        match AssertUnwindSafe(handle.plugin_driver().close_bundle(None)).catch_unwind().await {
-          Ok(result) => result?,
-          Err(payload) => {
-            let message = panic_payload_message(&*payload);
-            discard_panic_payload(payload);
-            return Err(anyhow::anyhow!("closeBundle hook panicked: {message}"));
-          }
-        }
+        let plugin_driver = handle.plugin_driver();
+        plugin_driver.close_bundle(None).await?;
       }
       if let Some(rx) = devtools_flush_rx {
         // Block on the writer-thread ack in a blocking task so we don't stall

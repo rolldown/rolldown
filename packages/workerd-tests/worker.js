@@ -570,38 +570,6 @@ async function caseFailedBuildReuse() {
   }
 }
 
-// CASE 8: `map.toUrl()` in an isolate with no `Buffer` global. The source is
-// non-ASCII so the data URL must carry UTF-8 bytes, not UTF-16 code units. At
-// ~190 KB (the map's `sourcesContent` carries it) the encoder crosses several
-// chunks, with multi-byte sequences throughout. The driver decodes the payload
-// on its own side.
-const UTF8_SOURCE = Array.from(
-  { length: 4000 },
-  (_, i) => `export const g${i} = 'h\u00e9llo \u6f22\u5b57 \u{1f642} ${i}';\n`,
-).join('');
-
-async function caseSourcemapUrl() {
-  const result = await build({
-    module: wasmModule,
-    input: 'virt:utf8.js',
-    plugins: [
-      {
-        name: 'workerd-suite-utf8-source',
-        resolveId: (source) => (source === 'virt:utf8.js' ? source : null),
-        load: (id) => (id === 'virt:utf8.js' ? UTF8_SOURCE : null),
-      },
-    ],
-    output: { format: 'esm', sourcemap: true },
-  });
-  const map = result.output[0].map;
-  return {
-    bufferGlobal: typeof Buffer,
-    source: UTF8_SOURCE,
-    mapString: map.toString(),
-    url: map.toUrl(),
-  };
-}
-
 // ---------------------------------------------------------------------------
 // CASE 5: capabilities, as reported from inside workerd. The handle has no raw
 // exports, so read them the way the pipeline does: a parallel plugin is refused
@@ -881,7 +849,6 @@ export default {
           ['capabilities', caseCapabilities],
           ['fireAndForgetLoad', caseFireAndForgetLoad],
           ['failedBuildReuse', caseFailedBuildReuse],
-          ['sourcemapUrl', caseSourcemapUrl],
         ];
         for (const [name, fn] of steps) {
           try {

@@ -73,8 +73,8 @@ This is fundamentally different from `Bundler.closed`:
 `close()` takes the last `BundleHandle` (`take`, not `clone`): a copy left on
 the struct would be freed only by the N-API finalizer, which never runs on
 threadless WASI. A second close therefore finds no handle and does not run
-`closeBundle` again. `closeBundle` runs under `catch_unwind`, so a panicking hook
-becomes an error.
+`closeBundle` again. This close-once guard is a runtime correctness requirement:
+a later native close must not reach the released async runtime.
 
 Because the handle is gone, a second native close resolves at once, before the first one's `closeBundle` ends. The JS side guarantees one call: `RolldownBuild.close()` in `packages/rolldown/src/api/rolldown/rolldown-build.ts` keeps the first close promise, and a repeated `close()` only waits for it (the first caller gets any error). Inside that first close every cleanup step runs exactly once, even when an earlier one fails: it stops the parallel-plugin workers, then always calls `BindingBundler.close()`, and only then rethrows a worker shutdown error.
 

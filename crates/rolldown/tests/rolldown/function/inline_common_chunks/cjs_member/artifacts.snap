@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { a as __share_require, i as __share_export, n as __esmMin, o as __toESM, r as __share, t as __commonJSMin } from "./rolldown-runtime.js";
-__share("cjs-1tongeCO", (exports$1) => {
+__share("cjs-1tongeCO", ((exports$1) => {
 	// cjs.js
 	var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		let n = 0;
@@ -23,7 +23,7 @@ __share("cjs-1tongeCO", (exports$1) => {
 		globalThis.events.push("CJS body");
 	}));
 	__share_export(exports$1, { t: () => require_cjs });
-});
+}));
 var share_cjs = __share_require("cjs-1tongeCO");
 // a.js
 var import_cjs;
@@ -42,7 +42,7 @@ init_a();
 
 ```js
 import { a as __share_require, i as __share_export, n as __esmMin, o as __toESM, r as __share, t as __commonJSMin } from "./rolldown-runtime.js";
-__share("cjs-1tongeCO", (exports$1) => {
+__share("cjs-1tongeCO", ((exports$1) => {
 	// cjs.js
 	var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		let n = 0;
@@ -58,7 +58,7 @@ __share("cjs-1tongeCO", (exports$1) => {
 		globalThis.events.push("CJS body");
 	}));
 	__share_export(exports$1, { t: () => require_cjs });
-});
+}));
 var share_cjs = __share_require("cjs-1tongeCO");
 // b.js
 var import_cjs;

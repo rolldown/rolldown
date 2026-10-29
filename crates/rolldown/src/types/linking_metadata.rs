@@ -1,4 +1,5 @@
 use crate::stages::link_stage::{ModuleInclusionVec, ModuleNamespaceReasonVec, StmtInclusionVec};
+use oxc::semantic::NodeId;
 use oxc_index::IndexVec;
 use oxc_str::CompactStr;
 use rolldown_common::{
@@ -84,6 +85,9 @@ pub struct LinkingMetadata {
   pub execution_dependencies: FxIndexSet<ModuleIdx>,
   // `None` the member expression resolve to a ambiguous export.
   pub resolved_member_expr_refs: MemberExprRefResolutionMap,
+  /// Results of the `'key' in ns` checks (see `EcmaView::namespace_in_checks`) that are known at
+  /// link time.
+  pub folded_namespace_in_checks: FxHashMap<NodeId, bool>,
   pub star_exports_from_external_modules: Vec<ImportRecordIdx>,
   pub is_tla_or_contains_tla_dependency: bool,
   pub concatenated_wrapped_module_kind: ConcatenateWrappedModuleKind,

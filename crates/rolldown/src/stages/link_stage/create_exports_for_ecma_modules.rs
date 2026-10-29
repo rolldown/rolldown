@@ -172,8 +172,9 @@ impl LinkStage<'_> {
       // - Module Namespace Object: https://tc39.es/ecma262/#sec-module-namespace-exotic-objects
       // Though Module Namespace Object is created in runtime, as a bundler, we have stimulus the behavior in compile-time and generate a
       // real statement to construct the Module Namespace Object and assign it to a variable.
-      // This is only a concept of esm, so no need to care about this in commonjs.
-      if matches!(ecma_module.exports_kind, ExportsKind::Esm) {
+      // This is only a concept of esm, so no need to care about this in commonjs. A module without
+      // module syntax (`ExportsKind::None`) still needs it when `import()` reads its namespace.
+      if matches!(ecma_module.exports_kind, ExportsKind::Esm | ExportsKind::None) {
         let meta = &mut self.metas[ecma_module.idx];
         let mut referenced_symbols = vec![];
         let mut declared_symbols: DeclaredSymbols = smallvec![];

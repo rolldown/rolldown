@@ -1,0 +1,284 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { a as __share_require, i as __share_export, n as __exportAll, r as __share, t as __esmMin } from "./rolldown-runtime.js";
+import assert from "node:assert";
+__share("self_accept-RFHWBDnX", ((exports) => {
+	__rolldown_runtime__.registerGraph({
+		ids: ["self_accept.js"],
+		localCount: 1,
+		edges: [[]]
+	});
+	// self_accept.js
+	var self_accept_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+	var self_accept_hot, value;
+	function init_self_accept() {
+		return (init_self_accept = __esmMin((() => {
+			self_accept_hot = __rolldown_runtime__.createModuleHotContext("self_accept.js");
+			__rolldown_runtime__.registerModule("self_accept.js", { exports: self_accept_exports });
+			value = "self-v0";
+			self_accept_hot.accept((mod) => {
+				globalThis.selfAccepted = mod.value;
+			});
+		})))();
+	}
+	__share_export(exports, {
+		n: () => value,
+		t: () => init_self_accept
+	});
+}));
+var share_self_accept = __share_require("self_accept-RFHWBDnX");
+__rolldown_runtime__.registerGraph({
+	ids: ["a.js", "self_accept.js"],
+	localCount: 1,
+	edges: [[1]],
+	entries: [0]
+});
+// a.js
+var a_exports = /* @__PURE__ */ __exportAll({});
+function init_a() {
+	return (init_a = __esmMin((() => {
+		share_self_accept.t();
+		__rolldown_runtime__.createModuleHotContext("a.js");
+		__rolldown_runtime__.registerModule("a.js", { exports: a_exports });
+		assert.strictEqual(share_self_accept.n, "self-v0");
+		process.on("beforeExit", (code) => {
+			if (code !== 0) return;
+			assert.strictEqual(globalThis.selfAccepted, "self-v1");
+		});
+	})))();
+}
+init_a();
+
+```
+
+## b.js
+
+```js
+import { a as __share_require, i as __share_export, n as __exportAll, r as __share, t as __esmMin } from "./rolldown-runtime.js";
+import assert from "node:assert";
+__share("self_accept-RFHWBDnX", ((exports) => {
+	__rolldown_runtime__.registerGraph({
+		ids: ["self_accept.js"],
+		localCount: 1,
+		edges: [[]]
+	});
+	// self_accept.js
+	var self_accept_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+	var self_accept_hot, value;
+	function init_self_accept() {
+		return (init_self_accept = __esmMin((() => {
+			self_accept_hot = __rolldown_runtime__.createModuleHotContext("self_accept.js");
+			__rolldown_runtime__.registerModule("self_accept.js", { exports: self_accept_exports });
+			value = "self-v0";
+			self_accept_hot.accept((mod) => {
+				globalThis.selfAccepted = mod.value;
+			});
+		})))();
+	}
+	__share_export(exports, {
+		n: () => value,
+		t: () => init_self_accept
+	});
+}));
+__share("accept_dep-z052dtnB", ((exports) => {
+	__rolldown_runtime__.registerGraph({
+		ids: ["dep.js", "accept_dep.js"],
+		localCount: 2,
+		edges: [[], [0]]
+	});
+	// dep.js
+	var dep_exports = /* @__PURE__ */ __exportAll({ dep: () => dep }), dep;
+	function init_dep() {
+		return (init_dep = __esmMin((() => {
+			__rolldown_runtime__.createModuleHotContext("dep.js");
+			__rolldown_runtime__.registerModule("dep.js", { exports: dep_exports });
+			dep = "dep-v0";
+		})))();
+	}
+	// accept_dep.js
+	var accept_dep_exports = /* @__PURE__ */ __exportAll({ current: () => current });
+	function current() {
+		return latest;
+	}
+	var accept_dep_hot, latest;
+	function init_accept_dep() {
+		return (init_accept_dep = __esmMin((() => {
+			init_dep();
+			accept_dep_hot = __rolldown_runtime__.createModuleHotContext("accept_dep.js");
+			__rolldown_runtime__.registerModule("accept_dep.js", { exports: accept_dep_exports });
+			latest = dep;
+			accept_dep_hot.accept("dep.js", (mod) => {
+				latest = mod.dep;
+			});
+		})))();
+	}
+	__share_export(exports, {
+		n: () => init_accept_dep,
+		t: () => current
+	});
+}));
+var share_self_accept = __share_require("self_accept-RFHWBDnX");
+var share_accept_dep = __share_require("accept_dep-z052dtnB");
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"b.js",
+		"self_accept.js",
+		"accept_dep.js"
+	],
+	localCount: 1,
+	edges: [[1, 2]],
+	entries: [0]
+});
+// b.js
+var b_exports = /* @__PURE__ */ __exportAll({});
+function init_b() {
+	return (init_b = __esmMin((() => {
+		share_self_accept.t();
+		share_accept_dep.n();
+		__rolldown_runtime__.createModuleHotContext("b.js");
+		__rolldown_runtime__.registerModule("b.js", { exports: b_exports });
+		assert.strictEqual(share_self_accept.n, "self-v0");
+		assert.strictEqual((0, share_accept_dep.t)(), "dep-v0");
+	})))();
+}
+init_b();
+
+```
+
+## c.js
+
+```js
+import { a as __share_require, i as __share_export, n as __exportAll, r as __share, t as __esmMin } from "./rolldown-runtime.js";
+import assert from "node:assert";
+__share("accept_dep-z052dtnB", ((exports) => {
+	__rolldown_runtime__.registerGraph({
+		ids: ["dep.js", "accept_dep.js"],
+		localCount: 2,
+		edges: [[], [0]]
+	});
+	// dep.js
+	var dep_exports = /* @__PURE__ */ __exportAll({ dep: () => dep }), dep;
+	function init_dep() {
+		return (init_dep = __esmMin((() => {
+			__rolldown_runtime__.createModuleHotContext("dep.js");
+			__rolldown_runtime__.registerModule("dep.js", { exports: dep_exports });
+			dep = "dep-v0";
+		})))();
+	}
+	// accept_dep.js
+	var accept_dep_exports = /* @__PURE__ */ __exportAll({ current: () => current });
+	function current() {
+		return latest;
+	}
+	var accept_dep_hot, latest;
+	function init_accept_dep() {
+		return (init_accept_dep = __esmMin((() => {
+			init_dep();
+			accept_dep_hot = __rolldown_runtime__.createModuleHotContext("accept_dep.js");
+			__rolldown_runtime__.registerModule("accept_dep.js", { exports: accept_dep_exports });
+			latest = dep;
+			accept_dep_hot.accept("dep.js", (mod) => {
+				latest = mod.dep;
+			});
+		})))();
+	}
+	__share_export(exports, {
+		n: () => init_accept_dep,
+		t: () => current
+	});
+}));
+var share_accept_dep = __share_require("accept_dep-z052dtnB");
+__rolldown_runtime__.registerGraph({
+	ids: ["c.js", "accept_dep.js"],
+	localCount: 1,
+	edges: [[1]],
+	entries: [0]
+});
+// c.js
+var c_exports = /* @__PURE__ */ __exportAll({});
+function init_c() {
+	return (init_c = __esmMin((() => {
+		share_accept_dep.n();
+		__rolldown_runtime__.createModuleHotContext("c.js");
+		__rolldown_runtime__.registerModule("c.js", { exports: c_exports });
+		assert.strictEqual((0, share_accept_dep.t)(), "dep-v0");
+		process.on("beforeExit", (code) => {
+			if (code !== 0) return;
+			assert.strictEqual((0, share_accept_dep.t)(), "dep-v1");
+		});
+	})))();
+}
+init_c();
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __share_require as a, __share_export as i, __exportAll as n, __share as r, __esmMin as t };
+
+```
+
+# HMR Step 0
+
+## Code
+
+```js
+__rolldown_runtime__.registerGraph({ids:["self_accept.js"],localCount:1,edges:[[]],stamps:{0:1}});
+//#region self_accept.js
+__rolldown_runtime__.registerFactory("self_accept.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_self_accept = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const value = "self-v1";
+		hot_self_accept.accept((mod) => {
+			globalThis.selfAccepted = mod.value;
+		});
+	} finally {}
+}), 1);
+
+//#endregion
+```
+
+## Meta
+
+- update type: patch
+
+### Changed Ids
+
+- self_accept.js
+
+# HMR Step 1
+
+## Code
+
+```js
+__rolldown_runtime__.registerGraph({ids:["dep.js"],localCount:1,edges:[[]],stamps:{0:2}});
+//#region dep.js
+__rolldown_runtime__.registerFactory("dep.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ dep: () => dep });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_dep = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const dep = "dep-v1";
+	} finally {}
+}), 2);
+
+//#endregion
+```
+
+## Meta
+
+- update type: patch
+
+### Changed Ids
+
+- dep.js

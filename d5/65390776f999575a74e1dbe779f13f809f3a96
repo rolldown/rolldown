@@ -1,0 +1,57 @@
+Cargo.lock
+  s_a1fe7583094f95::t_acdf104fd55ca9 341,593,1447,2576,2578,2585,2587,2605,2607,2617-2631,2634,2636,2665,3423,3769,3788,4186
+packages/rolldown/package.json
+  s_22c100838c5ffd::t_519df11bf40419 144
+packages/rolldown/src/binding.cjs
+  s_a1fe7583094f95::t_cbae05fcf9e535 850
+packages/rolldown/src/binding.d.cts
+  s_a1fe7583094f95::t_ee2ad34d199037 3230-3253
+packages/rolldown/src/rolldown-binding.wasi-browser.js
+  s_a1fe7583094f95::t_63795a716a9493 1532
+packages/rolldown/src/rolldown-binding.wasi.cjs
+  s_a1fe7583094f95::t_86241098fdbe57 1,2369
+packages/rolldown/src/rolldown-binding.wasi.d.cts
+  s_a1fe7583094f95::t_8bd2e5c093a5fb 3225-3248
+pnpm-lock.yaml
+  s_22c100838c5ffd::t_5989c91997e5fc 759-761,2121-2123,2136-2138,2148-2150,4985-5044,10298-10302,10323-10326,10341-10344,11342-11347,12281-12328
+pnpm-workspace.yaml
+  s_22c100838c5ffd::t_f74ec84789a5ab 149-158
+crates/rolldown_binding/Cargo.toml
+  s_22c100838c5ffd::t_18add01a6b9c48 43
+crates/rolldown_binding/src/lib.rs
+  s_a1fe7583094f95::t_3809c40ea0e4c0 72
+crates/rolldown_binding/src/types/js_callback.rs
+  s_a1fe7583094f95::t_4a6d5fc38e2027 156
+packages/rolldown/build.ts
+  s_a1fe7583094f95::t_bb8fb9741938c3 209
+packages/rolldown/src/utils-index.ts
+  s_a1fe7583094f95::t_a35fe970a1f794 4-16
+packages/rolldown/src/utils/notify.ts
+  s_a1fe7583094f95::t_7f52cb13d302a6 1-85
+packages/rolldown/tests/utils/notify.test.ts
+  s_a1fe7583094f95::t_2b7518de720644 1-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "d565390776f999575a74e1dbe779f13f809f3a96",
+  "prompts": {},
+  "sessions": {
+    "s_22c100838c5ffd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a18695-b023-7270-95c5-9441e76d5af8",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    },
+    "s_a1fe7583094f95": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a17bb6-f630-7011-8015-dfcde7bc0223",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

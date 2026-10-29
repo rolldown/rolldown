@@ -2856,7 +2856,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
         // The importee is bundled, so the second argument is inert and is dropped here. Import
         // attributes only reach the output for external imports, where `ecmascript/format/esm.rs`
-        // renders them from `import_attribute_map`; for an internal module they select no loader
+        // renders them from the attributes of the import record; for an internal module they select no loader
         // and do not affect module identity, and a static attributed import of an internal module
         // already drops them. Dropping them makes `import(spec, options)` produce byte-identical
         // output to `import(spec)`: the specifier below is redirected at the chunk that actually

@@ -2747,6 +2747,7 @@ dependencies = [
  "oxc_resolver",
  "oxc_sourcemap",
  "oxc_str",
+ "percent-encoding",
  "rolldown_ecmascript",
  "rolldown_error",
  "rolldown_fs",

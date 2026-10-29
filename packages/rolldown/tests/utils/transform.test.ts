@@ -59,19 +59,23 @@ describe('enhanced transform', () => {
           [
             '--input-type=module',
             '-e',
-            `import fs from 'node:fs';
-             import os from 'node:os';
-             import path from 'node:path';
-             import { transform, transformSync } from 'rolldown/utils';
-             const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rolldown-deleted-cwd-'));
-             process.chdir(dir);
-             // Fill Node's cwd cache, as a long-running dev server already has.
-             process.cwd();
-             fs.rmSync(dir, { recursive: true });
-             const file = path.join(dir, 'test.ts');
-             const sync = transformSync(file, 'const x: number = 1;');
-             const async = await transform(file, 'const x: = 1;');
-             console.log(JSON.stringify({ code: sync.code, errors: async.errors.length }));`,
+            /* js */ `
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { transform, transformSync } from 'rolldown/utils';
+
+const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rolldown-deleted-cwd-'));
+process.chdir(dir);
+// Fill Node's cwd cache, as a long-running dev server already has.
+process.cwd();
+fs.rmSync(dir, { recursive: true });
+
+const file = path.join(dir, 'test.ts');
+const sync = transformSync(file, 'const x: number = 1;');
+const async = await transform(file, 'const x: = 1;');
+console.log(JSON.stringify({ code: sync.code, errors: async.errors.length }));
+             `,
           ],
           { cwd: import.meta.dirname, encoding: 'utf8' },
         );

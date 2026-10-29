@@ -254,6 +254,9 @@ pub fn dce_chunk(
   let t = Timer::start();
   let ret = Minifier::new(minify_options.clone()).dce(allocator, &mut program);
   debug_assert!(ret.scoping.is_none(), "DCE-only mode does not mangle");
+  if std::env::var_os("ROLLDOWN_CHUNK_AST_DCE_DEBUG").is_some() {
+    eprintln!("chunk_ast_dce dce iterations={}", ret.iterations);
+  }
   t.stop(Phase::AstDce);
 
   let t = Timer::start();

@@ -194,6 +194,9 @@ fn dce_or_minify<'a>(
     minifier.dce(allocator, &mut program)
   };
   t.stop(Phase::MinifyDce);
+  if std::env::var_os("ROLLDOWN_CHUNK_AST_DCE_DEBUG").is_some() {
+    eprintln!("minify_chunks dce iterations={}", ret.iterations);
+  }
   let t = Timer::start();
   let property_mangle_cache = ret.property_mangle_cache;
   let ret = Codegen::new()

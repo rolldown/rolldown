@@ -51,6 +51,30 @@ and the delta workflow; its `entry.md` is the summary with a file index. Read th
 you need a number the kit does not print, such as hook time per plugin or the build
 history.
 
+## If the target is a server, not a page
+
+`node-scan --entry <builtServerScript> --ready <spec>` measures a process coming up
+instead of a page loading. The loop below is unchanged — baseline, one change, measure,
+accept or revert — with three differences that decide whether your work is worth anything:
+
+- **Declare readiness once and never change it.** `--ready port:3000` /
+  `'stdout:listening on'` / `http://127.0.0.1:3000/health` / `exit`. It is pinned with the
+  target; two scans that measured different moments are not comparable, the same way two
+  browser scans under different net scales are not.
+- **Read the ownership line before doing any work.** `node-scan` reports pre-ready CPU
+  split into app modules / runtime+native / engine. When app modules hold a small share,
+  the bundle is not the cost — startup is native addon loading, TLS/crypto init, or a
+  DB handshake — and deferring imports will not move the number no matter how good the
+  deferral is. Say that and stop, rather than shipping edits that cannot help.
+- **Judge small startups by bytes, not milliseconds.** Readiness polling quantizes; when
+  `node-scan` prints the resolution note, the millisecond delta is not evidence and the
+  cold-at-ready byte count is.
+
+`graph`, `what-if`, `cut` and `graph-diff` work exactly as below on a server build —
+a top-level import and a render-blocking import are the same edge in the module graph.
+Bun is not supported (JavaScriptCore, not V8) and edge runtimes can only be analyzed
+statically; do not report a measured number for either.
+
 ## The optimization loop
 
 1. Build the app. `scan --app <appDir>` — the first scan is your baseline.

@@ -4,6 +4,7 @@
 //! (`CLOCK_THREAD_CPUTIME_ID`) into a global counter, so phases that run in parallel report
 //! their summed CPU, not wall time.
 
+use std::fmt::Write as _;
 use std::sync::{
   LazyLock,
   atomic::{AtomicU64, Ordering},
@@ -98,7 +99,7 @@ pub fn report_and_reset() -> String {
     if ns != 0 {
       #[expect(clippy::cast_precision_loss)]
       let ms = ns as f64 / 1e6;
-      out.push_str(&format!("{name}={ms:.1}ms "));
+      let _ = write!(out, "{name}={ms:.1}ms ");
     }
   }
   out

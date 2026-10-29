@@ -84,6 +84,9 @@ pub struct ChunkAstDceOutput {
   pub imports: Option<String>,
   /// Replaces `render_wrapped_entry_chunk` + `render_chunk_exports`.
   pub exports: Option<String>,
+  /// `global` mode: maps of `imports`/`exports`, which can hold code moved out of modules.
+  pub imports_map: Option<rolldown_sourcemap::SourceMap>,
+  pub exports_map: Option<rolldown_sourcemap::SourceMap>,
   /// `global` mode: the chunk's shared source space; modules are printed against it.
   pub space: Option<std::sync::Arc<global::ChunkSourceSpace>>,
 }
@@ -95,6 +98,7 @@ pub struct GeneratedText<'a> {
 }
 
 /// Returns the DCE options when the fast path may run for this build at all.
+#[expect(clippy::print_stderr, reason = "PoC debug output behind an env var")]
 pub fn build_eligible<'o>(
   options: &'o NormalizedBundlerOptions,
   plugin_driver: &SharedPluginDriver,
@@ -183,7 +187,8 @@ fn user_render_chunk_plugins(plugin_driver: &SharedPluginDriver) -> usize {
 /// exports, and passthrough addons.
 pub fn chunk_eligible(ctx: &GenerateContext<'_>, asts: &[&mut EcmaAst]) -> bool {
   let chunk = ctx.chunk;
-  let filename = chunk.preliminary_filename.as_deref().map(|f| f.as_str()).unwrap_or_default();
+  let filename =
+    chunk.preliminary_filename.as_deref().map(arcstr::ArcStr::as_str).unwrap_or_default();
   if filename.ends_with(".d.ts") || filename.ends_with(".d.cts") || filename.ends_with(".d.mts") {
     return false;
   }
@@ -224,6 +229,7 @@ pub fn chunk_eligible(ctx: &GenerateContext<'_>, asts: &[&mut EcmaAst]) -> bool 
 /// `transmute`. `allocator` receives every node the minifier creates, and those nodes end up in
 /// the module programs, so `allocator` must outlive every use of `asts` (the caller drops it
 /// after the module ASTs are printed and dropped).
+#[expect(clippy::print_stderr, reason = "PoC debug output behind an env var")]
 pub fn dce_chunk(
   ctx: &GenerateContext<'_>,
   allocator: &Allocator,
@@ -233,14 +239,13 @@ pub fn dce_chunk(
   let t = Timer::start();
   let builder = AstBuilder::new(allocator);
   let source_type = ctx.options.format.source_type().with_jsx(true);
-  let imports_text = render_esm_chunk_imports(ctx).map(|s| &*allocator.alloc_str(&s));
+  let imports_text = render_esm_chunk_imports(ctx).map(|s| allocator.alloc_str(&s));
   // `render_esm` emits the wrapped entry's `export default require_x();` right before the exports.
   let exports_text = match (render_wrapped_entry_chunk(ctx, None), render_chunk_exports(ctx, None))
   {
     (None, None) => None,
     (entry, exports) => Some(
-      &*allocator
-        .alloc_str(&concat_string!(entry.unwrap_or_default(), exports.unwrap_or_default())),
+      allocator.alloc_str(&concat_string!(entry.unwrap_or_default(), exports.unwrap_or_default())),
     ),
   };
   // Without sourcemaps, `ROLLDOWN_CHUNK_AST_DCE=nobarrier` drops the markers, so oxc may move
@@ -335,7 +340,7 @@ pub fn dce_chunk(
   let imports = print_generated(allocator, ctx.options, source_type, head);
   let exports = print_generated(allocator, ctx.options, source_type, tail);
   t.stop(Phase::AstSplit);
-  ChunkAstDceOutput { imports, exports, space: None }
+  ChunkAstDceOutput { imports, exports, imports_map: None, exports_map: None, space: None }
 }
 
 struct Split<'a> {

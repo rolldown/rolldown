@@ -148,6 +148,7 @@ impl GenerateStage<'_> {
 
 /// `EcmaCompiler::dce_or_minify`, split into timed phases when `ROLLDOWN_POC_PROF=1`.
 #[expect(clippy::too_many_arguments)]
+#[expect(clippy::print_stderr, reason = "PoC debug output behind an env var")]
 fn dce_or_minify<'a>(
   allocator: &'a oxc_allocator::Allocator,
   source_text: &'a str,

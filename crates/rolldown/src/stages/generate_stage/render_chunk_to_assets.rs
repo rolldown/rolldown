@@ -282,10 +282,9 @@ impl GenerateStage<'_> {
   ///   [Some(ecma3_codegen), None],
   /// ]
   // `ast_table` is taken by value on purpose: this is the last reader, and
-  // having the compiler drop it at scope exit (rather than borrowing it and
-  // dropping later) is what releases the per-module bumpalo arenas before the
-  // rest of `instantiate_chunks` runs.
-  #[expect(clippy::needless_pass_by_value)]
+  // dropping it here (explicitly, before the PoC's chunk allocators) is what
+  // releases the per-module bumpalo arenas before the rest of
+  // `instantiate_chunks` runs.
   fn create_chunk_to_codegen_ret_map(
     &self,
     chunk_graph: &ChunkGraph,

@@ -6,7 +6,7 @@ use rolldown_common::{
   ImportRecordIdx, ImportRecordMeta, ModuleIdx, ModuleTable, RUNTIME_MODULE_KEY, Specifier,
   SymbolRef,
 };
-use rolldown_sourcemap::SourceJoiner;
+use rolldown_sourcemap::{SourceJoiner, SourceMapSource};
 use rolldown_utils::{
   concat_string,
   ecmascript::{escape_non_ascii, to_ecma_string_literal, to_module_import_export_name_with_ascii},
@@ -62,7 +62,10 @@ pub fn render_esm<'code>(
   if let Some(imports) =
     ast_dce.map_or_else(|| render_esm_chunk_imports(ctx), |out| out.imports.clone())
   {
-    source_joiner.append_source(imports);
+    match ast_dce.and_then(|out| out.imports_map.clone()) {
+      Some(map) => source_joiner.append_source(SourceMapSource::new(imports, map)),
+      None => source_joiner.append_source(imports),
+    }
   }
 
   // Registrations and bridges of inline common chunk records come right after the imports and
@@ -113,7 +116,10 @@ pub fn render_esm<'code>(
   if let Some(exports) =
     ast_dce.map_or_else(|| render_chunk_exports(ctx, None), |out| out.exports.clone())
   {
-    source_joiner.append_source(exports);
+    match ast_dce.and_then(|out| out.exports_map.clone()) {
+      Some(map) => source_joiner.append_source(SourceMapSource::new(exports, map)),
+      None => source_joiner.append_source(exports),
+    }
   }
 
   if let Some(outro) = outro {
@@ -349,7 +355,7 @@ fn render_chunk_content<'code>(
   }
 }
 
-pub(crate) fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
+pub fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
   let mut s = String::new();
   let ascii_only = ctx.options.charset.is_ascii();
   ctx.chunk.imports_from_other_chunks.iter().for_each(|(exporter_id, items)| {

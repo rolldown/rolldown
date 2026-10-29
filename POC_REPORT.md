@@ -272,8 +272,11 @@ After this run, two cheap optimizations went in (outputs byte-identical): the re
 module search for the printed module's own tokens (remap ≈ 45 → 23 ms thread CPU per three.js
 ×10 build), and the line tables are built per module in the parallel rebase job and concatenated
 (the serial "space" step is ~14 ms per warm build; the larger averages above include a cold
-first iteration of ~130 ms). The VM was too noisy afterwards (the same barrier configuration
-varied 5.5–7 s per 5 builds) to re-measure wall time meaningfully.
+first iteration of ~130 ms). A short re-measure afterwards (three.js ×10,
+sourcemaps on, 4 interleaved rounds of 5 builds; the VM was very noisy, DCE alone varied 1.7–2.3 s
+per 5 builds) gave per-build median walls of ~1.55 s (main), ~1.08 s (barrier) and ~1.10 s
+(global): global mode is within noise of barrier mode. Its extra thread CPU per build: rebase ~62
+ms (parallel), space ~30–48 ms (incl. one cold iteration per run), remap ~27 ms (parallel).
 
 - DCE costs the same (the barrier markers were not a significant cost).
 

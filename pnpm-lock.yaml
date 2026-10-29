@@ -1199,6 +1199,12 @@ importers:
         specifier: workspace:*
         version: link:../../..
 
+  packages/test-dev-server/tests/playground/hmr-unreceived-deps:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
   packages/test-dev-server/tests/playground/hmr-watch-file-load:
     devDependencies:
       '@rolldown/test-dev-server':

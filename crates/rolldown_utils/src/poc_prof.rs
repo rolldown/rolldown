@@ -29,9 +29,13 @@ pub enum Phase {
   ModulePrint,
   /// `SourceJoiner::join` (summed across chunks).
   Join,
+  /// `global` mode: rebasing module spans into the chunk source space (summed across threads).
+  AstRebase,
+  /// `global` mode: building the chunk source text and its line tables.
+  AstSpace,
 }
 
-const NAMES: [&str; 9] = [
+const NAMES: [&str; 11] = [
   "minify.parse",
   "minify.dce",
   "minify.codegen",
@@ -41,9 +45,11 @@ const NAMES: [&str; 9] = [
   "ast.split",
   "module_print",
   "join",
+  "ast.rebase",
+  "ast.space",
 ];
 
-static COUNTERS: [AtomicU64; 9] = [const { AtomicU64::new(0) }; 9];
+static COUNTERS: [AtomicU64; 11] = [const { AtomicU64::new(0) }; 11];
 
 pub static ENABLED: LazyLock<bool> =
   LazyLock::new(|| std::env::var_os("ROLLDOWN_POC_PROF").is_some_and(|v| v == "1"));

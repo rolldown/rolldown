@@ -317,6 +317,19 @@ impl GenerateStage<'_> {
           return vec![];
         }
         let force_annotation = !ast_dce_outputs.contains_key(&chunk_idx);
+        let space = ast_dce_outputs.get(&chunk_idx).and_then(|out| out.space.as_deref());
+        // Positions of the chunk's normal modules, as `chunk_ast_dce` numbers them.
+        let positions: FxHashMap<rolldown_common::ModuleIdx, usize> = if space.is_some() {
+          item
+            .modules
+            .iter()
+            .filter(|idx| self.link_output.module_table[**idx].is_normal())
+            .enumerate()
+            .map(|(pos, idx)| (*idx, pos))
+            .collect()
+        } else {
+          FxHashMap::default()
+        };
         item
           .modules
           .par_iter()
@@ -334,13 +347,31 @@ impl GenerateStage<'_> {
                 0
               };
               let t = Timer::start();
-              let out = module.render_with(
-                self.options,
-                &ModuleRenderArgs::Ecma { ast },
-                initial_indent,
-                force_annotation,
-              );
+              let out = match space {
+                Some(space) => chunk_ast_dce::print_module(
+                  module,
+                  ast,
+                  self.options,
+                  initial_indent,
+                  space,
+                  positions[&module_idx],
+                ),
+                None => module.render_with(
+                  self.options,
+                  &ModuleRenderArgs::Ecma { ast },
+                  initial_indent,
+                  force_annotation,
+                ),
+              };
               t.stop(Phase::ModulePrint);
+              if let Some(dir) = std::env::var_os("ROLLDOWN_CHUNK_AST_DCE_DUMP") {
+                let name = module.stable_id.as_str().replace(['/', '\\', '\0'], "_");
+                std::fs::write(
+                  std::path::Path::new(&dir).join(format!("module.{name}.js")),
+                  &out.code,
+                )
+                .unwrap();
+              }
               Some(out)
             }
             _ => None,

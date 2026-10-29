@@ -58,6 +58,9 @@ fn main() {
   if args[3] == "off" {
     opts.minify = Some(false.into());
   }
+  if std::env::var("PLATFORM").is_ok_and(|p| p == "node") {
+    opts.platform = Some(rolldown::Platform::Node);
+  }
   let out = args.get(4).cloned();
   let mut ctx = create_bench_context(&opts);
   let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();

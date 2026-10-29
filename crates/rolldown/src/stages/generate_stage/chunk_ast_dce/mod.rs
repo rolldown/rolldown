@@ -51,10 +51,18 @@ use crate::{
 
 use super::inline_common_chunks::InlineCommonChunksState;
 
+mod global;
+
+pub use global::{dedupe_sources, print_module};
+
 static ENABLED: LazyLock<bool> = LazyLock::new(|| {
   std::env::var_os("ROLLDOWN_CHUNK_AST_DCE")
-    .is_some_and(|v| v == "1" || v == "nobarrier" || v == "nobarrier-unsafe")
+    .is_some_and(|v| v == "1" || v == "nobarrier" || v == "nobarrier-unsafe" || v == "global")
 });
+
+/// `global`: no barrier, spans rebased into one per-chunk source space; see `global`.
+static GLOBAL: LazyLock<bool> =
+  LazyLock::new(|| std::env::var_os("ROLLDOWN_CHUNK_AST_DCE").is_some_and(|v| v == "global"));
 
 static NO_BARRIER: LazyLock<bool> = LazyLock::new(|| {
   std::env::var_os("ROLLDOWN_CHUNK_AST_DCE")
@@ -76,6 +84,14 @@ pub struct ChunkAstDceOutput {
   pub imports: Option<String>,
   /// Replaces `render_wrapped_entry_chunk` + `render_chunk_exports`.
   pub exports: Option<String>,
+  /// `global` mode: the chunk's shared source space; modules are printed against it.
+  pub space: Option<std::sync::Arc<global::ChunkSourceSpace>>,
+}
+
+/// The chunk's generated import and export text, as `render_esm` would emit it.
+pub struct GeneratedText<'a> {
+  pub imports: Option<&'a str>,
+  pub exports: Option<&'a str>,
 }
 
 /// Returns the DCE options when the fast path may run for this build at all.
@@ -229,6 +245,16 @@ pub fn dce_chunk(
   };
   // Without sourcemaps, `ROLLDOWN_CHUNK_AST_DCE=nobarrier` drops the markers, so oxc may move
   // code across module boundaries like it does on the re-parsed text; see `split_by_address`.
+  if *GLOBAL {
+    let modules: Vec<_> = ctx
+      .chunk
+      .modules
+      .iter()
+      .filter_map(|idx| ctx.link_output.module_table[*idx].as_normal())
+      .collect();
+    let generated = GeneratedText { imports: imports_text, exports: exports_text };
+    return global::dce_chunk_global(ctx, allocator, asts, &modules, &generated, minify_options);
+  }
   let use_markers = !(*NO_BARRIER && (ctx.options.sourcemap.is_none() || *NO_BARRIER_WITH_MAPS));
 
   let mut body: ArenaVec<'_, Statement<'_>> = ArenaVec::with_capacity_in(
@@ -283,6 +309,15 @@ pub fn dce_chunk(
   }
   t.stop(Phase::AstDce);
 
+  if let Some(dir) = std::env::var_os("ROLLDOWN_CHUNK_AST_DCE_DUMP") {
+    let code = Codegen::new().build(&program).code;
+    let name = ctx.chunk.preliminary_filename.as_deref().map(|f| f.as_str().replace('/', "_"));
+    std::fs::write(
+      std::path::Path::new(&dir).join(format!("{}.post-dce.js", name.unwrap_or_default())),
+      code,
+    )
+    .unwrap();
+  }
   let t = Timer::start();
   let stmts = program.body.take_in(&allocator);
   let Split { head, segments, tail } = if use_markers {
@@ -300,7 +335,7 @@ pub fn dce_chunk(
   let imports = print_generated(allocator, ctx.options, source_type, head);
   let exports = print_generated(allocator, ctx.options, source_type, tail);
   t.stop(Phase::AstSplit);
-  ChunkAstDceOutput { imports, exports }
+  ChunkAstDceOutput { imports, exports, space: None }
 }
 
 struct Split<'a> {
@@ -389,7 +424,7 @@ fn is_marker(stmt: &Statement<'_>) -> bool {
     if decl.span.start == MARKER_POS && decl.specifiers.is_empty())
 }
 
-fn parse_generated<'a>(
+pub(super) fn parse_generated<'a>(
   allocator: &'a Allocator,
   text: &'a str,
   source_type: SourceType,
@@ -405,7 +440,7 @@ fn parse_generated<'a>(
   body.extend(ret.program.body);
 }
 
-fn print_generated<'a>(
+pub(super) fn print_generated<'a>(
   allocator: &'a Allocator,
   options: &NormalizedBundlerOptions,
   source_type: SourceType,

@@ -1705,8 +1705,6 @@ dependencies = [
 [[package]]
 name = "oxc_codegen"
 version = "0.156.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88c1b6d7d9f1f5386534d88294903dadf00e72536e9fea6198e43450a52c41a5"
 dependencies = [
  "bitflags",
  "cow-utils",

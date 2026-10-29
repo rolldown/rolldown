@@ -55,13 +55,20 @@ pub fn render_inline_records<'code>(
     &ctx.inline_state.record(record_idx).expect("chunk should be a record").id
   };
 
+  // A parenthesized factory is a PIFE: the engine compiles it with the file instead of at its
+  // first `__share_require`, like rolldown's own module wrappers under the same option.
+  let (open, close) = if ctx.options.optimization.is_pife_for_module_wrappers_enabled() {
+    (", ((", "}));")
+  } else {
+    (", (", "});")
+  };
   for (record_idx, module_sources) in carried {
     // `__share("id", (exports) => {` and the bridges to the records this record reads.
     let mut head = concat_string!(
       share_name.as_ref(),
       "(",
       to_ecma_string_literal(record_id(*record_idx), ascii_only),
-      ", (",
+      open,
       exports_param.as_ref(),
       ") => {"
     );
@@ -131,7 +138,7 @@ pub fn render_inline_records<'code>(
       }
       tail.push_str("\n\t});\n");
     }
-    tail.push_str("});");
+    tail.push_str(close);
     source_joiner.append_source(tail);
   }
 

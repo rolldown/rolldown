@@ -736,7 +736,7 @@ describe('experimentalInlineCommonChunks', () => {
     // The id of the registration whose factory prints `marker`.
     const recordIdOf = (built: Built, marker: string) => {
       for (const chunk of built.chunks) {
-        const parts = chunk.code.split(/\b\w+\("([^"]+)", \(\w+\) => \{/);
+        const parts = chunk.code.split(/\b\w+\("([^"]+)", \(?\(\w+\) => \{/);
         for (let i = 1; i < parts.length; i += 2) {
           if (parts[i + 1].includes(marker)) return parts[i];
         }

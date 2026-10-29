@@ -88,7 +88,7 @@ The two earlier placement optimizations consult the size threshold and the same 
 
 A resolved internal dynamic import can be copied: the finalizer computes its target path from each receiving file. That file also takes over the copied record's dynamic-import edges so output metadata and content hashes include the targets. Computed imports and imports ignored by the scanner stay in their original file because the implementation preserves their native resolution base.
 
-Rolldown preserves native `import.meta` in ESM output. A retained `import.meta.url` therefore refers to the output file, and copying it would make the first loaded carrier choose the value. webpack's default replacement uses the source module URL, which has different behavior. The restriction applies only to included statements; a removed function containing `import.meta` does not keep its chunk alive.
+Rolldown preserves native `import.meta` in ESM output. A retained `import.meta.url` therefore refers to the output file, and copying it would make the first loaded carrier choose the value. webpack's default replacement uses the source module URL, which has different behavior. The restriction applies only to included statements; a removed function containing `import.meta` does not keep its chunk alive. Under `experimental.devMode` the finalizer rewrites `import.meta.hot`, so it does not count either (see [Dev mode](#dev-mode)).
 
 ## Registration on entry loading paths
 
@@ -103,10 +103,10 @@ Dynamic imports inside records contribute an edge from every file that can print
 
 ## Dev mode
 
-Records are selected and printed by the same rules under `experimental.devMode` (Vite's bundled dev mode). Two points are specific to it:
+Under `experimental.devMode` (Vite's bundled dev mode), two points differ from other builds:
 
 - **Graph rows.** The client looks for an HMR boundary in the graph rows that payloads register (`registerGraph`, principle 3 of `../hmr/design.md`) before it fetches the patch. A file's own prelude lists the modules of its chunk, so a record's factory registers the rows of the record's modules. The factory runs once per page: a carrier that loads later neither runs it again nor re-sends rows that would replace newer ones an HMR patch registered.
-- **Selection.** The `import.meta` rule covers `import.meta.hot`. Dev mode does not tree-shake, and HMR integrations add `import.meta.hot` code (React refresh adds `import.meta.hot.accept` to component modules), so a dev build keeps more common chunks as files than a production build of the same app.
+- **Selection.** `import.meta.hot` and the dependencies an `import.meta.hot.accept()` call names do not keep a chunk a file. The finalizer prints `import.meta.hot` as the module's own hot-context variable, which the module's `init_*` wrapper sets from `__rolldown_runtime__.createModuleHotContext(<module id>)`, and an accepted dependency as that dependency's module id. Neither depends on the file a copy is printed in, and a page runs one copy, so the module gets one hot context whichever carrier registers the factory first. HMR integrations add this code to the modules they handle (React refresh adds `import.meta.hot.accept` to component modules), and Vite's production build replaces `import.meta.hot` with `undefined`; keeping such chunks as files in dev would split the app differently from its production build. The exemption covers exactly the `import.meta.hot` expressions the finalizer rewrites: `import.meta.url` and every other `import.meta` use still keep the chunk a file, and outside dev mode so does `import.meta.hot`. The two builds can still choose different records: dev mode turns tree shaking off, so the selection rules also see statements and modules a production build removes, and `maxSize` counts module source, which in dev includes the code HMR integrations add.
 
 ## Rejected alternatives
 

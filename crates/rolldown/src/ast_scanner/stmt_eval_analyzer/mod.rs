@@ -180,7 +180,10 @@ impl<'a> StmtEvalAnalyzer<'a> {
     }
   }
 
-  fn constant_value_for_reference_id(&self, reference_id: ReferenceId) -> Option<&ConstantValue> {
+  fn constant_value_for_reference_id(
+    &self,
+    reference_id: ReferenceId,
+  ) -> Option<&'a ConstantValue> {
     if !self.use_constants.get() {
       return None;
     }
@@ -1173,7 +1176,7 @@ fn for_each_eager_chain_child<'a>(expr: &'a Expression, visit: impl FnMut(EagerC
   let _ = chain_root_visiting_eager_children(expr, visit);
 }
 
-impl<'ast> GlobalContext<'ast> for StmtEvalAnalyzer<'_> {
+impl<'ast> GlobalContext<'ast> for StmtEvalAnalyzer<'ast> {
   fn is_global_reference(&self, reference: &IdentifierReference<'ast>) -> bool {
     self.is_unresolved_reference(reference)
   }
@@ -1190,7 +1193,7 @@ impl<'ast> GlobalContext<'ast> for StmtEvalAnalyzer<'_> {
   }
 }
 
-impl MayHaveSideEffectsContext<'_> for StmtEvalAnalyzer<'_> {
+impl<'ast> MayHaveSideEffectsContext<'ast> for StmtEvalAnalyzer<'ast> {
   fn engine_targets(&self) -> Option<&EngineTargets> {
     Some(&self.options.transform_options.target)
   }

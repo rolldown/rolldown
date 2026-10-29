@@ -2714,6 +2714,7 @@ dependencies = [
  "rolldown_plugin_vite_transform",
  "rolldown_plugin_vite_web_worker_post",
  "rolldown_sourcemap",
+ "rolldown_std_utils",
  "rolldown_tracing",
  "rolldown_tracking_allocator",
  "rolldown_utils",

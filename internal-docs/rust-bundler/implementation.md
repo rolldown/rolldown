@@ -91,6 +91,7 @@ The following should be removed from `Bundler`:
 
 1. Calls the `closeBundle` plugin hook
 2. Is **idempotent** — calling close twice is safe (no-op on second call, tracked via `Arc<AtomicBool>`)
+3. Turns a panicking hook into an error and clears the plugin driver's retained resources on every outcome
 
 This is the correct place because `closeBundle` signals that no more output processing will happen for a specific build. The watcher's BUNDLE_END/ERROR event data carries a `BundleHandle` (not the full bundler), and JS `result.close()` calls `handle.close()` directly — no bundler lock needed.
 

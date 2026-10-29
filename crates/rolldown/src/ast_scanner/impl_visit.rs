@@ -585,10 +585,28 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             }
             rolldown_common::Specifier::Literal(_) => MemberExprObjectReferencedType::Named,
           };
-          // Record the whole chain for every import kind: a default or named import can resolve
-          // to a namespace (`export * as default from`), and the link stage resolves and shims
-          // missing exports through each nested namespace in the chain.
-          if let Some((node_id, span, props)) =
+          let in_operator_key = if matches!(ty, MemberExprObjectReferencedType::Namespace) {
+            self.try_extract_parent_in_operator_key()
+          } else {
+            None
+          };
+          if let Some((node_id, span, key)) = in_operator_key {
+            is_inserted_before = true;
+            self.result.namespace_in_checks.insert(node_id, key);
+            self.add_member_expr_reference(MemberExprRef {
+              object_ref: root_symbol_id,
+              prop_and_span_list: vec![],
+              node_id,
+              span,
+              object_ref_type: ty,
+              reference_id: ident_ref.reference_id.get(),
+              is_write: false,
+              write_target: None,
+            });
+          } else if let Some((node_id, span, props)) =
+            // Record the whole chain for every import kind: a default or named import can resolve
+            // to a namespace (`export * as default from`), and the link stage resolves and shims
+            // missing exports through each nested namespace in the chain.
             self.try_extract_parent_static_member_expr_chain(usize::MAX)
           {
             if !span.is_unspanned() {

@@ -410,6 +410,34 @@ console.log(JSON.stringify({ code: sync.code, errors: async.errors.length }));
         }
       },
     );
+
+    it('should report tsconfigFilePaths on cache hits with auto-discovery', async () => {
+      const filename = path.join(fixtures, 'test1.ts');
+      const code = 'const a: number = 1;';
+      const cache = new TsconfigCache();
+
+      transformSync(filename, code, undefined, cache);
+
+      for (const result of [
+        transformSync(filename, code, undefined, cache),
+        await transform(filename, code, undefined, cache),
+      ]) {
+        expect(result.tsconfigFilePaths).toStrictEqual([path.join(fixtures, 'tsconfig.json')]);
+      }
+    });
+
+    it('should report tsconfigFilePaths on cache hits with an explicit tsconfig', () => {
+      const filename = path.resolve('/nonexistent/path/test.ts');
+      const code = 'const a: number = 1;';
+      const explicitTsconfig = path.join(fixtures, 'tsconfig.json');
+      const options = { tsconfig: explicitTsconfig };
+      const cache = new TsconfigCache(explicitTsconfig);
+
+      transformSync(filename, code, options, cache);
+
+      const result = transformSync(filename, code, options, cache);
+      expect(result.tsconfigFilePaths).toStrictEqual([explicitTsconfig]);
+    });
   });
 
   describe('result properties', () => {

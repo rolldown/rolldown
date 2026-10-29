@@ -116,6 +116,8 @@ pub struct ScanResult {
   pub dynamic_import_called_names: FxHashMap<ImportRecordIdx, FxHashSet<CompactStr>>,
   /// `new URL('...', import.meta.url)`
   pub new_url_references: FxHashMap<NodeId, ImportRecordIdx>,
+  /// See `EcmaView::namespace_in_checks`.
+  pub namespace_in_checks: FxHashMap<NodeId, CompactStr>,
   /// `import.meta.ROLLDOWN_FILE_URL_<referenceId>[_<urlId>]`, one entry per occurrence.
   pub rolldown_file_url_references: Vec<RolldownFileUrlReference>,
   pub this_expr_replace_map: FxHashMap<NodeId, ThisExprReplaceKind>,
@@ -230,6 +232,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       dynamic_import_rec_exports_usage: FxHashMap::default(),
       dynamic_import_called_names: FxHashMap::default(),
       new_url_references: FxHashMap::default(),
+      namespace_in_checks: FxHashMap::default(),
       rolldown_file_url_references: Vec::new(),
       this_expr_replace_map: FxHashMap::default(),
       cjs_this_ref: None,
@@ -1152,6 +1155,21 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
     }
     (!props.is_empty()).then_some((node_id, span, props))
+  }
+
+  /// Returns the `BinaryExpression` node, its span and `key` if the visited identifier is `ns` in
+  /// `'key' in ns`.
+  pub fn try_extract_parent_in_operator_key(&self) -> Option<(NodeId, Span, CompactStr)> {
+    let AstKind::BinaryExpression(expr) = self.visit_path.last()? else {
+      return None;
+    };
+    if expr.operator != ast::BinaryOperator::In {
+      return None;
+    }
+    let Expression::StringLiteral(key) = &expr.left else {
+      return None;
+    };
+    Some((expr.node_id(), expr.span, key.value.as_str()?.into()))
   }
 
   // `console` in `console.log` is a global reference

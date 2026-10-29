@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { a as __share_require, i as __share_export, n as __exportAll, r as __share, t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
-__share("shared-NCqPxS0n", (exports) => {
+__share("shared-NCqPxS0n", ((exports) => {
 	__rolldown_runtime__.registerGraph({
 		ids: ["leaf.js", "shared.js"],
 		localCount: 2,
@@ -41,7 +41,7 @@ __share("shared-NCqPxS0n", (exports) => {
 		n: () => shared,
 		t: () => init_shared
 	});
-});
+}));
 var share_shared = __share_require("shared-NCqPxS0n");
 __rolldown_runtime__.registerGraph({
 	ids: ["main.js", "shared.js"],
@@ -77,7 +77,7 @@ init_main();
 
 ```js
 import { a as __share_require, i as __share_export, n as __exportAll, r as __share, t as __esmMin } from "./rolldown-runtime.js";
-__share("shared-NCqPxS0n", (exports) => {
+__share("shared-NCqPxS0n", ((exports) => {
 	__rolldown_runtime__.registerGraph({
 		ids: ["leaf.js", "shared.js"],
 		localCount: 2,
@@ -110,7 +110,7 @@ __share("shared-NCqPxS0n", (exports) => {
 		n: () => shared,
 		t: () => init_shared
 	});
-});
+}));
 var share_shared = __share_require("shared-NCqPxS0n");
 __rolldown_runtime__.registerGraph({
 	ids: ["other.js", "shared.js"],

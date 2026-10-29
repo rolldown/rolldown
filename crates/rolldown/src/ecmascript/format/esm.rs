@@ -57,7 +57,11 @@ pub fn render_esm<'code>(
     source_joiner.append_source(intro);
   }
 
-  if let Some(imports) = render_esm_chunk_imports(ctx) {
+  // PoC: a chunk whose DCE ran on its AST carries the re-printed (DCE'd) imports and exports.
+  let ast_dce = ctx.chunk_ast_dce.as_ref();
+  if let Some(imports) =
+    ast_dce.map_or_else(|| render_esm_chunk_imports(ctx), |out| out.imports.clone())
+  {
     source_joiner.append_source(imports);
   }
 
@@ -100,11 +104,15 @@ pub fn render_esm<'code>(
   // chunk content
   render_chunk_content(ctx, module_sources, &mut source_joiner);
 
-  if let Some(source) = render_wrapped_entry_chunk(ctx, None) {
+  if ast_dce.is_none()
+    && let Some(source) = render_wrapped_entry_chunk(ctx, None)
+  {
     source_joiner.append_source(source);
   }
 
-  if let Some(exports) = render_chunk_exports(ctx, None) {
+  if let Some(exports) =
+    ast_dce.map_or_else(|| render_chunk_exports(ctx, None), |out| out.exports.clone())
+  {
     source_joiner.append_source(exports);
   }
 
@@ -341,7 +349,7 @@ fn render_chunk_content<'code>(
   }
 }
 
-fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
+pub(crate) fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
   let mut s = String::new();
   let ascii_only = ctx.options.charset.is_ascii();
   ctx.chunk.imports_from_other_chunks.iter().for_each(|(exporter_id, items)| {

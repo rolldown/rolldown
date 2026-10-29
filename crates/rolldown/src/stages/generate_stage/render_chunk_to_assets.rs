@@ -13,9 +13,10 @@ use rolldown_error::{BatchedBuildDiagnostic, BuildResult, Diagnostics};
 use rolldown_utils::{
   index_vec_ext::IndexVecRefExt as _,
   indexmap::{FxIndexMap, FxIndexSet},
-  rayon::{IntoParallelRefIterator, ParallelIterator},
+  poc_prof::{Phase, Timer},
+  rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator},
 };
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   BundleOutput,
@@ -30,7 +31,10 @@ use crate::{
   },
 };
 
-use super::{CarriedRender, GenerateStage};
+use super::{
+  CarriedRender, GenerateStage,
+  chunk_ast_dce::{self, ChunkAstDceOutput},
+};
 
 type ChunkGeneratorFuture<'a> = Pin<
   Box<
@@ -59,7 +63,7 @@ impl GenerateStage<'_> {
     // (the last reader), where it is dropped at scope exit by the compiler —
     // releasing the per-module bumpalo arenas before `minify_chunks` and
     // `finalize_assets` allocate.
-    let (mut instantiated_chunks, index_chunk_to_instances) = self
+    let (mut instantiated_chunks, index_chunk_to_instances, ast_dce_chunks) = self
       .instantiate_chunks(
         chunk_graph,
         ast_table,
@@ -85,7 +89,8 @@ impl GenerateStage<'_> {
 
     augment_chunk_hash(self.plugin_driver, &mut instantiated_chunks).await?;
 
-    let mangle_cache = Self::minify_chunks(self.options, &mut instantiated_chunks)?;
+    let mangle_cache =
+      Self::minify_chunks(self.options, &mut instantiated_chunks, &ast_dce_chunks)?;
 
     Self::post_banner_footer(&mut instantiated_chunks)?;
 
@@ -173,12 +178,11 @@ impl GenerateStage<'_> {
     used_symbol_refs: &UsedSymbolRefs,
     order_state: &super::order_wrap_state::OrderWrapState,
     mut inline_renders: FxHashMap<ChunkIdx, Vec<CarriedRender>>,
-  ) -> BuildResult<(IndexInstantiatedChunks, IndexChunkToInstances)> {
+  ) -> BuildResult<(IndexInstantiatedChunks, IndexChunkToInstances, FxHashSet<ChunkIdx>)> {
     let mut index_chunk_to_instances: IndexChunkToInstances =
       index_vec![FxIndexSet::default(); chunk_graph.chunk_table.len()];
     let mut index_instantiated_chunks: IndexInstantiatedChunks =
       IndexVec::with_capacity(chunk_graph.chunk_table.len());
-    let chunk_index_to_codegen_rets = self.create_chunk_to_codegen_ret_map(chunk_graph, ast_table);
     let render_export_items_index_vec = &chunk_graph
       .chunk_table
       .chunks
@@ -191,6 +195,14 @@ impl GenerateStage<'_> {
         map
       })
       .collect();
+    let (chunk_index_to_codegen_rets, mut ast_dce_outputs) = self.create_chunk_to_codegen_ret_map(
+      chunk_graph,
+      ast_table,
+      used_symbol_refs,
+      order_state,
+      render_export_items_index_vec,
+    );
+    let ast_dce_chunks: FxHashSet<ChunkIdx> = ast_dce_outputs.keys().copied().collect();
 
     try_join_all(
       chunk_index_to_codegen_rets
@@ -207,32 +219,36 @@ impl GenerateStage<'_> {
           }
           let chunk = chunk_graph.chunk_table.get(chunk_idx)?;
           let carried_renders = inline_renders.remove(&chunk_idx).unwrap_or_default();
-          Some((chunk_idx, chunk, module_id_to_codegen_ret, carried_renders))
+          let chunk_ast_dce = ast_dce_outputs.remove(&chunk_idx);
+          Some((chunk_idx, chunk, module_id_to_codegen_ret, carried_renders, chunk_ast_dce))
         })
-        .flat_map(|(chunk_idx, chunk, module_id_to_codegen_ret, carried_renders)| {
-          let resolved_paths = self.resolved_paths.as_ref();
-          let ecma_chunks_future: ChunkGeneratorFuture = Box::pin(async move {
-            let mut ecma_ctx = GenerateContext {
-              chunk_idx,
-              chunk,
-              options: self.options,
-              link_output: self.link_output,
-              used_symbol_refs,
-              order_wrap_state: order_state,
-              chunk_graph,
-              plugin_driver: self.plugin_driver,
-              module_id_to_codegen_ret,
-              render_export_items_index_vec,
-              resolved_paths,
-              inline_state: &self.inline_state,
-              carried_renders,
-            };
-            let ecma_chunks_future = EcmaGenerator::instantiate_chunk(&mut ecma_ctx);
-            let ecma_chunks = ecma_chunks_future.await?;
-            Ok(ecma_chunks)
-          });
-          [ecma_chunks_future]
-        }),
+        .flat_map(
+          |(chunk_idx, chunk, module_id_to_codegen_ret, carried_renders, chunk_ast_dce)| {
+            let resolved_paths = self.resolved_paths.as_ref();
+            let ecma_chunks_future: ChunkGeneratorFuture = Box::pin(async move {
+              let mut ecma_ctx = GenerateContext {
+                chunk_idx,
+                chunk,
+                options: self.options,
+                link_output: self.link_output,
+                used_symbol_refs,
+                order_wrap_state: order_state,
+                chunk_graph,
+                plugin_driver: self.plugin_driver,
+                module_id_to_codegen_ret,
+                render_export_items_index_vec,
+                resolved_paths,
+                inline_state: &self.inline_state,
+                carried_renders,
+                chunk_ast_dce,
+              };
+              let ecma_chunks_future = EcmaGenerator::instantiate_chunk(&mut ecma_ctx);
+              let ecma_chunks = ecma_chunks_future.await?;
+              Ok(ecma_chunks)
+            });
+            [ecma_chunks_future]
+          },
+        ),
     )
     .await?
     .into_iter()
@@ -254,7 +270,7 @@ impl GenerateStage<'_> {
       });
     });
 
-    Ok((index_instantiated_chunks, index_chunk_to_instances))
+    Ok((index_instantiated_chunks, index_chunk_to_instances, ast_dce_chunks))
   }
 
   /// Create a IndexVecMap from chunk index to related modules codegen return list.
@@ -273,13 +289,26 @@ impl GenerateStage<'_> {
   fn create_chunk_to_codegen_ret_map(
     &self,
     chunk_graph: &ChunkGraph,
-    ast_table: IndexEcmaAst,
-  ) -> Vec<Vec<Option<ModuleRenderOutput>>> {
+    mut ast_table: IndexEcmaAst,
+    used_symbol_refs: &UsedSymbolRefs,
+    order_state: &super::order_wrap_state::OrderWrapState,
+    render_export_items_index_vec: &IndexVec<ChunkIdx, FxIndexMap<SymbolRef, Vec<CompactStr>>>,
+  ) -> (Vec<Vec<Option<ModuleRenderOutput>>>, FxHashMap<ChunkIdx, ChunkAstDceOutput>) {
+    // PoC: chunk-level DCE on the module ASTs (see `chunk_ast_dce`). The allocators hold nodes
+    // created by the minifier that now live in the module programs, so they are dropped only
+    // after `ast_table`.
+    let (ast_dce_outputs, ast_dce_allocators) = self.run_chunk_ast_dce(
+      chunk_graph,
+      &mut ast_table,
+      used_symbol_refs,
+      order_state,
+      render_export_items_index_vec,
+    );
     let needs_extra_indent = matches!(
       self.options.format,
       rolldown_common::OutputFormat::Iife | rolldown_common::OutputFormat::Umd
     );
-    chunk_graph
+    let ret = chunk_graph
       .chunk_table
       .par_iter_enumerated()
       .map(|(chunk_idx, item)| {
@@ -287,6 +316,7 @@ impl GenerateStage<'_> {
         if self.inline_state.is_record(chunk_idx) {
           return vec![];
         }
+        let force_annotation = !ast_dce_outputs.contains_key(&chunk_idx);
         item
           .modules
           .par_iter()
@@ -303,13 +333,84 @@ impl GenerateStage<'_> {
               } else {
                 0
               };
-              Some(module.render(self.options, &ModuleRenderArgs::Ecma { ast }, initial_indent))
+              let t = Timer::start();
+              let out = module.render_with(
+                self.options,
+                &ModuleRenderArgs::Ecma { ast },
+                initial_indent,
+                force_annotation,
+              );
+              t.stop(Phase::ModulePrint);
+              Some(out)
             }
             _ => None,
           })
           .collect::<Vec<_>>()
       })
-      .collect::<Vec<_>>()
+      .collect::<Vec<_>>();
+    drop(ast_table);
+    drop(ast_dce_allocators);
+    (ret, ast_dce_outputs)
+  }
+
+  /// PoC: runs `chunk_ast_dce::dce_chunk` on every eligible chunk, in parallel across chunks.
+  fn run_chunk_ast_dce(
+    &self,
+    chunk_graph: &ChunkGraph,
+    ast_table: &mut IndexEcmaAst,
+    used_symbol_refs: &UsedSymbolRefs,
+    order_state: &super::order_wrap_state::OrderWrapState,
+    render_export_items_index_vec: &IndexVec<ChunkIdx, FxIndexMap<SymbolRef, Vec<CompactStr>>>,
+  ) -> (FxHashMap<ChunkIdx, ChunkAstDceOutput>, Vec<oxc::allocator::Allocator>) {
+    let Some(minify_options) =
+      chunk_ast_dce::build_eligible(self.options, self.plugin_driver, &self.inline_state)
+    else {
+      return (FxHashMap::default(), vec![]);
+    };
+    let make_ctx = |chunk_idx: ChunkIdx| GenerateContext {
+      chunk_idx,
+      chunk: &chunk_graph.chunk_table[chunk_idx],
+      options: self.options,
+      link_output: self.link_output,
+      used_symbol_refs,
+      order_wrap_state: order_state,
+      chunk_graph,
+      plugin_driver: self.plugin_driver,
+      module_id_to_codegen_ret: vec![],
+      render_export_items_index_vec,
+      resolved_paths: self.resolved_paths.as_ref(),
+      inline_state: &self.inline_state,
+      carried_renders: vec![],
+      chunk_ast_dce: None,
+    };
+    let mut by_module: Vec<Option<&mut rolldown_ecmascript::EcmaAst>> =
+      ast_table.iter_mut().map(Option::as_mut).collect();
+    let mut work = vec![];
+    for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+      if chunk_graph.post_chunk_optimization_operations.contains_key(&chunk_idx)
+        || self.inline_state.is_record(chunk_idx)
+      {
+        continue;
+      }
+      let mut asts = Vec::with_capacity(chunk.modules.len());
+      for module_idx in &chunk.modules {
+        if self.link_output.module_table[*module_idx].as_normal().is_some() {
+          asts.push(by_module[module_idx.index()].take().expect("should have ast"));
+        }
+      }
+      if chunk_ast_dce::chunk_eligible(&make_ctx(chunk_idx), &asts) {
+        work.push((chunk_idx, asts));
+      }
+    }
+    work
+      .into_par_iter()
+      .map(|(chunk_idx, mut asts)| {
+        let allocator = oxc::allocator::Allocator::default();
+        let out =
+          chunk_ast_dce::dce_chunk(&make_ctx(chunk_idx), &allocator, &mut asts, minify_options);
+        ((chunk_idx, out), allocator)
+      })
+      .unzip()
   }
 
   fn trace_action_assets_ready(index_assets: &AssetVec) {

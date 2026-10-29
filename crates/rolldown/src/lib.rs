@@ -38,3 +38,5 @@ pub use rolldown_plugin as plugin;
 
 #[cfg(feature = "testing")]
 pub use crate::utils::determine_minify_internal_exports_default;
+/// PoC-only per-phase CPU report (`ROLLDOWN_POC_PROF=1`).
+pub use rolldown_utils::poc_prof::report_and_reset as poc_prof_report;

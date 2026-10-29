@@ -55,6 +55,7 @@ rolldown_plugin_lazy_compilation = { workspace = true }
 rolldown_plugin_oxc_runtime = { workspace = true }
 rolldown_resolver = { workspace = true }
 rolldown_sourcemap = { workspace = true }
+oxc_sourcemap = { workspace = true }
 rolldown_std_utils = { workspace = true }
 rolldown_tracing = { workspace = true }
 rolldown_utils = { workspace = true }

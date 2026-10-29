@@ -6,12 +6,14 @@ use oxc::{
 };
 use oxc_allocator::AllocatorPool;
 use rolldown_common::{
-  InstantiatedChunk, InstantiationKind, MinifyOptions, NormalizedBundlerOptions, Output,
+  ChunkIdx, InstantiatedChunk, InstantiationKind, MinifyOptions, NormalizedBundlerOptions, Output,
 };
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_error::{BuildDiagnostic, BuildResult, InvalidOptionType};
 use rolldown_sourcemap::collapse_sourcemaps;
+use rolldown_utils::poc_prof::{self, Phase, Timer};
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
+use rustc_hash::FxHashSet;
 
 use crate::type_alias::IndexInstantiatedChunks;
 
@@ -22,6 +24,7 @@ impl GenerateStage<'_> {
   pub fn minify_chunks(
     options: &NormalizedBundlerOptions,
     chunks: &mut IndexInstantiatedChunks,
+    ast_dce_chunks: &FxHashSet<ChunkIdx>,
   ) -> BuildResult<Option<BTreeMap<String, Option<String>>>> {
     let Some((compress, minify_options, remove_whitespace, ascii_only)) =
       chunk_minify_options(&options.minify)
@@ -42,6 +45,10 @@ impl GenerateStage<'_> {
     let property_mangle_cache = OnceLock::new();
     chunks.par_iter_mut().try_for_each(|chunk| -> BuildResult<()> {
       if !is_minifiable_ecma_chunk(chunk) {
+        return Ok(());
+      }
+      // PoC: DCE already ran on this chunk's AST (`chunk_ast_dce`).
+      if ast_dce_chunks.contains(&chunk.originate_from) {
         return Ok(());
       }
       let codegen_options = CodegenOptions {
@@ -66,7 +73,7 @@ impl GenerateStage<'_> {
       // content instead of paying an `into_owned` copy of the whole chunk text.
       let (minified_content, collapsed_map) = {
         // TODO: Do we need to ensure `chunk.preliminary_filename` to be absolute path?
-        let (minified_content, new_map, chunk_property_mangle_cache) = EcmaCompiler::dce_or_minify(
+        let (minified_content, new_map, chunk_property_mangle_cache) = dce_or_minify(
           &allocator_guard,
           chunk.content.try_as_inner_str()?,
           source_type,
@@ -81,6 +88,7 @@ impl GenerateStage<'_> {
             .set(cache)
             .expect("property mangling is limited to one JavaScript chunk");
         }
+        let t = Timer::start();
         let collapsed_map = match (&chunk.map, &new_map) {
           (Some(origin_map), Some(new_map)) => Some(collapse_sourcemaps(&[origin_map, new_map])),
           _ => {
@@ -88,6 +96,7 @@ impl GenerateStage<'_> {
             None
           }
         };
+        t.stop(Phase::MinifyCollapse);
         (minified_content, collapsed_map)
       };
       chunk.content = minified_content.into();
@@ -135,6 +144,68 @@ impl GenerateStage<'_> {
     }
     Ok(())
   }
+}
+
+/// `EcmaCompiler::dce_or_minify`, split into timed phases when `ROLLDOWN_POC_PROF=1`.
+#[expect(clippy::too_many_arguments)]
+fn dce_or_minify<'a>(
+  allocator: &'a oxc_allocator::Allocator,
+  source_text: &'a str,
+  source_type: oxc::span::SourceType,
+  enable_sourcemap: bool,
+  filename: &str,
+  compress: bool,
+  minify_options: OxcMinifierOptions,
+  codegen_options: CodegenOptions,
+) -> BuildResult<(
+  String,
+  Option<oxc_sourcemap::SourceMap<'a>>,
+  Option<oxc::minifier::ManglePropertyCache>,
+)> {
+  use oxc::{
+    codegen::Codegen,
+    minifier::Minifier,
+    parser::{ParseOptions, Parser},
+  };
+  if !*poc_prof::ENABLED {
+    return EcmaCompiler::dce_or_minify(
+      allocator,
+      source_text,
+      source_type,
+      enable_sourcemap,
+      filename,
+      compress,
+      minify_options,
+      codegen_options,
+    );
+  }
+  let t = Timer::start();
+  let ret = Parser::new(allocator, source_text, source_type)
+    .with_options(ParseOptions { preserve_parens: false, ..ParseOptions::default() })
+    .parse();
+  assert!(!ret.fatal_error && ret.diagnostics.is_empty());
+  let mut program = ret.program;
+  t.stop(Phase::MinifyParse);
+  let t = Timer::start();
+  let minifier = Minifier::new(minify_options);
+  let ret = if compress {
+    minifier.minify(allocator, &mut program)
+  } else {
+    minifier.dce(allocator, &mut program)
+  };
+  t.stop(Phase::MinifyDce);
+  let t = Timer::start();
+  let property_mangle_cache = ret.property_mangle_cache;
+  let ret = Codegen::new()
+    .with_options(CodegenOptions {
+      source_map_path: enable_sourcemap.then(|| std::path::PathBuf::from(filename)),
+      ..codegen_options
+    })
+    .with_scoping(ret.scoping)
+    .with_private_member_mappings(ret.class_private_mappings)
+    .build(&program);
+  t.stop(Phase::MinifyCodegen);
+  Ok((ret.code, ret.map, property_mangle_cache))
 }
 
 fn chunk_minify_options(

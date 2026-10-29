@@ -1695,6 +1695,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         class.id = Some(id);
       }
     }
+    // The box now sits in expression position. Keep its type in sync, so that a semantic pass
+    // over the finalized AST (`chunk_ast_dce`) scopes its name like the printed
+    // `class C {}` expression instead of re-declaring it in the root scope.
+    class.r#type = ast::ClassType::ClassExpression;
     Ok(ast::Declaration::new_variable_declaration(
       class.span,
       VariableDeclarationKind::Var,

@@ -47,6 +47,8 @@ pub struct GenerateContext<'a> {
   pub inline_state: &'a InlineCommonChunksState,
   /// The records this file carries, each finalized and printed for this file, dependencies first.
   pub carried_renders: Vec<CarriedRender>,
+  /// PoC: set when this chunk's DCE ran on its AST (`chunk_ast_dce`).
+  pub chunk_ast_dce: Option<crate::stages::generate_stage::chunk_ast_dce::ChunkAstDceOutput>,
 }
 
 impl GenerateContext<'_> {

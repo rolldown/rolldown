@@ -195,6 +195,19 @@ impl NormalModule {
     args: &ModuleRenderArgs,
     initial_indent: u32,
   ) -> ModuleRenderOutput {
+    self.render_with(options, args, initial_indent, true)
+  }
+
+  /// `force_annotation`: print annotation comments regardless of `comments.annotation`, because
+  /// `minify_chunks` re-parses the text. The PoC chunk-AST-DCE fast path (no re-parse) passes
+  /// `false` so the user's setting applies directly.
+  pub fn render_with(
+    &self,
+    options: &NormalizedBundlerOptions,
+    args: &ModuleRenderArgs,
+    initial_indent: u32,
+    force_annotation: bool,
+  ) -> ModuleRenderOutput {
     match args {
       ModuleRenderArgs::Ecma { ast } => {
         let enable_sourcemap = options.sourcemap.is_some() && !self.is_virtual();
@@ -216,7 +229,9 @@ impl NormalModule {
               // setting when it emits the final output.
               // Only `annotation` needs this override — `legal` and `jsdoc` comments
               // have no effect on DCE behaviour.
-              c.annotation = true;
+              if force_annotation {
+                c.annotation = true;
+              }
               c
             },
             initial_indent,

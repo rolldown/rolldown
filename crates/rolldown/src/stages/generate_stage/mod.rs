@@ -104,6 +104,7 @@ use crate::{
   utils::external_import_interop::ChunkAssignments,
 };
 
+pub mod chunk_ast_dce;
 mod chunk_ext;
 mod chunk_optimizer;
 mod code_splitting;
@@ -557,6 +558,7 @@ impl<'a> GenerateStage<'a> {
           resolved_paths: self.resolved_paths.as_ref(),
           inline_state: &self.inline_state,
           carried_renders: vec![],
+          chunk_ast_dce: None,
         },
         entry_module,
         &export_names,

@@ -1,0 +1,22 @@
+{
+  "name": "@rolldown/perf-kit",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Performance harness for agent loops: throttled browser runs, first-paint coverage, boot CPU profile, fused verdict.",
+  "bin": {
+    "perf-kit": "./harness.mjs"
+  },
+  "files": [
+    "harness.mjs",
+    "lib",
+    "AGENTS.md",
+    "README.md"
+  ],
+  "type": "module",
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\""
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

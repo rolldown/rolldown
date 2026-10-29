@@ -10,7 +10,7 @@ use rolldown_common::{
 };
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_error::{BuildDiagnostic, BuildResult, InvalidOptionType};
-use rolldown_sourcemap::collapse_sourcemaps;
+use rolldown_sourcemap::collapse_sourcemaps_into_first;
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::type_alias::IndexInstantiatedChunks;
@@ -81,9 +81,14 @@ impl GenerateStage<'_> {
             .set(cache)
             .expect("property mangling is limited to one JavaScript chunk");
         }
-        let collapsed_map = match (&chunk.map, &new_map) {
-          (Some(origin_map), Some(new_map)) => Some(collapse_sourcemaps(&[origin_map, new_map])),
-          _ => {
+        // The chunk map is replaced by the collapsed one, so hand it over to move its
+        // `sourcesContent` (every module's original source) instead of copying it.
+        let collapsed_map = match (chunk.map.take(), &new_map) {
+          (Some(origin_map), Some(new_map)) => {
+            Some(collapse_sourcemaps_into_first(origin_map, &[new_map]))
+          }
+          (origin_map, _) => {
+            chunk.map = origin_map;
             // TODO: Map is dirty. Should we reset the `chunk.map` to `None`?
             None
           }

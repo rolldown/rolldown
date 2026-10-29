@@ -68,17 +68,60 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) ->
     return sourcemap_chain[0].clone().into_owned();
   }
 
-  let last_map = sourcemap_chain.last().expect("sourcemap_chain should not be empty");
   let first_map = sourcemap_chain.first().expect("sourcemap_chain should not be empty");
+  let tokens = collapse_tokens(sourcemap_chain);
+
+  SourceMap::new(
+    None,
+    sourcemap_chain
+      .iter()
+      .flat_map(|map| map.get_names())
+      .map(|n| Cow::Owned(n.to_owned()))
+      .collect(),
+    None,
+    first_map.get_sources().map(|s| Cow::Owned(s.to_owned())).collect(),
+    first_map.get_source_contents().map(|x| x.map(|s| Cow::Owned(s.to_owned()))).collect(),
+    tokens,
+    None,
+  )
+}
+
+/// Same result as [`collapse_sourcemaps`] on `[&first_map, ..rest]`, but consumes `first_map`
+/// so its names, sources and `sourcesContent` move into the result instead of being copied.
+/// For a chunk map, `sourcesContent` holds every module's original source, so this skips
+/// copying the whole bundle's sources once more.
+pub fn collapse_sourcemaps_into_first(
+  first_map: SourceMap,
+  rest: &[&oxc_sourcemap::SourceMap<'_>],
+) -> SourceMap {
+  debug_assert!(!rest.is_empty());
+  let mut chain = Vec::with_capacity(rest.len() + 1);
+  chain.push(&first_map);
+  chain.extend_from_slice(rest);
+  let tokens = collapse_tokens(&chain);
+  let rest_names = rest.iter().flat_map(|map| map.get_names()).map(|n| Cow::Owned(n.to_owned()));
+  drop(chain);
+
+  let mut parts = first_map.into_parts();
+  parts.names.extend(rest_names);
+  SourceMap::new(None, parts.names, None, parts.sources, parts.source_contents, tokens, None)
+}
+
+/// Remaps the last map's tokens through the rest of the chain. A traced token's name_id indexes
+/// the concatenation of every map's names in chain order.
+fn collapse_tokens(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) -> Box<[Token]> {
+  let last_map = sourcemap_chain.last().expect("sourcemap_chain should not be empty");
   let chain_without_last = &sourcemap_chain[..sourcemap_chain.len() - 1];
 
-  // Concatenate each map's names into one pool, in chain order. A token's merged name_id is then
-  // `local_id + offset`, where `offset` is the pool index of that map's first name.
-  let mut merged_names: Vec<Cow<'static, str>> = Vec::new();
-  let mut append_names = |map: &oxc_sourcemap::SourceMap<'_>| {
+  // A token's merged name_id is `local_id + offset`, where `offset` is the pool index of that
+  // map's first name.
+  let mut names_len = 0u32;
+  let mut name_offset = |map: &oxc_sourcemap::SourceMap<'_>| {
+    let offset = names_len;
     #[expect(clippy::cast_possible_truncation)]
-    let offset = merged_names.len() as u32;
-    merged_names.extend(map.get_names().map(|n| Cow::Owned(n.to_owned())));
+    {
+      names_len += map.get_names().len() as u32;
+    }
     offset
   };
 
@@ -86,28 +129,18 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) ->
   // on every token lookup.
   let mut chain_with_offsets: Vec<_> = chain_without_last
     .iter()
-    .map(|sourcemap| (*sourcemap, sourcemap.generate_lookup_table(), append_names(sourcemap)))
+    .map(|sourcemap| (*sourcemap, sourcemap.generate_lookup_table(), name_offset(sourcemap)))
     .collect();
   chain_with_offsets.reverse();
-  let last_offset = append_names(last_map);
+  let last_offset = name_offset(last_map);
 
   // `last_offset` counts the names of every map before the last one. When it is 0, no traced
   // token can carry a name, so the remap loop skips the per-step name tracking.
-  let tokens = if last_offset == 0 {
+  if last_offset == 0 {
     remap_tokens::<false>(last_map, &chain_with_offsets, last_offset)
   } else {
     remap_tokens::<true>(last_map, &chain_with_offsets, last_offset)
-  };
-
-  SourceMap::new(
-    None,
-    merged_names,
-    None,
-    first_map.get_sources().map(|s| Cow::Owned(s.to_owned())).collect(),
-    first_map.get_source_contents().map(|x| x.map(|s| Cow::Owned(s.to_owned()))).collect(),
-    tokens,
-    None,
-  )
+  }
 }
 
 /// Remaps `last_map`'s tokens through `chain`, the earlier maps with the nearest one first.
@@ -546,4 +579,32 @@ fn test_collapse_sourcemaps_prefers_first_map_name() {
   let token =
     collapsed.lookup_source_view_token(&lookup, 0, 6).expect("token at generated position (0:6)");
   assert_eq!(token.get_name().map(AsRef::as_ref), Some("DEBUG_BUILD"));
+}
+
+/// `collapse_sourcemaps_into_first` moves the first map's strings instead of copying them, but
+/// must produce exactly what `collapse_sourcemaps` produces.
+#[test]
+fn test_collapse_sourcemaps_into_first_matches_collapse_sourcemaps() {
+  use oxc_sourcemap::SourceMapBuilder;
+
+  let mut first_builder = SourceMapBuilder::default();
+  let first_source_id = first_builder.set_source_and_content("source.ts", "const a = 1, b = 2");
+  let a = first_builder.add_name("a");
+  first_builder.add_token(0, 0, 0, 0, Some(first_source_id), None);
+  first_builder.add_token(0, 6, 0, 6, Some(first_source_id), Some(a));
+  first_builder.add_token(0, 13, 0, 13, Some(first_source_id), None);
+  let first_map = first_builder.into_sourcemap();
+
+  let mut last_builder = SourceMapBuilder::default();
+  let last_source_id = last_builder.set_source_and_content("bundle.js", "const a = 1, b = 2");
+  let b = last_builder.add_name("b");
+  last_builder.add_token(0, 0, 0, 0, Some(last_source_id), None);
+  last_builder.add_token(1, 0, 0, 6, Some(last_source_id), None);
+  last_builder.add_token(2, 2, 0, 13, Some(last_source_id), Some(b));
+  last_builder.add_token(2, 9, 1, 0, Some(last_source_id), None);
+  let last_map = last_builder.into_sourcemap();
+
+  let expected = collapse_sourcemaps(&[&first_map, &last_map]);
+  let actual = collapse_sourcemaps_into_first(first_map, &[&last_map]);
+  assert_eq!(actual.to_json_string(), expected.to_json_string());
 }

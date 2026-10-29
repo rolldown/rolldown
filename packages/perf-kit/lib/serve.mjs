@@ -55,7 +55,31 @@ function wantsGzip(req, ext) {
 // paint entries as the app's.
 const BLANK_HTML = '<!doctype html><title>blank</title>';
 
-export function startServer(rootDir, port = 0) {
+// Navigations get what a real static host gives them: a directory's index.html, a
+// sibling .html for an extensionless path (multi-page entries), and finally the
+// root index.html (SPA history routes, which parity loads by path). Subresource
+// misses stay 404 - an API fetch must never start receiving HTML it didn't get
+// before, or a measurement would change under the app.
+function resolveFile(rootDir, pathname, navigation) {
+  const inRoot = (file) =>
+    (file === rootDir || file.startsWith(rootDir + path.sep)) &&
+    fs.existsSync(file) &&
+    fs.statSync(file).isFile();
+  const direct = path.normalize(path.join(rootDir, pathname === '/' ? '/index.html' : pathname));
+  if (inRoot(direct)) return direct;
+  if (!navigation) return null;
+  const fallbacks = [path.join(direct, 'index.html')];
+  if (!path.extname(pathname)) fallbacks.push(`${direct}.html`, path.join(rootDir, 'index.html'));
+  return fallbacks.map((file) => path.normalize(file)).find(inRoot) ?? null;
+}
+
+/**
+ * `root` may be a function: parity serves the original build and the candidate
+ * from ONE origin (neither may render a different `location`), swapping the root
+ * between captures.
+ */
+export function startServer(root, port = 0) {
+  const rootOf = typeof root === 'function' ? root : () => root;
   const server = http.createServer((req, res) => {
     let pathname;
     try {
@@ -73,13 +97,12 @@ export function startServer(rootDir, port = 0) {
       res.end(BLANK_HTML);
       return;
     }
-    if (pathname === '/') pathname = '/index.html';
-    const file = path.normalize(path.join(rootDir, pathname));
-    if (
-      !file.startsWith(path.normalize(rootDir)) ||
-      !fs.existsSync(file) ||
-      !fs.statSync(file).isFile()
-    ) {
+    const file = resolveFile(
+      path.normalize(rootOf()),
+      pathname,
+      req.headers['sec-fetch-mode'] === 'navigate',
+    );
+    if (!file) {
       res.writeHead(404).end('not found');
       return;
     }

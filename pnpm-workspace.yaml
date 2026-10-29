@@ -146,6 +146,16 @@ minimumReleaseAgeExclude:
   - '@napi-rs/wasm-runtime'
   - '@emnapi/*'
   - emnapi
+  - '@rolldown/notify-darwin-arm64@0.1.0'
+  - '@rolldown/notify-darwin-x64@0.1.0'
+  - '@rolldown/notify-linux-arm64-gnu@0.1.0'
+  - '@rolldown/notify-linux-arm64-musl@0.1.0'
+  - '@rolldown/notify-linux-x64-gnu@0.1.0'
+  - '@rolldown/notify-linux-x64-musl@0.1.0'
+  - '@rolldown/notify-wasm32-wasi@0.1.0'
+  - '@rolldown/notify-win32-arm64-msvc@0.1.0'
+  - '@rolldown/notify-win32-x64-msvc@0.1.0'
+  - '@rolldown/notify@0.1.0'
 
 # avoid accidentally relying on `NODE_PATH` env var
 extendNodePath: false

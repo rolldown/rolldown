@@ -153,6 +153,7 @@ fn js_type_name(value_type: ValueType) -> &'static str {
     ValueType::Null => "null",
     ValueType::Boolean => "boolean",
     ValueType::Number => "number",
+    ValueType::BigInt => "bigint",
     ValueType::String => "string",
     ValueType::Symbol => "symbol",
     ValueType::Object => "object",

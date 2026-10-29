@@ -14,7 +14,7 @@ use rolldown_plugin::{
 };
 use rolldown_plugin_utils::parse_program;
 use rolldown_std_utils::relative_path_as_js_specifier;
-use rolldown_utils::pattern_filter::StringOrRegex;
+use rolldown_utils::{futures::block_on_spawn_all, pattern_filter::StringOrRegex};
 use sugar_path::SugarPath as _;
 
 pub const DYNAMIC_IMPORT_HELPER: &str = "\0rolldown_dynamic_import_helper.js";
@@ -154,10 +154,10 @@ impl Plugin for ViteDynamicImportVarsPlugin {
           visitor.async_imports
         };
 
-        let mut resolved_async_imports = Vec::with_capacity(async_imports.len());
-        for glob in async_imports {
-          resolved_async_imports.push(resolver(glob, args.id.to_string()).await.ok().flatten());
-        }
+        let task = async_imports
+          .into_iter()
+          .map(|glob| async { resolver(glob, args.id.to_string()).await.ok()? });
+        let resolved_async_imports = block_on_spawn_all(task).await;
 
         let allocator = oxc::allocator::Allocator::default();
         let Some(parser_ret) = parse_program(&allocator, args.code, args.module_type, args.id)?

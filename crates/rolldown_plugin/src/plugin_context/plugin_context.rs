@@ -70,11 +70,12 @@ impl PluginContext {
 
   pub async fn load(
     &self,
-    specifier: &str,
+    raw_id: &str,
+    attributes: rolldown_common::ImportAttributes,
     side_effects: Option<HookSideEffects>,
     module_def_format: ModuleDefFormat,
   ) -> anyhow::Result<()> {
-    call_native_only!(self, "load", ctx => ctx.load(specifier, side_effects, module_def_format).await)
+    call_native_only!(self, "load", ctx => ctx.load(raw_id, attributes, side_effects, module_def_format).await)
   }
 
   pub async fn resolve(

@@ -17,7 +17,7 @@ pub mod hmr_info;
 pub mod hybrid_index_vec;
 #[cfg(debug_assertions)]
 pub mod idx_ext;
-pub mod import_attribute;
+pub mod import_attributes;
 pub mod import_kind;
 pub mod import_record;
 pub mod importer_record;

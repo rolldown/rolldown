@@ -1827,7 +1827,7 @@ export declare class BindingOutputChunk {
 }
 
 export declare class BindingPluginContext {
-  load(specifier: string, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string): Promise<void>
+  load(rawId: string, attributes: Record<string, string>, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null, fnSanitizedFileName?: string | undefined | null): string
   emitChunk(file: BindingEmittedChunk): string
@@ -2024,6 +2024,8 @@ export interface BindingChecksOptions {
   sourcemapBroken?: boolean
   namespaceConflict?: boolean
   shimmedExport?: boolean
+  deprecatedImportAssertion?: boolean
+  invalidImportAttribute?: boolean
 }
 
 export interface BindingChunkImportMap {
@@ -2310,6 +2312,7 @@ export interface BindingExperimentalOptions {
   nativeMagicString?: boolean
   chunkOptimization?: boolean | BindingChunkOptimizationOptions
   lazyBarrel?: boolean
+  importAttributes?: boolean
 }
 
 export interface BindingFilterToken {
@@ -2364,6 +2367,11 @@ export interface BindingHookJsResolveIdOutput {
   moduleSideEffects?: boolean | 'no-treeshake'
 }
 
+export interface BindingHookLoadExtraArgs {
+  rawId: string
+  attributes: Record<string, string>
+}
+
 export interface BindingHookLoadOutput {
   code: string
   moduleSideEffects?: boolean | 'no-treeshake'
@@ -2378,6 +2386,19 @@ export interface BindingHookRenderChunkOutput {
    * omitting the field, which mirrors Rollup's "possibly broken" semantics).
    */
   map?: BindingSourcemap | null
+}
+
+/**
+ * The extra arguments of `resolveDynamicImport`. Empty attributes and a raw id equal to the
+ * importer are left out, and `bindingify-build-hooks.ts` fills them in.
+ */
+export interface BindingHookResolveDynamicImportExtraArgs {
+  /** The import attributes of the import being resolved. Omitted when empty. */
+  attributes?: Record<string, string>
+  /** The importer without its import attributes. Omitted when equal to the importer. */
+  importerRawId?: string
+  /** The import attributes of the importer itself. Omitted when empty. */
+  importerAttributes?: Record<string, string>
 }
 
 export interface BindingHookResolveFileUrlArgs {
@@ -2411,6 +2432,12 @@ export interface BindingHookResolveIdExtraArgs {
    * - `hot-accept`: `import.meta.hot.accept('./lib.js', () => {})`
    */
   kind: 'import-statement' | 'dynamic-import' | 'require-call' | 'import-rule' | 'url-token' | 'new-url' | 'hot-accept'
+  /** The import attributes of the import being resolved. Omitted when empty. */
+  attributes?: Record<string, string>
+  /** The importer without its import attributes. Omitted when equal to the importer. */
+  importerRawId?: string
+  /** The import attributes of the importer itself. Omitted when empty. */
+  importerAttributes?: Record<string, string>
 }
 
 export interface BindingHookResolveIdOutput {
@@ -2423,6 +2450,8 @@ export interface BindingHookResolveIdOutput {
    * we could get the related package json object via the path string.
    */
   packageJsonPath?: string | null
+  /** Replaces the import attributes of the import. `{}` removes them. */
+  attributes?: Record<string, string>
 }
 
 export type BindingHookSideEffects = boolean | string
@@ -2719,7 +2748,9 @@ export interface BindingOverwriteOptions {
 }
 
 export interface BindingPluginContextResolvedId {
+  /** The resolved id without its import attributes. */
   id: string
+  attributes: Record<string, string>
   packageJsonPath?: string
   external: boolean | 'absolute' | 'relative'
   moduleSideEffects?: boolean | 'no-treeshake'
@@ -2740,6 +2771,7 @@ export interface BindingPluginContextResolveOptions {
   skipSelf?: boolean
   custom?: number
   vitePluginCustom?: BindingVitePluginCustom
+  attributes?: Record<string, string>
 }
 
 export interface BindingPluginHookMeta {
@@ -2754,9 +2786,9 @@ export interface BindingPluginOptions {
   resolveId?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraArgs) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   resolveIdMeta?: BindingPluginHookMeta
   resolveIdFilter?: BindingHookFilter
-  resolveDynamicImport?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
+  resolveDynamicImport?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveDynamicImportExtraArgs) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   resolveDynamicImportMeta?: BindingPluginHookMeta
-  load?: (ctx: BindingLoadPluginContext, id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
+  load?: (ctx: BindingLoadPluginContext, id: string, options: Nullable<BindingHookLoadExtraArgs>) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
   loadMeta?: BindingPluginHookMeta
   loadFilter?: BindingHookFilter
   transform?: (ctx:  BindingTransformPluginContext, id: string, code: string, module_type: BindingTransformHookExtraArgs) => MaybePromise<VoidNullable<BindingHookTransformOutput>>
@@ -2908,6 +2940,8 @@ export interface BindingSourceMapOptions {
 
 export interface BindingTransformHookExtraArgs {
   moduleType: string
+  rawId?: string
+  attributes?: Record<string, string>
 }
 
 export interface BindingTreeshake {

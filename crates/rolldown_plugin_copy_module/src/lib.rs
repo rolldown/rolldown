@@ -4,7 +4,8 @@ use arcstr::ArcStr;
 use rolldown_common::{ModuleType, ResolvedExternal};
 use rolldown_plugin::{
   HookRenderChunkArgs, HookRenderChunkReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, HookUsage, Plugin, PluginContext, PluginHookMeta, PluginOrder,
+  HookResolveIdReturn, HookUsage, Plugin, PluginContext, PluginContextResolveOptions,
+  PluginHookMeta, PluginOrder,
 };
 use rolldown_plugin_utils::{emit_asset, rewrite_emitted_asset_references};
 use rolldown_utils::url::clean_url;
@@ -60,7 +61,16 @@ impl Plugin for CopyModulePlugin {
     }
 
     // Resolve the specifier to get the absolute path
-    let resolved = ctx.resolve(args.specifier, args.importer, None).await?;
+    let resolved = ctx
+      .resolve(
+        args.specifier,
+        args.importer,
+        Some(PluginContextResolveOptions {
+          attributes: args.attributes.clone(),
+          ..Default::default()
+        }),
+      )
+      .await?;
 
     let resolved_id = match resolved {
       Ok(id) => id,
@@ -74,6 +84,13 @@ impl Plugin for CopyModulePlugin {
     // `external` flag and try to read `*.jpg` from disk, emitting a
     // confusing `Failed to read copy module *.jpg` error.
     if resolved_id.external.is_external() {
+      return Ok(None);
+    }
+
+    // A `type` import attribute that selects a built-in module type beats `moduleTypes`. The
+    // resolved attributes include any `resolveId` override and are empty without
+    // `experimental.importAttributes`.
+    if resolved_id.attributes.module_type().is_some() {
       return Ok(None);
     }
 

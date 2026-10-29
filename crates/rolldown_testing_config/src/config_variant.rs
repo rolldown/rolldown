@@ -39,6 +39,7 @@ pub struct ConfigVariant {
   pub outro: Option<String>,
   pub comments: Option<CommentsOptions>,
   pub chunk_optimization: Option<ChunkOptimizationOption>,
+  pub import_attributes: Option<bool>,
   // --- non-bundler options are start with `_`
   /// Whether to include the output in the snapshot for this config variant.
   #[serde(rename = "_snapshot")]
@@ -143,6 +144,12 @@ impl ConfigVariant {
         ..config.experimental.unwrap_or_default()
       });
     }
+    if let Some(import_attributes) = &self.import_attributes {
+      config.experimental = Some(ExperimentalOptions {
+        import_attributes: Some(*import_attributes),
+        ..config.experimental.unwrap_or_default()
+      });
+    }
     config
   }
 
@@ -207,6 +214,9 @@ impl ConfigVariant {
     }
     if let Some(chunk_optimization) = &self.chunk_optimization {
       fields.push(format!("chunk_optimization: {chunk_optimization:?}"));
+    }
+    if let Some(import_attributes) = &self.import_attributes {
+      fields.push(format!("import_attributes: {import_attributes:?}"));
     }
     let mut result = String::new();
     self.config_name.as_ref().inspect(|config_name| {

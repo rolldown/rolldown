@@ -5,8 +5,8 @@ use crate::{
 use arcstr::ArcStr;
 use nodejs_built_in_modules::is_nodejs_builtin_module;
 use rolldown_common::{
-  ImportKind, MakeAbsoluteExternalsRelative, ModuleId, NormalizedBundlerOptions, ResolvedExternal,
-  ResolvedId,
+  ImportAttributes, ImportKind, MakeAbsoluteExternalsRelative, ModuleId, NormalizedBundlerOptions,
+  ResolvedExternal, ResolvedId,
 };
 use rolldown_fs::FileSystem;
 use rolldown_resolver::{ResolveError, Resolver};
@@ -19,6 +19,9 @@ use sugar_path::SugarPath;
 
 use crate::__inner::resolve_id_with_plugins;
 
+/// Resolves `specifier` imported with `attributes`, applying the `external` option. The
+/// attributes the import resolves with become part of the module id when
+/// `experimental.importAttributes` is enabled.
 #[expect(clippy::too_many_arguments)]
 pub async fn resolve_id_check_external<Fs: FileSystem>(
   resolver: &Resolver<Fs>,
@@ -31,10 +34,19 @@ pub async fn resolve_id_check_external<Fs: FileSystem>(
   custom: Arc<CustomField>,
   is_user_defined_entry: bool,
   bundle_options: &NormalizedBundlerOptions,
+  attributes: &ImportAttributes,
+  importer_raw_id: Option<&str>,
+  importer_attributes: &ImportAttributes,
 ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
-  // Check external with unresolved path
+  let import_attributes_enabled = bundle_options.experimental.is_import_attributes_enabled();
+  let finalize =
+    |resolved_id: ResolvedId| resolved_id.finalize_attributes(import_attributes_enabled);
+  // Check external with unresolved path. Plugins don't run, so the import keeps the attributes
+  // written in the source.
   if bundle_options.external.call(specifier, importer, false).await? {
-    return Ok(Ok(resolve_external(bundle_options, specifier, importer, true).await?.unwrap()));
+    let resolved_id =
+      resolve_external(bundle_options, specifier, importer, importer_raw_id, true).await?.unwrap();
+    return Ok(Ok(finalize(ResolvedId { attributes: attributes.clone(), ..resolved_id })));
   }
 
   let resolved_id = resolve_id_with_plugins(
@@ -47,15 +59,20 @@ pub async fn resolve_id_check_external<Fs: FileSystem>(
     skipped_resolve_calls,
     custom,
     is_user_defined_entry,
+    attributes,
+    importer_raw_id,
+    importer_attributes,
   )
   .await?;
 
   match resolved_id {
     Ok(mut resolved_id) => {
       if matches!(resolved_id.normalize_external_id, Some(true)) {
-        return Ok(Ok(
-          resolve_external(bundle_options, &resolved_id.id, importer, true).await?.unwrap(),
-        ));
+        let external =
+          resolve_external(bundle_options, &resolved_id.id, importer, importer_raw_id, true)
+            .await?
+            .unwrap();
+        return Ok(Ok(finalize(ResolvedId { attributes: resolved_id.attributes, ..external })));
       }
       let external = match resolved_id.external {
         ResolvedExternal::Bool(false) => {
@@ -82,15 +99,15 @@ pub async fn resolve_id_check_external<Fs: FileSystem>(
           }
         }
       };
-      Ok(Ok(resolved_id))
+      Ok(Ok(finalize(resolved_id)))
     }
     Err(e) => {
       if let ResolveError::NotFound(_) = &e {
         // If module can't resolve, check external with unresolved path with `isResolved: true`
         if let Some(resolved_id) =
-          resolve_external(bundle_options, specifier, importer, false).await?
+          resolve_external(bundle_options, specifier, importer, importer_raw_id, false).await?
         {
-          return Ok(Ok(resolved_id));
+          return Ok(Ok(finalize(ResolvedId { attributes: attributes.clone(), ..resolved_id })));
         }
       }
       Ok(Err(e))
@@ -102,10 +119,11 @@ async fn resolve_external(
   options: &NormalizedBundlerOptions,
   specifier: &str,
   importer: Option<&str>,
+  importer_raw_id: Option<&str>,
   is_external: bool,
 ) -> anyhow::Result<Option<ResolvedId>> {
   let id = if options.make_absolute_externals_relative.is_enabled() {
-    normalize_relative_external_id(&options.cwd, specifier, importer)
+    normalize_relative_external_id(&options.cwd, specifier, importer_raw_id)
   } else {
     specifier.into()
   };

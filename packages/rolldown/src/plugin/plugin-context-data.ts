@@ -12,6 +12,7 @@ import { NormalizedInputOptionsImpl } from '../options/normalized-input-options'
 import { NormalizedOutputOptionsImpl } from '../options/normalized-output-options';
 import type { ModuleInfo } from '../types/module-info';
 import { transformModuleInfo } from '../utils/transform-module-info';
+import { stringifyModuleId } from '../utils/module-id';
 import type { RenderedChunkMeta } from '.';
 import type { PluginContextResolveOptions } from './plugin-context';
 
@@ -54,6 +55,8 @@ export class PluginContextData {
   renderedChunkMeta: RenderedChunkMeta | null = null;
   normalizedInputOptions: NormalizedInputOptions | null = null;
   normalizedOutputOptions: NormalizedOutputOptions | null = null;
+  /** `experimental.importAttributes` */
+  importAttributes = false;
 
   constructor(
     private onLog: LogHandler,
@@ -63,6 +66,18 @@ export class PluginContextData {
     cacheOutputCode = true,
   ) {
     this.outputCodeCache = cacheOutputCode ? new Map() : null;
+  }
+
+  /**
+   * The id of the module `rawId` imported with `attributes`. An external keeps its attributes
+   * even without `experimental.importAttributes`, like on the Rust side.
+   */
+  toModuleId(
+    rawId: string,
+    attributes: Record<string, string> | undefined,
+    external = false,
+  ): string {
+    return this.importAttributes || external ? stringifyModuleId(rawId, attributes) : rawId;
   }
 
   updateModuleOption(id: string, option: ModuleOptions): ModuleOptions {

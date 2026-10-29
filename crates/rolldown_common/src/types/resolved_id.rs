@@ -52,11 +52,12 @@ pub struct ResolvedId {
 
 impl ResolvedId {
   /// Finishes a resolution: the attributes the import resolved with become part of the module
-  /// id when `experimental.importAttributes` is enabled, and are dropped otherwise.
+  /// id when `experimental.importAttributes` is enabled, and are dropped otherwise. An external
+  /// keeps them either way, since the output renders them.
   #[must_use]
   pub fn finalize_attributes(mut self, import_attributes_enabled: bool) -> Self {
     let attributes = std::mem::take(&mut self.attributes);
-    if import_attributes_enabled && !attributes.is_empty() {
+    if (import_attributes_enabled || self.external.is_external()) && !attributes.is_empty() {
       self.id = ModuleId::with_attributes(self.id.raw_id(), &attributes);
       self.attributes = attributes;
     }

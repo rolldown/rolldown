@@ -34,7 +34,9 @@ use oxc::{
   parser::{ParseOptions, Parser},
   span::{SPAN, SourceType, Span},
 };
-use rolldown_common::{ChunkKind, MinifyOptions, NormalizedBundlerOptions, OutputFormat, WrapKind};
+use rolldown_common::{
+  AddonOutputOption, ChunkKind, MinifyOptions, NormalizedBundlerOptions, OutputFormat, WrapKind,
+};
 use rolldown_ecmascript::EcmaAst;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::concat_string;
@@ -101,7 +103,13 @@ pub fn build_eligible<'o>(
     && options.outro.is_none()
     && plugin_driver.order_by_intro_meta.is_empty()
     && plugin_driver.order_by_outro_meta.is_empty()
-    && !inline_state.has_records();
+    && !inline_state.has_records()
+    // The re-parse also DCEs (and syntax-checks) banner/footer code. Only comment-only static
+    // banners/footers pass through; functions and plugin hooks are not known up front.
+    && addon_is_comment_only(options.banner.as_ref())
+    && addon_is_comment_only(options.footer.as_ref())
+    && plugin_driver.order_by_banner_meta.is_empty()
+    && plugin_driver.order_by_footer_meta.is_empty();
   if std::env::var_os("ROLLDOWN_CHUNK_AST_DCE_DEBUG").is_some() {
     eprintln!(
       "chunk_ast_dce build_eligible={eligible} mangle={} mangle_props={} compress={} format={:?} \
@@ -119,6 +127,22 @@ pub fn build_eligible<'o>(
     );
   }
   eligible.then_some(minify_options)
+}
+
+fn addon_is_comment_only(addon: Option<&AddonOutputOption>) -> bool {
+  match addon {
+    None | Some(AddonOutputOption::String(None)) => true,
+    Some(AddonOutputOption::String(Some(text))) => {
+      let allocator = Allocator::default();
+      let ret = Parser::new(&allocator, text, SourceType::mjs()).parse();
+      !ret.fatal_error
+        && ret.diagnostics.is_empty()
+        && ret.program.body.is_empty()
+        && ret.program.directives.is_empty()
+        && ret.program.hashbang.is_none()
+    }
+    Some(AddonOutputOption::Fn(_)) => false,
+  }
 }
 
 /// `renderChunk` plugins other than the builtin asset/copy plugins, which only replace emitted-file
@@ -288,34 +312,35 @@ struct Split<'a> {
   tail: ArenaVec<'a, Statement<'a>>,
 }
 
-/// Module bodies contain no module declarations, so leading ones are the generated imports and
-/// trailing ones the generated exports. oxc keeps the order of top-level statements.
-fn split_head_tail<'a>(
+/// `stmts` without the leading generated imports: module declarations before any module code
+/// (module bodies contain none, and oxc keeps the order of top-level statements).
+fn split_head<'a>(
   allocator: &'a Allocator,
   stmts: ArenaVec<'a, Statement<'a>>,
-) -> (ArenaVec<'a, Statement<'a>>, std::vec::Vec<Statement<'a>>, ArenaVec<'a, Statement<'a>>) {
+) -> (ArenaVec<'a, Statement<'a>>, std::vec::Vec<Statement<'a>>) {
   let mut head = ArenaVec::new_in(&allocator);
-  let mut middle = vec![];
-  let mut tail = ArenaVec::new_in(&allocator);
+  let mut rest = vec![];
   for stmt in stmts {
-    if stmt.is_module_declaration() && !is_marker(&stmt) {
-      if middle.is_empty() { head.push(stmt) } else { tail.push(stmt) }
+    if rest.is_empty() && stmt.is_module_declaration() && !is_marker(&stmt) {
+      head.push(stmt);
     } else {
-      middle.push(stmt);
+      rest.push(stmt);
     }
   }
-  (head, middle, tail)
+  (head, rest)
 }
 
+/// Everything after the last marker came from the generated tail (wrapped entry + exports), which
+/// is not only module declarations (e.g. `var sub = import_sub.sub;` before `export { sub }`).
 fn split_at_markers<'a>(
   allocator: &'a Allocator,
   stmts: ArenaVec<'a, Statement<'a>>,
   module_count: usize,
 ) -> Split<'a> {
-  let (head, middle, tail) = split_head_tail(allocator, stmts);
+  let (head, rest) = split_head(allocator, stmts);
   let mut segments = Vec::with_capacity(module_count);
   let mut current = ArenaVec::new_in(&allocator);
-  for stmt in middle {
+  for stmt in rest {
     if is_marker(&stmt) {
       segments.push(std::mem::replace(&mut current, ArenaVec::new_in(&allocator)));
     } else {
@@ -327,12 +352,9 @@ fn split_at_markers<'a>(
     module_count,
     "chunk AST DCE: a segment marker was removed; the split would be wrong"
   );
-  // Statements after the last marker (e.g. `var`s re-emitted by dead-code removal) belong to the
-  // last module.
-  if let Some(last) = segments.last_mut() {
-    last.extend(current);
-  }
-  Split { head, segments, tail }
+  // Rarely, a module's statements land after its marker (`var`s that dead-code removal re-emits
+  // at the end of the body); they are printed with the tail. Correct, but loses their mappings.
+  Split { head, segments, tail: current }
 }
 
 /// Assigns each surviving top-level statement to the module whose original top-level statement
@@ -346,10 +368,14 @@ fn split_by_address<'a>(
   module_count: usize,
   owner_by_address: &FxHashMap<Address, usize>,
 ) -> Split<'a> {
-  let (head, middle, tail) = split_head_tail(allocator, stmts);
+  let (head, mut rest) = split_head(allocator, stmts);
+  // The generated tail: the trailing run of statements that no module owned.
+  let tail_len =
+    rest.iter().rev().take_while(|s| !owner_by_address.contains_key(&s.address())).count();
+  let tail = ArenaVec::from_iter_in(rest.drain(rest.len() - tail_len..), &allocator);
   let mut segments: Vec<_> = (0..module_count).map(|_| ArenaVec::new_in(&allocator)).collect();
   let mut current = 0;
-  for stmt in middle {
+  for stmt in rest {
     if let Some(&owner) = owner_by_address.get(&stmt.address()) {
       current = current.max(owner);
     }

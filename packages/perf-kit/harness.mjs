@@ -2655,7 +2655,7 @@ function printNodeLeads(report, cov, profile, graph, top) {
 
   if (!graph) {
     console.log(
-      '\n(no module-graph.json: a rolldown devtools-metrics build would price every deferral statically -' +
+      '\n(no module-graph.json: a rolldown devtools report build would price every deferral statically -' +
         ' set devtools = { mode: "report" } and rebuild, then `graph` / `what-if` / `cut` work on this target)',
     );
   }

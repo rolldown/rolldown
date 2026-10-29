@@ -121,6 +121,7 @@ mod order_analysis;
 pub mod order_wrap_state;
 mod order_wrapping;
 mod post_banner_footer;
+mod reduced_chunk_graph;
 mod render_chunk_to_assets;
 mod resolve_file_urls;
 mod runtime_module_sweep;
@@ -688,9 +689,9 @@ impl<'a> GenerateStage<'a> {
             continue;
           };
 
-          let rendered_length =
-            u32::try_from(rendered_module.rendered_length()).unwrap_or(u32::MAX);
-          package_info.size = package_info.size.saturating_add(rendered_length);
+          let rendered_byte_length =
+            u32::try_from(rendered_module.rendered_byte_length()).unwrap_or(u32::MAX);
+          package_info.size = package_info.size.saturating_add(rendered_byte_length);
         }
       }
 

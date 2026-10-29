@@ -97,6 +97,7 @@ function packNodePackages() {
   // always regenerated, so the binding package.json cannot keep a version the tarball outgrew
   const npmDir = join(rolldownPackage, 'npm/wasm32-wasi');
   run('pnpm', ['exec', 'napi', 'create-npm-dirs'], rolldownPackage);
+  run('node', [join(repoRoot, 'scripts/misc/pin-wasi-binding-deps.mjs')], repoRoot);
   for (const file of WASI_ARTIFACTS) {
     copyFileSync(join(rolldownPackage, 'src', file), join(npmDir, file));
   }

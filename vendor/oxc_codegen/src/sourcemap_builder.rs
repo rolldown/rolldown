@@ -40,6 +40,27 @@ impl LineOffsetTables {
         SourcemapBuilder::generate_line_offset_tables(source_text)
     }
 
+    /// rolldown patch: tables of a text made of `parts`, each `(byte offset of the part in the
+    /// text, tables of the part)`, in increasing offset order. Lets callers build the parts'
+    /// tables in parallel. A part's lines keep their own boundaries, so a separator between
+    /// parts that would merge with a trailing `\r` into one `\r\n` break adds an empty line
+    /// instead; lines *within* each part are exact.
+    pub fn concat(parts: impl IntoIterator<Item = (u32, LineOffsetTables)>) -> Self {
+        let mut out = LineOffsetTables::default();
+        for (base, part) in parts {
+            let column_base = out.column_offsets.len();
+            out.lines.extend(part.lines.into_iter().map(|line| Line {
+                byte_offset_to_start_of_line: line.byte_offset_to_start_of_line + base,
+                column_offsets_id: line
+                    .column_offsets_id
+                    .map(|id| ColumnOffsetsId::from_usize(id.index() + column_base)),
+            }));
+            // `ColumnOffsets` are relative to their line's start, so they move as they are.
+            out.column_offsets.extend(part.column_offsets);
+        }
+        out
+    }
+
     /// rolldown patch: index of the line that contains byte offset `position`.
     pub fn line_index_of(&self, position: u32) -> u32 {
         let idx = self.lines.partition_point(|line| line.byte_offset_to_start_of_line <= position);

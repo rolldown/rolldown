@@ -354,6 +354,7 @@ impl GenerateStage<'_> {
                   initial_indent,
                   space,
                   positions[&module_idx],
+                  &self.link_output.module_table,
                 ),
                 None => module.render_with(
                   self.options,

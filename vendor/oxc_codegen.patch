@@ -1,6 +1,6 @@
 diff -ru a/src/lib.rs b/src/lib.rs
---- a/src/lib.rs	2026-10-29 06:18:02.723046827 +0000
-+++ b/src/lib.rs	2026-10-29 06:18:02.728805636 +0000
+--- a/src/lib.rs
++++ b/src/lib.rs
 @@ -38,6 +38,9 @@
  use operator::Operator;
  #[cfg(feature = "sourcemap")]
@@ -77,15 +77,15 @@ diff -ru a/src/lib.rs b/src/lib.rs
          program.print(&mut self, Context::default());
          let legal_comments = self.handle_eof_linked_or_external_comments(program);
 diff -ru a/src/sourcemap_builder.rs b/src/sourcemap_builder.rs
---- a/src/sourcemap_builder.rs	2026-10-29 06:18:02.723145249 +0000
-+++ b/src/sourcemap_builder.rs	2026-10-29 06:18:02.728670683 +0000
+--- a/src/sourcemap_builder.rs
++++ b/src/sourcemap_builder.rs
 @@ -1,4 +1,4 @@
 -use std::{borrow::Cow, collections::hash_map::Entry, path::Path};
 +use std::{borrow::Cow, collections::hash_map::Entry, path::Path, sync::Arc};
  
  use oxc_index::{IndexVec, define_nonmax_u32_index_type};
  use oxc_span::Span;
-@@ -34,6 +34,21 @@
+@@ -34,6 +34,42 @@
      column_offsets: IndexVec<ColumnOffsetsId, ColumnOffsets>,
  }
  
@@ -93,6 +93,27 @@ diff -ru a/src/sourcemap_builder.rs b/src/sourcemap_builder.rs
 +    /// rolldown patch: build the tables for `source_text`.
 +    pub fn new(source_text: &str) -> Self {
 +        SourcemapBuilder::generate_line_offset_tables(source_text)
++    }
++
++    /// rolldown patch: tables of a text made of `parts`, each `(byte offset of the part in the
++    /// text, tables of the part)`, in increasing offset order. Lets callers build the parts'
++    /// tables in parallel. A part's lines keep their own boundaries, so a separator between
++    /// parts that would merge with a trailing `\r` into one `\r\n` break adds an empty line
++    /// instead; lines *within* each part are exact.
++    pub fn concat(parts: impl IntoIterator<Item = (u32, LineOffsetTables)>) -> Self {
++        let mut out = LineOffsetTables::default();
++        for (base, part) in parts {
++            let column_base = out.column_offsets.len();
++            out.lines.extend(part.lines.into_iter().map(|line| Line {
++                byte_offset_to_start_of_line: line.byte_offset_to_start_of_line + base,
++                column_offsets_id: line
++                    .column_offsets_id
++                    .map(|id| ColumnOffsetsId::from_usize(id.index() + column_base)),
++            }));
++            // `ColumnOffsets` are relative to their line's start, so they move as they are.
++            out.column_offsets.extend(part.column_offsets);
++        }
++        out
 +    }
 +
 +    /// rolldown patch: index of the line that contains byte offset `position`.
@@ -107,7 +128,7 @@ diff -ru a/src/sourcemap_builder.rs b/src/sourcemap_builder.rs
  #[derive(Debug)]
  pub struct Line {
      byte_offset_to_start_of_line: u32,
-@@ -54,7 +69,9 @@
+@@ -54,7 +90,9 @@
      tokens: Vec<oxc_sourcemap::Token>,
      last_generated_update: usize,
      last_position: Option<u32>,
@@ -118,7 +139,7 @@ diff -ru a/src/sourcemap_builder.rs b/src/sourcemap_builder.rs
      generated_line: u32,
      generated_column: u32,
      /// Tracks the last accessed line index to optimize sequential lookups in `search_original_line_and_column`.
-@@ -65,9 +82,19 @@
+@@ -65,9 +103,19 @@
  
  impl<'a> SourcemapBuilder<'a> {
      pub fn new(path: &Path, source_text: &'a str) -> Self {

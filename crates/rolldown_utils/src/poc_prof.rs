@@ -34,9 +34,11 @@ pub enum Phase {
   AstRebase,
   /// `global` mode: building the chunk source text and its line tables.
   AstSpace,
+  /// `global` mode: remapping module maps from the chunk source space (summed across threads).
+  AstRemap,
 }
 
-const NAMES: [&str; 11] = [
+const NAMES: [&str; 12] = [
   "minify.parse",
   "minify.dce",
   "minify.codegen",
@@ -48,9 +50,10 @@ const NAMES: [&str; 11] = [
   "join",
   "ast.rebase",
   "ast.space",
+  "ast.remap",
 ];
 
-static COUNTERS: [AtomicU64; 11] = [const { AtomicU64::new(0) }; 11];
+static COUNTERS: [AtomicU64; 12] = [const { AtomicU64::new(0) }; 12];
 
 pub static ENABLED: LazyLock<bool> =
   LazyLock::new(|| std::env::var_os("ROLLDOWN_POC_PROF").is_some_and(|v| v == "1"));

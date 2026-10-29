@@ -110,10 +110,18 @@ with B's source text, line tables and comment table. Global mode makes spans una
    once and shared. That needs the `oxc_codegen` patch below; without it every print would rebuild
    line tables over all of `V` and reserve `|V|` bytes.
 5. Each printed map (single source `V`) is remapped token by token to `(module, line, column)`
-   using the modules' start lines in `V`. A module's map can now name other modules as sources
-   (code moved into it). Tokens into generated text are dropped. When the owning module, or the
-   module a moved token comes from, has a plugin `sourcemap_chain`, only the owner's own tokens are
-   kept (composition per foreign module is not implemented). Head and tail are printed the same
+   using the modules' start lines in `V` (the module's own tokens take a fast path; only foreign
+   ones are binary-searched). A module's map can now name other modules as sources (code moved
+   into it). Tokens into generated text are dropped. If a map has foreign tokens and any of its
+   source modules has a plugin `sourcemap_chain`, the tokens are split per source module, each
+   group goes through that module's chain with the existing `collapse_module_sourcemap`, and the
+   groups are merged back in generated order; the map is then marked final
+   (`ModuleRenderOutput::map_is_final`) so `render_ecma_module` does not collapse it again (it
+   still reports `SOURCEMAP_BROKEN` for omitted plugin maps). Without foreign tokens the owner's
+   map is composed with its chain exactly as today. Fixture:
+   `crates/rolldown/tests/rolldown/topics/chunk_ast_dce/plugin_sourcemap_chain` (a plugin shifts
+   every module by two lines with an exact map; oxc inlines `lib.js`'s object into `entry.js`;
+   in global mode the moved code maps to the same `lib.js` lines as on main). Head and tail are printed the same
    way (with the user's comment options; they can hold moved code, e.g. `var bar =
    require_foo().bar` gets `require_foo`'s initializer inlined) and joined as `SourceMapSource`s.
    The joined chunk map is de-duplicated by source afterwards.
@@ -123,6 +131,9 @@ root `Cargo.toml`; full diff in `vendor/oxc_codegen.patch`, ~140 lines):
 
 - `LineOffsetTables` is public, with `LineOffsetTables::new(source_text)` and
   `line_index_of(byte_offset)`.
+- `LineOffsetTables::concat(parts)`: tables of a concatenated text from the parts' tables, so the
+  per-module tables are built in parallel (inside the rebase job) instead of one serial scan of
+  `V`.
 - `SourcemapBuilder` holds its tables in an `Arc` and gains `new_with_line_offset_tables`; the
   token-capacity estimate is capped at 1 Mi (it was `source_len / 4`).
 - `Codegen::with_line_offset_tables(Arc<LineOffsetTables>)`: use those tables and skip
@@ -256,6 +267,14 @@ What global mode costs on top of barrier mode:
   the token remap from `V` to module coordinates and because each module map copies its own
   source content again. That work is parallel; with sourcemaps off the prints cost the same as in
   barrier mode.
+
+After this run, two cheap optimizations went in (outputs byte-identical): the remap skips the
+module search for the printed module's own tokens (remap ≈ 45 → 23 ms thread CPU per three.js
+×10 build), and the line tables are built per module in the parallel rebase job and concatenated
+(the serial "space" step is ~14 ms per warm build; the larger averages above include a cold
+first iteration of ~130 ms). The VM was too noisy afterwards (the same barrier configuration
+varied 5.5–7 s per 5 builds) to re-measure wall time meaningfully.
+
 - DCE costs the same (the barrier markers were not a significant cost).
 
 Net: global mode still removes ~60% of main's pass CPU on three.js ×10 with sourcemaps and
@@ -337,6 +356,9 @@ Tests: `cargo test -p rolldown`, `RUST_BACKTRACE` unset.
 | `=nobarrier`               |   2181 | same 2                                              |              1038 |
 | `=global`                  |   2181 | same 2                                              |              1038 |
 
+(After adding the `plugin_sourcemap_chain` fixture: 2182 passed in every mode, same 2 failures;
+flag off changes no snapshot; global mode changes the same 1,038.)
+
 The first run with the flag on also failed `issues/1722/{1,2}` (a facade chunk with no modules
 whose export text contains `var sub = import_sub.sub;`; the split dropped it) and
 `errors/chunk_parse_error` (an invalid `banner` is only caught by the re-parse). Both are fixed
@@ -385,12 +407,12 @@ top of that is a separate, larger step (item 4).
 2. **Cover more of the chunk text as AST**: cjs/iife/umd wrappers, concatenated module groups,
    other wrapped-entry shapes, `intro`/`outro`/banner code (parse them, as the PoC does with the
    import/export text). Or keep falling back.
-3. **Size parity (done in the PoC as global mode)**: upstream the `oxc_codegen` API (shared
-   `LineOffsetTables`); make rebasing cheaper or unnecessary, e.g. by giving each module a span
-   offset at parse time so module spans are chunk-unique from the start (then no `VisitMut` pass
-   and no copy of the sources into `V`; codegen would only need per-module line tables looked up
-   by offset); optimize the remap (it is a plain token loop today); compose foreign tokens with
-   their module's `sourcemap_chain` instead of dropping them.
+3. **Size parity (done in the PoC as global mode)**: upstream the `oxc_codegen` API (shared and
+   concatenable `LineOffsetTables`); make rebasing cheaper or unnecessary, e.g. by giving each
+   module a span offset at parse time so module spans are chunk-unique from the start (then no
+   `VisitMut` pass and no copy of the sources into `V`; codegen would only need per-module line
+   tables looked up by offset). A codegen-side source resolver (emit `(source, line, col)`
+   directly) would also remove the remap pass and the per-module source-content copies.
 4. **Full minify** (`minify: true`): global mode is the prerequisite (`sequences`/`join_vars` and
    mangling cross modules all the time). Mangling also needs the module prints to use the chunk
    `Scoping` (names are rewritten in the scoping, not the AST).
@@ -433,6 +455,11 @@ Main risks:
 - `vendor/oxc_codegen`, `vendor/oxc_codegen.patch` — the patched `oxc_codegen` 0.156.0.
 - `crates/rolldown/src/ecmascript/ecma_generator.rs` — dedupes the joined map's sources in global
   mode.
+- `crates/rolldown/src/utils/render_ecma_module.rs`, `crates/rolldown_common/src/types/
+  module_render_output.rs` — `map_is_final` for maps composed by global mode.
+- `crates/rolldown/tests/rolldown/topics/chunk_ast_dce/plugin_sourcemap_chain` — fixture for moved
+  code out of plugin-transformed modules (snapshot taken with the flag off; compare it with
+  `ROLLDOWN_CHUNK_AST_DCE=global`).
 - `crates/rolldown/src/stages/generate_stage/render_chunk_to_assets.rs` — runs it before module
   printing, keeps the chunk allocators alive until after `ast_table`.
 - `crates/rolldown/src/ecmascript/format/esm.rs` — uses the re-printed imports/exports.

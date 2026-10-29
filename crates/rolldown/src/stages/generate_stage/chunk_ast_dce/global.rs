@@ -32,7 +32,9 @@ use oxc::{
   span::{SPAN, Span},
 };
 use oxc_sourcemap::{SourceMap, SourceMapParts, Token};
-use rolldown_common::{ModuleRenderOutput, NormalModule, NormalizedBundlerOptions};
+use rolldown_common::{
+  ModuleIdx, ModuleRenderOutput, ModuleTable, NormalModule, NormalizedBundlerOptions,
+};
 use rolldown_ecmascript::EcmaAst;
 use rolldown_utils::{
   poc_prof::{Phase, Timer},
@@ -42,7 +44,9 @@ use rolldown_utils::{
 };
 
 use super::{ChunkAstDceOutput, GeneratedText, parse_generated};
-use crate::types::generator::GenerateContext;
+use crate::{
+  types::generator::GenerateContext, utils::render_ecma_module::collapse_module_sourcemap,
+};
 
 /// The shared source space of one chunk (see the module docs).
 pub struct ChunkSourceSpace {
@@ -63,8 +67,9 @@ struct SpaceModule {
   end_line: u32,
   /// Source name in sourcemaps (`module.id`), `None` for virtual modules (no mappings).
   source_name: Option<String>,
-  /// A module whose text came out of plugin transforms maps through its `sourcemap_chain`; only
-  /// its own printed tokens are composed with it, so foreign tokens into it are dropped.
+  idx: ModuleIdx,
+  /// The module's text came out of plugin transforms: tokens into it must be composed with its
+  /// `sourcemap_chain`.
   has_chain: bool,
 }
 
@@ -124,26 +129,37 @@ pub fn dce_chunk_global(
 
   // Rebase every module's spans and comments into `V`.
   t.stop(Phase::AstSpace);
-  asts.par_iter_mut().zip(bases.par_iter()).for_each(|(ast, base)| {
-    let t = Timer::start();
-    let base = *base;
-    ast.program.with_mut(|fields| {
-      Rebase(base).visit_program(fields.program);
-      for comment in &mut fields.program.comments {
-        comment.span.start += base;
-        comment.span.end += base;
-        // `attached_to == 0` is the finalizer's "print at the top of the module" marker for
-        // comments whose anchor it removed (imports, directives); codegen prints those through
-        // `print_comments_at(0)`. No real comment attaches to offset 0.
-        if comment.attached_to != 0 {
-          comment.attached_to += base;
+  // The module's line tables are built in the same parallel job; `concat`ed into `V`'s below.
+  let module_tables: Vec<LineOffsetTables> = asts
+    .par_iter_mut()
+    .zip(bases.par_iter())
+    .map(|(ast, base)| {
+      let t = Timer::start();
+      let base = *base;
+      let tables = if enable_sourcemap {
+        LineOffsetTables::new(ast.program().source_text)
+      } else {
+        LineOffsetTables::default()
+      };
+      ast.program.with_mut(|fields| {
+        Rebase(base).visit_program(fields.program);
+        for comment in &mut fields.program.comments {
+          comment.span.start += base;
+          comment.span.end += base;
+          // `attached_to == 0` is the finalizer's "print at the top of the module" marker for
+          // comments whose anchor it removed (imports, directives); codegen prints those through
+          // `print_comments_at(0)`. No real comment attaches to offset 0.
+          if comment.attached_to != 0 {
+            comment.attached_to += base;
+          }
         }
-      }
-      // SAFETY: see `text_ref`.
-      fields.program.source_text = unsafe { std::mem::transmute::<&str, &str>(text_ref) };
-    });
-    t.stop(Phase::AstRebase);
-  });
+        // SAFETY: see `text_ref`.
+        fields.program.source_text = unsafe { std::mem::transmute::<&str, &str>(text_ref) };
+      });
+      t.stop(Phase::AstRebase);
+      tables
+    })
+    .collect();
   let t = Timer::start();
 
   // 2. Assemble without markers: imports, module bodies, tail.
@@ -222,7 +238,16 @@ pub fn dce_chunk_global(
   t.stop(Phase::AstSplit);
   let t = Timer::start();
   let tables =
-    if enable_sourcemap { Arc::new(LineOffsetTables::new(&text)) } else { Arc::default() };
+    if enable_sourcemap {
+      let head = &text[head_base as usize..tail_base as usize];
+      let tail = &text[tail_base as usize..];
+      Arc::new(LineOffsetTables::concat(bases.iter().copied().zip(module_tables).chain([
+        (head_base, LineOffsetTables::new(head)),
+        (tail_base, LineOffsetTables::new(tail)),
+      ])))
+    } else {
+      Arc::default()
+    };
   let modules = modules
     .iter()
     .zip(bases.iter().zip(&lens))
@@ -232,6 +257,7 @@ pub fn dce_chunk_global(
       line: if enable_sourcemap { tables.line_index_of(base) } else { 0 },
       end_line: if enable_sourcemap { tables.line_index_of(base + len) } else { 0 },
       source_name: (!module.is_virtual()).then(|| module.id.to_string()),
+      idx: module.idx,
       has_chain: !module.sourcemap_chain.is_empty(),
     })
     .collect();
@@ -241,10 +267,22 @@ pub fn dce_chunk_global(
   // before `export { bar }` gets `require_foo`'s initializer inlined), so they are printed like
   // modules: with the user's comment options and a sourcemap into the moved code.
   let t = Timer::start();
-  let (imports, imports_map) =
-    print_generated_in_space(allocator, ctx.options, source_type, head, &space);
-  let (exports, exports_map) =
-    print_generated_in_space(allocator, ctx.options, source_type, tail, &space);
+  let (imports, imports_map) = print_generated_in_space(
+    allocator,
+    ctx.options,
+    source_type,
+    head,
+    &space,
+    &ctx.link_output.module_table,
+  );
+  let (exports, exports_map) = print_generated_in_space(
+    allocator,
+    ctx.options,
+    source_type,
+    tail,
+    &space,
+    &ctx.link_output.module_table,
+  );
   t.stop(Phase::AstSplit);
   ChunkAstDceOutput { imports, exports, imports_map, exports_map, space: Some(Arc::new(space)) }
 }
@@ -275,6 +313,7 @@ fn print_generated_in_space<'a>(
   source_type: oxc::span::SourceType,
   stmts: ArenaVec<'a, Statement<'a>>,
   space: &ChunkSourceSpace,
+  module_table: &ModuleTable,
 ) -> (Option<String>, Option<SourceMap<'static>>) {
   if stmts.is_empty() {
     return (None, None);
@@ -292,7 +331,8 @@ fn print_generated_in_space<'a>(
     ))
     .with_line_offset_tables(Arc::clone(&space.tables))
     .build(&program);
-  (Some(ret.code), ret.map.map(|map| remap(&map, space, None)))
+  // Head/tail maps go straight to the joiner, so they are always composed here.
+  (Some(ret.code), ret.map.map(|map| remap(&map, space, None, module_table).0))
 }
 
 /// Prints module `pos` of the chunk against `V` and remaps its map to module coordinates.
@@ -303,6 +343,7 @@ pub fn print_module(
   initial_indent: u32,
   space: &ChunkSourceSpace,
   pos: usize,
+  module_table: &ModuleTable,
 ) -> ModuleRenderOutput {
   let enable_sourcemap = options.sourcemap.is_some() && !module.is_virtual();
   let ret = Codegen::new()
@@ -313,52 +354,64 @@ pub fn print_module(
     ))
     .with_line_offset_tables(Arc::clone(&space.tables))
     .build(ast.program());
-  let map = ret.map.map(|map| remap(&map, space, Some(pos)));
-  ModuleRenderOutput { code: ret.code, map }
+  let t = Timer::start();
+  let (map, map_is_final) = ret.map.map_or((None, false), |map| {
+    let (map, is_final) = remap(&map, space, Some(pos), module_table);
+    (Some(map), is_final)
+  });
+  t.stop(Phase::AstRemap);
+  ModuleRenderOutput { code: ret.code, map, map_is_final }
 }
 
 /// Remaps a map whose single source is `V` to the chunk's modules. The owner (the printed
 /// module, `None` for the generated head/tail) comes first among the sources, so a map without
 /// foreign tokens looks exactly like today's module map. Tokens into generated text are dropped.
+///
+/// Returns whether the map is final. It is not when the printed module is the only source: the
+/// caller composes it with the owner's `sourcemap_chain`, as today. With tokens from other
+/// modules (code oxc moved), when any of the sources has a chain, each source's tokens are
+/// composed with that source's chain here and the map is final.
 fn remap(
   map: &SourceMap<'_>,
   space: &ChunkSourceSpace,
   owner: Option<usize>,
-) -> SourceMap<'static> {
-  let owner_has_chain = owner.is_some_and(|owner| space.modules[owner].has_chain);
-  // module position -> source id in the output
+  module_table: &ModuleTable,
+) -> (SourceMap<'static>, bool) {
+  // module position -> source id in the output, and back
   let mut source_ids: Vec<Option<u32>> = vec![None; space.modules.len()];
-  let mut sources: Vec<Cow<'static, str>> = vec![];
-  let mut contents: Vec<Option<Cow<'static, str>>> = vec![];
-  let mut add_source = |pos: usize, sources: &mut Vec<_>, contents: &mut Vec<_>| -> Option<u32> {
+  let mut source_modules: Vec<usize> = vec![];
+  let mut add_source = |pos: usize| -> Option<u32> {
     if let Some(id) = source_ids[pos] {
       return Some(id);
     }
-    let module = &space.modules[pos];
-    let name = module.source_name.as_ref()?;
-    let id = u32::try_from(sources.len()).expect("sources fit in u32");
-    sources.push(Cow::Owned(name.clone()));
-    let content = &space.text[module.base as usize..(module.base + module.len) as usize];
-    contents.push(Some(Cow::Owned(content.to_string())));
+    space.modules[pos].source_name.as_ref()?;
+    let id = u32::try_from(source_modules.len()).expect("sources fit in u32");
+    source_modules.push(pos);
     source_ids[pos] = Some(id);
     Some(id)
   };
   if let Some(owner) = owner {
-    add_source(owner, &mut sources, &mut contents);
+    add_source(owner);
   }
   let mut tokens = Vec::with_capacity(map.get_tokens().len());
+  let owner_lines = owner.map(|owner| space.modules[owner].line..=space.modules[owner].end_line);
   for token in map.get_tokens() {
     let line = token.get_src_line();
-    let Some(pos) = space.modules.partition_point(|m| m.line <= line).checked_sub(1) else {
-      continue;
+    // Almost every token is the printed module's own: skip the search for those.
+    let pos = if let (Some(owner), Some(lines)) = (owner, &owner_lines)
+      && lines.contains(&line)
+    {
+      owner
+    } else {
+      let Some(pos) = space.modules.partition_point(|m| m.line <= line).checked_sub(1) else {
+        continue;
+      };
+      if line > space.modules[pos].end_line {
+        continue;
+      }
+      pos
     };
-    if line > space.modules[pos].end_line {
-      continue;
-    }
-    if Some(pos) != owner && (owner_has_chain || space.modules[pos].has_chain) {
-      continue;
-    }
-    let Some(source_id) = add_source(pos, &mut sources, &mut contents) else { continue };
+    let Some(source_id) = add_source(pos) else { continue };
     tokens.push(Token::new(
       token.get_dst_line(),
       token.get_dst_col(),
@@ -368,13 +421,116 @@ fn remap(
       token.get_name_id(),
     ));
   }
-  SourceMap::from(SourceMapParts {
+  let names: Vec<Cow<'static, str>> =
+    map.get_names().map(|name| Cow::Owned(name.to_string())).collect();
+  let owner_only = source_modules.len() <= 1 && owner.is_some();
+  if !owner_only && source_modules.iter().any(|pos| space.modules[*pos].has_chain) {
+    return (compose_per_module(space, module_table, &source_modules, &names, tokens), true);
+  }
+  let (sources, source_contents) =
+    source_modules.iter().map(|pos| source_and_content(space, *pos)).unzip();
+  let map = SourceMap::from(SourceMapParts {
     file: None,
-    names: map.get_names().map(|name| Cow::Owned(name.to_string())).collect(),
+    names,
     source_root: None,
     sources,
-    source_contents: contents,
+    source_contents,
     tokens: tokens.into_boxed_slice(),
+    token_chunks: None,
+    ignore_list: None,
+    debug_id: None,
+  });
+  (map, false)
+}
+
+fn source_and_content(
+  space: &ChunkSourceSpace,
+  pos: usize,
+) -> (Cow<'static, str>, Option<Cow<'static, str>>) {
+  let module = &space.modules[pos];
+  let content = &space.text[module.base as usize..(module.base + module.len) as usize];
+  (
+    Cow::Owned(module.source_name.clone().unwrap_or_default()),
+    Some(Cow::Owned(content.to_string())),
+  )
+}
+
+/// Splits `tokens` (module coordinates, source id = index into `source_modules`) by source
+/// module, composes each group with its module's `sourcemap_chain` (`collapse_module_sourcemap`,
+/// as a module's own map is composed today), and merges the groups back in generated order.
+fn compose_per_module(
+  space: &ChunkSourceSpace,
+  module_table: &ModuleTable,
+  source_modules: &[usize],
+  names: &[Cow<'static, str>],
+  tokens: Vec<Token>,
+) -> SourceMap<'static> {
+  let mut groups: Vec<Vec<Token>> = vec![vec![]; source_modules.len()];
+  for token in tokens {
+    let id = token.get_source_id().expect("remapped tokens have a source") as usize;
+    groups[id].push(Token::new(
+      token.get_dst_line(),
+      token.get_dst_col(),
+      token.get_src_line(),
+      token.get_src_col(),
+      Some(0),
+      token.get_name_id(),
+    ));
+  }
+  let mut out_names: Vec<Cow<'static, str>> = vec![];
+  let mut out_sources: Vec<Cow<'static, str>> = vec![];
+  let mut out_contents: Vec<Option<Cow<'static, str>>> = vec![];
+  let mut out_tokens: Vec<Token> = vec![];
+  // Warnings for omitted plugin maps are reported by `render_ecma_module` for the owner.
+  let mut ignored_warnings = vec![];
+  for (pos, group) in source_modules.iter().zip(groups) {
+    let (source, content) = source_and_content(space, *pos);
+    let group_map = SourceMap::from(SourceMapParts {
+      file: None,
+      names: names.to_vec(),
+      source_root: None,
+      sources: vec![source],
+      source_contents: vec![content],
+      tokens: group.into_boxed_slice(),
+      token_chunks: None,
+      ignore_list: None,
+      debug_id: None,
+    });
+    let module = &space.modules[*pos];
+    let chain = module_table[module.idx].as_normal().map_or(&[][..], |m| &*m.sourcemap_chain);
+    let Some(composed) = collapse_module_sourcemap(
+      chain,
+      Some(group_map),
+      module.source_name.as_deref().unwrap_or_default(),
+      &mut ignored_warnings,
+    ) else {
+      continue;
+    };
+    let source_offset = u32::try_from(out_sources.len()).expect("sources fit in u32");
+    let name_offset = u32::try_from(out_names.len()).expect("names fit in u32");
+    out_tokens.extend(composed.get_tokens().map(|t| {
+      Token::new(
+        t.get_dst_line(),
+        t.get_dst_col(),
+        t.get_src_line(),
+        t.get_src_col(),
+        t.get_source_id().map(|id| id + source_offset),
+        t.get_name_id().map(|id| id + name_offset),
+      )
+    }));
+    out_names.extend(composed.get_names().map(|n| Cow::Owned(n.to_string())));
+    out_sources.extend(composed.get_sources().map(|n| Cow::Owned(n.to_string())));
+    out_contents
+      .extend(composed.get_source_contents().map(|c| c.map(|c| Cow::Owned(c.to_string()))));
+  }
+  out_tokens.sort_by_key(|t| (t.get_dst_line(), t.get_dst_col()));
+  SourceMap::from(SourceMapParts {
+    file: None,
+    names: out_names,
+    source_root: None,
+    sources: out_sources,
+    source_contents: out_contents,
+    tokens: out_tokens.into_boxed_slice(),
     token_chunks: None,
     ignore_list: None,
     debug_id: None,

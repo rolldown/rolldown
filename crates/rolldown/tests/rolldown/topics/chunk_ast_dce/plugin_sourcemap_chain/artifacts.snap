@@ -1,0 +1,46 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+// entry.js
+const ShaderChunk = {
+	shader: `
+  #ifdef USE_MAP
+    vec4 texel = texture2D( map, uv );
+  #endif
+`,
+	helper: {
+		name: "helper",
+		make: () => /* @__PURE__ */ Symbol("helper")
+	}
+};
+export { ShaderChunk };
+
+//# sourceMappingURL=entry.js.map
+```
+
+# Sourcemap Visualizer
+
+```
+- ../entry.js
+(2:0) "export const " --> (1:0) "const "
+(2:13) "ShaderChunk = " --> (1:6) "ShaderChunk = "
+(2:27) "{ " --> (1:20) "{\n"
+(2:29) "shader, " --> (2:1) "shader: "
+(2:29) "shader, " --> (2:9) "`\n"
+(2:37) "helper };\n" --> (7:1) "helper: {\n"
+- ../lib.js
+(1:2) "name: " --> (8:2) "name: "
+(1:8) "'helper',\n" --> (8:8) "\"helper\",\n"
+(2:2) "make: () => /* @__PURE__ */ " --> (9:2) "make: () => "
+(2:30) "Symbol(" --> (9:14) "/* @__PURE__ */ Symbol("
+(2:37) "'helper'" --> (9:37) "\"helper\""
+(2:45) "),\n" --> (9:45) ")\n"
+- ../entry.js
+(2:37) "helper " --> (10:1) "}\n"
+(2:44) "};\n" --> (11:0) "};\n"
+```

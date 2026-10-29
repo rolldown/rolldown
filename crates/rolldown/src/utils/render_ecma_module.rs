@@ -40,12 +40,18 @@ pub fn render_ecma_module(
   // So here make sure using correct `source_name` and `source_content.
 
   if enable_sourcemap {
-    if let Some(sourcemap) = collapse_module_sourcemap(
-      &module.sourcemap_chain,
-      render_output.map,
-      module.id.as_str(),
-      &mut warnings,
-    ) {
+    let map = if render_output.map_is_final {
+      push_sourcemap_broken_warnings(&module.sourcemap_chain, module.id.as_str(), &mut warnings);
+      render_output.map
+    } else {
+      collapse_module_sourcemap(
+        &module.sourcemap_chain,
+        render_output.map,
+        module.id.as_str(),
+        &mut warnings,
+      )
+    };
+    if let Some(sourcemap) = map {
       sources.push(Box::new(
         SourceMapSource::new(render_output.code, sourcemap)
           .with_pre_compute_sourcemap_data(options.is_sourcemap_enabled()),
@@ -58,6 +64,23 @@ pub fn render_ecma_module(
   }
 
   RenderEcmaModuleOutput { sources: Some(Arc::from(sources.into_boxed_slice())), warnings }
+}
+
+/// The `SOURCEMAP_BROKEN` warnings `collapse_module_sourcemap` would push, for a map that is
+/// already final (PoC `chunk_ast_dce` global mode).
+pub fn push_sourcemap_broken_warnings(
+  sourcemap_chain: &[SourcemapChainElement],
+  module_id: &str,
+  warnings: &mut Vec<BuildDiagnostic>,
+) {
+  for element in sourcemap_chain {
+    if let SourcemapChainElement::Omitted { plugin_name, .. } = element {
+      warnings.push(
+        BuildDiagnostic::sourcemap_broken(plugin_name.to_string(), Some(module_id.to_string()))
+          .with_severity_warning(),
+      );
+    }
+  }
 }
 
 /// Collapses a module's `sourcemap_chain` together with the oxc codegen map

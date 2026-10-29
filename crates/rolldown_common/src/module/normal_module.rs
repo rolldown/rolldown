@@ -257,11 +257,12 @@ impl NormalModule {
           // keeps from it, so no `into_owned` detach is needed.
           let map =
             render_output.map.map(|original| collapse_sourcemaps(&[&original, &mutated_map]));
-          return ModuleRenderOutput { code, map };
+          return ModuleRenderOutput { code, map, map_is_final: false };
         }
         ModuleRenderOutput {
           code: render_output.code,
           map: render_output.map.map(oxc_sourcemap::SourceMap::into_owned),
+          map_is_final: false,
         }
       }
     }

@@ -217,6 +217,7 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
     self.process_identifier_ref_by_scope(ident);
     self.try_diagnostic_forbid_const_assign(ident);
     self.update_dynamic_import_binding_usage_info(ident);
+    self.record_var_read_before_declaration(ident);
   }
 
   fn visit_statement(&mut self, stmt: &ast::Statement<'ast>) {
@@ -500,6 +501,24 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let id = class.id.as_ref()?;
     let symbol_id = *id.symbol_id.get().unpack_ref();
     Some(symbol_id)
+  }
+
+  /// Module-level code runs in source order, so it reads a root `var` declared later as
+  /// `undefined`. `export { x }` only forwards the binding.
+  fn record_var_read_before_declaration(&mut self, ident_ref: &IdentifierReference) {
+    if !self.is_top_level || matches!(self.visit_path.last(), Some(AstKind::ExportSpecifier(_))) {
+      return;
+    }
+    let Some(symbol_id) = self.resolve_symbol_from_reference(ident_ref) else {
+      return;
+    };
+    let scoping = self.result.symbol_ref_db.scoping();
+    if self.is_root_symbol(symbol_id)
+      && scoping.symbol_flags(symbol_id).is_function_scoped_declaration()
+      && ident_ref.span.start < scoping.symbol_span(symbol_id).start
+    {
+      self.vars_read_before_declaration.insert(symbol_id);
+    }
   }
 
   fn process_identifier_ref_by_scope(&mut self, ident_ref: &IdentifierReference) {

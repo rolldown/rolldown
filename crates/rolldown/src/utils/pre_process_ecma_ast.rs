@@ -67,7 +67,10 @@ impl PreProcessEcmaAst {
 
     // Step 1: Build initial semantic data and check for semantic errors.
     let semantic_ret = ast.program.with_dependent(|_owner, dep| {
-      semantic_builder_for_transform().with_check_syntax_error(true).build(&dep.program)
+      semantic_builder_for_transform()
+        .with_check_syntax_error(true)
+        .with_stats(estimate_stats(dep.program.source_text))
+        .build(&dep.program)
     });
 
     let (errors, warnings): (Vec<_>, Vec<_>) =
@@ -293,6 +296,21 @@ impl PreProcessEcmaAst {
     self.stats = ret.stats();
     ret.into_scoping()
   }
+}
+
+/// Estimates semantic capacity from the source length, so the first `SemanticBuilder` run skips
+/// `Stats::count` — an extra full AST traversal used only to size allocations. Later rebuilds
+/// reuse the exact stats of the previous run.
+///
+/// The divisors are near the dense end of the bytes-per-item distribution of real-world modules
+/// (three.js, rome), so most modules get slightly more capacity than they need: a moderate
+/// overestimate is cheaper than both the counting walk and a mid-build reallocation. `nodes`
+/// stays 0 because the builder does not build the full node store here.
+#[expect(clippy::cast_possible_truncation)]
+fn estimate_stats(source_text: &str) -> Stats {
+  // Spans are `u32`, so source text can't exceed `u32::MAX` bytes.
+  let len = source_text.len() as u32;
+  Stats::new(0, len / 160 + 1, len / 80 + 1, len / 24 + 1)
 }
 
 fn function_declaration_stmt_start(stmt: &Statement<'_>) -> Option<u32> {

@@ -182,8 +182,11 @@ pub struct AstScanner<'me, 'ast> {
   /// Symbol IDs of namespace imports (`import * as ns from '...'`).
   /// Used to treat property reads on namespace objects as side-effect-free.
   namespace_object_symbol_ids: FxHashSet<SymbolId>,
-  /// Root `var` bindings that module-level code reads before their declaration.
-  vars_read_before_declaration: FxHashSet<SymbolId>,
+  /// Root `var` bindings with module-level reads before their declarator completes.
+  vars_read_before_init: FxHashSet<SymbolId>,
+  /// Root `var` bindings whose declarators the scanner finished visiting. This tracks traversal
+  /// order; a conditional declaration can be visited even when its initializer does not execute.
+  vars_with_visited_declarator: FxHashSet<SymbolId>,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -285,7 +288,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       current_comment_idx: 0,
       untranspiled_syntax: UntranspiledSyntax::empty(),
       namespace_object_symbol_ids: FxHashSet::default(),
-      vars_read_before_declaration: FxHashSet::default(),
+      vars_read_before_init: FxHashSet::default(),
+      vars_with_visited_declarator: FxHashSet::default(),
     }
   }
 
@@ -438,8 +442,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
     }
 
-    // A `var` read before its declaration holds `undefined` there and its initializer later.
-    for symbol_id in &self.vars_read_before_declaration {
+    // Early reads can see `undefined` instead of the initializer's value. Apply this after all
+    // exports are scanned, because a later export can set `IsNotReassigned` again.
+    for symbol_id in &self.vars_read_before_init {
       if let Some(flags) = self.result.symbol_ref_db.flags.get_mut(symbol_id) {
         flags.remove(SymbolRefFlags::IsNotReassigned);
       }

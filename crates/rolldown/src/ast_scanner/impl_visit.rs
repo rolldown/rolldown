@@ -10,6 +10,7 @@ use oxc::{
   semantic::{ScopeFlags, SymbolId},
   span::{GetSpan, Span},
 };
+use oxc_ecmascript::BoundNames;
 use oxc_str::{CompactStr, JSStr};
 use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ImportKind, ImportRecordMeta, LocalExport,
@@ -217,7 +218,7 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
     self.process_identifier_ref_by_scope(ident);
     self.try_diagnostic_forbid_const_assign(ident);
     self.update_dynamic_import_binding_usage_info(ident);
-    self.record_var_read_before_declaration(ident);
+    self.record_var_read_before_init(ident);
   }
 
   fn visit_statement(&mut self, stmt: &ast::Statement<'ast>) {
@@ -393,6 +394,22 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
     walk_js::walk_variable_declaration(self, decl);
   }
 
+  fn visit_variable_declarator(&mut self, declarator: &ast::VariableDeclarator<'ast>) {
+    walk_js::walk_variable_declarator(self, declarator);
+    // Record the declarator after its initializer, which can read the binding before assignment.
+    if self.is_top_level {
+      declarator.id.bound_names(&mut |ident| {
+        let symbol_id = ident.symbol_id();
+        let scoping = self.result.symbol_ref_db.scoping();
+        if scoping.symbol_flags(symbol_id).is_function_scoped_declaration()
+          && self.is_root_symbol(symbol_id)
+        {
+          self.vars_with_visited_declarator.insert(symbol_id);
+        }
+      });
+    }
+  }
+
   fn visit_declaration(&mut self, it: &ast::Declaration<'ast>) {
     match it {
       Declaration::FunctionDeclaration(function) => {
@@ -503,9 +520,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     Some(symbol_id)
   }
 
-  /// Module-level code runs in source order, so it reads a root `var` declared later as
-  /// `undefined`. `export { x }` only forwards the binding.
-  fn record_var_read_before_declaration(&mut self, ident_ref: &IdentifierReference) {
+  /// Record reads before a root `var` declarator completes, including reads in its initializer.
+  /// `export { x }` only forwards the binding. Function bodies are excluded because the scanner
+  /// does not know when they run. Redeclarations and conditional initializers have separate guards.
+  fn record_var_read_before_init(&mut self, ident_ref: &IdentifierReference) {
     if !self.is_top_level || matches!(self.visit_path.last(), Some(AstKind::ExportSpecifier(_))) {
       return;
     }
@@ -515,9 +533,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let scoping = self.result.symbol_ref_db.scoping();
     if self.is_root_symbol(symbol_id)
       && scoping.symbol_flags(symbol_id).is_function_scoped_declaration()
-      && ident_ref.span.start < scoping.symbol_span(symbol_id).start
+      && !self.vars_with_visited_declarator.contains(&symbol_id)
     {
-      self.vars_read_before_declaration.insert(symbol_id);
+      self.vars_read_before_init.insert(symbol_id);
     }
   }
 

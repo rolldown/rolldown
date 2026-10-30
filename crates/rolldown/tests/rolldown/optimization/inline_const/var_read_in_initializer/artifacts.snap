@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// main.js
+var flag = ((flag || (() => {}))(), true);
+const reads = [];
+var value = (reads.push(value), true);
+assert.deepStrictEqual(reads, [void 0]);
+export { flag, value };
+
+```

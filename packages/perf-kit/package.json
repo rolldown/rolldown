@@ -10,7 +10,8 @@
     "harness.mjs",
     "lib",
     "AGENTS.md",
-    "README.md"
+    "README.md",
+    "PROMPTS.md"
   ],
   "type": "module",
   "scripts": {

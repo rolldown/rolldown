@@ -25,7 +25,8 @@ export function findChrome() {
   throw new Error('No Chrome/Edge executable found. Set CHROME_PATH to a Chromium binary.');
 }
 
-export async function launchBrowser({ profileDir }) {
+/** `extraArgs`: more Chrome switches (the replay maps every host to its server). */
+export async function launchBrowser({ profileDir, extraArgs = [] }) {
   if (typeof WebSocket === 'undefined') {
     throw new Error(
       `This harness needs Node >= 22 (global WebSocket); running ${process.version}.`,
@@ -48,10 +49,14 @@ export async function launchBrowser({ profileDir }) {
       '--disable-default-apps',
       '--mute-audio',
       '--window-size=1280,900',
+      ...extraArgs,
       'about:blank',
     ],
     { stdio: ['ignore', 'ignore', 'pipe'] },
   );
+  // Registered before anything else can run, so close() never waits for an exit
+  // that already happened.
+  const exited = new Promise((resolve) => child.once('exit', resolve));
 
   const wsUrl = await new Promise((resolve, reject) => {
     let stderr = '';
@@ -87,23 +92,23 @@ export async function launchBrowser({ profileDir }) {
   const cdp = await connect(wsUrl);
   return {
     cdp,
+    pid: child.pid,
+    /**
+     * Resolves only after the Chrome process has exited. Chrome keeps writing its
+     * profile directory while it shuts down; removing that directory before the exit
+     * fails with ENOTEMPTY. SIGTERM lets it flush; a browser that is still alive
+     * after 5 s gets SIGKILL, and close() still waits for the exit.
+     */
     async close() {
       try {
         cdp.close();
       } catch {
         /* already closed */
       }
-      try {
-        child.kill();
-      } catch {
-        /* already gone */
-      }
-      await new Promise((r) => setTimeout(r, 250));
-      try {
-        child.kill('SIGKILL');
-      } catch {
-        /* already gone */
-      }
+      if (child.exitCode === null && child.signalCode === null) child.kill();
+      const forceKill = setTimeout(() => child.kill('SIGKILL'), 5_000);
+      await exited;
+      clearTimeout(forceKill);
     },
   };
 }

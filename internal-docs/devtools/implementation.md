@@ -82,7 +82,9 @@ An empty graph replaces the previous file when a new build has no chunk assets.
 perf-kit joins this graph to full browser resource timings. It checks
 late discovery across static imports before FCP and LCP separately. Each example
 keeps one run's timings and an import chain. Source modules and request initiators
-help an agent check whether the chunk contributes to visible content. The report
+help an agent check whether the chunk contributes to visible content. Browser
+request priorities and their changes support preload experiments. Repeated URLs
+and redirects omit ambiguous request evidence. The report
 marks the paint dependency as unverified. It does not follow dynamic imports or
 predict a paint gain from a discovery delay. Vite's manifest supplies a fallback
 when the build does not emit this graph.
@@ -91,6 +93,13 @@ This check also applies when a rebuild reuses the same filenames.
 The runtime report also records `paintComparison`. It compares both FCP and LCP
 with the pinned baseline. A gain in one metric cannot hide a regression beyond
 noise in the other. Render-gap advice preserves concurrent resource evidence.
+
+The perf-kit CPU profile also uses emitted sourcemaps for every sampled
+same-origin chunk. Schema version 2 records explicit source, engine, and
+unattributed rows with chunk filenames. Missing maps cannot produce a clear CPU
+verdict. The profile ends when FCP is observed, so its polling tail can include
+post-paint work. Use the result to choose experiments, then compare timed FCP
+and LCP against the pinned baseline.
 
 ### Read-after-close contract
 

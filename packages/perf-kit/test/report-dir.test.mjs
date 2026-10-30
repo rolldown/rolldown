@@ -1,5 +1,5 @@
 // The report dir rule must match `report_dir_for` in
-// crates/rolldown_devtools_metrics/src/lib.rs, or the lab reads a stale or missing report.
+// crates/rolldown_devtools_metrics/src/lib.rs, or perf-kit reads a stale or missing report.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

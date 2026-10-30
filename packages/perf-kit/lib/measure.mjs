@@ -2,6 +2,7 @@
 // PerformanceObservers injected before any page script runs.
 
 import { openPage, sleep } from './cdp.mjs';
+import { recordNetworkEvidence } from './network-evidence.mjs';
 
 // Roughly Lighthouse's mobile lab shape: fast-3G-ish network, 4x CPU slowdown.
 // Absolute numbers are lab-only; the signal is the delta between builds.
@@ -31,6 +32,87 @@ export function scaleThrottle(base, netScale = 1) {
     uploadBps: base.uploadBps * netScale,
     netScale,
   };
+}
+
+/**
+ * A fixed network in real units instead of a scale step: the bandwidth and RTT a
+ * deployed environment measured (a record's network model), and the CPU slowdown of
+ * the device to model (1 = this machine). Bandwidth is in Mbit/s (SI: 1 Mbit =
+ * 1,000,000 bits); CDP takes bytes per second. Upload keeps the base shape's ratio.
+ * `rttMs` / `cpuRate` default to the base shape. Like the net scale, the network is
+ * part of the measurement identity (`throttleId`).
+ */
+export function networkThrottle(
+  base,
+  { bandwidthMbps, rttMs = base.latencyMs, cpuRate = base.cpuRate },
+) {
+  const downloadBps = Math.round((bandwidthMbps * 1_000_000) / 8);
+  return {
+    ...base,
+    latencyMs: rttMs,
+    downloadBps,
+    uploadBps: Math.round((downloadBps * base.uploadBps) / base.downloadBps),
+    cpuRate,
+    network: { bandwidthMbps, rttMs, cpuRate },
+  };
+}
+
+/**
+ * Read `--bandwidth <Mbit/s> [--rtt <ms>] [--cpu <rate>]` into a network, or null when
+ * `--bandwidth` is absent. `--rtt` / `--cpu` only shape a `--bandwidth` network, and the
+ * network replaces the net-scale ladder, so both misuses throw instead of being ignored.
+ */
+export function parseNetworkFlags(opts) {
+  const { bandwidth, rtt, cpu } = opts;
+  if (bandwidth == null) {
+    if (rtt != null || cpu != null) {
+      throw new Error(
+        '--rtt and --cpu shape a --bandwidth network - pass --bandwidth <Mbit/s> too',
+      );
+    }
+    return null;
+  }
+  if (opts['net-scale'] != null) {
+    throw new Error(
+      '--bandwidth replaces the net-scale ladder - pass one of --bandwidth or --net-scale',
+    );
+  }
+  const read = (flag, value, ok, expected) => {
+    const n = Number(value);
+    if (!Number.isFinite(n) || !ok(n))
+      throw new Error(`${flag} must be ${expected}, got '${value}'`);
+    return n;
+  };
+  return {
+    bandwidthMbps: read('--bandwidth', bandwidth, (n) => n > 0, 'a number > 0 (Mbit/s)'),
+    rttMs:
+      rtt == null
+        ? DEFAULT_THROTTLE.latencyMs
+        : read('--rtt', rtt, (n) => n >= 0, 'a number >= 0 (ms)'),
+    cpuRate:
+      cpu == null
+        ? DEFAULT_THROTTLE.cpuRate
+        : read('--cpu', cpu, (n) => n >= 1, 'a number >= 1 (1 = no slowdown)'),
+  };
+}
+
+/** The throttle a pinned profile (`throttle-profile.json`) describes. */
+export function throttleFromProfile(profile) {
+  return profile?.network
+    ? networkThrottle(DEFAULT_THROTTLE, profile.network)
+    : scaleThrottle(DEFAULT_THROTTLE, profile?.netScale ?? 1);
+}
+
+/**
+ * The measurement identity of a throttle, a pinned profile or a saved measurement state
+ * (all carry `network` or `netScale`): two measurements compare only when it is equal.
+ * A state without either was measured at net x1, as before networks existed.
+ */
+export function throttleId(value) {
+  if (!value) return 'unthrottled';
+  const n = value.network;
+  if (n) return `bw ${n.bandwidthMbps}Mbit/s rtt ${n.rttMs}ms cpu ${n.cpuRate}x`;
+  return `net x${value.netScale ?? 1}`;
 }
 
 /**
@@ -92,7 +174,7 @@ export const OBSERVER_JS = `(() => {
   } catch {}
 })();`;
 
-const COLLECT_JS = `(() => {
+export const COLLECT_JS = `(() => {
   const nav = performance.getEntriesByType('navigation')[0];
   const res = performance.getEntriesByType('resource');
   const M = window.__perfMetrics || {};
@@ -207,23 +289,7 @@ export async function timedRun(
   { url, throttle, expectedFeatures = [], settleMs = 1500, timeoutMs = 60_000 },
 ) {
   const page = await openPage(cdp, { throttle, injectScript: OBSERVER_JS });
-  const initiators = new Map();
-  const stopRecording = page.on('Network.requestWillBeSent', (event) => {
-    const initiator = event.initiator ?? {};
-    let stack = initiator.stack;
-    let frame;
-    while (stack && !frame) {
-      frame = stack.callFrames?.find((f) => f.url);
-      stack = stack.parent;
-    }
-    // Keep source locations only. Headers, cookies and request bodies are not
-    // needed to diagnose chunk discovery.
-    initiators.set(event.request.url, {
-      type: initiator.type,
-      url: frame?.url ?? initiator.url ?? null,
-      lineNumber: frame?.lineNumber ?? initiator.lineNumber ?? null,
-    });
-  });
+  const network = recordNetworkEvidence(page);
   try {
     await page.navigate(url);
     const deadline = Date.now() + timeoutMs;
@@ -235,22 +301,10 @@ export async function timedRun(
     }
     await sleep(settleMs);
     const sample = await page.evaluate(COLLECT_JS);
-    const origin = new URL(url).origin;
-    for (const resource of sample.resources) {
-      const key = resource.name.startsWith('/') ? `${origin}${resource.name}` : resource.name;
-      const initiator = initiators.get(key);
-      if (initiator) {
-        resource.initiator = {
-          ...initiator,
-          url: initiator.url?.startsWith(`${origin}/`)
-            ? initiator.url.slice(origin.length)
-            : initiator.url,
-        };
-      }
-    }
+    network.attach(sample.resources, new URL(url).origin);
     return sample;
   } finally {
-    stopRecording();
+    network.stop();
     await page.close().catch(() => {});
   }
 }

@@ -32,6 +32,7 @@ Machine-readable version: `metrics.json` → `delta` / `baselineDelta`.
 | `plugins.hook_call_count` | 5 | 5 | +0 | +0.0% |
 | `plugins.hook_noop_call_count` | 3 | 3 | +0 | +0.0% |
 | `plugins.hook_time_ms` | 11.0 ms | 11.0 ms | +0 ms | +0.0% |
+| `plugins.noop_hook_count` | 1 | 1 | +0 | +0.0% |
 
 ### Per-entry initial load
 
@@ -67,6 +68,7 @@ Machine-readable version: `metrics.json` → `delta` / `baselineDelta`.
 | `plugins.hook_call_count` | 5 | 5 | +0 | +0.0% |
 | `plugins.hook_noop_call_count` | 3 | 3 | +0 | +0.0% |
 | `plugins.hook_time_ms` | 11.0 ms | 11.0 ms | +0 ms | +0.0% |
+| `plugins.noop_hook_count` | 1 | 1 | +0 | +0.0% |
 
 ### Per-entry initial load
 

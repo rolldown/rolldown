@@ -271,10 +271,10 @@ syn = { version = "3", default-features = false }
 # napi
 # Keep the `tracing` feature on: `#[napi]` logs every binding call, which helps debug deadlocks
 # (e.g. #7289) by showing which napi function is pending.
-napi = { version = "3.15.0", features = ["anyhow", "tracing", "object_indexmap"] }
+napi = { version = "3.16.0", features = ["anyhow", "tracing", "object_indexmap"] }
 napi-async-runtime = { version = "0.2.6", default-features = false }
 napi-build = { version = "2.6.0" }
-napi-derive = { version = "3.6.13", default-features = false, features = ["type-def", "tracing"] }
+napi-derive = { version = "3.7.0", default-features = false, features = ["type-def", "tracing"] }
 
 # oxc crates with the same version
 oxc = { version = "0.156.0", features = [
@@ -344,9 +344,4 @@ debug = "full"
 strip = "none"
 
 [patch.crates-io]
-# Keep wrong-class checks while avoiding N-API 3.15's full-TypeId wrapper overhead.
-# Remove once the compact class-ID fix is released: https://github.com/napi-rs/napi-rs/pull/3667
-napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "4378d63fd803e10547f40545a675a57c67b8ad34" }
-napi-build = { git = "https://github.com/napi-rs/napi-rs.git", rev = "4378d63fd803e10547f40545a675a57c67b8ad34" }
-napi-sys = { git = "https://github.com/napi-rs/napi-rs.git", rev = "4378d63fd803e10547f40545a675a57c67b8ad34" }
 parking_lot_core = { git = "https://github.com/napi-rs/parking_lot", rev = "eb33ab62f79d27d1c7880b60e06187be1cbd21f4" }

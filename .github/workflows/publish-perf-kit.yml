@@ -1,0 +1,99 @@
+name: Publish perf-kit
+
+permissions: {}
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - packages/perf-kit/package.json
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # A release waiting for approval must not be cancelled by a later push.
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Check version
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.version.outputs.release }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+
+      # Publishes only for a merged `release: perf-kit@x.y.z` commit.
+      - name: Resolve release
+        id: version
+        run: |
+          subject=$(git log -1 --format=%s)
+          version=$(node -p "require('./packages/perf-kit/package.json').version")
+          if [[ ! "$subject" =~ ^release:\ perf-kit@([^ ]+)(\ \(#[0-9]+\))?$ ]]; then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "${BASH_REMATCH[1]}" != "$version" ]; then
+            echo "::error::The release commit is for perf-kit@${BASH_REMATCH[1]}, but packages/perf-kit/package.json is ${version}"
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags "https://github.com/${GITHUB_REPOSITORY}.git" "refs/tags/perf-kit@${version}" > /dev/null; then
+            echo "::error::Tag perf-kit@${version} already exists"
+            exit 1
+          fi
+          echo "Releasing perf-kit@${version}"
+          {
+            echo "release=true"
+            echo "version=${version}"
+          } >> "$GITHUB_OUTPUT"
+
+  publish:
+    needs: check
+    if: github.repository == 'rolldown/rolldown' && needs.check.outputs.release == 'true'
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write # for `npm publish --provenance`
+    steps:
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      - name: Install npm
+        # Needed before `npm publish` so OIDC provenance uses a current npm.
+        run: npm install -g npm
+
+      - name: Copy License
+        run: cp LICENSE packages/perf-kit/
+
+      - name: Publish
+        working-directory: packages/perf-kit
+        run: npm publish --provenance
+
+  release:
+    needs: [check, publish]
+    if: github.repository == 'rolldown/rolldown'
+    name: GitHub Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # for `gh release create`
+    steps:
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG_NAME: perf-kit@${{ needs.check.outputs.version }} # tags the current commit
+          TARGET: ${{ github.sha }}
+        # Rolldown keeps GitHub's "Latest" release.
+        run: |
+          gh release create "$TAG_NAME" \
+            --target "$TARGET" \
+            --title "$TAG_NAME" \
+            --notes "$(git show -s --format=%b)" \
+            --latest=false

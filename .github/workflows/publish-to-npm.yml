@@ -141,7 +141,7 @@ jobs:
         env:
           NAPI_DRY_RUN: '1'
         run: |
-          vp pm publish -r --tag latest --dry-run --no-git-checks
+          vp pm publish -r --filter rolldown --filter @rolldown/browser --filter @rolldown/debug --tag latest --dry-run --no-git-checks
 
       # `npm publish` can succeed before npm's malware scan makes the tarball
       # installable. Publish bindings first, wait until they resolve, then
@@ -157,7 +157,7 @@ jobs:
         # step only uploads rolldown / @rolldown/browser / @rolldown/debug.
         env:
           NAPI_SKIP_OPTIONAL_PUBLISH: '1'
-        run: vp pm publish -r --tag latest --no-git-checks
+        run: vp pm publish -r --filter rolldown --filter @rolldown/browser --filter @rolldown/debug --tag latest --no-git-checks
 
       - name: Wait for published packages
         run: >-

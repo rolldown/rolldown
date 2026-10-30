@@ -6,6 +6,7 @@ export {
   FSWatcher,
   watch,
   Watcher,
+  type ChokidarOptions,
   type Ignored,
   type NativeWatchEvent,
   type WatchEventName,

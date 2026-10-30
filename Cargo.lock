@@ -365,7 +365,7 @@ version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "faf9468729b8cbcea668e36183cb69d317348c2e08e994829fb56ebfdfbaac34"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -616,7 +616,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1364,8 +1364,7 @@ dependencies = [
 [[package]]
 name = "napi"
 version = "3.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a746ad50efbfb632ade1de4025519a477decbbd798cea1a6ac41d7c44f80083"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=4378d63fd803e10547f40545a675a57c67b8ad34#4378d63fd803e10547f40545a675a57c67b8ad34"
 dependencies = [
  "anyhow",
  "bitflags",
@@ -1400,8 +1399,7 @@ dependencies = [
 [[package]]
 name = "napi-build"
 version = "2.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b899b545d3aa6dca985939059f258c5488d34e4ecf39c274e20009748f4b846d"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=4378d63fd803e10547f40545a675a57c67b8ad34#4378d63fd803e10547f40545a675a57c67b8ad34"
 
 [[package]]
 name = "napi-derive"
@@ -1433,8 +1431,7 @@ dependencies = [
 [[package]]
 name = "napi-sys"
 version = "3.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d153beb7d5c973f4b9395be8a83054a28968b61188f1dd1a2cc2321af22daea2"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=4378d63fd803e10547f40545a675a57c67b8ad34#4378d63fd803e10547f40545a675a57c67b8ad34"
 dependencies = [
  "libloading",
 ]
@@ -1493,7 +1490,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -3480,7 +3477,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -3827,7 +3824,7 @@ dependencies = [
  "getrandom 0.4.3",
  "once_cell",
  "rustix",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -3846,7 +3843,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "230a1b821ccbd75b185820a1f1ff7b14d21da1e442e22c0863ea5f08771a8874"
 dependencies = [
  "rustix",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -4244,7 +4241,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

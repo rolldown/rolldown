@@ -732,6 +732,8 @@ importers:
         specifier: 'catalog:'
         version: 0.1.7
 
+  packages/perf-kit: {}
+
   packages/rolldown:
     dependencies:
       '@oxc-project/types':

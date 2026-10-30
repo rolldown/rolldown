@@ -2094,6 +2094,12 @@ export interface BindingDevOptions {
 
 export interface BindingDevtoolsOptions {
   sessionId?: string
+  /**
+   * `"full"` (default): write JSON-lines devtools logs. `"report"`: aggregate the same
+   * event stream in-memory and emit an agent-readable report (`metrics.json` + markdown)
+   * under `node_modules/.rolldown/report/<output dir>` instead.
+   */
+  mode?: 'full' | 'report'
 }
 
 export interface BindingDevWatchOptions {

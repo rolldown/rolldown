@@ -1,0 +1,21 @@
+.github/workflows/prepare-perf-kit-release.yml
+  s_bee808f7ea4949::t_d4a94f5cbec0b6 79
+.github/workflows/prepare-release.yml
+  s_bee808f7ea4949::t_75660e046e7f31 101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "dfad7e5ed4484803872117714018c49892148c87",
+  "prompts": {},
+  "sessions": {
+    "s_bee808f7ea4949": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a31f81c2-c61a-48ab-bb47-0d87bdbf90b7",
+        "model": "unknown"
+      },
+      "human_author": "shulaoda <165626830+shulaoda@users.noreply.github.com>"
+    }
+  }
+}

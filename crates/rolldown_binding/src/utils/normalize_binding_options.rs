@@ -790,7 +790,10 @@ pub fn normalize_binding_options(
     make_absolute_externals_relative: input_options
       .make_absolute_externals_relative
       .map(Into::into),
-    devtools: input_options.devtools.map(|inner| rolldown::DevtoolsOptions { session_id: inner.session_id }),
+    devtools: input_options.devtools.map(|inner| rolldown::DevtoolsOptions {
+      session_id: inner.session_id,
+      mode: inner.mode,
+    }),
     invalidate_js_side_cache,
     log_level: Some(input_options.log_level.into()),
     on_log,

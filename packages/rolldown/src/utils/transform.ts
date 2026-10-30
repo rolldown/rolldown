@@ -47,6 +47,13 @@ function normalizeBindingWarning(warning: BindingEnhancedTransformResult['warnin
   } satisfies RolldownLog;
 }
 
+// Default `cwd` to `process.cwd()` as the bundler does. Node caches it, so it keeps working after
+// the working directory is deleted, where the binding's own `getcwd` lookup would fail.
+function withDefaultCwd(options: TransformOptions | null | undefined) {
+  if (options?.cwd != null || typeof process !== 'object') return options;
+  return { ...options, cwd: process.cwd() };
+}
+
 /**
  * Transpile a JavaScript or TypeScript into a target ECMAScript version, asynchronously.
  *
@@ -72,7 +79,13 @@ export async function transform(
   options?: TransformOptions | null,
   cache?: TsconfigCache | null,
 ): Promise<TransformResult> {
-  const result = await originalTransform(filename, sourceText, options, cache, yarnPnp);
+  const result = await originalTransform(
+    filename,
+    sourceText,
+    withDefaultCwd(options),
+    cache,
+    yarnPnp,
+  );
   return {
     ...result,
     errors: result.errors.map(normalizeBindingError),
@@ -103,7 +116,13 @@ export function transformSync(
   options?: TransformOptions | null,
   cache?: TsconfigCache | null,
 ): TransformResult {
-  const result = originalTransformSync(filename, sourceText, options, cache, yarnPnp);
+  const result = originalTransformSync(
+    filename,
+    sourceText,
+    withDefaultCwd(options),
+    cache,
+    yarnPnp,
+  );
   return {
     ...result,
     errors: result.errors.map(normalizeBindingError),

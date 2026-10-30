@@ -13,7 +13,7 @@ use super::super::{
 };
 use anyhow::Context;
 use arcstr::ArcStr;
-use rolldown_common::{GetLocalDbMut, Module, ScanMode, SharedFileEmitter, SymbolRefDb};
+use rolldown_common::{GetLocalDbMut, Module, Output, ScanMode, SharedFileEmitter, SymbolRefDb};
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
 use rolldown_fs::{FileSystem, OsFileSystem};
@@ -363,7 +363,31 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       }
     }
 
+    Self::trace_action_output_chunk_graph_ready(&output.assets);
     Ok(output)
+  }
+
+  fn trace_action_output_chunk_graph_ready(output: &[Output]) {
+    if trace_action_enabled!() {
+      // See internal-docs/devtools/implementation.md. Plugins can rename, delete,
+      // or change imports in generateBundle, so the output is the graph source.
+      let chunks = output
+        .iter()
+        .filter_map(|asset| match asset {
+          Output::Chunk(chunk) => Some(action::OutputChunk {
+            file_name: chunk.filename.to_string(),
+            name: chunk.name.to_string(),
+            bytes: chunk.code.len() as u64,
+            is_entry: chunk.is_entry || chunk.is_dynamic_entry,
+            facade_module_id: chunk.facade_module_id.as_ref().map(ToString::to_string),
+            imports: chunk.imports.iter().map(ToString::to_string).collect(),
+            dynamic_imports: chunk.dynamic_imports.iter().map(ToString::to_string).collect(),
+          }),
+          Output::Asset(_) => None,
+        })
+        .collect();
+      trace_action!(action::OutputChunkGraphReady { action: "OutputChunkGraphReady", chunks });
+    }
   }
 
   fn merge_immutable_fields_for_cache(&mut self, symbol_db: SymbolRefDb) {

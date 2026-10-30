@@ -8,6 +8,7 @@ const packagesNeedToPublish = [
   'packages/rolldown/npm/*',
   'packages/browser',
   'packages/debug',
+  'packages/perf-kit',
 ];
 
 const root = process.cwd();

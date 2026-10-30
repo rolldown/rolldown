@@ -1,0 +1,79 @@
+name: Prepare perf-kit Release
+
+permissions: {}
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'New @rolldown/perf-kit version (e.g. 0.1.0)'
+        required: true
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    name: Prepare perf-kit Release
+    # perf-kit is only released from main.
+    if: github.repository == 'rolldown/rolldown' && github.ref_name == 'main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # for create-pull-request
+      pull-requests: write # for create-pull-request
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # for changelog
+          persist-credentials: true # for create-pull-request
+
+      - name: Bump version
+        working-directory: packages/perf-kit
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          npm version "$VERSION" --no-git-tag-version
+          # `git cliff --prepend` fails if the file does not exist.
+          touch CHANGELOG.md
+
+      - name: Generate changelog via git cliff
+        id: changelog
+        uses: orhun/git-cliff-action@a9a95522b26fe6403f7bb24031f21fb573d0f5ff # v4.9.1
+        env:
+          # Used to make request to GitHub without ratelimits.
+          # `secrets.GIT_CLIFF_TOKEN` only has read permission.
+          GITHUB_TOKEN: ${{ secrets.GIT_CLIFF_TOKEN }}
+        with:
+          version: v2.9.1 # git cliff version
+          config: cliff.toml
+          args: >-
+            --unreleased
+            --include-path "packages/perf-kit/**"
+            --tag-pattern "^perf-kit@"
+            --prepend packages/perf-kit/CHANGELOG.md
+            --tag ${{ inputs.version }}
+
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        if: ${{ steps.changelog.outputs.content }}
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          add-paths: |
+            packages/perf-kit/CHANGELOG.md
+            packages/perf-kit/package.json
+          commit-message: 'release: perf-kit@${{ inputs.version }}'
+          body: ${{ steps.changelog.outputs.content }}
+          branch: release-perf-kit-v${{ inputs.version }}
+          branch-suffix: timestamp
+          base: main
+          title: 'release: perf-kit@${{ inputs.version }}'
+          assignees: Boshen, shulaoda, IWANABETHATGUY

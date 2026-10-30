@@ -1,0 +1,27 @@
+.github/workflows/release-crates.yml
+  s_5bb2205dee0325::t_e9be3c8c5ce8a7 10,16,20-22
+.github/workflows/publish-to-npm.yml
+  s_5bb2205dee0325::t_7b49e3e1aa6e50 9,15-16,23,25-26,30-32,34-37,39-40,42-43,45-49,53,68,72,87,155,161-165,176,220-221,227
+.github/workflows/prepare-release.yml
+  s_5bb2205dee0325::t_20c024002397f5 12-16,19,31-39,42,65-69,93-95,120
+scripts/misc/release-line.mjs
+  s_5bb2205dee0325::t_fa9eb7bfaae445 1-233
+MAINTENANCE.md
+  s_5bb2205dee0325::t_7999d40c304859 3,5-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "17103e5f303bc2768284ea0053efc951c525c880",
+  "prompts": {},
+  "sessions": {
+    "s_5bb2205dee0325": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "533f5893-6fc2-4b0d-aeb2-960ec3f6a107",
+        "model": "unknown"
+      },
+      "human_author": "shulaoda <165626830+shulaoda@users.noreply.github.com>"
+    }
+  }
+}

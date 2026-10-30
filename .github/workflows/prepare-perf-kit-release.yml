@@ -76,4 +76,4 @@ jobs:
           branch-suffix: timestamp
           base: main
           title: 'release: perf-kit@${{ inputs.version }}'
-          assignees: Boshen, shulaoda
+          assignees: Boshen, shulaoda, IWANABETHATGUY

@@ -98,4 +98,4 @@ jobs:
           branch-suffix: timestamp
           base: main
           title: 'release: v${{ env.VERSION }}'
-          assignees: Boshen, shulaoda, IWANABETHATGUY
+          assignees: Boshen, shulaoda

@@ -8,48 +8,72 @@ import type { OutputAsset } from './rolldown-output';
 export class OutputAssetImpl extends PlainObjectLike implements OutputAsset {
   readonly type = 'asset' as const;
 
-  constructor(private bindingAsset: BindingOutputAsset) {
+  // Undefined after `releaseBindings()`.
+  private bindingAsset: BindingOutputAsset | undefined;
+
+  constructor(bindingAsset: BindingOutputAsset) {
     super();
+    this.bindingAsset = bindingAsset;
+  }
+
+  // Not `#private` members: getters run with a Proxy or derived object as
+  // `this`, which fails a `#private` brand check. Every field is cached before
+  // the release, so no getter reaches this then.
+  private binding(): BindingOutputAsset {
+    if (this.bindingAsset === undefined) {
+      throw new Error('This output asset has already released its binding object');
+    }
+    return this.bindingAsset;
   }
 
   @lazyProp
   get fileName(): string {
-    return this.bindingAsset.getFileName();
+    return this.binding().getFileName();
   }
 
   @lazyProp
   get originalFileName(): string | null {
-    return this.bindingAsset.getOriginalFileName() || null;
+    return this.binding().getOriginalFileName() || null;
   }
 
   @lazyProp
   get originalFileNames(): string[] {
-    return this.bindingAsset.getOriginalFileNames();
+    return this.binding().getOriginalFileNames();
   }
 
   @lazyProp
   get name(): string | undefined {
-    return this.bindingAsset.getName() ?? undefined;
+    return this.binding().getName() ?? undefined;
   }
 
   @lazyProp
   get names(): string[] {
-    return this.bindingAsset.getNames();
+    return this.binding().getNames();
   }
 
   @lazyProp
   get source(): AssetSource {
-    return transformAssetSource(this.bindingAsset.getSource());
+    return transformAssetSource(this.binding().getSource());
   }
 
   __rolldown_external_memory_handle__(keepDataAlive?: boolean): ExternalMemoryStatus {
     if (keepDataAlive) {
-      this.#evaluateAllLazyFields();
+      this.evaluateAllLazyFields();
+    }
+    if (this.bindingAsset === undefined) {
+      return { freed: false, reason: 'Memory has already been freed' };
     }
     return this.bindingAsset.dropInner();
   }
 
-  #evaluateAllLazyFields(): void {
+  /** @internal Cache every field, then drop the binding wrapper. */
+  releaseBindings(): void {
+    if (this.bindingAsset === undefined) return;
+    this.evaluateAllLazyFields();
+    this.bindingAsset = undefined;
+  }
+
+  private evaluateAllLazyFields(): void {
     for (const field of getLazyFields(this)) {
       // Accessing the property triggers lazy evaluation via the @lazyProp decorator.
       const _value = (this as any)[field];

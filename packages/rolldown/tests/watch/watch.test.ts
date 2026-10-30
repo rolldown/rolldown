@@ -1562,6 +1562,35 @@ test.concurrent(
   },
 );
 
+// The only test on the native watcher backend; raw `_watch` bypasses the
+// polling wrapper. Asserts the output, not the event kind: macOS FSEvents may
+// report an in-place write as "create".
+test.concurrent(
+  'native watcher (usePolling: false) rebuilds on file change',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output } = createTestInputAndOutput('watch-native-smoke', retryCount);
+    const watcher = _watch({
+      input,
+      cwd: path.dirname(input),
+      output: { dir: path.join(path.dirname(input), 'dist') },
+      // Explicit, so a change in library defaults cannot move this off the native backend.
+      watch: { watcher: { usePolling: false, useDebounce: false } },
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+    });
+    await waitBuildFinished(watcher);
+    expect(fs.readFileSync(output, 'utf-8')).toContain('console.log(1)');
+    await editFile(input, 'console.log(2)');
+    // 10s absorbs FSEvents coalescing stalls on loaded CI runners.
+    await expect
+      .poll(() => fs.readFileSync(output, 'utf-8'), { timeout: 10_000, interval: 100 })
+      .toContain('console.log(2)');
+  },
+);
+
 function createTestInputAndOutput(testLabel: string, retryCount: number, content?: string) {
   const uniqueId = crypto.randomUUID().slice(0, 8);
   const dirname = `${testLabel}-${uniqueId}-retry${retryCount}`;

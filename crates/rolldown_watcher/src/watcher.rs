@@ -4,17 +4,20 @@ use crate::watch_coordinator::WatchCoordinator;
 use crate::watch_task::{WatchTask, WatchTaskIdx};
 use crate::watcher_msg::WatcherMsg;
 use anyhow::Result;
+use event_listener::Event;
 use futures::FutureExt;
+use futures::channel::mpsc;
 use futures::future::Shared;
 use oxc_index::IndexVec;
 use rolldown::BundlerConfig;
 use rolldown_error::BuildResult;
 use rolldown_fs_watcher::FsWatcherConfig;
+use rolldown_utils::futures::try_spawn;
+use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
-use tokio::sync::{Notify, mpsc};
 
 /// Default debounce duration in milliseconds.
 /// Matches Rollup's default buildDelay of 0ms.
@@ -60,11 +63,37 @@ impl WatcherConfig {
   }
 }
 
-type CoordinatorFuture = Shared<Pin<Box<dyn Future<Output = ()> + Send>>>;
+/// Returned when the selected async runtime rejects watcher coordinator
+/// submission before the coordinator starts.
+#[derive(Debug)]
+pub struct WatcherStartError {
+  source: Box<dyn std::error::Error + Send + Sync>,
+}
+
+impl WatcherStartError {
+  fn new(error: impl std::error::Error + Send + Sync + 'static) -> Self {
+    Self { source: Box::new(error) }
+  }
+}
+
+impl fmt::Display for WatcherStartError {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "Watcher coordinator task submission failed: {}", self.source)
+  }
+}
+
+impl std::error::Error for WatcherStartError {
+  fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+    Some(self.source.as_ref())
+  }
+}
+
+type PendingCoordinatorFuture = Pin<Box<dyn Future<Output = ()> + Send>>;
+type CoordinatorFuture = Shared<PendingCoordinatorFuture>;
 
 struct CoordinatorState {
   /// The coordinator future, before `run()` is called.
-  coordinator: Option<Pin<Box<dyn Future<Output = ()> + Send>>>,
+  coordinator: Option<PendingCoordinatorFuture>,
   /// The spawned handle, after `run()` is called. Shared so multiple callers can await.
   handle: Option<CoordinatorFuture>,
 }
@@ -76,7 +105,7 @@ pub struct Watcher {
   coordinator_state: std::sync::Mutex<CoordinatorState>,
   tx: mpsc::UnboundedSender<WatcherMsg>,
   closed: Arc<AtomicBool>,
-  close_notify: Arc<Notify>,
+  close_notify: Arc<Event>,
 }
 
 impl Watcher {
@@ -87,9 +116,9 @@ impl Watcher {
     handler: H,
     watcher_config: &WatcherConfig,
   ) -> BuildResult<Self> {
-    let (tx, rx) = mpsc::unbounded_channel();
+    let (tx, rx) = mpsc::unbounded();
     let closed = Arc::new(AtomicBool::new(false));
-    let close_notify = Arc::new(Notify::new());
+    let close_notify = Arc::new(Event::new());
     let tasks = Self::create_tasks(configs, watcher_config, &tx, &closed)?;
     let coordinator = WatchCoordinator::new(
       rx,
@@ -99,7 +128,7 @@ impl Watcher {
       Arc::clone(&closed),
       Arc::clone(&close_notify),
     );
-    let coordinator_future: Pin<Box<dyn Future<Output = ()> + Send>> = Box::pin(coordinator.run());
+    let coordinator_future: PendingCoordinatorFuture = Box::pin(coordinator.run());
 
     Ok(Self {
       coordinator_state: std::sync::Mutex::new(CoordinatorState {
@@ -112,16 +141,19 @@ impl Watcher {
     })
   }
 
-  /// Spawn the coordinator. Can only be called once.
-  pub fn run(&self) {
+  /// Spawn the coordinator. Only the first call starts it; a coordinator the
+  /// runtime refused to start is dropped with the error.
+  pub fn run(&self) -> Result<(), WatcherStartError> {
     let mut state = self.coordinator_state.lock().unwrap();
-    if let Some(coordinator) = state.coordinator.take() {
-      let join_handle = tokio::spawn(coordinator);
-      let handle: Pin<Box<dyn Future<Output = ()> + Send>> = Box::pin(async move {
-        let _ = join_handle.await;
-      });
-      state.handle = Some(handle.shared());
-    }
+    let Some(coordinator) = state.coordinator.take() else {
+      return Ok(());
+    };
+    let join_handle = try_spawn(coordinator).map_err(|(error, _)| WatcherStartError::new(error))?;
+    let handle: PendingCoordinatorFuture = Box::pin(async move {
+      let _ = join_handle.await;
+    });
+    state.handle = Some(handle.shared());
+    Ok(())
   }
 
   /// Gives consumers a reliable way to await the watcher's completion.
@@ -132,14 +164,26 @@ impl Watcher {
     }
   }
 
-  /// Close the watcher and wait for the coordinator to finish.
-  /// Must be called after `run()` — calling before `run()` will skip cleanup hooks.
-  pub async fn close(&self) -> Result<()> {
-    self.closed.store(true, std::sync::atomic::Ordering::Relaxed);
+  /// Mark the watcher closed and wake the coordinator. Only the first call
+  /// publishes; it neither starts nor awaits the coordinator.
+  fn publish_close(&self) {
+    if self.closed.swap(true, std::sync::atomic::Ordering::Relaxed) {
+      return;
+    }
     // Wake the coordinator even when it is waiting for a user event callback. The mpsc message
     // remains the normal state-machine input when the coordinator is idle or debouncing.
-    self.close_notify.notify_one();
-    let _ = self.tx.send(WatcherMsg::Close);
+    // `event_listener::Event` stores no permit, so this notify must come after the `closed`
+    // store above; waiters listen before checking the flag to close the race.
+    self.close_notify.notify(usize::MAX);
+    let _ = self.tx.unbounded_send(WatcherMsg::Close);
+  }
+
+  /// Close the watcher and wait for the coordinator to finish.
+  pub async fn close(&self) -> Result<()> {
+    // Publish before starting a not-yet-run coordinator: otherwise a pool worker
+    // could enter the initial build before it sees the close signal.
+    self.publish_close();
+    self.run().map_err(anyhow::Error::new)?;
     self.wait_for_close().await;
     Ok(())
   }

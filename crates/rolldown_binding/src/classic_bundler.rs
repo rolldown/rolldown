@@ -63,6 +63,7 @@ use rolldown::{Bundle, BundleFactory, BundleFactoryOptions, BundleHandle, Bundle
 use rolldown_common::BundleMode;
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::__inner::SharedPluginable;
+use rolldown_utils::futures::spawn_blocking;
 use std::sync::Arc;
 
 pub struct ClassicBundler {
@@ -111,11 +112,13 @@ impl ClassicBundler {
 
   #[must_use = "Future must be awaited to do the actual cleanup work"]
   pub fn close(&mut self) -> impl Future<Output = anyhow::Result<()>> + Send + 'static {
-    let is_closed = self.closed;
-    let last_bundle_handle = self.last_bundle_handle.clone();
-    if !is_closed {
+    if !self.closed {
       self.closed = true;
     }
+    // `take`, not `clone`: a copy left here is freed only by the N-API finalizer, and a
+    // threadless WASI host may never run GC finalizers, so it would leak one options graph per
+    // bundler. A later close finds no handle, so `closeBundle` runs once.
+    let last_bundle_handle = self.last_bundle_handle.take();
     // When devtools is active, ask the writer thread to drain this session and
     // receive an ack. Consumers rely on "files are readable after
     // `bundle.close()` resolves" — see `internal-docs/devtools/implementation.md`.
@@ -133,16 +136,15 @@ impl ClassicBundler {
       }
       if let Some(rx) = devtools_flush_rx {
         // Block on the writer-thread ack in a blocking task so we don't stall
-        // a tokio worker. Bounded wait so a hung writer thread (e.g. stalled
+        // a runtime worker. Bounded wait so a hung writer thread (e.g. stalled
         // fs I/O on an NFS disconnect) can't wedge `bundle.close()` forever.
         // All three failure modes (timeout, writer disconnected, blocking task
         // panicked) are surfaced as errors so the documented "logs readable
         // after close()" contract does not silently break.
-        let join_result = napi::tokio::task::spawn_blocking(move || {
-          rx.recv_timeout(std::time::Duration::from_secs(30))
-        })
-        .await
-        .map_err(|err| anyhow::anyhow!("devtools flush task failed to join: {err}"))?;
+        let join_result =
+          spawn_blocking(move || rx.recv_timeout(std::time::Duration::from_secs(30)))
+            .await
+            .map_err(|err| anyhow::anyhow!("devtools flush task failed to join: {err}"))?;
         match join_result {
           Ok(()) => {}
           Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
@@ -268,6 +270,15 @@ fn invalid_session_id(reason: String) -> BuildDiagnostic {
 
 #[cfg(test)]
 mod tests {
+  use std::{
+    borrow::Cow,
+    sync::atomic::{AtomicUsize, Ordering},
+  };
+
+  use rolldown_plugin::{
+    HookCloseBundleArgs, HookNoopReturn, HookUsage, Plugin, PluginContext, Pluginable,
+  };
+
   use super::*;
 
   #[test]
@@ -367,5 +378,48 @@ mod tests {
         "{message}"
       );
     }
+  }
+
+  #[derive(Debug)]
+  struct CountingClosePlugin {
+    calls: Arc<AtomicUsize>,
+  }
+
+  impl Plugin for CountingClosePlugin {
+    fn name(&self) -> Cow<'static, str> {
+      "counting-close".into()
+    }
+
+    fn register_hook_usage(&self) -> HookUsage {
+      HookUsage::CloseBundle
+    }
+
+    async fn close_bundle(
+      &self,
+      _ctx: &PluginContext,
+      _args: Option<&HookCloseBundleArgs<'_>>,
+    ) -> HookNoopReturn {
+      self.calls.fetch_add(1, Ordering::SeqCst);
+      Ok(())
+    }
+  }
+
+  #[test]
+  fn second_close_finds_no_handle_and_skips_close_bundle() {
+    let calls = Arc::new(AtomicUsize::new(0));
+    let mut bundler = ClassicBundler::new();
+    let _bundle = bundler
+      .create_bundle(
+        BundlerOptions::default(),
+        vec![Pluginable::new_shared(CountingClosePlugin { calls: Arc::clone(&calls) })],
+      )
+      .unwrap_or_else(|_| panic!("create bundle"));
+
+    futures::executor::block_on(bundler.close()).expect("first close");
+    futures::executor::block_on(bundler.close()).expect("second close");
+
+    assert!(bundler.closed());
+    assert!(bundler.last_bundle_handle.is_none());
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
   }
 }

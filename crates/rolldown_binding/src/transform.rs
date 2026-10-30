@@ -31,7 +31,13 @@ fn resolve_tsconfig_from_cache(
     Ok(Some(tsconfig)) => {
       options.tsconfig = Some(TsconfigOption::Config(tsconfig));
     }
-    Ok(None) => {}
+    Ok(None) => {
+      // The cache's resolver already looked and found that no tsconfig owns this file.
+      // Reuse that answer instead of leaving the option on auto, which would make
+      // `enhanced_transform` rediscover with a fresh resolver (and an empty cache) on
+      // every call.
+      options.tsconfig = Some(TsconfigOption::Disabled);
+    }
     Err(err) => {
       return Err(BuildDiagnostic::tsconfig_error(err));
     }

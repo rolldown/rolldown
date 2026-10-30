@@ -14,6 +14,12 @@ export const chokidar: ChokidarApi = /* #__PURE__ */ createChokidarApi(binding);
  * @category Utilities
  * @experimental
  */
+export type ChokidarOptions = Chokidar.WatcherOptions;
+
+/**
+ * @category Utilities
+ * @experimental
+ */
 export const FSWatcher: ChokidarApi['FSWatcher'] = /* #__PURE__ */ (() => chokidar.FSWatcher)();
 
 /**

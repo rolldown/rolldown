@@ -1,0 +1,31 @@
+.github/workflows/ci.yml
+  s_5bb2205dee0325::t_37365090e8d963 413-415
+.github/workflows/prepare-release.yml
+  s_5bb2205dee0325::t_b9a8eea9a1d4ea 12-16,19,31-39,42,65-69,93-95,120
+.github/workflows/publish-to-npm.yml
+  s_5bb2205dee0325::t_13e0e8f388f088 9,15-16,23,25-26,30-32,34-37,39-40,42-43,45-54,58,73,77,92,160,166-170,181,225-226,232
+.github/workflows/release-crates.yml
+  s_5bb2205dee0325::t_7d9557fe27fda2 10,16,20-23
+MAINTENANCE.md
+  s_5bb2205dee0325::t_d95ad415a7f3da 3,5-37
+scripts/misc/release-line.mjs
+  s_5bb2205dee0325::t_1a84f24d8b89f4 1-239
+scripts/misc/release-line.test.mjs
+  s_5bb2205dee0325::t_68eb6610124b6b 1-241
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "fc9b030720d80913ffd262209bd6d6950801d18a",
+  "prompts": {},
+  "sessions": {
+    "s_5bb2205dee0325": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "533f5893-6fc2-4b0d-aeb2-960ec3f6a107",
+        "model": "unknown"
+      },
+      "human_author": "shulaoda <165626830+shulaoda@users.noreply.github.com>"
+    }
+  }
+}

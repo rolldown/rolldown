@@ -693,6 +693,14 @@ fn handle_include_symbol(
   let mut canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
 
   if is_bypassed_inlined_constant(ctx, canonical_ref, include_reason) {
+    // Reading the constant still evaluates its module, so the module's side effects and those of
+    // its dependencies stay, as when the constant is not inlined.
+    let owner = canonical_ref.owner;
+    if ctx.modules[owner].side_effects().has_side_effects()
+      || ctx.metas[owner].has_side_effectful_dependency(ctx.modules)
+    {
+      ctx.pending.push(WorkItem::Module(owner));
+    }
     return;
   }
 
@@ -765,7 +773,7 @@ fn is_bypassed_inlined_constant(
 /// namespace) makes the module's body observable, so its gated side-effect
 /// statements join now (e.g. `foo.bar = 1` once `foo` is demanded); see
 /// `side_effects_included_on_demand`. Must sit after the inlined-constant
-/// bypass: demand satisfied by inlining doesn't include the module today.
+/// bypass: demand satisfied by inlining does not demand the module's body.
 /// The `body_demand_swept` bit keeps each module swept at most once.
 fn drain_body_demand_stmts(ctx: &mut IncludeContext, canonical_ref: SymbolRef) {
   let Some(&module_idx) = ctx.body_demand_keys.get(&canonical_ref) else {

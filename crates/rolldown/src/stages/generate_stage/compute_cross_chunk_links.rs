@@ -665,9 +665,8 @@ impl GenerateStage<'_> {
   ///   reachability truthful; this direction validates that the gate mirrors emission. The base
   ///   prediction is exempt from this direction: it filters `load_dependencies`, the same edges
   ///   the pre-prediction bits reachability trusted, so its over-predictions are exactly
-  ///   main-parity — e.g. constant inlining drops a symbol's import (and can even orphan an
-  ///   annotated-side-effectful chunk, see `rollup@chunking form@namespace-reexport-side-effect-cache`)
-  ///   without touching `load_dependencies`, on main just as here.
+  ///   main-parity — e.g. constant inlining drops a symbol's import without touching
+  ///   `load_dependencies`.
   ///
   /// Service imports hang on the entry (possibly facade) chunk, so entry chunks predict them via
   /// their `entry_module_idx` — hosted or not — plus the facade edge to the chunk hosting a
@@ -1839,6 +1838,43 @@ impl GenerateStage<'_> {
             index_cross_chunk_imports[chunk_id].insert(importee_chunk_idx);
             let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
             imports_from_other_chunks.entry(importee_chunk_idx).or_default();
+          }
+
+          // Constant inlining can drop every import of a binding, imported directly or through a
+          // removed barrel; the module that declares it still has to be loaded when it or a
+          // dependency has side effects.
+          let mut binding_owners = vec![];
+          self.push_kept_static_importees(module_idx, &mut binding_owners);
+          let mut predicted_targets = None;
+          for owner in binding_owners {
+            // A module behind an order wrapper runs when its init is called, so a bare import of
+            // its chunk would only load that chunk earlier.
+            if self.options.is_strict_execution_order_enabled()
+              && order_state.esm_init_target(owner, &self.link_output.metas[owner]).is_some()
+            {
+              continue;
+            }
+            if !self.link_output.module_table[owner].side_effects().has_side_effects()
+              && !self.link_output.metas[owner]
+                .has_side_effectful_dependency(&self.link_output.module_table.modules)
+            {
+              continue;
+            }
+            let Some(owner_chunk_idx) = chunk_graph.module_to_chunk[owner] else {
+              continue;
+            };
+            if owner_chunk_idx == chunk_id {
+              continue;
+            }
+            // The already-loaded cycle check sees only predicted edges.
+            if !predicted_targets
+              .get_or_insert_with(|| self.predicted_static_import_targets(module_idx))
+              .contains(&owner)
+            {
+              continue;
+            }
+            index_cross_chunk_imports[chunk_id].insert(owner_chunk_idx);
+            index_imports_from_other_chunks[chunk_id].entry(owner_chunk_idx).or_default();
           }
 
           // Runtime module may have side effects (e.g. dev/HMR mode) without an import record.

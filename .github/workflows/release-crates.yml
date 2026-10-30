@@ -7,16 +7,19 @@ on:
   push:
     branches:
       - main
+      - 'v[0-9]*'
     paths:
       - crates/rolldown/Cargo.toml
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   release:
-    if: github.repository == 'rolldown/rolldown'
+    if: >-
+      github.repository == 'rolldown/rolldown' &&
+      (github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'release: v'))
     name: Release crates
     runs-on: ubuntu-latest
     environment: crates

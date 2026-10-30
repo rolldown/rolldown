@@ -67,9 +67,9 @@ pub mod watcher;
 pub mod worker_manager;
 
 // --- External NAPI-RS dependencies ---
+pub use notify_napi;
 pub use oxc_parser_napi;
 pub use oxc_resolver_napi;
-pub use notify_napi;
 
 /// Number of live holders of the shared tokio runtime.
 ///

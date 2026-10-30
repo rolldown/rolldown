@@ -25,7 +25,7 @@ use rolldown_utils::{
   indexmap::{FxIndexMap, FxIndexSet},
   make_unique_name::make_unique_name,
 };
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
 
 use self::types::{
@@ -98,6 +98,9 @@ pub struct Chunk {
   /// Used for cjs, umd, iife
   /// The module directly imported symbol actually came from external modules.
   pub import_symbol_from_external_modules: FxIndexSet<ModuleIdx>,
+  /// The symbols of external modules that the included statements of this chunk reference.
+  /// A named import of an external module is rendered only if this chunk references it.
+  pub depended_external_symbols: FxHashSet<SymbolRef>,
   pub exports_to_other_chunks: FxHashMap<SymbolRef, Vec<CompactStr>>,
   pub input_base: ArcStr,
   pub debug_info: Vec<ChunkDebugInfo>,

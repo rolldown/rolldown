@@ -27,6 +27,7 @@ type IndexChunkDependedSymbols = IndexVec<ChunkIdx, FxIndexSet<SymbolRef>>;
 type IndexChunkImportsFromExternalModules =
   IndexVec<ChunkIdx, FxHashMap<ModuleIdx, Vec<(ModuleIdx, NamedImport)>>>;
 type IndexChunkAllImportsFromExternalModules = IndexVec<ChunkIdx, FxIndexSet<ModuleIdx>>;
+type IndexChunkDependedExternalSymbols = IndexVec<ChunkIdx, FxHashSet<SymbolRef>>;
 type IndexChunkExportedSymbols = IndexVec<ChunkIdx, FxHashMap<SymbolRef, Vec<CompactStr>>>;
 type IndexCrossChunkImports = IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>;
 type IndexCrossChunkDynamicImports = IndexVec<ChunkIdx, FxIndexSet<ChunkIdx>>;
@@ -57,6 +58,8 @@ pub(super) struct CrossChunkLinkState {
     IndexChunkDynamicImportsFromExternalModules,
   pub(super) order_live_symbols: FxHashSet<SymbolRef>,
   symbol_chunk_table: SymbolChunkTable,
+  /// The external symbols that the included statements of each chunk reference.
+  index_chunk_depended_external_symbols: IndexChunkDependedExternalSymbols,
 }
 
 impl CrossChunkLinkState {
@@ -161,6 +164,7 @@ impl GenerateStage<'_> {
       index_chunk_dynamic_imports_from_external_modules,
       order_live_symbols,
       symbol_chunk_table,
+      index_chunk_depended_external_symbols,
     } = state;
     // The single flush of symbol->chunk ownership into the shared symbol database. Everything
     // downstream that reads `chunk_idx` — the module finalizer and the chunk-export generator
@@ -268,6 +272,7 @@ impl GenerateStage<'_> {
       index_cross_chunk_dynamic_imports,
       index_chunk_dynamic_imports_from_external_modules,
       index_chunk_indirect_imports_from_external_modules.iter_mut(),
+      index_chunk_depended_external_symbols,
     ))
     .par_bridge()
     .for_each(
@@ -279,6 +284,7 @@ impl GenerateStage<'_> {
         cross_chunk_dynamic_imports,
         dynamic_imports_from_external_modules,
         chunk_indirect_imports_from_external_modules,
+        depended_external_symbols,
       )| {
         // deduplicated
         for (module_idx, _) in &imports_from_external_modules {
@@ -293,6 +299,7 @@ impl GenerateStage<'_> {
           dynamic_imports_from_external_modules.into_iter().collect::<Vec<_>>();
         chunk.import_symbol_from_external_modules =
           std::mem::take(chunk_indirect_imports_from_external_modules);
+        chunk.depended_external_symbols = depended_external_symbols;
       },
     );
 
@@ -841,6 +848,17 @@ impl GenerateStage<'_> {
       &symbol_chunk_table,
     );
 
+    let index_chunk_depended_external_symbols = index_chunk_depended_symbols
+      .iter()
+      .map(|depended_symbols| {
+        depended_symbols
+          .iter()
+          .copied()
+          .filter(|symbol_ref| self.link_output.module_table[symbol_ref.owner].is_external())
+          .collect::<FxHashSet<_>>()
+      })
+      .collect::<IndexChunkDependedExternalSymbols>();
+
     CrossChunkLinkState {
       index_chunk_exported_symbols,
       index_chunk_direct_imports_from_external_modules,
@@ -851,6 +869,7 @@ impl GenerateStage<'_> {
       index_chunk_dynamic_imports_from_external_modules,
       order_live_symbols,
       symbol_chunk_table,
+      index_chunk_depended_external_symbols,
     }
   }
 

@@ -47,11 +47,11 @@ fn enhanced_transform_internal(
   yarn_pnp: bool,
 ) -> napi::Result<BindingEnhancedTransformResult> {
   let options = options.unwrap_or_default();
-  let cwd = options
-    .cwd
-    .clone()
-    .map(PathBuf::from)
-    .unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir"));
+  let cwd = match options.cwd.as_deref() {
+    Some(cwd) => PathBuf::from(cwd),
+    None => std::env::current_dir()
+      .map_err(|err| napi::Error::from_reason(format!("Failed to get current dir: {err}")))?,
+  };
   let mut transform_options = options.into_enhanced_transform_options(filename)?;
   if let Err(err) = resolve_tsconfig_from_cache(&mut transform_options, cache, filename) {
     return Ok(BindingEnhancedTransformResult::from_enhanced_transform_result(

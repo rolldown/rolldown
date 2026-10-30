@@ -142,10 +142,12 @@ pub struct BindingEnhancedTransformOptions {
   /// Sets the target environment for the generated JavaScript.
   ///
   /// The lowest target is `es2015`.
+  /// Browserslist queries such as `baseline widely available` are also supported.
   ///
   /// Example:
   ///
   /// * `'es2015'`
+  /// * `'baseline widely available'`
   /// * `['es2020', 'chrome58', 'edge16', 'firefox57', 'node12', 'safari11']`
   ///
   /// @default `esnext` (No transformation)

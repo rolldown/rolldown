@@ -11,6 +11,7 @@ pub mod hook_resolve_id_call_start;
 pub mod hook_transform_call_end;
 pub mod hook_transform_call_start;
 pub mod module_graph_ready;
+pub mod module_rendered_ready;
 pub mod package_graph_ready;
 pub mod session_meta;
 
@@ -27,6 +28,7 @@ pub enum Meta {
   HookResolveIdCallStart(hook_resolve_id_call_start::HookResolveIdCallStart),
   HookResolveIdCallEnd(hook_resolve_id_call_end::HookResolveIdCallEnd),
   ModuleGraphReady(module_graph_ready::ModuleGraphReady),
+  ModuleRenderedReady(module_rendered_ready::ModuleRenderedReady),
   SessionMeta(session_meta::SessionMeta),
   ChunksInfos(chunk_graph_ready::ChunkGraphReady),
   PackageGraphReady(package_graph_ready::PackageGraphReady),

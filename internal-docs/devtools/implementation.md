@@ -14,7 +14,8 @@ import { rolldown } from 'rolldown';
 const bundle = await rolldown({
   input: 'src/index.js',
   devtools: {
-    sessionId?: string,  // optional override; auto-generated if omitted
+    sessionId?: string,       // optional override; auto-generated if omitted
+    mode?: 'full' | 'report', // 'full' (default) writes the event log; 'report' writes the build report
   },
 });
 await bundle.generate();
@@ -22,11 +23,11 @@ await bundle.generate();
 
 The `devtools` option is `@experimental`. Setting `devtools: {}` is sufficient to enable tracing. The option flows through the binding layer as `BindingDevtoolsOptions` and normalizes to `DevtoolsOptions { session_id: Option<String> }` on the Rust side.
 
-CLI equivalent: `--devtools.session-id <id>`.
+CLI equivalent: `--devtools.session-id <id>`, `--devtools.mode <full|report>`.
 
 ## Output
 
-When devtools is enabled, rolldown writes JSON-lines files to:
+In the default `full` mode, rolldown writes JSON-lines files to:
 
 ```
 <InputOptions.cwd>/node_modules/.rolldown/<session_id>/
@@ -39,6 +40,36 @@ The formatter emits paths relative to `node_modules/`, and the writer thread joi
 Events with no session span in scope fall back to the `unknown-session` id (`DEFAULT_SESSION_ID` in `crates/rolldown_devtools/src/static_data.rs`), which never receives a `cwd`. Their paths stay relative, so they follow the process working directory natively and the writer warns instead of writing them on wasm. This is the same process-global activation caveat that [design.md](./design.md) tracks under per-build scoping: once any build turns devtools on, later builds in that process keep emitting under `unknown-session`.
 
 Each line is a self-contained JSON object with an `action` discriminator field. Action events also carry `timestamp`, `session_id`, and `build_id` fields. `StringRef` entries contain only `action`, `id`, and `content` (no timestamp). The consumer reads the file and splits on newlines.
+
+### Report mode
+
+With `devtools: { mode: 'report' }` the session writes no JSON-lines files. The writer
+thread folds the same `trace_action!` events into a `MetricsAggregator`
+(`crates/rolldown_devtools_metrics`) and renders the report when the session closes, before
+the close is acknowledged, so the read-after-close contract below holds for it too. The
+aggregator keeps counts, sizes, graph structure and timings only; it never retains the
+`content` payloads of load, transform and renderChunk events, so the string deduplication
+below does not apply.
+
+The report goes to one folder per build output:
+
+```
+<InputOptions.cwd>/node_modules/.rolldown/report/<output dir>/
+  metrics.json       # canonical, schema-versioned model; every other file is a view of it
+  module-graph.json  # full module graph with retained sizes (dominator annotations)
+  entry.md           # summary and file index; timing/chunks/modules/packages/graph/delta.md on demand
+  history.jsonl      # one line per build, appended across builds
+  AGENTS.md          # the directory contract for agents (text in render.rs)
+  .state.json        # previous build, the base of the next `delta`
+  baseline.json      # optional, user-pinned copy of .state.json; adds `baselineDelta`
+```
+
+`<output dir>` is `output.dir`, else the folder of `output.file`, else `dist`, made relative
+to `cwd` by `report_dir_for`; each `..` of a folder outside `cwd` becomes `__`. A bundler
+opens one report, so its first output picks the folder; a client and a server build of one
+app get two folders. `report_dir_is_one_folder_per_output` in
+`crates/rolldown_devtools_metrics/src/tests.rs` pins the mapping. The two modes are
+exclusive today: a report build writes no event log.
 
 ### Read-after-close contract
 
@@ -58,11 +89,12 @@ Top-level string fields larger than 10 KB are additionally replaced with a `$ref
 
 ### Crate Layout
 
-| Crate                      | Purpose                                                                    |
-| -------------------------- | -------------------------------------------------------------------------- |
-| `rolldown_devtools`        | Core tracing machinery: `DebugTracer`, `Session`, formatter, layer         |
-| `rolldown_devtools_action` | Action type definitions (Rust structs with `ts-rs` for TS codegen)         |
-| `@rolldown/debug`          | TypeScript package: re-exports generated types + `parseToEvents()` utility |
+| Crate                       | Purpose                                                                               |
+| --------------------------- | ------------------------------------------------------------------------------------- |
+| `rolldown_devtools`         | Core tracing machinery: `DebugTracer`, `Session`, formatter, layer                    |
+| `rolldown_devtools_action`  | Action type definitions (Rust structs with `ts-rs` for TS codegen)                    |
+| `rolldown_devtools_metrics` | Report mode: folds the event stream into bounded aggregates, renders the report files |
+| `@rolldown/debug`           | TypeScript package: re-exports generated types + `parseToEvents()` utility            |
 
 ### Key Types
 
@@ -109,7 +141,7 @@ The system is built on the `tracing` crate. The core idea: **spans carry context
 **`ClassicBundler`** (binding layer, Rollup-compatible API):
 
 1. `new()` — generates `session_id`, creates dummy session
-2. `enable_debug_tracing_if_needed()` — on first build with `devtools` option, swaps in `devtools.sessionId` if given, initializes `DebugTracer` and creates real session span
+2. `enable_debug_tracing_if_needed()` — on first build with `devtools` option, swaps in `devtools.sessionId` if given, initializes `DebugTracer` and creates real session span. In report mode it also computes the report folder with `report_dir_for` and registers the session with `open_metrics_session` before any event is emitted
 3. Passes `Session` to `BundleFactory` on each `create_bundle()` call
 
 **`BundleFactory`** (core):

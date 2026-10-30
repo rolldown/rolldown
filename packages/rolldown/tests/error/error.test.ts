@@ -2,6 +2,7 @@ import type { Plugin } from 'rolldown';
 import { rolldown } from 'rolldown';
 import { isWasiTest } from 'rolldown-tests/utils';
 import { describe, expect, test, vi } from 'vitest';
+import { aggregateBindingErrorsIntoJsError } from '../../src/utils/error';
 
 async function buildWithPlugin(plugin: Plugin) {
   try {
@@ -202,6 +203,49 @@ describe('Error output format', () => {
       await build.write({});
     } catch (error: any) {
       expect(removeAnsiColors(error.message)).toMatchSnapshot();
+    }
+  });
+
+  // Output-option callbacks skip the plugin hook normalizer, so a thrown
+  // `undefined`/`null` reaches the summary formatter verbatim and must not make it throw.
+  test.each([
+    ['undefined', undefined],
+    ['null', null],
+  ])('summarizes a %s thrown by an output-option callback', async (label, thrown) => {
+    // WASI reconstructs callback failures as Errors, so exercise the nullish formatter directly.
+    const formatted = aggregateBindingErrorsIntoJsError([
+      { type: 'JsError', field0: thrown as unknown as Error },
+    ]);
+    expect(formatted.message).toContain(`Error: ${label}`);
+
+    const build = await rolldown({
+      input: './main.js',
+      cwd: import.meta.dirname,
+    });
+    try {
+      const error: any = await build
+        .generate({
+          entryFileNames: () => {
+            throw thrown;
+          },
+        })
+        .then(
+          () => undefined,
+          (e: unknown) => e,
+        );
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).not.toContain('Cannot convert undefined or null to object');
+      expect(error.message).toContain('Build failed with 1 error');
+      expect(error.message).toContain(
+        isWasiTest ? 'Error: entryFileNames option:' : `Error: ${label}`,
+      );
+      expect(error.errors).toHaveLength(1);
+      if (!isWasiTest) {
+        // Native preserves the exact thrown value; WASI reconstructs it as an Error.
+        expect(error.errors[0]).toBe(thrown);
+      }
+    } finally {
+      await build.close();
     }
   });
 });

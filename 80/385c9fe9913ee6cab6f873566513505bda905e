@@ -1,0 +1,42 @@
+MAINTENANCE.md
+  s_5bb2205dee0325::t_7999d40c304859 9,11,13
+  s_5bb2205dee0325::t_72286561bf155d 10-17
+.github/workflows/prepare-perf-kit-release.yml
+  s_5bb2205dee0325::t_608c29d0a3e895 1-79
+.github/workflows/prepare-release.yml
+  s_bee808f7ea4949::t_300a1dd9efef59 73,101
+.github/workflows/publish-perf-kit.yml
+  s_5bb2205dee0325::t_11349f8a521f50 1-99
+cliff.toml
+  s_5bb2205dee0325::t_e56e6f86add86b 103-104
+packages/perf-kit/package.json
+  s_5bb2205dee0325::t_45a7b70e902341 5-10,18,22-24
+scripts/misc/bump-version.js
+  s_5bb2205dee0325::t_ea6b821cd62661 62-65
+scripts/misc/published-package-check.mjs
+  s_5bb2205dee0325::t_b200280219484d 11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "80385c9fe9913ee6cab6f873566513505bda905e",
+  "prompts": {},
+  "sessions": {
+    "s_5bb2205dee0325": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "533f5893-6fc2-4b0d-aeb2-960ec3f6a107",
+        "model": "unknown"
+      },
+      "human_author": "shulaoda <165626830+shulaoda@users.noreply.github.com>"
+    },
+    "s_bee808f7ea4949": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a31f81c2-c61a-48ab-bb47-0d87bdbf90b7",
+        "model": "unknown"
+      },
+      "human_author": "shulaoda <165626830+shulaoda@users.noreply.github.com>"
+    }
+  }
+}

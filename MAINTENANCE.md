@@ -1,11 +1,40 @@
 # Release Rolldown
 
-## Publish Latest
+## Release lines
 
-1. Visit https://github.com/rolldown/rolldown/actions/workflows/prepare-release.yml
-2. Trigger "Run workflow" manually, or wait for the weekly cron run.
-3. `prepare-release.yml` auto-bumps `packages/rolldown/package.json` from `x.y.z-rc.n` to `x.y.z-rc.(n+1)` and opens a release PR. This workflow assumes the current version already has an `-rc.n` suffix and fails if it does not match that pattern.
-4. Merge the release PR, then wait for https://github.com/rolldown/rolldown/actions/workflows/publish-to-npm.yml to finish.
+| Branch | Releases                                     | npm dist-tag | GitHub release  |
+| ------ | -------------------------------------------- | ------------ | --------------- |
+| `main` | the current minor (and the next minor/major) | `latest`     | marked "Latest" |
+| `vX.Y` | patches for an older `X.Y` minor             | `latest-X.Y` | not marked      |
+
+A maintenance branch `vX.Y` is cut from the line's last release tag, e.g. `git push origin v1.1.5:refs/heads/v1.1`. It only releases stable `X.Y.Z` versions older than npm `latest`; anything else is refused by `scripts/misc/release-line.mjs`. The `latest-X.Y` tag lets users install a line with `npm i rolldown@latest-1.1`. `vX.Y` itself cannot be a dist-tag, because npm reads it as a semver range.
+
+## Publish a release
+
+1. Visit https://github.com/rolldown/rolldown/actions/workflows/prepare-release.yml and click "Run workflow" on `main`.
+2. Enter the new `version` and the `target_branch` (`main`, or a maintenance branch such as `v1.1`).
+3. The workflow checks out `target_branch`, bumps crates and packages, prepends the changelog for commits since the last tag reachable from that branch, and opens a `release: vX.Y.Z` PR against it.
+4. Review and squash-merge the PR, keeping the `release: vX.Y.Z` title. That merge commit is what starts publishing.
+5. [`publish-to-npm.yml`](https://github.com/rolldown/rolldown/actions/workflows/publish-to-npm.yml) builds and waits for approval in the `release` environment. It then publishes under the line's dist-tag and creates the GitHub release and tag. [`release-crates.yml`](https://github.com/rolldown/rolldown/actions/workflows/release-crates.yml) publishes the crates.
+
+Pushes run the workflow files from the pushed branch. A maintenance branch therefore needs this release machinery (`publish-to-npm.yml`, `release-crates.yml`, `prepare-release.yml`, `scripts/misc/release-line.mjs`) backported before its first release. Keep that branch's own build matrix.
+
+## Backport a fix
+
+1. Land the fix on `main` first.
+2. Create a branch from `vX.Y`, run `git cherry-pick -x <commit>`, and open a PR against `vX.Y` with the original title.
+3. Add the `ci: windows` label when the fix touches platform-specific code.
+4. Squash-merge it; that is the only merge method the ruleset allows.
+
+## Repository configuration
+
+- The `main` ruleset also targets `refs/heads/v[0-9]*`, so maintenance branches require PRs and status checks.
+- The `release` and `crates` environments only allow deployments from `main` and `v[0-9]*`. Keep the npm and crates.io trusted publishers pinned to these environments.
+
+## Recovering a failed release
+
+- Use "Re-run failed jobs". Already-published npm versions are skipped, as are crate versions.
+- "Re-run all jobs" fails in the `check` job once the `vX.Y.Z` tag exists, so a finished release cannot be published twice.
 
 ## Canary
 

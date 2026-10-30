@@ -410,6 +410,9 @@ jobs:
           - name: Validate workspace package
             run: node scripts/misc/published-package-check.mjs
 
+          - name: Test release scripts
+            run: node --test scripts/misc/release-line.test.mjs
+
   repo-validation:
     name: Repo Validation
     runs-on: namespace-profile-linux-x64-default

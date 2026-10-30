@@ -1231,6 +1231,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     expr.and_then(|expr| try_extract_const_literal(&self.create_constant_eval_ctx(), expr))
   }
 
+  /// See internal-docs/inline-const/design.md.
   pub fn add_constant_symbol(&mut self, symbol_id: SymbolId, value: ConstExportMeta) {
     let scoping = self.result.symbol_ref_db.scoping();
     // A repeated `var` declaration assigns without a write reference.

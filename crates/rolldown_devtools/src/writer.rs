@@ -285,6 +285,7 @@ mod tests {
       session_id: "session".into(),
       filename: "node_modules/.rolldown/session/logs.json".into(),
       action_value: serde_json::json!({ "action": "BuildStart" }),
+      at: Instant::now(),
     });
 
     // `try_recv`: the ack must already be there when `flush_session_with` returns.

@@ -731,8 +731,8 @@ if (!nativeBinding || forceWasi) {
       if (!candidateFailed) {
         if (process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           const bindingPackageVersion = require('@rolldown/binding-wasm32-wasip1/package.json').version
-          if (bindingPackageVersion !== '1.2.15') {
-            throw new Error(`WASI binding package version mismatch, expected 1.2.15 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '1.2.16') {
+            throw new Error(`WASI binding package version mismatch, expected 1.2.16 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
         }
         wasiBinding = require('@rolldown/binding-wasm32-wasip1')

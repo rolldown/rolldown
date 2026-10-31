@@ -112,7 +112,8 @@ impl ClassicBundler {
   #[must_use = "Future must be awaited to do the actual cleanup work"]
   pub fn close(&mut self) -> impl Future<Output = anyhow::Result<()>> + Send + 'static {
     let is_closed = self.closed;
-    let last_bundle_handle = self.last_bundle_handle.clone();
+    // Closing owns the final handle so the closed wrapper does not retain module data.
+    let last_bundle_handle = self.last_bundle_handle.take();
     if !is_closed {
       self.closed = true;
     }

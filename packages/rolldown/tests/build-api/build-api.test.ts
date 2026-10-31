@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { Worker } from 'node:worker_threads';
-import { rolldown } from 'rolldown';
+import { rolldown, type PluginContext } from 'rolldown';
 import { defineParallelPlugin } from 'rolldown/experimental';
 import { expect, test, vi } from 'vitest';
 
@@ -80,6 +80,45 @@ test('passes errors from closeBundle hook', async () => {
     expect(handledError).toBeTruthy();
   }
 });
+
+test.each([false, true])(
+  'close releases module metadata after hooks (hook throws: %s)',
+  async (fails) => {
+    const id = '/close-memory.js';
+    const source = 'export default 42';
+    const contexts: PluginContext[] = [];
+    const bundle = await rolldown({
+      input: id,
+      plugins: [
+        {
+          name: 'close-memory',
+          resolveId: (id) => id,
+          load: () => source,
+          buildEnd() {
+            contexts.push(this);
+          },
+          closeBundle() {
+            // Metadata stays available throughout close hooks, then must be released.
+            expect(this.getModuleInfo(id)?.code).toBe(source);
+            if (fails) throw new Error('close-memory failure');
+          },
+        },
+      ],
+    });
+    await bundle.generate();
+    const output = await bundle.generate();
+    if (fails) await expect(bundle.close()).rejects.toThrow('close-memory failure');
+    else await bundle.close();
+    expect(bundle.closed).toBe(true);
+    expect(contexts).toHaveLength(2);
+    for (const context of contexts) {
+      expect([...context.getModuleIds()]).toEqual([]);
+      expect(context.getModuleInfo(id)).toBeNull();
+    }
+    expect(output.output.find((item) => item.type === 'chunk')!.code).toContain('42');
+    await bundle.close();
+  },
+);
 
 test('supports closeBundle hook', async () => {
   let closeBundleCalls = 0;

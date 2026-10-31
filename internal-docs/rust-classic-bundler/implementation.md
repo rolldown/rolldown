@@ -57,7 +57,7 @@ The `closed` flag on `ClassicBundler` is **user-observable** — it's what `Roll
 ```rust
 pub fn close(&mut self) -> impl Future<Output = anyhow::Result<()>> + Send + 'static {
     self.closed = true;
-    // calls plugin_driver.close_bundle(None) on the last bundle handle
+    // takes the last bundle handle and calls plugin_driver.close_bundle(None)
 }
 
 pub fn closed(&self) -> bool {
@@ -70,7 +70,7 @@ This is fundamentally different from `Bundler.closed`:
 - **`ClassicBundler.closed`** — User-facing API contract. "This build result is done, don't call write/generate again." Correct.
 - **`Bundler.closed`** — Internal hack. Exists to gate `closeBundle` calls, but `closeBundle` is a per-build concern that should live on `Bundle`. Being removed — see [rust-bundler.md](../rust-bundler/implementation.md).
 
-`ClassicBundler.close()` does not guard against a second call: it clones the last bundle handle, so every call runs `closeBundle` again. The JS side guarantees one call: `RolldownBuild.close()` in `packages/rolldown/src/api/rolldown/rolldown-build.ts` keeps the first close promise, and a repeated `close()` only waits for it (the first caller gets any error). Inside that first close every cleanup step runs exactly once, even when an earlier one fails: it stops the parallel-plugin workers, then always calls `BindingBundler.close()`, then releases the async runtime holder (`shutdownAsyncRuntime`), and only then rethrows a worker shutdown error. On wasm, once the last holder is gone, a second `BindingBundler.close()` would spawn onto the released runtime and trap.
+`ClassicBundler.close()` takes its last handle into the cleanup future. `BindingBundler.close()` runs `closeBundle` and timing reports while module metadata is available, then clears every generated bundle's driver even if a hook or report fails. The closed wrapper no longer owns that handle. The JS side guarantees one binding call: `RolldownBuild.close()` in `packages/rolldown/src/api/rolldown/rolldown-build.ts` keeps the first close promise, and a repeated `close()` only waits for it (the first caller gets any error). Inside that first close every cleanup step runs exactly once, even when an earlier one fails: it stops the parallel-plugin workers, then always calls `BindingBundler.close()`, then releases the async runtime holder (`shutdownAsyncRuntime`), and only then rethrows a worker shutdown error. On wasm, once the last holder is gone, a second `BindingBundler.close()` would spawn onto the released runtime and trap.
 
 ## Related
 

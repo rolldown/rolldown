@@ -139,16 +139,17 @@ impl FileEmitter {
       .context(
         "The `PluginContext.emitFile` with `type: 'chunk'` only work at `buildStart/resolveId/load/transform/moduleParsed` hooks.",
       )?;
-    // Seed from the name, importer, id and file name, so emits that resolve to
-    // different modules or output files get distinct reference ids. Paths are
-    // made relative to cwd so the ids don't depend on the checkout location.
+    // Emits that resolve to different modules or output files need distinct ids.
+    // Paths are taken relative to cwd so the ids don't depend on the checkout
+    // location; the flag keeps a path apart from a non-path id with the same text.
     let cwd = &self.options.cwd;
+    let stable = |id: &str| {
+      let is_path = Path::new(id).is_absolute();
+      (is_path, if is_path { stabilize_id(id, cwd) } else { id.to_string() })
+    };
     let reference_id = self.assign_reference_id(&format!(
-      "{}\0{}\0{}\0{}",
-      chunk.name.as_deref().unwrap_or_default(),
-      chunk.importer.as_deref().map(|importer| stabilize_id(importer, cwd)).unwrap_or_default(),
-      stabilize_id(&chunk.id, cwd),
-      chunk.file_name.as_deref().unwrap_or_default()
+      "{:?}",
+      (&chunk.name, chunk.importer.as_deref().map(stable), stable(&chunk.id), &chunk.file_name)
     ));
     sender
       .send(ModuleLoaderMsg::AddEntryModule(Box::new(AddEntryModuleMsg {
@@ -225,8 +226,6 @@ impl FileEmitter {
           return Ok(reference_id);
         }
         Entry::Vacant(entry) => {
-          // Seed from the content hash, which is also the dedupe key, so the id
-          // is unique per asset.
           let reference_id = self.assign_reference_id(&hash);
           // Insert into self.files while the VacantEntry holds its shard lock,
           // so any concurrent Occupied branch always finds the files entry.
@@ -507,10 +506,36 @@ mod tests {
   fn assign_reference_id_is_always_22_chars() {
     let emitter = FileEmitter::new(Arc::new(NormalizedBundlerOptions::default()));
 
-    // Seed-based ids: chunk names/ids, file names and content hashes, including edge cases.
     for seed in ["a", "index.js", "assets/deeply/nested/asset.name.txt", ""] {
       assert_eq!(emitter.assign_reference_id(seed).len(), 22, "seed={seed:?}");
     }
+  }
+
+  #[test]
+  fn chunk_reference_id_seeds_use_cwd_relative_paths() {
+    let emit = |cwd: &Path, id: &str| {
+      let options = NormalizedBundlerOptions { cwd: cwd.to_path_buf(), ..Default::default() };
+      let emitter = FileEmitter::new(Arc::new(options));
+      let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
+      emitter.set_context_load_modules_tx(Some(tx)).unwrap();
+      emitter
+        .emit_chunk(Arc::new(EmittedChunk { id: id.to_string(), ..Default::default() }))
+        .unwrap()
+    };
+    let root = std::env::current_dir().unwrap();
+    let (here, moved) = (root.join("project"), root.join("other").join("project"));
+    let path_in = |cwd: &Path| cwd.join("lazy.js").to_str().unwrap().to_string();
+
+    assert_eq!(
+      emit(&here, &path_in(&here)),
+      emit(&moved, &path_in(&moved)),
+      "moving the project must not change the id"
+    );
+    assert_ne!(
+      emit(&here, &path_in(&here)),
+      emit(&here, "lazy.js"),
+      "a path and a non-path id with the same text must not share an id"
+    );
   }
 
   /// Asset reference ids must depend only on content, not emission order — they leak

@@ -1,7 +1,8 @@
 {
   "config": {
     "context": "1",
-    "format": "cjs"
+    "format": "cjs",
+    "minify": false
   },
   "expectExecuted": false,
   "skipSyntaxValidation": true,

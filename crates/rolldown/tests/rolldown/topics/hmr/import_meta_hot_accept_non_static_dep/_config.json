@@ -1,0 +1,9 @@
+{
+  "config": {
+    "experimental": {
+      "devMode": {}
+    }
+  },
+  "expectError": true,
+  "expectExecuted": false
+}

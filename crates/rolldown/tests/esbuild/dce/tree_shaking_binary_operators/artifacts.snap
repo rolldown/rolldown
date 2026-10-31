@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 let keep;
 let keep2;
 keep + keep2;
@@ -39,6 +39,5 @@ keep ^= keep2;
 keep ??= keep2;
 keep ||= keep2;
 keep &&= keep2;
-//#endregion
 
 ```

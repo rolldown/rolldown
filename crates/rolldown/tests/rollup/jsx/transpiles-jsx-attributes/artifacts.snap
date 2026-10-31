@@ -6,20 +6,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region dep1.js
+// dep1.js
 const Foo$2 = () => {};
 console.log(Foo$2, "value 1");
-//#endregion
-//#region dep2.js
+// dep2.js
 const Foo$1 = () => {};
 const value$1 = "value 2";
 console.log(Foo$1, value$1);
-//#endregion
-//#region dep3.js
+// dep3.js
 const Foo = () => {};
 console.log(Foo, "value 3");
-//#endregion
-//#region main.js
+// main.js
 const result = /* @__PURE__ */ React.createElement(Foo$1, {
 	bar: true,
 	"baz:foo": "string",
@@ -27,7 +24,6 @@ const result = /* @__PURE__ */ React.createElement(Foo$1, {
 	element: /* @__PURE__ */ React.createElement(Foo$1, null),
 	fragment: /* @__PURE__ */ React.createElement(React.Fragment, null)
 });
-//#endregion
 export { result };
 
 ```

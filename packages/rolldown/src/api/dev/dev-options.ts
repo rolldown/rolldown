@@ -100,4 +100,9 @@ export interface DevOptions {
    */
   rebuildStrategy?: 'always' | 'never';
   watch?: DevWatchOptions;
+  /**
+   * Whether the `hotUpdate` plugin hook is called. `experimental.devMode.hotUpdate` also turns it on.
+   * @default false
+   */
+  hotUpdate?: boolean;
 }

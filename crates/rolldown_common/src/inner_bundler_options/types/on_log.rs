@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::{future::Future, pin::Pin};
 
 use derive_more::Debug;
+use rolldown_error::{BuildDiagnostic, RenderedDiagnostic};
 
 use super::log_level::LogLevel;
 
@@ -38,10 +39,44 @@ pub struct Log {
   pub id: Option<String>,
   pub code: Option<String>,
   pub exporter: Option<String>,
+  pub binding: Option<String>,
   pub plugin: Option<String>,
   pub loc: Option<LogLocation>,
   pub pos: Option<u32>,
   pub ids: Option<Vec<String>>,
+}
+
+impl Log {
+  pub fn from_rendered(warning: &BuildDiagnostic, rendered: RenderedDiagnostic) -> Self {
+    #[expect(
+      clippy::cast_possible_truncation,
+      reason = "line/column/position values are unlikely to exceed u32::MAX in practical use"
+    )]
+    let (loc, pos) = match rendered.primary_location {
+      Some(location) => (
+        Some(LogLocation {
+          line: location.line as u32,
+          column: location.column as u32,
+          // Use warning.id() since the diagnostic may only store the filename.
+          file: warning.id(),
+        }),
+        Some(location.utf16_position as u32),
+      ),
+      None => (None, None),
+    };
+
+    Self {
+      id: warning.id(),
+      exporter: warning.exporter(),
+      binding: warning.binding(),
+      code: Some(warning.kind().to_string()),
+      message: rendered.message,
+      plugin: warning.plugin(),
+      loc,
+      pos,
+      ids: warning.ids(),
+    }
+  }
 }
 
 #[derive(Debug, Default)]
@@ -50,6 +85,7 @@ pub struct LogWithoutPlugin {
   pub id: Option<String>,
   pub code: Option<String>,
   pub exporter: Option<String>,
+  pub binding: Option<String>,
   pub loc: Option<LogLocation>,
   pub pos: Option<u32>,
   pub ids: Option<Vec<String>>,
@@ -62,6 +98,7 @@ impl LogWithoutPlugin {
       id: self.id,
       code: self.code,
       exporter: self.exporter,
+      binding: self.binding,
       plugin: plugin_name,
       loc: self.loc,
       pos: self.pos,

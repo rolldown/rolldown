@@ -12,9 +12,9 @@ __rolldown_runtime__.registerGraph({
 	ids: ["mod.js", "main.js"],
 	localCount: 2,
 	edges: [[], [0]],
-	dynamicEdges: [[], []]
+	entries: [1]
 });
-//#region mod.js
+// mod.js
 var hmr_temp_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 const hmr_temp_hot = __rolldown_runtime__.createModuleHotContext("mod.js");
 __rolldown_runtime__.registerModule("mod.js", { exports: hmr_temp_exports });
@@ -22,12 +22,10 @@ const value = "hello";
 hmr_temp_hot.accept((mod) => {
 	assert.strictEqual(mod.value, "world");
 });
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
-//#endregion
 
 ```
 
@@ -48,10 +46,10 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["mod.js"],localCount:1,edges:[[]],dynamicEdges:[[]]});
+__rolldown_runtime__.registerGraph({ids:["mod.js"],localCount:1,edges:[[]],stamps:{0:3}});
 //#region mod.js
 import * as import_node_assert_00 from "node:assert";
-__rolldown_runtime__.registerFactory("mod.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("mod.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -61,7 +59,7 @@ __rolldown_runtime__.registerFactory("mod.js", "esm", (function(__rolldown_modul
 			import_node_assert_00.default.strictEqual(mod.value, "world");
 		});
 	} finally {}
-}));
+}), 3);
 
 //#endregion
 ```

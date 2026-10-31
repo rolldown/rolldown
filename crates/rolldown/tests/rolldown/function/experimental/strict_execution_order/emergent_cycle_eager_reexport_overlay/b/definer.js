@@ -1,6 +1,6 @@
 // Side-effect-free definer in chunk B, order-wrapped through the premature deviation. It is the
-// target of the forwarder's re-export hop: on-demand routing imports its initializer at the real
-// consumer, while wrap-all may reach it through the forwarder's wrapper.
+// target of the forwarder's re-export hop: both strict modes import its initializer at the real
+// consumer.
 function makePv() {
   return 'PV';
 }

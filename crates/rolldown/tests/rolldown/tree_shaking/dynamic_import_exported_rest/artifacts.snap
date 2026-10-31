@@ -1,0 +1,64 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## direct.js
+
+```js
+// direct.js
+const value = 42;
+var direct_default = "default";
+export { direct_default as default, value };
+
+```
+
+## local.js
+
+```js
+// local.js
+const kept = "kept";
+export { kept };
+
+```
+
+## main.js
+
+```js
+// main.js
+const { ...direct } = await import("./direct.js");
+const ns = await import("./separate.js");
+const { ...separate } = ns;
+const { value: separateValue } = ns;
+const { second } = ns;
+const { third } = ns;
+const { excluded, ...mixed } = await import("./mixed.js");
+const { ...local } = await import("./local.js");
+const localValue = local.kept;
+export { direct, excluded, localValue, mixed, second, separate, separateValue, third };
+
+```
+
+## mixed.js
+
+```js
+// mixed.js
+const excluded = "excluded";
+const retained = "retained";
+var mixed_default = "default";
+export { mixed_default as default, excluded, retained };
+
+```
+
+## separate.js
+
+```js
+// separate.js
+const value = 42;
+const second = 2;
+const third = 3;
+const restOnly = "rest-only";
+var separate_default = "default";
+export { separate_default as default, restOnly, second, third, value };
+
+```

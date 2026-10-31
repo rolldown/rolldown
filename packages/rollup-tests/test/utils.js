@@ -116,7 +116,7 @@ function normalizeExpectedError(error) {
 	delete clone.frame;
 	delete clone.watchFiles;
 	delete clone.url;
-	delete clone.binding;
+	if (clone.code !== 'SHIMMED_EXPORT') delete clone.binding;
 	if (parseErrorRollupErrorCodes.has(clone.code)) {
 		clone.code = 'PARSE_ERROR';
 	}
@@ -386,7 +386,7 @@ function loadConfigAndRunTest(directory, runTest) {
 		(!config.onlyWindows || platform === 'win32') &&
 		(!config.minNodeVersion || config.minNodeVersion <= Number(/^v(\d+)/.exec(version)[1]))
 	) {
-    if (!config.options?.checks?.pluginTimings) {
+    if (!(config.options?.checks?.bundlerTimings ?? config.options?.checks?.pluginTimings)) {
       config.expectedWarnings ??= [];
       config.expectedWarnings.push("PLUGIN_TIMINGS");
     }

@@ -29,6 +29,7 @@ use super::events::import_is_undefined::ImportIsUndefined;
 use super::events::invalid_annotation::InvalidAnnotation;
 use super::events::invalid_define_config::InvalidDefineConfig;
 use super::events::invalid_option::{InvalidOption, InvalidOptionType};
+use super::events::invalid_tla_format::InvalidTlaFormat;
 use super::events::json_parse::JsonParse;
 use super::events::missing_global_name::MissingGlobalName;
 use super::events::missing_name_option_for_iife_export::MissingNameOptionForIifeExport;
@@ -37,6 +38,7 @@ use super::events::plugin_timings::PluginTimings;
 use super::events::prefer_builtin_feature::PreferBuiltinFeature;
 use super::events::require_tla::RequireTla;
 use super::events::resolve_error::DiagnosableResolveError;
+use super::events::shimmed_export::ShimmedExport;
 use super::events::sourcemap_broken::SourcemapBroken;
 
 use super::events::tsconfig_error::TsConfigError;
@@ -57,6 +59,7 @@ use super::events::{
   invalid_export_option::InvalidExportOption,
   missing_export::MissingExport,
   mixed_exports::MixedExports,
+  module_level_directive::ModuleLevelDirective,
   namespace_conflict::{NamespaceConflict, NamespaceConflictExporter},
   oxc_error::OxcError,
   unresolved_entry::UnresolvedEntry,
@@ -64,6 +67,15 @@ use super::events::{
 
 impl BuildDiagnostic {
   // --- Rollup related
+  pub fn module_level_directive(
+    module_id: String,
+    directive: String,
+    source: ArcStr,
+    span: Span,
+  ) -> Self {
+    Self::new_inner(ModuleLevelDirective { module_id, directive, source, span })
+  }
+
   pub fn entry_cannot_be_external(unresolved_id: impl AsRef<Path>) -> Self {
     Self::new_inner(ExternalEntry { id: unresolved_id.as_ref().to_path_buf() })
   }
@@ -126,6 +138,7 @@ impl BuildDiagnostic {
     source: ArcStr,
     span: oxc::span::Span,
     is_before_function_declaration: bool,
+    is_no_side_effects: bool,
   ) -> Self {
     Self::new_inner(InvalidAnnotation {
       module_id,
@@ -133,6 +146,7 @@ impl BuildDiagnostic {
       source,
       span,
       is_before_function_declaration,
+      is_no_side_effects,
     })
   }
 
@@ -256,6 +270,10 @@ impl BuildDiagnostic {
     Self::new_inner(ImportIsUndefined { filename, source, span, name, stable_importer })
   }
 
+  pub fn shimmed_export(exporter: String, binding: String) -> Self {
+    Self::new_inner(ShimmedExport { exporter, binding }).with_severity_warning()
+  }
+
   pub fn unsupported_feature(
     filename: ArcStr,
     source: ArcStr,
@@ -263,6 +281,10 @@ impl BuildDiagnostic {
     error_message: String,
   ) -> Self {
     Self::new_inner(UnsupportedFeature { source, filename, span, error_message })
+  }
+
+  pub fn invalid_tla_format(filename: ArcStr, source: ArcStr, span: Span, format: ArcStr) -> Self {
+    Self::new_inner(InvalidTlaFormat { filename, source, span, format })
   }
 
   pub fn empty_import_meta(

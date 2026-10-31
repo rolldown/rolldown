@@ -1,4 +1,542 @@
 
+## [1.2.16] - 2026-10-29
+
+### 🚀 Features
+
+- perf-kit: check rendered output against the original build (#11140) by @IWANABETHATGUY
+- perf-kit: node/deno server startup mode (#10601) by @IWANABETHATGUY
+- perf-kit: browser page-load perf harness for coding agents (#10365) by @IWANABETHATGUY
+- devtools: report mode - agent-readable build metrics report (#10364) by @IWANABETHATGUY
+- inline-common-chunks: print record factories parenthesized so they compile eagerly (#11282) by @mattlewis92
+- fold `'key' in ns` on namespace imports with statically known exports (#11333) by @danielroe
+- inline-common-chunks: inline chunks using `import.meta.hot` in dev mode (#11339) by @hyfdev
+- support `experimentalInlineCommonChunks` in dev mode (#11335) by @hyfdev
+- use `INVALID_TLA_FORMAT` error for Rollup compatibility (#11266) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- await bundle.close() in loadConfig and clean up every generated config file (#10347) by @Brooooooklyn
+- deps: update mimalloc-safe to 0.1.69 (#11376) by @shulaoda
+- transform: don't crash when the working directory has been deleted (#11352) by @shulaoda
+- import-glob: follow directory symlinks on the wasm binding (#10624) by @hyfdev
+- tree-shaking: preserve exported rest bindings from dynamic imports (#11365) by @shuvroroy
+- transform: report `tsconfigFilePaths` for a tsconfig resolved through `TsconfigCache` (#11346) by @cainrus
+- tsconfig: don't apply tsconfig when resolving imports from virtual modules (#11089) by @rubas
+- code-splitting: handle emitted entries the same as `input` entries when placing the runtime (#11353) by @IWANABETHATGUY
+- error: make Diagnostic::add_file idempotent (#10610) by @Nic-Polumeyv
+- avoid retaining callable builtin callback owners (#10961) by @IWANABETHATGUY
+- code-splitting: only host the runtime in a chunk that every consumer's entries load (#11293) by @IWANABETHATGUY
+- code-splitting: keep the source order of chunk imports (#11298) by @IWANABETHATGUY
+- dev: don't treat a wrapped module's init as a no-op in dev mode (#11334) by @hyfdev
+- treat `cwd` as a literal path in relative glob filters (#11291) by @onmax
+- deps: update emnapi to 2.0.0-beta.2 and pin `@napi-rs/wasm-runtime` to 1.2.6 (#11292) by @IWANABETHATGUY
+- chunk-import-map: hash stable module ids so keys don't depend on the build folder (#11277) by @mandyheg
+- respect CPU limits when sizing native runtime workers (#11280) by @Brooooooklyn
+- deconflict the namespace of a module without module syntax (#11256) by @IWANABETHATGUY
+- code-splitting: rebuild an absorbed dynamic entry's namespace from what its imports read (#11200) by @mattlewis92
+- escape line terminators in debug-info comments (#11258) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- extract callable builtin hook wrapper (#10964) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- add an in-depth explanation for inline common chunks (#11239) by @hyfdev
+
+### ⚡ Performance
+
+- incremental cycle check for `avoidRedundantChunkLoads` (#11320) by @IWANABETHATGUY
+- avoid copying module code for `renderedLength` and share `chunk.code` across plugins (#11342) by @IWANABETHATGUY
+- count UTF-16 lengths with `simd-utf16-len` (#11259) by @IWANABETHATGUY
+- don't load consola when importing rolldown (#11257) by @magurotuna
+
+### 🧪 Testing
+
+- dev: cover hot updates that need modules the tab never received (#9647) by @matthewdavis-oai
+- dev: add dynamic import rebuild test (#7123) by @sapphi-red
+- code-splitting: import file URLs in fresh-process runtime host tests on Windows (#11354) by @shulaoda
+- esbuild: mark loader_data_url_base64_invalid_utf8 as an intentional difference (#10790) by @CoderSerio
+- watch: fix flaky `watch buildDelay` (#11175) by @Brooooooklyn
+
+### ⚙️ Miscellaneous Tasks
+
+- install `cmake-core` instead of the `cmake` metapackage on FreeBSD (#11361) by @shulaoda
+- deps: update oxc to 0.156.0 (#11326) by @Dunqing
+- stop the Discord notification when the metric workflow fails (#11357) by @IWANABETHATGUY
+- connect to the Void platform before the docs deploy (#11350) by @shulaoda
+- deps: update rust crates (#11297) by @renovate[bot]
+- deps: update dependency vite-plus to v1.4.0 (#11288) by @renovate[bot]
+- deps: update npm packages (#11296) by @renovate[bot]
+- deps: update napi (#11287) by @renovate[bot]
+- deps: update rollup submodule for tests to v4.65.1 (#11331) by @rolldown-guard[bot]
+- deps: update test262 submodule for tests (#11332) by @rolldown-guard[bot]
+- deps: update dependency rolldown-plugin-dts to v0.28.8 (#11286) by @renovate[bot]
+- deps: bump tokio to 1.53.3 (#11317) by @Brooooooklyn
+
+### ❤️ New Contributors
+
+* @mattlewis92 made their first contribution in [#11282](https://github.com/rolldown/rolldown/pull/11282)
+* @shuvroroy made their first contribution in [#11365](https://github.com/rolldown/rolldown/pull/11365)
+* @cainrus made their first contribution in [#11346](https://github.com/rolldown/rolldown/pull/11346)
+* @matthewdavis-oai made their first contribution in [#9647](https://github.com/rolldown/rolldown/pull/9647)
+* @rubas made their first contribution in [#11089](https://github.com/rolldown/rolldown/pull/11089)
+* @danielroe made their first contribution in [#11333](https://github.com/rolldown/rolldown/pull/11333)
+* @onmax made their first contribution in [#11291](https://github.com/rolldown/rolldown/pull/11291)
+* @mandyheg made their first contribution in [#11277](https://github.com/rolldown/rolldown/pull/11277)
+* @magurotuna made their first contribution in [#11257](https://github.com/rolldown/rolldown/pull/11257)
+
+
+## [1.2.15] - 2026-10-21
+
+### 🚀 Features
+
+- rolldown_plugin_vite_resolve: add `isBundled` to pick the browser-external stub format (#11260) by @h-a-n-a
+- dev: mark entry modules in the HMR module graph (#11252) by @h-a-n-a
+- mark module starts with `// <id>` comments instead of `#region` pairs (#11235) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- plugin: stop `this.resolve` recursion between plugins with `skipSelf: true` (#11181) by @anzal1
+- rolldown_plugin_vite_resolve: handle external `require` for `ssr.target: 'webworker'` (#11205) by @sapphi-red
+- rolldown_plugin_vite_build_import_analysis: only wrap dynamic imports with static specifiers in __vitePreload (#10879) by @smeng9
+- strict-execution-order: wrap eager modules that forward wrapped definers (#11186) by @hyfdev
+- chunk-import-map: keep common chunk keys unique when enabling inline common chunks (#11230) by @hyfdev
+- only register signal-exit handler when a trace subscriber is active (#11208) by @DaniilIsupov
+
+### 🧪 Testing
+
+- fold hand-unrolled Rust test tables (#11212) by @Brooooooklyn
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: upgrade oxc to 0.155.0 (#11228) by @Dunqing
+- rollup-tests: retriage failed tests (#11251) by @sapphi-red
+- deps: update rollup submodule for tests to v4.64.12 (#11249) by @rolldown-guard[bot]
+- deps: update test262 submodule for tests (#11242) by @rolldown-guard[bot]
+
+### ❤️ New Contributors
+
+* @anzal1 made their first contribution in [#11181](https://github.com/rolldown/rolldown/pull/11181)
+* @smeng9 made their first contribution in [#10879](https://github.com/rolldown/rolldown/pull/10879)
+* @DaniilIsupov made their first contribution in [#11208](https://github.com/rolldown/rolldown/pull/11208)
+
+
+## [1.2.14] - 2026-10-14
+
+### 🚀 Features
+
+- add `output.charset` option (#11194) by @sapphi-red
+- code-splitting: route independent ESM re-exports per consumer (#11177) by @hyfdev
+
+### 🐛 Bug Fixes
+
+- handle `output.charset: 'ascii'` + `output.minify: false` (#11207) by @sapphi-red
+- tree-shaking: preserve initialization of wrapped ESM re-exports (#11167) by @hyfdev
+- sourcemap: preserve boundaries when tracing has no mapping (#11170) by @sapphi-red
+- strict-execution-order: account for init imports during code splitting (#11162) by @hyfdev
+- strict-execution-order: avoid eager loading through mixed re-exports (#11151) by @hyfdev
+- tree-shake expression statements that coerce known constants (#10825) by @IWANABETHATGUY
+- shim-missing-exports: shim deep namespace reads through default imports (#11184) by @IWANABETHATGUY
+- shim-missing-exports: shim missing static namespace members (#11179) by @hyfdev
+- preserve-entry-signatures: keep internal bindings out of entry exports (#11094) by @hyfdev
+- report ASSIGN_TO_IMPORT for writes to re-exported namespace members (#11148) by @IWANABETHATGUY
+- dev: keep files loaded by the HMR stage watched when the same task rebuilds (#11154) by @Brooooooklyn
+- dev: watch lazily compiled files even when a build starts first (#11152) by @Brooooooklyn
+- cjs: print a CommonJS module's top-level `this` as a wrapper parameter rolldown names (#11135) by @IWANABETHATGUY
+- renamer: keep fixed names off the bindings that would capture them (#11134) by @IWANABETHATGUY
+- renamer: keep an external `require()` local in a CJS module off the top-level names (#11133) by @IWANABETHATGUY
+- rolldown: make a repeated `close()` a no-op (#11142) by @Brooooooklyn
+- avoid renaming entry top-level bindings onto their nested bindings (#11122) by @IWANABETHATGUY
+- renamer: keep generated top-level names off inner bindings (#11121) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- renamer: treat a CJS-wrapped module's root scope as an inner scope (#11130) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- add renaming design and implementation docs (#11131) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- ci: overlap independent setup, checks, and artifacts (#11169) by @hyfdev
+
+### 🧪 Testing
+
+- dev: use dunce::canonicalize so dev engine tests pass on Windows (#11192) by @shulaoda
+- preserve-entry-signatures: cover nested dynamic imports (#11164) by @hyfdev
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: upgrade oxc to 0.154.0 (#11209) by @shulaoda
+- make Security Analysis pass again (security-action v1.0.10, serde_yaml -> saphyr) (#11197) by @Brooooooklyn
+- deps: update rollup submodule for tests to v4.64.5 (#11190) by @rolldown-guard[bot]
+- deps: update test262 submodule for tests (#11191) by @rolldown-guard[bot]
+- deps: update crate-ci/typos action to v1.51.1 (#11174) by @renovate[bot]
+- vite-tests: link the workspace rolldown into the Vite clone again (#11147) by @Brooooooklyn
+
+
+## [1.2.13] - 2026-10-07
+
+### 🚀 Features
+
+- rolldown_plugin_vite_import_glob: follow file creation and deletion via hotUpdate (#10550) by @shulaoda
+- inline-common-chunks: deduplicate shared code along known loading paths (#11093) by @hyfdev
+- rolldown_plugin_vite_import_glob: record a matcher per glob call in dev (#10592) by @shulaoda
+- rolldown_plugin_vite_import_glob: watch the directory each glob reads (#10549) by @shulaoda
+- watch: hand watch.exclude to notify as its ignore filter (#11008) by @shulaoda
+- dev: add `experimental.devMode.hotUpdate` option (#11123) by @h-a-n-a
+
+### 🐛 Bug Fixes
+
+- renamer: check the printed name of namespace-alias imports for captures (#11129) by @IWANABETHATGUY
+- devtools: honor `devtools.sessionId` by @Brooooooklyn
+- renamer: keep a renamed nested binding off its module's top-level bindings (#11128) by @IWANABETHATGUY
+- dev: keep `this` undefined when calling an imported function in HMR patches and lazy chunks (#11126) by @h-a-n-a
+- dev: read string-named imports correctly in HMR patches and lazy chunks (#11127) by @h-a-n-a
+- sanitize preserveModules chunk names after resolving the relative path (#11087) by @waltuov
+- keep the `with` clause on bare external imports (#11100) by @IWANABETHATGUY
+- generator: filter DISABLE_JS_HOOK bits from generated HookUsage (#10346) by @Brooooooklyn
+- dev: make the module factory async for top-level await (#11118) by @h-a-n-a
+- node: give each renderChunk call its own meta object (#11115) by @Brooooooklyn
+- honor `externalLiveBindings` for imported exports (#11048) by @camc314
+- dev: keep a late payload from replacing newer module code (#11030) by @h-a-n-a
+- binding: use-after-free in async `transform` with a `TsconfigCache` (#11080) by @shulaoda
+- fail on chunk syntax errors and escape export names once (#11051) by @hyfdev
+- dev: ship newly imported modules the client never received (#11029) by @h-a-n-a
+- code-splitting: avoid cycles from redundant re-export initialization (#11073) by @hyfdev
+- link: treat re-exports of the same external binding as one export (#11069) by @IWANABETHATGUY
+- escape namespace properties in IIFE and UMD output (#11085) by @hyfdev
+- escape dependency paths in CJS and UMD output (#11084) by @hyfdev
+- use computed access for arbitrary import names (#11083) by @hyfdev
+- generate valid bindings for shimmed exports (#11082) by @hyfdev
+- dev: reload the page when an HMR update fails after merging its edit (#11031) by @h-a-n-a
+- dev/lazy: ship the deps of a module that a patch shipped but never ran (#11028) by @h-a-n-a
+- code-splitting: don't move init calls in front of unwrapped JSON modules (#11062) by @IWANABETHATGUY
+- escape export names in `defineProperty` calls (#11047) by @camc314
+
+### 📚 Documentation
+
+- say the CLI bundles multiple configs one after another (#11111) by @Brooooooklyn
+- add `renderChunk` hook filter docs (#11065) by @sapphi-red
+
+### ⚡ Performance
+
+- use `concat_string!` instead of `format!` for plain string joins (#11139) by @IWANABETHATGUY
+- utils: evaluate each `concat_string!` argument once (#11105) by @IWANABETHATGUY
+- json: escape `JSON.parse` string with `json-escape-simd` (#11104) by @IWANABETHATGUY
+- unwrap JSON modules with a non-object root (#11066) by @IWANABETHATGUY
+
+### 🧪 Testing
+
+- inline-common-chunks: fix flaky inlineCommonChunks concurrent imports (#11088) by @hyfdev
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: upgrade oxc to 0.153.0 (#11109) by @camc314
+- update pnpm to v12 (#10876) by @btea
+- deps: update pnpm to v11.28.0 (#11049) by @renovate[bot]
+- deps: update rollup submodule for tests to v4.64.0 (#11116) by @rolldown-guard[bot]
+- deps: update napi (#11137) by @renovate[bot]
+- scripts: spawn the rolldown CLI without a shell in setup-vite (#10875) by @Brooooooklyn
+- deps: bump `@napi-rs/wasm-runtime` to `~1.2.5` (#11117) by @shulaoda
+- deps: update napi (#11108) by @renovate[bot]
+- deps: update taiki-e/install-action action to v2.87.22 (#11096) by @renovate[bot]
+- deps: update npm packages (#11095) by @renovate[bot]
+- deps: update rust crates (#11097) by @renovate[bot]
+- deps: update napi (#11063) by @renovate[bot]
+- deps: update dependency rust to v1.99.0 (#11071) by @renovate[bot]
+- deps: update dependency vite-plus to v1 (#11056) by @renovate[bot]
+
+
+## [1.2.12] - 2026-09-30
+
+### 🚀 Features
+
+- inline common chunks containing import() and deduplicate shared code in lazy chunks (#11034) by @hyfdev
+- experimental `inlineCommonChunks` support (#10899) by @hyfdev
+- dev: ship imported bindings for HMR partial accept (#10856) by @h-a-n-a
+
+### 🐛 Bug Fixes
+
+- chunking: re-derive chunk exec orders after the runtime leaves its host chunk (#11005) by @hyfdev
+- code-splitting: gate member-read init paths on the reading statement (#11039) by @hyfdev
+- code-splitting: retain initialization paths through re-exported namespaces (#11037) by @hyfdev
+- dev: reject non-ESM output formats in dev mode (#11038) by @h-a-n-a
+- dev: align `import.meta.hot.accept` deps with Vite (#10997) by @h-a-n-a
+- dev: clear the resolver cache when a file is created or deleted (#10986) by @waltuov
+- error: name the resolved specifier in unresolved import diagnostics (#11014) by @linyiru
+- make entries-aware chunk merging deterministic (#11002) by @hyfdev
+- watch: avoid restarting macOS watcher for unchanged paths (#10992) by @sep2
+
+### 🚜 Refactor
+
+- dev: ship the dev runtime entry as one file (#10998) by @h-a-n-a
+- binding: remove `__internalForcePanic` (#10989) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- fix cloudflare preview builds (#10996) by @sapphi-red
+- fix build config loader warning (#10994) by @sapphi-red
+- deps: use Vite 8 (#10993) by @sapphi-red
+
+### ⚡ Performance
+
+- dev: only ship rows with dynamic edges in registerGraph (#11019) by @h-a-n-a
+
+### 🧪 Testing
+
+- code-splitting: cover more re-exported namespace shapes (#11042) by @hyfdev
+- webcontainer: cover the WebContainer download fallback in plain Node (#10966) by @shulaoda
+- dev: pin the runtime entry file layout that Vite serves (#10983) by @h-a-n-a
+
+### ⚙️ Miscellaneous Tasks
+
+- pin VOID_API_URL for the docs deploy (#11041) by @shulaoda
+- opt into the WebContainer smoke test for napi bumps and loader changes (#10967) by @shulaoda
+- deps: upgrade oxc to 0.152.0 (#11018) by @camc314
+- deps: update rust crates (#11012) by @renovate[bot]
+- deps: update npm packages (#11011) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.50.3 (#11023) by @renovate[bot]
+- deps: update test262 submodule for tests (#11022) by @rolldown-guard[bot]
+- deps: update rollup submodule for tests to v4.63.5 (#11021) by @rolldown-guard[bot]
+- deps: update dependency vite-plus to v1 (#11017) by @renovate[bot]
+- deps: update github actions (#11010) by @renovate[bot]
+- remove `CLAUDE.md` (#10925) by @iiio2
+- verify release debug info by matching file IDs (#10988) by @IWANABETHATGUY
+- deps: update rollup submodule for tests to v4.63.4 (#10940) by @rolldown-guard[bot]
+
+### ❤️ New Contributors
+
+* @waltuov made their first contribution in [#10986](https://github.com/rolldown/rolldown/pull/10986)
+* @linyiru made their first contribution in [#11014](https://github.com/rolldown/rolldown/pull/11014)
+* @sep2 made their first contribution in [#10992](https://github.com/rolldown/rolldown/pull/10992)
+
+
+## [1.2.11] - 2026-09-24
+
+### 🚀 Features
+
+- watch: report only file events (#10974) by @shulaoda
+
+### 🐛 Bug Fixes
+
+- sourcemap: preserve names through `collapse_sourcemaps` (#9486) by @eoin
+- watch: map metadata events by kind and missing paths as deleted (#10973) by @shulaoda
+
+### 🚜 Refactor
+
+- rolldown_fs_watcher: hand the handler file events instead of notify results (#10980) by @shulaoda
+- rolldown_fs_watcher: share one event handler adapter between the notify watchers (#10979) by @shulaoda
+- rolldown_fs_watcher: register every path with one watch mode (#10978) by @shulaoda
+- rolldown_fs_watcher: tweak the backend traits and the event mapping (#10977) by @shulaoda
+- watch: translate notify events inside FsWatcher (#10972) by @shulaoda
+
+### 📚 Documentation
+
+- watch: update the fs watcher layout and the dev coordinator message (#10981) by @shulaoda
+- watch: document the event translation in FsWatcher (#10975) by @shulaoda
+
+### ◀️ Revert
+
+- "perf(dev/lazy): fetch a lazy route in one request" (#10789) (#10982) by @h-a-n-a
+
+### ❤️ New Contributors
+
+* @eoin made their first contribution in [#9486](https://github.com/rolldown/rolldown/pull/9486)
+
+
+## [1.2.10] - 2026-09-23
+
+### 🚀 Features
+
+- rolldown_plugin_esm_external_require: prefer 'module.exports' over a namespace spread (#10901) by @isker
+- watch: support directories in addWatchFile (#10944) by @shulaoda
+- label code-splitting timing rows (#10896) by @IWANABETHATGUY
+- separate code-splitting group timing rows (#10892) by @IWANABETHATGUY
+- clarify callback owners in the timing report (#10890) by @IWANABETHATGUY
+- add checks.bundlerTimings with deprecated pluginTimings alias (#10883) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- code-splitting: initialize leaves behind a re-exported namespace import (#10694) by @hyfdev
+- node: record the WASI target on the WebContainer binding fallback (#10952) by @shulaoda
+- dev: force incremental build on in DevEngine::new (#10958) by @o-alexandrov
+- tree-shaking: propagate side effects through cycles (#10893) by @IWANABETHATGUY
+- deconflict CJS locals that shadow a renamed require wrapper (#10793) by @logaretm
+- include group indexes in labeled `codeSplitting` timing rows (#10916) by @IWANABETHATGUY
+- docs: type-check Algolia `indices` option (#10934) by @shulaoda
+- docs: restore Algolia search (#10929) by @isker
+- tell code-splitting timing rows apart by position (#10903) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- rolldown_fs_watcher: remove the single-path API (#10950) by @shulaoda
+- dev: register watch files through FsWatcher (#10949) by @shulaoda
+- watch: let FsWatcher own the watched paths (#10948) by @shulaoda
+- watch: identify watch files by normalized absolute path (#10943) by @shulaoda
+- plugin: build a plugin-resolved `ResolvedId` in one place (#10921) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- dev: add HMR design, align dev docs and engine comments (#10271) by @h-a-n-a
+
+### ⚡ Performance
+
+- batch `sourcemapPathTransform` calls (#10763) by @IWANABETHATGUY
+- batch `sourcemapIgnoreList` calls (#10762) by @IWANABETHATGUY
+- hmr: drop the unused kind argument from registerFactory (#10915) by @h-a-n-a
+
+### 🧪 Testing
+
+- handle Windows paths in sourcemap callback tests (#10942) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- replace custom `ban-expect-assertions` JS lint with builtin `no-restricted-properties` (#10933) by @isker
+- deps: update napi (#10959) by @renovate[bot]
+- deps: upgrade oxc to 0.151.0 (#10939) by @camc314
+- deps: update test262 submodule for tests (#10941) by @rolldown-guard[bot]
+- deps: update npm packages (#10931) by @renovate[bot]
+- deps: update napi (#10928) by @renovate[bot]
+- deps: update dependency vite-plus to v0.3.3 (#10914) by @renovate[bot]
+- deps: update rust crates (#10932) by @renovate[bot]
+- deps: update github actions (#10930) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.28.6 (#10924) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.50.2 (#10917) by @renovate[bot]
+- deps: update dependency @napi-rs/cli to v3.10.4 (#10913) by @renovate[bot]
+- deps: update napi (#10897) by @renovate[bot]
+
+### ❤️ New Contributors
+
+* @o-alexandrov made their first contribution in [#10958](https://github.com/rolldown/rolldown/pull/10958)
+
+
+## [1.2.9] - 2026-09-16
+
+### 🚀 Features
+
+- add `MODULE_LEVEL_DIRECTIVE` warning (#10791) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- handle CommonJS exports through top-level `this` (#10872) by @IWANABETHATGUY
+- scripts: make setup-vite CLI invocation work on Windows (#10885) by @shulaoda
+- remove deleted property from output bundle proxy target (#10815) by @Vladexy88x
+- treat module-scope `await using` as top-level await (#10739) by @MarshallOfSound
+- watch: preserve plugin attribution in warnings (#10473) by @Nic-Polumeyv
+- test-dev-server: link the workspace rolldown before building vite (#10857) by @h-a-n-a
+- minify: preserve annotation comments when minified (#10854) (#10855) by @justonemorenight
+
+### ⚡ Performance
+
+- dev/lazy: fetch a lazy route in one request (#10789) by @h-a-n-a
+- plugin: reduce binding binary size (#10776) by @Boshen
+- vite-reporter: reuse emitted sourcemap sizes (#10841) by @hyfdev
+
+### 🧪 Testing
+
+- dev: full-bundle-mode regression test for cyclic import binding (#9946) (#9947) by @ShMcK
+- cover asset option callback timings (#10870) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- wait for npm bindings before publishing rolldown (#10866) by @shulaoda
+- deps: update dependency @napi-rs/cli to v3.10.1 (#10889) by @renovate[bot]
+- deps: update napi (#10888) by @renovate[bot]
+- compress debug info archives with zstd (#10778) by @IWANABETHATGUY
+- publish split debug info for release bindings (#10777) by @IWANABETHATGUY
+- rolldown_utils: simplify MIME guessing and remove UTF-8 check bypass (#10884) by @shulaoda
+- add npm bugs metadata for rolldown (#9694) by @kingshuaishuai
+- deps: upgrade oxc to 0.150.0 (#10877) by @camc314
+- deps: update rust crates (#10869) by @renovate[bot]
+- deps: update dependency vite-plus to v0.3.2 (#10878) by @renovate[bot]
+- deps: update rollup submodule for tests to v4.63.3 (#10880) by @rolldown-guard[bot]
+- deps: update test262 submodule for tests (#10881) by @rolldown-guard[bot]
+- deps: update github actions (#10867) by @renovate[bot]
+- deps: update npm packages (#10868) by @renovate[bot]
+- deps: update napi to v3.12.4 (#10862) by @renovate[bot]
+- deps: update napi (#10861) by @renovate[bot]
+
+### ❤️ New Contributors
+
+* @Vladexy88x made their first contribution in [#10815](https://github.com/rolldown/rolldown/pull/10815)
+* @MarshallOfSound made their first contribution in [#10739](https://github.com/rolldown/rolldown/pull/10739)
+* @kingshuaishuai made their first contribution in [#9694](https://github.com/rolldown/rolldown/pull/9694)
+* @ShMcK made their first contribution in [#9947](https://github.com/rolldown/rolldown/pull/9947)
+* @justonemorenight made their first contribution in [#10855](https://github.com/rolldown/rolldown/pull/10855)
+
+
+## [1.2.8] - 2026-09-09
+
+### 🚀 Features
+
+- dev: add `hotUpdate` dev option to gate the `hotUpdate` hook (#10837) by @h-a-n-a
+- docs: add wrangler (#10821) by @mdong1909
+
+### 🐛 Bug Fixes
+
+- dev: clean stale dynamic entry references after partial scans (#10846) by @shulaoda
+- include external wildcard re-exports in `OutputChunk.imports` (#10845) by @isker
+
+### 📚 Documentation
+
+- document dynamic entry cache merging after partial scans (#10848) by @shulaoda
+
+### ⚡ Performance
+
+- cache `getModuleInfo` during code splitting (#10838) by @hyfdev
+
+### 🧪 Testing
+
+- dev: cover stale dynamic entry references after partial scans (#10847) by @shulaoda
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update dependency @napi-rs/cli to v3.9.0 (#10816) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.28.5 (#10827) by @renovate[bot]
+- deps: update dependency vite-plus to v0.3.1 (#10842) by @renovate[bot]
+- deps: upgrade oxc to 0.149.0 (#10834) by @camc314
+- deps: update rust crates (#10830) by @renovate[bot]
+- deps: update npm packages (#10832) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.50.1 (#10824) by @renovate[bot]
+- deps: update test262 submodule for tests (#10836) by @rolldown-guard[bot]
+- deps: update github actions (#10831) by @renovate[bot]
+- deps: update dependency rust to v1.98.1 (#10819) by @renovate[bot]
+
+### ❤️ New Contributors
+
+* @isker made their first contribution in [#10845](https://github.com/rolldown/rolldown/pull/10845)
+
+
+## [1.2.7] - 2026-09-02
+
+### 🐛 Bug Fixes
+
+- rolldown_binding: make `PreRenderedChunk.facadeModuleId` nullable like Rollup (#10810) by @IWANABETHATGUY
+- plugin_timings: reword the warning so it does not contradict itself (#10788) by @IWANABETHATGUY
+- model a facade's host import in the fold cycle check (#10743) by @ulrichstark
+
+### 🧪 Testing
+
+- dev: add circular reexport test (#10563) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update npm packages (#10795) by @renovate[bot]
+- deps: update rust crates (#10794) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.28.3 (#10805) by @renovate[bot]
+- renovate: disable oxc auto-updates (#10813) by @IWANABETHATGUY
+- deps: upgrade oxc to 0.148.0 (#10809) by @camc314
+- deps: update pnpm to v11.24.0 (#10803) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.50.0 (#10806) by @renovate[bot]
+- deps: update test262 submodule for tests (#10808) by @rolldown-guard[bot]
+- deps: update rollup submodule for tests to v4.63.1 (#10807) by @rolldown-guard[bot]
+- deps: update crate-ci/typos action to v1.49.1 (#10796) by @renovate[bot]
+- deps: update github actions (#10749) by @renovate[bot]
+
+
 ## [1.2.6] - 2026-08-26
 
 ### 🚀 Features

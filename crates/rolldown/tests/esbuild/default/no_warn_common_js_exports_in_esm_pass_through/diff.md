@@ -7,11 +7,10 @@ module.exports = 3;
 ```
 ### rolldown
 ```js
-//#region cjs-in-esm.js
+// cjs-in-esm.js
 let foo = 1;
 exports.foo = 2;
 module.exports = 3;
-//#endregion
 export { foo };
 
 ```
@@ -39,12 +38,11 @@ module.exports = foo;
 ```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
 import { foo } from "bar";
-//#region import-in-cjs.js
+// import-in-cjs.js
 var require_import_in_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	exports.foo = foo;
 	module.exports = foo;
 }));
-//#endregion
 export default require_import_in_cjs();
 
 ```
@@ -73,11 +71,10 @@ console.log(module, exports);
 ### rolldown
 ```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
-//#region no-warnings-here.js
+// no-warnings-here.js
 var require_no_warnings_here = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	console.log(module, exports);
 }));
-//#endregion
 export default require_no_warnings_here();
 
 ```

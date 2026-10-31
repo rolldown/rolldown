@@ -67,7 +67,7 @@ impl Plugin for ViteTransformPlugin {
     let ret = Parser::new(&allocator, args.code, source_type)
       .with_options(ParseOptions { preserve_parens: false, ..ParseOptions::default() })
       .parse();
-    if ret.panicked || !ret.diagnostics.is_empty() {
+    if ret.fatal_error || !ret.diagnostics.is_empty() {
       Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
         ret.diagnostics,
         args.code,

@@ -1,0 +1,13 @@
+{
+  "config": {
+    "moduleTypes": {
+      ".js": "jsx"
+    },
+    "transform": {
+      "jsx": {
+        "runtime": "automatic",
+        "importSource": "./local"
+      }
+    }
+  }
+}

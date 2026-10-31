@@ -3,9 +3,9 @@
 // In on-demand mode the consumer-local resolver gives the entry's live `pv` obligation directly
 // to `definer`. The forwarder's non-empty retained-path overlay must not also reference
 // `init_definer`: doing so would add a phantom A -> B edge which, together with chunk B's eager
-// import of chunk A's CJS carrier, would manufacture an A <-> B cycle. In wrap-all mode the
-// conservative wrapper path may still contain that edge, but it must defer the carrier read so
-// both modes produce the same initialized values.
+// import of chunk A's CJS carrier, would manufacture an A <-> B cycle. Wrap-all resolves `pv` the
+// same way and leaves the forwarder's wrapper empty; it also defers the carrier read, so both
+// modes produce the same initialized values.
 //
 // Source order pins the expected evaluation: a-first (A), the eager carrier reader (B), e-first
 // (entry chunk), then the definer subtree (B). The entry-chunk-hosted e-first runs after the

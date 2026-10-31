@@ -26,7 +26,11 @@
         ".vitepress/scripts/extract-options-plugin.ts", // used as a string path in TypeDoc plugin config
         ".vitepress/scripts/custom-theme-plugin.ts", // used as a string path in TypeDoc plugin config
       ],
-      "ignoreDependencies": ["typedoc-plugin-merge-modules", "typedoc-vitepress-theme"],
+      "ignoreDependencies": [
+        "typedoc-plugin-merge-modules",
+        "typedoc-vitepress-theme",
+        "wrangler", // used by the external Cloudflare Workers Builds deploy command
+      ],
     },
     "packages/bench": {
       "entry": ["vue-entry.js"],
@@ -60,6 +64,12 @@
         "meta-info-lib", // fixture dependency in packages/rolldown/tests/behaviors/emit-debug-data
         "unused-lib", // fixture dependency in packages/rolldown/tests/behaviors/emit-debug-data
       ],
+    },
+    "packages/perf-kit": {
+      // `lib/*.mjs` are toolkit modules: each exports its own primitives (VLQ decode,
+      // coverage painting, threshold constants) so they stay individually readable and
+      // unit-testable, even where only the module itself consumes them today.
+      "ignoreExportsUsedInFile": true,
     },
     "packages/rollup-tests": {
       "entry": ["src/**/*.js", "test/**/*.{js,ts}"],

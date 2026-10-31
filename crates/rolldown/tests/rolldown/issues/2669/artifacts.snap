@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 function nested1() {
 	function x() {}
 	function x$1() {}
@@ -28,7 +28,6 @@ function nested2() {
 	];
 }
 const x = "x";
-//#endregion
 export { nested1, nested2, x };
 
 ```

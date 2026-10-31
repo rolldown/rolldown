@@ -4,12 +4,13 @@ pub mod dynamic_import;
 mod hmr;
 pub mod impl_visit;
 mod import_analyzer;
+mod independent_init;
 mod new_url;
 pub mod stmt_eval_analyzer;
 mod top_level_import_read;
 
 use arcstr::ArcStr;
-use const_eval::{ConstEvalCtx, try_extract_const_literal};
+use const_eval::{ConstEvalCtx, eval_can_assign, try_extract_const_literal};
 use oxc::ast::ast::{BindingPattern, Expression, ImportExpression};
 use oxc::ast::{AstKind, ast};
 use oxc::semantic::{NodeId, Reference, ScopeFlags, Scoping};
@@ -27,7 +28,7 @@ use oxc::{
   span::{GetSpan, Span},
 };
 use oxc_index::IndexVec;
-use oxc_str::CompactStr;
+use oxc_str::{CompactStr, JSStr};
 use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicImportUsageInfo};
 use rolldown_common::{
   ConstExportMeta, ConstantValue, DynamicImportExprInfo, EcmaModuleAstUsage, EcmaViewMeta,
@@ -41,7 +42,7 @@ use rolldown_ecmascript_utils::FunctionExt;
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
 use rolldown_std_utils::PathExt;
 use rolldown_utils::concat_string;
-use rolldown_utils::ecmascript::legitimize_identifier_name;
+use rolldown_utils::ecmascript::{legitimize_identifier_name, to_usv_str};
 use rolldown_utils::indexmap::FxIndexMap;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::borrow::Cow;
@@ -111,11 +112,17 @@ pub struct ScanResult {
   /// we don't know the ImportRecord related ModuleIdx yet, so use ImportRecordIdx as key
   /// temporarily
   pub dynamic_import_rec_exports_usage: FxHashMap<ImportRecordIdx, DynamicImportExportsUsage>,
+  /// See `EcmaView::dynamic_import_called_names`.
+  pub dynamic_import_called_names: FxHashMap<ImportRecordIdx, FxHashSet<CompactStr>>,
   /// `new URL('...', import.meta.url)`
   pub new_url_references: FxHashMap<NodeId, ImportRecordIdx>,
+  /// See `EcmaView::namespace_in_checks`.
+  pub namespace_in_checks: FxHashMap<NodeId, CompactStr>,
   /// `import.meta.ROLLDOWN_FILE_URL_<referenceId>[_<urlId>]`, one entry per occurrence.
   pub rolldown_file_url_references: Vec<RolldownFileUrlReference>,
   pub this_expr_replace_map: FxHashMap<NodeId, ThisExprReplaceKind>,
+  /// See `EcmaView::cjs_this_ref`.
+  pub cjs_this_ref: Option<SymbolRef>,
   pub hmr_info: HmrInfo,
   pub hmr_hot_ref: Option<SymbolRef>,
   pub directive_range: Vec<Span>,
@@ -160,6 +167,8 @@ pub struct AstScanner<'me, 'ast> {
   top_level_this_expr_set: FxHashSet<NodeId>,
   /// A flag to resolve `this` appear with propertyKey in class
   is_nested_this_inside_class: bool,
+  /// The last top-level statement that read `this` inside a function or class.
+  last_nested_this_stmt_idx: Option<StmtInfoIdx>,
   /// Used in commonjs module it self
   cjs_named_exports_usage: FxHashMap<CompactStr, CommonjsExportSymbolUsage>,
   /// Set when `module.exports = <value>` is detected. All prior `exports.xxx`
@@ -173,6 +182,8 @@ pub struct AstScanner<'me, 'ast> {
   /// Symbol IDs of namespace imports (`import * as ns from '...'`).
   /// Used to treat property reads on namespace objects as side-effect-free.
   namespace_object_symbol_ids: FxHashSet<SymbolId>,
+  /// Root `var` bindings that module-level code reads before their declaration.
+  vars_read_before_declaration: FxHashSet<SymbolId>,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -221,9 +232,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       self_referenced_class_decl_symbol_ids: FxHashSet::default(),
       hashbang_range: None,
       dynamic_import_rec_exports_usage: FxHashMap::default(),
+      dynamic_import_called_names: FxHashMap::default(),
       new_url_references: FxHashMap::default(),
+      namespace_in_checks: FxHashMap::default(),
       rolldown_file_url_references: Vec::new(),
       this_expr_replace_map: FxHashMap::default(),
+      cjs_this_ref: None,
       hmr_info: HmrInfo::default(),
       hmr_hot_ref,
       directive_range: vec![],
@@ -261,6 +275,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       dynamic_import_usage_info: DynamicImportUsageInfo::default(),
       top_level_this_expr_set: FxHashSet::default(),
       is_nested_this_inside_class: false,
+      last_nested_this_stmt_idx: None,
       cjs_named_exports_usage: FxHashMap::from_iter([(
         "__esModule".into(),
         CommonjsExportSymbolUsage { read: 0, write: 0, bailout: true },
@@ -270,6 +285,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       current_comment_idx: 0,
       untranspiled_syntax: UntranspiledSyntax::empty(),
       namespace_object_symbol_ids: FxHashSet::default(),
+      vars_read_before_declaration: FxHashSet::default(),
     }
   }
 
@@ -355,6 +371,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       self.result.this_expr_replace_map = generate_replace_this_expr_map(
         &self.top_level_this_expr_set,
         if exports_kind.is_commonjs() {
+          // Top-level `this` is the module's exports object, an implicit `exports` reference.
+          // See internal-docs/linking/determine-module-exports-kind/implementation.md.
+          self.result.ast_usage.insert(EcmaModuleAstUsage::ExportsRef);
+          self.result.cjs_this_ref =
+            Some(self.result.symbol_ref_db.create_facade_root_symbol_ref("this"));
           ThisExprReplaceKind::Exports
         } else {
           ThisExprReplaceKind::Context
@@ -414,6 +435,13 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         for local_export in exports {
           bailout_inlined_cjs_exports_symbol_ids.insert(local_export.referenced.symbol);
         }
+      }
+    }
+
+    // A `var` read before its declaration holds `undefined` there and its initializer later.
+    for symbol_id in &self.vars_read_before_declaration {
+      if let Some(flags) = self.result.symbol_ref_db.flags.get_mut(symbol_id) {
+        flags.remove(SymbolRefFlags::IsNotReassigned);
       }
     }
 
@@ -554,9 +582,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   fn add_local_export(&mut self, export_name: &str, local: SymbolId, span: Span) {
     let symbol_ref: SymbolRef = (self.immutable_ctx.idx, local).into();
 
-    // If there is any write reference to the local variable, it is reassigned.
+    // A repeated `var` declaration assigns without a write reference.
     let is_reassigned =
-      self.result.symbol_ref_db.get_resolved_references(local).any(Reference::is_write);
+      self.result.symbol_ref_db.get_resolved_references(local).any(Reference::is_write)
+        || !self.result.symbol_ref_db.scoping().symbol_redeclarations(local).is_empty();
 
     let ref_flags = symbol_ref.flags_mut(&mut self.result.symbol_ref_db);
     if !is_reassigned {
@@ -571,6 +600,76 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         came_from_commonjs: false,
       },
     );
+  }
+
+  /// Called after visiting a top-level statement that reads no `this` inside a function or class.
+  /// See internal-docs/code-splitting/implementation.md.
+  fn mark_functions_never_reading_this(&mut self, stmt: &ast::Statement<'ast>) {
+    // A direct `eval` can read `this`, or reassign a binding without a write reference.
+    if self.result.symbol_ref_db.scoping().root_scope_flags().contains_direct_eval() {
+      return;
+    }
+    let declaration = match stmt {
+      ast::Statement::ExportDeclaration(decl) => Some(&decl.declaration),
+      ast::Statement::ExportDefaultDeclaration(decl) => {
+        match &decl.declaration {
+          ast::ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
+            if let Some(id) = &func.id {
+              self.mark_never_reads_this(id.symbol_id());
+            } else {
+              self.mark_default_export_never_reads_this();
+            }
+          }
+          ast::ExportDefaultDeclarationKind::FunctionExpression(_)
+          | ast::ExportDefaultDeclarationKind::ArrowFunctionExpression(_) => {
+            self.mark_default_export_never_reads_this();
+          }
+          _ => {}
+        }
+        return;
+      }
+      _ => stmt.as_declaration(),
+    };
+    match declaration {
+      Some(ast::Declaration::FunctionDeclaration(func)) => {
+        if let Some(id) = &func.id {
+          self.mark_never_reads_this(id.symbol_id());
+        }
+      }
+      Some(ast::Declaration::VariableDeclaration(var_decl)) => {
+        for decl in &var_decl.declarations {
+          if let BindingPattern::BindingIdentifier(id) = &decl.id
+            && matches!(
+              decl.init,
+              Some(Expression::FunctionExpression(_) | Expression::ArrowFunctionExpression(_))
+            )
+          {
+            self.mark_never_reads_this(id.symbol_id());
+          }
+        }
+      }
+      _ => {}
+    }
+  }
+
+  fn mark_never_reads_this(&mut self, symbol_id: SymbolId) {
+    let scoping = self.result.symbol_ref_db.scoping();
+    // A repeated `var` declaration assigns without a write reference.
+    if scoping.symbol_redeclarations(symbol_id).is_empty()
+      && !scoping.get_resolved_references(symbol_id).any(Reference::is_write)
+    {
+      let symbol_ref: SymbolRef = (self.immutable_ctx.idx, symbol_id).into();
+      symbol_ref.flags_mut(&mut self.result.symbol_ref_db).insert(SymbolRefFlags::NeverReadsThis);
+    }
+  }
+
+  /// The binding of an anonymous default export has no name, so no code can reassign it.
+  fn mark_default_export_never_reads_this(&mut self) {
+    self
+      .result
+      .default_export_ref
+      .flags_mut(&mut self.result.symbol_ref_db)
+      .insert(SymbolRefFlags::NeverReadsThis);
   }
 
   fn add_local_default_export(&mut self, local: SymbolId, span: Span) {
@@ -683,7 +782,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   fn scan_export_all_decl(&mut self, decl: &ExportAllDeclaration) {
     let id = self.add_import_record(
-      decl.source.value.as_str(),
+      &to_usv_str(decl.source.value),
       ImportKind::Import,
       decl.source.span(),
       decl.span,
@@ -725,7 +824,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   fn scan_export_from_decl(&mut self, decl: &ExportFromDeclaration<'ast>) {
     let source = &decl.source;
     let record_idx = self.add_import_record(
-      source.value.as_str(),
+      &to_usv_str(source.value),
       ImportKind::Import,
       source.span(),
       decl.span,
@@ -901,7 +1000,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   fn scan_import_decl(&mut self, decl: &ImportDeclaration) {
     let rec_id = self.add_import_record(
-      decl.source.value.as_str(),
+      &to_usv_str(decl.source.value),
       ImportKind::Import,
       decl.source.span(),
       decl.span,
@@ -1051,7 +1150,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           });
         }
         AstKind::ComputedMemberExpression(expr) => {
-          if let Some(name) = expr.static_property_name() {
+          if let Some(name) = expr.static_property_name().and_then(JSStr::as_str) {
             node_id = ancestor_ast.node_id();
             span = ancestor_ast.span();
             props.push(MemberExprProp {
@@ -1067,6 +1166,21 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
     }
     (!props.is_empty()).then_some((node_id, span, props))
+  }
+
+  /// Returns the `BinaryExpression` node, its span and `key` if the visited identifier is `ns` in
+  /// `'key' in ns`.
+  pub fn try_extract_parent_in_operator_key(&self) -> Option<(NodeId, Span, CompactStr)> {
+    let AstKind::BinaryExpression(expr) = self.visit_path.last()? else {
+      return None;
+    };
+    if expr.operator != ast::BinaryOperator::In {
+      return None;
+    }
+    let Expression::StringLiteral(key) = &expr.left else {
+      return None;
+    };
+    Some((expr.node_id(), expr.span, key.value.as_str()?.into()))
   }
 
   // `console` in `console.log` is a global reference
@@ -1118,9 +1232,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 
   pub fn add_constant_symbol(&mut self, symbol_id: SymbolId, value: ConstExportMeta) {
+    let scoping = self.result.symbol_ref_db.scoping();
+    // A repeated `var` declaration assigns without a write reference.
     let is_mutated = !self.result.symbol_ref_db.is_facade_symbol(symbol_id)
-      && self.result.symbol_ref_db.scoping().symbol_is_mutated(symbol_id);
-    if is_mutated {
+      && (scoping.symbol_is_mutated(symbol_id)
+        || !scoping.symbol_redeclarations(symbol_id).is_empty());
+    if is_mutated || eval_can_assign(scoping, symbol_id) {
       return;
     }
     self.result.constant_export_map.insert(symbol_id, value);

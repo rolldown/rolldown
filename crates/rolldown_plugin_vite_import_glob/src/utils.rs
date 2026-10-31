@@ -14,8 +14,11 @@ use rolldown_plugin_utils::{
   to_string_literal,
 };
 use rolldown_std_utils::relative_path_to_slash;
+use rolldown_utils::ecmascript::to_usv_str;
 use string_wizard::MagicString;
 use sugar_path::SugarPath;
+
+use crate::matcher::GlobMatcher;
 
 pub struct GlobImportVisit<'a> {
   pub ctx: &'a PluginContext,
@@ -27,6 +30,8 @@ pub struct GlobImportVisit<'a> {
   pub magic_string: Option<MagicString<'a>>,
   pub import_decls: Vec<String>,
   pub errors: Vec<anyhow::Error>,
+  pub is_dev_mode: bool,
+  pub matchers: Vec<GlobMatcher>,
 }
 
 impl<'ast> VisitJs<'ast> for GlobImportVisit<'_> {
@@ -76,6 +81,19 @@ impl<'a> PathWithGlob<'a> {
     Self { path, glob: &glob[glob.len() - i..] }
   }
 
+  /// `path` is literal, so its glob syntax is escaped, like vite's `globSafeResolvedPath`.
+  fn to_absolute_glob(&self) -> String {
+    let mut glob = String::with_capacity(self.path.len() + self.glob.len());
+    for char in self.path.chars() {
+      if matches!(char, '\\' | '*' | '?' | '[' | ']' | '{' | '}') {
+        glob.push('\\');
+      }
+      glob.push(char);
+    }
+    glob.push_str(self.glob);
+    glob
+  }
+
   fn find_glob_syntax(path: &str) -> usize {
     let mut last_slash = 0;
     for (i, b) in path.as_bytes().iter().enumerate() {
@@ -105,6 +123,44 @@ impl<'a> PathWithGlob<'a> {
 
     num_equal
   }
+}
+
+// `walkdir` resolves a root that is a symlink itself, so a linked directory's entries are still walked under the link's path.
+fn walk_files(root: PathBuf, exhaustive: bool) -> impl Iterator<Item = walkdir::DirEntry> {
+  walkdir::WalkDir::new(root)
+    .sort_by(|a, b| a.file_name().cmp(b.file_name()))
+    .into_iter()
+    .filter_entry(move |entry| {
+      exhaustive || entry.depth() == 0 || {
+        let path = entry.file_name();
+        if path.as_encoded_bytes().first() == Some(&b'.') {
+          return false;
+        }
+        path.to_str().is_none_or(|s| s != "node_modules")
+      }
+    })
+    .filter_map(Result::ok)
+    .filter(|entry| !entry.file_type().is_dir())
+}
+
+/// The directories this branch walked, as canonical `(root, left through)` pairs, extended with the walk `link` opens.
+/// `None` when following `link` would walk in circles.
+fn follow_link(link: &Path, walked: &[(PathBuf, PathBuf)]) -> Option<Vec<(PathBuf, PathBuf)>> {
+  let target = std::fs::canonicalize(link).ok()?;
+  let exit = link.parent().and_then(|dir| std::fs::canonicalize(dir).ok())?;
+
+  let mut walked = walked.to_vec();
+  if let Some((_, last_exit)) = walked.last_mut() {
+    *last_exit = exit;
+  }
+
+  // This is `walkdir`'s loop check: every walked pair spans the directories one walk descended through, and re-entering any of them repeats that tree.
+  if walked.iter().any(|(root, exit)| target.starts_with(root) && exit.starts_with(&target)) {
+    return None;
+  }
+
+  walked.push((target.clone(), target));
+  Some(walked)
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -407,19 +463,19 @@ impl GlobImportVisit<'_> {
 
     let mut values = vec![];
     match arg {
-      Argument::StringLiteral(str) => values.push(str.value.as_str()),
+      Argument::StringLiteral(str) => values.push(to_usv_str(str.value)),
       Argument::TemplateLiteral(lit) => {
         if let Some(str) = lit.single_quasi() {
-          values.push(str.as_str());
+          values.push(to_usv_str(str));
         }
       }
       Argument::ArrayExpression(array_expr) => {
         for expr in &array_expr.elements {
           match expr {
-            ArrayExpressionElement::StringLiteral(str) => values.push(&str.value),
+            ArrayExpressionElement::StringLiteral(str) => values.push(to_usv_str(str.value)),
             ArrayExpressionElement::TemplateLiteral(lit) => {
               if let Some(str) = lit.single_quasi() {
-                values.push(str.as_str());
+                values.push(to_usv_str(str));
               }
             }
             _ => {}
@@ -429,7 +485,7 @@ impl GlobImportVisit<'_> {
       _ => {}
     }
 
-    for value in values {
+    for value in &values {
       if let Some(glob) = value.strip_prefix('!') {
         negated_globs.push(self.to_absolute_glob(
           glob,
@@ -474,25 +530,61 @@ impl GlobImportVisit<'_> {
       return None;
     }
 
-    let common = self.get_common_base(&positive_globs);
-    let entries = walkdir::WalkDir::new(common.as_ref())
-      .follow_links(true)
-      .sort_by(|a, b| a.file_name().cmp(b.file_name()))
-      .into_iter()
-      .filter_entry(|entry| {
-        options.exhaustive || entry.depth() == 0 || {
-          let path = entry.file_name();
-          if path.as_encoded_bytes().first() == Some(&b'.') {
-            return false;
-          }
-          path.to_str().is_none_or(|s| s != "node_modules")
-        }
-      })
-      .filter_map(Result::ok)
-      .filter(|e| !e.file_type().is_dir());
+    // Nothing can match, and the common base would be the whole root.
+    if positive_globs.is_empty() {
+      return Some(());
+    }
 
-    for entry in entries {
+    let common = self.get_common_base(&positive_globs).into_owned();
+    let common_path = Path::new(&common);
+
+    if self.is_dev_mode {
+      self.watch_walk_root(common_path);
+      let to_absolute_globs =
+        |globs: &[PathWithGlob]| globs.iter().map(PathWithGlob::to_absolute_glob).collect();
+      // A glob that globstar rejects gets no matcher. The walk does not fail on it either.
+      if let Ok(matcher) = GlobMatcher::new(
+        to_absolute_globs(&positive_globs),
+        to_absolute_globs(&negated_globs),
+        options.exhaustive,
+        case_sensitive,
+      ) {
+        self.matchers.push(matcher);
+      }
+    }
+
+    let root = std::fs::canonicalize(common_path).unwrap_or_else(|_| common_path.to_path_buf());
+
+    // `walkdir`'s `follow_links` needs `same-file`, which has no wasm implementation, so walk every directory symlink from its own root instead.
+    // See https://github.com/BurntSushi/same-file/issues/68
+    let mut stack =
+      vec![(walk_files(common_path.to_path_buf(), options.exhaustive), vec![(root.clone(), root)])];
+    while !stack.is_empty() {
+      let top = stack.len() - 1;
+      let Some(entry) = stack[top].0.next() else {
+        stack.pop();
+        continue;
+      };
+
       let file = entry.path();
+
+      // A linked directory is walked right here, so its files keep the position they had while `walkdir` followed links itself.
+      // A link at depth 0 is the root `walkdir` already resolved, so only deeper ones open a walk.
+      if entry.file_type().is_symlink() {
+        let Ok(metadata) = std::fs::metadata(file) else {
+          continue;
+        };
+        if metadata.is_dir() {
+          if entry.depth() > 0 {
+            let walked = follow_link(file, &stack[top].1);
+            if let Some(walked) = walked {
+              stack.push((walk_files(file.to_path_buf(), options.exhaustive), walked));
+            }
+          }
+          continue;
+        }
+      }
+
       let path = file.to_slash_lossy();
 
       // Skip the file itself if it matches the glob pattern, to avoid self-importing.
@@ -547,7 +639,19 @@ impl GlobImportVisit<'_> {
 
       files.push(ImportGlobFileData { file_path, import_path });
     }
+
     Some(())
+  }
+
+  /// A directory is watched with everything below it, so the walk root covers all the walk
+  /// reads. The watcher can only wait for a missing path whose parent exists.
+  fn watch_walk_root(&self, walk_root: &Path) {
+    // The id of a virtual module can make it relative.
+    if walk_root.is_absolute() {
+      let path =
+        walk_root.ancestors().take_while(|path| !path.exists()).last().unwrap_or(walk_root);
+      self.ctx.add_watch_file(&path.to_slash_lossy());
+    }
   }
 
   fn update_options(arg: &Argument, options: &mut ImportGlobOptions) {
@@ -564,8 +668,8 @@ impl GlobImportVisit<'_> {
         continue;
       };
 
-      let key = match &p.key {
-        PropertyKey::StringLiteral(str) => str.value.as_str(),
+      let key: &str = match &p.key {
+        PropertyKey::StringLiteral(str) => &to_usv_str(str.value),
         PropertyKey::StaticIdentifier(id) => id.name.as_str(),
         _ => continue,
       };
@@ -573,7 +677,7 @@ impl GlobImportVisit<'_> {
       match key {
         "base" => match &p.value {
           Expression::StringLiteral(str) if !str.value.is_empty() => {
-            options.base = Some(str.value.as_str().to_string());
+            options.base = Some(to_usv_str(str.value).into_owned());
           }
           Expression::TemplateLiteral(str)
             if str.is_no_substitution_template() && !str.quasis[0].value.raw.is_empty() =>
@@ -584,7 +688,7 @@ impl GlobImportVisit<'_> {
         },
         "import" => {
           if let Expression::StringLiteral(str) = &p.value {
-            options.import = Some(str.value.as_str().to_string());
+            options.import = Some(to_usv_str(str.value).into_owned());
           }
         }
         "eager" => {
@@ -604,10 +708,11 @@ impl GlobImportVisit<'_> {
         }
         "query" => match &p.value {
           Expression::StringLiteral(str) => {
-            options.query = if str.value.starts_with('?') {
-              Some(str.value.to_string())
+            let query = to_usv_str(str.value);
+            options.query = if query.starts_with('?') {
+              Some(query.into_owned())
             } else {
-              Some(format!("?{}", str.value))
+              Some(format!("?{query}"))
             }
           }
           Expression::ObjectExpression(expr) => {
@@ -615,14 +720,14 @@ impl GlobImportVisit<'_> {
             for prop in &expr.properties {
               let ObjectPropertyKind::ObjectProperty(p) = prop else { continue };
 
-              let key = match &p.key {
-                PropertyKey::StringLiteral(key) => key.value.as_str(),
+              let key: &str = match &p.key {
+                PropertyKey::StringLiteral(key) => &to_usv_str(key.value),
                 PropertyKey::StaticIdentifier(ident) => ident.name.as_str(),
                 _ => continue,
               };
 
-              let value = match &p.value {
-                Expression::StringLiteral(v) => v.value.as_str(),
+              let value: &str = match &p.value {
+                Expression::StringLiteral(v) => &to_usv_str(v.value),
                 Expression::BooleanLiteral(v) => {
                   if v.value {
                     "true"

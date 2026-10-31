@@ -7,15 +7,10 @@ use std::{
 use anyhow::Context;
 use arcstr::ArcStr;
 use futures::FutureExt;
-#[cfg(target_os = "macos")]
-use notify::EventKind;
 use rolldown_common::WatcherChangeKind;
 use rolldown_error::BuildResult;
-use rolldown_fs_watcher::{
-  FsChangeKind, FsEventResult, FsWatcher, RecursiveMode, map_notify_event,
-};
+use rolldown_fs_watcher::{FsEvent, FsWatcher};
 use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexMap, pattern_filter};
-use sugar_path::SugarPath;
 use tokio::sync::Mutex;
 
 use rolldown::Bundler;
@@ -42,7 +37,9 @@ pub struct BundleCoordinator {
   next_hmr_patch_id: Arc<AtomicU32>,
   rx: CoordinatorReceiver,
   watcher: StdMutex<FsWatcher>,
-  watched_files: FxDashSet<ArcStr>,
+  /// The bundler's `cwd`, which the `watch.include` / `watch.exclude` patterns are
+  /// relative to.
+  cwd: PathBuf,
   /// Tracks the state of the initial build
   state: CoordinatorState,
   /// File changes that arrived during initial build
@@ -59,6 +56,7 @@ impl BundleCoordinator {
     ctx: SharedDevContext,
     rx: CoordinatorReceiver,
     watcher: FsWatcher,
+    cwd: PathBuf,
     next_hmr_patch_id: Arc<AtomicU32>,
   ) -> Self {
     Self {
@@ -67,7 +65,7 @@ impl BundleCoordinator {
       next_hmr_patch_id,
       rx,
       watcher: StdMutex::new(watcher),
-      watched_files: FxDashSet::default(),
+      cwd,
       state: CoordinatorState::Initialized,
       queued_file_changes_waited_for_full_build: FxIndexMap::default(),
       // Initialize build state with initial build task
@@ -107,8 +105,18 @@ impl BundleCoordinator {
         CoordinatorMsg::WatchEvent(watch_event) => {
           self.handle_watch_event(watch_event).await;
         }
-        CoordinatorMsg::BundleCompleted { error_stage, has_generated_bundle_output } => {
-          self.handle_bundle_completed(error_stage, has_generated_bundle_output).await;
+        CoordinatorMsg::BundleCompleted {
+          error_stage,
+          has_generated_bundle_output,
+          hmr_stage_watch_files,
+        } => {
+          self
+            .handle_bundle_completed(
+              error_stage,
+              has_generated_bundle_output,
+              hmr_stage_watch_files.as_deref(),
+            )
+            .await;
         }
         #[cfg(feature = "testing")]
         CoordinatorMsg::ScheduleBuildIfStale { reply } => {
@@ -128,17 +136,23 @@ impl BundleCoordinator {
         }
         #[cfg(feature = "testing")]
         CoordinatorMsg::GetWatchedFiles { reply } => {
-          let result = self.watched_files.iter().map(|s| s.to_string()).collect();
+          let result = self
+            .watcher
+            .lock()
+            .map(|watcher| {
+              watcher.watched_paths().map(|path| path.to_string_lossy().into_owned()).collect()
+            })
+            .unwrap_or_default();
           let _ = reply.send(result);
         }
-        CoordinatorMsg::ModuleChanged { module_id } => {
+        CoordinatorMsg::ModuleChanged { module_id, watch_files } => {
           // Handle programmatic module change (e.g., lazy compilation executed)
 
-          // `plugin_driver.watch_files` added in `bundler.compile_lazy_entry`
-          // will be removed when task rebuild starts,
-          // so we need to update watch paths here to make sure
-          // the changed module is watched and trigger rebuild by file change if needed.
-          let _ = self.update_watch_paths().await;
+          // Watch the files the lazy compile loaded, so later edits to them trigger
+          // updates. Take them from the list the message carries, not from the latest
+          // build: a build that started after the compile has a new list without them,
+          // and no later build loads these cached modules again.
+          let _ = self.register_watch_files([&*watch_files]);
 
           let mut changed_files = FxIndexMap::default();
           changed_files.insert(PathBuf::from(&module_id), WatcherChangeKind::Update);
@@ -163,38 +177,10 @@ impl BundleCoordinator {
 
   /// Handle file change events from watcher.
   ///
-  /// Rename mapping is shared with build watch via [`map_notify_event`].
   /// See `internal-docs/dev-engine/implementation.md` ("From fs event to queued task").
-  async fn handle_watch_event(&mut self, watch_event: FsEventResult) {
-    match watch_event {
-      Ok(batched_events) => {
-        let mut changed_files = FxIndexMap::default();
-        for batched_event in batched_events {
-          #[cfg(target_os = "macos")]
-          if matches!(
-            batched_event.detail.kind,
-            EventKind::Modify(notify::event::ModifyKind::Metadata(_))
-          ) && !self.ctx.options.use_polling
-          {
-            // kqueue on mac emits metadata events often; they do not affect the
-            // build in most cases. Polling prefers metadata over content events,
-            // so those must still be mapped.
-            continue;
-          }
-
-          for (path, kind) in
-            map_notify_event(&batched_event.detail.kind, batched_event.detail.paths)
-          {
-            changed_files.insert(path, watcher_change_kind(kind));
-          }
-        }
-
-        self.handle_file_changes(changed_files).await;
-      }
-      Err(e) => {
-        tracing::error!("notify error: {e:?}");
-      }
-    }
+  async fn handle_watch_event(&mut self, events: Vec<FsEvent>) {
+    let changed_files = events.into_iter().map(|event| (event.path, event.kind)).collect();
+    self.handle_file_changes(changed_files).await;
   }
 
   /// Handle file changes based on initial build state
@@ -226,7 +212,8 @@ impl BundleCoordinator {
         // Recovery choice (per Design principles §3 corollary): a Rebuild-stage
         // failure left the bundle output stale w.r.t. source, so the recovery
         // task must include a rebuild. An Hmr-stage failure (incl. watch_change
-        // hook) is recoverable by re-running the Hmr task alone.
+        // hook) is recoverable by re-running the Hmr task alone, which becomes a
+        // full build when the failed update already merged its edit (`run_inner`).
         let force_rebuild = matches!(last_error_stage, ErrorStage::Rebuild);
         let task_input = if force_rebuild || self.ctx.options.rebuild_strategy.is_always() {
           TaskInput::HmrRebuild { changed_files }
@@ -261,6 +248,7 @@ impl BundleCoordinator {
     &mut self,
     error_stage: Option<ErrorStage>,
     has_generated_bundle_output: bool,
+    hmr_stage_watch_files: Option<&FxDashSet<ArcStr>>,
   ) {
     match self.state {
       CoordinatorState::Initialized
@@ -277,7 +265,7 @@ impl BundleCoordinator {
 
         // Even if the build failed, update the watch paths
         // so that a new full build is triggered by the change for those files
-        let _ = self.update_watch_paths().await;
+        let _ = self.update_watch_paths(hmr_stage_watch_files).await;
 
         if error_stage.is_some() {
           // FullBuildFailed always recovers via FullBuild on next file change,
@@ -302,9 +290,9 @@ impl BundleCoordinator {
         // Clear current build
         self.current_bundling_future = None;
 
-        // Register any new files this rebuild pulled into `watch_files`
+        // Register any new files this task pulled into `watch_files`
         // (e.g. an edit that introduced a new transitive import).
-        let _ = self.update_watch_paths().await;
+        let _ = self.update_watch_paths(hmr_stage_watch_files).await;
 
         if let Some(stage) = error_stage {
           self.set_initial_build_state(CoordinatorState::Failed { last_error_stage: stage });
@@ -479,41 +467,32 @@ impl BundleCoordinator {
     self.state = new_state;
   }
 
-  /// Update watcher paths based on current build output
-  async fn update_watch_paths(&self) -> BuildResult<()> {
+  /// Watch the files a finished task loaded: the latest build's list, and the list its HMR
+  /// stage wrote to when its rebuild replaced that list. The rebuild does not load again the
+  /// modules the HMR stage cached, so the latest list can miss them.
+  async fn update_watch_paths(
+    &self,
+    hmr_stage_watch_files: Option<&FxDashSet<ArcStr>>,
+  ) -> BuildResult<()> {
     let bundler = self.bundler.lock().await;
-    let cwd = bundler.options().cwd.to_string_lossy().to_string();
+    self.register_watch_files(hmr_stage_watch_files.into_iter().chain([&**bundler.watch_files()]))
+  }
+
+  /// Add the files of `watch_files` lists to the watcher in one batch, filtered by
+  /// `watch.include` / `watch.exclude`.
+  fn register_watch_files<'a>(
+    &self,
+    watch_files: impl IntoIterator<Item = &'a FxDashSet<ArcStr>>,
+  ) -> BuildResult<()> {
+    let cwd = self.cwd.to_string_lossy();
 
     let include = self.ctx.options.watch_include.as_deref();
     let exclude = self.ctx.options.watch_exclude.as_deref();
 
     let mut watcher = self.watcher.lock().ok().context("Failed to acquire watcher lock")?;
-    let mut paths_mut = watcher.paths_mut();
-    for watch_file in bundler.watch_files().iter() {
-      let watch_file = watch_file.as_str();
-      if !self.watched_files.contains(watch_file)
-        && pattern_filter::filter(exclude, include, watch_file, &cwd).inner()
-      {
-        let path = watch_file.as_path();
-        match paths_mut.add(path, RecursiveMode::NonRecursive) {
-          Ok(()) => {
-            self.watched_files.insert(watch_file.to_string().into());
-          }
-          Err(error) => {
-            tracing::debug!(name = "notify watch skipped", path = ?path, error = ?error);
-          }
-        }
-      }
-    }
-    paths_mut.commit()?;
-    Ok(())
-  }
-}
-
-fn watcher_change_kind(kind: FsChangeKind) -> WatcherChangeKind {
-  match kind {
-    FsChangeKind::Create => WatcherChangeKind::Create,
-    FsChangeKind::Update => WatcherChangeKind::Update,
-    FsChangeKind::Delete => WatcherChangeKind::Delete,
+    watcher.watch_paths(
+      watch_files.into_iter().flat_map(|list| list.iter().map(|file| PathBuf::from(file.as_str()))),
+      |path| pattern_filter::filter(exclude, include, &path.to_string_lossy(), &cwd).inner(),
+    )
   }
 }

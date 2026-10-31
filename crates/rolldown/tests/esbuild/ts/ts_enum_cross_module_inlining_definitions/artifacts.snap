@@ -6,9 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region enums.ts
-//#endregion
-//#region entry.ts
+// entry.ts
 console.log([
 	0,
 	123,
@@ -21,6 +19,5 @@ console.log([
 		return a;
 	}({})).non_constant
 ]);
-//#endregion
 
 ```

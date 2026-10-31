@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region node_modules/pure-barrel/cn.js
+// node_modules/pure-barrel/cn.js
 var cn;
 function init_cn() {
 	return (init_cn = __esmMin((() => {
@@ -15,8 +15,7 @@ function init_cn() {
 		cn = (...values) => values.filter(Boolean).join(" ");
 	})))();
 }
-//#endregion
-//#region node_modules/pure-barrel/clone-deep.cjs
+// node_modules/pure-barrel/clone-deep.cjs
 var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("clone-deep");
 	module.exports = function cloneDeep(value) {
@@ -29,16 +28,12 @@ function init_pure_barrel_cjs_0() {
 		import_clone_deep = /* @__PURE__ */ __toESM(require_clone_deep(), 1);
 	})))();
 }
-//#endregion
-//#region node_modules/pure-barrel/index.js
-//#endregion
-//#region wrapper.js
+// wrapper.js
 var wrapper_exports = /* @__PURE__ */ __exportAll({
 	cloneDeep: () => import_clone_deep.default,
 	cn: () => cn
 });
-//#endregion
-//#region main.js
+// main.js
 var result;
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -50,7 +45,6 @@ function init_main() {
 		};
 	})))();
 }
-//#endregion
 init_main();
 export { result };
 
@@ -64,11 +58,10 @@ export { result };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region node_modules/pure-barrel/cn.js
+// node_modules/pure-barrel/cn.js
 globalThis.__events.push("cn");
 const cn = (...values) => values.filter(Boolean).join(" ");
-//#endregion
-//#region node_modules/pure-barrel/clone-deep.cjs
+// node_modules/pure-barrel/clone-deep.cjs
 var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("clone-deep");
 	module.exports = function cloneDeep(value) {
@@ -81,16 +74,12 @@ function init_pure_barrel_cjs_0() {
 		import_clone_deep = /* @__PURE__ */ __toESM(require_clone_deep(), 1);
 	})))();
 }
-//#endregion
-//#region node_modules/pure-barrel/index.js
-//#endregion
-//#region wrapper.js
+// wrapper.js
 var wrapper_exports = /* @__PURE__ */ __exportAll({
 	cloneDeep: () => import_clone_deep.default,
 	cn: () => cn
 });
-//#endregion
-//#region main.js
+// main.js
 var result;
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -102,7 +91,6 @@ function init_main() {
 		};
 	})))();
 }
-//#endregion
 init_main();
 export { result };
 

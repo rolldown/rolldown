@@ -599,3 +599,68 @@ test(
     expect(runtime.loadExports(stableId('side-effect\\.js'))).toEqual({});
   },
 );
+
+// A plugin that emits a chunk from `buildStart` emits it again on every rebuild, including
+// the partial one that follows a lazy compile. The emitted module is unchanged, so that scan
+// never loads it, and its module info has to come from the previous build instead (#11318).
+test(
+  'a chunk emitted in buildStart survives the rebuild after a lazy compile',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-emit-chunk-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'main.js'), `export const load = () => import('./dep.js');\n`);
+    fs.writeFileSync(path.join(dir, 'dep.js'), `export const value = 1;\n`);
+    fs.writeFileSync(path.join(dir, 'emitted.js'), `export default { a: 1 };\n`);
+
+    const outputFileNames: string[][] = [];
+    const engine = await dev(
+      {
+        input: path.join(dir, 'main.js'),
+        plugins: [
+          {
+            name: 'emit-chunk-in-build-start',
+            buildStart() {
+              this.emitFile({
+                type: 'chunk',
+                id: path.join(dir, 'emitted.js'),
+                fileName: 'emitted.js',
+              });
+            },
+          },
+        ],
+        experimental: { devMode: { lazy: true } },
+      },
+      { dir: path.join(dir, 'dist'), format: 'esm' },
+      {
+        onOutput(result) {
+          if (!(result instanceof Error)) {
+            outputFileNames.push(result.output.map((chunk) => chunk.fileName));
+          }
+        },
+      },
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await engine.ensureCurrentBuildFinish();
+    await engine.registerClient('emit-chunk-client');
+    const chunk = await engine.compileEntry(
+      `${path.join(dir, 'dep.js')}?rolldown-lazy=1`,
+      'emit-chunk-client',
+    );
+    expect(chunk.code).toMatch(/registerFactory\("[^"]*dep\.js"/);
+
+    // The lazy compile queues a rebuild that runs `buildStart` again.
+    await engine.ensureCurrentBuildFinish();
+    expect(outputFileNames.length).toBeGreaterThanOrEqual(2);
+    expect(outputFileNames.at(-1)).toContain('emitted.js');
+  },
+);

@@ -95,6 +95,8 @@ ChunkGraph
     └─ merge_cjs_namespace()                          Merge CJS namespace objects
 ```
 
+Order-wrapper and CJS-carrier placement both register synthetic statements in deterministic execution order. Carrier records within one importer use import-record order. The registration sequence feeds symbol deconfliction; iterating the carrier hash map directly would let asynchronous module loading change generated binding suffixes.
+
 **Key files:**
 
 - `crates/rolldown/src/stages/generate_stage/code_splitting.rs` — pipeline orchestration, `generate_chunks()`, `ensure_lazy_module_initialization_order()`

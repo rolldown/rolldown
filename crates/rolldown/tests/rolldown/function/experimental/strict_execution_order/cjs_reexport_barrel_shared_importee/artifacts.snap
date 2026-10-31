@@ -76,19 +76,19 @@ var require_shared = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("shared-cjs");
 	module.exports = "shared";
 }));
-var import_shared$1;
+var import_shared;
 function init_barrel_a_cjs_0() {
 	return (init_barrel_a_cjs_0 = __esmMin((() => {
-		import_shared$1 = /* @__PURE__ */ __toESM(require_shared(), 1);
-	})))();
-}
-var import_shared;
-function init_barrel_b_cjs_1() {
-	return (init_barrel_b_cjs_1 = __esmMin((() => {
 		import_shared = /* @__PURE__ */ __toESM(require_shared(), 1);
 	})))();
 }
-export { init_barrel_a_cjs_0 as i, init_barrel_b_cjs_1 as n, import_shared$1 as r, import_shared as t };
+var import_shared$1;
+function init_barrel_b_cjs_1() {
+	return (init_barrel_b_cjs_1 = __esmMin((() => {
+		import_shared$1 = /* @__PURE__ */ __toESM(require_shared(), 1);
+	})))();
+}
+export { init_barrel_a_cjs_0 as i, init_barrel_b_cjs_1 as n, import_shared as r, import_shared$1 as t };
 
 ```
 
@@ -162,18 +162,18 @@ var require_shared = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("shared-cjs");
 	module.exports = "shared";
 }));
-var import_shared$1;
+var import_shared;
 function init_barrel_a_cjs_0() {
 	return (init_barrel_a_cjs_0 = __esmMin((() => {
-		import_shared$1 = /* @__PURE__ */ __toESM(require_shared(), 1);
-	})))();
-}
-var import_shared;
-function init_barrel_b_cjs_1() {
-	return (init_barrel_b_cjs_1 = __esmMin((() => {
 		import_shared = /* @__PURE__ */ __toESM(require_shared(), 1);
 	})))();
 }
-export { init_barrel_a_cjs_0 as i, init_barrel_b_cjs_1 as n, import_shared$1 as r, import_shared as t };
+var import_shared$1;
+function init_barrel_b_cjs_1() {
+	return (init_barrel_b_cjs_1 = __esmMin((() => {
+		import_shared$1 = /* @__PURE__ */ __toESM(require_shared(), 1);
+	})))();
+}
+export { init_barrel_a_cjs_0 as i, init_barrel_b_cjs_1 as n, import_shared as r, import_shared$1 as t };
 
 ```

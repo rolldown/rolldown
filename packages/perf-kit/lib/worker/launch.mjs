@@ -24,7 +24,13 @@ export const WRAPPER_NAME = '__lab_wrapper.js';
 export const EMPTY_NAME = '__lab_empty.js';
 export const LAB_IMPORT_PATH = '/__lab/import';
 export const LAB_COVERAGE_PATH = '/__lab/coverage';
-export const COVERAGE_FLAGS = ['nodejs_compat', 'enable_nodejs_inspector_local_dev'];
+// `enable_nodejs_inspector_module` makes `node:inspector` importable on compatibility dates
+// before its default-on date; workerd knows it from 1.20260507.1, before the session shipped.
+export const COVERAGE_FLAGS = [
+  'nodejs_compat',
+  'enable_nodejs_inspector_local_dev',
+  'enable_nodejs_inspector_module',
+];
 /** First Wrangler whose workerd (1.20260706.1) carries the in-process inspector session. */
 export const COVERAGE_MIN_WRANGLER = '4.108.0';
 
@@ -166,7 +172,9 @@ export function classifyModules(outDir, rules = []) {
   const skipped = [];
   const walk = (dir, rel) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (entry.name.startsWith('.')) continue;
+      // Dot directories hold modules too: a preserveModules build of a pnpm app writes its
+      // libraries under `node_modules/.pnpm/`. Only `.vite/` (the manifest) and dot files stay out.
+      if (entry.name.startsWith('.') && (!entry.isDirectory() || entry.name === '.vite')) continue;
       const r = rel ? `${rel}/${entry.name}` : entry.name;
       if (entry.isDirectory()) {
         walk(path.join(dir, entry.name), r);
@@ -230,7 +238,8 @@ export const emptyModule = (outDir) => ({
 /**
  * Static assets answer before the worker unless a route is listed as worker-first; with
  * SPA fallback every unknown path becomes `index.html`, lab routes included - and that
- * answer is a 200, so the import silently never runs. Lab routes go worker-first.
+ * answer is a 200, so the import silently never runs. Lab routes go worker-first. Newer
+ * Miniflare builds the router from a `run_worker_first` list, so the route goes there too.
  */
 export function labAssetsRouting(assets) {
   if (!assets) return assets;
@@ -238,7 +247,11 @@ export function labAssetsRouting(assets) {
   const routing = { ...router.static_routing };
   routing.user_worker = ['/__lab/*', ...(routing.user_worker ?? [])];
   router.static_routing = routing;
-  return { ...assets, routerConfig: router };
+  const routed = { ...assets, routerConfig: router };
+  if (Array.isArray(assets.run_worker_first)) {
+    routed.run_worker_first = ['/__lab/*', ...assets.run_worker_first];
+  }
+  return routed;
 }
 
 /** Deduplicated workerd stderr, printed once at the end instead of once per run. */

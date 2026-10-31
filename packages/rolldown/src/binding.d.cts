@@ -2373,6 +2373,11 @@ export interface BindingHookJsResolveIdOutput {
   moduleSideEffects?: boolean | 'no-treeshake'
 }
 
+export interface BindingHookLoadExtraArgs {
+  rawId: string
+  attributes: Record<string, string>
+}
+
 export interface BindingHookLoadOutput {
   code: string
   moduleSideEffects?: boolean | 'no-treeshake'
@@ -2789,7 +2794,7 @@ export interface BindingPluginOptions {
   resolveIdFilter?: BindingHookFilter
   resolveDynamicImport?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveDynamicImportExtraArgs) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   resolveDynamicImportMeta?: BindingPluginHookMeta
-  load?: (ctx: BindingLoadPluginContext, id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
+  load?: (ctx: BindingLoadPluginContext, id: string, options: Nullable<BindingHookLoadExtraArgs>) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
   loadMeta?: BindingPluginHookMeta
   loadFilter?: BindingHookFilter
   transform?: (ctx:  BindingTransformPluginContext, id: string, code: string, module_type: BindingTransformHookExtraArgs) => MaybePromise<VoidNullable<BindingHookTransformOutput>>

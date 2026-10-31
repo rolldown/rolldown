@@ -12,10 +12,12 @@ use super::{
   binding_load_context::BindingLoadPluginContext,
   binding_transform_context::BindingTransformPluginContext,
   types::{
+    binding_hook_load_extra_args::BindingHookLoadExtraArgs,
     binding_hook_resolve_dynamic_import_extra_args::BindingHookResolveDynamicImportExtraArgs,
     binding_hook_resolve_file_url_args::BindingHookResolveFileUrlArgs,
     binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
     binding_hot_update_args::BindingHotUpdateArgs,
+    binding_import_attributes::to_binding_import_attributes,
     binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
     binding_render_chunk_meta_chunks::BindingRenderedChunkMeta,
     binding_shared_string::BindingSharedString,
@@ -234,8 +236,10 @@ impl Plugin for JsPlugin {
     let binding_ctx = BindingLoadPluginContext::new(Arc::clone(&ctx));
     let span =
       debug_span!("load_hook", plugin_name = self.name, result_kind = tracing::field::Empty);
+    let extra_args = to_binding_import_attributes(args.attributes)
+      .map(|attributes| BindingHookLoadExtraArgs { raw_id: args.raw_id.to_string(), attributes });
     let result = cb
-      .await_call((binding_ctx, args.id.to_string()).into())
+      .await_call((binding_ctx, args.id.to_string(), extra_args).into())
       .instrument(span.clone())
       .await?
       .map(TryInto::try_into)

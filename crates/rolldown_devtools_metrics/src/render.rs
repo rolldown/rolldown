@@ -195,12 +195,25 @@ pub(crate) fn render_entry(report: &Report) -> String {
     .unwrap();
   }
 
+  let noop_hooks = metric_u64(report, "plugins.noop_hook_count");
+  if noop_hooks > 0 {
+    writeln!(
+      out,
+      "{} did no work in any call — a hook filter would skip those calls (`timing.md`, \
+       \"Hooks that did no work\")\n",
+      plural(noop_hooks as usize, "plugin hook"),
+    )
+    .unwrap();
+  }
+
   out.push_str("## Details (load on demand)\n\n");
   out.push_str("| File | Load this when… |\n| --- | --- |\n");
   out.push_str(
     "| `metrics.json` | you need one precise number or the `delta`/`baselineDelta` sections — query it (jq/grep a metric id), don't read it wholesale |\n",
   );
-  out.push_str("| `timing.md` | investigating slow builds: stage split, plugin & hook cost |\n");
+  out.push_str(
+    "| `timing.md` | investigating slow builds: stage split, plugin & hook cost, hooks that did no work |\n",
+  );
   out.push_str(
     "| `chunks.md` | bundle size: chunk composition, reasons & cross-chunk duplication |\n",
   );
@@ -227,6 +240,11 @@ pub(crate) fn render_entry(report: &Report) -> String {
   );
   out
 }
+
+/// A hook at or above this no-op share is marked "most"; a share of 1 is marked "all".
+const NOOP_MOST_RATIO: f64 = 0.9;
+/// How many hooks with no-op calls the timing view lists, the highest share first.
+const NOOP_VIEW_LEN: usize = 10;
 
 pub(crate) fn render_timing(report: &Report) -> String {
   let mut out = String::new();
@@ -271,6 +289,39 @@ pub(crate) fn render_timing(report: &Report) -> String {
         row.calls,
         format_noop(row.noop_calls, row.calls),
         format_ms(row.ms),
+      )
+      .unwrap();
+    }
+    out.push('\n');
+  }
+
+  out.push_str("## Hooks that did no work\n\n");
+  let noop_rows: Vec<&crate::report::NoopHookRow> =
+    report.noop_hooks.iter().take(NOOP_VIEW_LEN).collect();
+  if noop_rows.is_empty() {
+    out.push_str("_None: no hook call was a no-op._\n\n");
+  } else {
+    writeln!(
+      out,
+      "Hooks with no-op calls, the highest share first (top {NOOP_VIEW_LEN}). A no-op call \
+       returned nothing, or returned the code unchanged, and still paid the plugin crossing. \
+       \"all\" = every call; \"most\" = at least nine calls in ten. The fix is a hook filter \
+       that skips the modules the hook does not change, or dropping the hook.\n",
+    )
+    .unwrap();
+    out.push_str("| Plugin | Hook | Calls | No-op | Share |\n| --- | --- | --- | --- | --- |\n");
+    for row in noop_rows {
+      let share = if row.noop_calls == row.calls {
+        "all".to_string()
+      } else if row.ratio >= NOOP_MOST_RATIO {
+        "most".to_string()
+      } else {
+        format!("{:.0}%", row.ratio * 100.0)
+      };
+      writeln!(
+        out,
+        "| `{}` | {} | {} | {} | {share} |",
+        row.plugin, row.hook, row.calls, row.noop_calls,
       )
       .unwrap();
     }
@@ -689,7 +740,7 @@ don't load the whole file into context.
 | --- | --- |
 | `entry.md` | One-paragraph summary + file index. Start here for orientation. |
 | `metrics.json` | Canonical machine-readable report (schema-versioned): flat `metrics` id map, sections, `delta`, `baselineDelta`. For tools and precise lookups. |
-| `timing.md` | Where build time went: scan/generate split, per-plugin hook cost, transform hotspots. |
+| `timing.md` | Where build time went: scan/generate split, per-plugin hook cost, hooks that did no work, transform hotspots. |
 | `chunks.md` | Output composition: chunk reasons/sizes, largest assets, cross-chunk duplication. |
 | `modules.md` | Module graph: import kinds, most-imported, shared-across-entries. |
 | `packages.md` | Dependency bloat: largest packages, duplicate versions. |
@@ -721,6 +772,7 @@ otherwise).
 | `packages.duplicate_version_count` | Packages shipped at multiple versions (dedupe = size win). |
 | `plugins.hook_call_count` / `plugins.hook_time_ms` | Plugin hook volume and cost (summed across concurrent calls). |
 | `plugins.hook_noop_call_count` | Hook calls that did no work (returned nothing, or transform returned the code unchanged). High share ⇒ plugins should declare hook filters; compare across builds to verify a filter change. |
+| `plugins.noop_hook_count` | Hooks whose every call was a no-op. Each one is a hook filter the plugin should declare; `metrics.json` → `noopHooks` lists every hook with no-op calls and its share. |
 
 Per-entry numbers live in `metrics.json` → `entries`, joined across builds by `entry`.
 

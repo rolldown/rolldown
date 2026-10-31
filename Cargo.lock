@@ -3148,12 +3148,15 @@ version = "0.1.0"
 dependencies = [
  "json-escape-simd",
  "memchr",
+ "rolldown",
  "rolldown_common",
  "rolldown_plugin",
  "rolldown_plugin_utils",
  "rolldown_sourcemap",
  "rolldown_utils",
  "serde_json",
+ "tempfile",
+ "tokio",
 ]
 
 [[package]]

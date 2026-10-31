@@ -1,0 +1,5 @@
+{
+  "__proto__": { "marker": 1 },
+  "nested": { "__proto__": null },
+  "array": [{ "__proto__": 42 }]
+}

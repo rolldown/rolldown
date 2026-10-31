@@ -10,6 +10,7 @@ const depId = stringifyModuleId(dep, { kind: 'x' });
 
 const resolveCalls: Record<string, unknown> = {};
 const loadCalls: Record<string, unknown> = {};
+const transformCalls: Record<string, unknown> = {};
 
 export default defineTest({
   config: {
@@ -23,6 +24,9 @@ export default defineTest({
         },
         load(id, { rawId, attributes }) {
           loadCalls[id] = { rawId, attributes };
+        },
+        transform(_code, id, { rawId, attributes }) {
+          transformCalls[id] = { rawId, attributes };
         },
         buildEnd() {
           expect([...this.getModuleIds()].sort()).toEqual(
@@ -61,6 +65,7 @@ export default defineTest({
     });
     expect(loadCalls[depId]).toEqual({ rawId: dep, attributes: { kind: 'x' } });
     expect(loadCalls[main]).toEqual({ rawId: main, attributes: {} });
+    expect(transformCalls[depId]).toEqual({ rawId: dep, attributes: { kind: 'x' } });
     expect(parseModuleId(depId)).toEqual({ rawId: dep, attributes: { kind: 'x' } });
   },
 });

@@ -2946,6 +2946,8 @@ export interface BindingSourceMapOptions {
 
 export interface BindingTransformHookExtraArgs {
   moduleType: string
+  rawId?: string
+  attributes?: Record<string, string>
 }
 
 export interface BindingTreeshake {

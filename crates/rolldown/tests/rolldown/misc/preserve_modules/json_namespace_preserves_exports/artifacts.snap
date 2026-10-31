@@ -11,7 +11,7 @@ export { __exportAll };
 
 ```
 
-## data.js
+## data.json.js
 
 ```js
 import { __exportAll } from "./_virtual/_rolldown/runtime.js";
@@ -34,7 +34,7 @@ export { answer, data_exports, data_default as default, nested };
 ## index.js
 
 ```js
-import { data_exports } from "./data.js";
+import { data_exports } from "./data.json.js";
 // index.js
 const namespace = data_exports;
 const namespaceKeys = Object.keys(data_exports).sort();

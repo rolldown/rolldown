@@ -82,6 +82,7 @@ import type {
   SourceDescription,
   TransformResult,
 } from './plugin';
+import type { UniqueModuleId } from './utils/module-id';
 import type {
   BufferEncoding,
   RolldownDirectoryEntry,
@@ -230,6 +231,7 @@ export type {
   TransformPluginContext,
   TransformResult,
   TreeshakingOptions,
+  UniqueModuleId,
   WarningHandlerWithDefault,
   WatcherFileWatcherOptions,
   WatcherOptions,

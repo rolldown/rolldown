@@ -11,3 +11,4 @@ export {
 } from './utils/transform';
 export { TsconfigCache } from './utils/resolve-tsconfig';
 export { Visitor, type VisitorObject } from './utils/visitor';
+export { parseModuleId, stringifyModuleId, type UniqueModuleId } from './utils/module-id';

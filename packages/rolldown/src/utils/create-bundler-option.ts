@@ -115,6 +115,7 @@ export async function createBundlerOptions(
       normalizedInputPlugins,
       normalizedOutputPlugins,
     );
+    pluginContextData.importAttributes = inputOptions.experimental?.importAttributes ?? false;
 
     // Convert `InputOptions` to `BindingInputOptions`
     const bindingInputOptions = bindingifyInputOptions(

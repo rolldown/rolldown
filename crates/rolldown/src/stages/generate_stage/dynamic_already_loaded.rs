@@ -232,7 +232,10 @@ impl GenerateStage<'_> {
   /// If all the used exports of the dynamic import are statically known and actual exports
   /// of the module, code will never observe the extra exports and we can avoid the extra
   /// indirection of exporting a synthetic namespace.
-  fn dynamic_entry_partial_usage_allows_plain_merge(&self, entry_module_idx: ModuleIdx) -> bool {
+  pub(super) fn dynamic_entry_partial_usage_allows_plain_merge(
+    &self,
+    entry_module_idx: ModuleIdx,
+  ) -> bool {
     let Some(DynamicImportExportsUsage::Partial(used)) =
       self.link_output.dynamic_import_exports_usage_map.get(&entry_module_idx)
     else {

@@ -67,7 +67,7 @@ export { html_default as default };
 ```js
 // index1.js
 function a() {
-	import("./tt.js");
+	import("./tt2.js");
 }
 export { a };
 
@@ -130,6 +130,13 @@ import("@prettier/plugin-hermes");
 import("prettier-plugin-astro");
 import("prettier-plugin-marko");
 const options = [postcss_exports, babel_exports];
-export { a, Ks as n, options, ra as r, _l as t };
+export { ra as a, Ks as i, options as n, _l as r, a as t };
+
+```
+
+## tt2.js
+
+```js
+export { t as a, n as options } from "./tt.js";
 
 ```

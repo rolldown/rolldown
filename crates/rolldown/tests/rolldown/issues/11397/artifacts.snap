@@ -1,0 +1,49 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## form.js
+
+```js
+// translations.js
+var translations_default = { title: "Transfer" };
+// form.js
+const translations = translations_default;
+const transferForm = () => ({ name: "transfer" });
+let count = 0;
+function increment() {
+	count++;
+}
+export { translations_default as a, translations as i, increment as n, transferForm as r, count as t };
+
+```
+
+## form2.js
+
+```js
+export { t as count, n as increment, r as transferForm, i as translations } from "./form.js";
+
+```
+
+## main.js
+
+```js
+// main.js
+const loadForm = () => import("./form2.js");
+const loadPage = () => import("./page.js");
+export { loadForm, loadPage };
+
+```
+
+## page.js
+
+```js
+import { a as translations_default, r as transferForm } from "./form.js";
+// page.js
+function Page() {
+	return [translations_default.title, transferForm().name];
+}
+export { Page as default };
+
+```

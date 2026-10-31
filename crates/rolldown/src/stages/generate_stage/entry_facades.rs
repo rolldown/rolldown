@@ -25,10 +25,26 @@ impl GenerateStage<'_> {
       .iter_enumerated()
       .filter_map(|(chunk_idx, chunk)| {
         let ChunkKind::EntryPoint { module, meta, .. } = chunk.kind else { return None };
-        if chunk.modules.is_empty()
-          || !meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk)
-          || !matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::Strict))
-        {
+        let preserve_signature =
+          if meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk) {
+            matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::Strict))
+          } else {
+            // Dynamic entries do not carry `preserve_entry_signature`, but their namespace must
+            // still exclude bindings exported only for other chunks. Keep explicit opt-outs,
+            // unobservable extensions, and entries whose importers already extract a namespace.
+            // See internal-docs/code-splitting/implementation.md.
+            meta.contains(ChunkMeta::DynamicImported)
+              && matches!(
+                self.options.preserve_entry_signatures,
+                PreserveEntrySignatures::Strict | PreserveEntrySignatures::ExportsOnly
+              )
+              && !self.dynamic_entry_partial_usage_allows_plain_merge(module)
+              && !chunk_graph
+                .common_chunk_exported_facade_chunk_namespace
+                .get(&chunk_idx)
+                .is_some_and(|entries| entries.contains(&module))
+          };
+        if chunk.modules.is_empty() || !preserve_signature {
           return None;
         }
         let exported_symbols = &state.index_chunk_exported_symbols[chunk_idx];

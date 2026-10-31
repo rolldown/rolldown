@@ -11,6 +11,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import {
+  COVERAGE_FLAGS,
   COVERAGE_MIN_WRANGLER,
   LAB_IMPORT_PATH,
   classifyModules,
@@ -24,11 +25,14 @@ import {
   attributeProfile,
   localFile,
   packageOf,
+  parseRequestSpec,
   summarizeProfile,
   summarizeWorkerStartup,
+  WS_QUIET_MS,
+  wsRequest,
 } from '../lib/worker/measure.mjs';
 import { evaluatingModules, whyModule } from '../lib/worker/attrib.mjs';
-import { viteConfigShim } from '../lib/worker/config.mjs';
+import { attribOutDir, viteConfigShim } from '../lib/worker/config.mjs';
 import { entryIdx, minCut } from '../lib/min-cut.mjs';
 import { indexOf, makeGraph } from './graph-fixtures.mjs';
 
@@ -73,6 +77,19 @@ test('every output file a rule classifies becomes a module; maps and configs nev
   assert.deepEqual(skipped, ['assets/data.json']);
 });
 
+test('libraries a preserveModules build writes under node_modules/.pnpm are modules too', () => {
+  const dir = tmp();
+  write(dir, 'index.js', 'export default {}');
+  write(dir, 'node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/classic/schemas.js', '');
+  write(dir, '.dev.vars', 'A=1');
+  write(dir, '.vite/manifest.js', '');
+  const rels = classifyModules(dir).modules.map((m) => m.rel);
+  assert.deepEqual(rels.sort((a, b) => a.localeCompare(b)), [
+    'index.js',
+    'node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/classic/schemas.js',
+  ]);
+});
+
 // --- wrapper and routing ------------------------------------------------------------
 
 test('the timing wrapper imports the target on the lab route and forwards everything else', () => {
@@ -101,6 +118,66 @@ test('lab routes are served worker-first even behind SPA assets', () => {
     '/__lab/*',
   ]);
   assert.equal(labAssetsRouting(undefined), undefined);
+});
+
+test('a run_worker_first list gets the lab route too; a boolean stays as it is', () => {
+  const list = { directory: '/x', run_worker_first: ['/agents/*'] };
+  assert.deepEqual(labAssetsRouting(list).run_worker_first, ['/__lab/*', '/agents/*']);
+  assert.deepEqual(list.run_worker_first, ['/agents/*']); // input untouched
+  assert.equal(labAssetsRouting({ directory: '/x', run_worker_first: true }).run_worker_first, true);
+  assert.equal('run_worker_first' in labAssetsRouting({ directory: '/x' }), false);
+});
+
+test('the coverage run makes node:inspector importable on any compatibility date', () => {
+  assert.deepEqual(COVERAGE_FLAGS, [
+    'nodejs_compat',
+    'enable_nodejs_inspector_local_dev',
+    'enable_nodejs_inspector_module',
+  ]);
+});
+
+test('a ws: request spec carries the path and the optional message', () => {
+  assert.deepEqual(parseRequestSpec('/api/health'), { ws: false, path: '/api/health', message: null });
+  assert.deepEqual(parseRequestSpec('ws:/agents/chat/a'), { ws: true, path: '/agents/chat/a', message: null });
+  assert.deepEqual(parseRequestSpec('ws:/agents/chat/a|{"type":"rpc","args":["a|b"]}'), {
+    ws: true,
+    path: '/agents/chat/a',
+    message: '{"type":"rpc","args":["a|b"]}',
+  });
+});
+
+test('a ws: request is timed to the last server message, and a refused upgrade reports its status', async () => {
+  const listeners = {};
+  const socket = {
+    accepted: false,
+    sent: [],
+    accept() {
+      this.accepted = true;
+    },
+    send(text) {
+      this.sent.push(text);
+      setTimeout(() => listeners.message({ data: 'reply-after-load' }), 20);
+    },
+    close() {},
+    addEventListener(type, fn) {
+      listeners[type] = fn;
+    },
+  };
+  const mf = { dispatchFetch: async () => ({ status: 101, webSocket: socket, text: async () => '' }) };
+  const row = await wsRequest(mf, '/agents/chat/a', 'hello');
+  assert.equal(socket.accepted, true);
+  assert.deepEqual(socket.sent, ['hello']);
+  assert.equal(row.status, 101);
+  assert.equal(row.messages, 1);
+  assert.equal(row.bytes, 'reply-after-load'.length);
+  assert.ok(row.ms >= 15 && row.ms < WS_QUIET_MS, `timed to the reply, not the quiet wait: ${row.ms}`);
+  const refused = await wsRequest(
+    { dispatchFetch: async () => ({ status: 404, webSocket: null, text: async () => 'no route' }) },
+    '/nope',
+    null,
+  );
+  assert.equal(refused.status, 404);
+  assert.equal(refused.text, 'no route');
 });
 
 test('the coverage floor is a wrangler version, compared numerically', () => {
@@ -407,4 +484,32 @@ test('the config shim puts the report on every environment and keeps the attribu
   assert.ok(shim.includes('preserveModules: true'));
   assert.ok(shim.includes('dist-attrib/${name}'));
   assert.ok(shim.includes('ROLLDOWN_PERF_KIT_WORKER_ONLY'));
+});
+
+test('the worker-only rebuild puts back the assets field the Cloudflare plugin drops', () => {
+  const shim = viteConfigShim('vite.config.ts');
+  assert.ok(shim.includes("name: 'perf-kit:keep-assets'"));
+  assert.ok(shim.includes("order: 'post'"));
+  assert.ok(shim.includes('savedAssets.set(file, assets)'));
+  assert.ok(shim.includes('config.assets = assets'));
+});
+
+test('worker-attrib finds the attribution build named after the environment', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'perf-kit-attrib-'));
+  try {
+    // TanStack Start: environment `ssr`, regular output `dist/server`.
+    fs.mkdirSync(path.join(root, 'ssr'));
+    fs.writeFileSync(path.join(root, 'ssr', 'wrangler.json'), '{}');
+    assert.equal(attribOutDir(root, 'server'), path.join(root, 'ssr'));
+    // A directory that matches the worker name wins.
+    fs.mkdirSync(path.join(root, 'server'));
+    fs.writeFileSync(path.join(root, 'server', 'wrangler.json'), '{}');
+    assert.equal(attribOutDir(root, 'server'), path.join(root, 'server'));
+    // Two candidates and no match: keep the worker name, so the caller's error names it.
+    assert.equal(attribOutDir(root, 'worker'), path.join(root, 'worker'));
+    // No attribution build at all.
+    assert.equal(attribOutDir(path.join(root, 'missing'), 'server'), path.join(root, 'missing', 'server'));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });

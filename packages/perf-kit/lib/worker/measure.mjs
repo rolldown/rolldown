@@ -76,6 +76,62 @@ export function summarizeWorkerStartup({ floor, main }) {
   };
 }
 
+/** Silence after the last WebSocket message that ends a `ws:` request (waited, not counted). */
+export const WS_QUIET_MS = 500;
+
+/**
+ * A pinned request: `/path` is a GET; `ws:/path` opens a WebSocket on the path, and
+ * `ws:/path|<text>` also sends `<text>` once the socket is open. Agent chats and RPC run
+ * over WebSockets, so a module deferred to the first RPC or chat turn only shows there.
+ */
+export function parseRequestSpec(spec) {
+  const m = /^ws:(\/[^|]*)(?:\|([\s\S]*))?$/.exec(spec);
+  return m ? { ws: true, path: m[1], message: m[2] ?? null } : { ws: false, path: spec, message: null };
+}
+
+/**
+ * One WebSocket request, timed from the upgrade to the server's last message before
+ * `WS_QUIET_MS` of silence: the reply to a sent message comes after any module load it
+ * triggers. With no message and no server message, the time is the upgrade alone.
+ */
+export async function wsRequest(mf, p, message, { timeoutMs = 30_000 } = {}) {
+  const t0 = performance.now();
+  const res = await mf.dispatchFetch(`http://lab${p}`, { headers: { Upgrade: 'websocket' } });
+  const ws = res.webSocket;
+  if (res.status !== 101 || !ws) return { status: res.status, text: await res.text(), ms: performance.now() - t0 };
+  ws.accept();
+  let last = performance.now();
+  let messages = 0;
+  let bytes = 0;
+  return new Promise((resolve) => {
+    let quiet = null;
+    const done = () => {
+      clearTimeout(quiet);
+      clearTimeout(hard);
+      try {
+        ws.close(1000);
+      } catch {
+        /* closed */
+      }
+      resolve({ status: 101, text: '', ms: last - t0, messages, bytes });
+    };
+    const hard = setTimeout(done, timeoutMs);
+    const arm = () => {
+      clearTimeout(quiet);
+      quiet = setTimeout(done, WS_QUIET_MS);
+    };
+    ws.addEventListener('message', (event) => {
+      messages++;
+      bytes += typeof event.data === 'string' ? event.data.length : (event.data?.byteLength ?? 0);
+      last = performance.now();
+      arm();
+    });
+    ws.addEventListener('close', done);
+    if (message != null) ws.send(message);
+    arm();
+  });
+}
+
 /**
  * First requests on a plain instance: the real entry, every export in place, startup
  * already done at boot. The first hit of a route that imports a deferred module pays
@@ -86,14 +142,17 @@ export async function firstRequests(ctx, paths) {
   const rows = [];
   try {
     for (const p of paths) {
+      const spec = parseRequestSpec(p);
       const t0 = performance.now();
-      const { status, text } = await fetchText(mf, p);
+      const res = spec.ws ? await wsRequest(mf, spec.path, spec.message) : await fetchText(mf, p);
+      const ms = spec.ws ? res.ms : performance.now() - t0;
       rows.push({
         path: p,
-        status,
-        bytes: text.length,
-        ms: round1(performance.now() - t0),
-        error: status >= 500 ? text.slice(0, 200).replace(/\s+/g, ' ') : null,
+        status: res.status,
+        bytes: spec.ws && res.status === 101 ? res.bytes : res.text.length,
+        ms: round1(ms),
+        ...(spec.ws && res.status === 101 ? { messages: res.messages } : {}),
+        error: res.status >= 500 ? res.text.slice(0, 200).replace(/\s+/g, ' ') : null,
       });
     }
   } finally {
@@ -208,7 +267,7 @@ export function attributeProfile(profile, { outDir, mainName }) {
  * Precise coverage of the import, taken from INSIDE the isolate. The external inspector
  * cannot do it: workerd answers `Profiler.enable` itself and never forwards it to V8, so
  * `Profiler.startPreciseCoverage` fails with "Profiler is not enabled". The in-process
- * `node:inspector` session needs two compatibility flags, added for this run only, and a
+ * `node:inspector` session needs three compatibility flags, added for this run only, and a
  * workerd from 1.20260706.1 on. `tools` may point at a newer wrangler than the app's; the
  * timing and the profile keep the app's own workerd regardless.
  */

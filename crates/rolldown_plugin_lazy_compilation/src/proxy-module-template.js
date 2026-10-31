@@ -6,7 +6,7 @@ const lazyExports = (async () => {
   // Dev server will intercept this import and serve the actual module code.
   // We send the proxy module ID (with ?rolldown-lazy=1) so the server can mark it as fetched.
   await import(
-    /* @vite-ignore */ `/@vite/lazy?id=${encodeURIComponent($PROXY_MODULE_ID)}&clientId=${__rolldown_runtime__.clientId}`
+    /* @vite-ignore */ `$LAZY_ENDPOINT?id=${encodeURIComponent($PROXY_MODULE_ID)}&clientId=${__rolldown_runtime__.clientId}`
   );
   // Loading the chunk re-registers this proxy id, exposing the real module's
   // initializer as its own `rolldown:exports` promise. Await that promise (don't

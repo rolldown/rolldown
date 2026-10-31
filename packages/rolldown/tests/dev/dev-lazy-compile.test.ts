@@ -599,3 +599,67 @@ test(
     expect(runtime.loadExports(stableId('side-effect\\.js'))).toEqual({});
   },
 );
+
+// `experimental.devMode.base` prefixes the lazy compilation endpoint everywhere the
+// URL is generated: the initial build's stub template (placeholder substitution in
+// `LazyCompilationPlugin`) and the HMR finalizer's nested-import rewrite inside a
+// lazy chunk. Without the prefix a dev server mounted under a base path (e.g.
+// Vite's `base`) would never receive the `/@vite/lazy` request.
+test(
+  'devMode.base prefixes the lazy endpoint in both the stub template and lazy chunks',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-base-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'main.js'), `import('./a.js');\n`);
+    // The nested dynamic import inside the lazy chunk is what exercises the HMR
+    // finalizer's rewrite — it must also carry the base prefix. Assigned to
+    // `globalThis` so tree-shaking cannot drop the import expression.
+    fs.writeFileSync(path.join(dir, 'a.js'), `globalThis.load = () => import('./b.js');\n`);
+    fs.writeFileSync(path.join(dir, 'b.js'), `export const value = 1;\n`);
+
+    const engine = await dev(
+      {
+        input: path.join(dir, 'main.js'),
+        experimental: { devMode: { lazy: true, base: '/foo/' } },
+      },
+      { dir: path.join(dir, 'dist') },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+
+    // Path 1: the initial build — the stub template's placeholder was rendered
+    // with the base-prefixed endpoint. The proxy module is emitted as its own
+    // chunk (dynamic imports of lazy proxies point at a chunk file), so scan
+    // every emitted file rather than just the entry.
+    const emitted = fs
+      .readdirSync(path.join(dir, 'dist'))
+      .filter((file) => file.endsWith('.js'))
+      .map((file) => fs.readFileSync(path.join(dir, 'dist', file), 'utf8'));
+    expect(emitted.some((code) => code.includes('/foo/@vite/lazy?id='))).toBe(true);
+    // A root-absolute endpoint would appear as a template literal starting at `/@vite`.
+    for (const code of emitted) {
+      expect(code).not.toContain('`/@vite/lazy?id=');
+    }
+
+    // Path 2: a lazy chunk — the nested `import('./b.js')` was rewritten by the
+    // HMR finalizer to the base-prefixed endpoint too.
+    await engine.registerClient('base-client');
+    const chunk = await engine.compileEntry(
+      `${path.join(dir, 'a.js')}?rolldown-lazy=1`,
+      'base-client',
+    );
+    expect(chunk.code).toContain('/foo/@vite/lazy?id=');
+    // A root-absolute endpoint would appear as a template literal starting at `/@vite`.
+    expect(chunk.code).not.toContain('`/@vite/lazy?id=');
+  },
+);

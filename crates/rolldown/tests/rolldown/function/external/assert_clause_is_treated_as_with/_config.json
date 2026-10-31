@@ -1,0 +1,12 @@
+{
+  "_comment": "The legacy `assert` keyword is treated as `with`, so the output renders a `with` clause and the build warns.",
+  "config": {
+    "external": ["ext"]
+  },
+  "configVariants": [
+    {
+      "importAttributes": true
+    }
+  ],
+  "expectExecuted": false
+}

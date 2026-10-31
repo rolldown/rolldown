@@ -7,7 +7,7 @@ use rolldown_utils::{
 };
 
 use super::module_id::ModuleId;
-use crate::{ModuleDefFormat, PackageJson, side_effects::HookSideEffects};
+use crate::{ImportAttributes, ModuleDefFormat, PackageJson, side_effects::HookSideEffects};
 
 #[derive(Debug, Clone, Copy)]
 pub enum ResolvedExternal {
@@ -40,6 +40,7 @@ impl From<bool> for ResolvedExternal {
 #[derive(Debug, Default, Clone)]
 pub struct ResolvedId {
   pub id: ModuleId,
+  pub attributes: ImportAttributes,
   pub module_def_format: ModuleDefFormat,
   pub external: ResolvedExternal,
   // If the js side is return object, the relative id is finally id, else it will be converted to an absolute id
@@ -50,11 +51,24 @@ pub struct ResolvedId {
 }
 
 impl ResolvedId {
+  /// Finishes a resolution: the attributes the import resolved with become part of the module
+  /// id when `experimental.importAttributes` is enabled, and are dropped otherwise.
+  #[must_use]
+  pub fn finalize_attributes(mut self, import_attributes_enabled: bool) -> Self {
+    let attributes = std::mem::take(&mut self.attributes);
+    if import_attributes_enabled && !attributes.is_empty() {
+      self.id = ModuleId::with_attributes(self.id.raw_id(), &attributes);
+      self.attributes = attributes;
+    }
+    self
+  }
+
   /// Create a dummy ResolvedId, which is not exists in the file system
   /// note: A dummy `ResolvedId` usually used with `DUMMY_MODULE_IDX`
   pub fn make_dummy() -> Self {
     Self {
       id: ModuleId::default(),
+      attributes: ImportAttributes::default(),
       module_def_format: ModuleDefFormat::Unknown,
       external: false.into(),
       normalize_external_id: None,
@@ -82,6 +96,7 @@ impl ResolvedId {
   pub fn new_external_without_side_effects(id: ArcStr) -> Self {
     Self {
       id: ModuleId::new(id),
+      attributes: ImportAttributes::default(),
       module_def_format: ModuleDefFormat::Unknown,
       external: true.into(),
       normalize_external_id: None,

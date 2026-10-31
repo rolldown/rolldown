@@ -1,0 +1,80 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## DEPRECATED_IMPORT_ASSERTION
+
+```text
+[DEPRECATED_IMPORT_ASSERTION] The legacy `assert` keyword in "main.js" is deprecated and is treated as `with`. Use `with` instead.
+   ╭─[ main.js:1:24 ]
+   │
+ 1 │ import data from 'ext' assert { type: 'json' };
+   │                        ───────────┬───────────  
+   │                                   ╰───────────── replace `assert` with `with`
+───╯
+
+```
+
+## DEPRECATED_IMPORT_ASSERTION
+
+```text
+[DEPRECATED_IMPORT_ASSERTION] The legacy `assert` keyword in "main.js" is deprecated and is treated as `with`. Use `with` instead.
+   ╭─[ main.js:2:21 ]
+   │
+ 2 │ export * from 'ext' assert { type: 'json' };
+   │                     ───────────┬───────────  
+   │                                ╰───────────── replace `assert` with `with`
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+export { default as data } from "ext" with { type: "json" };
+export * from "ext" with { type: "json" };
+
+```
+
+# Variant: [import_attributes: true]
+
+## warnings
+
+### DEPRECATED_IMPORT_ASSERTION
+
+```text
+[DEPRECATED_IMPORT_ASSERTION] The legacy `assert` keyword in "main.js" is deprecated and is treated as `with`. Use `with` instead.
+   ╭─[ main.js:1:24 ]
+   │
+ 1 │ import data from 'ext' assert { type: 'json' };
+   │                        ───────────┬───────────  
+   │                                   ╰───────────── replace `assert` with `with`
+───╯
+
+```
+
+### DEPRECATED_IMPORT_ASSERTION
+
+```text
+[DEPRECATED_IMPORT_ASSERTION] The legacy `assert` keyword in "main.js" is deprecated and is treated as `with`. Use `with` instead.
+   ╭─[ main.js:2:21 ]
+   │
+ 2 │ export * from 'ext' assert { type: 'json' };
+   │                     ───────────┬───────────  
+   │                                ╰───────────── replace `assert` with `with`
+───╯
+
+```
+
+## Assets
+
+### main.js
+
+```js
+export { default as data } from "ext" with { type: "json" };
+export * from "ext" with { type: "json" };
+
+```

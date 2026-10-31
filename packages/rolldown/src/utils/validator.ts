@@ -453,6 +453,12 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warnings when a missing export is replaced with an undefined binding',
     ),
   ),
+  deprecatedImportAssertion: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when an import uses the legacy `assert` keyword instead of `with`',
+    ),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof ChecksOptionsSchema, ChecksOptions>>();
 

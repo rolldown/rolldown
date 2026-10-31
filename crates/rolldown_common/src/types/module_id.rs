@@ -9,7 +9,7 @@ use arcstr::ArcStr;
 use rolldown_std_utils::PathExt as _;
 use sugar_path::SugarPath as _;
 
-use super::stable_module_id::StableModuleId;
+use super::{import_attributes::ImportAttributes, stable_module_id::StableModuleId};
 
 const EMPTY_MODULE_PREFIX: &str = "\0rolldown/empty.js?";
 
@@ -31,13 +31,6 @@ pub enum ModuleIdKind {
   Bare,
 }
 
-#[derive(Clone)]
-enum Repr {
-  Path(ArcStr),
-  Virtual(ArcStr),
-  Bare(ArcStr),
-}
-
 /// `ModuleId` is the unique string identifier for each module.
 /// - It will be used to identify the module in the whole bundle.
 /// - Users could stored the `ModuleId` to track the module in different stages/hooks.
@@ -48,13 +41,31 @@ enum Repr {
 /// type, so `ModuleId` optimizes for being a faithful, lossless string/path identity.
 #[derive(Clone)]
 pub struct ModuleId {
-  repr: Repr,
+  inner: ArcStr,
+  kind: ModuleIdKind,
+  /// Length of the raw id when `inner` is `rawId?attributes=...`, [`NO_ATTRIBUTES`] otherwise.
+  raw_len: u32,
 }
+
+const NO_ATTRIBUTES: u32 = u32::MAX;
 
 impl ModuleId {
   #[inline]
   pub fn new(value: impl Into<ArcStr>) -> Self {
-    Self { repr: Self::classify(value.into()) }
+    let inner = value.into();
+    Self { kind: Self::classify(&inner), inner, raw_len: NO_ATTRIBUTES }
+  }
+
+  /// The id of the module `raw_id` resolves to when imported with `attributes`. The attributes
+  /// become part of the id, so the same file imported with different attributes is a different
+  /// module, while path operations keep working on `raw_id`.
+  pub fn with_attributes(raw_id: &str, attributes: &ImportAttributes) -> Self {
+    if attributes.is_empty() {
+      return Self::new(raw_id);
+    }
+    let mut id = Self::new(attributes.compose_module_id(raw_id));
+    id.raw_len = u32::try_from(raw_id.len()).expect("module id should be shorter than 4 GiB");
+    id
   }
 
   /// Construct a `ModuleId` that is known at compile time to be a virtual id
@@ -62,7 +73,7 @@ impl ModuleId {
   /// virtual id; it is not re-classified, so this can be used in `const` context.
   #[inline]
   pub const fn new_virtual(inner: ArcStr) -> Self {
-    Self { repr: Repr::Virtual(inner) }
+    Self { inner, kind: ModuleIdKind::Virtual, raw_len: NO_ATTRIBUTES }
   }
 
   /// Construct the sentinel id used for `browser: false` ignored modules,
@@ -72,27 +83,33 @@ impl ModuleId {
     Self::new(format!("{EMPTY_MODULE_PREFIX}{original}"))
   }
 
-  fn classify(inner: ArcStr) -> Repr {
+  fn classify(inner: &str) -> ModuleIdKind {
     if inner.starts_with('\0') {
-      Repr::Virtual(inner)
-    } else if Path::new(inner.as_str()).is_absolute() {
-      Repr::Path(inner)
+      ModuleIdKind::Virtual
+    } else if Path::new(inner).is_absolute() {
+      ModuleIdKind::Path
     } else {
-      Repr::Bare(inner)
+      ModuleIdKind::Bare
     }
   }
 
   pub fn kind(&self) -> ModuleIdKind {
-    match self.repr {
-      Repr::Path(_) => ModuleIdKind::Path,
-      Repr::Virtual(_) => ModuleIdKind::Virtual,
-      Repr::Bare(_) => ModuleIdKind::Bare,
-    }
+    self.kind
   }
 
   /// Whether the id is an absolute filesystem path.
   pub fn is_path(&self) -> bool {
-    matches!(self.repr, Repr::Path(_))
+    matches!(self.kind, ModuleIdKind::Path)
+  }
+
+  /// The id without its import attributes: what the module is read from and watched by.
+  pub fn raw_id(&self) -> &str {
+    if self.raw_len == NO_ATTRIBUTES { &self.inner } else { &self.inner[..self.raw_len as usize] }
+  }
+
+  /// The `?attributes=...` / `&attributes=...` part after [`raw_id`](Self::raw_id), or `""`.
+  pub fn attributes_suffix(&self) -> &str {
+    if self.raw_len == NO_ATTRIBUTES { "" } else { &self.inner[self.raw_len as usize..] }
   }
 
   pub fn is_empty_module(&self) -> bool {
@@ -109,20 +126,15 @@ impl ModuleId {
   }
 
   pub fn as_arc_str(&self) -> &ArcStr {
-    match &self.repr {
-      Repr::Path(inner) | Repr::Virtual(inner) | Repr::Bare(inner) => inner,
-    }
+    &self.inner
   }
 
   /// Borrow the id as a filesystem [`Path`], but only when it actually is one
   /// (an absolute path). Returns `None` for virtual ids, bare specifiers, URLs,
   /// etc. This is a zero-cost view (`Path::new`); use it to *gate* path logic so
-  /// non-path ids don't get silently path-parsed.
+  /// non-path ids don't get silently path-parsed. Import attributes are not part of the path.
   pub fn as_path(&self) -> Option<&Path> {
-    match &self.repr {
-      Repr::Path(inner) => Some(Path::new(inner.as_str())),
-      Repr::Virtual(_) | Repr::Bare(_) => None,
-    }
+    self.is_path().then(|| Path::new(self.raw_id()))
   }
 
   /// Whether the id is a filesystem path inside a `node_modules` directory.
@@ -137,11 +149,12 @@ impl ModuleId {
   /// `empty`), matching historical behavior — naming is a heuristic, not a path
   /// operation, so it is not gated on [`is_path`](Self::is_path).
   pub fn representative_name(&self) -> Cow<'_, str> {
-    Path::new(self.as_str()).representative_file_name()
+    Path::new(self.raw_id()).representative_file_name()
   }
 
+  /// The raw id relative to `root`, without import attributes.
   pub fn relative_path(&self, root: impl AsRef<Path>) -> PathBuf {
-    Path::new(self.as_str()).relative(root).into_owned()
+    Path::new(self.raw_id()).relative(root).into_owned()
   }
 
   pub fn stabilize(&self, cwd: &Path) -> StableModuleId {
@@ -149,15 +162,13 @@ impl ModuleId {
   }
 
   pub fn into_inner(self) -> ArcStr {
-    match self.repr {
-      Repr::Path(inner) | Repr::Virtual(inner) | Repr::Bare(inner) => inner,
-    }
+    self.inner
   }
 }
 
 impl Default for ModuleId {
   fn default() -> Self {
-    Self { repr: Repr::Bare(ArcStr::default()) }
+    Self { inner: ArcStr::default(), kind: ModuleIdKind::Bare, raw_len: NO_ATTRIBUTES }
   }
 }
 

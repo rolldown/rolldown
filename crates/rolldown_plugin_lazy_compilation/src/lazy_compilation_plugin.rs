@@ -94,7 +94,9 @@ impl Plugin for LazyCompilationPlugin {
       }));
     }
 
-    if matches!(args.kind, ImportKind::DynamicImport) {
+    // Lazy compilation does not support import attributes yet, so such an import is bundled as
+    // usual.
+    if matches!(args.kind, ImportKind::DynamicImport) && args.attributes.is_empty() {
       // If the importer is a fetched proxy module, don't create another proxy.
       // This allows the fetched template's `import($MODULE_ID)` to resolve
       // to the actual module instead of creating a self-referencing proxy.
@@ -113,6 +115,7 @@ impl Plugin for LazyCompilationPlugin {
             is_entry: false,
             skip_self: true,
             custom: std::sync::Arc::<rolldown_plugin::CustomField>::clone(&args.custom),
+            attributes: args.attributes.clone(),
           }),
         )
         .await??;

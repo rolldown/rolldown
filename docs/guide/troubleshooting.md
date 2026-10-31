@@ -204,6 +204,20 @@ console.log(bar());
 
 :::
 
+Rolldown may also inline the value of an exported `var` that is never reassigned. A `var` has no TDZ, so code that reads it before its declaration runs gets `undefined` in ESM, but the inlined value in Rolldown's bundled output. This can happen through an import cycle as above, or within a single module when a function that reads the `var` is called before the declaration:
+
+```js
+main();
+export var flag = true;
+function main() {
+  // In ESM, this logs `undefined`.
+  // In Rolldown's bundled output, this logs `true`.
+  console.log(flag);
+}
+```
+
+Setting [`optimization.inlineConst`](/reference/InputOptions.optimization#inlineconst) to `false` keeps such a read `undefined`.
+
 ## Warning: "Sourcemap is likely to be incorrect"
 
 You'll see this warning if you generate a sourcemap with your bundle ([`sourcemap: true`](/reference/OutputOptions.sourcemap) or `sourcemap: 'inline'`) but you're using one or more plugins that transformed code without generating a sourcemap for the transformation.

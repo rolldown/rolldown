@@ -19,6 +19,10 @@
 ### The `resolveDynamicImport` hook `specifier: AstNode` not supported
  - rollup@form@dynamic-import-unresolvable: Returns the raw AST nodes for unresolvable dynamic imports@generates es
  - rollup@function@dynamic-import-expression: Dynamic import expression replacement
+ - rollup@form@import-attributes@keep-attribute-declarations-for-external-dynamic-imports: Keep the attribute declarations for external dynamic imports
+ - rollup@form@import-attributes@keep-dynamic-attributes-default: keep import attributes for dynamic imports@generates es
+ - rollup@form@import-attributes@keep-dynamic-attributes-with: keep import attributes for dynamic imports with "with" key@generates es
+ - rollup@form@import-attributes@plugin-attributes-resolvedynamicimport: allows plugins to read and write import attributes in resolveDynamicImport
 
 ### The plugin `sequential` is not supported
  - rollup@function@enforce-sequential-plugin-order: allows to enforce sequential plugin hook order for parallel plugin hooks
@@ -26,6 +30,8 @@
 
 ### The `renderDynamicImport/resolveImportMeta/shouldTransformCachedModule` hooks not supported
  - rollup@function@enforce-plugin-order: allows to enforce plugin hook order
+ - rollup@form@resolve-file-url-import-meta-attributes: adds attributes to file resolveFileUrl and resolveImportMeta hooks@generates es
+ - rollup@function@extend-more-hooks-to-include-import-attributes: extend load, transform and renderDynamicImport to include import attributes
  
 ### The `renderDynamicImport` hook not supported
  - rollup@form@custom-dynamic-import-no-interop: does not add any interop when using a custom dynamic import handler@generates es
@@ -369,39 +375,23 @@
  - rollup@chunking form@synthetic-named-exports@multi-level: handles multiple levels of synthetic named exports@generates es
  - rollup@function@synthetic-named-exports@preserve-modules-static-namespace: includes synthetic named exports in static namespace imports in preserveModules mode
 
-### Import Assertions is not supported
- - rollup@function@import-assertions@plugin-assertions-this-resolve: allows plugins to provide assertions for this.resolve'
- - rollup@function@import-assertions@plugin-assertions-this-resolve: allows plugins to provide attributes for this.resolve
- - rollup@function@import-assertions@warn-assertion-conflicts: warns for conflicting import attributes
- - rollup@function@import-assertions@warn-unresolvable-assertions: warns for dynamic import attributes that cannot be resolved
+### The `output.externalImportAttributes` and `output.externalImportAssertions` options are not supported
  - rollup@form@deprecated@removes-dynamic-assertions: keep import assertions for dynamic imports
  - rollup@form@deprecated@removes-static-attributes: keeps any import assertions on input
-  
-### Import attributes is not supported
- - rollup@form@import-attributes@attribute-shapes: handles special shapes of attributes
- - rollup@form@import-attributes@escapes-attribute-values: serializes quotes, backslashes and line terminators in import attribute values
- - rollup@form@import-attributes@keep-dynamic-assertions: keep import attributes for dynamic imports@generates es
- - rollup@form@import-attributes@keep-dynamic-attributes: keep import attributes for dynamic imports@generates es
- - rollup@form@import-attributes@keeps-static-assertions: keeps any import assertions on input@generates es
- - rollup@form@import-attributes@keeps-static-attributes: keeps any import attributes on input@generates es
- - rollup@form@import-attributes@plugin-attributes-resolvedynamicimport: allows plugins to read and write import attributes in resolveDynamicImport
- - rollup@form@import-attributes@plugin-attributes-resolveid: allows plugins to read and write import attributes in resolveId
  - rollup@form@import-attributes@removes-dynamic-attributes: keep import attributes for dynamic imports
  - rollup@form@import-attributes@removes-static-attributes: keeps any import attributes on input
- - rollup@form@import-attributes@keep-attribute-declarations-for-external-dynamic-imports: Keep the attribute declarations for external dynamic imports
+
+### The `output.importAttributesKey` option is not supported
  - rollup@form@import-attributes@keep-dynamic-attributes-assert: keep import attributes for dynamic imports with "assert" key@generates es
- - rollup@form@import-attributes@keep-dynamic-attributes-default: keep import attributes for dynamic imports@generates es
- - rollup@form@import-attributes@keep-dynamic-attributes-with: keep import attributes for dynamic imports with "with" key@generates es
  - rollup@form@import-attributes@keeps-static-attributes-key-assert: keeps any import attributes on input using import attributes with "with" key@generates es
- - rollup@form@import-attributes@keeps-static-attributes-key-default: keeps any import attributes on input using import attributes with "with" key@generates es
- - rollup@form@import-attributes@keeps-static-attributes-key-with: keeps any import attributes on input using import attributes with "with" key@generates es
- - rollup@form@resolve-file-url-import-meta-attributes: adds attributes to file resolveFileUrl and resolveImportMeta hooks@generates es
+
+### The `attributes` argument of the `resolveFileUrl` hook is not supported
  - rollup@form@configure-file-url: allows to configure file urls@generates es
  - rollup@chunking form@resolve-file-url: allows to configure file urls@generates es
  - rollup@chunking form@resolve-file-url: allows to configure file urls@generates cjs
- - rollup@function@deprecated@load-attributes: does not allow returning attributes from the "load" hook
- - rollup@function@deprecated@transform-attributes: does not allow returning attributes from the "transform" hook
- - rollup@function@extend-more-hooks-to-include-import-attributes: extend load, transform and renderDynamicImport to include import attributes
+
+### Invalid attributes in the `import()` options of an external are kept instead of removed
+ - rollup@form@import-attributes@attribute-shapes: handles special shapes of attributes
 
 ### Source phase import is not supported
  - rollup@form@source-phase-imports-external: preserves source phase import externals
@@ -451,6 +441,8 @@
  - rollup@function@deprecations@asset-originalfilename-in-bundle: marks the "originalFileName" property of emitted assets as deprecated in generateBundle when emitted during generate phase
  - rollup@function@deprecations@asset-render-chunk-originalfilename-in-bundle: marks the "originalFileName" property of emitted assets as deprecated in generateBundle when emitted during generate phase
  - rollup@function@deprecations@asset-render-chunk-name-in-bundle: marks the "name" property of emitted assets as deprecated in generateBundle when emitted during generate phase
+ - rollup@function@deprecated@load-attributes: does not allow returning attributes from the "load" hook
+ - rollup@function@deprecated@transform-attributes: does not allow returning attributes from the "transform" hook
 
 ### The error/warning information is not compatible with rollup
  - rollup@function@banner-and-footer: adds a banner/footer (expects `ADDON_ERROR` but got `PLUGIN_ERROR`)

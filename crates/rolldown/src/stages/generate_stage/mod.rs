@@ -326,6 +326,11 @@ impl<'a> GenerateStage<'a> {
             let module = &modules[entry_module_id];
             let generated = if self.options.preserve_modules {
               let module_id = module.id().as_str();
+              // The representative name keeps the file stem of the full id, as before.
+              // Rollup also derives the chunk variable name from the full id
+              // (`getAliasName(module.id)`).
+              let representative_chunk_name =
+                module_id.as_path().file_stem().and_then(|f| f.to_str()).unwrap_or(module_id);
               // Rollup's `QUERY_HASH_REGEX` (`[#?]`) drops a query or hash before the
               // extension check. Otherwise `odd.js?x` looks like a non-JS extension and
               // `[name]` keeps the query.
@@ -333,7 +338,7 @@ impl<'a> GenerateStage<'a> {
                 Some(index) => &module_id[..index],
                 None => module_id,
               });
-              let (representative_chunk_name, absolute_chunk_file_name, ext) =
+              let (_, absolute_chunk_file_name, ext) =
                 representative_file_name_for_preserve_modules(module_path);
 
               // The relative path is built from the raw id and sanitized once at the end:
@@ -379,7 +384,7 @@ impl<'a> GenerateStage<'a> {
               };
 
               let sanitized_representative_chunk_name =
-                sanitize_filename.call(&representative_chunk_name).await?;
+                sanitize_filename.call(representative_chunk_name).await?;
               PreGeneratedChunkName {
                 representative_chunk_name: sanitized_representative_chunk_name,
                 chunk_filename: chunk_name.clone(),

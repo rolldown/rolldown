@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.cjs
+(() => {
+	if (typeof window === "undefined") return;
+	globalThis.afterReturn = true;
+})();
+globalThis.outroRan = true;
+globalThis.footerRan = true;
+
+```

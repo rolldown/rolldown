@@ -77,6 +77,11 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
       self.result.ecma_view_meta.insert(EcmaViewMeta::IndependentInitialization);
     }
 
+    // With a top-level `return`, a module is CommonJS unless it has an `export` declaration.
+    let top_level_return_ends_module = !program
+      .body
+      .iter()
+      .any(|stmt| stmt.as_module_declaration().is_some_and(ast::ModuleDeclaration::is_export));
     for (idx, stmt) in program.body.iter().enumerate() {
       // `0` is reserved for Module Namespace Object stmt info
       #[expect(
@@ -95,7 +100,8 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
         // Constants that earlier statements declared. The map grows in statement order, so no read
         // precedes its declaration.
         Some(&self.result.constant_export_map),
-      );
+      )
+      .with_top_level_return_ends_module(top_level_return_ends_module);
       let mut stmt_eval_facts = analyzer.analyze_stmt(stmt);
       // `ExecutionOrderSensitive` is read outside the wrap planner too — it gates which leaf
       // modules `sort_chunk_modules` may sort by id — so it has to mean the same thing in every

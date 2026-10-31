@@ -7,6 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // entry.js
-return require("fs");
+(() => {
+	return require("fs");
+})();
 
 ```

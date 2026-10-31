@@ -10,6 +10,7 @@ use rolldown_error::{BuildDiagnostic, InvalidOptionType};
 use rolldown_std_utils::normalize_path_buf_to_slash;
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
 use rolldown_utils::make_unique_name::make_unique_name;
+use rolldown_utils::stabilize_id::stabilize_id;
 use rolldown_utils::xxhash::{xxhash_base64_url, xxhash_with_base};
 use std::ffi::OsStr;
 use std::path::Path;
@@ -138,11 +139,17 @@ impl FileEmitter {
       .context(
         "The `PluginContext.emitFile` with `type: 'chunk'` only work at `buildStart/resolveId/load/transform/moduleParsed` hooks.",
       )?;
-    // Only assign a reference id once we know we have a live sender — keeps
-    // `emit_chunk` side-effect-free on the error path.
-    // Seed from the module id when unnamed — duplicate emits of the same id
-    // then share a reference id, matching duplicate named emits.
-    let reference_id = self.assign_reference_id(chunk.name.as_deref().unwrap_or(&chunk.id));
+    // Seed from the name, importer, id and file name, so emits that resolve to
+    // different modules or output files get distinct reference ids. Paths are
+    // made relative to cwd so the ids don't depend on the checkout location.
+    let cwd = &self.options.cwd;
+    let reference_id = self.assign_reference_id(&format!(
+      "{}\0{}\0{}\0{}",
+      chunk.name.as_deref().unwrap_or_default(),
+      chunk.importer.as_deref().map(|importer| stabilize_id(importer, cwd)).unwrap_or_default(),
+      stabilize_id(&chunk.id, cwd),
+      chunk.file_name.as_deref().unwrap_or_default()
+    ));
     sender
       .send(ModuleLoaderMsg::AddEntryModule(Box::new(AddEntryModuleMsg {
         chunk: Arc::clone(&chunk),
@@ -218,9 +225,8 @@ impl FileEmitter {
           return Ok(reference_id);
         }
         Entry::Vacant(entry) => {
-          // Use the content hash (also the dedupe key, so unique per asset):
-          // a counter-based id depends on module processing order and makes
-          // builds nondeterministic.
+          // Seed from the content hash, which is also the dedupe key, so the id
+          // is unique per asset.
           let reference_id = self.assign_reference_id(&hash);
           // Insert into self.files while the VacantEntry holds its shard lock,
           // so any concurrent Occupied branch always finds the files entry.

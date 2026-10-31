@@ -108,7 +108,8 @@ async function invokeBuiltinHook(this: CallableBuiltinPluginContext, key: string
     return error(
       logPluginError(e, this.plugin.name, {
         hook: key,
-        id: key === 'transform' ? args[2] : undefined,
+        // `transform(code, id, options)` — the module id is the second argument.
+        id: key === 'transform' ? args[1] : undefined,
       }),
     );
   }

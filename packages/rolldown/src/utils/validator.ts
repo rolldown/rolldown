@@ -732,6 +732,12 @@ const InputOptionsSchema = v.strictObject({
           ),
           v.description('Used to name the build.'),
         ),
+        mode: v.pipe(
+          v.optional(v.union([v.literal('full'), v.literal('report')])),
+          v.description(
+            "'full' (default): write JSON-lines devtools logs. 'report': aggregate the same event stream in-memory and emit an agent-readable report (metrics.json + markdown views) instead.",
+          ),
+        ),
       }),
     ),
     v.description(

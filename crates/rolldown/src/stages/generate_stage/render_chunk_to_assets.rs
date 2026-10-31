@@ -71,6 +71,7 @@ impl GenerateStage<'_> {
       .await?;
 
     self.trace_action_package_graph_ready(chunk_graph, &instantiated_chunks);
+    self.trace_action_module_rendered(&instantiated_chunks);
 
     diagnostics.extend(
       render_chunks(

@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
-__share("shared-ZmCA4nrZ", (exports) => {
+__share("shared-ZmCA4nrZ", ((exports) => {
 	// shared.js
 	var s, load;
 	function init_shared() {
@@ -21,7 +21,7 @@ __share("shared-ZmCA4nrZ", (exports) => {
 		r: () => s,
 		t: () => init_shared
 	});
-});
+}));
 var share_shared = __share_require("shared-ZmCA4nrZ");
 // a.js
 var m;
@@ -40,7 +40,7 @@ await init_a();
 
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
-__share("shared-ZmCA4nrZ", (exports) => {
+__share("shared-ZmCA4nrZ", ((exports) => {
 	// shared.js
 	var s, load;
 	function init_shared() {
@@ -54,7 +54,7 @@ __share("shared-ZmCA4nrZ", (exports) => {
 		r: () => s,
 		t: () => init_shared
 	});
-});
+}));
 var share_shared = __share_require("shared-ZmCA4nrZ");
 // b.js
 function init_b() {

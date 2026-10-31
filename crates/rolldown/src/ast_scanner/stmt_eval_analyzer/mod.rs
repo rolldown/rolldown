@@ -157,6 +157,9 @@ pub struct StmtEvalAnalyzer<'a> {
   read_constant: Cell<bool>,
   /// `false` while [`Self::analyze_stmt`] analyzes a statement again without constants.
   use_constants: Cell<bool>,
+  /// Whether a top-level `return` ends the module, as it does in CommonJS. `false` for an ES module:
+  /// the parser accepts a top-level `return` there, but an output chunk that keeps one fails to parse.
+  top_level_return_ends_module: bool,
 }
 
 impl<'a> StmtEvalAnalyzer<'a> {
@@ -177,7 +180,14 @@ impl<'a> StmtEvalAnalyzer<'a> {
       constant_symbols,
       read_constant: Cell::new(false),
       use_constants: Cell::new(true),
+      top_level_return_ends_module: true,
     }
+  }
+
+  #[must_use]
+  pub fn with_top_level_return_ends_module(mut self, value: bool) -> Self {
+    self.top_level_return_ends_module = value;
+    self
   }
 
   fn constant_value_for_reference_id(
@@ -730,8 +740,11 @@ impl<'a> StmtEvalAnalyzer<'a> {
           | self.analyze_stmt_inner(&if_stmt.consequent)
           | if_stmt.alternate.as_ref().map(|s| self.analyze_stmt_inner(s)).unwrap_or_default()
       }
+      // This walk never enters a function body, so every `return` here is a top-level `return`.
+      // Dropping one that ends the module would run the statements after it.
       Statement::ReturnStatement(ret_stmt) => {
         ret_stmt.argument.as_ref().map(|expr| self.analyze_expr(expr)).unwrap_or_default()
+          | StmtEvalFacts::from_tree_shaking_side_effect(self.top_level_return_ends_module)
       }
       Statement::LabeledStatement(labeled_stmt) => self.analyze_stmt_inner(&labeled_stmt.body),
       Statement::TryStatement(try_stmt) => {
@@ -1658,10 +1671,8 @@ mod test {
 
   #[test]
   fn test_return_statement() {
-    assert!(!has_side_effect_for_tree_shaking("return;"));
-    assert!(!has_side_effect_for_tree_shaking("return 1;"));
-    // accessing global variable may have side effect
-    assert!(has_side_effect_for_tree_shaking("return bar;"));
+    assert!(has_side_effect_for_tree_shaking("return;"));
+    assert!(has_side_effect_for_tree_shaking("return 1;"));
   }
 
   #[test]

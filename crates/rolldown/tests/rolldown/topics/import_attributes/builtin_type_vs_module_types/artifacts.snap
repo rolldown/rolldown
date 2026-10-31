@@ -1,0 +1,48 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## assets/a-9GU1MUiM.png
+
+## assets/a-sVrPnKUg.txt
+
+## main.js
+
+```js
+import cssTxt from "./assets/a-sVrPnKUg.txt" with { type: "css" };
+// HIDDEN [\0rolldown/runtime.js]
+// a.png with { type: "text" }
+var a_default = "png\n";
+// a.txt with { type: "text" }
+var a_default$1 = "txt\n";
+var cssPng = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = "./assets/a-9GU1MUiM.png";
+})))())).default;
+export { cssPng, cssTxt, a_default as png, a_default$1 as txt };
+
+```
+
+# Variant: [import_attributes: false]
+
+## Assets
+
+### assets/a-9GU1MUiM.png
+
+### assets/a-sVrPnKUg.txt
+
+### main.js
+
+```js
+import txt from "./assets/a-sVrPnKUg.txt" with { type: "text" };
+import cssTxt from "./assets/a-sVrPnKUg.txt" with { type: "css" };
+// HIDDEN [\0rolldown/runtime.js]
+// main.js
+var import_a = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = "./assets/a-9GU1MUiM.png";
+})))());
+var cssPng = import_a.default;
+var png = import_a.default;
+export { cssPng, cssTxt, png, txt };
+
+```

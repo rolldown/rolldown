@@ -120,9 +120,11 @@ impl NativePluginContextImpl {
     };
 
     // A forwarded `importer` carries the importer's attributes in its id.
-    let importer_raw_id = importer.map(|importer| {
-      ImportAttributes::parse_module_id(importer).map_or(importer, |(raw_id, _)| raw_id)
-    });
+    let (importer_raw_id, importer_attributes) =
+      match importer.and_then(ImportAttributes::parse_module_id) {
+        Some((raw_id, attributes)) => (Some(raw_id), attributes),
+        None => (importer, ImportAttributes::default()),
+      };
 
     // Use the pre-created manual resolve span.
     // When PluginContext.resolve() is called from JavaScript via NAPI, the tracing span
@@ -144,6 +146,7 @@ impl NativePluginContextImpl {
         &self.options,
         &ImportAttributes::default(),
         importer_raw_id,
+        &importer_attributes,
       )
       .await
     }

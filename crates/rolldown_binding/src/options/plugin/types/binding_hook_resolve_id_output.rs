@@ -1,5 +1,6 @@
 use super::{
   binding_hook_side_effects::BindingHookSideEffects,
+  binding_import_attributes::{BindingImportAttributes, from_binding_import_attributes},
   binding_resolved_external::BindingResolvedExternal,
 };
 
@@ -18,6 +19,9 @@ pub struct BindingHookResolveIdOutput {
   /// we could get the related package json object via the path string.
   #[napi(ts_type = "string | null")]
   pub package_json_path: Option<String>,
+  /// Replaces the import attributes of the import. `{}` removes them.
+  #[napi(ts_type = "Record<string, string>")]
+  pub attributes: Option<BindingImportAttributes>,
 }
 
 impl TryFrom<BindingHookResolveIdOutput> for rolldown_plugin::HookResolveIdOutput {
@@ -30,6 +34,7 @@ impl TryFrom<BindingHookResolveIdOutput> for rolldown_plugin::HookResolveIdOutpu
       normalize_external_id: value.normalize_external_id,
       side_effects: value.module_side_effects.map(TryInto::try_into).transpose()?,
       package_json_path: value.package_json_path,
+      attributes: value.attributes.map(from_binding_import_attributes),
     })
   }
 }

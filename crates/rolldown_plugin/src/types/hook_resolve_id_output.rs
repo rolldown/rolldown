@@ -1,5 +1,7 @@
 use arcstr::ArcStr;
-use rolldown_common::{ResolvedExternal, ResolvedId, side_effects::HookSideEffects};
+use rolldown_common::{
+  ImportAttributes, ResolvedExternal, ResolvedId, side_effects::HookSideEffects,
+};
 
 #[derive(Debug, Default)]
 pub struct HookResolveIdOutput {
@@ -8,6 +10,8 @@ pub struct HookResolveIdOutput {
   pub normalize_external_id: Option<bool>,
   pub side_effects: Option<HookSideEffects>,
   pub package_json_path: Option<String>,
+  /// Replaces the attributes of the import. `None` keeps them; an empty value removes them.
+  pub attributes: Option<ImportAttributes>,
 }
 
 impl HookResolveIdOutput {
@@ -17,7 +21,8 @@ impl HookResolveIdOutput {
 
   pub fn from_resolved_id(resolved_id: ResolvedId) -> Self {
     Self {
-      id: resolved_id.id.as_arc_str().clone(),
+      id: resolved_id.id.raw_id().into(),
+      attributes: None,
       external: Some(resolved_id.external),
       side_effects: resolved_id.side_effects,
       normalize_external_id: None,

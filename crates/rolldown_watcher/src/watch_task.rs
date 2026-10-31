@@ -9,7 +9,7 @@ use rolldown_error::{
 };
 use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig};
 use rolldown_utils::pattern_filter;
-use std::path::Path;
+use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
@@ -168,7 +168,12 @@ impl WatchTask {
         }
         Ok(BuildOutcome::Success(BundleEndEventData {
           task_index,
-          output: self.options.cwd.join(&self.options.out_dir).to_string_lossy().into_owned(),
+          output: resolve_output_path(
+            &self.options.cwd,
+            self.options.file.as_deref().unwrap_or(&self.options.out_dir),
+          )
+          .to_string_lossy()
+          .into_owned(),
           duration,
           bundle_handle,
         }))
@@ -308,6 +313,33 @@ impl WatchTask {
   }
 }
 
+/// Absolute, normalized form of `output.file` / `output.dir` for `BundleEnd.output`.
+// See internal-docs/watch-mode/implementation.md ("API Contract").
+fn resolve_output_path(cwd: &Path, output: &str) -> PathBuf {
+  // Same join as `Bundle::bundle_write`, then the resolution `std::fs` applies when it writes:
+  // on Windows `absolute` is `GetFullPathNameW`, so a drive-relative `D:out.js` (which `join`
+  // lets replace `cwd`) resolves against the process's current directory for that drive.
+  let joined = cwd.join(output);
+  let absolute_path = std::path::absolute(&joined).unwrap_or(joined);
+
+  // `absolute` keeps `..` (on Unix) and a trailing separator; resolve both lexically, like
+  // Rollup's `path.resolve`: `components()` yields no separator, so `dist/` reports as `dist`.
+  let mut normalized = PathBuf::new();
+  for component in absolute_path.components() {
+    match component {
+      Component::CurDir => {}
+      // `pop` never removes a root or prefix, so excess `..` stays at the root.
+      Component::ParentDir => {
+        normalized.pop();
+      }
+      Component::Prefix(_) | Component::RootDir | Component::Normal(_) => {
+        normalized.push(component.as_os_str());
+      }
+    }
+  }
+  normalized
+}
+
 /// Outcome of a build attempt
 pub enum BuildOutcome {
   /// Build was skipped (no rebuild needed)
@@ -318,4 +350,51 @@ pub enum BuildOutcome {
   Error(WatchErrorEventData),
   /// `watcher.close()` was called during the build; output was discarded.
   Closed,
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn relative_output_path_is_resolved_and_normalized() {
+    let cwd = std::env::current_dir().expect("current directory");
+    assert_eq!(resolve_output_path(&cwd, "./nested/../dist/out.js"), cwd.join("dist/out.js"));
+    // `Path` equality ignores a trailing separator, so compare the reported string.
+    assert_eq!(resolve_output_path(&cwd, "dist/").as_os_str(), cwd.join("dist").as_os_str());
+
+    let absolute = cwd.join("absolute.js");
+    assert_eq!(resolve_output_path(&cwd, absolute.to_string_lossy().as_ref()), absolute);
+
+    let root = cwd.ancestors().last().expect("root");
+    let above_root = format!("{}x.js", "../".repeat(cwd.components().count() + 1));
+    assert_eq!(resolve_output_path(&cwd, &above_root), root.join("x.js"));
+  }
+
+  #[cfg(windows)]
+  #[test]
+  fn windows_drive_relative_output_path_matches_the_written_file() {
+    // The writer joins `cwd` (which a drive-relative path replaces) and lets the OS resolve the
+    // rest from the process's per-drive current directory, not from `cwd`.
+    let process_cwd = std::env::current_dir().expect("current directory");
+    let Some(Component::Prefix(prefix)) = process_cwd.components().next() else { return };
+    let std::path::Prefix::Disk(drive) = prefix.kind() else { return };
+    let drive = char::from(drive);
+    let other_cwd = PathBuf::from(format!(r"{drive}:\rolldown-not-the-process-cwd"));
+    assert_eq!(
+      resolve_output_path(&other_cwd, &format!("{drive}:bundle.js")),
+      process_cwd.join("bundle.js")
+    );
+    // Another drive: whatever `GetFullPathNameW` picks (its current directory, else its root).
+    let other = if drive.eq_ignore_ascii_case(&'Z') { 'Y' } else { 'Z' };
+    let output = format!("{other}:bundle.js");
+    assert_eq!(
+      resolve_output_path(&other_cwd, &output),
+      std::path::absolute(&output).expect("absolute")
+    );
+    assert_eq!(
+      resolve_output_path(&other_cwd, r"\bundle.js"),
+      PathBuf::from(format!(r"{drive}:\bundle.js"))
+    );
+  }
 }

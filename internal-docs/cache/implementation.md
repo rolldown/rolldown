@@ -168,6 +168,42 @@ is created, kept, or reused:
 `symbol_ref_db` via `clone_without_scoping` (a performance optimization —
 scoping is reinstated after the build).
 
+### Arena compaction
+
+`index_ecma_ast` and the per-module `Scoping` in `symbol_ref_db` are the bulk
+of the snapshot: on the `rome` bench fixture they are ~95% of the ~70 MiB the
+cache retains between builds, and most of that is not AST at all but arena
+slack. oxc parses each module into a bumpalo arena that starts at 16 KiB and
+doubles as it fills, and the transformer, dead-code elimination and the
+semantic rebuilds in `pre_process_ecma_ast` leave their discarded nodes in it;
+the scope tree's arena grows the same way. A one-shot build drops both after
+rendering, but an incremental build keeps them for the whole session.
+
+So when `experimental.incrementalBuild` is on, `ModuleTask` right-sizes both
+arenas once the scanner is done with the module
+(`module_loader/module_task.rs`, calling `EcmaAst::compact_arena` and
+`AstScopes::compact_arena`): the AST is measured in a thread-local scratch
+arena, then copied into an arena of exactly that size, unless the copy would
+not be smaller (a module of large string literals: the parser borrows them
+from the source, a copy writes them into the arena). The copies keep every
+`NodeId` / `ScopeId` / `SymbolId` / `ReferenceId`, so the scan-time side
+tables stay valid (see [ast-mutation](../ast-mutation/implementation.md)).
+Cost: one extra clone per scanned module, on the scan's worker threads.
+
+Two things the copy deliberately does not do: it never copies the module
+source into the arena (`Program.source_text` points at the module's `ArcStr`,
+as the parse does — `EcmaAst::clone_with_another_arena` shares this and so
+no longer duplicates the source in HMR and per-build clones either), and it
+is not applied to one-shot builds, where the arena is dropped after codegen.
+
+Known remaining cost: every incremental build still clones every module's
+AST once, in `create_output` / `make_copy`, because `finalize_modules`
+mutates ASTs in place. That clone is now sized by the compacted arena, but
+it is still the largest transient of a rebuild (~20% of the rebuild peak on
+`rome`). Removing it means moving the table out of the snapshot for the
+build and cloning per module inside finalize; see the "Unresolved Questions"
+in [design.md](./design.md).
+
 ### `ScanStageOutput` vs `NormalizedScanStageOutput`
 
 `ScanStageOutput` (`scan_stage.rs:131`) is what the scan produces. Its

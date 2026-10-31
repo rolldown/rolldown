@@ -25,6 +25,17 @@ impl AstScopes {
     self.scoping = scoping;
   }
 
+  /// Replaces the scope tree's arena with one sized to what the tree holds.
+  ///
+  /// `Scoping`'s arena starts at the allocator's default chunk size and doubles as it fills.
+  /// Its builder copies every name into that arena, so a copy holds nothing the tree did not,
+  /// and the clone never takes more than the arena it replaces. Keeps every `SymbolId` /
+  /// `ScopeId` / `ReferenceId`. Only worth doing for an AST that the bundler retains across
+  /// builds; see `EcmaAst::compact_arena`.
+  pub fn compact_arena(&mut self) {
+    self.scoping = self.scoping.clone_in_with_semantic_ids_with_another_arena();
+  }
+
   pub fn is_unresolved(&self, reference_id: ReferenceId) -> bool {
     self.scoping.get_reference(reference_id).symbol_id().is_none()
   }

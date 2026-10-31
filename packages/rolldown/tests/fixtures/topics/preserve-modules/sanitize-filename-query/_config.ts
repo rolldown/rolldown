@@ -40,7 +40,7 @@ export default defineTest({
       (item): item is OutputChunk => item.type === 'chunk' && item.fileName === 'index.js',
     );
     expect(entryChunk?.code).toMatchInlineSnapshot(`
-      "import "./components/TestComp.vue_vue_type_script_setup_true_lang.js";
+      "import "./components/TestComp.vue.js";
       "
     `);
 
@@ -48,9 +48,8 @@ export default defineTest({
       (item): item is OutputChunk =>
         item.type === 'chunk' && item.fileName.startsWith('components/'),
     );
-    expect(testCompChunk?.fileName).toBe(
-      'components/TestComp.vue_vue_type_script_setup_true_lang.js',
-    );
-    expect(testCompChunk?.name).toBe('components/TestComp.vue_vue_type_script_setup_true_lang');
+    // Like Rollup, the name ignores the query.
+    expect(testCompChunk?.fileName).toBe('components/TestComp.vue.js');
+    expect(testCompChunk?.name).toBe('components/TestComp.vue');
   },
 });

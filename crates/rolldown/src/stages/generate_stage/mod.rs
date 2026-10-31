@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use arcstr::ArcStr;
 use futures::future::try_join_all;
@@ -24,7 +24,11 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath as _;
 use tracing::debug_span;
 
-const COMMON_JS_EXTENSIONS: &[&str] = &["js", "jsx", "mjs", "cjs", "ts", "tsx", "mts", "cts"];
+/// Extensions Rollup drops from a preserved module's chunk name and from `[name]`.
+/// Any other extension stays, so `card.json` is `card.json` in both places and emits
+/// as `card.json.js` instead of taking `card.js` from the real module.
+/// https://github.com/rollup/rollup/blob/master/src/Chunk.ts (`NON_ASSET_EXTENSIONS`)
+const NON_ASSET_EXTENSIONS: &[&str] = &["js", "jsx", "ts", "tsx", "mjs", "mts", "cjs", "cts"];
 
 #[derive(Debug)]
 struct PreGeneratedChunkName {
@@ -33,8 +37,9 @@ struct PreGeneratedChunkName {
   /// The full chunk name including directory structure relative to `preserveModulesRoot`.
   /// This appears in `PreRenderedChunk.name` and hooks like `entryFileNames`.
   chunk_name: ArcStr,
-  /// The input for the `[name]` placeholder of filename templates. For a preserved module,
-  /// this is its sanitized relative path without the extension.
+  /// The input for the `[name]` placeholder of filename templates. For a preserved
+  /// module this is the same string as `chunk_name`: the sanitized relative path,
+  /// with only [`NON_ASSET_EXTENSIONS`] removed.
   chunk_filename: ArcStr,
 }
 
@@ -321,8 +326,20 @@ impl<'a> GenerateStage<'a> {
             let module = &modules[entry_module_id];
             let generated = if self.options.preserve_modules {
               let module_id = module.id().as_str();
-              let (representative_chunk_name, absolute_chunk_file_name, ext) =
-                representative_file_name_for_preserve_modules(module_id.as_path());
+              // The representative name keeps the file stem of the full id, as before.
+              // Rollup also derives the chunk variable name from the full id
+              // (`getAliasName(module.id)`).
+              let representative_chunk_name =
+                module_id.as_path().file_stem().and_then(|f| f.to_str()).unwrap_or(module_id);
+              // Rollup's `QUERY_HASH_REGEX` (`[#?]`) drops a query or hash before the
+              // extension check. Otherwise `odd.js?x` looks like a non-JS extension and
+              // `[name]` keeps the query.
+              let module_path = Path::new(match module_id.find(['?', '#']) {
+                Some(index) => &module_id[..index],
+                None => module_id,
+              });
+              let (_, absolute_chunk_file_name, ext) =
+                representative_file_name_for_preserve_modules(module_path);
 
               // The relative path is built from the raw id and sanitized once at the end:
               // `preserveModulesRoot` and the input base are raw paths, so a sanitized id may no
@@ -354,23 +371,24 @@ impl<'a> GenerateStage<'a> {
                   path_buf_to_slash(PathBuf::from(virtual_dirname.as_str()).join(p))
                 }
               };
-              // The `[name]` placeholder gets the path without the extension.
-              let chunk_filename = sanitize_filename.call_relative(&relative_path).await?;
-              // `relative_path` has no extension. The chunk name gets it back, except for
-              // common ones: https://github.com/rollup/rollup/pull/4565/files
+              // `relative_path` has had its final extension removed. Put a non-JS/TS
+              // extension back and use that string for both `chunk.name` and `[name]`,
+              // which is what Rollup's `getPreserveModulesChunkNameFromModule` does
+              // (rollup/rollup#4565). Feeding the stripped path to `[name]` makes
+              // `card.json` render as `card.js` and renames the real module to `card2.js`.
               let chunk_name = match ext.as_deref() {
-                Some(e) if !e.is_empty() && !COMMON_JS_EXTENSIONS.contains(&e) => {
+                Some(e) if !e.is_empty() && !NON_ASSET_EXTENSIONS.contains(&e) => {
                   sanitize_filename.call_relative(&concat_string!(relative_path, ".", e)).await?
                 }
-                _ => chunk_filename.clone(),
+                _ => sanitize_filename.call_relative(&relative_path).await?,
               };
 
               let sanitized_representative_chunk_name =
-                sanitize_filename.call(&representative_chunk_name).await?;
+                sanitize_filename.call(representative_chunk_name).await?;
               PreGeneratedChunkName {
                 representative_chunk_name: sanitized_representative_chunk_name,
+                chunk_filename: chunk_name.clone(),
                 chunk_name,
-                chunk_filename,
               }
             } else if meta.contains(rolldown_common::ChunkMeta::UserDefinedEntry) {
               // try extract meaningful input name from path

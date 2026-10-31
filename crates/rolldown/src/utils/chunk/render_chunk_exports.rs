@@ -25,7 +25,14 @@ pub fn render_wrapped_entry_chunk(
 ) -> Option<String> {
   if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
     let entry_meta = &ctx.link_output.metas[entry_id];
+    // In an import cycle, an eager wrapper call can run before the other wrappers of the cycle
+    // exist.
+    let without_eager_wrapper_call =
+      ctx.chunk_graph.chunks_without_eager_wrapper_call.contains(&ctx.chunk_idx);
     if matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
+      if without_eager_wrapper_call {
+        return None;
+      }
       let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
 
       let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
@@ -98,7 +105,7 @@ pub fn render_wrapped_entry_chunk(
 
     let reexport_init_calls = render_entry_reexported_wrapper_init_calls(ctx, entry_id, entry_meta);
 
-    match ctx.esm_init_target(entry_id) {
+    match ctx.esm_init_target(entry_id).filter(|_| !without_eager_wrapper_call) {
       Some(target) => {
         let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
           target.wrapper_ref,
@@ -226,6 +233,11 @@ pub fn render_chunk_exports(
       if export_items.is_empty() && !matches!(ctx.options.platform, Platform::Node) {
         return None;
       }
+      let defer_namespace_aliases = ctx
+        .chunk_graph
+        .chunks_without_eager_wrapper_call
+        .contains(&ctx.chunk_idx)
+        && chunk.entry_module_idx().is_some_and(|entry_id| ctx.esm_init_target(entry_id).is_some());
       let mut s = String::new();
       let rendered_items = export_items
         .into_iter()
@@ -248,18 +260,20 @@ pub fn render_chunk_exports(
             .canonical_name_for_or_original(canonical_ref, &chunk.canonical_names);
           let rendered_canonical_name = escape_non_ascii(canonical_name, ascii_only);
           if let Some(ns_alias) = &symbol.namespace_alias {
-            let canonical_ns_name = link_output
-              .symbol_db
-              .canonical_name_for_or_original(ns_alias.namespace_ref, &chunk.canonical_names);
-            let property_name = &ns_alias.property_name;
             s.push_str("var ");
             s.push_str(&rendered_canonical_name);
-            s.push_str(" = ");
-            s.push_str(&property_access_str_with_ascii(
-              &escape_non_ascii(canonical_ns_name, ascii_only),
-              property_name,
-              ascii_only,
-            ));
+            if !defer_namespace_aliases {
+              let canonical_ns_name = link_output
+                .symbol_db
+                .canonical_name_for_or_original(ns_alias.namespace_ref, &chunk.canonical_names);
+              s.push_str(" = ");
+              s.push_str(&property_access_str_with_ascii(
+                &escape_non_ascii(canonical_ns_name, ascii_only),
+                &ns_alias.property_name,
+                ascii_only,
+              ));
+            }
+            // The finalizer assigns deferred exports inside their ESM wrapper.
             s.push_str(";\n");
           }
 
@@ -506,10 +520,15 @@ pub fn get_export_items(chunk: &Chunk) -> Vec<(CompactStr, SymbolRef)> {
   export_items
 }
 
-pub fn get_chunk_export_names(chunk: &Chunk, graph: &LinkStageOutput) -> Vec<CompactStr> {
+pub fn get_chunk_export_names(
+  chunk: &Chunk,
+  graph: &LinkStageOutput,
+  without_eager_wrapper_call: bool,
+) -> Vec<CompactStr> {
   if let ChunkKind::EntryPoint { module: entry_id, .. } = &chunk.kind {
     let entry_meta = &graph.metas[*entry_id];
-    if matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
+    // Without the eager wrapper call, a CJS chunk has no `default` export (#11348).
+    if !without_eager_wrapper_call && matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
       return vec![CompactStr::new("default")];
     }
   }

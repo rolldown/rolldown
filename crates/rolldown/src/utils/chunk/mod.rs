@@ -35,6 +35,7 @@ pub fn generate_pre_rendered_chunk(
   chunk: &Chunk,
   chunk_name: &ArcStr,
   graph: &LinkStageOutput,
+  without_eager_wrapper_call: bool,
 ) -> RollupPreRenderedChunk {
   let is_entry = matches!(&chunk.kind, ChunkKind::EntryPoint { meta, .. } if meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk));
   let is_dynamic_entry = matches!(&chunk.kind, ChunkKind::EntryPoint { meta, .. } if !meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk));
@@ -54,7 +55,7 @@ pub fn generate_pre_rendered_chunk(
       .iter()
       .map(|id| graph.module_table[*id].id().as_str().into())
       .collect(),
-    exports: get_chunk_export_names(chunk, graph),
+    exports: get_chunk_export_names(chunk, graph, without_eager_wrapper_call),
   }
 }
 

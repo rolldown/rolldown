@@ -125,8 +125,12 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
 
     let mut warnings = vec![];
 
-    let CreateEcmaViewReturn { mut ecma_view, ecma_related, raw_import_records, tla_keyword_span } =
-      create_ecma_view(
+    let CreateEcmaViewReturn {
+      mut ecma_view,
+      mut ecma_related,
+      raw_import_records,
+      tla_keyword_span,
+    } = create_ecma_view(
         &mut CreateModuleContext {
           stable_id: &stable_id,
           module_idx: self.module_idx,
@@ -142,6 +146,15 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
         CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects },
       )
       .await?;
+
+    if self.ctx.options.experimental.is_incremental_build_enabled() {
+      // An incremental build keeps this module's AST and scope tree in the `ScanStageCache`
+      // snapshot until the module is re-scanned, so drop the arena slack that parsing and
+      // pre-processing leave behind now, once, instead of retaining it for the whole session.
+      // See internal-docs/cache/implementation.md ("Arena compaction").
+      ecma_related.ast.compact_arena();
+      ecma_related.symbols.ast_scopes.compact_arena();
+    }
 
     let resolved_deps = resolve_dependencies(
       &self.resolved_id,

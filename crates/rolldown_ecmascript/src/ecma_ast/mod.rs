@@ -1,13 +1,54 @@
-use std::fmt::Debug;
+use std::{cell::RefCell, fmt::Debug};
 
 use crate::EcmaCompiler;
 use arcstr::ArcStr;
 use oxc::{
   allocator::{Allocator, CloneIn},
-  ast::ast::{Comment, Program},
+  ast::{
+    ast::{Comment, Program},
+    builder::AstBuilder,
+  },
   span::SourceType,
 };
 use program_cell::{ProgramCellDependent, ProgramCellOwner};
+
+/// The largest scratch arena a thread keeps between [`EcmaAst::compact_arena`] calls. A larger
+/// one, grown by an unusually big module, is dropped instead of being kept around.
+const SCRATCH_ARENA_CAPACITY_LIMIT: usize = 256 * 1024;
+
+thread_local! {
+  /// Reused by [`EcmaAst::compact_arena`] to measure how many bytes a module's AST really
+  /// needs before allocating its right-sized arena.
+  static SCRATCH_ARENA: RefCell<Allocator> = RefCell::new(Allocator::default());
+}
+
+/// Clones `program` into `allocator`, keeping every `NodeId` / `ScopeId` (see
+/// `internal-docs/ast-mutation/implementation.md`), and points the copy's `source_text` at
+/// `source_text` instead of copying the text into the arena.
+///
+/// `Program`'s derived `CloneIn` copies `source_text` with `alloc_str`, which would duplicate
+/// the whole module source in every cloned arena; the parse itself only borrows it from the
+/// module's `ArcStr`. Every `EcmaAst` keeps that `ArcStr` alive, so the copy can borrow it too.
+fn clone_program_in<'new>(
+  program: &Program<'_>,
+  source_text: &'new str,
+  allocator: &'new Allocator,
+) -> Program<'new> {
+  let builder = AstBuilder::new(allocator);
+  let cloned = Program::new(
+    program.span,
+    program.source_type,
+    source_text,
+    program.comments.clone_in_with_semantic_ids(allocator),
+    program.hashbang.clone_in_with_semantic_ids(allocator),
+    program.directives.clone_in_with_semantic_ids(allocator),
+    program.body.clone_in_with_semantic_ids(allocator),
+    &builder,
+  );
+  cloned.node_id.set(program.node_id.get());
+  cloned.scope_id.set(program.scope_id.get());
+  cloned
+}
 
 use self::program_cell::ProgramCell;
 
@@ -57,19 +98,64 @@ impl EcmaAst {
   /// Clone the `Program` with another `Allocator`.
   /// and copy rest fields, this is used to cache the Ast in incremental compilation
   /// use another `Allocator` to avoid memory leak because.
+  ///
+  /// The new arena is sized by what the old one has handed out, which also counts nodes that
+  /// pre-processing discarded; [`Self::compact_arena`] is the way to get an exact-sized arena.
   #[must_use]
   pub fn clone_with_another_arena(&self) -> EcmaAst {
+    let allocator = Allocator::with_capacity(self.program.borrow_owner().allocator.used_bytes());
+    self.clone_into_arena(allocator)
+  }
+
+  fn clone_into_arena(&self, allocator: Allocator) -> EcmaAst {
     let program = ProgramCell::new(
-      ProgramCellOwner {
-        source: self.source().clone(),
-        allocator: Allocator::with_capacity(self.program.borrow_owner().allocator.used_bytes()),
-      },
+      ProgramCellOwner { source: self.source().clone(), allocator },
       |owner| {
-        let program = self.program().clone_in_with_semantic_ids(&owner.allocator);
+        let program = clone_program_in(self.program(), owner.source.as_str(), &owner.allocator);
         ProgramCellDependent { program }
       },
     );
     EcmaAst { program, source_type: self.source_type }
+  }
+
+  /// Replaces the arena with one sized to exactly what the AST holds, when that is smaller.
+  ///
+  /// The parser's arena starts at 16 KiB and doubles as it fills, and it keeps the nodes that
+  /// the transformer, dead-code elimination and semantic rebuilds discarded. A one-shot build
+  /// drops the arena after rendering, but an incremental build keeps every module's AST in the
+  /// `ScanStageCache` snapshot for later links and HMR patches, so that slack is retained for
+  /// the whole session (`internal-docs/cache/implementation.md`, "Arena compaction").
+  ///
+  /// The copy keeps every `NodeId` / `ScopeId` / `SymbolId`, so the scan-time side tables stay
+  /// valid. The AST is measured first in a thread-local scratch arena, because
+  /// `Allocator::used_bytes` of the old arena counts the discarded nodes too. A module whose
+  /// copy would not be smaller — one of large string literals, which the parser borrows from
+  /// the source but a copy writes into the arena — keeps its parse.
+  ///
+  /// Returns the arena capacity released.
+  pub fn compact_arena(&mut self) -> usize {
+    let retained = self.program.borrow_owner().allocator.capacity();
+    let needed = SCRATCH_ARENA.with_borrow_mut(|scratch| {
+      // The scratch copy is a throwaway: only its size matters.
+      let _ = clone_program_in(self.program(), "", scratch);
+      let needed = scratch.used_bytes();
+      if scratch.capacity() > SCRATCH_ARENA_CAPACITY_LIMIT {
+        *scratch = Allocator::default();
+      } else {
+        scratch.reset();
+      }
+      needed
+    });
+    if needed >= retained {
+      return 0;
+    }
+    let allocator = Allocator::with_capacity(needed);
+    let new_capacity = allocator.capacity();
+    if new_capacity >= retained {
+      return 0;
+    }
+    *self = self.clone_into_arena(allocator);
+    retained - new_capacity
   }
 }
 

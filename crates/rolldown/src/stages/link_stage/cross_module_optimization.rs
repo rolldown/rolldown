@@ -13,7 +13,7 @@ use oxc::{
   semantic::{NodeId, SymbolId},
 };
 use rolldown_common::{
-  AstScopes, ConstExportMeta, EcmaViewMeta, FlatOptions, GetLocalDb, IndexModules,
+  AstScopes, ConstExportMeta, EcmaViewMeta, ExportsKind, FlatOptions, GetLocalDb, IndexModules,
   MemberExprRefResolutionMap, ModuleIdx, SharedNormalizedBundlerOptions, Specifier, StmtEvalFlags,
   StmtInfoIdx, SymbolRef, SymbolRefDb, SymbolRefFlags,
 };
@@ -414,6 +414,11 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
           Some(&self.side_effect_free_call_expr_node_ids),
           Some(self.immutable_ctx.namespace_object_symbol_ids),
           Some(&constants),
+        )
+        .with_top_level_return_ends_module(
+          !self.immutable_ctx.modules[self.immutable_ctx.module_idx]
+            .as_normal()
+            .is_some_and(|module| matches!(module.exports_kind, ExportsKind::Esm)),
         )
         .analyze_stmt(stmt);
         // Cross-module optimization only refreshes tree-shaking flags. Module-level

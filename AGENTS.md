@@ -101,7 +101,7 @@ IMPORTANT: The project uses `just` as a task runner. Always prefer `just` comman
 
 # Common Pitfalls & Best Practices
 
-- **`AGENTS.md` is the source of truth.** `CLAUDE.md` is a symlink to it.
+- **`AGENTS.md` is the source of truth.**
 - **Check surrounding code for conventions:** Before adding new code, always study the existing patterns, naming conventions, and architectural choices in the file and directory you are working in.
 - **Break large changes into tracked steps:** Decompose substantial work into manageable subtasks. Track progress to prevent scope creep and missed items. Use `TodoWrite` or similar tools to maintain a checklist.
 - **Batch multiple edits:** Prefer to batch multiple edits over sequential single edits. Use `MultiEdit` or similar tools if available.

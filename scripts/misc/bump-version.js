@@ -59,6 +59,10 @@ async function bumpVersion(nextVersion) {
     if (workspace.manifest.private) {
       continue;
     }
+    // released independently by prepare-perf-kit-release.yml
+    if (workspace.manifest.name === '@rolldown/perf-kit') {
+      continue;
+    }
     console.info(
       `Bumping ${workspace.manifest.name} from ${workspace.manifest.version} to ${nextVersion}`,
     );

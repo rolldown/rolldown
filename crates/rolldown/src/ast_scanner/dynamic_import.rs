@@ -226,6 +226,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
       // only care about first level destructuring, if it is nested just assume it is used
       ast::BindingPattern::ObjectPattern(obj) => {
+        if is_exported && obj.rest.is_some() {
+          // An exported rest binding exposes the remaining namespace to external consumers,
+          // even without local references. See internal-docs/code-splitting/implementation.md.
+          return None;
+        }
         let mut set = FxHashSet::default();
         for binding in &obj.properties {
           let binding_name = match &binding.key {

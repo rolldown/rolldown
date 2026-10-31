@@ -117,7 +117,7 @@ Because the carrier's import table already holds the carried records' import ite
 
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
-__share("shared-ZmCA4nrZ", (exports) => {
+__share("shared-ZmCA4nrZ", ((exports) => {
 	// shared.js
 	var count;
 	function init_shared() { ... }
@@ -125,7 +125,7 @@ __share("shared-ZmCA4nrZ", (exports) => {
 		n: () => count,
 		r: () => init_shared
 	});
-});
+}));
 var share_shared = __share_require("shared-ZmCA4nrZ");
 // a.js
 function init_a() {
@@ -136,6 +136,8 @@ function init_a() {
 }
 init_a();
 ```
+
+The factory is parenthesized when `optimization.pifeForModuleWrappers` is on (the default outside the neutral platform), as rolldown's `__esmMin` wrappers are: the engine then compiles it while it compiles the file, off the main thread when the file is streamed, instead of at the factory's first `__share_require` on the main thread. oxc's parser keeps the parentheses as the function's `pife` flag, so the minifier prints them again.
 
 Factories come in `carried` order (dependencies first); a factory that reads other records opens with `var share_y = __share_require("<id>")` for each. `RenderedChunk.imports` comes from the projected `cross_chunk_imports`; content hashes include the factory text and the record ids; the runtime import carries its placeholder. `renderChunk`, `augmentChunkHash` and `generateBundle` see only files, and each carrier lists the carried modules after its own in `moduleIds` and in execution order in `modules`: a record's module belongs to every file that prints it.
 

@@ -77,6 +77,11 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
       self.result.ecma_view_meta.insert(EcmaViewMeta::IndependentInitialization);
     }
 
+    // With a top-level `return`, a module is CommonJS unless it has an `export` declaration.
+    let top_level_return_ends_module = !program
+      .body
+      .iter()
+      .any(|stmt| stmt.as_module_declaration().is_some_and(ast::ModuleDeclaration::is_export));
     for (idx, stmt) in program.body.iter().enumerate() {
       // `0` is reserved for Module Namespace Object stmt info
       #[expect(
@@ -95,7 +100,8 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
         // Constants that earlier statements declared. The map grows in statement order, so no read
         // precedes its declaration.
         Some(&self.result.constant_export_map),
-      );
+      )
+      .with_top_level_return_ends_module(top_level_return_ends_module);
       let mut stmt_eval_facts = analyzer.analyze_stmt(stmt);
       // `ExecutionOrderSensitive` is read outside the wrap planner too — it gates which leaf
       // modules `sort_chunk_modules` may sort by id — so it has to mean the same thing in every
@@ -217,6 +223,7 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
     self.process_identifier_ref_by_scope(ident);
     self.try_diagnostic_forbid_const_assign(ident);
     self.update_dynamic_import_binding_usage_info(ident);
+    self.record_var_read_before_declaration(ident);
   }
 
   fn visit_statement(&mut self, stmt: &ast::Statement<'ast>) {
@@ -500,6 +507,24 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let id = class.id.as_ref()?;
     let symbol_id = *id.symbol_id.get().unpack_ref();
     Some(symbol_id)
+  }
+
+  /// Module-level code runs in source order, so it reads a root `var` declared later as
+  /// `undefined`. `export { x }` only forwards the binding.
+  fn record_var_read_before_declaration(&mut self, ident_ref: &IdentifierReference) {
+    if !self.is_top_level || matches!(self.visit_path.last(), Some(AstKind::ExportSpecifier(_))) {
+      return;
+    }
+    let Some(symbol_id) = self.resolve_symbol_from_reference(ident_ref) else {
+      return;
+    };
+    let scoping = self.result.symbol_ref_db.scoping();
+    if self.is_root_symbol(symbol_id)
+      && scoping.symbol_flags(symbol_id).is_function_scoped_declaration()
+      && ident_ref.span.start < scoping.symbol_span(symbol_id).start
+    {
+      self.vars_read_before_declaration.insert(symbol_id);
+    }
   }
 
   fn process_identifier_ref_by_scope(&mut self, ident_ref: &IdentifierReference) {

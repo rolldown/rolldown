@@ -3065,14 +3065,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let id = first_decl.id.get_binding_identifier()?.symbol_id.get();
     match id {
       Some(id) => {
-        let symbol_ref: SymbolRef = (self.ctx.idx, id).into();
-        if !self
-          .ctx
-          .module
-          .json_module_none_self_reference_included_symbol
-          .as_ref()?
-          .contains(&symbol_ref)
-        {
+        if self.ctx.linking_info.is_inlined_json_key(
+          self.ctx.module,
+          self.ctx.symbol_db,
+          (self.ctx.idx, id).into(),
+        ) {
           json_module_inlined_prop.insert(id, first_decl.init.take()?);
           *it = ast::Statement::new_empty_statement(SPAN, self);
         }

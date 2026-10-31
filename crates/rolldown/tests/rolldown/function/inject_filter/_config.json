@@ -1,0 +1,14 @@
+{
+  "config": {
+    "inject": [
+      {
+        "type": "named",
+        "imported": "useKey",
+        "from": "composable"
+      }
+    ],
+    "injectFilter": {
+      "exclude": ["**/node_modules/**"]
+    }
+  }
+}

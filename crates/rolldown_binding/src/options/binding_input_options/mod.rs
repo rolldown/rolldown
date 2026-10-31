@@ -1,5 +1,6 @@
 mod binding_devtools_options;
 mod binding_experimental_options;
+mod binding_inject_filter;
 mod binding_input_item;
 mod binding_make_absolute_externals_relative;
 mod binding_optimization;
@@ -18,6 +19,7 @@ use napi::bindgen_prelude::FnArgs;
 use rustc_hash::FxBuildHasher;
 use std::collections::HashMap;
 
+use binding_inject_filter::BindingInjectFilter;
 use binding_inject_import::BindingInjectImport;
 use binding_input_item::BindingInputItem;
 use binding_resolve_options::BindingResolveOptions;
@@ -88,6 +90,7 @@ pub struct BindingInputOptions<'env> {
   pub define: Option<Vec<(/* Target to be replaced */ String, /* Replacement */ String)>>,
   pub drop_labels: Option<Vec<String>>,
   pub inject: Option<Vec<BindingInjectImport>>,
+  pub inject_filter: Option<BindingInjectFilter>,
   pub experimental: Option<binding_experimental_options::BindingExperimentalOptions>,
   pub profiler_names: Option<bool>,
   #[debug(skip)]

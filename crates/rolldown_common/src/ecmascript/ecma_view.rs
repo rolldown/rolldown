@@ -203,14 +203,8 @@ impl EcmaView {
       } else {
         self.dynamic_importers.insert(record.importer_path.clone());
         // Only real `import()` edges join the walkable dynamic-importer set; `HotAccept`
-        // and other non-static records are not import edges. Lazy-compilation proxy
-        // importers (`?rolldown-lazy=1`) are an internal artifact — excluding them keeps
-        // the server's superset walk from bubbling through the proxy chain
-        // (`foo -> proxy -> app`), which patch generation is not set up for. Lazy
-        // dynamic-import HMR is a separate follow-up; until then the walk stops at the
-        // lazy entry, and a tab whose own walk crosses the proxy chain reloads itself
-        // via its missing-factory / no-boundary paths, exactly as before.
-        if record.kind.is_dynamic() && !record.importer_path.as_str().contains("?rolldown-lazy=1") {
+        // and other non-static records are not import edges.
+        if record.kind.is_dynamic() {
           self.dynamic_importers_idx.insert(record.importer_idx);
         }
       }

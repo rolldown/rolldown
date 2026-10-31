@@ -390,7 +390,7 @@ impl DevEngine {
 
     // Mark the proxy module as fetched BEFORE compilation.
     // This changes the content returned by the lazy compilation plugin's load hook
-    // from a stub (fetches via /lazy endpoint) to actual code that imports the real module.
+    // from the empty stub to the fetched template, which imports the real module.
     if let Some(lazy_ctx) = &bundler.lazy_compilation_context {
       lazy_ctx.mark_as_fetched(&proxy_module_id);
     }
@@ -437,8 +437,9 @@ impl DevEngine {
         }
       }
 
-      // Notify that the proxy module has changed so build output gets updated.
-      // This ensures future page loads get the fetched template directly.
+      // The compile merged the route into the graph, so the build output no longer matches
+      // the graph, and a rebuild brings it in line. Pages never load the route from the build
+      // output: every lazy `import()` calls `requestLazy`.
       // The compile added the files it loaded to the watch list of the latest build.
       // A new build can start before the coordinator reads this message, and its list
       // starts empty, so send this list with the message.
@@ -729,5 +730,110 @@ mod tests {
     engine.close().await.unwrap();
     std::fs::remove_dir_all(&dir).unwrap();
     assert!(watched.contains(&dep), "{watched:#?}");
+  }
+
+  /// A temp dir with `files` and a dev engine with lazy compilation on. `files` must include
+  /// `main.js`, the entry. The caller runs the engine.
+  #[cfg(feature = "testing")]
+  fn lazy_fixture_with_files(
+    name: &str,
+    files: &[(&str, &str)],
+  ) -> (std::path::PathBuf, super::DevEngine) {
+    use rolldown::{DevModeOptions, ExperimentalOptions};
+
+    let dir = std::env::temp_dir().join(format!("rolldown-dev-{name}-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    // The resolver returns real paths, and the temp dir can sit behind a symlink.
+    let dir = dunce::canonicalize(&dir).unwrap();
+    for (file, content) in files {
+      std::fs::write(dir.join(file), content).unwrap();
+    }
+
+    let options = BundlerOptions {
+      input: Some(vec!["./main.js".to_string().into()]),
+      cwd: Some(dir.clone()),
+      experimental: Some(ExperimentalOptions {
+        dev_mode: Some(DevModeOptions { lazy: Some(true), ..Default::default() }),
+        ..Default::default()
+      }),
+      ..Default::default()
+    };
+    let engine = super::DevEngine::new(
+      BundlerConfig::new(options, vec![]),
+      crate::DevOptions {
+        watch: Some(crate::DevWatchOptions {
+          disable_watcher: Some(true),
+          skip_write: Some(true),
+          ..Default::default()
+        }),
+        ..Default::default()
+      },
+    )
+    .unwrap();
+    (dir, engine)
+  }
+
+  /// `a.js` calls `import('./utils.js')`, and no client visited it, so its proxy is the stub
+  /// with no `import()`. `b.js` imports `utils.js` statically, so `requestLazy` runs it with no
+  /// compile. The client graph links `a.js` to `utils.js`, so an edit of `utils.js` re-runs
+  /// `a.js`, and the patch must carry its factory.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn hmr_patch_carries_the_import_importer_of_an_unfetched_proxy() {
+    use std::sync::{Arc, atomic::AtomicU32};
+
+    use rolldown_common::{ClientHmrInput, HmrStampTable, HmrUpdate, WatcherChangeKind};
+    use rolldown_utils::indexmap::FxIndexMap;
+    use rustc_hash::FxHashMap;
+
+    let (dir, engine) = lazy_fixture_with_files(
+      "hmr-unfetched-proxy-importer",
+      &[
+        ("main.js", "import './a.js';\nimport './b.js';\n"),
+        ("a.js", "export const load = () => import('./utils.js');\nimport.meta.hot.accept();\n"),
+        (
+          "b.js",
+          "import { u } from './utils.js';\nexport const value = u;\nimport.meta.hot.accept();\n",
+        ),
+        ("utils.js", "export const u = 1;\n"),
+      ],
+    );
+    engine.run().await.unwrap();
+
+    std::fs::write(dir.join("utils.js"), "export const u = 2;\n").unwrap();
+    let shipped = FxHashMap::default();
+    let top_level_evaluated = FxHashMap::default();
+    let updates = engine
+      .bundler
+      .lock()
+      .await
+      .compute_hmr_update_for_file_changes(
+        &FxIndexMap::from_iter([(
+          dir.join("utils.js").to_string_lossy().into_owned(),
+          WatcherChangeKind::Update,
+        )]),
+        &[ClientHmrInput {
+          client_id: "c1",
+          shipped: &shipped,
+          top_level_evaluated: &top_level_evaluated,
+        }],
+        &mut HmrStampTable::default(),
+        Arc::new(AtomicU32::new(0)),
+        false,
+        false,
+      )
+      .await
+      .unwrap();
+
+    engine.close().await.unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+
+    let HmrUpdate::Patch(patch) = &updates[0].update else {
+      panic!("expected a patch, got {:?}", updates[0].update);
+    };
+    let mut carried = patch.carried.iter().map(|(id, _)| id.as_str()).collect::<Vec<_>>();
+    carried.sort_unstable();
+    assert_eq!(carried, ["a.js", "b.js", "utils.js"]);
   }
 }

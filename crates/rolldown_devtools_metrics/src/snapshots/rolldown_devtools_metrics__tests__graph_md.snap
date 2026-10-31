@@ -1,0 +1,37 @@
+---
+source: crates/rolldown_devtools_metrics/src/tests.rs
+expression: "render::render_graph(&report)"
+---
+# Entry Points & Chunk Graph
+
+3 entry points, 4 non-empty chunks.
+
+### Entry: `src/a.ts`
+
+- **Output chunk**: `dist/a.js` (1000 B)
+- **Initial load**: 3.9 kB (this chunk + its transitive static-import chunks)
+- **Static imports**: `dist/shared.js`
+
+### Entry: `src/b.ts`
+
+- **Output chunk**: `dist/b.js` (800 B)
+- **Initial load**: 3.7 kB (this chunk + its transitive static-import chunks)
+- **Static imports**: `dist/shared.js`
+- **Dynamic imports**: `dist/lazy.js`
+
+### Entry: `src/lazy.ts`
+
+- **Output chunk**: `dist/lazy.js` (500 B)
+- **Initial load**: 500 B (this chunk + its transitive static-import chunks)
+- **Static imports**: none
+
+## Retained size (dominator tree)
+
+5 modules / 2.1 kB statically reachable from 2 entry points; 1 module already lazy (dynamic-import only).
+
+Deferring the import edge that pulls a module in removes its whole retained subtree from the initial load. `via` names the immediate dominator - the single import chain to cut. Full graph + `what-if` queries: `module-graph.json`.
+
+| Module | Own | Retained | Modules | via |
+| --- | --- | --- | --- | --- |
+| `foo/index.js` | 1.2 kB | **1.2 kB** | 1 | `src/a.ts` |
+| `src/shared.ts` | 700 B | **700 B** | 2 | (entries) |

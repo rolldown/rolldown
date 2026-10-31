@@ -219,10 +219,6 @@ fn verify_inline_common_chunks_options(
   require(raw_options.preserve_modules != Some(true), "`output.preserveModules` to be off");
   let experimental = raw_options.experimental.as_ref();
   require(
-    experimental.is_none_or(|experimental| experimental.dev_mode.is_none()),
-    "`experimental.devMode` to be off",
-  );
-  require(
     experimental.is_none_or(|experimental| !experimental.is_on_demand_wrapping_enabled()),
     "`experimental.onDemandWrapping` to be off",
   );

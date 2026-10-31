@@ -219,7 +219,7 @@ jobs:
           environment_variables: 'DEBUG RUSTUP_IO_THREADS'
           shell: bash
           run: |
-            sudo pkg install -y -f curl node libnghttp2 npm cmake
+            sudo pkg install -y -f curl node libnghttp2 npm cmake-core
             curl https://sh.rustup.rs -sSf --output rustup.sh
             sh rustup.sh -y --profile minimal --default-toolchain stable
             source "$HOME/.cargo/env"

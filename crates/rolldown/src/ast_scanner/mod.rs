@@ -116,6 +116,8 @@ pub struct ScanResult {
   pub dynamic_import_called_names: FxHashMap<ImportRecordIdx, FxHashSet<CompactStr>>,
   /// `new URL('...', import.meta.url)`
   pub new_url_references: FxHashMap<NodeId, ImportRecordIdx>,
+  /// See `EcmaView::namespace_in_checks`.
+  pub namespace_in_checks: FxHashMap<NodeId, CompactStr>,
   /// `import.meta.ROLLDOWN_FILE_URL_<referenceId>[_<urlId>]`, one entry per occurrence.
   pub rolldown_file_url_references: Vec<RolldownFileUrlReference>,
   pub this_expr_replace_map: FxHashMap<NodeId, ThisExprReplaceKind>,
@@ -180,6 +182,8 @@ pub struct AstScanner<'me, 'ast> {
   /// Symbol IDs of namespace imports (`import * as ns from '...'`).
   /// Used to treat property reads on namespace objects as side-effect-free.
   namespace_object_symbol_ids: FxHashSet<SymbolId>,
+  /// Root `var` bindings that module-level code reads before their declaration.
+  vars_read_before_declaration: FxHashSet<SymbolId>,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -230,6 +234,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       dynamic_import_rec_exports_usage: FxHashMap::default(),
       dynamic_import_called_names: FxHashMap::default(),
       new_url_references: FxHashMap::default(),
+      namespace_in_checks: FxHashMap::default(),
       rolldown_file_url_references: Vec::new(),
       this_expr_replace_map: FxHashMap::default(),
       cjs_this_ref: None,
@@ -280,6 +285,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       current_comment_idx: 0,
       untranspiled_syntax: UntranspiledSyntax::empty(),
       namespace_object_symbol_ids: FxHashSet::default(),
+      vars_read_before_declaration: FxHashSet::default(),
     }
   }
 
@@ -432,6 +438,13 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
     }
 
+    // A `var` read before its declaration holds `undefined` there and its initializer later.
+    for symbol_id in &self.vars_read_before_declaration {
+      if let Some(flags) = self.result.symbol_ref_db.flags.get_mut(symbol_id) {
+        flags.remove(SymbolRefFlags::IsNotReassigned);
+      }
+    }
+
     self.result.constant_export_map.retain(|symbol_id, constant_meta| {
       (constant_meta.commonjs_export && !bailout_inlined_cjs_exports_symbol_ids.contains(symbol_id))
         || self
@@ -569,9 +582,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   fn add_local_export(&mut self, export_name: &str, local: SymbolId, span: Span) {
     let symbol_ref: SymbolRef = (self.immutable_ctx.idx, local).into();
 
-    // If there is any write reference to the local variable, it is reassigned.
+    // A repeated `var` declaration assigns without a write reference.
     let is_reassigned =
-      self.result.symbol_ref_db.get_resolved_references(local).any(Reference::is_write);
+      self.result.symbol_ref_db.get_resolved_references(local).any(Reference::is_write)
+        || !self.result.symbol_ref_db.scoping().symbol_redeclarations(local).is_empty();
 
     let ref_flags = symbol_ref.flags_mut(&mut self.result.symbol_ref_db);
     if !is_reassigned {
@@ -1154,6 +1168,21 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     (!props.is_empty()).then_some((node_id, span, props))
   }
 
+  /// Returns the `BinaryExpression` node, its span and `key` if the visited identifier is `ns` in
+  /// `'key' in ns`.
+  pub fn try_extract_parent_in_operator_key(&self) -> Option<(NodeId, Span, CompactStr)> {
+    let AstKind::BinaryExpression(expr) = self.visit_path.last()? else {
+      return None;
+    };
+    if expr.operator != ast::BinaryOperator::In {
+      return None;
+    }
+    let Expression::StringLiteral(key) = &expr.left else {
+      return None;
+    };
+    Some((expr.node_id(), expr.span, key.value.as_str()?.into()))
+  }
+
   // `console` in `console.log` is a global reference
   pub fn is_global_identifier_reference(&self, ident: &IdentifierReference) -> bool {
     let symbol_id = self.resolve_symbol_from_reference(ident);
@@ -1204,8 +1233,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   pub fn add_constant_symbol(&mut self, symbol_id: SymbolId, value: ConstExportMeta) {
     let scoping = self.result.symbol_ref_db.scoping();
+    // A repeated `var` declaration assigns without a write reference.
     let is_mutated = !self.result.symbol_ref_db.is_facade_symbol(symbol_id)
-      && scoping.symbol_is_mutated(symbol_id);
+      && (scoping.symbol_is_mutated(symbol_id)
+        || !scoping.symbol_redeclarations(symbol_id).is_empty());
     if is_mutated || eval_can_assign(scoping, symbol_id) {
       return;
     }

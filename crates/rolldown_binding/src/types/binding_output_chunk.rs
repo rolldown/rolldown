@@ -108,6 +108,15 @@ impl BindingOutputChunk {
     Ok(&self.try_get_inner()?.code)
   }
 
+  /// Identity of the shared chunk data behind this object. Two `BindingOutputChunk` objects with the same
+  /// identity share the same data, so a JavaScript string made from `getCode()` of one is valid for the other.
+  /// The identity is the address of that data. It stays unique while a `BindingOutputChunk` keeps the data alive.
+  #[napi]
+  pub fn get_code_identity(&self) -> napi::Result<i64> {
+    let address = Arc::as_ptr(self.try_get_inner()?).addr();
+    Ok(i64::try_from(address).unwrap_or(i64::MAX))
+  }
+
   #[napi]
   // TODO: claude code - Cannot change to Option<&str>: performs JSON serialization via to_json_string()
   pub fn get_map(&self) -> napi::Result<Option<String>> {

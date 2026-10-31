@@ -1197,6 +1197,10 @@
         {
           "type": "object",
           "properties": {
+            "type": {
+              "type": "string",
+              "const": "named"
+            },
             "imported": {
               "type": "string"
             },
@@ -1208,10 +1212,6 @@
             },
             "from": {
               "type": "string"
-            },
-            "type": {
-              "type": "string",
-              "const": "named"
             }
           },
           "additionalProperties": false,
@@ -1224,15 +1224,15 @@
         {
           "type": "object",
           "properties": {
+            "type": {
+              "type": "string",
+              "const": "namespace"
+            },
             "alias": {
               "type": "string"
             },
             "from": {
               "type": "string"
-            },
-            "type": {
-              "type": "string",
-              "const": "namespace"
             }
           },
           "additionalProperties": false,
@@ -1755,6 +1755,13 @@
       "type": "object",
       "properties": {
         "sessionId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mode": {
+          "description": "`\"full\"` (default): write JSON-lines devtools logs to disk.\n`\"report\"`: aggregate the same event stream in-memory and emit an agent-readable\nreport (`metrics.json` + `module-graph.json` + markdown views + per-build `history.jsonl`) instead of the\nmulti-GB `logs.json`, under `node_modules/.rolldown/report/<output dir>`. Any other value\nis an error.",
           "type": [
             "string",
             "null"

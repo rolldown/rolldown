@@ -21,11 +21,11 @@
     "@oxc-node/core": "catalog:",
     "@oxc-project/runtime": "catalog:",
     "@types/node": "catalog:",
-    "cjs-module-lexer": "^2.1.0",
+    "cjs-module-lexer": "^2.3.0",
     "knip": "^6.39.0",
     "playwright-chromium": "^1.63.0",
     "publint": "^0.3.21",
-    "remove-unused-vars": "^0.0.15",
+    "remove-unused-vars": "^0.0.16",
     "rolldown": "workspace:*",
     "typescript": "catalog:",
     "vite-plus": "^1.0.0"

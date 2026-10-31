@@ -3,6 +3,7 @@ use rolldown_common::{
   RuntimeModuleBrief, StmtInfo, StmtInfoMeta, StmtInfos, SymbolRefDb, TaggedSymbolRef, WrapKind,
 };
 use rolldown_utils::IndexBitSet;
+use rustc_hash::FxHashMap;
 use smallvec::smallvec;
 
 use crate::types::linking_metadata::{LinkingMetadata, LinkingMetadataVec};
@@ -49,58 +50,55 @@ fn wrap_module_recursively(ctx: &mut Context, target: ModuleIdx) {
   });
 }
 
-fn has_dynamic_exports_due_to_export_star(
-  target: ModuleIdx,
-  modules: &IndexModules,
-  linking_infos: &mut LinkingMetadataVec,
-  visited_modules: &mut IndexBitSet<ModuleIdx>,
-) -> bool {
-  if !visited_modules.set_bit(target) {
-    return linking_infos[target].has_dynamic_exports;
-  }
-
-  let has_dynamic_exports = match &modules[target] {
-    Module::Normal(module) => {
-      if matches!(module.exports_kind, ExportsKind::CommonJs) {
-        true
-      } else {
-        module.star_export_module_ids().any(|importee_id| {
-          target != importee_id
-            && has_dynamic_exports_due_to_export_star(
-              importee_id,
-              modules,
-              linking_infos,
-              visited_modules,
-            )
-        })
-      }
+/// Marks CommonJS and external modules reached through `export *`, and every module that
+/// re-exports one of them through a chain of `export *`, cycles included, as having dynamic
+/// exports.
+fn determine_has_dynamic_exports(modules: &IndexModules, linking_infos: &mut LinkingMetadataVec) {
+  let mut star_importers: FxHashMap<ModuleIdx, Vec<ModuleIdx>> = FxHashMap::default();
+  let mut queue = vec![];
+  let mut mark = |idx: ModuleIdx, queue: &mut Vec<ModuleIdx>| {
+    if !linking_infos[idx].has_dynamic_exports {
+      linking_infos[idx].has_dynamic_exports = true;
+      queue.push(idx);
     }
-    Module::External(_) => true,
   };
 
-  if has_dynamic_exports {
-    linking_infos[target].has_dynamic_exports = true;
+  for module in modules.iter().filter_map(Module::as_normal).filter(|m| m.has_star_export()) {
+    if matches!(module.exports_kind, ExportsKind::CommonJs) {
+      mark(module.idx, &mut queue);
+    }
+    for importee_id in module.star_export_module_ids() {
+      if importee_id == module.idx {
+        continue;
+      }
+      star_importers.entry(importee_id).or_default().push(module.idx);
+      let is_dynamic = match &modules[importee_id] {
+        Module::Normal(importee) => matches!(importee.exports_kind, ExportsKind::CommonJs),
+        Module::External(_) => true,
+      };
+      if is_dynamic {
+        mark(importee_id, &mut queue);
+      }
+    }
   }
-  linking_infos[target].has_dynamic_exports
+
+  while let Some(idx) = queue.pop() {
+    if let Some(importers) = star_importers.get(&idx) {
+      for &importer in importers {
+        mark(importer, &mut queue);
+      }
+    }
+  }
 }
 
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn wrap_modules(&mut self) {
     let mut visited_modules_for_wrapping = IndexBitSet::new(self.module_table.modules.len());
-    let mut visited_modules_for_dynamic_exports = IndexBitSet::new(self.module_table.modules.len());
+    determine_has_dynamic_exports(&self.module_table.modules, &mut self.metas);
 
     for module in self.module_table.modules.iter().filter_map(Module::as_normal) {
       let module_id = module.idx;
-
-      if module.has_star_export() {
-        has_dynamic_exports_due_to_export_star(
-          module_id,
-          &self.module_table.modules,
-          &mut self.metas,
-          &mut visited_modules_for_dynamic_exports,
-        );
-      }
 
       let need_to_wrap = !self.metas[module_id].wrap_kind().is_none();
 

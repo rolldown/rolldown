@@ -2,12 +2,12 @@
 // To edit this generated file you have to edit `tasks/generator/src/generators/oxc_runtime_helper.rs`
 
 // This file contains embedded @oxc-project/runtime helpers (both ESM and CJS variants).
-// @oxc-project/runtime version: 0.155.0
+// @oxc-project/runtime version: 0.156.0
 
 use arcstr::ArcStr;
 use phf::{Map, phf_map};
 
-pub const RUNTIME_HELPER_PREFIX: &str = "@oxc-project+runtime@0.155.0/helpers/";
+pub const RUNTIME_HELPER_PREFIX: &str = "@oxc-project+runtime@0.156.0/helpers/";
 pub const RUNTIME_HELPER_UNVERSIONED_PREFIX: &str = "@oxc-project/runtime/helpers/";
 
 /// Map of all helpers from `@oxc-project/runtime/src/helpers/esm/`.
@@ -1207,7 +1207,7 @@ function AsyncFromSyncIterator(r) {
       }) : AsyncFromSyncIteratorContinuation(n.apply(this.s, arguments));
     },
     "throw": function _throw(r) {
-      var n = this.s["return"];
+      var n = this.s["throw"];
       return void 0 === n ? Promise.reject(r) : AsyncFromSyncIteratorContinuation(n.apply(this.s, arguments));
     }
   }, new AsyncFromSyncIterator(r);
@@ -3807,7 +3807,7 @@ function AsyncFromSyncIterator(r) {
       }) : AsyncFromSyncIteratorContinuation(n.apply(this.s, arguments));
     },
     "throw": function _throw(r) {
-      var n = this.s["return"];
+      var n = this.s["throw"];
       return void 0 === n ? Promise.reject(r) : AsyncFromSyncIteratorContinuation(n.apply(this.s, arguments));
     }
   }, new AsyncFromSyncIterator(r);

@@ -1,0 +1,47 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+export { t as value } from "./read.js";
+import "./init.js";
+
+```
+
+## b.js
+
+```js
+import "./init.js";
+import { t as value } from "./read.js";
+// b.js
+const result = value;
+export { result };
+
+```
+
+## c.js
+
+```js
+export { t as value } from "./read.js";
+
+```
+
+## init.js
+
+```js
+// init.js
+globalThis.ready = "ready";
+
+```
+
+## read.js
+
+```js
+// read.js
+const value = globalThis.ready ?? "unset";
+export { value as t };
+
+```

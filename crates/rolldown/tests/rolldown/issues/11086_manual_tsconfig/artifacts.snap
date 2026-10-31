@@ -1,0 +1,15 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { createRequire } from "node:module";
+// HIDDEN [\0rolldown/runtime.js]
+// main.js
+const fs = (/* @__PURE__ */ (() => createRequire(import.meta.url))())("node:fs");
+export { fs };
+
+```

@@ -121,6 +121,7 @@ mod order_analysis;
 pub mod order_wrap_state;
 mod order_wrapping;
 mod post_banner_footer;
+mod reduced_chunk_graph;
 mod render_chunk_to_assets;
 mod resolve_file_urls;
 mod runtime_module_sweep;
@@ -612,6 +613,42 @@ impl<'a> GenerateStage<'a> {
     }
   }
 
+  /// Per-module rendered sizes (post tree-shaking, pre whole-chunk minification), summed across
+  /// every chunk a module was bundled into — the byte weights the metrics sink's dominator-tree
+  /// retained-size analysis attributes over the module graph.
+  fn trace_action_module_rendered(
+    &self,
+    instantiated_chunks: &crate::type_alias::IndexInstantiatedChunks,
+  ) {
+    if trace_action_enabled!() {
+      let mut bytes_by_module: FxHashMap<&str, u64> = FxHashMap::default();
+      for chunk in instantiated_chunks {
+        let InstantiationKind::Ecma(ecma_meta) = &chunk.kind else {
+          continue;
+        };
+        for (module_id, rendered_module) in ecma_meta
+          .rendered_chunk
+          .modules
+          .keys
+          .iter()
+          .zip(ecma_meta.rendered_chunk.modules.values.iter())
+        {
+          *bytes_by_module.entry(module_id.as_str()).or_default() +=
+            rendered_module.rendered_byte_length() as u64;
+        }
+      }
+      let mut modules: Vec<action::ModuleRendered> = bytes_by_module
+        .into_iter()
+        .map(|(id, bytes)| action::ModuleRendered {
+          id: id.to_string(),
+          bytes: u32::try_from(bytes).unwrap_or(u32::MAX),
+        })
+        .collect();
+      modules.sort_unstable_by(|a, b| a.id.cmp(&b.id));
+      trace_action!(action::ModuleRenderedReady { action: "ModuleRenderedReady", modules });
+    }
+  }
+
   fn trace_action_package_graph_ready(
     &self,
     chunk_graph: &ChunkGraph,
@@ -688,9 +725,9 @@ impl<'a> GenerateStage<'a> {
             continue;
           };
 
-          let rendered_length =
-            u32::try_from(rendered_module.rendered_length()).unwrap_or(u32::MAX);
-          package_info.size = package_info.size.saturating_add(rendered_length);
+          let rendered_byte_length =
+            u32::try_from(rendered_module.rendered_byte_length()).unwrap_or(u32::MAX);
+          package_info.size = package_info.size.saturating_add(rendered_byte_length);
         }
       }
 

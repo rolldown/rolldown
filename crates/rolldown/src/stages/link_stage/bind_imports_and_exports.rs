@@ -893,6 +893,7 @@ impl LinkStage<'_> {
       .map(|(module, stmt_infos)| match module {
         Module::Normal(module) => {
           let mut resolved_map = FxHashMap::default();
+          let mut folded_namespace_in_checks = FxHashMap::default();
           let mut side_effects_dependency = vec![];
           let mut written_cjs_exports: Vec<SymbolRef> = vec![];
           let mut star_reexport_consumptions: Vec<MemberReadConsumption> = vec![];
@@ -906,6 +907,28 @@ impl LinkStage<'_> {
               let mut star_reexport_steps: Vec<(ModuleIdx, CompactStr)> = vec![];
 
               if let SymbolOrMemberExprRef::MemberExpr(member_expr_ref) = symbol_ref {
+                if member_expr_ref.prop_and_span_list.is_empty() {
+                  // `'key' in ns` with a known result reads nothing from `ns`. Without a
+                  // resolution, the reference falls back to `ns` itself.
+                  if let Some(key) =
+                    module.ecma_view.namespace_in_checks.get(&member_expr_ref.node_id)
+                    && let Some(value) =
+                      self.try_fold_namespace_in_check(member_expr_ref.object_ref, key)
+                  {
+                    folded_namespace_in_checks.insert(member_expr_ref.node_id, value);
+                    resolved_map.insert(
+                      member_expr_ref.node_id,
+                      MemberExprRefResolution {
+                        resolved: None,
+                        prop_and_related_span_list: vec![],
+                        depended_refs: vec![],
+                        target_commonjs_exported_symbol: None,
+                        reference_id: member_expr_ref.reference_id,
+                      },
+                    );
+                  }
+                  return;
+                }
                 // First get the canonical ref of `foo_ns`, then we get the `NormalModule#namespace_object_ref` of `foo.js`.
                 let mut canonical_ref = self.symbols.canonical_ref_for(member_expr_ref.object_ref);
                 let mut canonical_ref_owner: &NormalModule =
@@ -1196,9 +1219,15 @@ impl LinkStage<'_> {
             });
           });
 
-          (resolved_map, side_effects_dependency, written_cjs_exports, star_reexport_consumptions)
+          (
+            resolved_map,
+            folded_namespace_in_checks,
+            side_effects_dependency,
+            written_cjs_exports,
+            star_reexport_consumptions,
+          )
         }
-        Module::External(_) => (FxHashMap::default(), vec![], vec![], vec![]),
+        Module::External(_) => (FxHashMap::default(), FxHashMap::default(), vec![], vec![], vec![]),
       })
       .collect::<Vec<_>>();
 
@@ -1211,7 +1240,9 @@ impl LinkStage<'_> {
     // `cjs[name] = value`, or writes through `ns.default`), bail out all CJS exports of the
     // target module since we can't determine which specific property is affected.
     let mut written_cjs_export_symbols: Vec<SymbolRef> = Vec::new();
-    for (meta, (_, _, written_cjs_exports, _)) in self.metas.iter().zip(resolved_meta_data.iter()) {
+    for (meta, (_, _, _, written_cjs_exports, _)) in
+      self.metas.iter().zip(resolved_meta_data.iter())
+    {
       written_cjs_export_symbols.extend(written_cjs_exports);
       for (import_symbol, cjs_module_idx) in
         meta.named_import_to_cjs_module.iter().chain(meta.import_record_ns_to_cjs_module.iter())
@@ -1240,7 +1271,7 @@ impl LinkStage<'_> {
     // retains each recorded path while its reading statement is included.
     if strict_execution_order {
       let mut recorded = FxHashSet::default();
-      for (module, (_, _, _, star_reexport_consumptions)) in
+      for (module, (_, _, _, _, star_reexport_consumptions)) in
         self.module_table.modules.iter().zip(&resolved_meta_data)
       {
         for (stmt_info_idx, resolved, steps) in star_reexport_consumptions {
@@ -1272,11 +1303,30 @@ impl LinkStage<'_> {
       }
     }
     self.metas.iter_mut().zip(resolved_meta_data).for_each(
-      |(meta, (resolved_map, side_effects_dependency, _, _))| {
+      |(meta, (resolved_map, folded_namespace_in_checks, side_effects_dependency, _, _))| {
         meta.resolved_member_expr_refs = resolved_map;
+        meta.folded_namespace_in_checks = folded_namespace_in_checks;
         meta.dependencies.extend(side_effects_dependency);
       },
     );
+  }
+
+  /// Returns the result of `'key' in ns` if `ns` is the namespace object of a module whose
+  /// exports are all known at link time.
+  fn try_fold_namespace_in_check(&self, namespace_ref: SymbolRef, key: &str) -> Option<bool> {
+    let canonical_ref = self.symbols.canonical_ref_for(namespace_ref);
+    let module = self.module_table[canonical_ref.owner].as_normal()?;
+    let meta = &self.metas[module.idx];
+    if module.namespace_object_ref != canonical_ref
+      || matches!(module.exports_kind, ExportsKind::CommonJs)
+      || meta.has_dynamic_exports
+    {
+      return None;
+    }
+    match meta.sorted_and_non_ambiguous_resolved_exports.get(key) {
+      Some(&came_from_commonjs) => (!came_from_commonjs).then_some(true),
+      None => Some(false),
+    }
   }
 
   /// Collect the JSON-module default exports in `stmt_infos` that must NOT be split into their

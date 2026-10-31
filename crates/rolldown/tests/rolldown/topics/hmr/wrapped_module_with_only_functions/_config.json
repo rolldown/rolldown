@@ -1,0 +1,13 @@
+{
+  "config": {
+    "experimental": {
+      "devMode": {}
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "strict_execution_order",
+      "strictExecutionOrder": true
+    }
+  ]
+}

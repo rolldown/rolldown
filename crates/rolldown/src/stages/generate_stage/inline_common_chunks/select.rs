@@ -363,10 +363,12 @@ impl GenerateStage<'_> {
               return Some("member uses dynamic import");
             }
           }
-          ImportKind::AtImport
-          | ImportKind::UrlImport
-          | ImportKind::NewUrl
-          | ImportKind::HotAccept => return Some("member uses an unsupported import kind"),
+          // Only dev mode records these, and the finalizer prints each as the accepted module's
+          // id. See internal-docs/inline-common-chunks/design.md ("Dev mode").
+          ImportKind::HotAccept => {}
+          ImportKind::AtImport | ImportKind::UrlImport | ImportKind::NewUrl => {
+            return Some("member uses an unsupported import kind");
+          }
         }
       }
     }

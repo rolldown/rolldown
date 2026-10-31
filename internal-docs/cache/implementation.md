@@ -67,11 +67,11 @@ Related non-`Cache`-named structures in the same file: `ViteMetadata`,
 
 ### 5. JS-side cache
 
-| Type                    | Location                                                                                | Stores                                                                                                                                    |
-| ----------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `PluginContextData`     | `packages/rolldown/src/plugin/plugin-context-data.ts:18`                                | `moduleOptionMap`, `resolveOptionsMap`, `loadModulePromiseMap`, `renderedChunkMeta`, `normalizedInputOptions`, `normalizedOutputOptions`. |
-| `InvalidateJsSideCache` | `crates/rolldown_common/src/inner_bundler_options/types/invalidate_js_side_cache.rs:11` | `Arc<InvalidateJsSideCacheFn>` — a Rust-held callback into JS.                                                                            |
-| `FilterExprCache`       | `crates/rolldown_binding/src/options/plugin/binding_plugin_options.rs:218`              | Pre-compiled plugin-hook filter expressions (NAPI binding, per-plugin).                                                                   |
+| Type                    | Location                                                                                | Stores                                                                                                                                                       |
+| ----------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `PluginContextData`     | `packages/rolldown/src/plugin/plugin-context-data.ts:45`                                | `moduleOptionMap`, `resolveOptionsMap`, `loadModulePromiseMap`, `renderedChunkMeta`, `outputCodeCache`, `normalizedInputOptions`, `normalizedOutputOptions`. |
+| `InvalidateJsSideCache` | `crates/rolldown_common/src/inner_bundler_options/types/invalidate_js_side_cache.rs:11` | `Arc<InvalidateJsSideCacheFn>` — a Rust-held callback into JS.                                                                                               |
+| `FilterExprCache`       | `crates/rolldown_binding/src/options/plugin/binding_plugin_options.rs:218`              | Pre-compiled plugin-hook filter expressions (NAPI binding, per-plugin).                                                                                      |
 
 `InvalidateJsSideCache` is wired in `crates/rolldown_binding/src/utils/normalize_binding_options.rs`; on the JS side
 (`packages/rolldown/src/utils/bindingify-input-options.ts`) it is bound to

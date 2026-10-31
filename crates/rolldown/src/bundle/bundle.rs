@@ -169,6 +169,14 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,
   ) -> BuildResult<BundleOutput> {
+    let result = self.bundle_write_impl(scan_stage_output).await;
+    self.invalidate_js_side_cache(result).await
+  }
+
+  async fn bundle_write_impl(
+    &mut self,
+    scan_stage_output: NormalizedScanStageOutput,
+  ) -> BuildResult<BundleOutput> {
     let dist_dir = self.options.cwd.join(&self.options.out_dir);
 
     if self.options.clean_dir && self.options.file.is_none() {
@@ -238,7 +246,25 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,
   ) -> BuildResult<BundleOutput> {
-    self.bundle_up(scan_stage_output, false).await
+    let result = self.bundle_up(scan_stage_output, false).await;
+    self.invalidate_js_side_cache(result).await
+  }
+
+  /// A plugin may read `chunk.code` in `generateBundle` or `writeBundle` before a later hook fails, so the
+  /// JS side must drop its per-build caches on every exit of the output stage, not only on success.
+  async fn invalidate_js_side_cache(
+    &self,
+    result: BuildResult<BundleOutput>,
+  ) -> BuildResult<BundleOutput> {
+    let Some(invalidate_js_side_cache) = &self.options.invalidate_js_side_cache else {
+      return result;
+    };
+    match (result, invalidate_js_side_cache.call().await) {
+      (Ok(output), Ok(())) => Ok(output),
+      // The build error is the one to report.
+      (Err(errors), _) => Err(errors),
+      (Ok(_), Err(err)) => Err(err.into()),
+    }
   }
 
   #[tracing::instrument(level = "debug", skip(self, output))]
@@ -335,10 +361,6 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
             .into(),
         );
       }
-    }
-
-    if let Some(invalidate_js_side_cache) = &self.options.invalidate_js_side_cache {
-      invalidate_js_side_cache.call().await?;
     }
 
     Ok(output)

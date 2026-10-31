@@ -1,0 +1,39 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## IMPORT_IS_UNDEFINED
+
+```text
+[IMPORT_IS_UNDEFINED] Import `d` will always be undefined because there is no matching export in 'foo.js'
+   ╭─[ main.js:8:17 ]
+   │
+ 8 │ if ('d' in foo) foo.d();
+   │                 ──┬──  
+   │                   ╰──── 
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// foo.js
+function c() {
+	return "c";
+}
+// main.js
+function hasKey(foo) {
+	return "a" in foo;
+}
+assert.strictEqual(c(), "c");
+assert.strictEqual(true, true);
+assert.strictEqual(true, true);
+assert.strictEqual(false, false);
+assert.strictEqual(hasKey({}), false);
+
+```

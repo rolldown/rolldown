@@ -1,0 +1,86 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+import { n as url, t as init_shared } from "./shared.js";
+__rolldown_runtime__.registerGraph({
+	ids: ["a.js", "shared.js"],
+	localCount: 1,
+	edges: [[1]],
+	entries: [0]
+});
+// a.js
+var a_exports = /* @__PURE__ */ __exportAll({});
+function init_a() {
+	return (init_a = __esmMin((() => {
+		init_shared();
+		__rolldown_runtime__.createModuleHotContext("a.js");
+		__rolldown_runtime__.registerModule("a.js", { exports: a_exports });
+		console.log("A", url);
+	})))();
+}
+init_a();
+
+```
+
+## b.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+import { n as url, t as init_shared } from "./shared.js";
+__rolldown_runtime__.registerGraph({
+	ids: ["b.js", "shared.js"],
+	localCount: 1,
+	edges: [[1]],
+	entries: [0]
+});
+// b.js
+var b_exports = /* @__PURE__ */ __exportAll({});
+function init_b() {
+	return (init_b = __esmMin((() => {
+		init_shared();
+		__rolldown_runtime__.createModuleHotContext("b.js");
+		__rolldown_runtime__.registerModule("b.js", { exports: b_exports });
+		console.log("B", url);
+	})))();
+}
+init_b();
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```
+
+## shared.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+__rolldown_runtime__.registerGraph({
+	ids: ["shared.js"],
+	localCount: 1,
+	edges: [[]]
+});
+// shared.js
+var shared_exports = /* @__PURE__ */ __exportAll({ url: () => url });
+var shared_hot, url;
+function init_shared() {
+	return (init_shared = __esmMin((() => {
+		shared_hot = __rolldown_runtime__.createModuleHotContext("shared.js");
+		__rolldown_runtime__.registerModule("shared.js", { exports: shared_exports });
+		url = import.meta.url;
+		shared_hot.accept();
+	})))();
+}
+export { url as n, init_shared as t };
+
+```

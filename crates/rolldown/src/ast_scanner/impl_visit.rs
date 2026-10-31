@@ -77,6 +77,11 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
       self.result.ecma_view_meta.insert(EcmaViewMeta::IndependentInitialization);
     }
 
+    // With a top-level `return`, a module is CommonJS unless it has an `export` declaration.
+    let top_level_return_ends_module = !program
+      .body
+      .iter()
+      .any(|stmt| stmt.as_module_declaration().is_some_and(ast::ModuleDeclaration::is_export));
     for (idx, stmt) in program.body.iter().enumerate() {
       // `0` is reserved for Module Namespace Object stmt info
       #[expect(
@@ -95,7 +100,8 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
         // Constants that earlier statements declared. The map grows in statement order, so no read
         // precedes its declaration.
         Some(&self.result.constant_export_map),
-      );
+      )
+      .with_top_level_return_ends_module(top_level_return_ends_module);
       let mut stmt_eval_facts = analyzer.analyze_stmt(stmt);
       // `ExecutionOrderSensitive` is read outside the wrap planner too — it gates which leaf
       // modules `sort_chunk_modules` may sort by id — so it has to mean the same thing in every
@@ -217,6 +223,7 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
     self.process_identifier_ref_by_scope(ident);
     self.try_diagnostic_forbid_const_assign(ident);
     self.update_dynamic_import_binding_usage_info(ident);
+    self.record_var_read_before_declaration(ident);
   }
 
   fn visit_statement(&mut self, stmt: &ast::Statement<'ast>) {
@@ -407,6 +414,11 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
   }
 
   fn visit_expression(&mut self, it: &Expression<'ast>) {
+    // Exactly the expressions `rewrite_import_meta_hot` rewrites. Returning keeps the inner
+    // `import.meta` from setting `ImportMeta`; the expression has nothing else to scan.
+    if it.is_import_meta_hot() && self.immutable_ctx.options.is_dev_mode_enabled() {
+      return;
+    }
     if matches!(it, Expression::ImportMeta(_)) {
       self.current_stmt_info.meta.insert(StmtInfoMeta::ImportMeta);
     }
@@ -497,6 +509,24 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     Some(symbol_id)
   }
 
+  /// Module-level code runs in source order, so it reads a root `var` declared later as
+  /// `undefined`. `export { x }` only forwards the binding.
+  fn record_var_read_before_declaration(&mut self, ident_ref: &IdentifierReference) {
+    if !self.is_top_level || matches!(self.visit_path.last(), Some(AstKind::ExportSpecifier(_))) {
+      return;
+    }
+    let Some(symbol_id) = self.resolve_symbol_from_reference(ident_ref) else {
+      return;
+    };
+    let scoping = self.result.symbol_ref_db.scoping();
+    if self.is_root_symbol(symbol_id)
+      && scoping.symbol_flags(symbol_id).is_function_scoped_declaration()
+      && ident_ref.span.start < scoping.symbol_span(symbol_id).start
+    {
+      self.vars_read_before_declaration.insert(symbol_id);
+    }
+  }
+
   fn process_identifier_ref_by_scope(&mut self, ident_ref: &IdentifierReference) {
     match self.resolve_identifier_reference(ident_ref) {
       super::IdentifierReferenceKind::Global => {
@@ -580,10 +610,28 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             }
             rolldown_common::Specifier::Literal(_) => MemberExprObjectReferencedType::Named,
           };
-          // Record the whole chain for every import kind: a default or named import can resolve
-          // to a namespace (`export * as default from`), and the link stage resolves and shims
-          // missing exports through each nested namespace in the chain.
-          if let Some((node_id, span, props)) =
+          let in_operator_key = if matches!(ty, MemberExprObjectReferencedType::Namespace) {
+            self.try_extract_parent_in_operator_key()
+          } else {
+            None
+          };
+          if let Some((node_id, span, key)) = in_operator_key {
+            is_inserted_before = true;
+            self.result.namespace_in_checks.insert(node_id, key);
+            self.add_member_expr_reference(MemberExprRef {
+              object_ref: root_symbol_id,
+              prop_and_span_list: vec![],
+              node_id,
+              span,
+              object_ref_type: ty,
+              reference_id: ident_ref.reference_id.get(),
+              is_write: false,
+              write_target: None,
+            });
+          } else if let Some((node_id, span, props)) =
+            // Record the whole chain for every import kind: a default or named import can resolve
+            // to a namespace (`export * as default from`), and the link stage resolves and shims
+            // missing exports through each nested namespace in the chain.
             self.try_extract_parent_static_member_expr_chain(usize::MAX)
           {
             if !span.is_unspanned() {

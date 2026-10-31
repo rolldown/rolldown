@@ -67,7 +67,26 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) ->
     // If there's only one sourcemap, return it as is.
     return sourcemap_chain[0].clone().into_owned();
   }
+  collapse(sourcemap_chain, false).0
+}
 
+/// Like `collapse_sourcemaps`, but keeps only the sources and names that a traced token
+/// references, as Rollup's `traceMappings()` does. So a map with no mappings (e.g. a transform's
+/// `{ mappings: '' }`) cuts out the code before it. A chain of one map is traced too.
+pub fn collapse_sourcemaps_traced(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) -> SourceMap {
+  let (map, name_used) = collapse(sourcemap_chain, true);
+  let every_source_used = references_every_source(&map);
+  if every_source_used && name_used.iter().all(|&used| used) {
+    return map;
+  }
+  drop_unreferenced(map, every_source_used, &name_used)
+}
+
+/// Collapses the chain. With `mark_names`, it also returns which names a traced token references.
+fn collapse(
+  sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>],
+  mark_names: bool,
+) -> (SourceMap, Vec<bool>) {
   let last_map = sourcemap_chain.last().expect("sourcemap_chain should not be empty");
   let first_map = sourcemap_chain.first().expect("sourcemap_chain should not be empty");
   let chain_without_last = &sourcemap_chain[..sourcemap_chain.len() - 1];
@@ -92,14 +111,18 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) ->
   let last_offset = append_names(last_map);
 
   // `last_offset` counts the names of every map before the last one. When it is 0, no traced
-  // token can carry a name, so the remap loop skips the per-step name tracking.
-  let tokens = if last_offset == 0 {
-    remap_tokens::<false>(last_map, &chain_with_offsets, last_offset)
-  } else {
-    remap_tokens::<true>(last_map, &chain_with_offsets, last_offset)
+  // token can carry a name, so the remap loop skips the per-step name tracking. A chain without
+  // names also skips the marks.
+  let mut name_used = if mark_names { vec![false; merged_names.len()] } else { Vec::new() };
+  let remap = match (last_offset == 0, name_used.is_empty()) {
+    (true, true) => remap_tokens::<false, false>,
+    (true, false) => remap_tokens::<false, true>,
+    (false, true) => remap_tokens::<true, false>,
+    (false, false) => remap_tokens::<true, true>,
   };
+  let tokens = remap(last_map, &chain_with_offsets, last_offset, &mut name_used);
 
-  SourceMap::new(
+  let map = SourceMap::new(
     None,
     merged_names,
     None,
@@ -107,15 +130,99 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) ->
     first_map.get_source_contents().map(|x| x.map(|s| Cow::Owned(s.to_owned()))).collect(),
     tokens,
     None,
-  )
+  );
+  (map, name_used)
+}
+
+/// Returns `true` when a token references every source. This runs once per collapsed module
+/// map, and a module map usually has one source, so the scan stops at its first mapped token.
+fn references_every_source(map: &SourceMap) -> bool {
+  let source_count = map.get_sources().len();
+  let mut stack_flags = [false; 64];
+  let mut heap_flags = Vec::new();
+  let used = if source_count <= stack_flags.len() {
+    &mut stack_flags[..source_count]
+  } else {
+    heap_flags.resize(source_count, false);
+    heap_flags.as_mut_slice()
+  };
+  let mut unseen = source_count;
+  for token in map.get_tokens() {
+    if unseen == 0 {
+      break;
+    }
+    let flag = token.get_source_id().and_then(|id| used.get_mut(id as usize));
+    unseen -= usize::from(flag.is_some_and(|flag| !std::mem::replace(flag, true)));
+  }
+  unseen == 0
+}
+
+/// Drops the sources that no token references and the names that `name_used` does not mark.
+/// The kept items keep their order, and the token ids are renumbered to match.
+fn drop_unreferenced(map: SourceMap, every_source_used: bool, name_used: &[bool]) -> SourceMap {
+  // Usually only names go, so the source scan runs only when the cheap check found a gap.
+  let source_used = (!every_source_used).then(|| {
+    let mut source_used = vec![false; map.get_sources().len()];
+    for token in map.get_tokens() {
+      if let Some(used) = token.get_source_id().and_then(|id| source_used.get_mut(id as usize)) {
+        *used = true;
+      }
+    }
+    source_used
+  });
+  let source_ids = source_used.as_deref().map(renumber_used);
+  let name_ids = renumber_used(name_used);
+  let new_id = |ids: &[Option<u32>], id: u32| ids.get(id as usize).copied().flatten();
+  let mut parts = map.into_parts();
+  if let Some(source_used) = &source_used {
+    retain_used(&mut parts.sources, source_used);
+    retain_used(&mut parts.source_contents, source_used);
+  }
+  retain_used(&mut parts.names, name_used);
+  for token in &mut parts.tokens {
+    let source_id = token.get_source_id();
+    *token = Token::new(
+      token.get_dst_line(),
+      token.get_dst_col(),
+      token.get_src_line(),
+      token.get_src_col(),
+      source_ids.as_deref().map_or(source_id, |ids| source_id.and_then(|id| new_id(ids, id))),
+      token.get_name_id().and_then(|id| new_id(&name_ids, id)),
+    );
+  }
+  SourceMap::from_parts(parts)
+}
+
+/// Maps each old id to its new id, or to `None` when the item is dropped.
+fn renumber_used(used: &[bool]) -> Vec<Option<u32>> {
+  let mut next_id = 0;
+  used
+    .iter()
+    .map(|&used| {
+      used.then(|| {
+        let id = next_id;
+        next_id += 1;
+        id
+      })
+    })
+    .collect()
+}
+
+/// Keeps the items whose index is marked as used.
+fn retain_used<T>(items: &mut Vec<T>, used: &[bool]) {
+  // `retain` visits every item once, in order.
+  let mut used = used.iter();
+  items.retain(|_| used.next().copied().unwrap_or(false));
 }
 
 /// Remaps `last_map`'s tokens through `chain`, the earlier maps with the nearest one first.
-/// `TRACK_NAMES` is a const so that a chain without names compiles without the name work.
-fn remap_tokens<const TRACK_NAMES: bool>(
+/// `TRACK_NAMES` and `MARK_NAMES` are consts so that a chain without names, or a collapse that
+/// does not mark names in `name_used`, compiles without that work.
+fn remap_tokens<const TRACK_NAMES: bool, const MARK_NAMES: bool>(
   last_map: &oxc_sourcemap::SourceMap<'_>,
   chain: &[(&oxc_sourcemap::SourceMap<'_>, Vec<&[Token]>, u32)],
   last_offset: u32,
+  name_used: &mut [bool],
 ) -> Box<[Token]> {
   let source_view_tokens = last_map.get_source_view_tokens();
   let mut remapped = Vec::with_capacity(source_view_tokens.size_hint().0);
@@ -152,6 +259,11 @@ fn remap_tokens<const TRACK_NAMES: bool>(
         original_token = traced;
       }
 
+      if MARK_NAMES {
+        if let Some(used) = name_id.and_then(|id| name_used.get_mut(id as usize)) {
+          *used = true;
+        }
+      }
       Some(Token::new(
         token.get_dst_line(),
         token.get_dst_col(),
@@ -546,4 +658,73 @@ fn test_collapse_sourcemaps_prefers_first_map_name() {
   let token =
     collapsed.lookup_source_view_token(&lookup, 0, 6).expect("token at generated position (0:6)");
   assert_eq!(token.get_name().map(AsRef::as_ref), Some("DEBUG_BUILD"));
+}
+
+#[test]
+fn test_collapse_sourcemaps_traced_drops_unreferenced_sources_and_names() {
+  let traced = |json: &str| {
+    let map = oxc_sourcemap::SourceMap::from_json_string(json).unwrap();
+    collapse_sourcemaps_traced(&[&map]).to_json_string()
+  };
+  // `b.js` and the name `x` have no token, so they go. The kept items keep their order.
+  assert_eq!(
+    traced(
+      r#"{"version":3,"names":["x","y"],"sources":["a.js","b.js","c.js"],"sourcesContent":["a","b","c"],"mappings":"AAAA,EEAAC"}"#
+    ),
+    r#"{"version":3,"names":["y"],"sources":["a.js","c.js"],"sourcesContent":["a","c"],"mappings":"AAAA,ECAAA"}"#
+  );
+  // The only source has a token, but the name `x` still goes.
+  assert_eq!(
+    traced(
+      r#"{"version":3,"names":["x","y"],"sources":["a.js"],"sourcesContent":["a"],"mappings":"AAAAC"}"#
+    ),
+    r#"{"version":3,"names":["y"],"sources":["a.js"],"sourcesContent":["a"],"mappings":"AAAAA"}"#
+  );
+  // Everything has a token, so the map stays the same.
+  let kept =
+    r#"{"version":3,"names":["y"],"sources":["a.js"],"sourcesContent":["a"],"mappings":"AAAAA"}"#;
+  assert_eq!(traced(kept), kept);
+}
+
+/// The earlier map's name wins, so the later map's name for the same position goes.
+#[test]
+fn test_collapse_sourcemaps_traced_drops_overridden_names() {
+  use oxc_sourcemap::SourceMapBuilder;
+
+  let mut first_builder = SourceMapBuilder::default();
+  let first_source_id =
+    first_builder.set_source_and_content("source.ts", "const DEBUG_BUILD = true");
+  let debug_build = first_builder.add_name("DEBUG_BUILD");
+  first_builder.add_token(0, 6, 0, 6, Some(first_source_id), Some(debug_build));
+  let first_map = first_builder.into_sourcemap();
+
+  let mut last_builder = SourceMapBuilder::default();
+  let last_source_id =
+    last_builder.set_source_and_content("bundle.js", "const DEBUG_BUILD$1 = true");
+  let intermediate = last_builder.add_name("DEBUG_BUILD$1");
+  last_builder.add_token(0, 6, 0, 6, Some(last_source_id), Some(intermediate));
+  let last_map = last_builder.into_sourcemap();
+
+  let collapsed = collapse_sourcemaps_traced(&[&first_map, &last_map]);
+  assert_eq!(collapsed.get_names().collect::<Vec<_>>(), ["DEBUG_BUILD"]);
+  let token = collapsed.get_tokens().last().unwrap();
+  assert_eq!((token.get_source_id(), token.get_name_id()), (Some(0), Some(0)));
+}
+
+#[test]
+fn test_collapse_sourcemaps_traced_beyond_stack_flags() {
+  // 70 sources do not fit the 64 stack flags, so the source check takes the heap path.
+  let sources: Vec<String> = (0..70).map(|i| format!("s{i}.js")).collect();
+  let mut builder = oxc_sourcemap::SourceMapBuilder::default();
+  let source_ids: Vec<u32> =
+    sources.iter().map(|source| builder.add_source_and_content(source, "")).collect();
+  builder.add_name("unused");
+  let used = builder.add_name("used");
+  builder.add_token(0, 0, 0, 0, Some(source_ids[69]), Some(used));
+  let map = builder.into_sourcemap();
+  let dropped = collapse_sourcemaps_traced(&[&map]);
+  assert_eq!(dropped.get_sources().collect::<Vec<_>>(), ["s69.js"]);
+  assert_eq!(dropped.get_names().collect::<Vec<_>>(), ["used"]);
+  let token = dropped.get_tokens().next().unwrap();
+  assert_eq!((token.get_source_id(), token.get_name_id()), (Some(0), Some(0)));
 }

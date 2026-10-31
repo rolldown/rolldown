@@ -6,16 +6,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+// dep1.js
 console.log({ value1: true });
+
 // dep2.js
 const obj$1 = { value2: true };
 console.log(obj$1);
+
+// dep3.js
 console.log({ value3: true });
+
 // main.js
 const Foo = () => {};
 const result1 = <Foo {...obj$1} />;
 const result2 = <Foo {...obj$1} prop />;
 const result3 = <Foo prop1 prop2 {...obj$1} {...obj$1} />;
+
 export { result1, result2, result3 };
 
 ```

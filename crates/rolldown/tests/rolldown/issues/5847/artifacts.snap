@@ -13,12 +13,15 @@ const nlp = function() {
 nlp.plugin = function() {
 	return this;
 };
+
 // compromise/one.js
 nlp.extend = function() {
 	return 666;
 };
+
 // compromise/index.js
 var compromise_default = nlp;
+
 export { compromise_default as default };
 
 ```
@@ -27,6 +30,7 @@ export { compromise_default as default };
 
 ```js
 import assert from "node:assert";
+
 // main.js
 const nlp = (await import("./compromise.js")).default;
 assert.strictEqual(nlp.extend(), 666);

@@ -7,7 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import "./shared.js";
-export * from "external" with { type: "json" };
+
+export * from "external" with { type: "json" }
 
 ```
 
@@ -15,7 +16,8 @@ export * from "external" with { type: "json" };
 
 ```js
 import "./shared.js";
-export * from "external" with { type: "css" };
+
+export * from "external" with { type: "css" }
 
 ```
 
@@ -24,6 +26,7 @@ export * from "external" with { type: "css" };
 ```js
 // setup.js
 globalThis.setupValue = "ready";
+
 // reader.js
 console.log(globalThis.setupValue);
 
@@ -61,12 +64,14 @@ function init_setup() {
 		globalThis.setupValue = "ready";
 	})))();
 }
+
 // reader.js
 function init_reader() {
 	return (init_reader = __esmMin((() => {
 		console.log(globalThis.setupValue);
 	})))();
 }
+
 // a.js
 function init_a() {
 	return (init_a = __esmMin((() => {
@@ -74,6 +79,7 @@ function init_a() {
 		init_reader();
 	})))();
 }
+
 // b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
@@ -81,6 +87,7 @@ function init_b() {
 		init_reader();
 	})))();
 }
+
 export { init_setup as i, init_a as n, init_reader as r, init_b as t };
 
 ```

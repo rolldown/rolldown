@@ -15,6 +15,7 @@ var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		get: () => () => ({ a })
 	});
 }));
+
 // a.cjs
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const b = require_b();
@@ -23,6 +24,7 @@ var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		get: () => () => ({ b })
 	});
 }));
+
 // main.mjs
 var import_a = /* @__PURE__ */ __toESM(require_a(), 1);
 var import_b = /* @__PURE__ */ __toESM(require_b(), 1);

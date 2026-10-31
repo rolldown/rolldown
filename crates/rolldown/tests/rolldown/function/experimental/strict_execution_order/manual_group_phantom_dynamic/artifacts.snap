@@ -9,12 +9,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_leafhost } from "./group-l.js";
 import { t as init_x } from "./x.js";
+
 // y.js
 function init_y() {
 	return (init_y = __esmMin((() => {
 		console.log("Y");
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -23,6 +25,7 @@ function init_main() {
 		console.log("A");
 	})))();
 }
+
 export { init_y as n, init_main as t };
 
 ```
@@ -31,6 +34,7 @@ export { init_y as n, init_main as t };
 
 ```js
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+
 // leafhost.js
 function init_leafhost() {
 	return (init_leafhost = __esmMin((() => {
@@ -38,6 +42,7 @@ function init_leafhost() {
 		console.log("L");
 	})))();
 }
+
 // m6.js
 var m6_exports = /* @__PURE__ */ __exportAll({});
 function init_m6() {
@@ -45,6 +50,7 @@ function init_m6() {
 		console.log("M6");
 	})))();
 }
+
 export { init_leafhost as t };
 
 ```
@@ -72,6 +78,7 @@ export { __exportAll as n, __esmMin as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_y } from "./group-0.js";
+
 // x.js
 function init_x() {
 	return (init_x = __esmMin((() => {
@@ -79,6 +86,7 @@ function init_x() {
 		console.log("X");
 	})))();
 }
+
 export { init_x as t };
 
 ```
@@ -93,12 +101,14 @@ export { init_x as t };
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_leafhost } from "./group-l.js";
 import { t as init_x } from "./x.js";
+
 // y.js
 function init_y() {
 	return (init_y = __esmMin((() => {
 		console.log("Y");
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -107,6 +117,7 @@ function init_main() {
 		console.log("A");
 	})))();
 }
+
 export { init_y as n, init_main as t };
 
 ```
@@ -115,6 +126,7 @@ export { init_y as n, init_main as t };
 
 ```js
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+
 // leafhost.js
 function init_leafhost() {
 	return (init_leafhost = __esmMin((() => {
@@ -122,6 +134,7 @@ function init_leafhost() {
 		console.log("L");
 	})))();
 }
+
 // m6.js
 var m6_exports = /* @__PURE__ */ __exportAll({});
 function init_m6() {
@@ -129,6 +142,7 @@ function init_m6() {
 		console.log("M6");
 	})))();
 }
+
 export { init_leafhost as t };
 
 ```
@@ -156,6 +170,7 @@ export { __exportAll as n, __esmMin as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_y } from "./group-0.js";
+
 // x.js
 function init_x() {
 	return (init_x = __esmMin((() => {
@@ -163,6 +178,7 @@ function init_x() {
 		console.log("X");
 	})))();
 }
+
 export { init_x as t };
 
 ```

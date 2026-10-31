@@ -11,31 +11,37 @@ source: crates/rolldown_testing/src/integration_test.rs
 var require_declared = /* @__PURE__ */ __commonJSMin(((exports, module, this$8) => {
 	this$8.viaThis = { local: true }.local;
 }));
+
 // assigned.cjs
 var require_assigned = /* @__PURE__ */ __commonJSMin(((exports, module, this$7) => {
 	exports = { local: true };
 	this$7.viaThis = exports.local;
 }));
+
 // replaced.cjs
 var require_replaced = /* @__PURE__ */ __commonJSMin(((exports, module, this$6) => {
 	exports = {};
 	module.exports = { value: "replacement" };
 	this$6.value = "original";
 }));
+
 // nulled.cjs
 var require_nulled = /* @__PURE__ */ __commonJSMin(((exports, module, this$5) => {
 	module.exports = null;
 	this$5.value = "original";
 }));
+
 // fnexports.cjs
 var require_fnexports = /* @__PURE__ */ __commonJSMin(((exports, module, this$4) => {
 	function exports() {}
 	this$4.value = typeof exports;
 }));
+
 // varmodule.cjs
 var require_varmodule = /* @__PURE__ */ __commonJSMin(((exports, module, this$3) => {
 	this$3.value = { exports: "fake" }.exports;
 }));
+
 // arrow.cjs
 var require_arrow = /* @__PURE__ */ __commonJSMin(((exports, module, this$2) => {
 	const set = () => {
@@ -43,12 +49,14 @@ var require_arrow = /* @__PURE__ */ __commonJSMin(((exports, module, this$2) => 
 	};
 	set();
 }));
+
 // plain.cjs
 var require_plain = /* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
 	this$1.a = 1;
 	exports.b = 2;
 	module.exports.c = this$1 === exports;
 }));
+
 // main.js
 var import_declared = /* @__PURE__ */ __toESM(require_declared());
 var import_assigned = /* @__PURE__ */ __toESM(require_assigned());
@@ -68,6 +76,7 @@ const all = {
 	arrow: import_arrow.default,
 	plain: import_plain.default
 };
+
 export { all };
 
 ```
@@ -235,31 +244,37 @@ exports.all = all;
 var require_declared = /* @__PURE__ */ __commonJS({ "declared.cjs": ((exports, module, this$8) => {
 	this$8.viaThis = { local: true }.local;
 }) });
+
 // assigned.cjs
 var require_assigned = /* @__PURE__ */ __commonJS({ "assigned.cjs": ((exports, module, this$7) => {
 	exports = { local: true };
 	this$7.viaThis = exports.local;
 }) });
+
 // replaced.cjs
 var require_replaced = /* @__PURE__ */ __commonJS({ "replaced.cjs": ((exports, module, this$6) => {
 	exports = {};
 	module.exports = { value: "replacement" };
 	this$6.value = "original";
 }) });
+
 // nulled.cjs
 var require_nulled = /* @__PURE__ */ __commonJS({ "nulled.cjs": ((exports, module, this$5) => {
 	module.exports = null;
 	this$5.value = "original";
 }) });
+
 // fnexports.cjs
 var require_fnexports = /* @__PURE__ */ __commonJS({ "fnexports.cjs": ((exports, module, this$4) => {
 	function exports() {}
 	this$4.value = typeof exports;
 }) });
+
 // varmodule.cjs
 var require_varmodule = /* @__PURE__ */ __commonJS({ "varmodule.cjs": ((exports, module, this$3) => {
 	this$3.value = { exports: "fake" }.exports;
 }) });
+
 // arrow.cjs
 var require_arrow = /* @__PURE__ */ __commonJS({ "arrow.cjs": ((exports, module, this$2) => {
 	const set = () => {
@@ -267,12 +282,14 @@ var require_arrow = /* @__PURE__ */ __commonJS({ "arrow.cjs": ((exports, module,
 	};
 	set();
 }) });
+
 // plain.cjs
 var require_plain = /* @__PURE__ */ __commonJS({ "plain.cjs": ((exports, module, this$1) => {
 	this$1.a = 1;
 	exports.b = 2;
 	module.exports.c = this$1 === exports;
 }) });
+
 // main.js
 var import_declared = /* @__PURE__ */ __toESM(require_declared());
 var import_assigned = /* @__PURE__ */ __toESM(require_assigned());
@@ -292,6 +309,7 @@ const all = {
 	arrow: import_arrow.default,
 	plain: import_plain.default
 };
+
 export { all };
 
 ```

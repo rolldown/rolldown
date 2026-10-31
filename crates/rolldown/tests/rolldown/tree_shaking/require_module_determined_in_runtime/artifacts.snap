@@ -11,6 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 function applyExtends(config) {
 	__require(config.extends);
 }
+
 // main.mjs
 console.log(`a: `, applyExtends);
 

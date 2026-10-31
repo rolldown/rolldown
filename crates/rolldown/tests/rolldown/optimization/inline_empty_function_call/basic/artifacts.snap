@@ -10,6 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 function _page($$payload, $$props) {
 	res();
 }
+
 export { _page as default };
 
 ```

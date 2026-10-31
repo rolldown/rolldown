@@ -6,5 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-var e=class{};console.log(<e tag-must-start-with-capital-letter/>);
+var e=class{};
+console.log(<e tag-must-start-with-capital-letter/>);
 ```

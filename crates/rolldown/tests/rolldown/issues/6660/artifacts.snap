@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { i as __toCommonJS, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./index.js";
+
 // d.js
 var d_exports = /* @__PURE__ */ __exportAll({ loadEventStreamCapability: () => loadEventStreamCapability });
 async function loadEventStreamCapability() {
@@ -16,12 +17,14 @@ async function loadEventStreamCapability() {
 var init_d = __esmMin((() => {
 	loadEventStreamCapability();
 }));
+
 // c.js
 var require_c = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.validateSsoProfile = function test() {
 		return init_d(), __toCommonJS(d_exports);
 	};
 }));
+
 export default require_c();
 
 ```
@@ -47,6 +50,7 @@ __esmMin((() => {
 		console.log(fromIni);
 	};
 })))();
+
 export { __toCommonJS as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
 
 ```

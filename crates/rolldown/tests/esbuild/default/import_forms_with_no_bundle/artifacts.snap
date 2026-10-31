@@ -75,6 +75,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import * as ns from "foo";
 import def, { a, a2, b } from "foo";
+
 // entry.js
 const imp = [import("foo"), function nested() {
 	return import("foo");

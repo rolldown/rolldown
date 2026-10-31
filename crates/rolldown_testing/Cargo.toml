@@ -29,6 +29,7 @@ rolldown = { workspace = true, features = ["testing"] }
 rolldown_common = { workspace = true }
 rolldown_dev = { workspace = true, features = ["testing"] }
 rolldown_error = { workspace = true }
+rolldown_plugin_utils = { workspace = true, features = ["testing"] }
 rolldown_sourcemap = { workspace = true }
 rolldown_testing_config = { workspace = true }
 rolldown_workspace = { workspace = true }

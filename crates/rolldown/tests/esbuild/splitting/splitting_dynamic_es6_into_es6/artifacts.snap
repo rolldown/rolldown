@@ -16,6 +16,7 @@ import("./foo.js").then(({ bar }) => console.log(bar));
 ```js
 // foo.js
 let bar = 123;
+
 export { bar };
 
 ```

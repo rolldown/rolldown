@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // shared.js
 const value = "shared";
+
 export { value };
 
 ```

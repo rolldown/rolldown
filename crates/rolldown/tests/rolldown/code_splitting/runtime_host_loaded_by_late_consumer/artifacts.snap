@@ -7,8 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as log } from "./log.js";
+
 // a.js
 const a = log("a");
+
 export { a };
 
 ```
@@ -21,6 +23,7 @@ async function b() {
 	const { log } = await import("./log.js").then((n) => n.n);
 	return log("b");
 }
+
 export { b };
 
 ```
@@ -29,8 +32,10 @@ export { b };
 
 ```js
 import { t as ns_exports } from "./ns.js";
+
 // c.js
 const c = ns_exports;
+
 export { c };
 
 ```
@@ -39,8 +44,10 @@ export { c };
 
 ```js
 import { t as ns_exports } from "./ns.js";
+
 // d.js
 const d = ns_exports;
+
 export { d };
 
 ```
@@ -49,11 +56,13 @@ export { d };
 
 ```js
 import { t as __exportAll } from "./rolldown-runtime.js";
+
 // log.js
 var log_exports = /* @__PURE__ */ __exportAll({ log: () => log });
 function log(message) {
 	return `log: ${message}`;
 }
+
 export { log_exports as n, log as t };
 
 ```
@@ -62,9 +71,11 @@ export { log_exports as n, log as t };
 
 ```js
 import { t as __exportAll } from "./rolldown-runtime.js";
+
 // ns.js
 var ns_exports = /* @__PURE__ */ __exportAll({ value: () => "ns" });
 globalThis.nsEvaluated = true;
+
 export { ns_exports as t };
 
 ```

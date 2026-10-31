@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // esm-impl.mjs
 var esm_impl_exports = /* @__PURE__ */ __exportAll({ foo: () => foo$1 });
@@ -14,10 +15,12 @@ var foo$1;
 var init_esm_impl = __esmMin((() => {
 	foo$1 = "from-esm";
 }));
+
 // cjs-impl.js
 var require_cjs_impl = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.foo = "from-cjs";
 }));
+
 // main.js
 var import_reexporter = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	if (process.env.USE_ESM) module.exports = (init_esm_impl(), __toCommonJS(esm_impl_exports));

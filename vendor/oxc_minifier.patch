@@ -1,0 +1,477 @@
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -8,6 +8,9 @@
+ # If you are reading this file be aware that the original Cargo.toml
+ # will likely look very different (and much more reasonable).
+ # See Cargo.toml.orig for the original contents.
++
++# Keep this pinned crate independently testable from the Rolldown workspace.
++[workspace]
+ 
+ [package]
+ edition = "2024"
+--- a/src/compressor.rs
++++ b/src/compressor.rs
+@@ -10,11 +10,23 @@
+ 
+ pub struct Compressor<'a> {
+     allocator: &'a Allocator,
++    preserve_literal_spans: bool,
+ }
+ 
+ impl<'a> Compressor<'a> {
+     pub fn new(allocator: &'a Allocator) -> Self {
+-        Self { allocator }
++        Self { allocator, preserve_literal_spans: false }
++    }
++
++    /// Preserve original literal initializer spans when inlining constants.
++    ///
++    /// Intended for callers printing source maps directly from the compressed AST.
++    /// Consumer spans take precedence when comments are attached there.
++    /// Synthesized constants retain consumer attribution. Default `false`.
++    #[must_use]
++    pub fn with_literal_spans(mut self, preserve: bool) -> Self {
++        self.preserve_literal_spans = preserve;
++        self
+     }
+ 
+     /// Full minify: removes dead code and applies size-reducing transforms.
+@@ -48,13 +60,19 @@
+         options: CompressOptions,
+     ) -> u8 {
+         let max_iterations = options.max_iterations;
+-        let state = MinifierState::new(
++        let mut state = MinifierState::new(
+             program.source_type,
+             options,
+             CompressionMode::Full,
+             &scoping,
+             self.allocator,
+         );
++        if self.preserve_literal_spans {
++            state.literal_spans = Some(Box::new(crate::literal_spans::LiteralSpans::new(
++                program,
++                scoping.symbols_len(),
++            )));
++        }
+         let mut ctx = ReusableTraverseCtx::new(state, scoping, self.allocator);
+         let normalize_options = NormalizeOptions {
+             convert_while_to_fors: true,
+@@ -85,13 +103,19 @@
+         options: CompressOptions,
+     ) -> u8 {
+         let max_iterations = options.max_iterations;
+-        let state = MinifierState::new(
++        let mut state = MinifierState::new(
+             program.source_type,
+             options,
+             CompressionMode::TreeShakeOnly,
+             &scoping,
+             self.allocator,
+         );
++        if self.preserve_literal_spans {
++            state.literal_spans = Some(Box::new(crate::literal_spans::LiteralSpans::new(
++                program,
++                scoping.symbols_len(),
++            )));
++        }
+         let mut ctx = ReusableTraverseCtx::new(state, scoping, self.allocator);
+         let normalize_options = NormalizeOptions {
+             convert_while_to_fors: false,
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -51,6 +51,7 @@
+ pub(crate) mod generated;
+ mod is_terminated;
+ mod keep_var;
++mod literal_spans;
+ mod minifier_traverse;
+ mod options;
+ mod peephole;
+@@ -62,6 +63,9 @@
+ mod symbol_value;
+ mod traverse_context;
+ 
++#[cfg(test)]
++mod literal_span_tests;
++
+ use oxc_allocator::Allocator;
+ use oxc_ast::ast::Program;
+ use oxc_index::IndexVec;
+@@ -124,11 +128,21 @@
+ 
+ pub struct Minifier {
+     options: MinifierOptions,
++    preserve_literal_spans: bool,
+ }
+ 
+ impl<'a> Minifier {
+     pub fn new(options: MinifierOptions) -> Self {
+-        Self { options }
++        Self { options, preserve_literal_spans: false }
++    }
++
++    /// Preserve original literal initializer spans when inlining constants.
++    ///
++    /// See [`Compressor::with_literal_spans`]. Default `false`.
++    #[must_use]
++    pub fn with_literal_spans(mut self, preserve: bool) -> Self {
++        self.preserve_literal_spans = preserve;
++        self
+     }
+ 
+     pub fn minify(self, allocator: &'a Allocator, program: &mut Program<'a>) -> MinifierReturn {
+@@ -145,7 +159,7 @@
+         allocator: &'a Allocator,
+         program: &mut Program<'a>,
+     ) -> MinifierReturn {
+-        let Self { options } = self;
++        let Self { options, preserve_literal_spans } = self;
+         let MinifierOptions { mangle, mangle_properties, compress } = options;
+ 
+         // Run property mangling first because compression can change which strings are property
+@@ -163,7 +177,8 @@
+                 let semantic = SemanticBuilder::new().build(program).semantic;
+                 let stats = semantic.stats();
+                 let scoping = semantic.into_scoping();
+-                let compressor = Compressor::new(allocator);
++                let compressor =
++                    Compressor::new(allocator).with_literal_spans(preserve_literal_spans);
+                 let iterations = if matches!(mode, CompressionMode::TreeShakeOnly) {
+                     let options = CompressOptions {
+                         target: options.target,
+--- /dev/null
++++ b/src/literal_span_tests.rs
+@@ -0,0 +1,157 @@
++use std::path::PathBuf;
++
++use oxc_allocator::Allocator;
++use oxc_ast::ast::StringLiteral;
++use oxc_ast_visit::Visit;
++use oxc_codegen::{Codegen, CodegenOptions};
++use oxc_parser::Parser;
++use oxc_span::{SourceType, Span};
++
++use crate::{CompressOptions, Minifier, MinifierOptions};
++
++#[derive(Default)]
++struct Strings(Vec<Span>);
++
++impl<'a> Visit<'a> for Strings {
++    fn visit_string_literal(&mut self, literal: &StringLiteral<'a>) {
++        self.0.push(literal.span);
++    }
++}
++
++fn run(
++    source: &str,
++    preserve: bool,
++    dce: bool,
++    sourcemap: bool,
++) -> (Vec<Span>, String, Option<u32>) {
++    let allocator = Allocator::default();
++    let parsed = Parser::new(&allocator, source, SourceType::mjs()).parse();
++    assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
++    let mut program = parsed.program;
++    let minifier = Minifier::new(MinifierOptions {
++        compress: Some(CompressOptions::default()),
++        mangle: None,
++        mangle_properties: None,
++    })
++    .with_literal_spans(preserve);
++    if dce {
++        minifier.dce(&allocator, &mut program);
++    } else {
++        minifier.minify(&allocator, &mut program);
++    }
++    let mut strings = Strings::default();
++    strings.visit_program(&program);
++    let printed = Codegen::new()
++        .with_options(CodegenOptions {
++            minify: true,
++            source_map_path: sourcemap.then(|| PathBuf::from("input.js")),
++            ..CodegenOptions::default()
++        })
++        .build(&program);
++    let mapped_col = printed.map.as_ref().map(|map| {
++        let col = u32::try_from(
++            printed
++                .code
++                .find(['\'', '"', '`'])
++                .unwrap_or_else(|| panic!("no string in {:?}", printed.code)),
++        )
++        .unwrap();
++        let lookup = map.generate_lookup_table();
++        map.lookup_source_view_token(&lookup, 0, col)
++            .unwrap_or_else(|| {
++                panic!(
++                    "no token at {col}: {:?} / {:?}",
++                    printed.code,
++                    map.get_tokens().collect::<Vec<_>>()
++                )
++            })
++            .get_src_col()
++    });
++    (strings.0, printed.code, mapped_col)
++}
++
++#[test]
++fn literal_span_donor_and_aliases() {
++    for source in [
++        "const shader='unique shader source'; export function get(){return shader}",
++        "const shader='unique shader source'; const alias=shader; const other=alias; export function get(){return other}",
++        "const shader=`unique shader source`; export function get(){return shader}",
++    ] {
++        let donor = u32::try_from(source.find(['\'', '`']).unwrap()).unwrap();
++        let (spans, _, mapped) = run(source, true, false, true);
++        assert_eq!(spans.len(), 1, "{source}");
++        assert_eq!(spans[0].start, donor, "{source}");
++        assert_eq!(mapped, Some(donor), "{source}");
++    }
++}
++
++#[test]
++fn literal_span_single_use_move() {
++    let source = "const shader='unique shader source'; consume(shader);";
++    for dce in [false, true] {
++        let (spans, _, mapped) = run(source, true, dce, true);
++        assert_eq!(spans.len(), 1);
++        assert_eq!(spans[0].start, u32::try_from(source.find('\'').unwrap()).unwrap());
++        assert_eq!(mapped, Some(spans[0].start));
++    }
++}
++
++#[test]
++fn literal_span_synthesized_fold_uses_consumer() {
++    for source in [
++        "const shader='unique '+'shader source'; export function get(){return shader}",
++        "const shader=`unique ${'shader'} source`; export function get(){return shader}",
++        "const shader='unique '+'shader source'; consume(shader);",
++    ] {
++        let (spans, _, mapped) = run(source, true, false, true);
++        assert_eq!(spans.len(), 1);
++        assert_eq!(
++            spans[0].start,
++            u32::try_from(source.rfind("shader").unwrap()).unwrap(),
++            "{source}"
++        );
++        assert_eq!(mapped, Some(spans[0].start));
++    }
++}
++
++#[test]
++fn literal_span_consumer_comments_take_precedence() {
++    for annotation in [
++        "/* @vite-ignore */",
++        "/* webpackIgnore: true */",
++        "/* @vite-ignore */ /* webpackIgnore: true */",
++    ] {
++        let source = format!("const shader='some-url'; import({annotation} shader);");
++        for dce in [false, true] {
++            let (spans, code, _) = run(&source, true, dce, true);
++            for comment in annotation.split(" */ ") {
++                assert!(code.contains(comment), "{code}");
++            }
++            assert_eq!(spans[0].start, u32::try_from(source.rfind("shader").unwrap()).unwrap());
++        }
++    }
++}
++
++#[test]
++fn literal_span_default_off_and_no_sourcemap() {
++    assert!(!Minifier::new(MinifierOptions::default()).preserve_literal_spans);
++    let source = "const shader='unique shader source'; consume(shader);";
++    for sourcemap in [false, true] {
++        let (spans, default_code, _) = run(source, false, false, sourcemap);
++        assert_eq!(spans[0].start, u32::try_from(source.rfind("shader").unwrap()).unwrap());
++        let (_, preserved_code, _) = run(source, true, false, sourcemap);
++        assert_eq!(default_code, preserved_code);
++    }
++}
++
++#[test]
++#[cfg(target_pointer_width = "64")]
++fn literal_span_storage_sizes() {
++    use crate::{symbol_state::SymbolState, symbol_value::SymbolValue};
++    use std::mem::size_of;
++    // Keep dense symbol storage at its measured pre-patch sizes.
++    assert_eq!(size_of::<SymbolValue>(), 48);
++    assert_eq!(size_of::<Option<SymbolValue>>(), 48);
++    assert_eq!(size_of::<SymbolState>(), 248);
++    assert_eq!(size_of::<Span>(), 8);
++}
+--- /dev/null
++++ b/src/literal_spans.rs
+@@ -0,0 +1,84 @@
++//! Optional source provenance for literal inlining. Kept out of dense SymbolValue storage.
++
++use oxc_ast::ast::{Expression, Program};
++use oxc_ast_visit::{Visit, walk};
++use oxc_index::IndexVec;
++use oxc_span::{GetSpan, SPAN, Span};
++use oxc_syntax::symbol::SymbolId;
++
++pub struct LiteralSpans {
++    original: Vec<Span>,
++    comment_anchors: Vec<u32>,
++    // Allocated on the first actual donor; retained and cleared between passes.
++    symbols: Option<IndexVec<SymbolId, Span>>,
++    symbols_len: usize,
++}
++
++impl LiteralSpans {
++    pub fn new(program: &Program<'_>, symbols_len: usize) -> Self {
++        struct Collector(Vec<Span>);
++        impl<'a> Visit<'a> for Collector {
++            fn visit_expression(&mut self, expr: &Expression<'a>) {
++                if is_literal(expr) && !expr.span().is_empty() {
++                    self.0.push(expr.span());
++                }
++                walk::walk_expression(self, expr);
++            }
++        }
++        let mut collector = Collector(Vec::new());
++        collector.visit_program(program);
++        collector.0.sort_unstable();
++        collector.0.dedup();
++        let mut comment_anchors: Vec<_> = program.comments.iter().map(|c| c.attached_to).collect();
++        comment_anchors.sort_unstable();
++        comment_anchors.dedup();
++        Self { original: collector.0, comment_anchors, symbols: None, symbols_len }
++    }
++
++    pub fn reset(&mut self) {
++        if let Some(symbols) = &mut self.symbols {
++            symbols.raw.fill(SPAN);
++        }
++    }
++
++    pub fn original_span(&self, expr: &Expression<'_>) -> Option<Span> {
++        let span = expr.span();
++        (is_literal(expr) && self.original.binary_search(&span).is_ok()).then_some(span)
++    }
++
++    pub fn symbol_span(&self, symbol: SymbolId) -> Option<Span> {
++        let span = *self.symbols.as_ref()?.get(symbol)?;
++        (!span.is_empty()).then_some(span)
++    }
++
++    pub fn set_symbol_span(&mut self, symbol: SymbolId, span: Option<Span>) {
++        if let Some(span) = span {
++            let symbols = self
++                .symbols
++                .get_or_insert_with(|| IndexVec::from_vec(vec![SPAN; self.symbols_len]));
++            symbols[symbol] = span;
++        } else if let Some(symbols) = &mut self.symbols {
++            symbols[symbol] = SPAN;
++        }
++    }
++
++    pub fn can_replace_span(&self, consumer: Span, donor: Span) -> bool {
++        // All comment kinds are guarded, including trailing anchors. Keeping the
++        // old consumer span preserves #8248 without mutating shared comment data.
++        // A donor anchor could duplicate a comment at multiple constant reads.
++        [consumer.start, consumer.end, donor.start, donor.end]
++            .iter()
++            .all(|anchor| self.comment_anchors.binary_search(anchor).is_err())
++    }
++}
++
++fn is_literal(expr: &Expression<'_>) -> bool {
++    matches!(
++        expr,
++        Expression::StringLiteral(_)
++            | Expression::NumericLiteral(_)
++            | Expression::BooleanLiteral(_)
++            | Expression::NullLiteral(_)
++            | Expression::BigIntLiteral(_)
++    ) || matches!(expr, Expression::TemplateLiteral(t) if t.expressions.is_empty())
++}
+--- a/src/peephole/inline.rs
++++ b/src/peephole/inline.rs
+@@ -106,6 +106,16 @@
+             .init
+             .as_ref()
+             .is_none_or(|init| Self::is_direct_implicit_undefined_alias(init, ctx));
++        if let Some(spans) = &ctx.state.literal_spans {
++            let span = decl.init.as_ref().and_then(|init| {
++                spans.original_span(init).or_else(|| {
++                    let ident = init.get_identifier_reference()?;
++                    let donor = ctx.scoping().get_reference(ident.reference_id()).symbol_id()?;
++                    spans.symbol_span(donor)
++                })
++            });
++            ctx.state.literal_spans.as_mut().unwrap().set_symbol_span(symbol_id, span);
++        }
+         ctx.init_value(symbol_id, value, kind, falsy_init, implicit_undefined);
+     }
+ 
+@@ -340,7 +350,17 @@
+             return;
+         }
+         let constant = symbol_value.initialized_constant.as_ref().unwrap();
+-        let new_expr = ctx.value_to_expr(expr.span(), constant.clone());
++        let span = ctx
++            .state
++            .literal_spans
++            .as_ref()
++            .and_then(|spans| {
++                spans
++                    .symbol_span(symbol_id)
++                    .filter(|&donor| spans.can_replace_span(expr.span(), donor))
++            })
++            .unwrap_or_else(|| expr.span());
++        let new_expr = ctx.value_to_expr(span, constant.clone());
+         ctx.replace_expression(expr, new_expr);
+     }
+ }
+--- a/src/peephole/minimize_statements.rs
++++ b/src/peephole/minimize_statements.rs
+@@ -1291,7 +1291,13 @@
+                     let target_span = target_expr.span();
+                     let mut new_expr = replacement.take_in(ctx);
+                     // Span fix-up on the still-owned new node before the slot replacement, not the slot replacement itself.
+-                    *new_expr.span_mut() = target_span;
++                    let preserve = ctx.state.literal_spans.as_ref().is_some_and(|spans| {
++                        spans.original_span(&new_expr)
++                            .is_some_and(|donor| spans.can_replace_span(target_span, donor))
++                    });
++                    if !preserve {
++                        *new_expr.span_mut() = target_span;
++                    }
+                     ctx.replace_expression(target_expr, new_expr);
+                     return Some(true);
+                 }
+--- a/src/peephole/mod.rs
++++ b/src/peephole/mod.rs
+@@ -307,6 +307,9 @@
+ 
+ impl<'a> Traverse<'a> for PeepholeOptimizations {
+     fn enter_program(&mut self, program: &mut Program<'a>, ctx: &mut TraverseCtx<'a>) {
++        if let Some(spans) = &mut ctx.state.literal_spans {
++            spans.reset();
++        }
+         // Any module loader (`import`, `export * from`, `export … from`) can, on a
+         // cycle, evaluate a foreign module that observes a not-yet-assigned binding
+         // our exports close over. So the program root starts its prelude "unsafe"
+--- a/src/state.rs
++++ b/src/state.rs
+@@ -92,6 +92,9 @@
+     /// the lifetime of this run.
+     config: CompressionConfig,
+ 
++    /// Absent by default: no provenance scan or buffers without source-map opt-in.
++    pub(crate) literal_spans: Option<Box<crate::literal_spans::LiteralSpans>>,
++
+     /// Dense per-pass values, sparse persistent metadata, and optional
+     /// reachability data indexed by semantic symbols.
+     pub(crate) symbols: SymbolState<'a>,
+@@ -121,6 +124,7 @@
+         let symbols = SymbolState::new(source_type, &options, scoping, allocator);
+         Self {
+             config: CompressionConfig { source_type, options, mode },
++            literal_spans: None,
+             symbols,
+             private_member_usage: PrivateMemberUsageStack::new(),
+             body_frames: NonEmptyStack::new(BodyFrame {

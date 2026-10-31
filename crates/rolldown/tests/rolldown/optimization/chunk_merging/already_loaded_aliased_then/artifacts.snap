@@ -11,6 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 function f0(x) {
 	return x * 2 + 1;
 }
+
 // app.js
 var app_exports = /* @__PURE__ */ __exportAll({
 	done: () => done,
@@ -21,6 +22,7 @@ const then = "not-a-function";
 const done = import("./lazy.js").then(({ fn }) => {
 	fn();
 });
+
 export { done, f0 as n, then as ready, app_exports as t };
 
 ```
@@ -29,10 +31,12 @@ export { done, f0 as n, then as ready, app_exports as t };
 
 ```js
 import { n as f0 } from "./app.js";
+
 // lazy.js
 function fn() {
 	console.log(f0(3));
 }
+
 export { fn };
 
 ```
@@ -45,6 +49,7 @@ const done = import("./app.js").then((n) => n.t).then(async (app) => {
 	await app.done;
 	return Object.keys(app).sort();
 });
+
 export { done };
 
 ```
@@ -59,6 +64,7 @@ export { done };
 function f0(x) {
 	return x * 2 + 1;
 }
+
 // app.js
 var app_exports = /* @__PURE__ */ __exportAll({
 	done: () => done,
@@ -69,6 +75,7 @@ const then = "not-a-function";
 const done = import("./lazy.js").then(({ fn }) => {
 	fn();
 });
+
 export { app_exports, done, f0, then as ready };
 
 ```
@@ -77,10 +84,12 @@ export { app_exports, done, f0, then as ready };
 
 ```js
 import { f0 } from "./app.js";
+
 // lazy.js
 function fn() {
 	console.log(f0(3));
 }
+
 export { fn };
 
 ```
@@ -93,6 +102,7 @@ const done = import("./app.js").then((n) => n.app_exports).then(async (app) => {
 	await app.done;
 	return Object.keys(app).sort();
 });
+
 export { done };
 
 ```

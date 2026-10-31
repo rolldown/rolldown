@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // internal.js
 const internal = "internal";
+
 export { internal as t };
 
 ```
@@ -16,8 +17,10 @@ export { internal as t };
 
 ```js
 import { t as internal } from "./internal.js";
+
 // main.js
 const main = internal;
+
 export { main };
 
 ```
@@ -26,8 +29,10 @@ export { main };
 
 ```js
 import { t as internal } from "./internal.js";
+
 // main2.js
 const main2 = internal;
+
 export { main2 };
 
 ```

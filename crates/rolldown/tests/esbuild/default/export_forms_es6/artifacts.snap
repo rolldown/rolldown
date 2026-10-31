@@ -9,8 +9,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 // a.js
 const abc = void 0;
+
 // b.js
 var b_exports = /* @__PURE__ */ __exportAll({ xyz: () => null });
+
 // entry.js
 var entry_default = 123;
 var v = 234;
@@ -18,6 +20,7 @@ let l = 234;
 const c = 234;
 function Fn() {}
 var Class = class {};
+
 export { Class as C, Class, Fn, abc, b_exports as b, c, entry_default as default, l, v };
 
 ```

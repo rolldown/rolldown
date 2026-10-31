@@ -7,10 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as __commonJSMin } from "./main.js";
+
 // imp.js
 var require_imp = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.imp = 1;
 }));
+
 export { require_imp as t };
 
 ```
@@ -19,6 +21,7 @@ export { require_imp as t };
 
 ```js
 import assert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // main.js
 const load = async () => {
@@ -27,6 +30,7 @@ const load = async () => {
 	});
 };
 load();
+
 export { __commonJSMin as t };
 
 ```

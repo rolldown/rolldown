@@ -22,8 +22,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import * as ns from "path";
+
 // entry.js
 let ns$1 = 123;
+
 export { ns, ns$1 as sn };
 
 ```

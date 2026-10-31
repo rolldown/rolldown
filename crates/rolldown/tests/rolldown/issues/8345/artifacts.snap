@@ -7,11 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // lib/prod.js
 var require_prod = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = 1, exports.b = 2;
 }));
+
 // lib/dev.js
 var require_dev = /* @__PURE__ */ __commonJSMin(((exports) => {
 	var a = 1;
@@ -19,6 +21,7 @@ var require_dev = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = a;
 	exports.b = b;
 }));
+
 // main.js
 const lib = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	if (process.env.NODE_ENV === "production") module.exports = require_prod();
@@ -28,6 +31,7 @@ assert.strictEqual(typeof lib.a, "number", "lib.a should be a number");
 assert.strictEqual(typeof lib.b, "number", "lib.b should be a number");
 assert.strictEqual(lib.a, 1);
 assert.strictEqual(lib.b, 2);
+
 export {};
 
 ```

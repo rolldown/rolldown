@@ -15,16 +15,19 @@ export default require_a();
 
 ```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
+
 // a.js
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events?.push("a");
 	module.exports = { a: true };
 }));
+
 // b.js
 var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events?.push("b");
 	module.exports = { b: true };
 }));
+
 export { require_a as n, require_b as t };
 
 ```
@@ -33,10 +36,12 @@ export { require_a as n, require_b as t };
 
 ```js
 import { n as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+
 // c.js
 var require_c = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports.load = () => import("./b.js").then((n) => /* @__PURE__ */ __toESM(n.t()));
 }));
+
 export default require_c();
 
 ```
@@ -65,16 +70,19 @@ export default require_a();
 
 ```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
+
 // a.js
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events?.push("a");
 	module.exports = { a: true };
 }));
+
 // b.js
 var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events?.push("b");
 	module.exports = { b: true };
 }));
+
 export { require_a as n, require_b as t };
 
 ```
@@ -83,10 +91,12 @@ export { require_a as n, require_b as t };
 
 ```js
 import { n as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+
 // c.js
 var require_c = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports.load = () => import("./b.js").then((n) => /* @__PURE__ */ __toESM(n.t()));
 }));
+
 export default require_c();
 
 ```

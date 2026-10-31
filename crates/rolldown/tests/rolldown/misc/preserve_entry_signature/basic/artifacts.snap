@@ -18,6 +18,7 @@ console.log(`shared: `, 100);
 import("./dynamic.js");
 console.log(`shared: `, 100);
 const unused = 100;
+
 export { unused };
 
 ```
@@ -41,6 +42,7 @@ console.log(`shared: `, 100);
 import("./dynamic.js");
 console.log(`shared: `, 100);
 const unused = 100;
+
 export { unused };
 
 ```

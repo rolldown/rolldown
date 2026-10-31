@@ -9,15 +9,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 // dep1.js
 const Foo$2 = () => {};
 console.log(Foo$2, "value 1");
+
 // dep2.js
 const Foo$1 = () => {};
 const value$1 = "value 2";
 console.log(Foo$1, value$1);
+
 // dep3.js
 const Foo = () => {};
 console.log(Foo, "value 3");
+
 // main.js
 const result = <Foo$1 bar baz:foo="string" quux-nix={value$1} element=<Foo$1 /> fragment=<></> />;
+
 export { result };
 
 ```

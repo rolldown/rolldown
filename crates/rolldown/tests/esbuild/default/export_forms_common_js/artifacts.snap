@@ -7,27 +7,43 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+// a.js
 var init_a = __esmMin((() => {})), init_b = __esmMin((() => {}));
+
+// commonjs.js
 var init_commonjs = __esmMin((() => {
 	init_a();
 	init_b();
 }));
+
+// c.js
 var init_c = __esmMin((() => {}));
+
+// d.js
 var Foo;
 var init_d = __esmMin((() => {
 	Foo = class {};
 	Foo.prop = 123;
 }));
+
+// e.js
 var init_e = __esmMin((() => {}));
+
+// f.js
 function foo$1() {}
 var init_f = __esmMin((() => {
 	foo$1.prop = 123;
 }));
+
+// g.js
 var init_g = __esmMin((() => {}));
+
+// h.js
 async function foo() {}
 var init_h = __esmMin((() => {
 	foo.prop = 123;
 }));
+
 // entry.js
 init_commonjs();
 init_c();

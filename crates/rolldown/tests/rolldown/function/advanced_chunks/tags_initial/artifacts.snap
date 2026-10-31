@@ -9,14 +9,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 // shared.js
 const shared = "shared-initial";
+
 // required.js
 var required_exports = /* @__PURE__ */ __exportAll({ required: () => required$1 });
 var required$1;
+
 // main.js
 const required = (__esmMin((() => {
 	required$1 = "required-value";
 }))(), __toCommonJS(required_exports));
 const lazy = import("./lazy.js");
+
 export { required as n, shared as r, lazy as t };
 
 ```
@@ -26,6 +29,7 @@ export { required as n, shared as r, lazy as t };
 ```js
 // lazy-dep.js
 const lazyDep = "lazy-dep";
+
 export { lazyDep };
 
 ```

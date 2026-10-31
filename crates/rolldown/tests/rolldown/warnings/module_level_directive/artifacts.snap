@@ -38,12 +38,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-"use asm";
-"use client";
+'use asm';
+'use client';
+
 // main.js
 function nested() {
 	"nested directive";
 }
+
 export { nested as default };
 
 ```

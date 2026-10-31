@@ -281,10 +281,8 @@ impl GenerateStage<'_> {
   ///   [Some(ecma1_codegen), Some(ecma2_codegen), None],
   ///   [Some(ecma3_codegen), None],
   /// ]
-  // `ast_table` is taken by value on purpose: this is the last reader, and
-  // dropping it here (explicitly, before the PoC's chunk allocators) is what
-  // releases the per-module bumpalo arenas before the rest of
-  // `instantiate_chunks` runs.
+  // This is the last reader of finalized ASTs. Eligible chunks consume their ASTs into a private
+  // owner that retains every arena during preparation, parallel printing, and unwind.
   fn create_chunk_to_codegen_ret_map(
     &self,
     chunk_graph: &ChunkGraph,
@@ -293,10 +291,7 @@ impl GenerateStage<'_> {
     order_state: &super::order_wrap_state::OrderWrapState,
     render_export_items_index_vec: &IndexVec<ChunkIdx, FxIndexMap<SymbolRef, Vec<CompactStr>>>,
   ) -> (Vec<Vec<Option<ModuleRenderOutput>>>, FxHashMap<ChunkIdx, ChunkAstDceOutput>) {
-    // PoC: chunk-level DCE on the module ASTs (see `chunk_ast_dce`). The allocators hold nodes
-    // created by the minifier that now live in the module programs, so they are dropped only
-    // after `ast_table`.
-    let (ast_dce_outputs, ast_dce_allocators) = self.run_chunk_ast_dce(
+    let prepared_chunks = self.run_chunk_ast_dce(
       chunk_graph,
       &mut ast_table,
       used_symbol_refs,
@@ -315,10 +310,9 @@ impl GenerateStage<'_> {
         if self.inline_state.is_record(chunk_idx) {
           return vec![];
         }
-        let force_annotation = !ast_dce_outputs.contains_key(&chunk_idx);
-        let space = ast_dce_outputs.get(&chunk_idx).and_then(|out| out.space.as_deref());
+        let prepared = prepared_chunks.get(&chunk_idx);
         // Positions of the chunk's normal modules, as `chunk_ast_dce` numbers them.
-        let positions: FxHashMap<rolldown_common::ModuleIdx, usize> = if space.is_some() {
+        let positions: FxHashMap<rolldown_common::ModuleIdx, usize> = if prepared.is_some() {
           item
             .modules
             .iter()
@@ -334,7 +328,6 @@ impl GenerateStage<'_> {
           .par_iter()
           .map(|&module_idx| match self.link_output.module_table[module_idx].as_normal() {
             Some(module) => {
-              let ast = ast_table[module.idx].as_ref().expect("should have ast");
               #[expect(clippy::bool_to_int_with_if)]
               let initial_indent = if needs_extra_indent
                 || !matches!(
@@ -346,21 +339,21 @@ impl GenerateStage<'_> {
                 0
               };
               let t = Timer::start();
-              let out = match space {
-                Some(space) => chunk_ast_dce::print_module(
+              let out = match prepared {
+                Some(prepared) => prepared.print_module(
+                  positions[&module_idx],
                   module,
-                  ast,
                   self.options,
                   initial_indent,
-                  space,
-                  positions[&module_idx],
                   &self.link_output.module_table,
                 ),
                 None => module.render_with(
                   self.options,
-                  &ModuleRenderArgs::Ecma { ast },
+                  &ModuleRenderArgs::Ecma {
+                    ast: ast_table[module.idx].as_ref().expect("should have ast"),
+                  },
                   initial_indent,
-                  force_annotation,
+                  true,
                 ),
               };
               t.stop(Phase::ModulePrint);
@@ -380,8 +373,9 @@ impl GenerateStage<'_> {
       })
       .collect::<Vec<_>>();
     drop(ast_table);
-    drop(ast_dce_allocators);
-    (ret, ast_dce_outputs)
+    let outputs =
+      prepared_chunks.into_iter().map(|(idx, chunk)| (idx, chunk.into_output())).collect();
+    (ret, outputs)
   }
 
   /// PoC: runs `chunk_ast_dce::dce_chunk` on every eligible chunk, in parallel across chunks.
@@ -392,11 +386,11 @@ impl GenerateStage<'_> {
     used_symbol_refs: &UsedSymbolRefs,
     order_state: &super::order_wrap_state::OrderWrapState,
     render_export_items_index_vec: &IndexVec<ChunkIdx, FxIndexMap<SymbolRef, Vec<CompactStr>>>,
-  ) -> (FxHashMap<ChunkIdx, ChunkAstDceOutput>, Vec<oxc::allocator::Allocator>) {
+  ) -> FxHashMap<ChunkIdx, chunk_ast_dce::PreparedChunk> {
     let Some(minify_options) =
       chunk_ast_dce::build_eligible(self.options, self.plugin_driver, &self.inline_state)
     else {
-      return (FxHashMap::default(), vec![]);
+      return FxHashMap::default();
     };
     let make_ctx = |chunk_idx: ChunkIdx| GenerateContext {
       chunk_idx,
@@ -414,34 +408,40 @@ impl GenerateStage<'_> {
       carried_renders: vec![],
       chunk_ast_dce: None,
     };
-    let mut by_module: Vec<Option<&mut rolldown_ecmascript::EcmaAst>> =
-      ast_table.iter_mut().map(Option::as_mut).collect();
     let mut work = vec![];
     for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
       if chunk_graph.post_chunk_optimization_operations.contains_key(&chunk_idx)
         || self.inline_state.is_record(chunk_idx)
       {
+        #[cfg(feature = "testing")]
+        chunk_ast_dce::record_coverage(
+          self.options,
+          "chunk",
+          "post_chunk_operation_or_inline_record",
+          chunk.preliminary_filename.as_deref().map(arcstr::ArcStr::as_str),
+        );
         continue;
       }
       let mut asts = Vec::with_capacity(chunk.modules.len());
       for module_idx in &chunk.modules {
         if self.link_output.module_table[*module_idx].as_normal().is_some() {
-          asts.push(by_module[module_idx.index()].take().expect("should have ast"));
+          asts.push(ast_table[*module_idx].as_ref().expect("should have ast"));
         }
       }
       if chunk_ast_dce::chunk_eligible(&make_ctx(chunk_idx), &asts) {
-        work.push((chunk_idx, asts));
+        let mut owned = chunk_ast_dce::ChunkAst::new(asts.len());
+        for module_idx in &chunk.modules {
+          if self.link_output.module_table[*module_idx].as_normal().is_some() {
+            owned.push(ast_table[*module_idx].take().expect("should have ast"));
+          }
+        }
+        work.push((chunk_idx, owned));
       }
     }
     work
       .into_par_iter()
-      .map(|(chunk_idx, mut asts)| {
-        let allocator = oxc::allocator::Allocator::default();
-        let out =
-          chunk_ast_dce::dce_chunk(&make_ctx(chunk_idx), &allocator, &mut asts, minify_options);
-        ((chunk_idx, out), allocator)
-      })
-      .unzip()
+      .map(|(chunk_idx, asts)| (chunk_idx, asts.prepare(&make_ctx(chunk_idx), minify_options)))
+      .collect()
   }
 
   fn trace_action_assets_ready(index_assets: &AssetVec) {

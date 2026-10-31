@@ -18,12 +18,15 @@ await import("./main.js");
 function b() {
 	return typeof a;
 }
+
 // dep.mjs
 const tla = await Promise.resolve("x");
+
 // a.mjs
 function a() {
 	return b() + tla;
 }
+
 // main.mjs
 console.log(a());
 

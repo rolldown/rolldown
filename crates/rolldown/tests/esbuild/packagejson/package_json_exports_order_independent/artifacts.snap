@@ -8,8 +8,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // node_modules/pkg1/2/bar.js
 console.log("SUCCESS");
+
 // node_modules/pkg2/1/bar.js
 console.log("SUCCESS");
+
 export {};
 
 ```

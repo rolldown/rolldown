@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // dep1.js
 var dep1_default = () => import("./dep2.js");
+
 export { dep1_default as default };
 
 ```
@@ -17,6 +18,7 @@ export { dep1_default as default };
 ```js
 // dep2.js
 var dep2_default = "dep2";
+
 export { dep2_default as default };
 
 ```
@@ -26,6 +28,7 @@ export { dep2_default as default };
 ```js
 // main.js
 var main_default = () => import("./dep1.js");
+
 export { main_default as default };
 
 ```

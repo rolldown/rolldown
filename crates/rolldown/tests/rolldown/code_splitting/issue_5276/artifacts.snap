@@ -9,13 +9,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 // imp1.js
 var imp1_exports = /* @__PURE__ */ __exportAll({ imp1: () => 1 });
+
 // imp2.js
 var imp2_exports = /* @__PURE__ */ __exportAll({ imp2: () => 2 });
+
 // imp3.js
 var imp3_exports = /* @__PURE__ */ __exportAll({
 	imp3: () => 3,
 	imp33: () => 33
 });
+
 export { imp2_exports as n, imp1_exports as r, imp3_exports as t };
 
 ```
@@ -24,6 +27,7 @@ export { imp2_exports as n, imp1_exports as r, imp3_exports as t };
 
 ```js
 import assert from "node:assert/strict";
+
 // main.js
 const load = async () => {
 	import("./imp.js").then((n) => n.r).then((m) => {
@@ -53,11 +57,14 @@ load();
 ```js
 // imp1.js
 const imp1 = 1;
+
 // imp2.js
 const imp2 = 2;
+
 // imp3.js
 const imp3 = 3;
 const imp33 = 33;
+
 export { imp1 as i, imp33 as n, imp2 as r, imp3 as t };
 
 ```
@@ -87,6 +94,7 @@ export { t as imp3, n as imp33 } from "./imp.js";
 
 ```js
 import assert from "node:assert/strict";
+
 // main.js
 const load = async () => {
 	import("./imp1.js").then((m) => {

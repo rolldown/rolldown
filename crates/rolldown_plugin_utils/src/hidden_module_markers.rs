@@ -31,11 +31,11 @@ use oxc::ast::ast::{JSXElement, JSXFragment, TemplateLiteral};
 use oxc::ast_visit::Visit;
 use oxc::parser::{ParseOptions, Parser, ParserReturn};
 use oxc::span::{SourceType, Span};
-use rolldown::plugin::{
+use rolldown_common::{MinifyOptions, Output, OutputFormat};
+use rolldown_plugin::{
   HookGenerateBundleArgs, HookNoopReturn, HookRenderChunkArgs, HookRenderChunkOutput,
   HookRenderChunkReturn, HookTransformOutputMap, HookUsage, Plugin, PluginContext,
 };
-use rolldown_common::{MinifyOptions, Output, OutputFormat};
 
 #[derive(Debug)]
 pub struct HiddenModuleMarkersPlugin {

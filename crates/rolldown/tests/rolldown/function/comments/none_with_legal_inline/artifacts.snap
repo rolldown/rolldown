@@ -15,6 +15,7 @@ function hello(name) {
 }
 //! Legal bang comment
 const foo = "bar";
+
 export { foo, hello };
 
 ```

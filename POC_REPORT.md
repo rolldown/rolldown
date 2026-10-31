@@ -45,8 +45,8 @@ In `create_chunk_to_codegen_ret_map` (before modules are printed), for each elig
 
 1. Every module's top-level statements are moved (`take_in`, no copy) into one chunk `Program`
    whose body `Vec` lives in a fresh per-chunk allocator. Nodes stay in their module arenas;
-   lifetimes are erased with `transmute` (all arenas outlive the chunk program; the chunk
-   allocators are dropped after `ast_table`).
+   lifetimes are erased inside a private chunk owner (intact donor ProgramCells and a boxed
+   scratch allocator stay at stable addresses through printing and unwind).
 2. After each module an `export {}` marker with a sentinel span (`u32::MAX`) is pushed.
 3. The text rolldown would generate for the chunk's imports (`render_esm_chunk_imports`) is
    parsed and put at the head; the wrapped-entry `export default require_x();` and the exports
@@ -164,9 +164,10 @@ Falls back to today's path (`chunk_ast_dce::build_eligible` / `chunk_eligible`):
 - full minify (`minify: true` or any `mangle`/`mangle_properties`) — mangling and `sequences`
   /`join_vars` would cross modules;
 - non-ESM formats (cjs/iife/umd wrappers are text);
-- `renderChunk` plugins, except `builtin:asset-module`, `builtin:copy-module` (placeholder string
-  rewriting) and the test harness's `hidden-module-markers` (comment lines only) — allowlisted
-  **by name**, a PoC hack;
+- `renderChunk` plugins, except the actual `AssetModulePlugin`, `CopyModulePlugin` and the
+  testing-only `HiddenModuleMarkersPlugin` types. The gate checks the underlying concrete type,
+  so reusing a builtin name does not bypass fallback. Chunks with emitted-file placeholders
+  still fall back to preserve replacement-before-minify ordering;
 - `intro`/`outro`, banner/footer functions or plugin hooks, or a static banner/footer that is
   not comment-only (the re-parse also syntax-checks and DCEs them: `errors/chunk_parse_error`);
 - dev mode, `experimentalInlineCommonChunks` records/carriers;
@@ -397,16 +398,43 @@ snapshots), and placing generated statements by span moved a merged `export … 
 `import` and changed module evaluation order (7 snapshots; `chunk_import_source_order` caught it
 only in the snapshot, not in execution).
 
+## Current correctness checkpoint
+
+The measurements above are historical experiment results. The current global path also supports
+compression and identifier mangling; its ownership, module metadata and sourcemap contracts are
+recorded in `internal-docs/chunk-ast-minify/implementation.md`. Both `oxc_codegen` and
+`oxc_minifier` 0.156.0 are vendored with explicit patches. Performance optimization is paused.
+
+The final native build passes the 36-case packed Node API/CLI original/global matrix, including
+compress-only, mangle-only, full minify, dynamic imports, exact final-map anchors and fallback
+assertions. Node watcher tests pass in both modes (44 each). The Node main suite passes 1,431
+cases in original mode; global passes 1,414 with 17 snapshot-test failures (19 reported snapshot
+mismatches), retaining the existing expectations. The audit found and fixed an empty producer-map
+boundary that incorrectly inherited a preceding foreign source mapping.
+
+The pinned Rollup compatibility harness passes 1,262 cases in original mode. Global passes 1,259
+with three exact source-inventory assertion failures after constant folding removes unused lib
+sources. Sixteen supplemental runtime/map/ignore-list cases pass. Existing harness ignore lists
+and known-failure skips remain active. Source-list identity is not part of the global contract.
+
+Global remains opt-in and still uses the original pipeline for unsupported formats, plugins and
+chunk operations. This checkpoint does not establish complete replacement, platform coverage or
+sanitizer safety. No Node/Rollup expectations were updated. The earlier reviewed Rust snapshot
+updates remain part of the checkpoint. The production checklist below predates this validation;
+its full-minify item is now implemented for eligible chunks, while fallback expansion and
+maintained dual-path CI remain open.
+
 ## 5. What a production version would take, and the risks
 
 Estimate: **3–5 weeks** for an ESM, `dce-only` production version in global mode (size parity,
 correct maps), mostly rolldown work plus upstreaming the small `oxc_codegen` API; full minify on
 top of that is a separate, larger step (item 4).
 
-1. **Make it the default for covered chunks.** Replace the name-based `renderChunk` allowlist with
-   a hook contract (e.g. a plugin flag "my renderChunk only rewrites strings/comments", or run
-   `renderChunk` after the DCE as it happens today on the fast path). Decide what `RenderedChunk`
-   module code and `renderChunk` should see (post-DCE code is a visible change).
+1. **Make it the default for covered chunks.** The `renderChunk` gate now uses concrete plugin
+   identity; unknown plugins keep falling back. Any future expansion needs a hook contract that
+   preserves minify ordering. Module metadata uses post-compression fragment attribution in
+   the global path; this accepted compatibility change is documented and regression-tested in
+   `metadata_audit` (see internal-docs/chunk-ast-minify/implementation.md).
 2. **Cover more of the chunk text as AST**: cjs/iife/umd wrappers, concatenated module groups,
    other wrapped-entry shapes, `intro`/`outro`/banner code (parse them, as the PoC does with the
    import/export text). Or keep falling back.
@@ -419,9 +447,9 @@ top of that is a separate, larger step (item 4).
 4. **Full minify** (`minify: true`): global mode is the prerequisite (`sequences`/`join_vars` and
    mangling cross modules all the time). Mangling also needs the module prints to use the chunk
    `Scoping` (names are rewritten in the scoping, not the AST).
-5. **Clean ownership instead of `transmute`**: a safe way to borrow statements from many arenas
-   into one program (e.g. an oxc API for "program over foreign arenas", or allocating all module
-   ASTs of a chunk in one arena from the start).
+5. **Ownership encapsulated**: `owned.rs` consumes eligible ASTs, retains intact donor cells,
+   stable scratch storage and shared source text, and exposes only frozen printing. Internal
+   lifetime erasure remains audited unsafe code; see internal-docs/chunk-ast-minify/implementation.md.
 6. **Tests**: run the whole suite in both modes in CI until the old path is removed; add
    targeted fixtures for the fallbacks and for sourcemap correctness of DCE'd chunks.
 
@@ -464,7 +492,7 @@ Main risks:
   code out of plugin-transformed modules (snapshot taken with the flag off; compare it with
   `ROLLDOWN_CHUNK_AST_DCE=global`).
 - `crates/rolldown/src/stages/generate_stage/render_chunk_to_assets.rs` — runs it before module
-  printing, keeps the chunk allocators alive until after `ast_table`.
+  printing, consumes eligible ASTs into frozen chunk owners.
 - `crates/rolldown/src/ecmascript/format/esm.rs` — uses the re-printed imports/exports.
 - `crates/rolldown/src/stages/generate_stage/minify_chunks.rs` — skips fast-path chunks; timed copy
   of `dce_or_minify` under `ROLLDOWN_POC_PROF`.

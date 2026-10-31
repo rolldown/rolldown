@@ -6,20 +6,26 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+// src/utils/util0.js
 function fn0(x) {
 	return x + "u0";
 }
+
+// src/utils/util1.js
 function fn1(x) {
 	return x + "u1";
 }
+
 // src/services/svc0.js
 function svc0(d) {
 	return fn0(d) + ":" + fn1(d);
 }
+
 // src/services/svc1.js
 function svc1(d) {
 	return fn1(d) + ":" + fn0(d);
 }
+
 // src/main.js
 document.title = [svc0("i"), svc1("i")].join("");
 const routes = {};
@@ -29,6 +35,7 @@ const routeName = location.hash.slice(1) || "r0";
 if (routes[routeName]) routes[routeName]().then((m) => {
 	document.body.textContent = m.render();
 });
+
 export { svc0 as n, svc1 as t };
 
 ```
@@ -37,10 +44,12 @@ export { svc0 as n, svc1 as t };
 
 ```js
 import { n as svc0, t as svc1 } from "./main.js";
+
 // src/routes/route0.js
 function render() {
 	return svc0("r0") + svc1("r0") + "u1";
 }
+
 export { render };
 
 ```
@@ -49,10 +58,12 @@ export { render };
 
 ```js
 import { n as svc0, t as svc1 } from "./main.js";
+
 // src/routes/route1.js
 function render() {
 	return svc1("r1") + svc0("r1") + "u0";
 }
+
 export { render };
 
 ```

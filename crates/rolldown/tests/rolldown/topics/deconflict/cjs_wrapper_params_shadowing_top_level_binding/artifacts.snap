@@ -13,11 +13,14 @@ var init_esm = __esmMin((() => {
 	module$1 = "esm-module";
 	exports$1 = "esm-exports";
 }));
+
+// main.js
 var main_default = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
 	init_esm();
 	exports.value = [module$1, exports$1];
 	exports.self = this$1 === exports;
 })))())).default;
+
 export { main_default as default };
 
 ```

@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+// entry.ts
 (/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.foo = 123;
 })))();

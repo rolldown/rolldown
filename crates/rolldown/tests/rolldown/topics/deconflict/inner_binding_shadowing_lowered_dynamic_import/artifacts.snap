@@ -10,6 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // dep.js
 var dep_exports = /* @__PURE__ */ __exportAll({ value: () => "dep" });
 var init_dep = __esmMin((() => {}));
+
 // main.js
 var import_lib = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {
 	var Promise$2 = () => "local";
@@ -22,6 +23,7 @@ var import_lib = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((export
 function nested(Promise$1) {
 	return Promise.resolve().then(() => (init_dep(), dep_exports));
 }
+
 var lib = import_lib.default;
 export { lib, nested };
 

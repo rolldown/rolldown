@@ -7,8 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import process from "node:process";
+
 // mod0.js
 console.log(0, process.pid);
+
 export {};
 
 ```
@@ -17,8 +19,10 @@ export {};
 
 ```js
 import process from "node:process";
+
 // mod1.js
 console.log(1, process.pid);
+
 export {};
 
 ```

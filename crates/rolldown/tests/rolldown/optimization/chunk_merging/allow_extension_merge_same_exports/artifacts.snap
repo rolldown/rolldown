@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { bar, value1, value2 } from "./libs.js";
 import assert from "node:assert";
+
 // index.js
 assert.strictEqual(value1, "lib1-value");
 assert.strictEqual(bar, "vendor-bar");
@@ -21,10 +22,13 @@ assert.strictEqual(bar, "vendor-bar");
 ```js
 // vendor.js
 const bar = "vendor-bar";
+
 // lib1.js
 const value1 = "lib1-value";
+
 // lib2.js
 const value2 = "lib2-value";
+
 export { bar, value1, value2 };
 
 ```

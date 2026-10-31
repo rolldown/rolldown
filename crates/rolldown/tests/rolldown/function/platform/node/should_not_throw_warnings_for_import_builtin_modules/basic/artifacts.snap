@@ -9,9 +9,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { createRequire } from "node:module";
 import * as fs from "fs";
 import * as nodeFs from "node:fs";
+
 // HIDDEN [\0rolldown/runtime.js]
 // main.js
 console.log(fs, nodeFs, __require("path"), __require("node:path"));
+
 export {};
 
 ```

@@ -8,10 +8,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // a.js
 const other = "other";
+
 // a2.js
 const thing = "thing";
+
 // lib.js
 var foo = "foo";
+
 export { foo, other, thing };
 
 ```

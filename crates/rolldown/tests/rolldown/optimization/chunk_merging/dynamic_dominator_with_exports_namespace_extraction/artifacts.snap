@@ -9,10 +9,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 // sharedDynamic.js
 const sharedDynamic = true;
+
 // dynamic1.js
 var dynamic1_exports = /* @__PURE__ */ __exportAll({ promise: () => promise });
 console.log(true);
 const promise = import("./dynamic2.js");
+
 export { sharedDynamic as n, promise, dynamic1_exports as t };
 
 ```

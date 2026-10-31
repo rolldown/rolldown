@@ -19,6 +19,7 @@ const someObject = {
 	e: 5,
 	nested: { deep: "value" }
 };
+
 // main.js
 function test() {
 	console.log("test function called");
@@ -32,6 +33,7 @@ const { e } = (() => {
 	return someObject;
 })();
 var main_default = {};
+
 export { main_default as default };
 
 ```

@@ -22,8 +22,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { foo } from "pkg";
+
 // entry.ts
 var used = foo.used;
+
 export { used };
 
 ```

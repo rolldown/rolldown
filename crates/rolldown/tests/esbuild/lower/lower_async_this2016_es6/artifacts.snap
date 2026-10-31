@@ -8,8 +8,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // other.js
 let bar = async () => {};
+
 // entry.js
 let foo = async () => void 0;
+
 export { bar, foo };
 
 ```

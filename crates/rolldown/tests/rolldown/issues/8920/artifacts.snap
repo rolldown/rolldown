@@ -12,8 +12,10 @@ var HeavyService = class {
 		return "heavy";
 	}
 };
+
 // barrel.js
 const createService = () => new HeavyService();
+
 // entry-heavy.js
 console.log(createService().run());
 
@@ -26,6 +28,7 @@ console.log(createService().run());
 function light() {
 	return "light";
 }
+
 // entry-light.js
 console.log(light());
 

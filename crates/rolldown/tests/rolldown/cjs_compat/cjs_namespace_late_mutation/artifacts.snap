@@ -7,11 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // target.cjs
 var require_target = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { existing: "existing" };
 }));
+
 // augment.cjs
 var require_augment = /* @__PURE__ */ __commonJSMin((() => {
 	const target = require_target();
@@ -19,6 +21,7 @@ var require_augment = /* @__PURE__ */ __commonJSMin((() => {
 		return "added";
 	};
 }));
+
 // main.js
 var import_target = /* @__PURE__ */ __toESM(require_target());
 require_augment();

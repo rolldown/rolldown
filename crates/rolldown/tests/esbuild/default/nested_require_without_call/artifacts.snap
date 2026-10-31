@@ -13,6 +13,7 @@ var require_entry = /* @__PURE__ */ __commonJSMin((() => {
 		require_entry();
 	})();
 }));
+
 export default require_entry();
 
 ```

@@ -8,8 +8,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // b.js
 var Base = class {};
+
 // a.js
 var Keep = class extends Base {};
+
 // entry.js
 new Keep();
 

@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // computed_lib.js
 const a = "a";
 const b = "b";
+
 export { a, b };
 
 ```
@@ -35,6 +36,7 @@ console.log(a);
 // reassigned_lib.js
 const a = "a";
 const b = "b";
+
 export { a, b };
 
 ```

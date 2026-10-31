@@ -13,10 +13,12 @@ var require_a = /* @__PURE__ */ __commonJSMin(((exports) => {
 		return 123;
 	};
 }));
+
 // j.json
 var require_j = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { "test": true };
 }));
+
 // entry.ts
 const { foo } = require_a();
 console.log(foo(), require_j());

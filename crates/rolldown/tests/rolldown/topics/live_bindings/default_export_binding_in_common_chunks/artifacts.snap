@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // shared.js
 let count = 0;
 function reset() {
@@ -15,6 +16,7 @@ function reset() {
 function inc() {
 	count += 1;
 }
+
 // async-entry.js
 reset();
 assert.strictEqual(count, 0);

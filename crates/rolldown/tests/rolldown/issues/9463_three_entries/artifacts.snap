@@ -35,6 +35,7 @@ init_c();
 function foo() {
 	(globalThis.sideEffectLog ??= []).push("shared-foo");
 }
+
 // a.js
 function init_a() {
 	return (init_a = __esmMin((() => {
@@ -42,6 +43,7 @@ function init_a() {
 		foo();
 	})))();
 }
+
 // b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
@@ -49,6 +51,7 @@ function init_b() {
 		foo();
 	})))();
 }
+
 // c.js
 function init_c() {
 	return (init_c = __esmMin((() => {
@@ -56,6 +59,7 @@ function init_c() {
 		foo();
 	})))();
 }
+
 export { init_b as n, init_a as r, init_c as t };
 
 ```
@@ -96,6 +100,7 @@ init_c();
 function foo() {
 	(globalThis.sideEffectLog ??= []).push("shared-foo");
 }
+
 // a.js
 function init_a() {
 	return (init_a = __esmMin((() => {
@@ -103,6 +108,7 @@ function init_a() {
 		foo();
 	})))();
 }
+
 // b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
@@ -110,6 +116,7 @@ function init_b() {
 		foo();
 	})))();
 }
+
 // c.js
 function init_c() {
 	return (init_c = __esmMin((() => {
@@ -117,6 +124,7 @@ function init_c() {
 		foo();
 	})))();
 }
+
 export { init_b as n, init_a as r, init_c as t };
 
 ```

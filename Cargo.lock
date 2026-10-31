@@ -133,6 +133,7 @@ version = "0.1.0"
 dependencies = [
  "criterion2",
  "ignore",
+ "libc",
  "mimalloc-safe",
  "oxc",
  "rolldown",
@@ -1847,8 +1848,6 @@ dependencies = [
 [[package]]
 name = "oxc_minifier"
 version = "0.156.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c518969f00beccce27bbc2479c0977ee58b9c1a3eb73bea17796c365ce699b61"
 dependencies = [
  "cow-utils",
  "itoa",
@@ -2580,6 +2579,7 @@ dependencies = [
  "rolldown_plugin_hmr",
  "rolldown_plugin_lazy_compilation",
  "rolldown_plugin_oxc_runtime",
+ "rolldown_plugin_utils",
  "rolldown_resolver",
  "rolldown_sourcemap",
  "rolldown_std_utils",
@@ -2827,6 +2827,7 @@ dependencies = [
  "oxc_sourcemap",
  "oxc_str",
  "rolldown_error",
+ "rolldown_utils",
  "self_cell",
 ]
 
@@ -3313,6 +3314,7 @@ dependencies = [
  "rolldown_common",
  "rolldown_dev",
  "rolldown_error",
+ "rolldown_plugin_utils",
  "rolldown_sourcemap",
  "rolldown_testing_config",
  "rolldown_workspace",
@@ -3369,6 +3371,7 @@ dependencies = [
  "infer",
  "itoa",
  "json-escape-simd",
+ "libc",
  "memchr",
  "mime",
  "nom",

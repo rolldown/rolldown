@@ -11,11 +11,13 @@ function getFooUtilityClass(slot) {
 	return "MuiFoo-" + slot;
 }
 const fooClasses = { root: "MuiFoo-root" };
+
 // components/Foo/Foo.js
 const Foo = {
 	name: "Foo",
 	root: fooClasses.root
 };
+
 export { Foo, fooClasses, getFooUtilityClass };
 
 ```

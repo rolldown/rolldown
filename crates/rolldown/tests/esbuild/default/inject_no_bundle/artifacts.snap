@@ -8,12 +8,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { re_export } from "external-pkg";
 import { "reexpo.rt" as reexpo_rt } from "external-pkg2";
+
 // replacement.js
 let replace = { test() {} };
 let replaceDot = { test() {} };
+
 // inject.js
 let obj = {};
 console.log("this should be renamed");
+
 // entry.js
 console.log("side effects");
 let collide = 123;

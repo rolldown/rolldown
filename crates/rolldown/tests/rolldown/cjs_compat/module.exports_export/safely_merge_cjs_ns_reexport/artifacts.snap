@@ -20,6 +20,7 @@ var import_this_is_only_used_for_testing = /* @__PURE__ */ __toESM((/* @__PURE__
 function useFoo() {
 	return (0, import_this_is_only_used_for_testing.foo)();
 }
+
 var CJS = import_this_is_only_used_for_testing.default;
 export { CJS, useFoo };
 

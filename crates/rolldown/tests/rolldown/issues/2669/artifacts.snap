@@ -28,6 +28,7 @@ function nested2() {
 	];
 }
 const x = "x";
+
 export { nested1, nested2, x };
 
 ```

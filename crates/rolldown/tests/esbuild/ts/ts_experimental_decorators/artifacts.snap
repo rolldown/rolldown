@@ -57,6 +57,7 @@ Foo$1 = _Foo = __decorate([
 	__decorateParam(1, y1)
 ], Foo$1);
 var all_default = Foo$1;
+
 // all_computed.ts
 var _ref;
 var _ref2;
@@ -106,6 +107,7 @@ __decorate([
 	__decorateParam(1, y1)
 ], Foo, _ref2, null);
 __decorate([x, y], Foo, null, void 0);
+
 // a.ts
 var _a_class;
 let a_class = class a_class {
@@ -121,6 +123,7 @@ let a_class = class a_class {
 };
 a_class = _a_class = __decorate([x(() => 0), y(() => 1)], a_class);
 let a = a_class;
+
 // b.ts
 var _b_class;
 let b_class = class b_class {
@@ -136,6 +139,7 @@ let b_class = class b_class {
 };
 b_class = _b_class = __decorate([x(() => 0), y(() => 1)], b_class);
 let b = b_class;
+
 // c.ts
 var _c;
 let c = class c {
@@ -150,6 +154,7 @@ let c = class c {
 	}
 };
 c = _c = __decorate([x(() => 0), y(() => 1)], c);
+
 // d.ts
 var _d;
 let d = class d {
@@ -164,10 +169,12 @@ let d = class d {
 	}
 };
 d = _d = __decorate([x(() => 0), y(() => 1)], d);
+
 // e.ts
 let _default$2 = class {};
 _default$2 = __decorate([x(() => 0), y(() => 1)], _default$2);
 var e_default = _default$2;
+
 // f.ts
 var _f;
 let f = class f {
@@ -183,10 +190,12 @@ let f = class f {
 };
 f = _f = __decorate([x(() => 0), y(() => 1)], f);
 var f_default = f;
+
 // g.ts
 let _default$1 = class {};
 _default$1 = __decorate([x(() => 0), y(() => 1)], _default$1);
 var g_default = _default$1;
+
 // h.ts
 var _h;
 let h = class h {
@@ -202,20 +211,24 @@ let h = class h {
 };
 h = _h = __decorate([x(() => 0), y(() => 1)], h);
 var h_default = h;
+
 // i.ts
 var i_class = class {};
 __decorate([x(() => 0), y(() => 1)], i_class.prototype, "foo", void 0);
 let i = i_class;
+
 // j.ts
 var j = class {
 	foo() {}
 };
 __decorate([x(() => 0), y(() => 1)], j.prototype, "foo", null);
+
 // k.ts
 var _default = class {
 	foo(x) {}
 };
 __decorate([__decorateParam(0, x(() => 0)), __decorateParam(0, y(() => 1))], _default.prototype, "foo", null);
+
 // arguments.ts
 function fn(x) {
 	var _arguments$;
@@ -225,6 +238,7 @@ function fn(x) {
 	__decorate([(arguments[0], void 0)], Foo.prototype, _arguments$, null);
 	return Foo;
 }
+
 // entry.js
 console.log(all_default, Foo, a, b, c, d, e_default, f_default, g_default, h_default, i, j, _default, fn);
 

@@ -18,6 +18,7 @@ const counter = {
 	another: 0
 };
 const temp = {};
+
 // main.js
 obj.nested.deep.value = 42;
 o.foo = 100;
@@ -38,6 +39,7 @@ obj[key] = "computed";
 const config = {};
 config.option = true;
 var main_default = { config };
+
 export { config, main_default as default };
 
 ```

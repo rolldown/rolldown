@@ -29,6 +29,7 @@ export { foo };
 var import_foo = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports.foo = "foo";
 })))();
+
 export { import_foo as t };
 
 ```

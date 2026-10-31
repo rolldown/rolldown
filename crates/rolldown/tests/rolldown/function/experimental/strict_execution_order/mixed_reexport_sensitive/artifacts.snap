@@ -62,6 +62,7 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // state.js
 function bump() {
 	state++;
@@ -72,6 +73,7 @@ function init_state() {
 		state = 0;
 	})))();
 }
+
 // snapshots/value.js
 var SNAPSHOT;
 function init_value() {
@@ -80,6 +82,7 @@ function init_value() {
 		SNAPSHOT = state;
 	})))();
 }
+
 // shared.js
 var LOCAL;
 function init_shared() {
@@ -88,6 +91,7 @@ function init_shared() {
 		LOCAL = "local";
 	})))();
 }
+
 export { bump as a, init_value as i, init_shared as n, init_state as o, SNAPSHOT as r, LOCAL as t };
 
 ```
@@ -155,6 +159,7 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // state.js
 function bump() {
 	state++;
@@ -165,6 +170,7 @@ function init_state() {
 		state = 0;
 	})))();
 }
+
 // snapshots/value.js
 var SNAPSHOT;
 function init_value() {
@@ -173,6 +179,7 @@ function init_value() {
 		SNAPSHOT = state;
 	})))();
 }
+
 // shared.js
 var LOCAL;
 function init_shared() {
@@ -181,6 +188,7 @@ function init_shared() {
 		LOCAL = "local";
 	})))();
 }
+
 export { bump as a, init_value as i, init_shared as n, init_state as o, SNAPSHOT as r, LOCAL as t };
 
 ```
@@ -193,12 +201,15 @@ export { bump as a, init_value as i, init_shared as n, init_state as o, SNAPSHOT
 
 ```js
 import { n as SNAPSHOT } from "./shared.js";
+
 // pure.js
 const PURE = "pure";
+
 // lazy.js
 function read() {
 	return [SNAPSHOT, PURE];
 }
+
 export { read };
 
 ```
@@ -207,10 +218,12 @@ export { read };
 
 ```js
 import { r as bump, t as LOCAL } from "./shared.js";
+
 // main.js
 const local = LOCAL;
 bump();
 const load = () => import("./lazy.js").then((module) => module.read());
+
 export { load, local };
 
 ```
@@ -223,10 +236,13 @@ let state = 0;
 function bump() {
 	state++;
 }
+
 // snapshots/value.js
 const SNAPSHOT = state;
+
 // shared.js
 const LOCAL = "local";
+
 export { SNAPSHOT as n, bump as r, LOCAL as t };
 
 ```
@@ -291,6 +307,7 @@ export { __esmMin as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_value } from "./snapshot.js";
+
 // state.js
 function bump() {
 	state++;
@@ -301,6 +318,7 @@ function init_state() {
 		state = 0;
 	})))();
 }
+
 // shared.js
 var LOCAL;
 function init_shared() {
@@ -309,6 +327,7 @@ function init_shared() {
 		LOCAL = "local";
 	})))();
 }
+
 export { state as a, init_state as i, init_shared as n, bump as r, LOCAL as t };
 
 ```
@@ -318,6 +337,7 @@ export { state as a, init_state as i, init_shared as n, bump as r, LOCAL as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { a as state, i as init_state } from "./shared.js";
+
 // snapshots/value.js
 var SNAPSHOT;
 function init_value() {
@@ -326,6 +346,7 @@ function init_value() {
 		SNAPSHOT = state;
 	})))();
 }
+
 export { init_value as n, SNAPSHOT as t };
 
 ```

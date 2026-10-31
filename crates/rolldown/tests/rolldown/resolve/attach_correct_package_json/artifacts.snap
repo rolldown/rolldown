@@ -7,7 +7,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
+// node_modules/demo-lib/nested-lib/index.js
 const value = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { value: "yes" };
 	Object.defineProperty(module.exports, "__esModule", {
@@ -15,6 +17,7 @@ const value = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports,
 		enumerable: false
 	});
 })))(), 1)).default.value;
+
 // main.js
 assert.strictEqual(value, "yes");
 

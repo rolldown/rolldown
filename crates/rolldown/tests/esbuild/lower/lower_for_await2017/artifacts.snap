@@ -21,6 +21,7 @@ var entry_default = [
 		for await (const x of y) z(x);
 	}
 ];
+
 export { entry_default as default };
 
 ```

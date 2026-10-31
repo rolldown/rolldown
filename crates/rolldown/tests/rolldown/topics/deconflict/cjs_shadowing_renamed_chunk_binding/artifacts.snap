@@ -15,6 +15,7 @@ var init_dependency = __esmMin((() => {
 		return value;
 	})(sharedValue || {});
 }));
+
 // main.js
 var require_main = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	init_dependency();
@@ -24,6 +25,7 @@ var require_main = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	var sharedValue$1 = class {};
 	console.log(eventKind, sharedValue$2, sharedValue$1, freeModule);
 }));
+
 export default require_main();
 
 ```

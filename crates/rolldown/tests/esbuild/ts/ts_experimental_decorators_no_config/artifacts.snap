@@ -40,6 +40,7 @@ var Foo = @x.y() @(new y.x()) class Foo {
 	@x @y static accessor #asUndef;
 	@x @y static accessor #asDef = 1;
 };
+
 export { Foo as default };
 
 ```

@@ -14,11 +14,13 @@ var client_only_exports = /* @__PURE__ */ __exportAll({
 });
 const sym = Symbol("client-only");
 var client_only_default = "default export";
+
 // index.ts
 function entry() {
 	return "server-entry-default " + String(sym);
 }
 const routes = { "/": () => import("./route.js") };
+
 export { routes as n, client_only_exports as r, entry as t };
 
 ```
@@ -28,6 +30,7 @@ export { routes as n, client_only_exports as r, entry as t };
 ```js
 // route.js
 var route_default = { loadString: () => import("./9446.js").then((n) => n.r).then((r) => r.default || r) };
+
 export { route_default as default };
 
 ```

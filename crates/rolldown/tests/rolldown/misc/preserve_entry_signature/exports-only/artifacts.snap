@@ -15,6 +15,7 @@ console.log(`shared: `, "lib");
 
 ```js
 import { t as value } from "./lib2.js";
+
 // dynamic2.js
 console.log(`shared: `, value);
 
@@ -25,6 +26,7 @@ console.log(`shared: `, value);
 ```js
 // lib2.js
 const value = "lib2";
+
 export { value as t };
 
 ```
@@ -42,9 +44,11 @@ console.log(`shared: `, "lib");
 
 ```js
 import { t as value } from "./lib2.js";
+
 // main2.js
 import("./dynamic2.js");
 const unused = value;
+
 export { unused };
 
 ```

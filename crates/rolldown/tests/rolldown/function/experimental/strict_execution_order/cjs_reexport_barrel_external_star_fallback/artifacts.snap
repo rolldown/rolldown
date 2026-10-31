@@ -141,9 +141,11 @@ export { pure_barrel_exports as i, loadRoute as n, import_clone_deep as r, init_
 
 ```js
 import { i as pure_barrel_exports, r as import_clone_deep } from "./main2.js";
+
 // route.js
 globalThis.__events.push(`route:${pure_barrel_exports.extLibValue}`);
 const value = (0, import_clone_deep.default)({ value: 1 });
+
 export { value };
 
 ```

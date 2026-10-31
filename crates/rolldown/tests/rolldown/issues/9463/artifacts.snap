@@ -37,6 +37,7 @@ var shared_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
 function foo() {
 	(globalThis.sideEffectLog ??= []).push("shared-foo");
 }
+
 // a.js
 function init_a() {
 	return (init_a = __esmMin((() => {
@@ -44,6 +45,7 @@ function init_a() {
 		foo();
 	})))();
 }
+
 // b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
@@ -53,6 +55,7 @@ function init_b() {
 		});
 	})))();
 }
+
 export { init_a as n, init_b as t };
 
 ```
@@ -95,6 +98,7 @@ var shared_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
 function foo() {
 	(globalThis.sideEffectLog ??= []).push("shared-foo");
 }
+
 // a.js
 function init_a() {
 	return (init_a = __esmMin((() => {
@@ -102,6 +106,7 @@ function init_a() {
 		foo();
 	})))();
 }
+
 // b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
@@ -111,6 +116,7 @@ function init_b() {
 		});
 	})))();
 }
+
 export { init_a as n, init_b as t };
 
 ```

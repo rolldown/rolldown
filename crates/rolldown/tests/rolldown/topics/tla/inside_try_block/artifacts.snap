@@ -11,6 +11,7 @@ let foo;
 try {
 	foo = await Promise.resolve("foo");
 } catch (_e) {}
+
 export { foo };
 
 ```
@@ -55,6 +56,7 @@ let foo;
 try {
 	foo = await Promise.resolve("foo");
 } catch (_e) {}
+
 export { foo };
 
 ```

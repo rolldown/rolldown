@@ -1,0 +1,93 @@
+use oxc_allocator::{ArenaBox, ArenaVec};
+use oxc_ast::{ast::*, builder::GetAstBuilder};
+use oxc_ast_visit::VisitJs;
+use oxc_ecmascript::BoundNames;
+use oxc_span::{SPAN, Span};
+use oxc_str::Ident;
+use oxc_syntax::symbol::SymbolId;
+
+pub struct KeepVar<'a> {
+    vars: Vec<(Ident<'a>, Span, Option<SymbolId>)>,
+}
+
+impl<'a> VisitJs<'a> for KeepVar<'a> {
+    fn visit_statement(&mut self, it: &Statement<'a>) {
+        // Only visit blocks where vars could be hoisted
+        match it {
+            Statement::BlockStatement(it) => self.visit_block_statement(it),
+            Statement::BreakStatement(it) => self.visit_break_statement(it),
+            Statement::ContinueStatement(it) => self.visit_continue_statement(it),
+            // Statement::DebuggerStatement(it) => self.visit_debugger_statement(it),
+            Statement::DoWhileStatement(it) => self.visit_do_while_statement(it),
+            // Statement::EmptyStatement(it) => self.visit_empty_statement(it),
+            // Statement::ExpressionStatement(it) => self.visit_expression_statement(it),
+            Statement::ForInStatement(it) => self.visit_for_in_statement(it),
+            Statement::ForOfStatement(it) => self.visit_for_of_statement(it),
+            Statement::ForStatement(it) => self.visit_for_statement(it),
+            Statement::IfStatement(it) => self.visit_if_statement(it),
+            Statement::LabeledStatement(it) => self.visit_labeled_statement(it),
+            // Statement::ReturnStatement(it) => self.visit_return_statement(it),
+            Statement::SwitchStatement(it) => self.visit_switch_statement(it),
+            // Statement::ThrowStatement(it) => self.visit_throw_statement(it),
+            Statement::TryStatement(it) => self.visit_try_statement(it),
+            Statement::WhileStatement(it) => self.visit_while_statement(it),
+            Statement::WithStatement(it) => self.visit_with_statement(it),
+            // match_declaration!(Statement) => visitor.visit_declaration(it.to_declaration()),
+            // match_module_declaration!(Statement) => {
+            // visitor.visit_module_declaration(it.to_module_declaration())
+            // }
+            Statement::VariableDeclaration(decl) => self.visit_variable_declaration(decl),
+            _ => {}
+        }
+    }
+
+    fn visit_variable_declaration(&mut self, it: &VariableDeclaration<'a>) {
+        if it.kind.is_var() {
+            it.bound_names(&mut |ident| {
+                self.vars.push((ident.name, ident.span, ident.symbol_id.get()));
+            });
+        }
+    }
+}
+
+impl<'a> KeepVar<'a> {
+    pub fn new() -> Self {
+        Self { vars: std::vec![] }
+    }
+
+    pub fn get_variable_declaration(
+        self,
+        builder: &impl GetAstBuilder<'a>,
+    ) -> Option<ArenaBox<'a, VariableDeclaration<'a>>> {
+        if self.vars.is_empty() {
+            return None;
+        }
+
+        let builder = builder.builder();
+
+        let kind = VariableDeclarationKind::Var;
+        let decls = ArenaVec::from_iter_in(
+            self.vars.into_iter().map(|(name, span, symbol_id)| {
+                let id = symbol_id.map_or_else(
+                    || BindingPattern::new_binding_identifier(span, name, builder),
+                    |symbol_id| {
+                        BindingPattern::new_binding_identifier_with_symbol_id(
+                            span, name, symbol_id, builder,
+                        )
+                    },
+                );
+                VariableDeclarator::new(span, id, None, None, false, builder)
+            }),
+            builder,
+        );
+
+        Some(VariableDeclaration::boxed(SPAN, kind, decls, false, builder))
+    }
+
+    pub fn get_variable_declaration_statement(
+        self,
+        builder: &impl GetAstBuilder<'a>,
+    ) -> Option<Statement<'a>> {
+        self.get_variable_declaration(builder).map(Statement::VariableDeclaration)
+    }
+}

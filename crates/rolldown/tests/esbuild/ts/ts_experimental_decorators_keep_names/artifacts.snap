@@ -6,11 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 // entry.ts
 let Foo = class Foo {};
 Foo = __decorate([decoratorMustComeAfterName], Foo);
+
 export { Foo };
 
 ```

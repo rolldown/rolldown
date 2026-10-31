@@ -1,0 +1,6 @@
+{
+  "git": {
+    "sha1": "75efdca4747c4ad9b252542743098d4894f8005b"
+  },
+  "path_in_vcs": "crates/oxc_minifier"
+}

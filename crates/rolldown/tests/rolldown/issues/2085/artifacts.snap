@@ -13,6 +13,7 @@ var import_b = (/* @__PURE__ */ __commonJSMin(((exports) => {
 		return "f";
 	};
 })))();
+
 var b_default = import_b._default;
 export { b_default as default, import_b as t };
 
@@ -22,10 +23,12 @@ export { b_default as default, import_b as t };
 
 ```js
 import { t as import_b } from "./a.js";
+
 // c.js
 function c_default(tag, options) {
 	return import_b._default;
 }
+
 export { c_default as default };
 
 ```
@@ -34,6 +37,7 @@ export { c_default as default };
 
 ```js
 import assert from "node:assert";
+
 // main.js
 import("./c.js").then((mod) => {
 	assert.strictEqual(mod.default()(), "f");

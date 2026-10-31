@@ -17,6 +17,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // foo.js
 var missing = void 0;
+
 export { missing };
 
 ```

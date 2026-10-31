@@ -11,6 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 var require_sub = /* @__PURE__ */ __commonJSMin((() => {
 	works();
 }));
+
 // src/entry.js
 (/* @__PURE__ */ __commonJSMin((() => {
 	require_sub();

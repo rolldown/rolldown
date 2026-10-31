@@ -24,6 +24,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 "use wtf";
+
 // hoist-directive.js
 using a = b;
 
@@ -45,6 +46,7 @@ var Bar1 = class Bar1 {
 	];
 };
 using c = d;
+
 export { Bar1, Foo1 };
 
 ```
@@ -65,6 +67,7 @@ var Bar1 = class Bar1 {
 	];
 };
 using c = d;
+
 export { Bar1, Foo1 };
 
 ```
@@ -75,6 +78,7 @@ export { Bar1, Foo1 };
 // hoist-export-clause.js
 using a = b;
 using c = d;
+
 export { a, c as "c!" };
 
 ```
@@ -88,6 +92,7 @@ var hoist_export_default_class_anonymous_default = class {
 	ac = [a, c];
 };
 using c = d;
+
 export { hoist_export_default_class_anonymous_default as default };
 
 ```
@@ -101,6 +106,7 @@ var Foo = class {
 	ac = [a, c];
 };
 using c = d;
+
 export { Foo as default };
 
 ```
@@ -118,6 +124,7 @@ var Foo = class Foo {
 	];
 };
 using c = d;
+
 export { Foo as default };
 
 ```
@@ -129,6 +136,7 @@ export { Foo as default };
 using a = b;
 var hoist_export_default_expr_default = [a, c];
 using c = d;
+
 export { hoist_export_default_expr_default as default };
 
 ```
@@ -142,6 +150,7 @@ function hoist_export_default_function_anonymous_default() {
 	return [a, c];
 }
 using c = d;
+
 export { hoist_export_default_function_anonymous_default as default };
 
 ```
@@ -155,6 +164,7 @@ function foo() {
 	return [a, c];
 }
 using c = d;
+
 export { foo as default };
 
 ```
@@ -172,6 +182,7 @@ function foo() {
 	];
 }
 using c = d;
+
 export { foo as default };
 
 ```
@@ -180,6 +191,7 @@ export { foo as default };
 
 ```js
 export { x, y } from "./foo";
+
 // hoist-export-from.js
 using a = b;
 using c = d;
@@ -202,6 +214,7 @@ function bar1() {
 	];
 }
 using c = d;
+
 export { bar1, foo1 };
 
 ```
@@ -222,6 +235,7 @@ function bar1() {
 	];
 }
 using c = d;
+
 export { bar1, foo1 };
 
 ```
@@ -238,6 +252,7 @@ var { x: [x2] } = foo;
 let { y: [y2] } = foo;
 const { z: [z2] } = foo;
 using c = d;
+
 export { a1, ac1, c1, x1, y1, z1 };
 
 ```
@@ -254,6 +269,7 @@ var { x: [x2] } = foo;
 let { y: [y2] } = foo;
 const { z: [z2] } = foo;
 using c = d;
+
 export { x1, y1, z1 };
 
 ```
@@ -261,7 +277,8 @@ export { x1, y1, z1 };
 ## hoist-export-star.js
 
 ```js
-export * from "./foo";
+export * from "./foo"
+
 // hoist-export-star.js
 using a = b;
 using c = d;
@@ -272,6 +289,7 @@ using c = d;
 
 ```js
 import "./foo";
+
 // hoist-import.js
 using a = b;
 using c = d;

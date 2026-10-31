@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import "./at_least_share_by_2.js";
+
 // share-by-1.js
 console.log("share-by-1");
 
@@ -17,6 +18,7 @@ console.log("share-by-1");
 ```js
 // share-by-2.js
 console.log("share-by-2");
+
 // share-by-3.js
 console.log("share-by-3");
 

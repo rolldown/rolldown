@@ -11,6 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 var require_main$2 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.pair = [{ value: "a" }, { value: "b" }];
 }));
+
 export default require_main$2();
 
 ```

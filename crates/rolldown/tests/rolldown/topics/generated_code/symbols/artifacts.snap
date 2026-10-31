@@ -22,6 +22,7 @@ exports.a = a;
 ```js
 // main.js
 const a = 1;
+
 export { a };
 
 ```

@@ -7,9 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // foo.json
 var foo = 1;
 var foo_default = { foo };
+
 // main.js
 assert.deepStrictEqual(foo_default, { foo });
 

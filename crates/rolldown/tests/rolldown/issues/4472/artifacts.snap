@@ -6,15 +6,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-export * from "ext-index";
-export * from "ext-file";
-export * from "ext-folder";
+export * from "ext-index"
+
+export * from "ext-file"
+
+export * from "ext-folder"
+
 // file.js
 const file = {};
+
 // folder.js
 const folder = {};
+
 // main.js
 const index = {};
+
 export { file, folder, index };
 
 ```

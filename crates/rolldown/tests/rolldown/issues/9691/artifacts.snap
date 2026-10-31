@@ -22,9 +22,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import dep_a from "node:https";
+
 // HIDDEN [\0rolldown/runtime.js]
 // lib/dep-a.js
 var init_dep_a = __esmMin((() => {}));
+
 // lib/handler-a.js
 var HandlerA;
 var init_handler_a = __esmMin((() => {
@@ -33,8 +35,10 @@ var init_handler_a = __esmMin((() => {
 		constants = dep_a.constants;
 	};
 }));
+
 // lib/handler-b.js
 var init_handler_b = __esmMin((() => {}));
+
 // main.js
 __esmMin((() => {
 	init_handler_a();

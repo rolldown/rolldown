@@ -49,8 +49,22 @@ impl GenerateStage<'_> {
       }
       // PoC: DCE already ran on this chunk's AST (`chunk_ast_dce`).
       if ast_dce_chunks.contains(&chunk.originate_from) {
+        #[cfg(feature = "testing")]
+        super::chunk_ast_dce::record_coverage(
+          options,
+          "late_minify",
+          "skipped_ast",
+          Some(chunk.preliminary_filename.as_str()),
+        );
         return Ok(());
       }
+      #[cfg(feature = "testing")]
+      super::chunk_ast_dce::record_coverage(
+        options,
+        "late_minify",
+        "original",
+        Some(chunk.preliminary_filename.as_str()),
+      );
       let codegen_options = CodegenOptions {
         minify: remove_whitespace,
         ascii_only: options.charset.is_ascii() || ascii_only,
@@ -188,11 +202,15 @@ fn dce_or_minify<'a>(
   let mut program = ret.program;
   t.stop(Phase::MinifyParse);
   let t = Timer::start();
-  let minifier = Minifier::new(minify_options);
-  let ret = if compress {
-    minifier.minify(allocator, &mut program)
+  let ret = if *poc_prof::ENABLED {
+    EcmaCompiler::minify_profiled(allocator, &mut program, minify_options, compress, false)
   } else {
-    minifier.dce(allocator, &mut program)
+    let minifier = Minifier::new(minify_options);
+    if compress {
+      minifier.minify(allocator, &mut program)
+    } else {
+      minifier.dce(allocator, &mut program)
+    }
   };
   t.stop(Phase::MinifyDce);
   if std::env::var_os("ROLLDOWN_CHUNK_AST_DCE_DEBUG").is_some() {

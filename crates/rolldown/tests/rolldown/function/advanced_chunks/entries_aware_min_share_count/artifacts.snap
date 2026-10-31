@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //! User-defined Entry: [Entry-Module-Id: entry-a.js] [Name: entry-a]
 import "./utils~entry-a~entry-b.js";
+
 // utils/debounce.js
 console.log("debounce");
 

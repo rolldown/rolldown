@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 // test.json
 var invalid_identifier$1 = true;
+
 // test2.json
 var test2_exports = /* @__PURE__ */ __exportAll({
 	default: () => test2_default,
@@ -16,6 +17,7 @@ var test2_exports = /* @__PURE__ */ __exportAll({
 });
 var invalid_identifier = true;
 var test2_default = { "invalid-identifier": invalid_identifier };
+
 // entry.js
 console.log(invalid_identifier$1, test2_exports);
 

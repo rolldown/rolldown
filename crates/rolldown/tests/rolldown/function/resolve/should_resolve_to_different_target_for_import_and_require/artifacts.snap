@@ -9,10 +9,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 // node_modules/package/esm-output.js
 const output = "esm";
+
 // main.js
 const { output: requireOutput } = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports.output = "cjs";
 })))();
+
 export { output as importOutput, requireOutput };
 
 ```

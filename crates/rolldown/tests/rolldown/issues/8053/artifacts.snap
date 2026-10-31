@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { t as import_lodash } from "./main.js";
 import assert from "node:assert";
+
 // lazy-a.js
 assert(typeof import_lodash.debounce === "function");
 assert(typeof import_lodash.noop === "function");
@@ -18,16 +19,19 @@ assert(typeof import_lodash.noop === "function");
 
 ```js
 import assert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // utils.js
 var import_lodash = (/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.noop = function noop() {};
 	exports.debounce = function debounce() {};
 })))();
+
 // main.js
 assert(typeof import_lodash.debounce === "function");
 assert(typeof import_lodash.noop === "function");
 import("./lazy-a.js");
+
 export { import_lodash as n, import_lodash as t };
 
 ```

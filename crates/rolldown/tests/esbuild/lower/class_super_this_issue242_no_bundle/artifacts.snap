@@ -18,6 +18,7 @@ var B = class extends A {
 		return this.#e;
 	}
 };
+
 export { A, B };
 
 ```

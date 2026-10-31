@@ -11,16 +11,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 var require_pkg = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.pkg = true;
 }));
+
 // nested/index.js
 var require_nested = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.nested = true;
 }));
+
 // index.js
 var require_source_identifier_name_index_single_entry = /* @__PURE__ */ __commonJSMin((() => {
 	require_source_identifier_name_index_single_entry();
 	require_pkg();
 	require_nested();
 }));
+
 export default require_source_identifier_name_index_single_entry();
 
 ```

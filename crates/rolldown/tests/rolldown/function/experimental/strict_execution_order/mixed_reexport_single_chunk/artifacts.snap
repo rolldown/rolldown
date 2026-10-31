@@ -8,8 +8,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // value.js
 const VALUE = "value";
+
 // shared.js
 const LOCAL = "local";
+
 export { LOCAL, VALUE };
 
 ```

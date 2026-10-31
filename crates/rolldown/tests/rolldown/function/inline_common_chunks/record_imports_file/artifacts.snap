@@ -151,6 +151,7 @@ init_c();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // c.js
 var helper;
 function init_c() {
@@ -159,6 +160,7 @@ function init_c() {
 		globalThis.events.push("C body");
 	})))();
 }
+
 export { init_c as n, helper as t };
 
 ```
@@ -176,6 +178,7 @@ export { __esmMin as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_c, t as helper } from "./c2.js";
+
 // s1.js
 var s1;
 function init_s1() {
@@ -184,6 +187,7 @@ function init_s1() {
 		s1 = helper + "!";
 	})))();
 }
+
 export { s1 as n, init_s1 as t };
 
 ```

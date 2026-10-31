@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as foo } from "./shared.js";
+
 // a.js
 console.log(foo);
 
@@ -16,6 +17,7 @@ console.log(foo);
 
 ```js
 import { t as foo } from "./shared.js";
+
 // b.js
 console.log(foo);
 
@@ -32,6 +34,7 @@ console.log(foo);
 ```js
 // shared.js
 function foo(bar) {}
+
 export { foo as t };
 
 ```

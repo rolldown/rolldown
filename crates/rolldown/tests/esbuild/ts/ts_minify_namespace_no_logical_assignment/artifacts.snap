@@ -28,6 +28,7 @@ let Foo;
 		foo(Foo, Bar);
 	})(Bar || (Bar = _Foo.Bar || (_Foo.Bar = {})));
 })(Foo || (Foo = {}));
+
 export { Foo };
 
 ```

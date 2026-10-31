@@ -17,6 +17,7 @@ function inc() {
 	x += 1;
 }
 var file_default = x;
+
 export { file_exports as file };
 
 ```

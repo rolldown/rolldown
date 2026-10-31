@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { n as __esmMin, r as __exportAll } from "./rolldown-runtime.js";
 import { n as extend, t as init_hub } from "./hub2.js";
+
 // dep.js
 var dep_exports = /* @__PURE__ */ __exportAll({ useDep: () => useDep });
 var useDep;
@@ -15,6 +16,7 @@ var init_dep = __esmMin((() => {
 	init_hub();
 	useDep = () => extend({}, {});
 }));
+
 export { init_dep as n, useDep as r, dep_exports as t };
 
 ```
@@ -34,20 +36,26 @@ export { extend, useDep };
 ```js
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
 import { n as init_dep } from "./dep.js";
+
+// shared.js
 var extend;
 var init_shared = __esmMin((() => {
 	extend = Object.assign;
 }));
+
 // interop.cjs
 var require_interop = /* @__PURE__ */ __commonJSMin((() => {
 	init_shared();
 	init_dep();
 }));
+
+// hub.js
 var init_hub = __esmMin((() => {
 	require_interop();
 	init_shared();
 	init_dep();
 }));
+
 export { extend as n, init_shared as r, init_hub as t };
 
 ```
@@ -94,6 +102,7 @@ var __exportAll = (all, no_symbols) => {
 	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
 	return target;
 };
+
 export { __esmMin as n, __exportAll as r, __commonJSMin as t };
 
 ```
@@ -413,6 +422,7 @@ Object.defineProperty(exports, "__exportAll", {
 ```js
 import { n as __esmMin, r as __exportAll } from "./rolldown-runtime.js";
 import { n as extend, t as init_hub } from "./hub2.js";
+
 // dep.js
 var dep_exports = /* @__PURE__ */ __exportAll({ useDep: () => useDep });
 var useDep;
@@ -420,6 +430,7 @@ var init_dep = __esmMin((() => {
 	init_hub();
 	useDep = () => extend({}, {});
 }));
+
 export { init_dep as n, useDep as r, dep_exports as t };
 
 ```
@@ -439,20 +450,26 @@ export { extend, useDep };
 ```js
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
 import { n as init_dep } from "./dep.js";
+
+// shared.js
 var extend;
 var init_shared = __esmMin((() => {
 	extend = Object.assign;
 }));
+
 // interop.cjs
 var require_interop = /* @__PURE__ */ __commonJSMin((() => {
 	init_shared();
 	init_dep();
 }));
+
+// hub.js
 var init_hub = __esmMin((() => {
 	require_interop();
 	init_shared();
 	init_dep();
 }));
+
 export { extend as n, init_shared as r, init_hub as t };
 
 ```
@@ -499,6 +516,7 @@ var __exportAll = (all, no_symbols) => {
 	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
 	return target;
 };
+
 export { __esmMin as n, __exportAll as r, __commonJSMin as t };
 
 ```

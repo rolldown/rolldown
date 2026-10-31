@@ -16,11 +16,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // cjs-module.js
 var require_cjs_module = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.value = 42;
 }));
+
+// main.js
 require_cjs_module();
 assert.strictEqual(42, 42);
 Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_cjs_module())).then((mod) => {

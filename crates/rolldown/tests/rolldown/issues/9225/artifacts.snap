@@ -7,8 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as getEnvInt } from "./env.js";
+
 // api.js
 const api = getEnvInt("REQUEST_TIMEOUT_MS");
+
 export { api as t };
 
 ```
@@ -17,8 +19,10 @@ export { api as t };
 
 ```js
 import "./dep.js";
+
 // dep-user.js
 const depUser = "dep";
+
 export { depUser };
 
 ```
@@ -28,6 +32,7 @@ export { depUser };
 ```js
 // side.js
 globalThis.__rolldown_issue_7449_side = (globalThis.__rolldown_issue_7449_side || 0) + 1;
+
 export {};
 
 ```
@@ -36,8 +41,10 @@ export {};
 
 ```js
 import { n as getEnvString } from "./env.js";
+
 // env-user.js
 const envUser = getEnvString("SECONDARY");
+
 export { envUser };
 
 ```
@@ -46,6 +53,7 @@ export { envUser };
 
 ```js
 import "./dep.js";
+
 // env.js
 const state = { config: {
 	REQUEST_TIMEOUT_MS: "300000",
@@ -57,6 +65,7 @@ function getEnvString(key) {
 function getEnvInt(key) {
 	return Number(getEnvString(key) || 3e5);
 }
+
 export { getEnvString as n, getEnvInt as t };
 
 ```
@@ -65,8 +74,10 @@ export { getEnvString as n, getEnvInt as t };
 
 ```js
 import { t as api } from "./api.js";
+
 // lazy.js
 const lazy = api;
+
 export { lazy };
 
 ```
@@ -76,6 +87,7 @@ export { lazy };
 ```js
 import { t as api } from "./api.js";
 import { n as getEnvString } from "./env.js";
+
 // main.js
 globalThis.__rolldown_issue_7449_imports = [
 	import("./lazy.js"),
@@ -83,6 +95,7 @@ globalThis.__rolldown_issue_7449_imports = [
 	import("./dep-user.js")
 ];
 globalThis.__rolldown_issue_7449_value = api + Number(getEnvString("MISSING") || 0);
+
 export {};
 
 ```

@@ -15,8 +15,10 @@ export { n as m1, t as m2 } from "./m2.js";
 
 ```js
 import { n as m1, t as m2 } from "./m2.js";
+
 // b.js
 const value = m1();
+
 export { m1, m2, value };
 
 ```
@@ -26,14 +28,17 @@ export { m1, m2, value };
 ```js
 import "./y.js";
 import { snapshot } from "./x.js";
+
 // m1.js
 function m1() {
 	return snapshot;
 }
+
 // m2.js
 function m2() {
 	return "m2";
 }
+
 export { m1 as n, m2 as t };
 
 ```
@@ -43,6 +48,7 @@ export { m1 as n, m2 as t };
 ```js
 // x.js
 const snapshot = globalThis.ready ?? "unset";
+
 export { snapshot };
 
 ```

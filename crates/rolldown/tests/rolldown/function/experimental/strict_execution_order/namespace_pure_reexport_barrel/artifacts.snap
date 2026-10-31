@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_cyc_b } from "./cb.js";
+
 // cyc-a.js
 function init_cyc_a() {
 	return (init_cyc_a = __esmMin((() => {
@@ -15,6 +16,7 @@ function init_cyc_a() {
 		(globalThis.__events ??= []).push("cyc-a");
 	})))();
 }
+
 export { init_cyc_a as t };
 
 ```
@@ -24,6 +26,7 @@ export { init_cyc_a as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_cyc_a } from "./ca.js";
+
 // cyc-b.js
 function init_cyc_b() {
 	return (init_cyc_b = __esmMin((() => {
@@ -31,6 +34,7 @@ function init_cyc_b() {
 		(globalThis.__events ??= []).push("cyc-b");
 	})))();
 }
+
 export { init_cyc_b as t };
 
 ```
@@ -137,6 +141,7 @@ export { __exportAll as n, __esmMin as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_cyc_b } from "./cb.js";
+
 // cyc-a.js
 function init_cyc_a() {
 	return (init_cyc_a = __esmMin((() => {
@@ -144,6 +149,7 @@ function init_cyc_a() {
 		(globalThis.__events ??= []).push("cyc-a");
 	})))();
 }
+
 export { init_cyc_a as t };
 
 ```
@@ -153,6 +159,7 @@ export { init_cyc_a as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_cyc_a } from "./ca.js";
+
 // cyc-b.js
 function init_cyc_b() {
 	return (init_cyc_b = __esmMin((() => {
@@ -160,6 +167,7 @@ function init_cyc_b() {
 		(globalThis.__events ??= []).push("cyc-b");
 	})))();
 }
+
 export { init_cyc_b as t };
 
 ```
@@ -239,6 +247,7 @@ export { getScale };
 function loadPage() {
 	return import("./dynamic-page.js");
 }
+
 export { loadPage };
 
 ```

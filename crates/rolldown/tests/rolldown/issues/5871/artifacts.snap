@@ -15,6 +15,7 @@ import("./3.js");
 
 ```js
 import "./1.js";
+
 // 4.js
 import("./1.js");
 

@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import nodeAssert from "node:assert";
+
 // main.js
 nodeAssert.equal(globalThis.value, void 0, "Unused no side effect module should be removed");
 
@@ -20,6 +21,7 @@ nodeAssert.equal(globalThis.value, void 0, "Unused no side effect module should 
 
 ```js
 import nodeAssert from "node:assert";
+
 // main.js
 nodeAssert.equal(globalThis.value, void 0, "Unused no side effect module should be removed");
 

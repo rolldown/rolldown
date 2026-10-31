@@ -9,14 +9,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 // internal.js
 let ok = true;
+
 // very-nested.js
 let nested$1 = 2;
+
 // nested.js
 var nested_exports = /* @__PURE__ */ __exportAll({
 	"nested name": () => 1,
 	"very nested name": () => 2
 });
 let nested = 1;
+
 export { nested_exports as "name space", nested as "nested name", ok as "not ok", ok, nested$1 as "very nested name" };
 
 ```

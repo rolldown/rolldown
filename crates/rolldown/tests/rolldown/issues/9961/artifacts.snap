@@ -38,10 +38,12 @@ init_main();
 function setupWorker(handler) {
 	return { handler };
 }
+
 // core/http.js
 function http() {
 	return "http";
 }
+
 // main.js
 const worker = setupWorker(http());
 console.log(worker);

@@ -17,6 +17,7 @@ export { StateCode, initialState };
 ```js
 // state-codes.js
 const StateCode = "waiting";
+
 export { StateCode };
 
 ```
@@ -25,8 +26,10 @@ export { StateCode };
 
 ```js
 import { StateCode } from "./state-codes.js";
+
 // wrapper.js
 const initialState = StateCode;
+
 export { StateCode, initialState };
 
 ```

@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // class.js
 var class_default = class {};
+
 export { class_default as default };
 
 ```
@@ -19,6 +20,7 @@ export { class_default as default };
 function func() {
 	console.log("function");
 }
+
 export { func as default };
 
 ```
@@ -28,6 +30,7 @@ export { func as default };
 ```js
 import class_default from "./class.js";
 import func from "./function.js";
+
 // main.js
 console.log(class_default, 42, func);
 

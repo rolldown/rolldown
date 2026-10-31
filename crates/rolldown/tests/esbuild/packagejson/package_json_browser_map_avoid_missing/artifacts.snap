@@ -13,6 +13,7 @@ var require_component_indexof = /* @__PURE__ */ __commonJSMin(((exports, module)
 		return 234;
 	};
 }));
+
 // node_modules/component-classes/index.js
 try {
 	require_component_indexof();

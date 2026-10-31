@@ -7,13 +7,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import "react";
+
 // other1.js
 const Foo$2 = () => {};
 const React$1 = () => {};
 console.log(Foo$2, React$1);
+
 // jsx.js
 const Foo$1 = () => {};
 console.log(<Foo$1 />);
+
 // other2.js
 const Foo = () => {};
 const React = () => {};

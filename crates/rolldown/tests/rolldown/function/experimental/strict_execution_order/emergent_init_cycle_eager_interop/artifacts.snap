@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { n as __esmMin, r as __toESM } from "./rolldown-runtime.js";
 import { r as require_carrier_cjs } from "./s.js";
+
 // h/eagerhaz.js
 var import_carrier_cjs;
 function init_eagerhaz() {
@@ -16,6 +17,7 @@ function init_eagerhaz() {
 		globalThis.__carried = (0, import_carrier_cjs.default)();
 	})))();
 }
+
 // h/pure.js
 function makePv() {
 	return "PV";
@@ -26,6 +28,7 @@ function init_pure() {
 		pv = /* @__PURE__ */ makePv();
 	})))();
 }
+
 export { pv as n, init_eagerhaz as r, init_pure as t };
 
 ```
@@ -73,18 +76,21 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 ```js
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
 import { t as init_pure } from "./h.js";
+
 // s/s-first.js
 function init_s_first() {
 	return (init_s_first = __esmMin((() => {
 		(globalThis.__events ??= []).push("s-first");
 	})))();
 }
+
 // s/carrier.cjs.js
 var require_carrier_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = function carrier() {
 		return "CARRIED";
 	};
 }));
+
 // s/barrel.js
 function makeBmark() {
 	return "B";
@@ -96,6 +102,7 @@ function init_barrel() {
 		bmark = /* @__PURE__ */ makeBmark();
 	})))();
 }
+
 export { init_s_first as i, init_barrel as n, require_carrier_cjs as r, bmark as t };
 
 ```
@@ -109,6 +116,7 @@ export { init_s_first as i, init_barrel as n, require_carrier_cjs as r, bmark as
 ```js
 import { n as __esmMin, r as __toESM } from "./rolldown-runtime.js";
 import { r as require_carrier_cjs } from "./s.js";
+
 // h/eagerhaz.js
 var import_carrier_cjs;
 function init_eagerhaz() {
@@ -117,6 +125,7 @@ function init_eagerhaz() {
 		globalThis.__carried = (0, import_carrier_cjs.default)();
 	})))();
 }
+
 // h/pure.js
 function makePv() {
 	return "PV";
@@ -127,6 +136,7 @@ function init_pure() {
 		pv = /* @__PURE__ */ makePv();
 	})))();
 }
+
 export { pv as n, init_eagerhaz as r, init_pure as t };
 
 ```
@@ -174,18 +184,21 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 ```js
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
 import { t as init_pure } from "./h.js";
+
 // s/s-first.js
 function init_s_first() {
 	return (init_s_first = __esmMin((() => {
 		(globalThis.__events ??= []).push("s-first");
 	})))();
 }
+
 // s/carrier.cjs.js
 var require_carrier_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = function carrier() {
 		return "CARRIED";
 	};
 }));
+
 // s/barrel.js
 function makeBmark() {
 	return "B";
@@ -197,6 +210,7 @@ function init_barrel() {
 		bmark = /* @__PURE__ */ makeBmark();
 	})))();
 }
+
 export { init_s_first as i, init_barrel as n, require_carrier_cjs as r, bmark as t };
 
 ```

@@ -20,6 +20,14 @@ pub enum Phase {
   MinifyCodegen,
   /// `minify_chunks`: `collapse_sourcemaps`.
   MinifyCollapse,
+  /// Profiling-only split of OXC minify: semantic before compression.
+  MinifySemantic,
+  /// Profiling-only split of OXC minify: normalization and peephole passes.
+  MinifyCompress,
+  /// Profiling-only split of OXC minify: semantic rebuilt for mangling.
+  MinifyMangleSemantic,
+  /// Profiling-only split of OXC minify: identifier and private-member mangling.
+  MinifyMangle,
   /// Fast path: take module bodies out, parse generated imports/exports, assemble the program.
   AstAssemble,
   /// Fast path: `Minifier::dce` on the assembled chunk program.
@@ -38,11 +46,15 @@ pub enum Phase {
   AstRemap,
 }
 
-const NAMES: [&str; 12] = [
+const NAMES: [&str; 16] = [
   "minify.parse",
   "minify.dce",
   "minify.codegen",
   "minify.collapse",
+  "minify.semantic",
+  "minify.compress",
+  "minify.mangle_semantic",
+  "minify.mangle",
   "ast.assemble",
   "ast.dce",
   "ast.split",
@@ -53,23 +65,20 @@ const NAMES: [&str; 12] = [
   "ast.remap",
 ];
 
-static COUNTERS: [AtomicU64; 12] = [const { AtomicU64::new(0) }; 12];
+static COUNTERS: [AtomicU64; 16] = [const { AtomicU64::new(0) }; 16];
 
 pub static ENABLED: LazyLock<bool> =
   LazyLock::new(|| std::env::var_os("ROLLDOWN_POC_PROF").is_some_and(|v| v == "1"));
 
 #[cfg(all(unix, not(target_family = "wasm")))]
 pub fn thread_cpu_ns() -> u64 {
-  #[repr(C)]
-  struct Ts(i64, i64);
-  unsafe extern "C" {
-    fn clock_gettime(clk: i32, ts: *mut Ts) -> i32;
+  let mut time = libc::timespec { tv_sec: 0, tv_nsec: 0 };
+  // SAFETY: `time` is a valid writable `timespec` for the duration of the call.
+  if unsafe { libc::clock_gettime(libc::CLOCK_THREAD_CPUTIME_ID, &raw mut time) } != 0 {
+    return 0;
   }
-  let mut t = Ts(0, 0);
-  // 3 = CLOCK_THREAD_CPUTIME_ID on Linux.
-  unsafe { clock_gettime(3, &raw mut t) };
   #[expect(clippy::cast_sign_loss)]
-  let ns = (t.0 as u64) * 1_000_000_000 + t.1 as u64;
+  let ns = (time.tv_sec as u64) * 1_000_000_000 + time.tv_nsec as u64;
   ns
 }
 

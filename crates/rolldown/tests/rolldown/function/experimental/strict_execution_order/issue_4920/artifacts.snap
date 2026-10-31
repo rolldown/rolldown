@@ -7,13 +7,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import nodeAssert from "node:assert";
+
 // dep.js
 function foo() {
 	globalThis.value = 1;
 }
 var dep_default = /*#__PURE__*/ foo();
+
 // main.js
 nodeAssert.strictEqual(globalThis.value, 1);
+
 export { dep_default as dep };
 
 ```

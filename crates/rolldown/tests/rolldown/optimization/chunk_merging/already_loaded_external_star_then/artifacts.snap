@@ -7,10 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as f0 } from "./vendor.js";
-export * from "ext-then";
+
+export * from "ext-then"
+
 // app.js
 console.log(f0(1));
 const done = import("./lazy.js").then((m) => m.value);
+
 export { done };
 
 ```
@@ -19,8 +22,10 @@ export { done };
 
 ```js
 import { t as f0 } from "./vendor.js";
+
 // lazy.js
 const value = f0(3);
+
 export { value };
 
 ```
@@ -30,6 +35,7 @@ export { value };
 ```js
 // main.js
 const app = import("./app.js");
+
 export { app };
 
 ```
@@ -41,6 +47,7 @@ export { app };
 function f0(x) {
 	return x * 2 + 1;
 }
+
 export { f0 as t };
 
 ```

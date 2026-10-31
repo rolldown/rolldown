@@ -15,6 +15,7 @@ function a() {
 var init_leaf_a = __esmMin((() => {
 	globalThis.__log.push("A");
 }));
+
 // leaf_b.js
 var leaf_b_exports = /* @__PURE__ */ __exportAll({ b: () => b });
 function b() {
@@ -23,9 +24,11 @@ function b() {
 var init_leaf_b = __esmMin((() => {
 	globalThis.__log.push("B");
 }));
+
 // barrel.js
 init_leaf_a();
 init_leaf_b();
+
 export { leaf_a_exports as a, init_leaf_a as i, leaf_b_exports as n, a as r, init_leaf_b as t };
 
 ```
@@ -34,6 +37,7 @@ export { leaf_a_exports as a, init_leaf_a as i, leaf_b_exports as n, a as r, ini
 
 ```js
 import { i as init_leaf_a, r as a, t as init_leaf_b } from "./barrel.js";
+
 // main.js
 init_leaf_a();
 globalThis.__log.push("BEFORE_REQUIRE:" + a());

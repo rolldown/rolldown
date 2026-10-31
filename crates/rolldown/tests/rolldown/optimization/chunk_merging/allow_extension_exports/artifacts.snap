@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { n as value1, value1 as value1$1, value2 } from "./libs.js";
 import assert from "node:assert";
+
 // index.js
 assert.strictEqual(value1, "lib1-value");
 assert.strictEqual(value1$1, "conflict-value");
@@ -32,9 +33,11 @@ export { n as value1 } from "./libs.js";
 // HIDDEN [\0rolldown/runtime.js]
 // lib1.js
 const value1$1 = "lib1-value";
+
 // lib2.js
 const value2 = "lib2-value";
 const value1 = "conflict-value";
+
 // lib3.js
 var lib3_exports = /* @__PURE__ */ __exportAll({
 	value3: () => value3,
@@ -42,6 +45,7 @@ var lib3_exports = /* @__PURE__ */ __exportAll({
 });
 const value3 = "lib3-value";
 const value4 = "lib3-value4";
+
 export { value1$1 as n, lib3_exports as t, value1, value2, value3, value4 };
 
 ```

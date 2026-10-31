@@ -87,6 +87,7 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // required.js
 var REQUIRED;
 function init_required() {
@@ -95,6 +96,7 @@ function init_required() {
 		REQUIRED = "required";
 	})))();
 }
+
 // shared.js
 var LOCAL;
 function init_shared() {
@@ -104,6 +106,7 @@ function init_shared() {
 		LOCAL = REQUIRED;
 	})))();
 }
+
 export { init_shared as n, LOCAL as t };
 
 ```
@@ -196,6 +199,7 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // required.js
 var REQUIRED;
 function init_required() {
@@ -204,6 +208,7 @@ function init_required() {
 		REQUIRED = "required";
 	})))();
 }
+
 // shared.js
 var LOCAL;
 function init_shared() {
@@ -213,6 +218,7 @@ function init_shared() {
 		LOCAL = REQUIRED;
 	})))();
 }
+
 export { init_shared as n, LOCAL as t };
 
 ```
@@ -225,12 +231,15 @@ export { init_shared as n, LOCAL as t };
 
 ```js
 import "./shared.js";
+
 // a.js
 const A = { value: "a" };
+
 // lazy-a.js
 function read() {
 	return A;
 }
+
 export { read };
 
 ```
@@ -239,12 +248,15 @@ export { read };
 
 ```js
 import "./shared.js";
+
 // b.js
 const B = { value: "b" };
+
 // lazy-b.js
 function read() {
 	return B;
 }
+
 export { read };
 
 ```
@@ -253,10 +265,12 @@ export { read };
 
 ```js
 import { t as LOCAL } from "./shared.js";
+
 // main.js
 const local = LOCAL;
 const loadA = () => import("./lazy-a.js").then((module) => module.read());
 const loadB = () => import("./lazy-b.js").then((module) => module.read());
+
 export { loadA, loadB, local };
 
 ```
@@ -267,9 +281,11 @@ export { loadA, loadB, local };
 // required.js
 globalThis.events.push("required");
 const REQUIRED = "required";
+
 // shared.js
 globalThis.events.push("shared");
 const LOCAL = REQUIRED;
+
 export { LOCAL as t };
 
 ```

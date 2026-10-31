@@ -38,8 +38,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-"use client";
+'use client';
+
 import { MyPage } from "./mod.js";
+
 // main.js
 console.log(MyPage);
 
@@ -48,11 +50,13 @@ console.log(MyPage);
 ## mod.js
 
 ```js
-"use client";
+'use client';
+
 // mod.js
 function MyPage() {
 	return null;
 }
+
 export { MyPage };
 
 ```

@@ -8,8 +8,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // \0rolldown/runtime.js
 console.log("transform-without-usage");
+
 // entry.js
 const value = "esm-only";
+
 export { value };
 
 ```

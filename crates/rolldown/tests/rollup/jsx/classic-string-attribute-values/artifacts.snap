@@ -7,8 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // h.js
 const h = (type, props) => props;
+
 // main.js
 const props = /* @__PURE__ */ h("input", {
 	title: "Terms & Conditions \"apply\" AB",

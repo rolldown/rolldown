@@ -9,10 +9,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 // a.js
 var require_a = /* @__PURE__ */ __commonJSMin((() => {}));
+
 // b.js
 var require_b = /* @__PURE__ */ __commonJSMin((() => {}));
+
 // d.js
 var require_d = /* @__PURE__ */ __commonJSMin((() => {}));
+
 // entry.js
 try {
 	foo();

@@ -11,6 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 var require_dep$1 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.v = 1;
 }));
+
 var read = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = function(require_dep) {
 		return [require_dep$1().v, require_dep];

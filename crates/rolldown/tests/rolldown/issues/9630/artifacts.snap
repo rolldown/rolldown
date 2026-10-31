@@ -14,6 +14,7 @@ var require_isArrayLike = /* @__PURE__ */ __commonJSMin(((exports) => {
 	}
 	exports.isArrayLike = isArrayLike;
 }));
+
 export { __commonJSMin as n, __toESM as r, require_isArrayLike as t };
 
 ```
@@ -22,6 +23,7 @@ export { __commonJSMin as n, __toESM as r, require_isArrayLike as t };
 
 ```js
 import { n as __commonJSMin, t as require_isArrayLike$1 } from "./isArrayLike.js";
+
 // last.cjs
 var require_last = /* @__PURE__ */ __commonJSMin(((exports) => {
 	var require_isArrayLike = require_isArrayLike$1();
@@ -35,6 +37,7 @@ var require_last = /* @__PURE__ */ __commonJSMin(((exports) => {
 	};
 	exports.last = last;
 }));
+
 export default require_last();
 
 ```
@@ -43,6 +46,8 @@ export default require_last();
 
 ```js
 import { r as __toESM, t as require_isArrayLike } from "./isArrayLike.js";
+
+// main.js
 const eager = (0, require_isArrayLike().isArrayLike)([1]);
 async function lazy() {
 	return (await import("./last.js").then((m) => /* @__PURE__ */ __toESM(m.default))).default.last([
@@ -51,6 +56,7 @@ async function lazy() {
 		3
 	]);
 }
+
 export { eager, lazy };
 
 ```

@@ -9,8 +9,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 // a/foo.js
 var foo_exports$1 = /* @__PURE__ */ __exportAll({ default: () => 1 });
+
 // b/foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({});
+
 export { foo_exports$1 as n, foo_exports as t };
 
 ```
@@ -19,6 +21,7 @@ export { foo_exports$1 as n, foo_exports as t };
 
 ```js
 import assert from "node:assert";
+
 // main.js
 import("./lazy.js").then((n) => n.n).then((a) => assert.strictEqual(a.default, 1));
 import("./lazy.js").then((n) => n.t).then((b) => b);

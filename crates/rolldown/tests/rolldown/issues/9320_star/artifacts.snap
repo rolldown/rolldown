@@ -11,14 +11,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 function formImpl() {
 	return "form-result";
 }
+
 // form.js
 var form_exports = /* @__PURE__ */ __exportAll({ formImpl: () => formImpl });
+
 // action-exports.js
 function actionImpl() {
 	return "action-result";
 }
+
 // action.js
 var action_exports = /* @__PURE__ */ __exportAll({ actionImpl: () => actionImpl });
+
 export { form_exports as n, action_exports as t };
 
 ```

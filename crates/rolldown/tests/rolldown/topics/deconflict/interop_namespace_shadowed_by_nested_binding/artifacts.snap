@@ -14,6 +14,7 @@ var import_dep$1 = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((expo
 function read(import_dep) {
 	return [import_dep$1.v, import_dep];
 }
+
 export { read };
 
 ```

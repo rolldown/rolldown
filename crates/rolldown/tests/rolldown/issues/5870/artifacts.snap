@@ -7,14 +7,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ constant: () => 1 });
 var init_lib = __esmMin((() => {}));
+
 // reexport.js
 init_lib();
+
 // log.js
 assert.strictEqual(1, 1);
+
+// main.js
 (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = (init_lib(), __toCommonJS(lib_exports));
 })))();

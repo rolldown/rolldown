@@ -10,6 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // imp.js
 var imp_exports = /* @__PURE__ */ __exportAll({ imp22: () => 22 });
 const imp22 = 22;
+
 export { imp_exports as n, imp22 as t };
 
 ```
@@ -19,6 +20,7 @@ export { imp_exports as n, imp22 as t };
 ```js
 import "./imp.js";
 import assert from "node:assert";
+
 // main.js
 assert.strictEqual(2, 2);
 assert.strictEqual(22, 22);

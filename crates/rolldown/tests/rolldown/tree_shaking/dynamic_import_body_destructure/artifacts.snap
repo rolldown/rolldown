@@ -10,6 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 const used = "used";
 const reExported = "reExported";
 const member = "member";
+
 export { member, reExported, used };
 
 ```
@@ -29,6 +30,7 @@ const { used } = m;
 const { used: used2 } = m;
 const { reExported } = m;
 console.log(used, used2, m.member);
+
 export { reExported };
 
 ```
@@ -42,6 +44,7 @@ const b = "b";
 const c = "c";
 const d = "d";
 const e = "e";
+
 export { a, b, c, d, e };
 
 ```

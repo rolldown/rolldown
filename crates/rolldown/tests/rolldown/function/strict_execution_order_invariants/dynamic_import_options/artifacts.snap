@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // a.js
 globalThis.events = [];
 const targetPromise = import("./dyn.js").then((n) => (n.t(), n.n));
+
 export { targetPromise };
 
 ```
@@ -32,12 +33,14 @@ init_b();
 
 ```js
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+
 // observer.js
 function init_observer() {
 	return (init_observer = __esmMin((() => {
 		globalThis.events.push(`observer:${Boolean(globalThis.ready)}`);
 	})))();
 }
+
 // target.js
 var target_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
 function init_target() {
@@ -46,6 +49,7 @@ function init_target() {
 		globalThis.ready = true;
 	})))();
 }
+
 export { target_exports as n, init_observer as r, init_target as t };
 
 ```

@@ -63,6 +63,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 // empty.cjs
 var require_empty = /* @__PURE__ */ __commonJSMin((() => {}));
+
 export { __toESM as n, require_empty as t };
 
 ```
@@ -71,6 +72,7 @@ export { __toESM as n, require_empty as t };
 
 ```js
 import { n as __toESM, t as require_empty } from "./empty.js";
+
 // entry-default.js
 var import_empty = /* @__PURE__ */ __toESM(require_empty());
 console.log(void 0, void 0, import_empty.default);
@@ -81,6 +83,7 @@ console.log(void 0, void 0, import_empty.default);
 
 ```js
 import { n as __toESM, t as require_empty } from "./empty.js";
+
 // entry-nope.js
 var import_empty = /* @__PURE__ */ __toESM(require_empty());
 console.log(void 0, void 0, import_empty.nope);

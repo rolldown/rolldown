@@ -12,9 +12,11 @@ var y_default = {
 	y1: true,
 	y2: false
 };
+
 // z.json
 var small = "some small text";
 var _if = "test keyword imports";
+
 // entry.js
 const x_json = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { "x": true };

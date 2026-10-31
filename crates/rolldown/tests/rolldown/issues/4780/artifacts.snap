@@ -11,6 +11,7 @@ const foo = {
 	bar: { 500: 500 }["500"],
 	foo: { k: { v: 0 } }.k.v
 };
+
 export { foo };
 
 ```

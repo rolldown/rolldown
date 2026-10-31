@@ -23,6 +23,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // foo.js
 const foo = { a: 0 };
+
 // main.js
 foo.a = 1;
 (void 0).a = 1;

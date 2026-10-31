@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { Fragment, jsx } from "react/jsx-runtime";
+
 // main.js
 console.log(/* @__PURE__ */ jsx(Fragment, {}));
 

@@ -16,17 +16,20 @@ export { loadRoute };
 
 ```js
 import { a as __toESM, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
+
 // node_modules/required-barrel/cn.js
 var cn;
 var init_cn = __esmMin((() => {
 	globalThis.__events.push("cn");
 	cn = () => "cn";
 }));
+
 // node_modules/required-barrel/clone.cjs
 var require_clone = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("clone");
 	module.exports = (value) => ({ ...value });
 }));
+
 // node_modules/required-barrel/index.js
 var required_barrel_exports = /* @__PURE__ */ __exportAll({
 	clone: () => import_clone.default,
@@ -37,6 +40,7 @@ var init_required_barrel = __esmMin((() => {
 	init_cn();
 	import_clone = /* @__PURE__ */ __toESM(require_clone(), 1);
 }));
+
 // main.js
 var loadRoute;
 function init_main() {
@@ -46,6 +50,7 @@ function init_main() {
 		loadRoute = () => import("./route.js").then((m) => /* @__PURE__ */ __toESM(m.default));
 	})))();
 }
+
 export { required_barrel_exports as i, loadRoute as n, init_required_barrel as r, init_main as t };
 
 ```
@@ -63,12 +68,14 @@ export { __toESM as a, __toCommonJS as i, __esmMin as n, __exportAll as r, __com
 ```js
 import { i as __toCommonJS, t as __commonJSMin } from "./rolldown-runtime.js";
 import { i as required_barrel_exports, r as init_required_barrel } from "./main2.js";
+
 // route.cjs
 var require_route = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const ns = (init_required_barrel(), __toCommonJS(required_barrel_exports));
 	globalThis.__events.push("route");
 	module.exports = ns.clone({ value: 1 });
 }));
+
 export default require_route();
 
 ```
@@ -90,17 +97,20 @@ export { loadRoute };
 
 ```js
 import { a as __toESM, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
+
 // node_modules/required-barrel/cn.js
 var cn;
 var init_cn = __esmMin((() => {
 	globalThis.__events.push("cn");
 	cn = () => "cn";
 }));
+
 // node_modules/required-barrel/clone.cjs
 var require_clone = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("clone");
 	module.exports = (value) => ({ ...value });
 }));
+
 // node_modules/required-barrel/index.js
 var required_barrel_exports = /* @__PURE__ */ __exportAll({
 	clone: () => import_clone.default,
@@ -111,6 +121,7 @@ var init_required_barrel = __esmMin((() => {
 	init_cn();
 	import_clone = /* @__PURE__ */ __toESM(require_clone(), 1);
 }));
+
 // main.js
 var loadRoute;
 function init_main() {
@@ -120,6 +131,7 @@ function init_main() {
 		loadRoute = () => import("./route.js").then((m) => /* @__PURE__ */ __toESM(m.default));
 	})))();
 }
+
 export { required_barrel_exports as i, loadRoute as n, init_required_barrel as r, init_main as t };
 
 ```
@@ -137,12 +149,14 @@ export { __toESM as a, __toCommonJS as i, __esmMin as n, __exportAll as r, __com
 ```js
 import { i as __toCommonJS, t as __commonJSMin } from "./rolldown-runtime.js";
 import { i as required_barrel_exports, r as init_required_barrel } from "./main2.js";
+
 // route.cjs
 var require_route = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const ns = (init_required_barrel(), __toCommonJS(required_barrel_exports));
 	globalThis.__events.push("route");
 	module.exports = ns.clone({ value: 1 });
 }));
+
 export default require_route();
 
 ```

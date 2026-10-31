@@ -8,8 +8,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // ring-b.js
 globalThis.__ringB = "b";
+
 // main.js
 const value = await Promise.resolve("a");
+
 export { value };
 
 ```
@@ -59,8 +61,10 @@ export { value };
 ```js
 // ring-b.js
 globalThis.__ringB = "b";
+
 // main.js
 const value = await Promise.resolve("a");
+
 export { value };
 
 ```

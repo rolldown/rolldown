@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // lib2.js
 var _Test$1;
@@ -32,6 +33,7 @@ assert.strictEqual(Fn(), 1);
 assert.strictEqual(ArrowFn(), 2);
 assert.strictEqual(_Fn$1(), 1);
 assert.strictEqual(_ArrowFn$1(), 2);
+
 // lib.js
 var _Test = class {};
 let _Fn = function() {};

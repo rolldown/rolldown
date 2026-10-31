@@ -7,9 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as vDef } from "./outer-barrel.js";
+
 // a.js
 (globalThis.__events ??= []).push("a");
 const defValue = vDef;
+
 export { defValue };
 
 ```
@@ -18,9 +20,11 @@ export { defValue };
 
 ```js
 import { t as outer_barrel_exports } from "./outer-barrel.js";
+
 // b.js
 (globalThis.__events ??= []).push("b");
 const loaded = typeof outer_barrel_exports === "object";
+
 export { loaded };
 
 ```
@@ -34,14 +38,17 @@ function build() {
 	return { value: 7 };
 }
 const vDef = /* @__PURE__ */ build();
+
 // sibling.js
 (globalThis.__events ??= []).push("sibling");
 const vSib = { value: 3 };
+
 // outer-barrel.js
 var outer_barrel_exports = /* @__PURE__ */ __exportAll({
 	vDef: () => vDef,
 	vSib: () => vSib
 });
+
 export { vDef as n, outer_barrel_exports as t };
 
 ```
@@ -92,6 +99,7 @@ export { loaded };
 
 ```js
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+
 // definer.js
 function build() {
 	return { value: 7 };
@@ -102,6 +110,7 @@ function init_definer() {
 		vDef = /* @__PURE__ */ build();
 	})))();
 }
+
 // sibling.js
 var vSib;
 function init_sibling() {
@@ -110,6 +119,7 @@ function init_sibling() {
 		vSib = { value: 3 };
 	})))();
 }
+
 // inner-barrel.js
 function init_inner_barrel() {
 	return (init_inner_barrel = __esmMin((() => {
@@ -117,6 +127,7 @@ function init_inner_barrel() {
 		init_sibling();
 	})))();
 }
+
 // outer-barrel.js
 var outer_barrel_exports = /* @__PURE__ */ __exportAll({
 	vDef: () => vDef,
@@ -127,6 +138,7 @@ function init_outer_barrel() {
 		init_inner_barrel();
 	})))();
 }
+
 export { vDef as i, outer_barrel_exports as n, init_definer as r, init_outer_barrel as t };
 
 ```

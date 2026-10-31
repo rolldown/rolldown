@@ -39,6 +39,7 @@ globalThis.ready = "ready";
 ```js
 // read.js
 const value = globalThis.ready ?? "unset";
+
 export { value as t };
 
 ```

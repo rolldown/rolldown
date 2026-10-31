@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { jsx } from "react/jsx-runtime";
+
 // main.js
 Foo;
 const b = /* @__PURE__ */ jsx(Foo, {}, 123);

@@ -68,10 +68,12 @@ var reexportDefaultImportOfExternal = (function(exports, node_https) {
 
 ```js
 import node_https from "node:https";
+
 // main.js
 function getAgentCtor() {
 	return node_https.Agent;
 }
+
 export { getAgentCtor };
 
 ```

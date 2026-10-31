@@ -6,9 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+// unrelated.js
 function unrelatedFn() {
 	return "hello";
 }
+
+// main.js
 console.log(unrelatedFn());
 
 ```

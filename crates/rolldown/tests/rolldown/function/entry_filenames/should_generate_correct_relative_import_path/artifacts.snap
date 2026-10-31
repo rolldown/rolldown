@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // async.js
 const value = "async";
+
 export { value };
 
 ```
@@ -17,6 +18,7 @@ export { value };
 ```js
 // shared.js
 const value = "shared";
+
 export { value as t };
 
 ```
@@ -25,8 +27,10 @@ export { value as t };
 
 ```js
 import { t as value } from "../chunks/shared.mjs";
+
 // a.js
 const asyncValue = import("../chunks/async.mjs");
+
 export { asyncValue, value };
 
 ```
@@ -35,8 +39,10 @@ export { asyncValue, value };
 
 ```js
 import { t as value } from "../chunks/shared.mjs";
+
 // b.js
 const asyncValue = import("../chunks/async.mjs");
+
 export { asyncValue, value };
 
 ```

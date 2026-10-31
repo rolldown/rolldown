@@ -42,6 +42,7 @@ export { check };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // node_modules/leaves/group.js
 var make$1, Group;
 function init_group() {
@@ -50,6 +51,7 @@ function init_group() {
 		Group = make$1("Group");
 	})))();
 }
+
 // node_modules/leaves/item.js
 var make, Item;
 function init_item() {
@@ -58,6 +60,7 @@ function init_item() {
 		Item = make("Item");
 	})))();
 }
+
 // motion.js
 var motion$1;
 function init_motion() {
@@ -65,6 +68,7 @@ function init_motion() {
 		motion$1 = {};
 	})))();
 }
+
 // react.js
 var motion;
 function init_react() {
@@ -75,6 +79,7 @@ function init_react() {
 		motion = motion$1;
 	})))();
 }
+
 export { Group as a, init_item as i, motion as n, init_group as o, Item as r, init_react as t };
 
 ```
@@ -115,6 +120,7 @@ export { check };
 // main.js
 const load = () => import("./story.js");
 const loadOther = () => import("./other.js");
+
 export { load, loadOther };
 
 ```
@@ -123,8 +129,10 @@ export { load, loadOther };
 
 ```js
 import { t as motion } from "./react.js";
+
 // other.js
 const check = () => motion;
+
 export { check };
 
 ```
@@ -135,11 +143,14 @@ export { check };
 // node_modules/leaves/group.js
 const make$1 = (name) => ({ name });
 const Group = make$1("Group");
+
 // node_modules/leaves/item.js
 const make = (name) => ({ name });
 const Item = make("Item");
+
 // react.js
 const motion = {};
+
 export { Item as n, Group as r, motion as t };
 
 ```
@@ -148,8 +159,10 @@ export { Item as n, Group as r, motion as t };
 
 ```js
 import { n as Item, r as Group } from "./react.js";
+
 // story.js
 const check = () => [Group, Item];
+
 export { check };
 
 ```

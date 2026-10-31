@@ -15,11 +15,13 @@ export default require_dynamic();
 
 ```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
+
 // dynamic.js
 var require_dynamic = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1e3;
 	globalThis.a = 1e3;
 }));
+
 export { require_dynamic as t };
 
 ```
@@ -90,11 +92,13 @@ export default require_dynamic();
 
 ```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
+
 // dynamic.js
 var require_dynamic = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1e3;
 	globalThis.a = 1e3;
 }));
+
 export { require_dynamic as t };
 
 ```

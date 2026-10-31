@@ -11,6 +11,7 @@ const A = "hello";
 const B = function() {
 	console.log(A);
 };
+
 export { A, B };
 
 ```

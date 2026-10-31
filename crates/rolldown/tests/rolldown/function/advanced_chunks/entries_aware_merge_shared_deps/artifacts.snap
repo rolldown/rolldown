@@ -22,8 +22,10 @@ import "./vendor~entry-a~entry-b.js";
 ```js
 // shared-dep.js
 console.log("shared-dependency-padding-to-make-this-module-large-enough-to-exceed-merge-threshold-when-duplicated");
+
 // lib-a.js
 console.log("lib-a");
+
 // lib-b.js
 console.log("lib-b");
 

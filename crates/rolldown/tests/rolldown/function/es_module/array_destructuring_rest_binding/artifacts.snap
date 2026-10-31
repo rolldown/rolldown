@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // main.js
 const [first, ...rest] = Object.values({
 	a: "1",
@@ -20,6 +21,7 @@ assert.deepStrictEqual(all, [
 	"2",
 	"3"
 ]);
+
 export { all };
 
 ```

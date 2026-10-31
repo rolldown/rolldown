@@ -8,10 +8,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // common-b.js
 const sharedB = "shared-b";
+
 // common-a.js
 function getSharedB() {
 	return sharedB;
 }
+
 export { getSharedB as t };
 
 ```
@@ -20,9 +22,11 @@ export { getSharedB as t };
 
 ```js
 import { t as getSharedB } from "./common-a.js";
+
 // dynamic1.js
 const value = getSharedB();
 console.log(`dynamic1:${value}`);
+
 export { value };
 
 ```
@@ -31,8 +35,10 @@ export { value };
 
 ```js
 import { t as getSharedB } from "./common-a.js";
+
 // dynamic2.js
 const value = getSharedB();
+
 export { value };
 
 ```

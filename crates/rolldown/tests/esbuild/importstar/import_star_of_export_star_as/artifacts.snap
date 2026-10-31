@@ -7,11 +7,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert/strict";
+
 // HIDDEN [\0rolldown/runtime.js]
 // bar.js
 var bar_exports = /* @__PURE__ */ __exportAll({ bar: () => 123 });
+
 // foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({ bar_ns: () => bar_exports });
+
 // entry.js
 console.log(foo_exports);
 assert.deepEqual(foo_exports, Object.defineProperty({ bar_ns: Object.defineProperty({ bar: 123 }, Symbol.toStringTag, { value: "Module" }) }, Symbol.toStringTag, { value: "Module" }));

@@ -25,9 +25,11 @@ let value = "expected";
 function then(resolve) {
 	resolve({ value: "assimilated:" + this.value });
 }
+
 // main.js
 import("./unused.js");
 const load = () => Promise.resolve().then(() => target_exports).then((ns) => ns.value);
+
 export { then as keepThen, load };
 
 ```
@@ -41,6 +43,7 @@ function then(resolve) {
 	globalThis.thenCalled();
 	resolve({});
 }
+
 export { then };
 
 ```

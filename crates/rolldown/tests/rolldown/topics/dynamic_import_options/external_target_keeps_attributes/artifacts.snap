@@ -23,6 +23,7 @@ exports.loaded = loaded;
 ```js
 // main.js
 const loaded = import("external-data.json", { with: { type: "json" } });
+
 export { loaded };
 
 ```

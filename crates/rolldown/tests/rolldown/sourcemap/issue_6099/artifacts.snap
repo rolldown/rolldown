@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+// main.js
 const foo = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.version = "1.0.0";
 	Object.defineProperty(exports, "version", { get() {
@@ -22,37 +23,34 @@ console.log(foo);
 
 ```
 - ../main.js
-(2:0) "const " --> (23:0) "const "
-(2:6) "foo = mod.version.startsWith('1');\n" --> (23:6) "foo = ("
-(2:6) "foo = mod.version.startsWith('1');\n" --> (23:13) "/* @__PURE__ */ "
+(2:0) "const " --> (24:0) "const "
+(2:6) "foo = mod.version.startsWith('1');\n" --> (24:6) "foo = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {\n"
 - ../cjs.js
-(0:0) "exports." --> (24:1) "exports."
-(0:8) "version = " --> (24:9) "version = "
-(0:18) "'1.0.0';\n" --> (24:19) "\"1.0.0\";\n"
-(1:0) "Object." --> (25:1) "Object."
-(1:7) "defineProperty(" --> (25:8) "defineProperty("
-(1:22) "exports, " --> (25:23) "exports, "
-(1:31) "'version', " --> (25:32) "\"version\", "
-(1:42) "{\n" --> (25:43) "{ "
-(2:2) "get() " --> (25:45) "get() "
-(2:8) "{\n" --> (25:51) "{\n"
-(3:4) "throw " --> (26:2) "throw "
-(3:10) "new " --> (26:8) "new "
-(3:14) "Error(" --> (26:12) "Error("
-(3:20) "'see stacktrace'" --> (26:18) "\"see stacktrace\""
-(3:36) ");\n" --> (26:34) ");\n"
-(4:2) "},\n" --> (27:1) "} "
-(5:0) "}" --> (27:3) "}"
-(5:1) ");\n" --> (27:4) ");\n"
+(0:0) "exports." --> (25:1) "exports."
+(0:8) "version = " --> (25:9) "version = "
+(0:18) "'1.0.0';\n" --> (25:19) "\"1.0.0\";\n"
+(1:0) "Object." --> (26:1) "Object."
+(1:7) "defineProperty(" --> (26:8) "defineProperty("
+(1:22) "exports, " --> (26:23) "exports, "
+(1:31) "'version', " --> (26:32) "\"version\", "
+(1:42) "{\n" --> (26:43) "{ "
+(2:2) "get() " --> (26:45) "get() "
+(2:8) "{\n" --> (26:51) "{\n"
+(3:4) "throw " --> (27:2) "throw "
+(3:10) "new " --> (27:8) "new "
+(3:14) "Error(" --> (27:12) "Error("
+(3:20) "'see stacktrace'" --> (27:18) "\"see stacktrace\""
+(3:36) ");\n" --> (27:34) ");\n"
+(4:2) "},\n" --> (28:1) "} "
+(5:0) "}" --> (28:3) "}"
+(5:1) ");\n" --> (28:4) ");\n"
 - ../main.js
-(2:6) "foo = mod." --> (28:6) "))"
-(2:6) "foo = mod." --> (28:8) "."
-(2:16) "version." --> (28:9) "version."
-(2:24) "startsWith(" --> (28:17) "startsWith("
-(2:35) "'1'" --> (28:28) "\"1\""
-(2:38) ");\n" --> (28:31) ");\n"
-(3:0) "console." --> (29:0) "console."
-(3:8) "log(" --> (29:8) "log("
-(3:12) "foo" --> (29:12) "foo"
-(3:15) ");\n" --> (29:15) ");\n"
+(2:16) "version." --> (29:9) "version."
+(2:24) "startsWith(" --> (29:17) "startsWith("
+(2:35) "'1'" --> (29:28) "\"1\""
+(2:38) ");\n" --> (29:31) ");\n"
+(3:0) "console." --> (30:0) "console."
+(3:8) "log(" --> (30:8) "log("
+(3:12) "foo" --> (30:12) "foo"
+(3:15) ");\n" --> (30:15) ");\n"
 ```

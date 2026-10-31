@@ -15,6 +15,7 @@ export { t as log } from "./logger.js";
 ```js
 // b.js
 const b = () => import("./logger.js").then((n) => n.n);
+
 export { b };
 
 ```
@@ -25,6 +26,7 @@ export { b };
 import { t as __exportAll } from "./rolldown-runtime.js";
 import { initValue } from "./init.js";
 import { t as snapshot } from "./common.js";
+
 // namespace.js
 var namespace_exports = /* @__PURE__ */ __exportAll({
 	getReady: () => getReady,
@@ -34,8 +36,10 @@ function getReady() {
 	return initValue();
 }
 const value = snapshot;
+
 // c.js
 const c = namespace_exports;
+
 export { c };
 
 ```
@@ -45,6 +49,7 @@ export { c };
 ```js
 // common.js
 const snapshot = globalThis.ready ?? "unset";
+
 export { snapshot as t };
 
 ```
@@ -57,6 +62,7 @@ globalThis.ready = "ready";
 function initValue() {
 	return globalThis.ready;
 }
+
 export { initValue };
 
 ```
@@ -66,11 +72,13 @@ export { initValue };
 ```js
 import { t as __exportAll } from "./rolldown-runtime.js";
 import { t as snapshot } from "./common.js";
+
 // logger.js
 var logger_exports = /* @__PURE__ */ __exportAll({ log: () => log });
 function log(value) {
 	return `${value} ${snapshot}`;
 }
+
 export { logger_exports as n, log as t };
 
 ```

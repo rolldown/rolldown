@@ -11,10 +11,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 var require_dup$3 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.value = "a";
 }));
+
 // b/dup.cjs
 var require_dup$2 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.value = "b";
 }));
+
+// main.js
 var main_default = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const require_dup = require_dup$3();
 	const require_dup$1 = require_dup$2();
@@ -23,6 +26,7 @@ var main_default = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exp
 		b: require_dup$1.value
 	};
 })))())).default;
+
 export { main_default as default };
 
 ```

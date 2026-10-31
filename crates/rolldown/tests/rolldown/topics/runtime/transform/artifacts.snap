@@ -7,9 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+// entry.js
 const value = (/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.value = "cjs-value";
 })))().value;
+
 export { value };
 
 ```

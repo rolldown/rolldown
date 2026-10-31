@@ -34,6 +34,7 @@ var Foo = class {
 		f()?.foo.#method(x).bar();
 	}
 };
+
 export { Foo };
 
 ```

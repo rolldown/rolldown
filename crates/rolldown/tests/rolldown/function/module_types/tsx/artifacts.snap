@@ -7,11 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { jsx, jsxs } from "react/jsx-runtime";
+
 // main.tsx
 const Hello = () => /* @__PURE__ */ jsx("div", { children: "Hello" });
 function World() {
 	return /* @__PURE__ */ jsxs("div", { children: [/* @__PURE__ */ jsx(Hello, {}), "World"] });
 }
+
 export { World as default };
 
 ```

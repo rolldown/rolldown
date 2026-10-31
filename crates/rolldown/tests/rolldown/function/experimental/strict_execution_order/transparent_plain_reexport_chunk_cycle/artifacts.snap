@@ -61,6 +61,7 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // utilities/index.js
 function hasExpectedValue(actual) {
 	return actual === "expected";
@@ -68,6 +69,7 @@ function hasExpectedValue(actual) {
 function init_utilities() {
 	return (init_utilities = __esmMin((() => {})))();
 }
+
 export { init_utilities as n, hasExpectedValue as t };
 
 ```
@@ -251,6 +253,7 @@ export { __esmMin as t };
 function hasExpectedValue(actual) {
 	return actual === "expected";
 }
+
 export { hasExpectedValue as t };
 
 ```

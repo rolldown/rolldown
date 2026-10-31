@@ -18,6 +18,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 // bar.js
 var nope = void 0;
+
 // entry.js
 console.log(/* @__PURE__ */ __exportAll({ nope: () => nope }));
 

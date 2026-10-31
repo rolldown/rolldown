@@ -11,11 +11,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 * default export function
 */
 function a() {}
+
 // b.js
 /**
 * default export class
 */
 var b = class {};
+
 // main.js
 /**
 * named export function
@@ -35,6 +37,7 @@ var Baz = "baz";
 * stmt
 */
 console.log(666);
+
 export { Bar, Baz, Baz as default, foo };
 
 ```

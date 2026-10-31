@@ -14,6 +14,7 @@ import "./rolldown-runtime.js";
 
 ```js
 import "./rolldown-runtime.js";
+
 // assign.js
 require = x;
 
@@ -23,6 +24,7 @@ require = x;
 
 ```js
 import { t as __require } from "./rolldown-runtime.js";
+
 // dot.js
 __require.cache;
 
@@ -39,6 +41,7 @@ import "./rolldown-runtime.js";
 
 ```js
 import { t as __require } from "./rolldown-runtime.js";
+
 // index.js
 __require[cache];
 

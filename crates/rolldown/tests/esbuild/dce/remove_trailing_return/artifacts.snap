@@ -32,6 +32,7 @@ var entry_default = [
 		return KEEP_ME;
 	}
 ];
+
 export { entry_default as default };
 
 ```

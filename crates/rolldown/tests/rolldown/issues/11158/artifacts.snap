@@ -11,6 +11,7 @@ async function load() {
 	const { lib } = await import("./main2.js").then((n) => n.n);
 	return lib();
 }
+
 export { load };
 
 ```
@@ -31,11 +32,13 @@ var lib_exports = /* @__PURE__ */ __exportAll({ lib: () => lib });
 function lib() {
 	return "lib";
 }
+
 // main.js
 async function main() {
 	const { load } = await import("./adapter.js");
 	return lib() + await load();
 }
+
 export { lib_exports as n, main as t };
 
 ```

@@ -11,9 +11,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 var require_dup$2 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.pair = [{ value: "a" }, { value: "b" }];
 }));
+
+// main.js
 var main_default = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = require_dup$2().pair.map((item) => item.value);
 })))())).default;
+
 export { main_default as default };
 
 ```

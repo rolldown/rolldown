@@ -51,6 +51,7 @@ var Foo = class {
 		fn().#prop ??= 1;
 	}
 };
+
 export { Foo };
 
 ```

@@ -7,8 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as shared } from "./shared.js";
+
 // a.js
 const a = `a:${shared}`;
+
 export { a };
 
 ```
@@ -17,8 +19,10 @@ export { a };
 
 ```js
 import { t as shared } from "./shared.js";
+
 // b.js
 const b = `b:${shared}`;
+
 export { b };
 
 ```
@@ -28,6 +32,7 @@ export { b };
 ```js
 // shared.js
 const shared = await Promise.resolve("shared");
+
 export { shared as t };
 
 ```
@@ -84,6 +89,7 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // shared.js
 var shared;
 function init_shared() {
@@ -91,6 +97,7 @@ function init_shared() {
 		shared = await Promise.resolve("shared");
 	})))();
 }
+
 export { shared as n, init_shared as t };
 
 ```
@@ -103,8 +110,10 @@ export { shared as n, init_shared as t };
 
 ```js
 import { t as shared } from "./shared.js";
+
 // a.js
 const a = `a:${shared}`;
+
 export { a };
 
 ```
@@ -113,8 +122,10 @@ export { a };
 
 ```js
 import { t as shared } from "./shared.js";
+
 // b.js
 const b = `b:${shared}`;
+
 export { b };
 
 ```
@@ -124,6 +135,7 @@ export { b };
 ```js
 // shared.js
 const shared = await Promise.resolve("shared");
+
 export { shared as t };
 
 ```

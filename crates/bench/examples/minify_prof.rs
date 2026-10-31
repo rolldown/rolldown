@@ -4,28 +4,39 @@ use rolldown::{BundlerOptions, SourceMapType};
 #[global_allocator]
 static GLOBAL: mimalloc_safe::MiMalloc = mimalloc_safe::MiMalloc;
 
-fn cpu_ns(clk: i32) -> u64 {
-  #[repr(C)]
-  struct Ts(i64, i64);
-  unsafe extern "C" {
-    fn clock_gettime(clk: i32, ts: *mut Ts) -> i32;
+#[cfg(unix)]
+fn process_cpu_ns() -> u64 {
+  let mut time = libc::timespec { tv_sec: 0, tv_nsec: 0 };
+  // SAFETY: `time` is a valid writable `timespec` for the duration of the call.
+  if unsafe { libc::clock_gettime(libc::CLOCK_PROCESS_CPUTIME_ID, &raw mut time) } != 0 {
+    return 0;
   }
-  let mut t = Ts(0, 0);
-  unsafe { clock_gettime(clk, &raw mut t) };
-  (t.0 as u64) * 1_000_000_000 + t.1 as u64
+  (time.tv_sec as u64) * 1_000_000_000 + time.tv_nsec as u64
+}
+
+#[cfg(not(unix))]
+fn process_cpu_ns() -> u64 {
+  0
 }
 
 /// Peak resident set size of this process in MiB (`getrusage(RUSAGE_SELF).ru_maxrss`).
+#[cfg(unix)]
 fn max_rss_mib() -> f64 {
-  // `struct rusage`: two `timeval`s (4 longs), then `ru_maxrss` (KiB on Linux), then 13 longs.
-  #[repr(C)]
-  struct Rusage([i64; 18]);
-  unsafe extern "C" {
-    fn getrusage(who: i32, usage: *mut Rusage) -> i32;
+  let mut usage = std::mem::MaybeUninit::<libc::rusage>::uninit();
+  // SAFETY: `usage` points to writable storage for `rusage` and is only read after success.
+  if unsafe { libc::getrusage(libc::RUSAGE_SELF, usage.as_mut_ptr()) } != 0 {
+    return 0.0;
   }
-  let mut r = Rusage([0; 18]);
-  unsafe { getrusage(0, &raw mut r) };
-  r.0[4] as f64 / 1024.0
+  // SAFETY: `getrusage` initialized `usage` when it returned success.
+  let max_rss = unsafe { usage.assume_init() }.ru_maxrss as f64;
+  // macOS reports bytes; Linux and the other supported Unix targets report KiB.
+  let bytes_per_unit = if cfg!(target_vendor = "apple") { 1.0 } else { 1024.0 };
+  max_rss * bytes_per_unit / (1024.0 * 1024.0)
+}
+
+#[cfg(not(unix))]
+fn max_rss_mib() -> f64 {
+  0.0
 }
 
 fn main() {
@@ -55,8 +66,10 @@ fn main() {
   if std::env::var_os("NO_MAP").is_none() {
     opts.sourcemap = Some(SourceMapType::File);
   }
-  if args[3] == "off" {
-    opts.minify = Some(false.into());
+  match args[3].as_str() {
+    "off" => opts.minify = Some(false.into()),
+    "full" => opts.minify = Some(true.into()),
+    _ => {}
   }
   if std::env::var("PLATFORM").is_ok_and(|p| p == "node") {
     opts.platform = Some(rolldown::Platform::Node);
@@ -64,7 +77,7 @@ fn main() {
   let out = args.get(4).cloned();
   let mut ctx = create_bench_context(&opts);
   let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
-  let p0 = cpu_ns(2); // CLOCK_PROCESS_CPUTIME_ID
+  let p0 = process_cpu_ns();
   let w0 = std::time::Instant::now();
   for i in 0..iters {
     let bundle = ctx.factory.create_bundle_with_fs(ctx.mem_fs.clone(), ctx.create_resolver());
@@ -81,7 +94,7 @@ fn main() {
     }
   }
   let wall = w0.elapsed().as_secs_f64() * 1e3;
-  let proc_cpu = (cpu_ns(2) - p0) as f64 / 1e6;
+  let proc_cpu = (process_cpu_ns() - p0) as f64 / 1e6;
   let fast = std::env::var("ROLLDOWN_CHUNK_AST_DCE").unwrap_or_default();
   println!(
     "{} {} ast_dce={fast} iters={iters} wall={wall:.0}ms proc_cpu={proc_cpu:.0}ms max_rss={:.0}MiB {}",

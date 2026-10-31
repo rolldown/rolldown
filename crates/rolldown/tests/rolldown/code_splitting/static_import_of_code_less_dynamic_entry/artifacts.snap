@@ -9,8 +9,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 // foo.js
 const foo = "foo";
+
 // dynamic.js
 var dynamic_exports = /* @__PURE__ */ __exportAll({ foo: () => "foo" });
+
 export { foo as n, dynamic_exports as t };
 
 ```
@@ -19,6 +21,7 @@ export { foo as n, dynamic_exports as t };
 
 ```js
 import "./dynamic.js";
+
 // main1.js
 console.log("foo");
 

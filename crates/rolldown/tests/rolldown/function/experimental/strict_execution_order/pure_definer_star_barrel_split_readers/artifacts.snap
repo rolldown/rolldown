@@ -7,9 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as vDef } from "./barrel.js";
+
 // a.js
 (globalThis.__events ??= []).push("a");
 const defValue = vDef;
+
 export { defValue };
 
 ```
@@ -18,9 +20,11 @@ export { defValue };
 
 ```js
 import { t as vSib } from "./barrel.js";
+
 // b.js
 (globalThis.__events ??= []).push("b");
 const sibValue = vSib;
+
 export { sibValue };
 
 ```
@@ -33,9 +37,11 @@ function build() {
 	return { value: 7 };
 }
 const vDef = /* @__PURE__ */ build();
+
 // sibling.js
 (globalThis.__events ??= []).push("sibling");
 const vSib = { value: 3 };
+
 export { vDef as n, vSib as t };
 
 ```
@@ -86,6 +92,7 @@ export { sibValue };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // definer.js
 function build() {
 	return { value: 7 };
@@ -96,6 +103,7 @@ function init_definer() {
 		vDef = /* @__PURE__ */ build();
 	})))();
 }
+
 // sibling.js
 var vSib;
 function init_sibling() {
@@ -104,6 +112,7 @@ function init_sibling() {
 		vSib = { value: 3 };
 	})))();
 }
+
 // barrel.js
 function init_barrel() {
 	return (init_barrel = __esmMin((() => {
@@ -111,6 +120,7 @@ function init_barrel() {
 		init_sibling();
 	})))();
 }
+
 export { vDef as a, init_definer as i, init_sibling as n, vSib as r, init_barrel as t };
 
 ```

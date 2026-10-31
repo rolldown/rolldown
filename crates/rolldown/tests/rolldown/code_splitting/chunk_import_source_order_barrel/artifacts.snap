@@ -16,8 +16,10 @@ import "./init.js";
 ```js
 import "./init.js";
 import { t as value } from "./read.js";
+
 // b.js
 const result = value;
+
 export { result };
 
 ```
@@ -42,6 +44,7 @@ globalThis.ready = "ready";
 ```js
 // read.js
 const value = globalThis.ready ?? "unset";
+
 export { value as t };
 
 ```

@@ -17,6 +17,7 @@ var __exportAll = (all, no_symbols) => {
 	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
 	return target;
 };
+
 // a.js
 console.log("A", Object.keys(/* @__PURE__ */ __exportAll({ c: () => 1 })).join());
 
@@ -27,8 +28,10 @@ console.log("A", Object.keys(/* @__PURE__ */ __exportAll({ c: () => 1 })).join()
 ```js
 import { t as p } from "./group-b.js";
 import "./a.js";
+
 // q.js
 console.log("Q");
+
 // e0.js
 console.log("E0", Object.keys(p).join());
 
@@ -38,6 +41,7 @@ console.log("E0", Object.keys(p).join());
 
 ```js
 import "./a.js";
+
 // e1.js
 console.log("E1");
 
@@ -48,8 +52,10 @@ console.log("E1");
 ```js
 // p.js
 const p = {};
+
 // b.js
 console.log("B");
+
 export { p as t };
 
 ```

@@ -25,12 +25,14 @@ init_main();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // reader.js
 function init_reader() {
 	return (init_reader = __esmMin((() => {
 		console.log(globalThis.setupValue);
 	})))();
 }
+
 export { init_reader as t };
 
 ```
@@ -74,12 +76,14 @@ init_main();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // reader.js
 function init_reader() {
 	return (init_reader = __esmMin((() => {
 		console.log(globalThis.setupValue);
 	})))();
 }
+
 export { init_reader as t };
 
 ```

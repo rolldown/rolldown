@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // main.js
 const NOT_THROWN = Symbol("not thrown");
 (async () => {
@@ -63,17 +64,20 @@ throw null;
 
 ```js
 import assert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // throws_error.js
 var throws_error_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
 var init_throws_error = __esmMin((() => {
 	throw new Error("evaluation error");
 }));
+
 // throws_null.js
 var throws_null_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
 var init_throws_null = __esmMin((() => {
 	throw null;
 }));
+
 // main.js
 const NOT_THROWN = Symbol("not thrown");
 (async () => {

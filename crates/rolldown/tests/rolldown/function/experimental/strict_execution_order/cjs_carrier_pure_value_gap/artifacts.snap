@@ -45,10 +45,12 @@ init_main();
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
+
 // node_modules/pure-carrier/index.js
 function init_pure_carrier() {
 	return (init_pure_carrier = __esmMin((() => {})))();
 }
+
 export { init_pure_carrier as t };
 
 ```
@@ -57,6 +59,7 @@ export { init_pure_carrier as t };
 
 ```js
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
+
 // node_modules/pure-cjs/index.cjs
 var require_pure_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { snapshot: globalThis.__strict_order_value ?? "stale" };
@@ -67,6 +70,7 @@ function init_pure_carrier_cjs_0() {
 		import_pure_cjs = require_pure_cjs();
 	})))();
 }
+
 export { init_pure_carrier_cjs_0 as n, require_pure_cjs as r, import_pure_cjs as t };
 
 ```
@@ -77,6 +81,7 @@ export { init_pure_carrier_cjs_0 as n, require_pure_cjs as r, import_pure_cjs as
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { n as init_pure_carrier_cjs_0, t as import_pure_cjs } from "./pure-cjs.js";
 import "./pure-carrier.js";
+
 // reader.js
 function read() {
 	return import_pure_cjs.snapshot;
@@ -86,6 +91,7 @@ function init_reader() {
 		init_pure_carrier_cjs_0();
 	})))();
 }
+
 export { read as n, init_reader as t };
 
 ```
@@ -103,6 +109,7 @@ var __esmMin = (fn, res, err) => () => {
 	}
 };
 var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
+
 export { __esmMin as n, __commonJSMin as t };
 
 ```
@@ -188,10 +195,12 @@ init_main();
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
+
 // node_modules/pure-carrier/index.js
 function init_pure_carrier() {
 	return (init_pure_carrier = __esmMin((() => {})))();
 }
+
 export { init_pure_carrier as t };
 
 ```
@@ -200,6 +209,7 @@ export { init_pure_carrier as t };
 
 ```js
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
+
 // node_modules/pure-cjs/index.cjs
 var require_pure_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { snapshot: globalThis.__strict_order_value ?? "stale" };
@@ -210,6 +220,7 @@ function init_pure_carrier_cjs_0() {
 		import_pure_cjs = require_pure_cjs();
 	})))();
 }
+
 export { init_pure_carrier_cjs_0 as n, require_pure_cjs as r, import_pure_cjs as t };
 
 ```
@@ -220,6 +231,7 @@ export { init_pure_carrier_cjs_0 as n, require_pure_cjs as r, import_pure_cjs as
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { n as init_pure_carrier_cjs_0, t as import_pure_cjs } from "./pure-cjs.js";
 import "./pure-carrier.js";
+
 // reader.js
 function read() {
 	return import_pure_cjs.snapshot;
@@ -229,6 +241,7 @@ function init_reader() {
 		init_pure_carrier_cjs_0();
 	})))();
 }
+
 export { read as n, init_reader as t };
 
 ```
@@ -246,6 +259,7 @@ var __esmMin = (fn, res, err) => () => {
 	}
 };
 var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
+
 export { __esmMin as n, __commonJSMin as t };
 
 ```

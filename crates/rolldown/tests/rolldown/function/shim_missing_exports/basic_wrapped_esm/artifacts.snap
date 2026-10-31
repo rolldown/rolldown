@@ -16,13 +16,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+// foo.js
 var missing;
 var init_foo = __esmMin((() => {
 	missing = void 0;
 }));
+
 // main.js
 init_foo();
 init_foo();
+
 export { missing };
 
 ```

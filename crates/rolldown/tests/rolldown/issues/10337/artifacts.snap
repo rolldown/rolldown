@@ -23,8 +23,10 @@ var MeshBVH = class {
 		this.name = "MeshBVH";
 	}
 };
+
 // three-mesh-bvh/index.js
 var three_mesh_bvh_exports = /* @__PURE__ */ __exportAll({ MeshBVH: () => MeshBVH });
+
 export { three_mesh_bvh_exports as t };
 
 ```

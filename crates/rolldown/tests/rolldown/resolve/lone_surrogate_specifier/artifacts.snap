@@ -10,6 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // d�.js
 const d = "d";
+
 export { d };
 
 ```
@@ -19,19 +20,24 @@ export { d };
 ```js
 import assert from "node:assert";
 import fs from "node:fs";
+
 // HIDDEN [\0rolldown/runtime.js]
 // b�.js
 const b = "b";
+
 // c�.js
 const c = "c";
+
 // e�.cjs
 var require_e_ = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "e";
 }));
+
 // f�.cjs
 var require_f_ = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "f";
 }));
+
 // main.js
 assert.strictEqual("a", "a");
 assert.strictEqual((await import("./d�.js")).d, "d");
@@ -52,6 +58,7 @@ const ignoredUrl = new URL(
 	import.meta.url
 );
 const dataUrl = new URL("data:text/plain,\ud800", import.meta.url);
+
 export { b, c, dataUrl, ignored, ignoredUrl };
 
 ```

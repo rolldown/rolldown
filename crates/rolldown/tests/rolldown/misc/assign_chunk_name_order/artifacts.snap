@@ -16,6 +16,7 @@ console.log("file");
 ```js
 // 1/file.js
 const value = "a";
+
 export { value };
 
 ```
@@ -25,6 +26,7 @@ export { value };
 ```js
 // 2/file.js
 const value = "b";
+
 export { value };
 
 ```
@@ -34,6 +36,7 @@ export { value };
 ```js
 // 3/file.js
 const value = "c";
+
 export { value };
 
 ```
@@ -43,6 +46,7 @@ export { value };
 ```js
 // 4/file.js
 const value = "d";
+
 export { value };
 
 ```
@@ -52,6 +56,7 @@ export { value };
 ```js
 // 5/file.js
 const value = "e";
+
 export { value };
 
 ```
@@ -61,6 +66,7 @@ export { value };
 ```js
 // 6/file.js
 const value = "f";
+
 export { value };
 
 ```
@@ -70,6 +76,7 @@ export { value };
 ```js
 // 7/file.js
 const value = "g";
+
 export { value };
 
 ```
@@ -78,6 +85,7 @@ export { value };
 
 ```js
 import "./file.js";
+
 // main.js
 import("./file2.js").then(console.log);
 import("./file3.js").then(console.log);

@@ -10,6 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 function x() {
 	return 1;
 }
+
 export { x as t };
 
 ```
@@ -84,6 +85,7 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // bridge.js
 function x() {
 	return 1;
@@ -91,6 +93,7 @@ function x() {
 function init_bridge() {
 	return (init_bridge = __esmMin((() => {})))();
 }
+
 export { x as n, init_bridge as t };
 
 ```

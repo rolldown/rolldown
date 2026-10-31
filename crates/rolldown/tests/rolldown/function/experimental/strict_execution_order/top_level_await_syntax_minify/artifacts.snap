@@ -6,7 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-async function e(){console.log(`foo`)}await e();
+async function e(){console.log(`foo`)}
+await e();
 ```
 
 # Variant: wrap-all: [on_demand_wrapping: false]

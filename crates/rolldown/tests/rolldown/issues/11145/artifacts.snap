@@ -60,6 +60,7 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // shared.js
 var LOCAL;
 function init_shared() {
@@ -67,6 +68,7 @@ function init_shared() {
 		LOCAL = "local";
 	})))();
 }
+
 export { init_shared as n, LOCAL as t };
 
 ```
@@ -132,6 +134,7 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // shared.js
 var LOCAL;
 function init_shared() {
@@ -139,6 +142,7 @@ function init_shared() {
 		LOCAL = "local";
 	})))();
 }
+
 export { init_shared as n, LOCAL as t };
 
 ```
@@ -152,10 +156,12 @@ export { init_shared as n, LOCAL as t };
 ```js
 // values.js
 const LAZY = "lazy";
+
 // lazy.js
 function read() {
 	return LAZY;
 }
+
 export { read };
 
 ```
@@ -164,9 +170,11 @@ export { read };
 
 ```js
 import { t as LOCAL } from "./shared.js";
+
 // main.js
 const local = LOCAL;
 const load = () => import("./lazy.js").then((module) => module.read());
+
 export { load, local };
 
 ```
@@ -176,6 +184,7 @@ export { load, local };
 ```js
 // shared.js
 const LOCAL = "local";
+
 export { LOCAL as t };
 
 ```

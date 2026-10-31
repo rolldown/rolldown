@@ -12,6 +12,7 @@ function hello(name) {
 }
 const foo = "bar";
 const x = 1;
+
 export { foo, hello, x };
 
 ```

@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 // url.js
 var URL = class {};
+
 // main.js
 function createURL() {
 	return class URL$1 extends URL {
@@ -42,6 +43,7 @@ function wrapper3() {
 		myClass
 	};
 }
+
 export { createFn, createURL, wrapper1, wrapper2, wrapper3 };
 
 ```

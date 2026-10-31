@@ -23,6 +23,7 @@ To fix:
 ```js
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 import { r as value$1, t as init_second } from "./second.js";
+
 // first.js
 var first_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 var value;
@@ -32,6 +33,7 @@ function init_first() {
 		value = "first" + value$1;
 	})))();
 }
+
 export { init_first as n, value as r, first_exports as t };
 
 ```
@@ -67,6 +69,7 @@ export { __exportAll as n, __esmMin as t };
 ```js
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_first, r as value$1 } from "./first.js";
+
 // second.js
 var second_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 var value;
@@ -76,6 +79,7 @@ function init_second() {
 		value = "second" + value$1;
 	})))();
 }
+
 export { second_exports as n, value as r, init_second as t };
 
 ```
@@ -104,6 +108,7 @@ To fix:
 ```js
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 import { r as value$1, t as init_second } from "./second.js";
+
 // first.js
 var first_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 var value;
@@ -113,6 +118,7 @@ function init_first() {
 		value = "first" + value$1;
 	})))();
 }
+
 export { init_first as n, value as r, first_exports as t };
 
 ```
@@ -148,6 +154,7 @@ export { __exportAll as n, __esmMin as t };
 ```js
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_first, r as value$1 } from "./first.js";
+
 // second.js
 var second_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 var value;
@@ -157,6 +164,7 @@ function init_second() {
 		value = "second" + value$1;
 	})))();
 }
+
 export { second_exports as n, value as r, init_second as t };
 
 ```

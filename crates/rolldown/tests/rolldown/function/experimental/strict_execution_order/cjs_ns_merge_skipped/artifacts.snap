@@ -13,6 +13,7 @@ var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((export
 	module.exports = { value: 1 };
 })))());
 const fromLib = import_cjs.default.value;
+
 // main.js
 console.log("main", fromLib, import_cjs.default.value);
 
@@ -65,7 +66,10 @@ var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	console.log("cjs");
 	module.exports = { value: 1 };
 }));
+
+// lib.js
 const fromLib = (/* @__PURE__ */ __toESM(require_cjs())).default.value;
+
 // main.js
 var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
 console.log("main", fromLib, import_cjs.default.value);

@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import "rewritten-./static.css";
+
 // HIDDEN [\0rolldown/runtime.js]
 // entry.js
 import("rewritten-./dynamic.css");

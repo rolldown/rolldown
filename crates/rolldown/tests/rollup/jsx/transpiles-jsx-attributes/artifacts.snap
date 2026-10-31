@@ -9,13 +9,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 // dep1.js
 const Foo$2 = () => {};
 console.log(Foo$2, "value 1");
+
 // dep2.js
 const Foo$1 = () => {};
 const value$1 = "value 2";
 console.log(Foo$1, value$1);
+
 // dep3.js
 const Foo = () => {};
 console.log(Foo, "value 3");
+
 // main.js
 const result = /* @__PURE__ */ React.createElement(Foo$1, {
 	bar: true,
@@ -24,6 +27,7 @@ const result = /* @__PURE__ */ React.createElement(Foo$1, {
 	element: /* @__PURE__ */ React.createElement(Foo$1, null),
 	fragment: /* @__PURE__ */ React.createElement(React.Fragment, null)
 });
+
 export { result };
 
 ```

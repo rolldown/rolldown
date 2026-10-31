@@ -51,9 +51,26 @@ use crate::{
 
 use super::inline_common_chunks::InlineCommonChunksState;
 
+#[cfg(feature = "testing")]
+mod coverage;
 mod global;
+mod owned;
 
-pub use global::{dedupe_sources, print_module};
+#[cfg(feature = "testing")]
+pub(super) use coverage::record as record_coverage;
+
+macro_rules! reject {
+  ($condition:expr, $options:expr, $stage:literal, $reason:literal, $chunk:expr, $result:expr) => {
+    if $condition {
+      #[cfg(feature = "testing")]
+      coverage::record($options, $stage, $reason, $chunk);
+      return $result;
+    }
+  };
+}
+
+pub use global::dedupe_sources;
+pub(super) use owned::{ChunkAst, PreparedChunk};
 
 static ENABLED: LazyLock<bool> = LazyLock::new(|| {
   std::env::var_os("ROLLDOWN_CHUNK_AST_DCE")
@@ -104,32 +121,87 @@ pub fn build_eligible<'o>(
   plugin_driver: &SharedPluginDriver,
   inline_state: &InlineCommonChunksState,
 ) -> Option<&'o OxcMinifierOptions> {
-  if !*ENABLED {
-    return None;
-  }
-  // Full minify can mangle and join statements across modules: not covered.
-  let MinifyOptions::DeadCodeEliminationOnly(minify_options) = &options.minify else {
-    return None;
+  reject!(!*ENABLED, options, "build", "disabled", None, None);
+  let minify_options = match &options.minify {
+    MinifyOptions::DeadCodeEliminationOnly(minify_options) => minify_options,
+    MinifyOptions::Enabled(minify) => {
+      reject!(
+        minify.options.mangle_properties.is_some(),
+        options,
+        "build",
+        "property_mangle",
+        None,
+        None
+      );
+      &minify.options
+    }
+    MinifyOptions::Disabled => {
+      #[cfg(feature = "testing")]
+      coverage::record(options, "build", "minify_disabled", None);
+      return None;
+    }
   };
-  let eligible = minify_options.mangle.is_none()
-    && minify_options.mangle_properties.is_none()
-    && minify_options.compress.is_some()
-    && matches!(options.format, OutputFormat::Esm)
-    && !options.is_dev_mode_enabled()
-    // `renderChunk` plugins operate on (and may change) the chunk text before minify.
-    && user_render_chunk_plugins(plugin_driver) == 0
-    // intro/outro are code that the re-parse would also DCE.
-    && options.intro.is_none()
-    && options.outro.is_none()
-    && plugin_driver.order_by_intro_meta.is_empty()
-    && plugin_driver.order_by_outro_meta.is_empty()
-    && !inline_state.has_records()
-    // The re-parse also DCEs (and syntax-checks) banner/footer code. Only comment-only static
-    // banners/footers pass through; functions and plugin hooks are not known up front.
-    && addon_is_comment_only(options.banner.as_ref())
-    && addon_is_comment_only(options.footer.as_ref())
-    && plugin_driver.order_by_banner_meta.is_empty()
-    && plugin_driver.order_by_footer_meta.is_empty();
+  reject!(
+    minify_options.compress.is_none() && minify_options.mangle.is_none(),
+    options,
+    "build",
+    "no_compress_or_mangle",
+    None,
+    None
+  );
+  reject!(!matches!(options.format, OutputFormat::Esm), options, "build", "format", None, None);
+  reject!(options.is_dev_mode_enabled(), options, "build", "dev_mode", None, None);
+  // `renderChunk` plugins operate on chunk text before the original minifier.
+  reject!(
+    user_render_chunk_plugins(plugin_driver) != 0,
+    options,
+    "build",
+    "render_chunk_plugin",
+    None,
+    None
+  );
+  // Intro/outro are executable code that the original reparse also optimizes.
+  reject!(options.intro.is_some(), options, "build", "intro", None, None);
+  reject!(options.outro.is_some(), options, "build", "outro", None, None);
+  reject!(
+    !plugin_driver.order_by_intro_meta.is_empty(),
+    options,
+    "build",
+    "intro_hook",
+    None,
+    None
+  );
+  reject!(
+    !plugin_driver.order_by_outro_meta.is_empty(),
+    options,
+    "build",
+    "outro_hook",
+    None,
+    None
+  );
+  reject!(inline_state.has_records(), options, "build", "inline_records", None, None);
+  // Only comment-only static banners/footers are known safe before rendering.
+  reject!(!addon_is_comment_only(options.banner.as_ref()), options, "build", "banner", None, None);
+  reject!(!addon_is_comment_only(options.footer.as_ref()), options, "build", "footer", None, None);
+  reject!(
+    !plugin_driver.order_by_banner_meta.is_empty(),
+    options,
+    "build",
+    "banner_hook",
+    None,
+    None
+  );
+  reject!(
+    !plugin_driver.order_by_footer_meta.is_empty(),
+    options,
+    "build",
+    "footer_hook",
+    None,
+    None
+  );
+  let eligible = true;
+  #[cfg(feature = "testing")]
+  coverage::record(options, "build", "eligible", None);
   if std::env::var_os("ROLLDOWN_CHUNK_AST_DCE_DEBUG").is_some() {
     eprintln!(
       "chunk_ast_dce build_eligible={eligible} mangle={} mangle_props={} compress={} format={:?} \
@@ -165,75 +237,118 @@ fn addon_is_comment_only(addon: Option<&AddonOutputOption>) -> bool {
   }
 }
 
-/// `renderChunk` plugins other than the builtin asset/copy plugins, which only replace emitted-file
-/// placeholders inside string literals (DCE is indifferent to that text, so they can run on the
-/// DCE'd text as they do on the minified text today), and the test harness's region-marker plugin,
-/// which only rewrites comment lines. PoC-only: a real version needs a plugin-declared contract
-/// instead of names.
+/// `renderChunk` plugins other than the builtin asset/copy plugins (chunks with emitted-file
+/// placeholders are excluded by `chunk_eligible`) and the test harness's region-marker plugin,
+/// which only rewrites comment lines. Concrete identity prevents custom plugins from bypassing
+/// the gate by using one of their names.
 fn user_render_chunk_plugins(plugin_driver: &SharedPluginDriver) -> usize {
   plugin_driver
     .order_by_render_chunk_meta
     .iter()
-    .filter(|idx| {
-      !matches!(
-        &*plugin_driver.plugins()[**idx].call_name(),
-        "builtin:asset-module" | "builtin:copy-module" | "rolldown-testing:hidden-module-markers"
-      )
-    })
+    .filter(|idx| !render_chunk_plugin_is_safe(&plugin_driver.plugins()[**idx]))
     .count()
+}
+
+fn render_chunk_plugin_is_safe(plugin: &rolldown_plugin::Pluginable) -> bool {
+  if plugin.is::<rolldown_plugin_asset_module::AssetModulePlugin>()
+    || plugin.is::<rolldown_plugin_copy_module::CopyModulePlugin>()
+  {
+    return true;
+  }
+  #[cfg(feature = "testing")]
+  if plugin.is::<rolldown_plugin_utils::hidden_module_markers::HiddenModuleMarkersPlugin>() {
+    return true;
+  }
+  false
 }
 
 /// Per-chunk checks: the chunk text must consist only of module code, generated imports and
 /// exports, and passthrough addons.
-pub fn chunk_eligible(ctx: &GenerateContext<'_>, asts: &[&mut EcmaAst]) -> bool {
+pub fn chunk_eligible(ctx: &GenerateContext<'_>, asts: &[&EcmaAst]) -> bool {
   let chunk = ctx.chunk;
   let filename =
     chunk.preliminary_filename.as_deref().map(arcstr::ArcStr::as_str).unwrap_or_default();
-  if filename.ends_with(".d.ts") || filename.ends_with(".d.cts") || filename.ends_with(".d.mts") {
-    return false;
-  }
+  reject!(
+    filename.ends_with(".d.ts") || filename.ends_with(".d.cts") || filename.ends_with(".d.mts"),
+    ctx.options,
+    "chunk",
+    "declaration",
+    Some(filename),
+    false
+  );
   // Concatenated wrapped modules emit hoisted vars/fns and `__esm` wrappers as text.
-  if !chunk.module_groups.is_empty() {
-    return false;
-  }
+  reject!(
+    !chunk.module_groups.is_empty(),
+    ctx.options,
+    "chunk",
+    "module_groups",
+    Some(filename),
+    false
+  );
   // A CJS-wrapped ESM entry renders `export default require_x();`, which parses into the tail.
   // Other wrapped-entry shapes (init calls of order-wrapped ESM) are not covered.
-  if render_wrapped_entry_chunk(ctx, None).is_some()
-    && !matches!(
-      ctx.chunk.kind,
-      ChunkKind::EntryPoint { module, .. }
-        if matches!(ctx.link_output.metas[module].wrap_kind(), WrapKind::Cjs)
-    )
-  {
-    return false;
-  }
+  reject!(
+    render_wrapped_entry_chunk(ctx, None).is_some()
+      && !matches!(
+        ctx.chunk.kind,
+        ChunkKind::EntryPoint { module, .. }
+          if matches!(ctx.link_output.metas[module].wrap_kind(), WrapKind::Cjs)
+      ),
+    ctx.options,
+    "chunk",
+    "wrapped_entry",
+    Some(filename),
+    false
+  );
   let module_table = &ctx.link_output.module_table;
   let all_plain = chunk
     .modules
     .iter()
     .all(|idx| module_table[*idx].as_normal().is_none_or(|m| m.ecma_view.mutations.is_empty()));
-  if !all_plain {
-    return false;
-  }
+  reject!(!all_plain, ctx.options, "chunk", "mutations", Some(filename), false);
   // Module bodies are expected to have no module declarations after finalization: they would be
   // confused with the generated head/tail.
-  asts.iter().all(|ast| !ast.program().body.iter().any(Statement::is_module_declaration))
+  reject!(
+    asts.iter().any(|ast| ast.program().body.iter().any(Statement::is_module_declaration)),
+    ctx.options,
+    "chunk",
+    "module_declaration",
+    Some(filename),
+    false
+  );
+  // Builtin renderChunk hooks resolve these strings before the normal minify pass. Running the
+  // minifier first can fold operations on the placeholder or print it with backticks, which the
+  // emitted-file rewriter does not recognize. Copy-module references also occur in generated
+  // imports/exports, so checking module source alone is insufficient.
+  // See internal-docs/plugin-asset-module/implementation.md.
+  reject!(
+    asts.iter().any(|ast| has_emitted_file_placeholder(ast.program().source_text))
+      || render_esm_chunk_imports(ctx).as_deref().is_some_and(has_emitted_file_placeholder)
+      || render_wrapped_entry_chunk(ctx, None).as_deref().is_some_and(has_emitted_file_placeholder)
+      || render_chunk_exports(ctx, None).as_deref().is_some_and(has_emitted_file_placeholder),
+    ctx.options,
+    "chunk",
+    "emitted_file_placeholder",
+    Some(filename),
+    false
+  );
+  #[cfg(feature = "testing")]
+  coverage::record(ctx.options, "chunk", "eligible", Some(filename));
+  true
 }
 
-/// Runs DCE on the chunk assembled from `asts` (in `chunk.modules` order) and writes the DCE'd
-/// statements back into each module's program.
-///
-/// # Lifetimes
-///
-/// Statements are moved between programs whose arenas differ, so their lifetimes are erased with
-/// `transmute`. `allocator` receives every node the minifier creates, and those nodes end up in
-/// the module programs, so `allocator` must outlive every use of `asts` (the caller drops it
-/// after the module ASTs are printed and dropped).
+fn has_emitted_file_placeholder(text: &str) -> bool {
+  text.contains("__ROLLDOWN_ASSET__#") || text.contains("__ROLLDOWN_COPY_MODULE__#")
+}
+
+/// Prepares roots exclusively owned by `ChunkAst`. Its intact donor cells and stable scratch
+/// arena outlive all roots, including unwinding. No mixed program is put back into `EcmaAst`.
 #[expect(clippy::print_stderr, reason = "PoC debug output behind an env var")]
-pub fn dce_chunk(
+fn dce_chunk(
   ctx: &GenerateContext<'_>,
   allocator: &Allocator,
-  asts: &mut [&mut EcmaAst],
+  asts: &mut [owned::ChunkProgram],
+  source_text: &mut Option<std::sync::Arc<str>>,
   minify_options: &OxcMinifierOptions,
 ) -> ChunkAstDceOutput {
   let t = Timer::start();
@@ -251,6 +366,13 @@ pub fn dce_chunk(
   // Without sourcemaps, `ROLLDOWN_CHUNK_AST_DCE=nobarrier` drops the markers, so oxc may move
   // code across module boundaries like it does on the re-parsed text; see `split_by_address`.
   if *GLOBAL {
+    #[cfg(feature = "testing")]
+    coverage::record(
+      ctx.options,
+      "execute",
+      "global",
+      ctx.chunk.preliminary_filename.as_deref().map(arcstr::ArcStr::as_str),
+    );
     let modules: Vec<_> = ctx
       .chunk
       .modules
@@ -258,12 +380,27 @@ pub fn dce_chunk(
       .filter_map(|idx| ctx.link_output.module_table[*idx].as_normal())
       .collect();
     let generated = GeneratedText { imports: imports_text, exports: exports_text };
-    return global::dce_chunk_global(ctx, allocator, asts, &modules, &generated, minify_options);
+    return global::dce_chunk_global(
+      ctx,
+      allocator,
+      asts,
+      &modules,
+      &generated,
+      source_text,
+      minify_options,
+    );
   }
   let use_markers = !(*NO_BARRIER && (ctx.options.sourcemap.is_none() || *NO_BARRIER_WITH_MAPS));
+  #[cfg(feature = "testing")]
+  coverage::record(
+    ctx.options,
+    "execute",
+    if use_markers { "legacy_barrier" } else { "legacy_nobarrier" },
+    ctx.chunk.preliminary_filename.as_deref().map(arcstr::ArcStr::as_str),
+  );
 
   let mut body: ArenaVec<'_, Statement<'_>> = ArenaVec::with_capacity_in(
-    asts.iter().map(|ast| ast.program().body.len() + 1).sum::<usize>() + 2,
+    asts.iter().map(|ast| ast.body.len() + 1).sum::<usize>() + 2,
     &allocator,
   );
   if let Some(text) = imports_text {
@@ -271,17 +408,12 @@ pub fn dce_chunk(
   }
   let mut owner_by_address = FxHashMap::default();
   for (module_pos, ast) in asts.iter_mut().enumerate() {
-    ast.program.with_mut(|fields| {
-      let stmts = fields.program.body.take_in(&fields.allocator);
-      for stmt in stmts {
-        // SAFETY: see the function docs; the module arena outlives the chunk program.
-        let stmt: Statement<'_> = unsafe { std::mem::transmute(stmt) };
-        if !use_markers {
-          owner_by_address.insert(stmt.address(), module_pos);
-        }
-        body.push(stmt);
+    for stmt in ast.take_body(allocator) {
+      if !use_markers {
+        owner_by_address.insert(stmt.address(), module_pos);
       }
-    });
+      body.push(stmt);
+    }
     if use_markers {
       body.push(Statement::new_export_named_declaration(
         Span::new(MARKER_POS, MARKER_POS),
@@ -331,11 +463,12 @@ pub fn dce_chunk(
     split_by_address(allocator, stmts, asts.len(), &owner_by_address)
   };
   for (ast, segment) in asts.iter_mut().zip(segments) {
-    ast.program.with_mut(|fields| {
-      // SAFETY: see the function docs.
-      let segment: ArenaVec<'_, Statement<'_>> = unsafe { std::mem::transmute(segment) };
-      fields.program.body = segment;
-    });
+    // SAFETY: the private ChunkAst owner retains every backing arena through printing/drop.
+    ast.body = unsafe {
+      std::mem::transmute::<ArenaVec<'_, Statement<'_>>, ArenaVec<'static, Statement<'static>>>(
+        segment,
+      )
+    };
   }
   let imports = print_generated(allocator, ctx.options, source_type, head);
   let exports = print_generated(allocator, ctx.options, source_type, tail);
@@ -465,4 +598,32 @@ pub(super) fn print_generated<'a>(
     .build(&program)
     .code;
   Some(code)
+}
+
+#[cfg(test)]
+mod tests {
+  use rolldown_plugin::Plugin;
+
+  use super::render_chunk_plugin_is_safe;
+
+  #[test]
+  fn builtin_render_chunk_plugins_are_safe_by_concrete_identity() {
+    let module_types = rustc_hash::FxHashMap::default();
+    let asset =
+      Plugin::new_shared(rolldown_plugin_asset_module::AssetModulePlugin::new(&module_types));
+    let copy =
+      Plugin::new_shared(rolldown_plugin_copy_module::CopyModulePlugin::new(&module_types));
+    assert!(render_chunk_plugin_is_safe(&asset));
+    assert!(render_chunk_plugin_is_safe(&copy));
+  }
+
+  #[cfg(feature = "testing")]
+  #[test]
+  fn harness_render_chunk_plugin_is_safe_by_concrete_identity() {
+    let marker =
+      Plugin::new_shared(rolldown_plugin_utils::hidden_module_markers::HiddenModuleMarkersPlugin {
+        hide_runtime_module: true,
+      });
+    assert!(render_chunk_plugin_is_safe(&marker));
+  }
 }

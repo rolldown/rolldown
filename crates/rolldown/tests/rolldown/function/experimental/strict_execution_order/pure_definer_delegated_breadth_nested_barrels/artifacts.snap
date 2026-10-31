@@ -7,10 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as vDef, t as outer_exports } from "./outer.js";
+
 // a.js
 (globalThis.__events ??= []).push("a");
 const defValue = vDef;
 const nsObject = outer_exports;
+
 export { defValue, nsObject };
 
 ```
@@ -19,9 +21,11 @@ export { defValue, nsObject };
 
 ```js
 import { n as vDef } from "./outer.js";
+
 // b.js
 (globalThis.__events ??= []).push("b");
 const sharedDef = vDef;
+
 export { sharedDef };
 
 ```
@@ -35,18 +39,22 @@ function build$1() {
 	return { value: 7 };
 }
 const vDef = /* @__PURE__ */ build$1();
+
 // definer2.js
 function build() {
 	return { value: 11 };
 }
 const wDef = /* @__PURE__ */ build();
+
 // mid.js
 (globalThis.__events ??= []).push("mid");
+
 // outer.js
 var outer_exports = /* @__PURE__ */ __exportAll({
 	vDef: () => vDef,
 	wDef: () => wDef
 });
+
 export { vDef as n, outer_exports as t };
 
 ```
@@ -98,6 +106,7 @@ export { sharedDef };
 
 ```js
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+
 // definer1.js
 function build$1() {
 	return { value: 7 };
@@ -108,6 +117,7 @@ function init_definer1() {
 		vDef = /* @__PURE__ */ build$1();
 	})))();
 }
+
 // definer2.js
 function build() {
 	return { value: 11 };
@@ -118,6 +128,7 @@ function init_definer2() {
 		wDef = /* @__PURE__ */ build();
 	})))();
 }
+
 // mid.js
 function init_mid() {
 	return (init_mid = __esmMin((() => {
@@ -126,6 +137,7 @@ function init_mid() {
 		(globalThis.__events ??= []).push("mid");
 	})))();
 }
+
 // outer.js
 var outer_exports = /* @__PURE__ */ __exportAll({
 	vDef: () => vDef,
@@ -136,6 +148,7 @@ function init_outer() {
 		init_mid();
 	})))();
 }
+
 export { vDef as i, outer_exports as n, init_definer1 as r, init_outer as t };
 
 ```

@@ -28,6 +28,7 @@ var shared_exports = /* @__PURE__ */ __exportAll({ func: () => func });
 function func() {
 	return "This is a shared function";
 }
+
 export { shared_exports as t };
 
 ```

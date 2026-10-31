@@ -7,13 +7,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // setup.js
 globalThis.globalValue = "foo";
+
 // dep.js
 function getGlobalValue() {
 	return globalValue;
 }
 var dep_default = /*#__PURE__*/ getGlobalValue();
+
 // main.js
 assert.strictEqual(dep_default, "foo");
 

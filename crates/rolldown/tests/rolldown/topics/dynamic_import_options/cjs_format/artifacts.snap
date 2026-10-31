@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // main.js
 import("./target.js").then((target) => {
 	assert.strictEqual(target.value, 42);
@@ -19,6 +20,7 @@ import("./target.js").then((target) => {
 ```js
 // target.js
 const value = 42;
+
 export { value };
 
 ```

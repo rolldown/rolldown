@@ -8,6 +8,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // circular-import-cycle.js
 console.log(bar());
+
+// circular-import-constants.js
 function bar() {
 	return 123;
 }
@@ -19,9 +21,12 @@ function bar() {
 ```js
 // circular-re-export-cycle.js
 console.log(bar());
+
+// circular-re-export-constants.js
 function bar() {
 	return 123;
 }
+
 // circular-re-export-entry.js
 console.log(0);
 
@@ -32,6 +37,8 @@ console.log(0);
 ```js
 // circular-re-export-star-cycle.js
 console.log(bar());
+
+// circular-re-export-star-constants.js
 function bar() {
 	return 123;
 }
@@ -53,6 +60,7 @@ console.log(1, 1);
 const x_REMOVE = 1;
 const y_keep = 2;
 console.log(x_REMOVE, 2);
+
 export { y_keep };
 
 ```
@@ -60,9 +68,11 @@ export { y_keep };
 ## non-circular-export-entry.js
 
 ```js
+// non-circular-export-constants.js
 function bar() {
 	return 123;
 }
+
 // non-circular-export-entry.js
 console.log(123, bar());
 
@@ -84,6 +94,7 @@ console.log({
 ```js
 // re-exported-2-constants.js
 const y_keep = 2;
+
 export { y_keep };
 
 ```
@@ -93,8 +104,10 @@ export { y_keep };
 ```js
 // re-exported-constants.js
 const y_keep = 2;
+
 // re-exported-entry.js
 console.log(1, 2);
+
 export { y_keep };
 
 ```
@@ -105,6 +118,7 @@ export { y_keep };
 // re-exported-star-constants.js
 const x_keep = 1;
 const y_keep = 2;
+
 export { x_keep, y_keep };
 
 ```

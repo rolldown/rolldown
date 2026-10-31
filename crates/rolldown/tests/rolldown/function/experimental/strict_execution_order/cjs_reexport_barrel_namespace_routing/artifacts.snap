@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
+
 // node_modules/namespace-barrel/cn.js
 var cn;
 function init_cn() {
@@ -15,6 +16,7 @@ function init_cn() {
 		cn = () => "cn";
 	})))();
 }
+
 export { init_cn as n, cn as t };
 
 ```
@@ -119,6 +121,7 @@ export { value };
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
+
 // node_modules/namespace-barrel/stack.js
 var Stack;
 function init_stack() {
@@ -129,6 +132,7 @@ function init_stack() {
 		};
 	})))();
 }
+
 export { init_stack as n, Stack as t };
 
 ```
@@ -141,6 +145,7 @@ export { init_stack as n, Stack as t };
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
+
 // node_modules/namespace-barrel/cn.js
 var cn;
 function init_cn() {
@@ -149,6 +154,7 @@ function init_cn() {
 		cn = () => "cn";
 	})))();
 }
+
 export { init_cn as n, cn as t };
 
 ```
@@ -253,6 +259,7 @@ export { value };
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
+
 // node_modules/namespace-barrel/stack.js
 var Stack;
 function init_stack() {
@@ -263,6 +270,7 @@ function init_stack() {
 		};
 	})))();
 }
+
 export { init_stack as n, Stack as t };
 
 ```

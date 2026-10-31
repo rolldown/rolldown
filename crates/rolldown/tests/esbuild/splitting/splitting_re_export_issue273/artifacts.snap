@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // a.js
 const a = 1;
+
 export { a };
 
 ```

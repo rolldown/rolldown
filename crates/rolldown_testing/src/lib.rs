@@ -1,5 +1,4 @@
 pub mod fixture;
-mod hidden_module_markers;
 mod hmr_files;
 pub mod integration_test;
 pub mod manual_integration_test_helper;

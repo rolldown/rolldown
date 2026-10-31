@@ -7,8 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // a.json
 var Message$1 = 1;
+
 // main.js
 var Message = class {
 	id;

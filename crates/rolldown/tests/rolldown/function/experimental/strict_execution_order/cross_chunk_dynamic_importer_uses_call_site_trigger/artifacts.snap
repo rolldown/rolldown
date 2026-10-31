@@ -16,11 +16,13 @@ export { aTargetPromise };
 
 ```js
 import { a as value, i as unrelated, r as setValue } from "./ga.js";
+
 // b.js
 (globalThis.log ??= []).push("b");
 setValue(1);
 if (value !== 1 || unrelated() !== "unrelated") throw new Error("retained barrel exports have the wrong value");
 const bTargetPromise = import("./ga.js").then((n) => (n.t(), n.n)).then(({ value }) => ({ value }));
+
 export { bTargetPromise };
 
 ```
@@ -37,6 +39,7 @@ function init_a() {
 		aTargetPromise = Promise.resolve().then(() => (init_target(), target_exports)).then(({ value }) => ({ value }));
 	})))();
 }
+
 // leaf.js
 let value = 1;
 function setValue(next) {
@@ -45,6 +48,7 @@ function setValue(next) {
 function unrelated() {
 	return "unrelated";
 }
+
 // target.js
 var target_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 function init_target() {
@@ -52,6 +56,7 @@ function init_target() {
 		(globalThis.log ??= []).push("target");
 	})))();
 }
+
 export { value as a, unrelated as i, target_exports as n, aTargetPromise as o, setValue as r, init_a as s, init_target as t };
 
 ```
@@ -94,6 +99,7 @@ export { bTargetPromise };
 
 ```js
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+
 // a.js
 var aTargetPromise;
 function init_a() {
@@ -102,6 +108,7 @@ function init_a() {
 		aTargetPromise = Promise.resolve().then(() => (init_leaf(), init_target(), target_exports)).then(({ value }) => ({ value }));
 	})))();
 }
+
 // leaf.js
 function setValue(next) {
 	value = next;
@@ -115,6 +122,7 @@ function init_leaf() {
 		value = 1;
 	})))();
 }
+
 // target.js
 var target_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 function init_target() {
@@ -122,6 +130,7 @@ function init_target() {
 		(globalThis.log ??= []).push("target");
 	})))();
 }
+
 export { unrelated as a, init_a as c, setValue as i, target_exports as n, value as o, init_leaf as r, aTargetPromise as s, init_target as t };
 
 ```

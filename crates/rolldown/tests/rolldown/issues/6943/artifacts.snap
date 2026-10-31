@@ -12,6 +12,7 @@ var lib_exports = /* @__PURE__ */ __exportAll({ tryPatchHandler: () => tryPatchH
 function tryPatchHandler(taskRoot, handlerPath) {
 	__require(taskRoot);
 }
+
 // main.js
 console.log(lib_exports);
 

@@ -12,9 +12,11 @@ var b_exports = /* @__PURE__ */ __exportAll({ bImpl: () => bImpl });
 function bImpl() {
 	return "b-result";
 }
+
 // a.js
 var a_exports = /* @__PURE__ */ __exportAll({});
 globalThis.__9320_single_export_ref = bImpl;
+
 export { b_exports as n, a_exports as t };
 
 ```

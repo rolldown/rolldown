@@ -10,6 +10,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 // esm.js
 var esm_exports = /* @__PURE__ */ __exportAll({ v: () => 1 });
 var init_esm = __esmMin((() => {}));
+
+// main.js
 var main_default = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	var __toCommonJS = (mod) => "local";
 	module.exports = {
@@ -17,6 +19,7 @@ var main_default = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exp
 		local: __toCommonJS(1)
 	};
 })))())).default;
+
 export { main_default as default };
 
 ```

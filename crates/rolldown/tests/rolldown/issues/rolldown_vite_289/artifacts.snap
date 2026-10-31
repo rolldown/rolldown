@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import nodeAssert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // lib-impl.js
 var lib_impl_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
@@ -17,10 +18,13 @@ var fn;
 var init_lib_impl = __esmMin((() => {
 	fn = () => 1;
 }));
+
 // lib-index.js
 init_lib_impl();
+
 // trigger-error.js
 nodeAssert(foo() === 1, "foo() should return 1");
+
 // trigger-wrapping.js
 console.log((init_lib_impl(), __toCommonJS(lib_impl_exports)));
 

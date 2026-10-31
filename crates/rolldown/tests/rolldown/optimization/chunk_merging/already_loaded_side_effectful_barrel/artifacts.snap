@@ -10,15 +10,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 function eagerValueA() {
 	return "value-a";
 }
+
 // library/family-b.js
 function eagerValueB() {
 	return "value-b";
 }
+
 // library/index.js
 (globalThis.fixtureLog ??= []).push("initialize");
 globalThis.fixtureInitialized = true;
+
 // eager-consumer.js
 (globalThis.fixtureLog ??= []).push(`eager:${eagerValueB()}`);
+
 // entry.js
 (globalThis.fixtureLog ??= []).push(`entry:${eagerValueA()}`);
 async function loadPart(part) {
@@ -26,6 +30,7 @@ async function loadPart(part) {
 	if (part === "b") return import("./lazy-consumer-b.js");
 	return import("./lazy-consumer-c.js");
 }
+
 export { loadPart };
 
 ```
@@ -34,6 +39,7 @@ export { loadPart };
 
 ```js
 import "./entry.js";
+
 // library/family-c.js
 const prefix = "value-a";
 function lazyValueA1() {
@@ -42,6 +48,7 @@ function lazyValueA1() {
 function lazyValueA2() {
 	return `${prefix}-2`;
 }
+
 // lazy-consumer-a.js
 (globalThis.fixtureLog ??= []).push(`lazy-a:${lazyValueA1()}+${lazyValueA2()}`);
 
@@ -51,10 +58,12 @@ function lazyValueA2() {
 
 ```js
 import "./entry.js";
+
 // library/family-d.js
 function lazyValueB() {
 	return "value-b";
 }
+
 // lazy-consumer-b.js
 (globalThis.fixtureLog ??= []).push(`lazy-b:${lazyValueB()}`);
 
@@ -64,10 +73,12 @@ function lazyValueB() {
 
 ```js
 import "./entry.js";
+
 // library/family-e.js
 function lazyValueC() {
 	return "value-c";
 }
+
 // lazy-consumer-c.js
 (globalThis.fixtureLog ??= []).push(`lazy-c:${lazyValueC()}`);
 

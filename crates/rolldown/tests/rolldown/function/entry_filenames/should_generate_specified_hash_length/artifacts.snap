@@ -3,11 +3,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entries/CeFOj2JW-CeFOj2JWmIa-CeFOj2-CeFOj2JWmIafldxTAu9Pe.js
+## entries/DVP7j8SI-DVP7j8SIzWD-DVP7j8-DVP7j8SIzWDGoF5gYEohh.js
 
 ```js
 // shared.js
 const value = "shared";
+
 export { value };
 
 ```

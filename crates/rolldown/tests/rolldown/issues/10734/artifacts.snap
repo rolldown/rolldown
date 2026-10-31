@@ -19,6 +19,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // chain-a.js
 var chain_a_exports = /* @__PURE__ */ __exportAll({ chainA: () => chainA });
 const chainA = "chainA";
+
 export { chain_a_exports as n, __exportAll as r, chainA as t };
 
 ```
@@ -27,8 +28,10 @@ export { chain_a_exports as n, __exportAll as r, chainA as t };
 
 ```js
 import { entryValue, r as chainB } from "./service.js";
+
 // cyclic.js
 const cyclic = "cyclic" + chainB + entryValue;
+
 export { cyclic };
 
 ```
@@ -38,6 +41,7 @@ export { cyclic };
 ```js
 // main.js
 const done = import("./service.js").then((n) => n.t);
+
 export { done };
 
 ```
@@ -46,10 +50,13 @@ export { done };
 
 ```js
 import { r as __exportAll, t as chainA } from "./chain-a.js";
+
 // chain-b.js
 const chainB = "chainB";
+
 // shared.js
 const shared = "shared" + chainA;
+
 // service.js
 var service_exports = /* @__PURE__ */ __exportAll({
 	entryValue: () => entryValue,
@@ -61,6 +68,7 @@ const entryValue = "entry" + shared + chainB;
 const loadCyclic = () => import("./cyclic.js");
 const loadShared = () => import("./shared.js");
 const loadChainA = () => import("./chain-a.js").then((n) => n.n);
+
 export { entryValue, loadChainA, loadCyclic, loadShared, shared as n, chainB as r, service_exports as t };
 
 ```

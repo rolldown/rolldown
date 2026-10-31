@@ -26,6 +26,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // a.js
 const a = "a";
 const b = "b";
+
 export { a, b };
 
 ```
@@ -36,6 +37,7 @@ export { a, b };
 // b.js
 const c = "c";
 const d = "d";
+
 export { c, d };
 
 ```

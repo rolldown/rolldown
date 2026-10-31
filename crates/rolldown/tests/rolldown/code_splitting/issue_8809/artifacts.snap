@@ -10,6 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 async function complete() {
 	return (await import("./daemon.js").then((n) => n.t)).start();
 }
+
 export { complete };
 
 ```
@@ -25,8 +26,10 @@ function start() {
 function stop() {
 	return "stop";
 }
+
 // daemon.js
 var daemon_exports = /* @__PURE__ */ __exportAll({ start: () => start });
+
 export { __commonJSMin as i, start as n, stop as r, daemon_exports as t };
 
 ```

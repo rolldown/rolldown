@@ -7,18 +7,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { i as __toCommonJS, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
+
 // shared.js
 var shared_exports = /* @__PURE__ */ __exportAll({ compute: () => compute });
 function compute(x) {
 	return x * 2;
 }
 var init_shared = __esmMin((() => {}));
+
 // app.cjs
 var require_app = /* @__PURE__ */ __commonJSMin(((exports) => {
 	const { compute } = __toCommonJS(shared_exports);
 	exports.own = compute(21) + 1;
 	exports.done = import("./lazy.js").then((m) => m.lazyValue);
 }));
+
 export default require_app();
 export { compute as n, init_shared as r, require_app as t };
 
@@ -43,8 +46,10 @@ export { lazyValue };
 
 ```js
 import { a as __toESM } from "./rolldown-runtime.js";
+
 // main.js
 const app = import("./app.js").then((n) => /* @__PURE__ */ __toESM(n.t()));
+
 export { app };
 
 ```

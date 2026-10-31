@@ -18,8 +18,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 // c.js
 Promise.resolve().then(() => a_exports);
+
 // a.js
 var a_exports = /* @__PURE__ */ __exportAll({});
+
 export { __commonJSMin as t };
 
 ```
@@ -35,6 +37,8 @@ import "./a.js";
 
 ```js
 import { t as __commonJSMin } from "./a.js";
+
+// b.js
 (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 42;
 })))();

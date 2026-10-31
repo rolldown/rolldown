@@ -1,0 +1,2138 @@
+use std::iter::repeat_with;
+
+use crate::generated::ancestor::Ancestor;
+use oxc_allocator::{ArenaVec, CloneIn, GetAllocator, TakeIn};
+use oxc_ast::ast::*;
+use oxc_compat::ESFeature;
+use oxc_ecmascript::{
+    BoundNames, ToNumber,
+    constant_evaluation::{
+        ConstantEvaluation, ConstantValue, DetermineValueType, evaluate_to_js_string,
+    },
+    side_effects::{
+        MayHaveSideEffects, MayHaveSideEffectsContext, is_error_constructor,
+        is_typed_array_constructor,
+    },
+};
+use oxc_semantic::ReferenceFlags;
+use oxc_span::{GetSpan, SPAN};
+use oxc_str::static_ident;
+use oxc_syntax::{
+    identifier::is_identifier_name_patched,
+    number::NumberBase,
+    operator::{BinaryOperator, UnaryOperator},
+    precedence::GetPrecedence,
+};
+
+use crate::TraverseCtx;
+
+use super::PeepholeOptimizations;
+
+/// A peephole optimization that minimizes code by simplifying conditional
+/// expressions, replacing IFs with HOOKs, replacing object constructors
+/// with literals, and simplifying returns.
+/// <https://github.com/google/closure-compiler/blob/v20240609/src/com/google/javascript/jscomp/PeepholeSubstituteAlternateSyntax.java>
+impl<'a> PeepholeOptimizations {
+    pub fn substitute_object_property(prop: &mut ObjectProperty<'a>, ctx: &mut TraverseCtx<'a>) {
+        // <https://tc39.es/ecma262/2024/multipage/ecmascript-language-expressions.html#sec-runtime-semantics-propertydefinitionevaluation>
+        if !prop.method
+            && let PropertyKey::StringLiteral(str) = &prop.key
+        {
+            // "{ __proto__ }" sets prototype, while "{ ['__proto__'] }" does not
+            if str.value == "__proto__" {
+                return;
+            }
+        }
+
+        // Normalise the key before checking shorthand: `try_compress_property_key`
+        // can turn `{ "x": x }` into `{ x: x }`, which then becomes a candidate
+        // for shorthand normalisation in the same visit.
+        Self::try_compress_property_key(&mut prop.key, &mut prop.computed, ctx);
+        Self::normalize_object_property_shorthand(prop);
+    }
+
+    /// `{ x: x }` is observationally equivalent to `{ x }`, and codegen always
+    /// prints it as `{ x }`. Set `shorthand = true` so the AST matches the
+    /// printed output; otherwise content-equality checks (e.g. when merging
+    /// adjacent `if` statements with identical jump bodies) treat the two
+    /// forms as different on the first pass and only converge on the second.
+    ///
+    /// Output text is unchanged, so we deliberately do not record a
+    /// mutation.
+    fn normalize_object_property_shorthand(prop: &mut ObjectProperty<'a>) {
+        if prop.shorthand {
+            return;
+        }
+        let Expression::Identifier(value) = &prop.value else { return };
+        if prop.computed || prop.method || prop.kind != PropertyKind::Init {
+            return;
+        }
+        let PropertyKey::StaticIdentifier(key) = &prop.key else { return };
+        // `{ __proto__: __proto__ }` triggers the Annex B.3.1 proto setter
+        // (literal `__proto__` key, non-computed, non-shorthand, non-method),
+        // but `{ __proto__ }` is a plain shorthand `IdentifierReference` that
+        // creates a regular own data property and does NOT set `[[Prototype]]`.
+        // Converting would change observable behaviour, so bail out.
+        if key.name == value.name && key.name != "__proto__" {
+            prop.shorthand = true;
+        }
+    }
+
+    pub fn substitute_assignment_target_property_property(
+        prop: &mut AssignmentTargetPropertyProperty<'a>,
+        ctx: &mut TraverseCtx<'a>,
+    ) {
+        Self::try_compress_property_key(&mut prop.name, &mut prop.computed, ctx);
+    }
+
+    pub fn substitute_assignment_target_property(
+        prop: &mut AssignmentTargetProperty<'a>,
+        ctx: &mut TraverseCtx<'a>,
+    ) {
+        Self::try_compress_assignment_target_property(prop, ctx);
+    }
+
+    pub fn try_compress_assignment_target_property(
+        prop: &mut AssignmentTargetProperty<'a>,
+        ctx: &mut TraverseCtx<'a>,
+    ) {
+        // `a: a` -> `a`, `a: a = b` -> `a = b`
+        if let AssignmentTargetProperty::AssignmentTargetPropertyProperty(assign_target_prop_prop) =
+            prop
+        {
+            let Some(prop_name) = assign_target_prop_prop.name.static_name() else { return };
+            let Some(ident) = assign_target_prop_prop.binding.identifier_mut() else {
+                return;
+            };
+            if prop_name == ident.name {
+                let ident = ident.take_in(ctx);
+                // `identifier_mut` also matches `a: a = b`, so keep its default.
+                let init = match &mut assign_target_prop_prop.binding {
+                    AssignmentTargetMaybeDefault::AssignmentTargetWithDefault(target) => {
+                        Some(target.init.take_in(ctx))
+                    }
+                    _ => None,
+                };
+                let new_prop = AssignmentTargetProperty::new_assignment_target_property_identifier(
+                    ident.span, ident, init, ctx,
+                );
+                ctx.replace_assignment_target_property(prop, new_prop);
+            }
+        }
+    }
+
+    pub fn substitute_binding_property(prop: &mut BindingProperty<'a>, ctx: &mut TraverseCtx<'a>) {
+        Self::try_compress_property_key(&mut prop.key, &mut prop.computed, ctx);
+    }
+
+    pub fn substitute_method_definition(
+        prop: &mut MethodDefinition<'a>,
+        ctx: &mut TraverseCtx<'a>,
+    ) {
+        let property_key_parent: ClassPropertyKeyParent = prop.into();
+        // Only check for computed property restrictions if this is actually a computed property
+        if prop.computed
+            && let PropertyKey::StringLiteral(str) = &prop.key
+            && str
+                .value
+                .as_str()
+                .is_some_and(|value| property_key_parent.should_keep_as_computed_property(value))
+        {
+            return;
+        }
+        Self::try_compress_property_key(&mut prop.key, &mut prop.computed, ctx);
+    }
+
+    pub fn substitute_property_definition(
+        prop: &mut PropertyDefinition<'a>,
+        ctx: &mut TraverseCtx<'a>,
+    ) {
+        let property_key_parent: ClassPropertyKeyParent = prop.into();
+        // Only check for computed property restrictions if this is actually a computed property
+        if prop.computed
+            && let PropertyKey::StringLiteral(str) = &prop.key
+            && str
+                .value
+                .as_str()
+                .is_some_and(|value| property_key_parent.should_keep_as_computed_property(value))
+        {
+            return;
+        }
+        Self::try_compress_property_key(&mut prop.key, &mut prop.computed, ctx);
+    }
+
+    pub fn substitute_accessor_property(
+        prop: &mut AccessorProperty<'a>,
+        ctx: &mut TraverseCtx<'a>,
+    ) {
+        let property_key_parent: ClassPropertyKeyParent = prop.into();
+        // Only check for computed property restrictions if this is actually a computed property
+        if prop.computed
+            && let PropertyKey::StringLiteral(str) = &prop.key
+            && str
+                .value
+                .as_str()
+                .is_some_and(|value| property_key_parent.should_keep_as_computed_property(value))
+        {
+            return;
+        }
+        Self::try_compress_property_key(&mut prop.key, &mut prop.computed, ctx);
+    }
+
+    pub fn substitute_for_statement(stmt: &mut ForStatement<'a>, ctx: &mut TraverseCtx<'a>) {
+        Self::try_rewrite_arguments_copy_loop(stmt, ctx);
+    }
+
+    pub fn substitute_variable_declaration(
+        decl: &mut VariableDeclaration<'a>,
+        ctx: &mut TraverseCtx<'a>,
+    ) {
+        for declarator in &mut decl.declarations {
+            Self::compress_variable_declarator(declarator, decl.kind, ctx);
+        }
+    }
+
+    pub fn substitute_call_expression(expr: &mut CallExpression<'a>, ctx: &mut TraverseCtx<'a>) {
+        Self::try_flatten_arguments(&mut expr.arguments, ctx);
+        Self::try_rewrite_object_callee_indirect_call(expr, ctx);
+    }
+
+    pub fn substitute_new_expression(expr: &mut NewExpression<'a>, ctx: &mut TraverseCtx<'a>) {
+        Self::try_flatten_arguments(&mut expr.arguments, ctx);
+    }
+
+    pub fn substitute_chain_expression(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
+        let Expression::ChainExpression(e) = expr else { return };
+        Self::try_flatten_nested_chain_expression(e, ctx);
+        Self::substitute_chain_call_expression(e, ctx);
+    }
+
+    pub fn substitute_swap_binary_expressions(e: &mut BinaryExpression<'a>) {
+        if e.operator.is_equality()
+            && (e.left.is_literal() || e.left.is_no_substitution_template() || e.left.is_void_0())
+            && !e.right.is_literal()
+        {
+            std::mem::swap(&mut e.left, &mut e.right);
+        }
+    }
+
+    /// `() => { return foo })` -> `() => foo`
+    pub fn substitute_arrow_expression(arrow_expr: &mut ArrowFunctionExpression<'a>) {
+        if let Some(body) = arrow_expr.get_function_body_mut()
+            && body.directives.is_empty()
+            && body.statements.len() == 1
+            && let Statement::ReturnStatement(return_statement) = &mut body.statements[0]
+            && let Some(expr) = return_statement.argument.take()
+        {
+            arrow_expr.body = ArrowFunctionBody::from(expr);
+        }
+    }
+
+    /// Compress `typeof foo == "undefined"`
+    ///
+    /// - `typeof foo == "undefined"` (if foo is not resolved) -> `typeof foo > "u"`
+    /// - `typeof foo != "undefined"` (if foo is not resolved) -> `typeof foo < "u"`
+    /// - `typeof foo == "undefined"` -> `foo === undefined`
+    /// - `typeof foo != "undefined"` -> `foo !== undefined`
+    /// - `typeof foo.bar == "undefined"` -> `foo.bar === undefined` (for any expression e.g.`typeof (foo + "")`)
+    /// - `typeof foo.bar != "undefined"` -> `foo.bar !== undefined` (for any expression e.g.`typeof (foo + "")`)
+    ///
+    /// Enabled by `compress.typeofs`
+    pub fn substitute_typeof_undefined(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
+        let Expression::BinaryExpression(e) = expr else { return };
+        let Expression::UnaryExpression(unary_expr) = &e.left else { return };
+        if !unary_expr.operator.is_typeof() {
+            return;
+        }
+        let (new_eq_op, new_comp_op) = match e.operator {
+            BinaryOperator::Equality | BinaryOperator::StrictEquality => {
+                (BinaryOperator::StrictEquality, BinaryOperator::GreaterThan)
+            }
+            BinaryOperator::Inequality | BinaryOperator::StrictInequality => {
+                (BinaryOperator::StrictInequality, BinaryOperator::LessThan)
+            }
+            _ => return,
+        };
+        if !e.right.is_specific_string_literal("undefined") {
+            return;
+        }
+        let new_value = if let Expression::Identifier(ident) = &unary_expr.argument
+            && ctx.is_global_reference(ident)
+        {
+            e.operator = new_comp_op;
+            Expression::new_string_literal(e.right.span(), "u", None, ctx)
+        } else {
+            e.operator = new_eq_op;
+            ctx.replace_expression_with(&mut e.left, Self::unwrap_unary);
+            Expression::new_void_0(e.right.span(), ctx)
+        };
+        ctx.replace_expression(&mut e.right, new_value);
+    }
+
+    /// Remove unary `+` if `ToNumber` conversion is done by the parent expression
+    ///
+    /// - `1 - +b` => `1 - b` (for other operators as well)
+    /// - `+a - 1` => `a - 1` (for other operators as well)
+    pub fn substitute_unary_plus(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
+        let Expression::UnaryExpression(e) = expr else { return };
+        if e.operator != UnaryOperator::UnaryPlus {
+            return;
+        }
+        let Some(parent_expression) = ctx.ancestors().next() else { return };
+        let parent_expression_does_to_number_conversion = match parent_expression {
+            Ancestor::BinaryExpressionLeft(e) => {
+                Self::is_binary_operator_that_does_number_conversion(*e.operator())
+                    && e.right().value_type(ctx).is_number()
+                    // The right operand is evaluated between the argument of `+`
+                    // and the conversion the operator performs on it, so it must
+                    // not affect that conversion. See the note below.
+                    && !e.right().may_have_side_effects(ctx)
+            }
+            Ancestor::BinaryExpressionRight(e) => {
+                Self::is_binary_operator_that_does_number_conversion(*e.operator())
+                    && e.left().value_type(ctx).is_number()
+            }
+            _ => false,
+        };
+        if !parent_expression_does_to_number_conversion {
+            return;
+        }
+        ctx.replace_expression_with(expr, Self::unwrap_unary);
+    }
+
+    /// For `+a - n` => `a - n` (assuming n is a number)
+    ///
+    /// Before compression the evaluation is:
+    /// 1. `a_2 = ToNumber(a)`
+    /// 2. `a_3 = ToNumeric(a_2)`
+    /// 3. `n_2 = ToNumeric(n)` (no-op since n is a number)
+    /// 4. If the type of `a_3` is not number, throw an error
+    /// 5. Calculate the result of the binary operation
+    ///
+    /// After compression, step 1 is removed. The difference we need to care is
+    /// the difference with `ToNumber(a)` and `ToNumeric(a)` because `ToNumeric(a_2)` is a no-op.
+    ///
+    /// - When `a` is an object and `ToPrimitive(a, NUMBER)` returns a BigInt,
+    ///   - `ToNumeric(a)` will return that value. But the binary operation will throw an error in step 4.
+    ///   - `ToNumber(a)` will throw an error.
+    /// - When `a` is an object and `ToPrimitive(a, NUMBER)` returns a value other than BigInt,
+    ///   `ToNumeric(a)` and `ToNumber(a)` works the same. Because the step 2 in `ToNumeric` is always `false`.
+    /// - When `a` is BigInt,
+    ///   - `ToNumeric(a)` will return that value. But the binary operation will throw an error in step 4.
+    ///   - `ToNumber(a)` will throw an error.
+    /// - When `a` is not a object nor a BigInt, `ToNumeric(a)` and `ToNumber(a)` works the same.
+    ///   Because the step 2 in `ToNumeric` is always `false`.
+    ///
+    /// Thus, removing `+` is fine as far as the conversion itself goes.
+    ///
+    /// What it does change is *when* the conversion happens. Step 1 runs while
+    /// evaluating `+a`, before `n` is evaluated at all; step 2 runs after. So
+    /// evaluating `n` must not affect the conversion of `a`:
+    ///
+    /// ```js
+    /// var xs = [];
+    /// (+xs) - (xs.push(1), 0); // 0, converted while `xs` was still empty
+    /// xs - (xs.push(1), 0);    // 1, converted after `xs` grew
+    /// ```
+    ///
+    /// Requiring `n` to be free of side effects rules that out. `n` cannot
+    /// observe the conversion either, because the conversion runs no user code
+    /// under the "Coercion Methods Are Pure" assumption (see
+    /// `docs/ASSUMPTIONS.md`).
+    ///
+    /// For `n - +a` the ordering holds regardless: `n` is evaluated first
+    /// either way, and step 3 is a no-op because `n` is already a number, so
+    /// nothing runs between evaluating `a` and converting it.
+    fn is_binary_operator_that_does_number_conversion(operator: BinaryOperator) -> bool {
+        matches!(
+            operator,
+            BinaryOperator::Exponential
+                | BinaryOperator::Multiplication
+                | BinaryOperator::Division
+                | BinaryOperator::Remainder
+                | BinaryOperator::Subtraction
+                | BinaryOperator::ShiftLeft
+                | BinaryOperator::ShiftRight
+                | BinaryOperator::ShiftRightZeroFill
+                | BinaryOperator::BitwiseAnd
+                | BinaryOperator::BitwiseXOR
+                | BinaryOperator::BitwiseOR
+        )
+    }
+
+    /// `a || (b || c);` -> `(a || b) || c;`
+    pub fn substitute_rotate_logical_expression(
+        expr: &mut Expression<'a>,
+        ctx: &mut TraverseCtx<'a>,
+    ) {
+        let Expression::LogicalExpression(e) = expr else { return };
+        let Expression::LogicalExpression(right) = &e.right else { return };
+        if right.operator != e.operator {
+            return;
+        }
+        let Expression::LogicalExpression(right) = e.right.take_in(ctx) else { return };
+        let LogicalExpression { left: right_left, right: right_right, .. } = right.unbox();
+        let mut new_left = Expression::new_logical_expression(
+            e.span,
+            e.left.take_in(ctx),
+            e.operator,
+            right_left,
+            ctx,
+        );
+        Self::substitute_rotate_logical_expression(&mut new_left, ctx);
+        let new_value =
+            Expression::new_logical_expression(e.span, new_left, e.operator, right_right, ctx);
+        ctx.replace_expression(expr, new_value);
+    }
+
+    /// Rotate associative binary operators:
+    /// - `a | (b | c)` -> `(a | b) | c`
+    ///
+    /// Rotate commutative operators to reduce parentheses:
+    /// - `a * (b % c)` -> `b % c * a`
+    /// - `a * (b / c)` -> `b / c * a`
+    pub fn substitute_rotate_binary_expression(
+        expr: &mut Expression<'a>,
+        ctx: &mut TraverseCtx<'a>,
+    ) {
+        let Expression::BinaryExpression(e) = expr else { return };
+
+        // Handle associative rotation
+        let is_associative = matches!(
+            e.operator,
+            BinaryOperator::BitwiseOR | BinaryOperator::BitwiseAnd | BinaryOperator::BitwiseXOR
+        );
+        if is_associative
+            && let Expression::BinaryExpression(right) = &e.right
+            && right.operator == e.operator
+            && !right.right.may_have_side_effects(ctx)
+        {
+            let Expression::BinaryExpression(right) = e.right.take_in(ctx) else {
+                return;
+            };
+            let BinaryExpression { left: right_left, right: right_right, .. } = right.unbox();
+            let mut new_left = Expression::new_binary_expression(
+                e.span,
+                e.left.take_in(ctx),
+                e.operator,
+                right_left,
+                ctx,
+            );
+            Self::substitute_rotate_binary_expression(&mut new_left, ctx);
+            let new_value =
+                Expression::new_binary_expression(e.span, new_left, e.operator, right_right, ctx);
+            ctx.replace_expression(expr, new_value);
+            return;
+        }
+
+        // Handle commutative rotation
+        if let Expression::BinaryExpression(right) = &e.right
+            && matches!(e.operator, BinaryOperator::Multiplication)
+            && e.operator.precedence() == right.operator.precedence()
+        {
+            // Don't swap if left does not need a parentheses
+            if let Expression::BinaryExpression(left) = &e.left
+                && e.operator.precedence() <= left.operator.precedence()
+            {
+                return;
+            }
+
+            // Don't swap if any of the value may have side effects as they may update the other values
+            if !e.left.may_have_side_effects(ctx)
+                && !right.left.may_have_side_effects(ctx)
+                && !right.right.may_have_side_effects(ctx)
+            {
+                let binary_expr = e.as_mut();
+                std::mem::swap(&mut binary_expr.left, &mut binary_expr.right);
+                ctx.notice_change();
+            }
+        }
+    }
+
+    /// Compress `typeof foo === 'object' && foo !== null` into `typeof foo == 'object' && !!foo`.
+    ///
+    /// - `typeof foo === 'object' && foo !== null` => `typeof foo == 'object' && !!foo`
+    /// - `typeof foo == 'object' && foo != null` => `typeof foo == 'object' && !!foo`
+    /// - `typeof foo !== 'object' || foo === null` => `typeof foo != 'object' || !foo`
+    /// - `typeof foo != 'object' || foo == null` => `typeof foo != 'object' || !foo`
+    ///
+    /// If `typeof foo == 'object'`, then `foo` is guaranteed to be an object or null.
+    /// - If `foo` is an object, then `foo !== null` is `true`. If `foo` is null, then `foo !== null` is `false`.
+    /// - If `foo` is an object, then `foo != null` is `true`. If `foo` is null, then `foo != null` is `false`.
+    /// - If `foo` is an object, then `!!foo` is `true`. If `foo` is null, then `!!foo` is `false`.
+    ///
+    /// This compression is safe for `document.all` because `typeof document.all` is not `'object'`.
+    pub fn substitute_is_object_and_not_null(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
+        let Expression::LogicalExpression(e) = expr else { return };
+        let inversed = match e.operator {
+            LogicalOperator::And => false,
+            LogicalOperator::Or => true,
+            LogicalOperator::Coalesce => return,
+        };
+        if let Some(new_expr) = Self::try_compress_is_object_and_not_null_for_left_and_right(
+            &e.left, &e.right, e.span, ctx, inversed,
+        ) {
+            ctx.replace_expression(expr, new_expr);
+            return;
+        }
+        let Expression::LogicalExpression(left) = &e.left else {
+            return;
+        };
+        if left.operator != e.operator {
+            return;
+        }
+        let Some(new_expr) = Self::try_compress_is_object_and_not_null_for_left_and_right(
+            &left.right,
+            &e.right,
+            left.right.span().merge_within(e.right.span(), e.span).unwrap_or(SPAN),
+            ctx,
+            inversed,
+        ) else {
+            return;
+        };
+        let span = e.span;
+        let Expression::LogicalExpression(left) = &mut e.left else {
+            return;
+        };
+        let new_value = Expression::new_logical_expression(
+            span,
+            left.left.take_in(ctx),
+            e.operator,
+            new_expr,
+            ctx,
+        );
+        ctx.replace_expression(expr, new_value);
+    }
+
+    fn try_compress_is_object_and_not_null_for_left_and_right(
+        left: &Expression<'a>,
+        right: &Expression<'a>,
+        span: Span,
+        ctx: &mut TraverseCtx<'a>,
+        inversed: bool,
+    ) -> Option<Expression<'a>> {
+        let pair = Self::commutative_pair(
+            (&left, &right),
+            |a_expr| {
+                let Expression::BinaryExpression(a) = a_expr else { return None };
+                let is_target_ops = if inversed {
+                    matches!(
+                        a.operator,
+                        BinaryOperator::StrictInequality | BinaryOperator::Inequality
+                    )
+                } else {
+                    matches!(a.operator, BinaryOperator::StrictEquality | BinaryOperator::Equality)
+                };
+                if !is_target_ops {
+                    return None;
+                }
+                let (id, ()) = Self::commutative_pair(
+                    (&a.left, &a.right),
+                    |a_a| {
+                        let Expression::UnaryExpression(a_a) = a_a else { return None };
+                        if a_a.operator != UnaryOperator::Typeof {
+                            return None;
+                        }
+                        let Expression::Identifier(id) = &a_a.argument else { return None };
+                        Some(id)
+                    },
+                    |b| b.is_specific_string_literal("object").then_some(()),
+                )?;
+                Some((id, a_expr))
+            },
+            |b| {
+                let Expression::BinaryExpression(b) = b else {
+                    return None;
+                };
+                let is_target_ops = if inversed {
+                    matches!(b.operator, BinaryOperator::StrictEquality | BinaryOperator::Equality)
+                } else {
+                    matches!(
+                        b.operator,
+                        BinaryOperator::StrictInequality | BinaryOperator::Inequality
+                    )
+                };
+                if !is_target_ops {
+                    return None;
+                }
+                let (id, ()) = Self::commutative_pair(
+                    (&b.left, &b.right),
+                    |a_a| {
+                        let Expression::Identifier(id) = a_a else { return None };
+                        Some(id)
+                    },
+                    |b| b.is_null().then_some(()),
+                )?;
+                Some(id)
+            },
+        );
+        let ((typeof_id_ref, typeof_binary_expr), is_null_id_ref) = pair?;
+        if typeof_id_ref.name != is_null_id_ref.name {
+            return None;
+        }
+        // It should also return None when the reference might refer to a reference value created by a with statement
+        // when the minifier supports with statements
+        if ctx.is_global_reference(typeof_id_ref) {
+            return None;
+        }
+
+        // The replacement must not alias `ReferenceId`s from the dropped subtree:
+        // `replace_expression` walks the old tree and marks its references dead,
+        // so a reused id would be pruned from scoping while still live in the
+        // program. Mint fresh references (same name, same resolution) instead.
+        let typeof_symbol_id =
+            ctx.scoping().get_reference(typeof_id_ref.reference_id()).symbol_id();
+        let is_null_symbol_id =
+            ctx.scoping().get_reference(is_null_id_ref.reference_id()).symbol_id();
+
+        // Plain `clone_in` resets every `reference_id` to `None`, making id
+        // aliasing structurally impossible. The fresh references below are
+        // stamped with the current scope, so the next post-flush graph
+        // analysis observes them directly from scoping.
+        let mut new_left_expr = typeof_binary_expr.clone_in(ctx.allocator());
+        if let Expression::BinaryExpression(new_left_expr_binary) = &mut new_left_expr {
+            new_left_expr_binary.operator =
+                if inversed { BinaryOperator::Inequality } else { BinaryOperator::Equality };
+            let fresh_reference_id =
+                ctx.create_reference(typeof_id_ref.name, typeof_symbol_id, ReferenceFlags::Read);
+            let BinaryExpression { left, right, .. } = &mut **new_left_expr_binary;
+            for operand in [left, right] {
+                if let Expression::UnaryExpression(unary) = operand
+                    && unary.operator == UnaryOperator::Typeof
+                    && let Expression::Identifier(id) = &mut unary.argument
+                {
+                    id.reference_id.set(Some(fresh_reference_id));
+                }
+            }
+        } else {
+            unreachable!();
+        }
+
+        let is_null_id_ref = ctx.create_ident_expr(
+            is_null_id_ref.span,
+            is_null_id_ref.name,
+            is_null_symbol_id,
+            ReferenceFlags::Read,
+        );
+
+        let new_right_expr = if inversed {
+            Expression::new_unary_expression(SPAN, UnaryOperator::LogicalNot, is_null_id_ref, ctx)
+        } else {
+            Expression::new_unary_expression(
+                SPAN,
+                UnaryOperator::LogicalNot,
+                Expression::new_unary_expression(
+                    SPAN,
+                    UnaryOperator::LogicalNot,
+                    is_null_id_ref,
+                    ctx,
+                ),
+                ctx,
+            )
+        };
+        Some(Expression::new_logical_expression(
+            span,
+            new_left_expr,
+            if inversed { LogicalOperator::Or } else { LogicalOperator::And },
+            new_right_expr,
+            ctx,
+        ))
+    }
+
+    pub fn substitute_loose_equals_undefined(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
+        let Expression::BinaryExpression(e) = expr else { return };
+        // `foo == void 0` -> `foo == null`, `foo == undefined` -> `foo == null`
+        // `foo != void 0` -> `foo == null`, `foo == undefined` -> `foo == null`
+        if e.operator == BinaryOperator::Inequality || e.operator == BinaryOperator::Equality {
+            if ctx.is_expression_undefined(&e.right) {
+                let new_null = Expression::new_null_literal(e.right.span(), ctx);
+                ctx.replace_expression(&mut e.right, new_null);
+            } else if ctx.is_expression_undefined(&e.left) {
+                let new_null = Expression::new_null_literal(e.left.span(), ctx);
+                ctx.replace_expression(&mut e.left, new_null);
+            }
+        }
+    }
+
+    #[expect(clippy::float_cmp)]
+    /// Rewrite classic `arguments` copy loop to spread form
+    ///
+    /// Transforms the common Babel/TS output:
+    /// ```js
+    ///   for (var e = arguments.length, r = Array(e), a = 0; a < e; a++)
+    ///     r[a] = arguments[a];
+    /// ```
+    /// into:
+    /// ```js
+    ///   for (var r = [...arguments]; 0; ) ;
+    /// ```
+    /// which gets folded later into:
+    /// ```js
+    ///   var r = [...arguments]
+    /// ```
+    ///
+    /// Other supported inputs:
+    /// ```js
+    ///   for (var e = arguments.length, r = Array(e > 1 ? e - 1 : 0), a = 1; a < e; a++)
+    ///     r[a - 1] = arguments[a];
+    ///   for (var r = [], a = 0; a < arguments.length; a++)
+    ///     r[a] = arguments[a];
+    ///   for (var r = [], a = 1; a < arguments.length; a++)
+    ///     r[a - 1] = arguments[a];
+    /// ```
+    fn try_rewrite_arguments_copy_loop(for_stmt: &mut ForStatement<'a>, ctx: &mut TraverseCtx<'a>) {
+        #[derive(PartialEq, Eq)]
+        enum VerifyArrayArgResult {
+            WithOffset,
+            WithoutOffset,
+            Invalid,
+        }
+
+        /// Verify whether `arg_expr` is `e > offset ? e - offset : 0` or `e`
+        fn verify_array_arg<'a>(
+            arg_expr: &Expression<'a>,
+            name_e: Ident<'a>,
+            offset: f64,
+        ) -> VerifyArrayArgResult {
+            match arg_expr {
+                Expression::Identifier(id) => {
+                    if offset == 0.0 && id.name == name_e {
+                        VerifyArrayArgResult::WithoutOffset
+                    } else {
+                        VerifyArrayArgResult::Invalid
+                    }
+                }
+                Expression::ConditionalExpression(cond_expr) => {
+                    let Expression::BinaryExpression(test_expr) = &cond_expr.test else {
+                        return VerifyArrayArgResult::Invalid;
+                    };
+                    let Expression::BinaryExpression(cons_expr) = &cond_expr.consequent else {
+                        return VerifyArrayArgResult::Invalid;
+                    };
+                    if test_expr.operator == BinaryOperator::GreaterThan
+                        && test_expr.left.is_specific_id(name_e)
+                        && matches!(&test_expr.right, Expression::NumericLiteral(n) if n.value == offset)
+                        && cons_expr.operator == BinaryOperator::Subtraction
+                        && matches!(&cons_expr.right, Expression::NumericLiteral(n) if n.value == offset)
+                        && cons_expr.left.is_specific_id(name_e)
+                        && cond_expr.alternate.is_number_0()
+                    {
+                        VerifyArrayArgResult::WithOffset
+                    } else {
+                        VerifyArrayArgResult::Invalid
+                    }
+                }
+                _ => VerifyArrayArgResult::Invalid,
+            }
+        }
+
+        // In non-strict mode, a different value may be reassigned to the `arguments` variable
+        if !ctx.current_scope_flags().is_strict_mode() {
+            return;
+        }
+
+        // Parse statement: `r[a - offset] = arguments[a];`
+        let body_assign_expr = {
+            let assign = match &mut for_stmt.body {
+                Statement::ExpressionStatement(expr_stmt) => expr_stmt,
+                Statement::BlockStatement(block) if block.body.len() == 1 => {
+                    match &mut block.body[0] {
+                        Statement::ExpressionStatement(expr_stmt) => expr_stmt,
+                        _ => return,
+                    }
+                }
+                _ => return,
+            };
+            let Expression::AssignmentExpression(assign_expr) = &mut assign.expression else {
+                return;
+            };
+            if !assign_expr.operator.is_assign() {
+                return;
+            }
+            assign_expr
+        };
+
+        // reference counts in the for-loop
+        let mut a_ref_count = 0;
+        let mut e_ref_count = 0;
+
+        let (r_id_name, a_id_name, offset) = {
+            let AssignmentTarget::ComputedMemberExpression(lhs_member_expr) =
+                &body_assign_expr.left
+            else {
+                return;
+            };
+            let Expression::Identifier(lhs_member_expr_obj) = &lhs_member_expr.object else {
+                return;
+            };
+            let (base_name, offset) = match &lhs_member_expr.expression {
+                Expression::Identifier(id) => (id.name, 0.0),
+                Expression::BinaryExpression(b) => {
+                    if b.operator != BinaryOperator::Subtraction {
+                        return;
+                    }
+                    let Expression::Identifier(id) = &b.left else { return };
+                    let Expression::NumericLiteral(n) = &b.right else { return };
+                    if n.value.fract() != 0.0 || n.value < 0.0 {
+                        return;
+                    }
+                    (id.name, n.value)
+                }
+                _ => return,
+            };
+            (lhs_member_expr_obj.name, base_name, offset)
+        };
+
+        let arguments_id = {
+            let Expression::ComputedMemberExpression(rhs_member_expr) = &mut body_assign_expr.right
+            else {
+                return;
+            };
+            let ComputedMemberExpression { object, expression, .. } = rhs_member_expr.as_mut();
+            let Expression::Identifier(rhs_member_expr_obj) = object else {
+                return;
+            };
+            if rhs_member_expr_obj.name != "arguments"
+                || !ctx.is_global_reference(rhs_member_expr_obj)
+            {
+                return;
+            }
+            let Expression::Identifier(rhs_member_expr_expr_id) = expression else {
+                return;
+            };
+            if rhs_member_expr_expr_id.name != a_id_name {
+                return;
+            }
+            rhs_member_expr_obj
+        };
+        a_ref_count += 2;
+
+        // Parse update: `a++`
+        {
+            let Some(Expression::UpdateExpression(u)) = &for_stmt.update else {
+                return;
+            };
+            let SimpleAssignmentTarget::AssignmentTargetIdentifier(id) = &u.argument else {
+                return;
+            };
+            if a_id_name != id.name {
+                return;
+            }
+            a_ref_count += 1;
+        };
+
+        // Parse test: `a < e` or `a < arguments.length`
+        let e_id_info = {
+            let Some(Expression::BinaryExpression(b)) = &for_stmt.test else {
+                return;
+            };
+            if b.operator != BinaryOperator::LessThan {
+                return;
+            }
+            let Expression::Identifier(left) = &b.left else { return };
+            if left.name != a_id_name {
+                return;
+            }
+            match &b.right {
+                Expression::Identifier(right) => Some((
+                    right.name,
+                    ctx.scoping().get_reference(right.reference_id()).symbol_id(),
+                )),
+                Expression::StaticMemberExpression(sm) => {
+                    let Expression::Identifier(id) = &sm.object else {
+                        return;
+                    };
+                    if id.name != "arguments"
+                        || !ctx.is_global_reference(id)
+                        || sm.property.name != "length"
+                    {
+                        return;
+                    }
+                    None
+                }
+                _ => return,
+            }
+        };
+        if e_id_info.is_some() {
+            e_ref_count += 1;
+        }
+        a_ref_count += 1;
+
+        let init_decl_len = if e_id_info.is_some() { 3 } else { 2 };
+
+        let Some(init) = &mut for_stmt.init else { return };
+        let ForStatementInit::VariableDeclaration(var_init) = init else { return };
+        let leading_var_count = if var_init.kind.is_var() {
+            let Some(var_position) =
+                var_init.declarations.iter().position(|decl| decl.init.is_some())
+            else {
+                return;
+            };
+            var_position
+        } else {
+            0
+        };
+        let pattern_end = leading_var_count + init_decl_len;
+        let Some(siblings) = var_init.declarations.get(pattern_end..) else { return };
+        // Sibling declarators may be in the source loop or folded into it by `sequences`.
+        // Keep uninitialized `var` siblings, but don't move an initializer across the spread.
+        if !siblings.is_empty()
+            && (!var_init.kind.is_var() || siblings.iter().any(|decl| decl.init.is_some()))
+        {
+            return;
+        }
+
+        // make sure `arguments` points to the arguments object
+        // this is checked after the structure checks above because this check is slower than the structure checks
+        if ctx.ancestor_scopes().all(|s| {
+            let scope_flags = ctx.scoping().scope_flags(s);
+            !scope_flags.is_function() || scope_flags.is_arrow()
+        }) {
+            return;
+        }
+
+        let mut idx = leading_var_count;
+
+        // Check `e = arguments.length`
+        if let Some((e_id_name, _)) = e_id_info {
+            let de = var_init
+                .declarations
+                .get(idx)
+                .expect("var_init.declarations.len() check above ensures this");
+            let BindingPattern::BindingIdentifier(de_id) = &de.id else { return };
+            if de_id.name != e_id_name {
+                return;
+            }
+            let Some(Expression::StaticMemberExpression(sm)) = &de.init else { return };
+            let Expression::Identifier(id) = &sm.object else { return };
+            if id.name != "arguments"
+                || !ctx.is_global_reference(id)
+                || sm.property.name != "length"
+            {
+                return;
+            }
+
+            idx += 1;
+        }
+
+        // Check `a = 0` or `a = k`
+        let a_id_symbol_id = {
+            let de_a = var_init
+                .declarations
+                .get(idx + 1)
+                .expect("var_init.declarations.len() check above ensures this");
+            let BindingPattern::BindingIdentifier(de_id) = &de_a.id else { return };
+            if de_id.name != a_id_name {
+                return;
+            }
+            if !matches!(&de_a.init, Some(Expression::NumericLiteral(n)) if n.value == offset) {
+                return;
+            }
+            de_id.symbol_id()
+        };
+
+        // Check `r = Array(e > 1 ? e - 1 : 0)`, or `r = []`
+        let r_id_pat_with_info = {
+            let de_r = var_init
+                .declarations
+                .get_mut(idx)
+                .expect("var_init.declarations.len() check above ensures this");
+            match &de_r.init {
+                // Array(e > 1 ? e - 1 : 0) or Array(e)
+                Some(Expression::CallExpression(call)) => {
+                    let Expression::Identifier(id) = &call.callee else { return };
+                    if id.name != "Array" || !ctx.is_global_reference(id) {
+                        return;
+                    }
+                    if call.arguments.len() != 1 {
+                        return;
+                    }
+                    let Some((e_id_name, _)) = e_id_info else { return };
+                    let Some(arg_expr) = call.arguments[0].as_expression() else { return };
+                    let result = verify_array_arg(arg_expr, e_id_name, offset);
+                    if result == VerifyArrayArgResult::Invalid {
+                        return;
+                    }
+                    e_ref_count += if result == VerifyArrayArgResult::WithOffset { 2 } else { 1 };
+                }
+                Some(Expression::ArrayExpression(arr)) => {
+                    if !arr.elements.is_empty() {
+                        return;
+                    }
+                }
+                _ => return,
+            }
+            let BindingPattern::BindingIdentifier(de_id) = &de_r.id else { return };
+            if de_id.name != r_id_name {
+                return;
+            }
+            let de_id_symbol_id = de_id.symbol_id();
+            (&mut de_r.id, de_id_symbol_id)
+        };
+
+        // bail out if `e` or `a` is used outside the for-loop
+        {
+            if let Some((_, e_id_symbol_id)) = e_id_info
+                && e_id_symbol_id.is_none_or(|id| {
+                    ctx.scoping().get_resolved_references(id).count() != e_ref_count
+                })
+            {
+                return;
+            }
+            if ctx.scoping().get_resolved_references(a_id_symbol_id).count() != a_ref_count {
+                return;
+            }
+        }
+
+        // Build `var r = [...arguments]` (with optional `.slice(offset)`) and drop test/update/body.
+
+        let r_id_pat = {
+            let (r_id, de_id_symbol_id) = r_id_pat_with_info;
+            // `var r = [...arguments]` / `var r = [...arguments].slice(n)` is not needed
+            // if r is not used by other places because `[...arguments]` does not have a sideeffect
+            // `r` is used once in the for-loop (assignment for each index)
+            (ctx.scoping().get_resolved_references(de_id_symbol_id).count() > 1)
+                .then(|| r_id.take_in(ctx))
+        };
+
+        if let Some(r_id_pat) = r_id_pat {
+            let base_arr = Expression::new_array_expression(
+                SPAN,
+                [ArrayExpressionElement::new_spread_element(
+                    SPAN,
+                    Expression::Identifier(arguments_id.take_in_box(ctx)),
+                    ctx,
+                )],
+                ctx,
+            );
+            // wrap with `.slice(offset)`
+            let arr = if offset > 0.0 {
+                let obj = base_arr;
+                let callee = Expression::new_static_member_expression(
+                    SPAN,
+                    obj,
+                    IdentifierName::new(SPAN, "slice", ctx),
+                    false,
+                    ctx,
+                );
+                Expression::new_call_expression(
+                    SPAN,
+                    callee,
+                    None,
+                    [Argument::new_numeric_literal(SPAN, offset, None, NumberBase::Decimal, ctx)],
+                    false,
+                    ctx,
+                )
+            } else {
+                base_arr
+            };
+
+            let new_decl = VariableDeclarator::new(SPAN, r_id_pat, None, Some(arr), false, ctx);
+            // Drop only the copy-loop declarators. Siblings remain in the `var` statement.
+            // Walk removed declarators so refs inside them reach `PassChanges`.
+            for decl in var_init.declarations.drain(leading_var_count..pattern_end) {
+                ctx.drop_variable_declarator(&decl);
+            }
+            var_init.declarations.insert(leading_var_count, new_decl);
+        } else {
+            // The copied array is unused, but sibling declarations still need to survive.
+            for decl in var_init.declarations.drain(leading_var_count..pattern_end) {
+                ctx.drop_variable_declarator(&decl);
+            }
+            // Avoid invalid `for (var; 0;)` when no siblings remain.
+            if var_init.declarations.is_empty() {
+                for_stmt.init = None;
+            }
+        }
+        if let Some(old) = for_stmt.test.take() {
+            ctx.drop_expression(&old);
+        }
+        for_stmt.test = Some(Expression::new_number_0(for_stmt.span, ctx));
+        if let Some(old) = for_stmt.update.take() {
+            ctx.drop_expression(&old);
+        }
+        ctx.replace_statement(&mut for_stmt.body, Statement::new_empty_statement(SPAN, ctx));
+    }
+
+    /// Removes redundant argument of `ReturnStatement`
+    ///
+    /// `return undefined` -> `return`
+    /// `return void 0` -> `return`
+    pub fn substitute_return_statement(stmt: &mut ReturnStatement<'a>, ctx: &mut TraverseCtx<'a>) {
+        let Some(argument) = &stmt.argument else { return };
+        if !match argument {
+            Expression::Identifier(ident) => ctx.is_identifier_undefined(ident),
+            Expression::UnaryExpression(e) => {
+                e.operator.is_void() && !argument.may_have_side_effects(ctx)
+            }
+            _ => false,
+        } {
+            return;
+        }
+        // `return undefined` has a different semantic in async generator function.
+        if ctx.is_closest_function_scope_an_async_generator() {
+            return;
+        }
+        if let Some(old) = stmt.argument.take() {
+            ctx.drop_expression(&old);
+        }
+    }
+
+    /// Remove `void 0` from a non-delegating `yield`.
+    /// `yield void 0` -> `yield`
+    pub fn substitute_yield_expression(expr: &mut YieldExpression<'a>) {
+        if !expr.delegate && expr.argument.as_ref().is_some_and(Expression::is_void_0) {
+            expr.argument = None;
+        }
+    }
+
+    fn compress_variable_declarator(
+        decl: &mut VariableDeclarator<'a>,
+        kind: VariableDeclarationKind,
+        ctx: &mut TraverseCtx<'a>,
+    ) {
+        // Destructuring Pattern has error throwing side effect.
+        if matches!(
+            kind,
+            VariableDeclarationKind::Const
+                | VariableDeclarationKind::Using
+                | VariableDeclarationKind::AwaitUsing
+        ) || decl.id.is_destructuring_pattern()
+        {
+            return;
+        }
+        if !kind.is_var()
+            && decl.init.as_ref().is_some_and(|init| ctx.is_expression_undefined(init))
+            && let Some(old) = decl.init.take()
+        {
+            ctx.drop_expression(&old);
+        }
+    }
+
+    /// Fold `Boolean`, ///
+    /// `Boolean(a)` -> `!!a`
+    /// `Number(0)` -> `0`
+    /// `String()` -> `''`
+    /// `BigInt(1)` -> `1`
+    pub fn substitute_simple_function_call(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
+        let Expression::CallExpression(e) = expr else { return };
+        if e.optional || e.arguments.len() >= 2 {
+            return;
+        }
+        let Expression::Identifier(ident) = &e.callee else { return };
+        let name = ident.name.as_str();
+        if !matches!(name, "Boolean" | "Number" | "String" | "BigInt") {
+            return;
+        }
+        if !ctx.is_global_reference(ident) {
+            return;
+        }
+        let span = e.span;
+        let args = &mut e.arguments;
+        let arg = match args.get_mut(0) {
+            None => None,
+            Some(arg) => match arg.as_expression_mut() {
+                Some(arg) => Some(arg),
+                None => return,
+            },
+        };
+        let changed = match name {
+            // `Boolean(a)` -> `!!(a)`
+            // http://www.ecma-international.org/ecma-262/6.0/index.html#sec-boolean-constructor-boolean-value
+            // and
+            // http://www.ecma-international.org/ecma-262/6.0/index.html#sec-logical-not-operator-runtime-semantics-evaluation
+            "Boolean" => match arg {
+                None => Some(Expression::new_boolean_literal(span, false, ctx)),
+                Some(arg) => {
+                    let mut arg = arg.take_in(ctx);
+                    Self::minimize_expression_in_boolean_context(&mut arg, ctx);
+                    let arg =
+                        Expression::new_unary_expression(span, UnaryOperator::LogicalNot, arg, ctx);
+                    Some(Self::minimize_not(span, arg, ctx, false))
+                }
+            },
+            "String" => {
+                match arg {
+                    // `String()` -> `''`
+                    None => Some(Expression::new_string_literal(span, "", None, ctx)),
+                    Some(arg) => arg
+                        .evaluate_value_to_string(ctx)
+                        .filter(|_| !arg.may_have_side_effects(ctx))
+                        .map(|s| ctx.value_to_expr(e.span, ConstantValue::String(s))),
+                }
+            }
+            "Number" => Some(Expression::new_numeric_literal(
+                span,
+                match arg {
+                    None => 0.0,
+                    Some(arg) => {
+                        match arg.to_number(ctx).filter(|_| !arg.may_have_side_effects(ctx)) {
+                            Some(n) => n,
+                            None => return,
+                        }
+                    }
+                },
+                None,
+                NumberBase::Decimal,
+                ctx,
+            )),
+            // `BigInt(1n)` -> `1n`
+            "BigInt" => match arg {
+                None => None,
+                Some(arg) => arg.is_big_int_literal().then(|| arg.take_in(ctx)),
+            },
+            _ => None,
+        };
+        if let Some(changed) = changed {
+            ctx.replace_expression(expr, changed);
+        }
+    }
+
+    /// Fold `Object` or `Array` constructor
+    fn get_fold_constructor_name(
+        callee: &Expression<'a>,
+        ctx: &TraverseCtx<'a>,
+    ) -> Option<&'a str> {
+        match callee {
+            Expression::StaticMemberExpression(e) => {
+                if !e.object.is_specific_id("window") {
+                    return None;
+                }
+                Some(e.property.name.as_str())
+            }
+            Expression::Identifier(ident) => {
+                let name = ident.name.as_str();
+                if !matches!(name, "Object" | "Array") {
+                    return None;
+                }
+                if !ctx.is_global_reference(ident) {
+                    return None;
+                }
+                Some(name)
+            }
+            _ => None,
+        }
+    }
+
+    /// `window.Object()`, `new Object()`, `Object()`  -> `{}`
+    /// `window.Array()`, `new Array()`, `Array()`  -> `[]`
+    pub fn substitute_object_or_array_constructor(
+        expr: &mut Expression<'a>,
+        ctx: &mut TraverseCtx<'a>,
+    ) {
+        let callee = match expr {
+            Expression::NewExpression(e) => &e.callee,
+            Expression::CallExpression(e) => &e.callee,
+            _ => return,
+        };
+        let Some(name) = Self::get_fold_constructor_name(callee, ctx) else { return };
+        let (span, args, is_new_expr) = match expr {
+            Expression::NewExpression(e) => {
+                let NewExpression { span, arguments, .. } = e.as_mut();
+                (span, arguments, true)
+            }
+            Expression::CallExpression(e) => {
+                let CallExpression { span, arguments, .. } = e.as_mut();
+                (span, arguments, false)
+            }
+            _ => return,
+        };
+        match name {
+            "Object" if args.is_empty() => {
+                let new_value = Expression::new_object_expression(*span, [], ctx);
+                ctx.replace_expression(expr, new_value);
+            }
+            "Array" => {
+                // `new Array` -> `[]`
+                if args.is_empty() {
+                    let new_value = Expression::new_array_expression(*span, [], ctx);
+                    ctx.replace_expression(expr, new_value);
+                } else if args.len() == 1 {
+                    let Some(arg) = args[0].as_expression_mut() else { return };
+                    // `new Array(0)` -> `[]`
+                    if arg.is_number_0() {
+                        let new_value = Expression::new_array_expression(*span, [], ctx);
+                        ctx.replace_expression(expr, new_value);
+                    }
+                    // `new Array(8)` -> `Array(8)`
+                    else if let Expression::NumericLiteral(n) = arg {
+                        // new Array(2) -> `[,,]`
+                        // this does not work with IE8 and below
+                        // learned from https://github.com/babel/minify/pull/45
+                        #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                        if n.value.fract() == 0.0 {
+                            let n_int = n.value as usize;
+                            if (1..=6).contains(&n_int) {
+                                let elisions = repeat_with(|| {
+                                    ArrayExpressionElement::new_elision(n.span, ctx)
+                                })
+                                .take(n_int);
+                                let new_value = Expression::new_array_expression(
+                                    *span,
+                                    ArenaVec::from_iter_in(elisions, ctx),
+                                    ctx,
+                                );
+                                ctx.replace_expression(expr, new_value);
+                                return;
+                            }
+                        }
+                        if is_new_expr {
+                            ctx.replace_expression_with(
+                                expr,
+                                Self::transform_new_expr_to_call_expr,
+                            );
+                        }
+                    }
+                    // `new Array(literal)` -> `[literal]`
+                    else if arg.is_literal() || matches!(arg, Expression::ArrayExpression(_)) {
+                        let new_value = Expression::new_array_expression(
+                            *span,
+                            [ArrayExpressionElement::from(arg.take_in(ctx))],
+                            ctx,
+                        );
+                        ctx.replace_expression(expr, new_value);
+                    }
+                    // `new Array(x)` -> `Array(x)`
+                    else if is_new_expr {
+                        ctx.replace_expression_with(expr, Self::transform_new_expr_to_call_expr);
+                    }
+                } else {
+                    // `Array` has special length-constructor behavior only when it receives
+                    // exactly one argument. See
+                    // <https://tc39.es/ecma262/#sec-array-constructor-array>. If a call contains
+                    // spread arguments, we can still fold it to an array literal once we have two
+                    // non-spread arguments, because the final argument count is guaranteed to be
+                    // at least 2 regardless of how many values the spreads produce. With fewer
+                    // than two non-spread arguments, a spread may produce 0 values and expose the
+                    // single-argument special case, e.g. `Array(foo, ...[])`.
+                    let mut has_spread = false;
+                    let mut non_spread_count = 0;
+                    for arg in args.iter() {
+                        if arg.is_spread() {
+                            has_spread = true;
+                        } else {
+                            non_spread_count += 1;
+                        }
+                        if has_spread && non_spread_count >= 2 {
+                            break;
+                        }
+                    }
+                    if has_spread && non_spread_count < 2 {
+                        return;
+                    }
+
+                    // `new Array(1, 2, ...xs)` -> `[1, 2, ...xs]`
+                    let elements = ArenaVec::from_iter_in(
+                        args.iter_mut().map(|arg| ArrayExpressionElement::from(arg.take_in(ctx))),
+                        ctx,
+                    );
+                    let new_value = Expression::new_array_expression(*span, elements, ctx);
+                    ctx.replace_expression(expr, new_value);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// `new Error()` -> `Error()` (also for NativeErrors)
+    /// `new AggregateError()` -> `AggregateError()`
+    /// `new Function()` -> `Function()`
+    /// `new RegExp()` -> `RegExp()`
+    pub fn substitute_global_new_expression(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
+        let Expression::NewExpression(e) = expr else { return };
+        let Expression::Identifier(ident) = &e.callee else { return };
+        let name = ident.name.as_str();
+        if !matches!(name, "Function" | "RegExp" | "AggregateError") && !is_error_constructor(name)
+        {
+            return;
+        }
+        if !ctx.is_global_reference(ident) {
+            return;
+        }
+        if match name {
+            "RegExp" => {
+                let arguments_len = e.arguments.len();
+                arguments_len == 0
+                    || (arguments_len >= 1
+                        && e.arguments[0].as_expression().is_some_and(|first_argument| {
+                            let ty = first_argument.value_type(ctx);
+                            !ty.is_undetermined() && !ty.is_object()
+                        }))
+            }
+            _ => true,
+        } {
+            ctx.replace_expression_with(expr, Self::transform_new_expr_to_call_expr);
+        }
+    }
+
+    pub fn substitute_chain_call_expression(
+        expr: &mut ChainExpression<'a>,
+        ctx: &mut TraverseCtx<'a>,
+    ) {
+        if let ChainElement::CallExpression(call_expr) = &mut expr.expression {
+            // `window.Object?.()` -> `Object?.()`
+            if call_expr.arguments.is_empty()
+                && call_expr
+                    .callee
+                    .as_member_expression()
+                    .is_some_and(|mem_expr| mem_expr.is_specific_member_access("window", "Object"))
+            {
+                let object = static_ident!("Object");
+                let reference_id = ctx.create_unbound_reference(object, ReferenceFlags::Read);
+                let new_callee = Expression::new_identifier_with_reference_id(
+                    call_expr.callee.span(),
+                    object,
+                    reference_id,
+                    ctx,
+                );
+                ctx.replace_expression(&mut call_expr.callee, new_callee);
+            }
+        }
+    }
+
+    pub fn substitute_template_literal(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
+        let Expression::TemplateLiteral(t) = &*expr else { return };
+        if t.may_have_side_effects(ctx) {
+            return;
+        }
+        let span = t.span();
+        // The cooked value is kept as a `JSStr`, so a template holding a lone surrogate
+        // becomes a string literal with the same code units.
+        let Some(value) = evaluate_to_js_string(expr, ctx) else { return };
+        let new_value = Expression::new_string_literal(span, value, None, ctx);
+        ctx.replace_expression(expr, new_value);
+    }
+
+    // <https://github.com/swc-project/swc/blob/4e2dae558f60a9f5c6d2eac860743e6c0b2ec562/crates/swc_ecma_minifier/src/compress/pure/properties.rs>
+    fn try_compress_property_key(
+        key: &mut PropertyKey<'a>,
+        computed: &mut bool,
+        ctx: &mut TraverseCtx<'a>,
+    ) {
+        match key {
+            // `-2`, `-0`, `Infinity` and `NaN` are not valid literal keys, so they keep their brackets.
+            PropertyKey::NumericLiteral(n)
+                if *computed && n.value.is_finite() && n.value.is_sign_positive() =>
+            {
+                // Bool field flip on an existing AST node, not a slot replacement.
+                *computed = false;
+            }
+            PropertyKey::StringLiteral(s) => {
+                // Bool field flip on an existing AST node, not a slot replacement.
+                *computed = false;
+                // A key with a lone surrogate is neither an identifier name nor a number.
+                let Some(value) = s.value.as_str() else { return };
+                if is_identifier_name_patched(value) {
+                    let new_key = PropertyKey::new_static_identifier(s.span, value, ctx);
+                    ctx.replace_property_key(key, new_key);
+                    return;
+                }
+                if let Some(value) = TraverseCtx::string_to_equivalent_number_value(value)
+                    && value >= 0.0
+                {
+                    let new_key = PropertyKey::new_numeric_literal(
+                        s.span,
+                        value,
+                        None,
+                        NumberBase::Decimal,
+                        ctx,
+                    );
+                    ctx.replace_property_key(key, new_key);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    // `foo(...[1,2,3])` -> `foo(1,2,3)`
+    // `new Foo(...[1,2,3])` -> `new Foo(1,2,3)`
+    fn try_flatten_arguments(args: &mut ArenaVec<'a, Argument<'a>>, ctx: &mut TraverseCtx<'a>) {
+        let (new_size, should_fold) =
+            args.iter().fold((0, false), |(mut new_size, mut should_fold), arg| {
+                new_size += if let Argument::SpreadElement(spread_el) = arg {
+                    if let Expression::ArrayExpression(array_expr) = &spread_el.argument {
+                        should_fold = true;
+                        array_expr.elements.len()
+                    } else {
+                        1
+                    }
+                } else {
+                    1
+                };
+
+                (new_size, should_fold)
+            });
+        if !should_fold {
+            return;
+        }
+
+        let old_args = std::mem::replace(args, ArenaVec::with_capacity_in(new_size, ctx));
+        let new_args = args;
+
+        for arg in old_args {
+            if let Argument::SpreadElement(spread_el) = arg {
+                let SpreadElement { span, argument, .. } = spread_el.unbox();
+                if let Expression::ArrayExpression(array_expr) = argument {
+                    for el in array_expr.unbox().elements {
+                        match el {
+                            ArrayExpressionElement::SpreadElement(spread_el) => {
+                                let SpreadElement { span, argument, .. } = spread_el.unbox();
+                                new_args.push(Argument::new_spread_element(span, argument, ctx));
+                            }
+                            ArrayExpressionElement::Elision(elision) => {
+                                new_args.push(Expression::new_void_0(elision.span, ctx).into());
+                            }
+                            match_expression!(ArrayExpressionElement) => {
+                                new_args.push(el.into_expression().into());
+                            }
+                        }
+                    }
+                } else {
+                    new_args.push(Argument::new_spread_element(span, argument, ctx));
+                }
+            } else {
+                new_args.push(arg);
+            }
+        }
+        ctx.notice_change();
+    }
+
+    /// Flatten nested chain expressions
+    /// `(foo?.bar)?.baz` -> `foo?.bar?.baz`
+    fn try_flatten_nested_chain_expression(
+        expr: &mut ChainExpression<'a>,
+        ctx: &mut TraverseCtx<'a>,
+    ) {
+        let object = match &mut expr.expression {
+            ChainElement::StaticMemberExpression(member) => &mut member.object,
+            ChainElement::ComputedMemberExpression(member) => &mut member.object,
+            ChainElement::PrivateFieldExpression(member) => &mut member.object,
+            ChainElement::CallExpression(call) => &mut call.callee,
+            ChainElement::TSNonNullExpression(_) => {
+                return; // noop
+            }
+        };
+
+        if matches!(object, Expression::ChainExpression(_)) {
+            ctx.replace_expression_with(object, |e, _ctx| {
+                let Expression::ChainExpression(expr) = e else { unreachable!() };
+                Expression::from(expr.unbox().expression)
+            });
+        }
+    }
+
+    /// `Object(expr)(args)` -> `(0, expr)(args)`
+    ///
+    /// If `expr` is `null` or `undefined`, both before and after throws an TypeError ("something is not a function").
+    /// It is because `Object(expr)` returns `{}`.
+    ///
+    /// If `expr` is other primitive values, both before and after throws an TypeError ("something is not a function").
+    /// It is because `Object(expr)` returns the Object wrapped values (e.g. `new Boolean()`).
+    ///
+    /// If `expr` is an object / function, `Object(expr)` returns `expr` as-is.
+    /// Note that we need to wrap `expr` as `(0, expr)` so that the `this` value is preserved.
+    ///
+    /// <https://tc39.es/ecma262/2025/multipage/fundamental-objects.html#sec-object-value>
+    fn try_rewrite_object_callee_indirect_call(
+        expr: &mut CallExpression<'a>,
+        ctx: &mut TraverseCtx<'a>,
+    ) {
+        let Expression::CallExpression(inner_call) = &mut expr.callee else { return };
+        if inner_call.optional || inner_call.arguments.len() != 1 {
+            return;
+        }
+        let Expression::Identifier(callee) = &inner_call.callee else {
+            return;
+        };
+        if callee.name != "Object" || !ctx.is_global_reference(callee) {
+            return;
+        }
+
+        let span = inner_call.span;
+        let Some(arg_expr) = inner_call.arguments[0].as_expression_mut() else {
+            return;
+        };
+
+        let new_callee = Self::preserve_indirect_access(span, arg_expr.take_in(ctx), ctx);
+        ctx.replace_expression(&mut expr.callee, new_callee);
+    }
+
+    /// Remove name from function expressions if it is not used.
+    ///
+    /// e.g. `var a = function f() {}` -> `var a = function () {}`
+    ///
+    /// This compression is not safe if the code relies on `Function::name`.
+    pub fn try_remove_name_from_functions(func: &mut Function<'a>, ctx: &mut TraverseCtx<'a>) {
+        if ctx.options().keep_names.function {
+            return;
+        }
+        if func.id.as_ref().is_some_and(|id| ctx.scoping().symbol_is_unused(id.symbol_id()))
+            && !ctx.scoping().scope_flags(func.scope_id()).contains_direct_eval()
+        {
+            func.id = None;
+            ctx.notice_change();
+        }
+    }
+
+    /// Remove name from class expressions if it is not used.
+    ///
+    /// e.g. `var a = class C {}` -> `var a = class {}`
+    ///
+    /// This compression is not safe if the code relies on `Class::name`.
+    pub fn try_remove_name_from_classes(class: &mut Class<'a>, ctx: &mut TraverseCtx<'a>) {
+        if ctx.options().keep_names.class {
+            return;
+        }
+
+        if class.id.as_ref().is_some_and(|id| ctx.scoping().symbol_is_unused(id.symbol_id()))
+            && !ctx.scoping().scope_flags(class.scope_id()).contains_direct_eval()
+        {
+            class.id = None;
+            ctx.notice_change();
+        }
+    }
+
+    /// `new Int8Array(0)` -> `new Int8Array()` (also for other TypedArrays)
+    pub fn substitute_typed_array_constructor(e: &mut NewExpression<'a>, ctx: &TraverseCtx<'a>) {
+        let Expression::Identifier(ident) = &e.callee else { return };
+        let name = ident.name.as_str();
+        if !is_typed_array_constructor(name) || !ctx.is_global_reference(ident) {
+            return;
+        }
+        if e.arguments.len() == 1
+            && e.arguments[0].as_expression().is_some_and(Expression::is_number_0)
+        {
+            e.arguments.clear();
+        }
+    }
+
+    /// Transforms boolean expression `true` => `!0` `false` => `!1`.
+    pub fn substitute_boolean(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
+        let Expression::BooleanLiteral(lit) = expr else { return };
+        let num = Expression::new_numeric_literal(
+            lit.span,
+            if lit.value { 0.0 } else { 1.0 },
+            None,
+            NumberBase::Decimal,
+            ctx,
+        );
+        let new_value =
+            Expression::new_unary_expression(lit.span, UnaryOperator::LogicalNot, num, ctx);
+        ctx.replace_expression(expr, new_value);
+    }
+
+    /// Flatten the spread of constant array literals inside array expressions:
+    /// `[a, ...[1, 2, 3]]` -> `[a, 1, 2, 3]`
+    ///
+    /// Elisions inside the spread source are converted to `void 0` to match iterator
+    /// semantics (spreading an elision should result in `undefined`):
+    /// `[a, ...[1, , 3]]` -> `[a, 1, void 0, 3]`
+    /// If there are two or more elisions, we keep the spread as-is to avoid causing
+    /// the code to be longer.
+    pub fn try_flatten_array_expression_elements(
+        expr: &mut Expression<'a>,
+        ctx: &mut TraverseCtx<'a>,
+    ) {
+        let Expression::ArrayExpression(array) = expr else {
+            return;
+        };
+
+        let (new_size, should_fold) =
+            array.elements.iter().fold((0, false), |(mut new_size, mut should_fold), arg| {
+                new_size += if let ArrayExpressionElement::SpreadElement(spread_el) = arg {
+                    if let Expression::ArrayExpression(array_expr) = &spread_el.argument
+                        && array_expr
+                            .elements
+                            .iter()
+                            .filter(|inner_el| inner_el.is_elision())
+                            .count()
+                            < 2
+                    {
+                        should_fold = true;
+                        array_expr.elements.len()
+                    } else {
+                        1
+                    }
+                } else {
+                    1
+                };
+
+                (new_size, should_fold)
+            });
+        if !should_fold {
+            return;
+        }
+
+        let old_elements =
+            std::mem::replace(&mut array.elements, ArenaVec::with_capacity_in(new_size, ctx));
+        let new_elements = &mut array.elements;
+
+        for elem in old_elements {
+            if let ArrayExpressionElement::SpreadElement(mut spread_el) = elem {
+                if let Expression::ArrayExpression(array_expr) = &mut spread_el.argument
+                    && array_expr.elements.iter().filter(|inner_el| inner_el.is_elision()).count()
+                        < 2
+                {
+                    for inner_el in array_expr.elements.drain(..) {
+                        if let ArrayExpressionElement::Elision(elision) = inner_el {
+                            new_elements.push(Expression::new_void_0(elision.span, ctx).into());
+                        } else {
+                            new_elements.push(inner_el);
+                        }
+                    }
+                } else {
+                    new_elements.push(ArrayExpressionElement::SpreadElement(spread_el));
+                }
+            } else {
+                new_elements.push(elem);
+            }
+        }
+        ctx.notice_change();
+    }
+
+    /// Transforms long array expression with string literals to `"str1,str2".split(',')`
+    pub fn substitute_array_expression(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
+        // this threshold is chosen by hand by checking the minsize output
+        const THRESHOLD: usize = 40;
+
+        let Expression::ArrayExpression(array) = expr else {
+            return;
+        };
+
+        let is_all_string = array.elements.iter().all(|element| {
+            element.as_expression().is_some_and(|expr| matches!(expr, Expression::StringLiteral(lit) if !lit.value.has_lone_surrogate()))
+        });
+        if !is_all_string {
+            return;
+        }
+
+        let element_count = array.elements.len();
+        // replace with `.split` only when the saved size is great enough
+        // because using `.split` in some places and not in others may cause gzipped size to be bigger
+        let can_save = element_count * 2 > ".split('.')".len() + THRESHOLD;
+        if !can_save {
+            return;
+        }
+
+        let strings = array.elements.iter().map(|element| {
+            let Expression::StringLiteral(str) = element.to_expression() else { unreachable!() };
+            // Checked above before constructing the iterator.
+            str.value.as_str().unwrap()
+        });
+        let Some(delimiter) = Self::pick_delimiter(&strings) else { return };
+
+        let concatenated_string = strings.collect::<Vec<_>>().join(delimiter);
+
+        // "str1,str2".split(',')
+        let new_value = Expression::new_call_expression_with_pure(
+            expr.span(),
+            Expression::new_static_member_expression(
+                expr.span(),
+                Expression::new_string_literal(
+                    expr.span(),
+                    Str::from_str_in(&concatenated_string, ctx),
+                    None,
+                    ctx,
+                ),
+                IdentifierName::new(expr.span(), "split", ctx),
+                false,
+                ctx,
+            ),
+            None,
+            [Argument::new_string_literal(
+                expr.span(),
+                Str::from_str_in(delimiter, ctx),
+                None,
+                ctx,
+            )],
+            false,
+            true,
+            ctx,
+        );
+        ctx.replace_expression(expr, new_value);
+    }
+
+    fn pick_delimiter<'s>(
+        strings: &(impl Iterator<Item = &'s str> + Clone),
+    ) -> Option<&'static str> {
+        // These delimiters are chars that appears a lot in the program
+        // therefore probably have a small Huffman encoding.
+        const DELIMITERS: [&str; 5] = [".", ",", "(", ")", " "];
+
+        let is_all_length_1 = strings.clone().all(|s| s.len() == 1);
+        if is_all_length_1 {
+            return Some("");
+        }
+
+        DELIMITERS.into_iter().find(|&delimiter| strings.clone().all(|s| !s.contains(delimiter)))
+    }
+
+    pub fn substitute_catch_clause(catch: &mut CatchClause<'a>, ctx: &TraverseCtx<'a>) {
+        if ctx.supports_feature(ESFeature::ES2019OptionalCatchBinding)
+            && let Some(param) = &catch.param
+            && let BindingPattern::BindingIdentifier(ident) = &param.pattern
+            && (catch.body.body.is_empty() || ctx.scoping().symbol_is_unused(ident.symbol_id()))
+            // Direct eval can reference the catch parameter even when static analysis sees no use.
+            && !ctx.scoping().scope_flags(catch.scope_id()).contains_direct_eval()
+            // Don't remove catch parameter when the body has a `var` with the same name.
+            // In `catch (e) { var e = x }`, `var e` hoists to function scope but the assignment
+            // targets the catch parameter. Removing the catch param changes semantics.
+            && ctx.scoping().symbol_redeclarations(ident.symbol_id()).is_empty()
+            && !Self::catch_body_has_same_name_var(&catch.body, ident.name)
+        {
+            catch.param = None;
+        }
+    }
+
+    /// Move sequence expressions out of operand positions so the trailing
+    /// expression can be folded into the parent operator.
+    ///
+    /// - `(a, b) + c` -> `a, b + c`
+    /// - `(a, b) || c` -> `a, b || c`
+    /// - `-(a, b)` -> `a, -b`
+    /// - `await (a, b)` -> `a, await b`
+    /// - `yield (a, b)` -> `a, yield b`
+    pub fn fold_sequence_expression(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
+        let argument = match expr {
+            Expression::BinaryExpression(binary_expr) => &mut binary_expr.left,
+            Expression::LogicalExpression(logical_expr) => &mut logical_expr.left,
+            Expression::UnaryExpression(unary_expr)
+                if !unary_expr.operator.is_keyword() && !unary_expr.operator.is_not() =>
+            {
+                &mut unary_expr.argument
+            }
+            Expression::AwaitExpression(await_expr) => &mut await_expr.argument,
+            Expression::YieldExpression(yield_expr) => {
+                let Some(maybe_sequence_expression) = &mut yield_expr.argument else { return };
+                maybe_sequence_expression
+            }
+            _ => {
+                return;
+            }
+        };
+
+        let Expression::SequenceExpression(seq_expr) = argument else { return };
+
+        if seq_expr.expressions.len() <= 1 {
+            return;
+        }
+
+        let mut seq_expr = seq_expr.take_in_box(ctx);
+        *argument = seq_expr.expressions.pop().unwrap();
+        seq_expr.expressions.push(expr.take_in(ctx));
+        let new_value = Expression::SequenceExpression(seq_expr);
+        ctx.replace_expression(expr, new_value);
+    }
+
+    fn catch_body_has_same_name_var(body: &BlockStatement<'a>, name: Ident<'a>) -> bool {
+        body.body.iter().any(|stmt| {
+            let Statement::VariableDeclaration(decl) = stmt else { return false };
+            if !decl.kind.is_var() {
+                return false;
+            }
+
+            let mut has_same_name = false;
+            decl.bound_names(&mut |ident| {
+                has_same_name |= ident.name == name;
+            });
+            has_same_name
+        })
+    }
+
+    /// Whether the expression's result will be discarded — bare expression
+    /// statement, or the init of a `var`/`let`/`const` whose binding is unused
+    /// by count. Used by the IIFE inliner to short-circuit
+    /// pure-annotated IIFEs to `void 0` so they drop regardless of body shape,
+    /// and to allow `(async () => {})()` / `(function* () {})()` (whose return
+    /// value isn't a meaningful result) to collapse in those positions too.
+    /// Fixes <https://github.com/oxc-project/oxc/issues/17480>.
+    fn is_expression_result_unused(ctx: &TraverseCtx<'a>) -> bool {
+        match ctx.parent() {
+            Ancestor::ExpressionStatementExpression(_) => true,
+            Ancestor::VariableDeclaratorInit(decl) => {
+                if !Self::can_remove_unused_declarators(ctx) {
+                    return false;
+                }
+                // `using` runs `[Symbol.dispose]` at scope exit.
+                let Ancestor::VariableDeclarationDeclarations(declaration) = ctx.ancestor(1) else {
+                    unreachable!();
+                };
+                if declaration.kind().is_using() {
+                    return false;
+                }
+                let BindingPattern::BindingIdentifier(ident) = decl.id() else {
+                    return false;
+                };
+                Self::symbol_is_unused_by_count(ident.symbol_id(), ctx)
+            }
+            _ => false,
+        }
+    }
+
+    /// Optimizes the usage of Immediately Invoked Function Expressions (IIFEs)
+    /// within the given expression and context by performing various substitutions
+    /// to clean up and simplify the code.
+    ///
+    /// - Replaces empty IIFEs (e.g., `(() => {})()` or `(function() {})()`) with the value `undefined`.
+    /// - Simplifies single-expression non-async arrow function IIFEs (e.g., `(() => foo())()` to `foo()`).
+    /// - Converts arrow function IIFEs that return void or execute one expression
+    ///   (e.g., `(() => { foo() })()` or `(() => { return foo() })()`) into simpler expressions.
+    pub fn substitute_iife_call(e: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
+        let Expression::CallExpression(call_expr) = e else { return };
+
+        if !call_expr.callee.is_function() {
+            return;
+        }
+
+        if !call_expr.arguments.is_empty() {
+            Self::substitute_empty_body_iife_call_with_args(e, ctx);
+            return;
+        }
+
+        let is_empty_iife = match &call_expr.callee {
+            Expression::FunctionExpression(f) => {
+                f.params.is_empty()
+                    && f.params
+                        .rest
+                        .as_ref()
+                        .is_none_or(|rest| rest.rest.argument.is_binding_identifier())
+                    && f.body.as_ref().is_some_and(|body| body.is_empty())
+                    // ignore async/generator if a return value is not used
+                    && ((!f.r#async && !f.generator) || Self::is_expression_result_unused(ctx))
+            }
+            Expression::ArrowFunctionExpression(f) => {
+                f.params.is_empty()
+                    && f.params
+                        .rest
+                        .as_ref()
+                        .is_none_or(|rest| rest.rest.argument.is_binding_identifier())
+                    && f.body.is_empty()
+                    // ignore async if a return value is not used
+                    && (!f.r#async || Self::is_expression_result_unused(ctx))
+            }
+            _ => false,
+        };
+
+        if is_empty_iife {
+            // Replace "(() => {})()" with "undefined"
+            // Replace "(function () => { return })()" with "undefined"
+            let new_value = Expression::new_void_0(call_expr.span, ctx);
+            ctx.replace_expression(e, new_value);
+            return;
+        }
+
+        // The callee here is always a function/arrow literal, so
+        // `manual_pure_functions` (which matches named paths like `styled`)
+        // can never apply — only an explicit `/* @__PURE__ */` annotation can.
+        let is_pure = call_expr.pure && ctx.annotations();
+
+        if let Expression::ArrowFunctionExpression(f) = &mut call_expr.callee
+            && !f.r#async
+            && !f.params.has_parameter()
+        {
+            if let Some(expr) = f.get_expression_mut() {
+                // Replace "(() => foo())()" with "foo()"
+                let new_value = if is_pure && Self::is_expression_result_unused(ctx) {
+                    Expression::new_void_0(call_expr.span, ctx)
+                } else if let Some(taken) = Self::try_take_iife_body(expr, is_pure, ctx) {
+                    // Replace "(() => o.f)()()" with "(0, o.f)()"
+                    Self::preserve_indirect_access_if_needed(call_expr.span, taken, ctx)
+                } else {
+                    return;
+                };
+                ctx.replace_expression(e, new_value);
+                return;
+            }
+            let Some(body) = f.get_function_body_mut() else { return };
+            if body.statements.len() != 1 || !body.directives.is_empty() {
+                return;
+            }
+            match &mut body.statements[0] {
+                Statement::ExpressionStatement(expr_stmt) => {
+                    // Replace "(() => { foo() })()" with "(foo(), undefined)"
+                    let new_value = if is_pure && Self::is_expression_result_unused(ctx) {
+                        Expression::new_void_0(call_expr.span, ctx)
+                    } else if let Some(taken) =
+                        Self::try_take_iife_body(&mut expr_stmt.expression, is_pure, ctx)
+                    {
+                        Self::join_sequence(
+                            expr_stmt.span,
+                            taken,
+                            Expression::new_void_0(call_expr.span, ctx),
+                            ctx,
+                        )
+                    } else {
+                        return;
+                    };
+
+                    ctx.replace_expression(e, new_value);
+                }
+                Statement::ReturnStatement(ret_stmt) => {
+                    if let Some(argument) = &mut ret_stmt.argument {
+                        // Replace "(() => { return foo() })()" with "foo()"
+                        let new_value = if is_pure && Self::is_expression_result_unused(ctx) {
+                            Expression::new_void_0(call_expr.span, ctx)
+                        } else if let Some(taken) = Self::try_take_iife_body(argument, is_pure, ctx)
+                        {
+                            // Replace "(() => { return o.f })()()" with "(0, o.f)()"
+                            Self::preserve_indirect_access_if_needed(call_expr.span, taken, ctx)
+                        } else {
+                            return;
+                        };
+                        ctx.replace_expression(e, new_value);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    /// `(() => {})(a, b)` → `(a, b, void 0)` — drop the wrapper when the body
+    /// is empty and every param is a bare identifier; spread args become
+    /// `[...a]` to keep the iterator-protocol invocation.
+    fn substitute_empty_body_iife_call_with_args(
+        e: &mut Expression<'a>,
+        ctx: &mut TraverseCtx<'a>,
+    ) {
+        let Expression::CallExpression(call_expr) = e else { return };
+
+        // Looser than the spec's `IsSimpleParameterList` (which forbids rest):
+        // a rest binding to an identifier is safe here — the empty body never
+        // observes the collected array.
+        let params_simple = |p: &FormalParameters<'a>| {
+            p.items
+                .iter()
+                .all(|item| item.pattern.is_binding_identifier() && item.initializer.is_none())
+                && p.rest.as_ref().is_none_or(|r| r.rest.argument.is_binding_identifier())
+        };
+
+        let is_drop_candidate = match &call_expr.callee {
+            Expression::FunctionExpression(f) => {
+                !f.r#async
+                    && !f.generator
+                    && f.body.as_ref().is_some_and(|b| b.is_empty())
+                    && params_simple(&f.params)
+            }
+            Expression::ArrowFunctionExpression(f) => {
+                !f.r#async && f.body.is_empty() && params_simple(&f.params)
+            }
+            _ => false,
+        };
+
+        if !is_drop_candidate {
+            return;
+        }
+
+        let span = call_expr.span;
+        let mut exprs = Self::fold_arguments_into_needed_expressions(&mut call_expr.arguments, ctx);
+        let new_value = if exprs.is_empty() {
+            Expression::new_void_0(span, ctx)
+        } else {
+            exprs.push(Expression::new_void_0(span, ctx));
+            Expression::new_sequence_expression(span, exprs, ctx)
+        };
+        ctx.replace_expression(e, new_value);
+    }
+
+    /// Take the IIFE body out for inlining and propagate `pure` onto a
+    /// call/new body. Bails in tree-shake-only mode — see the
+    /// `preserve_iife_in_dce_mode` test.
+    /// Returns `None` to signal the caller should leave the IIFE intact.
+    fn try_take_iife_body(
+        body: &mut Expression<'a>,
+        is_pure: bool,
+        ctx: &TraverseCtx<'a>,
+    ) -> Option<Expression<'a>> {
+        if ctx.is_tree_shake_only() {
+            return None;
+        }
+        let mut taken = body.take_in(ctx);
+        if is_pure {
+            match &mut taken {
+                Expression::CallExpression(c) => c.pure = true,
+                Expression::NewExpression(n) => n.pure = true,
+                _ => {}
+            }
+        }
+        Some(taken)
+    }
+
+    fn transform_new_expr_to_call_expr(
+        expr: Expression<'a>,
+        ctx: &mut TraverseCtx<'a>,
+    ) -> Expression<'a> {
+        let Expression::NewExpression(new_expr) = expr else { unreachable!() };
+        let e = new_expr.unbox();
+        Expression::new_call_expression_with_pure(
+            e.span,
+            e.callee,
+            None,
+            e.arguments,
+            false,
+            e.pure,
+            ctx,
+        )
+    }
+}
+
+struct ClassPropertyKeyParent {
+    pub ty: ClassPropertyKeyParentType,
+    /// Whether the property is static.
+    pub r#static: bool,
+}
+
+impl ClassPropertyKeyParent {
+    /// Whether the key should be kept as a computed property to avoid early errors.
+    ///
+    /// <https://tc39.es/ecma262/2024/multipage/ecmascript-language-functions-and-classes.html#sec-static-semantics-classelementkind>
+    /// <https://tc39.es/ecma262/2024/multipage/ecmascript-language-functions-and-classes.html#sec-class-definitions-static-semantics-early-errors>
+    /// <https://arai-a.github.io/ecma262-compare/?pr=2417&id=sec-class-definitions-static-semantics-early-errors>
+    fn should_keep_as_computed_property(&self, key: &str) -> bool {
+        match key {
+            "prototype" => self.r#static,
+            "constructor" => match self.ty {
+                // Uncaught SyntaxError: Class constructor may not be an accessor
+                ClassPropertyKeyParentType::MethodDefinition => !self.r#static,
+                // Uncaught SyntaxError: Classes may not have a field named 'constructor'
+                // Uncaught SyntaxError: Class constructor may not be a private method
+                ClassPropertyKeyParentType::AccessorProperty
+                | ClassPropertyKeyParentType::PropertyDefinition => true,
+            },
+            "#constructor" => true,
+            _ => false,
+        }
+    }
+}
+
+enum ClassPropertyKeyParentType {
+    PropertyDefinition,
+    AccessorProperty,
+    MethodDefinition,
+}
+
+impl From<&PropertyDefinition<'_>> for ClassPropertyKeyParent {
+    fn from(prop: &PropertyDefinition<'_>) -> Self {
+        Self { ty: ClassPropertyKeyParentType::PropertyDefinition, r#static: prop.r#static }
+    }
+}
+
+impl From<&AccessorProperty<'_>> for ClassPropertyKeyParent {
+    fn from(accessor: &AccessorProperty<'_>) -> Self {
+        Self { ty: ClassPropertyKeyParentType::AccessorProperty, r#static: accessor.r#static }
+    }
+}
+
+impl From<&MethodDefinition<'_>> for ClassPropertyKeyParent {
+    fn from(method: &MethodDefinition<'_>) -> Self {
+        Self { ty: ClassPropertyKeyParentType::MethodDefinition, r#static: method.r#static }
+    }
+}
+
+impl<T> From<&mut T> for ClassPropertyKeyParent
+where
+    ClassPropertyKeyParent: for<'a> std::convert::From<&'a T>,
+{
+    fn from(prop: &mut T) -> Self {
+        (&*prop).into()
+    }
+}

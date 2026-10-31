@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-// HIDDEN [\0rolldown/runtime.js]
+
 // text.data
 var text_default = (/* @__PURE__ */ (() => {
 	var table = /* @__PURE__ */ new Uint8Array(128);
@@ -24,9 +24,11 @@ var text_default = (/* @__PURE__ */ (() => {
 		return bytes;
 	};
 })())("IidgKz0vQCMkJCVeJiooCuS9oOWlve+8jOS4lueVjArQn9GA0LjQstC10YIg0LzQuNGACuOBk+OCk+OBq+OBoeOBr+S4lueVjAo=");
+
 // main.js
 assert(text_default instanceof Uint8Array);
 var main_default = text_default;
+
 export { main_default as default };
 
 ```

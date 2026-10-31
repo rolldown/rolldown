@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // logger.js
 let send = () => {};
 const setup = () => {
@@ -14,10 +15,12 @@ const setup = () => {
 		globalThis.result = msg;
 	};
 };
+
 // consumer.js
 const doWork = () => {
 	send("hello from doWork");
 };
+
 // main.js
 setup();
 doWork();

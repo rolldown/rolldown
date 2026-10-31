@@ -7,6 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as utilityClass, t as helper } from "./main.js";
+
+// dynamic.js
 new utilityClass(helper());
 
 ```
@@ -23,9 +25,11 @@ var utilityClass = class {
 		this.value = value;
 	}
 };
+
 // main.js
 console.log(helper());
 import("./dynamic.js");
+
 export { utilityClass as n, helper as t };
 
 ```

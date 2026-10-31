@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-// HIDDEN [\0rolldown/runtime.js]
+
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 // main.ts
 var _MyClass;
@@ -22,6 +22,7 @@ let MyClass = _MyClass = class MyClass {
 MyClass = _MyClass = __decorate([MyDecorator()], MyClass);
 const myName = new MyClass().myName;
 assert.strictEqual(myName, "MyClass");
+
 export { myName };
 
 ```

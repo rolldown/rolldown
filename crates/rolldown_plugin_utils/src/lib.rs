@@ -6,6 +6,9 @@ mod strip_bom;
 mod to_string_literal;
 
 pub mod constants;
+#[cfg(feature = "testing")]
+#[doc(hidden)]
+pub mod hidden_module_markers;
 
 pub use asset_emission::{emit_asset, rewrite_emitted_asset_references};
 pub use data_to_esm::data_to_esm;

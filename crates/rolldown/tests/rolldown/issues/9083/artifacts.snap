@@ -11,6 +11,7 @@ function sleep(ms) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 await sleep(100);
+
 // middle.js
 const manager = {
 	value: "hello",
@@ -19,8 +20,10 @@ const manager = {
 function setup() {
 	manager.ready = true;
 }
+
 // main.js
 setup();
+
 export { manager };
 
 ```
@@ -37,6 +40,7 @@ function sleep(ms) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 await sleep(100);
+
 // middle.js
 const manager = {
 	value: "hello",
@@ -45,8 +49,10 @@ const manager = {
 function setup() {
 	manager.ready = true;
 }
+
 // main.js
 setup();
+
 export { manager };
 
 ```

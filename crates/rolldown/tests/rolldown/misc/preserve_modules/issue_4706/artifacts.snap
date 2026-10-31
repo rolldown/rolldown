@@ -15,6 +15,7 @@ export { __commonJSMin };
 
 ```js
 import { require_cjs } from "./cjs.js";
+
 // child.js
 const m = require_cjs();
 console.log(m);
@@ -25,10 +26,12 @@ console.log(m);
 
 ```js
 import { __commonJSMin } from "./_virtual/_rolldown/runtime.js";
+
 // cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1e4;
 }));
+
 export default require_cjs();
 export { require_cjs };
 

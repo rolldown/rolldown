@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 import * as pathNs from "node:path";
 import { join, sep } from "node:path";
+
 // HIDDEN [\0rolldown/runtime.js]
 // barrel.js
 var barrel_exports = /* @__PURE__ */ __exportAll({
@@ -16,6 +17,7 @@ var barrel_exports = /* @__PURE__ */ __exportAll({
 	pathNs: () => pathNs,
 	sep: () => sep
 });
+
 // main.js
 assert.strictEqual(join, pathNs.join);
 assert.strictEqual(sep, pathNs.sep);

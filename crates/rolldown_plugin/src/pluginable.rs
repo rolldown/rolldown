@@ -354,6 +354,11 @@ impl Pluginable {
     Arc::new(Self::new(plugin))
   }
 
+  /// Whether the underlying plugin has the concrete type `T`.
+  pub fn is<T: Plugin>(&self) -> bool {
+    self.plugin.is::<T>()
+  }
+
   pub fn call_name(&self) -> Cow<'static, str> {
     (self.name)(self.plugin.as_ref())
   }

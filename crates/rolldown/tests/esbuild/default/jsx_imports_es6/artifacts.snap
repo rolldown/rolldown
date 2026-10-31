@@ -13,6 +13,7 @@ function elem() {
 function frag() {
 	console.log();
 }
+
 // entry.jsx
 console.log(/* @__PURE__ */ elem("div", null), /* @__PURE__ */ elem(frag, null, "fragment"));
 

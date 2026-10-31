@@ -17,6 +17,7 @@ var require_fake_esmodule = /* @__PURE__ */ __commonJSMin(((exports) => {
 		return "AWAITER";
 	};
 }));
+
 export { __toESM as n, require_fake_esmodule as t };
 
 ```
@@ -34,6 +35,7 @@ export default require_fake_esmodule();
 ```js
 import { n as __toESM, t as require_fake_esmodule } from "./fake-esmodule.js";
 import assert from "node:assert";
+
 // main.js
 var import_fake_esmodule = /* @__PURE__ */ __toESM(require_fake_esmodule());
 const { __extends } = import_fake_esmodule.default;

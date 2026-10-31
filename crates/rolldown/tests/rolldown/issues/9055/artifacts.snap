@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { strict } from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // greet.cjs
 var require_greet$1 = /* @__PURE__ */ __commonJSMin(((exports) => {
@@ -15,6 +16,7 @@ var require_greet$1 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	}
 	exports.greet = greet;
 }));
+
 // index.js
 var import_cjs_dependency = (/* @__PURE__ */ __commonJSMin(((exports) => {
 	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });

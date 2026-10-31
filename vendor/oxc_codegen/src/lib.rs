@@ -32,6 +32,8 @@ mod options;
 #[cfg(feature = "sourcemap")]
 mod sourcemap_builder;
 mod str;
+#[cfg(all(test, feature = "sourcemap"))]
+mod synthesized_sourcemap_tests;
 
 use binary_expr_visitor::BinaryExpressionVisitor;
 use comment::CommentsMap;
@@ -130,10 +132,11 @@ pub struct Codegen<'a> {
     #[cfg(feature = "sourcemap")]
     line_offset_tables: Option<std::sync::Arc<sourcemap_builder::LineOffsetTables>>,
 
-    scoping: Option<Scoping>,
+    scoping: Option<std::sync::Arc<Scoping>>,
 
     /// Private member name mappings for mangling
-    private_member_mappings: Option<IndexVec<ClassId, FxHashMap<String, CompactStr>>>,
+    private_member_mappings:
+        Option<std::sync::Arc<IndexVec<ClassId, FxHashMap<String, CompactStr>>>>,
 
     /// Output Code
     code: CodeBuffer,
@@ -305,6 +308,13 @@ impl<'a> Codegen<'a> {
     /// Can be used for easy renaming of variables (based on semantic analysis).
     #[must_use]
     pub fn with_scoping(mut self, scoping: Option<Scoping>) -> Self {
+        self.scoping = scoping.map(std::sync::Arc::new);
+        self
+    }
+
+    /// Share a chunk's symbol table across code generation of its individual modules.
+    #[must_use]
+    pub fn with_shared_scoping(mut self, scoping: Option<std::sync::Arc<Scoping>>) -> Self {
         self.scoping = scoping;
         self
     }
@@ -318,7 +328,24 @@ impl<'a> Codegen<'a> {
         mut self,
         mappings: Option<IndexVec<ClassId, FxHashMap<String, CompactStr>>>,
     ) -> Self {
+        self.private_member_mappings = mappings.map(std::sync::Arc::new);
+        self
+    }
+
+    /// Share a chunk's private member mappings across code generation of its individual modules.
+    #[must_use]
+    pub fn with_shared_private_member_mappings(
+        mut self,
+        mappings: Option<std::sync::Arc<IndexVec<ClassId, FxHashMap<String, CompactStr>>>>,
+    ) -> Self {
         self.private_member_mappings = mappings;
+        self
+    }
+
+    /// Continue the chunk-wide class numbering when printing one module at a time.
+    #[must_use]
+    pub fn with_class_id_offset(mut self, offset: usize) -> Self {
+        self.next_class_id = ClassId::from_usize(offset);
         self
     }
 
@@ -881,7 +908,7 @@ impl<'a> Codegen<'a> {
             self.dedent();
             self.print_indent();
         }
-        self.add_source_mapping_end(span);
+        self.add_source_mapping_block_end(span);
         self.print_ascii_byte(b'}');
     }
 
@@ -895,7 +922,7 @@ impl<'a> Codegen<'a> {
     fn print_block_end(&mut self, span: Span) {
         self.dedent();
         self.print_indent();
-        self.add_source_mapping_end(span);
+        self.add_source_mapping_block_end(span);
         self.print_ascii_byte(b'}');
     }
 
@@ -1186,6 +1213,18 @@ impl<'a> Codegen<'a> {
     #[inline]
     #[expect(clippy::needless_pass_by_ref_mut, clippy::unused_self)]
     fn add_source_mapping(&mut self, _span: Span) {}
+
+    fn add_source_mapping_block_end(&mut self, span: Span) {
+        #[cfg(feature = "sourcemap")]
+        if span.is_empty()
+            && let Some(builder) = self.sourcemap_builder.as_mut()
+        {
+            // A generated block wrapper must not inherit its last real child's mapping.
+            builder.add_unmapped(self.code.as_bytes());
+            return;
+        }
+        self.add_source_mapping_end(span);
+    }
 
     #[cfg(feature = "sourcemap")]
     fn add_source_mapping_end(&mut self, span: Span) {

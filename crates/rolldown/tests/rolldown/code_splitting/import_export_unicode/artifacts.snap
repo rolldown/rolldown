@@ -19,8 +19,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 // foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({ "😈": () => devil });
 const devil = "devil";
+
 // main.js
 const moduleFoo = Promise.resolve().then(() => foo_exports);
+
 export { moduleFoo, devil as "😈" };
 
 ```

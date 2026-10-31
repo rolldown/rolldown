@@ -7,11 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import nodeAssert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // pkg-barrel/index.mjs
 var import_other = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "other-value";
 })))(), 1);
+
 // main.js
 nodeAssert.equal(import_other.default, "other-value");
 
@@ -25,11 +27,13 @@ nodeAssert.equal(import_other.default, "other-value");
 
 ```js
 import nodeAssert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // pkg-barrel/index.mjs
 var import_other = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "other-value";
 })))(), 1);
+
 // main.js
 nodeAssert.equal(import_other.default, "other-value");
 

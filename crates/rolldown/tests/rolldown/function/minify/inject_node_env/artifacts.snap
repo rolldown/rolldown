@@ -6,5 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import e from"node:assert";e.equal(`production`,`production`);
+import e from"node:assert";
+e.equal(`production`,`production`);
 ```

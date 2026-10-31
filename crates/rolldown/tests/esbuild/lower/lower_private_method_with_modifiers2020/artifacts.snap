@@ -15,6 +15,7 @@ var Foo = class {
 	static async #sa() {}
 	static async *#sag() {}
 };
+
 export { Foo };
 
 ```

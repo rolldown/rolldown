@@ -234,6 +234,7 @@ export { __esmMin as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_s3, r as tag, t as base } from "./s3.js";
+
 // s1.js
 var one, tagged, C;
 function init_s1() {
@@ -249,6 +250,7 @@ function init_s1() {
 		};
 	})))();
 }
+
 export { tagged as i, init_s1 as n, one as r, C as t };
 
 ```
@@ -257,6 +259,7 @@ export { tagged as i, init_s1 as n, one as r, C as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // s3.js
 function tag(strings, ...values) {
 	return (this === void 0 ? "U" : "B") + strings.join("|") + values.join(",");
@@ -268,6 +271,7 @@ function init_s3() {
 		base = { n: 3 };
 	})))();
 }
+
 export { init_s3 as n, tag as r, base as t };
 
 ```

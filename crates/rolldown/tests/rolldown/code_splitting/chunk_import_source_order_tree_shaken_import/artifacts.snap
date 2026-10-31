@@ -8,10 +8,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import "./init.js";
 import { n as data, t as value } from "./read.js";
+
 // dead.js
 globalThis.dead = true;
+
 // a.js
 const name = data.name;
+
 export { name, value };
 
 ```
@@ -20,8 +23,10 @@ export { name, value };
 
 ```js
 import { n as data, t as value } from "./read.js";
+
 // b.js
 const name = data.name;
+
 export { name, value };
 
 ```
@@ -46,8 +51,10 @@ globalThis.ready = "ready";
 ```js
 // data.js
 const data = { name: "data" };
+
 // read.js
 const value = globalThis.ready ?? "unset";
+
 export { data as n, value as t };
 
 ```

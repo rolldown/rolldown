@@ -30,6 +30,7 @@ function f() {
 	return 42;
 }
 const load = () => import("./dynamic.js");
+
 export { f, load, main_exports };
 
 ```

@@ -13,6 +13,7 @@ console.log("production");
 function test() {
 	return "unused twounused threefalseproduction";
 }
+
 export { test };
 
 ```

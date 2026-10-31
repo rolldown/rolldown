@@ -7,14 +7,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // promise-shim.js
 const Promise$1 = "promise-shim";
+
 // jquery.js
 var jquery_default = "jquery";
+
 // node-fs.js
 var node_fs_default = "node-fs";
+
 // object-assign-shim.js
 var object_assign_shim_default = "object-assign-shim";
+
 // main.js
 assert.strictEqual(Promise$1, "promise-shim");
 assert.strictEqual(Promise$1, "promise-shim");

@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // const.js
 const y = 1e3;
+
 export { y as t };
 
 ```
@@ -56,10 +57,12 @@ export { _, common, y };
 ```js
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 import { t as y } from "./const.js";
+
 // bridge.js
 function x() {
 	return 1;
 }
+
 // page-b.js
 var page_b_exports = /* @__PURE__ */ __exportAll({});
 function init_page_b() {
@@ -68,6 +71,7 @@ function init_page_b() {
 		if (globalThis.value !== void 0) throw new Error(`page-b observed ${globalThis.value}`);
 	})))();
 }
+
 export { page_b_exports as n, x as r, init_page_b as t };
 
 ```
@@ -88,6 +92,7 @@ export { __exportAll as n, __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // const.js
 var y;
 function init_const() {
@@ -95,6 +100,7 @@ function init_const() {
 		y = 1e3;
 	})))();
 }
+
 export { y as n, init_const as t };
 
 ```
@@ -151,6 +157,7 @@ export { _, common, y };
 ```js
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 import { n as y, t as init_const } from "./const.js";
+
 // bridge.js
 function x() {
 	return 1;
@@ -158,6 +165,7 @@ function x() {
 function init_bridge() {
 	return (init_bridge = __esmMin((() => {})))();
 }
+
 // page-b.js
 var page_b_exports = /* @__PURE__ */ __exportAll({});
 function init_page_b() {
@@ -167,6 +175,7 @@ function init_page_b() {
 		if (globalThis.value !== void 0) throw new Error(`page-b observed ${globalThis.value}`);
 	})))();
 }
+
 export { x as i, page_b_exports as n, init_bridge as r, init_page_b as t };
 
 ```

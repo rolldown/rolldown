@@ -17,11 +17,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { read } from "node:fs";
 import assert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // indirect.js
 var indirect_exports = /* @__PURE__ */ __exportAll({ read: () => read });
+
 // read.js
 console.log(1);
+
 // main.js
 assert.strictEqual(typeof read, "function");
 Promise.resolve().then(() => indirect_exports).then((mod) => {

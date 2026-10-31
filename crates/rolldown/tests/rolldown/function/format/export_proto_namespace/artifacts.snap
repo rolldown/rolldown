@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 // lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ ["__proto__"]: () => 123 });
+
 export { lib_exports as lib };
 
 ```

@@ -41,19 +41,28 @@ export interface SourceMap {
 /** @category Plugin APIs */
 export interface RenderedModule {
   /**
-   * The rendered code of this module.
+   * The code fragment assigned to this module during chunk rendering, or `null`
+   * if the module has no rendered code.
    *
-   * The unused variables and functions are removed.
+   * When chunk optimization runs before module rendering, this is the optimized
+   * fragment. Inlining and statement merging can move code between modules or
+   * into generated chunk code. This fragment does not represent all code
+   * originating from the module and is not necessarily independently executable.
+   * Later chunk transformations are not reflected in this value.
    */
   readonly code: string | null;
   /**
-   * The length of the rendered code of this module.
+   * The UTF-16 length of {@linkcode code}, or `0` when `code` is `null`.
+   * This measures the assigned fragment, not the module's original contribution
+   * to the chunk after cross-module optimization.
    */
   renderedLength: number;
   /**
    * The list of exported names from this module.
    *
-   * The names that are not used are not included.
+   * The names that are not used are not included. These are the module's
+   * original export names retained by linking and tree shaking, even if chunk
+   * optimization subsequently inlines their code into another fragment.
    */
   renderedExports: string[];
 }

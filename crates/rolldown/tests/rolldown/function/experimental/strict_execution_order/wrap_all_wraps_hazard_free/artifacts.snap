@@ -33,6 +33,7 @@ init_main();
 ```js
 // dep.js
 console.log("dep");
+
 // main.js
 console.log("main", "v");
 

@@ -7,8 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "assert";
+
 // main.js
 assert.strictEqual("lib", "lib");
+
 export {};
 
 ```

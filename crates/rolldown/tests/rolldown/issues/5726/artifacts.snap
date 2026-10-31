@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // counter.js
 const a = 100;
+
 export { a };
 
 ```
@@ -16,8 +17,10 @@ export { a };
 
 ```js
 import "./counter.js";
+
 // lib.js
 console.log("test");
+
 // main.js
 console.log(`a: `, 100);
 

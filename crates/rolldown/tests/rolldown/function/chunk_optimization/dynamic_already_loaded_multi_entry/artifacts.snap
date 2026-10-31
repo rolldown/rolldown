@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { t as value1 } from "./from-main-1-and-dynamic.js";
 import "./from-main-1-and-2.js";
+
 // dynamic.js
 console.log("dynamic", value1, "all");
 
@@ -18,8 +19,10 @@ console.log("dynamic", value1, "all");
 ```js
 // from-all.js
 const value2 = "all";
+
 // from-main-1-and-2.js
 const value3 = "main1 and main2";
+
 export { value2 as n, value3 as t };
 
 ```
@@ -29,6 +32,7 @@ export { value2 as n, value3 as t };
 ```js
 // from-main-1-and-dynamic.js
 const value1 = "main1 and dynamic";
+
 export { value1 as t };
 
 ```
@@ -38,9 +42,11 @@ export { value1 as t };
 ```js
 import { t as value1 } from "./from-main-1-and-dynamic.js";
 import { n as value2, t as value3 } from "./from-main-1-and-2.js";
+
 // main1.js
 console.log("main1", value1, "all", value3);
 import("./dynamic.js");
+
 export { value1, value2, value3 };
 
 ```
@@ -49,9 +55,11 @@ export { value1, value2, value3 };
 
 ```js
 import { n as value2, t as value3 } from "./from-main-1-and-2.js";
+
 // main2.js
 console.log("main2", "all", value3);
 import("./dynamic.js");
+
 export { value2, value3 };
 
 ```

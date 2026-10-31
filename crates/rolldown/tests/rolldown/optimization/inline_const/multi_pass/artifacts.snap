@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // foo.js
 const derived = false;
+
 export { derived as t };
 
 ```
@@ -16,6 +17,7 @@ export { derived as t };
 
 ```js
 import { t as derived } from "./foo.js";
+
 // pagea.js
 function demo() {
 	if (derived) console.log("page-a");
@@ -28,6 +30,7 @@ demo();
 
 ```js
 import { t as derived } from "./foo.js";
+
 // pageb.js
 function demo() {
 	if (derived) console.log("page-a");

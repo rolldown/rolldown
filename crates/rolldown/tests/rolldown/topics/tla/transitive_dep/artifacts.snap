@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // lib.js
 const value = await Promise.resolve("tla") + "+lib";
+
 export { value };
 
 ```
@@ -55,6 +56,7 @@ export { value };
 ```js
 // lib.js
 const value = await Promise.resolve("tla") + "+lib";
+
 export { value };
 
 ```

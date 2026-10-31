@@ -7,10 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as SafeHtml, t as htmlEscape } from "./shared.js";
+
 // safe.js
 function setInnerHtml(elem, html) {
 	if (html instanceof SafeHtml) elem.innerHTML = html.unwrap();
 }
+
 // component.js
 var Component = class {
 	constructor(name) {
@@ -20,6 +22,7 @@ var Component = class {
 		setInnerHtml(el, htmlEscape(this.name));
 	}
 };
+
 export { Component };
 
 ```
@@ -38,6 +41,7 @@ export { n as SafeHtml } from "./shared.js";
 function isIE() {
 	return compareVersions("11", "10") >= 0;
 }
+
 // safehtml.js
 var SafeHtml = class {
 	constructor(html) {
@@ -48,6 +52,7 @@ var SafeHtml = class {
 		return this.html;
 	}
 };
+
 // shared.js
 function compareVersions(a, b) {
 	return a > b ? 1 : a < b ? -1 : 0;
@@ -55,6 +60,7 @@ function compareVersions(a, b) {
 function htmlEscape(str) {
 	return str.replace(/&/g, "&amp;").replace(/</g, "&lt;");
 }
+
 export { SafeHtml as n, htmlEscape as t };
 
 ```

@@ -26,12 +26,14 @@ init_e0();
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_m31 } from "./m31.js";
+
 // m13.js
 function init_m13() {
 	return (init_m13 = __esmMin((() => {
 		console.log("sfx-m13-0");
 	})))();
 }
+
 // m29.js
 function cf_m29(x) {
 	return x + 9;
@@ -41,6 +43,7 @@ function init_m29() {
 		init_m31();
 	})))();
 }
+
 export { init_m29 as n, init_m13 as r, cf_m29 as t };
 
 ```
@@ -59,12 +62,14 @@ export { cf_m29 };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // m31.js
 function init_m31() {
 	return (init_m31 = __esmMin((() => {
 		console.log("sfx-m31-0");
 	})))();
 }
+
 export { init_m31 as t };
 
 ```
@@ -104,12 +109,14 @@ init_e0();
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_m31 } from "./m31.js";
+
 // m13.js
 function init_m13() {
 	return (init_m13 = __esmMin((() => {
 		console.log("sfx-m13-0");
 	})))();
 }
+
 // m29.js
 function cf_m29(x) {
 	return x + 9;
@@ -119,6 +126,7 @@ function init_m29() {
 		init_m31();
 	})))();
 }
+
 export { init_m29 as n, init_m13 as r, cf_m29 as t };
 
 ```
@@ -137,12 +145,14 @@ export { cf_m29 };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // m31.js
 function init_m31() {
 	return (init_m31 = __esmMin((() => {
 		console.log("sfx-m31-0");
 	})))();
 }
+
 export { init_m31 as t };
 
 ```

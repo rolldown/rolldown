@@ -15,6 +15,7 @@ export { a } from "./mod.js";
 ```js
 // dynamic2.js
 const a = "a";
+
 export { a };
 
 ```
@@ -24,6 +25,7 @@ export { a };
 ```js
 // entry2.js
 var entry2_default = import("./dynamic.js");
+
 export { entry2_default as default };
 
 ```
@@ -34,6 +36,7 @@ export { entry2_default as default };
 // main.js
 const mod = () => import("./dynamic.js");
 const { a } = await import("./dynamic2.js");
+
 export { a, mod };
 
 ```
@@ -43,6 +46,7 @@ export { a, mod };
 ```js
 // mod.js
 const a = 1e3;
+
 export { a };
 
 ```

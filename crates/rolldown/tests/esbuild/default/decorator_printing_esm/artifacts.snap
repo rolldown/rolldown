@@ -29,8 +29,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { imported } from "somewhere";
+
 // empty.js
 var undef = void 0;
+
 // entry.js
 _ = class Outer {
 	#bar;

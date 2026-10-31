@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as import_fake_core, t as useCore } from "./utils.js";
+
 // entry-a.js
 console.log("Entry A:", import_fake_core.default, useCore());
 
@@ -16,6 +17,7 @@ console.log("Entry A:", import_fake_core.default, useCore());
 
 ```js
 import { n as import_fake_core, t as useCore } from "./utils.js";
+
 // entry-b.js
 console.log("Entry B:", import_fake_core.default, useCore());
 
@@ -41,6 +43,7 @@ var require_fake_core = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		} catch (_e) {}
 	})();
 }));
+
 // fake-plugin-model.cjs
 var require_fake_plugin_model = /* @__PURE__ */ __commonJSMin((() => {
 	(function() {
@@ -48,17 +51,21 @@ var require_fake_plugin_model = /* @__PURE__ */ __commonJSMin((() => {
 		globalThis.fakeCore.register("dom-model");
 	})();
 }));
+
 // fake-plugin.cjs
 var require_fake_plugin = /* @__PURE__ */ __commonJSMin((() => {
 	require_fake_plugin_model();
 }));
+
 // wrapper.js
 var import_fake_core = /* @__PURE__ */ __toESM(require_fake_core());
 require_fake_plugin();
+
 // utils.js
 function useCore() {
 	return import_fake_core.default.registry;
 }
+
 export { import_fake_core as n, useCore as t };
 
 ```

@@ -10,6 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 var foo = "foo";
 var bar = "bar";
 var baz = "baz";
+
 export { bar, baz, foo };
 
 ```

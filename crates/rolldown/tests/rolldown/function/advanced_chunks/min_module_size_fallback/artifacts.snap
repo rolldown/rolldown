@@ -15,6 +15,7 @@ console.log(1234567890);
 
 ```js
 import "./bigger-than-20.js";
+
 // size-14.js
 console.log(0);
 

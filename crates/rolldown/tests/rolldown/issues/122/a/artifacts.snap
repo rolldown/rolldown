@@ -39,6 +39,7 @@ import "./c.js";
 ```js
 import "./b.js";
 import "./c.js";
+
 // a.js
 console.log("a");
 

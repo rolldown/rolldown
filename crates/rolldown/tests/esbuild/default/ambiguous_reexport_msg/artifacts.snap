@@ -35,10 +35,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // a.js
 let a = 1;
+
 // b.js
 let b = 3;
+
 // c.js
 let c = 4;
+
 export { a, b, c };
 
 ```

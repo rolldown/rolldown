@@ -58,6 +58,7 @@ export { __esmMin as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_value } from "./snapshot.js";
+
 // ../shared.js
 var LOCAL;
 function init_shared() {
@@ -66,6 +67,7 @@ function init_shared() {
 		LOCAL = "local";
 	})))();
 }
+
 export { init_shared as n, LOCAL as t };
 
 ```
@@ -74,6 +76,7 @@ export { init_shared as n, LOCAL as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // ../snapshots/value.js
 var SNAPSHOT;
 function init_value() {
@@ -81,6 +84,7 @@ function init_value() {
 		SNAPSHOT = globalThis.__seed ?? 0;
 	})))();
 }
+
 export { init_value as n, SNAPSHOT as t };
 
 ```
@@ -144,6 +148,7 @@ export { __esmMin as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_value } from "./snapshot.js";
+
 // ../shared.js
 var LOCAL;
 function init_shared() {
@@ -152,6 +157,7 @@ function init_shared() {
 		LOCAL = "local";
 	})))();
 }
+
 export { init_shared as n, LOCAL as t };
 
 ```
@@ -160,6 +166,7 @@ export { init_shared as n, LOCAL as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // ../snapshots/value.js
 var SNAPSHOT;
 function init_value() {
@@ -167,6 +174,7 @@ function init_value() {
 		SNAPSHOT = globalThis.__seed ?? 0;
 	})))();
 }
+
 export { init_value as n, SNAPSHOT as t };
 
 ```

@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // main.js
 const mod = () => import("./mod.js");
+
 export { mod };
 
 ```
@@ -17,6 +18,7 @@ export { mod };
 ```js
 // mod.js
 const a = 1e3;
+
 export { a };
 
 ```

@@ -7,6 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
+// barrel.js
 __esmMin((() => {}));
 
 ```
@@ -68,6 +70,8 @@ export { __exportAll as n, __toCommonJS as r, __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
+// barrel.js
 __esmMin((() => {}));
 
 ```

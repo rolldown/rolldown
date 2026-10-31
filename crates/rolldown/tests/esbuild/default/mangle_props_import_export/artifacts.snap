@@ -40,6 +40,7 @@ var require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.foo_ = 123;
 	__require("xyz").bar_;
 }));
+
 export default require_cjs();
 
 ```
@@ -48,8 +49,10 @@ export default require_cjs();
 
 ```js
 import "xyz";
+
 // esm.js
 let foo_ = 123;
+
 export { foo_ };
 
 ```

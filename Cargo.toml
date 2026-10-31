@@ -209,6 +209,7 @@ itoa = "1.0.18"
 json-escape-simd = "3.1.1"
 json-strip-comments = "3"
 jsonschema = { version = "0.60.0", default-features = false }
+libc = "0.2.191"
 memchr = "2.8.2"
 mimalloc-safe = "0.1.64"
 mime = "0.3.17"
@@ -344,3 +345,4 @@ strip = "none"
 # The diff against the published crate is in `vendor/oxc_codegen.patch`.
 [patch.crates-io]
 oxc_codegen = { path = "vendor/oxc_codegen" }
+oxc_minifier = { path = "vendor/oxc_minifier" }

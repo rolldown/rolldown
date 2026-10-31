@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // foo.js
 var foo_default = "foo";
+
 export { foo_default as default };
 
 ```
@@ -16,6 +17,7 @@ export { foo_default as default };
 
 ```js
 import assert from "node:assert";
+
 // main.js
 import("./foo.js").then((foo) => {
 	assert.strictEqual(foo.default, "foo");

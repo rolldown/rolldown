@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //! User-defined Entry: [Entry-Module-Id: dynamic.js] [Name: dynamic]
 import assert from "node:assert";
+
 // dynamic.js
 (async () => {
 	const mod = await import("./foo.js");
@@ -22,6 +23,7 @@ import assert from "node:assert";
 //! User-defined Entry: [Entry-Module-Id: foo.js] [Name: foo]
 // foo.js
 var foo_default = "foo";
+
 export { foo_default as default };
 
 ```
@@ -32,6 +34,7 @@ export { foo_default as default };
 //! User-defined Entry: [Entry-Module-Id: foo2.js] [Name: foo2]
 // foo2.js
 var foo2_default = "foo2";
+
 export { foo2_default as default };
 
 ```
@@ -42,6 +45,7 @@ export { foo2_default as default };
 //! User-defined Entry: [Entry-Module-Id: main.js] [Name: main]
 import foo2_default from "./foo2.js";
 import assert from "node:assert";
+
 // main.js
 assert.strictEqual(foo2_default, "foo2");
 
@@ -56,6 +60,7 @@ assert.strictEqual(foo2_default, "foo2");
 ```js
 //! User-defined Entry: [Entry-Module-Id: dynamic.js] [Name: dynamic]
 import assert from "node:assert";
+
 // dynamic.js
 (async () => {
 	const mod = await import("./foo.js");
@@ -70,6 +75,7 @@ import assert from "node:assert";
 //! User-defined Entry: [Entry-Module-Id: foo.js] [Name: foo]
 // foo.js
 var foo_default = "foo";
+
 export { foo_default as default };
 
 ```
@@ -80,6 +86,7 @@ export { foo_default as default };
 //! User-defined Entry: [Entry-Module-Id: foo2.js] [Name: foo2]
 // foo2.js
 var foo2_default = "foo2";
+
 export { foo2_default as default };
 
 ```
@@ -90,6 +97,7 @@ export { foo2_default as default };
 //! User-defined Entry: [Entry-Module-Id: main.js] [Name: main]
 import foo2_default from "./foo2.js";
 import assert from "node:assert";
+
 // main.js
 assert.strictEqual(foo2_default, "foo2");
 

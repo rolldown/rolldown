@@ -18,10 +18,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 // a.ts
 var a_exports = /* @__PURE__ */ __exportAll({ foo: () => 123 });
+
 // b.ts
 var b_exports = /* @__PURE__ */ __exportAll({ foo: () => 123 });
+
 // test.ts
 var Test = void 0;
+
 // entry.ts
 console.log(a_exports, b_exports, /* @__PURE__ */ __exportAll({
 	Test: () => Test,

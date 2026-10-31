@@ -8,11 +8,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // other.js
 const a = "from-other";
+
 // module_with_nested.js
 function test(a, a$1) {
 	console.log(a, a$1);
 	return [a, a$1];
 }
+
 // main.js
 console.log(a, test("x", "y"));
 

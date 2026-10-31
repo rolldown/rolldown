@@ -11,11 +11,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 var require_dup$3 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "dep";
 }));
+
 // main.js
 const require_dup = "outer";
 function read(require_dup$2) {
 	return [require_dup$3(), require_dup$2()];
 }
+
 export { read, require_dup };
 
 ```

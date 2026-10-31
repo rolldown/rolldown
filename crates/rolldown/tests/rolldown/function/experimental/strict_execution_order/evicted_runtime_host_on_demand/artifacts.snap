@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as __exportAll } from "./rolldown-runtime.js";
+
 // a.js
 console.log("A", Object.keys(/* @__PURE__ */ __exportAll({ c: () => 1 })).join());
 
@@ -35,6 +36,7 @@ init_e0();
 
 ```js
 import "./a.js";
+
 // e1.js
 console.log("E1");
 
@@ -44,14 +46,17 @@ console.log("E1");
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // p.js
 const p = {};
+
 // b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
 		console.log("B");
 	})))();
 }
+
 export { p as n, init_b as t };
 
 ```
@@ -78,6 +83,7 @@ var __exportAll = (all, no_symbols) => {
 	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
 	return target;
 };
+
 export { __exportAll as n, __esmMin as t };
 
 ```
@@ -94,18 +100,21 @@ init_z();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // q.js
 function init_q() {
 	return (init_q = __esmMin((() => {
 		console.log("Q");
 	})))();
 }
+
 // z.js
 function init_z() {
 	return (init_z = __esmMin((() => {
 		console.log("Z");
 	})))();
 }
+
 export { init_q as n, init_z as t };
 
 ```

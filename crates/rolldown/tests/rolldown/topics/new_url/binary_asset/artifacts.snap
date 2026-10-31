@@ -10,6 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // main.js
 const url = new URL("assets/foo-u1ylrPOy.bin", import.meta.url);
+
 export { url };
 
 ```

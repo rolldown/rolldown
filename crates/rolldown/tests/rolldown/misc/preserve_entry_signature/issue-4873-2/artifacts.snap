@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // bar.js
 console.log("bar1");
 const msg = "Bar view";
+
 export { msg };
 
 ```
@@ -19,6 +20,7 @@ export { msg };
 // foo.js
 console.log("foo1");
 const msg = "Foo view";
+
 export { msg };
 
 ```

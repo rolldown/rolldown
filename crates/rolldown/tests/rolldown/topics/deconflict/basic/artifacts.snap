@@ -7,8 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "assert";
+
 // a.js
 const a = "a.js";
+
 // main.js
 assert.equal("main.js", "main.js");
 assert.equal(a, "a.js");

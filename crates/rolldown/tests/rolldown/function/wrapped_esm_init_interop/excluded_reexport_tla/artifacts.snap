@@ -16,6 +16,7 @@ var init_leaf = __esmMin((async () => {
 	globalThis.__log.push("LEAF:after");
 	used = "used";
 }));
+
 // carrier.js
 var marker;
 var init_carrier = __esmMin((async () => {
@@ -23,6 +24,7 @@ var init_carrier = __esmMin((async () => {
 	globalThis.__log.push(`CARRIER:${globalThis.__ready}`);
 	marker = "marker";
 }));
+
 // barrel.js
 var barrel_exports = /* @__PURE__ */ __exportAll({ result: () => result });
 var result;
@@ -32,11 +34,13 @@ var init_barrel = __esmMin((async () => {
 	globalThis.__log.push(`BARREL:${used}:${marker}`);
 	result = used + marker;
 }));
+
 // main.js
 async function run() {
 	const { result } = await init_barrel().then(() => barrel_exports);
 	return result;
 }
+
 export { run as default };
 
 ```

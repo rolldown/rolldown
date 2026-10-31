@@ -20,6 +20,7 @@ export { foo };
 var a_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
 var foo;
 var init_a = __esmMin((() => {}));
+
 export { __toCommonJS as i, foo as n, init_a as r, a_exports as t };
 
 ```
@@ -28,8 +29,10 @@ export { __toCommonJS as i, foo as n, init_a as r, a_exports as t };
 
 ```js
 import { i as __toCommonJS, r as init_a, t as a_exports } from "./a2.js";
+
 // b.js
 let bar = (init_a(), __toCommonJS(a_exports));
+
 export { bar };
 
 ```

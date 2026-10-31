@@ -18,5 +18,6 @@ function e(){}
 */
 const t=`bar`;
 /*! Bundle license information: */
-console.log(`hello`);export{t as bar,e as hello};
+console.log(`hello`);
+export{t as bar,e as hello};
 ```

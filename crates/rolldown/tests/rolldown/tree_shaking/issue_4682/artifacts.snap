@@ -8,11 +8,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // dynamic.no-treeshake.js
 console.log("dynamic no-treeshake");
+
 // dynamic.js
 const lazyLoad = async () => {
 	await import("./main.js").then((n) => n.t);
 	document.body.classList.add("loaded");
 };
+
 export { lazyLoad };
 
 ```
@@ -23,12 +25,15 @@ export { lazyLoad };
 // HIDDEN [\0rolldown/runtime.js]
 // static.no-treeshake.js
 console.log("static no-treeshake");
+
 // static.js
 var static_exports = /* @__PURE__ */ __exportAll({});
+
 // main.js
 import("./dynamic.js").then(async ({ lazyLoad }) => {
 	await lazyLoad();
 });
+
 export { static_exports as t };
 
 ```

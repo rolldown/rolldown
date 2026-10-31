@@ -8,8 +8,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // library/kept.effect.js
 console.log("kept-side-effect-marker");
+
 // library/excluded/dead.effect.js
 console.log("excluded-side-effect-marker");
+
 // main.js
 console.log("used-value");
 

@@ -15,10 +15,12 @@ asset
 // other.js
 const URL$1 = () => "local";
 const other = URL$1();
+
 // main.js
 function href(URL$2) {
 	return new URL("assets/asset-jGaNvs6u.txt", import.meta.url).href;
 }
+
 export { href, other };
 
 ```

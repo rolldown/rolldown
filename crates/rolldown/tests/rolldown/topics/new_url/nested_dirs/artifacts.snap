@@ -9,11 +9,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 foo
 ```
 
-## chunks/dep-BrNEOz6y.js
+## chunks/dep-BlY-z_qJ.js
 
 ```js
 // dep.js
 const url = new URL("../assets/foo-CKfX4HZF.txt", import.meta.url);
+
 export { url };
 
 ```
@@ -23,7 +24,8 @@ export { url };
 ```js
 // main.js
 const url = new URL("assets/foo-CKfX4HZF.txt", import.meta.url);
-const dep = import("./chunks/dep-BrNEOz6y.js");
+const dep = import("./chunks/dep-BlY-z_qJ.js");
+
 export { dep, url };
 
 ```

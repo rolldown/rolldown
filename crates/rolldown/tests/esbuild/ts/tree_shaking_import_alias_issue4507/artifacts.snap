@@ -12,10 +12,12 @@ var Base = class {
 		return "dep code is present";
 	}
 };
+
 // entry.ts
 function make() {
 	return new Base();
 }
+
 export { make };
 
 ```

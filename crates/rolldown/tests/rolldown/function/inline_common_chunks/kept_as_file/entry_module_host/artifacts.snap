@@ -31,6 +31,7 @@ init_e();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // shared.js
 var s;
 function init_shared() {
@@ -39,12 +40,14 @@ function init_shared() {
 		s = String(globalThis.__s ?? "S");
 	})))();
 }
+
 // e.js
 function init_e() {
 	return (init_e = __esmMin((() => {
 		globalThis.events.push("E body");
 	})))();
 }
+
 export { init_shared as n, s as r, init_e as t };
 
 ```

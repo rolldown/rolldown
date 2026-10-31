@@ -117,17 +117,21 @@ export { __esmMin as t };
 ```js
 // leaf.js
 (globalThis.__events ??= []).push("leaf");
+
 // definer.js
 (globalThis.__events ??= []).push("definer");
 function makeValue() {
 	return 5;
 }
 const value = makeValue();
+
 // reader.js
 (globalThis.__events ??= []).push("reader:" + value);
 const readerValue = value + 100;
+
 // reader-host.js
 (globalThis.__events ??= []).push("reader-host:" + readerValue);
+
 // dynamic-page.js
 (globalThis.__events ??= []).push("dynamic-page");
 
@@ -141,6 +145,7 @@ const readerValue = value + 100;
 function loadPage() {
 	return import("./dynamic-page.js");
 }
+
 export { loadPage };
 
 ```

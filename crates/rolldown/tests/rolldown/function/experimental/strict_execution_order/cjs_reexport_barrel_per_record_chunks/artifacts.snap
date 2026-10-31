@@ -102,10 +102,12 @@ export { value };
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
+
 // node_modules/split-barrel/index.js
 function init_split_barrel() {
 	return (init_split_barrel = __esmMin((() => {})))();
 }
+
 export { init_split_barrel as t };
 
 ```
@@ -213,10 +215,12 @@ export { value };
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
+
 // node_modules/split-barrel/index.js
 function init_split_barrel() {
 	return (init_split_barrel = __esmMin((() => {})))();
 }
+
 export { init_split_barrel as t };
 
 ```

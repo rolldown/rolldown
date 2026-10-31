@@ -8,9 +8,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert/strict";
 import assert$1 from "node:assert";
+
 // lib.js
 assert$1.strictEqual("b", "b", "CloseButton should be \"b\"");
 assert$1.strictEqual("a", "a", "Transition should be \"a\"");
+
 // main.js
 assert.deepEqual({}, {}, "Modal should be an object");
 

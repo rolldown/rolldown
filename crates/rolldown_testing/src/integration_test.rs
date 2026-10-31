@@ -17,11 +17,11 @@ use rolldown::{
 use rolldown_common::Output;
 use rolldown_dev::{BundlerConfig, DevEngine, DevOptions, DevWatchOptions};
 use rolldown_error::BuildResult;
+use rolldown_plugin_utils::hidden_module_markers::HiddenModuleMarkersPlugin;
 use rolldown_testing_config::{ExpectedExecutionFailure, TestMeta};
 use serde_json::{Map, Value};
 use sugar_path::SugarPath;
 
-use crate::hidden_module_markers::HiddenModuleMarkersPlugin;
 use crate::hmr_files::{
   apply_hmr_edit_files_to_hmr_temp_dir, collect_hmr_edit_files,
   copy_non_hmr_edit_files_to_hmr_temp_dir, get_changed_files_from_hmr_edit_files,

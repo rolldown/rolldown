@@ -10,10 +10,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 var loose_default = class {
 	foo;
 };
+
 // strict/index.js
 var strict_default = class {
 	foo;
 };
+
 // entry.js
 console.log(loose_default, strict_default);
 

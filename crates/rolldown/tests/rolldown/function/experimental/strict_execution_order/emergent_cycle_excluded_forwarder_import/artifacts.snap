@@ -7,18 +7,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
+
 // a/a-first.js
 function init_a_first() {
 	return (init_a_first = __esmMin((() => {
 		(globalThis.__events ??= []).push("a-first");
 	})))();
 }
+
 // a/carrier.cjs.js
 var require_carrier_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = function carrier() {
 		return "CARRIED";
 	};
 }));
+
 // a/wrapper.js
 function mkWv() {
 	return "WV";
@@ -29,6 +32,7 @@ function init_wrapper() {
 		wv = /* @__PURE__ */ mkWv();
 	})))();
 }
+
 export { init_a_first as i, wv as n, require_carrier_cjs as r, init_wrapper as t };
 
 ```
@@ -38,6 +42,7 @@ export { init_a_first as i, wv as n, require_carrier_cjs as r, init_wrapper as t
 ```js
 import { n as __esmMin, r as __toESM } from "./rolldown-runtime.js";
 import { r as require_carrier_cjs } from "./a.js";
+
 // c/eagerhaz.js
 var import_carrier_cjs;
 function init_eagerhaz() {
@@ -46,6 +51,7 @@ function init_eagerhaz() {
 		globalThis.__carried = (0, import_carrier_cjs.default)();
 	})))();
 }
+
 // c/t.js
 function mkTv() {
 	return "TV";
@@ -56,6 +62,7 @@ function init_t() {
 		tv = /* @__PURE__ */ mkTv();
 	})))();
 }
+
 export { tv as n, init_eagerhaz as r, init_t as t };
 
 ```
@@ -107,18 +114,21 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 
 ```js
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
+
 // a/a-first.js
 function init_a_first() {
 	return (init_a_first = __esmMin((() => {
 		(globalThis.__events ??= []).push("a-first");
 	})))();
 }
+
 // a/carrier.cjs.js
 var require_carrier_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = function carrier() {
 		return "CARRIED";
 	};
 }));
+
 // a/wrapper.js
 function mkWv() {
 	return "WV";
@@ -129,6 +139,7 @@ function init_wrapper() {
 		wv = /* @__PURE__ */ mkWv();
 	})))();
 }
+
 export { init_a_first as i, wv as n, require_carrier_cjs as r, init_wrapper as t };
 
 ```
@@ -138,6 +149,7 @@ export { init_a_first as i, wv as n, require_carrier_cjs as r, init_wrapper as t
 ```js
 import { n as __esmMin, r as __toESM } from "./rolldown-runtime.js";
 import { r as require_carrier_cjs } from "./a.js";
+
 // c/eagerhaz.js
 var import_carrier_cjs;
 function init_eagerhaz() {
@@ -146,6 +158,7 @@ function init_eagerhaz() {
 		globalThis.__carried = (0, import_carrier_cjs.default)();
 	})))();
 }
+
 // c/t.js
 function mkTv() {
 	return "TV";
@@ -156,6 +169,7 @@ function init_t() {
 		tv = /* @__PURE__ */ mkTv();
 	})))();
 }
+
 export { tv as n, init_eagerhaz as r, init_t as t };
 
 ```

@@ -6,15 +6,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+// dep1.js
 console.log(["spread 1"]);
+
 // dep2.js
 const spread$1 = ["spread 2"];
 console.log(spread$1);
+
+// dep3.js
 console.log(["spread 3"]);
+
 // main.js
 const Foo = () => {};
 const element = <Foo>{...spread$1}</Foo>;
 const fragment = <>{...spread$1}</>;
+
 export { element, fragment };
 
 ```

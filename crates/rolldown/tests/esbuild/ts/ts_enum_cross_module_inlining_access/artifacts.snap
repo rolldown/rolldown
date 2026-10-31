@@ -15,6 +15,7 @@ let e_str = /* @__PURE__ */ function(e_str) {
 	e_str["x"] = "abc";
 	return e_str;
 }({});
+
 // entry.ts
 inlined = [
 	123,

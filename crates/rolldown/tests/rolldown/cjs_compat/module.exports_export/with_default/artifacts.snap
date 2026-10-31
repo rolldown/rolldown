@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // esm.js
 var esm_exports = /* @__PURE__ */ __exportAll({
@@ -20,6 +21,7 @@ var moduleExports;
 var init_esm = __esmMin((() => {
 	moduleExports = { customExport: "custom" };
 }));
+
 // main.js
 var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = (init_esm(), __toCommonJS(esm_exports));

@@ -11,12 +11,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1e4;
 }));
+
 // util.js
 var require_util = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = function() {
 		console.log("util");
 	};
 }));
+
 // a.js
 var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
 var import_util = /* @__PURE__ */ __toESM(require_util());
@@ -24,13 +26,16 @@ function test$1() {
 	(0, import_util.default)();
 	return import_cjs.default;
 }
+
 // b.js
 function test() {
 	return import_cjs.default;
 }
+
 // main.js
 const aa = test$1();
 const bb = test();
+
 export { aa, bb };
 
 ```

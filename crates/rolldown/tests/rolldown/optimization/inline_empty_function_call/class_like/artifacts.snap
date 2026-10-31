@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // a.js
 let result = 0;
 function classLike() {}
@@ -14,11 +15,13 @@ Object.defineProperty(classLike.prototype, "sideEffect", { get() {
 	result++;
 	return 0;
 } });
+
 // main.js
 function main_default() {
 	new classLike();
 	assert.equal(result, 1);
 }
+
 export { main_default as default };
 
 ```

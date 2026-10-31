@@ -24,6 +24,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // plugins/acorn.mjs
 var acorn_default = {};
+
 export { acorn_default as default };
 
 ```
@@ -40,6 +41,7 @@ import "./tt.js";
 ```js
 // plugins/flow.mjs
 var flow_default = {};
+
 export { flow_default as default };
 
 ```
@@ -49,6 +51,7 @@ export { flow_default as default };
 ```js
 // plugins/glimmer.mjs
 var glimmer_default = {};
+
 export { glimmer_default as default };
 
 ```
@@ -58,6 +61,7 @@ export { glimmer_default as default };
 ```js
 // plugins/html.mjs
 var html_default = {};
+
 export { html_default as default };
 
 ```
@@ -69,6 +73,7 @@ export { html_default as default };
 function a() {
 	import("./tt.js");
 }
+
 export { a };
 
 ```
@@ -85,6 +90,7 @@ export { a } from "./index1.js";
 ```js
 // plugins/meriyah.mjs
 var meriyah_default = {};
+
 export { meriyah_default as default };
 
 ```
@@ -108,10 +114,12 @@ var babel_exports = /* @__PURE__ */ __exportAll({
 var Ks = {};
 var ra = {};
 Ks.parsers = ra;
+
 // plugins/postcss.mjs
 var postcss_exports = /* @__PURE__ */ __exportAll({ default: () => _l });
 var _l = {};
 _l.parsers = {};
+
 // tt.mjs
 import("./babel.js");
 import("./flow.js");
@@ -130,6 +138,7 @@ import("@prettier/plugin-hermes");
 import("prettier-plugin-astro");
 import("prettier-plugin-marko");
 const options = [postcss_exports, babel_exports];
+
 export { a, Ks as n, options, ra as r, _l as t };
 
 ```

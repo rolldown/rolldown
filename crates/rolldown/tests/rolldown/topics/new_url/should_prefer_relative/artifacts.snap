@@ -13,12 +13,14 @@ hello, world
 
 ```js
 import assert from "node:assert";
+
 // main.js
 const url = new URL("assets/index-Cctl21F7.txt", import.meta.url);
 const url2 = new URL("assets/index-Cctl21F7.txt", import.meta.url);
 const url3 = new URL("assets/index-Cctl21F7.txt", import.meta.url);
 assert.strictEqual(url.href, url3.href);
 assert.strictEqual(url2.href, url3.href);
+
 export { url, url2, url3 };
 
 ```

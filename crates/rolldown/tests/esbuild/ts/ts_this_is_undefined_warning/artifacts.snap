@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // silent1.ts
 var foo = void 0;
+
 export { foo };
 
 ```
@@ -17,6 +18,7 @@ export { foo };
 ```js
 // silent2.ts
 var foo = void 0;
+
 export { foo };
 
 ```
@@ -26,6 +28,7 @@ export { foo };
 ```js
 // warning1.ts
 var foo = void 0;
+
 export { foo };
 
 ```
@@ -35,6 +38,7 @@ export { foo };
 ```js
 // warning2.ts
 var foo = (void 0).foo;
+
 export { foo };
 
 ```
@@ -44,6 +48,7 @@ export { foo };
 ```js
 // warning3.ts
 var foo = null;
+
 export { foo };
 
 ```

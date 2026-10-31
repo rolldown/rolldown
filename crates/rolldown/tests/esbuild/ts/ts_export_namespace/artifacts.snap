@@ -42,6 +42,7 @@ var Foo = class {};
 (function(_Foo2) {
 	_Foo2.bar = 2;
 })(Foo || (Foo = {}));
+
 // a.ts
 console.log(new Foo());
 

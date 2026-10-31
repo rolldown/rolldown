@@ -7,8 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as log } from "./logger.js";
+
 // a.js
 const a = log("a");
+
 export { a };
 
 ```
@@ -18,8 +20,10 @@ export { a };
 ```js
 import { t as value } from "./shared.js";
 import { n as runBackend, t as keys } from "./consumer2.js";
+
 // b.js
 const lazyLog = () => import("./logger.js").then((n) => n.n).then((m) => m.log("b"));
+
 export { keys, lazyLog, runBackend, value };
 
 ```
@@ -29,11 +33,13 @@ export { keys, lazyLog, runBackend, value };
 ```js
 import { t as __exportAll } from "./rolldown-runtime.js";
 import { t as value } from "./shared.js";
+
 // c.js
 const keys = Object.keys(/* @__PURE__ */ __exportAll({
 	a: () => 1,
 	b: () => 2
 }));
+
 export { keys, value };
 
 ```
@@ -50,17 +56,20 @@ export { t as keys, n as runBackend } from "./consumer2.js";
 ```js
 import { t as __exportAll } from "./rolldown-runtime.js";
 import backend from "server-only";
+
 // nsB.js
 var nsB_exports = /* @__PURE__ */ __exportAll({
 	a: () => 1,
 	b: () => 2
 });
+
 // consumer.js
 globalThis.__consumer_ran = true;
 const keys = Object.keys(nsB_exports);
 function runBackend() {
 	return backend();
 }
+
 export { runBackend as n, keys as t };
 
 ```
@@ -78,11 +87,13 @@ export { keys, runBackend, value };
 
 ```js
 import { t as __exportAll } from "./rolldown-runtime.js";
+
 // logger.js
 var logger_exports = /* @__PURE__ */ __exportAll({ log: () => log });
 function log(message) {
 	return `log: ${message}`;
 }
+
 export { logger_exports as n, log as t };
 
 ```
@@ -100,6 +111,7 @@ export { __exportAll as t };
 ```js
 // shared.js
 const value = {};
+
 export { value as t };
 
 ```

@@ -7,8 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as run } from "./m0.js";
+
 // a.js
 const order = run();
+
 export { order };
 
 ```
@@ -17,8 +19,10 @@ export { order };
 
 ```js
 import { t as run } from "./m0.js";
+
 // b.js
 const order = run();
+
 export { order };
 
 ```
@@ -35,6 +39,7 @@ import "./m6.js";
 ```js
 // log.js
 const log = [];
+
 export { log as t };
 
 ```
@@ -45,13 +50,16 @@ export { log as t };
 import "./m1.js";
 import "./m6.js";
 import { t as log } from "./log.js";
+
 // m2.js
 log.push("m2");
+
 // m0.js
 log.push("m0");
 function run() {
 	return log.slice();
 }
+
 export { run as t };
 
 ```
@@ -60,6 +68,7 @@ export { run as t };
 
 ```js
 import { t as log } from "./log.js";
+
 // m1.js
 log.push("m1");
 
@@ -69,6 +78,7 @@ log.push("m1");
 
 ```js
 import { t as log } from "./log.js";
+
 // m6.js
 log.push("m6");
 

@@ -7,8 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as import_c } from "./b.js";
+
 // a.js
 let a = import_c.test;
+
 export { a };
 
 ```
@@ -21,6 +23,7 @@ export { a };
 var import_c = (/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.test = 1e3;
 })))();
+
 var test = import_c.test;
 export { import_c as t, test };
 
@@ -30,6 +33,7 @@ export { import_c as t, test };
 
 ```js
 import assert from "node:assert";
+
 // main.js
 import("./a.js").then((mod) => {
 	assert.strictEqual(mod.a, 1e3);

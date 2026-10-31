@@ -15,6 +15,7 @@ export { default as B } from "./b.js";
 ```js
 // b.ts
 const b = 100;
+
 export { b as default };
 
 ```

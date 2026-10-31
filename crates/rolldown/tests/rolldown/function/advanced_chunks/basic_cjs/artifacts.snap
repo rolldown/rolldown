@@ -27,10 +27,12 @@ export default require_b();
 var require_a = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = "a";
 }));
+
 // b.cjs
 var require_b = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.b = "b";
 }));
+
 export { require_a as n, require_b as t };
 
 ```
@@ -63,10 +65,12 @@ export default require_b();
 var require_a = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = "a";
 }));
+
 // b.cjs
 var require_b = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.b = "b";
 }));
+
 export { require_a as n, require_b as t };
 
 ```

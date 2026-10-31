@@ -26,6 +26,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import a from "a";
 import * as b from "b";
 import { c } from "c";
+
 // entry.js
 eval("foo(a, b, c)");
 

@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // package.json.js
 const version = "0.0.0";
+
 export { version };
 
 ```
@@ -17,6 +18,7 @@ export { version };
 ```js
 import { version } from "../package.json.js";
 import { id } from "./utils/index.js";
+
 // src/index.js
 console.log(`version: `, id(version));
 
@@ -29,6 +31,7 @@ console.log(`version: `, id(version));
 function id(a) {
 	return a;
 }
+
 export { id };
 
 ```

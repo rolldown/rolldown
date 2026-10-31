@@ -8,12 +8,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_m2, t as init_m1 } from "./m1.js";
+
 // m4.js
 function init_m4() {
 	return (init_m4 = __esmMin((() => {
 		console.log("m4");
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -22,6 +24,7 @@ function init_main() {
 		console.log("m0");
 	})))();
 }
+
 export { init_m4 as n, init_main as t };
 
 ```
@@ -31,6 +34,7 @@ export { init_m4 as n, init_main as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_m4 } from "./group-0.js";
+
 // m3.js
 function init_m3() {
 	return (init_m3 = __esmMin((() => {
@@ -38,6 +42,7 @@ function init_m3() {
 		console.log("m3");
 	})))();
 }
+
 // m2.js
 function init_m2() {
 	return (init_m2 = __esmMin((() => {
@@ -45,6 +50,7 @@ function init_m2() {
 		console.log("m2");
 	})))();
 }
+
 // m1.js
 function init_m1() {
 	return (init_m1 = __esmMin((() => {
@@ -53,6 +59,7 @@ function init_m1() {
 		console.log("m1");
 	})))();
 }
+
 export { init_m2 as n, init_m1 as t };
 
 ```
@@ -83,12 +90,14 @@ export { __esmMin as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_m2, t as init_m1 } from "./m1.js";
+
 // m4.js
 function init_m4() {
 	return (init_m4 = __esmMin((() => {
 		console.log("m4");
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -97,6 +106,7 @@ function init_main() {
 		console.log("m0");
 	})))();
 }
+
 export { init_m4 as n, init_main as t };
 
 ```
@@ -106,6 +116,7 @@ export { init_m4 as n, init_main as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_m4 } from "./group-0.js";
+
 // m3.js
 function init_m3() {
 	return (init_m3 = __esmMin((() => {
@@ -113,6 +124,7 @@ function init_m3() {
 		console.log("m3");
 	})))();
 }
+
 // m2.js
 function init_m2() {
 	return (init_m2 = __esmMin((() => {
@@ -120,6 +132,7 @@ function init_m2() {
 		console.log("m2");
 	})))();
 }
+
 // m1.js
 function init_m1() {
 	return (init_m1 = __esmMin((() => {
@@ -128,6 +141,7 @@ function init_m1() {
 		console.log("m1");
 	})))();
 }
+
 export { init_m2 as n, init_m1 as t };
 
 ```

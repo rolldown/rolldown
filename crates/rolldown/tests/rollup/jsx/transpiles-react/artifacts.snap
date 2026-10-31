@@ -8,9 +8,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // other1.js
 console.log("wrong Foo 1", "wrong React 1");
+
 // jsx.js
 const Foo = () => {};
 console.log(/* @__PURE__ */ React.createElement(Foo, null));
+
 // other2.js
 console.log("wrong Foo 2", "wrong React 2");
 

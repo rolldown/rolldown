@@ -11,6 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 var require_entry = /* @__PURE__ */ __commonJSMin((async () => {
 	return await foo;
 }));
+
 export default require_entry();
 
 ```

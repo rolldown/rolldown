@@ -47,6 +47,7 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // shared.js
 var hot;
 function init_shared() {
@@ -54,6 +55,7 @@ function init_shared() {
 		hot = import.meta.hot;
 	})))();
 }
+
 export { init_shared as n, hot as t };
 
 ```

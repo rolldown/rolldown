@@ -7,12 +7,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assertAgain, * as assertNamespace from "node:assert";
+
 // dep.js
 globalThis.__events.push("dep");
 var dep_default = "default";
 const value = "named";
+
 // other.js
 globalThis.__events.push("other");
+
 // main.js
 function read() {
 	return {
@@ -24,6 +27,7 @@ function read() {
 		sameNamespace: assertAgain === assertNamespace.default
 	};
 }
+
 export { read };
 
 ```

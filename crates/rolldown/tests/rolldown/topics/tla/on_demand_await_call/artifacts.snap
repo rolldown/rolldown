@@ -8,8 +8,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // normal-lib.js
 const value = "normal-dep+normal-lib";
+
 // tla-lib.js
 const value$1 = await Promise.resolve("tla-dep") + "+tla-lib";
+
 export { value as normalLibValue, value$1 as tlaLibValue };
 
 ```
@@ -73,8 +75,10 @@ export { value as normalLibValue, value$1 as tlaLibValue };
 ```js
 // normal-lib.js
 const value = "normal-dep+normal-lib";
+
 // tla-lib.js
 const value$1 = await Promise.resolve("tla-dep") + "+tla-lib";
+
 export { value as normalLibValue, value$1 as tlaLibValue };
 
 ```

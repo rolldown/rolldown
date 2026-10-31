@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // d1.js
 const a = "d1a";
+
 export { a };
 
 ```
@@ -18,6 +19,7 @@ export { a };
 // d2.js
 const a = "d2a";
 const b = "d2b";
+
 export { a, b };
 
 ```
@@ -28,6 +30,7 @@ export { a, b };
 // d3.js
 const a = "d3a";
 const b = "d3b";
+
 export { a, b };
 
 ```
@@ -38,6 +41,7 @@ export { a, b };
 // d4.js
 const a = "d4a";
 const b = "d4b";
+
 export { a, b };
 
 ```
@@ -47,6 +51,7 @@ export { a, b };
 ```js
 // d5.js
 const a = "d5a";
+
 export { a };
 
 ```
@@ -62,6 +67,7 @@ const d4 = () => import("./d4.js");
 const d5 = () => import("./d5.js").then((mod) => {
 	mod.a;
 });
+
 export { a, d3, d4, d5, main_default as default };
 
 ```

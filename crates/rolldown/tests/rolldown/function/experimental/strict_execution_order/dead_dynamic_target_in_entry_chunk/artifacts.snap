@@ -66,6 +66,7 @@ console.log("B");
 ```js
 // t.js
 const t = String(globalThis.__t ?? "t");
+
 // e.js
 console.log("E", t);
 

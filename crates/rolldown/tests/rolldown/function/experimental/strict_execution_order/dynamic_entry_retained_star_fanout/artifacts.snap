@@ -58,10 +58,12 @@ export { commonA, commonB };
 ```js
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
+
 // bridge.js
 function x() {
 	return 1;
 }
+
 // page-b.js
 var page_b_exports = /* @__PURE__ */ __exportAll({});
 function init_page_b() {
@@ -70,6 +72,7 @@ function init_page_b() {
 		assert.strictEqual(globalThis.valueB, void 0);
 	})))();
 }
+
 export { page_b_exports as n, x as r, init_page_b as t };
 
 ```
@@ -148,6 +151,7 @@ export { commonA, commonB };
 ```js
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
+
 // bridge.js
 function x() {
 	return 1;
@@ -155,6 +159,7 @@ function x() {
 function init_bridge() {
 	return (init_bridge = __esmMin((() => {})))();
 }
+
 // page-b.js
 var page_b_exports = /* @__PURE__ */ __exportAll({});
 function init_page_b() {
@@ -163,6 +168,7 @@ function init_page_b() {
 		assert.strictEqual(globalThis.valueB, void 0);
 	})))();
 }
+
 export { x as i, page_b_exports as n, init_bridge as r, init_page_b as t };
 
 ```

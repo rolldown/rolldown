@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // log.js
 const log = [];
+
 // main.js
 {
 	await using _ = { async [Symbol.asyncDispose]() {
@@ -16,6 +17,7 @@ const log = [];
 	} };
 	log.push("body");
 }
+
 export { log };
 
 ```
@@ -62,6 +64,7 @@ export { log };
 ```js
 // log.js
 const log = [];
+
 // main.js
 {
 	await using _ = { async [Symbol.asyncDispose]() {
@@ -70,6 +73,7 @@ const log = [];
 	} };
 	log.push("body");
 }
+
 export { log };
 
 ```

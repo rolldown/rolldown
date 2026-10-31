@@ -6,9 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
 
-//# sourceMappingURL=main.js.map
 ```
 
 # Sourcemap Visualizer

@@ -7,13 +7,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import "./server/index.js";
-export * from "@sentry/node";
+
+export * from "@sentry/node"
 
 ```
 
 ## server/index.js
 
 ```js
-export * from "@sentry/node";
+export * from "@sentry/node"
 
 ```

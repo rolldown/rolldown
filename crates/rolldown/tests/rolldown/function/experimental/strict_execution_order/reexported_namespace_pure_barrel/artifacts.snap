@@ -8,8 +8,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // color.js
 const setOpacity = (color, opacity) => `${color}:${opacity}`;
+
 // css.js
 globalThis.cssLoaded = true;
+
 export { setOpacity as t };
 
 ```
@@ -19,8 +21,10 @@ export { setOpacity as t };
 ```js
 import { t as setOpacity } from "./css.js";
 import assert from "node:assert";
+
 // theme.js
 const theme = setOpacity("red", .5);
+
 // first.js
 assert.strictEqual(theme, "red:0.5");
 
@@ -40,6 +44,7 @@ await import("./second.js");
 ```js
 import { t as setOpacity } from "./css.js";
 import assert from "node:assert";
+
 // second.js
 assert.strictEqual(setOpacity("blue", .2), "blue:0.2");
 
@@ -53,6 +58,7 @@ assert.strictEqual(setOpacity("blue", .2), "blue:0.2");
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // color.js
 var setOpacity;
 function init_color() {
@@ -60,6 +66,7 @@ function init_color() {
 		setOpacity = (color, opacity) => `${color}:${opacity}`;
 	})))();
 }
+
 // css.js
 function init_css() {
 	return (init_css = __esmMin((() => {
@@ -67,6 +74,7 @@ function init_css() {
 		globalThis.cssLoaded = true;
 	})))();
 }
+
 export { init_color as n, setOpacity as r, init_css as t };
 
 ```

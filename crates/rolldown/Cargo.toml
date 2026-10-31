@@ -15,7 +15,7 @@ workspace = true
 [features]
 default = ["serde"]
 serde = ["dep:serde", "oxc_index/serde"]
-testing = []
+testing = ["dep:rolldown_plugin_utils", "rolldown_plugin_utils/testing"]
 experimental = []
 
 [dependencies]
@@ -53,6 +53,7 @@ rolldown_plugin_data_url = { workspace = true }
 rolldown_plugin_hmr = { workspace = true }
 rolldown_plugin_lazy_compilation = { workspace = true }
 rolldown_plugin_oxc_runtime = { workspace = true }
+rolldown_plugin_utils = { workspace = true, optional = true }
 rolldown_resolver = { workspace = true }
 rolldown_sourcemap = { workspace = true }
 oxc_sourcemap = { workspace = true }

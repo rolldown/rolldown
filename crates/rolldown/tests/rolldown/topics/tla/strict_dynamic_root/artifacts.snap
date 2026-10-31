@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // main.js
 const loaded = import("./tla-target.js").then((mod) => mod.value);
+
 export { loaded };
 
 ```
@@ -17,6 +18,7 @@ export { loaded };
 ```js
 // tla-target.js
 const value = await Promise.resolve("tla");
+
 export { value };
 
 ```
@@ -74,6 +76,7 @@ export { value };
 ```js
 // main.js
 const loaded = import("./tla-target.js").then((mod) => mod.value);
+
 export { loaded };
 
 ```
@@ -83,6 +86,7 @@ export { loaded };
 ```js
 // tla-target.js
 const value = await Promise.resolve("tla");
+
 export { value };
 
 ```

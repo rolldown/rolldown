@@ -8,6 +8,8 @@ Asset modules (`ModuleType::Asset`) are handled by a built-in Rust plugin (`roll
 
 **`renderChunk` hook (Pre order):** Scans for `__ROLLDOWN_ASSET__#` placeholders using `memchr::memmem`, resolves each ref_id to an asset filename via `ctx.get_file_name()`, and replaces placeholders with relative paths.
 
+**Chunk AST minification:** Placeholder resolution must precede minification. The chunk AST fast path therefore falls back for chunks containing `__ROLLDOWN_ASSET__#` or `__ROLLDOWN_COPY_MODULE__#` in module sources or generated imports/exports. Minifying first can fold operations on unresolved strings and print them as template literals, which the render hook's quote-based scanner cannot resolve. This is a per-chunk exclusion; the presence of the built-in plugins alone does not disable the fast path. The render-hook gate recognizes the concrete `AssetModulePlugin` and `CopyModulePlugin` types through `Pluginable::is`; a custom plugin using either built-in name still disables the fast path.
+
 **`new URL()` bridge:** The `FileEmitter` has a `module_to_file_ref` map so the `new URL('./asset', import.meta.url)` finalizer can look up the emitted asset by module ID. See [new URL() Design Tradeoff](#new-url-design-tradeoff) for why this is handled in core.
 
 ## `has_lazy_export` and CJS Interop

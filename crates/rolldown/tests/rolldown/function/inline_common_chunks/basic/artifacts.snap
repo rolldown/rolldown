@@ -138,6 +138,7 @@ export { __share_require as i, __share as n, __share_export as r, __esmMin as t 
 
 ```js
 import { n as count, r as marker, t as bump } from "./shared.js";
+
 // a.js
 globalThis.events.push("A " + count + " " + bump() + " " + count);
 globalThis.markers.push(marker);
@@ -148,6 +149,7 @@ globalThis.markers.push(marker);
 
 ```js
 import { n as count, r as marker, t as bump } from "./shared.js";
+
 // b.js
 globalThis.events.push("B " + count + " " + bump?.() + " " + count);
 globalThis.markers.push(marker);
@@ -165,6 +167,7 @@ function bump() {
 	return this === void 0 ? "this:undefined" : "this:bound";
 }
 const marker = { tag: "shared" };
+
 export { count as n, marker as r, bump as t };
 
 ```

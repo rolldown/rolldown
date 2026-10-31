@@ -14,8 +14,10 @@ export { t as value } from "./entry-a.js";
 
 ```js
 import { t as value } from "./entry-a.js";
+
 // entry-b.js
 const combined = `b:${value}`;
+
 export { combined };
 
 ```
@@ -25,6 +27,7 @@ export { combined };
 ```js
 // entry-a.js
 const value = await Promise.resolve("a");
+
 export { value as t };
 
 ```
@@ -64,6 +67,7 @@ export { combined };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // entry-a.js
 var value;
 function init_entry_a() {
@@ -71,6 +75,7 @@ function init_entry_a() {
 		value = await Promise.resolve("a");
 	})))();
 }
+
 export { value as n, init_entry_a as t };
 
 ```
@@ -98,8 +103,10 @@ export { t as value } from "./entry-a.js";
 
 ```js
 import { t as value } from "./entry-a.js";
+
 // entry-b.js
 const combined = `b:${value}`;
+
 export { combined };
 
 ```
@@ -109,6 +116,7 @@ export { combined };
 ```js
 // entry-a.js
 const value = await Promise.resolve("a");
+
 export { value as t };
 
 ```

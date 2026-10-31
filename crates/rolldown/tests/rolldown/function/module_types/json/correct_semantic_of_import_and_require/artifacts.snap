@@ -7,11 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // codes.json
 var require_codes = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { "foo": "bar" };
 }));
+
 // main.js
 var import_codes = /* @__PURE__ */ __toESM(require_codes());
 const codes2 = require_codes();

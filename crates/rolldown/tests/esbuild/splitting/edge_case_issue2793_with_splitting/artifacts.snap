@@ -8,8 +8,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // a.js
 const A = 42;
+
 // b.js
 const B = async () => (await import("./index.js")).A;
+
 export { A, B };
 
 ```

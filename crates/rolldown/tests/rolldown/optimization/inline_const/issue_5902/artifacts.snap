@@ -7,11 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // foo.mjs
 var foo = null;
 function setFoo(_foo) {
 	foo = _foo;
 }
+
 // main.js
 setFoo(20);
 assert.strictEqual(foo, 20);

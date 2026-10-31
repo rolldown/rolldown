@@ -11,6 +11,7 @@ async function format(code) {
 	let pl = await import("./plugin.js");
 	return (await import("./core.js")).run(pl.transform(code));
 }
+
 export { format as t };
 
 ```
@@ -25,6 +26,7 @@ async function run(code) {
 	let pc = await import("./parser-c.js");
 	return pa.parse(code) + pb.parse(code) + pc.parse(code);
 }
+
 export { run };
 
 ```
@@ -33,8 +35,10 @@ export { run };
 
 ```js
 import { t as format } from "./apis.js";
+
 // entry-a.js
 const a = () => format("a");
+
 export { a };
 
 ```
@@ -43,8 +47,10 @@ export { a };
 
 ```js
 import { t as format } from "./apis.js";
+
 // entry-b.js
 const b = () => format("b");
+
 export { b };
 
 ```
@@ -53,10 +59,12 @@ export { b };
 
 ```js
 import { t as helper } from "./shared.js";
+
 // parser-a.js
 function parse(x) {
 	return helper("a" + x);
 }
+
 export { parse };
 
 ```
@@ -65,10 +73,12 @@ export { parse };
 
 ```js
 import { t as helper } from "./shared.js";
+
 // parser-b.js
 function parse(x) {
 	return helper("b" + x);
 }
+
 export { parse };
 
 ```
@@ -77,10 +87,12 @@ export { parse };
 
 ```js
 import { t as helper } from "./shared.js";
+
 // parser-c.js
 function parse(x) {
 	return helper("c" + x);
 }
+
 export { parse };
 
 ```
@@ -91,6 +103,7 @@ export { parse };
 import { parse } from "./parser-a.js";
 import { parse as parse$1 } from "./parser-b.js";
 import { parse as parse$2 } from "./parser-c.js";
+
 // plugin.js
 async function opt() {
 	await import("@optional/ext");
@@ -99,6 +112,7 @@ function transform(code) {
 	opt();
 	return parse(code) + parse$1(code) + parse$2(code);
 }
+
 export { transform };
 
 ```
@@ -110,6 +124,7 @@ export { transform };
 function helper(x) {
 	return x.toUpperCase();
 }
+
 export { helper as t };
 
 ```

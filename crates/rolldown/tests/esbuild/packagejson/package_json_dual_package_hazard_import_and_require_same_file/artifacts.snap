@@ -13,6 +13,7 @@ var module_default;
 var init_module = __esmMin((() => {
 	module_default = "module";
 }));
+
 // src/entry.js
 init_module();
 console.log(module_default, (init_module(), __toCommonJS(module_exports)));

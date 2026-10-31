@@ -19,6 +19,7 @@ oxc = { workspace = true }
 oxc_sourcemap = { workspace = true }
 oxc_str = { workspace = true }
 rolldown_error = { workspace = true }
+rolldown_utils = { workspace = true }
 self_cell = { workspace = true }
 
 [lib]

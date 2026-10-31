@@ -34,6 +34,7 @@ codspeed = ["criterion2/codspeed"]
 tracking_allocator = []
 
 [dev-dependencies]
+libc = { workspace = true }
 rustc-hash = { workspace = true }
 mimalloc-safe = { workspace = true }
 rolldown_tracking_allocator = { workspace = true }

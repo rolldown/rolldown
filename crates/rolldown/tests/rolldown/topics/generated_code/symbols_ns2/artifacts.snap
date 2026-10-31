@@ -7,12 +7,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ a: () => a });
 const a = 1e3;
+
 // a.js
 var a_exports = /* @__PURE__ */ __exportAll({ ns: () => lib_exports });
+
 // main.js
 assert.deepStrictEqual(Object.getOwnPropertyNames(a_exports), ["ns"]);
 assert.deepStrictEqual(Object.getOwnPropertyNames(lib_exports), ["a"]);

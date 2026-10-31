@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // init.js
 globalThis.array = [];
+
 // foo.js
 {
 	const foo = "foo" + globalThis.foo;
@@ -15,11 +16,13 @@ globalThis.array = [];
 		globalThis.array.push(foo);
 	}, 100);
 }
+
 // bar.js
 {
 	const foo = "bar" + globalThis.bar;
 	globalThis.array.push(foo);
 }
+
 // main.js
 console.log(globalThis.array);
 

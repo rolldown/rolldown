@@ -65,6 +65,7 @@ function cn(...values) {
 var init_cn = __esmMin((() => {
 	globalThis.__events.push("cn");
 }));
+
 // node_modules/pure-barrel/clone-deep.cjs
 var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("clone-deep");
@@ -72,12 +73,14 @@ var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		return JSON.parse(JSON.stringify(value));
 	};
 }));
+
 // node_modules/pure-barrel/index.js
 var import_clone_deep;
 var init_pure_barrel = __esmMin((() => {
 	init_cn();
 	import_clone_deep = /* @__PURE__ */ __toESM(require_clone_deep(), 1);
 }));
+
 // route.js
 var route_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 var value;
@@ -86,12 +89,14 @@ var init_route = __esmMin((() => {
 	globalThis.__events.push("route");
 	value = (0, import_clone_deep.default)({ value: 1 });
 }));
+
 // main.js
 init_pure_barrel();
 globalThis.__events.push(`main:${cn("a", "b")}`);
 function loadRoute() {
 	return Promise.resolve().then(() => (init_route(), route_exports));
 }
+
 export { loadRoute };
 
 ```

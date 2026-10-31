@@ -16,9 +16,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({ bar: () => 123 });
+
 // entry.js
 Promise.resolve().then(() => foo_exports).then(({ bar: b }) => {
 	assert.strictEqual(b, 123);

@@ -30,11 +30,14 @@ node_assert.default.strictEqual(t.t, 1);
 ```js
 import * as t$1 from "@babel/types";
 import assert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // mod.js
 var _7384_exports = /* @__PURE__ */ __exportAll({ t: () => t$1 });
+
 // a.js
 assert.strictEqual(t$1.t, 1);
+
 // b.js
 const { t } = _7384_exports;
 assert.strictEqual(t.t, 1);

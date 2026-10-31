@@ -17,6 +17,7 @@ function outer() {
 	}
 }
 outer();
+
 export { outer };
 
 ```

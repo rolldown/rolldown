@@ -28,6 +28,7 @@ let foo;
 		console.log(0, x.z);
 	})(x || (x = _foo3.x || (_foo3.x = {})));
 })(foo || (foo = {}));
+
 export { foo };
 
 ```
@@ -60,6 +61,7 @@ let n;
 	_n3.x = x;
 	console.log(a.b, n.a.b, n["a"]["b"], x.g, n.x.g, n["x"]["g"]);
 })(n || (n = {}));
+
 export { n };
 
 ```
@@ -89,6 +91,7 @@ let foo;
 		console.log("a", x.z);
 	})(x || (x = _foo3.x || (_foo3.x = {})));
 })(foo || (foo = {}));
+
 export { foo };
 
 ```
@@ -110,6 +113,7 @@ x = /* @__PURE__ */ function(x) {
 	console.log(y, z);
 })(x || (x = {}));
 console.log(0, 1);
+
 export { x };
 
 ```
@@ -134,6 +138,7 @@ x = /* @__PURE__ */ function(x) {
 	return x;
 }(x || {});
 console.log(100, 100, 625, 625);
+
 export { a, x };
 
 ```
@@ -155,6 +160,7 @@ x = /* @__PURE__ */ function(x) {
 	console.log(y, z);
 })(x || (x = {}));
 console.log("a", "a");
+
 export { x };
 
 ```

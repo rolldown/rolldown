@@ -8,10 +8,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // allow-extension/lib.js
 const shared = "shared";
+
 // allow-extension/main.js
 console.log(shared);
 import("./dynamic.js");
 const unused = 42;
+
 export { shared as t, unused };
 
 ```
@@ -20,6 +22,7 @@ export { shared as t, unused };
 
 ```js
 import { t as shared } from "./allow-extension.js";
+
 // allow-extension/dynamic.js
 console.log(shared);
 
@@ -29,6 +32,7 @@ console.log(shared);
 
 ```js
 import { t as shared } from "./false.js";
+
 // false/dynamic.js
 console.log(shared);
 
@@ -38,6 +42,7 @@ console.log(shared);
 
 ```js
 import { t as shared } from "./lib.js";
+
 // not-specified/dynamic.js
 console.log(shared);
 
@@ -47,6 +52,7 @@ console.log(shared);
 
 ```js
 import { t as shared } from "./lib2.js";
+
 // strict/dynamic.js
 console.log(shared);
 
@@ -57,9 +63,11 @@ console.log(shared);
 ```js
 // false/lib.js
 const shared = "shared";
+
 // false/main.js
 console.log(shared);
 import("./dynamic2.js");
+
 export { shared as t };
 
 ```
@@ -69,6 +77,7 @@ export { shared as t };
 ```js
 // not-specified/lib.js
 const shared = "shared";
+
 export { shared as t };
 
 ```
@@ -78,6 +87,7 @@ export { shared as t };
 ```js
 // strict/lib.js
 const shared = "shared";
+
 export { shared as t };
 
 ```
@@ -92,10 +102,12 @@ export { shared as t };
 
 ```js
 import { t as shared } from "./lib.js";
+
 // not-specified/main.js
 console.log(shared);
 import("./dynamic3.js");
 const unused = 42;
+
 export { unused };
 
 ```
@@ -104,10 +116,12 @@ export { unused };
 
 ```js
 import { t as shared } from "./lib2.js";
+
 // strict/main.js
 console.log(shared);
 import("./dynamic4.js");
 const unused = 42;
+
 export { unused };
 
 ```

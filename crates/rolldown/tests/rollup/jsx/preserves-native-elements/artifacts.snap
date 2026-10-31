@@ -8,9 +8,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // other1.js
 console.log("wrong div 1", "wrong span 1");
+
 // jsx.js
 console.log(<div />);
 console.log(<div><span /></div>);
+
 // other2.js
 console.log("wrong div 2", "wrong span 2");
 

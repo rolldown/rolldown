@@ -11,6 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 var require_entry = /* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
 	exports.foo = async () => this$1;
 }));
+
 export default require_entry();
 
 ```

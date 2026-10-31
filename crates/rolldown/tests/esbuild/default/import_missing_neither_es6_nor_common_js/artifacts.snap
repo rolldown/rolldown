@@ -30,6 +30,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { r as init_foo } from "./foo.js";
+
 // bare.js
 init_foo();
 
@@ -52,6 +53,7 @@ var init_foo = __esmMin((() => {
 	x = void 0;
 	y = void 0;
 }));
+
 export { y as a, x as i, foo_exports as n, __toCommonJS as o, init_foo as r, _default as t };
 
 ```
@@ -68,6 +70,7 @@ console.log(import("./foo.js").then((n) => (n.r(), n.n)));
 
 ```js
 import { a as y, i as x, r as init_foo, t as _default } from "./foo.js";
+
 // named.js
 init_foo();
 console.log(_default(x, y));
@@ -78,6 +81,7 @@ console.log(_default(x, y));
 
 ```js
 import { n as foo_exports, o as __toCommonJS, r as init_foo } from "./foo.js";
+
 // require.js
 console.log((init_foo(), __toCommonJS(foo_exports)));
 
@@ -87,6 +91,7 @@ console.log((init_foo(), __toCommonJS(foo_exports)));
 
 ```js
 import { n as foo_exports, r as init_foo } from "./foo.js";
+
 // star-capture.js
 init_foo();
 console.log(foo_exports);
@@ -97,6 +102,7 @@ console.log(foo_exports);
 
 ```js
 import { a as y, i as x, r as init_foo, t as _default } from "./foo.js";
+
 // star.js
 init_foo();
 console.log(_default(x, y));

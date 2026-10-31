@@ -36,6 +36,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import * as fs from "fs";
 import { readFileSync } from "fs";
+
 // HIDDEN [\0rolldown/runtime.js]
 // entry.js
 var require_entry = /* @__PURE__ */ __commonJSMin(((exports) => {
@@ -43,6 +44,7 @@ var require_entry = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.readFileSync = readFileSync;
 	exports.foo = 123;
 }));
+
 export default require_entry();
 
 ```

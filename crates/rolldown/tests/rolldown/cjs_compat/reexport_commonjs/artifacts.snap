@@ -7,11 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // commonjs.js
 var require_commonjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { bar: 1 };
 }));
+
 // foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({
 	bar: () => import_commonjs.bar,
@@ -19,11 +21,13 @@ var foo_exports = /* @__PURE__ */ __exportAll({
 });
 __reExport(foo_exports, /* @__PURE__ */ __toESM(require_commonjs()));
 var import_commonjs = require_commonjs();
+
 // main.js
 assert.equal(import_commonjs.bar, 1);
 assert.equal(1, 1);
 assert.equal(foo_exports.foo, void 0);
 assert.equal(Object.keys(foo_exports).length, 2);
+
 var bar = import_commonjs.bar;
 export { bar };
 

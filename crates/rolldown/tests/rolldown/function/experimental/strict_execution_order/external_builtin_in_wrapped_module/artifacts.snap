@@ -7,10 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { sep } from "node:path";
+
 // dep.js
 globalThis.__depRan = true;
+
 // main.js
 const out = `dep:${sep.length > 0}`;
+
 export { out };
 
 ```
@@ -53,10 +56,13 @@ export { out };
 
 ```js
 import { sep } from "node:path";
+
 // dep.js
 globalThis.__depRan = true;
+
 // main.js
 const out = `dep:${sep.length > 0}`;
+
 export { out };
 
 ```

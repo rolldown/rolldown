@@ -14,14 +14,17 @@ var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((export
 function test$1() {
 	return import_cjs.default;
 }
+
 // b.js
 function test() {
 	console.log(import_cjs.default);
 	return import_cjs.default;
 }
+
 // main.js
 const aa = test$1();
 const bb = test();
+
 export { aa, bb };
 
 ```

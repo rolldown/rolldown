@@ -58,6 +58,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 let foo = 1;
 exports.foo = 2;
 module.exports = 3;
+
 export { foo };
 
 ```
@@ -67,11 +68,13 @@ export { foo };
 ```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
 import { foo } from "bar";
+
 // import-in-cjs.js
 var require_import_in_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	exports.foo = foo;
 	module.exports = foo;
 }));
+
 export default require_import_in_cjs();
 
 ```
@@ -80,10 +83,12 @@ export default require_import_in_cjs();
 
 ```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
+
 // no-warnings-here.js
 var require_no_warnings_here = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	console.log(module, exports);
 }));
+
 export default require_no_warnings_here();
 
 ```

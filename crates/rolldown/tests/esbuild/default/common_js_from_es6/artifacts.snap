@@ -7,17 +7,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => foo$1 });
 function foo$1() {
 	return "foo";
 }
+
 // bar.js
 var bar_exports = /* @__PURE__ */ __exportAll({ bar: () => bar$1 });
 function bar$1() {
 	return "bar";
 }
+
 // entry.js
 const { foo } = __toCommonJS(foo_exports);
 assert.equal(foo(), "foo");

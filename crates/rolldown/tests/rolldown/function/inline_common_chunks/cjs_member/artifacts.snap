@@ -125,6 +125,7 @@ init_b();
 
 ```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
+
 // cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	let n = 0;
@@ -139,6 +140,7 @@ var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	};
 	globalThis.events.push("CJS body");
 }));
+
 export { require_cjs as t };
 
 ```

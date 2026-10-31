@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert/strict";
+
 // HIDDEN [\0rolldown/runtime.js]
 // lib.js
 var keep1, keep2;
@@ -14,6 +15,7 @@ var init_lib = __esmMin((() => {
 	keep1 = () => "keep1";
 	keep2 = () => "keep2";
 }));
+
 // cjs.js
 var cjs_exports = /* @__PURE__ */ __exportAll({ default: () => cjs_default });
 var cjs_default;
@@ -21,6 +23,7 @@ var init_cjs = __esmMin((() => {
 	init_lib();
 	cjs_default = keep2();
 }));
+
 // entry.js
 init_lib();
 assert.equal(keep1(), "keep1");

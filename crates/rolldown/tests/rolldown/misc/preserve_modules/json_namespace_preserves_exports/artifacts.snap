@@ -15,6 +15,7 @@ export { __exportAll };
 
 ```js
 import { __exportAll } from "./_virtual/_rolldown/runtime.js";
+
 // data.json
 var data_exports = /* @__PURE__ */ __exportAll({
 	answer: () => answer,
@@ -27,6 +28,7 @@ var data_default = {
 	answer,
 	nested
 };
+
 export { answer, data_exports, data_default as default, nested };
 
 ```
@@ -35,10 +37,12 @@ export { answer, data_exports, data_default as default, nested };
 
 ```js
 import { data_exports } from "./data.js";
+
 // index.js
 const namespace = data_exports;
 const namespaceKeys = Object.keys(data_exports).sort();
 console.log(data_exports);
+
 export { namespace, namespaceKeys };
 
 ```

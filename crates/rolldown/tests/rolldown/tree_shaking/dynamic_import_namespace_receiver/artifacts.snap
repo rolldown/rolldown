@@ -46,6 +46,7 @@ export { t as read, n as value } from "./shared.js";
 ```js
 // default-arrow.js
 var default_arrow_default = () => "expected";
+
 export { default_arrow_default as default };
 
 ```
@@ -57,6 +58,7 @@ export { default_arrow_default as default };
 function run() {
 	return "expected";
 }
+
 export { run as default };
 
 ```
@@ -69,6 +71,7 @@ let value = "expected";
 function default_this_default() {
 	return this.value;
 }
+
 export { default_this_default as default, value };
 
 ```
@@ -81,6 +84,7 @@ let value = "expected";
 function read() {
 	return eval("this.value");
 }
+
 export { read, value };
 
 ```
@@ -98,6 +102,7 @@ const value = "expected";
 function read() {
 	return this.value;
 }
+
 // main.js
 const merged = () => Promise.resolve().then(() => merged_exports).then((ns) => ns.read());
 const method = async () => import("./method.js").then((ns) => ns.read());
@@ -114,6 +119,7 @@ const redeclared = async () => import("./redeclared.js").then((ns) => ns.read())
 const defaultThis = async () => import("./default-this.js").then((ns) => ns.default());
 const defaultArrow = async () => import("./default-arrow.js").then((ns) => ns.default());
 const defaultNamed = async () => import("./default-named.js").then((ns) => ns.default());
+
 export { awaited, computed, defaultArrow, defaultNamed, defaultThis, evaluated, merged, method, nestedArrow, optional, parenthesized, plain, reassigned, redeclared, tagged, value };
 
 ```
@@ -133,6 +139,7 @@ let value = "expected";
 function read() {
 	return (() => this.value)();
 }
+
 export { read, value };
 
 ```
@@ -158,6 +165,7 @@ export { t as read, n as value } from "./shared.js";
 function read() {
 	return "expected";
 }
+
 export { read };
 
 ```
@@ -173,6 +181,7 @@ let read = function() {
 read = function() {
 	return this.value;
 };
+
 export { read, value };
 
 ```
@@ -188,6 +197,7 @@ var read = function() {
 var read = function() {
 	return this.value;
 };
+
 export { read, value };
 
 ```
@@ -200,6 +210,7 @@ let value = "expected";
 function read() {
 	return this.value;
 }
+
 export { value as n, read as t };
 
 ```

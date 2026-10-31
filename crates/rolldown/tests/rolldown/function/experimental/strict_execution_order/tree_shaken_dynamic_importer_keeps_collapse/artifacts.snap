@@ -7,9 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { r as load } from "./dyn.js";
+
 // a.js
 (globalThis.log ??= []).push("a");
 const targetPromise = load();
+
 export { targetPromise };
 
 ```
@@ -21,6 +23,7 @@ export { targetPromise };
 function used() {
 	(globalThis.log ??= []).push("used");
 }
+
 // b.js
 used();
 
@@ -32,6 +35,7 @@ used();
 // HIDDEN [\0rolldown/runtime.js]
 // loader.js
 const load = () => Promise.resolve().then(() => (init_target(), target_exports));
+
 // target.js
 var target_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
 function init_target() {
@@ -39,6 +43,7 @@ function init_target() {
 		(globalThis.log ??= []).push("target");
 	})))();
 }
+
 export { target_exports as n, load as r, init_target as t };
 
 ```
@@ -88,6 +93,7 @@ init_b();
 
 ```js
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+
 // loader.js
 var load;
 function init_loader() {
@@ -95,6 +101,7 @@ function init_loader() {
 		load = () => Promise.resolve().then(() => (init_target(), target_exports));
 	})))();
 }
+
 // target.js
 var target_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
 function init_target() {
@@ -102,6 +109,7 @@ function init_target() {
 		(globalThis.log ??= []).push("target");
 	})))();
 }
+
 export { load as i, target_exports as n, init_loader as r, init_target as t };
 
 ```

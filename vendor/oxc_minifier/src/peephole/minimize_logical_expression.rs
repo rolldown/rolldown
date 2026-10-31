@@ -1,0 +1,329 @@
+use oxc_allocator::TakeIn;
+use oxc_ast::ast::*;
+use oxc_compat::ESFeature;
+use oxc_semantic::ReferenceFlags;
+use oxc_span::{ContentEq, GetSpan, SPAN};
+
+use crate::{TraverseCtx, symbol_metadata::MemberWriteEffect};
+
+use super::PeepholeOptimizations;
+
+impl<'a> PeepholeOptimizations {
+    pub fn minimize_logical_expression(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
+        let Expression::LogicalExpression(e) = expr else { return };
+        if let Some(changed) = Self::try_compress_is_null_or_undefined(e, ctx) {
+            ctx.replace_expression(expr, changed);
+        }
+        Self::try_compress_logical_expression_to_assignment_expression(expr, ctx);
+    }
+
+    /// Compress `foo === null || foo === undefined` into `foo == null`.
+    ///
+    /// `foo === null || foo === undefined` => `foo == null`
+    /// `foo !== null && foo !== undefined` => `foo != null`
+    ///
+    /// Also supports `(a = foo.bar) === null || a === undefined` which commonly happens when
+    /// optional chaining is lowered. (`(a=foo.bar)==null`)
+    ///
+    /// This compression assumes that `document.all` is a normal object.
+    /// If that assumption does not hold, this compression is not allowed.
+    /// - `document.all === null || document.all === undefined` is `false`
+    /// - `document.all == null` is `true`
+    fn try_compress_is_null_or_undefined(
+        expr: &mut LogicalExpression<'a>,
+        ctx: &TraverseCtx<'a>,
+    ) -> Option<Expression<'a>> {
+        let op = expr.operator;
+        let target_ops = match op {
+            LogicalOperator::Or => (BinaryOperator::StrictEquality, BinaryOperator::Equality),
+            LogicalOperator::And => (BinaryOperator::StrictInequality, BinaryOperator::Inequality),
+            LogicalOperator::Coalesce => return None,
+        };
+        if let Some(new_expr) = Self::try_compress_is_null_or_undefined_for_left_and_right(
+            &mut expr.left,
+            &mut expr.right,
+            expr.span,
+            target_ops,
+            ctx,
+        ) {
+            return Some(new_expr);
+        }
+        let Expression::LogicalExpression(left) = &mut expr.left else {
+            return None;
+        };
+        if left.operator != op {
+            return None;
+        }
+        let new_span = left.right.span().merge_within(expr.right.span(), expr.span).unwrap_or(SPAN);
+        Self::try_compress_is_null_or_undefined_for_left_and_right(
+            &mut left.right,
+            &mut expr.right,
+            new_span,
+            target_ops,
+            ctx,
+        )
+        .map(|new_expr| {
+            Expression::new_logical_expression(
+                expr.span,
+                left.left.take_in(ctx),
+                expr.operator,
+                new_expr,
+                ctx,
+            )
+        })
+    }
+
+    fn try_compress_is_null_or_undefined_for_left_and_right(
+        left: &mut Expression<'a>,
+        right: &mut Expression<'a>,
+        span: Span,
+        (find_op, replace_op): (BinaryOperator, BinaryOperator),
+        ctx: &TraverseCtx<'a>,
+    ) -> Option<Expression<'a>> {
+        enum LeftPairValueResult {
+            Null(Span),
+            Undefined,
+        }
+
+        let (
+            Expression::BinaryExpression(left_binary_expr),
+            Expression::BinaryExpression(right_binary_expr),
+        ) = (left, right)
+        else {
+            return None;
+        };
+        if left_binary_expr.operator != find_op || right_binary_expr.operator != find_op {
+            return None;
+        }
+
+        let is_null_or_undefined = |a: &Expression| {
+            if a.is_null() {
+                Some(LeftPairValueResult::Null(a.span()))
+            } else if ctx.is_expression_undefined(a) {
+                Some(LeftPairValueResult::Undefined)
+            } else {
+                None
+            }
+        };
+        let (left_value, (left_non_value_expr, left_id_name)) = {
+            let left_value;
+            let left_non_value;
+            if let Some(v) = is_null_or_undefined(&left_binary_expr.left) {
+                left_value = v;
+                let left_non_value_id =
+                    Self::extract_id_or_assign_to_id(&left_binary_expr.right)?.name;
+                left_non_value = (&mut left_binary_expr.right, left_non_value_id);
+            } else {
+                left_value = is_null_or_undefined(&left_binary_expr.right)?;
+                let left_non_value_id =
+                    Self::extract_id_or_assign_to_id(&left_binary_expr.left)?.name;
+                left_non_value = (&mut left_binary_expr.left, left_non_value_id);
+            }
+            (left_value, left_non_value)
+        };
+
+        let (right_value, right_id) = Self::commutative_pair(
+            (&right_binary_expr.left, &right_binary_expr.right),
+            |a| match left_value {
+                LeftPairValueResult::Null(_) => ctx.is_expression_undefined(a).then_some(None),
+                LeftPairValueResult::Undefined => a.is_null().then_some(Some(a.span())),
+            },
+            |b| {
+                if let Expression::Identifier(id) = b { Some(id) } else { None }
+            },
+        )?;
+
+        if left_id_name != right_id.name {
+            return None;
+        }
+
+        let null_expr_span = match left_value {
+            LeftPairValueResult::Null(span) => span,
+            LeftPairValueResult::Undefined => right_value.unwrap(),
+        };
+        Some(Expression::new_binary_expression(
+            span,
+            left_non_value_expr.take_in(ctx),
+            replace_op,
+            Expression::new_null_literal(null_expr_span, ctx),
+            ctx,
+        ))
+    }
+
+    /// Returns `true` if the assignment target and expression have no side effect for *evaluation* and points to the same reference.
+    ///
+    /// Evaluation here means `Evaluation` in the spec.
+    /// <https://tc39.es/ecma262/multipage/syntax-directed-operations.html#sec-evaluation>
+    ///
+    /// Matches the following cases (`a` can be `this`):
+    ///
+    /// - `a`, `a`
+    /// - `a.b`, `a.b`
+    /// - `a["b"]`, `a["b"]`
+    /// - `a[0]`, `a[0]`
+    pub fn has_no_side_effect_for_evaluation_same_target(
+        assignment_target: &AssignmentTarget<'a>,
+        expr: &Expression,
+        ctx: &TraverseCtx<'a>,
+    ) -> bool {
+        if let (
+            AssignmentTarget::AssignmentTargetIdentifier(write_id_ref),
+            Expression::Identifier(read_id_ref),
+        ) = (assignment_target, expr)
+        {
+            return write_id_ref.name == read_id_ref.name;
+        }
+        if let Some(write_expr) = assignment_target.as_member_expression() {
+            if let MemberExpression::ComputedMemberExpression(e) = write_expr
+                && !matches!(
+                    e.expression,
+                    Expression::StringLiteral(_) | Expression::NumericLiteral(_)
+                )
+            {
+                return false;
+            }
+            let has_same_object = match &write_expr.object() {
+                // It should also return false when the reference might refer to a reference value created by a with statement
+                // when the minifier supports with statements
+                Expression::Identifier(ident) => !ctx.is_global_reference(ident),
+                Expression::ThisExpression(_) => {
+                    expr.as_member_expression().is_some_and(|read_expr| {
+                        matches!(read_expr.object(), Expression::ThisExpression(_))
+                    })
+                }
+                _ => false,
+            };
+            if !has_same_object {
+                return false;
+            }
+            if let Some(read_expr) = expr.as_member_expression() {
+                return write_expr.content_eq(read_expr);
+            }
+        }
+        false
+    }
+
+    /// Returns `true` if `read_expr <op> (target = value)` can be compressed to
+    /// `target <op>= value`, where `<op>` is `||`, `&&`, or `??`.
+    ///
+    /// On top of [`Self::has_no_side_effect_for_evaluation_same_target`], this
+    /// requires that `target`'s object binding cannot be mutated. Unlike the
+    /// `a = a + b` -> `a += b` compression (where the target is captured *before*
+    /// the right-hand side runs), the logical form reads `target` first and only
+    /// then evaluates the write target, so `<op>=` — which captures the object
+    /// once — would write to a different object if reading `target` reassigns its
+    /// object (e.g. `x.y || (x.y = 3)` where the getter of `x.y` sets `x`).
+    /// <https://github.com/oxc-project/oxc/issues/16647>
+    pub fn can_compress_to_logical_assignment(
+        assignment_target: &AssignmentTarget<'a>,
+        read_expr: &Expression,
+        ctx: &TraverseCtx<'a>,
+    ) -> bool {
+        Self::has_no_side_effect_for_evaluation_same_target(assignment_target, read_expr, ctx)
+            && !Self::member_object_may_be_mutated(assignment_target, ctx)
+    }
+
+    /// Compress `a || (a = b)` to `a ||= b`
+    ///
+    /// Also `a || (foo, bar, a = b)` to `a ||= (foo, bar, b)`
+    fn try_compress_logical_expression_to_assignment_expression(
+        expr: &mut Expression<'a>,
+        ctx: &mut TraverseCtx<'a>,
+    ) {
+        if !ctx.supports_feature(ESFeature::ES2021LogicalAssignmentOperators) {
+            return;
+        }
+        let Expression::LogicalExpression(e) = expr else { return };
+        if let Expression::SequenceExpression(sequence_expr) = &e.right {
+            let Some(Expression::AssignmentExpression(assignment_expr)) =
+                Self::last_expression_in_sequence(sequence_expr)
+            else {
+                return;
+            };
+            if assignment_expr.operator != AssignmentOperator::Assign {
+                return;
+            }
+            if !Self::can_compress_to_logical_assignment(&assignment_expr.left, &e.left, ctx) {
+                return;
+            }
+
+            let Expression::SequenceExpression(sequence_expr) = &mut e.right else { return };
+            let Some(Expression::AssignmentExpression(assignment_expr)) =
+                Self::pop_expression_from_sequence(sequence_expr)
+            else {
+                unreachable!()
+            };
+
+            let AssignmentExpression { left, right, .. } = assignment_expr.unbox();
+            Self::mark_assignment_target_as_read(&left, ctx);
+
+            sequence_expr.expressions.push(right);
+            let new_expr = Expression::new_assignment_expression(
+                e.span,
+                e.operator.to_assignment_operator(),
+                left,
+                e.right.take_in(ctx),
+                ctx,
+            );
+            ctx.replace_expression(expr, new_expr);
+            return;
+        }
+
+        let Expression::AssignmentExpression(assignment_expr) = &e.right else {
+            return;
+        };
+        if assignment_expr.operator != AssignmentOperator::Assign {
+            return;
+        }
+        let new_op = e.operator.to_assignment_operator();
+        if !Self::can_compress_to_logical_assignment(&assignment_expr.left, &e.left, ctx) {
+            return;
+        }
+
+        Self::mark_assignment_target_as_read(&assignment_expr.left, ctx);
+
+        let span = e.span;
+        let Expression::AssignmentExpression(assignment_expr) = &mut e.right else {
+            return;
+        };
+        assignment_expr.span = span;
+        assignment_expr.operator = new_op;
+        let new_expr = e.right.take_in(ctx);
+        ctx.replace_expression(expr, new_expr);
+    }
+
+    /// Marks the AssignmentTargetIdentifier of assignment expressions as ReferenceFlags::Read
+    ///
+    /// When creating AssignmentTargetIdentifier from normal expressions, the identifier only has ReferenceFlags::Write.
+    /// But assignment expressions changes the value, so we should add ReferenceFlags::Read.
+    ///
+    /// This is the single choke point where the fixed-point loop FORMS new
+    /// compound/logical assignments (`o.x = o.x + 1` → `o.x += 1`,
+    /// `o.x = o.x || y` → `o.x ||= y`). For member targets, the formed
+    /// operator READS the property, so the base symbol is also inserted into
+    /// the program-wide member-write hazard set — Normalize only saw the
+    /// plain-`=` source shape (whose blocking RHS read this rewrite consumes),
+    /// and the default-mode drop of write-only property assignments must not
+    /// remove a sibling plain write whose value the formed read observes.
+    pub fn mark_assignment_target_as_read(
+        assign_target: &AssignmentTarget,
+        ctx: &mut TraverseCtx<'a>,
+    ) {
+        let object = match assign_target {
+            AssignmentTarget::AssignmentTargetIdentifier(id) => {
+                let reference = ctx.scoping_mut().get_reference_mut(id.reference_id());
+                reference.flags_mut().insert(ReferenceFlags::Read);
+                return;
+            }
+            AssignmentTarget::StaticMemberExpression(e) => &e.object,
+            AssignmentTarget::ComputedMemberExpression(e) => &e.object,
+            AssignmentTarget::PrivateFieldExpression(e) => &e.object,
+            _ => return,
+        };
+        if let Expression::Identifier(ident) = object
+            && let Some(symbol_id) = ctx.scoping().get_reference(ident.reference_id()).symbol_id()
+        {
+            ctx.state.symbols.record_member_write_effect(symbol_id, MemberWriteEffect::Hazard);
+        }
+    }
+}

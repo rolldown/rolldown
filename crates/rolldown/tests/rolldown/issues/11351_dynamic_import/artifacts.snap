@@ -7,8 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as __exportAll } from "./rolldown-runtime.js";
+
 // ns2.js
 var ns2_exports = /* @__PURE__ */ __exportAll({ b: () => 2 });
+
 export { ns2_exports as ns2 };
 
 ```
@@ -18,6 +20,7 @@ export { ns2_exports as ns2 };
 ```js
 // main.js
 const hello = "hi";
+
 export { hello };
 
 ```
@@ -26,10 +29,13 @@ export { hello };
 
 ```js
 import { t as __exportAll } from "./rolldown-runtime.js";
+
 // ns.js
 var ns_exports = /* @__PURE__ */ __exportAll({ a: () => 1 });
+
 // other.js
 const loadLazy = () => import("./lazy.js");
+
 export { loadLazy, ns_exports as ns };
 
 ```

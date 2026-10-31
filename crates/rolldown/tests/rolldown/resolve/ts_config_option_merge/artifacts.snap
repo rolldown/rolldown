@@ -7,10 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { jsx } from "preact/jsx-runtime";
+
 // src/util.ts
 function add(a, b) {
 	return a + b;
 }
+
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 // main.tsx

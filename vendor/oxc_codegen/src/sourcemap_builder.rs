@@ -201,6 +201,22 @@ impl<'a> SourcemapBuilder<'a> {
         self.last_position = Some(position);
     }
 
+    /// End mapped child coverage before a synthesized closing delimiter.
+    pub fn add_unmapped(&mut self, output: &[u8]) {
+        if self.last_position.take().is_none() {
+            return;
+        }
+        self.update_generated_line_and_column(output);
+        self.tokens.push(oxc_sourcemap::Token::new(
+            self.generated_line,
+            self.generated_column,
+            0,
+            0,
+            None,
+            None,
+        ));
+    }
+
     fn add_name(&mut self, name: &'a str) -> u32 {
         match self.names_map.entry(name) {
             Entry::Occupied(entry) => *entry.get(),
@@ -686,6 +702,23 @@ mod test {
         // Line breaks straddling the 8-byte SWAR word boundary (`\r` at index 7).
         create_mappings("aaaaaaa\r\nbbbbbbbb", 1, 8);
         create_mappings("aaaaaaa\rbbbbbbbb", 1, 8);
+    }
+
+    #[test]
+    fn unmapped_boundary_resumes_same_original_position() {
+        let mut builder = SourcemapBuilder::new(Path::new("x.js"), "a");
+        builder.add_unmapped(b"");
+        builder.add_source_mapping(b"", 0, None);
+        builder.add_unmapped(b"a");
+        builder.add_unmapped(b"a)");
+        builder.add_source_mapping(b"a) ", 0, None);
+        let map = builder.into_sourcemap();
+        assert_eq!(map.get_tokens().len(), 3);
+        let lookup = map.generate_lookup_table();
+        assert!(map.lookup_source_view_token(&lookup, 0, 0).unwrap().get_source_id().is_some());
+        assert!(map.lookup_source_view_token(&lookup, 0, 1).unwrap().get_source_id().is_none());
+        assert!(map.lookup_source_view_token(&lookup, 0, 2).unwrap().get_source_id().is_none());
+        assert!(map.lookup_source_view_token(&lookup, 0, 3).unwrap().get_source_id().is_some());
     }
 
     #[test]

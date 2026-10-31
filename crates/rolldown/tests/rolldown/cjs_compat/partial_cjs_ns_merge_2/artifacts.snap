@@ -11,6 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 var require_react = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1e4;
 }));
+
 // lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ default: () => toArray$1 });
 function toArray$1(children) {
@@ -21,10 +22,12 @@ var import_react$1;
 var init_lib = __esmMin((() => {
 	import_react$1 = /* @__PURE__ */ __toESM(require_react());
 }));
+
 // cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = (init_lib(), __toCommonJS(lib_exports));
 }));
+
 // main.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_cjs = /* @__PURE__ */ __toESM(require_cjs());

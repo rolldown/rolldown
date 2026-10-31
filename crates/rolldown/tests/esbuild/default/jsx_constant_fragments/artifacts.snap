@@ -8,20 +8,28 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // default.jsx
 console.log(/* @__PURE__ */ React.createElement(React.Fragment, null));
+
 // null.jsx
 console.log(/* @__PURE__ */ React.createElement(React.Fragment, null));
+
 // boolean.jsx
 console.log(/* @__PURE__ */ React.createElement(React.Fragment, null));
+
 // number.jsx
 console.log(/* @__PURE__ */ React.createElement(React.Fragment, null));
+
 // string-single-empty.jsx
 console.log(/* @__PURE__ */ React.createElement(React.Fragment, null));
+
 // string-double-empty.jsx
 console.log(/* @__PURE__ */ React.createElement(React.Fragment, null));
+
 // string-single-punctuation.jsx
 console.log(/* @__PURE__ */ React.createElement(React.Fragment, null));
+
 // string-double-punctuation.jsx
 console.log(/* @__PURE__ */ React.createElement(React.Fragment, null));
+
 // string-template.jsx
 console.log(/* @__PURE__ */ React.createElement(React.Fragment, null));
 

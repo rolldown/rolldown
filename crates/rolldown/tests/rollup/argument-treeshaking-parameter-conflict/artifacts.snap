@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // dep.js
 let value = 0;
 const mutate = () => value++;
+
 // main.js
 function test(mutate$1) {
 	mutate("hello");

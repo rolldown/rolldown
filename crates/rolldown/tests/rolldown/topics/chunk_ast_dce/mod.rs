@@ -1,1 +1,9 @@
+mod asset_placeholders;
+mod full_minify;
+mod literal_provenance;
+mod map_assertions;
+mod metadata_audit;
+mod path_coverage;
 mod plugin_sourcemap_chain;
+mod sourcemap_audit;
+mod sourcemap_audit_cases;

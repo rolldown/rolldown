@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // shared.js
 console.log("shared");
+
 // app.js
 console.log("app");
 import("./sidebar.js");
@@ -27,6 +28,7 @@ import("./app.js");
 
 ```js
 import "./app.js";
+
 // sidebar.js
 console.log("sidebar");
 

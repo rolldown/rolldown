@@ -56,6 +56,7 @@ var a_b = void 0;
 var _default = void 0;
 var missing = void 0;
 var unused = void 0;
+
 // barrel.js
 var barrel_exports = /* @__PURE__ */ __exportAll({
 	"a-b": () => a_b,
@@ -63,6 +64,7 @@ var barrel_exports = /* @__PURE__ */ __exportAll({
 	unused: () => unused,
 	value: () => 1
 });
+
 // main.js
 const values = [
 	_default,
@@ -71,6 +73,7 @@ const values = [
 ];
 const keys = [Object.keys(dep_exports).sort(), Object.keys(barrel_exports).sort()];
 const load = () => Promise.resolve().then(() => barrel_exports);
+
 export { keys, load, values };
 
 ```

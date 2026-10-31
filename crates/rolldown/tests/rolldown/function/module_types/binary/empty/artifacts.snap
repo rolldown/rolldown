@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-// HIDDEN [\0rolldown/runtime.js]
+
 // example.data
 var example_default = (/* @__PURE__ */ (() => {
 	var table = /* @__PURE__ */ new Uint8Array(128);
@@ -24,6 +24,7 @@ var example_default = (/* @__PURE__ */ (() => {
 		return bytes;
 	};
 })())("");
+
 // main.js
 assert(example_default instanceof Uint8Array);
 

@@ -15,6 +15,7 @@ console.log("dynamic");
 
 ```js
 import "./share.js";
+
 // main1.js
 import("./dynamic.js");
 

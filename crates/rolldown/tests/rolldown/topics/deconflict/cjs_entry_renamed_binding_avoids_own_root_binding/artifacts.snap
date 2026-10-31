@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { createRequire } from "node:module";
+
 // HIDDEN [\0rolldown/runtime.js]
 // main.cjs
 var require_main = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -21,6 +22,7 @@ var require_main = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		param("nested")
 	];
 }));
+
 export default require_main();
 export {};
 

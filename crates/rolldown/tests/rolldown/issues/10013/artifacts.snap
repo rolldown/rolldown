@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as other } from "./helper.js";
+
 // entry-a.js
 console.log(other);
 
@@ -16,6 +17,7 @@ console.log(other);
 
 ```js
 import { t as other } from "./helper.js";
+
 // entry-b.js
 console.log(other);
 
@@ -26,6 +28,7 @@ console.log(other);
 ```js
 // helper.js
 const other = "other";
+
 export { other as t };
 
 ```
@@ -70,6 +73,7 @@ init_entry_b();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // helper.js
 var other;
 function init_helper() {
@@ -77,6 +81,7 @@ function init_helper() {
 		other = "other";
 	})))();
 }
+
 export { other as n, init_helper as t };
 
 ```

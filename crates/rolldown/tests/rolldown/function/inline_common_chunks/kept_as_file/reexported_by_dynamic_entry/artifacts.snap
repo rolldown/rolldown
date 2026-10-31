@@ -65,6 +65,7 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // shared.js
 var s;
 function init_shared() {
@@ -72,6 +73,7 @@ function init_shared() {
 		s = "S";
 	})))();
 }
+
 export { s as n, init_shared as t };
 
 ```

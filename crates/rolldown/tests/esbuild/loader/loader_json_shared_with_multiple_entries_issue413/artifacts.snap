@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as data_default } from "./data.js";
+
 // a.js
 console.log("a:", data_default);
 
@@ -16,6 +17,7 @@ console.log("a:", data_default);
 
 ```js
 import { t as data_default } from "./data.js";
+
 // b.js
 console.log("b:", data_default);
 
@@ -26,6 +28,7 @@ console.log("b:", data_default);
 ```js
 // data.json
 var data_default = { test: 123 };
+
 export { data_default as t };
 
 ```

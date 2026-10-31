@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as require_shared } from "./shared.js";
+
 // a.js
 require_shared();
 
@@ -16,6 +17,7 @@ require_shared();
 
 ```js
 import { t as require_shared } from "./shared.js";
+
 // b.js
 require_shared();
 
@@ -29,6 +31,7 @@ require_shared();
 var require_shared = /* @__PURE__ */ __commonJSMin((() => {
 	globalThis.sideEffectExecuted = true;
 }));
+
 export { require_shared as t };
 
 ```

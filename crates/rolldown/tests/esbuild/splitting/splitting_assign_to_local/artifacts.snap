@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as setFoo, t as foo } from "./shared.js";
+
 // a.js
 setFoo(123);
 console.log(foo);
@@ -17,6 +18,7 @@ console.log(foo);
 
 ```js
 import { t as foo } from "./shared.js";
+
 // b.js
 console.log(foo);
 
@@ -30,6 +32,7 @@ let foo;
 function setFoo(value) {
 	foo = value;
 }
+
 export { setFoo as n, foo as t };
 
 ```

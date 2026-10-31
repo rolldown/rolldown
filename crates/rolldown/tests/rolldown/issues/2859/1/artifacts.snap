@@ -11,6 +11,7 @@ const foo = "foo";
 let bar = "";
 bar = "bar";
 var lib_default = "default";
+
 export { bar, lib_default as default, foo };
 
 ```
@@ -19,12 +20,14 @@ export { bar, lib_default as default, foo };
 
 ```js
 import assert from "assert";
+
 // main.js
 import("./lib.js").then((exports) => assert.deepStrictEqual({ ...exports }, {
 	foo: "foo",
 	bar: "bar",
 	default: "default"
 }));
+
 export {};
 
 ```

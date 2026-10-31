@@ -40,6 +40,7 @@ init_main();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // reader.js
 var value;
 function init_reader() {
@@ -47,6 +48,7 @@ function init_reader() {
 		value = (() => /* @__PURE__ */ globalThis.__orderRead?.() ?? 5)();
 	})))();
 }
+
 export { value as n, init_reader as t };
 
 ```
@@ -105,6 +107,7 @@ init_main();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // reader.js
 var value;
 function init_reader() {
@@ -112,6 +115,7 @@ function init_reader() {
 		value = (() => /* @__PURE__ */ globalThis.__orderRead?.() ?? 5)();
 	})))();
 }
+
 export { value as n, init_reader as t };
 
 ```

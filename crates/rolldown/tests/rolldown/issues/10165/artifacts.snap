@@ -14,8 +14,10 @@ const [unused] = { [Symbol.iterator]() {
 	iterated = true;
 	return [][Symbol.iterator]();
 } }, used = iterated;
+
 // main.js
 if (!used) throw new Error("destructuring effect was dropped");
+
 export { F, f, used };
 
 ```

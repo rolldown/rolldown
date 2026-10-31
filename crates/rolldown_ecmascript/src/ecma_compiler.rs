@@ -14,6 +14,7 @@ use oxc::{
 };
 use oxc_sourcemap::SourceMap;
 use rolldown_error::{BuildDiagnostic, BuildResult, EventKind, Severity};
+use rolldown_utils::poc_prof::{Phase, Timer};
 
 use crate::ecma_ast::{
   EcmaAst,
@@ -152,6 +153,76 @@ impl EcmaCompiler {
       .with_private_member_mappings(ret.class_private_mappings)
       .build(&program);
     Ok((ret.code, ret.map, property_mangle_cache))
+  }
+
+  /// `Minifier::minify`/`dce` with OXC's public stages separately timed for the PoC profiler.
+  pub fn minify_profiled<'a>(
+    allocator: &'a Allocator,
+    program: &mut Program<'a>,
+    minify_options: MinifierOptions,
+    full: bool,
+    preserve_literal_spans: bool,
+  ) -> oxc::minifier::MinifierReturn {
+    use oxc::{
+      mangler::Mangler,
+      minifier::{CompressOptions, Compressor},
+      semantic::SemanticBuilder,
+    };
+
+    if minify_options.mangle_properties.is_some() {
+      let minifier = Minifier::new(minify_options).with_literal_spans(preserve_literal_spans);
+      return if full {
+        minifier.minify(allocator, program)
+      } else {
+        minifier.dce(allocator, program)
+      };
+    }
+    let MinifierOptions { mangle, compress, .. } = minify_options;
+    let (stats, iterations) = compress
+      .map(|options| {
+        let t = Timer::start();
+        let semantic = SemanticBuilder::new().build(program).semantic;
+        t.stop(Phase::MinifySemantic);
+        let stats = semantic.stats();
+        let scoping = semantic.into_scoping();
+        let compressor = Compressor::new(allocator).with_literal_spans(preserve_literal_spans);
+        let t = Timer::start();
+        let iterations = if full {
+          compressor.build_with_scoping(program, scoping, options)
+        } else {
+          let options = CompressOptions {
+            target: options.target,
+            treeshake: options.treeshake,
+            ..CompressOptions::dce()
+          };
+          compressor.dead_code_elimination_with_scoping(program, scoping, options)
+        };
+        t.stop(Phase::MinifyCompress);
+        (Some(stats), iterations)
+      })
+      .unwrap_or_default();
+    let (scoping, class_private_mappings) = mangle
+      .map(|options| {
+        let mut builder = SemanticBuilder::new().with_build_nodes(true).with_class_table(true);
+        if let Some(stats) = stats {
+          builder = builder.with_stats(stats);
+        }
+        let t = Timer::start();
+        let mut semantic = builder.build(program).semantic;
+        t.stop(Phase::MinifyMangleSemantic);
+        let t = Timer::start();
+        let class_private_mappings =
+          Mangler::default().with_options(options).build_with_semantic(&mut semantic, program);
+        t.stop(Phase::MinifyMangle);
+        (semantic.into_scoping(), class_private_mappings)
+      })
+      .map_or((None, None), |(scoping, mappings)| (Some(scoping), Some(mappings)));
+    oxc::minifier::MinifierReturn {
+      scoping,
+      class_private_mappings,
+      property_mangle_cache: None,
+      iterations,
+    }
   }
 }
 

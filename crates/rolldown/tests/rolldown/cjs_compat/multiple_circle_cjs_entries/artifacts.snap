@@ -12,11 +12,13 @@ var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	require_a();
 	module.exports = "b";
 }));
+
 // a.js
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	require_b();
 	module.exports = "a";
 }));
+
 export default require_a();
 export { require_b as t };
 

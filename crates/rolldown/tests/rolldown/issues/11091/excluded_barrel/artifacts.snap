@@ -9,10 +9,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 // leaf.js
 var value;
+
 // entry.js
 __esmMin((() => {
 	value = { answer: 42 };
 }))();
+
 export { value };
 
 ```

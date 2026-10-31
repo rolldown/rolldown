@@ -22,6 +22,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // entry.js
 assert.equal(void 0, void 0);
 

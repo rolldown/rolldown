@@ -36,6 +36,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // dep.js
 const ok = true;
+
 export { ok };
 
 ```
@@ -51,6 +52,7 @@ async function f() {
 		await import("no-such-pkg-h")
 	];
 }
+
 export { f };
 
 ```

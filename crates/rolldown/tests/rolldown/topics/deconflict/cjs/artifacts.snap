@@ -11,10 +11,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 var require_foo = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = {};
 }));
+
 // bar.js
 var require_bar = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = {};
 }));
+
 // main.js
 var import_foo = /* @__PURE__ */ __toESM(require_foo());
 var import_bar = /* @__PURE__ */ __toESM(require_bar());

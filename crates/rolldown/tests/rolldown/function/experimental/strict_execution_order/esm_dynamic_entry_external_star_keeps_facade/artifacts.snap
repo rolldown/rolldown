@@ -26,6 +26,7 @@ export { loaded };
 //! ManualCodeSplitting: [Group-Name: reader]
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_target } from "./target.js";
+
 // reader.js
 function read() {
 	globalThis.__externalStarLog.push(`reader:1`);
@@ -35,6 +36,7 @@ function init_reader() {
 		init_target();
 	})))();
 }
+
 export { read as n, init_reader as t };
 
 ```
@@ -52,6 +54,7 @@ var __esmMin = (fn, res, err) => () => {
 		throw err = [e], e;
 	}
 };
+
 export { __esmMin as t };
 
 ```
@@ -63,6 +66,7 @@ export { __esmMin as t };
 //! Common Chunk: [Shared-By: target.js]
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as read, t as init_reader } from "./reader.js";
+
 // target.js
 var x;
 function init_target() {
@@ -73,6 +77,7 @@ function init_target() {
 		read();
 	})))();
 }
+
 export { x as n, init_target as t };
 
 ```

@@ -45,6 +45,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 // foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({ test: () => 1 });
+
 // main.js
 foo_exports();
 foo_exports``;

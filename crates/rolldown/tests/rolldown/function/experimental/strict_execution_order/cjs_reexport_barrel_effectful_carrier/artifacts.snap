@@ -53,6 +53,7 @@ export { loadRoute };
 
 ```js
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
+
 // effect-before.cjs
 var require_effect_before = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("effect-before");
@@ -63,6 +64,7 @@ function init_barrel_cjs_0() {
 		require_effect_before();
 	})))();
 }
+
 // effect-after.cjs
 var require_effect_after = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("effect-after");
@@ -73,6 +75,7 @@ function init_barrel_cjs_1() {
 		require_effect_after();
 	})))();
 }
+
 export { init_barrel_cjs_1 as n, init_barrel_cjs_0 as t };
 
 ```
@@ -166,6 +169,7 @@ export { loadRoute };
 
 ```js
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
+
 // effect-before.cjs
 var require_effect_before = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("effect-before");
@@ -176,6 +180,7 @@ function init_barrel_cjs_0() {
 		require_effect_before();
 	})))();
 }
+
 // effect-after.cjs
 var require_effect_after = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("effect-after");
@@ -186,6 +191,7 @@ function init_barrel_cjs_1() {
 		require_effect_after();
 	})))();
 }
+
 export { init_barrel_cjs_1 as n, init_barrel_cjs_0 as t };
 
 ```
@@ -233,6 +239,7 @@ export { stack };
 
 ```js
 import "./outer.js";
+
 // bare.js
 globalThis.__events.push("bare");
 
@@ -242,16 +249,19 @@ globalThis.__events.push("bare");
 
 ```js
 import "./outer.js";
+
 // node_modules/pure-leaves/cn.js
 globalThis.__events.push("cn");
 function cn(...values) {
 	return values.filter(Boolean).join(" ");
 }
+
 // main.js
 globalThis.__events.push(`main:${cn("a", "b")}`);
 function loadRoute() {
 	return import("./route.js");
 }
+
 export { loadRoute };
 
 ```
@@ -265,11 +275,14 @@ var require_effect_before = /* @__PURE__ */ __commonJSMin(((exports, module) => 
 	globalThis.__events.push("effect-before");
 	module.exports = {};
 }));
+
 // effect-after.cjs
 var require_effect_after = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("effect-after");
 	module.exports = {};
 }));
+
+// barrel.js
 require_effect_before();
 require_effect_after();
 
@@ -279,12 +292,15 @@ require_effect_after();
 
 ```js
 import "./outer.js";
+
 // node_modules/pure-leaves/stack.js
 globalThis.__events.push("stack");
 var Stack = class {};
+
 // route.js
 globalThis.__events.push("route");
 const stack = new Stack();
+
 export { stack };
 
 ```

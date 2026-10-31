@@ -16,6 +16,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+
 // node_modules/pure-barrel/stack.js
 var Stack;
 function init_stack() {
@@ -29,6 +30,7 @@ function init_stack() {
 		};
 	})))();
 }
+
 // node_modules/pure-barrel/clone-deep.cjs
 var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("clone-deep");
@@ -42,6 +44,7 @@ function init_pure_barrel_cjs_0() {
 		import_clone_deep = /* @__PURE__ */ __toESM(require_clone_deep(), 1);
 	})))();
 }
+
 export { init_stack as i, init_pure_barrel_cjs_0 as n, Stack as r, import_clone_deep as t };
 
 ```
@@ -59,6 +62,7 @@ export { loadNamespace, loadRoute };
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
+
 // node_modules/pure-barrel/cn.js
 function cn(...values) {
 	return values.filter(Boolean).join(" ");
@@ -68,10 +72,12 @@ function init_cn() {
 		globalThis.__events.push("cn");
 	})))();
 }
+
 // node_modules/pure-barrel/index.js
 function init_pure_barrel() {
 	return (init_pure_barrel = __esmMin((() => {})))();
 }
+
 // main.js
 function loadRoute() {
 	return import("./route.js");
@@ -85,6 +91,7 @@ function init_main() {
 		globalThis.__events.push(`main:${cn("a", "b")}`);
 	})))();
 }
+
 export { cn as a, init_pure_barrel as i, loadNamespace as n, init_cn as o, loadRoute as r, init_main as t };
 
 ```
@@ -149,6 +156,7 @@ export { value };
 
 ```js
 import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+
 // node_modules/pure-barrel/stack.js
 var Stack;
 function init_stack() {
@@ -162,6 +170,7 @@ function init_stack() {
 		};
 	})))();
 }
+
 // node_modules/pure-barrel/clone-deep.cjs
 var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("clone-deep");
@@ -175,6 +184,7 @@ function init_pure_barrel_cjs_0() {
 		import_clone_deep = /* @__PURE__ */ __toESM(require_clone_deep(), 1);
 	})))();
 }
+
 export { init_stack as i, init_pure_barrel_cjs_0 as n, Stack as r, import_clone_deep as t };
 
 ```
@@ -192,6 +202,7 @@ export { loadNamespace, loadRoute };
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
+
 // node_modules/pure-barrel/cn.js
 function cn(...values) {
 	return values.filter(Boolean).join(" ");
@@ -201,10 +212,12 @@ function init_cn() {
 		globalThis.__events.push("cn");
 	})))();
 }
+
 // node_modules/pure-barrel/index.js
 function init_pure_barrel() {
 	return (init_pure_barrel = __esmMin((() => {})))();
 }
+
 // main.js
 function loadRoute() {
 	return import("./route.js");
@@ -218,6 +231,7 @@ function init_main() {
 		globalThis.__events.push(`main:${cn("a", "b")}`);
 	})))();
 }
+
 export { cn as a, init_pure_barrel as i, loadNamespace as n, init_cn as o, loadRoute as r, init_main as t };
 
 ```
@@ -284,6 +298,7 @@ import { __esmMin, __exportAll } from "./_rolldown/runtime.js";
 import { cn } from "../node_modules/pure-barrel/cn.js";
 import { Stack, init_stack } from "../node_modules/pure-barrel/stack.js";
 import { import_clone_deep, init_pure_barrel_cjs_0 } from "../node_modules/pure-barrel/clone-deep.js";
+
 // node_modules/pure-barrel/index.js
 var pure_barrel_exports = /* @__PURE__ */ __exportAll({
 	Stack: () => Stack,
@@ -293,6 +308,7 @@ var pure_barrel_exports = /* @__PURE__ */ __exportAll({
 function init_pure_barrel() {
 	return (init_pure_barrel = __esmMin((() => {})))();
 }
+
 export { init_pure_barrel, init_pure_barrel_cjs_0, init_stack, pure_barrel_exports };
 
 ```
@@ -323,6 +339,7 @@ export { loadNamespace, loadRoute };
 
 ```js
 import { __commonJSMin, __esmMin, __toESM } from "../../_virtual/_rolldown/runtime.js";
+
 // node_modules/pure-barrel/clone-deep.cjs
 var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("clone-deep");
@@ -336,6 +353,7 @@ function init_pure_barrel_cjs_0() {
 		import_clone_deep = /* @__PURE__ */ __toESM(require_clone_deep(), 1);
 	})))();
 }
+
 export default require_clone_deep();
 export { import_clone_deep, init_pure_barrel_cjs_0 };
 
@@ -349,6 +367,7 @@ globalThis.__events.push("cn");
 function cn(...values) {
 	return values.filter(Boolean).join(" ");
 }
+
 export { cn };
 
 ```
@@ -640,6 +659,7 @@ export { loadNamespace, loadRoute };
 
 ```js
 import { i as __toESM, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
+
 // node_modules/pure-barrel/cn.js
 function cn(...values) {
 	return values.filter(Boolean).join(" ");
@@ -649,6 +669,7 @@ function init_cn() {
 		globalThis.__events.push("cn");
 	})))();
 }
+
 // node_modules/pure-barrel/stack.js
 var Stack;
 function init_stack() {
@@ -662,6 +683,7 @@ function init_stack() {
 		};
 	})))();
 }
+
 // node_modules/pure-barrel/clone-deep.cjs
 var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("clone-deep");
@@ -669,6 +691,7 @@ var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		return JSON.parse(JSON.stringify(value));
 	};
 }));
+
 // node_modules/pure-barrel/index.js
 var pure_barrel_exports = /* @__PURE__ */ __exportAll({
 	Stack: () => Stack,
@@ -683,6 +706,7 @@ function init_pure_barrel() {
 		import_clone_deep = /* @__PURE__ */ __toESM(require_clone_deep(), 1);
 	})))();
 }
+
 // main.js
 function loadRoute() {
 	return import("./route.js");
@@ -696,6 +720,7 @@ function init_main() {
 		globalThis.__events.push(`main:${cn("a", "b")}`);
 	})))();
 }
+
 export { init_pure_barrel as a, import_clone_deep as i, loadNamespace as n, Stack as o, loadRoute as r, init_stack as s, init_main as t };
 
 ```

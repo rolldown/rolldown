@@ -87,7 +87,29 @@ impl<'source> SourceJoiner<'source> {
         }
       }
     }
-    (ret_source, sourcemap_builder.map(|builder| builder.into_owned_sourcemap().into_inner()))
+    let map = sourcemap_builder.map(|builder| {
+      let mut parts = builder.into_owned_sourcemap().into_inner().into_parts();
+      // oxc_sourcemap 9's concat builder takes original-coordinate baselines from the last raw
+      // token. Unmapped tokens do not update those fields in the VLQ stream, so carry the last
+      // mapped coordinates across chunk boundaries instead. Keep the token/chunk allocations.
+      // See internal-docs/chunk-ast-minify/implementation.md.
+      let mut previous = (0, 0);
+      if let Some(chunks) = &mut parts.token_chunks {
+        for chunk in chunks {
+          chunk.prev_src_line = previous.0;
+          chunk.prev_src_col = previous.1;
+          if let Some(token) = parts.tokens[chunk.start as usize..chunk.end as usize]
+            .iter()
+            .rev()
+            .find(|token| token.get_source_id().is_some())
+          {
+            previous = (token.get_src_line(), token.get_src_col());
+          }
+        }
+      }
+      SourceMap::from(parts)
+    });
+    (ret_source, map)
   }
 
   fn accumulate_sourcemap_data_size(&mut self, hint: &SourceMap) {
@@ -152,6 +174,62 @@ console.log(foo);
 (0:30) ");\n" --> (4:15) ");\n"
 "#
   );
+}
+
+#[test]
+fn test_concat_serialization_after_unmapped_boundaries() {
+  use oxc_sourcemap::{SourceMapParts, Token};
+
+  use crate::SourceMapSource;
+
+  for (end_unmapped, glue_count) in [(false, 0), (true, 0), (false, 2), (true, 2)] {
+    let map = |tokens: Vec<Token>| {
+      SourceMap::from(SourceMapParts {
+        sources: vec!["shared.js".into()],
+        source_contents: vec![Some("\n\n   first\n     second\n     third".into())],
+        names: vec!["unused".into(), "first".into()],
+        tokens: tokens.into_boxed_slice(),
+        ..Default::default()
+      })
+    };
+    let mut first =
+      vec![Token::new(0, 0, 2, 3, Some(0), Some(1)), Token::new(0, 4, 3, 5, Some(0), None)];
+    if end_unmapped {
+      first.push(Token::new(0, 8, 0, 0, None, None));
+    }
+    let mut joiner = SourceJoiner::default();
+    joiner.append_source(SourceMapSource::new("first();".to_string(), map(first)));
+    // Consecutive entirely unmapped fragments must carry the last mapped coordinates and name.
+    for _ in 0..glue_count {
+      joiner.append_source(SourceMapSource::new(
+        "glue();".to_string(),
+        map(vec![Token::new(0, 0, 0, 0, None, None)]),
+      ));
+    }
+    joiner.append_source(SourceMapSource::new(
+      "last();".to_string(),
+      map(vec![Token::new(0, 0, 2, 3, Some(0), Some(1)), Token::new(0, 4, 4, 5, Some(0), None)]),
+    ));
+    let (_, map) = joiner.join();
+    let map = map.unwrap();
+    let json = map.to_json_string();
+    let decoded = oxc_sourcemap::SourceMap::from_json_string(&json).unwrap();
+    let coordinates = |token: Token| {
+      (
+        token.get_dst_line(),
+        token.get_dst_col(),
+        token.get_source_id().map(|source| (source, token.get_src_line(), token.get_src_col())),
+        token.get_name_id(),
+      )
+    };
+    assert_eq!(
+      decoded.get_tokens().map(coordinates).collect::<Vec<_>>(),
+      map.get_tokens().map(coordinates).collect::<Vec<_>>(),
+      "serialization must preserve mapped coordinates ({end_unmapped}, {glue_count})"
+    );
+    assert_eq!(decoded.get_sources().collect::<Vec<_>>(), map.get_sources().collect::<Vec<_>>());
+    assert_eq!(decoded.get_names().collect::<Vec<_>>(), map.get_names().collect::<Vec<_>>());
+  }
 }
 
 #[test]

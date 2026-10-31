@@ -52,6 +52,7 @@ export { read, result };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // ../mixed.js
 var LOCAL;
 function init_mixed() {
@@ -59,6 +60,7 @@ function init_mixed() {
 		LOCAL = "local";
 	})))();
 }
+
 export { init_mixed as n, LOCAL as t };
 
 ```

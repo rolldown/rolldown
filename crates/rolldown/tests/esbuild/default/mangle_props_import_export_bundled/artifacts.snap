@@ -10,10 +10,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 // esm.js
 var esm_exports = /* @__PURE__ */ __exportAll({ esm_foo_: () => "foo" });
 var init_esm = __esmMin((() => {}));
+
 // cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.cjs_foo_ = "foo";
 }));
+
 export { __toCommonJS as a, __commonJSMin as i, esm_exports as n, __toESM as o, init_esm as r, require_cjs as t };
 
 ```
@@ -22,12 +24,14 @@ export { __toCommonJS as a, __commonJSMin as i, esm_exports as n, __toESM as o, 
 
 ```js
 import { a as __toCommonJS, i as __commonJSMin, n as esm_exports, r as init_esm, t as require_cjs } from "./cjs.js";
+
 // entry-cjs.js
 var require_entry_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
 	let { esm_foo_ } = (init_esm(), __toCommonJS(esm_exports));
 	let { cjs_foo_ } = require_cjs();
 	exports.bar_ = [esm_foo_, cjs_foo_];
 }));
+
 export default require_entry_cjs();
 
 ```
@@ -36,6 +40,7 @@ export default require_entry_cjs();
 
 ```js
 import { o as __toESM, r as init_esm, t as require_cjs } from "./cjs.js";
+
 // entry-esm.js
 init_esm();
 let bar_ = [
@@ -44,6 +49,7 @@ let bar_ = [
 	"foo",
 	"foo"
 ];
+
 export { bar_ };
 
 ```

@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // main.js
 const __proto__ = 123;
+
 export { __proto__ };
 
 ```

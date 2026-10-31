@@ -22,10 +22,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import "pkg1";
+
 // file.js
 console.log("file");
+
 // node_modules/pkg2/index.js
 console.log("pkg2");
+
 // libs/pkg3.js
 console.log("pkg3");
 

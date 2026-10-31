@@ -7,8 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // shared.js
 const a = "shared.js";
+
 // main.js
 assert.equal("index.js", "index.js");
 assert.equal(a, "shared.js");
@@ -20,18 +22,18 @@ assert.equal(a, "shared.js");
 
 ```
 - ../shared.js
-(0:0) "const " --> (2:0) "const "
-(0:6) "a = " --> (2:6) "a = "
-(0:10) "'shared.js';\n" --> (2:10) "\"shared.js\";\n"
+(0:0) "const " --> (3:0) "const "
+(0:6) "a = " --> (3:6) "a = "
+(0:10) "'shared.js';\n" --> (3:10) "\"shared.js\";\n"
 - ../main.js
-(3:0) "assert." --> (4:0) "assert."
-(3:7) "equal(" --> (4:7) "equal("
-(3:13) "a, " --> (4:13) "\"index.js\", "
-(3:16) "'index.js'" --> (4:25) "\"index.js\""
-(3:26) ");\n" --> (4:35) ");\n"
-(4:0) "assert." --> (5:0) "assert."
-(4:7) "equal(" --> (5:7) "equal("
-(4:13) "a2, " --> (5:13) "a, "
-(4:17) "'shared.js'" --> (5:16) "\"shared.js\""
-(4:28) ");\n" --> (5:27) ");\n"
+(3:0) "assert." --> (6:0) "assert."
+(3:7) "equal(" --> (6:7) "equal("
+(3:13) "a, " --> (6:13) "\"index.js\", "
+(3:16) "'index.js'" --> (6:25) "\"index.js\""
+(3:26) ");\n" --> (6:35) ");\n"
+(4:0) "assert." --> (7:0) "assert."
+(4:7) "equal(" --> (7:7) "equal("
+(4:13) "a2, " --> (7:13) "a, "
+(4:17) "'shared.js'" --> (7:16) "\"shared.js\""
+(4:28) ");\n" --> (7:27) ");\n"
 ```

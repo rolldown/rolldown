@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // setup.js
 globalThis.globalValue = "foo";
+
 // main.js
 console.log("main");
 
@@ -22,6 +23,7 @@ console.log("main");
 ```js
 // setup.js
 globalThis.globalValue = "foo";
+
 // main.js
 console.log("main");
 
@@ -36,6 +38,7 @@ console.log("main");
 ```js
 // setup.js
 globalThis.globalValue = "foo";
+
 // main.js
 console.log("main");
 

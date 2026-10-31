@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // lib.js
 const a = 42;
+
 export { a };
 
 ```
@@ -16,8 +17,10 @@ export { a };
 
 ```js
 import { a } from "./lib.js";
+
 // main.js
 const b = 42;
+
 export { a, b };
 
 ```
@@ -31,6 +34,7 @@ export { a, b };
 ```js
 // lib.js
 const a = 42;
+
 export { a };
 
 ```
@@ -39,8 +43,10 @@ export { a };
 
 ```js
 import { a } from "./lib.js";
+
 // main.js
 const b = 42;
+
 export { a, b };
 
 ```

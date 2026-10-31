@@ -30,6 +30,7 @@ export default require_node1();
 
 ```js
 import { n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
+
 // node2.js
 var node2_exports = /* @__PURE__ */ __exportAll({ node_2: () => node_2 });
 var node_2;
@@ -39,12 +40,14 @@ var init_node2 = __esmMin((() => {
 	node_2 = {};
 	node_2.value = 2;
 }));
+
 // node1.cjs
 var require_node1 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	globalThis.__acyclic_output_fuzz_1 = 1;
 	init_node2();
 	exports.node_1 = 1;
 }));
+
 export { init_node2 as n, node2_exports as r, require_node1 as t };
 
 ```
@@ -88,6 +91,7 @@ export default require_node1();
 
 ```js
 import { n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
+
 // node2.js
 var node2_exports = /* @__PURE__ */ __exportAll({ node_2: () => node_2 });
 var node_2;
@@ -97,12 +101,14 @@ var init_node2 = __esmMin((() => {
 	node_2 = {};
 	node_2.value = 2;
 }));
+
 // node1.cjs
 var require_node1 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	globalThis.__acyclic_output_fuzz_1 = 1;
 	init_node2();
 	exports.node_1 = 1;
 }));
+
 export { init_node2 as n, node2_exports as r, require_node1 as t };
 
 ```

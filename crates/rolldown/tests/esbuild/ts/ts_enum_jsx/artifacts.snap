@@ -12,6 +12,7 @@ let Foo = /* @__PURE__ */ function(Foo) {
 	return Foo;
 }({});
 console.log(/* @__PURE__ */ React.createElement("div", null));
+
 export { Foo };
 
 ```
@@ -25,6 +26,7 @@ let React = /* @__PURE__ */ function(React) {
 	return React;
 }({});
 console.log(/* @__PURE__ */ React.createElement("div", null, "test"));
+
 export { React };
 
 ```

@@ -1,40 +1,28 @@
 diff -ru a/src/lib.rs b/src/lib.rs
 --- a/src/lib.rs
 +++ b/src/lib.rs
-@@ -38,6 +38,9 @@
- use operator::Operator;
- #[cfg(feature = "sourcemap")]
- use sourcemap_builder::SourcemapBuilder;
+@@ -34,0 +35,2 @@
++#[cfg(all(test, feature = "sourcemap"))]
++mod synthesized_sourcemap_tests;
+@@ -40,0 +43,3 @@
 +/// rolldown patch: re-exported so callers can share line tables across prints.
 +#[cfg(feature = "sourcemap")]
 +pub use sourcemap_builder::LineOffsetTables;
- use str::{Quote, cold_branch, is_script_close_tag};
- 
- pub use context::Context;
-@@ -123,6 +126,10 @@
-     /// Original source code of the AST
-     source_text: Option<&'a str>,
- 
+@@ -126 +131,5 @@
+-    scoping: Option<Scoping>,
 +    /// rolldown patch: see [`Codegen::with_line_offset_tables`].
 +    #[cfg(feature = "sourcemap")]
 +    line_offset_tables: Option<std::sync::Arc<sourcemap_builder::LineOffsetTables>>,
 +
-     scoping: Option<Scoping>,
- 
-     /// Private member name mappings for mangling
-@@ -228,6 +235,8 @@
-         Self {
-             options,
-             source_text: None,
++    scoping: Option<std::sync::Arc<Scoping>>,
+@@ -129 +138,2 @@
+-    private_member_mappings: Option<IndexVec<ClassId, FxHashMap<String, CompactStr>>>,
++    private_member_mappings:
++        Option<std::sync::Arc<IndexVec<ClassId, FxHashMap<String, CompactStr>>>>,
+@@ -230,0 +241,2 @@
 +            #[cfg(feature = "sourcemap")]
 +            line_offset_tables: None,
-             scoping: None,
-             private_member_mappings: None,
-             code: CodeBuffer::default(),
-@@ -271,6 +280,19 @@
-         self
-     }
- 
+@@ -273,0 +286,13 @@
 +    /// rolldown patch: print against a shared source text (e.g. many programs whose spans index
 +    /// one concatenated text), reusing its line tables instead of building them per print. Also
 +    /// skips reserving the output for the whole source text.
@@ -48,13 +36,34 @@ diff -ru a/src/lib.rs b/src/lib.rs
 +        self
 +    }
 +
-     /// Sets the source type for code fragments printed without a [`Program`].
-     #[must_use]
-     pub fn with_source_type(mut self, source_type: SourceType) -> Self {
-@@ -308,11 +330,22 @@
-         self.quote = if self.options.single_quote { Quote::Single } else { Quote::Double };
-         self.source_text = Some(program.source_text);
-         self.indent = self.options.initial_indent;
+@@ -285,0 +311,7 @@
++        self.scoping = scoping.map(std::sync::Arc::new);
++        self
++    }
++
++    /// Share a chunk's symbol table across code generation of its individual modules.
++    #[must_use]
++    pub fn with_shared_scoping(mut self, scoping: Option<std::sync::Arc<Scoping>>) -> Self {
+@@ -298,0 +331,10 @@
++        self.private_member_mappings = mappings.map(std::sync::Arc::new);
++        self
++    }
++
++    /// Share a chunk's private member mappings across code generation of its individual modules.
++    #[must_use]
++    pub fn with_shared_private_member_mappings(
++        mut self,
++        mappings: Option<std::sync::Arc<IndexVec<ClassId, FxHashMap<String, CompactStr>>>>,
++    ) -> Self {
+@@ -299,0 +342,7 @@
++        self
++    }
++
++    /// Continue the chunk-wide class numbering when printing one module at a time.
++    #[must_use]
++    pub fn with_class_id_offset(mut self, offset: usize) -> Self {
++        self.next_class_id = ClassId::from_usize(offset);
+@@ -311 +360,7 @@
 -        self.code.reserve(program.source_text.len());
 +        #[cfg(feature = "sourcemap")]
 +        let shared_source = self.line_offset_tables.is_some();
@@ -63,9 +72,7 @@ diff -ru a/src/lib.rs b/src/lib.rs
 +        if !shared_source {
 +            self.code.reserve(program.source_text.len());
 +        }
-         self.build_comments(&program.comments);
-         #[cfg(feature = "sourcemap")]
-         if let Some(path) = &self.options.source_map_path {
+@@ -315 +370,6 @@
 -            self.sourcemap_builder = Some(SourcemapBuilder::new(path, program.source_text));
 +            self.sourcemap_builder = Some(match self.line_offset_tables.take() {
 +                Some(tables) => {
@@ -73,22 +80,32 @@ diff -ru a/src/lib.rs b/src/lib.rs
 +                }
 +                None => SourcemapBuilder::new(path, program.source_text),
 +            });
-         }
-         program.print(&mut self, Context::default());
-         let legal_comments = self.handle_eof_linked_or_external_comments(program);
+@@ -851 +911 @@
+-        self.add_source_mapping_end(span);
++        self.add_source_mapping_block_end(span);
+@@ -865 +925 @@
+-        self.add_source_mapping_end(span);
++        self.add_source_mapping_block_end(span);
+@@ -1156,0 +1217,12 @@
++    fn add_source_mapping_block_end(&mut self, span: Span) {
++        #[cfg(feature = "sourcemap")]
++        if span.is_empty()
++            && let Some(builder) = self.sourcemap_builder.as_mut()
++        {
++            // A generated block wrapper must not inherit its last real child's mapping.
++            builder.add_unmapped(self.code.as_bytes());
++            return;
++        }
++        self.add_source_mapping_end(span);
++    }
++
 diff -ru a/src/sourcemap_builder.rs b/src/sourcemap_builder.rs
 --- a/src/sourcemap_builder.rs
 +++ b/src/sourcemap_builder.rs
-@@ -1,4 +1,4 @@
+@@ -1 +1 @@
 -use std::{borrow::Cow, collections::hash_map::Entry, path::Path};
 +use std::{borrow::Cow, collections::hash_map::Entry, path::Path, sync::Arc};
- 
- use oxc_index::{IndexVec, define_nonmax_u32_index_type};
- use oxc_span::Span;
-@@ -34,6 +34,42 @@
-     column_offsets: IndexVec<ColumnOffsetsId, ColumnOffsets>,
- }
- 
+@@ -36,0 +37,36 @@
 +impl LineOffsetTables {
 +    /// rolldown patch: build the tables for `source_text`.
 +    pub fn new(source_text: &str) -> Self {
@@ -125,24 +142,12 @@ diff -ru a/src/sourcemap_builder.rs b/src/sourcemap_builder.rs
 +    }
 +}
 +
- #[derive(Debug)]
- pub struct Line {
-     byte_offset_to_start_of_line: u32,
-@@ -54,7 +90,9 @@
-     tokens: Vec<oxc_sourcemap::Token>,
-     last_generated_update: usize,
-     last_position: Option<u32>,
+@@ -57 +93,3 @@
 -    line_offset_tables: LineOffsetTables,
 +    // rolldown patch: shareable, so callers printing many programs against one big source text
 +    // build the tables once.
 +    line_offset_tables: Arc<LineOffsetTables>,
-     generated_line: u32,
-     generated_column: u32,
-     /// Tracks the last accessed line index to optimize sequential lookups in `search_original_line_and_column`.
-@@ -65,9 +103,19 @@
- 
- impl<'a> SourcemapBuilder<'a> {
-     pub fn new(path: &Path, source_text: &'a str) -> Self {
+@@ -68 +106,11 @@
 -        let line_offset_tables = Self::generate_line_offset_tables(source_text);
 +        let line_offset_tables = Arc::new(Self::generate_line_offset_tables(source_text));
 +        Self::new_with_line_offset_tables(path, source_text, line_offset_tables)
@@ -155,9 +160,86 @@ diff -ru a/src/sourcemap_builder.rs b/src/sourcemap_builder.rs
 +        source_text: &'a str,
 +        line_offset_tables: Arc<LineOffsetTables>,
 +    ) -> Self {
-         // Estimate mapping and name counts from source length to reduce reallocations.
+@@ -70 +118 @@
 -        let source_len = source_text.len();
 +        let source_len = source_text.len().min(1 << 20);
-         Self {
-             source_name: path.to_string_lossy().into_owned(),
-             original_source: source_text,
+@@ -153,0 +202,16 @@
++    }
++
++    /// End mapped child coverage before a synthesized closing delimiter.
++    pub fn add_unmapped(&mut self, output: &[u8]) {
++        if self.last_position.take().is_none() {
++            return;
++        }
++        self.update_generated_line_and_column(output);
++        self.tokens.push(oxc_sourcemap::Token::new(
++            self.generated_line,
++            self.generated_column,
++            0,
++            0,
++            None,
++            None,
++        ));
+@@ -643,0 +708,17 @@
++    fn unmapped_boundary_resumes_same_original_position() {
++        let mut builder = SourcemapBuilder::new(Path::new("x.js"), "a");
++        builder.add_unmapped(b"");
++        builder.add_source_mapping(b"", 0, None);
++        builder.add_unmapped(b"a");
++        builder.add_unmapped(b"a)");
++        builder.add_source_mapping(b"a) ", 0, None);
++        let map = builder.into_sourcemap();
++        assert_eq!(map.get_tokens().len(), 3);
++        let lookup = map.generate_lookup_table();
++        assert!(map.lookup_source_view_token(&lookup, 0, 0).unwrap().get_source_id().is_some());
++        assert!(map.lookup_source_view_token(&lookup, 0, 1).unwrap().get_source_id().is_none());
++        assert!(map.lookup_source_view_token(&lookup, 0, 2).unwrap().get_source_id().is_none());
++        assert!(map.lookup_source_view_token(&lookup, 0, 3).unwrap().get_source_id().is_some());
++    }
++
++    #[test]
+diff -ru a/src/synthesized_sourcemap_tests.rs b/src/synthesized_sourcemap_tests.rs
+--- a/src/synthesized_sourcemap_tests.rs
++++ b/src/synthesized_sourcemap_tests.rs
+@@ -0,0 +1,41 @@
++use std::path::PathBuf;
++
++use oxc_allocator::Allocator;
++use oxc_ast::ast::Statement;
++use oxc_parser::Parser;
++use oxc_span::{SPAN, SourceType};
++
++use super::{Codegen, CodegenOptions};
++
++#[test]
++fn synthesized_block_closing_ends_child_mapping() {
++    let allocator = Allocator::default();
++    let source = "function wrapper(){real()}after();";
++    let mut parsed = Parser::new(&allocator, source, SourceType::mjs()).parse();
++    assert!(parsed.diagnostics.is_empty());
++    let Statement::FunctionDeclaration(function) = &mut parsed.program.body[0] else {
++        panic!("expected function");
++    };
++    // Models the generated CommonJS wrapper around statements retaining real spans.
++    function.body.as_mut().unwrap().span = SPAN;
++    let printed = Codegen::new()
++        .with_options(CodegenOptions {
++            minify: true,
++            source_map_path: Some(PathBuf::from("input.js")),
++            ..CodegenOptions::default()
++        })
++        .build(&parsed.program);
++    let map = printed.map.unwrap();
++    let lookup = map.generate_lookup_table();
++    let real = printed.code.find("real").unwrap() as u32;
++    let closing = printed.code.find('}').unwrap() as u32;
++    let after = printed.code.find("after").unwrap() as u32;
++    let real_token = map.lookup_source_view_token(&lookup, 0, real).unwrap();
++    assert_eq!(real_token.get_src_col(), source.find("real").unwrap() as u32);
++    assert!(real_token.get_source_id().is_some());
++    let closing_token = map.lookup_source_view_token(&lookup, 0, closing).unwrap();
++    assert_eq!(closing_token.get_source_id(), None);
++    let after_token = map.lookup_source_view_token(&lookup, 0, after).unwrap();
++    assert_eq!(after_token.get_src_col(), source.find("after").unwrap() as u32);
++    assert!(after_token.get_source_id().is_some());
++}

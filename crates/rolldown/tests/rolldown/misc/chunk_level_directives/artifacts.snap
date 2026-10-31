@@ -68,8 +68,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry2.js
 
 ```js
-"use entry2";
+'use entry2';
+
 import { t as a } from "./shared.js";
+
 // entry2.js
 console.log(`a: `, a);
 
@@ -78,8 +80,10 @@ console.log(`a: `, a);
 ## main.js
 
 ```js
-"use entry";
+'use entry';
+
 import { t as a } from "./shared.js";
+
 // entry1.js
 console.log(`a: `, a);
 
@@ -90,6 +94,7 @@ console.log(`a: `, a);
 ```js
 // shared.js
 const a = "shared.js";
+
 export { a as t };
 
 ```

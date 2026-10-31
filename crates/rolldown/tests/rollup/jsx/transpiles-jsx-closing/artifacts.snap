@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // main.js
 const Foo = () => {};
 const result = /* @__PURE__ */ React.createElement(Foo, null);
+
 export { result };
 
 ```

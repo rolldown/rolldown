@@ -24,6 +24,7 @@ console.log(2);
 ```js
 import "./1.js";
 import "./2.js";
+
 // a.js
 console.log("a");
 
@@ -34,6 +35,7 @@ console.log("a");
 ```js
 import "./2.js";
 import "./1.js";
+
 // b.js
 console.log("a");
 
@@ -43,6 +45,7 @@ console.log("a");
 
 ```js
 import "./1.js";
+
 // c.js
 console.log("c");
 

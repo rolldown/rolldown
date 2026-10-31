@@ -22,10 +22,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // foo.js
 function c() {
 	return "c";
 }
+
 // main.js
 function hasKey(foo) {
 	return "a" in foo;

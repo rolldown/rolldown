@@ -17,6 +17,7 @@ import("./mod2.js").then(console.log);
 ```js
 // mod1.js
 const x = 1;
+
 export { x };
 
 ```
@@ -25,8 +26,10 @@ export { x };
 
 ```js
 import "./mod1.js";
+
 // mod2.js
 const y = 2;
+
 export { y };
 
 ```

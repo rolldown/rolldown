@@ -17,10 +17,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // types1.ts
 console.log("some code");
+
 // types2.ts
 console.log("some code");
+
 // types3.ts
 console.log("some code");
+
 // entry.ts
 console.log(123);
 

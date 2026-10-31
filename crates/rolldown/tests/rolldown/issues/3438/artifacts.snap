@@ -33,6 +33,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // repro1.js
 var repro1_exports = /* @__PURE__ */ __exportAll({ clear: () => clear$4 });
 const clear$4 = "repro1_clear";
+
 // repro2.js
 var repro2_exports = /* @__PURE__ */ __exportAll({
 	clear: () => clear$3,
@@ -40,6 +41,7 @@ var repro2_exports = /* @__PURE__ */ __exportAll({
 });
 const clear$1$1 = "repro2_clear$1";
 const clear$3 = "repro2_clear";
+
 // repro3.js
 var repro3_exports = /* @__PURE__ */ __exportAll({
 	clear: () => clear,
@@ -49,6 +51,7 @@ var repro3_exports = /* @__PURE__ */ __exportAll({
 const clear$2 = "repro3_clear$2";
 const clear$1 = "repro3_clear$1";
 const clear = "repro3_clear";
+
 // main.js
 var main_default = [
 	clear$4,
@@ -61,6 +64,7 @@ var main_default = [
 	() => Promise.resolve().then(() => repro2_exports).then(console.log),
 	() => Promise.resolve().then(() => repro3_exports).then(console.log)
 ];
+
 export { main_default as default };
 
 ```

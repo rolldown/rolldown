@@ -26,6 +26,7 @@ export { loaded };
 //! ManualCodeSplitting: [Group-Name: reader]
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_target } from "./target.js";
+
 // reader.js
 function read() {
 	globalThis.__externalStarLog.push(`reader:1`);
@@ -35,6 +36,7 @@ function init_reader() {
 		init_target();
 	})))();
 }
+
 export { read as n, init_reader as t };
 
 ```
@@ -76,6 +78,7 @@ var __copyProps = (to, from, except, desc) => {
 	return to;
 };
 var __reExport = (target, mod, secondTarget) => (__copyProps(target, mod, "default"), secondTarget && __copyProps(secondTarget, mod, "default"));
+
 export { __exportAll as n, __reExport as r, __esmMin as t };
 
 ```
@@ -87,10 +90,12 @@ export { __exportAll as n, __reExport as r, __esmMin as t };
 //! Common Chunk: [Shared-By: target.js]
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as read, t as init_reader } from "./reader.js";
+
 // barrel.js
 function init_barrel() {
 	return (init_barrel = __esmMin((() => {})))();
 }
+
 // target.js
 var x;
 function init_target() {
@@ -102,6 +107,7 @@ function init_target() {
 		read();
 	})))();
 }
+
 export { x as n, init_target as t };
 
 ```

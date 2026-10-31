@@ -26,6 +26,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 var require_example = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { "works": true };
 }));
+
 // entry.js
 var require_entry = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	console.log([
@@ -43,6 +44,7 @@ var require_entry = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		import(window.SOME_PATH)
 	]);
 }));
+
 export default require_entry();
 
 ```

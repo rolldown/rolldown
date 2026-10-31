@@ -11,6 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 const cjs = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "cjs";
 })))();
+
 export { cjs };
 
 ```

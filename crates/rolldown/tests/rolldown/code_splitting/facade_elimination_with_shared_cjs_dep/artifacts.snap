@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
+
 // vendor/rc-picker/locale/common.js
 var require_common = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.commonLocale = {
@@ -15,17 +16,20 @@ var require_common = /* @__PURE__ */ __commonJSMin(((exports) => {
 		monthBeforeYear: true
 	};
 }));
+
 // vendor/rc-picker/locale/ar_EG.js
 var import_common = require_common();
 var locale$1 = Object.assign({}, import_common.commonLocale, {
 	locale: "ar",
 	today: "اليوم"
 });
+
 // vendor/antd/locale/ar_EG.js
 var ar_EG_exports = /* @__PURE__ */ __exportAll({
 	DatePicker: () => locale$1,
 	locale: () => "ar"
 });
+
 export { require_common as n, ar_EG_exports as t };
 
 ```
@@ -35,17 +39,20 @@ export { require_common as n, ar_EG_exports as t };
 ```js
 import { n as __exportAll } from "./rolldown-runtime.js";
 import { n as require_common } from "./i18n-ar.js";
+
 // vendor/rc-picker/locale/en_US.js
 var import_common = require_common();
 var locale$1 = Object.assign({}, import_common.commonLocale, {
 	locale: "en_US",
 	today: "Today"
 });
+
 // vendor/antd/locale/en_US.js
 var en_US_exports = /* @__PURE__ */ __exportAll({
 	DatePicker: () => locale$1,
 	locale: () => "en"
 });
+
 export { en_US_exports as t };
 
 ```
@@ -54,6 +61,7 @@ export { en_US_exports as t };
 
 ```js
 import assert from "node:assert";
+
 // main.js
 const loaders = {
 	ar: () => import("./i18n-ar.js").then((n) => n.t),

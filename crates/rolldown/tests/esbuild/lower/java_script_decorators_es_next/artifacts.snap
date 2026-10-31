@@ -19,6 +19,7 @@ var Foo = @x.y() @(new y.x()) class Foo {
 		return new Foo();
 	}
 };
+
 export { Foo as default };
 
 ```

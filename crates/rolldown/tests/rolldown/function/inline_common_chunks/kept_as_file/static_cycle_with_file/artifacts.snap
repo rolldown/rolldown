@@ -42,6 +42,7 @@ init_b();
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as r, t as init_r } from "./r.js";
+
 // g.js
 function readR() {
 	return r;
@@ -53,6 +54,7 @@ function init_g() {
 		g = String(globalThis.__g ?? "g");
 	})))();
 }
+
 export { init_g as n, readR as r, g as t };
 
 ```
@@ -62,6 +64,7 @@ export { init_g as n, readR as r, g as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_g, t as g } from "./grp.js";
+
 // r.js
 var r;
 function init_r() {
@@ -70,6 +73,7 @@ function init_r() {
 		r = "r" + g;
 	})))();
 }
+
 export { r as n, init_r as t };
 
 ```

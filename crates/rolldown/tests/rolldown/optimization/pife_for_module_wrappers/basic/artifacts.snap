@@ -22,8 +22,10 @@ export { t as b } from "./common.js";
 ```js
 // a.js
 const a = "a";
+
 // b.js
 const b = "a";
+
 export { a as n, b as t };
 
 ```

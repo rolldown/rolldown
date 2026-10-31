@@ -33,6 +33,7 @@ export { __esmMin as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
+
 // foo_inner.js
 var foo_inner_default;
 function init_foo_inner() {
@@ -40,6 +41,7 @@ function init_foo_inner() {
 		foo_inner_default = { foo: /* #__PURE__ */ (() => globalValue)() };
 	})))();
 }
+
 // foo.js
 function init_foo() {
 	return (init_foo = __esmMin((() => {
@@ -47,6 +49,7 @@ function init_foo() {
 		assert.strictEqual(foo_inner_default.foo, "foo");
 	})))();
 }
+
 export { init_foo as t };
 
 ```
@@ -90,6 +93,7 @@ export { __esmMin as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
+
 // foo_inner.js
 var foo_inner_default;
 function init_foo_inner() {
@@ -97,6 +101,7 @@ function init_foo_inner() {
 		foo_inner_default = { foo: /* #__PURE__ */ (() => globalValue)() };
 	})))();
 }
+
 // foo.js
 function init_foo() {
 	return (init_foo = __esmMin((() => {
@@ -104,6 +109,7 @@ function init_foo() {
 		assert.strictEqual(foo_inner_default.foo, "foo");
 	})))();
 }
+
 export { init_foo as t };
 
 ```

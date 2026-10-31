@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use rolldown_common::{
-  AttachDebugInfo, ModuleRenderOutput, NormalModule, NormalizedBundlerOptions,
+  AttachDebugInfo, MinifyOptions, ModuleRenderOutput, NormalModule, NormalizedBundlerOptions,
   SourcemapChainElement,
 };
 use rolldown_error::BuildDiagnostic;
@@ -25,14 +25,20 @@ pub fn render_ecma_module(
   }
   let mut sources: Vec<Box<dyn rolldown_sourcemap::Source + Send + Sync>> = Vec::with_capacity(6);
   // Mark only where a module starts, like esbuild and bun.
-  if matches!(
-    options.experimental.attach_debug_info,
-    Some(AttachDebugInfo::Simple | AttachDebugInfo::Full)
-  ) {
+  if !matches!(options.minify, MinifyOptions::Enabled(_))
+    && matches!(
+      options.experimental.attach_debug_info,
+      Some(AttachDebugInfo::Simple | AttachDebugInfo::Full)
+    )
+  {
     sources.push(Box::new(concat_string!("// ", module.debug_id)));
   }
 
-  let enable_sourcemap = options.sourcemap.is_some() && !module.is_virtual();
+  // The global chunk minifier can move real source into a virtual module. Its codegen map then
+  // carries mappings back to those real sources, so do not discard it just because the owner is
+  // virtual.
+  let enable_sourcemap =
+    options.sourcemap.is_some() && (!module.is_virtual() || render_output.map.is_some());
   let mut warnings = vec![];
 
   // Because oxc codegen sourcemap is last of sourcemap chain,

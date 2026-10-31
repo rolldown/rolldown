@@ -8,8 +8,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { t as log } from "./logger.js";
 import { n as snapshot } from "./common.js";
+
 // a.js
 const a = log(snapshot);
+
 export { a };
 
 ```
@@ -22,6 +24,7 @@ async function b() {
 	const { log } = await import("./logger.js").then((n) => n.n);
 	return log("b");
 }
+
 export { b };
 
 ```
@@ -31,8 +34,10 @@ export { b };
 ```js
 import { t as namespace_exports } from "./namespace.js";
 import { n as snapshot, t as getData } from "./common.js";
+
 // c.js
 const c = namespace_exports;
+
 export { c, getData, snapshot };
 
 ```
@@ -42,11 +47,13 @@ export { c, getData, snapshot };
 ```js
 // marker.js
 const data = { fallback: "unset" };
+
 // common.js
 const snapshot = globalThis.ready ?? data[globalThis.key ?? "fallback"];
 function getData() {
 	return data;
 }
+
 export { snapshot as n, getData as t };
 
 ```
@@ -56,8 +63,10 @@ export { snapshot as n, getData as t };
 ```js
 import { t as namespace_exports } from "./namespace.js";
 import { n as snapshot, t as getData } from "./common.js";
+
 // d.js
 const d = namespace_exports;
+
 export { d, getData, snapshot };
 
 ```
@@ -67,11 +76,13 @@ export { d, getData, snapshot };
 ```js
 import { t as __exportAll } from "./rolldown-runtime.js";
 import { n as snapshot } from "./common.js";
+
 // logger.js
 var logger_exports = /* @__PURE__ */ __exportAll({ log: () => log });
 function log(value) {
 	return `${value} ${snapshot}`;
 }
+
 export { logger_exports as n, log as t };
 
 ```
@@ -80,12 +91,15 @@ export { logger_exports as n, log as t };
 
 ```js
 import { t as __exportAll } from "./rolldown-runtime.js";
+
 // dead.js
 globalThis.deadEffect = true;
+
 // namespace.js
 var namespace_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 globalThis.ready = "ready";
 const value = "namespace";
+
 export { namespace_exports as t };
 
 ```

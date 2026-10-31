@@ -7,16 +7,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // main.js
-const loaded = import("./target-B6cbPjZ7.js").then((target) => target.value);
+const loaded = import("./target-DX4npaXX.js").then((target) => target.value);
+
 export { loaded };
 
 ```
 
-## target-B6cbPjZ7.js
+## target-DX4npaXX.js
 
 ```js
 // target.js
 const value = 42;
+
 export { value };
 
 ```

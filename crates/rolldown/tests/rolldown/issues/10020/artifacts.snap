@@ -25,6 +25,7 @@ var data_default = {
 		500
 	]
 };
+
 export { data_default as default };
 
 ```
@@ -33,10 +34,12 @@ export { data_default as default };
 
 ```js
 import data_default from "./data.js";
+
 // index.js
 function get(name) {
 	return data_default[name];
 }
+
 export { get };
 
 ```

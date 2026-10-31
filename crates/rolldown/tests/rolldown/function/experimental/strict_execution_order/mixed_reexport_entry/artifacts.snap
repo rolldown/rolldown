@@ -126,9 +126,11 @@ export { FORWARDED };
 ```js
 // value.js
 const VALUE = { value: "entry" };
+
 // main.js
 const LOCAL = "local";
 const load = () => import("./shared.js").then((module) => module.FORWARDED);
+
 export { LOCAL, VALUE, load };
 
 ```
@@ -138,6 +140,7 @@ export { LOCAL, VALUE, load };
 ```js
 // forwarded.js
 const FORWARDED = { value: "dynamic" };
+
 export { FORWARDED };
 
 ```

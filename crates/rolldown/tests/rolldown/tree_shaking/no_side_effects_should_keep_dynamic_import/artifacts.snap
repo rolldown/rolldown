@@ -12,6 +12,7 @@ function wrapper(load) {
 	return { load };
 }
 const pages = [/* @__PURE__ */ wrapper(() => import("./page.js"))];
+
 export { pages, wrapper };
 
 ```
@@ -21,6 +22,7 @@ export { pages, wrapper };
 ```js
 // page.js
 const message = "Hello from page.js";
+
 export { message };
 
 ```

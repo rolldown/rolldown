@@ -7,19 +7,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // dep.js
 var dep_default = /* @__PURE__ */ __name((function() {}), "default");
+
 // dep-class.js
 var dep_class_default = class {
 	static {
 		__name(this, "default");
 	}
 };
+
 // dep-arrow.js
 var dep_arrow_default = /* @__PURE__ */ __name(() => {}, "default");
+
 // dep-named-default.js
 var dep_named_default_default = (function name() {});
+
 // main.js
 assert.strictEqual(dep_default.name, "default");
 assert.strictEqual(dep_class_default.name, "default");

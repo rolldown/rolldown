@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // main.js
 const load = () => import("./story.js");
 const loadOther = () => import("./other.js");
+
 export { load, loadOther };
 
 ```
@@ -17,8 +18,10 @@ export { load, loadOther };
 
 ```js
 import { t as motion } from "./react.js";
+
 // other.js
 const check = () => motion;
+
 export { check };
 
 ```
@@ -29,15 +32,19 @@ export { check };
 // HIDDEN [\0rolldown/runtime.js]
 // group.js
 const Group = { name: "Group" };
+
 // item.js
 const Item = { name: "Item" };
+
 // namespace.js
 var namespace_exports = /* @__PURE__ */ __exportAll({
 	Group: () => Group,
 	Item: () => Item
 });
+
 // react.js
 const motion = {};
+
 export { namespace_exports as n, motion as t };
 
 ```
@@ -46,8 +53,10 @@ export { namespace_exports as n, motion as t };
 
 ```js
 import { n as namespace_exports } from "./react.js";
+
 // story.js
 const check = () => Object.keys(namespace_exports).map((key) => namespace_exports[key]);
+
 export { check };
 
 ```
@@ -95,6 +104,7 @@ export { check };
 
 ```js
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+
 // group.js
 var Group;
 function init_group() {
@@ -102,6 +112,7 @@ function init_group() {
 		Group = { name: "Group" };
 	})))();
 }
+
 // item.js
 var Item;
 function init_item() {
@@ -109,6 +120,7 @@ function init_item() {
 		Item = { name: "Item" };
 	})))();
 }
+
 // namespace.js
 var namespace_exports = /* @__PURE__ */ __exportAll({
 	Group: () => Group,
@@ -120,6 +132,7 @@ function init_namespace() {
 		init_item();
 	})))();
 }
+
 // motion.js
 var motion$1;
 function init_motion() {
@@ -127,6 +140,7 @@ function init_motion() {
 		motion$1 = {};
 	})))();
 }
+
 // react.js
 var motion;
 function init_react() {
@@ -136,6 +150,7 @@ function init_react() {
 		motion = motion$1;
 	})))();
 }
+
 export { namespace_exports as i, motion as n, init_namespace as r, init_react as t };
 
 ```

@@ -11,10 +11,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 function compute(x) {
 	return x * 2;
 }
+
 // app.js
 var app_exports = /* @__PURE__ */ __exportAll({ done: () => done });
 compute(21) + 1;
 const done = import("./lazy.js").then((m) => m.lazyValue);
+
 export { done, compute as n, app_exports as t };
 
 ```
@@ -23,8 +25,10 @@ export { done, compute as n, app_exports as t };
 
 ```js
 import { n as compute } from "./app.js";
+
 // lazy.js
 const lazyValue = compute(42);
+
 export { lazyValue };
 
 ```
@@ -37,6 +41,7 @@ const app = import("./app.js").then((n) => n.t).then((m) => ({
 	done: m.done,
 	n: m.n
 }));
+
 export { app };
 
 ```

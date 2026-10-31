@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // color.js
 const setOpacity = (color, opacity) => `${color}:${opacity}`;
+
 // css.js
 globalThis.cssResult = setOpacity("a", 1);
 
@@ -18,6 +19,7 @@ globalThis.cssResult = setOpacity("a", 1);
 ```js
 import "./css.js";
 import assert from "node:assert";
+
 // first.js
 assert.strictEqual(globalThis.cssResult, "a:1");
 
@@ -37,6 +39,7 @@ await import("./second.js");
 ```js
 import "./css.js";
 import assert from "node:assert";
+
 // second.js
 assert.strictEqual(globalThis.cssResult, "a:1");
 
@@ -50,6 +53,7 @@ assert.strictEqual(globalThis.cssResult, "a:1");
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // color.js
 var setOpacity;
 function init_color() {
@@ -57,6 +61,7 @@ function init_color() {
 		setOpacity = (color, opacity) => `${color}:${opacity}`;
 	})))();
 }
+
 // css.js
 function init_css() {
 	return (init_css = __esmMin((() => {
@@ -64,6 +69,7 @@ function init_css() {
 		globalThis.cssResult = setOpacity("a", 1);
 	})))();
 }
+
 export { init_css as t };
 
 ```

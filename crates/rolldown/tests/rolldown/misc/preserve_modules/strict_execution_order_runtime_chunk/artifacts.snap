@@ -77,6 +77,7 @@ globalThis.__events.push("dep");
 function dep() {
 	return "D";
 }
+
 export { dep as default };
 
 ```
@@ -87,6 +88,7 @@ export { dep as default };
 // lazy.js
 globalThis.__events.push("lazy");
 const lazy = "L";
+
 export { lazy };
 
 ```
@@ -95,6 +97,7 @@ export { lazy };
 
 ```js
 import dep from "./dep.js";
+
 // main.js
 globalThis.__events.push("main " + dep() + "N");
 const mod = await import("./lazy.js");

@@ -9,8 +9,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 // esm.js
 var esm_exports = /* @__PURE__ */ __exportAll({ default: () => "esm" });
+
 // main.js
 const esm = (__esmMin((() => {}))(), __toCommonJS(esm_exports));
+
 export { esm };
 
 ```

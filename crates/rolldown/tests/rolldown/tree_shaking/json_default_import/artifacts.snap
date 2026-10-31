@@ -7,20 +7,25 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert/strict";
+
 // reexport-mutation.json
 var reexport_mutation_default = {
 	a: "original",
 	b: "unused"
 };
+
 // mutator.js
 reexport_mutation_default.a = "mutated";
+
 // foo.json
 var a$1 = "used";
+
 // bailout.json
 var bailout_default = {
 	a: "bailout_a",
 	b: "bailout_b"
 };
+
 // main.js
 assert.strictEqual(a$1, "used");
 assert.strictEqual(bailout_default.a, "bailout_a");

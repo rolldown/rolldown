@@ -12,6 +12,7 @@ function test(a) {
 	return a + "-test";
 }
 console.log(a$1);
+
 // main.js
 console.log("from-other", test("x"));
 

@@ -10,8 +10,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 function bar() {
 	throw new Error("test");
 }
+
 // data.txt
 var data_default = "#2041";
+
 // entry.js
 function foo() {
 	bar();

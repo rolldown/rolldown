@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // imp.js
 const imp = 1;
 const imp2 = 2;
+
 export { imp, imp2 };
 
 ```

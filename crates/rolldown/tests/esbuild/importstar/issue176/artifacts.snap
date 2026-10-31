@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 // folders/child/foo.js
 const foo = () => "hi there";
+
 // entry.js
 console.log(JSON.stringify(/* @__PURE__ */ __exportAll({ foo: () => foo })));
 

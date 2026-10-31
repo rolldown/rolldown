@@ -7,9 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // import.js
 var import_exports = /* @__PURE__ */ __exportAll({ default: () => "hi" });
+
 // main.js
 assert.deepStrictEqual(Object.getOwnPropertyNames(import_exports), ["default"]);
 assert.equal(String(import_exports), "[object Module]");

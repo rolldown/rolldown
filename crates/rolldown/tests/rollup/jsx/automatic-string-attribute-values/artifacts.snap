@@ -7,11 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // local/jsx-runtime.js
 const jsx = (type, props, key) => ({
 	key,
 	props
 });
+
 // main.js
 const withEntities = /* @__PURE__ */ jsx("input", {
 	pattern: "\\d+",

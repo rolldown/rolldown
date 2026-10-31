@@ -8,8 +8,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // group.js
 const Group = { name: "Group" };
+
 // direct.js
 const group = () => Group;
+
 export { group };
 
 ```
@@ -20,6 +22,7 @@ export { group };
 // main.js
 const loadOther = () => import("./other.js");
 const loadDirect = () => import("./direct.js");
+
 export { loadDirect, loadOther };
 
 ```

@@ -7,11 +7,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // state.js
 const app = { user: null };
+
 // main.js
 assert.strictEqual(app?.user?.name ?? "ok", "ok");
 assert.strictEqual(app?.user?.name ?? "ok", "ok");
+
 export {};
 
 ```

@@ -131,21 +131,21 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       raw_import_records,
       tla_keyword_span,
     } = create_ecma_view(
-        &mut CreateModuleContext {
-          stable_id: &stable_id,
-          module_idx: self.module_idx,
-          plugin_driver: &self.ctx.plugin_driver,
-          resolved_id: &self.resolved_id,
-          options: &self.ctx.options,
-          warnings: &mut warnings,
-          module_type: module_type.clone(),
-          replace_global_define_config: self.ctx.meta.replace_global_define_config.clone(),
-          is_user_defined_entry: self.is_user_defined_entry,
-          flat_options: self.flat_options,
-        },
-        CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects },
-      )
-      .await?;
+      &mut CreateModuleContext {
+        stable_id: &stable_id,
+        module_idx: self.module_idx,
+        plugin_driver: &self.ctx.plugin_driver,
+        resolved_id: &self.resolved_id,
+        options: &self.ctx.options,
+        warnings: &mut warnings,
+        module_type: module_type.clone(),
+        replace_global_define_config: self.ctx.meta.replace_global_define_config.clone(),
+        is_user_defined_entry: self.is_user_defined_entry,
+        flat_options: self.flat_options,
+      },
+      CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects },
+    )
+    .await?;
 
     if self.ctx.options.experimental.is_incremental_build_enabled() {
       // An incremental build keeps this module's AST and scope tree in the `ScanStageCache`

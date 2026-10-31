@@ -108,13 +108,11 @@ impl EcmaAst {
   }
 
   fn clone_into_arena(&self, allocator: Allocator) -> EcmaAst {
-    let program = ProgramCell::new(
-      ProgramCellOwner { source: self.source().clone(), allocator },
-      |owner| {
+    let program =
+      ProgramCell::new(ProgramCellOwner { source: self.source().clone(), allocator }, |owner| {
         let program = clone_program_in(self.program(), owner.source.as_str(), &owner.allocator);
         ProgramCellDependent { program }
-      },
-    );
+      });
     EcmaAst { program, source_type: self.source_type }
   }
 

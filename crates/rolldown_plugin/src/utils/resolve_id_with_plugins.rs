@@ -3,7 +3,9 @@ use crate::{
   types::{custom_field::CustomField, hook_resolve_id_skipped::HookResolveIdSkipped},
 };
 use nodejs_built_in_modules::is_nodejs_builtin_module;
-use rolldown_common::{ImportKind, ModuleDefFormat, ModuleId, PackageJson, ResolvedId};
+use rolldown_common::{
+  ImportAttributes, ImportKind, ModuleDefFormat, ModuleId, PackageJson, ResolvedId,
+};
 use rolldown_fs::FileSystem;
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dataurl::is_data_url;
@@ -51,6 +53,7 @@ pub fn infer_module_def_format(
 fn resolved_id_from_hook_output<Fs: FileSystem>(
   resolver: &Resolver<Fs>,
   r: HookResolveIdOutput,
+  attributes: &ImportAttributes,
 ) -> anyhow::Result<ResolvedId> {
   let package_json = r
     .package_json_path
@@ -64,10 +67,13 @@ fn resolved_id_from_hook_output<Fs: FileSystem>(
     normalize_external_id: r.normalize_external_id,
     side_effects: r.side_effects,
     package_json,
+    attributes: attributes.clone(),
     ..Default::default()
   })
 }
 
+/// Resolves `specifier` imported with `attributes`. The returned id does not contain the
+/// attributes it resolved with yet; see [`ResolvedId::finalize_attributes`].
 #[expect(clippy::too_many_arguments)]
 pub async fn resolve_id_with_plugins<Fs: FileSystem>(
   resolver: &Resolver<Fs>,
@@ -79,51 +85,30 @@ pub async fn resolve_id_with_plugins<Fs: FileSystem>(
   skipped_resolve_calls: Option<Vec<Arc<HookResolveIdSkipped>>>,
   custom: Arc<CustomField>,
   is_user_defined_entry: bool,
+  attributes: &ImportAttributes,
+  importer_raw_id: Option<&str>,
 ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
+  let args = HookResolveIdArgs { specifier, importer, is_entry, kind: import_kind, custom };
   if matches!(import_kind, ImportKind::DynamicImport) {
-    if let Some(r) = plugin_driver
-      .resolve_dynamic_import(
-        &HookResolveIdArgs {
-          importer: importer.map(std::convert::AsRef::as_ref),
-          specifier,
-          is_entry,
-          kind: import_kind,
-          custom: Arc::clone(&custom),
-        },
-        skipped_resolve_calls.as_ref(),
-      )
-      .await?
+    if let Some(r) =
+      plugin_driver.resolve_dynamic_import(&args, skipped_resolve_calls.as_ref()).await?
     {
-      return Ok(Ok(resolved_id_from_hook_output(resolver, r)?));
+      return Ok(Ok(resolved_id_from_hook_output(resolver, r, attributes)?));
     }
   }
   // Run plugin resolve_id first, if it is None use internal resolver as fallback
-  if let Some(r) = plugin_driver
-    .resolve_id(
-      &HookResolveIdArgs {
-        specifier,
-        importer,
-        is_entry,
-        kind: import_kind,
-        custom: Arc::clone(&custom),
-      },
-      skipped_resolve_calls.as_ref(),
-    )
-    .await?
-  {
-    return Ok(Ok(resolved_id_from_hook_output(resolver, r)?));
+  if let Some(r) = plugin_driver.resolve_id(&args, skipped_resolve_calls.as_ref()).await? {
+    return Ok(Ok(resolved_id_from_hook_output(resolver, r, attributes)?));
   }
 
   // Auto external http url or data url
-  if is_http_url(specifier) || is_data_url(specifier) {
-    return Ok(Ok(ResolvedId {
-      id: ModuleId::new(specifier),
-      external: true.into(),
-      ..Default::default()
-    }));
-  }
-
-  Ok(resolve_id(resolver, specifier, importer, import_kind, is_user_defined_entry))
+  let resolved = if is_http_url(specifier) || is_data_url(specifier) {
+    Ok(ResolvedId { id: ModuleId::new(specifier), external: true.into(), ..Default::default() })
+  } else {
+    // Attributes don't change which file a specifier resolves to.
+    resolve_id(resolver, specifier, importer_raw_id, import_kind, is_user_defined_entry)
+  };
+  Ok(resolved.map(|resolved_id| ResolvedId { attributes: attributes.clone(), ..resolved_id }))
 }
 
 fn resolve_id<Fs: FileSystem>(

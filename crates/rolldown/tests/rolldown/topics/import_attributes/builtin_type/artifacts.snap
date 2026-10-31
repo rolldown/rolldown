@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+// data.txt with { type: "json" }
+var data_default$2 = { value: 1 };
+// data.txt with { type: "text" }
+var data_default$1 = "{ \"value\": 1 }\n";
+// shader.glsl with { type: "text" }
+var shader_default = "void main() {}\n";
+// data.bin with { type: "bytes" }
+var data_default = __toBinary("QUI=");
+// config.json with { type: "json" }
+var config_default$1 = { value: 2 };
+// config.json
+var config_default = { value: 2 };
+// main.js
+assert.deepStrictEqual(data_default$2, { value: 1 });
+assert.strictEqual(data_default$1, "{ \"value\": 1 }\n");
+assert.strictEqual(shader_default, "void main() {}\n");
+assert.ok(data_default instanceof Uint8Array);
+assert.deepStrictEqual([...data_default], [65, 66]);
+assert.deepStrictEqual(config_default$1, { value: 2 });
+assert.deepStrictEqual(config_default, { value: 2 });
+
+```

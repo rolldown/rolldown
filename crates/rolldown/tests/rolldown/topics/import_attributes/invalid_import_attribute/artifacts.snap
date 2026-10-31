@@ -1,0 +1,116 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## DEPRECATED_IMPORT_ASSERTION
+
+```text
+[DEPRECATED_IMPORT_ASSERTION] The legacy `assert` keyword in "main.js" is deprecated and is treated as `with`. Use `with` instead.
+    ╭─[ main.js:10:24 ]
+    │
+ 10 │   import('./dep.js', { assert: { kind: 'x' } }),
+    │                        ───┬──  
+    │                           ╰──── replace `assert` with `with`
+────╯
+
+```
+
+## DEPRECATED_IMPORT_ASSERTION
+
+```text
+[DEPRECATED_IMPORT_ASSERTION] The legacy `assert` keyword in "main.js" is deprecated and is treated as `with`. Use `with` instead.
+   ╭─[ main.js:1:24 ]
+   │
+ 1 │ import json from 'ext' assert { type: 'json' };
+   │                        ───────────┬───────────  
+   │                                   ╰───────────── replace `assert` with `with`
+───╯
+
+```
+
+## INVALID_IMPORT_ATTRIBUTE
+
+```text
+[INVALID_IMPORT_ATTRIBUTE] Rolldown could not statically analyze an import attribute of a dynamic import in "main.js". Import attributes need to have string keys and values, so the attribute is ignored.
+   ╭─[ main.js:9:43 ]
+   │
+ 9 │   import('./dep.js', { with: { kind: 'x', [key]: 'y', size: 1 } }),
+   │                                           ─────┬────  
+   │                                                ╰────── not a string key and value
+───╯
+
+```
+
+## INVALID_IMPORT_ATTRIBUTE
+
+```text
+[INVALID_IMPORT_ATTRIBUTE] Rolldown could not statically analyze an import attribute of a dynamic import in "main.js". Import attributes need to have string keys and values, so the attribute is ignored.
+   ╭─[ main.js:9:55 ]
+   │
+ 9 │   import('./dep.js', { with: { kind: 'x', [key]: 'y', size: 1 } }),
+   │                                                       ───┬───  
+   │                                                          ╰───── not a string key and value
+───╯
+
+```
+
+## INVALID_IMPORT_ATTRIBUTE
+
+```text
+[INVALID_IMPORT_ATTRIBUTE] Rolldown could not statically analyze the options of a dynamic import in "main.js". Dynamic import options need to be an object with a nested `with` object, so the import has no attributes.
+   ╭─[ main.js:7:22 ]
+   │
+ 7 │   import('./dep.js', options),
+   │                      ───┬───  
+   │                         ╰───── not statically analyzable
+───╯
+
+```
+
+## INVALID_IMPORT_ATTRIBUTE
+
+```text
+[INVALID_IMPORT_ATTRIBUTE] Rolldown could not statically analyze the options of a dynamic import in "main.js". Dynamic import options need to be an object with a nested `with` object, so the import has no attributes.
+   ╭─[ main.js:8:30 ]
+   │
+ 8 │   import('./dep.js', { with: options.with }),
+   │                              ──────┬─────  
+   │                                    ╰─────── not statically analyzable
+───╯
+
+```
+
+# Assets
+
+## dep.js
+
+```js
+// dep.js
+var dep_default = 1;
+export { dep_default as default };
+
+```
+
+## dep2.js
+
+```js
+// dep.js with { kind: "x" }
+var dep_default = 1;
+export { dep_default as default };
+
+```
+
+## main.js
+
+```js
+import json from "ext" with { type: "json" };
+const imports = [
+	import("./dep.js"),
+	import("./dep.js"),
+	import("./dep2.js"),
+	import("./dep2.js")
+];
+export { imports, json };
+
+```

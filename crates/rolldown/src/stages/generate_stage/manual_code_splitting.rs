@@ -855,7 +855,11 @@ fn derive_entries_aware_chunk_name(
         let entry_point = flattened_entries[idx];
         Some(entry_point.name.as_ref().map(ArcStr::to_string).unwrap_or_else(|| {
           let module = &link_output.module_table[entry_point.idx];
-          Path::new(module.stable_id().as_str())
+          let stable_id = module.stable_id().as_str();
+          // Import attributes are not part of the file name.
+          let stable_path =
+            stable_id.strip_suffix(module.id().attributes_suffix()).unwrap_or(stable_id);
+          Path::new(stable_path)
             .file_stem()
             .and_then(|s| s.to_str())
             .map(ToString::to_string)

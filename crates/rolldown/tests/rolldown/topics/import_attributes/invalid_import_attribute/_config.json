@@ -1,0 +1,10 @@
+{
+  "_comment": "With `experimental.importAttributes`, dynamic import options that are not static are ignored and warn. The legacy `assert` keyword is treated as `with` and warns.",
+  "config": {
+    "external": ["ext"],
+    "experimental": {
+      "importAttributes": true
+    }
+  },
+  "expectExecuted": false
+}

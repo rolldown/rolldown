@@ -459,6 +459,12 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warnings when an import uses the legacy `assert` keyword instead of `with`',
     ),
   ),
+  invalidImportAttribute: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when the options of a dynamic import are not statically analyzable while `experimental.importAttributes` is on',
+    ),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof ChecksOptionsSchema, ChecksOptions>>();
 

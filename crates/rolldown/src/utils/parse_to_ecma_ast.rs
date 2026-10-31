@@ -62,7 +62,7 @@ pub async fn parse_to_ecma_ast(
     ..
   } = ctx;
 
-  let path = Path::new(resolved_id.id.as_str());
+  let path = Path::new(resolved_id.id.raw_id());
   let is_user_defined_entry = ctx.is_user_defined_entry;
 
   let (has_lazy_export, source, parsed_type) =
@@ -121,7 +121,7 @@ pub async fn parse_to_ecma_ast(
   PreProcessEcmaAst::default().build(
     ecma_ast,
     stable_id,
-    resolved_id.id.as_str(),
+    &resolved_id.id,
     should_warn_on_invalid_annotation,
     &parsed_type,
     replace_global_define_config.as_ref(),

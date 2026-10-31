@@ -1,0 +1,14 @@
+{
+  "_comment": "`output.globals` is keyed by the raw id of an external imported with attributes, as in Rollup 5.",
+  "config": {
+    "format": "iife",
+    "external": ["ext"],
+    "globals": {
+      "ext": "Ext"
+    },
+    "experimental": {
+      "importAttributes": true
+    }
+  },
+  "expectExecuted": false
+}

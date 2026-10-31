@@ -1,0 +1,46 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## DEPRECATED_IMPORT_ASSERTION
+
+```text
+[DEPRECATED_IMPORT_ASSERTION] The legacy `assert` keyword in "main.js" is deprecated and is treated as `with`. Use `with` instead.
+   ╭─[ main.js:5:49 ]
+   │
+ 5 │ export const lazyAssert = () => import('ext', { assert: { type: 'json' } });
+   │                                                 ───┬──  
+   │                                                    ╰──── replace `assert` with `with`
+───╯
+
+```
+
+## DEPRECATED_IMPORT_ASSERTION
+
+```text
+[DEPRECATED_IMPORT_ASSERTION] The legacy `assert` keyword in "main.js" is deprecated and is treated as `with`. Use `with` instead.
+   ╭─[ main.js:6:50 ]
+   │
+ 6 │ export const computed = (name) => import(name, { assert: { type: 'json' } });
+   │                                                  ───┬──  
+   │                                                     ╰──── replace `assert` with `with`
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import "ext";
+import data from "ext" with { type: "json" };
+export * from "ext" with { type: "json" };
+// main.js
+const lazy = () => import("ext", { with: { type: "json" } });
+const lazyAssert = () => import("ext", { with: { type: "json" } });
+const computed = (name) => import(name, { with: { type: "json" } });
+export { computed, data, lazy, lazyAssert };
+
+```

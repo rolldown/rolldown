@@ -13,10 +13,10 @@ use oxc::{
 };
 use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ChunkKind, ConcatenateWrappedModuleKind, ExportsKind,
-  ImportRecordIdx, ImportRecordMeta, InlineConstMode, MemberExprProp, MemberExprRefResolution,
-  Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleType, NamespaceAlias, NormalModule,
-  OutputExports, OutputFormat, Platform, RenderedConcatenatedModuleParts, Specifier, SymbolRef,
-  WrapKind,
+  ImportAttributes, ImportRecordIdx, ImportRecordMeta, InlineConstMode, MemberExprProp,
+  MemberExprRefResolution, Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleType,
+  NamespaceAlias, NormalModule, OutputExports, OutputFormat, Platform,
+  RenderedConcatenatedModuleParts, Specifier, SymbolRef, WrapKind,
 };
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
@@ -1200,9 +1200,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               Expression::new_id_ref_expr(SPAN, importee_namespace_name, self),
               self,
             );
+            // Insert `import * as ns from 'ext'`external module in esm format
+            let mut import_stmt =
+              Statement::new_import_star_stmt(importee_name, importee_namespace_name, self);
+            if let Statement::ImportDeclaration(decl) = &mut import_stmt {
+              decl.with_clause = self.new_with_clause(&module.attributes);
+            }
             vec![
-              // Insert `import * as ns from 'ext'`external module in esm format
-              Statement::new_import_star_stmt(importee_name, importee_namespace_name, self),
+              import_stmt,
               // Insert `__reExport(foo_exports, ns)`
               ast::Statement::new_expression_statement(
                 SPAN,
@@ -1232,7 +1237,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 ast::Expression::new_identifier(SPAN, "require", self),
                 ast::Expression::new_string_literal(
                   SPAN,
-                  oxc::ast::ast::Str::from_str_in(importee.id().as_str(), self),
+                  oxc::ast::ast::Str::from_str_in(importee.id().raw_id(), self),
                   None,
                   self,
                 ),
@@ -2790,6 +2795,117 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
+  /// `with { type: "json" }`, or `None` without attributes.
+  fn new_with_clause(
+    &self,
+    attributes: &ImportAttributes,
+  ) -> Option<allocator::Box<'ast, ast::WithClause<'ast>>> {
+    if attributes.is_empty() {
+      return None;
+    }
+    let entries = attributes.iter().map(|(key, value)| {
+      let key = if is_validate_identifier_name(key) {
+        ast::ImportAttributeKey::new_identifier(SPAN, ast::Str::from_str_in(key, self), self)
+      } else {
+        ast::ImportAttributeKey::new_string_literal(
+          SPAN,
+          ast::Str::from_str_in(key, self),
+          None,
+          self,
+        )
+      };
+      let value = ast::StringLiteral::new(SPAN, ast::Str::from_str_in(value, self), None, self);
+      ast::ImportAttribute::new(SPAN, key, value, self)
+    });
+    Some(ast::WithClause::boxed(
+      SPAN,
+      ast::WithClauseKeyword::With,
+      oxc::allocator::Vec::from_iter_in(entries, self),
+      self,
+    ))
+  }
+
+  /// Makes the options of `import()` of an external carry the module's final attributes, like
+  /// the `with` clause of a static import (`ecmascript/format/esm.rs`). `written` is what the
+  /// scanner read from the options; options it read nothing from are only replaced when there
+  /// are attributes to render.
+  fn rewrite_external_import_options(
+    &self,
+    expr: &mut ast::ImportExpression<'ast>,
+    written: &ImportAttributes,
+    attributes: &ImportAttributes,
+  ) {
+    if written == attributes {
+      self.rename_import_options_assert_key(expr);
+      return;
+    }
+    if attributes.is_empty() {
+      expr.options = None;
+      return;
+    }
+    let entries = attributes.iter().map(|(key, value)| {
+      let is_proto = key == "__proto__";
+      let key = if is_validate_identifier_name(key) && !is_proto {
+        ast::PropertyKey::new_static_identifier(SPAN, ast::Str::from_str_in(key, self), self)
+      } else {
+        ast::PropertyKey::new_string_literal(SPAN, ast::Str::from_str_in(key, self), None, self)
+      };
+      let value =
+        ast::Expression::new_string_literal(SPAN, ast::Str::from_str_in(value, self), None, self);
+      ObjectPropertyKind::new_object_property(
+        SPAN,
+        ast::PropertyKind::Init,
+        key,
+        value,
+        false,
+        false,
+        is_proto,
+        self,
+      )
+    });
+    let with = ast::Expression::new_object_expression(
+      SPAN,
+      oxc::allocator::Vec::from_iter_in(entries, self),
+      self,
+    );
+    expr.options = Some(ast::Expression::new_object_expression(
+      SPAN,
+      [ObjectPropertyKind::new_object_property(
+        SPAN,
+        ast::PropertyKind::Init,
+        ast::PropertyKey::new_static_identifier(SPAN, "with", self),
+        with,
+        false,
+        false,
+        false,
+        self,
+      )],
+      self,
+    ));
+  }
+
+  /// Engines ignore a legacy `assert` key in the options of `import()`, so it becomes `with`,
+  /// unless the options already have one.
+  fn rename_import_options_assert_key(&self, expr: &mut ast::ImportExpression<'ast>) {
+    let Some(Expression::ObjectExpression(options)) = &mut expr.options else { return };
+    let static_key = |property: &ObjectPropertyKind<'ast>| match property {
+      ObjectPropertyKind::ObjectProperty(property) if !property.computed => {
+        property.key.static_name()
+      }
+      _ => None,
+    };
+    if options.properties.iter().any(|property| static_key(property).is_some_and(|k| k == "with")) {
+      return;
+    }
+    let assert = options
+      .properties
+      .iter_mut()
+      .find(|property| static_key(property).is_some_and(|key| key == "assert"));
+    if let Some(ObjectPropertyKind::ObjectProperty(property)) = assert {
+      property.key = ast::PropertyKey::new_static_identifier(SPAN, "with", self);
+    }
+  }
+
   fn try_rewrite_import_expression(&mut self, node: &mut ast::Expression<'ast>) -> bool {
     let ast::Expression::ImportExpression(expr) = node else {
       return false;
@@ -2830,6 +2946,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         });
         return true;
       }
+      self.rename_import_options_assert_key(expr);
       return false;
     };
 
@@ -2838,6 +2955,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let Some(importee_idx) = rec.resolved_module else {
       // Unresolved: nothing to point somewhere else. Report "rewritten" only when there is no
       // options expression left to walk into.
+      self.rename_import_options_assert_key(expr);
       return expr.options.is_none();
     };
 
@@ -2855,10 +2973,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         };
 
         // The importee is bundled, so the second argument is inert and is dropped here. Import
-        // attributes only reach the output for external imports, where `ecmascript/format/esm.rs`
-        // renders them from the attributes of the import record; for an internal module they select no loader
-        // and do not affect module identity, and a static attributed import of an internal module
-        // already drops them. Dropping them makes `import(spec, options)` produce byte-identical
+        // attributes only reach the output for external imports, which render them from
+        // `ExternalModule.attributes`. For an internal module they only take part in resolving the
+        // module, which is already done. Dropping them makes `import(spec, options)` produce byte-identical
         // output to `import(spec)`: the specifier below is redirected at the chunk that actually
         // holds the module, and the merged-entry and CJS rewrites apply as usual. Keeping the
         // argument instead would emit a specifier the source wrote for a file the bundle never
@@ -2935,12 +3052,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         needs_to_esm_helper = importee.exports_kind.is_commonjs();
       }
       Module::External(importee) => {
-        if expr.options.is_some() {
-          // Attributes are load-bearing for an external import: the host resolves the specifier
-          // and `with { type: 'json' }` picks the module type. Leave the call exactly as written —
-          // in particular do not lower it to `require()`, which cannot carry attributes.
-          return false;
-        }
+        self.rewrite_external_import_options(expr, &rec.attributes, &importee.attributes);
+        // The path is rendered like the one of a static import, with or without options.
         let import_path = importee.get_import_path(self.ctx.chunk, self.ctx.resolved_paths);
         if str != import_path.as_str() {
           expr.source = Expression::new_string_literal(
@@ -2949,6 +3062,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             None,
             self,
           );
+        }
+        if expr.options.is_some() {
+          // Attributes are load-bearing for an external import: the host resolves the specifier
+          // and `with { type: 'json' }` picks the module type. Do not lower the call to
+          // `require()`, which cannot carry attributes.
+          return false;
         }
         // Convert `import("external")` to `Promise.resolve().then(() => __toESM(require("external")))`
         // when format is CJS and dynamicImportInCjs is false

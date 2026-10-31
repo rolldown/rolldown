@@ -1,0 +1,7 @@
+{
+  "_comment": "Without `experimental.importAttributes`, an external still keeps its import attributes. They are part of its identity, so `ext` with and without attributes are two imports in the output. A legacy `assert` key of `import()` options becomes `with` and warns, also when the specifier is computed.",
+  "config": {
+    "external": ["ext"]
+  },
+  "expectExecuted": false
+}

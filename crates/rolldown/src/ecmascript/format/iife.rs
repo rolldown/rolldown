@@ -196,7 +196,7 @@ async fn render_iife_factory_arguments(
   };
   let globals = &ctx.options.globals;
   for external in externals {
-    let global = globals.call(external.id.as_str()).await?;
+    let global = globals.call(external.id.raw_id()).await?;
     let target = match &global {
       Some(global_name) => global_name.clone(),
       None => {

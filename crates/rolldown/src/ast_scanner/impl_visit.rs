@@ -264,6 +264,10 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
     } else {
       // No import record - either @vite-ignore or non-static dynamic import
       self.current_stmt_info.meta.insert(StmtInfoMeta::NonStaticDynamicImport);
+      // Its options still reach the output, where a legacy `assert` key becomes `with`.
+      if let Some(span) = expr.options.as_ref().and_then(assert_key_span) {
+        self.warn_deprecated_import_assertion(span);
+      }
     }
     walk_js::walk_import_expression(self, expr);
   }
@@ -852,8 +856,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 
   /// `{ type: 'json' }` in `import('./data.json', { with: { type: 'json' } })`. Like Rollup, only
-  /// statically known string attributes count. The legacy `assert` key is read like `with`.
-  /// Ignored options are only worth a warning when they would be part of the module id.
+  /// statically known string attributes count. The legacy `assert` key is read like `with` and
+  /// warns. Ignored options are only worth a warning when they would be part of the module id.
   fn import_attributes_from_import_options(&mut self, options: &Expression) -> ImportAttributes {
     let Expression::ObjectExpression(options) = options else {
       self.warn_invalid_import_attribute(
@@ -869,19 +873,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     }) else {
       return ImportAttributes::default();
     };
-    let ctx = &self.immutable_ctx;
-    if keyword == "assert"
-      && ctx.options.experimental.is_import_attributes_enabled()
-      && ctx.options.checks.contains(EventKindSwitcher::DeprecatedImportAssertion)
-    {
-      self.result.warnings.push(
-        BuildDiagnostic::deprecated_import_assertion(
-          ctx.id.to_string(),
-          ctx.source.clone(),
-          with.key.span(),
-        )
-        .with_severity_warning(),
-      );
+    if keyword == "assert" {
+      self.warn_deprecated_import_assertion(with.key.span());
     }
     let Expression::ObjectExpression(with) = &with.value else {
       self.warn_invalid_import_attribute(
@@ -914,6 +907,16 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     }))
   }
 
+  fn warn_deprecated_import_assertion(&mut self, span: Span) {
+    let ctx = &self.immutable_ctx;
+    if ctx.options.checks.contains(EventKindSwitcher::DeprecatedImportAssertion) {
+      self.result.warnings.push(
+        BuildDiagnostic::deprecated_import_assertion(ctx.id.to_string(), ctx.source.clone(), span)
+          .with_severity_warning(),
+      );
+    }
+  }
+
   fn warn_invalid_import_attribute(&mut self, kind: InvalidImportAttributeKind, span: Span) {
     let ctx = &self.immutable_ctx;
     if ctx.options.experimental.is_import_attributes_enabled()
@@ -930,4 +933,13 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       );
     }
   }
+}
+
+/// The span of a legacy `assert` key in the options of `import()`.
+fn assert_key_span(options: &Expression) -> Option<Span> {
+  let Expression::ObjectExpression(options) = options else { return None };
+  options.properties.iter().find_map(|property| {
+    let ast::ObjectPropertyKind::ObjectProperty(property) = property else { return None };
+    (!property.computed && property.key.static_name()? == "assert").then(|| property.key.span())
+  })
 }

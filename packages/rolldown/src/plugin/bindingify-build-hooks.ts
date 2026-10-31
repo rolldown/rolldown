@@ -220,25 +220,16 @@ export function bindingifyTransform(
 
       let normalizedCode: string | undefined = undefined;
       let map = ret.map;
-      let mapHandledByNativeChannel = false;
       if (typeof ret.code === 'string') {
         normalizedCode = ret.code;
       } else if (ret.code instanceof RolldownMagicString) {
         let magicString = ret.code as RolldownMagicString;
         normalizedCode = magicString.toString();
-        // If the option is not enable we should just return soucemapJsonString
-        let fallbackSourcemap = ctx.sendMagicString(magicString);
-        if (fallbackSourcemap != undefined) {
-          map = fallbackSourcemap;
-        } else {
-          // `experimental.nativeMagicString` is enabled: the sourcemap is
-          // generated natively and delivered out-of-band via the magic-string
-          // channel. Signal `null` (an explicit "no map on this output object")
-          // rather than `undefined`, otherwise the Rust side treats this
-          // transform as a missing/broken sourcemap (`Omitted`) and the empty
-          // sentinel wipes out the real map produced by the channel.
-          mapHandledByNativeChannel = true;
-        }
+        // The map generated from the MagicString takes the place of `ret.map`.
+        // Rust returns it here unless `experimental.nativeMagicString` and
+        // sourcemaps are both enabled. Then it is generated natively and the
+        // Rust side already knows about it.
+        map = ctx.sendMagicString(magicString) ?? undefined;
       }
 
       return {
@@ -246,7 +237,7 @@ export function bindingifyTransform(
         // Preserve the `map: null` (intentional opt-out) vs `map: undefined`
         map:
           bindingifySourcemap(normalizeTransformHookSourcemap(id, code, map)) ??
-          (mapHandledByNativeChannel || ret.map === null ? null : undefined),
+          (ret.map === null ? null : undefined),
         moduleSideEffects: moduleOption.moduleSideEffects ?? undefined,
         moduleType: ret.moduleType,
       };

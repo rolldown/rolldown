@@ -2593,7 +2593,6 @@ dependencies = [
  "serde",
  "serde_json",
  "smallvec",
- "string_wizard",
  "sugar_path",
  "testing_macros",
  "tokio",

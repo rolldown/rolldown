@@ -6,6 +6,29 @@ After the first call in either helper, `mod` is set and `cb` is never accessed a
 
 Reference: https://github.com/rolldown/rolldown/issues/9063
 
+## `__exportAll`: namespace objects with the native shape
+
+`__exportAll(all, flags)` builds the namespace object of a module. `all` maps each export name to a getter, so readers see live bindings. The object has the shape of a native module namespace:
+
+- A null prototype (`{ __proto__: null }`). So `'constructor' in ns` is `false`, unless the module exports `constructor`.
+- `Symbol.toStringTag` with the value `'Module'`, unless the flag `1` is set (`generatedCode.symbols: false`).
+- No new properties (`Object.preventExtensions`). The specification makes a module namespace object not extensible: [[IsExtensible]] returns `false`.
+
+The flag `2` keeps the object open. A later `__reExport` adds properties to the namespace object of a module with dynamic exports or with an external `export *`, and `Object.defineProperty` throws a `TypeError` on an object that is not extensible. `namespace_object_is_open` in `module_finalizers/mod.rs` holds this rule, and each `__reExport` writer asserts it in debug builds. The HMR finalizer passes the flag `2` for a module with `export * from`. An open object still has the null prototype.
+
+Each writer other than the external `export *` writes only for an `export *` of a module with dynamic exports. `determine_has_dynamic_exports` in `link_stage/wrapping.rs` gives each such importer dynamic exports too, so the rule covers these writers by construction. No fixture runs the overlay writer of strict execution order (a trace over the full Rust suite printed nothing).
+
+An empty namespace without symbols does not call `__exportAll`, because the link stage does not always include the helper then. It is `Object.freeze({ __proto__: null })`, or `{ __proto__: null }` when it is open.
+
+The target is `{ __proto__: null }`, not `__create(null)`. Both have the same speed, but the literal is 7 bytes smaller when the output has no `__create`, and it needs no other runtime declaration.
+
+Some differences from a native namespace stay:
+
+- Each export is a getter, not a data property with `writable: true`. So `Object.getOwnPropertyDescriptor(ns, name)` gives a getter, and `Object.isFrozen(ns)` gives `true`. A native namespace with exports gives `false` for `Object.isFrozen`.
+- An open object accepts new properties.
+
+Fixtures: `misc/namespace_object_shape`, `misc/namespace_object_shape_empty` and `misc/namespace_object_shape_open`. The test262 test `test262_module_code` also checks the shape in `language/module-code/namespace/internals`. `crates/rolldown/tests/test262_failures.json` lists the namespace tests that still fail, each with its reason.
+
 ## `__share`, `__share_require`, `__share_export`: the inline common chunk registry
 
 `experimentalInlineCommonChunks` (see `internal-docs/inline-common-chunks/`) prints a common chunk's modules into the files that read them, wrapped in a factory. The registry makes those copies one module instance:

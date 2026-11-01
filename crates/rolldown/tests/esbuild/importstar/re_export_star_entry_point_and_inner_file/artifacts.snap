@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
 // inner.js
-var inner_exports = /* @__PURE__ */ __exportAll({});
+var inner_exports = /* @__PURE__ */ __exportAll({}, 2);
 __reExport(inner_exports, require("b"));
 Object.defineProperty(exports, "inner", {
 	enumerable: true,

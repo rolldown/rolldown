@@ -1136,38 +1136,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       },
     ));
 
-    // if there is no export, we should generate `var ns = {}` instead of `var ns = __exportAll({})`
-    // else construct `__exportAll({ prop_name: () => returned, ... })`
-    let module_namespace_rhs =
-      if arg_obj_expr.properties.is_empty() && !self.ctx.options.generated_code.symbols {
-        Expression::ObjectExpression(oxc::allocator::Box::new_in(arg_obj_expr, self))
-      } else {
-        let obj_expr = ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.allocator()));
-        let args = if self.ctx.options.generated_code.symbols {
-          oxc::allocator::Vec::from_iter_in([obj_expr], self)
-        } else {
-          oxc::allocator::Vec::from_iter_in(
-            [
-              obj_expr,
-              ast::Argument::new_numeric_literal(SPAN, 1.0, None, NumberBase::Decimal, self),
-            ],
-            self,
-          )
-        };
-        ast::Expression::new_call_expression_with_pure(
-          SPAN,
-          self.finalized_expr_for_runtime_symbol("__exportAll"),
-          None,
-          args,
-          false,
-          true,
-          self,
-        )
-      };
-
     // construct `var [binding_name_for_namespace_object_ref] = __exportAll(...)`
-    let decl_stmt =
-      Statement::new_var_decl(binding_name_for_namespace_object_ref, module_namespace_rhs, self);
+    let decl_stmt = Statement::new_var_decl(
+      binding_name_for_namespace_object_ref,
+      self.module_namespace_object_expr(arg_obj_expr),
+      self,
+    );
 
     let export_all_externals_rec_ids = &self.ctx.linking_info.star_exports_from_external_modules;
 
@@ -1251,6 +1225,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           re_export_external_stmts = Some(stmts.collect());
         }
       }
+    }
+
+    if re_export_external_stmts.as_ref().is_some_and(|stmts| !stmts.is_empty()) {
+      self.debug_assert_namespace_object_is_open();
     }
 
     let mut ret = vec![decl_stmt];
@@ -1868,6 +1846,98 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     None
   }
 
+  /// Whether a later `__reExport` can add properties to the namespace object of this module. Such
+  /// an object stays open (`__exportAll` flag `2`). Each other namespace object gets the shape of
+  /// a native module namespace: a null prototype, and no new properties.
+  ///
+  /// The `__reExport` writers into the namespace object of a module are the external `export *`
+  /// in the namespace declaration, and three writers that need dynamic exports: the overlay
+  /// records of strict execution order, the ESM importee with dynamic exports, and the CommonJS
+  /// importee. Each writer calls `debug_assert_namespace_object_is_open` first. The last three
+  /// write for an `export *` of a module with dynamic exports, and `determine_has_dynamic_exports`
+  /// (link stage) gives each such importer dynamic exports too. So their target is always open.
+  /// See internal-docs/runtime-helpers/implementation.md
+  fn namespace_object_is_open(&self) -> bool {
+    self.ctx.linking_info.has_dynamic_exports
+      || !self.ctx.linking_info.star_exports_from_external_modules.is_empty()
+  }
+
+  fn debug_assert_namespace_object_is_open(&self) {
+    debug_assert!(
+      self.namespace_object_is_open(),
+      "`__reExport` writes into the namespace object of `{}`, but that object accepts no new properties",
+      self.ctx.module.stable_id
+    );
+  }
+
+  /// The value of the namespace object of this module, from the getters in `arg_obj_expr`.
+  fn module_namespace_object_expr(
+    &self,
+    arg_obj_expr: ast::ObjectExpression<'ast>,
+  ) -> Expression<'ast> {
+    let symbols = self.ctx.options.generated_code.symbols;
+    let open = self.namespace_object_is_open();
+    // An empty namespace without symbols does not call `__exportAll`. The link stage does not
+    // always reference `__exportAll` in this case.
+    if arg_obj_expr.properties.is_empty() && !symbols {
+      return if open {
+        self.null_prototype_object_expr()
+      } else {
+        self.frozen_null_prototype_object_expr()
+      };
+    }
+    // `__exportAll({ prop_name: () => returned, ... }, flags)`. The flag `1` skips
+    // `Symbol.toStringTag`, and the flag `2` keeps the object open. Without flags, the call has
+    // no second argument.
+    let flags = u8::from(!symbols) | (u8::from(open) << 1);
+    let obj_expr = ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.allocator()));
+    let args = if flags == 0 {
+      oxc::allocator::Vec::from_iter_in([obj_expr], self)
+    } else {
+      let flags_expr =
+        ast::Argument::new_numeric_literal(SPAN, f64::from(flags), None, NumberBase::Decimal, self);
+      oxc::allocator::Vec::from_iter_in([obj_expr, flags_expr], self)
+    };
+    ast::Expression::new_call_expression_with_pure(
+      SPAN,
+      self.finalized_expr_for_runtime_symbol("__exportAll"),
+      None,
+      args,
+      false,
+      true,
+      self,
+    )
+  }
+
+  /// `{ __proto__: null }`: an empty object with a null prototype.
+  fn null_prototype_object_expr(&self) -> Expression<'ast> {
+    ast::Expression::new_object_expression(
+      SPAN,
+      [ast::ObjectPropertyKind::new_object_property(
+        SPAN,
+        ast::PropertyKind::Init,
+        ast::PropertyKey::new_static_identifier(SPAN, "__proto__", self),
+        ast::Expression::new_null_literal(SPAN, self),
+        false,
+        false,
+        false,
+        self,
+      )],
+      self,
+    )
+  }
+
+  /// `/* @__PURE__ */ Object.freeze({ __proto__: null })`: an empty namespace object with the
+  /// shape of a native one, without `Symbol.toStringTag`.
+  fn frozen_null_prototype_object_expr(&self) -> Expression<'ast> {
+    Expression::new_call_with_arg(
+      Expression::new_member_access_expr("Object", "freeze", self),
+      self.null_prototype_object_expr(),
+      true,
+      self,
+    )
+  }
+
   fn try_rewrite_inline_dynamic_import_expr(
     &self,
     import_expr: &oxc::allocator::Box<'ast, ImportExpression<'ast>>,
@@ -1879,25 +1949,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if rec.meta.contains(ImportRecordMeta::DeadDynamicImport) {
       // `Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }))`
       return Some(Expression::new_promise_resolve_then(
-        Expression::new_call_with_arg(
-          Expression::new_member_access_expr("Object", "freeze", self),
-          ast::Expression::new_object_expression(
-            SPAN,
-            [ast::ObjectPropertyKind::new_object_property(
-              SPAN,
-              ast::PropertyKind::Init,
-              ast::PropertyKey::new_static_identifier(SPAN, "__proto__", self),
-              ast::Expression::new_null_literal(SPAN, self),
-              false,
-              false,
-              false,
-              self,
-            )],
-            self,
-          ),
-          true,
-          self,
-        ),
+        self.frozen_null_prototype_object_expr(),
         self,
       ));
     }
@@ -2065,6 +2117,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             let Some(importee) = self.ctx.modules[importee_idx].as_normal() else {
               continue;
             };
+            self.debug_assert_namespace_object_is_open();
             let (importer_namespace_ref, _) = self.finalized_expr_for_symbol_ref(
               self.ctx.module.namespace_object_ref,
               false,
@@ -2164,6 +2217,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 match importee.exports_kind {
                   ExportsKind::Esm => {
                     if importee_linking_info.has_dynamic_exports {
+                      self.debug_assert_namespace_object_is_open();
                       // exports
                       let (importer_namespace_ref, _) = self.finalized_expr_for_symbol_ref(
                         self.ctx.module.namespace_object_ref,
@@ -2197,6 +2251,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     if !self.module_namespace_included {
                       return;
                     }
+                    self.debug_assert_namespace_object_is_open();
 
                     let re_export_fn_name = self.finalized_expr_for_runtime_symbol("__reExport");
 

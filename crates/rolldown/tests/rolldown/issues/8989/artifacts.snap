@@ -32,7 +32,6 @@ import { node_3 } from "./entry3.js";
 // node1.js
 globalThis.__acyclic_output_fuzz_1 = 1;
 var use_1_2 = node2_exports;
-use_1_2.ref = 1;
 var node_1 = {};
 node_1.value = 1;
 

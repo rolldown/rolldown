@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// external-star.js
+var external_star_exports = /* @__PURE__ */ __exportAll({ fromExternalStar: () => fromExternalStar }, 2);
+import * as import_node_path from "node:path";
+__reExport(external_star_exports, import_node_path);
+const fromExternalStar = "external star";
+// commonjs.cjs
+var require_commonjs = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.fromCommonjs = "commonjs";
+}));
+// commonjs-star.js
+var commonjs_star_exports = /* @__PURE__ */ __exportAll({ fromCommonjsStar: () => fromCommonjsStar }, 2);
+__reExport(commonjs_star_exports, /* @__PURE__ */ __toESM(require_commonjs()));
+const fromCommonjsStar = "commonjs star";
+// esm-star.js
+var esm_star_exports = /* @__PURE__ */ __exportAll({
+	fromEsmStar: () => fromEsmStar,
+	fromExternalStar: () => fromExternalStar
+}, 2);
+__reExport(esm_star_exports, external_star_exports);
+const fromEsmStar = "esm star";
+export { commonjs_star_exports as commonjsStar, esm_star_exports as esmStar, external_star_exports as externalStar };
+
+```

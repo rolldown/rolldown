@@ -420,10 +420,6 @@
  - rollup@function@function-use-strict-directive-removed: should delete use strict from function body
 
 ### The namespace object is not compatible with rollup
- - rollup@function@namespaces-have-null-prototype: creates namespaces with null prototypes
- - rollup@function@namespaces-are-frozen: namespaces should be non-extensible and its properties immutatable and non-configurable
- - rollup@function@namespace-override: does not warn when overriding namespace reexports with explicit ones
- - rollup@function@escape-arguments: does not use "arguments" as a placeholder variable for a default export
  - rollup@function@dynamic-import-only-default: correctly imports dynamic namespaces with only a default export from entry- and non-entry-point chunks
  - rollup@function@dynamic-import-default-mode-facade: handles dynamic imports from facades using default export mode
  - rollup@function@chunking-duplicate-reexport: handles duplicate reexports when using dynamic imports

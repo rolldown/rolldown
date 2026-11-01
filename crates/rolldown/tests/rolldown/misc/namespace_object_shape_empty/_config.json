@@ -1,0 +1,8 @@
+{
+  "config": {
+    "external": ["node:path"],
+    "generatedCode": {
+      "symbols": false
+    }
+  }
+}

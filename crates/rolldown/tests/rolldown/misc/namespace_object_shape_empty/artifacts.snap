@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// empty.js
+var empty_exports = /* @__PURE__ */ Object.freeze({ __proto__: null });
+// barrel.js
+var barrel_exports = { __proto__: null };
+import * as import_node_path from "node:path";
+__reExport(barrel_exports, import_node_path);
+export { barrel_exports as barrel, empty_exports as empty };
+
+```

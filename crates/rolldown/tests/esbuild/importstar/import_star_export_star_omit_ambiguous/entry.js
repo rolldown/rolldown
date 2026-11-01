@@ -4,6 +4,7 @@ assert.deepEqual(
   ns,
   Object.defineProperty(
     {
+      __proto__: null,
       x: 1,
       z: 4,
     },

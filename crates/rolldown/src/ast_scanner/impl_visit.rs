@@ -280,7 +280,7 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
             self.cjs_module_ident.get_or_insert(Span::new(id.span.start, id.span.start + 6));
             // `module.exports = <value>` replaces the entire exports object,
             // so all prior `exports.xxx` constants are stale.
-            self.has_module_exports_reassignment = true;
+            self.has_cjs_exports_reassignment = true;
           }
           if id.name == "exports" && self.is_global_identifier_reference(id) {
             self.cjs_exports_ident.get_or_insert(Span::new(id.span.start, id.span.start + 7));
@@ -565,7 +565,17 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           }
           "exports" => {
             self.result.ast_usage.insert(EcmaModuleAstUsage::ExportsRef);
-            // exports = {} will not change the module.exports object, so we just ignore it;
+            // A write to the binding can detach it from `module.exports`, including
+            // destructuring and loop targets. Property writes only read the binding.
+            if self
+              .result
+              .symbol_ref_db
+              .scoping()
+              .get_reference(ident_ref.reference_id())
+              .is_write()
+            {
+              self.has_cjs_exports_reassignment = true;
+            }
             let v =
               self.commonjs_export_analyzer(ident_ref, CjsGlobalAssignmentType::ExportsAssignment);
             self.update_ast_usage_for_commonjs_export(v.as_ref());

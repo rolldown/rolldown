@@ -3,8 +3,7 @@ use oxc::{
     AstKind,
     ast::{self, Argument, IdentifierReference},
   },
-  ast_visit::VisitJs,
-  semantic::{ScopeFlags, SymbolId},
+  semantic::SymbolId,
 };
 use oxc_str::{CompactStr, JSStr};
 use rolldown_common::{ImportRecordIdx, dynamic_import_usage::DynamicImportExportsUsage};
@@ -17,6 +16,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     &mut self,
     ident: &IdentifierReference,
   ) -> Option<()> {
+    if ident.name == "arguments" && self.is_global_identifier_reference(ident) {
+      return self.update_dynamic_import_arguments_usage_info();
+    }
+
     // Each reference is counted once, as it is visited. One visited before its binding was
     // registered stays in the set: see `complete_dynamic_imports_read_before_registration`.
     if !self
@@ -107,6 +110,35 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         info.dynamic_import_exports_usage.insert(rec_idx, DynamicImportExportsUsage::Complete);
       }
     }
+  }
+
+  fn update_dynamic_import_arguments_usage_info(&mut self) -> Option<()> {
+    // Arrow functions inherit `arguments`, but an ordinary nested function owns its own.
+    // See internal-docs/code-splitting/implementation.md.
+    let function_idx =
+      self.visit_path.iter().rposition(|kind| matches!(kind, AstKind::Function(_)))?;
+    let call = self.visit_path.get(function_idx.checked_sub(1)?)?.as_call_expression()?;
+    let Argument::FunctionExpression(callback) = call.arguments.first()? else {
+      return None;
+    };
+    if callback.node_id() != self.visit_path[function_idx].node_id() {
+      return None;
+    }
+    let ast::Expression::StaticMemberExpression(member) = &call.callee else {
+      return None;
+    };
+    if member.property.name != "then" {
+      return None;
+    }
+    let ast::Expression::ImportExpression(import) = &member.object else {
+      return None;
+    };
+    let import_record_idx = *self.result.imports.get(&import.node_id())?;
+    self
+      .dynamic_import_usage_info
+      .dynamic_import_exports_usage
+      .insert(import_record_idx, DynamicImportExportsUsage::Complete);
+    Some(())
   }
 
   /// See internal-docs/code-splitting/implementation.md.
@@ -228,17 +260,26 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let parent_parent_idx = self.visit_path.len().saturating_sub(2);
     let parent_parent = self.visit_path.get(parent_parent_idx)?.as_call_expression()?;
     let first_arg = parent_parent.arguments.first()?;
-    // A rest parameter, or a function's own `arguments`, reaches the namespace through an index
-    // that the scan doesn't follow.
     let params = match first_arg {
-      Argument::FunctionExpression(func) if !reads_own_arguments(func) => &func.params,
+      Argument::FunctionExpression(func) => &func.params,
       Argument::ArrowFunctionExpression(func) => &func.params,
       _ => return None,
     };
-    if params.rest.is_some() {
-      return None;
-    }
     let Some(dynamic_import_binding) = params.items.first() else {
+      if let Some(rest) = &params.rest {
+        let ast::BindingPattern::BindingIdentifier(id) = &rest.rest.argument else {
+          return None;
+        };
+        if !self
+          .result
+          .symbol_ref_db
+          .scoping()
+          .get_resolved_reference_ids(id.symbol_id())
+          .is_empty()
+        {
+          return None;
+        }
+      }
       return Some(FxHashSet::default());
     };
     self.update_dynamic_import_usage_info_from_binding_pattern(
@@ -349,24 +390,4 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
     }
   }
-}
-
-/// Whether `function` reads its own `arguments`, in its parameters or its body. A nested function
-/// has `arguments` of its own, and an arrow function shares its parent's. A binding that sloppy
-/// code names `arguments` counts too, which only makes the usage complete when it needn't be.
-fn reads_own_arguments(function: &ast::Function<'_>) -> bool {
-  struct ArgumentsReads(bool);
-  impl<'a> VisitJs<'a> for ArgumentsReads {
-    fn visit_identifier_reference(&mut self, it: &IdentifierReference<'a>) {
-      self.0 |= it.name == "arguments";
-    }
-
-    fn visit_function(&mut self, _it: &ast::Function<'a>, _flags: ScopeFlags) {}
-  }
-  let mut reads = ArgumentsReads(false);
-  reads.visit_formal_parameters(&function.params);
-  if let Some(body) = &function.body {
-    reads.visit_function_body(body);
-  }
-  reads.0
 }

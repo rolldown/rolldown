@@ -1,6 +1,7 @@
 use std::fmt::Write as _;
 
 use json_escape_simd::escape;
+use memchr::memmem;
 use rolldown_utils::concat_string;
 use serde_json::Value;
 
@@ -13,13 +14,36 @@ fn serialize_value(value: &Value) -> Result<String, serde_json::Error> {
     let value = escape(&value_as_string);
     Ok(concat_string!("/*#__PURE__*/ JSON.parse(", value, ")"))
   } else {
-    Ok(value_as_string)
+    Ok(json_to_js_expression(value_as_string))
   }
+}
+
+fn json_to_js_expression(json: String) -> String {
+  const PROTO_KEY: &str = "\"__proto__\":";
+  // The input is compact JSON from serde_json. An object delimiter before the key
+  // distinguishes it from an escaped quote inside another key or string value.
+  let mut keys = memmem::find_iter(json.as_bytes(), PROTO_KEY.as_bytes())
+    .filter(|&start| start > 0 && matches!(json.as_bytes()[start - 1], b'{' | b','))
+    .peekable();
+  if keys.peek().is_none() {
+    return json;
+  }
+
+  let mut code = String::with_capacity(json.len() + 2);
+  let mut end = 0;
+  for start in keys {
+    code.push_str(&json[end..start]);
+    // A computed key preserves the own data property at every nesting level.
+    code.push_str("[\"__proto__\"]:");
+    end = start + PROTO_KEY.len();
+  }
+  code.push_str(&json[end..]);
+  code
 }
 
 pub fn data_to_esm(data: &Value, named_exports: bool) -> String {
   if !named_exports || !data.is_object() {
-    return concat_string!("export default ", data.to_string(), ";\n");
+    return concat_string!("export default ", json_to_js_expression(data.to_string()), ";\n");
   }
 
   let data = data.as_object().unwrap();
@@ -33,7 +57,11 @@ pub fn data_to_esm(data: &Value, named_exports: bool) -> String {
     let value = serialize_value(value).expect("Invalid JSON value");
     if rolldown_utils::ecmascript::is_validate_assignee_identifier_name(key) {
       writeln!(named_export_code, "export const {key} = {value};").unwrap();
-      writeln!(default_object_code, "  {key},").unwrap();
+      if key == "__proto__" {
+        writeln!(default_object_code, "  [\"__proto__\"]: __proto__,").unwrap();
+      } else {
+        writeln!(default_object_code, "  {key},").unwrap();
+      }
     } else {
       let key = escape(key);
       writeln!(default_object_code, "  {key}: {value},").unwrap();
@@ -90,6 +118,53 @@ mod test {
     let foo = serde_json::to_string(&foo).unwrap();
     assert_eq!(
       format!("export const foo = /*#__PURE__*/ JSON.parse({foo});\nexport default {{\n  foo\n}};"),
+      data_to_esm(&data, true)
+    );
+  }
+
+  #[test]
+  fn to_esm_proto_data_properties() {
+    for json in [
+      r#"{"__proto__":null}"#,
+      r#"{"__proto__":42}"#,
+      r#"{"__proto__":{"nested":true}}"#,
+      r#"{"nested":{"__proto__":false}}"#,
+      r#"[{"__proto__":"value"}]"#,
+    ] {
+      let data: serde_json::Value = serde_json::from_str(json).unwrap();
+      let code = data_to_esm(&data, false);
+      assert!(code.contains(r#"["__proto__"]:"#), "{code}");
+    }
+  }
+
+  #[test]
+  fn to_esm_proto_with_escaped_keys_and_strings() {
+    let data = serde_json::json!({"prefix\"__proto__": {"__proto__": 42}});
+    assert_eq!(
+      "export default {\"prefix\\\"__proto__\":{[\"__proto__\"]:42}};\n",
+      data_to_esm(&data, false)
+    );
+
+    for json in [r#"{"__proto__":"literal"}"#, r#"x,{"__proto__":null}"#, r#"\"__proto__":"#] {
+      let data = serde_json::Value::String(json.to_string());
+      assert_eq!(format!("export default {data};\n"), data_to_esm(&data, false));
+    }
+  }
+
+  #[test]
+  fn to_esm_proto_does_not_reference_shadowed_json() {
+    let data = serde_json::json!({"JSON": null, "nested": {"__proto__": 42}});
+    let code = data_to_esm(&data, true);
+    assert!(code.contains("export const JSON = null;"));
+    assert!(code.contains("export const nested = {[\"__proto__\"]:42};"));
+    assert!(!code.contains("JSON.parse"));
+  }
+
+  #[test]
+  fn to_esm_named_proto_property() {
+    let data = serde_json::json!({"__proto__": 42});
+    assert_eq!(
+      "export const __proto__ = 42;\nexport default {\n  [\"__proto__\"]: __proto__\n};",
       data_to_esm(&data, true)
     );
   }

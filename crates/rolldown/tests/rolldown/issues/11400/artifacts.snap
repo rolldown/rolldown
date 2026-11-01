@@ -1,0 +1,41 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## card.js
+
+```js
+import { title } from "./card.json.js";
+// card.js
+const card = title;
+export { card };
+
+```
+
+## card.json.js
+
+```js
+// card.json
+var title = "card";
+export { title };
+
+```
+
+## index.js
+
+```js
+import { card } from "./card.js";
+import { note } from "./note.js";
+export { card, note };
+
+```
+
+## note.js
+
+```js
+// note.ts
+const note = "ts";
+export { note };
+
+```

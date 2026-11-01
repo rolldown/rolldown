@@ -158,6 +158,7 @@ impl GenerateStage<'_> {
         &state,
       )
     });
+    // The state is stale after the flag restore.
     drop(state);
     for (meta, flag) in self.link_output.metas.iter_mut().zip(namespace_included) {
       meta.namespace_included = flag;

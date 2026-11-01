@@ -56,7 +56,9 @@ export function parseReadySpec(spec) {
   if (stdout) {
     let pattern;
     try {
-      pattern = new RegExp(stdout[1]);
+      // `m`: the spec names a line, and an instrumented run's output starts with node's
+      // own "Debugger listening" banner, so `^` must anchor at a line, not at the buffer.
+      pattern = new RegExp(stdout[1], 'm');
     } catch (err) {
       throw new Error(
         `--ready stdout:<regex> — ${stdout[1]} is not a valid regex (${err.message}).`,
@@ -114,7 +116,9 @@ export async function assertReadyPortFree(spec) {
 async function isReady(spec, state) {
   switch (spec.kind) {
     case 'exit':
-      return state.exitCode === 0;
+      // Under the inspector the process stays alive after the script ends, until the
+      // debugger disconnects; node announces that moment instead of exiting.
+      return state.exitCode === 0 || state.waitingForDisconnect;
     case 'stdout':
       return spec.pattern.test(state.output);
     case 'port':
@@ -213,7 +217,7 @@ export async function startupRun({
   arm = null,
   atReady = null,
 }) {
-  const state = { output: '', exitCode: null, signal: null };
+  const state = { output: '', exitCode: null, signal: null, waitingForDisconnect: false };
   const argv = [...execArgv, ...(inspect ? ['--inspect-brk=0'] : []), entry, ...args];
 
   const started = process.hrtime.bigint();
@@ -253,6 +257,14 @@ export async function startupRun({
       }
       cdp = await connect(inspectorUrl);
       await cdp.send('Runtime.enable');
+      if (ready.kind === 'exit') {
+        // The exit probe cannot see an exit here: node holds the process until the debugger
+        // disconnects. It announces that moment, with the coverage and profile still readable.
+        cdp.on('NodeRuntime.waitingForDisconnect', () => {
+          state.waitingForDisconnect = true;
+        });
+        await cdp.send('NodeRuntime.notifyWhenWaitingForDisconnect', { enabled: true });
+      }
       if (arm) await arm(cdp);
       // Everything above happened while the process was paused at entry, so the
       // profiler sees module evaluation from its very first frame.
@@ -285,7 +297,9 @@ export async function startupRun({
     }
 
     const collected = atReady && cdp ? await atReady(cdp) : null;
-    return { elapsedMs: readyMs, output: state.output, exitCode: state.exitCode, collected };
+    // A script that reached "waiting for disconnect" ran to its end: that is a clean exit.
+    const exitCode = state.exitCode ?? (state.waitingForDisconnect ? 0 : null);
+    return { elapsedMs: readyMs, output: state.output, exitCode, collected };
   } finally {
     try {
       cdp?.close();
@@ -305,7 +319,7 @@ function readyTimeoutMessage(ready, timeoutMs, state) {
   const stillRunning = state.exitCode == null;
   if (ready.kind === 'exit' && stillRunning) {
     return (
-      `the target was still running after ${Math.round(timeoutMs / 1000)}s and --ready defaulted to "exit".\n` +
+      `the target was still running after ${Math.round(timeoutMs / 1000)}s with --ready "exit" (the default).\n` +
       'This looks like a long-lived server. Declare how it signals readiness:\n' +
       `${READY_MENU}\n${tail(state.output)}`
     );

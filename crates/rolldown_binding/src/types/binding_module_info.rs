@@ -3,7 +3,9 @@ use std::sync::Arc;
 use napi_derive::napi;
 use rolldown_common::ExportsKind;
 
-use crate::options::plugin::types::binding_shared_string::BindingSharedString;
+use crate::options::plugin::types::{
+  binding_hook_side_effects::BindingHookSideEffects, binding_shared_string::BindingSharedString,
+};
 
 #[napi]
 pub struct BindingModuleInfo {
@@ -64,5 +66,11 @@ impl BindingModuleInfo {
   #[napi(getter)]
   pub fn code(&self) -> Option<&str> {
     self.inner.code.as_deref()
+  }
+
+  /// Effective `moduleSideEffects` (`boolean | 'no-treeshake'`). `null` until the module has been parsed.
+  #[napi(getter, ts_return_type = "boolean | 'no-treeshake' | null")]
+  pub fn module_side_effects(&self) -> Option<BindingHookSideEffects> {
+    self.inner.module_side_effects.map(Into::into)
   }
 }

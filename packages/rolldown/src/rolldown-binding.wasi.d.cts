@@ -1741,6 +1741,8 @@ export declare class BindingModuleInfo {
   isEntry: boolean
   inputFormat: 'es' | 'cjs' | 'unknown'
   get code(): string | null
+  /** Effective `moduleSideEffects` (`boolean | 'no-treeshake'`). `null` until the module has been parsed. */
+  get moduleSideEffects(): boolean | 'no-treeshake' | null
 }
 
 export declare class BindingNormalizedOptions {

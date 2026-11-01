@@ -103,6 +103,9 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
         dynamically_imported_ids: FxIndexSet::default(),
         exports: vec![],
         input_format: ExportsKind::None,
+        // Filled in once the module has been parsed. Hook values recorded on the JS side
+        // are still visible before that.
+        module_side_effects: None,
       }),
     );
 

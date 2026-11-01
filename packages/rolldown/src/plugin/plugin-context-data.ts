@@ -42,8 +42,18 @@ export interface OutputCodeCacheEntry {
   code: string;
 }
 
+/**
+ * `undefined` means no hook or plugin write has set `moduleSideEffects`. Readers then
+ * use the effective native value. `null` is an explicit write and stays `null`.
+ * The public `ModuleOptions` type stays `boolean | 'no-treeshake' | null` so hook
+ * result types keep intersecting.
+ */
+type StoredModuleOptions = Omit<ModuleOptions, 'moduleSideEffects'> & {
+  moduleSideEffects: ModuleOptions['moduleSideEffects'] | undefined;
+};
+
 export class PluginContextData {
-  moduleOptionMap: Map<string, ModuleOptions> = new Map();
+  moduleOptionMap: Map<string, StoredModuleOptions> = new Map();
   /**
    * The cache is `null` in parallel plugin workers. In a worker, each plugin has its own
    * `PluginContextData`, so the cache never finds a match. See `parallel-plugin-worker.ts`.
@@ -65,9 +75,11 @@ export class PluginContextData {
     this.outputCodeCache = cacheOutputCode ? new Map() : null;
   }
 
-  updateModuleOption(id: string, option: ModuleOptions): ModuleOptions {
+  updateModuleOption(id: string, option: ModuleOptions): StoredModuleOptions {
     const existing = this.moduleOptionMap.get(id);
     if (existing) {
+      // `null` from a hook means "not specified" and must not clear a previous value.
+      // An explicit `null` write assigns the stored field directly.
       if (option.moduleSideEffects != null) {
         existing.moduleSideEffects = option.moduleSideEffects;
       }
@@ -78,17 +90,21 @@ export class PluginContextData {
         existing.invalidate = option.invalidate;
       }
     } else {
-      this.moduleOptionMap.set(id, option);
-      return option;
+      const stored: StoredModuleOptions = {
+        ...option,
+        moduleSideEffects: option.moduleSideEffects == null ? undefined : option.moduleSideEffects,
+      };
+      this.moduleOptionMap.set(id, stored);
+      return stored;
     }
     return existing;
   }
 
-  getModuleOption(id: string): ModuleOptions {
+  getModuleOption(id: string): StoredModuleOptions {
     const option = this.moduleOptionMap.get(id);
     if (!option) {
-      const raw: ModuleOptions = {
-        moduleSideEffects: null,
+      const raw: StoredModuleOptions = {
+        moduleSideEffects: undefined,
         meta: {},
       };
       this.moduleOptionMap.set(id, raw);
@@ -112,12 +128,10 @@ export class PluginContextData {
       get() {
         return moduleSideEffects;
       },
-      set: (v: any) => {
-        this.updateModuleOption(id, {
-          moduleSideEffects: v,
-          meta: info.meta,
-          invalidate: true,
-        });
+      set: (v: ModuleInfo['moduleSideEffects']) => {
+        const stored = this.getModuleOption(id);
+        stored.moduleSideEffects = v;
+        stored.invalidate = true;
         moduleSideEffects = v;
       },
     });

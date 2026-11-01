@@ -247,13 +247,15 @@ produces only the changed + newly discovered modules → sparse `Map`.
    change the module: `check_external_conflict` (in the `Seen(idx)` arm of
    `try_spawn_new_task`) records `INVALID_EXTERNAL_ID` or
    `EXTERNAL_MODULES_CANNOT_BE_TRANSFORMED_TO_MODULES`, and the scan fails
-   (#11417). In a partial scan, the kind of a module from an earlier build
-   comes from the snapshot. Thus a partial scan also reports this error when
-   an edit only switches the kind (the last importer of the old kind changes
-   its specifier). A fresh build accepts that edit. The error stays until a
-   full scan, because after a failed partial scan the dev engine runs partial
-   scans again. Unresolved: check the final `importers[idx]` at the end of the
-   scan, or make the next scan full.
+   (#11417). In a partial scan, a module that the scan re-scans or adds gets
+   its kind from this scan, so a changed file that was external can become a
+   normal module. An unchanged module keeps the kind from the snapshot. Thus a
+   partial scan also reports this error when an edit only switches the kind
+   (the last importer of the old kind changes its specifier). A fresh build
+   accepts that edit. The error stays until a full scan, because after a
+   failed partial scan the dev engine runs partial scans again. Unresolved:
+   check the final `importers[idx]` at the end of the scan, or make the next
+   scan full.
 
 ---
 

@@ -41,13 +41,11 @@ fn is_variable_declaration_prefix(s: &str) -> bool {
   // Trim the trailing whitespace
   let s = s.trim_end();
 
-  // Check for word boundary before the keywords
-  (s.ends_with("const")
-    && (s.len() == 5 || !s.chars().nth(s.len() - 6).unwrap_or(' ').is_alphanumeric()))
-    || (s.ends_with("let")
-      && (s.len() == 3 || !s.chars().nth(s.len() - 4).unwrap_or(' ').is_alphanumeric()))
-    || (s.ends_with("var")
-      && (s.len() == 3 || !s.chars().nth(s.len() - 4).unwrap_or(' ').is_alphanumeric()))
+  // Inspect the preceding character without mixing byte offsets and character indices.
+  s.strip_suffix("const")
+    .or_else(|| s.strip_suffix("let"))
+    .or_else(|| s.strip_suffix("var"))
+    .is_some_and(|prefix| prefix.chars().next_back().is_none_or(|c| !c.is_alphanumeric()))
 }
 
 impl ReplacePlugin {
@@ -227,5 +225,45 @@ impl Plugin for ReplacePlugin {
 
   fn register_hook_usage(&self) -> HookUsage {
     HookUsage::Transform | HookUsage::RenderChunk
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::{ReplaceOptions, ReplacePlugin};
+  use string_wizard::MagicString;
+
+  #[test]
+  fn prevent_assignment_after_unicode() {
+    for delimiters in [None, Some((r"\b".to_string(), r"\b(?!\.)".to_string()))] {
+      let plugin = ReplacePlugin::with_options(ReplaceOptions {
+        values: [("FOO".to_string(), "123".to_string())].into_iter().collect(),
+        delimiters,
+        prevent_assignment: true,
+        ..Default::default()
+      })
+      .unwrap();
+
+      for prefix in ["", "/*e*/ ", "/*é*/ ", "/*😀*/ "] {
+        for declaration in ["let FOO;", "var FOO;", "for (const FOO of []) {}"] {
+          let code = format!("{prefix}{declaration} console.log(FOO);");
+          let mut magic_string = MagicString::new(&code);
+          assert!(plugin.try_replace(&code, &mut magic_string));
+          assert_eq!(
+            magic_string.to_string(),
+            format!("{prefix}{declaration} console.log(123);"),
+            "input: {code}"
+          );
+        }
+
+        // A keyword suffix in a longer word does not begin a declaration.
+        for word in ["outlet", "myvar", "myconst", "élet"] {
+          let code = format!("{prefix}{word} FOO");
+          let mut magic_string = MagicString::new(&code);
+          assert!(plugin.try_replace(&code, &mut magic_string));
+          assert_eq!(magic_string.to_string(), format!("{prefix}{word} 123"));
+        }
+      }
+    }
   }
 }

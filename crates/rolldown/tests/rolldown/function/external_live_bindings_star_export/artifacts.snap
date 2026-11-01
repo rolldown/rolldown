@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+let node_fs = require("node:fs");
+exports.namedReadFile = node_fs.readFile;
+Object.prototype.hasOwnProperty.call(node_fs, "__proto__") && !Object.prototype.hasOwnProperty.call(exports, "__proto__") && Object.defineProperty(exports, "__proto__", {
+	enumerable: true,
+	value: node_fs["__proto__"]
+});
+Object.keys(node_fs).forEach(function(k) {
+	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) exports[k] = node_fs[k];
+});
+
+```

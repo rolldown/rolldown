@@ -1,0 +1,136 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## arguments.js
+
+```js
+// arguments.js
+const value = "expected";
+const other = ":other";
+export { other, value };
+
+```
+
+## arrow-rest.js
+
+```js
+// arrow-rest.js
+const value = "expected";
+const other = ":other";
+export { other, value };
+
+```
+
+## destructured-rest.js
+
+```js
+// destructured-rest.js
+const value = "expected";
+const other = ":other";
+export { other, value };
+
+```
+
+## function-rest.js
+
+```js
+// function-rest.js
+const value = "expected";
+const other = ":other";
+export { other, value };
+
+```
+
+## inherited-arguments.js
+
+```js
+
+```
+
+## main.js
+
+```js
+// main.js
+const arrowRest = () => import("./arrow-rest.js").then((...args) => args[0].value);
+const functionRest = () => import("./function-rest.js").then(function(...args) {
+	return args[0].value;
+});
+const functionArguments = () => import("./arguments.js").then(function() {
+	return arguments[0].value;
+});
+const namedArguments = () => import("./named-arguments.js").then(function(ns) {
+	return ns.value + arguments[0].other;
+});
+const nestedArrow = () => import("./nested-arrow.js").then(function() {
+	const read = () => arguments[0].value;
+	return read();
+});
+const unusedArguments = () => import("./unused.js").then(function() {
+	function inner() {
+		return arguments[0];
+	}
+	return inner("expected");
+});
+const unusedRest = () => import("./unused-rest.js").then((...args) => "expected");
+const trailingRest = () => import("./trailing-rest.js").then((ns, ...args) => ns.value);
+const destructuredRest = () => import("./destructured-rest.js").then((...[ns]) => ns.value);
+function inheritedArguments(value) {
+	return import("./inherited-arguments.js").then(() => arguments[0]);
+}
+const rejectionArguments = () => import("./rejection-arguments.js").then(function() {
+	return "expected";
+}, function() {
+	return arguments[0];
+});
+export { arrowRest, destructuredRest, functionArguments, functionRest, inheritedArguments, namedArguments, nestedArrow, rejectionArguments, trailingRest, unusedArguments, unusedRest };
+
+```
+
+## named-arguments.js
+
+```js
+// named-arguments.js
+const value = "expected";
+const other = ":other";
+export { other, value };
+
+```
+
+## nested-arrow.js
+
+```js
+// nested-arrow.js
+const value = "expected";
+const other = ":other";
+export { other, value };
+
+```
+
+## rejection-arguments.js
+
+```js
+
+```
+
+## trailing-rest.js
+
+```js
+// trailing-rest.js
+const value = "expected";
+export { value };
+
+```
+
+## unused-rest.js
+
+```js
+
+```
+
+## unused.js
+
+```js
+
+```

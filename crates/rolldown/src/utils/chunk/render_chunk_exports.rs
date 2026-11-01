@@ -411,14 +411,26 @@ pub fn render_chunk_exports(
             .symbol_db
             .canonical_name_for_or_original(external.namespace_ref, &ctx.chunk.canonical_names);
           let binding_ref_name = escape_non_ascii(binding_ref_name, ascii_only);
-          let import_stmt = concat_string!(
-            "Object.keys(",binding_ref_name, ").forEach(function (k) {\n",
-            "  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {\n",
-            "    enumerable: true,\n",
-            "    get: function () { return ",binding_ref_name,"[k]; }\n",
-            "  });\n",
-            "});\n"
-          );
+          let import_stmt = if ctx.options.external_live_bindings {
+            concat_string!(
+              "Object.keys(",binding_ref_name, ").forEach(function (k) {\n",
+              "  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {\n",
+              "    enumerable: true,\n",
+              "    get: function () { return ",binding_ref_name,"[k]; }\n",
+              "  });\n",
+              "});\n"
+            )
+          } else {
+            // Assigning `exports['__proto__']` would replace the prototype instead of adding an export.
+            concat_string!(
+              "Object.prototype.hasOwnProperty.call(",binding_ref_name, ", '__proto__') &&\n",
+              "  !Object.prototype.hasOwnProperty.call(exports, '__proto__') &&\n",
+              "  Object.defineProperty(exports, '__proto__', { enumerable: true, value: ",binding_ref_name,"['__proto__'] });\n",
+              "Object.keys(",binding_ref_name, ").forEach(function (k) {\n",
+              "  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) exports[k] = ",binding_ref_name,"[k];\n",
+              "});\n"
+            )
+          };
 
           s.push('\n');
           // Only generate require statement if this external module hasn't been imported yet

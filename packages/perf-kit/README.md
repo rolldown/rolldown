@@ -297,6 +297,7 @@ a floor-corrected number per run, what executed, and what each deferral would fr
 node harness.mjs worker-config --app <appDir>          # writes perf-kit.vite.config.ts, prints the build commands
 (cd <appDir> && npx vite build --config perf-kit.vite.config.ts)
 node harness.mjs worker-scan --app <appDir> --request / --request /api/health   # routes the app answers (2xx)
+node harness.mjs worker-scan --request 'ws:/agents/chat/a|{"type":"ping"}'     # a WebSocket route: upgrade, send, time to the last reply
 node harness.mjs worker-scan                           # target, requests and --tools are remembered
 node harness.mjs worker-scan --pin                     # make this the fixed reference
 ```
@@ -323,8 +324,9 @@ wrapper trick.
 **How coverage differs from the other modes.** Browser and node mode arm coverage from
 outside, over the inspector, before any code runs. workerd answers `Profiler.enable`
 itself and never forwards it to V8, so `Profiler.startPreciseCoverage` fails there. The
-coverage run adds two compatibility flags for that run only, `nodejs_compat` and
-`enable_nodejs_inspector_local_dev`, under which a wrapper opens a `node:inspector`
+coverage run adds three compatibility flags for that run only, `nodejs_compat`,
+`enable_nodejs_inspector_local_dev` and `enable_nodejs_inspector_module` (the module is off
+before its default-on date), under which a wrapper opens a `node:inspector`
 session inside the isolate, starts coverage, imports the main module and returns the
 result in the response. It needs Wrangler 4.108.0 or later (workerd 1.20260706.1); for an
 app that pins an older one, `--tools <dir>` borrows a newer wrangler for that run only.

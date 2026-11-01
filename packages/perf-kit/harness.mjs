@@ -34,6 +34,7 @@ import {
   DEFAULT_THROTTLE,
   deltaSection,
   lcpElementOf,
+  median,
   parseNetworkFlags,
   scaleThrottle,
   summarize,
@@ -96,6 +97,7 @@ import {
   createStderrCollector,
   loadWorkerOptions,
   resolveWorkerTools,
+  timedImport,
 } from './lib/worker/launch.mjs';
 import {
   NOISE_FLOOR_MS as WORKER_NOISE_FLOOR_MS,
@@ -106,10 +108,11 @@ import {
   cpuProfileRun,
   firstRequests,
   gatherSeries,
+  outputLocator,
   summarizeWorkerStartup,
 } from './lib/worker/measure.mjs';
-import { evaluatingModules, whyModule } from './lib/worker/attrib.mjs';
-import { ATTRIB_DIR, SHIM_FILE, writeViteConfigShim } from './lib/worker/config.mjs';
+import { evaluatingModules, shortModule, topLevelCalls, whyModule } from './lib/worker/attrib.mjs';
+import { ATTRIB_DIR, SHIM_FILE, attribOutDir, writeViteConfigShim } from './lib/worker/config.mjs';
 import {
   discoverPages,
   gitState,
@@ -4069,17 +4072,80 @@ function printWorkerContext(ctx) {
   );
 }
 
-async function runWorkerTiming(ctx, { runs, warmup }) {
+async function runWorkerTiming(ctx, { runs, warmup, pinned = null }) {
   process.stderr.write('floor (the wrapper importing an empty module)...\n');
   const floor = await gatherSeries(ctx, { target: EMPTY_NAME, runs, warmup });
-  process.stderr.write('main module...\n');
-  const main = await gatherSeries(ctx, {
-    target: ctx.mainName,
-    runs,
-    warmup,
-    onSample: (i, run) => process.stderr.write(`run ${i + 1}/${runs}: import ${ms(run.ms)}\n`),
-  });
-  return summarizeWorkerStartup({ floor, main });
+  if (!pinned) {
+    process.stderr.write('main module...\n');
+    const main = await gatherSeries(ctx, {
+      target: ctx.mainName,
+      runs,
+      warmup,
+      onSample: (i, run) => process.stderr.write(`run ${i + 1}/${runs}: import ${ms(run.ms)}\n`),
+    });
+    return summarizeWorkerStartup({ floor, main });
+  }
+  // The pinned build runs in the same scan, alternating with the current one (ABBA), so a
+  // change in machine load moves both series alike instead of the verdict.
+  process.stderr.write('main module, alternating with the pinned build...\n');
+  for (let i = 0; i < warmup; i++) {
+    await timedImport(ctx, { target: ctx.mainName });
+    await timedImport(pinned, { target: pinned.mainName });
+  }
+  const main = [];
+  const base = [];
+  for (let i = 0; i < runs; i++) {
+    const order = i % 2 === 0 ? [ctx, pinned] : [pinned, ctx];
+    for (const c of order) {
+      const run = await timedImport(c, { target: c.mainName });
+      (c === ctx ? main : base).push(run);
+    }
+    process.stderr.write(
+      `run ${i + 1}/${runs}: import ${ms(main[i].ms)} (pinned build ${ms(base[i].ms)})\n`,
+    );
+  }
+  const summary = summarizeWorkerStartup({ floor, main });
+  const pinnedSummary = summarizeWorkerStartup({ floor, main: base });
+  const pairs = main.map((r, i) => Math.round((r.ms - base[i].ms) * 10) / 10);
+  summary.pinnedBuild = {
+    appStartupMs: pinnedSummary.metrics['worker.app_startup_ms'],
+    deltaMs: median(pairs),
+    pairs,
+  };
+  return summary;
+}
+
+/** The pinned build's copy, so later scans can time it next to the current build. */
+function pinnedBuildDir(ctx) {
+  return path.join(ctx.paths.dir, 'pinned-build');
+}
+
+function snapshotPinnedBuild(ctx) {
+  const dest = pinnedBuildDir(ctx);
+  fs.rmSync(dest, { recursive: true, force: true });
+  fs.cpSync(ctx.outDir, dest, { recursive: true, filter: (src) => !src.endsWith('.map') });
+  // wrangler resolves the assets directory next to the config: keep it on the original.
+  const configFile = path.join(dest, 'wrangler.json');
+  const config = JSON.parse(fs.readFileSync(configFile, 'utf8'));
+  if (config.assets?.directory) {
+    config.assets.directory = path.resolve(ctx.outDir, config.assets.directory);
+    fs.writeFileSync(configFile, JSON.stringify(config));
+  }
+}
+
+/** The context of the pinned build's copy, or null when there is none or it does not load. */
+async function loadPinnedContext(ctx, notes) {
+  const dir = pinnedBuildDir(ctx);
+  if (!fs.existsSync(path.join(dir, 'wrangler.json'))) return null;
+  try {
+    const pinned = await loadWorkerContext(ctx, { outDir: dir, main: ctx.mainName });
+    return { ...pinned, stderr: ctx.stderr };
+  } catch (error) {
+    notes.push(
+      `the pinned build did not load, compared by number only: ${String(error.message).split('\n')[0]}`,
+    );
+    return null;
+  }
 }
 
 function writeWorkerReport(
@@ -4113,6 +4179,7 @@ function writeWorkerReport(
     notes,
     delta: prev ? deltaSection(prev.metrics, metrics) : null,
     baselineDelta: baseline ? deltaSection(baseline.metrics, metrics) : null,
+    pinnedBuild: summary.pinnedBuild ?? null,
     samples: summary.samples,
     runtimeStderr: [...ctx.stderr.lines.entries()],
   };
@@ -4140,7 +4207,10 @@ function pinWorkerBaseline(ctx) {
     );
   }
   writeJson(ctx.paths.baseline, state);
-  console.log(`baseline pinned (app startup ${ms(state.metrics['worker.app_startup_ms'])})`);
+  snapshotPinnedBuild(ctx);
+  console.log(
+    `baseline pinned (app startup ${ms(state.metrics['worker.app_startup_ms'])}); later scans time this build next to theirs`,
+  );
 }
 
 function noiseCall(delta, prev, floorMs, floorPct) {
@@ -4165,18 +4235,36 @@ function printWorkerSummary(report, hadBaseline) {
       `${spread > 25 ? ` - WARNING spread ${spread}% across runs: something outside the bundle moves this number, deltas are not trustworthy` : ''}`,
   );
   const base = report.baselineDelta?.['worker.app_startup_ms'];
-  if (base) {
+  const paired = report.pinnedBuild;
+  if (paired) {
+    const sign = (v) => `${v >= 0 ? '+' : ''}${Math.round(v * 10) / 10}`;
+    console.log(
+      `vs pinned build (timed in this scan, runs alternated): app startup ${sign(paired.deltaMs)}ms, ` +
+        `median of ${paired.pairs.length} pairs [${paired.pairs.map(sign).join(' ')}] - ` +
+        noiseCall(
+          paired.deltaMs,
+          paired.appStartupMs,
+          WORKER_NOISE_FLOOR_MS,
+          WORKER_NOISE_FLOOR_PCT,
+        ),
+    );
+    console.log(
+      '  every change since the pin; re-pin with --pin after a kept change so this is the last change alone',
+    );
+  } else if (base) {
     console.log(
       `vs pinned baseline: app startup ${base.delta >= 0 ? '+' : ''}${Math.round(base.delta)}ms (${base.pct}%) - ` +
-        noiseCall(base.delta, base.prev, WORKER_NOISE_FLOOR_MS, WORKER_NOISE_FLOOR_PCT),
+        noiseCall(base.delta, base.prev, WORKER_NOISE_FLOOR_MS, WORKER_NOISE_FLOOR_PCT) +
+        ' (a number from an earlier scan: machine load moves it; re-pin to time both builds side by side)',
     );
   } else if (!hadBaseline) {
     console.log('no pinned baseline yet - pass --pin to make this the fixed reference');
   }
   // The pinned line adds up every change since the pin. The last change alone is the
   // delta against the previous scan, so a kept-but-not-pinned change does not hide it.
+  // Next to a pinned build timed in the same scan, a number from another scan only adds drift.
   const prevScan = report.delta?.['worker.app_startup_ms'];
-  if (base && prevScan && prevScan.prev !== base.prev) {
+  if (!paired && base && prevScan && prevScan.prev !== base.prev) {
     console.log(
       `vs previous scan: app startup ${prevScan.delta >= 0 ? '+' : ''}${Math.round(prevScan.delta)}ms (${prevScan.pct}%) - ` +
         noiseCall(prevScan.delta, prevScan.prev, WORKER_NOISE_FLOOR_MS, WORKER_NOISE_FLOOR_PCT) +
@@ -4187,7 +4275,8 @@ function printWorkerSummary(report, hadBaseline) {
     console.log(
       '\nfirst requests on the real entry (startup already done; a deferred module loads on its first hit):',
     );
-    const gain = base && base.delta < 0 ? -base.delta : 0;
+    const startupDelta = paired ? paired.deltaMs : base?.delta;
+    const gain = startupDelta < 0 ? -startupDelta : 0;
     const movedRoutes = [];
     for (const r of report.requests) {
       const d = report.baselineDelta?.[`worker.request_ms:${r.path}`];
@@ -4200,7 +4289,7 @@ function printWorkerSummary(report, hadBaseline) {
       if (answered && d && gain && d.delta >= gain / 2)
         movedRoutes.push({ path: r.path, delta: d.delta });
       console.log(
-        `  ${r.path.padEnd(28)} ${String(r.status).padStart(3)}  ${ms(r.ms).padStart(7)}  ${r.bytes} bytes${r.error ? `  :: ${r.error}` : ''}${moved}`,
+        `  ${(r.path.length > 40 ? `${r.path.slice(0, 39)}…` : r.path).padEnd(28)} ${String(r.status).padStart(3)}  ${ms(r.ms).padStart(7)}  ${r.bytes} bytes${r.messages != null ? ` in ${r.messages} message(s)` : ''}${r.error ? `  :: ${r.error}` : ''}${moved}`,
       );
     }
     if (report.requests.every((r) => r.status >= 400)) {
@@ -4222,6 +4311,38 @@ function printWorkerSummary(report, hadBaseline) {
 }
 
 /**
+ * Calls made at module scope. The self-time view charges a warm-up such as
+ * `preloadSchemas()` to the files it runs in (zod); this view names the call.
+ */
+function printTopLevelCalls(calls, { top, withSource }) {
+  // One row per call site: the same library function called from several modules adds up.
+  const merged = new Map();
+  for (const c of calls ?? []) {
+    const key = `${c.fn}\0${c.at}`;
+    const row = merged.get(key);
+    if (row) row.ms = Math.round((row.ms + c.ms) * 10) / 10;
+    else merged.set(key, { ...c });
+  }
+  const rows = [...merged.values()]
+    .sort((a, b) => b.ms - a.ms)
+    .filter((c) => c.ms >= 0.5)
+    .slice(0, top);
+  if (!rows.length) return;
+  console.log('  calls made at module scope (the call right below a module top level):');
+  for (const c of rows) {
+    const where =
+      withSource && c.source ? `${shortModule(c.source)}  (${c.at})` : shortModule(c.at);
+    console.log(`    ${String(c.ms).padStart(7)}ms  ${c.fn}()  ${where}`);
+  }
+  const lead = rows[0];
+  if (lead.ms >= 2 && /node_modules\//.test(lead.source ?? lead.at)) {
+    console.log(
+      `  \`${lead.fn}\` is library code that runs at module scope: read it before you call the cost upstream (AGENTS.md, "Library top-level work")`,
+    );
+  }
+}
+
+/**
  * The leads, in the order a reader should take them: is the Worker's own code the cost,
  * which modules run at startup for how long, and what is parsed but not executed.
  */
@@ -4237,6 +4358,7 @@ function printWorkerLeads(report, cov, prof, graph, top) {
     for (const row of prof.rows.slice(0, Math.min(top, 10))) {
       console.log(`    ${String(round(row.ms)).padStart(7)}ms  ${row.bucket}`);
     }
+    printTopLevelCalls(prof.calls, { top: Math.min(top, 8), withSource: true });
     const unmapped = prof.rows.find((r) => r.bucket === '(unmapped)');
     if (unmapped && unmapped.ms >= 2) {
       console.log(
@@ -4362,9 +4484,11 @@ async function cmdWorkerScan(argv) {
   const ctx = await loadWorkerContext(resolveWorkerTarget(opts), { main: opts.main });
   printWorkerContext(ctx);
   const notes = [];
+  const pinned = await loadPinnedContext(ctx, notes);
   const summary = await runWorkerTiming(ctx, {
     runs: Number(opts.runs),
     warmup: Number(opts.warmup),
+    pinned,
   });
   process.stderr.write('first requests on the real entry...\n');
   const requests = await firstRequests(ctx, ctx.requests);
@@ -4380,6 +4504,7 @@ async function cmdWorkerScan(argv) {
     fs.mkdirSync(ctx.paths.dir, { recursive: true });
     fs.writeFileSync(ctx.paths.profile, JSON.stringify(profile));
     prof = attributeProfile(profile, { outDir: ctx.outDir, mainName: ctx.mainName });
+    prof.calls = topLevelCalls(profile, outputLocator(ctx.outDir));
   }
 
   let cov = null;
@@ -4446,7 +4571,7 @@ async function cmdWorkerAttrib(argv) {
     top: { type: 'string', default: '18' },
   });
   const target = resolveWorkerTarget(opts);
-  const outDir = path.join(target.appDir, opts['attrib-dir'], target.workerName);
+  const outDir = attribOutDir(path.join(target.appDir, opts['attrib-dir']), target.workerName);
   if (!fs.existsSync(path.join(outDir, 'wrangler.json'))) {
     throw new Error(
       `no attribution build at ${outDir}.\n` +
@@ -4478,13 +4603,19 @@ async function cmdWorkerAttrib(argv) {
   fs.writeFileSync(ctx.paths.attribProfile, JSON.stringify(profile));
   const graph = loadModuleGraph(workerReportDirs(target.appDir, outDir, opts.report));
   const { rows, pairs } = evaluatingModules(profile, { outDir, graph, top: Number(opts.top) });
+  const calls = topLevelCalls(profile, outputLocator(outDir));
   console.log(
     `\nstartup CPU by evaluating module${importRan ? '' : ' (partial)'} (its own top level plus the library calls it makes):`,
   );
   for (const r of rows) {
     console.log(`  ${String(r.ms).padStart(7)}ms  ${r.module}`);
     if (r.chain?.length) console.log(`             via ${r.chain.join(' -> ')}`);
+    const own = calls.filter((c) => c.module === r.module && c.ms >= 0.5).slice(0, 2);
+    for (const c of own)
+      console.log(`             calls ${c.fn}() ${c.ms}ms at ${shortModule(c.at)}`);
   }
+  console.log();
+  printTopLevelCalls(calls, { top: 6, withSource: false });
   console.log('\nevaluating module -> library it spends the time in:');
   for (const p of pairs.slice(0, 12)) console.log(`  ${String(p.ms).padStart(7)}ms  ${p.pair}`);
   if (!graph) {
@@ -4769,7 +4900,9 @@ Cloudflare Worker startup mode (a V8 isolate coming up under the app's own worke
   --request <path>          a route to hit after startup on the real entry; the first hit
                             of a route that imports a deferred module pays that load, and
                             the report prints it next to the startup gain (a deferral MOVES
-                            work, it does not delete it). Repeatable.
+                            work, it does not delete it). Repeatable. \`ws:/path\` opens a
+                            WebSocket instead, \`ws:/path|<text>\` also sends <text>; timed
+                            to the server's last message (agent chats and RPC run there).
   --tools <dir>             a project whose wrangler is ${COVERAGE_MIN_WRANGLER} or later, used for the
                             coverage run only (the in-process inspector session landed in
                             workerd 1.20260706.1). Timing and the profile keep the app's own workerd.

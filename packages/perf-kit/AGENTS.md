@@ -109,7 +109,9 @@ on the worker). The loop below is unchanged, with these differences:
 - **A deferral moves work, it does not delete it.** The first request that needs a deferred
   module pays its load, once per isolate. Pin the routes that matter with `--request` and
   read the "cost MOVED here" line next to the startup gain. perf-kit does not know the
-  route mix; an isolate whose first request needs the module gains nothing.
+  route mix; an isolate whose first request needs the module gains nothing. Agent chats and
+  RPC run over WebSockets: pin them as `--request 'ws:/path|<message>'`, with a message that
+  reaches the deferred code (an RPC call, a chat turn).
 - **Durable Object and Workflow classes are roots.** The runtime loads them by name, so their
   modules stay eager with their whole closure. `cut <module> --root <class modules>` lands
   the cut below them; without `--root`, every cut points at the entry's class exports,
@@ -117,11 +119,17 @@ on the worker). The loop below is unchanged, with these differences:
 - **Three kinds of edge, three kinds of fix.** `why <module>` names the importers. An importer
   under `node_modules` is upstream: when the library is only used in async code, a lazy shim
   behind a Vite alias is the app-side fix. A module reached only from a synchronous
-  constructor or getter cannot be deferred by a dynamic import: say so and move on. A mixed
+  constructor or getter cannot be deferred by a dynamic import: read the calls its top level
+  makes first (next bullet), then say so and move on. A mixed
   `import { type X } from 'm'` keeps a side-effect import of `m` under `verbatimModuleSyntax`:
   change it to `import type`, no dynamic import needed.
-- **Library top-level work is charged by the attribution build.** When the profile leaves
-  milliseconds in "(unmapped)" or in zod, run `worker-attrib` on the `ROLLDOWN_PERF_KIT_ATTRIB=1`
+- **Library top-level work has a name.** The self-time rows charge a call to the files it runs
+  in (zod); "calls made at module scope" in `worker-scan`, and the `calls` lines of
+  `worker-attrib`, name the function a module's top level calls. Read that function. A warm-up
+  (a cache or registry the library also builds on first use, such as `preloadSchemas()`) can
+  leave startup without a deferral: alias the file that makes the call to a local copy without
+  it, in the Worker environment only, and say what the first use now pays. When the profile
+  leaves milliseconds in "(unmapped)", run `worker-attrib` on the `ROLLDOWN_PERF_KIT_ATTRIB=1`
   build: it names the module whose evaluation runs the library code, with the import chain.
 - **The report needs a rolldown with the report mode.** The npm release has none, so with it
   no build writes `module-graph.json` and `graph`, `what-if`, `cut`, `why` and `graph-diff`
@@ -132,9 +140,11 @@ on the worker). The loop below is unchanged, with these differences:
   next to it, so `--from` is required there). The swap is not a config change;
   `<package manager> install --force` restores the release. Rebuild and re-pin the
   baseline after it: the bundler changed.
-- **Read the two delta lines.** `worker-scan` prints `vs pinned baseline` (every change since
-  the pin, added up) and `vs previous scan` (the last change alone). Judge a change by the
-  second line, or re-pin with `--pin` after each kept change so the first line means the same.
+- **Judge by the pinned build timed in the same scan.** `--pin` keeps a copy of the build;
+  every later `worker-scan` times that copy next to the current build, runs alternated, and
+  prints `vs pinned build` with each pair. Machine load moves both series alike, so the line
+  holds where a number from an earlier scan drifts by several milliseconds. It adds up every
+  change since the pin: re-pin with `--pin` after each kept change.
 - **The pinned routes must answer 2xx.** A 404 or 5xx never ran the handler, so no moved load
   can show on it, and the scan says so. Pin routes the app serves. Do not invent a `.dev.vars`
   to get past a 5xx: without the real variables the first-request numbers stay invalid.

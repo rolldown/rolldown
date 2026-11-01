@@ -7,6 +7,7 @@ use oxc::{
 };
 use rolldown_plugin::{LogWithoutPlugin, PluginContext};
 use rolldown_std_utils::relative_path_to_slash;
+use rolldown_utils::ecmascript::to_ecma_string_literal;
 use string_wizard::MagicString;
 
 use super::dynamic_import_to_glob::{
@@ -141,12 +142,13 @@ impl<'ast> DynamicImportVarsVisit<'ast, '_> {
       // __variableDynamicImportRuntimeHelper((import.meta.glob(pattern, params)), expr, segments)
       let segments = pattern.split('/').count();
       let replacement = format!(
-        "__variableDynamicImportRuntimeHelper(import.meta.glob(\"{pattern}\"{}), `{new_raw_pattern}`, {segments})",
+        "__variableDynamicImportRuntimeHelper(import.meta.glob({}{}), `{new_raw_pattern}`, {segments})",
+        to_ecma_string_literal(&pattern, false),
         glob_params
           .map(|params| {
             format!(
-              ", {{ query: \"{}\"{} }}",
-              params.query,
+              ", {{ query: {}{} }}",
+              to_ecma_string_literal(params.query, false),
               if params.import { ", import: \"*\"" } else { "" }
             )
           })

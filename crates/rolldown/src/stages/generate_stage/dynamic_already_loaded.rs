@@ -14,7 +14,8 @@ use crate::chunk_graph::ChunkGraph;
 use crate::esm_init_obligations::collect_entry_reexported_wrapper_inits;
 
 use super::{
-  GenerateStage, code_splitting::IndexSplittingInfo, reduced_chunk_graph::ReducedChunkGraph,
+  GenerateStage, code_splitting::IndexSplittingInfo,
+  dynamic_entry_namespace::is_pure_dynamic_entry_chunk, reduced_chunk_graph::ReducedChunkGraph,
   simulated_facade_inclusion::include_simulated_facade_namespace,
 };
 
@@ -63,6 +64,26 @@ impl ReducedEntriesAction {
       namespace_extractions.insert((entry_chunk_idx, entry_module_idx));
     }
   }
+
+  /// Records the chunk when this plain merge moves the atom into the chunk of a pure dynamic
+  /// entry. A plain merge into such a chunk passes only the weak first check of
+  /// `can_use_reduced_dependent_entries`. `find_leaking_dynamic_entry_namespaces` checks the chunk
+  /// again with the links.
+  fn record_dynamic_entry_merge_target(
+    &self,
+    reduced: &BitSet,
+    chunk_graph: &ChunkGraph,
+    dynamic_entry_merge_targets: &mut FxHashSet<ChunkIdx>,
+  ) {
+    if matches!(self, ReducedEntriesAction::Apply)
+      && reduced.bit_count() == 1
+      && let Some(entry_bit) = reduced.index_of_one().next()
+      && let entry_chunk_idx = ChunkIdx::from_raw(entry_bit)
+      && chunk_graph.chunk_table.get(entry_chunk_idx).is_some_and(is_pure_dynamic_entry_chunk)
+    {
+      dynamic_entry_merge_targets.insert(entry_chunk_idx);
+    }
+  }
 }
 
 /// A reduction that the pass accepted but did not apply in its first loop: the cycle check rejected
@@ -80,6 +101,7 @@ impl GenerateStage<'_> {
     chunk_graph: &mut ChunkGraph,
     entries_len: u32,
     used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
+    dynamic_entry_merge_targets: &mut FxHashSet<ChunkIdx>,
   ) {
     let mut namespace_extractions = FxHashSet::default();
     let DynamicEntryAnalysis {
@@ -167,6 +189,11 @@ impl GenerateStage<'_> {
       {
         changed = true;
         action.record_namespace_extraction(&mut namespace_extractions);
+        action.record_dynamic_entry_merge_target(
+          &atom.dependent_entries,
+          chunk_graph,
+          dynamic_entry_merge_targets,
+        );
       } else {
         let reduced = std::mem::replace(&mut atom.dependent_entries, original_dependent_entries);
         rejected_moves.push(RejectedMove { atom_idx, reduced, action });
@@ -184,6 +211,8 @@ impl GenerateStage<'_> {
         &mut reduced_chunk_graph,
         rejected_moves,
         &mut namespace_extractions,
+        chunk_graph,
+        dynamic_entry_merge_targets,
       );
     }
 
@@ -216,6 +245,8 @@ impl GenerateStage<'_> {
     reduced_chunk_graph: &mut ReducedChunkGraph<'_>,
     mut rejected_moves: Vec<RejectedMove>,
     namespace_extractions: &mut FxHashSet<(ChunkIdx, ModuleIdx)>,
+    chunk_graph: &ChunkGraph,
+    dynamic_entry_merge_targets: &mut FxHashSet<ChunkIdx>,
   ) -> bool {
     let mut changed = false;
     while !rejected_moves.is_empty() {
@@ -245,6 +276,11 @@ impl GenerateStage<'_> {
         }
         atoms[rejected_move.atom_idx].dependent_entries = rejected_move.reduced.clone();
         rejected_move.action.record_namespace_extraction(namespace_extractions);
+        rejected_move.action.record_dynamic_entry_merge_target(
+          &rejected_move.reduced,
+          chunk_graph,
+          dynamic_entry_merge_targets,
+        );
         false
       });
     }
@@ -319,7 +355,10 @@ impl GenerateStage<'_> {
   /// If all the used exports of the dynamic import are statically known and actual exports
   /// of the module, code will never observe the extra exports and we can avoid the extra
   /// indirection of exporting a synthetic namespace.
-  fn dynamic_entry_partial_usage_allows_plain_merge(&self, entry_module_idx: ModuleIdx) -> bool {
+  pub(super) fn dynamic_entry_partial_usage_allows_plain_merge(
+    &self,
+    entry_module_idx: ModuleIdx,
+  ) -> bool {
     let Some(DynamicImportExportsUsage::Partial(used)) =
       self.link_output.dynamic_import_exports_usage_map.get(&entry_module_idx)
     else {
@@ -332,7 +371,10 @@ impl GenerateStage<'_> {
   /// Whether `import()` of this dynamic entry can be preserved by exporting the
   /// entry's namespace object from its chunk and rewriting every dynamic importer to
   /// `.then((n) => n.<ns>)` (see `rewrite_dynamic_import_for_merged_entry`).
-  fn dynamic_entry_supports_namespace_extraction(&self, entry_module_idx: ModuleIdx) -> bool {
+  pub(super) fn dynamic_entry_supports_namespace_extraction(
+    &self,
+    entry_module_idx: ModuleIdx,
+  ) -> bool {
     if self.link_output.module_table[entry_module_idx].as_normal().is_none() {
       return false;
     }

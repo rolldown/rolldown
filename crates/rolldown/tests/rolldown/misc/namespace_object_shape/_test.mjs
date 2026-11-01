@@ -3,7 +3,7 @@ import { load, names, namespace } from './dist/main.js';
 
 // Each check below also passes on the native namespace objects of the source files.
 
-// The dynamic import gives the same object as the static import.
+// The dynamic import resolves to the same object as the static import.
 const imported = await load();
 assert.equal(imported, namespace);
 
@@ -12,7 +12,7 @@ assert.equal(namespace.value, 7);
 namespace.increment();
 assert.equal(namespace.value, 8);
 
-// A null prototype: no `Object.prototype` members.
+// The namespace object has a null prototype, so it has no `Object.prototype` members.
 assert.equal(Object.getPrototypeOf(namespace), null);
 assert.equal('constructor' in namespace, false);
 assert.equal('toString' in namespace, false);
@@ -20,7 +20,8 @@ assert.equal(namespace[Symbol.toStringTag], 'Module');
 assert.equal(Object.prototype.toString.call(namespace), '[object Module]');
 assert.deepEqual(Reflect.ownKeys(namespace), ['increment', 'value', Symbol.toStringTag]);
 
-// No new properties. Module code is strict, so a failed assignment throws.
+// The namespace object accepts no new properties. Module code is strict, so a failed assignment
+// throws.
 assert.equal(Object.isExtensible(namespace), false);
 assert.equal(Reflect.set(namespace, 'extra', 9), false);
 assert.equal(Reflect.defineProperty(namespace, 'extra', { value: 9 }), false);

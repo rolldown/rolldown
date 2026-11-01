@@ -31,9 +31,10 @@ export var __commonJS = (cb, mod) =>
 export var __commonJSMin = (cb, mod) => () => (
   mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports
 );
-// A module namespace object with the shape of a native one: a null prototype, and no new
-// properties. `flags & 1`: no `Symbol.toStringTag`. `flags & 2`: the object stays open, because a
-// later `__reExport` adds properties to it.
+// `__exportAll` creates a module namespace object with the shape of a native one. The object has
+// a null prototype, and it accepts no new properties. If `flags & 1` is set, the object has no
+// `Symbol.toStringTag`. If `flags & 2` is set, the object stays open (it accepts new properties),
+// because a later `__reExport` adds properties to it.
 // See internal-docs/runtime-helpers/implementation.md
 export var __exportAll = (all, flags) => {
   let target = { __proto__: null };

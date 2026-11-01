@@ -72,9 +72,23 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) ->
 
 /// Like `collapse_sourcemaps`, but keeps only the sources and names that a traced token
 /// references, as Rollup's `traceMappings()` does. So a map with no mappings (e.g. a transform's
-/// `{ mappings: '' }`) cuts out the code before it. A chain of one map is traced too.
+/// `{ mappings: '' }`) cuts out the code before it. A chain of one map is traced too, but it
+/// keeps its other fields, such as `sourceRoot`, as `getCombinedSourcemap` did before.
 pub fn collapse_sourcemaps_traced(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) -> SourceMap {
-  let (map, name_used) = collapse(sourcemap_chain, true);
+  let (map, name_used) = match sourcemap_chain {
+    // One map has nothing to remap, so it is not rebuilt.
+    [map] => {
+      let map = (*map).clone().into_owned();
+      let mut name_used = vec![false; map.get_names().len()];
+      for id in map.get_tokens().filter_map(|token| token.get_name_id()) {
+        if let Some(used) = name_used.get_mut(id as usize) {
+          *used = true;
+        }
+      }
+      (map, name_used)
+    }
+    _ => collapse(sourcemap_chain, true),
+  };
   let every_source_used = references_every_source(&map);
   if every_source_used && name_used.iter().all(|&used| used) {
     return map;
@@ -158,7 +172,7 @@ fn references_every_source(map: &SourceMap) -> bool {
 }
 
 /// Drops the sources that no token references and the names that `name_used` does not mark.
-/// The kept items keep their order, and the token ids are renumbered to match.
+/// The kept items keep their order, and the token ids and `ignoreList` are renumbered to match.
 fn drop_unreferenced(map: SourceMap, every_source_used: bool, name_used: &[bool]) -> SourceMap {
   // Usually only names go, so the source scan runs only when the cheap check found a gap.
   let source_used = (!every_source_used).then(|| {
@@ -190,6 +204,11 @@ fn drop_unreferenced(map: SourceMap, every_source_used: bool, name_used: &[bool]
       token.get_name_id().and_then(|id| new_id(&name_ids, id)),
     );
   }
+  if let (Some(source_ids), Some(ignore_list)) = (&source_ids, &mut parts.ignore_list) {
+    *ignore_list = ignore_list.iter().filter_map(|&id| new_id(source_ids, id)).collect();
+  }
+  // The VLQ baselines in `token_chunks` describe the old ids.
+  parts.token_chunks = None;
   SourceMap::from_parts(parts)
 }
 
@@ -709,6 +728,26 @@ fn test_collapse_sourcemaps_traced_drops_overridden_names() {
   assert_eq!(collapsed.get_names().collect::<Vec<_>>(), ["DEBUG_BUILD"]);
   let token = collapsed.get_tokens().last().unwrap();
   assert_eq!((token.get_source_id(), token.get_name_id()), (Some(0), Some(0)));
+}
+
+/// Vite's `css-sourcemap` playground reads a Sass map with `"sourceRoot": ""` back through
+/// `getCombinedSourcemap`.
+#[test]
+fn test_collapse_sourcemaps_traced_keeps_single_map_fields() {
+  let parse = |json: &str| oxc_sourcemap::SourceMap::from_json_string(json).unwrap().into_owned();
+  // Every source has a token, so the map stays the same.
+  let kept = parse(
+    r#"{"version":3,"sourceRoot":"","names":[],"sources":["a.sass","b.sass"],"sourcesContent":["a","b"],"mappings":"AAAA,ECAA"}"#,
+  );
+  assert_eq!(collapse_sourcemaps_traced(&[&kept]).to_json_string(), kept.to_json_string());
+  // `b.js` has no token, so it goes. `sourceRoot` stays, and `ignoreList` follows the new ids.
+  let dropped = collapse_sourcemaps_traced(&[&parse(
+    r#"{"version":3,"sourceRoot":"src/","names":[],"sources":["a.js","b.js","c.js"],"sourcesContent":["a","b","c"],"ignoreList":[1,2],"mappings":"AAAA,EEAA"}"#,
+  )]);
+  assert_eq!(dropped.get_source_root(), Some("src/"));
+  assert_eq!(dropped.get_sources().collect::<Vec<_>>(), ["a.js", "c.js"]);
+  assert_eq!(dropped.get_ignore_list(), Some([1].as_slice()));
+  assert_eq!(dropped.get_tokens().last().unwrap().get_source_id(), Some(1));
 }
 
 #[test]

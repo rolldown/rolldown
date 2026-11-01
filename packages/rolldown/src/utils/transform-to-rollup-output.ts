@@ -54,6 +54,46 @@ function transformToRollupOutputChunk(bindingChunk: BindingOutputChunk): OutputC
   return new OutputChunkImpl(bindingChunk);
 }
 
+function arrayChanged(value: ArrayLike<unknown>, snapshot: ArrayLike<unknown>): boolean {
+  if (value.length !== snapshot.length) return true;
+  for (let i = 0; i < snapshot.length; i++) {
+    if (value[i] !== snapshot[i]) return true;
+  }
+  return false;
+}
+
+function trackNestedMutations(value: unknown, fileName: string, changed: ChangedOutputs): void {
+  if (value === null || typeof value !== 'object' || changed.updated.has(fileName)) return;
+
+  // Snapshot only properties a plugin reads. Keep the actual arrays and typed arrays so
+  // their identity, native methods, and writes through subarray()/buffer views still work.
+  let hasChanged: () => boolean;
+  if (value instanceof Uint8Array || Array.isArray(value)) {
+    // Buffer.slice() shares its backing storage, so explicitly copy binary sources.
+    const snapshot = value instanceof Uint8Array ? new Uint8Array(value) : value.slice();
+    hasChanged = () => arrayChanged(value, snapshot);
+  } else {
+    // Source maps contain scalar fields and arrays; also include the legacy ignoreList alias.
+    const map = value as Record<string, unknown>;
+    const snapshot = Object.getOwnPropertyNames(map).map((key) => {
+      const item = map[key];
+      return [key, Array.isArray(item) ? item.slice() : item] as const;
+    });
+    hasChanged = () =>
+      Object.getOwnPropertyNames(map).length !== snapshot.length ||
+      snapshot.some(([key, item]) =>
+        Array.isArray(item)
+          ? !Array.isArray(map[key]) || arrayChanged(map[key], item)
+          : map[key] !== item,
+      );
+  }
+
+  const checks = (changed.mutationChecks ??= new Map());
+  const existing = checks.get(fileName);
+  if (existing) existing.push(hasChanged);
+  else checks.set(fileName, [hasChanged]);
+}
+
 function transformToMutableRollupOutputChunk(
   bindingChunk: BindingOutputChunk,
   changed: ChangedOutputs,
@@ -103,6 +143,10 @@ function transformToMutableRollupOutputChunk(
         return cache[p];
       }
       const value = target[p as keyof OutputChunk];
+      // These are the mutable fields applied by update_output_chunk on the Rust side.
+      if (p === 'imports' || p === 'dynamicImports' || p === 'map') {
+        trackNestedMutations(value, fileName, changed);
+      }
       cache[p] = value;
       return value;
     },
@@ -144,6 +188,9 @@ function transformToMutableRollupOutputAsset(
         return cache[p];
       }
       const value = target[p as keyof OutputAsset];
+      if (p === 'source' || p === 'names' || p === 'originalFileNames') {
+        trackNestedMutations(value, asset.fileName, changed);
+      }
       cache[p] = value;
       return value;
     },
@@ -223,6 +270,7 @@ export function transformToOutputBundle(
 export interface ChangedOutputs {
   updated: Set<string>;
   deleted: Set<string>;
+  mutationChecks?: Map<string, (() => boolean)[]>;
 }
 
 // TODO find a way only transfer the changed part to Rust side.
@@ -232,8 +280,11 @@ export function collectChangedBundle(
 ): JsChangedOutputs {
   const changes: Record<string, JsOutputChunk | JsOutputAsset> = {};
   for (const key in bundle) {
-    if (changed.deleted.has(key) || !changed.updated.has(key)) {
-      continue;
+    if (changed.deleted.has(key)) continue;
+    if (!changed.updated.has(key)) {
+      if (!changed.mutationChecks?.get(key)?.some((hasChanged) => hasChanged())) continue;
+      // Avoid snapshots of the remaining properties read while serializing this output.
+      changed.updated.add(key);
     }
     const item = bundle[key];
     if (item.type === 'asset') {

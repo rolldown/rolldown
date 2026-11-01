@@ -95,7 +95,20 @@ impl<'ast> DynamicImportVarsVisit<'ast, '_> {
       };
 
       let raw = source.span.shrink(1).source_text(self.source_text);
-      let raw_pattern = if &glob[..index] == source.quasis[0].value.raw {
+      let original_glob = if async_imports.is_some() {
+        // The resolver changed the glob, but the runtime expression still has its original prefix.
+        let Ok(glob) = template_literal_to_glob(source) else {
+          return false;
+        };
+        glob
+      } else {
+        Cow::Borrowed(glob.as_ref())
+      };
+      let original_prefix = original_glob.split_once('*').unwrap().0;
+      let expression_prefix = original_prefix.len() != source.quasis[0].value.raw.len();
+      let raw_pattern = if expression_prefix {
+        Cow::Borrowed(&glob[..index])
+      } else if &glob[..index] == source.quasis[0].value.raw {
         Cow::Borrowed(raw)
       } else {
         let mut s = String::with_capacity(index + source.quasis[0].value.raw.len());
@@ -110,14 +123,28 @@ impl<'ast> DynamicImportVarsVisit<'ast, '_> {
       } else {
         relative_path_to_slash(base.join(raw_pattern.as_ref()), base)
       };
-      let new_raw_pattern = if normalized.starts_with("./") || normalized.starts_with("../") {
+      let mut new_raw_pattern = if normalized.starts_with("./") || normalized.starts_with("../") {
         normalized
       } else {
         rolldown_utils::concat_string!("./", normalized)
       };
 
-      let glob = glob.cow_replace("**", "*");
       let source_text = source.span.source_text(self.source_text);
+      if expression_prefix {
+        if glob[..index].ends_with('/') && !new_raw_pattern.ends_with('/') {
+          new_raw_pattern.push('/');
+        }
+        // Static expressions already contribute the prefix. Keep them intact when possible;
+        // otherwise replace the prefix after evaluating the original template exactly once.
+        new_raw_pattern = if new_raw_pattern == original_prefix {
+          raw.to_owned()
+        } else {
+          let prefix_len = original_prefix.encode_utf16().count();
+          format!("{new_raw_pattern}${{({source_text}).slice({prefix_len})}}")
+        };
+      }
+
+      let glob = glob.cow_replace("**", "*");
 
       let (pattern, glob_params) = {
         let index = glob.rfind('/').unwrap_or(0);

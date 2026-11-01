@@ -41,7 +41,7 @@ export async function profileRun(cdp, { origin, throttle, timeoutMs = 60_000 }) 
 }
 
 /** Locate generated (line, column) positions back to source modules. */
-function sourceLocator(code, map) {
+export function sourceLocator(code, map) {
   const lineStarts = [0];
   for (let i = 0; i < code.length; i++) {
     if (code.charCodeAt(i) === 10) lineStarts.push(i + 1);

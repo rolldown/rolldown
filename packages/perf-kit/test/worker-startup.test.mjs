@@ -31,7 +31,7 @@ import {
   WS_QUIET_MS,
   wsRequest,
 } from '../lib/worker/measure.mjs';
-import { evaluatingModules, whyModule } from '../lib/worker/attrib.mjs';
+import { evaluatingModules, shortModule, topLevelCalls, whyModule } from '../lib/worker/attrib.mjs';
 import { attribOutDir, viteConfigShim } from '../lib/worker/config.mjs';
 import { entryIdx, minCut } from '../lib/min-cut.mjs';
 import { indexOf, makeGraph } from './graph-fixtures.mjs';
@@ -531,4 +531,53 @@ test('worker-attrib finds the attribution build named after the environment', ()
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test('a library call at module scope shows by name, charged to the module whose top level makes it', () => {
+  const dir = tmp();
+  write(dir, 'index.js', '');
+  write(dir, 'node_modules/.pnpm/sdk@1.0.0/node_modules/sdk/dist/src.js', '');
+  write(dir, 'node_modules/zod/core.js', '');
+  const url = (rel) => `file://${path.join(dir, rel)}`;
+  const frame = (functionName, rel, lineNumber) => ({
+    functionName,
+    url: rel ? url(rel) : '',
+    lineNumber,
+    columnNumber: 0,
+  });
+  const profile = {
+    nodes: [
+      { id: 1, callFrame: frame('(root)', null, -1), children: [2] },
+      { id: 2, callFrame: frame('', 'index.js', -1), children: [3] },
+      {
+        id: 3,
+        callFrame: frame(
+          'preloadSchemas',
+          'node_modules/.pnpm/sdk@1.0.0/node_modules/sdk/dist/src.js',
+          41,
+        ),
+        children: [4],
+      },
+      { id: 4, callFrame: frame('build', 'node_modules/zod/core.js', 9) },
+    ],
+    // Three samples inside the warm-up (one in the call, two below it), one in index.js itself.
+    samples: [3, 4, 4, 2],
+    timeDeltas: [1000, 1000, 1000, 1000],
+  };
+  const fileOf = (u) => (u ? path.relative(dir, new URL(u).pathname) : null);
+  const calls = topLevelCalls(profile, { fileOf });
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0], {
+    module: 'index.js',
+    fn: 'preloadSchemas',
+    at: 'node_modules/.pnpm/sdk@1.0.0/node_modules/sdk/dist/src.js:42',
+    source: null,
+    ms: 3,
+  });
+  assert.equal(shortModule(calls[0].at), 'sdk/dist/src.js:42');
+  assert.equal(
+    shortModule('../../node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/core.js'),
+    'zod/v4/core/core.js',
+  );
+  assert.equal(shortModule('src/server.ts'), 'src/server.ts');
 });

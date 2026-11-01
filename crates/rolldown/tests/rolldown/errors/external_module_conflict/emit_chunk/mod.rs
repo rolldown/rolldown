@@ -8,7 +8,8 @@ use rolldown_plugin::{
 use rolldown_std_utils::PathExt as _;
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
-/// Emits lib.js as a chunk. `./lib.js` in main.js already made that id external.
+/// This plugin emits lib.js as a chunk. The `./lib.js` import in main.js already made that id
+/// external.
 #[derive(Debug)]
 struct EmitExternalIdAsChunk;
 

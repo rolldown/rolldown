@@ -155,7 +155,7 @@ impl PluginDriver {
       }
       .instrument(tracing::trace_span!(
         "HookResolveIdCall",
-        CONTEXT_call_id = rolldown_utils::uuid::uuid_v4()
+        CONTEXT_call_id = super::hook_call_id(module_path!())
       ))
       .await
       .with_context(|| CausedPlugin::new(plugin.call_name()))?;
@@ -259,7 +259,7 @@ impl PluginDriver {
       }
       .instrument(tracing::trace_span!(
         "HookLoadCall",
-        CONTEXT_call_id = rolldown_utils::uuid::uuid_v4()
+        CONTEXT_call_id = super::hook_call_id(module_path!())
       ))
       .await
       .with_context(|| CausedPlugin::new(plugin.call_name()))?;

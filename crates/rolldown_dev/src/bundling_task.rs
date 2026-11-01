@@ -394,7 +394,7 @@ impl BundlingTask {
     } else {
       // The output just written is what any newly loading client evaluates; refresh
       // the top-level-evaluated snapshot new sessions freeze in at hello (`register_client`).
-      let top_level_evaluated = {
+      let (top_level_evaluated, _, _) = {
         let stamp_table = self.dev_context.stamp_table.lock().await;
         bundler.compute_top_level_evaluated_modules(&stamp_table)
       };

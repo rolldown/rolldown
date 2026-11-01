@@ -32,6 +32,9 @@ pub struct ChunkGraph {
   ///
   /// We use the second approach to avoid the overhead of re-indexing at the cost of some extra memory.
   pub post_chunk_optimization_operations: FxHashMap<ChunkIdx, PostChunkOptimizationOperation>,
+  /// Facade entry chunk elimination did not run (common-chunk merging is off, which a
+  /// top-level-await build forces), so every dynamic entry hosted elsewhere kept its facade.
+  pub dynamic_entry_facades_retained: bool,
 }
 
 impl ChunkGraph {
@@ -46,10 +49,10 @@ impl ChunkGraph {
       common_chunk_exported_facade_chunk_namespace: FxHashMap::default(),
       common_chunk_preserve_export_names_modules: FxHashMap::default(),
       post_chunk_optimization_operations: FxHashMap::default(),
+      dynamic_entry_facades_retained: false,
     }
   }
 
-  #[expect(unused)]
   pub fn sorted_chunks(&self) -> impl ExactSizeIterator<Item = &Chunk> {
     self.sorted_chunk_idx_vec.iter().map(move |&id| &self.chunk_table.chunks[id])
   }

@@ -1,6 +1,9 @@
 #[cfg(debug_assertions)]
-use rolldown_common::{ChunkIdx, ChunkKind, WrapKind};
-use rolldown_common::{UsedSymbolRefsBuilder, UsedSymbolRefsView};
+use rolldown_common::ChunkIdx;
+use rolldown_common::{
+  ChunkKind, ChunkMeta, PostChunkOptimizationOperation, UsedSymbolRefsBuilder, UsedSymbolRefsView,
+  WrapKind,
+};
 use rolldown_error::BuildResult;
 #[cfg(debug_assertions)]
 use rustc_hash::FxHashSet;
@@ -89,6 +92,9 @@ impl GenerateStage<'_> {
       }
     }
 
+    self.redirect_namespace_observable_dynamic_facades(chunk_graph, &order_state);
+    self.route_public_namespace_extractions(chunk_graph);
+
     let (mut final_esm_init_metadata, mut link_state) =
       self.compute_final_chunk_links(chunk_graph, used_symbol_refs_builder.view(), &order_state);
     // See internal-docs/code-splitting/implementation.md: derived exports include generated
@@ -149,6 +155,70 @@ impl GenerateStage<'_> {
       FinalEsmInitMetadataAvailability::Sealed(&metadata),
     );
     (metadata, links)
+  }
+
+  /// A retained dynamic-entry facade re-exports its module's bindings from the host chunk, so
+  /// `import()` of it yields the facade's own namespace object. Once the module's real namespace
+  /// is observable elsewhere — a static `import * as`, an `import()` from the host chunk — the two
+  /// differ where the source has one. Route such entries through the host chunk the way facade
+  /// elimination does: `import()` reads the namespace back out of the host and runs the module's
+  /// initializer there (awaited for a top-level-await module), and the now-unreferenced facade is
+  /// dropped. Only facades the optimizer never saw qualify; one it kept on purpose stays.
+  fn redirect_namespace_observable_dynamic_facades(
+    &self,
+    chunk_graph: &mut ChunkGraph,
+    order_state: &OrderWrapState,
+  ) {
+    if !chunk_graph.dynamic_entry_facades_retained {
+      return;
+    }
+    let mut redirected = Vec::new();
+    for (facade_idx, facade) in chunk_graph.chunk_table.iter_enumerated() {
+      let ChunkKind::EntryPoint { meta, module, .. } = facade.kind else {
+        continue;
+      };
+      if !meta.contains(ChunkMeta::DynamicImported)
+        || meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk)
+        || !facade.modules.is_empty()
+        || chunk_graph.post_chunk_optimization_operations.contains_key(&facade_idx)
+        || chunk_graph.entry_module_to_entry_chunk.get(&module) != Some(&facade_idx)
+      {
+        continue;
+      }
+      let Some(host_idx) = chunk_graph.module_to_chunk[module] else {
+        continue;
+      };
+      let meta = &self.link_output.metas[module];
+      // Only a common host: its exports are internal, so the extra namespace and init exports
+      // never change an entry chunk's public shape.
+      if !matches!(chunk_graph.chunk_table[host_idx].kind, ChunkKind::Common)
+        || chunk_graph.post_chunk_optimization_operations.contains_key(&host_idx)
+        || !meta.namespace_included
+        || matches!(meta.wrap_kind(), WrapKind::Cjs)
+        || order_state.consumer_local_namespace_targets(module).is_some()
+        // `import(host)` resolving to a namespace with a callable `then` never reaches the
+        // extraction callback; `None` stands for an importer outside the host chunk.
+        || self.order_wrap_host_can_expose_then_export(chunk_graph, host_idx, &[None])
+      {
+        continue;
+      }
+      redirected.push((facade_idx, module, host_idx));
+    }
+    if redirected.is_empty() {
+      return;
+    }
+    for (facade_idx, module, host_idx) in redirected {
+      chunk_graph.entry_module_to_entry_chunk.insert(module, host_idx);
+      chunk_graph
+        .common_chunk_exported_facade_chunk_namespace
+        .entry(host_idx)
+        .or_default()
+        .insert(module);
+      chunk_graph
+        .post_chunk_optimization_operations
+        .insert(facade_idx, PostChunkOptimizationOperation::Removed);
+    }
+    chunk_graph.rebuild_sorted_chunk_idx_vec(true);
   }
 
   #[cfg(debug_assertions)]

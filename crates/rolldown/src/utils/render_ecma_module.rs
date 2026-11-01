@@ -24,15 +24,17 @@ pub fn render_ecma_module(
     return RenderEcmaModuleOutput { sources: None, warnings: vec![] };
   }
   let mut sources: Vec<Box<dyn rolldown_sourcemap::Source + Send + Sync>> = Vec::with_capacity(6);
-  // Mark only where a module starts, like esbuild and bun.
-  if matches!(
+  let attach_debug_info = matches!(
     options.experimental.attach_debug_info,
     Some(AttachDebugInfo::Simple | AttachDebugInfo::Full)
-  ) {
-    sources.push(Box::new(concat_string!("// ", module.debug_id)));
+  );
+  if attach_debug_info {
+    sources.push(Box::new(concat_string!("//#region ", module.debug_id)));
   }
 
-  let enable_sourcemap = options.sourcemap.is_some() && !module.is_virtual();
+  // A native cell is virtual, but its loaded map points at its donor's authored file.
+  let enable_sourcemap = options.sourcemap.is_some()
+    && (!module.is_virtual() || crate::utils::native_records::is_native_cell(&module.id));
   let mut warnings = vec![];
 
   // Because oxc codegen sourcemap is last of sourcemap chain,
@@ -55,6 +57,10 @@ pub fn render_ecma_module(
     }
   } else {
     sources.push(Box::new(render_output.code));
+  }
+
+  if attach_debug_info {
+    sources.push(Box::new("//#endregion"));
   }
 
   RenderEcmaModuleOutput { sources: Some(Arc::from(sources.into_boxed_slice())), warnings }

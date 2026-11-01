@@ -1,7 +1,9 @@
 use std::{any::Any, borrow::Cow, fmt, future::Future, pin::Pin, sync::Arc};
 
 use anyhow::Result;
-use rolldown_common::{ModuleInfo, NormalModule, RollupRenderedChunk, WatcherChangeKind};
+use rolldown_common::{
+  ModuleDefFormat, ModuleInfo, NormalModule, RollupRenderedChunk, WatcherChangeKind,
+};
 
 use super::plugin_context::PluginContext;
 pub use crate::plugin::{
@@ -116,6 +118,8 @@ pub struct Pluginable {
   name: fn(&ErasedPlugin) -> Cow<'static, str>,
   hook_usage: HookUsage,
   hooks: PluginHooks,
+  // developer-bundler: see `Plugin::interop_module_def_format`.
+  interop_module_def_format: fn(&ErasedPlugin, &str, ModuleDefFormat) -> Option<ModuleDefFormat>,
 }
 
 define_hooks! {
@@ -346,7 +350,13 @@ impl Pluginable {
   pub fn new<T: Plugin>(plugin: T) -> Self {
     let hook_usage = Plugin::register_hook_usage(&plugin);
     let hooks = PluginHooks::new::<T>(hook_usage);
-    Self { plugin: Box::new(plugin), name: name::<T>, hook_usage, hooks }
+    Self {
+      plugin: Box::new(plugin),
+      name: name::<T>,
+      hook_usage,
+      hooks,
+      interop_module_def_format: interop_module_def_format::<T>,
+    }
   }
 
   #[inline]
@@ -360,6 +370,15 @@ impl Pluginable {
 
   pub fn call_hook_usage(&self) -> HookUsage {
     self.hook_usage
+  }
+
+  // developer-bundler: see `Plugin::interop_module_def_format`.
+  pub fn call_interop_module_def_format(
+    &self,
+    id: &str,
+    format: ModuleDefFormat,
+  ) -> Option<ModuleDefFormat> {
+    (self.interop_module_def_format)(self.plugin.as_ref(), id, format)
   }
 }
 
@@ -379,6 +398,14 @@ fn plugin_ref<T: Plugin>(plugin: &ErasedPlugin) -> &T {
 
 fn name<T: Plugin>(plugin: &ErasedPlugin) -> Cow<'static, str> {
   Plugin::name(plugin_ref::<T>(plugin))
+}
+
+fn interop_module_def_format<T: Plugin>(
+  plugin: &ErasedPlugin,
+  id: &str,
+  format: ModuleDefFormat,
+) -> Option<ModuleDefFormat> {
+  Plugin::interop_module_def_format(plugin_ref::<T>(plugin), id, format)
 }
 
 fn default_meta(_plugin: &ErasedPlugin) -> Option<PluginHookMeta> {

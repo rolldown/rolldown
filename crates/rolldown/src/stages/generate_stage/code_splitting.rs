@@ -22,8 +22,8 @@ use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx,
   ImportRecordMeta, IndexModules, Module, ModuleId, ModuleIdx, ModuleNamespaceIncludedReason,
   ModuleTag, ModuleTagBitSet, ModuleTagRegistry, ModuleType, NormalModule,
-  PostChunkOptimizationOperation, PreserveEntrySignatures, RetainedExportSymbols, SymbolRef,
-  UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
+  PostChunkOptimizationOperation, PreserveEntrySignatures, RetainedExportSymbols, StmtInfos,
+  SymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
 };
 use rolldown_error::BuildResult;
 use rolldown_std_utils::PathBufExt as _;
@@ -39,6 +39,20 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::{GenerateStage, chunk_ext::ChunkCreationReason};
 
+/// A module id usable for the common-dir computation: an absolute
+/// filesystem path, with rooted-but-volume-less ids (`/favicon.ico` from a
+/// plugin) anchored to the cwd volume root (a drive or UNC share). Such ids
+/// are classified `Bare` on Windows even though Node treats them as
+/// absolute; leaving them out here would make the input base and the
+/// preserve-modules chunk names disagree about where the module lives.
+pub(crate) fn common_dir_input<'a>(id: &'a ModuleId, cwd: &Path) -> Option<Cow<'a, str>> {
+  if id.is_path() {
+    return Some(Cow::Borrowed(id.as_ref()));
+  }
+  let glued = node_style_absolute(Path::new(id.as_str()), cwd)?;
+  Some(Cow::Owned(glued.into_owned().expect_into_string()))
+}
+
 #[derive(Clone, Debug)]
 pub struct SplittingInfo {
   pub bits: BitSet,
@@ -46,6 +60,11 @@ pub struct SplittingInfo {
   /// Module tags bitset. See internal-docs/module-tags/implementation.md
   pub tags_bit_set: ModuleTagBitSet,
 }
+
+pub const BUILTIN_ASYNC_TAG_BIT: u32 = 1;
+pub const BUILTIN_VENDOR_TAG_BIT: u32 = 2;
+pub const BUILTIN_APP_TAG_BIT: u32 = 3;
+pub const BUILTIN_SHARED_TAG_BIT: u32 = 4;
 
 pub type IndexSplittingInfo = IndexVec<ModuleIdx, SplittingInfo>;
 
@@ -65,15 +84,7 @@ impl GenerateStage<'_> {
       .try_into()
       .expect("Too many entries, u32 overflowed.");
     let mut chunk_graph = ChunkGraph::new(self.link_output.module_table.modules.len());
-    let pre_chunk_order_state = self.pre_chunk_order_state(used_symbol_refs_builder);
     chunk_graph.chunk_table.chunks.reserve(entries_len as usize);
-
-    let mut index_splitting_info: IndexSplittingInfo = oxc_index::index_vec![SplittingInfo {
-        bits: BitSet::new(entries_len),
-        share_count: 0,
-        tags_bit_set: ModuleTagBitSet::default(),
-      }; self.link_output.module_table.modules.len()];
-    let mut bits_to_chunk = FxHashMap::with_capacity(entries_len as usize);
 
     let input_base = ArcStr::from(
       self
@@ -81,13 +92,6 @@ impl GenerateStage<'_> {
         .unwrap_or_default(),
     );
     if self.options.preserve_modules {
-      let modules_len = self
-        .link_output
-        .module_table
-        .modules
-        .len()
-        .try_into()
-        .expect("Entry length exceeds u32::MAX");
       for (idx, module) in self.link_output.module_table.modules.iter_enumerated() {
         let Module::Normal(module) = module else {
           continue;
@@ -99,12 +103,10 @@ impl GenerateStage<'_> {
         }
 
         let count = idx.raw();
-        let mut bits = BitSet::new(modules_len);
-        bits.set_bit(count);
         let mut chunk = Chunk::new(
           matched_entry.and_then(|item| item.name.clone()),
           matched_entry.and_then(|item| item.file_name.clone()),
-          bits.clone(),
+          BitSet::default(),
           vec![],
           ChunkKind::EntryPoint {
             meta: {
@@ -115,7 +117,10 @@ impl GenerateStage<'_> {
                   .map(|entry_point| matches!(entry_point.kind, EntryPointKind::UserDefined))
                   .unwrap_or(false),
               );
-              meta.set(ChunkMeta::DynamicImported, !module.dynamic_importers.is_empty());
+              meta.set(
+                ChunkMeta::DynamicImported,
+                self.link_output.unreachable_modules.dynamically_imported(module),
+              );
               meta.set(
                 ChunkMeta::EmittedChunk,
                 matched_entry
@@ -161,7 +166,18 @@ impl GenerateStage<'_> {
         // bits_to_chunk.insert(bits, chunk); // This line is intentionally commented out because `bits_to_chunk` is not used in this loop. It is updated elsewhere in the `init_entry_point` and `split_chunks` methods.
         chunk_graph.entry_module_to_entry_chunk.entry(module.idx).or_insert(chunk_idx);
       }
+      // A preserved module's chunk carries its public exports. `import()` of one whose star exports
+      // reach CommonJS modules reads its namespace object instead, as of a dynamic entry's chunk,
+      // also in native-records mode where such a module has no engine namespace (#712).
+      self.preserve_dynamic_entry_namespaces(&mut chunk_graph, used_symbol_refs_builder);
     } else {
+      let pre_chunk_order_state = self.pre_chunk_order_state(used_symbol_refs_builder);
+      let mut index_splitting_info: IndexSplittingInfo = oxc_index::index_vec![SplittingInfo {
+          bits: BitSet::new(entries_len),
+          share_count: 0,
+          tags_bit_set: ModuleTagBitSet::default(),
+        }; self.link_output.module_table.modules.len()];
+      let mut bits_to_chunk = FxHashMap::with_capacity(entries_len as usize);
       self.init_entry_point(&mut chunk_graph, &mut bits_to_chunk, entries_len, &input_base);
 
       self
@@ -761,20 +777,6 @@ impl GenerateStage<'_> {
   // - https://github.com/rollup/rollup/blob/99d4bee3277b96b30e871fb471f6c7ed55f94850/src/Bundle.ts?plain=1#L267-L278
   // - https://github.com/rollup/rollup/blob/99d4bee3277b96b30e871fb471f6c7ed55f94850/src/utils/commondir.ts?plain=1#L4-L24
   pub fn get_common_dir_of_all_modules(&self, modules: &[Module]) -> Option<String> {
-    /// A module id usable for the common-dir computation: an absolute
-    /// filesystem path, with rooted-but-volume-less ids (`/favicon.ico` from a
-    /// plugin) anchored to the cwd volume root (a drive or UNC share). Such ids
-    /// are classified `Bare` on Windows even though Node treats them as
-    /// absolute; leaving them out here would make the input base and the
-    /// preserve-modules chunk names disagree about where the module lives.
-    fn common_dir_input<'a>(id: &'a ModuleId, cwd: &Path) -> Option<Cow<'a, str>> {
-      if id.is_path() {
-        return Some(Cow::Borrowed(id.as_ref()));
-      }
-      let glued = node_style_absolute(Path::new(id.as_str()), cwd)?;
-      Some(Cow::Owned(glued.into_owned().expect_into_string()))
-    }
-
     let mut ret: Option<String> = None;
     let iter = modules.iter().filter_map(|m| match m {
       Module::Normal(item) => {
@@ -875,7 +877,10 @@ impl GenerateStage<'_> {
               ChunkMeta::UserDefinedEntry,
               matches!(entry_point.kind, EntryPointKind::UserDefined),
             );
-            meta.set(ChunkMeta::DynamicImported, !module.dynamic_importers.is_empty());
+            meta.set(
+              ChunkMeta::DynamicImported,
+              self.link_output.unreachable_modules.dynamically_imported(module),
+            );
             meta.set(ChunkMeta::EmittedChunk, entry_point.kind.is_emitted_user_defined());
             meta
           },
@@ -915,30 +920,94 @@ impl GenerateStage<'_> {
     pre_chunk_order_state: &super::order_wrap_state::OrderWrapState,
   ) -> BuildResult<()> {
     // Determine which modules belong to which chunk. A module could belong to multiple chunks.
+    self.preserve_dynamic_entry_namespaces(chunk_graph, used_symbol_refs_builder);
     let tag_registry = ModuleTagRegistry::new();
     let init_dependencies = self
       .options
       .is_strict_execution_order_enabled()
       .then(|| self.pre_chunk_init_dependencies(used_symbol_refs_builder, pre_chunk_order_state));
-    for (entry_index, (&module_idx, entry_point)) in self
+    let entry_tasks: Vec<(u32, ModuleIdx, bool)> = self
       .link_output
       .entries
       .iter()
       .flat_map(|(idx, entries)| entries.iter().map(move |e| (idx, e)))
       .enumerate()
-    {
-      let is_user_defined_entry = matches!(
-        entry_point.kind,
-        EntryPointKind::UserDefined | EntryPointKind::EmittedUserDefined
-      );
-      self.determine_reachable_modules_for_entry(
-        module_idx,
-        entry_index.try_into().expect("Too many entries, u32 overflowed."),
-        index_splitting_info,
-        is_user_defined_entry,
-        init_dependencies.as_ref(),
-        pre_chunk_order_state,
-      );
+      .map(|(entry_index, (&module_idx, entry_point))| {
+        let is_user_defined_entry = matches!(
+          entry_point.kind,
+          EntryPointKind::UserDefined | EntryPointKind::EmittedUserDefined
+        );
+        (
+          entry_index.try_into().expect("Too many entries, u32 overflowed."),
+          module_idx,
+          is_user_defined_entry,
+        )
+      })
+      .collect();
+    if entry_tasks.len() >= 16 {
+      use rolldown_utils::rayon::IntoParallelRefIterator as _;
+      let init_deps_ref = init_dependencies.as_ref();
+      let reachable_per_entry: Vec<(u32, bool, Vec<ModuleIdx>)> = entry_tasks
+        .par_iter()
+        .map(|&(entry_index, module_idx, is_user_defined_entry)| {
+          let reachable = self.collect_reachable_modules_for_entry(
+            module_idx,
+            init_deps_ref,
+            pre_chunk_order_state,
+          );
+          (entry_index, is_user_defined_entry, reachable)
+        })
+        .collect();
+      for (entry_index, is_user_defined_entry, reachable) in reachable_per_entry {
+        for module_idx in reachable {
+          index_splitting_info[module_idx].bits.set_bit(entry_index);
+          index_splitting_info[module_idx].share_count += 1;
+          if is_user_defined_entry {
+            index_splitting_info[module_idx].tags_bit_set.set_bit(ModuleTag::INITIAL_BIT);
+          }
+        }
+      }
+    } else {
+      for (entry_index, module_idx, is_user_defined_entry) in entry_tasks {
+        self.determine_reachable_modules_for_entry(
+          module_idx,
+          entry_index,
+          index_splitting_info,
+          is_user_defined_entry,
+          init_dependencies.as_ref(),
+          pre_chunk_order_state,
+        );
+      }
+    }
+
+    // Populate built-in module tags (`$initial`, `$async`, `$vendor`, `$app`, `$shared`) for reachable modules.
+    for module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal) {
+      if !self.link_output.metas[module.idx].is_included {
+        continue;
+      }
+      let info = &mut index_splitting_info[module.idx];
+      if info.bits.is_empty() {
+        continue;
+      }
+      if !info.tags_bit_set.has_bit(ModuleTag::INITIAL_BIT) {
+        info.tags_bit_set.set_bit(BUILTIN_ASYNC_TAG_BIT);
+      }
+      if info.share_count >= 2 {
+        info.tags_bit_set.set_bit(BUILTIN_SHARED_TAG_BIT);
+      }
+      let id = module.id.as_str();
+      let is_vendor = id.contains("/node_modules/")
+        || id.contains("\\node_modules\\")
+        || id.starts_with("node_modules/")
+        || id.starts_with("node_modules\\")
+        || id.contains("/.store/")
+        || id.starts_with(".store/")
+        || id.contains("\\.store\\");
+      if is_vendor {
+        info.tags_bit_set.set_bit(BUILTIN_VENDOR_TAG_BIT);
+      } else {
+        info.tags_bit_set.set_bit(BUILTIN_APP_TAG_BIT);
+      }
     }
 
     let mut module_is_assigned: IndexBitSet<ModuleIdx> =
@@ -951,6 +1020,7 @@ impl GenerateStage<'_> {
     let allow_avoid_redundant_chunk_loads =
       self.options.experimental.is_avoid_redundant_chunk_loads_enabled()
         && !has_tla_or_tla_dependency;
+    chunk_graph.dynamic_entry_facades_retained = !allow_merge_common_chunks;
     // See internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
     if allow_avoid_redundant_chunk_loads {
       let entries_len: u32 = self
@@ -1078,6 +1148,13 @@ impl GenerateStage<'_> {
       RuntimeMergeCascade::Full,
       used_symbol_refs_builder,
     );
+    self.enforce_entry_request_budgets(chunk_graph);
+    self.try_merge_runtime_chunk(
+      chunk_graph,
+      None,
+      RuntimeMergeCascade::Full,
+      used_symbol_refs_builder,
+    );
 
     Ok(())
   }
@@ -1128,6 +1205,146 @@ impl GenerateStage<'_> {
     );
     module_is_assigned.set_bit(runtime_module_idx);
     Some(runtime_chunk_idx)
+  }
+
+  /// The modules behind each export of `route`'s namespace object, when the build keeps that
+  /// object. Its getters reference every export, so those modules load with the route, though
+  /// the entry walks otherwise reach only the leaves behind the names that importers import.
+  /// A namespace nested in it is a route of its own, which the walk reaches the same way.
+  fn route_namespace_object_modules(&self, route: ModuleIdx) -> Vec<ModuleIdx> {
+    let meta = &self.link_output.metas[route];
+    if !meta.stmt_info_included.has_bit(StmtInfos::NAMESPACE_STMT_IDX) {
+      return Vec::new();
+    }
+    meta
+      .sorted_and_non_ambiguous_resolved_exports
+      .keys()
+      .map(|name| {
+        self.link_output.symbol_db.canonical_ref_for(meta.resolved_exports[name].symbol_ref).owner
+      })
+      .collect()
+  }
+
+  fn collect_reachable_modules_for_entry(
+    &self,
+    entry_module_idx: ModuleIdx,
+    init_dependencies: Option<&IndexVec<ModuleIdx, Vec<ModuleIdx>>>,
+    pre_chunk_order_state: &super::order_wrap_state::OrderWrapState,
+  ) -> Vec<ModuleIdx> {
+    let has_consumer_local_reexport_routes =
+      pre_chunk_order_state.has_consumer_local_reexport_routes();
+    let mut visited: IndexBitSet<ModuleIdx> =
+      IndexBitSet::new(self.link_output.module_table.modules.len());
+    let mut result = Vec::new();
+    let mut q = VecDeque::from([entry_module_idx]);
+    if !has_consumer_local_reexport_routes && init_dependencies.is_none() {
+      while let Some(module_idx) = q.pop_front() {
+        if visited.has_bit(module_idx) {
+          continue;
+        }
+        if !self.link_output.module_table[module_idx].is_normal() {
+          continue;
+        }
+        let meta = &self.link_output.metas[module_idx];
+        if !meta.is_included {
+          continue;
+        }
+        visited.set_bit(module_idx);
+        result.push(module_idx);
+        for &dep_idx in &meta.load_dependencies {
+          if !visited.has_bit(dep_idx) {
+            q.push_back(dep_idx);
+          }
+        }
+      }
+      return result;
+    }
+    while let Some(module_idx) = q.pop_front() {
+      if visited.has_bit(module_idx) {
+        continue;
+      }
+      if !self.link_output.module_table[module_idx].is_normal() {
+        continue;
+      }
+      let meta = &self.link_output.metas[module_idx];
+      if !meta.is_included {
+        continue;
+      }
+      visited.set_bit(module_idx);
+      result.push(module_idx);
+      let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
+        continue;
+      };
+      let ctx = WrappedEsmInitTargetContext {
+        importer: module,
+        importer_meta: meta,
+        modules: &self.link_output.module_table.modules,
+        metas: &self.link_output.metas,
+        stmt_infos: &self.link_output.stmt_infos,
+        symbol_db: &self.link_output.symbol_db,
+        constant_value_map: &self.link_output.global_constant_symbol_map,
+        inline_const_mode: self.options.optimization.inline_const.map(|config| config.mode),
+        order_wrap_state: pre_chunk_order_state,
+        strict_execution_order: self.options.is_strict_execution_order_enabled(),
+      };
+      let is_consumer_local_barrel =
+        pre_chunk_order_state.is_consumer_local_reexport_route(module_idx);
+      if is_consumer_local_barrel && module_idx != entry_module_idx {
+        if module_namespace_is_referenced(module, meta, pre_chunk_order_state, |idx| {
+          self.link_output.metas[idx].is_included
+        }) {
+          for name in meta.sorted_and_non_ambiguous_resolved_exports.keys() {
+            let symbol_ref = self
+              .link_output
+              .symbol_db
+              .canonical_ref_resolving_namespace(meta.resolved_exports[name].symbol_ref);
+            if self.link_output.module_table[symbol_ref.owner]
+              .as_normal()
+              .is_some_and(|owner| owner.namespace_object_ref == symbol_ref)
+            {
+              q.push_back(symbol_ref.owner);
+            }
+          }
+        }
+        for rec in &module.import_records {
+          if rec.kind == ImportKind::Import
+            && let Some(importee_idx) = rec.resolved_module
+            && pre_chunk_order_state.is_consumer_local_reexport_route(importee_idx)
+            && !self.link_output.metas[importee_idx]
+              .module_namespace_included_reason
+              .contains(ModuleNamespaceIncludedReason::Unknown)
+          {
+            q.push_back(importee_idx);
+          }
+        }
+        for target in
+          collect_eager_order_cjs_carriers_for_consumer_local_route(&ctx, module_idx, |_| true)
+        {
+          let WrappedEsmInitTarget::CjsCarrier(key) = target else {
+            unreachable!("eager consumer-local target should be an order CJS carrier");
+          };
+          let carrier = pre_chunk_order_state
+            .order_cjs_carrier(key)
+            .expect("pre-chunk order CJS carrier should exist");
+          q.push_back(carrier.importee);
+        }
+        q.extend(self.route_namespace_object_modules(module_idx));
+        continue;
+      }
+      meta.load_dependencies.iter().copied().for_each(|dep_idx| {
+        if !visited.has_bit(dep_idx) {
+          q.push_back(dep_idx);
+        }
+      });
+      if let Some(dependencies) = init_dependencies {
+        for &dep_idx in &dependencies[module_idx] {
+          if !visited.has_bit(dep_idx) {
+            q.push_back(dep_idx);
+          }
+        }
+      }
+    }
+    result
   }
 
   // See internal-docs/code-splitting/implementation.md#reachability-propagation.
@@ -1329,6 +1546,7 @@ impl GenerateStage<'_> {
             .expect("pre-chunk order CJS carrier should exist");
           q.push_back(carrier.importee);
         }
+        q.extend(self.route_namespace_object_modules(module_idx));
         continue;
       }
       meta.load_dependencies.iter().copied().for_each(|dep_idx| {

@@ -12,6 +12,7 @@ use rolldown_ecmascript::EcmaCompiler;
 use rolldown_error::{BuildDiagnostic, BuildResult, InvalidOptionType};
 use rolldown_sourcemap::collapse_sourcemaps;
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
+use rustc_hash::FxHashSet;
 
 use crate::type_alias::IndexInstantiatedChunks;
 
@@ -20,9 +21,11 @@ use super::GenerateStage;
 impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn minify_chunks(
-    options: &NormalizedBundlerOptions,
+    &mut self,
     chunks: &mut IndexInstantiatedChunks,
+    skip_sourcemap_chunks: &FxHashSet<rolldown_common::ChunkIdx>,
   ) -> BuildResult<Option<BTreeMap<String, Option<String>>>> {
+    let options = self.options;
     let Some((compress, minify_options, remove_whitespace, ascii_only)) =
       chunk_minify_options(&options.minify)
     else {
@@ -38,64 +41,187 @@ impl GenerateStage<'_> {
     }
     let allocator_pool = AllocatorPool::new(rayon::current_num_threads());
     let source_type = options.format.source_type().with_jsx(true);
+    let eval_modules = self
+      .link_output
+      .module_table
+      .iter()
+      .filter_map(|module| module.as_normal())
+      .filter(|module| module.meta.has_eval())
+      .map(|module| module.id.as_str())
+      .collect::<FxHashSet<_>>();
 
     let property_mangle_cache = OnceLock::new();
-    chunks.par_iter_mut().try_for_each(|chunk| -> BuildResult<()> {
-      if !is_minifiable_ecma_chunk(chunk) {
-        return Ok(());
-      }
-      let codegen_options = CodegenOptions {
-        minify: remove_whitespace,
-        ascii_only: options.charset.is_ascii() || ascii_only,
-        comments: CommentOptions {
-          normal: !remove_whitespace,
-          jsdoc: options.comments.jsdoc && !remove_whitespace,
-          annotation: options.comments.annotation,
-          legal: if options.comments.legal || !remove_whitespace {
-            codegen::LegalComment::Inline
-          } else {
-            codegen::LegalComment::None
-          },
-        },
-        ..CodegenOptions::default()
-      };
-
-      let allocator_guard = allocator_pool.get();
-      // The minify map borrows the pre-minify `chunk.content` (as `sourcesContent`,
-      // which the collapse discards), so collapse before swapping in the minified
-      // content instead of paying an `into_owned` copy of the whole chunk text.
-      let (minified_content, collapsed_map) = {
-        // TODO: Do we need to ensure `chunk.preliminary_filename` to be absolute path?
-        let (minified_content, new_map, chunk_property_mangle_cache) = EcmaCompiler::dce_or_minify(
-          &allocator_guard,
-          chunk.content.try_as_inner_str()?,
-          source_type,
-          chunk.map.is_some(),
-          chunk.preliminary_filename.as_str(),
-          compress,
-          minify_options.clone(),
-          codegen_options,
-        )?;
-        if let Some(cache) = chunk_property_mangle_cache {
-          property_mangle_cache
-            .set(cache)
-            .expect("property mangling is limited to one JavaScript chunk");
-        }
-        let collapsed_map = match (&chunk.map, &new_map) {
-          (Some(origin_map), Some(new_map)) => Some(collapse_sourcemaps(&[origin_map, new_map])),
-          _ => {
-            // TODO: Map is dirty. Should we reset the `chunk.map` to `None`?
-            None
+    let deferred_modules = self
+      .link_output
+      .module_table
+      .iter()
+      .filter_map(|module| module.as_normal())
+      .filter(|module| !self.link_output.metas[module.idx].deferred_imports.is_empty())
+      .map(|module| module.id.as_str())
+      .collect::<FxHashSet<_>>();
+    let can_cache_minify = minify_options.mangle_properties.is_none();
+    let cache_ref = self.cache.as_deref();
+    let minify_results: Vec<
+      Option<(rolldown_common::ChunkIdx, [u8; 32], Vec<String>, arcstr::ArcStr, bool)>,
+    > = chunks
+      .par_iter_mut()
+      .map(
+        |chunk| -> anyhow::Result<
+          Option<(rolldown_common::ChunkIdx, [u8; 32], Vec<String>, arcstr::ArcStr, bool)>,
+        > {
+          if !is_minifiable_ecma_chunk(chunk) {
+            return Ok(None);
           }
-        };
-        (minified_content, collapsed_map)
-      };
-      chunk.content = minified_content.into();
-      if let Some(map) = collapsed_map {
-        chunk.map = Some(map);
+          let pre_state = if can_cache_minify {
+            use rolldown_utils::hash_placeholder::{
+              HASH_PLACEHOLDER_LEFT_FINDER, extract_hash_placeholders,
+              replace_placeholder_with_hash, visit_with_placeholders_defaulted,
+            };
+            use xxhash_rust::xxh3::Xxh3;
+            let pre_str = chunk.content.try_as_inner_str()?;
+            let mut h0 = Xxh3::with_seed(0x9e3779b97f4a7c15);
+            let mut h1 = Xxh3::with_seed(0x6a09e667f3bcc908);
+            visit_with_placeholders_defaulted(
+              pre_str,
+              &HASH_PLACEHOLDER_LEFT_FINDER,
+              |_| true,
+              |bytes| {
+                h0.update(bytes);
+                h1.update(bytes);
+              },
+            );
+            let mut out = [0u8; 32];
+            out[..16].copy_from_slice(&h0.digest128().to_le_bytes());
+            out[16..].copy_from_slice(&h1.digest128().to_le_bytes());
+            let placeholders: Vec<String> =
+              extract_hash_placeholders(pre_str, &HASH_PLACEHOLDER_LEFT_FINDER)
+                .into_iter()
+                .map(str::to_string)
+                .collect();
+            if let Some(c) = cache_ref
+              && let Some(&digest) = c.current_chunk_map_digests.get(&chunk.originate_from)
+              && let Some(hit) = c.cached_chunk_sourcemaps.get(&digest)
+              && hit.pre_minify_hash == out
+              && hit.pre_minify_placeholders.len() == placeholders.len()
+              && let Some(ref post_code) = hit.post_minify_content
+              && (options.sourcemap.is_none()
+                || skip_sourcemap_chunks.contains(&chunk.originate_from))
+            {
+              let final_post_code = if hit.pre_minify_placeholders == placeholders {
+                post_code.clone()
+              } else {
+                let remap: rustc_hash::FxHashMap<String, &str> = hit
+                  .pre_minify_placeholders
+                  .iter()
+                  .cloned()
+                  .zip(placeholders.iter().map(String::as_str))
+                  .collect();
+                let replaced = replace_placeholder_with_hash(
+                  post_code.as_str(),
+                  &remap,
+                  &HASH_PLACEHOLDER_LEFT_FINDER,
+                );
+                arcstr::ArcStr::from(replaced.as_ref())
+              };
+              chunk.content = final_post_code.to_string().into();
+              return Ok(Some((
+                chunk.originate_from,
+                out,
+                placeholders,
+                final_post_code,
+                true,
+              )));
+            }
+            Some((out, placeholders))
+          } else {
+            None
+          };
+          let mut minify_options = minify_options.clone();
+          if let InstantiationKind::Ecma(meta) = &chunk.kind
+            && meta.rendered_chunk.module_ids.iter().any(|id| eval_modules.contains(id.as_str()))
+          {
+            // Oxc DCE drops writes in initializer closures even when another closure's direct
+            // eval observes the outer binding. Keep compression off for these module records.
+            minify_options.compress = None;
+          }
+          if let InstantiationKind::Ecma(meta) = &chunk.kind
+            && meta.rendered_chunk.module_ids.iter().any(|id| deferred_modules.contains(id.as_str()))
+            && let Some(compress) = &mut minify_options.compress
+          {
+            // Even an unused deferred binding contributes an evaluation dependency: deleting
+            // its request changes ReadyForSyncExecution for async/cyclic module graphs.
+            compress.treeshake.invalid_import_side_effects = true;
+          }
+          let codegen_options = CodegenOptions {
+            minify: remove_whitespace,
+            ascii_only: options.charset.is_ascii() || ascii_only,
+            comments: CommentOptions {
+              normal: !remove_whitespace,
+              jsdoc: options.comments.jsdoc && !remove_whitespace,
+              annotation: options.comments.annotation,
+              legal: if options.comments.legal || !remove_whitespace {
+                codegen::LegalComment::Inline
+              } else {
+                codegen::LegalComment::None
+              },
+            },
+            ..CodegenOptions::default()
+          };
+
+          let allocator_guard = allocator_pool.get();
+          // The minify map borrows the pre-minify `chunk.content` (as `sourcesContent`,
+          // which the collapse discards), so collapse before swapping in the minified
+          // content instead of paying an `into_owned` copy of the whole chunk text.
+          let (minified_content, collapsed_map) = {
+            // TODO: Do we need to ensure `chunk.preliminary_filename` to be absolute path?
+            let (minified_content, new_map, chunk_property_mangle_cache) =
+              EcmaCompiler::dce_or_minify(
+                &allocator_guard,
+                chunk.content.try_as_inner_str()?,
+                source_type,
+                chunk.map.is_some(),
+                chunk.preliminary_filename.as_str(),
+                compress,
+                minify_options,
+                codegen_options,
+              )
+              .map_err(|e| anyhow::anyhow!("{e:?}"))?;
+            if let Some(cache) = chunk_property_mangle_cache {
+              property_mangle_cache
+                .set(cache)
+                .expect("property mangling is limited to one JavaScript chunk");
+            }
+            let collapsed_map = match (&chunk.map, &new_map) {
+              (Some(origin_map), Some(new_map)) => Some(collapse_sourcemaps(&[origin_map, new_map])),
+              _ => {
+                // TODO: Map is dirty. Should we reset the `chunk.map` to `None`?
+                None
+              }
+            };
+            (minified_content, collapsed_map)
+          };
+          let res = pre_state.map(|(ph, pls)| {
+            (
+              chunk.originate_from,
+              ph,
+              pls,
+              arcstr::ArcStr::from(minified_content.as_str()),
+              false,
+            )
+          });
+          chunk.content = minified_content.into();
+          if let Some(map) = collapsed_map {
+            chunk.map = Some(map);
+          }
+          Ok(res)
+        })
+        .collect::<anyhow::Result<Vec<_>>>()?;
+    if let Some(c) = self.cache.as_deref_mut() {
+      for (chunk_idx, pre_hash, pls, post_code, _was_hit) in minify_results.into_iter().flatten() {
+        c.current_chunk_minify_state
+          .insert(chunk_idx, (pre_hash, pls, Some(post_code)));
       }
-      Ok(())
-    })?;
+    }
 
     Ok(property_mangle_cache.into_inner().map(|cache| {
       cache

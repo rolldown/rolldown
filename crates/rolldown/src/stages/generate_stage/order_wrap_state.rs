@@ -42,11 +42,35 @@ pub struct OrderWrapState {
   runtime_symbols: FxHashSet<SymbolRef>,
   nested_reexport_records: FxHashSet<(ModuleIdx, ImportRecordIdx)>,
   consumed_reexport_facades: FxHashSet<SymbolRef>,
+  read_reexport_facades: FxHashSet<SymbolRef>,
 }
 
 impl OrderWrapState {
+  /// Whether order lowering decided nothing for any module: no wrapper, carrier, overlay,
+  /// synthetic statement, route or namespace demand.
+  pub(crate) fn is_empty(&self) -> bool {
+    self.modules.is_empty()
+      && self.reexport_init_transparent.is_empty()
+      && self.consumer_local_reexport_routes.is_empty()
+      && self.consumer_local_namespace_targets.is_empty()
+      && self.cjs_carriers.is_empty()
+      && self.cjs_carrier_wrapper_refs.is_empty()
+      && self.synthetic_statements.is_empty()
+      && self.import_overlays.is_empty()
+      && self.namespace_requirements.is_empty()
+      && self.simulated_facade_namespace_requirements.is_empty()
+      && self.runtime_symbols.is_empty()
+      && self.nested_reexport_records.is_empty()
+      && self.consumed_reexport_facades.is_empty()
+      && self.read_reexport_facades.is_empty()
+  }
+
   pub(crate) fn has_import_overlays(&self) -> bool {
     !self.import_overlays.is_empty()
+  }
+
+  pub(crate) fn module_has_import_overlays(&self, module_idx: ModuleIdx) -> bool {
+    self.import_overlays_by_importer.contains_key(&module_idx)
   }
 
   pub(crate) fn required_runtime_helpers(&self) -> RuntimeHelper {
@@ -109,6 +133,15 @@ impl OrderWrapState {
       .into_iter()
       .map(|helper| runtime.resolve_symbol(RUNTIME_HELPER_NAMES[helper.bit_index()]))
       .collect::<Vec<_>>();
+    // Synthetic getters can need compiler helpers without a RuntimeHelper bit.
+    pending.extend(
+      self
+        .synthetic_statements
+        .iter()
+        .flat_map(|stmt| &stmt.referenced_symbols)
+        .filter(|symbol| symbol.owner == runtime.id())
+        .copied(),
+    );
     while let Some(symbol_ref) = pending.pop() {
       let symbol_ref = symbols.canonical_ref_resolving_namespace(symbol_ref);
       if !self.runtime_symbols.insert(symbol_ref) {
@@ -172,6 +205,16 @@ impl OrderWrapState {
     self.consumed_reexport_facades.contains(&symbol_ref)
   }
 
+  pub(crate) fn set_read_reexport_facades(&mut self, facades: FxHashSet<SymbolRef>) {
+    self.read_reexport_facades = facades;
+  }
+
+  /// Whether `symbol_ref` is on the export chain of an importer binding that holds a namespace
+  /// and whose members its importer reads.
+  pub(crate) fn is_read_reexport_facade(&self, symbol_ref: SymbolRef) -> bool {
+    self.read_reexport_facades.contains(&symbol_ref)
+  }
+
   /// The wrapper evaluates the module-owned body. Consumer-local re-exports require the
   /// additional targets selected by the import-record or complete-namespace resolver.
   pub(crate) fn esm_init_target(
@@ -199,11 +242,12 @@ impl OrderWrapState {
     module_idx: ModuleIdx,
     wrapper_ref: SymbolRef,
     runtime_helper: RuntimeHelper,
+    referenced_symbols: Vec<SymbolRef>,
   ) {
     debug_assert_eq!(wrapper_ref.owner, module_idx);
     let wrapper_statement = self.add_synthetic_statement(OrderSyntheticStmt {
       declared_symbols: vec![TaggedSymbolRef::normal(wrapper_ref)],
-      referenced_symbols: vec![],
+      referenced_symbols,
       runtime_helpers: runtime_helper,
       chunk: None,
     });
@@ -355,9 +399,7 @@ impl OrderWrapState {
       self.simulated_facade_namespace_requirements.entry(namespace_ref).or_default();
     for export in exports {
       requirement.export_names.insert(export.name);
-      if let Some(symbol_ref) = export.referenced_symbol {
-        referenced_symbols.push(symbol_ref);
-      }
+      referenced_symbols.extend(export.referenced_symbols);
     }
     requirement.live_importers.extend(live_importers);
     let stmt_idx = self.add_synthetic_statement(OrderSyntheticStmt {
@@ -717,7 +759,7 @@ struct SimulatedFacadeNamespaceRequirement {
 #[derive(Debug)]
 pub(super) struct SimulatedFacadeNamespaceExport {
   pub(super) name: CompactStr,
-  pub(super) referenced_symbol: Option<SymbolRef>,
+  pub(super) referenced_symbols: Vec<SymbolRef>,
 }
 
 #[derive(Debug)]

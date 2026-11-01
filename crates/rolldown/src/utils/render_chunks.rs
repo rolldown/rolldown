@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use arcstr::ArcStr;
 use futures::future::try_join_all;
 use rolldown_common::{
   ChunkTable, InsChunkIdx, InstantiationKind, ModuleTable, RollupRenderedChunk,
@@ -21,19 +20,24 @@ pub async fn render_chunks(
   options: &SharedNormalizedBundlerOptions,
   chunk_table: &ChunkTable,
   module_table: &ModuleTable,
+  extra_runtime_chunk: Option<&Arc<RollupRenderedChunk>>,
 ) -> Result<Vec<BuildDiagnostic>> {
-  let chunks = Arc::new(
-    assets
-      .iter()
-      .filter_map(|asset| {
-        if let InstantiationKind::Ecma(ecma_meta) = &asset.kind {
-          Some((ecma_meta.rendered_chunk.filename.clone(), Arc::clone(&ecma_meta.rendered_chunk)))
-        } else {
-          None
-        }
-      })
-      .collect::<FxIndexMap<ArcStr, Arc<RollupRenderedChunk>>>(),
-  );
+  if assets.is_empty() {
+    return Ok(vec![]);
+  }
+  let mut chunks_map = FxIndexMap::default();
+  if let Some(rt) = extra_runtime_chunk {
+    chunks_map.insert(rt.filename.clone(), Arc::clone(rt));
+  }
+  for asset in assets.iter() {
+    if let InstantiationKind::Ecma(ecma_meta) = &asset.kind {
+      chunks_map.insert(
+        ecma_meta.rendered_chunk.filename.clone(),
+        Arc::clone(&ecma_meta.rendered_chunk),
+      );
+    }
+  }
+  let chunks = Arc::new(chunks_map);
 
   let result = try_join_all(assets.iter_mut().enumerate().map(|(index, asset)| {
     let chunks = Arc::clone(&chunks);

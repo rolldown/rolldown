@@ -1,10 +1,10 @@
 use oxc_index::IndexVec;
 use rolldown_common::{
-  ImportKind, ImportRecordMeta, Module, ModuleIdx, StmtEvalFlags, WrapKind,
+  ImportKind, ImportRecordMeta, IndexModules, Module, ModuleIdx, StmtEvalFlags, WrapKind,
   side_effects::DeterminedSideEffects,
 };
 
-use crate::stages::link_stage::LinkStage;
+use crate::{stages::link_stage::LinkStage, types::linking_metadata::LinkingMetadataVec};
 
 /// Holds a module's scan-time side-effect verdict and statement count. `link()` later appends
 /// wrapper statements that carry `UnknownSideEffect`, and those must not count as module side
@@ -16,62 +16,16 @@ pub struct ScanTimeSideEffects {
 }
 
 impl LinkStage<'_> {
+  /// Gives each module whose own statements have no side effects those of the modules that its
+  /// import records reach; see [`linked_side_effects`].
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn determine_side_effects(&mut self) {
-    let mut has_side_effects: IndexVec<ModuleIdx, bool> = self
-      .module_table
-      .modules
-      .iter()
-      .map(|module| module.side_effects().has_side_effects())
-      .collect();
-    let mut dependents: IndexVec<ModuleIdx, Vec<ModuleIdx>> =
-      oxc_index::index_vec![Vec::new(); self.module_table.modules.len()];
-
-    for module in self.module_table.modules.iter().filter_map(Module::as_normal) {
-      // User-defined verdicts override dependency effects. Modules already known to have
-      // effects do not need dependency edges either.
-      if !matches!(module.side_effects, DeterminedSideEffects::Analyzed(false)) {
-        continue;
-      }
-      for import_record in &module.import_records {
-        let Some(importee_idx) = import_record.resolved_module else { continue };
-        dependents[importee_idx].push(module.idx);
-
-        // Re-exporting a wrapped module must preserve its initialization. Dynamic exports
-        // also need the generated `__reExport` call, even without a wrapper.
-        if import_record.kind == ImportKind::Import
-          && import_record.meta.contains(ImportRecordMeta::IsExportStar)
-          && let Module::Normal(importee) = &self.module_table[importee_idx]
-        {
-          let linking_info = &self.metas[importee.idx];
-          has_side_effects[module.idx] |= match linking_info.wrap_kind() {
-            WrapKind::None => linking_info.has_dynamic_exports,
-            WrapKind::Cjs | WrapKind::Esm => true,
-          };
-        }
-      }
-    }
-
-    // Propagate effects back to importers. A recursive cache can mark a cycle member as
-    // effect-free before visiting an effectful dependency of another member. Each module
-    // enters this worklist at most once, so cycles converge in O(modules + imports).
-    // See internal-docs/linking/reference-needed-symbols/implementation.md.
-    let mut pending: Vec<_> = has_side_effects
-      .iter_enumerated()
-      .filter_map(|(idx, &has_effects)| has_effects.then_some(idx))
-      .collect();
-    while let Some(module_idx) = pending.pop() {
-      for &importer_idx in &dependents[module_idx] {
-        if !has_side_effects[importer_idx] {
-          has_side_effects[importer_idx] = true;
-          pending.push(importer_idx);
-        }
-      }
-    }
-
-    for module in self.module_table.modules.iter_mut().filter_map(Module::as_normal_mut) {
-      if matches!(module.side_effects, DeterminedSideEffects::Analyzed(false)) {
-        module.side_effects = DeterminedSideEffects::Analyzed(has_side_effects[module.idx]);
+    let has_side_effects = linked_side_effects(&self.module_table.modules, &self.metas);
+    for (idx, module) in self.module_table.modules.iter_mut_enumerated() {
+      if let Module::Normal(module) = module
+        && matches!(module.side_effects, DeterminedSideEffects::Analyzed(false))
+      {
+        module.side_effects = DeterminedSideEffects::Analyzed(has_side_effects[idx]);
       }
     }
   }
@@ -107,4 +61,116 @@ impl LinkStage<'_> {
     }
     self.determine_side_effects();
   }
+}
+
+/// Whether each module has side effects once linked. A module whose own statements have none,
+/// `DeterminedSideEffects::Analyzed(false)`, has side effects when one of its import records
+/// reaches a module that has some, or when it re-exports everything from a module whose
+/// re-export call must stay. Side effects that statements, package.json or `no-treeshake` give
+/// a module stay as they are.
+///
+/// Upstream walks the graph depth-first in module order and reads a module that the walk is
+/// still inside as side-effect-free, so a module that reaches side effects only through an
+/// import cycle could go either way: it depended on the order in which the scan numbered the
+/// modules, which follows the order in which their tasks finish, and in an incremental session
+/// on modules that nothing imports any more. This instead carries side effects from every module
+/// that has them to the modules that import it until nothing changes, which depends on the graph
+/// alone.
+pub(crate) fn linked_side_effects(
+  modules: &IndexModules,
+  metas: &LinkingMetadataVec,
+) -> IndexVec<ModuleIdx, bool> {
+  propagate_side_effects(modules, |target| {
+    let meta = &metas[target];
+    match meta.wrap_kind() {
+      WrapKind::None => meta.has_dynamic_exports,
+      WrapKind::Cjs | WrapKind::Esm => true,
+    }
+  })
+}
+
+/// [`linked_side_effects`], with `star_keeps_call` saying whether a module's `export *` of the
+/// normal module that it names keeps the call that initializes it or re-exports its dynamic
+/// exports, as `export *` of a wrapped module or of one with dynamic exports does.
+pub(crate) fn propagate_side_effects(
+  modules: &IndexModules,
+  star_keeps_call: impl Fn(ModuleIdx) -> bool,
+) -> IndexVec<ModuleIdx, bool> {
+  let mut has_side_effects: IndexVec<ModuleIdx, bool> =
+    modules.iter().map(|module| module.side_effects().has_side_effects()).collect();
+  // First resolve modules whose direct imports already have side effects or require a re-export
+  // call, and count remaining Analyzed(false) modules. Only build reverse edges for those.
+  let mut unresolved = Vec::new();
+  for (idx, module) in modules.iter_enumerated() {
+    let Module::Normal(module) = module else {
+      continue;
+    };
+    if !matches!(module.side_effects, DeterminedSideEffects::Analyzed(false)) {
+      continue;
+    }
+    let mut direct_se = false;
+    for record in &module.import_records {
+      let Some(target) = record.resolved_module else {
+        continue;
+      };
+      if has_side_effects[target] {
+        direct_se = true;
+        break;
+      }
+      if record.kind == ImportKind::Import
+        && record.meta.contains(ImportRecordMeta::IsExportStar)
+        && modules[target].is_normal()
+        && star_keeps_call(target)
+      {
+        direct_se = true;
+        break;
+      }
+    }
+    if direct_se {
+      has_side_effects[idx] = true;
+    } else if !module.import_records.is_empty() {
+      unresolved.push(idx);
+    }
+  }
+  if unresolved.is_empty() {
+    return has_side_effects;
+  }
+  // The modules without side effects of their own that import each module.
+  let mut importers: IndexVec<ModuleIdx, Vec<ModuleIdx>> =
+    IndexVec::from_vec(vec![Vec::new(); modules.len()]);
+  let mut pending = Vec::new();
+  for idx in unresolved {
+    let Module::Normal(module) = &modules[idx] else {
+      continue;
+    };
+    let mut resolved_now = false;
+    for record in &module.import_records {
+      let Some(target) = record.resolved_module else {
+        continue;
+      };
+      if has_side_effects[target] {
+        resolved_now = true;
+        break;
+      }
+    }
+    if resolved_now {
+      has_side_effects[idx] = true;
+      pending.push(idx);
+    } else {
+      for record in &module.import_records {
+        if let Some(target) = record.resolved_module {
+          importers[target].push(idx);
+        }
+      }
+    }
+  }
+  while let Some(target) = pending.pop() {
+    for &importer in &importers[target] {
+      if !has_side_effects[importer] {
+        has_side_effects[importer] = true;
+        pending.push(importer);
+      }
+    }
+  }
+  has_side_effects
 }

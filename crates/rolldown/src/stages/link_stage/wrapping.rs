@@ -1,9 +1,10 @@
+use oxc_index::IndexVec;
 use rolldown_common::{
   ExportsKind, ImportKind, IndexModules, Module, ModuleIdx, NormalModule, NormalizedBundlerOptions,
-  RuntimeModuleBrief, StmtInfo, StmtInfoMeta, StmtInfos, SymbolRefDb, TaggedSymbolRef, WrapKind,
+  RuntimeModuleBrief, StmtInfo, StmtInfoMeta, StmtInfos, SymbolRef, SymbolRefDb, TaggedSymbolRef,
+  WrapKind,
 };
 use rolldown_utils::IndexBitSet;
-use rustc_hash::FxHashMap;
 use smallvec::smallvec;
 
 use crate::types::linking_metadata::{LinkingMetadata, LinkingMetadataVec};
@@ -50,55 +51,80 @@ fn wrap_module_recursively(ctx: &mut Context, target: ModuleIdx) {
   });
 }
 
-/// Marks CommonJS and external modules reached through `export *`, and every module that
-/// re-exports one of them through a chain of `export *`, cycles included, as having dynamic
-/// exports.
-fn determine_has_dynamic_exports(modules: &IndexModules, linking_infos: &mut LinkingMetadataVec) {
-  let mut star_importers: FxHashMap<ModuleIdx, Vec<ModuleIdx>> = FxHashMap::default();
-  let mut queue = vec![];
-  let mut mark = |idx: ModuleIdx, queue: &mut Vec<ModuleIdx>| {
-    if !linking_infos[idx].has_dynamic_exports {
-      linking_infos[idx].has_dynamic_exports = true;
-      queue.push(idx);
+/// Whether each module's exports are dynamic because of its `export *` declarations, as linking
+/// decides `LinkingMetadata::has_dynamic_exports`, where `is_commonjs` says whether the link
+/// makes a module CommonJS: such a module's exports are, an external module's too, and so are
+/// those of a module whose stars reach one whose exports are, directly or through a cycle of
+/// stars. Only the modules that the stars of a module that `starts` accepts reach count, those
+/// that the graph reaches, as linking passes over the others (#660). The answer doesn't depend on
+/// the order of the modules, which a module HMR session's table keeps from earlier scans while a
+/// fresh scan numbers the modules as their loads finish (#731). The HMR stage asks this with the
+/// kinds that the link gives the scan's modules, and so gets the link's answer (#697).
+pub(crate) fn dynamic_exports(
+  modules: &IndexModules,
+  is_commonjs: impl Fn(&NormalModule) -> bool,
+  starts: impl Fn(ModuleIdx) -> bool,
+) -> IndexVec<ModuleIdx, bool> {
+  // The modules that the starting modules' stars reach, and the modules whose stars name each.
+  // A CommonJS module's exports are dynamic whatever it re-exports, so the walk stops there.
+  let mut reached = IndexBitSet::new(modules.len());
+  let mut star_importers = IndexVec::from_vec(vec![Vec::new(); modules.len()]);
+  let mut pending = modules
+    .iter()
+    .filter_map(Module::as_normal)
+    .filter(|module| module.has_star_export() && starts(module.idx))
+    .map(|module| module.idx)
+    .collect::<Vec<_>>();
+  let mut sources = Vec::new();
+  while let Some(idx) = pending.pop() {
+    if !reached.set_bit(idx) {
+      continue;
     }
-  };
-
-  for module in modules.iter().filter_map(Module::as_normal).filter(|m| m.has_star_export()) {
-    if matches!(module.exports_kind, ExportsKind::CommonJs) {
-      mark(module.idx, &mut queue);
-    }
-    for importee_id in module.star_export_module_ids() {
-      if importee_id == module.idx {
-        continue;
+    match &modules[idx] {
+      Module::Normal(module) if !is_commonjs(module) => {
+        for importee in module.star_export_module_ids() {
+          if importee != idx {
+            star_importers[importee].push(idx);
+            pending.push(importee);
+          }
+        }
       }
-      star_importers.entry(importee_id).or_default().push(module.idx);
-      let is_dynamic = match &modules[importee_id] {
-        Module::Normal(importee) => matches!(importee.exports_kind, ExportsKind::CommonJs),
-        Module::External(_) => true,
-      };
-      if is_dynamic {
-        mark(importee_id, &mut queue);
-      }
+      Module::Normal(_) | Module::External(_) => sources.push(idx),
     }
   }
-
-  while let Some(idx) = queue.pop() {
-    if let Some(importers) = star_importers.get(&idx) {
-      for &importer in importers {
-        mark(importer, &mut queue);
-      }
+  // Every module whose stars reach a source of dynamic exports has them too.
+  let mut dynamic = IndexVec::from_vec(vec![false; modules.len()]);
+  while let Some(idx) = sources.pop() {
+    if !std::mem::replace(&mut dynamic[idx], true) {
+      sources.extend(star_importers[idx].iter().copied());
     }
   }
+  dynamic
 }
 
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn wrap_modules(&mut self) {
     let mut visited_modules_for_wrapping = IndexBitSet::new(self.module_table.modules.len());
-    determine_has_dynamic_exports(&self.module_table.modules, &mut self.metas);
+    let dynamic = dynamic_exports(
+      &self.module_table.modules,
+      |module| matches!(module.exports_kind, ExportsKind::CommonJs),
+      |idx| self.unreachable_modules.reaches(idx),
+    );
+    for (meta, dynamic) in self.metas.iter_mut().zip(dynamic) {
+      if dynamic {
+        meta.has_dynamic_exports = true;
+      }
+    }
 
     for module in self.module_table.modules.iter().filter_map(Module::as_normal) {
       let module_id = module.idx;
+
+      // A fresh graph wouldn't load a module that the graph no longer reaches, so it wraps
+      // nothing that it imports (#660).
+      if !self.unreachable_modules.reaches(module_id) {
+        continue;
+      }
 
       let need_to_wrap = !self.metas[module_id].wrap_kind().is_none();
 
@@ -180,6 +206,34 @@ impl LinkStage<'_> {
   }
 }
 
+/// The name of a CommonJS module's `require_*` wrapper.
+pub(crate) fn cjs_wrapper_name(module: &NormalModule) -> String {
+  format!("require_{}", module.repr_name)
+}
+
+/// The statement that declares a CommonJS module's `require_*` wrapper, `wrapper_ref`.
+pub(crate) fn cjs_wrapper_stmt_info(
+  wrapper_ref: SymbolRef,
+  runtime: &RuntimeModuleBrief,
+  options: &NormalizedBundlerOptions,
+) -> StmtInfo {
+  StmtInfo {
+    declared_symbols: smallvec![TaggedSymbolRef::normal(wrapper_ref)],
+    referenced_symbols: vec![if options.profiler_names {
+      runtime.resolve_symbol("__commonJS").into()
+    } else {
+      runtime.resolve_symbol("__commonJSMin").into()
+    }],
+    eval_flags: false.into(),
+    import_records: Vec::new(),
+    #[cfg(debug_assertions)]
+    debug_label: None,
+    meta: StmtInfoMeta::default(),
+
+    force_tree_shaking: true,
+  }
+}
+
 fn create_wrapper(
   module: &NormalModule,
   stmt_infos: &mut StmtInfos,
@@ -198,24 +252,8 @@ fn create_wrapper(
     //
     WrapKind::Cjs => {
       let wrapper_ref =
-        symbols.create_facade_root_symbol_ref(module.idx, &format!("require_{}", module.repr_name));
-
-      let stmt_info = StmtInfo {
-        declared_symbols: smallvec![TaggedSymbolRef::normal(wrapper_ref)],
-        referenced_symbols: vec![if options.profiler_names {
-          runtime.resolve_symbol("__commonJS").into()
-        } else {
-          runtime.resolve_symbol("__commonJSMin").into()
-        }],
-        eval_flags: false.into(),
-        import_records: Vec::new(),
-        #[cfg(debug_assertions)]
-        debug_label: None,
-        meta: StmtInfoMeta::default(),
-
-        force_tree_shaking: true,
-      };
-
+        symbols.create_facade_root_symbol_ref(module.idx, &cjs_wrapper_name(module));
+      let stmt_info = cjs_wrapper_stmt_info(wrapper_ref, runtime, options);
       linking_info.wrapper_stmt_info = Some(stmt_infos.add_stmt_info(stmt_info));
       linking_info.wrapper_ref = Some(wrapper_ref);
     }

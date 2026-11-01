@@ -70,6 +70,14 @@ impl LinkStage<'_> {
       self.dynamic_import_exports_usage_map.insert(importee, DynamicImportExportsUsage::Complete);
     }
 
+    let non_callable_then: FxHashSet<ModuleIdx> = self
+      .module_table
+      .modules
+      .iter()
+      .filter_map(Module::as_normal)
+      .filter(|module| super::exports_namespace_as_then(module))
+      .map(|module| module.idx)
+      .collect();
     for module in &mut self.module_table.modules {
       let Some(module) = module.as_normal_mut() else { continue };
       for record in &mut module.import_records {
@@ -79,7 +87,9 @@ impl LinkStage<'_> {
         let Some(importee) = record.resolved_module else { continue };
         let meta = &self.metas[importee];
         // Promise resolution calls `then` with the namespace as its receiver.
-        if meta.has_dynamic_exports || meta.resolved_exports.contains_key("then") {
+        if meta.has_dynamic_exports
+          || (meta.resolved_exports.contains_key("then") && !non_callable_then.contains(&importee))
+        {
           self
             .dynamic_import_exports_usage_map
             .insert(importee, DynamicImportExportsUsage::Complete);
@@ -101,7 +111,7 @@ impl LinkStage<'_> {
           &self.dynamic_import_exports_usage_map,
           self.options,
           &self.overrode_preserve_entry_signature_map,
-          !ecma_module.dynamic_importers.is_empty(),
+          self.unreachable_modules.dynamically_imported(ecma_module),
         );
       }
 
@@ -132,7 +142,13 @@ impl LinkStage<'_> {
         let meta = &mut self.metas[ecma_module.idx];
         let mut referenced_symbols = vec![];
         let mut declared_symbols: DeclaredSymbols = smallvec![];
-        if !meta.is_canonical_exports_empty() || self.options.generated_code.symbols {
+        // A namespace that star exports complete at runtime calls `__exportAll` even without
+        // names of its own.
+        if !meta.is_canonical_exports_empty()
+          || self.options.generated_code.symbols
+          || meta.has_dynamic_exports
+          || !meta.star_exports_from_external_modules.is_empty()
+        {
           referenced_symbols.push(self.runtime.resolve_symbol("__exportAll").into());
           referenced_symbols
             .extend(meta.canonical_exports(false).map(|(_, export)| export.symbol_ref.into()));
@@ -185,7 +201,7 @@ impl LinkStage<'_> {
       );
       let is_dynamic_imported = self.module_table.modules[*entry_idx]
         .as_normal()
-        .is_some_and(|module| !module.dynamic_importers.is_empty());
+        .is_some_and(|module| self.unreachable_modules.dynamically_imported(module));
       if matches!(normalized_entry_signature, PreserveEntrySignatures::False)
         && !is_dynamic_imported
       {

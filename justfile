@@ -283,3 +283,7 @@ allocs:
 # Run the `rolldown` cli using node.
 run *args:
   ./node_modules/.bin/rolldown {{ args }}
+
+# Run the Rolldown fork integrity, upstream absorption, and performance gate
+perf-gate *args="":
+  node .github/scripts/perf-gate.js {{ args }}

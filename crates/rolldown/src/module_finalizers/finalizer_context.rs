@@ -29,7 +29,7 @@ use crate::{
       FinalEsmInitMetadata, InlineCommonChunksState, Sealed,
       order_wrap_state::{EsmInitOrigin, EsmInitTarget, OrderWrapState},
     },
-    link_stage::SafelyMergeCjsNsInfo,
+    link_stage::{SafelyMergeCjsNsInfo, UnreachableModules},
   },
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
 };
@@ -76,6 +76,9 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   /// True if any module in the bundle has enum member values to inline.
   /// Allows skipping enum inlining checks in the hot visitor path for enum-free bundles.
   pub has_enum_inlining: bool,
+  /// The modules that the link passed over, as the graph's entries no longer reach them: a
+  /// JSON module's importers among them don't decide its namespace (#660).
+  pub unreachable_modules: &'me UnreachableModules,
   /// `experimentalInlineCommonChunks`: records and the bridges this chunk reads them through.
   pub inline_state: &'me InlineCommonChunksState,
 }
@@ -97,11 +100,17 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
 
     if matches!(self.linking_info.wrap_kind(), WrapKind::Cjs) && legacy_wrapper_is_included {
       return ModuleWrapperMode::InteropCjs(
-        self.linking_info.wrapper_ref.expect("included CJS wrapper should have a symbol"),
+        self
+          .linking_info
+          .wrapper_ref
+          .expect("included CJS wrapper should have a symbol"),
       );
     }
 
-    let Some(target) = self.order_wrap_state.esm_init_target(self.idx, self.linking_info) else {
+    let Some(target) = self
+      .order_wrap_state
+      .esm_init_target(self.idx, self.linking_info)
+    else {
       return ModuleWrapperMode::None;
     };
     let declaration_is_included = match target.origin {
@@ -140,26 +149,58 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         .remove_map
         .get(&self.idx)
         .cloned()
-        .map(|idxs| idxs.into_iter().map(|idx| (idx, String::new())).collect::<FxIndexMap<_, _>>())
+        .map(|idxs| {
+          idxs
+            .into_iter()
+            .map(|idx| (idx, String::new()))
+            .collect::<FxIndexMap<_, _>>()
+        })
         .unwrap_or_default();
 
+      let temporal_bindings: FxHashMap<_, _> = self
+        .linking_info
+        .temporal_symbols
+        .iter()
+        .filter(|(_, flag)| self.used_symbol_refs.contains(flag))
+        .map(|(binding, flag)| {
+          (*binding, (*flag, self.linking_info.temporal_constants.contains(binding)))
+        })
+        .collect();
+      let temporal_declarations = temporal_bindings
+        .keys()
+        .map(|binding| {
+          (
+            oxc_str::CompactStr::from(
+              self.symbol_db.canonical_name_for_or_original(*binding, &self.chunk.canonical_names),
+            ),
+            *binding,
+          )
+        })
+        .collect();
       let mut finalizer = ScopeHoistingFinalizer {
+        temporal_bindings,
+        temporal_declarations,
         ctx: self,
         scope: ast_scope,
         ast_builder: AstBuilder::new(alloc),
         generated_init_esm_importee_ids: FxHashSet::default(),
         generated_order_cjs_carriers: FxHashSet::default(),
+        static_esm_init_callees: FxHashSet::default(),
         scope_stack: vec![],
         top_level_var_bindings: FxIndexSet::default(),
         state: TraverseState::empty(),
         cur_stmt_index: 0,
         keep_name_statement_to_insert: vec![],
+        top_level_function_names: oxc::allocator::Vec::new_in(&alloc),
         needs_hosted_top_level_binding: false,
         module_namespace_included,
         transferred_import_record,
         rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts::default(),
         json_module_inlined_prop: need_inline_json_prop.then(|| Box::new(FxHashMap::default())),
         missing_file_reference_ids: FxIndexMap::default(),
+        native_enclosing_classes: Vec::new(),
+        native_let_symbols: rustc_hash::FxHashSet::default(),
+        callee_member: None,
         resolve_file_url_errors: Vec::new(),
         surviving_import_meta_spans: FxIndexMap::default(),
       };
@@ -186,14 +227,18 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
       let missing_file_reference_ids = finalizer.missing_file_reference_ids;
       if !missing_file_reference_ids.is_empty() {
         let module = finalizer.ctx.module;
-        diagnostics.extend(missing_file_reference_ids.into_iter().map(|(reference_id, span)| {
-          BuildDiagnostic::file_not_found(
-            reference_id.as_str(),
-            module.id.to_string(),
-            module.ecma_view.source.clone(),
-            span,
-          )
-        }));
+        diagnostics.extend(
+          missing_file_reference_ids
+            .into_iter()
+            .map(|(reference_id, span)| {
+              BuildDiagnostic::file_not_found(
+                reference_id.as_str(),
+                module.id.to_string(),
+                module.ecma_view.source.clone(),
+                span,
+              )
+            }),
+        );
       }
 
       let mut resolve_file_url_errors = finalizer.resolve_file_url_errors;
@@ -203,9 +248,16 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         resolve_file_url_errors.sort_unstable();
         resolve_file_url_errors.dedup();
         // Attribute each failure to its plugin, so the user sees `[plugin foo] ...`
-        diagnostics.extend(resolve_file_url_errors.into_iter().map(|(plugin_name, message)| {
-          BuildDiagnostic::plugin_error(CausedPlugin::new(plugin_name), anyhow::anyhow!(message))
-        }));
+        diagnostics.extend(
+          resolve_file_url_errors
+            .into_iter()
+            .map(|(plugin_name, message)| {
+              BuildDiagnostic::plugin_error(
+                CausedPlugin::new(plugin_name),
+                anyhow::anyhow!(message),
+              )
+            }),
+        );
       }
 
       (

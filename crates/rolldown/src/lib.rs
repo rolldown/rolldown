@@ -3,6 +3,7 @@ mod bundle;
 mod bundler;
 mod bundler_builder;
 mod chunk_graph;
+mod deferred_resolution_error;
 mod ecmascript;
 mod esm_init_obligations;
 mod hmr;
@@ -30,9 +31,18 @@ pub use crate::{
   types::{bundle_output::BundleOutput, bundler_config::BundlerConfig},
 };
 
+pub use deferred_resolution_error::DeferredResolutionError;
 pub use rolldown_common::bundler_options::*;
+pub use utils::native_cell_plan;
+pub use utils::native_record_ast;
+pub use utils::native_records::{NATIVE_JSON_NAMESPACE_PREFIX, NATIVE_JSON_RECORD_PREFIX};
+pub use utils::topology_config;
 
 pub use rolldown_resolver::ResolveOptions;
+
+pub use crate::types::scan_stage_cache::{
+  CodegenCacheBudget, CodegenCacheTrim, CommonjsInterop, NativeGraphChange, RevisionScanCache,
+};
 
 pub use rolldown_plugin as plugin;
 

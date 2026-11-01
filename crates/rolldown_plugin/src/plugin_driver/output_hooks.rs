@@ -199,7 +199,7 @@ impl PluginDriver {
       }
       .instrument(tracing::trace_span!(
         "HookRenderChunk",
-        CONTEXT_call_id = rolldown_utils::uuid::uuid_v4()
+        CONTEXT_call_id = super::hook_call_id(module_path!())
       ))
       .await?;
     }

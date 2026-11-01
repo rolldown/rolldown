@@ -16,7 +16,9 @@ use crate::{
 };
 use anyhow::Result;
 use arcstr::ArcStr;
-use rolldown_common::{ModuleInfo, NormalModule, RollupRenderedChunk, WatcherChangeKind};
+use rolldown_common::{
+  ModuleDefFormat, ModuleInfo, NormalModule, RollupRenderedChunk, WatcherChangeKind,
+};
 use rolldown_ecmascript::EcmaAst;
 
 pub type HookResolveIdReturn = Result<Option<HookResolveIdOutput>>;
@@ -326,6 +328,18 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   }
 
   fn transform_ast_meta(&self) -> Option<PluginHookMeta> {
+    None
+  }
+
+  /// developer-bundler: the format whose CommonJS interop the module `id` follows, in place of
+  /// `format`, its own. Only the interop of its imports of CommonJS reads it; how the module
+  /// parses and what kind of exports it has keep its own format. The first plugin that answers
+  /// decides; see PATCHES.
+  fn interop_module_def_format(
+    &self,
+    _id: &str,
+    _format: ModuleDefFormat,
+  ) -> Option<ModuleDefFormat> {
     None
   }
 

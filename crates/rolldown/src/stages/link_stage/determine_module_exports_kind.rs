@@ -1,25 +1,33 @@
+use std::collections::BTreeMap;
+
 use rolldown_common::{
   EcmaModuleAstUsage, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module,
   OutputFormat, WrapKind,
 };
 
+use crate::types::scan_stage_cache::CommonjsInterop;
 use crate::utils::external_import_interop::import_record_needs_interop;
 
-use super::LinkStage;
+use super::{LinkStage, LinkStageOutput};
 
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn determine_module_exports_kind(&mut self) {
-    // Iterate by index so that we can release the iterator borrow on `module_table`
-    // before mutating an importee's `exports_kind` via `as_normal_mut`. Reads and
-    // writes interleave in the same order as the original closure walk, preserving
-    // the "earlier importer's promotion is observed by later importers" semantics.
-    let importer_indices: Vec<_> = self
+    // Iterate by discovery order from the entries (with module index as tie-breaker) so that
+    // we can release the iterator borrow on `module_table` before mutating an importee's
+    // `exports_kind` via `as_normal_mut`, and so that an edit that reorders importers in a
+    // cached module table gives an `ExportsKind::None` module the same kind that a fresh scan
+    // gives it (#681). A module that the graph no longer reaches imports nothing (#660).
+    let mut importer_indices: Vec<_> = self
       .module_table
       .modules
       .iter_enumerated()
-      .filter_map(|(idx, m)| matches!(m, Module::Normal(_)).then_some(idx))
+      .filter_map(|(idx, m)| {
+        (matches!(m, Module::Normal(_)) && self.unreachable_modules.reaches(idx)).then_some(idx)
+      })
       .collect();
+    importer_indices
+      .sort_by_key(|&idx| (self.unreachable_modules.discovery_order(idx), idx.index()));
 
     for importer_idx in importer_indices {
       let n_records = match &self.module_table[importer_idx] {
@@ -121,7 +129,13 @@ impl LinkStage<'_> {
     if self.options.is_strict_execution_order_enabled() {
       return;
     }
-    for importer in self.module_table.modules.iter().filter_map(Module::as_normal) {
+    for importer in self
+      .module_table
+      .modules
+      .iter()
+      .filter_map(Module::as_normal)
+      .filter(|importer| self.unreachable_modules.reaches(importer.idx))
+    {
       for (rec_idx, rec) in importer.import_records.iter_enumerated() {
         if !matches!(rec.kind, ImportKind::Import)
           || rec.meta.contains(ImportRecordMeta::IsExportStar)
@@ -140,4 +154,38 @@ impl LinkStage<'_> {
       }
     }
   }
+}
+
+/// How the records of a link's output convert the exports of each CommonJS module that the graph
+/// reaches and that ES modules import, by the module's stable id: whether every importer's record
+/// passes them through `__toESM`, as one default or namespace import makes all of them do
+/// ([`LinkStage::determine_safely_merge_cjs_ns`]), and the importers whose records read them
+/// through a binding, which the records of a page that loaded the output keep reading so (#660).
+pub(crate) fn commonjs_interop(link_output: &LinkStageOutput) -> BTreeMap<String, CommonjsInterop> {
+  let modules = &link_output.module_table.modules;
+  let reaches = |idx| link_output.unreachable_modules.reaches(idx);
+  link_output
+    .safely_merge_cjs_ns_map
+    .iter()
+    .filter(|&(&idx, _)| reaches(idx))
+    .filter_map(|(&idx, info)| {
+      let module = modules[idx].as_normal()?;
+      let readers = module
+        .ecma_view
+        .importers_idx
+        .iter()
+        .filter(|&&importer| reaches(importer))
+        .filter_map(|&importer| modules[importer].as_normal())
+        .filter(|importer| {
+          importer.named_imports.values().any(|import| {
+            let record = &importer.import_records[import.record_idx];
+            record.kind == ImportKind::Import && record.resolved_module == Some(idx)
+          })
+        })
+        .map(|importer| importer.stable_id.to_string())
+        .collect();
+      let interop = CommonjsInterop { converted: info.needs_interop, readers };
+      Some((module.stable_id.to_string(), interop))
+    })
+    .collect()
 }

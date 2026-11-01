@@ -1,6 +1,10 @@
-use oxc::ast::{
-  AstKind,
-  ast::{self, Argument, IdentifierReference},
+use oxc::{
+  ast::{
+    AstKind,
+    ast::{self, Argument, IdentifierReference},
+  },
+  ast_visit::VisitJs,
+  semantic::{ScopeFlags, SymbolId},
 };
 use oxc_str::{CompactStr, JSStr};
 use rolldown_common::{ImportRecordIdx, dynamic_import_usage::DynamicImportExportsUsage};
@@ -13,10 +17,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     &mut self,
     ident: &IdentifierReference,
   ) -> Option<()> {
+    // Each reference is counted once, as it is visited. One visited before its binding was
+    // registered stays in the set: see `complete_dynamic_imports_read_before_registration`.
     if !self
       .dynamic_import_usage_info
       .dynamic_import_binding_reference_id
-      .contains(&ident.reference_id())
+      .remove(&ident.reference_id())
     {
       return None;
     }
@@ -27,7 +33,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     // IdentifierReference, but IdentifierReference did not saved the related `SymbolId`
     // Something wrong with semantic analyze
     let symbol_id = reference.symbol_id().expect("should have symbol id");
-    let parent = *self.visit_path.last()?;
+    let parent_idx = self.effective_parent_idx()?;
+    let parent = self.visit_path[parent_idx];
     // if the property could be converted as a static property name, e.g.
     // a.b // static
     // a['b'] // static
@@ -43,7 +50,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       .get(&symbol_id)?;
     let usage = match partial_name {
       Some(name) => {
-        if self.dynamic_import_member_is_called(self.visit_path.len() - 1) {
+        if self.dynamic_import_member_is_called(parent_idx) {
           self.record_dynamic_import_called_name(rec_idx, name);
         }
         DynamicImportExportsUsage::Single(name.into())
@@ -58,10 +65,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           // A re-exported key (`export const { a } = ns`) must be kept even when it
           // is never read locally, so detect the enclosing export declaration
           // (VariableDeclarator -> VariableDeclaration -> Export*) and forward it.
-          let is_exported = self
-            .visit_path
-            .len()
-            .checked_sub(3)
+          let is_exported = parent_idx
+            .checked_sub(2)
             .and_then(|idx| self.visit_path.get(idx))
             .is_some_and(|kind| {
               matches!(kind, AstKind::ExportDeclaration(_) | AstKind::ExportDefaultDeclaration(_))
@@ -88,9 +93,39 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     None
   }
 
+  /// Counts as completely used each `import()` whose binding has a reference that the scan visited
+  /// before it registered the binding, such as a read in a closure declared above
+  /// `const ns = await import('mod')`: the scan never saw how that reference reads the namespace.
+  pub fn complete_dynamic_imports_read_before_registration(&mut self) {
+    let scoping = self.result.symbol_ref_db.scoping();
+    let info = &mut self.dynamic_import_usage_info;
+    for reference_id in info.dynamic_import_binding_reference_id.drain() {
+      let Some(symbol_id) = scoping.get_reference(reference_id).symbol_id() else {
+        continue;
+      };
+      if let Some(&rec_idx) = info.dynamic_import_binding_to_import_record_idx.get(&symbol_id) {
+        info.dynamic_import_exports_usage.insert(rec_idx, DynamicImportExportsUsage::Complete);
+      }
+    }
+  }
+
   /// See internal-docs/code-splitting/implementation.md.
   fn record_dynamic_import_called_name(&mut self, rec_idx: ImportRecordIdx, name: &str) {
     self.result.dynamic_import_called_names.entry(rec_idx).or_default().insert(name.into());
+  }
+
+  fn effective_parent_idx(&self) -> Option<usize> {
+    let mut idx = self.visit_path.len().checked_sub(1)?;
+    if idx >= 1
+      && let Some(AstKind::CallExpression(call)) = self.visit_path.get(idx)
+      && matches!(
+        &call.callee,
+        ast::Expression::Identifier(ident) if ident.name == "\0native_temporal_read"
+      )
+    {
+      idx -= 1;
+    }
+    Some(idx)
   }
 
   fn dynamic_import_member_is_called(&self, member_idx: usize) -> bool {
@@ -136,12 +171,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     &mut self,
     import_record_idx: ImportRecordIdx,
   ) -> Option<FxHashSet<CompactStr>> {
-    let ast_after_remove_paren_idx = self
-      .visit_path
-      .iter()
-      .skip(1)
-      .rposition(|kind| !matches!(kind, AstKind::ParenthesizedExpression(_)))?;
-    // ast_after_remove_paren_idx the index is find from `visit_path`
+    let (_, ancestors) = self.visit_path.split_last()?;
+    let ast_after_remove_paren_idx =
+      ancestors.iter().rposition(|kind| !matches!(kind, AstKind::ParenthesizedExpression(_)))?;
     match self.visit_path[ast_after_remove_paren_idx] {
       // 1. const mod = await import('mod'); console.log(mod)
       // 2. const {a} = await import('mod'); a.something;
@@ -196,12 +228,17 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let parent_parent_idx = self.visit_path.len().saturating_sub(2);
     let parent_parent = self.visit_path.get(parent_parent_idx)?.as_call_expression()?;
     let first_arg = parent_parent.arguments.first()?;
-    let dynamic_import_binding = match first_arg {
-      Argument::FunctionExpression(func) => func.params.items.first(),
-      Argument::ArrowFunctionExpression(func) => func.params.items.first(),
+    // A rest parameter, or a function's own `arguments`, reaches the namespace through an index
+    // that the scan doesn't follow.
+    let params = match first_arg {
+      Argument::FunctionExpression(func) if !reads_own_arguments(func) => &func.params,
+      Argument::ArrowFunctionExpression(func) => &func.params,
       _ => return None,
     };
-    let Some(dynamic_import_binding) = dynamic_import_binding else {
+    if params.rest.is_some() {
+      return None;
+    }
+    let Some(dynamic_import_binding) = params.items.first() else {
       return Some(FxHashSet::default());
     };
     self.update_dynamic_import_usage_info_from_binding_pattern(
@@ -261,15 +298,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         if let Some(rest) = &obj.rest {
           match &rest.argument {
             ast::BindingPattern::BindingIdentifier(id) => {
-              let symbol_id = id.symbol_id();
-              self
-                .dynamic_import_usage_info
-                .dynamic_import_binding_to_import_record_idx
-                .insert(symbol_id, import_record_idx);
-              self
-                .dynamic_import_usage_info
-                .dynamic_import_binding_reference_id
-                .extend(self.result.symbol_ref_db.scoping().get_resolved_reference_ids(symbol_id));
+              if !self.register_dynamic_import_binding(id.symbol_id(), import_record_idx) {
+                return None;
+              }
             }
             // If the rest argument is not a BindingIdentifier, this is an unexpected case
             // because '...' must be followed by an identifier in declaration contexts.
@@ -284,14 +315,58 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         return None;
       }
     };
-    self
-      .dynamic_import_usage_info
-      .dynamic_import_binding_to_import_record_idx
-      .insert(symbol_id, import_record_idx);
-    self
-      .dynamic_import_usage_info
-      .dynamic_import_binding_reference_id
-      .extend(self.result.symbol_ref_db.scoping().get_resolved_reference_ids(symbol_id));
+    if !self.register_dynamic_import_binding(symbol_id, import_record_idx) {
+      return None;
+    }
     Some(FxHashSet::default())
   }
+
+  /// Registers `symbol_id` as a binding of the namespace that `import_record_idx` imports, so that
+  /// visiting its references counts what they read. A binding that another `import()` registered
+  /// already, such as a `var` declared again, makes both imports completely used, since the scan
+  /// can't tell which namespace a reference reads; this returns `false` then.
+  fn register_dynamic_import_binding(
+    &mut self,
+    symbol_id: SymbolId,
+    import_record_idx: ImportRecordIdx,
+  ) -> bool {
+    let info = &mut self.dynamic_import_usage_info;
+    match info.dynamic_import_binding_to_import_record_idx.entry(symbol_id) {
+      std::collections::hash_map::Entry::Occupied(registered) => {
+        let registered = *registered.get();
+        if registered == import_record_idx {
+          return true;
+        }
+        info.dynamic_import_exports_usage.insert(registered, DynamicImportExportsUsage::Complete);
+        false
+      }
+      std::collections::hash_map::Entry::Vacant(vacant) => {
+        vacant.insert(import_record_idx);
+        info
+          .dynamic_import_binding_reference_id
+          .extend(self.result.symbol_ref_db.scoping().get_resolved_reference_ids(symbol_id));
+        true
+      }
+    }
+  }
+}
+
+/// Whether `function` reads its own `arguments`, in its parameters or its body. A nested function
+/// has `arguments` of its own, and an arrow function shares its parent's. A binding that sloppy
+/// code names `arguments` counts too, which only makes the usage complete when it needn't be.
+fn reads_own_arguments(function: &ast::Function<'_>) -> bool {
+  struct ArgumentsReads(bool);
+  impl<'a> VisitJs<'a> for ArgumentsReads {
+    fn visit_identifier_reference(&mut self, it: &IdentifierReference<'a>) {
+      self.0 |= it.name == "arguments";
+    }
+
+    fn visit_function(&mut self, _it: &ast::Function<'a>, _flags: ScopeFlags) {}
+  }
+  let mut reads = ArgumentsReads(false);
+  reads.visit_formal_parameters(&function.params);
+  if let Some(body) = &function.body {
+    reads.visit_function_body(body);
+  }
+  reads.0
 }

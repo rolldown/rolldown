@@ -581,8 +581,8 @@ fn handle_include_module(ctx: &mut IncludeContext, module_idx: ModuleIdx) {
     push_symbol_and_check_cjs_bailout(ctx, *symbol_ref, SymbolIncludeReason::Normal);
   });
 
-  // With enabling HMR, rolldown will register included esm module's namespace object to the runtime.
-  if ctx.options.is_dev_mode_enabled()
+  // Native records expose the complete authored namespace even without HMR registration.
+  if (ctx.options.is_dev_mode_enabled() || crate::utils::native_records::enabled(ctx.options))
     && module.idx != ctx.runtime_idx
     && matches!(module.exports_kind, ExportsKind::Esm)
   {
@@ -629,6 +629,17 @@ fn include_statements_without_treeshaking(ctx: &mut IncludeContext, module: &Nor
   // Skip the namespace statement. It should be included only if it is used no matter tree shaking is enabled or not.
   ctx.stmt_infos[module.idx].iter_enumerated_without_namespace_stmt().for_each(
     |(stmt_info_id, stmt_info)| {
+      if ctx.options.is_dev_mode_enabled()
+        && stmt_info.import_records.len() == 1
+        && crate::hmr::utils::unused_side_effect_free_import(
+          module,
+          stmt_info.import_records[0],
+          ctx.modules,
+          ctx.symbols[module.idx].as_ref().unwrap().ast_scopes.scoping(),
+        )
+      {
+        return;
+      }
       if stmt_info.force_tree_shaking {
         if stmt_info.eval_flags.has_side_effect_for_tree_shaking() {
           // If `force_tree_shaking` is true, the statement should be included either by itself having side effects
@@ -656,6 +667,21 @@ fn include_side_effectful_dependencies(ctx: &mut IncludeContext, module: &Normal
     }
     match &ctx.modules[dependency_idx] {
       Module::Normal(importee) => {
+        if ctx.options.is_dev_mode_enabled() && !importee.side_effects.has_side_effects() {
+          let mut records = module.import_records.iter_enumerated()
+            .filter(|(_, record)| record.resolved_module == Some(dependency_idx))
+            .peekable();
+          if records.peek().is_some()
+            && records.all(|(record_idx, _)| crate::hmr::utils::unused_side_effect_free_import(
+              module,
+              record_idx,
+              ctx.modules,
+              ctx.symbols[module.idx].as_ref().unwrap().ast_scopes.scoping(),
+            ))
+          {
+            return;
+          }
+        }
         if !ctx.tree_shaking || importee.side_effects.has_side_effects() {
           ctx.pending.push(WorkItem::Module(importee.idx));
         }

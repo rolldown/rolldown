@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use itertools::Itertools;
 use rolldown_common::{
   AddonRenderContext, ChunkIdx, ExportsKind, ExternalModule, ImportAttribute, ImportKind,
-  ImportRecordIdx, ImportRecordMeta, ModuleIdx, ModuleTable, RUNTIME_MODULE_KEY, Specifier,
+  ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable, RUNTIME_MODULE_KEY, Specifier,
   SymbolRef,
 };
 use rolldown_sourcemap::SourceJoiner;
@@ -188,7 +188,14 @@ fn render_chunk_content<'code>(
   let mut dev_graph_prelude = if ctx.options.is_dev_mode_enabled() {
     crate::hmr::module_graph_delta::render_register_graph_source(
       &ctx.link_output.module_table,
-      ctx.chunk.modules.iter().copied(),
+      crate::utils::native_records::dev_graph_rows(
+        ctx.chunk_idx,
+        ctx.chunk,
+        &ctx.link_output.module_table,
+        ctx.chunk_graph,
+        &ctx.link_output.metas,
+        crate::utils::native_records::enabled(ctx.options),
+      ),
       &ctx.link_output.user_defined_entry_modules,
       None,
     )
@@ -343,10 +350,13 @@ fn render_chunk_content<'code>(
 
 fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
   let mut s = String::new();
+  let mut internal_imports = vec![];
   let ascii_only = ctx.options.charset.is_ascii();
   ctx.chunk.imports_from_other_chunks.iter().for_each(|(exporter_id, items)| {
+    let mut s = String::new();
     let importee_chunk = &ctx.chunk_graph.chunk_table[*exporter_id];
     let mut default_alias = vec![];
+    let mut native_namespaces = vec![];
     // Track seen canonical refs to avoid duplicate imports.
     // Multiple import_refs can resolve to the same canonical_ref (e.g., re-exports from CJS modules),
     // and we only need to import once per unique canonical symbol.
@@ -364,6 +374,17 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
           .symbol_db
           .canonical_name_for_or_original(canonical_ref, &ctx.chunk.canonical_names);
         let rendered_imported = escape_non_ascii(imported, ascii_only);
+        if crate::utils::native_records::is_native_namespace(
+          ctx.options,
+          ctx.link_output,
+          canonical_ref,
+        ) && importee_chunk
+          .entry_module_idx()
+          .is_some_and(|module| module == canonical_ref.owner)
+        {
+          native_namespaces.push(rendered_imported.into_owned());
+          return None;
+        }
         let alias = &ctx.render_export_items_index_vec[*exporter_id]
           .get(&item.import_ref)
           .expect("should have export item index")[0];
@@ -384,15 +405,107 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
       .collect::<Vec<_>>();
     specifiers.sort_unstable();
 
-    s.push_str(&create_import_declaration(
-      &ctx.link_output.module_table,
-      specifiers,
-      &default_alias,
-      &ctx.chunk.import_path_for(importee_chunk),
-      None,
-      ascii_only,
-    ));
+    let path = ctx.chunk.import_path_for(importee_chunk);
+    native_namespaces.sort_unstable();
+    for namespace in &native_namespaces {
+      s.push_str(&concat_string!(
+        "import * as ",
+        namespace,
+        " from ",
+        to_ecma_string_literal(&path, ascii_only),
+        ";\n"
+      ));
+    }
+    if native_namespaces.is_empty() || !specifiers.is_empty() || !default_alias.is_empty() {
+      s.push_str(&create_import_declaration(
+        &ctx.link_output.module_table,
+        specifiers,
+        &default_alias,
+        &path,
+        None,
+        ascii_only,
+      ));
+    }
+    internal_imports.push((*exporter_id, s));
   });
+  let has_deferred_imports =
+    ctx.chunk.modules.iter().any(|idx| !ctx.link_output.metas[*idx].deferred_imports.is_empty());
+  if has_deferred_imports && crate::utils::native_records::enabled(ctx.options) {
+    let mut imports: FxHashMap<_, _> = internal_imports.into_iter().collect();
+    // The runtime is never an authored dependency and must precede registration glue.
+    if let Some(runtime) = ctx.chunk_graph.module_to_chunk[ctx.link_output.runtime.id()]
+      && let Some(source) = imports.remove(&runtime)
+    {
+      s.push_str(&source);
+    }
+    let mut deferred_only = FxHashSet::default();
+    for idx in &ctx.chunk.modules {
+      let Some(module) = ctx.link_output.module_table[*idx].as_normal() else {
+        continue;
+      };
+      let meta = &ctx.link_output.metas[*idx];
+      for (record_idx, record) in module.import_records.iter_enumerated() {
+        if !record.kind.is_static() {
+          continue;
+        }
+        let Some(target) = record.resolved_module else {
+          continue;
+        };
+        let target_chunk = ctx.chunk_graph.module_to_chunk[target];
+        if let Some(binding) = meta.deferred_imports.get(&record_idx) {
+          let name = ctx
+            .link_output
+            .symbol_db
+            .canonical_name_for_or_original(*binding, &ctx.chunk.canonical_names);
+          let path = match &ctx.link_output.module_table[target] {
+            Module::Normal(importee) => {
+              let Some(chunk) = target_chunk else { continue };
+              deferred_only.insert(chunk);
+              let target = &ctx.chunk_graph.chunk_table[chunk];
+              if crate::utils::import_options::is_json_module(importee) {
+                crate::utils::native_records::deferred_json_import_path(ctx.chunk, target)
+              } else {
+                ctx.chunk.import_path_for(target)
+              }
+            }
+            Module::External(module) => {
+              module.get_import_path(ctx.chunk, ctx.resolved_paths).to_string()
+            }
+          };
+          s.push_str(&concat_string!(
+            "import defer * as ",
+            escape_non_ascii(name, ascii_only),
+            " from ",
+            to_ecma_string_literal(&path, ascii_only)
+          ));
+          if ctx.link_output.module_table[target].is_external()
+            && let Some(attribute) = module.import_attribute_map.get(&record_idx)
+          {
+            s.push(' ');
+            s.push_str(&attribute.to_string());
+          }
+          s.push_str(";\n");
+        } else if let Some(chunk) = target_chunk
+          && let Some(source) = imports.remove(&chunk)
+        {
+          // Eager and deferred requests for the same module are separate edges:
+          // an earlier deferred request must not advance the eager request's order.
+          s.push_str(&source);
+        }
+      }
+    }
+    for (chunk, items) in &ctx.chunk.imports_from_other_chunks {
+      if let Some(source) = imports.remove(chunk)
+        && (!deferred_only.contains(chunk) || !items.is_empty())
+      {
+        s.push_str(&source);
+      }
+    }
+  } else {
+    for (_, source) in internal_imports {
+      s.push_str(&source);
+    }
+  }
   let mut rendered_external_import_namespace_modules = FxHashSet::default();
   let bare_import_attributes = bare_import_attributes(ctx);
   // render external imports
@@ -402,8 +515,29 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
       .expect("Should be external module here");
     let mut has_importee_imported = false;
     let mut import_attribute = None;
+    let named_imports: Vec<_> = named_imports
+      .iter()
+      .filter(|(idx, import)| {
+        !ctx.link_output.metas[*idx].deferred_imports.contains_key(&import.record_idx)
+      })
+      .collect();
+    let has_deferred_edge = ctx.chunk.modules.iter().any(|idx| {
+      let Some(module) = ctx.link_output.module_table[*idx].as_normal() else { return false };
+      ctx.link_output.metas[*idx].deferred_imports.keys()
+        .any(|record| module.import_records[*record].resolved_module == Some(*importee_id))
+    });
+    let has_eager_edge = ctx.chunk.modules.iter().any(|idx| {
+      let Some(module) = ctx.link_output.module_table[*idx].as_normal() else { return false };
+      module.import_records.iter_enumerated().any(|(record, import)| {
+        import.kind.is_static() && import.resolved_module == Some(*importee_id)
+          && !ctx.link_output.metas[*idx].deferred_imports.contains_key(&record)
+      })
+    });
+    if named_imports.is_empty() && has_deferred_edge && !has_eager_edge {
+      return;
+    }
     // TODO: Warning same import record has different import attributes. https://tinyurl.com/2ddnbbc8
-    named_imports.iter().for_each(|(idx, named_import)| {
+    named_imports.iter().copied().for_each(|(idx, named_import)| {
       let module = ctx.link_output.module_table[*idx].as_normal().unwrap();
       if module.import_attribute_map.contains_key(&named_import.record_idx) {
         if import_attribute.is_none() {
@@ -414,7 +548,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
     s += &render_named_imports(
       ctx,
       importee,
-      named_imports.iter(),
+      named_imports.into_iter(),
       &mut has_importee_imported,
       &mut rendered_external_import_namespace_modules,
       import_attribute,

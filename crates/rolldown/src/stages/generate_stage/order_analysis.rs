@@ -133,7 +133,31 @@ impl GenerateStage<'_> {
 
     let import_edges = self.predicted_static_import_edges(chunk_graph, used_symbol_refs_builder);
     let chunk_cycles = ChunkCycles::from_import_edges(&import_edges);
+    let reverse_static_imports =
+      reverse_static_import_index(&self.link_output.module_table.modules);
+    let mut cyclic_backward_closure = FxHashSet::default();
+    if !chunk_cycles.sccs.is_empty() {
+      let cyclic_seeds = chunk_cycles
+        .sccs
+        .iter()
+        .flatten()
+        .flat_map(|&chunk_idx| chunk_graph.chunk_table[chunk_idx].modules.iter().copied());
+      grow_static_import_backward_closure(
+        &reverse_static_imports,
+        cyclic_seeds,
+        &mut cyclic_backward_closure,
+      );
+    }
     let mut all_at_risk = FxHashSet::default();
+    for scc in &chunk_cycles.sccs {
+      for &chunk_idx in scc {
+        for &module_idx in &chunk_graph.chunk_table[chunk_idx].modules {
+          if self.is_order_wrap_eligible(module_idx) {
+            all_at_risk.insert(module_idx);
+          }
+        }
+      }
+    }
     let mut roots = Vec::new();
 
     for &root in self.link_output.entries.keys() {
@@ -148,11 +172,12 @@ impl GenerateStage<'_> {
       let (actual_order, trigger_hosts) =
         self.actual_order_for_root(root, root_chunk, chunk_graph, &import_edges);
       let mut at_risk = self.at_risk_modules(&expected_order, &actual_order, &trigger_hosts);
-      // Lowering can change the entry edge into a static chunk cycle, so wrap every eligible
-      // source module under a root that reaches one.
+      // Scope pre-lowering cycle wrapping to modules in the cyclic chunk SCCs and their backward
+      // static-import closure rather than poisoning every module reachable from the root chunk.
       if chunk_cycles.reachable_from(root_chunk, &import_edges) {
-        at_risk
-          .extend(expected_order.iter().copied().filter(|idx| self.is_order_wrap_eligible(*idx)));
+        at_risk.extend(expected_order.iter().copied().filter(|idx| {
+          cyclic_backward_closure.contains(idx) && self.is_order_wrap_eligible(*idx)
+        }));
       }
       all_at_risk.extend(at_risk.iter().copied());
       roots.push(RootOrderAnalysis { root, expected_order });
@@ -182,8 +207,6 @@ impl GenerateStage<'_> {
     // the roots never change across rounds, and the reverse index inverts the static module graph,
     // not anything the plan mints.
     let source_reachable = self.source_reachable_modules(&roots);
-    let reverse_static_imports =
-      reverse_static_import_index(&self.link_output.module_table.modules);
     // Carrierized re-export barrels must remain wrapped even when the provisional topology happens
     // to put them in source order. Code splitting has already routed their generated CJS interop
     // per consumer; leaving one eager would restore its original monolithic interop body after
@@ -686,7 +709,7 @@ impl GenerateStage<'_> {
       if super::order_wrapping::order_wrapper_is_reexport_transparent(
         &self.link_output.metas[module_idx],
         self.ast_table[module_idx].as_ref(),
-        self.options.keep_names,
+        self.link_output.runtime.id(),
       ) {
         probe_state.set_reexport_init_transparent(module_idx);
       }
@@ -706,8 +729,10 @@ impl GenerateStage<'_> {
       linking: &self.link_output.metas,
       statements: &self.link_output.stmt_infos,
       asts: &self.ast_table,
-      keep_names: self.options.keep_names,
+      runtime_idx: self.link_output.runtime.id(),
       export_chains: &self.link_output.normal_symbol_exports_chain_map,
+      constant_value_map: &self.link_output.global_constant_symbol_map,
+      inline_const_mode: self.options.optimization.inline_const.map(|config| config.mode),
       star_reexport_records_by_imported_symbol: &self
         .link_output
         .star_reexport_records_by_imported_symbol,
@@ -715,8 +740,8 @@ impl GenerateStage<'_> {
       used_symbol_refs_builder,
       cyclic_modules: &cyclic_modules,
       tree_shaking: self.options.treeshake.is_some(),
+      route_declared_barrels: self.routes_declared_side_effect_free_barrels(),
       code_splitting_disabled: self.options.code_splitting.is_disabled(),
-      runtime_idx: self.link_output.runtime.id(),
     };
     let consumer_local_plan =
       super::order_wrapping::consumer_local_reexport_plan(&input, &probe_state);
@@ -746,6 +771,7 @@ impl GenerateStage<'_> {
     let reexport_usage = super::order_wrapping::collect_frozen_reexport_usage(&input, &probe_state);
     probe_state.set_nested_reexport_records(reexport_usage.nested_records().clone());
     probe_state.set_consumed_reexport_facades(reexport_usage.consumed_facades().clone());
+    probe_state.set_read_reexport_facades(reexport_usage.read_facades().clone());
     super::order_wrapping::populate_order_import_overlays(
       &input,
       &reexport_usage,
@@ -753,6 +779,10 @@ impl GenerateStage<'_> {
       self.options.code_splitting.is_disabled(),
       reverse_static_imports,
     );
+    // Lowering gives each consumer-local route the targets of its namespace once it has routed
+    // the plan, and the init-target walks that read this state, such as code splitting's
+    // `pre_chunk_init_dependencies`, follow a retained namespace re-export of a route through them.
+    self.populate_consumer_local_namespace_targets(&mut probe_state);
     probe_state
   }
 

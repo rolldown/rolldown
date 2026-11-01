@@ -28,6 +28,24 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
       if let Some(hmr_hot_ref) = self.ctx.module.ecma_view.hmr_hot_ref {
         let hot_name = self.canonical_name_for(hmr_hot_ref);
         *expr = Expression::new_id_ref_expr(SPAN, hot_name, self);
+        if HmrAstBuilder::native_module_record(self) {
+          let target = ast::SimpleAssignmentTarget::new_assignment_target_identifier(
+            SPAN,
+            ast::Str::from_str_in(hot_name, self),
+            self,
+          );
+          *expr = Expression::new_parenthesized_expression(
+            SPAN,
+            Expression::new_assignment_expression(
+              SPAN,
+              ast::AssignmentOperator::LogicalNullish,
+              ast::AssignmentTarget::from(target),
+              self.create_module_hot_context_call(),
+              self,
+            ),
+            self,
+          );
+        }
       }
     }
   }

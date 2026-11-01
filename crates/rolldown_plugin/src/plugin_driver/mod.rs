@@ -15,8 +15,8 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use dashmap::DashMap;
 use rolldown_common::{
-  ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, PluginIdx, SharedFileEmitter,
-  SharedModuleInfoDashMap, WatchPath,
+  ModuleDefFormat, ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, PluginIdx,
+  SharedFileEmitter, SharedModuleInfoDashMap, WatchPath,
 };
 use rolldown_utils::dashmap::FxDashSet;
 use tokio::sync::broadcast;
@@ -97,6 +97,16 @@ impl PluginDriver {
 
   pub fn plugins(&self) -> &IndexPluginable {
     &self.plugins
+  }
+
+  /// developer-bundler: the format whose CommonJS interop the module `id` follows, in place of
+  /// `format`, its own; see `Plugin::interop_module_def_format`.
+  pub fn interop_module_def_format(&self, id: &str, format: ModuleDefFormat) -> ModuleDefFormat {
+    self
+      .plugins
+      .iter()
+      .find_map(|plugin| plugin.call_interop_module_def_format(id, format))
+      .unwrap_or(format)
   }
 
   pub fn add_transform_dependency(&self, module_idx: ModuleIdx, dependency: WatchPath) {
@@ -180,4 +190,17 @@ impl ContextLoadCompletionManager {
   pub fn clear(&self) {
     self.notifiers.clear();
   }
+}
+
+/// The `CONTEXT_call_id` of a hook-call span at `target`, or `None` when nothing can observe the
+/// span. Once a dispatcher has been set (globally or scoped), tracing evaluates a span's fields
+/// only for an enabled span, so the id is always generated then. Before that, tracing's `log`
+/// fallback evaluates them for every span and drops the record unless the `log` logger is enabled
+/// at `TRACE` for the span's target, so the id is generated only in that case. Every observer
+/// therefore receives the same field it did with an unconditional id, without a UUID per hook
+/// call that no one reads.
+#[doc(hidden)]
+pub fn hook_call_id(target: &str) -> Option<String> {
+  (tracing::dispatcher::has_been_set() || log::log_enabled!(target: target, log::Level::Trace))
+    .then(rolldown_utils::uuid::uuid_v4)
 }

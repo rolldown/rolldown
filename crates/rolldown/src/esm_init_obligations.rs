@@ -331,10 +331,14 @@ pub fn collect_wrapped_esm_init_targets_for_import_record(
 
 /// Resolve the complete namespace initialization targets. Re-export-only barrels use their leaf
 /// and CJS-carrier targets; mixed modules append their local initializer after the forwarded
-/// targets. Lowering caches the result for entry activation and namespace consumers.
+/// targets. Lowering caches the result for entry activation and namespace consumers. `export_is_exposed`
+/// selects the exports whose leaves the namespace object can reach: every one while liveness is open,
+/// and the retained ones once it is sealed, as the namespace object holds only those. Eager CJS
+/// carriers always run.
 pub fn collect_wrapped_esm_init_targets_for_module_namespace(
   ctx: &WrappedEsmInitTargetContext<'_>,
   wrapper_is_reachable: impl Fn(SymbolRef) -> bool,
+  export_is_exposed: impl Fn(SymbolRef) -> bool,
 ) -> Vec<WrappedEsmInitTarget> {
   let mut targets = collect_eager_order_cjs_carriers_for_consumer_local_route(
     ctx,
@@ -349,6 +353,9 @@ pub fn collect_wrapped_esm_init_targets_for_module_namespace(
       continue;
     }
     let resolved_export = &ctx.importer_meta.resolved_exports[export_name];
+    if !export_is_exposed(resolved_export.symbol_ref) {
+      continue;
+    }
     add_wrapped_esm_init_target_for_symbol(
       ctx,
       resolved_export.symbol_ref,
@@ -499,7 +506,8 @@ fn collect_esm_init_targets_for_record(
           // to a namespace whose downstream member reads were statically folded (issue #10690).
           let binding_is_opaque = symbol_is_used(*imported_as_ref)
             || ctx.order_wrap_state.is_consumed_reexport_facade(*imported_as_ref)
-            || importer_reexports_binding(ctx.importer, *imported_as_ref)
+            || (namespace_owner(ctx, *imported_as_ref).is_some()
+              && namespace_binding_is_delegated(ctx, *imported_as_ref))
             || add_wrapped_esm_init_targets_for_static_member_reads(
               ctx,
               *imported_as_ref,
@@ -742,7 +750,7 @@ fn add_wrapped_esm_init_targets_for_namespace_consumer(
   // importer-local reference behind for the member-read scan below (issue #10690). Dead leaves
   // stay pruned by the per-target reachability gates.
   let opaque_namespace_use = symbol_is_used(namespace_ref)
-    || importer_reexports_binding(ctx.importer, namespace_ref)
+    || namespace_binding_is_delegated(ctx, namespace_ref)
     || add_wrapped_esm_init_targets_for_static_member_reads(
       ctx,
       namespace_ref,
@@ -771,6 +779,30 @@ fn add_wrapped_esm_init_targets_for_namespace_consumer(
   }
 }
 
+/// Whether the importer's own importers call its initializer instead of initializing what they
+/// import from it, as `collect_esm_init_targets_for_record` does for a wrapped importee, while
+/// one of them uses the namespace that `binding` holds through the importer's re-export of it:
+/// opaquely, or by reading its members, through further re-exports or through the importer's own
+/// namespace. Those reads rely on the importer's initializer, which can't see which members they
+/// read, so the importer uses the namespace opaquely. An importer without a wrapper of its own, or
+/// with a transparent one, and one whose re-export of the namespace no importer uses, leave each
+/// importer to initialize what it reads.
+fn namespace_binding_is_delegated(ctx: &WrappedEsmInitTargetContext<'_>, binding: SymbolRef) -> bool {
+  ctx.order_wrap_state.esm_init_target(ctx.importer.idx, ctx.importer_meta).is_some()
+    && !ctx.order_wrap_state.reexport_init_is_transparent(ctx.importer.idx)
+    && (ctx.order_wrap_state.is_consumed_reexport_facade(binding)
+      || ctx.order_wrap_state.is_read_reexport_facade(binding))
+}
+
+/// The module whose namespace object `symbol_ref` holds, if it holds one.
+fn namespace_owner(ctx: &WrappedEsmInitTargetContext<'_>, symbol_ref: SymbolRef) -> Option<ModuleIdx> {
+  let canonical_ref = ctx.symbol_db.canonical_ref_for(symbol_ref);
+  ctx.modules[canonical_ref.owner]
+    .as_normal()
+    .filter(|module| module.namespace_object_ref == canonical_ref)
+    .map(|module| module.idx)
+}
+
 /// Whether the importer re-exports this local import binding. Membership is scan-time export
 /// surface data, deliberately not consumption-gated: a statically folded downstream read leaves no
 /// liveness trace on the facade chain, and a genuinely dead re-export routes nothing anyway
@@ -778,7 +810,6 @@ fn add_wrapped_esm_init_targets_for_namespace_consumer(
 pub fn importer_reexports_binding(importer: &NormalModule, local_ref: SymbolRef) -> bool {
   importer.named_exports.values().any(|export| export.referenced == local_ref)
 }
-
 /// Route statically resolved member reads of one local import facade and report whether any use is
 /// opaque, in which case the caller must also initialize the imported binding as a whole.
 fn add_wrapped_esm_init_targets_for_static_member_reads(
@@ -841,11 +872,24 @@ fn add_wrapped_esm_init_targets_for_static_member_reads(
 /// be per reference: consulting global symbol liveness alone lets another importer that needs the
 /// same constant make this consumer initialize a module whose value was inlined here.
 fn symbol_is_always_inlined(ctx: &WrappedEsmInitTargetContext<'_>, symbol_ref: SymbolRef) -> bool {
-  let Some(mode) = ctx.inline_const_mode else {
+  constant_is_always_inlined(
+    ctx.constant_value_map,
+    ctx.inline_const_mode,
+    ctx.symbol_db.canonical_ref_for(symbol_ref),
+  )
+}
+
+/// Whether the build replaces every read of `canonical_ref` with its constant value, so that a
+/// read of it reads nothing at run time.
+pub(crate) fn constant_is_always_inlined(
+  constant_value_map: &FxHashMap<SymbolRef, ConstExportMeta>,
+  inline_const_mode: Option<InlineConstMode>,
+  canonical_ref: SymbolRef,
+) -> bool {
+  let Some(mode) = inline_const_mode else {
     return false;
   };
-  let canonical_ref = ctx.symbol_db.canonical_ref_for(symbol_ref);
-  ctx.constant_value_map.get(&canonical_ref).is_some_and(|meta| {
+  constant_value_map.get(&canonical_ref).is_some_and(|meta| {
     !meta.commonjs_export && (mode != InlineConstMode::Smart || meta.safe_to_inline)
   })
 }

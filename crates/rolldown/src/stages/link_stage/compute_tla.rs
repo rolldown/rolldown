@@ -138,6 +138,10 @@ impl LinkStage<'_> {
     let mut visited = index_vec![TlaVisitState::NotVisited; self.module_table.modules.len()];
 
     self.module_table.modules.iter().filter_map(|m| m.as_normal()).for_each(|module| {
+      // A fresh graph wouldn't load a module that the graph no longer reaches (#660).
+      if !self.unreachable_modules.reaches(module.idx) {
+        return;
+      }
       let tla_source = find_tla_source(module.idx, &self.module_table, &mut visited);
       self.metas[module.idx].is_tla_or_contains_tla_dependency = tla_source.is_some();
 

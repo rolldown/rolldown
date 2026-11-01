@@ -1,0 +1,58 @@
+Base: oxc_sourcemap 9.0.0
+Source: https://static.crates.io/crates/oxc_sourcemap/oxc_sourcemap-9.0.0.crate
+Archive SHA-256: 1133371a5fadc14b9f66a8fec14be3564a77647c7ab21b1ef0ec973bd82613ce
+Upstream repository: https://github.com/oxc-project/oxc-sourcemap
+Upstream commit: 45265ceecd4c98b2ed964a9fca5ff25d1f735d46
+License: BSD-3-Clause; original LICENSE and copyright notice retained.
+
+The archive was checked against the original root Cargo.lock registry checksum.
+9.0.0 was the newest published version when vendored and upstream
+main still used the faulty original-coordinate chunk baseline.
+
+Local change: src/concat_sourcemap_builder.rs retains the last mapped original
+line/column independently of the last generated token. An unmapped segment
+does not update the original-coordinate state in VLQ encoding. That state
+must survive empty and entirely unmapped chunks, for borrowed and owned maps.
+The adjacent unit regression verifies serialized round-trip tokens and source
+metadata for those cases.
+
+Local change 2: src/encode.rs (estimate_mappings_length) counts the destination
+lines each TokenChunk advances (tokens[t.end - 1].get_dst_line().saturating_sub(t.prev_dst_line))
+instead of adding t.prev_dst_line (#109). Each chunk writes one semicolon per
+destination line it advances; sparse unminified output can advance more lines
+than tokens. Covered by encode_estimates_line_breaks_of_token_chunks.
+
+Local change 3: src/encode.rs pre-allocates total_string_bytes + (total_string_bytes >> 3) + 64
+(~1.125x headroom) instead of 6 * total_string_bytes worst-case escaping,
+avoiding 500+ MB over-allocations on large sourcemaps, and removes the
+debug_assert!(contents.len() <= max_segments) tied to the 6x bound (#553). When
+tokens.len() >= 50_000 and token_chunks.len() >= 8, encode_to_string_with_null_contents
+spawns up to four std::thread::scope workers for sourcesContent JSON escaping
+(when at least 64 entries exist) and up to four workers for TokenChunk VLQ
+mapping serialization concurrently in the same scope (up to eight worker threads
+total).
+
+Local change 4: src/sourcemap.rs adds SourceMap::redact_source_contents (filtering
+source_contents entries to None in place without cloning kept strings) and
+SourceMap::to_json_string_with_null_contents (calling encode_to_string_with_null_contents
+in src/encode.rs) so a sourcemap whose source_contents entries were all redacted
+to None still emits "sourcesContent":[null,...] instead of omitting the field (#553).
+
+Modified files SHA-256:
+1424e11e4186cb6ce569fb802eb65494e877d9c54b6bf446694b02cb1a86ef4f  src/concat_sourcemap_builder.rs
+76a09be1a810c15a7d1a070b183b5489d5fa15d4c830983b3722961c6723fb03  src/encode.rs
+8bc02c9a2cd13755af81169bc3f29f120eec3f64909a1e511a9def67639193c6  src/sourcemap.rs
+Unchanged files SHA-256 (17 files): ea1d636a5f337c4136a568f3aa9e21204c89282a552fbf783132103dfc666a0a
+
+The root crates.io patch applies to the host, Rolldown, and workspace plugins.
+An independently built plugin can keep its published 9.0.0 pin: no ABI or map
+format changes are introduced. No shared Cargo registry files are modified.
+See docs/dependency-alterations.md for the repository-wide ledger.
+
+Validation from the repository root:
+  cargo test --manifest-path vendor/oxc_sourcemap-9.0.0/Cargo.toml --locked --lib
+  cargo test --lib native::module_hmr::map_tests
+
+Remove this patch after a compatible published version passes the exact
+original-position HMR, lazy-factory, and query-view regressions and covers the
+encoding and in-place redaction paths.

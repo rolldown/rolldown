@@ -1,5 +1,6 @@
 [workspace]
 members = ["./crates/*", "tasks/*"]
+exclude = ["vendor/oxc_sourcemap-9.0.0"]
 resolver = "3"
 
 [workspace.package]
@@ -339,3 +340,6 @@ opt-level = "s"
 # it will strip these information for non-debug files
 debug = "full"
 strip = "none"
+
+[patch.crates-io]
+oxc_sourcemap = { path = "vendor/oxc_sourcemap-9.0.0" }

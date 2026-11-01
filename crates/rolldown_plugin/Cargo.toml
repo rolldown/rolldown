@@ -27,6 +27,7 @@ arcstr = { workspace = true }
 bitflags = { workspace = true }
 dashmap = { workspace = true }
 derive_more = { workspace = true }
+log = "0.4"
 nodejs-built-in-modules = { workspace = true }
 oxc_index = { workspace = true }
 rolldown_common = { workspace = true }

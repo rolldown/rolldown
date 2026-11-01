@@ -46,7 +46,7 @@ pub fn import_record_needs_interop(module: &NormalModule, rec_idx: ImportRecordI
 /// A chunk that merely holds a named import of the same external reads the CommonJS object directly
 /// and must be left alone: reading a name through the wrapper does yield the same value
 /// (`__copyProps` installs forwarding getters), but `__toESM` returns a fresh object
-/// (`__create(__getProtoOf(mod))`) and eagerly walks
+/// (`__create(mod)`) and eagerly walks
 /// `__getOwnPropertyNames`/`__getOwnPropertyDescriptor`. Wrapping a named-only chunk would change
 /// namespace identity, turn data properties into accessors, and — for a CommonJS export implemented
 /// as a Proxy — fire extra `ownKeys`/`getOwnPropertyDescriptor` traps at require time.

@@ -1,7 +1,9 @@
 use oxc::ast::ast::{self, Expression, IdentifierReference, MemberExpression};
 use oxc::span::GetSpanMut;
 use rolldown_common::SymbolRef;
-use rolldown_ecmascript_utils::{ExpressionExt, MemberExpressionFactoryExt as _};
+use rolldown_ecmascript_utils::{
+  ExpressionExt, ExpressionFactoryExt as _, MemberExpressionFactoryExt as _,
+};
 
 use super::ScopeHoistingFinalizer;
 
@@ -11,7 +13,10 @@ fn finalized_reference_expr_mut<'a, 'ast>(
   match expr {
     Expression::ParenthesizedExpression(expr) => finalized_reference_expr_mut(&mut expr.expression),
     Expression::SequenceExpression(expr) => finalized_reference_expr_mut(
-      expr.expressions.last_mut().expect("sequence expression should not be empty"),
+      expr
+        .expressions
+        .last_mut()
+        .expect("sequence expression should not be empty"),
     ),
     expr => expr,
   }
@@ -34,6 +39,27 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     let symbol_id = self.scope.symbol_id_for(reference_id)?;
 
     let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
+    let canonical = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
+    if canonical != symbol_ref
+      && let Some(read) = self.native_enclosing_class_read(canonical)
+    {
+      // A namespace member callee would bind `this` to the namespace.
+      return Some(if is_callee {
+        Expression::new_seq_in_parens(
+          Expression::new_numeric_literal(
+            oxc::span::SPAN,
+            0.0,
+            Some("0".into()),
+            oxc::syntax::number::NumberBase::Decimal,
+            self,
+          ),
+          read,
+          self,
+        )
+      } else {
+        read
+      });
+    }
     let (mut expr, _) = self.finalized_expr_for_symbol_ref(symbol_ref, is_callee, false);
 
     // See https://github.com/oxc-project/oxc/issues/4606
@@ -80,6 +106,9 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     let symbol_id = self.scope.symbol_id_for(reference_id)?;
 
     let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
+    if let Some(target) = self.imported_assignment_target(symbol_ref) {
+      return Some(target);
+    }
     let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
     let symbol = self.ctx.symbol_db.get(canonical_ref);
 
@@ -92,12 +121,17 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     }
 
     let canonical_name = self.canonical_name_for(canonical_ref);
+    if let Some(target) = self.temporal_assignment_target(canonical_ref, false) {
+      return Some(target);
+    }
     if id_ref.name != canonical_name {
-      return Some(ast::SimpleAssignmentTarget::new_assignment_target_identifier(
-        id_ref.span,
-        oxc::ast::ast::Str::from_str_in(canonical_name, self),
-        self,
-      ));
+      return Some(
+        ast::SimpleAssignmentTarget::new_assignment_target_identifier(
+          id_ref.span,
+          oxc::ast::ast::Str::from_str_in(canonical_name, self),
+          self,
+        ),
+      );
     }
 
     None
@@ -108,7 +142,12 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     ident_ref: &ast::IdentifierReference<'ast>,
     is_callee: bool,
   ) -> Option<Expression<'ast>> {
-    if self.ctx.module.dummy_record_set.contains(&ident_ref.node_id()) {
+    if self
+      .ctx
+      .module
+      .dummy_record_set
+      .contains(&ident_ref.node_id())
+    {
       // use `__require` instead of `require`
       return Some(self.finalized_expr_for_runtime_symbol("__require"));
     }
@@ -133,8 +172,16 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
         let symbol_id = self.scope.symbol_id_for(reference_id)?;
 
         let symbol_ref = (self.ctx.idx, symbol_id).into();
+        if let Some(imported) = self.imported_assignment_target(symbol_ref) {
+          *target = imported;
+          return None;
+        }
         let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
         let symbol = self.ctx.symbol_db.get(canonical_ref);
+        if let Some(guarded) = self.temporal_assignment_target(canonical_ref, false) {
+          *target = guarded;
+          return None;
+        }
 
         if let Some(ns_alias) = &symbol.namespace_alias {
           *target = ast::SimpleAssignmentTarget::from(MemberExpression::new_member_access(

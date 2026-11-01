@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::collections::BTreeMap;
 use std::hash::{Hash, Hasher};
 
 use arcstr::ArcStr;
@@ -7,7 +8,8 @@ use oxc_str::CompactStr;
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
 use rolldown_common::{
-  EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, IndexModules, MemberExprObjectReferencedType,
+  EcmaModuleAstUsage, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules,
+  MemberExprObjectReferencedType,
   MemberExprRef, MemberExprRefResolution, MemberExprWriteKind, Module, ModuleIdx, ModuleType,
   NamespaceAlias, NormalModule, OutputFormat, ResolvedExport, Specifier, StmtInfoIdx, StmtInfos,
   SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, SymbolRefFlags,
@@ -286,9 +288,13 @@ impl LinkStage<'_> {
         .collect::<FxHashMap<_, _>>();
 
       let mut module_stack = vec![];
-      // Strict initialization routing and retained-path tracking share this star-export origin map.
+      // Strict initialization routing and retained-path tracking share this star-export origin map;
+      // native records also need origins to certify noncontributing star-evaluation edges without
+      // introducing execution-order wrappers.
       let mut star_export_record_by_name =
-        self.options.is_strict_execution_order_enabled().then(FxHashMap::default);
+        (self.options.is_strict_execution_order_enabled()
+          || crate::utils::native_records::enabled(self.options))
+        .then(FxHashMap::default);
       if module.has_star_export() || module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
         Self::add_exports_for_export_star(
           &self.module_table.modules,
@@ -323,8 +329,11 @@ impl LinkStage<'_> {
       star_reexport_records_by_imported_symbol: &mut self.star_reexport_records_by_imported_symbol,
       external_import_namespace_merger: FxHashMap::default(),
     };
+    // A module that the graph no longer reaches imports nothing (#660).
     self.module_table.modules.iter().for_each(|module| {
-      binding_ctx.match_imports_with_exports(module.idx());
+      if self.unreachable_modules.reaches(module.idx()) {
+        binding_ctx.match_imports_with_exports(module.idx());
+      }
     });
 
     self.diagnostics.extend(binding_ctx.diagnostics);
@@ -414,7 +423,9 @@ impl LinkStage<'_> {
     let mut conflicts: FxHashMap<(CompactStr, Vec<ResolvedBinding<'_>>), (u32, ModuleIdx)> =
       FxHashMap::default();
     for (module_idx, meta) in self.metas.iter_enumerated() {
-      if meta.resolved_exports.len() == meta.sorted_and_non_ambiguous_resolved_exports.len() {
+      if meta.resolved_exports.len() == meta.sorted_and_non_ambiguous_resolved_exports.len()
+        || !self.unreachable_modules.reaches(module_idx)
+      {
         continue;
       }
       let Module::Normal(module) = &self.module_table[module_idx] else {
@@ -536,22 +547,41 @@ impl LinkStage<'_> {
       .filter_map(|(idx, module)| {
         // a cjs module could only be referenced by normal modules.
         let module = module.as_normal()?;
+        // A module that the graph no longer reaches imports nothing (#660).
+        if !self.unreachable_modules.reaches(idx) {
+          return None;
+        }
         let mut named_import_to_cjs_module = FxHashMap::default();
         let mut import_record_ns_to_cjs_module = FxHashMap::default();
         module.named_imports.iter().for_each(|(_, named_import)| {
           let rec = &module.import_records[named_import.record_idx];
-          if let Some(module_idx) = rec.resolved_module && relation_with_commonjs_map.contains_key(&module_idx) {
+          if let Some(module_idx) = rec.resolved_module
+            && relation_with_commonjs_map.contains_key(&module_idx)
+          {
             named_import_to_cjs_module.insert(named_import.imported_as, module_idx);
           }
         });
         module.import_records.iter().for_each(|item| {
-          if let Some(module_idx) = item.resolved_module && let Some(RelationWithCommonjs::Commonjs) = relation_with_commonjs_map.get(&module_idx) {
+          if let Some(module_idx) = item.resolved_module
+            && let Some(RelationWithCommonjs::Commonjs) =
+              relation_with_commonjs_map.get(&module_idx)
+          {
             import_record_ns_to_cjs_module.insert(item.namespace_ref, module_idx);
           }
         });
-        (!named_import_to_cjs_module.is_empty() || !import_record_ns_to_cjs_module.is_empty()).then_some((idx, (named_import_to_cjs_module, import_record_ns_to_cjs_module)))
+        (!named_import_to_cjs_module.is_empty() || !import_record_ns_to_cjs_module.is_empty())
+          .then_some((
+            idx,
+            (named_import_to_cjs_module, import_record_ns_to_cjs_module),
+          ))
       })
-      .collect::<FxHashMap<ModuleIdx, (FxHashMap<SymbolRef, ModuleIdx>, FxHashMap<SymbolRef, ModuleIdx>)>>();
+      .collect::<FxHashMap<
+        ModuleIdx,
+        (
+          FxHashMap<SymbolRef, ModuleIdx>,
+          FxHashMap<SymbolRef, ModuleIdx>,
+        ),
+      >>();
     for (k, (named_import_to_cjs_module, import_record_ns_to_cjs_module)) in
       idx_to_symbol_ref_to_module_idx_map
     {
@@ -808,6 +838,9 @@ impl LinkStage<'_> {
     }
     let mut namespace_consumed = FxHashSet::default();
     for module in self.module_table.modules.iter().filter_map(|module| module.as_normal()) {
+      if !self.unreachable_modules.reaches(module.idx) {
+        continue;
+      }
       for named_import in module.named_imports.values() {
         if matches!(named_import.imported, Specifier::Star)
           && let Some(importee_idx) = module.import_records[named_import.record_idx].resolved_module
@@ -867,6 +900,7 @@ impl LinkStage<'_> {
     let has_json_module = self.module_table.modules.iter().any(|module| {
       module.as_normal().is_some_and(|module| matches!(module.module_type, ModuleType::Json))
     });
+    // A module that the graph no longer reaches reads nothing (#660).
     let non_splittable_json_defaults: FxHashSet<SymbolRef> = if has_json_module {
       self
         .module_table
@@ -874,8 +908,22 @@ impl LinkStage<'_> {
         .par_iter()
         .zip(self.stmt_infos.par_iter())
         .map(|(module, stmt_infos)| match module {
-          Module::Normal(_) => self.collect_non_splittable_json_defaults(stmt_infos),
-          Module::External(_) => FxHashSet::default(),
+          Module::Normal(module) if self.unreachable_modules.reaches(module.idx) => {
+            let mut defaults = self.collect_non_splittable_json_defaults(stmt_infos);
+            // A require returns the whole JSON value, which can escape or be mutated.
+            for record in &module.import_records {
+              if record.kind == ImportKind::Require
+                && !record.meta.contains(ImportRecordMeta::IsRequireUnused)
+                && let Some(importee) =
+                  record.resolved_module.and_then(|idx| self.module_table[idx].as_normal())
+                && let Some(default) = self.json_default_canonical_ref(importee.default_export_ref)
+              {
+                defaults.insert(default);
+              }
+            }
+            defaults
+          }
+          Module::Normal(_) | Module::External(_) => FxHashSet::default(),
         })
         .collect::<Vec<_>>()
         .into_iter()
@@ -891,7 +939,7 @@ impl LinkStage<'_> {
       .par_iter()
       .zip(self.stmt_infos.par_iter())
       .map(|(module, stmt_infos)| match module {
-        Module::Normal(module) => {
+        Module::Normal(module) if self.unreachable_modules.reaches(module.idx) => {
           let mut resolved_map = FxHashMap::default();
           let mut folded_namespace_in_checks = FxHashMap::default();
           let mut side_effects_dependency = vec![];
@@ -985,7 +1033,16 @@ impl LinkStage<'_> {
                     break;
                   }
                   let export_symbol = meta.resolved_exports.get(name).and_then(|resolved_export| {
-                    (!resolved_export.came_from_commonjs).then_some(resolved_export)
+                    (!resolved_export.came_from_commonjs
+                      && (is_json_import_ns
+                        || name == "default"
+                        || !crate::utils::import_options::is_json_module(canonical_ref_owner)
+                        || crate::utils::import_options::json_namespace_has_properties(
+                          canonical_ref_owner,
+                          &self.module_table.modules,
+                          |idx| self.unreachable_modules.reaches(idx),
+                        )))
+                    .then_some(resolved_export)
                   });
                   let Some(export_symbol) = export_symbol else {
                     // when we try to resolve `a.b.c`, and found that `b` is not exported by module
@@ -1084,24 +1141,48 @@ impl LinkStage<'_> {
                     };
                   // corresponding to cases in:
                   // https://github.com/rolldown/rolldown/blob/30a5a2fc8fa6785821153922e21dc0273cc00c7a/crates/rolldown/tests/rolldown/tree_shaking/commonjs/main.js?plain=1#L3-L10
+                  let owner_meta = &self.metas[maybe_namespace.owner];
+                  let import_namespace =
+                    owner_meta.import_record_ns_to_cjs_module.get(&maybe_namespace).copied();
+                  // A module with dynamic exports resolves the members of its own namespace
+                  // object, not those of a binding that it re-exports (#760).
                   let cjs_module_idx = continue_resolve
                     .then(|| {
-                      self.metas[maybe_namespace.owner]
+                      owner_meta
                         .named_import_to_cjs_module
                         .get(&maybe_namespace)
-                        .or_else(|| {
-                          self.metas[maybe_namespace.owner]
-                            .import_record_ns_to_cjs_module
-                            .get(&maybe_namespace)
-                        })
-                        .or_else(|| {
-                          (self.metas[maybe_namespace.owner].has_dynamic_exports)
-                            .then_some(&maybe_namespace.owner)
-                        })
                         .copied()
+                        .or(import_namespace)
+                        .or_else(|| {
+                          (owner_meta.has_dynamic_exports
+                            && self.module_table[maybe_namespace.owner]
+                              .as_normal()
+                              .is_some_and(|owner| owner.namespace_object_ref == maybe_namespace))
+                          .then_some(maybe_namespace.owner)
+                        })
                     })
                     .flatten();
+                  // The `default` of the namespace that an importer of a CommonJS module makes,
+                  // which a default import holds, is the exports object where that importer reads
+                  // the module in Node mode. With Babel interop it is the exports object or the
+                  // module's own `default`, by an `__esModule` flag that the scan can't always
+                  // see, as a module that forwards another's exports inherits it, so linking
+                  // resolves nothing through it. A default import's own `default` member is the
+                  // module's `default`, never the exports object (#760).
+                  let node_mode = |namespace: SymbolRef| {
+                    self.module_table[self.symbols.canonical_ref_for(namespace).owner]
+                      .as_normal()
+                      .is_some_and(NormalModule::should_consider_node_esm_spec_for_static_import)
+                  };
+                  let is_default = member_expr_ref.prop_and_span_list[cursor].name == "default";
+                  let resolvable = match &maybe_namespace_symbol.namespace_alias {
+                    Some(alias) => !is_default && node_mode(alias.namespace_ref),
+                    None => {
+                      !is_default || (import_namespace.is_some() && node_mode(maybe_namespace))
+                    }
+                  };
                   if let Some(cjs_idx) = cjs_module_idx
+                    && resolvable
                     && let Some(m) = self.metas[cjs_idx]
                       .resolved_exports
                       .get(&member_expr_ref.prop_and_span_list[cursor].name)
@@ -1109,21 +1190,9 @@ impl LinkStage<'_> {
                         resolved_export.came_from_commonjs.then_some(resolved_export)
                       })
                   {
-                    let is_default = member_expr_ref.prop_and_span_list[cursor].name == "default";
-                    // When the accessed property is `default`, check if `.default` represents
-                    // the whole `module.exports` (rather than `exports.default`). This is true when:
-                    // - Node ESM mode: __toESM always ignores __esModule flag
-                    // - Non-node mode without __esModule: __toESM sets .default = module.exports
-                    // In these cases, skip resolving `.default` to a specific CJS export.
-                    let default_is_module_exports = is_default && {
-                      let is_node_esm = module.should_consider_node_esm_spec_for_static_import();
-                      let importee_has_es_module_flag =
-                        self.module_table[cjs_idx].as_normal().is_some_and(|importee| {
-                          importee.ecma_view.ast_usage.contains(EcmaModuleAstUsage::EsModuleFlag)
-                        });
-                      is_node_esm || !importee_has_es_module_flag
-                    };
-
+                    // Only a namespace's `default` that is the exports object gets here, whose
+                    // next property linking resolves as an export of the exports object.
+                    let default_is_module_exports = is_default;
                     // If the current property is `default` and it represents the whole `module.exports`,
                     // try to resolve the next property as a CJS export.
                     if default_is_module_exports
@@ -1227,12 +1296,22 @@ impl LinkStage<'_> {
             star_reexport_consumptions,
           )
         }
-        Module::External(_) => (FxHashMap::default(), FxHashMap::default(), vec![], vec![], vec![]),
+        Module::Normal(_) | Module::External(_) => (
+          FxHashMap::default(),
+          FxHashMap::default(),
+          vec![],
+          vec![],
+          vec![],
+        ),
       })
       .collect::<Vec<_>>();
 
     debug_assert_eq!(self.metas.len(), resolved_meta_data.len());
     self.diagnostics.extend(diagnostics);
+    // The link output keeps the JSON defaults that linking kept whole, which the records of a page
+    // that loaded it read until the page reloads (`split_json_defaults`, #660).
+    self.non_splittable_json_defaults =
+      non_splittable_json_defaults.into_iter().map(|json_default| json_default.owner).collect();
     // Remove CJS exported symbols that are written to by importers from the constant map
     // to prevent incorrect inlining of mutated values.
     // First, collect statically-known written symbols gathered during resolution above.
@@ -1240,9 +1319,24 @@ impl LinkStage<'_> {
     // `cjs[name] = value`, or writes through `ns.default`), bail out all CJS exports of the
     // target module since we can't determine which specific property is affected.
     let mut written_cjs_export_symbols: Vec<SymbolRef> = Vec::new();
-    for (meta, (_, _, _, written_cjs_exports, _)) in
-      self.metas.iter().zip(resolved_meta_data.iter())
+    for ((idx, meta), (_, _, _, written_cjs_exports, _)) in
+      self.metas.iter_enumerated().zip(resolved_meta_data.iter())
     {
+      // A module that the graph no longer reaches, which linking an incremental build's graph
+      // keeps in its table unsorted, writes nothing (#693).
+      if self.module_table[idx].exec_order() == u32::MAX {
+        continue;
+      }
+      // Code that linking never sees may change the exports object of a public module.
+      if commonjs_exports_public(self.options, &self.user_defined_entry_modules, idx)
+        && self.module_table[idx]
+          .as_normal()
+          .is_some_and(|module| module.exports_kind.is_commonjs())
+      {
+        written_cjs_export_symbols.extend(
+          meta.resolved_exports.values().filter(|e| e.came_from_commonjs).map(|e| e.symbol_ref),
+        );
+      }
       written_cjs_export_symbols.extend(written_cjs_exports);
       for (import_symbol, cjs_module_idx) in
         meta.named_import_to_cjs_module.iter().chain(meta.import_record_ns_to_cjs_module.iter())
@@ -1322,6 +1416,16 @@ impl LinkStage<'_> {
       || meta.has_dynamic_exports
     {
       return None;
+    }
+    if key != "default"
+      && crate::utils::import_options::is_json_module(module)
+      && !crate::utils::import_options::json_namespace_has_properties(
+        module,
+        &self.module_table.modules,
+        |idx| self.unreachable_modules.reaches(idx),
+      )
+    {
+      return Some(false);
     }
     match meta.sorted_and_non_ambiguous_resolved_exports.get(key) {
       Some(&came_from_commonjs) => (!came_from_commonjs).then_some(true),
@@ -1456,7 +1560,12 @@ impl BindImportsAndExportsContext<'_> {
       let _enter = match_import_span.enter();
 
       let rec = &module.import_records[named_import.record_idx];
-      let Some(resolved_module_idx) = rec.resolved_module else { continue };
+      if self.metas[module_idx].deferred_imports.contains_key(&named_import.record_idx) {
+        continue;
+      }
+      let Some(resolved_module_idx) = rec.resolved_module else {
+        continue;
+      };
       if self.options.is_strict_execution_order_enabled()
         && let Specifier::Literal(name) = &named_import.imported
       {
@@ -1795,6 +1904,14 @@ impl BindImportsAndExportsContext<'_> {
     let stack_base = ctx.tracker_stack.len();
     let mut cycle_in_own_frames = false;
     let ret = loop {
+      let imported =
+        &index_modules[tracker.importer].as_normal().unwrap().named_imports[&tracker.imported_as];
+      if self.metas[tracker.importer].deferred_imports.contains_key(&imported.record_idx) {
+        break MatchImportKind::Normal(MatchImportKindNormal {
+          symbol: tracker.imported_as,
+          reexports,
+        });
+      }
       if let Some(matched) = ctx.tracker_stack.iter().rposition(|prev| {
         prev.importer == tracker.importer && prev.imported_as == tracker.imported_as
       }) {
@@ -1979,7 +2096,14 @@ impl BindImportsAndExportsContext<'_> {
     }
 
     if let Module::Normal(importee) = &self.index_modules[tracker.importee] {
-      if (self.options.shim_missing_exports || matches!(importee.module_type, ModuleType::Empty))
+      if (self.options.shim_missing_exports
+        || matches!(importee.module_type, ModuleType::Empty)
+        || (self.options.experimental.is_lazy_barrel_enabled()
+          && has_unloaded_star_export(
+            importee.idx,
+            self.index_modules,
+            &mut FxHashSet::default(),
+          )))
         && matches!(ret, MatchImportKind::NoMatch)
       {
         match &tracker.imported {
@@ -2005,6 +2129,163 @@ impl BindImportsAndExportsContext<'_> {
 
     ret
   }
+}
+
+/// Whether code that linking never sees may reach the exports object of `module_idx`, a CommonJS
+/// module (#693): an entry's chunk, user-defined or emitted, exports it as its default, as every
+/// preserved module's file does outside development, whose files are public. Development output
+/// keeps the records of its graph to its own pages.
+pub(crate) fn commonjs_exports_public(
+  options: &SharedOptions,
+  user_defined_entry_modules: &FxHashSet<ModuleIdx>,
+  module_idx: ModuleIdx,
+) -> bool {
+  options.preserve_modules && !options.is_dev_mode_enabled()
+    || user_defined_entry_modules.contains(&module_idx)
+}
+
+/// The constants that a link inlines for the CommonJS exports of each module in its table, by the
+/// module's stable id and the export's name, which the records of a page that loaded its output
+/// hold until the page reloads (#693).
+pub(crate) fn inlined_commonjs_constants(
+  link_output: &crate::stages::link_stage::LinkStageOutput,
+) -> BTreeMap<String, BTreeMap<String, String>> {
+  link_output
+    .module_table
+    .modules
+    .iter()
+    .filter_map(Module::as_normal)
+    .filter(|module| module.exports_kind.is_commonjs())
+    .map(|module| {
+      let constants = module
+        .named_exports
+        .iter()
+        .filter(|(_, export)| export.came_from_commonjs)
+        .filter_map(|(name, export)| {
+          let constant = link_output.global_constant_symbol_map.get(&export.referenced)?;
+          Some((name.to_string(), format!("{:?}", constant.value)))
+        })
+        .collect();
+      (module.stable_id.to_string(), constants)
+    })
+    .collect()
+}
+
+/// Whether a link splits the default object of each JSON module that the graph reaches into the
+/// bindings of its properties, by the module's stable id: the records of the modules that read a
+/// property of a split default import the property's binding, and those of a default that a module
+/// writes or lets escape read the object (`resolve_member_expr_refs`), as the records of a page
+/// that loaded the link's output keep doing until the page reloads (#660).
+pub(crate) fn split_json_defaults(
+  link_output: &crate::stages::link_stage::LinkStageOutput,
+) -> BTreeMap<String, bool> {
+  link_output
+    .module_table
+    .modules
+    .iter()
+    .filter_map(Module::as_normal)
+    .filter(|module| {
+      matches!(module.module_type, ModuleType::Json)
+        && link_output.unreachable_modules.reaches(module.idx)
+    })
+    .map(|module| {
+      let split = !link_output.non_splittable_json_defaults.contains(&module.idx);
+      (module.stable_id.to_string(), split)
+    })
+    .collect()
+}
+
+/// Binds the named imports of `module_idx`, a module that a fast native relink appends to an
+/// already linked graph, exactly as linking the whole graph would. Returns `false` when binding
+/// reported a diagnostic or reached an external module, whose bindings link the whole graph.
+pub(crate) fn bind_appended_module_imports(
+  link_output: &mut crate::stages::link_stage::LinkStageOutput,
+  options: &SharedOptions,
+  module_idx: ModuleIdx,
+) -> bool {
+  let side_effects_modules = link_output
+    .module_table
+    .modules
+    .iter_enumerated()
+    .filter(|(_, module)| module.side_effects().has_side_effects())
+    .map(|(idx, _)| idx)
+    .collect::<FxHashSet<ModuleIdx>>();
+  let mut binding_ctx = BindImportsAndExportsContext {
+    index_modules: &link_output.module_table.modules,
+    metas: &mut link_output.metas,
+    symbol_db: &mut link_output.symbol_db,
+    options,
+    diagnostics: Diagnostics::new(),
+    external_import_binding_merger: FxHashMap::default(),
+    side_effects_modules: &side_effects_modules,
+    normal_symbol_exports_chain_map: &mut link_output.normal_symbol_exports_chain_map,
+    star_reexport_records_by_imported_symbol: &mut link_output
+      .star_reexport_records_by_imported_symbol,
+    external_import_namespace_merger: FxHashMap::default(),
+  };
+  binding_ctx.match_imports_with_exports(module_idx);
+  binding_ctx.diagnostics.is_empty()
+    && binding_ctx.external_import_binding_merger.is_empty()
+    && binding_ctx.external_import_namespace_merger.is_empty()
+}
+
+/// The exports of `module_idx`, a module that a fast native relink appends to an already linked
+/// graph, with the names that its `export *` records re-export, and the record that re-exports
+/// each, as linking the whole graph resolves them (`bind_imports_and_exports`). The modules
+/// that the records reach must already be in `link_output`'s module table.
+pub(crate) fn appended_module_exports(
+  link_output: &crate::stages::link_stage::LinkStageOutput,
+  options: &SharedOptions,
+  module_idx: ModuleIdx,
+) -> Option<(FxHashMap<CompactStr, ResolvedExport>, FxHashMap<CompactStr, ImportRecordIdx>)> {
+  let Module::Normal(module) = &link_output.module_table.modules[module_idx] else {
+    return None;
+  };
+  let mut resolved_exports = module
+    .named_exports
+    .iter()
+    .map(|(name, local)| {
+      (name.clone(), ResolvedExport::new(local.referenced, local.came_from_commonjs))
+    })
+    .collect::<FxHashMap<_, _>>();
+  let mut star_export_record_by_name = (options.is_strict_execution_order_enabled()
+    || crate::utils::native_records::enabled(options))
+  .then(FxHashMap::default);
+  if module.has_star_export() || module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
+    LinkStage::add_exports_for_export_star(
+      &link_output.module_table.modules,
+      &mut resolved_exports,
+      star_export_record_by_name.as_mut(),
+      module_idx,
+      &mut vec![],
+      None,
+      None,
+    );
+  }
+  Some((resolved_exports, star_export_record_by_name.unwrap_or_default()))
+}
+
+fn has_unloaded_star_export(
+  module_idx: ModuleIdx,
+  modules: &IndexModules,
+  visited: &mut FxHashSet<ModuleIdx>,
+) -> bool {
+  if !visited.insert(module_idx) {
+    return false;
+  }
+  let Some(module) = modules[module_idx].as_normal() else {
+    return false;
+  };
+  if module
+    .import_records
+    .iter()
+    .any(|rec| rec.meta.contains(rolldown_common::ImportRecordMeta::IsExportStar) && rec.resolved_module.is_none())
+  {
+    return true;
+  }
+  module
+    .star_export_records()
+    .any(|(_, target)| has_unloaded_star_export(target, modules, visited))
 }
 
 fn shim_missing_export(

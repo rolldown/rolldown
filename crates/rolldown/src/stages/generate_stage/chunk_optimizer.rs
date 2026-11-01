@@ -251,14 +251,11 @@ impl ChunkOptimizationGraph {
     false
   }
 
-  /// Returns true if `from` can transitively reach `to` through the dependency graph.
-  pub fn is_reachable(&self, from: ChunkIdx, to: ChunkIdx) -> bool {
+  /// Returns the set of chunks transitively reachable from `from` through the dependency graph.
+  pub fn reachable_from(&self, from: ChunkIdx) -> FxHashSet<ChunkIdx> {
     let mut queue: VecDeque<ChunkIdx> = self.chunks[from].dependencies.iter().copied().collect();
     let mut visited = FxHashSet::default();
     while let Some(chunk_idx) = queue.pop_front() {
-      if chunk_idx == to {
-        return true;
-      }
       if !visited.insert(chunk_idx) {
         continue;
       }
@@ -266,7 +263,7 @@ impl ChunkOptimizationGraph {
         self.chunks[chunk_idx].dependencies.iter().copied().filter(|dep| !visited.contains(dep)),
       );
     }
-    false
+    visited
   }
 
   /// Merges the dependencies of source chunk into target chunk.
@@ -290,7 +287,15 @@ impl ChunkOptimizationGraph {
     }
     // Remove self-reference if it exists (source might have depended on target)
     self.chunks[target_chunk_idx].dependencies.remove(&target_chunk_idx);
+    self.chunks[target_chunk_idx].dependencies.remove(&source_chunk_idx);
     self.chunks[target_chunk_idx].has_side_effects |= source_has_side_effects;
+    for chunk_idx in self.chunks.indices() {
+      if self.chunks[chunk_idx].dependencies.remove(&source_chunk_idx)
+        && chunk_idx != target_chunk_idx
+      {
+        self.chunks[chunk_idx].dependencies.insert(target_chunk_idx);
+      }
+    }
   }
 }
 
@@ -422,6 +427,65 @@ impl GenerateStage<'_> {
       })
       .collect();
 
+    #[derive(Clone, PartialEq, Eq, Hash)]
+    enum CoalesceBucketKey {
+      UserEntries(Vec<ChunkIdx>, bool),
+      AsyncCommon(bool),
+    }
+    fn has_revision_url(source: &str) -> bool {
+      let mut rest = source;
+      while let Some(pos) = rest.find("/r/") {
+        rest = &rest[pos + 3..];
+        if rest.as_bytes().first().is_some_and(u8::is_ascii_digit) {
+          return true;
+        }
+      }
+      false
+    }
+    let topology_config = crate::utils::topology_config::get(self.options);
+    let coalescing_policy = topology_config.as_ref().and_then(|cfg| cfg.common_chunk_coalescing);
+    let cycle_merging = topology_config
+      .as_ref()
+      .and_then(|cfg| cfg.cycle_merging)
+      .unwrap_or_else(|| {
+        if self.options.experimental.is_on_demand_wrapping_enabled() {
+          crate::utils::topology_config::CycleMergingPolicy::Forbid
+        } else {
+          crate::utils::topology_config::CycleMergingPolicy::AllowWrapped
+        }
+      });
+    let forbid_cycles = self.options.experimental.is_on_demand_wrapping_enabled()
+      || matches!(cycle_merging, crate::utils::topology_config::CycleMergingPolicy::Forbid);
+    let coalesce_wrapped_common_chunks =
+      matches!(self.options.format, rolldown_common::OutputFormat::Esm)
+        && self
+          .link_output
+          .module_table
+          .modules
+          .iter()
+          .all(|m| matches!(m, Module::Normal(_)))
+        && match coalescing_policy {
+          Some(crate::utils::topology_config::CommonChunkCoalescing::Off) => false,
+          Some(
+            crate::utils::topology_config::CommonChunkCoalescing::ByEntrySet
+            | crate::utils::topology_config::CommonChunkCoalescing::Aggressive,
+          ) => assignments.len() > 1,
+          None => {
+            self.options.is_strict_execution_order_enabled()
+              && !self.options.experimental.is_on_demand_wrapping_enabled()
+              && assignments.len() > 64
+          }
+        };
+    let aggressive_coalescing = matches!(
+      coalescing_policy,
+      Some(crate::utils::topology_config::CommonChunkCoalescing::Aggressive)
+    ) || coalescing_policy.is_none();
+    let max_chunk_bytes_override = topology_config
+      .as_ref()
+      .and_then(|cfg| cfg.chunk_size.map(|c| c.max_bytes as usize));
+    let mut coalesced_shards: FxHashMap<CoalesceBucketKey, (ChunkIdx, usize)> =
+      FxHashMap::default();
+
     // Second pass: apply chunk assignments
     for (bits, temp_chunk_idx, chunk_idxs, merge_target) in assignments {
       // Check if merging would create a circular dependency
@@ -437,6 +501,98 @@ impl GenerateStage<'_> {
       };
 
       let temp_modules = &temp_chunk_graph.chunks[temp_chunk_idx].modules;
+      let mut coalesce_info: Option<(CoalesceBucketKey, usize)> = None;
+      let mut is_coalesced_merge = false;
+      let merge_target = if let Some(target_chunk_idx) = merge_target {
+        Some(target_chunk_idx)
+      } else if coalesce_wrapped_common_chunks
+        && temp_modules.iter().all(|&m| {
+          !self.link_output.entries.contains_key(&m)
+            && !self.link_output.metas[m].is_tla_or_contains_tla_dependency
+            && m != self.link_output.runtime.id()
+            && self.link_output.module_table[m]
+              .as_normal()
+              .is_some_and(|n| !has_revision_url(&n.ecma_view.source))
+        })
+      {
+        let module_bytes: usize = temp_modules
+          .iter()
+          .filter_map(|&m| self.link_output.module_table[m].as_normal())
+          .map(|m| m.ecma_view.source.len())
+          .sum();
+        let is_vendor = temp_modules.iter().all(|&m| {
+          self.link_output.module_table[m].as_normal().is_some_and(|n| {
+            let id = n.id.as_str();
+            id.contains("node_modules") || id.contains("/.store/")
+          })
+        });
+        let strict_order = self.options.is_strict_execution_order_enabled();
+        let has_transitive_side_effects = temp_chunk_graph.chunks[temp_chunk_idx].has_side_effects
+          || (!strict_order
+            && temp_chunk_graph
+              .reachable_from(temp_chunk_idx)
+              .into_iter()
+              .any(|dep| temp_chunk_graph.chunks[dep].has_side_effects));
+        let user_entries: Vec<ChunkIdx> = chunk_idxs
+          .iter()
+          .copied()
+          .filter(|&idx| {
+            chunk_graph.chunk_table.get(idx).is_some_and(|chunk| {
+              matches!(
+                chunk.kind,
+                ChunkKind::EntryPoint { meta, .. }
+                  if meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk)
+              )
+            })
+          })
+          .collect();
+        let initial_cap = max_chunk_bytes_override.unwrap_or(2 * 1024 * 1024);
+        let async_cap = max_chunk_bytes_override.unwrap_or(512 * 1024);
+        // Under eager execution order (`!strict_order`), each `temp_chunk_idx` in `assignments`
+        // has a distinct reachability bitset `bits`. Merging any chunk that has own or transitive
+        // side effects with a chunk of a different `bits` widens the side-effectful chunk's bitset
+        // and runs top-level side effects on entries that never imported them. Only chunks free of
+        // own and transitive side effects may coalesce across bitsets when `!strict_order`.
+        let bucket_and_limit = if !strict_order && has_transitive_side_effects {
+          None
+        } else if !user_entries.is_empty() {
+          Some((CoalesceBucketKey::UserEntries(user_entries, is_vendor), initial_cap))
+        } else if aggressive_coalescing && module_bytes <= async_cap / 2 {
+          Some((CoalesceBucketKey::AsyncCommon(is_vendor), async_cap))
+        } else {
+          None
+        };
+        if let Some((bucket_key, max_shard_bytes)) = bucket_and_limit {
+          let existing_target = coalesced_shards.get_mut(&bucket_key).and_then(
+            |(candidate_idx, used_bytes)| {
+              let cycle_safe = if forbid_cycles {
+                temp_chunk_graph
+                  .to_temp_idx(*candidate_idx)
+                  .is_some_and(|target_temp_idx| {
+                    !temp_chunk_graph
+                      .would_create_circular_dependency(temp_chunk_idx, target_temp_idx)
+                  })
+              } else {
+                true
+              };
+              (*used_bytes + module_bytes <= max_shard_bytes && cycle_safe).then(|| {
+                *used_bytes += module_bytes;
+                is_coalesced_merge = true;
+                *candidate_idx
+              })
+            },
+          );
+          if existing_target.is_none() {
+            coalesce_info = Some((bucket_key, module_bytes));
+          }
+          existing_target
+        } else {
+          None
+        }
+      } else {
+        None
+      };
+
       match self.assign_modules_to_chunk(
         merge_target,
         &chunk_idxs,
@@ -447,11 +603,21 @@ impl GenerateStage<'_> {
         input_base,
       ) {
         ChunkAssignment::Merged(target_chunk_idx) => {
-          // Merge chunk dependencies immediately after successful merge
-          temp_chunk_graph.merge_chunk_dependencies(target_chunk_idx, temp_chunk_idx);
+          bits_to_chunk.insert(bits.clone(), target_chunk_idx);
+          if is_coalesced_merge {
+            chunk_graph.chunk_table[target_chunk_idx].bits.union(&bits);
+          }
+          if let Some(target_temp_idx) = temp_chunk_graph.to_temp_idx(target_chunk_idx) {
+            temp_chunk_graph.merge_chunk_dependencies(target_temp_idx, temp_chunk_idx);
+          } else if !is_coalesced_merge {
+            temp_chunk_graph.merge_chunk_dependencies(target_chunk_idx, temp_chunk_idx);
+          }
         }
         ChunkAssignment::Created(new_chunk_id) => {
           temp_chunk_graph.register_chunk_graph_index(new_chunk_id, temp_chunk_idx);
+          if let Some((bucket_key, module_bytes)) = coalesce_info {
+            coalesced_shards.insert(bucket_key, (new_chunk_id, module_bytes));
+          }
         }
       }
     }
@@ -634,6 +800,11 @@ impl GenerateStage<'_> {
       }
       Some(target_chunk_idx)
     } else {
+      if crate::utils::topology_config::get(self.options)
+        .is_some_and(|cfg| cfg.preserve_container_entries)
+      {
+        return None;
+      }
       let chunk_idx = merged_user_defined_chunk?;
       let chunk = &chunk_graph.chunk_table[chunk_idx];
       let reached_dynamic_chunk = entry_chunk_reference.get(&chunk_idx);
@@ -670,6 +841,13 @@ impl GenerateStage<'_> {
         if leak_possible {
           return None;
         }
+      }
+      if info
+        .modules
+        .iter()
+        .all(|module_idx| !dynamic_entry_to_dynamic_importers.contains_key(module_idx))
+      {
+        return Some(chunk_idx);
       }
       let modules_set = chunk
         .modules
@@ -806,8 +984,9 @@ impl GenerateStage<'_> {
     let mut facade_eliminations = vec![];
     let mut common_chunk_merges = vec![];
     let mut emitted_chunk_groups: FxHashMap<ChunkIdx, Vec<ChunkIdx>> = FxHashMap::default();
-    let temp_runtime_chunk_idx = chunk_graph.module_to_chunk[self.link_output.runtime.id()]
-      .and_then(|idx| temp_chunk_opt_graph.to_temp_idx(idx));
+    let reachable_from_runtime = chunk_graph.module_to_chunk[self.link_output.runtime.id()]
+      .and_then(|idx| temp_chunk_opt_graph.to_temp_idx(idx))
+      .map(|temp_runtime_idx| temp_chunk_opt_graph.reachable_from(temp_runtime_idx));
     for (from_chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
       let ChunkKind::EntryPoint { meta, bit: _, module } = chunk.kind else {
         continue;
@@ -832,8 +1011,10 @@ impl GenerateStage<'_> {
       };
       let target_chunk = &chunk_graph.chunk_table[target_chunk_idx];
 
+      let preserve_container_entries = crate::utils::topology_config::get(self.options)
+        .is_some_and(|cfg| cfg.preserve_container_entries);
       if meta.intersects(ChunkMeta::UserDefinedEntry) {
-        if matches!(target_chunk.kind, ChunkKind::Common) {
+        if !preserve_container_entries && matches!(target_chunk.kind, ChunkKind::Common) {
           // Execution-isolation guard (issue #9463).
           //
           // Folding the common chunk *into* this user-defined entry chunk makes the
@@ -877,7 +1058,8 @@ impl GenerateStage<'_> {
         target_chunk.chunk_reason_type.as_ref(),
         ChunkReasonType::ManualCodeSplitting { .. }
       );
-      let is_target_pure_user_entry_chunk = matches!(target_chunk.kind, ChunkKind::EntryPoint { meta, bit: _, module: _ } if meta.is_pure_user_defined_entry());
+      let is_target_pure_user_entry_chunk = !preserve_container_entries
+        && matches!(target_chunk.kind, ChunkKind::EntryPoint { meta, bit: _, module: _ } if meta.is_pure_user_defined_entry());
       let is_target_common_chunk = matches!(target_chunk.kind, ChunkKind::Common);
       // Five optimization scenarios (scenario 1 is handled above for user-defined entries):
       // 1. User-defined facade entry chunk merged with common chunk
@@ -896,10 +1078,11 @@ impl GenerateStage<'_> {
         // Check if merging would create a circular dependency.
         // Translate chunk_graph indices to temp_chunk_graph indices, since the two
         // graphs may diverge once new common chunks are materialised.
-        if temp_runtime_chunk_idx
-          .and_then(|temp_runtime_idx| {
+        if reachable_from_runtime
+          .as_ref()
+          .and_then(|reachable| {
             let temp_target_idx = temp_chunk_opt_graph.to_temp_idx(target_chunk_idx)?;
-            Some(temp_chunk_opt_graph.is_reachable(temp_runtime_idx, temp_target_idx))
+            Some(reachable.contains(&temp_target_idx))
           })
           // If runtime is not included before, it will not create circular dependency, because
           // the runtime module will be either included in the target chunk or in a separate chunk loaded before.
@@ -1829,39 +2012,100 @@ impl GenerateStage<'_> {
     if consumers.len() <= 1 {
       return consumers.iter().copied().next();
     }
-    let dominates =
-      |candidate: ChunkIdx, module_targets: &mut dyn FnMut(ModuleIdx, &mut Vec<ModuleIdx>)| {
-        consumers.iter().all(|&other| {
-          other == candidate
-            || Self::chunk_reaches_via_static_import(
-              other,
-              candidate,
-              chunk_graph,
-              &mut *module_targets,
-            )
+    let chunks_len = chunk_graph.chunk_table.len();
+    let find_dominator_in_graph =
+      |module_targets: &mut dyn FnMut(ModuleIdx, &mut Vec<ModuleIdx>),
+       candidate_allowed: &dyn Fn(ChunkIdx) -> bool|
+       -> Option<ChunkIdx> {
+        let mut forward_adj: Vec<Vec<ChunkIdx>> = vec![Vec::new(); chunks_len];
+        let mut reverse_adj: Vec<Vec<ChunkIdx>> = vec![Vec::new(); chunks_len];
+        let mut seen_edge = vec![u32::MAX; chunks_len];
+        let mut targets = Vec::new();
+        for (current, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+          if chunk_graph.post_chunk_optimization_operations.contains_key(&current) {
+            continue;
+          }
+          let mark = current.raw();
+          if let ChunkKind::EntryPoint { module: entry_module_idx, .. } = chunk.kind
+            && let Some(entry_module_chunk) = chunk_graph.module_to_chunk[entry_module_idx]
+            && entry_module_chunk != current
+            && !chunk_graph.post_chunk_optimization_operations.contains_key(&entry_module_chunk)
+          {
+            seen_edge[entry_module_chunk.index()] = mark;
+            forward_adj[current.index()].push(entry_module_chunk);
+            reverse_adj[entry_module_chunk.index()].push(current);
+          }
+          for &module_idx in &chunk.modules {
+            module_targets(module_idx, &mut targets);
+            for resolved in targets.drain(..) {
+              let Some(target_chunk) = chunk_graph.module_to_chunk[resolved] else {
+                continue;
+              };
+              if target_chunk != current
+                && seen_edge[target_chunk.index()] != mark
+                && !chunk_graph.post_chunk_optimization_operations.contains_key(&target_chunk)
+              {
+                seen_edge[target_chunk.index()] = mark;
+                forward_adj[current.index()].push(target_chunk);
+                reverse_adj[target_chunk.index()].push(current);
+              }
+            }
+          }
+        }
+        let first_consumer = *consumers.iter().next()?;
+        let mut reachable_from_first = vec![false; chunks_len];
+        let mut queue = VecDeque::from([first_consumer]);
+        reachable_from_first[first_consumer.index()] = true;
+        while let Some(cur) = queue.pop_front() {
+          for &next in &forward_adj[cur.index()] {
+            if !reachable_from_first[next.index()] {
+              reachable_from_first[next.index()] = true;
+              queue.push_back(next);
+            }
+          }
+        }
+        let mut visited = vec![u32::MAX; chunks_len];
+        consumers.iter().copied().find(|&candidate| {
+          if !reachable_from_first[candidate.index()] || !candidate_allowed(candidate) {
+            return false;
+          }
+          let mark = candidate.raw();
+          let mut reached_consumers = 1usize;
+          visited[candidate.index()] = mark;
+          queue.clear();
+          queue.push_back(candidate);
+          while let Some(cur) = queue.pop_front() {
+            for &prev in &reverse_adj[cur.index()] {
+              if visited[prev.index()] != mark {
+                visited[prev.index()] = mark;
+                if consumers.contains(&prev) {
+                  reached_consumers += 1;
+                  if reached_consumers == consumers.len() {
+                    return true;
+                  }
+                }
+                queue.push_back(prev);
+              }
+            }
+          }
+          reached_consumers == consumers.len()
         })
       };
-    consumers
-      .iter()
-      .copied()
-      .find(|&candidate| {
-        dominates(candidate, &mut |module_idx, targets| {
-          self.push_kept_static_importees(module_idx, targets);
-        })
-      })
-      .or_else(|| {
-        consumers
-          .iter()
-          .copied()
-          .filter(|&candidate| {
-            self.runtime_host_load_is_harmless(candidate, chunk_graph, module_table)
-          })
-          .find(|&candidate| {
-            dominates(candidate, &mut |module_idx, targets| {
-              Self::push_static_import_targets(module_table, module_idx, targets);
-            })
-          })
-      })
+
+    find_dominator_in_graph(
+      &mut |module_idx, targets| {
+        self.push_kept_static_importees(module_idx, targets);
+      },
+      &|_| true,
+    )
+    .or_else(|| {
+      find_dominator_in_graph(
+        &mut |module_idx, targets| {
+          Self::push_static_import_targets(module_table, module_idx, targets);
+        },
+        &|candidate| self.runtime_host_load_is_harmless(candidate, chunk_graph, module_table),
+      )
+    })
   }
 
   /// Whether a consumer may import `target_chunk_idx` for helpers although it does not load the
@@ -2009,6 +2253,7 @@ impl GenerateStage<'_> {
       let from_chunk_modules = std::mem::take(&mut from_chunk.modules);
       let from_chunk_debug_info = std::mem::take(&mut from_chunk.debug_info);
       let from_chunk_runtime_helper = std::mem::take(&mut from_chunk.depended_runtime_helper);
+      let from_chunk_imports = std::mem::take(&mut from_chunk.imports_from_other_chunks);
       for module_idx in &from_chunk_modules {
         chunk_graph.module_to_chunk[*module_idx] = Some(merge.to_chunk_idx);
       }
@@ -2016,6 +2261,20 @@ impl GenerateStage<'_> {
       to_chunk.modules.extend(from_chunk_modules);
       to_chunk.debug_info.extend(from_chunk_debug_info);
       to_chunk.depended_runtime_helper.insert(from_chunk_runtime_helper);
+      for (imp_chunk, items) in from_chunk_imports {
+        if imp_chunk != merge.to_chunk_idx && imp_chunk != merge.from_chunk_idx {
+          to_chunk.imports_from_other_chunks.entry(imp_chunk).or_default().extend(items);
+        }
+      }
+      to_chunk.imports_from_other_chunks.shift_remove(&merge.from_chunk_idx);
+      to_chunk.imports_from_other_chunks.shift_remove(&merge.to_chunk_idx);
+      for (c_idx, chunk) in chunk_graph.chunk_table.iter_mut_enumerated() {
+        if let Some(items) = chunk.imports_from_other_chunks.shift_remove(&merge.from_chunk_idx)
+          && c_idx != merge.to_chunk_idx
+        {
+          chunk.imports_from_other_chunks.entry(merge.to_chunk_idx).or_default().extend(items);
+        }
+      }
       chunk_graph
         .post_chunk_optimization_operations
         .insert(merge.from_chunk_idx, PostChunkOptimizationOperation::Removed);
@@ -2054,5 +2313,364 @@ impl GenerateStage<'_> {
         runtime_dependent_chunks.insert(merge.to_chunk_idx);
       }
     }
+  }
+
+  /// When `max_initial_requests` or `max_async_requests` is configured and exceeded for an entry,
+  /// deterministically coalesce the smallest cycle-safe common chunks on that entry's load path
+  /// (minimizing overfetch cost) until within budget or no legal merge remains.
+  pub(super) fn enforce_entry_request_budgets(&self, chunk_graph: &mut ChunkGraph) {
+    let Some(topology_config) = crate::utils::topology_config::get(self.options) else {
+      return;
+    };
+    if topology_config.max_initial_requests.is_none()
+      && topology_config.max_async_requests.is_none()
+    {
+      return;
+    }
+
+    let cycle_merging = topology_config.cycle_merging.unwrap_or_else(|| {
+      if self.options.experimental.is_on_demand_wrapping_enabled() {
+        crate::utils::topology_config::CycleMergingPolicy::Forbid
+      } else {
+        crate::utils::topology_config::CycleMergingPolicy::AllowWrapped
+      }
+    });
+    let forbid_cycles = self.options.experimental.is_on_demand_wrapping_enabled()
+      || matches!(cycle_merging, crate::utils::topology_config::CycleMergingPolicy::Forbid);
+
+    let entries_len: u32 = self
+      .link_output
+      .entries
+      .values()
+      .map(Vec::len)
+      .sum::<usize>()
+      .try_into()
+      .expect("Too many entries, u32 overflowed.");
+    let mut user_defined_entry_bits = BitSet::new(entries_len.max(1));
+    let mut entry_chunks = Vec::new();
+    for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+      if chunk_graph.post_chunk_optimization_operations.contains_key(&chunk_idx) {
+        continue;
+      }
+      if let ChunkKind::EntryPoint { meta, bit, .. } = chunk.kind {
+        let is_initial = meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk);
+        if is_initial && bit < entries_len.max(1) {
+          user_defined_entry_bits.set_bit(bit);
+        }
+        entry_chunks.push((chunk_idx, bit, is_initial));
+      }
+    }
+
+    let runtime_id = self.link_output.runtime.id();
+    let strict_order = self.options.is_strict_execution_order_enabled();
+
+    // Build chunk-level static dependency graph and own-side-effects flags once, and update
+    // incrementally on each merge, avoiding O(P^2 * M) module-graph walks per round.
+    let chunks_len = chunk_graph.chunk_table.len();
+    let mut chunk_deps: IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> =
+      index_vec![FxHashSet::default(); chunks_len];
+    let mut chunk_own_side_effects: IndexVec<ChunkIdx, bool> = index_vec![false; chunks_len];
+    for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+      if chunk_graph.post_chunk_optimization_operations.contains_key(&chunk_idx) {
+        continue;
+      }
+      if let ChunkKind::EntryPoint { module: entry_module_idx, .. } = chunk.kind
+        && let Some(entry_module_chunk) = chunk_graph.module_to_chunk[entry_module_idx]
+        && entry_module_chunk != chunk_idx
+        && !chunk_graph.post_chunk_optimization_operations.contains_key(&entry_module_chunk)
+      {
+        chunk_deps[chunk_idx].insert(entry_module_chunk);
+      }
+      for &module_idx in &chunk.modules {
+        if self.link_output.module_table[module_idx].side_effects().has_side_effects() {
+          chunk_own_side_effects[chunk_idx] = true;
+        }
+        for &dep_module_idx in &self.link_output.metas[module_idx].dependencies {
+          if let Some(dep_chunk) = chunk_graph.module_to_chunk[dep_module_idx]
+            && dep_chunk != chunk_idx
+            && !chunk_graph.post_chunk_optimization_operations.contains_key(&dep_chunk)
+          {
+            chunk_deps[chunk_idx].insert(dep_chunk);
+          }
+        }
+        if let Some(module) = self.link_output.module_table[module_idx].as_normal() {
+          for rec in &module.import_records {
+            if !rec.kind.is_static() {
+              continue;
+            }
+            if let Some(resolved) = rec.resolved_module
+              && let Some(dep_chunk) = chunk_graph.module_to_chunk[resolved]
+              && dep_chunk != chunk_idx
+              && !chunk_graph.post_chunk_optimization_operations.contains_key(&dep_chunk)
+            {
+              chunk_deps[chunk_idx].insert(dep_chunk);
+            }
+          }
+        }
+      }
+    }
+
+    for (_entry_chunk_idx, entry_bit, is_initial) in entry_chunks {
+      let Some(max_requests) = (if is_initial {
+        topology_config.max_initial_requests
+      } else {
+        topology_config.max_async_requests
+      }) else {
+        continue;
+      };
+      let max_requests = usize::from(max_requests);
+
+      loop {
+        let mut total_requests = 0usize;
+        let mut eligible_common: Vec<(ChunkIdx, usize)> = Vec::new();
+
+        for (c_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+          if chunk_graph.post_chunk_optimization_operations.contains_key(&c_idx)
+            || chunk.modules.is_empty()
+          {
+            continue;
+          }
+          let on_load_path = match chunk.kind {
+            ChunkKind::EntryPoint { bit, .. } => bit == entry_bit,
+            ChunkKind::Common => chunk.bits.has_bit(entry_bit),
+          };
+          if !on_load_path {
+            continue;
+          }
+          total_requests += 1;
+
+          if !matches!(chunk.kind, ChunkKind::Common)
+            || chunk.modules.contains(&runtime_id)
+            || self.chunk_has_tla_or_tla_dependency(chunk_graph, c_idx)
+          {
+            continue;
+          }
+          let is_mf_shared = match chunk.chunk_reason_type.as_ref() {
+            ChunkReasonType::ManualCodeSplitting { group_index, .. } => topology_config
+              .group_is_mf_shared
+              .get(*group_index as usize)
+              .copied()
+              .unwrap_or(false),
+            _ => false,
+          };
+          if is_mf_shared {
+            continue;
+          }
+          let chunk_bytes: usize = chunk
+            .modules
+            .iter()
+            .map(|&m| self.link_output.module_table[m].size())
+            .sum();
+          eligible_common.push((c_idx, chunk_bytes));
+        }
+
+        if total_requests <= max_requests || eligible_common.len() < 2 {
+          break;
+        }
+
+        let mut best_pair: Option<((usize, usize, u32, u32), ChunkIdx, ChunkIdx)> = None;
+        for i in 0..eligible_common.len() {
+          for j in (i + 1)..eligible_common.len() {
+            let (c1_idx, size1) = eligible_common[i];
+            let (c2_idx, size2) = eligible_common[j];
+            let c1 = &chunk_graph.chunk_table[c1_idx];
+            let c2 = &chunk_graph.chunk_table[c2_idx];
+
+            let c1_initial =
+              c1.bits.index_of_one().any(|b| user_defined_entry_bits.has_bit(b));
+            let c2_initial =
+              c2.bits.index_of_one().any(|b| user_defined_entry_bits.has_bit(b));
+            if c1_initial != c2_initial {
+              continue;
+            }
+
+            let c1_extra = c1.bits.index_of_one().filter(|b| !c2.bits.has_bit(*b)).count();
+            let c2_extra = c2.bits.index_of_one().filter(|b| !c1.bits.has_bit(*b)).count();
+            let overfetch_cost = (c1_extra * size2) + (c2_extra * size1);
+            let combined_size = size1 + size2;
+            let key = (overfetch_cost, combined_size, c1_idx.raw(), c2_idx.raw());
+
+            // Check score before running any graph reachability / cycle checks!
+            if best_pair.is_some_and(|(best_key, _, _)| key >= best_key) {
+              continue;
+            }
+
+            if !strict_order {
+              if c1_extra > 0
+                && Self::chunk_reaches_unshared_side_effects(
+                  c2_idx,
+                  &c1.bits,
+                  chunk_graph,
+                  &chunk_deps,
+                  &chunk_own_side_effects,
+                )
+              {
+                continue;
+              }
+              if c2_extra > 0
+                && Self::chunk_reaches_unshared_side_effects(
+                  c1_idx,
+                  &c2.bits,
+                  chunk_graph,
+                  &chunk_deps,
+                  &chunk_own_side_effects,
+                )
+              {
+                continue;
+              }
+            }
+
+            if forbid_cycles
+              && Self::chunk_graph_merge_creates_cycle(c2_idx, c1_idx, &chunk_deps)
+            {
+              continue;
+            }
+
+            best_pair = Some((key, c1_idx, c2_idx));
+          }
+        }
+
+        let Some((_key, target_idx, source_idx)) = best_pair else {
+          break;
+        };
+
+        // Update chunk-level dependency graph for the merge of source_idx -> target_idx.
+        let source_dep_set = std::mem::take(&mut chunk_deps[source_idx]);
+        for dep in source_dep_set {
+          if dep != target_idx {
+            chunk_deps[target_idx].insert(dep);
+          }
+        }
+        chunk_deps[target_idx].remove(&target_idx);
+        chunk_deps[target_idx].remove(&source_idx);
+        chunk_own_side_effects[target_idx] |= chunk_own_side_effects[source_idx];
+        for idx in chunk_deps.indices() {
+          if chunk_deps[idx].remove(&source_idx) && idx != target_idx {
+            chunk_deps[idx].insert(target_idx);
+          }
+        }
+
+        let source_chunk = &mut chunk_graph.chunk_table[source_idx];
+        let source_modules = std::mem::take(&mut source_chunk.modules);
+        let source_bits = source_chunk.bits.clone();
+        let source_debug_info = std::mem::take(&mut source_chunk.debug_info);
+        let source_runtime_helper = std::mem::take(&mut source_chunk.depended_runtime_helper);
+        let source_imports = std::mem::take(&mut source_chunk.imports_from_other_chunks);
+        for &module_idx in &source_modules {
+          chunk_graph.module_to_chunk[module_idx] = Some(target_idx);
+        }
+        let target_chunk = &mut chunk_graph.chunk_table[target_idx];
+        target_chunk.modules.extend(source_modules);
+        target_chunk.bits.union(&source_bits);
+        target_chunk.debug_info.extend(source_debug_info);
+        target_chunk.depended_runtime_helper.insert(source_runtime_helper);
+        for (imp_chunk, items) in source_imports {
+          if imp_chunk != target_idx && imp_chunk != source_idx {
+            target_chunk.imports_from_other_chunks.entry(imp_chunk).or_default().extend(items);
+          }
+        }
+        target_chunk.imports_from_other_chunks.shift_remove(&source_idx);
+        target_chunk.imports_from_other_chunks.shift_remove(&target_idx);
+        for (c_idx, chunk) in chunk_graph.chunk_table.iter_mut_enumerated() {
+          if let Some(items) = chunk.imports_from_other_chunks.shift_remove(&source_idx)
+            && c_idx != target_idx
+          {
+            chunk.imports_from_other_chunks.entry(target_idx).or_default().extend(items);
+          }
+        }
+        chunk_graph
+          .post_chunk_optimization_operations
+          .insert(source_idx, PostChunkOptimizationOperation::Removed);
+
+        for entry_chunk_idx in chunk_graph.entry_module_to_entry_chunk.values_mut() {
+          if *entry_chunk_idx == source_idx {
+            *entry_chunk_idx = target_idx;
+          }
+        }
+        if let Some(modules) =
+          chunk_graph.common_chunk_exported_facade_chunk_namespace.remove(&source_idx)
+        {
+          chunk_graph
+            .common_chunk_exported_facade_chunk_namespace
+            .entry(target_idx)
+            .or_default()
+            .extend(modules);
+        }
+        if let Some(modules) =
+          chunk_graph.common_chunk_preserve_export_names_modules.remove(&source_idx)
+        {
+          chunk_graph
+            .common_chunk_preserve_export_names_modules
+            .entry(target_idx)
+            .or_default()
+            .extend(modules);
+        }
+      }
+    }
+  }
+
+  /// Under eager execution order, returns `true` if `start_chunk` or any chunk statically reachable
+  /// from it has side effects and is not already reached by every entry in `other_bits`.
+  fn chunk_reaches_unshared_side_effects(
+    start_chunk: ChunkIdx,
+    other_bits: &BitSet,
+    chunk_graph: &ChunkGraph,
+    chunk_deps: &IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>,
+    chunk_own_side_effects: &IndexVec<ChunkIdx, bool>,
+  ) -> bool {
+    let mut queue = VecDeque::from([start_chunk]);
+    let mut visited = FxHashSet::default();
+    while let Some(curr) = queue.pop_front() {
+      if !visited.insert(curr) {
+        continue;
+      }
+      if chunk_own_side_effects[curr] {
+        let curr_bits = &chunk_graph.chunk_table[curr].bits;
+        if other_bits.index_of_one().any(|b| !curr_bits.has_bit(b)) {
+          return true;
+        }
+      }
+      for &dep in &chunk_deps[curr] {
+        if !visited.contains(&dep) {
+          queue.push_back(dep);
+        }
+      }
+    }
+    false
+  }
+
+  /// Checks if merging `source_chunk_idx` into `target_chunk_idx` would create a static chunk
+  /// cycle in the precomputed `chunk_deps` graph.
+  fn chunk_graph_merge_creates_cycle(
+    source_chunk_idx: ChunkIdx,
+    target_chunk_idx: ChunkIdx,
+    chunk_deps: &IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>,
+  ) -> bool {
+    let is_merged =
+      |idx: ChunkIdx| idx == source_chunk_idx || idx == target_chunk_idx;
+    let mut queue: VecDeque<ChunkIdx> = chunk_deps[source_chunk_idx]
+      .iter()
+      .chain(chunk_deps[target_chunk_idx].iter())
+      .copied()
+      .filter(|&dep| !is_merged(dep))
+      .collect();
+    let mut visited = FxHashSet::default();
+    while let Some(curr) = queue.pop_front() {
+      if is_merged(curr) {
+        return true;
+      }
+      if !visited.insert(curr) {
+        continue;
+      }
+      for &dep in &chunk_deps[curr] {
+        if is_merged(dep) {
+          return true;
+        }
+        if !visited.contains(&dep) {
+          queue.push_back(dep);
+        }
+      }
+    }
+    false
   }
 }

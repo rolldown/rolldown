@@ -22,7 +22,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
-  utils::tweak_ast_for_scanning::PreProcessor,
+  utils::{retained_memory, tweak_ast_for_scanning::PreProcessor},
 };
 
 use rolldown_fs::FileSystem;
@@ -62,7 +62,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
   pub async fn run(self) {
     if let Err(errs) = self.run_inner().await {
       // If the main thread is dead, nothing we can do to handle these send failures.
-      let _ = self.ctx.tx.send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
+      self.ctx.send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
     }
   }
 
@@ -106,7 +106,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
       }
     }
 
-    let (ast, scan_result) = self.make_ecma_ast(RUNTIME_MODULE_KEY, &source)?;
+    let (mut ast, scan_result) = self.make_ecma_ast(RUNTIME_MODULE_KEY, &source)?;
 
     let ScanResult {
       named_imports,
@@ -117,13 +117,16 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
       imports,
       import_records: raw_import_records,
       ast_usage,
-      symbol_ref_db,
+      mut symbol_ref_db,
       new_url_references,
       rolldown_file_url_references,
       dummy_record_set,
       ecma_view_meta,
       ..
     } = scan_result;
+    if self.ctx.compact_module_arenas {
+      retained_memory::compact_module_arenas(&mut ast, &mut symbol_ref_db);
+    }
 
     let determined_side_effects = match side_effects {
       Some(HookSideEffects::False) => DeterminedSideEffects::UserDefined(false),
@@ -148,6 +151,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
       &raw_import_records,
       source.clone(),
       &mut vec![],
+      &self.ctx.deferred_resolution_targets,
     )
     .await?;
 
@@ -220,7 +224,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
     }));
 
     // If the main thread is dead, nothing we can do to handle these send failures.
-    let _ = self.ctx.tx.send(result);
+    self.ctx.send(result);
 
     Ok(())
   }

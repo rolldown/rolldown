@@ -117,6 +117,7 @@ impl GenerateStage<'_> {
             resolved_paths: self.resolved_paths.as_ref(),
             resolved_file_urls,
             has_enum_inlining,
+            unreachable_modules: &self.link_output.unreachable_modules,
             inline_state: &self.inline_state,
           };
           let (_, _, module_diagnostics) = ctx.finalize_normal_module(&mut ast, ast_scope);

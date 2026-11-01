@@ -64,14 +64,20 @@ pub struct FinalEsmInitMetadata {
 
 impl FinalEsmInitMetadata {
   pub(crate) fn init_is_noop(&self, module_idx: ModuleIdx) -> bool {
-    self.modules.get(&module_idx).is_some_and(|metadata| metadata.init_is_noop)
+    self
+      .modules
+      .get(&module_idx)
+      .is_some_and(|metadata| metadata.init_is_noop)
   }
 
   pub(crate) fn transitive_init_targets(
     &self,
     module_idx: ModuleIdx,
   ) -> Option<&FxHashMap<StmtInfoIdx, Vec<WrappedEsmInitTarget>>> {
-    self.modules.get(&module_idx).map(|metadata| &metadata.transitive_init_targets)
+    self
+      .modules
+      .get(&module_idx)
+      .map(|metadata| &metadata.transitive_init_targets)
   }
 }
 
@@ -135,12 +141,17 @@ impl GenerateStage<'_> {
           .unwrap_or_default();
         (is_noop || !targets_by_stmt.is_empty()).then_some((
           module_idx,
-          ModuleEsmInitMetadata { init_is_noop: is_noop, transitive_init_targets: targets_by_stmt },
+          ModuleEsmInitMetadata {
+            init_is_noop: is_noop,
+            transitive_init_targets: targets_by_stmt,
+          },
         ))
       })
       .collect::<Vec<_>>();
 
-    Sealed::new(FinalEsmInitMetadata { modules: results.into_iter().collect() })
+    Sealed::new(FinalEsmInitMetadata {
+      modules: results.into_iter().collect(),
+    })
   }
 
   pub(super) fn pre_chunk_transitive_esm_init_targets(
@@ -239,10 +250,16 @@ impl EsmInitTargetContext<'_> {
 /// Whether calling the module's `init_*()` is a no-op because nothing lands inside its `__esm`
 /// closure.
 fn init_is_noop(meta: &LinkingMetadata, ast: Option<&EcmaAst>, keep_names: bool) -> bool {
+  if !meta.temporal_symbols.is_empty() {
+    return false;
+  }
   // Restrict to standalone wrappers. In a concatenated group the shared `init_*` runs the
   // whole group's closure, so this module's own empty body wouldn't prove the call is a
   // no-op (a sibling could carry content).
-  if !matches!(meta.concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::None) {
+  if !matches!(
+    meta.concatenated_wrapped_module_kind,
+    ConcatenateWrappedModuleKind::None
+  ) {
     return false;
   }
   // Shimmed missing exports emit `<name> = void 0;` assignments *into* the closure
@@ -260,7 +277,11 @@ fn init_is_noop(meta: &LinkingMetadata, ast: Option<&EcmaAst>, keep_names: bool)
   // statement that is *not* a function declaration is treated as making the init non-empty,
   // which only ever keeps a redundant (harmless) init call — never drops a needed one.
   ast.is_some_and(|ast| {
-    ast.program().body.iter().all(|stmt| contributes_no_closure_body(stmt, keep_names))
+    ast
+      .program()
+      .body
+      .iter()
+      .all(|stmt| contributes_no_closure_body(stmt, keep_names))
   })
 }
 
@@ -291,8 +312,8 @@ fn contributes_no_closure_body(stmt: &Statement, keep_names: bool) -> bool {
   }
 }
 
-/// For each non-included static import/re-export statement of `module`, the wrapped-ESM modules
-/// whose `init_*()` calls the finalizer must emit in the statement's place.
+/// The wrapped-ESM targets forwarded by excluded statements or retained re-export paths, including
+/// paths attached to included execution-order statements.
 fn transitive_esm_init_targets(
   module: &NormalModule,
   meta: &LinkingMetadata,
@@ -361,7 +382,10 @@ fn transitive_esm_init_targets(
         && namespace_is_semantically_observed
         && (ctx.metas[root].has_dynamic_exports
           || meta.star_export_record_by_name.iter().any(|(name, owner)| {
-            *owner == rec_idx && meta.sorted_and_non_ambiguous_resolved_exports.contains_key(name)
+            *owner == rec_idx
+              && meta
+                .sorted_and_non_ambiguous_resolved_exports
+                .contains_key(name)
           }));
       if ctx.order_wrap {
         if !order_wrap_record_forwards(
@@ -399,9 +423,18 @@ fn transitive_esm_init_targets(
         continue;
       }
       let mut targets = vec![];
-      if namespace_reexport_is_retained
-        && (ctx.order_wrap || ctx.order_state.is_consumer_local_reexport_route(root))
-      {
+      if namespace_reexport_is_retained && ctx.order_state.is_consumer_local_reexport_route(root) {
+        let namespace_targets = ctx
+          .order_state
+          .consumer_local_namespace_targets(root)
+          .expect("consumer-local route should have complete namespace targets");
+        targets.extend(
+          namespace_targets
+            .iter()
+            .copied()
+            .filter(|target| ctx.target_is_live(*target)),
+        );
+      } else if namespace_reexport_is_retained && ctx.order_wrap {
         targets.extend(retained_import_record_init_targets(module, meta, ctx, rec_idx));
       } else if ctx.order_wrap {
         let retained_reexport_path = overlay
@@ -414,7 +447,11 @@ fn transitive_esm_init_targets(
           ctx.order_state,
           root,
           retained_reexport_path,
-          if retained_reexport_path.is_some() { &mut retained_path_visited } else { &mut visited },
+          if retained_reexport_path.is_some() {
+            &mut retained_path_visited
+          } else {
+            &mut visited
+          },
           &mut targets,
           &|target| ctx.target_is_live(target),
           &|module_idx| ctx.forwarding_module_owns_initialization(module_idx),
@@ -538,7 +575,9 @@ fn collect_legacy_esm_init_targets(
 ) {
   let mut stack = vec![root];
   while let Some(module_idx) = stack.pop() {
-    let Module::Normal(importee) = &modules[module_idx] else { continue };
+    let Module::Normal(importee) = &modules[module_idx] else {
+      continue;
+    };
     let importee_linking_info = &metas[importee.idx];
     if !matches!(importee_linking_info.wrap_kind(), WrapKind::Esm) {
       continue;

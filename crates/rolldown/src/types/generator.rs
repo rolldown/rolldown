@@ -1,8 +1,8 @@
 use oxc_index::IndexVec;
 use oxc_str::CompactStr;
 use rolldown_common::{
-  Chunk, ChunkIdx, InstantiatedChunk, ModuleIdx, ModuleRenderOutput, NormalizedBundlerOptions,
-  OutputExports, PathsOutputOption, SymbolRef, UsedSymbolRefs,
+  Chunk, ChunkIdx, InstantiatedChunk, ModuleIdx, ModuleRenderOutput, OutputExports,
+  PathsOutputOption, SymbolRef, UsedSymbolRefs,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;
@@ -18,12 +18,13 @@ use crate::{
     },
     link_stage::LinkStageOutput,
   },
+  types::scan_stage_cache::{CachedChunkSourcemap, CachedMultiModuleChunk},
 };
 
 pub struct GenerateContext<'a> {
   pub chunk_idx: ChunkIdx,
   pub chunk: &'a Chunk,
-  pub options: &'a NormalizedBundlerOptions,
+  pub options: &'a crate::SharedOptions,
   pub link_output: &'a LinkStageOutput,
   /// Sealed record of inclusion-fixpoint liveness; see [`UsedSymbolRefs`].
   pub used_symbol_refs: &'a UsedSymbolRefs,
@@ -31,6 +32,10 @@ pub struct GenerateContext<'a> {
   pub chunk_graph: &'a ChunkGraph,
   pub plugin_driver: &'a SharedPluginDriver,
   pub module_id_to_codegen_ret: Vec<Option<ModuleRenderOutput>>,
+  pub cached_module_sources:
+    Option<&'a FxHashMap<ModuleIdx, crate::types::scan_stage_cache::CachedModuleSources>>,
+  pub skip_sourcemap_join: bool,
+  pub multi_module_chunk: Option<MultiModuleChunkLookup<'a>>,
   /// The key of the map is exported item symbol,
   /// the value of the map is optional alias. e.g.
   /// - chunkB.js
@@ -42,6 +47,12 @@ pub struct GenerateContext<'a> {
   /// Pre-resolved paths for external modules (always a `FxHashMap` variant).
   /// Used instead of `options.paths` in sync rendering code to avoid deadlocks.
   pub resolved_paths: Option<&'a PathsOutputOption>,
+  pub ast_table: Option<&'a crate::type_alias::IndexEcmaAst>,
+  pub final_esm_init_metadata: Option<
+    &'a crate::stages::generate_stage::Sealed<
+      crate::stages::generate_stage::FinalEsmInitMetadata,
+    >,
+  >,
   /// `experimentalInlineCommonChunks` decisions: which chunks are records, who carries and reads
   /// them, and the bridge names.
   pub inline_state: &'a InlineCommonChunksState,
@@ -189,6 +200,26 @@ impl GenerateContext<'_> {
 pub struct GenerateOutput {
   pub chunks: Vec<InstantiatedChunk>,
   pub warnings: Vec<BuildDiagnostic>,
+  pub multi_module_chunk: Option<MultiModuleChunkRender>,
+}
+
+/// Where a generator looks up a chunk's cached code; see [`CachedMultiModuleChunk`].
+#[derive(Clone, Copy)]
+pub struct MultiModuleChunkLookup<'a> {
+  /// Digest of the chunk's kind, file name and its modules' rendered code, in order.
+  pub base_digest: [u128; 2],
+  pub cached: &'a FxHashMap<[u128; 2], CachedMultiModuleChunk>,
+  /// Chunk source maps, which a chunk's key also keys: it determines the joined map.
+  pub cached_sourcemaps: &'a FxHashMap<[u128; 2], CachedChunkSourcemap>,
+}
+
+/// How a generator rendered a chunk with a [`MultiModuleChunkLookup`].
+pub struct MultiModuleChunkRender {
+  pub key: [u128; 2],
+  /// The chunk's map was not joined; finalizing takes the source map cached under `key`.
+  pub skip_sourcemap_join: bool,
+  /// The entry to cache under `key`, when the cache had none.
+  pub new_entry: Option<CachedMultiModuleChunk>,
 }
 
 pub trait Generator {

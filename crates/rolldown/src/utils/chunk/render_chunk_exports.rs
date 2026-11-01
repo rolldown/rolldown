@@ -1,10 +1,12 @@
 use std::borrow::Cow;
+use std::collections::BTreeMap;
 use std::fmt::Write as _;
 
 use oxc_str::CompactStr;
 use rolldown_common::{
-  Chunk, ChunkKind, ExportsKind, IndexModules, ModuleIdx, NormalizedBundlerOptions, OutputExports,
-  OutputFormat, Platform, SymbolRef, SymbolRefDb, WrapKind,
+  Chunk, ChunkKind, ChunkMeta, EntryPointKind, ExportsKind, IndexModules, Module, ModuleIdx,
+  NormalizedBundlerOptions, OutputExports, OutputFormat, Platform, SymbolRef, SymbolRefDb,
+  WrapKind,
 };
 use rolldown_utils::{
   concat_string,
@@ -19,13 +21,71 @@ use rustc_hash::FxHashSet;
 use crate::esm_init_obligations::{WrappedEsmInitTarget, collect_entry_reexported_wrapper_inits};
 use crate::{stages::link_stage::LinkStageOutput, types::generator::GenerateContext};
 
+/// Whether a static `import` or dynamic `import()` of a module that the graph reaches imports
+/// `module_idx` (#660, #821).
+pub(crate) fn is_imported_by_static_or_dynamic_import(
+  link_output: &LinkStageOutput,
+  module_idx: ModuleIdx,
+) -> bool {
+  link_output
+    .unreachable_modules
+    .imported_by_static_or_dynamic_import(&link_output.module_table.modules, module_idx)
+}
+
+/// Whether the records of a link's output evaluate each wrapped CommonJS module that the graph
+/// reaches as they evaluate, or leave it to its first `require`, as [`render_wrapped_entry_chunk`]
+/// renders its record, by the module's stable id. A page that loaded the output evaluated each
+/// such module then, which no patch repeats (#660).
+pub(crate) fn commonjs_evaluations(
+  link_output: &LinkStageOutput,
+  options: &NormalizedBundlerOptions,
+) -> BTreeMap<String, bool> {
+  link_output
+    .module_table
+    .modules
+    .iter()
+    .filter_map(Module::as_normal)
+    .filter(|module| {
+      let meta = &link_output.metas[module.idx];
+      meta.is_included
+        && matches!(meta.wrap_kind(), WrapKind::Cjs)
+        && link_output.unreachable_modules.reaches(module.idx)
+    })
+    .map(|module| {
+      // A preserved module's chunk is a user-defined entry's when its first entry is one
+      // (`code_splitting`).
+      let user_defined_entry = link_output
+        .entries
+        .get(&module.idx)
+        .and_then(|entries| entries.first())
+        .is_some_and(|entry| matches!(entry.kind, EntryPointKind::UserDefined));
+      let with_record = !crate::utils::native_records::enabled(options)
+        || user_defined_entry
+        || is_imported_by_static_or_dynamic_import(link_output, module.idx);
+      (module.stable_id.to_string(), with_record)
+    })
+    .collect()
+}
+
 pub fn render_wrapped_entry_chunk(
   ctx: &GenerateContext<'_>,
   export_mode: Option<&OutputExports>,
 ) -> Option<String> {
-  if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
+  if let ChunkKind::EntryPoint { module: entry_id, meta, .. } = ctx.chunk.kind {
     let entry_meta = &ctx.link_output.metas[entry_id];
     if matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
+      // A native record that only `require()` or `import.meta.hot.accept()` reaches evaluates on
+      // its first `require`, as CommonJS does, rather than when the record itself evaluates: an
+      // eager call would run it before the module requiring it, even inside a `require()` cycle
+      // (#821). A static import or `import()` still evaluates it with the record, in the
+      // importer's authored order. The imports of a module that the graph no longer reaches don't
+      // count (#660).
+      if crate::utils::native_records::enabled(ctx.options)
+        && !meta.contains(ChunkMeta::UserDefinedEntry)
+        && !is_imported_by_static_or_dynamic_import(ctx.link_output, entry_id)
+      {
+        return None;
+      }
       let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
 
       let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
@@ -214,6 +274,26 @@ pub fn render_chunk_exports(
 
   match options.format {
     OutputFormat::Esm => {
+      // A record's native namespace is reached through `import * as`, never a named export.
+      export_items.retain(|(_, symbol)| {
+        !(crate::utils::native_records::is_native_namespace(options, link_output, *symbol)
+          && chunk.entry_module_idx().is_some_and(|module| module == symbol.owner))
+      });
+      // A record that keeps its authored `export default ...` already exports `default`.
+      if let Some(rolldown_common::Module::Normal(entry)) =
+        chunk.entry_module_idx().map(|module| &link_output.module_table[module])
+        && crate::utils::native_records::has_native_default_export(
+          options,
+          entry,
+          &link_output.metas[entry.idx],
+          &link_output.symbol_db,
+          Some(entry.idx),
+        )
+      {
+        export_items.retain(|(exported_name, symbol)| {
+          exported_name.as_str() != "default" || *symbol != entry.default_export_ref
+        });
+      }
       // If this is an entry point with a CJS wrapper, render_wrapped_entry_chunk already handles
       // the default export, so we should filter it out from export_items to avoid duplicates.
       if let ChunkKind::EntryPoint { module: entry_id, .. } = chunk.kind {

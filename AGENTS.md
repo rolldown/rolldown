@@ -105,3 +105,11 @@ IMPORTANT: The project uses `just` as a task runner. Always prefer `just` comman
 - **Check surrounding code for conventions:** Before adding new code, always study the existing patterns, naming conventions, and architectural choices in the file and directory you are working in.
 - **Break large changes into tracked steps:** Decompose substantial work into manageable subtasks. Track progress to prevent scope creep and missed items. Use `TodoWrite` or similar tools to maintain a checklist.
 - **Batch multiple edits:** Prefer to batch multiple edits over sequential single edits. Use `MultiEdit` or similar tools if available.
+
+# Upstream Sync, Deduplication & Performance Gate (`just perf-gate`)
+
+This fork maintains `developer-bundler` Rolldown and Rolldown Plugin alterations (`RD-01..RD-53`, `RP-01..RP-02`, and `vendor/oxc_sourcemap-9.0.0` `OS-01..OS-04`) on top of upstream `rolldown/rolldown`:
+
+1. **Run `node .github/scripts/perf-gate.js --base origin/main` (`just perf-gate`)** after merging upstream changes or editing `crates/rolldown` / `crates/rolldown_plugin`.
+2. **Deduplicate upstreamed fixes**: When `perf-gate.js` reports `Upstream Overlap Candidates` against `origin/main` (such as standalone bugfixes in `RD-05`, `RD-24`, `RD-25`, `RD-32`, `RD-37`, `RD-38`, `RD-45`, `RD-46`), drop duplicate fork hunks in favor of upstream's implementation whenever the downstream reproduction test in `developer-bundler` passes without the fork hunk.
+3. **Sync into `developer-bundler`**: Run `node scripts/sync-vendor-from-forks.mjs --sync` in `/Users/kristoferbaxter/Projects/developer-bundler` (or the active worktree) to export `crates/rolldown`, `crates/rolldown_plugin`, and `vendor/oxc_sourcemap-*`, regenerate `UPSTREAM.json`, `revision-cache.patch`, `PATCHES`, and `docs/dependency-alterations.md`, and verify `node --test scripts/dependency-alterations.test.mjs`.

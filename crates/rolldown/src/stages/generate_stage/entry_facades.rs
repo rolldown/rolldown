@@ -118,6 +118,22 @@ impl GenerateStage<'_> {
     if chunk_graph.entry_module_to_entry_chunk.get(&module) == Some(&chunk_idx) {
       chunk_graph.entry_module_to_entry_chunk.insert(module, facade_idx);
     }
+    // `import()` of an entry whose namespace object it reads
+    // (`preserve_dynamic_entry_namespaces`) reads it from the facade now, which imports it from
+    // the module's chunk.
+    if let Some(entries) =
+      chunk_graph.common_chunk_exported_facade_chunk_namespace.get_mut(&chunk_idx)
+      && entries.remove(&module)
+    {
+      if entries.is_empty() {
+        chunk_graph.common_chunk_exported_facade_chunk_namespace.remove(&chunk_idx);
+      }
+      chunk_graph
+        .common_chunk_exported_facade_chunk_namespace
+        .entry(facade_idx)
+        .or_default()
+        .insert(module);
+    }
     if let Some(reference_ids) = chunk_graph.chunk_idx_to_reference_ids.remove(&chunk_idx) {
       chunk_graph.chunk_idx_to_reference_ids.insert(facade_idx, reference_ids);
     }

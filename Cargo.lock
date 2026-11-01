@@ -2036,8 +2036,6 @@ dependencies = [
 [[package]]
 name = "oxc_sourcemap"
 version = "9.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1133371a5fadc14b9f66a8fec14be3564a77647c7ab21b1ef0ec973bd82613ce"
 dependencies = [
  "base64-simd",
  "json-escape-simd",
@@ -2563,6 +2561,7 @@ dependencies = [
  "oxc_index",
  "oxc_str",
  "oxc_traverse",
+ "percent-encoding",
  "petgraph",
  "rayon",
  "regex",
@@ -2904,6 +2903,7 @@ dependencies = [
  "bitflags",
  "dashmap",
  "derive_more",
+ "log",
  "nodejs-built-in-modules",
  "oxc_index",
  "rolldown_common",

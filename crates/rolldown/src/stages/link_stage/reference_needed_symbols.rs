@@ -1,6 +1,6 @@
 use rolldown_common::{
-  ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, OutputFormat, RuntimeHelper,
-  StmtInfoMeta, SymbolRefDb, TaggedSymbolRef, WrapKind,
+  ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleType, OutputFormat,
+  RuntimeHelper, StmtInfoMeta, SymbolRefDb, TaggedSymbolRef, WrapKind,
 };
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
@@ -56,7 +56,14 @@ impl LinkStage<'_> {
           }
           stmt_info.import_records.iter().for_each(|rec_id| {
             let rec = &importer.import_records[*rec_id];
-            let Some(module_idx) = rec.state.resolved_module else { return };
+            if rec.module_request == "\0rolldown/computed-import" {
+              stmt_info
+                .referenced_symbols
+                .push(self.runtime.resolve_symbol("__computedImport").into());
+            }
+            let Some(module_idx) = rec.state.resolved_module else {
+              return;
+            };
             match &self.module_table[module_idx] {
               Module::External(importee) => {
                 // Make sure symbols from external modules are included and de_conflicted
@@ -196,7 +203,11 @@ impl LinkStage<'_> {
                     }
                   }
                   ImportKind::Require => match importee_linking_info.wrap_kind() {
-                    WrapKind::None => {}
+                    WrapKind::None => {
+                      if importee.module_type == ModuleType::Json {
+                        stmt_info.referenced_symbols.push(importee.default_export_ref.into());
+                      }
+                    }
                     WrapKind::Cjs => {
                       // something like `require_foo()`
                       // Reference to `require_foo`
@@ -218,6 +229,42 @@ impl LinkStage<'_> {
                     }
                   },
                   ImportKind::DynamicImport => {
+                    if !self.options.is_dev_mode_enabled()
+                      && crate::deferred_resolution_error::is_link_failure(
+                        &self.module_table.modules,
+                        module_idx,
+                      )
+                    {
+                      stmt_info
+                        .referenced_symbols
+                        .push(self.runtime.resolve_symbol("__rethrowModuleLinkError").into());
+                    }
+                    if !self.options.is_dev_mode_enabled() && !importee.exports_kind.is_commonjs() {
+                      stmt_info
+                        .referenced_symbols
+                        .push(self.runtime.resolve_symbol("__importNamespace").into());
+                      // Do not pull an otherwise dynamic-only module into its importer chunk.
+                      // Other canonical namespaces must already be retained by static consumers.
+                      if importee.idx == importer.idx {
+                        stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
+                        if let Some(wrapper) = importee_linking_info.wrapper_ref {
+                          stmt_info.referenced_symbols.push(wrapper.into());
+                        }
+                      }
+                    }
+                    stmt_info
+                      .referenced_symbols
+                      .push(self.runtime.resolve_symbol("__withImportOptions").into());
+                    if crate::deferred_resolution_error::failure_message(
+                      &self.module_table.modules,
+                      module_idx,
+                    )
+                    .is_some()
+                    {
+                      stmt_info
+                        .referenced_symbols
+                        .push(self.runtime.resolve_symbol("__rejectModuleResolution").into());
+                    }
                     if self.options.code_splitting.is_disabled() {
                       match importee_linking_info.wrap_kind() {
                         WrapKind::None => {}

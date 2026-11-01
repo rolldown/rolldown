@@ -332,6 +332,34 @@ impl<'a> StmtEvalAnalyzer<'a> {
     }
   }
 
+  /// `Object.freeze({...})`, `Object.seal({...})`, and `Object.preventExtensions({...})` on a
+  /// freshly constructed object or array literal cannot mutate any existing reference, so if
+  /// the literal itself is side-effect-free, the call has no observable side effect when its
+  /// return value is unused.
+  fn is_fresh_object_freeze_call(&self, expr: &CallExpression) -> bool {
+    if expr.arguments.len() != 1 {
+      return false;
+    }
+    let Expression::StaticMemberExpression(member) = expr.callee.get_inner_expression() else {
+      return false;
+    };
+    if !matches!(member.property.name.as_str(), "freeze" | "seal" | "preventExtensions") {
+      return false;
+    }
+    let Expression::Identifier(obj_ident) = member.object.get_inner_expression() else {
+      return false;
+    };
+    if obj_ident.name != "Object" || !self.is_unresolved_reference(obj_ident) {
+      return false;
+    }
+    let Some(arg_expr) = expr.arguments[0].as_expression() else {
+      return false;
+    };
+    let inner = arg_expr.get_inner_expression();
+    matches!(inner, Expression::ObjectExpression(_) | Expression::ArrayExpression(_))
+      && !inner.may_have_side_effects(self)
+  }
+
   fn analyze_call_expr(&self, expr: &CallExpression) -> StmtEvalFacts {
     let is_pure_annotated =
       !self.flat_options.ignore_annotations() && (expr.pure || self.is_call_expr_marked_pure(expr));
@@ -341,7 +369,11 @@ impl<'a> StmtEvalAnalyzer<'a> {
     // has bundler-specific overrides (e.g. import.meta.url is side-effect-free).
     // Oxc's pure-call handling would still check args via its own may_have_side_effects,
     // which doesn't know about these overrides.
-    let has_side_effect = if is_pure_annotated { false } else { expr.may_have_side_effects(self) };
+    let has_side_effect = if is_pure_annotated || self.is_fresh_object_freeze_call(expr) {
+      false
+    } else {
+      expr.may_have_side_effects(self)
+    };
 
     let is_global_call = !has_side_effect
       && matches!(&expr.callee, Expression::Identifier(id) if self.is_unresolved_reference(id));

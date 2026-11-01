@@ -9,7 +9,7 @@ use rolldown_common::{
   StrOrBytes, try_extract_lazy_barrel_info,
 };
 use rolldown_error::{
-  BuildDiagnostic, BuildResult, DiagnosticOptions, EventKindSwitcher, UnloadableDependencyContext,
+  BuildDiagnostic, BuildResult, DiagnosticOptions, EventKind, EventKindSwitcher, UnloadableDependencyContext,
   downcast_napi_error_diagnostics,
 };
 use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
@@ -19,7 +19,7 @@ use rolldown_fs::FileSystem;
 use crate::{
   ecmascript::ecma_module_view_factory::{CreateEcmaViewReturn, create_ecma_view},
   types::module_factory::{CreateModuleContext, CreateModuleViewArgs},
-  utils::{load_source::load_source, transform_source::transform_source},
+  utils::{load_source::load_source, retained_memory, transform_source::transform_source},
 };
 
 use super::{resolve_utils::resolve_dependencies, task_context::TaskContext};
@@ -78,17 +78,45 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
 
   #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_id = %self.resolved_id.id))]
   pub async fn run(mut self) {
-    if let Err(errs) = self.run_inner().await {
+    let resolution_failure = self
+      .ctx
+      .deferred_resolution_targets
+      .lock()
+      .expect("resolution failure state poisoned")
+      .get(&self.resolved_id.id)
+      .cloned()
+      .map(|diagnostic| diagnostic.into_diagnostic().to_string());
+    let override_source = resolution_failure.map(|diagnostic| {
+      format!(
+        "import {{__moduleTypeError}} from {:?}; throw new __moduleTypeError({});",
+        rolldown_common::RUNTIME_MODULE_KEY,
+        serde_json::to_string(&diagnostic).expect("diagnostic strings serialize")
+      ).into()
+    });
+    let result = match self.run_inner(override_source).await {
+      Err(errs) if !self.is_user_defined_entry
+        && !errs.is_empty()
+        && errs.iter().all(|error| matches!(error.kind(), EventKind::ParseError)) =>
+      {
+        let message = errs[0].to_string();
+        let source = format!(
+          "import {{__moduleSyntaxError}} from {:?}; throw new __moduleSyntaxError({});",
+          rolldown_common::RUNTIME_MODULE_KEY,
+          serde_json::to_string(&message).expect("diagnostic strings serialize")
+        );
+        self.ctx.deferred_parse_errors.lock().expect("parse failure state poisoned")
+          .insert(self.module_idx, errs.into_vec());
+        self.run_inner(Some(source.into())).await
+      }
+      result => result,
+    };
+    if let Err(errs) = result {
       self.ctx.plugin_driver.mark_context_load_modules_loaded(self.resolved_id.id.clone());
-      self
-        .ctx
-        .tx
-        .send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()))
-        .expect("ModuleLoader: failed to send build errors - main thread terminated while processing module errors");
+      self.ctx.send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
     }
   }
 
-  async fn run_inner(&mut self) -> BuildResult<()> {
+  async fn run_inner(&mut self, error_source: Option<ArcStr>) -> BuildResult<()> {
     let id = self.resolved_id.id.clone();
 
     self.ctx.plugin_driver.set_module_info(
@@ -107,10 +135,15 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     );
 
     let mut sourcemap_chain = vec![];
-    let mut hook_side_effects = self.resolved_id.side_effects.take();
-    let (source, module_type) = self
-      .load_source(&mut sourcemap_chain, &mut hook_side_effects, self.magic_string_tx.clone())
-      .await?;
+    let mut hook_side_effects = self.resolved_id.side_effects;
+    let (source, module_type) = if let Some(source) = error_source {
+      hook_side_effects = Some(rolldown_common::side_effects::HookSideEffects::NoTreeshake);
+      (StrOrBytes::Str(source.to_string()), ModuleType::Js)
+    } else {
+      self
+        .load_source(&mut sourcemap_chain, &mut hook_side_effects, self.magic_string_tx.clone())
+        .await?
+    };
 
     let stable_id = id.stabilize(&self.ctx.options.cwd);
 
@@ -125,23 +158,30 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
 
     let mut warnings = vec![];
 
-    let CreateEcmaViewReturn { mut ecma_view, ecma_related, raw_import_records, tla_keyword_span } =
-      create_ecma_view(
-        &mut CreateModuleContext {
-          stable_id: &stable_id,
-          module_idx: self.module_idx,
-          plugin_driver: &self.ctx.plugin_driver,
-          resolved_id: &self.resolved_id,
-          options: &self.ctx.options,
-          warnings: &mut warnings,
-          module_type: module_type.clone(),
-          replace_global_define_config: self.ctx.meta.replace_global_define_config.clone(),
-          is_user_defined_entry: self.is_user_defined_entry,
-          flat_options: self.flat_options,
-        },
-        CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects },
-      )
-      .await?;
+    let CreateEcmaViewReturn {
+      mut ecma_view,
+      mut ecma_related,
+      raw_import_records,
+      tla_keyword_span,
+    } = create_ecma_view(
+      &mut CreateModuleContext {
+        stable_id: &stable_id,
+        module_idx: self.module_idx,
+        plugin_driver: &self.ctx.plugin_driver,
+        resolved_id: &self.resolved_id,
+        options: &self.ctx.options,
+        warnings: &mut warnings,
+        module_type: module_type.clone(),
+        replace_global_define_config: self.ctx.meta.replace_global_define_config.clone(),
+        is_user_defined_entry: self.is_user_defined_entry,
+        flat_options: self.flat_options,
+      },
+      CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects },
+    )
+    .await?;
+    if self.ctx.compact_module_arenas {
+      retained_memory::compact_module_arenas(&mut ecma_related.ast, &mut ecma_related.symbols);
+    }
 
     let resolved_deps = resolve_dependencies(
       &self.resolved_id,
@@ -151,6 +191,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       &raw_import_records,
       ecma_view.source.clone(),
       &mut warnings,
+      &self.ctx.deferred_resolution_targets,
     )
     .await?;
 
@@ -236,9 +277,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       tla_keyword_span,
     }));
 
-    self.ctx.tx.send(result).expect(
-      "ModuleLoader channel closed while sending module completion - main thread terminated unexpectedly"
-    );
+    self.ctx.send(result);
 
     Ok(())
   }
@@ -287,7 +326,8 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
             importer_id: owner.importer_id.clone(),
             importee_span: owner.importee_span,
           }),
-          e.to_string().into(),
+          // The alternate format keeps the causes that a plugin attached below its own name.
+          format!("{e:#}").into(),
         )
       })
     })?;

@@ -122,7 +122,11 @@ pub async fn create_ecma_view(
     default_export_ref,
     exports_kind,
     namespace_object_ref,
-    def_format: ctx.resolved_id.module_def_format,
+    // developer-bundler: a plugin may give the module another format for the interop of its
+    // imports of CommonJS, which is all that reads `def_format` after the scan.
+    def_format: ctx
+      .plugin_driver
+      .interop_module_def_format(module_id.as_str(), ctx.resolved_id.module_def_format),
     sourcemap_chain,
     import_records: IndexVec::default(),
     importers: FxIndexSet::default(),
@@ -191,6 +195,10 @@ pub async fn normalize_side_effects(
     // If user don't specify the side effects, we use fallback value from `option.treeshake.moduleSideEffects`;
     None => match options.treeshake.as_ref() {
       // Actually this convert is not necessary, just for passing type checking
+      // Native dev records retain declarations independently of evaluation-edge certificates.
+      None if crate::utils::native_records::enabled(options) => {
+        lazy_check_side_effects(resolved_id, stmt_infos, true)
+      }
       None => DeterminedSideEffects::NoTreeshake,
       Some(opt) => {
         if opt.module_side_effects.is_fn() {

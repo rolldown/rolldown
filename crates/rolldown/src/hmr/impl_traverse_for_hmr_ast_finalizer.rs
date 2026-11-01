@@ -1,15 +1,15 @@
 use oxc::{
-  allocator::TakeIn,
+  allocator::{GetAllocator, TakeIn},
   ast::ast::{self, Expression, NumberBase},
   span::SPAN,
 };
 use oxc_traverse::Traverse;
-use rolldown_common::EcmaModuleAstUsage;
+use rolldown_common::{EcmaModuleAstUsage, ThisExprReplaceKind};
 use rolldown_ecmascript::{
   CJS_EXPORTS_REF_STR, CJS_MODULE_REF_STR, CJS_ROLLDOWN_EXPORTS_REF,
   CJS_ROLLDOWN_EXPORTS_REF_IDENT, CJS_ROLLDOWN_MODULE_REF, CJS_ROLLDOWN_MODULE_REF_IDENT,
 };
-use rolldown_ecmascript_utils::ExpressionFactoryExt as _;
+use rolldown_ecmascript_utils::{ExpressionFactoryExt as _, parse_injected_expression};
 use rustc_hash::FxHashSet;
 
 use crate::hmr::{
@@ -18,6 +18,60 @@ use crate::hmr::{
 };
 
 impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
+  fn exit_object_property(
+    &mut self,
+    node: &mut ast::ObjectProperty<'ast>,
+    _ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
+  ) {
+    if self.module.module_type == rolldown_common::ModuleType::Json
+      && self.module.meta.has_lazy_export()
+      && node.key.static_name().is_some_and(|key| key.as_str() == Some("__proto__"))
+    {
+      node.computed = true;
+    }
+  }
+
+  fn exit_simple_assignment_target(
+    &mut self,
+    node: &mut ast::SimpleAssignmentTarget<'ast>,
+    ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
+  ) {
+    if let ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(reference) = node
+      && let Some(target) = self.imported_assignment_target(reference, ctx)
+    {
+      *node = target;
+    }
+  }
+
+  fn exit_assignment_target_property(
+    &mut self,
+    node: &mut ast::AssignmentTargetProperty<'ast>,
+    ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
+  ) {
+    if let ast::AssignmentTargetProperty::AssignmentTargetPropertyIdentifier(property) = node
+      && let Some(target) = self.imported_assignment_target(&property.binding, ctx)
+    {
+      let symbol = ctx.scoping().get_reference(
+        property.binding.reference_id.get().expect("import reference"),
+      ).symbol_id().expect("import symbol");
+      let key = ast::Str::from_str_in(ctx.scoping().symbol_name(symbol), self);
+      let value = if let Some(initializer) = property.init.take() {
+        ast::AssignmentTargetMaybeDefault::new_assignment_target_with_default(
+          SPAN, target.into(), initializer, self,
+        )
+      } else {
+        target.into()
+      };
+      *node = ast::AssignmentTargetProperty::new_assignment_target_property_property(
+        SPAN,
+        ast::PropertyKey::new_static_identifier(property.span, key, self),
+        value,
+        false,
+        self,
+      );
+    }
+  }
+
   fn enter_program(
     &mut self,
     node: &mut ast::Program<'ast>,
@@ -111,13 +165,19 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     // Every binding is created next to a `self.dependencies.insert`, so the loop above emits all
     // of them.
     debug_assert!(load_exports_stmts.is_empty());
+    // The copies above are the module's star exports, after which its namespace takes no names.
+    if !self.re_export_all_dependencies.is_empty()
+      && matches!(self.exports_kind, rolldown_common::ExportsKind::Esm)
+    {
+      dependencies_init_fn_stmts.push(self.create_star_namespace_completion_stmt());
+    }
 
     let runtime_module_register = self.generate_runtime_module_register_for_hmr(ctx.scoping());
 
     // Factories uniformly take only `__rolldown_module_id__`; for CommonJS the
     // module/exports objects become locals the body's rewritten `module`/`exports`
     // references resolve to.
-    let cjs_module_locals: Vec<ast::Statement<'ast>> = if self.module.exports_kind.is_commonjs() {
+    let cjs_module_locals: Vec<ast::Statement<'ast>> = if self.exports_kind.is_commonjs() {
       let empty_exports_object = ast::Expression::new_object_expression(SPAN, [], self);
       let module_object = ast::Expression::new_object_expression(
         SPAN,
@@ -169,7 +229,11 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
                 self,
               ),
               None,
-              Some(Expression::new_member_access_expr(CJS_ROLLDOWN_MODULE_REF, "exports", self)),
+              Some(Expression::new_member_access_expr(
+                CJS_ROLLDOWN_MODULE_REF,
+                "exports",
+                self,
+              )),
               false,
               self,
             ),
@@ -193,7 +257,9 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     try_block.body.extend(cjs_module_locals);
     try_block.body.extend(runtime_module_register);
     try_block.body.extend(dependencies_init_fn_stmts);
-    try_block.body.push(self.create_module_hot_context_initializer_stmt());
+    try_block
+      .body
+      .push(self.create_module_hot_context_initializer_stmt());
     try_block.body.extend(node.body.take_in(self));
 
     node
@@ -247,13 +313,26 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     // mark the callback as PIFE because the callback is executed when this chunk is loaded
     user_code_wrapper.pife = self.use_pife_for_module_wrappers;
 
-    // __rolldown_runtime__.registerFactory(stable_id, function (__rolldown_module_id__) { [user code] }[, stamp])
+    // __rolldown_runtime__.registerFactory(stable_id, kind, function (__rolldown_module_id__) { [user code] }[, stamp])
     // Every factory is id-addressed and registry-gated at runtime; re-execution policy
     // is runtime data (evictions), never a per-payload flag.
-    let mut register_factory_args = oxc::allocator::Vec::with_capacity_in(3, self);
+    let mut register_factory_args = oxc::allocator::Vec::with_capacity_in(4, self);
     register_factory_args.push(ast::Argument::new_string_literal(
       SPAN,
       oxc::ast::ast::Str::from_str_in(&self.module.stable_id, self),
+      None,
+      self,
+    ));
+    register_factory_args.push(ast::Argument::new_string_literal(
+      SPAN,
+      oxc::ast::ast::Str::from_str_in(
+        if self.exports_kind.is_commonjs() {
+          "cjs"
+        } else {
+          "esm"
+        },
+        self,
+      ),
       None,
       self,
     ));
@@ -264,7 +343,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
         SPAN,
         f64::from(self.stamp),
         None,
-        ast::NumberBase::Decimal,
+        NumberBase::Decimal,
         self,
       ));
     }
@@ -278,7 +357,11 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       self,
     );
 
-    node.body.push(ast::Statement::new_expression_statement(SPAN, register_factory_call, self));
+    node.body.push(ast::Statement::new_expression_statement(
+      SPAN,
+      register_factory_call,
+      self,
+    ));
   }
 
   fn enter_call_expression(
@@ -287,6 +370,9 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     _ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
   ) {
     self.rewrite_hot_accept_call_deps(node);
+    crate::utils::import_options::rewrite_hmr_import_attribute_target(
+      node, self.module, self.modules, self,
+    );
   }
 
   fn exit_call_expression(
@@ -310,13 +396,24 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     node: &mut oxc::ast::ast::Expression<'ast>,
     ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
   ) {
-    // Rewrite top-level `this` to `exports` for CommonJS modules
-    // Use `this_expr_replace_map` from scanning to avoid rewriting `this` inside classes
+    crate::utils::temporal_reads::unwrap_temporal_read(node);
+    // Rewrite top-level `this` as the main build does, by the kind that the scan decided
+    // (`this_expr_replace_map`, which leaves `this` inside classes and functions alone): the
+    // module's `exports` for a module that the scan found CommonJS, and otherwise the
+    // `context` option, or `void 0` without one, also for a module that the link makes
+    // CommonJS. A factory runs as its record's method, whose `this` is the record.
     if let ast::Expression::ThisExpression(this_expr) = node
-      && self.module.exports_kind.is_commonjs()
-      && self.module.ecma_view.this_expr_replace_map.contains_key(&this_expr.node_id())
+      && let Some(kind) = self.module.ecma_view.this_expr_replace_map.get(&this_expr.node_id())
     {
-      *node = Expression::new_id_ref_expr(SPAN, CJS_ROLLDOWN_EXPORTS_REF, self);
+      *node = match kind {
+        ThisExprReplaceKind::Exports => {
+          Expression::new_id_ref_expr(SPAN, CJS_ROLLDOWN_EXPORTS_REF, self)
+        }
+        ThisExprReplaceKind::Context if self.context.is_empty() => {
+          ast::Expression::new_void_0(SPAN, self)
+        }
+        ThisExprReplaceKind::Context => Expression::new_id_ref_expr(SPAN, self.context, self),
+      };
       return;
     }
 
@@ -335,6 +432,21 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
 }
 
 impl<'ast> HmrAstFinalizer<'_, 'ast> {
+  fn imported_assignment_target(
+    &self,
+    reference: &ast::IdentifierReference<'ast>,
+    ctx: &oxc_traverse::TraverseCtx<'ast, ()>,
+  ) -> Option<ast::SimpleAssignmentTarget<'ast>> {
+    let reference = ctx.scoping().get_reference(reference.reference_id.get()?);
+    let binding = self.import_bindings.get(&reference.symbol_id()?)?;
+    let expression = format!(
+      "({{get value(){{return ({binding})}},set value(_){{const immutable=0;immutable=_}}}}).value"
+    );
+    let expression = parse_injected_expression(self.allocator(), &expression)
+      .expect("generated immutable import assignment target");
+    Some(ast::SimpleAssignmentTarget::from(expression.into_member_expression()))
+  }
+
   /// Rewrite a bare `exports` / `module` identifier to the wrapper-parameter
   /// name (`__rolldown_exports__` / `__rolldown_module__`), or an import-binding
   /// identifier to its generated binding name.

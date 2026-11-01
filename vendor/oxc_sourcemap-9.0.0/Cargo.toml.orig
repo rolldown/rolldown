@@ -1,0 +1,89 @@
+[package]
+name = "oxc_sourcemap"
+version = "9.0.0"
+authors = ["Boshen <boshenc@gmail.com>"]
+categories = []
+edition = "2024"
+include = ["build.rs", "/src", "/benches", "/LICENSE"]
+keywords = ["javascript", "sourcemap", "sourcemaps"]
+license = "BSD-3-Clause"
+publish = true
+readme = "README.md"
+repository = "https://github.com/oxc-project/oxc-sourcemap"
+rust-version = "1.95.0"
+description = "Basic sourcemap handling for Rust"
+
+# <https://doc.rust-lang.org/rustc/lints/listing/allowed-by-default.html>
+[lints.rust]
+absolute_paths_not_starting_with_crate = "warn"
+non_ascii_idents = "warn"
+unit-bindings = "warn"
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(coverage)", "cfg(coverage_nightly)"] }
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+# restriction
+dbg_macro = "warn"
+todo = "warn"
+unimplemented = "warn"
+print_stdout = "warn" # Must be opt-in
+print_stderr = "warn" # Must be opt-in
+allow_attributes = "warn"
+# I like the explicitness of this rule as it removes confusion around `clone`.
+# This increases readability, avoids `clone` mindlessly and heap allocating by accident.
+clone_on_ref_ptr = "warn"
+# These two are mutually exclusive, I like `mod.rs` files for better fuzzy searches on module entries.
+self_named_module_files = "warn" # "-Wclippy::mod_module_files"
+empty_drop = "warn"
+empty_structs_with_brackets = "warn"
+exit = "warn"
+filetype_is_file = "warn"
+get_unwrap = "warn"
+impl_trait_in_params = "warn"
+rc_buffer = "warn"
+rc_mutex = "warn"
+rest_pat_in_fully_bound_structs = "warn"
+unnecessary_safety_comment = "warn"
+infinite_loop = "warn"
+undocumented_unsafe_blocks = "allow"
+
+[lib]
+crate-type = ["lib", "cdylib"]
+
+[[bench]]
+name = "simple"
+harness = false
+
+[package.metadata.cargo-shear]
+ignored = ["napi"]
+
+[dependencies]
+base64-simd = "0.8"
+json-escape-simd = "3"
+napi = { version = "3", optional = true }
+napi-derive = { version = "3", optional = true }
+rustc-hash = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1" }
+
+[build-dependencies]
+napi-build = { version = "2", optional = true }
+
+[dev-dependencies]
+criterion2 = { version = "3.0.4", default-features = false }
+insta = { version = "1.48.0", features = ["glob"] }
+
+[features]
+default = []
+napi = ["dep:napi", "dep:napi-derive", "dep:napi-build"]
+codspeed = ["criterion2/codspeed"]
+
+[profile.bench]
+lto = true
+codegen-units = 1
+
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false

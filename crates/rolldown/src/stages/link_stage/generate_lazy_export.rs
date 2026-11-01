@@ -67,6 +67,14 @@ impl LinkStage<'_> {
       });
 
     for LazyModuleInfo { idx: module_idx, exports_kind, is_json } in lazy_modules {
+      if self.options.experimental.is_incremental_build_enabled() {
+        if let Some(ecma_ast) = self.ast_table[module_idx].as_ref() {
+          self
+            .pre_lazy_export_asts
+            .entry(module_idx)
+            .or_insert_with(|| ecma_ast.clone_with_another_arena());
+        }
+      }
       let Some(ecma_ast) = &mut self.ast_table[module_idx] else { unreachable!() };
       if matches!(exports_kind, ExportsKind::CommonJs) {
         replace_first_expr_stmt(ecma_ast, LazyExportWrap::CjsExport);
@@ -273,6 +281,12 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
   module.default_export_ref = recreate_facade(module.default_export_ref);
   if let Some(hot_ref) = module.hmr_hot_ref {
     module.hmr_hot_ref = Some(recreate_facade(hot_ref));
+  }
+  if link_staged.options.experimental.is_incremental_build_enabled() {
+    link_staged
+      .pre_lazy_export_symbols
+      .entry(module_idx)
+      .or_insert(original_symbol_ref_db);
   }
   let namespace_object_ref = module.namespace_object_ref;
   let default_export_ref = module.default_export_ref;

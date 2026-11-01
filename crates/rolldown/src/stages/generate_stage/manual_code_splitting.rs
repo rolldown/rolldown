@@ -10,8 +10,9 @@ use arcstr::ArcStr;
 use itertools::{Either, Itertools};
 use oxc_index::IndexVec;
 use rolldown_common::{
-  Chunk, ChunkKind, ChunkingContext, EntryPoint, ManualCodeSplittingOptions, MatchGroup,
-  MatchGroupName, Module, ModuleIdx, ModuleTable, ModuleTagBitSet, ModuleTagRegistry, NormalModule,
+  Chunk, ChunkKind, ChunkingContext, EntryPoint, EntryPointKind, ManualCodeSplittingOptions,
+  MatchGroup, MatchGroupName, Module, ModuleIdx, ModuleTable, ModuleTagBitSet, ModuleTagRegistry,
+  NormalModule,
 };
 use rolldown_error::BuildResult;
 use rolldown_plugin::SharedPluginDriver;
@@ -22,13 +23,19 @@ use crate::utils::module_id_matcher::match_module_ids;
 use crate::{
   SharedOptions, chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput,
   types::linking_metadata::LinkingMetadataVec,
+  utils::topology_config::{DependencyBoundary, TopologyConfig},
 };
 
 use super::{
   GenerateStage,
   chunk_ext::{ChunkCreationReason, ChunkDebugExt},
-  code_splitting::IndexSplittingInfo,
+  code_splitting::{
+    BUILTIN_APP_TAG_BIT, BUILTIN_ASYNC_TAG_BIT, BUILTIN_SHARED_TAG_BIT, BUILTIN_VENDOR_TAG_BIT,
+    IndexSplittingInfo,
+  },
 };
+use rolldown_common::ModuleTag;
+use sugar_path::SugarPath as _;
 
 // `ModuleGroup` is a temporary representation of `Chunk`. A valid `ModuleGroup` would be converted to a `Chunk` in the end.
 #[derive(Debug)]
@@ -82,6 +89,7 @@ struct ManualSplitter<'a> {
   index_splitting_info: &'a IndexSplittingInfo,
   options: &'a SharedOptions,
   chunking_options: &'a ManualCodeSplittingOptions,
+  topology_config: Option<Arc<TopologyConfig>>,
   match_groups: Vec<&'a MatchGroup>,
   /// Precomputed tag bitsets per match group (parallel to `match_groups`).
   /// `None` if the group has no `tags` filter.
@@ -194,11 +202,25 @@ impl ManualSplitter<'_> {
     let ctx = ChunkingContext::new(Arc::clone(&self.plugin_driver.module_infos));
 
     for (match_group_index, match_group) in self.match_groups.iter().copied().enumerate() {
-      let matched = match &match_group.test {
-        None => vec![true; candidate_modules.len()],
-        Some(test) => {
-          let ids = candidate_modules.iter().map(|module| module.id.as_str()).collect_vec();
-          match_module_ids(test, &ids, "a `codeSplitting` group `test` function").await?
+      let group_rule = self
+        .topology_config
+        .as_ref()
+        .and_then(|cfg| cfg.group_rules.get(match_group_index));
+
+      let matched = if let Some(rule) = group_rule
+        && (!rule.packages.is_empty() || !rule.paths.is_empty())
+      {
+        candidate_modules
+          .iter()
+          .map(|module| matches_group_rule(module, rule, &self.options.cwd))
+          .collect_vec()
+      } else {
+        match &match_group.test {
+          None => vec![true; candidate_modules.len()],
+          Some(test) => {
+            let ids = candidate_modules.iter().map(|module| module.id.as_str()).collect_vec();
+            match_module_ids(test, &ids, "a `codeSplitting` group `test` function").await?
+          }
         }
       };
 
@@ -216,11 +238,20 @@ impl ManualSplitter<'_> {
         continue;
       }
 
-      let names = match &match_group.name {
-        MatchGroupName::Static(name) => vec![Some(Cow::Borrowed(name.as_str())); captured.len()],
-        MatchGroupName::Dynamic(_) => {
-          let module_ids = captured.iter().map(|module| module.id.to_string()).collect_vec();
-          match_group.name.values(&ctx, module_ids).await?
+      let names = if let Some(rule) = group_rule
+        && let Some(naming) = &rule.naming
+      {
+        captured
+          .iter()
+          .map(|module| resolve_group_naming(module, naming, &self.options.cwd).map(Cow::Owned))
+          .collect_vec()
+      } else {
+        match &match_group.name {
+          MatchGroupName::Static(name) => vec![Some(Cow::Borrowed(name.as_str())); captured.len()],
+          MatchGroupName::Dynamic(_) => {
+            let module_ids = captured.iter().map(|module| module.id.to_string()).collect_vec();
+            match_group.name.values(&ctx, module_ids).await?
+          }
         }
       };
 
@@ -238,6 +269,24 @@ impl ManualSplitter<'_> {
           .include_dependencies_recursively
           .or(self.chunking_options.include_dependencies_recursively)
           .unwrap_or(true);
+        let boundary = self
+          .topology_config
+          .as_ref()
+          .and_then(|cfg| cfg.group_boundaries.get(match_group_index).copied())
+          .unwrap_or(if include_dependencies_recursively {
+            DependencyBoundary::All
+          } else {
+            DependencyBoundary::None
+          });
+        let is_mf_shared_group = self
+          .topology_config
+          .as_ref()
+          .and_then(|cfg| cfg.group_is_mf_shared.get(match_group_index).copied())
+          .unwrap_or(false);
+        let mf_shared_packages = self
+          .topology_config
+          .as_ref()
+          .map_or(&[][..], |cfg| cfg.mf_shared_packages.as_slice());
 
         let group: &mut ModuleGroup = if entries_aware {
           let idx = match entries_aware_idx_by_id.entry(module_group_id) {
@@ -277,11 +326,14 @@ impl ManualSplitter<'_> {
         add_module_and_dependencies_to_group_recursively(
           group,
           normal_module.idx,
+          normal_module.idx,
           &self.link_output.metas,
           &self.link_output.module_table,
           self.module_to_assigned,
           &mut FxHashSet::default(),
-          include_dependencies_recursively,
+          boundary,
+          is_mf_shared_group,
+          mf_shared_packages,
         );
       }
     }
@@ -305,8 +357,26 @@ impl ManualSplitter<'_> {
       let match_group_index = group.match_group_index;
       let name = group.name.clone();
       let priority = group.priority;
-      let merge_threshold =
+      let group_overfetch_budget = self
+        .topology_config
+        .as_ref()
+        .and_then(|cfg| cfg.group_overfetch_budget_bytes.get(match_group_index).copied().flatten())
+        .or_else(|| self.topology_config.as_ref().and_then(|cfg| cfg.overfetch_budget_bytes))
+        .map(f64::from);
+      let raw_merge_threshold =
         self.match_groups[match_group_index].entries_aware_merge_threshold.unwrap_or(0.0);
+      let merge_threshold = match (raw_merge_threshold > 0.0, group_overfetch_budget) {
+        (true, Some(budget)) => raw_merge_threshold.min(budget),
+        (true, None) => raw_merge_threshold,
+        (false, Some(budget)) => budget,
+        (false, None) => 0.0,
+      };
+      let allow_max_size = self.match_groups[match_group_index]
+        .max_size
+        .map_or(self.chunking_options.max_size, Some)
+        .or_else(|| {
+          self.topology_config.as_ref().and_then(|cfg| cfg.chunk_size.map(|c| f64::from(c.max_bytes)))
+        });
       let group_modules = group.modules.into_iter();
       // Merge ties use subgroup keys, so assign them in execution order.
       // See internal-docs/manual-code-splitting/implementation.md.
@@ -349,11 +419,24 @@ impl ManualSplitter<'_> {
 
       // Optionally merge small subgroups
       if merge_threshold > 0.0 && subgroups.len() > 1 {
-        let keys: Vec<u32> = subgroups.keys().copied().collect();
+        let mut user_defined_entry_bits = BitSet::new(self.flattened_entries.len() as u32);
+        for (entry_idx, entry_point) in self.flattened_entries.iter().enumerate() {
+          if matches!(
+            entry_point.kind,
+            EntryPointKind::UserDefined | EntryPointKind::EmittedUserDefined
+          ) {
+            user_defined_entry_bits.set_bit(entry_idx as u32);
+          }
+        }
+        let mut keys: Vec<u32> = subgroups.keys().copied().collect();
+        keys.sort_unstable();
         merge_entries_aware_subgroups(
           &mut subgroups,
           &keys,
           merge_threshold,
+          allow_max_size,
+          &user_defined_entry_bits,
+          self.index_splitting_info,
           &self.link_output.module_table,
         );
       }
@@ -402,22 +485,57 @@ impl ManualSplitter<'_> {
         continue;
       }
 
-      let allow_min_size = self.match_groups[group.match_group_index]
-        .min_size
-        .map_or(self.chunking_options.min_size, Some)
-        .unwrap_or(0.0);
+      let is_mf_shared = self
+        .topology_config
+        .as_ref()
+        .and_then(|cfg| cfg.group_is_mf_shared.get(group.match_group_index).copied())
+        .unwrap_or(false);
+
+      let allow_min_size = if is_mf_shared {
+        0.0
+      } else {
+        self.match_groups[group.match_group_index]
+          .min_size
+          .map_or(self.chunking_options.min_size, Some)
+          .or_else(|| {
+            self
+              .topology_config
+              .as_ref()
+              .and_then(|cfg| cfg.chunk_size.map(|c| f64::from(c.min_bytes)))
+          })
+          .unwrap_or(0.0)
+      };
 
       if group.sizes < allow_min_size {
         continue;
       }
 
-      if let Some(allow_max_size) = self.match_groups[group.match_group_index]
-        .max_size
-        .map_or(self.chunking_options.max_size, Some)
+      if !is_mf_shared
+        && let Some(allow_max_size) = self.match_groups[group.match_group_index]
+          .max_size
+          .map_or(self.chunking_options.max_size, Some)
+          .or_else(|| {
+            self
+              .topology_config
+              .as_ref()
+              .and_then(|cfg| cfg.chunk_size.map(|c| f64::from(c.max_bytes)))
+          })
       {
         if group.sizes > allow_max_size {
+          let target_size = self
+            .topology_config
+            .as_ref()
+            .and_then(|cfg| {
+              cfg
+                .group_target_bytes
+                .get(group.match_group_index)
+                .copied()
+                .flatten()
+                .or_else(|| cfg.chunk_size.and_then(|c| c.target_bytes))
+            })
+            .map(f64::from);
           if let Some((left, right)) =
-            self.try_split_oversized_group(&group, allow_min_size, allow_max_size)
+            self.try_split_oversized_group(&group, allow_min_size, allow_max_size, target_size)
           {
             module_groups.push(left);
             module_groups.push(right);
@@ -435,20 +553,30 @@ impl ManualSplitter<'_> {
     group: &ModuleGroup,
     min_size: f64,
     max_size: f64,
+    target_size: Option<f64>,
   ) -> Option<(ModuleGroup, ModuleGroup)> {
     let mut modules = group.modules.iter().copied().collect::<Vec<_>>();
-    // Split by lexical relevance first (stable module id), then by size constraints.
+    // Split by lexical relevance first (using pkg:// key for node_modules so .pnpm/ prefixes do not
+    // distort package similarity), then by size constraints.
     modules.sort_unstable_by(|lhs, rhs| {
       let lhs_module = &self.link_output.module_table[*lhs];
       let rhs_module = &self.link_output.module_table[*rhs];
-      lhs_module
-        .stable_id()
-        .cmp(rhs_module.stable_id())
+      let lhs_key = module_similarity_key(lhs_module);
+      let rhs_key = module_similarity_key(rhs_module);
+      lhs_key
+        .as_ref()
+        .cmp(rhs_key.as_ref())
+        .then_with(|| lhs_module.stable_id().cmp(rhs_module.stable_id()))
         .then(lhs_module.exec_order().cmp(&rhs_module.exec_order()))
     });
 
-    let (split_index, left_size, right_size) =
-      find_relevance_split_index(&modules, &self.link_output.module_table, min_size, max_size)?;
+    let (split_index, left_size, right_size) = find_relevance_split_index(
+      &modules,
+      &self.link_output.module_table,
+      min_size,
+      max_size,
+      target_size,
+    )?;
 
     Some((
       ModuleGroup {
@@ -553,17 +681,19 @@ impl GenerateStage<'_> {
       return Ok(());
     }
 
+    let _ = tag_registry;
     let flattened_entries: Vec<&EntryPoint> =
       self.link_output.entries.iter().flat_map(|(_idx, entries)| entries.iter()).collect();
     let match_group_required_tags: Vec<Option<ModuleTagBitSet>> = match_groups
       .iter()
-      .map(|group| group.tags.as_ref().map(|tags| tag_registry.compile_tags_to_bit_set(tags)))
+      .map(|group| group.tags.as_ref().map(|tags| compile_builtin_tags_to_bit_set(tags)))
       .collect();
     let mut splitter = ManualSplitter {
       link_output: self.link_output,
       index_splitting_info,
       options: self.options,
       chunking_options,
+      topology_config: crate::utils::topology_config::get(self.options),
       match_groups,
       match_group_required_tags,
       plugin_driver: self.plugin_driver,
@@ -584,6 +714,24 @@ impl GenerateStage<'_> {
   }
 }
 
+fn compile_builtin_tags_to_bit_set(tags: &[ModuleTag]) -> ModuleTagBitSet {
+  let mut bits = ModuleTagBitSet::default();
+  for tag in tags {
+    match tag {
+      ModuleTag::Initial => bits.set_bit(ModuleTag::INITIAL_BIT),
+      ModuleTag::Custom(name) => match name.as_str() {
+        "$initial" => bits.set_bit(ModuleTag::INITIAL_BIT),
+        "$async" => bits.set_bit(BUILTIN_ASYNC_TAG_BIT),
+        "$vendor" => bits.set_bit(BUILTIN_VENDOR_TAG_BIT),
+        "$app" => bits.set_bit(BUILTIN_APP_TAG_BIT),
+        "$shared" => bits.set_bit(BUILTIN_SHARED_TAG_BIT),
+        _ => {}
+      },
+    }
+  }
+  bits
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct OrderedSize(f64);
 
@@ -601,10 +749,58 @@ impl Ord for OrderedSize {
   }
 }
 
+fn has_user_defined_entry(bits: &BitSet, user_defined_entry_bits: &BitSet) -> bool {
+  bits.index_of_one().any(|bit| user_defined_entry_bits.has_bit(bit))
+}
+
+fn combined_overfetch_exceeds_budget(
+  candidate: &EntriesAwareSubgroup,
+  target: &EntriesAwareSubgroup,
+  threshold: f64,
+  index_splitting_info: &IndexSplittingInfo,
+  module_table: &ModuleTable,
+) -> bool {
+  // Check directional overfetch for every entry in candidate_bits ^ target_bits (and any entry
+  // in the combined bitset that already has overfetched modules from prior merges).
+  let mut union_bits = candidate.bits.clone();
+  union_bits.union(&target.bits);
+
+  // Fast directional check on the two subgroups' total sizes:
+  // If candidate has an entry not in target, that entry is forced to load target.sizes.
+  let candidate_has_extra =
+    candidate.bits.index_of_one().any(|bit| !target.bits.has_bit(bit));
+  if candidate_has_extra && !is_below_merge_threshold(target.sizes, threshold) {
+    return true;
+  }
+  // If target has an entry not in candidate, that entry is forced to load candidate.sizes.
+  let target_has_extra =
+    target.bits.index_of_one().any(|bit| !candidate.bits.has_bit(bit));
+  if target_has_extra && !is_below_merge_threshold(candidate.sizes, threshold) {
+    return true;
+  }
+
+  // Exact per-entry overfetch check across all modules in the merged subgroup:
+  for entry_bit in union_bits.index_of_one() {
+    let mut overfetch_bytes = 0.0;
+    for &module_idx in candidate.modules.iter().chain(target.modules.iter()) {
+      if !index_splitting_info[module_idx].bits.has_bit(entry_bit) {
+        overfetch_bytes += module_size(module_idx, module_table);
+        if overfetch_bytes >= threshold {
+          return true;
+        }
+      }
+    }
+  }
+  false
+}
+
 fn merge_entries_aware_subgroups(
   subgroups: &mut FxHashMap<u32, EntriesAwareSubgroup>,
   group_keys: &[u32],
   threshold: f64,
+  max_size: Option<f64>,
+  user_defined_entry_bits: &BitSet,
+  index_splitting_info: &IndexSplittingInfo,
   module_table: &ModuleTable,
 ) {
   let mut version_by_key: FxHashMap<u32, u32> = FxHashMap::default();
@@ -635,6 +831,7 @@ fn merge_entries_aware_subgroups(
     }
 
     let candidate_bits = &candidate_group.bits;
+    let candidate_is_initial = has_user_defined_entry(candidate_bits, user_defined_entry_bits);
 
     let mut best_target = None;
     for &target_key in group_keys {
@@ -646,6 +843,30 @@ fn merge_entries_aware_subgroups(
         continue;
       };
       if target_group.modules.is_empty() {
+        continue;
+      }
+
+      // Prevent merging an async-only subgroup (no UserDefinedEntry bits) with an initial subgroup.
+      let target_is_initial = has_user_defined_entry(&target_group.bits, user_defined_entry_bits);
+      if candidate_is_initial != target_is_initial {
+        continue;
+      }
+
+      // Respect max_size if configured.
+      if let Some(max_size) = max_size
+        && candidate_group.sizes + target_group.sizes > max_size
+      {
+        continue;
+      }
+
+      // Ensure directional overfetch imposed on any entry does not exceed threshold / overfetch_budget_bytes.
+      if combined_overfetch_exceeds_budget(
+        candidate_group,
+        target_group,
+        threshold,
+        index_splitting_info,
+        module_table,
+      ) {
         continue;
       }
 
@@ -743,30 +964,320 @@ fn stable_id_similarity(lhs: &str, rhs: &str) -> i32 {
   })
 }
 
+fn is_vendor_module(module: &NormalModule) -> bool {
+  let id = module.id.as_str();
+  id.contains("/node_modules/")
+    || id.contains("\\node_modules\\")
+    || id.starts_with("node_modules/")
+    || id.starts_with("node_modules\\")
+    || id.contains("/.store/")
+    || id.contains("\\.store\\")
+}
+
+/// Extract the resolved package name of a `node_modules` module from `originative_resolved_id.package_json`
+/// or by parsing its `node_modules` path segment.
+pub fn module_package_name(module: &NormalModule) -> Option<Cow<'_, str>> {
+  if !is_vendor_module(module) {
+    return None;
+  }
+  if let Some(pkg_json) = module.originative_resolved_id.package_json.as_ref()
+    && let Some(name) = pkg_json.name()
+    && !name.is_empty()
+  {
+    return Some(Cow::Borrowed(name));
+  }
+  let normalized = module.id.as_str().replace('\\', "/");
+  let (_, after_nm) = normalized.rsplit_once("node_modules/")?;
+  let mut parts = after_nm.split('/');
+  let first = parts.next()?;
+  if first.starts_with('@') {
+    let second = parts.next()?;
+    Some(Cow::Owned(format!("{first}/{second}")))
+  } else {
+    Some(Cow::Owned(first.to_string()))
+  }
+}
+
+/// Extract the resolved package version of a `node_modules` module from `originative_resolved_id.package_json`
+/// or from a `.pnpm/<pkg>@<version>` path segment.
+pub fn module_package_version(module: &NormalModule) -> Option<Cow<'_, str>> {
+  if !is_vendor_module(module) {
+    return None;
+  }
+  if let Some(pkg_json) = module.originative_resolved_id.package_json.as_ref()
+    && let Some(version) = pkg_json.version()
+    && !version.is_empty()
+  {
+    return Some(Cow::Borrowed(version));
+  }
+  let normalized = module.id.as_str().replace('\\', "/");
+  if let Some((_, after_pnpm)) = normalized.split_once(".pnpm/")
+    && let Some(first_seg) = after_pnpm.split('/').next()
+    && let Some((_, ver_rest)) = first_seg.rsplit_once('@')
+  {
+    let ver = ver_rest.split('_').next().unwrap_or(ver_rest);
+    if !ver.is_empty() {
+      return Some(Cow::Owned(ver.to_string()));
+    }
+  }
+  None
+}
+
+pub fn package_pattern_matches(pattern: &str, pkg_name: &str) -> bool {
+  if pattern == "*" {
+    return true;
+  }
+  if let Some(scope_prefix) = pattern.strip_suffix("/*") {
+    return pkg_name
+      .strip_prefix(scope_prefix)
+      .is_some_and(|rest| rest.starts_with('/') && !rest[1..].is_empty() && !rest[1..].contains('/'));
+  }
+  if let Some(prefix) = pattern.strip_suffix('*') {
+    return pkg_name.starts_with(prefix);
+  }
+  pkg_name == pattern
+}
+
+pub fn module_root_relative_path<'a>(module: &'a NormalModule, cwd: &Path) -> Cow<'a, str> {
+  let stable = module.stable_id.as_str();
+  if !Path::new(stable).is_absolute() && !stable.starts_with('/') {
+    return Cow::Borrowed(stable);
+  }
+  let id_slash = module.id.as_str().replace('\\', "/");
+  let cwd_slash = cwd.to_slash_lossy();
+  let cwd_trimmed = cwd_slash.trim_end_matches('/');
+  if !cwd_trimmed.is_empty()
+    && let Some(rest) = id_slash.strip_prefix(cwd_trimmed)
+    && let Some(rel) = rest.strip_prefix('/')
+  {
+    return Cow::Owned(rel.to_string());
+  }
+  if let Some((_, rel)) = id_slash.split_once("__native_inputs__/") {
+    return Cow::Owned(rel.to_string());
+  }
+  Cow::Owned(stable.trim_start_matches('/').to_string())
+}
+
+fn matches_group_rule(
+  module: &NormalModule,
+  rule: &crate::utils::topology_config::GroupRuleConfig,
+  cwd: &Path,
+) -> bool {
+  if !rule.packages.is_empty()
+    && let Some(pkg_name) = module_package_name(module)
+    && rule.packages.iter().any(|pattern| package_pattern_matches(pattern, pkg_name.as_ref()))
+  {
+    return true;
+  }
+  if !rule.paths.is_empty() && !is_vendor_module(module) {
+    let rel_path = module_root_relative_path(module, cwd);
+    let rel_str = rel_path.as_ref().trim_start_matches("./");
+    if rule.paths.iter().any(|prefix| {
+      let clean = prefix.trim_start_matches("./").trim_end_matches('/');
+      clean.is_empty()
+        || rel_str == clean
+        || rel_str
+          .strip_prefix(clean)
+          .is_some_and(|rest| rest.starts_with('/'))
+    }) {
+      return true;
+    }
+  }
+  false
+}
+
+fn sanitize_chunk_segment(raw: &str) -> String {
+  raw
+    .trim_start_matches('@')
+    .chars()
+    .map(|ch| if ch.is_ascii_alphanumeric() || ch == '_' || ch == '-' { ch } else { '-' })
+    .collect::<String>()
+    .trim_matches('-')
+    .to_string()
+}
+
+fn resolve_group_naming(
+  module: &NormalModule,
+  naming: &crate::utils::topology_config::GroupNamingPolicy,
+  cwd: &Path,
+) -> Option<String> {
+  use crate::utils::topology_config::GroupNamingPolicy;
+  match naming {
+    GroupNamingPolicy::Static(name) => Some(name.clone()),
+    GroupNamingPolicy::ByPackage { prefix, disambiguate_version } => {
+      let pkg = module_package_name(module)?;
+      let pkg_slug = sanitize_chunk_segment(pkg.as_ref());
+      if pkg_slug.is_empty() {
+        return Some(prefix.clone());
+      }
+      if *disambiguate_version
+        && let Some(ver) = module_package_version(module)
+      {
+        let ver_slug = sanitize_chunk_segment(ver.as_ref());
+        if !ver_slug.is_empty() {
+          return Some(format!("{prefix}-{pkg_slug}-{ver_slug}"));
+        }
+      }
+      Some(format!("{prefix}-{pkg_slug}"))
+    }
+    GroupNamingPolicy::ByDirectory { base_name, prefix, depth } => {
+      let rel = module_root_relative_path(module, cwd);
+      let rel_str = rel.as_ref().trim_start_matches("./");
+      let scoped = if let Some(prefix) = prefix {
+        let clean = prefix.trim_start_matches("./").trim_end_matches('/');
+        rel_str
+          .strip_prefix(clean)
+          .and_then(|rest| rest.strip_prefix('/'))
+          .unwrap_or(rel_str)
+      } else {
+        rel_str
+      };
+      let mut parts: Vec<&str> = scoped.split('/').filter(|s| !s.is_empty()).collect();
+      if parts.len() > 1 {
+        parts.pop(); // drop filename
+      }
+      let take_n = usize::from(*depth).max(1).min(parts.len());
+      let slug = parts[..take_n]
+        .iter()
+        .map(|s| sanitize_chunk_segment(s))
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join("-");
+      if slug.is_empty() {
+        Some(base_name.clone())
+      } else {
+        Some(format!("{base_name}-{slug}"))
+      }
+    }
+    GroupNamingPolicy::ByEcosystem { prefix } => {
+      let Some(pkg) = module_package_name(module) else {
+        return Some(prefix.clone());
+      };
+      let p = pkg.as_ref();
+      let bucket = if matches!(
+        p,
+        "react"
+          | "react-dom"
+          | "scheduler"
+          | "react-router"
+          | "react-router-dom"
+          | "use-sync-external-store"
+      ) || p.starts_with("@remix-run/")
+      {
+        "react"
+      } else if matches!(p, "zustand" | "redux" | "immer" | "recoil" | "jotai")
+        || p.starts_with("@tanstack/")
+        || p.starts_with("@reduxjs/")
+        || p.starts_with("mobx")
+      {
+        "state"
+      } else if matches!(
+        p,
+        "lucide-react"
+          | "clsx"
+          | "tailwind-merge"
+          | "class-variance-authority"
+          | "framer-motion"
+      ) || p.starts_with("@radix-ui/")
+        || p.starts_with("@fluentui/")
+        || p.starts_with("@mui/")
+        || p.starts_with("@emotion/")
+      {
+        "ui"
+      } else {
+        return Some(prefix.clone());
+      };
+      Some(format!("{prefix}-{bucket}"))
+    }
+  }
+}
+
+/// Build a canonical similarity key (`pkg://<name>@<version>/<rel_path>`) for `node_modules`
+/// modules so `.pnpm/` prefixes do not distort `stable_id_similarity`.
+pub fn module_similarity_key(module: &Module) -> Cow<'_, str> {
+  let Some(normal) = module.as_normal() else {
+    return Cow::Borrowed(module.stable_id().as_str());
+  };
+  if !is_vendor_module(normal) {
+    return Cow::Borrowed(module.stable_id().as_str());
+  }
+  if let Some(pkg_json) = normal.originative_resolved_id.package_json.as_ref()
+    && let Some(name) = pkg_json.name()
+    && !name.is_empty()
+  {
+    let version = pkg_json.version().unwrap_or("0.0.0");
+    let pkg_root = pkg_json
+      .realpath()
+      .parent()
+      .map(|p| p.to_slash_lossy().into_owned())
+      .unwrap_or_default();
+    let id_slash = normal.id.as_str().replace('\\', "/");
+    let rel_path = if !pkg_root.is_empty()
+      && let Some(rest) = id_slash.strip_prefix(&pkg_root)
+    {
+      rest.trim_start_matches('/')
+    } else if let Some((_, after_nm)) = id_slash.rsplit_once("node_modules/")
+      && let Some(rest) = after_nm.strip_prefix(name)
+    {
+      rest.trim_start_matches('/')
+    } else {
+      module.stable_id().as_str()
+    };
+    return Cow::Owned(format!("pkg://{name}@{version}/{rel_path}"));
+  }
+  let id_slash = module.stable_id().as_str().replace('\\', "/");
+  if let Some((_, after_nm)) = id_slash.rsplit_once("node_modules/") {
+    let mut parts = after_nm.splitn(3, '/');
+    if let Some(first) = parts.next() {
+      if first.starts_with('@') {
+        if let Some(second) = parts.next() {
+          let rel = parts.next().unwrap_or("");
+          return Cow::Owned(format!("pkg://{first}/{second}@0.0.0/{rel}"));
+        }
+      } else {
+        let rest = after_nm.strip_prefix(first).unwrap_or("").trim_start_matches('/');
+        return Cow::Owned(format!("pkg://{first}@0.0.0/{rest}"));
+      }
+    }
+  }
+  Cow::Borrowed(module.stable_id().as_str())
+}
+
 fn find_relevance_split_index(
   modules: &[ModuleIdx],
   module_table: &ModuleTable,
   min_size: f64,
   max_size: f64,
+  target_size: Option<f64>,
 ) -> Option<(usize, f64, f64)> {
   if modules.len() < 2 {
     return None;
   }
 
-  let keys = modules
-    .iter()
-    .map(|module_idx| module_table[*module_idx].stable_id().as_str())
-    .collect::<Vec<_>>();
+  let owned_keys: Vec<Cow<'_, str>> =
+    modules.iter().map(|module_idx| module_similarity_key(&module_table[*module_idx])).collect();
+  let keys: Vec<&str> = owned_keys.iter().map(AsRef::as_ref).collect();
   let sizes =
     modules.iter().map(|module_idx| module_size(*module_idx, module_table)).collect::<Vec<_>>();
-  pick_relevance_split_index(&keys, &sizes, min_size, max_size)
+  pick_relevance_split_index_with_target(&keys, &sizes, min_size, max_size, target_size)
 }
 
+#[cfg(test)]
 fn pick_relevance_split_index(
   keys: &[&str],
   sizes: &[f64],
   min_size: f64,
   max_size: f64,
+) -> Option<(usize, f64, f64)> {
+  pick_relevance_split_index_with_target(keys, sizes, min_size, max_size, None)
+}
+
+pub(crate) fn pick_relevance_split_index_with_target(
+  keys: &[&str],
+  sizes: &[f64],
+  min_size: f64,
+  max_size: f64,
+  target_size: Option<f64>,
 ) -> Option<(usize, f64, f64)> {
   debug_assert_eq!(keys.len(), sizes.len());
   if keys.len() < 2 || sizes.len() < 2 {
@@ -801,6 +1312,7 @@ fn pick_relevance_split_index(
   let mut best_split_index = None;
   let mut best_similarity = i32::MAX;
   let mut best_oversized_side_count = usize::MAX;
+  let mut best_target_distance = f64::INFINITY;
   let mut best_max_side_size = f64::INFINITY;
 
   for split_index in left_bound..=right_bound {
@@ -814,11 +1326,16 @@ fn pick_relevance_split_index(
     let oversized_side_count =
       usize::from(left_size > max_size) + usize::from(right_size > max_size);
     let max_side_size = left_size.max(right_size);
+    let target_distance = target_size.map_or(0.0, |target| {
+      (left_size - target).abs().min((right_size - target).abs())
+    });
 
     let is_better = if (best_similarity - similarity).abs() > SIMILARITY_SIGNIFICANCE_THRESHOLD {
       similarity < best_similarity
     } else if oversized_side_count != best_oversized_side_count {
       oversized_side_count < best_oversized_side_count
+    } else if target_size.is_some() && (target_distance - best_target_distance).abs() > f64::EPSILON {
+      target_distance < best_target_distance
     } else {
       max_side_size < best_max_side_size
     };
@@ -827,6 +1344,7 @@ fn pick_relevance_split_index(
       best_split_index = Some(split_index);
       best_similarity = similarity;
       best_oversized_side_count = oversized_side_count;
+      best_target_distance = target_distance;
       best_max_side_size = max_side_size;
     }
   }
@@ -889,14 +1407,18 @@ fn derive_entries_aware_chunk_name(
 /// `visited` guards one walk against cycles and repeated paths, and nothing more. A set shared
 /// across matched modules gave no measured gain. It would also have to belong to one
 /// `ModuleGroup`, because a dynamic `name` splits one match group across several groups.
+#[expect(clippy::too_many_arguments)]
 fn add_module_and_dependencies_to_group_recursively(
   module_group: &mut ModuleGroup,
+  seed_module_idx: ModuleIdx,
   module_idx: ModuleIdx,
   module_metas: &LinkingMetadataVec,
   module_table: &ModuleTable,
   module_to_assigned: &IndexBitSet<ModuleIdx>,
   visited: &mut FxHashSet<ModuleIdx>,
-  recursively: bool,
+  boundary: DependencyBoundary,
+  is_mf_shared_group: bool,
+  mf_shared_packages: &[String],
 ) {
   let is_visited = !visited.insert(module_idx);
 
@@ -904,9 +1426,9 @@ fn add_module_and_dependencies_to_group_recursively(
     return;
   }
 
-  if !module_table[module_idx].is_normal() {
+  let Some(normal_module) = module_table[module_idx].as_normal() else {
     return;
-  }
+  };
 
   if module_to_assigned.has_bit(module_idx) {
     return;
@@ -916,17 +1438,67 @@ fn add_module_and_dependencies_to_group_recursively(
     return;
   }
 
+  // Hard Module Federation shared-singleton barrier:
+  // - Non-shared groups must never capture or recursively pull modules belonging to federated `shared` packages.
+  // - A shared group (`is_mf_shared_group`) must never recursively pull a *different* federated `shared` package.
+  if !mf_shared_packages.is_empty()
+    && let Some(pkg_name) = module_package_name(normal_module)
+    && mf_shared_packages.iter().any(|shared| shared == pkg_name.as_ref())
+  {
+    if !is_mf_shared_group {
+      return;
+    }
+    if module_idx != seed_module_idx {
+      let seed_pkg = module_table[seed_module_idx]
+        .as_normal()
+        .and_then(module_package_name);
+      if seed_pkg.as_deref() != Some(pkg_name.as_ref()) {
+        return;
+      }
+    }
+  }
+
+  if module_idx != seed_module_idx {
+    match boundary {
+      DependencyBoundary::None => return,
+      DependencyBoundary::All => {}
+      DependencyBoundary::SameOriginKind => {
+        let Some(seed_normal) = module_table[seed_module_idx].as_normal() else {
+          return;
+        };
+        if is_vendor_module(seed_normal) != is_vendor_module(normal_module) {
+          return;
+        }
+      }
+      DependencyBoundary::SamePackage => {
+        let Some(seed_normal) = module_table[seed_module_idx].as_normal() else {
+          return;
+        };
+        let seed_pkg = module_package_name(seed_normal);
+        let cur_pkg = module_package_name(normal_module);
+        match (seed_pkg, cur_pkg) {
+          (Some(a), Some(b)) if a == b => {}
+          (None, None) if !is_vendor_module(seed_normal) && !is_vendor_module(normal_module) => {}
+          _ => return,
+        }
+      }
+    }
+  }
+
   module_group.add_module(module_idx, module_table);
-  if recursively {
+  if boundary != DependencyBoundary::None {
     for dep in &module_metas[module_idx].dependencies {
       add_module_and_dependencies_to_group_recursively(
         module_group,
+        seed_module_idx,
         *dep,
         module_metas,
         module_table,
         module_to_assigned,
         visited,
-        recursively,
+        boundary,
+        is_mf_shared_group,
+        mf_shared_packages,
       );
     }
   }
@@ -1032,5 +1604,49 @@ mod tests {
       max_size: 10.0,
       expected: None,
     });
+  }
+
+  #[test]
+  fn target_size_prefers_split_closer_to_target_within_similarity_tier() {
+    let keys = &["pkg://foo@1.0.0/a.js", "pkg://foo@1.0.0/b.js", "pkg://foo@1.0.0/c.js"];
+    let sizes = &[20.0, 15.0, 35.0];
+    // Without target_size, both splits (index 1: 20/50, index 2: 35/35) have 0 oversized sides
+    // at max_size=60, and min(max_side) picks index 2 (35 vs 35).
+    // With target_size = Some(20.0), index 1 has left_size = 20.0 (distance 0 from target_size),
+    // so it prefers index 1!
+    let (split_idx, left_size, right_size) =
+      super::pick_relevance_split_index_with_target(keys, sizes, 10.0, 60.0, Some(20.0)).unwrap();
+    assert_eq!(split_idx, 1);
+    assert_eq!((left_size, right_size), (20.0, 50.0));
+  }
+
+  #[test]
+  fn pnpm_pkg_similarity_key_splits_at_package_boundary() {
+    // With raw `.pnpm/` prefixes, all modules share a long `node_modules/.pnpm/` prefix that
+    // obscures the package boundary. With `pkg://` canonical keys, the boundary between
+    // `pkg://alpha@1.0.0/...` and `pkg://zeta@2.0.0/...` has similarity 0 and wins cleanly.
+    let keys = &[
+      "pkg://alpha@1.0.0/dist/a.js",
+      "pkg://alpha@1.0.0/dist/b.js",
+      "pkg://zeta@2.0.0/dist/c.js",
+    ];
+    let sizes = &[10.0, 30.0, 20.0];
+    let (split_idx, _, _) =
+      super::pick_relevance_split_index_with_target(keys, sizes, 5.0, 45.0, None).unwrap();
+    assert_eq!(split_idx, 2);
+  }
+
+  #[test]
+  fn package_pattern_matching_supports_exact_scoped_wildcard_prefix_and_star() {
+    use super::package_pattern_matches;
+    assert!(package_pattern_matches("*", "react"));
+    assert!(package_pattern_matches("*", "@radix-ui/react-dialog"));
+    assert!(package_pattern_matches("react", "react"));
+    assert!(!package_pattern_matches("react", "react-dom"));
+    assert!(package_pattern_matches("react*", "react"));
+    assert!(package_pattern_matches("react*", "react-dom"));
+    assert!(package_pattern_matches("@radix-ui/*", "@radix-ui/react-dialog"));
+    assert!(!package_pattern_matches("@radix-ui/*", "@radix-ui/react-dialog/sub"));
+    assert!(!package_pattern_matches("@radix-ui/*", "@fluentui/react-components"));
   }
 }

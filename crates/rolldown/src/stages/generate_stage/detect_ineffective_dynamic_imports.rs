@@ -26,8 +26,6 @@ impl GenerateStage<'_> {
       if self.inline_state.is_record(chunk_idx) {
         continue;
       }
-      let pre_rendered_chunk =
-        chunk.pre_rendered_chunk.as_ref().expect("Should have pre_rendered_chunk");
 
       for module_idx in &chunk.modules {
         let Some(module) = self.link_output.module_table[*module_idx].as_normal() else {
@@ -39,7 +37,12 @@ impl GenerateStage<'_> {
         }
 
         let has_ineffective = module.ecma_view.dynamic_importers.iter().any(|importer_id| {
-          !importer_id.is_in_node_modules() && pre_rendered_chunk.module_ids.contains(importer_id)
+          !importer_id.is_in_node_modules()
+            && if let Some(pre_rendered_chunk) = chunk.pre_rendered_chunk.as_ref() {
+              pre_rendered_chunk.module_ids.contains(importer_id)
+            } else {
+              chunk.modules.iter().any(|idx| self.link_output.module_table[*idx].id() == importer_id)
+            }
         });
 
         if has_ineffective {

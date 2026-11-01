@@ -404,7 +404,12 @@ impl DevEngine {
         proxy_module_id.clone(),
         &client_id,
         &shipped,
+        &Default::default(),
         &top_level_evaluated,
+        None,
+        None,
+        None,
+        None,
         &stamp_table,
         Arc::clone(&self.next_hmr_patch_id),
       )

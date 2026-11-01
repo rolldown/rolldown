@@ -3,8 +3,6 @@ use std::{sync::Arc, thread};
 use arcstr::ArcStr;
 use futures::future::join_all;
 use oxc::span::Span;
-use oxc_index::IndexVec;
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rolldown_common::SourceMapGenMsg;
 use rolldown_common::{
   EntryPoint, FlatOptions, HybridIndexVec, Module, ModuleIdx, ModuleTable, PreserveEntrySignatures,
@@ -62,18 +60,32 @@ pub struct NormalizedScanStageOutput {
 impl NormalizedScanStageOutput {
   /// Make a snapshot of the current ScanStage, skipping clone some fields that is immutable in
   /// following stage
-  pub fn make_copy(&self) -> Self {
+  pub fn make_copy(&mut self) -> Self {
+    use rolldown_utils::rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator};
     Self {
-      module_table: self.module_table.clone(),
-      index_ecma_ast: {
-        let iter = self.index_ecma_ast.raw.par_iter();
-
-        let index_ecma_ast = iter
-          .map(|ast| ast.as_ref().map(rolldown_ecmascript::EcmaAst::clone_with_another_arena))
-          .collect::<Vec<_>>();
-        IndexVec::from_vec(index_ecma_ast)
+      module_table: rolldown_common::ModuleTable {
+        modules: oxc_index::IndexVec::from_vec(
+          self
+            .module_table
+            .modules
+            .raw
+            .par_iter_mut()
+            .map(|module| match module {
+              Module::Normal(normal) => {
+                let chain = std::mem::take(&mut normal.sourcemap_chain);
+                let cloned = Module::Normal(normal.clone());
+                normal.sourcemap_chain = chain;
+                cloned
+              }
+              Module::External(ext) => Module::External(ext.clone()),
+            })
+            .collect(),
+        ),
       },
-      stmt_infos: self.stmt_infos.clone(),
+      index_ecma_ast: std::mem::take(&mut self.index_ecma_ast),
+      stmt_infos: oxc_index::IndexVec::from_vec(
+        self.stmt_infos.raw.par_iter().cloned().collect(),
+      ),
       entry_points: self.entry_points.clone(),
       symbol_ref_db: self.symbol_ref_db.clone_without_scoping(),
       runtime: self.runtime.clone(),
@@ -164,7 +176,7 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
     let fetch_mode = match mode {
       ScanMode::Full => ScanMode::Full,
       ScanMode::Partial(changed_ids) => {
-        ScanMode::Partial(self.resolve_absolute_path(&changed_ids).await?)
+        ScanMode::Partial(self.resolve_absolute_path(&changed_ids, cache).await?)
       }
     };
     let (tx_clone, handler) = self.create_sourcemap_channel();
@@ -302,11 +314,29 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
   }
 
   /// Make sure the passed `ids` is all absolute path
-  async fn resolve_absolute_path(&self, ids: &[ArcStr]) -> BuildResult<Vec<ResolvedId>> {
+  async fn resolve_absolute_path(
+    &self,
+    ids: &[ArcStr],
+    cache: &ScanStageCache,
+  ) -> BuildResult<Vec<ResolvedId>> {
     let resolver = &self.resolver;
     let plugin_driver = &self.plugin_driver;
+    let cached: Vec<Option<ResolvedId>> = ids
+      .iter()
+      .map(|input_item| {
+        if ids.len() <= 8 {
+          return None;
+        }
+        let visit_state = cache.module_id_to_idx.get(input_item.as_str())?;
+        let module = cache.snapshot()?.module_table.modules.get(visit_state.idx())?.as_normal()?;
+        (module.id.as_str() == input_item.as_str()).then(|| module.originative_resolved_id.clone())
+      })
+      .collect();
 
-    let resolved_ids = join_all(ids.iter().map(|input_item| async move {
+    let resolved_ids = join_all(ids.iter().zip(cached).map(|(input_item, cached_id)| async move {
+      if let Some(resolved_id) = cached_id {
+        return Ok(resolved_id);
+      }
       // The importer is useless, since all path is absolute path
 
       load_entry_module(resolver, plugin_driver, input_item, None).await

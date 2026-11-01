@@ -60,3 +60,6 @@ pub use crate::{
 };
 
 pub use rolldown_common::PluginIdx;
+
+#[doc(hidden)]
+pub use crate::plugin_driver::hook_call_id as __hook_call_id;

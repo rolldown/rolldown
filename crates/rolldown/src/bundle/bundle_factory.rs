@@ -147,6 +147,30 @@ impl BundleFactory {
     self.build_bundle(fs, resolver, ScanStageCache::default())
   }
 
+  /// Transfer only scan data into a new revision's filesystem, resolver and plugins.
+  /// The caller must invalidate every changed observation and must not reuse
+  /// plugin-emitted resources or configuration-dependent state.
+  pub fn create_bundle_with_fs_cache<Fs: FileSystem + Clone + 'static>(
+    &mut self,
+    fs: Fs,
+    resolver: SharedResolver<Fs>,
+    cache: crate::RevisionScanCache,
+  ) -> Bundle<Fs> {
+    self.module_infos_for_incremental_build.clear();
+    self.transform_dependencies_for_incremental_build = Arc::default();
+    if let Some(snapshot) = cache.0.snapshot() {
+      for module in &snapshot.module_table.modules {
+        if let Some(module) = module.as_normal() {
+          self.module_infos_for_incremental_build.insert(
+            module.id.as_arc_str().clone(),
+            Arc::new(module.to_module_info(None, snapshot.user_defined_entry_modules.contains(&module.idx))),
+          );
+        }
+      }
+    }
+    self.build_bundle(fs, resolver, cache.0)
+  }
+
   /// Live handle to the plugin-facing module infos. The `Arc` identity is stable for the
   /// factory's lifetime — full builds clear the map in place — so a held clone always
   /// observes the latest build.

@@ -28,9 +28,16 @@ pub async fn resolve_id<Fs: FileSystem>(
   kind: ImportKind,
 ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
   // Check runtime module
-  if specifier == RUNTIME_MODULE_KEY {
+  if matches!(
+    specifier,
+    RUNTIME_MODULE_KEY
+      | "\0rolldown/computed-import"
+      | "\0rolldown/import-meta-url"
+      | "\0rolldown/json-module"
+      | "\0rolldown/text-module"
+  ) {
     return Ok(Ok(ResolvedId {
-      id: ModuleId::new(specifier),
+      id: ModuleId::new(RUNTIME_MODULE_KEY),
       module_def_format: ModuleDefFormat::EsmMjs,
       ..Default::default()
     }));
@@ -59,6 +66,9 @@ pub async fn resolve_dependencies<Fs: FileSystem>(
   dependencies: &IndexVec<ImportRecordIdx, RawImportRecord>,
   source: ArcStr,
   warnings: &mut Vec<BuildDiagnostic>,
+  deferred_targets: &std::sync::Mutex<
+    FxHashMap<ModuleId, crate::module_loader::task_context::DeferredResolutionDiagnostic>,
+  >,
 ) -> BuildResult<IndexVec<ImportRecordIdx, ResolvedId>> {
   // NOTE: this dedupes the identical (specifier, kind) resolve calls
   let dedup_map: FxHashMap<(&str, ImportKind), ImportRecordIdx> = dependencies
@@ -66,13 +76,52 @@ pub async fn resolve_dependencies<Fs: FileSystem>(
     .map(|(idx, item)| ((item.module_request.as_str(), item.kind), idx))
     .collect();
 
+  let source = &source;
   let jobs = dedup_map.values().map(|&idx| async move {
     let item = &dependencies[idx];
     let importer = &self_resolved_id.id;
     let specifier = &item.module_request;
-    resolve_id(options, resolver, plugin_driver, importer, specifier, item.kind)
-      .await
-      .map(|id| (idx, id))
+    let result = resolve_id(
+      options,
+      resolver,
+      plugin_driver,
+      importer,
+      specifier,
+      item.kind,
+    )
+    .await;
+    match result {
+      Err(error)
+        if error
+          .downcast_ref::<crate::DeferredResolutionError>()
+          .is_some() =>
+      {
+        let id = ModuleId::new(format!(
+          "{}{}/failure.mjs",
+          crate::deferred_resolution_error::FAILURE_MODULE_PREFIX,
+          serde_json::to_string(&(importer.as_str(), specifier.as_str()))
+            .expect("module requests serialize")
+        ));
+        deferred_targets.lock().expect("resolution failure state poisoned").insert(
+          id.clone(),
+          crate::module_loader::task_context::DeferredResolutionDiagnostic {
+            source: source.clone(),
+            importer: importer.to_string(),
+            message: format!("{error:#}"),
+            span: (!item.is_unspanned()).then_some(item.state.span),
+          },
+        );
+        Ok((
+          idx,
+          Ok(ResolvedId {
+            id,
+            module_def_format: ModuleDefFormat::EsmMjs,
+            ..Default::default()
+          }),
+        ))
+      }
+      result => result.map(|id| (idx, id)),
+    }
   });
   let mut sparse_results: IndexVec<ImportRecordIdx, Option<Result<ResolvedId, ResolveError>>> =
     index_vec![None; dependencies.len()];
@@ -82,7 +131,9 @@ pub async fn resolve_dependencies<Fs: FileSystem>(
   }
   let resolved_results = dependencies.iter().map(|dep| {
     let repr_idx = dedup_map[&(dep.module_request.as_str(), dep.kind)];
-    sparse_results[repr_idx].as_ref().expect("dedup representative should be resolved")
+    sparse_results[repr_idx]
+      .as_ref()
+      .expect("dedup representative should be resolved")
   });
 
   let mut ret = IndexVec::with_capacity(dependencies.len());
@@ -148,7 +199,9 @@ pub async fn resolve_dependencies<Fs: FileSystem>(
               ));
           }
           e => {
-            let diagnostic_opts = DiagnosticOptions { cwd: options.cwd.clone() };
+            let diagnostic_opts = DiagnosticOptions {
+              cwd: options.cwd.clone(),
+            };
             build_errors.push(BuildDiagnostic::resolve_error(
               source.clone(),
               self_resolved_id.id.as_arc_str().clone(),
@@ -163,7 +216,11 @@ pub async fn resolve_dependencies<Fs: FileSystem>(
     }
   }
 
-  if build_errors.is_empty() { Ok(ret) } else { Err(build_errors.into()) }
+  if build_errors.is_empty() {
+    Ok(ret)
+  } else {
+    Err(build_errors.into())
+  }
 }
 
 /// The message names `module_request`. The span only underlines the import in source.

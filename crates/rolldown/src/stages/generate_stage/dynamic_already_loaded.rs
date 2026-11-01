@@ -2,9 +2,9 @@ use std::collections::VecDeque;
 
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx,
-  PreserveEntrySignatures, RuntimeHelper, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef,
-  UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
+  ChunkIdx, ChunkKind, ChunkMeta, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta,
+  Module, ModuleIdx, PreserveEntrySignatures, RuntimeHelper, StmtInfoIdx, SymbolOrMemberExprRef,
+  SymbolRef, UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_utils::BitSet;
@@ -14,7 +14,10 @@ use crate::chunk_graph::ChunkGraph;
 use crate::esm_init_obligations::collect_entry_reexported_wrapper_inits;
 
 use super::{
-  GenerateStage, code_splitting::IndexSplittingInfo, reduced_chunk_graph::ReducedChunkGraph,
+  GenerateStage,
+  chunk_ext::{ChunkCreationReason, ChunkDebugExt},
+  code_splitting::IndexSplittingInfo,
+  reduced_chunk_graph::ReducedChunkGraph,
   simulated_facade_inclusion::include_simulated_facade_namespace,
 };
 
@@ -25,7 +28,9 @@ struct ChunkAtom {
 
 /// Atom-level edge graphs for the pass's two consumers. `reachability` under-approximates the
 /// emitted chunk imports (safe to miss an edge, never to invent one); `cycle` over-approximates
-/// them (safe to invent an edge, never to miss one). See `compute_atom_dependencies`.
+/// them (safe to invent an edge, never to miss one). See `compute_atom_dependencies`. Under strict
+/// execution order `cycle` is empty unless a CommonJS module renders raw, since the fold doesn't
+/// otherwise keep the chunk graph acyclic there.
 struct AtomDependencyGraphs {
   reachability: Vec<Vec<usize>>,
   cycle: Vec<Vec<usize>>,
@@ -53,6 +58,42 @@ impl ReducedEntriesAction {
 }
 
 impl GenerateStage<'_> {
+  pub(super) fn preserve_dynamic_entry_namespaces(
+    &mut self,
+    chunk_graph: &mut ChunkGraph,
+    used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
+  ) {
+    // Even an unmerged JSON facade must expose the same default-only namespace
+    // as a static namespace import, not its bundler-only named bindings. And an
+    // unmerged facade whose star exports reach CommonJS modules must expose the
+    // namespace object that `__reExport` fills at runtime, whose names its chunk's
+    // export list can't carry, also when it is an explicit input, an emitted chunk or a
+    // preserved module, whose public exports stay (`route_public_namespace_extractions`).
+    let namespaces = chunk_graph
+      .entry_module_to_entry_chunk
+      .iter()
+      .filter_map(|(&module, &chunk)| {
+        let ChunkKind::EntryPoint { meta, .. } = chunk_graph.chunk_table[chunk].kind else {
+          return None;
+        };
+        let json = meta == ChunkMeta::DynamicImported
+          && !self.options.preserve_modules
+          && self.link_output.module_table[module]
+            .as_normal()
+            .is_some_and(crate::utils::import_options::is_json_module);
+        (json
+          || (meta.contains(ChunkMeta::DynamicImported)
+            && self.dynamic_exports_need_namespace_extraction(module)))
+        .then_some((chunk, module))
+      })
+      .collect();
+    self.apply_dynamic_entry_namespace_extractions(
+      chunk_graph,
+      &namespaces,
+      used_symbol_refs_builder,
+    );
+  }
+
   pub(super) fn optimize_dynamic_entry_bits(
     &mut self,
     index_splitting_info: &mut IndexSplittingInfo,
@@ -77,11 +118,35 @@ impl GenerateStage<'_> {
     }
     let module_to_atom_idx = self.compute_module_to_atom_idx(&atoms);
     let flattened_entry_modules = self.flattened_entry_modules();
+    // Strict execution order makes a chunk cycle safe, so the fold keeps the chunk graph acyclic
+    // only without it, or when a module's body would still run raw. There, lowering defers each
+    // module that a cycle's evaluation could reach too early: wrap-all defers every eligible
+    // module, and on-demand wrapping wraps every eligible module under a root that reaches a chunk
+    // cycle and in each chunk that lowering puts on one (`analyze_execution_order`). The modules
+    // that aren't eligible are wrapped, and so lazy already, or the runtime, whose standalone chunk
+    // imports nothing, or a CommonJS entry that renders raw, which keeps the checks. An entry whose
+    // chunk something else loads gets a facade for its trigger (`create_order_wrap_entry_facades`).
+    // The strict cycle graph links every import record, so it has a cycle wherever the modules do,
+    // and with it the fold never ran for such an application.
+    let cycle_merging = crate::utils::topology_config::get(self.options)
+      .and_then(|cfg| cfg.cycle_merging)
+      .unwrap_or_else(|| {
+        if self.options.experimental.is_on_demand_wrapping_enabled() {
+          crate::utils::topology_config::CycleMergingPolicy::Forbid
+        } else {
+          crate::utils::topology_config::CycleMergingPolicy::AllowWrapped
+        }
+      });
+    let keep_acyclic = !self.options.is_strict_execution_order_enabled()
+      || self.has_raw_commonjs_module()
+      || self.options.experimental.is_on_demand_wrapping_enabled()
+      || matches!(cycle_merging, crate::utils::topology_config::CycleMergingPolicy::Forbid);
     let atom_dependencies = self.compute_atom_dependencies(
       &atoms,
       &module_to_atom_idx,
       &flattened_entry_modules,
       used_symbol_refs_builder,
+      keep_acyclic,
     );
     // Indexed by entry bit, so `ReducedChunkGraph` can pair each facade chunk with its entry
     // module's host atom.
@@ -129,7 +194,7 @@ impl GenerateStage<'_> {
         )
       };
       if !matches!(action, ReducedEntriesAction::Avoid)
-        && reduced_chunk_graph.try_move(atom_idx, &atom.dependent_entries)
+        && (!keep_acyclic || reduced_chunk_graph.try_move(atom_idx, &atom.dependent_entries))
       {
         changed = true;
         if let ReducedEntriesAction::ApplyWithNamespaceExtraction {
@@ -184,6 +249,14 @@ impl GenerateStage<'_> {
     let Some(chunk) = chunk_graph.chunk_table.get(entry_chunk_idx) else {
       return ReducedEntriesAction::Avoid;
     };
+    if matches!(
+      chunk.kind,
+      ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry)
+    ) && crate::utils::topology_config::get(self.options)
+      .is_some_and(|cfg| cfg.preserve_container_entries)
+    {
+      return ReducedEntriesAction::Avoid;
+    }
 
     // See internal-docs/inline-common-chunks/design.md#keeping-shared-code-available-for-inlining.
     if self.prefers_inline_common_chunk(&atom.modules) {
@@ -240,6 +313,46 @@ impl GenerateStage<'_> {
     };
     let resolved_exports = &self.link_output.metas[entry_module_idx].resolved_exports;
     used.iter().all(|name| resolved_exports.contains_key(name))
+  }
+
+  /// Whether `import()` of this ES module dynamic entry has to read its namespace object,
+  /// because a star export of a CommonJS module, directly or through other modules, adds
+  /// names only at runtime, through `__reExport`. Its chunk's export list then lacks them.
+  ///
+  /// `import()` then assimilates the namespace object, so a `then` among its exports sees
+  /// every export through `this`, as it would the module's. The chunk leaves a `then` of the
+  /// module's own out of its exports, which would make the chunk a thenable that `import()`
+  /// assimilates before the namespace can be read (`hides_entry_then` in
+  /// compute_cross_chunk_links.rs), unless it is public and keeps the `then`, when `import()`
+  /// reads the namespace from the chunk hosting the module (`route_public_namespace_extractions`).
+  /// A star export that reaches an external module is re-exported by the file itself
+  /// (`EntryLevelExternal`) instead of the namespace object, which keeps the plain `import()`.
+  fn dynamic_exports_need_namespace_extraction(&self, entry_module_idx: ModuleIdx) -> bool {
+    let Some(module) = self.link_output.module_table[entry_module_idx].as_normal() else {
+      return false;
+    };
+    let meta = &self.link_output.metas[entry_module_idx];
+    if !matches!(module.exports_kind, ExportsKind::Esm) || !meta.has_dynamic_exports {
+      return false;
+    }
+    let mut queue = VecDeque::from([entry_module_idx]);
+    let mut visited = FxHashSet::default();
+    while let Some(module_idx) = queue.pop_front() {
+      if !visited.insert(module_idx) {
+        continue;
+      }
+      let Module::Normal(module) = &self.link_output.module_table[module_idx] else {
+        return false;
+      };
+      for record in &module.import_records {
+        if record.meta.contains(ImportRecordMeta::IsExportStar)
+          && let Some(importee_idx) = record.resolved_module
+        {
+          queue.push_back(importee_idx);
+        }
+      }
+    }
+    true
   }
 
   /// Whether `import()` of this dynamic entry can be preserved by exporting the
@@ -308,8 +421,197 @@ impl GenerateStage<'_> {
     });
   }
 
+  /// Routes `import()` of a module that reads its namespace object from a public chunk, an
+  /// explicit input's, an emitted chunk's or a preserved module's, to a chunk that it can import
+  /// without changing the public chunk's exports, which stay exactly the declared ones, a `then`
+  /// among them. Another chunk's `import()` of a module that its public chunk hosts splits the
+  /// chunk: the module's code stays in it as a common chunk, whose exports, the namespace object's
+  /// among them, take internal names, which are never `then`, and a new public facade re-exports
+  /// the module's exports from it. Another chunk's `import()` reads the namespace from the common
+  /// chunk hosting the module, or through a facade of its own when that chunk exports a `then`,
+  /// which `import()` of it would call. An `import()` inside the hosting chunk reads the namespace
+  /// in place.
+  pub(super) fn route_public_namespace_extractions(&self, chunk_graph: &mut ChunkGraph) {
+    if self.options.code_splitting.is_disabled() {
+      return;
+    }
+    let mut public: Vec<(ChunkIdx, ModuleIdx, u32)> = chunk_graph
+      .common_chunk_exported_facade_chunk_namespace
+      .iter()
+      .filter_map(|(&chunk_idx, modules)| {
+        let ChunkKind::EntryPoint { meta, bit, module } = chunk_graph.chunk_table[chunk_idx].kind
+        else {
+          return None;
+        };
+        (modules.contains(&module)
+          && chunk_graph.chunk_is_live(chunk_idx)
+          && (self.options.preserve_modules
+            || meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk)))
+        .then_some((chunk_idx, module, bit))
+      })
+      .collect();
+    if public.is_empty() {
+      return;
+    }
+    public.sort_unstable();
+    let importers =
+      self.live_dynamic_importers(chunk_graph, public.iter().map(|&(_, module, _)| module));
+    let mut added = false;
+    for (chunk_idx, module_idx, bit) in public {
+      let Some(host_idx) = chunk_graph.module_to_chunk[module_idx] else {
+        continue;
+      };
+      let crosses = importers[&module_idx]
+        .iter()
+        .any(|importer| importer.trigger_chunk.is_some_and(|chunk| chunk != host_idx));
+      if host_idx == chunk_idx {
+        if !crosses {
+          continue;
+        }
+        self.split_public_entry_chunk(chunk_graph, chunk_idx, module_idx);
+        added = true;
+      } else if !matches!(chunk_graph.chunk_table[host_idx].kind, ChunkKind::Common) {
+        // Strict execution order or a manual group leaves the public chunk a facade of a common
+        // chunk hosting the module. Another entry's chunk can't take the namespace's exports
+        // either, so `import()` resolves with the public chunk's own namespace.
+        remove_namespace_extraction(chunk_graph, chunk_idx, module_idx);
+        continue;
+      }
+      let reader_idx = if crosses && self.common_chunk_exports_then(chunk_graph, host_idx) {
+        added = true;
+        self.add_namespace_extraction_facade(chunk_graph, chunk_idx, module_idx, bit)
+      } else {
+        host_idx
+      };
+      remove_namespace_extraction(chunk_graph, chunk_idx, module_idx);
+      chunk_graph
+        .common_chunk_exported_facade_chunk_namespace
+        .entry(reader_idx)
+        .or_default()
+        .insert(module_idx);
+      chunk_graph.entry_module_to_entry_chunk.insert(module_idx, reader_idx);
+    }
+    if added {
+      chunk_graph.rebuild_sorted_chunk_idx_vec(true);
+    }
+  }
+
+  /// Whether the common chunk `chunk_idx` exports a `then`, which `import()` of it would call
+  /// instead of resolving with its namespace. Only a module whose export names the chunk keeps, an
+  /// emitted chunk's that allows extensions, can give it one: no other export takes the name (see
+  /// `dynamic_entry_supports_namespace_extraction`).
+  fn common_chunk_exports_then(&self, chunk_graph: &ChunkGraph, chunk_idx: ChunkIdx) -> bool {
+    chunk_graph.common_chunk_preserve_export_names_modules.get(&chunk_idx).is_some_and(|modules| {
+      modules.iter().any(|&module_idx| {
+        self.link_output.metas[module_idx]
+          .resolved_exports
+          .keys()
+          .any(|name| name.as_str() == "then")
+      })
+    })
+  }
+
+  /// Adds a dynamic entry's facade of `module_idx`, through which `import()` reads the module's
+  /// namespace object from the common chunk hosting it without the `then` that this chunk exports.
+  /// The facade leaves out the module's own `then` too (`hides_entry_then`). It takes the bits,
+  /// input base and execution order of `chunk_idx`, the module's public chunk or the common chunk
+  /// that the public chunk became.
+  fn add_namespace_extraction_facade(
+    &self,
+    chunk_graph: &mut ChunkGraph,
+    chunk_idx: ChunkIdx,
+    module_idx: ModuleIdx,
+    bit: u32,
+  ) -> ChunkIdx {
+    let chunk = &chunk_graph.chunk_table[chunk_idx];
+    let mut facade = rolldown_common::Chunk::new(
+      None,
+      None,
+      chunk.bits.clone(),
+      vec![],
+      ChunkKind::EntryPoint { meta: ChunkMeta::DynamicImported, bit, module: module_idx },
+      chunk.input_base.clone(),
+      None,
+    );
+    facade.exec_order = chunk.exec_order;
+    facade.add_creation_reason(
+      ChunkCreationReason::Entry {
+        is_user_defined_entry: false,
+        entry_module_id: self.link_output.module_table[module_idx].stable_id(),
+        name: None,
+      },
+      self.options,
+    );
+    chunk_graph.add_chunk(facade)
+  }
+
+  /// Turns the public entry chunk `chunk_idx`, which hosts `module_idx`, into a common chunk behind
+  /// a new public facade that takes over its name, file name, signature and emitted references.
+  fn split_public_entry_chunk(
+    &self,
+    chunk_graph: &mut ChunkGraph,
+    chunk_idx: ChunkIdx,
+    module_idx: ModuleIdx,
+  ) {
+    let entry_chunk = &mut chunk_graph.chunk_table[chunk_idx];
+    let ChunkKind::EntryPoint { meta, bit, .. } = entry_chunk.kind else {
+      return;
+    };
+    let bits = entry_chunk.bits.clone();
+    let input_base = entry_chunk.input_base.clone();
+    let name = entry_chunk.name.take();
+    let file_name = entry_chunk.file_name.take();
+    let preserve_entry_signature = entry_chunk.preserve_entry_signature.take();
+    let exec_order = entry_chunk.exec_order;
+    entry_chunk.kind = ChunkKind::Common;
+    entry_chunk.add_creation_reason(
+      ChunkCreationReason::CommonChunk { bits: &bits, link_output: self.link_output },
+      self.options,
+    );
+    let mut facade = rolldown_common::Chunk::new(
+      name,
+      file_name,
+      bits,
+      vec![],
+      ChunkKind::EntryPoint { meta, bit, module: module_idx },
+      input_base,
+      preserve_entry_signature,
+    );
+    facade.exec_order = exec_order;
+    facade.add_creation_reason(
+      ChunkCreationReason::Entry {
+        is_user_defined_entry: meta.contains(ChunkMeta::UserDefinedEntry),
+        entry_module_id: self.link_output.module_table[module_idx].stable_id(),
+        name: self
+          .link_output
+          .entries
+          .get(&module_idx)
+          .and_then(|entries| entries.first())
+          .and_then(|entry| entry.name.as_ref()),
+      },
+      self.options,
+    );
+    let facade_idx = chunk_graph.add_chunk(facade);
+    if let Some(reference_ids) = chunk_graph.chunk_idx_to_reference_ids.remove(&chunk_idx) {
+      chunk_graph.chunk_idx_to_reference_ids.insert(facade_idx, reference_ids);
+    }
+  }
+
   fn is_runtime_only_atom(&self, atom: &ChunkAtom) -> bool {
     atom.modules.len() == 1 && atom.modules[0] == self.link_output.runtime.id()
+  }
+
+  /// Whether an included CommonJS module renders raw, without a `require_*` wrapper, as a CommonJS
+  /// entry that nothing imports does in cjs output without code-splitting groups (`wrap_modules`).
+  /// Its body runs at the top level of its chunk, outside the order analysis, so a chunk cycle
+  /// through that chunk can run it before the chunk defines what the cycle imports from it.
+  fn has_raw_commonjs_module(&self) -> bool {
+    self.link_output.module_table.modules.iter().filter_map(Module::as_normal).any(|module| {
+      let meta = &self.link_output.metas[module.idx];
+      matches!(module.exports_kind, ExportsKind::CommonJs)
+        && meta.is_included
+        && matches!(meta.wrap_kind(), WrapKind::None)
+    })
   }
 
   fn removed_entries_are_dynamic_entry_modules(
@@ -385,6 +687,7 @@ impl GenerateStage<'_> {
     module_to_atom_idx: &IndexVec<ModuleIdx, Option<usize>>,
     flattened_entry_modules: &[ModuleIdx],
     used_symbol_refs_builder: &UsedSymbolRefsBuilder,
+    keep_acyclic: bool,
   ) -> AtomDependencyGraphs {
     let strict_execution_order = self.options.is_strict_execution_order_enabled();
 
@@ -402,10 +705,31 @@ impl GenerateStage<'_> {
       };
       for &module_idx in &atom.modules {
         if strict_execution_order {
-          // Strict lowering can turn linked import records back into `init_*` imports.
+          // Strict lowering can turn linked import records back into `init_*` imports. Unless the
+          // fold keeps the chunk graph acyclic, only reachability needs them.
           for &dep_module_idx in &self.link_output.metas[module_idx].dependencies {
             add(dep_module_idx, &mut reachability_deps);
-            add(dep_module_idx, &mut cycle_deps);
+          }
+          if keep_acyclic {
+            if self.has_raw_commonjs_module() {
+              for &dep_module_idx in &self.link_output.metas[module_idx].dependencies {
+                add(dep_module_idx, &mut cycle_deps);
+              }
+            } else {
+              for dep_module_idx in self.predicted_static_import_targets(module_idx) {
+                add(dep_module_idx, &mut cycle_deps);
+              }
+              let mut service_targets = vec![];
+              self.entry_export_service_targets(
+                module_idx,
+                used_symbol_refs_builder.view(),
+                true,
+                &mut service_targets,
+              );
+              for dep_module_idx in service_targets {
+                add(dep_module_idx, &mut cycle_deps);
+              }
+            }
           }
           continue;
         }
@@ -796,5 +1120,20 @@ impl GenerateStage<'_> {
     }
 
     already_loaded_atoms_by_entry
+  }
+}
+
+/// Stops `import()` of `module_idx` from reading the module's namespace object from `chunk_idx`.
+fn remove_namespace_extraction(
+  chunk_graph: &mut ChunkGraph,
+  chunk_idx: ChunkIdx,
+  module_idx: ModuleIdx,
+) {
+  let namespaces = &mut chunk_graph.common_chunk_exported_facade_chunk_namespace;
+  if let Some(modules) = namespaces.get_mut(&chunk_idx) {
+    modules.remove(&module_idx);
+    if modules.is_empty() {
+      namespaces.remove(&chunk_idx);
+    }
   }
 }

@@ -12,7 +12,8 @@ use oxc::{
 
 use oxc::ast::builder::{AstBuilder, GetAstBuilder};
 use rolldown_common::{
-  ExternalModule, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx, NormalModule,
+  ExportsKind, ExternalModule, ImportRecordIdx, ImportRecordMeta, IndexModules, Interop, Module,
+  ModuleIdx, NormalModule,
 };
 use rolldown_ecmascript::CJS_REQUIRE_REF_STR;
 use rolldown_ecmascript_utils::{
@@ -23,7 +24,7 @@ use rolldown_utils::{
   ecmascript::{is_validate_identifier_name, property_access_str},
   indexmap::{FxIndexMap, FxIndexSet},
 };
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::hmr::utils::{HmrAstBuilder, MODULE_EXPORTS_NAME_FOR_ESM};
 
@@ -31,8 +32,30 @@ pub struct HmrAstFinalizer<'me, 'ast> {
   // Outside input
   pub ast_builder: AstBuilder<'ast>,
   pub modules: &'me IndexModules,
+  /// Whether a module has no side effects once linked (`HmrStage`'s `LinkedSideEffects`), which
+  /// drops an unused import of it, as development output does, where the scan's table may give
+  /// it none of its own.
+  pub pure: &'me dyn Fn(ModuleIdx) -> bool,
   pub module: &'me NormalModule,
+  /// The kind that this module registers as (`HmrStage::rendered_exports_kind`): the link's
+  /// for a module without ES or CommonJS syntax, which the scan stage's table never sees.
+  pub exports_kind: ExportsKind,
+  /// The importees without ES or CommonJS syntax, whose scanned kind is `None`, that the link
+  /// makes CommonJS (`HmrStage::linked_exports_kind`). The scan stage's table never sees that
+  /// promotion, but the page's records bind them through their interop.
+  pub linked_commonjs: FxHashSet<ModuleIdx>,
+  /// The CommonJS importees whose exports the page's records read without `__toESM`, as linking
+  /// decides where no importer reads their default or namespace
+  /// (`LinkStage::determine_safely_merge_cjs_ns`), which this module's bindings read the same way
+  /// (#748).
+  pub unconverted_commonjs: FxHashSet<ModuleIdx>,
+  /// Whether this module is a JSON module whose namespace holds its properties beside `default`,
+  /// as its importers that the graph reaches decide (`json_namespace_has_properties`).
+  pub json_namespace_properties: bool,
   pub use_pife_for_module_wrappers: bool,
+  /// The `context` option, which a top-level `this` reads in a module that the scan didn't
+  /// find CommonJS, as in the main build; `void 0` when empty.
+  pub context: &'me str,
 
   // Each module has a unique index, which is used to generate something that needs to be unique.
   pub unique_index: usize,
@@ -64,9 +87,25 @@ pub struct HmrAstFinalizer<'me, 'ast> {
   // We need to store the static import statements for external separately, so we could put them outside of the `try` block.
   pub generated_static_import_stmts_from_external: FxIndexMap<ModuleIdx, ast::Statement<'ast>>,
   pub named_exports: FxHashMap<Str<'ast>, NamedExport>,
+  /// Records certified to bind straight to native cells (`native_cell_routes::Verdict::Bypass`):
+  /// imported name to the cell and its export name. The full build never evaluated the donor.
+  pub native_cell_bindings: FxHashMap<ImportRecordIdx, FxHashMap<String, (ModuleIdx, String)>>,
 }
 
 impl<'ast> HmrAstFinalizer<'_, 'ast> {
+  /// Whether the link makes `importee` CommonJS: its scan found CommonJS syntax, or none and
+  /// a require decides its kind (`linked_commonjs`).
+  fn is_commonjs(&self, importee: &NormalModule) -> bool {
+    importee.exports_kind == ExportsKind::CommonJs || self.linked_commonjs.contains(&importee.idx)
+  }
+
+  /// `NormalModule::interop` against the kind that the link gives `importee`.
+  fn interop(&self, importee: &NormalModule) -> Option<Interop> {
+    self
+      .is_commonjs(importee)
+      .then(|| if self.module.def_format.is_esm() { Interop::Node } else { Interop::Babel })
+  }
+
   pub fn handle_top_level_stmt(
     &mut self,
     program_body: &mut oxc::allocator::Vec<'ast, ast::Statement<'ast>>,
@@ -86,18 +125,68 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         // console.log(import_foo.default, import_foo.bar);
         // ```
         let rec_id = self.module.imports[&import_decl.node_id()];
+        if super::utils::unused_pure_import(self.module, rec_id, self.pure, scoping) {
+          return;
+        }
         let rec = &self.module.import_records[rec_id];
-        let Some(importee_idx) = rec.resolved_module else { return };
+        let Some(importee_idx) = rec.resolved_module else {
+          return;
+        };
         let importee = &self.modules[importee_idx];
+        // Loader-owned type metadata has no runtime dependency in a closed patch.
+        if matches!(
+          import_decl.source.value.as_str(),
+          Some("\0rolldown/json-module" | "\0rolldown/text-module")
+        )
+          && import_decl.specifiers.is_none()
+          && importee.id().as_str() == rolldown_common::RUNTIME_MODULE_KEY
+        {
+          return;
+        }
+        if let Some(cells) = self.native_cell_bindings.get(&rec_id) {
+          let cells = cells.clone();
+          let modules = self.modules;
+          for spec in import_decl.specifiers.iter().flatten() {
+            // Every referenced binding has a cell; the rest have no reference to rewrite.
+            let ast::ImportDeclarationSpecifier::ImportSpecifier(import_specifier) = spec else {
+              continue;
+            };
+            let Some((cell_idx, cell_name)) = cells.get(import_specifier.imported.name().as_str())
+            else {
+              continue;
+            };
+            let Module::Normal(cell) = &modules[*cell_idx] else {
+              continue;
+            };
+            self.dependencies.insert(*cell_idx);
+            let binding_name = self.ensure_static_import_info(*cell_idx, rec_id).to_string();
+            self.import_bindings.insert(
+              import_specifier.local.symbol_id(),
+              format!("{binding_name}[{}]", serde_json::to_string(cell_name).unwrap()),
+            );
+            self.create_load_exports_call_stmt(cell, &binding_name, import_decl.span);
+          }
+          return;
+        }
         self.dependencies.insert(importee_idx);
         let binding_name = self.ensure_static_import_info(importee_idx, rec_id).to_string();
+        // A JSON module's binding holds its namespace, whose default is the JSON value, unless
+        // the link makes the module CommonJS and reads its exports without `__toESM`, where the
+        // binding holds the value itself (#748).
+        let json_namespace = importee
+          .as_normal()
+          .is_some_and(crate::utils::import_options::is_json_module)
+          && !self.unconverted_commonjs.contains(&importee_idx);
         import_decl.specifiers.as_ref().inspect(|specifiers| {
           specifiers.iter().for_each(|spec| match spec {
             ast::ImportDeclarationSpecifier::ImportSpecifier(import_specifier) => {
-              self.import_bindings.insert(
-                import_specifier.local.symbol_id(),
-                property_access_str(&binding_name, &import_specifier.imported.name()),
-              );
+              let imported = import_specifier.imported.name();
+              let value = if imported != "default" && json_namespace {
+                property_access_str(&format!("{binding_name}.default"), &imported)
+              } else {
+                property_access_str(&binding_name, &imported)
+              };
+              self.import_bindings.insert(import_specifier.local.symbol_id(), value);
             }
             ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(import_default_specifier) => {
               self.import_bindings.insert(
@@ -120,11 +209,22 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         // export {} from '...'
         let rec_id = self.module.imports[&decl.node_id()];
         let rec = &self.module.import_records[rec_id];
-        let Some(importee_idx) = rec.resolved_module else { return };
+        let Some(importee_idx) = rec.resolved_module else {
+          return;
+        };
         let importee = &self.modules[importee_idx];
         self.dependencies.insert(importee_idx);
         let binding_name = self.ensure_static_import_info(importee_idx, rec_id).to_string();
+        let json_namespace = importee
+          .as_normal()
+          .is_some_and(crate::utils::import_options::is_json_module)
+          && !self.unconverted_commonjs.contains(&importee_idx);
         self.exports.extend(decl.specifiers.iter().map(|specifier| {
+          let binding_name = if specifier.local.name() != "default" && json_namespace {
+            format!("{binding_name}.default")
+          } else {
+            binding_name.clone()
+          };
           ObjectPropertyKind::new_lazy_export_property(
             &specifier.exported.name(),
             match &specifier.local {
@@ -251,9 +351,76 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
           program_body.push(ast::Statement::ClassDeclaration(class));
         }
         expr @ ast::match_expression!(ExportDefaultDeclarationKind) => {
-          let expr = expr.into_expression();
-          // Transform `export default [expression]` => `var __rolldown_default__ = [expression]`
-          program_body.push(Statement::new_var_decl("__rolldown_default__", expr, self));
+          let mut expr = expr.into_expression();
+          let mut json_properties = Vec::new();
+          if self.module.meta.has_lazy_export() && self.json_namespace_properties
+            && let Expression::ObjectExpression(object) = expr.without_parentheses()
+          {
+            for property in &object.properties {
+              let ast::ObjectPropertyKind::ObjectProperty(property) = property else {
+                continue;
+              };
+              let Some(key) = property.key.static_name() else { continue };
+              let Some(key) = key.as_str() else { continue };
+              if key.is_empty() || key == "default" {
+                continue;
+              }
+              json_properties.push(key.to_owned());
+            }
+          }
+          let anonymous = match expr.without_parentheses() {
+            Expression::FunctionExpression(function) => function.id.is_none(),
+            Expression::ClassExpression(class) => class.id.is_none(),
+            Expression::ArrowFunctionExpression(_) => true,
+            _ => false,
+          };
+          if anonymous {
+            // Preserve NamedEvaluation("default") without changing initialization timing
+            // or introducing another lexical scope around the authored expression.
+            expr = Expression::new_static_member_expression(
+              SPAN,
+              Expression::new_object_expression(
+                SPAN,
+                [ObjectPropertyKind::new_object_property(
+                  SPAN,
+                  ast::PropertyKind::Init,
+                  ast::PropertyKey::new_static_identifier(SPAN, "default", self),
+                  expr,
+                  false,
+                  false,
+                  false,
+                  self,
+                )],
+                self,
+              ),
+              IdentifierName::new(SPAN, "default", self),
+              false,
+              self,
+            );
+          }
+          let mut statement = Statement::new_var_decl("__rolldown_default__", expr, self);
+          if let Statement::VariableDeclaration(declaration) = &mut statement {
+            declaration.kind = ast::VariableDeclarationKind::Let;
+          }
+          program_body.push(statement);
+          for (index, key) in json_properties.iter().enumerate() {
+            let binding = format!("__rolldown_json_{index}__");
+            program_body.push(Statement::new_var_decl(
+              &binding,
+              Expression::new_id_ref_expr(
+                SPAN,
+                &property_access_str("__rolldown_default__", key),
+                self,
+              ),
+              self,
+            ));
+            self.exports.push(ObjectPropertyKind::new_lazy_export_property(
+              key,
+              Expression::new_id_ref_expr(SPAN, &binding, &self.ast_builder),
+              !is_validate_identifier_name(key) || key == "__proto__",
+              &self.ast_builder,
+            ));
+          }
           self.exports.push(ObjectPropertyKind::new_lazy_export_property(
             "default",
             Expression::new_identifier(SPAN, "__rolldown_default__", &self.ast_builder),
@@ -268,7 +435,9 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       ast::Statement::ExportAllDeclaration(export_all_decl) => {
         let rec_id = self.module.imports[&export_all_decl.node_id()];
         let rec = &self.module.import_records[rec_id];
-        let Some(importee_idx) = rec.resolved_module else { return };
+        let Some(importee_idx) = rec.resolved_module else {
+          return;
+        };
         let importee = &self.modules[importee_idx];
         self.dependencies.insert(importee_idx);
         let binding_name = self.ensure_static_import_info(importee_idx, rec_id).to_string();
@@ -323,11 +492,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
   }
 
   pub fn module_exports_name(&self) -> &'static str {
-    if self.module.exports_kind.is_commonjs() {
-      "module.exports"
-    } else {
-      MODULE_EXPORTS_NAME_FOR_ESM
-    }
+    if self.exports_kind.is_commonjs() { "module.exports" } else { MODULE_EXPORTS_NAME_FOR_ESM }
   }
 
   pub fn generate_runtime_module_register_for_hmr(
@@ -335,7 +500,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     scoping: &Scoping,
   ) -> Vec<ast::Statement<'ast>> {
     let mut ret = vec![];
-    if self.module.exports_kind == rolldown_common::ExportsKind::Esm {
+    if self.exports_kind == ExportsKind::Esm {
       let binding_name_for_namespace_object_ref = self.module_exports_name();
 
       ret.extend(self.generate_declaration_of_module_namespace_object(
@@ -396,7 +561,11 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
 
     // Use stable module ID for consistent runtime lookup
     let id = importee.stable_id.as_ref();
-    let interop = self.module.interop(importee);
+    let interop = if self.unconverted_commonjs.contains(&importee.idx) {
+      None
+    } else {
+      self.interop(importee)
+    };
     let call_expr = Expression::new_call_with_arg(
       Expression::new_member_access_expr("__rolldown_runtime__", "loadExports", self),
       ast::Expression::new_string_literal(SPAN, Str::from_str_in(id, self), None, self),
@@ -467,7 +636,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         Expression::new_to_esm_call_with_interop(
           "__rolldown_runtime__.__toESM",
           load_exports_call,
-          self.module.interop(importee),
+          self.interop(importee),
           self,
         )
       }
@@ -498,6 +667,23 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     ast::Statement::new_expression_statement(SPAN, call_expr, self)
   }
 
+  /// `__rolldown_runtime__.__exportAll(<this module's exports>)` once the module has copied its
+  /// `export * from` sources: the namespace object then takes no other names.
+  pub fn create_star_namespace_completion_stmt(&self) -> Statement<'ast> {
+    let call_expr = ast::Expression::new_call_expression(
+      SPAN,
+      Expression::new_member_access_expr("__rolldown_runtime__", "__exportAll", self),
+      None,
+      oxc::allocator::Vec::from_iter_in(
+        [ast::Argument::from(Expression::new_id_ref_expr(SPAN, self.module_exports_name(), self))],
+        self,
+      ),
+      false,
+      self,
+    );
+    ast::Statement::new_expression_statement(SPAN, call_expr, self)
+  }
+
   fn generate_declaration_of_module_namespace_object(
     &mut self,
     binding_name_for_namespace_object_ref: &str,
@@ -509,26 +695,46 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       oxc::allocator::Vec::with_capacity_in(self.exports.len(), self),
       self,
     );
-    arg_obj_expr.properties.extend(self.exports.drain(..));
-    arg_obj_expr.properties.extend(self.named_exports.iter().map(|(exported, named_export)| {
-      let expr = if let Some(local_binding) = self.import_bindings.get(&named_export.local_binding)
-      {
-        Expression::new_id_ref_expr(SPAN, local_binding, self)
-      } else {
-        let name = scoping.symbol_name(named_export.local_binding);
-        Expression::new_id_ref_expr(SPAN, name, self)
-      };
-      // Use computed property syntax for non-identifier export names (e.g., 'rolldown:exports')
-      let computed = !is_validate_identifier_name(exported.as_str());
-      ObjectPropertyKind::new_lazy_export_property(exported, expr, computed, self)
+    let json =
+      crate::utils::import_options::is_json_module(self.module) && !self.json_namespace_properties;
+    arg_obj_expr.properties.extend(self.exports.drain(..).filter(|property| {
+      !json
+        || matches!(property, ObjectPropertyKind::ObjectProperty(property)
+        if property.key.static_name().is_some_and(|name| name.as_str() == Some("default")))
     }));
+    arg_obj_expr.properties.extend(
+      self.named_exports.iter().filter(|(exported, _)| !json || *exported == "default").map(
+        |(exported, named_export)| {
+          let expr =
+            if let Some(local_binding) = self.import_bindings.get(&named_export.local_binding) {
+              Expression::new_id_ref_expr(SPAN, local_binding, self)
+            } else {
+              let name = scoping.symbol_name(named_export.local_binding);
+              Expression::new_id_ref_expr(SPAN, name, self)
+            };
+          // Use computed property syntax for non-identifier export names (e.g., 'rolldown:exports')
+          let computed = !is_validate_identifier_name(exported.as_str()) || exported == "__proto__";
+          ObjectPropertyKind::new_lazy_export_property(exported, expr, computed, self)
+        },
+      ),
+    );
 
     // construct `__export(ns_name, { prop_name: () => returned, ... })`
     let export_call_expr = ast::Expression::new_call_expression(
       SPAN,
       Expression::new_identifier(SPAN, "__rolldown_runtime__.__exportAll", self),
       None,
-      [ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.ast_builder.allocator()))],
+      [
+        ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.ast_builder.allocator())),
+        ast::Argument::new_numeric_literal(SPAN, 0.0, None, ast::NumberBase::Decimal, self),
+        ast::Argument::new_numeric_literal(
+          SPAN,
+          if self.re_export_all_dependencies.is_empty() { 1.0 } else { 0.0 },
+          None,
+          ast::NumberBase::Decimal,
+          self,
+        ),
+      ],
       false,
       self,
     );
@@ -552,6 +758,56 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     let Some(importee_idx) = self.module.import_records[*rec_idx].resolved_module else {
       return;
     };
+
+    let text = crate::utils::import_options::dynamic_import_is_text(import_expr, self.module, self.modules);
+    if self.modules[importee_idx]
+      .as_normal()
+      .is_some_and(|module| module.module_type != rolldown_common::ModuleType::Json)
+      && import_expr.options.is_some()
+    {
+      let options = import_expr.options.take().expect("import options");
+      let mut load = std::mem::replace(it, Expression::new_void_0(SPAN, self));
+      self.try_rewrite_dynamic_import(&mut load);
+      *it = Expression::new_call_expression(
+        SPAN,
+        Expression::new_identifier(SPAN, "globalThis.nativeModuleHmr.withImportOptions", self),
+        None,
+        [
+          ast::Argument::from(options),
+          ast::Argument::from(crate::utils::import_options::thunk(load, self)),
+          ast::Argument::from(if text {
+            Expression::new_string_literal(SPAN, "text", None, self)
+          } else {
+            Expression::new_boolean_literal(SPAN, false, self)
+          }),
+        ],
+        false,
+        self,
+      );
+      return;
+    }
+
+    if let Some(message) =
+      crate::deferred_resolution_error::failure_message(self.modules, importee_idx)
+    {
+      let mut args = oxc::allocator::Vec::new_in(self);
+      args.push(ast::Argument::new_string_literal(
+        SPAN,
+        Str::from_str_in(&message, self),
+        None,
+        self,
+      ));
+      args.extend(import_expr.options.take().map(ast::Argument::from));
+      *it = Expression::new_call_expression(
+        SPAN,
+        Expression::new_identifier(SPAN, "globalThis.nativeModuleHmr.rejectModuleResolution", self),
+        None,
+        args,
+        false,
+        self,
+      );
+      return;
+    }
 
     let Module::Normal(importee) = &self.modules[importee_idx] else {
       // Not a normal module, skip
@@ -680,7 +936,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     }
 
     // FIXME: consider about CommonJS interop
-    let is_importee_cjs = importee.exports_kind == rolldown_common::ExportsKind::CommonJs;
+    let is_importee_cjs = self.is_commonjs(importee);
 
     // __rolldown_runtime__.loadExports('./foo.js')
     // Use stable module ID for consistent runtime lookup
@@ -790,7 +1046,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       return;
     }
 
-    let is_importee_cjs = importee.exports_kind == rolldown_common::ExportsKind::CommonJs;
+    let is_importee_cjs = self.is_commonjs(importee);
 
     // Use stable module ID for consistent runtime lookup
     let load_exports_call = Expression::new_call_with_arg(
@@ -805,33 +1061,18 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       self,
     );
 
-    let load_exports_expr = if importee.meta.has_lazy_export() || is_importee_cjs {
-      // Note that HMR finalizer is only able to see scanner-level exports_kind, this means that the result
-      // from `determine_module_exports_kind` is not available here. So we have to use some heuristics to determine
-      // whether the importee is CommonJS or has lazy export, and handle them in a special way.
-      //
-      // 1. For the case of `is_importee_cjs`,
-      // the runtime will always have `module.exports`. This is determined in `determine_module_exports_kind`.
-      //
-      // 2. For the case of `has_lazy_export`,
-      // here we're inside `try_rewrite_require`, which means the original code is `require(...)`.
-      //
-      // Modules that have lazy export is of these `ModuleType`: `Json`, `Text`, `Base64`, `Dataurl`.
-      // These data type does not have `export`, `module.exports` or any export keyword at runtime,
-      // so they're `ExportsKind::None` by default.
-      //
-      // For those lazy export modules, if `ImportKind` is `Require`, which is the case here,
-      // and the importee has `ExportsKind::None`, then the importee's `WrapKind` is set to `WrapKind::Cjs`.
-      // So here we know for sure that the importee is using `module.exports` at runtime.
-      // So `loadExports(id)` returns the value directly.
-      //
-      // This is a way to mimic the same mechanism of `determine_module_exports_kind`.
-      //
-      // TODO(hana): we should think about a more robust way to track the consolidated export type of a module in the future.
-      // Listing all the special cases like this is error-prone.
+    let load_exports_expr = if is_importee_cjs
+      || (importee.meta.has_lazy_export()
+        && !crate::utils::import_options::is_json_module(importee))
+    {
+      // CommonJS records hold the value itself. Non-JSON lazy exports keep the existing
+      // CommonJS lowering; JSON can instead be ESM data even while it has a lazy export.
       load_exports_call
-    } else if rec.meta.contains(ImportRecordMeta::JsonModule) {
-      // Vite-mode JSON: ESM-wrapped at runtime, unwrap to the JSON value.
+    } else if rec.meta.contains(ImportRecordMeta::JsonModule)
+      || crate::utils::import_options::is_json_module(importee)
+    {
+      // Vite-mode JSON, or a JSON module loaded as JavaScript: ESM-wrapped at runtime, unwrap to
+      // the JSON value.
       let to_commonjs_call = Expression::new_call_with_arg(
         Expression::new_member_access_expr("__rolldown_runtime__", "__toCommonJS", self),
         load_exports_call,

@@ -3,7 +3,7 @@ use oxc::{
   ast::ast,
   span::{GetSpan, Span},
 };
-use rolldown_common::{EcmaModuleAstUsage, ImportKind, ImportRecordMeta};
+use rolldown_common::{EcmaModuleAstUsage, ImportKind, ImportRecordMeta, SymbolRefFlags};
 use rolldown_ecmascript_utils::ExpressionExt;
 use rolldown_error::BuildDiagnostic;
 
@@ -79,6 +79,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       ImportRecordMeta::empty(),
       None,
     );
+    // The callback gets the exports of a module that it accepts once the module updates, so a
+    // CommonJS module's exports object escapes to it (#693).
+    let namespace = self.result.import_records[record_idx].namespace_ref;
+    *namespace.flags_mut(&mut self.result.symbol_ref_db) |=
+      SymbolRefFlags::HasComputedMemberWrite;
     self
       .result
       .hmr_info

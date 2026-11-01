@@ -1,11 +1,9 @@
 use oxc::{
   ast::{
-    AstKind, MemberExpressionKind,
-    ast::{Expression, IdentifierReference, UnaryOperator},
+    AstKind,
+    ast::{IdentifierReference, UnaryOperator},
   },
   semantic::{SymbolFlags, SymbolId},
-  span::Span,
-  str::JSStr,
 };
 use rolldown_common::{MemberExprWriteKind, Specifier, SymbolRef};
 use rolldown_error::BuildDiagnostic;
@@ -18,7 +16,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     if symbol_flag.contains(SymbolFlags::Import) {
       let symbol_ref: SymbolRef = (self.immutable_ctx.idx, symbol_id).into();
       let named_import = self.result.named_imports.get(&symbol_ref);
-      let import_decl_span = self.result.symbol_ref_db.scoping().symbol_span(symbol_id);
       let is_namespace =
         named_import.is_some_and(|import| matches!(import.imported, Specifier::Star));
       if is_namespace {
@@ -48,32 +45,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             );
           }
         }
-
-        if let Some((span, name)) = self.get_span_if_namespace_specifier_updated() {
-          // For namespace imports, get the actual imported name (the namespace identifier)
-          let imported_name = self.result.symbol_ref_db.symbol_name(symbol_id);
-          self.result.errors.push(BuildDiagnostic::assign_to_import(
-            self.immutable_ctx.id.as_arc_str().clone(),
-            self.immutable_ctx.source.clone(),
-            span,
-            name.display().to_string().into(),
-            Some(import_decl_span),
-            Some(imported_name.into()),
-          ));
-          return;
-        }
-      }
-      let reference_flag =
-        self.result.symbol_ref_db.scoping().get_reference(ident.reference_id()).flags();
-      if reference_flag.is_write() {
-        self.result.errors.push(BuildDiagnostic::assign_to_import(
-          self.immutable_ctx.id.as_arc_str().clone(),
-          self.immutable_ctx.source.clone(),
-          ident.span,
-          ident.name.as_str().into(),
-          Some(import_decl_span),
-          None, // For non-namespace imports, use the name itself
-        ));
       }
     }
   }
@@ -96,32 +67,5 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       // delete namespace?.module
       || matches!(parent_kind, AstKind::ChainExpression(_) if ancestor(2).is_some_and(is_unary_expression_with_delete_operator));
     is_deleted.then_some(MemberExprWriteKind::Delete)
-  }
-
-  pub fn get_span_if_namespace_specifier_updated(&self) -> Option<(Span, JSStr<'ast>)> {
-    let ancestor_cursor = self.visit_path.len() - 1;
-    let parent_node = self.visit_path.get(ancestor_cursor)?;
-    if let Some(member_expr_kind) = parent_node.as_member_expression_kind() {
-      if self.member_expr_write_kind(ancestor_cursor).is_some() {
-        return match member_expr_kind {
-          MemberExpressionKind::Computed(expr) => match &expr.expression {
-            Expression::StringLiteral(lit) => Some((lit.span, lit.value)),
-            Expression::TemplateLiteral(lit) => {
-              if lit.quasis.len() == 1 {
-                lit.quasis[0].value.cooked.map(|cooked| (lit.span, cooked))
-              } else {
-                None
-              }
-            }
-            _ => None,
-          },
-          MemberExpressionKind::Static(expr) => {
-            Some((expr.property.span, expr.property.name.into()))
-          }
-          MemberExpressionKind::PrivateField(_) => None,
-        };
-      }
-    }
-    None
   }
 }

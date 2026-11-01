@@ -27,6 +27,15 @@ pub async fn process_code_and_sourcemap(
   emit_sourcemap(options, code, map, &map_filename, debug_id, is_css)
 }
 
+pub fn poll_ready_or_block_on<F: std::future::Future>(fut: F) -> F::Output {
+  let mut fut = std::pin::pin!(fut);
+  let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
+  match fut.as_mut().poll(&mut cx) {
+    std::task::Poll::Ready(val) => val,
+    std::task::Poll::Pending => futures::executor::block_on(fut),
+  }
+}
+
 pub async fn prepare_sourcemap(
   options: &NormalizedBundlerOptions,
   map: &mut SourceMap,
@@ -95,7 +104,13 @@ pub async fn prepare_sourcemap(
     let map_path = map_path.to_string_lossy();
     let relative_sources = map
       .get_sources()
-      .map(|source| source.as_path().relative(file_dir).to_string_lossy().into_owned())
+      .map(|source| {
+        if let Ok(stripped) = source.as_path().strip_prefix(file_dir) {
+          stripped.to_string_lossy().into_owned()
+        } else {
+          source.as_path().relative(file_dir).to_string_lossy().into_owned()
+        }
+      })
       .collect::<Vec<_>>();
     let source_count = relative_sources.len();
 
@@ -130,7 +145,13 @@ pub async fn prepare_sourcemap(
     map.set_sources(
       map
         .get_sources()
-        .map(|x| x.as_path().relative(file_dir).to_string_lossy().into_owned())
+        .map(|x| {
+          if let Ok(stripped) = x.as_path().strip_prefix(file_dir) {
+            stripped.to_string_lossy().into_owned()
+          } else {
+            x.as_path().relative(file_dir).to_string_lossy().into_owned()
+          }
+        })
         .collect::<Vec<_>>(),
     );
   }
@@ -145,6 +166,18 @@ pub fn emit_sourcemap(
   map_filename: &str,
   debug_id: u128,
   is_css: bool,
+) -> BuildResult<Option<OutputAsset>> {
+  emit_sourcemap_with_json(options, code, map, map_filename, debug_id, is_css, None)
+}
+
+pub fn emit_sourcemap_with_json(
+  options: &NormalizedBundlerOptions,
+  code: &mut String,
+  map: &mut SourceMap,
+  map_filename: &str,
+  debug_id: u128,
+  is_css: bool,
+  precomputed_json: Option<String>,
 ) -> BuildResult<Option<OutputAsset>> {
   let source_map_link_comment_kind =
     if is_css { CommentKind::SingleLineBlock } else { CommentKind::Line };
@@ -167,7 +200,7 @@ pub fn emit_sourcemap(
   if let Some(sourcemap) = &options.sourcemap {
     match sourcemap {
       SourceMapType::File | SourceMapType::Hidden => {
-        let source = map.to_json_string();
+        let source = precomputed_json.unwrap_or_else(|| map.to_json_string());
         if matches!(sourcemap, SourceMapType::File) {
           process_sourcemap_related_reference(
             code,

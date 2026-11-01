@@ -9,6 +9,7 @@ use oxc::{
     match_member_expression,
   },
   ast_visit::{VisitJsMut, walk_js_mut},
+  semantic::NodeId,
   span::{SPAN, Span},
 };
 use oxc_str::CompactStr;
@@ -17,6 +18,7 @@ use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
   EsmWrapperBodyKind, EsmWrapperCallKind, EsmWrapperDeclKind, EsmWrapperStmtOptions,
   ExpressionFactoryExt as _, JsxExt, JsxMemberExpressionObjectExt, StatementFactoryExt as _,
+  parse_injected_expression,
 };
 use rolldown_error::EmptyImportMetaKind;
 
@@ -28,6 +30,79 @@ use crate::{
 use super::ScopeHoistingFinalizer;
 
 impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
+  fn rewrite_hmr_import_attribute_target(&self, call: &mut ast::CallExpression<'ast>) {
+    if self.ctx.options.is_dev_mode_enabled() {
+      crate::utils::import_options::rewrite_hmr_import_attribute_target(
+        call,
+        self.ctx.module,
+        self.ctx.modules,
+        self,
+      );
+    }
+  }
+
+  fn lower_dynamic_import(&mut self, expr: &mut ast::Expression<'ast>) {
+    let ast::Expression::ImportExpression(import_expr) = expr else { unreachable!() };
+    let target = self
+      .ctx
+      .module
+      .imports
+      .get(&import_expr.node_id())
+      .and_then(|idx| self.ctx.module.import_records[*idx].resolved_module);
+    let link_failure = !self.ctx.options.is_dev_mode_enabled()
+      && target.is_some_and(|idx| {
+        crate::deferred_resolution_error::is_link_failure(self.ctx.modules, idx)
+      });
+    let resolution_failure = target
+      .and_then(|idx| crate::deferred_resolution_error::failure_message(self.ctx.modules, idx));
+    if let Some(message) = resolution_failure {
+      let options = import_expr.options.take().map(|mut options| {
+        self.visit_expression(&mut options);
+        ast::Argument::from(options)
+      });
+      let mut args = oxc::allocator::Vec::new_in(self);
+      args.push(ast::Argument::new_string_literal(
+        SPAN,
+        ast::Str::from_str_in(&message, self),
+        None,
+        self,
+      ));
+      args.extend(options);
+      *expr = ast::Expression::new_call_expression(
+        SPAN,
+        self.finalized_expr_for_runtime_symbol("__rejectModuleResolution"),
+        None,
+        args,
+        false,
+        self,
+      );
+      return;
+    }
+    if let Some(new_expr) = self.try_rewrite_inline_dynamic_import_expr(import_expr) {
+      *expr = new_expr;
+    }
+    if !self.try_rewrite_import_expression(expr) {
+      walk_js_mut::walk_expression(self, expr);
+    }
+    if link_failure {
+      let load = std::mem::replace(expr, ast::Expression::new_void_0(SPAN, self));
+      *expr = ast::Expression::new_call_expression(
+        SPAN,
+        ast::Expression::new_static_member_expression(
+          SPAN,
+          load,
+          ast::IdentifierName::new(SPAN, "catch", self),
+          false,
+          self,
+        ),
+        None,
+        [ast::Argument::from(self.finalized_expr_for_runtime_symbol("__rethrowModuleLinkError"))],
+        false,
+        self,
+      );
+    }
+  }
+
   /// Returns the parameters of the CJS closure: `cjs_wrapper_fixed_params`, then the `this`
   /// binding.
   fn cjs_wrapper_params(&self) -> Vec<&str> {
@@ -131,6 +206,50 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
       ));
     }
   }
+
+  /// Native records evaluate CommonJS modules from separate ES records, so a `require()` cycle
+  /// can call another record's wrapper before that record's `var` initializer runs. A hoisted
+  /// function memoizing the one `__commonJS` closure keeps a single module instance and its
+  /// partial exports for re-entrant calls.
+  fn hoist_native_commonjs_wrapper(&self, program: &mut ast::Program<'ast>, name: &str) {
+    let Some(Statement::VariableDeclaration(declaration)) = program.body.last_mut() else {
+      unreachable!("the CommonJS wrapper is a variable declaration")
+    };
+    let [declarator] = declaration.declarations.as_mut_slice() else {
+      unreachable!("the CommonJS wrapper declares one binding")
+    };
+    let wrapper = declarator.init.take().expect("the CommonJS wrapper has an initializer");
+    let memo = parse_injected_expression(self.allocator(), &format!("{name}.m"))
+      .expect("generated CommonJS wrapper memo")
+      .into_member_expression();
+    let memoized = Expression::new_assignment_expression(
+      SPAN,
+      ast::AssignmentOperator::LogicalNullish,
+      AssignmentTarget::from(SimpleAssignmentTarget::from(memo)),
+      wrapper,
+      self,
+    );
+    let call = Expression::new_call_expression(SPAN, memoized, None, [], false, self);
+    *program.body.last_mut().unwrap() = Statement::new_function_declaration(
+      SPAN,
+      ast::FunctionType::FunctionDeclaration,
+      Some(ast::BindingIdentifier::new(SPAN, ast::Str::from_str_in(name, self), self)),
+      false,
+      false,
+      false,
+      None,
+      None,
+      ast::FormalParameters::boxed(SPAN, ast::FormalParameterKind::FormalParameter, [], None, self),
+      None,
+      Some(ast::FunctionBody::boxed(
+        SPAN,
+        [],
+        [Statement::new_return_statement(SPAN, Some(call), self)],
+        self,
+      )),
+      self,
+    );
+  }
 }
 
 impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
@@ -203,13 +322,16 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     program.directives.clear();
     // init namespace_alias_symbol_id
 
+    self.collect_native_let_symbols(program);
     let last_import_stmt_idx = self.remove_unused_top_level_stmt(program);
+    let mut imports_end = last_import_stmt_idx;
 
     // Runs after `remove_unused_top_level_stmt` so statement-position init calls already sit in
     // the dedup set, and splices at the same after-imports index the HMR header uses (an HMR
     // header spliced below lands before these calls, which is fine — it is registration glue).
     let entry_init_prelude = self.entry_reexported_wrapper_init_prelude();
     if !entry_init_prelude.is_empty() {
+      imports_end += entry_init_prelude.len();
       program.body.splice(last_import_stmt_idx..last_import_stmt_idx, entry_init_prelude);
     }
 
@@ -221,14 +343,35 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         // Let's skip it for now.
         self.generate_hmr_header()
       };
-      program.body.splice(last_import_stmt_idx..last_import_stmt_idx, hmr_header);
+      let hmr_insert_idx = imports_end;
+      imports_end += hmr_header.len();
+      program.body.splice(hmr_insert_idx..hmr_insert_idx, hmr_header);
     }
 
     let wrapper_mode = self.ctx.wrapper_mode();
+    let schedule_async = self.ctx.linking_info.is_tla_or_contains_tla_dependency
+      && matches!(
+        wrapper_mode,
+        ModuleWrapperMode::InteropEsm(_) | ModuleWrapperMode::ExecutionOrder(_)
+      );
+    if schedule_async {
+      program.body.insert(imports_end, self.async_body_marker());
+    }
     self.needs_hosted_top_level_binding = matches!(
       wrapper_mode,
       ModuleWrapperMode::InteropEsm(_) | ModuleWrapperMode::ExecutionOrder(_)
-    );
+    ) || !self.temporal_bindings.is_empty();
+    // Hash order follows symbol numbering, which differs between live and fresh graphs; emit
+    // the flags by their chunk-unique canonical names so output bytes depend only on the program.
+    let mut flags = self
+      .temporal_bindings
+      .values()
+      .map(|(flag, _)| self.canonical_name_for(*flag))
+      .collect::<Vec<_>>();
+    flags.sort_unstable();
+    for flag in flags {
+      self.top_level_var_bindings.insert(ast::Str::from_str_in(flag, &self.ast_builder).into());
+    }
 
     // the order should be
     // 1. module namespace object declaration
@@ -264,12 +407,24 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
 
     walk_js_mut::walk_program(self, program);
 
+    // The module's own body runs its star exports, also inside a wrapper's closure.
+    if self.module_namespace_included
+      && self.star_exports_complete_namespace()
+      && !declaration_of_module_namespace_object.is_empty()
+      && !matches!(wrapper_mode, ModuleWrapperMode::InteropCjs(_))
+    {
+      program.body.push(self.complete_star_namespace_stmt());
+    }
+
     // Insert keep_name statements for top-level declarations
-    self.insert_keep_name_statements(&mut program.body);
+    let mut function_names = self.insert_keep_name_statements(&mut program.body, true);
+    function_names.extend(self.top_level_function_names.take_in(&self.ast_builder));
     self.keep_name_statement_to_insert.clear();
+    let async_pending_name = schedule_async.then(|| self.async_pending_name(program));
 
     match wrapper_mode {
       ModuleWrapperMode::InteropCjs(wrapper_ref) => {
+        program.body.splice(0..0, function_names);
         let wrap_ref_name = self.canonical_name_for(wrapper_ref);
         let commonjs_ref = if self.ctx.options.profiler_names {
           self.canonical_ref_for_runtime("__commonJS")
@@ -292,6 +447,9 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           self.ctx.linking_info.is_tla_or_contains_tla_dependency,
           self,
         ));
+        if crate::utils::native_records::enabled(self.ctx.options) {
+          self.hoist_native_commonjs_wrapper(program, wrap_ref_name);
+        }
       }
       ModuleWrapperMode::InteropEsm(target) | ModuleWrapperMode::ExecutionOrder(target) => {
         let is_concatenated_wrapped_module = !matches!(
@@ -300,11 +458,19 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         );
         let old_body = program.body.take_in(self);
 
-        let mut fn_stmts = allocator::Vec::new_in(self);
+        // Function names, like the functions themselves, exist before module evaluation.
+        let mut fn_stmts = function_names;
         let mut stmts_inside_closure = allocator::Vec::new_in(self);
+        let mut async_body = allocator::Vec::new_in(self);
+        let mut inside_async_body = false;
 
         // Hoist all top-level "var" and "function" declarations out of the closure
-        old_body.into_iter().for_each(|mut stmt| match &mut stmt {
+        old_body.into_iter().for_each(|mut stmt| {
+          if schedule_async && super::async_evaluation::is_async_body_marker(&stmt) {
+            inside_async_body = true;
+            return;
+          }
+          match &mut stmt {
             ast::Statement::FunctionDeclaration(_) => {
               fn_stmts.push(stmt);
             }
@@ -317,9 +483,18 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
               program.body.push(stmt);
             }
             _ => {
-              stmts_inside_closure.push(stmt);
+              if inside_async_body {
+                async_body.push(stmt);
+              } else {
+                stmts_inside_closure.push(stmt);
+              }
             }
-          });
+          }
+        });
+        if let Some(pending) = &async_pending_name {
+          stmts_inside_closure =
+            self.schedule_async_body(stmts_inside_closure, async_body, pending);
+        }
 
         // Safety net for the `init_is_noop` predictive classifier (see
         // `generate_stage::compute_wrapped_esm_init_metadata`): if a module was flagged as
@@ -381,7 +556,9 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           return;
         }
 
-        let esm_ref = if self.ctx.options.profiler_names {
+        let esm_ref = if schedule_async {
+          self.canonical_ref_for_runtime("__esmAsync")
+        } else if self.ctx.options.profiler_names {
           self.canonical_ref_for_runtime("__esm")
         } else {
           self.canonical_ref_for_runtime("__esmMin")
@@ -401,7 +578,13 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           return;
         }
 
-        program.body.push(Statement::new_esm_wrapper_stmt(
+        let leading_deps = if !schedule_async {
+          self.extract_leading_esm_init_deps(wrap_ref_name, &mut stmts_inside_closure)
+        } else {
+          allocator::Vec::new_in(self)
+        };
+        let fn_is_empty = stmts_inside_closure.is_empty();
+        let mut wrapper_stmt = Statement::new_esm_wrapper_stmt(
           EsmWrapperStmtOptions {
             binding_name: wrap_ref_name,
             esm_fn_expr: esm_ref_expr,
@@ -416,11 +599,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             } else {
               EsmWrapperCallKind::Plain
             },
-            body_kind: if self.ctx.linking_info.is_tla_or_contains_tla_dependency {
-              EsmWrapperBodyKind::Async
-            } else {
-              EsmWrapperBodyKind::Sync
-            },
+            body_kind: EsmWrapperBodyKind::Sync,
             decl_kind: if matches!(wrapper_mode, ModuleWrapperMode::ExecutionOrder(_)) {
               EsmWrapperDeclKind::HoistedFunction
             } else {
@@ -428,9 +607,34 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             },
           },
           self,
-        ));
+        );
+        self.attach_esm_wrapper_deps(&mut wrapper_stmt, leading_deps, fn_is_empty);
+        program.body.push(wrapper_stmt);
       }
       ModuleWrapperMode::None => {
+        program.body.splice(0..0, function_names);
+        if !self.top_level_var_bindings.is_empty() {
+          let declarations = self.top_level_var_bindings.iter().map(|name| {
+            ast::VariableDeclarator::new(
+              SPAN,
+              ast::BindingPattern::new_binding_identifier(SPAN, *name, self),
+              None,
+              None,
+              false,
+              self,
+            )
+          });
+          program.body.insert(
+            0,
+            Statement::new_variable_declaration(
+              SPAN,
+              ast::VariableDeclarationKind::Var,
+              allocator::Vec::from_iter_in(declarations, self),
+              false,
+              self,
+            ),
+          );
+        }
         program.body.splice(0..0, declaration_of_module_namespace_object);
       }
     }
@@ -487,7 +691,9 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       self.visit_statement(stmt);
     }
 
-    self.insert_keep_name_statements(it);
+    let names =
+      self.insert_keep_name_statements(it, self.scope_stack.iter().all(|flags| flags.is_top()));
+    self.top_level_function_names.extend(names);
     self.cur_stmt_index = previous_stmt_index;
     self.keep_name_statement_to_insert = previous_keep_name_statement;
   }
@@ -503,6 +709,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   }
 
   fn visit_expression(&mut self, expr: &mut ast::Expression<'ast>) {
+    crate::utils::temporal_reads::unwrap_temporal_read(expr);
     // Handle keep_names for named class/function expressions in any expression context
     // (return statements, function args, array elements, etc.)
     if self.ctx.options.keep_names && self.ctx.runtime.id() != self.ctx.idx {
@@ -557,6 +764,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
 
     match expr {
       ast::Expression::CallExpression(call_expr) => {
+        self.rewrite_hmr_import_attribute_target(call_expr);
         self.rewrite_hot_accept_call_deps(call_expr);
         if let Some(new_expr) = self.try_rewrite_global_require_call(call_expr) {
           *expr = new_expr;
@@ -572,14 +780,44 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       }
       // inline dynamic import
       ast::Expression::ImportExpression(import_expr) => {
-        if let Some(new_expr) = self.try_rewrite_inline_dynamic_import_expr(import_expr) {
-          *expr = new_expr;
-        }
-        if self.try_rewrite_import_expression(expr) {
-          // If the import expression is rewritten, we don't need to walk it again.
-          // Otherwise, it might cause infinite recursion in some cases.
+        let target = crate::utils::import_options::dynamic_import_is_json(
+          import_expr,
+          self.ctx.module,
+          self.ctx.modules,
+        );
+        let json = target == Some(true);
+        let text = crate::utils::import_options::dynamic_import_is_text(
+          import_expr, self.ctx.module, self.ctx.modules,
+        );
+        if import_expr.phase.is_none()
+          && target.is_some()
+          && (import_expr.options.is_some() || json && !self.ctx.options.is_dev_mode_enabled())
+        {
+          let mut options =
+            import_expr.options.take().unwrap_or_else(|| ast::Expression::new_void_0(SPAN, self));
+          self.visit_expression(&mut options);
+          let mut load = std::mem::replace(expr, ast::Expression::new_void_0(SPAN, self));
+          self.lower_dynamic_import(&mut load);
+          *expr = ast::Expression::new_call_expression(
+            SPAN,
+            self.finalized_expr_for_runtime_symbol("__withImportOptions"),
+            None,
+            [
+              ast::Argument::from(options),
+              ast::Argument::from(crate::utils::import_options::thunk(load, &*self)),
+              ast::Argument::from(if text {
+                ast::Expression::new_string_literal(SPAN, "text", None, self)
+              } else {
+                ast::Expression::new_boolean_literal(SPAN, json, self)
+              }),
+            ],
+            false,
+            self,
+          );
           return;
         }
+        self.lower_dynamic_import(expr);
+        return;
       }
       ast::Expression::NewExpression(new_expr) => {
         self.handle_new_url_with_string_literal_and_import_meta_url(new_expr);
@@ -781,6 +1019,29 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   // foo.js `export const bar = { a: 0 }`
   // main.js `import * as foo_exports from './foo.js';\n foo_exports.bar.a = 1;`
   // The `foo_exports.bar.a` ast is `StaticMemberExpression(StaticMemberExpression)`, The outer StaticMemberExpression span is `foo_exports.bar.a`, the `visit_expression(Expression::MemberExpression)` is called with `foo_exports.bar`, the span is inner StaticMemberExpression.
+  fn visit_class(&mut self, class: &mut ast::Class<'ast>) {
+    let own = class.id.as_ref().and_then(|id| id.symbol_id.get()).filter(|symbol| {
+      self.scope.scoping().symbol_scope_id(*symbol) == self.scope.scoping().root_scope_id()
+    });
+    if let Some(symbol) = own {
+      self.native_enclosing_classes.push(symbol);
+    }
+    walk_js_mut::walk_class(self, class);
+    if own.is_some() {
+      self.native_enclosing_classes.pop();
+    }
+  }
+
+  fn visit_call_expression(&mut self, it: &mut ast::CallExpression<'ast>) {
+    self.callee_member = member_callee(&it.callee);
+    walk_js_mut::walk_call_expression(self, it);
+  }
+
+  fn visit_tagged_template_expression(&mut self, it: &mut ast::TaggedTemplateExpression<'ast>) {
+    self.callee_member = member_callee(&it.tag);
+    walk_js_mut::walk_tagged_template_expression(self, it);
+  }
+
   fn visit_member_expression(&mut self, expr: &mut ast::MemberExpression<'ast>) {
     if let Some(new_expr) = self.try_rewrite_member_expr(expr) {
       match new_expr {
@@ -968,4 +1229,16 @@ fn has_optional_member_access(expr: &Expression) -> bool {
       _ => return false,
     }
   }
+}
+
+/// The member expression whose object a call of `callee` passes as `this`, also in parentheses
+/// or ending an optional chain there, as in `(t?.set)()`. Expressions that the bundler builds
+/// have no node of their own.
+fn member_callee(callee: &Expression) -> Option<NodeId> {
+  let callee = callee.without_parentheses();
+  let member = match callee {
+    Expression::ChainExpression(chain) => chain.expression.as_member_expression(),
+    _ => callee.as_member_expression(),
+  }?;
+  Some(member.node_id()).filter(|id| *id != NodeId::DUMMY)
 }

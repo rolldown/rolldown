@@ -2,7 +2,8 @@ use crate::{
   chunk_graph::ChunkGraph,
   esm_init_obligations::{
     WrappedEsmInitTarget, WrappedEsmInitTargetContext,
-    collect_wrapped_esm_init_targets_for_module_namespace, importer_reexports_binding,
+    collect_wrapped_esm_init_targets_for_module_namespace, constant_is_always_inlined,
+    importer_reexports_binding,
   },
   type_alias::{IndexEcmaAst, IndexStmtInfos},
   types::{
@@ -15,10 +16,11 @@ use itertools::Itertools;
 use oxc::ast::ast::{Declaration, ExportDefaultDeclarationKind, Statement};
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, ChunkMeta, EcmaViewMeta, EntryPointKind, ImportKind, ImportRecordIdx,
-  ImportRecordMeta, IndexModules, ModuleIdx, ModuleNamespaceIncludedReason, OutputFormat,
-  PostChunkOptimizationOperation, RuntimeHelper, StmtInfoIdx, SymbolRef, SymbolRefDb,
-  UsedSymbolRefsBuilder, WrapKind,
+  Chunk, ChunkIdx, ChunkKind, ChunkMeta, ConstExportMeta, EcmaViewMeta, EntryPointKind, ImportKind,
+  ImportRecordIdx, ImportRecordMeta, IndexModules, InlineConstMode, ModuleIdx,
+  ModuleNamespaceIncludedReason, OutputFormat, PostChunkOptimizationOperation, RuntimeHelper,
+  Specifier, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, UsedSymbolRefsBuilder,
+  WrapKind, side_effects::DeterminedSideEffects,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_ecmascript_utils::StatementExt;
@@ -41,11 +43,11 @@ use super::{
 const THEN: &str = "then";
 
 #[derive(Clone, Copy)]
-struct LiveDynamicImporter {
+pub(super) struct LiveDynamicImporter {
   module_idx: ModuleIdx,
   /// The chunk hosting the importer, i.e. where the rewritten call site would carry the trigger.
   /// `None` means the importer has no chunk of its own, so it cannot carry one.
-  trigger_chunk: Option<ChunkIdx>,
+  pub(super) trigger_chunk: Option<ChunkIdx>,
 }
 
 pub(super) struct OrderLoweringInput<'a> {
@@ -54,16 +56,21 @@ pub(super) struct OrderLoweringInput<'a> {
   pub(super) linking: &'a LinkingMetadataVec,
   pub(super) statements: &'a IndexStmtInfos,
   pub(super) asts: &'a IndexEcmaAst,
-  pub(super) keep_names: bool,
+  pub(super) runtime_idx: ModuleIdx,
   pub(super) export_chains: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
+  /// [`WrappedEsmInitTargetContext::constant_value_map`].
+  pub(super) constant_value_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
+  /// [`WrappedEsmInitTargetContext::inline_const_mode`].
+  pub(super) inline_const_mode: Option<InlineConstMode>,
   pub(super) star_reexport_records_by_imported_symbol:
     &'a FxHashMap<SymbolRef, Vec<Vec<(ModuleIdx, ImportRecordIdx)>>>,
   pub(super) member_read_star_reexport_paths: &'a [MemberReadStarReexportPath],
   pub(super) used_symbol_refs_builder: &'a UsedSymbolRefsBuilder,
   pub(super) cyclic_modules: &'a FxHashSet<ModuleIdx>,
   pub(super) tree_shaking: bool,
+  /// [`GenerateStage::routes_declared_side_effect_free_barrels`].
+  pub(super) route_declared_barrels: bool,
   pub(super) code_splitting_disabled: bool,
-  pub(super) runtime_idx: ModuleIdx,
 }
 
 #[derive(Default)]
@@ -97,37 +104,38 @@ struct OrderCjsCarrierPlan {
 /// Unlike `init_is_noop`, this deliberately ignores import/re-export lowering glue: that glue is
 /// consumer-dependent and retained leaf initialization must be routed from the consuming record,
 /// not installed into a shared pure barrel wrapper. Local executable statements, generated missing
-/// export assignments, `keepNames` calls, and unconditional execution dependencies make the
-/// wrapper non-transparent.
+/// export assignments and unconditional execution dependencies make the wrapper non-transparent.
+/// Function declarations and their keep-name calls are hoisted outside the wrapper by finalization.
 pub(super) fn order_wrapper_is_reexport_transparent(
   meta: &LinkingMetadata,
   ast: Option<&EcmaAst>,
-  keep_names: bool,
+  runtime_idx: ModuleIdx,
 ) -> bool {
   matches!(
     meta.concatenated_wrapped_module_kind,
     rolldown_common::ConcatenateWrappedModuleKind::None
   ) && meta.shimmed_missing_exports.is_empty()
-    && meta.execution_dependencies.is_empty()
-    && ast.is_some_and(|ast| {
-      ast.program().body.iter().all(|stmt| statement_has_no_local_wrapper_body(stmt, keep_names))
+    && meta.execution_dependencies.iter().all(|dependency| {
+      // Runtime loading and hoisted name preservation happen outside this
+      // wrapper. Keep their load edges, but do not turn them into a barrel body.
+      *dependency == runtime_idx
     })
+    && ast.is_some_and(|ast| ast.program().body.iter().all(statement_has_no_local_wrapper_body))
 }
 
-fn statement_has_no_local_wrapper_body(stmt: &Statement, keep_names: bool) -> bool {
+fn statement_has_no_local_wrapper_body(stmt: &Statement) -> bool {
   // Static import/re-export statements may lower to init forwarding or namespace glue, but that
   // work is routed per consumer for transparent wrappers and is not a module-local executable body.
   if stmt.is_module_declaration_with_source() {
     return true;
   }
   match stmt {
-    Statement::FunctionDeclaration(_) => !keep_names,
+    Statement::FunctionDeclaration(_) => true,
     Statement::ExportDefaultDeclaration(export) => {
       matches!(export.declaration, ExportDefaultDeclarationKind::FunctionDeclaration(_))
-        && !keep_names
     }
     Statement::ExportDeclaration(export) => match &export.declaration {
-      Declaration::FunctionDeclaration(_) => !keep_names,
+      Declaration::FunctionDeclaration(_) => true,
       _ => false,
     },
     Statement::ExportNamedDeclaration(_) => true,
@@ -202,6 +210,12 @@ pub(super) fn consumer_local_reexport_plan(
   // inner barrel before every outer forwarder, while an outer module may only ignore an importee's
   // transitive side-effect bit after that importee has itself become a consumer-local waypoint.
   // Each round accepts at least one new module or stops, so this is bounded by the plan size.
+  // Barrels that carry a CommonJS re-export, directly or through an inner route, are accepted
+  // first. Once those settle, a declared pass adds the barrels that their packages declare
+  // side-effect-free when the build asks for them, so a barrel that declares nothing never becomes
+  // a route only because it forwards a declared one, and the first pass's routes and carrier order
+  // stay as they were.
+  let mut declared_pass = false;
   loop {
     let accepted_before = accepted_modules.len();
     for &module_idx in &ordered_modules {
@@ -249,6 +263,11 @@ pub(super) fn consumer_local_reexport_plan(
           if rec.kind != ImportKind::Import {
             supported = false;
             break;
+          }
+          // A re-export that no importer reads, which lazy barrels don't load, initializes
+          // nothing (#502).
+          if rec.resolved_module.is_none() && !stmt_is_included {
+            continue;
           }
           let Some(importee_idx) = rec.resolved_module else {
             supported = false;
@@ -334,12 +353,24 @@ pub(super) fn consumer_local_reexport_plan(
         }
       }
 
+      // Carrier-free direct barrels are part of the same route when they forward an inner
+      // carrierized barrel. Marking every supported re-export-only waypoint keeps an arbitrarily
+      // deep chain importer-local; its non-CJS leaves are side-effect-free by the check above, so
+      // there is no module-local evaluation work to preserve here. The declared pass instead
+      // accepts a barrel that its package declares side-effect-free, whose shared wrapper would
+      // otherwise run every re-export that any importer keeps, for instance when the barrel is
+      // also a dynamic entry whose exports are its execution dependencies.
       // Forwarding an independent ESM route does not prove the outer barrel's other imports
       // independent. CJS carrier extraction retains its record-based eligibility.
       let is_cjs_route = cjs_route_supported && (!module_carriers.is_empty() || forwards_cjs_route);
       let is_independent_esm_route = independent_modules.contains(&module_idx)
         && (matches!(meta.wrap_kind(), WrapKind::Esm) || forwards_consumer_local_route);
-      if supported && (is_cjs_route || is_independent_esm_route) {
+      let accepted = if declared_pass {
+        matches!(module.side_effects, DeterminedSideEffects::UserDefined(false))
+      } else {
+        is_cjs_route || is_independent_esm_route
+      };
+      if supported && accepted {
         accepted_modules.insert(module_idx);
         if is_cjs_route {
           cjs_routes.insert(module_idx);
@@ -351,7 +382,10 @@ pub(super) fn consumer_local_reexport_plan(
       }
     }
     if accepted_modules.len() == accepted_before {
-      break;
+      if declared_pass || !input.route_declared_barrels {
+        break;
+      }
+      declared_pass = true;
     }
   }
 
@@ -397,11 +431,7 @@ fn consumer_local_reexport_records(
         )
         && input.asts[module.idx].as_ref().is_some_and(|ast| {
           ast.program().body.iter().any(statement_is_direct_reexport)
-            && !ast
-              .program()
-              .body
-              .iter()
-              .all(|stmt| statement_has_no_local_wrapper_body(stmt, input.keep_names))
+            && !ast.program().body.iter().all(statement_has_no_local_wrapper_body)
         }))
       .then_some(module)
     })
@@ -591,6 +621,7 @@ pub(super) struct FrozenReexportUsage {
   root_paths: FxHashMap<(ModuleIdx, ImportRecordIdx), Vec<(ModuleIdx, ImportRecordIdx)>>,
   nested_records: FxHashSet<(ModuleIdx, ImportRecordIdx)>,
   consumed_facades: FxHashSet<SymbolRef>,
+  read_facades: FxHashSet<SymbolRef>,
 }
 
 impl FrozenReexportUsage {
@@ -601,9 +632,85 @@ impl FrozenReexportUsage {
   pub(super) fn consumed_facades(&self) -> &FxHashSet<SymbolRef> {
     &self.consumed_facades
   }
+
+  pub(super) fn read_facades(&self) -> &FxHashSet<SymbolRef> {
+    &self.read_facades
+  }
 }
 
 impl GenerateStage<'_> {
+  /// The initialization targets of each consumer-local route's namespace, for the exports of the
+  /// route that `export_is_exposed` selects.
+  fn consumer_local_namespace_targets(
+    &self,
+    order_state: &OrderWrapState,
+    export_is_exposed: impl Fn(ModuleIdx, SymbolRef) -> bool,
+  ) -> Vec<(ModuleIdx, Vec<WrappedEsmInitTarget>)> {
+    self
+      .link_output
+      .module_table
+      .modules
+      .iter_enumerated()
+      .filter(|(module_idx, _)| {
+        order_state.is_consumer_local_reexport_route(*module_idx)
+          || (order_state.has_consumer_local_reexport_records(*module_idx)
+            && self.link_output.entries.contains_key(module_idx))
+      })
+      .filter_map(|(module_idx, module)| {
+        let module = module.as_normal()?;
+        let targets = collect_wrapped_esm_init_targets_for_module_namespace(
+          &WrappedEsmInitTargetContext {
+            importer: module,
+            importer_meta: &self.link_output.metas[module_idx],
+            modules: &self.link_output.module_table.modules,
+            metas: &self.link_output.metas,
+            stmt_infos: &self.link_output.stmt_infos,
+            symbol_db: &self.link_output.symbol_db,
+            constant_value_map: &self.link_output.global_constant_symbol_map,
+            inline_const_mode: self.options.optimization.inline_const.map(|config| config.mode),
+            order_wrap_state: order_state,
+            strict_execution_order: true,
+          },
+          |_| true,
+          |symbol_ref| export_is_exposed(module_idx, symbol_ref),
+        );
+        Some((module_idx, targets))
+      })
+      .collect_vec()
+  }
+
+  /// A route's namespace object holds only its retained exports, so creating it, as an `import()`
+  /// of the route does, initializes only the modules behind them. Lowering cached targets for every
+  /// export, before liveness was sealed. A namespace whose names a simulated facade decides keeps
+  /// all of them, as the finalizer then writes those names whether or not they are retained.
+  pub(super) fn narrow_consumer_local_namespace_targets(&self, order_state: &mut OrderWrapState) {
+    let retained = &self.link_output.retained_export_symbols;
+    let narrowed = self.consumer_local_namespace_targets(order_state, |module_idx, symbol_ref| {
+      retained.contains(&symbol_ref)
+        || self.link_output.module_table.modules[module_idx].as_normal().is_some_and(|module| {
+          order_state.simulated_facade_export_names(module.namespace_object_ref).is_some()
+        })
+    });
+    for (module_idx, targets) in narrowed {
+      order_state.set_consumer_local_namespace_targets(module_idx, targets);
+    }
+  }
+
+  pub(super) fn populate_consumer_local_namespace_targets(&self, order_state: &mut OrderWrapState) {
+    for (module_idx, targets) in self.consumer_local_namespace_targets(order_state, |_, _| true) {
+      order_state.set_consumer_local_namespace_targets(module_idx, targets);
+    }
+  }
+
+  /// Whether a re-export-only barrel that its package declares side-effect-free becomes a
+  /// consumer-local route without a CommonJS carrier, so that each importer initializes only the
+  /// modules that provide the names it imports, as Rspack evaluates such barrels. Lazy barrels ask
+  /// for it. A build without code splitting keeps the shared wrapper: its inlined `import()` calls
+  /// the wrapper and its chunk placement doesn't reach the leaves through a route.
+  pub(super) fn routes_declared_side_effect_free_barrels(&self) -> bool {
+    self.options.experimental.is_lazy_barrel_enabled() && !self.options.code_splitting.is_disabled()
+  }
+
   /// Returns whether the chunk topology changed.
   pub(super) fn apply_order_wraps(
     &mut self,
@@ -649,8 +756,10 @@ impl GenerateStage<'_> {
       linking: &self.link_output.metas,
       statements: &self.link_output.stmt_infos,
       asts: &self.ast_table,
-      keep_names: self.options.keep_names,
+      runtime_idx: self.link_output.runtime.id(),
       export_chains: &self.link_output.normal_symbol_exports_chain_map,
+      constant_value_map: &self.link_output.global_constant_symbol_map,
+      inline_const_mode: self.options.optimization.inline_const.map(|config| config.mode),
       star_reexport_records_by_imported_symbol: &self
         .link_output
         .star_reexport_records_by_imported_symbol,
@@ -658,8 +767,8 @@ impl GenerateStage<'_> {
       used_symbol_refs_builder,
       cyclic_modules: &cyclic_modules,
       tree_shaking: self.options.treeshake.is_some(),
+      route_declared_barrels: self.routes_declared_side_effect_free_barrels(),
       code_splitting_disabled,
-      runtime_idx: self.link_output.runtime.id(),
     };
     let consumer_local_plan = consumer_local_reexport_plan(&input, order_state);
     if plan.is_empty() && consumer_local_plan.is_empty() {
@@ -677,6 +786,11 @@ impl GenerateStage<'_> {
       &input,
       &mut output,
       runtime_helper,
+      [
+        self.link_output.runtime.resolve_symbol("__startAsync"),
+        self.link_output.runtime.resolve_symbol("__finishAsync"),
+        self.link_output.runtime.resolve_symbol("__esmAsync"),
+      ],
       code_splitting_disabled,
       &consumer_local_plan,
     );
@@ -749,42 +863,6 @@ impl GenerateStage<'_> {
     chunk_graph.sort_chunk_modules(self.link_output, self.options);
     self.renumber_live_chunks(chunk_graph);
     true
-  }
-
-  pub(super) fn populate_consumer_local_namespace_targets(&self, order_state: &mut OrderWrapState) {
-    let consumer_local_namespace_targets = self
-      .link_output
-      .module_table
-      .modules
-      .iter_enumerated()
-      .filter(|(module_idx, _)| {
-        order_state.is_consumer_local_reexport_route(*module_idx)
-          || (order_state.has_consumer_local_reexport_records(*module_idx)
-            && self.link_output.entries.contains_key(module_idx))
-      })
-      .filter_map(|(module_idx, module)| {
-        let module = module.as_normal()?;
-        let targets = collect_wrapped_esm_init_targets_for_module_namespace(
-          &WrappedEsmInitTargetContext {
-            importer: module,
-            importer_meta: &self.link_output.metas[module_idx],
-            modules: &self.link_output.module_table.modules,
-            metas: &self.link_output.metas,
-            stmt_infos: &self.link_output.stmt_infos,
-            symbol_db: &self.link_output.symbol_db,
-            constant_value_map: &self.link_output.global_constant_symbol_map,
-            inline_const_mode: self.options.optimization.inline_const.map(|config| config.mode),
-            order_wrap_state: order_state,
-            strict_execution_order: true,
-          },
-          |_| true,
-        );
-        Some((module_idx, targets))
-      })
-      .collect_vec();
-    for (module_idx, targets) in consumer_local_namespace_targets {
-      order_state.set_consumer_local_namespace_targets(module_idx, targets);
-    }
   }
 
   /// The no-lowering tail of [`GenerateStage::apply_order_wraps`]: nothing is order-wrapped and
@@ -1112,10 +1190,28 @@ impl GenerateStage<'_> {
             !meta.commonjs_export
               && (!self.options.optimization.is_inline_const_smart_mode() || meta.safe_to_inline)
           });
-        SimulatedFacadeNamespaceExport {
-          name: name.clone(),
-          referenced_symbol: (!is_inlinable_constant).then_some(export.symbol_ref),
+        let mut referenced_symbols = vec![];
+        if !is_inlinable_constant {
+          referenced_symbols.push(export.symbol_ref);
+          if let Some(flag) =
+            self.link_output.metas[canonical_ref.owner].temporal_symbols.get(&canonical_ref)
+          {
+            let native_owner = self.link_output.module_table[canonical_ref.owner]
+              .as_normal()
+              .filter(|owner| {
+                owner.idx != entry_module_idx
+                  && crate::utils::native_records::has_native_namespace(
+                    self.options,
+                    owner,
+                    &self.link_output.metas[owner.idx],
+                    &self.link_output.symbol_db,
+                  )
+              });
+            referenced_symbols.push(native_owner.map_or(*flag, |owner| owner.namespace_object_ref));
+            referenced_symbols.push(self.link_output.runtime.resolve_symbol("__checkTDZ"));
+          }
         }
+        SimulatedFacadeNamespaceExport { name: name.clone(), referenced_symbols }
       })
       .collect()
   }
@@ -1123,7 +1219,7 @@ impl GenerateStage<'_> {
   /// Collect every live `import()` call site for the requested dynamic entries. Statement
   /// inclusion is authoritative: a surviving import record in an excluded statement is not an
   /// emitted call site and therefore cannot carry an entry trigger.
-  fn live_dynamic_importers(
+  pub(super) fn live_dynamic_importers(
     &self,
     chunk_graph: &ChunkGraph,
     targets: impl IntoIterator<Item = ModuleIdx>,
@@ -1323,7 +1419,7 @@ impl GenerateStage<'_> {
   /// cross-chunk symbol path is emitted under the *declaring symbol's* name. So `export { then as
   /// hostThen }` is a hazard even though no export is named `then`, and `export { local as then }`
   /// is a hazard even though no symbol is named `then`.
-  fn order_wrap_host_can_expose_then_export(
+  pub(super) fn order_wrap_host_can_expose_then_export(
     &self,
     chunk_graph: &ChunkGraph,
     host_chunk_idx: ChunkIdx,
@@ -1568,6 +1664,7 @@ fn lower_order_state(
   input: &OrderLoweringInput<'_>,
   output: &mut OrderLoweringOutput<'_>,
   runtime_helper: RuntimeHelper,
+  async_helpers: [SymbolRef; 3],
   code_splitting_disabled: bool,
   consumer_local_plan: &ConsumerLocalReexportPlan,
 ) {
@@ -1582,11 +1679,16 @@ fn lower_order_state(
     let wrapper_ref = output
       .symbols
       .create_facade_root_symbol_ref(module_idx, &concat_string!("init_", module.repr_name));
-    output.state.insert_order_wrapper(module_idx, wrapper_ref, runtime_helper);
+    let referenced_symbols = if input.linking[module_idx].is_tla_or_contains_tla_dependency {
+      async_helpers.to_vec()
+    } else {
+      vec![]
+    };
+    output.state.insert_order_wrapper(module_idx, wrapper_ref, runtime_helper, referenced_symbols);
     if order_wrapper_is_reexport_transparent(
       &input.linking[module_idx],
       input.asts[module_idx].as_ref(),
-      input.keep_names,
+      input.runtime_idx,
     ) {
       output.state.set_reexport_init_transparent(module_idx);
     }
@@ -1597,6 +1699,7 @@ fn lower_order_state(
   let reexport_usage = collect_frozen_reexport_usage(input, output.state);
   output.state.set_nested_reexport_records(reexport_usage.nested_records.clone());
   output.state.set_consumed_reexport_facades(reexport_usage.consumed_facades.clone());
+  output.state.set_read_reexport_facades(reexport_usage.read_facades.clone());
 
   // Real lowering runs once per bundle, so it builds its own reverse index here; the fixpoint
   // projector passes the analysis-owned one instead of rebuilding per round.
@@ -1724,6 +1827,7 @@ pub(super) fn collect_frozen_reexport_usage(
       consumed_facades.extend(chain.iter().copied());
     }
   }
+  let read_facades = collect_read_namespace_facades(input);
 
   // A namespace-keyed path (recorded for a whole consumed namespace by
   // `record_namespace_consumed_star_reexport_paths`, or a member read resolving to a
@@ -1812,7 +1916,62 @@ pub(super) fn collect_frozen_reexport_usage(
     ));
   }
 
-  FrozenReexportUsage { root_paths, nested_records, consumed_facades }
+  FrozenReexportUsage { root_paths, nested_records, consumed_facades, read_facades }
+}
+
+/// The import facades of other modules that a statically resolved member read passes through: the
+/// export chain of the binding it reads, as `ns` has in `ns.member` where another module
+/// re-exports `ns`, and each facade on the way, as `DomUtils` in `P.DomUtils.member` where `P` is
+/// the namespace of the module that re-exports `DomUtils`. A read that resolves to a member
+/// initializes only that member in its own importer, but an importer that hands its
+/// initialization to a module on the way relies on that module's initializer for whatever it
+/// reads (see `esm_init_obligations::namespace_binding_is_delegated`). A read that the build
+/// replaces with `void 0` or with an inlined constant reads nothing at run time. Only the modules
+/// with a resolved read through another module's namespace import are scanned, which are few.
+fn collect_read_namespace_facades(input: &OrderLoweringInput<'_>) -> FxHashSet<SymbolRef> {
+  let named_import = |facade: SymbolRef| {
+    input.modules[facade.owner].as_normal().and_then(|module| module.named_imports.get(&facade))
+  };
+  let mut read_facades = FxHashSet::default();
+  for (module_idx, meta) in input.linking.iter_enumerated() {
+    let foreign = |facade: &&SymbolRef| facade.owner != module_idx;
+    let reads_through_a_namespace = meta.is_included
+      && meta.resolved_member_expr_refs.values().any(|resolution| {
+        resolution.depended_refs.iter().filter(foreign).any(|facade| {
+          named_import(*facade).is_some_and(|import| matches!(import.imported, Specifier::Star))
+        })
+      });
+    if !reads_through_a_namespace {
+      continue;
+    }
+    for (stmt_idx, stmt_info) in input.statements[module_idx].iter_enumerated() {
+      if !meta.stmt_info_included.has_bit(stmt_idx) {
+        continue;
+      }
+      for reference in &stmt_info.referenced_symbols {
+        let SymbolOrMemberExprRef::MemberExpr(member_expr) = reference else {
+          continue;
+        };
+        let Some(resolution) = member_expr.resolution(&meta.resolved_member_expr_refs) else {
+          continue;
+        };
+        let reads_at_run_time = resolution.resolved.is_some_and(|symbol_ref| {
+          !constant_is_always_inlined(input.constant_value_map, input.inline_const_mode, symbol_ref)
+        });
+        if reads_at_run_time {
+          read_facades.extend(
+            resolution
+              .depended_refs
+              .iter()
+              .filter(foreign)
+              .copied()
+              .filter(|facade| named_import(*facade).is_some()),
+          );
+        }
+      }
+    }
+  }
+  read_facades
 }
 
 /// A mixed module owns its local body but delegates eligible re-export records to consumers.

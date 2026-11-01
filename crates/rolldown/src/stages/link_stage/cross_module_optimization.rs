@@ -48,7 +48,10 @@ struct CrossModuleOptimizationCtx {
 
 impl CrossModuleOptimizationCtx {
   fn new(config: CrossModuleOptimizationConfig) -> Self {
-    Self { changed: true, config }
+    Self {
+      changed: true,
+      config,
+    }
   }
 }
 
@@ -64,8 +67,10 @@ type ModuleIdxAndStmtIdxToDynamicImportExprNodeIdMap =
 impl LinkStage<'_> {
   fn prepare_cross_module_optimization(&self) -> CrossModuleOptimizationConfig {
     let has_side_effect_free_functions = self.module_table.iter().any(|m| {
-      m.as_normal()
-        .is_some_and(|n| n.meta.contains(EcmaViewMeta::TopExportedSideEffectsFreeFunction))
+      m.as_normal().is_some_and(|n| {
+        n.meta
+          .contains(EcmaViewMeta::TopExportedSideEffectsFreeFunction)
+      })
     });
 
     #[expect(clippy::bool_to_int_with_if)]
@@ -177,8 +182,32 @@ impl LinkStage<'_> {
         }
         let module = self.module_table[*item].as_normal()?;
         let module_idx = module.idx;
-        let ast =
-          self.ast_table[module_idx].as_ref().expect("ast should be set in a normal module");
+        if !cross_module_inline_const_ctx.config.inline_const_optimization {
+          let can_have_side_effect_free_call = module
+            .meta
+            .contains(EcmaViewMeta::TopExportedSideEffectsFreeFunction)
+            || module.named_imports.keys().any(|sym_ref| {
+              self
+                .symbols
+                .canonical_ref_for(*sym_ref)
+                .is_side_effect_free_function(&self.symbols, &self.module_table.modules)
+            })
+            || self.metas[module_idx].resolved_member_expr_refs.values().any(|res| {
+              res.prop_and_related_span_list.is_empty()
+                && res.resolved.is_some_and(|sym_ref| {
+                  self
+                    .symbols
+                    .canonical_ref_for(sym_ref)
+                    .is_side_effect_free_function(&self.symbols, &self.module_table.modules)
+                })
+            });
+          if !can_have_side_effect_free_call {
+            return None;
+          }
+        }
+        let ast = self.ast_table[module_idx]
+          .as_ref()
+          .expect("ast should be set in a normal module");
         // A dummy map to fits the api of `ConstEvalCtx`
         let constant_map = FxHashMap::default();
         ast.program.with_dependent(|owner, dep| {
@@ -280,7 +309,15 @@ impl LinkStage<'_> {
       .collect();
 
     let mut new_constant_refs = FxHashSet::default();
-    for (tree_shaking_flags_mutations, local_constants, unreachable_node_ids) in mutation_result {
+    for (tree_shaking_flags_mutations, mut local_constants, unreachable_node_ids) in mutation_result
+    {
+      // Later passes must not reintroduce ESM values removed for initialization safety.
+      // A constant value alone does not prove that evaluation reached its declaration.
+      local_constants.retain(|symbol, _| {
+        self.module_table[symbol.owner]
+          .as_normal()
+          .is_some_and(|module| module.exports_kind.is_commonjs())
+      });
       if let Some((module_idx, mutations)) = tree_shaking_flags_mutations
         && self.module_table[module_idx].as_normal().is_some()
       {
@@ -361,7 +398,12 @@ impl<'ast> CrossModuleOptimizationRunnerContext<'_, 'ast> {
   fn resolve_callee_canonical_symbol(&self, callee: &Expression<'ast>) -> Option<SymbolRef> {
     if let Some(ident) = callee.as_identifier() {
       let ref_id = ident.reference_id.get()?;
-      let symbol_id = self.immutable_ctx.eval_ctx.scope.get_reference(ref_id).symbol_id()?;
+      let symbol_id = self
+        .immutable_ctx
+        .eval_ctx
+        .scope
+        .get_reference(ref_id)
+        .symbol_id()?;
       return Some(
         self
           .immutable_ctx
@@ -371,14 +413,22 @@ impl<'ast> CrossModuleOptimizationRunnerContext<'_, 'ast> {
     }
 
     let member_expr = callee.as_member_expression()?;
-    let resolution = self.immutable_ctx.resolved_member_expr_refs.get(&member_expr.node_id())?;
+    let resolution = self
+      .immutable_ctx
+      .resolved_member_expr_refs
+      .get(&member_expr.node_id())?;
     // Only treat it as a direct call to the resolved binding when the whole member expression
     // resolves to it (e.g. `ns.fn`). If trailing properties remain (e.g. `ns.fn.bar`), the call
     // targets something else.
     if !resolution.prop_and_related_span_list.is_empty() {
       return None;
     }
-    Some(self.immutable_ctx.symbols.canonical_ref_for(resolution.resolved?))
+    Some(
+      self
+        .immutable_ctx
+        .symbols
+        .canonical_ref_for(resolution.resolved?),
+    )
   }
 }
 
@@ -394,10 +444,22 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
   fn visit_program(&mut self, program: &oxc::ast::ast::Program<'ast>) {
     // Custom visit
     for (idx, stmt) in program.body.iter().enumerate() {
+      let stmt_info_idx = StmtInfoIdx::new(idx + 1);
+      if !self.immutable_ctx.config.inline_const_optimization
+        && !self.immutable_ctx.stmt_infos[self.immutable_ctx.module_idx][stmt_info_idx]
+          .eval_flags
+          .has_side_effect_for_tree_shaking()
+        && !self
+          .immutable_ctx
+          .stmt_idx_to_dynamic_import_expr_node_ids
+          .contains_key(&stmt_info_idx)
+      {
+        self.toplevel_stmt_idx.set(self.toplevel_stmt_idx.get() + 1);
+        continue;
+      }
       let pre_node_id_len = self.side_effect_free_call_expr_node_ids.len();
       self.visit_statement(stmt);
       if pre_node_id_len != self.side_effect_free_call_expr_node_ids.len() {
-        let stmt_info_idx = StmtInfoIdx::new(idx + 1);
         let constants = LinkedConstantLookup {
           module_idx: self.immutable_ctx.module_idx,
           stmt_idx: stmt_info_idx,
@@ -441,7 +503,9 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
           if is_lazy_path {
             // This import expression is inside a lazy path (e.g., inside a PURE-annotated
             // function callback), so it's unreachable and can be ignored for chunk splitting
-            self.unreachable_import_expression_node_ids.insert(it.node_id());
+            self
+              .unreachable_import_expression_node_ids
+              .insert(it.node_id());
           }
         }
       }
@@ -474,13 +538,17 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
       .unwrap_or((false, false));
 
     if is_side_effects_free_function {
-      self.side_effect_free_call_expr_node_ids.insert(it.node_id());
+      self
+        .side_effect_free_call_expr_node_ids
+        .insert(it.node_id());
       // Only track as latest side-effect-free call for unreachable import detection
       // when the function is truly empty (not just annotated with @__NO_SIDE_EFFECTS__).
       // Annotated functions may still use their arguments, so dynamic imports in
       // callback arguments should not be treated as unreachable.
       if !is_pure_annotation_only {
-        pre_node_id = self.latest_side_effect_free_call_expr_node_id.replace(it.node_id());
+        pre_node_id = self
+          .latest_side_effect_free_call_expr_node_id
+          .replace(it.node_id());
       }
     }
     walk_js::walk_call_expression(self, it);
@@ -510,10 +578,15 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
               .as_ref()
               .and_then(|expr| try_extract_const_literal(self.immutable_ctx.eval_ctx, expr))
           {
-            if self.local_constant_symbol_map.get(&symbol_ref).map(|meta| &meta.value)
+            if self
+              .local_constant_symbol_map
+              .get(&symbol_ref)
+              .map(|meta| &meta.value)
               != Some(&value)
             {
-              self.local_constant_symbol_map.insert(symbol_ref, ConstExportMeta::new(value, false));
+              self
+                .local_constant_symbol_map
+                .insert(symbol_ref, ConstExportMeta::new(value, false));
             }
           }
         }
@@ -527,7 +600,10 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
     // `stmt_idx_to_dynamic_import_expr_node_ids` is not empty) or if `inline_const_optimization` is enabled.
     // This placement ensures we skip walking when neither is needed.
     if !self.immutable_ctx.config.inline_const_optimization
-      && self.immutable_ctx.stmt_idx_to_dynamic_import_expr_node_ids.is_empty()
+      && self
+        .immutable_ctx
+        .stmt_idx_to_dynamic_import_expr_node_ids
+        .is_empty()
     {
       return;
     }
@@ -550,8 +626,15 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
       local_binding_for_default_export.unwrap_or(self.immutable_ctx.export_default_symbol.symbol);
     let symbol_ref: SymbolRef = (self.immutable_ctx.module_idx, symbol_id).into();
     if let Some(v) = try_extract_const_literal(self.immutable_ctx.eval_ctx, expr) {
-      if self.local_constant_symbol_map.get(&symbol_ref).map(|meta| &meta.value) != Some(&v) {
-        self.local_constant_symbol_map.insert(symbol_ref, ConstExportMeta::new(v, false));
+      if self
+        .local_constant_symbol_map
+        .get(&symbol_ref)
+        .map(|meta| &meta.value)
+        != Some(&v)
+      {
+        self
+          .local_constant_symbol_map
+          .insert(symbol_ref, ConstExportMeta::new(v, false));
       }
     }
   }

@@ -101,16 +101,18 @@ impl ConflictResolver {
 /// naming priority. `exec_order` is assigned ascending (dependencies first,
 /// entry last / highest), so `Reverse(exec_order)` sorts the entry first — the
 /// same priority as the `.rev()` pass in `deconflict_chunk_symbols`. Ties are
-/// broken by symbol name ascending. This is the single source of the ordering
+/// broken by symbol name ascending, then by `SymbolId` ascending (matching the
+/// forward statement declaration order within a module for same-named facade
+/// symbols such as `__initialized`). This is the single source of the ordering
 /// invariant previously duplicated as the pinned-SHA comments in
 /// `compute_cross_chunk_links.rs`.
 pub fn deconflict_order_key<'a>(
   symbol_ref: SymbolRef,
   module_table: &ModuleTable,
   symbol_db: &'a SymbolRefDb,
-) -> (Reverse<u32>, &'a str) {
+) -> (Reverse<u32>, &'a str, oxc::semantic::SymbolId) {
   let exec_order = module_table[symbol_ref.owner].exec_order();
-  (Reverse(exec_order), symbol_ref.name(symbol_db))
+  (Reverse(exec_order), symbol_ref.name(symbol_db), symbol_ref.symbol)
 }
 
 #[cfg(test)]

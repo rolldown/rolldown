@@ -242,6 +242,18 @@ produces only the changed + newly discovered modules → sparse `Map`.
    same value as the scan-output `Map` key, the `Module.idx` field, and the
    `module_id_to_idx` value (see `try_spawn_new_task`). These three are
    therefore equal for any given module.
+7. A module's kind (external or not) is fixed at first resolution, like its
+   `ModuleIdx`. A later resolution of the same id to the other kind does not
+   change the module: `check_external_conflict` (in the `Seen(idx)` arm of
+   `try_spawn_new_task`) records `INVALID_EXTERNAL_ID` or
+   `EXTERNAL_MODULES_CANNOT_BE_TRANSFORMED_TO_MODULES`, and the scan fails
+   (#11417). In a partial scan, the kind of a module from an earlier build
+   comes from the snapshot. Thus a partial scan also reports this error when
+   an edit only switches the kind (the last importer of the old kind changes
+   its specifier). A fresh build accepts that edit. The error stays until a
+   full scan, because after a failed partial scan the dev engine runs partial
+   scans again. Unresolved: check the final `importers[idx]` at the end of the
+   scan, or make the next scan full.
 
 ---
 
@@ -262,7 +274,7 @@ inserts into it.
 | ------------------------ | ----------------------------------- | --------------------------------------------------------------------------------------------- |
 | Runtime module           | `fetch_modules`, `:304`–`:308`      | `Entry::Vacant` → insert `Seen(idx)` (once).                                                  |
 | Invalidate changed files | `fetch_modules`, `:348`–`:350`      | For each watcher-reported file: `Entry::Occupied` → `insert(Invalidate(idx))`. idx unchanged. |
-| `Seen(idx)` arm          | `try_spawn_new_task`, `:230`–`:244` | No write; returns idx, module not re-scanned.                                                 |
+| `Seen(idx)` arm          | `try_spawn_new_task`, `:230`–`:244` | No write; checks the module kind (invariant 7), returns idx, module not re-scanned.           |
 | `Invalidate(idx)` arm    | `try_spawn_new_task`, `:246`–`:251` | `insert(Seen(idx))` — module is being re-scanned.                                             |
 | `None`, partial scan     | `try_spawn_new_task`, `:252`–`:259` | New module: `insert(id, Seen(len))`, `len = module_id_to_idx.len()`.                          |
 | `None`, full scan        | `try_spawn_new_task`, `:260`–`:264` | New module: `insert(id, Seen(alloc()))`.                                                      |

@@ -22,6 +22,9 @@ use super::events::cannot_call_namespace::CannotCallNamespace;
 use super::events::configuration_field_conflict::ConfigurationFieldConflict;
 use super::events::could_not_clean_directory::CouldNotCleanDirectory;
 use super::events::duplicate_shebang::DuplicateShebang;
+use super::events::external_module_conflict::{
+  ExternalModuleConflict, ExternalModuleConflictImporter,
+};
 use super::events::filename_conflict::FilenameConflict;
 use super::events::filename_outside_output_directory::FilenameOutsideOutputDirectory;
 use super::events::illegal_identifier_as_name::IllegalIdentifierAsName;
@@ -78,6 +81,30 @@ impl BuildDiagnostic {
 
   pub fn entry_cannot_be_external(unresolved_id: impl AsRef<Path>) -> Self {
     Self::new_inner(ExternalEntry { id: unresolved_id.as_ref().to_path_buf() })
+  }
+
+  /// A module id is already a non-external module, and a later resolution makes it external.
+  pub fn invalid_external_id(
+    module_id: ArcStr,
+    importer: Option<ExternalModuleConflictImporter>,
+  ) -> Self {
+    Self::new_inner(ExternalModuleConflict {
+      module_id,
+      is_existing_module_external: false,
+      importer,
+    })
+  }
+
+  /// A module id is already an external module, and a later resolution makes it non-external.
+  pub fn external_modules_cannot_be_transformed_to_modules(
+    module_id: ArcStr,
+    importer: Option<ExternalModuleConflictImporter>,
+  ) -> Self {
+    Self::new_inner(ExternalModuleConflict {
+      module_id,
+      is_existing_module_external: true,
+      importer,
+    })
   }
 
   pub fn ambiguous_external_namespace(

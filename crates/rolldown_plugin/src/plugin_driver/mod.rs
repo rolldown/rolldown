@@ -75,6 +75,13 @@ impl PluginDriver {
     self.context_load_completion_manager.mark_completion(module_id);
   }
 
+  /// Ends the `this.load` wait for a module that sends no load signal itself, for example an
+  /// id that is already an external module. Unlike `mark_context_load_modules_loaded`, it can
+  /// run more than once for the same module.
+  pub fn ensure_context_load_module_completion(&self, module_id: ModuleId) {
+    self.context_load_completion_manager.ensure_completion(module_id);
+  }
+
   pub fn invalidate_context_load_module(&self, module_id: &ModuleId) {
     self.context_load_completion_manager.invalidate(module_id);
   }
@@ -175,6 +182,22 @@ impl ContextLoadCompletionManager {
 
   pub fn invalidate(&self, module_id: &ModuleId) {
     self.notifiers.remove(module_id);
+  }
+
+  /// Same as `mark_completion`, but does nothing if the module is already completed.
+  pub fn ensure_completion(&self, module_id: ModuleId) {
+    match self.notifiers.entry(module_id) {
+      dashmap::Entry::Vacant(guard) => {
+        guard.insert(ContextLoadCompletionState::Completed);
+      }
+      dashmap::Entry::Occupied(mut guard) => {
+        if let ContextLoadCompletionState::Pending(sender) = guard.get_mut() {
+          // No receiver is left if the waiting hook was dropped. Nothing waits then.
+          let _ = sender.send(());
+          *guard.get_mut() = ContextLoadCompletionState::Completed;
+        }
+      }
+    }
   }
 
   pub fn clear(&self) {

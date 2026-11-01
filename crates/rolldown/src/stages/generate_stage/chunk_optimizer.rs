@@ -21,6 +21,7 @@ use super::{
   GenerateStage, chunk_ext::ChunkCreationReason, chunk_ext::ChunkDebugExt,
   code_splitting::IndexSplittingInfo, compute_cross_chunk_links::chunk_evaluation_order,
   compute_cross_chunk_links::sort_chunk_importees_by,
+  dynamic_entry_namespace::is_pure_dynamic_entry_chunk,
   simulated_facade_inclusion::include_simulated_facade_namespace,
 };
 
@@ -366,6 +367,7 @@ impl GenerateStage<'_> {
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
     input_base: &ArcStr,
     temp_chunk_graph: &mut ChunkOptimizationGraph,
+    dynamic_entry_merge_targets: &mut FxHashSet<ChunkIdx>,
   ) {
     let static_entry_chunk_reference: FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>> =
       self.construct_static_entry_to_reached_dynamic_entries_map(chunk_graph);
@@ -449,6 +451,11 @@ impl GenerateStage<'_> {
         ChunkAssignment::Merged(target_chunk_idx) => {
           // Merge chunk dependencies immediately after successful merge
           temp_chunk_graph.merge_chunk_dependencies(target_chunk_idx, temp_chunk_idx);
+          // The merged modules can make the chunk of a dynamic entry export bindings that its
+          // entry module does not export. `find_leaking_dynamic_entry_namespaces` checks it.
+          if is_pure_dynamic_entry_chunk(&chunk_graph.chunk_table[target_chunk_idx]) {
+            dynamic_entry_merge_targets.insert(target_chunk_idx);
+          }
         }
         ChunkAssignment::Created(new_chunk_id) => {
           temp_chunk_graph.register_chunk_graph_index(new_chunk_id, temp_chunk_idx);
@@ -987,6 +994,7 @@ impl GenerateStage<'_> {
   /// (e.g., a common chunk, manual code splitting group, or user-defined entry chunk).
   /// Instead of keeping an empty facade chunk, we rewrite references to point directly to the target chunk
   /// and ensure proper symbol inclusion.
+  #[expect(clippy::too_many_arguments)]
   pub(super) fn optimize_facade_entry_chunks(
     &mut self,
     chunk_graph: &mut ChunkGraph,
@@ -995,14 +1003,24 @@ impl GenerateStage<'_> {
     module_is_assigned: &mut IndexBitSet<ModuleIdx>,
     temp_chunk_opt_graph: &ChunkOptimizationGraph,
     used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
+    dynamic_entry_merge_targets: &FxHashSet<ChunkIdx>,
   ) {
     // Find empty dynamic entry chunks that should be merged with their target common chunks
     let (mut facade_eliminations, common_chunk_merges, emitted_chunk_groups) =
       self.find_facade_chunk_merge_ops(chunk_graph, temp_chunk_opt_graph);
+    // The pure dynamic entry chunks whose merged modules add keys to the namespace of `import()`.
+    // Each one also exports the namespace of its entry module, and the importers read that
+    // namespace. See internal-docs/code-splitting/implementation.md#dynamic-entry-namespaces.
+    let namespace_extractions = self.find_leaking_dynamic_entry_namespaces(
+      chunk_graph,
+      dynamic_entry_merge_targets,
+      used_symbol_refs_builder,
+    );
 
     if facade_eliminations.is_empty()
       && common_chunk_merges.is_empty()
       && emitted_chunk_groups.is_empty()
+      && namespace_extractions.is_empty()
     {
       return;
     }
@@ -1018,6 +1036,9 @@ impl GenerateStage<'_> {
         elimination.entry_module_idx,
         used_symbol_refs_builder,
       );
+    }
+    for &(_, entry_module_idx) in &namespace_extractions {
+      self.narrow_namespace_stmt_to_used_symbols(entry_module_idx, used_symbol_refs_builder);
     }
 
     let mut runtime_dependent_chunks = FxHashSet::default();
@@ -1095,6 +1116,22 @@ impl GenerateStage<'_> {
           let target_chunk = &mut chunk_graph.chunk_table[*to_chunk_idx];
           target_chunk.depended_runtime_helper.insert(RuntimeHelper::ExportAll);
           runtime_dependent_chunks.insert(*to_chunk_idx);
+          needs_export_all_helper = true;
+        }
+      }
+      // The same extraction as `apply_dynamic_entry_namespace_extractions`: the target is the
+      // entry chunk itself.
+      for &(entry_chunk_idx, entry_module_idx) in &namespace_extractions {
+        chunk_graph
+          .common_chunk_exported_facade_chunk_namespace
+          .entry(entry_chunk_idx)
+          .or_default()
+          .insert(entry_module_idx);
+        if include_simulated_facade_namespace(context, entry_module_idx) {
+          chunk_graph.chunk_table[entry_chunk_idx]
+            .depended_runtime_helper
+            .insert(RuntimeHelper::ExportAll);
+          runtime_dependent_chunks.insert(entry_chunk_idx);
           needs_export_all_helper = true;
         }
       }
@@ -1239,6 +1276,13 @@ impl GenerateStage<'_> {
             )
           })
           .filter(|&host| {
+            self.runtime_merge_preserves_dynamic_entry_namespace(
+              chunk_graph,
+              host,
+              &consumer_chunks,
+            )
+          })
+          .filter(|&host| {
             self.runtime_host_keeps_evaluation_order(
               chunk_graph,
               host,
@@ -1257,6 +1301,11 @@ impl GenerateStage<'_> {
                     &consumer_chunks,
                   )
                   && self.runtime_merge_preserves_target_signature(
+                    chunk_graph,
+                    target_chunk_idx,
+                    &consumer_chunks,
+                  )
+                  && self.runtime_merge_preserves_dynamic_entry_namespace(
                     chunk_graph,
                     target_chunk_idx,
                     &consumer_chunks,

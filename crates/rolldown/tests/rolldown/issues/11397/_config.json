@@ -1,0 +1,23 @@
+{
+  "_comment": "Keep internal chunk exports out of an observable dynamic-import namespace, while preserving live bindings and the static consumer's imports. The CJS variant renders the extracted namespace through `require`. Explicit extension opt-outs retain the original layout.",
+  "config": {},
+  "extendedTests": {
+    "preserveEntrySignaturesStrict": false,
+    "preserveEntrySignaturesAllowExtension": false
+  },
+  "configVariants": [
+    {
+      "format": "cjs",
+      "_snapshot": false
+    },
+    {
+      "strictExecutionOrder": true,
+      "_snapshot": false
+    },
+    {
+      "_configName": "allow-extension",
+      "preserveEntrySignatures": "allow-extension",
+      "_snapshot": false
+    }
+  ]
+}

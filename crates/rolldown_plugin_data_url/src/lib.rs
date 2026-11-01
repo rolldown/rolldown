@@ -49,16 +49,19 @@ impl Plugin for DataUrlPlugin {
       };
 
       let module_type = match parsed.mime {
-        "text/css" => ModuleType::Css,
-        "text/javascript" => ModuleType::Js,
-        "application/json" => ModuleType::Json,
+        mime if mime.eq_ignore_ascii_case("text/css") => ModuleType::Css,
+        mime if mime.eq_ignore_ascii_case("text/javascript") => ModuleType::Js,
+        mime if mime.eq_ignore_ascii_case("application/json") => ModuleType::Json,
         _ => {
           return Ok(None);
         }
       };
 
       let data = if parsed.is_base64 {
-        let data = base64_simd::STANDARD.decode_to_vec(parsed.data)?;
+        // Data URL payloads are percent-decoded before their base64 decoding.
+        // This borrows the original bytes when there are no percent escapes.
+        let encoded: Cow<'_, [u8]> = percent_encoding::percent_decode_str(parsed.data).into();
+        let data = base64_simd::STANDARD.decode_to_vec(encoded)?;
         simdutf8::basic::from_utf8(&data)?;
         // SAFETY: `data` is valid utf8
         unsafe { String::from_utf8_unchecked(data) }.into()

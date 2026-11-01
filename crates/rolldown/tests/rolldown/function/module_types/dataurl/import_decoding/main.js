@@ -1,0 +1,21 @@
+import assert from 'node:assert';
+import plain from 'data:text/javascript,export default 42';
+import fragment from 'data:text/javascript,export default 42#fragment';
+import encodedHash from "data:text/javascript,export default '%23'#fragment";
+import base64 from 'data:text/javascript;base64,ZXhwb3J0IGRlZmF1bHQgNDI=';
+import encodedBase64 from 'data:text/javascript;base64,ZXhwb3J0IGRlZmF1bHQgNDI%3D#fragment';
+import mixedCase from 'data:TeXt/JaVaScRiPt,export default 42';
+import json from 'data:APPLICATION/JSON,%7B%22value%22%3A42%7D#fragment';
+import first from 'data:text/javascript,export default {}#first';
+import firstAgain from 'data:text/javascript,export default {}#first';
+import second from 'data:text/javascript,export default {}#second';
+
+assert.strictEqual(plain, 42);
+assert.strictEqual(fragment, 42);
+assert.strictEqual(encodedHash, '#');
+assert.strictEqual(base64, 42);
+assert.strictEqual(encodedBase64, 42);
+assert.strictEqual(mixedCase, 42);
+assert.deepStrictEqual(json, { value: 42 });
+assert.strictEqual(first, firstAgain);
+assert.notStrictEqual(first, second);

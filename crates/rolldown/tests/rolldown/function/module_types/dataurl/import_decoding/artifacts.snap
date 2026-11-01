@@ -1,0 +1,56 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// \0rolldown/data-url:egmH1C4GtfOjnZhYQNYyhA
+var data_url_egmH1C4GtfOjnZhYQNYyhA_default = { value: 42 };
+// \0rolldown/data-url:GYrYjrcFpeBavZ2a3ZC4mQ
+var data_url_GYrYjrcFpeBavZ2a3ZC4mQ_default = {};
+// \0rolldown/data-url:WtlFrZuztX3hURdNMUFpNQ
+var data_url_WtlFrZuztX3hURdNMUFpNQ_default = {};
+// main.js
+assert.strictEqual(42, 42);
+assert.strictEqual(42, 42);
+assert.strictEqual("#", "#");
+assert.strictEqual(42, 42);
+assert.strictEqual(42, 42);
+assert.strictEqual(42, 42);
+assert.deepStrictEqual(data_url_egmH1C4GtfOjnZhYQNYyhA_default, { value: 42 });
+assert.strictEqual(data_url_GYrYjrcFpeBavZ2a3ZC4mQ_default, data_url_GYrYjrcFpeBavZ2a3ZC4mQ_default);
+assert.notStrictEqual(data_url_GYrYjrcFpeBavZ2a3ZC4mQ_default, data_url_WtlFrZuztX3hURdNMUFpNQ_default);
+
+```
+
+# Variant: [format: Cjs]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+// \0rolldown/data-url:egmH1C4GtfOjnZhYQNYyhA
+var data_url_egmH1C4GtfOjnZhYQNYyhA_default = { value: 42 };
+// \0rolldown/data-url:GYrYjrcFpeBavZ2a3ZC4mQ
+var data_url_GYrYjrcFpeBavZ2a3ZC4mQ_default = {};
+// \0rolldown/data-url:WtlFrZuztX3hURdNMUFpNQ
+var data_url_WtlFrZuztX3hURdNMUFpNQ_default = {};
+// main.js
+node_assert.default.strictEqual(42, 42);
+node_assert.default.strictEqual(42, 42);
+node_assert.default.strictEqual("#", "#");
+node_assert.default.strictEqual(42, 42);
+node_assert.default.strictEqual(42, 42);
+node_assert.default.strictEqual(42, 42);
+node_assert.default.deepStrictEqual(data_url_egmH1C4GtfOjnZhYQNYyhA_default, { value: 42 });
+node_assert.default.strictEqual(data_url_GYrYjrcFpeBavZ2a3ZC4mQ_default, data_url_GYrYjrcFpeBavZ2a3ZC4mQ_default);
+node_assert.default.notStrictEqual(data_url_GYrYjrcFpeBavZ2a3ZC4mQ_default, data_url_WtlFrZuztX3hURdNMUFpNQ_default);
+
+```

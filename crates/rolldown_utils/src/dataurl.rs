@@ -52,6 +52,9 @@ fn parse_data_url_nom(input: &str) -> IResult<&str, ParsedDataUrl<'_>> {
 }
 
 pub fn parse_data_url(dataurl: &str) -> Option<ParsedDataUrl<'_>> {
+  // The URL fragment is not part of the payload. Strip it before percent-decoding
+  // so an encoded `%23` remains part of the data.
+  let dataurl = dataurl.split_once('#').map_or(dataurl, |(url, _)| url);
   match parse_data_url_nom(dataurl) {
     Ok((_, parsed)) => Some(parsed),
     Err(_) => None,
@@ -120,5 +123,29 @@ mod tests {
     assert_eq!(mime, "application/json");
     assert!(is_base64);
     assert_eq!(data, "eyJ3b3JrcyI6dHJ1ZX0=");
+  }
+
+  #[test]
+  fn test_fragment_is_not_part_of_data() {
+    for dataurl in
+      ["data:text/javascript,export default 42#fragment", "data:text/javascript,export default 42#"]
+    {
+      let parsed = parse_data_url(dataurl).unwrap();
+      assert_eq!(parsed.data, "export default 42");
+    }
+    let parsed = parse_data_url("data:text/javascript;base64,NDI=#fragment").unwrap();
+    assert!(parsed.is_base64);
+    assert_eq!(parsed.data, "NDI=");
+  }
+
+  #[test]
+  fn test_percent_encoded_fragment_is_data() {
+    let parsed = parse_data_url("data:text/javascript,export default '%23'#fragment").unwrap();
+    assert_eq!(parsed.data, "export default '%23'");
+  }
+
+  #[test]
+  fn test_fragment_before_data_is_invalid() {
+    assert!(parse_data_url("data:text/javascript#fragment,export default 42").is_none());
   }
 }

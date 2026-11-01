@@ -249,7 +249,7 @@ sugar_path = { version = "3", features = ["cached_current_dir"] }
 supports-color = "3"
 tempfile = "3.27.0"
 terminal_size = "0.4.4"
-testing_macros = "1.0.1"
+testing_macros = "2.0.0"
 tokio = { version = "1.52.3", default-features = false }
 tracing = "0.1.44"
 tracing-chrome = "0.7.2"

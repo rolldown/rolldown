@@ -83,7 +83,8 @@ impl BuildDiagnostic {
     Self::new_inner(ExternalEntry { id: unresolved_id.as_ref().to_path_buf() })
   }
 
-  /// A module id is already a non-external module, and a later resolution makes it external.
+  /// Use this error when the module of an id is not external, but a later resolution of the
+  /// id is external.
   pub fn invalid_external_id(
     module_id: ArcStr,
     importer: Option<ExternalModuleConflictImporter>,
@@ -95,7 +96,8 @@ impl BuildDiagnostic {
     })
   }
 
-  /// A module id is already an external module, and a later resolution makes it non-external.
+  /// Use this error when the module of an id is external, but a later resolution of the id
+  /// is not external.
   pub fn external_modules_cannot_be_transformed_to_modules(
     module_id: ArcStr,
     importer: Option<ExternalModuleConflictImporter>,

@@ -7,7 +7,8 @@ use crate::{
   types::{diagnostic_options::DiagnosticOptions, event_kind::EventKind},
 };
 
-/// The import that resolves a module id to the other kind.
+/// This struct holds the import that causes the conflict. The import resolves the
+/// module id to the other kind (external or not external).
 #[derive(Debug)]
 pub struct ExternalModuleConflictImporter {
   pub source: ArcStr,
@@ -15,18 +16,20 @@ pub struct ExternalModuleConflictImporter {
   pub importee_span: Span,
 }
 
-/// One module id is resolved as an external module and as a non-external module.
+/// Two resolutions of one module id do not agree. One resolution is external, and the other
+/// resolution is not external.
 ///
-/// A module id has one module, and the first resolution decides if it is external. A later
-/// resolution of the other kind is an error, like in Rollup. Without this error, the module
-/// kind would depend on the load order.
+/// A module id has one module, and the first resolution decides if the module is external.
+/// A later resolution of the other kind is an error, like in Rollup. Without this error, the
+/// load order decides the module kind.
 ///
-/// This event does not implement `BuildEvent::id`, because Rollup's logs for these codes carry
-/// no `id` field.
+/// This event does not implement `BuildEvent::id`, because Rollup logs for these codes do not
+/// have an `id` field.
 #[derive(Debug)]
 pub struct ExternalModuleConflict {
   pub(crate) module_id: ArcStr,
-  /// `true` if the module is external and a later resolution is not external.
+  /// The value is `true` if the existing module is external and a later resolution is not
+  /// external.
   pub(crate) is_existing_module_external: bool,
   pub(crate) importer: Option<ExternalModuleConflictImporter>,
 }

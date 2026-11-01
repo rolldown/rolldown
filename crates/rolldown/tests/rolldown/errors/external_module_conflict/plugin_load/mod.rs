@@ -8,7 +8,8 @@ use rolldown_plugin::{
 use rolldown_std_utils::PathExt as _;
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
-/// Calls `this.load` for lib.js. `./lib.js` in main.js already made that id external.
+/// This plugin calls `this.load` for lib.js. The `./lib.js` import in main.js already made
+/// that id external.
 #[derive(Debug)]
 struct LoadExternalId;
 

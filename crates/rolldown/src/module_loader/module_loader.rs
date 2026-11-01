@@ -125,11 +125,13 @@ pub struct ModuleLoader<'a, Fs: FileSystem + Clone + 'static> {
   /// of the first TLA keyword. Stored here instead of on every `EcmaView`
   /// because top-level await is rarely used in real-world apps.
   tla_keyword_span_map: FxHashMap<ModuleIdx, Span>,
-  /// Modules that this scan spawned as external. It gives the kind of a module
-  /// before its task finishes. See `is_external_module`.
+  /// This set contains the modules that this scan spawned as external. The set
+  /// gives the kind of a module before its task finishes. See
+  /// `is_external_module`.
   external_module_idxs: FxHashSet<ModuleIdx>,
-  /// Errors of this scan, from the message loop and from helpers such as
-  /// `try_spawn_new_task`. `fetch_modules` returns them after the scan.
+  /// This list contains the errors of this scan. The message loop and helpers
+  /// such as `try_spawn_new_task` add errors to it. `fetch_modules` returns the
+  /// list after the scan.
   errors: Vec<BuildDiagnostic>,
 }
 
@@ -293,26 +295,32 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     }
   }
 
-  /// Returns `true` if the module at `idx` is external. The loader knows the
-  /// kind when it spawns the task, so the task does not need to be finished.
+  /// This function returns `true` if the module at `idx` is external. The
+  /// loader knows the kind when it spawns the task. Thus this function can
+  /// return the kind before the task finishes.
   fn is_external_module(&self, idx: ModuleIdx) -> bool {
     // A full scan spawns every module. A partial scan allocates a slot for each
-    // module that it spawns (changed and new modules), and the kind from this
-    // scan replaces the kind in the snapshot: a changed file that was external
-    // can now be a normal module.
+    // module that it spawns (changed and new modules). For these modules, the
+    // kind from this scan replaces the kind in the snapshot. Thus a changed file
+    // that was external can now be a normal module.
     if self.is_full_scan || self.intermediate_normal_modules.modules.try_get(idx).is_some() {
       self.external_module_idxs.contains(&idx)
     } else {
-      // An unchanged module from an earlier build.
+      // This scan did not spawn the module. The module is from an earlier build,
+      // and the snapshot has its kind.
       self.cache.get_snapshot().module_table.get(idx).is_some_and(Module::is_external)
     }
   }
 
-  /// Records an error if `resolved_id` is external but the module at `idx` is
-  /// not, or the opposite. One id has one module, and the first resolution
-  /// decided its kind. Without this error, that kind would depend on which
-  /// importer finished loading first (#11417). Rollup reports the same errors.
-  /// See internal-docs/cache/implementation.md (invariant 7).
+  /// This function records an error if the two kinds are different:
+  ///
+  /// - `resolved_id` is external, and the module at `idx` is not external.
+  /// - `resolved_id` is not external, and the module at `idx` is external.
+  ///
+  /// One id has one module, and the first resolution decides its kind. Without
+  /// this error, the importer that loads first decides the kind (#11417).
+  /// Rollup reports the same errors. See internal-docs/cache/implementation.md
+  /// (invariant 7).
   fn check_external_conflict(
     &mut self,
     idx: ModuleIdx,
@@ -647,13 +655,15 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
             if let Some(usage) = dynamic_import_rec_exports_usage.remove(&rec_idx) {
               dynamic_import_exports_usage_pairs.push((idx, usage));
             }
-            // External modules are excluded here to preserve the bit-position-to-ChunkIdx
-            // invariant in code splitting. `is_external` comes from this record, but it equals
-            // the kind of the module at `idx`: for a mismatch, `try_spawn_new_task` records an
-            // error and the build stops before code splitting. User-defined and emitted entries
-            // are never external: `load_entry_module()` rejects an external resolution with
-            // `entry_cannot_be_external`, and `try_spawn_new_task` rejects an entry whose id is
-            // already an external module.
+            // This filter excludes external modules, so that each bit position in code
+            // splitting stays equal to a `ChunkIdx`. `is_external` comes from this import
+            // record, but it is the same as the kind of the module at `idx`. If the two
+            // kinds are different, `try_spawn_new_task` records an error, and the build
+            // stops before code splitting. User-defined entries and emitted entries are
+            // never external:
+            // - `load_entry_module()` rejects an external resolution with
+            //   `entry_cannot_be_external`.
+            // - `try_spawn_new_task` rejects an entry whose id is already an external module.
             if matches!(raw_rec.kind, ImportKind::DynamicImport)
               && !is_external
               && !user_defined_entry_ids.contains(&idx)
@@ -775,10 +785,11 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         ModuleLoaderMsg::FetchModule(resolve_id) => {
           let module_id = resolve_id.id.clone();
           let idx = self.try_spawn_new_task(*resolve_id, None, false, None, &user_defined_entries);
-          // `this.load` waits for a load signal, and only a normal module task sends it. An id
-          // that is already external is a conflict that `try_spawn_new_task` records. End the
-          // wait so that the build can stop with that error instead of a hang. No normal task
-          // runs for an external module in this scan, so the wait gets no second signal.
+          // `this.load` waits for a load signal, and only a normal module task sends it.
+          // A `this.load` of an id that is already external is a conflict, and
+          // `try_spawn_new_task` records it as an error. The code below ends the wait, so
+          // the build stops with that error and does not hang. No normal module task runs
+          // for an external module in this scan, so the wait gets no second signal.
           if self.is_external_module(idx) {
             self.shared_context.plugin_driver.ensure_context_load_module_completion(module_id);
           }

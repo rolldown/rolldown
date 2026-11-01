@@ -11,6 +11,9 @@ import assert from "node:assert/strict";
 // bar.js
 var bar_exports = /* @__PURE__ */ __exportAll({ bar: () => "bar" });
 // main.js
-assert.deepEqual(bar_exports, Object.defineProperty({ bar: "bar" }, Symbol.toStringTag, { value: "Module" }));
+assert.deepEqual(bar_exports, Object.defineProperty({
+	__proto__: null,
+	bar: "bar"
+}, Symbol.toStringTag, { value: "Module" }));
 
 ```

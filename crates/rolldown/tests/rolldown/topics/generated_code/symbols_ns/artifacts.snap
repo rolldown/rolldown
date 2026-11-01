@@ -12,7 +12,7 @@ import assert from "assert";
 var import_exports = /* @__PURE__ */ __exportAll({ default: () => "hi" });
 // main.js
 assert.deepStrictEqual(Object.getOwnPropertyNames(import_exports), ["default"]);
-assert.equal(String(import_exports), "[object Module]");
+assert.equal(Object.prototype.toString.call(import_exports), "[object Module]");
 
 ```
 
@@ -30,7 +30,7 @@ assert = __toESM(assert);
 var import_exports = /* @__PURE__ */ __exportAll({ default: () => "hi" });
 // main.js
 assert.default.deepStrictEqual(Object.getOwnPropertyNames(import_exports), ["default"]);
-assert.default.equal(String(import_exports), "[object Module]");
+assert.default.equal(Object.prototype.toString.call(import_exports), "[object Module]");
 
 ```
 
@@ -57,7 +57,7 @@ assert.default.equal(String(import_exports), "[object Module]");
 	var import_exports = /* @__PURE__ */ __exportAll({ default: () => "hi" });
 	// main.js
 	assert.default.deepStrictEqual(Object.getOwnPropertyNames(import_exports), ["default"]);
-	assert.default.equal(String(import_exports), "[object Module]");
+	assert.default.equal(Object.prototype.toString.call(import_exports), "[object Module]");
 })(assert);
 
 ```

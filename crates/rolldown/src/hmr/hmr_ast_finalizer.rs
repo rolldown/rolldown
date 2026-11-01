@@ -523,12 +523,24 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       ObjectPropertyKind::new_lazy_export_property(exported, expr, computed, self)
     }));
 
-    // construct `__export(ns_name, { prop_name: () => returned, ... })`
+    // construct `__exportAll({ prop_name: () => returned, ... })`. `__exportAll` blocks new
+    // properties, but `__reExport` copies each `export * from` source into this object later, so
+    // such a module passes the flag `2`, which keeps the object open.
+    // See internal-docs/runtime-helpers/implementation.md
+    let obj_arg =
+      ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.ast_builder.allocator()));
+    let args = if self.re_export_all_dependencies.is_empty() {
+      oxc::allocator::Vec::from_iter_in([obj_arg], self)
+    } else {
+      let open_flag =
+        ast::Argument::new_numeric_literal(SPAN, 2.0, None, ast::NumberBase::Decimal, self);
+      oxc::allocator::Vec::from_iter_in([obj_arg, open_flag], self)
+    };
     let export_call_expr = ast::Expression::new_call_expression(
       SPAN,
       Expression::new_identifier(SPAN, "__rolldown_runtime__.__exportAll", self),
       None,
-      [ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.ast_builder.allocator()))],
+      args,
       false,
       self,
     );

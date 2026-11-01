@@ -156,7 +156,7 @@ Object.defineProperty(exports,Symbol.toStringTag,{value:`Module`});const e=requi
 ### rolldown-runtime.js
 
 ```js
-var e=Object.defineProperty,t=(e,t,n)=>()=>{if(n)throw n[0];try{return e&&(t=e(e=0)),t}catch(e){throw n=[e],e}},n=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],enumerable:!0});return n||e(r,Symbol.toStringTag,{value:`Module`}),r};Object.defineProperty(exports,"n",{enumerable:!0,get:function(){return n}}),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return t}});
+var e=Object.defineProperty,t=(e,t,n)=>()=>{if(n)throw n[0];try{return e&&(t=e(e=0)),t}catch(e){throw n=[e],e}},n=(t,n)=>{let r={__proto__:null};for(var i in t)e(r,i,{get:t[i],enumerable:!0});return n&1||e(r,Symbol.toStringTag,{value:`Module`}),n&2?r:Object.preventExtensions(r)};Object.defineProperty(exports,"n",{enumerable:!0,get:function(){return n}}),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return t}});
 ```
 
 ### shared.js

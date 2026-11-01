@@ -10,10 +10,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert, 1);
 // reexports.mjs
-var reexports_exports = /* @__PURE__ */ __exportAll({});
+var reexports_exports = /* @__PURE__ */ __exportAll({}, 2);
 __reExport(reexports_exports, require("foo"));
 // main.mjs
-node_assert.default.equal(String(reexports_exports), "[object Module]");
+node_assert.default.equal(Object.prototype.toString.call(reexports_exports), "[object Module]");
 
 ```
 
@@ -27,10 +27,10 @@ node_assert.default.equal(String(reexports_exports), "[object Module]");
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 // reexports.mjs
-var reexports_exports = /* @__PURE__ */ __exportAll({});
+var reexports_exports = /* @__PURE__ */ __exportAll({}, 2);
 import * as import_foo from "foo";
 __reExport(reexports_exports, import_foo);
 // main.mjs
-assert.equal(String(reexports_exports), "[object Module]");
+assert.equal(Object.prototype.toString.call(reexports_exports), "[object Module]");
 
 ```

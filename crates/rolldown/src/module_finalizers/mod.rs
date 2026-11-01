@@ -2195,6 +2195,25 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     // demand, we should skip generate related `__reExport` statements
                     // See: https://github.com/rolldown/rolldown/blob/60fc81ada3955ce84b38a5edbb33a169d1f89f15/crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs?plain=1#L148-L150
                     if !self.module_namespace_included {
+                      // No name is used, but side effects must still run: `require_foo()`
+                      if importee.side_effects.has_side_effects() {
+                        let (importee_wrapper_ref_expr, _) = self.finalized_expr_for_symbol_ref(
+                          importee_linking_info.wrapper_ref.unwrap(),
+                          false,
+                          false,
+                        );
+                        let call_expr = ast::Expression::new_call_expression(
+                          SPAN,
+                          importee_wrapper_ref_expr,
+                          None,
+                          [],
+                          false,
+                          self,
+                        );
+                        program
+                          .body
+                          .push(ast::Statement::new_expression_statement(SPAN, call_expr, self));
+                      }
                       return;
                     }
 

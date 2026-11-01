@@ -90,6 +90,14 @@ impl StmtEvalFacts {
     self.tree_shaking_flags.has_side_effect_for_tree_shaking()
   }
 
+  /// Whether the statement is kept even when nothing uses it. Tree shaking can drop a statement
+  /// whose only flag is `PureCjs` with an unused CommonJS export, so the analysis stops looking
+  /// for more side effects only at `UnknownSideEffect`.
+  #[inline]
+  fn has_unknown_side_effect(&self) -> bool {
+    self.tree_shaking_flags.contains(StmtEvalFlags::UnknownSideEffect)
+  }
+
   #[inline]
   pub fn is_order_sensitive(&self) -> bool {
     // `UnknownSideEffect` is stored in the tree-shaking channel, but unknown runtime work is
@@ -707,7 +715,7 @@ impl<'a> StmtEvalAnalyzer<'a> {
     self.read_constant.set(false);
     let facts = self.analyze_stmt_inner(stmt);
     if !self.read_constant.get()
-      || facts.has_side_effect_for_tree_shaking()
+      || facts.has_unknown_side_effect()
       || !ConstantTrustFinder::find(self, stmt)
     {
       return facts;
@@ -763,14 +771,14 @@ impl<'a> StmtEvalAnalyzer<'a> {
       }
       Statement::SwitchStatement(switch_stmt) => {
         let mut facts = self.analyze_expr(&switch_stmt.discriminant);
-        if facts.has_side_effect_for_tree_shaking() {
+        if facts.has_unknown_side_effect() {
           return facts;
         }
         'outer: for case in &switch_stmt.cases {
           facts |= case.test.as_ref().map(|expr| self.analyze_expr(expr)).unwrap_or_default();
           for stmt in &case.consequent {
             facts |= self.analyze_stmt_inner(stmt);
-            if facts.has_side_effect_for_tree_shaking() {
+            if facts.has_unknown_side_effect() {
               break 'outer;
             }
           }
@@ -787,7 +795,7 @@ impl<'a> StmtEvalAnalyzer<'a> {
     let mut facts = StmtEvalFacts::default();
     for stmt in &block.body {
       facts |= self.analyze_stmt_inner(stmt);
-      if facts.has_side_effect_for_tree_shaking() {
+      if facts.has_unknown_side_effect() {
         break;
       }
     }
@@ -1521,6 +1529,13 @@ mod test {
     assert_eq!(
       get_stmt_eval_flags_with_constants("const LENGTH = -1; new Uint8Array(LENGTH);", &length),
       [pure, unknown]
+    );
+    assert_eq!(
+      get_stmt_eval_flags_with_constants(
+        "const LENGTH = -1; { exports.a = 1; new Uint8Array(LENGTH); }",
+        &length
+      ),
+      [pure, unknown | StmtEvalFlags::PureCjs]
     );
     // A number shift cannot throw, so the constant still makes it pure.
     assert_eq!(
@@ -2634,6 +2649,14 @@ mod test {
       get_stmt_eval_flags("exports[test()] = true"),
       vec![StmtEvalFlags::UnknownSideEffect]
     );
+
+    for code in ["{ exports.a = 1; foo(); }", "switch (0) { case 0: exports.a = 1; foo(); }"] {
+      assert_eq!(
+        get_stmt_eval_flags(code),
+        vec![StmtEvalFlags::UnknownSideEffect | StmtEvalFlags::PureCjs],
+        "{code}"
+      );
+    }
 
     assert_eq!(
       get_stmt_eval_flags(

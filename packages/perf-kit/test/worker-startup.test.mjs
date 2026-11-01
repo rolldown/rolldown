@@ -31,7 +31,7 @@ import {
   WS_QUIET_MS,
   wsRequest,
 } from '../lib/worker/measure.mjs';
-import { evaluatingModules, whyModule } from '../lib/worker/attrib.mjs';
+import { evaluatingModules, shortModule, topLevelCalls, whyModule } from '../lib/worker/attrib.mjs';
 import { attribOutDir, viteConfigShim } from '../lib/worker/config.mjs';
 import { entryIdx, minCut } from '../lib/min-cut.mjs';
 import { indexOf, makeGraph } from './graph-fixtures.mjs';
@@ -84,10 +84,10 @@ test('libraries a preserveModules build writes under node_modules/.pnpm are modu
   write(dir, '.dev.vars', 'A=1');
   write(dir, '.vite/manifest.js', '');
   const rels = classifyModules(dir).modules.map((m) => m.rel);
-  assert.deepEqual(rels.sort((a, b) => a.localeCompare(b)), [
-    'index.js',
-    'node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/classic/schemas.js',
-  ]);
+  assert.deepEqual(
+    rels.sort((a, b) => a.localeCompare(b)),
+    ['index.js', 'node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/classic/schemas.js'],
+  );
 });
 
 // --- wrapper and routing ------------------------------------------------------------
@@ -124,7 +124,10 @@ test('a run_worker_first list gets the lab route too; a boolean stays as it is',
   const list = { directory: '/x', run_worker_first: ['/agents/*'] };
   assert.deepEqual(labAssetsRouting(list).run_worker_first, ['/__lab/*', '/agents/*']);
   assert.deepEqual(list.run_worker_first, ['/agents/*']); // input untouched
-  assert.equal(labAssetsRouting({ directory: '/x', run_worker_first: true }).run_worker_first, true);
+  assert.equal(
+    labAssetsRouting({ directory: '/x', run_worker_first: true }).run_worker_first,
+    true,
+  );
   assert.equal('run_worker_first' in labAssetsRouting({ directory: '/x' }), false);
 });
 
@@ -137,8 +140,16 @@ test('the coverage run makes node:inspector importable on any compatibility date
 });
 
 test('a ws: request spec carries the path and the optional message', () => {
-  assert.deepEqual(parseRequestSpec('/api/health'), { ws: false, path: '/api/health', message: null });
-  assert.deepEqual(parseRequestSpec('ws:/agents/chat/a'), { ws: true, path: '/agents/chat/a', message: null });
+  assert.deepEqual(parseRequestSpec('/api/health'), {
+    ws: false,
+    path: '/api/health',
+    message: null,
+  });
+  assert.deepEqual(parseRequestSpec('ws:/agents/chat/a'), {
+    ws: true,
+    path: '/agents/chat/a',
+    message: null,
+  });
   assert.deepEqual(parseRequestSpec('ws:/agents/chat/a|{"type":"rpc","args":["a|b"]}'), {
     ws: true,
     path: '/agents/chat/a',
@@ -163,14 +174,19 @@ test('a ws: request is timed to the last server message, and a refused upgrade r
       listeners[type] = fn;
     },
   };
-  const mf = { dispatchFetch: async () => ({ status: 101, webSocket: socket, text: async () => '' }) };
+  const mf = {
+    dispatchFetch: async () => ({ status: 101, webSocket: socket, text: async () => '' }),
+  };
   const row = await wsRequest(mf, '/agents/chat/a', 'hello');
   assert.equal(socket.accepted, true);
   assert.deepEqual(socket.sent, ['hello']);
   assert.equal(row.status, 101);
   assert.equal(row.messages, 1);
   assert.equal(row.bytes, 'reply-after-load'.length);
-  assert.ok(row.ms >= 15 && row.ms < WS_QUIET_MS, `timed to the reply, not the quiet wait: ${row.ms}`);
+  assert.ok(
+    row.ms >= 15 && row.ms < WS_QUIET_MS,
+    `timed to the reply, not the quiet wait: ${row.ms}`,
+  );
   const refused = await wsRequest(
     { dispatchFetch: async () => ({ status: 404, webSocket: null, text: async () => 'no route' }) },
     '/nope',
@@ -508,8 +524,60 @@ test('worker-attrib finds the attribution build named after the environment', ()
     // Two candidates and no match: keep the worker name, so the caller's error names it.
     assert.equal(attribOutDir(root, 'worker'), path.join(root, 'worker'));
     // No attribution build at all.
-    assert.equal(attribOutDir(path.join(root, 'missing'), 'server'), path.join(root, 'missing', 'server'));
+    assert.equal(
+      attribOutDir(path.join(root, 'missing'), 'server'),
+      path.join(root, 'missing', 'server'),
+    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test('a library call at module scope shows by name, charged to the module whose top level makes it', () => {
+  const dir = tmp();
+  write(dir, 'index.js', '');
+  write(dir, 'node_modules/.pnpm/sdk@1.0.0/node_modules/sdk/dist/src.js', '');
+  write(dir, 'node_modules/zod/core.js', '');
+  const url = (rel) => `file://${path.join(dir, rel)}`;
+  const frame = (functionName, rel, lineNumber) => ({
+    functionName,
+    url: rel ? url(rel) : '',
+    lineNumber,
+    columnNumber: 0,
+  });
+  const profile = {
+    nodes: [
+      { id: 1, callFrame: frame('(root)', null, -1), children: [2] },
+      { id: 2, callFrame: frame('', 'index.js', -1), children: [3] },
+      {
+        id: 3,
+        callFrame: frame(
+          'preloadSchemas',
+          'node_modules/.pnpm/sdk@1.0.0/node_modules/sdk/dist/src.js',
+          41,
+        ),
+        children: [4],
+      },
+      { id: 4, callFrame: frame('build', 'node_modules/zod/core.js', 9) },
+    ],
+    // Three samples inside the warm-up (one in the call, two below it), one in index.js itself.
+    samples: [3, 4, 4, 2],
+    timeDeltas: [1000, 1000, 1000, 1000],
+  };
+  const fileOf = (u) => (u ? path.relative(dir, new URL(u).pathname) : null);
+  const calls = topLevelCalls(profile, { fileOf });
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0], {
+    module: 'index.js',
+    fn: 'preloadSchemas',
+    at: 'node_modules/.pnpm/sdk@1.0.0/node_modules/sdk/dist/src.js:42',
+    source: null,
+    ms: 3,
+  });
+  assert.equal(shortModule(calls[0].at), 'sdk/dist/src.js:42');
+  assert.equal(
+    shortModule('../../node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/core.js'),
+    'zod/v4/core/core.js',
+  );
+  assert.equal(shortModule('src/server.ts'), 'src/server.ts');
 });

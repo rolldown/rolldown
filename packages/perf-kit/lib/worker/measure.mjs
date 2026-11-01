@@ -11,6 +11,7 @@ import { pathToFileURL } from 'node:url';
 import { connect } from '../cdp.mjs';
 import { median, quantile } from '../measure.mjs';
 import { attributeStartupCoverage, profileStartup } from '../node/measure.mjs';
+import { sourceLocator } from '../profile.mjs';
 import {
   COVERAGE_FLAGS,
   COVERAGE_MIN_WRANGLER,
@@ -86,7 +87,9 @@ export const WS_QUIET_MS = 500;
  */
 export function parseRequestSpec(spec) {
   const m = /^ws:(\/[^|]*)(?:\|([\s\S]*))?$/.exec(spec);
-  return m ? { ws: true, path: m[1], message: m[2] ?? null } : { ws: false, path: spec, message: null };
+  return m
+    ? { ws: true, path: m[1], message: m[2] ?? null }
+    : { ws: false, path: spec, message: null };
 }
 
 /**
@@ -98,7 +101,8 @@ export async function wsRequest(mf, p, message, { timeoutMs = 30_000 } = {}) {
   const t0 = performance.now();
   const res = await mf.dispatchFetch(`http://lab${p}`, { headers: { Upgrade: 'websocket' } });
   const ws = res.webSocket;
-  if (res.status !== 101 || !ws) return { status: res.status, text: await res.text(), ms: performance.now() - t0 };
+  if (res.status !== 101 || !ws)
+    return { status: res.status, text: await res.text(), ms: performance.now() - t0 };
   ws.accept();
   let last = performance.now();
   let messages = 0;
@@ -243,6 +247,28 @@ export function chunkResolver(outDir) {
       map: JSON.parse(fs.readFileSync(`${file}.map`, 'utf8')),
     };
   };
+}
+
+/**
+ * `fileOf(url)`: the output file of a frame, relative to the output dir, or null.
+ * `locate(file, line, column)`: the source module at a position of that file, from its sourcemap.
+ */
+export function outputLocator(outDir) {
+  const readChunk = chunkResolver(outDir);
+  const locators = new Map();
+  const fileOf = (url) => {
+    const file = localFile(url, outDir);
+    return file ? path.relative(outDir, file).replaceAll('\\', '/') : null;
+  };
+  const locate = (file, line, column) => {
+    if (!locators.has(file)) {
+      const chunk = readChunk(file);
+      locators.set(file, chunk ? sourceLocator(chunk.code, chunk.map) : null);
+    }
+    const source = locators.get(file)?.locate(line, column);
+    return source && source !== '(unmapped)' ? source : null;
+  };
+  return { fileOf, locate };
 }
 
 /** Self time by source module through every chunk's sourcemap, plus the wrangler-style summary. */

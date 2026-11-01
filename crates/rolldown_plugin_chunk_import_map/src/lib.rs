@@ -30,7 +30,19 @@ impl Plugin for ChunkImportMapPlugin {
   }
 
   fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::RenderChunk | HookUsage::GenerateBundle
+    HookUsage::RenderStart | HookUsage::RenderChunk | HookUsage::GenerateBundle
+  }
+
+  async fn render_start(
+    &self,
+    _ctx: &rolldown_plugin::PluginContext,
+    _args: &rolldown_plugin::HookRenderStartArgs<'_>,
+  ) -> rolldown_plugin::HookNoopReturn {
+    // Watch rebuilds reuse this plugin, but chunk placeholders belong to one output.
+    // See internal-docs/watch-mode/implementation.md.
+    self.chunk_import_map.clear();
+    self.initialized.store(false, Ordering::SeqCst);
+    Ok(())
   }
 
   async fn render_chunk(

@@ -1562,6 +1562,73 @@ test.concurrent(
   },
 );
 
+test.concurrent(
+  'watch chunkImportMap rebuilds mappings for the current chunks',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const entry = (name: string) => `export const load = () => import('./${name}.js');`;
+    const { input, outputDir, dir } = createTestInputAndOutput(
+      'watch-chunk-import-map',
+      retryCount,
+      entry('a'),
+    );
+    fs.writeFileSync(path.join(dir, 'a.js'), 'export const value = "a";');
+    fs.writeFileSync(path.join(dir, 'b.js'), 'export const value = "b";');
+    let generated: Record<string, string> = {};
+    const watcher = watch({
+      input,
+      experimental: { chunkImportMap: true },
+      output: { dir: outputDir, format: 'esm' },
+      watch: { skipWrite: true },
+      plugins: [
+        {
+          name: 'capture-output',
+          generateBundle(_, bundle) {
+            generated = Object.fromEntries(
+              Object.entries(bundle).map(([name, output]) => [
+                name,
+                output.type === 'chunk' ? output.code : String(output.source),
+              ]),
+            );
+          },
+        },
+      ],
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    function expectMappedImport(name: string) {
+      const specifier = generated['main.js'].match(/import\("(\.\/[^"\n]+)"\)/)?.[1];
+      expect(specifier).toBeDefined();
+      const imports: Record<string, string> = JSON.parse(generated['importmap.json']).imports;
+      expect(Object.keys(imports)).toEqual([specifier!.slice(1)]);
+      const target = imports[specifier!.slice(1)].slice(1);
+      expect(target).toMatch(new RegExp(`^${name}-.+\\.js$`));
+      expect(generated[target]).toBeDefined();
+      expect(generated[target]).toContain(`"${name}"`);
+    }
+
+    await waitBuildFinished(watcher);
+    expectMappedImport('a');
+
+    for (const name of ['b', undefined, 'a']) {
+      const finished = waitBuildFinished(watcher);
+      await editFile(input, name ? entry(name) : 'export const value = "no chunks";');
+      await finished;
+      if (name) {
+        expectMappedImport(name);
+      } else {
+        expect(Object.keys(generated)).toEqual(['main.js']);
+      }
+    }
+  },
+);
+
 function createTestInputAndOutput(testLabel: string, retryCount: number, content?: string) {
   const uniqueId = crypto.randomUUID().slice(0, 8);
   const dirname = `${testLabel}-${uniqueId}-retry${retryCount}`;

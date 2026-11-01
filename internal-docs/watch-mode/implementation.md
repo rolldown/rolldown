@@ -355,6 +355,10 @@ The watcher uses `Bundler::with_cached_bundle_experimental()` to get `&mut Bundl
 
 This matches the legacy watcher's approach (`with_cached_bundle`), where `watch_files()` was called between scan and write phases.
 
+The bundler reuses builtin plugin instances across rebuilds. Output-specific state must be reset
+for each render: `ChunkImportMapPlugin` clears its placeholder mappings and initialization flag in
+`renderStart`, so new or removed chunks cannot reuse mappings from a previous output.
+
 ### Missing File Recovery
 
 When an import resolves to a non-existent file, the build errors. Watch mode relies on the resolver cache being cleared before each rebuild (`bundler.clear_resolver_cache()`). The expected recovery workflow is: create the missing file, then manually edit a watched file (e.g. noop edit to the importer) to trigger a rebuild. The resolver re-evaluates the import with a fresh cache and succeeds. This matches Rollup's behavior — Rollup only watches successfully loaded modules.

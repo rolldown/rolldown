@@ -1,0 +1,9 @@
+{
+  "_comment": "The test asks for the exact keys. `allow-extension` allows extra keys, and `issues/11397` covers that option, so the automatic variant is off.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }]
+  },
+  "extendedTests": {
+    "preserveEntrySignaturesAllowExtension": false
+  }
+}

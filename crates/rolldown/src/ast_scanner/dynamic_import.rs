@@ -152,9 +152,21 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       AstKind::AwaitExpression(_) => {
         self.extract_init_set_from_await_expr_ancestor(import_record_idx)
       }
-      // e.g. `import('mod');`
-      // init_set is empty, importee would be included if it has side effects
-      AstKind::ExpressionStatement(_) if self.is_root_scope() => Some(FxHashSet::default()),
+      // e.g. `import('mod');`, in any scope. The statement discards the value, so the init_set is
+      // empty and the importee is still included if it has side effects.
+      // `() => import('mod')` returns the value, but oxc keeps that expression body in an
+      // `ExpressionStatement` too, so it stays complete.
+      AstKind::ExpressionStatement(_) => {
+        let len = self.visit_path.len();
+        let is_arrow_expression_body = matches!(
+          len.checked_sub(2).and_then(|idx| self.visit_path.get(idx)),
+          Some(AstKind::FunctionBody(_))
+        ) && matches!(
+          len.checked_sub(3).and_then(|idx| self.visit_path.get(idx)),
+          Some(AstKind::ArrowFunctionExpression(expr)) if expr.is_expression()
+        );
+        (!is_arrow_expression_body).then(FxHashSet::default)
+      }
       _ => None,
     };
 

@@ -1,0 +1,10 @@
+{
+  "config": {
+    "platform": "node",
+    "input": [{ "name": "main", "import": "./main.mjs" }],
+    "strictExecutionOrder": true,
+    "experimental": {
+      "onDemandWrapping": true
+    }
+  }
+}

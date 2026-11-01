@@ -1,0 +1,79 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.mjs
+globalThis.run = async () => {
+	await Promise.resolve().then(() => require("./page.js"));
+	const ns = await Promise.resolve().then(() => require("./target.js")).then((n) => n.target_exports);
+	globalThis.saved = ns;
+	ns.increment();
+	return ns.count;
+};
+
+```
+
+## page.js
+
+```js
+const require_target = require("./target.js");
+// page.mjs
+var import_a = /* @__PURE__ */ require_target.__toESM(require_target.require_a(), 1);
+globalThis.before = require_target.count;
+globalThis.data = import_a.default;
+
+```
+
+## target.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// a.cjs
+var require_a = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.n = 7;
+	exports.bump = () => ++exports.n;
+}));
+// target.mjs
+var target_exports = /* @__PURE__ */ __exportAll({
+	count: () => count,
+	increment: () => increment,
+	ns: () => import_a
+});
+var import_a = /* @__PURE__ */ __toESM(require_a(), 1);
+let count = 0;
+function increment() {
+	(0, import_a.bump)();
+	return ++count;
+}
+exports.__toESM = __toESM;
+Object.defineProperty(exports, "count", {
+	enumerable: true,
+	get: function() {
+		return count;
+	}
+});
+exports.increment = increment;
+Object.defineProperty(exports, "ns", {
+	enumerable: true,
+	get: function() {
+		return import_a;
+	}
+});
+Object.defineProperty(exports, "require_a", {
+	enumerable: true,
+	get: function() {
+		return require_a;
+	}
+});
+Object.defineProperty(exports, "target_exports", {
+	enumerable: true,
+	get: function() {
+		return target_exports;
+	}
+});
+
+```

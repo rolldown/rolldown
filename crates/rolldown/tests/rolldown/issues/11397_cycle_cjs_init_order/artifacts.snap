@@ -1,0 +1,44 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.mjs
+globalThis.run = async () => {
+	const page = await import("./page.js");
+	const route = await import("./route.js").then((n) => n.t);
+	return [page.getRoute(), route];
+};
+export {};
+
+```
+
+## page.js
+
+```js
+import { t as route_exports } from "./route.js";
+// page.mjs
+function getRoute() {
+	return route_exports;
+}
+export { getRoute };
+
+```
+
+## route.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+(/* @__PURE__ */ __commonJSMin(((exports) => {
+	globalThis.__event("leaf");
+})))();
+globalThis.__event("cycle");
+// route.mjs
+var route_exports = /* @__PURE__ */ __exportAll({ count: () => 0 });
+let count = 0;
+export { count, route_exports as t };
+
+```

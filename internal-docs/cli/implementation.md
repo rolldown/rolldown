@@ -265,12 +265,12 @@ The previous implementation used Node.js's built-in `parseArgs` with 16 hand-rol
 
 ### Behavioral Differences
 
-| Change                      | Before                                             | After                                                |
-| --------------------------- | -------------------------------------------------- | ---------------------------------------------------- |
-| Numeric string coercion     | `--code-splitting.min-size 1000` → string `"1000"` | → number `1000` (mri coerces numeric-looking values) |
-| `--no-*` on unknown options | warns "foo is unrecognized"                        | same warning, value is `false` instead of absent     |
+| Change                      | Before                                             | After                                                        |
+| --------------------------- | -------------------------------------------------- | ------------------------------------------------------------ |
+| Numeric string coercion     | `--code-splitting.min-size 1000` → string `"1000"` | → number `1000` (mri coerces numeric-looking values)         |
+| `--no-*` on unknown options | warns "foo is unrecognized"                        | same warning, value is `false` instead of absent             |
 | `--` delimiter              | args after `--` become positionals                 | collected into `options['--']`, then appended to positionals |
-| Short flag stacking         | not supported                                      | `-ms` = `--minify --sourcemap`                       |
+| Short flag stacking         | not supported                                      | `-ms` = `--minify --sourcemap`                               |
 
 ### Why `default` Was Removed From `alias.ts`
 

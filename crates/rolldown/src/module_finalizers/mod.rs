@@ -1846,16 +1846,23 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     None
   }
 
-  /// Whether a later `__reExport` can add properties to the namespace object of this module. Such
-  /// an object stays open (`__exportAll` flag `2`). Each other namespace object gets the shape of
-  /// a native module namespace: a null prototype, and no new properties.
+  /// Returns `true` when a later `__reExport` can add properties to the namespace object of this
+  /// module. Such an object stays open (it accepts new properties), and `__exportAll` gets the
+  /// flag `2`. Each other namespace object gets the shape of a native module namespace: it has a
+  /// null prototype, and it accepts no new properties.
   ///
-  /// The `__reExport` writers into the namespace object of a module are the external `export *`
-  /// in the namespace declaration, and three writers that need dynamic exports: the overlay
-  /// records of strict execution order, the ESM importee with dynamic exports, and the CommonJS
-  /// importee. Each writer calls `debug_assert_namespace_object_is_open` first. The last three
-  /// write for an `export *` of a module with dynamic exports, and `determine_has_dynamic_exports`
-  /// (link stage) gives each such importer dynamic exports too. So their target is always open.
+  /// A writer is a place in this finalizer that emits a `__reExport` call into a namespace object.
+  /// Four writers add properties to the namespace object of a module:
+  ///
+  /// 1. The writer for an external `export *`, in the namespace declaration.
+  /// 2. The writer for the overlay records of strict execution order.
+  /// 3. The writer for an ESM importee with dynamic exports.
+  /// 4. The writer for a CommonJS importee.
+  ///
+  /// Each writer calls `debug_assert_namespace_object_is_open` first. Writers 2, 3 and 4 write
+  /// only for an `export *` of a module with dynamic exports. `determine_has_dynamic_exports` in
+  /// the link stage gives each such importer dynamic exports too. So the target of writers 2, 3
+  /// and 4 is always open.
   /// See internal-docs/runtime-helpers/implementation.md
   fn namespace_object_is_open(&self) -> bool {
     self.ctx.linking_info.has_dynamic_exports
@@ -1870,15 +1877,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     );
   }
 
-  /// The value of the namespace object of this module, from the getters in `arg_obj_expr`.
+  /// Returns the expression that creates the namespace object of this module from the getters in
+  /// `arg_obj_expr`.
   fn module_namespace_object_expr(
     &self,
     arg_obj_expr: ast::ObjectExpression<'ast>,
   ) -> Expression<'ast> {
     let symbols = self.ctx.options.generated_code.symbols;
     let open = self.namespace_object_is_open();
-    // An empty namespace without symbols does not call `__exportAll`. The link stage does not
-    // always reference `__exportAll` in this case.
+    // An empty namespace without symbols does not call `__exportAll`, because the link stage does
+    // not always include `__exportAll` in this case.
     if arg_obj_expr.properties.is_empty() && !symbols {
       return if open {
         self.null_prototype_object_expr()
@@ -1886,9 +1894,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         self.frozen_null_prototype_object_expr()
       };
     }
-    // `__exportAll({ prop_name: () => returned, ... }, flags)`. The flag `1` skips
-    // `Symbol.toStringTag`, and the flag `2` keeps the object open. Without flags, the call has
-    // no second argument.
+    // The call is `__exportAll({ prop_name: () => returned, ... }, flags)`. With the flag `1`, the
+    // object has no `Symbol.toStringTag`. With the flag `2`, the object stays open. When `flags`
+    // is `0`, the call has no second argument.
     let flags = u8::from(!symbols) | (u8::from(open) << 1);
     let obj_expr = ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.allocator()));
     let args = if flags == 0 {
@@ -1909,7 +1917,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     )
   }
 
-  /// `{ __proto__: null }`: an empty object with a null prototype.
+  /// Returns `{ __proto__: null }`, an empty object with a null prototype.
   fn null_prototype_object_expr(&self) -> Expression<'ast> {
     ast::Expression::new_object_expression(
       SPAN,
@@ -1927,8 +1935,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     )
   }
 
-  /// `/* @__PURE__ */ Object.freeze({ __proto__: null })`: an empty namespace object with the
-  /// shape of a native one, without `Symbol.toStringTag`.
+  /// Returns `/* @__PURE__ */ Object.freeze({ __proto__: null })`. This expression creates an
+  /// empty namespace object with the shape of a native one, but with no `Symbol.toStringTag`.
   fn frozen_null_prototype_object_expr(&self) -> Expression<'ast> {
     Expression::new_call_with_arg(
       Expression::new_member_access_expr("Object", "freeze", self),

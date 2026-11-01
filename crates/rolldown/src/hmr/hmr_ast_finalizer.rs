@@ -523,9 +523,11 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       ObjectPropertyKind::new_lazy_export_property(exported, expr, computed, self)
     }));
 
-    // construct `__exportAll({ prop_name: () => returned, ... })`. `__exportAll` blocks new
-    // properties, but `__reExport` copies each `export * from` source into this object later, so
-    // such a module passes the flag `2`, which keeps the object open.
+    // The call is `__exportAll({ prop_name: () => returned, ... })`. For a module with
+    // `export * from`, the call is `__exportAll({ ... }, 2)`. `__exportAll` creates an object
+    // that accepts no new properties. Later, `__reExport` adds the exports of each
+    // `export * from` source to this object. The flag `2` keeps the object open (it accepts new
+    // properties).
     // See internal-docs/runtime-helpers/implementation.md
     let obj_arg =
       ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.ast_builder.allocator()));

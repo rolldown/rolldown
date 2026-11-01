@@ -237,7 +237,7 @@ mod tests {
   fn prevent_assignment_after_unicode() {
     for delimiters in [None, Some((r"\b".to_string(), r"\b(?!\.)".to_string()))] {
       let plugin = ReplacePlugin::with_options(ReplaceOptions {
-        values: [("FOO".to_string(), "123".to_string())].into_iter().collect(),
+        values: std::iter::once(("FOO".to_string(), "123".to_string())).collect(),
         delimiters,
         prevent_assignment: true,
         ..Default::default()

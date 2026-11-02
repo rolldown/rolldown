@@ -11,8 +11,7 @@ pub use crate::{
   path_ext::{
     PathExt, absolute_path_to_relative_slash, absolutize_path_buf, normalize_path_buf,
     normalize_path_buf_to_slash, path_buf_to_slash, relative_path_as_js_specifier,
-    relative_path_to_slash, representative_file_name_for_preserve_modules,
-    strip_path_prefix_to_slash,
+    relative_path_to_slash, strip_path_prefix_to_slash,
   },
   pretty_type_name::pretty_type_name,
 };

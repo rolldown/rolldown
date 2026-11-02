@@ -474,7 +474,6 @@
  - rollup@function@export-type-mismatch-b: export type must be auto, default, named or none (expected `INVALID_EXPORT_OPTION` error, but got `InvalidArg`)
  - rollup@function@assign-namespace-to-var: allows a namespace to be assigned to a variable (`EMPTY_BUNDLE` warning)
  - rollup@function@can-import-self-treeshake: direct self import (`EMPTY_BUNDLE` warning)
- - rollup@function@external-conflict: external paths from custom resolver remain external (#633) (`INVALID_EXTERNAL_ID` error)
  - rollup@function@conflicting-reexports@named-import-external: warns when a conflicting binding is imported via a named import from external namespaces (`AMBIGUOUS_EXTERNAL_NAMESPACES` warning)
  - rollup@function@cycles-pathological-2: resolves even more pathological cyclical dependencies gracefully
  - rollup@function@circular-missed-reexports: handles circular reexports (`MISSING_EXPORT` should be warning instead of error)

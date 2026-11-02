@@ -242,6 +242,29 @@ produces only the changed + newly discovered modules → sparse `Map`.
    same value as the scan-output `Map` key, the `Module.idx` field, and the
    `module_id_to_idx` value (see `try_spawn_new_task`). These three are
    therefore equal for any given module.
+7. The first resolution of an id sets the kind of its module (external or not
+   external), like its `ModuleIdx`. A later resolution of the same id to the
+   other kind does not change the module. Instead, `check_external_conflict`
+   (in the `Seen(idx)` arm of `try_spawn_new_task`) records
+   `INVALID_EXTERNAL_ID` or `EXTERNAL_MODULES_CANNOT_BE_TRANSFORMED_TO_MODULES`,
+   and the scan fails (#11417).
+
+   In a partial scan, the kind of a module comes from one of two places:
+
+   - A module that the scan re-scans or adds gets its kind from this scan.
+     Thus a changed file that was external can become a normal module.
+   - An unchanged module keeps its kind from the snapshot.
+
+   Known gap: a partial scan also reports this error when an edit only
+   switches the kind of an unchanged module. An example is an edit that
+   changes the specifier of the last importer of the old kind. A fresh build
+   accepts this edit. The error stays until the next full scan, because the
+   dev engine runs partial scans again after a failed partial scan.
+
+   If the kind comes from the snapshot, the error has a second help line: a
+   full rebuild fixes the error if all imports already resolve the same way.
+   Two fixes for the gap are possible: check the final `importers[idx]` at the
+   end of the scan, or make the next scan a full scan.
 
 ---
 
@@ -262,7 +285,7 @@ inserts into it.
 | ------------------------ | ----------------------------------- | --------------------------------------------------------------------------------------------- |
 | Runtime module           | `fetch_modules`, `:304`–`:308`      | `Entry::Vacant` → insert `Seen(idx)` (once).                                                  |
 | Invalidate changed files | `fetch_modules`, `:348`–`:350`      | For each watcher-reported file: `Entry::Occupied` → `insert(Invalidate(idx))`. idx unchanged. |
-| `Seen(idx)` arm          | `try_spawn_new_task`, `:230`–`:244` | No write; returns idx, module not re-scanned.                                                 |
+| `Seen(idx)` arm          | `try_spawn_new_task`, `:230`–`:244` | No write. Checks the module kind (invariant 7) and returns idx. Does not re-scan the module.  |
 | `Invalidate(idx)` arm    | `try_spawn_new_task`, `:246`–`:251` | `insert(Seen(idx))` — module is being re-scanned.                                             |
 | `None`, partial scan     | `try_spawn_new_task`, `:252`–`:259` | New module: `insert(id, Seen(len))`, `len = module_id_to_idx.len()`.                          |
 | `None`, full scan        | `try_spawn_new_task`, `:260`–`:264` | New module: `insert(id, Seen(alloc()))`.                                                      |

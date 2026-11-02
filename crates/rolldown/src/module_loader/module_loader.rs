@@ -125,6 +125,14 @@ pub struct ModuleLoader<'a, Fs: FileSystem + Clone + 'static> {
   /// of the first TLA keyword. Stored here instead of on every `EcmaView`
   /// because top-level await is rarely used in real-world apps.
   tla_keyword_span_map: FxHashMap<ModuleIdx, Span>,
+  /// This set contains the modules that this scan spawned as external. The set
+  /// gives the kind of a module before its task finishes. See
+  /// `is_external_module`.
+  external_module_idxs: FxHashSet<ModuleIdx>,
+  /// This list contains the errors of this scan. The message loop and helpers
+  /// such as `try_spawn_new_task` add errors to it. `fetch_modules` returns the
+  /// list after the scan.
+  errors: Vec<BuildDiagnostic>,
 }
 
 pub struct ModuleLoaderOutput {
@@ -218,6 +226,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       magic_string_tx,
       tla_module_count: 0,
       tla_keyword_span_map: FxHashMap::default(),
+      external_module_idxs: FxHashSet::default(),
+      errors: Vec::new(),
     })
   }
 
@@ -285,6 +295,66 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     }
   }
 
+  /// This function returns `true` if this scan spawned the module at `idx`. A full
+  /// scan spawns every module. A partial scan allocates a slot for each module that
+  /// it spawns (changed and new modules).
+  fn is_spawned_by_this_scan(&self, idx: ModuleIdx) -> bool {
+    self.is_full_scan || self.intermediate_normal_modules.modules.try_get(idx).is_some()
+  }
+
+  /// This function returns `true` if the module at `idx` is external. The
+  /// loader knows the kind when it spawns the task. Thus this function can
+  /// return the kind before the task finishes.
+  fn is_external_module(&self, idx: ModuleIdx) -> bool {
+    // For a module that this scan spawned, the kind from this scan replaces the
+    // kind in the snapshot. Thus a changed file that was external can now be a
+    // normal module.
+    if self.is_spawned_by_this_scan(idx) {
+      self.external_module_idxs.contains(&idx)
+    } else {
+      // This scan did not spawn the module. The module is from a previous build,
+      // and the snapshot has its kind.
+      self.cache.get_snapshot().module_table.get(idx).is_some_and(Module::is_external)
+    }
+  }
+
+  /// This function records an error if the two kinds are different:
+  ///
+  /// - `resolved_id` is external, and the module at `idx` is not external.
+  /// - `resolved_id` is not external, and the module at `idx` is external.
+  ///
+  /// One id has one module, and the first resolution decides its kind. Without
+  /// this error, the importer that loads first decides the kind (#11417).
+  /// Rollup reports the same errors. See internal-docs/cache/implementation.md
+  /// (invariant 7).
+  fn check_external_conflict(
+    &mut self,
+    idx: ModuleIdx,
+    resolved_id: &ResolvedId,
+    owner: Option<&ModuleTaskOwner>,
+  ) {
+    let is_external = resolved_id.external.is_external();
+    if is_external == self.is_external_module(idx) {
+      return;
+    }
+    let module_id = resolved_id.id.as_arc_str().clone();
+    let importer = owner.map(ModuleTaskOwner::to_external_conflict_importer);
+    // A partial scan keeps the kind from the snapshot for a module that it did not
+    // spawn. Then the error also suggests a full rebuild, because a full rebuild
+    // takes the kind from the current imports. See the known gap in
+    // internal-docs/cache/implementation.md (invariant 7).
+    let is_kind_from_previous_build = !self.is_spawned_by_this_scan(idx);
+    self.errors.push(if is_external {
+      BuildDiagnostic::invalid_external_id(module_id, importer, is_kind_from_previous_build)
+    } else {
+      BuildDiagnostic::external_modules_cannot_be_transformed_to_modules(
+        module_id,
+        importer,
+        is_kind_from_previous_build,
+      )
+    });
+  }
+
   /// Lazy barrel must not skip any of an entry's re-exports — an entry has to
   /// preserve all of its exports. Request `All` from it: if it has already been
   /// loaded as a barrel, load its remaining (deferred) records now; otherwise
@@ -319,6 +389,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
   ) -> ModuleIdx {
     let idx = match self.cache.module_id_to_idx.get(&resolved_id.id).copied() {
       Some(VisitState::Seen(idx)) => {
+        self.check_external_conflict(idx, &resolved_id, owner.as_ref());
         if self.flat_options.is_lazy_barrel_enabled() && owner.is_none() {
           self.request_all_exports_for_entry(idx, user_defined_entries);
         }
@@ -350,6 +421,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     }
     let ctx = Arc::clone(&self.shared_context);
     if resolved_id.external.is_external() {
+      self.external_module_idxs.insert(idx);
       let task = ExternalModuleTask::new(ctx, idx, resolved_id, Arc::clone(user_defined_entries));
       tokio::spawn(task.run().instrument(tracing::info_span!("external_module_task")));
     } else {
@@ -382,7 +454,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     &mut self,
     fetch_mode: ScanMode<ResolvedId>,
   ) -> BuildResult<ModuleLoaderOutput> {
-    let mut errors = vec![];
     let mut all_warnings = vec![];
 
     // Barrel state is accumulated demand, not derivable from the snapshot;
@@ -599,10 +670,15 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
             if let Some(usage) = dynamic_import_rec_exports_usage.remove(&rec_idx) {
               dynamic_import_exports_usage_pairs.push((idx, usage));
             }
-            // External modules are excluded here to preserve the bit-position-to-ChunkIdx
-            // invariant in code splitting. User-defined and emitted entries are already
-            // guaranteed non-external by `load_entry_module()` which rejects them with
-            // `entry_cannot_be_external`.
+            // This filter excludes external modules, so that each bit position in code
+            // splitting stays equal to a `ChunkIdx`. `is_external` comes from this import
+            // record, but it is the same as the kind of the module at `idx`. If the two
+            // kinds are different, `try_spawn_new_task` records an error, and the build
+            // stops before code splitting. User-defined entries and emitted entries are
+            // never external:
+            // - `load_entry_module()` rejects an external resolution with
+            //   `entry_cannot_be_external`.
+            // - `try_spawn_new_task` rejects an entry whose id is already an external module.
             if matches!(raw_rec.kind, ImportKind::DynamicImport)
               && !is_external
               && !user_defined_entry_ids.contains(&idx)
@@ -718,11 +794,20 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
           self.symbol_ref_db.store_local_db(runtime.id(), local_symbol_ref_db);
           self.remaining -= 1;
 
-          errors.extend(runtime.validate_symbols(&rolldown_common::RUNTIME_HELPER_NAMES));
+          self.errors.extend(runtime.validate_symbols(&rolldown_common::RUNTIME_HELPER_NAMES));
           runtime_brief = Some(runtime);
         }
         ModuleLoaderMsg::FetchModule(resolve_id) => {
-          self.try_spawn_new_task(*resolve_id, None, false, None, &user_defined_entries);
+          let module_id = resolve_id.id.clone();
+          let idx = self.try_spawn_new_task(*resolve_id, None, false, None, &user_defined_entries);
+          // `this.load` waits for a load signal, and only a normal module task sends it.
+          // A `this.load` of an id that is already external is a conflict, and
+          // `try_spawn_new_task` records it as an error. The code below ends the wait, so
+          // the build stops with that error and does not hang. No normal module task runs
+          // for an external module in this scan, so the wait gets no second signal.
+          if self.is_external_module(idx) {
+            self.shared_context.plugin_driver.ensure_context_load_module_completion(module_id);
+          }
         }
         ModuleLoaderMsg::AddEntryModule(msg) => {
           let data = msg.chunk;
@@ -739,7 +824,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
               self.try_spawn_new_task(resolved_id, None, true, None, &user_defined_entries)
             }
             Err(e) => {
-              errors.push(e);
+              self.errors.push(e);
               continue;
             }
           };
@@ -766,12 +851,13 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
           extra_entry_points.push(entry);
         }
         ModuleLoaderMsg::BuildErrors(e) => {
-          errors.extend(e);
+          self.errors.extend(e);
           self.remaining -= 1;
         }
       }
     }
 
+    let mut errors = std::mem::take(&mut self.errors);
     if !errors.is_empty() {
       // Enrich UNRESOLVED_IMPORT errors with import chain. Must run before
       // the revert below, which erases the failed scan's modules from the

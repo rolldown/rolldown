@@ -418,6 +418,16 @@
             "$ref": "#/$defs/InjectImport"
           }
         },
+        "injectFilter": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InjectFilter"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "externalLiveBindings": {
           "type": [
             "boolean",
@@ -1243,6 +1253,31 @@
           ]
         }
       ]
+    },
+    "InjectFilter": {
+      "description": "Limits the modules `inject` applies to, like the `include`/`exclude` options of `@rollup/plugin-inject`.",
+      "type": "object",
+      "properties": {
+        "include": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "exclude": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
     },
     "CodeSplittingMode": {
       "description": "Controls how code splitting is performed. Mirrors the public\n`codeSplitting: boolean | CodeSplittingOptions` option.\n\n- `Bool(true)`: Default behavior, automatic code splitting with lazy-loaded dynamic imports.\n- `Bool(false)`: Inline all dynamic imports into a single bundle (no code splitting).\n- `Advanced(..)`: Automatic code splitting enabled, with user-directed chunk grouping\n  (the object form). During normalization this is decomposed into the gate\n  (`code_splitting`) plus the grouping config (`manual_code_splitting`).",

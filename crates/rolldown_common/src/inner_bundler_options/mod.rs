@@ -5,6 +5,7 @@ use types::code_splitting_mode::CodeSplittingMode;
 use types::comments::CommentsOptions;
 use types::devtools_options::DevtoolsOptions;
 use types::generated_code_options::GeneratedCodeOptions;
+use types::inject_filter::InjectFilter;
 use types::inject_import::InjectImport;
 use types::invalidate_js_side_cache::InvalidateJsSideCache;
 use types::legal_comments::LegalComments;
@@ -195,6 +196,7 @@ pub struct BundlerOptions {
   pub profiler_names: Option<bool>,
   pub keep_names: Option<bool>,
   pub inject: Option<Vec<InjectImport>>,
+  pub inject_filter: Option<InjectFilter>,
   pub external_live_bindings: Option<bool>,
   /// Mirrors the public `codeSplitting: boolean | CodeSplittingOptions`. The object
   /// form (`Advanced`) carries the manual chunk grouping config; it is decomposed into

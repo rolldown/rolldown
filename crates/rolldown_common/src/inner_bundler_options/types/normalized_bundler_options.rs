@@ -14,6 +14,7 @@ use super::code_splitting_mode::CodeSplittingMode;
 use super::comments::CommentsOptions;
 use super::experimental_options::ExperimentalOptions;
 use super::generated_code_options::GeneratedCodeOptions;
+use super::inject_filter::InjectFilter;
 use super::inline_common_chunks_options::NormalizedInlineCommonChunksOptions;
 use super::legal_comments::LegalComments;
 use super::manual_code_splitting_options::ManualCodeSplittingOptions;
@@ -92,6 +93,7 @@ pub struct NormalizedBundlerOptions {
   pub keep_names: bool,
   pub inject: Vec<InjectImport>,
   pub oxc_inject_global_variables_config: InjectGlobalVariablesConfig,
+  pub inject_filter: InjectFilter,
   pub external_live_bindings: bool,
   pub code_splitting: CodeSplittingMode,
   pub dynamic_import_in_cjs: bool,
@@ -176,6 +178,7 @@ impl Default for NormalizedBundlerOptions {
       keep_names: Default::default(),
       inject: Default::default(),
       oxc_inject_global_variables_config: InjectGlobalVariablesConfig::new(vec![]),
+      inject_filter: Default::default(),
       external_live_bindings: Default::default(),
       code_splitting: CodeSplittingMode::default(),
       dynamic_import_in_cjs: true,

@@ -11,6 +11,7 @@ pub mod experimental_options;
 pub mod filename_template;
 pub mod generated_code_options;
 pub mod hash_characters;
+pub mod inject_filter;
 pub mod inject_import;
 pub mod inline_common_chunks_options;
 pub mod input_item;

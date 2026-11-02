@@ -522,6 +522,7 @@ pub fn prepare_build_context(
     define,
     inject: raw_options.inject.unwrap_or_default(),
     oxc_inject_global_variables_config,
+    inject_filter: raw_options.inject_filter.unwrap_or_default(),
     extend: raw_options.extend.unwrap_or(false),
     external_live_bindings: raw_options.external_live_bindings.unwrap_or(true),
     code_splitting,

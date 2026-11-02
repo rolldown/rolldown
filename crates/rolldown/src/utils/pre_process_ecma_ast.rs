@@ -216,7 +216,10 @@ impl PreProcessEcmaAst {
     );
 
     // Step 4: Run inject plugin.
-    if !bundle_options.inject.is_empty() {
+    if !bundle_options.inject.is_empty()
+      && (bundle_options.inject_filter.is_empty()
+        || bundle_options.inject_filter.matches(resolved_id, &bundle_options.cwd.to_string_lossy()))
+    {
       ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
         let new_scoping = self.recreate_scoping(&mut scoping, program);
         let inject_config = bundle_options.oxc_inject_global_variables_config.clone();

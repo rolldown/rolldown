@@ -928,6 +928,35 @@ impl GenerateStage<'_> {
     (facade_eliminations, common_chunk_merges, emitted_chunk_groups)
   }
 
+  /// Records the dependencies an entry chunk has on other chunks through its exports.
+  ///
+  /// `calc_chunk_dependencies` only follows import edges between modules. An entry chunk whose
+  /// module was moved elsewhere, or whose exports re-export symbols owned by other chunks, still
+  /// has to import those chunks. Without these edges, merging chunks into the entry chunk can
+  /// close a cycle that the cycle check cannot see.
+  pub(super) fn add_entry_export_dependencies(
+    &self,
+    chunk_graph: &ChunkGraph,
+    temp_chunk_graph: &mut ChunkOptimizationGraph,
+  ) {
+    for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+      let ChunkKind::EntryPoint { module, .. } = chunk.kind else {
+        continue;
+      };
+      let deps = self.link_output.metas[module]
+        .resolved_exports
+        .values()
+        .filter_map(|resolved_export| {
+          let owner = resolved_export.symbol_ref.canonical_ref(&self.link_output.symbol_db).owner;
+          temp_chunk_graph.module_to_chunk[owner]
+        })
+        .collect_vec();
+      temp_chunk_graph.chunks[chunk_idx]
+        .dependencies
+        .extend(deps.into_iter().filter(|&dep| dep != chunk_idx));
+    }
+  }
+
   /// Batch process emitted chunk groups to detect export name conflicts.
   /// Chunks with conflicting export names need to keep their facade chunks.
   fn resolve_emitted_chunk_group_conflicts(

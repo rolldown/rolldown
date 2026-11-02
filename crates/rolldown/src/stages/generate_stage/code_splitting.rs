@@ -1055,6 +1055,7 @@ impl GenerateStage<'_> {
 
     if allow_merge_common_chunks {
       temp_chunk_graph.calc_chunk_dependencies(&self.link_output.metas);
+      self.add_entry_export_dependencies(chunk_graph, &mut temp_chunk_graph);
       self.try_insert_common_module_to_exist_chunk(
         chunk_graph,
         bits_to_chunk,

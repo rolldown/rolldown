@@ -600,11 +600,11 @@ test(
   },
 );
 
-// Config `external` is checked before plugins, so `import('./dep.mjs')` stays a
-// real import and the lazy plugin never builds a proxy. A plugin `resolveId`
-// that returns `{ id, external: true }` used to be wrapped anyway, and the
-// proxy then called `loadExports` on an id the dev runtime never registers
-// (#11273). Both paths should keep the same direct import.
+// Any resolution `ctx.resolve` marks external must stay a real dynamic import:
+// config `external`, plugin `{ external: true }`, Node built-ins (`platform:
+// 'node'`), and http(s) URLs. Wrapping any of them used to append
+// `?rolldown-lazy=1` and call `loadExports` on an id the dev runtime never
+// registers (#11273).
 test(
   'a plugin-resolved external dynamic import is not wrapped in a lazy proxy',
   { timeout: TEST_TIMEOUT },
@@ -616,6 +616,10 @@ test(
     fs.writeFileSync(
       path.join(dir, 'lazy.mjs'),
       `export const load = () => import('./dep.mjs');\n`,
+    );
+    fs.writeFileSync(
+      path.join(dir, 'lazy-node.mjs'),
+      `export const load = () => import('node:fs');\n`,
     );
 
     onTestFinished(() => {
@@ -673,10 +677,20 @@ test(
 
     const configCode = await entryCode('config', { ...shared, external: ['./dep.mjs'] });
     const pluginCode = await entryCode('plugin', { ...shared, plugins: [externalPlugin] });
+    const nodeCode = await entryCode('node', {
+      ...shared,
+      input: path.join(dir, 'lazy-node.mjs'),
+      platform: 'node',
+    });
 
     expect(configCode).toContain(directImport);
     expect(pluginCode).toContain(directImport);
     expect(pluginCode).not.toContain('rolldown-lazy');
     expect(pluginCode).not.toContain('loadExports("./dep.mjs")');
+
+    const nodeImport = 'import("node:fs").then(__unwrap_lazy_compilation_entry)';
+    expect(nodeCode).toContain(nodeImport);
+    expect(nodeCode).not.toContain('rolldown-lazy');
+    expect(nodeCode).not.toContain('loadExports("node:fs")');
   },
 );

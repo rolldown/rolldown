@@ -118,10 +118,9 @@ impl Plugin for LazyCompilationPlugin {
 
       // Externals are not part of this build, so the dev runtime never registers
       // them and a lazy proxy's `loadExports(id)` cannot return their exports.
-      // Config-level `external` is decided before plugins and never reaches this
-      // hook. A plugin `resolveId` that returns `{ external: true }` does, and
-      // wrapping it would disagree with that config path. Hand the resolution
-      // back unchanged. See internal-docs/lazy-compilation/implementation.md.
+      // Any resolution `ctx.resolve` marks external is passed through unchanged:
+      // plugin `{ external: true }`, config `external` on the resolved id, Node
+      // built-ins, and http(s) URLs. See internal-docs/lazy-compilation/implementation.md.
       if original_id.external.is_external() {
         return Ok(Some(HookResolveIdOutput::from_resolved_id(original_id)));
       }

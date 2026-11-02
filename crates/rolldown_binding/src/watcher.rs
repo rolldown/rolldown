@@ -14,7 +14,7 @@ use rolldown_watcher::{WatchEvent, WatcherConfig, WatcherEventHandler};
 use crate::types::binding_bundler_options::BindingBundlerOptions;
 use crate::types::binding_watcher_event::BindingWatcherEvent;
 use crate::types::js_callback::{MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt};
-use crate::types::js_callback_release::{JsCallbackRelease, ReleaseJsCallbacksOnDrop};
+use crate::types::js_callback_release::{RequestReleaseOnDrop, SharedJsCallbackRelease};
 use crate::utils::{
   create_bundler_config_from_binding_options::create_bundler_config_from_binding_options,
   spawn_boxed_future,
@@ -23,11 +23,13 @@ use crate::utils::{
 /// Bridges watcher events from Rust to JS via a `ThreadsafeFunction`.
 struct NapiWatcherEventHandler {
   listener: Arc<MaybeAsyncJsCallback<FnArgs<(BindingWatcherEvent,)>>>,
+  /// Event results take a hold on it while they close.
+  option_callbacks: SharedJsCallbackRelease,
 }
 
 impl WatcherEventHandler for NapiWatcherEventHandler {
   async fn on_event(&self, event: WatchEvent) {
-    let binding_event = BindingWatcherEvent::from_watch_event(event);
+    let binding_event = BindingWatcherEvent::from_watch_event(event, self.option_callbacks.clone());
     if let Err(e) = self.listener.await_call(FnArgs { data: (binding_event,) }).await {
       eprintln!("watcher on_event listener error: {e:?}");
     }
@@ -58,10 +60,11 @@ impl WatcherEventHandler for NapiWatcherEventHandler {
 #[napi]
 pub struct BindingWatcher {
   inner: Arc<rolldown_watcher::Watcher>,
-  /// The JS functions of the options of each task. `close` releases them. The close of one event
-  /// result (`BindingWatcherBundler::close`) does not: the next rebuilds still use them.
+  /// The JS functions of the options of each task. `close` requests their release. The close of
+  /// one event result (`BindingWatcherBundler::close`) does not: the next rebuilds still use them.
+  /// But a result close that still runs delays the release until it ends.
   /// See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
-  option_callbacks: Vec<JsCallbackRelease>,
+  option_callbacks: SharedJsCallbackRelease,
 }
 
 #[napi]
@@ -94,7 +97,11 @@ impl BindingWatcher {
       debounce_tick_rate: watch.and_then(|w| w.debounce_tick_rate),
     };
 
-    let handler = NapiWatcherEventHandler { listener: Arc::new(listener) };
+    let option_callbacks = SharedJsCallbackRelease::new(option_callbacks);
+    let handler = NapiWatcherEventHandler {
+      listener: Arc::new(listener),
+      option_callbacks: option_callbacks.clone(),
+    };
     let inner =
       rolldown_watcher::Watcher::new(configs, handler, &watcher_config).map_err(|errs| {
         napi::Error::new(
@@ -133,9 +140,10 @@ impl BindingWatcher {
     let inner = Arc::clone(&self.inner);
     let option_callbacks = self.option_callbacks.clone();
     spawn_boxed_future(env, async move {
-      // Each `Watcher::close` call waits for the watcher to stop, so this release never runs
-      // before the last `closeBundle`. A second release does nothing.
-      let _release = ReleaseJsCallbacksOnDrop(option_callbacks);
+      // Each `Watcher::close` call waits for the watcher to stop. But it does not wait for an
+      // event result close that still runs `closeBundle`, so the release waits for its hold.
+      // A second request does nothing.
+      let _release = RequestReleaseOnDrop(option_callbacks);
       inner.close().await.map_err(|e| napi::Error::new(napi::Status::GenericFailure, e.to_string()))
     })
   }

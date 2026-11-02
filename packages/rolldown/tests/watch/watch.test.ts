@@ -1790,3 +1790,64 @@ test.concurrent(
     expect(entryFileNames).toHaveBeenCalled();
   },
 );
+
+// `watcher.close()` can run while an event result close still runs `closeBundle`. Then the watcher
+// close does not wait for that hook, so it must not release the JS functions of the options before
+// the hook ends. See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
+test.concurrent(
+  'a pending event result close keeps the option functions until its closeBundle ends',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, outputDir, dir } = createTestInputAndOutput(
+      'watch-pending-result-close-option-functions',
+      retryCount,
+    );
+    let hookStarted!: () => void;
+    const started = new Promise<void>((resolve) => (hookStarted = resolve));
+    let releaseHook!: () => void;
+    const paused = new Promise<void>((resolve) => (releaseHook = resolve));
+    let resultClosed!: () => void;
+    const closed = new Promise<void>((resolve) => (resultClosed = resolve));
+    let resolved: unknown;
+
+    const watcher = watch({
+      input,
+      output: { dir: outputDir },
+      external: (id) => id === 'ext',
+      plugins: [
+        {
+          name: 'paused-close-bundle',
+          async closeBundle() {
+            hookStarted();
+            await paused;
+            resolved = await this.resolve('ext').then(
+              (result) => result?.external,
+              (error: Error) => (error.cause as Error | undefined)?.message ?? error.message,
+            );
+          },
+        },
+      ],
+    });
+    onTestFinished(async () => {
+      // A second close does nothing. This one stops the watcher if the test fails early.
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    watcher.on('event', async (event) => {
+      if (event.code === 'BUNDLE_END' || event.code === 'ERROR') {
+        await event.result.close();
+        resultClosed();
+      }
+    });
+
+    await started;
+    await watcher.close();
+    releaseHook();
+    await closed;
+    expect(resolved).toBe(true);
+  },
+);

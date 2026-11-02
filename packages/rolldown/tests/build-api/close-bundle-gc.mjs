@@ -147,6 +147,36 @@ const cases = {
     });
     await watcher.close();
   },
+  async 'watch mode, watcher closes while an event result close runs'(marker) {
+    let hookStarted;
+    const started = new Promise((resolve) => (hookStarted = resolve));
+    let releaseHook;
+    const paused = new Promise((resolve) => (releaseHook = resolve));
+    const plugin = keepOptions('buildStart', marker);
+    plugin.closeBundle = async () => {
+      hookStarted();
+      await paused;
+      marker.closed = true;
+    };
+    const watcher = watch({
+      input,
+      logLevel: 'silent',
+      external: (id) => Boolean(plugin) && id === 'never',
+      plugins: [plugin],
+      watch: { skipWrite: true },
+    });
+    let onResultClosed;
+    const resultClosed = new Promise((resolve) => (onResultClosed = resolve));
+    watcher.on('event', (event) => {
+      if (event.code === 'BUNDLE_END' || event.code === 'ERROR') {
+        event.result.close().then(onResultClosed);
+      }
+    });
+    await started;
+    await watcher.close();
+    releaseHook();
+    await resultClosed;
+  },
   async 'dev engine'(marker) {
     if (isWasi) return;
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rolldown-close-gc-'));

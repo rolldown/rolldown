@@ -225,3 +225,98 @@ impl Drop for ReleaseJsCallbacksOnDrop {
     }
   }
 }
+
+/// A release that the owner shares with close operations that it does not wait for.
+///
+/// Example: the close of a watcher event result runs `closeBundle`, and `watcher.close()` does not
+/// wait for it. The result close takes a [`JsCallbackReleaseHold`] while it runs. A release request
+/// from the owner then runs when the last hold drops. Only [`Self::request_release`] starts a
+/// release. A drop of the owner or of a holder never does, because a GC can drop them while the
+/// owner still runs.
+#[derive(Clone)]
+pub struct SharedJsCallbackRelease {
+  state: Arc<Mutex<SharedReleaseState>>,
+}
+
+struct SharedReleaseState {
+  groups: Vec<JsCallbackRelease>,
+  holds: usize,
+  release_requested: bool,
+}
+
+impl SharedReleaseState {
+  /// Takes the groups out when the release can run now.
+  fn take_releasable(&mut self) -> Vec<JsCallbackRelease> {
+    if self.release_requested && self.holds == 0 {
+      std::mem::take(&mut self.groups)
+    } else {
+      Vec::new()
+    }
+  }
+}
+
+impl fmt::Debug for SharedJsCallbackRelease {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    f.write_str("SharedJsCallbackRelease")
+  }
+}
+
+impl SharedJsCallbackRelease {
+  pub fn new(groups: Vec<JsCallbackRelease>) -> Self {
+    Self {
+      state: Arc::new(Mutex::new(SharedReleaseState {
+        groups,
+        holds: 0,
+        release_requested: false,
+      })),
+    }
+  }
+
+  /// Keeps the JS functions until the hold drops. Take the hold in the synchronous part of the
+  /// operation, before it spawns its future, so that a release request that comes later waits for
+  /// it. A hold after the release does nothing.
+  pub fn hold(&self) -> JsCallbackReleaseHold {
+    self.lock().holds += 1;
+    JsCallbackReleaseHold(self.clone())
+  }
+
+  /// Releases the JS functions now, or when the last hold drops.
+  pub fn request_release(&self) {
+    let groups = {
+      let mut state = self.lock();
+      state.release_requested = true;
+      state.take_releasable()
+    };
+    // Release outside the lock.
+    drop(ReleaseJsCallbacksOnDrop(groups));
+  }
+
+  fn lock(&self) -> std::sync::MutexGuard<'_, SharedReleaseState> {
+    self.state.lock().unwrap_or_else(PoisonError::into_inner)
+  }
+}
+
+/// See [`SharedJsCallbackRelease::hold`].
+pub struct JsCallbackReleaseHold(SharedJsCallbackRelease);
+
+impl Drop for JsCallbackReleaseHold {
+  fn drop(&mut self) {
+    let groups = {
+      let mut state = self.0.lock();
+      state.holds -= 1;
+      state.take_releasable()
+    };
+    // Release outside the lock.
+    drop(ReleaseJsCallbacksOnDrop(groups));
+  }
+}
+
+/// Requests the release of a [`SharedJsCallbackRelease`] when it drops. Keep it as the first local
+/// of the close future of the owner, so that the request runs on each exit path.
+pub struct RequestReleaseOnDrop(pub SharedJsCallbackRelease);
+
+impl Drop for RequestReleaseOnDrop {
+  fn drop(&mut self) {
+    self.0.request_release();
+  }
+}

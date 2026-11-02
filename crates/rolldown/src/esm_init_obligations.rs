@@ -816,7 +816,8 @@ fn add_wrapped_esm_init_targets_for_static_member_reads(
           match member_expr.resolution(&ctx.importer_meta.resolved_member_expr_refs) {
             Some(resolution) => {
               if let Some(symbol_ref) = resolution.resolved
-                && !symbol_is_always_inlined(ctx, symbol_ref)
+                && (!symbol_is_always_inlined(ctx, symbol_ref)
+                  || declaring_module_has_side_effects(ctx, symbol_ref))
               {
                 add_wrapped_esm_init_target_for_symbol(
                   ctx,
@@ -848,6 +849,17 @@ fn symbol_is_always_inlined(ctx: &WrappedEsmInitTargetContext<'_>, symbol_ref: S
   ctx.constant_value_map.get(&canonical_ref).is_some_and(|meta| {
     !meta.commonjs_export && (mode != InlineConstMode::Smart || meta.safe_to_inline)
   })
+}
+
+/// Whether the module that declares the symbol, or one of its dependencies, has side effects. The
+/// inclusion pass keeps such a module when its constant is inlined, so the read still initializes it.
+fn declaring_module_has_side_effects(
+  ctx: &WrappedEsmInitTargetContext<'_>,
+  symbol_ref: SymbolRef,
+) -> bool {
+  let owner = ctx.symbol_db.canonical_ref_for(symbol_ref).owner;
+  ctx.modules[owner].side_effects().has_side_effects()
+    || ctx.metas[owner].has_side_effectful_dependency(ctx.modules)
 }
 
 /// Whether this record has a statically resolvable binding consumer. A side-effect-only import has

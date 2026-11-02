@@ -1,0 +1,157 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## button.js
+
+```js
+// ui/button.css.js
+globalThis.styleLoaded = true;
+
+```
+
+## direct.js
+
+```js
+import "./button.js";
+// direct.js
+globalThis.size = "md";
+
+```
+
+## namespace.js
+
+```js
+import "./button.js";
+// namespace.js
+globalThis.size = "md";
+
+```
+
+## through_barrel.js
+
+```js
+import "./button.js";
+// through_barrel.js
+globalThis.size = "md";
+
+```
+
+# Variant: [strict_execution_order: true]
+
+## Assets
+
+### button.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+// ui/button.css.js
+function init_button_css() {
+	return (init_button_css = __esmMin((() => {
+		globalThis.styleLoaded = true;
+	})))();
+}
+function init_button() {
+	return (init_button = __esmMin((() => {
+		init_button_css();
+	})))();
+}
+export { init_button as t };
+
+```
+
+### direct.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_button } from "./button.js";
+// direct.js
+function init_direct() {
+	return (init_direct = __esmMin((() => {
+		init_button();
+		globalThis.size = "md";
+	})))();
+}
+init_direct();
+
+```
+
+### namespace.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_button } from "./button.js";
+// namespace.js
+function init_namespace() {
+	return (init_namespace = __esmMin((() => {
+		init_button();
+		globalThis.size = "md";
+	})))();
+}
+init_namespace();
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+### through_barrel.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_button } from "./button.js";
+// through_barrel.js
+function init_through_barrel() {
+	return (init_through_barrel = __esmMin((() => {
+		init_button();
+		globalThis.size = "md";
+	})))();
+}
+init_through_barrel();
+
+```
+
+# Variant: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### button.js
+
+```js
+// ui/button.css.js
+globalThis.styleLoaded = true;
+
+```
+
+### direct.js
+
+```js
+import "./button.js";
+// direct.js
+globalThis.size = "md";
+
+```
+
+### namespace.js
+
+```js
+import "./button.js";
+// namespace.js
+globalThis.size = "md";
+
+```
+
+### through_barrel.js
+
+```js
+import "./button.js";
+// through_barrel.js
+globalThis.size = "md";
+
+```

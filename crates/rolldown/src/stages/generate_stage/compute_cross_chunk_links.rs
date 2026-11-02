@@ -14,9 +14,9 @@ use oxc_str::CompactStr;
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
   ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PostChunkOptimizationOperation,
-  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, ResolvedImportRecord, RuntimeHelper, SymbolRef,
-  SymbolRefDb, TaggedSymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder, UsedSymbolRefsView,
-  WrapKind,
+  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, ResolvedImportRecord, RuntimeHelper,
+  SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, TaggedSymbolRef, UsedSymbolRefs,
+  UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
 };
 use rolldown_utils::index_vec_ext::IndexVecRefExt as _;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
@@ -439,6 +439,32 @@ impl GenerateStage<'_> {
     })
   }
 
+  /// The modules that declare the constants that the included statements of a module read, by name
+  /// or as a namespace member such as `ns.SIZE`, in source order.
+  fn read_constant_owners(&self, module_idx: ModuleIdx) -> FxIndexSet<ModuleIdx> {
+    let meta = &self.link_output.metas[module_idx];
+    let mut owners = FxIndexSet::default();
+    for (stmt_idx, stmt_info) in self.link_output.stmt_infos[module_idx].iter_enumerated() {
+      if !meta.stmt_info_included.has_bit(stmt_idx) {
+        continue;
+      }
+      for reference in &stmt_info.referenced_symbols {
+        let symbol_ref = match reference {
+          SymbolOrMemberExprRef::Symbol(symbol_ref) => Some(*symbol_ref),
+          SymbolOrMemberExprRef::MemberExpr(member_expr) => {
+            member_expr.represent_symbol_ref(&meta.resolved_member_expr_refs)
+          }
+        };
+        let Some(symbol_ref) = symbol_ref else { continue };
+        let canonical_ref = self.link_output.symbol_db.canonical_ref_for(symbol_ref);
+        if self.link_output.global_constant_symbol_map.contains_key(&canonical_ref) {
+          owners.insert(canonical_ref.owner);
+        }
+      }
+    }
+    owners
+  }
+
   /// Pushes the modules that the static imports of a module lead to, in source order. Only the
   /// imports that tree shaking keeps count, because the output does not have the other imports. An
   /// import is kept when its module is in `load_dependencies`, the dependencies that survive tree
@@ -665,9 +691,8 @@ impl GenerateStage<'_> {
   ///   reachability truthful; this direction validates that the gate mirrors emission. The base
   ///   prediction is exempt from this direction: it filters `load_dependencies`, the same edges
   ///   the pre-prediction bits reachability trusted, so its over-predictions are exactly
-  ///   main-parity — e.g. constant inlining drops a symbol's import (and can even orphan an
-  ///   annotated-side-effectful chunk, see `rollup@chunking form@namespace-reexport-side-effect-cache`)
-  ///   without touching `load_dependencies`, on main just as here.
+  ///   main-parity — e.g. constant inlining drops a symbol's import without touching
+  ///   `load_dependencies`.
   ///
   /// Service imports hang on the entry (possibly facade) chunk, so entry chunks predict them via
   /// their `entry_module_idx` — hosted or not — plus the facade edge to the chunk hosting a
@@ -1839,6 +1864,46 @@ impl GenerateStage<'_> {
             index_cross_chunk_imports[chunk_id].insert(importee_chunk_idx);
             let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
             imports_from_other_chunks.entry(importee_chunk_idx).or_default();
+          }
+
+          // Constant inlining drops the import of a constant, whether it is imported directly,
+          // through a barrel, or read as a namespace member; the module that declares it still has
+          // to be loaded when it or a dependency has side effects.
+          let mut predicted_targets = None;
+          for owner in self.read_constant_owners(module_idx) {
+            // A module behind an order wrapper runs when its init is called, so a bare import of
+            // its chunk would only load that chunk earlier.
+            if self.options.is_strict_execution_order_enabled()
+              && order_state.esm_init_target(owner, &self.link_output.metas[owner]).is_some()
+            {
+              continue;
+            }
+            if !self.link_output.module_table[owner].side_effects().has_side_effects()
+              && !self.link_output.metas[owner]
+                .has_side_effectful_dependency(&self.link_output.module_table.modules)
+            {
+              continue;
+            }
+            let Some(owner_chunk_idx) = chunk_graph.module_to_chunk[owner] else {
+              continue;
+            };
+            if owner_chunk_idx == chunk_id {
+              continue;
+            }
+            // The already-loaded cycle check sees only predicted edges.
+            if !predicted_targets
+              .get_or_insert_with(|| {
+                self
+                  .predicted_static_import_targets(module_idx)
+                  .into_iter()
+                  .collect::<FxHashSet<_>>()
+              })
+              .contains(&owner)
+            {
+              continue;
+            }
+            index_cross_chunk_imports[chunk_id].insert(owner_chunk_idx);
+            index_imports_from_other_chunks[chunk_id].entry(owner_chunk_idx).or_default();
           }
 
           // Runtime module may have side effects (e.g. dev/HMR mode) without an import record.

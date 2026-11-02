@@ -1,0 +1,13 @@
+{
+  "config": {
+    "input": [
+      { "name": "through_barrel", "import": "./through_barrel.js" },
+      { "name": "direct", "import": "./direct.js" },
+      { "name": "namespace", "import": "./namespace.js" }
+    ]
+  },
+  "configVariants": [
+    { "strictExecutionOrder": true },
+    { "strictExecutionOrder": true, "onDemandWrapping": true }
+  ]
+}

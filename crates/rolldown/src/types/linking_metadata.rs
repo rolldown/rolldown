@@ -3,7 +3,7 @@ use oxc::semantic::NodeId;
 use oxc_index::IndexVec;
 use oxc_str::CompactStr;
 use rolldown_common::{
-  ConcatenateWrappedModuleKind, EntryPointKind, ImportRecordIdx, ImportRecordMeta,
+  ConcatenateWrappedModuleKind, EntryPointKind, ImportRecordIdx, ImportRecordMeta, IndexModules,
   MemberExprRefResolutionMap, ModuleIdx, ModuleNamespaceIncludedReason, ModuleType, NormalModule,
   OutputFormat, ResolvedExport, RuntimeHelper, StmtInfoIdx, SymbolRef, SymbolRefDb, WrapKind,
   dynamic_import_usage::DynamicImportExportsUsage,
@@ -117,6 +117,14 @@ pub struct LinkingMetadata {
 }
 
 impl LinkingMetadata {
+  /// Whether a dependency of the module, including an external one, has side effects.
+  pub fn has_side_effectful_dependency(&self, modules: &IndexModules) -> bool {
+    self
+      .dependencies
+      .iter()
+      .any(|&dependency_idx| modules[dependency_idx].side_effects().has_side_effects())
+  }
+
   pub fn canonical_exports(
     &self,
     needs_commonjs_export: bool,

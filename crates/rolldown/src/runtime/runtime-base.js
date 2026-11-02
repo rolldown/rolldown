@@ -31,15 +31,20 @@ export var __commonJS = (cb, mod) =>
 export var __commonJSMin = (cb, mod) => () => (
   mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports
 );
-export var __exportAll = (all, no_symbols) => {
-  let target = {};
+// `__exportAll` creates a module namespace object with the shape of a native one. The object has
+// a null prototype, and it accepts no new properties. If `flags & 1` is set, the object has no
+// `Symbol.toStringTag`. If `flags & 2` is set, the object stays open (it accepts new properties),
+// because a later `__reExport` adds properties to it.
+// See internal-docs/runtime-helpers/implementation.md
+export var __exportAll = (all, flags) => {
+  let target = { __proto__: null };
   for (var name in all) {
     __defProp(target, name, { get: all[name], enumerable: true });
   }
-  if (!no_symbols) {
+  if (!(flags & 1)) {
     __defProp(target, Symbol.toStringTag, { value: 'Module' });
   }
-  return target;
+  return flags & 2 ? target : Object.preventExtensions(target);
 };
 export var __copyProps = (to, from, except, desc) => {
   if ((from && typeof from === 'object') || typeof from === 'function') {

@@ -36,6 +36,7 @@ var common_exports = /* @__PURE__ */ __exportAll({
 });
 // entry.js
 assert.deepEqual(common_exports, Object.defineProperty({
+	__proto__: null,
 	x: 1,
 	z: 4
 }, Symbol.toStringTag, { value: "Module" }));

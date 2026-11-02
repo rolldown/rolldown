@@ -69,14 +69,14 @@ var __esmMin = (fn, res, err) => () => {
 		throw err = [e], e;
 	}
 };
-var __exportAll = (all, no_symbols) => {
-	let target = {};
+var __exportAll = (all, flags) => {
+	let target = { __proto__: null };
 	for (var name in all) __defProp(target, name, {
 		get: all[name],
 		enumerable: true
 	});
-	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
-	return target;
+	if (!(flags & 1)) __defProp(target, Symbol.toStringTag, { value: "Module" });
+	return flags & 2 ? target : Object.preventExtensions(target);
 };
 export { __exportAll as n, __esmMin as t };
 
@@ -190,14 +190,14 @@ var __esmMin = (fn, res, err) => () => {
 		throw err = [e], e;
 	}
 };
-var __exportAll = (all, no_symbols) => {
-	let target = {};
+var __exportAll = (all, flags) => {
+	let target = { __proto__: null };
 	for (var name in all) __defProp(target, name, {
 		get: all[name],
 		enumerable: true
 	});
-	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
-	return target;
+	if (!(flags & 1)) __defProp(target, Symbol.toStringTag, { value: "Module" });
+	return flags & 2 ? target : Object.preventExtensions(target);
 };
 Object.defineProperty(exports, "__esmMin", {
 	enumerable: true,

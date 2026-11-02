@@ -20,7 +20,10 @@ import assert from "node:assert/strict";
 // foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => 1 });
 // main.js
-assert.deepEqual(foo_exports, Object.defineProperty({ foo: 1 }, Symbol.toStringTag, { value: "Module" }));
+assert.deepEqual(foo_exports, Object.defineProperty({
+	__proto__: null,
+	foo: 1
+}, Symbol.toStringTag, { value: "Module" }));
 Promise.resolve().then(() => foo_exports).then((mod) => {
 	assert.deepEqual(mod, foo_exports);
 });

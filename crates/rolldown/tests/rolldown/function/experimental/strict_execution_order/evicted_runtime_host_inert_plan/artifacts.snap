@@ -8,14 +8,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // \0rolldown/runtime.js
 var __defProp = Object.defineProperty;
-var __exportAll = (all, no_symbols) => {
-	let target = {};
+var __exportAll = (all, flags) => {
+	let target = { __proto__: null };
 	for (var name in all) __defProp(target, name, {
 		get: all[name],
 		enumerable: true
 	});
-	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
-	return target;
+	if (!(flags & 1)) __defProp(target, Symbol.toStringTag, { value: "Module" });
+	return flags & 2 ? target : Object.preventExtensions(target);
 };
 // a.js
 console.log("A", Object.keys(/* @__PURE__ */ __exportAll({ c: () => 1 })).join());
@@ -116,14 +116,14 @@ Object.defineProperty(exports, "p", {
 ```js
 // \0rolldown/runtime.js
 var __defProp = Object.defineProperty;
-var __exportAll = (all, no_symbols) => {
-	let target = {};
+var __exportAll = (all, flags) => {
+	let target = { __proto__: null };
 	for (var name in all) __defProp(target, name, {
 		get: all[name],
 		enumerable: true
 	});
-	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
-	return target;
+	if (!(flags & 1)) __defProp(target, Symbol.toStringTag, { value: "Module" });
+	return flags & 2 ? target : Object.preventExtensions(target);
 };
 Object.defineProperty(exports, "__exportAll", {
 	enumerable: true,

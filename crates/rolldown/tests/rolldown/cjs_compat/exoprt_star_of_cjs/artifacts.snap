@@ -12,11 +12,11 @@ var require_c = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.test = 1e3;
 }));
 // b.js
-var b_exports = /* @__PURE__ */ __exportAll({});
+var b_exports = /* @__PURE__ */ __exportAll({}, 2);
 __reExport(b_exports, /* @__PURE__ */ __toESM(require_c()));
 // a.js
-var a_exports = /* @__PURE__ */ __exportAll({});
+var a_exports = /* @__PURE__ */ __exportAll({}, 2);
 __reExport(a_exports, b_exports);
-__reExport(/* @__PURE__ */ __exportAll({}), a_exports);
+__reExport(/* @__PURE__ */ __exportAll({}, 2), a_exports);
 
 ```

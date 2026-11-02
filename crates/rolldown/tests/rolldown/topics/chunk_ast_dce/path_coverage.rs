@@ -43,6 +43,9 @@ fn minify(mode: &str) -> RawMinifyOptions {
   if mode == "full" {
     return RawMinifyOptions::Bool(true);
   }
+  if mode == "dce" {
+    return RawMinifyOptions::DeadCodeEliminationOnly;
+  }
   RawMinifyOptions::Object(RawMinifyOptionsDetailed {
     compress: (mode == "compress_only").then(RawCompressOptions::default),
     mangle: (mode == "mangle_only").then(RawMangleOptions::default),
@@ -269,6 +272,54 @@ async fn execution_and_final_maps() {
   assert_eq!((builds, chunk_count, map_anchors), (27, 33, 60));
   if let Ok(path) = std::env::var("ROLLDOWN_PATH_MATRIX_OUTPUT") {
     std::fs::write(path, serde_json::to_string_pretty(&captures).unwrap()).unwrap();
+  }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn sourcemap_opt_in_does_not_change_javascript() {
+  for (cwd, entry) in [
+    (FIXTURE, "./cross/main.js"),
+    (
+      concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/rolldown/topics/chunk_ast_dce/literal_provenance"
+      ),
+      "./commented.js",
+    ),
+  ] {
+    for format in [OutputFormat::Esm, OutputFormat::Cjs, OutputFormat::Iife, OutputFormat::Umd] {
+      for mode in ["dce", "compress_only", "mangle_only", "full"] {
+        let mut outputs = Vec::new();
+        for sourcemap in [None, Some(SourceMapType::Hidden)] {
+          let output = Bundler::new(BundlerOptions {
+            cwd: Some(cwd.into()),
+            input: Some(vec![InputItem { name: Some("main".into()), import: entry.into() }]),
+            format: Some(format),
+            name: matches!(format, OutputFormat::Iife | OutputFormat::Umd)
+              .then(|| "PathCoverage".into()),
+            entry_filenames: Some("main.js".to_string().into()),
+            minify: Some(minify(mode)),
+            sourcemap,
+            ..Default::default()
+          })
+          .unwrap()
+          .generate()
+          .await
+          .unwrap();
+          let mut chunks: Vec<_> = output
+            .assets
+            .iter()
+            .filter_map(|asset| match asset {
+              Output::Chunk(chunk) => Some((chunk.filename.to_string(), chunk.code.clone())),
+              Output::Asset(_) => None,
+            })
+            .collect();
+          chunks.sort_unstable_by(|(left, _), (right, _)| left.cmp(right));
+          outputs.push(chunks);
+        }
+        assert_eq!(outputs[0], outputs[1], "{entry}/{format:?}/{mode}");
+      }
+    }
   }
 }
 

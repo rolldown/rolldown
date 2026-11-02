@@ -49,9 +49,8 @@ use rolldown_common::{
 use rolldown_ecmascript::EcmaCompiler;
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
-use rolldown_utils::{
-  poc_prof::{Phase, Timer},
-  rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
+use rolldown_utils::rayon::{
+  IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
 };
 use rustc_hash::FxHashMap;
 
@@ -246,7 +245,6 @@ pub(super) fn assemble_chunk_with_wrapper<'a>(
   inline_records: &[(rolldown_common::ChunkIdx, std::ops::Range<usize>)],
   wrapper_ast: Option<&crate::ecmascript::WrapperAstPlan>,
 ) -> rolldown_error::BuildResult<(Program<'a>, ChunkLayout)> {
-  let t = Timer::start();
   let builder = AstBuilder::new(allocator);
   let source_type = ctx.options.format.source_type().with_jsx(true);
   let generated_filename =
@@ -293,13 +291,11 @@ pub(super) fn assemble_chunk_with_wrapper<'a>(
   let text_ref: &'static str = unsafe { std::mem::transmute::<&str, &'static str>(&text) };
 
   // Rebase every module's spans and comments into `V`.
-  t.stop(Phase::AstSpace);
   // The module's line tables are built in the same parallel job; `concat`ed into `V`'s below.
   let module_tables: Vec<LineOffsetTables> = asts
     .par_iter_mut()
     .zip(bases.par_iter())
     .map(|(ast, base)| {
-      let t = Timer::start();
       let base = *base;
       let tables = if enable_sourcemap {
         LineOffsetTables::new(ast.source_text)
@@ -317,11 +313,9 @@ pub(super) fn assemble_chunk_with_wrapper<'a>(
         }
       }
       ast.source_text = text_ref;
-      t.stop(Phase::AstRebase);
       tables
     })
     .collect();
-  let t = Timer::start();
 
   // 2. Assemble without markers: imports, module bodies, tail.
   let mut body: ArenaVec<'_, Statement<'_>> = ArenaVec::with_capacity_in(
@@ -388,9 +382,7 @@ pub(super) fn assemble_chunk_with_wrapper<'a>(
     let directives = chunk_directives(ctx, allocator, generated.imports_after_runtime);
     Program::new(SPAN, source_type, text_ref, comments, None, directives, body, &builder)
   };
-  t.stop(Phase::AstAssemble);
 
-  let t = Timer::start();
   let tables =
     if enable_sourcemap {
       let head = &text[head_base as usize..tail_base as usize];
@@ -423,7 +415,6 @@ pub(super) fn assemble_chunk_with_wrapper<'a>(
     private_member_mappings: None,
     class_offsets: Vec::new(),
   };
-  t.stop(Phase::AstSpace);
   Ok((
     program,
     ChunkLayout {
@@ -648,7 +639,6 @@ pub(super) fn optimize_chunk<'a>(
   let ChunkLayout { mut space, head_base, tail_base, runtime_before_imports } = layout;
   let source_type = program.source_type;
   let enable_sourcemap = ctx.options.sourcemap.is_some();
-  let t = Timer::start();
   // Direct codegen retains donor literal spans; parser-produced inputs retain their own
   // final-text provenance. Both enter the same optimizer.
   let minify_ret = EcmaCompiler::minify_program(
@@ -658,12 +648,10 @@ pub(super) fn optimize_chunk<'a>(
     matches!(ctx.options.minify, MinifyOptions::Enabled(_)),
     enable_sourcemap,
   );
-  t.stop(Phase::AstDce);
   #[cfg(feature = "testing")]
   super::record_coverage(ctx.options, "optimized", "global", ctx.filename);
 
   // 3. Split by span ranges.
-  let t = Timer::start();
   #[cfg(debug_assertions)]
   let statement_order = statement_addresses(&program.body);
   let module_count = asts.len();
@@ -727,14 +715,12 @@ pub(super) fn optimize_chunk<'a>(
     };
   }
 
-  t.stop(Phase::AstSplit);
   space.scoping = minify_ret.scoping.map(Arc::new);
   space.private_member_mappings = minify_ret.class_private_mappings.map(Arc::new);
   space.class_offsets = class_offsets;
   // Head and tail may hold code oxc moved out of modules (e.g. `var bar = require_foo().bar`
   // before `export { bar }` gets `require_foo`'s initializer inlined), so they are printed like
   // modules: with the user's comment options and a sourcemap into the moved code.
-  let t = Timer::start();
   let (imports, imports_map) = print_generated_in_space(
     allocator,
     ctx.options,
@@ -753,7 +739,6 @@ pub(super) fn optimize_chunk<'a>(
     ctx.module_table,
     tail_class_offset,
   );
-  t.stop(Phase::AstSplit);
   #[cfg(feature = "testing")]
   super::record_coverage(ctx.options, "split", "global", ctx.filename);
   ChunkAstDceOutput {
@@ -874,12 +859,10 @@ pub fn print_module(
     .with_shared_private_member_mappings(space.private_member_mappings.clone())
     .with_class_id_offset(space.class_offsets[pos])
     .build(ast);
-  let t = Timer::start();
   let (map, map_is_final) = ret.map.map_or((None, false), |map| {
     let (map, is_final) = remap(&map, space, Some(pos), module_table);
     (Some(map), is_final)
   });
-  t.stop(Phase::AstRemap);
   ModuleRenderOutput { code: ret.code, map, map_is_final }
 }
 

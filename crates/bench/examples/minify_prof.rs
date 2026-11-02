@@ -96,10 +96,9 @@ fn main() {
   let wall = w0.elapsed().as_secs_f64() * 1e3;
   let proc_cpu = (process_cpu_ns() - p0) as f64 / 1e6;
   println!(
-    "{} {} iters={iters} wall={wall:.0}ms proc_cpu={proc_cpu:.0}ms max_rss={:.0}MiB {}",
+    "{} {} iters={iters} wall={wall:.0}ms proc_cpu={proc_cpu:.0}ms max_rss={:.0}MiB",
     args[1],
     args[3],
     max_rss_mib(),
-    rolldown::poc_prof_report()
   );
 }

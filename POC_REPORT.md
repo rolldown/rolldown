@@ -28,9 +28,6 @@ Everything is behind an env var, so main's behavior and the PoC are compared fro
 | `ROLLDOWN_CHUNK_AST_DCE=global`           | fast path, no barrier, rebased spans (correct sourcemaps, §1b)      |
 | `ROLLDOWN_CHUNK_AST_DCE=nobarrier`        | no barrier when sourcemaps are off (measurement only, see §4)       |
 | `ROLLDOWN_CHUNK_AST_DCE=nobarrier-unsafe` | no barrier even with sourcemaps (measurement only, maps get broken) |
-| `ROLLDOWN_POC_PROF=1`                     | per-phase thread-CPU accounting, printed by `minify_prof`           |
-| `ROLLDOWN_CHUNK_AST_DCE_DEBUG=1`          | eligibility / iteration-count logging                               |
-| `ROLLDOWN_CHUNK_AST_DCE_DUMP=<dir>`       | write the assembled chunk program (printed) before DCE              |
 
 With the env var unset, output is byte-identical to main (checked on three.js ×10, rome, antd,
 and the full `cargo test -p rolldown` snapshot suite).
@@ -494,12 +491,11 @@ Main risks:
 - `crates/rolldown/src/stages/generate_stage/render_chunk_to_assets.rs` — runs it before module
   printing, consumes eligible ASTs into frozen chunk owners.
 - `crates/rolldown/src/ecmascript/format/esm.rs` — uses the re-printed imports/exports.
-- `crates/rolldown/src/stages/generate_stage/minify_chunks.rs` — skips fast-path chunks; timed copy
-  of `dce_or_minify` under `ROLLDOWN_POC_PROF`.
+- `crates/rolldown/src/stages/generate_stage/minify_chunks.rs` — optimizes admitted final-text
+  inputs through the shared AST optimizer.
 - `crates/rolldown_common/src/module/normal_module.rs` — `render_with(…, force_annotation)`.
 - `crates/rolldown/src/module_finalizers/mod.rs` — the `ClassType` fix.
-- `crates/rolldown_utils/src/poc_prof.rs` — phase CPU accounting.
-- `crates/bench/examples/minify_prof.rs` — benchmark driver (adds max RSS, phase report,
+- `crates/bench/examples/minify_prof.rs` — benchmark driver (adds process/wall CPU, max RSS,
   `rome:<entry>` input); `crates/bench/examples/dce_text.rs` — runs oxc DCE on a text file.
 
 oxc changes: barrier mode none; global mode the `oxc_codegen` patch above (no `oxc_minifier`

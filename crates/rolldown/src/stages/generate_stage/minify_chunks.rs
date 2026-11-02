@@ -11,7 +11,6 @@ use rolldown_common::{
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_error::{BuildDiagnostic, BuildResult, InvalidOptionType};
 use rolldown_sourcemap::collapse_sourcemaps;
-use rolldown_utils::poc_prof::{Phase, Timer};
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 use rustc_hash::FxHashSet;
 
@@ -175,7 +174,6 @@ impl GenerateStage<'_> {
             .set(cache)
             .expect("property mangling is limited to one JavaScript chunk");
         }
-        let t = Timer::start();
         let collapsed_map = match (&chunk.map, &new_map) {
           (Some(origin_map), Some(new_map)) => Some(collapse_sourcemaps(&[origin_map, new_map])),
           _ => {
@@ -183,7 +181,6 @@ impl GenerateStage<'_> {
             None
           }
         };
-        t.stop(Phase::MinifyCollapse);
         (minified_content, collapsed_map)
       };
       chunk.content = minified_content.into();
@@ -253,7 +250,6 @@ fn optimize_final_text<'a>(
     codegen::Codegen,
     parser::{ParseOptions, Parser},
   };
-  let t = Timer::start();
   let ret = Parser::new(allocator, source_text, source_type)
     .with_options(ParseOptions { preserve_parens: false, ..ParseOptions::default() })
     .parse();
@@ -270,11 +266,7 @@ fn optimize_final_text<'a>(
     );
   }
   let mut program = ret.program;
-  t.stop(Phase::MinifyParse);
-  let t = Timer::start();
   let ret = EcmaCompiler::minify_program(allocator, &mut program, minify_options, compress, false);
-  t.stop(Phase::MinifyDce);
-  let t = Timer::start();
   let property_mangle_cache = ret.property_mangle_cache;
   let ret = Codegen::new()
     .with_options(CodegenOptions {
@@ -284,7 +276,6 @@ fn optimize_final_text<'a>(
     .with_scoping(ret.scoping)
     .with_private_member_mappings(ret.class_private_mappings)
     .build(&program);
-  t.stop(Phase::MinifyCodegen);
   Ok((ret.code, ret.map, property_mangle_cache))
 }
 

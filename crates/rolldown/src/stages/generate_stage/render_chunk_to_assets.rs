@@ -12,7 +12,6 @@ use rolldown_error::{BatchedBuildDiagnostic, BuildResult, Diagnostics};
 use rolldown_utils::{
   index_vec_ext::IndexVecRefExt as _,
   indexmap::{FxIndexMap, FxIndexSet},
-  poc_prof::{Phase, Timer},
   rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator},
 };
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -425,7 +424,6 @@ impl GenerateStage<'_> {
             Some(module) => {
               #[expect(clippy::bool_to_int_with_if)]
               let initial_indent = if needs_extra_indent { 1 } else { 0 };
-              let t = Timer::start();
               let out = match prepared {
                 Some(prepared) => prepared.print_module(
                   positions[&module_idx],
@@ -443,15 +441,6 @@ impl GenerateStage<'_> {
                   true,
                 ),
               };
-              t.stop(Phase::ModulePrint);
-              if let Some(dir) = std::env::var_os("ROLLDOWN_CHUNK_AST_DCE_DUMP") {
-                let name = module.stable_id.as_str().replace(['/', '\\', '\0'], "_");
-                std::fs::write(
-                  std::path::Path::new(&dir).join(format!("module.{name}.js")),
-                  &out.code,
-                )
-                .unwrap();
-              }
               Some(out)
             }
             _ => None,

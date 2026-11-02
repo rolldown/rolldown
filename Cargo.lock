@@ -3371,7 +3371,6 @@ dependencies = [
  "infer",
  "itoa",
  "json-escape-simd",
- "libc",
  "memchr",
  "mime",
  "nom",

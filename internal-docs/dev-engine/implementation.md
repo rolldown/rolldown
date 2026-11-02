@@ -1293,8 +1293,11 @@ Beyond `ensure_latest_bundle_output`, the public methods on `DevEngine`
 | `remove_client(client_id)`                       | disconnect: drops the session and its pending payloads (`dev_engine.rs:318`)                   |
 | `notify_payload_delivered(filename)`             | delivery ack: max-merges the pending payload's stamps into `shipped[C]` (`dev_engine.rs:332`)  |
 | `compile_lazy_entry(proxy_module_id, client_id)` | compiles a lazy entry, records it as a pending payload, then sends `ModuleChanged`             |
-| `close()`                                        | sends `Close`, runs `closeBundle`, awaits coordinator shutdown                                 |
+| `close()`                                        | sends `Close`, runs `closeBundle`, awaits coordinator shutdown; a repeat waits for it          |
 | `is_closed()` / `bundler_options()`              | accessors                                                                                      |
+
+A repeated `close()` waits until the first call ends, so no call returns while `closeBundle`
+still runs. See [JS callback lifetime](../bundler-data-lifecycle/implementation.md#js-callback-lifetime).
 
 `ModuleChanged` handling (`bundle_coordinator.rs:148-165`): registers the
 watch files the message carries, queues a `TaskInput::Rebuild` for the

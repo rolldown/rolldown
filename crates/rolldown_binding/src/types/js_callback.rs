@@ -135,29 +135,44 @@ where
     &self,
     args: Args,
   ) -> impl Future<Output = Result<Ret, napi::Error>> + Send + 'static {
-    let (sender, receiver) = futures::channel::oneshot::channel();
-    let status =
-      self.call_with_return_value(args, ThreadsafeFunctionCallMode::NonBlocking, move |ret, _| {
-        // The receiver may be gone; ignore it, as `call_async_catch` does.
-        let _ = sender.send(ret);
-        Ok(())
-      });
-    async move {
-      if status != Status::Ok {
-        return Err(napi::Error::from_status(status));
-      }
-      let ret = receiver.await.map_err(|_| {
-        napi::Error::new(
-          Status::GenericFailure,
-          "Receive value from threadsafe function sender failed",
-        )
-      })??;
-      match ret {
-        Either::A(ret) => Ok(ret),
-        Either::B(invalid) => {
-          Err(create_invalid_return_error(invalid.value_type, Ret::value_type()))
-        }
-      }
+    invoke_eager_on(self, args)
+  }
+}
+
+/// The body of [`JsCallbackExt::invoke_eager`]. The returned future does not borrow `callback`
+/// (`use<Args, Ret>`), so a caller can drop or move `callback` after the call is queued.
+pub(crate) fn invoke_eager_on<Args, Ret>(
+  callback: &JsCallback<Args, Ret>,
+  args: Args,
+) -> impl Future<Output = Result<Ret, napi::Error>> + Send + 'static + use<Args, Ret>
+where
+  Args: 'static + Send + JsValuesTupleIntoVec,
+  Ret: 'static + Send + FromNapiValue + TypeName,
+  napi::Either<Ret, InvalidReturnValue>: FromNapiValue,
+{
+  let (sender, receiver) = futures::channel::oneshot::channel();
+  let status = callback.call_with_return_value(
+    args,
+    ThreadsafeFunctionCallMode::NonBlocking,
+    move |ret, _| {
+      // The receiver may be gone; ignore it, as `call_async_catch` does.
+      let _ = sender.send(ret);
+      Ok(())
+    },
+  );
+  async move {
+    if status != Status::Ok {
+      return Err(napi::Error::from_status(status));
+    }
+    let ret = receiver.await.map_err(|_| {
+      napi::Error::new(
+        Status::GenericFailure,
+        "Receive value from threadsafe function sender failed",
+      )
+    })??;
+    match ret {
+      Either::A(ret) => Ok(ret),
+      Either::B(invalid) => Err(create_invalid_return_error(invalid.value_type, Ret::value_type())),
     }
   }
 }

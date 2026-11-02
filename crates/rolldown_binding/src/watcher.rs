@@ -14,6 +14,7 @@ use rolldown_watcher::{WatchEvent, WatcherConfig, WatcherEventHandler};
 use crate::types::binding_bundler_options::BindingBundlerOptions;
 use crate::types::binding_watcher_event::BindingWatcherEvent;
 use crate::types::js_callback::{MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt};
+use crate::types::js_callback_release::{JsCallbackRelease, ReleaseJsCallbacksOnDrop};
 use crate::utils::{
   create_bundler_config_from_binding_options::create_bundler_config_from_binding_options,
   spawn_boxed_future,
@@ -57,6 +58,10 @@ impl WatcherEventHandler for NapiWatcherEventHandler {
 #[napi]
 pub struct BindingWatcher {
   inner: Arc<rolldown_watcher::Watcher>,
+  /// The JS functions of the options of each task. `close` releases them. The close of one event
+  /// result (`BindingWatcherBundler::close`) does not: the next rebuilds still use them.
+  /// See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
+  option_callbacks: Vec<JsCallbackRelease>,
 }
 
 #[napi]
@@ -69,10 +74,13 @@ impl BindingWatcher {
     options: Vec<BindingBundlerOptions>,
     listener: MaybeAsyncJsCallback<FnArgs<(BindingWatcherEvent,)>>,
   ) -> napi::Result<Self> {
-    let configs = options
+    let (configs, option_callbacks): (Vec<_>, Vec<_>) = options
       .into_iter()
       .map(create_bundler_config_from_binding_options)
-      .collect::<Result<Vec<_>, _>>()?;
+      .collect::<Result<Vec<_>, _>>()?
+      .into_iter()
+      .map(|normalized| (normalized.config, normalized.callbacks))
+      .unzip();
 
     // Extract watcher config from the first config's watch options.
     let watch = configs.first().and_then(|c| c.options.watch.as_ref());
@@ -94,7 +102,7 @@ impl BindingWatcher {
           errs.iter().map(|e| e.to_diagnostic().to_string()).collect::<Vec<_>>().join("\n"),
         )
       })?;
-    Ok(Self { inner: Arc::new(inner) })
+    Ok(Self { inner: Arc::new(inner), option_callbacks })
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
@@ -123,7 +131,11 @@ impl BindingWatcher {
   #[napi(ts_return_type = "Promise<void>")]
   pub fn close<'env>(&self, env: &'env Env) -> napi::Result<PromiseRaw<'env, ()>> {
     let inner = Arc::clone(&self.inner);
+    let option_callbacks = self.option_callbacks.clone();
     spawn_boxed_future(env, async move {
+      // Each `Watcher::close` call waits for the watcher to stop, so this release never runs
+      // before the last `closeBundle`. A second release does nothing.
+      let _release = ReleaseJsCallbacksOnDrop(option_callbacks);
       inner.close().await.map_err(|e| napi::Error::new(napi::Status::GenericFailure, e.to_string()))
     })
   }

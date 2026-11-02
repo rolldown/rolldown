@@ -89,3 +89,62 @@ test.skipIf(isWasiTest)(
     await expect(engine.ensureCurrentBuildFinish()).resolves.toBeUndefined();
   },
 );
+
+// A second `close()` must not return while the first one still runs `closeBundle`. The binding
+// releases the JS functions of the options when `close()` returns, so an early return released
+// them too early. See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
+test.skipIf(isWasiTest)(
+  'a second close waits for the first close to end',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-close-twice-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    const input = path.join(dir, 'main.js');
+    fs.writeFileSync(input, 'console.log(1)');
+
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const order: string[] = [];
+    let hookStarted!: () => void;
+    const started = new Promise<void>((resolve) => (hookStarted = resolve));
+    let releaseHook!: () => void;
+    const paused = new Promise<void>((resolve) => (releaseHook = resolve));
+
+    const engine = await dev(
+      {
+        input,
+        experimental: { devMode: true },
+        plugins: [
+          {
+            name: 'paused-close-bundle',
+            async closeBundle() {
+              order.push('hook started');
+              hookStarted();
+              await paused;
+              order.push('hook ended');
+            },
+          },
+        ],
+      },
+      { dir: path.join(dir, 'dist') },
+      {},
+    );
+    engine.run().catch(() => {});
+    await engine.ensureCurrentBuildFinish();
+
+    const first = engine.close().then(() => order.push('first close returned'));
+    await started;
+    const second = engine.close().then(() => order.push('second close returned'));
+    // Before the fix, the second close returned in this time.
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    releaseHook();
+    await Promise.all([first, second]);
+
+    expect(order.indexOf('second close returned')).toBeGreaterThan(order.indexOf('hook ended'));
+  },
+);

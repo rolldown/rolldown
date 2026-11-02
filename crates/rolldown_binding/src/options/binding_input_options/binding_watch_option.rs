@@ -1,7 +1,7 @@
 use crate::types::binding_string_or_regex::{
   BindingStringOrRegex, bindingify_string_or_regex_array,
 };
-use crate::types::js_callback::JsCallback;
+use crate::types::js_callback_release::{JsCallbackRelease, UntrackedJsCallback};
 use derive_more::Debug;
 use napi::{bindgen_prelude::FnArgs, threadsafe_function::ThreadsafeFunctionCallMode};
 use rolldown::OnInvalidate;
@@ -22,12 +22,14 @@ pub struct BindingWatchOption {
   pub debounce_tick_rate: Option<u32>,
   #[napi(ts_type = "((id: string) => void) | undefined")]
   #[debug(skip)]
-  pub on_invalidate: Option<JsCallback<FnArgs<(String,)>>>,
+  pub on_invalidate: Option<UntrackedJsCallback<FnArgs<(String,)>>>,
 }
 
-impl From<BindingWatchOption> for rolldown_common::WatchOption {
-  fn from(value: BindingWatchOption) -> Self {
-    Self {
+impl BindingWatchOption {
+  /// The close of the owner releases the `onInvalidate` function through `callbacks`.
+  pub fn into_watch_option(self, callbacks: &JsCallbackRelease) -> rolldown_common::WatchOption {
+    let value = self;
+    rolldown_common::WatchOption {
       skip_write: value.skip_write.unwrap_or_default(),
       include: value.include.map(bindingify_string_or_regex_array),
       exclude: value.exclude.map(bindingify_string_or_regex_array),
@@ -39,9 +41,13 @@ impl From<BindingWatchOption> for rolldown_common::WatchOption {
       debounce_delay: value.debounce_delay.map(u64::from),
       debounce_tick_rate: value.debounce_tick_rate.map(u64::from),
       on_invalidate: value.on_invalidate.map(|js_callback| {
+        let js_callback = callbacks.track(js_callback);
         OnInvalidate::new(Arc::new(move |path| {
-          let f = Arc::clone(&js_callback);
-          f.call(FnArgs { data: (path.to_string(),) }, ThreadsafeFunctionCallMode::Blocking);
+          // After the release, the call does nothing: the callback returns nothing.
+          js_callback.call_and_forget(
+            FnArgs { data: (path.to_string(),) },
+            ThreadsafeFunctionCallMode::Blocking,
+          );
         }))
       }),
     }

@@ -1,0 +1,7 @@
+{
+  "_comment": "a.cjs runs `require('./e.js')`, so Rolldown wraps e.js. The eager wrapper call `init_e()` in e.js can run b.cjs before a.js defines `require_a`. So Rolldown does not write that call in e.js.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "preserveModules": true
+  }
+}

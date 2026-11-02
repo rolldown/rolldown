@@ -249,6 +249,8 @@ pub(super) fn assemble_chunk_with_wrapper<'a>(
   let t = Timer::start();
   let builder = AstBuilder::new(allocator);
   let source_type = ctx.options.format.source_type().with_jsx(true);
+  let generated_filename =
+    ctx.chunk.preliminary_filename.as_deref().map(arcstr::ArcStr::as_str).unwrap_or("<generated>");
   let enable_sourcemap = ctx.options.sourcemap.is_some();
 
   // 1. `V` and the module offsets.
@@ -329,7 +331,7 @@ pub(super) fn assemble_chunk_with_wrapper<'a>(
   if wrapper_ast.is_none()
     && let Some(prefix) = generated.prefix
   {
-    parse_generated(allocator, prefix, source_type, &mut body);
+    parse_generated(allocator, prefix, source_type, generated_filename, &mut body)?;
     for stmt in &mut body {
       Rebase(head_base).visit_statement(stmt);
     }
@@ -343,7 +345,7 @@ pub(super) fn assemble_chunk_with_wrapper<'a>(
   }
   if let Some(imports) = generated.imports {
     let start = body.len();
-    parse_generated(allocator, imports, source_type, &mut body);
+    parse_generated(allocator, imports, source_type, generated_filename, &mut body)?;
     for stmt in &mut body[start..] {
       Rebase(imports_base).visit_statement(stmt);
     }
@@ -351,7 +353,7 @@ pub(super) fn assemble_chunk_with_wrapper<'a>(
   append_module_bodies(ctx, allocator, asts, inline_records, head_base, &mut body);
   if let Some(exports) = generated.exports {
     let start = body.len();
-    parse_generated(allocator, exports, source_type, &mut body);
+    parse_generated(allocator, exports, source_type, generated_filename, &mut body)?;
     for stmt in &mut body[start..] {
       Rebase(tail_base).visit_statement(stmt);
     }
@@ -630,6 +632,10 @@ pub(super) fn optimize_wrapped<'a>(
   }
 }
 
+fn is_cjs_runtime_statement(runtime_before_imports: bool, owner: usize, span: Span) -> bool {
+  runtime_before_imports && owner == 0 && span != SPAN
+}
+
 /// Optimize the exclusively retained whole program, then freeze module fragments for printing.
 pub(super) fn optimize_chunk<'a>(
   ctx: &OptimizeContext<'_>,
@@ -677,7 +683,7 @@ pub(super) fn optimize_chunk<'a>(
     let owner = starts.partition_point(|start| *start <= span.start).saturating_sub(1);
     // CJS places runtime and requires together before user modules. Keeping runtime-owned
     // statements in the generated segments preserves this order even after inlining.
-    let cjs_runtime = runtime_before_imports && owner == 0;
+    let cjs_runtime = is_cjs_runtime_statement(runtime_before_imports, owner, span);
     if owner >= module_count || module_count == 0 || cjs_runtime {
       if seen_module_code { tail.push(stmt) } else { head.push(stmt) }
     } else {

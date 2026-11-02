@@ -122,7 +122,7 @@ impl ChunkAst {
     mut self: Pin<Box<Self>>,
     ctx: &GenerateContext<'_>,
     options: &oxc::minifier::MinifierOptions,
-  ) -> PreparedChunk {
+  ) -> rolldown_error::BuildResult<PreparedChunk> {
     if matches!(
       ctx.options.format,
       rolldown_common::OutputFormat::Iife | rolldown_common::OutputFormat::Umd
@@ -130,7 +130,7 @@ impl ChunkAst {
       || ctx.inline_state.has_records()
       || super::defer_for_render_hooks(ctx)
     {
-      return PreparedChunk { ast: self, output: ChunkAstDceOutput::default(), deferred: true };
+      return Ok(PreparedChunk { ast: self, output: ChunkAstDceOutput::default(), deferred: true });
     }
     let output = {
       // SAFETY: assembly borrows fields in place; no owner or Vec storage is moved.
@@ -142,9 +142,9 @@ impl ChunkAst {
         &mut this.assembled,
         &mut this.source_text,
         options,
-      )
+      )?
     };
-    PreparedChunk { ast: self, output, deferred: false }
+    Ok(PreparedChunk { ast: self, output, deferred: false })
   }
 }
 
@@ -222,9 +222,9 @@ impl PreparedChunk {
   pub(in crate::stages::generate_stage) fn into_render_state(
     self,
     ctx: &GenerateContext<'_>,
-  ) -> (Option<ChunkAstDceOutput>, Option<PendingChunk>) {
+  ) -> rolldown_error::BuildResult<(Option<ChunkAstDceOutput>, Option<PendingChunk>)> {
     if !self.deferred {
-      return (Some(self.output), None);
+      return Ok((Some(self.output), None));
     }
     assert!(!matches!(
       ctx.options.format,
@@ -248,13 +248,12 @@ impl PreparedChunk {
         &modules,
         &generated,
         &mut this.source_text,
-      )
-      .expect("flat generated glue has no parsed wrapper")
+      )?
     };
     // SAFETY: the complete root stays private to the same pinned owner as its donor roots.
     unsafe { ast.as_mut().get_unchecked_mut() }.assembled =
       Some(ChunkProgram(unsafe { std::mem::transmute::<Program<'_>, Program<'static>>(program) }));
-    (
+    Ok((
       None,
       Some(PendingChunk {
         ast,
@@ -263,7 +262,7 @@ impl PreparedChunk {
         suffix: String::new(),
         wrapped: false,
       }),
-    )
+    ))
   }
 
   pub(in crate::stages::generate_stage) fn into_wrapped(

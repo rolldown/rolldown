@@ -4,7 +4,14 @@ use oxc::codegen::LineOffsetTables;
 use oxc_sourcemap::{SourceMap, SourceMapParts, Token};
 use rolldown_common::{ModuleIdx, ModuleTable};
 
-use super::{ChunkSourceSpace, SpaceModule, remap};
+use super::{ChunkSourceSpace, SpaceModule, is_cjs_runtime_statement, remap};
+
+#[test]
+fn cjs_runtime_ownership_excludes_synthesized_span_statements() {
+  assert!(is_cjs_runtime_statement(true, 0, oxc::span::Span::new(10, 20)));
+  assert!(!is_cjs_runtime_statement(true, 0, oxc::span::SPAN));
+  assert!(!is_cjs_runtime_statement(false, 0, oxc::span::SPAN));
+}
 
 #[test]
 fn remap_preserves_unmapped_boundaries() {

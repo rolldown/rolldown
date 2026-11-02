@@ -250,7 +250,7 @@ fn dce_chunk(
   assembled: &mut Option<owned::ChunkProgram>,
   source_text: &mut Option<std::sync::Arc<str>>,
   minify_options: &OxcMinifierOptions,
-) -> ChunkAstDceOutput {
+) -> rolldown_error::BuildResult<ChunkAstDceOutput> {
   #[cfg(feature = "testing")]
   coverage::record(
     ctx.options,
@@ -266,8 +266,7 @@ fn dce_chunk(
     .filter_map(|idx| ctx.link_output.module_table[*idx].as_normal())
     .collect();
   let (program, layout) =
-    global::assemble_chunk(ctx, allocator, asts, &modules, &generated, source_text)
-      .expect("flat generated glue has no parsed wrapper");
+    global::assemble_chunk(ctx, allocator, asts, &modules, &generated, source_text)?;
   // SAFETY: the complete program is private to ChunkAst, whose stable donors, scratch allocator
   // and source text outlive both assembled and split roots, including unwinding.
   *assembled = Some(owned::ChunkProgram(unsafe {
@@ -293,30 +292,52 @@ fn dce_chunk(
     minify_options,
   );
   *assembled = None;
-  output
+  Ok(output)
 }
 
 pub(super) fn parse_generated<'a>(
   allocator: &'a Allocator,
   text: &'a str,
   source_type: SourceType,
+  filename: &str,
   body: &mut ArenaVec<'a, Statement<'a>>,
-) {
+) -> rolldown_error::BuildResult<()> {
   let ret = Parser::new(allocator, text, source_type)
     .with_options(ParseOptions { preserve_parens: false, ..ParseOptions::default() })
     .parse();
-  assert!(
-    !ret.fatal_error && ret.diagnostics.is_empty(),
-    "chunk AST DCE: generated import/export text failed to parse: {text}"
-  );
+  if ret.fatal_error || !ret.diagnostics.is_empty() {
+    return Err(
+      rolldown_error::BuildDiagnostic::from_oxc_diagnostics(
+        ret.diagnostics,
+        &arcstr::ArcStr::from(text),
+        filename,
+        rolldown_error::Severity::Error,
+        rolldown_error::EventKind::ParseError,
+      )
+      .into(),
+    );
+  }
   body.extend(ret.program.body);
+  Ok(())
 }
 
 #[cfg(test)]
 mod tests {
   use rolldown_plugin::Plugin;
 
-  use super::render_chunk_plugin_is_safe;
+  use super::{Allocator, ArenaVec, SourceType, parse_generated, render_chunk_plugin_is_safe};
+
+  #[test]
+  fn invalid_generated_text_returns_parse_diagnostic() {
+    let allocator = &Allocator::default();
+    let mut body = ArenaVec::new_in(&allocator);
+    let errors =
+      parse_generated(allocator, "const = ;", SourceType::mjs(), "generated.cjs", &mut body)
+        .expect_err("invalid generated text must return diagnostics");
+    assert!(
+      errors.iter().all(|error| matches!(error.kind(), rolldown_error::EventKind::ParseError))
+    );
+  }
 
   #[test]
   fn builtin_render_chunk_plugins_are_safe_by_concrete_identity() {

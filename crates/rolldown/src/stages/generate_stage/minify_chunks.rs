@@ -47,8 +47,15 @@ impl GenerateStage<'_> {
       property_mangle_cache.set(cache).expect("only one property-mangled chunk is permitted");
     }
     for (idx, pending) in deferred.pending {
-      let chunk =
-        chunks.iter_mut().find(|chunk| chunk.originate_from == idx).expect("pending chunk output");
+      let Some(chunk) = chunks.iter_mut().find(|chunk| chunk.originate_from == idx) else {
+        return Err(
+          BuildDiagnostic::unhandleable_error(anyhow::anyhow!(
+            "missing pending output for chunk {}",
+            idx.raw()
+          ))
+          .into(),
+        );
+      };
       let optimized = pending.optimize(
         options,
         module_table,
@@ -115,11 +122,15 @@ impl GenerateStage<'_> {
       }
       let replaced = deferred.replaced.contains(&chunk.originate_from);
       let addon_text = deferred.rendered_text.contains(&chunk.originate_from);
-      assert!(
-        replaced || addon_text,
-        "chunk AST pipeline has no admitted input for {:?}",
-        chunk.preliminary_filename
-      );
+      if !replaced && !addon_text {
+        return Err(
+          BuildDiagnostic::unhandleable_error(anyhow::anyhow!(
+            "chunk AST pipeline has no admitted input for {:?}",
+            chunk.preliminary_filename
+          ))
+          .into(),
+        );
+      }
       #[cfg(feature = "testing")]
       super::chunk_ast_dce::record_coverage(
         options,

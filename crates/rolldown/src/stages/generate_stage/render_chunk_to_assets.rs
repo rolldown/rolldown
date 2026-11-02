@@ -43,6 +43,9 @@ type ChunkGeneratorFuture<'a> = Pin<
   >,
 >;
 
+type ChunkCodegenRets = Vec<Vec<Option<ModuleRenderOutput>>>;
+type PreparedChunks = FxHashMap<ChunkIdx, chunk_ast_dce::PreparedChunk>;
+
 struct InstantiatedChunks {
   chunks: IndexInstantiatedChunks,
   instances: IndexChunkToInstances,
@@ -224,7 +227,7 @@ impl GenerateStage<'_> {
       order_state,
       render_export_items_index_vec,
       &mut inline_renders,
-    );
+    )?;
     let ast_dce_chunks: FxHashSet<ChunkIdx> = prepared_chunks.keys().copied().collect();
     let mut property_cache = None;
     let mut pending_ast = FxHashMap::default();
@@ -282,7 +285,7 @@ impl GenerateStage<'_> {
                   wrapped = Some(prepared);
                   ecma_ctx.defer_ast = true;
                 } else {
-                  (ecma_ctx.chunk_ast_dce, pending) = prepared.into_render_state(&ecma_ctx);
+                  (ecma_ctx.chunk_ast_dce, pending) = prepared.into_render_state(&ecma_ctx)?;
                   ecma_ctx.defer_ast = pending.is_some();
                 }
               }
@@ -381,7 +384,7 @@ impl GenerateStage<'_> {
     order_state: &super::order_wrap_state::OrderWrapState,
     render_export_items_index_vec: &IndexVec<ChunkIdx, FxIndexMap<SymbolRef, Vec<CompactStr>>>,
     inline_renders: &mut FxHashMap<ChunkIdx, Vec<CarriedRender>>,
-  ) -> (Vec<Vec<Option<ModuleRenderOutput>>>, FxHashMap<ChunkIdx, chunk_ast_dce::PreparedChunk>) {
+  ) -> BuildResult<(ChunkCodegenRets, PreparedChunks)> {
     let prepared_chunks = self.run_chunk_ast_dce(
       chunk_graph,
       &mut ast_table,
@@ -389,7 +392,7 @@ impl GenerateStage<'_> {
       order_state,
       render_export_items_index_vec,
       inline_renders,
-    );
+    )?;
     let needs_extra_indent = matches!(
       self.options.format,
       rolldown_common::OutputFormat::Iife | rolldown_common::OutputFormat::Umd
@@ -457,7 +460,7 @@ impl GenerateStage<'_> {
       })
       .collect::<Vec<_>>();
     drop(ast_table);
-    (ret, prepared_chunks)
+    Ok((ret, prepared_chunks))
   }
 
   /// PoC: runs `chunk_ast_dce::dce_chunk` on every eligible chunk, in parallel across chunks.
@@ -469,9 +472,9 @@ impl GenerateStage<'_> {
     order_state: &super::order_wrap_state::OrderWrapState,
     render_export_items_index_vec: &IndexVec<ChunkIdx, FxIndexMap<SymbolRef, Vec<CompactStr>>>,
     inline_renders: &mut FxHashMap<ChunkIdx, Vec<CarriedRender>>,
-  ) -> FxHashMap<ChunkIdx, chunk_ast_dce::PreparedChunk> {
+  ) -> BuildResult<PreparedChunks> {
     let Some(minify_options) = chunk_ast_dce::build_minify_options(self.options) else {
-      return FxHashMap::default();
+      return Ok(FxHashMap::default());
     };
     let make_ctx = |chunk_idx: ChunkIdx| GenerateContext {
       chunk_idx,
@@ -534,7 +537,9 @@ impl GenerateStage<'_> {
     }
     work
       .into_par_iter()
-      .map(|(chunk_idx, asts)| (chunk_idx, asts.prepare(&make_ctx(chunk_idx), minify_options)))
+      .map(|(chunk_idx, asts)| {
+        asts.prepare(&make_ctx(chunk_idx), minify_options).map(|prepared| (chunk_idx, prepared))
+      })
       .collect()
   }
 

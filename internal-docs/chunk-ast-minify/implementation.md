@@ -24,7 +24,7 @@ A synthesized block's closing brace must terminate mapped child coverage. The ve
 
 ## Splitting
 
-The debug build compares the minifier's statement-address sequence with the flattened head/module/tail segments. Printing may change ownership attribution but must preserve statement order. Class offsets passed to codegen must follow that same traversal order for private-member mangling.
+The debug build compares the minifier's statement-address sequence with the flattened head/module/tail segments. Printing may change ownership attribution but must preserve statement order. Class offsets passed to codegen must follow that same traversal order for private-member mangling. CJS generated-runtime ownership excludes minifier-synthesized `SPAN` statements: like the ESM path, they stay with the preceding module instead of being moved behind later user modules.
 
 ## Render hooks
 

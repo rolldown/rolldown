@@ -1,0 +1,93 @@
+crates/rolldown_binding/src/binding_dev_engine.rs
+  s_27ca5e469204cd::t_990df702fcab32 52
+crates/rolldown_binding/src/binding_dev_options.rs
+  s_27ca5e469204cd::t_facb783b4455d4 1,5-7,16,21-32
+crates/rolldown_binding/src/options/binding_input_options/binding_watch_option.rs
+  s_27ca5e469204cd::t_f49d9928755960 17,30,40-63
+crates/rolldown_binding/src/watcher.rs
+  s_27ca5e469204cd::t_af7905a5fff643 79,82-89
+crates/rolldown_common/src/inner_bundler_options/types/watch_option.rs
+  s_27ca5e469204cd::t_2f5644ca89ecd0 20,38-60
+crates/rolldown_common/src/lib.rs
+  s_27ca5e469204cd::t_6137e2e5675dfe 99
+crates/rolldown_dev/src/dev_engine.rs
+  s_27ca5e469204cd::t_879e5e2b65abf6 107,640-641,704-705
+crates/rolldown_dev_common/Cargo.toml
+  s_27ca5e469204cd::t_2cd58413d976e6 23-27
+crates/rolldown_dev_common/src/types/dev_options.rs
+  s_27ca5e469204cd::t_e1ce213868ec63 68,78,83-84,86-91
+crates/rolldown_dev_common/src/types/dev_watch_options.rs
+  s_27ca5e469204cd::t_78a1d0d4c86475 1,15-17,19-22
+crates/rolldown_testing/_config.schema.json
+  s_5d400d5b6fa2ab::t_52fd0228a218e7 1623-1660,1662-1666,1669,1678-1682,1685-1689,1692,1701,1710,2274-2275,2283-2284,2286-2294
+crates/rolldown_testing/src/integration_test.rs
+  s_27ca5e469204cd::t_7c69a0aa4a0f7a 257-258
+internal-docs/dev-engine/implementation.md
+  s_27ca5e469204cd::t_89bbae9061049d 146-157
+packages/rolldown/src/api/dev/dev-engine.ts
+  s_27ca5e469204cd::t_ee49c6ea779074 124
+packages/rolldown/src/api/dev/dev-options.ts
+  s_f1ad81eb29efc3::t_7f2a7f7f054d0f 2,18-25,55
+packages/rolldown/src/binding.d.cts
+  s_27ca5e469204cd::t_d5fa331840a790 2108,3115,3122-3129
+packages/rolldown/src/utils/bindingify-input-options.ts
+  s_27ca5e469204cd::t_d90f11c0f019e7 322
+packages/rolldown/tests/dev/dev-close-ensure-latest.test.ts
+  s_27ca5e469204cd::t_a7b74c160b29d8 23-26
+packages/rolldown/tests/dev/dev-close.test.ts
+  s_27ca5e469204cd::t_ff243b6629e0d1 22-25
+packages/rolldown/tests/dev/dev-lazy-compile.test.ts
+  s_27ca5e469204cd::t_3c437b1a9f2f65 23-26
+packages/rolldown/tests/dev/dev-watch.test.ts
+  s_2b7b67376215b7::t_df625169aa2f2d 26-29
+packages/test-dev-server/src/vite-server.ts
+  s_27ca5e469204cd::t_bcbca84e8c3cbd 52-58
+crates/rolldown_binding/src/options/binding_input_options/mod.rs
+  s_27ca5e469204cd::t_416f5695d96aed 25
+internal-docs/watch-mode/implementation.md
+  s_27ca5e469204cd::t_701098485acf01 340-343
+packages/test-dev-server/src/utils/get-dev-watch-options-for-ci.ts
+  s_27ca5e469204cd::t_1d37369f560656 5-18
+packages/test-dev-server/tests/src/dev-status.ts
+  s_27ca5e469204cd::t_b3dc8b541e91c6 18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "0892d500a98f86d23fa6574119e113efffae6f57",
+  "prompts": {},
+  "sessions": {
+    "s_27ca5e469204cd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a18b18-f837-77e1-a15b-c50a8d44cd36",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    },
+    "s_2b7b67376215b7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a19acb-6e44-7df1-9786-94b0ac661ab1",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    },
+    "s_5d400d5b6fa2ab": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a19a79-8184-7311-8145-d895f03575e8",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    },
+    "s_f1ad81eb29efc3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a18c79-487a-7ac3-8280-594556276586",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

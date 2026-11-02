@@ -263,6 +263,21 @@ fn report_metrics_and_sections() {
   assert_eq!(plugin.hooks["transform"].noop_calls, 1);
   assert_eq!(plugin.hooks["load"].calls, 1);
   assert_eq!(plugin.hooks["load"].noop_calls, 1);
+  // Only `load` was a no-op in every call; resolveId and transform did work once each.
+  assert_eq!(m("plugins.noop_hook_count"), int(1));
+  let noop: Vec<(&str, &str, usize, usize, f64)> = report
+    .noop_hooks
+    .iter()
+    .map(|r| (r.plugin.as_str(), r.hook.as_str(), r.calls, r.noop_calls, r.ratio))
+    .collect();
+  assert_eq!(
+    noop,
+    vec![
+      ("test-plugin", "load", 1, 1, 1.0),
+      ("test-plugin", "resolveId", 2, 1, 0.5),
+      ("test-plugin", "transform", 2, 1, 0.5),
+    ]
+  );
 
   assert_eq!(report.session.build_index, 1);
   let entry_a = &report.entries[0];
@@ -290,6 +305,22 @@ fn report_metrics_and_sections() {
     .map(|r| (r.module.as_str(), r.retained_bytes, r.via.as_deref()))
     .collect();
   assert_eq!(rows, vec![("foo/index.js", 1200, Some("src/a.ts")), ("src/shared.ts", 700, None)]);
+}
+
+#[test]
+fn noop_hooks_view_marks_all_and_most() {
+  let base = Instant::now();
+  let mut agg = agg();
+  fold_build(&mut agg, base, 0, 1000, 800);
+  let report = agg.build_report(None, None);
+  let timing = render::render_timing(&report);
+  let section = timing.split("## Hooks that did no work").nth(1).unwrap();
+  let section = section.split("## Slowest plugins").next().unwrap();
+  assert!(section.contains("| `test-plugin` | load | 1 | 1 | all |"), "{section}");
+  // Below the "most" share a hook is still listed, with its percentage.
+  assert!(section.contains("| `test-plugin` | resolveId | 2 | 1 | 50% |"), "{section}");
+  assert!(!section.contains("| most |"), "{section}");
+  assert!(render::render_entry(&report).contains("1 plugin hook did no work in any call"));
 }
 
 #[test]

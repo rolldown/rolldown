@@ -6,12 +6,14 @@ expression: "render::render_entry(&report)"
 
 Build 100.0 ms · output 5.6 kB · 6 modules (1 external) / 4 chunks / 5 assets / 3 packages · node / esm · build #1
 
+1 plugin hook did no work in any call — a hook filter would skip those calls (`timing.md`, "Hooks that did no work")
+
 ## Details (load on demand)
 
 | File | Load this when… |
 | --- | --- |
 | `metrics.json` | you need one precise number or the `delta`/`baselineDelta` sections — query it (jq/grep a metric id), don't read it wholesale |
-| `timing.md` | investigating slow builds: stage split, plugin & hook cost |
+| `timing.md` | investigating slow builds: stage split, plugin & hook cost, hooks that did no work |
 | `chunks.md` | bundle size: chunk composition, reasons & cross-chunk duplication |
 | `modules.md` | module graph: import kinds, most-imported, shared-across-entries |
 | `packages.md` | dependency bloat: largest packages, direct/transitive, duplicate versions |

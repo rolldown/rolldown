@@ -1,0 +1,64 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// flag.js
+const reads = [];
+var flag = false;
+reads.push(flag);
+var flag = true;
+reads.push(flag);
+// run.js
+const calls = [];
+var run = () => {};
+var run = () => {
+	calls.push("second");
+};
+// derived.js
+var base = 1;
+for (var base of [2]);
+const derived = base;
+// main.js
+assert.deepStrictEqual(reads, [false, true]);
+run();
+assert.deepStrictEqual(calls, ["second"]);
+assert.strictEqual(derived, 2);
+
+```
+
+# Variant: [inline_const: Config(InlineConstConfig { mode: Some(All), pass: 2 })]
+
+## Assets
+
+### main.js
+
+```js
+import assert from "node:assert";
+// flag.js
+const reads = [];
+var flag = false;
+reads.push(flag);
+var flag = true;
+reads.push(flag);
+// run.js
+const calls = [];
+var run = () => {};
+var run = () => {
+	calls.push("second");
+};
+// derived.js
+var base = 1;
+for (var base of [2]);
+const derived = base;
+// main.js
+assert.deepStrictEqual(reads, [false, true]);
+run();
+assert.deepStrictEqual(calls, ["second"]);
+assert.strictEqual(derived, 2);
+
+```

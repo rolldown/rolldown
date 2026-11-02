@@ -1,0 +1,75 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { t as run } from "./m0.js";
+// a.js
+const order = run();
+export { order };
+
+```
+
+## b.js
+
+```js
+import { t as run } from "./m0.js";
+// b.js
+const order = run();
+export { order };
+
+```
+
+## first.js
+
+```js
+import "./m6.js";
+
+```
+
+## log.js
+
+```js
+// log.js
+const log = [];
+export { log as t };
+
+```
+
+## m0.js
+
+```js
+import "./m1.js";
+import "./m6.js";
+import { t as log } from "./log.js";
+// m2.js
+log.push("m2");
+// m0.js
+log.push("m0");
+function run() {
+	return log.slice();
+}
+export { run as t };
+
+```
+
+## m1.js
+
+```js
+import { t as log } from "./log.js";
+// m1.js
+log.push("m1");
+
+```
+
+## m6.js
+
+```js
+import { t as log } from "./log.js";
+// m6.js
+log.push("m6");
+
+```

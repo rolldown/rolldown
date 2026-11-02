@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { pbkdf2 } from 'node:crypto';
 import path from 'node:path';
 import { promisify } from 'node:util';
@@ -47,6 +48,40 @@ describe('enhanced transform', () => {
       expect(result.errors).toHaveLength(0);
       expect(result.code).toBe('import source wasm from "./dep.wasm";\nwasm;\n');
     });
+
+    // Windows cannot delete a process's working directory.
+    it.skipIf(process.platform === 'win32' || isWasiTest)(
+      'should not crash after the working directory is deleted',
+      () => {
+        // Run in a child process so `chdir` doesn't leak into other tests.
+        const output = execFileSync(
+          process.execPath,
+          [
+            '--input-type=module',
+            '-e',
+            /* js */ `
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { transform, transformSync } from 'rolldown/utils';
+
+const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rolldown-deleted-cwd-'));
+process.chdir(dir);
+// Fill Node's cwd cache, as a long-running dev server already has.
+process.cwd();
+fs.rmSync(dir, { recursive: true });
+
+const file = path.join(dir, 'test.ts');
+const sync = transformSync(file, 'const x: number = 1;');
+const async = await transform(file, 'const x: = 1;');
+console.log(JSON.stringify({ code: sync.code, errors: async.errors.length }));
+             `,
+          ],
+          { cwd: import.meta.dirname, encoding: 'utf8' },
+        );
+        expect(JSON.parse(output.trim())).toEqual({ code: 'const x = 1;\n', errors: 1 });
+      },
+    );
   });
 
   describe('decorator metadata (strictNullChecks)', () => {
@@ -375,6 +410,34 @@ describe('enhanced transform', () => {
         }
       },
     );
+
+    it('should report tsconfigFilePaths on cache hits with auto-discovery', async () => {
+      const filename = path.join(fixtures, 'test1.ts');
+      const code = 'const a: number = 1;';
+      const cache = new TsconfigCache();
+
+      transformSync(filename, code, undefined, cache);
+
+      for (const result of [
+        transformSync(filename, code, undefined, cache),
+        await transform(filename, code, undefined, cache),
+      ]) {
+        expect(result.tsconfigFilePaths).toStrictEqual([path.join(fixtures, 'tsconfig.json')]);
+      }
+    });
+
+    it('should report tsconfigFilePaths on cache hits with an explicit tsconfig', () => {
+      const filename = path.resolve('/nonexistent/path/test.ts');
+      const code = 'const a: number = 1;';
+      const explicitTsconfig = path.join(fixtures, 'tsconfig.json');
+      const options = { tsconfig: explicitTsconfig };
+      const cache = new TsconfigCache(explicitTsconfig);
+
+      transformSync(filename, code, options, cache);
+
+      const result = transformSync(filename, code, options, cache);
+      expect(result.tsconfigFilePaths).toStrictEqual([explicitTsconfig]);
+    });
   });
 
   describe('result properties', () => {

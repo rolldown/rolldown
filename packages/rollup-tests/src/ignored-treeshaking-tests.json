@@ -280,5 +280,6 @@
   "rollup@form@unused-import: excludes unused imports ([#595])@generates es",
   "rollup@form@unused-inner-functions-and-classes: does not include unused inner functions and classes@generates es",
   "rollup@form@unused-var: omits unused var declaration@generates es",
-  "rollup@form@update-expression-side-effects: detect side-effects when dealing with update expressions@generates es"
+  "rollup@form@update-expression-side-effects: detect side-effects when dealing with update expressions@generates es",
+  "rollup@form@using-statement-disposal-usage: retains disposal methods according to all uses of an object and its aliases"
 ]

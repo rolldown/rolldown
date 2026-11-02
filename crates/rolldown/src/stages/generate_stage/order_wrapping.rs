@@ -740,7 +740,11 @@ impl GenerateStage<'_> {
       );
     }
     if fold_runtime_chunk {
-      self.fold_runtime_chunk_after_order_lowering(chunk_graph, order_state);
+      self.fold_runtime_chunk_after_order_lowering(
+        chunk_graph,
+        order_state,
+        used_symbol_refs_builder,
+      );
     }
     chunk_graph.sort_chunk_modules(self.link_output, self.options);
     self.renumber_live_chunks(chunk_graph);
@@ -1488,6 +1492,7 @@ impl GenerateStage<'_> {
     &self,
     chunk_graph: &mut ChunkGraph,
     order_state: &OrderWrapState,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
   ) {
     if !matches!(self.options.format, OutputFormat::Esm) {
       return;
@@ -1497,6 +1502,7 @@ impl GenerateStage<'_> {
       chunk_graph,
       Some(&order_consumers),
       RuntimeMergeCascade::SingleConsumerOnly,
+      used_symbol_refs_builder,
     );
   }
 

@@ -12,7 +12,10 @@ use oxc::{
   span::{SPAN, Span},
 };
 use oxc_str::CompactStr;
-use rolldown_common::{ConcatenateWrappedModuleKind, StmtInfoIdx, SymbolRef, ThisExprReplaceKind};
+use rolldown_common::{
+  ConcatenateWrappedModuleKind, EcmaModuleAstUsage, ExportsKind, StmtInfoIdx, SymbolRef,
+  ThisExprReplaceKind, WrapKind,
+};
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
   EsmWrapperBodyKind, EsmWrapperCallKind, EsmWrapperDeclKind, EsmWrapperStmtOptions,
@@ -44,6 +47,31 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     let this_ref = self.ctx.module.ecma_view.cjs_this_ref?;
     matches!(self.ctx.wrapper_mode(), ModuleWrapperMode::InteropCjs(_))
       .then(|| self.canonical_name_for(this_ref))
+  }
+
+  /// A top-level `return` in an unwrapped CommonJS entry would also skip the chunk exports and
+  /// `output.outro` printed after it, so the entry runs in an arrow function, which keeps its
+  /// `this` and `arguments`.
+  fn scope_top_level_return_of_unwrapped_cjs(&self, program: &mut ast::Program<'ast>) {
+    if !matches!(self.ctx.linking_info.wrap_kind(), WrapKind::None)
+      || !matches!(self.ctx.module.exports_kind, ExportsKind::CommonJs)
+      || !self.ctx.module.ast_usage.contains(EcmaModuleAstUsage::TopLevelReturn)
+      || program.body.is_empty()
+    {
+      return;
+    }
+    let body = ast::FunctionBody::boxed(SPAN, [], program.body.take_in(self), self);
+    let arrow = Expression::new_arrow_function_expression(
+      SPAN,
+      false,
+      None,
+      ast::FormalParameters::boxed(SPAN, ast::FormalParameterKind::Signature, [], None, self),
+      None,
+      ast::ArrowFunctionBody::FunctionBody(body),
+      self,
+    );
+    let call = Expression::new_call_expression(SPAN, arrow, None, [], false, self);
+    program.body.push(Statement::new_expression_statement(SPAN, call, self));
   }
 
   fn append_order_cjs_carriers(&self, program: &mut ast::Program<'ast>) {
@@ -432,6 +460,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       }
       ModuleWrapperMode::None => {
         program.body.splice(0..0, declaration_of_module_namespace_object);
+        self.scope_top_level_return_of_unwrapped_cjs(program);
       }
     }
 
@@ -583,6 +612,14 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       }
       ast::Expression::NewExpression(new_expr) => {
         self.handle_new_url_with_string_literal_and_import_meta_url(new_expr);
+      }
+      ast::Expression::BinaryExpression(binary_expr) => {
+        if let Some(&value) =
+          self.ctx.linking_info.folded_namespace_in_checks.get(&binary_expr.node_id())
+        {
+          *expr = Expression::new_boolean_literal(binary_expr.span, value, self);
+          return;
+        }
       }
       ast::Expression::Identifier(ident_ref) => {
         if let Some(new_expr) = self.try_rewrite_identifier_reference_expr(ident_ref, false) {

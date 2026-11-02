@@ -38,10 +38,11 @@ mod utils;
 mod writer;
 
 pub use rolldown_devtools_action as action;
+pub use rolldown_devtools_metrics::{MetricsConfig, report_dir_for};
 
 pub use {
   init_tracing::{DebugTracer, Session},
   static_data::DEFAULT_SESSION_ID,
   utils::{generate_build_id, generate_session_id},
-  writer::flush_session,
+  writer::{flush_session, open_metrics_session},
 };

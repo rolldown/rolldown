@@ -1,0 +1,7 @@
+{
+  "_comment": "The runtime module is a `\\0` virtual importer, so the manual tsconfig must not apply to it: its `paths` must not redirect the runtime's `node:module` import.",
+  "config": {
+    "platform": "node",
+    "tsconfig": "tsconfig.json"
+  }
+}

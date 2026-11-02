@@ -29,7 +29,6 @@ export const failedReasons: Record<string, string> = {
     'oxc minifier does not support JSX (https://github.com/oxc-project/oxc/issues/13248)',
   'loader/jsx_preserve_capital_letter_minify_nested':
     'oxc minifier does not support JSX (https://github.com/oxc-project/oxc/issues/13248)',
-  'loader/loader_data_url_base64_invalid_utf8': 'mime type should be `data:text/plain`',
   'loader/loader_file_one_source_two_different_output_paths_css':
     'generate wrong output when css as entry and has shared css',
   'packagejson/common_js_variable_in_esm_type_module':
@@ -206,6 +205,14 @@ export const ignoreReasons: Record<string, string> = {
 
   'default/line_limit_minified': 'irrelevant: lineLimit option will not be supported',
   'default/line_limit_not_minified': 'irrelevant: lineLimit option will not be supported',
+
+  'loader/loader_data_url_base64_invalid_utf8':
+    "esbuild's `charset=utf-8` comes from Go's `http.DetectContentType` and is applied to invalid UTF-8; Rolldown only adds it after validating the data as UTF-8",
+
+  'default/require_fs_node':
+    'Rolldown runs a CommonJS entry with a top-level `return` in an arrow function, so the `return` does not skip what the chunk prints after the module',
+  'default/require_fs_node_minify':
+    'Rolldown runs a CommonJS entry with a top-level `return` in an arrow function, so the `return` does not skip what the chunk prints after the module',
 
   'dce/tree_shaking_js_with_associated_css':
     'CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)',

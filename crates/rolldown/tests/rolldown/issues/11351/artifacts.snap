@@ -1,0 +1,49 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dep.js
+
+```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+// dep.js
+var dep_exports = /* @__PURE__ */ __exportAll({ extra: () => 3 });
+const extra = 3;
+export { extra as n, dep_exports as t };
+
+```
+
+## index.js
+
+```js
+// index.js
+const load = () => import("./dep.js").then((n) => n.t);
+export { load };
+
+```
+
+## other.js
+
+```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+// ns.js
+var ns_exports = /* @__PURE__ */ __exportAll({ a: () => 1 });
+export { ns_exports as ns };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as t };
+
+```
+
+## secondary.js
+
+```js
+export { n as extra } from "./dep.js";
+
+```

@@ -158,7 +158,9 @@ export function parseCliArguments(): NormalizedCliOptions & {
   // Post-processing
 
   // CAC collects arguments behind `--` in a separate `--` key.
-  // This is unknown to the bundler.
+  // Preserve them as positionals before removing the parser-specific key.
+  // See internal-docs/cli/implementation.md.
+  parsedInput.push(...parsedOptions['--']);
   delete parsedOptions['--'];
 
   // Remove short-alias keys (cac/mri duplicates them alongside the full name)

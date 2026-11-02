@@ -8,6 +8,7 @@ use crate::{
   types::{
     hook_resolve_id_skipped::HookResolveIdSkipped, hook_transform_ast_args::HookTransformAstArgs,
   },
+  utils::normalize_transform_sourcemap::normalize_transform_sourcemap,
 };
 use anyhow::{Context, Result};
 use arcstr::ArcStr;
@@ -17,7 +18,6 @@ use rolldown_common::{
 };
 use rolldown_devtools::{action, trace_action};
 use rolldown_error::CausedPlugin;
-use rolldown_sourcemap::SourceMap;
 use rolldown_utils::{IndexBitSet, unique_arc::UniqueArc};
 use tracing::{Instrument, debug_span};
 
@@ -331,7 +331,9 @@ impl PluginDriver {
         original_sourcemap_chain = plugin_sourcemap_chain.into_inner();
         let map_was_omitted = matches!(r.map, crate::HookTransformOutputMap::Omitted);
         let map_was_null = matches!(r.map, crate::HookTransformOutputMap::Null);
-        if let Some(map) = self.normalize_transform_sourcemap(r.map.into_sourcemap(), id, &code) {
+        if let Some(map) =
+          r.map.into_sourcemap().map(|map| normalize_transform_sourcemap(map, id, &code))
+        {
           original_sourcemap_chain.push(SourcemapChainElement::Transform((plugin_idx, map)));
         } else if map_was_omitted && r.code.is_some() {
           original_sourcemap_chain.push(SourcemapChainElement::Omitted {
@@ -383,28 +385,6 @@ impl PluginDriver {
     }
     *sourcemap_chain = plugin_sourcemap_chain.into_inner();
     Ok(code)
-  }
-
-  #[inline]
-  fn normalize_transform_sourcemap(
-    &self,
-    map: Option<SourceMap>,
-    id: &str,
-    original_code: &str,
-  ) -> Option<SourceMap> {
-    let mut map = map?;
-    // If sourcemap hasn't `sources`, using original id to fill it.
-    let source = map.get_source(0);
-    if source.is_none_or(str::is_empty)
-      || (map.get_sources().count() == 1 && (source.map(AsRef::as_ref) != Some(id)))
-    {
-      map.set_sources(vec![id]);
-    }
-    // If sourcemap hasn't `sourcesContent`, using original code to fill it.
-    if map.get_source_content(0).is_none_or(str::is_empty) {
-      map.set_source_contents(vec![Some(original_code)]);
-    }
-    Some(map)
   }
 
   #[tracing::instrument(

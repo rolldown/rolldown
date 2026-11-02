@@ -32,12 +32,7 @@ module.exports = plugin;
 var require_lib = /* @__PURE__ */ require("./_virtual/_rolldown/runtime.js").__commonJSMin(((exports, module) => {
 	module.exports = {};
 }));
-Object.defineProperty(exports, "default", {
-	enumerable: true,
-	get: function() {
-		return require_lib();
-	}
-});
+module.exports = require_lib();
 
 ```
 
@@ -48,9 +43,8 @@ const require_runtime = require("./_virtual/_rolldown/runtime.js");
 const require_lib$1 = require("./lib.js");
 // rule.js
 var require_rule = /* @__PURE__ */ require_runtime.__commonJSMin(((exports, module) => {
-	const mod = require_lib$1.default;
 	module.exports = {
-		meta: 4 + String(mod).length,
+		meta: 4 + String(require_lib$1).length,
 		create: function() {
 			console.log("loaded rule");
 		}

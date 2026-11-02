@@ -17,7 +17,7 @@ exports.__toESM = __toESM;
 
 ```js
 const require_runtime = require("../_virtual/_rolldown/runtime.js");
-//#region barrel/clone-deep.cjs
+// barrel/clone-deep.cjs
 var require_clone_deep = /* @__PURE__ */ require_runtime.__commonJSMin(((exports, module) => {
 	module.exports = function cloneDeep(value) {
 		return JSON.parse(JSON.stringify(value));
@@ -29,7 +29,6 @@ function init_barrel_cjs_0() {
 		import_clone_deep = /* @__PURE__ */ require_runtime.__toESM(require_clone_deep());
 	})))();
 }
-//#endregion
 Object.defineProperty(exports, "default", {
 	enumerable: true,
 	get: function() {
@@ -54,11 +53,10 @@ Object.defineProperty(exports, "init_barrel_cjs_0", {
 ## barrel/cn.js
 
 ```js
-//#region barrel/cn.js
+// barrel/cn.js
 function cn(...values) {
 	return values.filter(Boolean).join(" ");
 }
-//#endregion
 exports.cn = cn;
 
 ```
@@ -70,11 +68,10 @@ const require_runtime = require("../_virtual/_rolldown/runtime.js");
 const require_cn = require("./cn.js");
 const require_stack = require("./stack.js");
 const require_clone_deep = require("./clone-deep.js");
-//#region barrel/index.js
+// barrel/index.js
 function init_barrel() {
 	return (init_barrel = require_runtime.__esmMin((() => {})))();
 }
-//#endregion
 require_clone_deep.init_barrel_cjs_0();
 exports.Stack = require_stack.Stack;
 exports.cn = require_cn.cn;
@@ -90,14 +87,13 @@ Object.defineProperty(exports, "init_barrel", {
 ## barrel/stack.js
 
 ```js
-//#region barrel/stack.js
+// barrel/stack.js
 var Stack = class {
 	items = [];
 	push(value) {
 		this.items.push(value);
 	}
 };
-//#endregion
 exports.Stack = Stack;
 
 ```
@@ -112,7 +108,7 @@ const require_clone_deep = require("./barrel/clone-deep.js");
 require("./barrel/index.js");
 let node_assert = require("node:assert");
 node_assert = require_runtime.__toESM(node_assert);
-//#region main.js
+// main.js
 var ready;
 function init_main() {
 	return (init_main = require_runtime.__esmMin((() => {
@@ -123,7 +119,6 @@ function init_main() {
 		});
 	})))();
 }
-//#endregion
 init_main();
 exports.ready = ready;
 
@@ -136,7 +131,7 @@ const require_runtime = require("./_virtual/_rolldown/runtime.js");
 const require_stack = require("./barrel/stack.js");
 const require_clone_deep = require("./barrel/clone-deep.js");
 require("./barrel/index.js");
-//#region route.js
+// route.js
 var stack, value;
 function init_route() {
 	return (init_route = require_runtime.__esmMin((() => {
@@ -146,7 +141,6 @@ function init_route() {
 		value = stack.items[0];
 	})))();
 }
-//#endregion
 init_route();
 exports.value = value;
 

@@ -47,12 +47,7 @@ exports.__toESM = __toESM;
 var require_lib = /* @__PURE__ */ require("./_virtual/_rolldown/runtime.js").__commonJSMin(((exports, module) => {
 	module.exports = {};
 }));
-Object.defineProperty(exports, "default", {
-	enumerable: true,
-	get: function() {
-		return require_lib();
-	}
-});
+module.exports = require_lib();
 
 ```
 
@@ -63,7 +58,7 @@ const require_runtime = require("./_virtual/_rolldown/runtime.js");
 const require_rule$1 = require("./rule.js");
 let node_assert = require("node:assert");
 node_assert = require_runtime.__toESM(node_assert);
-const plugin = { mod: (/* @__PURE__ */ require_runtime.__toESM(require_rule$1.default)).default };
+const plugin = { mod: (/* @__PURE__ */ require_runtime.__toESM(require_rule$1)).default };
 node_assert.default.strictEqual(plugin.mod.meta, 19);
 module.exports = plugin;
 
@@ -76,19 +71,13 @@ const require_runtime = require("./_virtual/_rolldown/runtime.js");
 const require_lib$1 = require("./lib.js");
 // rule.js
 var require_rule = /* @__PURE__ */ require_runtime.__commonJSMin(((exports, module) => {
-	const mod = require_lib$1.default;
 	module.exports = {
-		meta: 4 + String(mod).length,
+		meta: 4 + String(require_lib$1).length,
 		create: function() {
 			console.log("loaded rule");
 		}
 	};
 }));
-Object.defineProperty(exports, "default", {
-	enumerable: true,
-	get: function() {
-		return require_rule();
-	}
-});
+module.exports = require_rule();
 
 ```

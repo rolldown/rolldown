@@ -189,9 +189,15 @@ impl BindingBundler {
     let handles = std::mem::take(&mut self.bundle_handles);
     spawn_boxed_future(env, async move {
       let res = cleanup_fut.await;
+      // Report after close hooks, before releasing their module metadata.
+      let timings = if res.is_ok() { report_plugin_timings(&handles).await } else { Ok(()) };
+      // Every generate/write has its own driver. Clear all of them even if a
+      // close hook or timing report failed; retained plugin contexts share these maps.
+      for handle in &handles {
+        handle.plugin_driver().clear();
+      }
       handle_result(res)?;
-      // After the cleanup, so `closeBundle` is part of what the other side reports.
-      handle_result(report_plugin_timings(&handles).await)?;
+      handle_result(timings)?;
       Ok(())
     })
   }

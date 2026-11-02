@@ -11,7 +11,7 @@ use rolldown_common::{
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_error::{BuildDiagnostic, BuildResult, InvalidOptionType};
 use rolldown_sourcemap::collapse_sourcemaps;
-use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
+use rolldown_utils::rayon::{IntoParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 use rustc_hash::FxHashSet;
 
 use crate::type_alias::IndexInstantiatedChunks;
@@ -45,59 +45,79 @@ impl GenerateStage<'_> {
     if let Some(cache) = ast_property_cache {
       property_mangle_cache.set(cache).expect("only one property-mangled chunk is permitted");
     }
-    let super::chunk_ast_dce::DeferredChunks { pending, final_text } = deferred;
-    for (idx, pending) in pending {
-      let Some(chunk) = chunks.iter_mut().find(|chunk| chunk.originate_from == idx) else {
-        return Err(
-          BuildDiagnostic::unhandleable_error(anyhow::anyhow!(
-            "missing pending output for chunk {}",
-            idx.raw()
-          ))
-          .into(),
-        );
-      };
-      let optimized = pending.optimize(
-        options,
-        module_table,
-        chunk.preliminary_filename.as_str(),
-        minify_options,
+    let super::chunk_ast_dce::DeferredChunks { mut pending, final_text } = deferred;
+    // Move each retained owner together with its exclusive output borrow to a worker. Owners are
+    // Send, not Sync; no AST is shared across jobs. See internal-docs/chunk-ast-minify/implementation.md.
+    let pending_count = pending.len();
+    // Two lanes bound live semantic/codegen allocations. Round-robin assignment spreads entry
+    // chunks across lanes instead of grouping them all ahead of cheap shared chunks in one job.
+    const PENDING_LANES: usize = 2;
+    let mut pending_chunks: [Vec<_>; PENDING_LANES] =
+      std::array::from_fn(|_| Vec::with_capacity(pending_count.div_ceil(PENDING_LANES)));
+    for (index, job) in chunks
+      .iter_mut()
+      .filter_map(|chunk| pending.remove(&chunk.originate_from).map(|owner| (chunk, owner)))
+      .take(pending_count)
+      .enumerate()
+    {
+      pending_chunks[index % PENDING_LANES].push(job);
+    }
+    if let Some(idx) = pending.keys().next() {
+      return Err(
+        BuildDiagnostic::unhandleable_error(anyhow::anyhow!(
+          "missing pending output for chunk {}",
+          idx.raw()
+        ))
+        .into(),
       );
-      chunk.content = optimized.code.into();
-      chunk.map = optimized.map;
-      if let InstantiationKind::Ecma(meta) = &mut chunk.kind {
-        let rendered = &meta.rendered_chunk;
-        let mut modules = rendered.modules.clone();
-        let module_indices: rustc_hash::FxHashMap<_, _> =
-          modules.keys.iter().enumerate().map(|(index, id)| (id, index)).collect();
-        for (module_idx, sources) in optimized.modules {
-          let id = &module_table[module_idx].as_normal().expect("normal metadata donor").id;
-          if let Some(&index) = module_indices.get(id) {
-            let previous = &modules.values[index];
-            modules.values[index] = std::sync::Arc::new(rolldown_common::RenderedModule::new(
-              sources,
-              previous.rendered_exports.clone(),
-              previous.exec_order,
-            ));
+    }
+    if pending_count != 0 {
+      pending_chunks.into_par_iter().for_each(|jobs| {
+        for (chunk, pending) in jobs {
+          let optimized = pending.optimize(
+            options,
+            module_table,
+            chunk.preliminary_filename.as_str(),
+            minify_options,
+          );
+          chunk.content = optimized.code.into();
+          chunk.map = optimized.map;
+          if let InstantiationKind::Ecma(meta) = &mut chunk.kind {
+            let rendered = &meta.rendered_chunk;
+            let mut modules = rendered.modules.clone();
+            let module_indices: rustc_hash::FxHashMap<_, _> =
+              modules.keys.iter().enumerate().map(|(index, id)| (id, index)).collect();
+            for (module_idx, sources) in optimized.modules {
+              let id = &module_table[module_idx].as_normal().expect("normal metadata donor").id;
+              if let Some(&index) = module_indices.get(id) {
+                let previous = &modules.values[index];
+                modules.values[index] = std::sync::Arc::new(rolldown_common::RenderedModule::new(
+                  sources,
+                  previous.rendered_exports.clone(),
+                  previous.exec_order,
+                ));
+              }
+            }
+            // Hook arguments are immutable Arc snapshots. Publish a new final metadata object.
+            meta.rendered_chunk = std::sync::Arc::new(rolldown_common::RollupRenderedChunk {
+              originate_from: rendered.originate_from,
+              name: rendered.name.clone(),
+              is_entry: rendered.is_entry,
+              is_dynamic_entry: rendered.is_dynamic_entry,
+              facade_module_id: rendered.facade_module_id.clone(),
+              module_ids: rendered.module_ids.clone(),
+              exports: rendered.exports.clone(),
+              filename: rendered.filename.clone(),
+              modules,
+              imports: rendered.imports.clone(),
+              dynamic_imports: rendered.dynamic_imports.clone(),
+            });
+          }
+          if let Some(cache) = optimized.property_cache {
+            property_mangle_cache.set(cache).expect("one property-mangled chunk");
           }
         }
-        // Hook arguments are immutable Arc snapshots. Publish a new final metadata object.
-        meta.rendered_chunk = std::sync::Arc::new(rolldown_common::RollupRenderedChunk {
-          originate_from: rendered.originate_from,
-          name: rendered.name.clone(),
-          is_entry: rendered.is_entry,
-          is_dynamic_entry: rendered.is_dynamic_entry,
-          facade_module_id: rendered.facade_module_id.clone(),
-          module_ids: rendered.module_ids.clone(),
-          exports: rendered.exports.clone(),
-          filename: rendered.filename.clone(),
-          modules,
-          imports: rendered.imports.clone(),
-          dynamic_imports: rendered.dynamic_imports.clone(),
-        });
-      }
-      if let Some(cache) = optimized.property_cache {
-        property_mangle_cache.set(cache).expect("one property-mangled chunk");
-      }
+      });
     }
     let allocator_pool = AllocatorPool::new(rayon::current_num_threads());
     let source_type = options.format.source_type().with_jsx(true);

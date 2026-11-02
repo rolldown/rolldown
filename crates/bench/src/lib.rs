@@ -133,6 +133,14 @@ impl BenchContext {
 /// This performs all one-time setup (option normalization, FS preloading, resolver creation)
 /// so the timed loop only measures bundling work.
 pub fn create_bench_context(options: &BundlerOptions) -> BenchContext {
+  create_bench_context_with_plugins(options, vec![])
+}
+
+/// Create a benchmark context with Rust plugins, matching the normal factory setup.
+pub fn create_bench_context_with_plugins(
+  options: &BundlerOptions,
+  plugins: Vec<rolldown::plugin::__inner::SharedPluginable>,
+) -> BenchContext {
   let cwd = options
     .cwd
     .clone()
@@ -155,7 +163,7 @@ pub fn create_bench_context(options: &BundlerOptions) -> BenchContext {
   }
   let factory = BundleFactory::new(BundleFactoryOptions {
     bundler_options: options.clone(),
-    plugins: vec![],
+    plugins,
     session: None,
     disable_tracing_setup: true,
   })

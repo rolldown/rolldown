@@ -14,6 +14,52 @@ fn cjs_runtime_ownership_excludes_synthesized_span_statements() {
 }
 
 #[test]
+fn whole_program_remap_preserves_source_order_and_reuses_ids() {
+  let space = ChunkSourceSpace {
+    text: Arc::from("a\nv\nb\nc\n"),
+    tables: Arc::new(LineOffsetTables::default()),
+    modules: (0_u32..4)
+      .map(|index| SpaceModule {
+        base: index * 2,
+        len: 1,
+        line: index,
+        end_line: index,
+        source_name: match index {
+          0 => Some("a.js".into()),
+          2 => Some("b.js".into()),
+          3 => Some("c.js".into()),
+          _ => None,
+        },
+        idx: ModuleIdx::from_raw(index),
+        has_chain: false,
+      })
+      .collect(),
+    scoping: None,
+    private_member_mappings: None,
+    class_offsets: vec![0; 4],
+  };
+  let map = SourceMap::from(SourceMapParts {
+    sources: vec!["V".into()],
+    tokens: [3, 1, 0, 2, 3, 1, 2, 0]
+      .into_iter()
+      .zip(0_u32..)
+      .map(|(line, column)| Token::new(0, column, line, 0, Some(0), None))
+      .collect(),
+    ..Default::default()
+  });
+  let (map, is_final) = remap(&map, &space, None, &ModuleTable::default());
+  assert!(is_final);
+  // Reparse the serialized map to check source IDs and explicit unmapped segments together.
+  let serialized = map.to_json_string();
+  let map = SourceMap::from_json_string(&serialized).unwrap();
+  assert_eq!(map.get_sources().collect::<Vec<_>>(), ["c.js", "a.js", "b.js"]);
+  assert_eq!(
+    map.get_tokens().map(|token| token.get_source_id()).collect::<Vec<_>>(),
+    [Some(0), None, Some(1), Some(2), Some(0), None, Some(2), Some(1)]
+  );
+}
+
+#[test]
 fn remap_preserves_unmapped_boundaries() {
   let space = ChunkSourceSpace {
     text: Arc::from("real\nvirtual\ngenerated\n"),

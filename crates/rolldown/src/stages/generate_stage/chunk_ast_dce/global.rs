@@ -883,15 +883,25 @@ fn remap(
   module_table: &ModuleTable,
 ) -> (SourceMap<'static>, bool) {
   // A module map usually has only its owner as a source. Keep that small set sparse instead of
-  // initializing a chunk-sized source-id array for every module map.
+  // initializing a chunk-sized source-id array for every module map. Whole-program maps can touch
+  // every module for every token, so use direct indexing there instead of a linear source search.
   let mut source_modules: Vec<usize> = vec![];
+  let mut whole_program_source_ids = owner.is_none().then(|| vec![u32::MAX; space.modules.len()]);
   let mut add_source = |pos: usize| -> Option<u32> {
-    if let Some(id) = source_modules.iter().position(|&module| module == pos) {
+    if let Some(source_ids) = &whole_program_source_ids {
+      let id = source_ids[pos];
+      if id != u32::MAX {
+        return Some(id);
+      }
+    } else if let Some(id) = source_modules.iter().position(|&module| module == pos) {
       return Some(u32::try_from(id).expect("sources fit in u32"));
     }
     space.modules[pos].source_name.as_ref()?;
     let id = u32::try_from(source_modules.len()).expect("sources fit in u32");
     source_modules.push(pos);
+    if let Some(source_ids) = &mut whole_program_source_ids {
+      source_ids[pos] = id;
+    }
     Some(id)
   };
   if let Some(owner) = owner {

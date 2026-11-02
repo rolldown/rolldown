@@ -1,8 +1,44 @@
-use bench::{bench_preset, create_bench_context, rome_ts_preset};
-use rolldown::{BundlerOptions, SourceMapType};
+use std::borrow::Cow;
+
+use bench::{bench_preset, create_bench_context_with_plugins, rome_ts_preset};
+use rolldown::{
+  AddonOutputOption, BundlerOptions, CodeSplittingMode, DevModeOptions, ExperimentalOptions,
+  InlineCommonChunksOptions, InputItem, ManualCodeSplittingOptions, OutputFormat,
+  PreserveEntrySignatures, RawMinifyOptions, SourceMapType,
+  plugin::{
+    HookRenderChunkArgs, HookRenderChunkOutput, HookRenderChunkReturn, HookUsage, Plugin,
+    PluginContext,
+  },
+};
 
 #[global_allocator]
 static GLOBAL: mimalloc_safe::MiMalloc = mimalloc_safe::MiMalloc;
+
+#[derive(Debug)]
+struct RenderChunkBenchmark {
+  replace: bool,
+}
+
+impl Plugin for RenderChunkBenchmark {
+  fn name(&self) -> Cow<'static, str> {
+    "deferred-render-chunk-benchmark".into()
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::RenderChunk
+  }
+
+  async fn render_chunk(
+    &self,
+    _ctx: &PluginContext,
+    args: &HookRenderChunkArgs<'_>,
+  ) -> HookRenderChunkReturn {
+    Ok(self.replace.then(|| HookRenderChunkOutput {
+      code: format!("{}\nglobalThis.__deferredBenchmark = 6 * 7;", args.code),
+      map: Default::default(),
+    }))
+  }
+}
 
 #[cfg(unix)]
 fn process_cpu_ns() -> u64 {
@@ -62,12 +98,58 @@ fn main() {
       bench_preset("x", d, e)
     }
   };
+  if let Ok(entries) = std::env::var("BENCH_ENTRIES") {
+    opts.input = Some(
+      entries.split(',').map(|entry| InputItem { name: None, import: entry.to_string() }).collect(),
+    );
+  }
+  let scenario = std::env::var("DEFER").unwrap_or_else(|_| "none".to_string());
+  let mut plugins: Vec<rolldown::plugin::__inner::SharedPluginable> = Vec::new();
+  match scenario.as_str() {
+    "none" => {}
+    "unchanged" => plugins.push(Plugin::new_shared(RenderChunkBenchmark { replace: false })),
+    "replaced" => plugins.push(Plugin::new_shared(RenderChunkBenchmark { replace: true })),
+    "addon" => {
+      opts.intro = Some(AddonOutputOption::String(Some(
+        "globalThis.__deferredBenchmark = 6 * 7;".to_string(),
+      )));
+    }
+    "inline" | "dev" | "dev-inline" => {
+      if scenario != "inline" {
+        opts.experimental = Some(ExperimentalOptions {
+          dev_mode: Some(DevModeOptions::default()),
+          ..Default::default()
+        });
+      }
+      if scenario != "dev" {
+        opts.code_splitting = Some(CodeSplittingMode::Advanced(ManualCodeSplittingOptions {
+          experimental_inline_common_chunks: Some(InlineCommonChunksOptions {
+            max_size: Some(f64::INFINITY),
+            exclude: None,
+          }),
+          ..Default::default()
+        }));
+      }
+      opts.preserve_entry_signatures = Some(PreserveEntrySignatures::False);
+    }
+    other => panic!("unknown DEFER scenario: {other}"),
+  }
+  let format = std::env::var("FORMAT").unwrap_or_else(|_| "esm".to_string());
+  match format.as_str() {
+    "esm" => {}
+    "iife" | "umd" => {
+      opts.format = Some(if format == "iife" { OutputFormat::Iife } else { OutputFormat::Umd });
+      opts.name = Some("DeferredBenchmark".to_string());
+    }
+    other => panic!("unknown FORMAT: {other}"),
+  }
   let iters: usize = args[2].parse().unwrap();
   if std::env::var_os("NO_MAP").is_none() {
     opts.sourcemap = Some(SourceMapType::File);
   }
   match args[3].as_str() {
     "off" => opts.minify = Some(false.into()),
+    "dce" => opts.minify = Some(RawMinifyOptions::DeadCodeEliminationOnly),
     "full" => opts.minify = Some(true.into()),
     _ => {}
   }
@@ -75,7 +157,7 @@ fn main() {
     opts.platform = Some(rolldown::Platform::Node);
   }
   let out = args.get(4).cloned();
-  let mut ctx = create_bench_context(&opts);
+  let mut ctx = create_bench_context_with_plugins(&opts, plugins);
   let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
   let p0 = process_cpu_ns();
   let w0 = std::time::Instant::now();
@@ -96,9 +178,10 @@ fn main() {
   let wall = w0.elapsed().as_secs_f64() * 1e3;
   let proc_cpu = (process_cpu_ns() - p0) as f64 / 1e6;
   println!(
-    "{} {} iters={iters} wall={wall:.0}ms proc_cpu={proc_cpu:.0}ms max_rss={:.0}MiB",
+    "{} {} scenario={scenario} format={format} map={} iters={iters} wall={wall:.3}ms proc_cpu={proc_cpu:.3}ms max_rss={:.3}MiB",
     args[1],
     args[3],
+    opts.sourcemap.is_some(),
     max_rss_mib(),
   );
 }

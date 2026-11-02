@@ -34,9 +34,8 @@ export default defineTest({
           ctx.sendMagicString(ms);
           // Repeating the transfer must refuse like every other consumed-instance API.
           expect(() => ctx.sendMagicString(ms)).toThrow(/already passed to `sendMagicString/);
-          // `map: null` signals the map was delivered out-of-band via the channel;
-          // omitting it would mark this transform Omitted and wipe the channel map.
-          return { code: out, map: null };
+          // The map sent above is used even though this result has no `map`.
+          return { code: out };
         },
       },
     ],

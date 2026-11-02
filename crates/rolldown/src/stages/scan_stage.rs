@@ -8,7 +8,7 @@ use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rolldown_common::SourceMapGenMsg;
 use rolldown_common::{
   EntryPoint, FlatOptions, HybridIndexVec, Module, ModuleIdx, ModuleTable, PreserveEntrySignatures,
-  ResolvedId, RuntimeModuleBrief, ScanMode, SourcemapChainElement, StmtInfos, SymbolRefDb,
+  ResolvedId, RuntimeModuleBrief, ScanMode, StmtInfos, SymbolRefDb,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_ecmascript::EcmaAst;
@@ -25,10 +25,8 @@ use crate::{
   utils::load_entry_module::load_entry_module,
 };
 
-type SourcemapChannel = (
-  Option<std::sync::mpsc::Sender<SourceMapGenMsg>>,
-  Option<thread::JoinHandle<FxHashMap<ModuleIdx, Vec<SourcemapChainElement>>>>,
-);
+type SourcemapChannel =
+  (Option<std::sync::mpsc::Sender<SourceMapGenMsg>>, Option<thread::JoinHandle<()>>);
 
 pub struct ScanStage<Fs: FileSystem + Clone + 'static> {
   options: SharedOptions,
@@ -192,10 +190,12 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
       .plugin_driver
       .set_context_load_modules_tx(Some(module_loader.shared_context.tx.clone()))?;
 
-    let mut module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
+    let module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
 
     if let Some(handler) = handler {
-      self.process_sourcemap_handler(handler, &mut module_loader_output);
+      // The maps already sit in each module's sourcemap chain, in plugin
+      // order. Joining only makes sure they are all generated.
+      handler.join().expect("SourceMapGen: sourcemap worker thread panicked");
     }
 
     self.plugin_driver.file_emitter.set_context_load_modules_tx(None)?;
@@ -211,93 +211,21 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
     {
       let (tx, rx) = std::sync::mpsc::channel::<SourceMapGenMsg>();
       let handler = thread::spawn(move || {
-        let mut map: FxHashMap<ModuleIdx, Vec<_>> = FxHashMap::default();
         while let Ok(msg) = rx.recv() {
           match msg {
-            SourceMapGenMsg::MagicString(v) => {
-              let (module_idx, plugin_idx, id, magic_string) = *v;
-              let generated_sourcemap = magic_string.source_map(string_wizard::SourceMapOptions {
-                source: id.as_str().into(),
-                ..Default::default()
-              });
-              map
-                .entry(module_idx)
-                .or_default()
-                .push(SourcemapChainElement::Transform((plugin_idx, generated_sourcemap)));
+            SourceMapGenMsg::MagicString(pending) => {
+              // Generates the map now, off the JS thread, so it's ready at render time.
+              pending.get();
             }
             SourceMapGenMsg::Terminate => {
               break;
             }
           }
         }
-        map
       });
       (Some(tx), Some(handler))
     } else {
       (None, None)
-    }
-  }
-
-  fn process_sourcemap_handler(
-    &self,
-    handler: thread::JoinHandle<FxHashMap<ModuleIdx, Vec<SourcemapChainElement>>>,
-    module_loader_output: &mut ModuleLoaderOutput,
-  ) {
-    let map: FxHashMap<ModuleIdx, Vec<_>> = handler.join().unwrap();
-    if !map.is_empty() {
-      let transform_plugin_order_map = self
-        .plugin_driver
-        .order_by_transform_meta
-        .iter()
-        .enumerate()
-        .map(|(i, plugin_idx)| (*plugin_idx, i))
-        .collect::<FxHashMap<_, _>>();
-      for (module_idx, sourcemaps) in map {
-        let Some(module) = module_loader_output.module_table.get_mut(module_idx).as_normal_mut()
-        else {
-          continue;
-        };
-        module.sourcemap_chain.extend(sourcemaps);
-        // Partition sourcemap chain into Load and Transform elements (O(n) instead of O(n log n) sort)
-        // Load elements come first, then Transform elements sorted by plugin order
-        let chain_len = module.sourcemap_chain.len();
-        let mut load_elements = Vec::with_capacity(chain_len);
-        let mut transform_elements = Vec::with_capacity(chain_len);
-
-        for element in module.sourcemap_chain.drain(..) {
-          match element {
-            SourcemapChainElement::Load(_) => load_elements.push(element),
-            SourcemapChainElement::Transform(_)
-            | SourcemapChainElement::Omitted { .. }
-            | SourcemapChainElement::Null { .. } => {
-              transform_elements.push(element);
-            }
-          }
-        }
-
-        // Sort only Transform elements by plugin order
-        transform_elements.sort_by(|a, b| {
-          let plugin_idx_of = |el: &SourcemapChainElement| match el {
-            SourcemapChainElement::Transform((plugin_idx, _))
-            | SourcemapChainElement::Omitted { plugin_idx, .. }
-            | SourcemapChainElement::Null { plugin_idx, .. } => Some(*plugin_idx),
-            SourcemapChainElement::Load(_) => None,
-          };
-          if let (Some(a_plugin_idx), Some(b_plugin_idx)) = (plugin_idx_of(a), plugin_idx_of(b)) {
-            let a_order =
-              transform_plugin_order_map.get(&a_plugin_idx).copied().unwrap_or(usize::MAX);
-            let b_order =
-              transform_plugin_order_map.get(&b_plugin_idx).copied().unwrap_or(usize::MAX);
-            a_order.cmp(&b_order)
-          } else {
-            std::cmp::Ordering::Equal
-          }
-        });
-
-        // Reconstruct: Load elements first, then sorted Transform elements
-        module.sourcemap_chain = load_elements;
-        module.sourcemap_chain.extend(transform_elements);
-      }
     }
   }
 

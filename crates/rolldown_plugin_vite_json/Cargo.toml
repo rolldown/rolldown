@@ -25,3 +25,8 @@ rolldown_plugin_utils = { workspace = true }
 rolldown_sourcemap = { workspace = true }
 rolldown_utils = { workspace = true }
 serde_json = { workspace = true }
+
+[dev-dependencies]
+rolldown = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

@@ -1,0 +1,2 @@
+exports &&= {};
+exports.x = true;

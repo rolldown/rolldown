@@ -247,6 +247,7 @@ simdutf8 = "0.1.5"
 smallvec = { version = "1.16.0", features = ["union"] }
 sugar_path = { version = "3", features = ["cached_current_dir"] }
 supports-color = "3"
+tempfile = "3.27.0"
 terminal_size = "0.4.4"
 testing_macros = "1.0.1"
 tokio = { version = "1.52.3", default-features = false }

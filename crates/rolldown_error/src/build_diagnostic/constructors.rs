@@ -21,6 +21,7 @@ use super::events::bundler_initialize_error::BundlerInitializeError;
 use super::events::cannot_call_namespace::CannotCallNamespace;
 use super::events::configuration_field_conflict::ConfigurationFieldConflict;
 use super::events::could_not_clean_directory::CouldNotCleanDirectory;
+use super::events::deprecated_import_assertion::DeprecatedImportAssertion;
 use super::events::duplicate_shebang::DuplicateShebang;
 use super::events::filename_conflict::FilenameConflict;
 use super::events::filename_outside_output_directory::FilenameOutsideOutputDirectory;
@@ -74,6 +75,10 @@ impl BuildDiagnostic {
     span: Span,
   ) -> Self {
     Self::new_inner(ModuleLevelDirective { module_id, directive, source, span })
+  }
+
+  pub fn deprecated_import_assertion(module_id: String, source: ArcStr, span: Span) -> Self {
+    Self::new_inner(DeprecatedImportAssertion { module_id, source, span })
   }
 
   pub fn entry_cannot_be_external(unresolved_id: impl AsRef<Path>) -> Self {

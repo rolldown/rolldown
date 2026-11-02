@@ -1067,6 +1067,12 @@
             "boolean",
             "null"
           ]
+        },
+        "importAttributes": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false
@@ -1602,6 +1608,12 @@
             "boolean",
             "null"
           ]
+        },
+        "deprecatedImportAssertion": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false
@@ -2069,6 +2081,12 @@
             {
               "type": "null"
             }
+          ]
+        },
+        "importAttributes": {
+          "type": [
+            "boolean",
+            "null"
           ]
         },
         "_snapshot": {

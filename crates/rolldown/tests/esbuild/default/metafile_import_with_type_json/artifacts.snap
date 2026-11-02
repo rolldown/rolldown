@@ -1,6 +1,21 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## DEPRECATED_IMPORT_ASSERTION
+
+```text
+[DEPRECATED_IMPORT_ASSERTION] The legacy `assert` keyword in "entry.js" is deprecated and is treated as `with`. Use `with` instead.
+   ╭─[ entry.js:2:29 ]
+   │
+ 2 │ import b from './data.json' assert { type: 'json' }
+   │                             ───────────┬───────────  
+   │                                        ╰───────────── replace `assert` with `with`
+───╯
+
+```
+
 # Assets
 
 ## entry.js

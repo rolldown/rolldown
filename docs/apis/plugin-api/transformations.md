@@ -11,6 +11,8 @@ return {
 };
 ```
 
+No output mapping then reaches the module's earlier code, so the output sourcemap leaves that code out of `sources`, `sourcesContent` and `names`.
+
 If the transformation does not move code, you can preserve existing sourcemaps by returning `null`:
 
 ```js

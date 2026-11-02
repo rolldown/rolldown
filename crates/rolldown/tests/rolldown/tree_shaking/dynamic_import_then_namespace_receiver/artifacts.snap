@@ -12,6 +12,31 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 # Assets
 
+## in_function.js
+
+```js
+// in_function.js
+function then(resolve) {
+	globalThis.inFunctionThenCalls = (globalThis.inFunctionThenCalls ?? 0) + 1;
+	resolve({});
+}
+export { then };
+
+```
+
+## kept.js
+
+```js
+// kept/kept.js
+function then(resolve) {
+	globalThis.keptThenCalls = (globalThis.keptThenCalls ?? 0) + 1;
+	globalThis.thenCalled();
+	resolve({});
+}
+export { then };
+
+```
+
 ## main.js
 
 ```js
@@ -26,21 +51,11 @@ function then(resolve) {
 	resolve({ value: "assimilated:" + this.value });
 }
 // main.js
-import("./unused.js");
+Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
+Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
+import("./kept.js");
 const load = () => Promise.resolve().then(() => target_exports).then((ns) => ns.value);
-export { then as keepThen, load };
-
-```
-
-## unused.js
-
-```js
-// unused.js
-function then(resolve) {
-	globalThis.thenCalls = (globalThis.thenCalls ?? 0) + 1;
-	globalThis.thenCalled();
-	resolve({});
-}
-export { then };
+const loadInFunction = () => import("./in_function.js").then(() => "loaded");
+export { then as keepThen, load, loadInFunction };
 
 ```

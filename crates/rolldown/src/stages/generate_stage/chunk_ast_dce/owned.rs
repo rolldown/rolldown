@@ -3,6 +3,7 @@ use std::{marker::PhantomPinned, pin::Pin, sync::Arc};
 use oxc::{allocator::Allocator, ast::ast::Program};
 use rolldown_common::{ModuleRenderOutput, ModuleTable, NormalModule, NormalizedBundlerOptions};
 use rolldown_ecmascript::EcmaAst;
+use rolldown_utils::rayon::{IntoParallelIterator as _, ParallelIterator as _};
 
 use super::{ChunkAstDceOutput, dce_chunk, global};
 use crate::types::generator::GenerateContext;
@@ -343,6 +344,24 @@ pub struct PendingChunk {
   wrapped: bool,
 }
 
+/// Optimized roots shared read-only with joined parallel printers, under the same contract as
+/// `PreparedChunk`'s `Sync`: codegen neither mutates AST cells nor allocates into any arena, and
+/// every reader joins before the owner can be consumed or dropped.
+struct FrozenRoots<'a>(&'a [ChunkProgram]);
+
+// SAFETY: see `FrozenRoots`; only shared, read-only printing happens through this view.
+unsafe impl Sync for FrozenRoots<'_> {}
+
+impl FrozenRoots<'_> {
+  fn len(&self) -> usize {
+    self.0.len()
+  }
+
+  fn get(&self, pos: usize) -> &ChunkProgram {
+    &self.0[pos]
+  }
+}
+
 type ModuleSources = Option<Arc<[Box<dyn rolldown_sourcemap::Source + Send + Sync>]>>;
 
 pub(in crate::stages::generate_stage) struct OptimizedChunk {
@@ -391,11 +410,12 @@ impl PendingChunk {
       minify_options,
     );
     let space = output.space.as_ref().expect("global chunk source space");
-    let module_sources: Vec<_> = ast
-      .programs
-      .iter()
-      .enumerate()
-      .map(|(pos, root)| {
+    let roots = FrozenRoots(&ast.programs);
+    let roots = &roots;
+    let module_sources: Vec<_> = (0..roots.len())
+      .into_par_iter()
+      .map(|pos| {
+        let root = roots.get(pos);
         let module = ctx.module_table[space.module_idx(pos)].as_normal().expect("normal donor");
         let rendered =
           global::print_module(module, &root.0, ctx.options, 0, space, pos, ctx.module_table);

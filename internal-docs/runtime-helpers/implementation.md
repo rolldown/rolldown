@@ -10,7 +10,7 @@ Reference: https://github.com/rolldown/rolldown/issues/9063
 
 `__exportAll(all, flags)` creates the namespace object of a module. `all` maps each export name to a getter, so code that reads an export sees the live binding. The object has the shape of a native module namespace:
 
-- It has a null prototype (`{ __proto__: null }`). So `'constructor' in ns` is `false`, unless the module exports `constructor`.
+- It has a null prototype. So `'constructor' in ns` is `false`, unless the module exports `constructor`.
 - It has `Symbol.toStringTag` with the value `'Module'`, unless the flag `1` is set (`generatedCode.symbols: false`).
 - It accepts no new properties (`Object.preventExtensions`). In the specification, [[IsExtensible]] of a module namespace object returns `false`.
 
@@ -18,9 +18,11 @@ The flag `2` keeps the object open: the object accepts new properties. A later `
 
 A writer is a place in the module finalizer that emits a `__reExport` call into a namespace object. Each writer checks `namespace_object_is_open` with a debug assertion. Each writer other than the external `export *` writes only for an `export *` of a module with dynamic exports. `determine_has_dynamic_exports` in `link_stage/wrapping.rs` gives each such importer dynamic exports too. So the target of these writers is always open. No fixture runs the overlay writer of strict execution order: a trace over the full Rust suite printed nothing.
 
-An empty namespace without symbols does not call `__exportAll`, because the link stage does not always include the helper in this case. Its value is `Object.freeze({ __proto__: null })`. When the object is open, its value is `{ __proto__: null }`.
+An empty namespace with `generatedCode.symbols: false` does not call `__exportAll`, because the link stage does not always include the helper in this case. Its value is `Object.freeze({ __proto__: null })`. When the object is open, its value is `Object.setPrototypeOf({}, null)`.
 
-`__exportAll` creates the object with `{ __proto__: null }`, not with `__create(null)`. Both have the same speed. The literal is 7 bytes smaller when the output has no `__create`, and the literal needs no other runtime declaration.
+`__exportAll` creates the object with `Object.setPrototypeOf({}, null)`, not with `{ __proto__: null }` or `__create(null)`. V8 keeps the properties of an object from `{ __proto__: null }` or `Object.create(null)` in a hash table (dictionary mode). So code that reads an export from such a namespace object runs slowly. V8 does not put an object from `Object.setPrototypeOf({}, null)` in dictionary mode, also after `__reExport` adds getters. The frozen empty object still uses `{ __proto__: null }`, because it has no properties.
+
+In Node 26, a loop of 5e7 iterations that reads two exports took about 700 ms with `{ __proto__: null }`. The same loop took about 50 ms with `Object.setPrototypeOf({}, null)` or with an ordinary object. JavaScriptCore gives the same speed for all three forms.
 
 These differences from a native namespace object stay:
 

@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // \0rolldown/runtime.js
 var __defProp = Object.defineProperty;
 var __exportAll = (all, flags) => {
-	let target = { __proto__: null };
+	let target = Object.setPrototypeOf({}, null);
 	for (var name in all) __defProp(target, name, {
 		get: all[name],
 		enumerable: true
@@ -117,7 +117,7 @@ Object.defineProperty(exports, "p", {
 // \0rolldown/runtime.js
 var __defProp = Object.defineProperty;
 var __exportAll = (all, flags) => {
-	let target = { __proto__: null };
+	let target = Object.setPrototypeOf({}, null);
 	for (var name in all) __defProp(target, name, {
 		get: all[name],
 		enumerable: true

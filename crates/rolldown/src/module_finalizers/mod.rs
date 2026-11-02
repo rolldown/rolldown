@@ -1893,7 +1893,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     // not always include `__exportAll` in this case.
     if arg_obj_expr.properties.is_empty() && !symbols {
       return if open {
-        self.null_prototype_object_expr()
+        self.open_null_prototype_object_expr()
       } else {
         self.frozen_null_prototype_object_expr()
       };
@@ -1921,7 +1921,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     )
   }
 
-  /// Returns `{ __proto__: null }`, an empty object with a null prototype.
+  /// Returns `{ __proto__: null }`, an empty object with a null prototype. V8 keeps the properties
+  /// of this object in a hash table (dictionary mode), which is slow to read. Use this object only
+  /// when it never gets properties.
   fn null_prototype_object_expr(&self) -> Expression<'ast> {
     ast::Expression::new_object_expression(
       SPAN,
@@ -1937,6 +1939,25 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       )],
       self,
     )
+  }
+
+  /// Returns `/* @__PURE__ */ Object.setPrototypeOf({}, null)`, an empty object with a null
+  /// prototype. A later `__reExport` adds getters to this object. V8 does not put this object in
+  /// dictionary mode, also with these getters, so the getters stay fast to read.
+  /// See internal-docs/runtime-helpers/implementation.md
+  fn open_null_prototype_object_expr(&self) -> Expression<'ast> {
+    let mut call_expr = CallExpression::new(
+      SPAN,
+      Expression::new_member_access_expr("Object", "setPrototypeOf", self),
+      None,
+      [],
+      false,
+      self,
+    );
+    call_expr.pure = true;
+    call_expr.arguments.push(ast::Expression::new_object_expression(SPAN, [], self).into());
+    call_expr.arguments.push(ast::Expression::new_null_literal(SPAN, self).into());
+    Expression::CallExpression(call_expr.into_in(self.allocator()))
   }
 
   /// Returns `/* @__PURE__ */ Object.freeze({ __proto__: null })`. This expression creates an

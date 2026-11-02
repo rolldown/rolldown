@@ -57,7 +57,7 @@ var __esmMin = (fn, res, err) => () => {
 	}
 };
 var __exportAll = (all, flags) => {
-	let target = { __proto__: null };
+	let target = Object.setPrototypeOf({}, null);
 	for (var name in all) __defProp(target, name, {
 		get: all[name],
 		enumerable: true

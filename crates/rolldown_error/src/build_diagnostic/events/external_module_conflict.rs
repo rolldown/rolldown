@@ -31,6 +31,9 @@ pub struct ExternalModuleConflict {
   /// The value is `true` if the existing module is external and a later resolution is not
   /// external.
   pub(crate) is_existing_module_external: bool,
+  /// The value is `true` if the kind of the existing module comes from the last successful
+  /// build. A partial scan keeps that kind for each module that it does not load again.
+  pub(crate) is_existing_kind_from_previous_build: bool,
   pub(crate) importer: Option<ExternalModuleConflictImporter>,
 }
 
@@ -80,5 +83,11 @@ impl BuildEvent for ExternalModuleConflict {
       "Make all imports of this module resolve the same way: all as external, or all as non-external."
         .to_string(),
     );
+    if self.is_existing_kind_from_previous_build {
+      diagnostic.add_help(
+        "The last successful build decided whether this module is external. If all imports already resolve the same way, a full rebuild fixes this error."
+          .to_string(),
+      );
+    }
   }
 }

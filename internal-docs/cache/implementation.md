@@ -259,9 +259,12 @@ produces only the changed + newly discovered modules → sparse `Map`.
    switches the kind of an unchanged module. An example is an edit that
    changes the specifier of the last importer of the old kind. A fresh build
    accepts this edit. The error stays until the next full scan, because the
-   dev engine runs partial scans again after a failed partial scan. Two fixes
-   are possible: check the final `importers[idx]` at the end of the scan, or
-   make the next scan a full scan.
+   dev engine runs partial scans again after a failed partial scan.
+
+   If the kind comes from the snapshot, the error has a second help line: a
+   full rebuild fixes the error if all imports already resolve the same way.
+   Two fixes for the gap are possible: check the final `importers[idx]` at the
+   end of the scan, or make the next scan a full scan.
 
 ---
 

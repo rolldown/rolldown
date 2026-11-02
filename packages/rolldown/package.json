@@ -141,6 +141,7 @@
     "@napi-rs/cli": "catalog:",
     "@napi-rs/wasm-runtime": "catalog:",
     "@oxc-node/cli": "catalog:",
+    "@rolldown/notify": "0.1.0",
     "cac": "catalog:",
     "consola": "catalog:",
     "emnapi": "catalog:",

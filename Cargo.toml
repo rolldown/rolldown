@@ -234,8 +234,9 @@ regex = { version = "1.13.0", default-features = false, features = [
   "unicode-case",
 ] }
 regress = "0.12.0"
-rolldown-notify = "11.0.0"
-rolldown-notify-debouncer-full = "0.8.0"
+rolldown-notify = "11.0.1"
+rolldown-notify-debouncer-full = "0.8.1"
+rolldown-notify-napi = "0.0.2"
 rustc-hash = { version = "2.1.3" }
 saphyr = { version = "0.3.0", default-features = false }
 schemars = "1.2.1"

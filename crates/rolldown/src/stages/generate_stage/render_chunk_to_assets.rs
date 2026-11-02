@@ -31,7 +31,7 @@ use crate::{
 
 use super::{
   CarriedRender, GenerateStage,
-  chunk_ast_dce::{self},
+  chunk_ast_dce::{self, FinalTextSource},
 };
 
 type ChunkGeneratorFuture<'a> = Pin<
@@ -102,7 +102,11 @@ impl GenerateStage<'_> {
     )
     .await?;
     diagnostics.extend(render_warnings);
-    let replaced = pending_ast.keys().filter(|idx| text_replaced.contains(idx)).copied().collect();
+    let mut final_text: FxHashMap<_, _> =
+      rendered_text.into_iter().map(|idx| (idx, FinalTextSource::Addon)).collect();
+    for idx in pending_ast.keys().filter(|idx| text_replaced.contains(idx)) {
+      final_text.insert(*idx, FinalTextSource::Hook);
+    }
     pending_ast.retain(|idx, _| !text_replaced.contains(idx));
 
     augment_chunk_hash(self.plugin_driver, &mut instantiated_chunks).await?;
@@ -112,7 +116,7 @@ impl GenerateStage<'_> {
       &mut instantiated_chunks,
       &ast_dce_chunks,
       ast_property_cache,
-      chunk_ast_dce::DeferredChunks { pending: pending_ast, replaced, rendered_text },
+      chunk_ast_dce::DeferredChunks { pending: pending_ast, final_text },
       &self.link_output.module_table,
     )?;
 

@@ -45,7 +45,8 @@ impl GenerateStage<'_> {
     if let Some(cache) = ast_property_cache {
       property_mangle_cache.set(cache).expect("only one property-mangled chunk is permitted");
     }
-    for (idx, pending) in deferred.pending {
+    let super::chunk_ast_dce::DeferredChunks { pending, final_text } = deferred;
+    for (idx, pending) in pending {
       let Some(chunk) = chunks.iter_mut().find(|chunk| chunk.originate_from == idx) else {
         return Err(
           BuildDiagnostic::unhandleable_error(anyhow::anyhow!(
@@ -105,38 +106,38 @@ impl GenerateStage<'_> {
       if !is_minifiable_ecma_chunk(chunk) {
         return Ok(());
       }
-      // This chunk was already optimized as a retained AST.
-      if ast_dce_chunks.contains(&chunk.originate_from)
-        && !deferred.replaced.contains(&chunk.originate_from)
-        && !deferred.rendered_text.contains(&chunk.originate_from)
-      {
-        #[cfg(feature = "testing")]
-        super::chunk_ast_dce::record_coverage(
-          options,
-          "late_minify",
-          "skipped_ast",
-          Some(chunk.preliminary_filename.as_str()),
-        );
-        return Ok(());
+      match final_text.get(&chunk.originate_from) {
+        Some(source) => {
+          #[cfg(not(feature = "testing"))]
+          let _ = source;
+          #[cfg(feature = "testing")]
+          super::chunk_ast_dce::record_coverage(
+            options,
+            "late_minify",
+            source.coverage_reason(),
+            Some(chunk.preliminary_filename.as_str()),
+          );
+        }
+        None if ast_dce_chunks.contains(&chunk.originate_from) => {
+          #[cfg(feature = "testing")]
+          super::chunk_ast_dce::record_coverage(
+            options,
+            "late_minify",
+            "skipped_ast",
+            Some(chunk.preliminary_filename.as_str()),
+          );
+          return Ok(());
+        }
+        None => {
+          return Err(
+            BuildDiagnostic::unhandleable_error(anyhow::anyhow!(
+              "chunk AST pipeline has no admitted input for {:?}",
+              chunk.preliminary_filename
+            ))
+            .into(),
+          );
+        }
       }
-      let replaced = deferred.replaced.contains(&chunk.originate_from);
-      let addon_text = deferred.rendered_text.contains(&chunk.originate_from);
-      if !replaced && !addon_text {
-        return Err(
-          BuildDiagnostic::unhandleable_error(anyhow::anyhow!(
-            "chunk AST pipeline has no admitted input for {:?}",
-            chunk.preliminary_filename
-          ))
-          .into(),
-        );
-      }
-      #[cfg(feature = "testing")]
-      super::chunk_ast_dce::record_coverage(
-        options,
-        "late_minify",
-        if replaced { "hook_text" } else { "addon_text" },
-        Some(chunk.preliminary_filename.as_str()),
-      );
       let codegen_options = CodegenOptions {
         minify: remove_whitespace,
         ascii_only: options.charset.is_ascii() || ascii_only,

@@ -47,11 +47,26 @@ pub use global::dedupe_sources;
 pub use owned::PendingChunk;
 pub(super) use owned::{ChunkAst, PreparedChunk};
 
+#[derive(Clone, Copy)]
+pub(super) enum FinalTextSource {
+  Hook,
+  Addon,
+}
+
+impl FinalTextSource {
+  #[cfg(feature = "testing")]
+  pub(super) fn coverage_reason(self) -> &'static str {
+    match self {
+      Self::Hook => "hook_text",
+      Self::Addon => "addon_text",
+    }
+  }
+}
+
 #[derive(Default)]
 pub(super) struct DeferredChunks {
   pub pending: rustc_hash::FxHashMap<rolldown_common::ChunkIdx, PendingChunk>,
-  pub replaced: rustc_hash::FxHashSet<rolldown_common::ChunkIdx>,
-  pub rendered_text: rustc_hash::FxHashSet<rolldown_common::ChunkIdx>,
+  pub final_text: rustc_hash::FxHashMap<rolldown_common::ChunkIdx, FinalTextSource>,
 }
 
 /// Retain finalized inline copies for the direct AST input path.

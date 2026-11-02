@@ -113,6 +113,61 @@ async fn unchanged_and_replaced_chunks_optimize_after_hooks() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn module_debug_markers_follow_whitespace_policy() {
+  let fixture =
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/rolldown/topics/chunk_ast_dce/path_coverage");
+  for format in [OutputFormat::Esm, OutputFormat::Cjs] {
+    for hook in [None, Some(false), Some(true)] {
+      for attach_debug_info in [AttachDebugInfo::Simple, AttachDebugInfo::Full] {
+        for remove_whitespace in [false, true] {
+          let output = Bundler::with_plugins(
+            BundlerOptions {
+              cwd: Some(fixture.clone()),
+              input: Some(vec![InputItem {
+                name: Some("main".into()),
+                import: "./cross/main.js".into(),
+              }]),
+              format: Some(format),
+              minify: Some(RawMinifyOptions::Object(rolldown_common::RawMinifyOptionsDetailed {
+                compress: Some(rolldown_common::RawCompressOptions::default()),
+                mangle: Some(rolldown_common::RawMangleOptions::default()),
+                remove_whitespace,
+                mangle_properties: None,
+                ascii_only: false,
+              })),
+              experimental: Some(ExperimentalOptions {
+                attach_debug_info: Some(attach_debug_info),
+                ..Default::default()
+              }),
+              ..Default::default()
+            },
+            hook
+              .map(|replace| Plugin::new_shared(Observe { replace, observations: Arc::default() }))
+              .into_iter()
+              .collect(),
+          )
+          .unwrap()
+          .generate()
+          .await
+          .unwrap();
+          let chunk = output
+            .assets
+            .iter()
+            .find_map(|asset| if let Output::Chunk(chunk) = asset { Some(chunk) } else { None })
+            .unwrap();
+          assert_eq!(
+            chunk.code.contains("// cross/main.js"),
+            !remove_whitespace,
+            "{format:?}/{hook:?}/{attach_debug_info:?}/{remove_whitespace}: {}",
+            chunk.code,
+          );
+        }
+      }
+    }
+  }
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn unchanged_hook_preserves_legal_debug_header() {
   let fixture = Path::new(env!("CARGO_MANIFEST_DIR"))
     .join("tests/rolldown/topics/chunk_ast_dce/generated_glue");

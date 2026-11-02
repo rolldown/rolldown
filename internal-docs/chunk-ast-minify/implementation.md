@@ -34,6 +34,8 @@ Chunks with user `renderChunk` hooks defer optimization. Preliminary module prin
 
 Concrete `Pluginable::is<T>()` checks distinguish builtin asset/copy hooks and the test marker plugin from user hooks; plugin names cannot bypass deferral. Asset/copy chunks defer when their module or generated glue contains emitted-file placeholders, so builtin rewrites finish before optimization. Ordinary chunks retain early optimization. See [plugin-asset-module](../plugin-asset-module/implementation.md). The test marker implementation lives in `rolldown_plugin_utils` behind its `testing` feature and only rewrites comment lines.
 
+Module-start debug markers follow whitespace removal rather than compression/mangling: they survive `removeWhitespace: false` in both early and retained module printing, and actual hook text keeps the normal final-chunk comment policy. `render_hooks::module_debug_markers_follow_whitespace_policy` covers ESM/CJS with no hook, an unchanged hook and a replaced hook, both debug-info modes, and whitespace removal on/off.
+
 The retained path reconstructs hashbang, comment-only banner/footer, directives and legal debug headers around optimized fragments. Directive rendering uses the format renderer's shared helper: appending another semicolon can terminate a multi-directive prologue and invalidate the optimizer's strictness assumptions. `render_hooks` executes unchanged/replaced ESM/CJS/IIFE/UMD output, checks original map anchors, CJS directive semantics and debug-header comment policy.
 
 ## Ownership and concurrency

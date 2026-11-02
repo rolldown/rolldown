@@ -25,7 +25,7 @@ pub fn render_ecma_module(
   }
   let mut sources: Vec<Box<dyn rolldown_sourcemap::Source + Send + Sync>> = Vec::with_capacity(6);
   // Mark only where a module starts, like esbuild and bun.
-  if !matches!(options.minify, MinifyOptions::Enabled(_))
+  if !matches!(&options.minify, MinifyOptions::Enabled(minify) if minify.remove_whitespace)
     && matches!(
       options.experimental.attach_debug_info,
       Some(AttachDebugInfo::Simple | AttachDebugInfo::Full)

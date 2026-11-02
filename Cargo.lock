@@ -3105,6 +3105,7 @@ dependencies = [
  "anyhow",
  "arcstr",
  "fast-glob",
+ "futures",
  "globstar",
  "itoa",
  "oxc",

@@ -12,7 +12,6 @@ description = "Rolldown plugin for glob imports"
 
 [lib]
 doctest = false
-test = false
 
 [lints]
 workspace = true
@@ -34,3 +33,6 @@ rolldown_utils = { workspace = true }
 string_wizard = { workspace = true }
 sugar_path = { workspace = true }
 walkdir = { workspace = true }
+
+[dev-dependencies]
+futures = { workspace = true }

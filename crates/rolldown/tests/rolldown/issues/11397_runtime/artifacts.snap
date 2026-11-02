@@ -1,0 +1,52 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## form.js
+
+```js
+import { n as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+const value = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { x: 1 };
+})))())).default.x;
+export { value };
+
+```
+
+## main.js
+
+```js
+// main.js
+globalThis.__11397r_done = {
+	page: () => import("./page.js"),
+	form: () => import("./form.js")
+}.form().then((form) => {
+	globalThis.__11397r_formNs = form;
+});
+
+```
+
+## page.js
+
+```js
+import { n as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+import { value } from "./form.js";
+// page.js
+var import_b = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { y: 2 };
+})))());
+function Page() {
+	return [value, import_b.default.y];
+}
+export { Page as default };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __toESM as n, __commonJSMin as t };
+
+```

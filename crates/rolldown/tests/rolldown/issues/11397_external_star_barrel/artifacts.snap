@@ -1,0 +1,37 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+const load = () => import("./route.js");
+const loadPage = () => import("./page.js");
+export { load, loadPage };
+
+```
+
+## page.js
+
+```js
+import { t as route_exports } from "./route.js";
+// page.js
+const get = () => route_exports;
+export { get };
+
+```
+
+## route.js
+
+```js
+export * from "node:path";
+// HIDDEN [\0rolldown/runtime.js]
+// body.js
+const value = 7;
+// route.js
+var route_exports = /* @__PURE__ */ __exportAll({ value: () => 7 });
+export { route_exports as t, value };
+
+```

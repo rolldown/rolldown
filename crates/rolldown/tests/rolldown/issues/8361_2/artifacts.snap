@@ -15,13 +15,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## b.js
 
 ```js
-import { n as __exportAll, r as __toESM } from "./rolldown-runtime.js";
-// b.js
-var b_exports = /* @__PURE__ */ __exportAll({ foo2: () => foo2 });
-function foo2() {
-	import("./main.js").then((n) => n.t);
-	Promise.resolve().then(() => b_exports);
-}
+import { r as __toESM } from "./rolldown-runtime.js";
 import("./cjs.js").then((n) => /* @__PURE__ */ __toESM(n.t()));
 
 ```

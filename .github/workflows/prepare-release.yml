@@ -9,9 +9,14 @@ on:
         description: 'New version (e.g. 1.0.1)'
         required: true
         type: string
+      target_branch:
+        description: 'Release line: main, or a vX.Y maintenance branch (e.g. v1.1)'
+        required: true
+        default: main
+        type: string
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event.pull_request.number || github.sha }}
+  group: ${{ github.workflow }}-${{ inputs.target_branch }}
   cancel-in-progress: true
 
 jobs:
@@ -23,8 +28,18 @@ jobs:
       contents: write # for create-pull-request
       pull-requests: write # for create-pull-request
     steps:
+      - name: Check target branch
+        env:
+          TARGET_BRANCH: ${{ inputs.target_branch }}
+        run: |
+          if [[ ! "$TARGET_BRANCH" =~ ^(main|v[0-9]+\.[0-9]+)$ ]]; then
+            echo "::error::target_branch must be main or a vX.Y maintenance branch, received ${TARGET_BRANCH}"
+            exit 1
+          fi
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.target_branch }}
           fetch-depth: 0 # for changelog
           persist-credentials: true # for create-pull-request
 
@@ -46,6 +61,11 @@ jobs:
         env:
           INPUT_VERSION: ${{ inputs.version }}
         run: echo "VERSION=$INPUT_VERSION" >> "$GITHUB_ENV"
+
+      - name: Check version
+        env:
+          TARGET_BRANCH: ${{ inputs.target_branch }}
+        run: node scripts/misc/release-line.mjs prepare --branch "$TARGET_BRANCH" --version "$VERSION"
 
       - name: Bump crate versions
         run: |
@@ -71,7 +91,9 @@ jobs:
           version: v2.9.1 # git cliff version
           config: cliff.toml
           # perf-kit has its own changelog.
-          args: --unreleased --exclude-path "packages/perf-kit/**" --prepend CHANGELOG.md --tag ${{ env.VERSION }}
+          # Only count tags reachable from the target branch, so a maintenance
+          # release does not end the range of the next release on main.
+          args: --unreleased --use-branch-tags --exclude-path "packages/perf-kit/**" --prepend CHANGELOG.md --tag ${{ env.VERSION }}
 
       - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
@@ -96,6 +118,6 @@ jobs:
           body: ${{ steps.changelog.outputs.content }}
           branch: release-v${{ env.VERSION }}
           branch-suffix: timestamp
-          base: main
+          base: ${{ inputs.target_branch }}
           title: 'release: v${{ env.VERSION }}'
           assignees: Boshen, shulaoda

@@ -1,7 +1,7 @@
 use json_escape_simd::escape;
 use rolldown_common::{
   HmrStampTable, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable,
-  NormalModule, RUNTIME_MODULE_KEY, Specifier,
+  NormalModule, RUNTIME_MODULE_KEY, Specifier, lazy_proxy_target,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -40,7 +40,7 @@ fn edge_bindings<'a>(
   module_table: &ModuleTable,
   module: &'a NormalModule,
   out_edges: &[usize],
-  id_to_index: &FxHashMap<ModuleIdx, usize>,
+  id_to_index: &FxHashMap<&str, usize>,
 ) -> Vec<Option<Vec<&'a str>>> {
   let names_by_record = static_import_bindings(module);
   let mut out_bindings: Vec<Option<Vec<&str>>> = vec![None; out_edges.len()];
@@ -53,7 +53,7 @@ fn edge_bindings<'a>(
     if !target.is_hmr_partially_accepting_module() {
       continue;
     }
-    let Some(target_pos) = id_to_index.get(&target_idx) else { continue };
+    let Some(target_pos) = id_to_index.get(target.stable_id.as_str()) else { continue };
     let Some(edge_pos) = out_edges.iter().position(|pos| pos == target_pos) else { continue };
     let names = out_bindings[edge_pos].get_or_insert_with(Vec::new);
     for name in names_by_record.get(&record_idx).into_iter().flatten() {
@@ -92,24 +92,35 @@ fn edge_bindings<'a>(
 /// `entries` lists the rows whose module is in `entry_modules`, and is left out when no row
 /// is one.
 ///
+/// A lazy proxy gets no row, and an `import()` edge into a proxy points at the module the
+/// proxy stands for. Nothing runs under a proxy id in the client (`requestLazy` runs the real
+/// module), so a proxy row would leave the real module with no importer that ran, and the
+/// client boundary walk would stop there. See internal-docs/lazy-compilation/implementation.md.
+///
 /// `ids[0, local_count)` are the carried modules in input order; `ids[local_count, ..)` are
-/// foreign edge targets interned on first use. Returns `None` when the payload carries no rows.
+/// foreign edge targets interned on first use. Ids are interned by stable id, not by
+/// `ModuleIdx`: the module behind an unfetched proxy is not in `module_table` yet. Returns
+/// `None` when the payload carries no rows.
 pub fn render_register_graph_source(
   module_table: &ModuleTable,
   carried_modules: impl IntoIterator<Item = ModuleIdx>,
   entry_modules: &FxHashSet<ModuleIdx>,
   stamp_table: Option<&HmrStampTable>,
 ) -> Option<String> {
-  let mut ids: Vec<ModuleIdx> = Vec::new();
-  let mut id_to_index: FxHashMap<ModuleIdx, usize> = FxHashMap::default();
+  let mut ids: Vec<&str> = Vec::new();
+  let mut id_to_index: FxHashMap<&str, usize> = FxHashMap::default();
+  // `local_modules[i]` is the module of row `i`.
+  let mut local_modules: Vec<ModuleIdx> = Vec::new();
 
   for idx in carried_modules {
     let Module::Normal(module) = &module_table.modules[idx] else { continue };
-    if module.id.as_str() == RUNTIME_MODULE_KEY {
+    let stable_id = module.stable_id.as_str();
+    if module.id.as_str() == RUNTIME_MODULE_KEY || lazy_proxy_target(stable_id).is_some() {
       continue;
     }
-    id_to_index.entry(idx).or_insert_with(|| {
-      ids.push(idx);
+    id_to_index.entry(stable_id).or_insert_with(|| {
+      ids.push(stable_id);
+      local_modules.push(idx);
       ids.len() - 1
     });
   }
@@ -128,8 +139,8 @@ pub fn render_register_graph_source(
   // linear rescan of the edge list per record (quadratic for high-fan-out modules).
   let mut seen_static = FxHashSet::default();
   let mut seen_dynamic = FxHashSet::default();
-  for i in 0..local_count {
-    let Module::Normal(module) = &module_table.modules[ids[i]] else {
+  for (i, &module_idx) in local_modules.iter().enumerate() {
+    let Module::Normal(module) = &module_table.modules[module_idx] else {
       unreachable!("carried rows are filtered to normal modules above");
     };
     seen_static.clear();
@@ -149,8 +160,10 @@ pub fn render_register_graph_source(
       if target.id.as_str() == RUNTIME_MODULE_KEY {
         continue;
       }
-      let target_pos = *id_to_index.entry(target_idx).or_insert_with(|| {
-        ids.push(target_idx);
+      let target_id = target.stable_id.as_str();
+      let target_id = lazy_proxy_target(target_id).unwrap_or(target_id);
+      let target_pos = *id_to_index.entry(target_id).or_insert_with(|| {
+        ids.push(target_id);
         ids.len() - 1
       });
       if record.kind.is_static() {
@@ -173,11 +186,11 @@ pub fn render_register_graph_source(
 
   let mut source = String::with_capacity(ids.len() * 32);
   source.push_str("__rolldown_runtime__.registerGraph({ids:[");
-  for (i, idx) in ids.iter().enumerate() {
+  for (i, id) in ids.iter().enumerate() {
     if i > 0 {
       source.push(',');
     }
-    source.push_str(&escape(module_table.modules[*idx].stable_id().as_str()));
+    source.push_str(&escape(id));
   }
   source.push_str("],localCount:");
   source.push_str(itoa::Buffer::new().format(local_count));
@@ -249,8 +262,8 @@ pub fn render_register_graph_source(
   if let Some(stamp_table) = stamp_table {
     source.push_str(",stamps:{");
     let mut first = true;
-    for (row, idx) in ids[..local_count].iter().enumerate() {
-      let stamp = stamp_table.render_time_stamp(module_table.modules[*idx].stable_id().as_str());
+    for (row, id) in ids[..local_count].iter().enumerate() {
+      let stamp = stamp_table.render_time_stamp(id);
       if stamp == 0 {
         continue;
       }
@@ -265,7 +278,7 @@ pub fn render_register_graph_source(
     source.push('}');
   }
   let mut entry_rows =
-    ids[..local_count].iter().enumerate().filter(|(_, idx)| entry_modules.contains(idx));
+    local_modules.iter().enumerate().filter(|(_, idx)| entry_modules.contains(idx));
   if let Some((first_row, _)) = entry_rows.next() {
     source.push_str(",entries:[");
     source.push_str(itoa::Buffer::new().format(first_row));

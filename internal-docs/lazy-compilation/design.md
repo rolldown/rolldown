@@ -4,17 +4,18 @@
 
 ## Key Notes (TL;DR)
 
-1. **Transparent UX** - `import('./module')` just works; the plugin rewrites dynamic imports and unwraps proxy exports automatically
+1. **Transparent UX** - `import('./module')` just works; the finalizer rewrites the import into a `requestLazy` call
 2. **Dynamic imports only** - static imports always compiled immediately. Boundary creation is module-type-blind (see Scope)
-3. **`rolldown:exports` contract** - proxy modules export this named export; the plugin's `transform_ast` chains `.then(__unwrap_lazy_compilation_entry)` onto every dynamic import in non-proxy modules
+3. **`requestLazy` entry point** - a lazy `import()` compiles to `__rolldown_runtime__.requestLazy(realStableId, proxyId)`; the runtime loads the chunk once through `loadLazyChunk`, then runs the module through the ordinary `initModule` gate
 4. **Compilation granularity** - lazy module + the sync deps whose current copy the requesting client does not already hold; nested `import()` become new lazy boundaries
 5. **Dev server returns JS directly** - `/@vite/lazy` returns the compiled code as a single JS string; the browser loads it as an ES module (only inline sourcemaps survive — see implementation.md)
-6. **Module IDs** - runtime module-map lookups use **stable IDs** (cwd-relative); absolute paths appear only in the `/@vite/lazy?id=` param and the fetched template's `import($MODULE_ID)`
-7. **Proxy module states** - proxies have two states: **not fetched** (stub template) and **fetched** (imports real module)
+6. **Module IDs** - runtime module-map lookups use **stable IDs** (cwd-relative); absolute paths appear only in the proxy id that `requestLazy` passes to `loadLazyChunk` (sent as the `/@vite/lazy?id=` param) and the fetched template's `import($MODULE_ID)`
+7. **Proxy module states** - a proxy is a server-side graph node, never fetched as a chunk. Two states: **not fetched** (empty body, keeps the real module out of the build) and **fetched** (imports the real module, rooting the partial scan)
 8. **Build output refresh** - after lazy compilation, the dev engine triggers a background rebuild to update build output; the rebuild is silent to connected clients
 9. **Dedup** - the server skips modules whose current copy the client already holds (its ship map + boot-evaluated map, `HmrStage::compile_lazy_entry`); in the browser `initModule` runs a factory only when the module is not yet in the module cache — a shared module never executes twice
 10. **Error handling** - unknown module ids are rejected (security gate, #9969); init errors in lazy modules reject the consumer's `await import()` catchably (#9981)
 11. **ClientId** - browser-generated id per tab (Vite's `bundledDevClient.ts`); selects the per-client `ClientSession` (`crates/rolldown_dev/src/types/client_session.rs`) whose ship map and boot-evaluated map size the lazy chunk
+12. **After boot, only factories** - a page gets scope-hoisted code only at boot; every lazy route reaches it as factories, even a route the server compiled before (see [After Boot, Only Factories](#5-after-boot-only-factories))
 
 ## What is Lazy Compilation?
 
@@ -70,7 +71,7 @@ Entry
     └── import('./lazy-b')  ← another lazy boundary (NOT compiled yet)
 ```
 
-Inside a rendered lazy chunk (or HMR patch), a nested `import()` of another lazy proxy is rewritten by the HMR finalizer to fetch `/@vite/lazy?...` and then read the proxy's registered exports via `loadExports(stableProxyId)` — partial bundles have no separately bundled proxy chunk, so the proxy's top-level export would otherwise be lost (see implementation.md "Lazy chunk rendering").
+Inside a rendered lazy chunk (or HMR patch), a nested `import()` of another lazy proxy is rewritten by the HMR finalizer into the same `requestLazy` call the full build emits (see "The `requestLazy` Entry Point" below), so a nested boundary also costs one request (see implementation.md "Lazy chunk rendering").
 
 ## Key Design Decisions
 
@@ -78,31 +79,48 @@ Inside a rendered lazy chunk (or HMR patch), a nested `import()` of another lazy
 
 Users should not need to change their code. `import('./module')` just works.
 
-### 2. The `rolldown:exports` Contract
+### 2. The `requestLazy` Entry Point
 
-Proxy modules export a special named export `'rolldown:exports'` — a promise that resolves to the real module's exports (and **rejects** if the real module throws during initialization, which is what makes init errors catchable at the consumer's `await import()`, #9981).
-
-Rolldown's `transform_ast` hook automatically wraps dynamic imports with an unwrapping helper:
+A lazy `import()` is rewritten by the finalizer into a single runtime call:
 
 ```js
 // User code (unchanged)
 const mod = await import('./lazy.js');
 
-// Transformed by lazy compilation plugin
-const mod = await import('./lazy.js').then(__unwrap_lazy_compilation_entry);
+// Emitted
+const mod = await __rolldown_runtime__.requestLazy('lazy.js', '/abs/path/lazy.js?rolldown-lazy=1');
 ```
 
-- The helper is injected (after any directive prologues) into each module where at least one dynamic import was wrapped:
+Both codegen paths emit this same shape (`create_request_lazy_call`) — the full build from `try_rewrite_import_expression`, HMR patches from `rewrite_dynamic_import` — so a lazy boundary never becomes a chunk the browser fetches, and a cold lazy route costs one request.
 
-  ```js
-  function __unwrap_lazy_compilation_entry(m) {
-    var e = m['rolldown:exports'];
-    return e ? e : m;
-  }
-  ```
+```mermaid
+sequenceDiagram
+  participant P as page
+  participant R as runtime
+  participant V as dev server
+  participant E as DevEngine
+  P->>R: requestLazy('lazy.js', proxyId)
+  alt lazy.js and its static imports already ran or have factories here
+    R->>R: no request
+  else
+    R->>V: loadLazyChunk(proxyId): GET /@vite/lazy?id=proxyId&clientId=C
+    V->>E: compileEntry(proxyId, C)
+    E-->>V: registerGraph, then one registerFactory per module that C lacks
+    V-->>R: JS, ending with payloadDelivered(filename)
+  end
+  R->>R: initModule('lazy.js')
+  R-->>P: exports
+```
 
-- This is safe for ALL dynamic imports: lazy proxies return the promise, non-lazy modules pass through unchanged
-- Proxy modules themselves (ids containing `?rolldown-lazy=1`) are **exempt**: `transform_ast` skips them, so the stub's `import('/@vite/lazy?...')` and the fetched template's `import($MODULE_ID)` are never wrapped
+A route whose factories the page does not hold always takes the request path, also after a reload and also when the server compiled the route before.
+
+The first argument is the **real** module's stable id, known at compile time. `requestLazy` memoizes the promise under that id, which is the dedup point: one request no matter how many places import the module. `removeModuleCache` drops the memo, so a module edited after being lazily loaded is re-run rather than served stale.
+
+The second argument is the boundary's own id (absolute path + `?rolldown-lazy=1`). `requestLazy` passes it to `loadLazyChunk`, which makes the request (see [Dev Server Integration](#4-dev-server-integration)).
+
+Nothing is registered under the proxy id in the client. A cache entry with no factory behind it reads as "executed" to the HMR boundary walk, which would turn a patch arriving mid-load into a full page reload.
+
+The client graph has no proxy node either: `registerGraph` links the importer straight to the real module. A proxy node would be the real module's only importer, and since it never runs, the boundary walk would stop at it and drop the update. The server walk, which decides what a patch carries, steps over the proxy in the same way, so the two walks reach the same importers. The client rows link the importer to the real module whether or not the proxy was fetched. An unfetched proxy is the stub with no `import()`, so the server walk finds the proxy by the real module's id, not by an import record.
 
 ### 3. Proxy Module States
 
@@ -110,60 +128,64 @@ A proxy module has two states that determine what content the `LazyCompilationPl
 
 #### Not Fetched (Initial State)
 
-Returns the **stub template** (`proxy-module-template.js`), which fetches via the `/@vite/lazy` endpoint:
+Returns the **stub template** (`proxy-module-template.js`), an empty module:
 
 ```js
-const lazyExports = (async () => {
-  // Remove the cache of the current module from the runtime's module map.
-  // This module with key $STABLE_PROXY_MODULE_ID is swapped in the lazy loaded chunk again with the real module.
-  delete __rolldown_runtime__.modules[$STABLE_PROXY_MODULE_ID];
-  // Dev server will intercept this import and serve the actual module code.
-  // We send the proxy module ID (with ?rolldown-lazy=1) so the server can mark it as fetched.
-  await import(
-    /* @vite-ignore */ `/@vite/lazy?id=${encodeURIComponent($PROXY_MODULE_ID)}&clientId=${__rolldown_runtime__.clientId}`
-  );
-  // Loading the chunk re-registers this proxy id, exposing the real module's
-  // initializer as its own `rolldown:exports` promise. Await that promise (don't
-  // just hand back the namespace) so an error thrown while the real module
-  // initializes rejects `lazyExports` too, surfacing at the consumer's
-  // `await import(...)` (catchable) instead of escaping as an unhandled rejection.
-  return await __rolldown_runtime__.loadExports($STABLE_PROXY_MODULE_ID)['rolldown:exports'];
-})();
-
-export { lazyExports as 'rolldown:exports' };
+export {};
 ```
 
-Three steps: (1) evict the proxy's stale runtime registration so the lazy chunk can re-register the same stable proxy id with the real initializer; (2) fetch the lazy chunk; (3) resolve through the **re-registered proxy's own `'rolldown:exports'` promise** — a two-level promise chain whose rejection semantics make init errors catchable.
+The body is never executed — every `import()` of this id was rewritten to `requestLazy`. The module exists only so the graph has a node under this id, and an empty body is what keeps the real module out of the initial build.
 
 #### Fetched (After First Request)
 
 Returns the **fetched template** (`proxy-module-template-fetched.js`), which imports the real module:
 
 ```js
-const lazyExports = (async () => {
-  await import($MODULE_ID);
-  return __rolldown_runtime__.loadExports($STABLE_MODULE_ID);
-})();
-
-export { lazyExports as 'rolldown:exports' };
+import($MODULE_ID);
 ```
 
-The import result (namespace) is deliberately discarded: exports are read from the runtime registry by stable id, because chunk-level renaming can minify export names when a shared lazy module lands in a common chunk (#9132). `$MODULE_ID` is the absolute path (used for resolution only); `$STABLE_MODULE_ID` is the cwd-relative stable id.
+This body is not executed either. Its `import($MODULE_ID)` matters at **scan** time only: it is the edge `compile_lazy_entry` follows to pull the real module and its dependencies into the partial build, and it keeps a fetched route in later builds. `$MODULE_ID` is the absolute path, used for resolution only.
 
 The state transition is managed by `LazyCompilationContext.mark_as_fetched()`.
 
 ### 4. Dev Server Integration
 
-The dev server handles `/@vite/lazy?id=...&clientId=...` requests:
+The dev server owns the lazy endpoint URL. The client loads a lazy chunk through `DevRuntime#loadLazyChunk(proxyModuleId)` (`runtime-extra-dev-common.js`):
+
+- The default imports `/@vite/lazy?id=...&clientId=...`.
+- A server that serves the endpoint at another URL overrides the method in its `DevRuntime` subclass.
+- Emitted code carries ids only. It never contains the URL, the `clientId`, or `encodeURIComponent` (a user binding of that name in the importer's scope cannot break the request).
+
+The dev server handles these requests:
 
 1. Receive request with the **proxy module ID** (absolute path with `?rolldown-lazy=1`) and the client's UUID
 2. Call `DevEngine.compileEntry(moduleId, clientId)` (TS) / `DevEngine::compile_lazy_entry` (Rust)
 3. `DevEngine::compile_lazy_entry` copies that client's ship map and boot-evaluated map out of its `ClientSession` and marks the proxy as fetched
 4. **Security gate**: the id is only a lookup key into the build cache — an id not already in the module graph is rejected with `Lazy entry module not found in cache` (never resolved from the filesystem, so a malicious request cannot bundle arbitrary files; analogous to Vite's `server.fs.strict`, pinned by test, #9969)
-5. Partial scan from the proxy module - plugin returns the fetched template, whose `import($MODULE_ID)` triggers compilation of the actual module
+5. Partial scan from the proxy module - plugin returns the fetched template, whose `import($MODULE_ID)` triggers compilation of the actual module. The chunk carries `registerFactory` calls only; `requestLazy` runs the module once the chunk has evaluated
 6. Assets emitted during the compile are delivered via the `onAdditionalAssets` callback **before** the code is returned, so they are servable when the chunk executes (#9815)
 7. **Return compiled JS directly** (`Content-Type: application/javascript`) - the browser loads it as an ES module; compile failures answer HTTP 500. Vite appends a `__rolldown_runtime__.payloadDelivered(filename)` line to the chunk (`payloadDeliveredAck` in `bundledDev.ts`); when the client runs it, `DevEngine::notify_payload_delivered` records the chunk's modules in that client's ship map
-8. **Notify coordinator** - trigger a background rebuild so future page loads get the fetched template without a `/lazy` request
+8. **Notify coordinator** - the coordinator watches the files the compile loaded and queues a background rebuild, so the build output matches the graph again. No page loads the route from that output: every lazy `import()` calls `requestLazy`
+
+### 5. After Boot, Only Factories
+
+A module can reach the page in two shapes. They stop a second run in different ways, and neither knows about the other:
+
+| Shape                                                | When the code runs              | What stops a second run                  |
+| ---------------------------------------------------- | ------------------------------- | ---------------------------------------- |
+| Scope-hoisted chunk (full build)                     | as soon as the file loads       | the browser, by file URL                 |
+| Factory (`registerFactory`, lazy chunk or HMR patch) | when `initModule(id)` is called | the runtime, by module id (module cache) |
+
+When one page mixes the shapes, a module can pass both checks and run twice. So:
+
+> **A page gets scope-hoisted code only at boot. Everything that arrives after boot is a factory.**
+
+Lazy mode follows this. The full build emits `requestLazy` for every lazy `import()`, fetched or not, so a route never loads from the build output. Example: `route-a.js` and `route-b.js` both import `store.js`. The user visits A, reloads, then visits B and then A. B arrives as factories and runs `store.js`. A also arrives as factories, and `initModule` returns the `store.js` that already ran. Had A come back as a built chunk, `store.js` would run a second time and A would get its own store. Pinned by the shared-module spec.
+
+Rejected options for making a repeat visit cheaper:
+
+- **Redirect `/@vite/lazy` to a built chunk** (vitejs/vite#23502). It brings built chunks back after boot, so it mixes the shapes. It also needs server-side guesses: the build generation is known at WebSocket connect, not at page load; the redirect must stop after the first payload; and Vite would copy state that `DevEngine` already has.
+- **A loader made by the build** (`requestLazy(id, proxyId, () => import('./x-HASH.js'))`). It mixes the shapes too, and needs page-side rules (no payload and no push since load) plus checks for timing cases.
 
 ## Related
 

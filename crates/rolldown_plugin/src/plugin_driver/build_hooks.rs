@@ -13,20 +13,13 @@ use anyhow::{Context, Result};
 use arcstr::ArcStr;
 use rolldown_common::{
   ModuleInfo, ModuleType, NormalModule, PluginIdx, SharedNormalizedBundlerOptions,
-  SourcemapChainElement, side_effects::HookSideEffects,
+  SourcemapChainElement, is_lazy_proxy, side_effects::HookSideEffects,
 };
 use rolldown_devtools::{action, trace_action};
 use rolldown_error::CausedPlugin;
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::{IndexBitSet, unique_arc::UniqueArc};
 use tracing::{Instrument, debug_span};
-
-const LAZY_PROXY_QUERY: &str = "?rolldown-lazy=1";
-
-#[inline]
-fn is_lazy_proxy_module_id(module_id: &str) -> bool {
-  module_id.ends_with(LAZY_PROXY_QUERY)
-}
 
 #[inline]
 fn should_skip_plugin_for_lazy_proxy(
@@ -35,7 +28,7 @@ fn should_skip_plugin_for_lazy_proxy(
   plugin_idx: PluginIdx,
   lazy_compilation_plugin_idx: Option<PluginIdx>,
 ) -> bool {
-  if !should_skip_user_plugins_for_lazy_proxy_modules || !is_lazy_proxy_module_id(module_id) {
+  if !should_skip_user_plugins_for_lazy_proxy_modules || !is_lazy_proxy(module_id) {
     return false;
   }
   lazy_compilation_plugin_idx.is_some_and(|idx| idx != plugin_idx)

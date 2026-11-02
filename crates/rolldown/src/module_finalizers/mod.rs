@@ -45,7 +45,11 @@ use crate::esm_init_obligations::{
   collect_entry_reexported_wrapper_inits, collect_wrapped_esm_init_targets_for_import_record,
   record_is_init_obligation,
 };
-use crate::stages::generate_stage::{InlineReader, order_wrap_state::OrderCjsCarrierKey};
+use crate::stages::generate_stage::{
+  InlineReader,
+  order_wrap_state::{OrderCjsCarrierKey, OrderWrapState},
+};
+use crate::types::linking_metadata::LinkingMetadata;
 use crate::utils;
 use crate::utils::external_import_interop::import_record_needs_interop;
 
@@ -1863,14 +1867,33 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   /// 3. The writer for an ESM importee with dynamic exports.
   /// 4. The writer for a CommonJS importee.
   ///
-  /// Each writer calls `debug_assert_namespace_object_is_open` first. Writers 2, 3 and 4 write
-  /// only for an `export *` of a module with dynamic exports. `determine_has_dynamic_exports` in
-  /// the link stage gives each such importer dynamic exports too. So the target of writers 2, 3
-  /// and 4 is always open.
+  /// Each writer calls `debug_assert_namespace_object_is_open` first. Each condition below covers
+  /// some of the writers:
+  ///
+  /// - `has_dynamic_exports` covers writers 3 and 4. They read the current flags, and they emit
+  ///   `__reExport` only for an `export *` of a module with dynamic exports. Each pass that gives
+  ///   a module dynamic exports also gives dynamic exports to each module that has an `export *`
+  ///   of that module. These passes are `determine_has_dynamic_exports` in the link stage and
+  ///   `find_entry_level_external_module` in the generate stage.
+  /// - `star_exports_from_external_modules` covers writer 1, which reads this list.
+  ///   `find_entry_level_external_module` ignores the records that it marks with
+  ///   `EntryLevelExternal`. So it can set `has_dynamic_exports` to `false`, but writer 1 can
+  ///   still emit `__reExport(ns, <external>)`.
+  /// - The overlay condition covers writer 2. Writer 2 reads `reexports_dynamic_exports`, a copy
+  ///   that `apply_order_wraps` makes of the `has_dynamic_exports` flag of the importee. Today two
+  ///   facts make this condition not necessary:
+  ///   - When tree shaking keeps a module, it keeps each `export *` of a module with dynamic
+  ///     exports. Writer 2 runs only for an `export *` that tree shaking removes. So writer 2
+  ///     never emits `__reExport`.
+  ///   - The calls of `find_entry_level_external_module` after `apply_order_wraps` give the same
+  ///     flags as the copy. So `has_dynamic_exports` also covers writer 2.
+  ///
+  ///   The condition uses the same copy as writer 2. So writer 2 never emits `__reExport` into a
+  ///   closed object, even if these facts change.
+  ///
   /// See internal-docs/runtime-helpers/implementation.md
   fn namespace_object_is_open(&self) -> bool {
-    self.ctx.linking_info.has_dynamic_exports
-      || !self.ctx.linking_info.star_exports_from_external_modules.is_empty()
+    is_namespace_object_open(self.ctx.linking_info, self.ctx.order_wrap_state, self.ctx.idx)
   }
 
   fn debug_assert_namespace_object_is_open(&self) {
@@ -3217,5 +3240,103 @@ struct ResolveFileUrlHookResultSpanRewriter(Span);
 impl oxc::ast_visit::VisitJsMut<'_> for ResolveFileUrlHookResultSpanRewriter {
   fn visit_span(&mut self, span: &mut Span) {
     *span = self.0;
+  }
+}
+
+/// Returns the result of [`ScopeHoistingFinalizer::namespace_object_is_open`] for the module
+/// `module_idx`. This function gets each input as an argument, so the unit tests below can call
+/// it without a finalizer.
+fn is_namespace_object_open(
+  linking_info: &LinkingMetadata,
+  order_wrap_state: &OrderWrapState,
+  module_idx: ModuleIdx,
+) -> bool {
+  linking_info.has_dynamic_exports
+    || !linking_info.star_exports_from_external_modules.is_empty()
+    || order_wrap_state.has_dynamic_reexport_overlay(module_idx)
+}
+
+#[cfg(test)]
+mod tests {
+  use oxc::semantic::SymbolId;
+  use rolldown_common::{ImportRecordIdx, ModuleIdx, StmtInfoIdx, SymbolRef};
+
+  use super::is_namespace_object_open;
+  use crate::{
+    stages::generate_stage::order_wrap_state::{
+      OrderImportKey, OrderImportOverlay, OrderWrapState,
+    },
+    types::linking_metadata::LinkingMetadata,
+  };
+
+  /// Returns a state with one overlay. The overlay belongs to an `export *` record of `importer`.
+  fn state_with_overlay(importer: ModuleIdx, reexports_dynamic_exports: bool) -> OrderWrapState {
+    let importee = ModuleIdx::new(9);
+    let overlay = OrderImportOverlay { reexports_dynamic_exports, ..OrderImportOverlay::default() };
+    let mut state = OrderWrapState::default();
+    state.insert_import_overlay(
+      OrderImportKey {
+        importer,
+        // Statement 0 is the namespace statement. So the overlay uses statement 1.
+        statement: StmtInfoIdx::new(1),
+        record: ImportRecordIdx::new(0),
+      },
+      overlay,
+      SymbolRef::from((importer, SymbolId::from_usize(0))),
+      SymbolRef::from((importee, SymbolId::from_usize(0))),
+    );
+    state
+  }
+
+  /// The overlay has an out-of-date copy of the `has_dynamic_exports` flag of the importee. The
+  /// flags of the module say that its namespace object is closed, but the overlay still has
+  /// `reexports_dynamic_exports`. The overlay writer reads this copy to decide if it emits
+  /// `__reExport` into the namespace object. So the object must stay open. No build makes this
+  /// state today. See the overlay condition in `ScopeHoistingFinalizer::namespace_object_is_open`.
+  #[test]
+  fn stale_dynamic_reexport_overlay_keeps_namespace_open() {
+    let module = ModuleIdx::new(1);
+    let linking_info = LinkingMetadata::default();
+    // Without the overlay, the flags of the module keep the namespace object closed.
+    assert!(!is_namespace_object_open(&linking_info, &OrderWrapState::default(), module));
+
+    assert!(is_namespace_object_open(&linking_info, &state_with_overlay(module, true), module));
+  }
+
+  #[test]
+  fn overlay_without_dynamic_reexport_keeps_namespace_closed() {
+    let module = ModuleIdx::new(1);
+
+    assert!(!is_namespace_object_open(
+      &LinkingMetadata::default(),
+      &state_with_overlay(module, false),
+      module
+    ));
+  }
+
+  #[test]
+  fn dynamic_reexport_overlay_of_other_module_keeps_namespace_closed() {
+    let module = ModuleIdx::new(1);
+    let other_module = ModuleIdx::new(2);
+
+    assert!(!is_namespace_object_open(
+      &LinkingMetadata::default(),
+      &state_with_overlay(other_module, true),
+      module
+    ));
+  }
+
+  #[test]
+  fn module_flags_open_namespace_without_overlay() {
+    let module = ModuleIdx::new(1);
+    let state = OrderWrapState::default();
+
+    let mut dynamic_exports = LinkingMetadata::default();
+    dynamic_exports.has_dynamic_exports = true;
+    assert!(is_namespace_object_open(&dynamic_exports, &state, module));
+
+    let mut external_star = LinkingMetadata::default();
+    external_star.star_exports_from_external_modules.push(ImportRecordIdx::new(0));
+    assert!(is_namespace_object_open(&external_star, &state, module));
   }
 }

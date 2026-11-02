@@ -15,11 +15,10 @@ exports.__toESM = __toESM;
 ## lazy-cjs.js
 
 ```js
-//#region lazy-cjs.cjs
+// lazy-cjs.cjs
 var require_lazy_cjs = /* @__PURE__ */ require("./_virtual/_rolldown/runtime.js").__commonJSMin(((exports, module) => {
 	module.exports = { a: 1 };
 }));
-//#endregion
 module.exports = require_lazy_cjs();
 
 ```
@@ -27,9 +26,8 @@ module.exports = require_lazy_cjs();
 ## lazy.js
 
 ```js
-//#region lazy.js
+// lazy.js
 var lazy_default = 42;
-//#endregion
 module.exports = lazy_default;
 
 ```
@@ -41,7 +39,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_runtime = require("./_virtual/_rolldown/runtime.js");
 let node_assert = require("node:assert");
 node_assert = require_runtime.__toESM(node_assert);
-//#region main.js
+// main.js
 const ready = Promise.all([Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({
 	__proto__: null,
 	default: require("./lazy.js")
@@ -52,7 +50,6 @@ const ready = Promise.all([Promise.resolve().then(() => /* @__PURE__ */ Object.f
 	node_assert.default.deepStrictEqual(m.default, { a: 1 });
 	node_assert.default.strictEqual(m.a, 1);
 })]);
-//#endregion
 exports.ready = ready;
 
 ```

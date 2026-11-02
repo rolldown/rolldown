@@ -22,9 +22,8 @@ Object.keys(node_path).forEach(function(k) {
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-//#region entry.js
+// entry.js
 const seen = require("./mid.js").default.name;
-//#endregion
 exports.seen = seen;
 
 ```
@@ -32,9 +31,8 @@ exports.seen = seen;
 ## mid.js
 
 ```js
-//#region mid.js
+// mid.js
 var mid_default = { name: "value" };
-//#endregion
 exports.default = mid_default;
 var node_path = require("node:path");
 Object.keys(node_path).forEach(function(k) {

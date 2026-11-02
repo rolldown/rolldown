@@ -15,6 +15,25 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use tokio::sync::{Notify, mpsc};
 
+enum DebounceWaitResult {
+  Message(Option<WatcherMsg>),
+  Timeout,
+}
+
+async fn wait_for_debounce_input(
+  rx: &mut mpsc::UnboundedReceiver<WatcherMsg>,
+  timeout: impl Future<Output = ()>,
+) -> DebounceWaitResult {
+  // A message already queued wins over a due deadline, so every part of an OS
+  // notification that is already in the channel joins this build.
+  // See "Rolldown's Approach" in internal-docs/watch-mode/implementation.md.
+  tokio::select! {
+    biased;
+    message = rx.recv() => DebounceWaitResult::Message(message),
+    () = timeout => DebounceWaitResult::Timeout,
+  }
+}
+
 /// The coordinator actor that owns all state and runs the event loop.
 pub struct WatchCoordinator<H: WatcherEventHandler> {
   rx: mpsc::UnboundedReceiver<WatcherMsg>,
@@ -72,8 +91,18 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
         WatcherState::Debouncing { deadline, .. } => {
           let timeout = tokio::time::sleep_until((*deadline).into());
 
-          tokio::select! {
-            () = timeout => {
+          match wait_for_debounce_input(&mut self.rx, timeout).await {
+            DebounceWaitResult::Message(message) => match message {
+              Some(WatcherMsg::FileChanges { task_index, changes }) => {
+                self.process_file_changes(task_index, changes).await;
+              }
+              Some(WatcherMsg::Close) => {
+                self.handle_close().await;
+                break;
+              }
+              None => break,
+            },
+            DebounceWaitResult::Timeout => {
               let (new_state, changes) = mem::take(&mut self.state).on_debounce_timeout();
               self.state = new_state;
 
@@ -82,18 +111,6 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
                   self.handle_close().await;
                   break;
                 }
-              }
-            }
-            msg = self.rx.recv() => {
-              match msg {
-                Some(WatcherMsg::FileChanges { task_index, changes }) => {
-                  self.process_file_changes(task_index, changes).await;
-                }
-                Some(WatcherMsg::Close) => {
-                  self.handle_close().await;
-                  break;
-                }
-                None => break,
               }
             }
           }
@@ -317,5 +334,130 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     }
 
     self.state = mem::take(&mut self.state).to_closed();
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::task_fs_event_handler::TaskFsEventHandler;
+  use rolldown::{BundlerConfig, BundlerOptions};
+  use rolldown_common::{OnInvalidate, WatchOption};
+  use rolldown_fs_watcher::FsWatcherConfig;
+  use std::sync::Mutex;
+  use std::sync::atomic::AtomicUsize;
+
+  #[tokio::test]
+  async fn queued_message_wins_over_due_deadline() {
+    let (tx, mut rx) = mpsc::unbounded_channel();
+    // An unbiased select would pick either ready branch at random; repeat so such a pick shows.
+    for _ in 0..64 {
+      tx.send(WatcherMsg::Close).unwrap();
+      let result = wait_for_debounce_input(&mut rx, std::future::ready(())).await;
+      assert!(matches!(result, DebounceWaitResult::Message(Some(WatcherMsg::Close))));
+    }
+  }
+
+  /// After the initial build, queues three `FileChanges` messages for the entry back to back,
+  /// the way the parts of one OS notification reach the coordinator. Closes the watcher at the
+  /// end of the next build.
+  struct Recorder {
+    tx: mpsc::UnboundedSender<WatcherMsg>,
+    invalidations: Arc<AtomicUsize>,
+    /// How many messages the coordinator had taken when each rebuild started.
+    taken_at_restart: Arc<Mutex<Vec<usize>>>,
+  }
+
+  impl Recorder {
+    fn rebuilt(&self) -> bool {
+      !self.taken_at_restart.lock().unwrap().is_empty()
+    }
+  }
+
+  impl WatcherEventHandler for Recorder {
+    async fn on_event(&self, event: WatchEvent) {
+      match event {
+        WatchEvent::BundleEnd(data) if !self.rebuilt() => {
+          let watched: Vec<String> =
+            data.bundle_handle.watch_files().iter().map(|file| file.to_string()).collect();
+          let [entry] = watched.as_slice() else {
+            panic!("expected one watched file: {watched:?}")
+          };
+          for _ in 0..3 {
+            let changes = vec![FileChangeEvent::new(entry.clone(), WatcherChangeKind::Update)];
+            let task_index = WatchTaskIdx::from_usize(0);
+            self.tx.send(WatcherMsg::FileChanges { task_index, changes }).unwrap();
+          }
+        }
+        WatchEvent::End if self.rebuilt() => {
+          self.tx.send(WatcherMsg::Close).unwrap();
+        }
+        WatchEvent::Error(data) => panic!("build failed: {data:?}"),
+        _ => {}
+      }
+    }
+
+    async fn on_change(&self, _path: &str, _kind: WatcherChangeKind) {}
+
+    async fn on_restart(&self) {
+      self.taken_at_restart.lock().unwrap().push(self.invalidations.load(Ordering::SeqCst));
+    }
+
+    async fn on_close(&self) {}
+  }
+
+  #[tokio::test]
+  async fn zero_build_delay_builds_queued_changes_together() {
+    let dir =
+      std::env::temp_dir().join(format!("rolldown-watcher-zero-delay-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let entry = dir.join("main.js");
+    std::fs::write(&entry, "export const value = 1;\n").unwrap();
+
+    // Each message the coordinator takes calls `onInvalidate` once.
+    let invalidations = Arc::new(AtomicUsize::new(0));
+    let counter = Arc::clone(&invalidations);
+    let on_invalidate = OnInvalidate::new(Arc::new(move |_path: &str| {
+      counter.fetch_add(1, Ordering::SeqCst);
+    }));
+    let bundler_config = BundlerConfig::new(
+      BundlerOptions {
+        cwd: Some(dir.clone()),
+        input: Some(vec![entry.to_string_lossy().into_owned().into()]),
+        watch: Some(WatchOption { on_invalidate: Some(on_invalidate), ..Default::default() }),
+        ..Default::default()
+      },
+      vec![],
+    );
+
+    let (tx, rx) = mpsc::unbounded_channel();
+    let closed = Arc::new(AtomicBool::new(false));
+    // Fs watching is off: only the messages the recorder queues reach the coordinator.
+    let task = WatchTask::new(
+      bundler_config,
+      TaskFsEventHandler { task_index: WatchTaskIdx::from_usize(0), tx: tx.clone() },
+      &FsWatcherConfig { enabled: false, ..Default::default() },
+      &closed,
+    )
+    .unwrap_or_else(|errors| panic!("create watch task: {errors:?}"));
+    let mut tasks = IndexVec::new();
+    tasks.push(task);
+
+    let taken_at_restart = Arc::new(Mutex::new(Vec::new()));
+    let recorder = Recorder { tx, invalidations, taken_at_restart: Arc::clone(&taken_at_restart) };
+    let coordinator = WatchCoordinator::new(
+      rx,
+      recorder,
+      tasks,
+      &WatcherConfig { debounce: Some(Duration::ZERO), ..Default::default() },
+      closed,
+      Arc::new(Notify::new()),
+    );
+    coordinator.run().await;
+
+    std::fs::remove_dir_all(&dir).unwrap();
+    // One rebuild, started only after all three messages were taken.
+    assert_eq!(*taken_at_restart.lock().unwrap(), vec![3]);
   }
 }

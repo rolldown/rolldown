@@ -90,6 +90,8 @@ pub(crate) struct Report {
   pub packages: PackagesSection,
   pub plugins: Vec<PluginSection>,
   pub transform_hotspots: Vec<TransformHotspot>,
+  /// Hooks with no-op calls, the highest no-op share first — see [`NoopHookRow`].
+  pub noop_hooks: Vec<NoopHookRow>,
   /// Change vs the immediately previous build (`.state.json`).
   #[serde(skip_serializing_if = "Option::is_none")]
   pub delta: Option<DeltaSection>,
@@ -276,6 +278,18 @@ pub(crate) struct HookRow {
   pub noop_calls: usize,
 }
 
+/// One `(plugin, hook)` with at least one no-op call. `ratio` is `noop_calls / calls`: at 1
+/// every call paid the plugin crossing for nothing, and a hook filter would skip them all.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct NoopHookRow {
+  pub plugin: String,
+  pub hook: String,
+  pub calls: usize,
+  pub noop_calls: usize,
+  pub ratio: f64,
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct TransformHotspot {
@@ -460,6 +474,7 @@ impl MetricsAggregator {
       packages: self.packages_section(),
       plugins: self.plugins_section(),
       transform_hotspots: self.transform_hotspots_section(),
+      noop_hooks: self.noop_hooks_section(),
       delta,
       baseline_delta,
     }
@@ -496,6 +511,8 @@ impl MetricsAggregator {
     let hook_calls: usize = self.hook_calls.values().map(|s| s.count).sum();
     let hook_micros: u64 = self.hook_calls.values().map(|s| s.micros).sum();
     let hook_noops: usize = self.hook_calls.values().map(|s| s.noop_calls).sum();
+    let noop_hooks =
+      self.hook_calls.values().filter(|s| s.count > 0 && s.noop_calls == s.count).count();
     let initial_load_max = entries.iter().map(|e| e.initial_load_bytes).max().unwrap_or(0);
     let as_u64 = |v: usize| Int(v as u64);
     let mut metrics = BTreeMap::new();
@@ -523,6 +540,7 @@ impl MetricsAggregator {
     put("packages.duplicate_version_count", as_u64(dup_version_total));
     put("plugins.hook_call_count", as_u64(hook_calls));
     put("plugins.hook_noop_call_count", as_u64(hook_noops));
+    put("plugins.noop_hook_count", as_u64(noop_hooks));
     put("plugins.hook_time_ms", Float(ms_value(hook_micros)));
     metrics
   }
@@ -668,6 +686,32 @@ impl MetricsAggregator {
     });
     plugins.truncate(self.config.top_n);
     plugins
+  }
+
+  /// Hooks with at least one no-op call: the highest no-op share first, then the most calls.
+  fn noop_hooks_section(&self) -> Vec<NoopHookRow> {
+    let mut rows: Vec<NoopHookRow> = self
+      .hook_calls
+      .iter()
+      .filter(|(_, stat)| stat.noop_calls > 0)
+      .map(|((plugin, hook), stat)| NoopHookRow {
+        plugin: plugin.clone(),
+        hook: (*hook).to_string(),
+        calls: stat.count,
+        noop_calls: stat.noop_calls,
+        ratio: round3(stat.noop_calls as f64 / stat.count as f64),
+      })
+      .collect();
+    rows.sort_by(|a, b| {
+      b.ratio
+        .partial_cmp(&a.ratio)
+        .unwrap_or(std::cmp::Ordering::Equal)
+        .then_with(|| b.calls.cmp(&a.calls))
+        .then_with(|| a.plugin.cmp(&b.plugin))
+        .then_with(|| a.hook.cmp(&b.hook))
+    });
+    rows.truncate(self.config.top_n);
+    rows
   }
 
   fn transform_hotspots_section(&self) -> Vec<TransformHotspot> {

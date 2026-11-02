@@ -296,8 +296,10 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
 
               self.declare_link_only_symbol_ref(exported_symbol.symbol);
 
-              // An assignment that may not run does not give `exports.test` its value.
-              if self.is_unconditional_module_level_expr()
+              // Only an unconditional `=` assigns the RHS value to `exports.test`.
+              // Compound and logical assignments also depend on its previous value.
+              if node.operator == ast::AssignmentOperator::Assign
+                && self.is_unconditional_module_level_expr()
                 && let Some(value) = self.extract_constant_value_from_expr(Some(&node.right))
               {
                 self.add_constant_symbol(exported_symbol.symbol, ConstExportMeta::new(value, true));

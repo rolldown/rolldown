@@ -5,7 +5,7 @@ use napi::{
   Either, Status, ValueType,
   bindgen_prelude::{FromNapiValue, JsValuesTupleIntoVec, Promise, TypeName, ValidateNapiValue},
   sys,
-  threadsafe_function::ThreadsafeFunction,
+  threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode},
 };
 
 /// Used as the fallback branch in `Either<Ret, InvalidReturnValue>` to catch
@@ -109,6 +109,13 @@ pub type MaybeAsyncJsCallback<Args = (), Ret = ()> = JsCallback<Args, Either<Pro
 
 pub trait JsCallbackExt<Args, Ret> {
   fn invoke_async(&self, args: Args) -> impl Future<Output = Result<Ret, napi::Error>> + Send;
+
+  /// Like `invoke_async`, but the call is enqueued on the JS thread before this returns;
+  /// the future only waits for the result.
+  fn invoke_eager(
+    &self,
+    args: Args,
+  ) -> impl Future<Output = Result<Ret, napi::Error>> + Send + 'static;
 }
 
 impl<Args, Ret> JsCallbackExt<Args, Ret> for JsCallback<Args, Ret>
@@ -121,6 +128,36 @@ where
     match self.call_async_catch(args).await? {
       Either::A(ret) => Ok(ret),
       Either::B(invalid) => Err(create_invalid_return_error(invalid.value_type, Ret::value_type())),
+    }
+  }
+
+  fn invoke_eager(
+    &self,
+    args: Args,
+  ) -> impl Future<Output = Result<Ret, napi::Error>> + Send + 'static {
+    let (sender, receiver) = futures::channel::oneshot::channel();
+    let status =
+      self.call_with_return_value(args, ThreadsafeFunctionCallMode::NonBlocking, move |ret, _| {
+        // The receiver may be gone; ignore it, as `call_async_catch` does.
+        let _ = sender.send(ret);
+        Ok(())
+      });
+    async move {
+      if status != Status::Ok {
+        return Err(napi::Error::from_status(status));
+      }
+      let ret = receiver.await.map_err(|_| {
+        napi::Error::new(
+          Status::GenericFailure,
+          "Receive value from threadsafe function sender failed",
+        )
+      })??;
+      match ret {
+        Either::A(ret) => Ok(ret),
+        Either::B(invalid) => {
+          Err(create_invalid_return_error(invalid.value_type, Ret::value_type()))
+        }
+      }
     }
   }
 }

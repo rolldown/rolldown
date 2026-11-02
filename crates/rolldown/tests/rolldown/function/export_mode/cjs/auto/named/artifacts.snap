@@ -7,10 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+
 // main.js
 function a() {
 	return "named";
 }
+
 exports.a = a;
 
 ```

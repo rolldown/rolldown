@@ -31,6 +31,7 @@ exports.v2 = require_g.v2;
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_m0 = require("./m0.js");
 const require_m3 = require("./m3.js");
+
 // m2.js
 var v2;
 function init_m2() {
@@ -41,6 +42,7 @@ function init_m2() {
 		v2 = 12;
 	})))();
 }
+
 // m1.js
 var v1;
 function init_m1() {
@@ -51,6 +53,7 @@ function init_m1() {
 		v1 = 1;
 	})))();
 }
+
 Object.defineProperty(exports, "init_m1", {
 	enumerable: true,
 	get: function() {
@@ -82,6 +85,7 @@ Object.defineProperty(exports, "v2", {
 
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
+
 // m0.js
 var v0;
 function init_m0() {
@@ -90,6 +94,7 @@ function init_m0() {
 		v0 = 10;
 	})))();
 }
+
 Object.defineProperty(exports, "init_m0", {
 	enumerable: true,
 	get: function() {
@@ -110,6 +115,7 @@ Object.defineProperty(exports, "v0", {
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_g = require("./g.js");
+
 // m3.js
 function init_m3() {
 	return (init_m3 = require_rolldown_runtime.__esmMin((() => {
@@ -117,6 +123,7 @@ function init_m3() {
 		globalThis.__log.push("m3");
 	})))();
 }
+
 Object.defineProperty(exports, "init_m3", {
 	enumerable: true,
 	get: function() {
@@ -129,7 +136,6 @@ Object.defineProperty(exports, "init_m3", {
 ## rolldown-runtime.js
 
 ```js
-// \0rolldown/runtime.js
 var __esmMin = (fn, res, err) => () => {
 	if (err) throw err[0];
 	try {
@@ -179,6 +185,7 @@ exports.v2 = require_g.v2;
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_m0 = require("./m0.js");
 const require_m3 = require("./m3.js");
+
 // m2.js
 var v2;
 function init_m2() {
@@ -189,6 +196,7 @@ function init_m2() {
 		v2 = 12;
 	})))();
 }
+
 // m1.js
 var v1;
 function init_m1() {
@@ -199,6 +207,7 @@ function init_m1() {
 		v1 = 1;
 	})))();
 }
+
 Object.defineProperty(exports, "init_m1", {
 	enumerable: true,
 	get: function() {
@@ -230,6 +239,7 @@ Object.defineProperty(exports, "v2", {
 
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
+
 // m0.js
 var v0;
 function init_m0() {
@@ -238,6 +248,7 @@ function init_m0() {
 		v0 = 10;
 	})))();
 }
+
 Object.defineProperty(exports, "init_m0", {
 	enumerable: true,
 	get: function() {
@@ -258,6 +269,7 @@ Object.defineProperty(exports, "v0", {
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_g = require("./g.js");
+
 // m3.js
 function init_m3() {
 	return (init_m3 = require_rolldown_runtime.__esmMin((() => {
@@ -265,6 +277,7 @@ function init_m3() {
 		globalThis.__log.push("m3");
 	})))();
 }
+
 Object.defineProperty(exports, "init_m3", {
 	enumerable: true,
 	get: function() {
@@ -277,7 +290,6 @@ Object.defineProperty(exports, "init_m3", {
 ### rolldown-runtime.js
 
 ```js
-// \0rolldown/runtime.js
 var __esmMin = (fn, res, err) => () => {
 	if (err) throw err[0];
 	try {
@@ -314,19 +326,26 @@ Object.defineProperty(exports,Symbol.toStringTag,{value:`Module`});const e=requi
 ### g.js
 
 ```js
-const e=require("./rolldown-runtime.js"),t=require("./m0.js"),n=require("./m3.js");var r;function i(){return(i=e.t((()=>{t.t(),n.t(),globalThis.__log.push(`m2`),r=12})))()}var a;function o(){return(o=e.t((()=>{n.t(),i(),globalThis.__log.push(`m1`),a=1})))()}Object.defineProperty(exports,"i",{enumerable:!0,get:function(){return r}}),Object.defineProperty(exports,"n",{enumerable:!0,get:function(){return a}}),Object.defineProperty(exports,"r",{enumerable:!0,get:function(){return i}}),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return o}});
+const e=require("./rolldown-runtime.js"),t=require("./m0.js"),n=require("./m3.js");
+var r;function i(){return(i=e.t((()=>{t.t(),n.t(),globalThis.__log.push(`m2`),r=12})))()}
+var a;function o(){return(o=e.t((()=>{n.t(),i(),globalThis.__log.push(`m1`),a=1})))()}
+Object.defineProperty(exports,"i",{enumerable:!0,get:function(){return r}}),Object.defineProperty(exports,"n",{enumerable:!0,get:function(){return a}}),Object.defineProperty(exports,"r",{enumerable:!0,get:function(){return i}}),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return o}});
 ```
 
 ### m0.js
 
 ```js
-const e=require("./rolldown-runtime.js");var t;function n(){return(n=e.t((()=>{globalThis.__log.push(`m0`),t=10})))()}Object.defineProperty(exports,"n",{enumerable:!0,get:function(){return t}}),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return n}});
+const e=require("./rolldown-runtime.js");
+var t;function n(){return(n=e.t((()=>{globalThis.__log.push(`m0`),t=10})))()}
+Object.defineProperty(exports,"n",{enumerable:!0,get:function(){return t}}),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return n}});
 ```
 
 ### m3.js
 
 ```js
-const e=require("./rolldown-runtime.js"),t=require("./g.js");function n(){return(n=e.t((()=>{t.r(),globalThis.__log.push(`m3`)})))()}Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return n}});
+const e=require("./rolldown-runtime.js"),t=require("./g.js");
+function n(){return(n=e.t((()=>{t.r(),globalThis.__log.push(`m3`)})))()}
+Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return n}});
 ```
 
 ### rolldown-runtime.js
@@ -354,19 +373,26 @@ Object.defineProperty(exports,Symbol.toStringTag,{value:`Module`});const e=requi
 ### g.js
 
 ```js
-const e=require("./rolldown-runtime.js"),t=require("./m0.js"),n=require("./m3.js");var r;function i(){return(i=e.t((()=>{t.t(),n.t(),globalThis.__log.push(`m2`),r=12})))()}var a;function o(){return(o=e.t((()=>{n.t(),i(),globalThis.__log.push(`m1`),a=1})))()}Object.defineProperty(exports,"i",{enumerable:!0,get:function(){return r}}),Object.defineProperty(exports,"n",{enumerable:!0,get:function(){return a}}),Object.defineProperty(exports,"r",{enumerable:!0,get:function(){return i}}),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return o}});
+const e=require("./rolldown-runtime.js"),t=require("./m0.js"),n=require("./m3.js");
+var r;function i(){return(i=e.t((()=>{t.t(),n.t(),globalThis.__log.push(`m2`),r=12})))()}
+var a;function o(){return(o=e.t((()=>{n.t(),i(),globalThis.__log.push(`m1`),a=1})))()}
+Object.defineProperty(exports,"i",{enumerable:!0,get:function(){return r}}),Object.defineProperty(exports,"n",{enumerable:!0,get:function(){return a}}),Object.defineProperty(exports,"r",{enumerable:!0,get:function(){return i}}),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return o}});
 ```
 
 ### m0.js
 
 ```js
-const e=require("./rolldown-runtime.js");var t;function n(){return(n=e.t((()=>{globalThis.__log.push(`m0`),t=10})))()}Object.defineProperty(exports,"n",{enumerable:!0,get:function(){return t}}),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return n}});
+const e=require("./rolldown-runtime.js");
+var t;function n(){return(n=e.t((()=>{globalThis.__log.push(`m0`),t=10})))()}
+Object.defineProperty(exports,"n",{enumerable:!0,get:function(){return t}}),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return n}});
 ```
 
 ### m3.js
 
 ```js
-const e=require("./rolldown-runtime.js"),t=require("./g.js");function n(){return(n=e.t((()=>{t.r(),globalThis.__log.push(`m3`)})))()}Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return n}});
+const e=require("./rolldown-runtime.js"),t=require("./g.js");
+function n(){return(n=e.t((()=>{t.r(),globalThis.__log.push(`m3`)})))()}
+Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return n}});
 ```
 
 ### rolldown-runtime.js

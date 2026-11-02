@@ -35,6 +35,7 @@ nodeAssert.equal(globalThis.value, void 0, "Unused no side effect module should 
 
 ```js
 import nodeAssert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // main.js
 function init_main() {
@@ -42,6 +43,7 @@ function init_main() {
 		nodeAssert.equal(globalThis.value, void 0, "Unused no side effect module should be removed");
 	})))();
 }
+
 init_main();
 
 ```

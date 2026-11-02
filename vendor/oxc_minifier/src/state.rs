@@ -92,7 +92,7 @@ pub struct MinifierState<'a> {
     /// the lifetime of this run.
     config: CompressionConfig,
 
-    /// Absent by default: no provenance scan or buffers without source-map opt-in.
+    /// Absent by default: no provenance recording or buffers without source-map opt-in.
     pub(crate) literal_spans: Option<Box<crate::literal_spans::LiteralSpans>>,
 
     /// Dense per-pass values, sparse persistent metadata, and optional

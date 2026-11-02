@@ -17,6 +17,7 @@ function init_shared_equality() {
 		hasOwnProperty = Object.prototype.hasOwnProperty;
 	})))();
 }
+
 // utilities/index.js
 var utilities_exports = /* @__PURE__ */ __exportAll({
 	hasExpectedValue: () => hasExpectedValue,
@@ -32,6 +33,7 @@ function init_utilities() {
 		init_shared_equality();
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -43,6 +45,7 @@ function init_main() {
 		];
 	})))();
 }
+
 init_main();
 
 ```
@@ -60,6 +63,7 @@ const hasOwnProperty = Object.prototype.hasOwnProperty;
 function isEqual(left, right) {
 	return left === right || typeof left === "object" && hasOwnProperty.call(left, right);
 }
+
 // utilities/index.js
 var utilities_exports = /* @__PURE__ */ __exportAll({
 	hasExpectedValue: () => hasExpectedValue,
@@ -70,6 +74,7 @@ __reExport(utilities_exports, import_node_path);
 function hasExpectedValue(actual) {
 	return actual === "expected";
 }
+
 // main.js
 globalThis.__result = [
 	hasExpectedValue("expected"),

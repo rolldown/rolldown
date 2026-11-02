@@ -30,16 +30,19 @@ export { read, require_dup };
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-// HIDDEN [\0rolldown/runtime.js]
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
+
 // dup.cjs
 var require_dup$3 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "dep";
 }));
+
 // main.js
 const require_dup = "outer";
 function read(require_dup$2) {
 	return [require_dup$3(), require_dup$2()];
 }
+
 exports.read = read;
 exports.require_dup = require_dup;
 

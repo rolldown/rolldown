@@ -15,6 +15,7 @@ function init_helper() {
 		helper = "H:" + __esmMin;
 	})))();
 }
+
 // late.js
 var late;
 function init_late() {
@@ -22,6 +23,7 @@ function init_late() {
 		late = "LATE:" + (globalThis.__y ?? "z");
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin$1((() => {
@@ -33,6 +35,7 @@ function init_main() {
 		};
 	})))();
 }
+
 init_main();
 
 ```

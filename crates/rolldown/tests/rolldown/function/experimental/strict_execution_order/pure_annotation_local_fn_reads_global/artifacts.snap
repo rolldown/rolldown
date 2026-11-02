@@ -30,6 +30,7 @@ assert.strictEqual(dep_default, "foo");
 
 ```js
 import assert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // setup.js
 function init_setup() {
@@ -37,6 +38,7 @@ function init_setup() {
 		globalThis.globalValue = "foo";
 	})))();
 }
+
 // dep.js
 function getGlobalValue() {
 	return globalValue;
@@ -47,6 +49,7 @@ function init_dep() {
 		dep_default = /*#__PURE__*/ getGlobalValue();
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -55,6 +58,7 @@ function init_main() {
 		assert.strictEqual(dep_default, "foo");
 	})))();
 }
+
 init_main();
 
 ```

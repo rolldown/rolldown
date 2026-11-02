@@ -1,28 +1,125 @@
+diff -ru a/src/binary_expr_visitor.rs b/src/binary_expr_visitor.rs
+--- a/src/binary_expr_visitor.rs	2006-07-24 09:21:28
++++ b/src/binary_expr_visitor.rs	2026-11-01 19:19:24
+@@ -107,0 +108 @@
++    pub output_claimed: bool,
+@@ -142,0 +144 @@
++                output_claimed: false,
+@@ -157,0 +160,5 @@
++        let span = match e {
++            Binaryish::Binary(e) => e.span,
++            Binaryish::Logical(e) => e.span,
++        };
++        self.output_claimed = p.begin_output_fragment(span);
+@@ -254,0 +262 @@
++        p.end_output_fragment(self.output_claimed);
+diff -ru a/src/cjs_module_lexer.rs b/src/cjs_module_lexer.rs
+--- a/src/cjs_module_lexer.rs	2006-07-24 09:21:28
++++ b/src/cjs_module_lexer.rs	2026-11-01 19:19:24
+@@ -56,0 +57 @@
++    let claimed = p.begin_output_fragment(str_lit.span);
+@@ -57,0 +59 @@
++    p.end_output_fragment(claimed);
+@@ -90,0 +93 @@
++            let claimed = p.begin_output_fragment(name.span);
+@@ -91,0 +95 @@
++            p.end_output_fragment(claimed);
+@@ -127,0 +132 @@
++    let claimed = p.begin_output_fragment(key.span);
+@@ -128,0 +134 @@
++    p.end_output_fragment(claimed);
+@@ -163,0 +170 @@
++    let claimed = p.begin_output_fragment(str_lit.span);
+@@ -164,0 +172 @@
++    p.end_output_fragment(claimed);
+diff -ru a/src/comment.rs b/src/comment.rs
+--- a/src/comment.rs	2006-07-24 09:21:28
++++ b/src/comment.rs	2026-11-01 19:19:24
+@@ -343,0 +344 @@
++            let claimed = self.begin_output_fragment(comment.span);
+@@ -346,0 +348 @@
++            self.end_output_fragment(claimed);
+@@ -349,3 +351,2 @@
+-        if comments.is_empty() {
+-            false
+-        } else {
++        if let Some(last) = comments.last() {
++            let claimed = self.begin_output_fragment(last.span);
+@@ -352,0 +354 @@
++            self.end_output_fragment(claimed);
+@@ -353,0 +356,2 @@
++        } else {
++            false
+@@ -361,0 +366 @@
++        let claimed = self.begin_output_fragment(first.span);
+@@ -385,0 +391 @@
++                let claimed = self.begin_output_fragment(comment.span);
+@@ -394,0 +401 @@
++                self.end_output_fragment(claimed);
+@@ -396,0 +404 @@
++            let claimed = self.begin_output_fragment(last.span);
+@@ -411,0 +420 @@
++            self.end_output_fragment(claimed);
+@@ -416,0 +426 @@
++        self.end_output_fragment(claimed);
+@@ -422,0 +433 @@
++        let claimed = self.begin_output_fragment(comment.span);
+@@ -456,0 +468 @@
++        self.end_output_fragment(claimed);
+diff -ru a/src/gen.rs b/src/gen.rs
+--- a/src/gen.rs	2006-07-24 09:21:28
++++ b/src/gen.rs	2026-11-01 19:19:24
+@@ -107,0 +108 @@
++        let claimed = p.begin_output_fragment(self.span());
+@@ -208,0 +210 @@
++        p.end_output_fragment(claimed);
+@@ -1310,0 +1313 @@
++        let claimed = p.begin_output_fragment(self.span());
+@@ -1395,0 +1399 @@
++        p.end_output_fragment(claimed);
+@@ -2029,0 +2034 @@
++            output_claimed: false,
+@@ -2059,0 +2065 @@
++            output_claimed: false,
 diff -ru a/src/lib.rs b/src/lib.rs
---- a/src/lib.rs
-+++ b/src/lib.rs
+--- a/src/lib.rs	2006-07-24 09:21:28
++++ b/src/lib.rs	2026-11-01 19:19:24
 @@ -34,0 +35,2 @@
 +#[cfg(all(test, feature = "sourcemap"))]
 +mod synthesized_sourcemap_tests;
-@@ -40,0 +43,3 @@
+@@ -38,0 +41 @@
 +/// rolldown patch: re-exported so callers can share line tables across prints.
-+#[cfg(feature = "sourcemap")]
+@@ -39,0 +43,2 @@
 +pub use sourcemap_builder::LineOffsetTables;
-@@ -126 +131,5 @@
++#[cfg(feature = "sourcemap")]
+@@ -82,0 +88,3 @@
++mod output_ranges;
++pub use output_ranges::{OutputRange, OutputRangeOwner};
++
+@@ -88,0 +97,3 @@
++    /// Opt-in actual emitted fragment ranges (independent of sourcemaps).
++    pub output_ranges: Vec<OutputRange>,
++
+@@ -126 +137,3 @@
 -    scoping: Option<Scoping>,
 +    /// rolldown patch: see [`Codegen::with_line_offset_tables`].
 +    #[cfg(feature = "sourcemap")]
 +    line_offset_tables: Option<std::sync::Arc<sourcemap_builder::LineOffsetTables>>,
-+
+@@ -127,0 +141,2 @@
 +    scoping: Option<std::sync::Arc<Scoping>>,
-@@ -129 +138,2 @@
++
+@@ -129 +144,2 @@
 -    private_member_mappings: Option<IndexVec<ClassId, FxHashMap<String, CompactStr>>>,
 +    private_member_mappings:
 +        Option<std::sync::Arc<IndexVec<ClassId, FxHashMap<String, CompactStr>>>>,
-@@ -230,0 +241,2 @@
+@@ -132,0 +149 @@
++    output_ranges: Option<output_ranges::OutputRanges>,
+@@ -230,0 +248,2 @@
 +            #[cfg(feature = "sourcemap")]
 +            line_offset_tables: None,
-@@ -273,0 +286,13 @@
+@@ -233,0 +253 @@
++            output_ranges: None,
+@@ -273,0 +294,13 @@
 +    /// rolldown patch: print against a shared source text (e.g. many programs whose spans index
 +    /// one concatenated text), reusing its line tables instead of building them per print. Also
 +    /// skips reserving the output for the whole source text.
@@ -36,7 +133,7 @@ diff -ru a/src/lib.rs b/src/lib.rs
 +        self
 +    }
 +
-@@ -285,0 +311,7 @@
+@@ -285,0 +319,7 @@
 +        self.scoping = scoping.map(std::sync::Arc::new);
 +        self
 +    }
@@ -44,7 +141,7 @@ diff -ru a/src/lib.rs b/src/lib.rs
 +    /// Share a chunk's symbol table across code generation of its individual modules.
 +    #[must_use]
 +    pub fn with_shared_scoping(mut self, scoping: Option<std::sync::Arc<Scoping>>) -> Self {
-@@ -298,0 +331,10 @@
+@@ -298,0 +339,10 @@
 +        self.private_member_mappings = mappings.map(std::sync::Arc::new);
 +        self
 +    }
@@ -55,15 +152,15 @@ diff -ru a/src/lib.rs b/src/lib.rs
 +        mut self,
 +        mappings: Option<std::sync::Arc<IndexVec<ClassId, FxHashMap<String, CompactStr>>>>,
 +    ) -> Self {
-@@ -299,0 +342,7 @@
-+        self
-+    }
-+
+@@ -302,0 +353,7 @@
 +    /// Continue the chunk-wide class numbering when printing one module at a time.
 +    #[must_use]
 +    pub fn with_class_id_offset(mut self, offset: usize) -> Self {
 +        self.next_class_id = ClassId::from_usize(offset);
-@@ -311 +360,7 @@
++        self
++    }
++
+@@ -311 +368,7 @@
 -        self.code.reserve(program.source_text.len());
 +        #[cfg(feature = "sourcemap")]
 +        let shared_source = self.line_offset_tables.is_some();
@@ -72,7 +169,7 @@ diff -ru a/src/lib.rs b/src/lib.rs
 +        if !shared_source {
 +            self.code.reserve(program.source_text.len());
 +        }
-@@ -315 +370,6 @@
+@@ -315 +378,6 @@
 -            self.sourcemap_builder = Some(SourcemapBuilder::new(path, program.source_text));
 +            self.sourcemap_builder = Some(match self.line_offset_tables.take() {
 +                Some(tables) => {
@@ -80,13 +177,32 @@ diff -ru a/src/lib.rs b/src/lib.rs
 +                }
 +                None => SourcemapBuilder::new(path, program.source_text),
 +            });
-@@ -851 +911 @@
+@@ -318,0 +387 @@
++        let output_ranges = self.finish_output_ranges();
+@@ -323,0 +393 @@
++            output_ranges,
+@@ -810,0 +881 @@
++            self.defer_output_semicolon();
+@@ -818,0 +890 @@
++            let previous = self.begin_output_semicolon();
+@@ -819,0 +892 @@
++            self.end_output_semicolon(previous);
+@@ -851 +924 @@
 -        self.add_source_mapping_end(span);
 +        self.add_source_mapping_block_end(span);
-@@ -865 +925 @@
+@@ -865 +938 @@
 -        self.add_source_mapping_end(span);
 +        self.add_source_mapping_block_end(span);
-@@ -1156,0 +1217,12 @@
+@@ -869,0 +943 @@
++        let claimed = self.begin_output_fragment(stmt.span());
+@@ -888,0 +963 @@
++        self.end_output_fragment(claimed);
+@@ -952,0 +1028 @@
++            let claimed = self.begin_output_fragment(stmt.span);
+@@ -965,0 +1042 @@
++            self.end_output_fragment(claimed);
+@@ -1155,0 +1233,12 @@
++
 +    fn add_source_mapping_block_end(&mut self, span: Span) {
 +        #[cfg(feature = "sourcemap")]
 +        if span.is_empty()
@@ -98,10 +214,298 @@ diff -ru a/src/lib.rs b/src/lib.rs
 +        }
 +        self.add_source_mapping_end(span);
 +    }
+diff -ru a/src/output_ranges.rs b/src/output_ranges.rs
+--- a/src/output_ranges.rs	1970-01-01 08:00:00
++++ b/src/output_ranges.rs	2026-11-01 19:19:41
+@@ -0,0 +1,285 @@
++//! Optional output-fragment accounting for Rolldown's retained complete programs.
++//! Owners describe emitted fragments, not sourcemap/source contributions.
 +
++use std::ops::Range;
++
++use oxc_span::Span;
++
++use crate::Codegen;
++
++/// A source-space interval identifying one donor. Intervals must be sorted and disjoint.
++#[derive(Debug, Clone)]
++pub struct OutputRangeOwner {
++    pub source: Range<u32>,
++    pub owner: u32,
++}
++
++/// An actual byte range in the final generated code. Ranges never overlap.
++#[derive(Debug, Clone, PartialEq, Eq)]
++pub struct OutputRange {
++    pub owner: u32,
++    pub output: Range<usize>,
++}
++
++pub(crate) struct OutputRanges {
++    owners: Vec<OutputRangeOwner>,
++    ranges: Vec<OutputRange>,
++    active: Option<u32>,
++    pending_semicolon: Option<u32>,
++    cursor: usize,
++}
++
++impl OutputRanges {
++    pub fn new(owners: Vec<OutputRangeOwner>) -> Self {
++        debug_assert!(owners.windows(2).all(|pair| pair[0].source.end <= pair[1].source.start));
++        Self { owners, ranges: Vec::new(), active: None, pending_semicolon: None, cursor: 0 }
++    }
++
++    fn flush(&mut self, end: usize) {
++        if end > self.cursor
++            && let Some(owner) = self.active
++        {
++            if let Some(last) = self.ranges.last_mut()
++                && last.owner == owner
++                && last.output.end == self.cursor
++            {
++                last.output.end = end;
++            } else {
++                self.ranges.push(OutputRange { owner, output: self.cursor..end });
++            }
++        }
++        self.cursor = end;
++    }
++
++    fn owner(&self, span: Span) -> Option<u32> {
++        // Minifier-created SPAN has no producer. A real donor's rebased empty span
++        // can otherwise name its interval, including an empty input module.
++        if span == oxc_span::SPAN {
++            return None;
++        }
++        let index =
++            self.owners.partition_point(|item| item.source.start <= span.start).checked_sub(1)?;
++        let item = &self.owners[index];
++        (span.start < item.source.end
++            || (item.source.is_empty() && span.start == item.source.start))
++            .then_some(item.owner)
++    }
++}
++
++impl Codegen<'_> {
++    /// Record donor fragments without affecting printing, source maps or syntax decisions.
++    #[must_use]
++    pub fn with_output_range_owners(mut self, owners: Vec<OutputRangeOwner>) -> Self {
++        self.output_ranges = Some(OutputRanges::new(owners));
++        self
++    }
++
++    pub(crate) fn begin_output_fragment(&mut self, span: Span) -> bool {
++        let Some(ranges) = &mut self.output_ranges else {
++            return false;
++        };
++        if ranges.active.is_some() {
++            return false;
++        }
++        let Some(owner) = ranges.owner(span) else {
++            return false;
++        };
++        ranges.flush(self.code.len());
++        ranges.active = Some(owner);
++        true
++    }
++
++    pub(crate) fn end_output_fragment(&mut self, claimed: bool) {
++        if !claimed {
++            return;
++        }
++        let ranges = self.output_ranges.as_mut().unwrap();
++        ranges.flush(self.code.len());
++        ranges.active = None;
++    }
++
++    pub(crate) fn defer_output_semicolon(&mut self) {
++        if let Some(ranges) = &mut self.output_ranges {
++            ranges.pending_semicolon = ranges.active;
++        }
++    }
++
++    pub(crate) fn begin_output_semicolon(&mut self) -> Option<u32> {
++        let Some(ranges) = &mut self.output_ranges else {
++            return None;
++        };
++        ranges.flush(self.code.len());
++        std::mem::replace(&mut ranges.active, ranges.pending_semicolon.take())
++    }
++
++    pub(crate) fn end_output_semicolon(&mut self, previous: Option<u32>) {
++        if let Some(ranges) = &mut self.output_ranges {
++            ranges.flush(self.code.len());
++            ranges.active = previous;
++        }
++    }
++
++    pub(crate) fn finish_output_ranges(&mut self) -> Vec<OutputRange> {
++        self.output_ranges.take().map_or_else(Vec::new, |mut ranges| {
++            ranges.flush(self.code.len());
++            ranges.ranges
++        })
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use oxc_allocator::Allocator;
++    use oxc_ast::ast::{Expression, Statement};
++    use oxc_parser::Parser;
++    use oxc_span::{SPAN, SourceType, Span};
++
++    use crate::{Codegen, CodegenOptions, OutputRangeOwner};
++
++    fn fragments(code: &str, ranges: &[crate::OutputRange], owner: u32) -> String {
++        ranges
++            .iter()
++            .filter(|range| range.owner == owner)
++            .map(|range| &code[range.output.clone()])
++            .collect()
++    }
++
++    #[test]
++    fn nested_frontiers_preserve_code_maps_and_pending_semicolons() {
++        let source = "function generated(){first('😀');second()}after();";
++        let first = source.find("first").unwrap();
++        let second = source.find("second").unwrap();
++        let end = source.find('}').unwrap();
++        for minify in [false, true] {
++            for maps in [false, true] {
++                let allocator = Allocator::default();
++                let parsed = Parser::new(&allocator, source, SourceType::mjs()).parse();
++                let options = CodegenOptions {
++                    minify,
++                    source_map_path: maps.then(|| "test.js".into()),
++                    ..Default::default()
++                };
++                let plain = Codegen::new().with_options(options.clone()).build(&parsed.program);
++                let traced = Codegen::new()
++                    .with_options(options)
++                    .with_output_range_owners(vec![
++                        OutputRangeOwner { source: first as u32..second as u32, owner: 0 },
++                        OutputRangeOwner { source: second as u32..end as u32, owner: 1 },
++                    ])
++                    .build(&parsed.program);
++                assert_eq!(plain.code, traced.code);
++                assert_eq!(
++                    plain.map.as_ref().map(|map| map.to_json_string()),
++                    traced.map.as_ref().map(|map| map.to_json_string())
++                );
++                assert!(
++                    traced
++                        .output_ranges
++                        .windows(2)
++                        .all(|pair| pair[0].output.end <= pair[1].output.start)
++                );
++                let first = fragments(&traced.code, &traced.output_ranges, 0);
++                let second = fragments(&traced.code, &traced.output_ranges, 1);
++                assert!(first.contains("first("));
++                assert!(first.contains('😀'));
++                assert!(first.ends_with(if minify { ";" } else { ";\n" }), "{first:?}");
++                assert!(second.contains("second()"));
++                assert!(!(first.clone() + &second).contains("generated"));
++                assert!(!(first + &second).contains("after"));
++            }
++        }
++    }
++
++    #[test]
++    fn merged_consumer_frontier_keeps_moved_child() {
++        let source = "consumer('producer');";
++        let allocator = Allocator::default();
++        let parsed = Parser::new(&allocator, source, SourceType::mjs()).parse();
++        let traced = Codegen::new()
++            .with_output_range_owners(vec![
++                OutputRangeOwner { source: 0..9, owner: 0 },
++                OutputRangeOwner { source: 9..source.len() as u32, owner: 1 },
++            ])
++            .build(&parsed.program);
++        assert!(traced.output_ranges.iter().all(|range| range.owner == 0));
++        assert_eq!(traced.output_ranges[0].output, 0..traced.code.len());
++    }
++
++    #[test]
++    fn iterative_binary_frontiers_find_donor_operands() {
++        let source = "a + b + c;";
++        let allocator = Allocator::default();
++        let mut parsed = Parser::new(&allocator, source, SourceType::mjs()).parse();
++        let Statement::ExpressionStatement(statement) = &mut parsed.program.body[0] else {
++            unreachable!();
++        };
++        statement.span = SPAN;
++        let Expression::BinaryExpression(root) = &mut statement.expression else {
++            unreachable!();
++        };
++        root.span = SPAN;
++        let Expression::BinaryExpression(left) = &mut root.left else { unreachable!() };
++        left.span = SPAN;
++        let traced = Codegen::new()
++            .with_options(CodegenOptions { minify: true, ..Default::default() })
++            .with_output_range_owners(vec![
++                OutputRangeOwner { source: 0..1, owner: 0 },
++                OutputRangeOwner { source: 4..5, owner: 1 },
++                OutputRangeOwner { source: 8..9, owner: 2 },
++            ])
++            .build(&parsed.program);
++        for (owner, expected) in ["a", "b", "c"].into_iter().enumerate() {
++            assert_eq!(fragments(&traced.code, &traced.output_ranges, owner as u32), expected);
++        }
++    }
++
++    #[test]
++    fn direct_cjs_literal_printers_still_claim_donors() {
++        for (source, literal) in [
++            ("key === 'default';", "'default'"),
++            ("require('donor');", "'donor'"),
++            ("Object.defineProperty(exports, 'name', value);", "'name'"),
++            ("exports['name'] = value;", "'name'"),
++        ] {
++            let start = source.find(literal).unwrap();
++            let allocator = Allocator::default();
++            let parsed = Parser::new(&allocator, source, SourceType::mjs()).parse();
++            let traced = Codegen::new()
++                .with_options(CodegenOptions { minify: true, ..Default::default() })
++                .with_output_range_owners(vec![OutputRangeOwner {
++                    source: start as u32..(start + literal.len()) as u32,
++                    owner: 0,
++                }])
++                .build(&parsed.program);
++            let expected = format!("\"{}\"", &literal[1..literal.len() - 1]);
++            assert_eq!(fragments(&traced.code, &traced.output_ranges, 0), expected, "{source}");
++        }
++    }
++
++    #[test]
++    fn orphan_comments_include_their_layout() {
++        let source = "/*first*/\nfunction generated() {\n/*second*/\n}\nafter();";
++        let first = source.find("/*first*/").unwrap();
++        let second = source.find("/*second*/").unwrap();
++        let allocator = Allocator::default();
++        let parsed = Parser::new(&allocator, source, SourceType::mjs()).parse();
++        let traced = Codegen::new()
++            .with_output_range_owners(vec![
++                OutputRangeOwner { source: first as u32..(first + 9) as u32, owner: 0 },
++                OutputRangeOwner { source: second as u32..(second + 10) as u32, owner: 1 },
++            ])
++            .build(&parsed.program);
++        for owner in 0..2 {
++            let fragment = fragments(&traced.code, &traced.output_ranges, owner);
++            assert!(fragment.contains(if owner == 0 { "/*first*/" } else { "/*second*/" }));
++            assert!(fragment.ends_with('\n'), "{fragment:?}");
++        }
++    }
++
++    #[test]
++    fn zero_span_never_implies_the_first_donor() {
++        let ranges = super::OutputRanges::new(vec![OutputRangeOwner { source: 1..2, owner: 0 }]);
++        assert_eq!(ranges.owner(Span::new(0, 0)), None);
++        assert_eq!(ranges.owner(Span::new(1, 1)), Some(0));
++    }
++}
 diff -ru a/src/sourcemap_builder.rs b/src/sourcemap_builder.rs
---- a/src/sourcemap_builder.rs
-+++ b/src/sourcemap_builder.rs
+--- a/src/sourcemap_builder.rs	2006-07-24 09:21:28
++++ b/src/sourcemap_builder.rs	2026-11-01 19:19:24
 @@ -1 +1 @@
 -use std::{borrow::Cow, collections::hash_map::Entry, path::Path};
 +use std::{borrow::Cow, collections::hash_map::Entry, path::Path, sync::Arc};
@@ -163,9 +567,7 @@ diff -ru a/src/sourcemap_builder.rs b/src/sourcemap_builder.rs
 @@ -70 +118 @@
 -        let source_len = source_text.len();
 +        let source_len = source_text.len().min(1 << 20);
-@@ -153,0 +202,16 @@
-+    }
-+
+@@ -155,0 +204,16 @@
 +    /// End mapped child coverage before a synthesized closing delimiter.
 +    pub fn add_unmapped(&mut self, output: &[u8]) {
 +        if self.last_position.take().is_none() {
@@ -180,7 +582,12 @@ diff -ru a/src/sourcemap_builder.rs b/src/sourcemap_builder.rs
 +            None,
 +            None,
 +        ));
-@@ -643,0 +708,17 @@
++    }
++
+@@ -640,0 +705,17 @@
++    }
++
++    #[test]
 +    fn unmapped_boundary_resumes_same_original_position() {
 +        let mut builder = SourcemapBuilder::new(Path::new("x.js"), "a");
 +        builder.add_unmapped(b"");
@@ -195,12 +602,9 @@ diff -ru a/src/sourcemap_builder.rs b/src/sourcemap_builder.rs
 +        assert!(map.lookup_source_view_token(&lookup, 0, 1).unwrap().get_source_id().is_none());
 +        assert!(map.lookup_source_view_token(&lookup, 0, 2).unwrap().get_source_id().is_none());
 +        assert!(map.lookup_source_view_token(&lookup, 0, 3).unwrap().get_source_id().is_some());
-+    }
-+
-+    #[test]
 diff -ru a/src/synthesized_sourcemap_tests.rs b/src/synthesized_sourcemap_tests.rs
---- a/src/synthesized_sourcemap_tests.rs
-+++ b/src/synthesized_sourcemap_tests.rs
+--- a/src/synthesized_sourcemap_tests.rs	1970-01-01 08:00:00
++++ b/src/synthesized_sourcemap_tests.rs	2026-11-01 19:19:24
 @@ -0,0 +1,41 @@
 +use std::path::PathBuf;
 +

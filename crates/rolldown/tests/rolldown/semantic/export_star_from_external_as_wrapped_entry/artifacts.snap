@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 export * from "node:fs";
+
 // HIDDEN [\0rolldown/runtime.js]
 // main.js
 var main_exports = /* @__PURE__ */ __exportAll({ main: () => main });
@@ -17,6 +18,7 @@ var init_main = __esmMin((() => {
 	main = "main";
 	console.log((init_main(), __toCommonJS(main_exports)));
 }));
+
 init_main();
 export { main };
 

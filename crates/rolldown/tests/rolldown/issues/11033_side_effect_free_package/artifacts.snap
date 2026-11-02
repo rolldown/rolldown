@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // main.js
 var load, loadOther;
 function init_main() {
@@ -15,6 +16,7 @@ function init_main() {
 		loadOther = () => import("./other.js");
 	})))();
 }
+
 init_main();
 export { load, loadOther };
 
@@ -25,6 +27,7 @@ export { load, loadOther };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as motion, t as init_react } from "./react.js";
+
 // other.js
 var check;
 function init_other() {
@@ -33,6 +36,7 @@ function init_other() {
 		check = () => motion;
 	})))();
 }
+
 init_other();
 export { check };
 
@@ -97,6 +101,7 @@ export { __esmMin as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { a as Group, r as Item, t as init_react } from "./react.js";
+
 // story.js
 var check;
 function init_story() {
@@ -105,6 +110,7 @@ function init_story() {
 		check = () => [Group, Item];
 	})))();
 }
+
 init_story();
 export { check };
 

@@ -71,10 +71,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+
 // cjs-in-esm.js
 let foo = 1;
 exports.foo = 2;
 module.exports = 3;
+
 exports.foo = foo;
 
 ```
@@ -83,9 +85,11 @@ exports.foo = foo;
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+
 // cjs-in-esm2.js
 let foo = 1;
 module.exports.bar = 3;
+
 exports.foo = foo;
 
 ```
@@ -94,6 +98,7 @@ exports.foo = foo;
 
 ```js
 let bar = require("bar");
+
 // import-in-cjs.js
 exports.foo = bar.foo;
 module.exports = bar.foo;

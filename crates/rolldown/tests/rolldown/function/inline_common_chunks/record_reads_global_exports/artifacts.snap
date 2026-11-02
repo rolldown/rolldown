@@ -8,7 +8,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 __share("shared-ZmCA4nrZ", (exports$1) => {
-	// shared.js
 	var kind;
 	function init_shared() {
 		return (init_shared = __esmMin((() => {
@@ -16,12 +15,11 @@ __share("shared-ZmCA4nrZ", (exports$1) => {
 		})))();
 	}
 	__share_export(exports$1, {
-		n: () => kind,
-		t: () => init_shared
+		"n": () => kind,
+		"t": () => init_shared
 	});
 });
 var share_shared$2 = __share_require("shared-ZmCA4nrZ");
-// a.js
 var share_shared$1;
 function init_a() {
 	return (init_a = __esmMin((() => {
@@ -40,7 +38,6 @@ init_a();
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 __share("shared-ZmCA4nrZ", (exports$1) => {
-	// shared.js
 	var kind;
 	function init_shared() {
 		return (init_shared = __esmMin((() => {
@@ -48,12 +45,11 @@ __share("shared-ZmCA4nrZ", (exports$1) => {
 		})))();
 	}
 	__share_export(exports$1, {
-		n: () => kind,
-		t: () => init_shared
+		"n": () => kind,
+		"t": () => init_shared
 	});
 });
 var share_shared$1 = __share_require("shared-ZmCA4nrZ");
-// b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
 		share_shared$1.t();

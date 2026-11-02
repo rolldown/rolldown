@@ -277,7 +277,7 @@ export { x1, y1, z1 };
 ## hoist-export-star.js
 
 ```js
-export * from "./foo"
+export * from "./foo";
 
 // hoist-export-star.js
 using a = b;

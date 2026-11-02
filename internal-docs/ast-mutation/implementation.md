@@ -37,6 +37,12 @@ Two paths finalize a _clone_ of the scanned AST, produced by `EcmaAst::clone_wit
 - **Cache path — id preservation.** The incremental-build cache (`NormalizedScanStageOutput::make_copy`, `ScanStageCache::create_output`) hands its clones to the link stage and `ScopeHoistingFinalizer`, which reuse scan-time scoping and never re-run semantic. The clone itself must carry the scan-time ids — this is why `clone_with_another_arena` uses oxc's `clone_in_with_semantic_ids` rather than plain `clone_in`, which would reset every id to `NodeId::DUMMY` and silently break every lookup.
 - **HMR path — deterministic re-derivation.** The HMR renderers in `crates/rolldown/src/hmr/hmr_stage.rs` clone and then immediately run `EcmaAst::make_semantic` on the clone, which re-stamps every `NodeId`; the ids the clone preserved are overwritten before any lookup. Lookups still hit because `SemanticBuilder` numbers nodes purely by traversal order, so an unmutated clone of the same tree shape re-derives exactly the scan-time ids. Two invariants keep this true: nothing may mutate the clone before `make_semantic` runs, and oxc's numbering must remain a pure function of tree shape (true as of oxc 0.135 — builder options such as `with_cfg` / `with_enum_eval` do not affect numbering). Breaking either shifts ids silently: the indexing lookups (`module.imports[&…]`) panic, the `.get()` lookups silently skip rewrites.
 
+## Transferred Finalized Imports
+
+Off-strict lazy-init ordering transfers generated import initialization statements between modules using the chunk's `remove_map` and ordered `insert_map`. The donor finalizer captures only the finalized statement in a small owned `EcmaAst` fragment, using plain `clone_in` to clear semantic IDs and resetting every span to `SPAN`. `None` records represent imports that emitted no statement (for example, a duplicate init).
+
+After every module finalizer has finished, `finalize_modules` clones each fragment into its recipient's allocator and prepends the statements in `insert_map` order. It never re-runs the recipient finalizer: the fragment already contains canonical output names, and donor IDs must not be used with recipient side tables. Generated spans keep transferred statements unmapped rather than attributing donor offsets to recipient source. The transfer neither reparses source strings nor clones a whole module.
+
 ## Current NodeId-Keyed Tables
 
 The main cross-pass side tables keyed by `NodeId` are:

@@ -7,8 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as compute } from "./shared.js";
-
-export * from "ext"
+export * from "ext";
 
 // app.js
 const own = compute(21) + 1;

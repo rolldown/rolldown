@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_shared, t as hot } from "./shared.js";
+
 // a.js
 function init_a() {
 	return (init_a = __esmMin((() => {
@@ -15,6 +16,7 @@ function init_a() {
 		console.log("A", hot);
 	})))();
 }
+
 init_a();
 
 ```
@@ -24,6 +26,7 @@ init_a();
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_shared, t as hot } from "./shared.js";
+
 // b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
@@ -31,6 +34,7 @@ function init_b() {
 		console.log("B", hot);
 	})))();
 }
+
 init_b();
 
 ```

@@ -18,6 +18,7 @@ var require_sheets = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		module.exports = t;
 	})(GC || {});
 }));
+
 // resource.cjs
 var require_resource = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	(function(factory) {
@@ -32,6 +33,7 @@ var require_resource = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		return {};
 	});
 }));
+
 // designer.cjs
 var require_designer = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	(function(factory) {
@@ -48,6 +50,8 @@ var require_designer = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		GC.Spread.Sheets.Designer = GC.Spread.Sheets.Designer || {};
 	});
 }));
+
+// noop.js
 require_resource();
 require_designer();
 

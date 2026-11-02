@@ -32,12 +32,14 @@ export { require_dynamic as t };
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { t as require_dynamic } from "./dynamic2.js";
 import { strictEqual } from "node:assert";
+
 // sideeffects.js
 function init_sideeffects() {
 	return (init_sideeffects = __esmMin((() => {
 		globalThis.a = 2;
 	})))();
 }
+
 // esm.js
 var a;
 function init_esm() {
@@ -48,6 +50,7 @@ function init_esm() {
 		strictEqual(a, 2);
 	})))();
 }
+
 // cjs.js
 function foo() {
 	return 100;
@@ -57,6 +60,7 @@ function init_cjs() {
 		init_esm();
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -64,6 +68,7 @@ function init_main() {
 		console.log(`mod.foo: `, foo);
 	})))();
 }
+
 init_main();
 
 ```
@@ -109,12 +114,14 @@ export { require_dynamic as t };
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { t as require_dynamic } from "./dynamic2.js";
 import { strictEqual } from "node:assert";
+
 // sideeffects.js
 function init_sideeffects() {
 	return (init_sideeffects = __esmMin((() => {
 		globalThis.a = 2;
 	})))();
 }
+
 // esm.js
 var a;
 function init_esm() {
@@ -125,6 +132,7 @@ function init_esm() {
 		strictEqual(a, 2);
 	})))();
 }
+
 // cjs.js
 function foo() {
 	return 100;
@@ -134,6 +142,7 @@ function init_cjs() {
 		init_esm();
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -141,6 +150,7 @@ function init_main() {
 		console.log(`mod.foo: `, foo);
 	})))();
 }
+
 init_main();
 
 ```

@@ -17,5 +17,8 @@ await e();
 ### main.js
 
 ```js
-var e=(e,t,n)=>()=>{if(n)throw n[0];try{return e&&(t=e(e=0)),t}catch(e){throw n=[e],e}};async function t(){console.log(`foo`)}function n(){return(n=e((async()=>{await t()})))()}await n();
+var e=(e,t,n)=>()=>{if(n)throw n[0];try{return e&&(t=e(e=0)),t}catch(e){throw n=[e],e}};
+async function t(){console.log(`foo`)}
+function n(){return(n=e((async()=>{await t()})))()}
+await n();
 ```

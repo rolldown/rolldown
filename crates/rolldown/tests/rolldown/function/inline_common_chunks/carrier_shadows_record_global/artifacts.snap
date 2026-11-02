@@ -8,7 +8,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 __share("shared-ZmCA4nrZ", (exports$1) => {
-	// shared.js
 	var g, e;
 	function init_shared() {
 		return (init_shared = __esmMin((() => {
@@ -17,13 +16,12 @@ __share("shared-ZmCA4nrZ", (exports$1) => {
 		})))();
 	}
 	__share_export(exports$1, {
-		n: () => g,
-		r: () => init_shared,
-		t: () => e
+		"n": () => g,
+		"r": () => init_shared,
+		"t": () => e
 	});
 });
 var share_shared = __share_require("shared-ZmCA4nrZ");
-// a.js
 function init_a() {
 	return (init_a = __esmMin((() => {
 		share_shared.r();
@@ -39,7 +37,6 @@ init_a();
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 __share("shared-ZmCA4nrZ", (exports$1) => {
-	// shared.js
 	var g, e;
 	function init_shared() {
 		return (init_shared = __esmMin((() => {
@@ -48,13 +45,12 @@ __share("shared-ZmCA4nrZ", (exports$1) => {
 		})))();
 	}
 	__share_export(exports$1, {
-		n: () => g,
-		r: () => init_shared,
-		t: () => e
+		"n": () => g,
+		"r": () => init_shared,
+		"t": () => e
 	});
 });
 var share_shared = __share_require("shared-ZmCA4nrZ");
-// b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
 		share_shared.r();

@@ -58,8 +58,10 @@ export { pv as n, init_definer as t };
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { t as marker } from "./a.js";
 import { n as pv, t as init_definer } from "./b.js";
+
 // e-first.js
 (globalThis.__events ??= []).push("e-first");
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -71,6 +73,7 @@ function init_main() {
 		};
 	})))();
 }
+
 init_main();
 
 ```
@@ -154,12 +157,14 @@ export { pv as n, init_eagerhaz as r, init_definer as t };
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { i as init_a_first, n as marker } from "./a.js";
 import { n as pv, r as init_eagerhaz, t as init_definer } from "./b.js";
+
 // e-first.js
 function init_e_first() {
 	return (init_e_first = __esmMin((() => {
 		(globalThis.__events ??= []).push("e-first");
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -174,6 +179,7 @@ function init_main() {
 		};
 	})))();
 }
+
 init_main();
 
 ```

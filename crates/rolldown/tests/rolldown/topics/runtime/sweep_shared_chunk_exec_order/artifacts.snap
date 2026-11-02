@@ -8,8 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import "./s_ac.js";
 import "./re.js";
-
-export * from "external"
+export * from "external";
 
 ```
 
@@ -17,8 +16,7 @@ export * from "external"
 
 ```js
 import "./re.js";
-
-export * from "external"
+export * from "external";
 
 ```
 

@@ -10,6 +10,7 @@ Object.defineProperties(exports, {
 	__esModule: { value: true },
 	[Symbol.toStringTag]: { value: "Module" }
 });
+
 // main.js
 let count = 0;
 function reset() {
@@ -18,6 +19,7 @@ function reset() {
 function inc() {
 	count += 1;
 }
+
 Object.defineProperty(exports, "default", {
 	enumerable: true,
 	get: function() {

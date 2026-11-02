@@ -7,9 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+
 // main.js
 const Symbol$1 = () => "local";
 const s = Symbol$1();
+
 exports.s = s;
 
 ```
@@ -21,12 +23,11 @@ exports.s = s;
 ### main.js
 
 ```js
-var lib = (function(exports) {
+var lib = function(exports) {
 	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-	// main.js
 	const Symbol$1 = () => "local";
 	exports.s = Symbol$1();
 	return exports;
-})({});
+}({});
 
 ```

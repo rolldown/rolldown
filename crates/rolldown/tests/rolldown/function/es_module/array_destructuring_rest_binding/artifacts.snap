@@ -34,6 +34,7 @@ export { all };
 
 ```js
 import assert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // lib.js
 var stages;
@@ -46,6 +47,7 @@ function init_lib() {
 		};
 	})))();
 }
+
 // main.js
 var first, rest, all;
 function init_main() {
@@ -61,6 +63,7 @@ function init_main() {
 		]);
 	})))();
 }
+
 init_main();
 export { all };
 

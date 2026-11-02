@@ -23,8 +23,10 @@ To fix:
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as value, t as init_reader } from "./reader.js";
+
 // patch.js
 globalThis.__orderRead = () => 42;
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -32,6 +34,7 @@ function init_main() {
 		if (value !== 42) throw new Error(`reader evaluated before patch: value = ${value}`);
 	})))();
 }
+
 init_main();
 
 ```
@@ -85,12 +88,14 @@ To fix:
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as value, t as init_reader } from "./reader.js";
+
 // patch.js
 function init_patch() {
 	return (init_patch = __esmMin((() => {
 		globalThis.__orderRead = () => 42;
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -99,6 +104,7 @@ function init_main() {
 		if (value !== 42) throw new Error(`reader evaluated before patch: value = ${value}`);
 	})))();
 }
+
 init_main();
 
 ```

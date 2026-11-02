@@ -6,6 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+// main.js
 (/* @__PURE__ */ require("./rolldown-runtime.js").__commonJSMin(((exports, module) => {
 	module.exports = console.log("cjs-dep");
 })))();
@@ -15,6 +16,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main2.js
 
 ```js
+// main2.js
 (/* @__PURE__ */ require("./rolldown-runtime.js").__commonJSMin(((exports, module) => {
 	module.exports = console.log("cjs-dep2");
 })))();
@@ -24,7 +26,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## rolldown-runtime.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
 Object.defineProperty(exports, "__commonJSMin", {
 	enumerable: true,
 	get: function() {

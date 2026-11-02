@@ -7,9 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-// HIDDEN [\0rolldown/runtime.js]
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
+
 // entry.js
 var import_foo = (/* @__PURE__ */ __commonJSMin(((exports) => {})))();
+
 Object.defineProperty(exports, "bar", {
 	enumerable: true,
 	get: function() {

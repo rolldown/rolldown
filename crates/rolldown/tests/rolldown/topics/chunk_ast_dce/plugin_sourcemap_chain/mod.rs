@@ -1,7 +1,6 @@
 //! PoC (`poc/chunk-ast-minify`): code that oxc's DCE moves across modules (single-use inlining)
-//! out of modules whose text came from a plugin `transform` with a sourcemap. In the chunk AST
-//! DCE `global` mode, the moved code must map through the *source* module's `sourcemap_chain`.
-//! Run with `ROLLDOWN_CHUNK_AST_DCE=global` and compare the visualized sourcemap with the default.
+//! out of modules whose text came from a plugin `transform` with a sourcemap. The moved code
+//! must map through the *source* module's `sourcemap_chain`.
 use std::{
   borrow::Cow,
   sync::{
@@ -94,26 +93,22 @@ async fn composed_source_positions() {
       let map = oxc_sourcemap::SourceMap::from_json_string(&json).unwrap();
       let map = &map;
       super::map_assertions::assert_valid_map(&chunk.code, map);
-      if std::env::var("ROLLDOWN_CHUNK_AST_DCE").is_ok_and(|mode| mode == "global") {
-        super::map_assertions::assert_unmapped(
-          &chunk.code,
-          map,
-          if full { "export{" } else { "export {" },
-        );
-      }
-      if std::env::var("ROLLDOWN_CHUNK_AST_DCE").is_ok_and(|mode| mode == "global") {
-        let marker = "#ifdef USE_MAP";
-        let start = chunk.code.find(marker).unwrap();
-        let quote = chunk.code[..start].rfind(['\'', '"', '`']).unwrap();
-        super::map_assertions::assert_mapping_at(
-          &chunk.code,
-          map,
-          quote,
-          "shader.js",
-          include_str!("shader.js"),
-          include_str!("shader.js").find('`').unwrap(),
-        );
-      }
+      super::map_assertions::assert_unmapped(
+        &chunk.code,
+        map,
+        if full { "export{" } else { "export {" },
+      );
+      let marker = "#ifdef USE_MAP";
+      let start = chunk.code.find(marker).unwrap();
+      let quote = chunk.code[..start].rfind(['\'', '"', '`']).unwrap();
+      super::map_assertions::assert_mapping_at(
+        &chunk.code,
+        map,
+        quote,
+        "shader.js",
+        include_str!("shader.js"),
+        include_str!("shader.js").find('`').unwrap(),
+      );
       let literal = if full { "`helper`" } else { "\"helper\"" };
       for (generated, original) in
         [("name:", "name:"), (literal, "'helper',"), ("make:", "make:"), ("Symbol(", "Symbol(")]
@@ -213,20 +208,18 @@ async fn empty_producer_map_terminates_foreign_mapping() {
       let json = chunk.map.as_ref().unwrap().to_json_string();
       let map = oxc_sourcemap::SourceMap::from_json_string(&json).unwrap();
       super::map_assertions::assert_valid_map(&chunk.code, &map);
-      if std::env::var("ROLLDOWN_CHUNK_AST_DCE").is_ok_and(|mode| mode == "global") {
-        super::map_assertions::assert_unmapped(&chunk.code, &map, "dep2-generated");
-        let lookup = map.generate_lookup_table();
-        for marker in ["dep1-test", "dep3-test"] {
-          let prefix = &chunk.code[..chunk.code.find(marker).unwrap()];
-          let line = u32::try_from(prefix.bytes().filter(|b| *b == b'\n').count()).unwrap();
-          let column = u32::try_from(prefix.rsplit('\n').next().unwrap().len()).unwrap();
-          let token = map.lookup_source_view_token(&lookup, line, column).unwrap();
-          assert!(token.get_source().unwrap().ends_with(if marker == "dep1-test" {
-            "dep1.js"
-          } else {
-            "dep3.js"
-          }));
-        }
+      super::map_assertions::assert_unmapped(&chunk.code, &map, "dep2-generated");
+      let lookup = map.generate_lookup_table();
+      for marker in ["dep1-test", "dep3-test"] {
+        let prefix = &chunk.code[..chunk.code.find(marker).unwrap()];
+        let line = u32::try_from(prefix.bytes().filter(|b| *b == b'\n').count()).unwrap();
+        let column = u32::try_from(prefix.rsplit('\n').next().unwrap().len()).unwrap();
+        let token = map.lookup_source_view_token(&lookup, line, column).unwrap();
+        assert!(token.get_source().unwrap().ends_with(if marker == "dep1-test" {
+          "dep1.js"
+        } else {
+          "dep3.js"
+        }));
       }
     }
   }

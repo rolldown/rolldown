@@ -9,8 +9,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as SNAPSHOT } from "./snapshot.js";
 import { n as init_shared } from "./shared.js";
+
 // ../pure.js
 const PURE = "pure";
+
 // lazy.js
 function read() {
 	return [SNAPSHOT, PURE];
@@ -20,6 +22,7 @@ function init_lazy() {
 		init_shared();
 	})))();
 }
+
 init_lazy();
 export { read };
 
@@ -30,6 +33,7 @@ export { read };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_shared, t as LOCAL } from "./shared.js";
+
 // main.js
 var local, load;
 function init_main() {
@@ -40,6 +44,7 @@ function init_main() {
 		load = () => import("./lazy.js").then((module) => module.read());
 	})))();
 }
+
 init_main();
 export { load, local };
 
@@ -99,8 +104,10 @@ export { init_value as n, SNAPSHOT as t };
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as SNAPSHOT } from "./snapshot.js";
 import { n as init_shared } from "./shared.js";
+
 // ../pure.js
 const PURE = "pure";
+
 // lazy.js
 function read() {
 	return [SNAPSHOT, PURE];
@@ -110,6 +117,7 @@ function init_lazy() {
 		init_shared();
 	})))();
 }
+
 init_lazy();
 export { read };
 
@@ -120,6 +128,7 @@ export { read };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_shared, t as LOCAL } from "./shared.js";
+
 // main.js
 var local, load;
 function init_main() {
@@ -130,6 +139,7 @@ function init_main() {
 		load = () => import("./lazy.js").then((module) => module.read());
 	})))();
 }
+
 init_main();
 export { load, local };
 

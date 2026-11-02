@@ -2,8 +2,9 @@ use std::{borrow::Cow, path::Path, process::Command};
 
 use rolldown::{Bundler, BundlerOptions, InputItem, SourceMapType};
 use rolldown_common::{
-  AddonOutputOption, CommentsOptions, Output, OutputFormat, RawCompressOptions, RawMangleOptions,
-  RawMinifyOptions, RawMinifyOptionsDetailed,
+  AddonOutputOption, CommentsOptions, EmittedAsset, ManglePropertiesPattern,
+  ManglePropertiesPatterns, Output, OutputFormat, RawCompressOptions, RawMangleOptions,
+  RawManglePropertiesOptions, RawMinifyOptions, RawMinifyOptionsDetailed,
 };
 use rolldown_plugin::{
   HookRenderChunkArgs, HookRenderChunkOutput, HookRenderChunkReturn, HookUsage, Plugin,
@@ -92,13 +93,11 @@ fn assert_anchors(chunks: &[&rolldown_common::OutputChunk], graph: &str) -> usiz
   sources.len()
 }
 
-// Run this test in separate original/global processes: production options are cached globally.
 // Path evidence is asserted by the external runner using ROLLDOWN_CHUNK_AST_COVERAGE, never by
 // changing process-global environment variables while Tokio/Rayon workers may be using them.
 #[tokio::test(flavor = "multi_thread")]
 async fn execution_and_final_maps() {
-  let global = std::env::var("ROLLDOWN_CHUNK_AST_DCE").is_ok_and(|mode| mode == "global");
-  let pipeline = if global { "global" } else { "original" };
+  let pipeline = "chunk-ast";
   let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
   let mut captures = Vec::new();
   let mut builds = 0;
@@ -160,7 +159,8 @@ async fn execution_and_final_maps() {
       } else {
         vec![]
       };
-      let output = Bundler::with_plugins(options, plugins).unwrap().generate().await.unwrap();
+      let output = Bundler::with_plugins(options, plugins).unwrap().generate().await;
+      let output = output.unwrap();
       let chunks: Vec<_> = output
         .assets
         .iter()
@@ -179,8 +179,7 @@ async fn execution_and_final_maps() {
       for chunk in &chunks {
         let map = chunk.map.as_ref().unwrap();
         super::map_assertions::assert_valid_map(&chunk.code, map);
-        if global
-          && matches!(format, OutputFormat::Esm)
+        if matches!(format, OutputFormat::Esm)
           && !matches!(scenario, "render_chunk" | "intro" | "code_banner")
         {
           super::map_assertions::assert_unmapped(&chunk.code, map, "export");
@@ -205,7 +204,7 @@ async fn execution_and_final_maps() {
       }
       map_anchors += assert_anchors(&chunks, graph);
       // Compression must actually move the donor's expression across the module boundary.
-      if global && mode != "mangle_only" && matches!(scenario, "cross_module" | "comment_banner") {
+      if mode != "mangle_only" && matches!(scenario, "cross_module" | "comment_banner") {
         let donor = entry_chunk
           .modules
           .keys
@@ -270,5 +269,191 @@ async fn execution_and_final_maps() {
   assert_eq!((builds, chunk_count, map_anchors), (27, 33, 60));
   if let Ok(path) = std::env::var("ROLLDOWN_PATH_MATRIX_OUTPUT") {
     std::fs::write(path, serde_json::to_string_pretty(&captures).unwrap()).unwrap();
+  }
+}
+
+fn default_options() -> BundlerOptions {
+  BundlerOptions {
+    cwd: Some(FIXTURE.into()),
+    input: Some(vec![InputItem { name: Some("main".into()), import: "./cross/main.js".into() }]),
+    entry_filenames: Some("[name].mjs".to_string().into()),
+    ..Default::default()
+  }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn disabled_minify_allows_unsupported_chunks() {
+  for format in [OutputFormat::Esm, OutputFormat::Cjs] {
+    let output = Bundler::with_plugins(
+      BundlerOptions {
+        format: Some(format),
+        minify: Some(RawMinifyOptions::Bool(false)),
+        ..default_options()
+      },
+      vec![Plugin::new_shared(RenderChunkFallback)],
+    )
+    .unwrap()
+    .generate()
+    .await
+    .unwrap();
+    let Output::Chunk(chunk) = &output.assets[0] else { panic!("expected JavaScript output") };
+    assert!(chunk.code.contains("globalThis.__pathHook = 17;"));
+    assert!(chunk.code.contains("cross-inlined-value"));
+    assert_eq!(chunk.exports, ["result"]);
+  }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn default_dce_is_supported() {
+  let output =
+    Bundler::new(BundlerOptions { sourcemap: Some(SourceMapType::File), ..default_options() })
+      .unwrap()
+      .generate()
+      .await
+      .unwrap();
+  let chunks: Vec<_> = output
+    .assets
+    .iter()
+    .filter_map(|output| match output {
+      Output::Chunk(chunk) => Some(chunk.as_ref()),
+      Output::Asset(_) => None,
+    })
+    .collect();
+  assert_eq!(chunks.len(), 1);
+  assert_eq!(assert_anchors(&chunks, "cross_module"), 2);
+  let chunk = chunks[0];
+  // Default DCE need not inline this donor. Successful generation and coverage prove the route;
+  // retain output/export and map assertions without requiring full compression.
+  assert_eq!(chunk.exports, ["result"]);
+  super::map_assertions::assert_valid_map(&chunk.code, chunk.map.as_ref().unwrap());
+  super::map_assertions::assert_unmapped(&chunk.code, chunk.map.as_ref().unwrap(), "export");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn supports_whitespace_and_property_mangle() {
+  for properties in [false, true] {
+    let output = Bundler::new(BundlerOptions {
+      sourcemap: Some(SourceMapType::File),
+      minify: Some(RawMinifyOptions::Object(RawMinifyOptionsDetailed {
+        // Keep compression enabled for property mangling so that its own gate is exercised.
+        compress: properties.then(RawCompressOptions::default),
+        mangle: None,
+        mangle_properties: properties.then(|| {
+          Box::new(RawManglePropertiesOptions {
+            options: {
+              let mut options =
+                oxc::minifier::ManglePropertiesOptions::from_pattern("^sum$").unwrap();
+              options.cache.insert("sum".into(), Some("cachedSum".into())).unwrap();
+              options.cache.insert("value".into(), None).unwrap();
+              options
+            },
+            patterns: ManglePropertiesPatterns {
+              include: ManglePropertiesPattern { source: "^sum$".into(), flags: String::new() },
+              exclude: None,
+            },
+          })
+        }),
+        remove_whitespace: true,
+        ascii_only: false,
+      })),
+      ..default_options()
+    })
+    .unwrap()
+    .generate()
+    .await;
+    let output = output.unwrap();
+    assert_eq!(output.mangle_cache.is_some(), properties);
+    let chunks: Vec<_> = output
+      .assets
+      .iter()
+      .filter_map(
+        |asset| {
+          if let Output::Chunk(chunk) = asset { Some(chunk.as_ref()) } else { None }
+        },
+      )
+      .collect();
+    assert_eq!(assert_anchors(&chunks, "cross_module"), 2);
+    let chunk = chunks[0];
+    let directory = Path::new(env!("CARGO_MANIFEST_DIR"))
+      .join("../../tmp/adoption-audit/property-ast")
+      .join(properties.to_string());
+    std::fs::create_dir_all(&directory).unwrap();
+    std::fs::write(directory.join("main.mjs"), &chunk.code).unwrap();
+    if properties {
+      let cache = output.mangle_cache.as_ref().unwrap();
+      assert_eq!(cache.get("sum"), Some(&Some("cachedSum".to_owned())));
+      assert_eq!(cache.get("value"), Some(&None));
+      assert!(chunk.code.contains("cachedSum"));
+    }
+    let runner = directory.join("execute.mjs");
+    std::fs::write(&runner, format!("import assert from 'node:assert/strict';\nglobalThis.__pathEvents = [];\nconst {{ result }} = await import('./main.mjs');\nassert.equal(result.value, 'cross-inlined-value');\nassert.equal(result.{}, 42);\n", if properties { "cachedSum" } else { "sum" })).unwrap();
+    let executed = Command::new("node").arg(runner).output().unwrap();
+    assert!(executed.status.success(), "{}", String::from_utf8_lossy(&executed.stderr));
+  }
+}
+
+#[derive(Debug)]
+struct EmitNonJavaScriptAsset;
+
+impl Plugin for EmitNonJavaScriptAsset {
+  fn name(&self) -> Cow<'static, str> {
+    "chunk-ast-non-javascript-asset".into()
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::BuildStart
+  }
+
+  async fn build_start(
+    &self,
+    ctx: &PluginContext,
+    _args: &rolldown_plugin::HookBuildStartArgs<'_>,
+  ) -> rolldown_plugin::HookNoopReturn {
+    ctx.emit_file(
+      EmittedAsset {
+        name: None,
+        original_file_name: None,
+        file_name: Some("untouched.txt".into()),
+        source: "not JavaScript: } [".to_string().into(),
+      },
+      None,
+      None,
+    )?;
+    Ok(())
+  }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn excludes_assets_and_declarations() {
+  for extension in ["mjs", "d.ts", "d.cts", "d.mts"] {
+    let declaration = extension != "mjs";
+    let output = Bundler::with_plugins(
+      BundlerOptions {
+        entry_filenames: Some(format!("[name].{extension}").into()),
+        // Declaration filenames skip minification even when their content is JavaScript.
+        format: declaration.then_some(OutputFormat::Cjs),
+        minify: Some(RawMinifyOptions::Bool(true)),
+        ..default_options()
+      },
+      vec![Plugin::new_shared(EmitNonJavaScriptAsset)],
+    )
+    .unwrap()
+    .generate()
+    .await
+    .unwrap();
+    assert_eq!(output.assets.len(), 2);
+    let asset = output.assets.iter().find(|output| output.filename() == "untouched.txt").unwrap();
+    assert!(matches!(asset, Output::Asset(_)));
+    assert_eq!(asset.content_as_bytes(), b"not JavaScript: } [");
+    let chunk = output
+      .assets
+      .iter()
+      .find_map(|output| match output {
+        Output::Chunk(chunk) => Some(chunk),
+        Output::Asset(_) => None,
+      })
+      .unwrap();
+    assert_eq!(chunk.filename.as_str(), format!("main.{extension}"));
+    assert!(chunk.code.contains("cross-inlined-value"));
   }
 }

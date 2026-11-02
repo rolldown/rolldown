@@ -139,6 +139,11 @@ const ignoreTests = [
   "rollup@chunking form@preserve-modules-filename-pattern: entryFileNames pattern supported in combination with preserveModules@generates cjs",
   "rollup@chunking form@preserve-modules-filename-pattern: entryFileNames pattern supported in combination with preserveModules@generates es",
 
+  // ## Eliminated constant-fold donors do not remain as unused sourcemap sources
+  "rollup@sourcemaps@ignore-list-default: defaults to adding files within node_modules to the ignore list@generates es",
+  "rollup@sourcemaps@ignore-list-false: accepts false for `sourcemapIgnoreList` to disable the default ignore-listing of node_modules@generates es",
+  "rollup@sourcemaps@ignore-list-source-files: populates ignore list@generates es",
+
   // ## Others
   'rollup@hooks@Throws when not specifying "file" or "dir"', // Rolldown defaults `output.dir` to `dist`
   'rollup@function@bundle-facade-order: respects the order of entry points when there are additional facades for chunks', // https://github.com/rolldown/rolldown/issues/1842#issuecomment-2296345255

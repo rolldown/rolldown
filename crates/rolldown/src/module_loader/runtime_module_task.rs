@@ -185,7 +185,6 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
         self_referenced_class_decl_symbol_ids: FxHashSet::default(),
         hashbang_range: None,
         meta: ecma_view_meta,
-        mutations: vec![],
         new_url_references,
         namespace_in_checks: FxHashMap::default(),
         rolldown_file_url_references,

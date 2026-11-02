@@ -9,7 +9,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { i as __share_require, t as __esmMin } from "./rolldown-runtime.js";
 import { n as viaV, t as init_v } from "./vendor.js";
 var share_s = __share_require("s-v3kGiqU-");
-// a.js
 function init_a() {
 	return (init_a = __esmMin((() => {
 		init_v();
@@ -26,7 +25,6 @@ init_a();
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as viaV, t as init_v } from "./vendor.js";
-// b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
 		init_v();
@@ -50,7 +48,6 @@ export { __share_require as i, __share as n, __share_export as r, __esmMin as t 
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 __share("s-v3kGiqU-", (exports) => {
-	// s.js
 	function bump() {
 		n += 1;
 		return n;
@@ -63,13 +60,12 @@ __share("s-v3kGiqU-", (exports) => {
 		})))();
 	}
 	__share_export(exports, {
-		n: () => init_s,
-		r: () => n,
-		t: () => bump
+		"n": () => init_s,
+		"r": () => n,
+		"t": () => bump
 	});
 });
 var share_s = __share_require("s-v3kGiqU-");
-// v.js
 function viaV() {
 	return (0, share_s.t)();
 }

@@ -10,11 +10,10 @@ import { a as __share_require, i as __share_export, n as __exportAll, r as __sha
 import assert from "node:assert";
 __share("shared-NCqPxS0n", (exports) => {
 	__rolldown_runtime__.registerGraph({
-		ids: ["leaf.js", "shared.js"],
-		localCount: 2,
-		edges: [[], [0]]
+		"ids": ["leaf.js", "shared.js"],
+		"localCount": 2,
+		"edges": [[], [0]]
 	});
-	// leaf.js
 	var leaf_exports = /* @__PURE__ */ __exportAll({ leaf: () => leaf });
 	function leaf() {
 		return "leaf-v0";
@@ -25,7 +24,6 @@ __share("shared-NCqPxS0n", (exports) => {
 			__rolldown_runtime__.registerModule("leaf.js", { exports: leaf_exports });
 		})))();
 	}
-	// shared.js
 	var shared_exports = /* @__PURE__ */ __exportAll({ shared: () => shared });
 	function shared() {
 		return "shared+" + leaf();
@@ -38,18 +36,17 @@ __share("shared-NCqPxS0n", (exports) => {
 		})))();
 	}
 	__share_export(exports, {
-		n: () => shared,
-		t: () => init_shared
+		"n": () => shared,
+		"t": () => init_shared
 	});
 });
 var share_shared = __share_require("shared-NCqPxS0n");
 __rolldown_runtime__.registerGraph({
-	ids: ["main.js", "shared.js"],
-	localCount: 1,
-	edges: [[1]],
-	entries: [0]
+	"ids": ["main.js", "shared.js"],
+	"localCount": 1,
+	"edges": [[1]],
+	"entries": [0]
 });
-// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 var main_hot, latest;
 function init_main() {
@@ -79,11 +76,10 @@ init_main();
 import { a as __share_require, i as __share_export, n as __exportAll, r as __share, t as __esmMin } from "./rolldown-runtime.js";
 __share("shared-NCqPxS0n", (exports) => {
 	__rolldown_runtime__.registerGraph({
-		ids: ["leaf.js", "shared.js"],
-		localCount: 2,
-		edges: [[], [0]]
+		"ids": ["leaf.js", "shared.js"],
+		"localCount": 2,
+		"edges": [[], [0]]
 	});
-	// leaf.js
 	var leaf_exports = /* @__PURE__ */ __exportAll({ leaf: () => leaf });
 	function leaf() {
 		return "leaf-v0";
@@ -94,7 +90,6 @@ __share("shared-NCqPxS0n", (exports) => {
 			__rolldown_runtime__.registerModule("leaf.js", { exports: leaf_exports });
 		})))();
 	}
-	// shared.js
 	var shared_exports = /* @__PURE__ */ __exportAll({ shared: () => shared });
 	function shared() {
 		return "shared+" + leaf();
@@ -107,18 +102,17 @@ __share("shared-NCqPxS0n", (exports) => {
 		})))();
 	}
 	__share_export(exports, {
-		n: () => shared,
-		t: () => init_shared
+		"n": () => shared,
+		"t": () => init_shared
 	});
 });
 var share_shared = __share_require("shared-NCqPxS0n");
 __rolldown_runtime__.registerGraph({
-	ids: ["other.js", "shared.js"],
-	localCount: 1,
-	edges: [[1]],
-	entries: [0]
+	"ids": ["other.js", "shared.js"],
+	"localCount": 1,
+	"edges": [[1]],
+	"entries": [0]
 });
-// other.js
 var other_exports = /* @__PURE__ */ __exportAll({});
 var other_hot;
 function init_other() {

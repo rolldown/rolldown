@@ -32,6 +32,7 @@ var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	console.log("cjs");
 	module.exports = { value: 1 };
 }));
+
 // lib.js
 var import_cjs$1, fromLib;
 function init_lib() {
@@ -40,6 +41,7 @@ function init_lib() {
 		fromLib = import_cjs$1.default.value;
 	})))();
 }
+
 // main.js
 var import_cjs;
 function init_main() {
@@ -49,6 +51,7 @@ function init_main() {
 		console.log("main", fromLib, import_cjs.default.value);
 	})))();
 }
+
 init_main();
 
 ```

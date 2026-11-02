@@ -7,11 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-// HIDDEN [\0rolldown/runtime.js]
+
 // lib/fromWebToken.js
 const fromWebToken = (init) => async () => {
 	return 1;
 };
+
 // main.js
 (async () => {
 	assert.strictEqual(await fromWebToken()(), 1);

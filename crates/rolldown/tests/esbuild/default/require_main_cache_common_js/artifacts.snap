@@ -6,11 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
+
 // is-main.js
 var require_is_main = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = require.main === module;
 }));
+
 // entry.js
 console.log("is main:", require.main === module);
 console.log(require_is_main());

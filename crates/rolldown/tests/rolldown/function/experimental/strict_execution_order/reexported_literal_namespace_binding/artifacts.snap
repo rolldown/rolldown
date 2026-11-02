@@ -85,6 +85,7 @@ export { init_color as n, setOpacity as r, init_css as t };
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { r as setOpacity, t as init_css } from "./css.js";
 import assert from "node:assert";
+
 // theme.js
 var theme;
 function init_theme() {
@@ -93,6 +94,7 @@ function init_theme() {
 		theme = setOpacity("red", .5);
 	})))();
 }
+
 // first.js
 function init_first() {
 	return (init_first = __esmMin((() => {
@@ -100,6 +102,7 @@ function init_first() {
 		assert.strictEqual(theme, "red:0.5");
 	})))();
 }
+
 init_first();
 
 ```
@@ -108,6 +111,7 @@ init_first();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((async () => {
@@ -115,6 +119,7 @@ function init_main() {
 		await import("./second.js");
 	})))();
 }
+
 await init_main();
 
 ```
@@ -133,6 +138,7 @@ export { __esmMin as t };
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { r as setOpacity, t as init_css } from "./css.js";
 import assert from "node:assert";
+
 // second.js
 function init_second() {
 	return (init_second = __esmMin((() => {
@@ -140,6 +146,7 @@ function init_second() {
 		assert.strictEqual(setOpacity("blue", .2), "blue:0.2");
 	})))();
 }
+
 init_second();
 
 ```

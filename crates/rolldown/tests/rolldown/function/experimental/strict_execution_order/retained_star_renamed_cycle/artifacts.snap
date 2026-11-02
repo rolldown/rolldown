@@ -18,6 +18,7 @@ console.log(pageA.common, pageA._);
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import "./page-b.js";
+
 // common.js
 function init() {
 	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
@@ -29,6 +30,7 @@ function init_common() {
 		_ = /* @__PURE__ */ init();
 	})))();
 }
+
 // page-a.js
 function init_page_a() {
 	return (init_page_a = __esmMin((() => {
@@ -36,6 +38,7 @@ function init_page_a() {
 		if (globalThis.value !== 0) throw new Error(`page-a observed ${globalThis.value}`);
 	})))();
 }
+
 init_page_a();
 export { _, common };
 
@@ -79,6 +82,7 @@ export { __exportAll as n, __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // main.js
 var pageA;
 function init_main() {
@@ -88,6 +92,7 @@ function init_main() {
 		console.log(pageA.common, pageA._);
 	})))();
 }
+
 await init_main();
 
 ```
@@ -97,6 +102,7 @@ await init_main();
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import "./page-b.js";
+
 // common.js
 function init() {
 	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
@@ -108,6 +114,7 @@ function init_common() {
 		_ = /* @__PURE__ */ init();
 	})))();
 }
+
 // page-a.js
 function init_page_a() {
 	return (init_page_a = __esmMin((() => {
@@ -115,6 +122,7 @@ function init_page_a() {
 		if (globalThis.value !== 0) throw new Error(`page-a observed ${globalThis.value}`);
 	})))();
 }
+
 init_page_a();
 export { _, common };
 

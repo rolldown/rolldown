@@ -26,6 +26,7 @@ export { init_cn as n, cn as t };
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { n as init_cn, t as cn } from "./cn.js";
+
 // main.js
 var loadStatic, loadOpaque;
 function init_main() {
@@ -36,6 +37,7 @@ function init_main() {
 		loadOpaque = () => import("./route-opaque.js");
 	})))();
 }
+
 init_main();
 export { loadOpaque, loadStatic };
 
@@ -55,6 +57,7 @@ export { __toESM as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
 import { i as __toESM, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
 import { n as init_cn, t as cn } from "./cn.js";
 import { n as init_stack, t as Stack } from "./stack.js";
+
 // node_modules/namespace-barrel/a.cjs
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("cjs-a");
@@ -66,6 +69,7 @@ function init_namespace_barrel_cjs_0() {
 		import_a = /* @__PURE__ */ __toESM(require_a(), 1);
 	})))();
 }
+
 // node_modules/namespace-barrel/b.cjs
 var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("cjs-b");
@@ -77,6 +81,7 @@ function init_namespace_barrel_cjs_1() {
 		import_b = /* @__PURE__ */ __toESM(require_b(), 1);
 	})))();
 }
+
 // node_modules/namespace-barrel/index.js
 var namespace_barrel_exports = /* @__PURE__ */ __exportAll({
 	Stack: () => Stack,
@@ -84,6 +89,7 @@ var namespace_barrel_exports = /* @__PURE__ */ __exportAll({
 	b: () => import_b.default,
 	cn: () => cn
 });
+
 // route-opaque.js
 var value;
 function init_route_opaque() {
@@ -93,6 +99,7 @@ function init_route_opaque() {
 		value = namespace_barrel_exports[globalThis.__namespaceKey];
 	})))();
 }
+
 init_route_opaque();
 export { value };
 
@@ -103,6 +110,7 @@ export { value };
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { n as init_stack, t as Stack } from "./stack.js";
+
 // route-static.js
 var value;
 function init_route_static() {
@@ -112,6 +120,7 @@ function init_route_static() {
 		value = new Stack().size;
 	})))();
 }
+
 init_route_static();
 export { value };
 
@@ -164,6 +173,7 @@ export { init_cn as n, cn as t };
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { n as init_cn, t as cn } from "./cn.js";
+
 // main.js
 var loadStatic, loadOpaque;
 function init_main() {
@@ -174,6 +184,7 @@ function init_main() {
 		loadOpaque = () => import("./route-opaque.js");
 	})))();
 }
+
 init_main();
 export { loadOpaque, loadStatic };
 
@@ -193,6 +204,7 @@ export { __toESM as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
 import { i as __toESM, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
 import { n as init_cn, t as cn } from "./cn.js";
 import { n as init_stack, t as Stack } from "./stack.js";
+
 // node_modules/namespace-barrel/a.cjs
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("cjs-a");
@@ -204,6 +216,7 @@ function init_namespace_barrel_cjs_0() {
 		import_a = /* @__PURE__ */ __toESM(require_a(), 1);
 	})))();
 }
+
 // node_modules/namespace-barrel/b.cjs
 var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("cjs-b");
@@ -215,6 +228,7 @@ function init_namespace_barrel_cjs_1() {
 		import_b = /* @__PURE__ */ __toESM(require_b(), 1);
 	})))();
 }
+
 // node_modules/namespace-barrel/index.js
 var namespace_barrel_exports = /* @__PURE__ */ __exportAll({
 	Stack: () => Stack,
@@ -222,6 +236,7 @@ var namespace_barrel_exports = /* @__PURE__ */ __exportAll({
 	b: () => import_b.default,
 	cn: () => cn
 });
+
 // route-opaque.js
 var value;
 function init_route_opaque() {
@@ -231,6 +246,7 @@ function init_route_opaque() {
 		value = namespace_barrel_exports[globalThis.__namespaceKey];
 	})))();
 }
+
 init_route_opaque();
 export { value };
 
@@ -241,6 +257,7 @@ export { value };
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { n as init_stack, t as Stack } from "./stack.js";
+
 // route-static.js
 var value;
 function init_route_static() {
@@ -250,6 +267,7 @@ function init_route_static() {
 		value = new Stack().size;
 	})))();
 }
+
 init_route_static();
 export { value };
 

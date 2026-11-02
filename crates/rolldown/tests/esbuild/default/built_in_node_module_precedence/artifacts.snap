@@ -6,15 +6,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
+
 // node_modules/fs/abc.js
 var require_abc = /* @__PURE__ */ __commonJSMin((() => {
 	console.log("include this");
 }));
+
 // node_modules/fs/index.js
 var require_fs = /* @__PURE__ */ __commonJSMin((() => {
 	console.log("include this too");
 }));
+
 // entry.js
 console.log([
 	require("fs"),

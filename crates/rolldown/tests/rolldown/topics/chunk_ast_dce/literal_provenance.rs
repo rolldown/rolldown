@@ -1,7 +1,9 @@
 use rolldown::{Bundler, BundlerOptions, InputItem, SourceMapType};
 use rolldown_common::{
   Output, RawCompressOptions, RawMangleOptions, RawMinifyOptions, RawMinifyOptionsDetailed,
+  SourceMapIgnoreList,
 };
+use rolldown_utils::pattern_filter::StringOrRegex;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn inlined_literal_sources() {
@@ -77,11 +79,6 @@ async fn inlined_literal_sources() {
       ),
     ] {
       let generated = chunk.code.find(marker).unwrap() - 1;
-      if mode != "mangle"
-        && !std::env::var("ROLLDOWN_CHUNK_AST_DCE").is_ok_and(|mode| mode == "global")
-      {
-        continue;
-      }
       super::map_assertions::assert_mapping_at(
         &chunk.code,
         &map,
@@ -93,6 +90,88 @@ async fn inlined_literal_sources() {
     }
     assert!(chunk.code.contains("shader-string-anchor"));
     assert!(chunk.code.contains("shader-template-anchor"));
+  }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn eliminated_donor_sources_drive_ignore_list() {
+  for (retained, cwd, input) in [
+    (
+      false,
+      concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../rollup/test/sourcemaps/samples/ignore-list-source-files"
+      ),
+      "./main.js",
+    ),
+    (
+      true,
+      concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/rolldown/topics/chunk_ast_dce/literal_provenance"
+      ),
+      "./retained-entry.js",
+    ),
+  ] {
+    let output = Bundler::new(BundlerOptions {
+      cwd: Some(cwd.into()),
+      input: Some(vec![InputItem { name: Some("entry".into()), import: input.into() }]),
+      sourcemap: Some(SourceMapType::File),
+      sourcemap_ignore_list: Some(SourceMapIgnoreList::from_string_or_regex(
+        StringOrRegex::String("lib".into()),
+      )),
+      ..Default::default()
+    })
+    .unwrap()
+    .generate()
+    .await
+    .unwrap();
+    let chunk = output
+      .assets
+      .iter()
+      .find_map(|asset| match asset {
+        Output::Chunk(chunk) => Some(chunk),
+        Output::Asset(_) => None,
+      })
+      .unwrap();
+    let json = chunk.map.as_ref().unwrap().to_json_string();
+    let map = oxc_sourcemap::SourceMap::from_json_string(&json).unwrap();
+    super::map_assertions::assert_valid_map(&chunk.code, &map);
+    let sources = map.get_sources().collect::<Vec<_>>();
+    if retained {
+      assert_eq!(sources.len(), 2, "{sources:?}");
+      assert!(sources.iter().any(|source| source.ends_with("retained-lib.js")));
+      assert!(sources.iter().any(|source| source.ends_with("retained-entry.js")));
+      let expected = sources
+        .iter()
+        .enumerate()
+        .filter(|(_, source)| source.contains("lib"))
+        .map(|(index, _)| u32::try_from(index).unwrap())
+        .collect::<Vec<_>>();
+      assert_eq!(expected.len(), 1);
+      assert!(expected[0] < u32::try_from(sources.len()).unwrap());
+      assert_eq!(map.get_ignore_list(), Some(expected.as_slice()));
+    } else {
+      assert_eq!(sources.len(), 1, "{sources:?}");
+      assert!(sources[0].ends_with("main.js"));
+      assert!(map.get_ignore_list().is_none_or(<[u32]>::is_empty));
+      assert!(map.get_source_view_tokens().all(|token| {
+        token
+          .get_source_id()
+          .is_none_or(|source| map.get_source(source).unwrap().ends_with("main.js"))
+      }));
+      let content = include_str!(
+        "../../../../../../rollup/test/sourcemaps/samples/ignore-list-source-files/main.js"
+      );
+      super::map_assertions::assert_mapping_at(
+        &chunk.code,
+        &map,
+        chunk.code.find("3;").unwrap(),
+        "main.js",
+        content,
+        content.find("one + two").unwrap(),
+      );
+    }
   }
 }
 

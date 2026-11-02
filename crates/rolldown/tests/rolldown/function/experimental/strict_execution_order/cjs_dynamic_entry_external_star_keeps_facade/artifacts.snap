@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 //! User-defined Entry: [Entry-Module-Id: main.js] [Name: main]
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_rolldown_runtime = require("./rolldown-runtime.js");
+
 // main.js
 var loaded;
 function init_main() {
@@ -16,6 +17,7 @@ function init_main() {
 		loaded = Promise.resolve().then(() => require("./target2.js")).then((namespace) => namespace);
 	})))();
 }
+
 init_main();
 exports.loaded = loaded;
 
@@ -27,6 +29,7 @@ exports.loaded = loaded;
 //! ManualCodeSplitting: [Group-Name: reader]
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_target = require("./target.js");
+
 // reader.js
 function read() {
 	globalThis.__externalStarLog.push(`reader:1`);
@@ -36,6 +39,7 @@ function init_reader() {
 		require_target.init_target();
 	})))();
 }
+
 Object.defineProperty(exports, "init_reader", {
 	enumerable: true,
 	get: function() {
@@ -55,7 +59,6 @@ Object.defineProperty(exports, "read", {
 
 ```js
 //! Common Chunk: [Shared-By: main.js, target.js]
-// \0rolldown/runtime.js
 var __esmMin = (fn, res, err) => () => {
 	if (err) throw err[0];
 	try {
@@ -80,6 +83,7 @@ Object.defineProperty(exports, "__esmMin", {
 //! Common Chunk: [Shared-By: target.js]
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_reader = require("./reader.js");
+
 // target.js
 var x;
 function init_target() {
@@ -90,6 +94,7 @@ function init_target() {
 		require_reader.read();
 	})))();
 }
+
 Object.defineProperty(exports, "init_target", {
 	enumerable: true,
 	get: function() {

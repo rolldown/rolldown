@@ -10,15 +10,18 @@ Object.defineProperties(exports, {
 	__esModule: { value: true },
 	[Symbol.toStringTag]: { value: "Module" }
 });
+
 // mod.js
 function example() {
 	return "named";
 }
+
 // main.js
 function a() {
 	return "named";
 }
 var main_default = example();
+
 exports.a = a;
 exports.default = main_default;
 

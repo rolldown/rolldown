@@ -50,9 +50,65 @@ pub fn render_cjs<'code>(
   // Use pre-computed output_exports from the chunk
   let export_mode = ctx.chunk.output_exports;
 
-  // Handle namespace markers for entry chunks
+  let ast_dce = ctx.chunk_ast_dce.as_ref();
+  if ast_dce.is_none() {
+    if let Some(marker) = render_cjs_namespace_markers(ctx) {
+      source_joiner.append_source(marker);
+    }
+  }
+
+  if let Some(output) = ast_dce {
+    if let Some(imports) = &output.imports {
+      if let Some(map) = &output.imports_map {
+        source_joiner
+          .append_source(rolldown_sourcemap::SourceMapSource::new(imports.clone(), map.clone()));
+      } else {
+        source_joiner.append_source(imports.clone());
+      }
+    }
+    for source in module_sources {
+      if let Some(sources) = &source.sources {
+        for source in sources.iter() {
+          source_joiner.append_source(source);
+        }
+      }
+    }
+    if let Some(exports) = &output.exports {
+      if let Some(map) = &output.exports_map {
+        source_joiner
+          .append_source(rolldown_sourcemap::SourceMapSource::new(exports.clone(), map.clone()));
+      } else {
+        source_joiner.append_source(exports.clone());
+      }
+    }
+  } else {
+    // Runtime helpers must precede generated requires that use them.
+    render_modules_with_peek_runtime_module_at_first(
+      ctx,
+      &mut source_joiner,
+      module_sources,
+      render_cjs_chunk_imports(ctx),
+    );
+    if let Some(source) = render_wrapped_entry_chunk(ctx, Some(&export_mode)) {
+      source_joiner.append_source(source);
+    }
+    if let Some(exports) = render_chunk_exports(ctx, Some(&export_mode)) {
+      source_joiner.append_source(exports);
+    }
+  }
+
+  if let Some(outro) = outro {
+    source_joiner.append_source(outro);
+  }
+  if let Some(footer) = footer {
+    source_joiner.append_source(footer);
+  }
+  source_joiner
+}
+
+pub fn render_cjs_namespace_markers(ctx: &GenerateContext<'_>) -> Option<&'static str> {
   if let (Some(entry_module), OutputExports::Named) =
-    (ctx.chunk.user_defined_entry_module(&ctx.link_output.module_table), export_mode)
+    (ctx.chunk.user_defined_entry_module(&ctx.link_output.module_table), ctx.chunk.output_exports)
   {
     let export_names = get_chunk_export_names_with_ctx(ctx);
     let has_default_export = export_names.iter().any(|name| name.as_str() == "default");
@@ -60,47 +116,19 @@ pub fn render_cjs<'code>(
     // Only `named` export can we render the namespace markers.
     if entry_module.exports_kind.is_esm() {
       // Symbol.toStringTag should only be added to module facades (chunks that represent a specific module)
-      if let Some(marker) = render_namespace_markers(
+      return render_namespace_markers(
         ctx.options.es_module,
         has_default_export,
         &ctx.options.generated_code,
         ctx.chunk.is_entry_point(),
-      ) {
-        source_joiner.append_source(marker);
-      }
+      );
     }
   }
-
-  // Runtime module should be placed before the generated `requires` in CJS format.
-  // Because, we might need to generate `__toESM(require(...))` that relies on the runtime module.
-  render_modules_with_peek_runtime_module_at_first(
-    ctx,
-    &mut source_joiner,
-    module_sources,
-    render_cjs_chunk_imports(ctx),
-  );
-
-  if let Some(source) = render_wrapped_entry_chunk(ctx, Some(&export_mode)) {
-    source_joiner.append_source(source);
-  }
-
-  if let Some(exports) = render_chunk_exports(ctx, Some(&export_mode)) {
-    source_joiner.append_source(exports);
-  }
-
-  if let Some(outro) = outro {
-    source_joiner.append_source(outro);
-  }
-
-  if let Some(footer) = footer {
-    source_joiner.append_source(footer);
-  }
-
-  source_joiner
+  None
 }
 
 // Make sure the imports generate stmts keep live bindings.
-fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
+pub fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
   let mut s = String::new();
   let ascii_only = ctx.options.charset.is_ascii();
 

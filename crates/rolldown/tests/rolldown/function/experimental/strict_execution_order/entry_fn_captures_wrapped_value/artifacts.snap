@@ -8,16 +8,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_facade, t as getPref } from "./pref.js";
+
 // first.js
 function init_first() {
 	return (init_first = __esmMin((() => {
 		(globalThis.__events ??= []).push("first");
 	})))();
 }
+
 // node_modules/pref-pkg/index.js
 function tag(value) {
 	return `tag:${value}`;
 }
+
 // main.js
 function boot() {
 	return tag(getPref());
@@ -34,6 +37,7 @@ function init_main() {
 		globalThis.__ready = initApplication();
 	})))();
 }
+
 init_main();
 
 ```
@@ -83,12 +87,15 @@ export { __esmMin as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_facade, t as getPref } from "./pref.js";
+
 // first.js
 (globalThis.__events ??= []).push("first");
+
 // node_modules/pref-pkg/index.js
 function tag(value) {
 	return `tag:${value}`;
 }
+
 // main.js
 function boot() {
 	return tag(getPref());
@@ -104,6 +111,7 @@ function init_main() {
 		globalThis.__ready = initApplication();
 	})))();
 }
+
 init_main();
 
 ```

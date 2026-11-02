@@ -129,11 +129,10 @@ export { __exportAll as t };
 ```js
 import { t as __exportAll } from "./main.js";
 __rolldown_runtime__.registerGraph({
-	ids: ["new-dynamic.js"],
-	localCount: 1,
-	edges: [[]]
+	"ids": ["new-dynamic.js"],
+	"localCount": 1,
+	"edges": [[]]
 });
-// new-dynamic.js
 var new_dynamic_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 __rolldown_runtime__.createModuleHotContext("new-dynamic.js");
 __rolldown_runtime__.registerModule("new-dynamic.js", { exports: new_dynamic_exports });

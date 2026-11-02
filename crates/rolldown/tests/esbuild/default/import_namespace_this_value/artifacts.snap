@@ -50,6 +50,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 let external = require("external");
 external = require_rolldown_runtime.__toESM(external);
+
 // a.js
 console.log(external[foo](), new external[foo]());
 
@@ -61,6 +62,7 @@ console.log(external[foo](), new external[foo]());
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 let external = require("external");
 external = require_rolldown_runtime.__toESM(external);
+
 // b.js
 console.log(external.foo(), new external.foo());
 
@@ -72,6 +74,7 @@ console.log(external.foo(), new external.foo());
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 let external = require("external");
 external = require_rolldown_runtime.__toESM(external);
+
 // c.js
 console.log((0, external.default)(), (0, external.foo)());
 console.log(new external.default(), new external.foo());
@@ -81,7 +84,26 @@ console.log(new external.default(), new external.foo());
 ## rolldown-runtime.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, "default") ? __defProp(target, "default", {
+	value: mod,
+	enumerable: true
+}) : target, mod));
 Object.defineProperty(exports, "__toESM", {
 	enumerable: true,
 	get: function() {

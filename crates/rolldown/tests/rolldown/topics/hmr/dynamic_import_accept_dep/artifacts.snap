@@ -8,11 +8,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { t as __exportAll } from "./main.js";
 __rolldown_runtime__.registerGraph({
-	ids: ["foo.js"],
-	localCount: 1,
-	edges: [[]]
+	"ids": ["foo.js"],
+	"localCount": 1,
+	"edges": [[]]
 });
-// foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
 __rolldown_runtime__.createModuleHotContext("foo.js");
 __rolldown_runtime__.registerModule("foo.js", { exports: foo_exports });

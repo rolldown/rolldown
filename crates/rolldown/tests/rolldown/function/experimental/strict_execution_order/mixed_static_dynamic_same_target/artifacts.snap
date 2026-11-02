@@ -22,6 +22,7 @@ var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.sideEffect = sideEffect;
 	module.exports = sideEffect;
 }));
+
 // dep-b.js
 var dep_b_exports = /* @__PURE__ */ __exportAll({});
 function init_dep_b() {
@@ -29,6 +30,8 @@ function init_dep_b() {
 		sideEffect.touched = true;
 	})))();
 }
+
+// main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		require_dep_a();
@@ -36,6 +39,7 @@ function init_main() {
 		Promise.resolve().then(() => (init_dep_b(), dep_b_exports));
 	})))();
 }
+
 init_main();
 
 ```
@@ -63,6 +67,7 @@ var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.sideEffect = sideEffect;
 	module.exports = sideEffect;
 }));
+
 // dep-b.js
 var dep_b_exports = /* @__PURE__ */ __exportAll({});
 function init_dep_b() {
@@ -70,6 +75,8 @@ function init_dep_b() {
 		sideEffect.touched = true;
 	})))();
 }
+
+// main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		require_dep_a();
@@ -77,6 +84,7 @@ function init_main() {
 		Promise.resolve().then(() => (init_dep_b(), dep_b_exports));
 	})))();
 }
+
 init_main();
 
 ```

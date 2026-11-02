@@ -28,6 +28,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((async () => {
@@ -35,6 +36,7 @@ function init_main() {
 		await import("./page-a.js");
 	})))();
 }
+
 await init_main();
 
 ```
@@ -44,6 +46,7 @@ await init_main();
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
+
 // common-a.js
 function mark$1() {
 	globalThis.valueA = typeof globalThis.valueA === "number" ? globalThis.valueA + 1 : 0;
@@ -55,6 +58,7 @@ function init_common_a() {
 		collision$1 = /* @__PURE__ */ mark$1();
 	})))();
 }
+
 // common-b.js
 function mark() {
 	globalThis.valueB = typeof globalThis.valueB === "number" ? globalThis.valueB + 1 : 0;
@@ -66,6 +70,7 @@ function init_common_b() {
 		collision = /* @__PURE__ */ mark();
 	})))();
 }
+
 // page-a.js
 function init_page_a() {
 	return (init_page_a = __esmMin((() => {
@@ -77,6 +82,7 @@ function init_page_a() {
 		assert.strictEqual(collision, "b");
 	})))();
 }
+
 init_page_a();
 
 ```
@@ -86,6 +92,7 @@ init_page_a();
 ```js
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
+
 // bridge.js
 var bridge_exports = /* @__PURE__ */ __exportAll({ ok: () => ok });
 function ok() {
@@ -94,6 +101,7 @@ function ok() {
 function init_bridge() {
 	return (init_bridge = __esmMin((() => {})))();
 }
+
 // page-b.js
 function init_page_b() {
 	return (init_page_b = __esmMin((() => {
@@ -103,6 +111,7 @@ function init_page_b() {
 		assert.strictEqual(globalThis.valueB, void 0);
 	})))();
 }
+
 init_page_b();
 
 ```
@@ -154,6 +163,7 @@ await import("./page-a.js");
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
+
 // common-a.js
 function mark$1() {
 	globalThis.valueA = typeof globalThis.valueA === "number" ? globalThis.valueA + 1 : 0;
@@ -165,6 +175,7 @@ function init_common_a() {
 		collision$1 = /* @__PURE__ */ mark$1();
 	})))();
 }
+
 // common-b.js
 function mark() {
 	globalThis.valueB = typeof globalThis.valueB === "number" ? globalThis.valueB + 1 : 0;
@@ -176,6 +187,7 @@ function init_common_b() {
 		collision = /* @__PURE__ */ mark();
 	})))();
 }
+
 // page-a.js
 function init_page_a() {
 	return (init_page_a = __esmMin((() => {
@@ -187,6 +199,7 @@ function init_page_a() {
 		assert.strictEqual(collision, "b");
 	})))();
 }
+
 init_page_a();
 
 ```
@@ -196,11 +209,13 @@ init_page_a();
 ```js
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
+
 // bridge.js
 var bridge_exports = /* @__PURE__ */ __exportAll({ ok: () => ok });
 function ok() {
 	return 1;
 }
+
 // page-b.js
 function init_page_b() {
 	return (init_page_b = __esmMin((() => {
@@ -209,6 +224,7 @@ function init_page_b() {
 		assert.strictEqual(globalThis.valueB, void 0);
 	})))();
 }
+
 init_page_b();
 
 ```

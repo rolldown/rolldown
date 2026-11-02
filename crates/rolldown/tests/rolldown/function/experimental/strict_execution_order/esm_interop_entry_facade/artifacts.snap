@@ -73,6 +73,7 @@ export { __esmMin as n, __exportAll as r, __commonJSMin as t };
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { n as init_e } from "./e2.js";
+
 // a.js
 function init_a() {
 	return (init_a = __esmMin((() => {
@@ -80,6 +81,7 @@ function init_a() {
 		console.log("A");
 	})))();
 }
+
 init_a();
 
 ```

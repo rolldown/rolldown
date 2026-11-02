@@ -25,21 +25,28 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // esm-export-cjs-export.js
 module.exports = 1;
+
 // foo.js
 var require_foo = /* @__PURE__ */ __commonJSMin((() => {}));
+
 // esm-export-cjs-require.js
 require_foo();
+
 // esm-import-cjs-export.js
 var require_esm_import_cjs_export = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1;
 }));
+
 // cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1;
 }));
+
+// esm-import-cjs-require.js
 require_esm_import_cjs_export();
 var import_cjs = require_cjs();
 require_foo();
@@ -52,23 +59,21 @@ assert.equal(import_cjs.a, void 0);
 
 ```
 - ../esm-export-cjs-export.js
-(0:0) "module." --> (5:0) "module."
-(0:7) "exports = " --> (5:7) "exports = "
-(0:17) "1;\n" --> (5:17) "1;\n"
+(0:0) "module." --> (6:0) "module."
+(0:7) "exports = " --> (6:7) "exports = "
+(0:17) "1;\n" --> (6:17) "1;\n"
 - ../esm-import-cjs-export.js
-(1:0) "module." --> (12:1) "module."
-(1:7) "exports = " --> (12:8) "exports = "
-(1:17) "1;\n" --> (12:18) "1;\n"
+(1:0) "module." --> (16:1) "module."
+(1:7) "exports = " --> (16:8) "exports = "
+(1:17) "1;\n" --> (16:18) "1;\n"
 - ../cjs.js
-(0:0) "module." --> (16:1) "module."
-(0:7) "exports = " --> (16:8) "exports = "
-(0:17) "1;\n" --> (16:18) "1;\n"
+(0:0) "module." --> (21:1) "module."
+(0:7) "exports = " --> (21:8) "exports = "
+(0:17) "1;\n" --> (21:18) "1;\n"
 - ../esm-import-cjs-require.js
-(3:0) "assert." --> (21:0) "assert."
-(3:7) "equal(" --> (21:7) "equal("
-(3:13) "a, " --> (21:13) "import_cjs."
-(3:13) "a, " --> (21:24) "a, "
-(3:16) "undefined" --> (21:27) "void "
-(3:16) "undefined" --> (21:32) "0"
-(3:25) ");\n" --> (21:33) ");\n"
+(3:0) "assert." --> (28:0) "assert."
+(3:7) "equal(" --> (28:7) "equal("
+(3:13) "a, " --> (28:13) "import_cjs.a, "
+(3:16) "undefined" --> (28:27) "void 0"
+(3:25) ");\n" --> (28:33) ");\n"
 ```

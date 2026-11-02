@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
+
 // main.js
 var loadA, loadB;
 function init_main() {
@@ -16,6 +17,7 @@ function init_main() {
 		loadB = () => import("./route-b.js");
 	})))();
 }
+
 init_main();
 export { loadA, loadB };
 
@@ -34,6 +36,7 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { i as init_barrel_a_cjs_0, r as import_shared } from "./shared.js";
+
 // route-a.js
 var value;
 function init_route_a() {
@@ -43,6 +46,7 @@ function init_route_a() {
 		value = import_shared.default;
 	})))();
 }
+
 init_route_a();
 export { value };
 
@@ -53,6 +57,7 @@ export { value };
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { n as init_barrel_b_cjs_1, t as import_shared } from "./shared.js";
+
 // route-b.js
 var value;
 function init_route_b() {
@@ -62,6 +67,7 @@ function init_route_b() {
 		value = import_shared.default;
 	})))();
 }
+
 init_route_b();
 export { value };
 
@@ -123,6 +129,7 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { i as init_barrel_a_cjs_0, r as import_shared } from "./shared.js";
+
 // route-a.js
 var value;
 function init_route_a() {
@@ -132,6 +139,7 @@ function init_route_a() {
 		value = import_shared.default;
 	})))();
 }
+
 init_route_a();
 export { value };
 
@@ -142,6 +150,7 @@ export { value };
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { n as init_barrel_b_cjs_1, t as import_shared } from "./shared.js";
+
 // route-b.js
 var value;
 function init_route_b() {
@@ -151,6 +160,7 @@ function init_route_b() {
 		value = import_shared.default;
 	})))();
 }
+
 init_route_b();
 export { value };
 

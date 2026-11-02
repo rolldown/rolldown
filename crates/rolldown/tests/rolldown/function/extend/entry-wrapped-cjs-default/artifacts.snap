@@ -23,11 +23,13 @@ export default require_main();
 ### main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
+
 // main.js
 var require_main = /* @__PURE__ */ __commonJSMin((() => {
 	require_main();
 }));
+
 module.exports = require_main();
 
 ```

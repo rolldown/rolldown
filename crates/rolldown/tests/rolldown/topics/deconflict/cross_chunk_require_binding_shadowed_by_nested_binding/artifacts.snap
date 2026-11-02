@@ -8,10 +8,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_shared$1 = require("./shared.js");
+
 // main.js
 function read(require_shared) {
 	return [require_shared$1.shared(), require_shared];
 }
+
 exports.read = read;
 
 ```
@@ -20,8 +22,10 @@ exports.read = read;
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+
 // other.js
 const fromOther = require("./shared.js").shared();
+
 exports.fromOther = fromOther;
 
 ```
@@ -33,6 +37,7 @@ exports.fromOther = fromOther;
 function shared() {
 	return "shared";
 }
+
 Object.defineProperty(exports, "shared", {
 	enumerable: true,
 	get: function() {

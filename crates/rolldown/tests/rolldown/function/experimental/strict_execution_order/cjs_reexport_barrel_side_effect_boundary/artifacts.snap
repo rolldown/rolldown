@@ -33,6 +33,7 @@ export { init_inner_effectful_barrel as n, init_inner_effectful_barrel_cjs_0 as 
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
+
 // node_modules/pure-boundary-barrel/cn.js
 var cn;
 function init_cn() {
@@ -41,6 +42,7 @@ function init_cn() {
 		cn = () => "cn";
 	})))();
 }
+
 // node_modules/pure-nested-leaf/index.js
 var nestedCn;
 function init_pure_nested_leaf() {
@@ -48,6 +50,7 @@ function init_pure_nested_leaf() {
 		nestedCn = () => "nested-cn";
 	})))();
 }
+
 // ancestor.js
 function init_ancestor() {
 	return (init_ancestor = __esmMin((() => {
@@ -55,6 +58,7 @@ function init_ancestor() {
 		globalThis.__events.push("ancestor");
 	})))();
 }
+
 // main.js
 var loadRoute;
 function init_main() {
@@ -65,6 +69,7 @@ function init_main() {
 		loadRoute = () => import("./route.js");
 	})))();
 }
+
 init_main();
 export { loadRoute };
 
@@ -83,6 +88,7 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 ```js
 import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
 import { r as init_inner_effectful_barrel_cjs_0, t as import_nested_effectful_clone } from "./inner-effectful-barrel.js";
+
 // node_modules/effectful-clone/index.cjs
 var require_effectful_clone = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("effectful-clone");
@@ -94,6 +100,7 @@ function init_pure_boundary_barrel_cjs_1() {
 		import_effectful_clone = /* @__PURE__ */ __toESM(require_effectful_clone(), 1);
 	})))();
 }
+
 // route.js
 var value;
 function init_route() {
@@ -103,6 +110,7 @@ function init_route() {
 		value = [(0, import_effectful_clone.default)({ value: 1 }), (0, import_nested_effectful_clone.default)({ value: 2 })];
 	})))();
 }
+
 init_route();
 export { value };
 
@@ -142,6 +150,7 @@ export { init_inner_effectful_barrel as n, init_inner_effectful_barrel_cjs_0 as 
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
+
 // node_modules/pure-boundary-barrel/cn.js
 var cn;
 function init_cn() {
@@ -150,14 +159,17 @@ function init_cn() {
 		cn = () => "cn";
 	})))();
 }
+
 // node_modules/pure-nested-leaf/index.js
 const nestedCn = () => "nested-cn";
+
 // ancestor.js
 function init_ancestor() {
 	return (init_ancestor = __esmMin((() => {
 		globalThis.__events.push("ancestor");
 	})))();
 }
+
 // main.js
 var loadRoute;
 function init_main() {
@@ -168,6 +180,7 @@ function init_main() {
 		loadRoute = () => import("./route.js");
 	})))();
 }
+
 init_main();
 export { loadRoute };
 
@@ -186,6 +199,7 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 ```js
 import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
 import { r as init_inner_effectful_barrel_cjs_0, t as import_nested_effectful_clone } from "./inner-effectful-barrel.js";
+
 // node_modules/effectful-clone/index.cjs
 var require_effectful_clone = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("effectful-clone");
@@ -197,6 +211,7 @@ function init_pure_boundary_barrel_cjs_1() {
 		import_effectful_clone = /* @__PURE__ */ __toESM(require_effectful_clone(), 1);
 	})))();
 }
+
 // route.js
 var value;
 function init_route() {
@@ -206,6 +221,7 @@ function init_route() {
 		value = [(0, import_effectful_clone.default)({ value: 1 }), (0, import_nested_effectful_clone.default)({ value: 2 })];
 	})))();
 }
+
 init_route();
 export { value };
 

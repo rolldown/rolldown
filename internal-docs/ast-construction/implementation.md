@@ -82,6 +82,12 @@ Construct nodes programmatically (oxc per-type constructors, rolldown patterns v
 
 Authoring code as JS source and parsing it (`EcmaCompiler::parse`) is reserved for a large, fixed body of code where maintaining it as real JS clearly outweighs the one-time parse cost. In practice that is the **runtime module** (`crates/rolldown/src/module_loader/runtime_module_task.rs`) and essentially nothing else on the output side. Never parse for nodes that splice into an existing AST and need a synthetic `SPAN` + dummy `NodeId` — build those programmatically, per the constraint above.
 
+### Complete-program output wrappers
+
+`crates/rolldown/src/ecmascript/format/wrapper_ast.rs` constructs the bounded IIFE and UMD wrapper syntax directly: factory functions and parameters, namespace initialization, export markers, return statements, and UMD CommonJS/AMD/browser dispatch. The renderer captures resolved `output.globals` values in `WrappedPlan` when it invokes the option callbacks, so complete-program assembly never invokes a callback a second time. Finalized module statements move into the factory body with their original donor arenas and rebased spans intact.
+
+User-provided IIFE globals retain the renderer's argument-list syntax: real user text is parsed in an argument context, preserving commas, spreads, and comments. UMD globals keep their existing dot-separated property-path interpretation. Generated wrapper nodes use a zero-width span in the chunk's generated source region rather than a donor's offset zero; this keeps wrapper glue out of original-source mappings. See [chunk-ast-minify](../chunk-ast-minify/implementation.md) for the ownership and source-space model.
+
 ### Read-only inspection → `as_*` / `is_*`
 
 Keep read-only inspection helpers (on `ExpressionExt`, `CallExpressionExt`, `StatementExt`, …) separate from construction. Construction traits are named `*FactoryExt` and carry only `new_*`; inspection traits carry only `as_*` / `is_*`.

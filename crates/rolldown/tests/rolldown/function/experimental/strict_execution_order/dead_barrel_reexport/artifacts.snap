@@ -17,6 +17,7 @@ await import("./page-a.js").then(console.log);
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
+
 // common.js
 function foo() {
 	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
@@ -28,6 +29,7 @@ function init_common() {
 		_ = /* @__PURE__ */ foo();
 	})))();
 }
+
 // page-a.js
 function render() {
 	console.log(common, _);
@@ -38,6 +40,7 @@ function init_page_a() {
 		assert.strictEqual(globalThis.value, 0);
 	})))();
 }
+
 init_page_a();
 export { render };
 
@@ -48,6 +51,7 @@ export { render };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
+
 // page-b.js
 function render() {}
 function init_page_b() {
@@ -55,6 +59,7 @@ function init_page_b() {
 		assert.strictEqual(globalThis.value, void 0, "dead barrel re-export must not initialize common before page-b");
 	})))();
 }
+
 init_page_b();
 export { render };
 
@@ -76,6 +81,7 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((async () => {
@@ -83,6 +89,7 @@ function init_main() {
 		await import("./page-a.js").then(console.log);
 	})))();
 }
+
 await init_main();
 
 ```
@@ -92,6 +99,7 @@ await init_main();
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
+
 // common.js
 function foo() {
 	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
@@ -103,6 +111,7 @@ function init_common() {
 		_ = /* @__PURE__ */ foo();
 	})))();
 }
+
 // page-a.js
 function render() {
 	console.log(common, _);
@@ -113,6 +122,7 @@ function init_page_a() {
 		assert.strictEqual(globalThis.value, 0);
 	})))();
 }
+
 init_page_a();
 export { render };
 
@@ -123,6 +133,7 @@ export { render };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
+
 // page-b.js
 function render() {}
 function init_page_b() {
@@ -130,6 +141,7 @@ function init_page_b() {
 		assert.strictEqual(globalThis.value, void 0, "dead barrel re-export must not initialize common before page-b");
 	})))();
 }
+
 init_page_b();
 export { render };
 

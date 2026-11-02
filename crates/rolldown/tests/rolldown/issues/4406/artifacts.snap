@@ -7,8 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 let zod = require("zod");
+
 // main.js
 console.log(zod.z);
+
 Object.keys(zod).forEach(function(k) {
 	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
 		enumerable: true,

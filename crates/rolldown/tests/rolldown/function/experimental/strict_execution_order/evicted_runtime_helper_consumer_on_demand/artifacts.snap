@@ -20,6 +20,7 @@ import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as p, t as init_b } from "./group-b.js";
 import "./a.js";
 import { n as init_q } from "./z2.js";
+
 // e0.js
 function init_e0() {
 	return (init_e0 = __esmMin((() => {
@@ -28,6 +29,7 @@ function init_e0() {
 		console.log("E0", Object.keys(p).join());
 	})))();
 }
+
 init_e0();
 
 ```
@@ -141,6 +143,7 @@ const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_group_b = require("./group-b.js");
 require("./a.js");
 const require_z = require("./z2.js");
+
 // e0.js
 function init_e0() {
 	return (init_e0 = require_rolldown_runtime.__esmMin((() => {
@@ -149,6 +152,7 @@ function init_e0() {
 		console.log("E0", Object.keys(require_group_b.p).join());
 	})))();
 }
+
 init_e0();
 
 ```
@@ -157,6 +161,7 @@ init_e0();
 
 ```js
 require("./a.js");
+
 // e1.js
 console.log("E1");
 
@@ -166,16 +171,20 @@ console.log("E1");
 
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
+
 // p.js
 const p = {};
+
 // d.js
 var d_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ d: () => 1 });
+
 // b.js
 function init_b() {
 	return (init_b = require_rolldown_runtime.__esmMin((() => {
 		console.log("B", Object.keys(d_exports).join());
 	})))();
 }
+
 Object.defineProperty(exports, "init_b", {
 	enumerable: true,
 	get: function() {
@@ -194,7 +203,6 @@ Object.defineProperty(exports, "p", {
 ### rolldown-runtime.js
 
 ```js
-// \0rolldown/runtime.js
 var __defProp = Object.defineProperty;
 var __esmMin = (fn, res, err) => () => {
 	if (err) throw err[0];
@@ -239,18 +247,21 @@ require("./z2.js").init_z();
 
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
+
 // q.js
 function init_q() {
 	return (init_q = require_rolldown_runtime.__esmMin((() => {
 		console.log("Q");
 	})))();
 }
+
 // z.js
 function init_z() {
 	return (init_z = require_rolldown_runtime.__esmMin((() => {
 		console.log("Z");
 	})))();
 }
+
 Object.defineProperty(exports, "init_q", {
 	enumerable: true,
 	get: function() {

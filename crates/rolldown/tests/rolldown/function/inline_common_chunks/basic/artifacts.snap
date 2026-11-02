@@ -8,7 +8,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 __share("shared-ZmCA4nrZ", (exports) => {
-	// shared.js
 	function bump() {
 		count += 1;
 		return this === void 0 ? "this:undefined" : "this:bound";
@@ -22,14 +21,13 @@ __share("shared-ZmCA4nrZ", (exports) => {
 		})))();
 	}
 	__share_export(exports, {
-		i: () => marker,
-		n: () => count,
-		r: () => init_shared,
-		t: () => bump
+		"i": () => marker,
+		"n": () => count,
+		"r": () => init_shared,
+		"t": () => bump
 	});
 });
 var share_shared = __share_require("shared-ZmCA4nrZ");
-// a.js
 function init_a() {
 	return (init_a = __esmMin((() => {
 		share_shared.r();
@@ -46,7 +44,6 @@ init_a();
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 __share("shared-ZmCA4nrZ", (exports) => {
-	// shared.js
 	function bump() {
 		count += 1;
 		return this === void 0 ? "this:undefined" : "this:bound";
@@ -60,14 +57,13 @@ __share("shared-ZmCA4nrZ", (exports) => {
 		})))();
 	}
 	__share_export(exports, {
-		i: () => marker,
-		n: () => count,
-		r: () => init_shared,
-		t: () => bump
+		"i": () => marker,
+		"n": () => count,
+		"r": () => init_shared,
+		"t": () => bump
 	});
 });
 var share_shared = __share_require("shared-ZmCA4nrZ");
-// b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
 		share_shared.r();
@@ -82,7 +78,6 @@ init_b();
 ## rolldown-runtime.js
 
 ```js
-// \0rolldown/runtime.js
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __esmMin = (fn, res, err) => () => {

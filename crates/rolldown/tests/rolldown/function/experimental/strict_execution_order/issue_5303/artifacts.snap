@@ -8,14 +8,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_foo } from "./test.js";
+
 // setup.js
 globalThis.globalValue = "foo";
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_foo();
 	})))();
 }
+
 init_main();
 
 ```
@@ -63,12 +66,14 @@ export { init_foo as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_foo } from "./test.js";
+
 // setup.js
 function init_setup() {
 	return (init_setup = __esmMin((() => {
 		globalThis.globalValue = "foo";
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -76,6 +81,7 @@ function init_main() {
 		init_foo();
 	})))();
 }
+
 init_main();
 
 ```

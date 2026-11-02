@@ -21,7 +21,14 @@ use crate::{
 pub struct CarriedRender {
   pub record: ChunkIdx,
   /// One entry per module of the record, in the record's module order.
-  pub modules: Vec<ModuleRenderOutput>,
+  pub modules: Vec<CarriedModule>,
+}
+
+#[derive(Debug)]
+pub struct CarriedModule {
+  /// Retained until the carrier consumes it into its complete program, or uses the text path.
+  pub ast: Option<rolldown_ecmascript::EcmaAst>,
+  pub rendered: ModuleRenderOutput,
 }
 
 impl GenerateStage<'_> {
@@ -70,6 +77,8 @@ impl GenerateStage<'_> {
         first_carrier_of.entry(record).or_insert(file);
       }
     }
+    let retain_asts =
+      super::super::chunk_ast_dce::retain_inline_asts(self.options, self.plugin_driver);
     let has_enum_inlining = self.link_output.has_enum_inlining;
     let wrapper_refs = self.wrapper_refs(order_state);
 
@@ -81,7 +90,7 @@ impl GenerateStage<'_> {
         &wrapper_refs,
         &self.link_output.symbol_db,
       );
-      let modules: Vec<ModuleRenderOutput> = chunk_graph.chunk_table[record]
+      let modules: Vec<CarriedModule> = chunk_graph.chunk_table[record]
         .modules
         .iter()
         .map(|&module_idx| {
@@ -119,7 +128,7 @@ impl GenerateStage<'_> {
             has_enum_inlining,
             inline_state: &self.inline_state,
           };
-          let (_, _, module_diagnostics) = ctx.finalize_normal_module(&mut ast, ast_scope);
+          let (_, module_diagnostics) = ctx.finalize_normal_module(&mut ast, ast_scope);
           diagnostics.extend(module_diagnostics);
           // The selection rules keep every shape the finalizer turns into an import or export
           // declaration as a file; a declaration that reaches a factory would be a syntax error
@@ -132,7 +141,8 @@ impl GenerateStage<'_> {
           }
           diagnostics.extend(bare_bridge_callee(ast.program(), &callees, &module.stable_id));
           // A factory body sits one level inside the `__share` arrow function.
-          module.render(self.options, &ModuleRenderArgs::Ecma { ast: &ast }, 1)
+          let rendered = module.render(self.options, &ModuleRenderArgs::Ecma { ast: &ast }, 1);
+          CarriedModule { ast: retain_asts.then_some(ast), rendered }
         })
         .collect();
       (modules, diagnostics)

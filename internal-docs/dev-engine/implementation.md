@@ -145,11 +145,16 @@ apart.
 
 ### Output format: ESM only
 
-Dev mode only supports `output.format: "esm"`. Only the ESM renderer
+Dev mode only supports `output.format: "esm"`. The ESM renderer
 (`render_chunk_content` in `crates/rolldown/src/ecmascript/format/esm.rs`)
-writes the `registerGraph` prelude (§10). The CJS, IIFE, and UMD renderers
-do not, so their output would build with no error, but the browser runtime
-would have no module graph and HMR would break.
+writes the `registerGraph` prelude (§10). The global chunk-AST path emits the
+same prelude programmatically after the runtime donor, or before the chunk's
+own modules when the runtime is imported. Both use the topology collector in
+`hmr/module_graph_delta.rs`; carried inline records register their rows inside
+their factory after its bridges. Graph metadata has generated, unmapped spans.
+The CJS, IIFE, and UMD renderers do not emit dev graph data; without the
+validation below, their output would leave the browser runtime without a
+module graph and HMR would break.
 
 `verify_raw_options` in `crates/rolldown/src/utils/prepare_build_context.rs`
 rejects `cjs`, `iife`, and `umd` when `experimental.devMode` is set, with an

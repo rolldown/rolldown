@@ -11,7 +11,7 @@ use rolldown_common::{
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_error::{BuildDiagnostic, BuildResult, InvalidOptionType};
 use rolldown_sourcemap::collapse_sourcemaps;
-use rolldown_utils::poc_prof::{self, Phase, Timer};
+use rolldown_utils::poc_prof::{Phase, Timer};
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 use rustc_hash::FxHashSet;
 
@@ -21,10 +21,13 @@ use super::GenerateStage;
 
 impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
-  pub fn minify_chunks(
+  pub(super) fn minify_chunks(
     options: &NormalizedBundlerOptions,
     chunks: &mut IndexInstantiatedChunks,
     ast_dce_chunks: &FxHashSet<ChunkIdx>,
+    ast_property_cache: Option<oxc::minifier::ManglePropertyCache>,
+    deferred: super::chunk_ast_dce::DeferredChunks,
+    module_table: &rolldown_common::ModuleTable,
   ) -> BuildResult<Option<BTreeMap<String, Option<String>>>> {
     let Some((compress, minify_options, remove_whitespace, ascii_only)) =
       chunk_minify_options(&options.minify)
@@ -39,16 +42,68 @@ impl GenerateStage<'_> {
           .into(),
       );
     }
+    let property_mangle_cache = OnceLock::new();
+    if let Some(cache) = ast_property_cache {
+      property_mangle_cache.set(cache).expect("only one property-mangled chunk is permitted");
+    }
+    for (idx, pending) in deferred.pending {
+      let chunk =
+        chunks.iter_mut().find(|chunk| chunk.originate_from == idx).expect("pending chunk output");
+      let optimized = pending.optimize(
+        options,
+        module_table,
+        chunk.preliminary_filename.as_str(),
+        minify_options,
+      );
+      chunk.content = optimized.code.into();
+      chunk.map = optimized.map;
+      if let InstantiationKind::Ecma(meta) = &mut chunk.kind {
+        let rendered = &meta.rendered_chunk;
+        let mut modules = rendered.modules.clone();
+        let module_indices: rustc_hash::FxHashMap<_, _> =
+          modules.keys.iter().enumerate().map(|(index, id)| (id, index)).collect();
+        for (module_idx, sources) in optimized.modules {
+          let id = &module_table[module_idx].as_normal().expect("normal metadata donor").id;
+          if let Some(&index) = module_indices.get(id) {
+            let previous = &modules.values[index];
+            modules.values[index] = std::sync::Arc::new(rolldown_common::RenderedModule::new(
+              sources,
+              previous.rendered_exports.clone(),
+              previous.exec_order,
+            ));
+          }
+        }
+        // Hook arguments are immutable Arc snapshots. Publish a new final metadata object.
+        meta.rendered_chunk = std::sync::Arc::new(rolldown_common::RollupRenderedChunk {
+          originate_from: rendered.originate_from,
+          name: rendered.name.clone(),
+          is_entry: rendered.is_entry,
+          is_dynamic_entry: rendered.is_dynamic_entry,
+          facade_module_id: rendered.facade_module_id.clone(),
+          module_ids: rendered.module_ids.clone(),
+          exports: rendered.exports.clone(),
+          filename: rendered.filename.clone(),
+          modules,
+          imports: rendered.imports.clone(),
+          dynamic_imports: rendered.dynamic_imports.clone(),
+        });
+      }
+      if let Some(cache) = optimized.property_cache {
+        property_mangle_cache.set(cache).expect("one property-mangled chunk");
+      }
+    }
     let allocator_pool = AllocatorPool::new(rayon::current_num_threads());
     let source_type = options.format.source_type().with_jsx(true);
 
-    let property_mangle_cache = OnceLock::new();
     chunks.par_iter_mut().try_for_each(|chunk| -> BuildResult<()> {
       if !is_minifiable_ecma_chunk(chunk) {
         return Ok(());
       }
-      // PoC: DCE already ran on this chunk's AST (`chunk_ast_dce`).
-      if ast_dce_chunks.contains(&chunk.originate_from) {
+      // This chunk was already optimized as a retained AST.
+      if ast_dce_chunks.contains(&chunk.originate_from)
+        && !deferred.replaced.contains(&chunk.originate_from)
+        && !deferred.rendered_text.contains(&chunk.originate_from)
+      {
         #[cfg(feature = "testing")]
         super::chunk_ast_dce::record_coverage(
           options,
@@ -58,11 +113,18 @@ impl GenerateStage<'_> {
         );
         return Ok(());
       }
+      let replaced = deferred.replaced.contains(&chunk.originate_from);
+      let addon_text = deferred.rendered_text.contains(&chunk.originate_from);
+      assert!(
+        replaced || addon_text,
+        "chunk AST pipeline has no admitted input for {:?}",
+        chunk.preliminary_filename
+      );
       #[cfg(feature = "testing")]
       super::chunk_ast_dce::record_coverage(
         options,
         "late_minify",
-        "original",
+        if replaced { "hook_text" } else { "addon_text" },
         Some(chunk.preliminary_filename.as_str()),
       );
       let codegen_options = CodegenOptions {
@@ -87,7 +149,7 @@ impl GenerateStage<'_> {
       // content instead of paying an `into_owned` copy of the whole chunk text.
       let (minified_content, collapsed_map) = {
         // TODO: Do we need to ensure `chunk.preliminary_filename` to be absolute path?
-        let (minified_content, new_map, chunk_property_mangle_cache) = dce_or_minify(
+        let (minified_content, new_map, chunk_property_mangle_cache) = optimize_final_text(
           &allocator_guard,
           chunk.content.try_as_inner_str()?,
           source_type,
@@ -160,10 +222,9 @@ impl GenerateStage<'_> {
   }
 }
 
-/// `EcmaCompiler::dce_or_minify`, split into timed phases when `ROLLDOWN_POC_PROF=1`.
+/// Parse actual hook/addon text into the shared AST optimizer. The map borrows this input until composition.
 #[expect(clippy::too_many_arguments)]
-#[expect(clippy::print_stderr, reason = "PoC debug output behind an env var")]
-fn dce_or_minify<'a>(
+fn optimize_final_text<'a>(
   allocator: &'a oxc_allocator::Allocator,
   source_text: &'a str,
   source_type: oxc::span::SourceType,
@@ -179,43 +240,29 @@ fn dce_or_minify<'a>(
 )> {
   use oxc::{
     codegen::Codegen,
-    minifier::Minifier,
     parser::{ParseOptions, Parser},
   };
-  if !*poc_prof::ENABLED {
-    return EcmaCompiler::dce_or_minify(
-      allocator,
-      source_text,
-      source_type,
-      enable_sourcemap,
-      filename,
-      compress,
-      minify_options,
-      codegen_options,
-    );
-  }
   let t = Timer::start();
   let ret = Parser::new(allocator, source_text, source_type)
     .with_options(ParseOptions { preserve_parens: false, ..ParseOptions::default() })
     .parse();
-  assert!(!ret.fatal_error && ret.diagnostics.is_empty());
+  if ret.fatal_error || !ret.diagnostics.is_empty() {
+    return Err(
+      BuildDiagnostic::from_oxc_diagnostics(
+        ret.diagnostics,
+        &arcstr::ArcStr::from(source_text),
+        filename,
+        rolldown_error::Severity::Error,
+        rolldown_error::EventKind::ParseError,
+      )
+      .into(),
+    );
+  }
   let mut program = ret.program;
   t.stop(Phase::MinifyParse);
   let t = Timer::start();
-  let ret = if *poc_prof::ENABLED {
-    EcmaCompiler::minify_profiled(allocator, &mut program, minify_options, compress, false)
-  } else {
-    let minifier = Minifier::new(minify_options);
-    if compress {
-      minifier.minify(allocator, &mut program)
-    } else {
-      minifier.dce(allocator, &mut program)
-    }
-  };
+  let ret = EcmaCompiler::minify_program(allocator, &mut program, minify_options, compress, false);
   t.stop(Phase::MinifyDce);
-  if std::env::var_os("ROLLDOWN_CHUNK_AST_DCE_DEBUG").is_some() {
-    eprintln!("minify_chunks dce iterations={}", ret.iterations);
-  }
   let t = Timer::start();
   let property_mangle_cache = ret.property_mangle_cache;
   let ret = Codegen::new()
@@ -254,6 +301,75 @@ fn test_d_ts_pattern(input: &str) -> bool {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  fn chunk(id: u32, filename: &str, ecma: bool) -> InstantiatedChunk {
+    use rolldown_common::{EcmaAssetMeta, Modules, PreliminaryFilename, RollupRenderedChunk};
+
+    let filename: arcstr::ArcStr = filename.into();
+    let preliminary_filename = PreliminaryFilename::new(filename.clone(), None);
+    InstantiatedChunk {
+      originate_from: ChunkIdx::from_raw(id),
+      content: "export const value = 1 + 2;".to_owned().into(),
+      map: Some(rolldown_sourcemap::empty_sourcemap()),
+      kind: if ecma {
+        EcmaAssetMeta {
+          rendered_chunk: std::sync::Arc::new(RollupRenderedChunk {
+            originate_from: ChunkIdx::from_raw(id),
+            name: "test".into(),
+            is_entry: true,
+            is_dynamic_entry: false,
+            facade_module_id: None,
+            module_ids: vec![],
+            exports: vec![],
+            filename,
+            modules: Modules { keys: vec![], values: vec![] },
+            imports: vec![],
+            dynamic_imports: vec![],
+          }),
+          debug_id: 0,
+          imports: vec![],
+          dynamic_imports: vec![],
+          sourcemap_filename: None,
+          file_dir: std::path::PathBuf::default(),
+          preliminary_filename: preliminary_filename.clone(),
+        }
+        .into()
+      } else {
+        InstantiationKind::None
+      },
+      augment_chunk_hash: None,
+      preliminary_filename,
+      preliminary_sourcemap_filename: None,
+      post_banner: None,
+      post_footer: None,
+    }
+  }
+
+  fn minify_options() -> NormalizedBundlerOptions {
+    let mut options = NormalizedBundlerOptions::default();
+    options.minify = rolldown_common::RawMinifyOptions::Bool(true).normalize(&options);
+    options
+  }
+
+  #[test]
+  fn property_validation_precedes_chunk_input_invariant() {
+    let mut options = minify_options();
+    let MinifyOptions::Enabled(ref mut minify) = options.minify else { unreachable!() };
+    minify.options.mangle_properties =
+      Some(oxc::minifier::ManglePropertiesOptions::from_pattern("^private_").unwrap());
+    let mut chunks =
+      [chunk(0, "first.js", true), chunk(1, "second.js", true)].into_iter().collect();
+    let error = GenerateStage::minify_chunks(
+      &options,
+      &mut chunks,
+      &FxHashSet::default(),
+      None,
+      super::super::chunk_ast_dce::DeferredChunks::default(),
+      &rolldown_common::ModuleTable::default(),
+    )
+    .unwrap_err();
+    assert!(error.to_string().contains("property mangling is currently supported only"));
+  }
 
   #[test]
   fn test_edge_cases() {

@@ -6,17 +6,29 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## app.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+var __defProp = Object.defineProperty;
+var __exportAll = (all, no_symbols) => {
+	let target = {};
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
+	return target;
+};
+
 // vendor.js
 function f0(x) {
 	return x * 2 + 1;
 }
+
 // app.js
 var app_exports = /* @__PURE__ */ __exportAll({ done: () => done });
 console.log(f0(1));
 const done = Promise.resolve().then(() => require("./lazy.js")).then(({ fn }) => {
 	fn();
 });
+
 Object.defineProperty(exports, "app_exports", {
 	enumerable: true,
 	get: function() {
@@ -32,10 +44,12 @@ exports.f0 = f0;
 
 ```js
 const require_app = require("./app.js");
+
 // lazy.js
 function fn() {
 	console.log(require_app.f0(3));
 }
+
 exports.fn = fn;
 
 ```
@@ -44,11 +58,13 @@ exports.fn = fn;
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+
 // main.js
 const done = Promise.resolve().then(() => require("./app.js")).then((n) => n.app_exports).then(async (app) => {
 	await app.done;
 	return Object.keys(app).sort();
 });
+
 exports.done = done;
 
 ```

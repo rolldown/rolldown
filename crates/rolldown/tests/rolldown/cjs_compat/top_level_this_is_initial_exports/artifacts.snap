@@ -89,36 +89,63 @@ export { all };
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-// HIDDEN [\0rolldown/runtime.js]
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, "default") ? __defProp(target, "default", {
+	value: mod,
+	enumerable: true
+}) : target, mod));
+
 // declared.cjs
 var require_declared = /* @__PURE__ */ __commonJSMin(((exports, module, this$8) => {
 	this$8.viaThis = { local: true }.local;
 }));
+
 // assigned.cjs
 var require_assigned = /* @__PURE__ */ __commonJSMin(((exports, module, this$7) => {
 	exports = { local: true };
 	this$7.viaThis = exports.local;
 }));
+
 // replaced.cjs
 var require_replaced = /* @__PURE__ */ __commonJSMin(((exports, module, this$6) => {
 	exports = {};
 	module.exports = { value: "replacement" };
 	this$6.value = "original";
 }));
+
 // nulled.cjs
 var require_nulled = /* @__PURE__ */ __commonJSMin(((exports, module, this$5) => {
 	module.exports = null;
 	this$5.value = "original";
 }));
+
 // fnexports.cjs
 var require_fnexports = /* @__PURE__ */ __commonJSMin(((exports, module, this$4) => {
 	function exports() {}
 	this$4.value = typeof exports;
 }));
+
 // varmodule.cjs
 var require_varmodule = /* @__PURE__ */ __commonJSMin(((exports, module, this$3) => {
 	this$3.value = { exports: "fake" }.exports;
 }));
+
 // arrow.cjs
 var require_arrow = /* @__PURE__ */ __commonJSMin(((exports, module, this$2) => {
 	const set = () => {
@@ -126,12 +153,14 @@ var require_arrow = /* @__PURE__ */ __commonJSMin(((exports, module, this$2) => 
 	};
 	set();
 }));
+
 // plain.cjs
 var require_plain = /* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
 	this$1.a = 1;
 	exports.b = 2;
 	module.exports.c = this$1 === exports;
 }));
+
 // main.js
 var import_declared = /* @__PURE__ */ __toESM(require_declared());
 var import_assigned = /* @__PURE__ */ __toESM(require_assigned());
@@ -151,6 +180,7 @@ const all = {
 	arrow: import_arrow.default,
 	plain: import_plain.default
 };
+
 exports.all = all;
 
 ```

@@ -42,6 +42,7 @@ export { other as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as other, t as init_helper } from "./helper.js";
+
 // entry-a.js
 function init_entry_a() {
 	return (init_entry_a = __esmMin((() => {
@@ -49,6 +50,7 @@ function init_entry_a() {
 		console.log(other);
 	})))();
 }
+
 init_entry_a();
 
 ```
@@ -58,6 +60,7 @@ init_entry_a();
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as other, t as init_helper } from "./helper.js";
+
 // entry-b.js
 function init_entry_b() {
 	return (init_entry_b = __esmMin((() => {
@@ -65,6 +68,7 @@ function init_entry_b() {
 		console.log(other);
 	})))();
 }
+
 init_entry_b();
 
 ```

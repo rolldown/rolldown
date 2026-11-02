@@ -45,10 +45,21 @@ Promise.resolve().then(() => foo_exports).then((mod) => {
 ### main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+var __defProp = Object.defineProperty;
+var __exportAll = (all, no_symbols) => {
+	let target = {};
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
+	return target;
+};
 let node_assert = require("node:assert");
+
 // foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => "foo" });
+
 // main.js
 (0, node_assert.strictEqual)("foo", "foo");
 Promise.resolve().then(() => foo_exports).then((mod) => {

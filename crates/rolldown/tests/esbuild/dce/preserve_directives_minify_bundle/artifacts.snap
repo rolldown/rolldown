@@ -98,26 +98,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+//! A
+//! B
+//! C
+//! 1
+//! 2
+//! 3
 "use 1";
 "use 2";
 "use 3";
+//! D
+//! E
+//! F
+//! 4
+//! 5
+//! 6
 (function() {
-	// nested.js
-	//! A
-	//! B
-	//! C
 	nested();
-	//! D
-	//! E
-	//! F
-	// entry.js
-	//! 1
-	//! 2
-	//! 3
 	entry();
-	//! 4
-	//! 5
-	//! 6
 })();
 
 ```

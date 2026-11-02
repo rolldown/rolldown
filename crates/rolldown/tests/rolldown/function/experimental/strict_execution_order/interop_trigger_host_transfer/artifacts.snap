@@ -61,6 +61,7 @@ export { init_m3 as t };
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { t as init_s } from "./s.js";
 import { t as init_m3 } from "./m32.js";
+
 // m1.js
 function init_m1() {
 	return (init_m1 = __esmMin((() => {
@@ -69,6 +70,7 @@ function init_m1() {
 		console.log("M1");
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -76,6 +78,7 @@ function init_main() {
 		console.log("A");
 	})))();
 }
+
 init_main();
 
 ```
@@ -165,6 +168,7 @@ export { init_m3 as t };
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { t as init_s } from "./s.js";
 import { t as init_m3 } from "./m32.js";
+
 // m1.js
 function init_m1() {
 	return (init_m1 = __esmMin((() => {
@@ -173,6 +177,7 @@ function init_m1() {
 		console.log("M1");
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -180,6 +185,7 @@ function init_main() {
 		console.log("A");
 	})))();
 }
+
 init_main();
 
 ```

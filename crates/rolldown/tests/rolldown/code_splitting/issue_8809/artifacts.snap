@@ -38,6 +38,7 @@ export { __commonJSMin as i, start as n, stop as r, daemon_exports as t };
 
 ```js
 import { i as __commonJSMin, n as start, r as stop } from "./daemon.js";
+
 // gateway.js
 var import_cjs_dep = (/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.helper = function() {
@@ -47,10 +48,12 @@ var import_cjs_dep = (/* @__PURE__ */ __commonJSMin(((exports) => {
 function gateway() {
 	return start() + stop();
 }
+
 // entry.js
 function main() {
 	return (0, import_cjs_dep.helper)() + gateway();
 }
+
 export { main };
 
 ```

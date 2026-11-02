@@ -23,6 +23,7 @@ assert.strictEqual(foo, "foo");
 
 ```js
 import assert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // main.js
 var A, foo;
@@ -33,6 +34,7 @@ function init_main() {
 		assert.strictEqual(foo, "foo");
 	})))();
 }
+
 init_main();
 
 ```

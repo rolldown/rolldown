@@ -27,7 +27,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 		__esModule: { value: true },
 		[Symbol.toStringTag]: { value: "Module" }
 	});
-	// test.json
 	var test = 123;
 	var invalid_identifier = true;
 	var test_default = {

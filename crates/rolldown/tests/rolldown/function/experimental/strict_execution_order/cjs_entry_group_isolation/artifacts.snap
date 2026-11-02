@@ -6,16 +6,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## common.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
+
 // effect.js
 var require_effect = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	(globalThis.__cjs_entry_group_isolation ??= []).push("effect-entry");
 	module.exports = { name: "effect" };
 }));
+
 // silent.js
 var require_silent = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { name: "silent" };
 }));
+
 Object.defineProperty(exports, "require_effect", {
 	enumerable: true,
 	get: function() {
@@ -54,16 +57,19 @@ module.exports = require_common.require_silent();
 ### common.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
+
 // effect.js
 var require_effect = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	(globalThis.__cjs_entry_group_isolation ??= []).push("effect-entry");
 	module.exports = { name: "effect" };
 }));
+
 // silent.js
 var require_silent = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { name: "silent" };
 }));
+
 Object.defineProperty(exports, "require_effect", {
 	enumerable: true,
 	get: function() {

@@ -278,7 +278,7 @@ impl<'a> GenerateStage<'a> {
 
     let resolved_file_urls = self.resolve_file_urls(&chunk_graph).await?;
     self.finalize_modules(
-      &mut chunk_graph,
+      &chunk_graph,
       &mut ast_table,
       &resolved_file_urls,
       &used_symbol_refs,
@@ -559,6 +559,7 @@ impl<'a> GenerateStage<'a> {
           inline_state: &self.inline_state,
           carried_renders: vec![],
           chunk_ast_dce: None,
+          defer_ast: false,
         },
         entry_module,
         &export_names,

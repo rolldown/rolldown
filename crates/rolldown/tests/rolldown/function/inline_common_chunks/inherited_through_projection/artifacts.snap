@@ -9,7 +9,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 import { n as v, t as init_v } from "./v.js";
 __share("r-5zf2vLDN", (exports) => {
-	// r.js
 	function r() {
 		return v();
 	}
@@ -19,13 +18,12 @@ __share("r-5zf2vLDN", (exports) => {
 		})))();
 	}
 	__share_export(exports, {
-		n: () => r,
-		t: () => init_r
+		"n": () => r,
+		"t": () => init_r
 	});
 });
 var share_s = __share_require("s-v3kGiqU-");
 var share_r = __share_require("r-5zf2vLDN");
-// a.js
 function init_a() {
 	return (init_a = __esmMin((() => {
 		share_r.t();
@@ -43,7 +41,6 @@ init_a();
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 import { n as v, t as init_v } from "./v.js";
 __share("r-5zf2vLDN", (exports) => {
-	// r.js
 	function r() {
 		return v();
 	}
@@ -53,12 +50,11 @@ __share("r-5zf2vLDN", (exports) => {
 		})))();
 	}
 	__share_export(exports, {
-		n: () => r,
-		t: () => init_r
+		"n": () => r,
+		"t": () => init_r
 	});
 });
 var share_r = __share_require("r-5zf2vLDN");
-// b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
 		share_r.t();
@@ -74,7 +70,6 @@ init_b();
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 __share("s-v3kGiqU-", (exports) => {
-	// s.js
 	function s() {
 		return ++n;
 	}
@@ -86,12 +81,11 @@ __share("s-v3kGiqU-", (exports) => {
 		})))();
 	}
 	__share_export(exports, {
-		n: () => s,
-		t: () => init_s
+		"n": () => s,
+		"t": () => init_s
 	});
 });
 var share_s = __share_require("s-v3kGiqU-");
-// c.js
 function init_c() {
 	return (init_c = __esmMin((() => {
 		share_s.t();
@@ -115,7 +109,6 @@ export { __share_require as i, __share as n, __share_export as r, __esmMin as t 
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 __share("s-v3kGiqU-", (exports) => {
-	// s.js
 	function s() {
 		return ++n;
 	}
@@ -127,12 +120,11 @@ __share("s-v3kGiqU-", (exports) => {
 		})))();
 	}
 	__share_export(exports, {
-		n: () => s,
-		t: () => init_s
+		"n": () => s,
+		"t": () => init_s
 	});
 });
 var share_s = __share_require("s-v3kGiqU-");
-// v.js
 function v() {
 	return (0, share_s.n)();
 }

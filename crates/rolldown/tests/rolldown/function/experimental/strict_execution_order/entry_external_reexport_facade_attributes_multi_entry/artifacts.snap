@@ -7,8 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import "./shared.js";
-
-export * from "external" with { type: "json" }
+export * from "external" with { type: "json" };
 
 ```
 
@@ -16,8 +15,7 @@ export * from "external" with { type: "json" }
 
 ```js
 import "./shared.js";
-
-export * from "external" with { type: "css" }
+export * from "external" with { type: "css" };
 
 ```
 

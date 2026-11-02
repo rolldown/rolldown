@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_app_admin } from "./apps~personal~admin~theming.js";
+
 // admin.js
 function init_admin() {
 	return (init_admin = __esmMin((() => {
@@ -15,6 +16,7 @@ function init_admin() {
 		(globalThis.sideEffectLog ??= []).push("admin");
 	})))();
 }
+
 init_admin();
 
 ```
@@ -100,6 +102,7 @@ export { __esmMin as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_app_theming } from "./apps~personal~admin~theming.js";
+
 // theming.js
 function init_theming() {
 	return (init_theming = __esmMin((() => {
@@ -107,6 +110,7 @@ function init_theming() {
 		(globalThis.sideEffectLog ??= []).push("theming");
 	})))();
 }
+
 init_theming();
 
 ```
@@ -120,6 +124,7 @@ init_theming();
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_app_admin } from "./apps~personal~admin~theming.js";
+
 // admin.js
 function init_admin() {
 	return (init_admin = __esmMin((() => {
@@ -127,6 +132,7 @@ function init_admin() {
 		(globalThis.sideEffectLog ??= []).push("admin");
 	})))();
 }
+
 init_admin();
 
 ```
@@ -212,6 +218,7 @@ export { __esmMin as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_app_theming } from "./apps~personal~admin~theming.js";
+
 // theming.js
 function init_theming() {
 	return (init_theming = __esmMin((() => {
@@ -219,6 +226,7 @@ function init_theming() {
 		(globalThis.sideEffectLog ??= []).push("theming");
 	})))();
 }
+
 init_theming();
 
 ```

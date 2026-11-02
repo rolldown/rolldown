@@ -16,7 +16,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 (function(node_path) {
-	// main.js
 	console.log((0, node_path.join)("a", "b"));
 })(node_path);
 

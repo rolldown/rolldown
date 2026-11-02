@@ -44,6 +44,7 @@ export { init_cyc_b as t };
 ```js
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_cyc_a } from "./ca.js";
+
 // linear.js
 function makeUnit() {
 	return { value: 7 };
@@ -57,6 +58,7 @@ function init_linear() {
 		unit$1 = /* @__PURE__ */ makeUnit();
 	})))();
 }
+
 // pow.js
 function makePow() {
 	return { value: 3 };
@@ -70,6 +72,7 @@ function init_pow() {
 		unit = /* @__PURE__ */ makePow();
 	})))();
 }
+
 // outer-barrel.js
 var outer_barrel_exports = /* @__PURE__ */ __exportAll({
 	scaleLinear: () => scaleLinear,
@@ -81,6 +84,7 @@ function init_outer_barrel() {
 		init_pow();
 	})))();
 }
+
 // reader.js
 function getScale(name) {
 	const factory = outer_barrel_exports[name];
@@ -94,6 +98,7 @@ function init_reader() {
 		(globalThis.__events ??= []).push("reader");
 	})))();
 }
+
 // dynamic-page.js
 function init_dynamic_page() {
 	return (init_dynamic_page = __esmMin((() => {
@@ -101,6 +106,7 @@ function init_dynamic_page() {
 		(globalThis.__events ??= []).push("dynamic-page");
 	})))();
 }
+
 init_dynamic_page();
 export { getScale };
 
@@ -110,6 +116,7 @@ export { getScale };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // main.js
 function loadPage() {
 	return import("./dynamic-page.js");
@@ -119,6 +126,7 @@ function init_main() {
 		(globalThis.__events ??= []).push("main");
 	})))();
 }
+
 init_main();
 export { loadPage };
 
@@ -177,6 +185,7 @@ export { init_cyc_b as t };
 ```js
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_cyc_a } from "./ca.js";
+
 // linear.js
 function makeUnit() {
 	return { value: 7 };
@@ -190,6 +199,7 @@ function init_linear() {
 		unit$1 = /* @__PURE__ */ makeUnit();
 	})))();
 }
+
 // pow.js
 function makePow() {
 	return { value: 3 };
@@ -203,6 +213,7 @@ function init_pow() {
 		unit = /* @__PURE__ */ makePow();
 	})))();
 }
+
 // outer-barrel.js
 var outer_barrel_exports = /* @__PURE__ */ __exportAll({
 	scaleLinear: () => scaleLinear,
@@ -214,6 +225,7 @@ function init_outer_barrel() {
 		init_pow();
 	})))();
 }
+
 // reader.js
 function getScale(name) {
 	const factory = outer_barrel_exports[name];
@@ -227,6 +239,7 @@ function init_reader() {
 		(globalThis.__events ??= []).push("reader");
 	})))();
 }
+
 // dynamic-page.js
 function init_dynamic_page() {
 	return (init_dynamic_page = __esmMin((() => {
@@ -234,6 +247,7 @@ function init_dynamic_page() {
 		(globalThis.__events ??= []).push("dynamic-page");
 	})))();
 }
+
 init_dynamic_page();
 export { getScale };
 

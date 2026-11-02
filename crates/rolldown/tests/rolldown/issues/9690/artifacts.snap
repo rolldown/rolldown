@@ -10,8 +10,10 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 let mock_cjs = require("mock-cjs");
 mock_cjs = require_rolldown_runtime.__toESM(mock_cjs, 1);
+
 // src/from-ts.ts
 const result = mock_cjs.default.div``;
+
 exports.result = result;
 
 ```
@@ -23,8 +25,10 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 let mock_cjs = require("mock-cjs");
 mock_cjs = require_rolldown_runtime.__toESM(mock_cjs, 1);
+
 // src/from-tsx.tsx
 const result = mock_cjs.default.div``;
+
 exports.result = result;
 
 ```
@@ -32,7 +36,26 @@ exports.result = result;
 ## rolldown-runtime.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, "default") ? __defProp(target, "default", {
+	value: mod,
+	enumerable: true
+}) : target, mod));
 Object.defineProperty(exports, "__toESM", {
 	enumerable: true,
 	get: function() {

@@ -12,8 +12,8 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   ExportsKind, HmrInfo, ImportRecordIdx, ImporterRecord, LocalExport, ModuleDefFormat, ModuleId,
-  ModuleIdx, NamedImport, ResolvedImportRecord, SourceMutation, StmtInfoIdx, SymbolRef,
-  side_effects::DeterminedSideEffects, types::source_mutation::ArcSourceMutation,
+  ModuleIdx, NamedImport, ResolvedImportRecord, StmtInfoIdx, SymbolRef,
+  side_effects::DeterminedSideEffects,
 };
 
 bitflags! {
@@ -154,7 +154,6 @@ pub struct EcmaView {
   pub hashbang_range: Option<Span>,
   pub directive_range: Vec<Span>,
   pub meta: EcmaViewMeta,
-  pub mutations: Vec<ArcSourceMutation>,
   /// `NodeId` of `new URL('path', import.meta.url)` -> `ImportRecordIdx`
   pub new_url_references: FxHashMap<NodeId, ImportRecordIdx>,
   /// `NodeId` of `'key' in ns`, where `ns` is a namespace import -> `key`.
@@ -237,15 +236,4 @@ bitflags! {
         const HmrAcceptExports = 1 << 9;
         const ModuleOrExports = Self::ModuleRef.bits() | Self::ExportsRef.bits();
     }
-}
-
-#[derive(Debug, Default)]
-pub struct PrependRenderedImport {
-  pub intro: String,
-}
-
-impl SourceMutation for PrependRenderedImport {
-  fn apply(&self, magic_string: &mut string_wizard::MagicString<'_>) {
-    magic_string.append_intro(self.intro.clone());
-  }
 }

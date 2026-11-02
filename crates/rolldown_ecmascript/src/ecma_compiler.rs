@@ -8,11 +8,10 @@ use oxc::{
     builder::AstBuilder,
   },
   codegen::{Codegen, CodegenOptions, CodegenReturn, CommentOptions, LegalComment},
-  minifier::{ManglePropertyCache, Minifier, MinifierOptions},
+  minifier::{Minifier, MinifierOptions},
   parser::{ParseOptions, Parser},
   span::{SPAN, SourceType},
 };
-use oxc_sourcemap::SourceMap;
 use rolldown_error::{BuildDiagnostic, BuildResult, EventKind, Severity};
 use rolldown_utils::poc_prof::{Phase, Timer};
 
@@ -106,53 +105,20 @@ impl EcmaCompiler {
       .build(ast.program())
   }
 
-  /// The returned map borrows `source_text` (its `sourcesContent` and token names are slices
-  /// of it) — callers that keep it beyond the borrow must `into_owned` it; callers that only
-  /// feed it to `collapse_sourcemaps` can use it as-is and skip that copy.
-  /// The property-mangle cache is present when property mangling ran.
-  #[expect(clippy::too_many_arguments)]
-  pub fn dce_or_minify<'a>(
+  /// Shared optimization boundary for assembled chunks and parser-produced final hook text.
+  /// The caller retains ownership and handles printing/provenance after this returns.
+  pub fn minify_program<'a>(
     allocator: &'a Allocator,
-    source_text: &'a str,
-    source_type: SourceType,
-    enable_sourcemap: bool,
-    filename: &str,
+    program: &mut Program<'a>,
+    options: MinifierOptions,
     compress: bool,
-    minify_options: MinifierOptions,
-    codegen_options: CodegenOptions,
-  ) -> BuildResult<(String, Option<SourceMap<'a>>, Option<ManglePropertyCache>)> {
-    let ret = Parser::new(allocator, source_text, source_type)
-      .with_options(ParseOptions { preserve_parens: false, ..ParseOptions::default() })
-      .parse();
-    if ret.fatal_error || !ret.diagnostics.is_empty() {
-      return Err(
-        BuildDiagnostic::from_oxc_diagnostics(
-          ret.diagnostics,
-          &ArcStr::from(source_text),
-          filename,
-          Severity::Error,
-          EventKind::ParseError,
-        )
-        .into(),
-      );
+    preserve_literal_spans: bool,
+  ) -> oxc::minifier::MinifierReturn {
+    if *rolldown_utils::poc_prof::ENABLED {
+      return Self::minify_profiled(allocator, program, options, compress, preserve_literal_spans);
     }
-    let mut program = ret.program;
-    let minifier = Minifier::new(minify_options);
-    let ret = if compress {
-      minifier.minify(allocator, &mut program)
-    } else {
-      minifier.dce(allocator, &mut program)
-    };
-    let property_mangle_cache = ret.property_mangle_cache;
-    let ret = Codegen::new()
-      .with_options(CodegenOptions {
-        source_map_path: enable_sourcemap.then(|| PathBuf::from(filename)),
-        ..codegen_options
-      })
-      .with_scoping(ret.scoping)
-      .with_private_member_mappings(ret.class_private_mappings)
-      .build(&program);
-    Ok((ret.code, ret.map, property_mangle_cache))
+    let minifier = Minifier::new(options).with_literal_spans(preserve_literal_spans);
+    if compress { minifier.minify(allocator, program) } else { minifier.dce(allocator, program) }
   }
 
   /// `Minifier::minify`/`dce` with OXC's public stages separately timed for the PoC profiler.

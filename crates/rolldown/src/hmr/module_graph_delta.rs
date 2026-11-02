@@ -100,6 +100,23 @@ pub fn render_register_graph_source(
   entry_modules: &FxHashSet<ModuleIdx>,
   stamp_table: Option<&HmrStampTable>,
 ) -> Option<String> {
+  let data = register_graph_data(module_table, carried_modules)?;
+  Some(render_graph_data(module_table, entry_modules, stamp_table, data))
+}
+
+struct RegisterGraphData<'a> {
+  ids: Vec<ModuleIdx>,
+  local_count: usize,
+  edges: Vec<Vec<usize>>,
+  bindings: Vec<(usize, Vec<Option<Vec<&'a str>>>)>,
+  dynamic_edges: Vec<(usize, Vec<usize>)>,
+}
+
+/// One topology collector serves string payloads and complete-program AST generation.
+fn register_graph_data(
+  module_table: &ModuleTable,
+  carried_modules: impl IntoIterator<Item = ModuleIdx>,
+) -> Option<RegisterGraphData<'_>> {
   let mut ids: Vec<ModuleIdx> = Vec::new();
   let mut id_to_index: FxHashMap<ModuleIdx, usize> = FxHashMap::default();
 
@@ -171,6 +188,169 @@ pub fn render_register_graph_source(
     }
   }
 
+  Some(RegisterGraphData { ids, local_count, edges, bindings, dynamic_edges })
+}
+
+/// Emit the same graph payload directly into the complete program. All nodes belong to the
+/// generated source region; graph metadata must never acquire a user-module source mapping.
+pub fn register_graph_ast<'a>(
+  module_table: &ModuleTable,
+  carried_modules: impl IntoIterator<Item = ModuleIdx>,
+  entry_modules: &FxHashSet<ModuleIdx>,
+  allocator: &'a oxc::allocator::Allocator,
+  span: oxc::span::Span,
+) -> Option<oxc::ast::ast::Statement<'a>> {
+  use oxc::{
+    allocator::Vec as ArenaVec,
+    ast::{
+      ast::{
+        Argument, ArrayExpressionElement, Expression, IdentifierName, ObjectPropertyKind,
+        PropertyKey, PropertyKind, Statement, Str,
+      },
+      builder::AstBuilder,
+    },
+    syntax::number::NumberBase,
+  };
+  fn array<'a>(
+    values: impl IntoIterator<Item = Expression<'a>>,
+    span: oxc::span::Span,
+    builder: &AstBuilder<'a>,
+  ) -> Expression<'a> {
+    Expression::new_array_expression(
+      span,
+      ArenaVec::from_iter_in(values.into_iter().map(ArrayExpressionElement::from), builder),
+      builder,
+    )
+  }
+  fn property<'a>(
+    name: &str,
+    value: Expression<'a>,
+    span: oxc::span::Span,
+    builder: &AstBuilder<'a>,
+  ) -> ObjectPropertyKind<'a> {
+    ObjectPropertyKind::new_object_property(
+      span,
+      PropertyKind::Init,
+      PropertyKey::new_string_literal(span, Str::from_str_in(name, builder), None, builder),
+      value,
+      false,
+      false,
+      false,
+      builder,
+    )
+  }
+  let RegisterGraphData { ids, local_count, edges, bindings, dynamic_edges } =
+    register_graph_data(module_table, carried_modules)?;
+  let builder = AstBuilder::new(allocator);
+  let string = |value: &str| {
+    Expression::new_string_literal(span, Str::from_str_in(value, &builder), None, &builder)
+  };
+  let number = |value: usize| {
+    Expression::new_numeric_literal(
+      span,
+      f64::from(u32::try_from(value).expect("graph row fits u32")),
+      None,
+      NumberBase::Decimal,
+      &builder,
+    )
+  };
+  let mut properties = ArenaVec::new_in(&builder);
+  properties.push(property(
+    "ids",
+    array(ids.iter().map(|idx| string(module_table[*idx].stable_id().as_str())), span, &builder),
+    span,
+    &builder,
+  ));
+  properties.push(property("localCount", number(local_count), span, &builder));
+  properties.push(property(
+    "edges",
+    array(
+      edges.iter().map(|row| array(row.iter().map(|pos| number(*pos)), span, &builder)),
+      span,
+      &builder,
+    ),
+    span,
+    &builder,
+  ));
+  if !bindings.is_empty() {
+    let rows = ArenaVec::from_iter_in(
+      bindings.iter().map(|(row, bindings)| {
+        let len = bindings.iter().rposition(Option::is_some).map_or(0, |pos| pos + 1);
+        let values = bindings[..len].iter().map(|names| match names {
+          None => Expression::new_null_literal(span, &builder),
+          Some(names) => array(names.iter().map(|name| string(name)), span, &builder),
+        });
+        property(itoa::Buffer::new().format(*row), array(values, span, &builder), span, &builder)
+      }),
+      &builder,
+    );
+    properties.push(property(
+      "bindings",
+      Expression::new_object_expression(span, rows, &builder),
+      span,
+      &builder,
+    ));
+  }
+  if !dynamic_edges.is_empty() {
+    let rows = ArenaVec::from_iter_in(
+      dynamic_edges.iter().map(|(row, edges)| {
+        property(
+          itoa::Buffer::new().format(*row),
+          array(edges.iter().map(|pos| number(*pos)), span, &builder),
+          span,
+          &builder,
+        )
+      }),
+      &builder,
+    );
+    properties.push(property(
+      "dynamicEdges",
+      Expression::new_object_expression(span, rows, &builder),
+      span,
+      &builder,
+    ));
+  }
+  let mut entries = ids[..local_count]
+    .iter()
+    .enumerate()
+    .filter_map(|(row, idx)| entry_modules.contains(idx).then_some(row))
+    .peekable();
+  if entries.peek().is_some() {
+    properties.push(property(
+      "entries",
+      array(entries.map(number), span, &builder),
+      span,
+      &builder,
+    ));
+  }
+  let callee = Expression::new_static_member_expression(
+    span,
+    Expression::new_identifier(span, "__rolldown_runtime__", &builder),
+    IdentifierName::new(span, "registerGraph", &builder),
+    false,
+    &builder,
+  );
+  Some(Statement::new_expression_statement(
+    span,
+    Expression::new_call_expression(
+      span,
+      callee,
+      None,
+      [Argument::from(Expression::new_object_expression(span, properties, &builder))],
+      false,
+      &builder,
+    ),
+    &builder,
+  ))
+}
+
+fn render_graph_data(
+  module_table: &ModuleTable,
+  entry_modules: &FxHashSet<ModuleIdx>,
+  stamp_table: Option<&HmrStampTable>,
+  data: RegisterGraphData<'_>,
+) -> String {
+  let RegisterGraphData { ids, local_count, edges, bindings, dynamic_edges } = data;
   let mut source = String::with_capacity(ids.len() * 32);
   source.push_str("__rolldown_runtime__.registerGraph({ids:[");
   for (i, idx) in ids.iter().enumerate() {
@@ -285,5 +465,5 @@ pub fn render_register_graph_source(
     ids.len(),
   );
 
-  Some(source)
+  source
 }

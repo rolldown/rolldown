@@ -8,7 +8,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 __share("s3-0a7yBFCx", (exports) => {
-	// s3.js
 	function tag(strings, ...values) {
 		return (this === void 0 ? "U" : "B") + strings.join("|") + values.join(",");
 	}
@@ -20,14 +19,13 @@ __share("s3-0a7yBFCx", (exports) => {
 		})))();
 	}
 	__share_export(exports, {
-		n: () => init_s3,
-		r: () => tag,
-		t: () => base
+		"n": () => init_s3,
+		"r": () => tag,
+		"t": () => base
 	});
 });
 __share("s1-PNXlmu-8", (exports) => {
 	var share_s3$1 = __share_require("s3-0a7yBFCx");
-	// s1.js
 	var one, tagged, C;
 	function init_s1() {
 		return (init_s1 = __esmMin((() => {
@@ -43,15 +41,14 @@ __share("s1-PNXlmu-8", (exports) => {
 		})))();
 	}
 	__share_export(exports, {
-		i: () => tagged,
-		n: () => init_s1,
-		r: () => one,
-		t: () => C
+		"i": () => tagged,
+		"n": () => init_s1,
+		"r": () => one,
+		"t": () => C
 	});
 });
 var share_s3 = __share_require("s3-0a7yBFCx");
 var share_s1 = __share_require("s1-PNXlmu-8");
-// a.js
 function init_a() {
 	return (init_a = __esmMin((() => {
 		share_s1.n();
@@ -68,7 +65,6 @@ init_a();
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 __share("s3-0a7yBFCx", (exports) => {
-	// s3.js
 	function tag(strings, ...values) {
 		return (this === void 0 ? "U" : "B") + strings.join("|") + values.join(",");
 	}
@@ -80,14 +76,13 @@ __share("s3-0a7yBFCx", (exports) => {
 		})))();
 	}
 	__share_export(exports, {
-		n: () => init_s3,
-		r: () => tag,
-		t: () => base
+		"n": () => init_s3,
+		"r": () => tag,
+		"t": () => base
 	});
 });
 __share("s1-PNXlmu-8", (exports) => {
 	var share_s3$1 = __share_require("s3-0a7yBFCx");
-	// s1.js
 	var one, tagged, C;
 	function init_s1() {
 		return (init_s1 = __esmMin((() => {
@@ -103,15 +98,14 @@ __share("s1-PNXlmu-8", (exports) => {
 		})))();
 	}
 	__share_export(exports, {
-		i: () => tagged,
-		n: () => init_s1,
-		r: () => one,
-		t: () => C
+		"i": () => tagged,
+		"n": () => init_s1,
+		"r": () => one,
+		"t": () => C
 	});
 });
 var share_s3 = __share_require("s3-0a7yBFCx");
 var share_s1 = __share_require("s1-PNXlmu-8");
-// b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
 		share_s1.n();
@@ -128,7 +122,6 @@ init_b();
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 __share("s3-0a7yBFCx", (exports) => {
-	// s3.js
 	function tag(strings, ...values) {
 		return (this === void 0 ? "U" : "B") + strings.join("|") + values.join(",");
 	}
@@ -140,13 +133,12 @@ __share("s3-0a7yBFCx", (exports) => {
 		})))();
 	}
 	__share_export(exports, {
-		n: () => init_s3,
-		r: () => tag,
-		t: () => base
+		"n": () => init_s3,
+		"r": () => tag,
+		"t": () => base
 	});
 });
 var share_s3 = __share_require("s3-0a7yBFCx");
-// c.js
 function init_c() {
 	return (init_c = __esmMin((() => {
 		share_s3.n();
@@ -175,6 +167,7 @@ export { __share_require as i, __share as n, __share_export as r, __esmMin as t 
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_s3, t as base } from "./s3.js";
 import { i as tagged, n as init_s1, r as one, t as C } from "./s1.js";
+
 // a.js
 function init_a() {
 	return (init_a = __esmMin((() => {
@@ -183,6 +176,7 @@ function init_a() {
 		globalThis.events.push("A " + one + " " + tagged + " " + new C().k + " " + base.n);
 	})))();
 }
+
 init_a();
 
 ```
@@ -193,6 +187,7 @@ init_a();
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_s3, r as tag } from "./s3.js";
 import { i as tagged, n as init_s1, r as one, t as C } from "./s1.js";
+
 // b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
@@ -201,6 +196,7 @@ function init_b() {
 		globalThis.events.push("B " + one + " " + tag`b${one}` + " " + tagged + " " + new C().k);
 	})))();
 }
+
 init_b();
 
 ```
@@ -210,6 +206,7 @@ init_b();
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_s3, r as tag, t as base } from "./s3.js";
+
 // c.js
 function init_c() {
 	return (init_c = __esmMin((() => {
@@ -217,6 +214,7 @@ function init_c() {
 		globalThis.events.push("C " + base.n + " " + tag`c`);
 	})))();
 }
+
 init_c();
 
 ```

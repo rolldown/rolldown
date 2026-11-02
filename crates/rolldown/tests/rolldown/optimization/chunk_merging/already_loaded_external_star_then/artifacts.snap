@@ -7,8 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as f0 } from "./vendor.js";
-
-export * from "ext-then"
+export * from "ext-then";
 
 // app.js
 console.log(f0(1));

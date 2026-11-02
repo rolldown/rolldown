@@ -145,7 +145,6 @@ pub async fn create_ecma_view(
     ast_usage,
     self_referenced_class_decl_symbol_ids,
     hashbang_range,
-    mutations: vec![],
     new_url_references: new_url_imports,
     namespace_in_checks,
     rolldown_file_url_references,

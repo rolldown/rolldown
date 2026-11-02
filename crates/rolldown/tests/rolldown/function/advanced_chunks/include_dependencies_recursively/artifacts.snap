@@ -34,6 +34,7 @@ export { foo as t };
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_foo, t as foo } from "./vendor.js";
 import nodeAssert from "node:assert";
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -41,6 +42,7 @@ function init_main() {
 		nodeAssert.strictEqual(foo, "foo bar");
 	})))();
 }
+
 init_main();
 
 ```

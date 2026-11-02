@@ -14,11 +14,14 @@ function getB() {
 var init_b = __esmMin((() => {
 	init_a();
 }));
+
 // leaf.js
 function leaf() {
 	return "leaf";
 }
 var init_leaf = __esmMin((() => {}));
+
+// a.js
 function getA() {
 	return getB && leaf ? "a" : "unreachable";
 }
@@ -26,6 +29,7 @@ var init_a = __esmMin((() => {
 	init_b();
 	init_leaf();
 }));
+
 // main.js
 var result;
 function init_main() {
@@ -35,6 +39,7 @@ function init_main() {
 		result = getA();
 	})))();
 }
+
 init_main();
 export { result };
 

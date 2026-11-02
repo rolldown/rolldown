@@ -41,6 +41,7 @@ export { foo as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as foo, r as init_user_lib } from "./main2.js";
+
 // lazy-chunk.js
 function init_lazy_chunk() {
 	return (init_lazy_chunk = __esmMin((() => {
@@ -48,6 +49,7 @@ function init_lazy_chunk() {
 		foo();
 	})))();
 }
+
 init_lazy_chunk();
 
 ```
@@ -112,6 +114,7 @@ export { __esmMin as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as foo, r as init_user_lib } from "./main2.js";
+
 // lazy-chunk.js
 function init_lazy_chunk() {
 	return (init_lazy_chunk = __esmMin((() => {
@@ -119,6 +122,7 @@ function init_lazy_chunk() {
 		foo();
 	})))();
 }
+
 init_lazy_chunk();
 
 ```

@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+// leaflet-toolbar.js
 (/* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
 	(function(global, factory) {
 		typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.leaflet = {}));
@@ -20,6 +21,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 	"use strict";
 	t.L.Toolbar = L.foo;
 })(global);
+
 // lib.js
 console.log("hello", !!L);
 

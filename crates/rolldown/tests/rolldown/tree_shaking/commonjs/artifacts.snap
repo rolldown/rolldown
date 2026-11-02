@@ -7,36 +7,48 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // src/basic_ns/index.js
 var require_basic_ns = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = "basic-a";
 }));
+
 // src/basic_ref_with_named_default/index.js
 var require_basic_ref_with_named_default = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = "basic-ref-with-named-default-a";
 }));
+
 // src/export_star_from_cjs/cjs.js
 var require_cjs$2 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = "export-star-from-cjs-a";
 }));
+
+// src/export_star_from_cjs/index.js
 require_basic_ns();
 require_basic_ref_with_named_default();
 __reExport(/* @__PURE__ */ __exportAll({}), /* @__PURE__ */ __toESM(require_cjs$2()));
+
+// src/nested_export_star_from_cjs/reexport.js
 __reExport(/* @__PURE__ */ __exportAll({}), /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = "nested-export-star-from-cjs-a";
 })))()));
+
 // src/named_import_export_star_from_cjs/cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = "named-import-export-star-from-cjs-a";
 }));
+
 // src/named_import_export_star_from_cjs/index.js
 var named_import_export_star_from_cjs_exports = /* @__PURE__ */ __exportAll({});
 __reExport(named_import_export_star_from_cjs_exports, /* @__PURE__ */ __toESM(require_cjs()));
+
 // src/indirect_common_js/lib.js
 var require_lib = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = "react-like-a";
 }));
+
+// main.js
 (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = require_lib();
 })))();

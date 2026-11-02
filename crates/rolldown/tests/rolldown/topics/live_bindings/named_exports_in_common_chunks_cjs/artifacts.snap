@@ -6,10 +6,30 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## async-entry.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, "default") ? __defProp(target, "default", {
+	value: mod,
+	enumerable: true
+}) : target, mod));
 const require_main = require("./main.js");
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
+
 // async-entry.js
 require_main.reset();
 node_assert.default.strictEqual(require_main.count, 0);
@@ -27,6 +47,7 @@ node_assert.default.strictEqual(require_main.count, require_main.count);
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+
 // shared.js
 let count = 0;
 function reset() {
@@ -35,8 +56,10 @@ function reset() {
 function inc() {
 	count += 1;
 }
+
 // main.js
 Promise.resolve().then(() => require("./async-entry.js"));
+
 Object.defineProperty(exports, "count", {
 	enumerable: true,
 	get: function() {

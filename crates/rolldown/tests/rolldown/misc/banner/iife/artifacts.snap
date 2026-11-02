@@ -7,8 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // Banner
-var module = (function() {
+var module = function() {
 	return "banner";
-})();
+}();
 
 ```

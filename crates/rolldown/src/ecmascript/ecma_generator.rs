@@ -10,7 +10,7 @@ use anyhow::Result;
 use oxc_str::CompactStr;
 use rolldown_common::{
   AddonRenderContext, ChunkIdx, EcmaAssetMeta, InstantiatedChunk, InstantiationKind, ModuleId,
-  ModuleIdx, OutputFormat, RenderedModule, StrictMode,
+  ModuleIdx, OutputFormat, RenderedModule,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::HookAddonArgs;
@@ -21,8 +21,8 @@ use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rolldown_utils::{concat_string, ecmascript::escape_line_terminators};
 use rustc_hash::FxHashMap;
 
-use super::format::utils::is_use_strict_directive;
-use super::format::{cjs::render_cjs, esm::render_esm, iife::render_iife, umd::render_umd};
+use super::format::utils::{chunk_directives, is_use_strict_directive, render_chunk_directives};
+use super::format::{cjs::render_cjs, esm::render_esm, iife::prepare_iife, umd::prepare_umd};
 
 pub type RenderedModuleSources = Vec<RenderedModuleSource>;
 
@@ -112,7 +112,7 @@ impl Generator for EcmaGenerator {
             let module = ctx.link_output.module_table[*module_idx]
               .as_normal()
               .expect("a record holds only normal modules");
-            let render = render_ecma_module(module, ctx.options, codegen_ret);
+            let render = render_ecma_module(module, ctx.options, codegen_ret.rendered);
             sourcemap_broken_warnings.extend(render.warnings);
             let rendered_exports = retained_export_names(ctx.link_output, *module_idx);
             rendered_modules.insert(
@@ -142,38 +142,7 @@ impl Generator for EcmaGenerator {
       },
     );
 
-    let mut directives: Vec<&str> = ctx
-      .chunk
-      .user_defined_entry_module(&ctx.link_output.module_table)
-      .or_else(|| {
-        ctx.options.preserve_modules.then_some({
-          let first_idx = *ctx.chunk.modules.first()?;
-          ctx.link_output.module_table[first_idx].as_normal()?
-        })
-      })
-      .map(|normal_module| {
-        normal_module
-          .ecma_view
-          .directive_range
-          .iter()
-          .map(|range| &normal_module.source[range.start as usize..range.end as usize])
-          .collect::<_>()
-      })
-      .unwrap_or_default();
-
-    // Apply output.strict option
-    match ctx.options.strict {
-      StrictMode::Always => {
-        let has_use_strict = directives.iter().any(|d| is_use_strict_directive(d));
-        if !has_use_strict {
-          directives.insert(0, "\"use strict\"");
-        }
-      }
-      StrictMode::Never => {
-        directives.retain(|d| !is_use_strict_directive(d));
-      }
-      StrictMode::Auto => {}
-    }
+    let directives = chunk_directives(ctx);
 
     let banner = {
       let injection = match ctx.options.banner.as_ref() {
@@ -265,7 +234,7 @@ impl Generator for EcmaGenerator {
       }
     }
 
-    let addon_render_context = AddonRenderContext {
+    let addon_render_context = || AddonRenderContext {
       hashbang,
       banner: banner.as_deref(),
       intro: intro.as_deref(),
@@ -273,29 +242,9 @@ impl Generator for EcmaGenerator {
       footer: footer.as_deref(),
       directives: &directives,
     };
-    let mut source_joiner = match ctx.options.format {
-      OutputFormat::Esm => {
-        render_esm(ctx, addon_render_context, &rendered_module_sources, &carried_sources)
-      }
-      OutputFormat::Cjs => {
-        render_cjs(ctx, addon_render_context, &rendered_module_sources, &mut warnings)
-      }
-      OutputFormat::Iife => {
-        match render_iife(ctx, addon_render_context, &rendered_module_sources, &mut warnings).await
-        {
-          Ok(source_joiner) => source_joiner,
-          Err(errors) => return Ok(Err(errors)),
-        }
-      }
-      OutputFormat::Umd => {
-        match render_umd(ctx, addon_render_context, &rendered_module_sources, &mut warnings).await {
-          Ok(source_joiner) => source_joiner,
-          Err(errors) => return Ok(Err(errors)),
-        }
-      }
-    };
-
-    if ctx.options.experimental.is_attach_debug_info_full() && !ctx.chunk.debug_info.is_empty() {
+    let debug_header = (ctx.options.experimental.is_attach_debug_info_full()
+      && !ctx.chunk.debug_info.is_empty())
+    .then(|| {
       // Module ids and chunk names can hold line terminators. Escape them, so that each item
       // stays on its own `//!` line.
       let debug_info_str = ctx
@@ -305,11 +254,52 @@ impl Generator for EcmaGenerator {
         .map(|info| escape_line_terminators(info.to_string()))
         .collect::<Vec<_>>()
         .join("\n//! ");
-      source_joiner.prepend_source(concat_string!("//! ", debug_info_str));
+      concat_string!("//! ", debug_info_str)
+    });
+    let mut wrapped_plan = match ctx.options.format {
+      OutputFormat::Iife => match prepare_iife(ctx, addon_render_context(), &mut warnings).await {
+        Ok(plan) => Some(plan),
+        Err(errors) => return Ok(Err(errors)),
+      },
+      OutputFormat::Umd => match prepare_umd(ctx, addon_render_context(), &mut warnings).await {
+        Ok(plan) => Some(plan),
+        Err(errors) => return Ok(Err(errors)),
+      },
+      _ if ctx.defer_ast
+        && (ctx.options.is_dev_mode_enabled()
+          || ctx.inline_state.has_records()
+          || crate::stages::generate_stage::chunk_ast_dce::complete_program(
+            ctx.options,
+            ctx.plugin_driver,
+          )) =>
+      {
+        Some(crate::ecmascript::WrappedPlan::flat(ctx, &addon_render_context()))
+      }
+      _ => None,
+    };
+    let mut source_joiner = if let Some(plan) = &wrapped_plan {
+      plan.render(ctx, &rendered_module_sources, &carried_sources)
+    } else {
+      match ctx.options.format {
+        OutputFormat::Esm => {
+          render_esm(ctx, addon_render_context(), &rendered_module_sources, &carried_sources)
+        }
+        OutputFormat::Cjs => {
+          render_cjs(ctx, addon_render_context(), &rendered_module_sources, &mut warnings)
+        }
+        OutputFormat::Iife | OutputFormat::Umd => {
+          unreachable!("wrapped formats have a rendering plan")
+        }
+      }
+    };
+
+    if let Some(header) = &debug_header {
+      source_joiner.prepend_source(header.as_str());
     }
 
     let t = rolldown_utils::poc_prof::Timer::start();
     let (content, mut map) = source_joiner.join();
+    drop(source_joiner);
     // PoC `global` mode: module maps may name other modules of the chunk as sources.
     if ctx.chunk_ast_dce.as_ref().is_some_and(|out| out.space.is_some()) {
       map = map.map(crate::stages::generate_stage::chunk_ast_dce::dedupe_sources);
@@ -328,7 +318,59 @@ impl Generator for EcmaGenerator {
     );
     let file_dir = file_path.parent().expect("chunk file name should have a parent");
 
+    let envelope = if ctx.defer_ast && wrapped_plan.is_none() {
+      let mut prefix = String::new();
+      let remove_whitespace = matches!(
+        &ctx.options.minify,
+        rolldown_common::MinifyOptions::Enabled(options) if options.remove_whitespace
+      );
+      if (ctx.options.comments.legal || !remove_whitespace)
+        && let Some(header) = &debug_header
+      {
+        prefix.push_str(header);
+        prefix.push('\n');
+      }
+      if let Some(hashbang) = hashbang {
+        prefix.push_str(hashbang);
+        prefix.push('\n');
+      }
+      if let Some(banner) = &banner {
+        prefix.push_str(banner);
+        prefix.push('\n');
+      }
+      prefix.push_str(&render_chunk_directives(directives.iter().filter(|directive| {
+        !matches!(ctx.options.format, OutputFormat::Esm) || !is_use_strict_directive(directive)
+      })));
+      let mut suffix = String::new();
+      if let Some(footer) = &footer {
+        suffix.push_str(footer);
+      }
+      Some((prefix, suffix))
+    } else {
+      None
+    };
+    let property_cache =
+      ctx.chunk_ast_dce.as_mut().and_then(|output| output.property_mangle_cache.take());
     Ok(Ok(GenerateOutput {
+      pending_ast: None,
+      minify_rendered_text: false,
+      wrapped_plan: if ctx.defer_ast {
+        let mut plan = wrapped_plan.take();
+        if let Some(plan) = &mut plan
+          && let Some(header) = debug_header
+        {
+          if let Some(ast) = &mut plan.ast {
+            ast.outer_prefix.insert(0, '\n');
+            ast.outer_prefix.insert_str(0, &header);
+          }
+          plan.prefix.insert(0, header);
+        }
+        plan
+      } else {
+        None
+      },
+      envelope,
+      property_cache,
       chunks: vec![InstantiatedChunk {
         originate_from: ctx.chunk_idx,
         content: content.into(),

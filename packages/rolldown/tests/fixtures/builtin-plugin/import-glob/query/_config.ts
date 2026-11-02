@@ -21,24 +21,26 @@ export default defineTest({
     ],
   },
   async afterTest(output: RolldownOutput) {
-    output.output.forEach(async (chunk) => {
-      if (chunk.type === 'chunk') {
-        switch (chunk.name) {
-          case 'b': {
-            await expect(chunk.code).toMatchFileSnapshot(
-              path.resolve(import.meta.dirname, 'dir/b.js.snap'),
-            );
-            break;
-          }
-          case 'dir_index': {
-            await expect(chunk.code).toMatchFileSnapshot(
-              path.resolve(import.meta.dirname, 'dir/index.js.snap'),
-            );
-            break;
+    await Promise.all(
+      output.output.map(async (chunk) => {
+        if (chunk.type === 'chunk') {
+          switch (chunk.name) {
+            case 'b': {
+              await expect(chunk.code).toMatchFileSnapshot(
+                path.resolve(import.meta.dirname, 'dir/b.js.snap'),
+              );
+              break;
+            }
+            case 'dir_index': {
+              await expect(chunk.code).toMatchFileSnapshot(
+                path.resolve(import.meta.dirname, 'dir/index.js.snap'),
+              );
+              break;
+            }
           }
         }
-      }
-    });
+      }),
+    );
     await import('./assert.mjs');
   },
 });

@@ -274,6 +274,9 @@ fn finish_pass<'a>(
 /// convergence, so consume the revisit request and ignore newly dead functions:
 /// pass one runs regardless and consumes both forms of progress.
 pub fn finish_normalize_pass<'a>(program: &Program<'a>, ctx: &mut TraverseCtx<'a>) {
+    if let Some(spans) = &mut ctx.state.literal_spans {
+        spans.finish_collection();
+    }
     let _ = ctx.state.take_revisit_requested();
     finish_pass(program, ctx, /* force_liveness_analysis */ true);
     debug_assert_pass_changes_clean(ctx);

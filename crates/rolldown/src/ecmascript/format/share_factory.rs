@@ -13,6 +13,202 @@ use crate::{
   utils::chunk::render_chunk_exports::get_export_items,
 };
 
+fn export_getter_property<'a>(
+  name: &str,
+  getter: oxc::ast::ast::Expression<'a>,
+  span: oxc::span::Span,
+  builder: &oxc::ast::builder::AstBuilder<'a>,
+) -> oxc::ast::ast::ObjectPropertyKind<'a> {
+  use oxc::ast::ast::{ObjectPropertyKind, PropertyKey, PropertyKind, Str};
+  ObjectPropertyKind::new_object_property(
+    span,
+    PropertyKind::Init,
+    PropertyKey::new_string_literal(span, Str::from_str_in(name, builder), None, builder),
+    getter,
+    false,
+    false,
+    name == "__proto__",
+    builder,
+  )
+}
+
+/// Construct a carrier's registrations and bridges around already-finalized, rebased bodies.
+/// The caller retains every donor arena. Generated nodes use synthetic spans; only donor nodes
+/// contribute mappings. See internal-docs/inline-common-chunks/implementation.md.
+pub fn inline_records_ast<'a>(
+  ctx: &GenerateContext<'_>,
+  allocator: &'a oxc::allocator::Allocator,
+  generated_span: oxc::span::Span,
+  carried: impl IntoIterator<Item = (ChunkIdx, oxc::allocator::Vec<'a, oxc::ast::ast::Statement<'a>>)>,
+) -> oxc::allocator::Vec<'a, oxc::ast::ast::Statement<'a>> {
+  use oxc::{
+    allocator::Vec as ArenaVec,
+    ast::{
+      ast::{
+        Argument, ArrowFunctionBody, BindingPattern, Expression, FormalParameter,
+        FormalParameterKind, FormalParameters, FunctionBody, Statement, Str,
+      },
+      builder::AstBuilder,
+    },
+  };
+  use rolldown_ecmascript_utils::StatementFactoryExt as _;
+
+  struct GeneratedSpan(oxc::span::Span);
+  impl oxc::ast_visit::VisitMut<'_> for GeneratedSpan {
+    fn visit_span(&mut self, span: &mut oxc::span::Span) {
+      *span = self.0;
+    }
+  }
+
+  let builder = AstBuilder::new(allocator);
+  let mut statements = ArenaVec::new_in(&builder);
+  let Some(names) = ctx.inline_state.file_names(ctx.chunk_idx) else {
+    return statements;
+  };
+  let identifier = |name: &str| {
+    Expression::new_identifier(generated_span, Str::from_str_in(name, &builder), &builder)
+  };
+  let string = |value: &str| {
+    Expression::new_string_literal(
+      generated_span,
+      Str::from_str_in(value, &builder),
+      None,
+      &builder,
+    )
+  };
+  let record_id = |record| ctx.inline_state.record(record).expect("inline record").id.as_str();
+  let bridge = |name: &str, record| {
+    let mut statement = Statement::new_var_decl(
+      name,
+      Expression::new_call_expression(
+        generated_span,
+        identifier(runtime_helper_name(ctx, "__share_require")),
+        None,
+        [Argument::from(string(record_id(record)))],
+        false,
+        &builder,
+      ),
+      &builder,
+    );
+    oxc::ast_visit::VisitMut::visit_statement(&mut GeneratedSpan(generated_span), &mut statement);
+    statement
+  };
+
+  for (record, body) in carried {
+    let mut factory_body = ArenaVec::new_in(&builder);
+    for other in ctx.inline_state.readers_of(record) {
+      let name = &names.factory_bridges[&record][other];
+      factory_body.push(bridge(name, *other));
+    }
+    if ctx.options.is_dev_mode_enabled() {
+      factory_body.extend(crate::hmr::module_graph_delta::register_graph_ast(
+        &ctx.link_output.module_table,
+        ctx.chunk_graph.chunk_table[record].modules.iter().copied(),
+        &ctx.link_output.user_defined_entry_modules,
+        allocator,
+        generated_span,
+      ));
+    }
+    factory_body.extend(body);
+    let export_items = get_export_items(&ctx.chunk_graph.chunk_table[record]);
+    if !export_items.is_empty() {
+      let properties = ArenaVec::from_iter_in(
+        export_items.iter().map(|(name, symbol)| {
+          let mut value = ctx.finalized_expr_for_symbol_ref(*symbol, record, &builder);
+          // The expression contains generated names only. Use the generated region of V rather
+          // than offset zero, which belongs to the first real donor.
+          oxc::ast_visit::VisitMut::visit_expression(
+            &mut GeneratedSpan(generated_span),
+            &mut value,
+          );
+          let getter = Expression::new_arrow_function_expression(
+            generated_span,
+            false,
+            None,
+            FormalParameters::boxed(
+              generated_span,
+              FormalParameterKind::ArrowFormalParameters,
+              [],
+              None,
+              &builder,
+            ),
+            None,
+            ArrowFunctionBody::from(value),
+            &builder,
+          );
+          export_getter_property(name, getter, generated_span, &builder)
+        }),
+        &builder,
+      );
+      let table = Expression::new_object_expression(generated_span, properties, &builder);
+      factory_body.push(Statement::new_expression_statement(
+        generated_span,
+        Expression::new_call_expression(
+          generated_span,
+          identifier(runtime_helper_name(ctx, "__share_export")),
+          None,
+          [Argument::from(identifier(&names.exports_param)), Argument::from(table)],
+          false,
+          &builder,
+        ),
+        &builder,
+      ));
+    }
+    let params = FormalParameters::boxed(
+      generated_span,
+      FormalParameterKind::ArrowFormalParameters,
+      [FormalParameter::new(
+        generated_span,
+        [],
+        BindingPattern::new_binding_identifier(
+          generated_span,
+          Str::from_str_in(&names.exports_param, &builder),
+          &builder,
+        ),
+        None,
+        None,
+        false,
+        None,
+        false,
+        false,
+        &builder,
+      )],
+      None,
+      &builder,
+    );
+    let factory = Expression::new_arrow_function_expression(
+      generated_span,
+      false,
+      None,
+      params,
+      None,
+      ArrowFunctionBody::FunctionBody(FunctionBody::boxed(
+        generated_span,
+        [],
+        factory_body,
+        &builder,
+      )),
+      &builder,
+    );
+    statements.push(Statement::new_expression_statement(
+      generated_span,
+      Expression::new_call_expression(
+        generated_span,
+        identifier(runtime_helper_name(ctx, "__share")),
+        None,
+        [Argument::from(string(record_id(record))), Argument::from(factory)],
+        false,
+        &builder,
+      ),
+      &builder,
+    ));
+  }
+  for record in ctx.inline_state.readers_of(ctx.chunk_idx) {
+    statements.push(bridge(&names.bridges[record], *record));
+  }
+  statements
+}
+
 fn runtime_helper_name<'a>(ctx: &'a GenerateContext<'_>, name: &str) -> &'a str {
   ctx.link_output.symbol_db.canonical_name_for_or_original(
     ctx.link_output.runtime.resolve_symbol(name),
@@ -154,5 +350,43 @@ pub fn render_inline_records<'code>(
       ));
     }
     source_joiner.append_source(bridges);
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  #[test]
+  fn proto_export_getter_is_an_own_property() {
+    use oxc::{
+      allocator::Allocator,
+      ast::{
+        ast::{Expression, Program, Statement},
+        builder::AstBuilder,
+      },
+      codegen::Codegen,
+      span::{SPAN, SourceType},
+    };
+    let allocator = Allocator::default();
+    let builder = AstBuilder::new(&allocator);
+    let getter =
+      rolldown_ecmascript_utils::parse_injected_expression(&allocator, "() => 37").unwrap();
+    let object = Expression::new_object_expression(
+      SPAN,
+      [super::export_getter_property("__proto__", getter, SPAN, &builder)],
+      &builder,
+    );
+    let program = Program::new(
+      SPAN,
+      SourceType::mjs(),
+      "",
+      [],
+      None,
+      [],
+      [Statement::new_expression_statement(SPAN, object, &builder)],
+      &builder,
+    );
+    let code = Codegen::new().build(&program).code;
+    let execution = std::process::Command::new("node").args(["--input-type=module", "--eval", &format!("import vm from 'node:vm'; import assert from 'node:assert/strict'; const table = vm.runInNewContext({}); assert.equal(Object.hasOwn(table, '__proto__'), true); assert.equal(table.__proto__(), 37);", serde_json::to_string(&code).unwrap())]).output().unwrap();
+    assert!(execution.status.success(), "{code}\n{}", String::from_utf8_lossy(&execution.stderr));
   }
 }

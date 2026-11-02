@@ -42,6 +42,7 @@ function init_init() {
 		globalThis.array = [];
 	})))();
 }
+
 // foo.js
 function init_foo() {
 	return (init_foo = __esmMin((() => {
@@ -53,6 +54,7 @@ function init_foo() {
 		}
 	})))();
 }
+
 // bar.js
 function init_bar() {
 	return (init_bar = __esmMin((() => {
@@ -62,6 +64,7 @@ function init_bar() {
 		}
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -71,6 +74,7 @@ function init_main() {
 		console.log(globalThis.array);
 	})))();
 }
+
 init_main();
 
 ```

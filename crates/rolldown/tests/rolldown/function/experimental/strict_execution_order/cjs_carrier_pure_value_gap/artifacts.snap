@@ -27,9 +27,11 @@ export default require_pure_cjs();
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { n as read, t as init_reader } from "./reader.js";
+
 // e.js
 globalThis.__strict_order_value = "ready";
 console.log("E");
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -37,6 +39,7 @@ function init_main() {
 		console.log(`MAIN:${read()}`);
 	})))();
 }
+
 init_main();
 
 ```
@@ -119,6 +122,7 @@ export { __esmMin as n, __commonJSMin as t };
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { n as read, t as init_reader } from "./reader.js";
+
 // second.js
 function init_second() {
 	return (init_second = __esmMin((() => {
@@ -126,6 +130,7 @@ function init_second() {
 		console.log(read());
 	})))();
 }
+
 init_second();
 
 ```
@@ -134,12 +139,14 @@ init_second();
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
+
 // unused.js
 function init_unused() {
 	return (init_unused = __esmMin((() => {
 		console.log("UNUSED");
 	})))();
 }
+
 init_unused();
 
 ```
@@ -172,6 +179,7 @@ export default require_pure_cjs();
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { n as read, t as init_reader } from "./reader.js";
+
 // e.js
 function init_e() {
 	return (init_e = __esmMin((() => {
@@ -179,6 +187,7 @@ function init_e() {
 		console.log("E");
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -187,6 +196,7 @@ function init_main() {
 		console.log(`MAIN:${read()}`);
 	})))();
 }
+
 init_main();
 
 ```
@@ -269,6 +279,7 @@ export { __esmMin as n, __commonJSMin as t };
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { n as read, t as init_reader } from "./reader.js";
+
 // second.js
 function init_second() {
 	return (init_second = __esmMin((() => {
@@ -276,6 +287,7 @@ function init_second() {
 		console.log(read());
 	})))();
 }
+
 init_second();
 
 ```
@@ -284,12 +296,14 @@ init_second();
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
+
 // unused.js
 function init_unused() {
 	return (init_unused = __esmMin((() => {
 		console.log("UNUSED");
 	})))();
 }
+
 init_unused();
 
 ```

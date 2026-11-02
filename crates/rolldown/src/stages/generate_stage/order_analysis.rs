@@ -4,9 +4,8 @@ use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
 use petgraph::prelude::DiGraphMap;
 use rolldown_common::{
-  ChunkIdx, ConcatenateWrappedModuleKind, EcmaViewMeta, ExportsKind, ImportKind, ImportRecordIdx,
-  ImportRecordMeta, Module, ModuleIdx, NormalModule, SymbolOrMemberExprRef, SymbolRef,
-  UsedSymbolRefsBuilder, WrapKind,
+  ChunkIdx, EcmaViewMeta, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module,
+  ModuleIdx, NormalModule, SymbolOrMemberExprRef, SymbolRef, UsedSymbolRefsBuilder, WrapKind,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -468,15 +467,11 @@ impl GenerateStage<'_> {
         //   any probe is built — and a wrapped (or interop `WrapKind::Esm`) importer's non-routed records
         //   are never nested (`record_owns_reexport_init`). Consumer-local records create no overlay,
         //   so for a live importer this combination is
-        //   unreachable. Assert it so the unproven corner (a concatenated-inner importer — a
-        //   dormant feature on this branch) trips loudly instead of silently dropping an edge.
+        //   unreachable. Assert it so a missed plan-closure case trips loudly instead of
+        //   silently dropping an edge.
         debug_assert!(
           !overlay.retained_reexport_path.is_empty()
-            || !self.link_output.metas[module.idx].is_included
-            || !matches!(
-              self.link_output.metas[module.idx].concatenated_wrapped_module_kind,
-              ConcatenateWrappedModuleKind::None
-            ),
+            || !self.link_output.metas[module.idx].is_included,
           "an included importer's nested re-export record carries a wrapper-referencing order \
            overlay with no retained path; the plan closure should have wrapped the importer first",
         );

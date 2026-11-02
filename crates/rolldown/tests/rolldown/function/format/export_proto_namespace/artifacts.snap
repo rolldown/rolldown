@@ -22,9 +22,20 @@ export { lib_exports as lib };
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-// HIDDEN [\0rolldown/runtime.js]
+var __defProp = Object.defineProperty;
+var __exportAll = (all, no_symbols) => {
+	let target = {};
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
+	return target;
+};
+
 // lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ ["__proto__"]: () => 123 });
+
 Object.defineProperty(exports, "lib", {
 	enumerable: true,
 	get: function() {

@@ -57,6 +57,7 @@ export { target_exports as n, load as r, init_target as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { i as load, r as init_loader } from "./dyn.js";
+
 // a.js
 var targetPromise;
 function init_a() {
@@ -66,6 +67,7 @@ function init_a() {
 		targetPromise = load();
 	})))();
 }
+
 init_a();
 export { targetPromise };
 
@@ -75,16 +77,19 @@ export { targetPromise };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // helpers.js
 function used() {
 	(globalThis.log ??= []).push("used");
 }
+
 // b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
 		used();
 	})))();
 }
+
 init_b();
 
 ```

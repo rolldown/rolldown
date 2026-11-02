@@ -76,6 +76,7 @@ function init_deep() {
 		value = "hello";
 	})))();
 }
+
 // middle.js
 function setup() {
 	manager.ready = true;
@@ -90,12 +91,14 @@ function init_middle() {
 		};
 	})))();
 }
+
 // barrel.js
 function init_barrel() {
 	return (init_barrel = __esmMin((async () => {
 		await init_middle();
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((async () => {
@@ -103,6 +106,7 @@ function init_main() {
 		setup();
 	})))();
 }
+
 await init_main();
 export { manager };
 

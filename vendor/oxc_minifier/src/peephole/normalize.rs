@@ -74,6 +74,16 @@ impl<'a> Traverse<'a> for Normalize {
         symbol_liveness::register_using_declaration(node, ctx);
     }
 
+    fn enter_variable_declarator(
+        &mut self,
+        node: &mut VariableDeclarator<'a>,
+        ctx: &mut TraverseCtx<'a>,
+    ) {
+        if let Some(spans) = &mut ctx.state.literal_spans {
+            spans.record_declarator(node);
+        }
+    }
+
     fn enter_export_named_declaration(
         &mut self,
         node: &mut ExportNamedDeclaration<'a>,

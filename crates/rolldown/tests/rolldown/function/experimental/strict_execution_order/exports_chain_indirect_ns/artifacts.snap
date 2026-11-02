@@ -21,6 +21,7 @@ nodeAssert.equal("foo", "foo");
 
 ```js
 import nodeAssert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // lib-foo.js
 var value;
@@ -29,6 +30,7 @@ function init_lib_foo() {
 		value = "foo";
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -36,6 +38,7 @@ function init_main() {
 		nodeAssert.equal(value, "foo");
 	})))();
 }
+
 init_main();
 
 ```

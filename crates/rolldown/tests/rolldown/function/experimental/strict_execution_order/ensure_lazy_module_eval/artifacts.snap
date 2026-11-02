@@ -23,11 +23,15 @@ export { require_dynamic as t };
 ```js
 import { t as require_dynamic } from "./dynamic.js";
 import { strictEqual } from "node:assert";
+
+// sideeffects.js
 require_dynamic();
 globalThis.a = 2;
+
 // main.js
 const a = globalThis.a;
 strictEqual(a, 2);
+
 export { a };
 
 ```

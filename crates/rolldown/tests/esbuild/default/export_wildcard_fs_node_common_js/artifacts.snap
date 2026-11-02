@@ -7,8 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+
 // internal.js
 let foo = 123;
+
 exports.foo = foo;
 var fs = require("fs");
 Object.keys(fs).forEach(function(k) {

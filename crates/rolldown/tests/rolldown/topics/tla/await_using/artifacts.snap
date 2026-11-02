@@ -37,6 +37,7 @@ function init_log() {
 		log = [];
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((async () => {
@@ -50,6 +51,7 @@ function init_main() {
 		}
 	})))();
 }
+
 await init_main();
 export { log };
 

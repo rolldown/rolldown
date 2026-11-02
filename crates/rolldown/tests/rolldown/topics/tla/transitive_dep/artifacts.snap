@@ -28,6 +28,7 @@ function init_tla() {
 		value$1 = await Promise.resolve("tla");
 	})))();
 }
+
 // lib.js
 var value;
 function init_lib() {
@@ -36,12 +37,14 @@ function init_lib() {
 		value = value$1 + "+lib";
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((async () => {
 		await init_lib();
 	})))();
 }
+
 await init_main();
 export { value };
 

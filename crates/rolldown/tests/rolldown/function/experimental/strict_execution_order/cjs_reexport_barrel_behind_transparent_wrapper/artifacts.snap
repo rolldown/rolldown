@@ -19,10 +19,12 @@ function init_pure_cjs_0() {
 		import_clone_deep = /* @__PURE__ */ __toESM(require_clone_deep());
 	})))();
 }
+
 // forwarder.js
 function helper() {
 	return "H";
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -30,6 +32,7 @@ function init_main() {
 		globalThis.__result = [(0, import_clone_deep.default)({ a: 1 }), helper()];
 	})))();
 }
+
 init_main();
 
 ```
@@ -54,10 +57,12 @@ function init_pure_cjs_0() {
 		import_clone_deep = /* @__PURE__ */ __toESM(require_clone_deep());
 	})))();
 }
+
 // forwarder.js
 function helper() {
 	return "H";
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -65,6 +70,7 @@ function init_main() {
 		globalThis.__result = [(0, import_clone_deep.default)({ a: 1 }), helper()];
 	})))();
 }
+
 init_main();
 
 ```

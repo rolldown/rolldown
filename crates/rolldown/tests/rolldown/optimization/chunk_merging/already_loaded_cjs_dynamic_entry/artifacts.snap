@@ -32,8 +32,10 @@ export { compute as n, init_shared as r, require_app as t };
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { n as compute, r as init_shared } from "./app.js";
+
 // lazy.js
 var lazyValue;
+
 __esmMin((() => {
 	init_shared();
 	lazyValue = compute(42);

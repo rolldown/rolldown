@@ -96,6 +96,7 @@ import { t as __esmMin } from "./rolldown-runtime.js";
 import { r as Checkbox, t as Radio } from "./comp.js";
 import { t as init_barrel } from "./carbon.js";
 import { t as init_cyc_a } from "./ca.js";
+
 // reader.js
 function render() {
 	return `${Checkbox ? Checkbox.name : "NO_CHECKBOX"}|${Radio ? Radio.name : "NO_RADIO"}`;
@@ -107,6 +108,7 @@ function init_reader() {
 		(globalThis.__events ??= []).push("reader");
 	})))();
 }
+
 // dynamic-page.js
 function init_dynamic_page() {
 	return (init_dynamic_page = __esmMin((() => {
@@ -114,6 +116,7 @@ function init_dynamic_page() {
 		(globalThis.__events ??= []).push("dynamic-page");
 	})))();
 }
+
 init_dynamic_page();
 export { render };
 
@@ -123,6 +126,7 @@ export { render };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // main.js
 function loadPage() {
 	return import("./dynamic-page.js");
@@ -132,6 +136,7 @@ function init_main() {
 		(globalThis.__events ??= []).push("main");
 	})))();
 }
+
 init_main();
 export { loadPage };
 
@@ -242,6 +247,7 @@ import { t as __esmMin } from "./rolldown-runtime.js";
 import { r as Checkbox, t as Radio } from "./comp.js";
 import { t as init_barrel } from "./carbon.js";
 import { t as init_cyc_a } from "./ca.js";
+
 // reader.js
 function render() {
 	return `${Checkbox ? Checkbox.name : "NO_CHECKBOX"}|${Radio ? Radio.name : "NO_RADIO"}`;
@@ -253,6 +259,7 @@ function init_reader() {
 		(globalThis.__events ??= []).push("reader");
 	})))();
 }
+
 // dynamic-page.js
 function init_dynamic_page() {
 	return (init_dynamic_page = __esmMin((() => {
@@ -260,6 +267,7 @@ function init_dynamic_page() {
 		(globalThis.__events ??= []).push("dynamic-page");
 	})))();
 }
+
 init_dynamic_page();
 export { render };
 

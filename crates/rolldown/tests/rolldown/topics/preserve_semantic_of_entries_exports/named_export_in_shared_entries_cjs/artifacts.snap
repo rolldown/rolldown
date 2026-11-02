@@ -7,9 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+
 // main.js
 const foo = "foo";
 var main_default = "main";
+
 exports.default = main_default;
 exports.foo = foo;
 

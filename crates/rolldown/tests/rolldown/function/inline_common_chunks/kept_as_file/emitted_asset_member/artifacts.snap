@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { n as __esmMin } from "./chunks/rolldown-runtime.js";
 import { n as url, t as init_shared } from "./chunks/shared.js";
+
 // a.js
 function init_a() {
 	return (init_a = __esmMin((() => {
@@ -15,6 +16,7 @@ function init_a() {
 		console.log("A", url);
 	})))();
 }
+
 init_a();
 
 ```
@@ -26,6 +28,7 @@ init_a();
 ```js
 import { n as __esmMin } from "./chunks/rolldown-runtime.js";
 import { n as url, t as init_shared } from "./chunks/shared.js";
+
 // b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
@@ -33,6 +36,7 @@ function init_b() {
 		console.log("B", url);
 	})))();
 }
+
 init_b();
 
 ```

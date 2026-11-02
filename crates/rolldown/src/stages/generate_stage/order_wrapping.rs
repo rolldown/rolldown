@@ -104,10 +104,7 @@ pub(super) fn order_wrapper_is_reexport_transparent(
   ast: Option<&EcmaAst>,
   keep_names: bool,
 ) -> bool {
-  matches!(
-    meta.concatenated_wrapped_module_kind,
-    rolldown_common::ConcatenateWrappedModuleKind::None
-  ) && meta.shimmed_missing_exports.is_empty()
+  meta.shimmed_missing_exports.is_empty()
     && meta.execution_dependencies.is_empty()
     && ast.is_some_and(|ast| {
       ast.program().body.iter().all(|stmt| statement_has_no_local_wrapper_body(stmt, keep_names))
@@ -214,10 +211,6 @@ pub(super) fn consumer_local_reexport_plan(
       let meta = &input.linking[module_idx];
       if meta.has_dynamic_exports
         || meta.is_tla_or_contains_tla_dependency
-        || !matches!(
-          meta.concatenated_wrapped_module_kind,
-          rolldown_common::ConcatenateWrappedModuleKind::None
-        )
         || !meta.shimmed_missing_exports.is_empty()
       {
         continue;
@@ -372,10 +365,6 @@ fn consumer_local_reexport_records(
       && !meta.has_dynamic_exports
       && !meta.is_tla_or_contains_tla_dependency
       && meta.shimmed_missing_exports.is_empty()
-      && matches!(
-        meta.concatenated_wrapped_module_kind,
-        rolldown_common::ConcatenateWrappedModuleKind::None
-      )
       && !input.cyclic_modules.contains(&module_idx)
       && !required_modules.contains(&module_idx)
   };
@@ -490,10 +479,6 @@ fn independently_initialized_esm_modules(input: &OrderLoweringInput<'_>) -> FxHa
     }) && !matches!(meta.wrap_kind(), WrapKind::Cjs)
       && !meta.is_tla_or_contains_tla_dependency
       && meta.shimmed_missing_exports.is_empty()
-      && matches!(
-        meta.concatenated_wrapped_module_kind,
-        rolldown_common::ConcatenateWrappedModuleKind::None
-      )
       && !input.cyclic_modules.contains(&module_idx)
     {
       independent.insert(module_idx);

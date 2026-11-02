@@ -9,7 +9,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_c, t as helper$1 } from "./c2.js";
 __share("s1-PNXlmu-8", (exports) => {
-	// s1.js
 	var s1;
 	function init_s1() {
 		return (init_s1 = __esmMin((() => {
@@ -18,12 +17,11 @@ __share("s1-PNXlmu-8", (exports) => {
 		})))();
 	}
 	__share_export(exports, {
-		n: () => s1,
-		t: () => init_s1
+		"n": () => s1,
+		"t": () => init_s1
 	});
 });
 var share_s1 = __share_require("s1-PNXlmu-8");
-// a.js
 var helper;
 function init_a() {
 	return (init_a = __esmMin((() => {
@@ -43,7 +41,6 @@ init_a();
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_c, t as helper } from "./c2.js";
 __share("s1-PNXlmu-8", (exports) => {
-	// s1.js
 	var s1;
 	function init_s1() {
 		return (init_s1 = __esmMin((() => {
@@ -52,12 +49,11 @@ __share("s1-PNXlmu-8", (exports) => {
 		})))();
 	}
 	__share_export(exports, {
-		n: () => s1,
-		t: () => init_s1
+		"n": () => s1,
+		"t": () => init_s1
 	});
 });
 var share_s1 = __share_require("s1-PNXlmu-8");
-// b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
 		share_s1.t();
@@ -80,7 +76,6 @@ init_c();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-// c.js
 var helper;
 function init_c() {
 	return (init_c = __esmMin((() => {
@@ -109,6 +104,7 @@ export { __share_require as i, __share as n, __share_export as r, __esmMin as t 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as s1, t as init_s1 } from "./s1.js";
+
 // a.js
 var helper;
 function init_a() {
@@ -119,6 +115,7 @@ function init_a() {
 		globalThis.events.push("A " + helper + " " + s1);
 	})))();
 }
+
 init_a();
 
 ```
@@ -128,6 +125,7 @@ init_a();
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as s1, t as init_s1 } from "./s1.js";
+
 // b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
@@ -135,6 +133,7 @@ function init_b() {
 		globalThis.events.push("B " + s1);
 	})))();
 }
+
 init_b();
 
 ```

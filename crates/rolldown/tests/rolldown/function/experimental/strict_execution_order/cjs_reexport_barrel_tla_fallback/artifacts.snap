@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { n as init_pure_barrel, r as cn } from "./pure-barrel.js";
+
 // main.js
 function loadRoute() {
 	return import("./route.js");
@@ -18,6 +19,7 @@ function init_main() {
 		globalThis.__events.push(`main:${cn("a", "b")}`);
 	})))();
 }
+
 await init_main();
 export { loadRoute };
 
@@ -73,6 +75,7 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { n as init_pure_barrel, t as import_clone_deep } from "./pure-barrel.js";
+
 // route.js
 var value;
 function init_route() {
@@ -82,6 +85,7 @@ function init_route() {
 		value = (0, import_clone_deep.default)({ value: 1 });
 	})))();
 }
+
 await init_route();
 export { value };
 

@@ -19,12 +19,14 @@ export { targetPromise };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { r as init_observer } from "./dyn.js";
+
 // b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
 		init_observer();
 	})))();
 }
+
 init_b();
 
 ```

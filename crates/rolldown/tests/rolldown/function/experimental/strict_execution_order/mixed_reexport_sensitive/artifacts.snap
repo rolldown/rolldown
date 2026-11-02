@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_shared, r as SNAPSHOT } from "./shared.js";
+
 // pure.js
 var PURE;
 function init_pure() {
@@ -15,6 +16,7 @@ function init_pure() {
 		PURE = "pure";
 	})))();
 }
+
 // lazy.js
 function read() {
 	return [SNAPSHOT, PURE];
@@ -24,6 +26,7 @@ function init_lazy() {
 		init_pure(), init_shared();
 	})))();
 }
+
 init_lazy();
 export { read };
 
@@ -34,6 +37,7 @@ export { read };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { a as bump, n as init_shared, o as init_state, t as LOCAL } from "./shared.js";
+
 // main.js
 var local, load;
 function init_main() {
@@ -45,6 +49,7 @@ function init_main() {
 		load = () => import("./lazy.js").then((module) => module.read());
 	})))();
 }
+
 init_main();
 export { load, local };
 
@@ -105,6 +110,7 @@ export { bump as a, init_value as i, init_shared as n, init_state as o, SNAPSHOT
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_shared, r as SNAPSHOT } from "./shared.js";
+
 // pure.js
 var PURE;
 function init_pure() {
@@ -112,6 +118,7 @@ function init_pure() {
 		PURE = "pure";
 	})))();
 }
+
 // lazy.js
 function read() {
 	return [SNAPSHOT, PURE];
@@ -121,6 +128,7 @@ function init_lazy() {
 		init_pure(), init_shared();
 	})))();
 }
+
 init_lazy();
 export { read };
 
@@ -131,6 +139,7 @@ export { read };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { a as bump, n as init_shared, o as init_state, t as LOCAL } from "./shared.js";
+
 // main.js
 var local, load;
 function init_main() {
@@ -142,6 +151,7 @@ function init_main() {
 		load = () => import("./lazy.js").then((module) => module.read());
 	})))();
 }
+
 init_main();
 export { load, local };
 
@@ -257,8 +267,10 @@ export { SNAPSHOT as n, bump as r, LOCAL as t };
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_shared } from "./shared.js";
 import { t as SNAPSHOT } from "./snapshot.js";
+
 // pure.js
 const PURE = "pure";
+
 // lazy.js
 function read() {
 	return [SNAPSHOT, PURE];
@@ -268,6 +280,7 @@ function init_lazy() {
 		init_shared();
 	})))();
 }
+
 init_lazy();
 export { read };
 
@@ -278,6 +291,7 @@ export { read };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { i as init_state, n as init_shared, r as bump, t as LOCAL } from "./shared.js";
+
 // main.js
 var local, load;
 function init_main() {
@@ -289,6 +303,7 @@ function init_main() {
 		load = () => import("./lazy.js").then((module) => module.read());
 	})))();
 }
+
 init_main();
 export { load, local };
 

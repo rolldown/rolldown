@@ -1,4 +1,5 @@
 import assert from "node:assert";
+
 // main.js
 console.log("production");
 assert.strictEqual("production", "production");

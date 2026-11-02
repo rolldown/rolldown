@@ -4,9 +4,8 @@ use futures::future::try_join_all;
 use oxc_index::{IndexVec, index_vec};
 use oxc_str::CompactStr;
 use rolldown_common::{
-  Asset, ChunkIdx, ConcatenateWrappedModuleKind, EmittedChunkInfo, InstantiationKind,
-  ModuleRenderArgs, ModuleRenderOutput, Output, OutputAsset, OutputChunk, SharedFileEmitter,
-  SymbolRef, UsedSymbolRefs,
+  Asset, ChunkIdx, EmittedChunkInfo, InstantiationKind, ModuleRenderArgs, ModuleRenderOutput,
+  Output, OutputAsset, OutputChunk, SharedFileEmitter, SymbolRef, UsedSymbolRefs,
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BatchedBuildDiagnostic, BuildResult, Diagnostics};
@@ -33,7 +32,7 @@ use crate::{
 
 use super::{
   CarriedRender, GenerateStage,
-  chunk_ast_dce::{self, ChunkAstDceOutput},
+  chunk_ast_dce::{self},
 };
 
 type ChunkGeneratorFuture<'a> = Pin<
@@ -43,6 +42,15 @@ type ChunkGeneratorFuture<'a> = Pin<
       + Send,
   >,
 >;
+
+struct InstantiatedChunks {
+  chunks: IndexInstantiatedChunks,
+  instances: IndexChunkToInstances,
+  optimized: FxHashSet<ChunkIdx>,
+  property_cache: Option<oxc::minifier::ManglePropertyCache>,
+  pending: FxHashMap<ChunkIdx, chunk_ast_dce::PendingChunk>,
+  rendered_text: FxHashSet<ChunkIdx>,
+}
 
 impl GenerateStage<'_> {
   pub async fn render_chunk_to_assets(
@@ -63,7 +71,14 @@ impl GenerateStage<'_> {
     // (the last reader), where it is dropped at scope exit by the compiler —
     // releasing the per-module bumpalo arenas before `minify_chunks` and
     // `finalize_assets` allocate.
-    let (mut instantiated_chunks, index_chunk_to_instances, ast_dce_chunks) = self
+    let InstantiatedChunks {
+      chunks: mut instantiated_chunks,
+      instances: index_chunk_to_instances,
+      optimized: ast_dce_chunks,
+      property_cache: ast_property_cache,
+      pending: mut pending_ast,
+      rendered_text,
+    } = self
       .instantiate_chunks(
         chunk_graph,
         ast_table,
@@ -76,21 +91,28 @@ impl GenerateStage<'_> {
 
     self.trace_action_package_graph_ready(chunk_graph, &instantiated_chunks);
 
-    diagnostics.extend(
-      render_chunks(
-        self.plugin_driver,
-        &mut instantiated_chunks,
-        self.options,
-        &chunk_graph.chunk_table,
-        &self.link_output.module_table,
-      )
-      .await?,
-    );
+    let (render_warnings, text_replaced) = render_chunks(
+      self.plugin_driver,
+      &mut instantiated_chunks,
+      self.options,
+      &chunk_graph.chunk_table,
+      &self.link_output.module_table,
+    )
+    .await?;
+    diagnostics.extend(render_warnings);
+    let replaced = pending_ast.keys().filter(|idx| text_replaced.contains(idx)).copied().collect();
+    pending_ast.retain(|idx, _| !text_replaced.contains(idx));
 
     augment_chunk_hash(self.plugin_driver, &mut instantiated_chunks).await?;
 
-    let mangle_cache =
-      Self::minify_chunks(self.options, &mut instantiated_chunks, &ast_dce_chunks)?;
+    let mangle_cache = Self::minify_chunks(
+      self.options,
+      &mut instantiated_chunks,
+      &ast_dce_chunks,
+      ast_property_cache,
+      chunk_ast_dce::DeferredChunks { pending: pending_ast, replaced, rendered_text },
+      &self.link_output.module_table,
+    )?;
 
     Self::post_banner_footer(&mut instantiated_chunks)?;
 
@@ -178,7 +200,7 @@ impl GenerateStage<'_> {
     used_symbol_refs: &UsedSymbolRefs,
     order_state: &super::order_wrap_state::OrderWrapState,
     mut inline_renders: FxHashMap<ChunkIdx, Vec<CarriedRender>>,
-  ) -> BuildResult<(IndexInstantiatedChunks, IndexChunkToInstances, FxHashSet<ChunkIdx>)> {
+  ) -> BuildResult<InstantiatedChunks> {
     let mut index_chunk_to_instances: IndexChunkToInstances =
       index_vec![FxIndexSet::default(); chunk_graph.chunk_table.len()];
     let mut index_instantiated_chunks: IndexInstantiatedChunks =
@@ -195,14 +217,18 @@ impl GenerateStage<'_> {
         map
       })
       .collect();
-    let (chunk_index_to_codegen_rets, mut ast_dce_outputs) = self.create_chunk_to_codegen_ret_map(
+    let (chunk_index_to_codegen_rets, mut prepared_chunks) = self.create_chunk_to_codegen_ret_map(
       chunk_graph,
       ast_table,
       used_symbol_refs,
       order_state,
       render_export_items_index_vec,
+      &mut inline_renders,
     );
-    let ast_dce_chunks: FxHashSet<ChunkIdx> = ast_dce_outputs.keys().copied().collect();
+    let ast_dce_chunks: FxHashSet<ChunkIdx> = prepared_chunks.keys().copied().collect();
+    let mut property_cache = None;
+    let mut pending_ast = FxHashMap::default();
+    let mut rendered_text = FxHashSet::default();
 
     try_join_all(
       chunk_index_to_codegen_rets
@@ -219,7 +245,7 @@ impl GenerateStage<'_> {
           }
           let chunk = chunk_graph.chunk_table.get(chunk_idx)?;
           let carried_renders = inline_renders.remove(&chunk_idx).unwrap_or_default();
-          let chunk_ast_dce = ast_dce_outputs.remove(&chunk_idx);
+          let chunk_ast_dce = prepared_chunks.remove(&chunk_idx);
           Some((chunk_idx, chunk, module_id_to_codegen_ret, carried_renders, chunk_ast_dce))
         })
         .flat_map(
@@ -240,11 +266,52 @@ impl GenerateStage<'_> {
                 resolved_paths,
                 inline_state: &self.inline_state,
                 carried_renders,
-                chunk_ast_dce,
+                chunk_ast_dce: None,
+                defer_ast: false,
               };
-              let ecma_chunks_future = EcmaGenerator::instantiate_chunk(&mut ecma_ctx);
-              let ecma_chunks = ecma_chunks_future.await?;
-              Ok(ecma_chunks)
+              let mut pending = None;
+              let mut wrapped = None;
+              if let Some(prepared) = chunk_ast_dce {
+                if matches!(
+                  self.options.format,
+                  rolldown_common::OutputFormat::Iife | rolldown_common::OutputFormat::Umd
+                ) || self.options.is_dev_mode_enabled()
+                  || self.inline_state.has_records()
+                  || chunk_ast_dce::complete_program(self.options, self.plugin_driver)
+                {
+                  wrapped = Some(prepared);
+                  ecma_ctx.defer_ast = true;
+                } else {
+                  (ecma_ctx.chunk_ast_dce, pending) = prepared.into_render_state(&ecma_ctx);
+                  ecma_ctx.defer_ast = pending.is_some();
+                }
+              }
+              let mut result = EcmaGenerator::instantiate_chunk(&mut ecma_ctx).await?;
+              if let Ok(output) = &mut result {
+                if let Some(prepared) = wrapped {
+                  if chunk_ast_dce::complete_program(self.options, self.plugin_driver) {
+                    // Arbitrary addon fragments can change tokenization and statement boundaries
+                    // across module text. Parse their actual rendered input after hooks, using the
+                    // shared optimizer. Empty-statement skeleton slots cannot preserve this contract.
+                    // See internal-docs/chunk-ast-minify/implementation.md.
+                    output.minify_rendered_text = true;
+                  } else {
+                    pending = match prepared.into_wrapped(
+                      &ecma_ctx,
+                      output.wrapped_plan.take().expect("wrapped format plan"),
+                    ) {
+                      Ok(pending) => Some(pending),
+                      Err(errors) => return Ok(Err(errors)),
+                    };
+                  }
+                } else if let Some(owner) = &mut pending {
+                  let (prefix, suffix) =
+                    output.envelope.take().expect("deferred rendering envelope");
+                  owner.set_envelope(prefix, suffix);
+                }
+                output.pending_ast = pending;
+              }
+              Ok(result)
             });
             [ecma_chunks_future]
           },
@@ -253,7 +320,23 @@ impl GenerateStage<'_> {
     .await?
     .into_iter()
     .for_each(|result| match result {
-      Ok(generate_output) => {
+      Ok(mut generate_output) => {
+        if generate_output.minify_rendered_text {
+          rendered_text.insert(generate_output.chunks[0].originate_from);
+        }
+        if let Some(pending) = generate_output.pending_ast.take() {
+          let idx = generate_output.chunks[0].originate_from;
+          pending_ast.insert(idx, pending);
+        }
+        if let Some(cache) = generate_output.property_cache.take() {
+          if property_cache.is_some() {
+            diagnostics.extend([rolldown_error::BuildDiagnostic::invalid_option(
+              rolldown_error::InvalidOptionType::ManglePropertiesWithMultipleChunks,
+            )]);
+          } else {
+            property_cache = Some(cache);
+          }
+        }
         generate_output.chunks.into_iter().for_each(|ins_chunk| {
           let base_chunk_idx = ins_chunk.originate_from;
           let ins_chunk_idx = index_instantiated_chunks.push(ins_chunk);
@@ -270,7 +353,14 @@ impl GenerateStage<'_> {
       });
     });
 
-    Ok((index_instantiated_chunks, index_chunk_to_instances, ast_dce_chunks))
+    Ok(InstantiatedChunks {
+      chunks: index_instantiated_chunks,
+      instances: index_chunk_to_instances,
+      optimized: ast_dce_chunks,
+      property_cache,
+      pending: pending_ast,
+      rendered_text,
+    })
   }
 
   /// Create a IndexVecMap from chunk index to related modules codegen return list.
@@ -290,13 +380,15 @@ impl GenerateStage<'_> {
     used_symbol_refs: &UsedSymbolRefs,
     order_state: &super::order_wrap_state::OrderWrapState,
     render_export_items_index_vec: &IndexVec<ChunkIdx, FxIndexMap<SymbolRef, Vec<CompactStr>>>,
-  ) -> (Vec<Vec<Option<ModuleRenderOutput>>>, FxHashMap<ChunkIdx, ChunkAstDceOutput>) {
+    inline_renders: &mut FxHashMap<ChunkIdx, Vec<CarriedRender>>,
+  ) -> (Vec<Vec<Option<ModuleRenderOutput>>>, FxHashMap<ChunkIdx, chunk_ast_dce::PreparedChunk>) {
     let prepared_chunks = self.run_chunk_ast_dce(
       chunk_graph,
       &mut ast_table,
       used_symbol_refs,
       order_state,
       render_export_items_index_vec,
+      inline_renders,
     );
     let needs_extra_indent = matches!(
       self.options.format,
@@ -329,15 +421,7 @@ impl GenerateStage<'_> {
           .map(|&module_idx| match self.link_output.module_table[module_idx].as_normal() {
             Some(module) => {
               #[expect(clippy::bool_to_int_with_if)]
-              let initial_indent = if needs_extra_indent
-                || !matches!(
-                  self.link_output.metas[module_idx].concatenated_wrapped_module_kind,
-                  ConcatenateWrappedModuleKind::None
-                ) {
-                1
-              } else {
-                0
-              };
+              let initial_indent = if needs_extra_indent { 1 } else { 0 };
               let t = Timer::start();
               let out = match prepared {
                 Some(prepared) => prepared.print_module(
@@ -373,9 +457,7 @@ impl GenerateStage<'_> {
       })
       .collect::<Vec<_>>();
     drop(ast_table);
-    let outputs =
-      prepared_chunks.into_iter().map(|(idx, chunk)| (idx, chunk.into_output())).collect();
-    (ret, outputs)
+    (ret, prepared_chunks)
   }
 
   /// PoC: runs `chunk_ast_dce::dce_chunk` on every eligible chunk, in parallel across chunks.
@@ -386,10 +468,9 @@ impl GenerateStage<'_> {
     used_symbol_refs: &UsedSymbolRefs,
     order_state: &super::order_wrap_state::OrderWrapState,
     render_export_items_index_vec: &IndexVec<ChunkIdx, FxIndexMap<SymbolRef, Vec<CompactStr>>>,
+    inline_renders: &mut FxHashMap<ChunkIdx, Vec<CarriedRender>>,
   ) -> FxHashMap<ChunkIdx, chunk_ast_dce::PreparedChunk> {
-    let Some(minify_options) =
-      chunk_ast_dce::build_eligible(self.options, self.plugin_driver, &self.inline_state)
-    else {
+    let Some(minify_options) = chunk_ast_dce::build_minify_options(self.options) else {
       return FxHashMap::default();
     };
     let make_ctx = |chunk_idx: ChunkIdx| GenerateContext {
@@ -407,6 +488,7 @@ impl GenerateStage<'_> {
       inline_state: &self.inline_state,
       carried_renders: vec![],
       chunk_ast_dce: None,
+      defer_ast: false,
     };
     let mut work = vec![];
     for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
@@ -428,12 +510,24 @@ impl GenerateStage<'_> {
           asts.push(ast_table[*module_idx].as_ref().expect("should have ast"));
         }
       }
-      if chunk_ast_dce::chunk_eligible(&make_ctx(chunk_idx), &asts) {
+      if let Some(carried) = inline_renders.get(&chunk_idx) {
+        asts.extend(
+          carried
+            .iter()
+            .flat_map(|record| record.modules.iter().filter_map(|module| module.ast.as_ref())),
+        );
+      }
+      if chunk_ast_dce::chunk_eligible(&make_ctx(chunk_idx)) {
         let mut owned = chunk_ast_dce::ChunkAst::new(asts.len());
         for module_idx in &chunk.modules {
           if self.link_output.module_table[*module_idx].as_normal().is_some() {
             owned.push(ast_table[*module_idx].take().expect("should have ast"));
           }
+        }
+        if chunk_ast_dce::retain_inline_asts(self.options, self.plugin_driver)
+          && let Some(carried) = inline_renders.get_mut(&chunk_idx)
+        {
+          owned.push_inline(carried);
         }
         work.push((chunk_idx, owned));
       }

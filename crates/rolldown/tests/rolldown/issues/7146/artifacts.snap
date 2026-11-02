@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## _virtual/_rolldown/runtime.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
 exports.__commonJSMin = __commonJSMin;
 
 ```
@@ -18,6 +18,7 @@ exports.__commonJSMin = __commonJSMin;
 var require_config = /* @__PURE__ */ require("./_virtual/_rolldown/runtime.js").__commonJSMin(((exports, module) => {
 	module.exports = { "foo": 1 };
 }));
+
 Object.defineProperty(exports, "default", {
 	enumerable: true,
 	get: function() {
@@ -31,6 +32,7 @@ Object.defineProperty(exports, "default", {
 
 ```js
 const require_config$1 = require("./config.js");
+
 // main.js
 const assert = require("assert/strict");
 const config = require_config$1.default;

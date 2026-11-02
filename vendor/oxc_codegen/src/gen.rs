@@ -105,6 +105,7 @@ impl Gen for Directive<'_> {
 
 impl Gen for Statement<'_> {
     fn r#gen(&self, p: &mut Codegen, ctx: Context) {
+        let claimed = p.begin_output_fragment(self.span());
         match self {
             // Most common statements first (based on parser order and frequency)
             Self::BlockStatement(stmt) => {
@@ -206,6 +207,7 @@ impl Gen for Statement<'_> {
                 p.print_semicolon_after_statement();
             }
         }
+        p.end_output_fragment(claimed);
     }
 }
 
@@ -1308,6 +1310,7 @@ impl Gen for ExportDefaultDeclarationKind<'_> {
 
 impl GenExpr for Expression<'_> {
     fn gen_expr(&self, p: &mut Codegen, precedence: Precedence, ctx: Context) {
+        let claimed = p.begin_output_fragment(self.span());
         match self {
             // Most common expressions first (identifiers, member access, calls)
             Self::Identifier(ident) => ident.print(p, ctx),
@@ -1393,6 +1396,7 @@ impl GenExpr for Expression<'_> {
             // V8 intrinsics (rare)
             Self::V8IntrinsicExpression(e) => e.print_expr(p, precedence, ctx),
         }
+        p.end_output_fragment(claimed);
     }
 }
 
@@ -2027,6 +2031,7 @@ impl GenExpr for UnaryExpression<'_> {
 impl GenExpr for BinaryExpression<'_> {
     fn gen_expr(&self, p: &mut Codegen, precedence: Precedence, ctx: Context) {
         let v = BinaryExpressionVisitor {
+            output_claimed: false,
             // SAFETY:
             // The pointer is stored on the heap and all will be consumed in the binary expression visitor.
             e: Binaryish::Binary(unsafe {
@@ -2057,6 +2062,7 @@ impl GenExpr for PrivateInExpression<'_> {
 impl GenExpr for LogicalExpression<'_> {
     fn gen_expr(&self, p: &mut Codegen, precedence: Precedence, ctx: Context) {
         let v = BinaryExpressionVisitor {
+            output_claimed: false,
             // SAFETY:
             // The pointer is stored on the heap and all will be consumed in the binary expression visitor.
             e: Binaryish::Logical(unsafe {

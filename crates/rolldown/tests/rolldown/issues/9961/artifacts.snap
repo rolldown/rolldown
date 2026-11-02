@@ -11,10 +11,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 function setupWorker(handler) {
 	return { handler };
 }
+
 // core/http.js
 function http() {
 	return "http";
 }
+
 // main.js
 var worker;
 function init_main() {
@@ -23,6 +25,7 @@ function init_main() {
 		console.log(worker);
 	})))();
 }
+
 init_main();
 
 ```

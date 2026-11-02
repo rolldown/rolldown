@@ -49,6 +49,7 @@ pub struct GenerateContext<'a> {
   pub carried_renders: Vec<CarriedRender>,
   /// PoC: set when this chunk's DCE ran on its AST (`chunk_ast_dce`).
   pub chunk_ast_dce: Option<crate::stages::generate_stage::chunk_ast_dce::ChunkAstDceOutput>,
+  pub defer_ast: bool,
 }
 
 impl GenerateContext<'_> {
@@ -159,6 +160,100 @@ impl GenerateContext<'_> {
     }
   }
 
+  /// Finalized symbol value, built directly so output generation never reparses expressions.
+  pub fn finalized_expr_for_symbol_ref<'ast>(
+    &self,
+    symbol_ref: SymbolRef,
+    reader: ChunkIdx,
+    builder: &oxc::ast::builder::AstBuilder<'ast>,
+  ) -> oxc::ast::ast::Expression<'ast> {
+    use oxc::{
+      ast::ast::{Expression, IdentifierName, Str},
+      span::SPAN,
+    };
+    fn identifier<'a>(name: &str, builder: &oxc::ast::builder::AstBuilder<'a>) -> Expression<'a> {
+      Expression::new_identifier(SPAN, Str::from_str_in(name, builder), builder)
+    }
+    fn member<'a>(
+      object: Expression<'a>,
+      name: &str,
+      builder: &oxc::ast::builder::AstBuilder<'a>,
+    ) -> Expression<'a> {
+      if oxc::syntax::identifier::is_identifier_name(name) {
+        Expression::new_static_member_expression(
+          SPAN,
+          object,
+          IdentifierName::new(SPAN, Str::from_str_in(name, builder), builder),
+          false,
+          builder,
+        )
+      } else {
+        Expression::new_computed_member_expression(
+          SPAN,
+          object,
+          Expression::new_string_literal(SPAN, Str::from_str_in(name, builder), None, builder),
+          false,
+          builder,
+        )
+      }
+    }
+    let db = &self.link_output.symbol_db;
+    if !symbol_ref.is_declared_in_root_scope(db) {
+      return identifier(self.canonical_name_for(&self.chunk.canonical_names, symbol_ref), builder);
+    }
+    let canonical = db.canonical_ref_for(symbol_ref);
+    if let Some(alias) = &db.get(canonical).namespace_alias {
+      let namespace = if self.order_wrap_state.is_order_cjs_carrier_namespace(alias.namespace_ref)
+        || self
+          .inline_state
+          .bridge_read(
+            InlineReader { file: self.chunk_idx, reader },
+            db.canonical_ref_for(alias.namespace_ref),
+            db,
+            self.chunk_graph,
+          )
+          .is_some()
+      {
+        self.finalized_expr_for_symbol_ref(alias.namespace_ref, reader, builder)
+      } else {
+        identifier(
+          db.canonical_name_for_or_original(alias.namespace_ref, &self.chunk.canonical_names),
+          builder,
+        )
+      };
+      return member(namespace, &alias.property_name, builder);
+    }
+    if self.link_output.module_table[canonical.owner].is_external() {
+      return identifier(
+        db.canonical_name_for_or_original(canonical, &self.chunk.canonical_names),
+        builder,
+      );
+    }
+    if let Some((bridge, name)) = self.inline_state.bridge_read(
+      InlineReader { file: self.chunk_idx, reader },
+      canonical,
+      db,
+      self.chunk_graph,
+    ) {
+      return member(identifier(bridge, builder), name, builder);
+    }
+    if matches!(self.options.format, rolldown_common::OutputFormat::Cjs) {
+      let owner = db.get(canonical).chunk_idx.expect("root symbol belongs to a chunk");
+      if owner != reader {
+        let binding =
+          &self.chunk_graph.chunk_table[reader].require_binding_names_for_other_chunks[&owner];
+        let exporter = &self.chunk_graph.chunk_table[owner];
+        let name = &exporter.exports_to_other_chunks[&canonical][0];
+        let value = identifier(binding, builder);
+        if name == "default" && matches!(exporter.output_exports, OutputExports::Default) {
+          return value;
+        }
+        return member(value, name, builder);
+      }
+    }
+    identifier(self.canonical_name_for(&self.chunk.canonical_names, canonical), builder)
+  }
+
   /// `bridge.name` when `canonical_ref` is owned by an inline common chunk record that
   /// `cur_chunk_idx` (this file, or a record printed in it) reads through a bridge.
   fn inline_bridge_pattern(
@@ -191,6 +286,12 @@ impl GenerateContext<'_> {
 pub struct GenerateOutput {
   pub chunks: Vec<InstantiatedChunk>,
   pub warnings: Vec<BuildDiagnostic>,
+  pub pending_ast: Option<crate::stages::generate_stage::chunk_ast_dce::PendingChunk>,
+  /// Addon fragments can alter tokenization across module boundaries.
+  pub minify_rendered_text: bool,
+  pub property_cache: Option<oxc::minifier::ManglePropertyCache>,
+  pub envelope: Option<(String, String)>,
+  pub wrapped_plan: Option<crate::ecmascript::WrappedPlan>,
 }
 
 pub trait Generator {

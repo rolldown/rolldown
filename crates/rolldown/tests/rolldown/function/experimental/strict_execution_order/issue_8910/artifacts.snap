@@ -7,8 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
+
 // node0.js
 var node_0;
+
 __esmMin((() => {
 	globalThis.__acyclic_output_fuzz_0 = 0;
 	import("./node12.js").then((n) => (n.n(), n.r));
@@ -68,8 +70,10 @@ export { __esmMin as n, __exportAll as r, __commonJSMin as t };
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
+
 // node0.js
 var node_0;
+
 __esmMin((() => {
 	globalThis.__acyclic_output_fuzz_0 = 0;
 	import("./node12.js").then((n) => (n.n(), n.r));

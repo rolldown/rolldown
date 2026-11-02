@@ -6,7 +6,27 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## _virtual/_rolldown/runtime.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, "default") ? __defProp(target, "default", {
+	value: mod,
+	enumerable: true
+}) : target, mod));
 exports.__commonJSMin = __commonJSMin;
 exports.__toESM = __toESM;
 
@@ -19,8 +39,11 @@ const require_runtime = require("./_virtual/_rolldown/runtime.js");
 const require_rule$1 = require("./rule.js");
 let node_assert = require("node:assert");
 node_assert = require_runtime.__toESM(node_assert);
+
+// main.js
 const plugin = { mod: (/* @__PURE__ */ require_runtime.__toESM(require_rule$1)).default };
 node_assert.default.strictEqual(plugin.mod.meta, 19);
+
 module.exports = plugin;
 
 ```
@@ -32,6 +55,7 @@ module.exports = plugin;
 var require_lib = /* @__PURE__ */ require("./_virtual/_rolldown/runtime.js").__commonJSMin(((exports, module) => {
 	module.exports = {};
 }));
+
 Object.defineProperty(exports, "default", {
 	enumerable: true,
 	get: function() {
@@ -46,6 +70,7 @@ Object.defineProperty(exports, "default", {
 ```js
 const require_runtime = require("./_virtual/_rolldown/runtime.js");
 const require_lib$1 = require("./lib.js");
+
 // rule.js
 var require_rule = /* @__PURE__ */ require_runtime.__commonJSMin(((exports, module) => {
 	const mod = require_lib$1.default;
@@ -56,6 +81,7 @@ var require_rule = /* @__PURE__ */ require_runtime.__commonJSMin(((exports, modu
 		}
 	};
 }));
+
 module.exports = require_rule();
 
 ```

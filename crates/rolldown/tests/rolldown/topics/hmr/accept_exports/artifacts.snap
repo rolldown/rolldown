@@ -292,11 +292,10 @@ export { __exportAll as t };
 import { t as __exportAll } from "./main.js";
 import assert from "node:assert";
 __rolldown_runtime__.registerGraph({
-	ids: ["dynamic_import/target.js"],
-	localCount: 1,
-	edges: [[]]
+	"ids": ["dynamic_import/target.js"],
+	"localCount": 1,
+	"edges": [[]]
 });
-// dynamic_import/target.js
 var target_exports = /* @__PURE__ */ __exportAll({
 	a: () => 0,
 	b: () => "b"

@@ -7,10 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+
 // entry.mjs
 let foo;
 let bar;
 let baz;
+
 exports["..."] = baz;
 exports.foo = foo;
 exports.if = bar;

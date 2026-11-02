@@ -50,6 +50,7 @@ export { value };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as value, t as init_entry_a } from "./entry-a.js";
+
 // entry-b.js
 var combined;
 function init_entry_b() {
@@ -58,6 +59,7 @@ function init_entry_b() {
 		combined = `b:${value}`;
 	})))();
 }
+
 await init_entry_b();
 export { combined };
 

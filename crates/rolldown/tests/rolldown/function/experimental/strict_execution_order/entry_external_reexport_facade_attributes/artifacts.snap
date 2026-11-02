@@ -9,14 +9,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_reader } from "./reader.js";
 export * from "external" with { type: "json" };
+
 // setup.js
 globalThis.setupValue = "ready";
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_reader();
 	})))();
 }
+
 init_main();
 
 ```
@@ -55,12 +58,14 @@ export { __esmMin as t };
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_reader } from "./reader.js";
 export * from "external" with { type: "json" };
+
 // setup.js
 function init_setup() {
 	return (init_setup = __esmMin((() => {
 		globalThis.setupValue = "ready";
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -68,6 +73,7 @@ function init_main() {
 		init_reader();
 	})))();
 }
+
 init_main();
 
 ```

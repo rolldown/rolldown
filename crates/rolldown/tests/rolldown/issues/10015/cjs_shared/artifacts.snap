@@ -61,6 +61,7 @@ export { POST, __commonJSMin, require_shared };
 
 ```js
 const require_main = require("./main2.js");
+
 // dynamic.cjs
 var require_dynamic = /* @__PURE__ */ require_main.__commonJSMin(((exports, module) => {
 	const shared = require_main.require_shared();
@@ -69,6 +70,7 @@ var require_dynamic = /* @__PURE__ */ require_main.__commonJSMin(((exports, modu
 		run: () => shared.tag
 	};
 }));
+
 Object.defineProperty(exports, "default", {
 	enumerable: true,
 	get: function() {
@@ -90,12 +92,34 @@ exports.POST = require_main.POST;
 ### main2.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, "default") ? __defProp(target, "default", {
+	value: mod,
+	enumerable: true
+}) : target, mod));
+
 // shared.cjs
 var require_shared = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.sharedInitializations = (globalThis.sharedInitializations ?? 0) + 1;
 	module.exports = { tag: "shared" };
 }));
+
 // main.js
 var import_shared = /* @__PURE__ */ __toESM(require_shared());
 const POST = async () => {
@@ -105,6 +129,7 @@ const POST = async () => {
 		value: import_shared.default.tag + ":" + dynamic.run()
 	};
 };
+
 Object.defineProperty(exports, "POST", {
 	enumerable: true,
 	get: function() {

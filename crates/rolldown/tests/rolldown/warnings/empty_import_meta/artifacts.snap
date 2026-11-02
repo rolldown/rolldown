@@ -120,7 +120,6 @@ console.log({});
 
 ```js
 (function() {
-	// main.js
 	console.log({}.hello);
 	console.log({}.dirname);
 	console.log({}.filename);
@@ -209,7 +208,6 @@ console.log({});
 (function(factory) {
 	typeof define === "function" && define.amd ? define([], factory) : factory();
 })(function() {
-	// main.js
 	console.log({}.hello);
 	console.log({}.dirname);
 	console.log({}.filename);

@@ -8,11 +8,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { t as __commonJSMin } from "./main.js";
 __rolldown_runtime__.registerGraph({
-	ids: ["exist-dep-cjs.js"],
-	localCount: 1,
-	edges: [[]]
+	"ids": ["exist-dep-cjs.js"],
+	"localCount": 1,
+	"edges": [[]]
 });
-// exist-dep-cjs.js
 var require_exist_dep_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	__rolldown_runtime__.createModuleHotContext("exist-dep-cjs.js");
 	__rolldown_runtime__.registerModule("exist-dep-cjs.js", module);
@@ -27,11 +26,10 @@ export default require_exist_dep_cjs();
 ```js
 import { n as __exportAll } from "./main.js";
 __rolldown_runtime__.registerGraph({
-	ids: ["exist-dep-esm.js"],
-	localCount: 1,
-	edges: [[]]
+	"ids": ["exist-dep-esm.js"],
+	"localCount": 1,
+	"edges": [[]]
 });
-// exist-dep-esm.js
 var exist_dep_esm_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 __rolldown_runtime__.createModuleHotContext("exist-dep-esm.js");
 __rolldown_runtime__.registerModule("exist-dep-esm.js", { exports: exist_dep_esm_exports });

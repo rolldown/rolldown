@@ -68,7 +68,28 @@ export { eager, lazy };
 ### isArrayLike.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, "default") ? __defProp(target, "default", {
+	value: mod,
+	enumerable: true
+}) : target, mod));
+
 // isArrayLike.cjs
 var require_isArrayLike = /* @__PURE__ */ __commonJSMin(((exports) => {
 	function isArrayLike(value) {
@@ -76,6 +97,7 @@ var require_isArrayLike = /* @__PURE__ */ __commonJSMin(((exports) => {
 	}
 	exports.isArrayLike = isArrayLike;
 }));
+
 Object.defineProperty(exports, "__commonJSMin", {
 	enumerable: true,
 	get: function() {
@@ -101,6 +123,7 @@ Object.defineProperty(exports, "require_isArrayLike", {
 
 ```js
 const require_isArrayLike$3 = require("./isArrayLike.js");
+
 // last.cjs
 var require_last = /* @__PURE__ */ require_isArrayLike$3.__commonJSMin(((exports) => {
 	var require_isArrayLike = require_isArrayLike$3.require_isArrayLike();
@@ -114,6 +137,7 @@ var require_last = /* @__PURE__ */ require_isArrayLike$3.__commonJSMin(((exports
 	};
 	exports.last = last;
 }));
+
 Object.defineProperty(exports, "default", {
 	enumerable: true,
 	get: function() {
@@ -128,6 +152,8 @@ Object.defineProperty(exports, "default", {
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_isArrayLike$1 = require("./isArrayLike.js");
+
+// main.js
 const eager = (0, require_isArrayLike$1.require_isArrayLike().isArrayLike)([1]);
 async function lazy() {
 	return (await Promise.resolve().then(() => /* @__PURE__ */ require_isArrayLike$1.__toESM(require("./last.js").default))).default.last([
@@ -136,6 +162,7 @@ async function lazy() {
 		3
 	]);
 }
+
 exports.eager = eager;
 exports.lazy = lazy;
 

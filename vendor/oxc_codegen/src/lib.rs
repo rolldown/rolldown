@@ -38,11 +38,11 @@ mod synthesized_sourcemap_tests;
 use binary_expr_visitor::BinaryExpressionVisitor;
 use comment::CommentsMap;
 use operator::Operator;
-#[cfg(feature = "sourcemap")]
-use sourcemap_builder::SourcemapBuilder;
 /// rolldown patch: re-exported so callers can share line tables across prints.
 #[cfg(feature = "sourcemap")]
 pub use sourcemap_builder::LineOffsetTables;
+#[cfg(feature = "sourcemap")]
+use sourcemap_builder::SourcemapBuilder;
 use str::{Quote, cold_branch, is_script_close_tag};
 
 pub use context::Context;
@@ -85,11 +85,17 @@ static IDENT_BYTES: Align128<[bool; 256]> = {
     Align128(slots)
 };
 
+mod output_ranges;
+pub use output_ranges::{OutputRange, OutputRangeOwner};
+
 /// Output from [`Codegen::build`]
 #[non_exhaustive]
 pub struct CodegenReturn<'a> {
     /// The generated source code.
     pub code: String,
+
+    /// Opt-in actual emitted fragment ranges (independent of sourcemaps).
+    pub output_ranges: Vec<OutputRange>,
 
     /// The source map from the input source code to the generated source code.
     ///
@@ -140,6 +146,7 @@ pub struct Codegen<'a> {
 
     /// Output Code
     code: CodeBuffer,
+    output_ranges: Option<output_ranges::OutputRanges>,
 
     // states
     prev_op_end: usize,
@@ -243,6 +250,7 @@ impl<'a> Codegen<'a> {
             scoping: None,
             private_member_mappings: None,
             code: CodeBuffer::default(),
+            output_ranges: None,
             needs_semicolon: false,
             need_space_before_dot: 0,
             print_next_indent_as_space: false,
@@ -376,11 +384,13 @@ impl<'a> Codegen<'a> {
         }
         program.print(&mut self, Context::default());
         let legal_comments = self.handle_eof_linked_or_external_comments(program);
+        let output_ranges = self.finish_output_ranges();
         let code = self.code.into_string();
         #[cfg(feature = "sourcemap")]
         let map = self.sourcemap_builder.map(SourcemapBuilder::into_sourcemap);
         CodegenReturn {
             code,
+            output_ranges,
             #[cfg(feature = "sourcemap")]
             map,
             #[cfg(not(feature = "sourcemap"))]
@@ -868,6 +878,7 @@ impl<'a> Codegen<'a> {
     fn print_semicolon_after_statement(&mut self) {
         if self.options.minify {
             self.needs_semicolon = true;
+            self.defer_output_semicolon();
         } else {
             self.print_str(";\n");
         }
@@ -876,7 +887,9 @@ impl<'a> Codegen<'a> {
     #[inline]
     fn print_semicolon_if_needed(&mut self) {
         if self.needs_semicolon {
+            let previous = self.begin_output_semicolon();
             self.print_semicolon();
+            self.end_output_semicolon(previous);
             self.needs_semicolon = false;
         }
     }
@@ -927,6 +940,7 @@ impl<'a> Codegen<'a> {
     }
 
     fn print_body(&mut self, stmt: &Statement<'_>, ctx: Context) {
+        let claimed = self.begin_output_fragment(stmt.span());
         match stmt {
             Statement::BlockStatement(stmt) => {
                 self.print_soft_space();
@@ -946,6 +960,7 @@ impl<'a> Codegen<'a> {
                 stmt.print(self, ctx);
             }
         }
+        self.end_output_fragment(claimed);
     }
 
     fn print_block_statement(&mut self, stmt: &BlockStatement<'_>, ctx: Context) {
@@ -1010,6 +1025,7 @@ impl<'a> Codegen<'a> {
             && let Expression::StringLiteral(string) = expr
         {
             // Mirror `ExpressionStatement`'s printer, which this path stands in for
+            let claimed = self.begin_output_fragment(stmt.span);
             self.print_comments_at(stmt.span.start);
             if self.indent > 0 || self.print_next_indent_as_space {
                 self.print_indent();
@@ -1023,6 +1039,7 @@ impl<'a> Codegen<'a> {
                 self.print_ascii_byte(b')');
             }
             self.print_semicolon_after_statement();
+            self.end_output_fragment(claimed);
         } else {
             first.print(self, ctx);
         }

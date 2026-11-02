@@ -1,12 +1,12 @@
 //! Optional source provenance for literal inlining. Kept out of dense SymbolValue storage.
 
-use oxc_ast::ast::{Expression, Program};
-use oxc_ast_visit::{Visit, walk};
+use oxc_ast::ast::{Expression, Program, VariableDeclarator};
 use oxc_index::IndexVec;
 use oxc_span::{GetSpan, SPAN, Span};
 use oxc_syntax::symbol::SymbolId;
 
 pub struct LiteralSpans {
+    // Direct variable-initializer literals recorded by Normalize before any folding.
     original: Vec<Span>,
     comment_anchors: Vec<u32>,
     // Allocated on the first actual donor; retained and cleared between passes.
@@ -16,23 +16,24 @@ pub struct LiteralSpans {
 
 impl LiteralSpans {
     pub fn new(program: &Program<'_>, symbols_len: usize) -> Self {
-        struct Collector(Vec<Span>);
-        impl<'a> Visit<'a> for Collector {
-            fn visit_expression(&mut self, expr: &Expression<'a>) {
-                if is_literal(expr) && !expr.span().is_empty() {
-                    self.0.push(expr.span());
-                }
-                walk::walk_expression(self, expr);
-            }
-        }
-        let mut collector = Collector(Vec::new());
-        collector.visit_program(program);
-        collector.0.sort_unstable();
-        collector.0.dedup();
         let mut comment_anchors: Vec<_> = program.comments.iter().map(|c| c.attached_to).collect();
         comment_anchors.sort_unstable();
         comment_anchors.dedup();
-        Self { original: collector.0, comment_anchors, symbols: None, symbols_len }
+        Self { original: Vec::new(), comment_anchors, symbols: None, symbols_len }
+    }
+
+    pub fn record_declarator(&mut self, decl: &VariableDeclarator<'_>) {
+        if let Some(init) = &decl.init
+            && is_literal(init)
+            && !init.span().is_empty()
+        {
+            self.original.push(init.span());
+        }
+    }
+
+    pub fn finish_collection(&mut self) {
+        self.original.sort_unstable();
+        self.original.dedup();
     }
 
     pub fn reset(&mut self) {

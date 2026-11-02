@@ -1,4 +1,4 @@
-use std::{fmt::Debug, sync::Arc};
+use std::fmt::Debug;
 
 use crate::types::module_render_output::ModuleRenderOutput;
 use crate::{
@@ -13,10 +13,8 @@ use itertools::Itertools;
 use oxc_index::IndexVec;
 use oxc_str::CompactStr;
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
-use rolldown_sourcemap::collapse_sourcemaps;
 use rolldown_utils::IndexBitSet;
 use rustc_hash::FxHashSet;
-use string_wizard::SourceMapOptions;
 
 #[derive(Debug, Clone)]
 pub struct NormalModule {
@@ -238,27 +236,6 @@ impl NormalModule {
             ascii_only: options.charset.is_ascii(),
           },
         );
-        if !self.ecma_view.mutations.is_empty() {
-          let original_code: Arc<str> = render_output.code.into();
-          let mut magic_string = string_wizard::MagicString::new(&*original_code);
-          for mutation in &self.ecma_view.mutations {
-            mutation.apply(&mut magic_string);
-          }
-          let code = magic_string.to_string();
-          // `collapse_sourcemaps` walks this map's tokens, so it must match the codegen map's
-          // granularity — the default `Hires::False` maps only each line's column 0 and drops
-          // indented lines' mappings (rolldown#10070).
-          let mutated_map = magic_string.source_map(SourceMapOptions {
-            source: Arc::clone(&original_code),
-            hires: string_wizard::Hires::Boundary,
-            ..Default::default()
-          });
-          // `original` borrows the module source; `collapse_sourcemaps` copies what it
-          // keeps from it, so no `into_owned` detach is needed.
-          let map =
-            render_output.map.map(|original| collapse_sourcemaps(&[&original, &mutated_map]));
-          return ModuleRenderOutput { code, map, map_is_final: false };
-        }
         ModuleRenderOutput {
           code: render_output.code,
           map: render_output.map.map(oxc_sourcemap::SourceMap::into_owned),

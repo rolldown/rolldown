@@ -22,11 +22,13 @@ console.log(123);
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+// foo.js
 function init_foo() {
 	return (init_foo = __esmMin((async () => {
 		await 1e3;
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((async () => {
@@ -34,6 +36,7 @@ function init_main() {
 		console.log(123);
 	})))();
 }
+
 await init_main();
 
 ```

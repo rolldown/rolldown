@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-export * from "./mapped-ext.js"
+export * from "./mapped-ext.js";
 
 ```
 
@@ -17,7 +17,7 @@ export * from "./mapped-ext.js"
 ### main.js
 
 ```js
-export * from "./mapped-ext.js"
+export * from "./mapped-ext.js";
 
 ```
 

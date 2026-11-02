@@ -46,6 +46,7 @@ export { shared as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as shared, t as init_shared } from "./shared.js";
+
 // a.js
 var a;
 function init_a() {
@@ -54,6 +55,7 @@ function init_a() {
 		a = `a:${shared}`;
 	})))();
 }
+
 await init_a();
 export { a };
 
@@ -64,6 +66,7 @@ export { a };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as shared, t as init_shared } from "./shared.js";
+
 // b.js
 var b;
 function init_b() {
@@ -72,6 +75,7 @@ function init_b() {
 		b = `b:${shared}`;
 	})))();
 }
+
 await init_b();
 export { b };
 

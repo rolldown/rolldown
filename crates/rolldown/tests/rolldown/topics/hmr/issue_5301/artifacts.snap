@@ -8,16 +8,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { t as __exportAll } from "./rolldown-runtime.js";
 __rolldown_runtime__.registerGraph({
-	ids: ["foo_inner.js", "foo.js"],
-	localCount: 2,
-	edges: [[], [0]]
+	"ids": ["foo_inner.js", "foo.js"],
+	"localCount": 2,
+	"edges": [[], [0]]
 });
-// foo_inner.js
 var foo_inner_exports = /* @__PURE__ */ __exportAll({ default: () => foo_inner_default });
 __rolldown_runtime__.createModuleHotContext("foo_inner.js");
 __rolldown_runtime__.registerModule("foo_inner.js", { exports: foo_inner_exports });
 var foo_inner_default = { foo: 1 };
-// foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("foo.js");
 __rolldown_runtime__.registerModule("foo.js", { exports: foo_exports });
@@ -31,12 +29,11 @@ console.log(foo_inner_default);
 import { t as __exportAll } from "./rolldown-runtime.js";
 import "./foo.js";
 __rolldown_runtime__.registerGraph({
-	ids: ["main.js", "foo.js"],
-	localCount: 1,
-	edges: [[1]],
-	entries: [0]
+	"ids": ["main.js", "foo.js"],
+	"localCount": 1,
+	"edges": [[1]],
+	"entries": [0]
 });
-// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });

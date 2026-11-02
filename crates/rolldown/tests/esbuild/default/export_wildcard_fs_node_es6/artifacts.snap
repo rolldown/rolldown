@@ -6,9 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-export * from "fs"
-
-export * from "./external"
+export * from "fs";
+export * from "./external";
 
 // internal.js
 let foo = 123;

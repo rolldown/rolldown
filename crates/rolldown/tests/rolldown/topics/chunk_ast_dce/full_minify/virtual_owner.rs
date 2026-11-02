@@ -97,14 +97,12 @@ async fn virtual_owner_composes_foreign_source() {
         Output::Asset(_) => None,
       })
       .unwrap();
-    if std::env::var("ROLLDOWN_CHUNK_AST_DCE").is_ok_and(|mode| mode == "global") {
-      let pos = chunk.modules.keys.iter().position(|id| id.as_str() == VIRTUAL_ENTRY).unwrap();
-      let owner = &chunk.modules.values[pos];
-      assert!(
-        owner.code().unwrap().contains("mapped-marker"),
-        "regression must exercise code moved into a virtual owner"
-      );
-    }
+    let pos = chunk.modules.keys.iter().position(|id| id.as_str() == VIRTUAL_ENTRY).unwrap();
+    let owner = &chunk.modules.values[pos];
+    assert!(
+      owner.code().unwrap().contains("mapped-marker"),
+      "regression must exercise code moved into a virtual owner"
+    );
     let marker = chunk.code.find("mapped-marker").unwrap();
     let prefix = &chunk.code[..marker];
     let line = u32::try_from(prefix.bytes().filter(|&c| c == b'\n').count()).unwrap();

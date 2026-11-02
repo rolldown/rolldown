@@ -8,11 +8,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import "./rolldown-runtime.js";
 __rolldown_runtime__.registerGraph({
-	ids: ["app.js"],
-	localCount: 1,
-	edges: [[]]
+	"ids": ["app.js"],
+	"localCount": 1,
+	"edges": [[]]
 });
-// app.js
 const app_hot = __rolldown_runtime__.createModuleHotContext("app.js");
 __rolldown_runtime__.registerModule("app.js");
 app_hot.accept();
@@ -26,11 +25,11 @@ console.log(value);
 ```js
 import "./rolldown-runtime.js";
 __rolldown_runtime__.registerGraph({
-	ids: ["main.js", "app.js"],
-	localCount: 1,
-	edges: [[]],
-	dynamicEdges: { 0: [1] },
-	entries: [0]
+	"ids": ["main.js", "app.js"],
+	"localCount": 1,
+	"edges": [[]],
+	"dynamicEdges": { "0": [1] },
+	"entries": [0]
 });
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js");

@@ -8,12 +8,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 let external_pkg = require("external-pkg");
 let external_pkg2 = require("external-pkg2");
+
 // replacement.js
 let replace = { test() {} };
 let replace2 = { test() {} };
+
 // inject.js
 let obj = {};
 console.log("side effects");
+
 // entry.js
 console.log("this should be renamed");
 let collide = 123;

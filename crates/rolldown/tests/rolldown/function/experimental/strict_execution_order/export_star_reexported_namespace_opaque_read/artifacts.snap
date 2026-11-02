@@ -69,6 +69,7 @@ export { check };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // main.js
 var load, loadOther;
 function init_main() {
@@ -77,6 +78,7 @@ function init_main() {
 		loadOther = () => import("./other.js");
 	})))();
 }
+
 init_main();
 export { load, loadOther };
 
@@ -87,6 +89,7 @@ export { load, loadOther };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as motion, t as init_react } from "./react.js";
+
 // other.js
 var check;
 function init_other() {
@@ -95,6 +98,7 @@ function init_other() {
 		check = () => motion;
 	})))();
 }
+
 init_other();
 export { check };
 
@@ -168,6 +172,7 @@ export { __exportAll as n, __esmMin as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { i as namespace_exports, t as init_react } from "./react.js";
+
 // story.js
 var check;
 function init_story() {
@@ -176,6 +181,7 @@ function init_story() {
 		check = () => Object.keys(namespace_exports).map((key) => namespace_exports[key]);
 	})))();
 }
+
 init_story();
 export { check };
 

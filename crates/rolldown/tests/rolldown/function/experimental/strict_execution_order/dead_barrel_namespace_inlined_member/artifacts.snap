@@ -94,6 +94,7 @@ await import("./page-a.js").then(console.log);
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as y, t as init_constants } from "./constants.js";
 import assert from "node:assert";
+
 // page-a.js
 function render() {
 	console.log(1, y);
@@ -104,6 +105,7 @@ function init_page_a() {
 		assert.strictEqual(globalThis.inlineNamespaceValue, 0);
 	})))();
 }
+
 init_page_a();
 export { render };
 
@@ -115,6 +117,7 @@ export { render };
 import { t as __esmMin } from "./rolldown-runtime.js";
 import "./constants.js";
 import assert from "node:assert";
+
 // page-b.js
 function render() {}
 function init_page_b() {
@@ -123,6 +126,7 @@ function init_page_b() {
 		assert.strictEqual(globalThis.inlineNamespaceValue, void 0, "inlined namespace member must not initialize its dead re-export before page-b");
 	})))();
 }
+
 init_page_b();
 export { render };
 
@@ -164,6 +168,7 @@ export { y as n, init_constants as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((async () => {
@@ -171,6 +176,7 @@ function init_main() {
 		await import("./page-a.js").then(console.log);
 	})))();
 }
+
 await init_main();
 
 ```
@@ -181,6 +187,7 @@ await init_main();
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as y, t as init_constants } from "./constants.js";
 import assert from "node:assert";
+
 // page-a.js
 function render() {
 	console.log(1, y);
@@ -191,6 +198,7 @@ function init_page_a() {
 		assert.strictEqual(globalThis.inlineNamespaceValue, 0);
 	})))();
 }
+
 init_page_a();
 export { render };
 
@@ -202,6 +210,7 @@ export { render };
 import { t as __esmMin } from "./rolldown-runtime.js";
 import "./constants.js";
 import assert from "node:assert";
+
 // page-b.js
 function render() {}
 function init_page_b() {
@@ -210,6 +219,7 @@ function init_page_b() {
 		assert.strictEqual(globalThis.inlineNamespaceValue, void 0, "inlined namespace member must not initialize its dead re-export before page-b");
 	})))();
 }
+
 init_page_b();
 export { render };
 

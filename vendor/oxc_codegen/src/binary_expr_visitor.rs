@@ -105,6 +105,7 @@ pub struct BinaryExpressionVisitor<'a> {
     pub operator: BinaryishOperator,
     pub wrap: bool,
     pub right_precedence: Precedence,
+    pub output_claimed: bool,
 }
 
 impl<'a> BinaryExpressionVisitor<'a> {
@@ -140,6 +141,7 @@ impl<'a> BinaryExpressionVisitor<'a> {
                 operator: v.operator,
                 wrap: false,
                 right_precedence: Precedence::Lowest,
+                output_claimed: false,
             };
         }
 
@@ -155,6 +157,11 @@ impl<'a> BinaryExpressionVisitor<'a> {
 
     pub fn check_and_prepare(&mut self, p: &mut Codegen) -> bool {
         let e = self.e;
+        let span = match e {
+            Binaryish::Binary(e) => e.span,
+            Binaryish::Logical(e) => e.span,
+        };
+        self.output_claimed = p.begin_output_fragment(span);
 
         // We don't need to print parentheses if both sides use the same logical operator
         // For example: `(a     &&     b)         && c` should be printed as `a && b && c`
@@ -252,5 +259,6 @@ impl<'a> BinaryExpressionVisitor<'a> {
         if self.wrap {
             p.print_ascii_byte(b')');
         }
+        p.end_output_fragment(self.output_claimed);
     }
 }

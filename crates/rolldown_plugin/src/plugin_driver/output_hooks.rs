@@ -147,7 +147,8 @@ impl PluginDriver {
   pub async fn render_chunk(
     &self,
     mut args: HookRenderChunkArgs<'_>,
-  ) -> Result<(String, Vec<SourceMap>, Vec<BuildDiagnostic>)> {
+  ) -> Result<(String, Vec<SourceMap>, Vec<BuildDiagnostic>, bool)> {
+    let mut replaced = false;
     let mut sourcemap_chain = vec![];
     let mut warnings = vec![];
     for (plugin_idx, plugin, ctx) in
@@ -172,6 +173,7 @@ impl PluginDriver {
                 .with_severity_warning(),
             );
           }
+          replaced = true;
           args.code = Arc::new(r.code);
           if let Some(map) = r.map.into_sourcemap() {
             sourcemap_chain.push(map);
@@ -203,7 +205,7 @@ impl PluginDriver {
       ))
       .await?;
     }
-    Ok((args.into_code(), sourcemap_chain, warnings))
+    Ok((args.into_code(), sourcemap_chain, warnings, replaced))
   }
 
   #[tracing::instrument(

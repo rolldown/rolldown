@@ -31,6 +31,7 @@ function init_ring_b() {
 		globalThis.__ringB = "b";
 	})))();
 }
+
 // ring-a.js
 var a;
 function init_ring_a() {
@@ -39,6 +40,7 @@ function init_ring_a() {
 		a = await Promise.resolve("a");
 	})))();
 }
+
 // main.js
 var value;
 function init_main() {
@@ -47,6 +49,7 @@ function init_main() {
 		value = a;
 	})))();
 }
+
 await init_main();
 export { value };
 

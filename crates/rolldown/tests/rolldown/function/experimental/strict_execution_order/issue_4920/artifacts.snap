@@ -29,6 +29,7 @@ export { dep_default as dep };
 
 ```js
 import nodeAssert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // dep.js
 function foo() {
@@ -40,6 +41,7 @@ function init_dep() {
 		dep_default = /*#__PURE__*/ foo();
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -47,6 +49,7 @@ function init_main() {
 		nodeAssert.strictEqual(globalThis.value, 1);
 	})))();
 }
+
 init_main();
 export { dep_default as dep };
 

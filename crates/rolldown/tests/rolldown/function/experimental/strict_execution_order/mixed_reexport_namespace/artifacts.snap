@@ -14,6 +14,7 @@ function init_leaf() {
 		VALUE = "leaf";
 	})))();
 }
+
 // mixed.js
 var LOCAL;
 function init_mixed() {
@@ -21,6 +22,7 @@ function init_mixed() {
 		LOCAL = "local";
 	})))();
 }
+
 // outer.js
 var outer_exports = /* @__PURE__ */ __exportAll({
 	LOCAL: () => LOCAL,
@@ -32,6 +34,7 @@ function init_outer() {
 		init_mixed();
 	})))();
 }
+
 // main.js
 var entries;
 function init_main() {
@@ -40,6 +43,7 @@ function init_main() {
 		entries = Object.entries(outer_exports);
 	})))();
 }
+
 init_main();
 export { entries };
 

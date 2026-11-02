@@ -17,6 +17,7 @@ function app() {
 	globalThis.side = 1;
 	return 42;
 }
+
 // main.js
 globalThis.h = import_dep.hello;
 globalThis.a = app;
@@ -47,11 +48,10 @@ globalThis.a = app;
 (2:9) "42;\n" --> (11:8) "42;\n"
 (3:0) "}\n" --> (12:0) "}\n"
 - ../main.js
-(2:0) "globalThis." --> (14:0) "globalThis."
-(2:11) "h = " --> (14:11) "h = "
-(2:15) "hello;\n" --> (14:15) "import_dep."
-(2:15) "hello;\n" --> (14:26) "hello;\n"
-(3:0) "globalThis." --> (15:0) "globalThis."
-(3:11) "a = " --> (15:11) "a = "
-(3:15) "app;\n" --> (15:15) "app;\n"
+(2:0) "globalThis." --> (15:0) "globalThis."
+(2:11) "h = " --> (15:11) "h = "
+(2:15) "hello;\n" --> (15:15) "import_dep.hello;\n"
+(3:0) "globalThis." --> (16:0) "globalThis."
+(3:11) "a = " --> (16:11) "a = "
+(3:15) "app;\n" --> (16:15) "app;\n"
 ```

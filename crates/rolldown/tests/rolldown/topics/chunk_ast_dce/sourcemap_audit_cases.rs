@@ -60,19 +60,17 @@ pub(super) fn assert_positions(fixture: &str, variant: &str, code: &str, map: &S
   }
   match fixture {
     "function/minify/basic" => {
-      if std::env::var("ROLLDOWN_CHUNK_AST_DCE").is_ok_and(|mode| mode == "global") {
-        let dependency = source(fixture, "shared.js");
-        let call = code.find(".equal(").unwrap();
-        let generated = code[call..].find("`shared.js`").unwrap() + call;
-        assert_mapping_at(
-          code,
-          map,
-          generated,
-          "shared.js",
-          &dependency,
-          dependency.find("'shared.js'").unwrap(),
-        );
-      }
+      let dependency = source(fixture, "shared.js");
+      let call = code.find(".equal(").unwrap();
+      let generated = code[call..].find("`shared.js`").unwrap() + call;
+      assert_mapping_at(
+        code,
+        map,
+        generated,
+        "shared.js",
+        &dependency,
+        dependency.find("'shared.js'").unwrap(),
+      );
     }
     "sourcemap/issue_6099" => {
       let dependency = source(fixture, "cjs.js");
@@ -226,18 +224,8 @@ pub(super) fn assert_positions(fixture: &str, variant: &str, code: &str, map: &S
       if fixture != "topics/deconflict/default_function" {
         let generated = code.find("\ninit_foo();").unwrap() + 1;
         assert_mapping_at(code, map, generated + 9, "bar.js", &bar, bar.find(';').unwrap());
-        // The call keeps the import span but its callee is synthetic. Global
-        // leaves its start unmapped; original composition clamps to import end.
-        let (line, column) = position(code, generated);
-        let lookup = map.generate_lookup_table();
-        if map
-          .lookup_source_view_token(&lookup, line, column)
-          .is_some_and(|token| token.get_source_id().is_some())
-        {
-          assert_mapping_at(code, map, generated, "bar.js", &bar, bar.find(';').unwrap());
-        } else {
-          assert_unmapped(code, map, &code[generated..]);
-        }
+        // The call keeps the import span but its callee is synthetic and starts unmapped.
+        assert_unmapped(code, map, &code[generated..]);
       }
     }
     "tree_shaking/multi-declarator" => {

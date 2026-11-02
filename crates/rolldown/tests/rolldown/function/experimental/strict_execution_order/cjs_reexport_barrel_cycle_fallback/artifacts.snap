@@ -12,6 +12,7 @@ var require_dep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("cjs");
 	module.exports = {};
 }));
+
 // leaf.js
 var value;
 function init_leaf() {
@@ -21,12 +22,15 @@ function init_leaf() {
 		value = "value";
 	})))();
 }
+
+// barrel.js
 function init_barrel() {
 	return (init_barrel = __esmMin((() => {
 		require_dep();
 		init_leaf();
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -34,6 +38,7 @@ function init_main() {
 		globalThis.__events.push(`main:${value}`);
 	})))();
 }
+
 init_main();
 export { value };
 
@@ -52,6 +57,7 @@ var require_dep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("cjs");
 	module.exports = {};
 }));
+
 // leaf.js
 var value;
 function init_leaf() {
@@ -61,12 +67,15 @@ function init_leaf() {
 		value = "value";
 	})))();
 }
+
+// barrel.js
 function init_barrel() {
 	return (init_barrel = __esmMin((() => {
 		require_dep();
 		init_leaf();
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -74,6 +83,7 @@ function init_main() {
 		globalThis.__events.push(`main:${value}`);
 	})))();
 }
+
 init_main();
 export { value };
 

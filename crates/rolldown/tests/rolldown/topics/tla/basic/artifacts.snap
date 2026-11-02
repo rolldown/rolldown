@@ -28,12 +28,14 @@ function init_lib() {
 		foo = await Promise.resolve("foo");
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((async () => {
 		await init_lib();
 	})))();
 }
+
 await init_main();
 export { foo };
 

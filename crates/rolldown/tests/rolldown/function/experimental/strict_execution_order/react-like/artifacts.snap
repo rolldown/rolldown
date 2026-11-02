@@ -44,6 +44,7 @@ assert.equal(test().toString(), "1");
 
 ```js
 import assert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // react.js
 var require_react = /* @__PURE__ */ __commonJSMin(((exports) => {
@@ -52,10 +53,12 @@ var require_react = /* @__PURE__ */ __commonJSMin(((exports) => {
 	};
 	exports.version = 1;
 }));
+
 // commonjs.js
 var require_commonjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = require_react();
 }));
+
 // lib.js
 function test() {
 	return 1;
@@ -65,6 +68,7 @@ function init_lib() {
 		require_commonjs();
 	})))();
 }
+
 // main.js
 var import_commonjs;
 function init_main() {
@@ -76,6 +80,7 @@ function init_main() {
 		assert.equal(test().toString(), "1");
 	})))();
 }
+
 init_main();
 
 ```

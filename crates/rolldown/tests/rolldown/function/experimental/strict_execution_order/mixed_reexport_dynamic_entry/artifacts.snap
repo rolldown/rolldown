@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_shared = require("./shared.js");
+
 // b.js
 var B;
 function init_b() {
@@ -15,6 +16,7 @@ function init_b() {
 		B = { value: "b" };
 	})))();
 }
+
 // lazy.js
 var lazy_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ read: () => read });
 function read() {
@@ -25,6 +27,7 @@ function init_lazy() {
 		init_b(), require_shared.init_shared();
 	})))();
 }
+
 Object.defineProperty(exports, "init_b", {
 	enumerable: true,
 	get: function() {
@@ -52,6 +55,7 @@ Object.defineProperty(exports, "lazy_exports", {
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_shared = require("./shared.js");
+
 // main.js
 async function read() {
 	return [
@@ -65,6 +69,7 @@ function init_main() {
 		require_shared.init_shared();
 	})))();
 }
+
 init_main();
 exports.read = read;
 
@@ -73,7 +78,24 @@ exports.read = read;
 ## rolldown-runtime.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+var __defProp = Object.defineProperty;
+var __esmMin = (fn, res, err) => () => {
+	if (err) throw err[0];
+	try {
+		return fn && (res = fn(fn = 0)), res;
+	} catch (e) {
+		throw err = [e], e;
+	}
+};
+var __exportAll = (all, no_symbols) => {
+	let target = {};
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
+	return target;
+};
 Object.defineProperty(exports, "__esmMin", {
 	enumerable: true,
 	get: function() {
@@ -94,6 +116,7 @@ Object.defineProperty(exports, "__exportAll", {
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_lazy = require("./lazy.js");
+
 // a.js
 var A;
 function init_a() {
@@ -101,6 +124,7 @@ function init_a() {
 		A = { value: "a" };
 	})))();
 }
+
 // shared.js
 var shared_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ A: () => A });
 var LOCAL;
@@ -110,6 +134,7 @@ function init_shared() {
 		LOCAL = "local";
 	})))();
 }
+
 Object.defineProperty(exports, "LOCAL", {
 	enumerable: true,
 	get: function() {
@@ -144,13 +169,18 @@ Object.defineProperty(exports, "shared_exports", {
 ### lazy.js
 
 ```js
-const e=require("./rolldown-runtime.js"),t=require("./shared.js");var n;function r(){return(r=e.t((()=>{n={value:`b`}})))()}var i=/* @__PURE__ */ e.n({read:()=>a});function a(){return n.value}function o(){return(o=e.t((()=>{r(),t.n()})))()}Object.defineProperty(exports,"n",{enumerable:!0,get:function(){return i}}),Object.defineProperty(exports,"r",{enumerable:!0,get:function(){return r}}),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return o}});
+const e=require("./rolldown-runtime.js"),t=require("./shared.js");
+var n;function r(){return(r=e.t((()=>{n={value:`b`}})))()}
+var i=/* @__PURE__ */ e.n({read:()=>a});function a(){return n.value}function o(){return(o=e.t((()=>{r(),t.n()})))()}
+Object.defineProperty(exports,"n",{enumerable:!0,get:function(){return i}}),Object.defineProperty(exports,"r",{enumerable:!0,get:function(){return r}}),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return o}});
 ```
 
 ### main.js
 
 ```js
-Object.defineProperty(exports,Symbol.toStringTag,{value:`Module`});const e=require("./rolldown-runtime.js"),t=require("./shared.js");async function n(){return[t.t,(await Promise.resolve().then(()=>require("./shared.js")).then(e=>(e.i(),e.n(),e.r))).A.value,(await Promise.resolve().then(()=>require("./lazy.js")).then(e=>(e.t(),e.n))).read()]}function r(){return(r=e.t((()=>{t.n()})))()}r(),exports.read=n;
+Object.defineProperty(exports,Symbol.toStringTag,{value:`Module`});const e=require("./rolldown-runtime.js"),t=require("./shared.js");
+async function n(){return[t.t,(await Promise.resolve().then(()=>require("./shared.js")).then(e=>(e.i(),e.n(),e.r))).A.value,(await Promise.resolve().then(()=>require("./lazy.js")).then(e=>(e.t(),e.n))).read()]}function r(){return(r=e.t((()=>{t.n()})))()}
+r(),exports.read=n;
 ```
 
 ### rolldown-runtime.js
@@ -162,7 +192,10 @@ var e=Object.defineProperty,t=(e,t,n)=>()=>{if(n)throw n[0];try{return e&&(t=e(e
 ### shared.js
 
 ```js
-const e=require("./rolldown-runtime.js"),t=require("./lazy.js");var n;function r(){return(r=e.t((()=>{n={value:`a`}})))()}var i=/* @__PURE__ */ e.n({A:()=>n}),a;function o(){return(o=e.t((()=>{r(),a=`local`})))()}Object.defineProperty(exports,"i",{enumerable:!0,get:function(){return t.r}}),Object.defineProperty(exports,"n",{enumerable:!0,get:function(){return o}}),Object.defineProperty(exports,"r",{enumerable:!0,get:function(){return i}}),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return a}});
+const e=require("./rolldown-runtime.js"),t=require("./lazy.js");
+var n;function r(){return(r=e.t((()=>{n={value:`a`}})))()}
+var i=/* @__PURE__ */ e.n({A:()=>n}),a;function o(){return(o=e.t((()=>{r(),a=`local`})))()}
+Object.defineProperty(exports,"i",{enumerable:!0,get:function(){return t.r}}),Object.defineProperty(exports,"n",{enumerable:!0,get:function(){return o}}),Object.defineProperty(exports,"r",{enumerable:!0,get:function(){return i}}),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return a}});
 ```
 
 # Variant: on-demand: [on_demand_wrapping: true]
@@ -174,10 +207,12 @@ const e=require("./rolldown-runtime.js"),t=require("./lazy.js");var n;function r
 ```js
 // b.js
 const B = { value: "b" };
+
 // lazy.js
 function read() {
 	return B.value;
 }
+
 exports.read = read;
 
 ```
@@ -187,6 +222,7 @@ exports.read = read;
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_shared = require("./shared.js");
+
 // main.js
 async function read() {
 	return [
@@ -195,6 +231,7 @@ async function read() {
 		(await Promise.resolve().then(() => require("./lazy.js"))).read()
 	];
 }
+
 exports.read = read;
 
 ```
@@ -202,7 +239,16 @@ exports.read = read;
 ### rolldown-runtime.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+var __defProp = Object.defineProperty;
+var __exportAll = (all, no_symbols) => {
+	let target = {};
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
+	return target;
+};
 Object.defineProperty(exports, "__exportAll", {
 	enumerable: true,
 	get: function() {
@@ -216,11 +262,14 @@ Object.defineProperty(exports, "__exportAll", {
 
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
+
 // a.js
 const A = { value: "a" };
+
 // shared.js
 var shared_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ A: () => A });
 const LOCAL = "local";
+
 Object.defineProperty(exports, "LOCAL", {
 	enumerable: true,
 	get: function() {

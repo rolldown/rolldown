@@ -17,16 +17,19 @@ __esmMin((() => {}));
 
 ```js
 import { n as __exportAll, r as __toCommonJS, t as __esmMin } from "./rolldown-runtime.js";
+
 // bar.js
 var bar;
 var init_bar = __esmMin((() => {
 	bar = { name: "bar" };
 }));
+
 // req.js
 var req_exports = /* @__PURE__ */ __exportAll({ bar: () => bar });
 var init_req = __esmMin((() => {
 	init_bar();
 }));
+
 // entry.js
 var Foo;
 function init_entry() {
@@ -36,6 +39,7 @@ function init_entry() {
 		console.log("Foo =", Foo);
 	})))();
 }
+
 await init_entry();
 export { Foo };
 
@@ -45,8 +49,10 @@ export { Foo };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // foo.js
 var Foo;
+
 __esmMin((() => {
 	Foo = { name: "Foo" };
 }))();
@@ -80,16 +86,19 @@ __esmMin((() => {}));
 
 ```js
 import { n as __exportAll, r as __toCommonJS, t as __esmMin } from "./rolldown-runtime.js";
+
 // bar.js
 var bar;
 var init_bar = __esmMin((() => {
 	bar = { name: "bar" };
 }));
+
 // req.js
 var req_exports = /* @__PURE__ */ __exportAll({ bar: () => bar });
 var init_req = __esmMin((() => {
 	init_bar();
 }));
+
 // entry.js
 var Foo;
 function init_entry() {
@@ -99,6 +108,7 @@ function init_entry() {
 		console.log("Foo =", Foo);
 	})))();
 }
+
 await init_entry();
 export { Foo };
 
@@ -108,8 +118,10 @@ export { Foo };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // foo.js
 var Foo;
+
 __esmMin((() => {
 	Foo = { name: "Foo" };
 }))();

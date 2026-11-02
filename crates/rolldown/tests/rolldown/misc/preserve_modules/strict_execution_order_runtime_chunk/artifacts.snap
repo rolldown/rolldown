@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { __esmMin } from "./rolldown-runtime.js";
+
 // dep.js
 function dep() {
 	return "D";
@@ -16,6 +17,7 @@ function init_dep() {
 		globalThis.__events.push("dep");
 	})))();
 }
+
 init_dep();
 export { dep as default, init_dep };
 
@@ -25,6 +27,7 @@ export { dep as default, init_dep };
 
 ```js
 import { __esmMin } from "./rolldown-runtime.js";
+
 // lazy.js
 var lazy;
 function init_lazy() {
@@ -33,6 +36,7 @@ function init_lazy() {
 		lazy = "L";
 	})))();
 }
+
 init_lazy();
 export { lazy };
 
@@ -43,6 +47,7 @@ export { lazy };
 ```js
 import { __esmMin } from "./rolldown-runtime.js";
 import dep, { init_dep } from "./dep.js";
+
 // main.js
 var mod;
 function init_main() {
@@ -53,6 +58,7 @@ function init_main() {
 		globalThis.__events.push("after " + mod.lazy);
 	})))();
 }
+
 await init_main();
 
 ```

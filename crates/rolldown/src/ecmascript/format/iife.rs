@@ -28,41 +28,44 @@ use crate::utils::chunk::render_chunk_exports::{
   get_chunk_export_names_with_ctx, render_wrapped_entry_chunk,
 };
 use crate::{
-  ecmascript::ecma_generator::RenderedModuleSources, types::generator::GenerateContext,
-  utils::chunk::render_chunk_exports::render_chunk_exports,
+  types::generator::GenerateContext, utils::chunk::render_chunk_exports::render_chunk_exports,
 };
 use rolldown_common::{AddonRenderContext, ExternalModule, OutputExports};
 use rolldown_error::{BuildDiagnostic, BuildResult};
-use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{concat_string, ecmascript::escape_non_ascii};
 
-use super::utils::{
-  render_chunk_directives, render_chunk_external_imports, render_factory_parameters,
-  render_modules_with_peek_runtime_module_at_first,
+use super::{
+  utils::{render_chunk_directives, render_chunk_external_imports, render_factory_parameters},
+  wrapped::WrappedPlan,
 };
 
-/// The main function for rendering the IIFE format chunks.
-pub async fn render_iife<'code>(
+pub async fn prepare_iife(
   ctx: &GenerateContext<'_>,
-  addon_render_context: AddonRenderContext<'code>,
-  module_sources: &'code RenderedModuleSources,
+  addon_render_context: AddonRenderContext<'_>,
   warnings: &mut Vec<BuildDiagnostic>,
-) -> BuildResult<SourceJoiner<'code>> {
-  let mut source_joiner = SourceJoiner::default();
+) -> BuildResult<WrappedPlan> {
+  let mut prefix = Vec::new();
+  let mut suffix = Vec::new();
+  let capture_ast = ctx.defer_ast
+    && !crate::stages::generate_stage::chunk_ast_dce::complete_program(
+      ctx.options,
+      ctx.plugin_driver,
+    );
+  let mut ast_tail = Vec::new();
   let AddonRenderContext { hashbang, banner, intro, outro, footer, directives } =
     addon_render_context;
   if let Some(hashbang) = hashbang {
-    source_joiner.append_source(hashbang);
+    prefix.push(hashbang.to_string());
   }
 
   if let Some(banner) = banner {
-    source_joiner.append_source(banner);
+    prefix.push(banner.to_string());
   }
 
   if !directives.is_empty() {
     let rendered_chunk_directives = render_chunk_directives(directives.iter());
     if !rendered_chunk_directives.is_empty() {
-      source_joiner.append_source(rendered_chunk_directives);
+      prefix.push(rendered_chunk_directives);
     }
   }
 
@@ -114,7 +117,7 @@ pub async fn render_iife<'code>(
   // The function argument and the external imports are passed as arguments to the wrapper function.
   let factory_parameters = render_factory_parameters(ctx, &externals, exports_prefix.is_some());
 
-  source_joiner.append_source(concat_string!(
+  prefix.push(concat_string!(
     definition,
     if (ctx.options.extend && named_exports) || !has_exports || assignment.is_empty() {
       // If facing following situations, there shouldn't an assignment for the wrapper function:
@@ -131,7 +134,7 @@ pub async fn render_iife<'code>(
   ));
 
   if let Some(intro) = intro {
-    source_joiner.append_source(intro);
+    prefix.push(intro.to_string());
   }
 
   if named_exports && entry_module.exports_kind.is_esm() {
@@ -142,45 +145,88 @@ pub async fn render_iife<'code>(
       &ctx.options.generated_code,
       ctx.chunk.is_entry_point(),
     ) {
-      source_joiner.append_source(marker);
+      prefix.push(marker.to_string());
     }
   }
 
-  render_modules_with_peek_runtime_module_at_first(
-    ctx,
-    &mut source_joiner,
-    module_sources,
-    import_code,
-  );
-
   if let Some(source) = render_wrapped_entry_chunk(ctx, Some(&export_mode)) {
-    source_joiner.append_source(source);
+    if capture_ast
+      && (matches!(export_mode, OutputExports::Named)
+        || !matches!(
+          ctx.link_output.metas[entry_module.idx].wrap_kind(),
+          rolldown_common::WrapKind::Cjs
+        ))
+    {
+      ast_tail.push(source.clone());
+    }
+    suffix.push(source);
   }
 
   // iife exports
   if let Some(exports) = render_chunk_exports(ctx, Some(&export_mode)) {
-    source_joiner.append_source(exports);
+    if capture_ast && !matches!(export_mode, OutputExports::Default) {
+      ast_tail.push(exports.clone());
+    }
+    suffix.push(exports);
   }
 
   if let Some(outro) = outro {
-    source_joiner.append_source(outro);
+    suffix.push(outro.to_string());
   }
 
   if named_exports && has_exports && !ctx.options.extend {
     // We need to add `return exports;` here only if using `named`, because the default value is returned when using `default` in `render_chunk_exports`.
-    source_joiner.append_source("return exports;");
+    suffix.push("return exports;".to_string());
   }
 
   // iife wrapper end
-  let factory_arguments =
-    render_iife_factory_arguments(warnings, ctx, &externals, exports_prefix).await?;
-  source_joiner.append_source(concat_string!("})(", factory_arguments, ");"));
+  let (factory_arguments, globals) =
+    render_iife_factory_arguments(warnings, ctx, &externals, exports_prefix, capture_ast).await?;
+  suffix.push(concat_string!("})(", factory_arguments, ");"));
 
   if let Some(footer) = footer {
-    source_joiner.append_source(footer);
+    suffix.push(footer.to_string());
   }
 
-  Ok(source_joiner)
+  let ast = capture_ast.then(|| {
+    let mut parameters = Vec::with_capacity(externals.len() + 1);
+    if exports_prefix.is_some() {
+      parameters.push("exports".into());
+    }
+    parameters.extend(externals.iter().map(|external| {
+      ctx
+        .link_output
+        .symbol_db
+        .canonical_name_for_or_original(external.namespace_ref, &ctx.chunk.canonical_names)
+        .to_string()
+    }));
+    super::wrapper_ast::WrapperAstPlan {
+      kind: super::wrapper_ast::WrapperKind::Iife,
+      name: ctx.options.name.clone(),
+      extend: ctx.options.extend,
+      has_exports,
+      named_exports,
+      parameters,
+      globals,
+      es_module: named_exports
+        && entry_module.exports_kind.is_esm()
+        && crate::utils::chunk::namespace_marker::determine_es_module(
+          ctx.options.es_module,
+          has_default_export,
+        ),
+      to_string_tag: named_exports
+        && entry_module.exports_kind.is_esm()
+        && ctx.options.generated_code.symbols
+        && ctx.chunk.is_entry_point(),
+      tail: ast_tail.join("\n"),
+      outer_prefix: banner.unwrap_or_default().to_string(),
+      outer_suffix: footer.unwrap_or_default().to_string(),
+      hashbang: hashbang.map(|value| value.trim_start_matches("#!").to_string()),
+      directives: directives.iter().map(|value| (*value).to_string()).collect(),
+      factory_return: super::wrapper_ast::WrapperAstPlan::factory_return(ctx),
+    }
+  });
+  Ok(WrappedPlan { prefix, imports: import_code, suffix, runtime_before_imports: true, ast })
 }
 
 async fn render_iife_factory_arguments(
@@ -188,7 +234,9 @@ async fn render_iife_factory_arguments(
   ctx: &GenerateContext<'_>,
   externals: &[&ExternalModule],
   exports_prefix: Option<&str>,
-) -> BuildResult<String> {
+  capture_ast: bool,
+) -> BuildResult<(String, Vec<String>)> {
+  let mut resolved_globals = Vec::with_capacity(if capture_ast { externals.len() } else { 0 });
   let mut factory_arguments = if let Some(exports_prefix) = exports_prefix {
     vec![exports_prefix.to_string()]
   } else {
@@ -197,8 +245,8 @@ async fn render_iife_factory_arguments(
   let globals = &ctx.options.globals;
   for external in externals {
     let global = globals.call(external.id.as_str()).await?;
-    let target = match &global {
-      Some(global_name) => global_name.clone(),
+    let target = match global {
+      Some(global_name) => global_name,
       None => {
         warnings.push(
           BuildDiagnostic::missing_global_name(
@@ -212,6 +260,9 @@ async fn render_iife_factory_arguments(
       }
     };
     factory_arguments.push(escape_non_ascii(&target, ctx.options.charset.is_ascii()).into_owned());
+    if capture_ast {
+      resolved_globals.push(target);
+    }
   }
-  Ok(factory_arguments.join(", "))
+  Ok((factory_arguments.join(", "), resolved_globals))
 }

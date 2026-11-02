@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 const require_shared = require("./shared.js");
+
 // main1.js
 function main() {
 	require_shared.shared();
@@ -23,6 +24,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_shared = require("./shared.js");
 exports.shared = require_shared.shared;
 
+//# sourceMappingURL=main2.js.map
 ```
 
 ## shared.js
@@ -32,6 +34,7 @@ exports.shared = require_shared.shared;
 function shared() {
 	console.trace("shared");
 }
+
 Object.defineProperty(exports, "shared", {
 	enumerable: true,
 	get: function() {
@@ -46,15 +49,16 @@ Object.defineProperty(exports, "shared", {
 
 ```
 - ../main1.js
-(2:0) "function " --> (2:0) "function "
-(2:9) "main() " --> (2:9) "main() "
-(2:16) "{\n" --> (2:16) "{\n"
-(3:2) "shared(" --> (3:1) "require_shared."
-(3:2) "shared(" --> (3:16) "shared("
-(3:9) ");\n" --> (3:23) ");\n"
-(4:0) "}\n" --> (4:0) "}\n"
-(6:0) "main(" --> (5:0) "main("
-(6:5) ");\n" --> (5:5) ");\n"
+(2:0) "function " --> (3:0) "function "
+(2:9) "main() " --> (3:9) "main() "
+(2:16) "{\n" --> (3:16) "{\n"
+(3:2) "shared(" --> (4:1) "require_shared.shared("
+(3:9) ");\n" --> (4:23) ");\n"
+(4:0) "}\n" --> (5:0) "}\n"
+(6:0) "main(" --> (6:0) "main("
+(6:5) ");\n" --> (6:5) ");\n"
+
+[no source contents]
 
 - ../shared.js
 (0:0) "export function " --> (1:0) "function "

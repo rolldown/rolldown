@@ -55,6 +55,7 @@ export { vDef as n, vSib as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { a as vDef, t as init_barrel } from "./barrel.js";
+
 // a.js
 var defValue;
 function init_a() {
@@ -64,6 +65,7 @@ function init_a() {
 		defValue = vDef;
 	})))();
 }
+
 init_a();
 export { defValue };
 
@@ -74,6 +76,7 @@ export { defValue };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { r as vSib, t as init_barrel } from "./barrel.js";
+
 // b.js
 var sibValue;
 function init_b() {
@@ -83,6 +86,7 @@ function init_b() {
 		sibValue = vSib;
 	})))();
 }
+
 init_b();
 export { sibValue };
 

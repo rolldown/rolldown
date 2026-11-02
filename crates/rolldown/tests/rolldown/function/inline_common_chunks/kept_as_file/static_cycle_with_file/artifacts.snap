@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as r, t as init_r } from "./r.js";
 import { n as init_g, r as readR } from "./grp.js";
+
 // a.js
 function init_a() {
 	return (init_a = __esmMin((() => {
@@ -17,6 +18,7 @@ function init_a() {
 		globalThis.events.push("A " + readR() + r);
 	})))();
 }
+
 init_a();
 
 ```
@@ -26,6 +28,7 @@ init_a();
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as r, t as init_r } from "./r.js";
+
 // b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
@@ -33,6 +36,7 @@ function init_b() {
 		globalThis.events.push("B " + r);
 	})))();
 }
+
 init_b();
 
 ```

@@ -7,8 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
+
 // dep.js
 var value;
+
 __esmMin((() => {
 	value = "dep";
 }))();
@@ -53,8 +55,10 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
+
 // dep.js
 var value;
+
 require_rolldown_runtime.__esmMin((() => {
 	value = "dep";
 }))();
@@ -66,6 +70,7 @@ exports.value = value;
 
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
+
 // lib.cjs
 var require_lib = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports, module) => {
 	const Promise$1 = { tag: "root-local" };
@@ -77,7 +82,10 @@ var require_lib = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((expor
 		load: () => Promise.resolve().then(() => require("./dep.js"))
 	};
 }));
+
+// main.js
 var main_default = (/* @__PURE__ */ require_rolldown_runtime.__toESM(require_lib())).default.read({ tag: "param" });
+
 module.exports = main_default;
 
 ```
@@ -85,7 +93,35 @@ module.exports = main_default;
 ### rolldown-runtime.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __esmMin = (fn, res, err) => () => {
+	if (err) throw err[0];
+	try {
+		return fn && (res = fn(fn = 0)), res;
+	} catch (e) {
+		throw err = [e], e;
+	}
+};
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, "default") ? __defProp(target, "default", {
+	value: mod,
+	enumerable: true
+}) : target, mod));
 Object.defineProperty(exports, "__commonJSMin", {
 	enumerable: true,
 	get: function() {

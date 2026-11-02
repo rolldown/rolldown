@@ -7,13 +7,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import * as import_x from "x";
+
 // HIDDEN [\0rolldown/runtime.js]
+// a.js
 var init_a = __esmMin((() => {}));
+
+// b.js
 var init_b = __esmMin((() => {}));
+
+// c.js
 var init_c = __esmMin((() => {}));
+
+// d.js
 var init_d = __esmMin((() => {}));
+
+// e.js
 __reExport(/* @__PURE__ */ __exportAll({}), import_x);
 var init_e = __esmMin((() => {}));
+
 // entry.js
 init_a();
 init_b();

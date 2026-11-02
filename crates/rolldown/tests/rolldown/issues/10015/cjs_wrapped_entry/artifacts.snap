@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 const require_main$1 = require("./main2.js");
+
 // consumer.cjs
 module.exports = () => require_main$1.require_main();
 
@@ -16,10 +17,12 @@ module.exports = () => require_main$1.require_main();
 
 ```js
 const require_main = require("./main2.js");
+
 // dynamic.cjs
 var require_dynamic = /* @__PURE__ */ require_main.__commonJSMin(((exports, module) => {
 	module.exports = require_main.require_shared();
 }));
+
 Object.defineProperty(exports, "default", {
 	enumerable: true,
 	get: function() {
@@ -40,17 +43,40 @@ module.exports = require_main$1.require_main();
 ## main2.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, "default") ? __defProp(target, "default", {
+	value: mod,
+	enumerable: true
+}) : target, mod));
+
 // shared.cjs
 var require_shared = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.sharedInitializations = (globalThis.sharedInitializations ?? 0) + 1;
 	module.exports = { tag: "shared" };
 }));
+
 // main.cjs
 var require_main = /* @__PURE__ */ __commonJSMin(((exports) => {
 	const shared = require_shared();
 	exports.POST = async () => (await Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("./dynamic.js").default, 1))).default === shared;
 }));
+
 Object.defineProperty(exports, "__commonJSMin", {
 	enumerable: true,
 	get: function() {

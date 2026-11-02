@@ -33,6 +33,7 @@ export { loadDirect, loadOther };
 // HIDDEN [\0rolldown/runtime.js]
 // motion.js
 const motion$1 = {};
+
 // react.js
 var motion;
 function init_react() {
@@ -40,6 +41,7 @@ function init_react() {
 		motion = motion$1;
 	})))();
 }
+
 // other.js
 var check;
 function init_other() {
@@ -48,6 +50,7 @@ function init_other() {
 		check = () => motion;
 	})))();
 }
+
 init_other();
 export { check };
 
@@ -61,6 +64,7 @@ export { check };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // group.js
 var Group;
 function init_group() {
@@ -68,6 +72,7 @@ function init_group() {
 		Group = { name: "Group" };
 	})))();
 }
+
 // direct.js
 var group;
 function init_direct() {
@@ -76,6 +81,7 @@ function init_direct() {
 		group = () => Group;
 	})))();
 }
+
 init_direct();
 export { group };
 
@@ -85,6 +91,7 @@ export { group };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // main.js
 var loadOther, loadDirect;
 function init_main() {
@@ -93,6 +100,7 @@ function init_main() {
 		loadDirect = () => import("./direct.js");
 	})))();
 }
+
 init_main();
 export { loadDirect, loadOther };
 
@@ -102,6 +110,7 @@ export { loadDirect, loadOther };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // motion.js
 var motion$1;
 function init_motion() {
@@ -109,6 +118,7 @@ function init_motion() {
 		motion$1 = {};
 	})))();
 }
+
 // react.js
 var motion;
 function init_react() {
@@ -117,6 +127,7 @@ function init_react() {
 		motion = motion$1;
 	})))();
 }
+
 // other.js
 var check;
 function init_other() {
@@ -125,6 +136,7 @@ function init_other() {
 		check = () => motion;
 	})))();
 }
+
 init_other();
 export { check };
 

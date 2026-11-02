@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+
 // main.js
 let count = 0;
 function reset() {
@@ -15,6 +16,7 @@ function reset() {
 function inc() {
 	count += 1;
 }
+
 Object.defineProperty(exports, "count", {
 	enumerable: true,
 	get: function() {

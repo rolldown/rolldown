@@ -29,6 +29,7 @@ if (pageA.y !== 1e3 || pageA.common !== "common" || pageA._ !== void 0) throw ne
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as y } from "./const.js";
 import "./page-b.js";
+
 // common.js
 function init() {
 	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
@@ -40,6 +41,7 @@ function init_common() {
 		_ = /* @__PURE__ */ init();
 	})))();
 }
+
 // page-a.js
 function init_page_a() {
 	return (init_page_a = __esmMin((() => {
@@ -47,6 +49,7 @@ function init_page_a() {
 		if (globalThis.value !== 0) throw new Error(`page-a observed ${globalThis.value}`);
 	})))();
 }
+
 init_page_a();
 export { _, common, y };
 
@@ -109,6 +112,7 @@ export { y as n, init_const as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // main.js
 var pageA;
 function init_main() {
@@ -118,6 +122,7 @@ function init_main() {
 		if (pageA.y !== 1e3 || pageA.common !== "common" || pageA._ !== void 0) throw new Error("partial dynamic import observed the wrong constant");
 	})))();
 }
+
 await init_main();
 
 ```
@@ -128,6 +133,7 @@ await init_main();
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as y, t as init_const } from "./const.js";
 import "./page-b.js";
+
 // common.js
 function init() {
 	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
@@ -139,6 +145,7 @@ function init_common() {
 		_ = /* @__PURE__ */ init();
 	})))();
 }
+
 // page-a.js
 function init_page_a() {
 	return (init_page_a = __esmMin((() => {
@@ -147,6 +154,7 @@ function init_page_a() {
 		if (globalThis.value !== 0) throw new Error(`page-a observed ${globalThis.value}`);
 	})))();
 }
+
 init_page_a();
 export { _, common, y };
 

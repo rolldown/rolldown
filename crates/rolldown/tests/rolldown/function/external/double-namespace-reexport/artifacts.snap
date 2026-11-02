@@ -11,9 +11,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 var second_exports = /* @__PURE__ */ __exportAll({});
 import * as import_external from "external";
 __reExport(second_exports, import_external);
+
 // first.js
 var first_exports = /* @__PURE__ */ __exportAll({});
 __reExport(first_exports, second_exports);
+
 var foo = first_exports.foo;
 export { foo };
 

@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use rolldown_common::ExternalModule;
-use rolldown_sourcemap::SourceJoiner;
+use rolldown_sourcemap::{Source, SourceJoiner};
 use rolldown_utils::ecmascript::escape_non_ascii;
 
 use crate::{
@@ -135,7 +135,7 @@ pub fn render_modules_with_peek_runtime_module_at_first<'a>(
   ctx: &GenerateContext<'_>,
   source_joiner: &mut SourceJoiner<'a>,
   module_sources: &'a RenderedModuleSources,
-  import_code: String,
+  import_code: impl Source + Send + 'a,
 ) {
   let mut module_sources_peekable = module_sources.iter().peekable();
   match module_sources_peekable.peek() {
@@ -155,7 +155,7 @@ pub fn render_modules_with_peek_runtime_module_at_first<'a>(
 
   // An empty import prelude is not a source slot. Appending it would make `SourceJoiner` insert a
   // separator line before the modules.
-  if !import_code.is_empty() {
+  if !import_code.content().is_empty() {
     source_joiner.append_source(import_code);
   }
 
@@ -169,6 +169,40 @@ pub fn render_modules_with_peek_runtime_module_at_first<'a>(
       }
     },
   );
+}
+
+/// Share the emitted directive context with chunk AST optimization.
+pub fn chunk_directives<'a>(ctx: &GenerateContext<'a>) -> Vec<&'a str> {
+  let mut directives: Vec<&str> = ctx
+    .chunk
+    .user_defined_entry_module(&ctx.link_output.module_table)
+    .or_else(|| {
+      ctx.options.preserve_modules.then_some({
+        let first_idx = *ctx.chunk.modules.first()?;
+        ctx.link_output.module_table[first_idx].as_normal()?
+      })
+    })
+    .map(|module| {
+      module
+        .ecma_view
+        .directive_range
+        .iter()
+        .map(|range| &module.source[range.start as usize..range.end as usize])
+        .collect()
+    })
+    .unwrap_or_default();
+  match ctx.options.strict {
+    rolldown_common::StrictMode::Always => {
+      if !directives.iter().any(|directive| is_use_strict_directive(directive)) {
+        directives.insert(0, "\"use strict\"");
+      }
+    }
+    rolldown_common::StrictMode::Never => {
+      directives.retain(|directive| !is_use_strict_directive(directive));
+    }
+    rolldown_common::StrictMode::Auto => {}
+  }
+  directives
 }
 
 pub fn render_chunk_directives<'a, T: Iterator<Item = &'a &'a str>>(directives: T) -> String {

@@ -1,14 +1,12 @@
 use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ConstExportMeta, ImportRecordIdx, IndexModules, ModuleIdx,
-  ModuleType, NormalModule, PathsOutputOption, RenderedConcatenatedModuleParts,
-  RetainedExportSymbols, RuntimeModuleBrief, SharedFileEmitter, StmtInfos, SymbolRef, SymbolRefDb,
-  UsedSymbolRefs, WrapKind,
+  ModuleType, NormalModule, PathsOutputOption, RetainedExportSymbols, RuntimeModuleBrief,
+  SharedFileEmitter, StmtInfos, SymbolRef, SymbolRefDb, UsedSymbolRefs, WrapKind,
 };
 
 pub type FinalizerMutableFields = (
-  FxIndexMap<ImportRecordIdx, String>, // transferred_import_record
-  RenderedConcatenatedModuleParts,     // rendered_concatenated_wrapped_module_parts
-  Vec<BuildDiagnostic>,                // diagnostics
+  FxIndexMap<ImportRecordIdx, Option<EcmaAst>>, // transferred_import_record
+  Vec<BuildDiagnostic>,                         // diagnostics
 );
 
 use oxc::ast::builder::AstBuilder;
@@ -139,8 +137,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         .chunk
         .remove_map
         .get(&self.idx)
-        .cloned()
-        .map(|idxs| idxs.into_iter().map(|idx| (idx, String::new())).collect::<FxIndexMap<_, _>>())
+        .map(|idxs| idxs.iter().map(|&idx| (idx, None)).collect::<FxIndexMap<_, _>>())
         .unwrap_or_default();
 
       let mut finalizer = ScopeHoistingFinalizer {
@@ -157,7 +154,6 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         needs_hosted_top_level_binding: false,
         module_namespace_included,
         transferred_import_record,
-        rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts::default(),
         json_module_inlined_prop: need_inline_json_prop.then(|| Box::new(FxHashMap::default())),
         missing_file_reference_ids: FxIndexMap::default(),
         resolve_file_url_errors: Vec::new(),
@@ -208,11 +204,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         }));
       }
 
-      (
-        finalizer.transferred_import_record,
-        finalizer.rendered_concatenated_wrapped_module_parts,
-        diagnostics,
-      )
+      (finalizer.transferred_import_record, diagnostics)
     })
   }
 }

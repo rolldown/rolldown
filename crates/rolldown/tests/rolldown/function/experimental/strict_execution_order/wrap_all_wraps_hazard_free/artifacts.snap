@@ -13,6 +13,7 @@ function init_dep() {
 		console.log("dep");
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -20,6 +21,7 @@ function init_main() {
 		console.log("main", "v");
 	})))();
 }
+
 init_main();
 
 ```

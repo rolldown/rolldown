@@ -26,6 +26,7 @@ export { out };
 
 ```js
 import { sep } from "node:path";
+
 // HIDDEN [\0rolldown/runtime.js]
 // dep.js
 var marker;
@@ -35,6 +36,7 @@ function init_dep() {
 		marker = `dep:${sep.length > 0}`;
 	})))();
 }
+
 // main.js
 var out;
 function init_main() {
@@ -43,6 +45,7 @@ function init_main() {
 		out = marker;
 	})))();
 }
+
 init_main();
 export { out };
 

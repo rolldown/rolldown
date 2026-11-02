@@ -9,7 +9,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 import { n as helper, r as init_vendor, t as calls } from "./vendor.js";
 __share("ab-Min5-dAA", (exports) => {
-	// ab.js
 	var fromAb;
 	function init_ab() {
 		return (init_ab = __esmMin((() => {
@@ -18,12 +17,11 @@ __share("ab-Min5-dAA", (exports) => {
 		})))();
 	}
 	__share_export(exports, {
-		n: () => init_ab,
-		t: () => fromAb
+		"n": () => init_ab,
+		"t": () => fromAb
 	});
 });
 __share("ac--MzVGF9g", (exports) => {
-	// ac.js
 	var fromAc;
 	function init_ac() {
 		return (init_ac = __esmMin((() => {
@@ -32,13 +30,12 @@ __share("ac--MzVGF9g", (exports) => {
 		})))();
 	}
 	__share_export(exports, {
-		n: () => init_ac,
-		t: () => fromAc
+		"n": () => init_ac,
+		"t": () => fromAc
 	});
 });
 var share_ab = __share_require("ab-Min5-dAA");
 var share_ac = __share_require("ac--MzVGF9g");
-// a.js
 function init_a() {
 	return (init_a = __esmMin((() => {
 		init_vendor();
@@ -57,7 +54,6 @@ init_a();
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 import { n as helper, r as init_vendor } from "./vendor.js";
 __share("ab-Min5-dAA", (exports) => {
-	// ab.js
 	var fromAb;
 	function init_ab() {
 		return (init_ab = __esmMin((() => {
@@ -66,12 +62,11 @@ __share("ab-Min5-dAA", (exports) => {
 		})))();
 	}
 	__share_export(exports, {
-		n: () => init_ab,
-		t: () => fromAb
+		"n": () => init_ab,
+		"t": () => fromAb
 	});
 });
 var share_ab = __share_require("ab-Min5-dAA");
-// b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
 		share_ab.n();
@@ -88,7 +83,6 @@ init_b();
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 import { n as helper, r as init_vendor } from "./vendor.js";
 __share("ac--MzVGF9g", (exports) => {
-	// ac.js
 	var fromAc;
 	function init_ac() {
 		return (init_ac = __esmMin((() => {
@@ -97,12 +91,11 @@ __share("ac--MzVGF9g", (exports) => {
 		})))();
 	}
 	__share_export(exports, {
-		n: () => init_ac,
-		t: () => fromAc
+		"n": () => init_ac,
+		"t": () => fromAc
 	});
 });
 var share_ac = __share_require("ac--MzVGF9g");
-// c.js
 function init_c() {
 	return (init_c = __esmMin((() => {
 		share_ac.n();
@@ -125,7 +118,6 @@ export { __share_require as i, __share as n, __share_export as r, __esmMin as t 
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-// vendor.js
 function helper(tag) {
 	calls += 1;
 	return tag + calls;

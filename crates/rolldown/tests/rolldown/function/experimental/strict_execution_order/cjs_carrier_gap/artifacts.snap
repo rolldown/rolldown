@@ -8,8 +8,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { t as init_p } from "./p.js";
+
 // e.js
 console.log("E");
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -17,6 +19,7 @@ function init_main() {
 		console.log("MAIN");
 	})))();
 }
+
 init_main();
 
 ```
@@ -66,12 +69,14 @@ export { __esmMin as n, __commonJSMin as t };
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { t as init_p } from "./p.js";
+
 // second.js
 function init_second() {
 	return (init_second = __esmMin((() => {
 		init_p();
 	})))();
 }
+
 init_second();
 
 ```
@@ -85,12 +90,14 @@ init_second();
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { t as init_p } from "./p.js";
+
 // e.js
 function init_e() {
 	return (init_e = __esmMin((() => {
 		console.log("E");
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -99,6 +106,7 @@ function init_main() {
 		console.log("MAIN");
 	})))();
 }
+
 init_main();
 
 ```
@@ -148,12 +156,14 @@ export { __esmMin as n, __commonJSMin as t };
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { t as init_p } from "./p.js";
+
 // second.js
 function init_second() {
 	return (init_second = __esmMin((() => {
 		init_p();
 	})))();
 }
+
 init_second();
 
 ```

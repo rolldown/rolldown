@@ -7,7 +7,28 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-// HIDDEN [\0rolldown/runtime.js]
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, "default") ? __defProp(target, "default", {
+	value: mod,
+	enumerable: true
+}) : target, mod));
+
 // promise-lib.cjs
 var require_promise_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	var Promise$1 = require("node:os");
@@ -16,15 +37,18 @@ var require_promise_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		path: Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("node:path"), 1))
 	};
 }));
+
 // object-lib.cjs
 var require_object_lib = /* @__PURE__ */ __commonJSMin(((exports) => {
 	var Object$1 = require("node:os");
 	exports.os = [typeof Object$1.platform, typeof Object$1.arch];
 	Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
 }));
+
 // main.js
 var import_promise_lib = /* @__PURE__ */ __toESM(require_promise_lib());
 var import_object_lib = /* @__PURE__ */ __toESM(require_object_lib());
+
 exports.objectLib = import_object_lib.default;
 exports.promiseLib = import_promise_lib.default;
 

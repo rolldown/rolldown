@@ -31,6 +31,7 @@ function init_normal_dep() {
 		value$3 = "normal-dep";
 	})))();
 }
+
 // normal-lib.js
 var value;
 function init_normal_lib() {
@@ -39,6 +40,7 @@ function init_normal_lib() {
 		value = value$3 + "+normal-lib";
 	})))();
 }
+
 // tla-dep.js
 var value$2;
 function init_tla_dep() {
@@ -46,6 +48,7 @@ function init_tla_dep() {
 		value$2 = await Promise.resolve("tla-dep");
 	})))();
 }
+
 // tla-lib.js
 var value$1;
 function init_tla_lib() {
@@ -54,6 +57,7 @@ function init_tla_lib() {
 		value$1 = value$2 + "+tla-lib";
 	})))();
 }
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((async () => {
@@ -61,6 +65,7 @@ function init_main() {
 		await init_tla_lib();
 	})))();
 }
+
 await init_main();
 export { value as normalLibValue, value$1 as tlaLibValue };
 

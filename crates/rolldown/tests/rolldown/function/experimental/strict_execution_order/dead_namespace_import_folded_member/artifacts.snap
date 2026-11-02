@@ -80,6 +80,7 @@ export { init_css as t };
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_css } from "./css.js";
 import assert from "node:assert";
+
 // first.js
 function init_first() {
 	return (init_first = __esmMin((() => {
@@ -87,6 +88,7 @@ function init_first() {
 		assert.strictEqual(globalThis.cssResult, "a:1");
 	})))();
 }
+
 init_first();
 
 ```
@@ -95,6 +97,7 @@ init_first();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
+
 // main.js
 function init_main() {
 	return (init_main = __esmMin((async () => {
@@ -102,6 +105,7 @@ function init_main() {
 		await import("./second.js");
 	})))();
 }
+
 await init_main();
 
 ```
@@ -120,6 +124,7 @@ export { __esmMin as t };
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_css } from "./css.js";
 import assert from "node:assert";
+
 // second.js
 function init_second() {
 	return (init_second = __esmMin((() => {
@@ -127,6 +132,7 @@ function init_second() {
 		assert.strictEqual(globalThis.cssResult, "a:1");
 	})))();
 }
+
 init_second();
 
 ```

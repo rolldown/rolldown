@@ -123,15 +123,19 @@ load();
 
 ```js
 const require_main = require("./main.js");
+
 // imp1.js
 var imp1_exports = /* @__PURE__ */ require_main.__exportAll({ imp1: () => 1 });
+
 // imp2.js
 var imp2_exports = /* @__PURE__ */ require_main.__exportAll({ imp2: () => 2 });
+
 // imp3.js
 var imp3_exports = /* @__PURE__ */ require_main.__exportAll({
 	imp3: () => 3,
 	imp33: () => 33
 });
+
 Object.defineProperty(exports, "imp1_exports", {
 	enumerable: true,
 	get: function() {
@@ -157,9 +161,38 @@ Object.defineProperty(exports, "imp3_exports", {
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-// HIDDEN [\0rolldown/runtime.js]
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __exportAll = (all, no_symbols) => {
+	let target = {};
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
+	return target;
+};
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, "default") ? __defProp(target, "default", {
+	value: mod,
+	enumerable: true
+}) : target, mod));
 let node_assert_strict = require("node:assert/strict");
 node_assert_strict = __toESM(node_assert_strict);
+
 // main.js
 const load = async () => {
 	Promise.resolve().then(() => require("./imp.js")).then((n) => n.imp1_exports).then((m) => {
@@ -177,6 +210,7 @@ const load = async () => {
 	});
 };
 load();
+
 exports.__exportAll = __exportAll;
 
 ```

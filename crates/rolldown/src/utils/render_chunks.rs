@@ -4,7 +4,7 @@ use anyhow::Result;
 use arcstr::ArcStr;
 use futures::future::try_join_all;
 use rolldown_common::{
-  ChunkTable, InsChunkIdx, InstantiationKind, ModuleTable, RollupRenderedChunk,
+  ChunkIdx, ChunkTable, InsChunkIdx, InstantiationKind, ModuleTable, RollupRenderedChunk,
   SharedNormalizedBundlerOptions,
 };
 use rolldown_error::BuildDiagnostic;
@@ -21,7 +21,7 @@ pub async fn render_chunks(
   options: &SharedNormalizedBundlerOptions,
   chunk_table: &ChunkTable,
   module_table: &ModuleTable,
-) -> Result<Vec<BuildDiagnostic>> {
+) -> Result<(Vec<BuildDiagnostic>, rustc_hash::FxHashSet<ChunkIdx>)> {
   let chunks = Arc::new(
     assets
       .iter()
@@ -35,36 +35,42 @@ pub async fn render_chunks(
       .collect::<FxIndexMap<ArcStr, Arc<RollupRenderedChunk>>>(),
   );
 
-  let result = try_join_all(assets.iter_mut().enumerate().map(|(index, asset)| {
-    let chunks = Arc::clone(&chunks);
-    async move {
-      if let InstantiationKind::Ecma(ecma_meta) = &asset.kind {
-        let render_chunk_ret = plugin_driver
-          .render_chunk(HookRenderChunkArgs {
-            code: Arc::new(std::mem::take(&mut asset.content).try_into_inner_string()?),
-            chunk: Arc::clone(
-              chunks.get(&ecma_meta.rendered_chunk.filename).expect("should have chunk"),
-            ),
-            options,
-            chunk_table,
-            module_table,
-            chunks,
-          })
-          .await?;
-        return Ok(Some((index.into(), render_chunk_ret)));
-      }
+  let result =
+    try_join_all(assets.iter_mut().enumerate().map(|(index, asset)| {
+      let chunks = Arc::clone(&chunks);
+      async move {
+        if let InstantiationKind::Ecma(ecma_meta) = &asset.kind {
+          let render_chunk_ret = plugin_driver
+            .render_chunk(HookRenderChunkArgs {
+              code: Arc::new(std::mem::take(&mut asset.content).try_into_inner_string()?),
+              chunk: Arc::clone(
+                chunks.get(&ecma_meta.rendered_chunk.filename).expect("should have chunk"),
+              ),
+              options,
+              chunk_table,
+              module_table,
+              chunks,
+            })
+            .await?;
+          return Ok(Some((index.into(), render_chunk_ret)));
+        }
 
-      Ok::<Option<(InsChunkIdx, (String, Vec<SourceMap>, Vec<BuildDiagnostic>))>, anyhow::Error>(
-        None,
-      )
-    }
-  }))
-  .await?;
+        Ok::<
+          Option<(InsChunkIdx, (String, Vec<SourceMap>, Vec<BuildDiagnostic>, bool))>,
+          anyhow::Error,
+        >(None)
+      }
+    }))
+    .await?;
 
   let mut warnings = vec![];
-  for (index, (code, sourcemaps, chunk_warnings)) in result.into_iter().flatten() {
+  let mut replaced_chunks = rustc_hash::FxHashSet::default();
+  for (index, (code, sourcemaps, chunk_warnings, replaced)) in result.into_iter().flatten() {
     let asset = &mut assets[index];
     asset.content = code.into();
+    if replaced {
+      replaced_chunks.insert(asset.originate_from);
+    }
     if !sourcemaps.is_empty() {
       if let Some(asset_map) = &asset.map {
         let mut sourcemap_chain = Vec::with_capacity(sourcemaps.len() + 1);
@@ -76,5 +82,5 @@ pub async fn render_chunks(
     warnings.extend(chunk_warnings);
   }
 
-  Ok(warnings)
+  Ok((warnings, replaced_chunks))
 }

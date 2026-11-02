@@ -46,6 +46,7 @@ export { import_lodash as n, import_lodash as t };
 const require_main = require("./main.js");
 let node_assert = require("node:assert");
 node_assert = require_main.__toESM(node_assert);
+
 // lazy-a.js
 (0, node_assert.default)(typeof require_main.import_lodash.debounce === "function");
 (0, node_assert.default)(typeof require_main.import_lodash$1.noop === "function");
@@ -56,18 +57,41 @@ node_assert = require_main.__toESM(node_assert);
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-// HIDDEN [\0rolldown/runtime.js]
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, "default") ? __defProp(target, "default", {
+	value: mod,
+	enumerable: true
+}) : target, mod));
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
+
 // utils.js
 var import_lodash = (/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.noop = function noop() {};
 	exports.debounce = function debounce() {};
 })))();
+
 // main.js
 (0, node_assert.default)(typeof import_lodash.debounce === "function");
 (0, node_assert.default)(typeof import_lodash.noop === "function");
 Promise.resolve().then(() => require("./lazy-a.js"));
+
 exports.__toESM = __toESM;
 Object.defineProperty(exports, "import_lodash", {
 	enumerable: true,

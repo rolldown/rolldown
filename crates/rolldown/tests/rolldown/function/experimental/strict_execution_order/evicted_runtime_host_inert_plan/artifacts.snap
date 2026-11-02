@@ -85,8 +85,10 @@ console.log("A", Object.keys(/* @__PURE__ */ require("./rolldown-runtime.js").__
 ```js
 const require_group_b = require("./group-b.js");
 require("./a.js");
+
 // q.js
 console.log("Q");
+
 // e0.js
 console.log("E0", Object.keys(require_group_b.p).join());
 
@@ -96,6 +98,7 @@ console.log("E0", Object.keys(require_group_b.p).join());
 
 ```js
 require("./a.js");
+
 // e1.js
 console.log("E1");
 
@@ -106,8 +109,10 @@ console.log("E1");
 ```js
 // p.js
 const p = {};
+
 // b.js
 console.log("B");
+
 Object.defineProperty(exports, "p", {
 	enumerable: true,
 	get: function() {
@@ -120,7 +125,6 @@ Object.defineProperty(exports, "p", {
 ### rolldown-runtime.js
 
 ```js
-// \0rolldown/runtime.js
 var __defProp = Object.defineProperty;
 var __exportAll = (all, no_symbols) => {
 	let target = {};

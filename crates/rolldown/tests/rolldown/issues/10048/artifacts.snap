@@ -49,6 +49,7 @@ function init_data() {
 		};
 	})))();
 }
+
 // entry.js
 function getProjectAnnotations() {
 	return [globalThis.__themes];
@@ -59,6 +60,7 @@ function init_entry() {
 		globalThis.__themes = themes;
 	})))();
 }
+
 init_entry();
 export { getProjectAnnotations };
 

@@ -72,36 +72,10 @@ pub fn render_esm<'code>(
   // before anything of this file's own runs.
   render_inline_records(ctx, &mut source_joiner, carried_sources);
 
-  if let Some(entry_module) = ctx.chunk.entry_module(&ctx.link_output.module_table) {
-    if matches!(entry_module.exports_kind, ExportsKind::Esm) {
-      for importee_idx in ctx.chunk.entry_level_external_module_idx.iter().copied() {
-        let importee = &ctx.link_output.module_table[importee_idx];
-        if let Some(m) = importee.as_external() {
-          let ext_name = m.get_import_path(ctx.chunk, ctx.resolved_paths);
-          // Preserve the `with { ... }` import attribute from the originating
-          // `export * from "..." with { ... }` record (issue #9160) instead of dropping it.
-          // Follow this entry's export-star chain to the record that resolved to this external and
-          // reuse its attribute. This remains entry-specific when several facades share one
-          // implementation chunk. Notes:
-          // - If no such record carries an attribute, `with_clause` is `None` and we emit the
-          //   plain `export * from` exactly as before (safe degradation, no regression). This is
-          //   also what happens if the originating record is unavailable.
-          // - If several records re-export the same external with *different* attributes (a
-          //   pathological, conflicting input), the first attributed record in the entry's
-          //   breadth-first export-star traversal wins.
-          let with_clause =
-            find_entry_level_external_import_attribute(ctx, entry_module.idx, importee_idx);
-          // An absent attribute is just an empty suffix, so both cases collapse to a
-          // single `append_source` (same shape `create_import_declaration` uses below).
-          source_joiner.append_source(concat_string!(
-            "export * from ",
-            to_ecma_string_literal(&ext_name, ctx.options.charset.is_ascii()),
-            with_clause.map(|attr| concat_string!(" ", attr.to_string())).unwrap_or_default(),
-            "\n"
-          ));
-        }
-      }
-    }
+  if ast_dce.is_none()
+    && let Some(exports) = render_esm_external_star_exports(ctx)
+  {
+    source_joiner.append_source(exports);
   }
 
   // chunk content
@@ -131,6 +105,43 @@ pub fn render_esm<'code>(
   }
 
   source_joiner
+}
+
+pub fn render_esm_external_star_exports(ctx: &GenerateContext<'_>) -> Option<String> {
+  let mut code = String::new();
+  if let Some(entry_module) = ctx.chunk.entry_module(&ctx.link_output.module_table) {
+    if matches!(entry_module.exports_kind, ExportsKind::Esm) {
+      for importee_idx in ctx.chunk.entry_level_external_module_idx.iter().copied() {
+        let importee = &ctx.link_output.module_table[importee_idx];
+        if let Some(m) = importee.as_external() {
+          let ext_name = m.get_import_path(ctx.chunk, ctx.resolved_paths);
+          // Preserve the `with { ... }` import attribute from the originating
+          // `export * from "..." with { ... }` record (issue #9160) instead of dropping it.
+          // Follow this entry's export-star chain to the record that resolved to this external and
+          // reuse its attribute. This remains entry-specific when several facades share one
+          // implementation chunk. Notes:
+          // - If no such record carries an attribute, `with_clause` is `None` and we emit the
+          //   plain `export * from` exactly as before (safe degradation, no regression). This is
+          //   also what happens if the originating record is unavailable.
+          // - If several records re-export the same external with *different* attributes (a
+          //   pathological, conflicting input), the first attributed record in the entry's
+          //   breadth-first export-star traversal wins.
+          let with_clause =
+            find_entry_level_external_import_attribute(ctx, entry_module.idx, importee_idx);
+          // An absent attribute is just an empty suffix, so both cases collapse to a
+          // single `append_source` (same shape `create_import_declaration` uses below).
+          code.push_str(&concat_string!(
+            "export * from ",
+            to_ecma_string_literal(&ext_name, ctx.options.charset.is_ascii()),
+            with_clause.map(|attr| concat_string!(" ", attr.to_string())).unwrap_or_default(),
+            "\n"
+          ));
+        }
+      }
+    }
+  }
+
+  (!code.is_empty()).then_some(code)
 }
 
 fn find_entry_level_external_import_attribute<'a>(
@@ -190,7 +201,7 @@ fn find_entry_level_external_import_attribute<'a>(
   None
 }
 
-fn render_chunk_content<'code>(
+pub(super) fn render_chunk_content<'code>(
   ctx: &GenerateContext<'_>,
   module_sources: &'code [RenderedModuleSource],
   source_joiner: &mut SourceJoiner<'code>,
@@ -222,137 +233,18 @@ fn render_chunk_content<'code>(
     }
   }
 
-  // If there is no concatenate_wrapping_modules, just concate all modules by exec order.
-  if ctx.chunk.module_groups.is_empty() {
-    module_sources.iter().for_each(
-      |RenderedModuleSource { sources: module_render_output, module_idx, .. }| {
-        if let Some(emitted_sources) = module_render_output {
-          for source in emitted_sources.as_ref() {
-            source_joiner.append_source(source);
-          }
-        }
-        if let Some(prelude) = dev_graph_prelude.take_if(|_| is_runtime_module(*module_idx)) {
-          source_joiner.append_source(prelude);
-        }
-      },
-    );
-    return;
-  }
-  let module_idx_to_source_idx = module_sources.iter().enumerate().fold(
-    FxHashMap::default(),
-    |mut acc, (idx, module_source)| {
-      acc.insert(module_source.module_idx, idx);
-      acc
-    },
-  );
-  let profiler_names = ctx.options.profiler_names;
-  let is_pife_for_module_wrappers_enabled =
-    ctx.options.optimization.is_pife_for_module_wrappers_enabled();
-  for group in &ctx.chunk.module_groups {
-    // If the group is not belong to any concatenated module, we just render it as a single module.
-    if group.modules.len() == 1 {
-      let source =
-        module_sources.get(module_idx_to_source_idx[&group.entry]).expect("should have source");
-      if let Some(emitted_sources) = source.sources.as_ref() {
+  module_sources.iter().for_each(
+    |RenderedModuleSource { sources: module_render_output, module_idx, .. }| {
+      if let Some(emitted_sources) = module_render_output {
         for source in emitted_sources.as_ref() {
           source_joiner.append_source(source);
         }
       }
-      if let Some(prelude) = dev_graph_prelude.take_if(|_| is_runtime_module(group.entry)) {
+      if let Some(prelude) = dev_graph_prelude.take_if(|_| is_runtime_module(*module_idx)) {
         source_joiner.append_source(prelude);
       }
-      continue;
-    }
-    // Concatenate hoisted functions and comma-join hoisted vars across the group's modules by
-    // appending each element directly into the accumulators, instead of allocating a temporary
-    // joined `String` per module just to append it.
-    let mut hoisted_fns = String::new();
-    let mut hoisted_vars = String::new();
-    for idx in &group.modules {
-      let Some(render_concatenated_module) =
-        ctx.chunk.module_idx_to_render_concatenated_module.get(idx)
-      else {
-        continue;
-      };
-      for hoisted_fn in &render_concatenated_module.hoisted_functions_or_module_ns_decl {
-        hoisted_fns.push_str(hoisted_fn);
-      }
-      for hoisted_var in &render_concatenated_module.hoisted_vars {
-        if !hoisted_vars.is_empty() {
-          hoisted_vars.push_str(", ");
-        }
-        hoisted_vars.push_str(hoisted_var);
-      }
-    }
-
-    let entry_module_stable_id = ctx.link_output.module_table[group.entry].stable_id();
-    // render var init_entry = __esm("", () => {
-    let rendered_esm_runtime_expr = ctx.chunk.module_idx_to_render_concatenated_module
-      [&group.entry]
-      .rendered_esm_runtime_expr
-      .as_ref()
-      .unwrap()
-      .trim_end_matches([';', '\n']);
-    let wrap_name = ctx.chunk.module_idx_to_render_concatenated_module[&group.entry]
-      .wrap_ref_name
-      .as_ref()
-      .unwrap();
-
-    // The concatenated closure holds the bodies of every module in the group. If the group's
-    // entry is TLA-tainted (has top-level `await`, or awaits a TLA importee's `init` call), those
-    // `await`s land inside this closure, so it must be `async`. This mirrors the flag threaded
-    // into `new_esm_wrapper_stmt` for the non-concatenated wrapper.
-    let is_async = ctx.link_output.metas[group.entry].is_tla_or_contains_tla_dependency;
-
-    if !hoisted_fns.is_empty() {
-      source_joiner.append_source(hoisted_fns);
-    }
-    if !hoisted_vars.is_empty() {
-      source_joiner.append_source(concat_string!("var ", hoisted_vars, ";"));
-    }
-
-    source_joiner.append_source(concat_string!(
-      "var ",
-      wrap_name,
-      " = ",
-      rendered_esm_runtime_expr,
-      "(",
-      if profiler_names {
-        concat_string!("{\"", entry_module_stable_id, "\": ")
-      } else {
-        String::new()
-      },
-      if is_pife_for_module_wrappers_enabled { "(" } else { "" },
-      if is_async { "async () => {" } else { "() => {" }
-    ));
-    // we render each module in the group by exec order.
-    group.modules.iter().for_each(|module_idx| {
-      if let Some(rendered) =
-        module_sources.get(module_idx_to_source_idx[module_idx]).and_then(|m| m.sources.as_ref())
-      {
-        for source in rendered.iter() {
-          source_joiner.append_source(source);
-        }
-      }
-    });
-    let mut postfix = "}".to_string();
-    if is_pife_for_module_wrappers_enabled {
-      postfix += ")";
-    }
-    if profiler_names {
-      postfix += "}";
-    }
-    postfix += ");\n";
-    source_joiner.append_source(postfix);
-    if let Some(prelude) =
-      dev_graph_prelude.take_if(|_| group.modules.iter().copied().any(is_runtime_module))
-    {
-      source_joiner.append_source(prelude);
-    }
-  }
-  if let Some(prelude) = dev_graph_prelude.take() {
-    source_joiner.append_source(prelude);
-  }
+    },
+  );
 }
 
 pub fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {

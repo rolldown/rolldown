@@ -68,6 +68,7 @@ export { vDef as n, outer_exports as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { i as vDef, n as outer_exports, t as init_outer } from "./outer.js";
+
 // a.js
 var defValue, nsObject;
 function init_a() {
@@ -78,6 +79,7 @@ function init_a() {
 		nsObject = outer_exports;
 	})))();
 }
+
 init_a();
 export { defValue, nsObject };
 
@@ -88,6 +90,7 @@ export { defValue, nsObject };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { i as vDef, t as init_outer } from "./outer.js";
+
 // b.js
 var sharedDef;
 function init_b() {
@@ -97,6 +100,7 @@ function init_b() {
 		sharedDef = vDef;
 	})))();
 }
+
 init_b();
 export { sharedDef };
 

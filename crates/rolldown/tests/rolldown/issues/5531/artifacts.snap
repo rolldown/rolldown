@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+
 // HIDDEN [\0rolldown/runtime.js]
 // leaflet.js
 var require_leaflet = /* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
@@ -18,13 +19,17 @@ var require_leaflet = /* @__PURE__ */ __commonJSMin(((exports, module, this$1) =
 		global.L = exports;
 	});
 }));
+
 // leaflet-toolbar.js
 var require_leaflet_toolbar = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	global.bar = global.L.foo;
 	module.exports = bar;
 }));
+
+// lib.js
 require_leaflet();
 require_leaflet_toolbar();
+
 // main.js
 assert.equal(bar, "foo");
 

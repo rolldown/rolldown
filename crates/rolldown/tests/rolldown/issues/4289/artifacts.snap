@@ -74,6 +74,7 @@ var require_lib = /* @__PURE__ */ require("./main.js").__commonJSMin(((exports) 
 	Object.defineProperty(exports, "__esModule", { value: true });
 	exports.parse = "parse";
 }));
+
 Object.defineProperty(exports, "default", {
 	enumerable: true,
 	get: function() {
@@ -87,11 +88,32 @@ Object.defineProperty(exports, "default", {
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-// HIDDEN [\0rolldown/runtime.js]
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, "default") ? __defProp(target, "default", {
+	value: mod,
+	enumerable: true
+}) : target, mod));
 let node_assert_strict = require("node:assert/strict");
 node_assert_strict = __toESM(node_assert_strict);
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert, 1);
+
 // non-node-mode.js
 async function main$1() {
 	const exports = await Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("./lib.js").default));
@@ -100,6 +122,7 @@ async function main$1() {
 	node_assert_strict.default.strictEqual(exports.default.parse, "parse", "Target has __esModule but no own default export, so default falls back to module.exports (#10360)");
 }
 main$1();
+
 // node-mode-by-mjs-extension.mjs
 async function main() {
 	const exports = await Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("./lib.js").default, 1));
@@ -108,6 +131,8 @@ async function main() {
 	node_assert.default.strictEqual(exports.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
 }
 main();
+
+// main.js
 (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const nodeAssert = require("node:assert");
 	async function main() {
@@ -119,6 +144,7 @@ main();
 	main();
 	module.exports = {};
 })))();
+
 exports.__commonJSMin = __commonJSMin;
 
 ```

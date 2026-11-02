@@ -9,12 +9,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 import { n as url, t as init_shared } from "./shared.js";
 __rolldown_runtime__.registerGraph({
-	ids: ["a.js", "shared.js"],
-	localCount: 1,
-	edges: [[1]],
-	entries: [0]
+	"ids": ["a.js", "shared.js"],
+	"localCount": 1,
+	"edges": [[1]],
+	"entries": [0]
 });
-// a.js
 var a_exports = /* @__PURE__ */ __exportAll({});
 function init_a() {
 	return (init_a = __esmMin((() => {
@@ -34,12 +33,11 @@ init_a();
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 import { n as url, t as init_shared } from "./shared.js";
 __rolldown_runtime__.registerGraph({
-	ids: ["b.js", "shared.js"],
-	localCount: 1,
-	edges: [[1]],
-	entries: [0]
+	"ids": ["b.js", "shared.js"],
+	"localCount": 1,
+	"edges": [[1]],
+	"entries": [0]
 });
-// b.js
 var b_exports = /* @__PURE__ */ __exportAll({});
 function init_b() {
 	return (init_b = __esmMin((() => {
@@ -66,11 +64,10 @@ export { __exportAll as n, __esmMin as t };
 ```js
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 __rolldown_runtime__.registerGraph({
-	ids: ["shared.js"],
-	localCount: 1,
-	edges: [[]]
+	"ids": ["shared.js"],
+	"localCount": 1,
+	"edges": [[]]
 });
-// shared.js
 var shared_exports = /* @__PURE__ */ __exportAll({ url: () => url });
 var shared_hot, url;
 function init_shared() {

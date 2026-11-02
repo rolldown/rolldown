@@ -341,16 +341,20 @@ impl Codegen<'_> {
         let Some(comments) = self.comments.remove(&start) else { return false };
 
         for comment in &comments {
+            let claimed = self.begin_output_fragment(comment.span);
             self.print_hard_newline();
             self.print_indent();
             self.print_comment(comment);
+            self.end_output_fragment(claimed);
         }
 
-        if comments.is_empty() {
-            false
-        } else {
+        if let Some(last) = comments.last() {
+            let claimed = self.begin_output_fragment(last.span);
             self.print_hard_newline();
+            self.end_output_fragment(claimed);
             true
+        } else {
+            false
         }
     }
 
@@ -359,6 +363,7 @@ impl Codegen<'_> {
             return;
         };
 
+        let claimed = self.begin_output_fragment(first.span);
         if first.preceded_by_newline() {
             // Skip printing newline if this comment is already on a newline.
             if let Some(b) = self.last_byte() {
@@ -383,6 +388,7 @@ impl Codegen<'_> {
 
         if let Some((last, middle)) = rest.split_last() {
             for comment in middle {
+                let claimed = self.begin_output_fragment(comment.span);
                 if comment.preceded_by_newline() {
                     self.print_hard_newline();
                     self.print_indent();
@@ -392,8 +398,10 @@ impl Codegen<'_> {
                     self.print_soft_space();
                 }
                 self.print_comment(comment);
+                self.end_output_fragment(claimed);
             }
 
+            let claimed = self.begin_output_fragment(last.span);
             if last.preceded_by_newline() {
                 self.print_hard_newline();
                 self.print_indent();
@@ -409,17 +417,20 @@ impl Codegen<'_> {
             } else {
                 self.print_next_indent_as_space = true;
             }
+            self.end_output_fragment(claimed);
         } else if first.is_line() || first.followed_by_newline() {
             self.print_hard_newline();
         } else {
             self.print_next_indent_as_space = true;
         }
+        self.end_output_fragment(claimed);
     }
 
     fn print_comment(&mut self, comment: &Comment) {
         let Some(source_text) = self.source_text else {
             return;
         };
+        let claimed = self.begin_output_fragment(comment.span);
         let comment_source = comment.span.source_text(source_text);
         match comment.kind {
             CommentKind::Line | CommentKind::HtmlOpen | CommentKind::SingleLineBlock => {
@@ -454,6 +465,7 @@ impl Codegen<'_> {
                 }
             }
         }
+        self.end_output_fragment(claimed);
     }
 
     /// Handle Eof / Linked / External Comments.

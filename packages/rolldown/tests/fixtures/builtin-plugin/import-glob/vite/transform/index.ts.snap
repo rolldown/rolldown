@@ -1,6 +1,7 @@
 import { t as __exportAll } from "./rolldown-runtime.js";
 import { t as a_exports$1 } from "./a.js";
 import { t as b_exports$1 } from "./b.js";
+
 // ../fixtures/a/modules/index.ts
 var modules_exports = /* @__PURE__ */ __exportAll({
 	a: () => "a",
@@ -10,12 +11,15 @@ var modules_exports = /* @__PURE__ */ __exportAll({
 });
 const name = "index";
 var modules_default = "indexDefault";
+
 // ../fixtures/a/modules/a.ts?raw
 var a_exports = /* @__PURE__ */ __exportAll({ default: () => a_default });
 var a_default = "export const name = 'a';\n";
+
 // ../fixtures/a/modules/b.ts?raw
 var b_exports = /* @__PURE__ */ __exportAll({ default: () => b_default });
 var b_default = "export const name = 'b';\n";
+
 // ../fixtures/a/index.ts
 const basic = /* #__PURE__ */ Object.assign({
 	"./modules/a.ts": () => import("./a.js").then((n) => n.t),
@@ -126,4 +130,5 @@ const customBaseParent = /* #__PURE__ */ Object.assign({
 	"../b/b.ts": () => import("./b2.js"),
 	"../b/index.ts": () => import("./b4.js")
 });
+
 export { basic, basicEager, basicEagerWithObjectKeys, basicEagerWithObjectValues, basicWithObjectKeys, basicWithObjectValues, cleverCwd1, cleverCwd2, customBase, customBaseParent, customQueryString, customRootBase, eagerAs, excludeSelf, excludeSelfRaw, ignore, ignoreWithObjectKeys, ignoreWithObjectValues, namedDefault, namedDefaultWithObjectKeys, namedDefaultWithObjectValues, namedEager, namedEagerWithObjectKeys, namedEagerWithObjectValues, parent, rawImportModule, rootMixedRelative };

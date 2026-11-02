@@ -8,7 +8,10 @@ use oxc_napi::JsRegExp;
 use rolldown::{InnerOptions, ModuleSideEffects, ModuleSideEffectsRule};
 use rolldown_utils::js_regex::HybridRegex;
 
-use crate::types::js_callback::{JsCallback, JsCallbackExt, JsCallbackResultExt};
+use crate::types::{
+  js_callback::{JsCallbackExt, JsCallbackResultExt},
+  js_callback_release::{JsCallbackRelease, UntrackedJsCallback},
+};
 
 #[napi]
 #[derive(Debug)]
@@ -28,7 +31,7 @@ pub type BindingModuleSideEffects = Either4<
   bool,
   HashSet<String, FxBuildHasher>,
   Vec<BindingModuleSideEffectsRule>,
-  JsCallback<FnArgs<(String, bool)>, Option<bool>>,
+  UntrackedJsCallback<FnArgs<(String, bool)>, Option<bool>>,
 >;
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -58,8 +61,13 @@ pub struct BindingModuleSideEffectsRule {
   pub external: Option<bool>,
 }
 
-impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
-  fn try_from(value: BindingTreeshake) -> anyhow::Result<Self> {
+impl BindingTreeshake {
+  /// The close of the bundle releases the `moduleSideEffects` function through `callbacks`.
+  pub fn into_treeshake_options(
+    self,
+    callbacks: &JsCallbackRelease,
+  ) -> anyhow::Result<rolldown::TreeshakeOptions> {
+    let value = self;
     let module_side_effects = match value.module_side_effects {
       Either4::A(value) => ModuleSideEffects::Boolean(value),
       Either4::B(rules) => ModuleSideEffects::IdSet(rules),
@@ -79,9 +87,10 @@ impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
         ModuleSideEffects::Rules(ret)
       }
       Either4::D(ts_fn) => {
+        let ts_fn = callbacks.track(ts_fn);
         ModuleSideEffects::Function(Arc::new(move |id: &str, is_external: bool| {
           let id = id.to_string();
-          let ts_fn = Arc::clone(&ts_fn);
+          let ts_fn = ts_fn.clone();
           Box::pin(async move {
             ts_fn
               .invoke_async((id.clone(), is_external).into())
@@ -103,7 +112,7 @@ impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
       BindingPropertyWriteSideEffects::False => rolldown::PropertyWriteSideEffects::False,
     });
 
-    Ok(Self::Option(InnerOptions {
+    Ok(rolldown::TreeshakeOptions::Option(InnerOptions {
       module_side_effects,
       annotations: value.annotations,
       manual_pure_functions: value.manual_pure_functions,
@@ -114,6 +123,4 @@ impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
       property_write_side_effects,
     }))
   }
-
-  type Error = anyhow::Error;
 }

@@ -1750,3 +1750,50 @@ test.concurrent(
     expect(fs.existsSync(output)).toBe(false);
   },
 );
+
+// The close of one event result runs `closeBundle` for that build only. The watcher keeps the
+// options for the next rebuilds, so that close must not release their JS functions.
+// See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
+test.concurrent(
+  'a rebuild after an event result close still calls the option functions',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, outputDir, dir } = createTestInputAndOutput(
+      'watch-result-close-option-functions',
+      retryCount,
+    );
+    const entryFileNames = vi.fn(() => '[name].js');
+    const watcher = watch({ input, output: { dir: outputDir, entryFileNames } });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const results: string[] = [];
+    let onResult: (() => void) | undefined;
+    watcher.on('event', async (event) => {
+      if (event.code === 'BUNDLE_END') {
+        await event.result.close();
+        results.push('end');
+        onResult?.();
+      } else if (event.code === 'ERROR') {
+        await event.result.close();
+        results.push(`error: ${event.error.message}`);
+        onResult?.();
+      }
+    });
+
+    await new Promise<void>((resolve) => (onResult = resolve));
+    expect(entryFileNames).toHaveBeenCalled();
+    entryFileNames.mockClear();
+
+    const rebuilt = new Promise<void>((resolve) => (onResult = resolve));
+    await editFile(input, 'console.log(2)');
+    await rebuilt;
+    expect(results).toEqual(['end', 'end']);
+    expect(entryFileNames).toHaveBeenCalled();
+  },
+);

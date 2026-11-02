@@ -1,10 +1,11 @@
 use crate::stages::link_stage::{ModuleInclusionVec, ModuleNamespaceReasonVec, StmtInclusionVec};
+use oxc::semantic::NodeId;
 use oxc_index::IndexVec;
 use oxc_str::CompactStr;
 use rolldown_common::{
   ConcatenateWrappedModuleKind, EntryPointKind, ImportRecordIdx, ImportRecordMeta,
-  MemberExprRefResolutionMap, ModuleIdx, ModuleNamespaceIncludedReason, OutputFormat,
-  ResolvedExport, RuntimeHelper, StmtInfoIdx, SymbolRef, WrapKind,
+  MemberExprRefResolutionMap, ModuleIdx, ModuleNamespaceIncludedReason, ModuleType, NormalModule,
+  OutputFormat, ResolvedExport, RuntimeHelper, StmtInfoIdx, SymbolRef, SymbolRefDb, WrapKind,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_utils::IndexBitSet;
@@ -84,6 +85,9 @@ pub struct LinkingMetadata {
   pub execution_dependencies: FxIndexSet<ModuleIdx>,
   // `None` the member expression resolve to a ambiguous export.
   pub resolved_member_expr_refs: MemberExprRefResolutionMap,
+  /// Results of the `'key' in ns` checks (see `EcmaView::namespace_in_checks`) that are known at
+  /// link time.
+  pub folded_namespace_in_checks: FxHashMap<NodeId, bool>,
   pub star_exports_from_external_modules: Vec<ImportRecordIdx>,
   pub is_tla_or_contains_tla_dependency: bool,
   pub concatenated_wrapped_module_kind: ConcatenateWrappedModuleKind,
@@ -126,6 +130,32 @@ impl LinkingMetadata {
 
   pub fn is_canonical_exports_empty(&self) -> bool {
     self.sorted_and_non_ambiguous_resolved_exports.is_empty()
+  }
+
+  /// Whether the finalizer may fold the keys of `module`, the JSON module this metadata belongs
+  /// to, into its default-export object. A namespace object needs every key as a binding.
+  pub fn inlines_json_keys(&self, module: &NormalModule) -> bool {
+    matches!(module.module_type, ModuleType::Json)
+      && !module.exports_kind.is_commonjs()
+      && !self.namespace_included
+  }
+
+  /// Whether `symbol_ref` is a key of JSON `module` that the finalizer folds into the
+  /// default-export object. Such a key has no `var`, so no chunk can import or export it.
+  pub fn is_inlined_json_key(
+    &self,
+    module: &NormalModule,
+    symbols: &SymbolRefDb,
+    symbol_ref: SymbolRef,
+  ) -> bool {
+    self.inlines_json_keys(module)
+      // Only the keys are real bindings. The namespace, the default export, and the wrapper are
+      // facade symbols, and the finalizer keeps them.
+      && !symbols.is_facade_symbol(symbol_ref)
+      && module
+        .json_module_none_self_reference_included_symbol
+        .as_deref()
+        .is_some_and(|kept_keys| !kept_keys.contains(&symbol_ref))
   }
 
   #[inline]

@@ -1,0 +1,31 @@
+{
+  "name": "@rolldown/perf-kit",
+  "version": "0.0.1",
+  "description": "Performance harness for agent loops: throttled browser runs with first-paint coverage and boot profile, node/deno startup runs, static deferral planning on the module graph.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rolldown/rolldown.git",
+    "directory": "packages/perf-kit"
+  },
+  "bin": {
+    "perf-kit": "./harness.mjs"
+  },
+  "files": [
+    "harness.mjs",
+    "lib",
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "README.md"
+  ],
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\""
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

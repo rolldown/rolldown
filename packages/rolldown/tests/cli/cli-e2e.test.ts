@@ -107,6 +107,27 @@ describe('cli options for bundling', () => {
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });
 
+  it.each([
+    { args: ['--', '1.ts'], entries: ['1'] },
+    { args: ['--', '1.ts', '2.js'], entries: ['1', '2'] },
+    { args: ['1.ts', '--', '2.js'], entries: ['1', '2'] },
+  ])('bundles positional entries after --: $args', async ({ args, entries }) => {
+    const cwd = cliFixturesDir('cli-multi-entries');
+    const status = await execa('rolldown', args, { cwd });
+    expect(status.exitCode).toBe(0);
+    for (const entry of entries) {
+      expect(status.stdout).toContain(`console.log("${entry}")`);
+    }
+  });
+
+  it('bundles a filename beginning with - after --', async () => {
+    const cwd = cliFixturesDir('cli-positional-delimiter');
+    const status = await execa('rolldown', ['--', '-entry.js'], { cwd });
+    expect(status.exitCode).toBe(0);
+    expect(status.stdout).toContain('console.log("dash-entry")');
+    expect(status.stdout).not.toContain('unrecognized');
+  });
+
   it('should handle single boolean option', async () => {
     const cwd = cliFixturesDir('cli-option-boolean');
     const status = await $({ cwd })`rolldown index.ts --minify -d dist`;

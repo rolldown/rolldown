@@ -49,7 +49,7 @@ export { __share_require as i, __share as n, __share_export as r, __esmMin as t 
 
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
-__share("s-v3kGiqU-", (exports) => {
+__share("s-v3kGiqU-", ((exports) => {
 	// s.js
 	function bump() {
 		n += 1;
@@ -67,7 +67,7 @@ __share("s-v3kGiqU-", (exports) => {
 		r: () => n,
 		t: () => bump
 	});
-});
+}));
 var share_s = __share_require("s-v3kGiqU-");
 // v.js
 function viaV() {

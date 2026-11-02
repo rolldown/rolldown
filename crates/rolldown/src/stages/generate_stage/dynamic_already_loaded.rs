@@ -14,7 +14,7 @@ use crate::chunk_graph::ChunkGraph;
 use crate::esm_init_obligations::collect_entry_reexported_wrapper_inits;
 
 use super::{
-  GenerateStage, code_splitting::IndexSplittingInfo,
+  GenerateStage, code_splitting::IndexSplittingInfo, reduced_chunk_graph::ReducedChunkGraph,
   simulated_facade_inclusion::include_simulated_facade_namespace,
 };
 
@@ -83,8 +83,8 @@ impl GenerateStage<'_> {
       &flattened_entry_modules,
       used_symbol_refs_builder,
     );
-    // Indexed by entry bit, so `reduced_atom_graph_has_static_cycle` can pair each facade chunk
-    // with its entry module's host atom by index instead of hashing a synthesized `BitSet`.
+    // Indexed by entry bit, so `ReducedChunkGraph` can pair each facade chunk with its entry
+    // module's host atom.
     let host_atom_by_entry_bit: Vec<Option<usize>> =
       flattened_entry_modules.iter().map(|&module_idx| module_to_atom_idx[module_idx]).collect();
 
@@ -102,33 +102,34 @@ impl GenerateStage<'_> {
       atoms.len(),
     );
 
+    let mut reduced_chunk_graph = ReducedChunkGraph::new(
+      atoms.iter().map(|atom| &atom.dependent_entries),
+      &atom_dependencies.cycle,
+      &host_atom_by_entry_bit,
+    );
     let mut changed = false;
-    for atom_idx in 0..atoms.len() {
-      let original_dependent_entries = atoms[atom_idx].dependent_entries.clone();
-      let dependent_entries = atoms[atom_idx].dependent_entries.index_of_one().collect::<Vec<_>>();
+    for (atom_idx, atom) in atoms.iter_mut().enumerate() {
+      let original_dependent_entries = atom.dependent_entries.clone();
+      let dependent_entries = atom.dependent_entries.index_of_one().collect::<Vec<_>>();
       let atom_bit: u32 = atom_idx.try_into().expect("Too many atoms, u32 overflowed.");
       for entry_idx in dependent_entries {
         if already_loaded_atoms_by_entry[entry_idx as usize].has_bit(atom_bit) {
-          atoms[atom_idx].dependent_entries.clear_bit(entry_idx);
+          atom.dependent_entries.clear_bit(entry_idx);
         }
       }
-      let action = if atoms[atom_idx].dependent_entries == original_dependent_entries {
+      let action = if atom.dependent_entries == original_dependent_entries {
         ReducedEntriesAction::Avoid
       } else {
         self.can_use_reduced_dependent_entries(
-          &atoms[atom_idx],
+          atom,
           &original_dependent_entries,
-          &atoms[atom_idx].dependent_entries,
+          &atom.dependent_entries,
           chunk_graph,
           &dynamic_entry_modules_by_entry,
         )
       };
       if !matches!(action, ReducedEntriesAction::Avoid)
-        && !Self::reduced_atom_graph_has_static_cycle(
-          &atoms,
-          &atom_dependencies.cycle,
-          &host_atom_by_entry_bit,
-        )
+        && reduced_chunk_graph.try_move(atom_idx, &atom.dependent_entries)
       {
         changed = true;
         if let ReducedEntriesAction::ApplyWithNamespaceExtraction {
@@ -139,7 +140,7 @@ impl GenerateStage<'_> {
           namespace_extractions.insert((entry_chunk_idx, entry_module_idx));
         }
       } else {
-        atoms[atom_idx].dependent_entries = original_dependent_entries;
+        atom.dependent_entries = original_dependent_entries;
       }
     }
 
@@ -368,7 +369,7 @@ impl GenerateStage<'_> {
   // emission.
   //
   // Hosting-atom attribution over-approximates rather than misses only because of the facade edges
-  // `reduced_atom_graph_has_static_cycle` adds: the facade depends on the host, which is where
+  // `ReducedChunkGraph` adds: the facade depends on the host, which is where
   // these edges land, so anything emission hangs on the facade stays reachable as facade -> host ->
   // target. Before rolldown#10734 this rested on facades having zero static in-degree, which a
   // fold moving an atom into a facade broke — re-derive it before attributing them elsewhere.
@@ -544,7 +545,7 @@ impl GenerateStage<'_> {
     }
   }
 
-  fn referenced_symbol_owners(&self, module_idx: ModuleIdx) -> FxHashSet<ModuleIdx> {
+  pub(super) fn referenced_symbol_owners(&self, module_idx: ModuleIdx) -> FxHashSet<ModuleIdx> {
     let meta = &self.link_output.metas[module_idx];
     let mut owners = FxHashSet::default();
     let note = |symbol_ref: SymbolRef, owners: &mut FxHashSet<ModuleIdx>| {
@@ -575,113 +576,6 @@ impl GenerateStage<'_> {
       }
     }
     owners
-  }
-
-  fn reduced_atom_graph_has_static_cycle(
-    atoms: &[ChunkAtom],
-    atom_dependencies: &[Vec<usize>],
-    host_atom_by_entry_bit: &[Option<usize>],
-  ) -> bool {
-    let mut chunk_idx_by_bits = FxHashMap::default();
-    let mut atom_to_chunk = Vec::with_capacity(atoms.len());
-    let mut facade_chunk_by_entry_bit = vec![None; host_atom_by_entry_bit.len()];
-    for atom in atoms {
-      let next_chunk_idx = chunk_idx_by_bits.len();
-      let chunk_idx = match chunk_idx_by_bits.entry(atom.dependent_entries.clone()) {
-        std::collections::hash_map::Entry::Occupied(occupied) => *occupied.get(),
-        std::collections::hash_map::Entry::Vacant(vacant) => {
-          vacant.insert(next_chunk_idx);
-          next_chunk_idx
-        }
-      };
-      atom_to_chunk.push(chunk_idx);
-      // An entry chunk's bits are exactly its own entry bit, so the singleton atoms seen here are
-      // the only facade candidates. Recording them keeps the facade lookup below an array index —
-      // this runs once per fold candidate, and hashing a `BitSet` per entry on every call would
-      // add `atoms * entries * entries / 8` bytes of hashing to the pass's quadratic hot spot.
-      if atom.dependent_entries.bit_count() == 1
-        && let Some(entry_bit) = atom.dependent_entries.index_of_one().next()
-      {
-        facade_chunk_by_entry_bit[entry_bit as usize] = Some(chunk_idx);
-      }
-    }
-
-    let mut chunk_dependencies = vec![FxHashSet::default(); chunk_idx_by_bits.len()];
-    for (atom_idx, dependencies) in atom_dependencies.iter().enumerate() {
-      let from_chunk_idx = atom_to_chunk[atom_idx];
-      for &dep_atom_idx in dependencies {
-        let to_chunk_idx = atom_to_chunk[dep_atom_idx];
-        if from_chunk_idx != to_chunk_idx {
-          chunk_dependencies[from_chunk_idx].insert(to_chunk_idx);
-        }
-      }
-    }
-
-    // The facade edges the atom graph cannot express: an entry whose module lands in a shared chunk
-    // keeps its own entry chunk as a facade, and `compute_chunk_imports` makes that facade import
-    // the host chunk — to run the module and to re-export its interface — but no module in the
-    // facade imports the entry module. Without them, folding an atom into a facade whose host
-    // statically depends on that atom yields a chunk cycle that evaluates in the wrong order
-    // (rolldown#10734). `cycle` over-approximates, so a redundant facade edge only costs a missed
-    // merge.
-    for (entry_bit, &host_atom_idx) in host_atom_by_entry_bit.iter().enumerate() {
-      // A `None` host means the entry module is external or excluded. Skipping is not a safe
-      // approximation in general — `cycle` may never miss an edge — but it drops no real edge:
-      // `split_chunks` assigns such a module to no chunk, so the facade has no host to import. An
-      // included normal entry module always has an atom — `determine_reachable_modules_for_entry`
-      // sets the entry's own bit on its module, and `split_chunks` asserts that an included
-      // module's bits are non-empty.
-      let Some(host_atom_idx) = host_atom_idx else {
-        continue;
-      };
-      // No facade chunk for this bit means the entry chunk holds nothing: a module-less facade
-      // declares no symbol, so nothing can depend back on it and the omitted node cannot sit on a
-      // cycle.
-      let Some(facade_chunk_idx) = facade_chunk_by_entry_bit[entry_bit] else {
-        continue;
-      };
-      let host_chunk_idx = atom_to_chunk[host_atom_idx];
-      if facade_chunk_idx != host_chunk_idx {
-        chunk_dependencies[facade_chunk_idx].insert(host_chunk_idx);
-      }
-    }
-
-    Self::chunk_dependency_graph_has_cycle(&chunk_dependencies)
-  }
-
-  fn chunk_dependency_graph_has_cycle(chunk_dependencies: &[FxHashSet<usize>]) -> bool {
-    let mut state = vec![0_u8; chunk_dependencies.len()];
-    for start_chunk_idx in 0..chunk_dependencies.len() {
-      if state[start_chunk_idx] != 0 {
-        continue;
-      }
-
-      let mut stack = vec![(start_chunk_idx, false)];
-      while let Some((chunk_idx, exiting)) = stack.pop() {
-        if exiting {
-          state[chunk_idx] = 2;
-          continue;
-        }
-
-        match state[chunk_idx] {
-          1 => return true,
-          2 => continue,
-          _ => {}
-        }
-
-        state[chunk_idx] = 1;
-        stack.push((chunk_idx, true));
-        for &dep_chunk_idx in &chunk_dependencies[chunk_idx] {
-          match state[dep_chunk_idx] {
-            1 => return true,
-            0 => stack.push((dep_chunk_idx, false)),
-            _ => {}
-          }
-        }
-      }
-    }
-
-    false
   }
 
   fn analyze_dynamic_entries(
@@ -740,7 +634,7 @@ impl GenerateStage<'_> {
     }
   }
 
-  fn is_included_dynamic_import_record(
+  pub(super) fn is_included_dynamic_import_record(
     &self,
     importer_idx: ModuleIdx,
     stmt_info_idx: StmtInfoIdx,

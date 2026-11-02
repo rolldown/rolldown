@@ -367,6 +367,7 @@
  - rollup@chunking form@synthetic-named-exports@mixed-synthetic-named-exports: mixed synthetic named exports@generates es
  - rollup@chunking form@synthetic-named-exports@multi-level: handles multiple levels of synthetic named exports@generates cjs
  - rollup@chunking form@synthetic-named-exports@multi-level: handles multiple levels of synthetic named exports@generates es
+ - rollup@function@synthetic-named-exports@preserve-modules-static-namespace: includes synthetic named exports in static namespace imports in preserveModules mode
 
 ### Import Assertions is not supported
  - rollup@function@import-assertions@plugin-assertions-this-resolve: allows plugins to provide assertions for this.resolve'
@@ -525,3 +526,4 @@
  - rollup@sourcemaps@warning-with-coarse-sourcemap: get correct mapping location with coarse sourcemap@generates es (`THIS_IS_UNDEFINED` warning)
  - rollup@function@export-default-this-without-semicolon: adds the missing semicolon after a default export of a rewritten top-level "this" without a trailing semicolon (`THIS_IS_UNDEFINED` warning)
  - rollup@function@circular-namespace-reexport-cache: handles cyclic reexports through cached namespace reexports for multiple importers (`CYCLIC_CROSS_CHUNK_REEXPORT` warning)
+ - rollup@function@warning-location-after-last-sourcemap-segment: uses the last sourcemap segment of a line for a location after the start of that segment (`THIS_IS_UNDEFINED` warning)

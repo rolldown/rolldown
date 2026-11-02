@@ -1,0 +1,8 @@
+{
+  "configVariants": [
+    {
+      "_configName": "strict",
+      "strictExecutionOrder": true
+    }
+  ]
+}

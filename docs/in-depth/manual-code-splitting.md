@@ -203,6 +203,7 @@ export default {
 ```
 
 By using the above codeSplitting option, the output will look like this:
+
 :::code-group
 
 ```js [output-hash0.js]
@@ -234,6 +235,7 @@ export { ... };
 ```
 
 :::
+
 Now, the libraries are split into separate chunks, and the browser can download them in parallel. This can significantly improve the loading performance of your application, especially if the libraries are large.
 
 ## Limitations

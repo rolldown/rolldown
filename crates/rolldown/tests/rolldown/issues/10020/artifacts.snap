@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## data.js
+## data.json.js
 
 ```js
 // data.json
@@ -32,7 +32,7 @@ export { data_default as default };
 ## index.js
 
 ```js
-import data_default from "./data.js";
+import data_default from "./data.json.js";
 // index.js
 function get(name) {
 	return data_default[name];

@@ -20,6 +20,12 @@ impl BindingRenderedModule {
     self.inner.code()
   }
 
+  /// `code.length` without materializing `code`.
+  #[napi(getter)]
+  pub fn rendered_length(&self) -> u32 {
+    u32::try_from(self.inner.rendered_utf16_length()).unwrap_or(u32::MAX)
+  }
+
   #[napi(getter)]
   pub fn rendered_exports(&self) -> Vec<&str> {
     self.inner.rendered_exports.iter().map(AsRef::as_ref).collect()

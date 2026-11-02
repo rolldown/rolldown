@@ -130,7 +130,12 @@ impl ChunkAst {
       || ctx.inline_state.has_records()
       || super::defer_for_render_hooks(ctx)
     {
-      return Ok(PreparedChunk { ast: self, output: ChunkAstDceOutput::default(), deferred: true });
+      return Ok(PreparedChunk {
+        ast: self,
+        output: ChunkAstDceOutput::default(),
+        layout: None,
+        deferred: true,
+      });
     }
     let output = {
       // SAFETY: assembly borrows fields in place; no owner or Vec storage is moved.
@@ -144,7 +149,7 @@ impl ChunkAst {
         options,
       )?
     };
-    Ok(PreparedChunk { ast: self, output, deferred: false })
+    Ok(PreparedChunk { ast: self, output, layout: None, deferred: false })
   }
 }
 
@@ -153,6 +158,7 @@ impl ChunkAst {
 pub(in crate::stages::generate_stage) struct PreparedChunk {
   ast: Pin<Box<ChunkAst>>,
   output: ChunkAstDceOutput,
+  layout: Option<global::ChunkLayout>,
   deferred: bool,
 }
 
@@ -219,18 +225,23 @@ impl PreparedChunk {
     }
   }
 
-  pub(in crate::stages::generate_stage) fn into_render_state(
-    self,
+  /// Assemble after preliminary readers join, before entering asynchronous rendering.
+  pub(in crate::stages::generate_stage) fn assemble_deferred(
+    mut self,
     ctx: &GenerateContext<'_>,
-  ) -> rolldown_error::BuildResult<(Option<ChunkAstDceOutput>, Option<PendingChunk>)> {
-    if !self.deferred {
-      return Ok((Some(self.output), None));
+  ) -> rolldown_error::BuildResult<Self> {
+    if !self.deferred
+      || matches!(
+        ctx.options.format,
+        rolldown_common::OutputFormat::Iife | rolldown_common::OutputFormat::Umd
+      )
+      || ctx.options.is_dev_mode_enabled()
+      || ctx.inline_state.has_records()
+      || super::complete_program(ctx.options, ctx.plugin_driver)
+    {
+      return Ok(self);
     }
-    assert!(!matches!(
-      ctx.options.format,
-      rolldown_common::OutputFormat::Iife | rolldown_common::OutputFormat::Umd
-    ));
-    let mut ast = self.ast;
+    let ast = &mut self.ast;
     let (program, layout) = {
       // SAFETY: all assembled references remain inside the pinned owner.
       let this = unsafe { ast.as_mut().get_unchecked_mut() };
@@ -253,7 +264,19 @@ impl PreparedChunk {
     // SAFETY: the complete root stays private to the same pinned owner as its donor roots.
     unsafe { ast.as_mut().get_unchecked_mut() }.assembled =
       Some(ChunkProgram(unsafe { std::mem::transmute::<Program<'_>, Program<'static>>(program) }));
-    Ok((
+    self.layout = Some(layout);
+    Ok(self)
+  }
+
+  pub(in crate::stages::generate_stage) fn into_render_state(
+    self,
+  ) -> (Option<ChunkAstDceOutput>, Option<PendingChunk>) {
+    if !self.deferred {
+      return (Some(self.output), None);
+    }
+    let ast = self.ast;
+    let layout = self.layout.expect("deferred chunk assembled before rendering");
+    (
       None,
       Some(PendingChunk {
         ast,
@@ -262,7 +285,7 @@ impl PreparedChunk {
         suffix: String::new(),
         wrapped: false,
       }),
-    ))
+    )
   }
 
   pub(in crate::stages::generate_stage) fn into_wrapped(
@@ -508,8 +531,12 @@ mod tests {
 
   #[test]
   fn frozen_owner_supports_joined_parallel_readers() {
-    let chunk =
-      PreparedChunk { ast: mixed_chunk(), output: ChunkAstDceOutput::default(), deferred: false };
+    let chunk = PreparedChunk {
+      ast: mixed_chunk(),
+      output: ChunkAstDceOutput::default(),
+      layout: None,
+      deferred: false,
+    };
     std::thread::scope(|scope| {
       for _ in 0..8 {
         let chunk = &chunk;

@@ -49,18 +49,19 @@ impl GenerateStage<'_> {
     // Move each retained owner together with its exclusive output borrow to a worker. Owners are
     // Send, not Sync; no AST is shared across jobs. See internal-docs/chunk-ast-minify/implementation.md.
     let pending_count = pending.len();
-    // Two lanes bound live semantic/codegen allocations. Round-robin assignment spreads entry
+    // Match the worker pool. Round-robin assignment spreads entry
     // chunks across lanes instead of grouping them all ahead of cheap shared chunks in one job.
-    const PENDING_LANES: usize = 2;
-    let mut pending_chunks: [Vec<_>; PENDING_LANES] =
-      std::array::from_fn(|_| Vec::with_capacity(pending_count.div_ceil(PENDING_LANES)));
+    let pending_lanes = rayon::current_num_threads().min(pending_count);
+    let mut pending_chunks: Vec<Vec<_>> = (0..pending_lanes)
+      .map(|_| Vec::with_capacity(pending_count.div_ceil(pending_lanes)))
+      .collect();
     for (index, job) in chunks
       .iter_mut()
       .filter_map(|chunk| pending.remove(&chunk.originate_from).map(|owner| (chunk, owner)))
       .take(pending_count)
       .enumerate()
     {
-      pending_chunks[index % PENDING_LANES].push(job);
+      pending_chunks[index % pending_lanes].push(job);
     }
     if let Some(idx) = pending.keys().next() {
       return Err(

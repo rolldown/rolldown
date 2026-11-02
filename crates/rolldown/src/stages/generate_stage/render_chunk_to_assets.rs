@@ -10,7 +10,6 @@ use rolldown_common::{
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BatchedBuildDiagnostic, BuildResult, Diagnostics};
 use rolldown_utils::{
-  index_vec_ext::IndexVecRefExt as _,
   indexmap::{FxIndexMap, FxIndexSet},
   rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator},
 };
@@ -288,7 +287,7 @@ impl GenerateStage<'_> {
                   wrapped = Some(prepared);
                   ecma_ctx.defer_ast = true;
                 } else {
-                  (ecma_ctx.chunk_ast_dce, pending) = prepared.into_render_state(&ecma_ctx)?;
+                  (ecma_ctx.chunk_ast_dce, pending) = prepared.into_render_state();
                   ecma_ctx.defer_ast = pending.is_some();
                 }
               }
@@ -388,7 +387,7 @@ impl GenerateStage<'_> {
     render_export_items_index_vec: &IndexVec<ChunkIdx, FxIndexMap<SymbolRef, Vec<CompactStr>>>,
     inline_renders: &mut FxHashMap<ChunkIdx, Vec<CarriedRender>>,
   ) -> BuildResult<(ChunkCodegenRets, PreparedChunks)> {
-    let prepared_chunks = self.run_chunk_ast_dce(
+    let mut prepared_chunks = self.run_chunk_ast_dce(
       chunk_graph,
       &mut ast_table,
       used_symbol_refs,
@@ -400,15 +399,35 @@ impl GenerateStage<'_> {
       self.options.format,
       rolldown_common::OutputFormat::Iife | rolldown_common::OutputFormat::Umd
     );
-    let ret = chunk_graph
+    let make_ctx = |chunk_idx: ChunkIdx| GenerateContext {
+      chunk_idx,
+      chunk: &chunk_graph.chunk_table[chunk_idx],
+      options: self.options,
+      link_output: self.link_output,
+      used_symbol_refs,
+      order_wrap_state: order_state,
+      chunk_graph,
+      plugin_driver: self.plugin_driver,
+      module_id_to_codegen_ret: vec![],
+      render_export_items_index_vec,
+      resolved_paths: self.resolved_paths.as_ref(),
+      inline_state: &self.inline_state,
+      carried_renders: vec![],
+      chunk_ast_dce: None,
+      defer_ast: false,
+    };
+    let owners: Vec<_> = chunk_graph
       .chunk_table
-      .par_iter_enumerated()
-      .map(|(chunk_idx, item)| {
+      .iter_enumerated()
+      .map(|(idx, chunk)| (idx, chunk, prepared_chunks.remove(&idx)))
+      .collect();
+    let results = owners
+      .into_par_iter()
+      .map(|(chunk_idx, item, prepared)| {
         // A record's modules were finalized and printed per carrier; its own ASTs stay untouched.
         if self.inline_state.is_record(chunk_idx) {
-          return vec![];
+          return Ok((vec![], None));
         }
-        let prepared = prepared_chunks.get(&chunk_idx);
         // Positions of the chunk's normal modules, as `chunk_ast_dce` numbers them.
         let positions: FxHashMap<rolldown_common::ModuleIdx, usize> = if prepared.is_some() {
           item
@@ -421,14 +440,14 @@ impl GenerateStage<'_> {
         } else {
           FxHashMap::default()
         };
-        item
+        let codegen = item
           .modules
           .par_iter()
           .map(|&module_idx| match self.link_output.module_table[module_idx].as_normal() {
             Some(module) => {
               #[expect(clippy::bool_to_int_with_if)]
               let initial_indent = if needs_extra_indent { 1 } else { 0 };
-              let out = match prepared {
+              let out = match prepared.as_ref() {
                 Some(prepared) => prepared.print_module(
                   positions[&module_idx],
                   module,
@@ -449,9 +468,21 @@ impl GenerateStage<'_> {
             }
             _ => None,
           })
-          .collect::<Vec<_>>()
+          .collect::<Vec<_>>();
+        // Readers have joined: assembly may now rebase spans and consume module bodies.
+        let prepared =
+          prepared.map(|prepared| prepared.assemble_deferred(&make_ctx(chunk_idx))).transpose()?;
+        Ok((codegen, prepared.map(|prepared| (chunk_idx, prepared))))
       })
-      .collect::<Vec<_>>();
+      .collect::<BuildResult<Vec<_>>>()?;
+    let mut ret = Vec::with_capacity(results.len());
+    for (codegen, prepared) in results {
+      ret.push(codegen);
+      if let Some((idx, prepared)) = prepared {
+        prepared_chunks.insert(idx, prepared);
+      }
+    }
+
     drop(ast_table);
     Ok((ret, prepared_chunks))
   }

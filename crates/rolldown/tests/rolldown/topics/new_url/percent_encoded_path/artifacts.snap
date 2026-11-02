@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## assets/my file-YOFJeqs9.txt
+
+## assets/✓-DcM-qmmG.txt
+
+## main.js
+
+```js
+// main.js
+const spaced = new URL("assets/my file-YOFJeqs9.txt", import.meta.url).href;
+const unicode = new URL("assets/✓-DcM-qmmG.txt", import.meta.url).href;
+export { spaced, unicode };
+
+```

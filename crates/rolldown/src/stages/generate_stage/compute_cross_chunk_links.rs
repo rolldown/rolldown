@@ -14,9 +14,9 @@ use oxc_str::CompactStr;
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
   ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PostChunkOptimizationOperation,
-  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, ResolvedImportRecord, RuntimeHelper, SymbolRef,
-  SymbolRefDb, TaggedSymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder, UsedSymbolRefsView,
-  WrapKind,
+  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, ResolvedImportRecord, RuntimeHelper,
+  SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, TaggedSymbolRef, UsedSymbolRefs,
+  UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
 };
 use rolldown_utils::index_vec_ext::IndexVecRefExt as _;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
@@ -437,6 +437,32 @@ impl GenerateStage<'_> {
         .drain(..)
         .any(|importee| chunk_graph.module_to_chunk[importee] == Some(importee_chunk_idx))
     })
+  }
+
+  /// The modules that declare the constants that the included statements of a module read, by name
+  /// or as a namespace member such as `ns.SIZE`, in source order.
+  fn read_constant_owners(&self, module_idx: ModuleIdx) -> FxIndexSet<ModuleIdx> {
+    let meta = &self.link_output.metas[module_idx];
+    let mut owners = FxIndexSet::default();
+    for (stmt_idx, stmt_info) in self.link_output.stmt_infos[module_idx].iter_enumerated() {
+      if !meta.stmt_info_included.has_bit(stmt_idx) {
+        continue;
+      }
+      for reference in &stmt_info.referenced_symbols {
+        let symbol_ref = match reference {
+          SymbolOrMemberExprRef::Symbol(symbol_ref) => Some(*symbol_ref),
+          SymbolOrMemberExprRef::MemberExpr(member_expr) => {
+            member_expr.represent_symbol_ref(&meta.resolved_member_expr_refs)
+          }
+        };
+        let Some(symbol_ref) = symbol_ref else { continue };
+        let canonical_ref = self.link_output.symbol_db.canonical_ref_for(symbol_ref);
+        if self.link_output.global_constant_symbol_map.contains_key(&canonical_ref) {
+          owners.insert(canonical_ref.owner);
+        }
+      }
+    }
+    owners
   }
 
   /// Pushes the modules that the static imports of a module lead to, in source order. Only the
@@ -1840,13 +1866,11 @@ impl GenerateStage<'_> {
             imports_from_other_chunks.entry(importee_chunk_idx).or_default();
           }
 
-          // Constant inlining can drop every import of a binding, imported directly or through a
-          // removed barrel; the module that declares it still has to be loaded when it or a
-          // dependency has side effects.
-          let mut binding_owners = vec![];
-          self.push_kept_static_importees(module_idx, &mut binding_owners);
+          // Constant inlining drops the import of a constant, whether it is imported directly,
+          // through a barrel, or read as a namespace member; the module that declares it still has
+          // to be loaded when it or a dependency has side effects.
           let mut predicted_targets = None;
-          for owner in binding_owners {
+          for owner in self.read_constant_owners(module_idx) {
             // A module behind an order wrapper runs when its init is called, so a bare import of
             // its chunk would only load that chunk earlier.
             if self.options.is_strict_execution_order_enabled()
@@ -1868,7 +1892,12 @@ impl GenerateStage<'_> {
             }
             // The already-loaded cycle check sees only predicted edges.
             if !predicted_targets
-              .get_or_insert_with(|| self.predicted_static_import_targets(module_idx))
+              .get_or_insert_with(|| {
+                self
+                  .predicted_static_import_targets(module_idx)
+                  .into_iter()
+                  .collect::<FxHashSet<_>>()
+              })
               .contains(&owner)
             {
               continue;

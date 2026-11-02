@@ -88,10 +88,12 @@ impl BuildDiagnostic {
   pub fn invalid_external_id(
     module_id: ArcStr,
     importer: Option<ExternalModuleConflictImporter>,
+    is_existing_kind_from_previous_build: bool,
   ) -> Self {
     Self::new_inner(ExternalModuleConflict {
       module_id,
       is_existing_module_external: false,
+      is_existing_kind_from_previous_build,
       importer,
     })
   }
@@ -101,10 +103,12 @@ impl BuildDiagnostic {
   pub fn external_modules_cannot_be_transformed_to_modules(
     module_id: ArcStr,
     importer: Option<ExternalModuleConflictImporter>,
+    is_existing_kind_from_previous_build: bool,
   ) -> Self {
     Self::new_inner(ExternalModuleConflict {
       module_id,
       is_existing_module_external: true,
+      is_existing_kind_from_previous_build,
       importer,
     })
   }

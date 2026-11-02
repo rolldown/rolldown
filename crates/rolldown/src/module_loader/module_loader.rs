@@ -295,18 +295,24 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     }
   }
 
+  /// This function returns `true` if this scan spawned the module at `idx`. A full
+  /// scan spawns every module. A partial scan allocates a slot for each module that
+  /// it spawns (changed and new modules).
+  fn is_spawned_by_this_scan(&self, idx: ModuleIdx) -> bool {
+    self.is_full_scan || self.intermediate_normal_modules.modules.try_get(idx).is_some()
+  }
+
   /// This function returns `true` if the module at `idx` is external. The
   /// loader knows the kind when it spawns the task. Thus this function can
   /// return the kind before the task finishes.
   fn is_external_module(&self, idx: ModuleIdx) -> bool {
-    // A full scan spawns every module. A partial scan allocates a slot for each
-    // module that it spawns (changed and new modules). For these modules, the
-    // kind from this scan replaces the kind in the snapshot. Thus a changed file
-    // that was external can now be a normal module.
-    if self.is_full_scan || self.intermediate_normal_modules.modules.try_get(idx).is_some() {
+    // For a module that this scan spawned, the kind from this scan replaces the
+    // kind in the snapshot. Thus a changed file that was external can now be a
+    // normal module.
+    if self.is_spawned_by_this_scan(idx) {
       self.external_module_idxs.contains(&idx)
     } else {
-      // This scan did not spawn the module. The module is from an earlier build,
+      // This scan did not spawn the module. The module is from a previous build,
       // and the snapshot has its kind.
       self.cache.get_snapshot().module_table.get(idx).is_some_and(Module::is_external)
     }
@@ -333,10 +339,19 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     }
     let module_id = resolved_id.id.as_arc_str().clone();
     let importer = owner.map(ModuleTaskOwner::to_external_conflict_importer);
+    // A partial scan keeps the kind from the snapshot for a module that it did not
+    // spawn. Then the error also suggests a full rebuild, because a full rebuild
+    // takes the kind from the current imports. See the known gap in
+    // internal-docs/cache/implementation.md (invariant 7).
+    let is_kind_from_previous_build = !self.is_spawned_by_this_scan(idx);
     self.errors.push(if is_external {
-      BuildDiagnostic::invalid_external_id(module_id, importer)
+      BuildDiagnostic::invalid_external_id(module_id, importer, is_kind_from_previous_build)
     } else {
-      BuildDiagnostic::external_modules_cannot_be_transformed_to_modules(module_id, importer)
+      BuildDiagnostic::external_modules_cannot_be_transformed_to_modules(
+        module_id,
+        importer,
+        is_kind_from_previous_build,
+      )
     });
   }
 

@@ -90,6 +90,14 @@ impl StmtEvalFacts {
     self.tree_shaking_flags.has_side_effect_for_tree_shaking()
   }
 
+  /// Whether the statement is kept even when nothing uses it. Tree shaking can drop a statement
+  /// whose only flag is `PureCjs` with an unused CommonJS export, so the analysis stops looking
+  /// for more side effects only at `UnknownSideEffect`.
+  #[inline]
+  fn has_unknown_side_effect(&self) -> bool {
+    self.tree_shaking_flags.contains(StmtEvalFlags::UnknownSideEffect)
+  }
+
   #[inline]
   pub fn is_order_sensitive(&self) -> bool {
     // `UnknownSideEffect` is stored in the tree-shaking channel, but unknown runtime work is
@@ -157,6 +165,9 @@ pub struct StmtEvalAnalyzer<'a> {
   read_constant: Cell<bool>,
   /// `false` while [`Self::analyze_stmt`] analyzes a statement again without constants.
   use_constants: Cell<bool>,
+  /// Whether a top-level `return` ends the module, as it does in CommonJS. `false` for an ES module:
+  /// the parser accepts a top-level `return` there, but an output chunk that keeps one fails to parse.
+  top_level_return_ends_module: bool,
 }
 
 impl<'a> StmtEvalAnalyzer<'a> {
@@ -177,10 +188,20 @@ impl<'a> StmtEvalAnalyzer<'a> {
       constant_symbols,
       read_constant: Cell::new(false),
       use_constants: Cell::new(true),
+      top_level_return_ends_module: true,
     }
   }
 
-  fn constant_value_for_reference_id(&self, reference_id: ReferenceId) -> Option<&ConstantValue> {
+  #[must_use]
+  pub fn with_top_level_return_ends_module(mut self, value: bool) -> Self {
+    self.top_level_return_ends_module = value;
+    self
+  }
+
+  fn constant_value_for_reference_id(
+    &self,
+    reference_id: ReferenceId,
+  ) -> Option<&'a ConstantValue> {
     if !self.use_constants.get() {
       return None;
     }
@@ -694,7 +715,7 @@ impl<'a> StmtEvalAnalyzer<'a> {
     self.read_constant.set(false);
     let facts = self.analyze_stmt_inner(stmt);
     if !self.read_constant.get()
-      || facts.has_side_effect_for_tree_shaking()
+      || facts.has_unknown_side_effect()
       || !ConstantTrustFinder::find(self, stmt)
     {
       return facts;
@@ -727,8 +748,11 @@ impl<'a> StmtEvalAnalyzer<'a> {
           | self.analyze_stmt_inner(&if_stmt.consequent)
           | if_stmt.alternate.as_ref().map(|s| self.analyze_stmt_inner(s)).unwrap_or_default()
       }
+      // This walk never enters a function body, so every `return` here is a top-level `return`.
+      // Dropping one that ends the module would run the statements after it.
       Statement::ReturnStatement(ret_stmt) => {
         ret_stmt.argument.as_ref().map(|expr| self.analyze_expr(expr)).unwrap_or_default()
+          | StmtEvalFacts::from_tree_shaking_side_effect(self.top_level_return_ends_module)
       }
       Statement::LabeledStatement(labeled_stmt) => self.analyze_stmt_inner(&labeled_stmt.body),
       Statement::TryStatement(try_stmt) => {
@@ -747,14 +771,14 @@ impl<'a> StmtEvalAnalyzer<'a> {
       }
       Statement::SwitchStatement(switch_stmt) => {
         let mut facts = self.analyze_expr(&switch_stmt.discriminant);
-        if facts.has_side_effect_for_tree_shaking() {
+        if facts.has_unknown_side_effect() {
           return facts;
         }
         'outer: for case in &switch_stmt.cases {
           facts |= case.test.as_ref().map(|expr| self.analyze_expr(expr)).unwrap_or_default();
           for stmt in &case.consequent {
             facts |= self.analyze_stmt_inner(stmt);
-            if facts.has_side_effect_for_tree_shaking() {
+            if facts.has_unknown_side_effect() {
               break 'outer;
             }
           }
@@ -771,7 +795,7 @@ impl<'a> StmtEvalAnalyzer<'a> {
     let mut facts = StmtEvalFacts::default();
     for stmt in &block.body {
       facts |= self.analyze_stmt_inner(stmt);
-      if facts.has_side_effect_for_tree_shaking() {
+      if facts.has_unknown_side_effect() {
         break;
       }
     }
@@ -1173,7 +1197,7 @@ fn for_each_eager_chain_child<'a>(expr: &'a Expression, visit: impl FnMut(EagerC
   let _ = chain_root_visiting_eager_children(expr, visit);
 }
 
-impl<'ast> GlobalContext<'ast> for StmtEvalAnalyzer<'_> {
+impl<'ast> GlobalContext<'ast> for StmtEvalAnalyzer<'ast> {
   fn is_global_reference(&self, reference: &IdentifierReference<'ast>) -> bool {
     self.is_unresolved_reference(reference)
   }
@@ -1190,7 +1214,7 @@ impl<'ast> GlobalContext<'ast> for StmtEvalAnalyzer<'_> {
   }
 }
 
-impl MayHaveSideEffectsContext<'_> for StmtEvalAnalyzer<'_> {
+impl<'ast> MayHaveSideEffectsContext<'ast> for StmtEvalAnalyzer<'ast> {
   fn engine_targets(&self) -> Option<&EngineTargets> {
     Some(&self.options.transform_options.target)
   }
@@ -1506,6 +1530,13 @@ mod test {
       get_stmt_eval_flags_with_constants("const LENGTH = -1; new Uint8Array(LENGTH);", &length),
       [pure, unknown]
     );
+    assert_eq!(
+      get_stmt_eval_flags_with_constants(
+        "const LENGTH = -1; { exports.a = 1; new Uint8Array(LENGTH); }",
+        &length
+      ),
+      [pure, unknown | StmtEvalFlags::PureCjs]
+    );
     // A number shift cannot throw, so the constant still makes it pure.
     assert_eq!(
       get_stmt_eval_flags_with_constants("const SECOND = 1000; 60 << SECOND;", &second),
@@ -1655,10 +1686,8 @@ mod test {
 
   #[test]
   fn test_return_statement() {
-    assert!(!has_side_effect_for_tree_shaking("return;"));
-    assert!(!has_side_effect_for_tree_shaking("return 1;"));
-    // accessing global variable may have side effect
-    assert!(has_side_effect_for_tree_shaking("return bar;"));
+    assert!(has_side_effect_for_tree_shaking("return;"));
+    assert!(has_side_effect_for_tree_shaking("return 1;"));
   }
 
   #[test]
@@ -2620,6 +2649,14 @@ mod test {
       get_stmt_eval_flags("exports[test()] = true"),
       vec![StmtEvalFlags::UnknownSideEffect]
     );
+
+    for code in ["{ exports.a = 1; foo(); }", "switch (0) { case 0: exports.a = 1; foo(); }"] {
+      assert_eq!(
+        get_stmt_eval_flags(code),
+        vec![StmtEvalFlags::UnknownSideEffect | StmtEvalFlags::PureCjs],
+        "{code}"
+      );
+    }
 
     assert_eq!(
       get_stmt_eval_flags(

@@ -2,6 +2,10 @@
 mod _10183;
 #[path = "./11253/mod.rs"]
 mod _11253;
+#[path = "./11351/mod.rs"]
+mod _11351;
+#[path = "./11351_dynamic_import/mod.rs"]
+mod _11351_dynamic_import;
 #[path = "./1733/mod.rs"]
 mod _1733;
 #[path = "./4895/mod.rs"]

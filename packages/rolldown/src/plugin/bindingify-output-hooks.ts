@@ -183,7 +183,12 @@ function createOutputBundle(
     deleted: new Set(),
   } as ChangedOutputs;
   const context = createPluginContext(args, ctx);
-  const output = transformToOutputBundle(context, unwrapBindingResult(bundle), changed);
+  const output = transformToOutputBundle(
+    context,
+    unwrapBindingResult(bundle),
+    changed,
+    args.pluginContextData.outputCodeCache ?? undefined,
+  );
   return { changed, context, output };
 }
 

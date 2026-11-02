@@ -1,4 +1,4 @@
-import { type BindingError, type BindingResult } from '../binding.cjs';
+import type { BindingError, BindingResult } from '../binding.cjs';
 import type { RolldownError } from '../log/logging';
 
 export function unwrapBindingResult<T>(container: BindingResult<T>): T {
@@ -75,17 +75,25 @@ export function aggregateBindingErrorsIntoJsError(rawErrors: BindingError[]): Bu
     configurable: true,
     enumerable: true,
     get: () => errors,
-    set: (value) =>
+    set: (value) => {
       Object.defineProperty(wrapper, 'errors', {
         configurable: true,
         enumerable: true,
         value,
-      }),
+      });
+    },
   });
   return wrapper;
 }
 
 function getErrorMessage(e: RolldownError): string {
+  // A JavaScript callback may reject with anything, and that value reaches us
+  // unchanged. `Object.hasOwn` throws on `null`/`undefined`, so render those
+  // here instead of losing the whole report to a secondary `TypeError`.
+  if (e === null || e === undefined) {
+    return `Error: ${String(e)}`;
+  }
+
   // If the `kind` field is present, we assume it represents
   // a custom error defined by rolldown on the Rust side.
   if (Object.hasOwn(e, 'kind')) {

@@ -130,6 +130,28 @@ test('requires devtools.sessionId to be one path segment', async () => {
   }
 });
 
+test('rejects an unknown devtools.mode', async () => {
+  const consoleSpy = vi.spyOn(console, 'warn');
+  // 'metrics' was the old name of 'report'.
+  for (const mode of ['metrics', 'markdown']) {
+    consoleSpy.mockClear();
+    const bundle = await rolldown({
+      input: './build-api/main.js',
+      cwd: import.meta.dirname,
+      // @ts-expect-error -- the value is invalid on purpose
+      devtools: { mode },
+    });
+    try {
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('"devtools.mode"'));
+      await expect(bundle.generate()).rejects.toThrow(
+        `Invalid value for option "devtools.mode" - expected "full" or "report", got "${mode}".`,
+      );
+    } finally {
+      await bundle.close();
+    }
+  }
+});
+
 test('rejects the reserved devtools.sessionId', async () => {
   const consoleSpy = vi.spyOn(console, 'warn');
   for (const sessionId of [

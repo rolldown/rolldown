@@ -188,6 +188,9 @@ starts with one `registerGraph(delta)` statement with one graph row per
 module in the payload: its static and dynamic `import()` edges, in
 separate sets, unioned by `getImporters`. The client merges deltas into
 one flat graph; the newest row for a module replaces the older one.
+A common chunk inlined by `experimentalInlineCommonChunks` registers its
+modules' rows from its factory (see
+[inline-common-chunks/design.md](../inline-common-chunks/design.md#dev-mode)).
 
 A row also says whether its module is an entry (`isEntry`). The page
 started each entry, and only a page load starts it again. So when an

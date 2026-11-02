@@ -95,7 +95,7 @@ init_utilities_page();
 
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
-__share("utilities-I-4Ibty4", (exports) => {
+__share("utilities-I-4Ibty4", ((exports) => {
 	// utilities/index.js
 	function hasExpectedValue(actual) {
 		return actual === "expected";
@@ -107,7 +107,7 @@ __share("utilities-I-4Ibty4", (exports) => {
 		n: () => init_utilities,
 		t: () => hasExpectedValue
 	});
-});
+}));
 var share_utilities = __share_require("utilities-I-4Ibty4");
 // shared-identity.js
 function isSame(left, right) {
@@ -162,7 +162,7 @@ export { __share_require as i, __share as n, __share_export as r, __esmMin as t 
 
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
-__share("utilities-I-4Ibty4", (exports) => {
+__share("utilities-I-4Ibty4", ((exports) => {
 	// utilities/index.js
 	function hasExpectedValue(actual) {
 		return actual === "expected";
@@ -174,7 +174,7 @@ __share("utilities-I-4Ibty4", (exports) => {
 		n: () => init_utilities,
 		t: () => hasExpectedValue
 	});
-});
+}));
 var share_utilities = __share_require("utilities-I-4Ibty4");
 // utilities-page.js
 function init_utilities_page() {

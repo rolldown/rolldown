@@ -87,6 +87,8 @@ jobs:
     # project-scoped deploy token. No long-lived secret is stored in the repo.
     permissions:
       id-token: write
+    env:
+      VOID_API_URL: https://api.void.cloud
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
@@ -95,11 +97,13 @@ jobs:
           version: '1.0.0'
           cache: true
 
+      - name: Connect to Void
+        run: vp exec --filter rolldown-docs void connect "$VOID_API_URL" --no-login
+
       - name: Deploy to Void
         run: vp run docs:void
         env:
           VOID_PROJECT: rolldown
-          VOID_API_URL: https://api.void.cloud
           ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
           ALGOLIA_API_KEY: ${{ secrets.ALGOLIA_API_KEY }}
 

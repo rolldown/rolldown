@@ -1,7 +1,8 @@
 import { execFileSync } from 'node:child_process';
-import type { OutputChunk, OutputOptions, RolldownOutput } from 'rolldown';
+import { join, resolve } from 'node:path';
+import type { OutputChunk, OutputOptions, Plugin, RolldownOutput } from 'rolldown';
 import { rolldown } from 'rolldown';
-import { describe, expect, test } from 'vitest';
+import { describe, expect, onTestFinished, test } from 'vitest';
 import { virtualPlugin } from '../src/inline-common-chunks/harness';
 import { getOutputAsset, getOutputChunk } from '../src/utils';
 
@@ -192,4 +193,65 @@ describe('chunkImportMap', () => {
     }
     expect(aliases[1]).toEqual(aliases[0]);
   });
+  test('aliases do not depend on the folder the build runs from', async () => {
+    const build = async (cwd: string) => {
+      const files = Object.fromEntries(
+        Object.entries(fixture()).map(([id, code]) => [join(cwd, id), code]),
+      );
+      const plugin: Plugin = {
+        name: 'folder',
+        resolveId: (id) => (join(cwd, id) in files ? join(cwd, id) : undefined),
+        load: (id) => files[id],
+      };
+      const bundle = await rolldown({
+        input,
+        cwd,
+        preserveEntrySignatures: false,
+        experimental: { chunkImportMap: true },
+        plugins: [plugin],
+      });
+      onTestFinished(() => bundle.close());
+      return bundle.generate(options(false, { entryFileNames: '[name]-[hash].js' }));
+    };
+    const fileNames = (output: RolldownOutput) =>
+      getOutputChunk(output)
+        .map((chunk) => chunk.fileName)
+        .sort();
+    const a = await build(resolve('/project-a'));
+    const b = await build(resolve('/nested/project-b'));
+    expect(Object.keys(importMap(a))).toHaveLength(getOutputChunk(a).length);
+    expect(importMap(b)).toEqual(importMap(a));
+    expect(fileNames(b)).toEqual(fileNames(a));
+  });
+
+  test.each(['entry', 'common'])(
+    'path and non-path module IDs have distinct %s aliases',
+    async (kind) => {
+      const cwd = resolve('/project');
+      const members = ['a/shared.js', 'b/shared.js'].flatMap((id) => [id, join(cwd, id)]);
+      const entries = members.map((_, index) => join(cwd, `e${index}.js`));
+      const files: Record<string, string> = {};
+      for (const [index, id] of members.entries()) {
+        files[id] = `export const value = () => '${index}';`;
+        files[entries[index]] = `
+          import { value as left } from ${JSON.stringify(id)};
+          import { value as right } from ${JSON.stringify(members[(index + 1) % members.length])};
+          globalThis.log(left() + right());
+        `;
+      }
+      const bundle = await rolldown({
+        cwd,
+        input: kind === 'entry' ? [...entries, ...members] : entries,
+        preserveEntrySignatures: false,
+        experimental: { chunkImportMap: true },
+        plugins: [virtualPlugin(files)],
+      });
+      onTestFinished(() => bundle.close());
+      const output = await bundle.generate(options(false, { entryFileNames: '[name]-[hash].js' }));
+      expect(Object.keys(importMap(output))).toHaveLength(getOutputChunk(output).length);
+      for (let index = 0; index < members.length; index++) {
+        expect(execute(output, `e${index}`)).toEqual([`${index}${(index + 1) % members.length}`]);
+      }
+    },
+  );
 });

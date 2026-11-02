@@ -1072,7 +1072,12 @@ impl GenerateStage<'_> {
       );
     }
 
-    self.try_merge_runtime_chunk(chunk_graph, None, RuntimeMergeCascade::Full);
+    self.try_merge_runtime_chunk(
+      chunk_graph,
+      None,
+      RuntimeMergeCascade::Full,
+      used_symbol_refs_builder,
+    );
 
     Ok(())
   }

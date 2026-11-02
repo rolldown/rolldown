@@ -18,6 +18,21 @@ impl DeterminedSideEffects {
       DeterminedSideEffects::NoTreeshake => true,
     }
   }
+
+  /// `moduleSideEffects` reported to plugins (`boolean | 'no-treeshake'`).
+  ///
+  /// `Analyzed` is the default inclusion algorithm. Plugins see that as `true`; the
+  /// statement-level result stays internal. Keep this aligned with
+  /// [`crate::reported_module_side_effects`].
+  pub fn to_module_side_effects(self) -> HookSideEffects {
+    match self {
+      DeterminedSideEffects::UserDefined(false) => HookSideEffects::False,
+      DeterminedSideEffects::UserDefined(true) | DeterminedSideEffects::Analyzed(_) => {
+        HookSideEffects::True
+      }
+      DeterminedSideEffects::NoTreeshake => HookSideEffects::NoTreeshake,
+    }
+  }
 }
 
 #[derive(Debug, Clone)]
@@ -57,9 +72,38 @@ pub(crate) fn glob_match_with_normalized_pattern(pattern: &str, path: &str) -> b
   fast_glob::glob_match(&normalized_glob, path.trim_start_matches("./"))
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HookSideEffects {
   True,
   False,
   NoTreeshake,
+}
+
+#[cfg(test)]
+mod tests {
+  use super::{DeterminedSideEffects, HookSideEffects};
+
+  #[test]
+  fn analyzed_side_effects_are_reported_as_true() {
+    assert_eq!(
+      DeterminedSideEffects::Analyzed(false).to_module_side_effects(),
+      HookSideEffects::True,
+    );
+    assert_eq!(
+      DeterminedSideEffects::Analyzed(true).to_module_side_effects(),
+      HookSideEffects::True
+    );
+    assert_eq!(
+      DeterminedSideEffects::UserDefined(false).to_module_side_effects(),
+      HookSideEffects::False,
+    );
+    assert_eq!(
+      DeterminedSideEffects::UserDefined(true).to_module_side_effects(),
+      HookSideEffects::True,
+    );
+    assert_eq!(
+      DeterminedSideEffects::NoTreeshake.to_module_side_effects(),
+      HookSideEffects::NoTreeshake
+    );
+  }
 }

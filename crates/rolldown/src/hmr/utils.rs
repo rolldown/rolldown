@@ -237,3 +237,29 @@ impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for ScopeHoistingFinalizer<'any, 'ast
     CJS_MODULE_REF
   }
 }
+
+/// The URL of the lazy compilation endpoint referenced from generated code.
+///
+/// The dev server is expected to intercept requests to this URL and serve the
+/// compiled lazy chunk. `base` (the dev server's public base path, from
+/// `experimental.devMode.base`) prefixes the endpoint so the URL stays reachable
+/// when the server is not mounted at the domain root.
+pub fn lazy_endpoint_url(base: Option<&str>) -> String {
+  match base {
+    Some(base) => format!("{}/@vite/lazy", base.trim_end_matches('/')),
+    None => "/@vite/lazy".to_string(),
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::lazy_endpoint_url;
+
+  #[test]
+  fn endpoint_url_normalizes_base() {
+    assert_eq!(lazy_endpoint_url(None), "/@vite/lazy");
+    assert_eq!(lazy_endpoint_url(Some("/")), "/@vite/lazy");
+    assert_eq!(lazy_endpoint_url(Some("/foo/")), "/foo/@vite/lazy");
+    assert_eq!(lazy_endpoint_url(Some("/foo")), "/foo/@vite/lazy");
+  }
+}

@@ -67,6 +67,7 @@ pub struct BindingExperimentalDevModeOptions {
   /// @deprecated Common runtime injection will be disabled by default in the future.
   pub skip_common_runtime_injection: Option<bool>,
   pub lazy: Option<bool>,
+  pub base: Option<String>,
   pub hot_update: Option<bool>,
 }
 
@@ -78,6 +79,7 @@ impl From<BindingExperimentalDevModeOptions> for rolldown_common::DevModeOptions
       implement: Some(value.implement),
       skip_common_runtime_injection: value.skip_common_runtime_injection,
       lazy: value.lazy,
+      base: value.base,
       hot_update: value.hot_update,
     }
   }

@@ -23,6 +23,13 @@ Data shared across all connected browser tabs:
 | Build Output      | Bundled JS files on disk/memory                                         |
 | Watched Files     | Files monitored for changes                                             |
 
+The `/@vite/lazy` endpoint path is prefixed with `experimental.devMode.base` (the dev server's
+public base path) everywhere it is generated from Rust: the HMR finalizer's nested-import rewrite
+prefixes the URL via `crate::hmr::utils::lazy_endpoint_url` (trailing slashes of `base` are
+trimmed; no `base` means the historical root-absolute path), and the initial build's stub template
+substitutes the same URL into its `$LAZY_ENDPOINT` placeholder —
+`apply_inner_plugins` computes it once and hands it to `LazyCompilationPlugin::new`.
+
 **Key behavior**: Once a lazy module is fetched by any client, all subsequent clients receive the fetched template (which imports the real module directly). The build output is refreshed after lazy compilation, so future page loads get the fetched template without needing a `/lazy` request.
 
 ### Client Scope

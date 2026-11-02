@@ -2296,6 +2296,7 @@ export interface BindingExperimentalDevModeOptions {
   /** @deprecated Common runtime injection will be disabled by default in the future. */
   skipCommonRuntimeInjection?: boolean
   lazy?: boolean
+  base?: string
   hotUpdate?: boolean
 }
 

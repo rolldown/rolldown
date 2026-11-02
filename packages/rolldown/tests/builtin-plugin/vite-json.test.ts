@@ -24,3 +24,32 @@ test.skipIf(isWasiTest)('a native hook error gets the caller frames', async () =
   expect(frames[0]).toContain('callTransform');
   expect(error?.stack).not.toContain('invokeBuiltinHook');
 });
+
+test('transform parses JSON into an ES module', async () => {
+  const plugin = viteJsonPlugin({
+    minify: false,
+    namedExports: true,
+    stringify: false,
+  }) as CallableJsonPlugin;
+
+  const result = await plugin.transform('{ "answer": 42 }', '/virtual/answer.json', {
+    moduleType: 'json',
+  });
+  expect(result?.code).toContain('42');
+});
+
+test('transform attaches the module id to a plugin error', async () => {
+  const plugin = viteJsonPlugin({
+    minify: false,
+    namedExports: true,
+    stringify: false,
+  }) as CallableJsonPlugin;
+
+  await expect(
+    plugin.transform('{ not json }', '/virtual/broken.json', { moduleType: 'json' }),
+  ).rejects.toMatchObject({
+    plugin: 'builtin:vite-json',
+    hook: 'transform',
+    id: '/virtual/broken.json',
+  });
+});

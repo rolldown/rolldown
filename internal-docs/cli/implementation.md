@@ -26,7 +26,7 @@ bin/cli.mjs
       → arguments/normalize.ts
         → validateCliOptions() via valibot
         → split into input/output based on schema keys
-        → merge positionals into input.input
+        → use positionals as input.input (exit with an error if `--input` is also set, like Rollup; `--help` and `--version` skip this check)
     → process --environment (KEY:VALUE → process.env)
     → if --help: showHelp()
     → if --version: print version

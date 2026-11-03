@@ -745,7 +745,7 @@ So the step computes the import lists from the baseline:
 - The host loses the runtime chunk.
 - Each other list stays the same.
 
-The commit takes these lists as an input and does not sort. The host keeps its `exec_order`, so the chunk order also stays the same. The last position is necessary. Example: `c.js` imports `x.js`, and `x.js` imports `p.js` and then `h.js`, so the source order is `p`, `h`, `x`, `c`. When the added import of `h.js` is the first import of `c.js`, the order is `h`, `p`, `x`, `c`. `code_splitting/runtime_host_added_import_last` pins this case.
+The commit takes these lists as an input and does not sort. The host keeps its `exec_order`, so the chunk order also stays the same. The last position is necessary. Example: `c.js` imports `x.js`, and `x.js` imports `p.js` and then `h.js`, so the source order is `p`, `h`, `x`, `c`. When the added import of `h.js` is the first import of `c.js`, the order is `h`, `p`, `x`, `c`. `code_splitting/runtime_host_added_import_last` pins this case. `code_splitting/runtime_host_user_import_keeps_position` pins the first reason: a facade imports the host for its re-exports, and a sort moves the host before an earlier import of the facade.
 
 ### The check after the fold
 

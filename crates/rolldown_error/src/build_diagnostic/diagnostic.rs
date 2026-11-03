@@ -203,7 +203,8 @@ impl Diagnostic {
   pub fn frame(&self) -> Option<String> {
     let span = self.labels.first()?.span();
     let source = self.files.get(span.source())?;
-    let frame = render_code_frame(source, span.start());
+    let (_, line, column, _) = self.get_primary_location()?;
+    let frame = render_code_frame(source, line, column);
     (!frame.is_empty()).then_some(frame)
   }
 
@@ -266,9 +267,13 @@ const LINE_TRUNCATE_LENGTH: usize = 120;
 const MIN_CHARACTERS_SHOWN_AFTER_LOCATION: usize = 10;
 const ELLIPSIS: &str = "...";
 
+fn leading_tabs(value: &str) -> usize {
+  value.bytes().take_while(|&byte| byte == b'\t').count()
+}
+
 // Only leading tabs are expanded, each to two spaces.
 fn tabs_to_spaces(value: &str) -> String {
-  let leading_tabs = value.bytes().take_while(|&byte| byte == b'\t').count();
+  let leading_tabs = leading_tabs(value);
   if leading_tabs == 0 {
     return value.to_string();
   }
@@ -277,19 +282,14 @@ fn tabs_to_spaces(value: &str) -> String {
   expanded
 }
 
-fn render_code_frame(source: &str, byte_offset: usize) -> String {
-  let offset = byte_offset.min(source.len());
-  let before = source.get(..offset).unwrap_or(source);
-  let line = before.bytes().filter(|&byte| byte == b'\n').count() + 1;
-  let byte_column = offset - before.rfind('\n').map_or(0, |index| index + 1);
-
+// Mirrors `getCodeFrame` in packages/rolldown/src/utils/code-frame.ts. The column and all
+// lengths count UTF-16 code units, like JS strings.
+fn render_code_frame(source: &str, line: usize, column: usize) -> String {
   let all: Vec<&str> = source.split('\n').collect();
   if line > all.len() {
     return String::new();
   }
-  let error_line = all[line - 1];
-  let location_width =
-    tabs_to_spaces(error_line.get(..byte_column).unwrap_or(error_line)).chars().count();
+  let location_width = column + leading_tabs(all[line - 1]).min(column);
   let max_line_length = (location_width + MIN_CHARACTERS_SHOWN_AFTER_LOCATION + ELLIPSIS.len())
     .max(LINE_TRUNCATE_LENGTH);
 
@@ -308,8 +308,16 @@ fn render_code_frame(source: &str, byte_offset: usize) -> String {
     .map(|(index, source_line)| {
       let line_no = frame_start + index + 1;
       let mut displayed = tabs_to_spaces(source_line);
-      if displayed.chars().count() > max_line_length {
-        displayed = displayed.chars().take(max_line_length - ELLIPSIS.len()).collect();
+      if simd_utf16_len::utf16_len(&displayed) > max_line_length {
+        let mut len = 0;
+        let end = displayed
+          .char_indices()
+          .find(|(_, ch)| {
+            len += ch.len_utf16();
+            len > max_line_length - ELLIPSIS.len()
+          })
+          .map_or(displayed.len(), |(index, _)| index);
+        displayed.truncate(end);
         displayed.push_str(ELLIPSIS);
       }
       if line_no == line {
@@ -352,23 +360,23 @@ mod tests {
   use super::{Severity, render_code_frame};
 
   #[test]
-  fn code_frame_points_at_offset() {
-    assert_eq!(render_code_frame("a\nbcd\nef", 3), "1: a\n2: bcd\n    ^\n3: ef");
+  fn code_frame_points_at_location() {
+    assert_eq!(render_code_frame("a\nbcd\nef", 2, 1), "1: a\n2: bcd\n    ^\n3: ef");
   }
 
   #[test]
   fn code_frame_expands_tabs_and_aligns_caret() {
-    assert_eq!(render_code_frame("\tfoo", 1), "1:   foo\n     ^");
+    assert_eq!(render_code_frame("\tfoo", 1, 1), "1:   foo\n     ^");
   }
 
   #[test]
   fn code_frame_preserves_non_leading_tabs() {
-    assert_eq!(render_code_frame("ab\tcd", 3), "1: ab\tcd\n      ^");
+    assert_eq!(render_code_frame("ab\tcd", 1, 3), "1: ab\tcd\n      ^");
   }
 
   #[test]
   fn code_frame_truncates_long_lines() {
-    let frame = render_code_frame(&"x".repeat(200), 0);
+    let frame = render_code_frame(&"x".repeat(200), 1, 0);
     let first_line = frame.lines().next().unwrap();
     assert_eq!(first_line, format!("1: {}...", "x".repeat(117)));
   }
@@ -377,6 +385,16 @@ mod tests {
   fn frame_returns_none_without_labels() {
     let diagnostic = super::Diagnostic::new("X".to_string(), "title".to_string(), Severity::Error);
     assert_eq!(diagnostic.frame(), None);
+  }
+
+  #[test]
+  fn frame_caret_counts_utf16_units() {
+    let mut diagnostic =
+      super::Diagnostic::new("X".to_string(), "title".to_string(), Severity::Error);
+    let file_id = diagnostic.add_file("test.js", "😀x");
+    // Byte offset 4 is `x`, which is UTF-16 column 2.
+    diagnostic.add_label(&file_id, 4..5, String::new());
+    assert_eq!(diagnostic.frame().as_deref(), Some("1: 😀x\n     ^"));
   }
 }
 

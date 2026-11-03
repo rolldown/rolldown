@@ -16,8 +16,8 @@ var a_exports = /* @__PURE__ */ __exportAll({ ns: () => lib_exports });
 // main.js
 assert.deepStrictEqual(Object.getOwnPropertyNames(a_exports), ["ns"]);
 assert.deepStrictEqual(Object.getOwnPropertyNames(lib_exports), ["a"]);
-assert.equal(String(a_exports), "[object Module]");
-assert.equal(String(lib_exports), "[object Module]");
+assert.equal(Object.prototype.toString.call(a_exports), "[object Module]");
+assert.equal(Object.prototype.toString.call(lib_exports), "[object Module]");
 
 ```
 
@@ -39,8 +39,8 @@ var a_exports = /* @__PURE__ */ __exportAll({ ns: () => lib_exports });
 // main.js
 assert.default.deepStrictEqual(Object.getOwnPropertyNames(a_exports), ["ns"]);
 assert.default.deepStrictEqual(Object.getOwnPropertyNames(lib_exports), ["a"]);
-assert.default.equal(String(a_exports), "[object Module]");
-assert.default.equal(String(lib_exports), "[object Module]");
+assert.default.equal(Object.prototype.toString.call(a_exports), "[object Module]");
+assert.default.equal(Object.prototype.toString.call(lib_exports), "[object Module]");
 
 ```
 
@@ -71,8 +71,8 @@ assert.default.equal(String(lib_exports), "[object Module]");
 	// main.js
 	assert.default.deepStrictEqual(Object.getOwnPropertyNames(a_exports), ["ns"]);
 	assert.default.deepStrictEqual(Object.getOwnPropertyNames(lib_exports), ["a"]);
-	assert.default.equal(String(a_exports), "[object Module]");
-	assert.default.equal(String(lib_exports), "[object Module]");
+	assert.default.equal(Object.prototype.toString.call(a_exports), "[object Module]");
+	assert.default.equal(Object.prototype.toString.call(lib_exports), "[object Module]");
 })(assert);
 
 ```

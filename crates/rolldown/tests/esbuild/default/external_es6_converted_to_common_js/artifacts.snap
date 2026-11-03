@@ -12,7 +12,7 @@ var init_a = __esmMin((() => {}));
 var init_b = __esmMin((() => {}));
 var init_c = __esmMin((() => {}));
 var init_d = __esmMin((() => {}));
-__reExport(/* @__PURE__ */ __exportAll({}), import_x);
+__reExport(/* @__PURE__ */ __exportAll({}, 2), import_x);
 var init_e = __esmMin((() => {}));
 // entry.js
 init_a();

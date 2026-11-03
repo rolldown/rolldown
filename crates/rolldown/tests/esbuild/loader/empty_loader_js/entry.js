@@ -7,7 +7,7 @@ import { named } from './d.empty'
 assert.deepEqual(
   ns,
   Object.defineProperty(
-    {},
+    { __proto__: null },
     Symbol.toStringTag,
     { value: "Module" },
   ),

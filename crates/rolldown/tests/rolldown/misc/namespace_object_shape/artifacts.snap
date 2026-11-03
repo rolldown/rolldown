@@ -1,0 +1,49 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] target.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// target.js
+var target_exports = /* @__PURE__ */ __exportAll({
+	increment: () => increment,
+	value: () => value
+});
+let value = 7;
+function increment() {
+	value++;
+}
+// names.js
+var names_exports = /* @__PURE__ */ __exportAll({
+	["__proto__"]: () => proto,
+	constructor: () => constructor,
+	toString: () => toString,
+	valueOf: () => valueOf
+});
+const proto = "proto export";
+function constructor() {
+	return "constructor export";
+}
+function toString() {
+	return "toString export";
+}
+function valueOf() {
+	return "valueOf export";
+}
+// main.js
+const load = () => Promise.resolve().then(() => target_exports);
+export { load, names_exports as names, target_exports as namespace };
+
+```

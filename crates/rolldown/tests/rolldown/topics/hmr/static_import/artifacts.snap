@@ -95,7 +95,10 @@ assert.deepStrictEqual(import_dep_cjs_namespace, {
 	value: "cjs-namespace",
 	default: { value: "cjs-namespace" }
 });
-assert.deepEqual(dep_esm_namespace_exports, Object.defineProperty({ value: "esm-namespace" }, Symbol.toStringTag, { value: "Module" }));
+assert.deepEqual(dep_esm_namespace_exports, Object.defineProperty({
+	__proto__: null,
+	value: "esm-namespace"
+}, Symbol.toStringTag, { value: "Module" }));
 hmr_hot.accept((mod) => {
 	if (mod) console.log(".hmr", mod.foo);
 });
@@ -147,7 +150,10 @@ __rolldown_runtime__.registerFactory("hmr.js", (function(__rolldown_module_id__)
 			value: "cjs-namespace",
 			default: { value: "cjs-namespace" }
 		});
-		import_node_assert_strict_00.default.deepEqual(import_dep_esm_namespace_08, Object.defineProperty({ value: "esm-namespace" }, Symbol.toStringTag, { value: "Module" }));
+		import_node_assert_strict_00.default.deepEqual(import_dep_esm_namespace_08, Object.defineProperty({
+			__proto__: null,
+			value: "esm-namespace"
+		}, Symbol.toStringTag, { value: "Module" }));
 		hot_hmr.accept((mod) => {
 			if (mod) {
 				console.log(".hmr", mod.foo);

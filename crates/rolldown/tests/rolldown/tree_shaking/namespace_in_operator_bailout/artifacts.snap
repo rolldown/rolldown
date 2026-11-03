@@ -15,7 +15,7 @@ var require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.b = "b";
 }));
 // reexport_cjs.js
-var reexport_cjs_exports = /* @__PURE__ */ __exportAll({});
+var reexport_cjs_exports = /* @__PURE__ */ __exportAll({}, 2);
 __reExport(reexport_cjs_exports, /* @__PURE__ */ __toESM(require_cjs()));
 // main.js
 var import_cjs = /* @__PURE__ */ __toESM(require_cjs());

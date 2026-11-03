@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+export * from "node:path";
+// HIDDEN [\0rolldown/runtime.js]
+// inner.js
+const fromInner = "inner";
+// barrel.js
+var barrel_exports = /* @__PURE__ */ __exportAll({ fromInner: () => fromInner }, 2);
+import * as import_node_path from "node:path";
+__reExport(barrel_exports, import_node_path);
+export { barrel_exports as barrel, fromInner };
+
+```

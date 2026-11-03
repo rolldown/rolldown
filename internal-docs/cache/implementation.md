@@ -77,8 +77,9 @@ Related non-`Cache`-named structures in the same file: `ViteMetadata`,
 (`packages/rolldown/src/utils/bindingify-input-options.ts`) it is bound to
 `PluginContextData.clear`. Calling it clears `renderedChunkMeta`,
 `loadModulePromiseMap` and `outputCodeCache`, not the other `PluginContextData` maps.
-`Bundler::with_cached_bundle` calls it before creating the next bundle, including
-watch rebuilds after a failed scan that skipped `bundle_up`'s successful-tail cleanup.
+`Bundle::bundle_write` and `Bundle::bundle_generate` call it on every exit, and
+`Bundler::with_cached_bundle` calls it again before creating the next bundle, because a
+failed scan never reaches the output stage.
 
 ### 6. Watch-mode filesystem cache
 

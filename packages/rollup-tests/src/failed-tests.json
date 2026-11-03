@@ -180,5 +180,13 @@
   "rollup@function@emit-file@no-input: It is not necessary to provide an input if a dynamic entry is emitted",
   "rollup@function@external-regex-stateful@sticky: matches sticky external regexes at the start without changing their lastIndex",
   "rollup@function@logging@transform-log-at-position-zero: includes source locations for transform logs at position zero",
-  "rollup@function@plugin-error-transform-pos-zero: includes the current source location for transform errors at position zero"
+  "rollup@function@plugin-error-transform-pos-zero: includes the current source location for transform errors at position zero",
+  "rollup@function@render-error-hook@asynchronous: preserves a renderChunk error when renderError rejects asynchronously",
+  "rollup@function@render-error-hook@plain-errors: names both plugins in the combined error when they throw plain errors",
+  "rollup@function@render-error-hook@successful-handler: reports the original render error after its handler completes successfully",
+  "rollup@function@render-error-hook@synchronous: preserves a renderStart error when renderError throws synchronously",
+  "rollup@sourcemaps@index-sourcemaps-names: keeps the names and shared sources of index sourcemap sections@generates es",
+  "rollup@sourcemaps@index-sourcemaps: supports index sourcemaps with sections@generates es",
+  "rollup@sourcemaps@null-sources-combined-sourcemap: leaves sources without a name out of the combined sourcemap@generates es",
+  "rollup@sourcemaps@null-sources: treats mappings to a null source as unmapped@generates es"
 ]

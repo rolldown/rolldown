@@ -1,1 +1,2 @@
-(globalThis.evaluated ??= []).push('esm'); export const esm = 1;
+(globalThis.evaluated ??= []).push('esm');
+export const esm = 1;

@@ -1,0 +1,17 @@
+{
+  "_comment": "Test for issue #10231: under preserveModules a preserved chunk that also exposes strict-execution-order wrapper bindings for other modules must keep named exports, otherwise a CommonJS module with a single default export would be rendered as several `module.exports = ...` assignments",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "format": "cjs",
+    "preserveModules": true,
+    "strictExecutionOrder": true,
+    "experimental": {
+      "onDemandWrapping": true
+    }
+  }
+}

@@ -88,6 +88,14 @@ impl Plugin for LazyCompilationPlugin {
         )
         .await??;
 
+      // An external has no factory in the dev runtime, so `requestLazy` cannot run it.
+      // Return `None` rather than this result: `HookResolveIdOutput` would drop fields
+      // such as `is_external_without_side_effects`.
+      // See internal-docs/lazy-compilation/implementation.md.
+      if original_id.external.is_external() {
+        return Ok(None);
+      }
+
       // `ctx.resolve` can re-enter this hook, so the id may already carry the marker. Appending
       // it twice would yield an id nothing else in the graph agrees on.
       let lazy_id: ArcStr = if is_lazy_proxy(original_id.id.as_str()) {

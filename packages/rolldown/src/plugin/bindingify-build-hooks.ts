@@ -69,6 +69,9 @@ export function bindingifyResolveId(
         {
           ...extraOptions,
           custom: contextResolveOptions?.custom,
+          attributes: extraOptions.attributes ?? {},
+          importerRawId: extraOptions.importerRawId ?? importer ?? undefined,
+          importerAttributes: extraOptions.importerAttributes ?? {},
         },
       );
       if (ret == null) {
@@ -86,11 +89,18 @@ export function bindingifyResolveId(
       }
 
       // Make sure the `moduleSideEffects` is update to date
-      let exist = args.pluginContextData.updateModuleOption(ret.id, {
-        meta: ret.meta || {},
-        moduleSideEffects: ret.moduleSideEffects ?? null,
-        invalidate: false,
-      });
+      let exist = args.pluginContextData.updateModuleOption(
+        args.pluginContextData.toModuleId(
+          ret.id,
+          ret.attributes ?? extraOptions.attributes,
+          !!ret.external,
+        ),
+        {
+          meta: ret.meta || {},
+          moduleSideEffects: ret.moduleSideEffects ?? null,
+          invalidate: false,
+        },
+      );
 
       return {
         id: ret.id,
@@ -98,6 +108,7 @@ export function bindingifyResolveId(
         normalizeExternalId: false,
         moduleSideEffects: exist.moduleSideEffects ?? undefined,
         packageJsonPath: ret.packageJsonPath,
+        attributes: ret.attributes,
       };
     },
     filter: bindingifyResolveIdFilter(options.filter),
@@ -108,11 +119,17 @@ export function bindingifyResolveDynamicImport(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['resolveDynamicImport']> {
   return bindingifyHook(args.plugin.resolveDynamicImport, ({ handler }) => ({
-    plugin: async (ctx, specifier, importer) => {
+    plugin: async (ctx, specifier, importer, extraOptions) => {
+      const attributes = extraOptions.attributes ?? {};
       const ret = await handler.call(
         createPluginContext(args, ctx),
         specifier,
         importer ?? undefined,
+        {
+          attributes,
+          importerRawId: extraOptions.importerRawId ?? importer ?? undefined,
+          importerAttributes: extraOptions.importerAttributes ?? {},
+        },
       );
       if (ret == null) {
         return;
@@ -133,17 +150,21 @@ export function bindingifyResolveDynamicImport(
         id: ret.id,
         external: ret.external,
         packageJsonPath: ret.packageJsonPath,
+        attributes: ret.attributes,
       };
 
       if (ret.moduleSideEffects !== null) {
         result.moduleSideEffects = ret.moduleSideEffects;
       }
 
-      args.pluginContextData.updateModuleOption(ret.id, {
-        meta: ret.meta || {},
-        moduleSideEffects: ret.moduleSideEffects || null,
-        invalidate: false,
-      });
+      args.pluginContextData.updateModuleOption(
+        args.pluginContextData.toModuleId(ret.id, ret.attributes ?? attributes, !!ret.external),
+        {
+          meta: ret.meta || {},
+          moduleSideEffects: ret.moduleSideEffects || null,
+          invalidate: false,
+        },
+      );
 
       return result;
     },

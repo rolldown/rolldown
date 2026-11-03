@@ -21,6 +21,7 @@ use super::{
     binding_filter_expression::normalized_tokens, binding_hook_filter::BindingHookFilter,
     binding_hook_load_output::BindingHookLoadOutput,
     binding_hook_render_chunk_output::BindingHookRenderChunkOutput,
+    binding_hook_resolve_dynamic_import_extra_args::BindingHookResolveDynamicImportExtraArgs,
     binding_hook_resolve_file_url_args::BindingHookResolveFileUrlArgs,
     binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
     binding_hook_resolve_id_output::BindingHookResolveIdOutput,
@@ -61,11 +62,16 @@ pub struct BindingPluginOptions {
   pub resolve_id_filter: Option<BindingHookFilter>,
 
   #[napi(
-    ts_type = "(ctx: BindingPluginContext, specifier: string, importer: Nullable<string>) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>"
+    ts_type = "(ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveDynamicImportExtraArgs) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>"
   )]
   pub resolve_dynamic_import: Option<
     MaybeAsyncJsCallback<
-      FnArgs<(BindingPluginContext, String, Option<String>)>,
+      FnArgs<(
+        BindingPluginContext,
+        String,
+        Option<String>,
+        BindingHookResolveDynamicImportExtraArgs,
+      )>,
       Option<BindingHookResolveIdOutput>,
     >,
   >,

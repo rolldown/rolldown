@@ -36,6 +36,7 @@ pub async fn resolve_id_check_external<Fs: FileSystem>(
   bundle_options: &NormalizedBundlerOptions,
   attributes: &ImportAttributes,
   importer_raw_id: Option<&str>,
+  importer_attributes: &ImportAttributes,
 ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
   let import_attributes_enabled = bundle_options.experimental.is_import_attributes_enabled();
   let finalize =
@@ -60,6 +61,7 @@ pub async fn resolve_id_check_external<Fs: FileSystem>(
     is_user_defined_entry,
     attributes,
     importer_raw_id,
+    importer_attributes,
   )
   .await?;
 

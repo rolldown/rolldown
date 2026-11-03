@@ -72,7 +72,7 @@ This is fundamentally different from `Bundler.closed`:
 
 `ClassicBundler.close()` does not guard against a second call: it clones the last bundle handle, so every call runs `closeBundle` again. The JS side guarantees one call: `RolldownBuild.close()` in `packages/rolldown/src/api/rolldown/rolldown-build.ts` keeps the first close promise, and a repeated `close()` only waits for it (the first caller gets any error). Inside that first close every cleanup step runs exactly once, even when an earlier one fails: it stops the parallel-plugin workers, then always calls `BindingBundler.close()`, then releases the async runtime holder (`shutdownAsyncRuntime`), and only then rethrows a worker shutdown error. On wasm, once the last holder is gone, a second `BindingBundler.close()` would spawn onto the released runtime and trap.
 
-At the end of its close future, `BindingBundler.close()` also releases the JS functions of the options. See [bundler-data-lifecycle](../bundler-data-lifecycle/implementation.md#js-callback-lifetime).
+At the end of its close future, `BindingBundler.close()` also requests the release of the JS functions of the options. The release waits for each build that started before the close. See [bundler-data-lifecycle](../bundler-data-lifecycle/implementation.md#js-callback-lifetime).
 
 ## Related
 

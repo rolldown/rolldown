@@ -88,13 +88,9 @@ impl Plugin for LazyCompilationPlugin {
         )
         .await??;
 
-      // Externals are not part of this build, so the dev runtime never gets a factory
-      // for them and `requestLazy` cannot run them.
-      // Any resolution `ctx.resolve` marks external is left to the normal resolution:
-      // plugin `{ external: true }`, config `external` on the resolved id, Node
-      // built-ins, and http(s) URLs. `HookResolveIdOutput` cannot carry every
-      // `ResolvedId` field (e.g. `is_external_without_side_effects`), so returning `None`
-      // lets the normal resolution build the full `ResolvedId` again.
+      // An external has no factory in the dev runtime, so `requestLazy` cannot run it.
+      // Return `None` rather than this result: `HookResolveIdOutput` would drop fields
+      // such as `is_external_without_side_effects`.
       // See internal-docs/lazy-compilation/implementation.md.
       if original_id.external.is_external() {
         return Ok(None);

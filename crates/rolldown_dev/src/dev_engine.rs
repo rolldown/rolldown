@@ -15,7 +15,7 @@ use rolldown_utils::dashmap::FxDashSet;
 use rustc_hash::FxHashMap;
 #[cfg(feature = "testing")]
 use rustc_hash::FxHashSet;
-use tokio::sync::{Mutex, mpsc::unbounded_channel, watch};
+use tokio::sync::{Mutex, mpsc::unbounded_channel};
 
 use rolldown::{Bundler, BundlerBuilder, BundlerConfig, NormalizedBundlerOptions};
 
@@ -42,15 +42,6 @@ pub struct CoordinatorState {
   handle: Option<Shared<PinBoxSendStaticFuture<()>>>,
 }
 
-/// Sets the `close_done` flag of a `DevEngine` when it drops.
-struct CloseDoneOnDrop<'a>(&'a watch::Sender<bool>);
-
-impl Drop for CloseDoneOnDrop<'_> {
-  fn drop(&mut self) {
-    self.0.send_replace(true);
-  }
-}
-
 pub struct DevEngine {
   coordinator_sender: CoordinatorSender,
   bundler: Arc<Mutex<Bundler>>,
@@ -60,8 +51,6 @@ pub struct DevEngine {
   coordinator_state: Mutex<CoordinatorState>,
   pub clients: SharedClients,
   is_closed: AtomicBool,
-  /// `true` when the first `close` call ends. A repeated `close` waits for it.
-  close_done: watch::Sender<bool>,
   /// The engine's single patch-id counter, shared with the coordinator's bundling
   /// tasks. Both counters' consumers format filenames as `hmr_patch_{id}.js` /
   /// `lazy_compile_{id}.js`, and pending-payload entries are keyed by those
@@ -146,7 +135,6 @@ impl DevEngine {
       }),
       clients,
       is_closed: AtomicBool::new(false),
-      close_done: watch::Sender::new(false),
       next_hmr_patch_id,
       module_infos,
     })
@@ -469,15 +457,8 @@ impl DevEngine {
 
   pub async fn close(&self) -> BuildResult<()> {
     if self.is_closed.swap(true, std::sync::atomic::Ordering::SeqCst) {
-      // Another call runs the close. Wait until it ends, so that a caller never sees the close as
-      // done while `closeBundle` hooks still run. The binding releases the JS functions of the
-      // options after `close` returns. The first call gets any error.
-      // See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
-      let _ = self.close_done.subscribe().wait_for(|done| *done).await;
       return Ok(());
     }
-    // Mark the close as done on each exit path, also after an error.
-    let _close_done = CloseDoneOnDrop(&self.close_done);
 
     // Send close message to coordinator
     self.coordinator_sender.send(CoordinatorMsg::Close)

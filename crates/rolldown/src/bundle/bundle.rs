@@ -110,6 +110,13 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     trace_action!(action::BuildStart { action: "BuildStart" });
     let is_full_scan_mode = scan_mode.is_full();
 
+    // Before `buildStart`, which may set module options itself.
+    if is_full_scan_mode
+      && let Some(reset_js_module_options) = &self.options.reset_js_module_options
+    {
+      reset_js_module_options.call().await?;
+    }
+
     if !is_full_scan_mode {
       // See `ScanStageCache::pending_build_rescans`.
       for resolved_id in &self.cache.pending_build_rescans {

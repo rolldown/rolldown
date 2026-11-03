@@ -573,6 +573,11 @@ pub fn normalize_binding_options(
     "invalidateJsSideCache option",
     &callbacks,
   );
+  let reset_js_module_options = normalize_invalidate_js_side_cache_option(
+    input_options.reset_js_module_options,
+    "resetJsModuleOptions option",
+    &callbacks,
+  );
   let on_log = normalize_on_log_option(input_options.on_log, &callbacks);
 
   let mut module_types = None;
@@ -876,6 +881,7 @@ pub fn normalize_binding_options(
       mode: inner.mode,
     }),
     invalidate_js_side_cache,
+    reset_js_module_options,
     log_level: Some(input_options.log_level.into()),
     on_log,
     preserve_modules: output_options.preserve_modules,

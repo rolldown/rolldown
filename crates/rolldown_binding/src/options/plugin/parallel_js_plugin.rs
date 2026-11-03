@@ -391,6 +391,10 @@ impl Plugin for ParallelJsPlugin {
     ctx: &rolldown_plugin::PluginContext,
     args: HookFilterArgs<'_>,
   ) -> bool {
-    Plugin::hook_filter_matches(self.first_plugin(), ctx, args)
+    // Each worker can build a different filter from `threadNumber`, and the driver asks before
+    // `run_single` selects a worker. So pass when the filter of any worker accepts the call: the
+    // driver then never skips a call that the selected worker would run. That worker checks its
+    // own filter again. See internal-docs/devtools/implementation.md.
+    self.plugins.iter().any(|plugin| Plugin::hook_filter_matches(plugin, ctx, args))
   }
 }

@@ -1,8 +1,11 @@
 import { rolldown } from 'rolldown';
+import { defineParallelPlugin } from 'rolldown/experimental';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { availableParallelism, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test } from 'vitest';
+// This folder has its own `package.json`, so `rolldown-tests/utils` does not resolve here.
+import { isWasiTest } from '../../src/utils';
 
 // A client and an SSR build of one app used to overwrite one report folder. Each output
 // folder now has its own report under `node_modules/.rolldown/report/<output dir>`.
@@ -95,3 +98,45 @@ test('report mode counts no-op calls and leaves out calls that the filter skips'
     rmSync(cwd, { recursive: true, force: true });
   }
 });
+
+// Each worker builds its own filter from `threadNumber`, and the driver checks the filter before
+// a worker takes the call. So the driver may skip a call only when every worker's filter rejects
+// it. Worker `k` accepts only `m<k>`, so the report holds one call per worker.
+//
+// The wasm binding drops parallel plugins, so the WASI suite skips this test.
+test.skipIf(isWasiTest)(
+  'report mode keeps parallel plugin calls that the filter of any worker accepts',
+  async () => {
+    // The same worker count as `initializeParallelPlugins`.
+    const workerCount = Math.min(availableParallelism(), 8);
+    const ids = Array.from({ length: 8 }, (_, i) => `m${i}`);
+    const sources = Object.fromEntries(ids.map((id) => [id, `console.log("${id}");`]));
+    sources.entry = ids.map((id) => `import "${id}";`).join('\n');
+    const threadFilter = defineParallelPlugin(join(import.meta.dirname, 'thread-filter-plugin.js'));
+    const cwd = mkdtempSync(join(tmpdir(), 'rolldown-report-parallel-'));
+    try {
+      const bundle = await rolldown({
+        cwd,
+        input: 'entry',
+        devtools: { mode: 'report' },
+        plugins: [
+          {
+            name: 'virtual',
+            resolveId: (id) => (id in sources ? id : null),
+            load: (id) => sources[id],
+          },
+          threadFilter(),
+        ],
+      });
+      await bundle.write({ dir: 'dist' });
+      await bundle.close();
+      const metrics = JSON.parse(
+        readFileSync(join(cwd, 'node_modules/.rolldown/report/dist/metrics.json'), 'utf8'),
+      );
+      const plugin = metrics.plugins.find((p) => p.name === 'thread-filter');
+      expect(plugin.hooks.transform.calls).toBe(workerCount);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  },
+);

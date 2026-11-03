@@ -168,6 +168,8 @@ Each hook call pair gets a unique `call_id` (UUID v4) via its enclosing span.
 
 A call that the plugin's own hook filter skips logs no events. In devtools mode the driver asks `Pluginable::call_hook_filter_matches` and skips the call, so the log and the report hold only calls whose handler ran. Every `transform` call emits a `HookTransformCallEnd`; a result without `code` ends with the unchanged code.
 
+A parallel plugin has one plugin per worker, and each worker can build a different filter from `threadNumber`. The driver asks before `run_single` selects a worker, so `ParallelJsPlugin::hook_filter_matches` passes when the filter of any worker accepts the call. A check of one worker only could skip a call that another worker runs, and the build output would then change in devtools mode. The selected worker checks its own filter again, so a call that it rejects can still appear as a no-op.
+
 ## Action Catalog
 
 | Action                       | When Emitted                              | Key Fields                                                                                                                     |

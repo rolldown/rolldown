@@ -69,8 +69,19 @@ console.log("Z");
 ### a.js
 
 ```js
+// \0rolldown/runtime.js
+var __defProp = Object.defineProperty;
+var __exportAll = (all, flags) => {
+	let target = Object.setPrototypeOf({}, null);
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+	if (!(flags & 1)) __defProp(target, Symbol.toStringTag, { value: "Module" });
+	return flags & 2 ? target : Object.preventExtensions(target);
+};
 // a.js
-console.log("A", Object.keys(/* @__PURE__ */ require("./rolldown-runtime.js").__exportAll({ c: () => 1 })).join());
+console.log("A", Object.keys(/* @__PURE__ */ __exportAll({ c: () => 1 })).join());
 
 ```
 
@@ -106,29 +117,6 @@ Object.defineProperty(exports, "p", {
 	enumerable: true,
 	get: function() {
 		return p;
-	}
-});
-
-```
-
-### rolldown-runtime.js
-
-```js
-// \0rolldown/runtime.js
-var __defProp = Object.defineProperty;
-var __exportAll = (all, flags) => {
-	let target = Object.setPrototypeOf({}, null);
-	for (var name in all) __defProp(target, name, {
-		get: all[name],
-		enumerable: true
-	});
-	if (!(flags & 1)) __defProp(target, Symbol.toStringTag, { value: "Module" });
-	return flags & 2 ? target : Object.preventExtensions(target);
-};
-Object.defineProperty(exports, "__exportAll", {
-	enumerable: true,
-	get: function() {
-		return __exportAll;
 	}
 });
 

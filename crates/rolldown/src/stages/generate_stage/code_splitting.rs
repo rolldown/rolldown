@@ -8,10 +8,7 @@ use crate::{
     collect_wrapped_esm_init_targets_for_import_record, import_record_has_live_binding_consumer,
     record_is_init_obligation,
   },
-  stages::generate_stage::{
-    chunk_ext::ChunkDebugExt,
-    chunk_optimizer::{ChunkOptimizationGraph, RuntimeMergeCascade},
-  },
+  stages::generate_stage::{chunk_ext::ChunkDebugExt, chunk_optimizer::ChunkOptimizationGraph},
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
   utils::chunk::normalize_preserve_entry_signature,
 };
@@ -1122,7 +1119,7 @@ impl GenerateStage<'_> {
       );
     }
 
-    let facade_runtime_consumers = if allow_merge_common_chunks {
+    if allow_merge_common_chunks {
       self.optimize_facade_entry_chunks(
         chunk_graph,
         index_splitting_info,
@@ -1130,10 +1127,8 @@ impl GenerateStage<'_> {
         &mut module_is_assigned,
         &temp_chunk_graph,
         used_symbol_refs_builder,
-      )
-    } else {
-      None
-    };
+      );
+    }
     let namespace_extractions = self.find_leaking_dynamic_entry_namespaces(
       chunk_graph,
       &mut dynamic_entry_merge_targets,
@@ -1152,15 +1147,6 @@ impl GenerateStage<'_> {
         &mut module_is_assigned,
         chunk_graph,
         input_base,
-      );
-    }
-
-    for consumers in facade_runtime_consumers.iter().map(Some).chain([None]) {
-      self.try_merge_runtime_chunk(
-        chunk_graph,
-        consumers,
-        RuntimeMergeCascade::Full,
-        used_symbol_refs_builder,
       );
     }
 

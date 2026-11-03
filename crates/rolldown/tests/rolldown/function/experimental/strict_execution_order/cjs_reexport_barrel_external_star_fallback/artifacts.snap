@@ -15,7 +15,7 @@ export { loadRoute };
 ## main2.js
 
 ```js
-import { a as __toESM, i as __reExport, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // node_modules/pure-barrel/cn.js
 function cn(...values) {
 	return values.filter(Boolean).join(" ");
@@ -56,23 +56,14 @@ function init_main() {
 		globalThis.__events.push(`main:${cn("a", "b")}`);
 	})))();
 }
-export { pure_barrel_exports as a, init_pure_barrel as i, loadRoute as n, import_clone_deep as r, init_main as t };
-
-```
-
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __toESM as a, __reExport as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
+export { pure_barrel_exports as a, init_pure_barrel as i, loadRoute as n, __esmMin as o, import_clone_deep as r, init_main as t };
 
 ```
 
 ## route.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
-import { a as pure_barrel_exports, i as init_pure_barrel, r as import_clone_deep } from "./main2.js";
+import { a as pure_barrel_exports, i as init_pure_barrel, o as __esmMin, r as import_clone_deep } from "./main2.js";
 // route.js
 var value;
 function init_route() {

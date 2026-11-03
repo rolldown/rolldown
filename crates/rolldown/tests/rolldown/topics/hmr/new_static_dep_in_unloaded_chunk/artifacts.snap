@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## heavy.js
 
 ```js
-import { t as __exportAll } from "./main.js";
+import { t as __exportAll } from "./rolldown-runtime.js";
 __rolldown_runtime__.registerGraph({
 	ids: ["heavy.js"],
 	localCount: 1,
@@ -24,7 +24,7 @@ export { heavy };
 ## main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+import { t as __exportAll } from "./rolldown-runtime.js";
 __rolldown_runtime__.registerGraph({
 	ids: [
 		"hmr.js",
@@ -59,6 +59,13 @@ var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 console.log(typeof load);
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
 export { __exportAll as t };
 
 ```

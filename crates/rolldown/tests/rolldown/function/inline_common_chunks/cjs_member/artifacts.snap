@@ -88,8 +88,7 @@ export { __share_require as a, __share_export as i, __esmMin as n, __toESM as o,
 ### a.js
 
 ```js
-import { n as __esmMin, r as __toESM } from "./rolldown-runtime.js";
-import { t as require_cjs } from "./cjs.js";
+import { n as __esmMin, r as __toESM, t as require_cjs } from "./cjs.js";
 // a.js
 var import_cjs;
 function init_a() {
@@ -106,8 +105,7 @@ init_a();
 ### b.js
 
 ```js
-import { n as __esmMin, r as __toESM } from "./rolldown-runtime.js";
-import { t as require_cjs } from "./cjs.js";
+import { n as __esmMin, r as __toESM, t as require_cjs } from "./cjs.js";
 // b.js
 var import_cjs;
 function init_b() {
@@ -124,7 +122,7 @@ init_b();
 ### cjs.js
 
 ```js
-import { t as __commonJSMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	let n = 0;
@@ -139,14 +137,6 @@ var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	};
 	globalThis.events.push("CJS body");
 }));
-export { require_cjs as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as n, __toESM as r, __commonJSMin as t };
+export { __esmMin as n, __toESM as r, require_cjs as t };
 
 ```

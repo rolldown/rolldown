@@ -34,6 +34,12 @@ impl RuntimeModuleBrief {
     self.modified_by_plugins = plugins;
   }
 
+  /// The plugins whose `transform` hook changed the runtime source. The list is empty exactly when
+  /// the final source is the source that rolldown generates.
+  pub fn modified_by_plugins(&self) -> &[String] {
+    &self.modified_by_plugins
+  }
+
   #[inline]
   pub fn id(&self) -> ModuleIdx {
     self.id

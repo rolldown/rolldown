@@ -45,8 +45,7 @@ export { s as t };
 ### dyn.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as s, t as init_shared } from "./shared.js";
+import { n as s, r as __esmMin, t as init_shared } from "./shared.js";
 // dyn.js
 var d;
 function init_dyn() {
@@ -63,9 +62,8 @@ export { d };
 ### main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
-import { n as s, t as init_shared } from "./shared.js";
+import { n as s, r as __esmMin, t as init_shared } from "./shared.js";
 // main.js
 var m;
 function init_main() {
@@ -83,18 +81,10 @@ await init_main();
 
 ```
 
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
-
-```
-
 ### shared.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // shared.js
 var s;
 function init_shared() {
@@ -102,7 +92,7 @@ function init_shared() {
 		s = { value: 1 };
 	})))();
 }
-export { s as n, init_shared as t };
+export { s as n, __esmMin as r, init_shared as t };
 
 ```
 

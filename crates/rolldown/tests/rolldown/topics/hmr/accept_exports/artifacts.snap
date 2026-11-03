@@ -6,8 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+import { t as __exportAll } from "./rolldown-runtime.js";
 import assert from "node:assert";
-// HIDDEN [\0rolldown/runtime.js]
 __rolldown_runtime__.registerGraph({
 	ids: [
 		"named/target.js",
@@ -282,6 +282,13 @@ process.on("beforeExit", (code) => {
 	assert.strictEqual(globalThis.multiRecordImporterSaw, "1b2");
 	assert.strictEqual(globalThis.multiRecordImporterAcceptCount, 1);
 });
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
 export { __exportAll as t };
 
 ```
@@ -289,7 +296,7 @@ export { __exportAll as t };
 ## target.js
 
 ```js
-import { t as __exportAll } from "./main.js";
+import { t as __exportAll } from "./rolldown-runtime.js";
 import assert from "node:assert";
 __rolldown_runtime__.registerGraph({
 	ids: ["dynamic_import/target.js"],

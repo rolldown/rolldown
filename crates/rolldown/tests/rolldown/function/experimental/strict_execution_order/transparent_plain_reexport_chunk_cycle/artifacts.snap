@@ -6,8 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## app.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as hasExpectedValue } from "./utilities.js";
+import { r as __esmMin, t as hasExpectedValue } from "./utilities.js";
 // shared-identity.js
 function isSame(left, right) {
 	return is(left, right);
@@ -49,18 +48,10 @@ init_main();
 
 ```
 
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
-
-```
-
 ## utilities.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // utilities/index.js
 function hasExpectedValue(actual) {
 	return actual === "expected";
@@ -68,15 +59,14 @@ function hasExpectedValue(actual) {
 function init_utilities() {
 	return (init_utilities = __esmMin((() => {})))();
 }
-export { init_utilities as n, hasExpectedValue as t };
+export { init_utilities as n, __esmMin as r, hasExpectedValue as t };
 
 ```
 
 ## utility-page.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as hasExpectedValue } from "./utilities.js";
+import { r as __esmMin, t as hasExpectedValue } from "./utilities.js";
 // utilities-page.js
 function init_utilities_page() {
 	return (init_utilities_page = __esmMin((() => {
@@ -193,8 +183,7 @@ init_utilities_page();
 ### app.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as hasExpectedValue } from "./utilities.js";
+import { n as __esmMin, t as hasExpectedValue } from "./utilities.js";
 // shared-identity.js
 function isSame(left, right) {
 	return is(left, right);
@@ -236,30 +225,22 @@ init_main();
 
 ```
 
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
-
-```
-
 ### utilities.js
 
 ```js
+// HIDDEN [\0rolldown/runtime.js]
 // utilities/index.js
 function hasExpectedValue(actual) {
 	return actual === "expected";
 }
-export { hasExpectedValue as t };
+export { __esmMin as n, hasExpectedValue as t };
 
 ```
 
 ### utility-page.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as hasExpectedValue } from "./utilities.js";
+import { n as __esmMin, t as hasExpectedValue } from "./utilities.js";
 // utilities-page.js
 function init_utilities_page() {
 	return (init_utilities_page = __esmMin((() => {

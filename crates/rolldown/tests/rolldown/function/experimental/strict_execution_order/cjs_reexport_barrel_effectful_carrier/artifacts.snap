@@ -6,8 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## bare.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
-import { n as init_barrel_cjs_1, t as init_barrel_cjs_0 } from "./outer.js";
+import { n as init_barrel_cjs_1, r as __esmMin, t as init_barrel_cjs_0 } from "./outer.js";
 // bare.js
 function init_bare() {
 	return (init_bare = __esmMin((() => {
@@ -23,8 +22,7 @@ init_bare();
 ## main.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
-import { n as init_barrel_cjs_1, t as init_barrel_cjs_0 } from "./outer.js";
+import { n as init_barrel_cjs_1, r as __esmMin, t as init_barrel_cjs_0 } from "./outer.js";
 // node_modules/pure-leaves/cn.js
 function cn(...values) {
 	return values.filter(Boolean).join(" ");
@@ -52,7 +50,7 @@ export { loadRoute };
 ## outer.js
 
 ```js
-import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // effect-before.cjs
 var require_effect_before = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("effect-before");
@@ -73,23 +71,14 @@ function init_barrel_cjs_1() {
 		require_effect_after();
 	})))();
 }
-export { init_barrel_cjs_1 as n, init_barrel_cjs_0 as t };
-
-```
-
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as n, __toESM as r, __commonJSMin as t };
+export { init_barrel_cjs_1 as n, __esmMin as r, init_barrel_cjs_0 as t };
 
 ```
 
 ## route.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
-import { n as init_barrel_cjs_1, t as init_barrel_cjs_0 } from "./outer.js";
+import { n as init_barrel_cjs_1, r as __esmMin, t as init_barrel_cjs_0 } from "./outer.js";
 // node_modules/pure-leaves/stack.js
 var Stack;
 function init_stack() {
@@ -119,8 +108,7 @@ export { stack };
 ### bare.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
-import { n as init_barrel_cjs_1, t as init_barrel_cjs_0 } from "./outer.js";
+import { n as init_barrel_cjs_1, r as __esmMin, t as init_barrel_cjs_0 } from "./outer.js";
 // bare.js
 function init_bare() {
 	return (init_bare = __esmMin((() => {
@@ -136,8 +124,7 @@ init_bare();
 ### main.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
-import { n as init_barrel_cjs_1, t as init_barrel_cjs_0 } from "./outer.js";
+import { n as init_barrel_cjs_1, r as __esmMin, t as init_barrel_cjs_0 } from "./outer.js";
 // node_modules/pure-leaves/cn.js
 function cn(...values) {
 	return values.filter(Boolean).join(" ");
@@ -165,7 +152,7 @@ export { loadRoute };
 ### outer.js
 
 ```js
-import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // effect-before.cjs
 var require_effect_before = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("effect-before");
@@ -186,23 +173,14 @@ function init_barrel_cjs_1() {
 		require_effect_after();
 	})))();
 }
-export { init_barrel_cjs_1 as n, init_barrel_cjs_0 as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as n, __toESM as r, __commonJSMin as t };
+export { init_barrel_cjs_1 as n, __esmMin as r, init_barrel_cjs_0 as t };
 
 ```
 
 ### route.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
-import { n as init_barrel_cjs_1, t as init_barrel_cjs_0 } from "./outer.js";
+import { n as init_barrel_cjs_1, r as __esmMin, t as init_barrel_cjs_0 } from "./outer.js";
 // node_modules/pure-leaves/stack.js
 var Stack;
 function init_stack() {

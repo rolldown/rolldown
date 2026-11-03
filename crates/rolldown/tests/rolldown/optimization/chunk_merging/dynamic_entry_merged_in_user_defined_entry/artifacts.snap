@@ -48,14 +48,14 @@ init_entry();
 ### entry.js
 
 ```js
-const require_rolldown_runtime = require("./rolldown-runtime.js");
+// HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
-node_assert = require_rolldown_runtime.__toESM(node_assert);
+node_assert = __toESM(node_assert);
 // lib.js
-var lib_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ a: () => 123 });
+var lib_exports = /* @__PURE__ */ __exportAll({ a: () => 123 });
 // entry.js
 function init_entry() {
-	return (init_entry = require_rolldown_runtime.__esmMin((() => {
+	return (init_entry = __esmMin((() => {
 		Promise.resolve().then(() => lib_exports).then((mod) => {
 			node_assert.default.strictEqual(mod.a, 123);
 			node_assert.default.strictEqual(123, 123);
@@ -63,31 +63,6 @@ function init_entry() {
 	})))();
 }
 init_entry();
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-Object.defineProperty(exports, "__esmMin", {
-	enumerable: true,
-	get: function() {
-		return __esmMin;
-	}
-});
-Object.defineProperty(exports, "__exportAll", {
-	enumerable: true,
-	get: function() {
-		return __exportAll;
-	}
-});
-Object.defineProperty(exports, "__toESM", {
-	enumerable: true,
-	get: function() {
-		return __toESM;
-	}
-});
 
 ```
 
@@ -107,17 +82,17 @@ Object.defineProperty(exports, "__toESM", {
 ### entry.js
 
 ```js
-const require_rolldown_runtime = require("./rolldown-runtime.js");
+// HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
-node_assert = require_rolldown_runtime.__toESM(node_assert);
+node_assert = __toESM(node_assert);
 // lib.js
-var lib_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ a: () => 123 });
+var lib_exports = /* @__PURE__ */ __exportAll({ a: () => 123 });
 function init_lib() {
-	return (init_lib = require_rolldown_runtime.__esmMin((() => {})))();
+	return (init_lib = __esmMin((() => {})))();
 }
 // entry.js
 function init_entry() {
-	return (init_entry = require_rolldown_runtime.__esmMin((() => {
+	return (init_entry = __esmMin((() => {
 		init_lib();
 		Promise.resolve().then(() => (init_lib(), lib_exports)).then((mod) => {
 			node_assert.default.strictEqual(mod.a, 123);
@@ -126,31 +101,6 @@ function init_entry() {
 	})))();
 }
 init_entry();
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-Object.defineProperty(exports, "__esmMin", {
-	enumerable: true,
-	get: function() {
-		return __esmMin;
-	}
-});
-Object.defineProperty(exports, "__exportAll", {
-	enumerable: true,
-	get: function() {
-		return __exportAll;
-	}
-});
-Object.defineProperty(exports, "__toESM", {
-	enumerable: true,
-	get: function() {
-		return __toESM;
-	}
-});
 
 ```
 

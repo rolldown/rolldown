@@ -16,8 +16,7 @@ console.log(pageA.common, pageA._);
 ## page-a.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import "./page-b.js";
+import { i as __esmMin } from "./page-b.js";
 // common.js
 function init() {
 	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
@@ -44,7 +43,7 @@ export { _, common };
 ## page-b.js
 
 ```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // bridge.js
 function x() {
 	return 1;
@@ -56,15 +55,7 @@ function init_page_b() {
 		if (globalThis.value !== void 0) throw new Error(`page-b observed ${globalThis.value}`);
 	})))();
 }
-export { page_b_exports as n, x as r, init_page_b as t };
-
-```
-
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __esmMin as t };
+export { __esmMin as i, page_b_exports as n, x as r, init_page_b as t };
 
 ```
 

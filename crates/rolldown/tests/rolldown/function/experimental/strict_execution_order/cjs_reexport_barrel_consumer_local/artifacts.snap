@@ -15,7 +15,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## clone-deep.js
 
 ```js
-import { i as __toESM, n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // node_modules/pure-barrel/stack.js
 var Stack;
 function init_stack() {
@@ -42,7 +42,7 @@ function init_pure_barrel_cjs_0() {
 		import_clone_deep = /* @__PURE__ */ __toESM(require_clone_deep(), 1);
 	})))();
 }
-export { init_stack as i, init_pure_barrel_cjs_0 as n, Stack as r, import_clone_deep as t };
+export { __esmMin as a, init_stack as i, init_pure_barrel_cjs_0 as n, __exportAll as o, Stack as r, __toESM as s, import_clone_deep as t };
 
 ```
 
@@ -58,8 +58,7 @@ export { loadNamespace, loadRoute };
 ## main2.js
 
 ```js
-import { n as __esmMin, r as __exportAll } from "./rolldown-runtime.js";
-import { i as init_stack, n as init_pure_barrel_cjs_0, r as Stack, t as import_clone_deep } from "./clone-deep.js";
+import { a as __esmMin, i as init_stack, n as init_pure_barrel_cjs_0, o as __exportAll, r as Stack, t as import_clone_deep } from "./clone-deep.js";
 // node_modules/pure-barrel/cn.js
 function cn(...values) {
 	return values.filter(Boolean).join(" ");
@@ -95,20 +94,11 @@ export { init_pure_barrel as i, loadNamespace as n, loadRoute as r, init_main as
 
 ```
 
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __toESM as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
-
-```
-
 ## route.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
 import "./main2.js";
-import { i as init_stack, n as init_pure_barrel_cjs_0, r as Stack, t as import_clone_deep } from "./clone-deep.js";
+import { a as __esmMin, i as init_stack, n as init_pure_barrel_cjs_0, r as Stack, t as import_clone_deep } from "./clone-deep.js";
 // route.js
 var stack, value;
 function init_route() {
@@ -141,7 +131,7 @@ export { value };
 ### clone-deep.js
 
 ```js
-import { i as __toESM, n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // node_modules/pure-barrel/stack.js
 var Stack;
 function init_stack() {
@@ -168,7 +158,7 @@ function init_pure_barrel_cjs_0() {
 		import_clone_deep = /* @__PURE__ */ __toESM(require_clone_deep(), 1);
 	})))();
 }
-export { init_stack as i, init_pure_barrel_cjs_0 as n, Stack as r, import_clone_deep as t };
+export { __esmMin as a, init_stack as i, init_pure_barrel_cjs_0 as n, __exportAll as o, Stack as r, __toESM as s, import_clone_deep as t };
 
 ```
 
@@ -184,8 +174,7 @@ export { loadNamespace, loadRoute };
 ### main2.js
 
 ```js
-import { n as __esmMin, r as __exportAll } from "./rolldown-runtime.js";
-import { i as init_stack, n as init_pure_barrel_cjs_0, r as Stack, t as import_clone_deep } from "./clone-deep.js";
+import { a as __esmMin, i as init_stack, n as init_pure_barrel_cjs_0, o as __exportAll, r as Stack, t as import_clone_deep } from "./clone-deep.js";
 // node_modules/pure-barrel/cn.js
 globalThis.__events.push("cn");
 function cn(...values) {
@@ -216,20 +205,11 @@ export { init_pure_barrel as i, loadNamespace as n, loadRoute as r, init_main as
 
 ```
 
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __toESM as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
-
-```
-
 ### route.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
 import "./main2.js";
-import { i as init_stack, n as init_pure_barrel_cjs_0, r as Stack, t as import_clone_deep } from "./clone-deep.js";
+import { a as __esmMin, i as init_stack, n as init_pure_barrel_cjs_0, r as Stack, t as import_clone_deep } from "./clone-deep.js";
 // route.js
 var stack, value;
 function init_route() {
@@ -395,11 +375,11 @@ export { value };
 ### clone-deep.js
 
 ```js
-const require_rolldown_runtime = require("./rolldown-runtime.js");
+// HIDDEN [\0rolldown/runtime.js]
 // node_modules/pure-barrel/stack.js
 var Stack;
 function init_stack() {
-	return (init_stack = require_rolldown_runtime.__esmMin((() => {
+	return (init_stack = __esmMin((() => {
 		globalThis.__events.push("stack");
 		Stack = class {
 			items = [];
@@ -410,7 +390,7 @@ function init_stack() {
 	})))();
 }
 // node_modules/pure-barrel/clone-deep.cjs
-var require_clone_deep = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports, module) => {
+var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("clone-deep");
 	module.exports = function cloneDeep(value) {
 		return JSON.parse(JSON.stringify(value));
@@ -418,14 +398,32 @@ var require_clone_deep = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(
 }));
 var import_clone_deep;
 function init_pure_barrel_cjs_0() {
-	return (init_pure_barrel_cjs_0 = require_rolldown_runtime.__esmMin((() => {
-		import_clone_deep = /* @__PURE__ */ require_rolldown_runtime.__toESM(require_clone_deep(), 1);
+	return (init_pure_barrel_cjs_0 = __esmMin((() => {
+		import_clone_deep = /* @__PURE__ */ __toESM(require_clone_deep(), 1);
 	})))();
 }
 Object.defineProperty(exports, "Stack", {
 	enumerable: true,
 	get: function() {
 		return Stack;
+	}
+});
+Object.defineProperty(exports, "__esmMin", {
+	enumerable: true,
+	get: function() {
+		return __esmMin;
+	}
+});
+Object.defineProperty(exports, "__exportAll", {
+	enumerable: true,
+	get: function() {
+		return __exportAll;
+	}
+});
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
 	}
 });
 Object.defineProperty(exports, "import_clone_deep", {
@@ -463,25 +461,24 @@ exports.loadRoute = require_main.loadRoute;
 ### main2.js
 
 ```js
-const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_clone_deep = require("./clone-deep.js");
 // node_modules/pure-barrel/cn.js
 function cn(...values) {
 	return values.filter(Boolean).join(" ");
 }
 function init_cn() {
-	return (init_cn = require_rolldown_runtime.__esmMin((() => {
+	return (init_cn = require_clone_deep.__esmMin((() => {
 		globalThis.__events.push("cn");
 	})))();
 }
 // node_modules/pure-barrel/index.js
-var pure_barrel_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
+var pure_barrel_exports = /* @__PURE__ */ require_clone_deep.__exportAll({
 	Stack: () => require_clone_deep.Stack,
 	cloneDeep: () => require_clone_deep.import_clone_deep.default,
 	cn: () => cn
 });
 function init_pure_barrel() {
-	return (init_pure_barrel = require_rolldown_runtime.__esmMin((() => {})))();
+	return (init_pure_barrel = require_clone_deep.__esmMin((() => {})))();
 }
 // main.js
 function loadRoute() {
@@ -491,7 +488,7 @@ function loadNamespace() {
 	return Promise.resolve().then(() => (init_cn(), require_clone_deep.init_stack(), require_clone_deep.init_pure_barrel_cjs_0(), pure_barrel_exports));
 }
 function init_main() {
-	return (init_main = require_rolldown_runtime.__esmMin((() => {
+	return (init_main = require_clone_deep.__esmMin((() => {
 		init_cn();
 		globalThis.__events.push(`main:${cn("a", "b")}`);
 	})))();
@@ -523,47 +520,15 @@ Object.defineProperty(exports, "loadRoute", {
 
 ```
 
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-Object.defineProperty(exports, "__commonJSMin", {
-	enumerable: true,
-	get: function() {
-		return __commonJSMin;
-	}
-});
-Object.defineProperty(exports, "__esmMin", {
-	enumerable: true,
-	get: function() {
-		return __esmMin;
-	}
-});
-Object.defineProperty(exports, "__exportAll", {
-	enumerable: true,
-	get: function() {
-		return __exportAll;
-	}
-});
-Object.defineProperty(exports, "__toESM", {
-	enumerable: true,
-	get: function() {
-		return __toESM;
-	}
-});
-
-```
-
 ### route.js
 
 ```js
-const require_rolldown_runtime = require("./rolldown-runtime.js");
 require("./main2.js");
 const require_clone_deep = require("./clone-deep.js");
 // route.js
 var stack, value;
 function init_route() {
-	return (init_route = require_rolldown_runtime.__esmMin((() => {
+	return (init_route = require_clone_deep.__esmMin((() => {
 		require_clone_deep.init_stack(), require_clone_deep.init_pure_barrel_cjs_0();
 		stack = new require_clone_deep.Stack();
 		stack.push((0, require_clone_deep.import_clone_deep.default)(1));
@@ -601,7 +566,7 @@ export { loadNamespace, loadRoute };
 ### main2.js
 
 ```js
-import { i as __toESM, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // node_modules/pure-barrel/cn.js
 function cn(...values) {
 	return values.filter(Boolean).join(" ");
@@ -658,23 +623,14 @@ function init_main() {
 		globalThis.__events.push(`main:${cn("a", "b")}`);
 	})))();
 }
-export { init_pure_barrel as a, import_clone_deep as i, loadNamespace as n, Stack as o, loadRoute as r, init_stack as s, init_main as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __toESM as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
+export { init_pure_barrel as a, __esmMin as c, import_clone_deep as i, loadNamespace as n, Stack as o, loadRoute as r, init_stack as s, init_main as t };
 
 ```
 
 ### route.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
-import { a as init_pure_barrel, i as import_clone_deep, o as Stack } from "./main2.js";
+import { a as init_pure_barrel, c as __esmMin, i as import_clone_deep, o as Stack } from "./main2.js";
 // route.js
 var stack, value;
 function init_route() {

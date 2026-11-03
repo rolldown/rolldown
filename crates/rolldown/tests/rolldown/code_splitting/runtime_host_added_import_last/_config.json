@@ -1,0 +1,10 @@
+{
+  "config": {
+    "input": [
+      { "name": "c", "import": "c.js" },
+      { "name": "x", "import": "x.js" },
+      { "name": "p", "import": "p.js" },
+      { "name": "h", "import": "h.js" }
+    ]
+  }
+}

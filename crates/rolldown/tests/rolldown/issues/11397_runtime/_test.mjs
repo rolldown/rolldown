@@ -12,7 +12,7 @@ await globalThis.__11397r_done;
 // the keys `['n', 't', 'value']`. Node gives `['value']`.
 //
 // Now the runtime does not go into a dynamic entry chunk when another chunk uses its helpers
-// (`runtime_merge_preserves_dynamic_entry_namespace`). So the runtime gets its own chunk,
+// (`runtime_host_preserves_dynamic_entry_namespace`). So the runtime gets its own chunk,
 // `rolldown-runtime.js`. That is the fourth chunk, and `form.js` exports only `value`.
 //
 // Rollup 4.65.0 (with `@rollup/plugin-commonjs` 29.0.3) also gives `['value']`, with 3 chunks. It

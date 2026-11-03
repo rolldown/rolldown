@@ -178,29 +178,28 @@ impl GenerateStage<'_> {
     leaks
   }
 
-  /// Whether the runtime can go into `target_chunk_idx` when that chunk is a pure dynamic entry
-  /// chunk. When a consumer other than the host uses helpers, the host exports them, and the
-  /// namespace of `import()` gets the helper keys. This is harmless only when no code can see the
-  /// keys, or when the importers read an extracted namespace (`issues/11397_runtime`).
+  /// Whether the runtime can go into `host` when that chunk is a pure dynamic entry chunk. When a
+  /// consumer other than the host uses helpers, the host exports them, and the namespace of
+  /// `import()` gets the helper keys. This is harmless only when no code can see the keys, or when
+  /// the importers read an extracted namespace (`issues/11397_runtime`).
   ///
-  /// An entry with a reason in `dynamic_entry_extraction_skip_reason` keeps the host, as before.
-  /// Its chunk keeps the other extra keys, so a separate runtime file would not remove the leak.
-  pub(super) fn runtime_merge_preserves_dynamic_entry_namespace(
+  /// An entry with a reason in `dynamic_entry_extraction_skip_reason` can still be the host. Its
+  /// chunk keeps the other extra keys, so a separate runtime file would not remove the leak.
+  pub(super) fn runtime_host_preserves_dynamic_entry_namespace(
     &self,
     chunk_graph: &ChunkGraph,
-    target_chunk_idx: ChunkIdx,
-    consumer_chunks: &FxHashSet<ChunkIdx>,
+    host: ChunkIdx,
+    consumers: &FxHashSet<ChunkIdx>,
   ) -> bool {
-    if consumer_chunks.iter().all(|&chunk_idx| chunk_idx == target_chunk_idx) {
+    if consumers.iter().all(|&chunk_idx| chunk_idx == host) {
       return true;
     }
-    let ChunkKind::EntryPoint { meta, module, .. } = chunk_graph.chunk_table[target_chunk_idx].kind
-    else {
+    let ChunkKind::EntryPoint { meta, module, .. } = chunk_graph.chunk_table[host].kind else {
       return true;
     };
     meta != ChunkMeta::DynamicImported
-      || !self.dynamic_entry_namespace_is_observable(chunk_graph, target_chunk_idx, module)
-      || self.dynamic_entry_extraction_skip_reason(chunk_graph, target_chunk_idx, module).is_some()
+      || !self.dynamic_entry_namespace_is_observable(chunk_graph, host, module)
+      || self.dynamic_entry_extraction_skip_reason(chunk_graph, host, module).is_some()
   }
 
   /// Asserts the rule of `find_leaking_dynamic_entry_namespaces` on the final links: a pure dynamic

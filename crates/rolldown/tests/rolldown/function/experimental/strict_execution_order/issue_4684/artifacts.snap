@@ -6,8 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## dynamic.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_read, r as read } from "./main2.js";
+import { i as __esmMin, n as init_read, r as read } from "./main2.js";
 // dynamic.js
 function init_dynamic() {
 	return (init_dynamic = __esmMin((() => {
@@ -30,8 +29,8 @@ init_main();
 ## main2.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
 import nodeAssert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
 // setup.js
 var setup;
 function init_setup() {
@@ -63,15 +62,7 @@ function init_main() {
 		nodeAssert.strictEqual(globalThis.foo, "foo");
 	})))();
 }
-export { init_read as n, read as r, init_main as t };
-
-```
-
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
+export { __esmMin as i, init_read as n, read as r, init_main as t };
 
 ```
 
@@ -82,8 +73,7 @@ export { __esmMin as t };
 ### dynamic.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_read, r as read } from "./main2.js";
+import { i as __esmMin, n as init_read, r as read } from "./main2.js";
 // dynamic.js
 function init_dynamic() {
 	return (init_dynamic = __esmMin((() => {
@@ -106,8 +96,8 @@ init_main();
 ### main2.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
 import nodeAssert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
 // setup.js
 var setup;
 function init_setup() {
@@ -139,14 +129,6 @@ function init_main() {
 		nodeAssert.strictEqual(globalThis.foo, "foo");
 	})))();
 }
-export { init_read as n, read as r, init_main as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
+export { __esmMin as i, init_read as n, read as r, init_main as t };
 
 ```

@@ -6,11 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## bridge.js
 
 ```js
+// HIDDEN [\0rolldown/runtime.js]
 // bridge.js
 function x() {
 	return 1;
 }
-export { x as t };
+export { __esmMin as n, x as t };
 
 ```
 
@@ -27,8 +28,7 @@ if (namespaceCopy.x() !== 1 || namespaceCopy.common !== "common" || namespaceCop
 ## page-a.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as x } from "./bridge.js";
+import { n as __esmMin, t as x } from "./bridge.js";
 // common.js
 function init() {
 	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
@@ -55,8 +55,7 @@ export { _, _ as underscoreLeaf, common, common as commonLeaf, x };
 ## page-b.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as x } from "./bridge.js";
+import { n as __esmMin, t as x } from "./bridge.js";
 // page-b.js
 function init_page_b() {
 	return (init_page_b = __esmMin((() => {
@@ -65,14 +64,6 @@ function init_page_b() {
 	})))();
 }
 init_page_b();
-
-```
-
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
 
 ```
 

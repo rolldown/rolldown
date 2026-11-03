@@ -6,8 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## lazy.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_shared } from "./shared.js";
+import { n as init_shared, r as __esmMin } from "./shared.js";
 // values.js
 var LAZY;
 function init_values() {
@@ -32,8 +31,7 @@ export { read };
 ## main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_shared, t as LOCAL } from "./shared.js";
+import { n as init_shared, r as __esmMin, t as LOCAL } from "./shared.js";
 // main.js
 var local, load;
 function init_main() {
@@ -48,18 +46,10 @@ export { load, local };
 
 ```
 
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
-
-```
-
 ## shared.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // shared.js
 var LOCAL;
 function init_shared() {
@@ -67,7 +57,7 @@ function init_shared() {
 		LOCAL = "local";
 	})))();
 }
-export { init_shared as n, LOCAL as t };
+export { init_shared as n, __esmMin as r, LOCAL as t };
 
 ```
 
@@ -78,8 +68,7 @@ export { init_shared as n, LOCAL as t };
 ### lazy.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_shared } from "./shared.js";
+import { n as init_shared, r as __esmMin } from "./shared.js";
 // values.js
 var LAZY;
 function init_values() {
@@ -104,8 +93,7 @@ export { read };
 ### main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_shared, t as LOCAL } from "./shared.js";
+import { n as init_shared, r as __esmMin, t as LOCAL } from "./shared.js";
 // main.js
 var local, load;
 function init_main() {
@@ -120,18 +108,10 @@ export { load, local };
 
 ```
 
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
-
-```
-
 ### shared.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // shared.js
 var LOCAL;
 function init_shared() {
@@ -139,7 +119,7 @@ function init_shared() {
 		LOCAL = "local";
 	})))();
 }
-export { init_shared as n, LOCAL as t };
+export { init_shared as n, __esmMin as r, LOCAL as t };
 
 ```
 

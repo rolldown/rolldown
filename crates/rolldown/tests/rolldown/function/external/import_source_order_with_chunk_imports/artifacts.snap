@@ -36,9 +36,9 @@ import "./app.js";
 ### app.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
 import lib from "lib";
 import "polyfill";
+// HIDDEN [\0rolldown/runtime.js]
 // app.js
 function init_app() {
 	return (init_app = __esmMin((() => {
@@ -46,16 +46,15 @@ function init_app() {
 		globalThis.lib = lib;
 	})))();
 }
-export { init_app as t };
+export { __esmMin as n, init_app as t };
 
 ```
 
 ### index.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
 import "polyfill";
-import { t as init_app } from "./app.js";
+import { n as __esmMin, t as init_app } from "./app.js";
 // index.js
 function init_import_source_order_with_chunk_imports() {
 	return (init_import_source_order_with_chunk_imports = __esmMin((() => {
@@ -69,8 +68,7 @@ init_import_source_order_with_chunk_imports();
 ### other.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as init_app } from "./app.js";
+import { n as __esmMin, t as init_app } from "./app.js";
 // other.js
 function init_other() {
 	return (init_other = __esmMin((() => {
@@ -78,14 +76,6 @@ function init_other() {
 	})))();
 }
 init_other();
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
 
 ```
 

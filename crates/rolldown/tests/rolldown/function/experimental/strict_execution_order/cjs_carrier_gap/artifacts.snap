@@ -6,8 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
-import { t as init_p } from "./p.js";
+import { n as __esmMin, t as init_p } from "./p.js";
 // e.js
 console.log("E");
 // main.js
@@ -24,24 +23,6 @@ init_main();
 ## p.js
 
 ```js
-import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
-// c.js
-var require_c = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	console.log("C");
-	module.exports = {};
-}));
-function init_p() {
-	return (init_p = __esmMin((() => {
-		require_c();
-	})))();
-}
-export { init_p as t };
-
-```
-
-## rolldown-runtime.js
-
-```js
 // \0rolldown/runtime.js
 var __esmMin = (fn, res, err) => () => {
 	if (err) throw err[0];
@@ -52,15 +33,24 @@ var __esmMin = (fn, res, err) => () => {
 	}
 };
 var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
-export { __esmMin as n, __commonJSMin as t };
+// c.js
+var require_c = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	console.log("C");
+	module.exports = {};
+}));
+function init_p() {
+	return (init_p = __esmMin((() => {
+		require_c();
+	})))();
+}
+export { __esmMin as n, init_p as t };
 
 ```
 
 ## second.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
-import { t as init_p } from "./p.js";
+import { n as __esmMin, t as init_p } from "./p.js";
 // second.js
 function init_second() {
 	return (init_second = __esmMin((() => {
@@ -78,8 +68,7 @@ init_second();
 ### main.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
-import { t as init_p } from "./p.js";
+import { n as __esmMin, t as init_p } from "./p.js";
 // e.js
 function init_e() {
 	return (init_e = __esmMin((() => {
@@ -101,24 +90,6 @@ init_main();
 ### p.js
 
 ```js
-import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
-// c.js
-var require_c = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	console.log("C");
-	module.exports = {};
-}));
-function init_p() {
-	return (init_p = __esmMin((() => {
-		require_c();
-	})))();
-}
-export { init_p as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
 // \0rolldown/runtime.js
 var __esmMin = (fn, res, err) => () => {
 	if (err) throw err[0];
@@ -129,15 +100,24 @@ var __esmMin = (fn, res, err) => () => {
 	}
 };
 var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
-export { __esmMin as n, __commonJSMin as t };
+// c.js
+var require_c = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	console.log("C");
+	module.exports = {};
+}));
+function init_p() {
+	return (init_p = __esmMin((() => {
+		require_c();
+	})))();
+}
+export { __esmMin as n, init_p as t };
 
 ```
 
 ### second.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
-import { t as init_p } from "./p.js";
+import { n as __esmMin, t as init_p } from "./p.js";
 // second.js
 function init_second() {
 	return (init_second = __esmMin((() => {

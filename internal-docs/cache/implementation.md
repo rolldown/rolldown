@@ -75,7 +75,11 @@ Related non-`Cache`-named structures in the same file: `ViteMetadata`,
 
 `InvalidateJsSideCache` is wired in `crates/rolldown_binding/src/utils/normalize_binding_options.rs`; on the JS side
 (`packages/rolldown/src/utils/bindingify-input-options.ts`) it is bound to
-`PluginContextData.clear`. Calling it clears the JS-side `PluginContextData`.
+`PluginContextData.clear`. Calling it clears `renderedChunkMeta`,
+`loadModulePromiseMap` and `outputCodeCache`, not the other `PluginContextData` maps.
+`Bundle::bundle_write` and `Bundle::bundle_generate` call it on every exit, and
+`Bundler::with_cached_bundle` calls it again before creating the next bundle, because a
+failed scan never reaches the output stage.
 
 ### 6. Watch-mode filesystem cache
 

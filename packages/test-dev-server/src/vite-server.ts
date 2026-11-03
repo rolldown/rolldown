@@ -49,7 +49,13 @@ DevEngine.create = ((...args: Parameters<typeof DevEngine.create>) => {
   const [inputOptions, outputOptions, devOptions] = args;
   return originalDevEngineCreate(inputOptions, outputOptions, {
     ...devOptions,
-    watch: { ...getDevWatchOptionsForCi(), ...devOptions?.watch },
+    watch: {
+      ...devOptions?.watch,
+      watcher: {
+        ...getDevWatchOptionsForCi().watcher,
+        ...devOptions?.watch?.watcher,
+      },
+    },
   });
 }) as typeof DevEngine.create;
 

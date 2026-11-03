@@ -184,7 +184,7 @@ catalogs:
       version: 0.3.31
     '@napi-rs/cli':
       specifier: ^3.10.0
-      version: 3.10.10
+      version: 3.10.11
     '@napi-rs/wasm-runtime':
       specifier: 1.2.6
       version: 1.2.6
@@ -751,7 +751,7 @@ importers:
         version: 2.0.0-beta.2
       '@napi-rs/cli':
         specifier: 'catalog:'
-        version: 3.10.10(@emnapi/core@2.0.0-beta.2)(@emnapi/runtime@2.0.0-beta.2)(@types/node@24.10.3)(emnapi@2.0.0-beta.2(node-addon-api@8.9.2))(supports-color@10.2.2)
+        version: 3.10.11(@emnapi/core@2.0.0-beta.2)(@emnapi/runtime@2.0.0-beta.2)(@types/node@24.10.3)(emnapi@2.0.0-beta.2(node-addon-api@8.9.2))(supports-color@10.2.2)
       '@napi-rs/wasm-runtime':
         specifier: 'catalog:'
         version: 1.2.6(@emnapi/core@2.0.0-beta.2)(@emnapi/runtime@2.0.0-beta.2)
@@ -3180,8 +3180,8 @@ packages:
     resolution: {integrity: sha512-47XIizs9XZXvuJgoaJUIE2lFoID8ugvc0jzSHP+Ptfk8nTbnR8g788wv48N03Kx0UkAv559HWRQ3yzOgzlRNUA==}
     engines: {node: '>= 18'}
 
-  '@napi-rs/cli@3.10.10':
-    resolution: {integrity: sha512-vkeG0mchlQOEZ6DH9CVczAEQwEy/ZA5by94/3Dv3EakWMDIgaDKg4tzPmh75khkib1/m51Q1invNzFJXj2ZPTg==}
+  '@napi-rs/cli@3.10.11':
+    resolution: {integrity: sha512-hOu+e0NJ+1OdssvTchb+83V3n14Iay0cNvSYNYxUTmVn2RoPVxmOjig+awwOzaAaquB/is0xjd2URmRRcG/FuQ==}
     engines: {node: ^20.17.0 || ^22.13.0 || >= 23.5.0}
     hasBin: true
     peerDependencies:
@@ -11274,7 +11274,7 @@ snapshots:
 
   '@msgpack/msgpack@3.1.3': {}
 
-  '@napi-rs/cli@3.10.10(@emnapi/core@2.0.0-beta.2)(@emnapi/runtime@2.0.0-beta.2)(@types/node@24.10.3)(emnapi@2.0.0-beta.2(node-addon-api@8.9.2))(supports-color@10.2.2)':
+  '@napi-rs/cli@3.10.11(@emnapi/core@2.0.0-beta.2)(@emnapi/runtime@2.0.0-beta.2)(@types/node@24.10.3)(emnapi@2.0.0-beta.2(node-addon-api@8.9.2))(supports-color@10.2.2)':
     dependencies:
       '@inquirer/prompts': 8.5.2(@types/node@24.10.3)
       '@napi-rs/cross-toolchain': 1.0.3(supports-color@10.2.2)

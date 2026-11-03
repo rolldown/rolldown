@@ -213,4 +213,10 @@ export interface ChecksOptions {
    * @default true
    * */
   shimmedExport?: boolean;
+
+  /**
+   * Whether to emit warnings when an import uses the legacy `assert` keyword instead of `with`.
+   * @default true
+   * */
+  deprecatedImportAssertion?: boolean;
 }

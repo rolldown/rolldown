@@ -1,4 +1,4 @@
-use crate::{ConstExportMeta, ImportAttribute, SourcemapChainElement};
+use crate::{ConstExportMeta, SourcemapChainElement};
 use arcstr::ArcStr;
 use bitflags::bitflags;
 use oxc::{
@@ -179,7 +179,6 @@ pub struct EcmaView {
   /// Used by the finalizer to inline `Direction.Up` style accesses across modules.
   /// Contains both const and regular enums.
   pub enum_member_value_map: FxHashMap<CompactStr, FxHashMap<CompactStr, ConstExportMeta>>,
-  pub import_attribute_map: FxHashMap<ImportRecordIdx, ImportAttribute>,
   /// Use `Box` since it is rarely used also it could reduce the size of `EcmaView`, .
   pub json_module_none_self_reference_included_symbol: Option<Box<FxHashSet<SymbolRef>>>,
   /// Import record indices for `module.exports = require(...)` patterns.

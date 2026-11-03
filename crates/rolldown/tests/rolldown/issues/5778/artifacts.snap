@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import a, { b, c, d } from "@meojs/cfgs/package.json" with { type: "json", foo: "bar", tag: "baz" };
+import a, { b, c, d } from "@meojs/cfgs/package.json" with { foo: "bar", tag: "baz", type: "json" };
 import "foo" with { type: "foo" };
 // main.js
 console.log(`cfgsPackageJson: `, a, b, c, d);

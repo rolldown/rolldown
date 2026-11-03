@@ -366,7 +366,7 @@ describe('MagicString', () => {
       assert.deepEqual(m1, m2);
     });
 
-    it.skip('should recover original names', () => {
+    it('should recover original names', () => {
       const s = new MagicString('function Foo () {}');
 
       s.overwrite(9, 12, 'Bar', { storeName: true });

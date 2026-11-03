@@ -9,12 +9,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region shared/common.js
+// shared/common.js
 var import_common = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "./assets/common-RzbKAZGz.png";
 })))());
 console.log(import_common.default);
-//#endregion
 
 ```
 

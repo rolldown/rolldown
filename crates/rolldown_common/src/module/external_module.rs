@@ -7,8 +7,8 @@ use crate::{
 };
 use arcstr::ArcStr;
 use oxc_index::IndexVec;
+use rolldown_std_utils::relative_path_as_js_specifier;
 use rolldown_utils::concat_string;
-use sugar_path::SugarPath;
 
 #[derive(Debug, Clone)]
 pub struct ExternalModule {
@@ -80,18 +80,12 @@ impl ExternalModule {
       target = &target[3..];
       importer = concat_string!("_/", importer);
     }
-    let relative_path = Path::new(target).relative(
-      importer
-        .as_path()
+    relative_path_as_js_specifier(
+      target,
+      Path::new(&importer)
         .parent()
         .expect("the importer chunk preliminary filename should have a parent directory"),
-    );
-    if relative_path.starts_with("..") {
-      relative_path.to_slash_lossy().into()
-    } else if relative_path.as_os_str().is_empty() {
-      ".".into()
-    } else {
-      concat_string!("./", relative_path.to_slash_lossy()).into()
-    }
+    )
+    .into()
   }
 }

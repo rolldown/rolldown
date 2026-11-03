@@ -11,11 +11,9 @@ class A {
   constructor() {
 this.module = (function() {
 
-
-//#region main.js
+// main.js
 	var main_default = "default";
 
-//#endregion
 return main_default;
 })();
   }

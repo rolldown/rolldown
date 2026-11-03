@@ -12,6 +12,7 @@ describe('lazy-shared-module', () => {
     // server rebuilds main.js around the fetched proxies. No assertions here
     // — the bug only shows on the rebuilt output.
     await page.goto(serverUrl, { waitUntil: 'domcontentloaded' });
+    await waitForBuildStable();
     await page.click('#shared-module-btn');
     await expect.poll(() => page.textContent('#shared-module-status')).toBe('done');
 
@@ -60,5 +61,31 @@ describe('lazy-shared-module', () => {
     expect(log).toContain('sel.foo = foo_value_updated');
     expect(log).toContain('sel.bar = bar_value_updated');
     expect(log).not.toContain('UNDEFINED');
+  });
+
+  // After boot, every lazy route reaches the page as factories, and the runtime runs a module
+  // once by its id. A route that was visited before the reload must not come back as built
+  // code: that code would run `store.js` a second time and give the route its own `store`.
+  test('a shared module runs once when a visited route loads after a new one', async () => {
+    await page.goto(serverUrl, { waitUntil: 'domcontentloaded' });
+    await waitForBuildStable();
+    await page.click('#shared-module-a-btn');
+    await expect.poll(() => page.textContent('#shared-module-stores')).toBe('a:1 b:- same:false');
+    await waitForBuildStable();
+
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.click('#shared-module-b-btn');
+    await expect.poll(() => page.textContent('#shared-module-stores')).toBe('a:- b:1 same:false');
+    await waitForBuildStable();
+    await page.click('#shared-module-a-btn');
+    await expect.poll(() => page.textContent('#shared-module-stores')).not.toMatch(/a:-/);
+    await waitForBuildStable();
+
+    expect(await page.textContent('#shared-module-stores')).toBe('a:1 b:1 same:true');
+    expect(
+      await page.evaluate(
+        () => (globalThis as { __sharedModuleStoreRuns?: number }).__sharedModuleStoreRuns,
+      ),
+    ).toBe(1);
   });
 });

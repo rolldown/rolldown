@@ -9,6 +9,12 @@ class Module {
    * @type {string}
    */
   id;
+  /**
+   * A CommonJS module registers its raw `module.exports`; `requestLazy` builds the `__toESM`
+   * view on top. ESM registers its namespace, used as is.
+   * @type {boolean}
+   */
+  isCommonJs = false;
 
   /**
    * @param {string} id
@@ -23,9 +29,27 @@ class Module {
 }
 
 /**
- * @typedef {{ type: 'hmr:module-registered', modules: string[] }} DevRuntimeMessage
- * @typedef {{ send(message: DevRuntimeMessage): void }} Messenger
+ * Compiler-emitted module-graph delta — topology (static + dynamic edges).
+ * `ids[0, localCount)` are the modules this payload carries; `ids[localCount, …)` are foreign edge targets.
+ * `edges[i]` / `dynamicEdges[i]` are the static / dynamic-`import()` out-edges of `ids[i]`.
+ * `bindings[i][j]` are the export names `ids[i]` imports through `edges[i][j]`. `bindings` holds
+ * only some rows; a missing row, or a missing or `null` entry, means the whole namespace.
+ * `dynamicEdges` also holds only some rows; a missing row means no dynamic edges.
+ * `stamps[i]` is the rebuild stamp of `ids[i]`; a missing row means 0.
+ * `entries` lists the rows whose module is an entry.
+ * @typedef {{ ids: string[], localCount: number, edges: number[][], bindings?: Record<number, (string[] | null)[]>, dynamicEdges?: Record<number, number[]>, stamps?: Record<number, number>, entries?: number[] }} ModuleGraphDelta
+ * @typedef {{ createModuleHotContext(moduleId: string): any, onModuleCacheRemoval(moduleId: string): void }} DevRuntimeHooks
  */
+
+export class MissingFactoryError extends Error {
+  /**
+   * @param {string} id
+   */
+  constructor(id) {
+    super(`No factory registered for module ${id}`);
+    this.id = id;
+  }
+}
 
 export class DevRuntime {
   /**
@@ -35,45 +59,231 @@ export class DevRuntime {
   clientId;
 
   /**
-   * @param {Messenger} messenger
    * @param {string} clientId
    */
-  constructor(messenger, clientId) {
-    this.messenger = messenger;
+  constructor(clientId) {
     this.clientId = clientId;
   }
 
   /**
-   * @type {Record<string, Module>}
+   * Static import edges from `registerGraph` — entries persist across `removeModuleCache`
+   * and change only by replacement from a newer payload (last write wins).
+   * `bindings` is the payload row as sent; `getImportedBindings` resolves a missing entry.
+   * @type {Map<string, { edges: string[], bindings: (string[] | null)[] | undefined }>}
    */
-  modules = {};
+  staticImports = new Map();
   /**
-   * @param {string} _moduleId
+   * Reverse index over the static imports.
+   * @type {Map<string, Set<string>>}
    */
-  createModuleHotContext(_moduleId) {
-    throw new Error('createModuleHotContext should be implemented');
-  }
+  importers = new Map();
   /**
-   * @param {[string, string][]} _boundaries
+   * Dynamic `import()` edges from `registerGraph`, keyed by importer — mirror of
+   * `staticImports` for the dynamic reverse index.
+   * @type {Map<string, { edges: string[] }>}
    */
-  applyUpdates(_boundaries) {
-    throw new Error('applyUpdates should be implemented');
+  dynamicImports = new Map();
+  /**
+   * Reverse index over the dynamic imports.
+   * @type {Map<string, Set<string>>}
+   */
+  dynamicImporters = new Map();
+  /** @type {Set<string>} */
+  entries = new Set();
+  /**
+   * The module cache. Membership means "this module's side effects ran in this tab" —
+   * registration is emitted ahead of every module body, and nothing un-registers on
+   * unwind, so a factory that throws mid-body stays registered. A `Map` rather than a
+   * plain object: HMR eviction deletes entries, and a `delete` on an object drops V8
+   * into dictionary mode, taxing every later lookup on the hottest read path.
+   * @type {Map<string, Module>}
+   */
+  moduleCache = new Map();
+  /**
+   * Re-runnable factories from HMR patches and lazy chunks. The initial bundle stays
+   * scope-hoisted and contributes none.
+   * @type {Map<string, (id: string) => void>}
+   */
+  factories = new Map();
+  /**
+   * A late payload (a slow lazy chunk after an HMR patch) must not replace newer rows or
+   * factories.
+   * @type {Map<string, number>}
+   */
+  rowStamps = new Map();
+  /** @type {Map<string, number>} */
+  factoryStamps = new Map();
+  /**
+   * Installed by the dev client at boot. The runtime is a store + executor and makes
+   * no HMR decisions; accepting, disposing, and reloading live behind these hooks.
+   * @type {DevRuntimeHooks | null}
+   */
+  hooks = null;
+
+  /**
+   * @param {ModuleGraphDelta} delta
+   */
+  registerGraph(delta) {
+    for (let i = 0; i < delta.localCount; i++) {
+      const id = delta.ids[i];
+      if (delta.stamps) {
+        const stamp = delta.stamps[i] ?? 0;
+        if (stamp < (this.rowStamps.get(id) ?? 0)) continue;
+        this.rowStamps.set(id, stamp);
+      } else {
+        // A full-build chunk has no stamps. It runs its code right away, so its row always
+        // replaces the old one.
+        this.rowStamps.delete(id);
+      }
+      const edges = delta.edges[i].map((j) => delta.ids[j]);
+      for (const target of this.staticImports.get(id)?.edges ?? []) {
+        this.importers.get(target)?.delete(id);
+      }
+      for (const target of edges) {
+        let importerSet = this.importers.get(target);
+        if (!importerSet) {
+          importerSet = new Set();
+          this.importers.set(target, importerSet);
+        }
+        importerSet.add(id);
+      }
+      this.staticImports.set(id, { edges, bindings: delta.bindings?.[i] });
+
+      // Dynamic `import()` edges are maintained in a parallel reverse index with the same
+      // last-write-wins bookkeeping; `getImporters` unions the two.
+      const dynamicEdges = (delta.dynamicEdges?.[i] ?? []).map((j) => delta.ids[j]);
+      for (const target of this.dynamicImports.get(id)?.edges ?? []) {
+        this.dynamicImporters.get(target)?.delete(id);
+      }
+      for (const target of dynamicEdges) {
+        let importerSet = this.dynamicImporters.get(target);
+        if (!importerSet) {
+          importerSet = new Set();
+          this.dynamicImporters.set(target, importerSet);
+        }
+        importerSet.add(id);
+      }
+      this.dynamicImports.set(id, { edges: dynamicEdges });
+
+      if (delta.entries?.includes(i)) {
+        this.entries.add(id);
+      } else {
+        this.entries.delete(id);
+      }
+    }
   }
+
   /**
    * @param {string} id
-   * @param {{ exports: any }} exportsHolder
+   * @param {(id: string) => void} fn
+   * @param {number} [stamp]
    */
-  registerModule(id, exportsHolder) {
+  registerFactory(id, fn, stamp = 0) {
+    if (stamp < (this.factoryStamps.get(id) ?? 0)) return;
+    this.factoryStamps.set(id, stamp);
+    this.factories.set(id, fn);
+  }
+
+  /**
+   * @param {string} id
+   * @param {{ exports: any }} [exportsHolder]
+   * @param {boolean | 0 | 1} [isCommonJs]
+   */
+  registerModule(id, exportsHolder = { exports: {} }, isCommonJs = false) {
     const module = new Module(id);
     module.exportsHolder = exportsHolder;
-    this.modules[id] = module;
-    this.sendModuleRegisteredMessage(id);
+    module.isCommonJs = !!isCommonJs;
+    this.moduleCache.set(id, module);
   }
+
+  /**
+   * @param {string} id
+   * @returns {string[]}
+   */
+  getImporters(id) {
+    // Static ∪ dynamic importers — the boundary walk treats both kinds the same (parity
+    // with Vite `node.importers` / webpack `module.parents`). Deduped so a module that
+    // imports `id` both statically and via `import()` appears once.
+    const dynamic = this.dynamicImporters.get(id);
+    if (!dynamic || dynamic.size === 0) {
+      return [...(this.importers.get(id) ?? [])];
+    }
+    return [...new Set([...(this.importers.get(id) ?? []), ...dynamic])];
+  }
+
+  /**
+   * `"*"` means the whole namespace, an empty list a side-effect-only import, `undefined` no edge.
+   * @param {string} importer
+   * @param {string} id
+   * @returns {string[] | undefined}
+   */
+  getImportedBindings(importer, id) {
+    const record = this.staticImports.get(importer);
+    const j = record ? record.edges.indexOf(id) : -1;
+    const names = j === -1 ? undefined : (record?.bindings?.[j] ?? ['*']);
+    if (!this.dynamicImports.get(importer)?.edges.includes(id)) {
+      return names;
+    }
+    if (!names) return ['*'];
+    return names.includes('*') ? names : [...names, '*'];
+  }
+
+  /**
+   * @param {string} id
+   */
+  isEntry(id) {
+    return this.entries.has(id);
+  }
+
+  /**
+   * @param {string} id
+   */
+  isExecuted(id) {
+    return this.moduleCache.has(id);
+  }
+
+  /**
+   * @param {string} id
+   */
+  hasFactory(id) {
+    return this.factories.has(id);
+  }
+
+  /**
+   * Module-cache delete only — static imports and factories persist. Removal is what
+   * re-arms a cache-gated factory for `initModule`.
+   * @param {string} id
+   */
+  removeModuleCache(id) {
+    this.moduleCache.delete(id);
+    // `registerModule` installs a fresh namespace on every run, so a kept memo would hand a
+    // later `import()` the pre-edit exports forever.
+    this.lazyRequests.delete(id);
+    this.hooks?.onModuleCacheRemoval(id);
+  }
+
+  /**
+   * The one re-execution gate: registered → return the live exports; otherwise run the
+   * mapped factory (which registers itself first, then runs the body).
+   * @param {string} id
+   */
+  initModule(id) {
+    if (this.moduleCache.has(id)) {
+      return this.loadExports(id);
+    }
+    const factory = this.factories.get(id);
+    if (!factory) {
+      throw new MissingFactoryError(id);
+    }
+    factory(id);
+    return this.loadExports(id);
+  }
+
   /**
    * @param {string} id
    */
   loadExports(id) {
-    const module = this.modules[id];
+    const module = this.moduleCache.get(id);
     if (module) {
       return module.exportsHolder.exports;
     } else {
@@ -82,39 +292,98 @@ export class DevRuntime {
     }
   }
 
+  /** @type {Map<string, Promise<any>>} */
+  lazyRequests = new Map();
+
   /**
-   * __esmMin
+   * The entry point for a lazy `import()`. `id` is the module the boundary stands for;
+   * `proxyModuleId` is the boundary's own id, used only to load the chunk.
    *
-   * When `dedup` is truthy and `id` is already registered on the runtime,
-   * skip the factory: another lazy blob got there first. HMR patches pass
-   * no `dedup` so they always re-run the factory and replace the registered
-   * exports.
+   * Nothing is registered under the boundary id, deliberately. A cache entry with no factory
+   * behind it reads as "executed" to the HMR boundary walk, and `applyUpdate` turns an
+   * updated-but-factory-less module into a full page reload.
    *
-   * @type {<T>(id: string, fn: any, dedup: any, res: T) => () => T}
-   * @internal
+   * A rejection is memoized like any other outcome, matching `import()` of a module that
+   * threw. Retrying could not work anyway: a factory registers its module before running its
+   * body, so re-running `initModule` would return half-initialized exports as success.
+   *
+   * A CommonJS module resolves to its `__toESM` view, as in a production build. The runtime
+   * decides from the registration: the importer is compiled before the importee is in the
+   * graph. `isNodeMode` is the importer's choice, so the view is built per call, not memoized.
+   *
+   * @param {string} id
+   * @param {string} proxyModuleId
+   * @param {boolean | 0 | 1} [isNodeMode]
+   * @returns {Promise<any>}
    */
-  createEsmInitializer = (id, fn, dedup, res) => () => (
-    fn && (dedup && this.modules[id] ? (fn = 0) : (res = fn((fn = 0, id)))),
-    res
-  );
+  requestLazy(id, proxyModuleId, isNodeMode) {
+    let pending = this.lazyRequests.get(id);
+    if (!pending) {
+      // Factories outlive `removeModuleCache`, so an evicted module can be re-run without the
+      // server — and must be, since the memo went with the cache entry. `Promise.resolve` keeps
+      // a synchronous `initModule` throw from escaping the call site.
+      pending = this.isRunnableHere(id)
+        ? Promise.resolve().then(() => this.initModule(id))
+        : Promise.resolve()
+            .then(() => this.loadLazyChunk(proxyModuleId))
+            .then(() => this.initModule(id));
+      this.lazyRequests.set(id, pending);
+    }
+
+    return pending.then((exports) =>
+      this.moduleCache.get(id)?.isCommonJs ? this.__toESM(exports, isNodeMode) : exports,
+    );
+  }
+
   /**
-   * __commonJSMin
-   *
-   * Same dedup gate as createEsmInitializer. With `dedup` truthy and `id`
-   * registered, reuse the registered exports object; otherwise run the
-   * factory.
-   *
-   * @type {<T extends { exports: any }>(id: string, cb: any, dedup: any, mod: { exports: any }, registered: any) => () => T}
+   * Whether `id` can run without the server: every module its run reaches through static
+   * imports already ran or has a factory. A factory alone is not enough, because a patch
+   * can ship a module without the static imports it never needed (#11028).
    * @internal
+   * @param {string} id
    */
-  createCjsInitializer = (id, cb, dedup, mod, registered) => () => (
-    mod || (
-      dedup && (registered = this.modules[id])
-        ? (mod = { exports: registered.exports })
-        : cb((mod = { exports: {} }).exports, mod, id)
-    ),
-    mod.exports
-  );
+  isRunnableHere(id) {
+    const seen = new Set([id]);
+    const queue = [id];
+    for (const current of queue) {
+      if (this.moduleCache.has(current)) continue;
+      if (!this.factories.has(current)) return false;
+      for (const dep of this.staticImports.get(current)?.edges ?? []) {
+        if (!seen.has(dep)) {
+          seen.add(dep);
+          queue.push(dep);
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Loads the lazy chunk behind a lazy boundary. The chunk only registers factories;
+   * `requestLazy` runs the module afterwards.
+   *
+   * The dev server owns the lazy endpoint, so a server that serves it at another URL (for
+   * example under a public base path) overrides this method.
+   *
+   * @param {string} proxyModuleId
+   * @returns {Promise<unknown>}
+   */
+  loadLazyChunk(proxyModuleId) {
+    return import(
+      /* @vite-ignore */ `/@vite/lazy?id=${encodeURIComponent(proxyModuleId)}&clientId=${this.clientId}`
+    );
+  }
+
+  /**
+   * @param {string} moduleId
+   */
+  createModuleHotContext(moduleId) {
+    if (this.hooks) {
+      return this.hooks.createModuleHotContext(moduleId);
+    }
+    throw new Error('createModuleHotContext requires installed hooks or an override');
+  }
+
   /** @internal */
   // @ts-expect-error The variable will be injected at build time.
   __toESM = __toESM;
@@ -124,52 +393,7 @@ export class DevRuntime {
   /** @internal */
   // @ts-expect-error The variable will be injected at build time.
   __exportAll = __exportAll;
-  /**
-   * @param {boolean} [isNodeMode]
-   * @returns {(mod: any) => any}
-   * @internal
-   */
-  // @ts-expect-error The variable will be injected at build time.
-  __toDynamicImportESM = (isNodeMode) => (mod) => __toESM(mod.default, isNodeMode);
   /** @internal */
   // @ts-expect-error The variable will be injected at build time.
   __reExport = __reExport;
-
-  sendModuleRegisteredMessage = (() => {
-    const cache = /** @type {string[]} */ ([]);
-    let timeout = /** @type {NodeJS.Timeout | null} */ (null);
-    let timeoutSetLength = 0;
-    const self = this;
-
-    /**
-     * @param {string} module
-     */
-    return function sendModuleRegisteredMessage(module) {
-      if (!self.messenger) {
-        return;
-      }
-      cache.push(module);
-      if (!timeout) {
-        timeout = setTimeout(
-          /** @returns void */
-          function flushCache() {
-            if (cache.length > timeoutSetLength) {
-              timeout = setTimeout(flushCache);
-              timeoutSetLength = cache.length;
-              return;
-            }
-
-            self.messenger.send({
-              type: 'hmr:module-registered',
-              modules: cache,
-            });
-            cache.length = 0;
-            timeout = null;
-            timeoutSetLength = 0;
-          },
-        );
-        timeoutSetLength = cache.length;
-      }
-    };
-  })();
 }

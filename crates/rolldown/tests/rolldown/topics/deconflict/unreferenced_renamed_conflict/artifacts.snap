@@ -9,9 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 function test(unused$1) {
 	return unused$1 + "-test";
 }
-//#endregion
-//#region main.js
+// main.js
 console.log(test("x"), "from-module-b");
-//#endregion
 
 ```

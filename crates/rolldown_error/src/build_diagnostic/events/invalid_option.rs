@@ -5,6 +5,7 @@ use crate::{types::diagnostic_options::DiagnosticOptions, types::event_kind::Eve
 pub enum InvalidOptionType {
   UnsupportedInlineDynamicFormat(String),
   UnsupportedCodeSplittingFormat(String),
+  UnsupportedDevModeFormat(String),
   InvalidOutputFile,
   OutputFileWithoutName(String),
   InvalidOutputDirOption,
@@ -17,10 +18,13 @@ pub enum InvalidOptionType {
   InvalidFilenameSubstitution { name: String, pattern_name: String },
   CodeSplittingDisabledWithMultipleInputs,
   CodeSplittingDisabledWithPreserveModules,
+  ManglePropertiesWithMultipleChunks,
   HashLengthTooLong { pattern_name: String, received: usize, max: usize },
   HashLengthTooShort { pattern_name: String, received: usize, min: usize, chunk_count: u32 },
   InvalidEmittedFileName(String),
   NulByteInFilename { pattern_name: String },
+  InlineCommonChunksInvalidMaxSize(String),
+  InlineCommonChunksRequirement(&'static str),
 }
 
 #[derive(Debug)]
@@ -40,6 +44,9 @@ impl BuildEvent for InvalidOption {
         }
         InvalidOptionType::UnsupportedCodeSplittingFormat(format) => {
           format!("Invalid value \"{format}\" for option \"output.format\" - UMD and IIFE are not supported for code-splitting builds. For single entry builds, you can set `output.codeSplitting` to `false` to disable code-splitting.")
+        }
+        InvalidOptionType::UnsupportedDevModeFormat(format) => {
+          format!("Invalid value \"{format}\" for option \"output.format\" - \"experimental.devMode\" only supports the \"esm\" format. Set \"output.format\" to \"esm\" when using dev mode.")
         }
         InvalidOptionType::InvalidOutputFile => "Invalid value for option \"output.file\" - When building multiple chunks, the \"output.dir\" option must be used, not \"output.file\". You may set `output.codeSplitting` to `false` when using dynamic imports.".to_string(),
         InvalidOptionType::OutputFileWithoutName(file) => {
@@ -87,7 +94,7 @@ impl BuildEvent for InvalidOption {
         InvalidOptionType::InvalidFilenameSubstitution { name, pattern_name } => {
           format!(
             "Invalid substitution \"{name}\" for placeholder \"[name]\" in \"{pattern_name}\" pattern, \
-             can be neither absolute nor relative paths."
+             can be neither absolute nor relative path."
           )
         }
         InvalidOptionType::CodeSplittingDisabledWithMultipleInputs => {
@@ -96,17 +103,24 @@ impl BuildEvent for InvalidOption {
         InvalidOptionType::CodeSplittingDisabledWithPreserveModules => {
           "Invalid value \"false\" for option \"output.codeSplitting\" - this option is not supported for \"output.preserveModules\".".to_string()
         }
+        InvalidOptionType::ManglePropertiesWithMultipleChunks => "Invalid value for option \"output.minify.mangleProps\" - property mangling is currently supported only when a build generates one JavaScript chunk. Use a single-chunk build or remove \"mangleProps\".".to_string(),
         InvalidOptionType::HashLengthTooLong { pattern_name, received, max } => {
-          format!("Hashes cannot be longer than {max} characters, received {received}. Check the `{pattern_name}` option.")
+          format!("Hashes cannot be longer than {max} characters, received {received}. Check the \"{pattern_name}\" option.")
         }
         InvalidOptionType::HashLengthTooShort { pattern_name, received, min, chunk_count } => {
-          format!("To generate hashes for this number of chunks (currently {chunk_count}), you need a minimum hash size of {min}, received {received}. Check the `{pattern_name}` option.")
+          format!("To generate hashes for this number of chunks (currently {chunk_count}), you need a minimum hash size of {min}, received {received}. Check the \"{pattern_name}\" option.")
         }
         InvalidOptionType::InvalidEmittedFileName(name) => {
           format!("The \"fileName\" or \"name\" properties of emitted chunks and assets must be strings that are neither absolute nor relative paths, received \"{name}\".")
         }
         InvalidOptionType::NulByteInFilename { pattern_name } => {
           format!("The \"{pattern_name}\" pattern (or the value returned from the function) would result in a filename with invalid null byte(s) (\\0). This is usually caused by using virtual module IDs (which start with \\0) directly in filenames. Use the module ID without the \\0 prefix, or filter out virtual modules from chunk.moduleIds.")
+        }
+        InvalidOptionType::InlineCommonChunksInvalidMaxSize(value) => {
+          format!("Invalid value {value} for option \"output.codeSplitting.experimentalInlineCommonChunks.maxSize\" - it must be a non-negative safe integer or `Infinity` (`0` disables the feature).")
+        }
+        InvalidOptionType::InlineCommonChunksRequirement(requirement) => {
+          format!("Invalid option combination for \"output.codeSplitting.experimentalInlineCommonChunks\" - a `maxSize` greater than 0 requires {requirement}.")
         }
     }
   }

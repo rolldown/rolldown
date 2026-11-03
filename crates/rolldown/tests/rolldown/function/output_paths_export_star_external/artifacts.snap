@@ -1,0 +1,41 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+export * from "./mapped-ext.js";
+
+```
+
+# Variant: esm: [format: Esm]
+
+## Assets
+
+### main.js
+
+```js
+export * from "./mapped-ext.js";
+
+```
+
+# Variant: cjs: [format: Cjs]
+
+## Assets
+
+### main.js
+
+```js
+var ext_mod = require("./mapped-ext.js");
+Object.keys(ext_mod).forEach(function(k) {
+	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function() {
+			return ext_mod[k];
+		}
+	});
+});
+
+```

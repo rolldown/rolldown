@@ -1,5 +1,5 @@
 use crate::{
-  HookResolveIdArgs, PluginDriver,
+  HookResolveIdArgs, HookResolveIdOutput, PluginDriver,
   types::{custom_field::CustomField, hook_resolve_id_skipped::HookResolveIdSkipped},
 };
 use nodejs_built_in_modules::is_nodejs_builtin_module;
@@ -47,6 +47,27 @@ pub fn infer_module_def_format(
   ModuleDefFormat::Unknown
 }
 
+/// Builds the `ResolvedId` for an id a plugin resolved.
+fn resolved_id_from_hook_output<Fs: FileSystem>(
+  resolver: &Resolver<Fs>,
+  r: HookResolveIdOutput,
+) -> anyhow::Result<ResolvedId> {
+  let package_json = r
+    .package_json_path
+    .as_ref()
+    .map(|p| resolver.try_get_package_json_or_create(p.as_path()))
+    .transpose()?;
+  Ok(ResolvedId {
+    module_def_format: infer_module_def_format(r.id.as_str(), package_json.as_ref()),
+    id: ModuleId::new(r.id),
+    external: r.external.unwrap_or_default(),
+    normalize_external_id: r.normalize_external_id,
+    side_effects: r.side_effects,
+    package_json,
+    ..Default::default()
+  })
+}
+
 #[expect(clippy::too_many_arguments)]
 pub async fn resolve_id_with_plugins<Fs: FileSystem>(
   resolver: &Resolver<Fs>,
@@ -73,20 +94,7 @@ pub async fn resolve_id_with_plugins<Fs: FileSystem>(
       )
       .await?
     {
-      let package_json = r
-        .package_json_path
-        .as_ref()
-        .map(|p| resolver.try_get_package_json_or_create(p.as_path()))
-        .transpose()?;
-      return Ok(Ok(ResolvedId {
-        module_def_format: infer_module_def_format(r.id.as_str(), package_json.as_ref()),
-        id: ModuleId::new(r.id),
-        external: r.external.unwrap_or_default(),
-        normalize_external_id: r.normalize_external_id,
-        side_effects: r.side_effects,
-        package_json,
-        ..Default::default()
-      }));
+      return Ok(Ok(resolved_id_from_hook_output(resolver, r)?));
     }
   }
   // Run plugin resolve_id first, if it is None use internal resolver as fallback
@@ -103,20 +111,7 @@ pub async fn resolve_id_with_plugins<Fs: FileSystem>(
     )
     .await?
   {
-    let package_json = r
-      .package_json_path
-      .as_ref()
-      .map(|p| resolver.try_get_package_json_or_create(p.as_path()))
-      .transpose()?;
-    return Ok(Ok(ResolvedId {
-      module_def_format: infer_module_def_format(r.id.as_str(), package_json.as_ref()),
-      id: ModuleId::new(r.id),
-      external: r.external.unwrap_or_default(),
-      normalize_external_id: r.normalize_external_id,
-      side_effects: r.side_effects,
-      package_json,
-      ..Default::default()
-    }));
+    return Ok(Ok(resolved_id_from_hook_output(resolver, r)?));
   }
 
   // Auto external http url or data url

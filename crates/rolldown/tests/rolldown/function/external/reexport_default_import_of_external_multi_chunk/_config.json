@@ -1,0 +1,12 @@
+{
+  "_comment": "https://github.com/rolldown/rolldown/issues/10069 - two entries reach the same external through the same eliminated re-export shim, and a third only imports a name from it. Each cjs chunk emits its own `require`, so each decides the interop wrapper on its own. The two default-importing chunks wrap; `named-user` must not, because it holds no observer of the external as an ES module and `__toESM` is not identity- or descriptor-transparent (see `chunk_recorded_external_interop`). `_test.mjs` asserts all three read the right values either way.",
+  "config": {
+    "input": [
+      { "name": "default-user", "import": "./default-user.js" },
+      { "name": "another-default-user", "import": "./another-default-user.js" },
+      { "name": "named-user", "import": "./named-user.js" }
+    ],
+    "external": ["node:https"],
+    "format": "cjs"
+  }
+}

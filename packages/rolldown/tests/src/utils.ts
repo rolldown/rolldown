@@ -8,6 +8,18 @@ import type {
   RolldownOutput as RollupOutput,
 } from 'rolldown';
 
+/** `true` when the suite runs against the WASI binding, set by the `wasi` CI job and `just test-wasi`; every test it skips states its own reason. */
+export const isWasiTest = process.env.ROLLDOWN_WASI_TEST === '1';
+
+/**
+ * @description
+ * Matches a reference id returned by `PluginContext.emitFile`.
+ *
+ * A reference id is guaranteed to be made of characters that an identifier can
+ * contain.
+ */
+export const REFERENCE_ID_REGEX = /^[$\w]+$/;
+
 /**
  * @description
  * - Get the absolute path to the root of the workspace. The root is always the directory containing the root `Cargo.toml`, `package.json`, `pnpm-workspace.yaml` etc.
@@ -35,6 +47,14 @@ export function getOutputAsset(output: RollupOutput): RolldownOutputAsset[] {
 
 export function getOutputFileNames(output: RollupOutput) {
   return output.output.map((chunk) => chunk.fileName).sort();
+}
+
+export function getOutputSourcemapFilenames(output: RollupOutput) {
+  return output.output
+    .filter((chunk) => chunk.type === 'chunk')
+    .map((chunk) => chunk.sourcemapFileName)
+    .filter((filename) => filename !== null)
+    .sort((a, b) => a.localeCompare(b));
 }
 
 export function getOutputAssetNames(output: RollupOutput) {

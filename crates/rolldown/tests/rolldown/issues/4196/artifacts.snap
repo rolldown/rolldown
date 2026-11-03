@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 console.log(1);
 function main_default() {
 	console.log({
@@ -14,7 +14,6 @@ function main_default() {
 		NaN: NaN
 	});
 }
-//#endregion
 export { main_default as default };
 
 ```

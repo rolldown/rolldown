@@ -15,11 +15,10 @@ exports.v4 = require_v4.default;
 ## v4.js
 
 ```js
-//#region v4.ts
+// v4.ts
 function v4() {
 	return "uuid-here";
 }
-//#endregion
 exports.default = v4;
 
 ```

@@ -21,7 +21,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.ts
+// entry.ts
 const { ...local_const } = {};
 let { ...local_let } = {};
 var { ...local_var } = {};
@@ -48,6 +48,5 @@ for ({...x} = x; 0;);
 console.log({...x} = x);
 console.log({x, ...xx} = { x });
 console.log({x: {...xx}} = { x });
-//#endregion
 
 ```

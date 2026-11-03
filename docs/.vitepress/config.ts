@@ -35,6 +35,7 @@ const sidebarForGuide: DefaultTheme.SidebarItem[] = [
       { text: 'Directives', link: '/in-depth/directives.md' },
       { text: 'Automatic Code Splitting', link: '/in-depth/automatic-code-splitting.md' },
       { text: 'Manual Code Splitting', link: '/in-depth/manual-code-splitting.md' },
+      { text: 'Inline Common Chunks', link: '/in-depth/inline-common-chunks.md' },
       { text: 'Bundling CJS', link: '/in-depth/bundling-cjs.md' },
       {
         text: 'Non ESM Output Formats',
@@ -269,6 +270,8 @@ const config = defineConfig({
     ['meta', { name: 'twitter:site', content: '@rolldown_rs' }],
   ],
 
+  ignoreDeadLinks: true,
+
   themeConfig: {
     variant: 'rolldown',
     search: {
@@ -276,15 +279,18 @@ const config = defineConfig({
       options: {
         appId: process.env.ALGOLIA_APP_ID || '',
         apiKey: process.env.ALGOLIA_API_KEY || '',
+        // DocSearch 5 requires `indices`; `indexName` remains for VitePress compatibility.
+        // VitePress types only declare `indexName`, so the extra field is asserted.
         indexName: 'rolldown',
-      },
+        indices: ['rolldown'],
+      } as DefaultTheme.AlgoliaSearchOptions & { indices: string[] },
     },
 
-    banner: {
-      id: 'viteplus-alpha',
-      text: 'Announcing Vite+ Alpha: Open source. Unified. Next-gen.',
-      url: 'https://voidzero.dev/posts/announcing-vite-plus-alpha?utm_source=rolldown&utm_content=top_banner',
-    },
+    // banner: {
+    //   id: 'viteplus-alpha',
+    //   text: 'Announcing Vite+ Alpha: Open source. Unified. Next-gen.',
+    //   url: 'https://voidzero.dev/posts/announcing-vite-plus-alpha?utm_source=rolldown&utm_content=top_banner',
+    // },
 
     // https://vitepress.dev/reference/default-theme-config
     nav: [

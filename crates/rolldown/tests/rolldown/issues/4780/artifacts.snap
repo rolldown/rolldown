@@ -6,13 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#endregion
-//#region main.js
+// main.js
 const foo = {
 	bar: { 500: 500 }["500"],
 	foo: { k: { v: 0 } }.k.v
 };
-//#endregion
 export { foo };
 
 ```

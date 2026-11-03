@@ -6,13 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region deep.js
+// deep.js
 function sleep(ms) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 await sleep(100);
-//#endregion
-//#region middle.js
+// middle.js
 const manager = {
 	value: "hello",
 	ready: false
@@ -20,15 +19,39 @@ const manager = {
 function setup() {
 	manager.ready = true;
 }
-//#endregion
-//#region main.js
+// main.js
 setup();
-//#endregion
 export { manager };
 
 ```
 
-# Variant: [strict_execution_order: true]
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+// deep.js
+function sleep(ms) {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+await sleep(100);
+// middle.js
+const manager = {
+	value: "hello",
+	ready: false
+};
+function setup() {
+	manager.ready = true;
+}
+// main.js
+setup();
+export { manager };
+
+```
+
+# Variant: wrap-all: [strict_execution_order: true]
 
 ## Assets
 
@@ -36,38 +59,45 @@ export { manager };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region deep.js
+// deep.js
 function sleep(ms) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 var value;
-var init_deep = __esmMin((async () => {
-	await sleep(100);
-	value = "hello";
-}));
-//#endregion
-//#region middle.js
+function init_deep() {
+	return (init_deep = __esmMin((async () => {
+		await sleep(100);
+		value = "hello";
+	})))();
+}
+// middle.js
 function setup() {
 	manager.ready = true;
 }
 var manager;
-var init_middle = __esmMin((async () => {
-	await init_deep();
-	manager = {
-		value,
-		ready: false
-	};
-}));
-//#endregion
-//#region barrel.js
-var init_barrel = __esmMin((async () => {
-	await init_middle();
-}));
-//#endregion
-await __esmMin((async () => {
-	await init_barrel();
-	setup();
-}))();
+function init_middle() {
+	return (init_middle = __esmMin((async () => {
+		await init_deep();
+		manager = {
+			value,
+			ready: false
+		};
+	})))();
+}
+// barrel.js
+function init_barrel() {
+	return (init_barrel = __esmMin((async () => {
+		await init_middle();
+	})))();
+}
+// main.js
+function init_main() {
+	return (init_main = __esmMin((async () => {
+		await init_barrel();
+		setup();
+	})))();
+}
+await init_main();
 export { manager };
 
 ```

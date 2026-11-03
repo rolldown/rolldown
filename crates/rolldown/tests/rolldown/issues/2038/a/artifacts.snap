@@ -7,9 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { result } from "./b.js";
-//#region a.js
+// a.js
 var a_default = result();
-//#endregion
 export { a_default as default };
 
 ```
@@ -17,11 +16,10 @@ export { a_default as default };
 ## b.js
 
 ```js
-//#region b.js
+// b.js
 function result() {
 	return "result";
 }
-//#endregion
 export { result };
 
 ```
@@ -30,13 +28,12 @@ export { result };
 
 ```js
 import assert from "node:assert";
-//#region main.js
+// main.js
 import("./b.js").then((mod) => {
 	assert.strictEqual(mod.result(), "result");
 });
 import("./a.js").then((mod) => {
 	assert.strictEqual(mod.default, "result");
 });
-//#endregion
 
 ```

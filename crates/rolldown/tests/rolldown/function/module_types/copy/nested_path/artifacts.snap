@@ -13,11 +13,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 import shallow from "../../deep/assets/root-DcToKNib.txt";
 import deep from "../../deep/assets/deep-DYZ8IeH_.txt";
 // HIDDEN [\0rolldown/runtime.js]
-//#region main.js
+// main.js
 const shallowReq = __require("../../deep/assets/root-DcToKNib.txt");
 const deepReq = __require("../../deep/assets/deep-DYZ8IeH_.txt");
 console.log(shallow, deep, shallowReq, deepReq);
-//#endregion
 
 //# sourceMappingURL=main.js.map
 ```
@@ -30,6 +29,7 @@ console.log(shallow, deep, shallowReq, deepReq);
 
 ```
 - ../../../main.js
+(2:0) "const " --> (9:0) "const "
 (2:6) "shallowReq = require(" --> (9:6) "shallowReq = "
 (2:6) "shallowReq = require(" --> (9:19) "__require("
 (2:27) "'./root.txt'" --> (9:29) "\"../../deep/assets/root-DcToKNib.txt\""

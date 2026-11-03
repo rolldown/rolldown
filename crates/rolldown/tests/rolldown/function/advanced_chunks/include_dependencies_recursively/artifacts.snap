@@ -6,18 +6,44 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_foo, t as foo } from "./vendor.js";
+import { t as foo } from "./vendor.js";
 import nodeAssert from "node:assert";
-//#endregion
-__esmMin((() => {
-	init_foo();
-	nodeAssert.strictEqual(foo, "foo bar");
-}))();
+// main.js
+nodeAssert.strictEqual(foo, "foo bar");
 
 ```
 
-## rolldown-runtime.js
+## vendor.js
+
+```js
+// foo.js
+const foo = "foo bar";
+export { foo as t };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_foo, t as foo } from "./vendor.js";
+import nodeAssert from "node:assert";
+// main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_foo();
+		nodeAssert.strictEqual(foo, "foo bar");
+	})))();
+}
+init_main();
+
+```
+
+### rolldown-runtime.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
@@ -25,20 +51,17 @@ export { __esmMin as t };
 
 ```
 
-## vendor.js
+### vendor.js
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region bar.js
-var init_bar = __esmMin((() => {}));
-//#endregion
-//#region foo.js
+// foo.js
 var foo;
-var init_foo = __esmMin((() => {
-	init_bar();
-	foo = "foo bar";
-}));
-//#endregion
+function init_foo() {
+	return (init_foo = __esmMin((() => {
+		foo = "foo bar";
+	})))();
+}
 export { init_foo as n, foo as t };
 
 ```

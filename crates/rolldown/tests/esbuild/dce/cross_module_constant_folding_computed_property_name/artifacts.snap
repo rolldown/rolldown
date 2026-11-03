@@ -6,23 +6,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## const-entry_js.js
 
 ```js
-//#region const-entry.js
+// const-entry.js
 console.log({
 	[456]: 456,
 	["xyz"]: "xyz"
 });
-//#endregion
 
 ```
 
 ## enum-entry_ts.js
 
 ```js
-//#region enum-entry.ts
+// enum-entry.ts
 console.log({
 	[123]: 123,
 	["abc"]: "abc"
 });
-//#endregion
 
 ```

@@ -133,3 +133,48 @@ function dependentPlugin() {
   };
 }
 ```
+
+## Descriptive metadata
+
+Plugins can attach descriptive metadata to modules and to themselves. This metadata does is only informational and intended to be surfaced by tooling that inspects a build, for example [Vite devtools](https://github.com/vitejs/devtools).
+
+### Module descriptions
+
+Tools often show a module by its id, which is often opaque. For example, `\0vite/modulepreload-polyfill.js` gives no hint about what the module is. This is useful for virtual modules. A plugin can attach a human-readable [`description`](/reference/Interface.ModuleOptions#description) to a module, returned from the [`resolveId`](/reference/Interface.Plugin#resolveid), [`load`](/reference/Interface.Plugin#load), or [`transform`](/reference/Interface.Plugin#transform) hooks.
+
+```js
+function modulePreloadPolyfillPlugin() {
+  return {
+    name: 'vite:modulepreload-polyfill',
+    load: {
+      filter: { id: /^\0vite\/modulepreload-polyfill\.js$/ },
+      handler(id) {
+        return {
+          code: '/* ... */',
+          description: 'A polyfill for `link` tag with `rel="modulepreload"`',
+        };
+      },
+    },
+  };
+}
+```
+
+### Plugin metadata
+
+A single package often ships several plugins, and a plugin's `name` does not always reveal which package it came from. A plugin can declare its originating package name and version via the [`meta`](/reference/Interface.Plugin#meta) property of the plugin object, letting tooling attribute and group plugins by package. It is also possible to attach a short description of what the plugin does via the `description` property.
+
+```js
+function vuePlugin() {
+  return {
+    name: 'vite:vue',
+    meta: {
+      packageName: '@vitejs/plugin-vue',
+      version: '5.0.0',
+      description: 'Handles Vue single-file components',
+    },
+    // ...plugin hooks
+  };
+}
+```
+
+See the [`PluginMeta`](/reference/Interface.PluginMeta) type for the full shape.

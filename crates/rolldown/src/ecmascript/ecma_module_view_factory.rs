@@ -2,7 +2,7 @@ use oxc::span::Span;
 use oxc_index::IndexVec;
 use rolldown_common::{
   EcmaModuleAstUsage, EcmaRelated, EcmaView, EcmaViewMeta, FlatOptions, ImportRecordIdx,
-  RawImportRecord, ResolvedId, SharedNormalizedBundlerOptions, SideEffectDetail,
+  RawImportRecord, ResolvedId, SharedNormalizedBundlerOptions, StmtEvalFlags,
   side_effects::{DeterminedSideEffects, HookSideEffects},
 };
 use rolldown_error::BuildResult;
@@ -81,8 +81,12 @@ pub async fn create_ecma_view(
     hashbang_range,
     ecma_view_meta,
     dynamic_import_rec_exports_usage,
+    dynamic_import_called_names,
     new_url_references: new_url_imports,
+    namespace_in_checks,
+    rolldown_file_url_references,
     this_expr_replace_map,
+    cjs_this_ref,
     hmr_info,
     hmr_hot_ref,
     directive_range,
@@ -124,6 +128,7 @@ pub async fn create_ecma_view(
     importers: FxIndexSet::default(),
     importers_idx: FxIndexSet::default(),
     dynamic_importers: FxIndexSet::default(),
+    dynamic_importers_idx: FxIndexSet::default(),
     imported_ids: FxIndexSet::default(),
     dynamically_imported_ids: FxIndexSet::default(),
     side_effects,
@@ -142,7 +147,10 @@ pub async fn create_ecma_view(
     hashbang_range,
     mutations: vec![],
     new_url_references: new_url_imports,
+    namespace_in_checks,
+    rolldown_file_url_references,
     this_expr_replace_map,
+    cjs_this_ref,
     hmr_info,
     hmr_hot_ref,
     directive_range,
@@ -152,6 +160,7 @@ pub async fn create_ecma_view(
     import_attribute_map,
     json_module_none_self_reference_included_symbol: None,
     cjs_reexport_import_record_ids,
+    dynamic_import_called_names,
   };
 
   let ecma_related =
@@ -240,7 +249,8 @@ pub fn lazy_check_side_effects(
 
   // when determining cjs module side effects:
   // we don't considered `exports.a` has side effects
-  let analyzed_side_effects =
-    stmt_infos.iter().any(|stmt_info| stmt_info.side_effect.contains(SideEffectDetail::Unknown));
+  let analyzed_side_effects = stmt_infos
+    .iter()
+    .any(|stmt_info| stmt_info.eval_flags.contains(StmtEvalFlags::UnknownSideEffect));
   DeterminedSideEffects::Analyzed(analyzed_side_effects)
 }

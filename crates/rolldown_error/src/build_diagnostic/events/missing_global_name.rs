@@ -21,7 +21,7 @@ impl BuildEvent for MissingGlobalName {
   fn message(&self, _opts: &DiagnosticOptions) -> String {
     format!(
       r#"No name was provided for external module "{}" in "output.globals" – guessing "{}"."#,
-      &self.module_name, &self.guessed_name
+      self.module_name, self.guessed_name
     )
   }
 }

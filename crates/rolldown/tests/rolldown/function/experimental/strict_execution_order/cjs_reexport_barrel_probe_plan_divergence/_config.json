@@ -1,0 +1,23 @@
+{
+  "configName": "wrap-all",
+  "config": {
+    "input": [
+      {
+        "name": "entry-a",
+        "import": "./entry-a.cjs"
+      },
+      {
+        "name": "entry-b",
+        "import": "./entry-b.cjs"
+      }
+    ],
+    "strictExecutionOrder": true,
+    "format": "cjs"
+  },
+  "configVariants": [
+    {
+      "_configName": "on-demand",
+      "onDemandWrapping": true
+    }
+  ]
+}

@@ -29,11 +29,8 @@ export default defineTest({
         renameSync(linkPath, backupPath);
       }
     }
-    // Create a directory symlink/junction so that walkdir (with
-    // `follow_links(true)`) in `rolldown_plugin_vite_import_glob`
-    // can traverse into `packages/my-lib/components/`.
-    // - On Windows, use `'junction'` which doesn't require administrator
-    //   privileges or Developer Mode (unlike real symlinks).
+    // Create a directory symlink/junction so `rolldown_plugin_vite_import_glob` traverses into `packages/my-lib/components/`.
+    // - On Windows, use `'junction'` which doesn't require administrator privileges or Developer Mode (unlike real symlinks).
     // - On Unix, use `'dir'` which creates a standard symbolic link.
     if (!existsSync(linkPath)) {
       await symlink(targetPath, linkPath, platform === 'win32' ? 'junction' : 'dir');

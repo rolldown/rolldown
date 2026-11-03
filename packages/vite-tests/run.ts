@@ -2,12 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { styleText } from 'node:util';
 import { x } from 'tinyexec';
+import { parseDocument } from 'yaml';
 
+const VITE_DIR = path.resolve(import.meta.dirname, '../../vite');
 const REPO_PATH = path.resolve(import.meta.dirname, './repo');
-const OVERRIDES = [
-  `  rolldown: ${path.resolve(import.meta.dirname, '../rolldown')}`,
-  `  "@rolldown/pluginutils": ${path.resolve(import.meta.dirname, '../pluginutils')}`
-];
+const ROLLDOWN_DIR = path.resolve(import.meta.dirname, '../rolldown');
+const ROLLDOWN_OVERRIDE = `link:${ROLLDOWN_DIR}`;
 
 function printTitle(title: string) {
   console.info(styleText(['cyan', 'bold'], title));
@@ -44,29 +44,68 @@ async function runCmdAndPipeOrExit(title: string, cmdOptions: Parameters<typeof 
 
 fs.rmSync(REPO_PATH, { recursive: true, force: true });
 
+// Reuse the shared `vite/` checkout at the repo root, prepared by
+// `just setup-vite` (the latest `rolldown-canary` rebased onto the latest
+// `main`), the same code the dev-server tests run on. Setup happens only
+// there, never here, so the checkout and the dev-server's built vite dist
+// cannot drift apart. The tests run on a throwaway LOCAL clone of the
+// checkout, never on the checkout itself: this suite edits tracked files
+// (pnpm overrides) and the checkout must stay unpatched. The clone shares
+// objects via hardlinks, so it needs no network.
+if (!fs.existsSync(path.join(VITE_DIR, 'package.json'))) {
+  console.error(
+    styleText(['red', 'bold'], `Vite checkout not found at ${VITE_DIR}. Run \`just setup-vite\` first.`),
+  );
+  process.exit(1);
+}
 await runCmdAndPipeOrExit(
-  '# Cloning vite repo (rolldown-canary branch)...',
-  ['git', ['clone', '--branch', 'rolldown-canary', 'https://github.com/vitejs/vite.git', REPO_PATH]],
+  '# Cloning the local vite checkout...',
+  ['git', ['clone', VITE_DIR, REPO_PATH]],
 );
 
-await runCmdAndPipeOrExit(
-  '# Rebasing rolldown-canary onto main...',
-  ['git', ['rebase', 'origin/main'], { nodeOptions: { cwd: REPO_PATH } }],
-);
-
+// Write the `rolldown` override ourselves: Vite no longer carries a
+// `rolldown: $rolldown` line for us to rewrite. A document edit keeps
+// comments and survives any YAML formatting Vite picks.
 printTitle('# Updating pnpm-workspace.yaml to link to local rolldown...');
 const pnpmWorkspace = path.resolve(REPO_PATH, 'pnpm-workspace.yaml');
-const pnpmWorkspaceYaml = fs.readFileSync(pnpmWorkspace, 'utf-8');
-const newPnpmWorkspaceYaml = pnpmWorkspaceYaml.replace(
-  /overrides:\n\s*rolldown:\s*\$rolldown\n/,
-  `overrides:\n${OVERRIDES.join('\n')}\n`
-);
+const workspaceDoc = parseDocument(fs.readFileSync(pnpmWorkspace, 'utf-8'));
+workspaceDoc.setIn(['overrides', 'rolldown'], ROLLDOWN_OVERRIDE);
+const newPnpmWorkspaceYaml = workspaceDoc.toString();
+if (parseDocument(newPnpmWorkspaceYaml).getIn(['overrides', 'rolldown']) !== ROLLDOWN_OVERRIDE) {
+  console.error(
+    styleText(['red', 'bold'], `Failed to set \`overrides.rolldown: ${ROLLDOWN_OVERRIDE}\` in ${pnpmWorkspace}`),
+  );
+  process.exit(1);
+}
 fs.writeFileSync(pnpmWorkspace, newPnpmWorkspaceYaml, 'utf-8');
 
 await runCmdAndPipeOrExit(
   '# Running `pnpm install`...',
   ['pnpm', ['install', '--no-frozen-lockfile'], { nodeOptions: { cwd: REPO_PATH } }],
 );
+
+// Fail when the clone does not resolve the workspace rolldown, so the suites
+// never silently test an npm release again.
+printTitle('# Checking that vite resolves the workspace rolldown...');
+const resolveResult = await x(
+  process.execPath,
+  ['-e', "console.log(require('fs').realpathSync(require.resolve('rolldown/package.json')))"],
+  { nodeOptions: { cwd: path.join(REPO_PATH, 'packages/vite') } },
+);
+const resolvedRolldownPkg = resolveResult.stdout.trim();
+const expectedRolldownPkg = fs.realpathSync(path.join(ROLLDOWN_DIR, 'package.json'));
+if (resolveResult.exitCode !== 0 || resolvedRolldownPkg !== expectedRolldownPkg) {
+  console.error(
+    styleText(
+      ['red', 'bold'],
+      `vite resolves rolldown to ${resolvedRolldownPkg || resolveResult.stderr.trim()}, expected ${expectedRolldownPkg}`,
+    ),
+  );
+  process.exit(1);
+}
+const { version: rolldownVersion } = JSON.parse(fs.readFileSync(resolvedRolldownPkg, 'utf-8'));
+console.info(`vite resolves rolldown ${rolldownVersion} at ${resolvedRolldownPkg}`);
+
 await runCmdAndPipeOrExit(
   '# Running `pnpm exec playwright install chromium`...',
   ['pnpm', ['exec', 'playwright', 'install', 'chromium'], { nodeOptions: { cwd: REPO_PATH } }],
@@ -75,15 +114,6 @@ await runCmdAndPipeOrExit(
   '# Running `pnpm run build`...',
   ['pnpm', ['run', 'build'], { nodeOptions: { cwd: REPO_PATH } }],
 );
-
-// Skip known failing tests
-// https://github.com/rolldown/rolldown/issues/8839
-const assetsSpecPath = path.resolve(REPO_PATH, 'playground/assets/__tests__/assets.spec.ts');
-const assetsSpec = fs.readFileSync(assetsSpecPath, 'utf-8');
-fs.writeFileSync(assetsSpecPath, assetsSpec.replace(
-  "test('import with raw query'",
-  "test.skip('import with raw query'"
-), 'utf-8');
 
 // Remove VITE_PLUS_* env vars to prevent leaking into loadEnv() test snapshots
 for (const key of Object.keys(process.env)) {
@@ -105,6 +135,12 @@ const failedTestServe = await runCmdAndPipe(
   ['pnpm', ['run', 'test-serve'], { nodeOptions: { cwd: REPO_PATH } }],
 );
 if (failedTestServe) failed.push('test-serve');
+
+const failedTestServeBundled = await runCmdAndPipe(
+  '# Running `pnpm test-serve-bundled`...',
+  ['pnpm', ['run', 'test-serve-bundled'], { nodeOptions: { cwd: REPO_PATH } }],
+);
+if (failedTestServeBundled) failed.push('test-serve-bundled');
 
 const failedTestBuild = await runCmdAndPipe(
   '# Running `pnpm test-build`...',

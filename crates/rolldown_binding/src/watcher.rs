@@ -3,7 +3,10 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use napi::bindgen_prelude::FnArgs;
+use napi::{
+  Env,
+  bindgen_prelude::{FnArgs, PromiseRaw},
+};
 use napi_derive::napi;
 use rolldown_common::WatcherChangeKind;
 use rolldown_watcher::{WatchEvent, WatcherConfig, WatcherEventHandler};
@@ -11,7 +14,10 @@ use rolldown_watcher::{WatchEvent, WatcherConfig, WatcherEventHandler};
 use crate::types::binding_bundler_options::BindingBundlerOptions;
 use crate::types::binding_watcher_event::BindingWatcherEvent;
 use crate::types::js_callback::{MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt};
-use crate::utils::create_bundler_config_from_binding_options::create_bundler_config_from_binding_options;
+use crate::utils::{
+  create_bundler_config_from_binding_options::create_bundler_config_from_binding_options,
+  spawn_boxed_future,
+};
 
 /// Bridges watcher events from Rust to JS via a `ThreadsafeFunction`.
 struct NapiWatcherEventHandler {
@@ -50,7 +56,7 @@ impl WatcherEventHandler for NapiWatcherEventHandler {
 
 #[napi]
 pub struct BindingWatcher {
-  inner: rolldown_watcher::Watcher,
+  inner: Arc<rolldown_watcher::Watcher>,
 }
 
 #[napi]
@@ -70,14 +76,17 @@ impl BindingWatcher {
 
     // Extract watcher config from the first config's watch options.
     let watch = configs.first().and_then(|c| c.options.watch.as_ref());
+    let watcher = watch.and_then(|w| w.watcher.as_ref());
     let watcher_config = WatcherConfig {
       debounce: watch.and_then(|w| w.build_delay).map(|ms| Duration::from_millis(u64::from(ms))),
-      use_polling: watch.is_some_and(|w| w.use_polling),
-      poll_interval: watch.and_then(|w| w.poll_interval),
-      compare_contents_for_polling: watch.is_some_and(|w| w.compare_contents_for_polling),
-      use_debounce: watch.is_some_and(|w| w.use_debounce),
-      debounce_delay: watch.and_then(|w| w.debounce_delay),
-      debounce_tick_rate: watch.and_then(|w| w.debounce_tick_rate),
+      use_polling: watcher.and_then(|w| w.use_polling).unwrap_or_default(),
+      poll_interval: watcher.and_then(|w| w.poll_interval),
+      compare_contents_for_polling: watcher
+        .and_then(|w| w.compare_contents_for_polling)
+        .unwrap_or_default(),
+      use_debounce: watcher.and_then(|w| w.use_debounce).unwrap_or_default(),
+      debounce_delay: watcher.and_then(|w| w.debounce_delay),
+      debounce_tick_rate: watcher.and_then(|w| w.debounce_tick_rate),
     };
 
     let handler = NapiWatcherEventHandler { listener: Arc::new(listener) };
@@ -88,32 +97,37 @@ impl BindingWatcher {
           errs.iter().map(|e| e.to_diagnostic().to_string()).collect::<Vec<_>>().join("\n"),
         )
       })?;
-    Ok(Self { inner })
+    Ok(Self { inner: Arc::new(inner) })
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  #[napi]
-  pub async fn run(&self) -> napi::Result<()> {
-    self.inner.run();
-    Ok(())
+  #[napi(ts_return_type = "Promise<void>")]
+  pub fn run<'env>(&self, env: &'env Env) -> napi::Result<PromiseRaw<'env, ()>> {
+    let inner = Arc::clone(&self.inner);
+    spawn_boxed_future(env, async move {
+      inner.run();
+      Ok(())
+    })
   }
 
   /// Gives consumers a reliable way to await the watcher's completion.
   /// The Node.js layer relies on the pending Promise to keep the process from exiting.
   #[tracing::instrument(level = "debug", skip_all)]
-  #[napi]
-  pub async fn wait_for_close(&self) -> napi::Result<()> {
-    self.inner.wait_for_close().await;
-    Ok(())
+  #[napi(ts_return_type = "Promise<void>")]
+  pub fn wait_for_close<'env>(&self, env: &'env Env) -> napi::Result<PromiseRaw<'env, ()>> {
+    let inner = Arc::clone(&self.inner);
+    spawn_boxed_future(env, async move {
+      inner.wait_for_close().await;
+      Ok(())
+    })
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  #[napi]
-  pub async fn close(&self) -> napi::Result<()> {
-    self
-      .inner
-      .close()
-      .await
-      .map_err(|e| napi::Error::new(napi::Status::GenericFailure, e.to_string()))
+  #[napi(ts_return_type = "Promise<void>")]
+  pub fn close<'env>(&self, env: &'env Env) -> napi::Result<PromiseRaw<'env, ()>> {
+    let inner = Arc::clone(&self.inner);
+    spawn_boxed_future(env, async move {
+      inner.close().await.map_err(|e| napi::Error::new(napi::Status::GenericFailure, e.to_string()))
+    })
   }
 }

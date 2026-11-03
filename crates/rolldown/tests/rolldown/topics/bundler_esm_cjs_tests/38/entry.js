@@ -1,2 +1,2 @@
 import * as foo from './foo.js';
-input.works = foo.default === void 0 && foo.bar === 123;
+input.works = foo.default.bar === 123 && foo.bar === 123;

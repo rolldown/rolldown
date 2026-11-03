@@ -1,0 +1,24 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// dependency.js
+var sharedValue;
+var init_dependency = __esmMin((() => {
+	sharedValue = { EventMatch: "event_match" };
+}));
+// main.js
+var require_main = /* @__PURE__ */ __commonJSMin(((exports) => {
+	init_dependency();
+	exports.kind = sharedValue.EventMatch;
+	var sharedValue$1 = class {};
+	exports.local = sharedValue$1;
+}));
+export default require_main();
+
+```

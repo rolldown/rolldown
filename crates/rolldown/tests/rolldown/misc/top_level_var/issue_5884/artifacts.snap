@@ -16,7 +16,6 @@ import assert from "node:assert";
 		this.foo = foo;
 	}
 });
-//#endregion
 
 ```
 
@@ -37,6 +36,5 @@ import assert from "node:assert";
 		this.foo = foo;
 	}
 });
-//#endregion
 
 ```

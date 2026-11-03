@@ -15,6 +15,7 @@ extend-exclude = [
   "/packages/rollup-tests/src/ignored-by-unsupported-features.md",
   "/packages/rollup-tests/src/ignored-passed-snapshot-different-tests.js",
   "/packages/rollup-tests/src/ignored-tests.js",
+  "/vite",
   "/packages/vite-tests/repo",
   "/rollup",
   "/test262",
@@ -37,6 +38,8 @@ extend-ignore-re = [
 [default.extend-words]
 splitted = "splitted"
 styl = "styl"
+# the PNG scanline filter (after Alan W. Paeth), decoded by packages/perf-kit
+paeth = "paeth"
 
 [default.extend-identifiers]
 IIFEs = "IIFEs"

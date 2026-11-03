@@ -1,4 +1,9 @@
 use napi::Either;
+use rolldown_common::{ManglePropertiesPattern, ManglePropertiesPatterns};
+
+fn mangle_properties_pattern_to_napi(pattern: &ManglePropertiesPattern) -> oxc_napi::JsRegExp {
+  oxc_napi::JsRegExp::new(pattern.source.clone(), pattern.flags.clone())
+}
 
 pub fn mangle_options_to_napi_mangle_options(
   mangle: &oxc::minifier::MangleOptions,
@@ -12,7 +17,32 @@ pub fn mangle_options_to_napi_mangle_options(
       };
       Some(Either::B(keep_names))
     },
+    reserved: Some(mangle.reserved.iter().map(ToString::to_string).collect()),
     debug: Some(mangle.debug),
+  }
+}
+
+pub fn mangle_properties_options_to_napi_mangle_properties_options(
+  mangle_properties: &oxc::minifier::ManglePropertiesOptions,
+  patterns: &ManglePropertiesPatterns,
+) -> oxc_minify_napi::ManglePropertiesOptions {
+  oxc_minify_napi::ManglePropertiesOptions {
+    include: mangle_properties_pattern_to_napi(&patterns.include),
+    exclude: patterns.exclude.as_ref().map(mangle_properties_pattern_to_napi),
+    reserved: Some(mangle_properties.reserved.iter().map(ToString::to_string).collect()),
+    quoted: Some(mangle_properties.mangle_quoted),
+    debug: Some(mangle_properties.debug),
+    cache: Some(
+      mangle_properties
+        .cache
+        .iter()
+        .map(|(original, target)| {
+          let target =
+            target.as_ref().map_or(Either::B(false), |target| Either::A(target.to_string()));
+          (original.to_string(), target)
+        })
+        .collect(),
+    ),
   }
 }
 
@@ -26,7 +56,7 @@ pub fn compress_options_to_napi_compress_options(
     drop_labels: Some(compress.drop_labels.iter().cloned().collect()),
     unused: Some(match compress.unused {
       oxc::minifier::CompressOptionsUnused::Remove => napi::Either::A(true),
-      oxc::minifier::CompressOptionsUnused::KeepAssign => napi::Either::B("keep-assign".to_owned()),
+      oxc::minifier::CompressOptionsUnused::KeepAssign => napi::Either::B("keep_assign".to_owned()),
       oxc::minifier::CompressOptionsUnused::Keep => napi::Either::A(false),
     }),
     keep_names: {
@@ -46,9 +76,11 @@ pub fn compress_options_to_napi_compress_options(
 
 pub fn codegen_options_to_napi_codegen_options(
   remove_whitespace: bool,
+  ascii_only: bool,
 ) -> oxc_minify_napi::CodegenOptions {
   oxc_minify_napi::CodegenOptions {
     remove_whitespace: Some(remove_whitespace),
+    ascii_only: Some(ascii_only),
     legal_comments: None,
   }
 }

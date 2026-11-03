@@ -1,0 +1,12 @@
+{
+  "_comment": "`app.js` contains `export * from 'ext'` with `ext` external, so part of its export interface only exists at runtime. Pins that those names stay observable through `import('./app.js')`, and how many chunks the shape currently produces.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "external": ["ext"]
+  }
+}

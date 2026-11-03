@@ -6,13 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 switch (foo) {
 	default: var foo;
 }
-switch (bar) {
-	default:
-}
-//#endregion
+bar;
 
 ```

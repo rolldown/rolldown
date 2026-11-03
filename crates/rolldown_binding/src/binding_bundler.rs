@@ -7,37 +7,25 @@ use crate::{
     binding_outputs::{BindingOutputs, to_binding_error},
     error::{BindingError, BindingErrors, BindingResult},
   },
-  utils::{handle_result, handle_warnings, normalize_binding_options::normalize_binding_options},
+  utils::{
+    handle_result, handle_warnings, normalize_binding_options::normalize_binding_options,
+    spawn_boxed_future,
+  },
 };
-use napi::{
-  Env,
-  bindgen_prelude::{PromiseRaw, ToNapiValue},
-};
+use napi::{Env, bindgen_prelude::PromiseRaw};
 use napi_derive::napi;
 use rolldown::{BundleHandle, BundlerConfig};
-use std::{future::Future, pin::Pin, sync::Arc};
-
-/// Box a future before handing it to napi's [`Env::spawn_future`].
-///
-/// `Env::spawn_future` is monomorphized over the concrete future type, so every
-/// distinct async body re-instantiates the whole tokio task harness (`poll_future`,
-/// `Core<T, S>`, the scheduler dispatch, …). These `BindingBundler` entry points run
-/// once per build, so erasing the future to a single `Pin<Box<dyn Future>>` collapses
-/// that machinery to one instantiation per output type, at the cost of one
-/// (perf-irrelevant) heap allocation per call. Do NOT use this for per-module/per-hook
-/// futures, where the extra allocation would be on a hot path.
-fn spawn_boxed_future<T: 'static + Send + ToNapiValue>(
-  env: &Env,
-  fut: impl 'static + Send + Future<Output = napi::Result<T>>,
-) -> napi::Result<PromiseRaw<'_, T>> {
-  let fut: Pin<Box<dyn Future<Output = napi::Result<T>> + Send>> = Box::pin(fut);
-  env.spawn_future(fut)
-}
+use rolldown_error::{BuildDiagnostic, PluginTimings};
+use rolldown_plugin::BuildTimings;
+use std::sync::Arc;
 
 #[napi]
 pub struct BindingBundler {
   inner: ClassicBundler,
-  last_bundle_handle: Option<BundleHandle>,
+  /// Every build this bundler has run, in order. A `RolldownBuild` may `generate` more
+  /// than once, and the plugin-timing measurement accumulates across all of them, so the
+  /// clocks it is judged against are summed over all of them too.
+  bundle_handles: Vec<BundleHandle>,
 }
 
 #[napi]
@@ -45,7 +33,7 @@ impl BindingBundler {
   #[napi(constructor)]
   pub fn new() -> Self {
     let inner = ClassicBundler::new();
-    Self { inner, last_bundle_handle: None }
+    Self { inner, bundle_handles: Vec::new() }
   }
 
   #[napi]
@@ -62,7 +50,7 @@ impl BindingBundler {
     let maybe_bundle = self.inner.create_bundle(normalized.options, normalized.plugins);
     if let Ok(bundle) = &maybe_bundle {
       // Extract bundle handle before consuming the bundle
-      self.last_bundle_handle = Some(bundle.context());
+      self.bundle_handles.push(bundle.context());
     }
 
     let fut = async move {
@@ -75,7 +63,7 @@ impl BindingBundler {
       })?;
       let cwd = bundle.options().cwd.clone();
       let options = Arc::clone(bundle.options());
-      let bundle_output = match bundle.generate().await {
+      let mut bundle_output = match bundle.generate().await {
         Ok(output) => output,
         Err(errs) => {
           let errors: Vec<BindingError> = errs
@@ -87,12 +75,13 @@ impl BindingBundler {
         }
       };
 
-      if let Err(err) = handle_warnings(bundle_output.warnings, &options).await {
+      if let Err(err) = handle_warnings(std::mem::take(&mut bundle_output.warnings), &options).await
+      {
         let error = to_binding_error(&err.into(), cwd.clone());
         return Ok(napi::Either::A(BindingErrors::new(vec![error])));
       }
 
-      Ok(napi::Either::B(bundle_output.assets.into()))
+      Ok(napi::Either::B(bundle_output.into()))
     };
     spawn_boxed_future(env, fut)
   }
@@ -111,7 +100,7 @@ impl BindingBundler {
     let maybe_bundle = self.inner.create_bundle(normalized.options, normalized.plugins);
     if let Ok(bundle) = &maybe_bundle {
       // Extract bundle handle before consuming the bundle
-      self.last_bundle_handle = Some(bundle.context());
+      self.bundle_handles.push(bundle.context());
     }
 
     let fut = async move {
@@ -123,7 +112,7 @@ impl BindingBundler {
       })?;
       let cwd = bundle.options().cwd.clone();
       let options = Arc::clone(bundle.options());
-      let bundle_output = match bundle.write().await {
+      let mut bundle_output = match bundle.write().await {
         Ok(output) => output,
         Err(errs) => {
           let errors: Vec<BindingError> = errs
@@ -135,12 +124,13 @@ impl BindingBundler {
         }
       };
 
-      if let Err(err) = handle_warnings(bundle_output.warnings, &options).await {
+      if let Err(err) = handle_warnings(std::mem::take(&mut bundle_output.warnings), &options).await
+      {
         let error = to_binding_error(&err.into(), cwd.clone());
         return Ok(napi::Either::A(BindingErrors::new(vec![error])));
       }
 
-      Ok(napi::Either::B(bundle_output.assets.into()))
+      Ok(napi::Either::B(bundle_output.into()))
     };
     spawn_boxed_future(env, fut)
   }
@@ -159,7 +149,7 @@ impl BindingBundler {
     let maybe_bundle = self.inner.create_bundle(normalized.options, normalized.plugins);
     if let Ok(bundle) = &maybe_bundle {
       // Extract bundle handle before consuming the bundle
-      self.last_bundle_handle = Some(bundle.context());
+      self.bundle_handles.push(bundle.context());
     }
 
     let fut = async move {
@@ -196,9 +186,12 @@ impl BindingBundler {
   // - This also affects how the code is written in `Bundler::close()/inner.close()`, see the implementation there for more details.
   pub fn close<'env>(&mut self, env: &'env Env) -> napi::Result<PromiseRaw<'env, ()>> {
     let cleanup_fut = self.inner.close();
+    let handles = std::mem::take(&mut self.bundle_handles);
     spawn_boxed_future(env, async move {
       let res = cleanup_fut.await;
       handle_result(res)?;
+      // After the cleanup, so `closeBundle` is part of what the other side reports.
+      handle_result(report_plugin_timings(&handles).await)?;
       Ok(())
     })
   }
@@ -211,16 +204,57 @@ impl BindingBundler {
   #[napi]
   pub fn get_watch_files(&self) -> Vec<String> {
     self
-      .last_bundle_handle
-      .as_ref()
+      .bundle_handles
+      .last()
       .map(|handle| handle.watch_files().iter().map(|s| s.to_string()).collect())
       .unwrap_or_default()
   }
 }
 
+/// Ask the JavaScript side what its plugin callbacks cost, and warn if it is worth saying.
+///
+/// The gate lives here because the clocks it needs — the build and the link stage — are only
+/// visible on this side; what the callbacks actually cost is only visible on the other. The
+/// diagnostic then goes out through the usual path, so `checks.bundlerTimings` filters it
+/// like any other.
+async fn report_plugin_timings(handles: &[BundleHandle]) -> anyhow::Result<()> {
+  let Some(last) = handles.last() else {
+    return Ok(());
+  };
+  let options = last.options();
+  let Some(get_timings) = options.plugin_timings.as_ref() else {
+    return Ok(());
+  };
+
+  // Summed over every output, because the measurement on the other side is: one
+  // `RolldownBuild` may generate more than once, and judging a cumulative measurement
+  // against only the last output's clocks would both suppress and inflate reports.
+  let total_micros: u64 =
+    handles.iter().map(|handle| handle.plugin_driver().build_timings.total_micros()).sum();
+  let link_micros: u64 =
+    handles.iter().map(|handle| handle.plugin_driver().build_timings.link_stage_micros()).sum();
+  if !BuildTimings::is_plugin_bound(total_micros, link_micros) {
+    return Ok(());
+  }
+
+  let measurement = get_timings.exec().await?;
+  #[expect(clippy::cast_precision_loss)]
+  let build_ms = total_micros as f64 / 1_000.0;
+  let Some(timings) = PluginTimings::new(build_ms, measurement) else {
+    return Ok(());
+  };
+  handle_warnings(vec![BuildDiagnostic::plugin_timings(timings).with_severity_warning()], options)
+    .await
+}
+
 impl BindingBundler {
   fn normalize_binding_options(option: BindingBundlerOptions) -> napi::Result<BundlerConfig> {
     let BindingBundlerOptions { input_options, output_options, parallel_plugins_registry } = option;
+    // Only the parallel-plugin worker pool reads the registry, and wasm has no
+    // threads for that pool. Borrow it so the binding counts as used. Do not
+    // bind it to `_`: that would drop it here instead of at the end of scope.
+    #[cfg(target_family = "wasm")]
+    let _ = &parallel_plugins_registry;
 
     #[cfg(not(target_family = "wasm"))]
     let worker_count =

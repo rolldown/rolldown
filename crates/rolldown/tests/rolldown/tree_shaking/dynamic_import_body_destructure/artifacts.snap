@@ -1,0 +1,47 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## await_lib.js
+
+```js
+// await_lib.js
+const used = "used";
+const reExported = "reExported";
+const member = "member";
+export { member, reExported, used };
+
+```
+
+## main.js
+
+```js
+// main.js
+import("./then_lib.js").then((ns) => {
+	const { a } = ns;
+	const { b = 1 } = ns;
+	const { c, ...rest } = ns;
+	console.log(a, b, c, ns.d, rest.e);
+});
+const m = await import("./await_lib.js");
+const { used } = m;
+const { used: used2 } = m;
+const { reExported } = m;
+console.log(used, used2, m.member);
+export { reExported };
+
+```
+
+## then_lib.js
+
+```js
+// then_lib.js
+const a = "a";
+const b = "b";
+const c = "c";
+const d = "d";
+const e = "e";
+export { a, b, c, d, e };
+
+```

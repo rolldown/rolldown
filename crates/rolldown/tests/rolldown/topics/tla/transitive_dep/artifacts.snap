@@ -6,15 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#endregion
-//#region lib.js
+// lib.js
 const value = await Promise.resolve("tla") + "+lib";
-//#endregion
 export { value };
 
 ```
 
-# Variant: [strict_execution_order: true]
+# Variant: wrap-all: [strict_execution_order: true]
 
 ## Assets
 
@@ -22,22 +20,41 @@ export { value };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region tla.js
+// tla.js
 var value$1;
-var init_tla = __esmMin((async () => {
-	value$1 = await Promise.resolve("tla");
-}));
-//#endregion
-//#region lib.js
+function init_tla() {
+	return (init_tla = __esmMin((async () => {
+		value$1 = await Promise.resolve("tla");
+	})))();
+}
+// lib.js
 var value;
-var init_lib = __esmMin((async () => {
-	await init_tla();
-	value = value$1 + "+lib";
-}));
-//#endregion
-await __esmMin((async () => {
-	await init_lib();
-}))();
+function init_lib() {
+	return (init_lib = __esmMin((async () => {
+		await init_tla();
+		value = value$1 + "+lib";
+	})))();
+}
+// main.js
+function init_main() {
+	return (init_main = __esmMin((async () => {
+		await init_lib();
+	})))();
+}
+await init_main();
+export { value };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+// lib.js
+const value = await Promise.resolve("tla") + "+lib";
 export { value };
 
 ```

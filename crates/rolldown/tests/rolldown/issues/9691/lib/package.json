@@ -1,0 +1,5 @@
+{
+  "name": "lib",
+  "type": "module",
+  "sideEffects": false
+}

@@ -6,9 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#endregion
-//#region entry.js
+// entry.js
 console.log("data:text/plain;charset=utf-8,%0A%0A%0A", "data:text/plain;charset=utf-8,%0A%0A%0A%0A", "data:text/plain;charset=utf-8;base64,CgoKCgo=", "data:text/plain;charset=utf-8;base64,CgoKCgoK");
-//#endregion
 
 ```

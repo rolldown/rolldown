@@ -1,0 +1,33 @@
+{
+  "configName": "on-demand",
+  "config": {
+    "input": [
+      {
+        "name": "e0",
+        "import": "./e0.js"
+      }
+    ],
+    "preserveEntrySignatures": "allow-extension",
+    "strictExecutionOrder": true,
+    "experimental": {
+      "onDemandWrapping": true
+    },
+    "codeSplitting": {
+      "minSize": 0,
+      "includeDependenciesRecursively": false,
+      "groups": [
+        {
+          "name": "gb",
+          "test": "[\\\\/](?:m29|m13)\\.js$",
+          "minSize": 0
+        }
+      ]
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
+    }
+  ]
+}

@@ -40,19 +40,19 @@ impl<'a> SourcemapBuilder<'a> {
     self.source_id = self.source_map_builder.set_source_and_content(id, content);
   }
 
+  /// Registers a sourcemap name up front and returns its index in `names`.
+  pub fn add_name(&mut self, name: &'a str) -> u32 {
+    self.source_map_builder.add_name(name)
+  }
+
   pub fn add_chunk(
     &mut self,
     chunk: &Chunk,
     chunk_start_utf16: u32,
     locator: &Locator,
     source: &str,
-    name: Option<&'a str>,
+    name_id: Option<u32>,
   ) {
-    let name_id = if chunk.keep_in_mappings {
-      name.map(|name| self.source_map_builder.add_name(name))
-    } else {
-      None
-    };
     let mut loc = locator.locate(chunk_start_utf16);
     if let Some(edited_content) = &chunk.edited_content {
       if !edited_content.is_empty() {
@@ -76,6 +76,8 @@ impl<'a> SourcemapBuilder<'a> {
             loc.bump_line();
             self.bump_line();
             new_line = true;
+            // A newline ends the current word run.
+            char_in_hires_boundary = false;
           }
           _ => {
             if new_line || !matches!(self.hires, Hires::False) {
@@ -137,12 +139,7 @@ impl<'a> SourcemapBuilder<'a> {
     for _ in lines {
       self.bump_line();
     }
-    // Fast path: ASCII strings have 1:1 byte-to-UTF-16 mapping
-    self.generated_code_column += if last_line.is_ascii() {
-      last_line.len() as u32
-    } else {
-      last_line.chars().map(|c| c.len_utf16() as u32).sum::<u32>()
-    };
+    self.generated_code_column += simd_utf16_len::utf16_len(last_line) as u32;
   }
 
   fn bump_line(&mut self) {

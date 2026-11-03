@@ -37,7 +37,7 @@ pub struct Resolver<Fs: FileSystem = OsFileSystem> {
   package_json_cache: FxDashMap<PathBuf, Arc<PackageJson>>,
 }
 
-impl<Fs: FileSystem + Clone> Resolver<Fs> {
+impl<Fs: FileSystem + Clone + 'static> Resolver<Fs> {
   /// Creates a new resolver with the specified options.
   pub fn new(
     fs: Fs,
@@ -65,6 +65,12 @@ impl<Fs: FileSystem + Clone> Resolver<Fs> {
       new_url_resolver,
       package_json_cache: DashMap::default(),
     }
+  }
+
+  /// The clone shares this resolver's cache, so tsconfig lookups and cache
+  /// clearing stay consistent with module resolution.
+  pub fn clone_default_resolver(&self) -> ResolverGeneric<Fs> {
+    self.default_resolver.clone_with_options(self.default_resolver.options().clone())
   }
 }
 
@@ -154,6 +160,14 @@ impl<Fs: FileSystem> Resolver<Fs> {
       // check if `is_absolute` to avoid extra `join` overhead
       if importer.is_absolute() {
         selected_resolver.resolve_file(importer, specifier)
+      } else if importer.to_str().is_some_and(|id| id.starts_with('\0')) {
+        // A `\0` importer is a virtual module with no location: resolve from cwd without any tsconfig.
+        selected_resolver.resolve_with_context(
+          self.cwd.as_path(),
+          specifier,
+          None,
+          &mut oxc_resolver::ResolveContext::default(),
+        )
       } else {
         selected_resolver.resolve_file(self.cwd.join(importer), specifier)
       }

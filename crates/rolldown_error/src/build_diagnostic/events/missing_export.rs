@@ -33,7 +33,7 @@ impl BuildEvent for MissingExport {
   fn message(&self, _opts: &DiagnosticOptions) -> String {
     format!(
       r#""{}" is not exported by "{}", imported by "{}"."#,
-      self.imported_specifier, &self.stable_importee, &self.stable_importer
+      self.imported_specifier, self.stable_importee, self.stable_importer
     )
   }
 
@@ -45,7 +45,7 @@ impl BuildEvent for MissingExport {
     let file_id = diagnostic.add_file(&self.stable_importer, &self.importer_source);
 
     diagnostic.title =
-      format!(r#""{}" is not exported by "{}"."#, self.imported_specifier, &self.stable_importee);
+      format!(r#""{}" is not exported by "{}"."#, self.imported_specifier, self.stable_importee);
 
     if let Some(note) = &self.note {
       diagnostic.add_note(note.clone());

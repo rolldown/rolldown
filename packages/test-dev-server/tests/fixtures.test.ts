@@ -7,9 +7,9 @@ import nodePath from 'node:path';
 import { afterAll, describe, test } from 'vitest';
 import {
   getBuildSeq,
-  getModuleRegistrationSeq,
+  getConnectedClients,
+  waitForClientConnected,
   waitForBuildStable,
-  waitForModuleRegistration,
   waitForNextBuild,
 } from './src/dev-status';
 import { isDirectoryExists, removeDirSync } from './src/utils';
@@ -186,15 +186,18 @@ async function runArtifactProcess(artifactPath: string, tmpProjectPath: string, 
   id++;
 
   const initOkFilePath = nodePath.join(tmpProjectPath, `ok-init-${thisId}`);
+  const webSocketUrl = import.meta.resolve('ws');
   const injectCode = encodeURIComponent(
     `
     import __nodeFs__ from 'node:fs';
+    import { WebSocket as __WebSocket__ } from ${JSON.stringify(webSocketUrl)};
+    globalThis.WebSocket = __WebSocket__;
     __nodeFs__.writeFileSync('ok-init-${thisId}', '');
   `.trim(),
   );
 
-  // Snapshot registered clients before starting the process
-  const currentRegistered = await getModuleRegistrationSeq(serverUrl);
+  // Snapshot connected clients before starting the process
+  const currentConnected = await getConnectedClients(serverUrl);
 
   console.log(`🔄 Starting Node.js process: ${artifactPath}`);
   const artifactProcess = execa(
@@ -206,8 +209,9 @@ async function runArtifactProcess(artifactPath: string, tmpProjectPath: string, 
   // Wait for the Node.js process to start
   await waitForPathExists(initOkFilePath);
 
-  // Wait for modules to be registered with the dev server
-  await waitForModuleRegistration(serverUrl, currentRegistered);
+  // Wait for the artifact's runtime to connect — the ws connect fires while the
+  // bundle evaluates, and the remaining modules evaluate synchronously after it
+  await waitForClientConnected(serverUrl, currentConnected);
 
   return {
     process: artifactProcess,

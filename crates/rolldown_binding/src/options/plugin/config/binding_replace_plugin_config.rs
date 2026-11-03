@@ -15,14 +15,26 @@ pub struct BindingReplacePluginConfig {
   pub sourcemap: Option<bool>,
 }
 
-impl From<BindingReplacePluginConfig> for ReplaceOptions {
-  fn from(config: BindingReplacePluginConfig) -> Self {
-    Self {
+impl TryFrom<BindingReplacePluginConfig> for ReplaceOptions {
+  type Error = napi::Error;
+
+  fn try_from(config: BindingReplacePluginConfig) -> Result<Self, Self::Error> {
+    let delimiters = match config.delimiters {
+      None => None,
+      Some(raw) if raw.len() == 2 => Some((raw[0].clone(), raw[1].clone())),
+      Some(raw) => {
+        return Err(napi::Error::new(
+          napi::Status::InvalidArg,
+          format!("`delimiters` expects a tuple of two strings, but got {} element(s)", raw.len()),
+        ));
+      }
+    };
+    Ok(Self {
       values: config.values,
-      delimiters: config.delimiters.map(|raw| (raw[0].clone(), raw[1].clone())),
+      delimiters,
       prevent_assignment: config.prevent_assignment.unwrap_or(false),
       object_guards: config.object_guards.unwrap_or(false),
       sourcemap: config.sourcemap.unwrap_or(false),
-    }
+    })
   }
 }

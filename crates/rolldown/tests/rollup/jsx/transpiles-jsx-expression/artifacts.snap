@@ -9,11 +9,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 console.log("element 1");
 console.log("element 2");
 console.log("element 3");
-//#endregion
-//#region main.js
+// main.js
 const Foo = () => {};
 const result = /* @__PURE__ */ React.createElement(Foo, null, "testelement 2");
-//#endregion
 export { result };
 
 ```

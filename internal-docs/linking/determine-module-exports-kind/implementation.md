@@ -10,7 +10,7 @@ Related code:
 
 - `crates/rolldown/src/stages/link_stage/generate_lazy_export.rs` — the one stage allowed to revise `exports_kind` after this pass (see §"Invariants").
 - `crates/rolldown/src/stages/link_stage/wrapping.rs` — consumes the `WrapKind` decisions made here.
-- `LinkingMetadata::sync_wrap_kind` — the writer used for wrap state.
+- `LinkingMetadata::set_wrap_kind` — the writer used for wrap state.
 
 ## Pipeline placement
 
@@ -37,7 +37,7 @@ Position is load-bearing: `wrap_modules` propagates wrap requirements transitive
 `determine_module_exports_kind` writes:
 
 - `module.exports_kind` for some normal modules (in-place via `addr_of!` cast — see §"The unsafe block").
-- `self.metas[idx].wrap_kind` (and `original_wrap_kind`) via `LinkingMetadata::sync_wrap_kind`. **Not idempotent** — the last writer wins, so call order is part of the contract.
+- `self.metas[idx].wrap_kind` via `LinkingMetadata::set_wrap_kind`. **Not idempotent** — the last writer wins, so call order is part of the contract.
 
 It does not touch symbol tables, tree-shaking flags, or chunk graph.
 
@@ -66,6 +66,10 @@ After processing all import records, the importer is itself wrapped as CJS when:
 
 The "is entry + Esm output" branch is what allows `module.exports = ...` to keep working in a CJS-emit-as-ESM scenario; the `Iife`/`Umd` branch prevents leaking `module`/`exports` into the IIFE wrapper's outer scope.
 
+The top-level `this` of a CommonJS module creates an implicit reference to `exports`. The same rule applies to `this` in arrow functions and blocks. The scanner first decides the kind of the module. Then it sets `ExportsRef` when it records the `this`.
+
+`ModuleOrExports` includes this reference. The linker uses `ModuleOrExports` to add a CommonJS wrapper to IIFE and UMD entries. The finalizer prints the `this` as the third parameter of the wrapper. The renamer gives this parameter its name (`EcmaView::cjs_this_ref`), and the runtime passes the initial exports object of the module to it. See [renaming/design.md](../../renaming/design.md), principles 6 and 7.
+
 > **Why "lazy export" is excluded from the `Import` + `None` arm:**
 > Lazy-export modules are deferred ESM facades; promoting them here would short-circuit the dedicated lazy-export pass that runs later (`generate_lazy_export`), which performs additional restructuring that a naive `None → Esm` promotion would skip.
 
@@ -73,7 +77,7 @@ The "is entry + Esm output" branch is what allows `module.exports = ...` to keep
 
 After this pass completes:
 
-1. **Non-lazy modules have their final `exports_kind`.** Every `Module::Normal` whose meta does **not** have `has_lazy_export()` has been classified — a residual `ExportsKind::None` means "no JS importer touched it; treat as a side-effect-only script."
+1. **Non-lazy modules have their final `exports_kind`.** Every `Module::Normal` whose meta does **not** have `has_lazy_export()` has been classified — a residual `ExportsKind::None` means "no `import` or `require` touched it": a side-effect-only script, or a module that only `import()` reads while code splitting is on. The second kind still gets a namespace statement, because the `import()` reads its namespace.
 2. **Lazy-export modules are intentionally not finalized here.** `generate_lazy_export` runs later and may flip a lazy module's `exports_kind` to `Esm` (`generate_lazy_export.rs:88`, `:287`) and even revise its `wrap_kind` to `WrapKind::None` for the JSON-lazy path (`:296`). Don't widen invariant (1) without auditing that pass.
 3. **For every non-lazy `(importer, importee)` pair where wrapping is required, `metas[importee.idx].wrap_kind` is set.** `wrap_modules` may transitively propagate wrappers from there, but it will never _introduce_ a wrap that this pass missed.
 
@@ -105,7 +109,7 @@ That refactor was previously merged and then reverted (#9237) after a hard-to-re
 
 Things that are easy to break and worth re-checking when changing this file:
 
-- **Order between `sync_wrap_kind` calls and `exports_kind` mutation.** Wrap decisions inside the `Require` / `DynamicImport` arms read `importee.exports_kind` _before_ any promotion would happen. Don't reorder.
+- **Order between `set_wrap_kind` calls and `exports_kind` mutation.** Wrap decisions inside the `Require` / `DynamicImport` arms read `importee.exports_kind` _before_ any promotion would happen. Don't reorder.
 - **The CJS-importer wrap rule** (after the per-record loop). The conjunction of conditions encodes three different output-format contracts; flattening it into a `match self.options.format` rewrite has tripped more than one reviewer. Add a regression test rather than refactoring blindly.
 - **Don't widen the unsafe block.** Anything that needs mutable access to other fields of `NormalModule` should go through a separate pass.
 - **Don't promote lazy-export modules here.** Leave `has_lazy_export()` modules to `generate_lazy_export`; promoting them prematurely will break the JSON-lazy and ESM-default code paths in that file.

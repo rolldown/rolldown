@@ -1,0 +1,11 @@
+{
+  "expectExecuted": false,
+  "config": {
+    "external": ["ext-mod"],
+    "paths": { "ext-mod": "./mapped-ext.js" }
+  },
+  "configVariants": [
+    { "format": "esm", "_configName": "esm" },
+    { "format": "cjs", "_configName": "cjs" }
+  ]
+}

@@ -7,15 +7,37 @@ pub mod napi_error;
 pub mod normalize_binding_options;
 
 use std::any::Any;
+use std::{future::Future, pin::Pin};
 
+use napi::{
+  Env,
+  bindgen_prelude::{PromiseRaw, ToNapiValue},
+};
 use napi_derive::napi;
-use rolldown::{LogLevel, NormalizedBundlerOptions};
+use rolldown::{Log, LogLevel, NormalizedBundlerOptions};
 use rolldown_error::{
   BuildDiagnostic, Diagnostic, DiagnosticOptions, filter_out_disabled_diagnostics,
 };
 use rolldown_tracing::try_init_tracing;
 
 pub use normalize_binding_transform_options::normalize_binding_transform_options;
+
+/// Box a future before handing it to napi's [`Env::spawn_future`].
+///
+/// `Env::spawn_future` is monomorphized over the concrete future type, so every
+/// distinct async body re-instantiates the tokio task harness (`poll_future`,
+/// `Core<T, S>`, the scheduler dispatch, ...). Binding entry points run once per
+/// operation, so erasing the future to a single `Pin<Box<dyn Future>>` collapses
+/// that machinery to one instantiation per output type, at the cost of one
+/// heap allocation per call. Do not use this for per-module/per-hook futures,
+/// where the extra allocation would be on a hot path.
+pub fn spawn_boxed_future<T: 'static + Send + ToNapiValue>(
+  env: &Env,
+  fut: impl 'static + Send + Future<Output = napi::Result<T>>,
+) -> napi::Result<PromiseRaw<'_, T>> {
+  let fut: Pin<Box<dyn Future<Output = napi::Result<T>> + Send>> = Box::pin(fut);
+  env.spawn_future(fut)
+}
 
 #[napi]
 pub struct TraceSubscriberGuard {
@@ -77,39 +99,7 @@ pub async fn handle_warnings(
   // #9748 was the per-warning re-render above, not the JS round-trip, so awaiting
   // one call at a time does not reintroduce the hang.
   for (warning, rendered) in warnings.into_iter().zip(rendered) {
-    // Only include loc/pos for warning types that report specific source locations.
-    // Use warning.id() for the file path since the diagnostic may only store the filename.
-    #[expect(
-      clippy::cast_possible_truncation,
-      reason = "line/column/position values are unlikely to exceed u32::MAX in practical use"
-    )]
-    let (loc, pos) = match rendered.primary_location {
-      Some(location) => (
-        Some(rolldown::LogLocation {
-          line: location.line as u32,
-          column: location.column as u32,
-          file: warning.id(),
-        }),
-        Some(location.utf16_position as u32),
-      ),
-      None => (None, None),
-    };
-
-    on_log
-      .call(
-        LogLevel::Warn,
-        rolldown::Log {
-          id: warning.id(),
-          exporter: warning.exporter(),
-          code: Some(warning.kind().to_string()),
-          message: rendered.message,
-          plugin: warning.plugin(),
-          loc,
-          pos,
-          ids: warning.ids(),
-        },
-      )
-      .await?;
+    on_log.call(LogLevel::Warn, Log::from_rendered(&warning, rendered)).await?;
   }
 
   Ok(())

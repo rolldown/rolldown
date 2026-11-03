@@ -1,7 +1,10 @@
 use rolldown_common::{AddonRenderContext, ExternalModule, OutputExports};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::SourceJoiner;
-use rolldown_utils::concat_string;
+use rolldown_utils::{
+  concat_string,
+  ecmascript::{property_access_str_with_ascii, to_ecma_string_literal},
+};
 
 use crate::{
   ecmascript::{
@@ -17,8 +20,8 @@ use crate::{
 };
 
 use super::utils::{
-  namespace::render_property_access, render_chunk_directives, render_chunk_external_imports,
-  render_factory_parameters, render_modules_with_peek_runtime_module_at_first,
+  render_chunk_directives, render_chunk_external_imports, render_factory_parameters,
+  render_modules_with_peek_runtime_module_at_first,
 };
 
 pub async fn render_umd<'code>(
@@ -148,10 +151,9 @@ fn render_amd_dependencies(
     dependencies.push("'exports'".to_string());
   }
   externals.iter().for_each(|external| {
-    dependencies.push(concat_string!(
-      "'",
-      external.get_import_path(ctx.chunk, ctx.resolved_paths),
-      "'"
+    dependencies.push(to_ecma_string_literal(
+      &external.get_import_path(ctx.chunk, ctx.resolved_paths),
+      ctx.options.charset.is_ascii(),
     ));
   });
   dependencies.join(", ")
@@ -168,11 +170,11 @@ fn render_cjs_dependencies(
     dependencies.push("exports".to_string());
   }
   externals.iter().for_each(|external| {
-    dependencies.push(concat_string!(
-      "require('",
-      external.get_import_path(ctx.chunk, ctx.resolved_paths),
-      "')"
-    ));
+    let import_path = to_ecma_string_literal(
+      &external.get_import_path(ctx.chunk, ctx.resolved_paths),
+      ctx.options.charset.is_ascii(),
+    );
+    dependencies.push(concat_string!("require(", import_path, ")"));
   });
   dependencies.join(", ")
 }
@@ -190,9 +192,12 @@ async fn render_iife_export(
   let mut dependencies = Vec::with_capacity(externals.len());
 
   for external in externals {
-    let global = ctx.options.globals.call(external.id.as_str()).await;
+    let global = ctx.options.globals.call(external.id.as_str()).await?;
     let target = match &global {
-      Some(global_name) => global_name.split('.').map(render_property_access).collect::<String>(),
+      Some(global_name) => global_name
+        .split('.')
+        .map(|part| property_access_str_with_ascii("", part, ctx.options.charset.is_ascii()))
+        .collect::<String>(),
       None => {
         warnings.push(
           BuildDiagnostic::missing_global_name(
@@ -202,7 +207,11 @@ async fn render_iife_export(
           )
           .with_severity_warning(),
         );
-        render_property_access(&external.identifier_name)
+        property_access_str_with_ascii(
+          "",
+          &external.identifier_name,
+          ctx.options.charset.is_ascii(),
+        )
       }
     };
     dependencies.push(format!("global{target}"));
@@ -214,6 +223,7 @@ async fn render_iife_export(
       ctx.options.name.as_ref().expect("should have name"),
       "global",
       ",",
+      ctx.options.charset.is_ascii(),
     );
     if named_exports {
       Ok(format!(

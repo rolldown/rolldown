@@ -6,9 +6,8 @@
 ```
 ### rolldown
 ```js
-//#region entry.js
+// entry.js
 ((require) => require("/test.txt"))();
-//#endregion
 
 ```
 ### diff

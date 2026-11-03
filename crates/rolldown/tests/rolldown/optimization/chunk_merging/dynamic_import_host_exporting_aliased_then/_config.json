@@ -1,0 +1,26 @@
+{
+  "_comment": "Same thenable-assimilation hazard as `dynamic_import_host_exporting_then`, reached through an alias: a cross-chunk export is emitted under the declaring symbol's name, so `export { then as hostThen }` still puts `then` on the host chunk.",
+  "config": {
+    "input": [
+      {
+        "name": "a",
+        "import": "./a.js"
+      },
+      {
+        "name": "b",
+        "import": "./b.js"
+      }
+    ],
+    "entryFilenames": "[name].js",
+    "chunkFilenames": "[name].js",
+    "minifyInternalExports": false,
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "dyn",
+          "test": "[\\\\/](?:target|observer|then-export)\\.js$"
+        }
+      ]
+    }
+  }
+}

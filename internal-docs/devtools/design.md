@@ -8,6 +8,24 @@ Rolldown devtools is a tracing-based system that emits structured build-time dat
 
 ## Future Directions
 
+### Plugin-Supplied Metadata
+
+Consumers cannot always tell what a virtual module is or which package a plugin came from. Rolldown lets plugins attach descriptive metadata to both, so the devtools output can surface richer, human-authored context. The metadata is informational and does not affect bundling. See vitejs/devtools [#171](https://github.com/vitejs/devtools/issues/171) (module descriptions) and [#172](https://github.com/vitejs/devtools/issues/172) (plugin package name).
+
+**Author-facing contract (already typed in `packages/rolldown`):**
+
+- **Module description** — plugins return a top-level `description` from the `resolveId`/`load`/`transform` hooks. It is a direct optional field on `ModuleOptions` (so it is also readable via `this.getModuleInfo`) and works for dynamically-generated virtual modules.
+- **Plugin metadata** — plugins set `meta.packageName`, `meta.version`, and `meta.description` on the plugin object (`PluginMeta`).
+
+These fields are all optional and inert to bundling. They are general-purpose descriptive metadata; the tracing layer is one consumer that forwards them to tools such as Vite devtools.
+
+**Emission side (not yet wired):** the trace actions need to carry these values so consumers actually receive them.
+
+- `SessionMeta.plugins[]` (`PluginItem` in `rolldown_devtools_action`) should gain `package_name: Option<String>`, `version: Option<String>`, and `description: Option<String>`, populated by reading each plugin's `meta` when the session meta is emitted.
+- Module descriptions should be attached where per-module data is emitted (e.g. `HookLoadCallEnd` / `ModuleGraphReady`), read from the module's resolved `description`.
+
+Until that plumbing lands, setting the fields is a no-op beyond type-checking; the contract is defined first so plugin authors and consumers can align on the shape.
+
 ### Performance
 
 The initial implementation prioritized unblocking consumability — getting structured data out to disk so that external tools could start building on it. Performance was explicitly not a priority at that stage.
@@ -33,6 +51,11 @@ The current storage model — appending JSON lines to a single `logs.json` file 
 - **Consumers cannot load the file.** Parsing 3 GB of JSON into memory is impractical for a browser-based UI or even a Node.js process. The entire point of emitting data is for tools to consume it, and the current format makes that impossible at scale.
 - **No random access.** To find a specific module's transform history, a consumer must scan the entire file linearly. There's no way to query "all HookTransformCall events for module X" without reading everything.
 - **No incremental consumption.** In watch mode, the file grows across rebuilds with no structure to distinguish boundaries. A consumer that already processed build N has no efficient way to read only build N+1's events.
+
+Report mode (`devtools: { mode: 'report' }`, see `implementation.md`, "Report mode") is the
+shipped answer for agents: bounded aggregates and a small set of files per build output,
+with no event log. It does not serve a UI that needs every event, so the storage question
+below stays open for `full` mode.
 
 #### Database-Backed Storage
 
@@ -154,7 +177,6 @@ Regardless of which approach is chosen for subscriber scoping, a **pre-emit chec
 
 ## Unresolved Questions
 
-- **Output location:** Currently hardcoded to `node_modules/.rolldown/` relative to real `process.cwd()`, not `InputOptions.cwd`. This means the devtools output may not land where expected if cwd differs.
 - **Incremental/watch mode:** The devtools system works for both `ClassicBundler` (one-shot) and core `Bundler` (incremental), but successive builds within the same session append to the same `logs.json`. No explicit "rebuild boundary" action exists yet.
 - **Dev engine integration:** `BindingDevEngine` creates a session but uses `Session::dummy()` — devtools is not yet wired up for the dev/HMR engine.
 

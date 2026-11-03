@@ -34,7 +34,7 @@ use crate::{
 use rolldown_common::{AddonRenderContext, ExternalModule, OutputExports};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::SourceJoiner;
-use rolldown_utils::concat_string;
+use rolldown_utils::{concat_string, ecmascript::escape_non_ascii};
 
 use super::utils::{
   render_chunk_directives, render_chunk_external_imports, render_factory_parameters,
@@ -173,7 +173,7 @@ pub async fn render_iife<'code>(
 
   // iife wrapper end
   let factory_arguments =
-    render_iife_factory_arguments(warnings, ctx, &externals, exports_prefix).await;
+    render_iife_factory_arguments(warnings, ctx, &externals, exports_prefix).await?;
   source_joiner.append_source(concat_string!("})(", factory_arguments, ");"));
 
   if let Some(footer) = footer {
@@ -188,7 +188,7 @@ async fn render_iife_factory_arguments(
   ctx: &GenerateContext<'_>,
   externals: &[&ExternalModule],
   exports_prefix: Option<&str>,
-) -> String {
+) -> BuildResult<String> {
   let mut factory_arguments = if let Some(exports_prefix) = exports_prefix {
     vec![exports_prefix.to_string()]
   } else {
@@ -196,7 +196,7 @@ async fn render_iife_factory_arguments(
   };
   let globals = &ctx.options.globals;
   for external in externals {
-    let global = globals.call(external.id.as_str()).await;
+    let global = globals.call(external.id.as_str()).await?;
     let target = match &global {
       Some(global_name) => global_name.clone(),
       None => {
@@ -211,7 +211,7 @@ async fn render_iife_factory_arguments(
         external.identifier_name.to_string()
       }
     };
-    factory_arguments.push(target);
+    factory_arguments.push(escape_non_ascii(&target, ctx.options.charset.is_ascii()).into_owned());
   }
-  factory_arguments.join(", ")
+  Ok(factory_arguments.join(", "))
 }

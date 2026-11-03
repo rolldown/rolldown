@@ -1,0 +1,122 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { r as init_a } from "./common~a~b~c.js";
+init_a();
+
+```
+
+## b.js
+
+```js
+import { n as init_b } from "./common~a~b~c.js";
+init_b();
+
+```
+
+## c.js
+
+```js
+import { t as init_c } from "./common~a~b~c.js";
+init_c();
+
+```
+
+## common~a~b~c.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// shared.js
+function foo() {
+	(globalThis.sideEffectLog ??= []).push("shared-foo");
+}
+// a.js
+function init_a() {
+	return (init_a = __esmMin((() => {
+		(globalThis.sideEffectLog ??= []).push("a");
+		foo();
+	})))();
+}
+// b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		(globalThis.sideEffectLog ??= []).push("b");
+		foo();
+	})))();
+}
+// c.js
+function init_c() {
+	return (init_c = __esmMin((() => {
+		(globalThis.sideEffectLog ??= []).push("c");
+		foo();
+	})))();
+}
+export { init_b as n, init_a as r, init_c as t };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### a.js
+
+```js
+import { r as init_a } from "./common~a~b~c.js";
+init_a();
+
+```
+
+### b.js
+
+```js
+import { n as init_b } from "./common~a~b~c.js";
+init_b();
+
+```
+
+### c.js
+
+```js
+import { t as init_c } from "./common~a~b~c.js";
+init_c();
+
+```
+
+### common~a~b~c.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// shared.js
+function foo() {
+	(globalThis.sideEffectLog ??= []).push("shared-foo");
+}
+// a.js
+function init_a() {
+	return (init_a = __esmMin((() => {
+		(globalThis.sideEffectLog ??= []).push("a");
+		foo();
+	})))();
+}
+// b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		(globalThis.sideEffectLog ??= []).push("b");
+		foo();
+	})))();
+}
+// c.js
+function init_c() {
+	return (init_c = __esmMin((() => {
+		(globalThis.sideEffectLog ??= []).push("c");
+		foo();
+	})))();
+}
+export { init_b as n, init_a as r, init_c as t };
+
+```

@@ -3,14 +3,12 @@ import path from 'node:path';
 import type {
   BindingHookFilter,
   BindingHookResolveIdOutput,
-  BindingPluginContext,
   BindingPluginOptions,
 } from '../binding.cjs';
 import { RolldownMagicString } from '../binding-magic-string';
 import { parseAst } from '../parse-ast-index';
 import { bindingifySourcemap, type ExistingRawSourceMap } from '../types/sourcemap';
 import { aggregateBindingErrorsIntoJsError } from '../utils/error';
-import { normalizeHook } from '../utils/normalize-hook';
 import { transformModuleInfo } from '../utils/transform-module-info';
 import {
   isEmptySourcemapFiled,
@@ -22,79 +20,42 @@ import {
   bindingifyTransformFilter,
 } from './bindingify-hook-filter';
 import type { BindingifyPluginArgs } from './bindingify-plugin';
-import {
-  bindingifyPluginHookMeta,
-  type PluginHookWithBindingExt,
-} from './bindingify-plugin-hook-meta';
+import { bindingifyHook, type PluginHookWithBindingExt } from './bindingify-plugin-hook-meta';
 import type { PluginHooks, SourceDescription } from './index';
 import { LoadPluginContextImpl } from './load-plugin-context';
-import { PluginContextImpl } from './plugin-context';
+import { createPluginContext } from './plugin-context';
 import { TransformPluginContextImpl } from './transform-plugin-context';
-
-function createPluginContext(
-  args: BindingifyPluginArgs,
-  ctx: BindingPluginContext,
-): PluginContextImpl {
-  return new PluginContextImpl(
-    args.outputOptions,
-    ctx,
-    args.plugin,
-    args.pluginContextData,
-    args.onLog,
-    args.logLevel,
-    args.watchMode,
-  );
-}
 
 export function bindingifyBuildStart(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['buildStart']> {
-  const hook = args.plugin.buildStart;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta } = normalizeHook(hook);
-
-  return {
+  return bindingifyHook(args.plugin.buildStart, ({ handler }) => ({
     plugin: async (ctx, opts) => {
       await handler.call(
         createPluginContext(args, ctx),
         args.pluginContextData.getInputOptions(opts),
       );
     },
-    meta: bindingifyPluginHookMeta(meta),
-  };
+  }));
 }
 export function bindingifyBuildEnd(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['buildEnd']> {
-  const hook = args.plugin.buildEnd;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta } = normalizeHook(hook);
-
-  return {
+  return bindingifyHook(args.plugin.buildEnd, ({ handler }) => ({
     plugin: async (ctx, err) => {
       await handler.call(
         createPluginContext(args, ctx),
         err ? aggregateBindingErrorsIntoJsError(err) : undefined,
       );
     },
-    meta: bindingifyPluginHookMeta(meta),
-  };
+  }));
 }
 
 export function bindingifyResolveId(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['resolveId'], BindingHookFilter | undefined> {
   const hook = args.plugin.resolveId as unknown as PluginHooks['resolveId'];
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta, options } = normalizeHook(hook);
-
-  return {
+  return bindingifyHook(hook, ({ handler, options }) => ({
     plugin: async (ctx, specifier, importer, extraOptions) => {
       const contextResolveOptions =
         extraOptions.custom != null
@@ -139,21 +100,14 @@ export function bindingifyResolveId(
         packageJsonPath: ret.packageJsonPath,
       };
     },
-    meta: bindingifyPluginHookMeta(meta),
     filter: bindingifyResolveIdFilter(options.filter),
-  };
+  }));
 }
 
 export function bindingifyResolveDynamicImport(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['resolveDynamicImport']> {
-  const hook = args.plugin.resolveDynamicImport;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta } = normalizeHook(hook);
-
-  return {
+  return bindingifyHook(args.plugin.resolveDynamicImport, ({ handler }) => ({
     plugin: async (ctx, specifier, importer) => {
       const ret = await handler.call(
         createPluginContext(args, ctx),
@@ -193,20 +147,13 @@ export function bindingifyResolveDynamicImport(
 
       return result;
     },
-    meta: bindingifyPluginHookMeta(meta),
-  };
+  }));
 }
 
 export function bindingifyTransform(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['transform'], BindingHookFilter | undefined> {
-  const hook = args.plugin.transform;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta, options } = normalizeHook(hook);
-
-  return {
+  return bindingifyHook(args.plugin.transform, ({ handler, options }) => ({
     plugin: async (ctx, code, id, meta) => {
       let magicStringInstance: RolldownMagicString, astInstance: Program;
       Object.defineProperties(meta, {
@@ -304,21 +251,14 @@ export function bindingifyTransform(
         moduleType: ret.moduleType,
       };
     },
-    meta: bindingifyPluginHookMeta(meta),
     filter: bindingifyTransformFilter(options.filter),
-  };
+  }));
 }
 
 export function bindingifyLoad(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['load'], BindingHookFilter | undefined> {
-  const hook = args.plugin.load;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta, options } = normalizeHook(hook);
-
-  return {
+  return bindingifyHook(args.plugin.load, ({ handler, options }) => ({
     plugin: async (ctx, id) => {
       const ret = await handler.call(
         new LoadPluginContextImpl(
@@ -358,9 +298,8 @@ export function bindingifyLoad(
         moduleSideEffects: moduleOption.moduleSideEffects ?? undefined,
       };
     },
-    meta: bindingifyPluginHookMeta(meta),
     filter: bindingifyLoadFilter(options.filter),
-  };
+  }));
 }
 
 function preProcessSourceMap(
@@ -384,19 +323,12 @@ function preProcessSourceMap(
 export function bindingifyModuleParsed(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['moduleParsed']> {
-  const hook = args.plugin.moduleParsed;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta } = normalizeHook(hook);
-
-  return {
+  return bindingifyHook(args.plugin.moduleParsed, ({ handler }) => ({
     plugin: async (ctx, moduleInfo) => {
       await handler.call(
         createPluginContext(args, ctx),
         transformModuleInfo(moduleInfo, args.pluginContextData.getModuleOption(moduleInfo.id)),
       );
     },
-    meta: bindingifyPluginHookMeta(meta),
-  };
+  }));
 }

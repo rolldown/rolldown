@@ -1,0 +1,11 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## TSCONFIG_ERROR
+
+```text
+[TSCONFIG_ERROR] Failed to load tsconfig 'tsconfig.json': key must be a string at line 3 column 5
+
+```

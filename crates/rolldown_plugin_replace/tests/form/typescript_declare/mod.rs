@@ -1,13 +1,11 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use rolldown::BundlerOptions;
-
 use rolldown_plugin::{
   HookTransformArgs, HookTransformReturn, HookUsage, Plugin, SharedTransformPluginContext,
 };
 use rolldown_plugin_replace::{ReplaceOptions, ReplacePlugin};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
-use std::sync::Mutex;
 
 #[derive(Debug)]
 struct TestPlugin(Arc<Mutex<Option<String>>>);
@@ -22,6 +20,9 @@ impl Plugin for TestPlugin {
     _ctx: SharedTransformPluginContext,
     args: &HookTransformArgs<'_>,
   ) -> HookTransformReturn {
+    if !args.id.ends_with("input.ts") {
+      return Ok(None);
+    }
     let mut code = self.0.lock().unwrap();
     *code = Some(args.code.to_string());
     Ok(None)
@@ -42,7 +43,7 @@ async fn typescript_declare() {
     .run_with_plugins(
       BundlerOptions { input: Some(vec!["./input.ts".to_string().into()]), ..Default::default() },
       vec![
-        Arc::new(
+        Plugin::new_shared(
           ReplacePlugin::with_options(ReplaceOptions {
             values: std::iter::once(("NAME".to_string(), "replaced".to_string())).collect(),
             prevent_assignment: true,
@@ -51,7 +52,7 @@ async fn typescript_declare() {
           })
           .unwrap(),
         ),
-        Arc::new(TestPlugin(Arc::clone(&code))),
+        Plugin::new_shared(TestPlugin(Arc::clone(&code))),
       ],
     )
     .await;

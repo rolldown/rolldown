@@ -1,0 +1,5 @@
+{
+  "name": "dep",
+  "type": "module",
+  "exports": "./index.js"
+}

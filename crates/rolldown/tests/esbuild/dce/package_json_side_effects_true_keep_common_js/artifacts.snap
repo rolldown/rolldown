@@ -7,5 +7,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+(/* @__PURE__ */ __commonJSMin(((exports) => {
+	console.log("hello");
+})))();
+console.log("unused import");
 
 ```

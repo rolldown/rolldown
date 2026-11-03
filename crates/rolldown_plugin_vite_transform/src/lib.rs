@@ -4,9 +4,10 @@ use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 
 use oxc::codegen::{Codegen, CodegenOptions, CodegenReturn, CommentOptions};
-use oxc::parser::Parser;
+use oxc::diagnostics::Severity as OxcSeverity;
+use oxc::parser::{ParseOptions, Parser};
 use oxc::transformer::Transformer;
-use rolldown_common::{BundlerTransformOptions, ModuleType};
+use rolldown_common::{BundlerTransformOptions, LogWithoutPlugin, ModuleType};
 use rolldown_ecmascript::semantic_builder_for_transform;
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, EventKind, Severity};
 use rolldown_plugin::{HookTransformOutputMap, HookUsage, Plugin, SharedTransformPluginContext};
@@ -27,9 +28,14 @@ pub struct ViteTransformPlugin {
 }
 
 impl ViteTransformPlugin {
-  pub fn new_resolver(yarn_pnp: bool) -> oxc_resolver::Resolver {
+  pub fn new_resolver(yarn_pnp: bool, tsconfig: Option<PathBuf>) -> oxc_resolver::Resolver {
     oxc_resolver::Resolver::new(oxc_resolver::ResolveOptions {
-      tsconfig: Some(oxc_resolver::TsconfigDiscovery::Auto),
+      tsconfig: Some(tsconfig.map_or(oxc_resolver::TsconfigDiscovery::Auto, |config_file| {
+        oxc_resolver::TsconfigDiscovery::Manual(oxc_resolver::TsconfigOptions {
+          config_file,
+          references: oxc_resolver::TsconfigReferences::Auto,
+        })
+      })),
       yarn_pnp,
       ..Default::default()
     })
@@ -59,9 +65,11 @@ impl Plugin for ViteTransformPlugin {
       self.get_modified_transform_options(&ctx, args.id, &cwd, extension, args.code)?;
 
     let allocator = oxc::allocator::Allocator::default();
-    let ret = Parser::new(&allocator, args.code, source_type).parse();
-    if ret.panicked || !ret.diagnostics.is_empty() {
-      return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
+    let ret = Parser::new(&allocator, args.code, source_type)
+      .with_options(ParseOptions { preserve_parens: false, ..ParseOptions::default() })
+      .parse();
+    if ret.fatal_error || !ret.diagnostics.is_empty() {
+      Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
         ret.diagnostics,
         args.code,
         args.id,
@@ -74,14 +82,28 @@ impl Plugin for ViteTransformPlugin {
     let scoping = semantic_builder_for_transform().build(&program).semantic.into_scoping();
     let transformer = Transformer::new(&allocator, Path::new(args.id), &transform_options);
     let transformer_return = transformer.build_with_scoping(scoping, &mut program);
-    if !transformer_return.diagnostics.is_empty() {
-      return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
-        transformer_return.diagnostics,
-        args.code,
-        args.id,
-        Severity::Error,
-        EventKind::ParseError,
-      )))?;
+    let diagnostics = transformer_return.diagnostics;
+    if diagnostics.has_errors() {
+      return Err(
+        BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
+          diagnostics.into_iter().filter(|d| d.severity == OxcSeverity::Error),
+          args.code,
+          args.id,
+          Severity::Error,
+          EventKind::ParseError,
+        ))
+        .into(),
+      );
+    }
+    // The transformer also reports warnings (e.g. unsupported syntax for the target).
+    // They should not fail the build.
+    for warning in diagnostics {
+      ctx.warn(LogWithoutPlugin {
+        message: warning.message.to_string(),
+        id: Some(args.id.to_string()),
+        code: Some(EventKind::ToleratedTransform.to_string()),
+        ..Default::default()
+      });
     }
 
     let CodegenReturn { mut code, map, .. } = Codegen::new()

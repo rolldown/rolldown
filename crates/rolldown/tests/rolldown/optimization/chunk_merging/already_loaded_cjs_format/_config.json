@@ -1,0 +1,13 @@
+{
+  "_comment": "The already-loaded shape with `minifyInternalExports` explicitly disabled, which is the default for non-ESM output without minify (`determine_minify_internal_exports_default`). Set explicitly so the harness does not also generate the opposite variant, keeping the emitted chunk count deterministic.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "format": "cjs",
+    "minifyInternalExports": false
+  }
+}

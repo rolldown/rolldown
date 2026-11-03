@@ -49,13 +49,13 @@ impl LinkStage<'_> {
           }
           ImportKind::Require => match importee_kind {
             ExportsKind::Esm => {
-              self.metas[importee_idx].sync_wrap_kind(WrapKind::Esm);
+              self.metas[importee_idx].set_wrap_kind(WrapKind::Esm);
             }
             ExportsKind::CommonJs => {
-              self.metas[importee_idx].sync_wrap_kind(WrapKind::Cjs);
+              self.metas[importee_idx].set_wrap_kind(WrapKind::Cjs);
             }
             ExportsKind::None => {
-              self.metas[importee_idx].sync_wrap_kind(WrapKind::Cjs);
+              self.metas[importee_idx].set_wrap_kind(WrapKind::Cjs);
               // A `require`'d module with `ExportsKind::None` is promoted to `ExportsKind::CommonJs`.
               if let Some(m) = self.module_table[importee_idx].as_normal_mut() {
                 m.exports_kind = ExportsKind::CommonJs;
@@ -68,13 +68,13 @@ impl LinkStage<'_> {
               // like a `require()` that returns a promise, so the imported module must be wrapped.
               match importee_kind {
                 ExportsKind::Esm => {
-                  self.metas[importee_idx].sync_wrap_kind(WrapKind::Esm);
+                  self.metas[importee_idx].set_wrap_kind(WrapKind::Esm);
                 }
                 ExportsKind::CommonJs => {
-                  self.metas[importee_idx].sync_wrap_kind(WrapKind::Cjs);
+                  self.metas[importee_idx].set_wrap_kind(WrapKind::Cjs);
                 }
                 ExportsKind::None => {
-                  self.metas[importee_idx].sync_wrap_kind(WrapKind::Cjs);
+                  self.metas[importee_idx].set_wrap_kind(WrapKind::Cjs);
                   // A dynamically-imported module with `ExportsKind::None` is promoted to `ExportsKind::CommonJs`
                   // since we wrap it as CJS.
                   if let Some(m) = self.module_table[importee_idx].as_normal_mut() {
@@ -102,7 +102,7 @@ impl LinkStage<'_> {
           || (matches!(self.options.format, OutputFormat::Iife | OutputFormat::Umd)
             && importer.ast_usage.intersects(EcmaModuleAstUsage::ModuleOrExports)))
       {
-        self.metas[importer.idx].sync_wrap_kind(WrapKind::Cjs);
+        self.metas[importer.idx].set_wrap_kind(WrapKind::Cjs);
       }
     }
   }
@@ -113,6 +113,14 @@ impl LinkStage<'_> {
   /// a single namespace binding, reducing code size.
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn determine_safely_merge_cjs_ns(&mut self) {
+    // Merging moves the surviving `require` call to whichever importer statement stays included,
+    // which can shift a CommonJS module's evaluation past later statements. Under strict execution
+    // order that reordering is an observable correctness break that wrapping cannot repair, so we
+    // keep every importer's own call site instead (the CJS wrapper memoizes, so the only cost is a
+    // few extra bytes).
+    if self.options.is_strict_execution_order_enabled() {
+      return;
+    }
     for importer in self.module_table.modules.iter().filter_map(Module::as_normal) {
       for (rec_idx, rec) in importer.import_records.iter_enumerated() {
         if !matches!(rec.kind, ImportKind::Import)

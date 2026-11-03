@@ -5,6 +5,7 @@ import path from 'node:path';
 import type { InputOptions, OutputOptions } from 'rolldown';
 import type { DevEngine, DevOptions } from 'rolldown/experimental';
 import { dev as _dev } from 'rolldown/experimental';
+import { isWasiTest } from 'rolldown-tests/utils';
 import { expect, test } from 'vitest';
 
 const TEST_TIMEOUT = 60_000;
@@ -17,8 +18,11 @@ function dev(
   return _dev(inputOptions, outputOptions, {
     ...devOptions,
     watch: {
-      ...getDevWatchOptionsForCi(),
       ...devOptions.watch,
+      watcher: {
+        ...getDevWatchOptionsForCi().watcher,
+        ...devOptions.watch?.watcher,
+      },
     },
   });
 }
@@ -35,7 +39,9 @@ function dev(
 //
 // Fix: after `close()`, `ensureCurrentBuildFinish()` is a no-op rather than
 // an error — there is no ongoing bundle to wait for.
-test(
+//
+// Under the wasm binding `close()` tears down the shared tokio runtime, so the no-op call panics with "Access tokio runtime failed in spawn". See https://github.com/rolldown/rolldown/issues/10639.
+test.skipIf(isWasiTest)(
   'ensureCurrentBuildFinish after close resolves instead of rejecting',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {

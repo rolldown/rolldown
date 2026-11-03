@@ -13,7 +13,7 @@ use rolldown_error::{
 use rolldown_fs::FileSystem;
 use rolldown_plugin::{__inner::resolve_id_check_external, PluginDriver, SharedPluginDriver};
 use rolldown_resolver::{ResolveError, Resolver};
-use rolldown_utils::ecmascript::{self};
+use rolldown_utils::ecmascript;
 use rustc_hash::FxHashMap;
 
 use crate::{SharedOptions, SharedResolver};
@@ -105,28 +105,24 @@ pub async fn resolve_dependencies<Fs: FileSystem>(
                 build_errors.push(BuildDiagnostic::resolve_error(
                   source.clone(),
                   self_resolved_id.id.as_arc_str().clone(),
-                  if dep.is_unspanned() {
-                    DiagnosableArcstr::String(specifier.as_str().into())
-                  } else {
-                    DiagnosableArcstr::Span(dep.state.span)
-                  },
+                  diagnosable_importee(dep),
                   "Module not found.".into(),
                   EventKind::UnresolvedImport,
                   None,
                 ));
               } else {
-                let help = matches!(options.platform, rolldown_common::Platform::Neutral).then(|| {
-                  r#"The "main" field here was ignored. Main fields must be configured explicitly when using the "neutral" platform."#.to_string()
-                });
+                let help = if specifier.starts_with("virtual:") {
+                  Some(r#"The id starts with "virtual:", which by convention denotes a virtual module that is expected to be resolved by a plugin. Make sure the plugin that should provide it is registered and resolves the id in its `resolveId` hook."#.to_string())
+                } else {
+                  matches!(options.platform, rolldown_common::Platform::Neutral).then(|| {
+                    r#"The "main" field here was ignored. Main fields must be configured explicitly when using the "neutral" platform."#.to_string()
+                  })
+                };
                 warnings.push(
                   BuildDiagnostic::resolve_error(
                     source.clone(),
                     self_resolved_id.id.as_arc_str().clone(),
-                    if dep.is_unspanned() {
-                      DiagnosableArcstr::String(specifier.as_str().into())
-                    } else {
-                      DiagnosableArcstr::Span(dep.state.span)
-                    },
+                    diagnosable_importee(dep),
                     "Module not found, treating it as an external dependency".into(),
                     EventKind::UnresolvedImport,
                     help,
@@ -145,11 +141,7 @@ pub async fn resolve_dependencies<Fs: FileSystem>(
             build_errors.push(BuildDiagnostic::resolve_error(
                 source.clone(),
                 self_resolved_id.id.as_arc_str().clone(),
-                if dep.is_unspanned() {
-                  DiagnosableArcstr::String(specifier.as_str().into())
-                } else {
-                  DiagnosableArcstr::Span(dep.state.span)
-                },
+                diagnosable_importee(dep),
                 format!("Matched alias not found for '{specifier}'"),
                     EventKind::ResolveError,
                 Some("Maybe you expected `resolve.alias` to call other plugins resolveId hook? see the docs https://rolldown.rs/reference/InputOptions.resolve#alias for more details".to_string()),
@@ -160,11 +152,7 @@ pub async fn resolve_dependencies<Fs: FileSystem>(
             build_errors.push(BuildDiagnostic::resolve_error(
               source.clone(),
               self_resolved_id.id.as_arc_str().clone(),
-              if dep.is_unspanned() {
-                DiagnosableArcstr::String(specifier.as_str().into())
-              } else {
-                DiagnosableArcstr::Span(dep.state.span)
-              },
+              diagnosable_importee(dep),
               rolldown_error::resolve_error_to_message(e, &diagnostic_opts),
               EventKind::ResolveError,
               None,
@@ -176,4 +164,14 @@ pub async fn resolve_dependencies<Fs: FileSystem>(
   }
 
   if build_errors.is_empty() { Ok(ret) } else { Err(build_errors.into()) }
+}
+
+/// The message names `module_request`. The span only underlines the import in source.
+fn diagnosable_importee(dep: &RawImportRecord) -> DiagnosableArcstr {
+  let text = ArcStr::from(dep.module_request.as_str());
+  if dep.is_unspanned() {
+    DiagnosableArcstr::String(text)
+  } else {
+    DiagnosableArcstr::Span { span: dep.state.span, text }
+  }
 }

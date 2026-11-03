@@ -221,14 +221,14 @@ fn append_oxc_diagnostics(
     diagnostics.into_iter().partition(|d| d.severity == OxcSeverity::Error);
   errors.extend(BuildDiagnostic::from_oxc_diagnostics(
     new_errors,
-    &source.clone(),
+    source,
     filename,
     Severity::Error,
     EventKind::ParseError,
   ));
   warnings.extend(BuildDiagnostic::from_oxc_diagnostics(
     new_warnings,
-    &source.clone(),
+    source,
     filename,
     Severity::Warning,
     EventKind::ParseError,

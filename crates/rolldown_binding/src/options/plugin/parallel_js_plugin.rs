@@ -3,7 +3,7 @@
 use std::{borrow::Cow, sync::Arc};
 
 use futures::future::{self, BoxFuture};
-use rolldown_plugin::{__inner::SharedPluginable, HookUsage, Plugin};
+use rolldown_plugin::{__inner::SharedPluginable, HookFilterArgs, HookUsage, Plugin};
 
 use super::{BindingPluginOptions, JsPlugin};
 use crate::worker_manager::WorkerManager;
@@ -384,5 +384,13 @@ impl Plugin for ParallelJsPlugin {
 
   fn register_hook_usage(&self) -> HookUsage {
     Plugin::register_hook_usage(self.first_plugin())
+  }
+
+  fn hook_filter_matches(
+    &self,
+    ctx: &rolldown_plugin::PluginContext,
+    args: HookFilterArgs<'_>,
+  ) -> bool {
+    Plugin::hook_filter_matches(self.first_plugin(), ctx, args)
   }
 }

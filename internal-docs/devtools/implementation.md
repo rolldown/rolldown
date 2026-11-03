@@ -166,6 +166,8 @@ The system is built on the `tracing` crate. The core idea: **spans carry context
 
 Each hook call pair gets a unique `call_id` (UUID v4) via its enclosing span.
 
+A call that the plugin's own hook filter skips logs no events. In devtools mode the driver asks `Pluginable::call_hook_filter_matches` and skips the call, so the log and the report hold only calls whose handler ran. Every `transform` call emits a `HookTransformCallEnd`; a result without `code` ends with the unchanged code.
+
 ## Action Catalog
 
 | Action                       | When Emitted                              | Key Fields                                                                                                                     |

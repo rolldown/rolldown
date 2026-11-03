@@ -52,6 +52,11 @@ The current storage model — appending JSON lines to a single `logs.json` file 
 - **No random access.** To find a specific module's transform history, a consumer must scan the entire file linearly. There's no way to query "all HookTransformCall events for module X" without reading everything.
 - **No incremental consumption.** In watch mode, the file grows across rebuilds with no structure to distinguish boundaries. A consumer that already processed build N has no efficient way to read only build N+1's events.
 
+Report mode (`devtools: { mode: 'report' }`, see `implementation.md`, "Report mode") is the
+shipped answer for agents: bounded aggregates and a small set of files per build output,
+with no event log. It does not serve a UI that needs every event, so the storage question
+below stays open for `full` mode.
+
 #### Database-Backed Storage
 
 A real database backend would address all of these and unlock new capabilities:

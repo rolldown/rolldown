@@ -21,7 +21,7 @@ function init_shared_equality() {
 var utilities_exports = /* @__PURE__ */ __exportAll({
 	hasExpectedValue: () => hasExpectedValue,
 	isEqual: () => isEqual
-});
+}, 2);
 import * as import_node_path from "node:path";
 __reExport(utilities_exports, import_node_path);
 function hasExpectedValue(actual) {
@@ -64,7 +64,7 @@ function isEqual(left, right) {
 var utilities_exports = /* @__PURE__ */ __exportAll({
 	hasExpectedValue: () => hasExpectedValue,
 	isEqual: () => isEqual
-});
+}, 2);
 import * as import_node_path from "node:path";
 __reExport(utilities_exports, import_node_path);
 function hasExpectedValue(actual) {

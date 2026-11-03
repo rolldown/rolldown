@@ -104,7 +104,7 @@ impl DevEngine {
     let watcher_config = FsWatcherConfig {
       enabled: !ctx.options.disable_watcher,
       poll_interval: ctx.options.poll_interval,
-      debounce_delay: ctx.options.debounce_duration,
+      debounce_delay: ctx.options.debounce_delay,
       compare_contents_for_polling: ctx.options.compare_contents_for_polling,
       debounce_tick_rate: ctx.options.debounce_tick_rate,
       use_polling: ctx.options.use_polling,
@@ -637,8 +637,8 @@ mod tests {
       ),
       crate::DevOptions {
         watch: Some(crate::DevWatchOptions {
-          disable_watcher: Some(true),
-          skip_write: Some(true),
+          enabled: Some(false),
+          skip_write: true,
           ..Default::default()
         }),
         ..Default::default()
@@ -701,8 +701,8 @@ mod tests {
       crate::DevOptions {
         rebuild_strategy: Some(crate::RebuildStrategy::Always),
         watch: Some(crate::DevWatchOptions {
-          disable_watcher: Some(true),
-          skip_write: Some(true),
+          enabled: Some(false),
+          skip_write: true,
           ..Default::default()
         }),
         ..Default::default()

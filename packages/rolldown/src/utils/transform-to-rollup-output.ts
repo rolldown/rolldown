@@ -24,10 +24,20 @@ export function transformToRollupSourceMap(map: string): SourceMap {
       return JSON.stringify(obj);
     },
     toUrl() {
-      return `data:application/json;charset=utf-8;base64,${Buffer.from(
-        obj.toString(),
-        'utf-8',
-      ).toString('base64')}`;
+      const json = obj.toString();
+      // Browsers and workerd without Node compatibility have no `Buffer`. Each chunk is encoded
+      // at once (no full-size binary string); a multiple of 3 bytes leaves padding to the last.
+      let base64: string;
+      if (typeof Buffer === 'function') {
+        base64 = Buffer.from(json, 'utf-8').toString('base64');
+      } else {
+        const bytes = new TextEncoder().encode(json);
+        base64 = '';
+        for (let i = 0; i < bytes.length; i += 0x7ffe) {
+          base64 += btoa(String.fromCharCode(...bytes.subarray(i, i + 0x7ffe)));
+        }
+      }
+      return `data:application/json;charset=utf-8;base64,${base64}`;
     },
   };
   // Preserve Rollup's legacy property for plugins while serializing the standard `ignoreList`.

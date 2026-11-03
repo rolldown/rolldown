@@ -1616,28 +1616,10 @@ impl GenerateStage<'_> {
               .map(|(name, export)| (name, export.symbol_ref))
             {
               // `preserveModules` emits a module's complete declared interface (#9934). A JSON
-              // module synthesizes a named export per top-level key, but the finalizer
-              // (`try_inline_json_module_prop`) may fold a key's `var` binding into the
-              // self-contained default-export object, leaving no standalone declaration. Listing
-              // such a key here produces an `export { key }` with no binding ->
-              // `SyntaxError: Export 'x' is not defined in module` (#10020).
-              //
-              // Drop a key iff the finalizer inlines it away. That decision is gated on
-              // `need_inline_json_prop` (see `finalizer_context.rs`): JSON, ESM exports, and the
-              // module namespace object NOT included; and within that, a key is inlined iff it is
-              // absent from `json_module_none_self_reference_included_symbol` (i.e. not reached by
-              // a named import, entry export, or — keeping every key materialized — a namespace
-              // import). Mirror that full condition so the export interface never lists an
-              // inlined-away key, while a namespace-imported JSON chunk still exports its complete
-              // interface (every key keeps its binding).
-              if let Module::Normal(normal_module) = &self.link_output.module_table[module_idx]
-                && let Some(none_self_referenced) =
-                  normal_module.json_module_none_self_reference_included_symbol.as_deref()
-                && !normal_module.exports_kind.is_commonjs()
-                && !self.link_output.metas[module_idx].namespace_included
-                && !none_self_referenced
-                  .contains(&self.link_output.symbol_db.canonical_ref_for(symbol))
-              {
+              // key that the finalizer folds into the default-export object has no `var`, so
+              // `export { key }` would throw `SyntaxError: Export 'x' is not defined in module`
+              // (#10020).
+              if self.is_inlined_json_key(self.link_output.symbol_db.canonical_ref_for(symbol)) {
                 continue;
               }
               index_chunk_exported_symbols[chunk_id].entry(symbol).or_default().push(name.clone());
@@ -2098,8 +2080,23 @@ impl GenerateStage<'_> {
     {
       self.link_output.metas[symbol_ref.owner].namespace_included
     } else {
-      used_symbol_refs.contains(&symbol_ref) || order_live_symbols.contains(&symbol_ref)
+      // An inlined JSON key stays in the inclusion fixpoint, but it has no binding to import.
+      // A dynamic-entry facade depends on every export of its entry (#11392).
+      (used_symbol_refs.contains(&symbol_ref) || order_live_symbols.contains(&symbol_ref))
+        && !self.is_inlined_json_key(symbol_ref)
     }
+  }
+
+  /// [`LinkingMetadata::is_inlined_json_key`](crate::types::linking_metadata::LinkingMetadata::is_inlined_json_key)
+  /// for the module that owns `symbol_ref`.
+  fn is_inlined_json_key(&self, symbol_ref: SymbolRef) -> bool {
+    self.link_output.module_table[symbol_ref.owner].as_normal().is_some_and(|module| {
+      self.link_output.metas[symbol_ref.owner].is_inlined_json_key(
+        module,
+        &self.link_output.symbol_db,
+        symbol_ref,
+      )
+    })
   }
 }
 

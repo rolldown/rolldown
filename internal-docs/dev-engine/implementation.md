@@ -143,6 +143,18 @@ module it is appended to already has them. The bundled entry is neither. Both
 copies are built from the same file in the same build, so they cannot drift
 apart.
 
+### Watch options
+
+The TypeScript `DevWatchOptions` type selects `skipWrite`, `watcher`, `include`,
+and `exclude` from `WatcherOptions` and adds the dev-only `enabled` flag. Polling
+and filesystem debounce settings are nested under `watcher`, including
+`debounceDelay`. The dev engine defaults `watcher.useDebounce` to `true`.
+Setting `watch.enabled` to `false` disables filesystem watching while allowing
+initial and explicit builds. `skipWrite` independently controls disk output.
+Rust `DevWatchOptions` and `WatchOption` share the nested
+`WatcherFileWatcherOptions` type; only `DevWatchOptions` has an `enabled` flag,
+which also defaults to `true`.
+
 ### Output format: ESM only
 
 Dev mode only supports `output.format: "esm"`. Only the ESM renderer

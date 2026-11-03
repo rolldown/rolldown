@@ -4,8 +4,8 @@ use oxc::semantic::SymbolId;
 use oxc_index::IndexVec;
 use petgraph::graph::{DiGraph, NodeIndex};
 use rolldown_common::{
-  ConstExportMeta, ConstantValue, GetLocalDb, IndexModules, ModuleIdx, Specifier, StmtEvalFlags,
-  StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  ConstExportMeta, ConstantValue, ExportsKind, GetLocalDb, IndexModules, ModuleIdx, Specifier,
+  StmtEvalFlags, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
 };
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -194,6 +194,7 @@ impl LinkStage<'_> {
                 Some(&namespace_object_symbol_ids),
                 Some(&constants),
               )
+              .with_top_level_return_ends_module(!matches!(module.exports_kind, ExportsKind::Esm))
               .analyze_stmt(stmt)
               .tree_shaking_flags();
               (!flags.has_side_effect_for_tree_shaking()).then_some((stmt_idx, flags))

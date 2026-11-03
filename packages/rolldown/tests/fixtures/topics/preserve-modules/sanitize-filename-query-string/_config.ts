@@ -43,10 +43,8 @@ export default defineTest({
         chunks.map((chunk) => [chunk.fileName, [chunk.name, chunk.sourcemapFileName]]),
       ),
     ).toStrictEqual({
-      'Comp.vue_vue_type_script_setup_true_lang.js': [
-        'Comp.vue_vue_type_script_setup_true_lang',
-        'Comp.vue_vue_type_script_setup_true_lang.js.map',
-      ],
+      // Like Rollup, the name ignores the query.
+      'Comp.vue.js': ['Comp.vue', 'Comp.vue.js.map'],
       'entry.js': ['entry', 'entry.js.map'],
     });
   },

@@ -171,9 +171,9 @@ pub struct AstScanner<'me, 'ast> {
   last_nested_this_stmt_idx: Option<StmtInfoIdx>,
   /// Used in commonjs module it self
   cjs_named_exports_usage: FxHashMap<CompactStr, CommonjsExportSymbolUsage>,
-  /// Set when `module.exports = <value>` is detected. All prior `exports.xxx`
-  /// constants are stale since the entire exports object is replaced at runtime.
-  has_module_exports_reassignment: bool,
+  /// Set when `exports` is reassigned or `module.exports` is replaced. In either
+  /// case, `exports.xxx` writes may no longer target the exported object.
+  has_cjs_exports_reassignment: bool,
   /// Whether the current position is at the top level (all parent scopes are block or top-level).
   /// A cache of [AstScanner::is_valid_tla_scope].
   is_top_level: bool,
@@ -182,6 +182,8 @@ pub struct AstScanner<'me, 'ast> {
   /// Symbol IDs of namespace imports (`import * as ns from '...'`).
   /// Used to treat property reads on namespace objects as side-effect-free.
   namespace_object_symbol_ids: FxHashSet<SymbolId>,
+  /// Root `var` bindings that module-level code reads before their declaration.
+  vars_read_before_declaration: FxHashSet<SymbolId>,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -278,11 +280,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         "__esModule".into(),
         CommonjsExportSymbolUsage { read: 0, write: 0, bailout: true },
       )]),
-      has_module_exports_reassignment: false,
+      has_cjs_exports_reassignment: false,
       is_top_level: false,
       current_comment_idx: 0,
       untranspiled_syntax: UntranspiledSyntax::empty(),
       namespace_object_symbol_ids: FxHashSet::default(),
+      vars_read_before_declaration: FxHashSet::default(),
     }
   }
 
@@ -425,13 +428,20 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       self.result.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
     }
 
-    // `module.exports = <value>` replaces the entire exports object, so all
-    // prior `exports.xxx` writes are stale and must not be inlined.
-    if self.has_module_exports_reassignment {
+    // Reassigning `exports` or `module.exports` breaks their aliasing, so values
+    // assigned to `exports.xxx` cannot be assumed to be exported constants.
+    if self.has_cjs_exports_reassignment {
       for exports in self.result.commonjs_exports.values() {
         for local_export in exports {
           bailout_inlined_cjs_exports_symbol_ids.insert(local_export.referenced.symbol);
         }
+      }
+    }
+
+    // A `var` read before its declaration holds `undefined` there and its initializer later.
+    for symbol_id in &self.vars_read_before_declaration {
+      if let Some(flags) = self.result.symbol_ref_db.flags.get_mut(symbol_id) {
+        flags.remove(SymbolRefFlags::IsNotReassigned);
       }
     }
 
@@ -572,9 +582,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   fn add_local_export(&mut self, export_name: &str, local: SymbolId, span: Span) {
     let symbol_ref: SymbolRef = (self.immutable_ctx.idx, local).into();
 
-    // If there is any write reference to the local variable, it is reassigned.
+    // A repeated `var` declaration assigns without a write reference.
     let is_reassigned =
-      self.result.symbol_ref_db.get_resolved_references(local).any(Reference::is_write);
+      self.result.symbol_ref_db.get_resolved_references(local).any(Reference::is_write)
+        || !self.result.symbol_ref_db.scoping().symbol_redeclarations(local).is_empty();
 
     let ref_flags = symbol_ref.flags_mut(&mut self.result.symbol_ref_db);
     if !is_reassigned {
@@ -1222,8 +1233,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   pub fn add_constant_symbol(&mut self, symbol_id: SymbolId, value: ConstExportMeta) {
     let scoping = self.result.symbol_ref_db.scoping();
+    // A repeated `var` declaration assigns without a write reference.
     let is_mutated = !self.result.symbol_ref_db.is_facade_symbol(symbol_id)
-      && scoping.symbol_is_mutated(symbol_id);
+      && (scoping.symbol_is_mutated(symbol_id)
+        || !scoping.symbol_redeclarations(symbol_id).is_empty());
     if is_mutated || eval_can_assign(scoping, symbol_id) {
       return;
     }

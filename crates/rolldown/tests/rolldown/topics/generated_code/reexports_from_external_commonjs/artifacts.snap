@@ -14,10 +14,10 @@ var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { a: 1 };
 }));
 // reexports.mjs
-var reexports_exports = /* @__PURE__ */ __exportAll({});
+var reexports_exports = /* @__PURE__ */ __exportAll({}, 2);
 __reExport(reexports_exports, /* @__PURE__ */ __toESM(require_cjs(), 1));
 // main.mjs
-node_assert.default.equal(String(reexports_exports), "[object Module]");
+node_assert.default.equal(Object.prototype.toString.call(reexports_exports), "[object Module]");
 
 ```
 
@@ -35,9 +35,9 @@ var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { a: 1 };
 }));
 // reexports.mjs
-var reexports_exports = /* @__PURE__ */ __exportAll({});
+var reexports_exports = /* @__PURE__ */ __exportAll({}, 2);
 __reExport(reexports_exports, /* @__PURE__ */ __toESM(require_cjs(), 1));
 // main.mjs
-assert.equal(String(reexports_exports), "[object Module]");
+assert.equal(Object.prototype.toString.call(reexports_exports), "[object Module]");
 
 ```

@@ -32,6 +32,8 @@ import type { WatcherOptions } from '../options/input-options';
 import type { RolldownBuild } from '../api/rolldown/rolldown-build';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
 import type { BundleError } from '../utils/error';
+// oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
+import type { stringifyModuleId } from '../utils/module-id';
 
 type ModuleSideEffects = boolean | 'no-treeshake' | null;
 export { withFilter } from './with-filter';
@@ -121,7 +123,16 @@ export interface ModuleOptions {
 /** @category Plugin APIs */
 export interface ResolvedId extends ModuleOptions {
   external: boolean | 'absolute';
+  /** The resolved id, without import attributes. */
   id: string;
+  /**
+   * The import attributes the import resolved with, after any change made by
+   * {@linkcode Plugin.resolveId | resolveId} hooks. `{}` means none.
+   *
+   * With {@linkcode InputOptions.experimental | experimental.importAttributes}, they are part of
+   * the module id: see {@linkcode stringifyModuleId}.
+   */
+  attributes: Record<string, string>;
 }
 
 // Separate interface to dedupe the JSDoc comment

@@ -71,3 +71,13 @@ export function parseModuleId(id: string): {
   }
   return { rawId: id, attributes: {} };
 }
+
+/** @internal */
+export function normalizeUniqueModuleId(id: UniqueModuleId): {
+  rawId: string;
+  attributes: Record<string, string>;
+} {
+  return typeof id === 'object'
+    ? { rawId: id.rawId, attributes: id.attributes ?? {} }
+    : parseModuleId(id);
+}

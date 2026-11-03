@@ -181,8 +181,8 @@ impl<T: Send + Sync> ReleaseSlot for RwLock<Option<T>> {
 
 /// The group of JS functions of one set of bundler options.
 ///
-/// `normalize_binding_options` creates one group for each call, and the owner of the options keeps
-/// it. The owner calls [`Self::release_all`] one time, at the end of its close operation.
+/// `normalize_binding_options` creates one group for each call. The owner of the options gives it
+/// to its [`SharedJsCallbackRelease`], which calls [`Self::release_all`].
 ///
 /// The group keeps only weak references to the slots. So it does not keep a callback alive after
 /// the options that use it are gone, for example when a build stops before it starts.
@@ -214,23 +214,19 @@ impl JsCallbackRelease {
   }
 }
 
-/// Releases its groups when it drops. Keep it as the first local of a close future, so that the
-/// release runs on each exit path, also after an error.
-pub struct ReleaseJsCallbacksOnDrop(pub Vec<JsCallbackRelease>);
-
-impl Drop for ReleaseJsCallbacksOnDrop {
-  fn drop(&mut self) {
-    for group in &self.0 {
-      group.release_all();
-    }
+/// Call it without a lock: the release drops the JS functions.
+fn release_groups(groups: Vec<JsCallbackRelease>) {
+  for group in &groups {
+    group.release_all();
   }
 }
 
-/// A release that the owner shares with close operations that it does not wait for.
+/// The release of all groups of one owner, shared with the operations that its close does not wait
+/// for.
 ///
-/// Example: the close of a watcher event result runs `closeBundle`, and `watcher.close()` does not
-/// wait for it. The result close takes a [`JsCallbackReleaseHold`] while it runs. A release request
-/// from the owner then runs when the last hold drops. Only [`Self::request_release`] starts a
+/// Each such operation takes a [`JsCallbackReleaseHold`] while it runs: a build that started before
+/// `bundle.close()`, the close of a watcher event result, each dev engine `close()`. The close of the
+/// owner requests the release at its end, and the release runs when the last hold drops. Only [`Self::request_release`] starts a
 /// release. A drop of the owner or of a holder never does, because a GC can drop them while the
 /// owner still runs.
 #[derive(Clone)]
@@ -280,6 +276,17 @@ impl SharedJsCallbackRelease {
     JsCallbackReleaseHold(self.clone())
   }
 
+  /// Adds the group of a new operation and takes a hold for it, under one lock. With two steps,
+  /// a release on another thread could release the new group before the hold exists. If the
+  /// release was already requested, the group goes when this hold drops.
+  pub fn hold_with_group(&self, group: JsCallbackRelease) -> JsCallbackReleaseHold {
+    let mut state = self.lock();
+    state.groups.push(group);
+    state.holds += 1;
+    drop(state);
+    JsCallbackReleaseHold(self.clone())
+  }
+
   /// Releases the JS functions now, or when the last hold drops.
   pub fn request_release(&self) {
     let groups = {
@@ -287,8 +294,7 @@ impl SharedJsCallbackRelease {
       state.release_requested = true;
       state.take_releasable()
     };
-    // Release outside the lock.
-    drop(ReleaseJsCallbacksOnDrop(groups));
+    release_groups(groups);
   }
 
   fn lock(&self) -> std::sync::MutexGuard<'_, SharedReleaseState> {
@@ -306,8 +312,7 @@ impl Drop for JsCallbackReleaseHold {
       state.holds -= 1;
       state.take_releasable()
     };
-    // Release outside the lock.
-    drop(ReleaseJsCallbacksOnDrop(groups));
+    release_groups(groups);
   }
 }
 

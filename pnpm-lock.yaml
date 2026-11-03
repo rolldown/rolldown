@@ -184,7 +184,7 @@ catalogs:
       version: 0.3.31
     '@napi-rs/cli':
       specifier: ^3.10.0
-      version: 3.10.9
+      version: 3.10.10
     '@napi-rs/wasm-runtime':
       specifier: 1.2.6
       version: 1.2.6
@@ -751,13 +751,16 @@ importers:
         version: 2.0.0-beta.2
       '@napi-rs/cli':
         specifier: 'catalog:'
-        version: 3.10.9(@emnapi/core@2.0.0-beta.2)(@emnapi/runtime@2.0.0-beta.2)(@types/node@24.10.3)(emnapi@2.0.0-beta.2(node-addon-api@8.9.2))(supports-color@10.2.2)
+        version: 3.10.10(@emnapi/core@2.0.0-beta.2)(@emnapi/runtime@2.0.0-beta.2)(@types/node@24.10.3)(emnapi@2.0.0-beta.2(node-addon-api@8.9.2))(supports-color@10.2.2)
       '@napi-rs/wasm-runtime':
         specifier: 'catalog:'
         version: 1.2.6(@emnapi/core@2.0.0-beta.2)(@emnapi/runtime@2.0.0-beta.2)
       '@oxc-node/cli':
         specifier: 'catalog:'
         version: 0.1.7
+      '@rolldown/notify':
+        specifier: 0.1.0
+        version: 0.1.0
       cac:
         specifier: 'catalog:'
         version: 7.1.0
@@ -1123,6 +1126,12 @@ importers:
         specifier: workspace:*
         version: link:../../..
 
+  packages/test-dev-server/tests/playground/hmr-import-glob:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
   packages/test-dev-server/tests/playground/hmr-invalidate-circular:
     devDependencies:
       '@rolldown/test-dev-server':
@@ -1232,6 +1241,12 @@ importers:
         version: link:../../..
 
   packages/test-dev-server/tests/playground/inline-common-chunks:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/test-dev-server/tests/playground/inline-common-chunks-lazy:
     devDependencies:
       '@rolldown/test-dev-server':
         specifier: workspace:*
@@ -2148,6 +2163,9 @@ packages:
   '@emnapi/core@1.9.2':
     resolution: {integrity: sha512-UC+ZhH3XtczQYfOlu3lNEkdW/p4dsJ1r/bP7H8+rhao3TTTMO1ATq/4DdIi23XuGoFY+Cz0JmCbdVl0hz9jZcA==}
 
+  '@emnapi/core@2.0.0-alpha.4':
+    resolution: {integrity: sha512-KjoUR6mNvjT+z5bKMy+a5QDI+kTNTiMZi6uPKzWuWjwZGNa0UPwIVduTfeBRdf6v8Ws5fmHDh7Usf15w/ANfkg==}
+
   '@emnapi/core@2.0.0-beta.2':
     resolution: {integrity: sha512-MzCVoWtcg4Pm2B3je5mMvYMvj3MmBKw+fU7vbsJc9/iT8ip6/eYIHo/Dsm/mr+wsHB6SEyJDuxB09Yy6r/8+4A==}
 
@@ -2160,6 +2178,9 @@ packages:
   '@emnapi/runtime@1.9.2':
     resolution: {integrity: sha512-3U4+MIWHImeyu1wnmVygh5WlgfYDtyf0k8AbLhMFxOipihf6nrWC4syIm/SwEeec0mNSafiiNnMJwbza/Is6Lw==}
 
+  '@emnapi/runtime@2.0.0-alpha.4':
+    resolution: {integrity: sha512-Wy1TQ99obRP3Ah7cf/OOtK1zD9t3pYTWz+G/SpAwTFMhG5hoMdlvfzBpYoHUigS/izu3q+VhYMKhJd7Ii/trpg==}
+
   '@emnapi/runtime@2.0.0-beta.2':
     resolution: {integrity: sha512-JcrSPzPvZuNZvJqPTF9Fw25LbOJ8avzFVlaf2grmH4Cku0oGP47tRgqPZadcfj3YoZMHkFVnCYFbQM8I+i5QEw==}
 
@@ -2168,6 +2189,9 @@ packages:
 
   '@emnapi/wasi-threads@1.2.2':
     resolution: {integrity: sha512-c95qOXkHdydNKhscBTebqEC1CVAZpyqOfVfBzQ1qgzyl3gfeldUjIggDbIZgDKsHLgnsM+igH7TJ/eAasaVuMA==}
+
+  '@emnapi/wasi-threads@2.0.1':
+    resolution: {integrity: sha512-9DsSk+o5NBX0CCJT8s0EROGSGxjR/tKu6aBTaVyq+SjAEQH4XcdcRxPBRzsBLizTTJ49MJjF+jgu3qnO9GLQcQ==}
 
   '@emnapi/wasi-threads@2.2.0':
     resolution: {integrity: sha512-JP7OYH38Q7+pyTAe14raZHLQIK7BDKbdwji+Xi3pcd/6QkJYQH3SX4wu6EplGrGJWRepoNzedfm0G3B9Z4e9Rw==}
@@ -3156,14 +3180,14 @@ packages:
     resolution: {integrity: sha512-47XIizs9XZXvuJgoaJUIE2lFoID8ugvc0jzSHP+Ptfk8nTbnR8g788wv48N03Kx0UkAv559HWRQ3yzOgzlRNUA==}
     engines: {node: '>= 18'}
 
-  '@napi-rs/cli@3.10.9':
-    resolution: {integrity: sha512-RpzJrTDlSxUi2Deo+dh4bmDTKklAVe295aSQjZspwbZyUBG7twbXbiKskL2w/bL4kNg3DdkrwbI/iQwI9kgQaQ==}
+  '@napi-rs/cli@3.10.10':
+    resolution: {integrity: sha512-vkeG0mchlQOEZ6DH9CVczAEQwEy/ZA5by94/3Dv3EakWMDIgaDKg4tzPmh75khkib1/m51Q1invNzFJXj2ZPTg==}
     engines: {node: ^20.17.0 || ^22.13.0 || >= 23.5.0}
     hasBin: true
     peerDependencies:
-      '@emnapi/core': ^1.7.1 || ^2.0.0-alpha.4
-      '@emnapi/runtime': ^1.7.1 || ^2.0.0-alpha.4
-      emnapi: ^1.7.1 || ^2.0.0-alpha.4
+      '@emnapi/core': ^1.7.1 || ^2.0.0-beta.2
+      '@emnapi/runtime': ^1.7.1 || ^2.0.0-beta.2
+      emnapi: ^1.7.1 || ^2.0.0-beta.2
     peerDependenciesMeta:
       '@emnapi/core':
         optional: true
@@ -4961,6 +4985,66 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [win32]
+
+  '@rolldown/notify-darwin-arm64@0.1.0':
+    resolution: {integrity: sha512-ThEIvYp4SiMfPbQjjNChzKXdpEvLox23a7UyAOjvIAgVlUSPbiFzbXbcdL/ZKHJvJUTHpNOaFSo42+JXJGX4Fw==}
+    engines: {node: '>=20'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@rolldown/notify-darwin-x64@0.1.0':
+    resolution: {integrity: sha512-hVC9xdDYQk8Os55F5nBwMjZ7IQgUSpvd7i3FPQ6YloqdL4tuM2b9d4fLcUHDy4+sFpTefGYspBQBKh2nWR/Pzg==}
+    engines: {node: '>=20'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@rolldown/notify-linux-arm64-gnu@0.1.0':
+    resolution: {integrity: sha512-58x99Oc6zQb4/naF+XXj3spgj+ESxOkdX25yOTqLvl9Sv7fYmOclp8mRqvQ6YHNuU2GMSfWkuT8SfaS/6aobzA==}
+    engines: {node: '>=20'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@rolldown/notify-linux-arm64-musl@0.1.0':
+    resolution: {integrity: sha512-08F7iZrNQabHkyMb5kC8BAoJRSsTHU7qrpkZdhoaMpzk7oHWyke+Ji1K/KIrTEwjMfN0ph9z5aToRXQlblOTKQ==}
+    engines: {node: '>=20'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  '@rolldown/notify-linux-x64-gnu@0.1.0':
+    resolution: {integrity: sha512-qo9OnmKWqhQt4ZCv6nHero6YYMm5Y7TAsuZSCU5R35JfUP2V1u+xQ5HCp3VIG5Sr27T5BslVcmHP7twZLbraAQ==}
+    engines: {node: '>=20'}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@rolldown/notify-linux-x64-musl@0.1.0':
+    resolution: {integrity: sha512-fL25/0LRnZ8bCwULT8bin9FPNRbWRhtU8CVYs2cD9CWzAkFbGVSujbMlKvlU89hJIUmTHwwRuxfvScqlxp6cyQ==}
+    engines: {node: '>=20'}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  '@rolldown/notify-wasm32-wasi@0.1.0':
+    resolution: {integrity: sha512-Xhyf9W98Fo1sdSDZwMOqmsoVaUI5br4JkrEECuCCZanw/r+NOOQHslV3lr3WX/sinELPiLVe+cfwRTsoLFVNqA==}
+    engines: {node: ^20.19.0 || ^22.13.0 || >=23.5.0}
+
+  '@rolldown/notify-win32-arm64-msvc@0.1.0':
+    resolution: {integrity: sha512-WqieQDPzoIwxCdZwPwoE84u3Q960FxnWumBTvadR+i3/Ule0bhe/0KOO878rH2Q+4yOKd6CM49FyQBAQLNYPiQ==}
+    engines: {node: '>=20'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@rolldown/notify-win32-x64-msvc@0.1.0':
+    resolution: {integrity: sha512-BNrksV7m1ioefrRkbaormE3bGi+3ODhyGq7X964X0MvzpPimUzUxlXgxfvn4TjoF3SFcq7F0dSL47P06itrcdg==}
+    engines: {node: '>=20'}
+    cpu: [x64]
+    os: [win32]
+
+  '@rolldown/notify@0.1.0':
+    resolution: {integrity: sha512-1qWTcoVEzzhee7NwoXkHpssPvxApuoJsGJ4Z+bXpVqONGW1QkWDLzR3rijLT/xtqtk6jXlJ293r9jjtv9ipqsQ==}
+    engines: {node: '>=20'}
 
   '@rolldown/pluginutils@1.0.1':
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
@@ -10475,6 +10559,11 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
+  '@emnapi/core@2.0.0-alpha.4':
+    dependencies:
+      '@emnapi/wasi-threads': 2.0.1
+      tslib: 2.8.1
+
   '@emnapi/core@2.0.0-beta.2':
     dependencies:
       '@emnapi/wasi-threads': 2.2.0
@@ -10495,6 +10584,10 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
+  '@emnapi/runtime@2.0.0-alpha.4':
+    dependencies:
+      tslib: 2.8.1
+
   '@emnapi/runtime@2.0.0-beta.2':
     dependencies:
       tslib: 2.8.1
@@ -10508,6 +10601,10 @@ snapshots:
     dependencies:
       tslib: 2.8.1
     optional: true
+
+  '@emnapi/wasi-threads@2.0.1':
+    dependencies:
+      tslib: 2.8.1
 
   '@emnapi/wasi-threads@2.2.0':
     dependencies:
@@ -11177,7 +11274,7 @@ snapshots:
 
   '@msgpack/msgpack@3.1.3': {}
 
-  '@napi-rs/cli@3.10.9(@emnapi/core@2.0.0-beta.2)(@emnapi/runtime@2.0.0-beta.2)(@types/node@24.10.3)(emnapi@2.0.0-beta.2(node-addon-api@8.9.2))(supports-color@10.2.2)':
+  '@napi-rs/cli@3.10.10(@emnapi/core@2.0.0-beta.2)(@emnapi/runtime@2.0.0-beta.2)(@types/node@24.10.3)(emnapi@2.0.0-beta.2(node-addon-api@8.9.2))(supports-color@10.2.2)':
     dependencies:
       '@inquirer/prompts': 8.5.2(@types/node@24.10.3)
       '@napi-rs/cross-toolchain': 1.0.3(supports-color@10.2.2)
@@ -11427,6 +11524,12 @@ snapshots:
       '@emnapi/runtime': 1.9.2
       '@tybys/wasm-util': 0.10.3
     optional: true
+
+  '@napi-rs/wasm-runtime@1.2.6(@emnapi/core@2.0.0-alpha.4)(@emnapi/runtime@2.0.0-alpha.4)':
+    dependencies:
+      '@emnapi/core': 2.0.0-alpha.4
+      '@emnapi/runtime': 2.0.0-alpha.4
+      '@tybys/wasm-util': 0.10.3
 
   '@napi-rs/wasm-runtime@1.2.6(@emnapi/core@2.0.0-beta.2)(@emnapi/runtime@2.0.0-beta.2)':
     dependencies:
@@ -12413,6 +12516,54 @@ snapshots:
 
   '@rolldown/binding-win32-x64-msvc@1.2.15':
     optional: true
+
+  '@rolldown/notify-darwin-arm64@0.1.0':
+    optional: true
+
+  '@rolldown/notify-darwin-x64@0.1.0':
+    optional: true
+
+  '@rolldown/notify-linux-arm64-gnu@0.1.0':
+    optional: true
+
+  '@rolldown/notify-linux-arm64-musl@0.1.0':
+    optional: true
+
+  '@rolldown/notify-linux-x64-gnu@0.1.0':
+    optional: true
+
+  '@rolldown/notify-linux-x64-musl@0.1.0':
+    optional: true
+
+  '@rolldown/notify-wasm32-wasi@0.1.0':
+    dependencies:
+      '@emnapi/core': 2.0.0-alpha.4
+      '@emnapi/runtime': 2.0.0-alpha.4
+      '@napi-rs/wasm-runtime': 1.2.6(@emnapi/core@2.0.0-alpha.4)(@emnapi/runtime@2.0.0-alpha.4)
+    optional: true
+
+  '@rolldown/notify-win32-arm64-msvc@0.1.0':
+    optional: true
+
+  '@rolldown/notify-win32-x64-msvc@0.1.0':
+    optional: true
+
+  '@rolldown/notify@0.1.0':
+    dependencies:
+      '@emnapi/core': 2.0.0-alpha.4
+      '@emnapi/runtime': 2.0.0-alpha.4
+      '@napi-rs/wasm-runtime': 1.2.6(@emnapi/core@2.0.0-alpha.4)(@emnapi/runtime@2.0.0-alpha.4)
+      picomatch: 4.0.7
+    optionalDependencies:
+      '@rolldown/notify-darwin-arm64': 0.1.0
+      '@rolldown/notify-darwin-x64': 0.1.0
+      '@rolldown/notify-linux-arm64-gnu': 0.1.0
+      '@rolldown/notify-linux-arm64-musl': 0.1.0
+      '@rolldown/notify-linux-x64-gnu': 0.1.0
+      '@rolldown/notify-linux-x64-musl': 0.1.0
+      '@rolldown/notify-wasm32-wasi': 0.1.0
+      '@rolldown/notify-win32-arm64-msvc': 0.1.0
+      '@rolldown/notify-win32-x64-msvc': 0.1.0
 
   '@rolldown/pluginutils@1.0.1': {}
 

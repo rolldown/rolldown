@@ -56,6 +56,8 @@ pub enum EventKind {
   FileNotFoundError = 18,
   /// Whether to emit warnings for module-level directives other than `use strict`.
   ModuleLevelDirective = 45,
+  InvalidExternalIdError = 52,
+  ExternalModulesCannotBeTransformedToModulesError = 53,
   // !! Only add new kind if it's not covered by the kinds from rollup !!
 
   // --- These kinds are derived from esbuild
@@ -169,6 +171,10 @@ impl Display for EventKind {
       }
       EventKind::FileNotFoundError => write!(f, "FILE_NOT_FOUND"),
       EventKind::ModuleLevelDirective => write!(f, "MODULE_LEVEL_DIRECTIVE"),
+      EventKind::InvalidExternalIdError => write!(f, "INVALID_EXTERNAL_ID"),
+      EventKind::ExternalModulesCannotBeTransformedToModulesError => {
+        write!(f, "EXTERNAL_MODULES_CANNOT_BE_TRANSFORMED_TO_MODULES")
+      }
 
       // --- Derived from esbuild
       EventKind::AssignToImportError => write!(f, "ASSIGN_TO_IMPORT"),

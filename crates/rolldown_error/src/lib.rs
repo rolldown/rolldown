@@ -14,6 +14,7 @@ pub use crate::{
   build_diagnostic::events::bundler_initialize_error::BundlerInitializeError,
   build_diagnostic::events::commonjs_variable_in_esm::CjsExportSpan,
   build_diagnostic::events::empty_import_meta::EmptyImportMetaKind,
+  build_diagnostic::events::external_module_conflict::ExternalModuleConflictImporter,
   build_diagnostic::events::invalid_option::InvalidOptionType,
   build_diagnostic::events::namespace_conflict::NamespaceConflictExporter,
   build_diagnostic::events::plugin_error::CausedPlugin,

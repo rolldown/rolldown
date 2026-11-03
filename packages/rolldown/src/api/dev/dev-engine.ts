@@ -121,12 +121,7 @@ export class DevEngine {
       watch: devOptions.watch && {
         enabled: devOptions.watch.enabled,
         skipWrite: devOptions.watch.skipWrite,
-        usePolling: devOptions.watch.usePolling,
-        pollInterval: devOptions.watch.pollInterval,
-        useDebounce: devOptions.watch.useDebounce,
-        debounceDuration: devOptions.watch.debounceDuration,
-        compareContentsForPolling: devOptions.watch.compareContentsForPolling,
-        debounceTickRate: devOptions.watch.debounceTickRate,
+        watcher: devOptions.watch.watcher,
         include: normalizedStringOrRegex(devOptions.watch.include),
         exclude: normalizedStringOrRegex(devOptions.watch.exclude),
       },

@@ -339,6 +339,10 @@ backend:
 | false         | true           | debounced `RecommendedWatcher`        |
 | true          | true           | debounced `PollWatcher`               |
 
+Rust `WatchOption.watcher` and `DevWatchOptions.watcher` use the shared
+`WatcherFileWatcherOptions` type. Unset fields use each mode's defaults:
+filesystem debouncing is off for build watch and on for dev mode.
+
 Watch mode leaves `enabled` at its default (`true`). The no-op backend is a
 dev-engine concern (`disable_watcher` → `FsWatcherConfig.enabled: false`).
 

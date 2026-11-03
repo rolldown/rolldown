@@ -96,7 +96,7 @@ pub mod bundler_options {
       },
       tsconfig::TsConfig,
       tsconfig_merge::merge_transform_options_with_tsconfig as merge_tsconfig,
-      watch_option::{OnInvalidate, WatchOption},
+      watch_option::{OnInvalidate, WatchOption, WatcherFileWatcherOptions},
     },
   };
 
@@ -135,9 +135,14 @@ pub use crate::{
     SharedFileEmitter,
   },
   hmr::{
-    client_hmr_input::ClientHmrInput, client_hmr_update::ClientHmrUpdate,
-    hmr_boundary::HmrBoundary, hmr_patch::HmrPatch, hmr_stamp_table::HmrStampTable,
-    hmr_update::HmrUpdate, lazy_chunk_output::HmrLazyChunkOutput,
+    client_hmr_input::ClientHmrInput,
+    client_hmr_update::ClientHmrUpdate,
+    hmr_boundary::HmrBoundary,
+    hmr_patch::HmrPatch,
+    hmr_stamp_table::HmrStampTable,
+    hmr_update::HmrUpdate,
+    lazy_chunk_output::HmrLazyChunkOutput,
+    lazy_proxy_id::{LAZY_PROXY_QUERY, is_lazy_proxy, lazy_proxy_target, write_lazy_proxy_id},
   },
   module::{
     Module,

@@ -2100,12 +2100,7 @@ export interface BindingDevtoolsOptions {
 export interface BindingDevWatchOptions {
   enabled?: boolean
   skipWrite?: boolean
-  usePolling?: boolean
-  pollInterval?: number
-  useDebounce?: boolean
-  debounceDuration?: number
-  compareContentsForPolling?: boolean
-  debounceTickRate?: number
+  watcher?: BindingWatcherFileWatcherOptions
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
 }
@@ -3112,17 +3107,21 @@ export interface BindingViteTransformPluginConfig {
   yarnPnp?: boolean
 }
 
-export interface BindingWatchOption {
-  skipWrite?: boolean
-  include?: Array<BindingStringOrRegex>
-  exclude?: Array<BindingStringOrRegex>
-  buildDelay?: number
+export interface BindingWatcherFileWatcherOptions {
   usePolling?: boolean
   pollInterval?: number
   compareContentsForPolling?: boolean
   useDebounce?: boolean
   debounceDelay?: number
   debounceTickRate?: number
+}
+
+export interface BindingWatchOption {
+  skipWrite?: boolean
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
+  buildDelay?: number
+  watcher?: BindingWatcherFileWatcherOptions
   onInvalidate?: ((id: string) => void) | undefined
 }
 
@@ -3235,4 +3234,28 @@ export declare function startAsyncRuntime(): void
 
 export interface ViteImportGlobMeta {
   isSubImportsPattern?: boolean
+}
+
+export declare class Watcher {
+  constructor(callback: (arg0: WatcherEvent) => void, options?: WatcherOptions | undefined | null)
+  add(paths: Array<string>): void
+  remove(paths: Array<string>): void
+  isWatched(path: string, isIgnored?: ((arg: string) => boolean) | undefined | null): boolean
+  close(): void
+  ref(): void
+  unref(): void
+}
+
+export interface WatcherEvent {
+  kind: string
+  path?: string
+  isDir?: boolean
+  error?: string
+}
+
+export interface WatcherOptions {
+  usePolling?: boolean
+  pollInterval?: number
+  followSymlinks?: boolean
+  ignored?: Array<string>
 }

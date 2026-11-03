@@ -6,7 +6,7 @@ use rolldown_common::{
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_sourcemap::{
-  Source, SourceMap, SourceMapSource, collapse_sourcemaps, empty_sourcemap,
+  Source, SourceMap, SourceMapSource, collapse_sourcemaps_traced, empty_sourcemap,
 };
 use rolldown_utils::concat_string;
 
@@ -64,6 +64,10 @@ pub fn render_ecma_module(
 /// (`codegen_map`, always the last element of the chain) into the final module
 /// sourcemap. Returns `None` when there is no sourcemap to emit.
 ///
+/// Like Rollup, the result keeps only the sources and names that a traced token
+/// references. So a transform that returns `{ mappings: '' }` or omits its map
+/// removes the module's earlier code, and the names that came with it.
+///
 /// A `SOURCEMAP_BROKEN` warning is pushed onto `warnings` for every plugin that
 /// omitted its sourcemap, since that breaks the mapping chain for `module_id`.
 pub fn collapse_module_sourcemap(
@@ -116,7 +120,7 @@ pub fn collapse_module_sourcemap(
     if let Some(sourcemap) = codegen_map.as_ref() {
       owned_chain.push(sourcemap);
     }
-    Some(collapse_sourcemaps(&owned_chain))
+    Some(collapse_sourcemaps_traced(&owned_chain))
   }
 }
 
@@ -126,7 +130,7 @@ mod tests {
   use arcstr::ArcStr;
   use insta::assert_snapshot;
   use rolldown_common::{PluginIdx, SourcemapChainElement};
-  use rolldown_sourcemap::{SourceMap, SourceMapBuilder};
+  use rolldown_sourcemap::{SourceMap, SourceMapBuilder, empty_sourcemap};
 
   const MODULE_ID: &str = "/project/src/index.js";
 
@@ -225,5 +229,28 @@ mod tests {
         .unwrap();
     assert_snapshot!(result.to_json_string(), @r#"{"version":3,"names":[],"sources":["loaded.js"],"sourcesContent":["const a = 1;\n"],"mappings":"AAAA,MAAM"}"#);
     assert!(warnings.is_empty());
+  }
+
+  #[test]
+  fn map_without_mappings_drops_earlier_sources_and_names() {
+    // `{ mappings: '' }` or an omitted map after a real map leaves no token that reaches the
+    // original code, so its source, content and names must not survive (#11176).
+    let mut builder = SourceMapBuilder::default();
+    let source_id = builder.add_source_and_content(MODULE_ID, "const secret = 1;\n");
+    let name_id = builder.add_name("secret");
+    builder.add_token(0, 6, 0, 6, Some(source_id), Some(name_id));
+    let earlier =
+      SourcemapChainElement::Transform((plugin_idx(), builder.into_sourcemap().into_owned()));
+    for last in [SourcemapChainElement::Transform((plugin_idx(), empty_sourcemap())), omitted()] {
+      let mut warnings = vec![];
+      let result = collapse_module_sourcemap(
+        &[earlier.clone(), last],
+        Some(codegen_map("proxy();\n")),
+        MODULE_ID,
+        &mut warnings,
+      )
+      .unwrap();
+      assert_eq!(result.to_json_string(), r#"{"version":3,"names":[],"sources":[],"mappings":""}"#);
+    }
   }
 }

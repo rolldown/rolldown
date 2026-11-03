@@ -90,11 +90,14 @@ impl Plugin for LazyCompilationPlugin {
 
       // Externals are not part of this build, so the dev runtime never gets a factory
       // for them and `requestLazy` cannot run them.
-      // Any resolution `ctx.resolve` marks external is passed through unchanged:
+      // Any resolution `ctx.resolve` marks external is left to the normal resolution:
       // plugin `{ external: true }`, config `external` on the resolved id, Node
-      // built-ins, and http(s) URLs. See internal-docs/lazy-compilation/implementation.md.
+      // built-ins, and http(s) URLs. `HookResolveIdOutput` cannot carry every
+      // `ResolvedId` field (e.g. `is_external_without_side_effects`), so returning `None`
+      // lets the normal resolution build the full `ResolvedId` again.
+      // See internal-docs/lazy-compilation/implementation.md.
       if original_id.external.is_external() {
-        return Ok(Some(HookResolveIdOutput::from_resolved_id(original_id)));
+        return Ok(None);
       }
 
       // `ctx.resolve` can re-enter this hook, so the id may already carry the marker. Appending

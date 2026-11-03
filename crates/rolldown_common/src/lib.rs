@@ -123,8 +123,8 @@ pub use crate::{
     dynamic_import_usage,
     ecma_asset_meta::EcmaAssetMeta,
     ecma_view::{
-      EcmaModuleAstUsage, EcmaView, EcmaViewMeta, ExportOrigin, PrependRenderedImport,
-      RolldownFileUrlReference, ThisExprReplaceKind, generate_replace_this_expr_map,
+      EcmaModuleAstUsage, EcmaView, EcmaViewMeta, ExportOrigin, RolldownFileUrlReference,
+      ThisExprReplaceKind, generate_replace_this_expr_map,
     },
     json_to_program::{json_value_to_ecma_ast, json_value_to_expression},
     module_idx::ModuleIdx,
@@ -214,7 +214,6 @@ pub use crate::{
   types::rollup_rendered_chunk::RollupRenderedChunk,
   types::scan_mode::ScanMode,
   types::side_effects,
-  types::source_mutation::SourceMutation,
   types::sourcemap_chain_element::SourcemapChainElement,
   types::stable_module_id::StableModuleId,
   types::stmt_eval_flags::StmtEvalFlags,

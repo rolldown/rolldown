@@ -1,13 +1,11 @@
 use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ConstExportMeta, ImportRecordIdx, IndexModules, ModuleIdx,
-  NormalModule, PathsOutputOption, RenderedConcatenatedModuleParts, RetainedExportSymbols,
-  RuntimeModuleBrief, SharedFileEmitter, StmtInfos, SymbolRef, SymbolRefDb, UsedSymbolRefs,
-  WrapKind,
+  NormalModule, PathsOutputOption, RetainedExportSymbols, RuntimeModuleBrief, SharedFileEmitter,
+  StmtInfos, SymbolRef, SymbolRefDb, UsedSymbolRefs, WrapKind,
 };
 
 pub type FinalizerMutableFields = (
   FxIndexMap<ImportRecordIdx, String>, // transferred_import_record
-  RenderedConcatenatedModuleParts,     // rendered_concatenated_wrapped_module_parts
   Vec<BuildDiagnostic>,                // diagnostics
 );
 
@@ -155,7 +153,6 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         needs_hosted_top_level_binding: false,
         module_namespace_included,
         transferred_import_record,
-        rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts::default(),
         json_module_inlined_prop: need_inline_json_prop.then(|| Box::new(FxHashMap::default())),
         missing_file_reference_ids: FxIndexMap::default(),
         resolve_file_url_errors: Vec::new(),
@@ -206,11 +203,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         }));
       }
 
-      (
-        finalizer.transferred_import_record,
-        finalizer.rendered_concatenated_wrapped_module_parts,
-        diagnostics,
-      )
+      (finalizer.transferred_import_record, diagnostics)
     })
   }
 }

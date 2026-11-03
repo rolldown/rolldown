@@ -12,11 +12,10 @@ use oxc::{
   span::{GetSpan, GetSpanMut, SPAN, Span},
 };
 use rolldown_common::{
-  AstScopes, Chunk, ChunkIdx, ChunkKind, ConcatenateWrappedModuleKind, ExportsKind,
-  ImportRecordIdx, ImportRecordMeta, InlineConstMode, MemberExprProp, MemberExprRefResolution,
-  Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleType, NamespaceAlias, NormalModule,
-  OutputExports, OutputFormat, Platform, RenderedConcatenatedModuleParts, Specifier, SymbolRef,
-  WrapKind, is_lazy_proxy,
+  AstScopes, Chunk, ChunkIdx, ChunkKind, ExportsKind, ImportRecordIdx, ImportRecordMeta,
+  InlineConstMode, MemberExprProp, MemberExprRefResolution, Module, ModuleIdx,
+  ModuleNamespaceIncludedReason, ModuleType, NamespaceAlias, NormalModule, OutputExports,
+  OutputFormat, Platform, Specifier, SymbolRef, WrapKind, is_lazy_proxy,
 };
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
@@ -113,7 +112,6 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub needs_hosted_top_level_binding: bool,
   pub module_namespace_included: bool,
   pub transferred_import_record: FxIndexMap<ImportRecordIdx, String>,
-  pub rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts,
   pub json_module_inlined_prop: Option<Box<FxHashMap<SymbolId, ast::Expression<'ast>>>>,
   /// Reference ids of `import.meta.ROLLDOWN_FILE_URL_*` accesses that no emitted file matches.
   ///
@@ -606,11 +604,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       // Replace the import statement with `init_foo()` if `ImportDeclaration` is not a plain import
       // or the importee have side effects.
       WrapKind::Esm => {
-        if matches!(
-          importee_linking_info.concatenated_wrapped_module_kind,
-          ConcatenateWrappedModuleKind::Inner
-        ) || self.generated_init_esm_importee_ids.contains(&importee.idx)
-        {
+        if self.generated_init_esm_importee_ids.contains(&importee.idx) {
           return true;
         }
         self.generated_init_esm_importee_ids.insert(importee.idx);
@@ -2260,11 +2254,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
                 if matches!(importee_linking_info.wrap_kind(), WrapKind::Esm)
                   && !consumer_local_route
-                // If it is a inner concatenated module, we should not call its wrapper here
-                  && !matches!(
-                    importee_linking_info.concatenated_wrapped_module_kind,
-                    ConcatenateWrappedModuleKind::Inner
-                  )
                 {
                   let (wrapper_ref, _) = self.finalized_expr_for_symbol_ref(
                     importee_linking_info.wrapper_ref.unwrap(),

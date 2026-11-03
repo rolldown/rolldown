@@ -144,6 +144,14 @@ impl NativePluginContextImpl {
     .await
   }
 
+  /// Effective `moduleSideEffects` for a manual `this.resolve` result.
+  pub async fn reported_module_side_effects(
+    &self,
+    resolved_id: &ResolvedId,
+  ) -> anyhow::Result<HookSideEffects> {
+    rolldown_common::reported_module_side_effects(&self.options.treeshake, resolved_id).await
+  }
+
   pub fn emit_chunk(&self, chunk: rolldown_common::EmittedChunk) -> anyhow::Result<ArcStr> {
     self.file_emitter.emit_chunk(Arc::new(chunk))
   }

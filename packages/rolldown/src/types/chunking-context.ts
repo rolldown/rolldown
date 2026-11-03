@@ -1,6 +1,6 @@
 import type { BindingChunkingContext } from '../binding.cjs';
 import type { PluginContextData } from '../plugin/plugin-context-data';
-import { transformModuleInfo } from '../utils/transform-module-info';
+import { effectiveModuleSideEffects, transformModuleInfo } from '../utils/transform-module-info';
 import type { ModuleInfo } from './module-info';
 
 export class ChunkingContextImpl {
@@ -25,7 +25,8 @@ export class ChunkingContextImpl {
       const option = this.pluginContextData.getModuleOption(moduleId);
       const info = transformModuleInfo(bindingInfo, option);
       Object.defineProperty(info, 'moduleSideEffects', {
-        get: () => option.moduleSideEffects,
+        get: () =>
+          effectiveModuleSideEffects(option.moduleSideEffects, bindingInfo.moduleSideEffects),
         set: (moduleSideEffects: ModuleInfo['moduleSideEffects']) => {
           option.moduleSideEffects = moduleSideEffects;
           option.invalidate = true;

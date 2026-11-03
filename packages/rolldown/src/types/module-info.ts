@@ -3,6 +3,15 @@ import type { ModuleOptions } from '..';
 /** @category Plugin APIs */
 export interface ModuleInfo extends ModuleOptions {
   /**
+   * Whether Rolldown treats this module as having side effects.
+   *
+   * This is the value Rolldown applies, in order: a `moduleSideEffects` returned from
+   * `resolveId`, `load`, or `transform`, then `treeshake.moduleSideEffects`, then the
+   * package `sideEffects` field, then `true`. `true` means the normal per-statement
+   * treeshake. The field is writable until `buildEnd`. Assigning `null` clears it.
+   */
+  moduleSideEffects: Exclude<ModuleOptions['moduleSideEffects'], undefined>;
+  /**
    * @hidden Not supported by Rolldown
    */
   ast: any;

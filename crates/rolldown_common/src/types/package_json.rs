@@ -45,6 +45,11 @@ impl PackageJson {
     self.r#type
   }
 
+  #[cfg(test)]
+  pub fn with_side_effects_for_test(side_effects: SideEffects, realpath: PathBuf) -> Self {
+    Self { name: None, version: None, r#type: None, side_effects: Some(side_effects), realpath }
+  }
+
   /// * `module_path`: relative path to the module from `package.json` path
   pub fn check_side_effects_for(&self, module_path: &str) -> Option<bool> {
     let side_effects = self.side_effects.as_ref()?;

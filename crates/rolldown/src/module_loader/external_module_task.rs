@@ -64,6 +64,7 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
         dynamically_imported_ids: FxIndexSet::default(),
         exports: vec![],
         input_format: ExportsKind::None,
+        module_side_effects: Some(external_module_side_effects.to_module_side_effects()),
       }),
     );
 

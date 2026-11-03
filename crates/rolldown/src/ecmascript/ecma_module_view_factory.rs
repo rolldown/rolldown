@@ -230,21 +230,12 @@ pub fn lazy_check_side_effects(
     };
   }
   let stmt_infos = stmt_infos.expect("Normal module should have stmt_infos");
+  // See `ResolvedId::package_json_side_effects` for why a non-path id still consults
+  // `package.json#sideEffects`.
   if check_package_json_side_effects
-    && let Some(side_effects) = resolved_id.package_json.as_ref().and_then(|p| {
-      // the glob expr is based on parent path of package.json, which is package path
-      // so we should use the relative path of the module to package path.
-      // A plugin `resolveId` hook can return a non-absolute id (e.g. virtual `\0dep`)
-      // together with a `packageJsonPath`, so `package_json` is populated even when the
-      // id is not a `Path` kind. Treat the raw id as a path here (matching the historical
-      // behavior) so `sideEffects` is still honored for such plugin-resolved modules,
-      // rather than gating on `as_path()` and silently dropping the package metadata.
-      let module_path_relative_to_package = resolved_id.id.relative_path(p.realpath().parent()?);
-      p.check_side_effects_for(&module_path_relative_to_package.to_string_lossy())
-        .map(DeterminedSideEffects::UserDefined)
-    })
+    && let Some(side_effects) = resolved_id.package_json_side_effects()
   {
-    return side_effects;
+    return DeterminedSideEffects::UserDefined(side_effects);
   }
 
   // when determining cjs module side effects:

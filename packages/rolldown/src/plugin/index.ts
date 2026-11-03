@@ -140,6 +140,10 @@ interface SpecifiedModuleOptions {
    * 4. {@linkcode TreeshakingOptions.moduleSideEffects | treeshake.moduleSideEffects} option
    * 5. `sideEffects` field in the `package.json` file
    * 6. `true` (default)
+   *
+   * `this.getModuleInfo(id).moduleSideEffects` and `this.resolve(id).moduleSideEffects` report
+   * this effective value. `true` is the normal per-statement treeshake, not a statement-level
+   * analysis result.
    */
   moduleSideEffects?: ModuleSideEffects | null;
 }

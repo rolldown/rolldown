@@ -92,7 +92,7 @@ pub mod bundler_options {
       },
       treeshake::{
         InnerOptions, ModuleSideEffects, ModuleSideEffectsRule, PropertyReadSideEffects,
-        PropertyWriteSideEffects, TreeshakeOptions,
+        PropertyWriteSideEffects, TreeshakeOptions, reported_module_side_effects,
       },
       tsconfig::TsConfig,
       tsconfig_merge::merge_transform_options_with_tsconfig as merge_tsconfig,

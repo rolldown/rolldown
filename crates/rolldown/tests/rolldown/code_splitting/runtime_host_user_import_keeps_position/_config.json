@@ -1,0 +1,9 @@
+{
+  "config": {
+    "input": [
+      { "name": "barrel", "import": "barrel.js" },
+      { "name": "first", "import": "first.js" },
+      { "name": "reader", "import": "reader.js" }
+    ]
+  }
+}

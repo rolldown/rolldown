@@ -9,6 +9,12 @@ class Module {
    * @type {string}
    */
   id;
+  /**
+   * A CommonJS module registers its raw `module.exports`; `requestLazy` builds the `__toESM`
+   * view on top. ESM registers its namespace, used as is.
+   * @type {boolean}
+   */
+  isCommonJs = false;
 
   /**
    * @param {string} id
@@ -181,10 +187,12 @@ export class DevRuntime {
   /**
    * @param {string} id
    * @param {{ exports: any }} [exportsHolder]
+   * @param {boolean | 0 | 1} [isCommonJs]
    */
-  registerModule(id, exportsHolder = { exports: {} }) {
+  registerModule(id, exportsHolder = { exports: {} }, isCommonJs = false) {
     const module = new Module(id);
     module.exportsHolder = exportsHolder;
+    module.isCommonJs = !!isCommonJs;
     this.moduleCache.set(id, module);
   }
 
@@ -248,6 +256,9 @@ export class DevRuntime {
    */
   removeModuleCache(id) {
     this.moduleCache.delete(id);
+    // `registerModule` installs a fresh namespace on every run, so a kept memo would hand a
+    // later `import()` the pre-edit exports forever.
+    this.lazyRequests.delete(id);
     this.hooks?.onModuleCacheRemoval(id);
   }
 
@@ -281,6 +292,88 @@ export class DevRuntime {
     }
   }
 
+  /** @type {Map<string, Promise<any>>} */
+  lazyRequests = new Map();
+
+  /**
+   * The entry point for a lazy `import()`. `id` is the module the boundary stands for;
+   * `proxyModuleId` is the boundary's own id, used only to load the chunk.
+   *
+   * Nothing is registered under the boundary id, deliberately. A cache entry with no factory
+   * behind it reads as "executed" to the HMR boundary walk, and `applyUpdate` turns an
+   * updated-but-factory-less module into a full page reload.
+   *
+   * A rejection is memoized like any other outcome, matching `import()` of a module that
+   * threw. Retrying could not work anyway: a factory registers its module before running its
+   * body, so re-running `initModule` would return half-initialized exports as success.
+   *
+   * A CommonJS module resolves to its `__toESM` view, as in a production build. The runtime
+   * decides from the registration: the importer is compiled before the importee is in the
+   * graph. `isNodeMode` is the importer's choice, so the view is built per call, not memoized.
+   *
+   * @param {string} id
+   * @param {string} proxyModuleId
+   * @param {boolean | 0 | 1} [isNodeMode]
+   * @returns {Promise<any>}
+   */
+  requestLazy(id, proxyModuleId, isNodeMode) {
+    let pending = this.lazyRequests.get(id);
+    if (!pending) {
+      // Factories outlive `removeModuleCache`, so an evicted module can be re-run without the
+      // server — and must be, since the memo went with the cache entry. `Promise.resolve` keeps
+      // a synchronous `initModule` throw from escaping the call site.
+      pending = this.isRunnableHere(id)
+        ? Promise.resolve().then(() => this.initModule(id))
+        : Promise.resolve()
+            .then(() => this.loadLazyChunk(proxyModuleId))
+            .then(() => this.initModule(id));
+      this.lazyRequests.set(id, pending);
+    }
+
+    return pending.then((exports) =>
+      this.moduleCache.get(id)?.isCommonJs ? this.__toESM(exports, isNodeMode) : exports,
+    );
+  }
+
+  /**
+   * Whether `id` can run without the server: every module its run reaches through static
+   * imports already ran or has a factory. A factory alone is not enough, because a patch
+   * can ship a module without the static imports it never needed (#11028).
+   * @internal
+   * @param {string} id
+   */
+  isRunnableHere(id) {
+    const seen = new Set([id]);
+    const queue = [id];
+    for (const current of queue) {
+      if (this.moduleCache.has(current)) continue;
+      if (!this.factories.has(current)) return false;
+      for (const dep of this.staticImports.get(current)?.edges ?? []) {
+        if (!seen.has(dep)) {
+          seen.add(dep);
+          queue.push(dep);
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Loads the lazy chunk behind a lazy boundary. The chunk only registers factories;
+   * `requestLazy` runs the module afterwards.
+   *
+   * The dev server owns the lazy endpoint, so a server that serves it at another URL (for
+   * example under a public base path) overrides this method.
+   *
+   * @param {string} proxyModuleId
+   * @returns {Promise<unknown>}
+   */
+  loadLazyChunk(proxyModuleId) {
+    return import(
+      /* @vite-ignore */ `/@vite/lazy?id=${encodeURIComponent(proxyModuleId)}&clientId=${this.clientId}`
+    );
+  }
+
   /**
    * @param {string} moduleId
    */
@@ -300,13 +393,6 @@ export class DevRuntime {
   /** @internal */
   // @ts-expect-error The variable will be injected at build time.
   __exportAll = __exportAll;
-  /**
-   * @param {boolean} [isNodeMode]
-   * @returns {(mod: any) => any}
-   * @internal
-   */
-  // @ts-expect-error The variable will be injected at build time.
-  __toDynamicImportESM = (isNodeMode) => (mod) => __toESM(mod.default, isNodeMode);
   /** @internal */
   // @ts-expect-error The variable will be injected at build time.
   __reExport = __reExport;

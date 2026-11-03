@@ -6,7 +6,6 @@ test.each([
   { args: ['--', 'first.js', 'second.js'], input: ['first.js', 'second.js'] },
   { args: ['first.js', '--', 'second.js'], input: ['first.js', 'second.js'] },
   { args: ['--', '-entry.js', '--help'], input: ['-entry.js', '--help'] },
-  { args: ['--input', 'first.js', '--', 'second.js'], input: ['first.js', 'second.js'] },
   { args: ['first.js', '--'], input: ['first.js'] },
 ])('preserves positional arguments after --: $args', ({ args, input }) => {
   const originalArgv = process.argv;

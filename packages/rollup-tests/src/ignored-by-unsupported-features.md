@@ -420,10 +420,6 @@
  - rollup@function@function-use-strict-directive-removed: should delete use strict from function body
 
 ### The namespace object is not compatible with rollup
- - rollup@function@namespaces-have-null-prototype: creates namespaces with null prototypes
- - rollup@function@namespaces-are-frozen: namespaces should be non-extensible and its properties immutatable and non-configurable
- - rollup@function@namespace-override: does not warn when overriding namespace reexports with explicit ones
- - rollup@function@escape-arguments: does not use "arguments" as a placeholder variable for a default export
  - rollup@function@dynamic-import-only-default: correctly imports dynamic namespaces with only a default export from entry- and non-entry-point chunks
  - rollup@function@dynamic-import-default-mode-facade: handles dynamic imports from facades using default export mode
  - rollup@function@chunking-duplicate-reexport: handles duplicate reexports when using dynamic imports
@@ -474,7 +470,6 @@
  - rollup@function@export-type-mismatch-b: export type must be auto, default, named or none (expected `INVALID_EXPORT_OPTION` error, but got `InvalidArg`)
  - rollup@function@assign-namespace-to-var: allows a namespace to be assigned to a variable (`EMPTY_BUNDLE` warning)
  - rollup@function@can-import-self-treeshake: direct self import (`EMPTY_BUNDLE` warning)
- - rollup@function@external-conflict: external paths from custom resolver remain external (#633) (`INVALID_EXTERNAL_ID` error)
  - rollup@function@conflicting-reexports@named-import-external: warns when a conflicting binding is imported via a named import from external namespaces (`AMBIGUOUS_EXTERNAL_NAMESPACES` warning)
  - rollup@function@cycles-pathological-2: resolves even more pathological cyclical dependencies gracefully
  - rollup@function@circular-missed-reexports: handles circular reexports (`MISSING_EXPORT` should be warning instead of error)

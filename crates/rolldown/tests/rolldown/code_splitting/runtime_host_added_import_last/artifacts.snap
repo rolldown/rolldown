@@ -1,0 +1,42 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## c.js
+
+```js
+import "./x.js";
+import { t as __exportAll } from "./h.js";
+// c.js
+console.log("C", Object.keys(/* @__PURE__ */ __exportAll({ c: () => "c" })).join());
+
+```
+
+## h.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// h.js
+console.log("H", Object.keys(/* @__PURE__ */ __exportAll({ h: () => "h" })).join());
+export { __exportAll as t };
+
+```
+
+## p.js
+
+```js
+// p.js
+console.log("P");
+
+```
+
+## x.js
+
+```js
+import "./p.js";
+import "./h.js";
+// x.js
+console.log("X");
+
+```

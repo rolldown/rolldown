@@ -102,18 +102,30 @@ exports.foo = require_lib.foo;
 ### lib2.js
 
 ```js
-const require_rolldown_runtime = require("./rolldown-runtime.js");
+// HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
-node_assert = require_rolldown_runtime.__toESM(node_assert);
+node_assert = __toESM(node_assert);
 // lib.js
 var foo, bar;
 function init_lib() {
-	return (init_lib = require_rolldown_runtime.__esmMin((() => {
+	return (init_lib = __esmMin((() => {
 		node_assert.default.strictEqual("lib runtime helper", "lib runtime helper");
 		foo = "foo_value";
 		bar = 42;
 	})))();
 }
+Object.defineProperty(exports, "__esmMin", {
+	enumerable: true,
+	get: function() {
+		return __esmMin;
+	}
+});
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
 Object.defineProperty(exports, "bar", {
 	enumerable: true,
 	get: function() {
@@ -139,13 +151,12 @@ Object.defineProperty(exports, "init_lib", {
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_lib = require("./lib2.js");
 let node_assert = require("node:assert");
-node_assert = require_rolldown_runtime.__toESM(node_assert);
+node_assert = require_lib.__toESM(node_assert);
 // main.js
 function init_main() {
-	return (init_main = require_rolldown_runtime.__esmMin((() => {
+	return (init_main = require_lib.__esmMin((() => {
 		require_lib.init_lib();
 		node_assert.default.strictEqual(require_lib.foo, "foo_value");
 		node_assert.default.strictEqual(42, 42);
@@ -154,25 +165,6 @@ function init_main() {
 init_main();
 exports.bar = require_lib.bar;
 exports.foo = require_lib.foo;
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-Object.defineProperty(exports, "__esmMin", {
-	enumerable: true,
-	get: function() {
-		return __esmMin;
-	}
-});
-Object.defineProperty(exports, "__toESM", {
-	enumerable: true,
-	get: function() {
-		return __toESM;
-	}
-});
 
 ```
 
@@ -194,18 +186,30 @@ exports.foo = require_lib.foo;
 ### lib2.js
 
 ```js
-const require_rolldown_runtime = require("./rolldown-runtime.js");
+// HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
-node_assert = require_rolldown_runtime.__toESM(node_assert);
+node_assert = __toESM(node_assert);
 // lib.js
 var foo, bar;
 function init_lib() {
-	return (init_lib = require_rolldown_runtime.__esmMin((() => {
+	return (init_lib = __esmMin((() => {
 		node_assert.default.strictEqual("lib runtime helper", "lib runtime helper");
 		foo = "foo_value";
 		bar = 42;
 	})))();
 }
+Object.defineProperty(exports, "__esmMin", {
+	enumerable: true,
+	get: function() {
+		return __esmMin;
+	}
+});
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
 Object.defineProperty(exports, "bar", {
 	enumerable: true,
 	get: function() {
@@ -231,13 +235,12 @@ Object.defineProperty(exports, "init_lib", {
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_lib = require("./lib2.js");
 let node_assert = require("node:assert");
-node_assert = require_rolldown_runtime.__toESM(node_assert);
+node_assert = require_lib.__toESM(node_assert);
 // main.js
 function init_main() {
-	return (init_main = require_rolldown_runtime.__esmMin((() => {
+	return (init_main = require_lib.__esmMin((() => {
 		require_lib.init_lib();
 		node_assert.default.strictEqual(require_lib.foo, "foo_value");
 		node_assert.default.strictEqual(42, 42);
@@ -246,24 +249,5 @@ function init_main() {
 init_main();
 exports.bar = require_lib.bar;
 exports.foo = require_lib.foo;
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-Object.defineProperty(exports, "__esmMin", {
-	enumerable: true,
-	get: function() {
-		return __esmMin;
-	}
-});
-Object.defineProperty(exports, "__toESM", {
-	enumerable: true,
-	get: function() {
-		return __toESM;
-	}
-});
 
 ```

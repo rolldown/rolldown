@@ -6,9 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## const.js
 
 ```js
+// HIDDEN [\0rolldown/runtime.js]
 // const.js
 const y = 1e3;
-export { y as t };
+export { __esmMin as n, __exportAll as r, y as t };
 
 ```
 
@@ -25,8 +26,7 @@ if (pageA.y !== 1e3 || pageA.common !== "common" || pageA._ !== void 0) throw ne
 ## page-a.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as y } from "./const.js";
+import { n as __esmMin, t as y } from "./const.js";
 import "./page-b.js";
 // common.js
 function init() {
@@ -54,8 +54,7 @@ export { _, common, y };
 ## page-b.js
 
 ```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
-import { t as y } from "./const.js";
+import { n as __esmMin, r as __exportAll, t as y } from "./const.js";
 // bridge.js
 function x() {
 	return 1;
@@ -69,14 +68,6 @@ function init_page_b() {
 	})))();
 }
 export { page_b_exports as n, x as r, init_page_b as t };
-
-```
-
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __esmMin as t };
 
 ```
 

@@ -138,6 +138,7 @@ mod post_banner_footer;
 mod reduced_chunk_graph;
 mod render_chunk_to_assets;
 mod resolve_file_urls;
+mod runtime_host;
 mod runtime_module_sweep;
 mod simulated_facade_inclusion;
 
@@ -196,6 +197,7 @@ impl<'a> GenerateStage<'a> {
       mut order_state,
       final_esm_init_metadata,
       mut link_state,
+      mut import_order,
     } = self.finalize_chunk_plan(&mut chunk_graph, &mut used_symbol_refs_builder)?;
 
     // Order lowering and the unused-runtime sweep have had their last chance to update liveness.
@@ -218,8 +220,10 @@ impl<'a> GenerateStage<'a> {
         &order_state,
         FinalEsmInitMetadataAvailability::Sealed(&final_esm_init_metadata),
       );
+      // The runtime stays in its own chunk while the feature is on, so a sort gives the order.
+      import_order = self.sort_chunk_imports(&chunk_graph, &link_state);
     }
-    self.commit_cross_chunk_links(&mut chunk_graph, link_state, &used_symbol_refs);
+    self.commit_cross_chunk_links(&mut chunk_graph, link_state, &import_order, &used_symbol_refs);
     self.apply_inline_common_chunks_links(&mut chunk_graph);
 
     self.ensure_lazy_module_initialization_order(&mut chunk_graph);

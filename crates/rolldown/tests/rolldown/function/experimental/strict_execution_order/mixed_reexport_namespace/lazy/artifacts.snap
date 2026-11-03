@@ -6,8 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## lazy.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_mixed, t as LOCAL } from "./mixed.js";
+import { n as init_mixed, r as __esmMin, t as LOCAL } from "./mixed.js";
 // ../leaf.js
 var VALUE;
 function init_leaf() {
@@ -30,8 +29,7 @@ export { LOCAL, VALUE };
 ## main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_mixed, t as LOCAL } from "./mixed.js";
+import { n as init_mixed, r as __esmMin, t as LOCAL } from "./mixed.js";
 // main.js
 async function read() {
 	return Object.entries(await import("./lazy.js"));
@@ -51,7 +49,7 @@ export { read, result };
 ## mixed.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // ../mixed.js
 var LOCAL;
 function init_mixed() {
@@ -59,14 +57,6 @@ function init_mixed() {
 		LOCAL = "local";
 	})))();
 }
-export { init_mixed as n, LOCAL as t };
-
-```
-
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
+export { init_mixed as n, __esmMin as r, LOCAL as t };
 
 ```

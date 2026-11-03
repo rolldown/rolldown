@@ -22,9 +22,8 @@ export { b };
 ## c.js
 
 ```js
-import { t as __exportAll } from "./rolldown-runtime.js";
 import { initValue } from "./init.js";
-import { t as snapshot } from "./common.js";
+import { n as __exportAll, t as snapshot } from "./common.js";
 // namespace.js
 var namespace_exports = /* @__PURE__ */ __exportAll({
 	getReady: () => getReady,
@@ -43,9 +42,10 @@ export { c };
 ## common.js
 
 ```js
+// HIDDEN [\0rolldown/runtime.js]
 // common.js
 const snapshot = globalThis.ready ?? "unset";
-export { snapshot as t };
+export { __exportAll as n, snapshot as t };
 
 ```
 
@@ -64,21 +64,12 @@ export { initValue };
 ## logger.js
 
 ```js
-import { t as __exportAll } from "./rolldown-runtime.js";
-import { t as snapshot } from "./common.js";
+import { n as __exportAll, t as snapshot } from "./common.js";
 // logger.js
 var logger_exports = /* @__PURE__ */ __exportAll({ log: () => log });
 function log(value) {
 	return `${value} ${snapshot}`;
 }
 export { logger_exports as n, log as t };
-
-```
-
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as t };
 
 ```

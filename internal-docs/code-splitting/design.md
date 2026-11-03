@@ -1,6 +1,6 @@
 # Code Splitting Design
 
-This document records the architecture for selective strict execution order. The current implementation is described in [implementation.md](./implementation.md). Order scheduling is not represented as interop wrapping, and generate-stage lowering cannot reopen user-code liveness.
+This document records the architecture for selective strict execution order. The current implementation is described in [implementation.md](./implementation.md). Order scheduling is not represented as interop wrapping, and generate-stage lowering cannot reopen user-code liveness. The last section records the design of [runtime placement](#runtime-placement).
 
 ## Problem
 
@@ -505,7 +505,7 @@ The API does not expose mutable `LinkingMetadata`, `StmtInfos`, or the chunk gra
 
 ### Final ESM init metadata
 
-After wrapper selection, `compute_wrapped_esm_init_metadata` derives the two facts that depend on both link and order state: whether an `init_*()` call is a no-op, and which wrapped modules must be initialized at each excluded statement. Interop and execution-order wrappers share one sealed result for a chunk layout. `finalize_chunk_plan` sweeps unused runtime helpers before deriving this result and replaces it if signature-facade creation changes the layout:
+After wrapper selection, `compute_wrapped_esm_init_metadata` derives the two facts that depend on both link and order state: whether an `init_*()` call is a no-op, and which wrapped modules must be initialized at each excluded statement. Interop and execution-order wrappers share one sealed result for a chunk layout. `finalize_chunk_plan` sweeps unused runtime helpers before deriving this result and replaces it if signature-facade creation or the runtime fold changes the layout:
 
 ```rust
 pub struct Sealed<T>(T); // private field and constructor; Deref only, never DerefMut or unwrap
@@ -597,7 +597,7 @@ Lowering precomputes the complete, source-ordered namespace target list for ever
 
 ### Topology
 
-`OrderWrapState` drives module and runtime placement. Strict entry facades can also change topology without an order wrapper. `finalize_chunk_plan()` remains the boundary after which topology-derived metadata is final.
+`OrderWrapState` drives module placement and the runtime demand of the order wrappers. Strict entry facades and the runtime fold can also change topology without an order wrapper. `finalize_chunk_plan()` remains the boundary after which topology-derived metadata is final.
 
 ## Data Flow
 
@@ -612,7 +612,8 @@ link + tree shaking
   -> derive sealed init metadata and cross-chunk links
   -> preserve strict entry signatures with public facades
   -> rederive init metadata and links if facades changed topology
-  -> seal liveness and commit cross-chunk links
+  -> place the runtime: fold it into a host, or keep its chunk
+  -> seal liveness and commit cross-chunk links in the given import order
   -> finalize modules using explicit interop/order wrapper cases + Sealed<FinalEsmInitMetadata>
   -> render entry prologues using the shared EsmInitTarget view
 ```
@@ -646,3 +647,142 @@ Verification stays at observable compiler boundaries rather than reaching into p
 5. Full Rust, Node, WASI, Vite, formatting, lint, and repository validation remain the merge gate.
 
 The migration is complete only after `override_wrap_kind()`, `hoist_esm_wrapper`, and order-specific reads of interop wrapper fields are removed.
+
+## Runtime placement
+
+The runtime module (`\0rolldown/runtime.js`) holds the helpers of the generated code, for example `__exportAll` and `__toESM`. A consumer is a chunk that imports a helper. Each consumer imports its helpers from the chunk that holds the runtime module: the host. The implementation is in [implementation.md](./implementation.md#runtime-module-placement).
+
+### Principle
+
+In a split build, the runtime module stays in its own chunk, the runtime chunk, until the final links exist. Then one step, `place_runtime_module`, can move the runtime module into a host and remove the runtime chunk. This move is a fold. The step folds only when a rule proves on the final links that the fold changes no load and no evaluation order.
+
+The layout that keeps the runtime chunk is the reference. It is safe without a proof:
+
+- The runtime chunk imports no chunk. So no user code runs before the helpers exist or inside the runtime chunk.
+- The runtime chunk is the first import of each consumer. So the helpers exist before a cycle peer of the consumer runs.
+- The runtime that rolldown generates only declares helpers. So user code cannot see when it starts.
+
+A host contains user code. An added import, an import of the host by a consumer that did not import it before the fold, can break four properties:
+
+| Property         | What can go wrong after a fold                                                                                                     |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Helper exists    | A consumer calls a helper before the host body defines it: `TypeError: … is not a function`.                                       |
+| Evaluation order | An added import runs the host and its imports earlier than the source does.                                                        |
+| Load set         | A consumer loads user code of the host that it did not load before.                                                                |
+| No new cycle     | An added import closes a static cycle between the host and a consumer ([#8989](https://github.com/rolldown/rolldown/issues/8989)). |
+
+### Why one late step
+
+The chunk optimizer once placed the runtime. Later steps then added consumers and changed the chunk graph: facade elimination, order lowering and the strict entry facades. So three more steps moved the runtime again: an eviction before the order analysis, a second fold after order lowering, and a merge after the strict entry facades. Each later step could change a fact that an earlier proof used. #11005, #11293 and #11353 fixed bugs of this kind.
+
+Now the placement runs one time, after the strict entry facades and the last link derivation. At that time, all helper demand is known, and no later step changes the chunk graph. The order analysis and the strict lowering see the runtime only in its own chunk, so they need no case for a host.
+
+### The host rule
+
+The rule reads only the baseline: the final links with the runtime in its own chunk. A chunk `H` can host the runtime only when:
+
+1. No consumer is in a static chunk cycle.
+2. `H` is a static dependency of each other consumer.
+3. No consumer is a static dependency of `H`.
+
+Why an added import changes nothing:
+
+1. ESM runs each import of a module to completion before the body of that module. The exception is an import that is already running higher in the evaluation stack.
+2. An import of a consumer `C` can already be running only when `C` is in a chunk cycle. Condition 1 rejects that case.
+3. `H` is a static dependency of `C` (condition 2). So `H` completes before the body of `C` starts.
+4. The added import of `H` goes after all other imports of `C`. When the evaluation reaches it, `H` already ran. The import only supplies the helper names.
+5. Condition 3 keeps each consumer out of the imports of `H`. So no consumer runs during the evaluation of `H`, before `H` defines the helpers.
+
+Conditions 2 and 3 are not sufficient without condition 1. Two failures can occur when the evaluation enters a cycle at a peer of the consumer:
+
+- The entry `m.js` imports `c.js` and then `x.js`. `c.js` imports `m.js`, and `x.js` imports `h.js`. The evaluation of `c.js` skips its import of `m.js`, because `m.js` is already running. So the added import runs `h.js` before the body of `c.js`, not after it.
+- The only consumer `c.js` is the host, and `c.js` imports `m.js`. `m.js` imports `c.js` back and calls a function of `c.js` that calls `__require`. `m.js` runs before the body of `c.js`, so `__require` does not exist yet. When the runtime chunk is the first import of `c.js`, the helper exists.
+
+### The runtime start
+
+After a fold, the runtime starts when the host starts, not at the first import of each consumer. User code cannot see this change only for the runtime that rolldown generates. So precondition 6, the known-runtime contract, keeps the runtime chunk in these cases:
+
+- A plugin changed the runtime source. A changed runtime can show its start with no side effects: it can read a mutable imported binding at its start, or import an external module with top-level await.
+- An import of the runtime does not resolve to the external `node:module`, or `output.paths` can change that import. `resolveId` also runs on the imports of the runtime, so the check reads the resolved module. A `paths` function runs only after this step, so the step treats it as a change.
+- The runtime or a module that it imports has side effects. This is a second guard: a `transform` hook can set `moduleSideEffects` with no change to the code.
+
+The generated runtime reads some built-ins at its start, for example `var __defProp = Object.defineProperty`. After a fold, it can read a built-in after user code replaced that built-in. The design accepts this. The runtime chunk does not keep the original built-ins either: an entry can load the module that replaces a built-in before it loads a consumer. Native ESM uses no helpers, so no layout matches native behavior when user code replaces built-ins.
+
+### Lazy consumers
+
+Condition 2 rejects each consumer that does not reach `H`. Some of these consumers are safe. When each load of the consumer starts after `H` completes, `H` already ran, and the added import loads and runs nothing. An example is a route that an entry loads with `import()`.
+
+The lazy consumer rule runs only when the host rule finds no host. So it does not change a fold that the host rule accepts. The lazy chunks of `H` are the largest set of chunks `X` with these properties:
+
+- `X` is not `H`, not a user entry and not an emitted chunk.
+- Each static importer of `X` is in the set.
+- Each chunk with an `import()` of `X` is `H` or is in the set.
+
+Each evaluation that starts at a chunk of the set starts after `H` completes. The proof is by induction over the start of these evaluations. An `import()` in `H` starts its target in a later job than the code of `H`. An `import()` in a lazy chunk starts after that chunk started, so also after `H` completed. A lazy chunk is part of only these evaluations, because its static importers are lazy chunks too.
+
+The proof needs three more facts:
+
+- No chunk that `H` reaches has top-level await. The rule checks this. So `H` completes before the end of each job that runs code of `H`.
+- The entries and the `import()` edges show each load of a chunk. The rule does not run in dev mode, because the dev runtime also loads chunks. It also does not run when an `import()` names a chunk that is not live.
+- No module throws during its evaluation. The rule assumes this. If `H` throws after its `import()` of a lazy consumer, the consumer now fails with the error of `H`. The earlier placement had this behavior in some builds, for example `issues/6660`. The rule also folds builds where the earlier placement kept the runtime chunk, for example five strict execution order fixtures. There, this behavior is new.
+
+The proof also holds when the chunk with the `import()` only reaches `H`. The rule does not accept that case. Then `H` is not the chunk that loads the consumer, and the consumer gets an import of a chunk that only its loader depends on. `function/experimental/strict_execution_order/cjs_reexport_barrel_namespace_routing` asserts that the lazy route `route-static.js` does not import `cn.js`.
+
+### Import order after the fold
+
+A sort cannot give the import order after a fold, for two reasons:
+
+- When the chunk order is derived again, the host gets the `exec_order` 0 of the runtime module. A sort by `exec_order` then moves the host to the front of each list.
+- An added import has no source import, so it has no source rank, and the strict path uses no ranks. So a sort puts an added import before each import that runs after the host, also when the host keeps its `exec_order`.
+
+After a fold, an added import and a user import of the host look the same. Only the baseline shows which import is new.
+
+So the step computes the import lists from the baseline:
+
+- A consumer loses the runtime chunk. It gets the host last when it did not import the host.
+- The host loses the runtime chunk.
+- Each other list stays the same.
+
+The commit takes these lists as an input and does not sort. The host keeps its `exec_order`, so the chunk order also stays the same. The last position is necessary. Example: `c.js` imports `x.js`, and `x.js` imports `p.js` and then `h.js`, so the source order is `p`, `h`, `x`, `c`. When the added import of `h.js` is the first import of `c.js`, the order is `h`, `p`, `x`, `c`. `code_splitting/runtime_host_added_import_last` pins this case.
+
+### The check after the fold
+
+After the fold, the step derives the links again and compares them with the expected lists. The check runs in release builds too:
+
+- Each live chunk imports the chunks of its expected list, and no other chunk.
+- Only the host and the consumers of the baseline import a helper from the host.
+
+If the check fails, the runtime goes back into its own chunk, and debug builds assert. So a bug in the link derivation gives one more file, not wrong output. A bug in the host rule still gives wrong output, and only the tests can find it. `packages/rolldown/tests/behaviors/runtime-host-loading.test.ts` compares source execution with the bundled output.
+
+### Policy
+
+The host rule proves that a fold is safe. The policy rejects a safe fold that changes a contract of the output:
+
+- `preserveModules` keeps one file for each module, also for the runtime.
+- `experimentalInlineCommonChunks` adds registry demand after this step. So the runtime chunk stays while the feature is on.
+- A root that loads no consumer must not load the host, because it would then load the runtime. A root is an entry or the target of an `import()`.
+- A shared host exports the helpers to the other consumers. So a shared host cannot be a manual group, because the hash of a group must not change when the helpers of the app change. It also cannot be a chunk with top-level await, an entry with a fixed signature, or an entry that exports only a default in CJS output, unless `output.exports` is `named`.
+- A chunk with a declaration module (`.d.ts`, `.d.mts`, `.d.cts`) never hosts the runtime. Declaration plugins discard the generated statements in `renderChunk`.
+
+When exactly one live chunk exists besides the runtime chunk, the runtime moves into that chunk without the host rule and without precondition 6. Each root loads that chunk, and that chunk imports no other chunk. So the fold gives the layout of the same build without code splitting. This keeps a dev build with one chunk at one file. It also keeps an `output.file` build valid when a plugin changes the runtime.
+
+### Trade-offs
+
+- A dev build with two or more chunks keeps the runtime chunk. The HMR plugin changes the runtime in each dev build, so precondition 6 rejects the fold. The earlier placement folded some of these builds, for example `topics/hmr/dynamic_import`.
+- The rule forbids a new load of user code, also when that code has no effect. In `issues/10543`, the earlier placement made the entry `lab` load `w.js` only for the helpers. The module bodies of `w.js` are lazy wrappers, so that load had no visible effect. The rule keeps the runtime chunk there.
+- A chunk that each root of a consumer loads, but that no consumer reaches, is not a host. A fold there is safe only when the chunk has no effects, and that proof needs an effect classifier for user code. The rule reads no effect facts about user chunks.
+
+### Rejected alternatives
+
+- **Place early and repair later.** This was the earlier design. Each later step that changed the chunk graph needed an eviction or a new proof (see [Why one late step](#why-one-late-step)).
+- **Sort the import lists again after the fold.** The sort moves the host to the front of the lists. A check after the sort can find this, but it cannot restore the order.
+- **Proofs with an effect classifier.** A classifier proves more hosts, for example a chunk with no effects that no consumer reaches. But each gap in the classifier gives wrong output, and the classifier must model each kind of effect. The host rule needs only the static chunk graph.
+- **Always keep the runtime chunk.** This layout has no placement bug, but most split builds get one more file and one more request. It stays as the fall back of the check and as the reference of the tests.
+- **Copy the helpers into each chunk.** Then no chunk imports helpers from another chunk. But the output grows with the number of chunks, and the inline-common-chunks registry and the dev runtime need one shared instance.
+
+### Unresolved questions
+
+- **Built-in capture.** A fourth condition can keep the start time of the runtime: each chunk that runs before `H` in the evaluation of a consumer has no effect. This needs an effect classifier, only for this condition.
+- **Dev builds.** A dev build can fold the HMR runtime when nothing with an effect runs before the host starts. This needs an exception in the known-runtime contract for the builtin HMR plugin.
+- **The wider lazy rule.** Accept an `import()` in a chunk that only reaches `H`. The proof holds, but the assertion of `cjs_reexport_barrel_namespace_routing` must change.
+- **Top-level await.** The policy rejects a shared host with top-level await. A later change can prove some of these cases.

@@ -1,0 +1,61 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## barrel.js
+
+```js
+import { first } from "./first.js";
+import { t as second } from "./second.js";
+import "./barrel2.js";
+export { first, second };
+
+```
+
+## barrel2.js
+
+```js
+import { first } from "./first.js";
+import { r as __exportAll, t as second } from "./second.js";
+// barrel.js
+var barrel_exports = /* @__PURE__ */ __exportAll({
+	first: () => first,
+	second: () => second
+});
+console.log("barrel");
+export { barrel_exports as t };
+
+```
+
+## first.js
+
+```js
+// first.js
+console.log("first");
+const first = "first";
+const loadSecond = () => import("./second.js").then((n) => n.n);
+export { first, loadSecond };
+
+```
+
+## reader.js
+
+```js
+import { t as barrel_exports } from "./barrel2.js";
+// reader.js
+console.log("reader", Object.keys(barrel_exports).join());
+
+```
+
+## second.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// second.js
+var second_exports = /* @__PURE__ */ __exportAll({ second: () => second });
+console.log("second");
+const second = "second";
+export { second_exports as n, __exportAll as r, second as t };
+
+```

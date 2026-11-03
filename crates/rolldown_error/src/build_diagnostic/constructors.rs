@@ -22,6 +22,9 @@ use super::events::cannot_call_namespace::CannotCallNamespace;
 use super::events::configuration_field_conflict::ConfigurationFieldConflict;
 use super::events::could_not_clean_directory::CouldNotCleanDirectory;
 use super::events::duplicate_shebang::DuplicateShebang;
+use super::events::external_module_conflict::{
+  ExternalModuleConflict, ExternalModuleConflictImporter,
+};
 use super::events::filename_conflict::FilenameConflict;
 use super::events::filename_outside_output_directory::FilenameOutsideOutputDirectory;
 use super::events::illegal_identifier_as_name::IllegalIdentifierAsName;
@@ -78,6 +81,36 @@ impl BuildDiagnostic {
 
   pub fn entry_cannot_be_external(unresolved_id: impl AsRef<Path>) -> Self {
     Self::new_inner(ExternalEntry { id: unresolved_id.as_ref().to_path_buf() })
+  }
+
+  /// Use this error when the module of an id is not external, but a later resolution of the
+  /// id is external.
+  pub fn invalid_external_id(
+    module_id: ArcStr,
+    importer: Option<ExternalModuleConflictImporter>,
+    is_existing_kind_from_previous_build: bool,
+  ) -> Self {
+    Self::new_inner(ExternalModuleConflict {
+      module_id,
+      is_existing_module_external: false,
+      is_existing_kind_from_previous_build,
+      importer,
+    })
+  }
+
+  /// Use this error when the module of an id is external, but a later resolution of the id
+  /// is not external.
+  pub fn external_modules_cannot_be_transformed_to_modules(
+    module_id: ArcStr,
+    importer: Option<ExternalModuleConflictImporter>,
+    is_existing_kind_from_previous_build: bool,
+  ) -> Self {
+    Self::new_inner(ExternalModuleConflict {
+      module_id,
+      is_existing_module_external: true,
+      is_existing_kind_from_previous_build,
+      importer,
+    })
   }
 
   pub fn ambiguous_external_namespace(

@@ -173,7 +173,16 @@ entry_index 2  →  plugin.js       →  bit 2  →  ChunkIdx(2)
 
 Dynamic imports are treated as entry points — they get bit positions and entry chunks just like static entries. This matches Rollup and esbuild behavior: a dynamic `import()` creates a new loading boundary, so the imported module needs its own chunk (or must be merged into an existing one).
 
-External modules are filtered out at the source — they never appear in `link_output.entries`. This is done in `module_loader.rs` where dynamic imports are collected as entry points: external modules are excluded from `dynamic_import_entry_ids`. User-defined and emitted entries are also safe because `load_entry_module()` rejects external resolutions with `entry_cannot_be_external`. This matches esbuild's approach where external modules never enter the entry list, and ensures that **bit positions directly equal chunk indices** — `ChunkIdx::from_raw(bit_position)` is always valid.
+The module loader excludes external modules from the entry list, so they never appear in `link_output.entries`. The filter is in `module_loader.rs`, where the loader collects dynamic imports as entry points. The loader does not add an external module to `dynamic_import_entry_ids`.
+
+The filter reads `is_external` from the import record. That value is the same as the kind of the module. The loader makes sure of this. If one resolution of a module id is external and another resolution is not external, the loader stops the build (`check_external_conflict` in `try_spawn_new_task`, #11417).
+
+User-defined entries and emitted entries are also safe:
+
+- `load_entry_module()` rejects an external resolution with `entry_cannot_be_external`.
+- The same conflict check rejects an entry whose id an import already made external.
+
+External modules also never enter the entry list in esbuild. The filter also makes sure that **each bit position is equal to a chunk index**: `ChunkIdx::from_raw(bit_position)` is always valid.
 
 See #8595 for the bug that motivated this filtering.
 

@@ -49,28 +49,7 @@ impl BindingDevEngine {
     let rebuild_strategy =
       dev_options.as_ref().and_then(|opts| opts.rebuild_strategy).map(Into::into);
     let hot_update = dev_options.as_ref().and_then(|opts| opts.hot_update);
-    // Take ownership of watch so we can consume Vec fields (include/exclude).
-    let watch_options = dev_options.and_then(|opts| opts.watch);
-    let watcher_enabled = watch_options.as_ref().and_then(|watch| watch.enabled);
-    let skip_write = watch_options.as_ref().and_then(|watch| watch.skip_write);
-    let use_polling = watch_options.as_ref().and_then(|watch| watch.use_polling);
-    let poll_interval = watch_options.as_ref().and_then(|watch| watch.poll_interval);
-    let use_debounce = watch_options.as_ref().and_then(|watch| watch.use_debounce);
-    let debounce_duration = watch_options.as_ref().and_then(|watch| watch.debounce_duration);
-    let compare_contents_for_polling =
-      watch_options.as_ref().and_then(|watch| watch.compare_contents_for_polling);
-    let debounce_tick_rate = watch_options.as_ref().and_then(|watch| watch.debounce_tick_rate);
-    let (watch_include, watch_exclude) = watch_options
-      .map(|watch| {
-        let include = watch
-          .include
-          .map(crate::types::binding_string_or_regex::bindingify_string_or_regex_array);
-        let exclude = watch
-          .exclude
-          .map(crate::types::binding_string_or_regex::bindingify_string_or_regex_array);
-        (include, exclude)
-      })
-      .unwrap_or((None, None));
+    let dev_watch_options = dev_options.and_then(|opts| opts.watch).map(Into::into);
 
     // Create bundler config
     let bundler_config = create_bundler_config_from_binding_options(options)?;
@@ -130,33 +109,6 @@ impl BindingDevEngine {
         js_callback.call(FnArgs { data: (binding_outputs,) }, ThreadsafeFunctionCallMode::Blocking);
       }) as OnAdditionalAssetsCallback
     });
-
-    let dev_watch_options = if watcher_enabled.is_some()
-      || skip_write.is_some()
-      || use_polling.is_some()
-      || poll_interval.is_some()
-      || use_debounce.is_some()
-      || debounce_duration.is_some()
-      || compare_contents_for_polling.is_some()
-      || debounce_tick_rate.is_some()
-      || watch_include.is_some()
-      || watch_exclude.is_some()
-    {
-      Some(rolldown_dev::DevWatchOptions {
-        disable_watcher: watcher_enabled.map(|enabled| !enabled),
-        skip_write,
-        use_polling,
-        poll_interval: poll_interval.map(u64::from),
-        use_debounce,
-        debounce_duration: debounce_duration.map(u64::from),
-        compare_contents_for_polling,
-        debounce_tick_rate: debounce_tick_rate.map(u64::from),
-        include: watch_include,
-        exclude: watch_exclude,
-      })
-    } else {
-      None
-    };
 
     let rolldown_dev_options = rolldown_dev::DevOptions {
       on_hmr_updates,

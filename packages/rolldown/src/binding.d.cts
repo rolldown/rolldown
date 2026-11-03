@@ -1814,6 +1814,12 @@ export declare class BindingOutputChunk {
   getImports(): Array<string>
   getDynamicImports(): Array<string>
   getCode(): string
+  /**
+   * Identity of the shared chunk data behind this object. Two `BindingOutputChunk` objects with the same
+   * identity share the same data, so a JavaScript string made from `getCode()` of one is valid for the other.
+   * The identity is the address of that data. It stays unique while a `BindingOutputChunk` keeps the data alive.
+   */
+  getCodeIdentity(): number
   getMap(): string | null
   getSourcemapFileName(): string | null
   getPreliminaryFileName(): string
@@ -1851,6 +1857,8 @@ export declare class BindingRenderedChunkMeta {
 
 export declare class BindingRenderedModule {
   get code(): string | null
+  /** `code.length` without materializing `code`. */
+  get renderedLength(): number
   get renderedExports(): Array<string>
 }
 
@@ -2086,17 +2094,18 @@ export interface BindingDevOptions {
 
 export interface BindingDevtoolsOptions {
   sessionId?: string
+  /**
+   * `"full"` (default): write JSON-lines devtools logs. `"report"`: aggregate the same
+   * event stream in-memory and emit an agent-readable report (`metrics.json` + markdown)
+   * under `node_modules/.rolldown/report/<output dir>` instead.
+   */
+  mode?: 'full' | 'report'
 }
 
 export interface BindingDevWatchOptions {
   enabled?: boolean
   skipWrite?: boolean
-  usePolling?: boolean
-  pollInterval?: number
-  useDebounce?: boolean
-  debounceDuration?: number
-  compareContentsForPolling?: boolean
-  debounceTickRate?: number
+  watcher?: BindingWatcherFileWatcherOptions
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
 }
@@ -3103,17 +3112,21 @@ export interface BindingViteTransformPluginConfig {
   yarnPnp?: boolean
 }
 
-export interface BindingWatchOption {
-  skipWrite?: boolean
-  include?: Array<BindingStringOrRegex>
-  exclude?: Array<BindingStringOrRegex>
-  buildDelay?: number
+export interface BindingWatcherFileWatcherOptions {
   usePolling?: boolean
   pollInterval?: number
   compareContentsForPolling?: boolean
   useDebounce?: boolean
   debounceDelay?: number
   debounceTickRate?: number
+}
+
+export interface BindingWatchOption {
+  skipWrite?: boolean
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
+  buildDelay?: number
+  watcher?: BindingWatcherFileWatcherOptions
   onInvalidate?: ((id: string) => void) | undefined
 }
 
@@ -3226,4 +3239,28 @@ export declare function startAsyncRuntime(): void
 
 export interface ViteImportGlobMeta {
   isSubImportsPattern?: boolean
+}
+
+export declare class Watcher {
+  constructor(callback: (arg0: WatcherEvent) => void, options?: WatcherOptions | undefined | null)
+  add(paths: Array<string>): void
+  remove(paths: Array<string>): void
+  isWatched(path: string, isIgnored?: ((arg: string) => boolean) | undefined | null): boolean
+  close(): void
+  ref(): void
+  unref(): void
+}
+
+export interface WatcherEvent {
+  kind: string
+  path?: string
+  isDir?: boolean
+  error?: string
+}
+
+export interface WatcherOptions {
+  usePolling?: boolean
+  pollInterval?: number
+  followSymlinks?: boolean
+  ignored?: Array<string>
 }

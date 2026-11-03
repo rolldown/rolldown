@@ -157,6 +157,8 @@ pub struct EcmaView {
   pub mutations: Vec<ArcSourceMutation>,
   /// `NodeId` of `new URL('path', import.meta.url)` -> `ImportRecordIdx`
   pub new_url_references: FxHashMap<NodeId, ImportRecordIdx>,
+  /// `NodeId` of `'key' in ns`, where `ns` is a namespace import -> `key`.
+  pub namespace_in_checks: FxHashMap<NodeId, CompactStr>,
   /// Occurrences of `import.meta.ROLLDOWN_FILE_URL_<referenceId>[_<urlId>]`, in source order.
   /// One entry per occurrence: the `resolveFileUrl` hook is called per occurrence,
   /// matching Rollup, so duplicates are meaningful.

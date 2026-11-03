@@ -143,6 +143,18 @@ module it is appended to already has them. The bundled entry is neither. Both
 copies are built from the same file in the same build, so they cannot drift
 apart.
 
+### Watch options
+
+The TypeScript `DevWatchOptions` type selects `skipWrite`, `watcher`, `include`,
+and `exclude` from `WatcherOptions` and adds the dev-only `enabled` flag. Polling
+and filesystem debounce settings are nested under `watcher`, including
+`debounceDelay`. The dev engine defaults `watcher.useDebounce` to `true`.
+Setting `watch.enabled` to `false` disables filesystem watching while allowing
+initial and explicit builds. `skipWrite` independently controls disk output.
+Rust `DevWatchOptions` and `WatchOption` share the nested
+`WatcherFileWatcherOptions` type; only `DevWatchOptions` has an `enabled` flag,
+which also defaults to `true`.
+
 ### Output format: ESM only
 
 Dev mode only supports `output.format: "esm"`. Only the ESM renderer
@@ -163,7 +175,7 @@ bundled dev, and Rust callers. Support for other formats is not planned
 - The `BundleCoordinator` runs in **one** dedicated tokio task
   (`DevEngine::run` does `tokio::spawn(coordinator.run())`,
   `dev_engine.rs:115`). Its `run()` is a single `while let Some(msg) =
-self.rx.recv().await` loop, so all coordinator state mutation is
+  self.rx.recv().await` loop, so all coordinator state mutation is
   serialized — there is no lock on `CoordinatorState`, the message loop
   _is_ the lock.
 - Each `BundlingTask` runs in its **own** spawned task. The coordinator
@@ -707,7 +719,7 @@ without forcing a rebuild.
 3. **HMR generation** — if `require_generate_hmr_update()`, calls
    `generate_hmr_updates`.
 4. **Rebuild** — if `requires_rebuild()`, sets `has_rebuild_happen =
-true` and calls `rebuild()`.
+   true` and calls `rebuild()`.
 
 ### `generate_hmr_updates` (`bundling_task.rs:235-356`)
 
@@ -1117,7 +1129,7 @@ never-settling cycle.
 ### 13d. Full pipeline example — page load after an `Hmr`-only task
 
 1. An `Hmr`-only task completes successfully. `has_rebuild_happen ==
-false` → `has_generated_bundle_output == false` →
+   false` → `has_generated_bundle_output == false` →
    `has_stale_bundle_output == true`, state `Idle`.
 2. A browser loads a page. The dev server middleware (JS/binding glue,
    outside these crates) calls `DevEngine::ensure_latest_bundle_output`.

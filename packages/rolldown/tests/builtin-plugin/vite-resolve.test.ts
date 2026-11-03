@@ -1,6 +1,8 @@
+import { execa } from 'execa';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import nodePath from 'node:path';
 import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
 import { rolldown, type Plugin } from 'rolldown';
 import { viteResolvePlugin } from 'rolldown/experimental';
 import { expect, test } from 'vitest';
@@ -267,4 +269,12 @@ test('`isBundled` defaults to `isBuild`', async () => {
   expect(read).toThrow('Cannot access "node:fs.readFileSync" in client code');
 
   await expect(bundleNodeBuiltinNamedImport({ isBuild: false })).rejects.toThrow('MISSING_EXPORT');
+});
+
+test('callable builtin callbacks follow the JavaScript owner lifetime', async () => {
+  await execa(
+    process.execPath,
+    ['--expose-gc', fileURLToPath(new URL('./callable-builtin-gc.mjs', import.meta.url))],
+    { timeout: 15000 },
+  );
 });

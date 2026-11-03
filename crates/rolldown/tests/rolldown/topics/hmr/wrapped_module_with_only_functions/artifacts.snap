@@ -1,0 +1,108 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"imported.js",
+		"required.js",
+		"main.js"
+	],
+	localCount: 3,
+	edges: [
+		[],
+		[],
+		[0, 1]
+	],
+	entries: [2]
+});
+// imported.js
+var imported_exports = /* @__PURE__ */ __exportAll({ triple: () => triple });
+__rolldown_runtime__.createModuleHotContext("imported.js");
+__rolldown_runtime__.registerModule("imported.js", { exports: imported_exports });
+function triple(n) {
+	return n * 3;
+}
+// required.js
+var required_exports = /* @__PURE__ */ __exportAll({ double: () => double$1 });
+function double$1(n) {
+	return n * 2;
+}
+var init_required = __esmMin((() => {
+	__rolldown_runtime__.createModuleHotContext("required.js");
+	__rolldown_runtime__.registerModule("required.js", { exports: required_exports });
+}));
+// main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+const { double } = (init_required(), __toCommonJS(required_exports));
+assert.strictEqual(double(2), 4);
+assert.strictEqual(triple(2), 6);
+
+```
+
+# Variant: strict_execution_order: [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"imported.js",
+		"required.js",
+		"main.js"
+	],
+	localCount: 3,
+	edges: [
+		[],
+		[],
+		[0, 1]
+	],
+	entries: [2]
+});
+// imported.js
+var imported_exports = /* @__PURE__ */ __exportAll({ triple: () => triple });
+function triple(n) {
+	return n * 3;
+}
+function init_imported() {
+	return (init_imported = __esmMin((() => {
+		__rolldown_runtime__.createModuleHotContext("imported.js");
+		__rolldown_runtime__.registerModule("imported.js", { exports: imported_exports });
+	})))();
+}
+// required.js
+var required_exports = /* @__PURE__ */ __exportAll({ double: () => double$1 });
+function double$1(n) {
+	return n * 2;
+}
+var init_required = __esmMin((() => {
+	__rolldown_runtime__.createModuleHotContext("required.js");
+	__rolldown_runtime__.registerModule("required.js", { exports: required_exports });
+}));
+// main.js
+var main_exports = /* @__PURE__ */ __exportAll({}), double;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_imported();
+		__rolldown_runtime__.createModuleHotContext("main.js");
+		__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+		({double} = (init_required(), __toCommonJS(required_exports)));
+		assert.strictEqual(double(2), 4);
+		assert.strictEqual(triple(2), 6);
+	})))();
+}
+init_main();
+
+```

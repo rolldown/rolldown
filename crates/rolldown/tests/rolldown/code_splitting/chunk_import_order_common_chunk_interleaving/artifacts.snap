@@ -1,0 +1,56 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import "./y.js";
+export { n as m1, t as m2 } from "./m2.js";
+
+```
+
+## b.js
+
+```js
+import { n as m1, t as m2 } from "./m2.js";
+// b.js
+const value = m1();
+export { m1, m2, value };
+
+```
+
+## m2.js
+
+```js
+import "./y.js";
+import { snapshot } from "./x.js";
+// m1.js
+function m1() {
+	return snapshot;
+}
+// m2.js
+function m2() {
+	return "m2";
+}
+export { m1 as n, m2 as t };
+
+```
+
+## x.js
+
+```js
+// x.js
+const snapshot = globalThis.ready ?? "unset";
+export { snapshot };
+
+```
+
+## y.js
+
+```js
+// y.js
+globalThis.ready = "ready";
+
+```

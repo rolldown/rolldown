@@ -2,6 +2,7 @@ use rolldown_common::{
   DeclaredSymbols, EntryPoint, ExportsKind, ImportKind, ImportRecordMeta, Module, ModuleIdx,
   OutputFormat, PreserveEntrySignatures, SharedNormalizedBundlerOptions, StmtInfo, StmtInfoMeta,
   SymbolRefFlags, TaggedSymbolRef, WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
+  side_effects::DeterminedSideEffects,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::smallvec;
@@ -70,6 +71,13 @@ impl LinkStage<'_> {
       self.dynamic_import_exports_usage_map.insert(importee, DynamicImportExportsUsage::Complete);
     }
 
+    let declared_side_effect_free = self
+      .module_table
+      .modules
+      .iter()
+      .filter(|module| matches!(module.side_effects(), DeterminedSideEffects::UserDefined(false)))
+      .map(Module::idx)
+      .collect::<FxHashSet<_>>();
     for module in &mut self.module_table.modules {
       let Some(module) = module.as_normal_mut() else { continue };
       for record in &mut module.import_records {
@@ -77,6 +85,13 @@ impl LinkStage<'_> {
           continue;
         }
         let Some(importee) = record.resolved_module else { continue };
+        // An unused top-level import of a module declared side-effect free is removed even when the
+        // module exports `then`.
+        if record.meta.contains(ImportRecordMeta::TopLevelPureDynamicImport)
+          && declared_side_effect_free.contains(&importee)
+        {
+          continue;
+        }
         let meta = &self.metas[importee];
         // Promise resolution calls `then` with the namespace as its receiver.
         if meta.has_dynamic_exports || meta.resolved_exports.contains_key("then") {
@@ -126,8 +141,9 @@ impl LinkStage<'_> {
       // - Module Namespace Object: https://tc39.es/ecma262/#sec-module-namespace-exotic-objects
       // Though Module Namespace Object is created in runtime, as a bundler, we have stimulus the behavior in compile-time and generate a
       // real statement to construct the Module Namespace Object and assign it to a variable.
-      // This is only a concept of esm, so no need to care about this in commonjs.
-      if matches!(ecma_module.exports_kind, ExportsKind::Esm) {
+      // This is only a concept of esm, so no need to care about this in commonjs. A module without
+      // module syntax (`ExportsKind::None`) still needs it when `import()` reads its namespace.
+      if matches!(ecma_module.exports_kind, ExportsKind::Esm | ExportsKind::None) {
         let meta = &mut self.metas[ecma_module.idx];
         let mut referenced_symbols = vec![];
         let mut declared_symbols: DeclaredSymbols = smallvec![];

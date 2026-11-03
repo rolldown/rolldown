@@ -74,8 +74,8 @@ export { lazy };
 ## main.js
 
 ```js
-import { n as getEnvString } from "./env.js";
 import { t as api } from "./api.js";
+import { n as getEnvString } from "./env.js";
 // main.js
 globalThis.__rolldown_issue_7449_imports = [
 	import("./lazy.js"),

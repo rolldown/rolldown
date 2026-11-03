@@ -24,6 +24,10 @@ export default defineConfig({
 
 `maxSize` uses transformed source sizes, summed per chunk before rendering, minification and compression. It defaults to `0` (disabled); `Infinity` removes the size limit.
 
+::: tip
+Paste the [Configure Inline Common Chunks](/prompts/inline-common-chunks) prompt into your coding agent to let it find the right `maxSize` for your project.
+:::
+
 Entries, dynamic import targets and manual chunks are not inlined. Matching any module with [`exclude`](/reference/TypeAlias.ExperimentalInlineCommonChunksOptions#exclude) prevents its entire common chunk from being inlined.
 
 Inlining requires:

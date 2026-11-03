@@ -106,7 +106,6 @@ pub struct Chunk {
   pub entry_level_external_module_idx: Vec<ModuleIdx>,
   pub insert_map: FxHashMap<ModuleIdx, Vec<(ModuleIdx, ImportRecordIdx)>>,
   pub remove_map: FxHashMap<ModuleIdx, Vec<ImportRecordIdx>>,
-  pub transformed_parts_rendered: FxIndexMap<(ModuleIdx, ImportRecordIdx), String>,
   /// Pre-computed export mode for the chunk
   pub output_exports: OutputExports,
 }

@@ -7,8 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import * as ns from "./foo";
-//#region entry.js
+// entry.js
 console.log(ns, ns.foo, 234);
-//#endregion
 
 ```

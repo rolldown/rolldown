@@ -1,6 +1,6 @@
 use oxc::allocator::{Allocator, TakeIn};
 use oxc::ast::ast::{Expression, Statement};
-use oxc::ast_visit::VisitMut;
+use oxc::ast_visit::VisitJsMut;
 use oxc::parser::{ParseOptions, Parser};
 use oxc::span::{SPAN, SourceType, Span};
 
@@ -8,7 +8,7 @@ use oxc::span::{SPAN, SourceType, Span};
 /// so implementing this one method covers the whole subtree.
 struct SpanZeroer;
 
-impl VisitMut<'_> for SpanZeroer {
+impl VisitJsMut<'_> for SpanZeroer {
   fn visit_span(&mut self, it: &mut Span) {
     *it = SPAN;
   }
@@ -78,7 +78,7 @@ mod tests {
     let allocator = Allocator::default();
     let expr = parse_injected_expression(&allocator, "'resolved'").expect("should parse");
     let Expression::StringLiteral(lit) = expr else { panic!("expected a string literal") };
-    assert_eq!(lit.value.as_str(), "resolved");
+    assert_eq!(lit.value.as_str(), Some("resolved"));
   }
 
   #[test]

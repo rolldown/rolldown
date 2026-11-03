@@ -19,13 +19,9 @@ __rolldown_runtime__.registerGraph({
 		[0],
 		[1]
 	],
-	dynamicEdges: [
-		[],
-		[],
-		[]
-	]
+	entries: [2]
 });
-//#region hmr.js
+// hmr.js
 var hmr_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
 const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
 __rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
@@ -37,8 +33,7 @@ function text$1(el, text) {
 hmr_hot.accept((mod) => {
 	if (mod) console.log(".hmr", mod.foo);
 });
-//#endregion
-//#region sub.js
+// sub.js
 var sub_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("sub.js");
 __rolldown_runtime__.registerModule("sub.js", { exports: sub_exports });
@@ -46,12 +41,10 @@ text(".app", "hello");
 function text(el, text) {
 	console.log(el, text);
 }
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
-//#endregion
 
 ```
 
@@ -77,9 +70,9 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["hmr.js"],localCount:1,edges:[[]],dynamicEdges:[[]]});
+__rolldown_runtime__.registerGraph({ids:["hmr.js"],localCount:1,edges:[[]],stamps:{0:1}});
 //#region hmr.js
-__rolldown_runtime__.registerFactory("hmr.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("hmr.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ foo: () => foo });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -95,7 +88,7 @@ __rolldown_runtime__.registerFactory("hmr.js", "esm", (function(__rolldown_modul
 			}
 		});
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 ```

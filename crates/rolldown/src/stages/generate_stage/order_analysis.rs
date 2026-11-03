@@ -12,8 +12,9 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::chunk_graph::ChunkGraph;
 use crate::esm_init_obligations::{
-  ObligationPurpose, WrappedEsmInitTargetContext, collect_order_wrap_esm_init_targets,
-  collect_wrapped_esm_init_targets_for_import_record, for_each_init_obligation_record,
+  ObligationPurpose, WrappedEsmInitTarget, WrappedEsmInitTargetContext,
+  collect_order_wrap_esm_init_targets, collect_wrapped_esm_init_targets_for_import_record,
+  for_each_init_obligation_record,
 };
 
 use super::GenerateStage;
@@ -93,10 +94,31 @@ struct ActualOrderTraversal {
 }
 
 impl GenerateStage<'_> {
+  /// Build the order-lowering probe, including retained import paths, before chunk assignment.
+  ///
+  /// Code splitting needs the same consumer-local routing decision as lowering: otherwise the
+  /// module-wide `load_dependencies` of a shared re-export barrel gives every entry the union of
+  /// every leaf consumed anywhere in the bundle. Using the wrap-all plan here is intentional. It
+  /// exposes every possible wrapped leaf to the shared resolver; on-demand lowering separately
+  /// forces every carrier-owning barrel into its final plan, while an unwrapped pure ESM leaf still
+  /// needs the same physical chunk placement even though it will not need an `init_*` call.
+  pub(super) fn pre_chunk_order_state(
+    &self,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
+  ) -> super::order_wrap_state::OrderWrapState {
+    if !self.options.is_strict_execution_order_enabled() {
+      return super::order_wrap_state::OrderWrapState::default();
+    }
+    let plan = self.wrap_all_order_analysis().plan;
+    let reverse_static_imports =
+      reverse_static_import_index(&self.link_output.module_table.modules);
+    self.probe_order_state(None, &plan, used_symbol_refs_builder, &reverse_static_imports)
+  }
+
   pub(super) fn analyze_execution_order(
     &self,
     chunk_graph: &ChunkGraph,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
   ) -> Option<OrderAnalysis> {
     if !self.options.is_strict_execution_order_enabled() {
       return None;
@@ -109,7 +131,7 @@ impl GenerateStage<'_> {
       return Some(self.wrap_all_order_analysis());
     }
 
-    let import_edges = self.predicted_static_import_edges(chunk_graph, used_symbol_refs);
+    let import_edges = self.predicted_static_import_edges(chunk_graph, used_symbol_refs_builder);
     let chunk_cycles = ChunkCycles::from_import_edges(&import_edges);
     let mut all_at_risk = FxHashSet::default();
     let mut roots = Vec::new();
@@ -150,12 +172,33 @@ impl GenerateStage<'_> {
     // mid-cycle), which is the standing correctness proof; the extra wrapping is bounded to
     // emergent-cycle members, the at-risk set only grows, and it is finite — so this converges.
     //
+    // The same fixpoint wraps every eager module whose wrapper would forward `init_*` to a planned
+    // module (`wrap_all_forwarded_importers`): each round walks the reverse of those precomputed
+    // obligations from the current plan, closing forwarding chains before rebuilding the plan.
+    // See
+    // internal-docs/code-splitting/design.md#emergent-cycle-plan-projection-on-demand.
+    //
     // Both inputs below are plan-independent, so they are computed once for every plan rebuild:
     // the roots never change across rounds, and the reverse index inverts the static module graph,
     // not anything the plan mints.
     let source_reachable = self.source_reachable_modules(&roots);
     let reverse_static_imports =
       reverse_static_import_index(&self.link_output.module_table.modules);
+    // Carrierized re-export barrels must remain wrapped even when the provisional topology happens
+    // to put them in source order. Code splitting has already routed their generated CJS interop
+    // per consumer; leaving one eager would restore its original monolithic interop body after
+    // placement and couple all of the routes again. The structural candidate check excludes
+    // synchronous import/require SCCs, so this monotone addition keeps the existing conservative
+    // cycle fallback.
+    let wrap_all_plan = self.wrap_all_order_analysis().plan;
+    let wrap_all_state = self.probe_order_state(
+      Some(chunk_graph),
+      &wrap_all_plan,
+      used_symbol_refs_builder,
+      &reverse_static_imports,
+    );
+    all_at_risk.extend(wrap_all_state.order_cjs_carrier_keys().map(|key| key.importer));
+
     let mut plan = self.build_order_wrap_plan(
       all_at_risk.clone(),
       &roots,
@@ -174,6 +217,12 @@ impl GenerateStage<'_> {
     // The at-risk set is monotone and finite; this bound only guards against a logic error.
     let iteration_cap = self.link_output.module_table.modules.len() + 1;
     let mut iterations = 0usize;
+    let forwarded_importers = self.wrap_all_forwarded_importers(
+      chunk_graph,
+      &source_reachable,
+      used_symbol_refs_builder,
+      &wrap_all_state,
+    );
     loop {
       // Project the chunk edges the current plan's lowering will add — the `init_*` forwarding
       // imports of wrapped modules — on top of the pre-lowering baseline, then find the chunk
@@ -182,27 +231,39 @@ impl GenerateStage<'_> {
         chunk_graph,
         &plan,
         &import_edges,
-        used_symbol_refs,
+        used_symbol_refs_builder,
         &reverse_static_imports,
       );
       let post_cycles = ChunkCycles::from_import_edges(&post_edges);
       // Mark every eligible module hosted in an emergent cyclic chunk at-risk. Wrapping them all
       // (not only the order-sensitive ones) removes every eager body from those chunks, matching the
       // wrap-all shape that is provably safe under cyclic evaluation. `all_at_risk` only grows.
-      let mut added = 0usize;
+      let mut cyclic = 0usize;
       for scc in &post_cycles.sccs {
         for &chunk_idx in scc {
           for &module_idx in &chunk_graph.chunk_table[chunk_idx].modules {
             if self.is_order_wrap_eligible(module_idx) && all_at_risk.insert(module_idx) {
-              added += 1;
+              cyclic += 1;
             }
           }
         }
       }
+      // Eager forwarders whose wrapper would initialize a planned module.
+      let mut forwarding = 0usize;
+      let mut pending = plan.modules().collect_vec();
+      while let Some(target_idx) = pending.pop() {
+        for &module_idx in &forwarded_importers[target_idx] {
+          if plan.insert(module_idx) {
+            pending.push(module_idx);
+            forwarding += usize::from(all_at_risk.insert(module_idx));
+          }
+        }
+      }
+      let added = cyclic + forwarding;
       iterations += 1;
       order_debug_trace(|| {
         format!(
-          "[order] fixpoint round {iterations}: {} emergent cyclic chunk SCC(s), +{added} at-risk (total {})",
+          "[order] fixpoint round {iterations}: {} emergent cyclic chunk SCC(s), +{cyclic} cyclic and +{forwarding} forwarding at-risk (total {})",
           post_cycles.sccs.len(),
           all_at_risk.len(),
         )
@@ -278,7 +339,8 @@ impl GenerateStage<'_> {
   ///   through it (asserted in `compute_cross_chunk_links`). So no facade edge is constructible.
   ///
   /// Unioning the projected edges with the baseline value/side-effect edges still over-approximates
-  /// the real post-lowering topology — it omits the wrapping's own liveness suppression — which is
+  /// the real post-lowering topology — it omits the wrapping's own liveness suppression, and it
+  /// keeps the records of a re-export-transparent wrapper, which registration skips — which is
   /// sound: extra edges only ever wrap more, and wrapping more is always legal (wrap-all wraps
   /// everything and is the standing correctness proof).
   ///
@@ -291,12 +353,16 @@ impl GenerateStage<'_> {
     chunk_graph: &ChunkGraph,
     plan: &OrderWrapPlan,
     baseline: &IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
     reverse_static_imports: &IndexVec<ModuleIdx, Vec<ModuleIdx>>,
   ) -> IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> {
     let mut edges = baseline.clone();
-    let probe_state =
-      self.probe_order_state(chunk_graph, plan, used_symbol_refs, reverse_static_imports);
+    let probe_state = self.probe_order_state(
+      Some(chunk_graph),
+      plan,
+      used_symbol_refs_builder,
+      reverse_static_imports,
+    );
 
     for module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal) {
       let importer_idx = module.idx;
@@ -317,7 +383,7 @@ impl GenerateStage<'_> {
         self.project_collector_edges(
           chunk_graph,
           &probe_state,
-          used_symbol_refs,
+          used_symbol_refs_builder,
           module,
           importer_chunk,
           &mut targets,
@@ -331,7 +397,16 @@ impl GenerateStage<'_> {
         );
       }
 
-      for target_idx in targets {
+      for target in targets {
+        let target_idx = match target {
+          WrappedEsmInitTarget::Module(module_idx) => module_idx,
+          WrappedEsmInitTarget::CjsCarrier(key) => {
+            probe_state
+              .order_cjs_carrier(key)
+              .expect("projected order CJS carrier should exist")
+              .importee
+          }
+        };
         if let Some(target_chunk) = chunk_graph.module_to_chunk[target_idx]
           && target_chunk != importer_chunk
           && chunk_graph.module_is_in_live_chunk(target_idx)
@@ -364,7 +439,7 @@ impl GenerateStage<'_> {
     &self,
     probe_state: &super::order_wrap_state::OrderWrapState,
     module: &NormalModule,
-    targets: &mut Vec<ModuleIdx>,
+    targets: &mut Vec<WrappedEsmInitTarget>,
   ) {
     for (key, overlay) in probe_state.import_overlays_for_importer(module.idx) {
       // A `transitive_reexport` overlay (no referenced symbols) routes its init through the
@@ -390,8 +465,9 @@ impl GenerateStage<'_> {
         // - With an *empty* retained path, minting the overlay requires an execution dependency on
         //   a planned target, which `build_order_wrap_plan`'s closure
         //   (`statically_imports_wrapped_member`) turns into wrapping this importer itself before
-        //   any probe is built — and a wrapped (or interop `WrapKind::Esm`) importer's records are
-        //   never nested (`module_owns_reexport_init`), so for a live importer this combination is
+        //   any probe is built — and a wrapped (or interop `WrapKind::Esm`) importer's non-routed records
+        //   are never nested (`record_owns_reexport_init`). Consumer-local records create no overlay,
+        //   so for a live importer this combination is
         //   unreachable. Assert it so the unproven corner (a concatenated-inner importer — a
         //   dormant feature on this branch) trips loudly instead of silently dropping an edge.
         debug_assert!(
@@ -416,7 +492,7 @@ impl GenerateStage<'_> {
         .esm_init_target(target_idx, &self.link_output.metas[target_idx])
         .is_some_and(|target| matches!(target.origin, EsmInitOrigin::ExecutionOrder))
       {
-        targets.push(target_idx);
+        targets.push(WrappedEsmInitTarget::Module(target_idx));
       }
     }
   }
@@ -433,10 +509,10 @@ impl GenerateStage<'_> {
     &self,
     chunk_graph: &ChunkGraph,
     probe_state: &super::order_wrap_state::OrderWrapState,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
     module: &NormalModule,
     importer_chunk: ChunkIdx,
-    targets: &mut Vec<ModuleIdx>,
+    targets: &mut Vec<WrappedEsmInitTarget>,
   ) {
     let meta = &self.link_output.metas[module.idx];
     let ctx = WrappedEsmInitTargetContext {
@@ -465,7 +541,7 @@ impl GenerateStage<'_> {
         targets.extend(collect_wrapped_esm_init_targets_for_import_record(
           &ctx,
           rec_idx,
-          |symbol_ref| used_symbol_refs.contains(&symbol_ref),
+          |symbol_ref| used_symbol_refs_builder.contains(&symbol_ref),
           |_| true,
           |forwarding_module_idx| {
             chunk_graph.module_to_chunk[forwarding_module_idx] == Some(importer_chunk)
@@ -485,12 +561,13 @@ impl GenerateStage<'_> {
   ///
   /// The walk passes `retained_reexport_path: None` while the real metadata pass can carry `Some`
   /// even through a non-included forwarder — retained star paths are recorded pre-tree-shaking
-  /// (`record_star_reexport_path`), so a path can structurally route through a forwarder that later
-  /// loses inclusion. The two calls then differ only at the same-chunk prune inside
-  /// `collect_order_wrap_esm_init_targets`: `None` prunes a same-chunk included waypoint where
-  /// `Some(path)` walks through it. That divergence never loses a real cross-chunk edge: every
-  /// target reachable across a retained re-export path is a resolved export of the importer and is
-  /// already projected by [`Self::project_collector_edges`]; this walk only needs to add the
+  /// (`record_star_reexport_path` and the namespace-member loop in `resolve_member_expr_refs`), so
+  /// a path can structurally route through a forwarder that later loses inclusion. The two calls
+  /// then differ only at the same-chunk prune inside `collect_order_wrap_esm_init_targets`: `None`
+  /// prunes a same-chunk included waypoint where `Some(path)` walks through it. That divergence
+  /// never loses a real cross-chunk edge: every target reachable across a retained re-export path
+  /// is a resolved export of the importer and is already projected by
+  /// [`Self::project_collector_edges`]; this walk only needs to add the
   /// forwarder's *plain-import* targets (which lie on no retained path), so `None` is faithful for
   /// exactly the edges this source owns.
   fn project_excluded_forwarder_edges(
@@ -499,7 +576,7 @@ impl GenerateStage<'_> {
     probe_state: &super::order_wrap_state::OrderWrapState,
     module: &NormalModule,
     importer_chunk: ChunkIdx,
-    targets: &mut Vec<ModuleIdx>,
+    targets: &mut Vec<WrappedEsmInitTarget>,
   ) {
     let mut visited = FxHashSet::default();
     for rec in &module.import_records {
@@ -517,30 +594,81 @@ impl GenerateStage<'_> {
       collect_order_wrap_esm_init_targets(
         &self.link_output.module_table.modules,
         &self.link_output.metas,
-        chunk_graph,
         probe_state,
-        importer_chunk,
         forwarder_idx,
         None,
         &mut visited,
         targets,
+        &|target| match target {
+          WrappedEsmInitTarget::Module(module_idx) => probe_state.esm_init_included_in_live_chunk(
+            &self.link_output.metas[module_idx],
+            module_idx,
+            chunk_graph,
+          ),
+          WrappedEsmInitTarget::CjsCarrier(key) => {
+            probe_state.order_cjs_carrier_included_in_live_chunk(key, chunk_graph)
+          }
+        },
+        &|module_idx| chunk_graph.module_to_chunk[module_idx] == Some(importer_chunk),
       );
     }
+  }
+
+  /// Reverse the excluded-statement initialization obligations of eligible source-reachable
+  /// modules. A wrap-all state exposes the obligations each forwarder's wrapper would own, so
+  /// walking from a planned target finds every forwarder that needs wrapping. See
+  /// internal-docs/code-splitting/design.md#emergent-cycle-plan-projection-on-demand.
+  fn wrap_all_forwarded_importers(
+    &self,
+    chunk_graph: &ChunkGraph,
+    source_reachable: &FxHashSet<ModuleIdx>,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
+    wrap_all_state: &super::order_wrap_state::OrderWrapState,
+  ) -> IndexVec<ModuleIdx, Vec<ModuleIdx>> {
+    let metadata = self.compute_wrapped_esm_init_metadata(
+      &self.ast_table,
+      chunk_graph,
+      wrap_all_state,
+      used_symbol_refs_builder.view(),
+    );
+    let mut importers = index_vec![Vec::new(); self.link_output.module_table.modules.len()];
+    for module in
+      self.link_output.module_table.modules.iter().filter_map(Module::as_normal).filter(|module| {
+        source_reachable.contains(&module.idx) && self.is_order_wrap_eligible(module.idx)
+      })
+    {
+      let Some(targets) = metadata.transitive_init_targets(module.idx) else { continue };
+      for target_idx in targets
+        .values()
+        .flatten()
+        .filter_map(|target| match target {
+          WrappedEsmInitTarget::Module(target_idx)
+            if wrap_all_state.has_order_wrapper(*target_idx) =>
+          {
+            Some(*target_idx)
+          }
+          WrappedEsmInitTarget::Module(_) | WrappedEsmInitTarget::CjsCarrier(_) => None,
+        })
+        .unique()
+      {
+        importers[target_idx].push(module.idx);
+      }
+    }
+    importers
   }
 
   /// A discovery-only [`OrderWrapState`] that marks exactly the plan's modules order-wrapped, so
   /// `esm_init_target` answers "is this module wrapped by this plan?" during edge projection.
   /// Reuses each module's existing namespace symbol as the wrapper placeholder — the projector only
   /// reads target *identity*, never the wrapper symbol's value — so no facade symbols are minted and
-  /// no symbol chunk ownership is touched. Each wrapper is assigned its module's own chunk (exactly
-  /// as `place_order_wrap_modules` does after real lowering) so `esm_init_included_in_live_chunk`
-  /// answers truthfully — the transitive excluded-hop projection depends on it. Built fresh per
-  /// fixpoint round, so it always reflects the current plan with no stale routes.
+  /// no symbol chunk ownership is touched. When chunks exist, each wrapper is assigned its module's
+  /// own chunk so excluded-hop projection sees real liveness. Before placement, wrappers have no
+  /// chunk assignment and the loading collector uses declaration liveness. Built fresh per plan.
   fn probe_order_state(
     &self,
-    chunk_graph: &ChunkGraph,
+    chunk_graph: Option<&ChunkGraph>,
     plan: &OrderWrapPlan,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
     reverse_static_imports: &IndexVec<ModuleIdx, Vec<ModuleIdx>>,
   ) -> super::order_wrap_state::OrderWrapState {
     let mut probe_state = super::order_wrap_state::OrderWrapState::default();
@@ -562,9 +690,6 @@ impl GenerateStage<'_> {
       ) {
         probe_state.set_reexport_init_transparent(module_idx);
       }
-      if let Some(chunk_idx) = chunk_graph.module_to_chunk[module_idx] {
-        probe_state.assign_order_wrapper_chunk(module_idx, chunk_idx);
-      }
     }
 
     // Populate exactly the nested re-export records and per-record overlays `lower_order_state`
@@ -573,6 +698,8 @@ impl GenerateStage<'_> {
     // retained star re-exports) and the overlay projection sees every eager forwarder's hop. The
     // module's own namespace ref stands in for each not-yet-minted wrapper — projection reads only
     // target identity, never the wrapper symbol's value.
+    let cyclic_modules =
+      super::order_wrapping::synchronous_cycle_modules(&self.link_output.module_table.modules);
     let input = super::order_wrapping::OrderLoweringInput {
       plan,
       modules: &self.link_output.module_table.modules,
@@ -584,9 +711,39 @@ impl GenerateStage<'_> {
       star_reexport_records_by_imported_symbol: &self
         .link_output
         .star_reexport_records_by_imported_symbol,
-      used_symbols: used_symbol_refs,
+      member_read_star_reexport_paths: &self.link_output.member_read_star_reexport_paths,
+      used_symbol_refs_builder,
+      cyclic_modules: &cyclic_modules,
+      tree_shaking: self.options.treeshake.is_some(),
+      code_splitting_disabled: self.options.code_splitting.is_disabled(),
+      runtime_idx: self.link_output.runtime.id(),
     };
-    let reexport_usage = super::order_wrapping::collect_frozen_reexport_usage(&input);
+    let consumer_local_plan =
+      super::order_wrapping::consumer_local_reexport_plan(&input, &probe_state);
+    super::order_wrapping::apply_consumer_local_reexport_plan_probe(
+      &mut probe_state,
+      &consumer_local_plan,
+    );
+    if let Some(chunk_graph) = chunk_graph {
+      for module_idx in plan.modules() {
+        if probe_state.has_order_wrapper(module_idx)
+          && let Some(chunk_idx) = chunk_graph.module_to_chunk[module_idx]
+        {
+          probe_state.assign_order_wrapper_chunk(module_idx, chunk_idx);
+        }
+      }
+      let carrier_keys = probe_state.order_cjs_carrier_keys().collect::<Vec<_>>();
+      for key in carrier_keys {
+        let importee = probe_state
+          .order_cjs_carrier(key)
+          .expect("probe order CJS carrier should exist")
+          .importee;
+        if let Some(chunk_idx) = chunk_graph.module_to_chunk[importee] {
+          probe_state.assign_order_cjs_carrier_chunk(key, chunk_idx);
+        }
+      }
+    }
+    let reexport_usage = super::order_wrapping::collect_frozen_reexport_usage(&input, &probe_state);
     probe_state.set_nested_reexport_records(reexport_usage.nested_records().clone());
     probe_state.set_consumed_reexport_facades(reexport_usage.consumed_facades().clone());
     super::order_wrapping::populate_order_import_overlays(

@@ -63,13 +63,23 @@ impl From<BindingChunkOptimizationOptions> for rolldown_common::ChunkOptimizatio
 pub struct BindingExperimentalDevModeOptions {
   pub host: Option<String>,
   pub port: Option<u16>,
-  pub implement: Option<String>,
+  pub implement: String,
+  /// @deprecated Common runtime injection will be disabled by default in the future.
+  pub skip_common_runtime_injection: Option<bool>,
   pub lazy: Option<bool>,
+  pub hot_update: Option<bool>,
 }
 
 impl From<BindingExperimentalDevModeOptions> for rolldown_common::DevModeOptions {
   fn from(value: BindingExperimentalDevModeOptions) -> Self {
-    Self { host: value.host, port: value.port, implement: value.implement, lazy: value.lazy }
+    Self {
+      host: value.host,
+      port: value.port,
+      implement: Some(value.implement),
+      skip_common_runtime_injection: value.skip_common_runtime_injection,
+      lazy: value.lazy,
+      hot_update: value.hot_update,
+    }
   }
 }
 

@@ -19,6 +19,16 @@ const { registryId, pluginInfos, threadNumber } = workerData as WorkerData;
         const plugin = await definePluginImpl(pluginInfo.options, {
           threadNumber,
         });
+        // TODO need to find a way to share pluginContextData
+        // Hook calls spread across workers and each plugin has its own context, so a `chunk.code`
+        // cache never hits here and would only keep every build's chunks alive across rebuilds.
+        const pluginContextData = new PluginContextData(
+          () => {},
+          {} as OutputOptions,
+          [],
+          [],
+          /* cacheOutputCode */ false,
+        );
         return {
           index: pluginInfo.index,
           // TODO(sapphi-red): support inputOptions and outputOptions
@@ -26,13 +36,15 @@ const { registryId, pluginInfos, threadNumber } = workerData as WorkerData;
             plugin,
             {} as InputOptions,
             {} as OutputOptions,
-            // TODO need to find a way to share pluginContextData
-            new PluginContextData(() => {}, {} as OutputOptions, [], []),
+            pluginContextData,
             [],
             () => {},
             'info' as const,
             // TODO: support this.meta.watchMode
             false,
+            // Not measured: these hooks run on a worker thread, so their spans could not
+            // be summed with the main thread's or reported through its log handler.
+            undefined,
           ),
         };
       }),

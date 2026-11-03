@@ -7,13 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as require_pkg, r as __commonJSMin, t as require_common } from "./common.js";
-//#region about/index.js
+// about/index.js
 var require_about = /* @__PURE__ */ __commonJSMin((() => {
 	require_about();
 	require_pkg();
 	require_common();
 }));
-//#endregion
 export default require_about();
 
 ```
@@ -22,16 +21,14 @@ export default require_about();
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region node_modules/pkg/index.js
+// node_modules/pkg/index.js
 var require_pkg = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.pkg = true;
 }));
-//#endregion
-//#region common/index.js
+// common/index.js
 var require_common = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.common = true;
 }));
-//#endregion
 export { require_pkg as n, __commonJSMin as r, require_common as t };
 
 ```
@@ -40,13 +37,12 @@ export { require_pkg as n, __commonJSMin as r, require_common as t };
 
 ```js
 import { n as require_pkg, r as __commonJSMin, t as require_common } from "./common.js";
-//#region home/index.js
+// home/index.js
 var require_home = /* @__PURE__ */ __commonJSMin((() => {
 	require_home();
 	require_pkg();
 	require_common();
 }));
-//#endregion
 export default require_home();
 
 ```

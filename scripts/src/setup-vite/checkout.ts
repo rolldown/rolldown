@@ -6,7 +6,7 @@
 // the latest `main`, so both harnesses track the canary line instead of a
 // pinned commit.
 
-import { execSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import nodeFs from 'node:fs';
 import nodePath from 'node:path';
 import nodeUrl from 'node:url';
@@ -21,6 +21,14 @@ export const viteDir = nodePath.join(repoRoot, 'vite');
 export const run = (cmd: string, cwd: string): void => {
   console.log(`[setup-vite] ${cmd}`);
   execSync(cmd, { cwd, stdio: 'inherit' });
+};
+
+// Spawn a Node script directly, without a shell: run() goes through the
+// platform shell, which on Windows is cmd.exe (execSync uses %ComSpec%) and
+// cannot execute POSIX-style paths such as `./node_modules/.bin/rolldown`.
+export const runNode = (scriptPath: string, args: string[], cwd: string): void => {
+  console.log(`[setup-vite] node ${[scriptPath, ...args].join(' ')}`);
+  execFileSync(process.execPath, [scriptPath, ...args], { cwd, stdio: 'inherit' });
 };
 const capture = (cmd: string, cwd: string): string =>
   execSync(cmd, { cwd, encoding: 'utf8' }).trim();

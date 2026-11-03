@@ -29,7 +29,7 @@ use(isNotPure);
 ```
 ### rolldown
 ```js
-//#region keep-these.js
+// keep-these.js
 undef = void 0;
 (() => {
 	keepMe();
@@ -52,7 +52,6 @@ use(isNotPure);
 		notPure();
 	} };
 })();
-//#endregion
 
 ```
 ### diff

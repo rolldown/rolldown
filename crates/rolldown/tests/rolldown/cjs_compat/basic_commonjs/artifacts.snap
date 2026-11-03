@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region esm.js
+// esm.js
 var esm_exports = /* @__PURE__ */ __exportAll({
 	default: () => esm_default_fn$1,
 	esm_named_class: () => esm_named_class,
@@ -20,10 +20,7 @@ var esm_named_class;
 var init_esm = __esmMin((() => {
 	esm_named_class = class {};
 }));
-//#endregion
-//#region commonjs.js
-//#endregion
-//#region main.js
+// main.js
 var import_commonjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = (init_esm(), __toCommonJS(esm_exports));
 })))());
@@ -32,6 +29,5 @@ console.log(import_commonjs.default, esm_default_fn$1, 1, esm_named_fn, esm_name
 const require_commonjs = () => {};
 function esm_default_fn() {}
 console.log(require_commonjs, esm_default_fn);
-//#endregion
 
 ```

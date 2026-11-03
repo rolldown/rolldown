@@ -7,6 +7,14 @@
 3. `prepare-release.yml` auto-bumps `packages/rolldown/package.json` from `x.y.z-rc.n` to `x.y.z-rc.(n+1)` and opens a release PR. This workflow assumes the current version already has an `-rc.n` suffix and fails if it does not match that pattern.
 4. Merge the release PR, then wait for https://github.com/rolldown/rolldown/actions/workflows/publish-to-npm.yml to finish.
 
+## perf-kit
+
+`@rolldown/perf-kit` is versioned independently and only released from `main`. Its tags are `perf-kit@x.y.z` and its changelog is `packages/perf-kit/CHANGELOG.md`.
+
+1. Run the [Prepare perf-kit Release](https://github.com/rolldown/rolldown/actions/workflows/prepare-perf-kit-release.yml) workflow from `main` with the version to release.
+2. Review the generated `release: perf-kit@x.y.z` pull request and squash-merge it without changing the title.
+3. Approve the `release` environment deployment in the [Publish perf-kit](https://github.com/rolldown/rolldown/actions/workflows/publish-perf-kit.yml) run.
+
 ## Canary
 
 Current Canary/preview distribution is handled by `publish-to-pkg.pr.new.yml` (not by an npm canary workflow).

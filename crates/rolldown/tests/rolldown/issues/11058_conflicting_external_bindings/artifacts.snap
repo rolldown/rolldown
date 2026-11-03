@@ -1,0 +1,159 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## NAMESPACE_CONFLICT
+
+```text
+[NAMESPACE_CONFLICT] Conflicting namespaces: "main.js" re-exports "N" from one of the modules "a.js" and "b.js" (will be ignored).
+   ╭─[ a.js:2:1 ]
+   │
+ 2 │ export * as N from 'ext';
+   │ ────────────┬────────────  
+   │             ╰────────────── One matching export is here.
+   │
+   ├─[ b.js:3:1 ]
+   │
+ 3 │ export * as N from 'ext2';
+   │ ─────────────┬────────────  
+   │              ╰────────────── One matching export is here.
+───╯
+
+```
+
+## NAMESPACE_CONFLICT
+
+```text
+[NAMESPACE_CONFLICT] Conflicting namespaces: "main.js" re-exports "T" from one of the modules "a.js" and "b.js" (will be ignored).
+   ╭─[ a.js:1:10 ]
+   │
+ 1 │ export { A as T, S, U } from 'ext';
+   │          ┬  
+   │          ╰── One matching export is here.
+   │
+   ├─[ b.js:1:10 ]
+   │
+ 1 │ export { B as T, S } from 'ext';
+   │          ┬  
+   │          ╰── One matching export is here.
+───╯
+
+```
+
+## NAMESPACE_CONFLICT
+
+```text
+[NAMESPACE_CONFLICT] Conflicting namespaces: "main.js" re-exports "U" from one of the modules "a.js" and "b.js" (will be ignored).
+   ╭─[ a.js:1:21 ]
+   │
+ 1 │ export { A as T, S, U } from 'ext';
+   │                     ┬  
+   │                     ╰── One matching export is here.
+   │
+   ├─[ b.js:2:14 ]
+   │
+ 2 │ export const U = 1;
+   │              ┬  
+   │              ╰── One matching export is here.
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import * as M from "ext";
+import { S } from "ext";
+import "ext2";
+export { M, S };
+
+```
+
+# Variant: [format: Cjs]
+
+## warnings
+
+### NAMESPACE_CONFLICT
+
+```text
+[NAMESPACE_CONFLICT] Conflicting namespaces: "main.js" re-exports "N" from one of the modules "a.js" and "b.js" (will be ignored).
+   ╭─[ a.js:2:1 ]
+   │
+ 2 │ export * as N from 'ext';
+   │ ────────────┬────────────  
+   │             ╰────────────── One matching export is here.
+   │
+   ├─[ b.js:3:1 ]
+   │
+ 3 │ export * as N from 'ext2';
+   │ ─────────────┬────────────  
+   │              ╰────────────── One matching export is here.
+───╯
+
+```
+
+### NAMESPACE_CONFLICT
+
+```text
+[NAMESPACE_CONFLICT] Conflicting namespaces: "main.js" re-exports "T" from one of the modules "a.js" and "b.js" (will be ignored).
+   ╭─[ a.js:1:10 ]
+   │
+ 1 │ export { A as T, S, U } from 'ext';
+   │          ┬  
+   │          ╰── One matching export is here.
+   │
+   ├─[ b.js:1:10 ]
+   │
+ 1 │ export { B as T, S } from 'ext';
+   │          ┬  
+   │          ╰── One matching export is here.
+───╯
+
+```
+
+### NAMESPACE_CONFLICT
+
+```text
+[NAMESPACE_CONFLICT] Conflicting namespaces: "main.js" re-exports "U" from one of the modules "a.js" and "b.js" (will be ignored).
+   ╭─[ a.js:1:21 ]
+   │
+ 1 │ export { A as T, S, U } from 'ext';
+   │                     ┬  
+   │                     ╰── One matching export is here.
+   │
+   ├─[ b.js:2:14 ]
+   │
+ 2 │ export const U = 1;
+   │              ┬  
+   │              ╰── One matching export is here.
+───╯
+
+```
+
+## Assets
+
+### main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+let ext = require("ext");
+ext = __toESM(ext);
+require("ext2");
+Object.defineProperty(exports, "M", {
+	enumerable: true,
+	get: function() {
+		return ext;
+	}
+});
+Object.defineProperty(exports, "S", {
+	enumerable: true,
+	get: function() {
+		return ext.S;
+	}
+});
+
+```

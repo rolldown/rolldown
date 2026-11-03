@@ -11,12 +11,13 @@ impl ByteLocator {
     let mut line_starts = vec![0usize];
     let mut line_utf16_starts = vec![0usize];
     let mut utf16 = 0usize;
-    for (byte_idx, ch) in source.char_indices() {
-      utf16 += ch.len_utf16();
-      if ch == '\n' {
-        line_starts.push(byte_idx + 1);
-        line_utf16_starts.push(utf16);
-      }
+    let mut line_start = 0usize;
+    for newline in memchr::memchr_iter(b'\n', source.as_bytes()) {
+      let next_line_start = newline + 1;
+      utf16 += simd_utf16_len::utf16_len(&source[line_start..next_line_start]);
+      line_starts.push(next_line_start);
+      line_utf16_starts.push(utf16);
+      line_start = next_line_start;
     }
     Self { line_starts, line_utf16_starts }
   }
@@ -45,10 +46,7 @@ impl ByteLocator {
     // Clamp so a (malformed) out-of-range offset degrades to the end-of-file
     // position instead of yielding column 0.
     let end = byte_offset.min(source.len());
-    let column: usize = source
-      .get(line_byte_start..end)
-      .map(|within_line| within_line.chars().map(char::len_utf16).sum())
-      .unwrap_or(0);
+    let column = source.get(line_byte_start..end).map_or(0, simd_utf16_len::utf16_len);
     (line_idx + 1, column, line_utf16_start + column)
   }
 }

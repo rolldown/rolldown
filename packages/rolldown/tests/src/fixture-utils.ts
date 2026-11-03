@@ -9,7 +9,7 @@ export async function compileFixture(fixturePath: string, config: TestConfig) {
     ...config.config,
   };
   inputOptions.checks ??= {};
-  inputOptions.checks.pluginTimings ??= false;
+  inputOptions.checks.bundlerTimings ??= inputOptions.checks.pluginTimings ?? false;
   const build = await rolldown(inputOptions);
   if (Array.isArray(config.config?.output)) {
     const outputs = [];

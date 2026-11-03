@@ -7,9 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region node_modules/this-is-only-used-for-testing/index.js
-//#endregion
-//#region helper.js
+// helper.js
 var import_this_is_only_used_for_testing = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	function CJS() {}
 	CJS.foo = function() {
@@ -22,7 +20,6 @@ var import_this_is_only_used_for_testing = /* @__PURE__ */ __toESM((/* @__PURE__
 function useFoo() {
 	return (0, import_this_is_only_used_for_testing.foo)();
 }
-//#endregion
 var CJS = import_this_is_only_used_for_testing.default;
 export { CJS, useFoo };
 

@@ -6,17 +6,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## group-0.js
 
 ```js
-import { n as init_leafhost } from "./group-l.js";
-import { t as init_x } from "./x.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region y.js
+import { t as init_leafhost } from "./group-l.js";
+import { t as init_x } from "./x.js";
+// y.js
 function init_y() {
 	return (init_y = __esmMin((() => {
 		console.log("Y");
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_x();
@@ -24,7 +23,6 @@ function init_main() {
 		console.log("A");
 	})))();
 }
-//#endregion
 export { init_y as n, init_main as t };
 
 ```
@@ -32,39 +30,30 @@ export { init_y as n, init_main as t };
 ## group-l.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-//#region leafhost.js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+// leafhost.js
 function init_leafhost() {
 	return (init_leafhost = __esmMin((() => {
-		globalThis.__loadM6 = () => import("./m6.js");
+		globalThis.__loadM6 = () => Promise.resolve().then(() => (init_m6(), m6_exports));
 		console.log("L");
 	})))();
 }
-//#endregion
-//#region m6.js
+// m6.js
+var m6_exports = /* @__PURE__ */ __exportAll({});
 function init_m6() {
 	return (init_m6 = __esmMin((() => {
 		console.log("M6");
 	})))();
 }
-//#endregion
-export { init_leafhost as n, init_m6 as t };
-
-```
-
-## m6.js
-
-```js
-import { t as init_m6 } from "./group-l.js";
-init_m6();
+export { init_leafhost as t };
 
 ```
 
 ## main.js
 
 ```js
-import "./group-l.js";
 import { t as init_main } from "./group-0.js";
+import "./group-l.js";
 import "./x.js";
 init_main();
 
@@ -81,16 +70,15 @@ export { __exportAll as n, __esmMin as t };
 ## x.js
 
 ```js
-import { n as init_y } from "./group-0.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region x.js
+import { n as init_y } from "./group-0.js";
+// x.js
 function init_x() {
 	return (init_x = __esmMin((() => {
 		init_y();
 		console.log("X");
 	})))();
 }
-//#endregion
 export { init_x as t };
 
 ```
@@ -102,17 +90,16 @@ export { init_x as t };
 ### group-0.js
 
 ```js
-import { n as init_leafhost } from "./group-l.js";
-import { t as init_x } from "./x.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region y.js
+import { t as init_leafhost } from "./group-l.js";
+import { t as init_x } from "./x.js";
+// y.js
 function init_y() {
 	return (init_y = __esmMin((() => {
 		console.log("Y");
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_x();
@@ -120,7 +107,6 @@ function init_main() {
 		console.log("A");
 	})))();
 }
-//#endregion
 export { init_y as n, init_main as t };
 
 ```
@@ -128,39 +114,30 @@ export { init_y as n, init_main as t };
 ### group-l.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-//#region leafhost.js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+// leafhost.js
 function init_leafhost() {
 	return (init_leafhost = __esmMin((() => {
-		globalThis.__loadM6 = () => import("./m6.js");
+		globalThis.__loadM6 = () => Promise.resolve().then(() => (init_m6(), m6_exports));
 		console.log("L");
 	})))();
 }
-//#endregion
-//#region m6.js
+// m6.js
+var m6_exports = /* @__PURE__ */ __exportAll({});
 function init_m6() {
 	return (init_m6 = __esmMin((() => {
 		console.log("M6");
 	})))();
 }
-//#endregion
-export { init_leafhost as n, init_m6 as t };
-
-```
-
-### m6.js
-
-```js
-import { t as init_m6 } from "./group-l.js";
-init_m6();
+export { init_leafhost as t };
 
 ```
 
 ### main.js
 
 ```js
-import "./group-l.js";
 import { t as init_main } from "./group-0.js";
+import "./group-l.js";
 import "./x.js";
 init_main();
 
@@ -177,16 +154,15 @@ export { __exportAll as n, __esmMin as t };
 ### x.js
 
 ```js
-import { n as init_y } from "./group-0.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region x.js
+import { n as init_y } from "./group-0.js";
+// x.js
 function init_x() {
 	return (init_x = __esmMin((() => {
 		init_y();
 		console.log("X");
 	})))();
 }
-//#endregion
 export { init_x as t };
 
 ```

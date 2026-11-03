@@ -17,14 +17,13 @@ pub mod types;
 
 use arcstr::ArcStr;
 use oxc_str::CompactStr;
-use rolldown_std_utils::{path_buf_to_slash, relative_path_to_slash, strip_path_prefix_to_slash};
+use rolldown_std_utils::{path_buf_to_slash, relative_path_to_slash};
 use rolldown_utils::{
-  BitSet,
+  BitSet, concat_string,
   dashmap::FxDashMap,
   hash_placeholder::HashPlaceholderGenerator,
   indexmap::{FxIndexMap, FxIndexSet},
   make_unique_name::make_unique_name,
-  node_style_absolute,
 };
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
@@ -86,6 +85,7 @@ pub struct Chunk {
   // Sorted by Chunk#exec_order of the imported chunks
   pub cross_chunk_imports: Vec<ChunkIdx>,
   pub cross_chunk_dynamic_imports: Vec<ChunkIdx>,
+  pub dynamic_imports_from_external_modules: Vec<ModuleIdx>,
   pub bits: BitSet,
   pub imports_from_other_chunks: FxIndexMap<ChunkIdx, Vec<CrossChunkImportItem>>,
   // Only meaningful for cjs format
@@ -150,7 +150,7 @@ impl Chunk {
       .as_ref()
       .expect("importee chunk should have absolute_preliminary_filename");
     let import_path = self.relative_path_for(importee_filename.as_path());
-    if import_path.starts_with("../") { import_path } else { format!("./{import_path}") }
+    if import_path.starts_with("../") { import_path } else { concat_string!("./", import_path) }
   }
 
   pub fn relative_path_for(&self, target: &Path) -> String {
@@ -180,7 +180,7 @@ impl Chunk {
       options.chunk_filenames.call(rollup_pre_rendered_chunk).await?
     };
 
-    let pattern_name = if is_entry { "entryFileNames" } else { "chunkFileNames" };
+    let pattern_name = if is_entry { "output.entryFileNames" } else { "output.chunkFileNames" };
 
     Ok(FilenameTemplate::new(ret, pattern_name))
   }
@@ -242,7 +242,7 @@ impl Chunk {
     };
     let sourcemap_filename = sourcemap_filename.call(rollup_pre_rendered_chunk).await?;
 
-    let filename_template = FilenameTemplate::new(sourcemap_filename, "sourcemapFileNames");
+    let filename_template = FilenameTemplate::new(sourcemap_filename, "output.sourcemapFileNames");
     let has_hash_pattern = filename_template.has_hash_pattern();
 
     let mut hash_placeholder = has_hash_pattern.then_some(vec![]);
@@ -293,29 +293,15 @@ impl Chunk {
       return Cow::Borrowed(name.as_str());
     }
 
-    let p = PathBuf::from(chunk_name);
-    // Besides genuinely absolute paths, `node_style_absolute` anchors a
-    // rooted-but-volume-less id (`/favicon`, `\favicon`) to the cwd volume
-    // root (a drive or UNC share): Node and Rollup treat such ids as absolute,
-    // but Rust's `Path::is_absolute()`
-    // reports them as non-absolute on Windows, and letting them fall into the
-    // `virtual_dirname` join below would discard the prefix and leak the
-    // leading slash into `[name]`.
-    let p = if let Some(abs) = node_style_absolute(&p, &options.cwd) {
-      if let Some(ref preserve_modules_root) = options.preserve_modules_root {
-        // See internal-docs/module-id/implementation.md: output paths may normalize separators even when module
-        // ids keep native separators.
-        if let Some(relative_path) =
-          strip_path_prefix_to_slash(&abs, preserve_modules_root.as_path())
-        {
-          return Cow::Owned(relative_path);
-        }
-      }
-      relative_path_to_slash(abs, self.input_base.as_str())
-    } else {
-      path_buf_to_slash(PathBuf::from(options.virtual_dirname.as_str()).join(p))
-    };
-    Cow::Owned(p)
+    match self.kind {
+      // The generate stage already turned the module id into the sanitized relative path.
+      ChunkKind::EntryPoint { .. } => Cow::Borrowed(chunk_name),
+      // A common chunk (for example one that strict execution order splits off a module's
+      // chunk) is named after one of its modules and goes to the virtual directory.
+      ChunkKind::Common => Cow::Owned(path_buf_to_slash(
+        PathBuf::from(options.virtual_dirname.as_str()).join(chunk_name),
+      )),
+    }
   }
 
   pub fn user_defined_entry_module_idx(&self) -> Option<ModuleIdx> {

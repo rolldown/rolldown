@@ -1,0 +1,6 @@
+{
+  "config": {
+    "codeSplitting": false,
+    "minify": false
+  }
+}

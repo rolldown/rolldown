@@ -1,28 +1,38 @@
 use std::{
+  collections::hash_map::Entry,
   fs::{File, OpenOptions},
   io::{BufWriter, Write},
-  path::Path,
+  path::PathBuf,
   sync::{
     Arc, LazyLock,
     mpsc::{Sender, channel},
   },
   thread,
-  time::{SystemTime, UNIX_EPOCH},
+  time::{Instant, SystemTime, UNIX_EPOCH},
 };
 
+use rolldown_devtools_metrics::{MetricsAggregator, MetricsConfig};
 use rustc_hash::{FxHashMap, FxHashSet};
 use serde::ser::{SerializeMap, Serializer as _};
 
 /// Commands sent to the background devtools log-writer thread.
 pub enum LogCommand {
+  /// Bind a session to the directory its relative log paths resolve against; the wasm binding has no process working directory, so relying on one writes outside the project.
+  SetSessionCwd { session_id: String, cwd: PathBuf },
   /// Emit one event. Carries a fully resolved action payload plus the
-  /// session/filename the producer has already decided on.
-  Write { session_id: String, filename: Arc<str>, action_value: serde_json::Value },
+  /// session/filename the producer has already decided on. `at` is captured at
+  /// emit time on the build thread, so duration metrics derived from event pairs
+  /// are not skewed by writer-queue latency.
+  Write { session_id: String, filename: Arc<str>, action_value: serde_json::Value, at: Instant },
   /// Flush and close every file associated with this session. When `ack` is
   /// `Some`, the writer signals it once all files for this session have been
   /// flushed to the OS, so callers can establish a happens-before relationship
   /// between "build finished" and "log file is readable".
   CloseSession { session_id: String, ack: Option<Sender<()>> },
+  /// Mark a session as report-mode: subsequent `Write`s are folded into an in-memory
+  /// aggregator (no JSON-lines log for this session) and a metrics report is rendered on
+  /// `CloseSession`.
+  OpenMetricsSession { session_id: String, config: MetricsConfig },
 }
 
 static LOG_WRITER_TX: LazyLock<Sender<LogCommand>> = LazyLock::new(|| {
@@ -58,36 +68,77 @@ pub fn flush_session(session_id: String) -> std::sync::mpsc::Receiver<()> {
   rx
 }
 
+/// Register a report-mode session before its build emits events. Must be sent before any
+/// `Write` for this session so the writer aggregates (rather than writes files) those events.
+pub fn open_metrics_session(session_id: String, config: MetricsConfig) {
+  send(LogCommand::OpenMetricsSession { session_id, config });
+}
+
 #[derive(Default)]
 struct WriterState {
   files: FxHashMap<Arc<str>, BufWriter<File>>,
   files_by_session: FxHashMap<String, FxHashSet<Arc<str>>>,
   exist_hash_by_session: FxHashMap<String, FxHashSet<String>>,
-  dir_ensured: FxHashSet<String>,
+  cwd_by_session: FxHashMap<String, PathBuf>,
+  unopenable_files_by_session: FxHashMap<String, FxHashSet<Arc<str>>>,
+  /// Sessions opened in report mode: events are aggregated here instead of written to disk.
+  metrics: FxHashMap<String, MetricsAggregator>,
 }
 
 impl WriterState {
   fn handle(&mut self, cmd: LogCommand) {
     match cmd {
-      LogCommand::Write { session_id, filename, action_value } => {
-        if self.dir_ensured.insert(session_id.clone()) {
-          if let Some(parent) = Path::new(filename.as_ref()).parent() {
-            let _ = std::fs::create_dir_all(parent);
-          }
+      LogCommand::SetSessionCwd { session_id, cwd } => {
+        self.cwd_by_session.insert(session_id, cwd);
+      }
+      LogCommand::Write { session_id, filename, action_value, at } => {
+        // Metrics-mode sessions aggregate in-memory and never touch disk.
+        if let Some(aggregator) = self.metrics.get_mut(&session_id) {
+          aggregator.fold(&action_value, at);
+          return;
         }
-        let file = self.files.entry(Arc::clone(&filename)).or_insert_with(|| {
-          let f = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(filename.as_ref())
-            .unwrap_or_else(|e| panic!("devtools: failed to open log file {filename}: {e}"));
-          BufWriter::new(f)
-        });
+        let unopenable = self.unopenable_files_by_session.get(&session_id);
+        if unopenable.is_some_and(|files| files.contains(&filename)) {
+          return;
+        }
+        let file = match self.files.entry(Arc::clone(&filename)) {
+          Entry::Occupied(entry) => entry.into_mut(),
+          Entry::Vacant(entry) => {
+            let path = self
+              .cwd_by_session
+              .get(&session_id)
+              .map_or_else(|| PathBuf::from(filename.as_ref()), |cwd| cwd.join(filename.as_ref()));
+            if let Some(parent) = path.parent() {
+              let _ = std::fs::create_dir_all(parent);
+            }
+            match OpenOptions::new().create(true).append(true).open(&path) {
+              Ok(file) => entry.insert(BufWriter::new(file)),
+              // Losing devtools output must not abort the build; on wasm a panic here traps the whole module.
+              Err(err) => {
+                #[expect(clippy::print_stderr, reason = "no diagnostics channel on this thread")]
+                {
+                  eprintln!("devtools: failed to open log file {}: {err}", path.display());
+                }
+                // Warn once and stop retrying the open for every later event on this file.
+                self.unopenable_files_by_session.entry(session_id).or_default().insert(filename);
+                return;
+              }
+            }
+          }
+        };
         self.files_by_session.entry(session_id.clone()).or_default().insert(Arc::clone(&filename));
         let hashes = self.exist_hash_by_session.entry(session_id).or_default();
         let _ = write_event(file, &action_value, hashes);
       }
+      LogCommand::OpenMetricsSession { session_id, config } => {
+        self.metrics.insert(session_id, MetricsAggregator::new(config));
+      }
       LogCommand::CloseSession { session_id, ack } => {
+        // Report mode: render the report before acking, so the report is on disk
+        // by the time `bundle.close()` resolves (same contract as the log-file path).
+        if let Some(aggregator) = self.metrics.remove(&session_id) {
+          let _ = aggregator.render();
+        }
         if let Some(files) = self.files_by_session.remove(&session_id) {
           for fname in files {
             if let Some(mut w) = self.files.remove(&fname) {
@@ -95,8 +146,10 @@ impl WriterState {
             }
           }
         }
+        // The session cwd outlives its files: `close()` queues this command before the `closeBundle` hooks run, so late events still have to resolve.
         self.exist_hash_by_session.remove(&session_id);
-        self.dir_ensured.remove(&session_id);
+        // A late event on a still-broken file warns once more and re-adds its entry, which the next close drops again.
+        self.unopenable_files_by_session.remove(&session_id);
         if let Some(ack) = ack {
           let _ = ack.send(());
         }

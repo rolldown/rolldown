@@ -7,17 +7,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region effect.js
+// effect.js
 var require_effect = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	(globalThis.__cjs_entry_group_isolation ??= []).push("effect-entry");
 	module.exports = { name: "effect" };
 }));
-//#endregion
-//#region silent.js
+// silent.js
 var require_silent = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { name: "silent" };
 }));
-//#endregion
 Object.defineProperty(exports, "require_effect", {
 	enumerable: true,
 	get: function() {
@@ -57,17 +55,15 @@ module.exports = require_common.require_silent();
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region effect.js
+// effect.js
 var require_effect = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	(globalThis.__cjs_entry_group_isolation ??= []).push("effect-entry");
 	module.exports = { name: "effect" };
 }));
-//#endregion
-//#region silent.js
+// silent.js
 var require_silent = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { name: "silent" };
 }));
-//#endregion
 Object.defineProperty(exports, "require_effect", {
 	enumerable: true,
 	get: function() {

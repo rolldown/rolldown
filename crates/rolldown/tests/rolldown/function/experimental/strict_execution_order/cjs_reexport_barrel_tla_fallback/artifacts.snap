@@ -1,0 +1,133 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+import { n as init_pure_barrel, r as cn } from "./pure-barrel.js";
+// main.js
+function loadRoute() {
+	return import("./route.js");
+}
+function init_main() {
+	return (init_main = __esmMin((async () => {
+		await init_pure_barrel();
+		globalThis.__events.push(`main:${cn("a", "b")}`);
+	})))();
+}
+await init_main();
+export { loadRoute };
+
+```
+
+## pure-barrel.js
+
+```js
+import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+// node_modules/pure-barrel/cn.js
+function cn(...values) {
+	return values.filter(Boolean).join(" ");
+}
+function init_cn() {
+	return (init_cn = __esmMin((async () => {
+		await Promise.resolve();
+		globalThis.__events.push("cn");
+	})))();
+}
+// node_modules/pure-barrel/clone-deep.cjs
+var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events.push("clone-deep");
+	module.exports = function cloneDeep(value) {
+		return JSON.parse(JSON.stringify(value));
+	};
+}));
+// node_modules/pure-barrel/index.js
+var import_clone_deep;
+function init_pure_barrel() {
+	return (init_pure_barrel = __esmMin((async () => {
+		await init_cn();
+		import_clone_deep = /* @__PURE__ */ __toESM(require_clone_deep(), 1);
+	})))();
+}
+export { init_cn as i, init_pure_barrel as n, cn as r, import_clone_deep as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __toESM as r, __commonJSMin as t };
+
+```
+
+## route.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+import { n as init_pure_barrel, t as import_clone_deep } from "./pure-barrel.js";
+// route.js
+var value;
+function init_route() {
+	return (init_route = __esmMin((async () => {
+		await init_pure_barrel();
+		globalThis.__events.push("route");
+		value = (0, import_clone_deep.default)({ value: 1 });
+	})))();
+}
+await init_route();
+export { value };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### main.js
+
+```js
+import { n as cn } from "./pure-barrel.js";
+// main.js
+globalThis.__events.push(`main:${cn("a", "b")}`);
+function loadRoute() {
+	return import("./route.js");
+}
+export { loadRoute };
+
+```
+
+### pure-barrel.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// node_modules/pure-barrel/cn.js
+await Promise.resolve();
+globalThis.__events.push("cn");
+function cn(...values) {
+	return values.filter(Boolean).join(" ");
+}
+// node_modules/pure-barrel/index.js
+var import_clone_deep = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events.push("clone-deep");
+	module.exports = function cloneDeep(value) {
+		return JSON.parse(JSON.stringify(value));
+	};
+})))(), 1);
+export { cn as n, import_clone_deep as t };
+
+```
+
+### route.js
+
+```js
+import { t as import_clone_deep } from "./pure-barrel.js";
+// route.js
+globalThis.__events.push("route");
+const value = (0, import_clone_deep.default)({ value: 1 });
+export { value };
+
+```

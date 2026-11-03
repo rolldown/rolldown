@@ -1,14 +1,60 @@
 use oxc::allocator::GetAllocator;
-use oxc::ast::builder::{AstBuilder, NONE};
-use oxc::{ast::ast, span::SPAN};
-use rolldown_common::NormalModule;
+use oxc::ast::builder::AstBuilder;
+use oxc::{
+  ast::ast,
+  span::{GetSpan, SPAN},
+};
+use rolldown_common::{IndexModules, NormalModule, lazy_proxy_target};
 use rolldown_ecmascript::CJS_MODULE_REF;
 #[cfg(feature = "experimental")]
 use rolldown_ecmascript::CJS_ROLLDOWN_MODULE_REF;
+use rolldown_ecmascript_utils::ExpressionExt;
 
 #[cfg(feature = "experimental")]
 use crate::hmr::hmr_ast_finalizer::HmrAstFinalizer;
 use crate::module_finalizers::ScopeHoistingFinalizer;
+
+/// The runtime matches accepted deps by stable id, so each recorded dep is rewritten to it.
+pub fn rewrite_hot_accept_deps<'ast>(
+  call_expr: &mut ast::CallExpression<'ast>,
+  module: &NormalModule,
+  modules: &IndexModules,
+  builder: &AstBuilder<'ast>,
+) {
+  if !call_expr.callee.is_import_meta_hot_accept() {
+    return;
+  }
+  let rewrite = |expr: &mut ast::Expression<'ast>| {
+    let Some(request) = expr.as_static_module_request() else { return };
+    let Some(record_idx) =
+      module.hmr_info.module_request_to_import_record_idx.get(request.as_ref())
+    else {
+      return;
+    };
+    let Some(module_idx) = module.import_records[*record_idx].resolved_module else { return };
+    *expr = ast::Expression::new_string_literal(
+      expr.span(),
+      ast::Str::from_str_in(modules[module_idx].stable_id(), builder),
+      None,
+      builder,
+    );
+  };
+  match call_expr.arguments.first_mut() {
+    Some(ast::Argument::ArrayExpression(array_expression)) => {
+      array_expression
+        .elements
+        .iter_mut()
+        .filter_map(|element| element.as_expression_mut())
+        .for_each(rewrite);
+    }
+    Some(argument) => {
+      if let Some(expr) = argument.as_expression_mut() {
+        rewrite(expr);
+      }
+    }
+    None => {}
+  }
+}
 
 #[cfg(feature = "experimental")]
 pub static MODULE_EXPORTS_NAME_FOR_ESM: &str = "__rolldown_exports__";
@@ -30,7 +76,7 @@ pub trait HmrAstBuilder<'any, 'ast> {
 
   /// How to refer to the current module id at the emission site.
   ///
-  /// The HMR/lazy path wraps each module body in `createEsmInitializer(id, function () { … })`,
+  /// The HMR/lazy path wraps each module body in `registerFactory(id, function () { … })`,
   /// so inside the body the id is available as an identifier (`__rolldown_module_id__`) passed in
   /// by the runtime. The main-bundle path has no such wrapper, so it still needs to emit the
   /// stable id as a string literal.
@@ -43,7 +89,7 @@ pub trait HmrAstBuilder<'any, 'ast> {
     )
   }
 
-  /// `__rolldown_runtime__.registerModule(moduleId, module)`
+  /// `__rolldown_runtime__.registerModule(moduleId[, module])`
   fn create_register_module_stmt(&self) -> ast::Statement<'ast> {
     let module_exports = match self.module().exports_kind {
       rolldown_common::ExportsKind::Esm => {
@@ -56,7 +102,7 @@ pub trait HmrAstBuilder<'any, 'ast> {
         );
 
         // { exports: namespace }
-        ast::Argument::new_object_expression(
+        Some(ast::Argument::new_object_expression(
           SPAN,
           [ast::ObjectPropertyKind::new_object_property(
             SPAN,
@@ -69,26 +115,38 @@ pub trait HmrAstBuilder<'any, 'ast> {
             &self.builder(),
           )],
           &self.builder(),
-        )
+        ))
       }
       rolldown_common::ExportsKind::CommonJs => {
         // `module`
-        ast::Argument::new_identifier(SPAN, Self::cjs_module_name(), &self.builder())
+        Some(ast::Argument::new_identifier(SPAN, Self::cjs_module_name(), &self.builder()))
       }
-      rolldown_common::ExportsKind::None => {
-        // `{}`
-        ast::Argument::new_object_expression(SPAN, [], &self.builder())
-      }
+      rolldown_common::ExportsKind::None => None,
     };
 
-    // __rolldown_runtime__.registerModule(moduleId, module)
+    let mut arguments = oxc::allocator::Vec::from_iter_in(
+      std::iter::once(self.module_id_argument()).chain(module_exports),
+      &self.builder(),
+    );
+    // CommonJS passes a third argument `1`; `requestLazy` reads it to apply `__toESM`.
+    if self.module().exports_kind.is_commonjs() {
+      arguments.push(ast::Argument::new_numeric_literal(
+        SPAN,
+        1.0,
+        None,
+        ast::NumberBase::Decimal,
+        &self.builder(),
+      ));
+    }
+
+    // __rolldown_runtime__.registerModule(moduleId[, module[, 1]])
     // moduleId is either `__rolldown_module_id__` (HMR/lazy path) or the stable-id
     // string literal (main-bundle path).
     let register_call = ast::Expression::new_call_expression(
       SPAN,
       ast::Expression::new_identifier(SPAN, "__rolldown_runtime__.registerModule", &self.builder()),
-      NONE,
-      [self.module_id_argument(), module_exports],
+      None,
+      arguments,
       false,
       &self.builder(),
     );
@@ -107,13 +165,12 @@ pub trait HmrAstBuilder<'any, 'ast> {
         // var $hot_name
         ast::VariableDeclarator::new(
           SPAN,
-          ast::VariableDeclarationKind::Const,
           ast::BindingPattern::new_binding_identifier(
             SPAN,
             self.alias_name_for_import_meta_hot(),
             &self.builder(),
           ),
-          NONE,
+          None,
           // __rolldown_runtime__.createModuleHotContext($stable_id)
           Some(ast::Expression::new_call_expression(
             SPAN,
@@ -122,7 +179,7 @@ pub trait HmrAstBuilder<'any, 'ast> {
               "__rolldown_runtime__.createModuleHotContext",
               &self.builder(),
             ),
-            NONE,
+            None,
             [self.module_id_argument()],
             false,
             &self.builder(),
@@ -161,8 +218,7 @@ impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for HmrAstFinalizer<'any, 'ast> {
   }
 
   /// HMR/lazy path: each module body is wrapped in
-  /// `createEsmInitializer(id, function (__rolldown_module_id__) { … })`
-  /// (or `createCjsInitializer(id, function (exports, module, __rolldown_module_id__) { … })`),
+  /// `registerFactory(id, function (__rolldown_module_id__) { … })`,
   /// so the id is in lexical scope as a parameter.
   fn module_id_argument(&self) -> ast::Argument<'ast> {
     ast::Argument::new_identifier(SPAN, MODULE_ID_PARAM_FOR_HMR, &self.builder())
@@ -192,4 +248,63 @@ impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for ScopeHoistingFinalizer<'any, 'ast
   fn cjs_module_name() -> &'static str {
     CJS_MODULE_REF
   }
+}
+
+/// `__rolldown_runtime__.requestLazy("<stable_real_id>", "<proxy_module_id>"[, 1])`
+///
+/// The one shape both codegen paths emit for a lazy boundary, so a boundary never becomes a
+/// chunk the browser fetches.
+///
+/// The emitted code carries ids only. The runtime's `loadLazyChunk` builds the request, so the
+/// dev server decides the URL (Vite adds its `base`).
+///
+/// `is_node_mode` is the importer's interop choice, as in a production build. Whether the
+/// importee is CommonJS is unknown here, so the runtime decides that from its registration.
+pub fn create_request_lazy_call<'ast, B>(
+  proxy_module_id: &str,
+  stable_proxy_id: &str,
+  is_node_mode: bool,
+  builder: &B,
+) -> ast::Expression<'ast>
+where
+  B: oxc::ast::builder::GetAstBuilder<'ast> + GetAllocator<'ast>,
+{
+  let mut arguments = oxc::allocator::Vec::from_iter_in(
+    [
+      ast::Argument::new_string_literal(
+        SPAN,
+        ast::Str::from_str_in(
+          lazy_proxy_target(stable_proxy_id).unwrap_or(stable_proxy_id),
+          builder,
+        ),
+        None,
+        builder,
+      ),
+      ast::Argument::new_string_literal(
+        SPAN,
+        ast::Str::from_str_in(proxy_module_id, builder),
+        None,
+        builder,
+      ),
+    ],
+    builder,
+  );
+  if is_node_mode {
+    arguments.push(ast::Argument::new_numeric_literal(
+      SPAN,
+      1.0,
+      None,
+      ast::NumberBase::Decimal,
+      builder,
+    ));
+  }
+
+  ast::Expression::new_call_expression(
+    SPAN,
+    ast::Expression::new_identifier(SPAN, "__rolldown_runtime__.requestLazy", builder),
+    None,
+    arguments,
+    false,
+    builder,
+  )
 }

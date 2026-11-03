@@ -7,10 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert/strict";
-//#region foo.json
-//#endregion
-//#region main.js
+// main.js
 assert.deepEqual([[1, 2]].flat(), [1, 2]);
-//#endregion
 
 ```

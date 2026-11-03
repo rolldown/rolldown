@@ -29,9 +29,13 @@ name = "bench"
 
 [features]
 codspeed = ["criterion2/codspeed"]
+# Swap the bench global allocator to the counting wrapper, to measure its
+# overhead against plain mimalloc on the same benchmark cases.
+tracking_allocator = []
 
 [dev-dependencies]
 rustc-hash = { workspace = true }
 mimalloc-safe = { workspace = true }
+rolldown_tracking_allocator = { workspace = true }
 oxc = { workspace = true }
 rolldown_sourcemap = { workspace = true }

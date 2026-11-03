@@ -9,8 +9,8 @@ use rolldown_common::{
   StrOrBytes, try_extract_lazy_barrel_info,
 };
 use rolldown_error::{
-  BuildDiagnostic, BuildResult, DiagnosticOptions, EventKindSwitcher, UnloadableDependencyContext,
-  downcast_napi_error_diagnostics,
+  BuildDiagnostic, BuildResult, DiagnosticOptions, EventKindSwitcher,
+  ExternalModuleConflictImporter, UnloadableDependencyContext, downcast_napi_error_diagnostics,
 };
 use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
 
@@ -36,6 +36,14 @@ impl ModuleTaskOwner {
       source: normal_module.source.clone(),
       importer_id: normal_module.stable_id.as_arc_str().clone(),
       importee_span,
+    }
+  }
+
+  pub fn to_external_conflict_importer(&self) -> ExternalModuleConflictImporter {
+    ExternalModuleConflictImporter {
+      source: self.source.clone(),
+      importer_id: self.importer_id.clone(),
+      importee_span: self.importee_span,
     }
   }
 }
@@ -76,7 +84,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     }
   }
 
-  #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_id = ?self.resolved_id.id))]
+  #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_id = %self.resolved_id.id))]
   pub async fn run(mut self) {
     if let Err(errs) = self.run_inner().await {
       self.ctx.plugin_driver.mark_context_load_modules_loaded(self.resolved_id.id.clone());
@@ -315,7 +323,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       // e.g.
       // sass -> recommended npm install `sass` etc
       Err(anyhow::anyhow!(
-        "`{:?}` is not specified module type,  rolldown can't handle this asset correctly. Please use the load/transform hook to transform the resource",
+        "`{}` is not specified module type,  rolldown can't handle this asset correctly. Please use the load/transform hook to transform the resource",
         self.resolved_id.id
       ))?;
     }

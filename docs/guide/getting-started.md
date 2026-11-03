@@ -54,6 +54,7 @@ Prebuilt binaries are distributed for the following platforms (grouped by [Node.
 - Other
   - Linux arm64 musl (`aarch64-unknown-linux-musl`)
   - Android arm64 (`aarch64-linux-android`)
+  - Android armv7 (`armv7-linux-androideabi`)
   - Wasm + Wasi (`wasm32-wasip1-threads`)
 
 If you are using a platform that a prebuilt binary is not distributed, you have the following options:
@@ -208,7 +209,7 @@ Next, in the npm script, we can instruct Rolldown to use the config file with th
 
 ### Multiple builds in the same config
 
-You can also specify multiple configurations as an array, and Rolldown will bundle them in parallel.
+You can also specify multiple configurations as an array. The CLI bundles them one after another, in the order they are listed. The `build()` API bundles an array of configurations concurrently.
 
 ```js [rolldown.config.js]
 import { defineConfig } from 'rolldown';

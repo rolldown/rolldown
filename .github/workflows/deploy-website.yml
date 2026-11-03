@@ -37,9 +37,9 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - uses: voidzero-dev/setup-vp@250f29ce396baf5e8f24498e17c0dfdebabc26eb # v1.15.0
+      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
         with:
-          version: '0.2.1'
+          version: '1.0.0'
           cache: true
 
       - name: Generate API reference
@@ -87,13 +87,18 @@ jobs:
     # project-scoped deploy token. No long-lived secret is stored in the repo.
     permissions:
       id-token: write
+    env:
+      VOID_API_URL: https://api.void.cloud
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - uses: voidzero-dev/setup-vp@250f29ce396baf5e8f24498e17c0dfdebabc26eb # v1.15.0
+      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
         with:
-          version: '0.2.1'
+          version: '1.0.0'
           cache: true
+
+      - name: Connect to Void
+        run: vp exec --filter rolldown-docs void connect "$VOID_API_URL" --no-login
 
       - name: Deploy to Void
         run: vp run docs:void

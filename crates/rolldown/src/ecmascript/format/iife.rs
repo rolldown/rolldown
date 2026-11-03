@@ -34,7 +34,7 @@ use crate::{
 use rolldown_common::{AddonRenderContext, ExternalModule, OutputExports};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::SourceJoiner;
-use rolldown_utils::concat_string;
+use rolldown_utils::{concat_string, ecmascript::escape_non_ascii};
 
 use super::utils::{
   render_chunk_directives, render_chunk_external_imports, render_factory_parameters,
@@ -211,7 +211,7 @@ async fn render_iife_factory_arguments(
         external.identifier_name.to_string()
       }
     };
-    factory_arguments.push(target);
+    factory_arguments.push(escape_non_ascii(&target, ctx.options.charset.is_ascii()).into_owned());
   }
   Ok(factory_arguments.join(", "))
 }

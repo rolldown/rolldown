@@ -1,0 +1,22 @@
+{
+  "_comment": "`a` reads a namespace, so the runtime is placed before order wrapping, and `a`'s chunk is the only chunk with the runtime's bits, so the runtime is merged into it and evicted again for the order wrappers. `e0` imports `b` before `a`, so it must import `b`'s chunk, and the external module behind it, before `a`'s.",
+  "config": {
+    "input": [
+      {
+        "name": "e0",
+        "import": "./e0.js"
+      },
+      {
+        "name": "e1",
+        "import": "./e1.js"
+      },
+      {
+        "name": "e2",
+        "import": "./e2.js"
+      }
+    ],
+    "external": ["ext-a", "ext-b"],
+    "strictExecutionOrder": true
+  },
+  "hiddenRuntimeModule": false
+}

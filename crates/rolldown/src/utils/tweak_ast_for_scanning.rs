@@ -1,9 +1,9 @@
 use itertools::Itertools;
 use oxc::allocator::GetAllocator;
 use oxc::allocator::{Allocator, ReplaceWith, TakeIn};
-use oxc::ast::ast::{self, BindingPattern, Declaration, ImportOrExportKind, Statement};
-use oxc::ast::builder::{AstBuilder, GetAstBuilder, NONE};
-use oxc::ast_visit::{VisitMut, walk_mut};
+use oxc::ast::ast::{self, BindingPattern, Declaration, Statement};
+use oxc::ast::builder::{AstBuilder, GetAstBuilder};
+use oxc::ast_visit::{VisitJsMut, walk_js_mut};
 use oxc::span::{SPAN, Span};
 use rolldown_ecmascript_utils::StatementExt;
 use rustc_hash::FxHashSet;
@@ -82,14 +82,9 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
           self,
         );
         if let Some(named_decl_span) = named_decl_span {
-          Statement::new_export_named_declaration(
+          Statement::new_export_declaration(
             if i == 0 { named_decl_span } else { SPAN },
-            Some(Declaration::VariableDeclaration(new_decl)),
-            [],
-            // Since it is `export a = 1, b = 2;`, source should be `None`
-            None,
-            ImportOrExportKind::Value,
-            NONE,
+            Declaration::VariableDeclaration(new_decl),
             self,
           )
         } else {
@@ -136,14 +131,13 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
     top_level: bool,
   ) -> Option<Vec<Statement<'ast>>> {
     match stmt {
-      Statement::ExportNamedDeclaration(named_decl) => {
-        let named_decl_span = named_decl.span;
-        let Some(Declaration::VariableDeclaration(var_decl)) = named_decl.declaration.as_mut()
-        else {
+      Statement::ExportDeclaration(export_decl) => {
+        let export_decl_span = export_decl.span;
+        let Declaration::VariableDeclaration(var_decl) = &mut export_decl.declaration else {
           return None;
         };
         Self::should_split_var_declaration(var_decl)
-          .then(|| self.split_var_declaration(var_decl, Some(named_decl_span)))
+          .then(|| self.split_var_declaration(var_decl, Some(export_decl_span)))
       }
       Statement::VariableDeclaration(var_decl) => ((top_level || self.keep_names)
         && Self::should_split_var_declaration(var_decl))
@@ -153,13 +147,13 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
   }
 }
 
-impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
+impl<'ast> VisitJsMut<'ast> for PreProcessor<'ast, '_> {
   fn visit_import_declaration(&mut self, it: &mut ast::ImportDeclaration<'ast>) {
     if matches!(it.phase, Some(ast::ImportPhase::Defer)) {
       self.defer_spans.push(it.span);
       it.phase = None;
     }
-    walk_mut::walk_import_declaration(self, it);
+    walk_js_mut::walk_import_declaration(self, it);
   }
 
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
@@ -174,7 +168,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
         self.top_level_stmt_temp_storage.push(stmt);
         continue;
       }
-      walk_mut::walk_statement(self, &mut stmt);
+      walk_js_mut::walk_statement(self, &mut stmt);
       if let Some(split) = self.split_multi_declarator(&mut stmt, true) {
         self.top_level_stmt_temp_storage.extend(split);
       } else if stmt.is_module_declaration_with_source() {
@@ -194,7 +188,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
     if self.try_drop_labeled(it) {
       return;
     }
-    walk_mut::walk_statement(self, it);
+    walk_js_mut::walk_statement(self, it);
     if let Some(split) = self.split_multi_declarator(it, false) {
       *it =
         Statement::new_block_statement(SPAN, oxc::allocator::Vec::from_iter_in(split, self), self);
@@ -206,7 +200,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
   /// `var`s here so each binding becomes independently tree-shakeable.
   fn visit_statements(&mut self, it: &mut oxc::allocator::Vec<'ast, Statement<'ast>>) {
     if !self.keep_names {
-      walk_mut::walk_statements(self, it);
+      walk_js_mut::walk_statements(self, it);
       return;
     }
     let stmts = it.take_in(self);
@@ -215,7 +209,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
         it.push(stmt);
         continue;
       }
-      walk_mut::walk_statement(self, &mut stmt);
+      walk_js_mut::walk_statement(self, &mut stmt);
       if let Some(split) = self.split_multi_declarator(&mut stmt, false) {
         it.extend(split);
       } else {
@@ -229,7 +223,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
       self.defer_spans.push(it.span);
       it.phase = None;
     }
-    walk_mut::walk_import_expression(self, it);
+    walk_js_mut::walk_import_expression(self, it);
   }
 
   fn visit_expression(&mut self, it: &mut ast::Expression<'ast>) {
@@ -256,7 +250,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
           ast::Expression::new_call_expression(
             SPAN,
             ast::Expression::new_identifier(SPAN, "require", self),
-            NONE,
+            None,
             [ast::Argument::from(cond_expr.consequent)],
             false,
             self,
@@ -264,7 +258,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
           ast::Expression::new_call_expression(
             SPAN,
             ast::Expression::new_identifier(SPAN, "require", self),
-            NONE,
+            None,
             [ast::Argument::from(cond_expr.alternate)],
             false,
             self,
@@ -293,7 +287,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
         )
       });
     }
-    walk_mut::walk_expression(self, it);
+    walk_js_mut::walk_expression(self, it);
   }
 }
 

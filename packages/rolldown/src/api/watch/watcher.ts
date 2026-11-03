@@ -140,8 +140,7 @@ function warnMultiplePollingOptions(bundlerOptions: BundlerOptionWithStopWorker[
   let found = false;
   for (const option of bundlerOptions) {
     const watch = option.inputOptions.watch;
-    const watcher =
-      watch && typeof watch === 'object' ? (watch.watcher ?? watch.notify) : undefined;
+    const watcher = watch && typeof watch === 'object' ? watch.watcher : undefined;
     if (watcher && (watcher.usePolling != null || watcher.pollInterval != null)) {
       if (found) {
         option.onLog(LOG_LEVEL_WARN, logMultipleWatcherOption());

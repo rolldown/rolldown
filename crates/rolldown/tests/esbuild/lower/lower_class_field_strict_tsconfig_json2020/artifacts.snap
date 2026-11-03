@@ -6,18 +6,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region loose/index.js
+// loose/index.js
 var loose_default = class {
 	foo;
 };
-//#endregion
-//#region strict/index.js
+// strict/index.js
 var strict_default = class {
 	foo;
 };
-//#endregion
-//#region entry.js
+// entry.js
 console.log(loose_default, strict_default);
-//#endregion
 
 ```

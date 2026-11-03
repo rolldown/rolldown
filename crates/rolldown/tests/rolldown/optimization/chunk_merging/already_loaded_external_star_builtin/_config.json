@@ -1,0 +1,12 @@
+{
+  "_comment": "`app.js` contains `export * from 'node:path'` with `node:path` external. Same shape as `already_loaded_external_star` but with a builtin: its exports must stay available to the dynamic importer. Pins how many chunks that currently produces.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "external": ["node:path"]
+  }
+}

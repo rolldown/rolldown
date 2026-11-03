@@ -1,0 +1,11 @@
+{
+  "_comment": "The options bail used to sit above the `import()` -> `require()` transform, so a two-argument call stayed a native ESM `import()` inside CJS output. It now takes the same shape as a one-argument call in every format; the entry's own assertions run in both cells.",
+  "config": {
+    "external": ["node:assert"]
+  },
+  "configVariants": [
+    {
+      "format": "cjs"
+    }
+  ]
+}

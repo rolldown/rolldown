@@ -1,0 +1,9 @@
+{
+  "_comment": "Node-mode provenance must survive the shim being tree-shaken. `shim.mjs` is ESM by definition format, so Node's ESM/CJS interop applies to the namespace it imported and the wrapper must be `__toESM(mod, 1)` — which makes `ns.default` the raw `module.exports` rather than an `__esModule`-declared `default`. Linking collapses the re-export chain onto the external's namespace symbol, so the reference reaching the inclusion pass belongs to `main.js` (not ESM); the importing module has to be recovered by walking the symbol link chain.",
+  "expectExecuted": false,
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "external": ["node:https"],
+    "format": "cjs"
+  }
+}

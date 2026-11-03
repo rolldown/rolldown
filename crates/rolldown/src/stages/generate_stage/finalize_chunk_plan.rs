@@ -1,6 +1,6 @@
-use rolldown_common::UsedSymbolRefsBuilder;
 #[cfg(debug_assertions)]
 use rolldown_common::{ChunkIdx, ChunkKind, WrapKind};
+use rolldown_common::{UsedSymbolRefsBuilder, UsedSymbolRefsView};
 use rolldown_error::BuildResult;
 #[cfg(debug_assertions)]
 use rustc_hash::FxHashSet;
@@ -10,32 +10,69 @@ use crate::{
   utils::chunk::validate_options_for_multi_chunk_output::validate_options_for_multi_chunk_output,
 };
 
-use super::GenerateStage;
+use super::compute_cross_chunk_links::{CrossChunkLinkState, FinalEsmInitMetadataAvailability};
 #[cfg(debug_assertions)]
 use super::order_analysis::OrderWrapPlan;
 use super::order_wrap_state::OrderWrapState;
+use super::{FinalEsmInitMetadata, GenerateStage, Sealed};
+
+pub(super) struct FinalizedChunkPlan {
+  pub(super) order_state: OrderWrapState,
+  pub(super) final_esm_init_metadata: Sealed<FinalEsmInitMetadata>,
+  pub(super) link_state: CrossChunkLinkState,
+}
 
 impl GenerateStage<'_> {
-  /// Apply order wrapping and entry facades before deriving final output metadata.
+  /// Finalize entry facades, runtime liveness and the links for the completed chunk layout.
   pub(super) fn finalize_chunk_plan(
     &mut self,
     chunk_graph: &mut ChunkGraph,
-    used_symbol_refs: &mut UsedSymbolRefsBuilder,
-  ) -> BuildResult<OrderWrapState> {
+    used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
+  ) -> BuildResult<FinalizedChunkPlan> {
     // The order analysis reuses cross-chunk linking logic, which reads finalized namespace and
     // external-export facts. Prepare those inputs on the provisional topology first.
     self.find_entry_level_external_module(chunk_graph);
     let mut order_state = OrderWrapState::default();
     self.finalized_module_namespace_ref_usage(chunk_graph, &order_state);
 
-    let order_analysis = self.analyze_execution_order(chunk_graph, used_symbol_refs);
+    let mut order_analysis = self.analyze_execution_order(chunk_graph, used_symbol_refs_builder);
+    let runtime_evicted_for_analysis = self.options.experimental.is_on_demand_wrapping_enabled()
+      && !self.options.code_splitting.is_disabled()
+      && chunk_graph.module_to_chunk[self.link_output.runtime.id()]
+        .is_some_and(|chunk_idx| chunk_graph.chunk_table[chunk_idx].modules.len() > 1)
+      && order_analysis.as_ref().is_some_and(|analysis| {
+        !analysis.plan.is_empty()
+          || self
+            .pre_chunk_order_state(used_symbol_refs_builder)
+            .has_consumer_local_reexport_routes()
+      });
+    if runtime_evicted_for_analysis {
+      self.ensure_runtime_module_for_order_wraps(chunk_graph);
+      chunk_graph.rebuild_sorted_chunk_idx_vec(true);
+      self.find_entry_level_external_module(chunk_graph);
+      self.finalized_module_namespace_ref_usage(chunk_graph, &order_state);
+      order_analysis = self.analyze_execution_order(chunk_graph, used_symbol_refs_builder);
+    }
     if let Some(analysis) = &order_analysis
-      && self.apply_order_wraps(chunk_graph, analysis, used_symbol_refs, &mut order_state)
+      && self.apply_order_wraps(chunk_graph, analysis, used_symbol_refs_builder, &mut order_state)
     {
       #[cfg(debug_assertions)]
       self.assert_order_wrap_plan_applied(chunk_graph, &analysis.plan, &order_state);
       self.find_entry_level_external_module(chunk_graph);
       self.finalized_module_namespace_ref_usage(chunk_graph, &order_state);
+    }
+
+    if runtime_evicted_for_analysis
+      && order_analysis.as_ref().is_some_and(|analysis| analysis.plan.is_empty())
+      && !order_state.has_consumer_local_reexport_routes()
+    {
+      self.fold_runtime_chunk_after_order_lowering(
+        chunk_graph,
+        &order_state,
+        used_symbol_refs_builder,
+      );
+      chunk_graph.sort_chunk_modules(self.link_output, self.options);
+      self.renumber_live_chunks(chunk_graph);
     }
 
     // The runtime sweep must observe the final namespace/external facts above. Order wrappers
@@ -44,19 +81,42 @@ impl GenerateStage<'_> {
     if order_state.required_runtime_helpers().is_empty() {
       let runtime_idx = self.link_output.runtime.id();
       let runtime_chunk_before = chunk_graph.module_to_chunk[runtime_idx];
-      self.sweep_unused_runtime_module(chunk_graph, used_symbol_refs);
+      self.sweep_unused_runtime_module(chunk_graph, used_symbol_refs_builder);
       if runtime_chunk_before.is_some() && chunk_graph.module_to_chunk[runtime_idx].is_none() {
-        // The sweep removed the runtime from its chunk. When that chunk is still live (the runtime
-        // co-hosted with user modules), its `modules[0]` changed, so the `exec_order` the
-        // provisional `assign_chunk_exec_orders` in `generate_chunks` derived from the runtime
-        // (`exec_order` 0) is now stale and would sort the chunk ahead of chunks it should follow.
-        // Re-derive every live chunk's `exec_order` from its current lead module before rebuilding
-        // the sorted list, which restores the ordering the pre-#10104 pipeline produced by sweeping
-        // before assignment. See `assign_chunk_exec_orders` for how this composes with the
-        // strict-only `renumber_live_chunks`.
+        // Removing a co-hosted runtime changes the chunk's lead module and its execution order.
         self.assign_chunk_exec_orders(chunk_graph);
         chunk_graph.rebuild_sorted_chunk_idx_vec(true);
       }
+    }
+
+    let (mut final_esm_init_metadata, mut link_state) =
+      self.compute_final_chunk_links(chunk_graph, used_symbol_refs_builder.view(), &order_state);
+    // See internal-docs/code-splitting/implementation.md: derived exports include generated
+    // bindings that strict entries must keep behind a public facade.
+    if self.preserve_strict_entry_signatures(
+      chunk_graph,
+      used_symbol_refs_builder.view(),
+      &link_state,
+    ) {
+      // The common implementation chunk can export helpers without extending the entry signature.
+      // Strict execution order leaves runtime placement to order lowering.
+      if !self.options.is_strict_execution_order_enabled() {
+        self.try_merge_runtime_chunk(
+          chunk_graph,
+          None,
+          super::chunk_optimizer::RuntimeMergeCascade::Full,
+          used_symbol_refs_builder,
+        );
+      }
+      chunk_graph.sort_chunk_modules(self.link_output, self.options);
+      self.assign_chunk_exec_orders(chunk_graph);
+      chunk_graph.rebuild_sorted_chunk_idx_vec(true);
+      self.find_entry_level_external_module(chunk_graph);
+      self.finalized_module_namespace_ref_usage(chunk_graph, &order_state);
+      // Release the old tables before allocating their replacements.
+      drop((final_esm_init_metadata, link_state));
+      (final_esm_init_metadata, link_state) =
+        self.compute_final_chunk_links(chunk_graph, used_symbol_refs_builder.view(), &order_state);
     }
 
     let rendered_chunk_count = chunk_graph
@@ -67,7 +127,28 @@ impl GenerateStage<'_> {
       validate_options_for_multi_chunk_output(self.options)?;
     }
 
-    Ok(order_state)
+    Ok(FinalizedChunkPlan { order_state, final_esm_init_metadata, link_state })
+  }
+
+  fn compute_final_chunk_links(
+    &self,
+    chunk_graph: &ChunkGraph,
+    used_symbol_refs: UsedSymbolRefsView<'_>,
+    order_state: &OrderWrapState,
+  ) -> (Sealed<FinalEsmInitMetadata>, CrossChunkLinkState) {
+    let metadata = self.compute_wrapped_esm_init_metadata(
+      &self.ast_table,
+      chunk_graph,
+      order_state,
+      used_symbol_refs,
+    );
+    let links = self.compute_cross_chunk_link_state(
+      chunk_graph,
+      used_symbol_refs,
+      order_state,
+      FinalEsmInitMetadataAvailability::Sealed(&metadata),
+    );
+    (metadata, links)
   }
 
   #[cfg(debug_assertions)]
@@ -100,7 +181,12 @@ impl GenerateStage<'_> {
         let entry_chunk_idx = chunk_graph.entry_module_to_entry_chunk[&module_idx];
         debug_assert!(is_rendered_chunk(chunk_graph, entry_chunk_idx));
         match chunk_graph.chunk_table[entry_chunk_idx].kind {
-          ChunkKind::EntryPoint { module, .. } => debug_assert_eq!(module, module_idx),
+          // A dynamic entry merged into a user-defined entry chunk keeps that host chunk as
+          // its entry chunk (the facade stays eliminated); the host must contain the module.
+          ChunkKind::EntryPoint { module, .. } => debug_assert!(
+            module == module_idx
+              || chunk_graph.chunk_table[entry_chunk_idx].modules.contains(&module_idx)
+          ),
           ChunkKind::Common => {
             debug_assert!(chunk_graph.chunk_table[entry_chunk_idx].modules.contains(&module_idx));
           }

@@ -2210,9 +2210,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                           false,
                           self,
                         );
-                        program
-                          .body
-                          .push(ast::Statement::new_expression_statement(SPAN, call_expr, self));
+                        let stmt = ast::Statement::new_expression_statement(SPAN, call_expr, self);
+                        if self.transferred_import_record.contains_key(&rec_idx) {
+                          self.transferred_import_record.insert(rec_idx, stmt.to_source_string());
+                        } else {
+                          program.body.push(stmt);
+                        }
                       }
                       return;
                     }

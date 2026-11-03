@@ -36,6 +36,7 @@ use oxc_str::{CompactStr, Ident};
 use rolldown_std_utils::absolutize_path_buf;
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
+use rolldown_utils::url::clean_url;
 use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
 
@@ -1505,7 +1506,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let ref_id = self.ctx.file_emitter.file_ref_for_module(&importee.id)?;
     let filename = self.ctx.file_emitter.get_file_name(&ref_id).ok()?;
     let abs_path = self.ctx.options.cwd.join(&self.ctx.options.out_dir).join(filename.as_str());
-    let import_path = self.ctx.chunk.relative_path_for(abs_path.as_path());
+    let mut import_path = self.ctx.chunk.relative_path_for(abs_path.as_path());
+    // Keep the query and fragment, e.g. `sprite.svg#icon`, since they are part of the URL.
+    let specifier = rec.module_request.as_str();
+    import_path.push_str(&specifier[clean_url(specifier).len()..]);
 
     *first_arg_expr = ast::Expression::new_string_literal(
       first_arg_expr.span(),

@@ -198,6 +198,39 @@ const cases = {
       fs.rmSync(dir, { recursive: true, force: true });
     }
   },
+  async 'dev engine, closeBundle awaits engine.close()'(marker) {
+    if (isWasi) return;
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rolldown-close-gc-'));
+    try {
+      const plugin = keepOptions('buildStart', marker);
+      // A plugin that holds the engine itself keeps the engine and its plugin hooks alive, and the
+      // release does not cover plugin hooks. So the hook reaches the engine only through a WeakRef.
+      let engineRef;
+      plugin.closeBundle = async () => {
+        const running = engineRef.deref();
+        assert(running, 'The engine is alive during its close');
+        await running.close();
+        marker.closed = true;
+      };
+      const engine = await dev(
+        {
+          input,
+          logLevel: 'silent',
+          external: (id) => Boolean(plugin) && id === 'never',
+          experimental: { devMode: true },
+          plugins: [plugin],
+        },
+        { dir },
+        { watch: { enabled: false } },
+      );
+      engineRef = new WeakRef(engine);
+      engine.run().catch(() => {});
+      await engine.ensureCurrentBuildFinish();
+      await engine.close();
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  },
 };
 
 async function runCase(run) {

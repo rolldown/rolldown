@@ -13,7 +13,7 @@ use crate::types::binding_error_stage::BindingErrorStage;
 use crate::types::binding_module_info::BindingModuleInfo;
 use crate::types::binding_outputs::{BindingOutputs, to_binding_error};
 use crate::types::error::{BindingErrors, BindingResult};
-use crate::types::js_callback_release::{JsCallbackRelease, ReleaseJsCallbacksOnDrop};
+use crate::types::js_callback_release::{RequestReleaseOnDrop, SharedJsCallbackRelease};
 use crate::utils::{
   create_bundler_config_from_binding_options::create_bundler_config_from_binding_options,
   spawn_boxed_future,
@@ -27,9 +27,9 @@ pub struct BindingDevEngine {
   cwd: Arc<Path>,
   _session_id: Arc<str>,
   _session: rolldown_devtools::Session,
-  /// The JS functions of the options. `close` releases them.
+  /// The JS functions of the options. `close` requests their release.
   /// See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
-  option_callbacks: JsCallbackRelease,
+  option_callbacks: SharedJsCallbackRelease,
 }
 
 #[napi]
@@ -57,7 +57,8 @@ impl BindingDevEngine {
 
     // Create bundler config
     let normalized = create_bundler_config_from_binding_options(options)?;
-    let (bundler_config, option_callbacks) = (normalized.config, normalized.callbacks);
+    let (bundler_config, option_callbacks) =
+      (normalized.config, SharedJsCallbackRelease::new(vec![normalized.callbacks]));
 
     // If callback is provided, wrap it to convert BuildResult<(Vec<ClientHmrUpdate>, Vec<String>)> to BindingResult<(Vec<BindingClientHmrUpdate>, Vec<String>)>
     let on_hmr_updates = on_hmr_updates_callback.map(|js_callback| {
@@ -248,11 +249,16 @@ impl BindingDevEngine {
   #[napi(ts_return_type = "Promise<void>")]
   pub fn close<'env>(&self, env: &'env Env) -> napi::Result<PromiseRaw<'env, ()>> {
     let inner = Arc::clone(&self.inner);
+    // A repeated `DevEngine::close` returns at once, also from inside a `closeBundle` hook of the
+    // first close. So each call takes a hold before the spawn, and the release waits for the last
+    // hold: it runs when the first close ends. A wait in the repeated close would deadlock when
+    // `closeBundle` awaits `engine.close()`.
+    let hold = self.option_callbacks.hold();
     let option_callbacks = self.option_callbacks.clone();
     spawn_boxed_future(env, async move {
-      // A repeated `DevEngine::close` waits for the first one, so this release never runs
-      // before the last `closeBundle`. A second release does nothing.
-      let _release = ReleaseJsCallbacksOnDrop(vec![option_callbacks]);
+      // Locals drop in reverse order: the hold goes first, then the release request runs.
+      let _release = RequestReleaseOnDrop(option_callbacks);
+      let _hold = hold;
       inner.close().await.map_err(|_e| napi::Error::from_reason("Failed to close dev engine"))?;
       Ok(())
     })

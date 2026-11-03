@@ -7,6 +7,7 @@ import type { InputOptions, OutputOptions, Plugin } from 'rolldown';
 import type { DevEngine, DevOptions } from 'rolldown/experimental';
 import { dev as _dev } from 'rolldown/experimental';
 import type * as DevRuntimeModule from 'rolldown/experimental/runtime';
+import { isWasiTest } from 'rolldown-tests/utils';
 import { SourceMapConsumer, SourceMapGenerator } from 'source-map';
 import { expect, test } from 'vitest';
 
@@ -1117,13 +1118,16 @@ test(
 
     expect(rejection).toBeInstanceOf(Error);
     const [cause] = (rejection as { errors?: unknown[] }).errors ?? [];
-    // Which plugin, which hook, which module - and the throw site itself.
-    expect(cause).toMatchObject({
-      message: 'boom from a user plugin',
-      plugin: 'throws-on-lazy',
-      hook: 'transform',
-      id: path.join(dir, 'lazy.js'),
-    });
-    expect((cause as Error).stack).toContain('boom from a user plugin');
+    expect(cause).toMatchObject({ message: 'boom from a user plugin' });
+    // The wasm binding rebuilds the error from its message alone (see `to_binding_error`).
+    if (!isWasiTest) {
+      // Which plugin, which hook, which module - and the throw site itself.
+      expect(cause).toMatchObject({
+        plugin: 'throws-on-lazy',
+        hook: 'transform',
+        id: path.join(dir, 'lazy.js'),
+      });
+      expect((cause as Error).stack).toContain('boom from a user plugin');
+    }
   },
 );

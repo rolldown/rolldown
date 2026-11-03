@@ -1,11 +1,13 @@
-use std::{ops::Deref, sync::Arc};
+use std::{
+  ops::Deref,
+  sync::{Arc, OnceLock},
+};
 
 use crate::PluginContext;
 use arcstr::ArcStr;
-use rolldown_common::{ModuleIdx, PluginIdx, SourceMapGenMsg, SourcemapChainElement, WatchPath};
+use rolldown_common::{ModuleIdx, PendingSourcemap, SourcemapChainElement, WatchPath};
 use rolldown_sourcemap::{SourceMap, collapse_sourcemaps, empty_sourcemap};
 use rolldown_utils::unique_arc::WeakRef;
-use std::sync::mpsc;
 use string_wizard::{MagicString, SourceMapOptions};
 
 #[derive(Debug)]
@@ -15,8 +17,13 @@ pub struct TransformPluginContext {
   original_code: ArcStr,
   id: ArcStr,
   module_idx: ModuleIdx,
-  plugin_idx: PluginIdx,
-  magic_string_tx: Option<mpsc::Sender<SourceMapGenMsg>>,
+  /// Whether the sourcemap worker runs. If it does, `send_magic_string` leaves
+  /// the map to it instead of generating the map on the JS thread.
+  has_sourcemap_worker: bool,
+  /// Set by `send_magic_string`. The plugin driver adds it to the sourcemap
+  /// chain once the hook returns. Only the JS thread sets it and the driver only
+  /// reads it, so neither ever waits for the other.
+  pending_sourcemap: OnceLock<Arc<PendingSourcemap>>,
 }
 
 impl TransformPluginContext {
@@ -26,10 +33,17 @@ impl TransformPluginContext {
     original_code: ArcStr,
     id: ArcStr,
     module_idx: ModuleIdx,
-    plugin_idx: PluginIdx,
-    magic_string_tx: Option<mpsc::Sender<SourceMapGenMsg>>,
+    has_sourcemap_worker: bool,
   ) -> Self {
-    Self { inner, sourcemap_chain, original_code, id, module_idx, plugin_idx, magic_string_tx }
+    Self {
+      inner,
+      sourcemap_chain,
+      original_code,
+      id,
+      module_idx,
+      has_sourcemap_worker,
+      pending_sourcemap: OnceLock::new(),
+    }
   }
 
   pub fn get_combined_sourcemap(&self) -> SourceMap {
@@ -40,6 +54,9 @@ impl TransformPluginContext {
         .filter_map(|element| match element {
           SourcemapChainElement::Transform((_, sourcemap))
           | SourcemapChainElement::Load(sourcemap) => Some(sourcemap),
+          // Generates the map on this thread if no earlier call did. The
+          // sourcemap worker only gets it after the module's last hook.
+          SourcemapChainElement::MagicString((_, pending)) => Some(pending.get()),
           SourcemapChainElement::Omitted { .. } => Some(&empty_map),
           SourcemapChainElement::Null { .. } => None,
         })
@@ -82,21 +99,29 @@ impl TransformPluginContext {
     }
   }
 
+  /// Returns the map as JSON if there is no sourcemap worker. Otherwise the map
+  /// is generated later and `None` is returned.
   pub fn send_magic_string(
     &self,
     magic_string: MagicString<'static>,
-  ) -> Result<Option<String>, mpsc::SendError<SourceMapGenMsg>> {
-    if let Some(tx) = self.magic_string_tx.as_ref() {
-      tx.send(SourceMapGenMsg::MagicString(Box::new((
-        self.module_idx,
-        self.plugin_idx,
-        self.id.clone(),
-        magic_string,
-      ))))
-      .map(|()| None)
-    } else {
-      Ok(Some(magic_string.source_map(string_wizard::SourceMapOptions::default()).to_json_string()))
+  ) -> anyhow::Result<Option<String>> {
+    if !self.has_sourcemap_worker {
+      return Ok(Some(
+        magic_string.source_map(string_wizard::SourceMapOptions::default()).to_json_string(),
+      ));
     }
+    let pending = Arc::new(PendingSourcemap::new(self.id.clone(), magic_string));
+    if self.pending_sourcemap.set(pending).is_err() {
+      anyhow::bail!(
+        "TransformPluginContext: `sendMagicString` can only be called once per transform hook"
+      );
+    }
+    Ok(None)
+  }
+
+  /// The map registered by `send_magic_string` during this hook, if any.
+  pub fn pending_sourcemap(&self) -> Option<Arc<PendingSourcemap>> {
+    self.pending_sourcemap.get().cloned()
   }
 }
 

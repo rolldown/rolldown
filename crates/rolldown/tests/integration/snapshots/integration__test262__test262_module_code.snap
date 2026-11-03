@@ -662,21 +662,21 @@ Actual:
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Identifier `type` has already been declared
+Duplicate import attribute key `type`
 ---
 
 # language/module-code/import-attributes/early-dup-attribute-key-import-nobinding.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Identifier `type` has already been declared
+Duplicate import attribute key `type`
 ---
 
 # language/module-code/import-attributes/early-dup-attribute-key-import-withbinding.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Identifier `type` has already been declared
+Duplicate import attribute key `type`
 ---
 
 # language/module-code/import-attributes/import-attribute-empty.js

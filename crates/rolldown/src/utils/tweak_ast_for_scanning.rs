@@ -12,7 +12,6 @@ use oxc_str::{Ident, IdentHashMap, IdentHashSet};
 use rolldown_ecmascript_utils::StatementExt;
 use rustc_hash::FxHashSet;
 
-/// Source and import attributes a namespace alias is re-imported with.
 type NamespaceImportSource<'ast> =
   (ast::StringLiteral<'ast>, Option<ArenaBox<'ast, ast::WithClause<'ast>>>);
 
@@ -31,12 +30,11 @@ pub struct PreProcessor<'ast, 'a> {
   /// was lowered to a regular import. Read after `visit_program` to emit the
   /// `UNSUPPORTED_FEATURE` warning.
   defer_spans: Vec<Span>,
-  /// Local names of top-level namespace imports and of their top-level `const` aliases.
-  /// The scanner only tree-shakes a namespace through member reads, so destructuring one of
-  /// these names is rewritten into member reads.
+  /// Top-level namespace imports and their `const` aliases. The scanner tree-shakes a namespace
+  /// only through member reads, so destructuring these is rewritten into member reads.
   namespace_names: IdentHashSet<'ast>,
-  /// Top-level `const alias = ns;` declarations to rewrite into `import * as alias from '...'`,
-  /// so `alias` is linked as the namespace itself instead of a copy that escapes it.
+  /// Top-level `const alias = ns;` declarations, rewritten into `import * as alias` so the
+  /// scanner sees a namespace import instead of a reference to the whole namespace.
   namespace_aliases: IdentHashMap<'ast, NamespaceImportSource<'ast>>,
 }
 
@@ -163,7 +161,6 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
     }
   }
 
-  /// `(alias, target)` for an `alias = target` declarator whose init is a bare identifier.
   fn identifier_alias(
     declarator: &ast::VariableDeclarator<'ast>,
   ) -> Option<(Ident<'ast>, Ident<'ast>)> {
@@ -173,12 +170,9 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
     Some((id.name, init.name))
   }
 
-  /// Collects top-level namespace imports and the `const` aliases of them (in source order, so
-  /// `const a = ns, b = a` aliases both). This runs before any statement is walked because a hoisted
-  /// function may destructure an alias declared after it.
-  ///
-  /// Only declarations that end up as a single-declarator `const` statement are aliases: the
-  /// rewrite in `rewrite_namespace_alias` runs after `split_multi_declarator`.
+  /// Runs before any statement is walked, since a function declared above an alias can
+  /// destructure it. Only declarations that become a single-declarator `const` after
+  /// `split_multi_declarator` count, matching what `rewrite_namespace_alias` accepts.
   fn collect_namespace_bindings(&mut self, body: &[Statement<'ast>]) {
     let mut import_stmt_of: IdentHashMap<'ast, usize> = IdentHashMap::default();
 
@@ -222,10 +216,8 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
 
   /// `const alias = ns;` -> `import * as alias from '<source of ns>';`
   ///
-  /// The import binding is linked to the same namespace object, so every existing namespace
-  /// optimization applies to `alias` and a CommonJS importee still yields one shared object
-  /// (`alias === ns` holds). The only observable difference is that reading `alias` before its
-  /// declaration no longer throws a TDZ error.
+  /// Both imports link to the same namespace object, so `alias === ns` still holds, also for
+  /// CommonJS importees. Reading `alias` before its declaration no longer throws (TDZ).
   fn rewrite_namespace_alias(&mut self, stmt: Statement<'ast>) -> Statement<'ast> {
     let Statement::VariableDeclaration(decl) = &stmt else { return stmt };
 
@@ -268,13 +260,10 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
     }
   }
 
-  /// Whether `declarator` is `{ a, b: c } = ns` with `ns` a namespace name, only static keys,
-  /// plain identifier bindings, no defaults and no rest.
-  ///
-  /// For such a pattern, `const { a, b: c } = ns` and `const a = ns.a, c = ns.b` read the same
-  /// properties in the same order and throw on the same values, even when a nested `ns` shadows the
-  /// import. They only differ when `ns` changes between the reads: a binding named `ns`
-  /// (`var { a: ns, b } = ns`) is rejected, and a getter reassigning a shadowing local is ignored.
+  /// Without scope info, a local that shadows the import is rewritten too. That is safe because
+  /// both forms read the same properties in the same order and throw on the same values. They
+  /// differ only if `ns` changes between reads: a binding named `ns` is rejected, and a getter
+  /// that reassigns a shadowing local is not handled.
   fn is_namespace_destructuring(&self, declarator: &ast::VariableDeclarator<'ast>) -> bool {
     let BindingPattern::ObjectPattern(pattern) = &declarator.id else { return false };
     let Some(Expression::Identifier(ns)) = &declarator.init else { return false };
@@ -289,8 +278,7 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
       })
   }
 
-  /// `const { a, b: c } = ns` -> `const a = ns.a, c = ns.b`, so the scanner records each read as a
-  /// namespace member access instead of a reference to the whole namespace.
+  /// `const { a, b: c } = ns` -> `const a = ns.a, c = ns.b`
   fn split_namespace_destructuring(&self, decl: &mut ast::VariableDeclaration<'ast>) {
     let declarations = decl.declarations.take_in(self);
     let mut rewritten = oxc::allocator::Vec::with_capacity_in(declarations.len(), self);
@@ -314,7 +302,7 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
           unreachable!()
         };
 
-        // Real spans are required: the scanner ignores unspanned member expression chains.
+        // The scanner skips unspanned member expressions, so reuse the property span.
         let init = Expression::new_static_member_expression(
           prop.span,
           Expression::new_identifier(ns.span, ns.name, self),

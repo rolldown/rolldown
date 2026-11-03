@@ -2100,12 +2100,7 @@ export interface BindingDevtoolsOptions {
 export interface BindingDevWatchOptions {
   enabled?: boolean
   skipWrite?: boolean
-  usePolling?: boolean
-  pollInterval?: number
-  useDebounce?: boolean
-  debounceDuration?: number
-  compareContentsForPolling?: boolean
-  debounceTickRate?: number
+  watcher?: BindingWatcherFileWatcherOptions
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
 }
@@ -3112,17 +3107,21 @@ export interface BindingViteTransformPluginConfig {
   yarnPnp?: boolean
 }
 
-export interface BindingWatchOption {
-  skipWrite?: boolean
-  include?: Array<BindingStringOrRegex>
-  exclude?: Array<BindingStringOrRegex>
-  buildDelay?: number
+export interface BindingWatcherFileWatcherOptions {
   usePolling?: boolean
   pollInterval?: number
   compareContentsForPolling?: boolean
   useDebounce?: boolean
   debounceDelay?: number
   debounceTickRate?: number
+}
+
+export interface BindingWatchOption {
+  skipWrite?: boolean
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
+  buildDelay?: number
+  watcher?: BindingWatcherFileWatcherOptions
   onInvalidate?: ((id: string) => void) | undefined
 }
 

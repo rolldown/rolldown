@@ -171,9 +171,9 @@ pub struct AstScanner<'me, 'ast> {
   last_nested_this_stmt_idx: Option<StmtInfoIdx>,
   /// Used in commonjs module it self
   cjs_named_exports_usage: FxHashMap<CompactStr, CommonjsExportSymbolUsage>,
-  /// Set when `module.exports = <value>` is detected. All prior `exports.xxx`
-  /// constants are stale since the entire exports object is replaced at runtime.
-  has_module_exports_reassignment: bool,
+  /// Set when `exports` is reassigned or `module.exports` is replaced. In either
+  /// case, `exports.xxx` writes may no longer target the exported object.
+  has_cjs_exports_reassignment: bool,
   /// Whether the current position is at the top level (all parent scopes are block or top-level).
   /// A cache of [AstScanner::is_valid_tla_scope].
   is_top_level: bool,
@@ -280,7 +280,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         "__esModule".into(),
         CommonjsExportSymbolUsage { read: 0, write: 0, bailout: true },
       )]),
-      has_module_exports_reassignment: false,
+      has_cjs_exports_reassignment: false,
       is_top_level: false,
       current_comment_idx: 0,
       untranspiled_syntax: UntranspiledSyntax::empty(),
@@ -428,9 +428,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       self.result.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
     }
 
-    // `module.exports = <value>` replaces the entire exports object, so all
-    // prior `exports.xxx` writes are stale and must not be inlined.
-    if self.has_module_exports_reassignment {
+    // Reassigning `exports` or `module.exports` breaks their aliasing, so values
+    // assigned to `exports.xxx` cannot be assumed to be exported constants.
+    if self.has_cjs_exports_reassignment {
       for exports in self.result.commonjs_exports.values() {
         for local_export in exports {
           bailout_inlined_cjs_exports_symbol_ids.insert(local_export.referenced.symbol);

@@ -34,7 +34,8 @@ expression: "serde_json::to_string_pretty(&report).unwrap()"
     "packages.transitive_count": 2,
     "plugins.hook_call_count": 5,
     "plugins.hook_noop_call_count": 3,
-    "plugins.hook_time_ms": 11.0
+    "plugins.hook_time_ms": 11.0,
+    "plugins.noop_hook_count": 1
   },
   "entries": [
     {
@@ -266,6 +267,29 @@ expression: "serde_json::to_string_pretty(&report).unwrap()"
       "module": "src/b.ts",
       "calls": 1,
       "ms": 2.0
+    }
+  ],
+  "noopHooks": [
+    {
+      "plugin": "test-plugin",
+      "hook": "load",
+      "calls": 1,
+      "noopCalls": 1,
+      "ratio": 1.0
+    },
+    {
+      "plugin": "test-plugin",
+      "hook": "resolveId",
+      "calls": 2,
+      "noopCalls": 1,
+      "ratio": 0.5
+    },
+    {
+      "plugin": "test-plugin",
+      "hook": "transform",
+      "calls": 2,
+      "noopCalls": 1,
+      "ratio": 0.5
     }
   ]
 }

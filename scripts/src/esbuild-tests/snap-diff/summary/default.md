@@ -173,8 +173,6 @@
 ## [require_bad_argument_count](../../../../../crates/rolldown/tests/esbuild/default/require_bad_argument_count)
 ## [require_child_dir_common_js](../../../../../crates/rolldown/tests/esbuild/default/require_child_dir_common_js)
 ## [require_child_dir_es6](../../../../../crates/rolldown/tests/esbuild/default/require_child_dir_es6)
-## [require_fs_node](../../../../../crates/rolldown/tests/esbuild/default/require_fs_node)
-## [require_fs_node_minify](../../../../../crates/rolldown/tests/esbuild/default/require_fs_node_minify)
 ## [require_json](../../../../../crates/rolldown/tests/esbuild/default/require_json)
 ## [require_main_cache_common_js](../../../../../crates/rolldown/tests/esbuild/default/require_main_cache_common_js)
 ## [require_parent_dir_common_js](../../../../../crates/rolldown/tests/esbuild/default/require_parent_dir_common_js)
@@ -269,6 +267,10 @@
   resolve alias behavior difference
 ## [quoted_property_mangle](../../../../../crates/rolldown/tests/esbuild/default/quoted_property_mangle)
   covered by minifier
+## [require_fs_node](../../../../../crates/rolldown/tests/esbuild/default/require_fs_node)
+  Rolldown runs a CommonJS entry with a top-level `return` in an arrow function, so the `return` does not skip what the chunk prints after the module
+## [require_fs_node_minify](../../../../../crates/rolldown/tests/esbuild/default/require_fs_node_minify)
+  Rolldown runs a CommonJS entry with a top-level `return` in an arrow function, so the `return` does not skip what the chunk prints after the module
 ## [warnings_inside_node_modules](../../../../../crates/rolldown/tests/esbuild/default/warnings_inside_node_modules)
   resolve alias behavior difference
 # Ignored Cases (not supported)

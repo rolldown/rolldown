@@ -200,11 +200,13 @@ Changes accumulate in an `invalidatedIds` Map during the delay window — both p
 
 ### Rolldown's Approach
 
-The `WatcherState::Debouncing` state does the same thing with `tokio::select!` and a deadline reset:
+The `WatcherState::Debouncing` state does the same thing with a deadline reset. `wait_for_debounce_input()` uses a biased `tokio::select!` over the mpsc receiver (polled first) and `tokio::time::sleep_until(deadline)`:
 
 - File change → `Idle` becomes `Debouncing { changes, deadline }`
 - More changes → deadline resets, changes accumulate with kind consolidation per path
 - Deadline fires → if changes are non-empty, passed to `run_build_sequence()`; if empty (all cancelled out by kind consolidation), silently return to Idle
+
+One OS notification can reach the coordinator as several `FileChanges` messages, one per change kind of the file. A message already in the channel wins over a deadline that is already due, so all parts of the notification that have arrived join the current build instead of being drained after `END` into a follow-up build.
 
 #### Kind Consolidation
 
@@ -336,6 +338,10 @@ backend:
 | true          | false          | notify `PollWatcher`                  |
 | false         | true           | debounced `RecommendedWatcher`        |
 | true          | true           | debounced `PollWatcher`               |
+
+Rust `WatchOption.watcher` and `DevWatchOptions.watcher` use the shared
+`WatcherFileWatcherOptions` type. Unset fields use each mode's defaults:
+filesystem debouncing is off for build watch and on for dev mode.
 
 Watch mode leaves `enabled` at its default (`true`). The no-op backend is a
 dev-engine concern (`disable_watcher` → `FsWatcherConfig.enabled: false`).

@@ -1064,95 +1064,95 @@ test('a lazily imported CommonJS module keeps its ESM view after an HMR update',
   expect(second.version).toBe('v2');
 });
 
-// Any resolution `ctx.resolve` marks external must stay a real dynamic import:
-// config `external`, plugin `{ external: true }`, Node built-ins (`platform:
-// 'node'`), and http(s) URLs. Wrapping any of them used to append
-// `?rolldown-lazy=1` and route the import through `requestLazy`, which cannot
-// run an id the dev runtime has no factory for (#11273).
-test(
-  'a plugin-resolved external dynamic import is not wrapped in a lazy proxy',
+// Any resolution `ctx.resolve` marks external must stay a real dynamic import. Wrapping it
+// appends `?rolldown-lazy=1` and routes the import through `requestLazy`, which cannot run an
+// id the dev runtime has no factory for (#11273). Config `external` on the raw specifier is not
+// listed: it applies before any plugin runs, so the lazy plugin never sees that import.
+test.for([
+  {
+    name: 'a plugin `resolveId` that returns `external: true`',
+    specifier: './dep.mjs',
+    options: (): InputOptions => ({
+      plugins: [
+        {
+          name: 'external',
+          resolveId: (id) => (id === './dep.mjs' ? { id, external: true } : null),
+        },
+      ],
+    }),
+    proxyId: () => './dep.mjs?rolldown-lazy=1',
+  },
+  {
+    name: 'config `external` on the resolved id',
+    specifier: './dep.mjs',
+    options: (dir: string): InputOptions => ({ external: [path.join(dir, 'dep.mjs')] }),
+    proxyId: (dir: string) => `${path.join(dir, 'dep.mjs')}?rolldown-lazy=1`,
+  },
+  {
+    name: 'a Node built-in',
+    specifier: 'node:fs',
+    options: (): InputOptions => ({ platform: 'node' }),
+    proxyId: () => 'node:fs?rolldown-lazy=1',
+  },
+  {
+    name: 'an http(s) URL',
+    specifier: 'https://example.com/dep.js',
+    options: (): InputOptions => ({}),
+    proxyId: () => 'https://example.com/dep.js?rolldown-lazy=1',
+  },
+])(
+  'an external dynamic import is not wrapped in a lazy proxy: $name',
   { timeout: TEST_TIMEOUT },
-  async ({ onTestFinished }) => {
+  async ({ specifier, options, proxyId }, { onTestFinished }) => {
     const uniqueId = crypto.randomUUID().slice(0, 8);
-    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-plugin-external-${uniqueId}`);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-external-${uniqueId}`);
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, 'dep.mjs'), `export const value = 1;\n`);
     fs.writeFileSync(
       path.join(dir, 'lazy.mjs'),
-      `export const load = () => import('./dep.mjs');\n`,
-    );
-    fs.writeFileSync(
-      path.join(dir, 'lazy-node.mjs'),
-      `export const load = () => import('node:fs');\n`,
+      `export const load = () => import(${JSON.stringify(specifier)});\n`,
     );
 
-    onTestFinished(() => {
+    let code = '';
+    let buildError: Error | undefined;
+    const engine = await dev(
+      {
+        input: path.join(dir, 'lazy.mjs'),
+        experimental: { devMode: { lazy: true } },
+        ...options(dir),
+      },
+      { format: 'esm', dir: path.join(dir, 'dist') },
+      {
+        onOutput(result) {
+          if (result instanceof Error) {
+            buildError = result;
+            return;
+          }
+          const chunk = result.output.find((item) => item.type === 'chunk' && item.isEntry);
+          if (chunk?.type === 'chunk') {
+            code = chunk.code;
+          }
+        },
+      },
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
       if (!process.env.CI) {
         fs.rmSync(dir, { recursive: true, force: true });
       }
     });
 
-    const directImport = 'import("./dep.mjs")';
-
-    async function entryCode(label: string, input: InputOptions): Promise<string> {
-      let code = '';
-      const engine = await dev(
-        input,
-        { format: 'esm', dir: path.join(dir, `dist-${label}`) },
-        {
-          // Nothing in this case edits files, and two engines must not watch the same dir.
-          watch: { enabled: false },
-          onOutput(result) {
-            if (result instanceof Error) {
-              return;
-            }
-            const chunk = result.output.find((item) => item.type === 'chunk' && item.isEntry);
-            if (chunk?.type === 'chunk') {
-              code = chunk.code;
-            }
-          },
-        },
-      );
-      try {
-        await engine.run();
-        // No proxy was registered, so the id the bug used to compile is unknown.
-        await expect(engine.compileEntry('./dep.mjs?rolldown-lazy=1', 'client')).rejects.toThrow(
-          'Lazy entry module not found in cache',
-        );
-        return code;
-      } finally {
-        await engine.close();
-      }
+    await engine.run();
+    if (buildError) {
+      throw buildError;
     }
 
-    const shared: InputOptions = {
-      input: path.join(dir, 'lazy.mjs'),
-      experimental: { devMode: { lazy: true } },
-    };
-    const externalPlugin: Plugin = {
-      name: 'external',
-      resolveId(id) {
-        if (id === './dep.mjs') {
-          return { id, external: true };
-        }
-        return null;
-      },
-    };
-
-    const configCode = await entryCode('config', { ...shared, external: ['./dep.mjs'] });
-    const pluginCode = await entryCode('plugin', { ...shared, plugins: [externalPlugin] });
-    const nodeCode = await entryCode('node', {
-      ...shared,
-      input: path.join(dir, 'lazy-node.mjs'),
-      platform: 'node',
-    });
-
-    expect(configCode).toContain(directImport);
-    expect(pluginCode).toContain(directImport);
-    expect(pluginCode).not.toContain('rolldown-lazy');
-
-    const nodeImport = 'import("node:fs")';
-    expect(nodeCode).toContain(nodeImport);
-    expect(nodeCode).not.toContain('rolldown-lazy');
+    expect(code).toContain(`import(${JSON.stringify(specifier)})`);
+    expect(code).not.toContain('rolldown-lazy');
+    // No proxy was registered, so the id the bug used to compile is unknown.
+    await expect(engine.compileEntry(proxyId(dir), 'client')).rejects.toThrow(
+      'Lazy entry module not found in cache',
+    );
   },
 );

@@ -36,8 +36,7 @@ global.foo.log();
 ### entry1.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as init_run_dep } from "./run-dep.js";
+import { n as __esmMin, t as init_run_dep } from "./run-dep.js";
 // init-dep-1.js
 function init_init_dep_1() {
 	return (init_init_dep_1 = __esmMin((() => {
@@ -58,8 +57,7 @@ init_entry1();
 ### entry2.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as init_run_dep } from "./run-dep.js";
+import { n as __esmMin, t as init_run_dep } from "./run-dep.js";
 // init-dep-2.js
 function init_init_dep_2() {
 	return (init_init_dep_2 = __esmMin((() => {
@@ -77,25 +75,17 @@ init_entry2();
 
 ```
 
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
-
-```
-
 ### run-dep.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // run-dep.js
 function init_run_dep() {
 	return (init_run_dep = __esmMin((() => {
 		global.foo.log();
 	})))();
 }
-export { init_run_dep as t };
+export { __esmMin as n, init_run_dep as t };
 
 ```
 
@@ -106,8 +96,7 @@ export { init_run_dep as t };
 ### entry1.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as init_run_dep } from "./run-dep.js";
+import { n as __esmMin, t as init_run_dep } from "./run-dep.js";
 // init-dep-1.js
 global.foo = { log: () => console.log("foo.log() (from entry 1) called") };
 // entry1.js
@@ -123,8 +112,7 @@ init_entry1();
 ### entry2.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as init_run_dep } from "./run-dep.js";
+import { n as __esmMin, t as init_run_dep } from "./run-dep.js";
 // init-dep-2.js
 global.foo = { log: () => console.log("foo.log() (from entry 2) called") };
 // entry2.js
@@ -137,24 +125,16 @@ init_entry2();
 
 ```
 
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
-
-```
-
 ### run-dep.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // run-dep.js
 function init_run_dep() {
 	return (init_run_dep = __esmMin((() => {
 		global.foo.log();
 	})))();
 }
-export { init_run_dep as t };
+export { __esmMin as n, init_run_dep as t };
 
 ```

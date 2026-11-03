@@ -62,8 +62,7 @@ export { b };
 ### entry_a.js
 
 ```js
-import { n as __exportAll, r as __reExport, t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_entry_b, t as b } from "./entry_b2.js";
+import { a as __reExport, i as __exportAll, n as init_entry_b, r as __esmMin, t as b } from "./entry_b2.js";
 
 export * from "external"
 
@@ -94,8 +93,7 @@ export { b };
 ### entry_b2.js
 
 ```js
-import { n as __exportAll, r as __reExport, t as __esmMin } from "./rolldown-runtime.js";
-
+// HIDDEN [\0rolldown/runtime.js]
 // entry_b.js
 var b;
 function init_entry_b() {
@@ -104,12 +102,5 @@ function init_entry_b() {
 	})))();
 }
 
-export { init_entry_b as n, b as t };
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __reExport as r, __esmMin as t };
+export { __reExport as a, __exportAll as i, init_entry_b as n, __esmMin as r, b as t };
 ```

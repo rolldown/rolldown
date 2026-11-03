@@ -172,8 +172,7 @@ export { __share_require as i, __share as n, __share_export as r, __esmMin as t 
 ### a.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_s3, t as base } from "./s3.js";
+import { i as __esmMin, n as init_s3, t as base } from "./s3.js";
 import { i as tagged, n as init_s1, r as one, t as C } from "./s1.js";
 // a.js
 function init_a() {
@@ -190,8 +189,7 @@ init_a();
 ### b.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_s3, r as tag } from "./s3.js";
+import { i as __esmMin, n as init_s3, r as tag } from "./s3.js";
 import { i as tagged, n as init_s1, r as one, t as C } from "./s1.js";
 // b.js
 function init_b() {
@@ -208,8 +206,7 @@ init_b();
 ### c.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_s3, r as tag, t as base } from "./s3.js";
+import { i as __esmMin, n as init_s3, r as tag, t as base } from "./s3.js";
 // c.js
 function init_c() {
 	return (init_c = __esmMin((() => {
@@ -221,19 +218,10 @@ init_c();
 
 ```
 
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
-
-```
-
 ### s1.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_s3, r as tag, t as base } from "./s3.js";
+import { i as __esmMin, n as init_s3, r as tag, t as base } from "./s3.js";
 // s1.js
 var one, tagged, C;
 function init_s1() {
@@ -256,7 +244,7 @@ export { tagged as i, init_s1 as n, one as r, C as t };
 ### s3.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // s3.js
 function tag(strings, ...values) {
 	return (this === void 0 ? "U" : "B") + strings.join("|") + values.join(",");
@@ -268,6 +256,6 @@ function init_s3() {
 		base = { n: 3 };
 	})))();
 }
-export { init_s3 as n, tag as r, base as t };
+export { __esmMin as i, init_s3 as n, tag as r, base as t };
 
 ```

@@ -45,7 +45,7 @@ globalThis.size = "md";
 ### button.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // ui/button.css.js
 var init_button_css = __esmMin((() => {
 	globalThis.styleLoaded = true;
@@ -53,15 +53,14 @@ var init_button_css = __esmMin((() => {
 var init_button = __esmMin((() => {
 	init_button_css();
 }));
-export { init_button as t };
+export { __esmMin as n, init_button as t };
 
 ```
 
 ### namespace.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as init_button } from "./button.js";
+import { n as __esmMin, t as init_button } from "./button.js";
 // namespace.js
 function init_namespace() {
 	return (init_namespace = __esmMin((() => {
@@ -73,19 +72,10 @@ init_namespace();
 
 ```
 
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
-
-```
-
 ### through_barrel.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as init_button } from "./button.js";
+import { n as __esmMin, t as init_button } from "./button.js";
 // through_barrel.js
 function init_through_barrel() {
 	return (init_through_barrel = __esmMin((() => {

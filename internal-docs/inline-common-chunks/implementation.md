@@ -22,8 +22,8 @@ A fixture's `configVariants` entry with `codeSplitting: { experimentalInlineComm
 ```
 generate()
   ├─ prepare_inline_common_chunks()          evaluates `exclude` once (async), marks `.d.ts`
-  ├─ generate_chunks()                        try_merge_runtime_chunk() returns early while on
-  ├─ finalize_chunk_plan()                    order lowering, sweep, signature facades; returns final init metadata and derived logical links
+  ├─ generate_chunks()
+  ├─ finalize_chunk_plan()                    order lowering, sweep, signature facades; place_runtime_module() keeps the runtime chunk while on; returns final init metadata and derived logical links
   ├─ used_symbol_refs.seal()
   ├─ select_inline_common_chunks()            <- selection point: records, placement, registry demand
   ├─ compute_cross_chunk_link_state()         again, only when something was selected: the demand
@@ -58,7 +58,7 @@ pub struct InlineReader { pub file: ChunkIdx, pub reader: ChunkIdx }   // whose 
 
 ## Selection (`inline_common_chunks/select.rs`)
 
-Runs on the `CrossChunkLinkState` of the final link derivation: every module is in its final chunk, liveness is sealed, order lowering and the unused-runtime sweep are done. The runtime chunk must exist and be standalone (`try_merge_runtime_chunk` returns early while the option is on; the sweep keeps the runtime whenever a candidate exists, because a candidate's members demand `__esmMin`/`__esm` or `__commonJS`); otherwise nothing is selected. The static importee table is `index_imports_from_other_chunks` plus the edges chunk merging pre-populated on `Chunk::imports_from_other_chunks`, the same union `commit_cross_chunk_links` writes.
+Runs on the `CrossChunkLinkState` of the final link derivation: every module is in its final chunk, liveness is sealed, order lowering and the unused-runtime sweep are done. The runtime chunk must exist and be standalone (`place_runtime_module` keeps the runtime chunk while the option is on; the sweep keeps the runtime whenever a candidate exists, because a candidate's members demand `__esmMin`/`__esm` or `__commonJS`); otherwise nothing is selected. The static importee table is `index_imports_from_other_chunks` plus the edges chunk merging pre-populated on `Chunk::imports_from_other_chunks`, the same union `commit_cross_chunk_links` writes.
 
 `prefers_inline_common_chunk` lets dynamic already-loaded reduction and common-chunk merging preserve small, eligible module groups before entry assignment. It shares `inline_common_chunk_module_bailout` with final selection and ignores runtime modules, whose placement is separate.
 

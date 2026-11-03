@@ -17,7 +17,7 @@ export { iconP };
 ## lab.js
 
 ```js
-import { a as __esmMin, i as __commonJSMin, o as __exportAll, s as __toCommonJS } from "./w.js";
+import { i as __toCommonJS, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
 // top.js
 var top_exports = /* @__PURE__ */ __exportAll({ t: () => 2 });
 var init_top = __esmMin((() => {}));
@@ -30,10 +30,19 @@ export default require_lab();
 
 ```
 
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __toCommonJS as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
+
+```
+
 ## styles.js
 
 ```js
-import { a as __esmMin, n as V, r as init_w, t as P } from "./w.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
+import { n as V, r as init_w, t as P } from "./w.js";
 // mid.js
 var init_mid = __esmMin((() => {
 	init_w();
@@ -54,7 +63,7 @@ export { P, V, util };
 ## w.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+import { n as __esmMin } from "./rolldown-runtime.js";
 // w.js
 function P() {
 	return "v18";
@@ -64,6 +73,6 @@ var init_w = __esmMin((() => {
 	globalThis.__w_side_effect = "ran";
 	V = "v18";
 }));
-export { __esmMin as a, __commonJSMin as i, V as n, __exportAll as o, init_w as r, __toCommonJS as s, P as t };
+export { V as n, init_w as r, P as t };
 
 ```

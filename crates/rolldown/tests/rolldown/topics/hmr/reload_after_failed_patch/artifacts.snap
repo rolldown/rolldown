@@ -71,8 +71,8 @@ simulated failure while rendering an HMR patch
 #### main.js
 
 ```js
+import { t as __exportAll } from "./rolldown-runtime.js";
 import assert from "node:assert";
-// HIDDEN [\0rolldown/runtime.js]
 __rolldown_runtime__.registerGraph({
 	ids: [
 		"new-static.js",
@@ -119,7 +119,6 @@ process.on("beforeExit", (code) => {
 	assert.strictEqual(globalThis.__reload_after_failed_patch_static, "static");
 	assert.strictEqual(globalThis.__reload_after_failed_patch_dynamic, "dynamic");
 });
-export { __exportAll as t };
 
 //# sourceMappingURL=main.js.map
 ```
@@ -127,7 +126,7 @@ export { __exportAll as t };
 #### new-dynamic.js
 
 ```js
-import { t as __exportAll } from "./main.js";
+import { t as __exportAll } from "./rolldown-runtime.js";
 __rolldown_runtime__.registerGraph({
 	ids: ["new-dynamic.js"],
 	localCount: 1,
@@ -141,4 +140,12 @@ const value = "dynamic";
 export { value };
 
 //# sourceMappingURL=new-dynamic.js.map
+```
+
+#### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as t };
+
 ```

@@ -44,7 +44,7 @@ impl GenerateStage<'_> {
       return false;
     };
 
-    // The registry lives in the runtime module. `try_merge_runtime_chunk` never merges the
+    // The registry lives in the runtime module. `place_runtime_module` never merges the
     // runtime while the option is on, and any candidate's members demand a helper (`__esmMin` for
     // an order-wrapped module, `__commonJS` for a CommonJS one), so the sweep keeps the runtime
     // whenever there is something to select. A build that still has no standalone runtime chunk

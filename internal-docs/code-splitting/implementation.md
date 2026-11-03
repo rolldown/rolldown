@@ -56,8 +56,7 @@ generate_chunks()
     │    │
     │    ├─ Module assignment         Group modules by identical BitSet → chunks
     │    │
-    │    ├─ ChunkOptimizer           Merge common chunks into entry chunks, remove empty facades
-    │    └─ try_merge_runtime_chunk() Optionally merge the standalone runtime into a safe host
+    │    └─ ChunkOptimizer           Merge common chunks into entry chunks, remove empty facades
     │
     └─ Chunk exec-order assignment    → ChunkGraph    Provisional module-to-chunk assignment
 
@@ -68,25 +67,21 @@ ChunkGraph
     ├─ finalize_chunk_plan()
     │    ├─ finalize provisional namespace/external facts
     │    ├─ analyze_execution_order()                Build an OrderWrapPlan with per-module reasons
-    │    ├─ if runtime_evicted_for_analysis
-    │    │    ├─ ensure_runtime_module_for_order_wraps()
-    │    │    ├─ find_entry_level_external_module()
-    │    │    ├─ finalized_module_namespace_ref_usage()
-    │    │    └─ analyze_execution_order()
     │    ├─ apply_order_wraps()                      Lower the plan into wrappers and topology edits
-    │    │    └─ ensure_runtime_module_for_order_wraps()   Re-place the runtime, then sole-consumer fold
+    │    │    └─ ensure_runtime_module_for_order_wraps()   Put an unplaced runtime into its own chunk
     │    ├─ recompute metadata if topology changed
     │    ├─ sweep_unused_runtime_module()            Drop a runtime with no source or order-state demand
     │    ├─ compute_wrapped_esm_init_metadata()       Derive sealed init facts for the current layout
     │    ├─ compute_cross_chunk_link_state()          Derive imports/exports, including synthetic symbols
     │    ├─ preserve_strict_entry_signatures()        Separate public facades from internal exports
     │    ├─ rederive init facts and links if facades changed topology
+    │    ├─ place_runtime_module()                    Move the runtime into a host, or keep its chunk
     │    └─ validate final output shape
     │
     ├─ used_symbol_refs.seal()                        Freeze liveness; the sweep is the last writer
     │
     ├─ select_inline_common_chunks()                 experimentalInlineCommonChunks: pick records on the derived edges, register registry demand, derive again
-    ├─ commit_cross_chunk_links()                     Write the derived links into the chunk graph
+    ├─ commit_cross_chunk_links()                     Write the derived links, in the given import order
     │
     ├─ apply_inline_common_chunks_links()             experimentalInlineCommonChunks: project record edges onto files
     │
@@ -108,6 +103,7 @@ ChunkGraph
 - `crates/rolldown/src/stages/generate_stage/dynamic_already_loaded.rs` — Rollup-style dynamic import already-loaded atom reduction
 - `crates/rolldown/src/stages/generate_stage/chunk_optimizer.rs` — merge/optimization
 - `crates/rolldown/src/stages/generate_stage/runtime_module_sweep.rs` — post-optimization runtime-demand sweep
+- `crates/rolldown/src/stages/generate_stage/runtime_host.rs` — runtime placement after the final links: the host rule, the move, and the check after the move
 - `crates/rolldown/src/stages/generate_stage/inline_common_chunks/` — `experimentalInlineCommonChunks`: selection, placement, physical projection, per-carrier finalization of records (see `internal-docs/inline-common-chunks/`)
 - `crates/rolldown/src/chunk_graph.rs` — output data structure
 - `crates/rolldown_utils/src/bitset.rs` — compact reachability representation
@@ -119,7 +115,7 @@ Wrap-all (the default strict mode) seeds the plan from the expected orders alone
 
 Both collapse paths register a synthetic namespace declaration and its runtime demand in `OrderWrapState`, then recompute the runtime-symbol closure: the create path does so when it avoids minting a facade, and the restore path does so when it leaves an optimizer-eliminated facade dead. The state stores the exact export names selected by `DynamicImportExportsUsage` and the non-inlined bindings behind them. The names keep finalization identical to the removed facade even when another alias of the same canonical binding is live elsewhere; the binding references let normal cross-chunk linking import every getter target after the entry becomes a common chunk. A real semantic namespace consumer overrides this narrowing and keeps the complete interface. Runtime demand includes `ExportAll`; entries that would require an external-star merge retain their facade instead. Simulated-facade namespace demand remains separate from semantic namespace demand, so this does not turn the narrowed dynamic-import interface into an opaque namespace read or reopen link-stage user-code liveness.
 
-`finalize_chunk_plan` sweeps unused runtime helpers after order lowering and namespace/external finalization, then derives sealed init facts and cross-chunk links. Strict entry signatures compare the actual exported symbols, including generated wrappers, namespace objects, and import bindings, against the entry's canonical public exports. A strict entry needing an internal export becomes a common implementation chunk behind a public facade. An unwrapped CommonJS entry module moves into the public facade because its `exports` and `module.exports` writes address that file; its dependencies remain in the original chunk, which becomes common. `create_entry_facade` preserves entry naming, reference-ID routing and creation metadata for both signature preservation and order lowering. A signature facade preserves the entry module set and module-level runtime demand, so the sweep can precede it. After a split, namespace/external facts and chunk order are refreshed and the derived init facts and links are replaced. An unchanged layout reuses the first derivation through the final commit.
+`finalize_chunk_plan` sweeps unused runtime helpers after order lowering and namespace/external finalization, then derives sealed init facts and cross-chunk links. Strict entry signatures compare the actual exported symbols, including generated wrappers, namespace objects, and import bindings, against the entry's canonical public exports. A strict entry needing an internal export becomes a common implementation chunk behind a public facade. An unwrapped CommonJS entry module moves into the public facade because its `exports` and `module.exports` writes address that file; its dependencies remain in the original chunk, which becomes common. `create_entry_facade` preserves entry naming, reference-ID routing and creation metadata for both signature preservation and order lowering. A signature facade preserves the entry module set and module-level runtime demand, so the sweep can precede it. After a split, namespace/external facts and chunk order are refreshed and the derived init facts and links are replaced. An unchanged layout reuses the first derivation. `place_runtime_module` then derives the links again only when it moves the runtime.
 
 An `exports-only` entry with dynamic star exports requires a strict signature even when it has no statically known export names.
 
@@ -294,11 +290,11 @@ A **user-defined** entry can likewise become an empty facade when manual code sp
 
 ### Runtime Module Placement
 
-When code splitting is enabled, the runtime module is assigned before manual and normal module chunking into a dedicated common chunk. This chunk uses normal chunk naming and is not registered in `bits_to_chunk`, so other modules with the same reachability bits cannot be grouped into it. Manual chunking also treats the runtime as already assigned, including during recursive dependency collection. The normal chunking and common-chunk merging passes therefore operate on user modules without carrying runtime-specific exceptions.
+The runtime module (`\0rolldown/runtime.js`) holds the helpers, for example `__exportAll` and `__toESM`. Each chunk that calls a helper imports it from the chunk that holds the runtime module. The runtime module stays in its own chunk until the final links exist. Then one step, `place_runtime_module` in `runtime_host.rs`, can move it into a host chunk. For the reasons, see [design.md](./design.md#runtime-placement).
 
-When code splitting is disabled, Rolldown does not extract a standalone runtime chunk. The runtime remains in the single output chunk, which preserves the single-file formats such as IIFE and UMD.
+**Before the step.** When code splitting is enabled, `extract_standalone_runtime_chunk` puts the runtime module into a dedicated common chunk before manual and normal module chunking. This chunk has the name `rolldown-runtime` and is not registered in `bits_to_chunk`, so other modules with the same reachability bits cannot be grouped into it. Manual chunking also treats the runtime as already assigned, including during recursive dependency collection. When the order wrappers need helpers and tree shaking left the runtime out, `ensure_runtime_module_for_order_wraps` creates this chunk. When code splitting is disabled, the runtime stays in the only output chunk, which keeps the single-file formats such as IIFE and UMD. No other step moves the runtime module.
 
-This standalone-first placement is the correctness baseline. Runtime helper consumers import helper symbols such as `__exportAll` from whichever chunk contains the runtime. If the runtime is co-located with a chunk that already has a forward static path to one of those consumers, the helper import can close a static cycle. See [#8989](https://github.com/rolldown/rolldown/issues/8989) for the canonical shape:
+The runtime chunk is a safe layout. It imports no chunk, and each consumer imports it first. A host is not always safe: when the host already has a forward static path to a consumer, the helper import of that consumer closes a static cycle. See [#8989](https://github.com/rolldown/rolldown/issues/8989) for the canonical shape:
 
 ```
 chunk(node2) ──forward──> chunk(node3) ──forward──> chunk(node4)
@@ -306,91 +302,62 @@ chunk(node2) ──forward──> chunk(node3) ──forward──> chunk(node4)
      └──────── helper edge after facade elim ────────────┘
 ```
 
-After chunk optimization, `try_merge_runtime_chunk()` can fold the standalone runtime chunk into an existing live chunk when that is proven safe. It computes the runtime consumer set from:
+**The baseline.** `finalize_chunk_plan` calls `place_runtime_module` after the strict entry facades and the last link derivation. The final links with the runtime in its own chunk are the baseline. `sort_chunk_imports` gives the import list of each chunk in the baseline (`ChunkImportOrder`, see [Chunk Import Order](#chunk-import-order)). A consumer is a chunk whose list contains the runtime chunk. The step reads its facts only from the baseline, so the helper demand that facade elimination, order lowering and entry facades add is already in it.
 
-```
-consumer_chunks = (non-removed chunks with non-empty depended_runtime_helper)
-                ∪ chunks whose included statements reference runtime-owned symbols
-                ∪ chunks containing modules that depend on the runtime module
-                ∪ chunks containing wrapped modules or side-effectful runtime dependencies
-                ∪ caller-supplied additional consumers
-```
+**Build policy.** The runtime chunk stays with `preserveModules`, without code splitting, and while `experimentalInlineCommonChunks` is on. That feature registers registry demand on each file that reads records after this step. See `internal-docs/inline-common-chunks/implementation.md`.
 
-The additional-consumers channel carries demand that only the caller can see: facade-elimination consumers during chunk optimization, and order-introduced consumers during the post-order-lowering fold below.
+**Preconditions** (`movable_runtime_chunk`, `runtime_start_is_invisible`):
 
-Most runtime-helper dependencies are known at link time, before chunking, so this consumer set is usually complete as soon as chunks exist. Facade elimination is the exception: collapsing a facade into its target chunk can add a helper edge that did not exist during early chunking, through one of two `wrap_kind`-gated paths in `optimize_facade_entry_chunks`:
+1. The runtime chunk is not an entry, and it has no reference id.
+2. The runtime chunk holds only the runtime module.
+3. No `import()` loads the runtime chunk.
+4. The runtime module has no top-level await.
+5. The runtime chunk imports no chunk.
+6. The runtime is the one that rolldown generates (the known-runtime contract). No plugin changed its source (`RuntimeModuleBrief::modified_by_plugins`). Its only import, if any, resolves to the external `node:module`, and `output.paths` does not change that import: `paths` is not set, or it is a map without a `node:module` key. Neither the runtime nor a module that it imports has side effects.
 
-- **`WrapKind::Esm` / `WrapKind::None`** — the dynamic `import()` site still expects a namespace object, so the eliminated module's simulated namespace is materialized (`include_symbol(namespace_object_ref)`) and `__exportAll` (`RuntimeHelper::ExportAll`) is inserted into the target chunk's `depended_runtime_helper`. A module without module syntax (`ExportsKind::None`) also has a namespace statement (`create_exports_for_ecma_modules`). Without it, `include_symbol` includes no declaration, and the renamer does not deconflict the printed namespace (#11255).
-- **`WrapKind::Cjs` / `WrapKind::Esm`** — the `require_xxx` wrapper (`wrapper_ref`) is included, which transitively pulls whatever helpers the wrapper needs — commonly `__toESM` (`RuntimeHelper::ToEsm`) and `__commonJSMin` (`RuntimeHelper::CommonJsMin`) — via normal inclusion propagation.
+After a fold, the runtime starts when the host starts, not before each consumer. Precondition 6 makes this change invisible: the generated runtime only declares helpers. In dev mode, the HMR plugin appends the dev runtime, so precondition 6 keeps the runtime chunk when the host is not the only consumer. `packages/rolldown/tests/behaviors/runtime-host-known-runtime.test.ts` covers precondition 6.
 
-A `WrapKind::Esm` facade hits both paths.
+**One other chunk.** When exactly one live chunk exists besides the runtime chunk, the runtime moves into that chunk. Only preconditions 1, 2, 3 and 5 and the declaration guard apply. Each root loads that chunk, and the result is the layout of the same build without code splitting. This rule also keeps an `output.file` build valid when a plugin changes the runtime.
 
-A chunk only _consumes_ the runtime once it carries a non-empty `depended_runtime_helper` (or references a runtime-owned symbol). So in a build that needed no helpers at link time, _no_ chunk consumed the runtime — and one of the paths above can create the very first consumer _after_ early chunking has already placed the runtime standalone. To keep that placement decision sound, the pass restores the inclusion metadata it just mutated, (re)materializes the standalone runtime chunk, and re-runs `try_merge_runtime_chunk` with these newly added consumers (the final bullet of the consumer set above).
+**The host rule** (`HostSearch::select`). A chunk `H` can host the runtime when:
 
-The two bitset steps below compare chunks against a runtime bitset. This bitset must cover every runtime consumer. The bits of the runtime module cover only the consumers that exist at link time. Facade elimination can later add a consumer, and entries that are not in these bits can load it. If the host has only the link-time bits, those entries load the host only to get helpers. Then those entries also run the side effects of the host (`code_splitting/runtime_host_loaded_by_late_consumer`). In `issues/11351`, the link-time bits contain only the bit of `other.js`, an entry from `this.emitFile({ type: 'chunk' })`. `dep.js` becomes a consumer only after facade elimination.
+1. No consumer is in a chunk cycle (`chunks_in_cycles`, one iterative Tarjan walk).
+2. `H` is a static dependency of each other consumer.
+3. No consumer is a static dependency of `H`.
 
-So `runtime_bits_covering_consumers` adds to the bits each consumer entry that can start while the host is not loaded. `entries_loaded_after` finds the other entries with a fixpoint loop over the dynamic entries. An entry is in its result in one of these conditions:
+Condition 2 uses the minimal consumers: the consumers that reach no other consumer. Each other consumer reaches a minimal consumer, because no consumer is in a cycle. So the candidates are the chunks that each minimal consumer reaches (`common_dependencies`). A sole minimal consumer is also a candidate.
 
-- The entry is in the link-time bits. The entry loads the host itself.
-- The entry is a dynamic entry with at least one included `import()` site. Each of these sites is in a chunk that only entries in the result load. Thus the entry can start only after one of those entries loads the host.
+**The lazy consumer rule** (`select_with_lazy_consumers`). It runs only when the host rule selects no host. A consumer that does not reach `H` can still import `H` when each load of the consumer starts after `H` completes. Then `H` already ran, and the added edge loads and runs nothing. The chunks that start after `H` completes are the largest set of chunks `X` with these properties:
 
-The second condition keeps the dynamic-entry pruning of the [already-loaded analysis](#dynamic-already-loaded-analysis). Without it, a consumer chunk that the host's entries load only through `import()` would add its entries to the bits. The runtime would then go into a standalone chunk instead of a safe host (`code_splitting/issue_5276`).
+- `X` is not `H`, not a user entry and not an emitted chunk.
+- Each static importer of `X` is in the set.
+- Each chunk with an `import()` of `X` is `H` or is in the set.
 
-A bitset host can also change the evaluation order. A consumer that does not import the host yet must import it for the helpers. Then the host runs before that consumer, also when the source runs the consumer first. In `code_splitting/runtime_host_consumer_order_tree_shaken_import`, the `common.js` chunk has the bits of all consumers. Entry `c` imports `namespace.js` before `common.js`, and `namespace.js` sets a global that `common.js` reads. If the runtime goes into the `common.js` chunk, the `namespace.js` chunk must import that chunk for `__exportAll`. Then `common.js` runs first and reads the global before `namespace.js` sets it.
+`start_before_host` computes the complement of this set with one walk. A consumer that an entry reaches is never in the set, so `H` must be a static dependency of each such consumer: the candidates are `common_dependencies` of the minimal consumers among them. The rule does not run in dev mode, because the dev runtime also loads chunks. It also does not run when an `import()` names a chunk that is not live, and it rejects a host that reaches a chunk with top-level await. The proof is in the doc comment of `select_with_lazy_consumers`. In `issues/6660`, the entry `index.js` loads `c.js` with `import()`, and `c.js` loads `e.js` with `import()`. All three chunks use helpers, and the runtime moves into `index.js`.
 
-So when `strictExecutionOrder` is off, `runtime_host_keeps_consumer_order` accepts a bitset host only if each consumer agrees with one of these conditions:
+The rule accepts only an `import()` in `H` or in the set. The proof also holds for an `import()` in a chunk that only reaches `H`, but then a lazy route imports a chunk that does not load it. `function/experimental/strict_execution_order/cjs_reexport_barrel_namespace_routing` asserts that the lazy route `route-static.js` does not import `cn.js`, which is a static dependency of the entry.
 
-- The consumer is the host.
-- The code of the consumer already imports a module of the host. `chunk_imports_chunk` checks this with the same kept imports as the import order walk (see [Chunk Import Order](#chunk-import-order)). The helpers then join that import. Only an import that tree shaking keeps counts. In `code_splitting/runtime_host_consumer_order_tree_shaken_import`, `dead.js` in the `namespace.js` chunk imports `marker.js` of the `common.js` chunk, but only for a function that tree shaking removes. The `namespace.js` chunk does not import the `common.js` chunk, so the runtime must not go there.
-- Only late dynamic entries load the consumer. A late entry is in the result of `entries_loaded_after` for the link-time runtime bits, but not in these bits. A late entry starts only after an entry in the link-time bits loads the host. So the host runs before the consumer.
+**The root check and the policy** (`host_policy_allows`). A root is an entry chunk or the target of an `import()`. A root that loads no consumer must not load the host, because it would then load the runtime. When the host is not the only consumer, the host exports helpers to the other consumers, so these hosts are rejected:
 
-If no bitset host passes this check, the cascade tries the consumer dominator next. The strict path does not need this check, because the order plan wraps the modules whose order matters.
+- A manual group: its hash must not change when the helpers of the app change.
+- A chunk with a module that has top-level await or depends on one.
+- A user entry or an emitted entry with a fixed signature: `strict`, or `exports-only` when the entry has exports or dynamic exports (`has_dynamic_exports`). An entry from `this.emitFile({ type: 'chunk' })` gets its signature from its `preserveSignature` option, or from `preserveEntrySignatures`.
+- In CJS output with `output.exports` other than `named`, an entry that exports only a default: the helper exports change its `module.exports` into an object.
 
-The cascade calculates the covering bits and the late entries only after the sole-consumer step. A sole consumer does not need them: the covering bits add only the runtime bits to that host. `runtime_bits_covering_consumers` and `runtime_host_keeps_consumer_order` share one copy of the late entries. This copy is `late_entries` in `try_merge_runtime_chunk`. `late_runtime_entries` calculates it when a check first needs it. The order check runs only on the first bitset host that the cascade finds. If a sole live chunk has the bitset, no other chunk has it, so the common-chunk search can only find that chunk again.
+No host can hold a module whose ID ends in `.d.ts`, `.d.mts`, or `.d.cts`, also when it is the only consumer. Declaration plugins such as `rolldown-plugin-dts` reconstruct types from fake JavaScript in `renderChunk` and discard unrecognized generated statements. Hosting the runtime there would delete the helper definitions and could make ordinary JavaScript chunks import a declaration file. This matches the declaration exclusion for inline common chunks. `packages/rolldown/tests/behaviors/runtime-declaration-host.test.ts` covers all three suffixes with one and with more runtime consumers.
 
-The merge target must not create a static cycle or force unrelated entry chunks to execute just to access helpers. Candidate targets are tried in compactness-preserving order: a sole runtime consumer, a sole live chunk with the runtime bitset, a live common chunk with the same runtime bitset, then a consumer-set dominator. Every host of the full cascade, the sole consumer included, must also keep the evaluation order of the chunks that import it (`runtime_host_keeps_evaluation_order`, below). The caller selects how deep this cascade may go (`RuntimeMergeCascade`): both merge attempts during chunk optimization use the full cascade, while the post-order-lowering fold below stops after the sole-consumer step. Manual code splitting / advanced chunk group chunks may host runtime only when that chunk is the sole runtime consumer; otherwise their contents are user-directed grouping output, and absorbing the runtime would make unrelated chunks load the group for helpers. Chunks containing top-level await, or a dependency on top-level await, are runtime hosts only when they are the sole runtime consumer; otherwise a dynamically imported chunk that statically imports its awaiting importer for helpers can produce an unsettled async module cycle.
+**The choice.** The fewest added edges, then the lowest chunk `exec_order`, then the lowest chunk index. An added edge is an import of the host by a consumer that did not import the host in the baseline.
 
-A host exports the helpers to the other consumers, and these exports change the signature of an entry chunk. So `runtime_merge_preserves_target_signature` rejects an entry with a fixed signature when the host has other consumers. The signature is fixed when its setting is `strict`. It is also fixed when the setting is `exports-only` and the entry has exports or dynamic exports (`has_dynamic_exports`). An entry from `this.emitFile({ type: 'chunk' })` is a user-defined entry too. Its signature comes from its `preserveSignature` option, or from `preserveEntrySignatures` when the plugin does not set that option.
+**The move** (`move_runtime_module`). The runtime module goes to index 0 of the host modules, and the host gets the helper flags of the runtime chunk. The runtime chunk is marked `Removed` and leaves `sorted_chunk_idx_vec`. The host keeps its bits and its `exec_order`, and no sort of the chunks runs again.
 
-In `issues/11351_dynamic_import`, only the emitted `other.js` loads `lazy.js`. So `lazy.js` is a late entry, and the chunk of `other.js` has the covering bits. But `other.js` has exports, so its signature is fixed. Thus `runtime_merge_preserves_target_signature` rejects that chunk, and the runtime stays in its own chunk, as for an `input` entry ([#11351](https://github.com/rolldown/rolldown/issues/11351)).
+**The import order after the move** (`expected_import_order`). Each list comes from the baseline. A consumer loses the runtime chunk, and it gets the host last when it did not import the host. The host loses the runtime chunk. Each other list stays the same. `commit_cross_chunk_links` writes these lists as they are, without a sort. A sort can put the host first, and that can run the host before other imports. The host has no source rank in a consumer that did not import it, and when the chunk order is derived again, the host gets the `exec_order` 0 of the runtime module.
 
-If this check ignores emitted entries, the chunk of `other.js` becomes the host. Then `preserve_strict_entry_signatures` splits that chunk into a facade and a common chunk. When entries and chunks both use the `[name].js` file name pattern, the common chunk gets the name `other.js`. The emitted entry then gets the name `other2.js`.
+**The check after the move** (`fold_keeps_baseline`). The step derives the links again and compares them with the expected lists, also in release builds:
 
-A chunk that hosts the runtime module gets chunk `exec_order` 0, because `assign_chunk_exec_orders` keys a common chunk on its first module and the runtime module has `exec_order` 0. `sort_chunk_importees` (see [Chunk Import Order](#chunk-import-order)) then puts the host first in every import list, and the source order walk moves back only the importees that it ranks. An importee that the walk does not reach keeps its position and runs after the host. So `runtime_host_keeps_evaluation_order` sorts the imports of each chunk that imports the host twice, with the `exec_order` of the standalone layout and with the host first. When the two sorts differ, it walks the imports from that chunk depth first with each sort (`chunk_evaluation_order`), and accepts the host only when both walks give the same evaluation order. For example, a host that moves before a chunk that it imports itself still evaluates after that chunk. The importers and their imports come from `predicted_static_import_edges`, which also has the imports that the walk does not reach. An entry chunk keys on its entry module, so it does not move while it stays an entry chunk. In `code_splitting/runtime_host_import_order_namespace_import`, `namespace.js` imports `init.js` through a package without side effects and reads it as `marker.initValue()`, so the walk does not rank the chunk of `init.js`. The chunk of `common.js` is the bitset host and the dominator, but with the runtime inside it would move before the chunk of `init.js` in `c`, and `common.js` would read a global before `init.js` sets it. The runtime stays in its own chunk, as on `main` before the host checks. The check needs the chunk orders of the standalone layout, so `try_merge_runtime_chunk` runs `sort_chunk_modules` and `assign_chunk_exec_orders` before the cascade, and `generate_chunks` runs both again on the final layout. The strict path models the chunk `exec_order` in its order analysis and skips the check. The post-order-lowering fold skips it too: `renumber_live_chunks` keeps the orders of the chunks, so the host does not move. In debug builds, `compute_cross_chunk_links` asserts the rule on the final links, so a gap in the predicted edges shows up in the test suite.
+- Same edges: each live chunk imports the chunks of its expected list, and no other chunk.
+- No new consumer: only the host and the baseline consumers import a runtime symbol from the host. The host is not checked: the demand of its modules does not depend on the layout, and it reads the helpers locally.
 
-`preserve_strict_entry_signatures` in `finalize_chunk_plan` runs after the merge. It can turn an entry chunk that hosts the runtime into a common chunk behind an entry facade (`create_entry_facade`). Then the host keys on the runtime module and moves to the front of the import lists, and nothing checks it again. In `rollup@chunking form@entry-point-without-own-code` and `rollup@chunking form@namespace-reexports`, the host moves before a chunk that it imports itself, so the evaluation order stays the same, and the debug assertion accepts it. A harmful case fails the assertion in the test suite. A check of such a host belongs at the `try_merge_runtime_chunk` call after `preserve_strict_entry_signatures`, but no code does it yet.
-
-Every consumer imports the dominator for helpers, so the dominator search has two steps. Both steps follow static chunk-loading edges through still-live chunks and skip dynamic imports.
-
-1. Step 1 follows only the static imports that the output keeps (`push_kept_static_importees`, the rule of `chunk_importee_ranks`). Every consumer already loads such a dominator, so the helper import adds no chunk load. `predicted_static_import_targets` is not usable here: it also follows an unused import of an entry module without side effects, and the output does not have that import. In `code_splitting/runtime_host_dominator_tree_shaken_entry_import`, `c.js` and `logger.js` import the entry `consumer.js` only for a binding that tree shaking removes. If the search followed these imports, `consumer.js` would host the runtime, and entry `a` would load its external import `server-only` through the helper import of `logger.js`.
-2. Step 2 follows every static import record, also the records that tree shaking removes, and accepts the dominator only when its load is harmless (`runtime_host_load_is_harmless`): in its chunk and in the chunks that it imports through kept edges, each module is the runtime, is wrapped, or has no side effects, and no module keeps an import of an external module. In an entry chunk, wrapping does not count, because the entry module runs at load time. A consumer that reaches the dominator only through a removed import does not load it yet, and the helper import then loads it for real. In `issues/10543`, `lab.cjs` reaches `w.js` only through the removed import of `system.js` in `top.js`, but the `w.js` chunk runs nothing at load time, so the runtime stays in `w.js` and the chunk count stays at four.
-
-The cycle check follows every static import record, also `require()` records and the records that tree shaking removes. A cycle check must not miss an edge that the output has, and an extra edge only keeps the runtime standalone.
-
-Before moving the runtime, every candidate path rejects a host containing a module whose ID ends in `.d.ts`, `.d.mts`, or `.d.cts`, including the sole-consumer path. Declaration plugins such as `rolldown-plugin-dts` reconstruct types from fake JavaScript in `renderChunk` and discard unrecognized generated statements. Hosting runtime there would delete the helper definitions and could make ordinary JavaScript chunks import a declaration file. If the selected host contains a declaration module, the runtime stays standalone; this matches the declaration exclusion for inline common chunks. `packages/rolldown/tests/behaviors/runtime-declaration-host.test.ts` covers all three suffixes with sole and multiple runtime consumers.
-
-- **Safe target found** → runtime moves into that chunk, and the empty standalone runtime chunk is marked removed.
-- **No safe target** → keep the standalone runtime chunk. Runtime imports that resolve only to externals are ignored for chunk-cycle checks; live internal runtime imports keep the runtime standalone instead.
-
-With `experimentalInlineCommonChunks` enabled (`maxSize > 0`), `try_merge_runtime_chunk` returns before any of this: the registry demand that feature registers on every reading file (`insert_runtime_helper_demand`) appears after every merge proof has run, so the standalone runtime placed above is final, and the post-order-lowering fold below is skipped for the same reason. See `internal-docs/inline-common-chunks/implementation.md`.
-
-### Post-Order-Lowering Runtime Fold (`ensure_runtime_module_for_order_wraps`)
-
-Order lowering can invalidate the placement the merge above decided. Synthetic wrappers and importer overlays add helper demand that lives only in `OrderWrapState`, never in link-stage metadata, so a chunk with no pre-lowering demand can become a consumer — and that new consumer may sit in a static cycle with the runtime's current host. `ensure_runtime_module_for_order_wraps` therefore restores the standalone-first baseline when code splitting is enabled: a runtime co-hosted in a user chunk is evicted into a fresh standalone chunk, and a runtime that was never placed is materialized standalone. (With code splitting disabled, the single-chunk placement above stands.) Both paths re-derive every live chunk's `exec_order` from its current lead module (`assign_chunk_exec_orders`). A fresh runtime chunk otherwise keeps its default `u32::MAX` order. After eviction, the former host would retain the order derived from the runtime module (`exec_order` 0), placing it and its external imports ahead of chunks that execute before it. These (re)minted chunks carry synthetic all-live-union bits so they sort and name as a universal source; the bits are not reachability facts.
-
-Eviction changes chunk order and helper-import edges, so on-demand analysis must observe the standalone runtime before selecting wrappers. The entry-facade edge query also needs the runtime placed so it can resolve helper symbols to their chunk.
-
-The caller folds the runtime after lowering and facade creation, when `OrderWrapState` contains the complete helper demand and the runtime's consumer set is final.
-
-Evicting unconditionally would permanently split layouts the pre-lowering merge had already proven safe (#10294). So every exit of the pass — standalone runtime kept, co-hosted runtime evicted, runtime newly materialized — re-runs `try_merge_runtime_chunk` against the post-lowering consumer set (`fold_runtime_chunk_after_order_lowering`). The order-introduced consumers come from `OrderWrapState::runtime_helper_consumer_chunks`: a synthetic `init_*` declaration consumes helpers in its assigned chunk, and an importer overlay consumes them in the importer's chunk, where its lowered import glue renders. They are passed through the additional-consumers channel; pre-lowering demand is re-scanned by the merge itself, so the proof sees the full post-lowering consumer set. The standalone-kept exit re-runs the proof too, because entry-facade restoration during lowering can tombstone chunks the pre-lowering merge counted as consumers — a sole consumer may exist only now.
-
-The fold is deliberately narrower than the optimization-time merge:
-
-- **Sole-consumer host only (`RuntimeMergeCascade::SingleConsumerOnly`).** Exec order and the order-wrap plan are already fixed. Any other host would create or reorder chunk-evaluation edges the order analysis never modeled: a dominator merge turns transitive reachability into a direct helper import whose exec-order sort position can hoist the host past sibling imports, and a bitset host can gain a brand-new consumer edge. Merging into the sole consumer only removes that consumer's edge to a runtime-only chunk — no new edges, no reordering.
-- **ESM output only.** Under CJS output, `compute_cross_chunk_links` later gives every ESM-exports entry chunk — including zero-module facades minted during lowering — a speculative `__toCommonJS` demand that is invisible at fold time, so a chunk with no visible demand could be handed a brand-new require edge into a user chunk. Other formats keep the standalone or evicted layout.
-- **No bits union.** The full cascade unions the runtime chunk's bits into the host so bits stay an exact reachability record. Here the runtime chunk's bits are the synthetic all-live union above; folding them in would widen the host's bits, which is user-visible through bits-derived chunk names. The sole-consumer host keeps its own bits.
-
-**Regression coverage:** `crates/rolldown/tests/rolldown/issues/9463/` and `issues/9463_plain_group/` — the runtime folds into the sole consumer `common~a~b~shared` instead of shipping as a helper-only chunk, in both config cells; `issues/10265/` and `optimization/chunk_merging/dynamic_entry_merged_in_user_defined_entry/` — the only demand is order-introduced (synthetic `init_*` wrappers), and the runtime folds into the chunk hosting them, while the latter's cjs cells pin the ESM-only gate by keeping the standalone `rolldown-runtime.js`; the `function/experimental/strict_execution_order/` snapshots pin the folded layouts under wrap-all and on-demand wrapping (`top_level_await_syntax` pins the TLA sole-consumer case).
+If the check fails, `restore_runtime_chunk` restores the layout, and the step derives the links of the baseline again. Debug builds assert that this does not occur.
 
 ### Unused-Runtime Sweep (`sweep_unused_runtime_module`)
 
@@ -406,22 +373,27 @@ The sweep is **all-or-nothing and conservative**: any remaining demand — or an
 
 **Why this shape**
 
-Runtime used to be placed by normal bitset grouping and later peeled out when a cycle was detected. That made every optimizer responsible for understanding runtime-host edge cases. Standalone-first flips the default: the initial layout is always cycle-safe, and runtime-specific processing is confined to three final passes — the optional merge into a proven host after chunk optimization, the re-placement and sole-consumer fold, then the unused-runtime sweep once the entry-level-external walk-back has settled what the finalizer will actually emit.
+The runtime was once placed by normal bitset grouping and later peeled out when a cycle was detected. That made every optimizer responsible for runtime-host edge cases. Then the runtime started in its own chunk, but three later steps could move it: a merge after chunk optimization, an eviction and a second fold after order lowering, and a merge after the strict entry facades. Each later step could change a fact that an earlier proof used. Now two final steps do all runtime-specific processing: the unused-runtime sweep, after the entry-level-external walk-back has settled what the finalizer will emit, and `place_runtime_module`, after the final links. See [design.md](./design.md#runtime-placement).
 
 **Regression coverage**
 
 - `crates/rolldown/tests/rolldown/issues/9401/` — `avoidRedundantChunkLoads` must not move the runtime into a user entry and create a helper cycle.
-- `crates/rolldown/tests/rolldown/issues/8989/` — facade elimination introduces helper consumers; runtime may merge only into a downstream dominator.
+- `crates/rolldown/tests/rolldown/issues/8989/` — facade elimination introduces helper consumers; the runtime may move only into a host that each consumer reaches.
 - `crates/rolldown/tests/rolldown/issues/8920_2/` — fuzz-discovered shape where consumer-count heuristics produced a cycle.
-- `crates/rolldown/tests/rolldown/code_splitting/runtime_host_dominator_tree_shaken_entry_import/` — `c.js` and `logger.js` import the entry `consumer.js` only for a binding that tree shaking removes; the dominator search must not follow these imports, or entry `a` loads the external import of `consumer.js` for helpers.
+- `crates/rolldown/tests/rolldown/code_splitting/runtime_host_dominator_tree_shaken_entry_import/` — `c.js` and `logger.js` import the entry `consumer.js` only for a binding that tree shaking removes. The baseline lists do not have these imports, so `consumer.js` cannot be the host, and entry `a` does not load the external import of `consumer.js` for helpers.
+- `crates/rolldown/tests/rolldown/code_splitting/runtime_host_added_import_last/` — the fold adds an import of the host to a consumer, and that import must be the last import of the consumer. As the first import, it runs the host before an earlier import of the consumer.
+- `crates/rolldown/tests/rolldown/code_splitting/runtime_host_import_order_namespace_import/` — an import of the host that the consumer already has keeps its position. A sort after the fold moves the host before the chunk of `init.js`.
 - `crates/rolldown/tests/rolldown/issues/9597/` — a static + dynamic import cycle that previously placed the runtime chunk inside the cycle, throwing `__exportAll is not a function`; standalone-first keeps the runtime out of the cycle.
+- `crates/rolldown/tests/rolldown/issues/6660/` and `crates/rolldown/tests/rolldown/code_splitting/issue_5276/` — the lazy consumer rule moves the runtime into the entry that loads the lazy consumers.
+- `crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_namespace_routing/` — the lazy consumer rule accepts only an `import()` in the host or in a lazy chunk.
+- `packages/rolldown/tests/behaviors/runtime-host-known-runtime.test.ts` — precondition 6: a runtime that a plugin changed, a runtime import that `resolveId` or `output.paths` redirects, and a `moduleSideEffects` verdict that a plugin sets.
 - `packages/rolldown/tests/behaviors/runtime-host-loading.test.ts` compares source execution with bundled output on seeded graphs. It checks effects, export values, live bindings, and namespace identity with each entry loaded alone and with forward/reverse entry sequences. The cases vary dynamic-import chains and cycles, re-export facades, multiple importers, CommonJS, top-level await, strict order, minification, manual groups, emitted/duplicate entries, and `preserveModules`. Set `RUNTIME_HOST_FUZZ_SEEDS` to increase the default 18 seeds.
 
 These fixtures assert structural invariants in `_test.mjs`, so runtime-placement regressions fail immediately rather than only showing up as snapshot drift.
 
 ## Chunk Import Order
 
-A chunk loads its importee chunks with `import` statements (ESM) or `require()` calls (CJS) at the top of the chunk. These run before the body of the chunk, in the order in which they appear. `commit_cross_chunk_links` sets this order in `imports_from_other_chunks` and `cross_chunk_imports`. Both lists get the same order, because `inline_common_chunks` builds its import order from `cross_chunk_imports`.
+A chunk loads its importee chunks with `import` statements (ESM) or `require()` calls (CJS) at the top of the chunk. These run before the body of the chunk, in the order in which they appear. `sort_chunk_imports` gives this order (`ChunkImportOrder`), and `commit_cross_chunk_links` writes it into `imports_from_other_chunks` and `cross_chunk_imports` without a sort. After a runtime fold, the order comes from the baseline instead (see [Runtime Module Placement](#runtime-module-placement)). Both lists get the same order, because `inline_common_chunks` builds its import order from `cross_chunk_imports`.
 
 When `strictExecutionOrder` is off, `sort_chunk_importees` sets the order in two steps:
 
@@ -430,7 +402,7 @@ When `strictExecutionOrder` is off, `sort_chunk_importees` sets the order in two
 
 The first step alone is not sufficient. `exec_order` comes from one depth-first walk over all entries (`sort_modules`). A module that an earlier entry imports gets an early `exec_order`, even when this chunk imports it after other modules. In `code_splitting/chunk_import_source_order`, entry `a` imports `read.js` first. Entry `b` imports `init.js` before `read.js`, and `init.js` sets a global that `read.js` reads. With the first step alone, `b` imports the `read.js` chunk first.
 
-Runtime placement relies on this sort. When the runtime leaves a chunk, that chunk loses the `exec_order` 0 of the runtime module. An entry that imported that chunk first only because of the runtime then needs the second step to keep the order of its imports.
+The sort sees the runtime only in its own chunk. That chunk has the `exec_order` of the runtime module, 0, so it is the first import of each consumer. A runtime fold does not sort again.
 
 `chunk_importee_ranks` walks the static imports depth-first, in source order. The walk starts at the module that leads the chunk. For an entry chunk, that is the entry module; the other modules of the chunk come last, for a module that the entry module does not reach. For a common chunk, that is the module that runs last. When one module leads a common chunk, every other module of the chunk runs because the lead module imports it, directly or indirectly, so the lead module runs last. This holds also for an import cycle: in `code_splitting/chunk_import_order_common_chunk_cycle`, `m0.js` and `m2.js` import each other, the chunk enters the cycle through `m0.js`, and `m0.js` runs last. This lead module is not the module that `assign_chunk_exec_orders` keys the chunk `exec_order` on; that is `modules[0]`, the module that runs first. The code of the lead module defines the order of its imports. This is the rule of Rollup (`getStaticDependencies` walks the modules of a chunk from the last to the first and their dependencies in source order).
 
@@ -440,9 +412,9 @@ The walk follows only the imports that tree shaking keeps (`push_kept_static_imp
 
 An import that is not kept can still get bindings that other modules declare, for example through a re-export module that tree shaking removes. Such an import leads to the modules that declare those bindings (the canonical owners of its named imports), because the output imports the bindings from there. It also leads to the modules of the inlined constants that the module reads through it as a namespace, such as `ns.SIZE`, when the output keeps those modules, because the output then imports their chunks. These modules are sorted by `exec_order`, the order that their chunks have without ranks. In `code_splitting/chunk_import_source_order_barrel`, entry `b` imports `value` through the `barrel` package, which has no side effects, so the chunk of `read.js` takes the position of that import. The walk stops at a module of another chunk and gives that chunk the next rank. That chunk orders its own imports.
 
-An importee that the walk does not reach keeps its `exec_order` position. Examples are the runtime chunk, which a chunk imports for helpers, and the imports that chunk merging adds. Thus the change moves only the chunks that the source code of the chunk imports. The walk also does not reach every module that the chunk gets bindings from. Examples are a binding that the chunk reads through a namespace import (`ns.x`) or an `export *` of a re-export module that tree shaking removes, and a binding that a kept module re-exports but does not use. Such a chunk also keeps its `exec_order` position. A chunk that hosts the runtime module would take `exec_order` 0 and move before such an importee, so `try_merge_runtime_chunk` rejects a host that changes the evaluation order (see [Runtime module placement](#runtime-module-placement)).
+An importee that the walk does not reach keeps its `exec_order` position. Examples are the runtime chunk, which a chunk imports for helpers, and the imports that chunk merging adds. Thus the change moves only the chunks that the source code of the chunk imports. The walk also does not reach every module that the chunk gets bindings from. Examples are a binding that the chunk reads through a namespace import (`ns.x`) or an `export *` of a re-export module that tree shaking removes, and a binding that a kept module re-exports but does not use. Such a chunk also keeps its `exec_order` position. When the chunk order is derived again after a runtime fold, the host gets the `exec_order` 0 of the runtime module, and a sort moves it before such an importee. So the fold writes the import lists of the baseline (see [Runtime Module Placement](#runtime-module-placement)).
 
-The strict path keeps the `exec_order` sort. Its order analysis models chunk evaluation with that order (see the sole-consumer fold above), and the order plan wraps the modules whose order matters.
+The strict path keeps the `exec_order` sort. Its order analysis models chunk evaluation with that order and with the runtime in its own chunk, and the order plan wraps the modules whose order matters.
 
 This does not fix every order difference of the default mode:
 

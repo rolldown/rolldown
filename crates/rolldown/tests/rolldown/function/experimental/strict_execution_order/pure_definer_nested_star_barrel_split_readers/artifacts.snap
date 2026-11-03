@@ -53,8 +53,7 @@ export { vDef as n, outer_barrel_exports as t };
 ### a.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { i as vDef, t as init_outer_barrel } from "./outer-barrel.js";
+import { a as __esmMin, i as vDef, t as init_outer_barrel } from "./outer-barrel.js";
 // a.js
 var defValue;
 function init_a() {
@@ -72,8 +71,7 @@ export { defValue };
 ### b.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as outer_barrel_exports, t as init_outer_barrel } from "./outer-barrel.js";
+import { a as __esmMin, n as outer_barrel_exports, t as init_outer_barrel } from "./outer-barrel.js";
 // b.js
 var loaded;
 function init_b() {
@@ -91,7 +89,7 @@ export { loaded };
 ### outer-barrel.js
 
 ```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // definer.js
 function build() {
 	return { value: 7 };
@@ -127,14 +125,6 @@ function init_outer_barrel() {
 		init_inner_barrel();
 	})))();
 }
-export { vDef as i, outer_barrel_exports as n, init_definer as r, init_outer_barrel as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __esmMin as t };
+export { __esmMin as a, vDef as i, outer_barrel_exports as n, init_definer as r, init_outer_barrel as t };
 
 ```

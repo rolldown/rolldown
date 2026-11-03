@@ -6,8 +6,33 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## barrel.js
 
 ```js
+// HIDDEN [\0rolldown/runtime.js]
 // barrel.js
-var init_barrel = require("./rolldown-runtime.js").__esmMin((() => {}));
+var init_barrel = __esmMin((() => {}));
+Object.defineProperty(exports, "__commonJSMin", {
+	enumerable: true,
+	get: function() {
+		return __commonJSMin;
+	}
+});
+Object.defineProperty(exports, "__esmMin", {
+	enumerable: true,
+	get: function() {
+		return __esmMin;
+	}
+});
+Object.defineProperty(exports, "__exportAll", {
+	enumerable: true,
+	get: function() {
+		return __exportAll;
+	}
+});
+Object.defineProperty(exports, "__toCommonJS", {
+	enumerable: true,
+	get: function() {
+		return __toCommonJS;
+	}
+});
 Object.defineProperty(exports, "init_barrel", {
 	enumerable: true,
 	get: function() {
@@ -20,24 +45,23 @@ Object.defineProperty(exports, "init_barrel", {
 ## entry-a.js
 
 ```js
-const require_rolldown_runtime = require("./rolldown-runtime.js");
-require("./barrel.js");
+const require_barrel = require("./barrel.js");
 // a.cjs
-var require_a = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports) => {
+var require_a = /* @__PURE__ */ require_barrel.__commonJSMin(((exports) => {
 	exports.a = "a";
 }));
 var import_a;
 function init_barrel_cjs_0() {
-	return (init_barrel_cjs_0 = require_rolldown_runtime.__esmMin((() => {
+	return (init_barrel_cjs_0 = require_barrel.__esmMin((() => {
 		import_a = require_a();
 	})))();
 }
 // forwarder-a.mjs
-var forwarder_a_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ a: () => import_a.a });
+var forwarder_a_exports = /* @__PURE__ */ require_barrel.__exportAll({ a: () => import_a.a });
 // entry-a.cjs
-const { a } = (require_rolldown_runtime.__esmMin((() => {
+const { a } = (require_barrel.__esmMin((() => {
 	init_barrel_cjs_0();
-}))(), require_rolldown_runtime.__toCommonJS(forwarder_a_exports));
+}))(), require_barrel.__toCommonJS(forwarder_a_exports));
 module.exports = { a };
 
 ```
@@ -45,32 +69,37 @@ module.exports = { a };
 ## entry-b.js
 
 ```js
-const require_rolldown_runtime = require("./rolldown-runtime.js");
-require("./barrel.js");
+const require_barrel = require("./barrel.js");
 // b.cjs
-var require_b = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports) => {
+var require_b = /* @__PURE__ */ require_barrel.__commonJSMin(((exports) => {
 	exports.b = "b";
 }));
 var import_b;
 function init_barrel_cjs_1() {
-	return (init_barrel_cjs_1 = require_rolldown_runtime.__esmMin((() => {
+	return (init_barrel_cjs_1 = require_barrel.__esmMin((() => {
 		import_b = require_b();
 	})))();
 }
 // forwarder-b.mjs
-var forwarder_b_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ b: () => import_b.b });
+var forwarder_b_exports = /* @__PURE__ */ require_barrel.__exportAll({ b: () => import_b.b });
 // entry-b.cjs
-const { b } = (require_rolldown_runtime.__esmMin((() => {
+const { b } = (require_barrel.__esmMin((() => {
 	init_barrel_cjs_1();
-}))(), require_rolldown_runtime.__toCommonJS(forwarder_b_exports));
+}))(), require_barrel.__toCommonJS(forwarder_b_exports));
 module.exports = { b };
 
 ```
 
-## rolldown-runtime.js
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### barrel.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+// barrel.js
+var init_barrel = __esmMin((() => {}));
 Object.defineProperty(exports, "__commonJSMin", {
 	enumerable: true,
 	get: function() {
@@ -95,18 +124,6 @@ Object.defineProperty(exports, "__toCommonJS", {
 		return __toCommonJS;
 	}
 });
-
-```
-
-# Variant: on-demand: [on_demand_wrapping: true]
-
-## Assets
-
-### barrel.js
-
-```js
-// barrel.js
-var init_barrel = require("./rolldown-runtime.js").__esmMin((() => {}));
 Object.defineProperty(exports, "init_barrel", {
 	enumerable: true,
 	get: function() {
@@ -119,24 +136,23 @@ Object.defineProperty(exports, "init_barrel", {
 ### entry-a.js
 
 ```js
-const require_rolldown_runtime = require("./rolldown-runtime.js");
-require("./barrel.js");
+const require_barrel = require("./barrel.js");
 // a.cjs
-var require_a = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports) => {
+var require_a = /* @__PURE__ */ require_barrel.__commonJSMin(((exports) => {
 	exports.a = "a";
 }));
 var import_a;
 function init_barrel_cjs_0() {
-	return (init_barrel_cjs_0 = require_rolldown_runtime.__esmMin((() => {
+	return (init_barrel_cjs_0 = require_barrel.__esmMin((() => {
 		import_a = require_a();
 	})))();
 }
 // forwarder-a.mjs
-var forwarder_a_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ a: () => import_a.a });
+var forwarder_a_exports = /* @__PURE__ */ require_barrel.__exportAll({ a: () => import_a.a });
 // entry-a.cjs
-const { a } = (require_rolldown_runtime.__esmMin((() => {
+const { a } = (require_barrel.__esmMin((() => {
 	init_barrel_cjs_0();
-}))(), require_rolldown_runtime.__toCommonJS(forwarder_a_exports));
+}))(), require_barrel.__toCommonJS(forwarder_a_exports));
 module.exports = { a };
 
 ```
@@ -144,55 +160,23 @@ module.exports = { a };
 ### entry-b.js
 
 ```js
-const require_rolldown_runtime = require("./rolldown-runtime.js");
-require("./barrel.js");
+const require_barrel = require("./barrel.js");
 // b.cjs
-var require_b = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports) => {
+var require_b = /* @__PURE__ */ require_barrel.__commonJSMin(((exports) => {
 	exports.b = "b";
 }));
 var import_b;
 function init_barrel_cjs_1() {
-	return (init_barrel_cjs_1 = require_rolldown_runtime.__esmMin((() => {
+	return (init_barrel_cjs_1 = require_barrel.__esmMin((() => {
 		import_b = require_b();
 	})))();
 }
 // forwarder-b.mjs
-var forwarder_b_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ b: () => import_b.b });
+var forwarder_b_exports = /* @__PURE__ */ require_barrel.__exportAll({ b: () => import_b.b });
 // entry-b.cjs
-const { b } = (require_rolldown_runtime.__esmMin((() => {
+const { b } = (require_barrel.__esmMin((() => {
 	init_barrel_cjs_1();
-}))(), require_rolldown_runtime.__toCommonJS(forwarder_b_exports));
+}))(), require_barrel.__toCommonJS(forwarder_b_exports));
 module.exports = { b };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-Object.defineProperty(exports, "__commonJSMin", {
-	enumerable: true,
-	get: function() {
-		return __commonJSMin;
-	}
-});
-Object.defineProperty(exports, "__esmMin", {
-	enumerable: true,
-	get: function() {
-		return __esmMin;
-	}
-});
-Object.defineProperty(exports, "__exportAll", {
-	enumerable: true,
-	get: function() {
-		return __exportAll;
-	}
-});
-Object.defineProperty(exports, "__toCommonJS", {
-	enumerable: true,
-	get: function() {
-		return __toCommonJS;
-	}
-});
 
 ```

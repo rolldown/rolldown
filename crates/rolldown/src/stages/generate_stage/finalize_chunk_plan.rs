@@ -10,7 +10,9 @@ use crate::{
   utils::chunk::validate_options_for_multi_chunk_output::validate_options_for_multi_chunk_output,
 };
 
-use super::compute_cross_chunk_links::{CrossChunkLinkState, FinalEsmInitMetadataAvailability};
+use super::compute_cross_chunk_links::{
+  ChunkImportOrder, CrossChunkLinkState, FinalEsmInitMetadataAvailability,
+};
 #[cfg(debug_assertions)]
 use super::order_analysis::OrderWrapPlan;
 use super::order_wrap_state::OrderWrapState;
@@ -20,6 +22,7 @@ pub(super) struct FinalizedChunkPlan {
   pub(super) order_state: OrderWrapState,
   pub(super) final_esm_init_metadata: Sealed<FinalEsmInitMetadata>,
   pub(super) link_state: CrossChunkLinkState,
+  pub(super) import_order: ChunkImportOrder,
 }
 
 impl GenerateStage<'_> {
@@ -35,24 +38,9 @@ impl GenerateStage<'_> {
     let mut order_state = OrderWrapState::default();
     self.finalized_module_namespace_ref_usage(chunk_graph, &order_state);
 
-    let mut order_analysis = self.analyze_execution_order(chunk_graph, used_symbol_refs_builder);
-    let runtime_evicted_for_analysis = self.options.experimental.is_on_demand_wrapping_enabled()
-      && !self.options.code_splitting.is_disabled()
-      && chunk_graph.module_to_chunk[self.link_output.runtime.id()]
-        .is_some_and(|chunk_idx| chunk_graph.chunk_table[chunk_idx].modules.len() > 1)
-      && order_analysis.as_ref().is_some_and(|analysis| {
-        !analysis.plan.is_empty()
-          || self
-            .pre_chunk_order_state(used_symbol_refs_builder)
-            .has_consumer_local_reexport_routes()
-      });
-    if runtime_evicted_for_analysis {
-      self.ensure_runtime_module_for_order_wraps(chunk_graph);
-      chunk_graph.rebuild_sorted_chunk_idx_vec(true);
-      self.find_entry_level_external_module(chunk_graph);
-      self.finalized_module_namespace_ref_usage(chunk_graph, &order_state);
-      order_analysis = self.analyze_execution_order(chunk_graph, used_symbol_refs_builder);
-    }
+    // The runtime module is in its own chunk here, so the order analysis sees the chunk order and
+    // the helper edges of that layout.
+    let order_analysis = self.analyze_execution_order(chunk_graph, used_symbol_refs_builder);
     if let Some(analysis) = &order_analysis
       && self.apply_order_wraps(chunk_graph, analysis, used_symbol_refs_builder, &mut order_state)
     {
@@ -60,19 +48,6 @@ impl GenerateStage<'_> {
       self.assert_order_wrap_plan_applied(chunk_graph, &analysis.plan, &order_state);
       self.find_entry_level_external_module(chunk_graph);
       self.finalized_module_namespace_ref_usage(chunk_graph, &order_state);
-    }
-
-    if runtime_evicted_for_analysis
-      && order_analysis.as_ref().is_some_and(|analysis| analysis.plan.is_empty())
-      && !order_state.has_consumer_local_reexport_routes()
-    {
-      self.fold_runtime_chunk_after_order_lowering(
-        chunk_graph,
-        &order_state,
-        used_symbol_refs_builder,
-      );
-      chunk_graph.sort_chunk_modules(self.link_output, self.options);
-      self.renumber_live_chunks(chunk_graph);
     }
 
     // The runtime sweep must observe the final namespace/external facts above. Order wrappers
@@ -98,16 +73,6 @@ impl GenerateStage<'_> {
       used_symbol_refs_builder.view(),
       &link_state,
     ) {
-      // The common implementation chunk can export helpers without extending the entry signature.
-      // Strict execution order leaves runtime placement to order lowering.
-      if !self.options.is_strict_execution_order_enabled() {
-        self.try_merge_runtime_chunk(
-          chunk_graph,
-          None,
-          super::chunk_optimizer::RuntimeMergeCascade::Full,
-          used_symbol_refs_builder,
-        );
-      }
       chunk_graph.sort_chunk_modules(self.link_output, self.options);
       self.assign_chunk_exec_orders(chunk_graph);
       chunk_graph.rebuild_sorted_chunk_idx_vec(true);
@@ -119,6 +84,15 @@ impl GenerateStage<'_> {
         self.compute_final_chunk_links(chunk_graph, used_symbol_refs_builder.view(), &order_state);
     }
 
+    // See internal-docs/code-splitting/implementation.md#runtime-module-placement.
+    let (final_esm_init_metadata, link_state, import_order) = self.place_runtime_module(
+      chunk_graph,
+      used_symbol_refs_builder.view(),
+      &order_state,
+      final_esm_init_metadata,
+      link_state,
+    );
+
     let rendered_chunk_count = chunk_graph
       .chunk_table
       .len()
@@ -127,10 +101,10 @@ impl GenerateStage<'_> {
       validate_options_for_multi_chunk_output(self.options)?;
     }
 
-    Ok(FinalizedChunkPlan { order_state, final_esm_init_metadata, link_state })
+    Ok(FinalizedChunkPlan { order_state, final_esm_init_metadata, link_state, import_order })
   }
 
-  fn compute_final_chunk_links(
+  pub(super) fn compute_final_chunk_links(
     &self,
     chunk_graph: &ChunkGraph,
     used_symbol_refs: UsedSymbolRefsView<'_>,

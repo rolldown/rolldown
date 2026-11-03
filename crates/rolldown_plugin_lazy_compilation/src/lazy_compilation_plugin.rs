@@ -35,16 +35,22 @@ pub struct LazyCompilationPlugin {
   lazy_entries: SharedLazyEntries,
   /// Tracks which proxy modules have been fetched (requested at runtime via `/lazy`)
   fetched_entries: SharedLazyEntries,
+  /// The lazy compilation endpoint URL referenced from generated code, already
+  /// prefixed with the dev server's public base path when one is configured.
+  lazy_endpoint: String,
   /// The current working directory, obtained from build_start hook
   cwd: OnceLock<PathBuf>,
 }
 
 impl LazyCompilationPlugin {
   /// Creates a new LazyCompilationPlugin
-  pub fn new() -> Self {
+  ///
+  /// `lazy_endpoint` is the URL the generated proxy modules import from (e.g.
+  /// `/@vite/lazy`, or `/<base>/@vite/lazy` when the dev server has a base path).
+  pub fn new(lazy_endpoint: String) -> Self {
     let lazy_entries: SharedLazyEntries = Arc::new(FxDashSet::default());
     let fetched_entries: SharedLazyEntries = Arc::new(FxDashSet::default());
-    LazyCompilationPlugin { lazy_entries, fetched_entries, cwd: OnceLock::new() }
+    LazyCompilationPlugin { lazy_entries, fetched_entries, lazy_endpoint, cwd: OnceLock::new() }
   }
 
   /// Returns a context that can be used to interact with lazy compilation state
@@ -175,8 +181,14 @@ impl Plugin for LazyCompilationPlugin {
 
         let stable_proxy_id = format!("{stable_id}?rolldown-lazy=1");
 
-        let code =
-          render_proxy_template(template, proxy_id, &stable_id, &stable_proxy_id, original_id)?;
+        let code = render_proxy_template(
+          template,
+          proxy_id,
+          &stable_id,
+          &stable_proxy_id,
+          original_id,
+          &self.lazy_endpoint,
+        )?;
         return Ok(Some(rolldown_plugin::HookLoadOutput {
           code: ArcStr::from(code),
           ..Default::default()
@@ -230,13 +242,15 @@ fn render_proxy_template(
   stable_id: &str,
   stable_proxy_id: &str,
   original_id: &str,
+  lazy_endpoint: &str,
 ) -> serde_json::Result<String> {
   Ok(
     template
       .replace("$PROXY_MODULE_ID", &serde_json::to_string(proxy_id)?)
       .replace("$STABLE_MODULE_ID", &serde_json::to_string(stable_id)?)
       .replace("$STABLE_PROXY_MODULE_ID", &serde_json::to_string(stable_proxy_id)?)
-      .replace("$MODULE_ID", &serde_json::to_string(original_id)?),
+      .replace("$MODULE_ID", &serde_json::to_string(original_id)?)
+      .replace("$LAZY_ENDPOINT", lazy_endpoint),
   )
 }
 
@@ -252,8 +266,15 @@ mod tests {
     let original_id = r"D:\Users\foo\bar\baz.js";
 
     let template = "P=$PROXY_MODULE_ID;S=$STABLE_MODULE_ID;M=$MODULE_ID;";
-    let rendered =
-      render_proxy_template(template, proxy_id, stable_id, stable_proxy_id, original_id).unwrap();
+    let rendered = render_proxy_template(
+      template,
+      proxy_id,
+      stable_id,
+      stable_proxy_id,
+      original_id,
+      "/@vite/lazy",
+    )
+    .unwrap();
 
     assert_eq!(
       rendered,
@@ -270,8 +291,17 @@ mod tests {
       "src/bar.js",
       "src/bar.js?rolldown-lazy=1",
       "/Users/foo/bar.js",
+      "/@vite/lazy",
     )
     .unwrap();
     assert_eq!(rendered, "\"/Users/foo/bar.js?rolldown-lazy=1\"");
+  }
+
+  #[test]
+  fn lazy_endpoint_is_substituted_verbatim() {
+    let rendered =
+      render_proxy_template("`$LAZY_ENDPOINT?id=${x}`", "p", "s", "sp", "o", "/foo/@vite/lazy")
+        .unwrap();
+    assert_eq!(rendered, "`/foo/@vite/lazy?id=${x}`");
   }
 }

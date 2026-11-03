@@ -225,6 +225,14 @@ export type DevModeOptions =
       skipCommonRuntimeInjection?: boolean;
       lazy?: boolean;
       /**
+       * Public base path of the dev server.
+       *
+       * URLs of dev-server endpoints referenced from generated code (currently the
+       * lazy compilation endpoint `/@vite/lazy`) are prefixed with it.
+       * @default '/'
+       */
+      base?: string;
+      /**
        * Call the `hotUpdate` plugin hook. The `hotUpdate` option of `dev()` also turns it on.
        * @default false
        */

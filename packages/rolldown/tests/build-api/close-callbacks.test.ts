@@ -27,8 +27,7 @@ test('a closed build does not keep its plugins alive', { timeout: 60_000 }, asyn
 });
 
 // `ClassicBundler::close()` keeps `last_bundle_handle`, so a plugin that keeps the build object
-// still keeps the plugin driver and its hooks. https://github.com/rolldown/rolldown/pull/11319
-// takes that handle at close.
+// still keeps the plugin driver and its hooks.
 test.todo('a plugin that keeps its build object can be collected after close');
 
 test('option getters read for the first time after close', async () => {
@@ -132,5 +131,50 @@ test('a second close does not run closeBundle again', async () => {
   await Promise.all([bundle.close(), bundle.close()]);
   await bundle.close();
 
+  expect(closeBundleCalls).toBe(1);
+});
+
+// `bundle.close()` does not wait for a build that started before it. That build must still be
+// able to call the option functions, so the release waits until the build ends.
+test('a build that runs during close still calls the option functions', async () => {
+  // With the WASI binding, the close of the last open bundle stops the shared async runtime, also
+  // while a build is pending (https://github.com/rolldown/rolldown/issues/10639). This bundle stays
+  // open, so that the pending build can end.
+  const runtimeKeeper = await rolldown({ input });
+  let buildStarted!: () => void;
+  const started = new Promise<void>((resolve) => (buildStarted = resolve));
+  let releaseBuild!: () => void;
+  const paused = new Promise<void>((resolve) => (releaseBuild = resolve));
+  let closeBundleCalls = 0;
+  const bundle = await rolldown({
+    input: 'entry',
+    external: (id) => id === 'ext',
+    plugins: [
+      {
+        name: 'close-during-build',
+        async buildStart() {
+          buildStarted();
+          await paused;
+        },
+        resolveId(id) {
+          return id === 'entry' ? id : null;
+        },
+        load(id) {
+          return id === 'entry' ? "import ext from 'ext'; console.log(ext);" : null;
+        },
+        closeBundle() {
+          closeBundleCalls++;
+        },
+      },
+    ],
+  });
+  const pending = bundle.generate({});
+  await started;
+  await bundle.close();
+  releaseBuild();
+
+  const { output } = await pending;
+  await runtimeKeeper.close();
+  expect(output[0].code).toContain('from "ext"');
   expect(closeBundleCalls).toBe(1);
 });

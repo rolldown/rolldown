@@ -127,6 +127,34 @@ const cases = {
     };
     await assert.rejects(classic({ plugins: [plugin] }), /closeBundle failed/);
   },
+  async 'close while a build still runs'(marker) {
+    // Under the wasm binding, the close of the last open bundle stops the shared async runtime,
+    // also while a build is pending. This bundle stays open, so that the pending build can end.
+    const runtimeKeeper = await rolldown({ input, logLevel: 'silent' });
+    let buildStarted;
+    const started = new Promise((resolve) => (buildStarted = resolve));
+    let releaseBuild;
+    const paused = new Promise((resolve) => (releaseBuild = resolve));
+    const plugin = markerPlugin(marker, {
+      async buildStart(options) {
+        plugin.options = options;
+        buildStarted();
+        await paused;
+      },
+    });
+    const bundle = await rolldown({
+      input,
+      logLevel: 'silent',
+      external: (id) => Boolean(plugin) && id === 'never',
+      plugins: [plugin],
+    });
+    const pending = bundle.generate({ format: 'es' });
+    await started;
+    await bundle.close();
+    releaseBuild();
+    await pending;
+    await runtimeKeeper.close();
+  },
   async 'watch mode'(marker) {
     const watcher = watch({
       input,
@@ -148,6 +176,9 @@ const cases = {
     await watcher.close();
   },
   async 'watch mode, watcher closes while an event result close runs'(marker) {
+    // Under the wasm binding, `watcher.close()` stops the shared async runtime when no other owner
+    // keeps it, also while an event result close is pending. This bundle keeps it.
+    const runtimeKeeper = await rolldown({ input, logLevel: 'silent' });
     let hookStarted;
     const started = new Promise((resolve) => (hookStarted = resolve));
     let releaseHook;
@@ -176,6 +207,7 @@ const cases = {
     await watcher.close();
     releaseHook();
     await resultClosed;
+    await runtimeKeeper.close();
   },
   async 'dev engine'(marker) {
     if (isWasi) return;

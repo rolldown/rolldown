@@ -9,6 +9,12 @@ class Module {
    * @type {string}
    */
   id;
+  /**
+   * A CommonJS module registers its raw `module.exports`; `requestLazy` builds the `__toESM`
+   * view on top. ESM registers its namespace, used as is.
+   * @type {boolean}
+   */
+  isCommonJs = false;
 
   /**
    * @param {string} id
@@ -181,10 +187,12 @@ export class DevRuntime {
   /**
    * @param {string} id
    * @param {{ exports: any }} [exportsHolder]
+   * @param {boolean | 0 | 1} [isCommonJs]
    */
-  registerModule(id, exportsHolder = { exports: {} }) {
+  registerModule(id, exportsHolder = { exports: {} }, isCommonJs = false) {
     const module = new Module(id);
     module.exportsHolder = exportsHolder;
+    module.isCommonJs = !!isCommonJs;
     this.moduleCache.set(id, module);
   }
 
@@ -299,27 +307,32 @@ export class DevRuntime {
    * threw. Retrying could not work anyway: a factory registers its module before running its
    * body, so re-running `initModule` would return half-initialized exports as success.
    *
+   * A CommonJS module resolves to its `__toESM` view, as in a production build. The runtime
+   * decides from the registration: the importer is compiled before the importee is in the
+   * graph. `isNodeMode` is the importer's choice, so the view is built per call, not memoized.
+   *
    * @param {string} id
    * @param {string} proxyModuleId
+   * @param {boolean | 0 | 1} [isNodeMode]
    * @returns {Promise<any>}
    */
-  requestLazy(id, proxyModuleId) {
-    const pending = this.lazyRequests.get(id);
-    if (pending) {
-      return pending;
+  requestLazy(id, proxyModuleId, isNodeMode) {
+    let pending = this.lazyRequests.get(id);
+    if (!pending) {
+      // Factories outlive `removeModuleCache`, so an evicted module can be re-run without the
+      // server — and must be, since the memo went with the cache entry. `Promise.resolve` keeps
+      // a synchronous `initModule` throw from escaping the call site.
+      pending = this.isRunnableHere(id)
+        ? Promise.resolve().then(() => this.initModule(id))
+        : Promise.resolve()
+            .then(() => this.loadLazyChunk(proxyModuleId))
+            .then(() => this.initModule(id));
+      this.lazyRequests.set(id, pending);
     }
 
-    // Factories outlive `removeModuleCache`, so an evicted module can be re-run without the
-    // server — and must be, since the memo went with the cache entry. `Promise.resolve` keeps
-    // a synchronous `initModule` throw from escaping the call site.
-    const promise = this.isRunnableHere(id)
-      ? Promise.resolve().then(() => this.initModule(id))
-      : Promise.resolve()
-          .then(() => this.loadLazyChunk(proxyModuleId))
-          .then(() => this.initModule(id));
-
-    this.lazyRequests.set(id, promise);
-    return promise;
+    return pending.then((exports) =>
+      this.moduleCache.get(id)?.isCommonJs ? this.__toESM(exports, isNodeMode) : exports,
+    );
   }
 
   /**
@@ -380,13 +393,6 @@ export class DevRuntime {
   /** @internal */
   // @ts-expect-error The variable will be injected at build time.
   __exportAll = __exportAll;
-  /**
-   * @param {boolean} [isNodeMode]
-   * @returns {(mod: any) => any}
-   * @internal
-   */
-  // @ts-expect-error The variable will be injected at build time.
-  __toDynamicImportESM = (isNodeMode) => (mod) => __toESM(mod.default, isNodeMode);
   /** @internal */
   // @ts-expect-error The variable will be injected at build time.
   __reExport = __reExport;

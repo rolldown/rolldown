@@ -4,7 +4,8 @@ use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx,
   PreserveEntrySignatures, RuntimeHelper, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef,
-  UsedSymbolRefsBuilder, WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
+  UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
+  dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_utils::BitSet;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -13,7 +14,7 @@ use crate::chunk_graph::ChunkGraph;
 use crate::esm_init_obligations::collect_entry_reexported_wrapper_inits;
 
 use super::{
-  GenerateStage, code_splitting::IndexSplittingInfo, compute_cross_chunk_links::UsedSymbolRefsView,
+  GenerateStage, code_splitting::IndexSplittingInfo, reduced_chunk_graph::ReducedChunkGraph,
   simulated_facade_inclusion::include_simulated_facade_namespace,
 };
 
@@ -57,7 +58,7 @@ impl GenerateStage<'_> {
     index_splitting_info: &mut IndexSplittingInfo,
     chunk_graph: &mut ChunkGraph,
     entries_len: u32,
-    used_symbol_refs: &mut UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
   ) {
     let mut namespace_extractions = FxHashSet::default();
     let DynamicEntryAnalysis {
@@ -75,8 +76,17 @@ impl GenerateStage<'_> {
       return;
     }
     let module_to_atom_idx = self.compute_module_to_atom_idx(&atoms);
-    let atom_dependencies =
-      self.compute_atom_dependencies(&atoms, &module_to_atom_idx, used_symbol_refs);
+    let flattened_entry_modules = self.flattened_entry_modules();
+    let atom_dependencies = self.compute_atom_dependencies(
+      &atoms,
+      &module_to_atom_idx,
+      &flattened_entry_modules,
+      used_symbol_refs_builder,
+    );
+    // Indexed by entry bit, so `ReducedChunkGraph` can pair each facade chunk with its entry
+    // module's host atom.
+    let host_atom_by_entry_bit: Vec<Option<usize>> =
+      flattened_entry_modules.iter().map(|&module_idx| module_to_atom_idx[module_idx]).collect();
 
     let static_dependency_atoms_by_entry = self.compute_static_dependency_atoms_by_entry(
       entries_len as usize,
@@ -92,29 +102,34 @@ impl GenerateStage<'_> {
       atoms.len(),
     );
 
+    let mut reduced_chunk_graph = ReducedChunkGraph::new(
+      atoms.iter().map(|atom| &atom.dependent_entries),
+      &atom_dependencies.cycle,
+      &host_atom_by_entry_bit,
+    );
     let mut changed = false;
-    for atom_idx in 0..atoms.len() {
-      let original_dependent_entries = atoms[atom_idx].dependent_entries.clone();
-      let dependent_entries = atoms[atom_idx].dependent_entries.index_of_one().collect::<Vec<_>>();
+    for (atom_idx, atom) in atoms.iter_mut().enumerate() {
+      let original_dependent_entries = atom.dependent_entries.clone();
+      let dependent_entries = atom.dependent_entries.index_of_one().collect::<Vec<_>>();
       let atom_bit: u32 = atom_idx.try_into().expect("Too many atoms, u32 overflowed.");
       for entry_idx in dependent_entries {
         if already_loaded_atoms_by_entry[entry_idx as usize].has_bit(atom_bit) {
-          atoms[atom_idx].dependent_entries.clear_bit(entry_idx);
+          atom.dependent_entries.clear_bit(entry_idx);
         }
       }
-      let action = if atoms[atom_idx].dependent_entries == original_dependent_entries {
+      let action = if atom.dependent_entries == original_dependent_entries {
         ReducedEntriesAction::Avoid
       } else {
         self.can_use_reduced_dependent_entries(
-          &atoms[atom_idx],
+          atom,
           &original_dependent_entries,
-          &atoms[atom_idx].dependent_entries,
+          &atom.dependent_entries,
           chunk_graph,
           &dynamic_entry_modules_by_entry,
         )
       };
       if !matches!(action, ReducedEntriesAction::Avoid)
-        && !Self::reduced_atom_graph_has_static_cycle(&atoms, &atom_dependencies.cycle)
+        && reduced_chunk_graph.try_move(atom_idx, &atom.dependent_entries)
       {
         changed = true;
         if let ReducedEntriesAction::ApplyWithNamespaceExtraction {
@@ -125,7 +140,7 @@ impl GenerateStage<'_> {
           namespace_extractions.insert((entry_chunk_idx, entry_module_idx));
         }
       } else {
-        atoms[atom_idx].dependent_entries = original_dependent_entries;
+        atom.dependent_entries = original_dependent_entries;
       }
     }
 
@@ -145,7 +160,7 @@ impl GenerateStage<'_> {
     self.apply_dynamic_entry_namespace_extractions(
       chunk_graph,
       &namespace_extractions,
-      used_symbol_refs,
+      used_symbol_refs_builder,
     );
   }
 
@@ -169,6 +184,11 @@ impl GenerateStage<'_> {
     let Some(chunk) = chunk_graph.chunk_table.get(entry_chunk_idx) else {
       return ReducedEntriesAction::Avoid;
     };
+
+    // See internal-docs/inline-common-chunks/design.md#keeping-shared-code-available-for-inlining.
+    if self.prefers_inline_common_chunk(&atom.modules) {
+      return ReducedEntriesAction::Avoid;
+    }
 
     let can_merge_without_changing_entry_signature =
       self.can_merge_without_changing_entry_signature(chunk, &atom.modules);
@@ -258,17 +278,17 @@ impl GenerateStage<'_> {
     &mut self,
     chunk_graph: &mut ChunkGraph,
     namespace_extractions: &FxHashSet<(ChunkIdx, ModuleIdx)>,
-    used_symbol_refs: &mut UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
   ) {
     if namespace_extractions.is_empty() {
       return;
     }
 
     for &(_, entry_module_idx) in namespace_extractions {
-      self.narrow_namespace_stmt_to_used_symbols(entry_module_idx, used_symbol_refs);
+      self.narrow_namespace_stmt_to_used_symbols(entry_module_idx, used_symbol_refs_builder);
     }
 
-    self.replay_link_stage_inclusion(used_symbol_refs, |context| {
+    self.replay_link_stage_inclusion(used_symbol_refs_builder, |context| {
       let mut needs_export_all_helper = false;
       for &(entry_chunk_idx, entry_module_idx) in namespace_extractions {
         chunk_graph
@@ -325,6 +345,17 @@ impl GenerateStage<'_> {
     module_to_atom_idx
   }
 
+  /// The entry module behind each entry bit, in the bit order `determine_reachable_modules_for_entry`
+  /// assigns (`link_output.entries` flattened, one bit per entry point).
+  fn flattened_entry_modules(&self) -> Vec<ModuleIdx> {
+    self
+      .link_output
+      .entries
+      .iter()
+      .flat_map(|(&idx, entries)| std::iter::repeat_n(idx, entries.len()))
+      .collect()
+  }
+
   // See internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
   //
   // The two graphs serve the pass's two consumers, whose safe approximations point in opposite
@@ -333,28 +364,29 @@ impl GenerateStage<'_> {
   // hosted by its own entry chunk, because emission hangs those imports on the entry (facade)
   // chunk, not on whichever shared chunk hosts the module. `cycle` must contain every edge the
   // emitted chunks might have: its service edges are attached to the hosting atom regardless,
-  // with no liveness gate — `used_symbol_refs` still grows after this pass (namespace-extraction
-  // and facade-elimination replays), so an export dead here can be live at emission. A facade's
-  // own service edges cannot close a cycle (facades have zero static in-degree), so attributing
-  // them to the hosting atom only over-approximates. The price of the ungated edges is that a
-  // dead entry re-export can conservatively veto a fold that would have been acyclic — a missed
-  // optimization, accepted over trusting a liveness snapshot the replays may outgrow. The
-  // liveness-growth immunity is scoped to service edges: the base prediction's ambiguous branch
-  // (`referenced_symbol_owners`) still reads decision-time statement inclusion, a narrower
-  // pre-existing skew the replays can also outgrow.
+  // with no liveness gate — `used_symbol_refs_builder` still grows after this pass
+  // (namespace-extraction and facade-elimination replays), so an export dead here can be live at
+  // emission.
+  //
+  // Hosting-atom attribution over-approximates rather than misses only because of the facade edges
+  // `ReducedChunkGraph` adds: the facade depends on the host, which is where
+  // these edges land, so anything emission hangs on the facade stays reachable as facade -> host ->
+  // target. Before rolldown#10734 this rested on facades having zero static in-degree, which a
+  // fold moving an atom into a facade broke — re-derive it before attributing them elsewhere.
+  //
+  // The price of the ungated edges is that a dead entry re-export can conservatively veto a fold
+  // that would have been acyclic — a missed optimization, accepted over trusting a liveness
+  // snapshot the replays may outgrow. The liveness-growth immunity is scoped to service edges:
+  // the base prediction's ambiguous branch (`referenced_symbol_owners`) still reads decision-time
+  // statement inclusion, a narrower pre-existing skew the replays can also outgrow.
   fn compute_atom_dependencies(
     &self,
     atoms: &[ChunkAtom],
     module_to_atom_idx: &IndexVec<ModuleIdx, Option<usize>>,
-    used_symbol_refs: &impl UsedSymbolRefsView,
+    flattened_entry_modules: &[ModuleIdx],
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
   ) -> AtomDependencyGraphs {
     let strict_execution_order = self.options.is_strict_execution_order_enabled();
-    let flattened_entry_modules: Vec<ModuleIdx> = self
-      .link_output
-      .entries
-      .iter()
-      .flat_map(|(&idx, entries)| std::iter::repeat_n(idx, entries.len()))
-      .collect();
 
     let mut reachability = Vec::with_capacity(atoms.len());
     let mut cycle = Vec::with_capacity(atoms.len());
@@ -383,7 +415,12 @@ impl GenerateStage<'_> {
         }
 
         let mut service_targets = vec![];
-        self.entry_export_service_targets(module_idx, used_symbol_refs, true, &mut service_targets);
+        self.entry_export_service_targets(
+          module_idx,
+          used_symbol_refs_builder.view(),
+          true,
+          &mut service_targets,
+        );
         for dep_module_idx in service_targets {
           add(dep_module_idx, &mut cycle_deps);
         }
@@ -396,7 +433,7 @@ impl GenerateStage<'_> {
           let mut service_targets = vec![];
           self.entry_export_service_targets(
             module_idx,
-            used_symbol_refs,
+            used_symbol_refs_builder.view(),
             false,
             &mut service_targets,
           );
@@ -458,12 +495,12 @@ impl GenerateStage<'_> {
   ///
   /// With `assume_all_live: false` the liveness gate mirrors emission exactly: a dead export
   /// produces no import. `assume_all_live: true` skips the gate for consumers that need a stable
-  /// over-approximation — `used_symbol_refs` keeps growing after the fold's decisions, so a
+  /// over-approximation — `used_symbol_refs_builder` keeps growing after the fold's decisions, so a
   /// dead-here export can still emit an import later.
   pub(super) fn entry_export_service_targets(
     &self,
     module_idx: ModuleIdx,
-    used_symbol_refs: &impl UsedSymbolRefsView,
+    used_symbol_refs_view: UsedSymbolRefsView<'_>,
     assume_all_live: bool,
     targets: &mut Vec<ModuleIdx>,
   ) {
@@ -487,7 +524,7 @@ impl GenerateStage<'_> {
         {
           self.link_output.metas[served.owner].namespace_included
         } else {
-          used_symbol_refs.contains(&served)
+          used_symbol_refs_view.contains(&served)
         };
       if is_live {
         targets.push(served.owner);
@@ -502,13 +539,13 @@ impl GenerateStage<'_> {
       symbol_db,
       None,
     ) {
-      if assume_all_live || used_symbol_refs.contains(&init.wrapper_ref) {
+      if assume_all_live || used_symbol_refs_view.contains(&init.wrapper_ref) {
         targets.push(init.wrapper_ref.owner);
       }
     }
   }
 
-  fn referenced_symbol_owners(&self, module_idx: ModuleIdx) -> FxHashSet<ModuleIdx> {
+  pub(super) fn referenced_symbol_owners(&self, module_idx: ModuleIdx) -> FxHashSet<ModuleIdx> {
     let meta = &self.link_output.metas[module_idx];
     let mut owners = FxHashSet::default();
     let note = |symbol_ref: SymbolRef, owners: &mut FxHashSet<ModuleIdx>| {
@@ -539,73 +576,6 @@ impl GenerateStage<'_> {
       }
     }
     owners
-  }
-
-  fn reduced_atom_graph_has_static_cycle(
-    atoms: &[ChunkAtom],
-    atom_dependencies: &[Vec<usize>],
-  ) -> bool {
-    let mut chunk_idx_by_bits = FxHashMap::default();
-    let mut atom_to_chunk = Vec::with_capacity(atoms.len());
-    for atom in atoms {
-      let next_chunk_idx = chunk_idx_by_bits.len();
-      let chunk_idx = match chunk_idx_by_bits.entry(atom.dependent_entries.clone()) {
-        std::collections::hash_map::Entry::Occupied(occupied) => *occupied.get(),
-        std::collections::hash_map::Entry::Vacant(vacant) => {
-          vacant.insert(next_chunk_idx);
-          next_chunk_idx
-        }
-      };
-      atom_to_chunk.push(chunk_idx);
-    }
-
-    let mut chunk_dependencies = vec![FxHashSet::default(); chunk_idx_by_bits.len()];
-    for (atom_idx, dependencies) in atom_dependencies.iter().enumerate() {
-      let from_chunk_idx = atom_to_chunk[atom_idx];
-      for &dep_atom_idx in dependencies {
-        let to_chunk_idx = atom_to_chunk[dep_atom_idx];
-        if from_chunk_idx != to_chunk_idx {
-          chunk_dependencies[from_chunk_idx].insert(to_chunk_idx);
-        }
-      }
-    }
-
-    Self::chunk_dependency_graph_has_cycle(&chunk_dependencies)
-  }
-
-  fn chunk_dependency_graph_has_cycle(chunk_dependencies: &[FxHashSet<usize>]) -> bool {
-    let mut state = vec![0_u8; chunk_dependencies.len()];
-    for start_chunk_idx in 0..chunk_dependencies.len() {
-      if state[start_chunk_idx] != 0 {
-        continue;
-      }
-
-      let mut stack = vec![(start_chunk_idx, false)];
-      while let Some((chunk_idx, exiting)) = stack.pop() {
-        if exiting {
-          state[chunk_idx] = 2;
-          continue;
-        }
-
-        match state[chunk_idx] {
-          1 => return true,
-          2 => continue,
-          _ => {}
-        }
-
-        state[chunk_idx] = 1;
-        stack.push((chunk_idx, true));
-        for &dep_chunk_idx in &chunk_dependencies[chunk_idx] {
-          match state[dep_chunk_idx] {
-            1 => return true,
-            0 => stack.push((dep_chunk_idx, false)),
-            _ => {}
-          }
-        }
-      }
-    }
-
-    false
   }
 
   fn analyze_dynamic_entries(
@@ -664,7 +634,7 @@ impl GenerateStage<'_> {
     }
   }
 
-  fn is_included_dynamic_import_record(
+  pub(super) fn is_included_dynamic_import_record(
     &self,
     importer_idx: ModuleIdx,
     stmt_info_idx: StmtInfoIdx,

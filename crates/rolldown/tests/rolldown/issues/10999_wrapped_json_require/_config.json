@@ -1,0 +1,4 @@
+{
+  "_comment": "JSON used by both import and require stays wrapped. Its import namespace must be initialized before an eager consumer reads it through a cycle.",
+  "snapshot": false
+}

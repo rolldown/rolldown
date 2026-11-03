@@ -99,10 +99,13 @@ export interface PluginTimingsRecorder {
    * collision would silently merge two plugins' rows.
    */
   costs: Map<unknown, Map<string, HookCost>>;
+  /** This set prevents duplicate missing-label warnings across outputs. */
+  warnedMissingGroupLabels: Set<unknown>;
   /**
-   * Wall time during which *any* measured callback was running — the union of every span,
-   * so overlapping calls are counted once. Unlike a sum of spans this cannot outrun the
-   * build, which is what makes it usable as a share.
+   * Wall time in which at least one measured callback ran: the union of every span, so
+   * overlapping calls count once. The value cannot be more than the window the callbacks
+   * ran in. That is what makes it usable as a share. It can be more than the core build
+   * clock, because `closeBundle` runs after that clock stops.
    */
   busyMs: number;
   /** Across all hooks, for maintaining {@link PluginTimingsRecorder.busyMs}. */
@@ -125,6 +128,7 @@ export function pluginTimingsRecorderFor(key: object): PluginTimingsRecorder {
   if (recorder === undefined) {
     recorder = {
       costs: new Map(),
+      warnedMissingGroupLabels: new Set(),
       busyMs: 0,
       inFlight: 0,
       busyStart: 0,
@@ -246,8 +250,9 @@ export function measureHookCost<T extends (...args: never[]) => unknown>(
 }
 
 /**
- * The owner shown for user callbacks the core invokes directly rather than through a
- * plugin. One shared identity: they are all configured on the same options object.
+ * The shared owner for callbacks that users configure directly on the output options.
+ * Code-splitting groups use their group objects as owner keys. Each group then has separate
+ * timing rows.
  */
 export const OUTPUT_OPTIONS_OWNER: TimingOwner = {
   key: Symbol('output options'),
@@ -318,7 +323,11 @@ export interface PluginTimingRow {
  * as `BindingPluginTimingsMeasurement`.
  */
 export interface PluginTimingsMeasurement {
-  /** Union of every span, so it counts overlap once and cannot outrun the build. */
+  /**
+   * Union of every span, so overlap counts once. The value cannot be more than the window
+   * the callbacks ran in. It can be more than the core build clock, because `closeBundle`
+   * runs after that clock stops.
+   */
   busyMs: number;
   /**
    * First-call order. No significance — ordering is the renderer's call, and this side does

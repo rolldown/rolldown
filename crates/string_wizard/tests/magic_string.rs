@@ -223,18 +223,12 @@ mod relocate {
 
   #[test]
   fn refuses_to_move_a_selection_to_inside_itself() {
-    let mut s = MagicString::new("abcdefghijkl");
-    s.relocate(3, 6, 3).unwrap_err();
-  }
-  #[test]
-  fn refuses_to_move_a_selection_to_inside_itself2() {
-    let mut s = MagicString::new("abcdefghijkl");
-    s.relocate(3, 6, 4).unwrap_err();
-  }
-  #[test]
-  fn refuses_to_move_a_selection_to_inside_itself3() {
-    let mut s = MagicString::new("abcdefghijkl");
-    s.relocate(3, 6, 6).unwrap_err();
+    // Keep all three targets: each one is the only test of its part of the `start..=end` guard
+    // (an exclusive start, an exclusive end, or checking only the ends fails just that row).
+    for to in [3, 4, 6] {
+      let mut s = MagicString::new("abcdefghijkl");
+      s.relocate(3, 6, to).unwrap_err();
+    }
   }
 
   #[test]

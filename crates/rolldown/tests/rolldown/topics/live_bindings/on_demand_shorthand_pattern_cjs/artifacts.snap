@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-//#region main.js
+// main.js
 const short1 = "";
 let short2 = "";
 function short3() {}
@@ -16,7 +16,6 @@ let nonShort1 = "";
 nonShort1 = "";
 function nonShort2() {}
 nonShort2 = () => {};
-//#endregion
 Object.defineProperty(exports, "nonShort1", {
 	enumerable: true,
 	get: function() {

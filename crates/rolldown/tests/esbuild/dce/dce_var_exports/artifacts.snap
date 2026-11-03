@@ -7,11 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
-//#region a.js
+// a.js
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { bar: 123 };
 }));
-//#endregion
 export default require_a();
 
 ```
@@ -20,11 +19,10 @@ export default require_a();
 
 ```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
-//#region b.js
+// b.js
 var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { bar: 123 };
 }));
-//#endregion
 export default require_b();
 
 ```
@@ -33,11 +31,10 @@ export default require_b();
 
 ```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
-//#region c.js
+// c.js
 var require_c = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.foo = { bar: 123 };
 }));
-//#endregion
 export default require_c();
 
 ```

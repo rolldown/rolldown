@@ -92,11 +92,59 @@ describe('basic arguments', () => {
 });
 
 describe('cli options for bundling', () => {
-  it('should handle `--input` and positional args as entries', async () => {
-    const cwd = cliFixturesDir('cli-multi-entries');
-    const status = await $({ cwd })`rolldown 1.ts --input ./2.js`;
+  it.each(['bundler-timings', 'plugin-timings'])('accepts --checks.%s', async (option) => {
+    const cwd = cliFixturesDir('no-config');
+    const status = await execa('rolldown', ['index.js', `--checks.${option}`], { cwd });
     expect(status.exitCode).toBe(0);
-    expect(cleanStdout(status.stdout)).toMatchSnapshot();
+    expect(status.stderr).not.toContain('Invalid');
+    expect(status.stderr).not.toContain('Unknown');
+  });
+
+  it.each([{ args: ['1.ts', '--input', './2.js'] }, { args: ['--input', '1.ts', '--', '2.js'] }])(
+    'should error when `--input` and positional args are both used: $args',
+    async ({ args }) => {
+      const cwd = cliFixturesDir('cli-multi-entries');
+      const status = await execa('rolldown', args, { cwd, reject: false });
+      expect(status.exitCode).toBe(1);
+      expect(status.stdout).toContain('Either use --input, or pass input path as argument');
+    },
+  );
+
+  it.each([
+    { flag: '--help', output: 'USAGE rolldown' },
+    { flag: '-h', output: 'USAGE rolldown' },
+    { flag: '--version', output: 'rolldown v' },
+    { flag: '-v', output: 'rolldown v' },
+  ])(
+    'should let $flag win over the `--input` and positional args conflict',
+    async ({ flag, output }) => {
+      const cwd = cliFixturesDir('cli-multi-entries');
+      const status = await execa('rolldown', ['1.ts', '--input', './2.js', flag], { cwd });
+      expect(status.exitCode).toBe(0);
+      expect(cleanStdout(status.stdout)).toContain(output);
+      expect(cleanStdout(status.stdout)).not.toContain('Either use --input');
+    },
+  );
+
+  it.each([
+    { args: ['--', '1.ts'], entries: ['1'] },
+    { args: ['--', '1.ts', '2.js'], entries: ['1', '2'] },
+    { args: ['1.ts', '--', '2.js'], entries: ['1', '2'] },
+  ])('bundles positional entries after --: $args', async ({ args, entries }) => {
+    const cwd = cliFixturesDir('cli-multi-entries');
+    const status = await execa('rolldown', args, { cwd });
+    expect(status.exitCode).toBe(0);
+    for (const entry of entries) {
+      expect(status.stdout).toContain(`console.log("${entry}")`);
+    }
+  });
+
+  it('bundles a filename beginning with - after --', async () => {
+    const cwd = cliFixturesDir('cli-positional-delimiter');
+    const status = await execa('rolldown', ['--', '-entry.js'], { cwd });
+    expect(status.exitCode).toBe(0);
+    expect(status.stdout).toContain('console.log("dash-entry")');
+    expect(status.stdout).not.toContain('unrecognized');
   });
 
   it('should handle single boolean option', async () => {

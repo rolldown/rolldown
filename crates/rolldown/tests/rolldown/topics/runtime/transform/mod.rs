@@ -74,7 +74,7 @@ impl Plugin for RuntimeTransformPlugin {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn transform_runtime_module() {
-  let plugin = Arc::new(RuntimeTransformPlugin);
+  let plugin = Plugin::new_shared(RuntimeTransformPlugin);
 
   manual_integration_test!()
     .build(TestMeta { expect_executed: false, ..Default::default() })

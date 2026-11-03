@@ -121,15 +121,11 @@ export class DevEngine {
       watch: devOptions.watch && {
         enabled: devOptions.watch.enabled,
         skipWrite: devOptions.watch.skipWrite,
-        usePolling: devOptions.watch.usePolling,
-        pollInterval: devOptions.watch.pollInterval,
-        useDebounce: devOptions.watch.useDebounce,
-        debounceDuration: devOptions.watch.debounceDuration,
-        compareContentsForPolling: devOptions.watch.compareContentsForPolling,
-        debounceTickRate: devOptions.watch.debounceTickRate,
+        watcher: devOptions.watch.watcher,
         include: normalizedStringOrRegex(devOptions.watch.include),
         exclude: normalizedStringOrRegex(devOptions.watch.exclude),
       },
+      hotUpdate: devOptions.hotUpdate,
     };
 
     const inner = new BindingDevEngine(options.bundlerOptions, bindingDevOptions);
@@ -180,8 +176,11 @@ export class DevEngine {
   }
 
   /**
-   * Delivery notification from the serving middleware: the response for
-   * `filename` completed, so record its modules as shipped to that client.
+   * Delivery notification for the payload `filename`. Call it when the client
+   * reports that it ran the payload (Vite appends a
+   * `__rolldown_runtime__.payloadDelivered(filename)` statement to every patch
+   * and lazy chunk). A completed HTTP response is not enough: the bytes may not
+   * have evaluated yet. Records the payload's modules as shipped to that client.
    */
   async notifyPayloadDelivered(filename: string): Promise<void> {
     await this.#inner.notifyPayloadDelivered(filename);
@@ -214,9 +213,11 @@ export class DevEngine {
    * @param moduleId - The absolute file path of the module to compile
    * @param clientId - The client ID requesting this compilation
    * @returns The compiled chunk: its code plus the filename whose delivery the
-   * serving middleware reports via {@link notifyPayloadDelivered}
+   * dev server reports via {@link notifyPayloadDelivered}
+   * @throws The plugin's own error, since a lazy compile runs the full pipeline and is
+   * where a user plugin most often throws
    */
   async compileEntry(moduleId: string, clientId: string): Promise<BindingLazyChunkOutput> {
-    return this.#inner.compileEntry(moduleId, clientId);
+    return unwrapBindingResult(await this.#inner.compileEntry(moduleId, clientId));
   }
 }

@@ -6,12 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## constants.js
 
 ```js
-//#region constants.js
 function mark() {
 	globalThis.inlineNamespaceValue = 0;
 }
 const y = /* @__PURE__ */ mark();
-//#endregion
 export { y as t };
 
 ```
@@ -19,10 +17,9 @@ export { y as t };
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 await import("./page-b.js").then(console.log);
 await import("./page-a.js").then(console.log);
-//#endregion
 
 ```
 
@@ -31,12 +28,11 @@ await import("./page-a.js").then(console.log);
 ```js
 import { t as y } from "./constants.js";
 import assert from "node:assert";
-//#region page-a.js
+// page-a.js
 assert.strictEqual(globalThis.inlineNamespaceValue, 0);
 function render() {
 	console.log(1, y);
 }
-//#endregion
 export { render };
 
 ```
@@ -45,11 +41,10 @@ export { render };
 
 ```js
 import assert from "node:assert";
-//#region page-b.js
+// page-b.js
 assert.strictEqual(1, 1);
 assert.strictEqual(globalThis.inlineNamespaceValue, void 0, "inlined namespace member must not initialize its dead re-export before page-b");
 function render() {}
-//#endregion
 export { render };
 
 ```
@@ -62,7 +57,7 @@ export { render };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region constants.js
+// constants.js
 function mark() {
 	globalThis.inlineNamespaceValue = 0;
 }
@@ -72,7 +67,6 @@ function init_constants() {
 		y = /* @__PURE__ */ mark();
 	})))();
 }
-//#endregion
 export { y as n, init_constants as t };
 
 ```
@@ -80,20 +74,19 @@ export { y as n, init_constants as t };
 ### main.js
 
 ```js
-//#region main.js
+// main.js
 await import("./page-b.js").then(console.log);
 await import("./page-a.js").then(console.log);
-//#endregion
 
 ```
 
 ### page-a.js
 
 ```js
-import { n as y, t as init_constants } from "./constants.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as y, t as init_constants } from "./constants.js";
 import assert from "node:assert";
-//#region page-a.js
+// page-a.js
 function render() {
 	console.log(1, y);
 }
@@ -103,7 +96,6 @@ function init_page_a() {
 		assert.strictEqual(globalThis.inlineNamespaceValue, 0);
 	})))();
 }
-//#endregion
 init_page_a();
 export { render };
 
@@ -112,10 +104,10 @@ export { render };
 ### page-b.js
 
 ```js
-import "./constants.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import "./constants.js";
 import assert from "node:assert";
-//#region page-b.js
+// page-b.js
 function render() {}
 function init_page_b() {
 	return (init_page_b = __esmMin((() => {
@@ -123,7 +115,6 @@ function init_page_b() {
 		assert.strictEqual(globalThis.inlineNamespaceValue, void 0, "inlined namespace member must not initialize its dead re-export before page-b");
 	})))();
 }
-//#endregion
 init_page_b();
 export { render };
 
@@ -145,7 +136,7 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region constants.js
+// constants.js
 function mark() {
 	globalThis.inlineNamespaceValue = 0;
 }
@@ -155,7 +146,6 @@ function init_constants() {
 		y = /* @__PURE__ */ mark();
 	})))();
 }
-//#endregion
 export { y as n, init_constants as t };
 
 ```
@@ -164,14 +154,13 @@ export { y as n, init_constants as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((async () => {
 		await import("./page-b.js").then(console.log);
 		await import("./page-a.js").then(console.log);
 	})))();
 }
-//#endregion
 await init_main();
 
 ```
@@ -179,10 +168,10 @@ await init_main();
 ### page-a.js
 
 ```js
-import { n as y, t as init_constants } from "./constants.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as y, t as init_constants } from "./constants.js";
 import assert from "node:assert";
-//#region page-a.js
+// page-a.js
 function render() {
 	console.log(1, y);
 }
@@ -192,7 +181,6 @@ function init_page_a() {
 		assert.strictEqual(globalThis.inlineNamespaceValue, 0);
 	})))();
 }
-//#endregion
 init_page_a();
 export { render };
 
@@ -201,10 +189,10 @@ export { render };
 ### page-b.js
 
 ```js
-import "./constants.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import "./constants.js";
 import assert from "node:assert";
-//#region page-b.js
+// page-b.js
 function render() {}
 function init_page_b() {
 	return (init_page_b = __esmMin((() => {
@@ -212,7 +200,6 @@ function init_page_b() {
 		assert.strictEqual(globalThis.inlineNamespaceValue, void 0, "inlined namespace member must not initialize its dead re-export before page-b");
 	})))();
 }
-//#endregion
 init_page_b();
 export { render };
 

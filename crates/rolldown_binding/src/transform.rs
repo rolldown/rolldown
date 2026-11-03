@@ -47,11 +47,11 @@ fn enhanced_transform_internal(
   yarn_pnp: bool,
 ) -> napi::Result<BindingEnhancedTransformResult> {
   let options = options.unwrap_or_default();
-  let cwd = options
-    .cwd
-    .clone()
-    .map(PathBuf::from)
-    .unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir"));
+  let cwd = match options.cwd.as_deref() {
+    Some(cwd) => PathBuf::from(cwd),
+    None => std::env::current_dir()
+      .map_err(|err| napi::Error::from_reason(format!("Failed to get current dir: {err}")))?,
+  };
   let mut transform_options = options.into_enhanced_transform_options(filename)?;
   if let Err(err) = resolve_tsconfig_from_cache(&mut transform_options, cache, filename) {
     return Ok(BindingEnhancedTransformResult::from_enhanced_transform_result(
@@ -64,16 +64,16 @@ fn enhanced_transform_internal(
   Ok(BindingEnhancedTransformResult::from_enhanced_transform_result(result, cwd))
 }
 
-pub struct EnhancedTransformTask<'a> {
+pub struct EnhancedTransformTask {
   filename: String,
   source_text: String,
   options: Option<BindingEnhancedTransformOptions>,
-  cache: Option<&'a TsconfigCache>,
+  cache: Option<TsconfigCache>,
   yarn_pnp: bool,
 }
 
 #[napi]
-impl Task for EnhancedTransformTask<'_> {
+impl Task for EnhancedTransformTask {
   type JsValue = BindingEnhancedTransformResult;
   type Output = BindingEnhancedTransformResult;
 
@@ -82,7 +82,7 @@ impl Task for EnhancedTransformTask<'_> {
       &self.filename,
       &self.source_text,
       self.options.take(),
-      self.cache,
+      self.cache.as_ref(),
       self.yarn_pnp,
     )
   }
@@ -99,8 +99,15 @@ pub fn enhanced_transform(
   options: Option<BindingEnhancedTransformOptions>,
   cache: Option<&TsconfigCache>,
   yarn_pnp: bool,
-) -> AsyncTask<EnhancedTransformTask<'_>> {
-  AsyncTask::new(EnhancedTransformTask { filename, source_text, options, cache, yarn_pnp })
+) -> AsyncTask<EnhancedTransformTask> {
+  // The task runs on another thread and may outlive the JS `TsconfigCache` object.
+  AsyncTask::new(EnhancedTransformTask {
+    filename,
+    source_text,
+    options,
+    cache: cache.cloned(),
+    yarn_pnp,
+  })
 }
 
 #[napi]

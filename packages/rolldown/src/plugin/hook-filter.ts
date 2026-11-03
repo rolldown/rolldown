@@ -71,9 +71,10 @@ export interface HookFilter {
    */
   moduleType?: ModuleTypeFilter;
   /**
-   * A filter based on the module's code.
+   * A filter based on the code passed to the hook.
    *
-   * Only available for {@linkcode Plugin.transform | transform} hook.
+   * Only available for {@linkcode Plugin.transform | transform} and
+   * {@linkcode Plugin.renderChunk | renderChunk} hooks.
    */
   code?: GeneralHookFilter;
 }

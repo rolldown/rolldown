@@ -13,6 +13,7 @@ use rolldown_error::BuildResult;
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
   base64::to_url_safe_base64,
+  concat_string,
   hash_placeholder::{
     HASH_PLACEHOLDER_LEFT_FINDER, extract_hash_placeholders, replace_placeholder_with_hash,
     visit_with_placeholders_defaulted,
@@ -204,10 +205,10 @@ pub async fn finalize_assets(
         .iter()
         .flat_map(|importee_idx| &index_chunk_to_instances[*importee_idx])
         .map(|importee_asset_idx| index_ins_chunk_to_filename[*importee_asset_idx].clone())
-        .chain(chunk.direct_imports_from_external_modules.iter().map(|(idx, _)| {
-          link_output.module_table[*idx]
+        .chain(super::static_external_imports(chunk, &link_output.module_table).map(|idx| {
+          link_output.module_table[idx]
             .as_external()
-            .expect("direct_imports_from_external_modules should only contain external modules")
+            .expect("static external imports should only contain external modules")
             .get_file_name(resolved_paths)
         }))
         .collect();
@@ -281,7 +282,7 @@ async fn finalize_sourcemaps(
           let map_filename = ecma_meta
             .sourcemap_filename
             .clone()
-            .unwrap_or_else(|| format!("{}.map", asset.filename));
+            .unwrap_or_else(|| concat_string!(asset.filename, ".map"));
           if let Some(sourcemap_asset) = emit_sourcemap(
             options,
             &mut code,

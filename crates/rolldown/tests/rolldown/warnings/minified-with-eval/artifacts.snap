@@ -23,7 +23,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 function g0(n) {
 	console.log("Hello, " + n + "!");
 }
@@ -105,6 +105,5 @@ function g19(n) {
 	console.log("Hello, " + n + "!");
 }
 g19("World");
-//#endregion
 
 ```

@@ -12,6 +12,8 @@ export default defineTest({
   async afterTest(output) {
     const code = output.output[0].code;
     expect(code).toContain('function(ext)');
-    expect(code).toContain('module.exports = { ...ext }');
+    expect(code).toContain(
+      'module.exports = Object.prototype.hasOwnProperty.call(ext, "module.exports") ? ext["module.exports"] : { ...ext }',
+    );
   },
 });

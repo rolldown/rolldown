@@ -6,9 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-//#region a.js
+// a.js
 const A = 10;
-//#endregion
 export { A };
 
 ```
@@ -16,9 +15,8 @@ export { A };
 ## b.js
 
 ```js
-//#region b.js
+// b.js
 const A = 10;
-//#endregion
 export { A };
 
 ```
@@ -26,15 +24,13 @@ export { A };
 ## entrya.js
 
 ```js
-import { A } from "./a.js";
-export { A };
+export { A } from "./a.js";
 
 ```
 
 ## entryb.js
 
 ```js
-import { A } from "./b.js";
-export { A };
+export { A } from "./b.js";
 
 ```

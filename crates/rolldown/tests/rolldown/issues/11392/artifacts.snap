@@ -1,0 +1,83 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## data.js
+
+```js
+export { t as default } from "./data2.js";
+
+```
+
+## data2.js
+
+```js
+// data.json
+var data_default = { k: 1 };
+export { data_default as t };
+
+```
+
+## main.js
+
+```js
+import assert from "node:assert";
+// main.js
+const ns = await import("./data.js");
+assert.strictEqual(ns.default.k, 1);
+
+```
+
+# Variant: strict: [strict_execution_order: true]
+
+## Assets
+
+### data.js
+
+```js
+import { n as init_data, t as data_default } from "./data2.js";
+init_data();
+export { data_default as default };
+
+```
+
+### data2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+// data.json
+var data_default;
+function init_data() {
+	return (init_data = __esmMin((() => {
+		data_default = { k: 1 };
+	})))();
+}
+export { init_data as n, data_default as t };
+
+```
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import assert from "node:assert";
+// main.js
+var ns;
+function init_main() {
+	return (init_main = __esmMin((async () => {
+		ns = await import("./data.js");
+		assert.strictEqual(ns.default.k, 1);
+	})))();
+}
+await init_main();
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```

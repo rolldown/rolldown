@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## namespace-after.js
 
 ```js
-//#region namespace-after.ts
+// namespace-after.ts
 var x = /* @__PURE__ */ function(x) {
 	x[x["y"] = 123] = "y";
 	return x;
@@ -14,14 +14,13 @@ var x = /* @__PURE__ */ function(x) {
 (function(_x) {
 	console.log(x, y);
 })(x || (x = {}));
-//#endregion
 
 ```
 
 ## namespace-before.js
 
 ```js
-//#region namespace-before.ts
+// namespace-before.ts
 let x;
 (function(_x) {
 	console.log(x, y);
@@ -30,14 +29,13 @@ x = /* @__PURE__ */ function(x) {
 	x[x["y"] = 123] = "y";
 	return x;
 }(x || {});
-//#endregion
 
 ```
 
 ## sibling-enum-after.js
 
 ```js
-//#region sibling-enum-after.ts
+// sibling-enum-after.ts
 var x = /* @__PURE__ */ function(x) {
 	x[x["y"] = 123] = "y";
 	return x;
@@ -47,14 +45,13 @@ x = /* @__PURE__ */ function(x) {
 	return x;
 }(x || {});
 console.log(x);
-//#endregion
 
 ```
 
 ## sibling-enum-before.js
 
 ```js
-//#region sibling-enum-before.ts
+// sibling-enum-before.ts
 console.log(x);
 var x = /* @__PURE__ */ function(x) {
 	x[x["y"] = 123] = "y";
@@ -64,14 +61,13 @@ x = /* @__PURE__ */ function(x) {
 	x[x["z"] = 246] = "z";
 	return x;
 }(x || {});
-//#endregion
 
 ```
 
 ## sibling-enum-middle.js
 
 ```js
-//#region sibling-enum-middle.ts
+// sibling-enum-middle.ts
 var x = /* @__PURE__ */ function(x) {
 	x[x["y"] = 123] = "y";
 	return x;
@@ -81,37 +77,33 @@ x = /* @__PURE__ */ function(x) {
 	x[x["z"] = 246] = "z";
 	return x;
 }(x || {});
-//#endregion
 
 ```
 
 ## sibling-member.js
 
 ```js
-//#region sibling-member.ts
+// sibling-member.ts
 console.log(123, 246);
-//#endregion
 
 ```
 
 ## simple-enum.js
 
 ```js
-//#region simple-enum.ts
+// simple-enum.ts
 var x = /* @__PURE__ */ function(x) {
 	x[x["y"] = 123] = "y";
 	return x;
 }(x || {});
 console.log(x);
-//#endregion
 
 ```
 
 ## simple-member.js
 
 ```js
-//#region simple-member.ts
+// simple-member.ts
 console.log(123);
-//#endregion
 
 ```

@@ -7,7 +7,11 @@ import { editFile, errorOverlayText, page, waitForBuildStable } from '~utils';
 // `pending_rescans`, so dep's new content reaches the browser only when
 // dep.js itself changes again.
 
-describe('hmr-hot-update-hook-error', () => {
+// SKIPPED: the `hotUpdate` hook is off by default (`hotUpdate` dev
+// option, see rolldown/rolldown#10714). This playground runs on Vite's bundled
+// dev, which does not pass that option yet; un-skip once Vite can enable it
+// (vitejs/vite#22956).
+describe.skip('hmr-hot-update-hook-error', () => {
   test('renders the initial values', async () => {
     await waitForBuildStable();
     await expect.poll(() => page.textContent('.dep')).toBe('dep-v1');

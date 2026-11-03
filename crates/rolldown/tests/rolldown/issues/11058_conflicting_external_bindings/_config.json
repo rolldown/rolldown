@@ -1,0 +1,13 @@
+{
+  "_comment": "https://github.com/rolldown/rolldown/issues/11058. `main.js` drops and warns about each ambiguous name: `T` resolves to two different bindings of `ext`, `U` to a binding of `ext` and a declaration, and `N` to the namespaces of `ext` and `ext2`. `S` and `M` resolve to the same binding twice and stay exported. Without ESM output, a namespace import links to the external module's namespace symbol, so the CJS variant checks that `N` still warns.",
+  "expectExecuted": false,
+  "expectWarning": true,
+  "config": {
+    "external": ["ext", "ext2"]
+  },
+  "configVariants": [
+    {
+      "format": "cjs"
+    }
+  ]
+}

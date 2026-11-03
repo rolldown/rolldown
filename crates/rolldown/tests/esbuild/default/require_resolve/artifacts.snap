@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 console.log(require.resolve);
 console.log(require.resolve());
 console.log(require.resolve(foo));
@@ -26,6 +26,5 @@ console.log(0);
 console.log(false);
 console.log(true);
 console.log(true);
-//#endregion
 
 ```

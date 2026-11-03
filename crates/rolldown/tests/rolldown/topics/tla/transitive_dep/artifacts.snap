@@ -6,11 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region tla.js
-//#endregion
-//#region lib.js
+// lib.js
 const value = await Promise.resolve("tla") + "+lib";
-//#endregion
 export { value };
 
 ```
@@ -23,15 +20,14 @@ export { value };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region tla.js
+// tla.js
 var value$1;
 function init_tla() {
 	return (init_tla = __esmMin((async () => {
 		value$1 = await Promise.resolve("tla");
 	})))();
 }
-//#endregion
-//#region lib.js
+// lib.js
 var value;
 function init_lib() {
 	return (init_lib = __esmMin((async () => {
@@ -39,14 +35,12 @@ function init_lib() {
 		value = value$1 + "+lib";
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((async () => {
 		await init_lib();
 	})))();
 }
-//#endregion
 await init_main();
 export { value };
 
@@ -59,11 +53,8 @@ export { value };
 ### main.js
 
 ```js
-//#region tla.js
-//#endregion
-//#region lib.js
+// lib.js
 const value = await Promise.resolve("tla") + "+lib";
-//#endregion
 export { value };
 
 ```

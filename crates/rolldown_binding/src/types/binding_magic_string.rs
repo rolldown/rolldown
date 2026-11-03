@@ -4,13 +4,12 @@ use std::borrow::Cow;
 use napi::bindgen_prelude::{Either, This};
 use napi::{Env, JsString};
 use napi_derive::napi;
+use oxc_napi::JsRegExp;
 use rolldown_sourcemap::{JSONSourceMap, SourceMap};
 use rolldown_utils::base64::to_standard_base64;
 use rolldown_utils::js_regex::{HybridMatch, HybridRegex};
 use serde::Serialize;
 use string_wizard::{MagicString, MagicStringOptions, SourceMapOptions, UpdateOptions};
-
-use super::js_regex::JsRegExp;
 
 /// Internal representation preserving the original JS format (flat `[start, end]` vs nested
 /// `[[start, end], ...]`) so the getter returns the same shape the user passed in.
@@ -305,7 +304,7 @@ impl BindingSourceMap {
   /// The list of source indices that should be excluded from debugging.
   #[napi(getter, js_name = "x_google_ignoreList")]
   pub fn x_google_ignore_list(&self) -> Option<Vec<u32>> {
-    self.json.x_google_ignore_list.clone()
+    self.json.ignore_list.clone()
   }
 
   /// Returns the source map as a JSON string.
@@ -318,7 +317,7 @@ impl BindingSourceMap {
       sources_content: self.json.sources_content.as_ref(),
       names: &self.json.names,
       mappings: &self.json.mappings,
-      x_google_ignore_list: self.json.x_google_ignore_list.as_ref(),
+      x_google_ignore_list: self.json.ignore_list.as_ref(),
     };
     serde_json::to_string(&serializable).expect("should be able to serialize source map")
   }
@@ -399,7 +398,7 @@ impl BindingDecodedMap {
   /// The list of source indices that should be excluded from debugging.
   #[napi(getter, js_name = "x_google_ignoreList")]
   pub fn x_google_ignore_list(&self) -> Option<Vec<u32>> {
-    self.json.x_google_ignore_list.clone()
+    self.json.ignore_list.clone()
   }
 }
 
@@ -546,7 +545,7 @@ impl BindingMagicString<'_> {
         let start = if global || !is_sticky {
           0
         } else {
-          match self.utf16_to_byte_mapper.utf16_to_byte(js_regex.last_index as u32) {
+          match self.utf16_to_byte_mapper.utf16_to_byte(js_regex.last_index) {
             Some(byte_offset) => byte_offset as usize,
             None => return Ok(None),
           }
@@ -1260,7 +1259,7 @@ impl BindingMagicString<'_> {
         None,
       );
       if self.ignore_list {
-        m.set_x_google_ignore_list(vec![0]);
+        m.set_ignore_list(vec![0]);
       }
       m
     } else {
@@ -1302,7 +1301,7 @@ impl BindingMagicString<'_> {
         None,
       );
       if self.ignore_list {
-        m.set_x_google_ignore_list(vec![0]);
+        m.set_ignore_list(vec![0]);
       }
       m
     } else {

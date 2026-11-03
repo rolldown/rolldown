@@ -1,6 +1,6 @@
 use rolldown_common::{
-  ModuleIdx, ModuleNamespaceIncludedReason, RuntimeHelper, StmtInfos, UsedSymbolRefsBuilder,
-  WrapKind,
+  ModuleIdx, ModuleNamespaceIncludedReason, RuntimeHelper, StmtInfos, SymbolRef,
+  UsedSymbolRefsBuilder, WrapKind,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -23,7 +23,7 @@ impl GenerateStage<'_> {
   pub(super) fn narrow_namespace_stmt_to_used_symbols(
     &mut self,
     entry_module_idx: ModuleIdx,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
   ) {
     let runtime_module_idx = self.link_output.runtime.id();
     let wrap_kind = self.link_output.metas[entry_module_idx].wrap_kind();
@@ -34,13 +34,29 @@ impl GenerateStage<'_> {
     // Instead, we should include the wrapper_ref (`require_xxx`), which will be handled
     // in the `include_simulated_facade_namespace` call.
     if !matches!(wrap_kind, WrapKind::Cjs) {
+      let dynamically_read_names = self.link_output.metas[entry_module_idx]
+        .dynamically_read_export_names(
+          self.link_output.dynamic_import_exports_usage_map.get(&entry_module_idx),
+        );
+      let dynamically_read = dynamically_read_names.map(|names| {
+        let meta = &self.link_output.metas[entry_module_idx];
+        names
+          .iter()
+          .filter_map(|name| meta.resolved_exports.get(name))
+          .map(|export| self.link_output.symbol_db.canonical_ref_for(export.symbol_ref))
+          .collect::<FxHashSet<SymbolRef>>()
+      });
       // Filter in place to avoid cloning
       self.link_output.stmt_infos[entry_module_idx][StmtInfos::NAMESPACE_STMT_IDX]
         .referenced_symbols
         .retain(|item| match item {
           rolldown_common::SymbolOrMemberExprRef::Symbol(symbol_ref) => {
             // module namespace symbol requires `__exportAll` runtime helper
-            used_symbol_refs.contains(symbol_ref) || symbol_ref.owner == runtime_module_idx
+            symbol_ref.owner == runtime_module_idx
+              || (used_symbol_refs_builder.contains(symbol_ref)
+                && dynamically_read.as_ref().is_none_or(|read| {
+                  read.contains(&self.link_output.symbol_db.canonical_ref_for(*symbol_ref))
+                }))
           }
           rolldown_common::SymbolOrMemberExprRef::MemberExpr(_member_expr_ref) => true,
         });
@@ -53,7 +69,7 @@ impl GenerateStage<'_> {
   /// When `f` returns `true`, the `__exportAll` runtime helper is included as well.
   pub(super) fn replay_link_stage_inclusion(
     &mut self,
-    used_symbol_refs: &mut UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
     f: impl FnOnce(&mut IncludeContext<'_>) -> bool,
   ) {
     let (mut stmt_info_included_vec, mut module_included_vec, mut module_namespace_reason_vec) =
@@ -77,7 +93,7 @@ impl GenerateStage<'_> {
       tree_shaking: self.options.treeshake.is_some(),
       runtime_idx: self.link_output.runtime.id(),
       metas: &self.link_output.metas,
-      used_symbol_refs,
+      used_symbol_refs_builder,
       used_external_symbols: &mut self.link_output.used_external_symbols,
       constant_symbol_map: &self.link_output.global_constant_symbol_map,
       options: self.options,
@@ -91,6 +107,7 @@ impl GenerateStage<'_> {
       entry_module_idxs: &self.link_output.user_defined_entry_modules,
       body_demand_keys: &body_demand_keys,
       body_demand_swept: FxHashSet::default(),
+      deferred_forwarding_refs: FxHashMap::default(),
       pending: Vec::new(),
     };
 

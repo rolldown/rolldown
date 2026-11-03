@@ -31,7 +31,7 @@ export default function resolveFirst() {
 
 - Type: [`HookFilter`](/reference/Interface.HookFilter) | `TopLevelFilterExpression`[] (depends on hook)
 
-Run this plugin hook only when the specified filter returns true. This property is only available for [`resolveId`](/reference/Interface.Plugin#resolveid), [`load`](/reference/Interface.Plugin#load), [`transform`](/reference/Interface.Plugin#transform) hooks.
+Run this plugin hook only when the specified filter returns true. This property is only available for [`resolveId`](/reference/Interface.Plugin#resolveid), [`load`](/reference/Interface.Plugin#load), [`transform`](/reference/Interface.Plugin#transform), and [`renderChunk`](/reference/Interface.Plugin#renderchunk) hooks. See [Plugin Hook Filters](/apis/plugin-api/hook-filters) for the properties supported by each hook.
 
 #### Example
 

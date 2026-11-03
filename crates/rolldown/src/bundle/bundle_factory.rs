@@ -1,10 +1,9 @@
 use std::{any::Any, sync::Arc};
 
-use arcstr::ArcStr;
 use dashmap::DashMap;
 use rolldown_common::{
   BundleMode, BundlerOptions, FileEmitter, ModuleIdx, NormalizedBundlerOptions, SharedFileEmitter,
-  SharedModuleInfoDashMap,
+  SharedModuleInfoDashMap, WatchPath,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, EventKindSwitcher};
 use rolldown_fs::{FileSystem, OsFileSystem};
@@ -49,7 +48,7 @@ pub struct BundleFactory {
   module_infos_for_incremental_build: SharedModuleInfoDashMap,
 
   // Used to preserve transform dependencies (from addWatchFile) across incremental builds for HMR
-  transform_dependencies_for_incremental_build: Arc<DashMap<ModuleIdx, Arc<FxDashSet<ArcStr>>>>,
+  transform_dependencies_for_incremental_build: Arc<DashMap<ModuleIdx, Arc<FxDashSet<WatchPath>>>>,
 
   // Used to generate unique id for each bundle process
   bundle_id_seed: u32,
@@ -161,10 +160,8 @@ impl BundleFactory {
     resolver: SharedResolver<Fs>,
     cache: ScanStageCache,
   ) -> Bundle<Fs> {
-    // Every build passes through here exactly once before any scan/link work
-    // starts. Wait for the previous build's deferred drops to retire so they
-    // can never overlap this build's rayon work; a no-op in steady state.
-    // See `utils::defer_drop` for the full invariant.
+    // Sole entry point for every build: retire the previous build's deferred
+    // drops before any scan/link work touches the rayon pool.
     crate::utils::defer_drop::drain();
 
     let bundle_span = self.generate_unique_bundle_span();

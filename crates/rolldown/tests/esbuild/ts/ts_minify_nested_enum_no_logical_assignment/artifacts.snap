@@ -12,7 +12,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## b.js
 
 ```js
-//#region b.ts
+// b.ts
 function foo() {
 	return /* @__PURE__ */ function(Foo) {
 		Foo[Foo["X"] = 0] = "X";
@@ -21,7 +21,6 @@ function foo() {
 		return Foo;
 	}({});
 }
-//#endregion
 export { foo };
 
 ```

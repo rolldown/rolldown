@@ -48,28 +48,8 @@ impl BindingDevEngine {
 
     let rebuild_strategy =
       dev_options.as_ref().and_then(|opts| opts.rebuild_strategy).map(Into::into);
-    // Take ownership of watch so we can consume Vec fields (include/exclude).
-    let watch_options = dev_options.and_then(|opts| opts.watch);
-    let watcher_enabled = watch_options.as_ref().and_then(|watch| watch.enabled);
-    let skip_write = watch_options.as_ref().and_then(|watch| watch.skip_write);
-    let use_polling = watch_options.as_ref().and_then(|watch| watch.use_polling);
-    let poll_interval = watch_options.as_ref().and_then(|watch| watch.poll_interval);
-    let use_debounce = watch_options.as_ref().and_then(|watch| watch.use_debounce);
-    let debounce_duration = watch_options.as_ref().and_then(|watch| watch.debounce_duration);
-    let compare_contents_for_polling =
-      watch_options.as_ref().and_then(|watch| watch.compare_contents_for_polling);
-    let debounce_tick_rate = watch_options.as_ref().and_then(|watch| watch.debounce_tick_rate);
-    let (watch_include, watch_exclude) = watch_options
-      .map(|watch| {
-        let include = watch
-          .include
-          .map(crate::types::binding_string_or_regex::bindingify_string_or_regex_array);
-        let exclude = watch
-          .exclude
-          .map(crate::types::binding_string_or_regex::bindingify_string_or_regex_array);
-        (include, exclude)
-      })
-      .unwrap_or((None, None));
+    let hot_update = dev_options.as_ref().and_then(|opts| opts.hot_update);
+    let dev_watch_options = dev_options.and_then(|opts| opts.watch).map(Into::into);
 
     // Create bundler config
     let bundler_config = create_bundler_config_from_binding_options(options)?;
@@ -108,7 +88,7 @@ impl BindingDevEngine {
       let cwd = Arc::<Path>::clone(&cwd);
       Arc::new(move |result: rolldown_error::BuildResult<rolldown::BundleOutput>| {
         let binding_result: BindingResult<BindingOutputs> = match result {
-          Ok(bundle_output) => Either::B(BindingOutputs::from(bundle_output.assets)),
+          Ok(bundle_output) => Either::B(BindingOutputs::from(bundle_output)),
           Err(errors) => {
             let binding_errors: Vec<_> = errors
               .iter()
@@ -125,37 +105,10 @@ impl BindingDevEngine {
     // `on_output`). Forward the assets; warnings stay Rust-side, as in `on_output`.
     let on_additional_assets = on_additional_assets_callback.map(|js_callback| {
       Arc::new(move |output: rolldown::BundleOutput| {
-        let binding_outputs = BindingOutputs::from(output.assets);
+        let binding_outputs = BindingOutputs::from(output);
         js_callback.call(FnArgs { data: (binding_outputs,) }, ThreadsafeFunctionCallMode::Blocking);
       }) as OnAdditionalAssetsCallback
     });
-
-    let dev_watch_options = if watcher_enabled.is_some()
-      || skip_write.is_some()
-      || use_polling.is_some()
-      || poll_interval.is_some()
-      || use_debounce.is_some()
-      || debounce_duration.is_some()
-      || compare_contents_for_polling.is_some()
-      || debounce_tick_rate.is_some()
-      || watch_include.is_some()
-      || watch_exclude.is_some()
-    {
-      Some(rolldown_dev::DevWatchOptions {
-        disable_watcher: watcher_enabled.map(|enabled| !enabled),
-        skip_write,
-        use_polling,
-        poll_interval: poll_interval.map(u64::from),
-        use_debounce,
-        debounce_duration: debounce_duration.map(u64::from),
-        compare_contents_for_polling,
-        debounce_tick_rate: debounce_tick_rate.map(u64::from),
-        include: watch_include,
-        exclude: watch_exclude,
-      })
-    } else {
-      None
-    };
 
     let rolldown_dev_options = rolldown_dev::DevOptions {
       on_hmr_updates,
@@ -163,6 +116,7 @@ impl BindingDevEngine {
       on_additional_assets,
       rebuild_strategy,
       watch: dev_watch_options,
+      hot_update,
     };
 
     let inner = rolldown_dev::DevEngine::new(bundler_config, rolldown_dev_options)
@@ -251,8 +205,9 @@ impl BindingDevEngine {
     })
   }
 
-  /// Delivery notification from the serving middleware: the response for
-  /// `filename` completed, so record its modules as shipped to that client.
+  /// Delivery notification for the payload `filename`: the client reported that it
+  /// ran the payload, so record its modules as shipped to that client. See
+  /// `DevEngine::notify_payload_delivered`.
   #[napi(ts_return_type = "Promise<void>")]
   pub fn notify_payload_delivered<'env>(
     &self,
@@ -293,25 +248,32 @@ impl BindingDevEngine {
   /// This is called when a dynamically imported module is first requested at runtime.
   /// The module was previously stubbed with a proxy, and now we need to compile the
   /// actual module and its dependencies.
+  /// Failures come back as `BindingErrors`, the same shape the build and HMR callbacks
+  /// use, rather than as a napi error carrying a formatted string. A lazy compile runs the
+  /// full plugin pipeline, so what fails here is usually a user plugin - and `to_binding_error`
+  /// hands its thrown JS error back untouched, keeping the stack and the diagnostic's module
+  /// id instead of flattening both into a message.
   #[napi]
   pub fn compile_entry<'env>(
     &self,
     env: &'env Env,
     module_id: String,
     client_id: String,
-  ) -> napi::Result<PromiseRaw<'env, BindingLazyChunkOutput>> {
+  ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingLazyChunkOutput>>> {
     let inner = Arc::clone(&self.inner);
+    let cwd = Arc::<Path>::clone(&self.cwd);
     spawn_boxed_future(env, async move {
-      inner
-        .compile_lazy_entry(module_id, client_id)
-        .await
-        .map(|output| BindingLazyChunkOutput {
+      Ok(match inner.compile_lazy_entry(module_id, client_id).await {
+        Ok(output) => Either::B(BindingLazyChunkOutput {
           code: output.code,
           filename: output.filename,
           sourcemap: output.sourcemap,
           sourcemap_filename: output.sourcemap_filename,
-        })
-        .map_err(|e| napi::Error::from_reason(format!("Failed to compile lazy entry: {e:#?}")))
+        }),
+        Err(errors) => Either::A(BindingErrors::new(
+          errors.iter().map(|diagnostic| to_binding_error(diagnostic, cwd.to_path_buf())).collect(),
+        )),
+      })
     })
   }
 

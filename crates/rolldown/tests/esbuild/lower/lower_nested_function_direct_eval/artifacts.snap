@@ -98,89 +98,81 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## 1.js
 
 ```js
-//#region 1.js
+// 1.js
 if (foo) {}
-//#endregion
 
 ```
 
 ## 2.js
 
 ```js
-//#region 2.js
+// 2.js
 if (foo) {
 	function x() {}
 	eval("");
 }
-//#endregion
 
 ```
 
 ## 3.js
 
 ```js
-//#region 3.js
+// 3.js
 if (foo) {
 	function x() {}
 	if (bar) eval("");
 }
-//#endregion
 
 ```
 
 ## 4.js
 
 ```js
-//#region 4.js
+// 4.js
 if (foo) {
 	eval("");
 	function x() {}
 }
-//#endregion
 
 ```
 
 ## 5.js
 
 ```js
-//#region 5.js
+// 5.js
 if (foo) {}
-//#endregion
 
 ```
 
 ## 6.js
 
 ```js
-//#region 6.js
+// 6.js
 if (foo) {
 	function x() {}
 	eval("");
 }
-//#endregion
 
 ```
 
 ## 7.js
 
 ```js
-//#region 7.js
+// 7.js
 if (foo) {
 	function x() {}
 	if (bar) eval("");
 }
-//#endregion
 
 ```
 
 ## 8.js
 
 ```js
-//#region 8.js
+// 8.js
 if (foo) {
 	eval("");
 	function x() {}
 }
-//#endregion
 
 ```

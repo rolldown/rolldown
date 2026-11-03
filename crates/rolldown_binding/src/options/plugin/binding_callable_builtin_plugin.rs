@@ -138,8 +138,19 @@ impl BindingCallableBuiltinPlugin {
     AsyncBlockBuilder::with(async move {
       let module_idx = rolldown_common::ModuleIdx::new(0);
       let load_ctx = Arc::new(LoadPluginContext::new(context.inner.clone(), module_idx));
+      let (raw_id, attributes) =
+        ImportAttributes::parse_module_id(&id).unwrap_or((&id, ImportAttributes::default()));
       plugin
-        .call_load(load_ctx, &HookLoadArgs { id: &id, module_idx, asserted_module_type: None })
+        .call_load(
+          load_ctx,
+          &HookLoadArgs {
+            id: &id,
+            raw_id,
+            attributes: &attributes,
+            module_idx,
+            asserted_module_type: None,
+          },
+        )
         .await
         .map_err(AnyHowMaybeNapiError::into_napi_error)
         .map(|result| result.map(Into::into))

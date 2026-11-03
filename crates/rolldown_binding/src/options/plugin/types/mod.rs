@@ -5,6 +5,7 @@ pub mod binding_emitted_chunk;
 pub mod binding_emitted_prebuilt_chunk;
 pub mod binding_filter_expression;
 pub mod binding_hook_filter;
+pub mod binding_hook_load_extra_args;
 pub mod binding_hook_load_output;
 pub mod binding_hook_render_chunk_output;
 pub mod binding_hook_resolve_dynamic_import_extra_args;

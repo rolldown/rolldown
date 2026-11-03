@@ -273,7 +273,11 @@ impl Plugin for JsPlugin {
       }
     }
 
-    let extra_args = BindingTransformHookExtraArgs { module_type: args.module_type.to_string() };
+    let extra_args = BindingTransformHookExtraArgs {
+      module_type: args.module_type.to_string(),
+      raw_id: (!args.attributes.is_empty()).then(|| args.raw_id.to_string()),
+      attributes: to_binding_import_attributes(args.attributes),
+    };
 
     let span =
       debug_span!("transform_hook", plugin_name = self.name, result_kind = tracing::field::Empty);

@@ -169,6 +169,15 @@ export class PluginContextData {
     return this.normalizedOutputOptions;
   }
 
+  /**
+   * Module options belong to one full scan, as in Rollup: every hook runs again for every module,
+   * so an option a hook stopped returning must not survive. A partial scan keeps them, because
+   * unchanged modules are not fetched again.
+   */
+  resetModuleOptions(): void {
+    this.moduleOptionMap.clear();
+  }
+
   clear(): void {
     this.renderedChunkMeta = null;
     this.loadModulePromiseMap.clear();

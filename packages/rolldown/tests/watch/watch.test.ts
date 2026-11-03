@@ -1743,3 +1743,53 @@ test.concurrent(
     expect(fs.existsSync(output)).toBe(false);
   },
 );
+
+// https://github.com/rolldown/rolldown/issues/11223
+test.concurrent(
+  'a later build does not keep the `moduleSideEffects: false` of an earlier build',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput('watch-reset-side-effects', retryCount);
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+    const source = path.join(dir, 'mod-source.js');
+    fs.writeFileSync(input, `import 'virtual:mod'`);
+    fs.writeFileSync(source, 'export const value = 1');
+
+    const watcher = watch({
+      input,
+      output: { file: output },
+      plugins: [
+        {
+          name: 'toggle-side-effects',
+          resolveId: (id) => (id === 'virtual:mod' ? '\0virtual:mod' : undefined),
+          load(id) {
+            if (id !== '\0virtual:mod') return;
+            this.addWatchFile(source);
+            return fs.readFileSync(source, 'utf8');
+          },
+          transform(code, id) {
+            if (id !== '\0virtual:mod') return;
+            // No opinion once the module has a top-level effect.
+            return code.includes('EFFECT') ? { code } : { code, moduleSideEffects: false };
+          },
+        },
+      ],
+    });
+
+    try {
+      await waitBuildFinished(watcher);
+      expect(fs.readFileSync(output, 'utf-8')).not.toContain('EFFECT');
+
+      await editFile(source, 'globalThis.EFFECT = true\nexport const value = 1');
+      await waitBuildFinished(watcher);
+      expect(fs.readFileSync(output, 'utf-8')).toContain('EFFECT');
+    } finally {
+      await watcher.close();
+    }
+  },
+);

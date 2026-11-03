@@ -1,6 +1,13 @@
 //! Drop heavy values on a dedicated serial worker instead of the caller's
 //! thread or the shared Rayon pool.
 //!
+//! On a 20k-module build, deferring the link stage output takes ~15ms of
+//! frees off the caller's thread.
+//!
+//! [`drain`] also waits for other bundlers' queued drops, which the worker
+//! frees one at a time. That cost is accepted as cheaper than tracking drops
+//! per bundler.
+//!
 //! Call-site rules:
 //!
 //! - [`drain`] must run at every entry that starts scan/link/render work on

@@ -219,4 +219,10 @@ export interface ChecksOptions {
    * @default true
    * */
   deprecatedImportAssertion?: boolean;
+
+  /**
+   * Whether to emit warnings when the options of a dynamic import are not statically analyzable while `experimental.importAttributes` is on.
+   * @default true
+   * */
+  invalidImportAttribute?: boolean;
 }

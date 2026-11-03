@@ -60,5 +60,6 @@ bitflags! {
     const NamespaceConflict = 1 << 50;
     const ShimmedExport = 1 << 51;
     const DeprecatedImportAssertion = 1 << 54;
+    const InvalidImportAttribute = 1 << 55;
   }
 }

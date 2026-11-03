@@ -8,8 +8,8 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use derive_more::Debug;
 use rolldown_common::{
-  FilenameTemplate, LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleId, ModuleLoaderMsg,
-  PackageJson, PluginIdx, ResolvedId, SharedFileEmitter, SharedModuleInfoDashMap,
+  FilenameTemplate, ImportAttributes, LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleId,
+  ModuleLoaderMsg, PackageJson, PluginIdx, ResolvedId, SharedFileEmitter, SharedModuleInfoDashMap,
   SharedNormalizedBundlerOptions, WatchPath, side_effects::HookSideEffects,
 };
 use rolldown_resolver::{ResolveError, Resolver};
@@ -119,6 +119,11 @@ impl NativePluginContextImpl {
       None
     };
 
+    // A forwarded `importer` carries the importer's attributes in its id.
+    let importer_raw_id = importer.map(|importer| {
+      ImportAttributes::parse_module_id(importer).map_or(importer, |(raw_id, _)| raw_id)
+    });
+
     // Use the pre-created manual resolve span.
     // When PluginContext.resolve() is called from JavaScript via NAPI, the tracing span
     // context is lost across the async boundary. By making the resolve span a child of
@@ -137,6 +142,8 @@ impl NativePluginContextImpl {
         normalized_extra_options.custom,
         false,
         &self.options,
+        &ImportAttributes::default(),
+        importer_raw_id,
       )
       .await
     }

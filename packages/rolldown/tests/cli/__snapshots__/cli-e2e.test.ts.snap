@@ -39,6 +39,7 @@ OPTIONS
   --checks.importIsUndefined  Whether to emit warnings when an imported variable is not exported.
   --checks.ineffectiveDynamicImport Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
   --checks.invalidAnnotation  Whether to emit warnings when a \`#__PURE__\` / \`@__PURE__\` annotation has no effect due to its position.
+  --checks.invalidImportAttribute Whether to emit warnings when the options of a dynamic import are not statically analyzable while \`experimental.importAttributes\` is on.
   --checks.largeBarrelModules Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000).
   --checks.missingGlobalName  Whether to emit warnings when the \`output.globals\` option is missing when needed.
   --checks.missingNameOptionForIifeExport Whether to emit warnings when the \`output.name\` option is missing when needed.
@@ -195,6 +196,7 @@ OPTIONS
   --checks.importIsUndefined  Whether to emit warnings when an imported variable is not exported.
   --checks.ineffectiveDynamicImport Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
   --checks.invalidAnnotation  Whether to emit warnings when a \`#__PURE__\` / \`@__PURE__\` annotation has no effect due to its position.
+  --checks.invalidImportAttribute Whether to emit warnings when the options of a dynamic import are not statically analyzable while \`experimental.importAttributes\` is on.
   --checks.largeBarrelModules Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000).
   --checks.missingGlobalName  Whether to emit warnings when the \`output.globals\` option is missing when needed.
   --checks.missingNameOptionForIifeExport Whether to emit warnings when the \`output.name\` option is missing when needed.
@@ -351,6 +353,7 @@ OPTIONS
   --checks.importIsUndefined  Whether to emit warnings when an imported variable is not exported.
   --checks.ineffectiveDynamicImport Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
   --checks.invalidAnnotation  Whether to emit warnings when a \`#__PURE__\` / \`@__PURE__\` annotation has no effect due to its position.
+  --checks.invalidImportAttribute Whether to emit warnings when the options of a dynamic import are not statically analyzable while \`experimental.importAttributes\` is on.
   --checks.largeBarrelModules Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000).
   --checks.missingGlobalName  Whether to emit warnings when the \`output.globals\` option is missing when needed.
   --checks.missingNameOptionForIifeExport Whether to emit warnings when the \`output.name\` option is missing when needed.
@@ -507,6 +510,7 @@ OPTIONS
   --checks.importIsUndefined  Whether to emit warnings when an imported variable is not exported.
   --checks.ineffectiveDynamicImport Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
   --checks.invalidAnnotation  Whether to emit warnings when a \`#__PURE__\` / \`@__PURE__\` annotation has no effect due to its position.
+  --checks.invalidImportAttribute Whether to emit warnings when the options of a dynamic import are not statically analyzable while \`experimental.importAttributes\` is on.
   --checks.largeBarrelModules Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000).
   --checks.missingGlobalName  Whether to emit warnings when the \`output.globals\` option is missing when needed.
   --checks.missingNameOptionForIifeExport Whether to emit warnings when the \`output.name\` option is missing when needed.

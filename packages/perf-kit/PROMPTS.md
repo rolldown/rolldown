@@ -6,9 +6,7 @@ the other text as it is. Do not tell the agent how to measure or profile. The ma
 that. A prompt that also does it moves the agent away from the manual.
 
 The Tools paragraph is the only part that names perf-kit. For an A/B test, the same prompt
-without the Tools paragraph is the control prompt. The last sentence of the Tools paragraph
-is temporary: no rolldown release has the report mode yet. Remove that sentence when a
-release has it.
+without the Tools paragraph is the control prompt.
 
 ## Browser page load
 
@@ -22,7 +20,6 @@ and first contentful paint). Measure them on a throttled mobile profile: fast
 result against it. Runs are noisy. You decide the run count.
 
 Tools: run `npx @rolldown/perf-kit help` first. Its AGENTS.md is the manual.
-For its `rolldown-install --from`, a built rolldown is at <path>.
 
 Rules:
 - Do not remove features.
@@ -51,8 +48,7 @@ change. Report every result against it. Runs are noisy. You decide the run
 count.
 
 Tools: run `npx @rolldown/perf-kit help` first. Its AGENTS.md is the manual.
-Read its server section. For its `rolldown-install --from`, a built rolldown
-is at <path>.
+Read its server section.
 
 Rules:
 - Do not remove features.
@@ -69,6 +65,9 @@ Report:
 
 ## Cloudflare Worker startup
 
+Worker startup commands are not included in perf-kit 0.0.1. Use this repo's copy
+and replace `<perf-kit path>` below with its absolute path.
+
 ```text
 Cut the cold start of our Cloudflare Worker at <repo path>. Dependencies are
 installed with <pm>.
@@ -77,9 +76,8 @@ The number that counts is `wrangler check startup` on the built Worker. Take
 a baseline before any change. Report every result against it. Runs are
 noisy. You decide the run count.
 
-Tools: run `npx @rolldown/perf-kit help` first. Its AGENTS.md is the manual.
-Read its Cloudflare Worker section. For its `rolldown-install --from`, a
-built rolldown is at <path>.
+Tools: run `node <perf-kit path>/harness.mjs help` first. Its AGENTS.md is the
+manual. Read its Cloudflare Worker section.
 
 Rules:
 - Do not remove features.

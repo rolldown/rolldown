@@ -58,7 +58,7 @@ Prefer running the build on the builder's native architecture when possible. A s
 
 ### Plugins
 
-Plugins extend Rolldown's functionality, but can also introduce performance overhead.
+Plugins extend Rolldown's functionality, but can also introduce performance overhead. To see plugin timings for `resolveId`, `load`, `transform` and `renderChunk`, turn on the [build report](/in-depth/build-report) and read its `timing.md`.
 
 #### Plugin Hook Filters
 

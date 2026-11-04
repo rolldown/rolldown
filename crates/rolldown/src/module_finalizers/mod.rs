@@ -2197,20 +2197,28 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     if !self.module_namespace_included {
                       // No name is used, but side effects must still run: `require_foo()`
                       if importee.side_effects.has_side_effects() {
-                        let (importee_wrapper_ref_expr, _) = self.finalized_expr_for_symbol_ref(
+                        let (importee_wrapper_ref_expr, hint) = self.finalized_expr_for_symbol_ref(
                           importee_linking_info.wrapper_ref.unwrap(),
                           false,
                           false,
                         );
-                        let call_expr = ast::Expression::new_call_expression(
-                          SPAN,
-                          importee_wrapper_ref_expr,
-                          None,
-                          [],
-                          false,
-                          self,
-                        );
-                        let stmt = ast::Statement::new_expression_statement(SPAN, call_expr, self);
+                        // For a CJS entry in another chunk, the expression is already its
+                        // `module.exports`, not the `require_foo` wrapper, so do not call it
+                        let require_expr =
+                          if hint.contains(FinalizedExprProcessHint::FromCjsWrapKindEntry) {
+                            importee_wrapper_ref_expr
+                          } else {
+                            ast::Expression::new_call_expression(
+                              SPAN,
+                              importee_wrapper_ref_expr,
+                              None,
+                              [],
+                              false,
+                              self,
+                            )
+                          };
+                        let stmt =
+                          ast::Statement::new_expression_statement(SPAN, require_expr, self);
                         if self.transferred_import_record.contains_key(&rec_idx) {
                           self.transferred_import_record.insert(rec_idx, stmt.to_source_string());
                         } else {

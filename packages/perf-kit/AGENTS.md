@@ -8,6 +8,14 @@ All commands work from any working directory (`node <this dir>/harness.mjs ...`)
 The first `--app <appDir>` is remembered, so afterwards every command can be run
 bare — no paths. Each target app keeps its own state (baseline, history, reports).
 
+Installed from npm, perf-kit runs as `npx <package name> ...` with no install into the
+project; `help` prints the exact spelling and the path of this file. The state then
+goes to `.perf-kit/` under the directory you run it from: keep that directory out of
+commits. In the repository, `packages/rolldown` sits next to perf-kit and is the default
+source of `rolldown-install`. An installed copy has no such neighbour, so pass
+`--from <packages/rolldown of a checkout built with just build-rolldown-release>`
+(see the Worker section).
+
 ## The two commands that matter
 
 - `node harness.mjs scan --app <appDir>` — one browser session that does it all:
@@ -23,6 +31,13 @@ bare — no paths. Each target app keeps its own state (baseline, history, repor
 Individual commands exist too (`measure [--pin]`, `coverage`, `profile`,
 `baseline`, `target [<appDir>] [--demo]`) plus demo-app helpers (README.md).
 
+The throttle is part of the measurement identity. The first scan calibrates a bandwidth
+scale (x1 to x8, with RTT 150 ms and a 4x CPU slowdown) and pins it. To judge the page on
+the network of a deployed environment instead, pin that network:
+`scan --bandwidth <Mbit/s> --rtt <ms> --cpu <rate>`, with the values that a calibrated
+`record` measured (`--cpu 1` = this machine's CPU). A change of either makes the pinned
+baseline incomparable: re-pin on the unchanged build before you judge a change.
+
 On rolldown devtools report builds (vite ≥ 8:
 `build.rolldownOptions.devtools = { mode: "report" }`) several static queries skip the
 import-chain archaeology entirely: `graph` ranks split candidates by **retained size**
@@ -36,7 +51,10 @@ import statements** to make dynamic to detach a module reached by several paths 
 last-hop edges nearest it, the exact files to edit — a min edge cut, which dominator
 retained-size can't answer once several paths reach the module; `--keep` edges are
 protected; `--root a,b` keeps class modules eager with their closure so the cut lands
-below them); and `graph-diff [--against <file>]` reports, deterministically and with no
+below them; on `what-if` and `cut`, `--root` also takes a module that only a dynamic import
+reaches but the app loads on every start (a boot chain of `import()` calls): it joins the
+entries, so both commands price that startup load); and `graph-diff [--against <file>]`
+reports, deterministically and with no
 browser run, what a change did to the initial load (the modules that ENTERED or LEFT the
 eager set with byte deltas) against the pinned baseline graph or any saved sidecar. Rank
 candidates statically with these, then verify the winner's real LCP effect with `scan`.
@@ -85,11 +103,12 @@ on the worker). The loop below is unchanged, with these differences:
 
 - **Startup is the global scope.** `worker.app_startup_ms` is the import of the main module
   and its static closure, timed from the host minus an empty-import floor. Isolate boot
-  sits outside it. Cloudflare's startup limit counts the same scope; the number to quote
-  in a PR comes from `wrangler check startup` on the same build, before and after.
+  sits outside it. `worker-scan` against the pinned baseline is the keep-or-revert signal.
+  Cloudflare's startup limit counts the same scope; the number to quote in a PR comes
+  from `wrangler check startup` on the same build, before and after.
 - **A deferral moves work, it does not delete it.** The first request that needs a deferred
   module pays its load, once per isolate. Pin the routes that matter with `--request` and
-  read the "cost MOVED here" line next to the startup gain. The lab does not know the
+  read the "cost MOVED here" line next to the startup gain. perf-kit does not know the
   route mix; an isolate whose first request needs the module gains nothing.
 - **Durable Object and Workflow classes are roots.** The runtime loads them by name, so their
   modules stay eager with their whole closure. `cut <module> --root <class modules>` lands
@@ -104,12 +123,78 @@ on the worker). The loop below is unchanged, with these differences:
 - **Library top-level work is charged by the attribution build.** When the profile leaves
   milliseconds in "(unmapped)" or in zod, run `worker-attrib` on the `ROLLDOWN_PERF_KIT_ATTRIB=1`
   build: it names the module whose evaluation runs the library code, with the import chain.
+- **The report needs a rolldown with the report mode.** The npm release has none, so with it
+  no build writes `module-graph.json` and `graph`, `what-if`, `cut`, `why` and `graph-diff`
+  have nothing to read. `worker-config` names the app's rolldown when it lacks the mode;
+  `rolldown-install --app <appDir>` copies a built package over the copy the app's vite
+  resolves: the one next to perf-kit in a rolldown checkout, or `--from <packages/rolldown>`
+  of a checkout built with `just build-rolldown-release` (an installed perf-kit has no package
+  next to it, so `--from` is required there). The swap is not a config change;
+  `<package manager> install --force` restores the release. Rebuild and re-pin the
+  baseline after it: the bundler changed.
+- **Read the two delta lines.** `worker-scan` prints `vs pinned baseline` (every change since
+  the pin, added up) and `vs previous scan` (the last change alone). Judge a change by the
+  second line, or re-pin with `--pin` after each kept change so the first line means the same.
+- **The pinned routes must answer 2xx.** A 404 or 5xx never ran the handler, so no moved load
+  can show on it, and the scan says so. Pin routes the app serves. Do not invent a `.dev.vars`
+  to get past a 5xx: without the real variables the first-request numbers stay invalid.
+- **The functional check is the app's own test suite, run the way the repo documents it.** When
+  the test pool fails for environment reasons (port exhaustion, `EADDRNOTAVAIL`), run it serially
+  or in batches. Never reinstall dependencies inside the loop: that undoes `rolldown-install`,
+  and the config shim then refuses to build. Never move or symlink packages inside `node_modules`.
 - **Coverage comes from inside the isolate** and needs Wrangler 4.108.0 or later. When the
   scan reports it unavailable, pass `--tools <dir>` with a newer wrangler for that run, or
   work from the profile and the static graph; do not add the compatibility flags to the app.
 - **Never upload, never deploy, never edit the app's config, variables or bindings to satisfy
   the tool.** A 5xx on the first requests usually means the app needs its `.dev.vars`; startup
   is unaffected, the first-request numbers are not valid until it has them.
+
+## If the lab and production disagree
+
+`field --config <file>` measures the DEPLOYED site in the user's own logged-in Chrome
+(README.md, "Field mode"). It does not replace the loop above; it checks where the lab
+cannot see:
+
+- **Read the critical path first.** When `after gate` is small and `gate ttfb` is most
+  of the LCP, the page waits on the server; only `gate start` (client time before the
+  request the LCP waits for) can move with a bundle change. Optimize what delays that
+  request, not what renders after it.
+- **Judge by the paired deltas and their 90% intervals,** never by one load or by a
+  median of unpaired runs. An interval that crosses 0 is "no measured difference".
+- **Compare `gate - doc`, not only `gate start`,** when the variants come from different
+  servers (a preview worker can answer the HTML hundreds of ms slower than production).
+- **Module rows need a build match.** Read `buildMatch` before quoting a module; with no
+  match only the chunk-level rows are evidence.
+- Field output contains real account traffic. Keep it where the tool writes it; never
+  copy it into a repo, a ticket or a merge request.
+
+`record` + `replay` give field-like numbers for a build that is NOT deployed (README.md,
+"Replay"):
+
+- **Calibrate before any A/B.** `replay --calibrate` on the recorded build must PASS.
+  A FAIL means the model misses something real; find it in `timing.json` (the field
+  waterfalls) before you quote a replay delta.
+- **Read the unrecorded requests.** A page request that the recording never saw gets a
+  404; a candidate that adds an API call is then not measured as it would run.
+- **Record again when the network changes.** Chrome's network rating decides which
+  requests wait; an archive from a fast network says nothing about a slow one.
+- The archive holds real responses. It stays in `$TMPDIR`; never copy it anywhere.
+- **Two agents: hand over the archive path only.** The recording agent runs
+  `node replay.mjs record ... --json` and passes the `archive` path. The replaying
+  agent runs `node replay.mjs inspect --archive <dir> --json` first, then
+  `replay ... --calibrate --json --exit-code`. Exit 2 or `usable: false` means record
+  again; do not edit `archive.json` by hand.
+- **Act on the calibration verdict, not on PASS/FAIL alone.** `record-again` (exit 3,
+  `gaps` not empty): record again with a longer `--settle`, at most twice.
+  `model-error` (exit 1): the archive is complete; do NOT record again, report the rows
+  that are off. Recording again cannot fix a model error.
+- **Keep `--storage warm` for a page that caches data in storage.** The field profile
+  has visited the page before; an empty context measures a first visit instead.
+- **Find leads in the field runs, decide with a replay A/B.** `inspect` →
+  `lateChunksBeforeLcp` lists static chunks that started more than one recorded RTT
+  after a static ancestor finished, in the real field runs. Check in the source whether
+  paint needs them before you change a chunk boundary or a preload. Never quote a
+  discovery delay as a gain.
 
 ## The rendered output must not change
 
@@ -160,7 +245,10 @@ automatically; a shared chunk or stylesheet you change for `/` can break another
      more than one RTT after an ancestor finishes. The download must finish before
      that paint. The check uses `chunk-graph.json` or the current Vite manifest.
      Each example includes an import chain, request timings, and the available
-     source module and initiator. Follow these to the source. Check whether the
+     source module and initiator. Request details also record Chrome's initial
+     priority and priority changes. Check them when testing preload priorities.
+     Repeated URLs and redirects omit ambiguous network evidence.
+     Follow the available source locations to the source. Check whether the
      chunk renders the first visible content or the LCP element. The report marks
      this dependency `unverified`; timing alone cannot prove it. If paint needs
      the chunk, test an earlier preload or a different chunk boundary. If paint
@@ -176,8 +264,16 @@ automatically; a shared chunk or stylesheet you change for `/` can break another
      animation or fade-in wrapper that starts the hero at opacity 0 delays LCP
      until the reveal — LCP counts the first frame the element paints VISIBLE.
      Render the hero visible immediately and animate only decoration.
-   - **pre-paint CPU by module** — warm-up caches, telemetry, data-module
-     evaluation running ahead of paint. Defer what the first render does not need —
+   - **pre-paint CPU by module** — the profile maps all sampled same-origin
+     chunks through their sourcemaps, including dynamic imports. Inspect source
+     rows and their chunk filenames in `profile.json`. Missing maps, unmapped
+     positions, inline scripts, external scripts and mixed top-level lines
+     (`top-level`) stay unattributed. Do not
+     classify a generated filename as engine work. Old entry-only profiles must
+     be collected again. The profile stops at FCP observation; its polling tail
+     can include post-paint work. It does not cover the FCP-to-LCP interval.
+     Sampled time does not prove that work blocks paint or can be deferred.
+     Check warm-up caches, telemetry, and data-module evaluation. Defer what the first render does not need —
      but only judge deferrals AFTER any render gap is fixed (CPU that overlaps a
      blocked render is free, so deferring it can measure worse until then).
    - **cold bytes at paint** — the unified byte view: weight fetched+parsed before
@@ -202,7 +298,11 @@ automatically; a shared chunk or stylesheet you change for `/` can break another
      behind a dynamic import.
    - **sibling variant groups** — locales/themes/config families where one variant is
      active per session: keep the default in the entry, load the active one dynamically.
-   - **statically retained imports** (rolldown builds only) — the module graph's
+   - **statically retained imports** (rolldown builds only) — this view starts
+     at build entries. It does not price dynamic imports that startup immediately
+     executes. Check coverage and CPU evidence for those imports, and pass the modules
+     they load as `--root` to `what-if` / `cut` to price that startup load.
+     The module graph's
      dominator view: any non-framework module retaining ≥100KB on the initial load
      is a priced split candidate; `what-if` shows the exact cut, `cut` the fewest
      import edits when several paths reach it, and `what-if <a> <b>` the combined

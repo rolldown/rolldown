@@ -3,7 +3,7 @@
 // so it can be timed, profiled and covered.
 //
 // workerd evaluates a Worker's main module when it loads the worker, before any request
-// or inspector can observe it. So the worker the lab runs is a generated wrapper entry
+// or inspector can observe it. So the worker perf-kit runs is a generated wrapper entry
 // whose fetch handler does `await import('./<main>')`: the import compiles and evaluates
 // the main module and its whole static closure, which is exactly the work Cloudflare's
 // startup limit counts. `wrangler check startup` uses the same trick.
@@ -29,7 +29,7 @@ export const COVERAGE_FLAGS = ['nodejs_compat', 'enable_nodejs_inspector_local_d
 export const COVERAGE_MIN_WRANGLER = '4.108.0';
 
 /**
- * Resolve miniflare, wrangler and the workerd version from the app directory. The lab
+ * Resolve miniflare, wrangler and the workerd version from the app directory. perf-kit
  * never ships a runtime of its own: the number must come from the workerd the app pins.
  */
 export function resolveWorkerTools(appDir) {
@@ -46,7 +46,7 @@ export function resolveWorkerTools(appDir) {
   if (!miniflarePath || !wranglerPath) {
     throw new Error(
       `${appDir} has no ${!miniflarePath ? 'miniflare' : 'wrangler'} - add wrangler as a dev dependency ` +
-        "(it brings miniflare and workerd). The lab runs the app's own workerd, never one of its own.",
+        "(it brings miniflare and workerd). perf-kit runs the app's own workerd, never one of its own.",
     );
   }
   const version = (id) => {

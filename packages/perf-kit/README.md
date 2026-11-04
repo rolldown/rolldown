@@ -10,6 +10,8 @@ Chrome/Edge), so it works three ways:
   (the `bin` shim replaces any `node node_modules/…` path-typing). When installed,
   state lives in the consumer project at `.perf-kit/` (add it to your
   `.gitignore`), never inside `node_modules`; override with `ROLLDOWN_PERF_KIT_STATE`.
+  The hints print the spelling that applies. No rolldown checkout sits next to an
+  installed copy, so `rolldown-install` needs `--from <a built packages/rolldown>`.
 - **Once published**: `npx @rolldown/perf-kit scan --app .` with no install step.
 
 Prompts for an agent, one per target (browser page load, node or deno server startup,
@@ -34,6 +36,13 @@ every build also refreshes the build-side report under
 
 `scan` keeps the full resource detail list in `runtime-metrics.json`. This includes
 small preload facades. Each request records its initiator type and source location.
+`requestPriority` records Chrome's initial priority, its last observed priority,
+and changes with milliseconds since the request began. Use this history when
+comparing preload priorities. The last priority is the value at collection, not
+necessarily at paint. Repeated URLs and redirect hops have ambiguous matches;
+the report omits their initiator and priority evidence. Missing evidence is not
+proof of low priority. These fields use the
+[CDP Network protocol](https://github.com/ChromeDevTools/devtools-protocol/blob/master/json/browser_protocol.json).
 The report does not collect request headers or bodies. A browser timing buffer
 overflow keeps the discovery check UNKNOWN.
 
@@ -69,11 +78,43 @@ The render-gap report also counts scripts that start after `load` and finish
 before FCP or LCP. The load event does not prove that downloads ended. Commands
 that resolve a page target print its path, including remembered targets.
 
+Static module analysis starts at build entries. It does not price a dynamic import
+that startup immediately executes. Check coverage and CPU evidence before treating
+small static entry totals as small startup totals. Manually grouped chunks can
+also load modules outside an observed facade's static closure.
+
+### CPU source attribution
+
+`profile` maps sampled work through every same-origin chunk's sourcemap. This
+includes static siblings and dynamic imports. `profile.json` records each source,
+its chunk filenames, and sampled self-time. It separates source work, engine work,
+and unattributed work. Missing or invalid maps, unmapped positions, inline scripts,
+and external scripts remain visible. They do not count as engine work. A frame
+without a URL (a builtin such as `JSON.parse` or a DOM call) counts for its nearest
+caller with a URL, or as engine work when it has none. Top-level code of a bundled
+chunk runs many modules in one frame: its time splits by the sampled lines, and a
+line that holds more than one source stays `top-level` (unattributed). Minified
+chunks keep most top-level time unattributed; profile an unminified build to split it.
+
+The verdict keeps source modules with at least 15ms of sampled work OPEN for
+inspection. A filename without a directory can also identify a source module.
+Unattributed rows of at least 15ms keep the check UNKNOWN; a smaller row cannot
+hide a source module that reaches the threshold. Old profiles that map only the entry chunk
+must be collected again. A clear CPU signal means no source reaches the threshold;
+it does not prove that all startup work is required.
+
+The profile stops when the harness observes FCP. The polling tail can include
+post-paint work. Sampled time is a lead, not a predicted paint gain. Check whether
+the first render needs each source module. Test deferring optional work, then
+compare both FCP and LCP in timed runs. The profile does not attribute CPU between
+FCP and LCP when those paints differ.
+
 ### Command list
 
 | Command                                                                          | One loop step                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `node harness.mjs scan --app <appDir>`                                           | **The whole iteration in one browser session**: N timed runs + coverage + boot profile + the fused verdict. First scan of a target auto-pins the baseline; `--pin` re-pins after a kept change; `--quick` = 1 run + no profile, a fast mid-iteration probe on slow apps (indicative only — never pinned, and the verdict flags single-run measurements). The target is remembered — afterwards run everything bare, from any cwd. Per-target state dirs keep baselines/history from mixing across apps.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `node harness.mjs scan --bandwidth <Mbit/s> [--rtt <ms>] [--cpu <rate>]`         | Pin a network in real units instead of a net-scale step: the network a deployed environment measured (a record's model), e.g. `--bandwidth 26 --rtt 120 --cpu 1` (1 = this machine's CPU). No calibration; RTT and CPU default to 150 ms and 4x. Pinned and compared like `--net-scale`: a change makes the pinned baseline incomparable (re-pin). Same flags on `measure` and `target`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `node harness.mjs target [<appDir>] [--demo]`                                    | Show / set / clear the remembered target.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `node harness.mjs gen [--force]`                                                 | Generate the demo app (deterministic; `--force` resets defers).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `node harness.mjs build`                                                         | Build `app/` → `app/dist/` + build metrics report.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
@@ -81,7 +122,7 @@ that resolve a page target print its path, including remembered targets.
 | `node harness.mjs coverage`                                                      | One instrumented run → per-module bytes executed **before first paint** vs **by settle** → `state/coverage.json` + four lead sections: defer candidates, **cold bytes at paint** (the unified ranking `totalBytes − paintBytes`, coldest first — catches the mid-band a partially-initializing vendor SDK sits in, which neither the <2% nor the ≥50% bucket sees; framework runtimes annotated), large-modules-executed-at-paint (data evaluates on import — executed ≠ needed), and sibling variant groups (locales/themes). Covers the **whole initial load**: the entry chunk plus every same-origin chunk that executed before first paint (modules tagged with their chunk; chunks without sourcemaps are called out). Post-paint-executed chunks are split by fetch timing: **static pre-paint transfer** (fetched before paint via static tags/preloads — the paint paid for the download; verdict lead when ≥100KB) vs genuinely-deferred (fetched after paint). Entry auto-detected from `dist/index.html` — module scripts, or webpack-style plain script tags (main-looking/biggest bundle, query strings stripped); override with `--entry`. |
 | `node harness.mjs profile`                                                       | One profiled run → boot CPU by source module, navigation → first paint (`state/profile.json`). The follow-up to a pre-paint CPU flag.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `node harness.mjs graph`                                                         | **Static split candidates ranked by retained size** — per module, the bytes its dominator subtree would remove from the initial load if its import edge were deferred, with `via` naming the single import chain to cut. Reads `module-graph.json` from a rolldown devtools report build (vite ≥ 8: `build.rolldownOptions.devtools = { mode: "report" }`; the demo app emits it natively).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| `node harness.mjs what-if <module> [--keep a,b]`                                 | The exact modules + bytes one deferral frees (unique-reachable closure; equals the module's retained size). `--keep` marks sentry modules that stay eager. Instant candidate ranking; verify the winner's LCP effect with `scan`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `node harness.mjs what-if <module> [--keep a,b] [--root a,b]`                    | The exact modules + bytes one deferral frees (unique-reachable closure; equals the module's retained size). `--keep` marks sentry modules that stay eager. `--root` (also on `cut`) adds modules that load on every start without a static import from an entry - a dynamic import the app always runs: they join the entries, so the query prices that startup load. Instant candidate ranking; verify the winner's LCP effect with `scan`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `node harness.mjs verdict`                                                       | Fuses all signals into an OPEN/clear/UNKNOWN lead checklist with staleness tracking. Refuses to say "done" while leads are open or signals are missing/stale; the all-clear states the tools' blind-spot boundary. While leads are OPEN it also instructs the operator/agent to copy the checklist into their summary and justify any early stop lead-by-lead — a re-pinned baseline records a gain, it does not close the checklist.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `node harness.mjs parity [--only /a,/b] [--label x] [--exit-code]`               | **Rendered output vs the original build**, both rendered back to back in one browser session: first-screen + full-page pixels, page height, visible text, accessible names, new runtime errors, and the LCP element. Compared once, when the optimizing is done (`scan --parity` = final measurement + this). A difference starts recover mode. `--only` re-checks some pages, `--exit-code` exits 1 while a page differs (`git bisect run`), `--pages` / `--mask` add routes / masks (also on `scan`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `node harness.mjs parity recover` / `strategy each-tweak\|on-demand` / `history` | Recover mode: what to do and how to bisect; re-check on every scan or when you decide; every check with its snapshot images.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
@@ -95,6 +136,12 @@ that resolve a page target print its path, including remembered targets.
 `measure` and `coverage` also take `--dist <dir>` (plus optional `--entry`,
 `--features a,b`) to point at any other built app; candidates are then advisory
 per-module (the agent finds the import seams itself).
+
+`graph`, `what-if`, `cut`, `why` and `graph-diff` read the report of the target dist
+(`node_modules/.rolldown/report/<output dir>`), and stop with an error when none of
+the report's entry chunks exists in that dist: a rebuild without the report leaves
+the old report behind, and builds that share an outDir share a report. Rebuild with
+the report on, or pass `--report <dir>`, which is never checked.
 
 ## Rendered-output parity
 
@@ -125,7 +172,7 @@ every iteration would mostly buy time back for nothing.
   covers every page without a difference ends recover mode.
 
 **The original is a copy of the build, frozen.** The first scan / measure / parity of
-a target copies the build directory into the lab state (`parity/anchor/`), with the
+a target copies the build directory into perf-kit's state (`parity/anchor/`), with the
 app's commit and a content hash, and the first full scan records its LCP element. A
 check serves it next to the current build from one origin and renders both in the
 same browser session, so a Chrome update, a newly installed font or machine load
@@ -249,23 +296,24 @@ a floor-corrected number per run, what executed, and what each deferral would fr
 ```bash
 node harness.mjs worker-config --app <appDir>          # writes perf-kit.vite.config.ts, prints the build commands
 (cd <appDir> && npx vite build --config perf-kit.vite.config.ts)
-node harness.mjs worker-scan --app <appDir> --request / --request /api/health
+node harness.mjs worker-scan --app <appDir> --request / --request /api/health   # routes the app answers (2xx)
 node harness.mjs worker-scan                           # target, requests and --tools are remembered
 node harness.mjs worker-scan --pin                     # make this the fixed reference
 ```
 
-| Command                            | What it does                                                                                                                                                                                                                                                                                                                                                                                                          |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `worker-config`                    | Writes a Vite config that wraps the app's own: the rolldown metrics report on **every** environment (one directory per output dir), sourcemaps on the worker, a worker-only rebuild (`ROLLDOWN_PERF_KIT_WORKER_ONLY=1`) and the attribution build (`ROLLDOWN_PERF_KIT_ATTRIB=1`, `preserveModules` into `dist-attrib/`).                                                                                              |
-| `worker-scan`                      | N cold runs, a fresh workerd each: the main module's import timed from the host minus an empty-import floor = **app startup**. Then the first requests on the real entry, a CPU profile of the import attributed through every chunk's sourcemap, precise coverage of the import taken from inside the isolate, and the leads: cold and idle bytes per module and per package, runtime modules loaded, class exports. |
-| `worker-measure`                   | Timing and first requests only.                                                                                                                                                                                                                                                                                                                                                                                       |
-| `worker-attrib`                    | CPU by **evaluating module** from the attribution build, each row with its import chain: the only view that charges a library's top-level work (zod schemas built at import, a YAML parse) to the module whose evaluation runs it.                                                                                                                                                                                    |
-| `why <module>`                     | Direct static importers and one chain from the entry.                                                                                                                                                                                                                                                                                                                                                                 |
-| `cut <module> --root a,b`          | The fewest imports to make dynamic, with the Durable Object / Workflow class modules as roots: their closure stays eager, so the cut lands below them instead of at the entry.                                                                                                                                                                                                                                        |
-| `graph` / `what-if` / `graph-diff` | Unchanged on the Worker's report (`node_modules/.rolldown/report/dist/<worker>`).                                                                                                                                                                                                                                                                                                                                     |
+| Command                            | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `rolldown-install --app <dir>`     | Copies a built rolldown package (with its native binding) over the copy the app's vite resolves; the default source is the rolldown package next to perf-kit, `--from <packages/rolldown>` names another. The npm release has no report mode; `worker-config` and the config shim refuse to build on it, because such a build writes the full event log (hundreds of MB) instead of the report. `<package manager> install --force` restores the release. |
+| `worker-config`                    | Writes a Vite config that wraps the app's own: the rolldown metrics report on **every** environment (one directory per output dir), sourcemaps on the worker, a worker-only rebuild (`ROLLDOWN_PERF_KIT_WORKER_ONLY=1`) and the attribution build (`ROLLDOWN_PERF_KIT_ATTRIB=1`, `preserveModules` into `dist-attrib/`).                                                                                                                                  |
+| `worker-scan`                      | N cold runs, a fresh workerd each: the main module's import timed from the host minus an empty-import floor = **app startup**. Then the first requests on the real entry, a CPU profile of the import attributed through every chunk's sourcemap, precise coverage of the import taken from inside the isolate, and the leads: cold and idle bytes per module and per package, runtime modules loaded, class exports.                                     |
+| `worker-measure`                   | Timing and first requests only.                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `worker-attrib`                    | CPU by **evaluating module** from the attribution build, each row with its import chain: the only view that charges a library's top-level work (zod schemas built at import, a YAML parse) to the module whose evaluation runs it.                                                                                                                                                                                                                        |
+| `why <module>`                     | Direct static importers and one chain from the entry.                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `cut <module> --root a,b`          | The fewest imports to make dynamic, with the Durable Object / Workflow class modules as roots: their closure stays eager, so the cut lands below them instead of at the entry.                                                                                                                                                                                                                                                                            |
+| `graph` / `what-if` / `graph-diff` | Unchanged on the Worker's report (`node_modules/.rolldown/report/dist/<worker>`).                                                                                                                                                                                                                                                                                                                                                                         |
 
 **Why the startup sits inside a request.** workerd evaluates a Worker's main module when
-it loads the worker, before any request or inspector can observe it. The lab therefore
+it loads the worker, before any request or inspector can observe it. perf-kit therefore
 runs a generated wrapper entry whose fetch handler does `await import('./index.js')`:
 that import compiles and evaluates the main module and its whole static closure. The
 first requests and parity use a plain instance with the real entry instead, because
@@ -283,15 +331,15 @@ app that pins an older one, `--tools <dir>` borrows a newer wrangler for that ru
 
 **Requirements the scan checks for and names when unmet**
 
-| Need                  | Requirement                                                                                                      |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| the target            | a `@cloudflare/vite-plugin` build: `dist/<worker>/wrangler.json` next to `index.js`                              |
-| the runtime           | `wrangler` as a dev dependency of the app (brings miniflare and workerd)                                         |
-| the report            | the `worker-config` build, or `devtools: { mode: 'report' }` on every environment by hand                        |
-| sourcemaps            | `build.sourcemap: true` on the worker environment (the config shim sets it)                                      |
-| precise coverage      | Wrangler >= 4.108.0, or `--tools <dir>`                                                                          |
-| first-request numbers | the app's variables (a `.dev.vars` next to the config); without them both real apps answered 500                 |
-| the number for a PR   | `wrangler check startup` (Wrangler >= 4.116.0), before and after; its dry-run build runs Docker for `containers` |
+| Need                  | Requirement                                                                                                                                                                                          |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| the target            | a `@cloudflare/vite-plugin` build: `dist/<worker>/wrangler.json` next to `index.js`                                                                                                                  |
+| the runtime           | `wrangler` as a dev dependency of the app (brings miniflare and workerd)                                                                                                                             |
+| the report            | the `worker-config` build, or `devtools: { mode: 'report' }` on every environment by hand, on a rolldown with the report mode: the npm release has none yet, so `rolldown-install --app <dir>` first |
+| sourcemaps            | `build.sourcemap: true` on the worker environment (the config shim sets it)                                                                                                                          |
+| precise coverage      | Wrangler >= 4.108.0, or `--tools <dir>`                                                                                                                                                              |
+| first-request numbers | the app's variables (a `.dev.vars` next to the config); without them both real apps answered 500                                                                                                     |
+| the number for a PR   | `wrangler check startup` (Wrangler >= 4.116.0), before and after; its dry-run build runs Docker for `containers`                                                                                     |
 
 Metrics are `worker.startup_ms`, `worker.boot_floor_ms`, `worker.app_startup_ms` (the part a
 bundle change can move), `worker.instance_boot_ms` (reported, never counted) and
@@ -309,6 +357,181 @@ deferral **moved** into that route; the summary prints it next to the startup ga
 - **No timing from inside the Worker.** Timers in workerd advance only on I/O.
 - **No response parity yet.** The first requests report status and size; a replayed
   request set against the frozen original is not built.
+- **The attribution build works around a rolldown limit (rolldown#11348).** With `preserveModules` every
+  CommonJS file ends with an eager `export default require_x()`, and a require cycle reaches
+  a wrapper before its own file ran (`require_x is not a function`). The config shim drops
+  that line in the attribution build only; its importers use the named wrapper. If an import
+  still fails, `worker-attrib` says so and marks its rows partial.
+
+## Field mode (a deployed site)
+
+The lab answers "what does this build pay for" on a local copy with a fixed throttle.
+Field mode asks the same question of the **deployed** site, in your own logged-in
+Chrome: real data, real network, real server time. Use it when the lab and production
+disagree, or to check that a gain survives a fast network.
+
+```bash
+# 1. Chrome: open a logged-in tab on the site, turn on chrome://inspect/#remote-debugging
+# 2. Describe how the site serves each build:
+node harness.mjs field --config field.json            # 6 alternating pairs + 1 diagnostic run each
+node harness.mjs field --config field.json --runs 10 --cut lcp --out /tmp/my-field
+```
+
+```json
+{
+  "url": "https://app.example.com/",
+  "variants": {
+    "base": {
+      "cookies": [{ "name": "version", "value": "stable" }],
+      "build": "/builds/stable/dist"
+    },
+    "candidate": { "query": { "preview": "pr-123" } }
+  },
+  "block": ["analytics.example.com"],
+  "ignoreLcp": "#splash",
+  "gate": "/api/items"
+}
+```
+
+| Part           | What it does                                                                                                                                                                                                                                                                                                   |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Timing runs    | Pairs of loads, one per variant, in alternating order, so a slow minute of the network hits both sides. A hidden page (covered window) or a missing LCP makes a run invalid; it is retried, never averaged in.                                                                                                 |
+| Critical path  | The request LCP waited for (`gate`: a substring of a fetch/XHR URL, matched after redaction; unset: the last fetch/XHR that ended before LCP), split into: document end, client time before the gate request, gate TTFB, download, client time after it. Only the client parts can move.                       |
+| Script chain   | What the gate request waited for: of all scripts on its initiator stack, the one that finished loading last, then that script's own initiator, back to the document. The shape comes from the diagnostic run (async stacks name the caller behind a fetch wrapper); the times come from the median timing run. |
+| Diagnostic run | V8 precise coverage at the cut (`--cut gate`: when the gate request is sent; `lcp`; `fcp`) and at settle, plus a CPU profile to the cut. Slower by design and never used for timing. A run that does not reach its cut in `--timeout` is invalid.                                                              |
+| Build match    | Each served script is matched to a local build file by SHA-256 (or `//# debugId=`). A match gives module attribution and the module graph; no match still gives chunk-level coverage from the served body.                                                                                                     |
+| Report         | `<out>/<variant>/runtime-metrics.json`, `coverage.json`, `profile.json` in perf-kit's shapes (`"paint"` means "at the cut", see `field.cut`), plus `field-report.json`: medians, paired deltas with a seeded bootstrap 90% interval, slow-server outlier pairs.                                                |
+
+**Privacy.** Output goes outside the repo (default `$TMPDIR/perf-kit-field/<site>`).
+It holds no cookies, no headers, no page text and no screenshots. IDs, emails and long
+numbers in URLs are redacted (add patterns with `redact`). Variant cookies change the
+whole profile, so each run starts from the original values and they are restored at the
+end, also on Ctrl-C. Block the site's analytics beacons in `block` so runs do not add
+synthetic sessions.
+
+**Getting a matching build.** Production rarely serves its sourcemaps. Build the same
+commit locally with the deploy's settings and bundler version; identical inputs give
+byte-identical chunks. Anything the build fetches at build time must be identical too.
+`buildMatch` in `coverage.json` says how much of the page the build explains;
+`different-build` means the path exists locally with other content.
+
+### What this mode does NOT do
+
+- **It measures one account, one network, one machine.** Gates, data size and network
+  differ per user. Population behavior needs field RUM.
+- **Your extensions run in the measured page.** Their scripts show up in `profile.json`
+  as `external` rows (the full URL for `chrome-extension://` frames). Use a profile with
+  few extensions when CPU numbers matter.
+- **No parity check.** Real data changes between loads.
+- **Only navigations.** It never clicks or submits. `nonGetRequests` in each
+  `runtime-metrics.json` lists what the page itself sent.
+- **`--throttle lab` adds the lab throttle on top of the real network.** The real RTT
+  stays in, so the result is not comparable to a lab scan.
+
+## Replay (a build that is not deployed)
+
+Field mode needs every variant deployed. Replay gives field-like numbers for a LOCAL
+build: record the deployed site once, then serve that recording to a throwaway headless
+Chrome with your dist in place of the deployed files.
+
+```bash
+# 1. Record one deployed variant (same config file as field mode; Chrome as for field)
+node harness.mjs record --config field.json --variant base          # 6 timing runs + 1 body run
+# 2. Calibrate: the replay of the RECORDED build must reproduce the field medians
+node harness.mjs replay --archive $TMPDIR/perf-kit-replay/<site>-base \
+  --dist recorded=/builds/stable/dist --calibrate
+# 3. A/B: alternating pairs of two local builds on the same recorded network and server
+node harness.mjs replay --archive <dir> --dist base=/builds/stable/dist --dist candidate=./dist
+```
+
+### Standalone: one agent records, another replays
+
+`replay.mjs` (bin `perf-kit-replay`) runs record and replay with no harness target and
+no perf-kit state. The archive folder is the whole interface: the recording agent hands over
+its path, and the replaying agent needs no browser login.
+
+```bash
+# Recording agent (the user's Chrome, remote debugging on). No config file needed.
+node replay.mjs record --url https://app.example.com/ --cookie version=canary \
+  --block analytics.example.com --gate /api/items --ignore-lcp '#splash' \
+  --build /builds/stable/dist --settle 6000 --json
+# -> stdout: { "archive": "<dir>", "complete": true, "gaps": [], "next": {...}, ... }
+
+# Replaying agent
+node replay.mjs inspect --archive <dir> --json            # usable? complete? warnings? age?
+node replay.mjs replay --archive <dir> --dist recorded=/builds/stable/dist \
+  --calibrate --json --exit-code                          # result.calibration.verdict
+node replay.mjs replay --archive <dir> --dist base=/builds/stable/dist --dist candidate=./dist --json
+```
+
+- `--json` prints one result object on stdout and sends the log to stderr. An error
+  gives `{ "error": "..." }`.
+- Exit codes: 0 done, 1 model error, 2 error, 3 record again. Codes 1 and 3 come only
+  with `replay --calibrate --exit-code`.
+- **Gaps.** `record` and `inspect` compare the archive with the field timing runs. A
+  request that at least half of the runs made, that the archive has no response for,
+  and that the build does not serve is a gap: the replay answers it with a 404. They
+  return `complete` and `gaps`. A gap usually means that the body run stopped too early;
+  record again with a longer `--settle`.
+- **Calibration verdict.** `calibration.verdict` says what to do next:
+
+  | Verdict        | Meaning                                                   | Next step                                        |
+  | -------------- | --------------------------------------------------------- | ------------------------------------------------ |
+  | `pass`         | Every row is within tolerance and the archive has no gaps | An A/B on this archive is usable                 |
+  | `record-again` | The archive has gaps                                      | Record again (longer `--settle`)                 |
+  | `model-error`  | The archive is complete, but a row is off                 | Report the rows. A new recording does not fix it |
+
+- `record` writes `HANDOFF.txt` next to `archive.json`. It holds the next commands
+  with absolute paths. `record --out` replaces an earlier archive, and refuses a folder
+  that is not empty and holds no `archive.json`.
+- `archive.json` has `schemaVersion` and `recordedWith` (tool, Chrome and Node
+  versions, cookie names, never values). `inspect` and `replay` refuse an archive with
+  another schema or with missing bodies. Record again in that case.
+- `inspect` warns when the archive has no network rating, no bandwidth, no named build,
+  or is more than 24 h old.
+- `--build` on `record` names the local copy of the build that the site serves. The
+  replaying agent uses it for the calibration and the `next` commands.
+- **Late chunks.** `inspect` runs the chunk discovery check (see "Chunk discovery") on
+  the field timing runs with the `--build` manifest. `replay` runs it on each dist's
+  replay runs. Both read the CDP requests, not the Resource Timing list, and use the
+  archive's `rtt` as the threshold. They return `lateChunksBeforeLcp`, and `replay`
+  writes the full result to `runtime-metrics.json` → `chunkDiscovery`. These are leads,
+  not predicted gains: a replay A/B decides. The check needs `.vite/manifest.json` that
+  is not older than the files it names; copy a build with `mv` or `cp -p`, not `cp -R`.
+
+### How the replay works
+
+| Part                      | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Archive                   | Every response of the body run with safelisted headers (type, encoding, CORS, `vary`, `location`, `link`; never cookies or auth), request body hashes (never request bodies), the median server time of each call over the timing runs, volatile query parameters (values that change between loads), the field medians, and the timing runs (`timing.json`).                                                                                                                                                                                                        |
+| One server for every host | Chrome runs with `--host-resolver-rules`, so the page keeps its real origin (cookies, CORS, absolute URLs unchanged) and no request leaves the machine. HTTPS + HTTP/2, like the recorded site.                                                                                                                                                                                                                                                                                                                                                                      |
+| Document                  | The dist's `index.html` plus every tag that only the deployed HTML has (a host's nonce, analytics snippet, service-worker or bot-check loader), after the recorded TTFB. The head comes at once and the rest after the recorded download time, like the recorded early flush. `--document local\|recorded` serves either file bare. An iframe document is served like any recorded response.                                                                                                                                                                         |
+| Static files              | From the dist, compressed like the recorded assets (encoding and level fitted on the recorded sizes). Each time to first byte is DRAWN from the recorded TTFB of files that loaded on an idle link (less than 50 kB of other downloads during the wait): a startup step waits for the slowest of its parallel chunks, so a constant median makes every step too fast. Both builds of a pair use the same seed.                                                                                                                                                       |
+| Wire queue                | On a busy slow link a response's first byte comes late because of the page's OWN downloads. The replay keeps a FIFO of `wireBytes` (the median extra TTFB of files fetched on a busy link × bandwidth) between the scheduler and the link. Static response headers wait behind the bytes in it, and the body follows them without a second wait. `--wire <kB>` overrides it. Drawing from ALL recorded TTFBs instead counts this queue two times.                                                                                                                    |
+| API                       | The recorded response after its recorded server time, matched by method + host + path + query without volatile parameters, then call order (request bodies: exact hash, then normalized hash). A recorded late body sends its last byte after the recorded download time, outside the bandwidth queue (the recorded time already holds that wait). An unrecorded request gets a 404 and is listed in the report.                                                                                                                                                     |
+| Bandwidth                 | One token bucket for all streams, most urgent first (`priority: u=N`). A delay per request would let 80 parallel chunks all run at full speed. The default rate is the median over the timing runs of the busiest 250 ms window. On a link whose rate changes (for example a VPN), this estimate is too high; use `--bandwidth <Mbit/s>` and calibrate.                                                                                                                                                                                                              |
+| Chrome's network rating   | Over loopback Chrome rates the network as fast. On a slow real network (rating `3g` or slower) it holds back low-priority requests even on HTTP/2, which can add seconds. The replay forces the recorded rating (`navigator.connection.effectiveType`); `--ect` overrides it.                                                                                                                                                                                                                                                                                        |
+| Storage                   | The field runs load the page in a profile that visited it before. A page that caches data in `localStorage` (a boot payload, flags) starts from that copy there and does not wait for the API. `--storage warm` first loads the page once, unmeasured, in the same browser context, so the build writes its own storage; the measured load reads it. The HTTP cache stays off and service workers are bypassed on every load, as in the field runs, so only storage and cookies carry over. Default: `warm` when the recorded page had `localStorage`, else `empty`. |
+| Calibration               | `--calibrate` compares the first dist's medians with the field medians (LCP, document end, gate start, gate - doc, gate TTFB, after gate). Each must be within max(15%, 150 ms). A row that the field has and the replay lacks (no gate found) is off. The verdict (`pass`, `record-again`, `model-error`) says what to do next; `timing.json` holds the field waterfalls to find a model error.                                                                                                                                                                     |
+
+**Privacy.** The archive holds REAL responses from your account. It goes to
+`$TMPDIR/perf-kit-replay/` with owner-only permissions, and `record` refuses a path
+inside a git work tree. Delete it when done.
+
+### What replay does NOT do
+
+- **It models one recorded network and server.** A result holds for those conditions;
+  record again when the network changes (a slower RTT changes Chrome's rating, and with
+  it which requests wait).
+- **It does not copy the recorded profile's storage.** With `--storage warm` the build
+  writes its own storage in an unmeasured first load. Storage that only older visits or
+  other pages write (the archive's `page` field lists the cookie names and the number of
+  localStorage keys) is not there. A build that reads it can take another path; the
+  report warns when the replay lands on another path than the field.
+- **It does not model packet loss.** A lost packet on a real connection holds every
+  stream until it is resent. The sampled TTFB covers only part of this.
+- **New API calls of a candidate build have no response.** They get a 404 and the
+  report lists them; the result may not hold.
 
 ## The loop protocol (for an agent)
 

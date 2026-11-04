@@ -9,10 +9,12 @@
     "directory": "packages/perf-kit"
   },
   "bin": {
-    "perf-kit": "./harness.mjs"
+    "perf-kit": "./harness.mjs",
+    "perf-kit-replay": "./replay.mjs"
   },
   "files": [
     "harness.mjs",
+    "replay.mjs",
     "lib",
     "AGENTS.md",
     "CHANGELOG.md",

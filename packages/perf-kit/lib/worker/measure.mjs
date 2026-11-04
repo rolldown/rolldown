@@ -6,6 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
+import { pathToFileURL } from 'node:url';
 
 import { connect } from '../cdp.mjs';
 import { median, quantile } from '../measure.mjs';
@@ -173,10 +174,10 @@ export function localFile(url, outDir) {
   return null;
 }
 
-/** `resolveChunk` for `aggregateProfile`: every chunk under the output dir that has a sourcemap. */
+/** `readChunk` for `profileStartup`: every chunk under the output dir that has a sourcemap. */
 export function chunkResolver(outDir) {
-  return (url) => {
-    const file = localFile(url, outDir);
+  return (frameFile) => {
+    const file = localFile(frameFile, outDir);
     if (!file || !fs.existsSync(`${file}.map`)) return null;
     return {
       code: fs.readFileSync(file, 'utf8'),
@@ -196,8 +197,9 @@ export function attributeProfile(profile, { outDir, mainName }) {
   const { rows, totalMs, ownership } = profileStartup(profile, {
     code,
     map,
-    entryUrlSuffix: mainName,
-    resolveChunk: chunkResolver(outDir),
+    entryPath: path.join(outDir, mainName),
+    readChunk: chunkResolver(outDir),
+    baseUrl: pathToFileURL(`${outDir}/`),
   });
   return { summary, rows, totalMs, ownership, missingSourcemap: false };
 }

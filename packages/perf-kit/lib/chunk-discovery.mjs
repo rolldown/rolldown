@@ -1,5 +1,7 @@
 // Join emitted static chunk imports to the runtime waterfall. A discovery delay
 // is a lead to test, not a predicted LCP gain or proof that paint awaits a chunk.
+// The waterfall is a lab scan's Resource Timing list, or the CDP requests of field
+// and replay runs (requestSamples).
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -90,6 +92,30 @@ function staticDescendants(graph, root) {
   return paths;
 }
 
+/**
+ * Field and replay runs as discovery samples. Their CDP request rows (page time,
+ * every request of the page) stand in for the Resource Timing list, which field
+ * runs do not keep. `redact` cleans initiator URLs: a document URL can name an account.
+ */
+export function requestSamples(runs, origin, redact = (value) => value) {
+  const local = (url) => (url?.startsWith(`${origin}/`) ? url.slice(origin.length) : url);
+  return runs.map((run) => ({
+    fcp: run.fcp ?? null,
+    lcp: run.lcp ?? null,
+    resourceDetailsComplete: true,
+    resources: (run.requests ?? []).map((r) => ({
+      name: local(r.url),
+      type: String(r.type ?? 'other').toLowerCase(),
+      start: r.startMs ?? 0,
+      // end 0 = unfinished or failed, as in the Resource Timing list.
+      end: r.failed || typeof r.endMs !== 'number' ? 0 : r.endMs,
+      bytes: r.encodedBytes ?? 0,
+      initiator: { type: r.initiator?.type ?? null, url: redact(local(r.initiator?.url ?? null)) },
+      requestPriority: { initial: r.priority ?? null, last: r.lastPriority ?? r.priority ?? null },
+    })),
+  }));
+}
+
 export function analyzeChunkDiscovery(graph, samples, latencyMs) {
   return Object.fromEntries(
     ['fcp', 'lcp'].map((paint) => [paint, analyzePaintDiscovery(graph, samples, latencyMs, paint)]),
@@ -145,6 +171,7 @@ function analyzePaintDiscovery(graph, samples, latencyMs, paint) {
           delayMs: child.start - request.end,
           bytes: child.bytes,
           initiator: child.initiator ?? null,
+          requestPriority: child.requestPriority ?? null,
         });
       }
       if (!late.length) continue;

@@ -10,7 +10,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { parseReadySpec, describeReady, runEnv } from '../lib/node/launch.mjs';
+import { parseReadySpec, describeReady, runEnv, startupRun } from '../lib/node/launch.mjs';
 import {
   attributeStartupCoverage,
   coldModules,
@@ -32,6 +32,9 @@ test('every supported --ready form parses to its own probe kind', () => {
   assert.equal(stdout.kind, 'stdout');
   assert.ok(stdout.pattern.test('server listening on 3000'));
   assert.ok(!stdout.pattern.test('still booting'));
+  // The spec names a line: an anchor must hold after node's inspector banner.
+  const anchored = parseReadySpec('stdout:^ready');
+  assert.ok(anchored.pattern.test('Debugger listening on ws://127.0.0.1:1/x\nready 1\n'));
 });
 
 test('an unparsable ready spec names every supported form', () => {
@@ -281,4 +284,23 @@ test('profile ownership separates what the bundle owns from what it never will',
   // 25% is the threshold the scan uses to say "the bundle is not your problem";
   // 50 of 300ms must land below it.
   assert.equal(split.appShare, 16.7);
+});
+
+test('the exit probe and a stdout anchor are reached under the inspector', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'perf-kit-node-ready-'));
+  const entry = path.join(dir, 'entry.mjs');
+  fs.writeFileSync(entry, "console.log('ready');\n");
+  for (const spec of ['exit', 'stdout:^ready']) {
+    const run = await startupRun({
+      entry,
+      cwd: dir,
+      ready: parseReadySpec(spec),
+      inspect: true,
+      timeoutMs: 20_000,
+      atReady: async () => 'collected',
+    });
+    assert.equal(run.collected, 'collected', spec);
+    assert.ok(run.elapsedMs > 0, spec);
+    if (spec === 'exit') assert.equal(run.exitCode, 0);
+  }
 });

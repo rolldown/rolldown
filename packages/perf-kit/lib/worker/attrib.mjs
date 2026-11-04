@@ -18,7 +18,8 @@ const isLab = (rel) => !rel || rel.startsWith('__lab') || rel.startsWith('_virtu
 /**
  * `graph` (optional) is the loaded module graph of the attribution build; with it every
  * row carries the chain from the entry. Returns rows sorted by time: `{ module, ms, chain }`,
- * `pairs` (evaluating module -> library file the time is spent in) and `self` by file.
+ * `pairs` (evaluating module -> library file the time is spent in), `self` by file, and
+ * `byFile`: the evaluating time of every output file, `{ file: ms }`.
  */
 export function evaluatingModules(profile, { outDir, graph = null, top = 20 }) {
   const nodes = new Map(profile.nodes.map((n) => [n.id, n]));
@@ -69,6 +70,9 @@ export function evaluatingModules(profile, { outDir, graph = null, top = 20 }) {
     self: sorted(self)
       .slice(0, top)
       .map(([file, us]) => ({ file, ms: ms(us) })),
+    byFile: Object.fromEntries(
+      [...evaluating.entries()].filter(([f]) => !f.startsWith('(')).map(([f, us]) => [f, ms(us)]),
+    ),
   };
 }
 

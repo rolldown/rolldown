@@ -31,6 +31,126 @@ import {
 export const NOISE_FLOOR_MS = 3;
 export const NOISE_FLOOR_PCT = 2;
 export const COLD_MIN_BYTES = 4 * 1024;
+// Under the floor, pairs that fall on one side still decide: a no-op lands on both sides.
+// The sign test allows a no-op that chance at most (5 of 5 pairs, or 8 of 9). The median
+// must also be this large, so rounding alone cannot make the series one-sided.
+export const PAIRED_MAX_TAIL = 1 / 32;
+export const PAIRED_MIN_MS = 0.5;
+// A 5-pair series with 4 pairs on one side is ambiguous: `worker-scan` times more pairs.
+export const PAIRED_EXTEND_TO = 9;
+// Beyond the floor, the median decides only when the pairs agree: at most 1 of 5 pairs (2 of
+// 9) on the other side. A median beyond the floor with pairs on both sides is a few slow runs.
+export const PAIRED_BEYOND_TAIL = 1 / 4;
+
+/** The chance that a no-op puts at least `k` of `n` pairs on one given side. */
+export function signTail(k, n) {
+  let ways = 0;
+  let choose = 1; // C(n, i), built up from C(n, 0)
+  for (let i = 0; i <= n; i++) {
+    if (i >= k) ways += choose;
+    choose = (choose * (n - i)) / (i + 1);
+  }
+  return ways / 2 ** n;
+}
+
+const sideCount = (pairs, deltaMs) => pairs.filter((p) => (deltaMs < 0 ? p < 0 : p > 0)).length;
+
+/**
+ * Verdict on the pairs `current - pinned` timed in one scan. Beyond the floor the median
+ * decides when the pairs agree (`mixed` when they do not); under it, a change that the sign
+ * test puts on one side still counts, as `small`.
+ */
+export function pairedVerdict({ pairs, deltaMs, appStartupMs }) {
+  const floor = Math.max(NOISE_FLOOR_MS, (NOISE_FLOOR_PCT / 100) * (appStartupMs ?? 0));
+  const kind = deltaMs < 0 ? 'improvement' : 'regression';
+  const side = sideCount(pairs, deltaMs);
+  if (Math.abs(deltaMs) >= floor) {
+    const agree = pairs.length < 3 || signTail(side, pairs.length) <= PAIRED_BEYOND_TAIL;
+    return agree
+      ? { kind, small: false, floor, side }
+      : { kind: 'noise', small: false, floor, side, mixed: deltaMs < 0 ? 'lower' : 'higher' };
+  }
+  const oneSided =
+    Math.abs(deltaMs) >= PAIRED_MIN_MS && signTail(side, pairs.length) <= PAIRED_MAX_TAIL;
+  return oneSided ? { kind, small: true, floor, side } : { kind: 'noise', small: false, floor };
+}
+
+/** True when a short series leans one way, or disagrees beyond the floor: time more pairs. */
+export function needsMorePairs({ pairs, deltaMs, appStartupMs }) {
+  if (pairs.length >= PAIRED_EXTEND_TO) return false;
+  const verdict = pairedVerdict({ pairs, deltaMs, appStartupMs });
+  if (verdict.kind !== 'noise') return false;
+  if (verdict.mixed) return true;
+  return Math.abs(deltaMs) >= PAIRED_MIN_MS && sideCount(pairs, deltaMs) >= pairs.length - 1;
+}
+
+/** The words `worker-scan` prints for a `pairedVerdict`. */
+export function pairedCall(verdict, pairCount) {
+  const floor = Math.round(verdict.floor);
+  if (verdict.mixed) {
+    return `within noise (floor ${floor}ms) - the pairs disagree: the median is beyond the floor, ${verdict.mixed} in only ${verdict.side} of ${pairCount} pairs`;
+  }
+  if (verdict.kind === 'noise') return `within noise (floor ${floor}ms) - no effect proven`;
+  const word = verdict.kind === 'improvement' ? 'IMPROVEMENT' : 'REGRESSION';
+  if (!verdict.small) return `${word} beyond noise`;
+  const side = verdict.kind === 'improvement' ? 'lower' : 'higher';
+  const count = verdict.side === pairCount ? `all ${pairCount}` : `${verdict.side} of ${pairCount}`;
+  return `${word} beyond noise - small: ${side} in ${count} pairs (under the ${floor}ms floor)`;
+}
+
+// Startup that lost this much against the pinned build is smaller, whatever the timing says:
+// a share of the bytes, or of the modules (a text or data module counts few bytes in the
+// graph and still loads on its own).
+export const CLOSURE_MIN_BYTES = 32 * 1024;
+export const CLOSURE_MIN_BYTE_SHARE = 0.01;
+export const CLOSURE_MIN_MODULES = 50;
+export const CLOSURE_MIN_MODULE_SHARE = 0.1;
+
+/**
+ * The call the modules at startup add when the paired timing proves nothing. `closure`: the
+ * static closure diff against the pinned build (`left`, `entered`, `leftBytes`,
+ * `enteredBytes`, `stillCount` and `stillBytes` for the modules that left but a startup chunk
+ * still loads, `pinnedBytes`, `pinnedModules`). `loaded`: the delta of
+ * `worker.startup_loaded_bytes`. Returns `{ kind: 'keep', bytes, modules }` when startup lost
+ * enough, `{ kind: 'none' }` when neither moved, else null.
+ */
+export function closureCall(closure, loaded, verdict) {
+  if (verdict?.kind !== 'noise' || (!closure && !loaded)) return null;
+  const moved = Boolean(closure && (closure.left.length || closure.entered.length));
+  const loadedMoved = Boolean(loaded && Math.abs(loaded.delta) >= 1024);
+  const staticBytes = closure ? closure.leftBytes - closure.stillBytes - closure.enteredBytes : 0;
+  const bytes = Math.max(staticBytes, loaded ? -loaded.delta : 0);
+  const before = Math.max(closure?.pinnedBytes ?? 0, loaded?.prev ?? 0);
+  const modules = closure ? closure.left.length - closure.stillCount - closure.entered.length : 0;
+  const byBytes = bytes >= Math.max(CLOSURE_MIN_BYTES, CLOSURE_MIN_BYTE_SHARE * before);
+  const byModules =
+    modules >=
+    Math.max(CLOSURE_MIN_MODULES, CLOSURE_MIN_MODULE_SHARE * (closure?.pinnedModules ?? 0));
+  if (byBytes || byModules) return { kind: 'keep', bytes: byBytes ? bytes : null, modules };
+  return moved || loadedMoved ? null : { kind: 'none' };
+}
+
+// V8 sizes the young generation by what the isolate allocated so far. A deferral that takes a
+// large early allocation out of startup can keep it small for longer, and the extra scavenges
+// can cost more than the code saved. When startup only lost modules and the import still got
+// slower, `worker-scan` times both builds again with these flags, which fix that size.
+export const FIXED_YOUNG_V8_FLAGS = ['--min-semi-space-size=16'];
+
+/** True when the static closure only lost modules against the pinned build. */
+export function closureOnlyShrank(closure) {
+  return Boolean(closure && closure.left.length > 0 && closure.entered.length === 0);
+}
+
+/**
+ * The verdict the keep rule uses. A regression that the fixed-young-generation series does
+ * not repeat is V8 heap sizing, not the change: the keep rule reads that series instead.
+ */
+export function keepVerdict(paired, fixedYoung) {
+  const verdict = pairedVerdict(paired);
+  if (verdict.kind !== 'regression' || !fixedYoung) return verdict;
+  const fixed = pairedVerdict(fixedYoung);
+  return fixed.kind === 'regression' ? verdict : { ...fixed, kind: 'noise', heapSizing: true };
+}
 
 const round1 = (v) => (v == null ? null : Math.round(v * 10) / 10);
 
@@ -275,10 +395,13 @@ export function outputLocator(outDir) {
 export function attributeProfile(profile, { outDir, mainName }) {
   const summary = summarizeProfile(profile);
   const mapFile = path.join(outDir, `${mainName}.map`);
-  if (!fs.existsSync(mapFile))
+  // An entry that only re-exports from a manual chunk has no map; the chunks that run do.
+  const map = fs.existsSync(mapFile) ? JSON.parse(fs.readFileSync(mapFile, 'utf8')) : null;
+  const anyMap = () =>
+    fs.readdirSync(outDir, { recursive: true }).some((f) => String(f).endsWith('.js.map'));
+  if (!map && !anyMap())
     return { summary, rows: null, totalMs: null, ownership: null, missingSourcemap: true };
   const code = fs.readFileSync(path.join(outDir, mainName), 'utf8');
-  const map = JSON.parse(fs.readFileSync(mapFile, 'utf8'));
   const { rows, totalMs, ownership } = profileStartup(profile, {
     code,
     map,

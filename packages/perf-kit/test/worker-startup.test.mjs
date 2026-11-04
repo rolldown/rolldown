@@ -17,6 +17,7 @@ import {
   classifyModules,
   globToRegExp,
   labAssetsRouting,
+  resolveWorkerTools,
   versionAtLeast,
   wrapperModule,
 } from '../lib/worker/launch.mjs';
@@ -206,6 +207,40 @@ test('the coverage floor is a wrangler version, compared numerically', () => {
   assert.ok(!versionAtLeast(null, COVERAGE_MIN_WRANGLER));
 });
 
+test("an isolated install finds miniflare and workerd next to the app's wrangler", () => {
+  const root = tmp();
+  try {
+    const store = path.join(root, 'node_modules/.bun/wrangler@4.123.0/node_modules');
+    for (const [name, version] of [
+      ['wrangler', '4.123.0'],
+      ['miniflare', '5.0.0'],
+      ['workerd', '1.20260811.1'],
+    ]) {
+      write(store, `${name}/package.json`, JSON.stringify({ name, version, main: 'index.js' }));
+      write(store, `${name}/index.js`, '');
+    }
+    const app = path.join(root, 'apps/web');
+    write(app, 'package.json', '{}');
+    fs.mkdirSync(path.join(app, 'node_modules'), { recursive: true });
+    fs.symlinkSync(path.join(store, 'wrangler'), path.join(app, 'node_modules/wrangler'), 'dir');
+    const tools = resolveWorkerTools(app);
+    assert.equal(
+      fs.realpathSync(tools.miniflarePath),
+      fs.realpathSync(path.join(store, 'miniflare/index.js')),
+    );
+    assert.deepEqual(tools.versions, {
+      wrangler: '4.123.0',
+      miniflare: '5.0.0',
+      workerd: '1.20260811.1',
+    });
+    const bare = path.join(root, 'apps/bare');
+    write(bare, 'package.json', '{}');
+    assert.throws(() => resolveWorkerTools(bare), /has no wrangler/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 // --- timing summary -----------------------------------------------------------------
 
 test('app startup is the main import minus the empty-import floor, never negative', () => {
@@ -382,6 +417,35 @@ test('a missing sourcemap yields the summary and no rows, not a crash', () => {
   assert.equal(prof.rows, null);
   assert.equal(prof.missingSourcemap, true);
   assert.equal(prof.summary.samples, 1);
+});
+
+test('an entry with no map of its own still maps the chunks it re-exports from', () => {
+  const dir = tmp();
+  write(dir, 'index.js', "export { t as default } from './assets/entry.js';\n");
+  write(dir, 'assets/entry.js', 'c();\n');
+  write(
+    dir,
+    'assets/entry.js.map',
+    JSON.stringify({ version: 3, sources: ['../../src/c.ts'], names: [], mappings: 'AAAA' }),
+  );
+  const frame = { functionName: 'c', url: `file://${path.join(dir, 'assets/entry.js')}` };
+  const profile = {
+    startTime: 0,
+    endTime: 2000,
+    nodes: [
+      { id: 1, callFrame: { functionName: '(root)', url: '' }, children: [2] },
+      { id: 2, callFrame: { ...frame, lineNumber: 0, columnNumber: 0 } },
+    ],
+    samples: [2, 2],
+    timeDeltas: [1000, 1000],
+  };
+  const prof = attributeProfile(profile, { outDir: dir, mainName: 'index.js' });
+  assert.equal(prof.missingSourcemap, false);
+  assert.deepEqual(
+    prof.rows.map((r) => [r.bucket, r.ms]),
+    [['../../src/c.ts', 2]],
+  );
+  assert.equal(prof.ownership.appMs, 2);
 });
 
 // --- attribution build: CPU by evaluating module -----------------------------------------

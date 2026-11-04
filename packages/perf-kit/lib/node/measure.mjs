@@ -207,6 +207,10 @@ export function graphIdCandidates(source) {
     candidate = candidate.replace(/^\.\.?\//, '');
     forms.push(candidate);
   }
+  // The report names a package file from the package root ('zod/v4/core/core.js'); the
+  // last `node_modules/` also covers pnpm and bun stores (`.bun/zod@4/node_modules/zod/...`).
+  const at = candidate.lastIndexOf('node_modules/');
+  if (at >= 0) forms.push(candidate.slice(at + 'node_modules/'.length));
   return forms;
 }
 
@@ -268,9 +272,9 @@ export function splitProfileOwnership(rows, appSources) {
 }
 
 /**
- * `entryPath`: the profiled entry file; by default only it has a sourcemap here.
- * `readChunk(file)` reads any other chunk with its sourcemap, and `baseUrl` resolves bare
- * script names (Worker builds).
+ * `entryPath`: the profiled entry file; by default only it has a sourcemap here (`map` is
+ * null when it has none). `readChunk(file)` reads any other chunk with its sourcemap, and
+ * `baseUrl` resolves bare script names (Worker builds).
  */
 export function profileStartup(profile, { code, map, entryPath, readChunk = () => null, baseUrl }) {
   // Node and Deno frames are file: URLs (plus node:/ext: internals, never local).
@@ -281,9 +285,9 @@ export function profileStartup(profile, { code, map, entryPath, readChunk = () =
   const { rows, totalMs } = aggregateProfile(profile, {
     baseUrl,
     isLocal: (url) => url.protocol === 'file:',
-    readChunk: (file) => (file === entryFile ? { code, map } : readChunk(file)),
+    readChunk: (file) => (file !== entryFile ? readChunk(file) : map ? { code, map } : null),
   });
-  return { rows, totalMs, ownership: splitProfileOwnership(rows, map.sources ?? []) };
+  return { rows, totalMs, ownership: splitProfileOwnership(rows, map?.sources ?? []) };
 }
 
 export { measureBootFloor };

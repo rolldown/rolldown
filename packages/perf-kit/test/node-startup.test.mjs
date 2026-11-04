@@ -238,6 +238,14 @@ test('a sourcemap source resolves to the graph id it corresponds to', () => {
     'packages/app/src/x.ts',
   ]);
   assert.deepEqual(graphIdCandidates('src/plain.ts'), ['src/plain.ts']);
+  assert.deepEqual(
+    graphIdCandidates('../node_modules/.bun/zod@4.4.3/node_modules/zod/v4/core.js'),
+    [
+      '../node_modules/.bun/zod@4.4.3/node_modules/zod/v4/core.js',
+      'node_modules/.bun/zod@4.4.3/node_modules/zod/v4/core.js',
+      'zod/v4/core.js',
+    ],
+  );
   assert.deepEqual(graphIdCandidates('..\\src\\win.ts'), ['../src/win.ts', 'src/win.ts']);
 
   // ...and the candidate list actually finds the module in a real graph.

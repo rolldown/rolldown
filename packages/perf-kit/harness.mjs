@@ -217,7 +217,7 @@ const kib = (n) => `${(n / 1024).toFixed(1)}KiB`;
 const ms = (v) => (v == null ? 'n/a' : `${Math.round(v)}ms`);
 const readJson = (file) => (fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null);
 // The state dir self-ignores: agents running `git add -A` in a consumer repo must
-// never commit tool state (a haiku run committed the whole Chrome profile).
+// never commit tool state (an agent run once committed the whole Chrome profile).
 const guardStateDir = () => {
   const gitignore = path.join(STATE_DIR, '.gitignore');
   if (!fs.existsSync(gitignore)) {
@@ -297,7 +297,7 @@ function targetPaths(dist) {
 }
 
 // Resolve --app/<appDir> to an EXISTING build dir, or throw with the fix. A guessed
-// path must never be remembered: a haiku agent once obeyed the fabricated path in
+// path must never be remembered: an agent once obeyed the fabricated path in
 // our error message and rewired the app's outDir (then "fixed" the functional check).
 function resolveAppDist(appArg) {
   const app = path.resolve(appArg);

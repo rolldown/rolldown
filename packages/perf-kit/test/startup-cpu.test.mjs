@@ -266,7 +266,7 @@ test('paired keep rule: the floor, or every pair on one side', () => {
   const call = (pairs, deltaMs) =>
     pairedCall(pairedVerdict({ pairs, deltaMs, appStartupMs: 30 }), pairs.length);
   assert.equal(call([-9.6, -9.4, -9.7, -10.3, -9.8], -9.7), 'IMPROVEMENT beyond noise');
-  // tss run 3: real, under the floor, lower in every pair
+  // a small change under the floor: lower in every pair
   assert.equal(
     call([-1.7, -0.7, -1.2, -1.3, -1], -1.2),
     'IMPROVEMENT beyond noise - small: lower in all 5 pairs (under the 3ms floor)',
@@ -275,7 +275,7 @@ test('paired keep rule: the floor, or every pair on one side', () => {
     call([0.8, 1.2, 0.6, 1.1, 0.9], 0.9),
     'REGRESSION beyond noise - small: higher in all 5 pairs (under the 3ms floor)',
   );
-  // lexema run 4, round 3: both sides
+  // pairs on both sides of zero
   assert.equal(
     call([-1.5, 3.9, 0.1, -1.6, -2], -1.5),
     'within noise (floor 3ms) - no effect proven',
@@ -290,19 +290,19 @@ test('paired keep rule: the floor, or every pair on one side', () => {
 
 test('beyond the floor the pairs must agree: a few slow runs do not make a verdict', () => {
   const verdict = (pairs, deltaMs) => pairedVerdict({ pairs, deltaMs, appStartupMs: 29 });
-  // A real series: the median is beyond the floor, the pairs fall on both sides
-  const round4 = [3.3, -1.4, 4.9, -0.5, 3.9];
+  // the median is beyond the floor, but the pairs fall on both sides
+  const mixed = [3.3, -1.4, 4.9, -0.5, 3.9];
   assert.equal(
-    pairedCall(verdict(round4, 3.3), 5),
+    pairedCall(verdict(mixed, 3.3), 5),
     'within noise (floor 3ms) - the pairs disagree: the median is beyond the floor, higher in only 3 of 5 pairs',
   );
-  assert.equal(needsMorePairs({ pairs: round4, deltaMs: 3.3, appStartupMs: 29 }), true);
-  // round 5: 4 of 5 lower still decides
+  assert.equal(needsMorePairs({ pairs: mixed, deltaMs: 3.3, appStartupMs: 29 }), true);
+  // 4 of 5 lower still decides
   assert.equal(
     pairedCall(verdict([-4.4, 0.7, -0.2, -3.8, -4.5], -3.8), 5),
     'IMPROVEMENT beyond noise',
   );
-  // round 6: 8 of 9 higher
+  // 8 of 9 higher still decides
   assert.equal(
     pairedCall(verdict([-0.2, 6.7, 1.8, 6.9, 2.2, 7.8, 7, 5.7, 3.9], 5.7), 9),
     'REGRESSION beyond noise',

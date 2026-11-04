@@ -19,7 +19,8 @@ pub struct BindingHookResolveIdOutput {
   /// we could get the related package json object via the path string.
   #[napi(ts_type = "string | null")]
   pub package_json_path: Option<String>,
-  /// Replaces the import attributes of the import. `{}` removes them.
+  /// Replaces the import attributes of the import. `{}` removes them. Ignored without
+  /// `experimental.importAttributes`.
   #[napi(ts_type = "Record<string, string>")]
   pub attributes: Option<BindingImportAttributes>,
 }

@@ -471,6 +471,7 @@ export interface OutputOptions {
   name?: string;
   /**
    * Specifies `id: variableName` pairs necessary for {@link InputOptions.external | external} imports in `umd` / `iife` {@link OutputOptions.format | formats}.
+   * The `id` does not include import attributes.
    *
    * @example
    * ```js
@@ -498,7 +499,8 @@ export interface OutputOptions {
    */
   globals?: Record<string, string> | GlobalsFunction;
   /**
-   * Maps {@link InputOptions.external | external} module IDs to paths.
+   * Maps {@link InputOptions.external | external} module IDs to paths. The ID does not include
+   * import attributes.
    *
    * Allows customizing the path used when importing external dependencies.
    * This is particularly useful for loading dependencies from CDNs or custom locations.
@@ -560,6 +562,8 @@ export interface OutputOptions {
    * Whether to keep external dynamic imports as `import(...)` expressions in CommonJS output.
    *
    * If set to `false`, external dynamic imports will be rewritten to use `require(...)` calls.
+   * An `import()` with a second argument, such as `{ with: { type: 'json' } }`, stays an
+   * `import()`, because `require()` cannot carry import attributes.
    * This may be necessary to support environments that do not support dynamic `import()` in CommonJS modules like old Node.js versions.
    *
    * @default true

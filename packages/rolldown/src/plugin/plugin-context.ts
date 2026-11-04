@@ -180,7 +180,9 @@ export interface PluginContextResolveOptions {
   /**
    * The import attributes of the simulated import, passed to
    * {@linkcode Plugin.resolveId | resolveId} hooks as
-   * {@linkcode ResolveIdExtraOptions.attributes | attributes}.
+   * {@linkcode ResolveIdExtraOptions.attributes | attributes}. Without
+   * {@linkcode InputOptions.experimental | experimental.importAttributes}, hooks get `{}`, and
+   * only an external result keeps them.
    *
    * @default {}
    */
@@ -398,7 +400,7 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
 
     if (res == null) return null;
     const info =
-      this.data.getModuleOption(this.data.toModuleId(res.id, res.attributes, !!res.external)) ||
+      this.data.getModuleOption(this.data.toModuleId(res.id, res.attributes)) ||
       ({} as ModuleOptions);
     return {
       ...res,

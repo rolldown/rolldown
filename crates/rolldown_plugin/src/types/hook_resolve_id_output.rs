@@ -10,7 +10,8 @@ pub struct HookResolveIdOutput {
   pub normalize_external_id: Option<bool>,
   pub side_effects: Option<HookSideEffects>,
   pub package_json_path: Option<String>,
-  /// Replaces the attributes of the import. `None` keeps them; an empty value removes them.
+  /// Replaces the attributes of the import. `None` keeps them, and an empty value removes them.
+  /// Ignored without `experimental.importAttributes`.
   pub attributes: Option<ImportAttributes>,
 }
 

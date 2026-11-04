@@ -50,7 +50,7 @@ The current storage model — appending JSON lines to a single `logs.json` file 
 
 - **Consumers cannot load the file.** Parsing 3 GB of JSON into memory is impractical for a browser-based UI or even a Node.js process. The entire point of emitting data is for tools to consume it, and the current format makes that impossible at scale.
 - **No random access.** To find a specific module's transform history, a consumer must scan the entire file linearly. There's no way to query "all HookTransformCall events for module X" without reading everything.
-- **No incremental consumption.** In watch mode, the file grows across rebuilds with no structure to distinguish boundaries. A consumer that already processed build N has no efficient way to read only build N+1's events.
+- **No incremental consumption.** When one bundle builds more than once (several `generate`/`write` calls), the file grows with no structure to distinguish boundaries. A consumer that already processed build N has no efficient way to read only build N+1's events.
 
 Report mode (`devtools: { mode: 'report' }`, see `implementation.md`, "Report mode") is the
 shipped answer for agents: bounded aggregates and a small set of files per build output,
@@ -177,7 +177,7 @@ Regardless of which approach is chosen for subscriber scoping, a **pre-emit chec
 
 ## Unresolved Questions
 
-- **Incremental/watch mode:** The devtools system works for both `ClassicBundler` (one-shot) and core `Bundler` (incremental), but successive builds within the same session append to the same `logs.json`. No explicit "rebuild boundary" action exists yet.
+- **Incremental/watch mode:** Only `ClassicBundler` (the `rolldown()` API) opens a devtools session. The core `Bundler` that `watch()` uses keeps `Session::dummy()`, so watch builds emit no events and write no report. Successive builds of one `ClassicBundler` append to the same `logs.json`. No explicit "rebuild boundary" action exists yet.
 - **Dev engine integration:** `BindingDevEngine` creates a session but uses `Session::dummy()` — devtools is not yet wired up for the dev/HMR engine.
 
 ## Related

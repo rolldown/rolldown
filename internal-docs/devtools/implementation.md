@@ -21,7 +21,7 @@ const bundle = await rolldown({
 await bundle.generate();
 ```
 
-The `devtools` option is `@experimental`. Setting `devtools: {}` is sufficient to enable tracing. The option flows through the binding layer as `BindingDevtoolsOptions` and normalizes to `DevtoolsOptions { session_id: Option<String> }` on the Rust side.
+The `devtools` option is `@experimental`. Setting `devtools: {}` is sufficient to enable tracing. The option flows through the binding layer as `BindingDevtoolsOptions` and normalizes to `DevtoolsOptions { session_id: Option<String>, mode: Option<String> }` on the Rust side.
 
 CLI equivalent: `--devtools.session-id <id>`, `--devtools.mode <full|report>`.
 
@@ -31,7 +31,7 @@ In the default `full` mode, rolldown writes JSON-lines files to:
 
 ```
 <InputOptions.cwd>/node_modules/.rolldown/<session_id>/
-  meta.json    # SessionMeta action (one JSON object per build; appended in watch/rebuild)
+  meta.json    # SessionMeta action (one JSON object per build; appended on each generate/write)
   logs.json    # All other actions, one JSON object per line
 ```
 
@@ -213,6 +213,7 @@ A parallel plugin has one plugin per worker, and each worker can build a differe
 | `BuildEnd`                   | After scan stage + after write/generate   | —                                                                                                                              |
 | `ChunkGraphReady`            | After chunk graph construction            | chunks[]{chunk_id, name, reason, modules[], imports[], is_user_defined_entry, is_async_entry, entry_module}                    |
 | `PackageGraphReady`          | After chunk instantiation                 | packages[]{package_id, name, version, package_json_path, package_root, is_used, dependency_type, size, modules[], chunk_ids[]} |
+| `ModuleRenderedReady`        | After chunk instantiation                 | modules[]{id, bytes}                                                                                                           |
 | `HookRenderChunkStart/End`   | Per plugin per renderChunk call           | chunk_id, plugin_name, plugin_id, call_id, content                                                                             |
 | `AssetsReady`                | After final asset generation              | assets[]{chunk_id, content, size, filename}                                                                                    |
 | `OutputChunkGraphReady`      | After `generateBundle` hooks finish       | chunks[]{file_name, name, bytes, is_entry, facade_module_id, imports, dynamic_imports}                                         |

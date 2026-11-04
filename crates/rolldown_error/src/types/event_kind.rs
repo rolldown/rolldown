@@ -141,6 +141,10 @@ pub enum EventKind {
   NamespaceConflict = 50,
   /// Whether to emit warnings when a missing export is replaced with an undefined binding.
   ShimmedExport = 51,
+  /// Whether to emit warnings when an import uses the legacy `assert` keyword instead of `with`.
+  DeprecatedImportAssertion = 54,
+  /// Whether to emit warnings when the options of a dynamic import are not statically analyzable while `experimental.importAttributes` is on.
+  InvalidImportAttribute = 55,
 }
 
 impl Display for EventKind {
@@ -150,6 +154,8 @@ impl Display for EventKind {
       EventKind::AmbiguousExternalNamespaceError => write!(f, "AMBIGUOUS_EXTERNAL_NAMESPACES"),
       EventKind::NamespaceConflict => write!(f, "NAMESPACE_CONFLICT"),
       EventKind::ShimmedExport => write!(f, "SHIMMED_EXPORT"),
+      EventKind::DeprecatedImportAssertion => write!(f, "DEPRECATED_IMPORT_ASSERTION"),
+      EventKind::InvalidImportAttribute => write!(f, "INVALID_IMPORT_ATTRIBUTE"),
       EventKind::CircularDependency => write!(f, "CIRCULAR_DEPENDENCY"),
       EventKind::CircularReexportError => write!(f, "CIRCULAR_REEXPORT"),
       EventKind::Eval => write!(f, "EVAL"),

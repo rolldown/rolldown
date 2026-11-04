@@ -72,6 +72,16 @@ pub struct SymbolRefDbForModule {
   // Only some symbols would be cared about, so we use a hashmap to store the flags.
   pub flags: FxHashMap<SymbolId, SymbolRefFlags>,
   pub classic_data: IndexVec<SymbolId, SymbolRefDataClassic>,
+  /// Every incremental build links against the cached `Scoping`, and linking
+  /// creates facades (`init_*`/`require_*` wrappers and friends) that
+  /// `merge_from_build` then keeps in the cache. Without reuse each rebuild adds
+  /// one more set per module, and every later build clones and walks them.
+  /// These are the facades the previous link created, by name, handed back in
+  /// creation order before a new one is made.
+  reusable_link_facades: FxHashMap<CompactStr, Vec<SymbolId>>,
+  /// Facades created or reused since `begin_link`, in creation order.
+  link_facades: Vec<(CompactStr, SymbolId)>,
+  linking: bool,
   #[cfg(debug_assertions)]
   create_reason: FxHashMap<SymbolRef, String>,
 }
@@ -84,6 +94,9 @@ impl Default for SymbolRefDbForModule {
       ast_scopes: AstScopes::new(Scoping::default()),
       flags: FxHashMap::default(),
       classic_data: IndexVec::default(),
+      reusable_link_facades: FxHashMap::default(),
+      link_facades: Vec::new(),
+      linking: false,
       #[cfg(debug_assertions)]
       create_reason: FxHashMap::default(),
     }
@@ -101,17 +114,39 @@ impl SymbolRefDbForModule {
       ]),
       ast_scopes: AstScopes::new(scoping),
       flags: FxHashMap::default(),
+      reusable_link_facades: FxHashMap::default(),
+      link_facades: Vec::new(),
+      linking: false,
       #[cfg(debug_assertions)]
       create_reason: FxHashMap::default(),
     }
   }
 
+  /// Marks the start of a link: facades created from here on are recorded, and
+  /// may reuse the ones the previous link created. Scan-time facades are real
+  /// symbols of the module, so they are never recorded or reused.
+  pub fn begin_link(&mut self) {
+    self.linking = true;
+    self.link_facades.clear();
+  }
+
   /// The `facade` means the symbol is actually not exist in the AST.
   #[cfg_attr(debug_assertions, track_caller)]
   pub fn create_facade_root_symbol_ref(&mut self, name: &str) -> SymbolRef {
-    let symbol_id = self.ast_scopes.create_facade_root_symbol_ref(name);
-    self.classic_data.push(SymbolRefDataClassic::default());
-    self.flags.entry(symbol_id).or_default().insert(SymbolRefFlags::IsFacade);
+    let reused =
+      if self.linking { self.reusable_link_facades.get_mut(name).and_then(Vec::pop) } else { None };
+    let symbol_id = if let Some(symbol_id) = reused {
+      self.ast_scopes.set_symbol_name(symbol_id, name);
+      symbol_id
+    } else {
+      let symbol_id = self.ast_scopes.create_facade_root_symbol_ref(name);
+      self.classic_data.push(SymbolRefDataClassic::default());
+      self.flags.entry(symbol_id).or_default().insert(SymbolRefFlags::IsFacade);
+      symbol_id
+    };
+    if self.linking {
+      self.link_facades.push((CompactStr::from(name), symbol_id));
+    }
 
     let ret = SymbolRef::from((self.owner_idx, symbol_id));
     #[cfg(debug_assertions)]
@@ -151,6 +186,15 @@ impl SymbolRefDbForModule {
         self.flags.entry(*symbol_id).or_default().insert(SymbolRefFlags::IsFacade);
       }
     }
+
+    let mut reusable: FxHashMap<CompactStr, Vec<SymbolId>> = FxHashMap::default();
+    for (name, symbol_id) in build_db.link_facades {
+      reusable.entry(name).or_default().push(symbol_id);
+    }
+    for symbol_ids in reusable.values_mut() {
+      symbol_ids.reverse();
+    }
+    self.reusable_link_facades = reusable;
 
     let scoping = build_db.ast_scopes.into_scoping();
     self.ast_scopes.set_scoping(scoping);
@@ -222,11 +266,21 @@ impl SymbolRefDb {
         ast_scopes: AstScopes::new(Scoping::default()),
         flags: inner.flags.clone(),
         classic_data: inner.classic_data.clone(),
+        reusable_link_facades: inner.reusable_link_facades.clone(),
+        link_facades: Vec::new(),
+        linking: false,
         #[cfg(debug_assertions)]
         create_reason: inner.create_reason.clone(),
       }));
     }
     Self { inner: vec, has_module_preserve_jsx: self.has_module_preserve_jsx }
+  }
+
+  /// See [`SymbolRefDbForModule::begin_link`].
+  pub fn begin_link(&mut self) {
+    for db in self.inner.iter_mut().flatten() {
+      db.begin_link();
+    }
   }
 }
 
@@ -436,5 +490,83 @@ impl GetLocalDbMut for SymbolRefDbForModule {
   fn local_db_mut(&mut self, owner: ModuleIdx) -> &mut SymbolRefDbForModule {
     debug_assert_eq!(self.owner_idx, owner);
     self
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use oxc::semantic::{ScopeId, Scoping, SymbolId};
+
+  use super::{GetLocalDbMut, SymbolRefDb, SymbolRefDbForModule};
+  use crate::ModuleIdx;
+
+  fn module() -> ModuleIdx {
+    ModuleIdx::new(0)
+  }
+
+  fn cache_with_one_module() -> SymbolRefDb {
+    let mut db = SymbolRefDb::new();
+    db.store_local_db(
+      module(),
+      SymbolRefDbForModule::new(Scoping::default(), module(), ScopeId::new(0)),
+    );
+    db
+  }
+
+  /// One incremental build as `ScanStageCache::create_output` and
+  /// `merge_immutable_fields_for_cache` drive it: the build takes the cached DB,
+  /// the cache keeps a scoping-less clone, and the linked DB merges back.
+  fn link_build(cache: &mut SymbolRefDb, facade_names: &[&str]) -> Vec<SymbolId> {
+    let partial = cache.clone_without_scoping();
+    let mut build = std::mem::replace(cache, partial);
+    build.begin_link();
+    let ids = facade_names
+      .iter()
+      .map(|name| build.create_facade_root_symbol_ref(module(), name).symbol)
+      .collect();
+    for (idx, db) in build.into_inner().into_iter_enumerated() {
+      if let Some(db) = db {
+        cache.local_db_mut(idx).merge_from_build(db);
+      }
+    }
+    ids
+  }
+
+  fn symbol_count(cache: &SymbolRefDb) -> usize {
+    cache.inner()[module()].as_ref().unwrap().ast_scopes.total_symbol_count()
+  }
+
+  #[test]
+  fn link_facades_keep_their_ids_across_builds() {
+    let mut cache = cache_with_one_module();
+    let first = link_build(&mut cache, &["init_a", "require_b"]);
+    let count = symbol_count(&cache);
+
+    let second = link_build(&mut cache, &["init_a", "require_b"]);
+    let third = link_build(&mut cache, &["init_a", "require_b"]);
+
+    assert_eq!(first, second);
+    assert_eq!(first, third);
+    assert_eq!(symbol_count(&cache), count);
+  }
+
+  #[test]
+  fn same_named_link_facades_stay_distinct() {
+    let mut cache = cache_with_one_module();
+    let first = link_build(&mut cache, &["init_a", "init_a"]);
+    let second = link_build(&mut cache, &["init_a", "init_a"]);
+
+    assert_ne!(first[0], first[1]);
+    assert_eq!(first, second);
+  }
+
+  #[test]
+  fn scan_facades_are_never_reused_by_linking() {
+    let mut cache = cache_with_one_module();
+    let scan_facade = cache.create_facade_root_symbol_ref(module(), "init_a").symbol;
+
+    let linked = link_build(&mut cache, &["init_a"]);
+
+    assert_ne!(linked[0], scan_facade);
   }
 }

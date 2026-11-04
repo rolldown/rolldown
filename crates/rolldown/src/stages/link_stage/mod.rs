@@ -146,6 +146,7 @@ pub struct LinkStage<'a> {
 
 impl<'a> LinkStage<'a> {
   pub fn new(mut scan_stage_output: NormalizedScanStageOutput, options: &'a SharedOptions) -> Self {
+    scan_stage_output.symbol_ref_db.begin_link();
     // since constant export is spared in most of time, aggregate them would make searching more efficient
     let constant_symbol_map = if options.optimization.is_inline_const_enabled() {
       scan_stage_output

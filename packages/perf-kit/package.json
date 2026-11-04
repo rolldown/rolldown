@@ -16,7 +16,8 @@
     "lib",
     "AGENTS.md",
     "CHANGELOG.md",
-    "README.md"
+    "README.md",
+    "PROMPTS.md"
   ],
   "type": "module",
   "publishConfig": {

@@ -899,7 +899,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   /// `{ type: 'json' }` in `import('./data.json', { with: { type: 'json' } })`. Like Rollup, only
   /// statically known string attributes count. The legacy `assert` key is read like `with` and
-  /// warns. Ignored options are only worth a warning when they would be part of the module id.
+  /// warns. Ignored options warn only with `experimental.importAttributes`.
   fn import_attributes_from_import_options(&mut self, options: &Expression) -> ImportAttributes {
     let Expression::ObjectExpression(options) = options else {
       self.warn_invalid_import_attribute(

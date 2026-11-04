@@ -430,6 +430,9 @@ export interface FunctionPluginHooks {
     source: string,
     /**
      * The fully resolved id of the importing module.
+     * With {@linkcode InputOptions.experimental | experimental.importAttributes}, it contains the
+     * import attributes of the importer. Use
+     * {@linkcode ResolveIdExtraOptions.importerRawId | importerRawId} to get its file.
      *
      * When resolving entry points, `importer` will usually be undefined.
      * An exception here is entry points generated via
@@ -465,6 +468,9 @@ export interface FunctionPluginHooks {
     source: string,
     /**
      * The fully resolved id of the importing module.
+     * With {@linkcode InputOptions.experimental | experimental.importAttributes}, it contains the
+     * import attributes of the importer. Use
+     * {@linkcode ResolveIdExtraOptions.importerRawId | importerRawId} to get its file.
      *
      * This will be `undefined` when {@linkcode PluginContext.resolve | this.resolve(source, undefined, { kind: 'dynamic-import' })} is called.
      */
@@ -512,6 +518,11 @@ export interface FunctionPluginHooks {
   [DEFINED_HOOK_NAMES.transform]: (
     this: TransformPluginContext,
     code: string,
+    /**
+     * The module id. With
+     * {@linkcode InputOptions.experimental | experimental.importAttributes}, it contains the
+     * import attributes of the module, so read the file from `meta.rawId`.
+     */
     id: string,
     meta: BindingTransformHookExtraArgs & {
       moduleType: ModuleType;

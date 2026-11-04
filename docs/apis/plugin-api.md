@@ -291,3 +291,7 @@ Rollup does not check a plugin's sourcemap against its own `sources` and `names`
 Failed to convert json sourcemap to struct
 Reference to non-existing source at position 1
 ```
+
+### Import Attributes
+
+Rollup 4 passes import attributes to plugin hooks. Rolldown only does this when `experimental.importAttributes` is on, and then follows Rollup 5. The option is off by default, so hooks get `{}` and the attributes that `resolveId` returns are ignored. See [Import Attributes](/in-depth/import-attributes).

@@ -83,6 +83,10 @@ import lib from 'https://cdn.example.com/lib.js';
 // Always external, emitted as-is
 ```
 
+## Import Attributes
+
+In ESM output, an external import keeps its import attributes, such as `with { type: 'json' }`. Imports of one specifier with different attributes become separate external modules, each with its own `with` clause. See [Import Attributes](/in-depth/import-attributes#external-modules) for other formats and plugin hooks.
+
 ## Unused Imports Are Removed
 
 If nothing uses an import from an external module, Rolldown removes it.

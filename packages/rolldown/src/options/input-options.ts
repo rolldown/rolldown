@@ -522,6 +522,9 @@ export interface InputOptions {
    *
    * See [the In-Depth Guide](https://rolldown.rs/in-depth/module-types) for more details.
    *
+   * With {@linkcode InputOptions.experimental | experimental.importAttributes}, a `type` import
+   * attribute of `json`, `text` or `bytes` wins over this option.
+   *
    * @example
    * ```js
    * import { defineConfig } from 'rolldown'
@@ -743,6 +746,7 @@ export interface InputOptions {
      * `attributes` is always `{}` and the attributes a `resolveId` hook returns are ignored. An
      * external module keeps the attributes written in the source in both modes.
      *
+     * @see {@link https://rolldown.rs/in-depth/import-attributes | Import Attributes}
      * @see {@link https://github.com/rolldown/rolldown/discussions/11217 | RFC}
      * @default false
      */

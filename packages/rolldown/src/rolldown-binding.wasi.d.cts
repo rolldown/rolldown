@@ -3211,21 +3211,24 @@ export interface JsOutputAsset {
   source: BindingAssetSource
 }
 
+/**
+ * What a `generateBundle` or `writeBundle` hook changed in an output chunk. A field that is left
+ * out is a property the plugin did not change, so the chunk keeps its value, which is never copied
+ * through JavaScript. See `collectChunkChange` in
+ * `packages/rolldown/src/utils/transform-to-rollup-output.ts`.
+ */
 export interface JsOutputChunk {
-  name: string
-  isEntry: boolean
-  isDynamicEntry: boolean
-  facadeModuleId?: string
-  moduleIds: Array<string>
-  exports: Array<string>
   filename: string
-  modules: Record<string, BindingRenderedModule>
-  imports: Array<string>
-  dynamicImports: Array<string>
-  code: string
-  map?: BindingSourcemap
-  sourcemapFilename?: string
-  preliminaryFilename: string
+  /**
+   * Always sent. Besides its value, it tells a chunk apart from a `JsOutputAsset`, which has no
+   * `isEntry`, when napi picks a side of `Either<JsOutputChunk, JsOutputAsset>`.
+   */
+  isEntry: boolean
+  code?: string
+  /** `null` removes the map. */
+  map?: BindingSourcemap | null
+  imports?: Array<string>
+  dynamicImports?: Array<string>
 }
 
 /** Error emitted from native side, it only contains kind and message, no stack trace. */

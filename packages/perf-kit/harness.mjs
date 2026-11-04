@@ -17,10 +17,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
+import { spawnSync } from 'node:child_process';
 
 import { launchBrowser } from './lib/cdp.mjs';
 import { startServer } from './lib/serve.mjs';
 import { buildApp } from './lib/build.mjs';
+import { installCheckoutRolldown, reportSupportNote } from './lib/rolldown-support.mjs';
 import {
   FEATURES,
   FEATURE_NAMES,
@@ -31,12 +33,14 @@ import {
 import {
   DEFAULT_THROTTLE,
   deltaSection,
-  heavyPrepaintTypes,
   lcpElementOf,
+  median,
+  parseNetworkFlags,
   scaleThrottle,
   summarize,
+  throttleFromProfile,
+  throttleId,
   timedRun,
-  weightLabel,
 } from './lib/measure.mjs';
 import {
   COLD_OPEN_MIN_BYTES,
@@ -46,15 +50,23 @@ import {
   largeAtPaintModules,
   siblingVariantGroups,
 } from './lib/coverage.mjs';
-import { aggregateProfile, profileRun } from './lib/profile.mjs';
+import { aggregateProfile, profileEvidence, profileRun } from './lib/profile.mjs';
+import { analyzeChunkDiscovery, loadChunkGraph } from './lib/chunk-discovery.mjs';
+import {
+  chunkDiscoveryAdvice,
+  comparePaints,
+  renderGapEvidence,
+} from './lib/paint-diagnostics.mjs';
 import {
   deferAllInto,
   evalOverrides,
   loadModuleGraph,
   moduleGraphCandidates,
   reportDirFor,
+  reportDistMismatch,
   resolveModule,
   whatIf,
+  withRoots,
 } from './lib/module-graph.mjs';
 import { minCut } from './lib/min-cut.mjs';
 import { diffGraphs } from './lib/graph-diff.mjs';
@@ -79,6 +91,63 @@ import {
   summarizeStartup,
 } from './lib/node/measure.mjs';
 import {
+  COVERAGE_MIN_WRANGLER,
+  EMPTY_NAME,
+  classifyModules,
+  createStderrCollector,
+  loadWorkerOptions,
+  resolveWorkerTools,
+  supportsV8Flags,
+  timedImport,
+} from './lib/worker/launch.mjs';
+import {
+  NOISE_FLOOR_MS as WORKER_NOISE_FLOOR_MS,
+  NOISE_FLOOR_PCT as WORKER_NOISE_FLOOR_PCT,
+  attributeCoverage,
+  attributeProfile,
+  PAIRED_EXTEND_TO,
+  CLOSURE_MIN_MODULES,
+  FIXED_YOUNG_V8_FLAGS,
+  closureCall,
+  closureOnlyShrank,
+  keepVerdict,
+  needsMorePairs,
+  pairedCall,
+  pairedVerdict,
+  coverageRun as workerCoverageRun,
+  cpuProfileRun,
+  firstRequests,
+  gatherSeries,
+  outputLocator,
+  summarizeWorkerStartup,
+} from './lib/worker/measure.mjs';
+import { evaluatingModules, shortModule, topLevelCalls, whyModule } from './lib/worker/attrib.mjs';
+import {
+  classModules,
+  cpuByModule,
+  cpuByOutputFile,
+  cpuOf,
+  isVirtual,
+  lazyInStartupChunks,
+  leaveOnlyTogether,
+  libraryShare,
+  sourceCpu,
+  startupGroups,
+  wrapperPrice,
+} from './lib/worker/startup-cpu.mjs';
+import { ATTRIB_DIR, SHIM_FILE, attribOutDir, writeViteConfigShim } from './lib/worker/config.mjs';
+import {
+  asyncImportModules,
+  importUses,
+  loadParseAst,
+  mainModuleIndex,
+  matchImportTargets,
+  parseFile,
+  readOnlyInAsync,
+  readOnlyLater,
+  textModuleBytes,
+} from './lib/worker/handler-imports.mjs';
+import {
   discoverPages,
   gitState,
   hashDist,
@@ -88,6 +157,9 @@ import {
 } from './lib/parity/anchor.mjs';
 import { compareLcp, describeLcp, lcpReason } from './lib/parity/compare.mjs';
 import { runParity, pageSlug } from './lib/parity/run.mjs';
+import { cmdField } from './lib/field/run.mjs';
+import { onInterrupt } from './lib/interrupt.mjs';
+import { cmdRecord, cmdReplay } from './lib/replay/run.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const APP_DIR = path.join(ROOT, 'app');
@@ -108,13 +180,9 @@ const CHROME_PROFILE_DIR = path.join(STATE_DIR, 'chrome-profile');
 // them; accepting or reverting a change is the loop driver's (agent's) call.
 const NOISE_FLOOR_MS = 30;
 const NOISE_FLOOR_PCT = 2;
-// Sequential early stop: when a scan has a pinned baseline and run 1's LCP
-// delta is at least this many noise thresholds away from it, the remaining
-// runs cannot flip the accept/revert call - they only refine a median nobody
-// needs, at the price of full page loads (minutes on slow apps). Sample count
-// is the SAFE adaptive dimension; the throttle is the objective function and
-// never adapts (zero-throttle hides byte weight and RTT waterfalls - the main
-// fix classes - and can invert decisions near the floor).
+// A large first-run LCP change can end a probe early. A keep/revert decision
+// still needs a full scan of both paint metrics with --no-early-stop.
+// Keep the throttle fixed: changing it can invert a comparison.
 const EARLY_STOP_FACTOR = 5;
 // Per-target throttle calibration: the ONE throttle dimension that may vary is
 // network bandwidth, in named discrete steps, chosen once per target and PINNED
@@ -130,13 +198,22 @@ const CALIBRATE_CEILING_MS = 8000;
 const CANDIDATE_MIN_BYTES = 3 * 1024;
 const CANDIDATE_MAX_PAINT_RATIO = 0.02;
 
-// How to spell an invocation in hints: a launcher can dictate it via ROLLDOWN_PERF_KIT_CLI,
-// otherwise the bin name when installed, the script when run from the repo.
+// How to spell an invocation in hints: a launcher can dictate it via ROLLDOWN_PERF_KIT_CLI;
+// installed, `npx <package name>` when a bin carries the package's bare name (npx runs that
+// bin, with or without a local install), else the first bin; from the repo, the script.
 const CLI =
   process.env.ROLLDOWN_PERF_KIT_CLI ??
-  (/[\\/]node_modules[\\/]/.test(ROOT) ? 'npx perf-kit' : 'node harness.mjs');
+  (/[\\/]node_modules[\\/]/.test(ROOT) ? installedCli() : 'node harness.mjs');
+
+function installedCli() {
+  const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+  const bins = Object.keys(pkg.bin ?? {});
+  const bare = pkg.name.split('/').pop();
+  return `npx ${bins.includes(bare) ? pkg.name : (bins[0] ?? bare)}`;
+}
 
 const kb = (n) => `${(n / 1024).toFixed(1)}KB`;
+const kib = (n) => `${(n / 1024).toFixed(1)}KiB`;
 const ms = (v) => (v == null ? 'n/a' : `${Math.round(v)}ms`);
 const readJson = (file) => (fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null);
 // The state dir self-ignores: agents running `git add -A` in a consumer repo must
@@ -155,9 +232,8 @@ const writeJson = (file, value) => {
 };
 
 const cleanups = [];
-process.on('SIGINT', async () => {
+onInterrupt(async () => {
   for (const fn of cleanups.splice(0)) await fn().catch(() => {});
-  process.exit(130);
 });
 
 function parse(argv, options) {
@@ -173,6 +249,24 @@ const TARGET_OPTS = {
   app: { type: 'string' },
   dist: { type: 'string' },
 };
+
+// `--bandwidth <Mbit/s> [--rtt <ms>] [--cpu <rate>]`: pin a network in real units - the
+// network a deployed environment measured (a record's model) - instead of a net-scale
+// step. Pinned like --net-scale; changing it makes the pinned baseline incomparable.
+const NETWORK_OPTS = {
+  bandwidth: { type: 'string' },
+  rtt: { type: 'string' },
+  cpu: { type: 'string' },
+};
+
+// The throttle identity a measurement will run under: the flag's, else the pinned
+// profile's; null before the first calibration (nothing to compare against yet).
+function expectedThrottleId(target, opts, networkFlag) {
+  if (networkFlag) return throttleId({ network: networkFlag });
+  if (opts['net-scale'] != null) return throttleId({ netScale: Number(opts['net-scale']) });
+  const profile = readJson(target.paths.throttleProfile);
+  return profile ? throttleId(profile) : null;
+}
 
 function targetSlug(dist) {
   return dist
@@ -233,8 +327,8 @@ function resolveTarget(opts) {
   }
   if ((opts.dist || opts.app) && readJson(TARGET_FILE)?.dist !== dist) {
     writeJson(TARGET_FILE, { dist, setAtMs: Date.now() });
-    console.log(`target: ${dist} (remembered - future commands can omit --app/--dist)`);
   }
+  console.log(`target: ${dist}${opts.dist || opts.app ? '' : ' (remembered)'}`);
   return { dist, paths: targetPaths(dist), isDemo: isDemoDist(dist) };
 }
 
@@ -280,6 +374,15 @@ function detectEntry(distDir) {
       module: tag.includes('type="module"'),
     });
   }
+  // Astro islands have no script tag: each <astro-island> names its chunks in
+  // component-url / renderer-url attributes. They load as modules.
+  if (!locals.length) {
+    for (const [, src] of html.matchAll(/\b(?:component|renderer)-url="([^"]+)"/g)) {
+      if (!src.startsWith('http')) {
+        locals.push({ src: src.split('?')[0].replace(/^\.?\//, ''), module: false });
+      }
+    }
+  }
   const moduleScript = locals.find((s) => s.module);
   if (moduleScript) return moduleScript.src;
   // webpack-style multi-script pages have no type="module": prefer the
@@ -300,12 +403,32 @@ function detectEntry(distDir) {
  * Resolve the target's PINNED throttle profile, calibrating on first use: walk
  * the net-scale ladder (one probe navigation per step) until the baseline LCP
  * fits under the ceiling, then pin the winning scale. Explicit --net-scale
- * pins without probing. Pinned means pinned: every later scan/measure/coverage/
+ * pins without probing; so does --bandwidth/--rtt/--cpu, which pins a network in
+ * real units (a deployed environment's measured network) instead of a scale step.
+ * Pinned means pinned: every later scan/measure/coverage/
  * profile - and the eval referee - inherits this value until the profile file
  * is deleted or explicitly overridden.
  */
-async function ensureThrottleProfile(target, { origin, cdp, netScaleFlag = null }) {
+async function ensureThrottleProfile(
+  target,
+  { origin, cdp, netScaleFlag = null, networkFlag = null },
+) {
   const existing = readJson(target.paths.throttleProfile);
+  if (networkFlag) {
+    const id = throttleId({ network: networkFlag });
+    if (!existing || throttleId(existing) !== id) {
+      writeJson(target.paths.throttleProfile, {
+        schemaVersion: 1,
+        network: networkFlag,
+        source: 'flag',
+        pinnedAtMs: Date.now(),
+      });
+      console.log(
+        `throttle profile pinned by flag: ${id}${existing ? ` (was ${throttleId(existing)} - the pinned baseline is now incomparable, re-pin with scan --pin)` : ''}`,
+      );
+    }
+    return readJson(target.paths.throttleProfile);
+  }
   if (netScaleFlag != null) {
     const netScale = Number(netScaleFlag);
     if (!CALIBRATE_LADDER.includes(netScale)) {
@@ -313,7 +436,7 @@ async function ensureThrottleProfile(target, { origin, cdp, netScaleFlag = null 
         `--net-scale must be one of ${CALIBRATE_LADDER.join('/')} (named, reproducible steps only)`,
       );
     }
-    if (existing?.netScale !== netScale) {
+    if (!existing || throttleId(existing) !== throttleId({ netScale })) {
       writeJson(target.paths.throttleProfile, {
         schemaVersion: 1,
         netScale,
@@ -321,7 +444,7 @@ async function ensureThrottleProfile(target, { origin, cdp, netScaleFlag = null 
         pinnedAtMs: Date.now(),
       });
       console.log(
-        `throttle profile pinned by flag: net x${netScale}${existing ? ` (was x${existing.netScale} - the pinned baseline is now incomparable, re-pin with scan --pin)` : ''}`,
+        `throttle profile pinned by flag: net x${netScale}${existing ? ` (was ${throttleId(existing)} - the pinned baseline is now incomparable, re-pin with scan --pin)` : ''}`,
       );
     }
     return readJson(target.paths.throttleProfile);
@@ -360,7 +483,12 @@ async function ensureThrottleProfile(target, { origin, cdp, netScaleFlag = null 
   return profile;
 }
 
-async function withServerAndBrowser(target, throttleOff, fn, { netScaleFlag = null } = {}) {
+async function withServerAndBrowser(
+  target,
+  throttleOff,
+  fn,
+  { netScaleFlag = null, networkFlag = null } = {},
+) {
   const distDir = target.dist;
   if (!fs.existsSync(path.join(distDir, 'index.html'))) {
     throw new Error(`no build at ${distDir} - build the app first`);
@@ -380,8 +508,9 @@ async function withServerAndBrowser(target, throttleOff, fn, { netScaleFlag = nu
         origin: server.origin,
         cdp: browser.cdp,
         netScaleFlag,
+        networkFlag,
       });
-      throttle = scaleThrottle(DEFAULT_THROTTLE, profile.netScale);
+      throttle = throttleFromProfile(profile);
     }
     return await fn({ origin: server.origin, cdp: browser.cdp, throttle });
   } finally {
@@ -447,10 +576,20 @@ function writeMeasureReport(
   const prev = readJson(target.paths.runtimeState);
   const baseline = readJson(target.paths.runtimeBaseline);
   // Deltas are only meaningful between measurements taken under the SAME pinned
-  // net scale - the scale is part of the measurement's identity. A mismatch
-  // suppresses the comparison and says so, instead of printing a wrong number.
-  const currScale = throttle ? (throttle.netScale ?? 1) : null;
-  const sameScale = (state) => state && currScale != null && (state.netScale ?? 1) === currScale;
+  // throttle (net scale or network) - it is part of the measurement's identity. A
+  // mismatch suppresses the comparison and says so, instead of printing a wrong number.
+  const currId = throttle ? throttleId(throttle) : null;
+  const sameScale = (state) => state && currId != null && throttleId(state) === currId;
+  const chunkGraph = loadChunkGraph(
+    target.dist,
+    moduleGraphCandidates({
+      demoMetricsDir: target.isDemo ? BUILD_METRICS_DIR : undefined,
+      dist: target.dist,
+    }).map((file) => path.join(path.dirname(file), 'chunk-graph.json')),
+  );
+  const baselineDelta = sameScale(baseline)
+    ? deltaSection(baseline.metrics, summary.metrics)
+    : null;
   const report = {
     schemaVersion: 1,
     generatedAtMs: Date.now(),
@@ -466,25 +605,33 @@ function writeMeasureReport(
     gatingFetches: summary.gatingFetches,
     resourceWeight: summary.resourceWeight,
     renderBlockingGate: summary.renderBlockingGate,
+    postLoadScripts: summary.postLoadScripts,
+    resourceDetailsComplete: summary.resourceDetailsComplete,
+    chunkDiscovery: analyzeChunkDiscovery(chunkGraph, samples, throttle?.latencyMs),
     lcpElement: summary.lcpElement,
     delta: sameScale(prev) ? deltaSection(prev.metrics, summary.metrics) : null,
-    baselineDelta: sameScale(baseline) ? deltaSection(baseline.metrics, summary.metrics) : null,
+    baselineDelta,
+    paintComparison: comparePaints(baselineDelta, {
+      noiseFloorMs: NOISE_FLOOR_MS,
+      noiseFloorPct: NOISE_FLOOR_PCT,
+    }),
     baselineScaleMismatch:
-      baseline && currScale != null && !sameScale(baseline)
-        ? { pinned: baseline.netScale ?? 1, current: currScale }
+      baseline && currId != null && !sameScale(baseline)
+        ? { pinned: throttleId(baseline), current: currId }
         : null,
     samples: summary.samples,
   };
   writeJson(target.paths.runtimeMetrics, report);
   // runs travels with the state so pinBaseline can refuse single-run pins
   // (quick probes and early-stopped scans - a 1-run baseline poisons deltas);
-  // netScale travels so future measurements refuse cross-scale comparisons.
+  // netScale / network travel so future measurements refuse cross-throttle comparisons.
   writeJson(target.paths.runtimeState, {
     schemaVersion: 1,
     tsMs: report.generatedAtMs,
     label: report.label,
     runs: report.runs,
-    netScale: currScale ?? undefined,
+    netScale: throttle && !throttle.network ? (throttle.netScale ?? 1) : undefined,
+    network: throttle?.network,
     metrics: report.metrics,
   });
   fs.appendFileSync(
@@ -523,7 +670,7 @@ function printMeasureSummary(
     const e = report.earlyStopped;
     console.log(
       `early stop after run 1 of ${e.plannedRuns}: |dLCP vs pinned baseline| ${Math.abs(e.deltaMs)}ms >= ${e.factor}x noise threshold ${e.thresholdMs}ms` +
-        ' - the remaining runs cannot flip this call. Decision-grade for accept/revert; pinning still needs a full scan.',
+        ' - this is a probe. A full scan with --no-early-stop must check both FCP and LCP before a decision.',
     );
   }
   console.log(
@@ -531,18 +678,19 @@ function printMeasureSummary(
       `FCP ${ms(m['runtime.fcp_ms'])} | load ${ms(m['runtime.load_ms'])} | ` +
       `CLS ${m['runtime.cls']} | transfer ${kb(m['runtime.transfer_bytes'])} | ` +
       `${m['runtime.js_request_count']} js requests` +
-      `${(report.throttle?.netScale ?? 1) !== 1 ? ` | net x${report.throttle.netScale} (pinned)` : ''}`,
+      `${report.throttle && (report.throttle.network || (report.throttle.netScale ?? 1) !== 1) ? ` | ${throttleId(report.throttle)} (pinned)` : ''}`,
   );
   if (report.baselineScaleMismatch) {
     const mm = report.baselineScaleMismatch;
     console.log(
-      `vs pinned baseline: INCOMPARABLE - the baseline was pinned under net x${mm.pinned}, this measurement ran under net x${mm.current}.`,
+      `vs pinned baseline: INCOMPARABLE - the baseline was pinned under ${mm.pinned}, this measurement ran under ${mm.current}.`,
     );
     console.log('next: re-pin under the current profile (scan --pin) before judging any change.');
   }
   const guardOk =
     report.guard.allFeaturesReady &&
     report.guard.heroRendered !== false && // null = no hero probe on this app
+    report.guard.fcpObservedInAllRuns &&
     report.guard.lcpObservedInAllRuns;
   console.log(`guard: ${guardOk ? 'PASS' : `FAIL ${JSON.stringify(report.guard)}`}`);
 
@@ -568,83 +716,85 @@ function printMeasureSummary(
   const renderGap = m['runtime.render_gap_ms'];
   if (typeof renderGap === 'number' && renderGap > 150) {
     console.log(
-      `render gap: first paint landed ${Math.round(renderGap)}ms AFTER the load event - rendering is gated on post-load work, not on downloading.`,
+      `render gap: LCP landed ${Math.round(renderGap)}ms AFTER the load event. Downloads can continue after load.`,
     );
-    const fetches = report.gatingFetches ?? [];
-    for (const fetchLine of fetches) {
-      console.log(`  completed just before paint: ${fetchLine}`);
+    for (const evidence of renderGapEvidence(report)) {
+      console.log(`  candidate: ${evidence.detail}`);
+      if (advice) console.log(`  next: ${evidence.next}`);
     }
-    const prepaint = (report.resourceWeight ?? []).filter((w) => w.preFcpCount > 0);
-    if (prepaint.length) {
-      console.log(`  before first paint: ${prepaint.slice(0, 5).map(weightLabel).join(', ')}`);
-    }
-    const heavy = heavyPrepaintTypes(report.resourceWeight);
-    if (!advice) {
-      // verdict names the gap's cause class and the move - no second copy here
-    } else if (fetches.length) {
+    if (advice) {
       console.log(
-        '  next: find what the boot path awaits before the first render (a config/data fetch, a locale chunk) and render with bundled defaults instead, applying the fetched result when it arrives.',
-      );
-    } else if (heavy.some((w) => w.type === 'font')) {
-      console.log(
-        '  next: no render-gating fetch - the paint likely waits on fonts. Make first paint depend on at most one (subset) font: preload it, and defer loading/registering the rest until after paint.',
-      );
-    } else if (heavy.length) {
-      console.log(
-        '  next: no render-gating fetch - heavy images load before first paint. Lazy-load below-the-fold images and shrink the ones the first view needs.',
-      );
-    } else {
-      console.log(
-        `  next: no render-gating fetch or heavy pre-paint asset - the gap is post-load CPU, late-executing chunks, or a hero revealed by an entry animation. Run \`${CLI} profile\` and defer the attributed app work; if the profile shows only framework/baseline work, check whether the LCP element mounts invisible (opacity-0 fade-in wrapper) - LCP counts the first frame it paints VISIBLE, so render the hero visible immediately and animate only decoration.`,
+        `  next: check these candidates against the source and the CPU profile (${CLI} profile). Check whether an animation hides the LCP element. Timing alone does not show what blocked paint.`,
       );
     }
+  }
+  for (const paint of ['fcp', 'lcp']) {
+    const discovery = report.chunkDiscovery?.[paint];
+    if (!discovery?.groups.length) continue;
+    console.log(
+      `late chunk candidates before ${paint.toUpperCase()}: ${discovery.groups.length} static import group(s). Paint dependencies are unverified.`,
+    );
+    for (const group of discovery.groups.slice(0, 4)) {
+      console.log(
+        `  ${group.parent}: ${group.count} chunk(s), ${kib(group.bytes)}, up to ${ms(group.maxDelayMs)} delay (${group.runsAffected}/${group.measuredRuns} runs).`,
+      );
+      const example = group.example.chunks[0];
+      console.log(`    import chain: ${example.importChain.join(' -> ')}`);
+      if (example.facadeModuleId) console.log(`    source: ${example.facadeModuleId}`);
+    }
+    console.log('  Groups and paint windows overlap. Do not add their bytes or delays.');
+    if (advice) console.log(`  next: ${chunkDiscoveryAdvice(paint)}`);
+    console.log(
+      `  evidence: ${discovery.graphFile}; runtime-metrics.json -> chunkDiscovery.${paint}.groups`,
+    );
   }
   const prepaintCpu = m['runtime.prepaint_longtask_ms'];
   if (typeof prepaintCpu === 'number' && prepaintCpu > 150) {
     console.log(`pre-paint CPU: ${Math.round(prepaintCpu)}ms of long tasks before first paint.`);
     if (advice) {
       console.log(
-        `  next: run \`${CLI} profile\` to see which modules burn that CPU; defer work the first paint does not need. ORDER MATTERS: fix any render gap (above) first - CPU that overlaps a render-blocking fetch is free, so deferring it can measure worse until the fetch is fixed.`,
+        `  next: run ${CLI} profile to find the modules that use this CPU time. Check their timing against required downloads. Test deferring work that the first paint does not need. Compare both FCP and LCP.`,
       );
     }
   }
 
-  if (report.baselineDelta?.['runtime.lcp_ms']) {
-    const d = report.baselineDelta['runtime.lcp_ms'];
-    const threshold = Math.max(NOISE_FLOOR_MS, (NOISE_FLOOR_PCT / 100) * d.prev);
-    const call =
-      d.delta <= -threshold
-        ? 'improvement beyond noise'
-        : d.delta >= threshold
-          ? 'REGRESSION beyond noise'
-          : 'within noise';
-    console.log(
-      `vs pinned baseline: LCP ${d.delta > 0 ? '+' : ''}${Math.round(d.delta)}ms ` +
-        `(${d.pct > 0 ? '+' : ''}${d.pct}%) -> ${call} (noise threshold ${Math.round(threshold)}ms)`,
-    );
-    if (call === 'improvement beyond noise' && parity?.state === 'open') {
+  if (report.baselineDelta) {
+    const comparison = report.paintComparison;
+    for (const [paint, metric] of Object.entries(comparison.metrics)) {
+      if (metric.state === 'unknown') {
+        console.log(`vs pinned baseline: ${paint.toUpperCase()} missing`);
+        continue;
+      }
       console.log(
-        'next: NOT a keeper - this build renders differently from the original (see "rendered output" below), so this LCP number does not count. Fix or revert the change that broke it, rebuild, re-scan.',
+        `vs pinned baseline: ${paint.toUpperCase()} ${metric.delta > 0 ? '+' : ''}${Math.round(metric.delta)}ms ` +
+          `(${metric.pct > 0 ? '+' : ''}${metric.pct}%) -> ${metric.state} (noise threshold ${Math.round(metric.thresholdMs)}ms)`,
       );
-    } else if (call === 'improvement beyond noise') {
+    }
+    if (parity?.state === 'open' || !guardOk) {
       console.log(
-        report.earlyStopped
-          ? `next: keep this change - re-pin with \`${CLI} scan --pin\` (pins need full sampling), then commit it.`
-          : `next: keep this change - re-pin with \`${CLI} baseline\` (or scan --pin), then commit it.`,
+        'next: resolve the failed guard or rendered output check before judging paint gains. Both paints must appear in every run.',
       );
+    } else if (report.runs < 3) {
       console.log(
-        `Probe your NEXT change with \`${CLI} scan --quick\` (one run, minutes cheaper); run a full scan only to accept/revert or pin.`,
+        `next: this is a probe. Run ${CLI} scan --no-early-stop with at least 3 runs before a keep/revert decision.`,
       );
+    } else if (comparison.state === 'improved') {
+      console.log(
+        `next: one or both paint metrics improved beyond noise, and neither regressed beyond noise. Keep the change if the functional check passes. Re-pin with ${CLI} baseline. Run scan --parity when the work is complete.`,
+      );
+    } else if (comparison.state === 'regressed') {
+      console.log(
+        'next: FCP or LCP regressed beyond noise. Revert the change and test a different experiment.',
+      );
+    } else if (comparison.state === 'unknown') {
+      console.log('next: collect both FCP and LCP before judging this change.');
     } else {
       console.log(
-        'next: this attempt did not clearly improve LCP - revert the change and rebuild (then try a different one).',
-      );
-      console.log(
-        `Probe the next attempt with \`${CLI} scan --quick\` first; confirm keepers with a full scan.`,
+        'next: neither FCP nor LCP improved beyond noise. Revert the change and test a different experiment.',
       );
     }
   } else if (hadBaseline) {
-    console.log('vs pinned baseline: n/a (metric missing)');
+    console.log('vs pinned baseline: n/a (metrics missing or throttle changed)');
   }
   // Free on every measurement (the timed runs already observe it), so it is shown
   // as it happens - information, not a gate; the final parity check gates on it.
@@ -975,28 +1125,45 @@ function printCoverageReport(target, report, { compact = false, advice = true } 
 // --- profile core ----------------------------------------------------------------
 
 function buildProfileReport(target, profile, entry) {
-  const entryFile = path.join(target.dist, entry);
-  const { rows, totalMs } = aggregateProfile(profile, {
-    code: fs.readFileSync(entryFile, 'utf8'),
-    map: JSON.parse(fs.readFileSync(`${entryFile}.map`, 'utf8')),
-    entryUrlSuffix: `/${entry.replaceAll('\\', '/')}`,
+  const summary = aggregateProfile(profile, {
+    readChunk: (file) => {
+      const chunkFile = path.join(target.dist, file);
+      if (!fs.existsSync(chunkFile) || !fs.existsSync(`${chunkFile}.map`)) return null;
+      return {
+        code: fs.readFileSync(chunkFile, 'utf8'),
+        map: JSON.parse(fs.readFileSync(`${chunkFile}.map`, 'utf8')),
+      };
+    },
   });
-  const report = { schemaVersion: 1, generatedAtMs: Date.now(), entry, totalMs, rows };
+  const report = { schemaVersion: 2, generatedAtMs: Date.now(), entry, ...summary };
   writeJson(target.paths.profile, report);
   return report;
 }
 
 function printProfileReport(report, { advice = true } = {}) {
-  console.log(`boot CPU by module, navigation -> first paint (${report.totalMs}ms sampled):\n`);
+  console.log(`boot CPU by module, navigation -> FCP observation (${report.totalMs}ms sampled):\n`);
   for (const row of report.rows.slice(0, 20)) {
     const pctStr =
       report.totalMs > 0 ? `${((row.ms / report.totalMs) * 100).toFixed(0).padStart(4)}%` : '';
-    console.log(`  ${row.bucket.padEnd(40)} ${String(row.ms).padStart(7)}ms ${pctStr}`);
+    console.log(
+      `  ${row.bucket.padEnd(40)} ${String(row.ms).padStart(7)}ms ${pctStr} [${row.kind}]`,
+    );
   }
+  console.log(
+    `\nsource ${report.attribution.sourceMs}ms | engine ${report.attribution.engineMs}ms | unattributed ${report.attribution.unattributedMs}ms`,
+  );
+  console.log(
+    'The profile can include work between FCP and its observation. Sampled time is not a predicted paint gain.',
+  );
   if (advice) {
     console.log(
-      '\nnext: work here runs BEFORE the page paints. Defer whatever the first render does not need (idle callback + dynamic import). Fix render-gating fetches first: CPU that overlaps a blocked render is free, so deferring it can measure worse until the fetch is fixed.',
+      '\nnext: check whether each source module contributes to the first render. Test deferring only optional work. Compare both FCP and LCP.',
     );
+    if (profileEvidence(report).unattributed.length) {
+      console.log(
+        'Inspect unattributed rows and supply missing sourcemaps before treating CPU attribution as complete.',
+      );
+    }
   }
 }
 
@@ -1007,8 +1174,8 @@ function printProfileReport(report, { advice = true } = {}) {
 // while any lead is open or any signal is missing/stale, and states the tools'
 // blind-spot boundary even when everything is clear.
 
-function printVerdict(target) {
-  const entry = requireEntry(target);
+function printVerdict(target, opts = {}) {
+  const entry = requireEntry(target, opts);
   const entryFile = path.join(target.dist, entry);
   const builtAtMs = fs.statSync(entryFile).mtimeMs;
   // A report vouches only for the build it ran against: entry filename must match
@@ -1170,37 +1337,39 @@ function printVerdict(target) {
 
     const gap = runtime.metrics['runtime.render_gap_ms'];
     if (typeof gap === 'number' && gap > 150) {
-      const fetches = runtime.gatingFetches ?? [];
-      const heavy = heavyPrepaintTypes(runtime.resourceWeight);
-      if (fetches.length) {
-        lead(
-          'open',
-          `render gap ${Math.round(gap)}ms`,
-          `paint is gated on post-load work (${fetches.join('; ')})`,
-          'render with bundled defaults and apply fetched results when they arrive - fix this before judging CPU deferrals',
-        );
-      } else if (heavy.length) {
-        lead(
-          'open',
-          `render gap ${Math.round(gap)}ms`,
-          `no render-gating fetch; before first paint: ${heavy.map(weightLabel).join(', ')}`,
-          heavy.some((w) => w.type === 'font')
-            ? 'make first paint depend on at most one (subset) font - preload it, defer the rest until after paint - fix this before judging CPU deferrals'
-            : 'lazy-load below-the-fold images and shrink the ones the first view needs - fix this before judging CPU deferrals',
-        );
-      } else {
-        lead(
-          'open',
-          `render gap ${Math.round(gap)}ms`,
-          'no render-gating fetch or heavy pre-paint asset - post-load CPU, late-executing chunks, or a hero that mounts invisible',
-          `${CLI} profile  (or scan), then defer the attributed app work. If the profile shows only framework/baseline work, check for an entry animation that mounts the LCP element at opacity 0 (fade-in wrapper): LCP counts the first VISIBLY painted frame - render the hero visible immediately, animate only decoration - fix this before judging CPU deferrals`,
-        );
+      lead(
+        'open',
+        `LCP after load: ${Math.round(gap)}ms`,
+        'downloads, CPU work, or visibility changes can delay paint',
+        `Inspect all candidates below. Check the source and the CPU profile (${CLI} profile). Check whether an animation hides the LCP element.`,
+      );
+      for (const evidence of renderGapEvidence(runtime)) {
+        lines.push(`            candidate: ${evidence.detail}`);
+        lines.push(`            next: ${evidence.next}`);
       }
     } else {
       lead(
-        'clear',
-        'render gap',
-        gap == null ? 'not measurable' : `paint lands ${Math.round(gap)}ms after load`,
+        gap == null ? 'unknown' : 'clear',
+        'LCP after load',
+        gap == null ? 'not measurable' : `LCP lands ${Math.round(gap)}ms after load`,
+        `${CLI} scan`,
+      );
+    }
+
+    for (const paint of ['fcp', 'lcp']) {
+      const discovery = runtime.chunkDiscovery?.[paint];
+      lead(
+        discovery?.state ?? 'unknown',
+        `late chunk candidates before ${paint.toUpperCase()}`,
+        !discovery
+          ? 'runtime report has no discovery data for this paint'
+          : (discovery.reason ??
+              (discovery.groups.length
+                ? `${discovery.groups.length} static group(s); paint dependencies are unverified. Largest: ${discovery.groups[0].parent}, ${kib(discovery.groups[0].bytes)}`
+                : `${discovery.matchedScripts} scripts matched; no static descendant met the delay threshold before this paint. Dynamic imports are excluded.`)),
+        discovery?.state === 'open'
+          ? `Inspect runtime-metrics.json -> chunkDiscovery.${paint}.groups. ${chunkDiscoveryAdvice(paint)} Groups overlap. Delay is not a predicted paint gain.`
+          : 'run scan with full request details and a current chunk-graph.json or Vite manifest',
       );
     }
 
@@ -1221,24 +1390,30 @@ function printVerdict(target) {
         `${CLI} profile  (or scan)`,
       );
     } else {
-      const appRows = (profile.rows ?? []).filter(
-        (row) => row.bucket.includes('/') && !row.bucket.startsWith('(') && row.ms >= 15,
+      const evidence = profileEvidence(profile);
+      lead(
+        evidence.state,
+        `pre-paint CPU ${Math.round(cpu)}ms`,
+        evidence.reason ??
+          (evidence.candidates.length
+            ? `sampled source work near FCP: ${evidence.candidates
+                .slice(0, 3)
+                .map((row) => `${row.bucket} ${row.ms}ms`)
+                .join(', ')}`
+            : evidence.unattributed.length
+              ? 'sampled work lacks complete source attribution'
+              : 'no source module reaches the 15ms sample threshold'),
+        'Check which work the first render needs. Test deferring optional work and compare both FCP and LCP. Run profile again for old reports.',
       );
-      if (appRows.length) {
+      if (evidence.unattributed.length) {
         lead(
-          'open',
-          `pre-paint CPU ${Math.round(cpu)}ms`,
-          `deferrable app work before paint: ${appRows
+          'unknown',
+          'CPU source attribution',
+          `${profile.attribution.unattributedMs}ms unattributed: ${evidence.unattributed
             .slice(0, 3)
-            .map((row) => `${row.bucket} ${row.ms}ms`)
+            .map((row) => `${row.bucket} [${row.kind}]`)
             .join(', ')}`,
-          'defer work the first render does not need (idle callback + dynamic import)',
-        );
-      } else {
-        lead(
-          'clear',
-          `pre-paint CPU ${Math.round(cpu)}ms`,
-          'profile attributes it to baseline parse/engine work, not deferrable app modules',
+          'Inspect profile.json. Supply missing sourcemaps or inspect generated/inline code; do not classify these rows as engine work.',
         );
       }
     }
@@ -1365,7 +1540,7 @@ function printVerdict(target) {
       const mods = mg.graph.modules;
       lead(
         'open',
-        `statically retained imports (${rows.length} module(s) >=${kb(GRAPH_RETAINED_OPEN_BYTES)})`,
+        `statically retained imports from build entries (${rows.length} module(s) >=${kb(GRAPH_RETAINED_OPEN_BYTES)})`,
         rows
           .slice(0, 3)
           .map(
@@ -1378,7 +1553,7 @@ function printVerdict(target) {
     } else {
       lead(
         'clear',
-        'statically retained imports',
+        'statically retained imports (build entries only)',
         `no non-framework module retains >=${kb(GRAPH_RETAINED_OPEN_BYTES)} behind a cuttable static edge`,
       );
     }
@@ -1406,14 +1581,14 @@ function printVerdict(target) {
       `NOTE: the latest measurement EARLY-STOPPED after run 1 - its LCP delta was >=${runtime.earlyStopped.factor}x the`,
     );
     console.log(
-      'noise threshold, so the accept/revert call is decision-grade. Pinning still needs a full scan (scan --pin).\n',
+      'noise threshold. This is a probe. Use scan --no-early-stop to check both FCP and LCP before a decision.\n',
     );
-  } else if (fresh(runtime) && runtime.runs === 1) {
+  } else if (fresh(runtime) && runtime.runs < 3) {
     console.log(
-      'NOTE: the latest measurement used a SINGLE run (quick mode) - its delta is indicative only.',
+      'NOTE: the latest measurement used fewer than 3 runs. Its deltas are indicative only.',
     );
     console.log(
-      'Confirm any accept/revert decision with a full scan (>=3 runs) before acting on it.\n',
+      'Check both FCP and LCP with scan --no-early-stop (at least 3 runs) before a keep/revert decision.\n',
     );
   }
   if (openCount + unknownCount + pendingCount === 0) {
@@ -1526,19 +1701,19 @@ async function cmdMeasure(argv) {
     pin: { type: 'boolean', default: false },
     'no-early-stop': { type: 'boolean', default: false },
     'net-scale': { type: 'string' },
+    ...NETWORK_OPTS,
   });
+  const networkFlag = parseNetworkFlags(opts);
   const target = resolveTarget(opts);
   const expectedFeatures = expectedFeaturesFor(target, opts);
   ensureAnchor(target);
   const baselineState = readJson(target.paths.runtimeBaseline);
   const pinnedLcp = baselineState?.metrics?.['runtime.lcp_ms'];
   // The early stop compares run 1 against the pinned baseline - only valid when
-  // both were measured under the SAME pinned net scale.
-  const expectedScale =
-    opts['net-scale'] != null
-      ? Number(opts['net-scale'])
-      : (readJson(target.paths.throttleProfile)?.netScale ?? null);
-  const scaleMatches = expectedScale != null && (baselineState?.netScale ?? 1) === expectedScale;
+  // both were measured under the SAME pinned throttle.
+  const expectedId = expectedThrottleId(target, opts, networkFlag);
+  const scaleMatches =
+    expectedId != null && baselineState != null && throttleId(baselineState) === expectedId;
   const earlyStop =
     !opts.pin && !opts['no-early-stop'] && typeof pinnedLcp === 'number' && scaleMatches
       ? {
@@ -1565,7 +1740,7 @@ async function cmdMeasure(argv) {
       })),
       throttle,
     }),
-    { netScaleFlag: opts['net-scale'] ?? null },
+    { netScaleFlag: opts['net-scale'] ?? null, networkFlag },
   );
   const { report, hadBaseline } = writeMeasureReport(target, samples, {
     expectedFeatures,
@@ -1625,11 +1800,6 @@ async function cmdProfile(argv) {
   const target = resolveTarget(opts);
   const entry = requireEntry(target, opts);
   if (!opts.entry) console.log(`entry: ${entry} (auto-detected from dist/index.html)`);
-  if (!fs.existsSync(path.join(target.dist, `${entry}.map`))) {
-    throw new Error(
-      `entry ${entry} has no sourcemap (${path.join(target.dist, entry)}.map) - build with sourcemap: true`,
-    );
-  }
   const profile = await withServerAndBrowser(
     target,
     opts['no-throttle'],
@@ -1668,12 +1838,14 @@ async function cmdScan(argv) {
     // 60 - the actionable sections are never trimmed); --full restores the
     // whole table. First scan of a target is always full.
     full: { type: 'boolean', default: false },
-    // Disable the sequential early stop (run 1 decides when its LCP delta vs
+    // Disable the probe's early stop (run 1 stops when its LCP delta vs
     // the pinned baseline is >=5x the noise threshold; see EARLY_STOP_FACTOR).
     'no-early-stop': { type: 'boolean', default: false },
     // Pin the target's net-scale explicitly (one of 1/2/4/8) instead of the
     // calibrated value. Changing it makes the pinned baseline incomparable.
     'net-scale': { type: 'string' },
+    // Or pin a network in real units (--bandwidth/--rtt/--cpu), same rules.
+    ...NETWORK_OPTS,
     // Rendered-output parity: pages beyond the build's discoverable entries (SPA
     // routes) and masks for regions the page renders differently on every load.
     pages: { type: 'string' },
@@ -1691,6 +1863,7 @@ async function cmdScan(argv) {
   if (opts.quick) {
     opts.runs = '1';
   }
+  const networkFlag = parseNetworkFlags(opts);
   const target = resolveTarget(opts);
   const expectedFeatures = expectedFeaturesFor(target, opts);
   const entry = requireEntry(target, opts);
@@ -1702,16 +1875,14 @@ async function cmdScan(argv) {
   // The first scan of a target saves the build as the original - before any change.
   ensureAnchor(target, { pages: parsePages(opts.pages), masks: opts.mask ?? [] });
   // Early stop needs a decision context (a pinned baseline measured under the
-  // SAME pinned net scale) and full-median exemptions: --pin measurements
+  // SAME pinned throttle) and full-median exemptions: --pin measurements
   // BECOME the baseline, so they always sample fully; quick mode is already a
   // single run.
   const baselineState = readJson(target.paths.runtimeBaseline);
   const pinnedLcp = baselineState?.metrics?.['runtime.lcp_ms'];
-  const expectedScale =
-    opts['net-scale'] != null
-      ? Number(opts['net-scale'])
-      : (readJson(target.paths.throttleProfile)?.netScale ?? null);
-  const scaleMatches = expectedScale != null && (baselineState?.netScale ?? 1) === expectedScale;
+  const expectedId = expectedThrottleId(target, opts, networkFlag);
+  const scaleMatches =
+    expectedId != null && baselineState != null && throttleId(baselineState) === expectedId;
   const earlyStop =
     !opts.quick &&
     !opts.pin &&
@@ -1777,7 +1948,7 @@ async function cmdScan(argv) {
         : null;
       return { samples, earlyStopped, cov, profile, throttle, parity };
     },
-    { netScaleFlag: opts['net-scale'] ?? null },
+    { netScaleFlag: opts['net-scale'] ?? null, networkFlag },
   );
 
   const { report, hadBaseline } = writeMeasureReport(target, gathered.samples, {
@@ -1815,7 +1986,7 @@ async function cmdScan(argv) {
     printParityReport(gathered.parity, target);
     console.log('');
   }
-  printVerdict(target);
+  printVerdict(target, { entry });
 
   if (opts.pin) {
     pinBaseline(target);
@@ -1835,8 +2006,8 @@ async function cmdScan(argv) {
 }
 
 async function cmdVerdict(argv) {
-  const opts = parse(argv, { ...TARGET_OPTS });
-  printVerdict(resolveTarget(opts));
+  const opts = parse(argv, { ...TARGET_OPTS, entry: { type: 'string' } });
+  printVerdict(resolveTarget(opts), opts);
 }
 
 // --- rendered-output parity -------------------------------------------------------
@@ -1847,7 +2018,7 @@ async function cmdVerdict(argv) {
 // accepts a change: the keep/revert line, pinning, and the verdict's "done".
 // See README.md "Rendered-output parity" for the design.
 
-// The lab's own state can sit inside the build dir (--dist . with ./.perf-kit):
+// perf-kit's own state can sit inside the build dir (--dist . with ./.perf-kit):
 // never copy, hash or crawl it as part of the app.
 const PARITY_EXCLUDE = [STATE_DIR];
 
@@ -1905,7 +2076,7 @@ function parityStatus(target) {
   return { state: report.state, manifest, report };
 }
 
-const throttleKey = (throttle) => (throttle ? `net x${throttle.netScale ?? 1}` : 'unthrottled');
+const throttleKey = (throttle) => throttleId(throttle);
 
 /**
  * LCP-element bookkeeping on every measurement - free, the timed runs observed it.
@@ -2196,8 +2367,8 @@ function recordCheck(target, report, { label, captured }) {
 /** What to do once a check found a difference - printed with it, and by `parity recover`. */
 function printRecoverGuide(target) {
   const strategy = readJson(target.paths.parity.recover)?.strategy ?? 'on-demand';
-  // bisect runs from the app's repo: spell the lab by absolute path
-  const lab = CLI === 'node harness.mjs' ? `node ${path.join(ROOT, 'harness.mjs')}` : CLI;
+  // bisect runs from the app's repo: spell perf-kit by absolute path
+  const kit = CLI === 'node harness.mjs' ? `node ${path.join(ROOT, 'harness.mjs')}` : CLI;
   const say = (line = '') => console.log(line);
   say(
     'RECOVER MODE - this build renders differently from the original, so its LCP numbers do not count',
@@ -2217,7 +2388,7 @@ function printRecoverGuide(target) {
   say(`       ${CLI} parity strategy each-tweak   every scan re-checks and records a snapshot`);
   say('  3. Not sure which kept change broke it? Bisect your commits - the check exits 1 while a');
   say('     page differs:');
-  say(`       git bisect run sh -c '<build command> && ${lab} parity --only <page> --exit-code'`);
+  say(`       git bisect run sh -c '<build command> && ${kit} parity --only <page> --exit-code'`);
   say(`  4. ${CLI} parity history   every check of this recovery, with its snapshot images`);
   say(
     '  A fix may give back part of the gain: the number you report must come from a build that matches',
@@ -2823,23 +2994,54 @@ function printEagerDiffSummary(target, builtAtMs) {
 }
 
 function requireModuleGraph(opts) {
-  const target = resolveTarget(opts);
-  const graph = loadModuleGraph(
-    moduleGraphCandidates({
+  // A remembered Worker target answers the static queries too (its report sits in a
+  // per-environment directory); a browser target is only resolved when none applies.
+  const workerCandidates = opts.report ? null : workerReportCandidates(opts);
+  let candidates;
+  let target = null;
+  let appHint = null; // where the app's rolldown resolves from, for the missing-report cause
+  if (workerCandidates) {
+    candidates = workerCandidates;
+    appHint = readJson(WORKER_TARGET_FILE)?.app ?? null;
+  } else {
+    target = resolveTarget(opts);
+    candidates = moduleGraphCandidates({
       reportDir: opts.report,
       demoMetricsDir: target.isDemo ? BUILD_METRICS_DIR : null,
       dist: target.dist,
-    }),
-  );
+    });
+    appHint = target.isDemo ? null : path.dirname(target.dist);
+  }
+  const graph = loadModuleGraph(candidates);
   if (!graph) {
+    const cause = appHint && !opts.report ? reportSupportNote(appHint, CLI) : null;
     throw new Error(
-      'no module-graph.json found - it is written by rolldown devtools report builds.\n' +
+      (cause ? `${cause}\n\n` : '') +
+        'no module-graph.json found - it is written by rolldown devtools report builds.\n' +
         'vite >= 8: add `build.rolldownOptions.devtools = { mode: "report" }` to the vite config\n' +
         '(report lands in node_modules/.rolldown/report/<output dir>), rebuild, then re-run.\n' +
-        'Or point at an existing report with --report <dir>.',
+        `For a Cloudflare Worker: \`${CLI} worker-config --app <appDir>\` writes a config that puts the report\n` +
+        'on every environment. Or point at an existing report with --report <dir>.',
     );
   }
+  if (target && !opts.report) assertReportMatchesDist(graph, target.dist);
   return graph;
+}
+
+// A report perf-kit discovered for the dist must describe that dist. Seen in the field:
+// an agent ranked a server build's graph against the client dist, because the SSR build
+// ran last and overwrote the one shared report directory. Report mode now writes one
+// directory per output dir, but a rebuild without the report still leaves a stale one.
+// An explicit --report is the user's choice and is not checked.
+function assertReportMatchesDist(graph, dist) {
+  const why = reportDistMismatch(graph, dist);
+  if (!why) return;
+  throw new Error(
+    `${why}\n` +
+      'Rebuild with the report on, so the report and the dist come from the same build.\n' +
+      'Report mode writes one report per output dir: builds that share an outDir share a report.\n' +
+      'Or point at the client report with --report <dir>.',
+  );
 }
 
 async function cmdGraph(argv) {
@@ -2886,14 +3088,21 @@ async function cmdGraph(argv) {
 async function cmdWhatIf(argv) {
   const { values: opts, positionals } = parseArgs({
     args: argv,
-    options: { ...TARGET_OPTS, report: { type: 'string' }, keep: { type: 'string' } },
+    options: {
+      ...TARGET_OPTS,
+      report: { type: 'string' },
+      keep: { type: 'string' },
+      root: { type: 'string' },
+    },
     allowPositionals: true,
   });
   if (!positionals.length)
-    throw new Error(`usage: ${CLI} what-if <module> [<module> ...] [--keep a,b] [--report <dir>]`);
-  const graph = requireModuleGraph(opts);
+    throw new Error(
+      `usage: ${CLI} what-if <module> [<module> ...] [--keep a,b] [--root a,b] [--report <dir>]`,
+    );
+  const built = requireModuleGraph(opts);
   const resolve = (q) => {
-    const hit = resolveModule(graph, q);
+    const hit = resolveModule(built, q);
     if (!hit)
       throw new Error(`no module matches '${q}' (ids are project-relative, e.g. src/router.ts)`);
     if (hit.ambiguous) {
@@ -2905,12 +3114,21 @@ async function cmdWhatIf(argv) {
   };
   const resolved = positionals.map(resolve);
   const keep = (opts.keep ?? '').split(',').filter(Boolean).map(resolve);
+  // `--root`: modules that load on every start without a static import from an entry
+  // (see withRoots) - the initial load priced below is the entries + their closure.
+  const graph = withRoots(built, (opts.root ?? '').split(',').filter(Boolean).map(resolve));
+  printRootedLoad(graph);
   // Entries cannot be deferred - they ARE the initial load (no import edge to cut).
   // Filtered up front so single and group queries answer the same way.
   const entrySet = new Set(graph.entryModules);
+  const rootSet = new Set(graph.rootModules ?? []);
   const targets = [];
   for (const t of resolved) {
-    if (entrySet.has(graph.modules[t].id)) {
+    if (rootSet.has(graph.modules[t].id)) {
+      console.log(
+        `${graph.modules[t].id} is a --root - it stays eager with its closure, so there is no import edge to defer. Skipped.`,
+      );
+    } else if (entrySet.has(graph.modules[t].id)) {
       console.log(
         `${graph.modules[t].id} is an entry - it IS the initial load, so there is no import edge to defer. Skipped; \`${CLI} graph\` ranks its heavy children instead.`,
       );
@@ -2920,7 +3138,7 @@ async function cmdWhatIf(argv) {
   }
   if (!targets.length) return;
   if (targets.length > 1) {
-    printCombinedWhatIf(graph, targets, keep);
+    printCombinedWhatIf(graph, targets, keep, lastWorkerCpu(built));
     return;
   }
   const target = targets[0];
@@ -2930,7 +3148,7 @@ async function cmdWhatIf(argv) {
   if (result.notStaticallyReachable) {
     console.log(
       result.alreadyLazy
-        ? 'already lazy: every path to this module crosses a dynamic import - it costs the initial load nothing.'
+        ? `already lazy: every path to this module crosses a dynamic import - it costs the initial load nothing.${rootSet.size ? '' : ROOT_HINT}`
         : 'not reachable from the entries at all in this build.',
     );
     return;
@@ -2940,9 +3158,14 @@ async function cmdWhatIf(argv) {
       `cut ${result.cutEdges.length} static import edge(s), from: ${result.cutEdges.join(', ')}`,
     );
   }
+  const cpu = lastWorkerCpu(built);
   console.log(
-    `removes ${kb(result.removedBytes)} / ${result.removedCount} module(s) from the initial load${keep.length ? ` (keeping ${keep.length} sentry module(s) eager)` : ''}:`,
+    `removes ${kb(result.removedBytes)} / ${result.removedCount} module(s) from the initial load${keep.length ? ` (keeping ${keep.length} sentry module(s) eager)` : ''}` +
+      `${cpuSegment(graph, cpu, result.removed)}:`,
   );
+  // Before the module list: an agent often reads only the first lines.
+  printCpuCaveat(graph, cpu, result.removed, result.removedBytes);
+  printGroupChunkWarning(graph, cpu, result.removed);
   const shown = result.removed.slice(0, 20);
   for (const mod of shown) {
     console.log(`  ${kb(mod.bytes).padStart(10)}  ${mod.id}`);
@@ -2965,7 +3188,7 @@ async function cmdWhatIf(argv) {
     );
   }
   console.log(
-    `\nnext: make those importer(s) load it with a dynamic import(), rebuild, run the app's functional check, then \`${CLI} scan\` to confirm the LCP effect.`,
+    `\nnext: make those importer(s) load it with a dynamic import(), rebuild, run the app's functional check, then ${cpu ? `\`${CLI} worker-scan\` to confirm the startup effect` : `\`${CLI} scan\` to confirm the LCP effect`}.`,
   );
 }
 
@@ -2977,21 +3200,41 @@ function keepProtectedEdges(graph, keep) {
   return edges;
 }
 
+// "Already lazy" in the build can still be startup code: an app whose boot chain is a
+// row of dynamic imports (`import('./initReact')`) pays for them on every load.
+const ROOT_HINT =
+  ' If the app runs that dynamic import on every start, pass the module it loads as --root to price it as startup code.';
+
+// With --root, the "initial load" every line below prices is the startup load: the
+// static closure of the entries + the roots. Say so once, with its size.
+function printRootedLoad(graph) {
+  if (!graph.rootModules?.length) return;
+  const base = evalOverrides(graph, []);
+  console.log(`roots: ${graph.rootModules.join(', ')}`);
+  console.log(
+    `"initial load" below = the static closure of the entries + ${graph.rootModules.length} root(s): ${kb(base.eagerBytes)} / ${base.eager.size} module(s)\n`,
+  );
+}
+
 // Multiple targets = ONE combined deferral, priced with a single overlay. The payoff is
 // the comparison against the summed-individually total: shared internals dominated by no
 // single target only leave the initial load when the whole group is deferred, so the
 // combined free can exceed the sum (the firebase / sibling-routes pattern).
-function printCombinedWhatIf(graph, targets, keep) {
+function printCombinedWhatIf(graph, targets, keep, cpu = null) {
   const keepRoots = keep.filter((k) => !targets.includes(k));
   const overrides = targets.flatMap((t) => deferAllInto(graph, t));
   const combined = evalOverrides(graph, overrides, keepRoots.length ? keepRoots : null);
-  const summed = targets.reduce((sum, t) => sum + whatIf(graph, t, keep).removedBytes, 0);
+  const singles = targets.map((t) => whatIf(graph, t, keep));
+  const summed = singles.reduce((sum, r) => sum + r.removedBytes, 0);
   const ids = targets.map((t) => graph.modules[t].id);
   console.log(`what-if deferred (combined): ${ids.join(', ')}`);
   console.log(
     `removes ${kb(combined.removedBytes)} / ${combined.removedCount} module(s) from the initial load` +
-      `${keepRoots.length ? ` (keeping ${keepRoots.length} sentry module(s) eager)` : ''}:`,
+      `${keepRoots.length ? ` (keeping ${keepRoots.length} sentry module(s) eager)` : ''}` +
+      `${cpuSegment(graph, cpu, combined.removed, singles)}:`,
   );
+  printCpuCaveat(graph, cpu, combined.removed, combined.removedBytes);
+  printGroupChunkWarning(graph, cpu, combined.removed);
   const shown = combined.removed.slice(0, 20);
   for (const mod of shown) console.log(`  ${kb(mod.bytes).padStart(10)}  ${mod.id}`);
   if (combined.removed.length > shown.length)
@@ -3015,18 +3258,25 @@ function printCombinedWhatIf(graph, targets, keep) {
     );
   }
   console.log(
-    `\nnext: make each importer load its target with a dynamic import(), rebuild, run the app's functional check, then \`${CLI} scan\` to confirm the LCP effect.`,
+    `\nnext: make each importer load its target with a dynamic import(), rebuild, run the app's functional check, then ${cpu ? `\`${CLI} worker-scan\` to confirm the startup effect` : `\`${CLI} scan\` to confirm the LCP effect`}.`,
   );
 }
 
 async function cmdCut(argv) {
   const { values: opts, positionals } = parseArgs({
     args: argv,
-    options: { ...TARGET_OPTS, report: { type: 'string' }, keep: { type: 'string' } },
+    options: {
+      ...TARGET_OPTS,
+      report: { type: 'string' },
+      keep: { type: 'string' },
+      root: { type: 'string' },
+    },
     allowPositionals: true,
   });
   const query = positionals[0];
-  if (!query) throw new Error(`usage: ${CLI} cut <module> [--keep a,b] [--report <dir>]`);
+  if (!query) {
+    throw new Error(`usage: ${CLI} cut <module> [--keep a,b] [--root a,b] [--report <dir>]`);
+  }
   const graph = requireModuleGraph(opts);
   const resolve = (q) => {
     const hit = resolveModule(graph, q);
@@ -3041,7 +3291,16 @@ async function cmdCut(argv) {
   };
   const target = resolve(query);
   const keep = (opts.keep ?? '').split(',').filter(Boolean).map(resolve);
-  const mod = graph.modules[target];
+  // `--root`: modules whose whole closure must stay eager because the runtime loads them
+  // without a static import from an entry - a Durable Object or Workflow class the
+  // entry exports and the runtime loads by name, or a dynamic import the app runs on
+  // every start. They join the entries (withRoots), so the cut lands on the edges BELOW
+  // them, and a module only a root reaches becomes cuttable. `--keep` cannot say this:
+  // protecting a root's in-edges only pushes the cut up to the entry.
+  const roots = (opts.root ?? '').split(',').filter(Boolean).map(resolve);
+  const rooted = withRoots(graph, roots);
+  const mod = rooted.modules[target];
+  printRootedLoad(rooted);
 
   // Trivial cases reuse what-if's flags: a module that costs the initial load nothing
   // has nothing to cut.
@@ -3049,16 +3308,18 @@ async function cmdCut(argv) {
     console.log(`min cut for ${mod.id}`);
     console.log(
       mod.dynamicOnly === true
-        ? 'already lazy: every path to this module crosses a dynamic import - nothing to cut.'
+        ? `already lazy: every path to this module crosses a dynamic import - nothing to cut.${roots.length ? '' : ROOT_HINT}`
         : 'not reachable from the entries at all in this build - nothing to cut.',
     );
     return;
   }
-  const cut = minCut(graph, target, keepProtectedEdges(graph, keep));
+  const cut = minCut(rooted, target, keepProtectedEdges(rooted, keep));
   if (cut.hasUncuttableSink) {
     console.log(`min cut for ${mod.id}`);
     console.log(
-      'this module is an entry - it cannot be detached by cutting imports (you would delete the module itself).',
+      roots.includes(target)
+        ? 'this module is a --root - it stays eager with its closure; drop it from --root to cut it.'
+        : 'this module is an entry - it cannot be detached by cutting imports (you would delete the module itself).',
     );
     return;
   }
@@ -3074,20 +3335,21 @@ async function cmdCut(argv) {
     console.log('nothing to cut - it is already detached from the initial load.');
     return;
   }
-  const naive = whatIf(graph, target, keep).cutEdges.length;
+  const naive = whatIf(rooted, target, keep).cutEdges.length;
   const priced = evalOverrides(
-    graph,
+    rooted,
     cut.cutEdges.map((e) => ({ ...e, kind: 'defer' })),
   );
   console.log(
     `min cut for ${mod.id} - ${cut.flow} import edge(s) to make dynamic (naive what-if would touch ${naive}):`,
   );
   for (const e of cut.cutEdges) {
-    console.log(`  ${graph.modules[e.from].id}  ->  ${graph.modules[e.to].id}`);
+    console.log(`  ${rooted.modules[e.from].id}  ->  ${rooted.modules[e.to].id}`);
   }
   console.log(
     `make each import dynamic (import()) -> frees ${kb(priced.removedBytes)} / ${priced.removedCount} module(s) from the initial load` +
-      `${keep.length ? ` (keeping ${keep.length} sentry module(s) eager)` : ''}.`,
+      `${keep.length ? ` (keeping ${keep.length} sentry module(s) eager)` : ''}` +
+      `${roots.length ? ` (${roots.length} root module(s) stay eager with their closure)` : ''}.`,
   );
   console.log(
     `\nnext: open those file(s), change the static import to a dynamic import(), rebuild, run the app's functional check, then \`${CLI} scan\` to confirm the LCP effect.`,
@@ -3109,12 +3371,16 @@ async function cmdGraphDiff(argv) {
     }),
   );
   if (!current) {
+    const cause =
+      target.isDemo || opts.report ? null : reportSupportNote(path.dirname(target.dist), CLI);
     throw new Error(
-      'no current module-graph.json found - it is written by rolldown devtools report builds.\n' +
+      (cause ? `${cause}\n\n` : '') +
+        'no current module-graph.json found - it is written by rolldown devtools report builds.\n' +
         'vite >= 8: add `build.rolldownOptions.devtools = { mode: "report" }` to the vite config,\n' +
         'rebuild, then re-run. Or point at an existing report with --report <dir>.',
     );
   }
+  if (!opts.report) assertReportMatchesDist(current, target.dist);
   // Default: compare against the pinned baseline snapshot; --against compares vs any saved
   // sidecar (a dir or a module-graph.json path). Absent baseline exits normally (no error).
   const baseline = opts.against
@@ -3140,11 +3406,16 @@ async function cmdBaseline(argv) {
 }
 
 async function cmdTarget(argv) {
-  const opts = parse(argv, {
-    demo: { type: 'boolean', default: false },
-    'net-scale': { type: 'string' },
+  const { values: opts, positionals: positional } = parseArgs({
+    args: argv,
+    options: {
+      demo: { type: 'boolean', default: false },
+      'net-scale': { type: 'string' },
+      ...NETWORK_OPTS,
+    },
+    allowPositionals: true,
   });
-  const positional = argv.filter((a) => !a.startsWith('--') && a !== opts['net-scale']);
+  const networkFlag = parseNetworkFlags(opts);
   if (opts.demo) {
     fs.rmSync(TARGET_FILE, { force: true });
     console.log('target cleared - commands now default to the demo app');
@@ -3161,7 +3432,23 @@ async function cmdTarget(argv) {
         ? `target: ${sticky.dist}`
         : 'no target set - commands default to the demo app (set one: node harness.mjs target <appDir>)',
     );
-    if (!sticky?.dist && !opts['net-scale']) return;
+    if (!sticky?.dist && !opts['net-scale'] && !networkFlag) return;
+  }
+  // Pin the network without a probe run - the operator declares the network a
+  // deployed environment measured; every later scan/measure inherits it.
+  if (networkFlag) {
+    const target = resolveTarget({});
+    const existing = readJson(target.paths.throttleProfile);
+    const id = throttleId({ network: networkFlag });
+    writeJson(target.paths.throttleProfile, {
+      schemaVersion: 1,
+      network: networkFlag,
+      source: 'target-cmd',
+      pinnedAtMs: Date.now(),
+    });
+    console.log(
+      `throttle profile pinned: ${id}${existing && throttleId(existing) !== id ? ` (was ${throttleId(existing)} - any pinned baseline is now incomparable, re-pin with scan --pin)` : ''}`,
+    );
   }
   // Pin the net-scale without a probe run - the operator (or eval prep) declares
   // it; every later scan/measure and the scoring legs inherit it.
@@ -3181,7 +3468,7 @@ async function cmdTarget(argv) {
       pinnedAtMs: Date.now(),
     });
     console.log(
-      `throttle profile pinned: net x${netScale}${existing && existing.netScale !== netScale ? ` (was x${existing.netScale} - any pinned baseline is now incomparable, re-pin with scan --pin)` : ''}`,
+      `throttle profile pinned: net x${netScale}${existing && throttleId(existing) !== throttleId({ netScale }) ? ` (was ${throttleId(existing)} - any pinned baseline is now incomparable, re-pin with scan --pin)` : ''}`,
     );
   }
 }
@@ -3549,7 +3836,7 @@ async function cmdNodeScan(argv) {
       profile = profileStartup(raw, {
         code: sources.code,
         map: sources.map,
-        entryUrlSuffix: `/${path.basename(target.entry)}`,
+        entryPath: target.entry,
       });
     }
   }
@@ -3656,6 +3943,1582 @@ function priceDeferral(graph, source) {
 
 const round = (v) => (v == null ? 0 : Math.round(v));
 
+// --- Cloudflare Worker startup mode ----------------------------------------------
+// The question is the server one ("what does startup pay for, and what can leave it?")
+// asked of a V8 isolate coming up under workerd. The target is a Vite-built Worker: the
+// output directory that holds the plugin's `wrangler.json` next to `index.js`. perf-kit
+// runs the app's own workerd through its miniflare; see lib/worker/launch.mjs for why
+// startup is moved inside a request. Requirements and rules: AGENTS.md.
+
+const WORKER_TARGET_FILE = path.join(STATE_DIR, 'worker-target.json');
+const WORKER_TARGET_OPTS = {
+  app: { type: 'string' },
+  dist: { type: 'string' },
+  worker: { type: 'string' },
+  main: { type: 'string' },
+  request: { type: 'string', multiple: true },
+  tools: { type: 'string' },
+  report: { type: 'string' },
+};
+
+function workerTargetPaths(outDir) {
+  const dir = path.join(STATE_DIR, 'worker', targetSlug(outDir));
+  return {
+    dir,
+    metrics: path.join(dir, 'startup-metrics.json'),
+    state: path.join(dir, '.state.json'),
+    baseline: path.join(dir, 'baseline.json'),
+    history: path.join(dir, 'history.jsonl'),
+    profile: path.join(dir, 'startup.cpuprofile'),
+    coverage: path.join(dir, 'startup-coverage.json'),
+    attribProfile: path.join(dir, 'attrib.cpuprofile'),
+    attribCpu: path.join(dir, 'attrib-cpu.json'),
+  };
+}
+
+/** Where the Worker's build report lands: report mode writes one directory per output dir. */
+function workerReportDirs(appDir, outDir, report = null) {
+  const dirs = [];
+  if (report) dirs.push(path.resolve(report));
+  dirs.push(reportDirFor(appDir, outDir));
+  return dirs.map((d) => path.join(d, 'module-graph.json'));
+}
+
+/** The remembered Worker target's report candidates, when the query is about it. */
+function workerReportCandidates(opts) {
+  const sticky = readJson(WORKER_TARGET_FILE);
+  if (!sticky) return null;
+  if (opts.app && path.resolve(opts.app) !== sticky.app) return null;
+  if (opts.dist) return null;
+  const browser = readJson(TARGET_FILE);
+  if (!opts.app && browser?.dist && fs.existsSync(browser.dist)) return null;
+  return workerReportDirs(
+    sticky.app,
+    path.resolve(sticky.app, sticky.dist ?? 'dist', sticky.worker),
+  );
+}
+
+/**
+ * Measured startup CPU per module of the remembered Worker, when `graph` is that Worker's
+ * report. Null otherwise (a browser target, no scan yet). See `workerCpu`.
+ */
+function lastWorkerCpu(graph) {
+  const sticky = readJson(WORKER_TARGET_FILE);
+  if (!sticky || !graph?.file) return null;
+  const outDir = path.resolve(sticky.app, sticky.dist ?? 'dist', sticky.worker);
+  if (!workerReportDirs(sticky.app, outDir).includes(graph.file)) return null;
+  const paths = workerTargetPaths(outDir);
+  const metrics = readJson(paths.metrics);
+  const wc = workerCpu(graph, paths, sticky.app, metrics?.profile?.bySource);
+  if (wc) {
+    wc.bytesRate = bytesRate(metrics.profile);
+    wc.groupChunks = groupChunkModules(graph, outDir, metrics.coverage?.groupChunks ?? []);
+  }
+  return wc;
+}
+
+/** Graph module index -> output chunk, for the chunks a chunk group keeps at startup. */
+function groupChunkModules(graph, outDir, chunks) {
+  const byIdx = new Map();
+  for (const chunk of chunks) {
+    const map = readJson(path.join(outDir, `${chunk}.map`));
+    for (const source of map?.sources ?? []) {
+      for (const form of graphIdCandidates(source)) {
+        const hit = resolveModule(graph, form);
+        if (hit && !hit.ambiguous) {
+          byIdx.set(hit.index, chunk);
+          break;
+        }
+      }
+    }
+  }
+  return byIdx;
+}
+
+/** Deferred modules that a chunk group keeps in a startup chunk: the import alone frees nothing. */
+function printGroupChunkWarning(graph, wc, removed) {
+  if (!wc?.groupChunks?.size) return;
+  const idOf = new Map(graph.modules.map((m, i) => [m, i]));
+  const byChunk = new Map();
+  for (const m of removed) {
+    const chunk = wc.groupChunks.get(idOf.get(m));
+    if (chunk) byChunk.set(chunk, (byChunk.get(chunk) ?? 0) + (m.bytes ?? 0));
+  }
+  for (const [chunk, bytes] of byChunk) {
+    if (bytes < 16 * 1024) continue;
+    console.log(
+      `  ${kb(bytes)} of these sit in ${chunk}, a chunk that loads at startup and holds modules only dynamic imports reach (a chunk group).` +
+        ' A dynamic import keeps them in startup until the chunk config (manualChunks, advancedChunks) takes them out of that group.',
+    );
+  }
+}
+
+/**
+ * GC and parse/compile have no module in the profile. Their share of a deferral is estimated
+ * by bytes: this Worker's GC + "(program)" time over its startup closure, from the last scan.
+ */
+function bytesRate(profile) {
+  const sm = profile?.summary;
+  if (!sm || !profile.closureBytes) return null;
+  const ms = (sm.gcMs ?? 0) + (sm.programMs ?? 0);
+  return { ms, bytes: profile.closureBytes, perByte: ms / profile.closureBytes };
+}
+
+/**
+ * The CPU a deferral is priced with. The last `worker-attrib` charges a library call to the
+ * module whose top level makes it (`kind: 'evaluating'`). Without it, the scan's self time
+ * charges the call to the library (`kind: 'self'`), and `library` says how much that hides.
+ */
+function workerCpu(graph, paths, appDir, bySource) {
+  const isApp = (id) => isVirtual(id) || fs.existsSync(path.resolve(appDir, id));
+  const attrib = readJson(paths.attribCpu);
+  if (attrib?.byFile) {
+    const builtAt = graph.file && fs.existsSync(graph.file) ? fs.statSync(graph.file).mtimeMs : 0;
+    return {
+      kind: 'evaluating',
+      cpu: cpuByOutputFile(graph, attrib.byFile),
+      isApp,
+      partial: attrib.complete === false,
+      older: attrib.atMs < builtAt,
+    };
+  }
+  if (!bySource) return null;
+  const cpu = cpuByModule(graph, bySource);
+  return { kind: 'self', cpu, isApp, library: libraryShare(graph, cpu, isApp) };
+}
+
+/** The CPU part of a what-if line: `removed` priced, plus each target alone (`singles`). */
+function cpuSegment(graph, wc, removed, singles = null) {
+  if (!wc) return '';
+  const price = (mods) => ms(cpuOf(graph, wc.cpu, mods));
+  const each = singles ? `; ${singles.map((r) => price(r.removed)).join(' + ')} one at a time` : '';
+  if (wc.kind === 'self')
+    return `, ${price(removed)} of measured self time (last worker-scan${each})`;
+  const when = wc.older ? ', run before the current build' : '';
+  return `, ${price(removed)} of startup CPU with the library calls they make (last worker-attrib${when}${each})`;
+}
+
+/** The estimated GC and parse/compile share of a deferral, as its own line. */
+function printBytesEstimate(wc, cpuMs, removedBytes) {
+  const rate = wc?.bytesRate;
+  if (!rate) return false;
+  const est = removedBytes * rate.perByte;
+  console.log(
+    `  + about ${ms(est)} of GC and parse/compile, about ${ms(cpuMs + est)} in all: an estimate by bytes` +
+      ` (the last worker-scan: ${ms(rate.ms)} over a ${kb(rate.bytes)} startup closure).` +
+      ' A large data module or a package with many objects often saves more; worker-scan measures it.',
+  );
+  return true;
+}
+
+/** The self-time caveat: a library call is charged to the library, not to its caller. */
+function printLibraryCaveat(wc) {
+  const lib = wc?.library;
+  if (wc?.kind !== 'self' || !lib || lib.ms < 1 || lib.ms < 0.3 * lib.totalMs) return;
+  const top = lib.top
+    .slice(0, 3)
+    .map(([p, v]) => `${p} ${ms(v)}`)
+    .join(', ');
+  console.log(
+    `  self time charges a library call to the library: ${ms(lib.ms)} of ${ms(lib.totalMs)} is in libraries (${top}).` +
+      ' A module whose top level calls them can price near 0ms here and still cost that time.' +
+      ` For the price with those calls, build with ROLLDOWN_PERF_KIT_ATTRIB=1 and run \`${CLI} worker-attrib\`; what-if then uses it.`,
+  );
+}
+
+/** What the CPU price of a what-if leaves out. */
+function printCpuCaveat(graph, wc, removed, removedBytes) {
+  if (!wc) return;
+  printLibraryCaveat(wc);
+  if (
+    !printBytesEstimate(wc, cpuOf(graph, wc.cpu, removed), removedBytes) &&
+    removedBytes >= 100 * 1024
+  ) {
+    console.log(
+      `  GC and parse/compile time is not in that number: ${kb(removedBytes)} leaves startup, and a large data module saves more than it prices.`,
+    );
+  }
+}
+
+/**
+ * Resolve (and remember) the Worker target: the app directory, the output directory
+ * that holds `wrangler.json`, the pinned request set and an optional tools directory.
+ * Like the server target, what is pinned is what makes two scans comparable.
+ */
+function resolveWorkerTarget(opts) {
+  const sticky = readJson(WORKER_TARGET_FILE);
+  const appArg = opts.app ?? sticky?.app;
+  if (!appArg) {
+    throw new Error(
+      'no Worker target yet - name the app directory (the one with vite.config and wrangler.jsonc):\n' +
+        `  ${CLI} worker-scan --app <appDir>\n` +
+        `Build it first with the report on: \`${CLI} worker-config --app <appDir>\` prints the build command.`,
+    );
+  }
+  const appDir = path.resolve(appArg);
+  const distRel = opts.dist ?? sticky?.dist ?? 'dist';
+  const distDir = path.resolve(appDir, distRel);
+  let workerName = opts.worker ?? sticky?.worker;
+  if (!workerName || !fs.existsSync(path.join(distDir, workerName, 'wrangler.json'))) {
+    const candidates = fs.existsSync(distDir)
+      ? fs.readdirSync(distDir).filter((d) => fs.existsSync(path.join(distDir, d, 'wrangler.json')))
+      : [];
+    if (candidates.length !== 1) {
+      throw new Error(
+        `expected one ${distRel}/<worker>/wrangler.json under ${appDir}, found ${candidates.length ? candidates.join(', ') : 'none'}.\n` +
+          `Build the app with the Cloudflare Vite plugin first (\`${CLI} worker-config --app <appDir>\` prints the command),\n` +
+          'or pass --worker <name> / --dist <dir>. Never change the build layout to fit this tool.',
+      );
+    }
+    workerName = candidates[0];
+  }
+  const outDir = path.join(distDir, workerName);
+  const requests = opts.request?.length ? opts.request : (sticky?.requests ?? ['/']);
+  const toolsDir = opts.tools ? path.resolve(opts.tools) : (sticky?.tools ?? null);
+  const target = {
+    appDir,
+    distRel,
+    distDir,
+    workerName,
+    outDir,
+    configPath: path.join(outDir, 'wrangler.json'),
+    requests,
+    toolsDir,
+    reportDirs: workerReportDirs(appDir, outDir, opts.report),
+    paths: workerTargetPaths(outDir),
+  };
+  const changed =
+    sticky?.app !== appDir ||
+    sticky?.dist !== distRel ||
+    sticky?.worker !== workerName ||
+    JSON.stringify(sticky?.requests) !== JSON.stringify(requests) ||
+    (sticky?.tools ?? null) !== toolsDir;
+  if (changed) {
+    writeJson(WORKER_TARGET_FILE, {
+      app: appDir,
+      dist: distRel,
+      worker: workerName,
+      requests,
+      tools: toolsDir,
+      setAtMs: Date.now(),
+    });
+    console.log(
+      `target: ${path.relative(process.cwd(), outDir) || outDir} (requests: ${requests.join(' ')}${toolsDir ? `; coverage tools: ${toolsDir}` : ''}) - remembered`,
+    );
+  }
+  return target;
+}
+
+/** Load the runtime and the Worker's options; `outDir` may be an attribution build's. */
+async function loadWorkerContext(target, { outDir = target.outDir, main = null } = {}) {
+  // Miniflare caches the `cf` object under the cwd (.wrangler/cache) unless told where;
+  // perf-kit's state dir keeps that out of the package and out of the user's project.
+  process.env.MINIFLARE_CACHE_DIR ??= path.join(STATE_DIR, 'worker', 'cache');
+  const tools = await resolveWorkerTools(target.appDir).load();
+  const configPath = path.join(outDir, 'wrangler.json');
+  if (!fs.existsSync(configPath)) throw new Error(`no wrangler.json in ${outDir}`);
+  const { workerOptions, main: configMain, fallback } = loadWorkerOptions(tools, configPath);
+  const mainName = (main ?? path.relative(outDir, path.resolve(outDir, configMain))).replaceAll(
+    '\\',
+    '/',
+  );
+  const { modules, skipped } = classifyModules(outDir, workerOptions.modulesRules);
+  if (!modules.some((m) => m.rel === mainName)) {
+    throw new Error(
+      `main module ${mainName} is not among the output modules of ${outDir} (pass --main <file>)`,
+    );
+  }
+  const borrowed = target.toolsDir ? await resolveWorkerTools(target.toolsDir).load() : null;
+  if (fallback) {
+    console.log(
+      `note: wrangler could not express every binding (${fallback}); running with date, flags and modules only`,
+    );
+  }
+  return {
+    ...target,
+    outDir,
+    tools,
+    borrowed,
+    workerOptions,
+    mainName,
+    modules,
+    skipped,
+    fallback,
+    stderr: createStderrCollector(),
+  };
+}
+
+function printWorkerContext(ctx) {
+  const v = ctx.tools.versions;
+  const flags = ctx.workerOptions.compatibilityFlags ?? [];
+  console.log(
+    `${path.relative(ctx.appDir, ctx.outDir)}/${ctx.mainName} · compat ${ctx.workerOptions.compatibilityDate ?? '?'} [${flags.join(', ')}] · ` +
+      `wrangler ${v.wrangler ?? '?'} / workerd ${v.workerd ?? '?'}${ctx.borrowed ? ` (coverage tools: workerd ${ctx.borrowed.versions.workerd})` : ''} · ` +
+      `${ctx.modules.length} module(s)${ctx.skipped.length ? `, skipped ${ctx.skipped.join(', ')}` : ''}`,
+  );
+}
+
+async function runWorkerTiming(ctx, { runs, warmup, pinned = null }) {
+  process.stderr.write('floor (the wrapper importing an empty module)...\n');
+  const floor = await gatherSeries(ctx, { target: EMPTY_NAME, runs, warmup });
+  if (!pinned) {
+    process.stderr.write('main module...\n');
+    const main = await gatherSeries(ctx, {
+      target: ctx.mainName,
+      runs,
+      warmup,
+      onSample: (i, run) => process.stderr.write(`run ${i + 1}/${runs}: import ${ms(run.ms)}\n`),
+    });
+    return summarizeWorkerStartup({ floor, main });
+  }
+  // The pinned build runs in the same scan, alternating with the current one (ABBA), so a
+  // change in machine load moves both series alike instead of the verdict.
+  process.stderr.write('main module, alternating with the pinned build...\n');
+  const { main, paired } = await pairedSeries(ctx, pinned, { runs, warmup, floor });
+  const summary = summarizeWorkerStartup({ floor, main });
+  summary.pinnedBuild = paired;
+  return summary;
+}
+
+/**
+ * Alternated pairs of the current and the pinned build: `current - pinned` per pair. The
+ * noise floor comes from `appStartupMs`, or from the `floor` series and the pinned runs.
+ * `v8Flags` go to every workerd of the series.
+ */
+async function pairedSeries(
+  ctx,
+  pinned,
+  { runs, warmup, floor = null, appStartupMs = null, v8Flags = [], label = '' },
+) {
+  for (let i = 0; i < warmup; i++) {
+    await timedImport(ctx, { target: ctx.mainName, v8Flags });
+    await timedImport(pinned, { target: pinned.mainName, v8Flags });
+  }
+  const main = [];
+  const base = [];
+  const timePair = async (i, total) => {
+    const order = i % 2 === 0 ? [ctx, pinned] : [pinned, ctx];
+    for (const c of order) {
+      const run = await timedImport(c, { target: c.mainName, v8Flags });
+      (c === ctx ? main : base).push(run);
+    }
+    process.stderr.write(
+      `${label}run ${i + 1}/${total}: import ${ms(main[i].ms)} (pinned build ${ms(base[i].ms)})\n`,
+    );
+  };
+  for (let i = 0; i < runs; i++) await timePair(i, runs);
+  const paired = () => {
+    const pairs = main.map((r, i) => Math.round((r.ms - base[i].ms) * 10) / 10);
+    const app =
+      appStartupMs ??
+      summarizeWorkerStartup({ floor, main: base }).metrics['worker.app_startup_ms'];
+    return { appStartupMs: app, deltaMs: median(pairs), pairs };
+  };
+  // A short series that leans one way, or disagrees beyond the floor, gets more pairs.
+  let extendedFrom = null;
+  if (needsMorePairs(paired())) {
+    extendedFrom = runs;
+    process.stderr.write(
+      `${label}the pairs do not decide yet: ${PAIRED_EXTEND_TO - runs} more pairs...\n`,
+    );
+    for (let i = runs; i < PAIRED_EXTEND_TO; i++) await timePair(i, PAIRED_EXTEND_TO);
+  }
+  return { main, base, paired: { ...paired(), extendedFrom } };
+}
+
+/** The pinned build's copy, so later scans can time it next to the current build. */
+function pinnedBuildDir(ctx) {
+  return path.join(ctx.paths.dir, 'pinned-build');
+}
+
+function snapshotPinnedBuild(ctx) {
+  const dest = pinnedBuildDir(ctx);
+  fs.rmSync(dest, { recursive: true, force: true });
+  fs.cpSync(ctx.outDir, dest, { recursive: true, filter: (src) => !src.endsWith('.map') });
+  // wrangler resolves the assets directory next to the config: keep it on the original.
+  const configFile = path.join(dest, 'wrangler.json');
+  const config = JSON.parse(fs.readFileSync(configFile, 'utf8'));
+  if (config.assets?.directory) {
+    config.assets.directory = path.resolve(ctx.outDir, config.assets.directory);
+    fs.writeFileSync(configFile, JSON.stringify(config));
+  }
+}
+
+/** The context of the pinned build's copy, or null when there is none or it does not load. */
+async function loadPinnedContext(ctx, notes) {
+  const dir = pinnedBuildDir(ctx);
+  if (!fs.existsSync(path.join(dir, 'wrangler.json'))) return null;
+  try {
+    const pinned = await loadWorkerContext(ctx, { outDir: dir, main: ctx.mainName });
+    return { ...pinned, stderr: ctx.stderr };
+  } catch (error) {
+    notes.push(
+      `the pinned build did not load, compared by number only: ${String(error.message).split('\n')[0]}`,
+    );
+    return null;
+  }
+}
+
+function writeWorkerReport(
+  ctx,
+  summary,
+  { label, requests = null, profile = null, coverage = null, notes = [] },
+) {
+  const prev = readJson(ctx.paths.state);
+  const baseline = readJson(ctx.paths.baseline);
+  const metrics = { ...summary.metrics };
+  for (const r of requests ?? []) if (r.status < 500) metrics[`worker.request_ms:${r.path}`] = r.ms;
+  // Module bytes in the chunks the isolate loads at startup: unlike the time, the same build
+  // always gives the same number, and a chunk config change moves it.
+  if (coverage?.totals) metrics['worker.startup_loaded_bytes'] = coverage.totals.totalBytes;
+  const report = {
+    schemaVersion: 1,
+    generatedAtMs: Date.now(),
+    label: label || null,
+    worker: {
+      app: ctx.appDir,
+      outDir: ctx.outDir,
+      main: ctx.mainName,
+      compatibilityDate: ctx.workerOptions.compatibilityDate ?? null,
+      compatibilityFlags: ctx.workerOptions.compatibilityFlags ?? [],
+      versions: ctx.tools.versions,
+      coverageTools: ctx.borrowed?.versions ?? null,
+    },
+    runs: summary.runs,
+    metrics,
+    guard: summary.guard,
+    requests,
+    profile,
+    coverage,
+    notes,
+    delta: prev ? deltaSection(prev.metrics, metrics) : null,
+    baselineDelta: baseline ? deltaSection(baseline.metrics, metrics) : null,
+    pinnedBuild: summary.pinnedBuild ?? null,
+    samples: summary.samples,
+    runtimeStderr: [...ctx.stderr.lines.entries()],
+  };
+  writeJson(ctx.paths.metrics, report);
+  writeJson(ctx.paths.state, {
+    schemaVersion: 1,
+    tsMs: report.generatedAtMs,
+    label: report.label,
+    runs: report.runs,
+    metrics,
+  });
+  fs.appendFileSync(
+    ctx.paths.history,
+    `${JSON.stringify({ tsMs: report.generatedAtMs, label: report.label, metrics, guard: report.guard })}\n`,
+  );
+  return { report, hadBaseline: Boolean(baseline) };
+}
+
+function pinWorkerBaseline(ctx, graph = null) {
+  const state = readJson(ctx.paths.state);
+  if (!state) throw new Error('nothing to pin - run worker-scan first');
+  if (state.runs < 3) {
+    throw new Error(
+      `refusing to pin a ${state.runs}-run measurement - a thin median poisons every later delta. Re-run worker-scan with the default sample count.`,
+    );
+  }
+  writeJson(ctx.paths.baseline, state);
+  snapshotPinnedBuild(ctx);
+  // The pinned build's module graph: later scans diff their startup closure against it.
+  const pinnedGraph = path.join(ctx.paths.dir, PINNED_GRAPH);
+  if (graph?.file) fs.copyFileSync(graph.file, pinnedGraph);
+  else fs.rmSync(pinnedGraph, { force: true });
+  console.log(
+    `baseline pinned (app startup ${ms(state.metrics['worker.app_startup_ms'])}); later scans time this build next to theirs`,
+  );
+}
+
+const PINNED_GRAPH = 'pinned-module-graph.json';
+
+/**
+ * The startup closure of the current build against the pinned build's: the modules that left
+ * or entered the static import closure. The graphs do not depend on machine load. A module
+ * that left the closure still loads when coverage finds it in a startup chunk (a chunk group).
+ */
+function pinnedClosureDiff(ctx, graph, cov) {
+  const pinned = loadModuleGraph([path.join(ctx.paths.dir, PINNED_GRAPH)]);
+  if (!pinned) return null;
+  const diff = diffGraphs(pinned, graph);
+  const before = evalOverrides(pinned, []);
+  const left = new Set(diff.left.map((m) => m.id));
+  let stillBytes = 0;
+  let stillCount = 0;
+  for (const m of cov?.modules ?? []) {
+    for (const form of graphIdCandidates(m.source)) {
+      const hit = resolveModule(graph, form);
+      if (!hit || hit.ambiguous) continue;
+      if (left.has(graph.modules[hit.index].id.replaceAll('\\', '/'))) {
+        stillBytes += graph.modules[hit.index].bytes;
+        stillCount += 1;
+      }
+      break;
+    }
+  }
+  return {
+    left: diff.left,
+    entered: diff.entered,
+    leftBytes: diff.leftBytes,
+    enteredBytes: diff.enteredBytes,
+    stillBytes,
+    stillCount,
+    covered: Boolean(cov?.modules),
+    pinnedBytes: before.eagerBytes,
+    pinnedModules: before.eager.size,
+    appDir: ctx.appDir,
+  };
+}
+
+/** A module id for a reader: relative to the app, without the Cloudflare module-rule markers. */
+function readableId(id, appDir) {
+  const rest = id.replace(/^__CLOUDFLARE_MODULE__\w+?__(.+?)(?:__CLOUDFLARE_MODULE__)?$/, '$1');
+  return path.isAbsolute(rest) ? path.relative(appDir, rest) : shortModule(rest);
+}
+
+/**
+ * The startup-closure lines under the paired verdict, and the call they add when the timing
+ * proves nothing. Startup that loads a share less (fewer modules in the static closure, or
+ * fewer bytes in the chunks the isolate loads) is a smaller startup: keep. When neither moved,
+ * the change took nothing out of startup. `loaded` is the delta of
+ * `worker.startup_loaded_bytes` against the pinned scan.
+ */
+function printClosureDiff(closure, loaded, verdict) {
+  if (!closure && !loaded) return;
+  const top = (list) =>
+    list
+      .slice(0, 3)
+      .map((m) => `${readableId(m.id, closure.appDir)} ${kb(m.bytes)}`)
+      .join(', ');
+  const moved = closure && (closure.left.length || closure.entered.length);
+  if (closure && !moved) {
+    console.log(
+      'startup closure vs pinned build: unchanged (the static import closure; no timing noise in it)',
+    );
+  } else if (closure) {
+    const { left, entered } = closure;
+    console.log(
+      `startup closure vs pinned build: ${left.length} module(s) / ${kb(closure.leftBytes)} moved out of startup, ${entered.length} / ${kb(closure.enteredBytes)} moved in (the static import closure; no timing noise in it)`,
+    );
+    if (left.length) console.log(`  moved out: ${top(left)}${left.length > 3 ? ', ...' : ''}`);
+    if (entered.length)
+      console.log(`  moved in: ${top(entered)}${entered.length > 3 ? ', ...' : ''}`);
+    if (closure.stillCount) {
+      console.log(
+        `  ${closure.stillCount} of the modules that moved out (${kb(closure.stillBytes)}) still load: a startup chunk holds them (a chunk group). Take them out of that group in the build config.`,
+      );
+    }
+  }
+  const loadedMoved = loaded && Math.abs(loaded.delta) >= 1024;
+  if (loadedMoved) {
+    console.log(
+      `loaded at startup vs pinned build: ${kb(loaded.prev)} -> ${kb(loaded.curr)} of modules in the chunks the isolate loads (coverage; the same build always gives the same number)`,
+    );
+  }
+  const call = closureCall(closure, loaded, verdict);
+  if (call?.kind === 'keep') {
+    console.log(
+      `  KEEP: startup loads ${call.bytes != null ? kb(call.bytes) : `${call.modules} module(s)`} less, and the time did not rise beyond noise${verdict.heapSizing ? ' with the young generation fixed' : ''}. A smaller startup is a gain the timing cannot resolve.`,
+    );
+  } else if (call?.kind === 'none') {
+    console.log(
+      '  no effect: neither the modules at startup nor the time moved. When the change was a deferral, the module is still reached through another static import:' +
+        ` \`${CLI} why <module>\` names it; move that import too, in the same round (\`${CLI} what-if <a> <b>\` prices the pair)`,
+    );
+  }
+}
+
+function noiseCall(delta, prev, floorMs, floorPct) {
+  const floor = Math.max(floorMs, (floorPct / 100) * prev);
+  if (Math.abs(delta) < floor)
+    return `within noise (floor ${Math.round(floor)}ms) - no effect proven`;
+  return delta < 0 ? 'IMPROVEMENT beyond noise' : 'REGRESSION beyond noise';
+}
+
+function printWorkerSummary(report, hadBaseline, closure = null) {
+  const m = report.metrics;
+  console.log(
+    `\n${report.label ? `[${report.label}] ` : ''}${report.runs} cold runs (fresh workerd each)`,
+  );
+  console.log(
+    `startup ${ms(m['worker.startup_ms'])} (p75 ${ms(m['worker.startup_p75_ms'])}) | floor ${ms(m['worker.boot_floor_ms'])} | ` +
+      `app ${ms(m['worker.app_startup_ms'])} | instance boot ${ms(m['worker.instance_boot_ms'])} (not counted)`,
+  );
+  const spread = report.guard.spreadPct;
+  console.log(
+    `guard: ${report.guard.allRunsCompleted ? 'PASS' : 'FAIL (a run never imported the main module)'}` +
+      `${spread > 25 ? ` - WARNING spread ${spread}% across runs: something outside the bundle moves this number, deltas are not trustworthy` : ''}`,
+  );
+  const base = report.baselineDelta?.['worker.app_startup_ms'];
+  const paired = report.pinnedBuild;
+  if (paired) {
+    const sign = (v) => `${v >= 0 ? '+' : ''}${Math.round(v * 10) / 10}`;
+    console.log(
+      `vs pinned build (timed in this scan, runs alternated): app startup ${sign(paired.deltaMs)}ms, ` +
+        `median of ${paired.pairs.length} pairs${paired.extendedFrom ? ` (${paired.pairs.length - paired.extendedFrom} added: the first ${paired.extendedFrom} did not decide)` : ''} [${paired.pairs.map(sign).join(' ')}] - ` +
+        pairedCall(pairedVerdict(paired), paired.pairs.length),
+    );
+    console.log(
+      '  every change since the pin; re-pin with --pin after a kept change so this is the last change alone',
+    );
+    const fixed = paired.fixedYoung;
+    if (fixed) {
+      const fixedVerdict = pairedVerdict(fixed);
+      console.log(
+        `  young generation fixed (V8 ${FIXED_YOUNG_V8_FLAGS.join(' ')}, both builds): app startup ${sign(fixed.deltaMs)}ms, median of ${fixed.pairs.length} pairs [${fixed.pairs.map(sign).join(' ')}] - ` +
+          pairedCall(fixedVerdict, fixed.pairs.length),
+      );
+      console.log(
+        fixedVerdict.kind === 'regression'
+          ? '  the rise stays with the young generation fixed: the change itself costs that time'
+          : '  the rise is V8 heap sizing, not the code that moved: V8 sizes its young generation by what startup allocated so far, and this change took an early allocation out. A later change can move it back.',
+      );
+    }
+    printClosureDiff(
+      closure,
+      report.baselineDelta?.['worker.startup_loaded_bytes'] ?? null,
+      keepVerdict(paired, fixed),
+    );
+  } else if (base) {
+    console.log(
+      `vs pinned baseline: app startup ${base.delta >= 0 ? '+' : ''}${Math.round(base.delta)}ms (${base.pct}%) - ` +
+        noiseCall(base.delta, base.prev, WORKER_NOISE_FLOOR_MS, WORKER_NOISE_FLOOR_PCT) +
+        ' (a number from an earlier scan: machine load moves it; re-pin to time both builds side by side)',
+    );
+  } else if (!hadBaseline) {
+    console.log('no pinned baseline yet - pass --pin to make this the fixed reference');
+  }
+  // The pinned line adds up every change since the pin. The last change alone is the
+  // delta against the previous scan, so a kept-but-not-pinned change does not hide it.
+  // Next to a pinned build timed in the same scan, a number from another scan only adds drift.
+  const prevScan = report.delta?.['worker.app_startup_ms'];
+  if (!paired && base && prevScan && prevScan.prev !== base.prev) {
+    console.log(
+      `vs previous scan: app startup ${prevScan.delta >= 0 ? '+' : ''}${Math.round(prevScan.delta)}ms (${prevScan.pct}%) - ` +
+        noiseCall(prevScan.delta, prevScan.prev, WORKER_NOISE_FLOOR_MS, WORKER_NOISE_FLOOR_PCT) +
+        ' (the last change alone)',
+    );
+  }
+  if (report.requests?.length) {
+    console.log(
+      '\nfirst requests on the real entry (startup already done; a deferred module loads on its first hit):',
+    );
+    const startupDelta = paired ? paired.deltaMs : base?.delta;
+    const gain = startupDelta < 0 ? -startupDelta : 0;
+    const movedRoutes = [];
+    for (const r of report.requests) {
+      const d = report.baselineDelta?.[`worker.request_ms:${r.path}`];
+      // A 4xx or 5xx answer never reached the app's handler: its time says nothing about a moved load.
+      const answered = r.status < 400;
+      const moved =
+        answered && d && Math.abs(d.delta) >= WORKER_NOISE_FLOOR_MS
+          ? `  vs baseline ${d.delta >= 0 ? '+' : ''}${Math.round(d.delta)}ms${d.delta > 0 ? ' - cost MOVED here from startup' : ''}`
+          : '';
+      if (answered && d && gain && d.delta >= gain / 2)
+        movedRoutes.push({ path: r.path, delta: d.delta });
+      console.log(
+        `  ${(r.path.length > 40 ? `${r.path.slice(0, 39)}…` : r.path).padEnd(28)} ${String(r.status).padStart(3)}  ${ms(r.ms).padStart(7)}  ${r.bytes} bytes${r.messages != null ? ` in ${r.messages} message(s)` : ''}${r.error ? `  :: ${r.error}` : ''}${moved}`,
+      );
+    }
+    if (report.requests.every((r) => r.status >= 400)) {
+      console.log(
+        '  every pinned route answered 4xx/5xx: the handler never ran, so a moved load cannot show here - pin routes the app answers (--request /path)',
+      );
+    }
+    if (report.requests.some((r) => r.status >= 500)) {
+      console.log(
+        '  a 5xx here usually means the app needs its variables (a .dev.vars next to the config) - startup is unaffected, first-request numbers are not valid',
+      );
+    }
+    for (const r of movedRoutes) {
+      console.log(
+        `  ${r.path}: +${Math.round(r.delta)}ms moved into this route against ${Math.round(gain)}ms gained at startup - startup and the startup limit keep the gain; first-request latency on ${r.path} gains little or nothing`,
+      );
+    }
+  }
+}
+
+/**
+ * Calls made at module scope. The self-time view charges a warm-up such as
+ * `preloadSchemas()` to the files it runs in (zod); this view names the call.
+ */
+function printTopLevelCalls(calls, { top, withSource }) {
+  // One row per call site: the same library function called from several modules adds up.
+  const merged = new Map();
+  for (const c of calls ?? []) {
+    const key = `${c.fn}\0${c.at}`;
+    const row = merged.get(key);
+    if (row) row.ms = Math.round((row.ms + c.ms) * 10) / 10;
+    else merged.set(key, { ...c });
+  }
+  const rows = [...merged.values()]
+    .sort((a, b) => b.ms - a.ms)
+    .filter((c) => c.ms >= 0.5)
+    .slice(0, top);
+  if (!rows.length) return;
+  console.log('  calls made at module scope (the call right below a module top level):');
+  for (const c of rows) {
+    const where =
+      withSource && c.source ? `${shortModule(c.source)}  (${c.at})` : shortModule(c.at);
+    console.log(`    ${String(c.ms).padStart(7)}ms  ${c.fn}()  ${where}`);
+  }
+  const lead = rows[0];
+  if (lead.ms >= 2 && /node_modules\//.test(lead.source ?? lead.at)) {
+    console.log(
+      `  \`${lead.fn}\` is library code that runs at module scope: read it before you call the cost upstream (AGENTS.md, "Library top-level work")`,
+    );
+  }
+}
+
+/**
+ * The leads, in the order a reader should take them: is the Worker's own code the cost,
+ * which modules run at startup for how long, and what is parsed but not executed.
+ */
+function printWorkerLeads(report, cov, prof, graph, top, handlers = null) {
+  if (prof?.rows) {
+    const own = prof.ownership;
+    const sm = prof.summary;
+    console.log(
+      `\nstartup CPU (profile): active ${ms(sm.activeMs)} = app modules ${ms(own.appMs)} (${own.appShare ?? 0}%) + runtime ${ms(own.runtimeMs)} + engine ${ms(own.engineMs)}` +
+        ` + parse/compile "(program)" ${ms(sm.programMs)}; GC ${ms(sm.gcMs)}; ${sm.samples} samples`,
+    );
+    console.log('  top self-time at startup:');
+    for (const row of prof.rows.slice(0, Math.min(top, 10))) {
+      console.log(`    ${String(round(row.ms)).padStart(7)}ms  ${row.bucket}`);
+    }
+    printTopLevelCalls(prof.calls, { top: Math.min(top, 8), withSource: true });
+    const unmapped = prof.rows.find((r) => r.bucket === '(unmapped)');
+    if (unmapped && unmapped.ms >= 2) {
+      console.log(
+        `  ${ms(unmapped.ms)} sits in chunk top-level code V8 gave no line ticks for - \`${CLI} worker-attrib\` on an attribution build charges it to the evaluating module`,
+      );
+    }
+  } else if (prof?.missingSourcemap) {
+    console.log(
+      `\n(no startup CPU by module: ${report.worker.main}.map is missing - build the worker environment with sourcemaps; \`${CLI} worker-config\` sets that)`,
+    );
+  }
+  const wc =
+    prof?.rows && graph
+      ? workerCpu(
+          graph,
+          workerTargetPaths(report.worker.outDir),
+          report.worker.app,
+          sourceCpu(prof.rows),
+        )
+      : null;
+  if (wc) {
+    wc.bytesRate = bytesRate({
+      summary: prof.summary,
+      closureBytes: evalOverrides(graph, []).eagerBytes,
+    });
+    if (cov?.modules) {
+      wc.groupChunks = groupChunkModules(
+        graph,
+        report.worker.outDir,
+        lazyInStartupChunks(graph, cov.modules).byScript.map(([c]) => c),
+      );
+    }
+  }
+  if (graph) {
+    const classes = workerClasses(report.worker.outDir);
+    const found = classes.length
+      ? classModules(
+          graph,
+          classes.map((c) => c.name),
+          report.worker.app,
+        ).map((c) => ({ ...c, kind: classes.find((k) => k.name === c.name).kind }))
+      : [];
+    const unlock = classUnlock(graph, handlers, found);
+    printHandlerImports(graph, wc, handlers, report.worker.app, unlock);
+    printAsyncImports(graph, wc, handlers, report.worker.app);
+    if (classes.length) printClassExports(graph, wc, classes, found, report.worker.app, unlock);
+  }
+  if (wc) printStartupGroups(graph, wc, prof, report.worker.app);
+
+  if (cov?.totals) {
+    const t = cov.totals;
+    console.log(
+      `\nevaluated at startup: ${kb(t.readyBytes)} of ${kb(t.totalBytes)} in the static closure (${t.moduleCount} modules, ${Math.round((t.readyBytes / Math.max(1, t.totalBytes)) * 100)}% executed)` +
+        `${cov.runtimeScripts.length ? `; ${cov.runtimeScripts.length} runtime module(s) loaded (${cov.runtimeScripts.slice(0, 5).join(', ')}${cov.runtimeScripts.length > 5 ? ', ...' : ''})` : ''}`,
+    );
+    if (graph) printLazyInStartupChunks(graph, cov.modules);
+    if (cov.cold.length) {
+      console.log(
+        `\ncold at startup - in the closure, never executed to start (${cov.cold.length}):`,
+      );
+      for (const mod of cov.cold.slice(0, top)) {
+        const priced = graph ? priceDeferral(graph, mod.source) : null;
+        console.log(
+          `  ${kb(mod.totalBytes).padStart(10)}  ${mod.source}${priced ? `  -> deferring frees ${kb(priced.removedBytes)} / ${priced.removedCount} module(s)` : ''}`,
+        );
+      }
+    }
+    const idle = cov.idle
+      .filter((m) => m.idleBytes >= 16 * 1024 && m.readyRatio > 0.02)
+      .slice(0, top);
+    if (idle.length) {
+      console.log(
+        '\nparsed but mostly not executed at startup (libraries run a slice of themselves at import; the rest is load cost):',
+      );
+      for (const mod of idle) {
+        const priced = graph ? priceDeferral(graph, mod.source) : null;
+        console.log(
+          `  ${kb(mod.idleBytes).padStart(10)} idle of ${kb(mod.totalBytes).padStart(9)}  ${String(Math.round(mod.readyRatio * 100)).padStart(3)}% executed  ${mod.source}${priced ? `  -> deferring frees ${kb(priced.removedBytes)}` : ''}`,
+        );
+      }
+    }
+    console.log('\nby package (bytes in the startup closure, share executed):');
+    for (const p of cov.packages.slice(0, Math.min(top, 12))) {
+      console.log(
+        `  ${kb(p.totalBytes).padStart(10)}  ${String(Math.round((p.readyBytes / Math.max(1, p.totalBytes)) * 100)).padStart(3)}%  ${String(p.modules).padStart(4)} module(s)  ${p.pkg}`,
+      );
+    }
+  }
+
+  if (!graph) {
+    const cause = reportSupportNote(ctx.appDir, CLI);
+    console.log(
+      cause
+        ? `\n(no module-graph.json for this worker)\n${cause}`
+        : `\n(no module-graph.json for this worker: \`${CLI} worker-config --app <appDir>\` writes a build config that collects it; then graph / what-if / cut / why price every candidate)`,
+    );
+  } else {
+    console.log(
+      `\nnext: \`${CLI} why <module>\` names the importers and the chain from the entry; \`${CLI} what-if <a> <b>\` prices a group of deferrals (bytes and measured startup CPU);` +
+        ` \`${CLI} cut <module> --root <class modules>\` the fewest imports to make dynamic while the classes stay eager.`,
+    );
+  }
+}
+
+/**
+ * Startup CPU grouped by import: each row is the CPU that one deferral removes (the
+ * module's dominator subtree), so rows under the noise floor can be added up. `wc` comes
+ * from `workerCpu`. See lib/worker/startup-cpu.mjs.
+ */
+function printStartupGroups(graph, wc, prof, appDir) {
+  // App modules are files under the Vite root (or virtual); package ids are package-relative.
+  const { cpu, isApp } = wc;
+  const groups = startupGroups(graph, cpu, { isApp });
+  const short = (id) => (path.isAbsolute(id) ? path.relative(appDir, id) : id);
+  if (!groups?.rows.length) return;
+  const self = wc.kind === 'self';
+  const totalMs = self
+    ? prof.ownership?.appMs
+    : [...cpu.byIdx.values()].reduce((sum, v) => sum + v, 0);
+  console.log(
+    self
+      ? `\nstartup CPU by import (self time summed over what deferring that import removes; rows do not overlap):`
+      : `\nstartup CPU by import (from the last worker-attrib${wc.older ? ', run before the current build' : ''}: each module with the library calls its top level makes, summed over what deferring that import removes; rows do not overlap):`,
+  );
+  console.log(
+    `  under ${short(groups.anchor.id)} (${ms(groups.anchor.ms)} of the ${ms(totalMs)} ${self ? 'app-module time' : 'module time'}; its own top level ${ms(groups.anchorSelfMs)}):`,
+  );
+  const who = (r) =>
+    r.importers > 1
+      ? `  (${r.importers} importers: \`${CLI} cut ${short(r.id)}\` lists the fewest edges)`
+      : '';
+  for (const r of groups.rows) {
+    console.log(
+      `    ${String(r.ms).padStart(7)}ms ${String(r.modules).padStart(5)} module(s)  ${short(r.id)}${who(r)}`,
+    );
+    for (const c of r.children) {
+      console.log(
+        `      ${String(c.ms).padStart(7)}ms ${String(c.modules).padStart(5)} module(s)  ${short(c.id)}${who(c)}`,
+      );
+    }
+  }
+  if (groups.restCount) {
+    console.log(`    ${String(groups.restMs).padStart(7)}ms in ${groups.restCount} smaller row(s)`);
+  }
+  const lib = groups.rows.find((r) => !isApp(r.id));
+  if (self && lib && lib === groups.rows[0]) {
+    console.log(
+      `  ${short(lib.id)} is library code: its time is charged to the library, not to the app module whose top level calls it.` +
+        ` \`${CLI} worker-attrib\` on the attribution build charges it to those modules, and this view and what-if then use it.`,
+    );
+  }
+  if (cpu.unmatchedMs >= 1) {
+    console.log(`  ${ms(cpu.unmatchedMs)} of mapped time matched no module in the build graph`);
+  }
+  console.log(
+    `  rows under the noise floor add up: defer two or three in one round and judge the group; \`${CLI} what-if <a> <b>\` prices them together.`,
+  );
+  const sm = prof.summary;
+  if (sm && sm.gcMs + sm.programMs >= 5) {
+    console.log(
+      `  GC ${ms(sm.gcMs)} and parse/compile ${ms(sm.programMs)} have no module row: \`${CLI} what-if\` estimates the share of a deferral by the bytes it removes.`,
+    );
+  }
+}
+
+// A lead row frees at least this much: bytes, or modules (a text module counts 0 bytes).
+const LEAD_MIN_BYTES = 16 * 1024;
+// The most app modules the scan reads for imports that only async functions read.
+const ASYNC_LEAD_MAX_FILES = 400;
+
+/**
+ * The main module's imports and where its code reads them (lib/worker/handler-imports.mjs),
+ * with the graph edge of each. Also the imports of the other app modules at startup that only
+ * `async` functions read (`asyncRows`). Null when the graph has no app main module.
+ */
+async function handlerImports(graph, appDir) {
+  const isApp = (id) =>
+    !isVirtual(id) &&
+    !id.replaceAll('\\', '/').includes('node_modules/') &&
+    fs.existsSync(path.resolve(appDir, id));
+  const main = mainModuleIndex(graph, isApp);
+  if (main == null) return null;
+  const file = path.resolve(appDir, graph.modules[main].id);
+  const parseAst = await loadParseAst(appDir);
+  if (!parseAst)
+    return {
+      main,
+      note: 'rolldown/parseAst did not load, so the scan did not read the main module',
+    };
+  const program = parseFile(parseAst, file, fs.readFileSync(file, 'utf8'));
+  if (!program) return { main, note: `${path.relative(appDir, file)} did not parse` };
+  const rows = importUses(program);
+  const targets = matchImportTargets(
+    graph,
+    main,
+    rows.map((r) => r.source),
+    appDir,
+  );
+  const asyncRows = [];
+  const candidates = asyncImportModules(graph, isApp, {
+    skip: main,
+    minBytes: LEAD_MIN_BYTES,
+    minModules: CLOSURE_MIN_MODULES,
+  });
+  for (const from of candidates.slice(0, ASYNC_LEAD_MAX_FILES)) {
+    const source = path.resolve(appDir, graph.modules[from].id);
+    let text;
+    try {
+      text = fs.readFileSync(source, 'utf8');
+    } catch {
+      continue;
+    }
+    const tree = parseFile(parseAst, source, text);
+    if (!tree) continue;
+    // Every source goes to the matcher: the last source left pairs with the last edge left.
+    const uses = importUses(tree);
+    const hits = matchImportTargets(
+      graph,
+      from,
+      uses.map((r) => r.source),
+      appDir,
+    );
+    for (const row of uses) {
+      if (readOnlyInAsync(row) && hits.has(row.source)) {
+        asyncRows.push({ from, to: hits.get(row.source), row });
+      }
+    }
+  }
+  return { main, rows, targets, asyncRows };
+}
+
+/**
+ * Imports that only code inside the main module's functions reads. A handler runs per event,
+ * so a dynamic import there takes the import's closure out of startup. Priced together
+ * (modules they share leave only then) and one at a time.
+ */
+function printHandlerImports(graph, wc, lead, appDir, unlock = null) {
+  if (!lead) return;
+  if (lead.note) {
+    console.log(`\n(imports read only in handlers: not checked - ${lead.note})`);
+    return;
+  }
+  const later = lead.rows.filter((r) => readOnlyLater(r) && lead.targets.has(r.source));
+  if (!later.length) return;
+  const edge = (r) => ({ from: lead.main, to: lead.targets.get(r.source), kind: 'defer' });
+  const all = evalOverrides(graph, later.map(edge));
+  if (all.removedBytes < LEAD_MIN_BYTES && !unlock) return;
+  const alone = later
+    .map((r) => ({ r, ...evalOverrides(graph, [edge(r)]) }))
+    .sort((a, b) => b.removedBytes - a.removedBytes || b.removedCount - a.removedCount);
+  const short = (id) => (path.isAbsolute(id) ? path.relative(appDir, id) : id);
+  const cut = (s, n) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+  console.log(
+    `\nimports that only code inside functions reads (${short(graph.modules[lead.main].id)}): a handler runs per event, not at startup`,
+  );
+  let syncRows = 0;
+  for (const a of alone.slice(0, 12)) {
+    const names = a.r.names.filter((n) => n.reads).map((n) => n.name);
+    const fns = [...new Set(a.r.names.flatMap((n) => n.fns))];
+    const sync = !readOnlyInAsync(a.r);
+    if (sync) syncRows += 1;
+    console.log(
+      `    ${String(a.removedCount).padStart(5)} module(s) ${kb(a.removedBytes).padStart(10)}  ${cut(names.join(', '), 30).padEnd(30)} from ${cut(a.r.source, 36).padEnd(36)} read in ${cut(fns.join(', '), 40)}${sync ? ' (sync)' : ''}`,
+    );
+  }
+  if (alone.length > 12) console.log(`    ... +${alone.length - 12} more`);
+  if (syncRows) {
+    console.log(
+      '  (sync): a function that is not async reads it - make it async when every caller can await it, or load the import in an async function that runs first',
+    );
+  }
+  console.log(
+    `  all ${later.length} loaded inside the functions that read them: ${all.removedCount} module(s) / ${kb(all.removedBytes)} leave startup${cpuSegment(graph, wc, all.removed)}`,
+  );
+  printCpuCaveat(graph, wc, all.removed, all.removedBytes);
+  printGroupChunkWarning(graph, wc, all.removed);
+  const sum = alone.reduce((s, a) => s + a.removedCount, 0);
+  if (all.removedCount > sum) {
+    console.log(
+      `  together they free ${all.removedCount - sum} module(s) more than one at a time: a module they share leaves only when every import that reaches it moves`,
+    );
+  }
+  if (unlock) {
+    console.log(
+      `  with lazy class wrappers as well, ${unlock.removedCount} module(s) / ${kb(unlock.removedBytes)} more leave: the class modules import them too (class exports, below)`,
+    );
+  }
+  console.log(
+    '  the first event that runs such a function pays the load, once per isolate: a startup task takes that trade (AGENTS.md, "A handler runs per event")',
+  );
+}
+
+/**
+ * Imports of the other app modules at startup that only `async` functions read. Such a
+ * function already returns a promise, so an `await import()` inside it changes no caller.
+ */
+function printAsyncImports(graph, wc, lead, appDir) {
+  const rows = (lead?.asyncRows ?? [])
+    .map((a) => ({ ...a, ...evalOverrides(graph, [{ from: a.from, to: a.to, kind: 'defer' }]) }))
+    .filter((a) => a.removedBytes >= LEAD_MIN_BYTES || a.removedCount >= CLOSURE_MIN_MODULES)
+    .sort((a, b) => b.removedBytes - a.removedBytes || b.removedCount - a.removedCount);
+  if (!rows.length) return;
+  const edges = rows.map((a) => ({ from: a.from, to: a.to, kind: 'defer' }));
+  const all = evalOverrides(graph, edges);
+  const short = (id) => (path.isAbsolute(id) ? path.relative(appDir, id) : id);
+  const cut = (s, n) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+  const files = (mods) => {
+    const t = textModuleBytes(mods);
+    return t.count ? ` (+${kb(t.bytes)} in ${t.count} text file(s))` : '';
+  };
+  console.log(
+    '\nimports that only async functions read, in the other app modules: an `await import()` inside the function changes no caller',
+  );
+  for (const a of rows.slice(0, 10)) {
+    const fns = [...new Set(a.row.names.flatMap((n) => n.fns))];
+    console.log(
+      `    ${String(a.removedCount).padStart(5)} module(s) ${kb(a.removedBytes).padStart(10)}${files(a.removed)}  ${cut(short(graph.modules[a.from].id), 44)} imports ${cut(a.row.source, 36)}, read in ${cut(fns.join(', '), 36)}`,
+    );
+  }
+  if (rows.length > 10) console.log(`    ... +${rows.length - 10} more`);
+  console.log(
+    `  all ${rows.length} loaded inside those functions: ${all.removedCount} module(s) / ${kb(all.removedBytes)}${files(all.removed)} leave startup${cpuSegment(graph, wc, all.removed)}`,
+  );
+  printGroupChunkWarning(graph, wc, all.removed);
+}
+
+/**
+ * The build is older than an app module it holds: a failed or skipped build left the last
+ * output, and the scan would time that.
+ */
+function staleBuildNote(ctx, graph) {
+  let builtAt;
+  try {
+    builtAt = fs.statSync(path.join(ctx.outDir, ctx.mainName)).mtimeMs;
+  } catch {
+    return null;
+  }
+  let newest = null;
+  for (const m of graph.modules) {
+    if (isVirtual(m.id) || m.id.replaceAll('\\', '/').includes('node_modules/')) continue;
+    let at;
+    try {
+      at = fs.statSync(path.resolve(ctx.appDir, m.id)).mtimeMs;
+    } catch {
+      continue;
+    }
+    if (at > builtAt + 1000 && (!newest || at > newest.at)) newest = { id: m.id, at };
+  }
+  if (!newest) return null;
+  const id = path.isAbsolute(newest.id) ? path.relative(ctx.appDir, newest.id) : newest.id;
+  return `the build is older than ${id} (changed ${Math.round((newest.at - builtAt) / 1000)}s after it): this scan timed the last build that succeeded. Rebuild, then scan again.`;
+}
+
+/**
+ * Modules that load at startup only because a chunk group put them with startup code.
+ * The graph calls them lazy, so `what-if` prices their deferral at 0; the chunk config is the
+ * lever. See lib/worker/startup-cpu.mjs.
+ */
+function printLazyInStartupChunks(graph, covModules) {
+  const lazy = lazyInStartupChunks(graph, covModules);
+  if (lazy.bytes < 16 * 1024) return;
+  console.log(
+    `\nloaded at startup although only dynamic imports reach them: ${kb(lazy.bytes)} / ${lazy.count} module(s), in a chunk with startup code:`,
+  );
+  for (const [script, bytes] of lazy.byScript.slice(0, 4)) {
+    console.log(`  ${kb(bytes).padStart(10)}  ${script}`);
+  }
+  console.log(
+    `  by package: ${lazy.byPackage
+      .slice(0, 10)
+      .map(([p, b]) => `${p} ${kb(b)}`)
+      .join(', ')}`,
+  );
+  console.log(
+    '  the chunk config (manualChunks, advancedChunks groups) puts them there, and a dynamic import saves nothing while the target shares a chunk with startup code.' +
+      ' Take these packages out of that group, rebuild, then worker-scan. Check the same for every package you defer.',
+  );
+}
+
+/**
+ * Durable Object and Workflow classes: the module that defines each one, and what lazy
+ * wrapper classes (same name, the implementation imported on the first call) would move.
+ * Priced like the other leads: the CPU of `wc`, plus GC and parse/compile estimated by bytes.
+ */
+function printClassExports(graph, wc, classes, found, appDir, unlock) {
+  const missing = classes.filter((c) => !found.some((f) => f.name === c.name)).map((c) => c.name);
+  console.log(
+    `\nclass exports in wrangler.json (the runtime loads them by name): ${classes.length}`,
+  );
+  const cpu = wc?.cpu ?? null;
+  const priceOf = (list) => wrapperPrice(graph, cpu ?? { byIdx: new Map() }, list);
+  const price = found.length ? priceOf(found) : null;
+  if (price) {
+    const source =
+      wc?.kind === 'self'
+        ? 'of measured self time (last worker-scan)'
+        : `of startup CPU with the library calls they make (last worker-attrib${wc?.older ? ', run before the current build' : ''})`;
+    const timeOf = (p) => {
+      if (!cpu) return '';
+      const est = wc.bytesRate ? p.removedBytes * wc.bytesRate.perByte : null;
+      return (
+        `: ${ms(p.ms)} ${source}` +
+        (est != null
+          ? ` + about ${ms(est)} of GC and parse/compile (an estimate by bytes) = about ${ms(p.ms + est)}`
+          : '')
+      );
+    };
+    console.log(
+      `  lazy wrapper classes for all of them would move ${kb(price.removedBytes)} / ${price.removedCount} module(s) out of startup${timeOf(price)}`,
+    );
+    // Without the base class, workerd rejects every RPC call on the stub, and fetch still works.
+    console.log(
+      '  a wrapper extends the runtime base class of the original (DurableObject or WorkflowEntrypoint from cloudflare:workers): without it, every RPC call on the stub fails',
+    );
+    // A Workflow wrapper forwards one method; a Durable Object wrapper forwards all of them.
+    const workflows = found.filter((c) => c.kind === 'workflow');
+    const objects = found.filter((c) => c.kind === 'durable-object');
+    if (workflows.length && objects.length) {
+      const w = priceOf(workflows);
+      const o = priceOf(objects);
+      console.log(
+        `  the ${workflows.length} Workflow class(es) alone: ${kb(w.removedBytes)} / ${w.removedCount} module(s)${timeOf(w)}. A Workflow wrapper forwards run() only.`,
+      );
+      console.log(
+        `  the ${objects.length} Durable Object class(es) alone: ${kb(o.removedBytes)} / ${o.removedCount} module(s)${timeOf(o)}. A Durable Object wrapper forwards fetch, alarm, the WebSocket handlers and every RPC method.`,
+      );
+    } else if (workflows.length) {
+      console.log('  all of them are Workflow classes: a Workflow wrapper forwards run() only');
+    }
+    console.log('  per class, what only that class holds:');
+    for (const c of price.perClass.slice(0, 8)) {
+      console.log(
+        `    ${cpu ? `${String(c.ms).padStart(7)}ms ` : ''}${String(c.modules).padStart(5)} module(s) ${kb(c.bytes).padStart(9)}  ${c.name.padEnd(28)} ${path.isAbsolute(c.id) ? path.relative(appDir, c.id) : c.id}`,
+      );
+    }
+    if (price.perClass.length > 8) console.log(`    ... +${price.perClass.length - 8} more`);
+    if (price.shared.count) {
+      console.log(
+        `  ${price.shared.count} module(s) / ${kb(price.shared.bytes)}${cpu ? ` (${ms(price.shared.ms)})` : ''} of the total are shared by two or more classes: they leave only when every class has a wrapper`,
+      );
+    }
+    if (unlock) {
+      const u = {
+        ms: cpu ? cpuOf(graph, cpu, unlock.removed) : 0,
+        removedBytes: unlock.removedBytes,
+      };
+      // The wrapper set and the unlocked set do not overlap, so their sums are exact.
+      const t = { ms: price.ms + u.ms, removedBytes: price.removedBytes + unlock.removedBytes };
+      console.log(
+        `  with the imports above (only read in functions) moved too, ${unlock.removedCount} module(s) / ${kb(unlock.removedBytes)} more leave${timeOf(u)}: the class modules import them as well, so neither change alone frees them`,
+      );
+      console.log(
+        `  so after those imports move, the wrappers take ${price.removedCount + unlock.removedCount} module(s) / ${kb(t.removedBytes)} out of startup${timeOf(t)}`,
+      );
+    }
+    printLibraryCaveat(wc);
+    console.log(
+      '  a wrapper keeps the class name in the entry and imports the implementation on the first call. It changes no class code: the app tests still cover the class, and a typecheck checks each forward (AGENTS.md, "classes loaded by name")',
+    );
+  }
+  if (missing.length) console.log(`  no module found for: ${missing.join(', ')}`);
+}
+
+/**
+ * Durable Object and Workflow classes the config binds; their modules are roots. A class in
+ * both lists counts as a Durable Object: its wrapper must forward more.
+ */
+function workerClasses(outDir) {
+  const config = readJson(path.join(outDir, 'wrangler.json'));
+  if (!config) return [];
+  const kinds = new Map();
+  for (const w of config.workflows ?? []) if (w.class_name) kinds.set(w.class_name, 'workflow');
+  for (const b of config.durable_objects?.bindings ?? []) {
+    if (b.class_name) kinds.set(b.class_name, 'durable-object');
+  }
+  return [...kinds].map(([name, kind]) => ({ name, kind }));
+}
+
+/** The edges the handler and async-function leads defer, all at once. */
+function leadEdges(lead) {
+  if (!lead || lead.note) return [];
+  return [
+    ...lead.rows
+      .filter((r) => readOnlyLater(r) && lead.targets.has(r.source))
+      .map((r) => ({ from: lead.main, to: lead.targets.get(r.source), kind: 'defer' })),
+    ...(lead.asyncRows ?? []).map((a) => ({ from: a.from, to: a.to, kind: 'defer' })),
+  ];
+}
+
+/**
+ * The modules that leave startup only when the lazy class wrappers and the lead imports both
+ * move: the class modules import them too, so each change alone frees none of them.
+ */
+function classUnlock(graph, lead, found) {
+  const edges = leadEdges(lead);
+  if (!edges.length || !found.length) return null;
+  const wrap = [...new Set(found.map((c) => c.index))].flatMap((t) => deferAllInto(graph, t));
+  const removed = leaveOnlyTogether(graph, wrap, edges);
+  const removedBytes = removed.reduce((sum, m) => sum + m.bytes, 0);
+  if (removedBytes < LEAD_MIN_BYTES && removed.length < CLOSURE_MIN_MODULES) return null;
+  return { removed, removedBytes, removedCount: removed.length };
+}
+
+function workerModuleGraph(ctx) {
+  return loadModuleGraph(ctx.reportDirs);
+}
+
+function printRuntimeStderr(ctx) {
+  if (!ctx.stderr.lines.size) return;
+  console.log('\nworkerd stderr (deduplicated):');
+  for (const [line, n] of ctx.stderr.lines) console.log(`  ${n}x ${line}`);
+}
+
+async function cmdWorkerMeasure(argv) {
+  const opts = parse(argv, {
+    ...WORKER_TARGET_OPTS,
+    runs: { type: 'string', default: '5' },
+    warmup: { type: 'string', default: '1' },
+    label: { type: 'string', default: '' },
+    pin: { type: 'boolean', default: false },
+  });
+  const ctx = await loadWorkerContext(resolveWorkerTarget(opts), { main: opts.main });
+  printWorkerContext(ctx);
+  const summary = await runWorkerTiming(ctx, {
+    runs: Number(opts.runs),
+    warmup: Number(opts.warmup),
+  });
+  const requests = await firstRequests(ctx, ctx.requests);
+  const { report, hadBaseline } = writeWorkerReport(ctx, summary, { label: opts.label, requests });
+  printWorkerSummary(report, hadBaseline);
+  if (opts.pin) pinWorkerBaseline(ctx, workerModuleGraph(ctx));
+  printRuntimeStderr(ctx);
+  console.log(`\nfull report: ${ctx.paths.metrics}`);
+}
+
+async function cmdWorkerScan(argv) {
+  const opts = parse(argv, {
+    ...WORKER_TARGET_OPTS,
+    runs: { type: 'string', default: '5' },
+    warmup: { type: 'string', default: '1' },
+    label: { type: 'string', default: '' },
+    pin: { type: 'boolean', default: false },
+    top: { type: 'string', default: '10' },
+    interval: { type: 'string', default: '100' },
+    'no-coverage': { type: 'boolean', default: false },
+    'no-profile': { type: 'boolean', default: false },
+  });
+  const ctx = await loadWorkerContext(resolveWorkerTarget(opts), { main: opts.main });
+  printWorkerContext(ctx);
+  const notes = [];
+  const pinned = await loadPinnedContext(ctx, notes);
+  const summary = await runWorkerTiming(ctx, {
+    runs: Number(opts.runs),
+    warmup: Number(opts.warmup),
+    pinned,
+  });
+  process.stderr.write('first requests on the real entry...\n');
+  const requests = await firstRequests(ctx, ctx.requests);
+
+  let prof = null;
+  if (!opts['no-profile']) {
+    process.stderr.write('profile run (where the startup CPU went)...\n');
+    const { profile, importRan, importText } = await cpuProfileRun(ctx, {
+      intervalUs: Number(opts.interval),
+    });
+    if (!importRan)
+      notes.push(`profile run: the import did not complete: ${importText.slice(0, 200)}`);
+    fs.mkdirSync(ctx.paths.dir, { recursive: true });
+    fs.writeFileSync(ctx.paths.profile, JSON.stringify(profile));
+    prof = attributeProfile(profile, { outDir: ctx.outDir, mainName: ctx.mainName });
+    prof.calls = topLevelCalls(profile, outputLocator(ctx.outDir));
+  }
+
+  let cov = null;
+  if (!opts['no-coverage']) {
+    process.stderr.write(
+      'coverage run (what executed at startup; in-process inspector session)...\n',
+    );
+    const run = await workerCoverageRun(ctx, { tools: ctx.borrowed });
+    if (run.unsupported) {
+      notes.push(`precise coverage unavailable: ${run.unsupported}`);
+    } else {
+      if (run.importError)
+        notes.push(`coverage run: the import threw: ${run.importError.slice(0, 200)}`);
+      fs.mkdirSync(ctx.paths.dir, { recursive: true });
+      fs.writeFileSync(ctx.paths.coverage, JSON.stringify(run.result));
+      cov = attributeCoverage(run.result, { outDir: ctx.outDir });
+      cov.source = `precise, workerd ${run.workerd}${run.borrowed ? ' (borrowed through --tools)' : ''}; flags added for that run: ${run.addedFlags.join(', ') || 'none'}`;
+    }
+  }
+
+  const graph = workerModuleGraph(ctx);
+  const stale = graph ? staleBuildNote(ctx, graph) : null;
+  const handlers = graph ? await handlerImports(graph, ctx.appDir) : null;
+  const closure = graph && pinned ? pinnedClosureDiff(ctx, graph, cov) : null;
+  const paired = summary.pinnedBuild;
+  if (
+    paired &&
+    closureOnlyShrank(closure) &&
+    pairedVerdict(paired).kind === 'regression' &&
+    supportsV8Flags(ctx.tools)
+  ) {
+    process.stderr.write(
+      'the import got slower, but startup only lost modules: both builds again, young generation fixed...\n',
+    );
+    paired.fixedYoung = (
+      await pairedSeries(ctx, pinned, {
+        runs: Number(opts.runs),
+        warmup: Number(opts.warmup),
+        appStartupMs: paired.appStartupMs,
+        v8Flags: FIXED_YOUNG_V8_FLAGS,
+        label: 'young generation fixed: ',
+      })
+    ).paired;
+  }
+  const { report, hadBaseline } = writeWorkerReport(ctx, summary, {
+    label: opts.label,
+    requests,
+    profile: prof
+      ? {
+          summary: prof.summary,
+          ownership: prof.ownership,
+          totalMs: prof.totalMs,
+          rows: prof.rows?.slice(0, 40) ?? null,
+          // Every mapped row, so `what-if` can price the measured CPU of any group later.
+          bySource: prof.rows ? sourceCpu(prof.rows) : null,
+          // With GC and parse/compile, the rate `what-if` estimates their share by bytes with.
+          closureBytes: graph ? evalOverrides(graph, []).eagerBytes : null,
+        }
+      : null,
+    coverage: cov
+      ? {
+          source: cov.source,
+          totals: cov.totals,
+          runtimeScripts: cov.runtimeScripts,
+          modules: cov.modules.slice(0, 60),
+          cold: cov.cold.slice(0, 20),
+          idle: cov.idle.slice(0, 20),
+          packages: cov.packages.slice(0, 30),
+          // Startup chunks that hold modules only dynamic imports reach: `what-if` checks them.
+          groupChunks: graph
+            ? lazyInStartupChunks(graph, cov.modules).byScript.map(([c]) => c)
+            : [],
+        }
+      : null,
+    notes,
+  });
+  if (stale) console.log(`\nWARNING: ${stale}`);
+  printWorkerSummary(report, hadBaseline, closure);
+  printWorkerLeads(report, cov, prof, graph, Number(opts.top), handlers);
+  if (cov?.source) console.log(`\ncoverage: ${cov.source}`);
+  for (const note of notes) console.log(`note: ${note}`);
+  if (opts.pin) pinWorkerBaseline(ctx, graph);
+  printRuntimeStderr(ctx);
+  console.log(`\nfull report: ${ctx.paths.metrics}`);
+}
+
+/**
+ * CPU by EVALUATING module, from the attribution build (every module its own file):
+ * `ROLLDOWN_PERF_KIT_ATTRIB=1 npx vite build --config perf-kit.vite.config.ts`.
+ */
+async function cmdWorkerAttrib(argv) {
+  const opts = parse(argv, {
+    ...WORKER_TARGET_OPTS,
+    'attrib-dir': { type: 'string', default: ATTRIB_DIR },
+    interval: { type: 'string', default: '100' },
+    top: { type: 'string', default: '18' },
+  });
+  const target = resolveWorkerTarget(opts);
+  const outDir = attribOutDir(path.join(target.appDir, opts['attrib-dir']), target.workerName);
+  if (!fs.existsSync(path.join(outDir, 'wrangler.json'))) {
+    throw new Error(
+      `no attribution build at ${outDir}.\n` +
+        `Build one: ROLLDOWN_PERF_KIT_ATTRIB=1 npx vite build --config ${SHIM_FILE}   (in ${target.appDir}; \`${CLI} worker-config\` writes that config)`,
+    );
+  }
+  const ctx = await loadWorkerContext(target, { outDir, main: opts.main });
+  printWorkerContext(ctx);
+  process.stderr.write('profile run on the attribution build...\n');
+  const { profile, importRan, importText } = await cpuProfileRun(ctx, {
+    intervalUs: Number(opts.interval),
+  });
+  if (!importRan) {
+    const first = importText
+      .replace(/^startup threw: /, '')
+      .split('\n')[0]
+      .slice(0, 200);
+    console.log(`\nthe attribution build did not finish its import: ${first}`);
+    console.log('  the rows below cover only the modules that evaluated before that point.');
+    if (/\brequire_\w+ is not a function/.test(importText)) {
+      console.log(
+        '  (a CommonJS module in an import cycle: with preserveModules every file evaluates\n' +
+          '  `export default require_x()` eagerly, and a cycle reaches a wrapper before its own file ran.\n' +
+          `  That is the bundler's output, not the app; the bundled profile of \`${CLI} worker-scan\` is the fallback.)`,
+      );
+    }
+  }
+  fs.mkdirSync(ctx.paths.dir, { recursive: true });
+  fs.writeFileSync(ctx.paths.attribProfile, JSON.stringify(profile));
+  const graph = loadModuleGraph(workerReportDirs(target.appDir, outDir, opts.report));
+  const { rows, pairs, byFile } = evaluatingModules(profile, {
+    outDir,
+    graph,
+    top: Number(opts.top),
+  });
+  // Stored with the Worker's own scan data: what-if and the scan's groups price with it.
+  fs.mkdirSync(target.paths.dir, { recursive: true });
+  writeJson(target.paths.attribCpu, { atMs: Date.now(), complete: importRan, byFile });
+  const calls = topLevelCalls(profile, outputLocator(outDir));
+  console.log(
+    `\nstartup CPU by evaluating module${importRan ? '' : ' (partial)'} (its own top level plus the library calls it makes):`,
+  );
+  for (const r of rows) {
+    console.log(`  ${String(r.ms).padStart(7)}ms  ${r.module}`);
+    if (r.chain?.length) console.log(`             via ${r.chain.join(' -> ')}`);
+    const own = calls.filter((c) => c.module === r.module && c.ms >= 0.5).slice(0, 2);
+    for (const c of own)
+      console.log(`             calls ${c.fn}() ${c.ms}ms at ${shortModule(c.at)}`);
+  }
+  console.log();
+  printTopLevelCalls(calls, { top: 6, withSource: false });
+  console.log('\nevaluating module -> library it spends the time in:');
+  for (const p of pairs.slice(0, 12)) console.log(`  ${String(p.ms).padStart(7)}ms  ${p.pair}`);
+  if (!graph) {
+    console.log(
+      `\n(no report for the attribution build - the chains need ${path.relative(target.appDir, reportDirFor(target.appDir, outDir))})`,
+    );
+  }
+  printRuntimeStderr(ctx);
+  console.log(`\nprofile: ${ctx.paths.attribProfile}`);
+  console.log(
+    `what-if and the worker-scan groups now price with this time (${path.relative(process.cwd(), target.paths.attribCpu)}).` +
+      ' Rerun this command after an edit changes what a module does at its top level.',
+  );
+}
+
+/** How to name an app directory in a hint: relative when it is below cwd, absolute otherwise. */
+function appArgFor(appDir) {
+  const rel = path.relative(process.cwd(), appDir);
+  return !rel ? '.' : rel.startsWith('..') ? appDir : rel;
+}
+
+/** Write the Vite config shim and print the three build commands. */
+async function cmdWorkerConfig(argv) {
+  const opts = parse(argv, { app: { type: 'string' }, force: { type: 'boolean', default: false } });
+  const sticky = readJson(WORKER_TARGET_FILE);
+  const appDir = path.resolve(opts.app ?? sticky?.app ?? '.');
+  const { file, baseConfigFile, existed } = writeViteConfigShim(appDir, { force: opts.force });
+  console.log(
+    `${existed && !opts.force ? 'kept' : 'wrote'} ${file} (wraps ${baseConfigFile}; --force rewrites)`,
+  );
+  const cause = reportSupportNote(appDir, CLI);
+  if (cause) console.log(`\nbefore you build:\n${cause}`);
+  console.log(`\nbuild commands (run in ${appDir}):`);
+  console.log(
+    `  npx vite build --config ${SHIM_FILE}                            full build; report per environment, sourcemaps on the worker`,
+  );
+  console.log(
+    `  ROLLDOWN_PERF_KIT_WORKER_ONLY=1 npx vite build --config ${SHIM_FILE}  rebuild the worker environment only (the loop)`,
+  );
+  console.log(
+    `  ROLLDOWN_PERF_KIT_ATTRIB=1 npx vite build --config ${SHIM_FILE}       attribution build into ${ATTRIB_DIR}/ for \`${CLI} worker-attrib\``,
+  );
+  console.log(
+    `\nthen: ${CLI} worker-scan --app ${appArgFor(appDir)} [--request /path ...] [--tools <dir with wrangler >= ${COVERAGE_MIN_WRANGLER}>]`,
+  );
+}
+
+/** Copy this checkout's built rolldown over the copy the app's vite resolves. */
+async function cmdRolldownInstall(argv) {
+  const opts = parse(argv, { app: { type: 'string' }, from: { type: 'string' } });
+  const sticky = readJson(WORKER_TARGET_FILE);
+  const appDir = path.resolve(opts.app ?? sticky?.app ?? '.');
+  const { from, dir, before, after } = installCheckoutRolldown(
+    appDir,
+    opts.from ? { checkout: path.resolve(opts.from) } : {},
+  );
+  console.log(
+    `copied ${from.dir} (rolldown ${from.version}, ${from.binding}) over ${dir} (was rolldown ${before})`,
+  );
+  const loaded = spawnSync(
+    process.execPath,
+    ['-e', "import('rolldown').then((m) => console.log(m.VERSION))"],
+    { cwd: appDir, encoding: 'utf8' },
+  );
+  const version = loaded.status === 0 ? loaded.stdout.trim() : null;
+  if (!version) {
+    throw new Error(
+      `the copy does not load from ${appDir}: ${(loaded.stderr || '').split('\n').find(Boolean) ?? 'no output'}`,
+    );
+  }
+  console.log(
+    after.reportMode
+      ? `rolldown ${version} with the report mode now loads from the app`
+      : `rolldown ${version} loads from the app but still has no report mode - is the checkout on this branch?`,
+  );
+  console.log(
+    '\nrebuild the app, then re-pin the baseline (the bundler changed). `<package manager> install --force` in the app restores the release.',
+  );
+}
+
+/** `why <module>`: direct static importers and one chain from the entry. */
+async function cmdWhy(argv) {
+  const { values: opts, positionals } = parseArgs({
+    args: argv,
+    options: { ...TARGET_OPTS, report: { type: 'string' } },
+    allowPositionals: true,
+  });
+  const query = positionals[0];
+  if (!query) throw new Error(`usage: ${CLI} why <module> [--report <dir>]`);
+  const graph = requireModuleGraph(opts);
+  const hit = resolveModule(graph, query);
+  if (!hit)
+    throw new Error(`no module matches '${query}' (ids are project-relative, e.g. src/router.ts)`);
+  if (hit.ambiguous) {
+    throw new Error(
+      `'${query}' is ambiguous:\n  ${hit.ambiguous.join('\n  ')}\nuse a longer suffix.`,
+    );
+  }
+  const why = whyModule(graph, hit.index);
+  console.log(`${why.module} (${kb(why.bytes)}): ${why.importers.length} static importer(s)`);
+  for (const imp of why.importers.slice(0, 12))
+    console.log(`  <- ${imp.module} (${kb(imp.bytes)})`);
+  if (why.importers.length > 12) console.log(`  ... ${why.importers.length - 12} more`);
+  const chain = why.chain.filter((id) => !/^(\\0|\0)/.test(id));
+  console.log(`chain from the entry: ${[...chain, why.module].join(' -> ')}`);
+  console.log(
+    `\nnext: \`${CLI} cut ${why.module}\` lists the fewest imports to make dynamic; add --root <module> for a class the runtime loads by name (Durable Object, Workflow).`,
+  );
+}
+
 async function cmdHelp() {
   console.log(`browser-loading perf harness - measurement + diagnosis; you drive the loop
 
@@ -3671,14 +5534,19 @@ start here (the target is remembered after the first command):
                             candidates/cold/large/sibling sections always complete) - --full
                             restores the whole module table
   scan --no-early-stop      scans with a pinned baseline stop after run 1 when |dLCP| is
-                            >=5x the noise threshold (later runs cannot flip that call;
-                            pins always sample fully) - this flag forces all runs
+                            >=5x the noise threshold. This flag forces all runs to check
+                            both FCP and LCP before a decision. Pins always sample fully.
   scan --net-scale <1|2|4|8>  pin the target's network-bandwidth scale explicitly.
                             First scan CALIBRATES it automatically (walks x1->x8 until
                             baseline LCP fits under 8s - only pathologically heavy apps
                             leave x1; RTT and 4x CPU never change) and PINS it: the scale
                             is part of the measurement identity for the whole session.
                             Changing it makes the pinned baseline incomparable (re-pin).
+  scan --bandwidth <Mbit/s> [--rtt <ms>] [--cpu <rate>]   pin a network in real units instead
+                            of a scale step: the network a deployed environment measured (a
+                            record's model), e.g. --bandwidth 26 --rtt 120 --cpu 1 (1 = this
+                            machine's CPU). No calibration; RTT/CPU default to 150ms / 4x.
+                            Pinned and compared like --net-scale (re-pin after a change).
   verdict                   fuse the gathered signals -> OPEN/clear/UNKNOWN; the only "done" that counts
 
 rendered output (parity) - is it still the same page? Compared ONCE, when you finish.
@@ -3713,14 +5581,21 @@ individual commands (same target rules):
                                             deferring each module removes from the initial load) -
                                             needs a rolldown devtools report build (vite >= 8:
                                             build.rolldownOptions.devtools = { mode: "report" })
-  what-if <module> [<module>...] [--keep a,b]  exact modules+bytes one deferral frees; sentries
-                                            stay eager. TWO+ modules = one combined plan, priced
+  what-if <module> [<module>...] [--keep a,b] [--root a,b]  exact modules+bytes one deferral frees;
+                                            sentries stay eager. TWO+ modules = one combined plan, priced
                                             with a single overlay + a vs-summed-individually line
                                             (shared internals can make the combined free exceed the sum)
-  cut <module> [--keep a,b]                 min edge cut: the FEWEST import statements to make dynamic
+  cut <module> [--keep a,b] [--root a,b]    min edge cut: the FEWEST import statements to make dynamic
                                             to detach the module (last-hop edges, the exact files to
                                             edit) + the bytes freed. Beats what-if when one upstream
-                                            cut detaches a multi-path module; --keep edges are protected
+                                            cut detaches a multi-path module; --keep edges are protected;
+                                            --root modules stay eager with their closure (a Durable
+                                            Object class loaded by name) so the cut lands below them
+  what-if|cut ... --root a,b                roots also price startup code no static import reaches: a
+                                            dynamic import the app runs on every start joins the
+                                            entries, so "initial load" = entries + roots + closure
+  why <module>                              the module's direct static importers + one chain from the
+                                            entry: where it enters the initial load, and who to edit
   graph-diff [--against <file>]             what a change did to the initial load (eager set): modules
                                             that entered/left with byte deltas, vs the pinned baseline
                                             graph (or any saved sidecar). Deterministic, no browser run
@@ -3728,7 +5603,46 @@ individual commands (same target rules):
                                             snapshots the module graph for graph-diff)
   target [<appDir>] [--demo]                show / set / clear the remembered target
          [--net-scale <1|2|4|8>]            ...and/or pin its throttle net-scale without probing
+         [--bandwidth <Mbit/s> [--rtt <ms>] [--cpu <rate>]]   ...or pin a network in real units
   gen | build | defer <f> | undefer <f> | status | serve    demo-app helpers (README.md)
+
+field mode (a DEPLOYED site in your own logged-in Chrome - real data, network, server):
+  field --config <file.json>   alternating timed runs per variant (cookie/query switches the
+                            build), the request LCP waited for and the script chain that
+                            started it, then one coverage + CPU profile run per variant.
+                            Writes runtime-metrics/coverage/profile.json per variant and
+                            field-report.json (paired deltas, 90% intervals) OUTSIDE the repo.
+                            Needs chrome://inspect/#remote-debugging on (or --cdp-port).
+  --runs 6                  pairs of timed runs
+  --diagnose 1|0            one coverage + CPU profile run per variant, or none
+  --cut gate|lcp|fcp        coverage snapshot point; gate = when the config's "gate" request
+                            is sent ("what ran before the request LCP waits for")
+  --throttle lab [--net-scale n]   add the lab throttle ON TOP of the real network
+  Module attribution needs "build" per variant: a local build whose chunks are
+  byte-identical to the served ones (same commit, settings, bundler version).
+
+replay (field numbers for a build that is NOT deployed):
+  Standalone entry for agents (one records, another replays): node replay.mjs help
+  (adds inspect, record --url/--cookie without a config, --json results, HANDOFF.txt).
+  record --config <file.json> [--variant <name>] [--runs 6]
+                            load one deployed variant in your Chrome (like field) and write a
+                            replay archive to $TMPDIR: every response (safelisted headers, no
+                            cookies), its median server time, a fitted network model, the
+                            field medians. Holds REAL account data - it refuses a git work tree.
+  replay --archive <dir> --dist [name=]<dir> [--dist [name=]<dir>] [--runs 6]
+                            serve the archive to headless Chrome from one local HTTP/2 server
+                            for every host: the local dist replaces the deployed files, API
+                            responses keep their recorded server time, all bodies share the
+                            recorded bandwidth. Same reports as field, paired deltas.
+  replay ... --calibrate    FIRST: replay the recorded build; its medians must match the field
+                            medians, or the model misses something and an A/B means nothing
+  --bandwidth <Mbit/s> --rtt <ms> --static-ttfb <ms> --wire <kB> --ect <rating|off>   override the model
+  --document merged|local|recorded   the dist's index.html plus the tags only the deployed
+                            HTML has (default: a host's injected loaders run in the replay too),
+                            the bare dist index.html, or the recorded HTML
+  --storage warm|empty      warm: an unmeasured load first, in the same browser context, so the
+                            build's own storage is there (default when the recorded page had storage)
+  --diagnose 1 [--cut gate|lcp|fcp]   coverage + CPU profile run per dist, as in field
 
 server startup mode (node/deno - a process coming up, not a page loading):
   node-scan --entry dist/server.js --ready port:3000    timed spawn->ready runs + what had to
@@ -3752,6 +5666,46 @@ server startup mode (node/deno - a process coming up, not a page loading):
                             render-blocking import are the same edge in the module graph.
   There is no throttle in this mode: server startup does no network I/O, so a throttle
   would invent a dimension the measurement does not have.
+
+Cloudflare Worker startup mode (a V8 isolate coming up under the app's own workerd):
+  worker-config --app <appDir>    write perf-kit.vite.config.ts next to the app's vite config:
+                            the rolldown metrics report on EVERY environment (one dir each),
+                            sourcemaps on the worker, a worker-only rebuild and an attribution
+                            build behind env vars. Prints the build commands. Build, then:
+  worker-scan --app <appDir> [--request /path ...] [--tools <dir>]
+                            N cold runs (fresh workerd each) of the main module's import minus
+                            an empty-import floor = app startup; first requests on the real
+                            entry; startup CPU by module (profile); what executed at startup
+                            (precise coverage from inside the isolate); the leads. --pin
+                            makes this the baseline. The app dir, the request set and
+                            --tools are remembered; later \`worker-scan\` runs bare.
+  worker-measure            timing + first requests only
+  worker-attrib             startup CPU by EVALUATING module, from the attribution build
+                            (ROLLDOWN_PERF_KIT_ATTRIB=1 ... build): charges library work at
+                            startup to the module whose top level runs it, with the import
+                            chain. The bundled profile cannot (no line ticks for chunk
+                            top-level code; ESM evaluation is not a call stack).
+  rolldown-install --app <appDir> [--from <packages/rolldown>]
+                            copy a built rolldown package (dist with its native binding) over
+                            the copy the app's vite resolves; the default source is the
+                            rolldown package next to this one (an installed perf-kit has none:
+                            pass --from a checkout built with \`just build-rolldown-release\`).
+                            The npm release has no report mode, so without this no build
+                            writes the report; worker-config says when that is the case. The
+                            swap is not a config change. Rebuild and re-pin afterwards.
+                            \`<package manager> install --force\` restores the release.
+  --request <path>          a route to hit after startup on the real entry; the first hit
+                            of a route that imports a deferred module pays that load, and
+                            the report prints it next to the startup gain (a deferral MOVES
+                            work, it does not delete it). Repeatable. \`ws:/path\` opens a
+                            WebSocket instead, \`ws:/path|<text>\` also sends <text>; timed
+                            to the server's last message (agent chats and RPC run there).
+  --tools <dir>             a project whose wrangler is ${COVERAGE_MIN_WRANGLER} or later, used for the
+                            coverage run only (the in-process inspector session landed in
+                            workerd 1.20260706.1). Timing and the profile keep the app's own workerd.
+  graph | what-if | cut --root | why   work on the Worker's report (node_modules/.rolldown/
+                            report/dist/<worker>) once worker-scan remembered the target.
+  Requirements, the coverage difference per mode, and the rules: AGENTS.md.
 
 the loop:
   1. build the app; scan --app <appDir> (first scan pins the baseline)
@@ -3784,7 +5738,7 @@ the loop:
      summary and every OPEN lead justified (sub-noise measurement or concrete constraint)
 
 judge only by "vs pinned baseline".
-full contract: ${path.join(ROOT, 'AGENTS.md')}
+${CLI.startsWith('npx ') ? `state for this directory: ${STATE_DIR} (keep it out of commits)\n` : ''}full contract: ${path.join(ROOT, 'AGENTS.md')}
 demo-app details: ${path.join(ROOT, 'README.md')}
 (read them at those exact paths - never search the filesystem for them: a
 \`find / -iname ...\` grinds a full CPU core for hours on a large machine)`);
@@ -3809,6 +5763,15 @@ const commands = {
   target: cmdTarget,
   'node-scan': cmdNodeScan,
   'node-measure': cmdNodeMeasure,
+  'worker-scan': cmdWorkerScan,
+  'worker-measure': cmdWorkerMeasure,
+  'worker-attrib': cmdWorkerAttrib,
+  'worker-config': cmdWorkerConfig,
+  'rolldown-install': cmdRolldownInstall,
+  why: cmdWhy,
+  field: cmdField,
+  record: cmdRecord,
+  replay: cmdReplay,
   defer: (argv) => cmdDefer(argv, 'deferred'),
   undefer: (argv) => cmdDefer(argv, 'baseline'),
   status: cmdStatus,

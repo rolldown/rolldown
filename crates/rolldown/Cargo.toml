@@ -82,7 +82,7 @@ serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 sugar_path = { workspace = true }
 testing_macros = { workspace = true }
-tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
+tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread", "time"] }
 walkdir = { workspace = true }
 
 [lib]

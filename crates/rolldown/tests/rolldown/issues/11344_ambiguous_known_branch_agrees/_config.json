@@ -1,0 +1,8 @@
+{
+  "_comment": "Like `11344_ambiguous_known_branch`, but `M.js` reaches `X` directly through `q1.js` too. The `b.js` branch is uncertain but binds the same `q1.js` export, so it agrees and `X` is not reported as ambiguous.",
+  "config": {
+    "experimental": {
+      "lazyBarrel": true
+    }
+  }
+}

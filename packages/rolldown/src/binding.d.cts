@@ -2461,7 +2461,10 @@ export interface BindingHookResolveIdOutput {
    * we could get the related package json object via the path string.
    */
   packageJsonPath?: string | null
-  /** Replaces the import attributes of the import. `{}` removes them. */
+  /**
+   * Replaces the import attributes of the import. `{}` removes them. Ignored without
+   * `experimental.importAttributes`.
+   */
   attributes?: Record<string, string>
 }
 

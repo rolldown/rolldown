@@ -739,7 +739,9 @@ export interface InputOptions {
      * different attributes becomes different modules. The `type` attribute also selects a
      * built-in module type: `json`, `text` or `bytes`.
      *
-     * The `rawId` and `attributes` fields of plugin hooks are available without this option.
+     * Without this option, plugin hooks still have the `rawId` and `attributes` fields, but
+     * `attributes` is always `{}` and the attributes a `resolveId` hook returns are ignored. An
+     * external module keeps the attributes written in the source in both modes.
      *
      * @see {@link https://github.com/rolldown/rolldown/discussions/11217 | RFC}
      * @default false

@@ -13,6 +13,20 @@ import path from 'node:path';
 export const SHIM_FILE = 'perf-kit.vite.config.ts';
 export const ATTRIB_DIR = 'dist-attrib';
 
+/**
+ * The attribution build's worker directory. The shim names it after the environment (`ssr`),
+ * which can differ from the regular output directory (`dist/server` in TanStack Start and
+ * React Router apps); then the only directory with a `wrangler.json` is the one.
+ */
+export function attribOutDir(attribRoot, workerName) {
+  const named = path.join(attribRoot, workerName);
+  if (fs.existsSync(path.join(named, 'wrangler.json')) || !fs.existsSync(attribRoot)) return named;
+  const found = fs
+    .readdirSync(attribRoot)
+    .filter((d) => fs.existsSync(path.join(attribRoot, d, 'wrangler.json')));
+  return found.length === 1 ? path.join(attribRoot, found[0]) : named;
+}
+
 export function viteConfigShim(baseConfigFile) {
   return `// Written by perf-kit (worker-config). Wraps ${baseConfigFile} without editing it.
 //   npx vite build --config ${SHIM_FILE}                         full build, report per environment
@@ -51,19 +65,46 @@ export default async (env: any) => {
   const resolved = typeof base === 'function' ? await (base as any)(env) : await base;
   const attrib = process.env.ROLLDOWN_PERF_KIT_ATTRIB === '1';
   const workerOnly = attrib || process.env.ROLLDOWN_PERF_KIT_WORKER_ONLY === '1';
+  // The Cloudflare plugin drops \`assets\` from the worker's wrangler.json when the client
+  // environment was not built in the same run; the worker-only rebuild puts it back.
+  const savedAssets = new Map<string, unknown>();
   return mergeConfig(resolved, {
     ...(workerOnly
       ? {
           builder: {
             buildApp: async (builder: any) => {
               for (const name of Object.keys(builder.environments)) {
-                if (name !== 'client') await builder.build(builder.environments[name]);
+                if (name === 'client') continue;
+                const environment = builder.environments[name];
+                const file = path.resolve(builder.config.root, environment.config.build.outDir, 'wrangler.json');
+                try {
+                  const assets = JSON.parse(fs.readFileSync(file, 'utf8')).assets;
+                  if (assets) savedAssets.set(file, assets);
+                } catch {}
+                await builder.build(environment);
               }
             },
           },
         }
       : {}),
     plugins: [
+      {
+        name: 'perf-kit:keep-assets',
+        // Runs after the Cloudflare plugin's own post-order buildApp hook, which drops the field.
+        buildApp: {
+          order: 'post',
+          handler() {
+            for (const [file, assets] of savedAssets) {
+              try {
+                const config = JSON.parse(fs.readFileSync(file, 'utf8'));
+                if (config.assets) continue;
+                config.assets = assets;
+                fs.writeFileSync(file, JSON.stringify(config));
+              } catch {}
+            }
+          },
+        },
+      },
       {
         name: 'perf-kit',
         generateBundle(_options: any, bundle: Record<string, any>) {

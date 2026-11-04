@@ -109,7 +109,9 @@ on the worker). The loop below is unchanged, with these differences:
 - **A deferral moves work, it does not delete it.** The first request that needs a deferred
   module pays its load, once per isolate. Pin the routes that matter with `--request` and
   read the "cost MOVED here" line next to the startup gain. perf-kit does not know the
-  route mix; an isolate whose first request needs the module gains nothing.
+  route mix; an isolate whose first request needs the module gains nothing. Agent chats and
+  RPC run over WebSockets: pin them as `--request 'ws:/path|<message>'`, with a message that
+  reaches the deferred code (an RPC call, a chat turn).
 - **Durable Object and Workflow classes are roots.** The runtime loads them by name, so their
   modules stay eager with their whole closure. `cut <module> --root <class modules>` lands
   the cut below them; without `--root`, every cut points at the entry's class exports,

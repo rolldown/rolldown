@@ -109,7 +109,7 @@ import {
   summarizeWorkerStartup,
 } from './lib/worker/measure.mjs';
 import { evaluatingModules, whyModule } from './lib/worker/attrib.mjs';
-import { ATTRIB_DIR, SHIM_FILE, writeViteConfigShim } from './lib/worker/config.mjs';
+import { ATTRIB_DIR, SHIM_FILE, attribOutDir, writeViteConfigShim } from './lib/worker/config.mjs';
 import {
   discoverPages,
   gitState,
@@ -4200,7 +4200,7 @@ function printWorkerSummary(report, hadBaseline) {
       if (answered && d && gain && d.delta >= gain / 2)
         movedRoutes.push({ path: r.path, delta: d.delta });
       console.log(
-        `  ${r.path.padEnd(28)} ${String(r.status).padStart(3)}  ${ms(r.ms).padStart(7)}  ${r.bytes} bytes${r.error ? `  :: ${r.error}` : ''}${moved}`,
+        `  ${(r.path.length > 40 ? `${r.path.slice(0, 39)}…` : r.path).padEnd(28)} ${String(r.status).padStart(3)}  ${ms(r.ms).padStart(7)}  ${r.bytes} bytes${r.messages != null ? ` in ${r.messages} message(s)` : ''}${r.error ? `  :: ${r.error}` : ''}${moved}`,
       );
     }
     if (report.requests.every((r) => r.status >= 400)) {
@@ -4446,7 +4446,7 @@ async function cmdWorkerAttrib(argv) {
     top: { type: 'string', default: '18' },
   });
   const target = resolveWorkerTarget(opts);
-  const outDir = path.join(target.appDir, opts['attrib-dir'], target.workerName);
+  const outDir = attribOutDir(path.join(target.appDir, opts['attrib-dir']), target.workerName);
   if (!fs.existsSync(path.join(outDir, 'wrangler.json'))) {
     throw new Error(
       `no attribution build at ${outDir}.\n` +
@@ -4769,7 +4769,9 @@ Cloudflare Worker startup mode (a V8 isolate coming up under the app's own worke
   --request <path>          a route to hit after startup on the real entry; the first hit
                             of a route that imports a deferred module pays that load, and
                             the report prints it next to the startup gain (a deferral MOVES
-                            work, it does not delete it). Repeatable.
+                            work, it does not delete it). Repeatable. \`ws:/path\` opens a
+                            WebSocket instead, \`ws:/path|<text>\` also sends <text>; timed
+                            to the server's last message (agent chats and RPC run there).
   --tools <dir>             a project whose wrangler is ${COVERAGE_MIN_WRANGLER} or later, used for the
                             coverage run only (the in-process inspector session landed in
                             workerd 1.20260706.1). Timing and the profile keep the app's own workerd.

@@ -402,7 +402,9 @@ where
       // (`bind_imports_and_exports`), so its canonical ref stays importer-local; its usage
       // is still answered by `used_symbol_refs` until exports get their own tracking.
       let is_used = if ctx.link_output.module_table[canonical_ref.owner].is_external() {
-        ctx.link_output.used_external_symbols.contains(&canonical_ref)
+        // Every importer of an external module shares one binding, so check the importer's own
+        // import binding: another chunk may still use the shared one.
+        ctx.used_symbol_refs.contains(&named_import.imported_as)
       } else {
         ctx.used_symbol_refs.contains(&canonical_ref)
       };

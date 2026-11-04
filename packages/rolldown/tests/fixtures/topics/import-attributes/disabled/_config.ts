@@ -5,8 +5,8 @@ import { expect } from 'vitest';
 const data = path.join(import.meta.dirname, 'data.json');
 const calls: Record<string, unknown> = {};
 
-// Without `experimental.importAttributes`, `resolveId` still sees the attributes of the import,
-// but they are not part of the module identity.
+// Without `experimental.importAttributes`, hooks see no attributes and they are not part of the
+// module identity.
 export default defineTest({
   config: {
     plugins: [
@@ -23,7 +23,7 @@ export default defineTest({
   },
   afterTest() {
     expect(calls).toEqual({
-      resolveId: { type: 'json' },
+      resolveId: {},
       load: { id: data, rawId: data, attributes: {} },
     });
   },

@@ -19,9 +19,10 @@ use sugar_path::SugarPath;
 
 use crate::__inner::resolve_id_with_plugins;
 
-/// Resolves `specifier` imported with `attributes`, applying the `external` option. The
-/// attributes the import resolves with become part of the module id when
-/// `experimental.importAttributes` is enabled.
+/// Resolves `specifier` imported with `attributes`, applying the `external` option. With
+/// `experimental.importAttributes`, plugins see the attributes, and the final ones become part of
+/// the module id. Without it, plugins see none, and only an external keeps the requested
+/// attributes in its id.
 #[expect(clippy::too_many_arguments)]
 pub async fn resolve_id_check_external<Fs: FileSystem>(
   resolver: &Resolver<Fs>,
@@ -49,6 +50,14 @@ pub async fn resolve_id_check_external<Fs: FileSystem>(
     return Ok(Ok(finalize(ResolvedId { attributes: attributes.clone(), ..resolved_id })));
   }
 
+  // Without the option, plugins neither see nor change attributes. An external still keeps the
+  // attributes written in the source.
+  let no_attributes = ImportAttributes::default();
+  let (hook_attributes, hook_importer_attributes) = if import_attributes_enabled {
+    (attributes, importer_attributes)
+  } else {
+    (&no_attributes, &no_attributes)
+  };
   let resolved_id = resolve_id_with_plugins(
     resolver,
     plugin_driver,
@@ -59,14 +68,17 @@ pub async fn resolve_id_check_external<Fs: FileSystem>(
     skipped_resolve_calls,
     custom,
     is_user_defined_entry,
-    attributes,
+    hook_attributes,
     importer_raw_id,
-    importer_attributes,
+    hook_importer_attributes,
   )
   .await?;
 
   match resolved_id {
     Ok(mut resolved_id) => {
+      if !import_attributes_enabled {
+        resolved_id.attributes = attributes.clone();
+      }
       if matches!(resolved_id.normalize_external_id, Some(true)) {
         let external =
           resolve_external(bundle_options, &resolved_id.id, importer, importer_raw_id, true)

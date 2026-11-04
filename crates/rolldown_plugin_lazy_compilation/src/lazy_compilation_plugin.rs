@@ -68,7 +68,8 @@ impl Plugin for LazyCompilationPlugin {
     }
 
     // Lazy compilation does not support import attributes yet, so such an import is bundled as
-    // usual.
+    // usual. Without `experimental.importAttributes`, hooks see no attributes, and the import is
+    // compiled lazily like any other.
     if matches!(args.kind, ImportKind::DynamicImport) && args.attributes.is_empty() {
       // Without this the fetched template's `import($MODULE_ID)` would be given the proxy's
       // own id back, so the proxy would import itself and the real module never enter the graph.

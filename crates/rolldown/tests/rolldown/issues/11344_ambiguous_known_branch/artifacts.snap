@@ -1,0 +1,29 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## AMBIGUOUS_EXTERNAL_NAMESPACES
+
+```text
+[AMBIGUOUS_EXTERNAL_NAMESPACES] Found ambiguous export.
+   ╭─[ lib/P.js:4:10 ]
+   │
+ 4 │ export { X } from './M.js';
+   │          ┬  
+   │          ╰── "lib/M.js" re-exports "X"
+   │
+   ├─[ lib/a.js:1:14 ]
+   │
+ 1 │ export const X = 'a';
+   │              ┬  
+   │              ╰── One matching export is here.
+   │
+   ├─[ lib/q1.js:1:14 ]
+   │
+ 1 │ export const X = 'q1';
+   │              ┬  
+   │              ╰── One matching export is here.
+───╯
+
+```

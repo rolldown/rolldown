@@ -1,0 +1,135 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { n as __share_export, r as __share_require, t as __share } from "./rolldown-runtime.js";
+__share("shared-ZmCA4nrZ", (exports) => {
+	// shared.js
+	let count = 0;
+	function bump() {
+		count += 1;
+		return this === void 0 ? "this:undefined" : "this:bound";
+	}
+	const marker = { tag: "shared" };
+	__share_export(exports, {
+		n: () => count,
+		r: () => marker,
+		t: () => bump
+	});
+});
+var share_shared = __share_require("shared-ZmCA4nrZ");
+// a.js
+globalThis.events.push("A " + share_shared.n + " " + (0, share_shared.t)() + " " + share_shared.n);
+globalThis.markers.push(share_shared.r);
+
+```
+
+## b.js
+
+```js
+import { n as __share_export, r as __share_require, t as __share } from "./rolldown-runtime.js";
+__share("shared-ZmCA4nrZ", (exports) => {
+	// shared.js
+	let count = 0;
+	function bump() {
+		count += 1;
+		return this === void 0 ? "this:undefined" : "this:bound";
+	}
+	const marker = { tag: "shared" };
+	__share_export(exports, {
+		n: () => count,
+		r: () => marker,
+		t: () => bump
+	});
+});
+var share_shared = __share_require("shared-ZmCA4nrZ");
+// b.js
+globalThis.events.push("B " + share_shared.n + " " + (0, share_shared.t)?.() + " " + share_shared.n);
+globalThis.markers.push(share_shared.r);
+
+```
+
+## rolldown-runtime.js
+
+```js
+// \0rolldown/runtime.js
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __share_factories = /* @__PURE__ */ __create(null);
+var __share_records = /* @__PURE__ */ __create(null);
+var __share = (id, factory) => {
+	if (!(id in __share_factories)) __share_factories[id] = factory;
+};
+var __share_require = (id) => {
+	var record = __share_records[id];
+	if (record) {
+		if (record.failed) throw record.error;
+		return record.exports;
+	}
+	var factory = __share_factories[id];
+	if (!factory) throw new Error("Shared chunk \"" + id + "\" was not registered before it was required.");
+	record = __share_records[id] = {
+		exports: {},
+		failed: false,
+		error: void 0
+	};
+	try {
+		factory(record.exports);
+	} catch (error) {
+		record.failed = true;
+		record.error = error;
+		throw error;
+	}
+	return record.exports;
+};
+var __share_export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
+export { __share_export as n, __share_require as r, __share as t };
+
+```
+
+# Variant: off: [code_splitting: enabled]
+
+## Assets
+
+### a.js
+
+```js
+import { n as count, r as marker, t as bump } from "./shared.js";
+// a.js
+globalThis.events.push("A " + count + " " + bump() + " " + count);
+globalThis.markers.push(marker);
+
+```
+
+### b.js
+
+```js
+import { n as count, r as marker, t as bump } from "./shared.js";
+// b.js
+globalThis.events.push("B " + count + " " + bump?.() + " " + count);
+globalThis.markers.push(marker);
+
+```
+
+### shared.js
+
+```js
+// shared.js
+let count = 0;
+function bump() {
+	count += 1;
+	return this === void 0 ? "this:undefined" : "this:bound";
+}
+const marker = { tag: "shared" };
+export { count as n, marker as r, bump as t };
+
+```

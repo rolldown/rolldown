@@ -1,0 +1,125 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import "./after.js";
+import { t as read } from "./helper.js";
+// a.js
+globalThis.events.push("A " + read());
+
+```
+
+## after.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+// lib.cjs
+var require_lib = /* @__PURE__ */ __commonJSMin((() => {
+	globalThis.events.push("cjs body");
+	globalThis.installed = "yes";
+}));
+// after.js
+globalThis.events.push("after body:" + globalThis.installed);
+export { require_lib as t };
+
+```
+
+## b.js
+
+```js
+import "./after.js";
+import { t as read } from "./helper.js";
+// b.js
+globalThis.events.push("B " + read());
+
+```
+
+## c.js
+
+```js
+import { t as require_lib } from "./after.js";
+require_lib();
+globalThis.events.push("C " + globalThis.installed);
+
+```
+
+## helper.js
+
+```js
+import { t as require_lib } from "./after.js";
+require_lib();
+const read = () => globalThis.installed;
+export { read as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
+export { __commonJSMin as t };
+
+```
+
+# Variant: off: [code_splitting: enabled]
+
+## Assets
+
+### a.js
+
+```js
+import "./after.js";
+import { t as read } from "./helper.js";
+// a.js
+globalThis.events.push("A " + read());
+
+```
+
+### after.js
+
+```js
+// \0rolldown/runtime.js
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
+// lib.cjs
+var require_lib = /* @__PURE__ */ __commonJSMin((() => {
+	globalThis.events.push("cjs body");
+	globalThis.installed = "yes";
+}));
+// after.js
+globalThis.events.push("after body:" + globalThis.installed);
+export { require_lib as t };
+
+```
+
+### b.js
+
+```js
+import "./after.js";
+import { t as read } from "./helper.js";
+// b.js
+globalThis.events.push("B " + read());
+
+```
+
+### c.js
+
+```js
+import { t as require_lib } from "./after.js";
+require_lib();
+globalThis.events.push("C " + globalThis.installed);
+
+```
+
+### helper.js
+
+```js
+import { t as require_lib } from "./after.js";
+require_lib();
+const read = () => globalThis.installed;
+export { read as t };
+
+```

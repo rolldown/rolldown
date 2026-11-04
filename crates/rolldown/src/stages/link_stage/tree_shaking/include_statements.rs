@@ -451,6 +451,15 @@ impl LinkStage<'_> {
     if used_external_symbols.has_interop_use() {
       depended_runtime_helper |= RuntimeHelper::ToEsm;
     }
+    // Without strict execution order, an `experimentalInlineCommonChunks` record can consist of
+    // modules that demand no helper, so nothing else would keep the runtime chunk its registry
+    // lives in.
+    if self.options.inline_common_chunks.is_some()
+      && !self.options.is_strict_execution_order_enabled()
+    {
+      depended_runtime_helper |=
+        RuntimeHelper::Share | RuntimeHelper::ShareRequire | RuntimeHelper::ShareExport;
+    }
     let context = &mut IncludeContext::new(
       &self.module_table.modules,
       &self.stmt_infos,

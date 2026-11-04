@@ -1,0 +1,226 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { a as __toESM, i as __share_require, n as __share, r as __share_export } from "./rolldown-runtime.js";
+import { n as require_lib, t as Box } from "./after.js";
+__share("helper-4kQ84yLP", (exports) => {
+	// helper.js
+	var import_lib = /* @__PURE__ */ __toESM(require_lib());
+	const box = new Box("helper");
+	const read = () => import_lib.default.tag + " " + box.name;
+	__share_export(exports, { t: () => read });
+});
+var share_helper = __share_require("helper-4kQ84yLP");
+// a.js
+globalThis.events.push("A " + (0, share_helper.t)());
+
+```
+
+## after.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+// lib.cjs
+var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.events.push("cjs body");
+	module.exports = { tag: "cjs" };
+}));
+// box.js
+globalThis.events.push("box body");
+var Box = class {
+	constructor(name) {
+		globalThis.events.push("new " + name);
+		this.name = name;
+	}
+};
+// after.js
+globalThis.events.push("after body");
+export { require_lib as n, Box as t };
+
+```
+
+## b.js
+
+```js
+import { a as __toESM, i as __share_require, n as __share, r as __share_export } from "./rolldown-runtime.js";
+import { n as require_lib, t as Box } from "./after.js";
+__share("helper-4kQ84yLP", (exports) => {
+	// helper.js
+	var import_lib = /* @__PURE__ */ __toESM(require_lib());
+	const box = new Box("helper");
+	const read = () => import_lib.default.tag + " " + box.name;
+	__share_export(exports, { t: () => read });
+});
+var share_helper = __share_require("helper-4kQ84yLP");
+// b.js
+globalThis.events.push("B " + (0, share_helper.t)());
+
+```
+
+## c.js
+
+```js
+import { a as __toESM } from "./rolldown-runtime.js";
+import { n as require_lib, t as Box } from "./after.js";
+// c.js
+var import_lib = /* @__PURE__ */ __toESM(require_lib());
+globalThis.events.push("C " + import_lib.default.tag + " " + new Box("c").name);
+
+```
+
+## rolldown-runtime.js
+
+```js
+// \0rolldown/runtime.js
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, "default") ? __defProp(target, "default", {
+	value: mod,
+	enumerable: true
+}) : target, mod));
+var __share_factories = /* @__PURE__ */ __create(null);
+var __share_records = /* @__PURE__ */ __create(null);
+var __share = (id, factory) => {
+	if (!(id in __share_factories)) __share_factories[id] = factory;
+};
+var __share_require = (id) => {
+	var record = __share_records[id];
+	if (record) {
+		if (record.failed) throw record.error;
+		return record.exports;
+	}
+	var factory = __share_factories[id];
+	if (!factory) throw new Error("Shared chunk \"" + id + "\" was not registered before it was required.");
+	record = __share_records[id] = {
+		exports: {},
+		failed: false,
+		error: void 0
+	};
+	try {
+		factory(record.exports);
+	} catch (error) {
+		record.failed = true;
+		record.error = error;
+		throw error;
+	}
+	return record.exports;
+};
+var __share_export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
+export { __toESM as a, __share_require as i, __share as n, __share_export as r, __commonJSMin as t };
+
+```
+
+# Variant: off: [code_splitting: enabled]
+
+## Assets
+
+### a.js
+
+```js
+import "./after.js";
+import { t as read } from "./helper.js";
+// a.js
+globalThis.events.push("A " + read());
+
+```
+
+### after.js
+
+```js
+// \0rolldown/runtime.js
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, "default") ? __defProp(target, "default", {
+	value: mod,
+	enumerable: true
+}) : target, mod));
+// lib.cjs
+var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.events.push("cjs body");
+	module.exports = { tag: "cjs" };
+}));
+// box.js
+globalThis.events.push("box body");
+var Box = class {
+	constructor(name) {
+		globalThis.events.push("new " + name);
+		this.name = name;
+	}
+};
+// after.js
+globalThis.events.push("after body");
+export { require_lib as n, __toESM as r, Box as t };
+
+```
+
+### b.js
+
+```js
+import "./after.js";
+import { t as read } from "./helper.js";
+// b.js
+globalThis.events.push("B " + read());
+
+```
+
+### c.js
+
+```js
+import { n as require_lib, r as __toESM, t as Box } from "./after.js";
+// c.js
+var import_lib = /* @__PURE__ */ __toESM(require_lib());
+globalThis.events.push("C " + import_lib.default.tag + " " + new Box("c").name);
+
+```
+
+### helper.js
+
+```js
+import { n as require_lib, r as __toESM, t as Box } from "./after.js";
+// helper.js
+var import_lib = /* @__PURE__ */ __toESM(require_lib());
+const box = new Box("helper");
+const read = () => import_lib.default.tag + " " + box.name;
+export { read as t };
+
+```

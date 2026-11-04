@@ -2630,9 +2630,9 @@ dependencies = [
 
 [[package]]
 name = "rolldown-notify-napi"
-version = "0.0.2"
+version = "0.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c87c7d2972498f030f0d8191669b12dac8d044a2ab8e61095eda0b6797bfd979"
+checksum = "d923808c282e221cd731343770ff928b1e70c1dc9f53ee18892deee043a08d53"
 dependencies = [
  "dunce",
  "globset",

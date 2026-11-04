@@ -122,7 +122,6 @@ export function bindingifyResolveId(
       } finally {
         releaseOrDefer(ctx);
       }
-
     },
     filter: bindingifyResolveIdFilter(options.filter),
   }));
@@ -184,7 +183,6 @@ export function bindingifyResolveDynamicImport(
       } finally {
         releaseOrDefer(ctx);
       }
-
     },
   }));
 }

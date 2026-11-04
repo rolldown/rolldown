@@ -1572,6 +1572,6 @@ export const resetNativeMemoryStats = __napiModule.exports.resetNativeMemoryStat
 export const resolveTsconfig = __napiModule.exports.resolveTsconfig
 export const shutdownAsyncRuntime = __napiModule.exports.shutdownAsyncRuntime
 export const startAsyncRuntime = __napiModule.exports.startAsyncRuntime
-export const Watcher = __napiModule.exports.Watcher
 export const unregisterCurrentThreadTaskHost = __napiModule.exports.unregisterCurrentThreadTaskHost
 export const unregisterTimerHost = __napiModule.exports.unregisterTimerHost
+export const Watcher = __napiModule.exports.Watcher

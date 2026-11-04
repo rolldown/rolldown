@@ -959,6 +959,6 @@ module.exports.resetNativeMemoryStats = nativeBinding.resetNativeMemoryStats
 module.exports.resolveTsconfig = nativeBinding.resolveTsconfig
 module.exports.shutdownAsyncRuntime = nativeBinding.shutdownAsyncRuntime
 module.exports.startAsyncRuntime = nativeBinding.startAsyncRuntime
-module.exports.Watcher = nativeBinding.Watcher
 module.exports.unregisterCurrentThreadTaskHost = nativeBinding.unregisterCurrentThreadTaskHost
 module.exports.unregisterTimerHost = nativeBinding.unregisterTimerHost
+module.exports.Watcher = nativeBinding.Watcher

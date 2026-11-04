@@ -393,9 +393,7 @@ describe('Error output format', () => {
       expect(error).toBeInstanceOf(Error);
       expect(error.message).not.toContain('Cannot convert undefined or null to object');
       expect(error.message).toContain('Build failed with 1 error');
-      expect(error.message).toContain(
-        isWasiTest ? 'Error: entryFileNames option:' : `Error: ${label}`,
-      );
+      expect(error.message).toContain(`Error: ${label}`);
       expect(error.errors).toHaveLength(1);
       if (!isWasiTest) {
         // Native preserves the exact thrown value; WASI reconstructs it as an Error.

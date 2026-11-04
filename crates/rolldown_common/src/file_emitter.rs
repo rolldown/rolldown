@@ -516,7 +516,7 @@ mod tests {
     let emit = |cwd: &Path, id: &str| {
       let options = NormalizedBundlerOptions { cwd: cwd.to_path_buf(), ..Default::default() };
       let emitter = FileEmitter::new(Arc::new(options));
-      let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
+      let (tx, _rx) = futures::channel::mpsc::unbounded();
       emitter.set_context_load_modules_tx(Some(tx)).unwrap();
       emitter
         .emit_chunk(Arc::new(EmittedChunk { id: id.to_string(), ..Default::default() }))

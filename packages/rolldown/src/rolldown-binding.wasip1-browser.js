@@ -1507,3 +1507,4 @@ export const shutdownAsyncRuntime = __napiModule.exports.shutdownAsyncRuntime
 export const startAsyncRuntime = __napiModule.exports.startAsyncRuntime
 export const unregisterCurrentThreadTaskHost = __napiModule.exports.unregisterCurrentThreadTaskHost
 export const unregisterTimerHost = __napiModule.exports.unregisterTimerHost
+export const Watcher = __napiModule.exports.Watcher

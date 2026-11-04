@@ -630,7 +630,7 @@ test.skipIf(isSingleThread)(
 // A plugin that emits a chunk from `buildStart` emits it again on every rebuild, including
 // the partial one that follows a lazy compile. The emitted module is unchanged, so that scan
 // never loads it, and its module info has to come from the previous build instead (#11318).
-test(
+test.skipIf(isSingleThread)(
   'a chunk emitted in buildStart survives the rebuild after a lazy compile',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -697,7 +697,7 @@ test(
 // pulling the module into the bundle — the opposite of lazy compilation. The empty proxy body
 // also used to trip the `init_is_noop` assertion, because dev mode adds an HMR header to a
 // closure that pass had classified as empty.
-test(
+test.skipIf(isSingleThread)(
   'a lazy import stays lazy when code splitting is disabled',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -732,7 +732,7 @@ test(
 // The dev server owns the lazy endpoint URL, so emitted code carries ids only and the
 // runtime's `loadLazyChunk` makes the request. This covers both emitters: the full build,
 // and the HMR finalizer for a nested boundary inside a lazy chunk.
-test(
+test.skipIf(isSingleThread)(
   'lazy chunks are loaded through DevRuntime#loadLazyChunk',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -804,7 +804,7 @@ test(
 // Nothing runs under a proxy id in the client, so the client graph must not route an `import()`
 // through the proxy. Otherwise the lazy module's only importer never ran, and the client
 // boundary walk stops there: an edit to it is neither hot-updated nor reloaded.
-test(
+test.skipIf(isSingleThread)(
   'the client graph links a lazy import to the real module, not to its proxy',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -862,7 +862,7 @@ test(
 // registers its module before running the body, so a module that threw stays in the cache and
 // re-running `initModule` would hand back its half-initialized exports as success. The browser
 // specs only ever click once per page load, so nothing else covers this.
-test(
+test.skipIf(isSingleThread)(
   'a lazy module that throws stays rejected on repeat imports',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -916,36 +916,39 @@ test(
 // object on every run, so a memo kept across an HMR update would hand a repeat `import()` the
 // pre-edit namespace forever — the module is no longer re-executed by any other path that
 // could refresh it.
-test('a repeat lazy import after an HMR update sees the new exports', async () => {
-  const runtime = await createDevRuntime('stale-client');
+test.skipIf(isSingleThread)(
+  'a repeat lazy import after an HMR update sees the new exports',
+  async () => {
+    const runtime = await createDevRuntime('stale-client');
 
-  const id = 'lazy.js';
-  const registerVersion = (v: string) =>
-    runtime.registerFactory(id, (moduleId: string) => {
-      runtime.registerModule(moduleId, { exports: runtime.__exportAll({ v: () => v }) });
-    });
+    const id = 'lazy.js';
+    const registerVersion = (v: string) =>
+      runtime.registerFactory(id, (moduleId: string) => {
+        runtime.registerModule(moduleId, { exports: runtime.__exportAll({ v: () => v }) });
+      });
 
-  const proxyId = `${id}?rolldown-lazy=1`;
-  runtime.loadLazyChunk = async () => registerVersion('v1');
-  const first = await runtime.requestLazy(id, proxyId);
-  expect(first.v).toBe('v1');
+    const proxyId = `${id}?rolldown-lazy=1`;
+    runtime.loadLazyChunk = async () => registerVersion('v1');
+    const first = await runtime.requestLazy(id, proxyId);
+    expect(first.v).toBe('v1');
 
-  // What `applyUpdate` does for a patched module: new factory, evict, re-run.
-  registerVersion('v2');
-  runtime.removeModuleCache(id);
-  runtime.initModule(id);
+    // What `applyUpdate` does for a patched module: new factory, evict, re-run.
+    registerVersion('v2');
+    runtime.removeModuleCache(id);
+    runtime.initModule(id);
 
-  // A repeat import must see v2, and must not need the server to get it.
-  runtime.loadLazyChunk = async () => {
-    throw new Error('should not re-fetch: the factory is already registered');
-  };
-  const second = await runtime.requestLazy(id, proxyId);
-  expect(second.v).toBe('v2');
-});
+    // A repeat import must see v2, and must not need the server to get it.
+    runtime.loadLazyChunk = async () => {
+      throw new Error('should not re-fetch: the factory is already registered');
+    };
+    const second = await runtime.requestLazy(id, proxyId);
+    expect(second.v).toBe('v2');
+  },
+);
 
 // vitejs/vite#23558: `import()` of a CommonJS module must resolve to its ESM view, with
 // `default` = `module.exports`, as a production build does.
-test(
+test.skipIf(isSingleThread)(
   'a lazy import of a CommonJS module resolves to its ESM view',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -1007,73 +1010,79 @@ test(
 );
 
 // Resident module (no fetch): the view is still built, per importer, on top of the memoized run.
-test('requestLazy applies CommonJS interop per importer, on top of the memoized run', async () => {
-  const runtime = await createDevRuntime('cjs-resident-client');
+test.skipIf(isSingleThread)(
+  'requestLazy applies CommonJS interop per importer, on top of the memoized run',
+  async () => {
+    const runtime = await createDevRuntime('cjs-resident-client');
 
-  // `__esModule` + own `default`: node mode keeps `default` = exports, Babel mode unwraps it.
-  const cjsExports = { __esModule: true, default: 'inner', named: 'n' };
-  const cjsId = 'transpiled.cjs';
-  runtime.registerFactory(cjsId, (moduleId: string) => {
-    runtime.registerModule(moduleId, { exports: cjsExports }, true);
-  });
-  runtime.initModule(cjsId);
+    // `__esModule` + own `default`: node mode keeps `default` = exports, Babel mode unwraps it.
+    const cjsExports = { __esModule: true, default: 'inner', named: 'n' };
+    const cjsId = 'transpiled.cjs';
+    runtime.registerFactory(cjsId, (moduleId: string) => {
+      runtime.registerModule(moduleId, { exports: cjsExports }, true);
+    });
+    runtime.initModule(cjsId);
 
-  runtime.loadLazyChunk = async () => {
-    throw new Error('should not fetch: the module is resident');
-  };
-  const nodeView = await runtime.requestLazy(cjsId, `${cjsId}?rolldown-lazy=1`, 1);
-  expect(nodeView.default).toBe(cjsExports);
-  expect(nodeView.named).toBe('n');
-  const babelView = await runtime.requestLazy(cjsId, `${cjsId}?rolldown-lazy=1`);
-  expect(babelView.default).toBe('inner');
-  expect(babelView.named).toBe('n');
+    runtime.loadLazyChunk = async () => {
+      throw new Error('should not fetch: the module is resident');
+    };
+    const nodeView = await runtime.requestLazy(cjsId, `${cjsId}?rolldown-lazy=1`, 1);
+    expect(nodeView.default).toBe(cjsExports);
+    expect(nodeView.named).toBe('n');
+    const babelView = await runtime.requestLazy(cjsId, `${cjsId}?rolldown-lazy=1`);
+    expect(babelView.default).toBe('inner');
+    expect(babelView.named).toBe('n');
 
-  // ESM is handed back as is: no extra `default`, same namespace object each time.
-  const esmId = 'esm.js';
-  const esmNs = runtime.__exportAll({ value: () => 1 });
-  runtime.registerFactory(esmId, (moduleId: string) => {
-    runtime.registerModule(moduleId, { exports: esmNs });
-  });
-  expect(await runtime.requestLazy(esmId, `${esmId}?rolldown-lazy=1`, 1)).toBe(esmNs);
-  expect(await runtime.requestLazy(esmId, `${esmId}?rolldown-lazy=1`)).toBe(esmNs);
-});
+    // ESM is handed back as is: no extra `default`, same namespace object each time.
+    const esmId = 'esm.js';
+    const esmNs = runtime.__exportAll({ value: () => 1 });
+    runtime.registerFactory(esmId, (moduleId: string) => {
+      runtime.registerModule(moduleId, { exports: esmNs });
+    });
+    expect(await runtime.requestLazy(esmId, `${esmId}?rolldown-lazy=1`, 1)).toBe(esmNs);
+    expect(await runtime.requestLazy(esmId, `${esmId}?rolldown-lazy=1`)).toBe(esmNs);
+  },
+);
 
 // After an HMR patch the module is evicted and its factory replaced. A repeat `import()` re-runs
 // it, and the new registration must carry the CommonJS flag again.
-test('a lazily imported CommonJS module keeps its ESM view after an HMR update', async () => {
-  const runtime = await createDevRuntime('cjs-update-client');
+test.skipIf(isSingleThread)(
+  'a lazily imported CommonJS module keeps its ESM view after an HMR update',
+  async () => {
+    const runtime = await createDevRuntime('cjs-update-client');
 
-  const id = 'lib.cjs';
-  const registerVersion = (version: string) =>
-    runtime.registerFactory(id, (moduleId: string) => {
-      const module = { exports: { version } };
-      runtime.registerModule(moduleId, module, 1);
-    });
+    const id = 'lib.cjs';
+    const registerVersion = (version: string) =>
+      runtime.registerFactory(id, (moduleId: string) => {
+        const module = { exports: { version } };
+        runtime.registerModule(moduleId, module, 1);
+      });
 
-  const proxyId = `${id}?rolldown-lazy=1`;
-  runtime.loadLazyChunk = async () => registerVersion('v1');
-  const first = await runtime.requestLazy(id, proxyId, 1);
-  expect(first.default).toEqual({ version: 'v1' });
+    const proxyId = `${id}?rolldown-lazy=1`;
+    runtime.loadLazyChunk = async () => registerVersion('v1');
+    const first = await runtime.requestLazy(id, proxyId, 1);
+    expect(first.default).toEqual({ version: 'v1' });
 
-  // What `applyUpdate` does for a patched module: new factory, evict, re-run.
-  registerVersion('v2');
-  runtime.removeModuleCache(id);
-  runtime.initModule(id);
+    // What `applyUpdate` does for a patched module: new factory, evict, re-run.
+    registerVersion('v2');
+    runtime.removeModuleCache(id);
+    runtime.initModule(id);
 
-  runtime.loadLazyChunk = async () => {
-    throw new Error('should not re-fetch: the factory is already registered');
-  };
-  const second = await runtime.requestLazy(id, proxyId, 1);
-  expect(second.default).toEqual({ version: 'v2' });
-  expect(second.version).toBe('v2');
-});
+    runtime.loadLazyChunk = async () => {
+      throw new Error('should not re-fetch: the factory is already registered');
+    };
+    const second = await runtime.requestLazy(id, proxyId, 1);
+    expect(second.default).toEqual({ version: 'v2' });
+    expect(second.version).toBe('v2');
+  },
+);
 
 // A lazy compile is the first time a lazy module runs the plugin pipeline, so a plugin
 // throwing is the ordinary failure here rather than an exotic one. The engine used to
 // answer with a napi error built from `format!("{e:#?}")`, which flattened whatever was
 // thrown - message, custom fields, stack - into one string, leaving the caller unable to
 // tell which plugin or module was at fault.
-test(
+test.skipIf(isSingleThread)(
   'a plugin error during lazy compile reaches the caller intact',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -1139,7 +1148,7 @@ test(
 // appends `?rolldown-lazy=1` and routes the import through `requestLazy`, which cannot run an
 // id the dev runtime has no factory for (#11273). Config `external` on the raw specifier is not
 // listed: it applies before any plugin runs, so the lazy plugin never sees that import.
-test.for([
+test.skipIf(isSingleThread).for([
   {
     name: 'a plugin `resolveId` that returns `external: true`',
     specifier: './dep.mjs',

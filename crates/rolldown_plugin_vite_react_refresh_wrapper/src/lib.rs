@@ -56,10 +56,12 @@ impl ViteReactRefreshWrapperPlugin {
     }
 
     let escaped_id = to_string_literal(id);
+    let runtime_path =
+      to_string_literal(&format!("{}{RUNTIME_PUBLIC_PATH}", self.react_refresh_host));
 
     let mut new_code = code.to_string();
     write!(new_code, "\
-import * as RefreshRuntime from \"{}{RUNTIME_PUBLIC_PATH}\";
+import * as RefreshRuntime from {runtime_path};
 const inWebWorker = typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScope;
 import * as __vite_react_currentExports from {escaped_id};
 if (import.meta.hot && !inWebWorker) {{
@@ -79,8 +81,7 @@ if (import.meta.hot && !inWebWorker) {{
     }});
   }});
 }}
-",
-      self.react_refresh_host).unwrap();
+").unwrap();
 
     if has_refresh {
       write!(

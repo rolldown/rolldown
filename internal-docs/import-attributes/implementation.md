@@ -48,6 +48,7 @@ Attributes are parsed per import record, travel through resolution as `ResolvedI
 
 - Rust: `crates/rolldown/tests/rolldown/topics/import_attributes/` (`module_identity`, `builtin_type`, `builtin_type_vs_module_types`, `external`, `external_globals`, `external_reexport`, `dynamic_import`, `data_url`, `invalid_import_attribute`), `function/external/assert_clause_is_treated_as_with`, `function/external/import_attributes_kept_without_option`, plus unit tests in `import_attributes.rs`.
 - Node: `packages/rolldown/tests/fixtures/topics/import-attributes/` (hook args, `resolveId` override for static and dynamic imports, `resolveDynamicImport`, `output.paths` of externals, `this.resolve` / `this.load`, option disabled) and `packages/rolldown/tests/utils/module-id.test.ts`.
+- Rollup: the Rollup 5 versions of Rollup's attribute tests are ported to `packages/rolldown/tests/fixtures/topics/import-attributes/rollup-5/` until the `rollup` submodule moves to Rollup 5. The Rollup 4 originals are listed in `packages/rollup-tests/src/ignored-tests.js` (ported) and `ignored-by-unsupported-features.md` (the rest, grouped by the missing feature).
 
 ## Related
 

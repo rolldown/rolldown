@@ -57,7 +57,9 @@ export const ELEMENT_PATH_JS = `const pathOf = (el) => {
   };`;
 
 export const OBSERVER_JS = `(() => {
-  const M = (window.__perfMetrics = { fcp: null, lcp: null, lcpEntry: null, lcpNode: null, cls: 0, longtasks: [] });
+  const M = (window.__perfMetrics = { fcp: null, lcp: null, lcpEntry: null, lcpNode: null, cls: 0, longtasks: [], resourceBufferFull: false });
+  performance.setResourceTimingBufferSize(10000);
+  performance.addEventListener('resourcetimingbufferfull', () => { M.resourceBufferFull = true; });
   ${ELEMENT_PATH_JS}
   try {
     new PerformanceObserver((list) => {
@@ -114,6 +116,7 @@ const COLLECT_JS = `(() => {
     start: Math.round(r.startTime),
     end: Math.round(r.responseEnd),
     bytes: r.encodedBodySize || 0,
+    initiatorType: r.initiatorType,
   }));
   // Uncapped per-type totals (+ the pre-first-paint share): real apps load
   // hundreds of resources, so any capped detail list under-reports by design.
@@ -140,12 +143,6 @@ const COLLECT_JS = `(() => {
     worst: blocking.slice().sort((a, b) => (b.responseEnd || 0) - (a.responseEnd || 0)).slice(0, 4)
       .map((r) => ({ name: r.name.replace(location.origin, ''), end: Math.round(r.responseEnd || 0), bytes: r.encodedBodySize || 0 })),
   };
-  // Detail list: every fetch/xhr (render-gap suspects are often tiny), then the
-  // largest of everything else - a big resource must never fall off the list.
-  const fetchLike = all.filter((r) => r.type === 'fetch' || r.type === 'xhr').slice(0, 40);
-  const rest = all.filter((r) => r.type !== 'fetch' && r.type !== 'xhr')
-    .sort((a, b) => b.bytes - a.bytes)
-    .slice(0, 60 - fetchLike.length);
   return {
     blockingGate,
     fcp: M.fcp,
@@ -156,7 +153,10 @@ const COLLECT_JS = `(() => {
     load: nav ? nav.loadEventEnd : null,
     bytes: (nav ? nav.encodedBodySize : 0) + res.reduce((a, r) => a + (r.encodedBodySize || 0), 0),
     jsRequests: res.filter((r) => r.name.endsWith('.js')).length,
-    resources: fetchLike.concat(rest),
+    // A tiny facade can initiate a large download graph. Do not rank or cap
+    // request details by size; report browser buffer overflow explicitly.
+    resources: all,
+    resourceDetailsComplete: M.resourceBufferFull === false,
     resourceTypes: typeAgg,
     longtasks: (M.longtasks || []).map((t) => ({ start: Math.round(t.start), duration: Math.round(t.duration) })),
     ready: Object.assign({}, window.__ready || {}),
@@ -207,6 +207,23 @@ export async function timedRun(
   { url, throttle, expectedFeatures = [], settleMs = 1500, timeoutMs = 60_000 },
 ) {
   const page = await openPage(cdp, { throttle, injectScript: OBSERVER_JS });
+  const initiators = new Map();
+  const stopRecording = page.on('Network.requestWillBeSent', (event) => {
+    const initiator = event.initiator ?? {};
+    let stack = initiator.stack;
+    let frame;
+    while (stack && !frame) {
+      frame = stack.callFrames?.find((f) => f.url);
+      stack = stack.parent;
+    }
+    // Keep source locations only. Headers, cookies and request bodies are not
+    // needed to diagnose chunk discovery.
+    initiators.set(event.request.url, {
+      type: initiator.type,
+      url: frame?.url ?? initiator.url ?? null,
+      lineNumber: frame?.lineNumber ?? initiator.lineNumber ?? null,
+    });
+  });
   try {
     await page.navigate(url);
     const deadline = Date.now() + timeoutMs;
@@ -217,8 +234,23 @@ export async function timedRun(
       await sleep(100);
     }
     await sleep(settleMs);
-    return await page.evaluate(COLLECT_JS);
+    const sample = await page.evaluate(COLLECT_JS);
+    const origin = new URL(url).origin;
+    for (const resource of sample.resources) {
+      const key = resource.name.startsWith('/') ? `${origin}${resource.name}` : resource.name;
+      const initiator = initiators.get(key);
+      if (initiator) {
+        resource.initiator = {
+          ...initiator,
+          url: initiator.url?.startsWith(`${origin}/`)
+            ? initiator.url.slice(origin.length)
+            : initiator.url,
+        };
+      }
+    }
+    return sample;
   } finally {
+    stopRecording();
     await page.close().catch(() => {});
   }
 }
@@ -381,6 +413,9 @@ export function summarize(samples, expectedFeatures = []) {
     gatingFetches: gatingFetches(samples),
     resourceWeight: resourceWeight(samples),
     renderBlockingGate: renderBlockingGate(samples),
+    postLoadScripts: postLoadScripts(samples),
+    resourceDetailsComplete:
+      samples.length > 0 && samples.every((s) => s.resourceDetailsComplete === true),
     lcpElement: lcpElementOf(samples),
     guard: {
       allFeaturesReady: samples.every((s) =>
@@ -395,10 +430,42 @@ export function summarize(samples, expectedFeatures = []) {
               (s.heroSubtitle === null || s.heroSubtitle.length > 0),
           )
         : null,
+      fcpObservedInAllRuns: samples.every((s) => typeof s.fcp === 'number'),
       lcpObservedInAllRuns: samples.every((s) => typeof s.lcp === 'number'),
     },
     samples,
   };
+}
+
+/** Scripts discovered after load that finished before FCP or LCP. Not proof of a paint dependency. */
+export function postLoadScripts(samples) {
+  const result = {};
+  for (const paint of ['fcp', 'lcp']) {
+    const valid = samples.filter((s) => typeof s[paint] === 'number' && s.load > 0);
+    if (!valid.length) {
+      result[paint] = null;
+      continue;
+    }
+    const rows = valid.map((s) => {
+      const scripts = (s.resources ?? []).filter(
+        (r) => r.type === 'script' && r.start > s.load && r.end > 0 && r.end <= s[paint],
+      );
+      return {
+        count: scripts.length,
+        bytes: scripts.reduce((sum, r) => sum + r.bytes, 0),
+        firstStartMs: scripts.length ? Math.min(...scripts.map((r) => r.start)) : null,
+        lastEndMs: scripts.length ? Math.max(...scripts.map((r) => r.end)) : null,
+      };
+    });
+    const mid = (key) => median(rows.map((r) => r[key]).filter((v) => typeof v === 'number'));
+    result[paint] = {
+      count: mid('count'),
+      bytes: mid('bytes'),
+      firstStartMs: mid('firstStartMs'),
+      lastEndMs: mid('lastEndMs'),
+    };
+  }
+  return result;
 }
 
 /** Per-metric prev/curr/delta/pct — the same shape as build metrics.json deltas. */

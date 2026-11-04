@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::SharedResolver;
 use crate::utils::resolve_id::resolve_id;
-use rolldown_common::{ImportKind, ResolvedId};
+use rolldown_common::{ImportAttributes, ImportKind, NormalizedBundlerOptions, ResolvedId};
 use rolldown_error::ResultExt;
 use rolldown_error::{BuildDiagnostic, SingleBuildResult};
 use rolldown_fs::FileSystem;
@@ -10,11 +10,17 @@ use rolldown_plugin::SharedPluginDriver;
 use rolldown_resolver::ResolveError;
 
 pub async fn load_entry_module<Fs: FileSystem>(
+  options: &NormalizedBundlerOptions,
   resolver: &SharedResolver<Fs>,
   plugin_driver: &SharedPluginDriver,
   id: &str,
   importer: Option<&str>,
 ) -> SingleBuildResult<ResolvedId> {
+  let (importer_raw_id, importer_attributes) =
+    match importer.and_then(ImportAttributes::parse_module_id) {
+      Some((raw_id, attributes)) => (Some(raw_id), attributes),
+      None => (importer, ImportAttributes::default()),
+    };
   let result = resolve_id(
     resolver,
     plugin_driver,
@@ -25,11 +31,15 @@ pub async fn load_entry_module<Fs: FileSystem>(
     None,
     Arc::default(),
     true,
+    &ImportAttributes::default(),
+    importer_raw_id,
+    &importer_attributes,
   )
   .await?;
 
   match result {
     Ok(result) => {
+      let result = result.finalize_attributes(options.experimental.is_import_attributes_enabled());
       if result.external.is_external() {
         Err(BuildDiagnostic::entry_cannot_be_external(result.id.as_str()))
       } else {

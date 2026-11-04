@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.cjs
+
+```js
+// main.cjs
+module.exports = () => Promise.resolve().then(() => require("./shadowed-arguments.cjs")).then(function(arguments) {
+	return arguments.value;
+});
+
+```
+
+## shadowed-arguments.cjs
+
+```js
+// shadowed-arguments.js
+const value = "expected";
+exports.value = value;
+
+```

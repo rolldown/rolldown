@@ -32,14 +32,14 @@ use oxc_str::{CompactStr, JSStr};
 use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicImportUsageInfo};
 use rolldown_common::{
   ConstExportMeta, ConstantValue, DynamicImportExprInfo, EcmaModuleAstUsage, EcmaViewMeta,
-  ExportsKind, FlatOptions, HmrInfo, ImportAttribute, ImportKind, ImportRecordIdx,
+  ExportsKind, FlatOptions, HmrInfo, ImportAttributes, ImportKind, ImportRecordIdx,
   ImportRecordMeta, LocalExport, MemberExprProp, MemberExprRef, ModuleDefFormat, ModuleId,
   ModuleIdx, NamedImport, RawImportRecord, RolldownFileUrlReference, Specifier, StmtEvalFlags,
   StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
   TaggedSymbolRef, ThisExprReplaceKind, generate_replace_this_expr_map,
 };
 use rolldown_ecmascript_utils::FunctionExt;
-use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
+use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan, EventKindSwitcher};
 use rolldown_std_utils::PathExt;
 use rolldown_utils::concat_string;
 use rolldown_utils::ecmascript::{legitimize_identifier_name, to_usv_str};
@@ -116,6 +116,8 @@ pub struct ScanResult {
   pub dynamic_import_called_names: FxHashMap<ImportRecordIdx, FxHashSet<CompactStr>>,
   /// `new URL('...', import.meta.url)`
   pub new_url_references: FxHashMap<NodeId, ImportRecordIdx>,
+  /// See `EcmaView::namespace_in_checks`.
+  pub namespace_in_checks: FxHashMap<NodeId, CompactStr>,
   /// `import.meta.ROLLDOWN_FILE_URL_<referenceId>[_<urlId>]`, one entry per occurrence.
   pub rolldown_file_url_references: Vec<RolldownFileUrlReference>,
   pub this_expr_replace_map: FxHashMap<NodeId, ThisExprReplaceKind>,
@@ -125,7 +127,6 @@ pub struct ScanResult {
   pub hmr_hot_ref: Option<SymbolRef>,
   pub directive_range: Vec<Span>,
   pub constant_export_map: FxHashMap<SymbolId, ConstExportMeta>,
-  pub import_attribute_map: FxHashMap<ImportRecordIdx, ImportAttribute>,
   /// Temporary storage for node IDs of `require()` calls in `module.exports = require(...)` patterns.
   /// Resolved to `cjs_reexport_import_record_ids` after scanning completes.
   pub cjs_reexport_require_node_ids: Vec<NodeId>,
@@ -169,9 +170,9 @@ pub struct AstScanner<'me, 'ast> {
   last_nested_this_stmt_idx: Option<StmtInfoIdx>,
   /// Used in commonjs module it self
   cjs_named_exports_usage: FxHashMap<CompactStr, CommonjsExportSymbolUsage>,
-  /// Set when `module.exports = <value>` is detected. All prior `exports.xxx`
-  /// constants are stale since the entire exports object is replaced at runtime.
-  has_module_exports_reassignment: bool,
+  /// Set when `exports` is reassigned or `module.exports` is replaced. In either
+  /// case, `exports.xxx` writes may no longer target the exported object.
+  has_cjs_exports_reassignment: bool,
   /// Whether the current position is at the top level (all parent scopes are block or top-level).
   /// A cache of [AstScanner::is_valid_tla_scope].
   is_top_level: bool,
@@ -180,6 +181,8 @@ pub struct AstScanner<'me, 'ast> {
   /// Symbol IDs of namespace imports (`import * as ns from '...'`).
   /// Used to treat property reads on namespace objects as side-effect-free.
   namespace_object_symbol_ids: FxHashSet<SymbolId>,
+  /// Root `var` bindings that module-level code reads before their declaration.
+  vars_read_before_declaration: FxHashSet<SymbolId>,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -230,6 +233,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       dynamic_import_rec_exports_usage: FxHashMap::default(),
       dynamic_import_called_names: FxHashMap::default(),
       new_url_references: FxHashMap::default(),
+      namespace_in_checks: FxHashMap::default(),
       rolldown_file_url_references: Vec::new(),
       this_expr_replace_map: FxHashMap::default(),
       cjs_this_ref: None,
@@ -240,7 +244,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       commonjs_exports: FxHashMap::default(),
       constant_export_map: FxHashMap::default(),
       ecma_view_meta: EcmaViewMeta::default(),
-      import_attribute_map: FxHashMap::default(),
       cjs_reexport_require_node_ids: Vec::new(),
       cjs_reexport_import_record_ids: Vec::new(),
     };
@@ -275,11 +278,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         "__esModule".into(),
         CommonjsExportSymbolUsage { read: 0, write: 0, bailout: true },
       )]),
-      has_module_exports_reassignment: false,
+      has_cjs_exports_reassignment: false,
       is_top_level: false,
       current_comment_idx: 0,
       untranspiled_syntax: UntranspiledSyntax::empty(),
       namespace_object_symbol_ids: FxHashSet::default(),
+      vars_read_before_declaration: FxHashSet::default(),
     }
   }
 
@@ -422,13 +426,20 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       self.result.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
     }
 
-    // `module.exports = <value>` replaces the entire exports object, so all
-    // prior `exports.xxx` writes are stale and must not be inlined.
-    if self.has_module_exports_reassignment {
+    // Reassigning `exports` or `module.exports` breaks their aliasing, so values
+    // assigned to `exports.xxx` cannot be assumed to be exported constants.
+    if self.has_cjs_exports_reassignment {
       for exports in self.result.commonjs_exports.values() {
         for local_export in exports {
           bailout_inlined_cjs_exports_symbol_ids.insert(local_export.referenced.symbol);
         }
+      }
+    }
+
+    // A `var` read before its declaration holds `undefined` there and its initializer later.
+    for symbol_id in &self.vars_read_before_declaration {
+      if let Some(flags) = self.result.symbol_ref_db.flags.get_mut(symbol_id) {
+        flags.remove(SymbolRefFlags::IsNotReassigned);
       }
     }
 
@@ -535,6 +546,29 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     id
   }
 
+  fn add_with_clause(&mut self, record_idx: ImportRecordIdx, with_clause: &ast::WithClause) {
+    if matches!(with_clause.keyword, ast::WithClauseKeyword::Assert)
+      && self.immutable_ctx.options.checks.contains(EventKindSwitcher::DeprecatedImportAssertion)
+    {
+      // The span of the clause starts at its `{`, so widen it to the keyword.
+      let source = self.immutable_ctx.source;
+      let start = source[..with_clause.span.start as usize]
+        .rfind("assert")
+        .and_then(|start| u32::try_from(start).ok())
+        .unwrap_or(with_clause.span.start);
+      self.result.warnings.push(
+        BuildDiagnostic::deprecated_import_assertion(
+          self.immutable_ctx.id.to_string(),
+          source.clone(),
+          Span::new(start, with_clause.span.end),
+        )
+        .with_severity_warning(),
+      );
+    }
+    self.result.import_records[record_idx].attributes =
+      ImportAttributes::from_with_clause(with_clause);
+  }
+
   fn add_named_import(
     &mut self,
     local: SymbolId,
@@ -569,9 +603,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   fn add_local_export(&mut self, export_name: &str, local: SymbolId, span: Span) {
     let symbol_ref: SymbolRef = (self.immutable_ctx.idx, local).into();
 
-    // If there is any write reference to the local variable, it is reassigned.
+    // A repeated `var` declaration assigns without a write reference.
     let is_reassigned =
-      self.result.symbol_ref_db.get_resolved_references(local).any(Reference::is_write);
+      self.result.symbol_ref_db.get_resolved_references(local).any(Reference::is_write)
+        || !self.result.symbol_ref_db.scoping().symbol_redeclarations(local).is_empty();
 
     let ref_flags = symbol_ref.flags_mut(&mut self.result.symbol_ref_db);
     if !is_reassigned {
@@ -790,7 +825,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     }
     self.result.imports.insert(decl.node_id(), id);
     if let Some(ref with_clause) = decl.with_clause {
-      self.result.import_attribute_map.insert(id, ImportAttribute::from_with_clause(with_clause));
+      self.add_with_clause(id, with_clause);
     }
   }
 
@@ -830,10 +865,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       );
     });
     if let Some(ref with_clause) = decl.with_clause {
-      self
-        .result
-        .import_attribute_map
-        .insert(record_idx, ImportAttribute::from_with_clause(with_clause));
+      self.add_with_clause(record_idx, with_clause);
     }
     self.result.imports.insert(decl.node_id(), record_idx);
     self.result.import_records[record_idx].meta.insert(ImportRecordMeta::IsReExportOnly);
@@ -999,10 +1031,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     );
 
     if let Some(ref with_clause) = decl.with_clause {
-      self
-        .result
-        .import_attribute_map
-        .insert(rec_id, ImportAttribute::from_with_clause(with_clause));
+      self.add_with_clause(rec_id, with_clause);
     }
     self.result.imports.insert(decl.node_id(), rec_id);
 
@@ -1154,6 +1183,21 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     (!props.is_empty()).then_some((node_id, span, props))
   }
 
+  /// Returns the `BinaryExpression` node, its span and `key` if the visited identifier is `ns` in
+  /// `'key' in ns`.
+  pub fn try_extract_parent_in_operator_key(&self) -> Option<(NodeId, Span, CompactStr)> {
+    let AstKind::BinaryExpression(expr) = self.visit_path.last()? else {
+      return None;
+    };
+    if expr.operator != ast::BinaryOperator::In {
+      return None;
+    }
+    let Expression::StringLiteral(key) = &expr.left else {
+      return None;
+    };
+    Some((expr.node_id(), expr.span, key.value.as_str()?.into()))
+  }
+
   // `console` in `console.log` is a global reference
   pub fn is_global_identifier_reference(&self, ident: &IdentifierReference) -> bool {
     let symbol_id = self.resolve_symbol_from_reference(ident);
@@ -1204,8 +1248,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   pub fn add_constant_symbol(&mut self, symbol_id: SymbolId, value: ConstExportMeta) {
     let scoping = self.result.symbol_ref_db.scoping();
+    // A repeated `var` declaration assigns without a write reference.
     let is_mutated = !self.result.symbol_ref_db.is_facade_symbol(symbol_id)
-      && scoping.symbol_is_mutated(symbol_id);
+      && (scoping.symbol_is_mutated(symbol_id)
+        || !scoping.symbol_redeclarations(symbol_id).is_empty());
     if is_mutated || eval_can_assign(scoping, symbol_id) {
       return;
     }

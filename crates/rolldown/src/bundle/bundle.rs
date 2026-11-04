@@ -169,6 +169,14 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,
   ) -> BuildResult<BundleOutput> {
+    let result = self.bundle_write_impl(scan_stage_output).await;
+    self.invalidate_js_side_cache(result).await
+  }
+
+  async fn bundle_write_impl(
+    &mut self,
+    scan_stage_output: NormalizedScanStageOutput,
+  ) -> BuildResult<BundleOutput> {
     let dist_dir = self.options.cwd.join(&self.options.out_dir);
 
     if self.options.clean_dir && self.options.file.is_none() {
@@ -238,7 +246,25 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,
   ) -> BuildResult<BundleOutput> {
-    self.bundle_up(scan_stage_output, false).await
+    let result = self.bundle_up(scan_stage_output, false).await;
+    self.invalidate_js_side_cache(result).await
+  }
+
+  /// A plugin may read `chunk.code` in `generateBundle` or `writeBundle` before a later hook fails, so the
+  /// JS side must drop its per-build caches on every exit of the output stage, not only on success.
+  async fn invalidate_js_side_cache(
+    &self,
+    result: BuildResult<BundleOutput>,
+  ) -> BuildResult<BundleOutput> {
+    let Some(invalidate_js_side_cache) = &self.options.invalidate_js_side_cache else {
+      return result;
+    };
+    match (result, invalidate_js_side_cache.call().await) {
+      (Ok(output), Ok(())) => Ok(output),
+      // The build error is the one to report.
+      (Err(errors), _) => Err(errors),
+      (Ok(_), Err(err)) => Err(err.into()),
+    }
   }
 
   #[tracing::instrument(level = "debug", skip(self, output))]
@@ -295,9 +321,8 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     self.merge_immutable_fields_for_cache(std::mem::take(&mut link_stage_output.symbol_db));
 
     // `link_stage_output` is dead from here on (its `symbol_db` was just taken
-    // for the cache merge); ship the remaining heavy fields (module_table,
-    // metas, stmt_infos, ...) to a rayon worker so their free() happens off
-    // the critical path.
+    // for the cache merge); free the remaining heavy fields (module_table, metas,
+    // stmt_infos, ...) off the critical path.
     crate::utils::defer_drop::spawn_drop(link_stage_output);
 
     if let Err(errors) = &bundle_output {
@@ -335,10 +360,6 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
             .into(),
         );
       }
-    }
-
-    if let Some(invalidate_js_side_cache) = &self.options.invalidate_js_side_cache {
-      invalidate_js_side_cache.call().await?;
     }
 
     Ok(output)

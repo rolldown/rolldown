@@ -1,4 +1,4 @@
-use crate::{ConstExportMeta, ImportAttribute, SourcemapChainElement};
+use crate::{ConstExportMeta, SourcemapChainElement};
 use arcstr::ArcStr;
 use bitflags::bitflags;
 use oxc::{
@@ -157,6 +157,8 @@ pub struct EcmaView {
   pub mutations: Vec<ArcSourceMutation>,
   /// `NodeId` of `new URL('path', import.meta.url)` -> `ImportRecordIdx`
   pub new_url_references: FxHashMap<NodeId, ImportRecordIdx>,
+  /// `NodeId` of `'key' in ns`, where `ns` is a namespace import -> `key`.
+  pub namespace_in_checks: FxHashMap<NodeId, CompactStr>,
   /// Occurrences of `import.meta.ROLLDOWN_FILE_URL_<referenceId>[_<urlId>]`, in source order.
   /// One entry per occurrence: the `resolveFileUrl` hook is called per occurrence,
   /// matching Rollup, so duplicates are meaningful.
@@ -177,7 +179,6 @@ pub struct EcmaView {
   /// Used by the finalizer to inline `Direction.Up` style accesses across modules.
   /// Contains both const and regular enums.
   pub enum_member_value_map: FxHashMap<CompactStr, FxHashMap<CompactStr, ConstExportMeta>>,
-  pub import_attribute_map: FxHashMap<ImportRecordIdx, ImportAttribute>,
   /// Use `Box` since it is rarely used also it could reduce the size of `EcmaView`, .
   pub json_module_none_self_reference_included_symbol: Option<Box<FxHashSet<SymbolRef>>>,
   /// Import record indices for `module.exports = require(...)` patterns.
@@ -201,14 +202,8 @@ impl EcmaView {
       } else {
         self.dynamic_importers.insert(record.importer_path.clone());
         // Only real `import()` edges join the walkable dynamic-importer set; `HotAccept`
-        // and other non-static records are not import edges. Lazy-compilation proxy
-        // importers (`?rolldown-lazy=1`) are an internal artifact — excluding them keeps
-        // the server's superset walk from bubbling through the proxy chain
-        // (`foo -> proxy -> app`), which patch generation is not set up for. Lazy
-        // dynamic-import HMR is a separate follow-up; until then the walk stops at the
-        // lazy entry, and a tab whose own walk crosses the proxy chain reloads itself
-        // via its missing-factory / no-boundary paths, exactly as before.
-        if record.kind.is_dynamic() && !record.importer_path.as_str().contains("?rolldown-lazy=1") {
+        // and other non-static records are not import edges.
+        if record.kind.is_dynamic() {
           self.dynamic_importers_idx.insert(record.importer_idx);
         }
       }

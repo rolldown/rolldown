@@ -14,6 +14,12 @@ var bar_exports = /* @__PURE__ */ __exportAll({ bar: () => 123 });
 var foo_exports = /* @__PURE__ */ __exportAll({ bar_ns: () => bar_exports });
 // entry.js
 console.log(foo_exports);
-assert.deepEqual(foo_exports, Object.defineProperty({ bar_ns: Object.defineProperty({ bar: 123 }, Symbol.toStringTag, { value: "Module" }) }, Symbol.toStringTag, { value: "Module" }));
+assert.deepEqual(foo_exports, Object.defineProperty({
+	__proto__: null,
+	bar_ns: Object.defineProperty({
+		__proto__: null,
+		bar: 123
+	}, Symbol.toStringTag, { value: "Module" })
+}, Symbol.toStringTag, { value: "Module" }));
 
 ```

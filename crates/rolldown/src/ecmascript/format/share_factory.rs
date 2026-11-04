@@ -55,13 +55,20 @@ pub fn render_inline_records<'code>(
     &ctx.inline_state.record(record_idx).expect("chunk should be a record").id
   };
 
+  // A parenthesized factory is a PIFE: the engine compiles it with the file instead of at its
+  // first `__share_require`, like rolldown's own module wrappers under the same option.
+  let (open, close) = if ctx.options.optimization.is_pife_for_module_wrappers_enabled() {
+    (", ((", "}));")
+  } else {
+    (", (", "});")
+  };
   for (record_idx, module_sources) in carried {
     // `__share("id", (exports) => {` and the bridges to the records this record reads.
     let mut head = concat_string!(
       share_name.as_ref(),
       "(",
       to_ecma_string_literal(record_id(*record_idx), ascii_only),
-      ", (",
+      open,
       exports_param.as_ref(),
       ") => {"
     );
@@ -80,6 +87,18 @@ pub fn render_inline_records<'code>(
         to_ecma_string_literal(record_id(*other), ascii_only),
         ");"
       ));
+    }
+    // Dev mode: the record's graph rows ship from inside its factory, which runs once per page;
+    // a carrier's own prelude lists only its chunk's modules.
+    if ctx.options.is_dev_mode_enabled()
+      && let Some(rows) = crate::hmr::module_graph_delta::render_register_graph_source(
+        &ctx.link_output.module_table,
+        ctx.chunk_graph.chunk_table[*record_idx].modules.iter().copied(),
+        &ctx.link_output.user_defined_entry_modules,
+        None,
+      )
+    {
+      head.push_str(&concat_string!("\n\t", rows));
     }
     source_joiner.append_source(head);
     for module_source in module_sources {
@@ -119,7 +138,7 @@ pub fn render_inline_records<'code>(
       }
       tail.push_str("\n\t});\n");
     }
-    tail.push_str("});");
+    tail.push_str(close);
     source_joiner.append_source(tail);
   }
 

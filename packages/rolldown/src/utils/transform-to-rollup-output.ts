@@ -7,6 +7,7 @@ import type {
   JsOutputChunk,
 } from '../binding.cjs';
 import type { MinimalPluginContext } from '../plugin/minimal-plugin-context';
+import type { OutputCodeCacheEntry } from '../plugin/plugin-context-data';
 import { OutputAssetImpl } from '../types/output-asset-impl';
 import type { OutputBundle } from '../types/output-bundle';
 import { OutputChunkImpl } from '../types/output-chunk-impl';
@@ -23,10 +24,20 @@ export function transformToRollupSourceMap(map: string): SourceMap {
       return JSON.stringify(obj);
     },
     toUrl() {
-      return `data:application/json;charset=utf-8;base64,${Buffer.from(
-        obj.toString(),
-        'utf-8',
-      ).toString('base64')}`;
+      const json = obj.toString();
+      // Browsers and workerd without Node compatibility have no `Buffer`. Each chunk is encoded
+      // at once (no full-size binary string); a multiple of 3 bytes leaves padding to the last.
+      let base64: string;
+      if (typeof Buffer === 'function') {
+        base64 = Buffer.from(json, 'utf-8').toString('base64');
+      } else {
+        const bytes = new TextEncoder().encode(json);
+        base64 = '';
+        for (let i = 0; i < bytes.length; i += 0x7ffe) {
+          base64 += btoa(String.fromCharCode(...bytes.subarray(i, i + 0x7ffe)));
+        }
+      }
+      return `data:application/json;charset=utf-8;base64,${base64}`;
     },
   };
   // Preserve Rollup's legacy property for plugins while serializing the standard `ignoreList`.
@@ -46,13 +57,21 @@ function transformToRollupOutputChunk(bindingChunk: BindingOutputChunk): OutputC
 function transformToMutableRollupOutputChunk(
   bindingChunk: BindingOutputChunk,
   changed: ChangedOutputs,
+  codeCache?: Map<string, OutputCodeCacheEntry>,
 ): OutputChunk {
+  const fileName = bindingChunk.getFileName();
   const chunk = {
     type: 'chunk',
     get code() {
-      return bindingChunk.getCode();
+      if (!codeCache) return bindingChunk.getCode();
+      const identity = bindingChunk.getCodeIdentity();
+      const hit = codeCache.get(fileName);
+      if (hit && hit.identity === identity) return hit.code;
+      const code = bindingChunk.getCode();
+      codeCache.set(fileName, { identity, holder: bindingChunk, code });
+      return code;
     },
-    fileName: bindingChunk.getFileName(),
+    fileName,
     name: bindingChunk.getName(),
     get modules() {
       return transformChunkModules(bindingChunk.getModules());
@@ -153,11 +172,12 @@ export function transformToRollupOutput(output: BindingOutputs): RolldownOutput 
 function transformToMutableRollupOutput(
   output: BindingOutputs,
   changed: ChangedOutputs,
+  codeCache?: Map<string, OutputCodeCacheEntry>,
 ): RolldownOutput {
   const { chunks, assets } = output;
   return {
     output: [
-      ...chunks.map((chunk) => transformToMutableRollupOutputChunk(chunk, changed)),
+      ...chunks.map((chunk) => transformToMutableRollupOutputChunk(chunk, changed, codeCache)),
       ...assets.map((asset) => transformToMutableRollupOutputAsset(asset, changed)),
     ],
   } as RolldownOutput;
@@ -167,9 +187,13 @@ export function transformToOutputBundle(
   context: MinimalPluginContext,
   output: BindingOutputs,
   changed: ChangedOutputs,
+  codeCache?: Map<string, OutputCodeCacheEntry>,
 ): OutputBundle {
   const bundle = Object.fromEntries(
-    transformToMutableRollupOutput(output, changed).output.map((item) => [item.fileName, item]),
+    transformToMutableRollupOutput(output, changed, codeCache).output.map((item) => [
+      item.fileName,
+      item,
+    ]),
   );
   return new Proxy(bundle, {
     set(_target, _p, _newValue, _receiver) {

@@ -160,6 +160,14 @@ impl<Fs: FileSystem> Resolver<Fs> {
       // check if `is_absolute` to avoid extra `join` overhead
       if importer.is_absolute() {
         selected_resolver.resolve_file(importer, specifier)
+      } else if importer.to_str().is_some_and(|id| id.starts_with('\0')) {
+        // A `\0` importer is a virtual module with no location: resolve from cwd without any tsconfig.
+        selected_resolver.resolve_with_context(
+          self.cwd.as_path(),
+          specifier,
+          None,
+          &mut oxc_resolver::ResolveContext::default(),
+        )
       } else {
         selected_resolver.resolve_file(self.cwd.join(importer), specifier)
       }

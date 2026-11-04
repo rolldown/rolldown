@@ -22,8 +22,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // data.json
+var data_default$1 = { works: true };
+// data.json with { type: "json" }
 var data_default = { works: true };
 // entry.js
-console.log(data_default === data_default, data_default !== data_default);
+console.log(data_default$1 === data_default, data_default$1 !== data_default);
 
 ```

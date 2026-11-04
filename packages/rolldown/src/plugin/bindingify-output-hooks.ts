@@ -178,10 +178,10 @@ function createOutputBundle(
   ctx: BindingPluginContext,
   bundle: BindingResult<BindingOutputs>,
 ) {
-  const changed = {
-    updated: new Set(),
+  const changed: ChangedOutputs = {
+    updated: new Map(),
     deleted: new Set(),
-  } as ChangedOutputs;
+  };
   const context = createPluginContext(args, ctx);
   const output = transformToOutputBundle(
     context,

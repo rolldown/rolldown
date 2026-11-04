@@ -90,11 +90,7 @@ export function bindingifyResolveId(
 
       // Make sure the `moduleSideEffects` is update to date
       let exist = args.pluginContextData.updateModuleOption(
-        args.pluginContextData.toModuleId(
-          ret.id,
-          ret.attributes ?? extraOptions.attributes,
-          !!ret.external,
-        ),
+        args.pluginContextData.toModuleId(ret.id, ret.attributes ?? extraOptions.attributes),
         {
           meta: ret.meta || {},
           moduleSideEffects: ret.moduleSideEffects ?? null,
@@ -158,7 +154,7 @@ export function bindingifyResolveDynamicImport(
       }
 
       args.pluginContextData.updateModuleOption(
-        args.pluginContextData.toModuleId(ret.id, ret.attributes ?? attributes, !!ret.external),
+        args.pluginContextData.toModuleId(ret.id, ret.attributes ?? attributes),
         {
           meta: ret.meta || {},
           moduleSideEffects: ret.moduleSideEffects || null,

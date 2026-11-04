@@ -16,11 +16,13 @@ pub async fn load_entry_module<Fs: FileSystem>(
   id: &str,
   importer: Option<&str>,
 ) -> SingleBuildResult<ResolvedId> {
-  let (importer_raw_id, importer_attributes) =
-    match importer.and_then(ImportAttributes::parse_module_id) {
-      Some((raw_id, attributes)) => (Some(raw_id), attributes),
-      None => (importer, ImportAttributes::default()),
-    };
+  let (importer_raw_id, importer_attributes) = match importer
+    .filter(|_| options.experimental.is_import_attributes_enabled())
+    .and_then(ImportAttributes::parse_module_id)
+  {
+    Some((raw_id, attributes)) => (Some(raw_id), attributes),
+    None => (importer, ImportAttributes::default()),
+  };
   let result = resolve_id(
     resolver,
     plugin_driver,

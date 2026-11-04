@@ -130,7 +130,8 @@ export interface ResolvedId extends ModuleOptions {
    * {@linkcode Plugin.resolveId | resolveId} hooks. `{}` means none.
    *
    * With {@linkcode InputOptions.experimental | experimental.importAttributes}, they are part of
-   * the module id: see {@linkcode stringifyModuleId}.
+   * the module id: see {@linkcode stringifyModuleId}. Without it, only an external module keeps
+   * them, and `resolveId` hooks cannot change them.
    */
   attributes: Record<string, string>;
 }
@@ -176,11 +177,10 @@ export interface PartialResolvedId
   id: string;
   /**
    * Replaces the import attributes of the import. `{}` removes them. If omitted, the import
-   * keeps the attributes written in the source.
+   * keeps its own attributes.
    *
    * For an external module, they become the `with` clause of the import in the output. Without
-   * {@linkcode InputOptions.experimental | experimental.importAttributes}, they only apply to
-   * external modules and are ignored for other modules.
+   * {@linkcode InputOptions.experimental | experimental.importAttributes}, they are ignored.
    */
   attributes?: Record<string, string>;
 }
@@ -268,7 +268,8 @@ export interface ResolveIdExtraOptions {
   kind: BindingHookResolveIdExtraArgs['kind'];
   /**
    * The import attributes of the import being resolved, e.g. `{ type: 'json' }` for
-   * `import data from './data.json' with { type: 'json' }`. `{}` means none.
+   * `import data from './data.json' with { type: 'json' }`. `{}` means none. Without
+   * {@linkcode InputOptions.experimental | experimental.importAttributes}, it is always `{}`.
    */
   attributes: Record<string, string>;
   /**
@@ -280,7 +281,8 @@ export interface ResolveIdExtraOptions {
   /**
    * The import attributes the importer itself was imported with. `{}` means none.
    *
-   * `{}` when `importer` is `undefined`.
+   * `{}` when `importer` is `undefined`. Without
+   * {@linkcode InputOptions.experimental | experimental.importAttributes}, it is always `{}`.
    */
   importerAttributes: Record<string, string>;
 }
@@ -428,6 +430,9 @@ export interface FunctionPluginHooks {
     source: string,
     /**
      * The fully resolved id of the importing module.
+     * With {@linkcode InputOptions.experimental | experimental.importAttributes}, it contains the
+     * import attributes of the importer. Use
+     * {@linkcode ResolveIdExtraOptions.importerRawId | importerRawId} to get its file.
      *
      * When resolving entry points, `importer` will usually be undefined.
      * An exception here is entry points generated via
@@ -463,6 +468,9 @@ export interface FunctionPluginHooks {
     source: string,
     /**
      * The fully resolved id of the importing module.
+     * With {@linkcode InputOptions.experimental | experimental.importAttributes}, it contains the
+     * import attributes of the importer. Use
+     * {@linkcode ResolveIdExtraOptions.importerRawId | importerRawId} to get its file.
      *
      * This will be `undefined` when {@linkcode PluginContext.resolve | this.resolve(source, undefined, { kind: 'dynamic-import' })} is called.
      */
@@ -510,6 +518,11 @@ export interface FunctionPluginHooks {
   [DEFINED_HOOK_NAMES.transform]: (
     this: TransformPluginContext,
     code: string,
+    /**
+     * The module id. With
+     * {@linkcode InputOptions.experimental | experimental.importAttributes}, it contains the
+     * import attributes of the module, so read the file from `meta.rawId`.
+     */
     id: string,
     meta: BindingTransformHookExtraArgs & {
       moduleType: ModuleType;

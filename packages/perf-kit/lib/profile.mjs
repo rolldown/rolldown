@@ -46,11 +46,12 @@ function sourceLocator(code, map) {
   for (let i = 0; i < code.length; i++) {
     if (code.charCodeAt(i) === 10) lineStarts.push(i + 1);
   }
-  const spans = generatedSpans(code, map); // sorted [{start, end, srcIdx}]
-  return (line, column) => {
-    const lineStart = lineStarts[line];
-    if (lineStart === undefined) return null;
-    const offset = lineStart + column;
+  const spans = generatedSpans(code, map); // sorted, contiguous [{start, end, srcIdx}]
+  const sourceOf = (span) =>
+    span.srcIdx >= 0
+      ? String(map.sources[span.srcIdx] ?? `#${span.srcIdx}`).replaceAll('\\', '/')
+      : '(unmapped)';
+  const spanIndexAt = (offset) => {
     let lo = 0;
     let hi = spans.length - 1;
     while (lo <= hi) {
@@ -58,13 +59,39 @@ function sourceLocator(code, map) {
       const span = spans[mid];
       if (offset < span.start) hi = mid - 1;
       else if (offset >= span.end) lo = mid + 1;
-      else
-        return span.srcIdx >= 0
-          ? String(map.sources[span.srcIdx] ?? `#${span.srcIdx}`).replaceAll('\\', '/')
-          : '(unmapped)';
+      else return mid;
     }
-    return '(unmapped)';
+    return -1;
   };
+  const locate = (line, column) => {
+    const lineStart = lineStarts[line];
+    if (lineStart === undefined) return null;
+    const index = spanIndexAt(lineStart + column);
+    return index < 0 ? '(unmapped)' : sourceOf(spans[index]);
+  };
+  // A whole generated line (1-based, as `positionTicks` reports it) resolves to the
+  // source that covers most of it. `positionTicks` carries no column, and a chunk's
+  // top-level frame reports no usable `callFrame` position at all (-1:-1 in workerd,
+  // 0:0 in Chrome), so this is the only way to attribute module-evaluation time.
+  const locateLine = (line1) => {
+    const start = lineStarts[line1 - 1];
+    if (start === undefined) return null;
+    const end = lineStarts[line1] ?? code.length;
+    let index = spanIndexAt(start);
+    if (index < 0) return '(unmapped)';
+    let best = null;
+    let bestLength = 0;
+    for (; index < spans.length && spans[index].start < end; index++) {
+      const span = spans[index];
+      const length = Math.min(span.end, end) - Math.max(span.start, start);
+      if (length > bestLength) {
+        bestLength = length;
+        best = span;
+      }
+    }
+    return best ? sourceOf(best) : '(unmapped)';
+  };
+  return { locate, locateLine };
 }
 
 /**
@@ -73,8 +100,24 @@ function sourceLocator(code, map) {
  * by their script URL; engine frames (GC, parser, no URL) bucket as (engine).
  * Returns { rows: [{ bucket, ms }], totalMs } sorted by self-time.
  */
-export function aggregateProfile(profile, { code, map, entryUrlSuffix }) {
-  const locate = sourceLocator(code, map);
+export function aggregateProfile(profile, { code, map, entryUrlSuffix, resolveChunk = null }) {
+  // One locator per script: the entry chunk from `code`/`map`, every other chunk through
+  // `resolveChunk(url)` -> { code, map } | null. Without it, a frame in a non-entry chunk
+  // buckets by file name, and a shared chunk the entry imports statically hides the
+  // modules it holds (checklist A4).
+  const locators = new Map();
+  const locatorFor = (url) => {
+    if (url.endsWith(entryUrlSuffix)) {
+      if (!locators.has('')) locators.set('', sourceLocator(code, map));
+      return locators.get('');
+    }
+    if (!resolveChunk) return null;
+    if (!locators.has(url)) {
+      const chunk = resolveChunk(url);
+      locators.set(url, chunk ? sourceLocator(chunk.code, chunk.map) : null);
+    }
+    return locators.get(url);
+  };
   const nodesById = new Map(profile.nodes.map((node) => [node.id, node]));
 
   // Exact self-time per node from the sample stream.
@@ -88,21 +131,31 @@ export function aggregateProfile(profile, { code, map, entryUrlSuffix }) {
   }
 
   const buckets = new Map();
+  const add = (bucket, micros) => buckets.set(bucket, (buckets.get(bucket) ?? 0) + micros);
   for (const [nodeId, micros] of selfMicros) {
     const node = nodesById.get(nodeId);
     if (!node) continue;
     const frame = node.callFrame ?? {};
     const fn = frame.functionName ?? '';
-    let bucket;
     if (fn === '(idle)' || fn === '(program)') continue; // not attributable work
+    const locator = frame.url ? locatorFor(frame.url) : null;
     if (!frame.url) {
-      bucket = fn === '(garbage collector)' ? '(engine: gc)' : '(engine)';
-    } else if (frame.url.endsWith(entryUrlSuffix)) {
-      bucket = locate(frame.lineNumber ?? 0, frame.columnNumber ?? 0) ?? '(unmapped)';
+      add(fn === '(garbage collector)' ? '(engine: gc)' : '(engine)', micros);
+    } else if (locator) {
+      // Line ticks split a frame's self-time across the sources it spans. The chunk's
+      // top-level frame is the one that matters: module evaluation of every module in
+      // the chunk runs in it, and its callFrame position names none of them.
+      const { locate, locateLine } = locator;
+      const ticks = (node.positionTicks ?? []).filter((t) => t.ticks > 0);
+      const total = ticks.reduce((sum, t) => sum + t.ticks, 0);
+      if (total > 0) {
+        for (const t of ticks) add(locateLine(t.line) ?? '(unmapped)', (micros * t.ticks) / total);
+      } else {
+        add(locate(frame.lineNumber ?? 0, frame.columnNumber ?? 0) ?? '(unmapped)', micros);
+      }
     } else {
-      bucket = frame.url.split('/').slice(-1)[0] || frame.url;
+      add(frame.url.split('/').slice(-1)[0] || frame.url, micros);
     }
-    buckets.set(bucket, (buckets.get(bucket) ?? 0) + micros);
   }
 
   const rows = [...buckets.entries()]

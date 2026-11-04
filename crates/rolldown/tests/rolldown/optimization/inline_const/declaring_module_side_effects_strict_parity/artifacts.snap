@@ -1,0 +1,174 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+// a.js
+globalThis.size = "md";
+
+```
+
+## b.js
+
+```js
+import { t as useFx } from "./owner.js";
+// b.js
+globalThis.fx = useFx();
+
+```
+
+## owner.js
+
+```js
+// ui/impl.js
+globalThis.implLoaded = true;
+function fx() {
+	return 1;
+}
+function useFx() {
+	return fx();
+}
+export { useFx as t };
+
+```
+
+# Variant: [strict_execution_order: true]
+
+## Assets
+
+### a.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import "./owner.js";
+// a.js
+function init_a() {
+	return (init_a = __esmMin((() => {
+		globalThis.size = "md";
+	})))();
+}
+init_a();
+
+```
+
+### b.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as useFx, t as init_owner } from "./owner.js";
+// b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		init_owner();
+		globalThis.fx = useFx();
+	})))();
+}
+init_b();
+
+```
+
+### owner.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+// ui/impl.js
+function fx() {
+	return 1;
+}
+function init_impl() {
+	return (init_impl = __esmMin((() => {
+		globalThis.implLoaded = true;
+	})))();
+}
+// ui/owner.js
+function useFx() {
+	return fx();
+}
+function init_owner() {
+	return (init_owner = __esmMin((() => {
+		init_impl();
+	})))();
+}
+export { useFx as n, init_owner as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+# Variant: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### a.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import "./owner.js";
+// a.js
+function init_a() {
+	return (init_a = __esmMin((() => {
+		globalThis.size = "md";
+	})))();
+}
+init_a();
+
+```
+
+### b.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as useFx, t as init_owner } from "./owner.js";
+// b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		init_owner();
+		globalThis.fx = useFx();
+	})))();
+}
+init_b();
+
+```
+
+### owner.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+// ui/impl.js
+function fx() {
+	return 1;
+}
+function init_impl() {
+	return (init_impl = __esmMin((() => {
+		globalThis.implLoaded = true;
+	})))();
+}
+// ui/owner.js
+function useFx() {
+	return fx();
+}
+function init_owner() {
+	return (init_owner = __esmMin((() => {
+		init_impl();
+	})))();
+}
+export { useFx as n, init_owner as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```

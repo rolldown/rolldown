@@ -188,9 +188,10 @@ including facades retained through an export chain. Namespace holders — both `
 named import whose value is a namespace — inspect only included statements: statically resolved
 member reads route that member, while opaque uses expand the non-ambiguous namespace. A resolved
 member that the constant-inlining pass will replace is skipped using the same constant metadata and
-inline mode as tree shaking. Module-global leaf or namespace liveness is deliberately insufficient,
-because another importer can make the same canonical symbol live without retaining it for this
-consumer.
+inline mode as tree shaking, unless its declaring module or a dependency of that module has side
+effects: tree shaking keeps that module, so the read still routes it. Module-global leaf or
+namespace liveness is deliberately insufficient, because another importer can make the same
+canonical symbol live without retaining it for this consumer.
 
 The CJS-carrier optimization is restricted to modules whose retained body consists entirely of
 direct re-exports. Tree shaking must be enabled, and the module must not be in a

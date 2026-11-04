@@ -17,7 +17,6 @@ function bar() {
 ## circular-re-export-entry.js
 
 ```js
-// circular-re-export-cycle.js
 console.log(bar());
 function bar() {
 	return 123;

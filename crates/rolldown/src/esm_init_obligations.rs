@@ -837,9 +837,11 @@ fn add_wrapped_esm_init_targets_for_static_member_reads(
   opaque_use
 }
 
-/// Match the inclusion pass's constant bypass for a resolved namespace member. The decision must
-/// be per reference: consulting global symbol liveness alone lets another importer that needs the
-/// same constant make this consumer initialize a module whose value was inlined here.
+/// Match the inclusion pass's constant bypass for a resolved namespace member. A constant whose
+/// declaring module keeps its reads (`constant_reads_included`) is still inlined, but its read
+/// initializes the module. The decision must be per reference: consulting global symbol liveness
+/// alone lets another importer that needs the same constant make this consumer initialize a module
+/// whose value was inlined here.
 fn symbol_is_always_inlined(ctx: &WrappedEsmInitTargetContext<'_>, symbol_ref: SymbolRef) -> bool {
   let Some(mode) = ctx.inline_const_mode else {
     return false;
@@ -847,7 +849,7 @@ fn symbol_is_always_inlined(ctx: &WrappedEsmInitTargetContext<'_>, symbol_ref: S
   let canonical_ref = ctx.symbol_db.canonical_ref_for(symbol_ref);
   ctx.constant_value_map.get(&canonical_ref).is_some_and(|meta| {
     !meta.commonjs_export && (mode != InlineConstMode::Smart || meta.safe_to_inline)
-  })
+  }) && !ctx.metas[canonical_ref.owner].constant_reads_included
 }
 
 /// Whether this record has a statically resolvable binding consumer. A side-effect-only import has

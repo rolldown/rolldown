@@ -1,0 +1,146 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## button.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// ui/button.css.js
+var init_button_css = __esmMin((() => {
+	globalThis.styleLoaded = true;
+}));
+// ui/button.js
+var SIZE;
+var init_button = __esmMin((() => {
+	init_button_css();
+	SIZE = "md";
+}));
+export { init_button as n, SIZE as t };
+
+```
+
+## namespace.js
+
+```js
+import { n as init_button } from "./button.js";
+// namespace.js
+init_button();
+globalThis.size = "md";
+
+```
+
+## through_barrel.js
+
+```js
+import { n as init_button } from "./button.js";
+// through_barrel.js
+init_button();
+globalThis.size = "md";
+
+```
+
+# Variant: [strict_execution_order: true]
+
+## Assets
+
+### button.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+// ui/button.css.js
+var init_button_css = __esmMin((() => {
+	globalThis.styleLoaded = true;
+}));
+// ui/button.js
+var SIZE;
+var init_button = __esmMin((() => {
+	init_button_css();
+	SIZE = "md";
+}));
+export { init_button as n, SIZE as t };
+
+```
+
+### namespace.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_button } from "./button.js";
+// namespace.js
+function init_namespace() {
+	return (init_namespace = __esmMin((() => {
+		init_button();
+		globalThis.size = "md";
+	})))();
+}
+init_namespace();
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+### through_barrel.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_button } from "./button.js";
+// through_barrel.js
+function init_through_barrel() {
+	return (init_through_barrel = __esmMin((() => {
+		init_button();
+		globalThis.size = "md";
+	})))();
+}
+init_through_barrel();
+
+```
+
+# Variant: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### button.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// ui/button.css.js
+var init_button_css = __esmMin((() => {
+	globalThis.styleLoaded = true;
+}));
+// ui/button.js
+var SIZE;
+var init_button = __esmMin((() => {
+	init_button_css();
+	SIZE = "md";
+}));
+export { init_button as n, SIZE as t };
+
+```
+
+### namespace.js
+
+```js
+import { n as init_button } from "./button.js";
+// namespace.js
+init_button();
+globalThis.size = "md";
+
+```
+
+### through_barrel.js
+
+```js
+import { n as init_button } from "./button.js";
+// through_barrel.js
+init_button();
+globalThis.size = "md";
+
+```

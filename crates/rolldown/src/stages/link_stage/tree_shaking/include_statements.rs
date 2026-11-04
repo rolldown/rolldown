@@ -83,6 +83,9 @@ pub struct IncludeContext<'a> {
   pub bailout_cjs_tree_shaking_modules: FxHashSet<ModuleIdx>,
   /// Cache for [`external_importer_modes`], keyed by external module.
   pub external_importer_modes: FxHashMap<ModuleIdx, ExternalInteropUse>,
+  /// Cache for whether the module that declares an inlined constant, or one of its dependencies,
+  /// has side effects (see [`is_bypassed_inlined_constant`]), keyed by that module.
+  pub inlined_constant_owner_side_effects: FxHashMap<ModuleIdx, bool>,
   /// Tracks whether any new module was included during the current convergence iteration.
   /// Used to detect fixpoint without O(N) scanning of `is_module_included_vec`.
   pub module_inclusion_changed: bool,
@@ -151,6 +154,7 @@ impl<'a> IncludeContext<'a> {
       normal_symbol_exports_chain_map,
       bailout_cjs_tree_shaking_modules: FxHashSet::default(),
       external_importer_modes: FxHashMap::default(),
+      inlined_constant_owner_side_effects: FxHashMap::default(),
       module_inclusion_changed: false,
       module_namespace_included_reason,
       json_module_none_self_reference_included_symbol: FxHashMap::default(),
@@ -393,6 +397,9 @@ impl LinkStage<'_> {
       entries
     };
 
+    let inlined_constant_owner_side_effects =
+      std::mem::take(&mut context.inlined_constant_owner_side_effects);
+
     // Setting the json module none self reference included symbol map
     for (mi, set) in std::mem::take(&mut context.json_module_none_self_reference_included_symbol) {
       let module = self.module_table[mi].as_normal_mut().expect("should be a normal module");
@@ -437,6 +444,9 @@ impl LinkStage<'_> {
         meta.depended_runtime_helper = normalized_runtime_helper;
         meta.module_namespace_included_reason = module_namespace_included_reason[module.idx];
       });
+    for (owner, has_side_effects) in inlined_constant_owner_side_effects {
+      self.metas[owner].constant_reads_included = has_side_effects;
+    }
 
     let mut depended_runtime_helper = collect_depended_runtime_helpers(
       &self.module_table.modules,
@@ -692,7 +702,7 @@ fn handle_include_symbol(
 ) {
   let mut canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
 
-  if is_bypassed_inlined_constant(ctx, canonical_ref, include_reason) {
+  if is_bypassed_inlined_constant(ctx, symbol_ref, canonical_ref, include_reason) {
     return;
   }
 
@@ -740,25 +750,50 @@ fn handle_include_symbol(
 }
 
 /// Mirror of the finalizer's constant inlining: a constant value is always inlined at its
-/// reference sites, so the reference does not retain the declaration.
+/// reference sites, so the reference does not retain the declaration, unless the declaring module
+/// or one of its dependencies has side effects. Reading the constant evaluates that module, so such
+/// a read takes the normal include path. A module with side effects of its own already stays
+/// through the import of a module that imports it directly, so a read through that import does not
+/// need to keep it.
 ///
 /// If the symbol is a constant value and it is not a commonjs module export, we don't need to
 /// include it since it would be always inlined. In smart mode, we only skip if `safe_to_inline`
 /// is true (meaning it will be inlined regardless of context). We don't need to add any flag
 /// since if `inlineConst` is disabled, the test expr will always return `false`.
 fn is_bypassed_inlined_constant(
-  ctx: &IncludeContext,
+  ctx: &mut IncludeContext,
+  symbol_ref: SymbolRef,
   canonical_ref: SymbolRef,
   include_reason: SymbolIncludeReason,
 ) -> bool {
-  if let Some(v) = ctx.constant_symbol_map.get(&canonical_ref)
-    && !include_reason.contains(SymbolIncludeReason::EntryExport)
-    && (!ctx.inline_const_smart || v.safe_to_inline)
-    && !v.commonjs_export
+  let constant_symbol_map = ctx.constant_symbol_map;
+  let Some(v) = constant_symbol_map.get(&canonical_ref) else {
+    return false;
+  };
+  if include_reason.contains(SymbolIncludeReason::EntryExport)
+    || (ctx.inline_const_smart && !v.safe_to_inline)
+    || v.commonjs_export
+  {
+    return false;
+  }
+  let owner = canonical_ref.owner;
+  let (modules, metas) = (ctx.modules, ctx.metas);
+  if modules[owner].side_effects().has_side_effects()
+    && modules[symbol_ref.owner].as_normal().is_some_and(|reader| {
+      reader.named_imports.get(&symbol_ref).is_some_and(|named_import| {
+        reader.import_records[named_import.record_idx].resolved_module == Some(owner)
+      })
+    })
   {
     return true;
   }
-  false
+  !*ctx.inlined_constant_owner_side_effects.entry(owner).or_insert_with(|| {
+    modules[owner].side_effects().has_side_effects()
+      || metas[owner]
+        .dependencies
+        .iter()
+        .any(|&dependency_idx| modules[dependency_idx].side_effects().has_side_effects())
+  })
 }
 
 /// Demanding a user-declared side-effect-free module's own export (or its

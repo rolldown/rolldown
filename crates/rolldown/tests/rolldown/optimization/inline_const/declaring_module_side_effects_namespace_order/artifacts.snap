@@ -1,0 +1,78 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## bridge.js
+
+```js
+import "./owner.js";
+// bridge.js
+function readOrder() {
+	return globalThis.order.slice();
+}
+export { readOrder as t };
+
+```
+
+## direct.js
+
+```js
+import "./owner.js";
+import "./setup.js";
+// direct.js
+const size = 42;
+export { size };
+
+```
+
+## namespace.js
+
+```js
+import "./setup.js";
+import { t as readOrder } from "./bridge.js";
+import "./owner.js";
+// namespace.js
+const size = 42;
+const order = readOrder();
+export { order, size };
+
+```
+
+## owner.js
+
+```js
+// ui/owner.js
+globalThis.order ??= [];
+globalThis.order.push("owner");
+const SIZE = 42;
+export { SIZE as t };
+
+```
+
+## setup.js
+
+```js
+// setup.js
+globalThis.order ??= [];
+globalThis.order.push("setup");
+
+```
+
+## setup_only.js
+
+```js
+import "./setup.js";
+// setup_only.js
+const setupOnly = true;
+export { setupOnly };
+
+```
+
+## shared.js
+
+```js
+import "./setup.js";
+export { t as readOrder } from "./bridge.js";
+
+```

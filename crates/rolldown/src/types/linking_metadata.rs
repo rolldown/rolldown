@@ -114,6 +114,11 @@ pub struct LinkingMetadata {
   pub stmt_info_included: IndexBitSet<StmtInfoIdx>,
   /// Tracks whether the module is included after tree-shaking.
   pub is_included: bool,
+  /// Whether tree shaking includes the reads of the inlined constants that this module declares,
+  /// because the module or one of its dependencies has side effects. A read through a direct import
+  /// of a module with side effects of its own is the exception: that import keeps the module. Later
+  /// passes read this instead of checking again, because `dependencies` grows after tree shaking.
+  pub constant_reads_included: bool,
 }
 
 impl LinkingMetadata {

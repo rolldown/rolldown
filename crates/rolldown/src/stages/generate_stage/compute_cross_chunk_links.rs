@@ -13,10 +13,10 @@ use oxc_index::{IndexVec, index_vec};
 use oxc_str::CompactStr;
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
-  ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PostChunkOptimizationOperation,
-  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, ResolvedImportRecord, RuntimeHelper, SymbolRef,
-  SymbolRefDb, TaggedSymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder, UsedSymbolRefsView,
-  WrapKind,
+  ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, NamedImport, NormalModule, OutputFormat,
+  PostChunkOptimizationOperation, PreserveEntrySignatures, RUNTIME_HELPER_NAMES,
+  ResolvedImportRecord, RuntimeHelper, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  TaggedSymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
 };
 use rolldown_utils::index_vec_ext::IndexVecRefExt as _;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
@@ -439,6 +439,50 @@ impl GenerateStage<'_> {
     })
   }
 
+  /// The inlined constants that the included statements of a module read through a namespace
+  /// import, such as `ns.SIZE` for `import * as ns from './ui.js'`, each with the record of that
+  /// import. Only constants whose module the output keeps count, because the output imports the
+  /// chunk of such a module for them. They are sorted by the `exec_order` of their modules, the
+  /// order that the chunks have without ranks.
+  fn namespace_constant_reads(&self, module: &NormalModule) -> Vec<(ImportRecordIdx, SymbolRef)> {
+    if !module.named_imports.values().any(|named_import| named_import.imported.is_star()) {
+      return vec![];
+    }
+    let meta = &self.link_output.metas[module.idx];
+    let mut reads = vec![];
+    for (stmt_idx, stmt_info) in self.link_output.stmt_infos[module.idx].iter_enumerated() {
+      if !meta.stmt_info_included.has_bit(stmt_idx) {
+        continue;
+      }
+      for reference in &stmt_info.referenced_symbols {
+        let SymbolOrMemberExprRef::MemberExpr(member_expr) = reference else {
+          continue;
+        };
+        let Some(named_import) = module.named_imports.get(&member_expr.object_ref) else {
+          continue;
+        };
+        if !named_import.imported.is_star() {
+          continue;
+        }
+        let Some(symbol_ref) = member_expr.represent_symbol_ref(&meta.resolved_member_expr_refs)
+        else {
+          continue;
+        };
+        let canonical_ref = self.link_output.symbol_db.canonical_ref_for(symbol_ref);
+        if self.link_output.global_constant_symbol_map.contains_key(&canonical_ref)
+          && self.link_output.metas[canonical_ref.owner].constant_reads_included
+        {
+          reads.push((named_import.record_idx, symbol_ref));
+        }
+      }
+    }
+    let symbol_db = &self.link_output.symbol_db;
+    reads.sort_by_key(|&(_, symbol_ref)| {
+      self.link_output.module_table[symbol_db.canonical_ref_for(symbol_ref).owner].exec_order()
+    });
+    reads
+  }
+
   /// Pushes the modules that the static imports of a module lead to, in source order. Only the
   /// imports that tree shaking keeps count, because the output does not have the other imports. An
   /// import is kept when its module is in `load_dependencies`, the dependencies that survive tree
@@ -479,16 +523,20 @@ impl GenerateStage<'_> {
         importees.push(importee);
         continue;
       }
-      // The modules that declare the bindings of each import record, sorted by record. The runtime
-      // chunk is not ranked, so that it keeps its position.
+      // The modules that declare the bindings of each import record, sorted by record: the bindings
+      // that it imports by name, and the inlined constants read through it as a namespace whose
+      // modules the output keeps, such as `ns.SIZE`. The runtime chunk is not ranked, so that it
+      // keeps its position.
       let binding_owners = binding_owners.get_or_insert_with(|| {
         let symbol_db = &self.link_output.symbol_db;
         let runtime_idx = self.link_output.runtime.id();
         let mut owners = module
           .named_imports
           .values()
-          .flat_map(|named_import| {
-            let canonical_ref = symbol_db.canonical_ref_for(named_import.imported_as);
+          .map(|named_import| (named_import.record_idx, named_import.imported_as))
+          .chain(self.namespace_constant_reads(module))
+          .flat_map(|(record_idx, symbol_ref)| {
+            let canonical_ref = symbol_db.canonical_ref_for(symbol_ref);
             let namespace_owner = symbol_db
               .get(canonical_ref)
               .namespace_alias
@@ -496,7 +544,7 @@ impl GenerateStage<'_> {
               .map(|ns| ns.namespace_ref.owner);
             std::iter::once(canonical_ref.owner)
               .chain(namespace_owner)
-              .map(|owner| (named_import.record_idx, owner))
+              .map(move |owner| (record_idx, owner))
           })
           .filter(|&(_, owner)| owner != module_idx && owner != runtime_idx)
           .collect::<Vec<_>>();
@@ -665,9 +713,10 @@ impl GenerateStage<'_> {
   ///   reachability truthful; this direction validates that the gate mirrors emission. The base
   ///   prediction is exempt from this direction: it filters `load_dependencies`, the same edges
   ///   the pre-prediction bits reachability trusted, so its over-predictions are exactly
-  ///   main-parity — e.g. constant inlining drops a symbol's import (and can even orphan an
-  ///   annotated-side-effectful chunk, see `rollup@chunking form@namespace-reexport-side-effect-cache`)
-  ///   without touching `load_dependencies`, on main just as here.
+  ///   main-parity — e.g. constant inlining drops a symbol's import without touching
+  ///   `load_dependencies`, and can orphan an annotated-side-effectful chunk: a
+  ///   side-effectful module between a removed barrel and a side-effect-free declaring module ends
+  ///   up in a chunk that no entry imports (#10688).
   ///
   /// Service imports hang on the entry (possibly facade) chunk, so entry chunks predict them via
   /// their `entry_module_idx` — hosted or not — plus the facade edge to the chunk hosting a

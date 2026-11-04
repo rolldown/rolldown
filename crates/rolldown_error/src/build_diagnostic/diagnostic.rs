@@ -199,11 +199,10 @@ impl Diagnostic {
     self.kind.clone()
   }
 
-  /// Code frame around the error's first label.
-  pub fn frame(&self) -> Option<String> {
-    let span = self.labels.first()?.span();
-    let source = self.files.get(span.source())?;
-    let (_, line, column, _) = self.get_primary_location()?;
+  /// Code frame of the first label's file, at the `line` and `column` that
+  /// [`Self::get_primary_location`] returns.
+  pub fn frame(&self, line: usize, column: usize) -> Option<String> {
+    let source = self.files.get(self.labels.first()?.span().source())?;
     let frame = render_code_frame(source, line, column);
     (!frame.is_empty()).then_some(frame)
   }
@@ -285,23 +284,21 @@ fn tabs_to_spaces(value: &str) -> String {
 // Mirrors `getCodeFrame` in packages/rolldown/src/utils/code-frame.ts. The column and all
 // lengths count UTF-16 code units, like JS strings.
 fn render_code_frame(source: &str, line: usize, column: usize) -> String {
-  let all: Vec<&str> = source.split('\n').collect();
-  if line > all.len() {
+  let frame_start = line.saturating_sub(3);
+  let mut lines: Vec<&str> =
+    source.split('\n').skip(frame_start).take(line + 2 - frame_start).collect();
+  let Some(&error_line) = lines.get(line - 1 - frame_start) else {
     return String::new();
-  }
-  let location_width = column + leading_tabs(all[line - 1]).min(column);
+  };
+  let location_width = column + leading_tabs(error_line).min(column);
   let max_line_length = (location_width + MIN_CHARACTERS_SHOWN_AFTER_LOCATION + ELLIPSIS.len())
     .max(LINE_TRUNCATE_LENGTH);
 
-  let frame_start = line.saturating_sub(3);
-  let mut frame_end = (line + 2).min(all.len());
-  let mut lines: Vec<&str> = all[frame_start..frame_end].to_vec();
   while lines.last().is_some_and(|last| last.trim().is_empty()) {
     lines.pop();
-    frame_end -= 1;
   }
 
-  let digits = frame_end.to_string().len();
+  let digits = (frame_start + lines.len()).to_string().len();
   lines
     .iter()
     .enumerate()
@@ -357,50 +354,7 @@ impl Display for Diagnostic {
 
 #[cfg(test)]
 mod tests {
-  use super::{Severity, render_code_frame};
-
-  #[test]
-  fn code_frame_points_at_location() {
-    assert_eq!(render_code_frame("a\nbcd\nef", 2, 1), "1: a\n2: bcd\n    ^\n3: ef");
-  }
-
-  #[test]
-  fn code_frame_expands_tabs_and_aligns_caret() {
-    assert_eq!(render_code_frame("\tfoo", 1, 1), "1:   foo\n     ^");
-  }
-
-  #[test]
-  fn code_frame_preserves_non_leading_tabs() {
-    assert_eq!(render_code_frame("ab\tcd", 1, 3), "1: ab\tcd\n      ^");
-  }
-
-  #[test]
-  fn code_frame_truncates_long_lines() {
-    let frame = render_code_frame(&"x".repeat(200), 1, 0);
-    let first_line = frame.lines().next().unwrap();
-    assert_eq!(first_line, format!("1: {}...", "x".repeat(117)));
-  }
-
-  #[test]
-  fn frame_returns_none_without_labels() {
-    let diagnostic = super::Diagnostic::new("X".to_string(), "title".to_string(), Severity::Error);
-    assert_eq!(diagnostic.frame(), None);
-  }
-
-  #[test]
-  fn frame_caret_counts_utf16_units() {
-    let mut diagnostic =
-      super::Diagnostic::new("X".to_string(), "title".to_string(), Severity::Error);
-    let file_id = diagnostic.add_file("test.js", "😀x");
-    // Byte offset 4 is `x`, which is UTF-16 column 2.
-    diagnostic.add_label(&file_id, 4..5, String::new());
-    assert_eq!(diagnostic.frame().as_deref(), Some("1: 😀x\n     ^"));
-  }
-}
-
-#[cfg(test)]
-mod test_primary_location {
-  use super::{Diagnostic, Severity};
+  use super::{Diagnostic, Severity, render_code_frame};
 
   /// Char-by-char reference for [`Diagnostic::get_primary_location`]. Returns
   /// `(line, column, utf16_position)`.
@@ -439,5 +393,48 @@ mod test_primary_location {
         );
       }
     }
+  }
+
+  #[test]
+  fn code_frame_points_at_location() {
+    assert_eq!(render_code_frame("a\nbcd\nef", 2, 1), "1: a\n2: bcd\n    ^\n3: ef");
+  }
+
+  #[test]
+  fn code_frame_expands_tabs_and_aligns_caret() {
+    assert_eq!(render_code_frame("\tfoo", 1, 1), "1:   foo\n     ^");
+  }
+
+  #[test]
+  fn code_frame_preserves_non_leading_tabs() {
+    assert_eq!(render_code_frame("ab\tcd", 1, 3), "1: ab\tcd\n      ^");
+  }
+
+  #[test]
+  fn code_frame_truncates_long_lines() {
+    let frame = render_code_frame(&"x".repeat(200), 1, 0);
+    let first_line = frame.lines().next().unwrap();
+    assert_eq!(first_line, format!("1: {}...", "x".repeat(117)));
+  }
+
+  #[test]
+  fn code_frame_drops_trailing_blank_lines() {
+    assert_eq!(render_code_frame("a\nb\n\n \n", 2, 0), "1: a\n2: b\n   ^");
+  }
+
+  #[test]
+  fn frame_returns_none_without_labels() {
+    let diagnostic = Diagnostic::new("X".to_string(), "title".to_string(), Severity::Error);
+    assert_eq!(diagnostic.frame(1, 0), None);
+  }
+
+  #[test]
+  fn frame_caret_counts_utf16_units() {
+    let mut diagnostic = Diagnostic::new("X".to_string(), "title".to_string(), Severity::Error);
+    let file_id = diagnostic.add_file("test.js", "😀x");
+    // Byte offset 4 is `x`, which is UTF-16 column 2.
+    diagnostic.add_label(&file_id, 4..5, String::new());
+    let (_, line, column, _) = diagnostic.get_primary_location().unwrap();
+    assert_eq!(diagnostic.frame(line, column).as_deref(), Some("1: 😀x\n     ^"));
   }
 }

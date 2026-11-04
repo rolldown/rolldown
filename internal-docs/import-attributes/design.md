@@ -17,9 +17,19 @@ With `experimental.importAttributes`, the import attributes of an import (`with 
 
 ## Unresolved Questions
 
-- A plugin returning an already-composed id from `resolveId` without `attributes` gets the requested attributes appended a second time. Should `resolveId` output be parsed with `parseModuleId` first?
-- Formats other than ESM have no way to express attributes on externals; nothing warns about the dropped attributes.
+- A plugin returning an already-composed id from `resolveId` without `attributes` gets the requested attributes appended a second time. Without requested attributes, the composed id stays opaque, so its file is read from the whole string and fails. `this.emitFile({ type: 'chunk', id })` with a composed id has the same problem. Should such ids be parsed with `parseModuleId` first?
+- In formats other than ESM, a static import of an external becomes `require()` or a global, which cannot carry attributes, and nothing warns when they are dropped. An `import()` with options stays an `import()`.
 - Dev engine / HMR and Vite integration are not covered yet. With the option on, lazy compilation skips an `import()` with attributes, so it is bundled as usual. Without it, the plugin sees no attributes and compiles such an import lazily, which is safe because the attributes of an internal module are dropped then.
+- With the option on, some code still treats the composed id as a file path. They should use the raw id.
+  - `rolldown_plugin_vite_resolve` checks the prefixes of its virtual ids (optional peer deps, browser externals) on `args.id` in `load` and returns no module type, so `type: 'json'` makes the stub fail to parse as JSON.
+  - `rolldown_plugin_vite_import_glob` compares the composed id to skip the importer itself, so a glob can include the importing file.
+  - `rolldown_plugin_vite_transform` takes the extension and the oxc `Transformer` path from `args.id`.
+  - `rolldown_plugin_isolated_declaration` names the emitted `.d.ts` after the composed `stable_id`, so two variants of one file emit the same name.
+  - The declaration file checks in `chunk_optimizer.rs` and `inline_common_chunks/exclude.rs` test the composed id.
+  - `rolldown_plugin_lazy_compilation` only checks the requested attributes. When a `resolveId` hook adds attributes, the proxy imports a composed id that resolves to an opaque module.
+- `rolldown_plugin_vite_manifest` keys a chunk by `relative_path`, which drops the attributes. Two chunks of one file with different attributes share a key, and one is lost. Vite's JS version keys by the full `facadeModuleId`. Should the key keep the suffix?
+- Sourcemap `sources` keep the `?attributes=` suffix (`normal_module.rs`, `normalize_transform_sourcemap`). This keeps two variants of one file apart, but tools see a path that does not exist. Keep or strip it?
+- Builtin plugins called from JS (`binding_callable_builtin_plugin.rs`) get `{}` as `resolveId` attributes, and the attributes they return are dropped, because `BindingHookJsResolveIdOptions` and `BindingHookJsResolveIdOutput` have no field for them.
 
 ## Related
 

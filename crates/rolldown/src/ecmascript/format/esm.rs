@@ -68,8 +68,8 @@ pub fn render_esm<'code>(
         let importee = &ctx.link_output.module_table[importee_idx];
         if let Some(m) = importee.as_external() {
           let ext_name = m.get_import_path(ctx.chunk, ctx.resolved_paths);
-          // With `experimental.importAttributes` the attributes are part of the external module,
-          // so every import and re-export of it carries them. Without it there are none.
+          // The attributes are part of the external module in both modes, so every import and
+          // re-export of it carries them.
           let with_clause = m.attributes.to_with_clause(ctx.options.charset.is_ascii());
           source_joiner.append_source(concat_string!(
             "export * from ",

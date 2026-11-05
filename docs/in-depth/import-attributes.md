@@ -141,7 +141,7 @@ Since `importer` contains the attributes of the importer, use `importerRawId` to
 
 Return `attributes` to replace the attributes of the import, or `{}` to remove them. `load` and `transform` cannot change them.
 
-For example, to keep JSON imports external with the attribute Node.js requires:
+For example, to add attributes to external JSON imports with the attribute Node.js requires:
 
 ```js
 resolveId(source) {

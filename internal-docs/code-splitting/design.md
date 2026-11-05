@@ -758,12 +758,13 @@ If the check fails, the runtime goes back into its own chunk, and debug builds a
 
 ### Policy
 
-The host rule proves that a fold is safe. The policy rejects a safe fold that changes a contract of the output:
+The host rule proves that a fold keeps the evaluation order. The policy rejects a fold that changes a contract of the output, or whose helper exports the consumers cannot read:
 
 - `preserveModules` keeps one file for each module, also for the runtime.
 - `experimentalInlineCommonChunks` adds registry demand after this step. So the runtime chunk stays while the feature is on.
 - A root that loads no consumer must not load the host, because it would then load the runtime. A root is an entry or the target of an `import()`.
 - A shared host exports the helpers to the other consumers. So a shared host cannot be a manual group, because the hash of a group must not change when the helpers of the app change. It also cannot be a chunk with top-level await, an entry with a fixed signature, or an entry that exports only a default in CJS output, unless `output.exports` is `named`.
+- In CJS output, `require()` of an entry returns `module.exports`, and the helper exports go on `exports`. A CommonJS entry controls both objects. Without a wrapper, its code can replace either object, for example with `module.exports = {}` or `exports = {}`. A wrapped entry ends with `module.exports = require_x()`, except in the `named` mode. So a CommonJS entry can be a shared host in CJS output only when it is wrapped and `output.exports` is `named`. `code_splitting/runtime_host_cjs_entry_module_exports` and `code_splitting/runtime_host_cjs_entry_exports_reassign` pin the two forms without a wrapper. The rule does not list the forms, because the list stays open: `require.main.exports = {}` also replaces the object.
 - A chunk with a declaration module (`.d.ts`, `.d.mts`, `.d.cts`) never hosts the runtime. Declaration plugins discard the generated statements in `renderChunk`.
 
 When exactly one live chunk exists besides the runtime chunk, the runtime moves into that chunk without the host rule and without precondition 6. Each root loads that chunk, and that chunk imports no other chunk. So the fold gives the layout of the same build without code splitting. This keeps a dev build with one chunk at one file. It also keeps an `output.file` build valid when a plugin changes the runtime.

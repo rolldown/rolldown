@@ -7,7 +7,7 @@ use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, ChunkReasonType, EntryPointKind, OutputExports,
   OutputFormat, PathsOutputOption, PostChunkOptimizationOperation, PreserveEntrySignatures,
-  RuntimeHelper, UsedSymbolRefsView,
+  RuntimeHelper, UsedSymbolRefsView, WrapKind,
 };
 use rolldown_utils::{IndexBitSet, indexmap::FxIndexSet};
 use rustc_hash::FxHashSet;
@@ -217,8 +217,9 @@ impl GenerateStage<'_> {
     })
   }
 
-  /// The policy for one host. The host rule proves that a fold is safe. These rules reject a safe
-  /// fold that changes a contract of the output.
+  /// The policy for one host. The host rule proves that a fold keeps the evaluation order. These
+  /// rules reject a fold that changes a contract of the output, or whose helper exports the
+  /// consumers cannot read.
   fn host_policy_allows(
     &self,
     chunk_graph: &ChunkGraph,
@@ -260,14 +261,26 @@ impl GenerateStage<'_> {
       Some(PreserveEntrySignatures::Strict) => true,
       Some(PreserveEntrySignatures::ExportsOnly) | None => has_exports,
     };
+    let cjs = matches!(self.options.format, OutputFormat::Cjs);
     // In CJS output, the helper exports change `module.exports` of an entry that exports only a
     // default from that value into an object.
-    let default_only = matches!(self.options.format, OutputFormat::Cjs)
+    let default_only = cjs
       && !matches!(self.options.exports, OutputExports::Named)
       && !entry_meta.has_dynamic_exports
       && entry_meta.resolved_exports.len() == 1
       && entry_meta.resolved_exports.contains_key("default");
-    !fixed_signature && !default_only
+    // In CJS output, `require()` of the host returns `module.exports`, and the helper exports go on
+    // `exports`. A CommonJS entry controls both objects. Without a wrapper, its code runs at the top
+    // level of the chunk and can replace either object, for example with `module.exports = {}`,
+    // `exports = {}` or `require.main.exports = {}`. A wrapped entry ends with
+    // `module.exports = require_x()`, except in the `named` mode.
+    let detaches_exports = cjs
+      && self.link_output.module_table[entry_module_idx]
+        .as_normal()
+        .is_some_and(|module| module.exports_kind.is_commonjs())
+      && !(matches!(entry_meta.wrap_kind(), WrapKind::Cjs)
+        && matches!(self.options.exports, OutputExports::Named));
+    !fixed_signature && !default_only && !detaches_exports
   }
 
   /// Moves the runtime module to the front of the host. The chunk order does not change: the host

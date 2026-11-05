@@ -1,0 +1,69 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lazy.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+// data.js
+var data_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
+	a: () => 1,
+	b: () => 2
+});
+function init_data() {
+	return (init_data = require_rolldown_runtime.__esmMin((() => {})))();
+}
+// lazy.js
+var value;
+function init_lazy() {
+	return (init_lazy = require_rolldown_runtime.__esmMin((() => {
+		init_data();
+		value = Object.keys(data_exports).join();
+	})))();
+}
+init_lazy();
+exports.value = value;
+
+```
+
+## main.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+// esm.js
+var esm_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ value: () => "esm" });
+// main.js
+exports = {
+	name: "main",
+	esm: (require_rolldown_runtime.__esmMin((() => {}))(), require_rolldown_runtime.__toCommonJS(esm_exports)).value
+};
+globalThis.lazy = Promise.resolve().then(() => require("./lazy.js")).then((m) => m.value);
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__esmMin", {
+	enumerable: true,
+	get: function() {
+		return __esmMin;
+	}
+});
+Object.defineProperty(exports, "__exportAll", {
+	enumerable: true,
+	get: function() {
+		return __exportAll;
+	}
+});
+Object.defineProperty(exports, "__toCommonJS", {
+	enumerable: true,
+	get: function() {
+		return __toCommonJS;
+	}
+});
+
+```

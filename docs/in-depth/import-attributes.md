@@ -111,7 +111,7 @@ Other `type` values, such as `'css'`, have no built-in meaning and are passed to
 
 ## Plugin API
 
-Without the option, the fields below still exist, but `attributes` is always `{}` and the `attributes` that `resolveId` returns are ignored.
+Without the option, the fields below still exist, but `attributes` is always `{}` and the `attributes` that `resolveId` returns are ignored. The only exception is `this.resolve` for an external module, which returns the attributes of the import.
 
 ### `resolveId`
 
@@ -413,9 +413,7 @@ Differences:
 
 - Rolldown gives `type: 'json'`, `type: 'text'` and `type: 'bytes'` a built-in module type. Rollup 5 gives no attribute a built-in meaning.
 - Rolldown always renders the attributes of external imports with `with`. Rollup 5 can drop them with `output.externalImportAttributes`, or use `assert` with the deprecated `output.importAttributesKey`.
-- Rolldown sorts the keys of a rendered `with` clause. Rollup 5 keeps the order written in the source.
 - For an `import()` of an external module, Rolldown keeps the options as written, unless a `resolveId` hook changed the attributes. Rollup 5 always rebuilds the options from the attributes, so it drops entries whose value is a variable.
-- Rolldown warns about the legacy `assert` keyword. Rollup 5 accepts it without a warning.
 - Rolldown does not support the deprecated `importerAttributes` option of `this.resolve()`. Pass `importer` as `{ rawId, attributes }` instead.
 
 Not supported yet:

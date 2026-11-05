@@ -58,13 +58,13 @@ Prefer running the build on the builder's native architecture when possible. A s
 
 ### Plugins
 
-Plugins extend Rolldown's functionality, but can also introduce performance overhead. To see plugin timings for `resolveId`, `load`, `transform` and `renderChunk`, turn on the [build report](/tools/build-report) and read its `timing.md`.
+Plugins extend Rolldown's functionality, but can also introduce performance overhead. To see plugin timings for `resolveId`, `load`, `transform` and `renderChunk`, turn on the [build report](/in-depth/build-report) and read its `timing.md`.
 
 #### Plugin Hook Filters
 
 Rolldown provides a feature called **Plugin Hook Filters**. This allows you to specify precisely which modules a plugin hook should process, reducing the communication overhead between JavaScript and Rust. For detailed information on how filters work internally, refer to the [Hook Filters](/apis/plugin-api/hook-filters) page.
 
-The `timing.md` file of the [build report](/tools/build-report#files) lists the hooks that did no work. Those hooks are the first candidates for a filter.
+The `timing.md` file of the [build report](/in-depth/build-report#files) lists the hooks that did no work. Those hooks are the first candidates for a filter.
 
 If you are a plugin user and the plugin you use does not have hook filters specified, you can apply them by using the `withFilter` utility function exported by Rolldown.
 

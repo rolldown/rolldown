@@ -25,7 +25,7 @@ To add it to the project instead, run `npm i -D @rolldown/perf-kit`. The command
 
 ### Turn on the build report
 
-This step is optional. If the app builds with Rolldown 1.2.16 or later, turn on the [build report](/tools/build-report#usage) and rebuild the app. perf-kit then reads 2 of its files:
+This step is optional. If the app builds with Rolldown 1.2.16 or later, turn on the [build report](/in-depth/build-report#usage) and rebuild the app. perf-kit then reads 2 of its files:
 
 - `module-graph.json`, for the commands that [find code that can load later](#find-code-that-can-load-later).
 - `chunk-graph.json`, for the check that finds chunks that start late. Rolldown 1.2.16 does not write this file. A Vite manifest (`build.manifest: true`) also works.

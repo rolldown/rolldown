@@ -46,6 +46,8 @@ const sidebarForGuide: DefaultTheme.SidebarItem[] = [
       { text: 'Dead Code Elimination', link: '/in-depth/dead-code-elimination.md' },
       { text: 'Lazy Barrel Optimization', link: '/in-depth/lazy-barrel-optimization.md' },
       { text: 'Native MagicString', link: '/in-depth/native-magic-string.md' },
+      { text: 'Build Report', link: '/in-depth/build-report.md' },
+      { text: 'Perf Kit', link: '/in-depth/perf-kit.md' },
     ],
   },
   {
@@ -170,14 +172,6 @@ const sidebarForReference: DefaultTheme.SidebarItem[] = [
     collapsed: false,
   },
   ...typedocSidebar,
-  {
-    text: 'Tools',
-    items: [
-      { text: 'Build Report', link: '/tools/build-report.md' },
-      { text: 'Perf Kit', link: '/tools/perf-kit.md' },
-    ],
-    collapsed: false,
-  },
 ];
 
 const sidebarForDevGuide: DefaultTheme.SidebarItem[] = [
@@ -308,7 +302,7 @@ const config = defineConfig({
         activeMatch: '/(guide|in-depth|glossary)',
         link: '/guide/getting-started.md',
       },
-      { text: 'Reference', activeMatch: '/(reference|tools)', link: '/reference' },
+      { text: 'Reference', activeMatch: '/reference', link: '/reference' },
       {
         text: 'Plugins',
         activeMatch: '/builtin-plugins',
@@ -347,9 +341,8 @@ const config = defineConfig({
       '/guide/': sidebarForGuide,
       '/in-depth/': sidebarForGuide,
       '/glossary/': sidebarForGuide,
-      // --- Reference (options + typedoc dictionary + tools) ---
+      // --- Reference (options + typedoc dictionary) ---
       '/reference/': sidebarForReference,
-      '/tools/': sidebarForReference,
       // --- Plugins ---
       '/builtin-plugins/': sidebarForPlugins,
       // --- API ---

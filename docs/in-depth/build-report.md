@@ -67,28 +67,30 @@ await bundle.close(); // Rolldown writes the report here
 
 Start with `entry.md`. It summarizes the build and tells you which file to open next.
 
-| File                | Contents                                                                                                                                             |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `entry.md`          | Build time, output size, module, chunk and package counts, and the change since the previous build.                                                  |
-| `timing.md`         | Scan and generate times, plugin timings for `resolveId`, `load`, `transform` and `renderChunk`, and the slowest modules in plugin `transform` hooks. |
-| `chunks.md`         | The largest chunks, the reason each chunk exists, and modules duplicated across chunks.                                                              |
-| `modules.md`        | Import kinds, the most-imported modules, and modules shared by several entries.                                                                      |
-| `packages.md`       | The largest packages, direct and transitive dependencies, and packages with more than one version.                                                   |
-| `graph.md`          | Entry points, the chunk import graph, the initial load of each entry, and retained sizes.                                                            |
-| `delta.md`          | The change since the previous build and since the pinned baseline. Written from the second build on.                                                 |
-| `metrics.json`      | The numbers of the build, with stable metric ids such as `output.total_bytes` and `build.total_ms`. Use it in scripts.                               |
-| `module-graph.json` | The full module graph: every module with its size, its imports and its retained size.                                                                |
-| `history.jsonl`     | One summary line per build.                                                                                                                          |
-| `AGENTS.md`         | Instructions for a coding agent that reads the folder.                                                                                               |
-| `.state.json`       | A snapshot of this build. The next build compares against it.                                                                                        |
+| File                | Contents                                                                                                                                                                         |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `entry.md`          | Build time, output size, module, chunk and package counts, and the change since the previous build.                                                                              |
+| `timing.md`         | Scan and generate times, plugin timings for `resolveId`, `load`, `transform` and `renderChunk`, the hooks that did no work, and the slowest modules in plugin `transform` hooks. |
+| `chunks.md`         | The largest chunks, the reason each chunk exists, and modules duplicated across chunks.                                                                                          |
+| `modules.md`        | Import kinds, the most-imported modules, and modules shared by several entries.                                                                                                  |
+| `packages.md`       | The largest packages, direct and transitive dependencies, and packages with more than one version.                                                                               |
+| `graph.md`          | Entry points, the chunk import graph, the initial load of each entry, and retained sizes.                                                                                        |
+| `delta.md`          | The change since the previous build and since the pinned baseline. Written from the second build on.                                                                             |
+| `metrics.json`      | The numbers of the build, with stable metric ids such as `output.total_bytes` and `build.total_ms`. Use it in scripts.                                                           |
+| `module-graph.json` | The full module graph: every module with its size, its imports and its retained size.                                                                                            |
+| `chunk-graph.json`  | Every output chunk with its file name, size, entry flag and imports. Rolldown 1.2.16 does not write it.                                                                          |
+| `history.jsonl`     | One summary line per build.                                                                                                                                                      |
+| `AGENTS.md`         | Instructions for a coding agent that reads the folder.                                                                                                                           |
+| `.state.json`       | A snapshot of this build. The next build compares against it.                                                                                                                    |
 
 - Chunk and asset sizes are measured before `generateBundle` hooks, before compression, and exclude sourcemap files. Files added or changed by `generateBundle` or `writeBundle` hooks are not reflected in these sizes.
 - Module and package sizes count rendered module code after tree shaking, before `renderChunk` hooks and chunk minification. A module duplicated across chunks is counted once per copy.
 - The initial load of an entry is its chunk plus every chunk that it imports statically, directly or through other chunks.
 - The retained size of a module estimates the rendered module bytes that could leave the static initial load if all eager import paths to it were deferred: the module itself plus the modules that only it brings in. It is calculated across all user-defined entries, and is not a prediction of compressed download savings or load time.
 - Direct packages are those imported by project modules under `cwd` and outside `node_modules`; other packages are classified as transitive. This classification uses the import graph, not `package.json` dependency fields.
-- Most lists keep the top 20 items. `module-graph.json` lists every module.
+- Most lists keep the top 20 items. `module-graph.json` lists every module, and `chunk-graph.json` every chunk.
 - Plugin timings cover `resolveId`, `load`, `transform` and `renderChunk`. They add up calls that run at the same time, so they can be larger than the build time. Core TypeScript and JSX transformation is not attributed per module in the transform hotspots.
+- A hook call did no work when `resolveId`, `load` or `renderChunk` returned nothing, or `transform` returned nothing or the code unchanged. For a JavaScript plugin, each such call still crosses from Rust to JavaScript. A [hook filter](/apis/plugin-api/hook-filters) skips the call, and a skipped call does not count. Builtin plugins (`builtin:*`) run in Rust, so their no-op calls cost little. Rolldown 1.2.16 shows only the No-op column of the hook table, and it also counts the calls that the filter skips.
 
 ## Compare builds
 

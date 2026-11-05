@@ -82,7 +82,7 @@ manual. Read its Cloudflare Worker section.
 Rules:
 - Do not remove features.
 - Do not change bindings or the wrangler config.
-- Keep the Durable Object classes in the entry.
+- Keep each Durable Object class exported from the entry.
 - `<test commands>` must stay green.
 - Make one change at a time. Keep it only when it is clearly faster. Revert
   all other changes.

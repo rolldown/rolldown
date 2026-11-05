@@ -64,6 +64,8 @@ Plugins extend Rolldown's functionality, but can also introduce performance over
 
 Rolldown provides a feature called **Plugin Hook Filters**. This allows you to specify precisely which modules a plugin hook should process, reducing the communication overhead between JavaScript and Rust. For detailed information on how filters work internally, refer to the [Hook Filters](/apis/plugin-api/hook-filters) page.
 
+The `timing.md` file of the [build report](/in-depth/build-report#files) lists the hooks that did no work. Those hooks are the first candidates for a filter.
+
 If you are a plugin user and the plugin you use does not have hook filters specified, you can apply them by using the `withFilter` utility function exported by Rolldown.
 
 ```js

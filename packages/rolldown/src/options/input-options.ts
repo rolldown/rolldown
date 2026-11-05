@@ -808,7 +808,7 @@ export interface InputOptions {
    *
    * In `'report'` mode, Rolldown writes a small build report instead of the multi-GB
    * `logs.json`: Markdown views, `metrics.json` with a build-over-build `delta`,
-   * `module-graph.json` and `history.jsonl`. The report goes to
+   * `module-graph.json`, `chunk-graph.json` and `history.jsonl`. The report goes to
    * `node_modules/.rolldown/report/<output dir>`, resolved against {@linkcode cwd}, where
    * `<output dir>` is the output folder relative to `cwd` (each `..` becomes `__`). Rolldown
    * writes it when the bundle closes. `watch()` and the dev engine write no report. See the

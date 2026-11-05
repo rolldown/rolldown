@@ -138,9 +138,10 @@ FCP and LCP when those paints differ.
 | `node harness.mjs status`                                                        | Feature modes, entry size, last/baseline LCP.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `node harness.mjs serve [--port 4646]`                                           | Serve `app/dist` for manual poking.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
-`measure` and `coverage` also take `--dist <dir>` (plus optional `--features a,b`, and
-`--entry` for `coverage`) to point at any other built app; candidates are then advisory
-per-module (the agent finds the import seams itself).
+`measure` and `coverage` also take `--dist <dir>` (plus optional `--features a,b`) to point
+at any other built app; candidates are then advisory per-module (the agent finds the import
+seams itself). `coverage`, `profile`, `scan` and `verdict` take `--entry <file>` to name the
+entry script. Without it they detect the entry, also from the chunk URLs of Astro islands.
 
 `graph`, `what-if`, `cut`, `why` and `graph-diff` read the report of the target dist
 (`node_modules/.rolldown/report/<output dir>`), and stop with an error when none of
@@ -351,9 +352,12 @@ app that pins an older one, `--tools <dir>` borrows a newer wrangler for that ru
 
 Metrics are `worker.startup_ms`, `worker.boot_floor_ms`, `worker.app_startup_ms` (the part a
 bundle change can move), `worker.instance_boot_ms` (reported, never counted) and
-`worker.request_ms:<path>` per pinned request, with the same `delta` / `baselineDelta`
+`worker.request_ms:<path>` per pinned request, and `worker.startup_loaded_bytes` (the module
+bytes in the chunks the isolate loads at startup), with the same `delta` / `baselineDelta`
 shape as the other modes. A request's delta against the pinned baseline is the cost a
 deferral **moved** into that route; the summary prints it next to the startup gain.
+When the time stays within noise and startup lost 1% of its bytes (32 KB at least) or 10%
+of its modules (50 at least) against the pinned build, the scan prints `KEEP`.
 
 ### What this mode does NOT do
 
@@ -385,6 +389,12 @@ node harness.mjs field --config field.json            # 6 alternating pairs + 1 
 node harness.mjs field --config field.json --runs 10 --cut lcp --out /tmp/my-field
 ```
 
+perf-kit finds your Chrome through the `DevToolsActivePort` file in its profile folder
+(`CHROME_USER_DATA_DIR` names a folder other than the default). `--cdp-port <n>` or
+`--cdp-url <ws>` names the endpoint directly. Other flags: `--only a,b` (a subset of the
+variants), `--pause <ms>` between loads, `--settle <ms>` after load and LCP, and
+`--timeout <ms>` (defaults 3000, 3000 and 30000).
+
 ```json
 {
   "url": "https://app.example.com/",
@@ -412,7 +422,8 @@ node harness.mjs field --config field.json --runs 10 --cut lcp --out /tmp/my-fie
 
 **Privacy.** Output goes outside the repo (default `$TMPDIR/perf-kit-field/<site>`).
 It holds no cookies, no headers, no page text and no screenshots. IDs, emails and long
-numbers in URLs are redacted (add patterns with `redact`). Variant cookies change the
+numbers in URLs are redacted (add patterns with `redact`, or `--redact <regex>` on
+`replay.mjs record`). Variant cookies change the
 whole profile, so each run starts from the original values and they are restored at the
 end, also on Ctrl-C. Block the site's analytics beacons in `block` so runs do not add
 synthetic sessions.
@@ -600,8 +611,9 @@ the `pinned-build/` copy and `pinned-module-graph.json`).
   LCP element), `report.json` (per page: state, the judged reasons, notes, region
   explanations, approval signature), `approvals.json`, and `pages/<page>/*.png`.
 
-Environment variables: `CHROME_PATH` (the browser), `ROLLDOWN_PERF_KIT_STATE` (the
-state folder) and `MINIFLARE_CACHE_DIR` (the Worker runtime cache, default
+Environment variables: `CHROME_PATH` (the browser), `CHROME_USER_DATA_DIR` (the Chrome
+profile folder that field mode reads), `ROLLDOWN_PERF_KIT_STATE` (the state folder) and
+`MINIFLARE_CACHE_DIR` (the Worker runtime cache, default
 `worker/cache/` in the state folder). `help` lists every command and flag.
 
 ## The demo app

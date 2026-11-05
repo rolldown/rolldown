@@ -50,8 +50,8 @@ proof of low priority. These fields use the
 The report does not collect request headers or bodies. A browser timing buffer
 overflow keeps the discovery check UNKNOWN.
 
-The check reads `chunk-graph.json` from the rolldown build report (rolldown 1.2.16
-does not write it yet). It can also use a Vite manifest at `dist/.vite/manifest.json`
+The check reads `chunk-graph.json` from the rolldown build report (since rolldown
+1.3.0). It can also use a Vite manifest at `dist/.vite/manifest.json`
 (`build.manifest: true`). It follows static imports only. The report
 stores separate results in `chunkDiscovery.fcp` and `chunkDiscovery.lcp`.
 Each result uses that paint's time as the download deadline. A candidate starts

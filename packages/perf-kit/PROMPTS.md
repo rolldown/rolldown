@@ -68,7 +68,8 @@ Report:
 
 Worker startup commands are not included in perf-kit 0.0.1. Run `npm pack` in this
 package, and add the `.tgz` file to the dev dependencies of the app. Add `dist-attrib/` and
-`perf-kit.vite.config.ts` to `.gitignore`, so that the agent does not commit them.
+`perf-kit.vite.config.ts` to `.gitignore`, so that the agent does not commit them. The app
+must build with Rolldown 1.2.16 or later.
 
 Unlike the other two prompts, this prompt lists the commands. This is the form that was
 tested with coding agents. Keep `<command>`, `<module>` and `<class modules>` as they are,

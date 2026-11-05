@@ -224,7 +224,7 @@ impl WatchTask {
     let diagnostic_options = DiagnosticOptions { cwd: options.cwd.clone() };
     let diagnostics: Vec<Diagnostic> =
       warnings.iter().map(|warning| warning.to_diagnostic_with(&diagnostic_options)).collect();
-    let rendered = Diagnostic::render_batch(&diagnostics, true);
+    let rendered = Diagnostic::render_batch(&diagnostics, rolldown_error::stderr_supports_color());
 
     // Dispatch sequentially, awaiting each callback before the next, so a handler
     // that throws to abort the build stops at the first failure without invoking

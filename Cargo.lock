@@ -2864,6 +2864,7 @@ dependencies = [
  "rustc-hash",
  "simd-utf16-len",
  "sugar_path",
+ "supports-color",
 ]
 
 [[package]]

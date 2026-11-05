@@ -90,7 +90,8 @@ impl DynamicImportVarsVisit<'_> {
         return false;
       }
 
-      let first_quasi_len = source.quasis[0].value.raw.len();
+      // Oxc turns CRLF into LF in `raw`, so take the length from the span.
+      let first_quasi_len = source.quasis[0].span.size() as usize;
       if glob.as_bytes()[0] != b'.' && glob.as_bytes()[0] != b'/' {
         self.async_imports.push(AsyncImport {
           glob: glob.into_owned(),
@@ -109,8 +110,8 @@ impl DynamicImportVarsVisit<'_> {
   }
 
   /// Rewrites the `import(...)` at `span` into a glob import. `source_span` is the span of its
-  /// template literal, `first_quasi_len` is the raw byte length of its first quasi, and `prefix` is
-  /// the cooked or resolved static runtime path prefix.
+  /// template literal, `first_quasi_len` is the source byte length of its first quasi, and
+  /// `prefix` is the cooked or resolved static runtime path prefix.
   pub fn rewrite(
     &mut self,
     span: Span,

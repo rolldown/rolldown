@@ -29,21 +29,22 @@ impl LinkStage<'_> {
       return;
     }
 
-    // Known limitation: on a cycle hit we return `None` for the visiting
-    // edge and then memoize modules along the current DFS path even
-    // though a later branch of the same parent might still discover TLA
-    // through them. If a subsequent `require(...)` lookup lands on one
-    // of those prematurely memoized siblings we silently miss the error.
-    // A proper fix would delay memoization until the enclosing SCC
-    // resolves.
+    // On a cycle hit, this returns `None` for the edge back to the module that is still
+    // `Visiting`, and sets `hit_cycle`. The modules on the current DFS path can then memoize
+    // `None`, although the visiting module finds TLA later through another import.
+    // `propagate_tla_source_through_cycles` fixes these results.
     fn find_tla_source(
       module_idx: ModuleIdx,
       module_table: &ModuleTable,
       visited: &mut IndexVec<ModuleIdx, TlaVisitState>,
+      hit_cycle: &mut bool,
     ) -> Option<ModuleIdx> {
       match visited[module_idx] {
         TlaVisitState::Visited(result) => return result,
-        TlaVisitState::Visiting => return None,
+        TlaVisitState::Visiting => {
+          *hit_cycle = true;
+          return None;
+        }
         TlaVisitState::NotVisited => {}
       }
 
@@ -62,13 +63,51 @@ impl LinkStage<'_> {
         .iter()
         .filter(|rec| matches!(rec.kind, ImportKind::Import))
         .find_map(|rec| {
-          rec
-            .resolved_module
-            .and_then(|dep_idx| find_tla_source(module_table[dep_idx].idx(), module_table, visited))
+          rec.resolved_module.and_then(|dep_idx| {
+            find_tla_source(module_table[dep_idx].idx(), module_table, visited, hit_cycle)
+          })
         });
 
       visited[module_idx] = TlaVisitState::Visited(tla_source);
       tla_source
+    }
+
+    // A `Some` result of `find_tla_source` is always a real import path. Only a `None` result
+    // after a cycle hit can be wrong: the module reaches TLA through a module of the cycle. This
+    // gives each such module the source of an import that has one, until nothing changes. Each
+    // fixed module then has an import with the same source, so `build_import_chain` still finds
+    // a path.
+    fn propagate_tla_source_through_cycles(
+      module_table: &ModuleTable,
+      visited: &mut IndexVec<ModuleIdx, TlaVisitState>,
+    ) {
+      // For each module, its importers that have the result `None`.
+      let mut importers: IndexVec<ModuleIdx, Vec<ModuleIdx>> =
+        index_vec![Vec::new(); module_table.modules.len()];
+      let mut worklist = Vec::new();
+      for module in module_table.modules.iter().filter_map(|m| m.as_normal()) {
+        if !matches!(visited[module.idx], TlaVisitState::Visited(None)) {
+          continue;
+        }
+        for rec in module.import_records.iter().filter(|rec| matches!(rec.kind, ImportKind::Import))
+        {
+          let Some(dep_idx) = rec.resolved_module else { continue };
+          let dep_idx = module_table[dep_idx].idx();
+          importers[dep_idx].push(module.idx);
+          if matches!(visited[dep_idx], TlaVisitState::Visited(Some(_))) {
+            worklist.push(dep_idx);
+          }
+        }
+      }
+      while let Some(dep_idx) = worklist.pop() {
+        let TlaVisitState::Visited(Some(source)) = visited[dep_idx] else { continue };
+        for importer_idx in std::mem::take(&mut importers[dep_idx]) {
+          if matches!(visited[importer_idx], TlaVisitState::Visited(None)) {
+            visited[importer_idx] = TlaVisitState::Visited(Some(source));
+            worklist.push(importer_idx);
+          }
+        }
+      }
     }
 
     fn build_import_chain(
@@ -136,9 +175,19 @@ impl LinkStage<'_> {
     }
 
     let mut visited = index_vec![TlaVisitState::NotVisited; self.module_table.modules.len()];
+    let mut hit_cycle = false;
+    for module in self.module_table.modules.iter().filter_map(|m| m.as_normal()) {
+      find_tla_source(module.idx, &self.module_table, &mut visited, &mut hit_cycle);
+    }
+    if hit_cycle {
+      propagate_tla_source_through_cycles(&self.module_table, &mut visited);
+    }
 
+    // All normal modules have their final result now. A call below visits only a module that
+    // is not normal, which has no imports.
     self.module_table.modules.iter().filter_map(|m| m.as_normal()).for_each(|module| {
-      let tla_source = find_tla_source(module.idx, &self.module_table, &mut visited);
+      let tla_source =
+        find_tla_source(module.idx, &self.module_table, &mut visited, &mut hit_cycle);
       self.metas[module.idx].is_tla_or_contains_tla_dependency = tla_source.is_some();
 
       // Check for require() of TLA modules — this is forbidden.
@@ -148,7 +197,8 @@ impl LinkStage<'_> {
         }
         let Some(resolved_module_idx) = rec.resolved_module else { continue };
         let dep_idx = self.module_table[resolved_module_idx].idx();
-        let Some(tla_source_idx) = find_tla_source(dep_idx, &self.module_table, &mut visited)
+        let Some(tla_source_idx) =
+          find_tla_source(dep_idx, &self.module_table, &mut visited, &mut hit_cycle)
         else {
           continue;
         };

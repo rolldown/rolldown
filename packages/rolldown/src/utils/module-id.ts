@@ -32,9 +32,9 @@ export function stringifyModuleId(rawId: string, attributes?: Record<string, str
 /**
  * Splits a module id into the raw id and the import attributes it was built from.
  *
- * An id that only looks like it has attributes, e.g. `virtual?attributes=foo`, is returned as
- * the raw id with no attributes, because only a suffix that {@linkcode stringifyModuleId}
- * produces exactly is accepted.
+ * Only an id in the exact format that Rolldown uses is split. Any other id, e.g.
+ * `virtual?attributes=foo`, is returned as the raw id with no attributes. See
+ * [Module ids](https://rolldown.rs/in-depth/import-attributes#module-ids) for the format.
  *
  * @example
  * ```js

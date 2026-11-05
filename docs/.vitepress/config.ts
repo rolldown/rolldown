@@ -46,6 +46,8 @@ const sidebarForGuide: DefaultTheme.SidebarItem[] = [
       { text: 'Dead Code Elimination', link: '/in-depth/dead-code-elimination.md' },
       { text: 'Lazy Barrel Optimization', link: '/in-depth/lazy-barrel-optimization.md' },
       { text: 'Native MagicString', link: '/in-depth/native-magic-string.md' },
+      { text: 'Build Report', link: '/in-depth/build-report.md' },
+      { text: 'Perf Kit', link: '/in-depth/perf-kit.md' },
     ],
   },
   {

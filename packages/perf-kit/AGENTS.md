@@ -38,7 +38,7 @@ the network of a deployed environment instead, pin that network:
 `record` measured (`--cpu 1` = this machine's CPU). A change of either makes the pinned
 baseline incomparable: re-pin on the unchanged build before you judge a change.
 
-On rolldown devtools report builds (vite ≥ 8:
+On rolldown devtools report builds (rolldown ≥ 1.2.16; vite ≥ 8:
 `build.rolldownOptions.devtools = { mode: "report" }`) several static queries skip the
 import-chain archaeology entirely: `graph` ranks split candidates by **retained size**
 (the dominator subtree a deferral removes from the initial load, with `via` naming the
@@ -89,8 +89,9 @@ accept or revert — with three differences that decide whether your work is wor
   `node-scan` prints the resolution note, the millisecond delta is not evidence and the
   cold-at-ready byte count is.
 
-`graph`, `what-if`, `cut` and `graph-diff` work exactly as below on a server build —
+`graph`, `what-if` and `cut` work exactly as below on a server build —
 a top-level import and a render-blocking import are the same edge in the module graph.
+A server pin saves no module graph, so `graph-diff` needs `--report <dir> --against <file>`.
 Bun is not supported (JavaScriptCore, not V8) and edge runtimes can only be analyzed
 statically; do not report a measured number for either.
 
@@ -160,8 +161,8 @@ on the worker). The loop below is unchanged, with these differences:
   it, in the Worker environment only, and say what the first use now pays. When the profile
   leaves milliseconds in "(unmapped)", run `worker-attrib` on the `ROLLDOWN_PERF_KIT_ATTRIB=1`
   build: it names the module whose evaluation runs the library code, with the import chain.
-- **The report needs a rolldown with the report mode.** The npm release has none, so with it
-  no build writes `module-graph.json` and `graph`, `what-if`, `cut`, `why` and `graph-diff`
+- **The report needs a rolldown with the report mode.** A rolldown release before 1.2.16 has none, so
+  with it no build writes `module-graph.json` and `graph`, `what-if`, `cut`, `why` and `graph-diff`
   have nothing to read. `worker-config` names the app's rolldown when it lacks the mode;
   `rolldown-install --app <appDir>` copies a built package over the copy the app's vite
   resolves: the one next to perf-kit in a rolldown checkout, or `--from <packages/rolldown>`

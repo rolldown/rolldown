@@ -3,7 +3,7 @@
 With `devtools: { mode: 'report' }`, Rolldown writes a build report: a folder of small Markdown and JSON files about each build. The report shows how the build uses its time, what is in the output, and the changes since the previous build. You can give the folder to a coding agent, read it yourself, or use its numbers in scripts.
 
 ::: warning Experimental
-The `devtools` option is experimental. The report format can be different in later releases. The report needs Rolldown 1.2.16 or later.
+The `devtools` option is experimental. The report format can be different in later releases. The report needs Rolldown 1.3.0 or later.
 :::
 
 ## Why a report
@@ -83,7 +83,7 @@ await bundle.close(); // Rolldown writes the report here
 
 ## Read a report
 
-This example adds one plugin to `apps/10000`. The plugin handles only `.css` files, but it has no [hook filter](/apis/plugin-api/hook-filters), so Rolldown runs it for every module. The report text below comes from the code for Rolldown 1.3.0. Rolldown 1.2.16 writes less.
+This example adds one plugin to `apps/10000`. The plugin handles only `.css` files, but it has no [hook filter](/apis/plugin-api/hook-filters), so Rolldown runs it for every module.
 
 ```js [rolldown.config.js]
 export default defineConfig({
@@ -208,7 +208,7 @@ Start with `entry.md`. It summarizes the build and tells you which file to open 
 - A direct package is a package that a module under `cwd` and outside `node_modules` imports. All other packages are transitive. Rolldown uses the import graph for this, not the dependency fields of `package.json`.
 - Most lists keep the top 20 items. `module-graph.json` has every module, and `chunk-graph.json` has every chunk.
 - Plugin timings include `resolveId`, `load`, `transform` and `renderChunk`. Each timing is the sum of calls that run at the same time, so it can be much larger than the build time. The `Transform hotspots` table in `timing.md` does not include the TypeScript and JSX transformation in Rolldown core.
-- A no-op call is a hook call that did no work: `resolveId`, `load` or `renderChunk` returned nothing, or `transform` returned nothing or the same code. For a JavaScript plugin, each no-op call still crosses from Rust to JavaScript. A [hook filter](/apis/plugin-api/hook-filters) skips the call, and the report does not include it. Builtin plugins (`builtin:*`) run in Rust, so their no-op calls cost little. Before 1.3.0, the report shows only the No-op column of the hook table, and this column also includes the calls that the filter skips.
+- A no-op call is a hook call that did no work: `resolveId`, `load` or `renderChunk` returned nothing, or `transform` returned nothing or the same code. For a JavaScript plugin, each no-op call still crosses from Rust to JavaScript. A [hook filter](/apis/plugin-api/hook-filters) skips the call, and the report does not include it. Builtin plugins (`builtin:*`) run in Rust, so their no-op calls cost little.
 
 ### Retained size
 

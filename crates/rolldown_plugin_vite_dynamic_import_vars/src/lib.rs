@@ -102,7 +102,7 @@ impl Plugin for ViteDynamicImportVarsPlugin {
             visitor.rewrite(
               import.span,
               import.source_span,
-              &import.first_quasi,
+              import.first_quasi_len,
               &id[..index],
               &id,
             );

@@ -740,7 +740,11 @@ impl GenerateStage<'_> {
       );
     }
     if fold_runtime_chunk {
-      self.fold_runtime_chunk_after_order_lowering(chunk_graph, order_state);
+      self.fold_runtime_chunk_after_order_lowering(
+        chunk_graph,
+        order_state,
+        used_symbol_refs_builder,
+      );
     }
     chunk_graph.sort_chunk_modules(self.link_output, self.options);
     self.renumber_live_chunks(chunk_graph);
@@ -867,7 +871,14 @@ impl GenerateStage<'_> {
         chunk_graph.module_to_chunk[module_idx].expect("order-wrapped module should have a chunk");
       order_state.assign_order_wrapper_chunk(module_idx, chunk_idx);
     }
-    let carriers = order_state.order_cjs_carrier_keys().collect_vec();
+    // carrier registration feeds symbol deconfliction too. module indices reflect load
+    // completion, so hash-map iteration would assign suffixes in a different order per build.
+    let carriers = order_state
+      .order_cjs_carrier_keys()
+      .sorted_unstable_by_key(|key| {
+        (self.link_output.module_table[key.importer].exec_order(), key.record)
+      })
+      .collect_vec();
     for key in carriers {
       let importee =
         order_state.order_cjs_carrier(key).expect("order CJS carrier should exist").importee;
@@ -1488,6 +1499,7 @@ impl GenerateStage<'_> {
     &self,
     chunk_graph: &mut ChunkGraph,
     order_state: &OrderWrapState,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
   ) {
     if !matches!(self.options.format, OutputFormat::Esm) {
       return;
@@ -1497,6 +1509,7 @@ impl GenerateStage<'_> {
       chunk_graph,
       Some(&order_consumers),
       RuntimeMergeCascade::SingleConsumerOnly,
+      used_symbol_refs_builder,
     );
   }
 

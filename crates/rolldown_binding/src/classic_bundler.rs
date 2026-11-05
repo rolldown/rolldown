@@ -63,7 +63,10 @@ use rolldown::{Bundle, BundleFactory, BundleFactoryOptions, BundleHandle, Bundle
 use rolldown_common::BundleMode;
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::__inner::SharedPluginable;
-use std::sync::Arc;
+use rolldown_std_utils::{discard_panic_payload, panic_payload_message};
+use std::{panic::AssertUnwindSafe, sync::Arc};
+
+use futures::FutureExt;
 
 pub struct ClassicBundler {
   session_id: Arc<str>,
@@ -111,11 +114,12 @@ impl ClassicBundler {
 
   #[must_use = "Future must be awaited to do the actual cleanup work"]
   pub fn close(&mut self) -> impl Future<Output = anyhow::Result<()>> + Send + 'static {
-    let is_closed = self.closed;
-    let last_bundle_handle = self.last_bundle_handle.clone();
-    if !is_closed {
+    if !self.closed {
       self.closed = true;
     }
+    // Release the handle with the first close rather than retaining it until the N-API
+    // finalizer. A later close finds no handle, so `closeBundle` runs once.
+    let last_bundle_handle = self.last_bundle_handle.take();
     // When devtools is active, ask the writer thread to drain this session and
     // receive an ack. Consumers rely on "files are readable after
     // `bundle.close()` resolves" — see `internal-docs/devtools/implementation.md`.
@@ -128,8 +132,14 @@ impl ClassicBundler {
     // - Read `BindingBundler#close` in `crates/rolldown_binding/src/binding_bundler.rs` for more details.
     async move {
       if let Some(handle) = last_bundle_handle {
-        let plugin_driver = handle.plugin_driver();
-        plugin_driver.close_bundle(None).await?;
+        match AssertUnwindSafe(handle.plugin_driver().close_bundle(None)).catch_unwind().await {
+          Ok(result) => result?,
+          Err(payload) => {
+            let message = panic_payload_message(&*payload);
+            discard_panic_payload(payload);
+            return Err(anyhow::anyhow!("closeBundle hook panicked: {message}"));
+          }
+        }
       }
       if let Some(rx) = devtools_flush_rx {
         // Block on the writer-thread ack in a blocking task so we don't stall
@@ -168,12 +178,22 @@ impl ClassicBundler {
   }
 
   fn enable_debug_tracing_if_needed(&mut self, options: &BundlerOptions) -> BuildResult<()> {
+    check_devtools_mode(options)?;
     if self.debug_tracer.is_none() && self.configure_devtools_session_id(options)? {
       // Mirrors the `cwd` default in `prepare_build_context`; the wasm binding always supplies one because it has no process working directory.
       let cwd = options
         .cwd
         .clone()
         .unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir"));
+      // Report mode: one folder per build output. A bundler opens one report, so its first
+      // output picks the folder.
+      let report_dir = options
+        .devtools
+        .as_ref()
+        .is_some_and(|devtools| devtools.mode.as_deref() == Some("report"))
+        .then(|| {
+          rolldown_devtools::report_dir_for(&cwd, options.dir.as_deref(), options.file.as_deref())
+        });
       self.debug_tracer =
         Some(rolldown_devtools::DebugTracer::init(Arc::clone(&self.session_id), cwd));
       // Caveat: `Span` must be created after initialization of `DebugTracer`, we need it to inject data to the tracking system.
@@ -181,6 +201,13 @@ impl ClassicBundler {
         tracing::debug_span!("session", CONTEXT_session_id = self.session_id.as_ref());
       // Update the `session` with the actual session span
       self.session = rolldown_devtools::Session::new(Arc::clone(&self.session_id), session_span);
+
+      // Report mode: aggregate the event stream in-memory and emit an agent-readable report
+      // instead of the JSON-lines log. Registered before the build emits any events.
+      if let Some(report_dir) = report_dir {
+        let config = rolldown_devtools::MetricsConfig::new(report_dir);
+        rolldown_devtools::open_metrics_session(self.session_id.as_ref().to_string(), config);
+      }
     }
     Ok(())
   }
@@ -222,6 +249,26 @@ impl ClassicBundler {
   }
 }
 
+/// Any `devtools.mode` other than `"full"` or `"report"` would silently fall back to the full
+/// JSON-lines log, which can be several GB. The TS validator only warns, so Rust rejects it.
+fn check_devtools_mode(options: &BundlerOptions) -> BuildResult<()> {
+  let Some(mode) = options.devtools.as_ref().and_then(|devtools| devtools.mode.as_deref()) else {
+    return Ok(());
+  };
+  if matches!(mode, "full" | "report") {
+    return Ok(());
+  }
+  Err(
+    BuildDiagnostic::bundler_initialize_error(
+      format!(
+        "Invalid value for option \"devtools.mode\" - expected \"full\" or \"report\", got {mode:?}."
+      ),
+      None,
+    )
+    .into(),
+  )
+}
+
 fn invalid_session_id(reason: String) -> BuildDiagnostic {
   BuildDiagnostic::bundler_initialize_error(
     format!("Invalid value for option \"devtools.sessionId\" - {reason}."),
@@ -231,6 +278,15 @@ fn invalid_session_id(reason: String) -> BuildDiagnostic {
 
 #[cfg(test)]
 mod tests {
+  use std::{
+    borrow::Cow,
+    sync::atomic::{AtomicUsize, Ordering},
+  };
+
+  use rolldown_plugin::{
+    HookCloseBundleArgs, HookNoopReturn, HookUsage, Plugin, PluginContext, Pluginable,
+  };
+
   use super::*;
 
   #[test]
@@ -250,6 +306,7 @@ mod tests {
     let requested_options = BundlerOptions {
       devtools: Some(rolldown::DevtoolsOptions {
         session_id: Some("requested-session".to_string()),
+        ..Default::default()
       }),
       ..Default::default()
     };
@@ -259,7 +316,10 @@ mod tests {
 
   fn options_with_session_id(session_id: &str) -> BundlerOptions {
     BundlerOptions {
-      devtools: Some(rolldown::DevtoolsOptions { session_id: Some(session_id.to_string()) }),
+      devtools: Some(rolldown::DevtoolsOptions {
+        session_id: Some(session_id.to_string()),
+        ..Default::default()
+      }),
       ..Default::default()
     }
   }
@@ -282,6 +342,31 @@ mod tests {
     assert!(Arc::ptr_eq(&bundler.session_id, &generated_session_id));
   }
 
+  fn options_with_mode(mode: Option<&str>) -> BundlerOptions {
+    BundlerOptions {
+      devtools: Some(rolldown::DevtoolsOptions {
+        mode: mode.map(str::to_string),
+        ..Default::default()
+      }),
+      ..Default::default()
+    }
+  }
+
+  #[test]
+  fn devtools_mode_must_be_full_or_report() {
+    check_devtools_mode(&BundlerOptions::default()).unwrap();
+    for mode in [None, Some("full"), Some("report")] {
+      check_devtools_mode(&options_with_mode(mode)).unwrap();
+    }
+    // `"metrics"` was the old name of `"report"`.
+    for mode in ["metrics", "Report", "markdown", ""] {
+      let err = check_devtools_mode(&options_with_mode(Some(mode))).unwrap_err();
+      let message: String = err.iter().map(|e| e.to_diagnostic().to_string()).collect();
+      assert!(message.contains("\"devtools.mode\""), "{message}");
+      assert!(message.contains(&format!("got {mode:?}")), "{message}");
+    }
+  }
+
   #[test]
   #[expect(clippy::unicode_not_nfc)]
   fn devtools_session_id_cannot_use_the_fallback_id() {
@@ -301,5 +386,48 @@ mod tests {
         "{message}"
       );
     }
+  }
+
+  #[derive(Debug)]
+  struct CountingClosePlugin {
+    calls: Arc<AtomicUsize>,
+  }
+
+  impl Plugin for CountingClosePlugin {
+    fn name(&self) -> Cow<'static, str> {
+      "counting-close".into()
+    }
+
+    fn register_hook_usage(&self) -> HookUsage {
+      HookUsage::CloseBundle
+    }
+
+    async fn close_bundle(
+      &self,
+      _ctx: &PluginContext,
+      _args: Option<&HookCloseBundleArgs<'_>>,
+    ) -> HookNoopReturn {
+      self.calls.fetch_add(1, Ordering::SeqCst);
+      Ok(())
+    }
+  }
+
+  #[test]
+  fn second_close_finds_no_handle_and_skips_close_bundle() {
+    let calls = Arc::new(AtomicUsize::new(0));
+    let mut bundler = ClassicBundler::new();
+    let _bundle = bundler
+      .create_bundle(
+        BundlerOptions::default(),
+        vec![Pluginable::new_shared(CountingClosePlugin { calls: Arc::clone(&calls) })],
+      )
+      .unwrap_or_else(|_| panic!("create bundle"));
+
+    futures::executor::block_on(bundler.close()).expect("first close");
+    futures::executor::block_on(bundler.close()).expect("second close");
+
+    assert!(bundler.closed());
+    assert!(bundler.last_bundle_handle.is_none());
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
   }
 }

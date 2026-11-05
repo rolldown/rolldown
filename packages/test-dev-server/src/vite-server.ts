@@ -49,7 +49,13 @@ DevEngine.create = ((...args: Parameters<typeof DevEngine.create>) => {
   const [inputOptions, outputOptions, devOptions] = args;
   return originalDevEngineCreate(inputOptions, outputOptions, {
     ...devOptions,
-    watch: { ...getDevWatchOptionsForCi(), ...devOptions?.watch },
+    watch: {
+      ...devOptions?.watch,
+      watcher: {
+        ...getDevWatchOptionsForCi().watcher,
+        ...devOptions?.watch?.watcher,
+      },
+    },
   });
 }) as typeof DevEngine.create;
 
@@ -367,6 +373,9 @@ function toViteConfig(
         // builds `{ lazy: true, ...resolvedDevMode, implement }`, spreading the resolved
         // devMode AFTER the default, so an explicit `lazy: false` here wins.
         ...(build.experimental !== undefined ? { experimental: build.experimental } : {}),
+        // Forward the fixture's rolldown `output` (e.g. `codeSplitting`); bundled dev mode
+        // still overrides file names, `minify` and `sourcemap`.
+        ...(build.output !== undefined ? { output: build.output } : {}),
       },
     },
   };

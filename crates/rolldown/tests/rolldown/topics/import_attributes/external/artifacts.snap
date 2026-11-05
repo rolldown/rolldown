@@ -1,0 +1,16 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import json, { named } from "ext" with { type: "json" };
+import plain from "ext";
+import * as ns from "ext-ns" with { type: "css" };
+import "ext" with { side: "effect" };
+export * from "ext-ns" with { type: "css" };
+export { json, named, ns, plain };
+
+```

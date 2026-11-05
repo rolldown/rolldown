@@ -1,0 +1,9 @@
+{
+  "_comment": "`B.js` reaches `n` first through `p.js`, whose record to `x.js` lazy barrel skips, so that candidate is unknown. The other candidates in `a.js` and `a2.js` are known and differ, so `n` is ambiguous whatever `p.js` re-exports. It must be reported as AMBIGUOUS_EXTERNAL_NAMESPACES, like with lazy barrel off.",
+  "config": {
+    "experimental": {
+      "lazyBarrel": true
+    }
+  },
+  "expectError": true
+}

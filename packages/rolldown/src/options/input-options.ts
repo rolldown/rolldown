@@ -607,7 +607,8 @@ export interface InputOptions {
      * Enables automatic generation of a chunk import map asset during build.
      *
      * This map includes chunks with hashed filenames. Entry keys use their facade module ID. Common chunks
-     * use their name; later chunks with the same name use their smallest original module ID.
+     * use their name; later chunks with the same name use the smallest module key among their original members.
+     * Module keys distinguish cwd-relative filesystem paths from verbatim non-path IDs.
      * Modules copied into a file by `experimentalInlineCommonChunks` remain in `moduleIds` but do not
      * affect that file's key.
      * Keeping these keys independent of content hashes reduces cascading cache invalidation when
@@ -730,6 +731,22 @@ export interface InputOptions {
      * @default false
      */
     lazyBarrel?: boolean;
+    /**
+     * Make import attributes part of module identity, aligned with Rollup 5.
+     *
+     * A module imported with attributes, e.g. `import data from './data.json' with { type: 'json' }`,
+     * gets the id `<rawId>?attributes=<encoded attributes>`, so the same file imported with
+     * different attributes becomes different modules. The `type` attribute also selects a
+     * built-in module type: `json`, `text` or `bytes`.
+     *
+     * Without this option, plugin hooks still have the `rawId` and `attributes` fields, but
+     * `attributes` is always `{}` and the attributes a `resolveId` hook returns are ignored. An
+     * external module keeps the attributes written in the source in both modes.
+     *
+     * @see {@link https://github.com/rolldown/rolldown/discussions/11217 | RFC}
+     * @default false
+     */
+    importAttributes?: boolean;
   };
   /**
    * Configure how the code is transformed. This process happens after the `transform` hook.
@@ -775,7 +792,7 @@ export interface InputOptions {
   /**
    * Devtools integration options.
    *
-   * When enabled, Rolldown writes JSON-lines devtools output under
+   * In the default `'full'` mode, Rolldown writes JSON-lines devtools output under
    * `node_modules/.rolldown/{session_id}/`, resolved against {@linkcode cwd}.
    * Consumers can parse the output with `@rolldown/debug` after
    * `await bundle.close()` resolves.
@@ -785,10 +802,30 @@ export interface InputOptions {
    * bundler that runs at the same time its own `sessionId`, or their devtools output mixes.
    * The name `unknown-session` is reserved regardless of case.
    *
+   * In `'report'` mode, Rolldown aggregates the same internal event stream in-memory and
+   * writes a small, agent-readable report instead of the multi-GB `logs.json`: a canonical
+   * `metrics.json` (schema-versioned, with a build-over-build `delta`), `module-graph.json`
+   * (the full module graph with retained sizes), progressive markdown
+   * views (`entry.md` + on-demand detail files), one `history.jsonl` line per build, and an
+   * `AGENTS.md` describing the directory contract.
+   *
+   * The report goes to `node_modules/.rolldown/report/<output dir>`, resolved against
+   * {@linkcode cwd}. `<output dir>` is the output folder (`output.dir`, the folder of
+   * `output.file`, or `dist`) relative to `cwd`, so each build output keeps its own report and
+   * finds its previous one for the delta. Each `..` of an output folder outside `cwd` is written
+   * as `__`. A bundler opens one report, so its first output picks the folder.
+   *
    * @experimental
    */
   devtools?: {
     sessionId?: string;
+    /**
+     * `'full'` (default): write JSON-lines devtools logs.
+     * `'report'`: aggregate the same event stream in-memory and emit an agent-readable
+     * report (`metrics.json` + markdown views + `history.jsonl`) instead.
+     * Any other value fails the build.
+     */
+    mode?: 'full' | 'report';
   };
   /**
    * Controls how entry chunk exports are preserved.

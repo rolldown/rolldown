@@ -341,14 +341,9 @@ fn normalize_invalidate_js_side_cache_option(
 fn normalize_on_log_option(on_log: BindingOnLog) -> Option<rolldown::OnLog> {
   on_log.map(|ts_fn| {
     rolldown::OnLog::new(Arc::new(move |level, log| {
-      let ts_fn = Arc::clone(&ts_fn);
-      Box::pin(async move {
-        ts_fn
-          .invoke_async((level.to_string(), log.into()).into())
-          .await
-          .context("onLog option")
-          .map_err(anyhow::Error::from)
-      })
+      // Enqueue the JS callback at call time; the returned future only waits for its result.
+      let result = ts_fn.invoke_eager((level.to_string(), log.into()).into());
+      Box::pin(async move { result.await.context("onLog option").map_err(anyhow::Error::from) })
     }))
   })
 }
@@ -790,7 +785,10 @@ pub fn normalize_binding_options(
     make_absolute_externals_relative: input_options
       .make_absolute_externals_relative
       .map(Into::into),
-    devtools: input_options.devtools.map(|inner| rolldown::DevtoolsOptions { session_id: inner.session_id }),
+    devtools: input_options.devtools.map(|inner| rolldown::DevtoolsOptions {
+      session_id: inner.session_id,
+      mode: inner.mode,
+    }),
     invalidate_js_side_cache,
     log_level: Some(input_options.log_level.into()),
     on_log,

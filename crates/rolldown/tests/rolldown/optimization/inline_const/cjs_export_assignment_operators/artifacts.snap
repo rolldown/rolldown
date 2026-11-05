@@ -1,0 +1,100 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+// main.js
+var import_dep = (/* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.add += 1;
+	exports.subtract -= 1;
+	exports.multiply *= 2;
+	exports.divide /= 2;
+	exports.remainder %= 2;
+	exports.exponent **= 2;
+	exports.shiftLeft <<= 1;
+	exports.shiftRight >>= 1;
+	exports.unsignedShiftRight >>>= 1;
+	exports.bitAnd &= 1;
+	exports.bitOr |= 1;
+	exports.bitXor ^= 1;
+	exports.logicalAnd &&= true;
+	exports.logicalOr ||= 2;
+	exports.nullish ??= 3;
+	exports.constant = true;
+})))();
+assert.strictEqual(import_dep.add ? "truthy" : "falsy", "falsy");
+assert.strictEqual(import_dep.logicalAnd ? "truthy" : "falsy", "falsy");
+assert.strictEqual("truthy", "truthy");
+assert.strictEqual(import_dep.add, NaN);
+assert.strictEqual(import_dep.subtract, NaN);
+assert.strictEqual(import_dep.multiply, NaN);
+assert.strictEqual(import_dep.divide, NaN);
+assert.strictEqual(import_dep.remainder, NaN);
+assert.strictEqual(import_dep.exponent, NaN);
+assert.strictEqual(import_dep.shiftLeft, 0);
+assert.strictEqual(import_dep.shiftRight, 0);
+assert.strictEqual(import_dep.unsignedShiftRight, 0);
+assert.strictEqual(import_dep.bitAnd, 0);
+assert.strictEqual(import_dep.bitOr, 1);
+assert.strictEqual(import_dep.bitXor, 1);
+assert.strictEqual(import_dep.logicalAnd, void 0);
+assert.strictEqual(import_dep.logicalOr, 2);
+assert.strictEqual(import_dep.nullish, 3);
+assert.strictEqual(import_dep.constant, true);
+
+```
+
+# Variant: [inline_const: Config(InlineConstConfig { mode: Some(All), pass: 2 })]
+
+## Assets
+
+### main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+// main.js
+var import_dep = (/* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.add += 1;
+	exports.subtract -= 1;
+	exports.multiply *= 2;
+	exports.divide /= 2;
+	exports.remainder %= 2;
+	exports.exponent **= 2;
+	exports.shiftLeft <<= 1;
+	exports.shiftRight >>= 1;
+	exports.unsignedShiftRight >>>= 1;
+	exports.bitAnd &= 1;
+	exports.bitOr |= 1;
+	exports.bitXor ^= 1;
+	exports.logicalAnd &&= true;
+	exports.logicalOr ||= 2;
+	exports.nullish ??= 3;
+	exports.constant = true;
+})))();
+assert.strictEqual(import_dep.add ? "truthy" : "falsy", "falsy");
+assert.strictEqual(import_dep.logicalAnd ? "truthy" : "falsy", "falsy");
+assert.strictEqual("truthy", "truthy");
+assert.strictEqual(import_dep.add, NaN);
+assert.strictEqual(import_dep.subtract, NaN);
+assert.strictEqual(import_dep.multiply, NaN);
+assert.strictEqual(import_dep.divide, NaN);
+assert.strictEqual(import_dep.remainder, NaN);
+assert.strictEqual(import_dep.exponent, NaN);
+assert.strictEqual(import_dep.shiftLeft, 0);
+assert.strictEqual(import_dep.shiftRight, 0);
+assert.strictEqual(import_dep.unsignedShiftRight, 0);
+assert.strictEqual(import_dep.bitAnd, 0);
+assert.strictEqual(import_dep.bitOr, 1);
+assert.strictEqual(import_dep.bitXor, 1);
+assert.strictEqual(import_dep.logicalAnd, void 0);
+assert.strictEqual(import_dep.logicalOr, 2);
+assert.strictEqual(import_dep.nullish, 3);
+assert.strictEqual(true, true);
+
+```

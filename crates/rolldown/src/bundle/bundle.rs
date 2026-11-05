@@ -13,7 +13,7 @@ use super::super::{
 };
 use anyhow::Context;
 use arcstr::ArcStr;
-use rolldown_common::{GetLocalDbMut, Module, ScanMode, SharedFileEmitter, SymbolRefDb};
+use rolldown_common::{GetLocalDbMut, Module, Output, ScanMode, SharedFileEmitter, SymbolRefDb};
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
 use rolldown_fs::{FileSystem, OsFileSystem};
@@ -321,9 +321,8 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     self.merge_immutable_fields_for_cache(std::mem::take(&mut link_stage_output.symbol_db));
 
     // `link_stage_output` is dead from here on (its `symbol_db` was just taken
-    // for the cache merge); ship the remaining heavy fields (module_table,
-    // metas, stmt_infos, ...) to a rayon worker so their free() happens off
-    // the critical path.
+    // for the cache merge); free the remaining heavy fields (module_table, metas,
+    // stmt_infos, ...) off the critical path.
     crate::utils::defer_drop::spawn_drop(link_stage_output);
 
     if let Err(errors) = &bundle_output {
@@ -363,7 +362,31 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       }
     }
 
+    Self::trace_action_output_chunk_graph_ready(&output.assets);
     Ok(output)
+  }
+
+  fn trace_action_output_chunk_graph_ready(output: &[Output]) {
+    if trace_action_enabled!() {
+      // See internal-docs/devtools/implementation.md. Plugins can rename, delete,
+      // or change imports in generateBundle, so the output is the graph source.
+      let chunks = output
+        .iter()
+        .filter_map(|asset| match asset {
+          Output::Chunk(chunk) => Some(action::OutputChunk {
+            file_name: chunk.filename.to_string(),
+            name: chunk.name.to_string(),
+            bytes: chunk.code.len() as u64,
+            is_entry: chunk.is_entry || chunk.is_dynamic_entry,
+            facade_module_id: chunk.facade_module_id.as_ref().map(ToString::to_string),
+            imports: chunk.imports.iter().map(ToString::to_string).collect(),
+            dynamic_imports: chunk.dynamic_imports.iter().map(ToString::to_string).collect(),
+          }),
+          Output::Asset(_) => None,
+        })
+        .collect();
+      trace_action!(action::OutputChunkGraphReady { action: "OutputChunkGraphReady", chunks });
+    }
   }
 
   fn merge_immutable_fields_for_cache(&mut self, symbol_db: SymbolRefDb) {

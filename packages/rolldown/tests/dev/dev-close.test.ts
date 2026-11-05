@@ -18,8 +18,11 @@ function dev(
   return _dev(inputOptions, outputOptions, {
     ...devOptions,
     watch: {
-      ...getDevWatchOptionsForCi(),
       ...devOptions.watch,
+      watcher: {
+        ...getDevWatchOptionsForCi().watcher,
+        ...devOptions.watch?.watcher,
+      },
     },
   });
 }

@@ -25,6 +25,8 @@ bitflags! {
     const FilenameOutsideOutputDirectoryError = 1 << 17;
     const FileNotFoundError = 1 << 18;
     const ModuleLevelDirective = 1 << 45;
+    const InvalidExternalIdError = 1 << 52;
+    const ExternalModulesCannotBeTransformedToModulesError = 1 << 53;
     const AssignToImportError = 1 << 19;
     const CommonJsVariableInEsm = 1 << 20;
     const ImportIsUndefined = 1 << 21;
@@ -57,5 +59,7 @@ bitflags! {
     const SourcemapBroken = 1 << 49;
     const NamespaceConflict = 1 << 50;
     const ShimmedExport = 1 << 51;
+    const DeprecatedImportAssertion = 1 << 54;
+    const InvalidImportAttribute = 1 << 55;
   }
 }

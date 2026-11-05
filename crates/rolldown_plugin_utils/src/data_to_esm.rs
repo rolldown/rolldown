@@ -55,7 +55,18 @@ pub fn data_to_esm(data: &Value, named_exports: bool) -> String {
   let mut default_object_code = String::new();
   for (key, value) in data {
     let value = serialize_value(value).expect("Invalid JSON value");
-    if rolldown_utils::ecmascript::is_validate_assignee_identifier_name(key) {
+    if key == "JSON" {
+      // Keep the global JSON available to serialize_value's JSON.parse calls,
+      // including calls emitted before this property or in its initializer.
+      let mut suffix = 1;
+      let mut name = format!("JSON${suffix}");
+      while data.contains_key(&name) {
+        suffix += 1;
+        name = format!("JSON${suffix}");
+      }
+      writeln!(named_export_code, "const {name} = {value};\nexport {{ {name} as JSON }};").unwrap();
+      writeln!(default_object_code, "  JSON: {name},").unwrap();
+    } else if rolldown_utils::ecmascript::is_validate_assignee_identifier_name(key) {
       writeln!(named_export_code, "export const {key} = {value};").unwrap();
       if key == "__proto__" {
         writeln!(default_object_code, "  [\"__proto__\"]: __proto__,").unwrap();
@@ -123,6 +134,15 @@ mod test {
   }
 
   #[test]
+  fn to_esm_named_json_binding_avoids_collisions() {
+    let data = serde_json::json!({"JSON": null, "JSON$1": 1, "JSON$2": 2});
+    assert_eq!(
+      "const JSON$3 = null;\nexport { JSON$3 as JSON };\nexport const JSON$1 = 1;\nexport const JSON$2 = 2;\nexport default {\n  JSON: JSON$3,\n  JSON$1,\n  JSON$2\n};",
+      data_to_esm(&data, true)
+    );
+  }
+
+  #[test]
   fn to_esm_proto_data_properties() {
     for json in [
       r#"{"__proto__":null}"#,
@@ -155,7 +175,7 @@ mod test {
   fn to_esm_proto_does_not_reference_shadowed_json() {
     let data = serde_json::json!({"JSON": null, "nested": {"__proto__": 42}});
     let code = data_to_esm(&data, true);
-    assert!(code.contains("export const JSON = null;"));
+    assert!(code.contains("const JSON$1 = null;\nexport { JSON$1 as JSON };"));
     assert!(code.contains("export const nested = {[\"__proto__\"]:42};"));
     assert!(!code.contains("JSON.parse"));
   }

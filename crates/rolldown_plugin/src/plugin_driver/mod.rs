@@ -18,18 +18,31 @@ use rolldown_common::{
   ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, PluginIdx, SharedFileEmitter,
   SharedModuleInfoDashMap, WatchPath,
 };
+use rolldown_devtools::trace_action_enabled;
 use rolldown_utils::dashmap::FxDashSet;
 use tokio::sync::broadcast;
 
 use crate::{
   __inner::SharedPluginable,
-  PluginContext,
+  HookFilterArgs, PluginContext, Pluginable,
   plugin_driver::hook_orders::PluginHookOrders,
   type_aliases::{IndexPluginContext, IndexPluginable},
   types::build_timings::BuildTimings,
 };
 
 pub type SharedPluginDriver = Arc<PluginDriver>;
+
+/// In devtools mode, the driver skips a call that the plugin's own hook filter rejects before it
+/// logs the call, so the hook log holds only calls that ran. The plugin returns `None` for that
+/// call anyway. See internal-docs/devtools/implementation.md.
+#[inline]
+fn skipped_by_hook_filter(
+  plugin: &Pluginable,
+  ctx: &PluginContext,
+  args: HookFilterArgs<'_>,
+) -> bool {
+  trace_action_enabled!() && !plugin.call_hook_filter_matches(ctx, args)
+}
 
 pub struct PluginDriver {
   plugins: IndexPluginable,
@@ -73,6 +86,14 @@ impl PluginDriver {
 
   pub fn mark_context_load_modules_loaded(&self, module_id: ModuleId) {
     self.context_load_completion_manager.mark_completion(module_id);
+  }
+
+  /// This function ends the `this.load` wait for a module that does not send a load signal.
+  /// An example is an id that is already an external module. You can call this function more
+  /// than one time for the same module. Call `mark_context_load_modules_loaded` only one time
+  /// for a module.
+  pub fn ensure_context_load_module_completion(&self, module_id: ModuleId) {
+    self.context_load_completion_manager.ensure_completion(module_id);
   }
 
   pub fn invalidate_context_load_module(&self, module_id: &ModuleId) {
@@ -175,6 +196,24 @@ impl ContextLoadCompletionManager {
 
   pub fn invalidate(&self, module_id: &ModuleId) {
     self.notifiers.remove(module_id);
+  }
+
+  /// This function is the same as `mark_completion`, but it does nothing if the module is
+  /// already completed.
+  pub fn ensure_completion(&self, module_id: ModuleId) {
+    match self.notifiers.entry(module_id) {
+      dashmap::Entry::Vacant(guard) => {
+        guard.insert(ContextLoadCompletionState::Completed);
+      }
+      dashmap::Entry::Occupied(mut guard) => {
+        if let ContextLoadCompletionState::Pending(sender) = guard.get_mut() {
+          // The send fails only when the hook that waits is gone. Then nothing waits for the
+          // signal, so ignore the error.
+          let _ = sender.send(());
+          *guard.get_mut() = ContextLoadCompletionState::Completed;
+        }
+      }
+    }
   }
 
   pub fn clear(&self) {

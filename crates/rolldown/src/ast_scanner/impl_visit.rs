@@ -12,14 +12,15 @@ use oxc::{
 };
 use oxc_str::{CompactStr, JSStr};
 use rolldown_common::{
-  ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ImportKind, ImportRecordMeta, LocalExport,
-  MemberExprObjectReferencedType, MemberExprRef, RUNTIME_MODULE_KEY, RolldownFileUrlReference,
-  StmtInfoIdx, StmtInfoMeta, SymbolRefFlags, dynamic_import_usage::DynamicImportExportsUsage,
+  ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ImportAttributes, ImportKind,
+  ImportRecordMeta, LocalExport, MemberExprObjectReferencedType, MemberExprRef, RUNTIME_MODULE_KEY,
+  RolldownFileUrlReference, StmtInfoIdx, StmtInfoMeta, SymbolRefFlags,
+  dynamic_import_usage::DynamicImportExportsUsage,
 };
 #[cfg(debug_assertions)]
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{ExpressionExt, is_top_level};
-use rolldown_error::{BuildDiagnostic, EventKindSwitcher};
+use rolldown_error::{BuildDiagnostic, EventKindSwitcher, InvalidImportAttributeKind};
 use rolldown_std_utils::OptionExt;
 use rolldown_utils::ecmascript::to_usv_str;
 
@@ -260,11 +261,19 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
         },
         Some(expr.node_id()),
       );
+      if let Some(options) = &expr.options {
+        self.result.import_records[import_rec_idx].attributes =
+          self.import_attributes_from_import_options(options);
+      }
       self.init_dynamic_import_binding_usage_info(import_rec_idx);
       self.result.imports.insert(expr.node_id(), import_rec_idx);
     } else {
       // No import record - either @vite-ignore or non-static dynamic import
       self.current_stmt_info.meta.insert(StmtInfoMeta::NonStaticDynamicImport);
+      // Its options still reach the output, where a legacy `assert` key becomes `with`.
+      if let Some(span) = expr.options.as_ref().and_then(assert_key_span) {
+        self.warn_deprecated_import_assertion(span);
+      }
     }
     walk_js::walk_import_expression(self, expr);
   }
@@ -280,7 +289,7 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
             self.cjs_module_ident.get_or_insert(Span::new(id.span.start, id.span.start + 6));
             // `module.exports = <value>` replaces the entire exports object,
             // so all prior `exports.xxx` constants are stale.
-            self.has_module_exports_reassignment = true;
+            self.has_cjs_exports_reassignment = true;
           }
           if id.name == "exports" && self.is_global_identifier_reference(id) {
             self.cjs_exports_ident.get_or_insert(Span::new(id.span.start, id.span.start + 7));
@@ -296,8 +305,10 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
 
               self.declare_link_only_symbol_ref(exported_symbol.symbol);
 
-              // An assignment that may not run does not give `exports.test` its value.
-              if self.is_unconditional_module_level_expr()
+              // Only an unconditional `=` assigns the RHS value to `exports.test`.
+              // Compound and logical assignments also depend on its previous value.
+              if node.operator == ast::AssignmentOperator::Assign
+                && self.is_unconditional_module_level_expr()
                 && let Some(value) = self.extract_constant_value_from_expr(Some(&node.right))
               {
                 self.add_constant_symbol(exported_symbol.symbol, ConstExportMeta::new(value, true));
@@ -565,7 +576,17 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           }
           "exports" => {
             self.result.ast_usage.insert(EcmaModuleAstUsage::ExportsRef);
-            // exports = {} will not change the module.exports object, so we just ignore it;
+            // A write to the binding can detach it from `module.exports`, including
+            // destructuring and loop targets. Property writes only read the binding.
+            if self
+              .result
+              .symbol_ref_db
+              .scoping()
+              .get_reference(ident_ref.reference_id())
+              .is_write()
+            {
+              self.has_cjs_exports_reassignment = true;
+            }
             let v =
               self.commonjs_export_analyzer(ident_ref, CjsGlobalAssignmentType::ExportsAssignment);
             self.update_ast_usage_for_commonjs_export(v.as_ref());
@@ -875,4 +896,92 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   fn visit_jsx_closing_element_for_jsx_preserve(&mut self, elem: &JSXClosingElement<'ast>) {
     self.mark_jsx_member_expression_root(&elem.name);
   }
+
+  /// `{ type: 'json' }` in `import('./data.json', { with: { type: 'json' } })`. Like Rollup, only
+  /// statically known string attributes count. The legacy `assert` key is read like `with` and
+  /// warns. Ignored options warn only with `experimental.importAttributes`.
+  fn import_attributes_from_import_options(&mut self, options: &Expression) -> ImportAttributes {
+    let Expression::ObjectExpression(options) = options else {
+      self.warn_invalid_import_attribute(
+        InvalidImportAttributeKind::DynamicImportOptions,
+        options.span(),
+      );
+      return ImportAttributes::default();
+    };
+    let Some((keyword, with)) = options.properties.iter().find_map(|property| {
+      let ast::ObjectPropertyKind::ObjectProperty(property) = property else { return None };
+      let name = property.key.static_name().filter(|_| !property.computed)?;
+      (name == "with" || name == "assert").then_some((name, property))
+    }) else {
+      return ImportAttributes::default();
+    };
+    if keyword == "assert" {
+      self.warn_deprecated_import_assertion(with.key.span());
+    }
+    let Expression::ObjectExpression(with) = &with.value else {
+      self.warn_invalid_import_attribute(
+        InvalidImportAttributeKind::DynamicImportOptions,
+        with.value.span(),
+      );
+      return ImportAttributes::default();
+    };
+    // An object literal may repeat a key, and the later one wins, as in JS.
+    ImportAttributes::from_entries(with.properties.iter().filter_map(|property| {
+      let entry = match property {
+        ast::ObjectPropertyKind::ObjectProperty(property) => match &property.value {
+          // Lone surrogates become U+FFFD, like in a static `with` clause.
+          Expression::StringLiteral(value) => property
+            .key
+            .static_name()
+            .filter(|_| !property.computed)
+            .map(|key| (CompactStr::from(to_usv_str(key.as_js_str())), to_usv_str(value.value))),
+          _ => None,
+        },
+        ast::ObjectPropertyKind::SpreadProperty(_) => None,
+      };
+      if entry.is_none() {
+        self.warn_invalid_import_attribute(
+          InvalidImportAttributeKind::DynamicImportAttribute,
+          property.span(),
+        );
+      }
+      entry
+    }))
+  }
+
+  fn warn_deprecated_import_assertion(&mut self, span: Span) {
+    let ctx = &self.immutable_ctx;
+    if ctx.options.checks.contains(EventKindSwitcher::DeprecatedImportAssertion) {
+      self.result.warnings.push(
+        BuildDiagnostic::deprecated_import_assertion(ctx.id.to_string(), ctx.source.clone(), span)
+          .with_severity_warning(),
+      );
+    }
+  }
+
+  fn warn_invalid_import_attribute(&mut self, kind: InvalidImportAttributeKind, span: Span) {
+    let ctx = &self.immutable_ctx;
+    if ctx.options.experimental.is_import_attributes_enabled()
+      && ctx.options.checks.contains(EventKindSwitcher::InvalidImportAttribute)
+    {
+      self.result.warnings.push(
+        BuildDiagnostic::invalid_import_attribute(
+          ctx.id.to_string(),
+          ctx.source.clone(),
+          span,
+          kind,
+        )
+        .with_severity_warning(),
+      );
+    }
+  }
+}
+
+/// The span of a legacy `assert` key in the options of `import()`.
+fn assert_key_span(options: &Expression) -> Option<Span> {
+  let Expression::ObjectExpression(options) = options else { return None };
+  options.properties.iter().find_map(|property| {
+    let ast::ObjectPropertyKind::ObjectProperty(property) = property else { return None };
+    (!property.computed && property.key.static_name()? == "assert").then(|| property.key.span())
+  })
 }

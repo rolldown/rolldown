@@ -31,6 +31,7 @@ OPTIONS
   --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.
   --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
   --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
+  --checks.deprecatedImportAssertion Whether to emit warnings when an import uses the legacy \`assert\` keyword instead of \`with\`.
   --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
   --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.
@@ -38,6 +39,7 @@ OPTIONS
   --checks.importIsUndefined  Whether to emit warnings when an imported variable is not exported.
   --checks.ineffectiveDynamicImport Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
   --checks.invalidAnnotation  Whether to emit warnings when a \`#__PURE__\` / \`@__PURE__\` annotation has no effect due to its position.
+  --checks.invalidImportAttribute Whether to emit warnings when the options of a dynamic import are not statically analyzable while \`experimental.importAttributes\` is on.
   --checks.largeBarrelModules Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000).
   --checks.missingGlobalName  Whether to emit warnings when the \`output.globals\` option is missing when needed.
   --checks.missingNameOptionForIifeExport Whether to emit warnings when the \`output.name\` option is missing when needed.
@@ -186,6 +188,7 @@ OPTIONS
   --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.
   --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
   --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
+  --checks.deprecatedImportAssertion Whether to emit warnings when an import uses the legacy \`assert\` keyword instead of \`with\`.
   --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
   --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.
@@ -193,6 +196,7 @@ OPTIONS
   --checks.importIsUndefined  Whether to emit warnings when an imported variable is not exported.
   --checks.ineffectiveDynamicImport Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
   --checks.invalidAnnotation  Whether to emit warnings when a \`#__PURE__\` / \`@__PURE__\` annotation has no effect due to its position.
+  --checks.invalidImportAttribute Whether to emit warnings when the options of a dynamic import are not statically analyzable while \`experimental.importAttributes\` is on.
   --checks.largeBarrelModules Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000).
   --checks.missingGlobalName  Whether to emit warnings when the \`output.globals\` option is missing when needed.
   --checks.missingNameOptionForIifeExport Whether to emit warnings when the \`output.name\` option is missing when needed.
@@ -341,6 +345,7 @@ OPTIONS
   --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.
   --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
   --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
+  --checks.deprecatedImportAssertion Whether to emit warnings when an import uses the legacy \`assert\` keyword instead of \`with\`.
   --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
   --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.
@@ -348,6 +353,7 @@ OPTIONS
   --checks.importIsUndefined  Whether to emit warnings when an imported variable is not exported.
   --checks.ineffectiveDynamicImport Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
   --checks.invalidAnnotation  Whether to emit warnings when a \`#__PURE__\` / \`@__PURE__\` annotation has no effect due to its position.
+  --checks.invalidImportAttribute Whether to emit warnings when the options of a dynamic import are not statically analyzable while \`experimental.importAttributes\` is on.
   --checks.largeBarrelModules Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000).
   --checks.missingGlobalName  Whether to emit warnings when the \`output.globals\` option is missing when needed.
   --checks.missingNameOptionForIifeExport Whether to emit warnings when the \`output.name\` option is missing when needed.
@@ -496,6 +502,7 @@ OPTIONS
   --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.
   --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
   --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
+  --checks.deprecatedImportAssertion Whether to emit warnings when an import uses the legacy \`assert\` keyword instead of \`with\`.
   --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
   --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.
@@ -503,6 +510,7 @@ OPTIONS
   --checks.importIsUndefined  Whether to emit warnings when an imported variable is not exported.
   --checks.ineffectiveDynamicImport Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
   --checks.invalidAnnotation  Whether to emit warnings when a \`#__PURE__\` / \`@__PURE__\` annotation has no effect due to its position.
+  --checks.invalidImportAttribute Whether to emit warnings when the options of a dynamic import are not statically analyzable while \`experimental.importAttributes\` is on.
   --checks.largeBarrelModules Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000).
   --checks.missingGlobalName  Whether to emit warnings when the \`output.globals\` option is missing when needed.
   --checks.missingNameOptionForIifeExport Whether to emit warnings when the \`output.name\` option is missing when needed.
@@ -634,21 +642,6 @@ exports[`cli options for bundling > cli default options 1`] = `
 output cli default options {}
 <DIR>/index.js  chunk │ size: 0.11 kB
 
-"
-`;
-
-exports[`cli options for bundling > should handle \`--input\` and positional args as entries 1`] = `
-"
-|→ 1.js:
-
-// 1.ts
-console.log("1");
-
-
-|→ 2.js:
-
-// 2.js
-console.log("2");
 "
 `;
 

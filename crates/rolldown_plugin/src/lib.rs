@@ -39,6 +39,7 @@ pub use crate::{
   types::hook_build_end_args::HookBuildEndArgs,
   types::hook_build_start_args::HookBuildStartArgs,
   types::hook_close_bundle_args::HookCloseBundleArgs,
+  types::hook_filter_args::HookFilterArgs,
   types::hook_generate_bundle_args::HookGenerateBundleArgs,
   types::hook_hot_update_args::HookHotUpdateArgs,
   types::hook_load_args::HookLoadArgs,

@@ -5723,7 +5723,7 @@ the loop:
      enable it, it is one config line)
   3. read the app source; find why the landing page pays for each finding. On rolldown
      devtools report builds, \`graph\` + \`what-if <module>\` answer this statically: the
-     exact import chain (via/idom) and the bytes a deferral frees; \`cut <module>\` gives the
+     module every import path goes through (via/idom) and the bytes a deferral frees; \`cut <module>\` gives the
      fewest import edits to detach a multi-path module - no chain-tracing by hand
   4. change the app (never remove features); one change at a time
   5. rebuild; run the app's functional check; scan (--quick to probe, full scan to decide)

@@ -170,6 +170,30 @@ function entryIndices(graph) {
 }
 
 /**
+ * Returns a lookup from a module index to the shortest chain of static imports that reaches
+ * it: entry first, last importer last, empty for an entry or a module outside the initial
+ * load. A walk up `idom` does not give this, because a module's dominator need not import it.
+ */
+export function importChainResolver(graph) {
+  const parent = new Int32Array(graph.modules.length).fill(-1);
+  const queue = [...entryIndices(graph)];
+  const seen = new Set(queue);
+  for (const v of queue) {
+    for (const [to, isDynamic] of graph.modules[v].imports ?? []) {
+      if (isDynamic || seen.has(to)) continue;
+      seen.add(to);
+      parent[to] = v;
+      queue.push(to);
+    }
+  }
+  return (index) => {
+    const chain = [];
+    for (let up = parent[index]; up !== -1; up = parent[up]) chain.push(up);
+    return chain.reverse();
+  };
+}
+
+/**
  * The eager set: module indices reachable from the roots over static edges, with the
  * `overrides` edges skipped. `overrides` is an array of `{ from, to, kind }` (both
  * 'defer' and 'remove' stop the edge pinning `to` eager). `extraRoots` seeds extra

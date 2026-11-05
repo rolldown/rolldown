@@ -80,27 +80,11 @@ import original from './logo.png';
 
 ### External modules
 
-In ESM output, imports of [external modules](/in-depth/external-modules) keep their attributes, including dynamic `import()`. This works with or without `experimental.importAttributes`.
+In ESM output, imports of [external modules](/in-depth/external-modules) keep their attributes, including dynamic `import()`. This works with or without `experimental.importAttributes`. Without the option, an external imported with attributes still has them in its [module id](#module-ids), for example in `this.getModuleIds()`.
 
-- The `with` clause keeps the attributes written in the source. With the option on, a `resolveId` hook can change them.
-- Imports of the same path with different attributes become separate external modules, each with its own import statement.
+With the option on, a `resolveId` hook can change the attributes. If the [`external`](/reference/InputOptions.external) option marks an import as external before resolution, `resolveId` hooks do not run, so the import keeps the attributes written in the source.
 
-```js
-// input
-import a from 'ext' with { type: 'json' };
-import b from 'ext';
-
-// output
-import a from 'ext' with { type: 'json' };
-import b from 'ext';
-```
-
-In `cjs`, `iife` and `umd` output:
-
-- A static import of an external becomes `require()` or a global. Neither can carry attributes, so Rolldown drops them without a warning.
-- A dynamic `import()` with options stays an `import()` and keeps its options. Rolldown does not turn it into `require()`, because that would drop the attributes.
-
-If the [`external`](/reference/InputOptions.external) option marks an import as external before resolution, `resolveId` hooks do not run. The import keeps the attributes written in the source.
+For `cjs`, `iife` and `umd` output, see [Non ESM Output Formats](/in-depth/non-esm-output-formats#import-attributes).
 
 ### Built-in `type` attributes
 
@@ -278,12 +262,8 @@ moduleParsed(info) {
 },
 ```
 
-::: info Notes
-
-- Use the helper functions instead of handling ids by hand.
-- `parseModuleId` only recognizes the exact [composite id format](#module-ids). Any other id is returned as `rawId` with no attributes.
-- [`output.paths`](/reference/OutputOptions.paths), [`output.globals`](/reference/OutputOptions.globals) and [`treeshake.moduleSideEffects`](/reference/InputOptions.treeshake) receive `rawId`, not the composite id.
-
+::: info Note
+[`output.paths`](/reference/OutputOptions.paths), [`output.globals`](/reference/OutputOptions.globals) and [`treeshake.moduleSideEffects`](/reference/InputOptions.treeshake) receive `rawId`, not the composite id.
 :::
 
 ## Migrating plugins
@@ -402,7 +382,7 @@ resolveId(source, importer, options) {
 },
 ```
 
-`this.resolve` returns the attributes in the `attributes` field. `this.load` only reads attributes from `id`. So to load the module with its attributes, pass `{ rawId, attributes }` as `id`. This also works when the option is off:
+`this.resolve` returns the attributes in the `attributes` field. `this.load` only reads attributes from `id`. So to load the module with its attributes, pass `{ rawId, attributes }` as `id`:
 
 ```js
 const resolved = await this.resolve('./data.js', importer, { attributes: { type: 'foo' } });
@@ -413,6 +393,8 @@ const info = await this.load({
 });
 // info.id: '/src/data.js?attributes=%7B%22type%22%3A%22foo%22%7D'
 ```
+
+Without the option, `resolved.attributes` is `{}` and `info.id` is `/src/data.js`. The same code works in both cases.
 
 ### Check magic queries
 
@@ -425,25 +407,12 @@ id.endsWith('?raw'); // false
 /[?&]raw\b/.test(id); // true
 ```
 
-## Changes from earlier versions
-
-These changes apply to every build, with or without `experimental.importAttributes`:
-
-- Each set of attributes on an external is its own module with its own `with` clause.
-- The legacy `assert` keyword is treated as `with`, with a warning. See [Supported syntax](#supported-syntax).
-- A rendered `with` clause is normalized. Keys are sorted, duplicate keys are merged, and keys that are valid identifiers are not quoted.
-
-Earlier versions kept the `with` clause of an external import as written, but the attributes were not part of the module identity. Two imports of one external with different attributes became one module, so only one clause survived. For example, `import 'ext'; import 'ext' with { type: 'json' }` rendered only the second import.
-
-If you import each external with a single set of attributes, the output does not change. But plugins will see that an external imported with attributes now has a [composite id](#module-ids), for example in `this.getModuleIds()`.
-
 ## Compatibility with Rollup 5
 
-Rolldown follows the import attributes design of [Rollup 5](https://github.com/rollup/rollup/pull/6266). Module ids have the same format, so a module gets the same id in both bundlers. With the option on, the new hook fields, `this.resolve` and `this.load` behave the same, and `INVALID_IMPORT_ATTRIBUTE` is reported in the same cases.
+Rolldown follows the import attributes design of [Rollup 5](https://github.com/rollup/rollup/pull/6266). This section assumes `experimental.importAttributes` is on. Module ids have the same format, so a module gets the same id in both bundlers. The new hook fields, `this.resolve` and `this.load` behave the same, and `INVALID_IMPORT_ATTRIBUTE` is reported in the same cases.
 
 Differences:
 
-- Rolldown uses composite ids for bundled modules and passes attributes to plugins only with `experimental.importAttributes`. Rollup 5 always does both.
 - Rolldown gives `type: 'json'`, `type: 'text'` and `type: 'bytes'` a built-in module type. Rollup 5 gives no attribute a built-in meaning.
 - Rolldown always renders the attributes of external imports with `with`. Rollup 5 can drop them with `output.externalImportAttributes`, or use `assert` with the deprecated `output.importAttributesKey`.
 - Rolldown sorts the keys of a rendered `with` clause. Rollup 5 keeps the order written in the source.
@@ -456,6 +425,7 @@ Not supported yet:
 - `rawId` and `attributes` in `ModuleInfo` and `RenderedModule`
 - `facadeModuleRawId` and `facadeModuleAttributes` in chunks
 - The fourth argument of the `external` function, and `{ attributes }` for the `output.globals` and `output.paths` functions
+- The `AMBIGUOUS_GLOBAL_NAME` warning, when the object form of `output.globals` gives several attribute variants of one external the same global name
 - `this.getModuleInfo()` with a `{ rawId, attributes }` object, and `this.emitFile()` chunks with attributes
 - `moduleRawId` and `moduleAttributes` in the `resolveFileUrl` hook
 

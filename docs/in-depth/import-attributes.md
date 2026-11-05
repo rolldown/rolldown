@@ -42,7 +42,7 @@ Rolldown reads attributes from static imports, re-exports and dynamic imports wi
 
 Rolldown treats the removed `assert` keyword as if it's `with` for compatibility, but this support will be removed in the future.
 
-Rolldown reads attributes at build time, so the `import()` options must be written directly in the call. If they come from a variable, as in `import('./data.json', options)`, the import has no attributes.
+Rolldown reads attributes at build time, so the `import()` options must be written directly in the call. If they come from a variable, as in `import('./data.json', options)`, the attributes are not extracted.
 
 ## How it works
 

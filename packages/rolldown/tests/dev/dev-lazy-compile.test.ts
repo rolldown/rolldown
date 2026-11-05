@@ -7,6 +7,7 @@ import type { InputOptions, OutputOptions, Plugin } from 'rolldown';
 import type { DevEngine, DevOptions } from 'rolldown/experimental';
 import { dev as _dev } from 'rolldown/experimental';
 import type * as DevRuntimeModule from 'rolldown/experimental/runtime';
+import { isWasiTest } from 'rolldown-tests/utils';
 import { SourceMapConsumer, SourceMapGenerator } from 'source-map';
 import { expect, test } from 'vitest';
 
@@ -84,8 +85,8 @@ test(
     await engine.run();
 
     // An arbitrary id that was never part of the build graph must be rejected.
-    // The thrown message is prefixed by the napi binding with
-    // "Failed to compile lazy entry: ..." so match on the inner substring.
+    // The rejection aggregates the diagnostics, so match on the message rather
+    // than on the whole string.
     await expect(
       engine.compileEntry('/does/not/exist.js?rolldown-lazy=1', 'some-client'),
     ).rejects.toThrow('Lazy entry module not found in cache');
@@ -1063,3 +1064,163 @@ test('a lazily imported CommonJS module keeps its ESM view after an HMR update',
   expect(second.default).toEqual({ version: 'v2' });
   expect(second.version).toBe('v2');
 });
+
+// A lazy compile is the first time a lazy module runs the plugin pipeline, so a plugin
+// throwing is the ordinary failure here rather than an exotic one. The engine used to
+// answer with a napi error built from `format!("{e:#?}")`, which flattened whatever was
+// thrown - message, custom fields, stack - into one string, leaving the caller unable to
+// tell which plugin or module was at fault.
+test(
+  'a plugin error during lazy compile reaches the caller intact',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-plugin-error-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'main.js'), `import('./lazy.js');\n`);
+    fs.writeFileSync(path.join(dir, 'lazy.js'), `export const lazy = 'lazy';\n`);
+
+    const plugin = {
+      name: 'throws-on-lazy',
+      transform(_code: string, id: string) {
+        if (id.endsWith('lazy.js')) {
+          throw Object.assign(new Error('boom from a user plugin'), { code: 'PLUGIN_BOOM' });
+        }
+      },
+    };
+
+    const engine = await dev(
+      {
+        input: path.join(dir, 'main.js'),
+        plugins: [plugin],
+        experimental: { devMode: { lazy: true } },
+      },
+      { dir: path.join(dir, 'dist') },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    // The initial build stubs `lazy.js` with a proxy, so the plugin has not run on it yet.
+    await engine.run();
+
+    const rejection = await engine
+      .compileEntry(`${path.join(dir, 'lazy.js')}?rolldown-lazy=1`, 'c1')
+      .then(
+        () => null,
+        (error: unknown) => error,
+      );
+
+    expect(rejection).toBeInstanceOf(Error);
+    const [cause] = (rejection as { errors?: unknown[] }).errors ?? [];
+    expect(cause).toMatchObject({ message: 'boom from a user plugin' });
+    // The wasm binding rebuilds the error from its message alone (see `to_binding_error`).
+    if (!isWasiTest) {
+      // Which plugin, which hook, which module - and the throw site itself.
+      expect(cause).toMatchObject({
+        plugin: 'throws-on-lazy',
+        hook: 'transform',
+        id: path.join(dir, 'lazy.js'),
+      });
+      expect((cause as Error).stack).toContain('boom from a user plugin');
+    }
+  },
+);
+
+// Any resolution `ctx.resolve` marks external must stay a real dynamic import. Wrapping it
+// appends `?rolldown-lazy=1` and routes the import through `requestLazy`, which cannot run an
+// id the dev runtime has no factory for (#11273). Config `external` on the raw specifier is not
+// listed: it applies before any plugin runs, so the lazy plugin never sees that import.
+test.for([
+  {
+    name: 'a plugin `resolveId` that returns `external: true`',
+    specifier: './dep.mjs',
+    options: (): InputOptions => ({
+      plugins: [
+        {
+          name: 'external',
+          resolveId: (id) => (id === './dep.mjs' ? { id, external: true } : null),
+        },
+      ],
+    }),
+    proxyId: () => './dep.mjs?rolldown-lazy=1',
+  },
+  {
+    name: 'config `external` on the resolved id',
+    specifier: './dep.mjs',
+    options: (dir: string): InputOptions => ({ external: [path.join(dir, 'dep.mjs')] }),
+    proxyId: (dir: string) => `${path.join(dir, 'dep.mjs')}?rolldown-lazy=1`,
+  },
+  {
+    name: 'a Node built-in',
+    specifier: 'node:fs',
+    options: (): InputOptions => ({ platform: 'node' }),
+    proxyId: () => 'node:fs?rolldown-lazy=1',
+  },
+  {
+    name: 'an http(s) URL',
+    specifier: 'https://example.com/dep.js',
+    options: (): InputOptions => ({}),
+    proxyId: () => 'https://example.com/dep.js?rolldown-lazy=1',
+  },
+])(
+  'an external dynamic import is not wrapped in a lazy proxy: $name',
+  { timeout: TEST_TIMEOUT },
+  async ({ specifier, options, proxyId }, { onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-external-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'dep.mjs'), `export const value = 1;\n`);
+    fs.writeFileSync(
+      path.join(dir, 'lazy.mjs'),
+      `export const load = () => import(${JSON.stringify(specifier)});\n`,
+    );
+
+    let code = '';
+    let buildError: Error | undefined;
+    const engine = await dev(
+      {
+        input: path.join(dir, 'lazy.mjs'),
+        experimental: { devMode: { lazy: true } },
+        ...options(dir),
+      },
+      { format: 'esm', dir: path.join(dir, 'dist') },
+      {
+        onOutput(result) {
+          if (result instanceof Error) {
+            buildError = result;
+            return;
+          }
+          const chunk = result.output.find((item) => item.type === 'chunk' && item.isEntry);
+          if (chunk?.type === 'chunk') {
+            code = chunk.code;
+          }
+        },
+      },
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    if (buildError) {
+      throw buildError;
+    }
+
+    expect(code).toContain(`import(${JSON.stringify(specifier)})`);
+    expect(code).not.toContain('rolldown-lazy');
+    // No proxy was registered, so the id the bug used to compile is unknown.
+    await expect(engine.compileEntry(proxyId(dir), 'client')).rejects.toThrow(
+      'Lazy entry module not found in cache',
+    );
+  },
+);

@@ -7,7 +7,7 @@ use napi::{
 };
 use napi_derive::napi;
 use rolldown::ModuleType;
-use rolldown_common::WatcherChangeKind;
+use rolldown_common::{ImportAttributes, WatcherChangeKind};
 use rolldown_plugin::{
   __inner::SharedPluginable, CustomField, HookLoadArgs, HookLoadOutput, HookResolveIdArgs,
   HookResolveIdOutput, HookTransformArgs, LoadPluginContext, PluginIdx, PluginOrder,
@@ -96,6 +96,11 @@ impl BindingCallableBuiltinPlugin {
     let context = Arc::clone(&self.context);
     crate::start_async_runtime();
     AsyncBlockBuilder::with(async move {
+      let (importer_raw_id, importer_attributes) =
+        match importer.as_deref().and_then(ImportAttributes::parse_module_id) {
+          Some((raw_id, attributes)) => (Some(raw_id), attributes),
+          None => (importer.as_deref(), ImportAttributes::default()),
+        };
       plugin
         .call_resolve_id(
           &context.inner,
@@ -105,6 +110,9 @@ impl BindingCallableBuiltinPlugin {
             is_entry: options.as_ref().is_some_and(|options| options.is_entry.unwrap_or_default()),
             kind,
             custom: options.map(Into::into).unwrap_or_default(),
+            attributes: &ImportAttributes::default(),
+            importer_raw_id,
+            importer_attributes: &importer_attributes,
           },
         )
         .await
@@ -130,8 +138,19 @@ impl BindingCallableBuiltinPlugin {
     AsyncBlockBuilder::with(async move {
       let module_idx = rolldown_common::ModuleIdx::new(0);
       let load_ctx = Arc::new(LoadPluginContext::new(context.inner.clone(), module_idx));
+      let (raw_id, attributes) =
+        ImportAttributes::parse_module_id(&id).unwrap_or((&id, ImportAttributes::default()));
       plugin
-        .call_load(load_ctx, &HookLoadArgs { id: &id, module_idx, asserted_module_type: None })
+        .call_load(
+          load_ctx,
+          &HookLoadArgs {
+            id: &id,
+            raw_id,
+            attributes: &attributes,
+            module_idx,
+            asserted_module_type: None,
+          },
+        )
         .await
         .map_err(AnyHowMaybeNapiError::into_napi_error)
         .map(|result| result.map(Into::into))
@@ -157,10 +176,18 @@ impl BindingCallableBuiltinPlugin {
     crate::start_async_runtime();
     AsyncBlockBuilder::with(async move {
       let code_arc = ArcStr::from(code.as_str());
+      let (raw_id, attributes) =
+        ImportAttributes::parse_module_id(&id).unwrap_or((&id, ImportAttributes::default()));
       plugin
         .call_transform(
           context,
-          &HookTransformArgs { id: &id, code: &code_arc, module_type: &module_type },
+          &HookTransformArgs {
+            id: &id,
+            raw_id,
+            attributes: &attributes,
+            code: &code_arc,
+            module_type: &module_type,
+          },
         )
         .await
         .map_err(AnyHowMaybeNapiError::into_napi_error)
@@ -222,13 +249,14 @@ impl From<BindingHookJsResolveIdOptions> for Arc<CustomField> {
   fn from(value: BindingHookJsResolveIdOptions) -> Self {
     let mut map = CustomField::default();
     map.insert(ResolveIdOptionsScan, value.scan.unwrap_or(false));
-    if let Some(vite_plugin_custom) = value.custom {
-      let is_sub_imports_pattern =
-        vite_plugin_custom.vite_import_glob.and_then(|meta| meta.is_sub_imports_pattern);
+    // Only mark the call as an `import.meta.glob` resolution when the caller actually passed
+    // `custom['vite:import-glob']`. Plugins routinely pass unrelated `custom` metadata, and the
+    // presence of this key alone changes how `builtin:vite-resolve` resolves the specifier.
+    if let Some(vite_import_glob) = value.custom.and_then(|custom| custom.vite_import_glob) {
       map.insert(
         rolldown_plugin_utils::constants::ViteImportGlob,
         rolldown_plugin_utils::constants::ViteImportGlobValue(
-          is_sub_imports_pattern.unwrap_or(false),
+          vite_import_glob.is_sub_imports_pattern.unwrap_or(false),
         ),
       );
     }
@@ -243,6 +271,9 @@ pub struct BindingHookJsResolveIdOutput {
   pub external: Option<BindingResolvedExternal>,
   #[napi(ts_type = "boolean | 'no-treeshake'")]
   pub module_side_effects: Option<BindingHookSideEffects>,
+  /// @internal The package json path resolved by oxc resolver, so that the caller can hand it
+  /// back to rolldown instead of making it infer the module format from the id alone.
+  pub package_json_path: Option<String>,
 }
 
 impl From<HookResolveIdOutput> for BindingHookJsResolveIdOutput {
@@ -251,6 +282,7 @@ impl From<HookResolveIdOutput> for BindingHookJsResolveIdOutput {
       id: value.id.to_string(),
       external: value.external.map(Into::into),
       module_side_effects: value.side_effects.map(Into::into),
+      package_json_path: value.package_json_path,
     }
   }
 }

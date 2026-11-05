@@ -450,7 +450,7 @@ mod tests {
       rx,
       recorder,
       tasks,
-      &WatcherConfig { debounce: Some(Duration::ZERO), ..Default::default() },
+      &WatcherConfig { debounce: Some(Duration::ZERO) },
       closed,
       Arc::new(Notify::new()),
     );

@@ -779,6 +779,8 @@ Per changed file:
    scan, nothing is queued in `pending_rescans`, so the lost edits
    reach the graph only when a later change touches those files
    again — the same contract as `watchChange`.
+   The builtin `import.meta.glob` plugin uses this chain. See
+   [import-meta-glob](../import-meta-glob/implementation.md).
 3. **Delete handling** — a deleted module cannot be re-fetched; the
    update starts from its importers instead.
 
@@ -1434,15 +1436,17 @@ and return a single result use `BindingResult<T> = Either<BindingErrors, T>`
 on the boundary, and the JS wrapper calls `unwrapBindingResult` to either
 return the success value or throw a `BundleError`.
 
-Used by: `ensureLatestBuildOutput` (`binding_dev_engine.rs:216-219`,
-unwrapped in `packages/rolldown/src/api/dev/dev-engine.ts:168`). The
-other napi methods that can fail (`run`, `ensureCurrentBuildFinish`,
-`getBundleState`, `compileEntry`, `close`) convert their error to a plain
-`napi::Error` with a reason string instead. The thrown error reaches
-whichever audience called the method:
+Used by: `ensureLatestBuildOutput` and `compileEntry`
+(`ensure_latest_build_output` and `compile_entry` in `binding_dev_engine.rs`,
+unwrapped in `packages/rolldown/src/api/dev/dev-engine.ts`). The other napi
+methods that can fail (`run`, `ensureCurrentBuildFinish`, `getBundleState`,
+`close`) convert their error to a plain `napi::Error` with a reason string
+instead. The thrown error reaches whichever audience called the method:
 
 - `ensureLatestBuildOutput` is called by the consumer's dev-server
   middleware before serving a request. The consumer handles or propagates.
+- `compileEntry` is called by the consumer's lazy-compile middleware when a
+  lazy chunk is first requested. The consumer handles or propagates.
 - `close`, `run`, lifecycle-shaped methods are consumer-driven by
   construction.
 

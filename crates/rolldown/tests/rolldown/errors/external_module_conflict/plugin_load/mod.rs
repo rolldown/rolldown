@@ -1,7 +1,7 @@
 use std::{borrow::Cow, path::Path, time::Duration};
 
 use rolldown::{BundlerOptions, InputItem};
-use rolldown_common::{IsExternal, ModuleDefFormat};
+use rolldown_common::{ImportAttributes, IsExternal, ModuleDefFormat};
 use rolldown_plugin::{
   HookTransformArgs, HookTransformReturn, HookUsage, Plugin, SharedTransformPluginContext,
 };
@@ -29,7 +29,14 @@ impl Plugin for LoadExternalId {
   ) -> HookTransformReturn {
     let id = Path::new(args.id);
     if id.ends_with("trigger.js") {
-      ctx.load(id.with_file_name("lib.js").expect_to_str(), None, ModuleDefFormat::Unknown).await?;
+      ctx
+        .load(
+          id.with_file_name("lib.js").expect_to_str(),
+          ImportAttributes::default(),
+          None,
+          ModuleDefFormat::Unknown,
+        )
+        .await?;
     }
     Ok(None)
   }

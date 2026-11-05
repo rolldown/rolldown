@@ -285,7 +285,7 @@ impl<'a> GenerateStage<'a> {
         .module_table
         .modules
         .iter()
-        .filter_map(|m| m.as_external().map(|e| e.id.as_str()));
+        .filter_map(|m| m.as_external().map(|e| e.id.raw_id()));
       self.resolved_paths = Some(paths.resolve_all(ids).await);
     }
 
@@ -333,7 +333,8 @@ impl<'a> GenerateStage<'a> {
           ChunkKind::EntryPoint { module: entry_module_id, meta, .. } => {
             let module = &modules[entry_module_id];
             let generated = if self.options.preserve_modules {
-              let module_id = module.id().as_str();
+              // Import attributes are not part of the file name.
+              let module_id = module.id().raw_id();
               // The representative name keeps the file stem of the full id, as before.
               // Rollup also derives the chunk variable name from the full id
               // (`getAliasName(module.id)`).
@@ -390,7 +391,7 @@ impl<'a> GenerateStage<'a> {
             } else if meta.contains(rolldown_common::ChunkMeta::UserDefinedEntry) {
               // try extract meaningful input name from path
               if let Some(file_stem) =
-                module.id().as_str().as_path().file_stem().and_then(|f| f.to_str())
+                module.id().raw_id().as_path().file_stem().and_then(|f| f.to_str())
               {
                 let name = sanitize_filename.call(file_stem).await?;
                 PreGeneratedChunkName { chunk_name: name.clone(), representative_chunk_name: name }

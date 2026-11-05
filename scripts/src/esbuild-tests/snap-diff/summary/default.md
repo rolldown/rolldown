@@ -225,6 +225,8 @@
 ## [warn_common_js_exports_in_esm_convert](../../../../../crates/rolldown/tests/esbuild/default/warn_common_js_exports_in_esm_convert)
 ## [with_statement_tainting_no_bundle](../../../../../crates/rolldown/tests/esbuild/default/with_statement_tainting_no_bundle)
 # Ignored Cases
+## [comment_preservation_import_assertions](../../../../../crates/rolldown/tests/esbuild/default/comment_preservation_import_assertions)
+  Rolldown renders the legacy `assert` keyword as `with` and does not keep comments inside import attributes
 ## [define_import_meta_es5](../../../../../crates/rolldown/tests/esbuild/default/define_import_meta_es5)
   target: 'es5' is not supported
 ## [entry_names_chunk_names_ext_placeholder](../../../../../crates/rolldown/tests/esbuild/default/entry_names_chunk_names_ext_placeholder)
@@ -259,6 +261,8 @@
   irrelevant: lineLimit option will not be supported
 ## [line_limit_not_minified](../../../../../crates/rolldown/tests/esbuild/default/line_limit_not_minified)
   irrelevant: lineLimit option will not be supported
+## [metafile_import_with_type_json](../../../../../crates/rolldown/tests/esbuild/default/metafile_import_with_type_json)
+  Rolldown treats the legacy `assert` keyword as `with`, so the `assert` and `with` imports are one module. esbuild puts the `assert` import with the plain one
 ## [metafile_no_bundle](../../../../../crates/rolldown/tests/esbuild/default/metafile_no_bundle)
   CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)
 ## [package_alias](../../../../../crates/rolldown/tests/esbuild/default/package_alias)
@@ -274,8 +278,6 @@
 ## [warnings_inside_node_modules](../../../../../crates/rolldown/tests/esbuild/default/warnings_inside_node_modules)
   resolve alias behavior difference
 # Ignored Cases (not supported)
-## [comment_preservation_import_assertions](../../../../../crates/rolldown/tests/esbuild/default/comment_preservation_import_assertions)
-  import attributes is not supported
 ## [conditional_require_resolve](../../../../../crates/rolldown/tests/esbuild/default/conditional_require_resolve)
   converting conditional `require.resolve` is not supported
 ## [import_with_hash_parameter](../../../../../crates/rolldown/tests/esbuild/default/import_with_hash_parameter)
@@ -312,8 +314,6 @@
   mangle props is not supported by oxc minifier
 ## [mangle_props_type_script_features](../../../../../crates/rolldown/tests/esbuild/default/mangle_props_type_script_features)
   mangle props is not supported by oxc minifier
-## [metafile_import_with_type_json](../../../../../crates/rolldown/tests/esbuild/default/metafile_import_with_type_json)
-  import attributes is not supported
 ## [metafile_various_cases](../../../../../crates/rolldown/tests/esbuild/default/metafile_various_cases)
   copy loader is not supported
 ## [metafile_very_long_external_paths](../../../../../crates/rolldown/tests/esbuild/default/metafile_very_long_external_paths)
@@ -321,7 +321,7 @@
 ## [minify_nested_labels_no_bundle](../../../../../crates/rolldown/tests/esbuild/default/minify_nested_labels_no_bundle)
   label mangling is not supported by oxc minifier
 ## [output_for_assert_type_json](../../../../../crates/rolldown/tests/esbuild/default/output_for_assert_type_json)
-  import attributes is not supported
+  copy loader is not supported
 ## [require_and_dynamic_import_invalid_template](../../../../../crates/rolldown/tests/esbuild/default/require_and_dynamic_import_invalid_template)
   glob is not supported
 ## [require_shim_substitution](../../../../../crates/rolldown/tests/esbuild/default/require_shim_substitution)

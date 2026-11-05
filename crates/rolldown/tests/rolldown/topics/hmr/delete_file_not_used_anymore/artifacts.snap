@@ -18,15 +18,15 @@ __rolldown_runtime__.registerGraph({
 		[],
 		[0],
 		[1]
-	]
+	],
+	entries: [2]
 });
-//#region child.js
+// child.js
 var child_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 __rolldown_runtime__.createModuleHotContext("child.js");
 __rolldown_runtime__.registerModule("child.js", { exports: child_exports });
 const value = "child";
-//#endregion
-//#region parent.js
+// parent.js
 var parent_exports = /* @__PURE__ */ __exportAll({
 	childValue: () => value,
 	parentValue: () => parentValue
@@ -41,12 +41,10 @@ parent_hot.accept((newMod) => {
 	assert.strictEqual(parentValue, "parent");
 	assert.strictEqual(childValue, "not-child");
 });
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
-//#endregion
 
 ```
 

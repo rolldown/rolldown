@@ -1,6 +1,6 @@
 [package]
 name = "rolldown_dev_common"
-version = "1.2.13"
+version = "1.2.16"
 publish = true
 description = "Common types for rolldown dev mode"
 readme = "../../README.md"
@@ -20,7 +20,11 @@ test = false
 workspace = true
 
 [features]
-deserialize_dev_options = ["dep:schemars", "dep:serde"]
+deserialize_dev_options = [
+  "dep:schemars",
+  "dep:serde",
+  "rolldown_common/deserialize_bundler_options",
+]
 
 [dependencies]
 derive_more = { workspace = true }

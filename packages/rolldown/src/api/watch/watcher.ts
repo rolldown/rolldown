@@ -170,7 +170,7 @@ function warnMultipleWatcherOptions(bundlerOptions: BundlerOptionWithStopWorker[
   let found = false;
   for (const option of bundlerOptions) {
     const watcher = getWatcherOptions(option);
-    // Mirrors selects_watcher_backend in crates/rolldown_binding/src/watcher.rs
+    // Mirrors sets_watcher_backend in crates/rolldown_binding/src/watcher.rs
     if (
       watcher &&
       (watcher.usePolling != null ||

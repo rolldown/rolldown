@@ -189,6 +189,16 @@
             "null"
           ]
         },
+        "charset": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OutputCharset"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "format": {
           "anyOf": [
             {
@@ -638,6 +648,13 @@
         }
       ]
     },
+    "OutputCharset": {
+      "type": "string",
+      "enum": [
+        "ascii",
+        "utf8"
+      ]
+    },
     "OutputFormat": {
       "type": "string",
       "enum": [
@@ -1050,6 +1067,12 @@
             "boolean",
             "null"
           ]
+        },
+        "importAttributes": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false
@@ -1180,6 +1203,10 @@
         {
           "type": "object",
           "properties": {
+            "type": {
+              "type": "string",
+              "const": "named"
+            },
             "imported": {
               "type": "string"
             },
@@ -1191,10 +1218,6 @@
             },
             "from": {
               "type": "string"
-            },
-            "type": {
-              "type": "string",
-              "const": "named"
             }
           },
           "additionalProperties": false,
@@ -1207,15 +1230,15 @@
         {
           "type": "object",
           "properties": {
+            "type": {
+              "type": "string",
+              "const": "namespace"
+            },
             "alias": {
               "type": "string"
             },
             "from": {
               "type": "string"
-            },
-            "type": {
-              "type": "string",
-              "const": "namespace"
             }
           },
           "additionalProperties": false,
@@ -1579,6 +1602,24 @@
             "boolean",
             "null"
           ]
+        },
+        "shimmedExport": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "deprecatedImportAssertion": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "invalidImportAttribute": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false
@@ -1597,38 +1638,15 @@
           "format": "uint32",
           "minimum": 0
         },
-        "usePolling": {
-          "type": "boolean"
-        },
-        "pollInterval": {
-          "type": [
-            "integer",
-            "null"
-          ],
-          "format": "uint64",
-          "minimum": 0
-        },
-        "compareContentsForPolling": {
-          "type": "boolean"
-        },
-        "useDebounce": {
-          "type": "boolean"
-        },
-        "debounceDelay": {
-          "type": [
-            "integer",
-            "null"
-          ],
-          "format": "uint64",
-          "minimum": 0
-        },
-        "debounceTickRate": {
-          "type": [
-            "integer",
-            "null"
-          ],
-          "format": "uint64",
-          "minimum": 0
+        "watcher": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WatcherFileWatcherOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "include": {
           "type": [
@@ -1651,11 +1669,63 @@
       },
       "additionalProperties": false,
       "required": [
-        "skipWrite",
-        "usePolling",
-        "compareContentsForPolling",
-        "useDebounce"
+        "skipWrite"
       ]
+    },
+    "WatcherFileWatcherOptions": {
+      "description": "Filesystem watcher settings shared by build watch and the dev engine.\nSee internal-docs/watch-mode/implementation.md#backend-selection.",
+      "type": "object",
+      "properties": {
+        "usePolling": {
+          "description": "Use polling instead of native filesystem events.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "pollInterval": {
+          "description": "Poll interval in milliseconds, when polling is enabled.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "compareContentsForPolling": {
+          "description": "Compare file contents to detect changes when polling is enabled.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "useDebounce": {
+          "description": "Coalesce filesystem events before delivering them to the build coordinator.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "debounceDelay": {
+          "description": "Debounce delay in milliseconds, when debouncing is enabled.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "debounceTickRate": {
+          "description": "Debouncer tick rate in milliseconds; defaults to one quarter of the debounce delay.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
     },
     "LegalComments": {
       "oneOf": [
@@ -1732,6 +1802,13 @@
       "type": "object",
       "properties": {
         "sessionId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mode": {
+          "description": "`\"full\"` (default): write JSON-lines devtools logs to disk.\n`\"report\"`: aggregate the same event stream in-memory and emit an agent-readable\nreport (`metrics.json` + `module-graph.json` + markdown views + per-build `history.jsonl`) instead of the\nmulti-GB `logs.json`, under `node_modules/.rolldown/report/<output dir>`. Any other value\nis an error.",
           "type": [
             "string",
             "null"
@@ -2041,6 +2118,12 @@
             }
           ]
         },
+        "importAttributes": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "_snapshot": {
           "description": "Whether to include the output in the snapshot for this config variant.",
           "type": [
@@ -2212,8 +2295,8 @@
     "DevWatchOptions": {
       "type": "object",
       "properties": {
-        "disableWatcher": {
-          "description": "If `true`, watcher will be disabled.",
+        "enabled": {
+          "description": "Whether to watch for filesystem changes. Defaults to `true`.\nInitial and explicit builds are available when watching is disabled.",
           "type": [
             "boolean",
             "null"
@@ -2221,58 +2304,19 @@
         },
         "skipWrite": {
           "description": "If `true`, files are not written to disk.",
-          "type": [
-            "boolean",
-            "null"
+          "type": "boolean",
+          "default": false
+        },
+        "watcher": {
+          "description": "Filesystem watcher settings. Debounced events are enabled by default in dev mode.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WatcherFileWatcherOptions"
+            },
+            {
+              "type": "null"
+            }
           ]
-        },
-        "usePolling": {
-          "description": "If `true`, use polling instead of native file system events for watching",
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "pollInterval": {
-          "description": "Poll interval in milliseconds (only used when use_polling is true)",
-          "type": [
-            "integer",
-            "null"
-          ],
-          "format": "uint64",
-          "minimum": 0
-        },
-        "useDebounce": {
-          "description": "If `true`, use debounced watcher. If `false`, use non-debounced watcher",
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "debounceDuration": {
-          "description": "Debounce duration in milliseconds (only used when use_debounce is true)",
-          "type": [
-            "integer",
-            "null"
-          ],
-          "format": "uint64",
-          "minimum": 0
-        },
-        "compareContentsForPolling": {
-          "description": "Whether to compare file contents for poll-based watchers (only used when use_polling is true)",
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "debounceTickRate": {
-          "description": "Tick rate in milliseconds for debounced watchers (only used when use_debounce is true)",
-          "type": [
-            "integer",
-            "null"
-          ],
-          "format": "uint64",
-          "minimum": 0
         },
         "include": {
           "description": "Filter to limit which discovered files are registered with the file watcher.\nStrings are treated as glob patterns.",

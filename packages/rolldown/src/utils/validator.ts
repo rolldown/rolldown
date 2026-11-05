@@ -447,6 +447,24 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warnings when multiple star re-exports provide the same name from different modules',
     ),
   ),
+  shimmedExport: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when a missing export is replaced with an undefined binding',
+    ),
+  ),
+  deprecatedImportAssertion: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when an import uses the legacy `assert` keyword instead of `with`',
+    ),
+  ),
+  invalidImportAttribute: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when the options of a dynamic import are not statically analyzable while `experimental.importAttributes` is on',
+    ),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof ChecksOptionsSchema, ChecksOptions>>();
 
@@ -701,6 +719,7 @@ const InputOptionsSchema = v.strictObject({
         ]),
       ),
       lazyBarrel: v.optional(v.boolean()),
+      importAttributes: v.optional(v.boolean()),
     }),
   ),
   transform: v.optional(TransformOptionsSchema),
@@ -725,6 +744,12 @@ const InputOptionsSchema = v.strictObject({
             ),
           ),
           v.description('Used to name the build.'),
+        ),
+        mode: v.pipe(
+          v.optional(v.union([v.literal('full'), v.literal('report')])),
+          v.description(
+            "'full' (default): write JSON-lines devtools logs. 'report': aggregate the same event stream in-memory and emit an agent-readable report (metrics.json + markdown views) instead.",
+          ),
         ),
       }),
     ),
@@ -933,6 +958,10 @@ const OutputOptionsSchema = v.strictObject({
     v.description('Output directory, defaults to `dist` if `file` is not set'),
   ),
   file: v.pipe(v.optional(v.string()), v.description('Single output file')),
+  charset: v.pipe(
+    v.optional(v.union([v.literal('ascii'), v.literal('utf8')])),
+    v.description('Character set to use in generated JavaScript'),
+  ),
   exports: v.pipe(
     v.optional(
       v.union([v.literal('auto'), v.literal('named'), v.literal('default'), v.literal('none')]),

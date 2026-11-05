@@ -46,7 +46,7 @@ impl GenerateStage<'_> {
       }
       let codegen_options = CodegenOptions {
         minify: remove_whitespace,
-        ascii_only,
+        ascii_only: options.charset.is_ascii() || ascii_only,
         comments: CommentOptions {
           normal: !remove_whitespace,
           jsdoc: options.comments.jsdoc && !remove_whitespace,

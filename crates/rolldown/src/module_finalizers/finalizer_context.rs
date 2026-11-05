@@ -1,8 +1,8 @@
 use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ConstExportMeta, ImportRecordIdx, IndexModules, ModuleIdx,
-  ModuleType, NormalModule, PathsOutputOption, RenderedConcatenatedModuleParts,
-  RetainedExportSymbols, RuntimeModuleBrief, SharedFileEmitter, StmtInfos, SymbolRef, SymbolRefDb,
-  UsedSymbolRefs, WrapKind,
+  NormalModule, PathsOutputOption, RenderedConcatenatedModuleParts, RetainedExportSymbols,
+  RuntimeModuleBrief, SharedFileEmitter, StmtInfos, SymbolRef, SymbolRefDb, UsedSymbolRefs,
+  WrapKind,
 };
 
 pub type FinalizerMutableFields = (
@@ -52,6 +52,8 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   /// module's statement inclusion to tell whether an eager forwarder discharges its own hops.
   pub index_stmt_infos: &'me crate::type_alias::IndexStmtInfos,
   pub modules: &'me IndexModules,
+  pub dynamic_import_usage:
+    Option<&'me rolldown_common::dynamic_import_usage::DynamicImportExportsUsage>,
   pub linking_info: &'me LinkingMetadata,
   pub linking_infos: &'me LinkingMetadataVec,
   pub order_wrap_state: &'me OrderWrapState,
@@ -129,9 +131,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
 
       let module_namespace_included = self.linking_info.namespace_included;
 
-      let need_inline_json_prop = matches!(self.module.module_type, ModuleType::Json)
-        && !self.module.exports_kind.is_commonjs()
-        && !module_namespace_included;
+      let need_inline_json_prop = self.linking_info.inlines_json_keys(self.module);
 
       let transferred_import_record = self
         .chunk

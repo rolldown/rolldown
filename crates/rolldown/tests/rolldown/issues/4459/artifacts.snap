@@ -19,11 +19,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 	typeof exports === "object" && typeof module !== "undefined" ? factory(exports, require("es-toolkit")) : typeof define === "function" && define.amd ? define(["exports", "es-toolkit"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.Lib = {}, global.es_toolkit));
 })(this, function(exports, es_toolkit) {
 	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-	//#region main.js
+	// main.js
 	function test(str) {
 		return (0, es_toolkit.camelCase)(str);
 	}
-	//#endregion
 	exports.test = test;
 	Object.keys(es_toolkit).forEach(function(k) {
 		if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {

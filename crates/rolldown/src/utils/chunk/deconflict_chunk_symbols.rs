@@ -9,12 +9,16 @@ use crate::{
     external_import_interop::{
       ChunkAssignments, chunk_external_interop_modes, chunk_has_node_esm_reader,
     },
-    renamer::{InnerBindingNames, NestedScopeRenamer, Renamer, RootBindingKind},
+    renamer::{
+      InnerBindingNames, NestedScopeRenamer, Renamer, RootBindingKind, cjs_wrapper_fixed_params,
+      fixed_names_in_module_body,
+    },
   },
 };
 use arcstr::ArcStr;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, GetLocalDb, ModuleIdx, OutputFormat, SymbolRef, WrapKind,
+  Chunk, ChunkIdx, ChunkKind, GetLocalDb, ImportKind, ModuleIdx, NormalModule, OutputFormat,
+  StmtInfo, SymbolRef, WrapKind,
 };
 use rolldown_utils::{concat_string, ecmascript::legitimize_identifier_name};
 use rustc_hash::FxHashMap;
@@ -68,25 +72,7 @@ pub fn deconflict_chunk_symbols(
       .collect(),
   );
   let mut renamer = Renamer::new(&link_output.symbol_db, format, inner_binding_names);
-  // Reserve global scope symbols (unresolved references) to prevent generating conflicting names.
-  // These are identifiers referenced but not defined in the module's scope (e.g., `console`, `window`).
-  modules
-    .iter()
-    .copied()
-    .filter_map(|idx| {
-      Some(
-        link_output.symbol_db[idx]
-          .as_ref()?
-          .ast_scopes
-          .scoping()
-          .root_unresolved_references()
-          .keys(),
-      )
-    })
-    .flatten()
-    .for_each(|name| {
-      renamer.reserve(CompactStr::new(name));
-    });
+  reserve_fixed_names(&mut renamer, modules, link_output, format);
 
   if matches!(format, OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Cjs) {
     // deconflict iife introduce symbols by external
@@ -163,6 +149,13 @@ pub fn deconflict_chunk_symbols(
       // unless they would capture a reference (`rename_shadowing_symbols_in_nested_scopes`).
       let meta = &link_output.metas[module.idx];
       let is_cjs_wrapped_module = matches!(meta.wrap_kind(), WrapKind::Cjs);
+      // A parameter of the CJS closure, named like a top-level binding so that no inner binding
+      // and no other top-level binding uses its name.
+      if let Some(this_ref) = module.cjs_this_ref
+        && is_cjs_wrapped_module
+      {
+        renamer.add_symbol_in_root_scope(this_ref, RootBindingKind::Synthesized);
+      }
 
       link_output.stmt_infos[module.idx]
         .iter_enumerated()
@@ -197,11 +190,7 @@ pub fn deconflict_chunk_symbols(
             // Every other symbol is a closure-local, renamed only if it would capture a reference.
             if is_cjs_wrapped_module
               && !link_output.symbol_db.is_facade_symbol(canonical_ref)
-              && !stmt_info.import_records.iter().any(|import_rec_idx| {
-                module.import_records[*import_rec_idx]
-                  .resolved_module
-                  .is_some_and(|module_idx| link_output.module_table[module_idx].is_external())
-              })
+              && !is_external_import_declaration(link_output, module, stmt_info)
             {
               continue;
             }
@@ -306,6 +295,68 @@ pub fn deconflict_chunk_symbols(
   inline_names
 }
 
+/// Reserve the names that no top-level binding can take:
+/// - each unresolved reference of the modules of the chunk (for example `console` and `window`),
+///   because these references must resolve to globals;
+/// - the fixed names that the bodies of the modules print (`fixed_names_in_module_body`), because
+///   the body of an ESM module is at the top level;
+/// - the fixed parameters of their CJS closures (`cjs_wrapper_fixed_params`), because a parameter
+///   would capture a reference to a top-level binding with its name.
+fn reserve_fixed_names(
+  renamer: &mut Renamer<'_>,
+  modules: &[ModuleIdx],
+  link_output: &LinkStageOutput,
+  format: OutputFormat,
+) {
+  modules
+    .iter()
+    .copied()
+    .filter_map(|idx| {
+      Some(
+        link_output.symbol_db[idx]
+          .as_ref()?
+          .ast_scopes
+          .scoping()
+          .root_unresolved_references()
+          .keys(),
+      )
+    })
+    .flatten()
+    .for_each(|name| {
+      renamer.reserve(CompactStr::new(name));
+    });
+  modules.iter().filter_map(|&idx| link_output.module_table[idx].as_normal()).for_each(|module| {
+    let wrapper_params = if matches!(link_output.metas[module.idx].wrap_kind(), WrapKind::Cjs) {
+      cjs_wrapper_fixed_params(module)
+    } else {
+      &[]
+    };
+    for name in fixed_names_in_module_body(module, link_output, format)
+      .into_iter()
+      .chain(wrapper_params.iter().copied())
+    {
+      renamer.reserve(CompactStr::new_const(name));
+    }
+  });
+}
+
+/// Whether `stmt_info` is an `import` declaration of an external module. In a CJS-wrapped module,
+/// rolldown moves that declaration out of the CJS closure. A `require('external')` initializer
+/// stays in the closure, and its binding stays a local of the closure.
+fn is_external_import_declaration(
+  link_output: &LinkStageOutput,
+  module: &NormalModule,
+  stmt_info: &StmtInfo,
+) -> bool {
+  stmt_info.import_records.iter().any(|import_rec_idx| {
+    let import_record = &module.import_records[*import_rec_idx];
+    import_record.kind == ImportKind::Import
+      && import_record
+        .resolved_module
+        .is_some_and(|module_idx| link_output.module_table[module_idx].is_external())
+  })
+}
+
 /// Returns the kind of a top-level symbol. A symbol is synthesized if it is a runtime helper, or a
 /// facade that a normal module owns (for example a wrapper binding, a namespace object or an
 /// interop namespace). The finalizer prints references to these symbols at any location in the
@@ -400,11 +451,6 @@ fn rename_shadowing_symbols_in_nested_scopes<'a>(
 
     ctx.rename_bindings_shadowing_star_imports();
     ctx.rename_bindings_shadowing_named_imports();
-    ctx.rename_bindings_shadowing_wrapper_params(matches!(
-      output_format,
-      OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Cjs
-    ));
-
-    ctx.rename_bindings_shadowing_cjs_ambient_names(output_format);
+    ctx.rename_bindings_shadowing_fixed_names(output_format);
   }
 }

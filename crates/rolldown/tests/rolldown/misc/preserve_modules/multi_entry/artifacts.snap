@@ -13,9 +13,8 @@ export { default as B } from "./b.js";
 ## b.js
 
 ```js
-//#region b.ts
+// b.ts
 const b = 100;
-//#endregion
 export { b as default };
 
 ```

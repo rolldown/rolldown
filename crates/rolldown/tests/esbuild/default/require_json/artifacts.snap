@@ -7,9 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region test.json
-//#endregion
-//#region entry.js
+// entry.js
 console.log((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = {
 		"a": true,
@@ -17,6 +15,5 @@ console.log((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 		"c": [null]
 	};
 })))());
-//#endregion
 
 ```

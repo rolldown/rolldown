@@ -188,6 +188,18 @@ starts with one `registerGraph(delta)` statement with one graph row per
 module in the payload: its static and dynamic `import()` edges, in
 separate sets, unioned by `getImporters`. The client merges deltas into
 one flat graph; the newest row for a module replaces the older one.
+A common chunk inlined by `experimentalInlineCommonChunks` registers its
+modules' rows from its factory (see
+[inline-common-chunks/design.md](../inline-common-chunks/design.md#dev-mode)).
+
+A row also says whether its module is an entry (`isEntry`). The page
+started each entry, and only a page load starts it again. So when an
+update removes an entry from the module cache and no boundary runs it
+again, the client reloads. A module that is not an entry and has no
+importer that ran is no longer imported, so the update stops there.
+Webpack records a similar fact at run time (`module.hot._main`: no
+parent's `require` ran the module first). FBM has no `require` call to
+watch, so the compiler sends the flag.
 
 Rejected: an edges argument on `registerModule` (the call that enters a
 module into the module cache). A module registers itself only when it
@@ -233,10 +245,11 @@ per-payload re-run flag written into the generated code — that puts
 runtime policy into codegen and cannot express "re-run this time, skip
 next time".
 
-A lazy `import()` goes through the same gate. The proxy stub removes
-its own id from the cache before it fetches the lazy chunk, and the
-chunk's `initModule` tail then re-runs it (see
-[lazy-compilation/design.md](../lazy-compilation/design.md)).
+A lazy `import()` goes through the same gate (`requestLazy`, see
+[lazy-compilation/design.md](../lazy-compilation/design.md)). Removing
+a module from the cache also forgets its cached lazy load, so a lazy
+module edited after it loaded re-runs instead of being served from the
+old promise.
 
 `removeModuleCache` is also where cleanup lives: each removal runs the
 module's `hot.dispose` with its `hot.data` object — for every removed
@@ -433,13 +446,6 @@ the changed module.
   the set a hook receives is not yet correct for query-variant modules.
   `experimental.devMode.hotUpdate` or `dev.hotUpdate` turns it on. Vite
   does not run its own `handleHotUpdate` / `hotUpdate` hooks in FBM yet.
-- **Lazy dynamic-import HMR** — an edit under a lazy boundary
-  (`app → proxy → foo`, where the proxy is the placeholder module that
-  stands in for a lazy-compiled module) full-reloads until the walk can
-  follow an edge through a proxy. The server excludes proxy importers
-  from its dynamic index (`rebuild_importer_sets`, `ecma_view.rs`).
-  Nothing registers under the proxy id in the client, so the client
-  walk finds no executed importer and asks for a reload.
 - **Hello without a build id** — a client that loaded an output older
   than the latest rebuild gets the newer boot-evaluated map at hello.
   Two mismatches follow, until the hello carries a build id:
@@ -456,7 +462,7 @@ the changed module.
   from `initModule` is not turned into a reload (Failure policy). Known
   entry points: the build-id gap above, and a payload that threw before
   its ack. The fix is a reload request from the apply queue's catch and
-  from the lazy proxy stub.
+  from `requestLazy`.
 - **Reloads from the client walk going past the prediction** — if the
   client walk often climbs past the server's predicted set, widen the
   server walk (more first-edit bytes, more hot coverage). Needs
@@ -473,11 +479,11 @@ the changed module.
 - [dev-engine/implementation.md](../dev-engine/implementation.md) — the
   step order inside `compute_hmr_update_for_file_changes`
 - [lazy-compilation/design.md](../lazy-compilation/design.md) — the
-  `rolldown:exports` proxy contract; lazy chunk sizing reads the ship map
+  `requestLazy` entry point; lazy chunk sizing reads the ship map
 - Runtime API (`runtime-extra-dev-common.js`): lifecycle methods
   `registerGraph`, `registerFactory`, `registerModule`, `initModule`,
-  `removeModuleCache`, `loadExports`; read-only queries
-  `getImporters`, `isExecuted`, `hasFactory`; hooks
+  `removeModuleCache`, `loadExports`, `requestLazy`; read-only queries
+  `getImporters`, `isEntry`, `isExecuted`, `hasFactory`; hooks
   `createModuleHotContext`, `onModuleCacheRemoval`
 - Key code: `crates/rolldown/src/hmr/module_graph_delta.rs`,
   `crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js`

@@ -1169,8 +1169,8 @@ export interface ModuleRunnerTransformResult {
    * This will be set if {@link TransformOptions#sourcemap} is `true`.
    */
   map?: SourceMap
-  deps: Array<string>
-  dynamicDeps: Array<string>
+  deps: string[]
+  dynamicDeps: string[]
   /**
    * Parse and transformation errors.
    *
@@ -1629,8 +1629,13 @@ export declare class BindingDevEngine {
    * This is called when a dynamically imported module is first requested at runtime.
    * The module was previously stubbed with a proxy, and now we need to compile the
    * actual module and its dependencies.
+   * Failures come back as `BindingErrors`, the same shape the build and HMR callbacks
+   * use, rather than as a napi error carrying a formatted string. A lazy compile runs the
+   * full plugin pipeline, so what fails here is usually a user plugin - and `to_binding_error`
+   * hands its thrown JS error back untouched, keeping the stack and the diagnostic's module
+   * id instead of flattening both into a message.
    */
-  compileEntry(moduleId: string, clientId: string): Promise<BindingLazyChunkOutput>
+  compileEntry(moduleId: string, clientId: string): Promise<BindingResult<BindingLazyChunkOutput>>
   /**
    * Same data the plugin-context `getModuleInfo` returns, readable from the engine
    * handle at any time (no hook context needed).
@@ -1755,6 +1760,7 @@ export declare class BindingNormalizedOptions {
   get assetFilenames(): string | undefined
   get dir(): string | null
   get file(): string | null
+  get charset(): 'ascii' | 'utf8'
   get format(): 'es' | 'cjs' | 'iife' | 'umd'
   get exports(): 'default' | 'named' | 'none' | 'auto'
   get esModule(): boolean | 'if-default-prop'
@@ -1808,6 +1814,12 @@ export declare class BindingOutputChunk {
   getImports(): Array<string>
   getDynamicImports(): Array<string>
   getCode(): string
+  /**
+   * Identity of the shared chunk data behind this object. Two `BindingOutputChunk` objects with the same
+   * identity share the same data, so a JavaScript string made from `getCode()` of one is valid for the other.
+   * The identity is the address of that data. It stays unique while a `BindingOutputChunk` keeps the data alive.
+   */
+  getCodeIdentity(): number
   getMap(): string | null
   getSourcemapFileName(): string | null
   getPreliminaryFileName(): string
@@ -1815,7 +1827,7 @@ export declare class BindingOutputChunk {
 }
 
 export declare class BindingPluginContext {
-  load(specifier: string, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string): Promise<void>
+  load(rawId: string, attributes: Record<string, string>, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null, fnSanitizedFileName?: string | undefined | null): string
   emitChunk(file: BindingEmittedChunk): string
@@ -1845,6 +1857,8 @@ export declare class BindingRenderedChunkMeta {
 
 export declare class BindingRenderedModule {
   get code(): string | null
+  /** `code.length` without materializing `code`. */
+  get renderedLength(): number
   get renderedExports(): Array<string>
 }
 
@@ -2009,6 +2023,9 @@ export interface BindingChecksOptions {
   largeBarrelModules?: boolean
   sourcemapBroken?: boolean
   namespaceConflict?: boolean
+  shimmedExport?: boolean
+  deprecatedImportAssertion?: boolean
+  invalidImportAttribute?: boolean
 }
 
 export interface BindingChunkImportMap {
@@ -2079,17 +2096,18 @@ export interface BindingDevOptions {
 
 export interface BindingDevtoolsOptions {
   sessionId?: string
+  /**
+   * `"full"` (default): write JSON-lines devtools logs. `"report"`: aggregate the same
+   * event stream in-memory and emit an agent-readable report (`metrics.json` + markdown)
+   * under `node_modules/.rolldown/report/<output dir>` instead.
+   */
+  mode?: 'full' | 'report'
 }
 
 export interface BindingDevWatchOptions {
   enabled?: boolean
   skipWrite?: boolean
-  usePolling?: boolean
-  pollInterval?: number
-  useDebounce?: boolean
-  debounceDuration?: number
-  compareContentsForPolling?: boolean
-  debounceTickRate?: number
+  watcher?: BindingWatcherFileWatcherOptions
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
 }
@@ -2295,6 +2313,7 @@ export interface BindingExperimentalOptions {
   nativeMagicString?: boolean
   chunkOptimization?: boolean | BindingChunkOptimizationOptions
   lazyBarrel?: boolean
+  importAttributes?: boolean
 }
 
 export interface BindingFilterToken {
@@ -2347,6 +2366,16 @@ export interface BindingHookJsResolveIdOutput {
   id: string
   external?: boolean | 'absolute' | 'relative'
   moduleSideEffects?: boolean | 'no-treeshake'
+  /**
+   * @internal The package json path resolved by oxc resolver, so that the caller can hand it
+   * back to rolldown instead of making it infer the module format from the id alone.
+   */
+  packageJsonPath?: string
+}
+
+export interface BindingHookLoadExtraArgs {
+  rawId: string
+  attributes: Record<string, string>
 }
 
 export interface BindingHookLoadOutput {
@@ -2363,6 +2392,19 @@ export interface BindingHookRenderChunkOutput {
    * omitting the field, which mirrors Rollup's "possibly broken" semantics).
    */
   map?: BindingSourcemap | null
+}
+
+/**
+ * The extra arguments of `resolveDynamicImport`. Empty attributes and a raw id equal to the
+ * importer are left out, and `bindingify-build-hooks.ts` fills them in.
+ */
+export interface BindingHookResolveDynamicImportExtraArgs {
+  /** The import attributes of the import being resolved. Omitted when empty. */
+  attributes?: Record<string, string>
+  /** The importer without its import attributes. Omitted when equal to the importer. */
+  importerRawId?: string
+  /** The import attributes of the importer itself. Omitted when empty. */
+  importerAttributes?: Record<string, string>
 }
 
 export interface BindingHookResolveFileUrlArgs {
@@ -2396,6 +2438,12 @@ export interface BindingHookResolveIdExtraArgs {
    * - `hot-accept`: `import.meta.hot.accept('./lib.js', () => {})`
    */
   kind: 'import-statement' | 'dynamic-import' | 'require-call' | 'import-rule' | 'url-token' | 'new-url' | 'hot-accept'
+  /** The import attributes of the import being resolved. Omitted when empty. */
+  attributes?: Record<string, string>
+  /** The importer without its import attributes. Omitted when equal to the importer. */
+  importerRawId?: string
+  /** The import attributes of the importer itself. Omitted when empty. */
+  importerAttributes?: Record<string, string>
 }
 
 export interface BindingHookResolveIdOutput {
@@ -2408,6 +2456,11 @@ export interface BindingHookResolveIdOutput {
    * we could get the related package json object via the path string.
    */
   packageJsonPath?: string | null
+  /**
+   * Replaces the import attributes of the import. `{}` removes them. Ignored without
+   * `experimental.importAttributes`.
+   */
+  attributes?: Record<string, string>
 }
 
 export type BindingHookSideEffects = boolean | string
@@ -2543,6 +2596,7 @@ export interface BindingLog {
   id?: string
   code?: string
   exporter?: string
+  binding?: string
   plugin?: string
   /** Location information (line, column, file) */
   loc?: BindingLogLocation
@@ -2649,6 +2703,7 @@ export interface BindingOutputOptions {
   postFooter?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
   dir?: string
   file?: string
+  charset?: 'ascii' | 'utf8'
   esModule?: boolean | 'if-default-prop'
   exports?: 'default' | 'named' | 'none' | 'auto'
   extend?: boolean
@@ -2702,7 +2757,9 @@ export interface BindingOverwriteOptions {
 }
 
 export interface BindingPluginContextResolvedId {
+  /** The resolved id without its import attributes. */
   id: string
+  attributes: Record<string, string>
   packageJsonPath?: string
   external: boolean | 'absolute' | 'relative'
   moduleSideEffects?: boolean | 'no-treeshake'
@@ -2723,6 +2780,7 @@ export interface BindingPluginContextResolveOptions {
   skipSelf?: boolean
   custom?: number
   vitePluginCustom?: BindingVitePluginCustom
+  attributes?: Record<string, string>
 }
 
 export interface BindingPluginHookMeta {
@@ -2737,9 +2795,9 @@ export interface BindingPluginOptions {
   resolveId?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraArgs) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   resolveIdMeta?: BindingPluginHookMeta
   resolveIdFilter?: BindingHookFilter
-  resolveDynamicImport?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
+  resolveDynamicImport?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveDynamicImportExtraArgs) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   resolveDynamicImportMeta?: BindingPluginHookMeta
-  load?: (ctx: BindingLoadPluginContext, id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
+  load?: (ctx: BindingLoadPluginContext, id: string, options: Nullable<BindingHookLoadExtraArgs>) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
   loadMeta?: BindingPluginHookMeta
   loadFilter?: BindingHookFilter
   transform?: (ctx:  BindingTransformPluginContext, id: string, code: string, module_type: BindingTransformHookExtraArgs) => MaybePromise<VoidNullable<BindingHookTransformOutput>>
@@ -2891,6 +2949,8 @@ export interface BindingSourceMapOptions {
 
 export interface BindingTransformHookExtraArgs {
   moduleType: string
+  rawId?: string
+  attributes?: Record<string, string>
 }
 
 export interface BindingTreeshake {
@@ -3046,6 +3106,7 @@ export interface BindingViteResolvePluginConfig {
   tsconfig?: string
   environmentConsumer: string
   environmentName: string
+  convertExternalRequire?: boolean
   builtins: Array<BindingStringOrRegex>
   external: true | string[]
   noExternal: true | Array<string | RegExp>
@@ -3062,6 +3123,8 @@ export interface BindingViteResolvePluginConfig {
 
 export interface BindingViteResolvePluginResolveOptions {
   isBuild: boolean
+  /** Defaults to `isBuild`. */
+  isBundled?: boolean
   isProduction: boolean
   asSrc: boolean
   preferRelative: boolean
@@ -3091,17 +3154,21 @@ export interface BindingViteTransformPluginConfig {
   yarnPnp?: boolean
 }
 
-export interface BindingWatchOption {
-  skipWrite?: boolean
-  include?: Array<BindingStringOrRegex>
-  exclude?: Array<BindingStringOrRegex>
-  buildDelay?: number
+export interface BindingWatcherFileWatcherOptions {
   usePolling?: boolean
   pollInterval?: number
   compareContentsForPolling?: boolean
   useDebounce?: boolean
   debounceDelay?: number
   debounceTickRate?: number
+}
+
+export interface BindingWatchOption {
+  skipWrite?: boolean
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
+  buildDelay?: number
+  watcher?: BindingWatcherFileWatcherOptions
   onInvalidate?: ((id: string) => void) | undefined
 }
 
@@ -3167,6 +3234,10 @@ export interface NativeError {
   message: string
   /** The id of the file associated with the error */
   id?: string
+  /** The name of the plugin that threw the error */
+  plugin?: string
+  /** Code frame around the error location */
+  frame?: string
   /** The exporter associated with the error (for import/export errors) */
   exporter?: string
   /** Location information (line, column, file) */
@@ -3214,4 +3285,32 @@ export declare function startAsyncRuntime(): void
 
 export interface ViteImportGlobMeta {
   isSubImportsPattern?: boolean
+}
+
+export declare class Watcher {
+  constructor(callback: (arg0: WatcherEvent) => void, options?: WatcherOptions | undefined | null)
+  add(paths: Array<string>): void
+  remove(paths: Array<string>): void
+  isWatched(path: string, isIgnored?: ((arg: string) => boolean) | undefined | null): boolean
+  close(): void
+  ref(): void
+  unref(): void
+}
+
+export interface WatcherEvent {
+  kind: string
+  path?: string
+  isDir?: boolean
+  error?: string
+}
+
+export interface WatcherOptions {
+  usePolling?: boolean
+  pollInterval?: number
+  compareContentsForPolling?: boolean
+  useDebounce?: boolean
+  debounceDelay?: number
+  debounceTickRate?: number
+  followSymlinks?: boolean
+  ignored?: Array<string>
 }

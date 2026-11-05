@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region h1.js
+// h1.js
 var h1_exports = /* @__PURE__ */ __exportAll({ h1: () => h1 });
 var h1;
 var init_h1 = __esmMin((() => {
@@ -15,12 +15,10 @@ var init_h1 = __esmMin((() => {
 	h1 = () => load;
 }));
 
-//#endregion
-//#region data.json
+// data.json
 var data_default = {};
 
-//#endregion
-//#region app.js
+// app.js
 var load, value;
 var init_app = __esmMin((() => {
 	init_h1();
@@ -28,10 +26,8 @@ var init_app = __esmMin((() => {
 	value = [h1, data_default];
 }));
 
-//#endregion
-//#region main.js
+// main.js
 init_app();
 
-//#endregion
 export { value };
 ```

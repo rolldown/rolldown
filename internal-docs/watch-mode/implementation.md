@@ -208,11 +208,13 @@ Changes accumulate in an `invalidatedIds` Map during the delay window — both p
 
 ### Rolldown's Approach
 
-The `WatcherState::Debouncing` state does the same thing with `tokio::select!` and a deadline reset:
+The `WatcherState::Debouncing` state does the same thing with a deadline reset. `wait_for_debounce_input()` uses a biased `tokio::select!` over the mpsc receiver (polled first) and `tokio::time::sleep_until(deadline)`:
 
 - File change → `Idle` becomes `Debouncing { changes, deadline }`
 - More changes → deadline resets, changes accumulate with kind consolidation per path
 - Deadline fires → if changes are non-empty, passed to `run_build_sequence()`; if empty (all cancelled out by kind consolidation), silently return to Idle
+
+One OS notification can reach the coordinator as several `FileChanges` messages, one per change kind of the file. A message already in the channel wins over a deadline that is already due, so all parts of the notification that have arrived join the current build instead of being drained after `END` into a follow-up build.
 
 #### Kind Consolidation
 
@@ -345,6 +347,10 @@ backend:
 | false         | true           | debounced `RecommendedWatcher`        |
 | true          | true           | debounced `PollWatcher`               |
 
+Rust `WatchOption.watcher` and `DevWatchOptions.watcher` use the shared
+`WatcherFileWatcherOptions` type. Unset fields use each mode's defaults:
+filesystem debouncing is off for build watch and on for dev mode.
+
 Watch mode leaves `enabled` at its default (`true`). The no-op backend is a
 dev-engine concern (`disable_watcher` → `FsWatcherConfig.enabled: false`).
 
@@ -463,9 +469,9 @@ close() → inner.close()         // sends Close msg, awaits shared future
 Each output of each config becomes its own `WatchTask`, but `Watcher::new()` takes one `WatcherConfig`: it sets the coordinator's debounce window, and `to_fs_watcher_config()` configures every task's `FsWatcher` the same way. `create_watcher_config()` (`crates/rolldown_binding/src/watcher.rs`) folds N configs into it:
 
 - **`buildDelay`: the maximum across configs.** The rebuild is shared, and a config asking for 250ms is not served by a 50ms window. Rollup does the same.
-- **Backend/debouncer fields: the first config that sets any of them.** `usePolling`, `pollInterval`, `compareContentsForPolling`, `useDebounce`, `debounceDelay` and `debounceTickRate` cannot be merged (the watcher polls or it does not), so that config supplies all six; if no config sets one, the first config's options are used. This is what the `MULTIPLE_WATCHER_OPTION` warning promises ("using first one to start watcher"): `warnMultipleWatcherOptions()` in `packages/rolldown/src/api/watch/watcher.ts` fires when a later config also sets any of these six fields (counted once per distinct setting per config, not per output: the `options` hook runs per output and may return different settings), the same set `selects_watcher_backend()` checks on the Rust side.
+- **Backend/debouncer fields: the first config that sets any of them.** `usePolling`, `pollInterval`, `compareContentsForPolling`, `useDebounce`, `debounceDelay` and `debounceTickRate` cannot be merged (the watcher polls or it does not), so that config supplies all six; if no config sets one, the defaults are used. This is what the `MULTIPLE_WATCHER_OPTION` warning promises ("using first one to start watcher"): `warnMultipleWatcherOptions()` in `packages/rolldown/src/api/watch/watcher.ts` fires when a later config also sets any of these six fields (counted once per distinct setting per config, not per output: the `options` hook runs per output and may return different settings), the same set `sets_watcher_backend()` checks on the Rust side.
 
-**Invariant:** "sets" is read from `BindingWatchOption` before `From<BindingWatchOption> for WatchOption` runs. That conversion turns `Some(false)` and `None` into `false`, so reading it afterwards would skip an explicit `usePolling: false` and pick a later `usePolling: true`. `BindingWatcher::new()` records the per-config flags first and passes them to `create_watcher_config()`.
+**Invariant:** "sets" means `Some(_)`, so an explicit `usePolling: false` counts and wins over a later `usePolling: true`. This only works because `WatcherFileWatcherOptions` keeps every field as an `Option` after conversion. Do not resolve defaults before `create_watcher_config()` runs.
 
 ### Event Emitter
 

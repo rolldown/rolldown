@@ -65,6 +65,7 @@ pub mod bundler_options {
         InlineConstConfig, InlineConstMode, InlineConstOption, OptimizationOption,
         normalize_optimization_option,
       },
+      output_charset::OutputCharset,
       output_exports::OutputExports,
       output_format::OutputFormat,
       output_option::{
@@ -95,7 +96,7 @@ pub mod bundler_options {
       },
       tsconfig::TsConfig,
       tsconfig_merge::merge_transform_options_with_tsconfig as merge_tsconfig,
-      watch_option::{OnInvalidate, WatchOption},
+      watch_option::{OnInvalidate, WatchOption, WatcherFileWatcherOptions},
     },
   };
 
@@ -134,9 +135,14 @@ pub use crate::{
     SharedFileEmitter,
   },
   hmr::{
-    client_hmr_input::ClientHmrInput, client_hmr_update::ClientHmrUpdate,
-    hmr_boundary::HmrBoundary, hmr_patch::HmrPatch, hmr_stamp_table::HmrStampTable,
-    hmr_update::HmrUpdate, lazy_chunk_output::HmrLazyChunkOutput,
+    client_hmr_input::ClientHmrInput,
+    client_hmr_update::ClientHmrUpdate,
+    hmr_boundary::HmrBoundary,
+    hmr_patch::HmrPatch,
+    hmr_stamp_table::HmrStampTable,
+    hmr_update::HmrUpdate,
+    lazy_chunk_output::HmrLazyChunkOutput,
+    lazy_proxy_id::{LAZY_PROXY_QUERY, is_lazy_proxy, lazy_proxy_target, write_lazy_proxy_id},
   },
   module::{
     Module,
@@ -170,7 +176,7 @@ pub use crate::{
   types::flat_options::FlatOptions,
   types::hmr_info::HmrInfo,
   types::hybrid_index_vec::HybridIndexVec,
-  types::import_attribute::ImportAttribute,
+  types::import_attributes::ImportAttributes,
   types::import_kind::ImportKind,
   types::import_record::{
     DynamicImportExprInfo, ImportRecordIdx, ImportRecordMeta, ImportRecordStateInit,
@@ -184,7 +190,9 @@ pub use crate::{
     BarrelInfo, BarrelState, ExportSource, ImportedExports, LazyBarrelInfo,
     try_extract_lazy_barrel_info,
   },
-  types::member_expr_ref::{MemberExprObjectReferencedType, MemberExprProp, MemberExprRef},
+  types::member_expr_ref::{
+    MemberExprObjectReferencedType, MemberExprProp, MemberExprRef, MemberExprWriteKind,
+  },
   types::member_expr_ref_resolution::MemberExprRefResolution,
   types::module_def_format::ModuleDefFormat,
   types::module_id::{ModuleId, ModuleIdKind},

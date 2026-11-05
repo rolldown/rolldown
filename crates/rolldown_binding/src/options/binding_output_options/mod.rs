@@ -82,6 +82,8 @@ pub struct BindingOutputOptions<'env> {
   // compact: boolean;
   pub dir: Option<String>,
   pub file: Option<String>,
+  #[napi(ts_type = "'ascii' | 'utf8'")]
+  pub charset: Option<String>,
   #[napi(ts_type = "boolean | 'if-default-prop'")]
   pub es_module: Option<Either<bool, String>>,
   #[napi(ts_type = "'default' | 'named' | 'none' | 'auto'")]

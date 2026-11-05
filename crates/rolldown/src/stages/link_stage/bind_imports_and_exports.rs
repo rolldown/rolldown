@@ -7,10 +7,10 @@ use oxc_str::CompactStr;
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
 use rolldown_common::{
-  EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, IndexModules, MemberExprObjectReferencedType,
-  MemberExprRefResolution, Module, ModuleIdx, ModuleType, NamespaceAlias, NormalModule,
-  OutputFormat, ResolvedExport, Specifier, StmtInfoIdx, StmtInfos, SymbolOrMemberExprRef,
-  SymbolRef, SymbolRefDb, SymbolRefFlags,
+  EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, ImportRecordMeta, IndexModules,
+  MemberExprObjectReferencedType, MemberExprRef, MemberExprRefResolution, MemberExprWriteKind,
+  Module, ModuleIdx, ModuleType, NamespaceAlias, NormalModule, OutputFormat, ResolvedExport,
+  Specifier, StmtInfoIdx, StmtInfos, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, SymbolRefFlags,
 };
 use rolldown_error::{
   AmbiguousExternalNamespaceModule, BuildDiagnostic, Diagnostics, EventKindSwitcher,
@@ -33,7 +33,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   SharedOptions,
   types::{
-    linking_metadata::LinkingMetadataVec,
+    linking_metadata::{LinkingMetadata, LinkingMetadataVec},
     member_read_star_reexport_path::MemberReadStarReexportPath,
   },
 };
@@ -128,6 +128,14 @@ pub enum MatchImportKind {
     symbol_ref: SymbolRef,
     potentially_ambiguous_symbol_refs: Box<Vec<SymbolRef>>,
   },
+  /// Resolution reached an import record that lazy barrel skipped, so the binding is unknown.
+  /// Linked like `Normal` to `symbol`, the import symbol where resolution stopped.
+  /// `check_lazy_barrel_uncertain_bindings` requires it to be unused.
+  LazyBarrelUnknown(MatchImportKindNormal),
+  /// The resolved `export *` candidates agree on `symbol`, but one that lazy barrel skipped may
+  /// not, so the export may be ambiguous. Compared like `Normal` against other candidates, and
+  /// like `LazyBarrelUnknown` it must stay unused.
+  LazyBarrelMaybeAmbiguous(MatchImportKindNormal),
   NoMatch,
 }
 
@@ -139,7 +147,21 @@ impl MatchImportKind {
       Self::NormalAndNamespace { .. } => "normal-and-namespace",
       Self::Cycle { .. } => "cycle",
       Self::Ambiguous { .. } => "ambiguous",
+      Self::LazyBarrelUnknown(_) => "lazy-barrel-unknown",
+      Self::LazyBarrelMaybeAmbiguous(_) => "lazy-barrel-maybe-ambiguous",
       Self::NoMatch => "no-match",
+    }
+  }
+
+  fn is_lazy_barrel_uncertain(&self) -> bool {
+    matches!(self, Self::LazyBarrelUnknown(_) | Self::LazyBarrelMaybeAmbiguous(_))
+  }
+
+  /// The `Normal` binding of a resolution, including one a skipped candidate may contradict.
+  fn normal_binding(&self) -> Option<&MatchImportKindNormal> {
+    match self {
+      Self::Normal(normal) | Self::LazyBarrelMaybeAmbiguous(normal) => Some(normal),
+      _ => None,
     }
   }
 
@@ -147,11 +169,15 @@ impl MatchImportKind {
   /// an ambiguous export.
   fn bound_symbol(&self) -> Option<SymbolRef> {
     match *self {
-      MatchImportKind::Normal(MatchImportKindNormal { symbol, .. }) => Some(symbol),
+      MatchImportKind::Normal(MatchImportKindNormal { symbol, .. })
+      | MatchImportKind::LazyBarrelMaybeAmbiguous(MatchImportKindNormal { symbol, .. }) => {
+        Some(symbol)
+      }
       MatchImportKind::Namespace { namespace_ref }
       | MatchImportKind::NormalAndNamespace { namespace_ref, .. } => Some(namespace_ref),
       MatchImportKind::Cycle { .. }
       | MatchImportKind::Ambiguous { .. }
+      | MatchImportKind::LazyBarrelUnknown(_)
       | MatchImportKind::NoMatch => None,
     }
   }
@@ -161,6 +187,9 @@ impl MatchImportKind {
 pub enum ImportStatus {
   /// The imported file has no matching export
   NoMatch,
+
+  /// No loaded module exports the name, but an `export *` record that lazy barrel skipped may.
+  MaybeInSkippedStarExport,
 
   /// The imported file has a matching export
   Found {
@@ -190,6 +219,7 @@ impl ImportStatus {
   fn kind_name(&self) -> &'static str {
     match self {
       Self::NoMatch => "no-match",
+      Self::MaybeInSkippedStarExport => "maybe-in-skipped-star-export",
       Self::Found { .. } => "found",
       Self::CommonJS => "commonjs",
       Self::DynamicFallback { .. } => "dynamic-fallback",
@@ -286,8 +316,7 @@ impl LinkStage<'_> {
         .collect::<FxHashMap<_, _>>();
 
       let mut module_stack = vec![];
-      // The star-export origin map only feeds `collect_star_reexport_path`, whose callers are all
-      // strict-only.
+      // Strict initialization routing and retained-path tracking share this star-export origin map.
       let mut star_export_record_by_name =
         self.options.is_strict_execution_order_enabled().then(FxHashMap::default);
       if module.has_star_export() || module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
@@ -297,6 +326,7 @@ impl LinkStage<'_> {
           star_export_record_by_name.as_mut(),
           module_id,
           &mut module_stack,
+          None,
           None,
         );
       }
@@ -322,12 +352,14 @@ impl LinkStage<'_> {
       normal_symbol_exports_chain_map: &mut normal_symbol_exports_chain_map,
       star_reexport_records_by_imported_symbol: &mut self.star_reexport_records_by_imported_symbol,
       external_import_namespace_merger: FxHashMap::default(),
+      lazy_barrel_uncertain_bindings: Vec::new(),
     };
     self.module_table.modules.iter().for_each(|module| {
       binding_ctx.match_imports_with_exports(module.idx());
     });
 
     self.diagnostics.extend(binding_ctx.diagnostics);
+    self.lazy_barrel_uncertain_bindings = binding_ctx.lazy_barrel_uncertain_bindings;
 
     self.external_import_namespace_merger = binding_ctx.external_import_namespace_merger;
 
@@ -373,6 +405,11 @@ impl LinkStage<'_> {
       }
     }
 
+    self.register_shimmed_exports();
+    if self.options.shim_missing_exports {
+      self.shim_missing_namespace_exports();
+    }
+
     self.metas.par_iter_mut().for_each(|meta| {
       let mut sorted_and_non_ambiguous_resolved_exports = vec![];
       'next_export: for (exported_name, resolved_export) in &meta.resolved_exports {
@@ -403,6 +440,47 @@ impl LinkStage<'_> {
     self.update_cjs_module_meta();
     self.resolve_member_expr_refs(&side_effects_modules, &normal_symbol_exports_chain_map);
     self.normal_symbol_exports_chain_map = normal_symbol_exports_chain_map;
+  }
+
+  /// Lazy barrel skips a record only when no name is requested through it, so imports whose
+  /// binding is uncertain must be unused after tree shaking. A used one means the loader missed a
+  /// module; fail the build rather than emit a dangling reference.
+  pub(super) fn check_lazy_barrel_uncertain_bindings(&mut self) {
+    debug_assert!(
+      self.flat_options.is_lazy_barrel_enabled() || self.lazy_barrel_uncertain_bindings.is_empty(),
+      "only lazy barrel skips import records"
+    );
+    let mut reported = FxHashSet::default();
+    for &imported_as in &self.lazy_barrel_uncertain_bindings {
+      // Check the import, not its canonical symbol: an uncertain import can be linked to a real
+      // declaration that other imports use. Any import linked to a dangling binding is in this
+      // list itself.
+      if !self.used_symbol_refs_builder.contains(&imported_as) {
+        continue;
+      }
+      // Report each dangling binding once; imports along a re-export chain share it.
+      if !reported.insert(self.symbols.canonical_ref_for(imported_as)) {
+        continue;
+      }
+      let Module::Normal(module) = &self.module_table[imported_as.owner] else {
+        continue;
+      };
+      let named_import = &module.named_imports[&imported_as];
+      let module_request =
+        module.import_records[named_import.record_idx].module_request.to_string();
+      self.diagnostics.push(BuildDiagnostic::missing_export(
+        module.id.to_string(),
+        module.stable_id.to_string(),
+        module_request.clone(),
+        module_request,
+        module.source.clone(),
+        named_import.imported.to_string(),
+        named_import.span_imported,
+        Some(
+          "This import is used, but `experimental.lazyBarrel` did not load a module needed to resolve it. This is a Rolldown bug, set `experimental.lazyBarrel: false` to work around it.".to_string(),
+        ),
+      ));
+    }
   }
 
   fn detect_namespace_conflicts(&mut self) {
@@ -563,6 +641,7 @@ impl LinkStage<'_> {
     module_idx: ModuleIdx,
     module_stack: &mut Vec<ModuleIdx>,
     root_record: Option<ImportRecordIdx>,
+    shimmed_exports: Option<&LinkingMetadataVec>,
   ) {
     if module_stack.contains(&module_idx) {
       return;
@@ -599,43 +678,56 @@ impl LinkStage<'_> {
       //   continue;
       // }
 
-      for (exported_name, named_export) in &dep_module.named_exports {
+      let exports = dep_module
+        .named_exports
+        .iter()
+        .filter(|_| shimmed_exports.is_none())
+        .map(|(name, export)| (name, export.referenced, export.came_from_commonjs))
+        .chain(shimmed_exports.into_iter().flat_map(|metas| {
+          metas[dep_id].shimmed_missing_exports.iter().map(|(name, &symbol)| (name, symbol, false))
+        }));
+      for (exported_name, referenced, came_from_commonjs) in exports {
         // ES6 export star statements ignore exports named "default"
-        if exported_name.as_str() == "default" && !named_export.came_from_commonjs {
+        if exported_name.as_str() == "default" && !came_from_commonjs {
           continue;
         }
         // This export star is shadowed if any file in the stack has a matching real named export
-        if module_stack
-          .iter()
-          .filter_map(|id| normal_modules[*id].as_normal())
-          .any(|module| module.named_exports.contains_key(exported_name))
-        {
+        if module_stack.iter().any(|id| {
+          normal_modules[*id].as_normal().is_some_and(|module| {
+            module.named_exports.contains_key(exported_name)
+              || shimmed_exports
+                .is_some_and(|metas| metas[*id].shimmed_missing_exports.contains_key(exported_name))
+          })
+        }) {
           continue;
         }
         // We have filled `resolve_exports` with `named_exports`. If the export is already exists, it means that the importer
         // has a named export with the same name. So the export from dep module is shadowed.
         if let Some(resolved_export) = resolve_exports.get_mut(exported_name) {
-          if named_export.referenced != resolved_export.symbol_ref {
-            if resolved_export.came_from_commonjs || named_export.came_from_commonjs {
+          // Shims are fallbacks: they cannot invalidate a real export or its ambiguity.
+          // See internal-docs/code-splitting/implementation.md.
+          if shimmed_exports.is_some() {
+            continue;
+          }
+          if referenced != resolved_export.symbol_ref {
+            if resolved_export.came_from_commonjs || came_from_commonjs {
               // CJS conflict: at least one side came from CJS (e.g., conditional re-exports
               // mixing ESM and CJS targets). Track these separately — they're expected runtime
               // branches, not static ambiguity errors.
               resolved_export
                 .cjs_conflicting_symbol_refs
                 .get_or_insert(Box::default())
-                .push(named_export.referenced);
+                .push(referenced);
             } else {
               resolved_export
                 .potentially_ambiguous_symbol_refs
                 .get_or_insert(Box::default())
-                .push(named_export.referenced);
+                .push(referenced);
             }
           }
         } else {
-          resolve_exports.insert(
-            exported_name.clone(),
-            ResolvedExport::new(named_export.referenced, named_export.came_from_commonjs),
-          );
+          resolve_exports
+            .insert(exported_name.clone(), ResolvedExport::new(referenced, came_from_commonjs));
           if let Some(root_record) = root_record
             && let Some(map) = star_export_record_by_name.as_deref_mut()
           {
@@ -651,10 +743,122 @@ impl LinkStage<'_> {
         dep_id,
         module_stack,
         root_record,
+        shimmed_exports,
       );
     }
 
     module_stack.pop();
+  }
+
+  fn register_shimmed_exports(&mut self) {
+    let mut has_shims = false;
+    for meta in &mut self.metas {
+      has_shims |= !meta.shimmed_missing_exports.is_empty();
+      meta.resolved_exports.extend(
+        meta
+          .shimmed_missing_exports
+          .iter()
+          .map(|(name, &symbol)| (name.clone(), ResolvedExport::new(symbol, false))),
+      );
+    }
+    if !has_shims {
+      return;
+    }
+    let exports = self
+      .module_table
+      .modules
+      .par_iter()
+      .filter_map(|module| {
+        let module = module.as_normal()?;
+        if !module.has_star_export() {
+          return None;
+        }
+        let meta = &self.metas[module.idx];
+        let mut exports = meta.resolved_exports.clone();
+        let mut records = meta.star_export_record_by_name.clone();
+        // Namespace requests can add earlier candidates, so select star shims afresh.
+        exports.retain(|name, export| {
+          let symbol = export.symbol_ref;
+          let is_propagated_shim = symbol.owner != module.idx
+            && self.metas[symbol.owner].shimmed_missing_exports.get(name) == Some(&symbol);
+          if is_propagated_shim {
+            records.remove(name);
+          }
+          !is_propagated_shim
+        });
+        Self::add_exports_for_export_star(
+          &self.module_table.modules,
+          &mut exports,
+          self.options.is_strict_execution_order_enabled().then_some(&mut records),
+          module.idx,
+          &mut vec![],
+          None,
+          Some(&self.metas),
+        );
+        Some((module.idx, exports, records))
+      })
+      .collect::<Vec<_>>();
+    for (idx, exports, records) in exports {
+      self.metas[idx].resolved_exports = exports;
+      self.metas[idx].star_export_record_by_name = records;
+    }
+  }
+
+  fn shim_missing_namespace_exports(&mut self) {
+    let mut requested = FxIndexSet::default();
+    for stmt_infos in &self.stmt_infos {
+      for stmt in stmt_infos.iter() {
+        for reference in &stmt.referenced_symbols {
+          let SymbolOrMemberExprRef::MemberExpr(member) = reference else { continue };
+          let mut symbol = self.symbols.canonical_ref_for(member.object_ref);
+          for (cursor, prop) in member.prop_and_span_list.iter().enumerate() {
+            if cursor + 1 == member.prop_and_span_list.len() && member.write_target.is_some() {
+              break;
+            }
+            let Some(module) = self.module_table[symbol.owner].as_normal() else { break };
+            if module.namespace_object_ref != symbol {
+              break;
+            }
+            let meta = &self.metas[module.idx];
+            let Some(export) = meta.resolved_exports.get(&prop.name) else {
+              if !meta.has_dynamic_exports {
+                requested.insert((module.idx, prop.name.clone()));
+              }
+              break;
+            };
+            if export.came_from_commonjs
+              || export.potentially_ambiguous_symbol_refs.as_ref().is_some_and(|others| {
+                others.iter().any(|&other| {
+                  ResolvedBinding::of(&self.module_table.modules, &self.symbols, other)
+                    != ResolvedBinding::of(
+                      &self.module_table.modules,
+                      &self.symbols,
+                      export.symbol_ref,
+                    )
+                })
+              })
+            {
+              break;
+            }
+            symbol = self.symbols.canonical_ref_for(export.symbol_ref);
+          }
+        }
+      }
+    }
+    if requested.is_empty() {
+      return;
+    }
+    for (idx, name) in requested {
+      shim_missing_export(
+        self.module_table[idx].as_normal().unwrap(),
+        &name,
+        &mut self.metas[idx],
+        &mut self.symbols,
+        &mut self.diagnostics,
+        self.options.checks.contains(EventKindSwitcher::ShimmedExport),
+      );
+    }
+    self.register_shimmed_exports();
   }
 
   /// Strict-execution-order only: record the star re-export paths behind every non-ambiguous
@@ -726,7 +930,7 @@ impl LinkStage<'_> {
     side_effects_modules: &FxHashSet<ModuleIdx>,
     normal_symbol_exports_chain_map: &FxHashMap<SymbolRef, Vec<SymbolRef>>,
   ) {
-    let warnings = append_only_vec::AppendOnlyVec::new();
+    let diagnostics = append_only_vec::AppendOnlyVec::new();
     // A JSON default object whose `data.key` accesses get rewritten to the statically split
     // per-key exports must stay un-split once it is mutated or escapes (see
     // `collect_non_splittable_json_defaults`). Such a mutation/escape in one module invalidates
@@ -762,6 +966,7 @@ impl LinkStage<'_> {
       .map(|(module, stmt_infos)| match module {
         Module::Normal(module) => {
           let mut resolved_map = FxHashMap::default();
+          let mut folded_namespace_in_checks = FxHashMap::default();
           let mut side_effects_dependency = vec![];
           let mut written_cjs_exports: Vec<SymbolRef> = vec![];
           let mut star_reexport_consumptions: Vec<MemberReadConsumption> = vec![];
@@ -775,6 +980,28 @@ impl LinkStage<'_> {
               let mut star_reexport_steps: Vec<(ModuleIdx, CompactStr)> = vec![];
 
               if let SymbolOrMemberExprRef::MemberExpr(member_expr_ref) = symbol_ref {
+                if member_expr_ref.prop_and_span_list.is_empty() {
+                  // `'key' in ns` with a known result reads nothing from `ns`. Without a
+                  // resolution, the reference falls back to `ns` itself.
+                  if let Some(key) =
+                    module.ecma_view.namespace_in_checks.get(&member_expr_ref.node_id)
+                    && let Some(value) =
+                      self.try_fold_namespace_in_check(member_expr_ref.object_ref, key)
+                  {
+                    folded_namespace_in_checks.insert(member_expr_ref.node_id, value);
+                    resolved_map.insert(
+                      member_expr_ref.node_id,
+                      MemberExprRefResolution {
+                        resolved: None,
+                        prop_and_related_span_list: vec![],
+                        depended_refs: vec![],
+                        target_commonjs_exported_symbol: None,
+                        reference_id: member_expr_ref.reference_id,
+                      },
+                    );
+                  }
+                  return;
+                }
                 // First get the canonical ref of `foo_ns`, then we get the `NormalModule#namespace_object_ref` of `foo.js`.
                 let mut canonical_ref = self.symbols.canonical_ref_for(member_expr_ref.object_ref);
                 let mut canonical_ref_owner: &NormalModule =
@@ -818,6 +1045,18 @@ impl LinkStage<'_> {
                   let prop = &member_expr_ref.prop_and_span_list[cursor];
                   let name = &prop.name;
                   let meta = &self.metas[canonical_ref_owner.idx];
+                  // Stop before the written prop: the finalizer cannot write its bare binding into a
+                  // member write target.
+                  if let Some(error) = namespace_member_write_error(
+                    module,
+                    member_expr_ref,
+                    cursor,
+                    meta,
+                    &self.symbols,
+                  ) {
+                    diagnostics.push(error);
+                    break;
+                  }
                   let export_symbol = meta.resolved_exports.get(name).and_then(|resolved_export| {
                     (!resolved_export.came_from_commonjs).then_some(resolved_export)
                   });
@@ -841,7 +1080,7 @@ impl LinkStage<'_> {
                     if !self.metas[canonical_ref_owner.idx].has_dynamic_exports
                       && !is_json_import_ns
                     {
-                      warnings.push(
+                      diagnostics.push(
                         BuildDiagnostic::import_is_undefined(
                           module.id.as_arc_str().clone(),
                           module.source.clone(),
@@ -1053,14 +1292,20 @@ impl LinkStage<'_> {
             });
           });
 
-          (resolved_map, side_effects_dependency, written_cjs_exports, star_reexport_consumptions)
+          (
+            resolved_map,
+            folded_namespace_in_checks,
+            side_effects_dependency,
+            written_cjs_exports,
+            star_reexport_consumptions,
+          )
         }
-        Module::External(_) => (FxHashMap::default(), vec![], vec![], vec![]),
+        Module::External(_) => (FxHashMap::default(), FxHashMap::default(), vec![], vec![], vec![]),
       })
       .collect::<Vec<_>>();
 
     debug_assert_eq!(self.metas.len(), resolved_meta_data.len());
-    self.diagnostics.extend(warnings);
+    self.diagnostics.extend(diagnostics);
     // Remove CJS exported symbols that are written to by importers from the constant map
     // to prevent incorrect inlining of mutated values.
     // First, collect statically-known written symbols gathered during resolution above.
@@ -1068,7 +1313,9 @@ impl LinkStage<'_> {
     // `cjs[name] = value`, or writes through `ns.default`), bail out all CJS exports of the
     // target module since we can't determine which specific property is affected.
     let mut written_cjs_export_symbols: Vec<SymbolRef> = Vec::new();
-    for (meta, (_, _, written_cjs_exports, _)) in self.metas.iter().zip(resolved_meta_data.iter()) {
+    for (meta, (_, _, _, written_cjs_exports, _)) in
+      self.metas.iter().zip(resolved_meta_data.iter())
+    {
       written_cjs_export_symbols.extend(written_cjs_exports);
       for (import_symbol, cjs_module_idx) in
         meta.named_import_to_cjs_module.iter().chain(meta.import_record_ns_to_cjs_module.iter())
@@ -1097,7 +1344,7 @@ impl LinkStage<'_> {
     // retains each recorded path while its reading statement is included.
     if strict_execution_order {
       let mut recorded = FxHashSet::default();
-      for (module, (_, _, _, star_reexport_consumptions)) in
+      for (module, (_, _, _, _, star_reexport_consumptions)) in
         self.module_table.modules.iter().zip(&resolved_meta_data)
       {
         for (stmt_info_idx, resolved, steps) in star_reexport_consumptions {
@@ -1129,11 +1376,30 @@ impl LinkStage<'_> {
       }
     }
     self.metas.iter_mut().zip(resolved_meta_data).for_each(
-      |(meta, (resolved_map, side_effects_dependency, _, _))| {
+      |(meta, (resolved_map, folded_namespace_in_checks, side_effects_dependency, _, _))| {
         meta.resolved_member_expr_refs = resolved_map;
+        meta.folded_namespace_in_checks = folded_namespace_in_checks;
         meta.dependencies.extend(side_effects_dependency);
       },
     );
+  }
+
+  /// Returns the result of `'key' in ns` if `ns` is the namespace object of a module whose
+  /// exports are all known at link time.
+  fn try_fold_namespace_in_check(&self, namespace_ref: SymbolRef, key: &str) -> Option<bool> {
+    let canonical_ref = self.symbols.canonical_ref_for(namespace_ref);
+    let module = self.module_table[canonical_ref.owner].as_normal()?;
+    let meta = &self.metas[module.idx];
+    if module.namespace_object_ref != canonical_ref
+      || matches!(module.exports_kind, ExportsKind::CommonJs)
+      || meta.has_dynamic_exports
+    {
+      return None;
+    }
+    match meta.sorted_and_non_ambiguous_resolved_exports.get(key) {
+      Some(&came_from_commonjs) => (!came_from_commonjs).then_some(true),
+      None => Some(false),
+    }
   }
 
   /// Collect the JSON-module default exports in `stmt_infos` that must NOT be split into their
@@ -1241,6 +1507,7 @@ struct BindImportsAndExportsContext<'a> {
   pub normal_symbol_exports_chain_map: &'a mut FxHashMap<SymbolRef, Vec<SymbolRef>>,
   pub star_reexport_records_by_imported_symbol:
     &'a mut FxHashMap<SymbolRef, Vec<Vec<(ModuleIdx, ImportRecordIdx)>>>,
+  pub lazy_barrel_uncertain_bindings: Vec<SymbolRef>,
 }
 
 impl BindImportsAndExportsContext<'_> {
@@ -1263,7 +1530,11 @@ impl BindImportsAndExportsContext<'_> {
       let _enter = match_import_span.enter();
 
       let rec = &module.import_records[named_import.record_idx];
-      let Some(resolved_module_idx) = rec.resolved_module else { continue };
+      let Some(resolved_module_idx) = rec.resolved_module else {
+        // Lazy barrel skipped this record.
+        self.lazy_barrel_uncertain_bindings.push(*imported_as_ref);
+        continue;
+      };
       if self.options.is_strict_execution_order_enabled()
         && let Specifier::Literal(name) = &named_import.imported
       {
@@ -1318,6 +1589,9 @@ impl BindImportsAndExportsContext<'_> {
       );
 
       tracing::trace!(result = ret.kind_name(), "matched import with export");
+      if ret.is_lazy_barrel_uncertain() {
+        self.lazy_barrel_uncertain_bindings.push(*imported_as_ref);
+      }
       match ret {
         MatchImportKind::Cycle { importer, imported } => {
           self.diagnostics.push(BuildDiagnostic::circular_reexport(
@@ -1382,7 +1656,9 @@ impl BindImportsAndExportsContext<'_> {
             ));
           }
         }
-        MatchImportKind::Normal(MatchImportKindNormal { symbol, reexports }) => {
+        MatchImportKind::Normal(MatchImportKindNormal { symbol, reexports })
+        | MatchImportKind::LazyBarrelUnknown(MatchImportKindNormal { symbol, reexports })
+        | MatchImportKind::LazyBarrelMaybeAmbiguous(MatchImportKindNormal { symbol, reexports }) => {
           for r in &reexports {
             if self.side_effects_modules.contains(&r.owner) {
               self.metas[module_idx].dependencies.insert(r.owner);
@@ -1496,6 +1772,11 @@ impl BindImportsAndExportsContext<'_> {
           _ => {
             if self.metas[importee_id].has_dynamic_exports {
               ImportStatus::DynamicFallback { namespace_ref: importee.namespace_object_ref }
+            } else if self.options.experimental.is_lazy_barrel_enabled()
+              && literal_imported.as_str() != "default"
+              && has_skipped_star_export(self.index_modules, importee_id, &mut FxHashSet::default())
+            {
+              ImportStatus::MaybeInSkippedStarExport
             } else {
               ImportStatus::NoMatch
             }
@@ -1512,7 +1793,8 @@ impl BindImportsAndExportsContext<'_> {
   /// format doesn't keep ESM imports, a read off the external namespace.
   fn external_binding_of<'k>(&'k self, kind: &'k MatchImportKind) -> Option<ExternalBinding<'k>> {
     let (namespace_ref, imported) = match kind {
-      MatchImportKind::Normal(MatchImportKindNormal { symbol, .. }) => {
+      MatchImportKind::Normal(MatchImportKindNormal { symbol, .. })
+      | MatchImportKind::LazyBarrelMaybeAmbiguous(MatchImportKindNormal { symbol, .. }) => {
         return ExternalBinding::of(self.index_modules, *symbol);
       }
       MatchImportKind::Namespace { namespace_ref } => (namespace_ref, None),
@@ -1521,6 +1803,7 @@ impl BindImportsAndExportsContext<'_> {
       }
       MatchImportKind::Cycle { .. }
       | MatchImportKind::Ambiguous { .. }
+      | MatchImportKind::LazyBarrelUnknown(_)
       | MatchImportKind::NoMatch => return None,
     };
     self.index_modules[namespace_ref.owner]
@@ -1532,7 +1815,13 @@ impl BindImportsAndExportsContext<'_> {
   /// requires of an export that isn't ambiguous.
   fn is_same_binding(&self, a: &MatchImportKind, b: &MatchImportKind) -> bool {
     let (a_external, b_external) = (self.external_binding_of(a), self.external_binding_of(b));
-    if a_external.is_some() || b_external.is_some() { a_external == b_external } else { a == b }
+    if a_external.is_some() || b_external.is_some() {
+      return a_external == b_external;
+    }
+    if let (Some(a_normal), Some(b_normal)) = (a.normal_binding(), b.normal_binding()) {
+      return a_normal == b_normal;
+    }
+    a == b
   }
 
   /// Apply `ResolveExport`'s null-cycle rule to the collected star branches. Cycle branches are
@@ -1561,7 +1850,10 @@ impl BindImportsAndExportsContext<'_> {
 
     let (ret, promoted) = if matches!(ret, MatchImportKind::Cycle { .. }) {
       if let Some((mut promoted, mut promotion)) = deduped_ambiguous_results.shift_remove_index(0) {
-        if let MatchImportKind::Normal(normal) = &mut promoted {
+        if let MatchImportKind::Normal(normal)
+        | MatchImportKind::LazyBarrelUnknown(normal)
+        | MatchImportKind::LazyBarrelMaybeAmbiguous(normal) = &mut promoted
+        {
           let mut reexports = std::mem::take(&mut promotion.reexports_prefix);
           reexports.append(&mut normal.reexports);
           normal.reexports = reexports;
@@ -1575,6 +1867,54 @@ impl BindImportsAndExportsContext<'_> {
     };
 
     (ret, deduped_ambiguous_results, promoted)
+  }
+
+  /// Match one `export *` candidate for the name `tracker` is looking up.
+  fn match_star_branch(
+    &mut self,
+    index_modules: &IndexModules,
+    ctx: &MatchingContext,
+    tracker: &ImportTracker,
+    reexports: &[SymbolRef],
+    ambiguous_ref: SymbolRef,
+  ) -> (MatchImportKind, StarBranchPromotion) {
+    let ambiguous_ref_owner = index_modules[ambiguous_ref.owner].as_normal().unwrap();
+    let mut reexports_prefix = reexports.to_vec();
+    let result = match ambiguous_ref_owner.named_imports.get(&ambiguous_ref) {
+      Some(another_named_import) => {
+        let rec = &ambiguous_ref_owner.import_records[another_named_import.record_idx];
+        match rec.resolved_module {
+          Some(resolved_module_idx) => {
+            reexports_prefix.push(another_named_import.imported_as);
+            self.match_import_with_export(
+              index_modules,
+              &mut MatchingContext { tracker_stack: ctx.tracker_stack.clone() },
+              ImportTracker {
+                importer: ambiguous_ref_owner.idx,
+                importee: resolved_module_idx,
+                imported: another_named_import.imported.clone(),
+                imported_as: another_named_import.imported_as,
+              },
+            )
+          }
+          // Lazy barrel skipped this candidate's record.
+          None => MatchImportKind::LazyBarrelUnknown(MatchImportKindNormal {
+            symbol: ambiguous_ref,
+            reexports: vec![],
+          }),
+        }
+      }
+      None => {
+        MatchImportKind::Normal(MatchImportKindNormal { symbol: ambiguous_ref, reexports: vec![] })
+      }
+    };
+    let promotion = StarBranchPromotion {
+      reexports_prefix,
+      export: ambiguous_ref,
+      star_module: tracker.importee,
+      imported: tracker.imported.clone(),
+    };
+    (result, promotion)
   }
 
   fn match_import_with_export(
@@ -1647,52 +1987,19 @@ impl BindImportsAndExportsContext<'_> {
         ImportStatus::NoMatch => {
           break MatchImportKind::NoMatch;
         }
+        ImportStatus::MaybeInSkippedStarExport => {
+          // Stop at this import: it becomes the result, so it is not part of the re-export chain.
+          reexports.pop_if(|last| *last == tracker.imported_as);
+          break MatchImportKind::LazyBarrelUnknown(MatchImportKindNormal {
+            symbol: tracker.imported_as,
+            reexports,
+          });
+        }
         ImportStatus::Found { symbol, potentially_ambiguous_export_star_refs } => {
           for ambiguous_ref in &potentially_ambiguous_export_star_refs {
-            let ambiguous_ref_owner = &index_modules[ambiguous_ref.owner];
-            match ambiguous_ref_owner.as_normal().unwrap().named_imports.get(ambiguous_ref) {
-              Some(another_named_import) => {
-                let rec = &ambiguous_ref_owner.as_normal().unwrap().import_records
-                  [another_named_import.record_idx];
-                if let Some(resolved_module_idx) = rec.resolved_module {
-                  let ambiguous_result = self.match_import_with_export(
-                    index_modules,
-                    &mut MatchingContext { tracker_stack: ctx.tracker_stack.clone() },
-                    ImportTracker {
-                      importer: ambiguous_ref_owner.idx(),
-                      importee: resolved_module_idx,
-                      imported: another_named_import.imported.clone(),
-                      imported_as: another_named_import.imported_as,
-                    },
-                  );
-                  let mut reexports_prefix = reexports.clone();
-                  reexports_prefix.push(another_named_import.imported_as);
-                  ambiguous_results.push((
-                    ambiguous_result,
-                    StarBranchPromotion {
-                      reexports_prefix,
-                      export: *ambiguous_ref,
-                      star_module: tracker.importee,
-                      imported: tracker.imported.clone(),
-                    },
-                  ));
-                }
-              }
-              _ => {
-                ambiguous_results.push((
-                  MatchImportKind::Normal(MatchImportKindNormal {
-                    symbol: *ambiguous_ref,
-                    reexports: vec![],
-                  }),
-                  StarBranchPromotion {
-                    reexports_prefix: reexports.clone(),
-                    export: *ambiguous_ref,
-                    star_module: tracker.importee,
-                    imported: tracker.imported.clone(),
-                  },
-                ));
-              }
-            }
+            let branch =
+              self.match_star_branch(index_modules, ctx, &tracker, &reexports, *ambiguous_ref);
+            ambiguous_results.push(branch);
           }
 
           // If this is a re-export of another import, continue for another
@@ -1719,6 +2026,8 @@ impl BindImportsAndExportsContext<'_> {
                 }
               }
             }
+            // Lazy barrel skipped this re-export's record.
+            break MatchImportKind::LazyBarrelUnknown(MatchImportKindNormal { symbol, reexports });
           }
 
           break MatchImportKind::Normal(MatchImportKindNormal { symbol, reexports });
@@ -1753,13 +2062,23 @@ impl BindImportsAndExportsContext<'_> {
     let (ret, deduped_ambiguous_results, promoted) =
       Self::promote_first_surviving_star_branch(ret, ambiguous_results);
 
-    if let Some(symbol_ref) = ret.bound_symbol()
-      && deduped_ambiguous_results.keys().any(|result| !self.is_same_binding(result, &ret))
+    // An unknown candidate can't be compared, but the others still have to agree with each other.
+    let mut candidates = deduped_ambiguous_results
+      .keys()
+      .filter(|kind| !matches!(kind, MatchImportKind::LazyBarrelUnknown(_)));
+    let first = if matches!(ret, MatchImportKind::LazyBarrelUnknown(_)) {
+      candidates.next()
+    } else {
+      Some(&ret)
+    };
+    if let Some(first) = first
+      && let Some(symbol_ref) = first.bound_symbol()
+      && candidates.clone().any(|kind| !self.is_same_binding(kind, first))
     {
       return MatchImportKind::Ambiguous {
         symbol_ref,
         potentially_ambiguous_symbol_refs: Box::new(
-          deduped_ambiguous_results.keys().filter_map(MatchImportKind::bound_symbol).collect(),
+          candidates.filter_map(MatchImportKind::bound_symbol).collect(),
         ),
       };
     }
@@ -1785,6 +2104,16 @@ impl BindImportsAndExportsContext<'_> {
       resolved_export.symbol_ref = export;
     }
 
+    // The resolved `export *` candidates agree, but a skipped one may point to a different binding.
+    let ret = match ret {
+      MatchImportKind::Normal(normal)
+        if deduped_ambiguous_results.keys().any(MatchImportKind::is_lazy_barrel_uncertain) =>
+      {
+        MatchImportKind::LazyBarrelMaybeAmbiguous(normal)
+      }
+      ret => ret,
+    };
+
     if let Module::Normal(importee) = &self.index_modules[tracker.importee] {
       if (self.options.shim_missing_exports || matches!(importee.module_type, ModuleType::Empty))
         && matches!(ret, MatchImportKind::NoMatch)
@@ -1792,18 +2121,17 @@ impl BindImportsAndExportsContext<'_> {
         match &tracker.imported {
           Specifier::Star => unreachable!("star should always exist, no need to shim"),
           Specifier::Literal(imported) => {
-            let shimmed_symbol_ref = self.metas[tracker.importee]
-              .shimmed_missing_exports
-              .entry(imported.clone())
-              .or_insert_with(|| {
-                let mut name = legitimize_identifier_name(imported);
-                if !none_preserved_keyword_or_global_object_ext(&name) {
-                  name = Cow::Owned(format!("_{name}"));
-                }
-                self.symbol_db.create_facade_root_symbol_ref(tracker.importee, &name)
-              });
+            let shimmed_symbol_ref = shim_missing_export(
+              importee,
+              imported,
+              &mut self.metas[tracker.importee],
+              self.symbol_db,
+              &mut self.diagnostics,
+              self.options.shim_missing_exports
+                && self.options.checks.contains(EventKindSwitcher::ShimmedExport),
+            );
             return MatchImportKind::Normal(MatchImportKindNormal {
-              symbol: *shimmed_symbol_ref,
+              symbol: shimmed_symbol_ref,
               reexports: vec![],
             });
           }
@@ -1813,6 +2141,48 @@ impl BindImportsAndExportsContext<'_> {
 
     ret
   }
+}
+
+/// Whether `module_idx`, or any loaded module reached through its `export *` records, has an
+/// `export *` record that lazy barrel skipped. Only lazy barrel leaves `resolved_module` empty.
+fn has_skipped_star_export(
+  modules: &IndexModules,
+  module_idx: ModuleIdx,
+  visited: &mut FxHashSet<ModuleIdx>,
+) -> bool {
+  if !visited.insert(module_idx) {
+    return false;
+  }
+  let Module::Normal(module) = &modules[module_idx] else {
+    return false;
+  };
+  module.import_records.iter().any(|rec| {
+    rec.meta.contains(ImportRecordMeta::IsExportStar)
+      && rec
+        .resolved_module
+        .is_none_or(|star_module_idx| has_skipped_star_export(modules, star_module_idx, visited))
+  })
+}
+
+fn shim_missing_export(
+  module: &NormalModule,
+  exported_name: &CompactStr,
+  meta: &mut LinkingMetadata,
+  symbols: &mut SymbolRefDb,
+  diagnostics: &mut Diagnostics,
+  warn: bool,
+) -> SymbolRef {
+  *meta.shimmed_missing_exports.entry(exported_name.clone()).or_insert_with(|| {
+    if warn {
+      diagnostics
+        .push(BuildDiagnostic::shimmed_export(module.id.to_string(), exported_name.to_string()));
+    }
+    let mut name = legitimize_identifier_name(exported_name);
+    if !none_preserved_keyword_or_global_object_ext(&name) {
+      name = Cow::Owned(format!("_{name}"));
+    }
+    symbols.create_facade_root_symbol_ref(module.idx, &name)
+  })
 }
 
 pub(super) fn record_star_reexport_path(
@@ -1871,4 +2241,41 @@ fn collect_star_reexport_path(
     return;
   };
   collect_star_reexport_path(importee_idx, &next_export_name, modules, metas, path, visited);
+}
+
+/// Returns the `ASSIGN_TO_IMPORT` error when the prop at `cursor` is the target of a namespace
+/// member write (`ns.foo = 1`). The scanner reports this only when `ns` comes from `import * as`.
+#[inline]
+fn namespace_member_write_error(
+  module: &NormalModule,
+  member_expr_ref: &MemberExprRef,
+  cursor: usize,
+  meta: &LinkingMetadata,
+  symbols: &SymbolRefDb,
+) -> Option<BuildDiagnostic> {
+  if cursor + 1 != member_expr_ref.prop_and_span_list.len() {
+    return None;
+  }
+  let prop = &member_expr_ref.prop_and_span_list[cursor];
+  match member_expr_ref.write_target? {
+    MemberExprWriteKind::Assign => {}
+    // Deleting a name that the namespace does not export is legal and returns `true`, so let the
+    // caller handle `delete ns.missing` like a read of a missing export.
+    MemberExprWriteKind::Delete => {
+      let is_exported =
+        meta.resolved_exports.get(&prop.name).is_some_and(|export| !export.came_from_commonjs)
+          && meta.sorted_and_non_ambiguous_resolved_exports.contains_key(&prop.name);
+      if !is_exported {
+        return None;
+      }
+    }
+  }
+  Some(BuildDiagnostic::assign_to_import(
+    module.id.as_arc_str().clone(),
+    module.source.clone(),
+    prop.span,
+    ArcStr::from(prop.name.as_str()),
+    module.named_imports.get(&member_expr_ref.object_ref).map(|import| import.span_imported),
+    Some(ArcStr::from(member_expr_ref.object_ref.name(symbols))),
+  ))
 }

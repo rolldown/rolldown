@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region pure/clone-deep.cjs
+// pure/clone-deep.cjs
 var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = function cloneDeep(value) {
 		return JSON.parse(JSON.stringify(value));
@@ -19,22 +19,17 @@ function init_pure_cjs_0() {
 		import_clone_deep = /* @__PURE__ */ __toESM(require_clone_deep());
 	})))();
 }
-//#endregion
-//#region pure/index.js
-//#endregion
-//#region forwarder.js
+// forwarder.js
 function helper() {
 	return "H";
 }
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_pure_cjs_0();
 		globalThis.__result = [(0, import_clone_deep.default)({ a: 1 }), helper()];
 	})))();
 }
-//#endregion
 init_main();
 
 ```
@@ -47,7 +42,7 @@ init_main();
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region pure/clone-deep.cjs
+// pure/clone-deep.cjs
 var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = function cloneDeep(value) {
 		return JSON.parse(JSON.stringify(value));
@@ -59,22 +54,17 @@ function init_pure_cjs_0() {
 		import_clone_deep = /* @__PURE__ */ __toESM(require_clone_deep());
 	})))();
 }
-//#endregion
-//#region pure/index.js
-//#endregion
-//#region forwarder.js
+// forwarder.js
 function helper() {
 	return "H";
 }
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_pure_cjs_0();
 		globalThis.__result = [(0, import_clone_deep.default)({ a: 1 }), helper()];
 	})))();
 }
-//#endregion
 init_main();
 
 ```

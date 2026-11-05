@@ -30,9 +30,9 @@ use rolldown::{
   ChunkFilenamesOutputOption, CodeSplittingMode, DeferSyncScanDataOption, HashCharacters,
   InlineCommonChunksOptions, IsExternal, ManglePropertiesPattern, ManglePropertiesPatterns,
   ManualCodeSplittingOptions, MatchGroup, MatchGroupName, ModuleType, OptimizationOption,
-  OutputExports, OutputFormat, Platform, PluginTimingsOption, RawCompressOptions, RawMangleOptions,
-  RawManglePropertiesOptions, RawMinifyOptions, RawMinifyOptionsDetailed, SanitizeFilename,
-  StrictMode, TsConfig,
+  OutputCharset, OutputExports, OutputFormat, Platform, PluginTimingsOption, RawCompressOptions,
+  RawMangleOptions, RawManglePropertiesOptions, RawMinifyOptions, RawMinifyOptionsDetailed,
+  SanitizeFilename, StrictMode, TsConfig,
 };
 use rolldown_common::DeferSyncScanData;
 use rolldown_common::GeneratedCodeOptions;
@@ -341,14 +341,9 @@ fn normalize_invalidate_js_side_cache_option(
 fn normalize_on_log_option(on_log: BindingOnLog) -> Option<rolldown::OnLog> {
   on_log.map(|ts_fn| {
     rolldown::OnLog::new(Arc::new(move |level, log| {
-      let ts_fn = Arc::clone(&ts_fn);
-      Box::pin(async move {
-        ts_fn
-          .invoke_async((level.to_string(), log.into()).into())
-          .await
-          .context("onLog option")
-          .map_err(anyhow::Error::from)
-      })
+      // Enqueue the JS callback at call time; the returned future only waits for its result.
+      let result = ts_fn.invoke_eager((level.to_string(), log.into()).into());
+      Box::pin(async move { result.await.context("onLog option").map_err(anyhow::Error::from) })
     }))
   })
 }
@@ -558,6 +553,21 @@ pub fn normalize_binding_options(
     sanitize_filename: normalize_sanitize_filename(output_options.sanitize_file_name)?,
     dir: output_options.dir,
     file: output_options.file,
+    charset: output_options
+      .charset
+      .map(|charset| {
+        Ok(match charset.as_str() {
+          "ascii" => OutputCharset::Ascii,
+          "utf8" => OutputCharset::Utf8,
+          _ => {
+            return Err(napi::Error::new(
+              napi::Status::InvalidArg,
+              format!("Invalid value \"{charset}\" for option \"output.charset\" - valid values are \"ascii\" and \"utf8\"."),
+            ));
+          }
+        })
+      })
+      .transpose()?,
     sourcemap: output_options.sourcemap.map(Into::into),
     es_module: output_options.es_module.map(|es_module| match es_module {
       Either::A(es_module_bool) => es_module_bool.into(),
@@ -775,7 +785,10 @@ pub fn normalize_binding_options(
     make_absolute_externals_relative: input_options
       .make_absolute_externals_relative
       .map(Into::into),
-    devtools: input_options.devtools.map(|inner| rolldown::DevtoolsOptions { session_id: inner.session_id }),
+    devtools: input_options.devtools.map(|inner| rolldown::DevtoolsOptions {
+      session_id: inner.session_id,
+      mode: inner.mode,
+    }),
     invalidate_js_side_cache,
     log_level: Some(input_options.log_level.into()),
     on_log,

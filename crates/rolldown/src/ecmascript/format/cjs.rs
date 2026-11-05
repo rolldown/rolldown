@@ -8,11 +8,13 @@ use crate::{
   utils::chunk::render_chunk_exports::render_chunk_exports,
   utils::external_import_interop::{ChunkAssignments, chunk_external_interop_modes},
 };
-use json_escape_simd::escape;
 use rolldown_common::{AddonRenderContext, OutputExports};
 use rolldown_error::BuildDiagnostic;
 use rolldown_sourcemap::SourceJoiner;
-use rolldown_utils::concat_string;
+use rolldown_utils::{
+  concat_string,
+  ecmascript::{escape_non_ascii, to_ecma_string_literal},
+};
 
 use super::utils::{render_chunk_directives, render_modules_with_peek_runtime_module_at_first};
 
@@ -100,11 +102,13 @@ pub fn render_cjs<'code>(
 // Make sure the imports generate stmts keep live bindings.
 fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
   let mut s = String::new();
+  let ascii_only = ctx.options.charset.is_ascii();
 
   // render imports from other chunks
   ctx.chunk.imports_from_other_chunks.iter().for_each(|(exporter_id, items)| {
     let importee_chunk = &ctx.chunk_graph.chunk_table[*exporter_id];
-    let import_path = escape(&ctx.chunk.import_path_for(importee_chunk));
+    let import_path =
+      to_ecma_string_literal(&ctx.chunk.import_path_for(importee_chunk), ascii_only);
     let require_path_str = concat_string!("require(", import_path, ");\n");
     if items.is_empty() {
       s.push_str(&require_path_str);
@@ -129,7 +133,10 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
         .as_external()
         .expect("Should be external module here");
 
-      let import_path = escape(&importee.get_import_path(ctx.chunk, ctx.resolved_paths));
+      let import_path = to_ecma_string_literal(
+        &importee.get_import_path(ctx.chunk, ctx.resolved_paths),
+        ascii_only,
+      );
       let require_path_str = concat_string!("require(", import_path, ")");
 
       if ctx.link_output.used_external_symbols.contains(&importee.namespace_ref) {
@@ -137,6 +144,7 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
           .link_output
           .symbol_db
           .canonical_name_for_or_original(importee.namespace_ref, &ctx.chunk.canonical_names);
+        let external_module_symbol_name = escape_non_ascii(external_module_symbol_name, ascii_only);
         // `named_imports` only covers imports written by modules that live in this chunk, so the
         // mode set also folds in what the inclusion pass recorded for observers landing here.
         // Deconflicting derives the mixed-mode binding names from this same call.
@@ -158,21 +166,21 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
             // Mixed-mode: emit two __toESM bindings (node-mode and non-node-mode)
             let require_external = concat_string!(
               "let ",
-              external_module_symbol_name,
+              external_module_symbol_name.as_ref(),
               " = ",
               require_path_str,
               ";\nlet ",
-              node_mode_name,
+              escape_non_ascii(node_mode_name, ascii_only),
               " = ",
               to_esm_fn,
               "(",
-              external_module_symbol_name,
+              external_module_symbol_name.as_ref(),
               ", 1);\n",
-              external_module_symbol_name,
+              external_module_symbol_name.as_ref(),
               " = ",
               to_esm_fn,
               "(",
-              external_module_symbol_name,
+              external_module_symbol_name.as_ref(),
               ");\n"
             );
             s.push_str(&require_external);
@@ -184,15 +192,15 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
               if interop_modes.node_esm && !interop_modes.non_node_esm { ", 1" } else { "" };
             let require_external = concat_string!(
               "let ",
-              external_module_symbol_name,
+              external_module_symbol_name.as_ref(),
               " = ",
               require_path_str,
               ";\n",
-              external_module_symbol_name,
+              external_module_symbol_name.as_ref(),
               " = ",
               to_esm_fn,
               "(",
-              external_module_symbol_name,
+              external_module_symbol_name.as_ref(),
               node_mode_arg,
               ");\n"
             );
@@ -201,8 +209,13 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
         } else {
           // generate code like:
           // let external_module_symbol_name = require("external-module");
-          let require_external =
-            concat_string!("let ", external_module_symbol_name, " = ", require_path_str, ";\n");
+          let require_external = concat_string!(
+            "let ",
+            external_module_symbol_name.as_ref(),
+            " = ",
+            require_path_str,
+            ";\n"
+          );
           s.push_str(&require_external);
         }
       } else if importee.side_effects.has_side_effects() {

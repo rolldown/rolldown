@@ -6,8 +6,9 @@ use std::{
   },
 };
 
+use arcstr::ArcStr;
 use rolldown_common::{ClientHmrInput, ClientHmrUpdate, HmrUpdate, ScanMode, WatcherChangeKind};
-use rolldown_utils::indexmap::FxIndexMap;
+use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexMap};
 use tokio::sync::Mutex;
 
 use rolldown::Bundler;
@@ -32,6 +33,9 @@ pub struct BundlingTask {
   /// when deriving the final stage — see `final_error_stage`.
   rebuild_errored: bool,
   has_rebuild_happen: bool,
+  /// The watch list the HMR stage added its loaded files to, kept when the rebuild that
+  /// followed replaced it. See `rebuild`.
+  hmr_stage_watch_files: Option<Arc<FxDashSet<ArcStr>>>,
 }
 
 impl Deref for BundlingTask {
@@ -63,6 +67,7 @@ impl BundlingTask {
       has_rebuild_happen: false,
       hmr_errored: false,
       rebuild_errored: false,
+      hmr_stage_watch_files: None,
     }
   }
 
@@ -112,6 +117,7 @@ impl BundlingTask {
     self.dev_context.coordinator_tx.send(CoordinatorMsg::BundleCompleted {
       error_stage,
       has_generated_bundle_output,
+      hmr_stage_watch_files: self.hmr_stage_watch_files,
     }).expect(
       "Coordinator channel closed while sending BundleCompleted - coordinator terminated unexpectedly"
     );
@@ -353,6 +359,13 @@ impl BundlingTask {
   async fn rebuild(&mut self) {
     let mut bundler = self.bundler.lock().await;
 
+    // The HMR stage of this task added the files it loaded to the latest build's watch list.
+    // The build below starts a new, empty list and does not load those cached modules again,
+    // so keep the HMR stage's list for the coordinator to register.
+    // See internal-docs/dev-engine/implementation.md §10.
+    let hmr_stage_watch_files =
+      self.input.require_generate_hmr_update().then(|| Arc::clone(bundler.watch_files()));
+
     // TODO: hyf0 `skip_write` in watch mode won't trigger generate stage, need to investigate why.
     let skip_write = self.dev_context.options.skip_write;
 
@@ -372,6 +385,8 @@ impl BundlingTask {
     } else {
       bundler.incremental_write(scan_mode).await
     };
+    self.hmr_stage_watch_files =
+      hmr_stage_watch_files.filter(|list| !Arc::ptr_eq(list, bundler.watch_files()));
 
     if let Err(err) = &build_result {
       tracing::error!("[BundlingTask] rebuild failed: {:?}", err);

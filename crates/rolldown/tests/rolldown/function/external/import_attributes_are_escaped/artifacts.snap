@@ -8,9 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import "ext-bare" with { custom: "a\"b", "k\"ey": "c\\d" };
 import { x } from "ext-named" with { custom: "a\"b" };
+import "ext-surrogate" with { custom: "a�", "k�": "b" };
 export * from "ext-star" with { custom: "a\"b" };
-//#region main.js
+// main.js
 console.log(x);
-//#endregion
 
 ```

@@ -6,12 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## direct.js
 
 ```js
-//#region group.js
+// group.js
 const Group = { name: "Group" };
-//#endregion
-//#region direct.js
+// direct.js
 const group = () => Group;
-//#endregion
 export { group };
 
 ```
@@ -19,10 +17,9 @@ export { group };
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 const loadOther = () => import("./other.js");
 const loadDirect = () => import("./direct.js");
-//#endregion
 export { loadDirect, loadOther };
 
 ```
@@ -31,18 +28,16 @@ export { loadDirect, loadOther };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region motion.js
+// motion.js
 const motion$1 = {};
-//#endregion
-//#region react.js
+// react.js
 var motion;
 function init_react() {
 	return (init_react = __esmMin((() => {
 		motion = motion$1;
 	})))();
 }
-//#endregion
-//#region other.js
+// other.js
 var check;
 function init_other() {
 	return (init_other = __esmMin((() => {
@@ -50,7 +45,6 @@ function init_other() {
 		check = () => motion;
 	})))();
 }
-//#endregion
 init_other();
 export { check };
 
@@ -64,15 +58,14 @@ export { check };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region group.js
+// group.js
 var Group;
 function init_group() {
 	return (init_group = __esmMin((() => {
 		Group = { name: "Group" };
 	})))();
 }
-//#endregion
-//#region direct.js
+// direct.js
 var group;
 function init_direct() {
 	return (init_direct = __esmMin((() => {
@@ -80,7 +73,6 @@ function init_direct() {
 		group = () => Group;
 	})))();
 }
-//#endregion
 init_direct();
 export { group };
 
@@ -90,7 +82,7 @@ export { group };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region main.js
+// main.js
 var loadOther, loadDirect;
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -98,7 +90,6 @@ function init_main() {
 		loadDirect = () => import("./direct.js");
 	})))();
 }
-//#endregion
 init_main();
 export { loadDirect, loadOther };
 
@@ -108,15 +99,14 @@ export { loadDirect, loadOther };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region motion.js
+// motion.js
 var motion$1;
 function init_motion() {
 	return (init_motion = __esmMin((() => {
 		motion$1 = {};
 	})))();
 }
-//#endregion
-//#region react.js
+// react.js
 var motion;
 function init_react() {
 	return (init_react = __esmMin((() => {
@@ -124,8 +114,7 @@ function init_react() {
 		motion = motion$1;
 	})))();
 }
-//#endregion
-//#region other.js
+// other.js
 var check;
 function init_other() {
 	return (init_other = __esmMin((() => {
@@ -133,7 +122,6 @@ function init_other() {
 		check = () => motion;
 	})))();
 }
-//#endregion
 init_other();
 export { check };
 

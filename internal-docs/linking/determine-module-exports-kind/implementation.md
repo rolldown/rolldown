@@ -66,9 +66,9 @@ After processing all import records, the importer is itself wrapped as CJS when:
 
 The "is entry + Esm output" branch is what allows `module.exports = ...` to keep working in a CJS-emit-as-ESM scenario; the `Iife`/`Umd` branch prevents leaking `module`/`exports` into the IIFE wrapper's outer scope.
 
-CommonJS top-level `this` creates an implicit reference to `exports`. The same rule applies to `this` in arrow functions and blocks. The scanner first classifies the module. It then sets `ExportsRef` when it records the rewrite.
+The top-level `this` of a CommonJS module creates an implicit reference to `exports`. The same rule applies to `this` in arrow functions and blocks. The scanner first decides the kind of the module. Then it sets `ExportsRef` when it records the `this`.
 
-`ModuleOrExports` includes this reference. The linker uses `ModuleOrExports` to add a CommonJS wrapper to IIFE and UMD entries. Each CommonJS wrapper also receives an `exports` parameter when the source exports only through `this`.
+`ModuleOrExports` includes this reference. The linker uses `ModuleOrExports` to add a CommonJS wrapper to IIFE and UMD entries. The finalizer prints the `this` as the third parameter of the wrapper. The renamer gives this parameter its name (`EcmaView::cjs_this_ref`), and the runtime passes the initial exports object of the module to it. See [renaming/design.md](../../renaming/design.md), principles 6 and 7.
 
 > **Why "lazy export" is excluded from the `Import` + `None` arm:**
 > Lazy-export modules are deferred ESM facades; promoting them here would short-circuit the dedicated lazy-export pass that runs later (`generate_lazy_export`), which performs additional restructuring that a naive `None → Esm` promotion would skip.
@@ -77,7 +77,7 @@ CommonJS top-level `this` creates an implicit reference to `exports`. The same r
 
 After this pass completes:
 
-1. **Non-lazy modules have their final `exports_kind`.** Every `Module::Normal` whose meta does **not** have `has_lazy_export()` has been classified — a residual `ExportsKind::None` means "no JS importer touched it; treat as a side-effect-only script."
+1. **Non-lazy modules have their final `exports_kind`.** Every `Module::Normal` whose meta does **not** have `has_lazy_export()` has been classified — a residual `ExportsKind::None` means "no `import` or `require` touched it": a side-effect-only script, or a module that only `import()` reads while code splitting is on. The second kind still gets a namespace statement, because the `import()` reads its namespace.
 2. **Lazy-export modules are intentionally not finalized here.** `generate_lazy_export` runs later and may flip a lazy module's `exports_kind` to `Esm` (`generate_lazy_export.rs:88`, `:287`) and even revise its `wrap_kind` to `WrapKind::None` for the JSON-lazy path (`:296`). Don't widen invariant (1) without auditing that pass.
 3. **For every non-lazy `(importer, importee)` pair where wrapping is required, `metas[importee.idx].wrap_kind` is set.** `wrap_modules` may transitively propagate wrappers from there, but it will never _introduce_ a wrap that this pass missed.
 

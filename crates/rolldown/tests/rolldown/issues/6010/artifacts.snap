@@ -22,10 +22,9 @@ export { two_exports as two } from "./two.js";
 
 ```js
 import { __exportAll } from "./_virtual/_rolldown/runtime.js";
-//#region three.js
+// three.js
 var three_exports = /* @__PURE__ */ __exportAll({ myVariable: () => myVariable });
 const myVariable = "world";
-//#endregion
 export { myVariable, three_exports };
 
 ```
@@ -35,9 +34,8 @@ export { myVariable, three_exports };
 ```js
 import { __exportAll } from "./_virtual/_rolldown/runtime.js";
 import { three_exports } from "./three.js";
-//#region two.js
+// two.js
 var two_exports = /* @__PURE__ */ __exportAll({ three: () => three_exports });
-//#endregion
 export { three_exports as three, two_exports };
 
 ```

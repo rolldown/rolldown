@@ -16,7 +16,7 @@ use rolldown_utils::rayon::{
 };
 
 use rolldown_utils::IndexBitSet;
-use rolldown_utils::indexmap::FxIndexMap;
+use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
@@ -102,6 +102,10 @@ pub struct IncludeContext<'a> {
   /// inclusion), which deliberately skips those statements for
   /// [`side_effects_included_on_demand`] modules.
   pub body_demand_swept: FxHashSet<ModuleIdx>,
+  /// Forwarding declarations (see [`retain_forwarding_declarations`]) whose owner module is not
+  /// included yet, keyed by that owner; [`handle_include_module`] drains them when it includes
+  /// the module.
+  pub deferred_forwarding_refs: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
   /// Work queue of the inclusion engine (see [`drain_work_items`]). Edge producers push typed
   /// work items here instead of recursing; the public `include_*` entry points drain it to
   /// empty before returning. Invariant (debug-asserted at every public entry point): empty
@@ -153,6 +157,7 @@ impl<'a> IncludeContext<'a> {
       entry_module_idxs,
       body_demand_keys,
       body_demand_swept: FxHashSet::default(),
+      deferred_forwarding_refs: FxHashMap::default(),
       pending: Vec::new(),
     }
   }
@@ -509,6 +514,27 @@ fn enqueue_declaring_statements(ctx: &mut IncludeContext, symbol_ref: &SymbolRef
   }
 }
 
+/// Retain the statements that forward `symbol_ref` from its canonical owner: its own import or
+/// re-export declaration and the intermediates in `normal_symbol_exports_chain_map`. A statement is
+/// retained only once its owner module is included; until then it waits in
+/// `deferred_forwarding_refs`. See internal-docs/linking/reference-needed-symbols/implementation.md.
+fn retain_forwarding_declarations(ctx: &mut IncludeContext, symbol_ref: SymbolRef) {
+  retain_forwarding_declaration(ctx, symbol_ref);
+  if let Some(forwarding_refs) = ctx.normal_symbol_exports_chain_map.get(&symbol_ref) {
+    for forwarding_ref in forwarding_refs {
+      retain_forwarding_declaration(ctx, *forwarding_ref);
+    }
+  }
+}
+
+fn retain_forwarding_declaration(ctx: &mut IncludeContext, forwarding_ref: SymbolRef) {
+  if ctx.is_module_included_vec.has_bit(forwarding_ref.owner) {
+    enqueue_declaring_statements(ctx, &forwarding_ref);
+  } else {
+    ctx.deferred_forwarding_refs.entry(forwarding_ref.owner).or_default().insert(forwarding_ref);
+  }
+}
+
 pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
   debug_assert!(ctx.pending.is_empty(), "engine queue must be empty between public entry points");
   ctx.pending.push(WorkItem::Module(module.idx));
@@ -524,6 +550,11 @@ fn handle_include_module(ctx: &mut IncludeContext, module_idx: ModuleIdx) {
     return;
   }
   ctx.module_inclusion_changed = true;
+  if let Some(forwarding_refs) = ctx.deferred_forwarding_refs.remove(&module_idx) {
+    for forwarding_ref in &forwarding_refs {
+      enqueue_declaring_statements(ctx, forwarding_ref);
+    }
+  }
 
   if module.idx == ctx.runtime_idx && !module.side_effects.has_side_effects() {
     // Unmodified runtime: statements included only via references.
@@ -697,7 +728,7 @@ fn handle_include_symbol(
     note_external_interop_use(ctx, symbol_ref, alias_holder_ref, canonical_ref);
   }
   if let Module::Normal(module) = &ctx.modules[canonical_ref.owner] {
-    demand_esm_init_wrapper(ctx, canonical_ref);
+    demand_esm_initialization(ctx, symbol_ref, canonical_ref);
     note_json_self_reference(ctx, module, canonical_ref, include_reason);
     enqueue_declaring_statements(ctx, &canonical_ref);
     if !is_simulated_facade_chunk {
@@ -919,9 +950,13 @@ fn note_namespace_inclusion_reason(
   }
 }
 
-/// Using any binding of a `WrapKind::Esm` module demands its `init_*` wrapper: the binding is
-/// only initialized once the wrapper runs.
-fn demand_esm_init_wrapper(ctx: &mut IncludeContext, canonical_ref: SymbolRef) {
+/// A wrapped ESM binding needs its wrapper and the forwarding declarations that call it.
+/// See internal-docs/linking/reference-needed-symbols/implementation.md.
+fn demand_esm_initialization(
+  ctx: &mut IncludeContext,
+  symbol_ref: SymbolRef,
+  canonical_ref: SymbolRef,
+) {
   let wrapper_ref = {
     let meta = &ctx.metas[canonical_ref.owner];
     matches!(meta.wrap_kind(), WrapKind::Esm)
@@ -931,6 +966,7 @@ fn demand_esm_init_wrapper(ctx: &mut IncludeContext, canonical_ref: SymbolRef) {
   };
   if let Some(wrapper_ref) = wrapper_ref {
     ctx.pending.push(WorkItem::Symbol(wrapper_ref, SymbolIncludeReason::Normal));
+    retain_forwarding_declarations(ctx, symbol_ref);
   }
 }
 
@@ -1024,7 +1060,7 @@ fn handle_include_statement(
       // it means this member expr definitely contains module namespace ref.
       if let Some(resolved_ref) = member_expr_resolution.resolved {
         member_expr_resolution.depended_refs.iter().for_each(|sym_ref| {
-          enqueue_declaring_statements(ctx, sym_ref);
+          retain_forwarding_declaration(ctx, *sym_ref);
         });
         ctx.pending.push(WorkItem::Symbol(resolved_ref, include_kind));
         // When the member expression resolves to a specific CJS export property
@@ -1046,15 +1082,9 @@ fn handle_include_statement(
           return;
         }
       }
-      let original_ref = reference_ref.symbol_ref();
-      std::iter::once(original_ref)
-        .chain(
-          ctx.normal_symbol_exports_chain_map.get(original_ref).map(Vec::as_slice).unwrap_or(&[]),
-        )
-        .for_each(|sym_ref| {
-          enqueue_declaring_statements(ctx, sym_ref);
-        });
-      push_symbol_and_check_cjs_bailout(ctx, *original_ref, include_kind);
+      let original_ref = *reference_ref.symbol_ref();
+      retain_forwarding_declarations(ctx, original_ref);
+      push_symbol_and_check_cjs_bailout(ctx, original_ref, include_kind);
     }
   });
 }

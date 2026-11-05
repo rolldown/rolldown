@@ -14,9 +14,8 @@ export { t as value } from "./entry-a.js";
 
 ```js
 import { t as value } from "./entry-a.js";
-//#region entry-b.js
+// entry-b.js
 const combined = `b:${value}`;
-//#endregion
 export { combined };
 
 ```
@@ -24,9 +23,8 @@ export { combined };
 ## entry-a.js
 
 ```js
-//#region entry-a.js
+// entry-a.js
 const value = await Promise.resolve("a");
-//#endregion
 export { value as t };
 
 ```
@@ -49,7 +47,7 @@ export { value };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as value, t as init_entry_a } from "./entry-a.js";
-//#region entry-b.js
+// entry-b.js
 var combined;
 function init_entry_b() {
 	return (init_entry_b = __esmMin((async () => {
@@ -57,7 +55,6 @@ function init_entry_b() {
 		combined = `b:${value}`;
 	})))();
 }
-//#endregion
 await init_entry_b();
 export { combined };
 
@@ -67,14 +64,13 @@ export { combined };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region entry-a.js
+// entry-a.js
 var value;
 function init_entry_a() {
 	return (init_entry_a = __esmMin((async () => {
 		value = await Promise.resolve("a");
 	})))();
 }
-//#endregion
 export { value as n, init_entry_a as t };
 
 ```
@@ -102,9 +98,8 @@ export { t as value } from "./entry-a.js";
 
 ```js
 import { t as value } from "./entry-a.js";
-//#region entry-b.js
+// entry-b.js
 const combined = `b:${value}`;
-//#endregion
 export { combined };
 
 ```
@@ -112,9 +107,8 @@ export { combined };
 ### entry-a.js
 
 ```js
-//#region entry-a.js
+// entry-a.js
 const value = await Promise.resolve("a");
-//#endregion
 export { value as t };
 
 ```

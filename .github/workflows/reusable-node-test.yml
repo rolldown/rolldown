@@ -35,17 +35,18 @@ jobs:
           env-mapping: |
             PNPM_HOME,{{ DEV_DRIVE }}/.pnpm
 
-      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
-        with:
-          version: '1.0.0'
-          node-version: ${{ inputs.node-version }}
-          cache: true
+      - parallel:
+          - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
+            with:
+              version: '1.0.0'
+              node-version: ${{ inputs.node-version }}
+              cache: true
 
-      - name: Download Native Rolldown Build
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: rolldown-native-${{ inputs.os }}
-          path: packages/rolldown/dist
+          - name: Download Native Rolldown Build
+            uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+            with:
+              name: rolldown-native-${{ inputs.os }}
+              path: packages/rolldown/dist
 
       - name: Build `@rolldown/test-dev-server`
         run: vp run --filter '@rolldown/test-dev-server' build

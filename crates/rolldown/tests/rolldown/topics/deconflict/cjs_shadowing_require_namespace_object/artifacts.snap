@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region lib.js
+// lib.js
 var lib_exports$1 = /* @__PURE__ */ __exportAll({
 	default: () => makeValue,
 	named: () => named
@@ -19,13 +19,11 @@ var named;
 var init_lib = __esmMin((() => {
 	named = "lib-named";
 }));
-//#endregion
-//#region main.js
+// main.js
 var require_main = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	var lib_exports = (init_lib(), __toCommonJS(lib_exports$1));
 	module.exports = lib_exports.default() + ":" + lib_exports.named;
 }));
-//#endregion
 export default require_main();
 
 ```

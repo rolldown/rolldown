@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "assert";
-//#region main.js
+// main.js
 const foo = "foo";
 let bar = "";
 bar = "bar";
@@ -17,7 +17,6 @@ import("./main.js").then((exports) => assert.deepStrictEqual({ ...exports }, {
 	bar: "bar",
 	default: "default"
 }));
-//#endregion
 export { bar, main_default as default, foo };
 
 ```
@@ -45,7 +44,7 @@ Object.defineProperties(exports, {
 // HIDDEN [\0rolldown/runtime.js]
 let assert = require("assert");
 assert = __toESM(assert);
-//#region main.js
+// main.js
 const foo = "foo";
 let bar = "";
 bar = "bar";
@@ -55,7 +54,6 @@ Promise.resolve().then(() => require("./main.js")).then((exports) => assert.defa
 	bar: "bar",
 	default: "default"
 }));
-//#endregion
 Object.defineProperty(exports, "bar", {
 	enumerable: true,
 	get: function() {

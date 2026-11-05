@@ -8,14 +8,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //! User-defined Entry: [Entry-Module-Id: main.js] [Name: main]
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region main.js
+// main.js
 var loaded;
 function init_main() {
 	return (init_main = __esmMin((() => {
 		loaded = import("./target2.js").then((namespace) => namespace);
 	})))();
 }
-//#endregion
 init_main();
 export { loaded };
 
@@ -27,7 +26,7 @@ export { loaded };
 //! ManualCodeSplitting: [Group-Name: reader]
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_target } from "./target.js";
-//#region reader.js
+// reader.js
 function read() {
 	globalThis.__externalStarLog.push(`reader:1`);
 }
@@ -36,7 +35,6 @@ function init_reader() {
 		init_target();
 	})))();
 }
-//#endregion
 export { read as n, init_reader as t };
 
 ```
@@ -45,7 +43,7 @@ export { read as n, init_reader as t };
 
 ```js
 //! Common Chunk: [Shared-By: main.js, target.js]
-//#region \0rolldown/runtime.js
+// \0rolldown/runtime.js
 var __esmMin = (fn, res, err) => () => {
 	if (err) throw err[0];
 	try {
@@ -54,7 +52,6 @@ var __esmMin = (fn, res, err) => () => {
 		throw err = [e], e;
 	}
 };
-//#endregion
 export { __esmMin as t };
 
 ```
@@ -66,7 +63,7 @@ export { __esmMin as t };
 //! Common Chunk: [Shared-By: target.js]
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as read, t as init_reader } from "./reader.js";
-//#region target.js
+// target.js
 var x;
 function init_target() {
 	return (init_target = __esmMin((() => {
@@ -76,7 +73,6 @@ function init_target() {
 		read();
 	})))();
 }
-//#endregion
 export { x as n, init_target as t };
 
 ```

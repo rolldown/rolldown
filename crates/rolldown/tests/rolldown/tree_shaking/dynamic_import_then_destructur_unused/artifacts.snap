@@ -6,9 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## lib.js
 
 ```js
-//#region lib.js
+// lib.js
 var foo = "foo";
-//#endregion
 export { foo };
 
 ```
@@ -16,8 +15,7 @@ export { foo };
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 import("./lib.js").then(({ foo: x, bar: a }) => [x, thing]);
-//#endregion
 
 ```

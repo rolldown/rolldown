@@ -20,12 +20,10 @@ export { t as b } from "./common.js";
 ## common.js
 
 ```js
-//#region a.js
+// a.js
 const a = "a";
-//#endregion
-//#region b.js
+// b.js
 const b = "a";
-//#endregion
 export { a as n, b as t };
 
 ```

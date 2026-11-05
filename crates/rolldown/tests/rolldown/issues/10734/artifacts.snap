@@ -16,10 +16,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region chain-a.js
+// chain-a.js
 var chain_a_exports = /* @__PURE__ */ __exportAll({ chainA: () => chainA });
 const chainA = "chainA";
-//#endregion
 export { chain_a_exports as n, __exportAll as r, chainA as t };
 
 ```
@@ -28,9 +27,8 @@ export { chain_a_exports as n, __exportAll as r, chainA as t };
 
 ```js
 import { entryValue, r as chainB } from "./service.js";
-//#region cyclic.js
+// cyclic.js
 const cyclic = "cyclic" + chainB + entryValue;
-//#endregion
 export { cyclic };
 
 ```
@@ -38,9 +36,8 @@ export { cyclic };
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 const done = import("./service.js").then((n) => n.t);
-//#endregion
 export { done };
 
 ```
@@ -49,13 +46,11 @@ export { done };
 
 ```js
 import { r as __exportAll, t as chainA } from "./chain-a.js";
-//#region chain-b.js
+// chain-b.js
 const chainB = "chainB";
-//#endregion
-//#region shared.js
+// shared.js
 const shared = "shared" + chainA;
-//#endregion
-//#region service.js
+// service.js
 var service_exports = /* @__PURE__ */ __exportAll({
 	entryValue: () => entryValue,
 	loadChainA: () => loadChainA,
@@ -66,7 +61,6 @@ const entryValue = "entry" + shared + chainB;
 const loadCyclic = () => import("./cyclic.js");
 const loadShared = () => import("./shared.js");
 const loadChainA = () => import("./chain-a.js").then((n) => n.n);
-//#endregion
 export { entryValue, loadChainA, loadCyclic, loadShared, shared as n, chainB as r, service_exports as t };
 
 ```

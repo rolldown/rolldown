@@ -1,19 +1,12 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# Errors
+# Assets
 
-## PARSE_ERROR
+## entry.js
 
-```text
-[PARSE_ERROR] Expected a semicolon or an implicit semicolon after a statement, but found none
-   ╭─[ foo.js:1:24 ]
-   │
- 1 │ { "this is json not js": true }
-   │                        │ 
-   │                        ╰─ 
-   │ 
-   │ Help: Try inserting a semicolon here
-───╯
+```js
+// entry.js
+console.log({ "this is json not js": true });
 
 ```

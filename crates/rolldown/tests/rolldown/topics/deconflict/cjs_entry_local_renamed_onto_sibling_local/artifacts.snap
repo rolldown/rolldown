@@ -7,11 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region main.cjs
+// main.cjs
 var require_main$2 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.pair = [{ value: "a" }, { value: "b" }];
 }));
-//#endregion
 export default require_main$2();
 
 ```
@@ -23,10 +22,9 @@ export default require_main$2();
 ### main.js
 
 ```js
-//#region main.cjs
+// main.cjs
 const require_main = { value: "a" };
 const require_main$1 = { value: "b" };
 exports.pair = [require_main, require_main$1];
-//#endregion
 
 ```

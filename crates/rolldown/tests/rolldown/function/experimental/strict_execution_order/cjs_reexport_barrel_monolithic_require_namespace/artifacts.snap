@@ -7,14 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region node_modules/pure-barrel/cn.js
+// node_modules/pure-barrel/cn.js
 var cn;
 var init_cn = __esmMin((() => {
 	globalThis.__events.push("cn");
 	cn = (...values) => values.filter(Boolean).join(" ");
 }));
-//#endregion
-//#region node_modules/pure-barrel/clone-deep.cjs
+// node_modules/pure-barrel/clone-deep.cjs
 var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("clone-deep");
 	module.exports = function cloneDeep(value) {
@@ -27,10 +26,7 @@ function init_pure_barrel_cjs_0() {
 		import_clone_deep = /* @__PURE__ */ __toESM(require_clone_deep(), 1);
 	})))();
 }
-//#endregion
-//#region node_modules/pure-barrel/index.js
-//#endregion
-//#region wrapper.js
+// wrapper.js
 var wrapper_exports = /* @__PURE__ */ __exportAll({
 	cloneDeep: () => import_clone_deep.default,
 	cn: () => cn
@@ -38,8 +34,7 @@ var wrapper_exports = /* @__PURE__ */ __exportAll({
 var init_wrapper = __esmMin((() => {
 	init_cn(), init_pure_barrel_cjs_0();
 }));
-//#endregion
-//#region outer.cjs
+// outer.cjs
 var require_outer = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const ns = (init_wrapper(), __toCommonJS(wrapper_exports));
 	module.exports = {
@@ -54,9 +49,6 @@ function init_main_cjs_1() {
 		import_outer = /* @__PURE__ */ __toESM(require_outer());
 	})))();
 }
-//#endregion
-//#region main.js
-//#endregion
 init_main_cjs_1();
 var result = import_outer.default;
 export { result };
@@ -71,14 +63,13 @@ export { result };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region node_modules/pure-barrel/cn.js
+// node_modules/pure-barrel/cn.js
 var cn;
 var init_cn = __esmMin((() => {
 	globalThis.__events.push("cn");
 	cn = (...values) => values.filter(Boolean).join(" ");
 }));
-//#endregion
-//#region node_modules/pure-barrel/clone-deep.cjs
+// node_modules/pure-barrel/clone-deep.cjs
 var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("clone-deep");
 	module.exports = function cloneDeep(value) {
@@ -91,10 +82,7 @@ function init_pure_barrel_cjs_0() {
 		import_clone_deep = /* @__PURE__ */ __toESM(require_clone_deep(), 1);
 	})))();
 }
-//#endregion
-//#region node_modules/pure-barrel/index.js
-//#endregion
-//#region wrapper.js
+// wrapper.js
 var wrapper_exports = /* @__PURE__ */ __exportAll({
 	cloneDeep: () => import_clone_deep.default,
 	cn: () => cn
@@ -102,8 +90,7 @@ var wrapper_exports = /* @__PURE__ */ __exportAll({
 var init_wrapper = __esmMin((() => {
 	init_cn(), init_pure_barrel_cjs_0();
 }));
-//#endregion
-//#region outer.cjs
+// outer.cjs
 var require_outer = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const ns = (init_wrapper(), __toCommonJS(wrapper_exports));
 	module.exports = {
@@ -118,9 +105,6 @@ function init_main_cjs_1() {
 		import_outer = /* @__PURE__ */ __toESM(require_outer());
 	})))();
 }
-//#endregion
-//#region main.js
-//#endregion
 init_main_cjs_1();
 var result = import_outer.default;
 export { result };

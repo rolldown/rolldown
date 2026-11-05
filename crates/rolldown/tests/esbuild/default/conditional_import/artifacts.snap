@@ -7,9 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as __toESM } from "./rolldown-runtime.js";
-//#region a.js
+// a.js
 x ? import("a") : y ? import("./import.js").then((m) => /* @__PURE__ */ __toESM(m.default)) : import("c");
-//#endregion
 
 ```
 
@@ -17,9 +16,8 @@ x ? import("a") : y ? import("./import.js").then((m) => /* @__PURE__ */ __toESM(
 
 ```js
 import { n as __toESM } from "./rolldown-runtime.js";
-//#region b.js
+// b.js
 x ? y ? import("a") : import("./import.js").then((m) => /* @__PURE__ */ __toESM(m.default)) : import(c);
-//#endregion
 
 ```
 
@@ -27,11 +25,10 @@ x ? y ? import("a") : import("./import.js").then((m) => /* @__PURE__ */ __toESM(
 
 ```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
-//#region import.js
+// import.js
 var require_import = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.foo = 213;
 }));
-//#endregion
 export default require_import();
 
 ```

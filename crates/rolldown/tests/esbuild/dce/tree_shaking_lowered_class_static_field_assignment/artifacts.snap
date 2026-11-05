@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.ts
+// entry.ts
 var KeepMe1 = class {};
 KeepMe1.x = "x";
 KeepMe1.y = "y";
@@ -20,6 +20,5 @@ KeepMe3.x = "x";
 KeepMe3.y = "y";
 KeepMe3.z = "z";
 new KeepMe3();
-//#endregion
 
 ```

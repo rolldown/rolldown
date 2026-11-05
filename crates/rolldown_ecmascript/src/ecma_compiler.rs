@@ -98,6 +98,7 @@ impl EcmaCompiler {
           annotation: options.comments.annotation,
         },
         initial_indent: options.initial_indent,
+        ascii_only: options.ascii_only,
         source_map_path: options.sourcemap.then(|| PathBuf::from(options.filename)),
         ..CodegenOptions::default()
       })
@@ -167,6 +168,7 @@ pub struct PrintOptions {
   pub filename: String,
   pub sourcemap: bool,
   pub initial_indent: u32,
+  pub ascii_only: bool,
 }
 
 #[derive(Debug, Default, Clone, Copy)]

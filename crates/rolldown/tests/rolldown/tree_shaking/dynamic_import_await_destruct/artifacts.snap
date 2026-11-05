@@ -6,9 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## lib.js
 
 ```js
-//#region lib.js
+// lib.js
 var foo = "foo";
-//#endregion
 export { foo };
 
 ```
@@ -16,9 +15,8 @@ export { foo };
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 const { foo: x, thing: a } = await import("./lib.js");
 console.log(x);
-//#endregion
 
 ```

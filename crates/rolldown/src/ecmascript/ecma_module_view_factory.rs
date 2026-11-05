@@ -81,15 +81,17 @@ pub async fn create_ecma_view(
     hashbang_range,
     ecma_view_meta,
     dynamic_import_rec_exports_usage,
+    dynamic_import_called_names,
     new_url_references: new_url_imports,
+    namespace_in_checks,
     rolldown_file_url_references,
     this_expr_replace_map,
+    cjs_this_ref,
     hmr_info,
     hmr_hot_ref,
     directive_range,
     dummy_record_set,
     constant_export_map,
-    import_attribute_map,
     cjs_reexport_require_node_ids: _,
     cjs_reexport_import_record_ids,
   } = scan_result;
@@ -144,17 +146,19 @@ pub async fn create_ecma_view(
     hashbang_range,
     mutations: vec![],
     new_url_references: new_url_imports,
+    namespace_in_checks,
     rolldown_file_url_references,
     this_expr_replace_map,
+    cjs_this_ref,
     hmr_info,
     hmr_hot_ref,
     directive_range,
     dummy_record_set,
     constant_export_map,
     enum_member_value_map,
-    import_attribute_map,
     json_module_none_self_reference_included_symbol: None,
     cjs_reexport_import_record_ids,
+    dynamic_import_called_names,
   };
 
   let ecma_related =
@@ -190,7 +194,7 @@ pub async fn normalize_side_effects(
         if opt.module_side_effects.is_fn() {
           match opt
             .module_side_effects
-            .ffi_resolve(&resolved_id.id, resolved_id.external.is_external())
+            .ffi_resolve(resolved_id.id.raw_id(), resolved_id.external.is_external())
             .await?
           {
             Some(value) => DeterminedSideEffects::UserDefined(value),
@@ -199,7 +203,7 @@ pub async fn normalize_side_effects(
         } else {
           match opt
             .module_side_effects
-            .native_resolve(&resolved_id.id, resolved_id.external.is_external())
+            .native_resolve(resolved_id.id.raw_id(), resolved_id.external.is_external())
           {
             Some(value) => DeterminedSideEffects::UserDefined(value),
             None => lazy_check_side_effects(resolved_id, stmt_infos, true),

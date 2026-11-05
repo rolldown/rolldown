@@ -19,8 +19,13 @@ impl OnLog {
     Self(f)
   }
 
-  pub async fn call(&self, log_level: LogLevel, log: Log) -> anyhow::Result<()> {
-    self.0(log_level, log).await
+  /// Invokes the callback now; the returned future only waits for its result.
+  pub fn call(
+    &self,
+    log_level: LogLevel,
+    log: Log,
+  ) -> Pin<Box<dyn Future<Output = anyhow::Result<()>> + Send + 'static>> {
+    self.0(log_level, log)
   }
 }
 
@@ -39,6 +44,7 @@ pub struct Log {
   pub id: Option<String>,
   pub code: Option<String>,
   pub exporter: Option<String>,
+  pub binding: Option<String>,
   pub plugin: Option<String>,
   pub loc: Option<LogLocation>,
   pub pos: Option<u32>,
@@ -67,6 +73,7 @@ impl Log {
     Self {
       id: warning.id(),
       exporter: warning.exporter(),
+      binding: warning.binding(),
       code: Some(warning.kind().to_string()),
       message: rendered.message,
       plugin: warning.plugin(),
@@ -83,6 +90,7 @@ pub struct LogWithoutPlugin {
   pub id: Option<String>,
   pub code: Option<String>,
   pub exporter: Option<String>,
+  pub binding: Option<String>,
   pub loc: Option<LogLocation>,
   pub pos: Option<u32>,
   pub ids: Option<Vec<String>>,
@@ -95,6 +103,7 @@ impl LogWithoutPlugin {
       id: self.id,
       code: self.code,
       exporter: self.exporter,
+      binding: self.binding,
       plugin: plugin_name,
       loc: self.loc,
       pos: self.pos,

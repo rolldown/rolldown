@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 function foo() {
 	if (a) b();
 }
@@ -32,7 +32,6 @@ var entry_default = [
 		return KEEP_ME;
 	}
 ];
-//#endregion
 export { entry_default as default };
 
 ```

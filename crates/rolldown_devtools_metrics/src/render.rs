@@ -272,6 +272,14 @@ pub(crate) fn render_entry(report: &Report) -> String {
   out.push_str(
     "| `graph.md` | code-splitting: entry points, chunk import graph & initial-load cost |\n",
   );
+  if report.graph.is_some() {
+    out.push_str(
+      "| `module-graph.json` | what-if queries: the bytes one deferred import removes from the initial load — filter it, don't read it wholesale |\n",
+    );
+  }
+  out.push_str(
+    "| `chunk-graph.json` | joining output file names to browser request timings (every chunk, no top-N limit) |\n",
+  );
   if report.delta.is_some() || report.baseline_delta.is_some() {
     out.push_str(
       "| `delta.md` | checking this build for regressions vs the last (and the pinned baseline, if any) |\n",
@@ -283,8 +291,8 @@ pub(crate) fn render_entry(report: &Report) -> String {
   out.push('\n');
   out.push_str(
     "> Derived in-memory from the rolldown devtools event stream (same data that feeds Vite \
-     DevTools). Durations are measured at event emission. Sizes are per-asset/chunk and \
-     per-package; per-module byte size is not yet in the devtools stream.\n",
+     DevTools). Durations are measured at event emission. Sizes are per asset/chunk, \
+     per package and per module (rendered bytes before minification).\n",
   );
   out
 }
@@ -821,7 +829,7 @@ otherwise).
 | `packages.duplicate_version_count` | Packages shipped at multiple versions (dedupe = size win). |
 | `plugins.hook_call_count` / `plugins.hook_time_ms` | Plugin hook volume and cost (summed across concurrent calls). |
 | `plugins.hook_noop_call_count` | Hook calls that did no work (returned nothing, or transform returned the code unchanged). High share ⇒ plugins should declare hook filters; compare across builds to verify a filter change. |
-| `plugins.noop_hook_count` | Hooks whose every call was a no-op. Each one is a hook filter the plugin should declare; `metrics.json` → `noopHooks` lists every hook with no-op calls and its share. |
+| `plugins.noop_hook_count` | Hooks whose every call was a no-op. Each one is a hook filter the plugin should declare; `metrics.json` → `noopHooks` lists the top-N hooks with no-op calls, highest share first. |
 
 Per-entry numbers live in `metrics.json` → `entries`, joined across builds by `entry`.
 

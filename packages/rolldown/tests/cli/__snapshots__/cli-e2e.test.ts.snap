@@ -61,8 +61,8 @@ OPTIONS
   --configLoader <loader>     How to load the config file (bundle, native).
   --context <context>         The entity top-level \`this\` represents.
   --cwd <cwd>                 Current working directory.
-  --devtools.mode <devtools.mode>'full' (default): write JSON-lines devtools logs. 'report': aggregate the same event stream in-memory and emit an agent-readable report (metrics.json + markdown views) instead.
-  --devtools.sessionId <devtools.sessionId>Used to name the build.
+  --devtools.mode <devtools.mode>'full' (default): write JSON-lines devtools logs. 'report': write a small build report to node_modules/.rolldown/report/ instead.
+  --devtools.sessionId <devtools.sessionId>Name of the 'full' mode log folder, node_modules/.rolldown/<sessionId>/.
   --dynamicImportInCjs        Dynamic import in CJS output.
   --entryFileNames <name>     Name pattern for emitted entry chunks.
   --environment <environment> Pass additional settings to the config file via process.ENV.
@@ -218,8 +218,8 @@ OPTIONS
   --configLoader <loader>     How to load the config file (bundle, native).
   --context <context>         The entity top-level \`this\` represents.
   --cwd <cwd>                 Current working directory.
-  --devtools.mode <devtools.mode>'full' (default): write JSON-lines devtools logs. 'report': aggregate the same event stream in-memory and emit an agent-readable report (metrics.json + markdown views) instead.
-  --devtools.sessionId <devtools.sessionId>Used to name the build.
+  --devtools.mode <devtools.mode>'full' (default): write JSON-lines devtools logs. 'report': write a small build report to node_modules/.rolldown/report/ instead.
+  --devtools.sessionId <devtools.sessionId>Name of the 'full' mode log folder, node_modules/.rolldown/<sessionId>/.
   --dynamicImportInCjs        Dynamic import in CJS output.
   --entryFileNames <name>     Name pattern for emitted entry chunks.
   --environment <environment> Pass additional settings to the config file via process.ENV.
@@ -375,8 +375,8 @@ OPTIONS
   --configLoader <loader>     How to load the config file (bundle, native).
   --context <context>         The entity top-level \`this\` represents.
   --cwd <cwd>                 Current working directory.
-  --devtools.mode <devtools.mode>'full' (default): write JSON-lines devtools logs. 'report': aggregate the same event stream in-memory and emit an agent-readable report (metrics.json + markdown views) instead.
-  --devtools.sessionId <devtools.sessionId>Used to name the build.
+  --devtools.mode <devtools.mode>'full' (default): write JSON-lines devtools logs. 'report': write a small build report to node_modules/.rolldown/report/ instead.
+  --devtools.sessionId <devtools.sessionId>Name of the 'full' mode log folder, node_modules/.rolldown/<sessionId>/.
   --dynamicImportInCjs        Dynamic import in CJS output.
   --entryFileNames <name>     Name pattern for emitted entry chunks.
   --environment <environment> Pass additional settings to the config file via process.ENV.
@@ -532,8 +532,8 @@ OPTIONS
   --configLoader <loader>     How to load the config file (bundle, native).
   --context <context>         The entity top-level \`this\` represents.
   --cwd <cwd>                 Current working directory.
-  --devtools.mode <devtools.mode>'full' (default): write JSON-lines devtools logs. 'report': aggregate the same event stream in-memory and emit an agent-readable report (metrics.json + markdown views) instead.
-  --devtools.sessionId <devtools.sessionId>Used to name the build.
+  --devtools.mode <devtools.mode>'full' (default): write JSON-lines devtools logs. 'report': write a small build report to node_modules/.rolldown/report/ instead.
+  --devtools.sessionId <devtools.sessionId>Name of the 'full' mode log folder, node_modules/.rolldown/<sessionId>/.
   --dynamicImportInCjs        Dynamic import in CJS output.
   --entryFileNames <name>     Name pattern for emitted entry chunks.
   --environment <environment> Pass additional settings to the config file via process.ENV.

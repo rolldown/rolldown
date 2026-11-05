@@ -5,7 +5,7 @@
 
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, ChunkMeta, ChunkReasonType, EntryPointKind, OutputExports,
+  Chunk, ChunkIdx, ChunkKind, ChunkMeta, ChunkReasonType, EntryPointKind, ModuleIdx, OutputExports,
   OutputFormat, PathsOutputOption, PostChunkOptimizationOperation, PreserveEntrySignatures,
   RuntimeHelper, UsedSymbolRefsView, WrapKind,
 };
@@ -177,8 +177,6 @@ impl GenerateStage<'_> {
     }
     // 6.2. The generated runtime has at most one import: `node:module` for ESM output on Node.
     // `resolveId` also runs on this import, so check the resolved module, not the specifier.
-    // `output.paths` can change the emitted path of the import after this step. A `paths` function
-    // runs only after this step, so treat it as a change.
     let mut records = runtime.import_records.iter();
     let generated_imports = match (records.next(), records.next()) {
       (None, _) => true,
@@ -187,11 +185,7 @@ impl GenerateStage<'_> {
           .resolved_module
           .and_then(|module_idx| module_table[module_idx].as_external())
           .is_some_and(|module| module.id.as_str() == "node:module")
-          && match &self.options.paths {
-            None => true,
-            Some(PathsOutputOption::FxHashMap(paths)) => !paths.contains_key("node:module"),
-            Some(PathsOutputOption::Fn(_)) => false,
-          }
+          && !self.external_path_can_change("node:module")
       }
       (Some(_), Some(_)) => false,
     };
@@ -205,6 +199,65 @@ impl GenerateStage<'_> {
         .iter()
         .filter_map(|record| record.resolved_module)
         .all(|module_idx| !module_table[module_idx].side_effects().has_side_effects())
+  }
+
+  /// `output.paths` can send an import of the external module `id` to another module after this
+  /// step. A `paths` function runs only after this step, so treat it as a change.
+  fn external_path_can_change(&self, id: &str) -> bool {
+    match &self.options.paths {
+      None => false,
+      Some(PathsOutputOption::FxHashMap(paths)) => paths.contains_key(id),
+      Some(PathsOutputOption::Fn(_)) => true,
+    }
+  }
+
+  /// A chunk that can wait during its evaluation: it has a module with top-level await, or, in ESM
+  /// output, it statically imports an external module that can wait. Rolldown cannot see the code
+  /// of an external module. That code can use top-level await, and it can import a user entry, so
+  /// it can also put the chunk in a cycle that the chunk graph does not show. Only a Node built-in
+  /// module evaluates synchronously and imports no user module, and only when the output imports
+  /// it by its own id. In CJS output, `require()` loads each external module synchronously.
+  fn chunk_can_wait(
+    &self,
+    chunk_graph: &ChunkGraph,
+    links: &CrossChunkLinkState,
+    chunk_idx: ChunkIdx,
+  ) -> bool {
+    let chunk = &chunk_graph.chunk_table[chunk_idx];
+    if chunk
+      .modules
+      .iter()
+      .any(|&module_idx| self.link_output.metas[module_idx].is_tla_or_contains_tla_dependency)
+    {
+      return true;
+    }
+    if matches!(self.options.format, OutputFormat::Cjs) {
+      return false;
+    }
+    let module_table = &self.link_output.module_table;
+    let is_synchronous = |module_idx: ModuleIdx| {
+      module_table[module_idx].as_external().is_some_and(|module| {
+        module.id.as_str().starts_with("node:")
+          && !self.external_path_can_change(module.id.as_str())
+      })
+    };
+    // The links hold each static import of an external module, except one: for `export * from
+    // 'ext'` below the entry level, the namespace object of the module imports `ext` inline. An
+    // `import()` of an external module adds no wait.
+    let star_exports = chunk.modules.iter().flat_map(|&module_idx| {
+      let module = module_table[module_idx].as_normal();
+      self.link_output.metas[module_idx]
+        .star_exports_from_external_modules
+        .iter()
+        .filter_map(move |&rec_idx| module?.import_records[rec_idx].resolved_module)
+    });
+    links.index_chunk_direct_imports_from_external_modules[chunk_idx]
+      .keys()
+      .copied()
+      .chain(links.index_chunk_indirect_imports_from_external_modules[chunk_idx].iter().copied())
+      .chain(chunk.entry_level_external_module_idx.iter().copied())
+      .chain(star_exports)
+      .any(|module_idx| !is_synchronous(module_idx))
   }
 
   /// Declaration plugins discard generated runtime statements in `renderChunk`, so these chunks
@@ -655,8 +708,12 @@ impl<'a> HostSearch<'a> {
   /// asserts that such a lazy route does not import `H`.
   ///
   /// The proof needs three more facts:
-  /// - No chunk that `H` reaches has top-level await. So `H` completes before the end of each job
-  ///   that runs code of `H`, also when `H` is in a chunk cycle.
+  /// - No chunk that `H` reaches can wait (see `chunk_can_wait`). Then each cycle that contains `H`
+  ///   is in the static closure of `H`, and no module in that closure waits. So `H` completes
+  ///   before the end of each job that runs code of `H`, also when `H` is in a chunk cycle. A
+  ///   module that waits can keep a cycle that contains `H` unfinished after the code of `H` ran.
+  ///   ESM then makes each new importer of `H` wait for that cycle, and the cycle can pass through
+  ///   an external module that imports a user entry.
   /// - No module throws during its evaluation. If `H` throws after an `import()`, the lazy
   ///   consumer now fails with the error of `H`.
   /// - The entries and the `import()` edges show each load of a chunk.
@@ -690,16 +747,14 @@ impl<'a> HostSearch<'a> {
       .copied()
       .filter(|&consumer| eager.has_bit(consumer) && !forbidden.has_bit(consumer));
     let candidates = self.common_dependencies(minimal)?;
-    let reaches_tla = self.walk(
-      self.nodes.index_of_one().filter(|&chunk_idx| {
-        chunk_graph.chunk_table[chunk_idx]
-          .modules
-          .iter()
-          .any(|&module_idx| stage.link_output.metas[module_idx].is_tla_or_contains_tla_dependency)
-      }),
+    let reaches_wait = self.walk(
+      self
+        .nodes
+        .index_of_one()
+        .filter(|&chunk_idx| stage.chunk_can_wait(chunk_graph, links, chunk_idx)),
       false,
     );
-    hosts(&candidates).into_iter().filter(|&host| !reaches_tla.has_bit(host)).find(|&host| {
+    hosts(&candidates).into_iter().filter(|&host| !reaches_wait.has_bit(host)).find(|&host| {
       let reaches_host = self.walk([host], false);
       let before_host = self.start_before_host(&entries, host, dynamic_importees);
       consumers.iter().all(|&consumer| {

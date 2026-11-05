@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      { "name": "entry", "import": "entry.js" },
+      { "name": "entry2", "import": "entry2.js" }
+    ],
+    "external": ["ext-async"],
+    "experimental": { "chunkOptimization": false },
+    "codeSplitting": {
+      "includeDependenciesRecursively": false,
+      "groups": [{ "name": "k", "test": "[\\\\/][ky]\\.js$" }]
+    }
+  }
+}

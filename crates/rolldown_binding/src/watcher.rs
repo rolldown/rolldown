@@ -74,17 +74,13 @@ impl BindingWatcher {
       .map(create_bundler_config_from_binding_options)
       .collect::<Result<Vec<_>, _>>()?;
 
-    // Extract watcher config from the first config's watch options.
-    let watch = configs.first().and_then(|c| c.options.watch.as_ref());
-    let watcher_config = WatcherConfig {
-      debounce: watch.and_then(|w| w.build_delay).map(|ms| Duration::from_millis(u64::from(ms))),
-      use_polling: watch.is_some_and(|w| w.use_polling),
-      poll_interval: watch.and_then(|w| w.poll_interval),
-      compare_contents_for_polling: watch.is_some_and(|w| w.compare_contents_for_polling),
-      use_debounce: watch.is_some_and(|w| w.use_debounce),
-      debounce_delay: watch.and_then(|w| w.debounce_delay),
-      debounce_tick_rate: watch.and_then(|w| w.debounce_tick_rate),
-    };
+    // See internal-docs/watch-mode/implementation.md ("Multi-Config Watcher Options").
+    let debounce = configs
+      .iter()
+      .filter_map(|config| config.options.watch.as_ref()?.build_delay)
+      .max()
+      .map(|ms| Duration::from_millis(u64::from(ms)));
+    let watcher_config = WatcherConfig { debounce };
 
     let handler = NapiWatcherEventHandler { listener: Arc::new(listener) };
     let inner =

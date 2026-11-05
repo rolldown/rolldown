@@ -7,12 +7,9 @@ export default defineTest({
     input: './main.js',
     plugins: [
       {
-        name: 'insert_dummy_flag',
-        transform(code) {
-          let runtimeCode = `const __VITE_PRELOAD__ = [];`;
-          return {
-            code: runtimeCode + code,
-          };
+        name: 'replace_preload_markers',
+        renderChunk(code) {
+          return code.replace(/__VITE_PRELOAD__[\da-f]{32}/g, '[]');
         },
       },
       viteBuildImportAnalysisPlugin({

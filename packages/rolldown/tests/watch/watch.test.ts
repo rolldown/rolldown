@@ -449,16 +449,13 @@ test.concurrent(
       }
     });
 
-    const eventFn = vi.fn();
+    // A throwing listener is only logged, so assert outside it.
+    const outputs: (readonly string[])[] = [];
     watcher.on('event', (event) => {
-      if (event.code === 'BUNDLE_END') {
-        eventFn();
-        expect(event.output).toEqual([output]);
-      }
+      if (event.code === 'BUNDLE_END') outputs.push(event.output);
     });
 
-    // test first build event
-    await expect.poll(() => eventFn).toBeCalled();
+    await expect.poll(() => outputs).toEqual([[output]]);
   },
 );
 
@@ -1083,60 +1080,41 @@ test.concurrent(
 );
 
 test.concurrent(
-  'warning for multiply notify options',
+  'each config uses its own watcher options',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
   async ({ task, expect, onTestFinished }) => {
     const retryCount = task.result?.retryCount ?? 0;
-    const { input, output, dir } = createTestInputAndOutput(
-      'watch-multiply-options-warning',
+    const { input, output, outputDir, dir } = createTestInputAndOutput(
+      'watch-own-watcher-options',
       retryCount,
     );
-    const { input: foo, dir: fooDir } = createTestInputAndOutput(
-      'watch-multiply-options-warning-foo',
-      retryCount,
-    );
+    const fastOutputDir = path.join(dir, 'dist-fast');
+    const fastOutput = path.join(fastOutputDir, 'main.js');
     onTestFinished(() => {
       if (!process.env.CI) {
         fs.rmSync(dir, { recursive: true, force: true });
-        fs.rmSync(fooDir, { recursive: true, force: true });
       }
     });
-    const onLogFn = vi.fn();
+    // Both configs watch `input`. The first polls every 10 minutes, the second every 50ms.
     const watcher = watch([
       {
         input,
-        output: { file: output },
-        watch: {
-          watcher: {
-            usePolling: true,
-            pollInterval: 50,
-          },
-        },
+        output: { dir: outputDir },
+        watch: { watcher: { pollInterval: 600_000 } },
       },
       {
-        input: foo,
-        output: { file: output },
-        watch: {
-          watcher: {
-            usePolling: true,
-            pollInterval: 100,
-          },
-        },
-        plugins: [
-          {
-            name: 'test',
-            onLog: (level, log) => {
-              onLogFn();
-              expect(level).toBe('warn');
-              expect(log.code).toBe('MULTIPLE_WATCHER_OPTION');
-            },
-          },
-        ],
+        input,
+        output: { dir: fastOutputDir },
       },
     ]);
     onTestFinished(async () => await watcher.close());
 
-    await expect.poll(() => onLogFn).toBeCalled();
+    await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(1)');
+    await expect.poll(() => fs.readFileSync(fastOutput, 'utf-8')).toContain('console.log(1)');
+    await editFile(input, 'console.log(2)');
+    await expect.poll(() => fs.readFileSync(fastOutput, 'utf-8')).toContain('console.log(2)');
+    await sleep(500);
+    expect(fs.readFileSync(output, 'utf-8')).toContain('console.log(1)');
   },
 );
 

@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
+use super::skipped_by_hook_filter;
 use crate::{
-  HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveIdArgs,
-  HookResolveIdReturn, HookTransformArgs, LoadPluginContext, PluginContext, PluginDriver,
-  TransformPluginContext,
+  HookBuildEndArgs, HookFilterArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn,
+  HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs, LoadPluginContext, PluginContext,
+  PluginDriver, TransformPluginContext,
   pluginable::HookTransformAstReturn,
   types::{
     hook_resolve_id_skipped::HookResolveIdSkipped, hook_transform_ast_args::HookTransformAstArgs,
@@ -13,20 +14,13 @@ use anyhow::{Context, Result};
 use arcstr::ArcStr;
 use rolldown_common::{
   ModuleInfo, ModuleType, NormalModule, PluginIdx, SharedNormalizedBundlerOptions,
-  SourcemapChainElement, side_effects::HookSideEffects,
+  SourcemapChainElement, is_lazy_proxy, side_effects::HookSideEffects,
 };
 use rolldown_devtools::{action, trace_action};
 use rolldown_error::CausedPlugin;
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::{IndexBitSet, unique_arc::UniqueArc};
 use tracing::{Instrument, debug_span};
-
-const LAZY_PROXY_QUERY: &str = "?rolldown-lazy=1";
-
-#[inline]
-fn is_lazy_proxy_module_id(module_id: &str) -> bool {
-  module_id.ends_with(LAZY_PROXY_QUERY)
-}
 
 #[inline]
 fn should_skip_plugin_for_lazy_proxy(
@@ -35,7 +29,7 @@ fn should_skip_plugin_for_lazy_proxy(
   plugin_idx: PluginIdx,
   lazy_compilation_plugin_idx: Option<PluginIdx>,
 ) -> bool {
-  if !should_skip_user_plugins_for_lazy_proxy_modules || !is_lazy_proxy_module_id(module_id) {
+  if !should_skip_user_plugins_for_lazy_proxy_modules || !is_lazy_proxy(module_id) {
     return false;
   }
   lazy_compilation_plugin_idx.is_some_and(|idx| idx != plugin_idx)
@@ -104,7 +98,8 @@ impl PluginDriver {
         args.specifier,
         plugin_idx,
         self.lazy_compilation_plugin_idx,
-      ) {
+      ) || skipped_by_hook_filter(plugin, ctx, HookFilterArgs::ResolveId(args))
+      {
         continue;
       }
       let ret = async {
@@ -222,7 +217,8 @@ impl PluginDriver {
         args.id,
         plugin_idx,
         self.lazy_compilation_plugin_idx,
-      ) {
+      ) || skipped_by_hook_filter(plugin, ctx, HookFilterArgs::Load(args))
+      {
         continue;
       }
       let ret = async {
@@ -278,7 +274,8 @@ impl PluginDriver {
   #[expect(clippy::too_many_arguments)]
   pub async fn transform(
     &self,
-    id: &str,
+    module_id: &rolldown_common::ModuleId,
+    attributes: &rolldown_common::ImportAttributes,
     module_idx: rolldown_common::ModuleIdx,
     original_code: String,
     sourcemap_chain: &mut Vec<SourcemapChainElement>,
@@ -287,6 +284,7 @@ impl PluginDriver {
     magic_string_tx: Option<std::sync::mpsc::Sender<rolldown_common::SourceMapGenMsg>>,
     code_changed_by_plugins: &mut Option<Vec<String>>,
   ) -> Result<String> {
+    let id = module_id.as_str();
     let mut code = original_code;
     let mut code_arc: Option<ArcStr> = None;
     let mut original_sourcemap_chain = std::mem::take(sourcemap_chain);
@@ -294,17 +292,25 @@ impl PluginDriver {
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_transform_meta)
     {
-      let call_id = tracing::enabled!(tracing::Level::TRACE).then(rolldown_utils::uuid::uuid_v4);
       let code_arc_ref = code_arc.get_or_insert_with(|| ArcStr::from(code.as_str()));
+      let args = HookTransformArgs {
+        id,
+        raw_id: module_id.raw_id(),
+        attributes,
+        code: code_arc_ref,
+        module_type: &*module_type,
+      };
       if should_skip_plugin_for_lazy_proxy(
         self.should_skip_user_plugins_for_lazy_proxy_modules,
         id,
         plugin_idx,
         self.lazy_compilation_plugin_idx,
-      ) {
+      ) || skipped_by_hook_filter(plugin, ctx, HookFilterArgs::Transform(&args))
+      {
         continue;
       }
 
+      let call_id = tracing::enabled!(tracing::Level::TRACE).then(rolldown_utils::uuid::uuid_v4);
       trace_action!(action::HookTransformCallStart {
         action: "HookTransformCallStart",
         module_id: id.to_string(),
@@ -324,7 +330,7 @@ impl PluginDriver {
             plugin_idx,
             magic_string_tx.clone(),
           )),
-          &HookTransformArgs { id, code: code_arc_ref, module_type: &*module_type },
+          &args,
         )
         .await;
       if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
@@ -358,28 +364,20 @@ impl PluginDriver {
           }
           code = v;
           code_arc = None;
-          trace_action!(action::HookTransformCallEnd {
-            action: "HookTransformCallEnd",
-            module_id: id.to_string(),
-            content: Some(code.clone()),
-            plugin_name: plugin.call_name().to_string(),
-            plugin_id: plugin_idx.raw(),
-            call_id: call_id.unwrap_or_default()
-          });
         }
         if let Some(ty) = r.module_type {
           *module_type = ty;
         }
-      } else {
-        trace_action!(action::HookTransformCallEnd {
-          action: "HookTransformCallEnd",
-          module_id: id.to_string(),
-          content: Some(code.clone()),
-          plugin_name: plugin.call_name().to_string(),
-          plugin_id: plugin_idx.raw(),
-          call_id: call_id.unwrap_or_default()
-        });
       }
+      // Every call ends here: a result without `code` keeps the code unchanged.
+      trace_action!(action::HookTransformCallEnd {
+        action: "HookTransformCallEnd",
+        module_id: id.to_string(),
+        content: Some(code.clone()),
+        plugin_name: plugin.call_name().to_string(),
+        plugin_id: plugin_idx.raw(),
+        call_id: call_id.unwrap_or_default()
+      });
     }
     *sourcemap_chain = plugin_sourcemap_chain.into_inner();
     Ok(code)

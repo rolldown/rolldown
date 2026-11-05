@@ -1,3 +1,4 @@
+use cow_utils::CowUtils;
 use oxc::syntax::{identifier, keyword};
 use oxc_str::{CompactStr, JSStr};
 use std::{borrow::Cow, fmt::Write, path::Path};
@@ -133,6 +134,42 @@ pub fn to_ecma_string_literal(value: &str, ascii_only: bool) -> String {
   escape_non_ascii(&literal, ascii_only).into_owned()
 }
 
+/// Escape a string value as template literal raw text, without surrounding backticks.
+/// Raw text is source, so a lone surrogate is written as a `\u` escape.
+///
+/// Copied from Oxc 0.156.0's `PeepholeOptimizations`, which is not publicly exported:
+/// <https://github.com/oxc-project/oxc/blob/75efdca4747c4ad9b252542743098d4894f8005b/crates/oxc_minifier/src/peephole/replace_known_methods.rs#L509-L540>
+pub fn escape_string_for_template_literal(value: JSStr<'_>) -> Cow<'_, str> {
+  let Some(s) = value.as_str() else {
+    let mut raw = String::with_capacity(value.len());
+    for c in value.chars() {
+      match c.to_char() {
+        Some(c @ ('\\' | '`' | '$')) => {
+          raw.push('\\');
+          raw.push(c);
+        }
+        Some('\r') => raw.push_str("\\r"),
+        Some(c) => raw.push(c),
+        None => {
+          let _ = write!(raw, "\\u{:04x}", c.to_u32());
+        }
+      }
+    }
+    return Cow::Owned(raw);
+  };
+  if s.contains(['\\', '`', '$', '\r']) {
+    Cow::Owned(
+      s.cow_replace("\\", "\\\\")
+        .cow_replace("`", "\\`")
+        .cow_replace("$", "\\$")
+        .cow_replace('\r', "\\r")
+        .into_owned(),
+    )
+  } else {
+    Cow::Borrowed(s)
+  }
+}
+
 pub fn to_module_import_export_name_with_ascii(name: &str, ascii_only: bool) -> String {
   if is_validate_identifier_name(name) {
     escape_non_ascii(name, ascii_only).into_owned()
@@ -188,6 +225,36 @@ fn test_escape_non_ascii() {
   assert_eq!(escape_non_ascii("π你😀", false), "π你😀");
   assert_eq!(escape_non_ascii("π你😀", true), "\\u03C0\\u4F60\\u{1F600}");
   assert_eq!(to_ecma_string_literal("外部", true), "\"\\u5916\\u90E8\"");
+}
+
+#[test]
+fn test_escape_string_for_template_literal() {
+  use oxc::{allocator::Allocator, ast::ast::Expression, parser::Parser, span::SourceType};
+
+  fn check(value: JSStr<'_>) {
+    let escaped = escape_string_for_template_literal(value);
+    let source = format!("`{escaped}`");
+    let allocator = Allocator::default();
+    let expr = Parser::new(&allocator, &source, SourceType::mjs()).parse_expression().unwrap();
+    let Expression::TemplateLiteral(lit) = expr else { unreachable!() };
+    assert!(lit.expressions.is_empty());
+    assert_eq!(lit.quasis[0].value.cooked, Some(value));
+  }
+
+  for value in ["", "plain", "π中文😀", "\\`$${x}\r\n", r"\${x}", "\0\u{2028}\u{2029}"] {
+    check(JSStr::from(value));
+  }
+  assert!(matches!(
+    escape_string_for_template_literal(JSStr::from("plain")),
+    Cow::Borrowed("plain")
+  ));
+
+  let allocator = Allocator::default();
+  let expr = Parser::new(&allocator, r"'a\uD800b\uDC00\uD800\uDC00\\`$\r'", SourceType::mjs())
+    .parse_expression()
+    .unwrap();
+  let Expression::StringLiteral(lit) = expr else { unreachable!() };
+  check(lit.value);
 }
 
 /// Converts a JavaScript string to UTF-8 the way `URL` and Node's file system APIs do: each lone

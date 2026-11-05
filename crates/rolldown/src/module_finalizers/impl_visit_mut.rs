@@ -938,11 +938,15 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       ast::Declaration::ClassDeclaration(decl) => {
         // need to insert `keep_names` helper, because `get_transformed_class_decl`
         // will remove id in `class.id`
-        if let Some(element) = self.keep_name_helper_for_class(
-          decl.id.as_ref().and_then(|id| id.symbol_id.get().map(KeepNameId::SymbolId)),
-          &decl.body,
-        ) {
+        let keep_name_id =
+          decl.id.as_ref().and_then(|id| id.symbol_id.get().map(KeepNameId::SymbolId));
+        if let Some(element) = self.keep_name_helper_for_class(keep_name_id, &decl.body) {
           decl.body.body.insert(0, element);
+        } else if !self.can_keep_class_name_in_static_block()
+          && self.keep_name_for_class(keep_name_id, &decl.body).is_some()
+          && let Some(insert) = self.process_fn(keep_name_id, keep_name_id)
+        {
+          self.keep_name_statement_to_insert.push(insert);
         }
         it.replace_with(|old| {
           let ast::Declaration::ClassDeclaration(class_box) = old else { unreachable!() };

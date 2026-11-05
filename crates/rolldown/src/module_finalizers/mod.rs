@@ -2445,13 +2445,21 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   ast::Expression::ClassExpression(class_expression)
                     if class_expression.id.is_none() =>
                   {
+                    let default_name = CompactStr::from("default");
                     if let Some(element) = self.keep_name_helper_for_class(
-                      Some(KeepNameId::CompactStr(&CompactStr::from("default"))),
+                      Some(KeepNameId::CompactStr(&default_name)),
                       &class_expression.body,
                     ) {
                       class_expression.body.body.insert(0, element);
+                      false
+                    } else {
+                      self
+                        .keep_name_for_class(
+                          Some(KeepNameId::CompactStr(&default_name)),
+                          &class_expression.body,
+                        )
+                        .is_some()
                     }
-                    false
                   }
                   ast::Expression::ArrowFunctionExpression(_) => true,
                   _ => false,
@@ -2504,14 +2512,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             ast::ExportDefaultDeclarationKind::ClassDeclaration(mut class) => {
               // "export default class {}" => "class default {}"
               // "export default class Foo {}" => "class Foo {}"
+              let mut keep_name_call = None;
               if class.id.is_none() {
                 let canonical_name_for_default_export_ref =
                   self.canonical_name_for(self.ctx.module.default_export_ref);
-                class.id = Some(BindingIdentifier::new_id(
-                  SPAN,
-                  canonical_name_for_default_export_ref,
-                  self,
-                ));
 
                 // When keep_names is enabled, preserve "default" as the class name
                 // Skip if class has static name property
@@ -2522,13 +2526,42 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     &class.body,
                   ) {
                     class.body.body.insert(0, element);
+                  } else if self
+                    .keep_name_for_class(Some(KeepNameId::CompactStr(&default_name)), &class.body)
+                    .is_some()
+                  {
+                    keep_name_call = Some(canonical_name_for_default_export_ref);
                   }
+                }
+
+                if keep_name_call.is_none() {
+                  class.id = Some(BindingIdentifier::new_id(
+                    SPAN,
+                    canonical_name_for_default_export_ref,
+                    self,
+                  ));
                 }
               }
 
-              // Class should be handled specially, because the `ClassDecl` will be transformed again.
               class.span = default_decl_span;
-              top_stmt = ast::Statement::ClassDeclaration(class);
+              if let Some(canonical_name_for_default_export_ref) = keep_name_call {
+                // No class static blocks in the target: `var default = __name(class {}, "default")`
+                let name_ref = self.canonical_ref_for_runtime("__name");
+                let (finalized_callee, _) =
+                  self.finalized_expr_for_symbol_ref(name_ref, false, false);
+                let init_expr = Expression::new_keep_name_call(
+                  "default",
+                  Expression::ClassExpression(class),
+                  finalized_callee,
+                  true,
+                  self,
+                );
+                top_stmt =
+                  Statement::new_var_decl(canonical_name_for_default_export_ref, init_expr, self);
+              } else {
+                // Class should be handled specially, because the `ClassDecl` will be transformed again.
+                top_stmt = ast::Statement::ClassDeclaration(class);
+              }
             }
             ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {
               unreachable!("TypeScript declarations are stripped before the finalizer runs")
@@ -2613,6 +2646,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         if let Some(element) = self.keep_name_helper_for_class(keep_name_id, &class_expression.body)
         {
           class_expression.body.body.insert(0, element);
+        } else {
+          self.wrap_class_expr_with_keep_name(keep_name_id, expr);
         }
       }
       ast::Expression::FunctionExpression(fn_expression) => {
@@ -2645,11 +2680,23 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
-  fn keep_name_helper_for_class(
+  /// Whether the output target supports class static blocks, which the `__name` helper
+  /// for classes is injected as. Otherwise the call has to live outside the class body.
+  fn can_keep_class_name_in_static_block(&self) -> bool {
+    !self
+      .ctx
+      .options
+      .transform_options
+      .target
+      .has_feature(oxc::transformer::ESFeature::ES2022ClassStaticBlock)
+  }
+
+  /// The original name a class has to keep, or `None` when it needs no `__name` call.
+  fn keep_name_for_class(
     &self,
     id: Option<KeepNameId>,
     class_body: &ast::ClassBody<'ast>,
-  ) -> Option<ClassElement<'ast>> {
+  ) -> Option<CompactStr> {
     if !self.ctx.options.keep_names {
       return None;
     }
@@ -2658,21 +2705,50 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if Self::class_body_has_static_name(class_body) {
       return None;
     }
-    let original_name = match keep_name_id {
-      KeepNameId::CompactStr(name) => {
-        // CompactStr variant doesn't need conflict resolution - it's already a direct name
-        name.clone()
-      }
+    match keep_name_id {
+      // CompactStr variant doesn't need conflict resolution - it's already a direct name
+      KeepNameId::CompactStr(name) => Some(name.clone()),
       KeepNameId::SymbolId(_) | KeepNameId::ReferenceId(_) => {
         let (original_name, _) = self.get_keep_name_info(keep_name_id)?;
-        let original_name: CompactStr = CompactStr::new(original_name);
-        original_name
+        Some(CompactStr::new(original_name))
       }
-    };
+    }
+  }
 
+  fn keep_name_helper_for_class(
+    &self,
+    id: Option<KeepNameId>,
+    class_body: &ast::ClassBody<'ast>,
+  ) -> Option<ClassElement<'ast>> {
+    if !self.can_keep_class_name_in_static_block() {
+      return None;
+    }
+    let original_name = self.keep_name_for_class(id, class_body)?;
     let name_ref = self.canonical_ref_for_runtime("__name");
     let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);
     Some(ClassElement::new_static_block_keep_name(&original_name, finalized_callee, self))
+  }
+
+  /// `__name(<class expr>, "<name>")` for targets without class static blocks.
+  fn wrap_class_expr_with_keep_name(
+    &self,
+    id: Option<KeepNameId>,
+    expr: &mut ast::Expression<'ast>,
+  ) {
+    if self.can_keep_class_name_in_static_block() {
+      return;
+    }
+    let ast::Expression::ClassExpression(class_expression) = expr.without_parentheses() else {
+      return;
+    };
+    let Some(original_name) = self.keep_name_for_class(id, &class_expression.body) else {
+      return;
+    };
+    let name_ref = self.canonical_ref_for_runtime("__name");
+    let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);
+    expr.replace_with(|class_expr| {
+      Expression::new_keep_name_call(&original_name, class_expr, finalized_callee, true, self)
+    });
   }
 
   /// Check if a class body has a static `name` property, method, or accessor.

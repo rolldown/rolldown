@@ -96,7 +96,16 @@ impl Plugin for ViteDynamicImportVarsPlugin {
               continue;
             }
 
-            visitor.rewrite(import.span, import.source_span, &import.first_quasi, &id);
+            let Some(index) = memchr::memchr(b'*', id.as_bytes()) else {
+              continue;
+            };
+            visitor.rewrite(
+              import.span,
+              import.source_span,
+              &import.first_quasi,
+              &id[..index],
+              &id,
+            );
           }
         }
       }

@@ -35,7 +35,13 @@ import {
   WS_QUIET_MS,
   wsRequest,
 } from '../lib/worker/measure.mjs';
-import { evaluatingModules, shortModule, topLevelCalls, whyModule } from '../lib/worker/attrib.mjs';
+import {
+  evaluatingModules,
+  graphChainResolver,
+  shortModule,
+  topLevelCalls,
+  whyModule,
+} from '../lib/worker/attrib.mjs';
 import { attribOutDir, viteConfigShim } from '../lib/worker/config.mjs';
 import { entryIdx, minCut } from '../lib/min-cut.mjs';
 import { indexOf, makeGraph } from './graph-fixtures.mjs';
@@ -554,6 +560,37 @@ test('why: direct importers and the chain from the entry', () => {
     ['worker/agents/ThinkAgent.ts'],
   );
   assert.deepEqual(why.chain, ['worker/index.ts', 'worker/agents/ThinkAgent.ts']);
+});
+
+test('why: the chain holds only real static imports', () => {
+  // main -> a, b -> shared -> lib. The dominator of shared is main, which only loads it dynamically.
+  const graph = makeGraph(
+    [
+      {
+        id: 'src/main.js',
+        bytes: 10,
+        imports: [
+          [1, false],
+          [2, false],
+          [3, true],
+          [5, true],
+        ],
+      },
+      { id: 'src/a.js', bytes: 10, imports: [[3, false]] },
+      { id: 'src/b.js', bytes: 10, imports: [[3, false]] },
+      { id: 'src/shared.js', bytes: 10, imports: [[4, false]] },
+      { id: 'src/lib.js', bytes: 10, imports: [] },
+      { id: 'src/lazy.js', bytes: 10, imports: [] },
+    ],
+    ['src/main.js'],
+  );
+  const main = indexOf(graph, 'src/main.js');
+  assert.equal(graph.modules[indexOf(graph, 'src/shared.js')].idom, main);
+  const chain = ['src/main.js', 'src/a.js', 'src/shared.js'];
+  assert.deepEqual(whyModule(graph, indexOf(graph, 'src/lib.js')).chain, chain);
+  assert.deepEqual(graphChainResolver(graph)('src/lib.js'), chain);
+  assert.deepEqual(whyModule(graph, main).chain, []);
+  assert.deepEqual(whyModule(graph, indexOf(graph, 'src/lazy.js')).chain, []);
 });
 
 // --- the config shim ---------------------------------------------------------------------

@@ -50,7 +50,6 @@ pub mod rollup_pre_rendered_chunk;
 pub mod rollup_rendered_chunk;
 pub mod scan_mode;
 pub mod side_effects;
-pub mod source_mutation;
 pub mod sourcemap_chain_element;
 pub mod stable_module_id;
 pub mod stmt_eval_flags;

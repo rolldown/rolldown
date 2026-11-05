@@ -92,8 +92,8 @@ export { cn as a, init_pure_barrel as i, loadNamespace as n, init_cn as o, loadR
 ## pure-barrel.js
 
 ```js
-import { i as init_stack, n as init_pure_barrel_cjs_0, r as Stack, t as import_clone_deep } from "./clone-deep.js";
 import { a as cn, o as init_cn } from "./main2.js";
+import { i as init_stack, n as init_pure_barrel_cjs_0, r as Stack, t as import_clone_deep } from "./clone-deep.js";
 init_cn();
 init_stack();
 init_pure_barrel_cjs_0();
@@ -114,8 +114,8 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
-import { i as init_stack, n as init_pure_barrel_cjs_0, r as Stack, t as import_clone_deep } from "./clone-deep.js";
 import "./main2.js";
+import { i as init_stack, n as init_pure_barrel_cjs_0, r as Stack, t as import_clone_deep } from "./clone-deep.js";
 // route.js
 var stack, value;
 function init_route() {
@@ -225,8 +225,8 @@ export { cn as a, init_pure_barrel as i, loadNamespace as n, init_cn as o, loadR
 ### pure-barrel.js
 
 ```js
-import { i as init_stack, n as init_pure_barrel_cjs_0, r as Stack, t as import_clone_deep } from "./clone-deep.js";
 import { a as cn, o as init_cn } from "./main2.js";
+import { i as init_stack, n as init_pure_barrel_cjs_0, r as Stack, t as import_clone_deep } from "./clone-deep.js";
 init_cn();
 init_stack();
 init_pure_barrel_cjs_0();
@@ -247,8 +247,8 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
-import { i as init_stack, n as init_pure_barrel_cjs_0, r as Stack, t as import_clone_deep } from "./clone-deep.js";
 import "./main2.js";
+import { i as init_stack, n as init_pure_barrel_cjs_0, r as Stack, t as import_clone_deep } from "./clone-deep.js";
 // route.js
 var stack, value;
 function init_route() {
@@ -551,8 +551,8 @@ Object.defineProperty(exports, "loadRoute", {
 ### pure-barrel.js
 
 ```js
-const require_clone_deep = require("./clone-deep.js");
 const require_main = require("./main2.js");
+const require_clone_deep = require("./clone-deep.js");
 require_main.init_cn();
 require_clone_deep.init_stack();
 require_clone_deep.init_pure_barrel_cjs_0();
@@ -596,8 +596,8 @@ Object.defineProperty(exports, "__toESM", {
 
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
-const require_clone_deep = require("./clone-deep.js");
 require("./main2.js");
+const require_clone_deep = require("./clone-deep.js");
 // route.js
 var stack, value;
 function init_route() {

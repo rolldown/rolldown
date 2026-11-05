@@ -78,7 +78,7 @@ Start with `entry.md`. It summarizes the build and tells you which file to open 
 | `delta.md`          | The change since the previous build and since the pinned baseline. Written from the second build on.                                                                             |
 | `metrics.json`      | The numbers of the build, with stable metric ids such as `output.total_bytes` and `build.total_ms`. Use it in scripts.                                                           |
 | `module-graph.json` | The full module graph: every module with its size, its imports and its retained size.                                                                                            |
-| `chunk-graph.json`  | Every output chunk with its file name, size, entry flag and imports. Rolldown 1.2.16 does not write it.                                                                          |
+| `chunk-graph.json`  | Every output chunk with its file name, size, entry flag and imports.                                                                                                             |
 | `history.jsonl`     | One summary line per build.                                                                                                                                                      |
 | `AGENTS.md`         | Instructions for a coding agent that reads the folder.                                                                                                                           |
 | `.state.json`       | A snapshot of this build. The next build compares against it.                                                                                                                    |

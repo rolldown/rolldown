@@ -2,6 +2,7 @@
 // PerformanceObservers injected before any page script runs.
 
 import { openPage, sleep } from './cdp.mjs';
+import { recordNetworkEvidence } from './network-evidence.mjs';
 
 // Roughly Lighthouse's mobile lab shape: fast-3G-ish network, 4x CPU slowdown.
 // Absolute numbers are lab-only; the signal is the delta between builds.
@@ -34,6 +35,87 @@ export function scaleThrottle(base, netScale = 1) {
 }
 
 /**
+ * A fixed network in real units instead of a scale step: the bandwidth and RTT a
+ * deployed environment measured (a record's network model), and the CPU slowdown of
+ * the device to model (1 = this machine). Bandwidth is in Mbit/s (SI: 1 Mbit =
+ * 1,000,000 bits); CDP takes bytes per second. Upload keeps the base shape's ratio.
+ * `rttMs` / `cpuRate` default to the base shape. Like the net scale, the network is
+ * part of the measurement identity (`throttleId`).
+ */
+export function networkThrottle(
+  base,
+  { bandwidthMbps, rttMs = base.latencyMs, cpuRate = base.cpuRate },
+) {
+  const downloadBps = Math.round((bandwidthMbps * 1_000_000) / 8);
+  return {
+    ...base,
+    latencyMs: rttMs,
+    downloadBps,
+    uploadBps: Math.round((downloadBps * base.uploadBps) / base.downloadBps),
+    cpuRate,
+    network: { bandwidthMbps, rttMs, cpuRate },
+  };
+}
+
+/**
+ * Read `--bandwidth <Mbit/s> [--rtt <ms>] [--cpu <rate>]` into a network, or null when
+ * `--bandwidth` is absent. `--rtt` / `--cpu` only shape a `--bandwidth` network, and the
+ * network replaces the net-scale ladder, so both misuses throw instead of being ignored.
+ */
+export function parseNetworkFlags(opts) {
+  const { bandwidth, rtt, cpu } = opts;
+  if (bandwidth == null) {
+    if (rtt != null || cpu != null) {
+      throw new Error(
+        '--rtt and --cpu shape a --bandwidth network - pass --bandwidth <Mbit/s> too',
+      );
+    }
+    return null;
+  }
+  if (opts['net-scale'] != null) {
+    throw new Error(
+      '--bandwidth replaces the net-scale ladder - pass one of --bandwidth or --net-scale',
+    );
+  }
+  const read = (flag, value, ok, expected) => {
+    const n = Number(value);
+    if (!Number.isFinite(n) || !ok(n))
+      throw new Error(`${flag} must be ${expected}, got '${value}'`);
+    return n;
+  };
+  return {
+    bandwidthMbps: read('--bandwidth', bandwidth, (n) => n > 0, 'a number > 0 (Mbit/s)'),
+    rttMs:
+      rtt == null
+        ? DEFAULT_THROTTLE.latencyMs
+        : read('--rtt', rtt, (n) => n >= 0, 'a number >= 0 (ms)'),
+    cpuRate:
+      cpu == null
+        ? DEFAULT_THROTTLE.cpuRate
+        : read('--cpu', cpu, (n) => n >= 1, 'a number >= 1 (1 = no slowdown)'),
+  };
+}
+
+/** The throttle a pinned profile (`throttle-profile.json`) describes. */
+export function throttleFromProfile(profile) {
+  return profile?.network
+    ? networkThrottle(DEFAULT_THROTTLE, profile.network)
+    : scaleThrottle(DEFAULT_THROTTLE, profile?.netScale ?? 1);
+}
+
+/**
+ * The measurement identity of a throttle, a pinned profile or a saved measurement state
+ * (all carry `network` or `netScale`): two measurements compare only when it is equal.
+ * A state without either was measured at net x1, as before networks existed.
+ */
+export function throttleId(value) {
+  if (!value) return 'unthrottled';
+  const n = value.network;
+  if (n) return `bw ${n.bandwidthMbps}Mbit/s rtt ${n.rttMs}ms cpu ${n.cpuRate}x`;
+  return `net x${value.netScale ?? 1}`;
+}
+
+/**
  * Element identity helpers shared by every injected script that names elements:
  * a structural path (tag:nth-of-type chain from <body>, stable across builds that
  * keep the DOM shape) and a short human label.
@@ -57,7 +139,9 @@ export const ELEMENT_PATH_JS = `const pathOf = (el) => {
   };`;
 
 export const OBSERVER_JS = `(() => {
-  const M = (window.__perfMetrics = { fcp: null, lcp: null, lcpEntry: null, lcpNode: null, cls: 0, longtasks: [] });
+  const M = (window.__perfMetrics = { fcp: null, lcp: null, lcpEntry: null, lcpNode: null, cls: 0, longtasks: [], resourceBufferFull: false });
+  performance.setResourceTimingBufferSize(10000);
+  performance.addEventListener('resourcetimingbufferfull', () => { M.resourceBufferFull = true; });
   ${ELEMENT_PATH_JS}
   try {
     new PerformanceObserver((list) => {
@@ -90,7 +174,7 @@ export const OBSERVER_JS = `(() => {
   } catch {}
 })();`;
 
-const COLLECT_JS = `(() => {
+export const COLLECT_JS = `(() => {
   const nav = performance.getEntriesByType('navigation')[0];
   const res = performance.getEntriesByType('resource');
   const M = window.__perfMetrics || {};
@@ -114,6 +198,7 @@ const COLLECT_JS = `(() => {
     start: Math.round(r.startTime),
     end: Math.round(r.responseEnd),
     bytes: r.encodedBodySize || 0,
+    initiatorType: r.initiatorType,
   }));
   // Uncapped per-type totals (+ the pre-first-paint share): real apps load
   // hundreds of resources, so any capped detail list under-reports by design.
@@ -140,12 +225,6 @@ const COLLECT_JS = `(() => {
     worst: blocking.slice().sort((a, b) => (b.responseEnd || 0) - (a.responseEnd || 0)).slice(0, 4)
       .map((r) => ({ name: r.name.replace(location.origin, ''), end: Math.round(r.responseEnd || 0), bytes: r.encodedBodySize || 0 })),
   };
-  // Detail list: every fetch/xhr (render-gap suspects are often tiny), then the
-  // largest of everything else - a big resource must never fall off the list.
-  const fetchLike = all.filter((r) => r.type === 'fetch' || r.type === 'xhr').slice(0, 40);
-  const rest = all.filter((r) => r.type !== 'fetch' && r.type !== 'xhr')
-    .sort((a, b) => b.bytes - a.bytes)
-    .slice(0, 60 - fetchLike.length);
   return {
     blockingGate,
     fcp: M.fcp,
@@ -156,7 +235,10 @@ const COLLECT_JS = `(() => {
     load: nav ? nav.loadEventEnd : null,
     bytes: (nav ? nav.encodedBodySize : 0) + res.reduce((a, r) => a + (r.encodedBodySize || 0), 0),
     jsRequests: res.filter((r) => r.name.endsWith('.js')).length,
-    resources: fetchLike.concat(rest),
+    // A tiny facade can initiate a large download graph. Do not rank or cap
+    // request details by size; report browser buffer overflow explicitly.
+    resources: all,
+    resourceDetailsComplete: M.resourceBufferFull === false,
     resourceTypes: typeAgg,
     longtasks: (M.longtasks || []).map((t) => ({ start: Math.round(t.start), duration: Math.round(t.duration) })),
     ready: Object.assign({}, window.__ready || {}),
@@ -207,6 +289,7 @@ export async function timedRun(
   { url, throttle, expectedFeatures = [], settleMs = 1500, timeoutMs = 60_000 },
 ) {
   const page = await openPage(cdp, { throttle, injectScript: OBSERVER_JS });
+  const network = recordNetworkEvidence(page);
   try {
     await page.navigate(url);
     const deadline = Date.now() + timeoutMs;
@@ -217,8 +300,11 @@ export async function timedRun(
       await sleep(100);
     }
     await sleep(settleMs);
-    return await page.evaluate(COLLECT_JS);
+    const sample = await page.evaluate(COLLECT_JS);
+    network.attach(sample.resources, new URL(url).origin);
+    return sample;
   } finally {
+    network.stop();
     await page.close().catch(() => {});
   }
 }
@@ -381,6 +467,9 @@ export function summarize(samples, expectedFeatures = []) {
     gatingFetches: gatingFetches(samples),
     resourceWeight: resourceWeight(samples),
     renderBlockingGate: renderBlockingGate(samples),
+    postLoadScripts: postLoadScripts(samples),
+    resourceDetailsComplete:
+      samples.length > 0 && samples.every((s) => s.resourceDetailsComplete === true),
     lcpElement: lcpElementOf(samples),
     guard: {
       allFeaturesReady: samples.every((s) =>
@@ -395,10 +484,42 @@ export function summarize(samples, expectedFeatures = []) {
               (s.heroSubtitle === null || s.heroSubtitle.length > 0),
           )
         : null,
+      fcpObservedInAllRuns: samples.every((s) => typeof s.fcp === 'number'),
       lcpObservedInAllRuns: samples.every((s) => typeof s.lcp === 'number'),
     },
     samples,
   };
+}
+
+/** Scripts discovered after load that finished before FCP or LCP. Not proof of a paint dependency. */
+export function postLoadScripts(samples) {
+  const result = {};
+  for (const paint of ['fcp', 'lcp']) {
+    const valid = samples.filter((s) => typeof s[paint] === 'number' && s.load > 0);
+    if (!valid.length) {
+      result[paint] = null;
+      continue;
+    }
+    const rows = valid.map((s) => {
+      const scripts = (s.resources ?? []).filter(
+        (r) => r.type === 'script' && r.start > s.load && r.end > 0 && r.end <= s[paint],
+      );
+      return {
+        count: scripts.length,
+        bytes: scripts.reduce((sum, r) => sum + r.bytes, 0),
+        firstStartMs: scripts.length ? Math.min(...scripts.map((r) => r.start)) : null,
+        lastEndMs: scripts.length ? Math.max(...scripts.map((r) => r.end)) : null,
+      };
+    });
+    const mid = (key) => median(rows.map((r) => r[key]).filter((v) => typeof v === 'number'));
+    result[paint] = {
+      count: mid('count'),
+      bytes: mid('bytes'),
+      firstStartMs: mid('firstStartMs'),
+      lastEndMs: mid('lastEndMs'),
+    };
+  }
+  return result;
 }
 
 /** Per-metric prev/curr/delta/pct — the same shape as build metrics.json deltas. */

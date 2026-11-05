@@ -92,8 +92,8 @@ pub struct Chunk {
   pub require_binding_names_for_other_chunks: FxHashMap<ChunkIdx, String>,
   /// The first element of tuple is module idx of external module
   /// the second element is the related named import of external module.
-  /// The second `ModuleIdx` is the importer of the named import which is used to look up related
-  /// import attribute.
+  /// The second `ModuleIdx` is the importer of the named import. Its module format decides the
+  /// interop of the import.
   pub direct_imports_from_external_modules: Vec<(ModuleIdx, Vec<(ModuleIdx, NamedImport)>)>,
   /// Used for cjs, umd, iife
   /// The module directly imported symbol actually came from external modules.

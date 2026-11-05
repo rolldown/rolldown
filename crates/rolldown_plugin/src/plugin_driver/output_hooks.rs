@@ -1,10 +1,12 @@
 use std::sync::Arc;
 
+use super::skipped_by_hook_filter;
 use crate::types::hook_close_bundle_args::HookCloseBundleArgs;
 use crate::types::hook_render_error::HookRenderErrorArgs;
 use crate::{HookAddonArgs, HookResolveFileUrlArgs, HookResolveFileUrlOutput, PluginDriver};
 use crate::{
-  HookAugmentChunkHashReturn, HookNoopReturn, HookRenderChunkArgs, HookTransformOutputMap,
+  HookAugmentChunkHashReturn, HookFilterArgs, HookNoopReturn, HookRenderChunkArgs,
+  HookTransformOutputMap,
 };
 use anyhow::{Context, Ok, Result};
 use rolldown_common::{Output, RollupRenderedChunk, SharedNormalizedBundlerOptions};
@@ -153,6 +155,9 @@ impl PluginDriver {
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_render_chunk_meta)
     {
+      if skipped_by_hook_filter(plugin, ctx, HookFilterArgs::RenderChunk(&args)) {
+        continue;
+      }
       async {
         if trace_action_enabled!() {
           trace_action!(action::HookRenderChunkStart {

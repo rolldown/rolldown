@@ -9,8 +9,8 @@ use rolldown_common::{
   StrOrBytes, try_extract_lazy_barrel_info,
 };
 use rolldown_error::{
-  BuildDiagnostic, BuildResult, DiagnosticOptions, EventKindSwitcher, UnloadableDependencyContext,
-  downcast_napi_error_diagnostics,
+  BuildDiagnostic, BuildResult, DiagnosticOptions, EventKindSwitcher,
+  ExternalModuleConflictImporter, UnloadableDependencyContext, downcast_napi_error_diagnostics,
 };
 use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
 
@@ -36,6 +36,14 @@ impl ModuleTaskOwner {
       source: normal_module.source.clone(),
       importer_id: normal_module.stable_id.as_arc_str().clone(),
       importee_span,
+    }
+  }
+
+  pub fn to_external_conflict_importer(&self) -> ExternalModuleConflictImporter {
+    ExternalModuleConflictImporter {
+      source: self.source.clone(),
+      importer_id: self.importer_id.clone(),
+      importee_span: self.importee_span,
     }
   }
 }
@@ -266,14 +274,12 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     if is_read_from_disk {
       // - Only add watch files for files read from disk.
       // - Add watch files as early as possible for we might be able to recover from build errors.
-      self.ctx.plugin_driver.watch_files.insert(self.resolved_id.id.as_arc_str().clone());
+      let raw_id = self.resolved_id.id.raw_id();
+      self.ctx.plugin_driver.watch_files.insert(raw_id.into());
       // The tsconfig governing this module affects its transform and
       // resolution results, so watch it as well (#9598).
-      if let Some(tsconfig_path) = self
-        .ctx
-        .options
-        .transform_options
-        .discover_tsconfig_file(std::path::Path::new(self.resolved_id.id.as_str()))
+      if let Some(tsconfig_path) =
+        self.ctx.options.transform_options.discover_tsconfig_file(std::path::Path::new(raw_id))
       {
         self.ctx.plugin_driver.watch_files.insert(tsconfig_path.to_string_lossy().as_ref().into());
       }

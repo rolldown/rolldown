@@ -18,6 +18,8 @@ export default {
 };
 ```
 
+With `experimental.importAttributes`, a `type` import attribute can also set the module type of a single import. For example, `import data from './data.txt' with { type: 'json' }` loads `data.txt` as JSON. Without the option, it loads as text. See [Import Attributes](/in-depth/import-attributes).
+
 ## Module types and plugins
 
 Plugins can specify the module type of a specific file via the `load` hook and the `transform` hook:

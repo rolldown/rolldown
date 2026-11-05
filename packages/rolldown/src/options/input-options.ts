@@ -745,6 +745,30 @@ export interface InputOptions {
      * @default false
      */
     importAttributes?: boolean;
+    /**
+     * Keep the deferred evaluation of `import defer * as ns from './x'` and `import.defer('./x')`.
+     *
+     * When this option is on, a deferred module evaluates at the first access to its namespace,
+     * not when its importer evaluates. When this option is off, Rolldown lowers each deferred
+     * import to a normal import and emits a warning.
+     *
+     * @see {@link https://github.com/tc39/proposal-defer-import-eval | Proposal}
+     * @default false
+     */
+    importDefer?: boolean;
+    /**
+     * What to do with `import defer` and `import.defer()` of an external module in ESM output.
+     *
+     * - `'error'`: fail the build. The target runtime can be without support for `import defer`.
+     * - `'preserve'`: keep `import defer` in the output. Use this value only when the target
+     *   runtime supports `import defer`.
+     *
+     * Other output formats load a deferred external module lazily with `require()` (CommonJS),
+     * or load it eagerly with a warning (IIFE and UMD).
+     *
+     * @default 'error'
+     */
+    importDeferExternal?: 'error' | 'preserve';
   };
   /**
    * Configure how the code is transformed. This process happens after the `transform` hook.

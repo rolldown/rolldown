@@ -1,0 +1,51 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## d.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// d.js
+var d_exports = /* @__PURE__ */ __exportAll({ x: () => x });
+var d_deferred = /* @__PURE__ */ __deferNs(() => (init_d(), d_exports), d_exports);
+var import_ext_dyn, x;
+function init_d() {
+	return (init_d = __esmMin((() => {
+		import_ext_dyn = require("ext-dyn");
+		x = import_ext_dyn.value;
+	})))();
+}
+Object.defineProperty(exports, "d_deferred", {
+	enumerable: true,
+	get: function() {
+		return d_deferred;
+	}
+});
+Object.defineProperty(exports, "d_exports", {
+	enumerable: true,
+	get: function() {
+		return d_exports;
+	}
+});
+Object.defineProperty(exports, "init_d", {
+	enumerable: true,
+	get: function() {
+		return init_d;
+	}
+});
+exports.x = x;
+
+```
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// main.js
+(globalThis.__extLog ??= []).push("main");
+const load = () => (async (n) => (n = (await 0, require("./d.js")), n.d_deferred))();
+exports.load = load;
+
+```

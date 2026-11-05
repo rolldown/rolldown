@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use rolldown_common::{
-  AddonRenderContext, ChunkIdx, ExportsKind, ExternalModule, ModuleIdx, RUNTIME_MODULE_KEY,
-  Specifier, SymbolRef,
+  AddonRenderContext, ChunkIdx, ExportsKind, ExternalModule, ImportKind, ImportRecordMeta,
+  ModuleIdx, NamedImport, RUNTIME_MODULE_KEY, Specifier, SymbolRef,
 };
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{
@@ -333,9 +333,39 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
       named_imports.iter(),
       &mut has_importee_imported,
       &mut rendered_external_import_namespace_modules,
+      has_evaluation_phase_import(ctx, *importee_id),
     );
   });
   (!s.is_empty()).then_some(s)
+}
+
+/// Whether `named_import` comes from `import defer * as ns from '...'`.
+fn is_defer_phase_import(
+  ctx: &GenerateContext<'_>,
+  importer: ModuleIdx,
+  named_import: &NamedImport,
+) -> bool {
+  ctx.link_output.module_table[importer]
+    .as_normal()
+    .is_some_and(|module| module.import_records[named_import.record_idx].is_defer_phase())
+}
+
+/// Whether a module of this chunk imports the external in the evaluation phase. `import defer`
+/// does not evaluate the external when the chunk loads. Thus, an external that this chunk imports
+/// only in the defer phase (`experimental.importDeferExternal: 'preserve'`) gets no bare
+/// `import 'ext'` for its side effects.
+fn has_evaluation_phase_import(ctx: &GenerateContext<'_>, external_idx: ModuleIdx) -> bool {
+  !ctx.options.experimental.is_import_defer_enabled()
+    || ctx.chunk.modules.iter().any(|module_idx| {
+      ctx.link_output.module_table[*module_idx].as_normal().is_some_and(|module| {
+        module.import_records.iter().any(|rec| {
+          rec.kind == ImportKind::Import
+            && rec.resolved_module == Some(external_idx)
+            && !rec.is_defer_phase()
+            && !rec.meta.contains(ImportRecordMeta::IsExportStar)
+        })
+      })
+    })
 }
 
 fn create_import_declaration(
@@ -388,6 +418,7 @@ fn render_named_imports<'a, I>(
   named_imports: I,
   is_importee_rendered: &mut bool,
   rendered_external_import_namespace_modules: &mut FxHashSet<ModuleIdx>,
+  has_evaluation_phase_import: bool,
 ) -> String
 where
   I: Iterator<Item = &'a (ModuleIdx, rolldown_common::NamedImport)>,
@@ -395,8 +426,9 @@ where
   let mut s = String::new();
   let ascii_only = ctx.options.charset.is_ascii();
   let mut default_alias = vec![];
+  let mut rendered_deferred_aliases = FxHashSet::default();
   let specifiers = named_imports
-    .filter_map(|(_importer, named_import)| {
+    .filter_map(|(importer, named_import)| {
       let canonical_ref = ctx.link_output.symbol_db.canonical_ref_for(named_import.imported_as);
       // A named import that is itself re-exported skips the external binding merger
       // (`bind_imports_and_exports`), so its canonical ref stays importer-local; its usage
@@ -414,6 +446,25 @@ where
         .symbol_db
         .canonical_name_for_or_original(canonical_ref, &ctx.chunk.canonical_names);
       let rendered_alias = escape_non_ascii(alias, ascii_only);
+      if is_defer_phase_import(ctx, *importer, named_import) {
+        // `import defer * as ns from 'ext'` (kept with `experimental.importDeferExternal:
+        // 'preserve'`). It is a separate declaration, and it does not evaluate the external.
+        if rendered_deferred_aliases.insert(rendered_alias.to_string()) {
+          s.push_str("import defer * as ");
+          s.push_str(&rendered_alias);
+          s.push_str(" from ");
+          s.push_str(&to_ecma_string_literal(
+            &importee.get_import_path(ctx.chunk, ctx.resolved_paths),
+            ascii_only,
+          ));
+          if let Some(with_clause) = importee.attributes.to_with_clause(ascii_only) {
+            s.push(' ');
+            s.push_str(&with_clause);
+          }
+          s.push_str(";\n");
+        }
+        return None;
+      }
       match &named_import.imported {
         Specifier::Star => {
           if rendered_external_import_namespace_modules.contains(&importee.idx) {
@@ -457,7 +508,9 @@ where
 
   if !specifiers.is_empty()
     || !default_alias.is_empty()
-    || (importee.side_effects.has_side_effects() && !*is_importee_rendered)
+    || (importee.side_effects.has_side_effects()
+      && !*is_importee_rendered
+      && has_evaluation_phase_import)
   {
     *is_importee_rendered = true;
     s.push_str(&create_import_declaration(

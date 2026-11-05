@@ -1,0 +1,31 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] `import.defer()` with a specifier that is not a static string is lowered to `import()`. The module evaluates when it loads, not at the first access to its namespace.
+   ╭─[ main.js:5:18 ]
+   │
+ 5 │ const ns = await import.defer(globalThis.__nonLiteralSpecifier);
+   │                  ───────────────────────┬──────────────────────  
+   │                                         ╰──────────────────────── The deferred phase is removed here.
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// main.js
+globalThis.__nonLiteralSpecifier = "node:path";
+const ns = await import(globalThis.__nonLiteralSpecifier);
+assert.strictEqual(typeof ns.join, "function");
+delete globalThis.__nonLiteralSpecifier;
+
+```

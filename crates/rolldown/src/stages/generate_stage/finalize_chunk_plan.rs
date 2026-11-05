@@ -92,7 +92,8 @@ impl GenerateStage<'_> {
     let (mut final_esm_init_metadata, mut link_state) =
       self.compute_final_chunk_links(chunk_graph, used_symbol_refs_builder.view(), &order_state);
     // See internal-docs/code-splitting/implementation.md: derived exports include generated
-    // bindings that strict entries must keep behind a public facade.
+    // bindings that strict entries must keep behind a public facade. A deferred entry module
+    // gets the same facade, so that another chunk can load its code without evaluating it.
     if self.preserve_strict_entry_signatures(
       chunk_graph,
       used_symbol_refs_builder.view(),

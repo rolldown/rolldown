@@ -9,8 +9,8 @@ use oxc_str::CompactStr;
 use rolldown_common::{
   EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, IndexModules, MemberExprObjectReferencedType,
   MemberExprRef, MemberExprRefResolution, MemberExprWriteKind, Module, ModuleIdx, ModuleType,
-  NamespaceAlias, NormalModule, OutputFormat, ResolvedExport, Specifier, StmtInfoIdx, StmtInfos,
-  SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, SymbolRefFlags,
+  NamedImport, NamespaceAlias, NormalModule, OutputFormat, ResolvedExport, ResolvedImportRecord,
+  Specifier, StmtInfoIdx, StmtInfos, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, SymbolRefFlags,
 };
 use rolldown_error::{
   AmbiguousExternalNamespaceModule, BuildDiagnostic, Diagnostics, EventKindSwitcher,
@@ -33,7 +33,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   SharedOptions,
   types::{
-    linking_metadata::{LinkingMetadata, LinkingMetadataVec},
+    linking_metadata::{DeferredAccess, LinkingMetadata, LinkingMetadataVec},
     member_read_star_reexport_path::MemberReadStarReexportPath,
   },
 };
@@ -897,6 +897,10 @@ impl LinkStage<'_> {
           let mut side_effects_dependency = vec![];
           let mut written_cjs_exports: Vec<SymbolRef> = vec![];
           let mut star_reexport_consumptions: Vec<MemberReadConsumption> = vec![];
+          let mut deferred_access_targets = FxHashMap::default();
+          let deferred_cjs_namespace_imports =
+            &self.metas[module.idx].deferred_cjs_namespace_imports;
+          let import_defer = self.options.experimental.is_import_defer_enabled();
           stmt_infos.iter_enumerated().for_each(|(stmt_info_idx, stmt_info)| {
             stmt_info.referenced_symbols.iter().for_each(|symbol_ref| {
               // `depended_refs` is used to store necessary symbols that must be included once the resolved symbol gets included
@@ -907,6 +911,66 @@ impl LinkStage<'_> {
               let mut star_reexport_steps: Vec<(ModuleIdx, CompactStr)> = vec![];
 
               if let SymbolOrMemberExprRef::MemberExpr(member_expr_ref) = symbol_ref {
+                let deferred_access = if !import_defer {
+                  None
+                } else if let Some(&rec_idx) =
+                  deferred_cjs_namespace_imports.get(&member_expr_ref.object_ref)
+                {
+                  Some(DeferredAccess::Cjs(rec_idx))
+                } else {
+                  let canonical_ref = self.symbols.canonical_ref_for(member_expr_ref.object_ref);
+                  let meta = &self.metas[canonical_ref.owner];
+                  // An access through a re-export of a CommonJS deferred namespace object
+                  // (`export { ns }`) keeps the object, whose traps evaluate the module. It
+                  // cannot assign `import_x` of the other module.
+                  if meta.deferred_cjs_namespaces.values().any(|ns| ns.symbol_ref == canonical_ref)
+                  {
+                    return;
+                  }
+                  (meta.deferred_namespace_ref == Some(canonical_ref))
+                    .then_some(DeferredAccess::Esm(canonical_ref.owner))
+                };
+                // A local access to a CommonJS deferred namespace reads `import_x` directly, not
+                // the deferred namespace object that `ns` links to.
+                let cjs_namespace_ref = match deferred_access {
+                  Some(DeferredAccess::Cjs(rec_idx)) => {
+                    Some(module.import_records[rec_idx].namespace_ref)
+                  }
+                  _ => None,
+                };
+                if let Some(deferred_access) = deferred_access {
+                  // A write (`ns.foo = v`, `ns.a.b++`, `delete ns.foo`) keeps the deferred
+                  // namespace object, whose traps evaluate the module when the spec says so.
+                  if member_expr_ref.is_write && matches!(deferred_access, DeferredAccess::Esm(_)) {
+                    return;
+                  }
+                  // The key `then` of a deferred namespace is always absent, and reading it
+                  // does not evaluate the module (spec `GetModuleNamespace`, defer phase).
+                  let in_check_key =
+                    module.ecma_view.namespace_in_checks.get(&member_expr_ref.node_id);
+                  let key = member_expr_ref
+                    .prop_and_span_list
+                    .first()
+                    .map(|prop| prop.name.as_str())
+                    .or_else(|| in_check_key.map(CompactStr::as_str));
+                  if key == Some("then") {
+                    if in_check_key.is_some() {
+                      folded_namespace_in_checks.insert(member_expr_ref.node_id, false);
+                    }
+                    resolved_map.insert(
+                      member_expr_ref.node_id,
+                      MemberExprRefResolution {
+                        resolved: None,
+                        prop_and_related_span_list: member_expr_ref.prop_and_span_list.clone(),
+                        depended_refs: vec![],
+                        target_commonjs_exported_symbol: None,
+                        reference_id: member_expr_ref.reference_id,
+                      },
+                    );
+                    return;
+                  }
+                  deferred_access_targets.insert(member_expr_ref.node_id, deferred_access);
+                }
                 if member_expr_ref.prop_and_span_list.is_empty() {
                   // `'key' in ns` with a known result reads nothing from `ns`. Without a
                   // resolution, the reference falls back to `ns` itself.
@@ -926,11 +990,24 @@ impl LinkStage<'_> {
                         reference_id: member_expr_ref.reference_id,
                       },
                     );
+                  } else if cjs_namespace_ref.is_some() {
+                    resolved_map.insert(
+                      member_expr_ref.node_id,
+                      MemberExprRefResolution {
+                        resolved: cjs_namespace_ref,
+                        prop_and_related_span_list: vec![],
+                        depended_refs: vec![],
+                        target_commonjs_exported_symbol: None,
+                        reference_id: member_expr_ref.reference_id,
+                      },
+                    );
                   }
                   return;
                 }
                 // First get the canonical ref of `foo_ns`, then we get the `NormalModule#namespace_object_ref` of `foo.js`.
-                let mut canonical_ref = self.symbols.canonical_ref_for(member_expr_ref.object_ref);
+                let object_canonical_ref = cjs_namespace_ref
+                  .unwrap_or_else(|| self.symbols.canonical_ref_for(member_expr_ref.object_ref));
+                let mut canonical_ref = object_canonical_ref;
                 let mut canonical_ref_owner: &NormalModule =
                   match &self.module_table[canonical_ref.owner] {
                     Module::Normal(module) => module,
@@ -957,8 +1034,10 @@ impl LinkStage<'_> {
                     .prop_and_span_list
                     .first()
                     .is_none_or(|prop| prop.name.as_str() != "default");
-                let mut is_namespace_ref =
-                  canonical_ref_owner.namespace_object_ref == canonical_ref || is_json_import_ns;
+                let mut is_namespace_ref = canonical_ref_owner.namespace_object_ref
+                  == canonical_ref
+                  || is_json_import_ns
+                  || matches!(deferred_access, Some(DeferredAccess::Esm(_)));
                 if strict_execution_order
                   && is_namespace_ref
                   && let Some(import) = module.named_imports.get(&member_expr_ref.object_ref)
@@ -1068,10 +1147,8 @@ impl LinkStage<'_> {
                 // TODO: we could record if a module could potential reference a cjs symbol
                 // so that we could skip this step.
                 if cursor < member_expr_ref.prop_and_span_list.len() {
-                  let maybe_namespace = depended_refs
-                    .last()
-                    .copied()
-                    .unwrap_or(self.symbols.canonical_ref_for(member_expr_ref.object_ref));
+                  let maybe_namespace =
+                    depended_refs.last().copied().unwrap_or(object_canonical_ref);
                   let maybe_namespace_symbol = self.symbols.get(maybe_namespace);
                   let continue_resolve =
                     if let Some(ref ns) = maybe_namespace_symbol.namespace_alias {
@@ -1214,6 +1291,17 @@ impl LinkStage<'_> {
                       reference_id: member_expr_ref.reference_id,
                     },
                   );
+                } else if cjs_namespace_ref.is_some() {
+                  resolved_map.insert(
+                    member_expr_ref.node_id,
+                    MemberExprRefResolution {
+                      resolved: cjs_namespace_ref,
+                      prop_and_related_span_list: member_expr_ref.prop_and_span_list.clone(),
+                      depended_refs,
+                      target_commonjs_exported_symbol: None,
+                      reference_id: member_expr_ref.reference_id,
+                    },
+                  );
                 }
               }
             });
@@ -1225,9 +1313,12 @@ impl LinkStage<'_> {
             side_effects_dependency,
             written_cjs_exports,
             star_reexport_consumptions,
+            deferred_access_targets,
           )
         }
-        Module::External(_) => (FxHashMap::default(), FxHashMap::default(), vec![], vec![], vec![]),
+        Module::External(_) => {
+          (FxHashMap::default(), FxHashMap::default(), vec![], vec![], vec![], FxHashMap::default())
+        }
       })
       .collect::<Vec<_>>();
 
@@ -1240,7 +1331,7 @@ impl LinkStage<'_> {
     // `cjs[name] = value`, or writes through `ns.default`), bail out all CJS exports of the
     // target module since we can't determine which specific property is affected.
     let mut written_cjs_export_symbols: Vec<SymbolRef> = Vec::new();
-    for (meta, (_, _, _, written_cjs_exports, _)) in
+    for (meta, (_, _, _, written_cjs_exports, _, _)) in
       self.metas.iter().zip(resolved_meta_data.iter())
     {
       written_cjs_export_symbols.extend(written_cjs_exports);
@@ -1271,7 +1362,7 @@ impl LinkStage<'_> {
     // retains each recorded path while its reading statement is included.
     if strict_execution_order {
       let mut recorded = FxHashSet::default();
-      for (module, (_, _, _, _, star_reexport_consumptions)) in
+      for (module, (_, _, _, _, star_reexport_consumptions, _)) in
         self.module_table.modules.iter().zip(&resolved_meta_data)
       {
         for (stmt_info_idx, resolved, steps) in star_reexport_consumptions {
@@ -1303,9 +1394,20 @@ impl LinkStage<'_> {
       }
     }
     self.metas.iter_mut().zip(resolved_meta_data).for_each(
-      |(meta, (resolved_map, folded_namespace_in_checks, side_effects_dependency, _, _))| {
+      |(
+        meta,
+        (
+          resolved_map,
+          folded_namespace_in_checks,
+          side_effects_dependency,
+          _,
+          _,
+          deferred_access_targets,
+        ),
+      )| {
         meta.resolved_member_expr_refs = resolved_map;
         meta.folded_namespace_in_checks = folded_namespace_in_checks;
+        meta.deferred_access_targets = deferred_access_targets;
         meta.dependencies.extend(side_effects_dependency);
       },
     );
@@ -1317,7 +1419,8 @@ impl LinkStage<'_> {
     let canonical_ref = self.symbols.canonical_ref_for(namespace_ref);
     let module = self.module_table[canonical_ref.owner].as_normal()?;
     let meta = &self.metas[module.idx];
-    if module.namespace_object_ref != canonical_ref
+    if (module.namespace_object_ref != canonical_ref
+      && meta.deferred_namespace_ref != Some(canonical_ref))
       || matches!(module.exports_kind, ExportsKind::CommonJs)
       || meta.has_dynamic_exports
     {
@@ -1474,6 +1577,9 @@ impl BindImportsAndExportsContext<'_> {
 
       if is_esm && is_external {
         match named_import.imported {
+          // `import defer * as ns from 'ext'` keeps its own binding: the output declares it with
+          // `import defer` (ESM) or as a lazy namespace (CommonJS), never merged with an eager one.
+          Specifier::Star if rec.is_defer_phase() => {}
           Specifier::Star => {
             self
               .external_import_namespace_merger
@@ -1662,7 +1768,11 @@ impl BindImportsAndExportsContext<'_> {
 
     match &named_import.imported {
       Specifier::Star => ImportStatus::Found {
-        symbol: importee.namespace_object_ref,
+        // `import defer * as ns` reads the deferred namespace object of the module.
+        symbol: self.metas[importee_id]
+          .deferred_namespace_ref
+          .filter(|_| importer.import_records[named_import.record_idx].is_defer_phase())
+          .unwrap_or(importee.namespace_object_ref),
         // owner: importee_id,
         potentially_ambiguous_export_star_refs: vec![],
       },
@@ -1770,6 +1880,53 @@ impl BindImportsAndExportsContext<'_> {
     (ret, deduped_ambiguous_results, promoted)
   }
 
+  /// Links an import of an external module.
+  fn match_external_import(
+    &self,
+    tracker: &ImportTracker,
+    named_import: &NamedImport,
+    importer_record: &ResolvedImportRecord,
+    symbol_ref: SymbolRef,
+  ) -> MatchImportKind {
+    if self.options.format.keep_esm_import_export_syntax() {
+      // Imports from external modules should not be converted to CommonJS
+      // if the output format preserves the original ES6 import statements
+      return MatchImportKind::Normal(MatchImportKindNormal {
+        symbol: tracker.imported_as,
+        reexports: vec![],
+      });
+    }
+
+    // CommonJS output, a module of a deferred closure: the import reads the binding of its own
+    // record, which the module assigns at the position of the import, in its init
+    // (`lazy_external_import_stmt`). Thus, the external loads when the module evaluates. A
+    // re-export chain from another module ends at this binding, and that module calls the init of
+    // this module before it reads it. The link target keeps the module that wrote the import: a
+    // link to the shared namespace of the external cannot, because `SymbolRefDb::link` compresses
+    // the path.
+    let namespace_ref = if matches!(self.options.format, OutputFormat::Cjs)
+      && self.metas[tracker.importer].wrapped_by_import_defer
+      && !importer_record.is_defer_phase()
+    {
+      importer_record.namespace_ref
+    } else {
+      symbol_ref
+    };
+    match &tracker.imported {
+      Specifier::Star => MatchImportKind::Namespace {
+        // `import defer * as ns from 'ext'` in CommonJS output links to the deferred namespace
+        // object of the record, like a CommonJS module.
+        namespace_ref: self.metas[tracker.importer]
+          .deferred_cjs_namespaces
+          .get(&named_import.record_idx)
+          .map_or(namespace_ref, |ns| ns.symbol_ref),
+      },
+      Specifier::Literal(alias) => {
+        MatchImportKind::NormalAndNamespace { namespace_ref, alias: alias.clone() }
+      }
+    }
+  }
+
   fn match_import_with_export(
     &mut self,
     index_modules: &IndexModules,
@@ -1814,9 +1971,13 @@ impl BindImportsAndExportsContext<'_> {
 
       let kind = match import_status {
         ImportStatus::CommonJS => match &tracker.imported {
-          Specifier::Star => {
-            MatchImportKind::Namespace { namespace_ref: importer_record.namespace_ref }
-          }
+          Specifier::Star => MatchImportKind::Namespace {
+            // `import defer * as ns` links to the deferred namespace object of the record.
+            namespace_ref: self.metas[tracker.importer]
+              .deferred_cjs_namespaces
+              .get(&named_import.record_idx)
+              .map_or(importer_record.namespace_ref, |ns| ns.symbol_ref),
+          },
           Specifier::Literal(alias) => MatchImportKind::NormalAndNamespace {
             namespace_ref: importer_record.namespace_ref,
             alias: alias.clone(),
@@ -1917,22 +2078,7 @@ impl BindImportsAndExportsContext<'_> {
           break MatchImportKind::Normal(MatchImportKindNormal { symbol, reexports });
         }
         ImportStatus::External(symbol_ref) => {
-          if self.options.format.keep_esm_import_export_syntax() {
-            // Imports from external modules should not be converted to CommonJS
-            // if the output format preserves the original ES6 import statements
-            break MatchImportKind::Normal(MatchImportKindNormal {
-              symbol: tracker.imported_as,
-              reexports: vec![],
-            });
-          }
-
-          match &tracker.imported {
-            Specifier::Star => MatchImportKind::Namespace { namespace_ref: symbol_ref },
-            Specifier::Literal(alias) => MatchImportKind::NormalAndNamespace {
-              namespace_ref: symbol_ref,
-              alias: alias.clone(),
-            },
-          }
+          self.match_external_import(&tracker, named_import, importer_record, symbol_ref)
         }
       };
       break kind;

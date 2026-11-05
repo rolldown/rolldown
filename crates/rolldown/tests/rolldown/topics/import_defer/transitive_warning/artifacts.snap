@@ -1,0 +1,145 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## DEFERRED_EXTERNAL_EVALUATED_EAGERLY
+
+```text
+[DEFERRED_EXTERNAL_EVALUATED_EAGERLY] The external module "ext-inner" evaluates when its chunk loads, not when the deferred module evaluates. "main.js" defers "d.js", and "inner.js" in the dependencies of "d.js" imports "ext-inner". ESM output loads each external module at the start of the chunk that imports it. To evaluate "ext-inner" lazily, bundle it, or use the CommonJS output format, which loads it with `require()` in the deferred code. CommonJS output works only when the runtime supports CommonJS and the module can load with `require()`.
+
+```
+
+## DEFERRED_EXTERNAL_EVALUATED_EAGERLY
+
+```text
+[DEFERRED_EXTERNAL_EVALUATED_EAGERLY] The external module "ext-lazy" evaluates when its chunk loads, not when the deferred module evaluates. "main.js" defers "d.js", and "d.js" imports "ext-lazy". ESM output loads each external module at the start of the chunk that imports it. To evaluate "ext-lazy" lazily, bundle it, or use the CommonJS output format, which loads it with `require()` in the deferred code. CommonJS output works only when the runtime supports CommonJS and the module can load with `require()`.
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import "ext-eager";
+import "ext-inner";
+import { value } from "ext-lazy";
+import { join } from "node:path";
+// HIDDEN [\0rolldown/runtime.js]
+// inner.js
+function init_inner() {
+	return (init_inner = __esmMin((() => {})))();
+}
+// d.js
+var x;
+function init_d() {
+	return (init_d = __esmMin((() => {
+		init_inner();
+		x = [value, join];
+	})))();
+}
+// main.js
+const read = () => (init_d(), x);
+export { read };
+
+```
+
+# Variant: [format: Iife] [name: "lib"]
+
+## warnings
+
+### DEFERRED_EXTERNAL_EVALUATED_EAGERLY
+
+```text
+[DEFERRED_EXTERNAL_EVALUATED_EAGERLY] The external module "ext-inner" evaluates when its chunk loads, not when the deferred module evaluates. "main.js" defers "d.js", and "inner.js" in the dependencies of "d.js" imports "ext-inner". IIFE output loads each external module at the start of the chunk that imports it. To evaluate "ext-inner" lazily, bundle it, or use the CommonJS output format, which loads it with `require()` in the deferred code. CommonJS output works only when the runtime supports CommonJS and the module can load with `require()`.
+
+```
+
+### DEFERRED_EXTERNAL_EVALUATED_EAGERLY
+
+```text
+[DEFERRED_EXTERNAL_EVALUATED_EAGERLY] The external module "ext-lazy" evaluates when its chunk loads, not when the deferred module evaluates. "main.js" defers "d.js", and "d.js" imports "ext-lazy". IIFE output loads each external module at the start of the chunk that imports it. To evaluate "ext-lazy" lazily, bundle it, or use the CommonJS output format, which loads it with `require()` in the deferred code. CommonJS output works only when the runtime supports CommonJS and the module can load with `require()`.
+
+```
+
+## Assets
+
+### main.js
+
+```js
+var lib = (function(exports, ext_lazy, node_path) {
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	// HIDDEN [\0rolldown/runtime.js]
+	// inner.js
+	function init_inner() {
+		return (init_inner = __esmMin((() => {})))();
+	}
+	// d.js
+	var x;
+	function init_d() {
+		return (init_d = __esmMin((() => {
+			init_inner();
+			x = [ext_lazy.value, node_path.join];
+		})))();
+	}
+	// main.js
+	const read = () => (init_d(), x);
+	exports.read = read;
+	return exports;
+})({}, ExtLazy, NodePath);
+
+```
+
+# Variant: [format: Umd] [name: "lib"]
+
+## warnings
+
+### DEFERRED_EXTERNAL_EVALUATED_EAGERLY
+
+```text
+[DEFERRED_EXTERNAL_EVALUATED_EAGERLY] The external module "ext-inner" evaluates when its chunk loads, not when the deferred module evaluates. "main.js" defers "d.js", and "inner.js" in the dependencies of "d.js" imports "ext-inner". UMD output loads each external module at the start of the chunk that imports it. To evaluate "ext-inner" lazily, bundle it, or use the CommonJS output format, which loads it with `require()` in the deferred code. CommonJS output works only when the runtime supports CommonJS and the module can load with `require()`.
+
+```
+
+### DEFERRED_EXTERNAL_EVALUATED_EAGERLY
+
+```text
+[DEFERRED_EXTERNAL_EVALUATED_EAGERLY] The external module "ext-lazy" evaluates when its chunk loads, not when the deferred module evaluates. "main.js" defers "d.js", and "d.js" imports "ext-lazy". UMD output loads each external module at the start of the chunk that imports it. To evaluate "ext-lazy" lazily, bundle it, or use the CommonJS output format, which loads it with `require()` in the deferred code. CommonJS output works only when the runtime supports CommonJS and the module can load with `require()`.
+
+```
+
+## Assets
+
+### main.js
+
+```js
+(function(global, factory) {
+	typeof exports === "object" && typeof module !== "undefined" ? factory(exports, require("ext-eager"), require("ext-inner"), require("ext-lazy"), require("node:path")) : typeof define === "function" && define.amd ? define([
+		"exports",
+		"ext-eager",
+		"ext-inner",
+		"ext-lazy",
+		"node:path"
+	], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.lib = {}, global.ExtEager, global.ExtInner, global.ExtLazy, global.NodePath));
+})(this, function(exports, ext_eager, ext_inner, ext_lazy, node_path) {
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	// HIDDEN [\0rolldown/runtime.js]
+	// inner.js
+	function init_inner() {
+		return (init_inner = __esmMin((() => {})))();
+	}
+	// d.js
+	var x;
+	function init_d() {
+		return (init_d = __esmMin((() => {
+			init_inner();
+			x = [ext_lazy.value, node_path.join];
+		})))();
+	}
+	// main.js
+	const read = () => (init_d(), x);
+	exports.read = read;
+});
+
+```

@@ -872,9 +872,25 @@ impl GenerateStage<'_> {
     // Ensure the external module is imported in case it has side effects.
     if matches!(import_record.kind, ImportKind::Import)
       && !import_record.meta.contains(ImportRecordMeta::IsExportStar)
+      && !self.is_lazy_external_import(importer_idx, import_record)
     {
       imports_from_external_modules.entry(external_module_idx).or_default();
     }
+  }
+
+  /// Whether the importer loads the external itself, in its own code, so that the chunk does not
+  /// load it at the top. Only in CommonJS output:
+  /// - `import defer * as ns from 'ext'` (`deferred_cjs_import_decl`).
+  /// - An import of an external in a module of a deferred closure. The module loads it at the
+  ///   position of the import, in its init (`lazy_external_import_stmt`).
+  fn is_lazy_external_import(
+    &self,
+    importer_idx: ModuleIdx,
+    import_record: &ResolvedImportRecord,
+  ) -> bool {
+    matches!(self.options.format, OutputFormat::Cjs)
+      && (import_record.is_defer_phase()
+        || self.link_output.metas[importer_idx].wrapped_by_import_defer)
   }
 
   fn collect_dynamic_chunk_import(
@@ -976,7 +992,10 @@ impl GenerateStage<'_> {
                 .map(|module_idx| (import, module_idx))
             })
             .for_each(|(import, module_idx)| {
-              if let Module::External(importee) = &self.link_output.module_table[module_idx] {
+              if let Module::External(importee) = &self.link_output.module_table[module_idx]
+                && !self
+                  .is_lazy_external_import(module.idx, &module.import_records[import.record_idx])
+              {
                 imports_from_external_modules
                   .entry(importee.idx)
                   .or_default()
@@ -1533,6 +1552,40 @@ impl GenerateStage<'_> {
     // covers `DynamicImport`-kind entries; emitted entries that are also dynamically
     // imported (e.g. via `this.emitFile` + `import()` in the same build) wouldn't be
     // found that way. Walking import_records directly catches both.
+    // `import()` and `import.defer()` of an `import.defer()` target, and `import()` of a module
+    // whose chunk does not evaluate it at load (`ChunkGraph::lazy_dynamic_defer_host`), read
+    // `init_x`, `x_exports` and `x_deferred` from the chunk that holds the module, when the
+    // importer is in another chunk. Key: that chunk.
+    let dynamic_defer_target_exports: FxHashMap<ChunkIdx, Vec<ModuleIdx>> = {
+      let mut map: FxHashMap<ChunkIdx, Vec<ModuleIdx>> = FxHashMap::default();
+      if self.options.experimental.is_import_defer_enabled() {
+        for (importer_idx, module) in self.link_output.module_table.iter_enumerated() {
+          let Some(module) = module.as_normal() else { continue };
+          let Some(importer_chunk) = chunk_graph.module_to_chunk[importer_idx] else { continue };
+          for rec in &module.import_records {
+            if rec.kind != ImportKind::DynamicImport {
+              continue;
+            }
+            let Some(target) = rec.resolved_module else { continue };
+            let meta = &self.link_output.metas[target];
+            if !meta.dynamic_defer_target
+              && chunk_graph.lazy_dynamic_defer_host(target, meta).is_none()
+            {
+              continue;
+            }
+            let Some(host) = chunk_graph.module_to_chunk[target] else { continue };
+            if host != importer_chunk {
+              let targets = map.entry(host).or_default();
+              if !targets.contains(&target) {
+                targets.push(target);
+              }
+            }
+          }
+        }
+      }
+      map
+    };
+
     let dynamic_importers_by_target: FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>> = {
       let mut map: FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>> = FxHashMap::default();
       let absorbed_targets: FxHashSet<ModuleIdx> = chunk_graph
@@ -1699,6 +1752,25 @@ impl GenerateStage<'_> {
                 .namespace_object_ref()
                 .expect("dynamic entry should be normal module");
               index_chunk_exported_symbols[chunk_id].entry(ns_ref).or_default();
+            }
+          }
+        }
+
+        if let Some(targets) = dynamic_defer_target_exports.get(&chunk_id) {
+          for &target in targets {
+            let meta = &self.link_output.metas[target];
+            // Only an `import.defer()` target keeps its deferred namespace object as an entry
+            // export (`init_entry_point_stmt_info`).
+            let deferred_ref = meta.deferred_namespace_ref.filter(|_| meta.dynamic_defer_target);
+            for symbol_ref in [
+              meta.wrapper_ref,
+              self.link_output.module_table[target].namespace_object_ref(),
+              deferred_ref,
+            ]
+            .into_iter()
+            .flatten()
+            {
+              index_chunk_exported_symbols[chunk_id].entry(symbol_ref).or_default();
             }
           }
         }

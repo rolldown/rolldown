@@ -1,0 +1,21 @@
+{
+  "_comment": "ESM, IIFE and UMD output load each external module at the start of the chunk, so an external that a module of a deferred closure imports evaluates early: DEFERRED_EXTERNAL_EVALUATED_EAGERLY, one for each external module. No warning for `ext-eager`, which `main.js` (not deferred) also imports, or for the builtin `node:path`.",
+  "config": {
+    "external": ["ext-lazy", "ext-inner", "ext-eager", "node:path"],
+    "globals": {
+      "ext-lazy": "ExtLazy",
+      "ext-inner": "ExtInner",
+      "ext-eager": "ExtEager",
+      "node:path": "NodePath"
+    },
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "configVariants": [
+    { "format": "iife", "name": "lib" },
+    { "format": "umd", "name": "lib" }
+  ],
+  "expectExecuted": false,
+  "expectWarning": true
+}

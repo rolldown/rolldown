@@ -109,6 +109,7 @@ impl BindingCallableBuiltinPlugin {
             importer: importer.as_deref(),
             is_entry: options.as_ref().is_some_and(|options| options.is_entry.unwrap_or_default()),
             kind,
+            phase: rolldown_common::ImportPhase::Evaluation,
             custom: options.map(Into::into).unwrap_or_default(),
             attributes: &ImportAttributes::default(),
             importer_raw_id,

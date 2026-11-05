@@ -1,0 +1,48 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.js
+var log;
+function init_log() {
+	return (init_log = __esmMin((() => {
+		log = [];
+	})))();
+}
+function init_x() {
+	return (init_x = __esmMin((() => {
+		init_log();
+		log.push("x");
+	})))();
+}
+// y.js
+var obj;
+function init_y() {
+	return (init_y = __esmMin((() => {
+		init_log();
+		log.push("y");
+		obj = { inner: "inner" };
+	})))();
+}
+// main.js
+init_log();
+const before = [...log];
+const thenValue = void 0;
+const thenIn = false;
+const afterThen = [...log];
+init_x();
+const afterRead = [...log];
+const fooIn = (init_x(), true);
+const value = (init_x(), 1) + (init_x(), 2);
+const plainThen = void 0;
+const afterPlainThen = [...log];
+const inner = (init_y(), obj.inner);
+const afterInner = [...log];
+export { afterInner, afterPlainThen, afterRead, afterThen, before, fooIn, inner, plainThen, thenIn, thenValue, value };
+
+```

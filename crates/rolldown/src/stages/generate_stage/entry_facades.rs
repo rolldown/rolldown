@@ -11,6 +11,13 @@ use rolldown_common::{
 use rustc_hash::FxHashSet;
 
 impl GenerateStage<'_> {
+  /// Gives a facade to each user-defined or emitted entry chunk that exports more than the public
+  /// exports of its entry module, when one of these is true:
+  /// - The entry keeps a strict signature.
+  /// - The entry module is in a deferred closure (`import defer` or `import.defer()`). The chunk
+  ///   runs the entry module when it loads. Another chunk that imports the chunk for a deferred
+  ///   access (`init_x`, `x_deferred`) must not evaluate the module. After the split, only the
+  ///   facade runs the module, and the old chunk keeps the code with no evaluation at load.
   pub(super) fn preserve_strict_entry_signatures(
     &self,
     chunk_graph: &mut ChunkGraph,
@@ -20,6 +27,7 @@ impl GenerateStage<'_> {
     if self.options.preserve_modules || self.options.code_splitting.is_disabled() {
       return false;
     }
+    let import_defer = self.options.experimental.is_import_defer_enabled();
     let candidates: Vec<_> = chunk_graph
       .chunk_table
       .iter_enumerated()
@@ -27,7 +35,8 @@ impl GenerateStage<'_> {
         let ChunkKind::EntryPoint { module, meta, .. } = chunk.kind else { return None };
         if chunk.modules.is_empty()
           || !meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk)
-          || !matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::Strict))
+          || !(matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::Strict))
+            || (import_defer && self.link_output.metas[module].wrapped_by_import_defer))
         {
           return None;
         }

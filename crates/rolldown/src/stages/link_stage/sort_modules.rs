@@ -1,6 +1,6 @@
 use std::iter;
 
-use rolldown_common::{Module, ModuleIdx};
+use rolldown_common::{Module, ModuleIdx, ResolvedImportRecord};
 use rolldown_error::{BuildDiagnostic, EventKindSwitcher};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -78,14 +78,19 @@ impl LinkStage<'_> {
             );
             stack_indexes_of_executing_id.insert(id, execution_stack.len() - 1);
 
+            let records = self.module_table[id].import_records();
+            let is_executed = |rec: &&ResolvedImportRecord| {
+              rec.kind.is_static()
+                || (self.options.code_splitting.is_disabled() && rec.kind.is_dynamic())
+            };
+            // Visit the deferred records after the eager ones. A module that only a deferred
+            // record reaches then gets a position after the eager dependencies of the importer
+            // and before the importer, so its declarations exist before the importer's body.
+            let eager = records.iter().filter(is_executed).filter(|rec| !rec.is_defer_phase());
+            let deferred = records.iter().filter(is_executed).filter(|rec| rec.is_defer_phase());
             execution_stack.extend(
-              self.module_table[id]
-                .import_records()
-                .iter()
-                .filter(|rec| {
-                  rec.kind.is_static()
-                    || (self.options.code_splitting.is_disabled() && rec.kind.is_dynamic())
-                })
+              eager
+                .chain(deferred)
                 .filter_map(|rec| rec.resolved_module)
                 .rev()
                 .map(Status::ToBeExecuted),

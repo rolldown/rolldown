@@ -6,9 +6,11 @@ use crate::{
   ecmascript::ecma_generator::RenderedModuleSources,
   types::generator::GenerateContext,
   utils::chunk::render_chunk_exports::render_chunk_exports,
-  utils::external_import_interop::{ChunkAssignments, chunk_external_interop_modes},
+  utils::external_import_interop::{
+    ChunkAssignments, chunk_external_interop_modes, import_record_needs_interop,
+  },
 };
-use rolldown_common::{AddonRenderContext, OutputExports};
+use rolldown_common::{AddonRenderContext, ImportKind, ImportRecordMeta, ModuleIdx, OutputExports};
 use rolldown_error::BuildDiagnostic;
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{
@@ -156,8 +158,15 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
           named_imports.map(Vec::as_slice),
         );
         if let Some(interop_modes) = interop_modes {
+          // A module of this chunk loads the external lazily with `__toESMCached` (`import
+          // defer`). The eager binding uses the same helper, so both give one namespace object.
+          let to_esm_helper = if chunk_has_lazy_namespace_load(ctx, *importee_idx) {
+            "__toESMCached"
+          } else {
+            "__toESM"
+          };
           let to_esm_fn = ctx.finalized_string_pattern_for_symbol_ref(
-            ctx.link_output.runtime.resolve_symbol("__toESM"),
+            ctx.link_output.runtime.resolve_symbol(to_esm_helper),
             ctx.chunk_idx,
             &ctx.chunk.canonical_names,
           );
@@ -225,4 +234,30 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
     });
 
   s
+}
+
+/// Whether a module of this chunk is in a deferred closure (`import defer`) and keeps an import of
+/// the external that needs `__toESM`. That module loads the external lazily, with
+/// `__toESMCached(require("ext"))` (`lazy_external_import_stmt`), and tree shaking keeps the
+/// statement, so the helper is in the runtime.
+fn chunk_has_lazy_namespace_load(ctx: &GenerateContext<'_>, external_idx: ModuleIdx) -> bool {
+  ctx.options.experimental.is_import_defer_enabled()
+    && ctx.chunk.modules.iter().any(|&module_idx| {
+      let meta = &ctx.link_output.metas[module_idx];
+      let Some(module) = ctx.link_output.module_table[module_idx].as_normal() else {
+        return false;
+      };
+      meta.wrapped_by_import_defer
+        && ctx.link_output.stmt_infos[module_idx].iter_enumerated().any(|(stmt_idx, stmt_info)| {
+          meta.stmt_info_included.has_bit(stmt_idx)
+            && stmt_info.import_records.iter().any(|&rec_idx| {
+              let rec = &module.import_records[rec_idx];
+              rec.kind == ImportKind::Import
+                && rec.resolved_module == Some(external_idx)
+                && !rec.is_defer_phase()
+                && !rec.meta.contains(ImportRecordMeta::IsExportStar)
+                && import_record_needs_interop(module, rec_idx)
+            })
+        })
+    })
 }

@@ -4,8 +4,8 @@ use arcstr::ArcStr;
 use futures::future::join_all;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  ImportAttributes, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleDefFormat, ModuleId,
-  NormalizedBundlerOptions, RUNTIME_MODULE_KEY, RawImportRecord, ResolvedId,
+  ImportAttributes, ImportKind, ImportPhase, ImportRecordIdx, ImportRecordMeta, ModuleDefFormat,
+  ModuleId, NormalizedBundlerOptions, RUNTIME_MODULE_KEY, RawImportRecord, ResolvedId,
 };
 use rolldown_error::{
   BuildDiagnostic, BuildResult, DiagnosableArcstr, DiagnosticOptions, EventKind,
@@ -19,6 +19,7 @@ use rustc_hash::FxHashMap;
 use crate::{SharedOptions, SharedResolver};
 
 #[tracing::instrument(skip_all, fields(CONTEXT_hook_resolve_id_trigger = "automatic"))]
+#[expect(clippy::too_many_arguments)]
 pub async fn resolve_id<Fs: FileSystem>(
   bundle_options: &NormalizedBundlerOptions,
   resolver: &Resolver<Fs>,
@@ -27,6 +28,7 @@ pub async fn resolve_id<Fs: FileSystem>(
   specifier: &str,
   kind: ImportKind,
   attributes: &ImportAttributes,
+  phase: ImportPhase,
 ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
   // Check runtime module
   if specifier == RUNTIME_MODULE_KEY {
@@ -44,6 +46,7 @@ pub async fn resolve_id<Fs: FileSystem>(
     Some(&importer.id),
     false,
     kind,
+    phase,
     None,
     Arc::default(),
     false,
@@ -64,11 +67,14 @@ pub async fn resolve_dependencies<Fs: FileSystem>(
   source: ArcStr,
   warnings: &mut Vec<BuildDiagnostic>,
 ) -> BuildResult<IndexVec<ImportRecordIdx, ResolvedId>> {
-  // NOTE: this dedupes the identical (specifier, kind, attributes) resolve calls
-  let dedup_map: FxHashMap<(&str, ImportKind, &ImportAttributes), ImportRecordIdx> = dependencies
-    .iter_enumerated()
-    .map(|(idx, item)| ((item.module_request.as_str(), item.kind, &item.attributes), idx))
-    .collect();
+  // NOTE: this dedupes the identical (specifier, kind, phase, attributes) resolve calls
+  let dedup_map: FxHashMap<(&str, ImportKind, ImportPhase, &ImportAttributes), ImportRecordIdx> =
+    dependencies
+      .iter_enumerated()
+      .map(|(idx, item)| {
+        ((item.module_request.as_str(), item.kind, item.phase(), &item.attributes), idx)
+      })
+      .collect();
 
   let jobs = dedup_map.values().map(|&idx| async move {
     let item = &dependencies[idx];
@@ -81,6 +87,7 @@ pub async fn resolve_dependencies<Fs: FileSystem>(
       specifier,
       item.kind,
       &item.attributes,
+      item.phase(),
     )
     .await
     .map(|id| (idx, id))
@@ -92,7 +99,8 @@ pub async fn resolve_dependencies<Fs: FileSystem>(
     sparse_results[idx] = Some(resolved);
   }
   let resolved_results = dependencies.iter().map(|dep| {
-    let repr_idx = dedup_map[&(dep.module_request.as_str(), dep.kind, &dep.attributes)];
+    let repr_idx =
+      dedup_map[&(dep.module_request.as_str(), dep.kind, dep.phase(), &dep.attributes)];
     sparse_results[repr_idx].as_ref().expect("dedup representative should be resolved")
   });
 

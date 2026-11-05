@@ -1,0 +1,56 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.cjs
+var require_log = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = [];
+}));
+// cjs.js
+var require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
+	require_log().push("cjs");
+	exports.foo = "foo";
+	exports.bar = "bar";
+	exports.then = "then";
+	exports.hidden = "hidden";
+}));
+// barrel.js
+var import_log = /* @__PURE__ */ __toESM(require_log());
+var import_cjs$2, cjs_deferred$2 = /* @__PURE__ */ __deferNs(() => import_cjs$2 || (import_cjs$2 = /* @__PURE__ */ __toESM(require_cjs())));
+// user.js
+const readFoo = () => cjs_deferred$2.foo;
+// wrapped.js
+var import_cjs$1, cjs_deferred$1, get;
+function init_wrapped() {
+	return (init_wrapped = __esmMin((() => {
+		cjs_deferred$1 = /* @__PURE__ */ __deferNs(() => import_cjs$1 || (import_cjs$1 = /* @__PURE__ */ __toESM(require_cjs())));
+		get = () => cjs_deferred$1;
+	})))();
+}
+// main.js
+var import_cjs, cjs_deferred = /* @__PURE__ */ __deferNs(() => import_cjs || (import_cjs = /* @__PURE__ */ __toESM(require_cjs())));
+const o = cjs_deferred;
+const isObject = typeof o === "object" && o !== null;
+const tag = Object.prototype.toString.call(o);
+const thenInO = "then" in o;
+const before = [...import_log.default];
+const foo = readFoo();
+const after = [...import_log.default];
+const dynamicRead = o["hidden"];
+const keys = Object.keys(o);
+let writeError;
+try {
+	o.foo = 1;
+} catch (e) {
+	writeError = e.constructor.name;
+}
+const local = (import_cjs || (import_cjs = /* @__PURE__ */ __toESM(require_cjs())), "bar");
+const wrappedBar = (init_wrapped(), get)().bar;
+export { after, before, dynamicRead, cjs_deferred as exported, foo, isObject, keys, local, tag, thenInO, wrappedBar, writeError };
+
+```

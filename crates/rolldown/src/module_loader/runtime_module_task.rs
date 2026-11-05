@@ -31,16 +31,22 @@ use super::resolve_utils::resolve_dependencies;
 use super::task_context::TaskContext;
 
 const RUNTIME_BASE_JS: &str = include_str!("../runtime/runtime-base.js");
+const RUNTIME_DEFER_JS: &str = include_str!("../runtime/runtime-defer.js");
 const RUNTIME_TAIL_JS: &str = include_str!("../runtime/runtime-tail.js");
 const RUNTIME_HEAD_NODE_JS: &str = include_str!("../runtime/runtime-head-node.js");
 const RUNTIME_TAIL_NODE_JS: &str = include_str!("../runtime/runtime-tail-node.js");
 
-fn get_runtime_js() -> String {
-  concat_string!(RUNTIME_BASE_JS, RUNTIME_TAIL_JS)
+/// The helpers of `import defer` are in the source only when `experimental.importDefer` is on.
+/// Each build parses and scans this source, so the helpers cost time even when a build does not
+/// use them. See internal-docs/runtime-helpers/implementation.md.
+fn get_runtime_js(import_defer: bool) -> String {
+  let defer = if import_defer { RUNTIME_DEFER_JS } else { "" };
+  concat_string!(RUNTIME_BASE_JS, defer, RUNTIME_TAIL_JS)
 }
 
-fn get_runtime_js_with_node_platform() -> String {
-  concat_string!(RUNTIME_HEAD_NODE_JS, RUNTIME_BASE_JS, RUNTIME_TAIL_NODE_JS)
+fn get_runtime_js_with_node_platform(import_defer: bool) -> String {
+  let defer = if import_defer { RUNTIME_DEFER_JS } else { "" };
+  concat_string!(RUNTIME_HEAD_NODE_JS, RUNTIME_BASE_JS, defer, RUNTIME_TAIL_NODE_JS)
 }
 
 pub struct RuntimeModuleTask<Fs: FileSystem + Clone + 'static> {
@@ -67,10 +73,11 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
   }
 
   async fn run_inner(&self) -> BuildResult<()> {
+    let import_defer = self.ctx.options.experimental.is_import_defer_enabled();
     let source: String = if self.ctx.options.is_esm_format_with_node_platform() {
-      get_runtime_js_with_node_platform()
+      get_runtime_js_with_node_platform(import_defer)
     } else {
-      get_runtime_js()
+      get_runtime_js(import_defer)
     };
 
     let original_source = source.clone();
@@ -231,7 +238,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
     let mut ast = EcmaCompiler::parse(filename, source.clone(), source_type)?;
 
     ast.program.with_mut(|fields| {
-      let mut pre_processor = PreProcessor::new(fields.allocator, false, None);
+      let mut pre_processor = PreProcessor::new(fields.allocator, false, None, false);
       pre_processor.visit_program(fields.program);
     });
 

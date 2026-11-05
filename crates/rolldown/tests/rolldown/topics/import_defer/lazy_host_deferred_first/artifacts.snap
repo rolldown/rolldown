@@ -1,0 +1,158 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## d.js
+
+```js
+import { a as __exportAll, i as __esmMin, n as log, r as __deferNs, t as init_log } from "./log.js";
+// d.js
+var d_exports = /* @__PURE__ */ __exportAll({});
+var d_deferred = /* @__PURE__ */ __deferNs(() => (init_d(), d_exports), d_exports);
+function init_d() {
+	return (init_d = __esmMin((() => {
+		init_log();
+		log.push("d");
+		throw new Error("d failed");
+	})))();
+}
+export { d_exports as n, init_d as r, d_deferred as t };
+
+```
+
+## importer.js
+
+```js
+export { t as ns } from "./d.js";
+
+```
+
+## log.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.js
+var log;
+function init_log() {
+	return (init_log = __esmMin((() => {
+		log = [];
+	})))();
+}
+export { __exportAll as a, __esmMin as i, log as n, __deferNs as r, init_log as t };
+
+```
+
+## main.js
+
+```js
+import { n as log, t as init_log } from "./log.js";
+// main.js
+init_log();
+const result = (async () => {
+	const { ns } = await import("./importer.js");
+	log.push("after import(importer)");
+	let err1, err2;
+	await import("./d.js").then((n) => (n.r(), n.n)).catch((e) => {
+		err1 = e;
+	});
+	try {
+		ns.value;
+	} catch (e) {
+		err2 = e;
+	}
+	return [err1?.message, err1 === err2];
+})();
+export { log, result };
+
+```
+
+# Variant: [strict_execution_order: true]
+
+## Assets
+
+### d.js
+
+```js
+import { n as __esmMin, r as __exportAll, t as __deferNs } from "./rolldown-runtime.js";
+import { n as log, t as init_log } from "./log.js";
+// d.js
+var d_exports = /* @__PURE__ */ __exportAll({});
+var d_deferred = /* @__PURE__ */ __deferNs(() => (init_d(), d_exports), d_exports);
+function init_d() {
+	return (init_d = __esmMin((() => {
+		init_log();
+		log.push("d");
+		throw new Error("d failed");
+	})))();
+}
+export { d_exports as n, init_d as r, d_deferred as t };
+
+```
+
+### importer.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+export { t as ns } from "./d.js";
+// importer.js
+function init_importer() {
+	return (init_importer = __esmMin((() => {})))();
+}
+init_importer();
+
+```
+
+### log.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+// log.js
+var log;
+function init_log() {
+	return (init_log = __esmMin((() => {
+		log = [];
+	})))();
+}
+export { log as n, init_log as t };
+
+```
+
+### main.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+import { n as log, t as init_log } from "./log.js";
+// main.js
+var result;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_log();
+		result = (async () => {
+			const { ns } = await import("./importer.js");
+			log.push("after import(importer)");
+			let err1, err2;
+			await import("./d.js").then((n) => (n.r(), n.n)).catch((e) => {
+				err1 = e;
+			});
+			try {
+				ns.value;
+			} catch (e) {
+				err2 = e;
+			}
+			return [err1?.message, err1 === err2];
+		})();
+	})))();
+}
+init_main();
+export { log, result };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __exportAll as r, __deferNs as t };
+
+```

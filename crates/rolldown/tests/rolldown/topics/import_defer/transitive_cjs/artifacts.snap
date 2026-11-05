@@ -1,0 +1,123 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+// d.js
+var d_exports = /* @__PURE__ */ __exportAll({
+	nsValue: () => nsValue,
+	x: () => x
+}, 2);
+var d_deferred = /* @__PURE__ */ __deferNs(() => (init_d(), d_exports));
+var import_ext_named, import_ext_ns, x, nsValue;
+function init_d() {
+	return (init_d = __esmMin((() => {
+		require("ext-bare");
+		import_ext_named = require("ext-named");
+		import_ext_ns = /* @__PURE__ */ __toESMCached(require("ext-ns"));
+		__reExport(d_exports, require("ext-star"));
+		globalThis.__extLog.push("d");
+		x = import_ext_named.value;
+		nsValue = import_ext_ns.default.z;
+	})))();
+}
+// main.js
+(globalThis.__extLog ??= []).push("main");
+const read = () => [
+	(init_d(), x),
+	(init_d(), nsValue),
+	(init_d(), d_deferred.starValue)
+];
+const keys = () => Object.keys(d_deferred);
+exports.keys = keys;
+exports.read = read;
+
+```
+
+# Variant: [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+// d.js
+var d_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
+	nsValue: () => nsValue,
+	x: () => x
+}, 2);
+var d_deferred = /* @__PURE__ */ require_rolldown_runtime.__deferNs(() => (init_d(), d_exports));
+var import_ext_named, import_ext_ns, x, nsValue;
+function init_d() {
+	return (init_d = require_rolldown_runtime.__esmMin((() => {
+		require("ext-bare");
+		import_ext_named = require("ext-named");
+		import_ext_ns = /* @__PURE__ */ require_rolldown_runtime.__toESMCached(require("ext-ns"));
+		require_rolldown_runtime.__reExport(d_exports, require("ext-star"));
+		globalThis.__extLog.push("d");
+		x = import_ext_named.value;
+		nsValue = import_ext_ns.default.z;
+	})))();
+}
+// main.js
+var read, keys;
+function init_main() {
+	return (init_main = require_rolldown_runtime.__esmMin((() => {
+		(globalThis.__extLog ??= []).push("main");
+		read = () => [
+			(init_d(), x),
+			(init_d(), nsValue),
+			(init_d(), d_deferred.starValue)
+		];
+		keys = () => Object.keys(d_deferred);
+	})))();
+}
+init_main();
+exports.keys = keys;
+exports.read = read;
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__deferNs", {
+	enumerable: true,
+	get: function() {
+		return __deferNs;
+	}
+});
+Object.defineProperty(exports, "__esmMin", {
+	enumerable: true,
+	get: function() {
+		return __esmMin;
+	}
+});
+Object.defineProperty(exports, "__exportAll", {
+	enumerable: true,
+	get: function() {
+		return __exportAll;
+	}
+});
+Object.defineProperty(exports, "__reExport", {
+	enumerable: true,
+	get: function() {
+		return __reExport;
+	}
+});
+Object.defineProperty(exports, "__toESMCached", {
+	enumerable: true,
+	get: function() {
+		return __toESMCached;
+	}
+});
+
+```

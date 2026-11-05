@@ -5,8 +5,8 @@ use crate::{
 use arcstr::ArcStr;
 use nodejs_built_in_modules::is_nodejs_builtin_module;
 use rolldown_common::{
-  ImportAttributes, ImportKind, MakeAbsoluteExternalsRelative, ModuleId, NormalizedBundlerOptions,
-  ResolvedExternal, ResolvedId,
+  ImportAttributes, ImportKind, ImportPhase, MakeAbsoluteExternalsRelative, ModuleId,
+  NormalizedBundlerOptions, ResolvedExternal, ResolvedId,
 };
 use rolldown_fs::FileSystem;
 use rolldown_resolver::{ResolveError, Resolver};
@@ -30,6 +30,7 @@ pub async fn resolve_id_check_external<Fs: FileSystem>(
   importer: Option<&str>,
   is_entry: bool,
   import_kind: ImportKind,
+  phase: ImportPhase,
   skipped_resolve_calls: Option<Vec<Arc<HookResolveIdSkipped>>>,
   custom: Arc<CustomField>,
   is_user_defined_entry: bool,
@@ -56,6 +57,7 @@ pub async fn resolve_id_check_external<Fs: FileSystem>(
     importer,
     is_entry,
     import_kind,
+    phase,
     skipped_resolve_calls,
     custom,
     is_user_defined_entry,

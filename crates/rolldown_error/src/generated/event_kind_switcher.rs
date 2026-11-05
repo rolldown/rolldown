@@ -55,6 +55,8 @@ bitflags! {
     const RuntimeModuleSymbolNotFoundError = 1 << 44;
     const IneffectiveDynamicImport = 1 << 46;
     const RequireTlaError = 1 << 47;
+    const ImportDeferExternalError = 1 << 56;
+    const DeferredExternalEvaluatedEagerly = 1 << 57;
     const LargeBarrelModules = 1 << 48;
     const SourcemapBroken = 1 << 49;
     const NamespaceConflict = 1 << 50;

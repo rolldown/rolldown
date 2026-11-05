@@ -257,6 +257,9 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
           meta.set(ImportRecordMeta::IsTopLevel, self.is_root_scope());
           meta.set(ImportRecordMeta::IsUnspannedImport, expr.source.span().is_empty());
           meta.set(ImportRecordMeta::InTryCatchBlock, self.in_side_try_catch_block());
+          // The pre-processor keeps the phase only when `experimental.importDefer` is on.
+          meta
+            .set(ImportRecordMeta::DeferPhase, matches!(expr.phase, Some(ast::ImportPhase::Defer)));
           meta
         },
         Some(expr.node_id()),

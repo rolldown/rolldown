@@ -176,7 +176,10 @@ impl LinkStage<'_> {
           .named_imports
           .iter()
           .filter_map(|(local_ref, named_import)| {
-            matches!(named_import.imported, Specifier::Star).then_some(local_ref.symbol)
+            // A property read on a deferred namespace evaluates the deferred module.
+            (matches!(named_import.imported, Specifier::Star)
+              && !module.import_records[named_import.record_idx].is_defer_phase())
+            .then_some(local_ref.symbol)
           })
           .collect();
         let refined = ast.program.with_dependent(|_owner, dep| {

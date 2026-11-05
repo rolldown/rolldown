@@ -283,6 +283,20 @@ export interface ResolveIdExtraOptions {
    * `{}` when `importer` is `undefined`.
    */
   importerAttributes: Record<string, string>;
+  /**
+   * The phase of the import being resolved.
+   *
+   * - `evaluation`: `import { foo } from './lib.js'` or `import('./lib.js')`
+   * - `defer`: `import defer * as ns from './lib.js'` or `import.defer('./lib.js')`
+   *
+   * An import and a deferred import of the same specifier are resolved separately.
+   * The phase is `defer` only when `experimental.importDefer` is on.
+   *
+   * `this.resolve()` always resolves in the `evaluation` phase.
+   *
+   * @experimental
+   */
+  phase: BindingHookResolveIdExtraArgs['phase'];
 }
 
 /** @inline */

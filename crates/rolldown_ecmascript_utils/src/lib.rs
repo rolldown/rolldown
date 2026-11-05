@@ -7,9 +7,9 @@ mod source_utils;
 pub use crate::{
   ast_factory::{
     BindingIdentifierFactoryExt, CallExpressionFactoryExt, ClassElementFactoryExt,
-    EsmWrapperBodyKind, EsmWrapperCallKind, EsmWrapperDeclKind, EsmWrapperStmtOptions,
-    ExpressionFactoryExt, IdentifierNameFactoryExt, MemberExpressionFactoryExt,
-    ObjectPropertyKindFactoryExt, StatementFactoryExt,
+    EsmWrapperBodyKind, EsmWrapperCallKind, EsmWrapperDeclKind, EsmWrapperState,
+    EsmWrapperStmtOptions, ExpressionFactoryExt, IdentifierNameFactoryExt,
+    MemberExpressionFactoryExt, ObjectPropertyKindFactoryExt, StatementFactoryExt,
   },
   extensions::ast_ext::{
     binding_pattern_ext::BindingPatternExt,

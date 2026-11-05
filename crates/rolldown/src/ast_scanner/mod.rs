@@ -597,7 +597,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         span_imported,
       },
     );
-    self.namespace_object_symbol_ids.insert(local);
+    // A property read on a deferred namespace evaluates the deferred module, so it is not a pure
+    // read.
+    if !self.result.import_records[record_idx].is_defer_phase() {
+      self.namespace_object_symbol_ids.insert(local);
+    }
   }
 
   fn add_local_export(&mut self, export_name: &str, local: SymbolId, span: Span) {
@@ -1017,16 +1021,19 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 
   fn scan_import_decl(&mut self, decl: &ImportDeclaration) {
+    let mut meta = if decl.source.span().is_empty() {
+      ImportRecordMeta::IsUnspannedImport
+    } else {
+      ImportRecordMeta::empty()
+    };
+    // The pre-processor keeps the phase only when `experimental.importDefer` is on.
+    meta.set(ImportRecordMeta::DeferPhase, matches!(decl.phase, Some(ast::ImportPhase::Defer)));
     let rec_id = self.add_import_record(
       &to_usv_str(decl.source.value),
       ImportKind::Import,
       decl.source.span(),
       decl.span,
-      if decl.source.span().is_empty() {
-        ImportRecordMeta::IsUnspannedImport
-      } else {
-        ImportRecordMeta::empty()
-      },
+      meta,
       None,
     );
 

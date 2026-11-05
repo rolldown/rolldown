@@ -1,0 +1,11 @@
+{
+  "_comment": "CommonJS output: `d.js` is in a deferred closure and re-exports a namespace import of an external (`import * as ns from 'ext-ns'; export { ns }`). A deferred access loads it. `consumer.js` (another chunk) imports `ns` from `d.js` eagerly: it calls `init_d()` and reads the binding of `d.js`, the same object. The variant has no module side effects: the read still gets an assigned binding.",
+  "config": {
+    "format": "cjs",
+    "external": ["ext-ns"],
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "configVariants": [{ "treeshake": { "moduleSideEffects": false } }]
+}

@@ -20,12 +20,12 @@ use oxc::{
   ast::{
     ast::{
       Argument, ArrowFunctionBody, ArrowFunctionExpression, AssignmentOperator, AssignmentTarget,
-      BindingIdentifier, BindingPattern, CallExpression, ClassElement,
-      ExportDefaultDeclarationKind, ExportSpecifier, Expression, FormalParameter,
-      FormalParameterKind, FormalParameters, FunctionBody, FunctionType, IdentifierName,
-      ImportDeclarationSpecifier, ImportOrExportKind, MemberExpression, ModuleExportName,
-      NumberBase, ObjectExpression, ObjectPropertyKind, PropertyKey, PropertyKind, Statement,
-      StringLiteral, VariableDeclarationKind, VariableDeclarator,
+      BindingIdentifier, BindingPattern, BlockStatement, CallExpression, CatchClause,
+      CatchParameter, ClassElement, ExportDefaultDeclarationKind, ExportSpecifier, Expression,
+      FormalParameter, FormalParameterKind, FormalParameters, FunctionBody, FunctionType,
+      IdentifierName, ImportDeclarationSpecifier, ImportOrExportKind, MemberExpression,
+      ModuleExportName, NumberBase, ObjectExpression, ObjectPropertyKind, PropertyKey,
+      PropertyKind, Statement, StringLiteral, VariableDeclarationKind, VariableDeclarator,
     },
     builder::GetAstBuilder,
   },
@@ -43,6 +43,24 @@ pub struct EsmWrapperStmtOptions<'ast, 'data> {
   pub call_kind: EsmWrapperCallKind,
   pub body_kind: EsmWrapperBodyKind,
   pub decl_kind: EsmWrapperDeclKind,
+  /// `Some` for the `__esmState` wrapper of a module that a deferred access observes
+  /// (`import defer`).
+  pub state: Option<EsmWrapperState<'ast>>,
+}
+
+/// The `__esmState` wrapper of a module that a deferred access observes (`import defer`):
+/// `__esmState(() => { ... }, () => [init_y, ...], flags)`. The hoisted function passes
+/// `arguments[0]`, the init function of the importer, to the new wrapper. A named parameter could
+/// shadow a top-level binding that the body reads.
+pub struct EsmWrapperState<'ast> {
+  /// `() => [init_y, ...]`, the second argument.
+  pub deps: Expression<'ast>,
+  /// The module has its own top-level await: flag 2 of the third argument.
+  pub own_tla: bool,
+  /// `(__esmEnd, __esmFail)` for an async body (flag 1 of the third argument). The body becomes
+  /// `try { ... } catch (e) { throw __esmFail(init_x, e) } __esmEnd(init_x);`, because a promise
+  /// cannot tell synchronously that the body finished.
+  pub end_and_fail: Option<(Expression<'ast>, Expression<'ast>)>,
 }
 
 #[derive(Clone, Copy)]
@@ -837,7 +855,23 @@ pub trait StatementFactoryExt<'ast> {
       call_kind,
       body_kind,
       decl_kind,
+      state,
     } = options;
+    let has_state = state.is_some();
+    let (state_deps, state_flags, end_and_fail) = match state {
+      Some(EsmWrapperState { deps, own_tla, end_and_fail }) => {
+        debug_assert_eq!(end_and_fail.is_some(), matches!(body_kind, EsmWrapperBodyKind::Async));
+        let flags = u8::from(end_and_fail.is_some()) | (u8::from(own_tla) << 1);
+        (Some(deps), flags, end_and_fail)
+      }
+      None => (None, 0, None),
+    };
+    let statements = match end_and_fail {
+      Some((end_expr, fail_expr)) => {
+        esm_state_async_body(binding_name, statements, end_expr, fail_expr, builder)
+      }
+      None => statements,
+    };
     let params = FormalParameters::boxed(SPAN, FormalParameterKind::Signature, [], None, builder);
     let body = FunctionBody::boxed(SPAN, [], statements, builder);
     let mut esm_call_expr = CallExpression::new(SPAN, esm_fn_expr, None, [], false, builder);
@@ -875,6 +909,25 @@ pub trait StatementFactoryExt<'ast> {
     } else {
       esm_call_expr.arguments.push(Argument::ArrowFunctionExpression(arrow_expr));
     }
+    if let Some(deps) = state_deps {
+      esm_call_expr.arguments.push(deps.into());
+      if state_flags != 0 {
+        esm_call_expr.arguments.push(
+          Expression::new_numeric_literal(
+            SPAN,
+            f64::from(state_flags),
+            None,
+            NumberBase::Decimal,
+            builder,
+          )
+          .into(),
+        );
+      }
+    }
+    debug_assert!(
+      !has_state || matches!(decl_kind, EsmWrapperDeclKind::HoistedFunction),
+      "the `__esmState` wrapper is a hoisted function"
+    );
     if matches!(decl_kind, EsmWrapperDeclKind::Var) {
       return Statement::new_var_decl(
         binding_name,
@@ -893,8 +946,21 @@ pub trait StatementFactoryExt<'ast> {
       Expression::CallExpression(esm_call_expr.into_in(builder.allocator())),
       builder,
     );
-    let call_expr =
-      Expression::new_call_expression(SPAN, assignment_expr, None, [], false, builder);
+    let mut call_expr = CallExpression::new(SPAN, assignment_expr, None, [], false, builder);
+    if has_state {
+      // `arguments[0]`
+      call_expr.arguments.push(
+        Expression::new_computed_member_expression(
+          SPAN,
+          Expression::new_identifier(SPAN, "arguments", builder),
+          Expression::new_numeric_literal(SPAN, 0.0, None, NumberBase::Decimal, builder),
+          false,
+          builder,
+        )
+        .into(),
+      );
+    }
+    let call_expr = Expression::CallExpression(call_expr.into_in(builder.allocator()));
     Statement::new_function_declaration(
       SPAN,
       FunctionType::FunctionDeclaration,
@@ -922,6 +988,65 @@ pub trait StatementFactoryExt<'ast> {
 }
 
 impl<'ast> StatementFactoryExt<'ast> for Statement<'ast> {}
+
+/// `try { <statements> } catch (e) { throw __esmFail(init_x, e) } __esmEnd(init_x);`
+fn esm_state_async_body<'ast, B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
+  binding_name: &str,
+  statements: allocator::Vec<'ast, Statement<'ast>>,
+  end_expr: Expression<'ast>,
+  fail_expr: Expression<'ast>,
+  builder: &B,
+) -> allocator::Vec<'ast, Statement<'ast>> {
+  let fail_call = Expression::new_call_expression(
+    SPAN,
+    fail_expr,
+    None,
+    [
+      Expression::new_id_ref_expr(SPAN, binding_name, builder).into(),
+      Expression::new_id_ref_expr(SPAN, "e", builder).into(),
+    ],
+    false,
+    builder,
+  );
+  let handler = CatchClause::boxed(
+    SPAN,
+    Some(CatchParameter::new(
+      SPAN,
+      BindingPattern::new_binding_identifier(
+        SPAN,
+        oxc::ast::ast::Str::from_str_in("e", builder),
+        builder,
+      ),
+      None,
+      builder,
+    )),
+    BlockStatement::boxed(
+      SPAN,
+      [Statement::new_throw_statement(SPAN, fail_call, builder)],
+      builder,
+    ),
+    builder,
+  );
+  let try_stmt = Statement::new_try_statement(
+    SPAN,
+    BlockStatement::boxed(SPAN, statements, builder),
+    Some(handler),
+    None,
+    builder,
+  );
+  let end_call = Expression::new_call_expression(
+    SPAN,
+    end_expr,
+    None,
+    [Expression::new_id_ref_expr(SPAN, binding_name, builder).into()],
+    false,
+    builder,
+  );
+  allocator::Vec::from_array_in(
+    [try_stmt, Statement::new_expression_statement(SPAN, end_call, builder)],
+    builder,
+  )
+}
 
 /// `<expr>.then(n => <return_expr>)`
 fn then_with_arrow_callback<'ast, B: GetAstBuilder<'ast> + GetAllocator<'ast>>(

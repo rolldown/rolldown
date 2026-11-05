@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use rolldown_common::{ImportAttributes, ImportKind};
+use rolldown_common::{ImportAttributes, ImportKind, ImportPhase};
 
 use super::custom_field::CustomField;
 
@@ -12,6 +12,8 @@ pub struct HookResolveIdArgs<'a> {
   // Rollup doesn't have a `kind` field, but rolldown supports cjs, css by default. So we need this
   // field to determine the import kind.
   pub kind: ImportKind,
+  /// The phase of the import. `Defer` for `import defer` and `import.defer()`.
+  pub phase: ImportPhase,
   pub custom: Arc<CustomField>,
   /// The attributes of the import being resolved.
   pub attributes: &'a ImportAttributes,

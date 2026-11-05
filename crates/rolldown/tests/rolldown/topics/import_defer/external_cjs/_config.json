@@ -1,0 +1,15 @@
+{
+  "_comment": "CommonJS output loads a deferred external lazily: `import defer` and `import.defer()` give a deferred namespace over `__toESMCached(require(\"ext-lazy\"))`. The chunk has no `require(\"ext-lazy\")` at the top.",
+  "config": {
+    "format": "cjs",
+    "external": ["ext-lazy"],
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "configVariants": [
+    {
+      "strictExecutionOrder": true
+    }
+  ]
+}

@@ -127,6 +127,9 @@ pub enum EventKind {
   /// Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
   IneffectiveDynamicImport = 46,
   RequireTlaError = 47,
+  ImportDeferExternalError = 56,
+  /// Whether to emit warnings when an external module in the dependencies of an `import defer` target evaluates when its chunk loads, not when the target evaluates.
+  DeferredExternalEvaluatedEagerly = 57,
   /// Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000).
   ///
   /// Such modules can significantly slow down module resolution. Consider using
@@ -216,6 +219,10 @@ impl Display for EventKind {
       }
       EventKind::IneffectiveDynamicImport => write!(f, "INEFFECTIVE_DYNAMIC_IMPORT"),
       EventKind::RequireTlaError => write!(f, "REQUIRE_TLA"),
+      EventKind::ImportDeferExternalError => write!(f, "IMPORT_DEFER_EXTERNAL"),
+      EventKind::DeferredExternalEvaluatedEagerly => {
+        write!(f, "DEFERRED_EXTERNAL_EVALUATED_EAGERLY")
+      }
       EventKind::LargeBarrelModules => write!(f, "LARGE_BARREL_MODULES"),
       EventKind::SourcemapBroken => write!(f, "SOURCEMAP_BROKEN"),
     }

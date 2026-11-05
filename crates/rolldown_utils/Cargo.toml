@@ -38,6 +38,7 @@ itoa = { workspace = true }
 json-escape-simd = { workspace = true }
 memchr = { workspace = true }
 mime = { workspace = true }
+nodejs-built-in-modules = { workspace = true }
 nom = { workspace = true }
 oxc = { workspace = true }
 oxc_index = { workspace = true }

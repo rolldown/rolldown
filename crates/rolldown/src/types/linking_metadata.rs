@@ -12,6 +12,26 @@ use rolldown_utils::IndexBitSet;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 
+/// The module that a deferred access (`ns.foo`) evaluates first.
+#[derive(Debug, Clone, Copy)]
+pub enum DeferredAccess {
+  /// An ESM module: `(init_x(), <access>)`.
+  Esm(ModuleIdx),
+  /// The import record of a CommonJS module:
+  /// `(import_x || (import_x = __toESM(require_x())), <access>)`.
+  Cjs(ImportRecordIdx),
+}
+
+/// The deferred namespace object of one `import defer * as ns from './x'`, where `./x` is a
+/// CommonJS module: `x_deferred = __deferNs(() => import_x || (import_x = __toESM(require_x())))`.
+/// The importer declares it next to `import_x`, and the two share one namespace object.
+#[derive(Debug, Clone, Copy)]
+pub struct DeferredCjsNamespace {
+  pub symbol_ref: SymbolRef,
+  /// The facade statement that declares `symbol_ref`.
+  pub stmt_info_idx: StmtInfoIdx,
+}
+
 /// Module metadata about linking
 #[derive(Debug, Default)]
 #[expect(clippy::struct_excessive_bools)]
@@ -88,6 +108,37 @@ pub struct LinkingMetadata {
   /// Results of the `'key' in ns` checks (see `EcmaView::namespace_in_checks`) that are known at
   /// link time.
   pub folded_namespace_in_checks: FxHashMap<NodeId, bool>,
+  /// Set on each target of `import defer` and on each module of its static dependency closure.
+  /// The ESM wrapper of such a module is a hoisted function, so that a call from a cyclic
+  /// importer that runs before the declaration works.
+  pub wrapped_by_import_defer: bool,
+  /// Set on each ESM module that an `import.defer()` call targets. The chunk that holds the
+  /// module must not evaluate it when the chunk loads, and each `import()` or `import.defer()` of
+  /// the module reads `init_x`, `x_exports` and `x_deferred` from that chunk.
+  pub dynamic_defer_target: bool,
+  /// The deferred namespace object of this module (`x_deferred`), when an `import defer * as ns`
+  /// or an `import.defer()` targets this ESM module. Each deferred star import of the module
+  /// links to this symbol, so that all of them read one object, also through `export { ns }`.
+  pub deferred_namespace_ref: Option<SymbolRef>,
+  /// The facade statement that declares `deferred_namespace_ref`.
+  pub deferred_namespace_stmt_info: Option<StmtInfoIdx>,
+  /// Set when a deferred access must observe this module: the module is in a strongly connected
+  /// component that contains a target of `import defer`, in the graph of the requested modules of
+  /// all phases. The wrapper is then `__esmState`, which keeps a record of the evaluation state,
+  /// and a deferred access checks the records first (`__esmDefer`). The list has the tracked
+  /// modules that this module requests, in source order, for the ready check.
+  pub import_defer_tracked_deps: Option<Vec<ModuleIdx>>,
+  /// The local bindings of `import defer * as ns from './x'` in this module where `./x` is a
+  /// CommonJS module, mapped to the import record of `./x`. An access through the local binding
+  /// reads `import_x` directly (`DeferredAccess::Cjs`).
+  pub deferred_cjs_namespace_imports: FxHashMap<SymbolRef, ImportRecordIdx>,
+  /// The deferred namespace object of each import record in `deferred_cjs_namespace_imports`.
+  /// The local binding links to it, so that an escape (`f(ns)`, `export { ns }`) reads the object.
+  pub deferred_cjs_namespaces: FxHashMap<ImportRecordIdx, DeferredCjsNamespace>,
+  /// The accesses to a deferred namespace (`ns.foo`, `'foo' in ns`) that evaluate the deferred
+  /// module first. The keys are the node ids of `resolved_member_expr_refs` and
+  /// `folded_namespace_in_checks`.
+  pub deferred_access_targets: FxHashMap<NodeId, DeferredAccess>,
   pub star_exports_from_external_modules: Vec<ImportRecordIdx>,
   pub is_tla_or_contains_tla_dependency: bool,
   pub concatenated_wrapped_module_kind: ConcatenateWrappedModuleKind,

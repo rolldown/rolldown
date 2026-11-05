@@ -123,6 +123,7 @@ mod chunk_optimizer;
 mod code_splitting;
 mod compute_cross_chunk_links;
 mod compute_wrapped_esm_init_metadata;
+mod detect_deferred_externals_evaluated_eagerly;
 mod detect_ineffective_dynamic_imports;
 mod dynamic_already_loaded;
 mod entry_facades;
@@ -299,6 +300,7 @@ impl<'a> GenerateStage<'a> {
       &final_esm_init_metadata,
     )?;
     self.detect_ineffective_dynamic_imports(&chunk_graph);
+    self.detect_deferred_externals_evaluated_eagerly(&chunk_graph);
     self.render_chunk_to_assets(&chunk_graph, ast_table, &used_symbol_refs, &order_state).await
   }
 

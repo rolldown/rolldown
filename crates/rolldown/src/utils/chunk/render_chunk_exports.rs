@@ -25,6 +25,10 @@ pub fn render_wrapped_entry_chunk(
 ) -> Option<String> {
   if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
     let entry_meta = &ctx.link_output.metas[entry_id];
+    // A module of a deferred closure evaluates on request, not when its chunk loads.
+    if ctx.chunk_graph.lazy_dynamic_defer_host(entry_id, entry_meta) == Some(ctx.chunk_idx) {
+      return None;
+    }
     if matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
       let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
 

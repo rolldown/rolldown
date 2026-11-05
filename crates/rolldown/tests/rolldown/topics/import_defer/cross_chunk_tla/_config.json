@@ -1,0 +1,15 @@
+{
+  "config": {
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "deferred",
+          "test": "/d\\.js$"
+        }
+      ]
+    },
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

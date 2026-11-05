@@ -1,0 +1,83 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.js
+var log;
+function init_log() {
+	return (init_log = __esmMin((() => {
+		log = globalThis.deferLog = [];
+	})))();
+}
+// a.js
+function init_a() {
+	return (init_a = __esmState((async () => {
+		try {
+			init_log();
+			log.push("a start");
+			await 0;
+			await 0;
+			log.push("a end");
+		} catch (e) {
+			throw __esmFail(init_a, e);
+		}
+		__esmEnd(init_a);
+	}), () => [], 3))(arguments[0]);
+}
+// m2.js
+function init_m2() {
+	return (init_m2 = __esmState((async () => {
+		try {
+			init_log();
+			__esmDepDone(init_a(init_m2), init_a, init_m2) || await init_a(init_m2);
+			log.push("m2");
+		} catch (e) {
+			throw __esmFail(init_m2, e);
+		}
+		__esmEnd(init_m2);
+	}), () => [init_a], 1))(arguments[0]);
+}
+// m1.js
+var m1_exports = /* @__PURE__ */ __exportAll({});
+function init_m1() {
+	return (init_m1 = __esmState((async () => {
+		try {
+			__esmDepDone(init_m2(init_m1), init_m2, init_m1) || await init_m2(init_m1);
+			throw new Error("m1 failed");
+		} catch (e) {
+			throw __esmFail(init_m1, e);
+		}
+	}), () => [init_m2], 1))(arguments[0]);
+}
+// starter.js
+init_log();
+init_m1().then(() => m1_exports).catch(() => log.push("import(m1) rejects"));
+function init_d() {
+	return (init_d = __esmState((async () => {
+		try {
+			init_log();
+			__esmDepDone(init_m1(init_d), init_m1, init_d) || await init_m1(init_d);
+			log.push("d");
+		} catch (e) {
+			throw __esmFail(init_d, e);
+		}
+		__esmEnd(init_d);
+	}), () => [init_m1], 1))(arguments[0]);
+}
+// i.js
+init_log();
+__esmGather(init_d) || await __esmGather();
+let result;
+try {
+	result = (__esmDefer(init_d), "ok");
+} catch (e) {
+	result = e.message;
+}
+log.push("i reads d: " + result);
+
+```

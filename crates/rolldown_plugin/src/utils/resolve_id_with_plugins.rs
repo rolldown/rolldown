@@ -4,7 +4,7 @@ use crate::{
 };
 use nodejs_built_in_modules::is_nodejs_builtin_module;
 use rolldown_common::{
-  ImportAttributes, ImportKind, ModuleDefFormat, ModuleId, PackageJson, ResolvedId,
+  ImportAttributes, ImportKind, ImportPhase, ModuleDefFormat, ModuleId, PackageJson, ResolvedId,
 };
 use rolldown_fs::FileSystem;
 use rolldown_resolver::{ResolveError, Resolver};
@@ -82,6 +82,7 @@ pub async fn resolve_id_with_plugins<Fs: FileSystem>(
   importer: Option<&str>,
   is_entry: bool,
   import_kind: ImportKind,
+  phase: ImportPhase,
   skipped_resolve_calls: Option<Vec<Arc<HookResolveIdSkipped>>>,
   custom: Arc<CustomField>,
   is_user_defined_entry: bool,
@@ -94,6 +95,7 @@ pub async fn resolve_id_with_plugins<Fs: FileSystem>(
     importer,
     is_entry,
     kind: import_kind,
+    phase,
     custom,
     attributes,
     importer_raw_id,

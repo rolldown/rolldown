@@ -36,6 +36,7 @@ pub struct ChecksOptions {
   pub duplicate_shebang: Option<bool>,
   pub unsupported_tsconfig_option: Option<bool>,
   pub ineffective_dynamic_import: Option<bool>,
+  pub deferred_external_evaluated_eagerly: Option<bool>,
   pub large_barrel_modules: Option<bool>,
   pub sourcemap_broken: Option<bool>,
   pub namespace_conflict: Option<bool>,
@@ -127,6 +128,10 @@ impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
     flag.set(
       rolldown_error::EventKindSwitcher::IneffectiveDynamicImport,
       value.ineffective_dynamic_import.unwrap_or(true),
+    );
+    flag.set(
+      rolldown_error::EventKindSwitcher::DeferredExternalEvaluatedEagerly,
+      value.deferred_external_evaluated_eagerly.unwrap_or(true),
     );
     flag.set(
       rolldown_error::EventKindSwitcher::LargeBarrelModules,

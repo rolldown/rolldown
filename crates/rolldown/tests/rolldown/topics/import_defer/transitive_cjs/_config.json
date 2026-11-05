@@ -1,0 +1,12 @@
+{
+  "_comment": "CommonJS output: a module of a deferred closure loads its external imports at the position of each import, in its init, in source order: a bare import, a named import, a namespace import and `export *`. The chunk has no `require()` of them at the top, and the build has no warning.",
+  "config": {
+    "format": "cjs",
+    "external": ["ext-bare", "ext-named", "ext-ns", "ext-star"],
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "configVariants": [{ "strictExecutionOrder": true }],
+  "expectWarning": false
+}

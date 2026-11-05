@@ -3,11 +3,13 @@ use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, ChunkModulesOrderBy, ChunkTable, EcmaViewMeta, ModuleIdx,
-  PostChunkOptimizationOperation, RuntimeHelper, SymbolRef,
+  PostChunkOptimizationOperation, RuntimeHelper, SymbolRef, WrapKind,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::{SharedOptions, stages::link_stage::LinkStageOutput};
+use crate::{
+  SharedOptions, stages::link_stage::LinkStageOutput, types::linking_metadata::LinkingMetadata,
+};
 
 #[derive(Debug)]
 pub struct ChunkGraph {
@@ -64,6 +66,32 @@ impl ChunkGraph {
   pub fn chunk_is_live(&self, chunk_idx: ChunkIdx) -> bool {
     self.post_chunk_optimization_operations.get(&chunk_idx)
       != Some(&PostChunkOptimizationOperation::Removed)
+  }
+
+  /// For an ESM module of a deferred closure (`import defer` or `import.defer()`), the dynamic
+  /// entry chunk that holds the code of the module. The tail of this chunk does not call
+  /// `init_x()`: another chunk can import this chunk statically for a deferred access, and the
+  /// load must not evaluate the module. Each `import()` of the module then calls `init_x()`
+  /// itself. `None` when the module is in a chunk with no such tail (a common chunk behind a
+  /// facade) or in a user-defined or emitted entry chunk, whose tail must stay.
+  pub fn lazy_dynamic_defer_host(
+    &self,
+    module_idx: ModuleIdx,
+    meta: &LinkingMetadata,
+  ) -> Option<ChunkIdx> {
+    if !meta.wrapped_by_import_defer || !matches!(meta.wrap_kind(), WrapKind::Esm) {
+      return None;
+    }
+    let chunk_idx = self.module_to_chunk[module_idx]?;
+    match self.chunk_table[chunk_idx].kind {
+      ChunkKind::EntryPoint { module, meta: chunk_meta, .. }
+        if module == module_idx
+          && !chunk_meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk) =>
+      {
+        Some(chunk_idx)
+      }
+      _ => None,
+    }
   }
 
   /// The module is assigned to a live chunk that still contains it.

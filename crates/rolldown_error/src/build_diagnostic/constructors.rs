@@ -21,6 +21,7 @@ use super::events::bundler_initialize_error::BundlerInitializeError;
 use super::events::cannot_call_namespace::CannotCallNamespace;
 use super::events::configuration_field_conflict::ConfigurationFieldConflict;
 use super::events::could_not_clean_directory::CouldNotCleanDirectory;
+use super::events::deferred_external_evaluated_eagerly::DeferredExternalEvaluatedEagerly;
 use super::events::deprecated_import_assertion::DeprecatedImportAssertion;
 use super::events::duplicate_shebang::DuplicateShebang;
 use super::events::external_module_conflict::{
@@ -29,6 +30,7 @@ use super::events::external_module_conflict::{
 use super::events::filename_conflict::FilenameConflict;
 use super::events::filename_outside_output_directory::FilenameOutsideOutputDirectory;
 use super::events::illegal_identifier_as_name::IllegalIdentifierAsName;
+use super::events::import_defer_external::ImportDeferExternal;
 use super::events::import_is_undefined::ImportIsUndefined;
 use super::events::invalid_annotation::InvalidAnnotation;
 use super::events::invalid_define_config::InvalidDefineConfig;
@@ -92,6 +94,31 @@ impl BuildDiagnostic {
     kind: InvalidImportAttributeKind,
   ) -> Self {
     Self::new_inner(InvalidImportAttribute { module_id, source, span, kind })
+  }
+
+  pub fn import_defer_external(
+    importer_id: ArcStr,
+    source: ArcStr,
+    span: Span,
+    external_id: ArcStr,
+  ) -> Self {
+    Self::new_inner(ImportDeferExternal { importer_id, source, span, external_id })
+  }
+
+  pub fn deferred_external_evaluated_eagerly(
+    external_id: ArcStr,
+    deferring_module: ArcStr,
+    deferred_module: ArcStr,
+    importer: ArcStr,
+    format: &'static str,
+  ) -> Self {
+    Self::new_inner(DeferredExternalEvaluatedEagerly {
+      external_id,
+      deferring_module,
+      deferred_module,
+      importer,
+      format,
+    })
   }
 
   pub fn entry_cannot_be_external(unresolved_id: impl AsRef<Path>) -> Self {

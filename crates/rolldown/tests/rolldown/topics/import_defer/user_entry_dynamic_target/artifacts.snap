@@ -1,0 +1,41 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+globalThis.log.push("main");
+const loadDeferred = () => (async (n) => (n = await import("./other2.js"), n.n))();
+export { loadDeferred };
+
+```
+
+## other.js
+
+```js
+import { i as value, t as init_other } from "./other2.js";
+init_other();
+export { value };
+
+```
+
+## other2.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// other.js
+var other_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+var other_deferred = /* @__PURE__ */ __deferNs(() => (init_other(), other_exports), other_exports);
+var value;
+function init_other() {
+	return (init_other = __esmMin((() => {
+		globalThis.log.push("other");
+		value = "other";
+	})))();
+}
+export { value as i, other_deferred as n, other_exports as r, init_other as t };
+
+```

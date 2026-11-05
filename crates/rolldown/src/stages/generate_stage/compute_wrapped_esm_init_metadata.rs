@@ -319,7 +319,7 @@ fn transitive_esm_init_targets(
     }
     for &rec_idx in &stmt_info.import_records {
       let rec = &module.import_records[rec_idx];
-      if rec.kind != ImportKind::Import {
+      if rec.kind != ImportKind::Import || rec.is_defer_phase() {
         continue;
       }
       if ctx.order_state.is_consumer_local_reexport_record(module.idx, rec_idx) {
@@ -552,6 +552,9 @@ fn collect_legacy_esm_init_targets(
       targets.push(WrappedEsmInitTarget::Module(importee.idx));
     } else {
       for rec in importee.import_records.iter().rev() {
+        if rec.is_defer_phase() {
+          continue;
+        }
         if let Some(sub_importee_idx) = rec.resolved_module {
           stack.push(sub_importee_idx);
         }

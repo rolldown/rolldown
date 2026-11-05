@@ -145,6 +145,8 @@ impl NativePluginContextImpl {
         importer,
         normalized_extra_options.is_entry,
         normalized_extra_options.import_kind,
+        // `this.resolve()` always resolves in the evaluation phase.
+        rolldown_common::ImportPhase::Evaluation,
         skipped_resolve_calls,
         normalized_extra_options.custom,
         false,

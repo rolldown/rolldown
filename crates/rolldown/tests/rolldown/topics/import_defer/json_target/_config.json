@@ -1,0 +1,8 @@
+{
+  "_comment": "`import defer` of a JSON module: the link stage makes new symbols for a JSON object module (`generate_lazy_export`), so the deferred namespace object is created after that step. The escaping namespace is a deferred namespace object, with its own name.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

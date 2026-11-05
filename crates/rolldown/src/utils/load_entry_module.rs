@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use crate::SharedResolver;
 use crate::utils::resolve_id::resolve_id;
-use rolldown_common::{ImportAttributes, ImportKind, NormalizedBundlerOptions, ResolvedId};
+use rolldown_common::{
+  ImportAttributes, ImportKind, ImportPhase, NormalizedBundlerOptions, ResolvedId,
+};
 use rolldown_error::ResultExt;
 use rolldown_error::{BuildDiagnostic, SingleBuildResult};
 use rolldown_fs::FileSystem;
@@ -28,6 +30,7 @@ pub async fn load_entry_module<Fs: FileSystem>(
     importer,
     true,
     ImportKind::Import,
+    ImportPhase::Evaluation,
     None,
     Arc::default(),
     true,

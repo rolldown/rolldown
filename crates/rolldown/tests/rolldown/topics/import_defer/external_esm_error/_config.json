@@ -1,0 +1,10 @@
+{
+  "_comment": "ESM output, `importDeferExternal` not set: a deferred import of an external module, static or `import.defer()`, is a build error (IMPORT_DEFER_EXTERNAL).",
+  "config": {
+    "external": ["ext", "ext2"],
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "expectError": true
+}

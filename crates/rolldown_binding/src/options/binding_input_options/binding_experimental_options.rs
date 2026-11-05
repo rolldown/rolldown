@@ -15,6 +15,9 @@ pub struct BindingExperimentalOptions {
   pub chunk_optimization: Option<Either<bool, BindingChunkOptimizationOptions>>,
   pub lazy_barrel: Option<bool>,
   pub import_attributes: Option<bool>,
+  pub import_defer: Option<bool>,
+  /// `'error'` or `'preserve'`.
+  pub import_defer_external: Option<String>,
 }
 
 impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOptions {
@@ -40,6 +43,13 @@ impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOption
       }),
       lazy_barrel: value.lazy_barrel,
       import_attributes: value.import_attributes,
+      import_defer: value.import_defer,
+      import_defer_external: value
+        .import_defer_external
+        .as_deref()
+        .map(rolldown_common::ImportDeferExternal::try_from)
+        .transpose()
+        .map_err(|err| napi::Error::new(napi::Status::InvalidArg, err))?,
     })
   }
 }

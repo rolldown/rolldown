@@ -17,7 +17,10 @@ mod utils;
 pub mod bundler_options {
   pub use crate::generated::{
     checks_options::ChecksOptions,
-    runtime_helper::{DependedRuntimeHelperMap, RUNTIME_HELPER_NAMES, RuntimeHelper},
+    runtime_helper::{
+      DependedRuntimeHelperMap, RUNTIME_HELPER_NAMES, RUNTIME_IMPORT_DEFER_HELPER_NAMES,
+      RuntimeHelper,
+    },
   };
 
   #[cfg(feature = "deserialize_bundler_options")]
@@ -40,6 +43,7 @@ pub mod bundler_options {
       filename_template::{FilenameTemplate, is_path_fragment},
       generated_code_options::GeneratedCodeOptions,
       hash_characters::HashCharacters,
+      import_defer_external::ImportDeferExternal,
       inject_import::InjectImport,
       inline_common_chunks_options::{
         InlineCommonChunksOptions, NormalizedInlineCommonChunksOptions,
@@ -178,6 +182,7 @@ pub use crate::{
   types::hybrid_index_vec::HybridIndexVec,
   types::import_attributes::ImportAttributes,
   types::import_kind::ImportKind,
+  types::import_phase::ImportPhase,
   types::import_record::{
     DynamicImportExprInfo, ImportRecordIdx, ImportRecordMeta, ImportRecordStateInit,
     RawImportRecord, ResolvedImportRecord,

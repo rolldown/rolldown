@@ -7,6 +7,7 @@ use super::attach_debug_info::AttachDebugInfo;
 use super::chunk_import_map::ChunkImportMap;
 use super::chunk_modules_order::ChunkModulesOrderBy;
 use super::dev_mode_options::DevModeOptions;
+use super::import_defer_external::ImportDeferExternal;
 
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(
@@ -81,6 +82,8 @@ pub struct ExperimentalOptions {
   pub chunk_optimization: Option<ChunkOptimizationOption>,
   pub lazy_barrel: Option<bool>,
   pub import_attributes: Option<bool>,
+  pub import_defer: Option<bool>,
+  pub import_defer_external: Option<ImportDeferExternal>,
 }
 
 impl ExperimentalOptions {
@@ -125,5 +128,13 @@ impl ExperimentalOptions {
 
   pub fn is_import_attributes_enabled(&self) -> bool {
     self.import_attributes.unwrap_or(false)
+  }
+
+  pub fn is_import_defer_enabled(&self) -> bool {
+    self.import_defer.unwrap_or(false)
+  }
+
+  pub fn import_defer_external(&self) -> ImportDeferExternal {
+    self.import_defer_external.unwrap_or_default()
   }
 }

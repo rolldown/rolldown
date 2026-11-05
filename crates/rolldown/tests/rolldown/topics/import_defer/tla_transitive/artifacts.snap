@@ -1,0 +1,51 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.js
+var log;
+function init_log() {
+	return (init_log = __esmMin((() => {
+		log = [];
+	})))();
+}
+// tla.js
+function init_tla() {
+	return (init_tla = __esmState((async () => {
+		try {
+			init_log();
+			log.push("tla start");
+			await Promise.resolve(0);
+			log.push("tla end");
+		} catch (e) {
+			throw __esmFail(init_tla, e);
+		}
+		__esmEnd(init_tla);
+	}), () => [], 3))(arguments[0]);
+}
+function init_imports_tla() {
+	return (init_imports_tla = __esmState((async () => {
+		try {
+			init_log();
+			__esmDepDone(init_tla(init_imports_tla), init_tla, init_imports_tla) || await init_tla(init_imports_tla);
+			log.push("imports-tla");
+		} catch (e) {
+			throw __esmFail(init_imports_tla, e);
+		}
+		__esmEnd(init_imports_tla);
+	}), () => [init_tla], 1))(arguments[0]);
+}
+// main.js
+init_log();
+__esmGather(init_imports_tla) || await __esmGather();
+const before = [...log];
+const x = (__esmDefer(init_imports_tla), 1);
+const after = [...log];
+export { after, before, x };
+
+```

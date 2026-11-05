@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+let ext_lazy = require("ext-lazy");
+// eager.js
+const eagerValue = () => ext_lazy.value;
+// main.js
+var import_ext_lazy;
+(globalThis.__extLog ??= []).push("main");
+const read = () => [(import_ext_lazy || (import_ext_lazy = /* @__PURE__ */ __toESMCached(require("ext-lazy"))), import_ext_lazy.value), eagerValue()];
+exports.read = read;
+
+```

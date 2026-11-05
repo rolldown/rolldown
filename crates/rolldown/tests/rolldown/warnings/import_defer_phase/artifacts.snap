@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNSUPPORTED_FEATURE
 
 ```text
-[UNSUPPORTED_FEATURE] `import defer` is currently lowered to a normal import. This changes execution timing because side effects run immediately instead of when the deferred import is first used.
+[UNSUPPORTED_FEATURE] `import defer` is currently lowered to a normal import. This changes execution timing because side effects run immediately instead of when the deferred import is first used. Set `experimental.importDefer` to `true` to keep the deferred evaluation.
    ╭─[ main.js:1:1 ]
    │
  1 │ import defer * as dep from './dep.js';

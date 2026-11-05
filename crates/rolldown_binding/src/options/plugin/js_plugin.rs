@@ -133,6 +133,7 @@ impl Plugin for JsPlugin {
     let extra_args = BindingHookResolveIdExtraArgs {
       is_entry: args.is_entry,
       kind: args.kind.to_string(),
+      phase: args.phase.as_str().to_string(),
       custom: args
         .custom
         .get::<JsPluginContextResolveCustomArgId>(&JsPluginContextResolveCustomArgId)

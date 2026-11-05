@@ -1073,6 +1073,22 @@
             "boolean",
             "null"
           ]
+        },
+        "importDefer": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "importDeferExternal": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ImportDeferExternal"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -1184,6 +1200,21 @@
         }
       },
       "additionalProperties": false
+    },
+    "ImportDeferExternal": {
+      "description": "What Rolldown does with `import defer` and `import.defer()` of an external module in ESM\noutput (`experimental.importDeferExternal`).",
+      "oneOf": [
+        {
+          "description": "A build error. The target runtime can be without support for `import defer`.",
+          "type": "string",
+          "const": "error"
+        },
+        {
+          "description": "Keep `import defer` in the output. The target runtime supports it.",
+          "type": "string",
+          "const": "preserve"
+        }
+      ]
     },
     "SimpleMinifyOptions": {
       "description": "A simple minify option that can be either a boolean or a string, used for rolldown rust testing.",
@@ -1580,6 +1611,12 @@
           ]
         },
         "ineffectiveDynamicImport": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "deferredExternalEvaluatedEagerly": {
           "type": [
             "boolean",
             "null"

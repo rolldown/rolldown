@@ -2025,6 +2025,7 @@ export interface BindingChecksOptions {
   duplicateShebang?: boolean
   unsupportedTsconfigOption?: boolean
   ineffectiveDynamicImport?: boolean
+  deferredExternalEvaluatedEagerly?: boolean
   largeBarrelModules?: boolean
   sourcemapBroken?: boolean
   namespaceConflict?: boolean
@@ -2319,6 +2320,9 @@ export interface BindingExperimentalOptions {
   chunkOptimization?: boolean | BindingChunkOptimizationOptions
   lazyBarrel?: boolean
   importAttributes?: boolean
+  importDefer?: boolean
+  /** `'error'` or `'preserve'`. */
+  importDeferExternal?: string
 }
 
 export interface BindingFilterToken {
@@ -2449,6 +2453,11 @@ export interface BindingHookResolveIdExtraArgs {
   importerRawId?: string
   /** The import attributes of the importer itself. Omitted when empty. */
   importerAttributes?: Record<string, string>
+  /**
+   * - `evaluation`: `import { foo } from './lib.js'` or `import('./lib.js')`
+   * - `defer`: `import defer * as ns from './lib.js'` or `import.defer('./lib.js')`
+   */
+  phase: 'evaluation' | 'defer'
 }
 
 export interface BindingHookResolveIdOutput {

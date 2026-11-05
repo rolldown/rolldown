@@ -49,7 +49,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           }
         }
 
-        if let Some((span, name)) = self.get_span_if_namespace_specifier_updated() {
+        // A write to a deferred namespace (`import defer * as ns`) stays in the output. The
+        // namespace object rejects it at run time, and the write does not evaluate the module.
+        let is_deferred = named_import
+          .is_some_and(|import| self.result.import_records[import.record_idx].is_defer_phase());
+        if !is_deferred && let Some((span, name)) = self.get_span_if_namespace_specifier_updated() {
           // For namespace imports, get the actual imported name (the namespace identifier)
           let imported_name = self.result.symbol_ref_db.symbol_name(symbol_id);
           self.result.errors.push(BuildDiagnostic::assign_to_import(

@@ -60,7 +60,7 @@ So the **inclusion pass records it** (`note_external_interop_use`), being the on
 Two things follow from the importer being potentially dead:
 
 - **Keeping the helper alive.** `RuntimeHelper::ToEsm` is normally requested by the import statement, so it dies with the module holding it. `include_statements` re-adds it whenever any interop use was recorded, and `patch_module_dependencies` derives the runtime _edge_ from the reference rather than the importer — including references that exist only as entry exports (`referenced_symbols_by_entry_point_chunk`), which are otherwise invisible to the statement walk and leave the chunk emitting a helper it never imported.
-- **Node-mode provenance.** `__toESM(mod, 1)` applies when the importing module is ESM by definition format. Linking collapses the re-export chain onto the external's namespace symbol, so the reference reaching the inclusion pass may belong to a consumer several hops downstream; the importing module is recovered by walking the symbol link chain (`external_import_writer`).
+- **Node-mode provenance.** `__toESM(mod, 1)` applies when the importing module is ESM by definition format. Linking collapses the re-export chain onto the external's namespace symbol, so the reference reaching the inclusion pass may belong to a consumer several hops downstream. For a default import, the importing module is the owner of the alias holder, which is the union-find root. For a namespace import, path compression can remove the importing module from the link chain, so `external_importer_modes` reads the import records and combines the modes of all modules that import the external.
 
 Inclusion runs before chunking, so the record cannot name a chunk directly. It stores the **observer** instead — the module whose included code holds the surviving reference — and rendering resolves that to a chunk via `ChunkGraph::module_to_chunk`. The observer is deliberately not the importer: the importer is routinely the shim that gets dropped, whereas an observer has included code by construction and therefore lands in a chunk.
 
@@ -81,3 +81,15 @@ They agree because the wrap arrives through exactly **two channels**, each carry
 So the invariant is pairwise, not one source answering both questions. Narrowing a channel's wrap without its edge — or the more tempting inverse, registering `ToEsm` only for imports tree-shaking kept alive — reopens the panic for the cases the other channel does not cover.
 
 Chunks do not exist yet when `patch_module_dependencies` runs, so `is_included` stands in for "will have a chunk". An observer that is not included cannot be attributed to one, and rendering falls back to wrapping every chunk emitting the external — so every referencing module keeps the edge, matching that fallback.
+
+## `__toESMCached`: one namespace object for lazy loads
+
+With `experimental.importDefer`, CommonJS output loads an external module lazily in two places: the deferred namespace of `import defer * as ns from 'ext'` or `import.defer('ext')`, and the import statements of a module in a deferred closure, which stay at their position in the init of the module. Each load calls `require("ext")`, and `__toESM` returns a new object for each call, so an eager namespace and a lazy namespace of the same external would be different objects.
+
+`__toESMCached(mod, isNodeMode)` keeps one `__toESM` result for each exports object and interop mode in a `WeakMap`, and calls `__toESM` directly for a primitive. The cache is global to the runtime, so loads in different chunks also give one object. The hoisted binding of a chunk uses `__toESMCached` only when the chunk has an included lazy namespace load of the same external (`chunk_has_lazy_namespace_load` in `crates/rolldown/src/ecmascript/format/cjs.rs`). Other chunks keep `__toESM`.
+
+## The helpers of `import defer`: only with the option
+
+The helpers of `import defer` (`__esmState` and the other `__esm*` state helpers, `__deferNs`, `__toESMCached`) are in `crates/rolldown/src/runtime/runtime-defer.js`, not in `runtime-base.js`. `RuntimeModuleTask` adds the file to the runtime source only when `experimental.importDefer` is on. Each build parses and scans the full runtime source, also the helpers that tree shaking removes later. With these helpers in `runtime-base.js`, a build without the option did about 0.5 to 0.7 million more instructions (about 0.1%) on the `crates/bench` cases `threejs` and `rome_ts`. The cost is small, but a build that does not use `import defer` should not pay for it at all.
+
+The generator (`tasks/generator/src/generators/runtime_helper.rs`) reads the file last, so the other helpers keep their bits in `RuntimeHelper`. It also writes the names of the file to `RUNTIME_IMPORT_DEFER_HELPER_NAMES`. When the option is off, the module loader leaves these names out of the runtime symbol check, and no code path may resolve them: `RuntimeModuleBrief::resolve_symbol` panics on a missing name.

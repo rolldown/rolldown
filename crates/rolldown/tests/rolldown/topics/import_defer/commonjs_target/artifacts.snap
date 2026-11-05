@@ -1,0 +1,41 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.cjs
+var require_log = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = [];
+}));
+// cjs.js
+var require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
+	require_log().push("cjs");
+	exports.foo = "foo";
+	exports.bar = "bar";
+	exports.then = "then";
+}));
+// mid.js
+var import_cjs$2, read;
+function init_mid() {
+	return (init_mid = __esmMin((() => {
+		read = () => (import_cjs$2 || (import_cjs$2 = /* @__PURE__ */ __toESM(require_cjs())), "bar");
+	})))();
+}
+// main.js
+var import_log = /* @__PURE__ */ __toESM(require_log());
+var import_cjs;
+var import_cjs$1;
+const thenValue = void 0;
+const before = [...import_log.default];
+const value = (import_cjs || (import_cjs = /* @__PURE__ */ __toESM(require_cjs())), "foo");
+const hasBar = (import_cjs$1 || (import_cjs$1 = /* @__PURE__ */ __toESM(require_cjs())), "bar" in import_cjs$1);
+const same = (import_cjs || (import_cjs = /* @__PURE__ */ __toESM(require_cjs())), import_cjs.default) === (import_cjs$1 || (import_cjs$1 = /* @__PURE__ */ __toESM(require_cjs())), import_cjs$1.default);
+const after = [...import_log.default];
+const midValue = (init_mid(), read)();
+export { after, before, hasBar, midValue, same, thenValue, value };
+
+```

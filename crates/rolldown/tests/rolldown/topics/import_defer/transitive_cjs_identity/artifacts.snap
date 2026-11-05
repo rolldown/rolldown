@@ -1,0 +1,36 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+let ext_ns = require("ext-ns");
+ext_ns = __toESMCached(ext_ns);
+// d.js
+var import_ext_ns$1;
+function init_d() {
+	return (init_d = __esmMin((() => {
+		import_ext_ns$1 = /* @__PURE__ */ __toESMCached(require("ext-ns"));
+	})))();
+}
+// d2.js
+var import_ext_ns;
+function init_d2() {
+	return (init_d2 = __esmMin((() => {
+		import_ext_ns = /* @__PURE__ */ __toESMCached(require("ext-ns"));
+	})))();
+}
+// main.js
+globalThis.__extLog.push("main");
+const same = () => [
+	ext_ns === (init_d(), import_ext_ns$1),
+	(init_d(), import_ext_ns$1) === (init_d2(), import_ext_ns),
+	ext_ns.y
+];
+exports.same = same;
+
+```

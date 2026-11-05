@@ -1,0 +1,37 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+// data.json
+var data_exports = /* @__PURE__ */ __exportAll({
+	a: () => a,
+	b: () => b,
+	default: () => data_default
+});
+var data_deferred = /* @__PURE__ */ __deferNs(() => data_exports, data_exports);
+var a = 1;
+var b = 2;
+var data_default = {
+	a,
+	b
+};
+// main.js
+assert.strictEqual(Object.prototype.toString.call(data_deferred), "[object Deferred Module]");
+assert.deepStrictEqual(Object.keys(data_deferred), [
+	"a",
+	"b",
+	"default"
+]);
+assert.strictEqual(a, 1);
+assert.deepStrictEqual(data_default, {
+	a: 1,
+	b: 2
+});
+
+```

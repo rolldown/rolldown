@@ -145,5 +145,32 @@
   },
   "language/module-code/source-phase-import/reexport-source-binding-namespace-get.js": {
     "reason": "source phase imports are not supported in Rolldown"
+  },
+  "language/import/import-defer/errors/resolution-error/import-defer-of-missing-module-fails.js": {
+    "reason": "Rolldown reports a module that it cannot resolve as a build error, not as a rejection of `import()` at runtime"
+  },
+  "language/import/import-defer/evaluation-top-level-await/async-cycle-dependency-of-deferred-module/main.js": {
+    "reason": "Rolldown does not support preserving TLA semantics perfectly"
+  },
+  "language/import/import-defer/evaluation-top-level-await/flattening-order/main.js": {
+    "reason": "Rolldown does not support preserving TLA semantics perfectly"
+  },
+  "language/import/import-defer/evaluation-triggers/ignore-private-name-access.js": {
+    "reason": "Node.js 24.12.0 does not support `nonextensible-applies-to-private`, so it adds a private field to a non-extensible object with no TypeError"
+  },
+  "language/expressions/dynamic-import/import-defer/import-defer-transitive-async-module/promise-prototype-then-not-called.js": {
+    "reason": "The output loads the chunk of the target with a native `import()`, and the `import()` of Node.js 24.12.0 calls `Promise.prototype.then`"
+  },
+  "language/expressions/dynamic-import/syntax/valid/nested-with-expression-import-defer-empty-str-is-valid-assign-expr.js": {
+    "reason": "The test needs non-strict script code (`with`), but Rolldown parses every input as module code, which is always strict"
+  },
+  "language/expressions/dynamic-import/syntax/valid/nested-with-expression-import-defer-script-code-valid.js": {
+    "reason": "The test needs non-strict script code (`with`), but Rolldown parses every input as module code, which is always strict"
+  },
+  "language/expressions/dynamic-import/syntax/valid/nested-with-import-defer-empty-str-is-valid-assign-expr.js": {
+    "reason": "The test needs non-strict script code (`with`), but Rolldown parses every input as module code, which is always strict"
+  },
+  "language/expressions/dynamic-import/syntax/valid/nested-with-import-defer-script-code-valid.js": {
+    "reason": "The test needs non-strict script code (`with`), but Rolldown parses every input as module code, which is always strict"
   }
 }

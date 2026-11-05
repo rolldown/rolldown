@@ -28,4 +28,8 @@ pub struct BindingHookResolveIdExtraArgs {
   /// The import attributes of the importer itself. Omitted when empty.
   #[napi(ts_type = "Record<string, string>")]
   pub importer_attributes: Option<BindingImportAttributes>,
+  /// - `evaluation`: `import { foo } from './lib.js'` or `import('./lib.js')`
+  /// - `defer`: `import defer * as ns from './lib.js'` or `import.defer('./lib.js')`
+  #[napi(ts_type = "'evaluation' | 'defer'")]
+  pub phase: String,
 }

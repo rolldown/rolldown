@@ -185,6 +185,12 @@ export interface ChecksOptions {
   ineffectiveDynamicImport?: boolean;
 
   /**
+   * Whether to emit warnings when an external module in the dependencies of an `import defer` target evaluates when its chunk loads, not when the target evaluates.
+   * @default true
+   * */
+  deferredExternalEvaluatedEagerly?: boolean;
+
+  /**
    * Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000).
    *
    * Such modules can significantly slow down module resolution. Consider using

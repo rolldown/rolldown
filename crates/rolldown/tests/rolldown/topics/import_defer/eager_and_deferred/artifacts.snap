@@ -1,0 +1,33 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.js
+var log;
+function init_log() {
+	return (init_log = __esmMin((() => {
+		log = [];
+	})))();
+}
+function init_x() {
+	return (init_x = __esmMin((() => {
+		init_log();
+		log.push("x");
+	})))();
+}
+// y.js
+init_log();
+init_x();
+log.push("y");
+// main.js
+init_log();
+const order = [...log];
+const value = (init_x(), "foo");
+export { order, value };
+
+```

@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## IMPORT_DEFER_EXTERNAL
+
+```text
+[IMPORT_DEFER_EXTERNAL] "main.js" imports the external module "ext" in the defer phase. The ESM output keeps `import defer` for an external module only when `experimental.importDeferExternal` is `'preserve'`.
+   ╭─[ main.js:1:1 ]
+   │
+ 1 │ import defer * as ns from 'ext';
+   │ ────────────────┬───────────────  
+   │                 ╰───────────────── This deferred import has an external module.
+   │ 
+   │ Help: Set `experimental.importDeferExternal` to `'preserve'` when the target runtime supports `import defer`. Otherwise, bundle the module, or use the CommonJS output format, which loads the module lazily with `require()`.
+───╯
+
+```
+
+## IMPORT_DEFER_EXTERNAL
+
+```text
+[IMPORT_DEFER_EXTERNAL] "main.js" imports the external module "ext2" in the defer phase. The ESM output keeps `import defer` for an external module only when `experimental.importDeferExternal` is `'preserve'`.
+   ╭─[ main.js:4:27 ]
+   │
+ 4 │ export const load = () => import.defer('ext2');
+   │                           ──────────┬─────────  
+   │                                     ╰─────────── This deferred import has an external module.
+   │ 
+   │ Help: Set `experimental.importDeferExternal` to `'preserve'` when the target runtime supports `import defer`. Otherwise, bundle the module, or use the CommonJS output format, which loads the module lazily with `require()`.
+───╯
+
+```

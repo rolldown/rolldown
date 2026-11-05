@@ -1,0 +1,47 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## j.js
+
+```js
+import { t as init_x } from "./x.js";
+// j.js
+init_x();
+
+```
+
+## main.js
+
+```js
+import { n as __esmDefer, t as init_x } from "./x.js";
+// log.js
+const log = [];
+function read(access) {
+	try {
+		access();
+		return "ok";
+	} catch (error) {
+		return error instanceof TypeError ? "TypeError" : `${error.constructor.name}: ${error.message}`;
+	}
+}
+// main.js
+log.push("main: " + read(() => (__esmDefer(init_x), 1)));
+const done = import("./j.js").then(() => log.push("j runs"), (error) => log.push("j throws: " + error.message));
+export { done, log };
+
+```
+
+## x.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+function init_x() {
+	return (init_x = __esmState((() => {
+		throw new Error("X failed");
+	}), () => [init_x]))(arguments[0]);
+}
+export { __esmDefer as n, init_x as t };
+
+```

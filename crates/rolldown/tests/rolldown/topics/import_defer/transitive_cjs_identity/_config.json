@@ -1,0 +1,10 @@
+{
+  "_comment": "CommonJS output: an eager namespace import of an external and the lazy namespace imports in two modules of deferred closures give one namespace object (`__toESMCached`).",
+  "config": {
+    "format": "cjs",
+    "external": ["ext-ns"],
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

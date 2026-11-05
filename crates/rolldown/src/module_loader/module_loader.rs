@@ -796,7 +796,16 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
           self.symbol_ref_db.store_local_db(runtime.id(), local_symbol_ref_db);
           self.remaining -= 1;
 
-          self.errors.extend(runtime.validate_symbols(&rolldown_common::RUNTIME_HELPER_NAMES));
+          if self.shared_context.options.experimental.is_import_defer_enabled() {
+            self.errors.extend(runtime.validate_symbols(&rolldown_common::RUNTIME_HELPER_NAMES));
+          } else {
+            // The runtime module has the helpers of `import defer` only when the option is on.
+            let expected = rolldown_common::RUNTIME_HELPER_NAMES
+              .into_iter()
+              .filter(|name| !rolldown_common::RUNTIME_IMPORT_DEFER_HELPER_NAMES.contains(name))
+              .collect::<Vec<_>>();
+            self.errors.extend(runtime.validate_symbols(&expected));
+          }
           runtime_brief = Some(runtime);
         }
         ModuleLoaderMsg::FetchModule(resolve_id) => {

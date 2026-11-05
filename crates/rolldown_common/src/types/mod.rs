@@ -19,6 +19,7 @@ pub mod hybrid_index_vec;
 pub mod idx_ext;
 pub mod import_attributes;
 pub mod import_kind;
+pub mod import_phase;
 pub mod import_record;
 pub mod importer_record;
 pub mod ins_chunk_idx;

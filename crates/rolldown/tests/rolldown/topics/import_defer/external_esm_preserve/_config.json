@@ -1,0 +1,11 @@
+{
+  "_comment": "ESM output with `importDeferExternal: 'preserve'` keeps `import defer * as ns from \"ext\"` and `import.defer(\"ext2\")`, with no bare `import \"ext\"`. `ext3` has an eager import and keeps it. `ext4` has an eager and a deferred import. Node.js cannot parse `import defer`, so the output does not run.",
+  "config": {
+    "external": ["ext", "ext2", "ext3", "ext4"],
+    "experimental": {
+      "importDefer": true,
+      "importDeferExternal": "preserve"
+    }
+  },
+  "expectExecuted": false
+}

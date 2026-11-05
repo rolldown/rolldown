@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import "ext3";
+import defer * as lazy from "ext4";
+import { x } from "ext4";
+import defer * as ns from "ext";
+// both.js
+const both = () => [lazy.y, x];
+// main.js
+const read = () => ns.value;
+const escape = () => ns;
+const load = () => import.defer("ext2");
+export { both, escape, load, read };
+
+```

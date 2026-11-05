@@ -3375,6 +3375,7 @@ dependencies = [
  "json-escape-simd",
  "memchr",
  "mime",
+ "nodejs-built-in-modules",
  "nom",
  "oxc",
  "oxc_index",

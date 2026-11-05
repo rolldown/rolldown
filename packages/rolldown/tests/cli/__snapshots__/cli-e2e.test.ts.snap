@@ -31,6 +31,7 @@ OPTIONS
   --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.
   --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
   --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
+  --checks.deferredExternalEvaluatedEagerly Whether to emit warnings when an external module in the dependencies of an \`import defer\` target evaluates when its chunk loads, not when the target evaluates.
   --checks.deprecatedImportAssertion Whether to emit warnings when an import uses the legacy \`assert\` keyword instead of \`with\`.
   --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
   --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
@@ -188,6 +189,7 @@ OPTIONS
   --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.
   --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
   --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
+  --checks.deferredExternalEvaluatedEagerly Whether to emit warnings when an external module in the dependencies of an \`import defer\` target evaluates when its chunk loads, not when the target evaluates.
   --checks.deprecatedImportAssertion Whether to emit warnings when an import uses the legacy \`assert\` keyword instead of \`with\`.
   --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
   --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
@@ -345,6 +347,7 @@ OPTIONS
   --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.
   --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
   --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
+  --checks.deferredExternalEvaluatedEagerly Whether to emit warnings when an external module in the dependencies of an \`import defer\` target evaluates when its chunk loads, not when the target evaluates.
   --checks.deprecatedImportAssertion Whether to emit warnings when an import uses the legacy \`assert\` keyword instead of \`with\`.
   --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
   --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
@@ -502,6 +505,7 @@ OPTIONS
   --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.
   --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
   --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
+  --checks.deferredExternalEvaluatedEagerly Whether to emit warnings when an external module in the dependencies of an \`import defer\` target evaluates when its chunk loads, not when the target evaluates.
   --checks.deprecatedImportAssertion Whether to emit warnings when an import uses the legacy \`assert\` keyword instead of \`with\`.
   --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
   --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).

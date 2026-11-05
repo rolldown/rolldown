@@ -1,0 +1,10 @@
+{
+  "_comment": "CommonJS output: an eager import of the external in the same chunk keeps the `require(\"ext-lazy\")` at the top, and the deferred namespace reads the same module.",
+  "config": {
+    "format": "cjs",
+    "external": ["ext-lazy"],
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

@@ -123,8 +123,11 @@ impl LinkStage<'_> {
     }
     for importer in self.module_table.modules.iter().filter_map(Module::as_normal) {
       for (rec_idx, rec) in importer.import_records.iter_enumerated() {
+        // A deferred import keeps its own binding: it gets its value at the first access, not
+        // at the import statement.
         if !matches!(rec.kind, ImportKind::Import)
           || rec.meta.contains(ImportRecordMeta::IsExportStar)
+          || rec.is_defer_phase()
         {
           continue;
         }

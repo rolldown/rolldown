@@ -1,0 +1,9 @@
+{
+  "_comment": "With `experimental.importDefer`, `import.defer(expr)` with a specifier that is not a static string keeps the fallback: `import(expr)` and a warning.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "expectWarning": true
+}

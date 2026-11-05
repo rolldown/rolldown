@@ -1,0 +1,58 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dep.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.js
+var log;
+function init_log() {
+	return (init_log = __esmMin((() => {
+		log = [];
+	})))();
+}
+// dep.js
+var dep_exports = /* @__PURE__ */ __exportAll({ value: () => "dep" });
+var dep_deferred = /* @__PURE__ */ __deferNs(() => (init_dep(), dep_exports), dep_exports);
+var value;
+function init_dep() {
+	return (init_dep = __esmMin((() => {
+		init_log();
+		log.push("dep");
+		value = "dep";
+	})))();
+}
+export { init_log as a, value as i, dep_exports as n, log as o, init_dep as r, dep_deferred as t };
+
+```
+
+## dep2.js
+
+```js
+import { i as value, r as init_dep } from "./dep.js";
+init_dep();
+export { value };
+
+```
+
+## main.js
+
+```js
+import { a as init_log, n as dep_exports, o as log, r as init_dep, t as dep_deferred } from "./dep.js";
+// barrel.js
+init_log();
+// main.js
+init_dep();
+const deferred4 = await (async (n) => (n = await import("./dep.js"), n.t))();
+const result = [
+	dep_deferred === dep_deferred,
+	dep_deferred === dep_deferred,
+	dep_deferred === deferred4,
+	dep_deferred !== dep_exports
+];
+export { log, result };
+
+```

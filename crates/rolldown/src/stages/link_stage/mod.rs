@@ -265,8 +265,9 @@ impl<'a> LinkStage<'a> {
     self.compute_tla();
     self.determine_module_exports_kind();
     self.determine_safely_merge_cjs_ns();
-    self.wrap_modules();
+    let deferred_esm_targets = self.wrap_modules();
     self.generate_lazy_export();
+    self.create_deferred_namespaces(&deferred_esm_targets);
     self.determine_side_effects();
     self.bind_imports_and_exports();
     self.create_exports_for_ecma_modules();

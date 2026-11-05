@@ -1,0 +1,38 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// i.js
+var ns, tag;
+function init_i() {
+	return (init_i = __esmState((() => {
+		ns = d_deferred;
+		tag = Object.prototype.toString.call(d_deferred);
+	}), () => [init_d]))(arguments[0]);
+}
+// d.js
+var d_exports = /* @__PURE__ */ __exportAll({
+	seen: () => seen,
+	value: () => "d"
+});
+var d_deferred = /* @__PURE__ */ __deferNs(() => (__esmDefer(init_d), d_exports), d_exports);
+var value, seen;
+function init_d() {
+	return (init_d = __esmState((() => {
+		init_i(init_d);
+		value = "d";
+		seen = tag;
+	}), () => [init_i]))(arguments[0]);
+}
+// main.js
+init_d();
+init_i();
+const later = ns.value;
+export { later, seen, value };
+
+```

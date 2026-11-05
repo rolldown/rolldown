@@ -1,0 +1,63 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.js
+var log;
+function init_log() {
+	return (init_log = __esmMin((() => {
+		log = [];
+	})))();
+}
+// a.js
+function init_a() {
+	return (init_a = __esmState((async () => {
+		try {
+			init_log();
+			await 0;
+			log.push("a");
+		} catch (e) {
+			throw __esmFail(init_a, e);
+		}
+		__esmEnd(init_a);
+	}), () => [], 3))(arguments[0]);
+}
+// b.js
+function init_b() {
+	return (init_b = __esmState((async () => {
+		try {
+			init_log();
+			await 0;
+			log.push("b");
+		} catch (e) {
+			throw __esmFail(init_b, e);
+		}
+		__esmEnd(init_b);
+	}), () => [], 3))(arguments[0]);
+}
+function init_d() {
+	return (init_d = __esmState((async () => {
+		try {
+			init_log();
+			__esmDepDone(init_a(init_d), init_a, init_d) || await init_a(init_d);
+			__esmDepDone(init_b(init_d), init_b, init_d) || await init_b(init_d);
+			log.push("d");
+		} catch (e) {
+			throw __esmFail(init_d, e);
+		}
+		__esmEnd(init_d);
+	}), () => [init_a, init_b], 1))(arguments[0]);
+}
+// main.js
+init_log();
+__esmGather(init_d) || await __esmGather();
+log.push("main");
+const value = (__esmDefer(init_d), "d");
+export { log, value };
+
+```

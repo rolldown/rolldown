@@ -1,0 +1,118 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## consumer.js
+
+```js
+const require_d = require("./d.js");
+// consumer.js
+require_d.init_d();
+const consumerNs = require_d.import_ext_ns;
+const consumerRead = () => require_d.import_ext_ns.y;
+exports.consumerNs = consumerNs;
+exports.consumerRead = consumerRead;
+
+```
+
+## d.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// d.js
+var import_ext_ns;
+function init_d() {
+	return (init_d = __esmMin((() => {
+		import_ext_ns = /* @__PURE__ */ __toESMCached(require("ext-ns"));
+	})))();
+}
+Object.defineProperty(exports, "import_ext_ns", {
+	enumerable: true,
+	get: function() {
+		return import_ext_ns;
+	}
+});
+Object.defineProperty(exports, "init_d", {
+	enumerable: true,
+	get: function() {
+		return init_d;
+	}
+});
+
+```
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_d = require("./d.js");
+// main.js
+(globalThis.__extLog ??= []).push("main");
+const read = () => (require_d.init_d(), require_d.import_ext_ns.y);
+const escape = () => (require_d.init_d(), require_d.import_ext_ns);
+const loadConsumer = () => Promise.resolve().then(() => require("./consumer.js"));
+exports.escape = escape;
+exports.loadConsumer = loadConsumer;
+exports.read = read;
+
+```
+
+# Variant: [treeshake: Option(InnerOptions { module_side_effects: Boolean(false), annotations: None, manual_pure_functions: None, unknown_global_side_effects: None, commonjs: None, property_read_side_effects: None, property_write_side_effects: None, invalid_import_side_effects: None })]
+
+## Assets
+
+### consumer.js
+
+```js
+const require_d = require("./d.js");
+// consumer.js
+require_d.init_d();
+const consumerNs = require_d.import_ext_ns;
+const consumerRead = () => require_d.import_ext_ns.y;
+exports.consumerNs = consumerNs;
+exports.consumerRead = consumerRead;
+
+```
+
+### d.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// d.js
+var import_ext_ns;
+function init_d() {
+	return (init_d = __esmMin((() => {
+		import_ext_ns = /* @__PURE__ */ __toESMCached(require("ext-ns"));
+	})))();
+}
+Object.defineProperty(exports, "import_ext_ns", {
+	enumerable: true,
+	get: function() {
+		return import_ext_ns;
+	}
+});
+Object.defineProperty(exports, "init_d", {
+	enumerable: true,
+	get: function() {
+		return init_d;
+	}
+});
+
+```
+
+### main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_d = require("./d.js");
+// main.js
+(globalThis.__extLog ??= []).push("main");
+const read = () => (require_d.init_d(), require_d.import_ext_ns.y);
+const escape = () => (require_d.init_d(), require_d.import_ext_ns);
+const loadConsumer = () => Promise.resolve().then(() => require("./consumer.js"));
+exports.escape = escape;
+exports.loadConsumer = loadConsumer;
+exports.read = read;
+
+```

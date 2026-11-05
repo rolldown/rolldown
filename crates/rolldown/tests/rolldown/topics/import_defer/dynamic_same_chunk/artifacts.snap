@@ -1,0 +1,36 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.js
+var log;
+function init_log() {
+	return (init_log = __esmMin((() => {
+		log = [];
+	})))();
+}
+// d.js
+var d_exports = /* @__PURE__ */ __exportAll({ value: () => "d" });
+var d_deferred = /* @__PURE__ */ __deferNs(() => (init_d(), d_exports), d_exports);
+function init_d() {
+	return (init_d = __esmMin((() => {
+		init_log();
+		log.push("d");
+	})))();
+}
+// main.js
+init_log();
+const ns = await (async () => d_deferred)();
+log.push("after import");
+const keys = Object.keys(ns);
+log.push("after keys");
+const value = ns.value;
+const then = "then" in ns;
+export { keys, log, then, value };
+
+```

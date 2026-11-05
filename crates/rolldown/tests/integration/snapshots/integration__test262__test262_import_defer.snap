@@ -1,0 +1,1634 @@
+---
+source: crates/rolldown/tests/integration/test262.rs
+expression: snapshot
+---
+Summary: 243 passed, 9 failed, 252 total
+
+---
+
+# language/import/import-defer/deferred-namespace-object/exotic-object-behavior.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/deferred-namespace-object/identity.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/deferred-namespace-object/json-module.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/deferred-namespace-object/reexport-deferred-ns-evaluation.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/deferred-namespace-object/to-string-tag.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/errors/get-other-while-dep-evaluating/main.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/errors/get-other-while-dep-evaluating-async/main.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/import/import-defer/errors/get-other-while-evaluating/main.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/errors/get-other-while-evaluating-async/main.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/import/import-defer/errors/get-self-while-defer-evaluating/main.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/errors/get-self-while-evaluating-async/main.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/import/import-defer/errors/get-self-while-evaluating.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/errors/module-throws/defer-import-after-evaluation.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/import/import-defer/errors/module-throws/third-party-evaluation-after-defer-import.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/import/import-defer/errors/module-throws/trigger-evaluation.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/errors/resolution-error/import-defer-of-missing-module-fails.js
+Result: FAIL
+Reason: Rolldown reports a module that it cannot resolve as a build error, not as a rejection of `import()` at runtime
+Expected: success
+Actual:
+Could not resolve './missing.js' in resolution-error_FIXTURE.js
+---
+
+# language/import/import-defer/errors/syntax-error/import-defer-of-syntax-error-fails.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: resolution)
+Actual:
+Expected a semicolon or an implicit semicolon after a statement, but found none
+---
+
+# language/import/import-defer/evaluation-sync/import-defer-does-not-evaluate.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-sync/module-imported-defer-and-eager.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-top-level-await/async-cycle-dependency-of-deferred-module/main.js
+Result: FAIL
+Reason: Rolldown does not support preserving TLA semantics perfectly
+Expected: success
+Actual:
+Async test failed: Test262Error: $DONE was not called
+---
+
+# language/import/import-defer/evaluation-top-level-await/flattening-order/main.js
+Result: FAIL
+Reason: Rolldown does not support preserving TLA semantics perfectly
+Expected: success
+Actual:
+Runtime error: Failed to import test module: Test262Error {
+  message: 'Actual [1, 3, 5, 2.1.1 start, 2.1.1 end, 2.2.1, 2.2 start, 2.2 end, 4.1 start, 4.1 end] and expected [1, 2.1.1 start, 2.2.1, 2.2 start, 3, 5, 2.1.1 end, 2.2 end, 4.1 start, 4.1 end] should have the same contents. '
+}
+---
+
+# language/import/import-defer/evaluation-top-level-await/import-defer-async-module/main.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/import/import-defer/evaluation-top-level-await/import-defer-transitive-async-module/main.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/import/import-defer/evaluation-top-level-await/sync-dependency-of-deferred-async-module/main.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-exported-then-defineOwnProperty.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-exported-then-delete.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-exported-then-get-in-prototype.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-exported-then-get.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-exported-then-getOwnProperty.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-exported-then-hasProperty-in-prototype.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-exported-then-hasProperty.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-exported-then-super-get.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-exported-then-super-property-define.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-exported-then-super-property-set-exported.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-getPrototypeOf.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-isExtensible.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-not-exported-then-defineOwnProperty.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-not-exported-then-delete.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-not-exported-then-get-in-prototype.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-not-exported-then-get.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-not-exported-then-getOwnProperty.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-not-exported-then-hasProperty-in-prototype.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-not-exported-then-hasProperty.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-not-exported-then-super-get.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-not-exported-then-super-property-define.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-not-exported-then-super-property-set-exported.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-preventExtensions.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-private-name-access.js
+Result: FAIL
+Reason: Node.js 24.12.0 does not support `nonextensible-applies-to-private`, so it adds a private field to a non-extensible object with no TypeError
+Expected: success
+Actual:
+Runtime error: Failed to import test module: Test262Error {
+  message: 'Expected a TypeError to be thrown but no exception was thrown at all'
+}
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-set-string-exported.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-set-string-not-exported.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-setPrototypeOf.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-symbol-other-defineOwnProperty.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-symbol-other-delete.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-symbol-other-get-in-prototype.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-symbol-other-get.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-symbol-other-getOwnProperty.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-symbol-other-hasProperty-in-prototype.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-symbol-other-hasProperty.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-symbol-other-super-get.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-symbol-other-super-property-define.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-symbol-other-super-property-set-exported.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-defineOwnProperty.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-delete.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-get-in-prototype.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-get.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-getOwnProperty.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-hasProperty-in-prototype.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-hasProperty.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-super-get.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-super-property-define.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-super-property-set-exported.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/trigger-exported-string-defineOwnProperty.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/trigger-exported-string-delete.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/trigger-exported-string-get-in-prototype.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/trigger-exported-string-get.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/trigger-exported-string-getOwnProperty.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/trigger-exported-string-hasProperty-in-prototype.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/trigger-exported-string-hasProperty.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/trigger-exported-string-super-get.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/trigger-exported-string-super-property-define.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/trigger-exported-string-super-property-set-exported.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/trigger-not-exported-string-defineOwnProperty.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/trigger-not-exported-string-delete.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/trigger-not-exported-string-get-in-prototype.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/trigger-not-exported-string-get.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/trigger-not-exported-string-getOwnProperty.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/trigger-not-exported-string-hasProperty-in-prototype.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/trigger-not-exported-string-hasProperty.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/trigger-not-exported-string-super-get.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/trigger-not-exported-string-super-property-define.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/trigger-not-exported-string-super-property-set-exported.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/trigger-ownPropertyKey-names.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/trigger-ownPropertyKeys-symbols.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/evaluation-triggers/trigger-ownPropertyKeys.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/syntax/import-attributes.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/syntax/invalid-default-and-defer-namespace.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Default imports are not allowed in a deferred import.
+---
+
+# language/import/import-defer/syntax/invalid-defer-as-with-no-asterisk.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Expected `from` but found `as`
+---
+
+# language/import/import-defer/syntax/invalid-defer-default-and-namespace.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Unexpected token
+---
+
+# language/import/import-defer/syntax/invalid-defer-default.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Default imports are not allowed in a deferred import.
+---
+
+# language/import/import-defer/syntax/invalid-defer-named.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Named imports are not allowed in a deferred import.
+---
+
+# language/import/import-defer/syntax/invalid-export-defer-namespace.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Unexpected token
+---
+
+# language/import/import-defer/syntax/valid-default-binding-named-defer.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/import/import-defer/syntax/valid-defer-namespace.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/catch/nested-arrow-import-catch-import-defer-specifier-tostring-abrupt-rejects.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/expressions/dynamic-import/catch/nested-async-arrow-function-await-import-defer-specifier-tostring-abrupt-rejects.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/expressions/dynamic-import/catch/nested-async-arrow-function-return-await-import-defer-specifier-tostring-abrupt-rejects.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/expressions/dynamic-import/catch/nested-async-function-await-import-defer-specifier-tostring-abrupt-rejects.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/expressions/dynamic-import/catch/nested-async-function-import-defer-specifier-tostring-abrupt-rejects.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/expressions/dynamic-import/catch/nested-async-function-return-await-import-defer-specifier-tostring-abrupt-rejects.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/expressions/dynamic-import/catch/nested-async-gen-await-import-defer-specifier-tostring-abrupt-rejects.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/expressions/dynamic-import/catch/nested-async-gen-return-await-import-defer-specifier-tostring-abrupt-rejects.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/expressions/dynamic-import/catch/nested-block-import-catch-import-defer-specifier-tostring-abrupt-rejects.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/expressions/dynamic-import/catch/nested-block-labeled-import-defer-specifier-tostring-abrupt-rejects.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/expressions/dynamic-import/catch/nested-do-while-import-defer-specifier-tostring-abrupt-rejects.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/expressions/dynamic-import/catch/nested-else-import-catch-import-defer-specifier-tostring-abrupt-rejects.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/expressions/dynamic-import/catch/nested-function-import-catch-import-defer-specifier-tostring-abrupt-rejects.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/expressions/dynamic-import/catch/nested-if-import-catch-import-defer-specifier-tostring-abrupt-rejects.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/expressions/dynamic-import/catch/nested-while-import-catch-import-defer-specifier-tostring-abrupt-rejects.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/expressions/dynamic-import/catch/top-level-import-catch-import-defer-specifier-tostring-abrupt-rejects.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/expressions/dynamic-import/import-defer/import-defer-async-module/main.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/expressions/dynamic-import/import-defer/import-defer-transitive-async-module/main.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/expressions/dynamic-import/import-defer/import-defer-transitive-async-module/promise-prototype-then-not-called.js
+Result: FAIL
+Reason: The output loads the chunk of the target with a native `import()`, and the `import()` of Node.js 24.12.0 calls `Promise.prototype.then`
+Expected: success
+Actual:
+Async test failed: Test262Error: Test262Error: Promise.prototype.then must not be called by import.defer internals Expected SameValue(«5», «0») to be true
+---
+
+# language/expressions/dynamic-import/import-defer/sync/main.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/expressions/dynamic-import/import-defer/sync-dependency-of-deferred-async-module/main.js
+Result: PASS
+Expected: success
+Actual: Async test completed successfully
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-arrow-assignment-expression-import-defer-assignment-expr-not-optional.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+import() requires a specifier.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-arrow-assignment-expression-import-defer-no-new-call-expression-prop-access.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-arrow-assignment-expression-import-defer-no-new-call-expression.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-arrow-assignment-expression-import-defer-no-rest-param.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Argument of dynamic import cannot be a spread element.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-arrow-import-defer-assignment-expr-not-optional.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+import() requires a specifier.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-arrow-import-defer-no-new-call-expression-prop-access.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-arrow-import-defer-no-new-call-expression.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-arrow-import-defer-no-rest-param.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Argument of dynamic import cannot be a spread element.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-async-arrow-function-await-import-defer-assignment-expr-not-optional.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+import() requires a specifier.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-async-arrow-function-await-import-defer-no-new-call-expression-prop-access.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-async-arrow-function-await-import-defer-no-new-call-expression.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-async-arrow-function-await-import-defer-no-rest-param.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Argument of dynamic import cannot be a spread element.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-async-arrow-function-return-await-import-defer-assignment-expr-not-optional.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+import() requires a specifier.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-async-arrow-function-return-await-import-defer-no-new-call-expression-prop-access.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-async-arrow-function-return-await-import-defer-no-new-call-expression.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-async-arrow-function-return-await-import-defer-no-rest-param.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Argument of dynamic import cannot be a spread element.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-async-function-await-import-defer-assignment-expr-not-optional.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+import() requires a specifier.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-async-function-await-import-defer-no-new-call-expression-prop-access.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-async-function-await-import-defer-no-new-call-expression.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-async-function-await-import-defer-no-rest-param.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Argument of dynamic import cannot be a spread element.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-async-function-import-defer-assignment-expr-not-optional.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+import() requires a specifier.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-async-function-import-defer-no-new-call-expression-prop-access.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-async-function-import-defer-no-new-call-expression.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-async-function-import-defer-no-rest-param.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Argument of dynamic import cannot be a spread element.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-async-function-return-await-import-defer-assignment-expr-not-optional.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+import() requires a specifier.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-async-function-return-await-import-defer-no-new-call-expression-prop-access.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-async-function-return-await-import-defer-no-new-call-expression.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-async-function-return-await-import-defer-no-rest-param.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Argument of dynamic import cannot be a spread element.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-async-gen-await-import-defer-assignment-expr-not-optional.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+import() requires a specifier.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-async-gen-await-import-defer-no-new-call-expression-prop-access.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-async-gen-await-import-defer-no-new-call-expression.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-async-gen-await-import-defer-no-rest-param.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Argument of dynamic import cannot be a spread element.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-block-import-defer-assignment-expr-not-optional.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+import() requires a specifier.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-block-import-defer-no-new-call-expression-prop-access.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-block-import-defer-no-new-call-expression.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-block-import-defer-no-rest-param.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Argument of dynamic import cannot be a spread element.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-block-labeled-import-defer-assignment-expr-not-optional.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+import() requires a specifier.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-block-labeled-import-defer-no-new-call-expression-prop-access.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-block-labeled-import-defer-no-new-call-expression.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-block-labeled-import-defer-no-rest-param.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Argument of dynamic import cannot be a spread element.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-do-while-import-defer-assignment-expr-not-optional.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+import() requires a specifier.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-do-while-import-defer-no-new-call-expression-prop-access.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-do-while-import-defer-no-new-call-expression.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-do-while-import-defer-no-rest-param.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Argument of dynamic import cannot be a spread element.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-else-braceless-import-defer-assignment-expr-not-optional.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+import() requires a specifier.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-else-braceless-import-defer-no-new-call-expression-prop-access.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-else-braceless-import-defer-no-new-call-expression.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-else-braceless-import-defer-no-rest-param.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Argument of dynamic import cannot be a spread element.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-else-import-defer-assignment-expr-not-optional.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+import() requires a specifier.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-else-import-defer-no-new-call-expression-prop-access.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-else-import-defer-no-new-call-expression.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-else-import-defer-no-rest-param.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Argument of dynamic import cannot be a spread element.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-function-import-defer-assignment-expr-not-optional.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+import() requires a specifier.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-function-import-defer-no-new-call-expression-prop-access.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-function-import-defer-no-new-call-expression.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-function-import-defer-no-rest-param.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Argument of dynamic import cannot be a spread element.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-function-return-import-defer-assignment-expr-not-optional.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+import() requires a specifier.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-function-return-import-defer-no-new-call-expression-prop-access.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-function-return-import-defer-no-new-call-expression.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-function-return-import-defer-no-rest-param.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Argument of dynamic import cannot be a spread element.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-if-braceless-import-defer-assignment-expr-not-optional.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+import() requires a specifier.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-if-braceless-import-defer-no-new-call-expression-prop-access.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-if-braceless-import-defer-no-new-call-expression.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-if-braceless-import-defer-no-rest-param.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Argument of dynamic import cannot be a spread element.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-if-import-defer-assignment-expr-not-optional.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+import() requires a specifier.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-if-import-defer-no-new-call-expression-prop-access.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-if-import-defer-no-new-call-expression.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-if-import-defer-no-rest-param.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Argument of dynamic import cannot be a spread element.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-while-import-defer-assignment-expr-not-optional.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+import() requires a specifier.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-while-import-defer-no-new-call-expression-prop-access.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-while-import-defer-no-new-call-expression.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-while-import-defer-no-rest-param.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Argument of dynamic import cannot be a spread element.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-with-expression-import-defer-assignment-expr-not-optional.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+import() requires a specifier.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-with-expression-import-defer-no-new-call-expression-prop-access.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-with-expression-import-defer-no-new-call-expression.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-with-expression-import-defer-no-rest-param.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Argument of dynamic import cannot be a spread element.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-with-import-defer-assignment-expr-not-optional.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+import() requires a specifier.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-with-import-defer-no-new-call-expression-prop-access.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-with-import-defer-no-new-call-expression.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/nested-with-import-defer-no-rest-param.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Argument of dynamic import cannot be a spread element.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/top-level-import-defer-assignment-expr-not-optional.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+import() requires a specifier.
+---
+
+# language/expressions/dynamic-import/syntax/invalid/top-level-import-defer-no-new-call-expression-prop-access.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/top-level-import-defer-no-new-call-expression.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Cannot use new with dynamic import
+---
+
+# language/expressions/dynamic-import/syntax/invalid/top-level-import-defer-no-rest-param.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+Argument of dynamic import cannot be a spread element.
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-arrow-assignment-expression-import-defer-empty-str-is-valid-assign-expr.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-arrow-assignment-expression-import-defer-script-code-valid.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-arrow-import-defer-empty-str-is-valid-assign-expr.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-arrow-import-defer-script-code-valid.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-async-arrow-function-await-import-defer-empty-str-is-valid-assign-expr.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-async-arrow-function-await-import-defer-script-code-valid.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-async-arrow-function-return-await-import-defer-empty-str-is-valid-assign-expr.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-async-arrow-function-return-await-import-defer-script-code-valid.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-async-function-await-import-defer-empty-str-is-valid-assign-expr.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-async-function-await-import-defer-script-code-valid.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-async-function-import-defer-empty-str-is-valid-assign-expr.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-async-function-import-defer-script-code-valid.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-async-function-return-await-import-defer-empty-str-is-valid-assign-expr.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-async-function-return-await-import-defer-script-code-valid.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-async-gen-await-import-defer-empty-str-is-valid-assign-expr.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-async-gen-await-import-defer-script-code-valid.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-block-import-defer-empty-str-is-valid-assign-expr.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-block-import-defer-script-code-valid.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-block-labeled-import-defer-empty-str-is-valid-assign-expr.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-block-labeled-import-defer-script-code-valid.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-do-while-import-defer-empty-str-is-valid-assign-expr.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-do-while-import-defer-script-code-valid.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-else-braceless-import-defer-empty-str-is-valid-assign-expr.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-else-braceless-import-defer-script-code-valid.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-else-import-defer-empty-str-is-valid-assign-expr.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-else-import-defer-script-code-valid.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-function-import-defer-empty-str-is-valid-assign-expr.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-function-import-defer-script-code-valid.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-function-return-import-defer-empty-str-is-valid-assign-expr.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-function-return-import-defer-script-code-valid.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-if-braceless-import-defer-empty-str-is-valid-assign-expr.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-if-braceless-import-defer-script-code-valid.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-if-import-defer-empty-str-is-valid-assign-expr.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-if-import-defer-script-code-valid.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-while-import-defer-empty-str-is-valid-assign-expr.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-while-import-defer-script-code-valid.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-with-expression-import-defer-empty-str-is-valid-assign-expr.js
+Result: FAIL
+Reason: The test needs non-strict script code (`with`), but Rolldown parses every input as module code, which is always strict
+Expected: success
+Actual:
+'with' statements are not allowed
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-with-expression-import-defer-script-code-valid.js
+Result: FAIL
+Reason: The test needs non-strict script code (`with`), but Rolldown parses every input as module code, which is always strict
+Expected: success
+Actual:
+'with' statements are not allowed
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-with-import-defer-empty-str-is-valid-assign-expr.js
+Result: FAIL
+Reason: The test needs non-strict script code (`with`), but Rolldown parses every input as module code, which is always strict
+Expected: success
+Actual:
+'with' statements are not allowed
+---
+
+# language/expressions/dynamic-import/syntax/valid/nested-with-import-defer-script-code-valid.js
+Result: FAIL
+Reason: The test needs non-strict script code (`with`), but Rolldown parses every input as module code, which is always strict
+Expected: success
+Actual:
+'with' statements are not allowed
+---
+
+# language/expressions/dynamic-import/syntax/valid/top-level-import-defer-empty-str-is-valid-assign-expr.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/dynamic-import/syntax/valid/top-level-import-defer-script-code-valid.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
+---
+
+# language/expressions/assignmenttargettype/direct-importcall-defer.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+import() requires a specifier.
+---
+
+# language/expressions/assignmenttargettype/parenthesized-importcall-defer.js
+Result: PASS
+Expected: error (type: SyntaxError, phase: parse)
+Actual:
+import() requires a specifier.
+---

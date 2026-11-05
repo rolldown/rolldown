@@ -1,0 +1,11 @@
+{
+  "_comment": "ESM output: DEFERRED_EXTERNAL_EVALUATED_EAGERLY for `ext-dyn`, which the `import.defer()` target `e.js` imports: the chunk of `e.js` loads it at the start. `ext-lazy` also gets the warning, because only `other.js` in another chunk imports it eagerly.",
+  "config": {
+    "external": ["ext-lazy", "ext-dyn"],
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "expectExecuted": false,
+  "expectWarning": true
+}

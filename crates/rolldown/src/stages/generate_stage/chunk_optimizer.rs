@@ -47,6 +47,8 @@ struct FacadeChunkElimination {
 struct CommonChunkMerge {
   from_chunk_idx: ChunkIdx,
   to_chunk_idx: ChunkIdx,
+  /// Whether the entry chunk takes over the name of the merged common chunk.
+  inherit_name: bool,
 }
 
 #[derive(Debug, Default)]
@@ -867,6 +869,7 @@ impl GenerateStage<'_> {
             common_chunk_merges.push(CommonChunkMerge {
               from_chunk_idx: target_chunk_idx,
               to_chunk_idx: from_chunk_idx,
+              inherit_name: false,
             });
           }
         }
@@ -879,18 +882,31 @@ impl GenerateStage<'_> {
       );
       let is_target_pure_user_entry_chunk = matches!(target_chunk.kind, ChunkKind::EntryPoint { meta, bit: _, module: _ } if meta.is_pure_user_defined_entry());
       let is_target_common_chunk = matches!(target_chunk.kind, ChunkKind::Common);
-      // Five optimization scenarios (scenario 1 is handled above for user-defined entries):
+      // Six optimization scenarios (scenario 1 is handled above for user-defined entries):
       // 1. User-defined facade entry chunk merged with common chunk
       //    → Common chunk modules are moved into the entry chunk (handled above)
       // 2. Emitted chunk (AllowExtension) merged into manual code splitting group
       //    → Group by target chunk to detect export name conflicts before merging
-      // 3. Dynamic entry chunk merged into manual code splitting group
+      // 3. Dynamic entry chunk targeting a manual code splitting group with no other entry module
+      //    → Group modules are moved into the entry chunk, which keeps the group's name
+      // 4. Dynamic entry chunk merged into a manual code splitting group with other entry modules
       //    → Directly merge, the facade chunk can be removed
-      // 4. Dynamic entry chunk merged into user-defined entry chunk
+      // 5. Dynamic entry chunk merged into user-defined entry chunk
       //    → Directly merge, the facade chunk can be removed
-      // 5. Dynamic entry chunk merged into common chunk
+      // 6. Dynamic entry chunk merged into common chunk
       //    → Directly merge, the facade chunk can be removed
-      if is_target_manual_chunk && is_emitted_entry_chunk {
+      if is_target_manual_chunk
+        && !is_emitted_entry_chunk
+        && !target_chunk.modules.iter().any(|&module_idx| {
+          module_idx != module && self.link_output.entries.contains_key(&module_idx)
+        })
+      {
+        common_chunk_merges.push(CommonChunkMerge {
+          from_chunk_idx: target_chunk_idx,
+          to_chunk_idx: from_chunk_idx,
+          inherit_name: true,
+        });
+      } else if is_target_manual_chunk && is_emitted_entry_chunk {
         emitted_chunk_groups.entry(target_chunk_idx).or_default().push(from_chunk_idx);
       } else if !is_emitted_entry_chunk {
         // Check if merging would create a circular dependency.
@@ -2009,6 +2025,7 @@ impl GenerateStage<'_> {
       let from_chunk_modules = std::mem::take(&mut from_chunk.modules);
       let from_chunk_debug_info = std::mem::take(&mut from_chunk.debug_info);
       let from_chunk_runtime_helper = std::mem::take(&mut from_chunk.depended_runtime_helper);
+      let from_chunk_name = if merge.inherit_name { from_chunk.name.take() } else { None };
       for module_idx in &from_chunk_modules {
         chunk_graph.module_to_chunk[*module_idx] = Some(merge.to_chunk_idx);
       }
@@ -2016,6 +2033,9 @@ impl GenerateStage<'_> {
       to_chunk.modules.extend(from_chunk_modules);
       to_chunk.debug_info.extend(from_chunk_debug_info);
       to_chunk.depended_runtime_helper.insert(from_chunk_runtime_helper);
+      if from_chunk_name.is_some() {
+        to_chunk.name = from_chunk_name;
+      }
       chunk_graph
         .post_chunk_optimization_operations
         .insert(merge.from_chunk_idx, PostChunkOptimizationOperation::Removed);

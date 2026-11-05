@@ -8,6 +8,9 @@ const load = async () => {
   import('./imp').then((m) => {
     assert.strictEqual(m.imp22, 22);
   });
+  import('./imp-other').then((m) => {
+    assert.strictEqual(m.other, 'other');
+  });
 };
 
 load();

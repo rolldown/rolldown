@@ -1,5 +1,5 @@
 {
-  "_comment": "A merged dynamic entry is reached through `import('./dyn.js').then((n) => n.ns)`. If the host chunk also carries an internal cross-chunk export literally named `then`, promise resolution assimilates the chunk namespace as a thenable and the callback never sees the namespace.",
+  "_comment": "A merged dynamic entry is reached through `import('./dyn.js').then((n) => n.ns)`. If the host chunk also carries an internal cross-chunk export literally named `then`, promise resolution assimilates the chunk namespace as a thenable and the callback never sees the namespace. `target2.js` keeps a second entry in the group, so the group stays a shared host chunk.",
   "config": {
     "input": [
       {
@@ -18,7 +18,7 @@
       "groups": [
         {
           "name": "dyn",
-          "test": "[\\\\/](?:target|observer|then-export)\\.js$"
+          "test": "[\\\\/](?:target2?|observer|then-export)\\.js$"
         }
       ]
     }

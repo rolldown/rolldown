@@ -1,11 +1,17 @@
 import assert from 'node:assert';
-import Default, { Foo as OtherFoo, Bar as OtherBar, Baz as OtherBaz, SelfRef as OtherSelfRef, Named as OtherNamed } from './other.js';
+import Default, {
+  Foo as OtherFoo,
+  Bar as OtherBar,
+  Baz as OtherBaz,
+  SelfRef as OtherSelfRef,
+  Named as OtherNamed,
+} from './other.js';
 import Default2 from './other2.js';
 import Default3 from './other3.js';
 
 export class Foo {}
-export const Bar = class {}
-export const Baz = class Baz {}
+export const Bar = class {};
+export const Baz = class Baz {};
 class SelfRef {}
 class Named {}
 function nested() {

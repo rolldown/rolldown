@@ -32,7 +32,7 @@ pub struct AsyncImport {
   pub glob: String,
   pub span: Span,
   pub source_span: Span,
-  pub first_quasi: String,
+  pub first_quasi_len: usize,
 }
 
 pub struct DynamicImportVarsVisit<'a> {
@@ -90,32 +90,32 @@ impl DynamicImportVarsVisit<'_> {
         return false;
       }
 
-      let first_quasi = source.quasis[0].value.raw.as_str();
+      let first_quasi_len = source.quasis[0].value.raw.len();
       if glob.as_bytes()[0] != b'.' && glob.as_bytes()[0] != b'/' {
         self.async_imports.push(AsyncImport {
           glob: glob.into_owned(),
           span: import_expr.span,
           source_span: source.span,
-          first_quasi: first_quasi.to_owned(),
+          first_quasi_len,
         });
         return false;
       }
 
       let prefix = to_usv_str(source.quasis[0].value.cooked.expect("untagged template literal"));
-      self.rewrite(import_expr.span, source.span, first_quasi, &prefix, &glob);
+      self.rewrite(import_expr.span, source.span, first_quasi_len, &prefix, &glob);
       return false;
     }
     true
   }
 
   /// Rewrites the `import(...)` at `span` into a glob import. `source_span` is the span of its
-  /// template literal, `first_quasi` is the raw text of its first quasi, and `prefix` is
+  /// template literal, `first_quasi_len` is the raw byte length of its first quasi, and `prefix` is
   /// the cooked or resolved static runtime path prefix.
   pub fn rewrite(
     &mut self,
     span: Span,
     source_span: Span,
-    first_quasi: &str,
+    first_quasi_len: usize,
     prefix: &str,
     glob: &str,
   ) {
@@ -137,7 +137,7 @@ impl DynamicImportVarsVisit<'_> {
     };
     // Escape the static prefix for a template literal and keep the original expressions as source.
     let runtime_prefix = escape_string_for_template_literal(runtime_prefix.as_str().into());
-    let runtime_pattern = format!("`{runtime_prefix}{}`", &raw[first_quasi.len()..]);
+    let runtime_pattern = format!("`{runtime_prefix}{}`", &raw[first_quasi_len..]);
 
     let glob = glob.cow_replace("**", "*");
     let source_text = source_span.source_text(self.source_text);

@@ -72,11 +72,9 @@ import original from './logo.png';
 | `'./logo.png'` `{ size: '400' }`     | `/src/logo.png`    | `{ size: '400' }`  | `/src/logo.png?attributes=%7B%22size%22%3A%22400%22%7D`     |
 | `'./logo.png'` (no attributes)       | `/src/logo.png`    | `{}`               | `/src/logo.png` (unchanged)                                 |
 
-- A module imported without attributes keeps its id.
-- All attributes are included in the id, not only `type`.
-- The order of keys does not matter. `{ type: 'json', a: '1' }` and `{ a: '1', type: 'json' }` give the same id.
-- If the same file is imported with different attributes, Rolldown bundles it as separate modules. Each module runs its top-level code separately, so module-level variables are not shared between them.
-- Avoid naming a query parameter `attributes` in your own ids. If its value happens to match this format, Rolldown and `parseModuleId` read it as import attributes.
+::: warning Avoid `?attributes`
+Avoid naming a query parameter `attributes` in your own ids. If its value happens to match this format, Rolldown and `parseModuleId` read it as import attributes.
+:::
 
 ### External modules
 

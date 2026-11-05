@@ -110,6 +110,7 @@ struct RejectedMove {
 }
 
 impl GenerateStage<'_> {
+  #[expect(clippy::too_many_arguments)]
   pub(super) fn optimize_dynamic_entry_bits(
     &mut self,
     index_splitting_info: &mut IndexSplittingInfo,
@@ -118,6 +119,7 @@ impl GenerateStage<'_> {
     used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
     dynamic_entry_merge_targets: &mut FxHashSet<ChunkIdx>,
     own_side_effect_exec_orders: &IndexVec<ModuleIdx, Option<u32>>,
+    predicted_import_targets: &mut IndexVec<ModuleIdx, Vec<ModuleIdx>>,
   ) {
     let mut namespace_extractions = FxHashSet::default();
     let DynamicEntryAnalysis {
@@ -141,6 +143,7 @@ impl GenerateStage<'_> {
       &module_to_atom_idx,
       &flattened_entry_modules,
       used_symbol_refs_builder,
+      predicted_import_targets,
     );
     // Indexed by entry bit, so `ReducedChunkGraph` can pair each facade chunk with its entry
     // module's host atom.
@@ -271,6 +274,15 @@ impl GenerateStage<'_> {
       &namespace_extractions,
       used_symbol_refs_builder,
     );
+    // The extraction narrows each extracted entry's namespace statement, so only those
+    // predictions can lose a target; the replayed inclusion only adds to the others, which keeps
+    // them a safe under-approximation for the merge's exemption.
+    if !predicted_import_targets.is_empty() {
+      for &(_, entry_module_idx) in &namespace_extractions {
+        predicted_import_targets[entry_module_idx] =
+          self.predicted_static_import_targets(entry_module_idx);
+      }
+    }
   }
 
   /// Retries the rejected moves after the first pass. A rejected move can close a cycle only
@@ -759,6 +771,7 @@ impl GenerateStage<'_> {
     module_to_atom_idx: &IndexVec<ModuleIdx, Option<usize>>,
     flattened_entry_modules: &[ModuleIdx],
     used_symbol_refs_builder: &UsedSymbolRefsBuilder,
+    predicted_import_targets: &IndexVec<ModuleIdx, Vec<ModuleIdx>>,
   ) -> AtomDependencyGraphs {
     let strict_execution_order = self.options.is_strict_execution_order_enabled();
 
@@ -783,7 +796,7 @@ impl GenerateStage<'_> {
           }
           continue;
         }
-        for dep_module_idx in self.predicted_static_import_targets(module_idx) {
+        for &dep_module_idx in &predicted_import_targets[module_idx] {
           add(dep_module_idx, &mut reachability_deps);
           add(dep_module_idx, &mut cycle_deps);
         }
@@ -820,6 +833,23 @@ impl GenerateStage<'_> {
       cycle.push(cycle_deps.into_iter().collect());
     }
     AtomDependencyGraphs { reachability, cycle }
+  }
+
+  /// `predicted_static_import_targets` of every included module, read by both the fold and the
+  /// common-chunk merge.
+  pub(super) fn predicted_static_import_targets_by_module(
+    &self,
+  ) -> IndexVec<ModuleIdx, Vec<ModuleIdx>> {
+    self
+      .link_output
+      .metas
+      .iter_enumerated()
+      .map(
+        |(module_idx, meta)| {
+          if meta.is_included { self.predicted_static_import_targets(module_idx) } else { vec![] }
+        },
+      )
+      .collect()
   }
 
   /// Returns the targets that `compute_cross_chunk_links` will import for this module. Transitive

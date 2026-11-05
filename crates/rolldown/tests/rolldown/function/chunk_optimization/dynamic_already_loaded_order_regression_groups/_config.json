@@ -1,0 +1,11 @@
+{
+  "_comment": "`dynamic_already_loaded_order_regression` with a group that matches no module. With groups set, a fold that a cycle vetoed is not retried, so the merge of a common chunk into the entry must keep the side effects in order on its own.",
+  "snapshot": false,
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "preserveEntrySignatures": "allow-extension",
+    "codeSplitting": {
+      "groups": [{ "name": "unused", "test": "no-module-matches-this" }]
+    }
+  }
+}

@@ -80,7 +80,7 @@ Avoid naming a query parameter `attributes` in your own ids. If its value happen
 
 In ESM output, imports of [external modules](/in-depth/external-modules) keep their attributes, including dynamic `import()`. This works with or without `experimental.importAttributes`. Without the option, an external imported with attributes still has them in its [module id](#module-ids), for example in `this.getModuleIds()`.
 
-With the option on, a `resolveId` hook can change the attributes. If the [`external`](/reference/InputOptions.external) option marks an import as external before resolution, `resolveId` hooks do not run, so the import keeps the attributes written in the source.
+With the option on, a `resolveId` hook can change the attributes in the output. If the [`external`](/reference/InputOptions.external) option marks an import as external before resolution, `resolveId` hooks do not run, so the import keeps the attributes written in the source.
 
 For `cjs`, `iife` and `umd` output, see [Non ESM Output Formats](/in-depth/non-esm-output-formats#import-attributes).
 

@@ -290,14 +290,14 @@ The JS functions of the bundler options live only while their owner is open. The
 
 - The group keeps weak references to the slots. So it does not keep a callback alive after its options are gone.
 - A call that starts before the release keeps its own clone and ends normally. `onLog` still queues its call before it returns (rolldown/rolldown#11374).
-- A call after the release gives an error with the message "A JS function of the bundler options was called after the bundle closed." `watch.onInvalidate` does nothing instead. Example: a plugin keeps `this` and calls `this.resolve()` after close, and the options have an `external` function. Then `this.resolve()` rejects, and the error is in its `cause`.
+- A call after the release gives an error with the message "A JS function of the bundler options was called after the bundle closed." `watch.onInvalidate` does nothing instead. Example: a plugin keeps `this` and calls `this.resolve()` after a dev engine close, and the options have an `external` function. Then `this.resolve()` rejects, and the error is in its `cause`. After `bundle.close()`, the same call fails before it gets to the option function, because that close drops the plugin driver.
 - Option getters still work after close. The native options stay readable. Only their JS functions go.
 
 ### Limits
 
 - An event result close that starts after the release of its watcher runs `closeBundle` with released functions. This happens only for an old result: the watcher close already ran `closeBundle` for the last build.
 - Some close calls return before other work ends: `bundle.close()` during a build that started before it, `watcher.close()` during an event result close, and a repeated dev engine `close()`. The release does not make them wait. A wait would deadlock when a `closeBundle` hook awaits that close. Only the release waits for the hook.
-- Plugin hooks are not in the group. They live in `PluginDriver`, and the plugin context holds the driver only as `Weak`. But `ClassicBundler.last_bundle_handle` keeps the driver until the build object goes. So a plugin that keeps the build object still makes a cycle. The same is true for a plugin that keeps the dev engine object: the JS dev engine holds the native engine, and the native engine holds the plugin driver.
+- Plugin hooks are not in the group. They live in `PluginDriver`, and the plugin context holds the driver only as `Weak`. `ClassicBundler::close()` takes `last_bundle_handle`, so a plugin that keeps the build object does not keep the driver after close. But a plugin that keeps the dev engine object makes a cycle: the JS dev engine holds the native engine, and the native engine holds the plugin driver.
 - A build that the user never closes keeps its callbacks until its build object goes.
 - The compiler checks only the fields that use `UntrackedJsCallback`. A new function option must use it too. Nothing checks a new field that uses `JsCallback` directly.
 - The watcher event listener is not an option callback, so the release does not cover it.
@@ -305,9 +305,9 @@ The JS functions of the bundler options live only while their owner is open. The
 ### Tests
 
 - `packages/rolldown/tests/build-api/close-bundle-gc.mjs`, run by `close-callbacks.test.ts`: GC cases for each kind of owner and callback.
-- `packages/rolldown/tests/build-api/close-callbacks.test.ts`: a build that runs during `bundle.close()`, option getters after close, and the error after the release.
+- `packages/rolldown/tests/build-api/close-callbacks.test.ts`: a build that runs during `bundle.close()`, and option getters after close.
 - `packages/rolldown/tests/bundler-timings-options.test.ts`: the release order. The close calls `pluginTimings` and the native `onLog` before the release.
-- `packages/rolldown/tests/dev/dev-close.test.ts`: a `closeBundle` hook that awaits `engine.close()`, and a second dev engine close while `closeBundle` runs.
+- `packages/rolldown/tests/dev/dev-close.test.ts`: a `closeBundle` hook that awaits `engine.close()`, a second dev engine close while `closeBundle` runs, and the error after the release.
 - `packages/rolldown/tests/watch/watch.test.ts`: a rebuild after an event result close, and a watcher close while an event result close runs `closeBundle`.
 
 ## Unresolved Questions

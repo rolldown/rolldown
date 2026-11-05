@@ -1,13 +1,7 @@
 import { execa } from 'execa';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  rolldown,
-  type NormalizedInputOptions,
-  type NormalizedOutputOptions,
-  type PluginContext,
-} from 'rolldown';
-import { isWasiTest } from 'rolldown-tests/utils';
+import { rolldown, type NormalizedInputOptions, type NormalizedOutputOptions } from 'rolldown';
 import { expect, test } from 'vitest';
 
 // The close of a build releases the JS functions of its options.
@@ -16,8 +10,8 @@ import { expect, test } from 'vitest';
 const input = path.join(import.meta.dirname, 'main.js');
 
 // https://github.com/rolldown/rolldown/issues/11444
-// The script runs 16 builds, so it gets more time than the default 20 s. The execa limit is lower,
-// so a hung script fails with its own output.
+// The script runs one build for each case, so it gets more time than the default 20 s. The execa
+// limit is lower, so a hung script fails with its own output.
 test('a closed build does not keep its plugins alive', { timeout: 60_000 }, async () => {
   await execa(
     process.execPath,
@@ -25,10 +19,6 @@ test('a closed build does not keep its plugins alive', { timeout: 60_000 }, asyn
     { timeout: 50_000 },
   );
 });
-
-// `ClassicBundler::close()` keeps `last_bundle_handle`, so a plugin that keeps the build object
-// still keeps the plugin driver and its hooks.
-test.todo('a plugin that keeps its build object can be collected after close');
 
 test('option getters read for the first time after close', async () => {
   let inputOptions: NormalizedInputOptions | undefined;
@@ -57,40 +47,6 @@ test('option getters read for the first time after close', async () => {
   expect(outputOptions!.format).toBe('cjs');
   expect(outputOptions!.entryFileNames).toBe(entryFileNames);
 });
-
-// With the WASI binding, the close releases the shared async runtime. Then each native call that
-// spawns a task traps ("Access tokio runtime failed in spawn"), with or without an option function.
-test.skipIf(isWasiTest)(
-  'a kept plugin context gets a clear error when an option function runs after close',
-  async () => {
-    let context: PluginContext | undefined;
-    const keepContext = (value: PluginContext) => {
-      context = value;
-    };
-    const bundle = await rolldown({
-      input,
-      external: (id) => id === 'ext',
-      plugins: [
-        {
-          name: 'keep-context',
-          buildStart() {
-            keepContext(this);
-          },
-        },
-      ],
-    });
-    await bundle.generate({});
-    await expect(context!.resolve('ext')).resolves.toMatchObject({ id: 'ext', external: true });
-    await bundle.close();
-
-    const error = await context!.resolve('ext').catch((error: unknown) => error);
-    expect(error).toBeInstanceOf(Error);
-    expect((error as Error).message).toBe('Errored while resolving "ext" in `this.resolve`.');
-    expect(((error as Error).cause as Error).message).toContain(
-      'external option: A JS function of the bundler options was called after the bundle closed.',
-    );
-  },
-);
 
 test('closeBundle can still log through onLog', async () => {
   const logs: string[] = [];

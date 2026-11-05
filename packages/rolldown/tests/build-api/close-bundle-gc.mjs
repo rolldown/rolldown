@@ -1,8 +1,9 @@
 // Each case builds with a plugin whose `closeBundle` captures a marker, closes the build, and
 // drops every reference to it. After GC, no marker may stay alive. Each case except the control
 // makes JS hold a native object that keeps the options alive (cached or kept options, a kept
-// plugin context). Before the fix, the JS functions of the options were GC roots, so that native
-// object made a cycle that the GC could not free (https://github.com/rolldown/rolldown/issues/11444).
+// plugin context, a kept build object). Before the fix, the JS functions of the options were GC
+// roots, so that native object made a cycle that the GC could not free
+// (https://github.com/rolldown/rolldown/issues/11444).
 // See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -77,6 +78,16 @@ const cases = {
       plugin.context = this;
     };
     await classic({ plugins: [plugin] });
+  },
+  async 'plugin keeps its build object'(marker) {
+    const plugin = markerPlugin(marker);
+    const bundle = await rolldown({ input, logLevel: 'silent', plugins: [plugin] });
+    plugin.build = bundle;
+    try {
+      await bundle.generate({ format: 'es' });
+    } finally {
+      await bundle.close();
+    }
   },
   async 'external function captures the plugin'(marker) {
     const plugin = keepOptions('buildStart', marker);

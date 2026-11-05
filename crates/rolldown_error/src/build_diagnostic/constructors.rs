@@ -563,4 +563,22 @@ impl BuildDiagnostic {
       reexport_count,
     })
   }
+
+  pub fn lazy_barrel_unloaded_binding(
+    importer: String,
+    stable_importer: String,
+    importer_source: ArcStr,
+    module_request: String,
+    imported_specifier: String,
+    imported_specifier_span: Span,
+  ) -> Self {
+    Self::new_inner(super::events::lazy_barrel_unloaded_binding::LazyBarrelUnloadedBinding {
+      importer,
+      stable_importer,
+      importer_source,
+      module_request,
+      imported_specifier,
+      imported_specifier_span,
+    })
+  }
 }

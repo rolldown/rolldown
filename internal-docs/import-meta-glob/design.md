@@ -64,9 +64,17 @@ must implement `hotUpdate`. See [rolldown#10059](https://github.com/rolldown/rol
 
 4. **A missing walk root is watched through its topmost missing directory.** The walk finds nothing
    in a directory that does not exist. Without a watch, `import.meta.glob('./pages/*.vue')` would
-   stay empty after `pages/` is created, which is a normal scaffolding flow. The watcher can wait
-   for a missing path, but only if its parent exists. For `./a/b/*.js` with `a/` missing, the
-   watched path is `a/`.
+   stay empty after `pages/` is created, which is a normal scaffolding flow.
+
+   Waiting for a missing path is the watcher's job, not the plugin's. notify's `TrackPath` waits
+   for it through its parent, and the parent must exist
+   ([rolldown/notify#32](https://github.com/rolldown/notify/issues/32)). So for `./a/b/*.js` with
+   `a/` missing, the plugin registers `a/`. Until `a/` appears, the watcher waits on `.` and does
+   not watch what is below `.`. Then it watches `a/` with everything below it.
+
+   The plugin does not register `.` itself. A registered directory is watched with everything below
+   it, and [the watch set only grows](#unresolved-questions). So `.` would stay watched as a whole
+   after `a/` is created.
 
 5. **Only dev mode pays for any of this.** `hotUpdate` is a dev-only hook. Outside dev mode the
    matchers and the watched directory would be pure overhead, and the directory would show up in

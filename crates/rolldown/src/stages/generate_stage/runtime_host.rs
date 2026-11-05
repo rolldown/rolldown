@@ -262,13 +262,20 @@ impl GenerateStage<'_> {
       Some(PreserveEntrySignatures::ExportsOnly) | None => has_exports,
     };
     let cjs = matches!(self.options.format, OutputFormat::Cjs);
-    // In CJS output, the helper exports change `module.exports` of an entry that exports only a
-    // default from that value into an object.
-    let default_only = cjs
-      && !matches!(self.options.exports, OutputExports::Named)
-      && !entry_meta.has_dynamic_exports
-      && entry_meta.resolved_exports.len() == 1
-      && entry_meta.resolved_exports.contains_key("default");
+    // `output.exports` fixes the export names of each entry chunk, in each format: `none` allows no
+    // export, and `default` allows only `default`. In CJS output, `auto` gives the `default` mode to
+    // an entry that exports only a default. Then the helper exports change its `module.exports`
+    // from that value into an object.
+    let mode_rejects_helpers = match self.options.exports {
+      OutputExports::None | OutputExports::Default => true,
+      OutputExports::Auto => {
+        cjs
+          && !entry_meta.has_dynamic_exports
+          && entry_meta.resolved_exports.len() == 1
+          && entry_meta.resolved_exports.contains_key("default")
+      }
+      OutputExports::Named => false,
+    };
     // In CJS output, `require()` of the host returns `module.exports`, and the helper exports go on
     // `exports`. A CommonJS entry controls both objects. Without a wrapper, its code runs at the top
     // level of the chunk and can replace either object, for example with `module.exports = {}`,
@@ -280,7 +287,7 @@ impl GenerateStage<'_> {
         .is_some_and(|module| module.exports_kind.is_commonjs())
       && !(matches!(entry_meta.wrap_kind(), WrapKind::Cjs)
         && matches!(self.options.exports, OutputExports::Named));
-    !fixed_signature && !default_only && !detaches_exports
+    !fixed_signature && !mode_rejects_helpers && !detaches_exports
   }
 
   /// Moves the runtime module to the front of the host. The chunk order does not change: the host

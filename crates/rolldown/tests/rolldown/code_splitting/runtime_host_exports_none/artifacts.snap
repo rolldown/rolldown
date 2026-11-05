@@ -1,0 +1,35 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lazy.js
+
+```js
+// lazy.js
+const value = Object.keys(/* @__PURE__ */ require("./rolldown-runtime.js").__exportAll({ b: () => 2 })).join();
+exports.value = value;
+
+```
+
+## main.js
+
+```js
+// main.js
+globalThis.main = Object.keys(/* @__PURE__ */ require("./rolldown-runtime.js").__exportAll({ a: () => 1 })).join();
+globalThis.lazy = Promise.resolve().then(() => require("./lazy.js")).then((m) => m.value);
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__exportAll", {
+	enumerable: true,
+	get: function() {
+		return __exportAll;
+	}
+});
+
+```

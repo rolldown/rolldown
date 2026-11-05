@@ -7,5 +7,5 @@
     "format": "cjs",
     "exports": "default"
   },
-  "_comment": "Tests Entry + Cjs WrapKind + Default OutputExports + default export access. lib.js must not host the runtime: lib.js sets module.exports to the result of require_lib()."
+  "_comment": "Tests Entry + Cjs WrapKind + Default OutputExports + default export access. lib.js must not host the runtime: the default mode allows no helper export, and lib.js sets module.exports to the result of require_lib()."
 }

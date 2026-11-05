@@ -58,9 +58,18 @@ impl WatchTask {
       .build()?;
 
     let options = Arc::clone(bundler.options());
+    let watcher = options.watch.watcher.clone().unwrap_or_default();
     let fs_watcher = FsWatcher::new(
       fs_handler,
       &FsWatcherConfig {
+        use_polling: watcher.use_polling.unwrap_or(fs_watcher_config.use_polling),
+        poll_interval: watcher.poll_interval.unwrap_or(fs_watcher_config.poll_interval),
+        compare_contents_for_polling: watcher
+          .compare_contents_for_polling
+          .unwrap_or(fs_watcher_config.compare_contents_for_polling),
+        use_debounce: watcher.use_debounce.unwrap_or(fs_watcher_config.use_debounce),
+        debounce_delay: watcher.debounce_delay.unwrap_or(fs_watcher_config.debounce_delay),
+        debounce_tick_rate: watcher.debounce_tick_rate.or(fs_watcher_config.debounce_tick_rate),
         ignored: options.watch.exclude.clone(),
         cwd: options.cwd.clone(),
         ..fs_watcher_config.clone()

@@ -331,9 +331,8 @@ Configured via `WatcherOptions`, fires **immediately** on file change (before de
 
 Each `WatchTask` builds its watcher with `FsWatcher::new(handler, &config)`.
 `FsWatcher` is a concrete type; the notify implementations stay crate-private.
-`WatcherConfig::to_fs_watcher_config()` maps watch options onto `FsWatcherConfig`,
-`WatchTask::new` adds the task's `ignored` and `cwd`, and construction picks the
-backend:
+`WatchTask::new` maps the task's own `watch.watcher`, `exclude` and `cwd` onto
+`FsWatcherConfig`, and construction picks the backend:
 
 | `use_polling` | `use_debounce` | Backend                               |
 | ------------- | -------------- | ------------------------------------- |
@@ -457,14 +456,11 @@ close() → inner.close()         // sends Close msg, awaits shared future
 
 ### Binding as Thin Wrapper
 
-`BindingWatcher` is intentionally a thin wrapper — it holds a `rolldown_watcher::Watcher` and delegates directly. No state machine, no locking. All lifecycle management lives in the Rust core. The constructor takes both `options` and `listener`, creates the `NapiWatcherEventHandler`, and passes it to `Watcher::new()`. Each NAPI method (`run`, `waitForClose`, `close`) is a direct delegation to the inner watcher. Its only logic beyond type conversion is the multi-config fold below.
+`BindingWatcher` is intentionally a thin wrapper — it holds a `rolldown_watcher::Watcher` and delegates directly. No state machine, no locking. All lifecycle management lives in the Rust core. The constructor takes both `options` and `listener`, creates the `NapiWatcherEventHandler`, and passes it to `Watcher::new()`. Each NAPI method (`run`, `waitForClose`, `close`) is a direct delegation to the inner watcher. Its only logic beyond type conversion is the `buildDelay` fold below.
 
 ### Multi-Config Watcher Options
 
-`Watcher::new()` takes one `WatcherConfig` for all tasks, so `BindingWatcher::new()` (`crates/rolldown_binding/src/watcher.rs`) folds the configs into it:
-
-- **`buildDelay`:** the maximum across configs, like Rollup. The rebuild is shared, so the longest delay must be served.
-- **`watch.watcher` fields:** they cannot be merged, so they all come from the first config that sets any of them. An explicit `false` counts as set. `warnMultipleWatcherOptions()` in `packages/rolldown/src/api/watch/watcher.ts` warns when a later config also sets one. It counts per config, not per output.
+Each output of each config becomes its own `WatchTask` with its own `FsWatcher`, so each task uses its own `watch.watcher` options, like Rollup's per-task chokidar options. Only the coordinator's debounce window is shared. `BindingWatcher::new()` (`crates/rolldown_binding/src/watcher.rs`) sets it to the largest `buildDelay` across configs, like Rollup.
 
 ### Event Emitter
 

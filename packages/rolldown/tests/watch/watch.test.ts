@@ -1080,128 +1080,41 @@ test.concurrent(
 );
 
 test.concurrent(
-  'warning for multiply notify options',
-  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
-  async ({ task, expect, onTestFinished }) => {
-    const retryCount = task.result?.retryCount ?? 0;
-    const { input, output, dir } = createTestInputAndOutput(
-      'watch-multiply-options-warning',
-      retryCount,
-    );
-    const { input: foo, dir: fooDir } = createTestInputAndOutput(
-      'watch-multiply-options-warning-foo',
-      retryCount,
-    );
-    onTestFinished(() => {
-      if (!process.env.CI) {
-        fs.rmSync(dir, { recursive: true, force: true });
-        fs.rmSync(fooDir, { recursive: true, force: true });
-      }
-    });
-    const onLogFn = vi.fn();
-    const watcher = watch([
-      {
-        input,
-        output: { file: output },
-        watch: {
-          watcher: {
-            usePolling: true,
-            pollInterval: 50,
-          },
-        },
-      },
-      {
-        input: foo,
-        output: { file: output },
-        watch: {
-          watcher: {
-            usePolling: true,
-            pollInterval: 100,
-          },
-        },
-        plugins: [
-          {
-            name: 'test',
-            onLog: (level, log) => {
-              onLogFn();
-              expect(level).toBe('warn');
-              expect(log.code).toBe('MULTIPLE_WATCHER_OPTION');
-            },
-          },
-        ],
-      },
-    ]);
-    onTestFinished(async () => await watcher.close());
-
-    await expect.poll(() => onLogFn).toBeCalled();
-  },
-);
-
-test.concurrent(
-  'warning when a debouncer-only config is followed by a polling config',
-  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
-  async ({ task, expect, onTestFinished }) => {
-    const retryCount = task.result?.retryCount ?? 0;
-    const { input, output, dir } = createTestInputAndOutput(
-      'watch-debounce-then-polling-warning',
-      retryCount,
-    );
-    const {
-      input: foo,
-      output: fooOutput,
-      dir: fooDir,
-    } = createTestInputAndOutput('watch-debounce-then-polling-warning-foo', retryCount);
-    onTestFinished(() => {
-      if (!process.env.CI) {
-        fs.rmSync(dir, { recursive: true, force: true });
-        fs.rmSync(fooDir, { recursive: true, force: true });
-      }
-    });
-    const logs: [string, string | undefined][] = [];
-    // `_watch`: the wrapper would add `usePolling` to the first config too.
-    const watcher = _watch([
-      {
-        input,
-        output: { file: output },
-        watch: { watcher: { useDebounce: true, debounceDelay: 10 } },
-      },
-      {
-        input: foo,
-        output: { file: fooOutput },
-        watch: { watcher: { usePolling: true } },
-        plugins: [{ name: 'test', onLog: (level, log) => void logs.push([level, log.code]) }],
-      },
-    ]);
-    onTestFinished(async () => await watcher.close());
-
-    await expect.poll(() => logs).toContainEqual(['warn', 'MULTIPLE_WATCHER_OPTION']);
-  },
-);
-
-test.concurrent(
-  'no watcher-option warning for one config with several outputs',
+  'each config uses its own watcher options',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
   async ({ task, expect, onTestFinished }) => {
     const retryCount = task.result?.retryCount ?? 0;
     const { input, output, outputDir, dir } = createTestInputAndOutput(
-      'watch-multi-output-no-warning',
+      'watch-own-watcher-options',
       retryCount,
     );
+    const fastOutputDir = path.join(dir, 'dist-fast');
+    const fastOutput = path.join(fastOutputDir, 'main.js');
     onTestFinished(() => {
       if (!process.env.CI) {
         fs.rmSync(dir, { recursive: true, force: true });
       }
     });
-    const logs: [string, string | undefined][] = [];
-    const watcher = watch({
-      input,
-      output: [{ file: output }, { file: path.join(outputDir, 'second.js') }],
-      plugins: [{ name: 'test', onLog: (level, log) => void logs.push([level, log.code]) }],
-    });
+    // Both configs watch `input`. The first polls every 10 minutes, the second every 50ms.
+    const watcher = watch([
+      {
+        input,
+        output: { dir: outputDir },
+        watch: { watcher: { pollInterval: 600_000 } },
+      },
+      {
+        input,
+        output: { dir: fastOutputDir },
+      },
+    ]);
     onTestFinished(async () => await watcher.close());
 
-    await waitBuildFinished(watcher);
-    expect(logs).not.toContainEqual(['warn', 'MULTIPLE_WATCHER_OPTION']);
+    await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(1)');
+    await expect.poll(() => fs.readFileSync(fastOutput, 'utf-8')).toContain('console.log(1)');
+    await editFile(input, 'console.log(2)');
+    await expect.poll(() => fs.readFileSync(fastOutput, 'utf-8')).toContain('console.log(2)');
+    await sleep(500);
+    expect(fs.readFileSync(output, 'utf-8')).toContain('console.log(1)');
   },
 );
 

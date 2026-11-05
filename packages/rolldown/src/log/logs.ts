@@ -6,7 +6,6 @@ const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
   PLUGIN_ERROR = 'PLUGIN_ERROR',
   INPUT_HOOK_IN_OUTPUT_PLUGIN = 'INPUT_HOOK_IN_OUTPUT_PLUGIN',
   CYCLE_LOADING = 'CYCLE_LOADING',
-  MULTIPLE_WATCHER_OPTION = 'MULTIPLE_WATCHER_OPTION',
   MISSING_CODE_SPLITTING_GROUP_DEBUG_NAME = 'MISSING_CODE_SPLITTING_GROUP_DEBUG_NAME',
   PARSE_ERROR = 'PARSE_ERROR',
   NO_FS_IN_BROWSER = 'NO_FS_IN_BROWSER',
@@ -46,13 +45,6 @@ export function logCycleLoading(pluginName: string, moduleId: string): RolldownL
   return {
     code: CYCLE_LOADING,
     message: `Found the module "${moduleId}" cycle loading at ${pluginName} plugin, it maybe blocking fetching modules.`,
-  };
-}
-
-export function logMultipleWatcherOption(): RolldownLog {
-  return {
-    code: MULTIPLE_WATCHER_OPTION,
-    message: `Found multiple watcher options at watch options, using first one to start watcher.`,
   };
 }
 

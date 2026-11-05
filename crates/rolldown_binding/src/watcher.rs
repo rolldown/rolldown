@@ -75,29 +75,12 @@ impl BindingWatcher {
       .collect::<Result<Vec<_>, _>>()?;
 
     // See internal-docs/watch-mode/implementation.md ("Multi-Config Watcher Options").
-    let watches = configs.iter().filter_map(|config| config.options.watch.as_ref());
-    let debounce = watches.clone().filter_map(|watch| watch.build_delay).max();
-    let watcher = watches
-      .filter_map(|watch| watch.watcher.as_ref())
-      .find(|w| {
-        w.use_polling.is_some()
-          || w.poll_interval.is_some()
-          || w.compare_contents_for_polling.is_some()
-          || w.use_debounce.is_some()
-          || w.debounce_delay.is_some()
-          || w.debounce_tick_rate.is_some()
-      })
-      .cloned()
-      .unwrap_or_default();
-    let watcher_config = WatcherConfig {
-      debounce: debounce.map(|ms| Duration::from_millis(u64::from(ms))),
-      use_polling: watcher.use_polling.unwrap_or_default(),
-      poll_interval: watcher.poll_interval,
-      compare_contents_for_polling: watcher.compare_contents_for_polling.unwrap_or_default(),
-      use_debounce: watcher.use_debounce.unwrap_or_default(),
-      debounce_delay: watcher.debounce_delay,
-      debounce_tick_rate: watcher.debounce_tick_rate,
-    };
+    let debounce = configs
+      .iter()
+      .filter_map(|config| config.options.watch.as_ref()?.build_delay)
+      .max()
+      .map(|ms| Duration::from_millis(u64::from(ms)));
+    let watcher_config = WatcherConfig { debounce };
 
     let handler = NapiWatcherEventHandler { listener: Arc::new(listener) };
     let inner =

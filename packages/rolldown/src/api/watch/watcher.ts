@@ -4,15 +4,10 @@ import {
   shutdownAsyncRuntime,
   startAsyncRuntime,
 } from '../../binding.cjs';
-import { LOG_LEVEL_WARN } from '../../log/logging';
-import { logMultipleWatcherOption } from '../../log/logs';
 import { aggregateBindingErrorsIntoJsError } from '../../utils/error';
 import type { WatchOptions } from '../../options/watch-options';
 import { PluginDriver } from '../../plugin/plugin-driver';
-import {
-  type BundlerOptionWithStopWorker,
-  createBundlerOptions,
-} from '../../utils/create-bundler-option';
+import { createBundlerOptions } from '../../utils/create-bundler-option';
 import { arraify } from '../../utils/misc';
 import type { WatcherEmitter } from './watch-emitter';
 
@@ -113,18 +108,16 @@ export async function createWatcher(
   input: WatchOptions | WatchOptions[],
 ): Promise<void> {
   const options = arraify(input);
-  const bundlerOptionsByConfig = await Promise.all(
-    options.map((option) =>
-      Promise.all(
+  const bundlerOptions = await Promise.all(
+    options
+      .map((option) =>
         arraify(option.output || {}).map(async (output) => {
           const inputOptions = await PluginDriver.callOptionsHook(option, true);
           return createBundlerOptions(inputOptions, output, true);
         }),
-      ),
-    ),
+      )
+      .flat(),
   );
-  warnMultipleWatcherOptions(bundlerOptionsByConfig);
-  const bundlerOptions = bundlerOptionsByConfig.flat();
   const callback = createEventCallback(emitter);
   const bindingWatcher = new BindingWatcher(
     bundlerOptions.map((option) => option.bundlerOptions),
@@ -135,24 +128,4 @@ export async function createWatcher(
     bindingWatcher,
     bundlerOptions.map((option) => option.stopWorkers),
   );
-}
-
-function setsWatcherOptions(option: BundlerOptionWithStopWorker): boolean {
-  const watch = option.inputOptions.watch;
-  const watcher = watch && typeof watch === 'object' ? watch.watcher : undefined;
-  return watcher != null && Object.values(watcher).some((value) => value != null);
-}
-
-function warnMultipleWatcherOptions(bundlerOptionsByConfig: BundlerOptionWithStopWorker[][]) {
-  let found = false;
-  for (const configOptions of bundlerOptionsByConfig) {
-    const option = configOptions.find(setsWatcherOptions);
-    if (option) {
-      if (found) {
-        option.onLog(LOG_LEVEL_WARN, logMultipleWatcherOption());
-        return;
-      }
-      found = true;
-    }
-  }
 }

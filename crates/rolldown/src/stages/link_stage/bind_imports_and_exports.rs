@@ -466,19 +466,13 @@ impl LinkStage<'_> {
         continue;
       };
       let named_import = &module.named_imports[&imported_as];
-      let module_request =
-        module.import_records[named_import.record_idx].module_request.to_string();
-      self.diagnostics.push(BuildDiagnostic::missing_export(
+      self.diagnostics.push(BuildDiagnostic::lazy_barrel_unloaded_binding(
         module.id.to_string(),
         module.stable_id.to_string(),
-        module_request.clone(),
-        module_request,
         module.source.clone(),
+        module.import_records[named_import.record_idx].module_request.to_string(),
         named_import.imported.to_string(),
         named_import.span_imported,
-        Some(
-          "This import is used, but `experimental.lazyBarrel` did not load a module needed to resolve it. This is a Rolldown bug, set `experimental.lazyBarrel: false` to work around it.".to_string(),
-        ),
       ));
     }
   }

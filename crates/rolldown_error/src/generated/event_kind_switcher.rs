@@ -61,5 +61,6 @@ bitflags! {
     const ShimmedExport = 1 << 51;
     const DeprecatedImportAssertion = 1 << 54;
     const InvalidImportAttribute = 1 << 55;
+    const LazyBarrelUnloadedBindingError = 1 << 56;
   }
 }

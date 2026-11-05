@@ -43,7 +43,7 @@ import base from './${baseConfigFile.replace(/\.[cm]?[jt]s$/, '')}';
 function assertReportMode() {
   const here = createRequire(import.meta.url);
   let from = here;
-  try { from = createRequire(path.dirname(fs.realpathSync(here.resolve('vite/package.json')))); } catch {}
+  try { from = createRequire(fs.realpathSync(here.resolve('vite/package.json'))); } catch {}
   const pkg = JSON.parse(fs.readFileSync(from.resolve('rolldown/package.json'), 'utf8'));
   const dist = path.join(path.dirname(fs.realpathSync(from.resolve('rolldown/package.json'))), 'dist');
   const stack = [dist];

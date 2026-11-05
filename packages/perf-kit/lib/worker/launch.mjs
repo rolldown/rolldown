@@ -17,6 +17,7 @@
 
 import { createRequire } from 'node:module';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 
@@ -278,6 +279,18 @@ export function createStderrCollector() {
   };
 }
 
+// An empty dev registry for this process. Bindings to Workers outside the instance
+// (auxiliary Workers, other scripts) then go to Miniflare's registry proxy and fail when
+// called, not at startup. A private folder keeps the lab away from running dev sessions.
+let registryDir = null;
+function labRegistryDir() {
+  if (!registryDir) {
+    registryDir = fs.mkdtempSync(path.join(os.tmpdir(), 'perf-kit-registry-'));
+    process.once('exit', () => fs.rmSync(registryDir, { recursive: true, force: true }));
+  }
+  return registryDir;
+}
+
 /**
  * One miniflare instance. `ctx` is the resolved worker context (tools, workerOptions,
  * outDir, mainName, modules). Options: `target` (module the wrapper imports), `coverage`
@@ -307,6 +320,7 @@ export async function createInstance(
     modulesRoot: ctx.outDir,
     handleRuntimeStdio: ctx.stderr.handleRuntimeStdio,
     log: new Log(LogLevel.WARN),
+    unsafeDevRegistryPath: labRegistryDir(),
     ...shared,
   };
   if (plain) {
@@ -356,7 +370,11 @@ export function supportsV8Flags(tools) {
 }
 
 export async function fetchText(mf, p, { timeoutMs = 120_000 } = {}) {
-  const res = await mf.dispatchFetch(`http://lab${p}`, { signal: AbortSignal.timeout(timeoutMs) });
+  // A redirect is the answer: following it would leave the local instance.
+  const res = await mf.dispatchFetch(`http://lab${p}`, {
+    redirect: 'manual',
+    signal: AbortSignal.timeout(timeoutMs),
+  });
   return { status: res.status, text: await res.text() };
 }
 

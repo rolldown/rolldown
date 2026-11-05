@@ -1,0 +1,9 @@
+{
+  "config": {
+    "input": [
+      { "name": "h", "import": "h.js" },
+      { "name": "x", "import": "x.js" }
+    ],
+    "external": ["ext-async"]
+  }
+}

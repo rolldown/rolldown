@@ -218,6 +218,11 @@ const redirects: {
     name: 'output.paths',
     options: (shim) => ({ output: { paths: { 'node:module': shim } } }),
   },
+  {
+    // A `paths` function runs only after the placement, so the placement cannot read its result.
+    name: 'output.paths function',
+    options: (shim) => ({ output: { paths: (id) => (id === 'node:module' ? shim : id) } }),
+  },
 ];
 
 test.each(redirects)('a redirected node:module import starts first: $name', async (redirect) => {

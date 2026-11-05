@@ -205,7 +205,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
             .call(
               rolldown_common::LogLevel::Info,
               rolldown_common::Log {
-                message: event.to_color_string(),
+                message: event.to_stderr_string(),
                 id: Some(id.to_string()),
                 code: Some(event.kind()),
                 ..Default::default()

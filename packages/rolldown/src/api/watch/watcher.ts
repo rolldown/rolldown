@@ -113,7 +113,6 @@ export async function createWatcher(
   input: WatchOptions | WatchOptions[],
 ): Promise<void> {
   const options = arraify(input);
-  // One group per config: the outputs of one config share its watch options.
   const bundlerOptionsByConfig = await Promise.all(
     options.map((option) =>
       Promise.all(
@@ -124,19 +123,8 @@ export async function createWatcher(
       ),
     ),
   );
+  warnMultipleWatcherOptions(bundlerOptionsByConfig);
   const bundlerOptions = bundlerOptionsByConfig.flat();
-  // The `options` hook runs per output and may return different watcher settings,
-  // so collapse by value: identical settings count once per config, divergent ones still warn.
-  warnMultipleWatcherOptions(
-    bundlerOptionsByConfig.flatMap((group) => {
-      const seen = new Map<string, BundlerOptionWithStopWorker>();
-      for (const option of group) {
-        const key = watcherOptionsKey(option);
-        if (!seen.has(key)) seen.set(key, option);
-      }
-      return [...seen.values()];
-    }),
-  );
   const callback = createEventCallback(emitter);
   const bindingWatcher = new BindingWatcher(
     bundlerOptions.map((option) => option.bundlerOptions),
@@ -149,37 +137,17 @@ export async function createWatcher(
   );
 }
 
-function getWatcherOptions(option: BundlerOptionWithStopWorker) {
+function setsWatcherOptions(option: BundlerOptionWithStopWorker): boolean {
   const watch = option.inputOptions.watch;
-  return watch && typeof watch === 'object' ? watch.watcher : undefined;
+  const watcher = watch && typeof watch === 'object' ? watch.watcher : undefined;
+  return watcher != null && Object.values(watcher).some((value) => value != null);
 }
 
-function watcherOptionsKey(option: BundlerOptionWithStopWorker): string {
-  const watcher = getWatcherOptions(option);
-  return JSON.stringify([
-    watcher?.usePolling,
-    watcher?.pollInterval,
-    watcher?.compareContentsForPolling,
-    watcher?.useDebounce,
-    watcher?.debounceDelay,
-    watcher?.debounceTickRate,
-  ]);
-}
-
-function warnMultipleWatcherOptions(bundlerOptions: BundlerOptionWithStopWorker[]) {
+function warnMultipleWatcherOptions(bundlerOptionsByConfig: BundlerOptionWithStopWorker[][]) {
   let found = false;
-  for (const option of bundlerOptions) {
-    const watcher = getWatcherOptions(option);
-    // Mirrors sets_watcher_backend in crates/rolldown_binding/src/watcher.rs
-    if (
-      watcher &&
-      (watcher.usePolling != null ||
-        watcher.pollInterval != null ||
-        watcher.compareContentsForPolling != null ||
-        watcher.useDebounce != null ||
-        watcher.debounceDelay != null ||
-        watcher.debounceTickRate != null)
-    ) {
+  for (const configOptions of bundlerOptionsByConfig) {
+    const option = configOptions.find(setsWatcherOptions);
+    if (option) {
       if (found) {
         option.onLog(LOG_LEVEL_WARN, logMultipleWatcherOption());
         return;

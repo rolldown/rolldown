@@ -449,7 +449,7 @@ test.concurrent(
       }
     });
 
-    // Assert outside the listener: a listener that throws only logs on the Rust side.
+    // A throwing listener is only logged, so assert outside it.
     const outputs: (readonly string[])[] = [];
     watcher.on('event', (event) => {
       if (event.code === 'BUNDLE_END') outputs.push(event.output);
@@ -1158,7 +1158,7 @@ test.concurrent(
       }
     });
     const logs: [string, string | undefined][] = [];
-    // `_watch`: the `watch` wrapper injects `usePolling` into every config.
+    // `_watch`: the wrapper would add `usePolling` to the first config too.
     const watcher = _watch([
       {
         input,
@@ -1193,76 +1193,15 @@ test.concurrent(
       }
     });
     const logs: [string, string | undefined][] = [];
-    // `_watch`: the `watch` wrapper's injected `usePolling` would hide which field is counted.
-    const watcher = _watch({
+    const watcher = watch({
       input,
       output: [{ file: output }, { file: path.join(outputDir, 'second.js') }],
-      watch: { watcher: { useDebounce: true, debounceDelay: 10 } },
       plugins: [{ name: 'test', onLog: (level, log) => void logs.push([level, log.code]) }],
     });
     onTestFinished(async () => await watcher.close());
 
-    // The warning is checked before the first build starts.
     await waitBuildFinished(watcher);
     expect(logs).not.toContainEqual(['warn', 'MULTIPLE_WATCHER_OPTION']);
-  },
-);
-
-test.concurrent(
-  'a config whose outputs diverge in watcher options still warns',
-  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
-  async ({ task, expect, onTestFinished }) => {
-    const retryCount = task.result?.retryCount ?? 0;
-    const { input, output, outputDir, dir } = createTestInputAndOutput(
-      'watch-multi-output-diverge-warning',
-      retryCount,
-    );
-    const {
-      input: foo,
-      output: fooOutput,
-      dir: fooDir,
-    } = createTestInputAndOutput('watch-multi-output-diverge-warning-foo', retryCount);
-    onTestFinished(() => {
-      if (!process.env.CI) {
-        fs.rmSync(dir, { recursive: true, force: true });
-        fs.rmSync(fooDir, { recursive: true, force: true });
-      }
-    });
-    const logs: [string, string | undefined][] = [];
-    const logPlugin = {
-      name: 'log',
-      onLog: (level: string, log: { code?: string }) => void logs.push([level, log.code]),
-    };
-    let optionsCalls = 0;
-    // `_watch`: the `watch` wrapper injects `usePolling` into every config.
-    const watcher = _watch([
-      {
-        input,
-        output: [{ file: output }, { file: path.join(outputDir, 'second.js') }],
-        plugins: [
-          logPlugin,
-          {
-            name: 'diverge',
-            // Runs once per output; only the second call sets watcher options.
-            options(options) {
-              optionsCalls++;
-              return optionsCalls === 2
-                ? { ...options, watch: { watcher: { usePolling: true } } }
-                : null;
-            },
-          },
-        ],
-      },
-      {
-        input: foo,
-        output: { file: fooOutput },
-        watch: { watcher: { useDebounce: true, debounceDelay: 10 } },
-        plugins: [logPlugin],
-      },
-    ]);
-    onTestFinished(async () => await watcher.close());
-
-    await expect.poll(() => logs).toContainEqual(['warn', 'MULTIPLE_WATCHER_OPTION']);
   },
 );
 

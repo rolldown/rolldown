@@ -3406,6 +3406,7 @@ dependencies = [
  "rolldown_common",
  "rolldown_error",
  "rolldown_fs_watcher",
+ "rolldown_std_utils",
  "rolldown_utils",
  "rolldown_workspace",
  "sugar_path",

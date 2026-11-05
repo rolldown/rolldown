@@ -955,11 +955,13 @@ impl GenerateStage<'_> {
         .sum::<usize>()
         .try_into()
         .expect("Too many entries, u32 overflowed.");
+      let own_side_effect_exec_orders = self.own_side_effect_exec_orders();
       self.optimize_dynamic_entry_bits(
         index_splitting_info,
         chunk_graph,
         entries_len,
         used_symbol_refs_builder,
+        &own_side_effect_exec_orders,
       );
     }
     self.extract_standalone_runtime_chunk(

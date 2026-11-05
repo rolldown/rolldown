@@ -1,0 +1,53 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] barrel.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] setup.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## barrel.js
+
+```js
+export { value } from "./main.js";
+
+```
+
+## main.js
+
+```js
+// effect.js
+globalThis.order = ["effect"];
+const value = "effect";
+// setup.js
+globalThis.order.push("setup");
+function setupValue() {
+	return "setup";
+}
+// main.js
+const seen = globalThis.order.join(",");
+const loadSetup = () => import("./setup.js");
+const loadBarrel = () => import("./barrel.js");
+export { loadBarrel, loadSetup, seen, setupValue as t, value };
+
+```
+
+## setup.js
+
+```js
+export { t as setupValue } from "./main.js";
+
+```

@@ -40,7 +40,7 @@ Rolldown reads attributes from static imports, re-exports and dynamic imports wi
 | `import('a', options)` where `options` is not a literal | `{}`               |
 | `require()`, `new URL()`, CSS `@import`                 | `{}`               |
 
-The legacy `assert` keyword was replaced by `with`, and Node.js 22 and Chrome 126 removed it. Rolldown treats `assert` as `with` in every build, including an `assert` key in dynamic import options, and warns. Use `with` instead.
+Rolldown treats the removed `assert` keyword as if it's `with` for compatibility, but this support will be removed in the future.
 
 Rolldown reads attributes at build time, so the `import()` options must be written directly in the call. If they come from a variable, as in `import('./data.json', options)`, the import has no attributes.
 

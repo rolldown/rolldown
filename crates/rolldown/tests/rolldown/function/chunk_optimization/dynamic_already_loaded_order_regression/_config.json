@@ -1,0 +1,7 @@
+{
+  "snapshot": false,
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "preserveEntrySignatures": "allow-extension"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "_comment": "The cycle has one way in: a.js. So a.js keeps its eager wrapper call, and the cycle runs before after.js. Node.js uses the same order.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "preserveModules": true
+  },
+  "configVariants": [{ "strictExecutionOrder": true }]
+}

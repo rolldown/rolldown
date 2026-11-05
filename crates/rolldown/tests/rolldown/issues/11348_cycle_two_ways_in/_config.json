@@ -1,0 +1,10 @@
+{
+  "_comment": "main-a.js enters the cycle at a.cjs, and main-b.js enters it at b.cjs. So the cycle has two ways in, and no member keeps its eager wrapper call. Each entry enters the cycle through its own `require_*()` call.",
+  "config": {
+    "input": [
+      { "name": "main-a", "import": "./main-a.js" },
+      { "name": "main-b", "import": "./main-b.js" }
+    ],
+    "preserveModules": true
+  }
+}

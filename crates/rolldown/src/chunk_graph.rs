@@ -32,6 +32,9 @@ pub struct ChunkGraph {
   ///
   /// We use the second approach to avoid the overhead of re-indexing at the cost of some extra memory.
   pub post_chunk_optimization_operations: FxHashMap<ChunkIdx, PostChunkOptimizationOperation>,
+  /// Rolldown writes no eager wrapper call in these `preserveModules` chunks.
+  /// See `GenerateStage::compute_chunks_without_eager_wrapper_call`.
+  pub chunks_without_eager_wrapper_call: FxHashSet<ChunkIdx>,
 }
 
 impl ChunkGraph {
@@ -46,6 +49,7 @@ impl ChunkGraph {
       common_chunk_exported_facade_chunk_namespace: FxHashMap::default(),
       common_chunk_preserve_export_names_modules: FxHashMap::default(),
       post_chunk_optimization_operations: FxHashMap::default(),
+      chunks_without_eager_wrapper_call: FxHashSet::default(),
     }
   }
 

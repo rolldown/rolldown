@@ -1,0 +1,13 @@
+{
+  "_comment": "The cycle defers init_e(). Its namespace-alias exports must initialize inside that wrapper.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "preserveModules": true,
+    "strictExecutionOrder": false
+  },
+  "configVariants": [
+    { "strictExecutionOrder": true },
+    { "minify": true, "_snapshot": false },
+    { "minify": true, "strictExecutionOrder": true, "_snapshot": false }
+  ]
+}

@@ -25,12 +25,50 @@ use rolldown_error::EmptyImportMetaKind;
 
 use crate::{
   module_finalizers::{FinalizedExprProcessHint, KeepNameId, ModuleWrapperMode, TraverseState},
-  utils::renamer::cjs_wrapper_fixed_params,
+  utils::{chunk::render_chunk_exports::get_export_items, renamer::cjs_wrapper_fixed_params},
 };
 
 use super::ScopeHoistingFinalizer;
 
 impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
+  fn append_deferred_namespace_alias_exports(
+    &self,
+    statements: &mut allocator::Vec<'ast, Statement<'ast>>,
+  ) {
+    if !self.ctx.chunk_graph.chunks_without_eager_wrapper_call.contains(&self.ctx.chunk_idx)
+      || self.ctx.chunk.entry_module_idx() != Some(self.ctx.idx)
+    {
+      return;
+    }
+
+    // The chunk renderer declares these bindings. Assign them after the wrapper initializes
+    // their namespaces, since this cycle member has no eager wrapper call.
+    // See internal-docs/linking/module-execution-order/implementation.md.
+    for export_ref in get_export_items(self.ctx.chunk)
+      .into_iter()
+      .map(|(_, symbol_ref)| self.ctx.symbol_db.canonical_ref_for(symbol_ref))
+      .unique()
+    {
+      let Some(ns_alias) = &self.ctx.symbol_db.get(export_ref).namespace_alias else { continue };
+      let assignment = Expression::new_assignment_expression(
+        SPAN,
+        ast::AssignmentOperator::Assign,
+        AssignmentTarget::new_assignment_target_identifier(
+          SPAN,
+          oxc::ast::ast::Str::from_str_in(self.canonical_name_for(export_ref), self),
+          self,
+        ),
+        Expression::new_member_access_expr(
+          self.canonical_name_for(ns_alias.namespace_ref),
+          &ns_alias.property_name,
+          self,
+        ),
+        self,
+      );
+      statements.push(Statement::new_expression_statement(SPAN, assignment, self));
+    }
+  }
+
   /// Returns the parameters of the CJS closure: `cjs_wrapper_fixed_params`, then the `this`
   /// binding.
   fn cjs_wrapper_params(&self) -> Vec<&str> {
@@ -322,6 +360,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         ));
       }
       ModuleWrapperMode::InteropEsm(target) | ModuleWrapperMode::ExecutionOrder(target) => {
+        self.append_deferred_namespace_alias_exports(&mut program.body);
         let is_concatenated_wrapped_module = !matches!(
           self.ctx.linking_info.concatenated_wrapped_module_kind,
           ConcatenateWrappedModuleKind::None

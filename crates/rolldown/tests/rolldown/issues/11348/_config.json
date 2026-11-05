@@ -1,0 +1,8 @@
+{
+  "_comment": "ESM evaluates b.js before a.js. An eager wrapper call in b.js can run `require_a()` before a.js defines `require_a`. So Rolldown does not write that call in b.js.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "preserveModules": true
+  },
+  "configVariants": [{ "strictExecutionOrder": true }]
+}

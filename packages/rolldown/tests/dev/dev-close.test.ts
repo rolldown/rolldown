@@ -204,3 +204,46 @@ test.skipIf(isWasiTest)(
     expect(resolved).toBe(true);
   },
 );
+
+// The dev engine keeps its plugin driver after close, so a kept plugin context can still reach an
+// option function. After `bundle.close()` the same call fails earlier, because that close drops the
+// plugin driver.
+test.skipIf(isWasiTest)(
+  'a kept plugin context gets a clear error when an option function runs after close',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const { input, outDir } = createInput('dev-close-kept-context', onTestFinished);
+    let context: { resolve(id: string): Promise<unknown> } | undefined;
+    const keepContext = (value: typeof context) => {
+      context = value;
+    };
+    const engine = await dev(
+      {
+        input,
+        external: (id) => id === 'ext',
+        experimental: { devMode: true },
+        plugins: [
+          {
+            name: 'keep-context',
+            buildStart() {
+              keepContext(this);
+            },
+          },
+        ],
+      },
+      { dir: outDir },
+      {},
+    );
+    engine.run().catch(() => {});
+    await engine.ensureCurrentBuildFinish();
+    await expect(context!.resolve('ext')).resolves.toMatchObject({ id: 'ext', external: true });
+    await withTimeout(engine.close(), 'The close');
+
+    const error = await context!.resolve('ext').catch((error: unknown) => error);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe('Errored while resolving "ext" in `this.resolve`.');
+    expect(((error as Error).cause as Error).message).toContain(
+      'external option: A JS function of the bundler options was called after the bundle closed.',
+    );
+  },
+);

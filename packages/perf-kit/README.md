@@ -298,7 +298,6 @@ The same question asked of a V8 isolate coming up under workerd: what does the W
 global scope pay for, and what can leave it? Cloudflare's startup limit counts that
 scope, and `wrangler check startup` profiles it; this mode adds the loop around it:
 a floor-corrected number per run, what executed, and what each deferral would free.
-Worker mode needs a perf-kit release newer than 0.0.1, or this repo's copy.
 
 ```bash
 node harness.mjs worker-config --app <appDir>          # writes perf-kit.vite.config.ts, prints the build commands

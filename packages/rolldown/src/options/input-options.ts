@@ -812,7 +812,7 @@ export interface InputOptions {
    * `node_modules/.rolldown/report/<output dir>`, resolved against {@linkcode cwd}, where
    * `<output dir>` is the output folder relative to `cwd` (each `..` becomes `__`). Rolldown
    * writes it when the bundle closes. `watch()` and the dev engine write no report. See the
-   * [Build Report guide](/in-depth/build-report) for the files and how to compare builds.
+   * [Build Report guide](/guide/build-report) for the files and how to compare builds.
    *
    * @experimental
    */

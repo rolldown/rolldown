@@ -13,7 +13,7 @@ perf-kit is experimental, and its commands and output may change. The npm releas
 - Node.js 22 or later.
 - Chrome or Edge on the machine. `CHROME_PATH` selects the browser.
 - A built app. perf-kit does not build it.
-- For the [static commands](#static-analysis-with-the-build-report): a build with Rolldown 1.2.16 or later and the [build report](/in-depth/build-report) turned on.
+- For the [static commands](#static-analysis-with-the-build-report): a build with Rolldown 1.2.16 or later and the [build report](/guide/build-report) turned on.
 
 perf-kit has no dependencies, so it runs without an install step:
 
@@ -79,7 +79,7 @@ The scan finds the HTML entry pages. Add client-side routes with `--pages /prici
 
 ## Static analysis with the build report
 
-These commands read `module-graph.json` from the [build report](/in-depth/build-report). They need no browser run:
+These commands read `module-graph.json` from the [build report](/guide/build-report). They need no browser run:
 
 | Command               | What it answers                                                                                                                |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
@@ -126,5 +126,5 @@ The app must build with `@cloudflare/vite-plugin` and have `wrangler` as a dev d
 
 ## Related
 
-- The [build report](/in-depth/build-report) gives the module graph and the chunk graph that the static commands and the late chunk check read.
+- The [build report](/guide/build-report) gives the module graph and the chunk graph that the static commands and the late chunk check read.
 - The perf-kit [README](https://github.com/rolldown/rolldown/blob/main/packages/perf-kit/README.md) lists every command, flag and output file.

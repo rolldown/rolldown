@@ -1,0 +1,57 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lazy.js
+
+```js
+// lazy.js
+const value = Object.keys(/* @__PURE__ */ require("./rolldown-runtime.js").__exportAll({
+	a: () => 1,
+	b: () => 2
+})).join();
+exports.value = value;
+
+```
+
+## main.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+// esm.js
+var esm_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ value: () => "esm" });
+// main.js
+const esm = (require_rolldown_runtime.__esmMin((() => {}))(), require_rolldown_runtime.__toCommonJS(esm_exports));
+module.exports = {
+	name: "main",
+	esm: esm.value
+};
+globalThis.lazy = Promise.resolve().then(() => require("./lazy.js")).then((m) => m.value);
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__esmMin", {
+	enumerable: true,
+	get: function() {
+		return __esmMin;
+	}
+});
+Object.defineProperty(exports, "__exportAll", {
+	enumerable: true,
+	get: function() {
+		return __exportAll;
+	}
+});
+Object.defineProperty(exports, "__toCommonJS", {
+	enumerable: true,
+	get: function() {
+		return __toCommonJS;
+	}
+});
+
+```

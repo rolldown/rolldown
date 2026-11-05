@@ -1,6 +1,6 @@
 // The app's rolldown must carry the devtools report mode, or no build writes the report
-// and graph / what-if / cut / why / graph-diff have nothing to read. The npm release does
-// not carry it yet; this checkout's packages/rolldown does. Two things live here: the probe
+// and graph / what-if / cut / why / graph-diff have nothing to read. Releases before 1.2.16
+// do not carry it; this checkout's packages/rolldown does. Two things live here: the probe
 // that names the app's rolldown and whether it has the mode, and the install that copies
 // the checkout's build over the copy the app's vite resolves, whatever the package manager
 // laid out (bun and npm hoist a real directory, pnpm symlinks into its store).
@@ -104,7 +104,7 @@ export function reportSupportNote(appDir, cli, { checkout = CHECKOUT_ROLLDOWN } 
   const src = checkoutRolldown(checkout);
   const lines = [
     `rolldown ${app.version} at ${app.dir} has no devtools report mode, so no build of this app writes the report`,
-    '(the npm release does not carry it yet; graph / what-if / cut / why / graph-diff need it).',
+    '(releases before 1.2.16 do not carry it; graph / what-if / cut / why / graph-diff need it).',
   ];
   if (src?.built && src.binding) {
     lines.push(

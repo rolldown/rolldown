@@ -115,7 +115,6 @@ pub use crate::{
       chunk_debug_info::{ChunkDebugInfo, FacadeChunkEliminationReason},
       chunk_reason_type::ChunkReasonType,
       cross_chunk_import_item::CrossChunkImportItem,
-      module_group::ModuleGroup,
       preliminary_filename::PreliminaryFilename,
     },
   },
@@ -164,9 +163,6 @@ pub use crate::{
   types::bundle_mode::BundleMode,
   types::chunk_idx::ChunkIdx,
   types::chunk_kind::ChunkKind,
-  types::concatenate_wrapped_module::{
-    ConcatenateWrappedModuleKind, RenderedConcatenatedModuleParts,
-  },
   types::constant_value::{ConstExportMeta, ConstantValue},
   types::deconflict::ModuleScopeSymbolIdMap,
   types::defer_sync_scan_data::DeferSyncScanData,

@@ -9,12 +9,15 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import {
   COVERAGE_FLAGS,
   COVERAGE_MIN_WRANGLER,
   LAB_IMPORT_PATH,
   classifyModules,
+  createInstance,
+  fetchText,
   globToRegExp,
   labAssetsRouting,
   resolveWorkerTools,
@@ -572,6 +575,70 @@ test('the worker-only rebuild puts back the assets field the Cloudflare plugin d
   assert.ok(shim.includes("order: 'post'"));
   assert.ok(shim.includes('savedAssets.set(file, assets)'));
   assert.ok(shim.includes('config.assets = assets'));
+});
+
+test('the config shim checks the rolldown vite uses, not an older copy at the app root', async () => {
+  const app = tmp();
+  write(app, 'node_modules/vite/package.json', '{"name":"vite"}');
+  write(app, 'node_modules/rolldown/package.json', '{"name":"rolldown","version":"1.0.0"}');
+  write(app, 'node_modules/rolldown/dist/index.d.ts', 'export {};');
+  const nested = 'node_modules/vite/node_modules/rolldown';
+  write(app, `${nested}/package.json`, '{"name":"rolldown","version":"1.2.16"}');
+  write(app, `${nested}/dist/index.d.ts`, "type M = { mode?: 'full' | 'report' };");
+  const check = viteConfigShim('vite.config.ts')
+    .match(/function assertReportMode\(\) \{[\s\S]*?\n\}\n/)[0]
+    .replace('stack.pop()!', 'stack.pop()');
+  const file = write(
+    app,
+    'check.mjs',
+    `import fs from 'node:fs';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+${check}
+assertReportMode();
+`,
+  );
+  await import(pathToFileURL(file).href);
+});
+
+test('every instance gets the same private, empty dev registry', async () => {
+  const options = [];
+  class Miniflare {
+    ready = Promise.resolve();
+    constructor(opts) {
+      options.push(opts);
+    }
+  }
+  const main = { rel: 'index.js' };
+  const ctx = {
+    tools: {
+      load: async () => {},
+      miniflare: { Log: class {}, LogLevel: { WARN: 1 }, Miniflare },
+      toOptions: (flat) => flat,
+    },
+    workerOptions: {},
+    outDir: tmp(),
+    mainName: main.rel,
+    modules: [main],
+    stderr: { handleRuntimeStdio: () => {} },
+  };
+  await createInstance(ctx, { plain: true });
+  await createInstance(ctx, { plain: true });
+  const [first, second] = options.map((o) => o.unsafeDevRegistryPath);
+  assert.equal(first, second);
+  assert.deepEqual(fs.readdirSync(first), []);
+});
+
+test('a redirect comes back as the answer and is not followed', async () => {
+  let init;
+  const mf = {
+    dispatchFetch: async (_url, options) => {
+      init = options;
+      return new Response('moved', { status: 302, headers: { location: 'https://example.com/' } });
+    },
+  };
+  assert.deepEqual(await fetchText(mf, '/old'), { status: 302, text: 'moved' });
+  assert.equal(init.redirect, 'manual');
 });
 
 test('worker-attrib finds the attribution build named after the environment', () => {

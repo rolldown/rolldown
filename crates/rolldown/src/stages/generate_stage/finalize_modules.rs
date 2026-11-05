@@ -1,8 +1,6 @@
 use std::sync::Arc;
 
-use rolldown_common::{
-  ChunkIdx, ConcatenateWrappedModuleKind, PrependRenderedImport, UsedSymbolRefs,
-};
+use rolldown_common::{ChunkIdx, PrependRenderedImport, UsedSymbolRefs};
 use rolldown_error::{BuildResult, Severity};
 use rolldown_utils::{index_vec_ext::IndexVecExt as _, rayon::ParallelIterator as _};
 use rustc_hash::FxHashMap;
@@ -105,12 +103,8 @@ impl GenerateStage<'_> {
             inline_state: &self.inline_state,
           };
 
-          let concatenated_wrapped_module_kind = ctx.linking_info.concatenated_wrapped_module_kind;
-          let (
-            transferred_import_record,
-            rendered_concatenated_wrapped_module_parts,
-            mut module_diagnostics,
-          ) = ctx.finalize_normal_module(ast, ast_scope);
+          let (transferred_import_record, mut module_diagnostics) =
+            ctx.finalize_normal_module(ast, ast_scope);
           if let Some(callees) = bridge_callees.get(&chunk_idx) {
             module_diagnostics.extend(bare_bridge_callee(
               ast.program(),
@@ -119,9 +113,8 @@ impl GenerateStage<'_> {
             ));
           }
 
-          let payload = (!transferred_import_record.is_empty()
-            || !matches!(concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::None))
-          .then_some((idx, transferred_import_record, rendered_concatenated_wrapped_module_parts));
+          let payload =
+            (!transferred_import_record.is_empty()).then_some((idx, transferred_import_record));
           Some((payload, module_diagnostics))
         })
         .collect::<Vec<_>>()
@@ -131,18 +124,12 @@ impl GenerateStage<'_> {
     let mut diagnostics = vec![];
     for (payload, module_diagnostics) in finalized {
       diagnostics.extend(module_diagnostics);
-      let Some((idx, transferred_import_record, rendered_concatenated_module_parts)) = payload
-      else {
+      let Some((idx, transferred_import_record)) = payload else {
         continue;
       };
       for (rec_idx, rendered_string) in transferred_import_record {
         normalized_transfer_parts_rendered_maps.insert((idx, rec_idx), rendered_string);
       }
-      let chunk_idx = chunk_graph.module_to_chunk[idx].expect("should have chunk idx");
-      let chunk = &mut chunk_graph.chunk_table[chunk_idx];
-      chunk
-        .module_idx_to_render_concatenated_module
-        .insert(idx, rendered_concatenated_module_parts);
     }
 
     let has_error = diagnostics.iter().any(|diagnostic| diagnostic.severity() == Severity::Error);

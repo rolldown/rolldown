@@ -461,7 +461,7 @@ close() → inner.close()         // sends Close msg, awaits shared future
 
 ### Multi-Config Watcher Options
 
-`Watcher::new()` takes one `WatcherConfig` for all tasks, so `create_watcher_config()` (`crates/rolldown_binding/src/watcher.rs`) folds the configs into it:
+`Watcher::new()` takes one `WatcherConfig` for all tasks, so `BindingWatcher::new()` (`crates/rolldown_binding/src/watcher.rs`) folds the configs into it:
 
 - **`buildDelay`:** the maximum across configs, like Rollup. The rebuild is shared, so the longest delay must be served.
 - **`watch.watcher` fields:** they cannot be merged, so they all come from the first config that sets any of them. An explicit `false` counts as set. `warnMultipleWatcherOptions()` in `packages/rolldown/src/api/watch/watcher.ts` warns when a later config also sets one. It counts per config, not per output.

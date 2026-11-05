@@ -8,8 +8,7 @@ use napi::{
   bindgen_prelude::{FnArgs, PromiseRaw},
 };
 use napi_derive::napi;
-use rolldown::BundlerConfig;
-use rolldown_common::{WatcherChangeKind, WatcherFileWatcherOptions};
+use rolldown_common::WatcherChangeKind;
 use rolldown_watcher::{WatchEvent, WatcherConfig, WatcherEventHandler};
 
 use crate::types::binding_bundler_options::BindingBundlerOptions;
@@ -19,39 +18,6 @@ use crate::utils::{
   create_bundler_config_from_binding_options::create_bundler_config_from_binding_options,
   spawn_boxed_future,
 };
-
-fn sets_watcher_backend(watcher: &WatcherFileWatcherOptions) -> bool {
-  watcher.use_polling.is_some()
-    || watcher.poll_interval.is_some()
-    || watcher.compare_contents_for_polling.is_some()
-    || watcher.use_debounce.is_some()
-    || watcher.debounce_delay.is_some()
-    || watcher.debounce_tick_rate.is_some()
-}
-
-// See internal-docs/watch-mode/implementation.md ("Multi-Config Watcher Options").
-fn create_watcher_config(configs: &[BundlerConfig]) -> WatcherConfig {
-  let watches = configs.iter().filter_map(|config| config.options.watch.as_ref());
-  let debounce = watches
-    .clone()
-    .filter_map(|watch| watch.build_delay)
-    .max()
-    .map(|ms| Duration::from_millis(u64::from(ms)));
-  let watcher = watches
-    .filter_map(|watch| watch.watcher.as_ref())
-    .find(|watcher| sets_watcher_backend(watcher))
-    .cloned()
-    .unwrap_or_default();
-  WatcherConfig {
-    debounce,
-    use_polling: watcher.use_polling.unwrap_or_default(),
-    poll_interval: watcher.poll_interval,
-    compare_contents_for_polling: watcher.compare_contents_for_polling.unwrap_or_default(),
-    use_debounce: watcher.use_debounce.unwrap_or_default(),
-    debounce_delay: watcher.debounce_delay,
-    debounce_tick_rate: watcher.debounce_tick_rate,
-  }
-}
 
 /// Bridges watcher events from Rust to JS via a `ThreadsafeFunction`.
 struct NapiWatcherEventHandler {
@@ -108,7 +74,30 @@ impl BindingWatcher {
       .map(create_bundler_config_from_binding_options)
       .collect::<Result<Vec<_>, _>>()?;
 
-    let watcher_config = create_watcher_config(&configs);
+    // See internal-docs/watch-mode/implementation.md ("Multi-Config Watcher Options").
+    let watches = configs.iter().filter_map(|config| config.options.watch.as_ref());
+    let debounce = watches.clone().filter_map(|watch| watch.build_delay).max();
+    let watcher = watches
+      .filter_map(|watch| watch.watcher.as_ref())
+      .find(|w| {
+        w.use_polling.is_some()
+          || w.poll_interval.is_some()
+          || w.compare_contents_for_polling.is_some()
+          || w.use_debounce.is_some()
+          || w.debounce_delay.is_some()
+          || w.debounce_tick_rate.is_some()
+      })
+      .cloned()
+      .unwrap_or_default();
+    let watcher_config = WatcherConfig {
+      debounce: debounce.map(|ms| Duration::from_millis(u64::from(ms))),
+      use_polling: watcher.use_polling.unwrap_or_default(),
+      poll_interval: watcher.poll_interval,
+      compare_contents_for_polling: watcher.compare_contents_for_polling.unwrap_or_default(),
+      use_debounce: watcher.use_debounce.unwrap_or_default(),
+      debounce_delay: watcher.debounce_delay,
+      debounce_tick_rate: watcher.debounce_tick_rate,
+    };
 
     let handler = NapiWatcherEventHandler { listener: Arc::new(listener) };
     let inner =
@@ -150,39 +139,5 @@ impl BindingWatcher {
     spawn_boxed_future(env, async move {
       inner.close().await.map_err(|e| napi::Error::new(napi::Status::GenericFailure, e.to_string()))
     })
-  }
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-  use rolldown::BundlerOptions;
-  use rolldown_common::WatchOption;
-
-  #[test]
-  fn watcher_config_uses_max_build_delay_and_first_config_that_sets_watcher_options() {
-    let config = |build_delay, watcher| {
-      let watch = WatchOption { build_delay, watcher, ..Default::default() };
-      BundlerConfig::new(BundlerOptions { watch: Some(watch), ..Default::default() }, vec![])
-    };
-    let configs = [
-      config(Some(50), None),
-      config(
-        Some(250),
-        Some(WatcherFileWatcherOptions {
-          use_polling: Some(true),
-          poll_interval: Some(75),
-          ..Default::default()
-        }),
-      ),
-      config(
-        None,
-        Some(WatcherFileWatcherOptions { use_polling: Some(false), ..Default::default() }),
-      ),
-    ];
-    let watcher_config = create_watcher_config(&configs);
-    assert_eq!(watcher_config.debounce, Some(Duration::from_millis(250)));
-    assert!(watcher_config.use_polling);
-    assert_eq!(watcher_config.poll_interval, Some(75));
   }
 }

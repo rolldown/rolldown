@@ -3,7 +3,7 @@
 // so it can be timed, profiled and covered.
 //
 // workerd evaluates a Worker's main module when it loads the worker, before any request
-// or inspector can observe it. So the worker the lab runs is a generated wrapper entry
+// or inspector can observe it. So the worker perf-kit runs is a generated wrapper entry
 // whose fetch handler does `await import('./<main>')`: the import compiles and evaluates
 // the main module and its whole static closure, which is exactly the work Cloudflare's
 // startup limit counts. `wrangler check startup` uses the same trick.
@@ -24,34 +24,47 @@ export const WRAPPER_NAME = '__lab_wrapper.js';
 export const EMPTY_NAME = '__lab_empty.js';
 export const LAB_IMPORT_PATH = '/__lab/import';
 export const LAB_COVERAGE_PATH = '/__lab/coverage';
-export const COVERAGE_FLAGS = ['nodejs_compat', 'enable_nodejs_inspector_local_dev'];
+// `enable_nodejs_inspector_module` makes `node:inspector` importable on compatibility dates
+// before its default-on date; workerd knows it from 1.20260507.1, before the session shipped.
+export const COVERAGE_FLAGS = [
+  'nodejs_compat',
+  'enable_nodejs_inspector_local_dev',
+  'enable_nodejs_inspector_module',
+];
 /** First Wrangler whose workerd (1.20260706.1) carries the in-process inspector session. */
 export const COVERAGE_MIN_WRANGLER = '4.108.0';
 
 /**
- * Resolve miniflare, wrangler and the workerd version from the app directory. The lab
+ * Resolve miniflare, wrangler and the workerd version from the app directory. perf-kit
  * never ships a runtime of its own: the number must come from the workerd the app pins.
  */
 export function resolveWorkerTools(appDir) {
-  const require = createRequire(path.join(appDir, 'package.json'));
-  const resolveOrNull = (id) => {
+  const appRequire = createRequire(path.join(appDir, 'package.json'));
+  const tryResolve = (req, id) => {
     try {
-      return require.resolve(id);
+      return req.resolve(id);
     } catch {
       return null;
     }
   };
-  const miniflarePath = resolveOrNull('miniflare');
-  const wranglerPath = resolveOrNull('wrangler');
+  const wranglerPath = tryResolve(appRequire, 'wrangler');
+  // Isolated installs (pnpm, bun workspaces) link only direct dependencies, so the app may
+  // see wrangler and not miniflare or workerd: those come from wrangler's own directory.
+  const wranglerRequire = wranglerPath ? createRequire(wranglerPath) : null;
+  const requireFor = (id) =>
+    tryResolve(appRequire, id) || !wranglerRequire || !tryResolve(wranglerRequire, id)
+      ? appRequire
+      : wranglerRequire;
+  const miniflarePath = tryResolve(requireFor('miniflare'), 'miniflare');
   if (!miniflarePath || !wranglerPath) {
     throw new Error(
-      `${appDir} has no ${!miniflarePath ? 'miniflare' : 'wrangler'} - add wrangler as a dev dependency ` +
-        "(it brings miniflare and workerd). The lab runs the app's own workerd, never one of its own.",
+      `${appDir} has no ${!wranglerPath ? 'wrangler' : 'miniflare'} - add wrangler as a dev dependency ` +
+        "(it brings miniflare and workerd). perf-kit runs the app's own workerd, never one of its own.",
     );
   }
   const version = (id) => {
     try {
-      return require(`${id}/package.json`).version;
+      return requireFor(id)(`${id}/package.json`).version;
     } catch {
       return null;
     }
@@ -166,7 +179,9 @@ export function classifyModules(outDir, rules = []) {
   const skipped = [];
   const walk = (dir, rel) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (entry.name.startsWith('.')) continue;
+      // Dot directories hold modules too: a preserveModules build of a pnpm app writes its
+      // libraries under `node_modules/.pnpm/`. Only `.vite/` (the manifest) and dot files stay out.
+      if (entry.name.startsWith('.') && (!entry.isDirectory() || entry.name === '.vite')) continue;
       const r = rel ? `${rel}/${entry.name}` : entry.name;
       if (entry.isDirectory()) {
         walk(path.join(dir, entry.name), r);
@@ -230,7 +245,8 @@ export const emptyModule = (outDir) => ({
 /**
  * Static assets answer before the worker unless a route is listed as worker-first; with
  * SPA fallback every unknown path becomes `index.html`, lab routes included - and that
- * answer is a 200, so the import silently never runs. Lab routes go worker-first.
+ * answer is a 200, so the import silently never runs. Lab routes go worker-first. Newer
+ * Miniflare builds the router from a `run_worker_first` list, so the route goes there too.
  */
 export function labAssetsRouting(assets) {
   if (!assets) return assets;
@@ -238,7 +254,11 @@ export function labAssetsRouting(assets) {
   const routing = { ...router.static_routing };
   routing.user_worker = ['/__lab/*', ...(routing.user_worker ?? [])];
   router.static_routing = routing;
-  return { ...assets, routerConfig: router };
+  const routed = { ...assets, routerConfig: router };
+  if (Array.isArray(assets.run_worker_first)) {
+    routed.run_worker_first = ['/__lab/*', ...assets.run_worker_first];
+  }
+  return routed;
 }
 
 /** Deduplicated workerd stderr, printed once at the end instead of once per run. */
@@ -266,7 +286,15 @@ export function createStderrCollector() {
  */
 export async function createInstance(
   ctx,
-  { target, coverage = false, extraFlags = [], shared = {}, plain = false, tools = null } = {},
+  {
+    target,
+    coverage = false,
+    extraFlags = [],
+    shared = {},
+    plain = false,
+    tools = null,
+    v8Flags = [],
+  } = {},
 ) {
   const mod = tools ?? ctx.tools;
   await mod.load();
@@ -295,9 +323,36 @@ export async function createInstance(
     delete flat.workflows;
     if (flat.assets) flat.assets = labAssetsRouting(flat.assets);
   }
-  const mf = new mod.miniflare.Miniflare(mod.toOptions(flat));
-  await mf.ready;
-  return mf;
+  if (!v8Flags.length) {
+    const mf = new mod.miniflare.Miniflare(mod.toOptions(flat));
+    await mf.ready;
+    return mf;
+  }
+  // Miniflare reads workerd's V8 flags from this variable when it builds the config.
+  const prev = process.env[V8_FLAGS_ENV];
+  process.env[V8_FLAGS_ENV] = [prev, ...v8Flags].filter(Boolean).join(' ');
+  try {
+    const mf = new mod.miniflare.Miniflare(mod.toOptions(flat));
+    await mf.ready;
+    return mf;
+  } finally {
+    if (prev === undefined) delete process.env[V8_FLAGS_ENV];
+    else process.env[V8_FLAGS_ENV] = prev;
+  }
+}
+
+const V8_FLAGS_ENV = 'MINIFLARE_WORKERD_V8_FLAGS';
+
+/** True when the app's Miniflare passes `MINIFLARE_WORKERD_V8_FLAGS` to workerd. */
+export function supportsV8Flags(tools) {
+  if (tools.v8FlagsSupported == null) {
+    try {
+      tools.v8FlagsSupported = fs.readFileSync(tools.miniflarePath, 'utf8').includes(V8_FLAGS_ENV);
+    } catch {
+      tools.v8FlagsSupported = false;
+    }
+  }
+  return tools.v8FlagsSupported;
 }
 
 export async function fetchText(mf, p, { timeoutMs = 120_000 } = {}) {
@@ -319,9 +374,9 @@ export async function disposeQuietly(mf) {
  * `bootMs` (instance creation to ready) is reported but never counted: it is workerd
  * process start, config load and wasm compile, not the Worker's global scope.
  */
-export async function timedImport(ctx, { target } = {}) {
+export async function timedImport(ctx, { target, v8Flags = [] } = {}) {
   const b0 = performance.now();
-  const mf = await createInstance(ctx, { target });
+  const mf = await createInstance(ctx, { target, v8Flags });
   const bootMs = performance.now() - b0;
   try {
     const t0 = performance.now();

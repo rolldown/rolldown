@@ -1,0 +1,8 @@
+{
+  "_comment": "https://github.com/rolldown/rolldown/issues/10044 - the entry uses `used`, a sibling of `RESET` in one `export { RESET, used } from './barrel.js'`. Lazy barrel requests only `used` from `barrel.js`, so it skips the `export * from './leaf.js'` record even though `leaf.js` is loaded through `export { used }`. The unused `RESET` re-export must not be reported as MISSING_EXPORT.",
+  "config": {
+    "experimental": {
+      "lazyBarrel": true
+    }
+  }
+}

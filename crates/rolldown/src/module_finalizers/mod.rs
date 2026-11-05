@@ -2321,6 +2321,36 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     // demand, we should skip generate related `__reExport` statements
                     // See: https://github.com/rolldown/rolldown/blob/60fc81ada3955ce84b38a5edbb33a169d1f89f15/crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs?plain=1#L148-L150
                     if !self.module_namespace_included {
+                      // No name is used, but side effects must still run: `require_foo()`
+                      if importee.side_effects.has_side_effects() {
+                        let (importee_wrapper_ref_expr, hint) = self.finalized_expr_for_symbol_ref(
+                          importee_linking_info.wrapper_ref.unwrap(),
+                          false,
+                          false,
+                        );
+                        // For a CJS entry in another chunk, the expression is already its
+                        // `module.exports`, not the `require_foo` wrapper, so do not call it
+                        let require_expr =
+                          if hint.contains(FinalizedExprProcessHint::FromCjsWrapKindEntry) {
+                            importee_wrapper_ref_expr
+                          } else {
+                            ast::Expression::new_call_expression(
+                              SPAN,
+                              importee_wrapper_ref_expr,
+                              None,
+                              [],
+                              false,
+                              self,
+                            )
+                          };
+                        let stmt =
+                          ast::Statement::new_expression_statement(SPAN, require_expr, self);
+                        if self.transferred_import_record.contains_key(&rec_idx) {
+                          self.transferred_import_record.insert(rec_idx, stmt.to_source_string());
+                        } else {
+                          program.body.push(stmt);
+                        }
+                      }
                       return;
                     }
                     self.debug_assert_namespace_object_is_open();

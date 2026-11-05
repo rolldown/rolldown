@@ -153,7 +153,7 @@ export function gitState(appRoot, distDir) {
 
 /**
  * Copy the build into the parity state and return its manifest (the caller writes
- * it). `exclude` keeps the lab's own state out when it lives inside the build dir.
+ * it). `exclude` keeps perf-kit's own state out when it lives inside the build dir.
  */
 export function saveAnchor({
   dist,

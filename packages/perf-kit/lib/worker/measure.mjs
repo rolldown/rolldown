@@ -6,10 +6,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
+import { pathToFileURL } from 'node:url';
 
 import { connect } from '../cdp.mjs';
 import { median, quantile } from '../measure.mjs';
 import { attributeStartupCoverage, profileStartup } from '../node/measure.mjs';
+import { sourceLocator } from '../profile.mjs';
 import {
   COVERAGE_FLAGS,
   COVERAGE_MIN_WRANGLER,
@@ -29,6 +31,126 @@ import {
 export const NOISE_FLOOR_MS = 3;
 export const NOISE_FLOOR_PCT = 2;
 export const COLD_MIN_BYTES = 4 * 1024;
+// Under the floor, pairs that fall on one side still decide: a no-op lands on both sides.
+// The sign test allows a no-op that chance at most (5 of 5 pairs, or 8 of 9). The median
+// must also be this large, so rounding alone cannot make the series one-sided.
+export const PAIRED_MAX_TAIL = 1 / 32;
+export const PAIRED_MIN_MS = 0.5;
+// A 5-pair series with 4 pairs on one side is ambiguous: `worker-scan` times more pairs.
+export const PAIRED_EXTEND_TO = 9;
+// Beyond the floor, the median decides only when the pairs agree: at most 1 of 5 pairs (2 of
+// 9) on the other side. A median beyond the floor with pairs on both sides is a few slow runs.
+export const PAIRED_BEYOND_TAIL = 1 / 4;
+
+/** The chance that a no-op puts at least `k` of `n` pairs on one given side. */
+export function signTail(k, n) {
+  let ways = 0;
+  let choose = 1; // C(n, i), built up from C(n, 0)
+  for (let i = 0; i <= n; i++) {
+    if (i >= k) ways += choose;
+    choose = (choose * (n - i)) / (i + 1);
+  }
+  return ways / 2 ** n;
+}
+
+const sideCount = (pairs, deltaMs) => pairs.filter((p) => (deltaMs < 0 ? p < 0 : p > 0)).length;
+
+/**
+ * Verdict on the pairs `current - pinned` timed in one scan. Beyond the floor the median
+ * decides when the pairs agree (`mixed` when they do not); under it, a change that the sign
+ * test puts on one side still counts, as `small`.
+ */
+export function pairedVerdict({ pairs, deltaMs, appStartupMs }) {
+  const floor = Math.max(NOISE_FLOOR_MS, (NOISE_FLOOR_PCT / 100) * (appStartupMs ?? 0));
+  const kind = deltaMs < 0 ? 'improvement' : 'regression';
+  const side = sideCount(pairs, deltaMs);
+  if (Math.abs(deltaMs) >= floor) {
+    const agree = pairs.length < 3 || signTail(side, pairs.length) <= PAIRED_BEYOND_TAIL;
+    return agree
+      ? { kind, small: false, floor, side }
+      : { kind: 'noise', small: false, floor, side, mixed: deltaMs < 0 ? 'lower' : 'higher' };
+  }
+  const oneSided =
+    Math.abs(deltaMs) >= PAIRED_MIN_MS && signTail(side, pairs.length) <= PAIRED_MAX_TAIL;
+  return oneSided ? { kind, small: true, floor, side } : { kind: 'noise', small: false, floor };
+}
+
+/** True when a short series leans one way, or disagrees beyond the floor: time more pairs. */
+export function needsMorePairs({ pairs, deltaMs, appStartupMs }) {
+  if (pairs.length >= PAIRED_EXTEND_TO) return false;
+  const verdict = pairedVerdict({ pairs, deltaMs, appStartupMs });
+  if (verdict.kind !== 'noise') return false;
+  if (verdict.mixed) return true;
+  return Math.abs(deltaMs) >= PAIRED_MIN_MS && sideCount(pairs, deltaMs) >= pairs.length - 1;
+}
+
+/** The words `worker-scan` prints for a `pairedVerdict`. */
+export function pairedCall(verdict, pairCount) {
+  const floor = Math.round(verdict.floor);
+  if (verdict.mixed) {
+    return `within noise (floor ${floor}ms) - the pairs disagree: the median is beyond the floor, ${verdict.mixed} in only ${verdict.side} of ${pairCount} pairs`;
+  }
+  if (verdict.kind === 'noise') return `within noise (floor ${floor}ms) - no effect proven`;
+  const word = verdict.kind === 'improvement' ? 'IMPROVEMENT' : 'REGRESSION';
+  if (!verdict.small) return `${word} beyond noise`;
+  const side = verdict.kind === 'improvement' ? 'lower' : 'higher';
+  const count = verdict.side === pairCount ? `all ${pairCount}` : `${verdict.side} of ${pairCount}`;
+  return `${word} beyond noise - small: ${side} in ${count} pairs (under the ${floor}ms floor)`;
+}
+
+// Startup that lost this much against the pinned build is smaller, whatever the timing says:
+// a share of the bytes, or of the modules (a text or data module counts few bytes in the
+// graph and still loads on its own).
+export const CLOSURE_MIN_BYTES = 32 * 1024;
+export const CLOSURE_MIN_BYTE_SHARE = 0.01;
+export const CLOSURE_MIN_MODULES = 50;
+export const CLOSURE_MIN_MODULE_SHARE = 0.1;
+
+/**
+ * The call the modules at startup add when the paired timing proves nothing. `closure`: the
+ * static closure diff against the pinned build (`left`, `entered`, `leftBytes`,
+ * `enteredBytes`, `stillCount` and `stillBytes` for the modules that left but a startup chunk
+ * still loads, `pinnedBytes`, `pinnedModules`). `loaded`: the delta of
+ * `worker.startup_loaded_bytes`. Returns `{ kind: 'keep', bytes, modules }` when startup lost
+ * enough, `{ kind: 'none' }` when neither moved, else null.
+ */
+export function closureCall(closure, loaded, verdict) {
+  if (verdict?.kind !== 'noise' || (!closure && !loaded)) return null;
+  const moved = Boolean(closure && (closure.left.length || closure.entered.length));
+  const loadedMoved = Boolean(loaded && Math.abs(loaded.delta) >= 1024);
+  const staticBytes = closure ? closure.leftBytes - closure.stillBytes - closure.enteredBytes : 0;
+  const bytes = Math.max(staticBytes, loaded ? -loaded.delta : 0);
+  const before = Math.max(closure?.pinnedBytes ?? 0, loaded?.prev ?? 0);
+  const modules = closure ? closure.left.length - closure.stillCount - closure.entered.length : 0;
+  const byBytes = bytes >= Math.max(CLOSURE_MIN_BYTES, CLOSURE_MIN_BYTE_SHARE * before);
+  const byModules =
+    modules >=
+    Math.max(CLOSURE_MIN_MODULES, CLOSURE_MIN_MODULE_SHARE * (closure?.pinnedModules ?? 0));
+  if (byBytes || byModules) return { kind: 'keep', bytes: byBytes ? bytes : null, modules };
+  return moved || loadedMoved ? null : { kind: 'none' };
+}
+
+// V8 sizes the young generation by what the isolate allocated so far. A deferral that takes a
+// large early allocation out of startup can keep it small for longer, and the extra scavenges
+// can cost more than the code saved. When startup only lost modules and the import still got
+// slower, `worker-scan` times both builds again with these flags, which fix that size.
+export const FIXED_YOUNG_V8_FLAGS = ['--min-semi-space-size=16'];
+
+/** True when the static closure only lost modules against the pinned build. */
+export function closureOnlyShrank(closure) {
+  return Boolean(closure && closure.left.length > 0 && closure.entered.length === 0);
+}
+
+/**
+ * The verdict the keep rule uses. A regression that the fixed-young-generation series does
+ * not repeat is V8 heap sizing, not the change: the keep rule reads that series instead.
+ */
+export function keepVerdict(paired, fixedYoung) {
+  const verdict = pairedVerdict(paired);
+  if (verdict.kind !== 'regression' || !fixedYoung) return verdict;
+  const fixed = pairedVerdict(fixedYoung);
+  return fixed.kind === 'regression' ? verdict : { ...fixed, kind: 'noise', heapSizing: true };
+}
 
 const round1 = (v) => (v == null ? null : Math.round(v * 10) / 10);
 
@@ -75,6 +197,65 @@ export function summarizeWorkerStartup({ floor, main }) {
   };
 }
 
+/** Silence after the last WebSocket message that ends a `ws:` request (waited, not counted). */
+export const WS_QUIET_MS = 500;
+
+/**
+ * A pinned request: `/path` is a GET; `ws:/path` opens a WebSocket on the path, and
+ * `ws:/path|<text>` also sends `<text>` once the socket is open. Agent chats and RPC run
+ * over WebSockets, so a module deferred to the first RPC or chat turn only shows there.
+ */
+export function parseRequestSpec(spec) {
+  const m = /^ws:(\/[^|]*)(?:\|([\s\S]*))?$/.exec(spec);
+  return m
+    ? { ws: true, path: m[1], message: m[2] ?? null }
+    : { ws: false, path: spec, message: null };
+}
+
+/**
+ * One WebSocket request, timed from the upgrade to the server's last message before
+ * `WS_QUIET_MS` of silence: the reply to a sent message comes after any module load it
+ * triggers. With no message and no server message, the time is the upgrade alone.
+ */
+export async function wsRequest(mf, p, message, { timeoutMs = 30_000 } = {}) {
+  const t0 = performance.now();
+  const res = await mf.dispatchFetch(`http://lab${p}`, { headers: { Upgrade: 'websocket' } });
+  const ws = res.webSocket;
+  if (res.status !== 101 || !ws)
+    return { status: res.status, text: await res.text(), ms: performance.now() - t0 };
+  ws.accept();
+  let last = performance.now();
+  let messages = 0;
+  let bytes = 0;
+  return new Promise((resolve) => {
+    let quiet = null;
+    const done = () => {
+      clearTimeout(quiet);
+      clearTimeout(hard);
+      try {
+        ws.close(1000);
+      } catch {
+        /* closed */
+      }
+      resolve({ status: 101, text: '', ms: last - t0, messages, bytes });
+    };
+    const hard = setTimeout(done, timeoutMs);
+    const arm = () => {
+      clearTimeout(quiet);
+      quiet = setTimeout(done, WS_QUIET_MS);
+    };
+    ws.addEventListener('message', (event) => {
+      messages++;
+      bytes += typeof event.data === 'string' ? event.data.length : (event.data?.byteLength ?? 0);
+      last = performance.now();
+      arm();
+    });
+    ws.addEventListener('close', done);
+    if (message != null) ws.send(message);
+    arm();
+  });
+}
+
 /**
  * First requests on a plain instance: the real entry, every export in place, startup
  * already done at boot. The first hit of a route that imports a deferred module pays
@@ -85,14 +266,17 @@ export async function firstRequests(ctx, paths) {
   const rows = [];
   try {
     for (const p of paths) {
+      const spec = parseRequestSpec(p);
       const t0 = performance.now();
-      const { status, text } = await fetchText(mf, p);
+      const res = spec.ws ? await wsRequest(mf, spec.path, spec.message) : await fetchText(mf, p);
+      const ms = spec.ws ? res.ms : performance.now() - t0;
       rows.push({
         path: p,
-        status,
-        bytes: text.length,
-        ms: round1(performance.now() - t0),
-        error: status >= 500 ? text.slice(0, 200).replace(/\s+/g, ' ') : null,
+        status: res.status,
+        bytes: spec.ws && res.status === 101 ? res.bytes : res.text.length,
+        ms: round1(ms),
+        ...(spec.ws && res.status === 101 ? { messages: res.messages } : {}),
+        error: res.status >= 500 ? res.text.slice(0, 200).replace(/\s+/g, ' ') : null,
       });
     }
   } finally {
@@ -173,10 +357,10 @@ export function localFile(url, outDir) {
   return null;
 }
 
-/** `resolveChunk` for `aggregateProfile`: every chunk under the output dir that has a sourcemap. */
+/** `readChunk` for `profileStartup`: every chunk under the output dir that has a sourcemap. */
 export function chunkResolver(outDir) {
-  return (url) => {
-    const file = localFile(url, outDir);
+  return (frameFile) => {
+    const file = localFile(frameFile, outDir);
     if (!file || !fs.existsSync(`${file}.map`)) return null;
     return {
       code: fs.readFileSync(file, 'utf8'),
@@ -185,19 +369,45 @@ export function chunkResolver(outDir) {
   };
 }
 
+/**
+ * `fileOf(url)`: the output file of a frame, relative to the output dir, or null.
+ * `locate(file, line, column)`: the source module at a position of that file, from its sourcemap.
+ */
+export function outputLocator(outDir) {
+  const readChunk = chunkResolver(outDir);
+  const locators = new Map();
+  const fileOf = (url) => {
+    const file = localFile(url, outDir);
+    return file ? path.relative(outDir, file).replaceAll('\\', '/') : null;
+  };
+  const locate = (file, line, column) => {
+    if (!locators.has(file)) {
+      const chunk = readChunk(file);
+      locators.set(file, chunk ? sourceLocator(chunk.code, chunk.map) : null);
+    }
+    const source = locators.get(file)?.locate(line, column);
+    return source && source !== '(unmapped)' ? source : null;
+  };
+  return { fileOf, locate };
+}
+
 /** Self time by source module through every chunk's sourcemap, plus the wrangler-style summary. */
 export function attributeProfile(profile, { outDir, mainName }) {
   const summary = summarizeProfile(profile);
   const mapFile = path.join(outDir, `${mainName}.map`);
-  if (!fs.existsSync(mapFile))
+  // An entry that only re-exports from a manual chunk has no map; the chunks that run do.
+  const map = fs.existsSync(mapFile) ? JSON.parse(fs.readFileSync(mapFile, 'utf8')) : null;
+  const anyMap = () =>
+    fs.readdirSync(outDir, { recursive: true }).some((f) => String(f).endsWith('.js.map'));
+  if (!map && !anyMap())
     return { summary, rows: null, totalMs: null, ownership: null, missingSourcemap: true };
   const code = fs.readFileSync(path.join(outDir, mainName), 'utf8');
-  const map = JSON.parse(fs.readFileSync(mapFile, 'utf8'));
   const { rows, totalMs, ownership } = profileStartup(profile, {
     code,
     map,
-    entryUrlSuffix: mainName,
-    resolveChunk: chunkResolver(outDir),
+    entryPath: path.join(outDir, mainName),
+    readChunk: chunkResolver(outDir),
+    baseUrl: pathToFileURL(`${outDir}/`),
   });
   return { summary, rows, totalMs, ownership, missingSourcemap: false };
 }
@@ -206,7 +416,7 @@ export function attributeProfile(profile, { outDir, mainName }) {
  * Precise coverage of the import, taken from INSIDE the isolate. The external inspector
  * cannot do it: workerd answers `Profiler.enable` itself and never forwards it to V8, so
  * `Profiler.startPreciseCoverage` fails with "Profiler is not enabled". The in-process
- * `node:inspector` session needs two compatibility flags, added for this run only, and a
+ * `node:inspector` session needs three compatibility flags, added for this run only, and a
  * workerd from 1.20260706.1 on. `tools` may point at a newer wrangler than the app's; the
  * timing and the profile keep the app's own workerd regardless.
  */

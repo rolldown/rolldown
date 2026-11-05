@@ -18,7 +18,8 @@ const isLab = (rel) => !rel || rel.startsWith('__lab') || rel.startsWith('_virtu
 /**
  * `graph` (optional) is the loaded module graph of the attribution build; with it every
  * row carries the chain from the entry. Returns rows sorted by time: `{ module, ms, chain }`,
- * `pairs` (evaluating module -> library file the time is spent in) and `self` by file.
+ * `pairs` (evaluating module -> library file the time is spent in), `self` by file, and
+ * `byFile`: the evaluating time of every output file, `{ file: ms }`.
  */
 export function evaluatingModules(profile, { outDir, graph = null, top = 20 }) {
   const nodes = new Map(profile.nodes.map((n) => [n.id, n]));
@@ -69,7 +70,66 @@ export function evaluatingModules(profile, { outDir, graph = null, top = 20 }) {
     self: sorted(self)
       .slice(0, top)
       .map(([file, us]) => ({ file, ms: ms(us) })),
+    byFile: Object.fromEntries(
+      [...evaluating.entries()].filter(([f]) => !f.startsWith('(')).map(([f, us]) => [f, ms(us)]),
+    ),
   };
+}
+
+/**
+ * The calls that module top levels make: the frame right below the root-most frame of a
+ * local file. A library that spends its import in one call (a warm-up such as
+ * `preloadSchemas()`) shows here by name; the per-file views charge that time to the files
+ * the call runs in. `fileOf(url)` maps a frame URL to an output file (relative) or null;
+ * `locate(file, line, column)` optionally names the source module of a bundled position.
+ * Returns rows `{ module, fn, at, source, ms }` sorted by time; `at` is `file:line` (1-based).
+ */
+export function topLevelCalls(profile, { fileOf, locate = null }) {
+  const nodes = new Map(profile.nodes.map((n) => [n.id, n]));
+  const parent = new Map();
+  for (const n of profile.nodes) for (const c of n.children ?? []) parent.set(c, n.id);
+  const calls = new Map();
+  profile.samples.forEach((id, i) => {
+    const delta = profile.timeDeltas[i] ?? 0;
+    if (delta <= 0) return;
+    let cur = id;
+    let below = null;
+    let root = null;
+    let call = null;
+    while (cur != null) {
+      const f = fileOf(nodes.get(cur)?.callFrame.url);
+      if (f && !isLab(f)) {
+        root = f;
+        call = below;
+      }
+      below = cur;
+      cur = parent.get(cur);
+    }
+    if (!root || call == null) return;
+    const frame = nodes.get(call).callFrame;
+    const key = `${root}\0${frame.functionName}\0${frame.url}\0${frame.lineNumber}\0${frame.columnNumber}`;
+    const row = calls.get(key) ?? { root, frame, us: 0 };
+    row.us += delta;
+    calls.set(key, row);
+  });
+  return [...calls.values()]
+    .sort((a, b) => b.us - a.us)
+    .map(({ root, frame, us }) => {
+      const file = fileOf(frame.url);
+      const line = frame.lineNumber >= 0 ? frame.lineNumber + 1 : null;
+      return {
+        module: root,
+        fn: frame.functionName || '(anonymous)',
+        at: `${file ?? frame.url ?? '?'}${line ? `:${line}` : ''}`,
+        source: file && locate ? locate(file, frame.lineNumber, frame.columnNumber) : null,
+        ms: Math.round(us / 100) / 10,
+      };
+    });
+}
+
+/** A module id without the package manager's store prefix: `zod/v4/core/core.js`. */
+export function shortModule(id) {
+  return String(id).replace(/^(?:\.\.\/)*(?:.*\/)?node_modules\/\.pnpm\/[^/]+\/node_modules\//, '');
 }
 
 /** Match an output file of the attribution build to a graph id and walk up to the entry. */

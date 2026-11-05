@@ -14,7 +14,10 @@ use rolldown_plugin_utils::{
   to_string_literal,
 };
 use rolldown_std_utils::relative_path_to_slash;
-use rolldown_utils::{ecmascript::to_usv_str, indexmap::FxIndexMap};
+use rolldown_utils::{
+  ecmascript::{to_module_import_export_name_with_ascii, to_usv_str},
+  indexmap::FxIndexMap,
+};
 use string_wizard::MagicString;
 use sugar_path::SugarPath;
 
@@ -319,7 +322,9 @@ impl<'ast> GlobImportVisit<'_> {
           Some("*") | None => {
             format!("* as {name}")
           }
-          Some(import) => format!("{{ {import} as {name} }}"),
+          Some(import) => {
+            format!("{{ {} as {name} }}", to_module_import_export_name_with_ascii(import, false))
+          }
         };
 
         self.import_decls.push(format!("import {module_specifier} from {formatted_file};"));

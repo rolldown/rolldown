@@ -8,12 +8,12 @@ use rolldown_error::{
   filter_out_disabled_diagnostics,
 };
 use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig};
-use rolldown_std_utils::normalize_path_buf;
 use rolldown_utils::pattern_filter;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
+use sugar_path::SugarPath;
 use tokio::sync::Mutex as TokioMutex;
 
 use crate::event::{BundleEndEventData, BundleStartEventData, WatchErrorEventData};
@@ -178,11 +178,13 @@ impl WatchTask {
         }
         Ok(BuildOutcome::Success(BundleEndEventData {
           task_index,
-          output: normalize_path_buf(
-            self.options.cwd.join(self.options.file.as_deref().unwrap_or(&self.options.out_dir)),
-          )
-          .to_string_lossy()
-          .into_owned(),
+          output: self
+            .options
+            .cwd
+            .join(self.options.file.as_deref().unwrap_or(&self.options.out_dir))
+            .absolutize()
+            .to_string_lossy()
+            .into_owned(),
           duration,
           bundle_handle,
         }))

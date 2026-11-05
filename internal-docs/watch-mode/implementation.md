@@ -50,7 +50,7 @@ type RolldownWatcherEvent =
   | { code: 'ERROR'; error: Error; result: RolldownWatchBuild };
 ```
 
-`BUNDLE_END.output` is `output.file` when set, otherwise `output.dir`, joined to `cwd` and normalized.
+`BUNDLE_END.output` is `output.file` when set, otherwise `output.dir`, joined to `cwd` and resolved like Rollup's `path.resolve`.
 `out_dir` alone is not enough. With `output.file` it holds the file's parent directory.
 
 Event listeners are normally **awaited** before proceeding — blocking semantics matching Rollup.

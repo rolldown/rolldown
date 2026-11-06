@@ -11,6 +11,7 @@ on:
   push:
     branches:
       - main
+      - 'v[0-9]*' # Maintenance branches
       - 'renovate/**' # For renovate bot "automerge": true
   workflow_dispatch:
 
@@ -26,15 +27,26 @@ jobs:
     permissions:
       pull-requests: read
     outputs:
+      # main and the vX.Y maintenance branches run everything on every OS.
+      run-all: "${{ steps.branch.outputs.run-all == 'true' }}"
       # A Windows CI request runs the complete Windows suite, even for paths outside the normal filters.
-      rust-changes: "${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') || (steps.pr-labels.outputs.run-windows == 'true') }}"
-      node-changes: "${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') || (steps.pr-labels.outputs.run-windows == 'true') }}"
+      rust-changes: "${{ (steps.filter.outputs.rust-changes == 'true') || (steps.branch.outputs.run-all == 'true') || (steps.pr-labels.outputs.run-windows == 'true') }}"
+      node-changes: "${{ (steps.filter.outputs.node-changes == 'true') || (steps.branch.outputs.run-all == 'true') || (steps.pr-labels.outputs.run-windows == 'true') }}"
       # Allows opting into Windows CI per-PR by adding the `ci: windows` label.
       run-windows: "${{ steps.pr-labels.outputs.run-windows == 'true' }}"
       # The WebContainer smoke test is opt-in: the `ci: webcontainer` label, or a PR that touches the
       # binding loader glue and its packaging (the `webcontainer-changes` filter below). Never on main.
       run-webcontainer: "${{ (steps.pr-labels.outputs.run-webcontainer == 'true') || (github.event_name == 'pull_request' && steps.filter.outputs.webcontainer-changes == 'true') }}"
     steps:
+      - name: Check branch
+        id: branch
+        run: |
+          run_all=false
+          if [[ "$GITHUB_REF_NAME" == main || "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+$ ]]; then
+            run_all=true
+          fi
+          echo "run-all=${run_all}" >> "$GITHUB_OUTPUT"
+
       # Reruns keep the original event payload, so query the current labels instead.
       - name: Read pull request labels
         if: github.event_name == 'pull_request'
@@ -96,8 +108,8 @@ jobs:
               - 'packages/rolldown/src/webcontainer-fallback.cjs'
       - name: Show outputs
         run: |
-          echo "Rust changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') || (steps.pr-labels.outputs.run-windows == 'true') }}"
-          echo "Node changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') || (steps.pr-labels.outputs.run-windows == 'true') }}"
+          echo "Rust changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (steps.branch.outputs.run-all == 'true') || (steps.pr-labels.outputs.run-windows == 'true') }}"
+          echo "Node changes: ${{ (steps.filter.outputs.node-changes == 'true') || (steps.branch.outputs.run-all == 'true') || (steps.pr-labels.outputs.run-windows == 'true') }}"
           echo "WebContainer: ${{ (steps.pr-labels.outputs.run-webcontainer == 'true') || (github.event_name == 'pull_request' && steps.filter.outputs.webcontainer-changes == 'true') }}"
 
   rust-validation:
@@ -129,7 +141,7 @@ jobs:
     strategy:
       matrix:
         target: >-
-          ${{ (github.ref_name == 'main') && fromJSON('["ubuntu-latest","macos-latest","windows-latest"]')
+          ${{ (needs.changes.outputs.run-all == 'true') && fromJSON('["ubuntu-latest","macos-latest","windows-latest"]')
               || (needs.changes.outputs.run-windows == 'true') && fromJSON('["ubuntu-latest","windows-latest"]')
               || fromJSON('["ubuntu-latest"]') }}
     uses: ./.github/workflows/reusable-cargo-test.yml
@@ -141,7 +153,7 @@ jobs:
     needs: [changes, build-rolldown-windows]
     uses: ./.github/workflows/reusable-node-test.yml
     if: |
-      (github.ref_name == 'main' || needs.changes.outputs.run-windows == 'true') &&
+      (needs.changes.outputs.run-all == 'true' || needs.changes.outputs.run-windows == 'true') &&
       always() &&
       (needs.build-rolldown-windows.result == 'success' || needs.build-rolldown-windows.result == 'skipped')
     with:
@@ -153,7 +165,7 @@ jobs:
     needs: [changes, build-rolldown-macos]
     uses: ./.github/workflows/reusable-node-test.yml
     if: |
-      github.ref_name == 'main' &&
+      needs.changes.outputs.run-all == 'true' &&
       always() &&
       (needs.build-rolldown-macos.result == 'success' || needs.build-rolldown-macos.result == 'skipped')
     with:
@@ -201,7 +213,7 @@ jobs:
     needs: [changes, build-rolldown-windows]
     uses: ./.github/workflows/reusable-node-dev-server-test.yml
     if: |
-      (github.ref_name == 'main' || needs.changes.outputs.run-windows == 'true') &&
+      (needs.changes.outputs.run-all == 'true' || needs.changes.outputs.run-windows == 'true') &&
       always() &&
       (needs.build-rolldown-windows.result == 'success' || needs.build-rolldown-windows.result == 'skipped')
     with:
@@ -213,7 +225,7 @@ jobs:
     needs: [changes, build-rolldown-macos]
     uses: ./.github/workflows/reusable-node-dev-server-test.yml
     if: |
-      github.ref_name == 'main' &&
+      needs.changes.outputs.run-all == 'true' &&
       always() &&
       (needs.build-rolldown-macos.result == 'success' || needs.build-rolldown-macos.result == 'skipped')
     with:
@@ -283,7 +295,7 @@ jobs:
     name: Vite Test Windows
     needs: [changes, build-rolldown-windows]
     if: |
-      (github.ref_name == 'main' || needs.changes.outputs.run-windows == 'true') &&
+      (needs.changes.outputs.run-all == 'true' || needs.changes.outputs.run-windows == 'true') &&
       always() &&
       (needs.build-rolldown-windows.result == 'success' || needs.build-rolldown-windows.result == 'skipped')
     runs-on: windows-latest
@@ -327,7 +339,7 @@ jobs:
 
   build-rolldown-windows:
     needs: changes
-    if: github.ref_name == 'main' || needs.changes.outputs.run-windows == 'true'
+    if: needs.changes.outputs.run-all == 'true' || needs.changes.outputs.run-windows == 'true'
     uses: ./.github/workflows/reusable-native-build.yml
     with:
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
@@ -335,7 +347,7 @@ jobs:
 
   build-rolldown-macos:
     needs: changes
-    if: github.ref_name == 'main'
+    if: needs.changes.outputs.run-all == 'true'
     uses: ./.github/workflows/reusable-native-build.yml
     with:
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}

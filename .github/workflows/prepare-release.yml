@@ -6,12 +6,12 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'New version (e.g. 1.0.1)'
+        description: 'New version (e.g. 1.0.1). A version lower than npm latest is prepared on its vX.Y branch.'
         required: true
         type: string
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event.pull_request.number || github.sha }}
+  group: ${{ github.workflow }}-${{ inputs.version }}
   cancel-in-progress: true
 
 jobs:
@@ -25,8 +25,25 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0 # for changelog
+          fetch-depth: 0 # for changelog and the target branch
           persist-credentials: true # for create-pull-request
+
+      - name: Set version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: echo "VERSION=$INPUT_VERSION" >> "$GITHUB_ENV"
+
+      # Before the toolchain setup, so it uses the target branch's toolchain and lockfile.
+      - name: Switch to target branch
+        id: target
+        run: |
+          branch="$(node scripts/misc/release-line.mjs target --version "$VERSION")"
+          if ! git rev-parse --verify --quiet "refs/remotes/origin/${branch}" > /dev/null; then
+            echo "::error::v${VERSION} is released from ${branch}, which does not exist yet. See MAINTENANCE.md."
+            exit 1
+          fi
+          git switch "$branch"
+          echo "branch=${branch}" >> "$GITHUB_OUTPUT"
 
       - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
         with:
@@ -42,10 +59,15 @@ jobs:
           cache-key: warm
           tools: cargo-release-oxc
 
-      - name: Set version
+      - name: Check version
         env:
-          INPUT_VERSION: ${{ inputs.version }}
-        run: echo "VERSION=$INPUT_VERSION" >> "$GITHUB_ENV"
+          TARGET_BRANCH: ${{ steps.target.outputs.branch }}
+        run: |
+          node scripts/misc/release-line.mjs prepare --branch "$TARGET_BRANCH" --version "$VERSION"
+          if git ls-remote --exit-code --tags "https://github.com/${GITHUB_REPOSITORY}.git" "refs/tags/v${VERSION}" > /dev/null; then
+            echo "::error::Tag v${VERSION} already exists"
+            exit 1
+          fi
 
       - name: Bump crate versions
         run: |
@@ -71,7 +93,9 @@ jobs:
           version: v2.9.1 # git cliff version
           config: cliff.toml
           # perf-kit has its own changelog.
-          args: --unreleased --exclude-path "packages/perf-kit/**" --prepend CHANGELOG.md --tag ${{ env.VERSION }}
+          # Only count tags reachable from the target branch, so a maintenance
+          # release does not end the range of the next release on main.
+          args: --unreleased --use-branch-tags --exclude-path "packages/perf-kit/**" --prepend CHANGELOG.md --tag ${{ env.VERSION }}
 
       - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
@@ -96,6 +120,6 @@ jobs:
           body: ${{ steps.changelog.outputs.content }}
           branch: release-v${{ env.VERSION }}
           branch-suffix: timestamp
-          base: main
+          base: ${{ steps.target.outputs.branch }}
           title: 'release: v${{ env.VERSION }}'
           assignees: Boshen, shulaoda

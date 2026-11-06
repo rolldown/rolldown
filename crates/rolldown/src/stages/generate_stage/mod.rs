@@ -291,7 +291,7 @@ impl<'a> GenerateStage<'a> {
 
     let resolved_file_urls = self.resolve_file_urls(&chunk_graph).await?;
     self.finalize_modules(
-      &mut chunk_graph,
+      &chunk_graph,
       &mut ast_table,
       &resolved_file_urls,
       &used_symbol_refs,

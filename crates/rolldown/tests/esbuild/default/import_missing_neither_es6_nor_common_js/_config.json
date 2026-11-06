@@ -26,8 +26,8 @@
         "import": "import.js"
       }
     ],
-    // Imported empty module would be treated as esm module in rolldown.
-    // If we don't shim missing exports, it would have a `MISSING_EXPORT` error.
+    // reverse execution order visits the require entry before the static import entries,
+    // so the exportless module is consistently promoted to commonjs.
     "shimMissingExports": true
   },
   "expectExecuted": false

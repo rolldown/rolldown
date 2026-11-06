@@ -10,16 +10,26 @@ use super::LinkStage;
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn determine_module_exports_kind(&mut self) {
-    // Iterate by index so that we can release the iterator borrow on `module_table`
-    // before mutating an importee's `exports_kind` via `as_normal_mut`. Reads and
-    // writes interleave in the same order as the original closure walk, preserving
-    // the "earlier importer's promotion is observed by later importers" semantics.
-    let importer_indices: Vec<_> = self
+    // iterate by index to release the module-table borrow before mutating an
+    // importee's exports kind. later importers observe earlier promotions.
+    let mut importer_indices: Vec<_> = self
       .module_table
       .modules
       .iter_enumerated()
       .filter_map(|(idx, m)| matches!(m, Module::Normal(_)).then_some(idx))
       .collect();
+
+    // `sort_modules` runs before this pass and assigns deterministic `exec_order`.
+    // module-table (discovery) order depends on async load completion, so iterating
+    // in discovery order makes first Import vs Require promotion of
+    // `ExportsKind::None` nondeterministic. iterate in reverse execution order so
+    // entries and direct importers establish kinds before their dependencies,
+    // tie-breaking by stable id for unvisited modules.
+    importer_indices.sort_by(|&a, &b| {
+      let a_m = self.module_table[a].as_normal().expect("importer must be normal");
+      let b_m = self.module_table[b].as_normal().expect("importer must be normal");
+      b_m.exec_order.cmp(&a_m.exec_order).then_with(|| a_m.stable_id.cmp(&b_m.stable_id))
+    });
 
     for importer_idx in importer_indices {
       let n_records = match &self.module_table[importer_idx] {

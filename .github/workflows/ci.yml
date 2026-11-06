@@ -11,6 +11,7 @@ on:
   push:
     branches:
       - main
+      - 'v[0-9]*' # Maintenance branches
       - 'renovate/**' # For renovate bot "automerge": true
   workflow_dispatch:
 

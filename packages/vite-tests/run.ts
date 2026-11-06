@@ -44,14 +44,18 @@ async function runCmdAndPipeOrExit(title: string, cmdOptions: Parameters<typeof 
 
 fs.rmSync(REPO_PATH, { recursive: true, force: true });
 
+// The Vite 8.1 line ships rolldown 1.1. See MAINTENANCE.md.
+const VITE_BRANCH = 'rolldown-canary-8.1';
+const VITE_BASE = 'v8.1';
+
 await runCmdAndPipeOrExit(
-  '# Cloning vite repo (rolldown-canary branch)...',
-  ['git', ['clone', '--branch', 'rolldown-canary', 'https://github.com/vitejs/vite.git', REPO_PATH]],
+  `# Cloning vite repo (${VITE_BRANCH} branch)...`,
+  ['git', ['clone', '--branch', VITE_BRANCH, 'https://github.com/vitejs/vite.git', REPO_PATH]],
 );
 
 await runCmdAndPipeOrExit(
-  '# Rebasing rolldown-canary onto main...',
-  ['git', ['rebase', 'origin/main'], { nodeOptions: { cwd: REPO_PATH } }],
+  `# Rebasing ${VITE_BRANCH} onto ${VITE_BASE}...`,
+  ['git', ['rebase', `origin/${VITE_BASE}`], { nodeOptions: { cwd: REPO_PATH } }],
 );
 
 printTitle('# Updating pnpm-workspace.yaml to link to local rolldown...');

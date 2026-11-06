@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { minCut } from '../lib/min-cut.mjs';
-import { evalOverrides, whatIf } from '../lib/module-graph.mjs';
+import { evalOverrides, whatIf, withRoots } from '../lib/module-graph.mjs';
 import { chain, indexOf, makeGraph } from './graph-fixtures.mjs';
 
 const cutIds = (graph, result) =>
@@ -234,4 +234,52 @@ test('redundant diamond severs both incoming edges nearest the sink', () => {
   const result = minCut(g, indexOf(g, 'feat'));
   assert.equal(result.flow, 2);
   assert.deepEqual(cutIds(g, result), ['m1->feat', 'm2->feat']);
+});
+
+// --- --root on modules that only dynamic imports reach ---------------------------------
+test('rooted view: the cut lands below a dynamic boot root; the root itself is uncuttable', () => {
+  // entry -(dyn)-> boot -> app -> heavy -> util, boot -> shell; entry -(dyn)-> later -> heavy
+  const built = makeGraph(
+    [
+      {
+        id: 'entry',
+        bytes: 5,
+        imports: [
+          [1, true],
+          [5, true],
+        ],
+      },
+      {
+        id: 'boot',
+        bytes: 20,
+        imports: [
+          [2, false],
+          [3, false],
+        ],
+      },
+      { id: 'app', bytes: 100, imports: [[4, false]] },
+      { id: 'shell', bytes: 50, imports: [] },
+      { id: 'heavy', bytes: 4000, imports: [[6, false]] },
+      { id: 'later', bytes: 30, imports: [[4, false]] },
+      { id: 'util', bytes: 200, imports: [] },
+    ],
+    ['entry'],
+  );
+  const heavy = indexOf(built, 'heavy');
+  // Without the root: dynamic-only, nothing flows.
+  assert.equal(minCut(built, heavy).flow, 0);
+  const view = withRoots(built, [indexOf(built, 'boot')]);
+  const cut = minCut(view, heavy);
+  // The lazy route's edge (later -> heavy) is not startup code: one edge, app -> heavy.
+  assert.equal(cut.flow, 1);
+  assert.deepEqual(
+    cut.cutEdges.map((e) => [view.modules[e.from].id, view.modules[e.to].id]),
+    [['app', 'heavy']],
+  );
+  const priced = evalOverrides(
+    view,
+    cut.cutEdges.map((e) => ({ ...e, kind: 'defer' })),
+  );
+  assert.equal(priced.removedBytes, 4200);
+  assert.equal(minCut(view, indexOf(built, 'boot')).hasUncuttableSink, true);
 });

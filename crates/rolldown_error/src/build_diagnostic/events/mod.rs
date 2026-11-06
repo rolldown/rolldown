@@ -42,6 +42,7 @@ pub mod invalid_option;
 pub mod invalid_tla_format;
 pub mod json_parse;
 pub mod large_barrel_modules;
+pub mod lazy_barrel_unloaded_binding;
 pub mod missing_export;
 pub mod missing_global_name;
 pub mod missing_name_option_for_iife_export;

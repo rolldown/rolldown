@@ -2456,7 +2456,10 @@ export interface BindingHookResolveIdOutput {
    * we could get the related package json object via the path string.
    */
   packageJsonPath?: string | null
-  /** Replaces the import attributes of the import. `{}` removes them. */
+  /**
+   * Replaces the import attributes of the import. `{}` removes them. Ignored without
+   * `experimental.importAttributes`.
+   */
   attributes?: Record<string, string>
 }
 
@@ -3231,6 +3234,10 @@ export interface NativeError {
   message: string
   /** The id of the file associated with the error */
   id?: string
+  /** The name of the plugin that threw the error */
+  plugin?: string
+  /** Code frame around the error location */
+  frame?: string
   /** The exporter associated with the error (for import/export errors) */
   exporter?: string
   /** Location information (line, column, file) */
@@ -3300,6 +3307,10 @@ export interface WatcherEvent {
 export interface WatcherOptions {
   usePolling?: boolean
   pollInterval?: number
+  compareContentsForPolling?: boolean
+  useDebounce?: boolean
+  debounceDelay?: number
+  debounceTickRate?: number
   followSymlinks?: boolean
   ignored?: Array<string>
 }

@@ -36,6 +36,8 @@ extend-ignore-re = [
 ]
 
 [default.extend-words]
+# Chrome's effective-connection-type rating (`--force-effective-connection-type`, perf-kit `--ect`).
+ect = "ect"
 splitted = "splitted"
 styl = "styl"
 # the PNG scanline filter (after Alan W. Paeth), decoded by packages/perf-kit

@@ -1,0 +1,75 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// setup.js
+function init_setup() {
+	return (init_setup = __esmMin((() => {
+		globalThis.globalValue = "foo";
+	})))();
+}
+// main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_setup();
+		console.log("main");
+	})))();
+}
+init_main();
+
+```
+
+# Variant: profiler-names: [profiler_names: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// setup.js
+function init_setup() {
+	return (init_setup = __esm({ "setup.js": (() => {
+		globalThis.globalValue = "foo";
+	}) }))();
+}
+// main.js
+function init_main() {
+	return (init_main = __esm({ "main.js": (() => {
+		init_setup();
+		console.log("main");
+	}) }))();
+}
+init_main();
+
+```
+
+# Variant: pife-disabled: [pife_for_module_wrappers: false]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// setup.js
+function init_setup() {
+	return (init_setup = __esmMin(() => {
+		globalThis.globalValue = "foo";
+	}))();
+}
+// main.js
+function init_main() {
+	return (init_main = __esmMin(() => {
+		init_setup();
+		console.log("main");
+	}))();
+}
+init_main();
+
+```

@@ -59,6 +59,7 @@ impl Plugin for ViteBuildImportAnalysisPlugin {
     args: HookTransformAstArgs<'_>,
   ) -> HookTransformAstReturn {
     let mut ast = args.ast;
+    let preload_marker_module_id = args.stable_id.to_owned();
     ast.program.with_mut(|fields| {
       let ast_builder = AstBuilder::new(fields.allocator);
       let mut visitor = BuildImportAnalysisVisitor::new(
@@ -67,6 +68,7 @@ impl Plugin for ViteBuildImportAnalysisPlugin {
         self.render_built_url,
         self.is_relative_base,
         ctx.options().format.is_esm(),
+        preload_marker_module_id,
       );
       visitor.visit_program(fields.program);
     });

@@ -3,7 +3,9 @@ use std::{borrow::Cow, ops::Deref, sync::Arc};
 use anyhow::Context;
 use napi::bindgen_prelude::FnArgs;
 use rolldown_common::NormalModule;
-use rolldown_plugin::{__inner::SharedPluginable, HookUsage, Plugin, typedmap::TypedMapKey};
+use rolldown_plugin::{
+  __inner::SharedPluginable, HookFilterArgs, HookUsage, Plugin, typedmap::TypedMapKey,
+};
 use rolldown_utils::filter_expression::filter_exprs_interpreter;
 use tracing::{Instrument, debug_span};
 
@@ -112,17 +114,8 @@ impl Plugin for JsPlugin {
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> rolldown_plugin::HookResolveIdReturn {
     let Some(cb) = &self.resolve_id else { return Ok(None) };
-    if let Some(ref v) = self.filter_expr_cache.resolve_id {
-      if !filter_exprs_interpreter(
-        v,
-        Some(args.specifier),
-        None,
-        None,
-        args.importer,
-        ctx.cwd().to_string_lossy().as_ref(),
-      ) {
-        return Ok(None);
-      }
+    if !self.hook_filter_matches(ctx, HookFilterArgs::ResolveId(args)) {
+      return Ok(None);
     }
 
     let BindingHookResolveDynamicImportExtraArgs {
@@ -220,17 +213,8 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookLoadReturn {
     let Some(cb) = &self.load else { return Ok(None) };
 
-    if let Some(ref v) = self.filter_expr_cache.load {
-      if !filter_exprs_interpreter(
-        v,
-        Some(args.id),
-        None,
-        None,
-        None,
-        ctx.cwd().to_string_lossy().as_ref(),
-      ) {
-        return Ok(None);
-      }
+    if !self.hook_filter_matches(&ctx, HookFilterArgs::Load(args)) {
+      return Ok(None);
     }
 
     let binding_ctx = BindingLoadPluginContext::new(Arc::clone(&ctx));
@@ -260,17 +244,8 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookTransformReturn {
     let Some(cb) = &self.transform else { return Ok(None) };
     // Custom field have higher priority, it will override the default filter
-    if let Some(ref v) = self.filter_expr_cache.transform {
-      if !filter_exprs_interpreter(
-        v,
-        Some(args.id),
-        Some(args.code.as_str()),
-        Some(args.module_type.to_string().as_ref()),
-        None,
-        ctx.cwd().to_string_lossy().as_ref(),
-      ) {
-        return Ok(None);
-      }
+    if !self.hook_filter_matches(&ctx, HookFilterArgs::Transform(args)) {
+      return Ok(None);
     }
 
     let extra_args = BindingTransformHookExtraArgs {
@@ -480,17 +455,8 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookRenderChunkReturn {
     let Some(cb) = &self.render_chunk else { return Ok(None) };
 
-    if let Some(ref v) = self.filter_expr_cache.render_chunk {
-      if !filter_exprs_interpreter(
-        v,
-        None,
-        Some(args.code.as_str()),
-        None,
-        None,
-        ctx.cwd().to_string_lossy().as_ref(),
-      ) {
-        return Ok(None);
-      }
+    if !self.hook_filter_matches(ctx, HookFilterArgs::RenderChunk(args)) {
+      return Ok(None);
     }
 
     let span = debug_span!(
@@ -758,5 +724,37 @@ impl Plugin for JsPlugin {
 
   fn register_hook_usage(&self) -> HookUsage {
     HookUsage::from_bits(self.inner.hook_usage).expect("Failed to register hook usage")
+  }
+
+  fn hook_filter_matches(
+    &self,
+    ctx: &rolldown_plugin::PluginContext,
+    args: HookFilterArgs<'_>,
+  ) -> bool {
+    let (exprs, id, code, module_type, importer) = match args {
+      HookFilterArgs::ResolveId(args) => {
+        (&self.filter_expr_cache.resolve_id, Some(args.specifier), None, None, args.importer)
+      }
+      HookFilterArgs::Load(args) => (&self.filter_expr_cache.load, Some(args.id), None, None, None),
+      HookFilterArgs::Transform(args) => (
+        &self.filter_expr_cache.transform,
+        Some(args.id),
+        Some(args.code.as_str()),
+        Some(args.module_type),
+        None,
+      ),
+      HookFilterArgs::RenderChunk(args) => {
+        (&self.filter_expr_cache.render_chunk, None, Some(args.code.as_str()), None, None)
+      }
+    };
+    let Some(exprs) = exprs else { return true };
+    filter_exprs_interpreter(
+      exprs,
+      id,
+      code,
+      module_type.map(ToString::to_string).as_deref(),
+      importer,
+      ctx.cwd().to_string_lossy().as_ref(),
+    )
   }
 }

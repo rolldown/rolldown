@@ -1,4 +1,143 @@
 
+## [1.3.0] - 2026-11-05
+
+### 💥 BREAKING CHANGES
+
+- cli: reject `--input` together with positional entries like Rollup (#11445) by @IWANABETHATGUY
+
+### 🚀 Features
+
+- perf-kit: measure the deployed site and replay it for local builds (#11215) by @IWANABETHATGUY
+- perf-kit: diagnose chunk loading before FCP and LCP (#11214) by @IWANABETHATGUY
+- import-attributes: keep import attributes away from plugins without the option (#11476) by @shulaoda
+- import-attributes: let a `type` import attribute beat `moduleTypes` in the asset and copy plugins (#11309) by @shulaoda
+- import-attributes: pass import attributes to the `transform` hook (#11308) by @shulaoda
+- import-attributes: pass import attributes to the `load` hook (#11307) by @shulaoda
+- import-attributes: accept import attributes in `this.resolve` and `this.load` (#11306) by @shulaoda
+- import-attributes: pass import attributes to the `resolveId` and `resolveDynamicImport` hooks (#11305) by @shulaoda
+- import-attributes: expose `experimental.importAttributes` and the module id helpers to JS (#11304) by @shulaoda
+- import-attributes: render the import attributes of externals from their module identity (#11303) by @shulaoda
+- import-attributes: make import attributes part of module identity (#11302) by @shulaoda
+- import-attributes: model import attributes and keep them on the import record (#11301) by @shulaoda
+- expose notify APIs (#11380) by @sapphi-red
+- devtools: list the hooks that did no work in the report (#11388) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- respect `NO_COLOR` in error and warning diagnostics (#11499) by @shulaoda
+- rolldown_plugin_vite_import_glob: match negated `**` globs from the walk root (#11495) by @shulaoda
+- lazy-barrel: report used lazy barrel uncertain bindings with a dedicated error (#11493) by @shulaoda
+- avoid following output directory symlinks with `output.cleanDir` (#11494) by @sapphi-red
+- rolldown_plugin_vite_dynamic_import_vars: handle CRLF line breaks in the static import prefix (#11492) by @shulaoda
+- rolldown_plugin_vite_build_import_analysis: ensure unique preload markers (#11157) by @sapphi-red
+- watch: match Rollup for BUNDLE_END output and multi-config watch options (#10348) by @Brooooooklyn
+- rolldown_plugin_vite_dynamic_import_vars: escape import specifier (#11483) by @sapphi-red
+- error: add id, plugin, and frame to native errors (#9979) by @raminjafary
+- treeshaking: run a CommonJS module that is reached only through `export *` (#11423) by @magurotuna
+- escape URL in sourceMappingURL (#11482) by @sapphi-red
+- rolldown_plugin_vite_import_glob: escape import names (#11486) by @sapphi-red
+- rolldown_plugin_esm_external_require: escape import specifiers (#11487) by @sapphi-red
+- tree-shaking: drop unused imports of side-effect-free externals in ESM output (#11470) by @hyfdev
+- lazy-barrel: treat bindings behind skipped lazy barrel records as unknown (#11448) by @shulaoda
+- rolldown_plugin_vite_react_refresh_wrapper: escape import specifier (#11485) by @sapphi-red
+- devtools: count only hook calls that ran in the report (#11468) by @IWANABETHATGUY
+- rust: harden bundle close lifecycle (#11371) by @Brooooooklyn
+- strict-execution-order: name shared CJS re-export bindings independently of load order (#11206) by @natew
+- dev/lazy: don't proxy plugin-resolved externals (#11295) by @cestercian
+- rolldown_plugin_vite_transform: report oxc transformer warnings as warnings (#11459) by @Dunqing
+- dev: report a lazy-compile failure as diagnostics, not a formatted string (#10490) by @tbvjaos510
+- binding: stop mishandling per-call data at the callable builtin plugin boundary (#10482) by @hyfdev
+- dev/lazy: resolve `import()` of a CommonJS module to its ESM view (#11020) by @h-a-n-a
+- dev/lazy: load a lazy route in one request and only as factories (#11000) by @h-a-n-a
+- error when one module id resolves as both external and non-external (#11421) by @IWANABETHATGUY
+- sourcemap: keep only traced sources and names in module sourcemaps (#11270) by @IWANABETHATGUY
+- give module namespace objects a `null` prototype and make them non-extensible (#11428) by @IWANABETHATGUY
+- watch: reset JS load promises before rebuilding (#11316) by @owjs3901
+- new-url: keep the query and fragment when rewriting `new URL()` (#11420) by @theRizwan
+- dev: don't panic when buildStart emits a chunk during a partial rebuild (#11322) by @RagedPanda
+- treeshaking: drop an unused top-level `import()` of a side-effect-free module that exports `then` (#11409) by @hyfdev
+- derive reference ids from stable seeds for deterministic builds (#10797) by @MarshallOfSound
+- rolldown_plugin_vite_import_glob: resolve aliased globs without blocking a runtime worker (#11385) by @shulaoda
+- preserve-modules: read the extension after `sanitizeFileName` like Rollup (#11413) by @IWANABETHATGUY
+- rolldown_plugin_vite_dynamic_import_vars: await the resolver instead of blocking a runtime worker (#11386) by @shulaoda
+- cli: preserve entry arguments after double dash (#11438) by @shuvroroy
+- treeshaking: invalidate constants when exports is reassigned (#11430) by @shuvroroy
+- plugin: queue onLog callbacks eagerly (#11374) by @Brooooooklyn
+- avoid inferring constants from compound CommonJS exports (#11429) by @shuvroroy
+- json: avoid shadowing JSON.parse with named exports (#11432) by @shuvroroy
+- watcher: prioritize queued input during debounce (#11369) by @Brooooooklyn
+- replace: preserve declarations after Unicode text (#11435) by @shuvroroy
+- treeshaking: don't drop side effects that follow an `exports.x` write in the same CommonJS statement (#11408) by @hyfdev
+- don't inline a CommonJS export that is assigned conditionally or also through `module.exports` (#11404) by @hyfdev
+- json: preserve __proto__ as an own data property (#11367) by @shuvroroy
+- tree-shaking: preserve dynamic import exports read through callback arguments (#11366) by @shuvroroy
+- respect `externalLiveBindings` for star re-exports from externals in cjs (#11328) by @logaretm
+- preserve-modules: keep non-JS extensions in [name] (#11410) by @cestercian
+- treeshaking: don't tree-shake a statement that holds a CommonJS top-level `return` (#11402) by @hyfdev
+- don't export JSON keys that the finalizer inlines away from a shared chunk (#11396) by @IWANABETHATGUY
+- sourcemap: support toUrl without Buffer (#11370) by @Brooooooklyn
+- handle nullish thrown values in error summary (#11373) by @Brooooooklyn
+- don't inline a `var` that module-level code reads before its declaration (#11379) by @hyfdev
+- treat a repeated `var` declaration as a reassignment (#11378) by @hyfdev
+
+### 🚜 Refactor
+
+- remove dead concatenated wrapped module code (#11453) by @Dunqing
+- align watch options for the util function to dev mode (#11474) by @sapphi-red
+- simplify splitting oxc diagnostics by severity (#11458) by @Dunqing
+- rolldown: run deferred drops on a dedicated thread instead of rayon (#11372) by @Brooooooklyn
+- align watch options for dev mode and build (#11446) by @sapphi-red
+
+### 📚 Documentation
+
+- add build report and perf-kit in-depth pages (#11480) by @IWANABETHATGUY
+- rolldown_plugin_vite_import_glob: describe how import.meta.glob follows file changes (#10573) by @shulaoda
+- import-attributes: add an in-depth guide for import attributes (#11310) by @shulaoda
+- import-attributes: correct comments and docs about import attributes (#11477) by @shulaoda
+- rolldown: explain why drops are deferred and why `drain` waits for every bundler's drops (#11455) by @hyfdev
+
+### ⚡ Performance
+
+- rolldown_plugin_vite_dynamic_import_vars: avoid string allocation for `first_quasi` (#11484) by @sapphi-red
+- node: read each rendered chunk's binding fields once (#11364) by @mattlewis92
+
+### 🧪 Testing
+
+- import-attributes: run the esbuild import attributes tests with the option on (#11472) by @shulaoda
+- import-attributes: port the Rollup 5 import attributes tests (#11381) by @shulaoda
+- rolldown_plugin_vite_import_glob: cover the glob matcher (#10572) by @shulaoda
+- rolldown_plugin_vite_import_glob: cover import.meta.glob file creation and deletion (#10551) by @shulaoda
+
+### ⚙️ Miscellaneous Tasks
+
+- ai: harden rolldown REPL decode skill (#11491) by @sapphi-red
+- deps: update rust crate testing_macros to v2 (#11439) by @renovate[bot]
+- deps: update dependency @napi-rs/cli to v3.10.12 (#11463) by @renovate[bot]
+- deps: update dependency vite-plus to v1.5.0 (#11475) by @renovate[bot]
+- deps: update dependency glob to v14 [security] (#11462) by @renovate[bot]
+- deps: upgrade oxc to 0.157.0 (#11460) by @camc314
+- deps: update dependency @napi-rs/cli to v3.10.11 (#11461) by @renovate[bot]
+- deps: update dependency @napi-rs/cli to v3.10.10 (#11454) by @renovate[bot]
+- deps: update rollup submodule for tests to v4.67.4 (#11451) by @rolldown-guard[bot]
+- deps: update test262 submodule for tests (#11452) by @rolldown-guard[bot]
+- deps: update dependency rolldown-plugin-dts to ^0.29.0 (#11427) by @renovate[bot]
+- deps: update rust crates (#11426) by @renovate[bot]
+- deps: update npm packages (#11425) by @renovate[bot]
+- deps: update rust crate napi to v3.16.1 (#11401) by @renovate[bot]
+- release `@rolldown/perf-kit` independently (#11394) by @shulaoda
+- deps: update napi to v3.16.0 (#11389) by @renovate[bot]
+- drop outdated `CLAUDE.md` symlink note from `AGENTS.md` (#11384) by @iiio2
+
+### ❤️ New Contributors
+
+* @raminjafary made their first contribution in [#9979](https://github.com/rolldown/rolldown/pull/9979)
+* @natew made their first contribution in [#11206](https://github.com/rolldown/rolldown/pull/11206)
+* @cestercian made their first contribution in [#11295](https://github.com/rolldown/rolldown/pull/11295)
+* @owjs3901 made their first contribution in [#11316](https://github.com/rolldown/rolldown/pull/11316)
+* @theRizwan made their first contribution in [#11420](https://github.com/rolldown/rolldown/pull/11420)
+* @RagedPanda made their first contribution in [#11322](https://github.com/rolldown/rolldown/pull/11322)
+
+
 ## [1.2.16] - 2026-10-29
 
 ### 🚀 Features

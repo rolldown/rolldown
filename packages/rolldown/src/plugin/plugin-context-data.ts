@@ -12,7 +12,7 @@ import { NormalizedInputOptionsImpl } from '../options/normalized-input-options'
 import { NormalizedOutputOptionsImpl } from '../options/normalized-output-options';
 import type { ModuleInfo } from '../types/module-info';
 import { transformModuleInfo } from '../utils/transform-module-info';
-import { stringifyModuleId } from '../utils/module-id';
+import { parseModuleId, stringifyModuleId } from '../utils/module-id';
 import type { RenderedChunkMeta } from '.';
 import type { PluginContextResolveOptions } from './plugin-context';
 
@@ -69,18 +69,23 @@ export class PluginContextData {
   }
 
   /**
-   * The id of the module `rawId` imported with `attributes`. An external keeps its attributes
-   * even without `experimental.importAttributes`, like on the Rust side.
+   * The module id of `rawId` imported with `attributes`, as JS keys it. Without
+   * `experimental.importAttributes`, it is always `rawId`.
    */
-  toModuleId(
-    rawId: string,
-    attributes: Record<string, string> | undefined,
-    external = false,
-  ): string {
-    return this.importAttributes || external ? stringifyModuleId(rawId, attributes) : rawId;
+  toModuleId(rawId: string, attributes: Record<string, string> | undefined): string {
+    return this.importAttributes ? stringifyModuleId(rawId, attributes) : rawId;
+  }
+
+  /**
+   * Without `experimental.importAttributes`, plugins see no attributes, so the module options of
+   * an external are keyed by its raw id, even though its module id has the attributes.
+   */
+  private moduleOptionKey(id: string): string {
+    return this.importAttributes ? id : parseModuleId(id).rawId;
   }
 
   updateModuleOption(id: string, option: ModuleOptions): ModuleOptions {
+    id = this.moduleOptionKey(id);
     const existing = this.moduleOptionMap.get(id);
     if (existing) {
       if (option.moduleSideEffects != null) {
@@ -100,6 +105,7 @@ export class PluginContextData {
   }
 
   getModuleOption(id: string): ModuleOptions {
+    id = this.moduleOptionKey(id);
     const option = this.moduleOptionMap.get(id);
     if (!option) {
       const raw: ModuleOptions = {

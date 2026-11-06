@@ -27,12 +27,23 @@ jobs:
     permissions:
       pull-requests: read
     outputs:
-      rust-changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') }}
-      node-changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') }}
-      docs-changes: ${{ (steps.filter.outputs.docs-changes == 'true') || (github.ref_name == 'main') }}
+      # main and the vX.Y maintenance branches run everything on every OS.
+      run-all: "${{ steps.branch.outputs.run-all == 'true' }}"
+      rust-changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (steps.branch.outputs.run-all == 'true') }}
+      node-changes: ${{ (steps.filter.outputs.node-changes == 'true') || (steps.branch.outputs.run-all == 'true') }}
+      docs-changes: ${{ (steps.filter.outputs.docs-changes == 'true') || (steps.branch.outputs.run-all == 'true') }}
       # Allows opting into Windows CI per-PR by adding the `ci: windows` label.
       run-windows: "${{ (github.event_name == 'pull_request') && contains(github.event.pull_request.labels.*.name, 'ci: windows') }}"
     steps:
+      - name: Check branch
+        id: branch
+        run: |
+          run_all=false
+          if [[ "$GITHUB_REF_NAME" == main || "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+$ ]]; then
+            run_all=true
+          fi
+          echo "run-all=${run_all}" >> "$GITHUB_OUTPUT"
+
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
       - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
@@ -69,9 +80,9 @@ jobs:
               - 'packages/rolldown/tsconfig*.json'
       - name: Show outputs
         run: |
-          echo "Rust changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') }}"
-          echo "Node changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') }}"
-          echo "Docs changes: ${{ (steps.filter.outputs.docs-changes == 'true') || (github.ref_name == 'main') }}"
+          echo "Rust changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (steps.branch.outputs.run-all == 'true') }}"
+          echo "Node changes: ${{ (steps.filter.outputs.node-changes == 'true') || (steps.branch.outputs.run-all == 'true') }}"
+          echo "Docs changes: ${{ (steps.filter.outputs.docs-changes == 'true') || (steps.branch.outputs.run-all == 'true') }}"
 
   rust-validation:
     name: Rust Validation
@@ -96,7 +107,7 @@ jobs:
     strategy:
       matrix:
         target: >-
-          ${{ (github.ref_name == 'main') && fromJSON('["ubuntu-latest","macos-latest","windows-latest"]')
+          ${{ (needs.changes.outputs.run-all == 'true') && fromJSON('["ubuntu-latest","macos-latest","windows-latest"]')
               || (needs.changes.outputs.run-windows == 'true') && fromJSON('["ubuntu-latest","windows-latest"]')
               || fromJSON('["ubuntu-latest"]') }}
     uses: ./.github/workflows/reusable-cargo-test.yml
@@ -108,7 +119,7 @@ jobs:
     needs: [changes, build-rolldown-windows]
     uses: ./.github/workflows/reusable-node-test.yml
     if: |
-      (github.ref_name == 'main' || needs.changes.outputs.run-windows == 'true') &&
+      (needs.changes.outputs.run-all == 'true' || needs.changes.outputs.run-windows == 'true') &&
       always() &&
       (needs.build-rolldown-windows.result == 'success' || needs.build-rolldown-windows.result == 'skipped')
     with:
@@ -120,7 +131,7 @@ jobs:
     needs: [changes, build-rolldown-macos]
     uses: ./.github/workflows/reusable-node-test.yml
     if: |
-      github.ref_name == 'main' &&
+      needs.changes.outputs.run-all == 'true' &&
       always() &&
       (needs.build-rolldown-macos.result == 'success' || needs.build-rolldown-macos.result == 'skipped')
     with:
@@ -151,7 +162,7 @@ jobs:
     needs: [changes, build-rolldown-windows]
     uses: ./.github/workflows/reusable-node-dev-server-test.yml
     if: |
-      (github.ref_name == 'main' || needs.changes.outputs.run-windows == 'true') &&
+      (needs.changes.outputs.run-all == 'true' || needs.changes.outputs.run-windows == 'true') &&
       always() &&
       (needs.build-rolldown-windows.result == 'success' || needs.build-rolldown-windows.result == 'skipped')
     with:
@@ -163,7 +174,7 @@ jobs:
     needs: [changes, build-rolldown-macos]
     uses: ./.github/workflows/reusable-node-dev-server-test.yml
     if: |
-      github.ref_name == 'main' &&
+      needs.changes.outputs.run-all == 'true' &&
       always() &&
       (needs.build-rolldown-macos.result == 'success' || needs.build-rolldown-macos.result == 'skipped')
     with:
@@ -225,7 +236,7 @@ jobs:
     name: Vite Test Windows
     needs: [changes, build-rolldown-windows]
     if: |
-      (github.ref_name == 'main' || needs.changes.outputs.run-windows == 'true') &&
+      (needs.changes.outputs.run-all == 'true' || needs.changes.outputs.run-windows == 'true') &&
       always() &&
       (needs.build-rolldown-windows.result == 'success' || needs.build-rolldown-windows.result == 'skipped')
     runs-on: windows-latest
@@ -261,7 +272,7 @@ jobs:
 
   build-rolldown-windows:
     needs: changes
-    if: github.ref_name == 'main' || needs.changes.outputs.run-windows == 'true'
+    if: needs.changes.outputs.run-all == 'true' || needs.changes.outputs.run-windows == 'true'
     uses: ./.github/workflows/reusable-native-build.yml
     with:
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
@@ -269,7 +280,7 @@ jobs:
 
   build-rolldown-macos:
     needs: changes
-    if: github.ref_name == 'main'
+    if: needs.changes.outputs.run-all == 'true'
     uses: ./.github/workflows/reusable-native-build.yml
     with:
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}

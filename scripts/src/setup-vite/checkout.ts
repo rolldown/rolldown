@@ -33,6 +33,13 @@ export const runNode = (scriptPath: string, args: string[], cwd: string): void =
 const capture = (cmd: string, cwd: string): string =>
   execSync(cmd, { cwd, encoding: 'utf8' }).trim();
 
+// `rolldown-canary` follows Vite `main`, so it is rebased onto the latest
+// `main`. A `vX.Y` maintenance branch sets this to `rolldown-canary-A.B`,
+// where `A.B` is a Vite minor that ships rolldown X.Y, and uses it as-is.
+// See MAINTENANCE.md.
+const viteBranch: string = 'rolldown-canary';
+const rebaseOntoMain = viteBranch === 'rolldown-canary';
+
 // Ensure `vite/` has a checkout at the latest `rolldown-canary` rebased onto
 // the latest `main`, so canary-side fixes take effect right away and the
 // newest Vite changes surface incompatibilities early.
@@ -44,8 +51,10 @@ const capture = (cmd: string, cwd: string): string =>
 //     exactly as-is so local experiments are never trampled.
 export function ensureViteCheckout(): void {
   if (!nodeFs.existsSync(nodePath.join(viteDir, 'package.json'))) {
-    run('git clone --branch rolldown-canary https://github.com/vitejs/vite.git vite', repoRoot);
-    run('git rebase origin/main', viteDir);
+    run(`git clone --branch ${viteBranch} https://github.com/vitejs/vite.git vite`, repoRoot);
+    if (rebaseOntoMain) {
+      run('git rebase origin/main', viteDir);
+    }
   } else {
     updateViteCheckout();
   }
@@ -55,18 +64,20 @@ export function ensureViteCheckout(): void {
 
 function updateViteCheckout(): void {
   const dirty = capture('git status --porcelain', viteDir) !== '';
-  if (dirty || capture('git rev-parse --abbrev-ref HEAD', viteDir) !== 'rolldown-canary') {
+  if (dirty || capture('git rev-parse --abbrev-ref HEAD', viteDir) !== viteBranch) {
     console.log(
-      `[setup-vite] vite/ ${dirty ? 'has local changes' : 'is not on rolldown-canary'}, using it as-is`,
+      `[setup-vite] vite/ ${dirty ? 'has local changes' : `is not on ${viteBranch}`}, using it as-is`,
     );
     return;
   }
   try {
-    run('git fetch origin main rolldown-canary', viteDir);
+    run(`git fetch origin ${rebaseOntoMain ? 'main ' : ''}${viteBranch}`, viteDir);
   } catch {
     console.log('[setup-vite] fetch failed, using the existing checkout as-is');
     return;
   }
-  run('git checkout -B rolldown-canary origin/rolldown-canary', viteDir);
-  run('git rebase origin/main', viteDir);
+  run(`git checkout -B ${viteBranch} origin/${viteBranch}`, viteDir);
+  if (rebaseOntoMain) {
+    run('git rebase origin/main', viteDir);
+  }
 }

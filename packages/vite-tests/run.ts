@@ -50,8 +50,8 @@ fs.rmSync(REPO_PATH, { recursive: true, force: true });
 // there, never here, so the checkout and the dev-server's built vite dist
 // cannot drift apart. The tests run on a throwaway LOCAL clone of the
 // checkout, never on the checkout itself: this suite edits tracked files
-// (pnpm overrides) and the checkout must stay unpatched. The clone shares
-// objects via hardlinks, so it needs no network.
+// (pnpm overrides and snapshot patches) and the checkout must stay unpatched.
+// The clone shares objects via hardlinks, so it needs no network.
 if (!fs.existsSync(path.join(VITE_DIR, 'package.json'))) {
   console.error(
     styleText(['red', 'bold'], `Vite checkout not found at ${VITE_DIR}. Run \`just setup-vite\` first.`),
@@ -61,6 +61,18 @@ if (!fs.existsSync(path.join(VITE_DIR, 'package.json'))) {
 await runCmdAndPipeOrExit(
   '# Cloning the local vite checkout...',
   ['git', ['clone', VITE_DIR, REPO_PATH]],
+);
+
+// The visualization URLs embed chunk hashes and debug IDs changed by #11508.
+// Refresh only those expected URLs, keeping all mapping and code assertions intact.
+// Remove this patch once Vite's canary snapshots include the new hashes.
+await runCmdAndPipeOrExit(
+  '# Updating Vite sourcemap visualization snapshots...',
+  [
+    'git',
+    ['apply', path.join(import.meta.dirname, 'patches/sourcemap-comment-hashes.patch')],
+    { nodeOptions: { cwd: REPO_PATH } },
+  ],
 );
 
 // Write the `rolldown` override ourselves: Vite no longer carries a

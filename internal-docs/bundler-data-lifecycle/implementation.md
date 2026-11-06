@@ -157,6 +157,11 @@ master copy everything else is recovered from:
 - existing `module_id_to_idx` entries end the scan at their pre-scan values
   (`Seen` -> `Invalidate` -> `Seen`); only the keys inserted for newly
   discovered modules are removed;
+- the plugin driver's load-completion state of those new modules is dropped
+  too (`invalidate_context_load_module`). The next scan loads them as new
+  again and marks their load complete a second time, which trips a
+  `debug_assert` in `ContextLoadCompletionManager::mark_completion` if the
+  old state is still there (a failed first lazy compile, then a retry);
 - the `importers` edge list is re-derived from the snapshot
   (`ScanStageCache::derive_importers_from_snapshot`), since every edge is a
   resolved import record of some module;

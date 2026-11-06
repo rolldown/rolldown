@@ -119,7 +119,7 @@ __rolldown_runtime__.registerFactory("main.js", (function(__rolldown_module_id__
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("parent.js");
-		var import_parent_10 = __rolldown_runtime__.loadExports("parent.js");
+		var import_parent_0 = __rolldown_runtime__.loadExports("parent.js");
 		const hot_main = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 	} finally {}
 }));
@@ -130,15 +130,15 @@ __rolldown_runtime__.registerFactory("parent.js", (function(__rolldown_module_id
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
 			parentValue: () => parentValue,
-			childValue: () => import_child_20.value
+			childValue: () => import_child_0.value
 		});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("child.js");
-		var import_child_20 = __rolldown_runtime__.loadExports("child.js");
+		var import_child_0 = __rolldown_runtime__.loadExports("child.js");
 		const hot_parent = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const parentValue = "parent";
 		assert.strictEqual(parentValue, "parent");
-		assert.strictEqual(import_child_20.value, "child");
+		assert.strictEqual(import_child_0.value, "child");
 	} finally {}
 }), 3);
 

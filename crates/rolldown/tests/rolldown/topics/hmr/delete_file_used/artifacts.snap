@@ -99,11 +99,11 @@ __rolldown_runtime__.registerFactory("parent.js", (function(__rolldown_module_id
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
 			parentValue: () => parentValue,
-			childValue: () => import_child_10.value
+			childValue: () => import_child_0.value
 		});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("child.js");
-		var import_child_10 = __rolldown_runtime__.loadExports("child.js");
+		var import_child_0 = __rolldown_runtime__.loadExports("child.js");
 		const hot_parent = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const parentValue = "parent";
 		hot_parent.accept((newMod) => {

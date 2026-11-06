@@ -437,23 +437,35 @@ impl DevEngine {
         }
       }
 
-      // The compile merged the route into the graph, so the build output no longer matches
-      // the graph, and a rebuild brings it in line. Pages never load the route from the build
-      // output: every lazy `import()` calls `requestLazy`.
+      // A compile that scanned merged the route into the graph, so the build output no longer
+      // matches the graph, and a rebuild brings it in line. Pages never load the route from
+      // the build output: every lazy `import()` calls `requestLazy`. A repeat visit did not
+      // scan, so the output still matches and no rebuild is queued.
+      // See internal-docs/lazy-compilation/design.md ("Repeat Visits").
       // The compile added the files it loaded to the watch list of the latest build.
       // A new build can start before the coordinator reads this message, and its list
       // starts empty, so send this list with the message.
       // See internal-docs/dev-engine/implementation.md §15.
-      self.notify_module_changed(proxy_module_id, Arc::clone(bundler.watch_files()));
+      let rebuild = output.scanned;
+      self.notify_module_changed(proxy_module_id, Arc::clone(bundler.watch_files()), rebuild);
     }
 
     result
   }
 
-  /// Notify the coordinator that a module has changed programmatically.
-  /// This triggers a rebuild to update the build output.
-  fn notify_module_changed(&self, module_id: String, watch_files: Arc<FxDashSet<ArcStr>>) {
-    let _ = self.coordinator_sender.send(CoordinatorMsg::ModuleChanged { module_id, watch_files });
+  /// Notify the coordinator that a lazy compile ran. It always watches the compile's files,
+  /// and queues a rebuild of the build output only when `rebuild` is true.
+  fn notify_module_changed(
+    &self,
+    module_id: String,
+    watch_files: Arc<FxDashSet<ArcStr>>,
+    rebuild: bool,
+  ) {
+    let _ = self.coordinator_sender.send(CoordinatorMsg::ModuleChanged {
+      module_id,
+      watch_files,
+      rebuild,
+    });
   }
 
   pub async fn close(&self) -> BuildResult<()> {
@@ -732,14 +744,38 @@ mod tests {
     assert!(watched.contains(&dep), "{watched:#?}");
   }
 
-  /// A temp dir with `files` and a dev engine with lazy compilation on. `files` must include
-  /// `main.js`, the entry. The caller runs the engine.
+  /// A temp dir with `main.js` -> `import('./lazy.js')` -> `dep.js`, and a dev engine with lazy
+  /// compilation and sourcemaps on. The caller runs the engine.
+  #[cfg(feature = "testing")]
+  fn lazy_fixture(name: &str) -> (std::path::PathBuf, super::DevEngine) {
+    lazy_fixture_with_files(
+      name,
+      &[
+        ("main.js", "import('./lazy.js');\n"),
+        ("lazy.js", "import { dep } from './dep.js';\nexport const value = dep;\n"),
+        ("dep.js", "export const dep = 1;\n"),
+      ],
+    )
+  }
+
+  /// `files` must include `main.js`, the entry.
   #[cfg(feature = "testing")]
   fn lazy_fixture_with_files(
     name: &str,
     files: &[(&str, &str)],
   ) -> (std::path::PathBuf, super::DevEngine) {
+    lazy_fixture_with_options(name, files, |_| {})
+  }
+
+  /// Like `lazy_fixture_with_files`, and `configure` can change the bundler options.
+  #[cfg(feature = "testing")]
+  fn lazy_fixture_with_options(
+    name: &str,
+    files: &[(&str, &str)],
+    configure: impl FnOnce(&mut BundlerOptions),
+  ) -> (std::path::PathBuf, super::DevEngine) {
     use rolldown::{DevModeOptions, ExperimentalOptions};
+    use rolldown_common::SourceMapType;
 
     let dir = std::env::temp_dir().join(format!("rolldown-dev-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
@@ -750,15 +786,17 @@ mod tests {
       std::fs::write(dir.join(file), content).unwrap();
     }
 
-    let options = BundlerOptions {
+    let mut options = BundlerOptions {
       input: Some(vec!["./main.js".to_string().into()]),
       cwd: Some(dir.clone()),
+      sourcemap: Some(SourceMapType::File),
       experimental: Some(ExperimentalOptions {
         dev_mode: Some(DevModeOptions { lazy: Some(true), ..Default::default() }),
         ..Default::default()
       }),
       ..Default::default()
     };
+    configure(&mut options);
     let engine = super::DevEngine::new(
       BundlerConfig::new(options, vec![]),
       crate::DevOptions {
@@ -772,6 +810,123 @@ mod tests {
     )
     .unwrap();
     (dir, engine)
+  }
+
+  #[cfg(feature = "testing")]
+  fn lazy_proxy_id(dir: &std::path::Path) -> String {
+    format!("{}?rolldown-lazy=1", dir.join("lazy.js").to_string_lossy())
+  }
+
+  /// Each compile gets its own file name. Mask it, so two payloads compare by content.
+  #[cfg(feature = "testing")]
+  fn mask_payload_name(output: &rolldown_common::HmrLazyChunkOutput) -> (String, Option<String>) {
+    let mask = |text: &str| text.replace(&output.filename, "lazy_compile_N.js");
+    (mask(&output.code), output.sourcemap.as_deref().map(mask))
+  }
+
+  /// A repeat visit of a fetched route does not scan and does not queue a rebuild: the graph
+  /// already holds the route. It serves the same code and sourcemap as the first visit.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn lazy_repeat_visit_skips_the_scan_and_the_rebuild() {
+    let (dir, engine) = lazy_fixture("lazy-repeat-visit");
+    engine.run().await.unwrap();
+    let proxy = lazy_proxy_id(&dir);
+
+    let first = engine.compile_lazy_entry(proxy.clone(), "c1".to_string()).await.unwrap();
+    let state_after_first = engine.get_bundle_state().await.unwrap();
+    engine.ensure_latest_bundle_output().await.unwrap();
+
+    // A client id the engine has never seen holds nothing, like a new tab.
+    let repeat = engine.compile_lazy_entry(proxy, "c2".to_string()).await.unwrap();
+    let state_after_repeat = engine.get_bundle_state().await.unwrap();
+
+    engine.close().await.unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+
+    assert!(first.scanned);
+    assert!(state_after_first.has_stale_output, "the first visit queues a rebuild");
+    assert!(!repeat.scanned);
+    assert!(!state_after_repeat.has_stale_output, "the repeat visit queues no rebuild");
+    assert!(first.sourcemap.is_some());
+    assert_eq!(mask_payload_name(&repeat), mask_payload_name(&first));
+  }
+
+  /// A failed first compile never merges the fetched proxy, so the next compile scans again
+  /// and sees the fixed file.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn lazy_compile_scans_again_after_a_failed_first_compile() {
+    let (dir, engine) = lazy_fixture("lazy-retry-first-compile");
+    engine.run().await.unwrap();
+    let proxy = lazy_proxy_id(&dir);
+
+    std::fs::write(dir.join("dep.js"), "export const dep = ;\n").unwrap();
+    let failed = engine.compile_lazy_entry(proxy.clone(), "c1".to_string()).await;
+    std::fs::write(dir.join("dep.js"), "export const dep = 'fixed';\n").unwrap();
+    let retry = engine.compile_lazy_entry(proxy, "c1".to_string()).await;
+
+    engine.close().await.unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+
+    failed.expect_err("the first compile hits the broken file");
+    let retry = retry.unwrap();
+    assert!(retry.scanned);
+    assert!(retry.code.contains("'fixed'") || retry.code.contains("\"fixed\""), "{}", retry.code);
+  }
+
+  /// A compile that fails after it merged the route queues no rebuild. The retry finds the
+  /// route merged, so it would count as a repeat visit. It must still scan, so that it queues
+  /// the rebuild.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn lazy_compile_scans_again_after_a_compile_failed_past_its_merge() {
+    use std::sync::{
+      Arc,
+      atomic::{AtomicBool, Ordering},
+    };
+
+    use rolldown_common::SourceMapIgnoreList;
+
+    let fail = Arc::new(AtomicBool::new(false));
+    let fail_in_callback = Arc::clone(&fail);
+    let (dir, engine) = lazy_fixture_with_options(
+      "lazy-retry-past-merge",
+      &[
+        ("main.js", "import('./lazy.js');\n"),
+        ("lazy.js", "import { dep } from './dep.js';\nexport const value = dep;\n"),
+        ("dep.js", "export const dep = 1;\n"),
+      ],
+      move |options| {
+        // The sourcemap step runs after the merge.
+        options.sourcemap_ignore_list =
+          Some(SourceMapIgnoreList::new(Arc::new(move |sources, _| {
+            let fail = fail_in_callback.load(Ordering::Relaxed);
+            Box::pin(async move {
+              if fail {
+                anyhow::bail!("sourcemapIgnoreList failed");
+              }
+              Ok(vec![false; sources.len()])
+            })
+          })));
+      },
+    );
+    engine.run().await.unwrap();
+    let proxy = lazy_proxy_id(&dir);
+
+    fail.store(true, Ordering::Relaxed);
+    let failed = engine.compile_lazy_entry(proxy.clone(), "c1".to_string()).await;
+    fail.store(false, Ordering::Relaxed);
+    let retry = engine.compile_lazy_entry(proxy, "c1".to_string()).await;
+    let state_after_retry = engine.get_bundle_state().await.unwrap();
+
+    engine.close().await.unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+
+    failed.expect_err("the sourcemap step fails");
+    let retry = retry.unwrap();
+    assert!(retry.scanned);
+    assert!(state_after_retry.has_stale_output, "the retry queues the rebuild");
   }
 
   /// `a.js` calls `import('./utils.js')`, and no client visited it, so its proxy is the stub
@@ -835,5 +990,75 @@ mod tests {
     let mut carried = patch.carried.iter().map(|(id, _)| id.as_str()).collect::<Vec<_>>();
     carried.sort_unstable();
     assert_eq!(carried, ["a.js", "b.js", "utils.js"]);
+  }
+
+  /// A failed HMR scan queues the broken file in `pending_rescans`. A compile then scans
+  /// again, even for a fetched route, so the fixed file reaches the payload.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn lazy_repeat_visit_scans_while_a_rescan_is_queued() {
+    use rolldown_common::WatcherChangeKind;
+    use rolldown_utils::indexmap::FxIndexMap;
+
+    let (dir, engine) = lazy_fixture("lazy-repeat-visit-rescan");
+    engine.run().await.unwrap();
+    engine.create_client_for_testing().await;
+    let proxy = lazy_proxy_id(&dir);
+
+    let first = engine.compile_lazy_entry(proxy.clone(), "c1".to_string()).await.unwrap();
+    engine.ensure_latest_bundle_output().await.unwrap();
+
+    std::fs::write(dir.join("dep.js"), "export const dep = ;\n").unwrap();
+    engine
+      .ensure_task_with_changed_files(FxIndexMap::from_iter([(
+        dir.join("dep.js"),
+        WatcherChangeKind::Update,
+      )]))
+      .await;
+    let state_after_break = engine.get_bundle_state().await.unwrap();
+    // Fixed with no watch event: only the queued rescan can pick it up.
+    std::fs::write(dir.join("dep.js"), "export const dep = 'fixed';\n").unwrap();
+    let retry = engine.compile_lazy_entry(proxy, "c2".to_string()).await;
+
+    engine.close().await.unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+
+    assert!(first.scanned);
+    assert!(state_after_break.last_build_errored, "the HMR scan of the broken file fails");
+    let retry = retry.unwrap();
+    assert!(retry.scanned);
+    assert!(retry.code.contains("'fixed'") || retry.code.contains("\"fixed\""), "{}", retry.code);
+  }
+
+  /// Deleting a fetched route's file rescans the proxy in the HMR stage, and that scan fails
+  /// to resolve the file. The proxy is then queued for a rescan, so the next compile scans and
+  /// reports the missing file instead of serving the deleted module from the graph.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn lazy_repeat_visit_reports_a_deleted_route_file() {
+    use rolldown_common::WatcherChangeKind;
+    use rolldown_utils::indexmap::FxIndexMap;
+
+    let (dir, engine) = lazy_fixture("lazy-repeat-visit-deleted");
+    engine.run().await.unwrap();
+    engine.create_client_for_testing().await;
+    let proxy = lazy_proxy_id(&dir);
+
+    engine.compile_lazy_entry(proxy.clone(), "c1".to_string()).await.unwrap();
+    engine.ensure_latest_bundle_output().await.unwrap();
+    std::fs::remove_file(dir.join("lazy.js")).unwrap();
+    engine
+      .ensure_task_with_changed_files(FxIndexMap::from_iter([(
+        dir.join("lazy.js"),
+        WatcherChangeKind::Delete,
+      )]))
+      .await;
+    let repeat = engine.compile_lazy_entry(proxy, "c2".to_string()).await;
+
+    engine.close().await.unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+
+    let errors = format!("{:?}", repeat.expect_err("the deleted file must not be served"));
+    assert!(errors.contains("UNRESOLVED_IMPORT") && errors.contains("lazy.js"), "{errors}");
   }
 }

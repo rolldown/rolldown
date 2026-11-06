@@ -1,4 +1,4 @@
-name: Benchmarks Rust (paired lazy-line walltime validation)
+name: Benchmarks Rust Borrowed Tokens (paired lazy-line walltime validation)
 
 permissions: {}
 
@@ -33,6 +33,10 @@ jobs:
       github.event_name != 'pull_request' ||
       (github.event.pull_request.draft != true &&
       !contains(github.event.pull_request.labels.*.name, 'graphite: merge-when-ready'))
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [simulation, walltime]
     runs-on: ubuntu-latest
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
@@ -47,7 +51,7 @@ jobs:
             uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
             with:
               tools: just, cargo-codspeed
-              cache-key: codspeed-lazy-line-walltime-validation
+              cache-key: codspeed-borrowed-token-validation
               save-cache: ${{ github.ref_name == 'main' }}
 
       - name: Setup Benchmark Input
@@ -57,20 +61,34 @@ jobs:
 
       - name: Build paired baseline and candidate
         env:
+          BENCH_MODE: ${{ matrix.mode }}
           RUSTFLAGS: '-C debuginfo=1 -C strip=none -g -C lto=false -C codegen-units=16'
         run: |
+          if [ "$BENCH_MODE" = simulation ]; then export RUSTFLAGS="$RUSTFLAGS --cfg codspeed"; fi
+          git clone --depth 1 --branch v9.0.0 https://github.com/oxc-project/oxc-sourcemap.git /tmp/borrowed-sourcemap
+          python3 - <<'PY_API'
+          from pathlib import Path
+          p = Path('/tmp/borrowed-sourcemap/src/sourcemap.rs')
+          t = p.read_text()
+          needle = '    /// Get source view tokens.'
+          assert t.count(needle) == 1
+          t = t.replace(needle, '    /// Borrow the raw tokens in generated-position order without copying them.\n    pub fn get_tokens_slice(&self) -> &[Token] {\n        &self.tokens\n    }\n\n' + needle)
+          p.write_text(t)
+          PY_API
           cat > /tmp/prepare-paired.py <<'PY_PREPARE'
           from pathlib import Path
 
           root = Path.cwd()
-          p = root / 'Cargo.toml'
-          p.write_text(p.read_text().replace(
-              'criterion2 = { version = "3.0.4", default-features = false }',
-              'criterion = { package = "codspeed-criterion-compat", version = "=6.0.0", default-features = false }',
-          ))
-          for rel in ['crates/bench/Cargo.toml', 'crates/rolldown_sourcemap/Cargo.toml', 'crates/rolldown_utils/Cargo.toml']:
-              p = root / rel
-              p.write_text(p.read_text().replace('criterion2', 'criterion').replace('codspeed = ["criterion/codspeed"]', 'codspeed = []'))
+          import os
+          if os.environ["BENCH_MODE"] == "walltime":
+              p = root / 'Cargo.toml'
+              p.write_text(p.read_text().replace(
+                  'criterion2 = { version = "3.0.4", default-features = false }',
+                  'criterion = { package = "codspeed-criterion-compat", version = "=6.0.0", default-features = false }',
+              ))
+              for rel in ['crates/bench/Cargo.toml', 'crates/rolldown_sourcemap/Cargo.toml', 'crates/rolldown_utils/Cargo.toml']:
+                  p = root / rel
+                  p.write_text(p.read_text().replace('criterion2', 'criterion').replace('codspeed = ["criterion/codspeed"]', 'codspeed = []'))
 
           # Label the builds without changing benchmark inputs or measured operations.
           p = root / 'crates/bench/benches/bench.rs'
@@ -98,47 +116,55 @@ jobs:
           assert len(paths) == 1, paths
           shutil.copy2(paths[0], sys.argv[2])
           PY_COPY
-          git fetch origin 1f1e5ffc9a208c774784f71fb3fcaa35c01a1ca3 b2413e00da69e104d203c128d32f337202182016
+          git fetch origin 1f1e5ffc9a208c774784f71fb3fcaa35c01a1ca3 d293ec097039bc4b79e4e4b6d94abc8392cfb386
+          features=()
+          if [ "$BENCH_MODE" = simulation ]; then features=(--features codspeed); fi
           for variant in base head; do
             case "$variant" in
               base) revision=1f1e5ffc9a208c774784f71fb3fcaa35c01a1ca3 ;;
-              head) revision=b2413e00da69e104d203c128d32f337202182016 ;;
+              head) revision=d293ec097039bc4b79e4e4b6d94abc8392cfb386 ;;
             esac
             git checkout --detach "$revision"
             python3 /tmp/prepare-paired.py
             if [ "$variant" = head ]; then cp /tmp/paired-Cargo.lock Cargo.lock; fi
             if [ "$variant" = base ]; then
-              cargo build --release -p bench --bench bench --message-format=json > /tmp/base-build.json
+              cargo --config 'patch.crates-io.oxc_sourcemap.path="/tmp/borrowed-sourcemap"' build --release -p bench --bench bench "${features[@]}" --message-format=json > /tmp/base-build.json
               cp Cargo.lock /tmp/paired-Cargo.lock
             else
-              cargo build --locked --release -p bench --bench bench --message-format=json > /tmp/head-build.json
+              cargo --config 'patch.crates-io.oxc_sourcemap.path="/tmp/borrowed-sourcemap"' build --locked --release -p bench --bench bench "${features[@]}" --message-format=json > /tmp/head-build.json
             fi
             python3 /tmp/copy-benchmark.py "/tmp/$variant-build.json" "/tmp/$variant-bench"
             if [ "$variant" = base ]; then
               git restore --worktree Cargo.toml Cargo.lock crates/bench/Cargo.toml crates/rolldown_sourcemap/Cargo.toml crates/rolldown_utils/Cargo.toml crates/bench/benches/bench.rs crates/bench/src/lib.rs
             fi
           done
-          mkdir -p target/codspeed/walltime/bench
-          find target/codspeed/walltime/bench -maxdepth 1 -type f -delete
-          cp /tmp/base-bench target/codspeed/walltime/bench/base
-          cp /tmp/head-bench target/codspeed/walltime/bench/head
+          bucket=walltime
+          if [ "$BENCH_MODE" = simulation ]; then bucket=analysis; fi
+          mkdir -p "target/codspeed/$bucket/bench"
+          find target/codspeed/$bucket/bench -maxdepth 1 -type f -delete
+          cp /tmp/base-bench target/codspeed/$bucket/bench/base
+          cp /tmp/head-bench target/codspeed/$bucket/bench/head
           sha256sum /tmp/base-bench /tmp/head-bench
           cat > /tmp/run-paired-walltime.sh <<'SH_RUN'
           set -euo pipefail
+          opts=()
+          if [ "$BENCH_MODE" = walltime ]; then opts=(-- --sample-size 40 --warm-up-time 1 --measurement-time 3); fi
           for phase in base1 head1 head2 base2; do
             case "$phase" in
               base*) binary=base ;;
               head*) binary=head ;;
             esac
-            WALLTIME_LABEL="$phase" cargo codspeed run -m walltime -p bench --bench "$binary" sourcemap -- --sample-size 40 --warm-up-time 1 --measurement-time 3
+            WALLTIME_LABEL="$phase" cargo codspeed run -m "$BENCH_MODE" -p bench --bench "$binary" sourcemap "${opts[@]}"
           done
           SH_RUN
 
       - wait: benchmark-input
 
       - name: Run the benchmarks
+        env:
+          BENCH_MODE: ${{ matrix.mode }}
         uses: CodSpeedHQ/action@373d6868929f444bc08d901fd0eb0ad52a8875ea # v5.2.1
         with:
           run: bash /tmp/run-paired-walltime.sh
           token: ${{ secrets.CODSPEED_TOKEN }}
-          mode: walltime
+          mode: ${{ matrix.mode }}

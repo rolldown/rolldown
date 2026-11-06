@@ -1,4 +1,4 @@
-name: Benchmarks Rust (temporary walltime validation)
+name: Benchmarks Rust (paired cursor walltime validation)
 
 permissions: {}
 
@@ -47,7 +47,7 @@ jobs:
             uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
             with:
               tools: just, cargo-codspeed
-              cache-key: codspeed-walltime-validation
+              cache-key: codspeed-paired-walltime-validation
               save-cache: ${{ github.ref_name == 'main' }}
 
       - name: Setup Benchmark Input
@@ -55,20 +55,83 @@ jobs:
         background: true
         run: just setup-bench
 
-      - name: Build benchmark
+      - name: Build paired baseline and candidate
         env:
           RUSTFLAGS: '-C debuginfo=1 -C strip=none -g -C lto=false -C codegen-units=16'
         run: |
-          cargo build --release -p bench --bench bench
+          cat > /tmp/prepare-paired.py <<'PY_PREPARE'
+          from pathlib import Path
+
+          root = Path.cwd()
+          p = root / 'Cargo.toml'
+          p.write_text(p.read_text().replace(
+              'criterion2 = { version = "3.0.4", default-features = false }',
+              'criterion = { package = "codspeed-criterion-compat", version = "=6.0.0", default-features = false }',
+          ))
+          for rel in ['crates/bench/Cargo.toml', 'crates/rolldown_sourcemap/Cargo.toml', 'crates/rolldown_utils/Cargo.toml']:
+              p = root / rel
+              p.write_text(p.read_text().replace('criterion2', 'criterion').replace('codspeed = ["criterion/codspeed"]', 'codspeed = []'))
+
+          # Label the builds without changing benchmark inputs or measured operations.
+          p = root / 'crates/bench/benches/bench.rs'
+          p.write_text(p.read_text().replace(
+              'let mut group = c.benchmark_group("sourcemap");',
+              'let label = std::env::var("WALLTIME_LABEL").expect("validation label");\n  let mut group = c.benchmark_group(format!("{label}/sourcemap"));',
+          ))
+          p = root / 'crates/bench/src/lib.rs'
+          p.write_text(p.read_text().replace(
+              'let mut group = c.benchmark_group(group_name);',
+              'let label = std::env::var("WALLTIME_LABEL").expect("validation label");\n  let mut group = c.benchmark_group(format!("{label}/{group_name}"));',
+          ))
+          PY_PREPARE
+          cat > /tmp/copy-benchmark.py <<'PY_COPY'
+          import json, shutil, sys
+          records = [json.loads(line) for line in open(sys.argv[1]) if line.startswith('{')]
+          paths = [r['executable'] for r in records if r.get('reason') == 'compiler-artifact' and 'bench' in r.get('target', {}).get('kind', []) and r.get('executable')]
+          assert len(paths) == 1, paths
+          shutil.copy2(paths[0], sys.argv[2])
+          PY_COPY
+          git fetch origin 7cef1ae5c9a7429847e854ecfbd18372612ffa06 1f1e5ffc9a208c774784f71fb3fcaa35c01a1ca3
+          for variant in base head; do
+            case "$variant" in
+              base) revision=7cef1ae5c9a7429847e854ecfbd18372612ffa06 ;;
+              head) revision=1f1e5ffc9a208c774784f71fb3fcaa35c01a1ca3 ;;
+            esac
+            git checkout --detach "$revision"
+            python3 /tmp/prepare-paired.py
+            if [ "$variant" = head ]; then cp /tmp/paired-Cargo.lock Cargo.lock; fi
+            if [ "$variant" = base ]; then
+              cargo build --release -p bench --bench bench --message-format=json > /tmp/base-build.json
+              cp Cargo.lock /tmp/paired-Cargo.lock
+            else
+              cargo build --locked --release -p bench --bench bench --message-format=json > /tmp/head-build.json
+            fi
+            python3 /tmp/copy-benchmark.py "/tmp/$variant-build.json" "/tmp/$variant-bench"
+            if [ "$variant" = base ]; then
+              git restore --worktree Cargo.toml Cargo.lock crates/bench/Cargo.toml crates/rolldown_sourcemap/Cargo.toml crates/rolldown_utils/Cargo.toml crates/bench/benches/bench.rs crates/bench/src/lib.rs
+            fi
+          done
           mkdir -p target/codspeed/walltime/bench
-          mv target/release/deps/bench-* target/codspeed/walltime/bench
-          rm target/codspeed/walltime/bench/*.d
+          find target/codspeed/walltime/bench -maxdepth 1 -type f -delete
+          cp /tmp/base-bench target/codspeed/walltime/bench/base
+          cp /tmp/head-bench target/codspeed/walltime/bench/head
+          sha256sum /tmp/base-bench /tmp/head-bench
+          cat > /tmp/run-paired-walltime.sh <<'SH_RUN'
+          set -euo pipefail
+          for phase in base1 head1 head2 base2; do
+            case "$phase" in
+              base*) binary=base ;;
+              head*) binary=head ;;
+            esac
+            WALLTIME_LABEL="$phase" cargo codspeed run -m walltime -p bench --bench "$binary" sourcemap -- --sample-size 40 --warm-up-time 1 --measurement-time 3
+          done
+          SH_RUN
 
       - wait: benchmark-input
 
       - name: Run the benchmarks
         uses: CodSpeedHQ/action@373d6868929f444bc08d901fd0eb0ad52a8875ea # v5.2.1
         with:
-          run: cargo codspeed run -m walltime -p bench sourcemap -- --sample-size 40 --warm-up-time 1 --measurement-time 3
+          run: bash /tmp/run-paired-walltime.sh
           token: ${{ secrets.CODSPEED_TOKEN }}
           mode: walltime

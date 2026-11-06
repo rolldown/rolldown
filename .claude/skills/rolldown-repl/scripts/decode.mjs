@@ -10,7 +10,7 @@
 
 import { argv, exit } from 'node:process';
 import { writeFileSync, mkdirSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { dirname, resolve, relative, isAbsolute, sep } from 'node:path';
 import { Buffer } from 'node:buffer';
 import zlib from 'node:zlib';
 
@@ -41,6 +41,16 @@ function fileContent(meta) {
   return meta?.c ?? meta?.code ?? '';
 }
 
+function isFileInsideDirectory(filePath, directory) {
+  const relativePath = relative(directory, filePath);
+  return (
+    relativePath !== '' &&
+    relativePath !== '..' &&
+    !relativePath.startsWith(`..${sep}`) &&
+    !isAbsolute(relativePath)
+  );
+}
+
 function main() {
   const args = argv.slice(2);
   const writeIdx = args.indexOf('--write');
@@ -68,9 +78,13 @@ function main() {
   console.log(JSON.stringify(summary, null, 2));
 
   if (writeDir) {
+    const root = resolve(writeDir);
     mkdirSync(writeDir, { recursive: true });
     for (const [name, meta] of Object.entries(files)) {
-      const path = join(writeDir, name);
+      const path = resolve(root, name);
+      if (!isFileInsideDirectory(path, root)) {
+        throw new Error(`Refusing to write outside --write directory: ${name}`);
+      }
       mkdirSync(dirname(path), { recursive: true });
       writeFileSync(path, fileContent(meta), 'utf-8');
     }

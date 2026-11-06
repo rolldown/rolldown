@@ -28,7 +28,7 @@ export default defineTest({
     }
 
     const parsed = JSON.parse(map.source as string);
-    const ignored = parsed.x_google_ignoreList as number[];
+    const ignored = parsed.ignoreList as number[];
     const sources = parsed.sources as string[];
     const vendorIndex = sources.findIndex((source) => source.includes('vendor'));
 

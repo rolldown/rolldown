@@ -29,16 +29,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 __rolldown_runtime__.registerGraph({
 	ids: ["main.ts"],
 	localCount: 1,
-	edges: [[]]
+	edges: [[]],
+	entries: [0]
 });
-//#region main.ts
+// main.ts
 var main_exports = /* @__PURE__ */ __exportAll({ Foo: () => Foo });
 __rolldown_runtime__.createModuleHotContext("main.ts");
 __rolldown_runtime__.registerModule("main.ts", { exports: main_exports });
 var Foo = class {
 	bar = 1;
 };
-//#endregion
 export { Foo };
 
 ```

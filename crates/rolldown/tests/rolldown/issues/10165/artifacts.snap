@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region module.js
+// module.js
 let F = () => {};
 let f = () => {};
 let iterated = false;
@@ -14,10 +14,8 @@ const [unused] = { [Symbol.iterator]() {
 	iterated = true;
 	return [][Symbol.iterator]();
 } }, used = iterated;
-//#endregion
-//#region main.js
+// main.js
 if (!used) throw new Error("destructuring effect was dropped");
-//#endregion
 export { F, f, used };
 
 ```

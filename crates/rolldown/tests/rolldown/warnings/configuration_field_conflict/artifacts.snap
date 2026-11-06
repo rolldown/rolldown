@@ -15,11 +15,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region main.tsx
+// main.tsx
 function Something() {
 	return /* @__PURE__ */ React.createElement("div", null, "Something");
 }
 console.log(`<Something/>: `, /* @__PURE__ */ React.createElement(Something, null));
-//#endregion
 
 ```

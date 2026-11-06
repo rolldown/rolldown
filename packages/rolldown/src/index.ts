@@ -41,6 +41,7 @@ import type {
   BuiltinModuleTag,
   CodeSplittingGroup,
   CodeSplittingOptions,
+  ExperimentalInlineCommonChunksOptions,
   AddonFunction,
   ChunkFileNamesFunction,
   ChunkingContext,
@@ -64,6 +65,7 @@ import type {
   FunctionPluginHooks,
   HookFilterExtension,
   ImportKind,
+  LoadExtraOptions,
   LoadResult,
   ModuleOptions,
   ModuleType,
@@ -81,6 +83,7 @@ import type {
   SourceDescription,
   TransformResult,
 } from './plugin';
+import type { UniqueModuleId } from './utils/module-id';
 import type {
   BufferEncoding,
   RolldownDirectoryEntry,
@@ -130,6 +133,7 @@ export type {
   BundleError,
   CodeSplittingGroup,
   CodeSplittingOptions,
+  ExperimentalInlineCommonChunksOptions,
   AsyncPluginHooks,
   AdvancedChunksGroup,
   AdvancedChunksOptions,
@@ -165,6 +169,7 @@ export type {
   InputOption,
   InputOptions,
   InternalModuleFormat,
+  LoadExtraOptions,
   LoadResult,
   LoggingFunction,
   LogLevel,
@@ -228,6 +233,7 @@ export type {
   TransformPluginContext,
   TransformResult,
   TreeshakingOptions,
+  UniqueModuleId,
   WarningHandlerWithDefault,
   WatcherFileWatcherOptions,
   WatcherOptions,

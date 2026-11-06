@@ -14,6 +14,7 @@ pub struct BindingExperimentalOptions {
   pub native_magic_string: Option<bool>,
   pub chunk_optimization: Option<Either<bool, BindingChunkOptimizationOptions>>,
   pub lazy_barrel: Option<bool>,
+  pub import_attributes: Option<bool>,
 }
 
 impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOptions {
@@ -38,6 +39,7 @@ impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOption
         Either::B(v) => rolldown_common::ChunkOptimizationOption::Options(v.into()),
       }),
       lazy_barrel: value.lazy_barrel,
+      import_attributes: value.import_attributes,
     })
   }
 }
@@ -67,6 +69,7 @@ pub struct BindingExperimentalDevModeOptions {
   /// @deprecated Common runtime injection will be disabled by default in the future.
   pub skip_common_runtime_injection: Option<bool>,
   pub lazy: Option<bool>,
+  pub hot_update: Option<bool>,
 }
 
 impl From<BindingExperimentalDevModeOptions> for rolldown_common::DevModeOptions {
@@ -77,6 +80,7 @@ impl From<BindingExperimentalDevModeOptions> for rolldown_common::DevModeOptions
       implement: Some(value.implement),
       skip_common_runtime_injection: value.skip_common_runtime_injection,
       lazy: value.lazy,
+      hot_update: value.hot_update,
     }
   }
 }

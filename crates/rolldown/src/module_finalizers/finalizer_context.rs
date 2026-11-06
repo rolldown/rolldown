@@ -1,14 +1,12 @@
 use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ConstExportMeta, ImportRecordIdx, IndexModules, ModuleIdx,
-  ModuleType, NormalModule, PathsOutputOption, RenderedConcatenatedModuleParts,
-  RetainedExportSymbols, RuntimeModuleBrief, SharedFileEmitter, StmtInfos, SymbolRef, SymbolRefDb,
-  UsedSymbolRefs, WrapKind,
+  NormalModule, PathsOutputOption, RetainedExportSymbols, RuntimeModuleBrief, SharedFileEmitter,
+  StmtInfos, SymbolRef, SymbolRefDb, UsedSymbolRefs, WrapKind,
 };
 
 pub type FinalizerMutableFields = (
-  FxIndexMap<ImportRecordIdx, String>, // transferred_import_record
-  RenderedConcatenatedModuleParts,     // rendered_concatenated_wrapped_module_parts
-  Vec<BuildDiagnostic>,                // diagnostics
+  Vec<(ImportRecordIdx, EcmaAst)>, // transferred_import_record
+  Vec<BuildDiagnostic>,            // diagnostics
 );
 
 use oxc::ast::builder::AstBuilder;
@@ -26,7 +24,7 @@ use crate::{
   module_finalizers::{ScopeHoistingFinalizer, TraverseState},
   stages::{
     generate_stage::{
-      FinalEsmInitMetadata, Sealed,
+      FinalEsmInitMetadata, InlineCommonChunksState, Sealed,
       order_wrap_state::{EsmInitOrigin, EsmInitTarget, OrderWrapState},
     },
     link_stage::SafelyMergeCjsNsInfo,
@@ -36,8 +34,14 @@ use crate::{
 
 pub struct ScopeHoistingFinalizerContext<'me> {
   pub idx: ModuleIdx,
+  /// The output file the finalized code is printed in. For a module of an inline common chunk
+  /// record this is the carrier, not the record.
   pub chunk: &'me Chunk,
+  /// The chunk the module is placed in (`module_to_chunk`).
   pub chunk_idx: ChunkIdx,
+  /// The index of `chunk`. With `chunk_idx` it says which bridges resolve the module's reads of
+  /// inline common chunk records.
+  pub file_idx: ChunkIdx,
   pub module: &'me NormalModule,
   /// Statement-info table for the current module, threaded in from the
   /// link-stage side `IndexVec<ModuleIdx, StmtInfos>` (see `LinkStage.stmt_infos`).
@@ -46,6 +50,8 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   /// module's statement inclusion to tell whether an eager forwarder discharges its own hops.
   pub index_stmt_infos: &'me crate::type_alias::IndexStmtInfos,
   pub modules: &'me IndexModules,
+  pub dynamic_import_usage:
+    Option<&'me rolldown_common::dynamic_import_usage::DynamicImportExportsUsage>,
   pub linking_info: &'me LinkingMetadata,
   pub linking_infos: &'me LinkingMetadataVec,
   pub order_wrap_state: &'me OrderWrapState,
@@ -68,6 +74,8 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   /// True if any module in the bundle has enum member values to inline.
   /// Allows skipping enum inlining checks in the hot visitor path for enum-free bundles.
   pub has_enum_inlining: bool,
+  /// `experimentalInlineCommonChunks`: records and the bridges this chunk reads them through.
+  pub inline_state: &'me InlineCommonChunksState,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -121,17 +129,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
 
       let module_namespace_included = self.linking_info.namespace_included;
 
-      let need_inline_json_prop = matches!(self.module.module_type, ModuleType::Json)
-        && !self.module.exports_kind.is_commonjs()
-        && !module_namespace_included;
-
-      let transferred_import_record = self
-        .chunk
-        .remove_map
-        .get(&self.idx)
-        .cloned()
-        .map(|idxs| idxs.into_iter().map(|idx| (idx, String::new())).collect::<FxIndexMap<_, _>>())
-        .unwrap_or_default();
+      let need_inline_json_prop = self.linking_info.inlines_json_keys(self.module);
 
       let mut finalizer = ScopeHoistingFinalizer {
         ctx: self,
@@ -146,8 +144,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         keep_name_statement_to_insert: vec![],
         needs_hosted_top_level_binding: false,
         module_namespace_included,
-        transferred_import_record,
-        rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts::default(),
+        transferred_import_record: Vec::new(),
         json_module_inlined_prop: need_inline_json_prop.then(|| Box::new(FxHashMap::default())),
         missing_file_reference_ids: FxIndexMap::default(),
         resolve_file_url_errors: Vec::new(),
@@ -198,11 +195,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         }));
       }
 
-      (
-        finalizer.transferred_import_record,
-        finalizer.rendered_concatenated_wrapped_module_parts,
-        diagnostics,
-      )
+      (finalizer.transferred_import_record, diagnostics)
     })
   }
 }

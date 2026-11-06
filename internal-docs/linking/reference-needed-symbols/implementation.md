@@ -11,39 +11,6 @@
 
 It writes data; it does not decide what is included. `include_statements` is the next pass and consumes everything written here.
 
-Between dependency recording and inclusion, `refine_constant_statement_side_effects` (in
-`cross_module_optimization.rs`, called from `link()` right after `cross_module_optimization`)
-refines side-effect flags using linked immutable ESM constants, including with the default single
-inline-constant pass. The scan-time analyzer cannot resolve imported bindings. Without this
-refinement, a top-level `if (DEV) warn()` with imported `DEV = false` demands `warn` before
-finalization removes the call; if `warn` belongs to another chunk, its generated chunk export
-becomes a root for the later chunk-local DCE and retains the otherwise dead function.
-
-The refinement only clears effects, and only re-analyzes statements that have no import records
-and reference a linked constant. Skipping statements with import records preserves effects
-introduced by import lowering, which is the only post-scan pass that adds effects today. A future
-pass that forces effects on record-free statements must run after this refinement or be excluded
-by it. Statements already cleared by the function-purity pass are skipped because they no longer
-have effects. Conditions are evaluated separately from their effects: a known-false condition with
-an effectful test must still execute that test. Known conditions are keyed by expression address,
-not `NodeId`, because synthesized nodes may share `NodeId::DUMMY`. Linked constants also report
-their value type to Oxc (`value_type_for_reference_id`), which proves template interpolation and
-string concatenation of primitives effect-free without trusting mutable bindings or objects with
-observable coercion. Substitution-free template literals are collected as string constants during
-scanning.
-
-The pass does not mutate the AST or semantic IDs, nor remove references from a retained
-statement; it refines whole-statement inclusion. Pruning references from retained statements was
-rejected: it is only sound if finalization reliably deletes the matching dead branch, and a miss
-would emit a dangling reference. Consequently, dead branches inside live functions, such as
-`function f() { if (DEV) warn() }`, still keep their callees and cross-chunk exports. Statements
-with import records (`if (DEV) import('./devtools')`), namespace member conditions
-(`if (ns.DEV)`), and `??` are also not refined.
-
-Regression fixtures: `optimization/inline_const/dead_shared_chunk_export`,
-`optimization/inline_const/cross_chunk_value_type` (#6939), and
-`optimization/inline_const/constant_effects_safety` under `crates/rolldown/tests/rolldown/`.
-
 Source: `crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs`.
 
 ## Pipeline placement
@@ -51,18 +18,21 @@ Source: `crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs`.
 ```
 … wrap_modules → generate_lazy_export → determine_side_effects
   → bind_imports_and_exports → create_exports_for_ecma_modules
+  → cross_module_optimization → refine_stmt_side_effects_with_imported_constants
+  → recompute_analyzed_side_effects
   → reference_needed_symbols   ← this pass
-  → cross_module_optimization → include_statements → patch_module_dependencies
+  → include_statements → patch_module_dependencies
 ```
 
-Position is load-bearing in two directions:
+This position matters for three reasons:
 
 1. **`wrap_kind` and `wrapper_ref` must already exist.** Every CJS/ESM-wrap arm reads `metas[importee.idx].wrap_kind()` and dereferences `wrapper_ref.unwrap()`. `wrap_modules` and `generate_lazy_export` populate them.
-2. **`include_statements` must run after.** Tree-shaking traverses `stmt_info.referenced_symbols` and joins `depended_runtime_helper` against included statements. Without the data this pass writes, wrappers and helpers would be silently dropped from the output.
+2. **Module side effects must be final.** This pass copies the verdict `importee.side_effects` into the import-statement flags. `cross_module_optimization` and `refine_stmt_side_effects_with_imported_constants` relax statement flags after `determine_side_effects` runs. Thus `recompute_analyzed_side_effects` recalculates the module verdicts before this pass runs. Without this step, this pass keeps a side-effect-only `import './mod'` of a module that became side-effect free.
+3. **`include_statements` must run after this pass.** It traverses `stmt_info.referenced_symbols` and joins `depended_runtime_helper` against included statements. Without the data from this pass, it silently drops wrappers and helpers from the output.
 
-`determine_side_effects` propagates effects from dependencies to their importers through a worklist. User-defined verdicts remain authoritative. Re-exports that need wrapper initialization or a `__reExport` call also start propagation. Each module enters the worklist at most once, so the pass takes O(modules + imports).
+`determine_side_effects` propagates side effects from dependencies to their importers through a worklist. User-defined verdicts do not change. Re-exports that need wrapper initialization or a `__reExport` call also start propagation. Each module enters the worklist at most once, so each propagation takes O(modules + imports).
 
-A recursive cache can finish one member of an import cycle before it discovers an effectful dependency of another member. For `a → b → a` and `a → effect`, it can cache `b` as effect-free before discovering `effect`. A separate entry that imports `b` then loses the effect. The fixture `crates/rolldown/tests/rolldown/tree_shaking/multi_entry_side_effect_cycle` reproduces this without constant refinement.
+A recursive walk can cache a member of an import cycle as side-effect free too early. For `a → b → a` and `a → effect`, it can cache `b` as side-effect free before it reaches `effect`. A separate entry that imports `b` then loses the side effect. The fixture `crates/rolldown/tests/rolldown/tree_shaking/multi_entry_side_effect_cycle` tests this case.
 
 ## Dispatch
 
@@ -214,6 +184,23 @@ After this pass:
 4. **Every CJS namespace import has a stable `import_<repr_name>` name.** Downstream rendering can rely on both `wrapper_ref` (set by `wrap_modules`) and the namespace name (set here) being settled.
 
 A bug in any of (1)–(4) typically surfaces as a tree-shaking false-positive (helper or wrapper missing in output) or a de-conflict miss.
+
+## Forwarding declarations in `include_statements`
+
+Binding demand retains initialization as well as the declaration. In
+`tree_shaking/include_statements.rs`, `demand_esm_initialization` retains a wrapped ESM owner's
+wrapper and, through `retain_forwarding_declarations`, the import or re-export statements that
+forward the binding to its consumer (`normal_symbol_exports_chain_map`); entry exports and bindings
+read in included statements share this path. A forwarding statement whose importee is wrapped lowers
+to that importee's `init_*()` call, so a wrapped barrel's wrapper initializes the module it
+re-exports from, in source order and also when chunking places that module elsewhere.
+
+A forwarding statement is retained only once its owner module is included; a declaration whose owner
+is included later is retained at that point (`deferred_forwarding_refs`). In a module that never
+joins the output the statement is dead, and its wrapper reference would otherwise include the
+wrapped importee without any entry reaching it: debug builds assert in chunk assignment, release
+builds emit a chunk no entry loads. The consumer then initializes the canonical owner itself, as the
+`Import`, `WrapKind::None` arm under [Dispatch](#dispatch) describes.
 
 ## Implementation constraints
 

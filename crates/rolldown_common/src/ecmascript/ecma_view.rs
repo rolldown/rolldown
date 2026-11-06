@@ -1,4 +1,4 @@
-use crate::{ConstExportMeta, ImportAttribute, SourcemapChainElement};
+use crate::{ConstExportMeta, SourcemapChainElement};
 use arcstr::ArcStr;
 use bitflags::bitflags;
 use oxc::{
@@ -12,8 +12,8 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   ExportsKind, HmrInfo, ImportRecordIdx, ImporterRecord, LocalExport, ModuleDefFormat, ModuleId,
-  ModuleIdx, NamedImport, ResolvedImportRecord, SourceMutation, StmtInfoIdx, SymbolRef,
-  side_effects::DeterminedSideEffects, types::source_mutation::ArcSourceMutation,
+  ModuleIdx, NamedImport, ResolvedImportRecord, StmtInfoIdx, SymbolRef,
+  side_effects::DeterminedSideEffects,
 };
 
 bitflags! {
@@ -30,6 +30,8 @@ bitflags! {
         const TopExportedSideEffectsFreeFunction = 1 << 5;
         /// Module evaluation reads at least one imported binding.
         const TopLevelImportRead = 1 << 6;
+        /// Local initialization creates data and functions without observing outside state.
+        const IndependentInitialization = 1 << 7;
     }
 }
 
@@ -52,6 +54,11 @@ pub struct RolldownFileUrlReference {
 pub enum ThisExprReplaceKind {
   /// It depends on `context` set by the user. If it's unset, replace it with `undefined`.
   Context,
+  /// The top-level `this` of a CommonJS module, which is the initial exports object of the module.
+  /// If the finalizer prints the module inside a CJS closure, it prints `this` as
+  /// `EcmaView::cjs_this_ref`. If the module is an unwrapped CommonJS entry, the finalizer keeps
+  /// `this`, which is the module `this` of Node. The HMR finalizer prints its own exports reference
+  /// instead.
   Exports,
 }
 
@@ -147,14 +154,24 @@ pub struct EcmaView {
   pub hashbang_range: Option<Span>,
   pub directive_range: Vec<Span>,
   pub meta: EcmaViewMeta,
-  pub mutations: Vec<ArcSourceMutation>,
   /// `NodeId` of `new URL('path', import.meta.url)` -> `ImportRecordIdx`
   pub new_url_references: FxHashMap<NodeId, ImportRecordIdx>,
+  /// `NodeId` of `'key' in ns`, where `ns` is a namespace import -> `key`.
+  pub namespace_in_checks: FxHashMap<NodeId, CompactStr>,
   /// Occurrences of `import.meta.ROLLDOWN_FILE_URL_<referenceId>[_<urlId>]`, in source order.
   /// One entry per occurrence: the `resolveFileUrl` hook is called per occurrence,
   /// matching Rollup, so duplicates are meaningful.
   pub rolldown_file_url_references: Vec<RolldownFileUrlReference>,
   pub this_expr_replace_map: FxHashMap<NodeId, ThisExprReplaceKind>,
+  /// The facade symbol for the top-level `this` of a CommonJS module. The scanner makes it for each
+  /// CommonJS module that reads its top-level `this`, and `determine_module_exports_kind` makes it
+  /// for a module that reads its top-level `this` when it promotes the module from
+  /// `ExportsKind::None` to `ExportsKind::CommonJs`. If the finalizer prints the module inside a
+  /// CJS closure, the renamer gives the symbol a name, and the finalizer prints it as the third
+  /// parameter of the closure. The runtime passes the initial exports object of the module to that
+  /// parameter. The name is synthesized, so no binding of the module can capture it. An unwrapped
+  /// CommonJS entry does not use this symbol. See internal-docs/renaming/design.md.
+  pub cjs_this_ref: Option<SymbolRef>,
 
   pub hmr_hot_ref: Option<SymbolRef>,
   pub hmr_info: HmrInfo,
@@ -163,11 +180,13 @@ pub struct EcmaView {
   /// Used by the finalizer to inline `Direction.Up` style accesses across modules.
   /// Contains both const and regular enums.
   pub enum_member_value_map: FxHashMap<CompactStr, FxHashMap<CompactStr, ConstExportMeta>>,
-  pub import_attribute_map: FxHashMap<ImportRecordIdx, ImportAttribute>,
   /// Use `Box` since it is rarely used also it could reduce the size of `EcmaView`, .
   pub json_module_none_self_reference_included_symbol: Option<Box<FxHashSet<SymbolRef>>>,
   /// Import record indices for `module.exports = require(...)` patterns.
   pub cjs_reexport_import_record_ids: Vec<ImportRecordIdx>,
+  /// Members called on a dynamic import's namespace, e.g. `foo` in
+  /// `import('mod').then(ns => ns.foo())`.
+  pub dynamic_import_called_names: FxHashMap<ImportRecordIdx, FxHashSet<CompactStr>>,
 }
 
 impl EcmaView {
@@ -184,14 +203,8 @@ impl EcmaView {
       } else {
         self.dynamic_importers.insert(record.importer_path.clone());
         // Only real `import()` edges join the walkable dynamic-importer set; `HotAccept`
-        // and other non-static records are not import edges. Lazy-compilation proxy
-        // importers (`?rolldown-lazy=1`) are an internal artifact — excluding them keeps
-        // the server's superset walk from bubbling through the proxy chain
-        // (`foo -> proxy -> app`), which patch generation is not set up for. Lazy
-        // dynamic-import HMR is a separate follow-up; until then the walk stops at the
-        // lazy entry, and a tab whose own walk crosses the proxy chain reloads itself
-        // via its missing-factory / no-boundary paths, exactly as before.
-        if record.kind.is_dynamic() && !record.importer_path.as_str().contains("?rolldown-lazy=1") {
+        // and other non-static records are not import edges.
+        if record.kind.is_dynamic() {
           self.dynamic_importers_idx.insert(record.importer_idx);
         }
       }
@@ -218,15 +231,4 @@ bitflags! {
         const HmrAcceptExports = 1 << 9;
         const ModuleOrExports = Self::ModuleRef.bits() | Self::ExportsRef.bits();
     }
-}
-
-#[derive(Debug, Default)]
-pub struct PrependRenderedImport {
-  pub intro: String,
-}
-
-impl SourceMutation for PrependRenderedImport {
-  fn apply(&self, magic_string: &mut string_wizard::MagicString<'_>) {
-    magic_string.append_intro(self.intro.clone());
-  }
 }

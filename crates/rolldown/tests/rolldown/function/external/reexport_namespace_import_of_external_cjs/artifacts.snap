@@ -10,11 +10,10 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
 let node_https = require("node:https");
 node_https = __toESM(node_https);
-//#region main.js
+// main.js
 function getDefaultExport() {
 	return node_https.default;
 }
-//#endregion
 exports.getDefaultExport = getDefaultExport;
 
 ```

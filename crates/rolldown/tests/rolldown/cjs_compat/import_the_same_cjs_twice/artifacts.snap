@@ -7,13 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region cjs.js
-//#endregion
-//#region main.js
+// main.js
 var import_cjs = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports.a = {};
 })))();
-//#endregion
 var a = import_cjs.a;
 var a2 = import_cjs.a;
 export { a, a2 };

@@ -117,6 +117,14 @@ impl BindingNormalizedOptions {
     self.inner.file.as_deref()
   }
 
+  #[napi(getter, ts_return_type = "'ascii' | 'utf8'")]
+  pub fn charset(&self) -> &'static str {
+    match self.inner.charset {
+      rolldown::OutputCharset::Ascii => "ascii",
+      rolldown::OutputCharset::Utf8 => "utf8",
+    }
+  }
+
   #[napi(getter, ts_return_type = "'es' | 'cjs' | 'iife' | 'umd'")]
   pub fn format(&self) -> &'static str {
     self.inner.format.as_str()

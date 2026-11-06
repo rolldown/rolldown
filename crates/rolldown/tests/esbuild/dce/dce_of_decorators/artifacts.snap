@@ -6,12 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## keep-these.js
 
 ```js
-//#region decorator.js
+// decorator.js
 const fn = () => {
 	console.log("side effect");
 };
-//#endregion
-//#region keep-these.js
+// keep-these.js
 var Class = @fn class {};
 var Field = class {
 	@fn field;
@@ -31,6 +30,5 @@ var StaticMethod = class {
 var StaticAccessor = class {
 	@fn static accessor accessor;
 };
-//#endregion
 
 ```

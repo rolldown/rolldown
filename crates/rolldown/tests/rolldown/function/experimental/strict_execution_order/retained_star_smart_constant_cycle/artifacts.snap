@@ -6,9 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## const.js
 
 ```js
-//#region const.js
+// const.js
 const y = 1e3;
-//#endregion
 export { y as t };
 
 ```
@@ -16,21 +15,20 @@ export { y as t };
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 await import("./page-b.js").then((n) => (n.t(), n.n));
 const pageA = await import("./page-a.js");
 if (pageA.y !== 1e3 || pageA.common !== "common" || pageA._ !== void 0) throw new Error("partial dynamic import observed the wrong constant");
-//#endregion
 
 ```
 
 ## page-a.js
 
 ```js
+import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as y } from "./const.js";
 import "./page-b.js";
-import { t as __esmMin } from "./rolldown-runtime.js";
-//#region common.js
+// common.js
 function init() {
 	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
 }
@@ -41,15 +39,13 @@ function init_common() {
 		_ = /* @__PURE__ */ init();
 	})))();
 }
-//#endregion
-//#region page-a.js
+// page-a.js
 function init_page_a() {
 	return (init_page_a = __esmMin((() => {
 		init_common();
 		if (globalThis.value !== 0) throw new Error(`page-a observed ${globalThis.value}`);
 	})))();
 }
-//#endregion
 init_page_a();
 export { _, common, y };
 
@@ -58,14 +54,13 @@ export { _, common, y };
 ## page-b.js
 
 ```js
-import { t as y } from "./const.js";
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
-//#region bridge.js
+import { t as y } from "./const.js";
+// bridge.js
 function x() {
 	return 1;
 }
-//#endregion
-//#region page-b.js
+// page-b.js
 var page_b_exports = /* @__PURE__ */ __exportAll({});
 function init_page_b() {
 	return (init_page_b = __esmMin((() => {
@@ -73,7 +68,6 @@ function init_page_b() {
 		if (globalThis.value !== void 0) throw new Error(`page-b observed ${globalThis.value}`);
 	})))();
 }
-//#endregion
 export { page_b_exports as n, x as r, init_page_b as t };
 
 ```
@@ -94,14 +88,13 @@ export { __exportAll as n, __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region const.js
+// const.js
 var y;
 function init_const() {
 	return (init_const = __esmMin((() => {
 		y = 1e3;
 	})))();
 }
-//#endregion
 export { y as n, init_const as t };
 
 ```
@@ -110,7 +103,7 @@ export { y as n, init_const as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region main.js
+// main.js
 var pageA;
 function init_main() {
 	return (init_main = __esmMin((async () => {
@@ -119,7 +112,6 @@ function init_main() {
 		if (pageA.y !== 1e3 || pageA.common !== "common" || pageA._ !== void 0) throw new Error("partial dynamic import observed the wrong constant");
 	})))();
 }
-//#endregion
 await init_main();
 
 ```
@@ -127,10 +119,10 @@ await init_main();
 ### page-a.js
 
 ```js
+import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as y, t as init_const } from "./const.js";
 import "./page-b.js";
-import { t as __esmMin } from "./rolldown-runtime.js";
-//#region common.js
+// common.js
 function init() {
 	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
 }
@@ -141,8 +133,7 @@ function init_common() {
 		_ = /* @__PURE__ */ init();
 	})))();
 }
-//#endregion
-//#region page-a.js
+// page-a.js
 function init_page_a() {
 	return (init_page_a = __esmMin((() => {
 		init_const();
@@ -150,7 +141,6 @@ function init_page_a() {
 		if (globalThis.value !== 0) throw new Error(`page-a observed ${globalThis.value}`);
 	})))();
 }
-//#endregion
 init_page_a();
 export { _, common, y };
 
@@ -159,17 +149,16 @@ export { _, common, y };
 ### page-b.js
 
 ```js
-import { n as y, t as init_const } from "./const.js";
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
-//#region bridge.js
+import { n as y, t as init_const } from "./const.js";
+// bridge.js
 function x() {
 	return 1;
 }
 function init_bridge() {
 	return (init_bridge = __esmMin((() => {})))();
 }
-//#endregion
-//#region page-b.js
+// page-b.js
 var page_b_exports = /* @__PURE__ */ __exportAll({});
 function init_page_b() {
 	return (init_page_b = __esmMin((() => {
@@ -178,7 +167,6 @@ function init_page_b() {
 		if (globalThis.value !== void 0) throw new Error(`page-b observed ${globalThis.value}`);
 	})))();
 }
-//#endregion
 export { x as i, page_b_exports as n, init_bridge as r, init_page_b as t };
 
 ```

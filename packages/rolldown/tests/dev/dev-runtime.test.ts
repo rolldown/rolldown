@@ -144,6 +144,42 @@ test('registerGraph maintains static + dynamic reverse indexes; getImporters uni
   expect(runtime.getImporters('both.js')).toEqual([]);
 });
 
+test('registerGraph keeps the entry flag of each row it carries', async () => {
+  const { runtime } = await createRuntime();
+
+  // `foo.js` is a foreign target here, so this payload says nothing about it
+  runtime.registerGraph({
+    ids: ['main.js', 'app.js', 'foo.js'],
+    localCount: 2,
+    edges: [[1], [2]],
+    entries: [0],
+  });
+  expect(runtime.isEntry('main.js')).toBe(true);
+  expect(runtime.isEntry('app.js')).toBe(false);
+  expect(runtime.isEntry('foo.js')).toBe(false);
+
+  runtime.registerGraph({ ids: ['foo.js'], localCount: 1, edges: [[]] });
+  expect(runtime.isEntry('main.js')).toBe(true);
+
+  runtime.registerGraph({ ids: ['main.js', 'app.js'], localCount: 2, edges: [[1], []] });
+  expect(runtime.isEntry('main.js')).toBe(false);
+
+  runtime.registerGraph({ ids: ['main.js'], localCount: 1, edges: [[]], entries: [0] });
+  runtime.removeModuleCache('main.js');
+  expect(runtime.isEntry('main.js')).toBe(true);
+
+  // a late row with an older stamp does not change the flag
+  runtime.registerGraph({
+    ids: ['main.js'],
+    localCount: 1,
+    edges: [[]],
+    entries: [0],
+    stamps: { 0: 2 },
+  });
+  runtime.registerGraph({ ids: ['main.js'], localCount: 1, edges: [[]], stamps: { 0: 1 } });
+  expect(runtime.isEntry('main.js')).toBe(true);
+});
+
 test('registerGraph keeps the export names each static edge imports', async () => {
   const { runtime } = await createRuntime();
 
@@ -226,6 +262,57 @@ test('initModule is registry-gated and returns the live exports', async () => {
   // registered → the factory is skipped, the live exports come back
   expect(runtime.initModule('foo.js')).toEqual({ value: 1 });
   expect(factory).toHaveBeenCalledTimes(1);
+});
+
+test('a payload that arrives late does not replace newer factories or graph rows', async () => {
+  const { runtime } = await createRuntime();
+
+  // an HMR patch rendered at stamp 2 lands first
+  runtime.registerGraph({
+    ids: ['foo.js', 'bar.js'],
+    localCount: 1,
+    edges: [[1]],
+    stamps: { 0: 2 },
+  });
+  runtime.registerFactory(
+    'foo.js',
+    (id: string) => runtime.registerModule(id, { exports: { v: 2 } }),
+    2,
+  );
+
+  // a lazy chunk rendered before that edit (stamp 1) lands after it
+  runtime.registerGraph({ ids: ['foo.js'], localCount: 1, edges: [[]], stamps: { 0: 1 } });
+  runtime.registerFactory(
+    'foo.js',
+    (id: string) => runtime.registerModule(id, { exports: { v: 1 } }),
+    1,
+  );
+
+  expect(runtime.getImporters('bar.js')).toEqual(['foo.js']);
+  expect(runtime.initModule('foo.js')).toEqual({ v: 2 });
+
+  // the same stamp replaces (the copies are the same), and so does a newer one
+  runtime.registerFactory(
+    'foo.js',
+    (id: string) => runtime.registerModule(id, { exports: { v: 3 } }),
+    3,
+  );
+  runtime.removeModuleCache('foo.js');
+  expect(runtime.initModule('foo.js')).toEqual({ v: 3 });
+});
+
+test('graph rows without stamps replace the row like before', async () => {
+  const { runtime } = await createRuntime();
+
+  runtime.registerGraph({
+    ids: ['foo.js', 'bar.js'],
+    localCount: 1,
+    edges: [[1]],
+    stamps: { 0: 2 },
+  });
+  // a full-build chunk carries no `stamps`
+  runtime.registerGraph({ ids: ['foo.js'], localCount: 1, edges: [[]] });
+  expect(runtime.getImporters('bar.js')).toEqual([]);
 });
 
 test('initModule throws MissingFactoryError when no factory is mapped', async () => {

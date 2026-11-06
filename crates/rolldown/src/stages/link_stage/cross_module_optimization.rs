@@ -1,3 +1,5 @@
+use std::cell::Cell;
+
 use oxc::{
   ast::{
     AstKind,
@@ -10,9 +12,8 @@ use oxc::{
   ast_visit::{VisitJs, walk_js},
   semantic::{NodeId, SymbolId},
 };
-use oxc_ecmascript::constant_evaluation::ConstantEvaluation;
 use rolldown_common::{
-  AstScopes, ConstExportMeta, EcmaViewMeta, FlatOptions, GetLocalDb, IndexModules,
+  AstScopes, ConstExportMeta, EcmaViewMeta, ExportsKind, FlatOptions, GetLocalDb, IndexModules,
   MemberExprRefResolutionMap, ModuleIdx, SharedNormalizedBundlerOptions, Specifier, StmtEvalFlags,
   StmtInfoIdx, SymbolRef, SymbolRefDb, SymbolRefFlags,
 };
@@ -20,12 +21,18 @@ use rolldown_ecmascript_utils::ExpressionExt;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::ast_scanner::{
-  const_eval::{ConstEvalCtx, try_extract_const_literal},
-  stmt_eval_analyzer::{ConstantConditions, StmtEvalAnalyzer, condition_key},
+use crate::{
+  ast_scanner::{
+    const_eval::{ConstEvalCtx, eval_can_assign, try_extract_const_literal},
+    stmt_eval_analyzer::StmtEvalAnalyzer,
+  },
+  type_alias::IndexStmtInfos,
 };
 
-use super::LinkStage;
+use super::{
+  LinkStage,
+  refine_stmt_side_effects::{ImportCycles, LinkedConstantLookup},
+};
 
 type MutationResult = (
   Option<(ModuleIdx, FxHashMap<StmtInfoIdx, StmtEvalFlags>)>,
@@ -77,8 +84,8 @@ impl LinkStage<'_> {
       return FxHashSet::default();
     }
     // Explain `inline_const.pass`:
-    // - if `inline_const.pass` is 1, constant discovery happens in the scan phase. Linked
-    // statement side effects are refined afterwards by `refine_constant_statement_side_effects`.
+    // - if `inline_const.pass` is 1, we don't need the extra visit pass, since we already do it in
+    // scan phase. This would already cover most of the cases, and the overhead is minimal.
     // - if `inline_const.pass` is greater than 1, and there is no cycle in module graph,
     // we could just revisit the ast of module in topological order only once.
     // - TODO:
@@ -87,7 +94,7 @@ impl LinkStage<'_> {
     //  potential optimization:
     //  - if in one pass there is no new constant export found, we can stop the pass early.
     //  - if all dependencies of a module has no constant export, we don't need to visit ast at all.
-    // Extra constant-discovery passes only run with `inline_const.pass` greater than 1.
+    // The extra passes only run when user enable `inline_const` and set `pass` greater than 1.
     let mut ctx = CrossModuleOptimizationCtx::new(config);
     let mut constant_symbol_map = std::mem::take(&mut self.global_constant_symbol_map);
     let mut unreachable_node_ids = FxHashSet::default();
@@ -127,106 +134,6 @@ impl LinkStage<'_> {
     // Return all unreachable import expression node IDs instead of add it as a field of LinkStage,
     // Because this set is only used include statement stage.
     unreachable_node_ids
-  }
-
-  /// Refine statement inclusion before chunk dependencies are computed, even with the default
-  /// single inline-constant pass. Finalization is too late: a dead reference can already have
-  /// forced its declaration to be exported from a shared chunk.
-  ///
-  /// Only clears effects: a statement is re-analyzed only if it has no import records and
-  /// references a linked immutable ESM constant. Every link-stage pass that adds effects to a
-  /// statement after scanning (import lowering in `reference_needed_symbols`) does so on
-  /// statements with import records, so skipping those keeps its decisions intact. A future pass
-  /// that forces effects on record-free statements must run after this one or be excluded here.
-  // See internal-docs/linking/reference-needed-symbols/implementation.md.
-  pub(super) fn refine_constant_statement_side_effects(&mut self) {
-    if self.options.treeshake.is_none() || self.global_constant_symbol_map.is_empty() {
-      return;
-    }
-    let constant_meta = |symbol_ref: SymbolRef| {
-      // Mutable CJS properties are not immutable ES module bindings.
-      self
-        .global_constant_symbol_map
-        .get(&self.symbols.canonical_ref_for(symbol_ref))
-        .filter(|meta| !meta.commonjs_export)
-    };
-    let refined: Vec<(ModuleIdx, Vec<StmtInfoIdx>)> = self
-      .sorted_modules
-      .par_iter()
-      .filter_map(|&module_idx| {
-        let module = self.module_table[module_idx].as_normal()?;
-        let stmt_infos = &self.stmt_infos[module_idx];
-        let candidates: Vec<StmtInfoIdx> = stmt_infos
-          .iter_enumerated_without_namespace_stmt()
-          .filter(|(_, stmt_info)| {
-            stmt_info.import_records.is_empty()
-              && stmt_info.eval_flags.has_side_effect_for_tree_shaking()
-              && stmt_info
-                .referenced_symbols
-                .iter()
-                .any(|reference| constant_meta(*reference.symbol_ref()).is_some())
-          })
-          .map(|(idx, _)| idx)
-          .collect();
-        if candidates.is_empty() {
-          return None;
-        }
-        let ast = self.ast_table[module_idx].as_ref()?;
-        let namespace_object_symbol_ids: FxHashSet<SymbolId> = module
-          .named_imports
-          .iter()
-          .filter_map(|(local_ref, import)| {
-            matches!(import.imported, Specifier::Star).then_some(local_ref.symbol)
-          })
-          .collect();
-        let scope = &self.symbols.local_db(module_idx).ast_scopes;
-        let reference_meta =
-          |reference_id| constant_meta((module_idx, scope.symbol_id_for(reference_id)?).into());
-        let evaluate_reference = |reference_id| {
-          reference_meta(reference_id)
-            .map(|meta| oxc_ecmascript::constant_evaluation::ConstantValue::from(&meta.value))
-        };
-        let value_type = |reference_id| reference_meta(reference_id).map(|m| m.value.value_type());
-        let constant_map = FxHashMap::default();
-        // Constant evaluation may allocate temporary values. Keep those off the shared module
-        // arena, and release them when this module's refinement finishes.
-        let allocator = oxc::allocator::Allocator::default();
-        let eval_ctx = ConstEvalCtx {
-          ast: AstBuilder::new(&allocator),
-          scope: scope.scoping(),
-          constant_map: &constant_map,
-          overrode_get_constant_value_from_reference_id: Some(&evaluate_reference),
-        };
-        let body = &ast.program().body;
-        let cleared = candidates
-          .into_iter()
-          .filter(|&stmt_info_idx| {
-            // `0` is the namespace stmt, so top-level statement `i` is stmt info `i + 1`.
-            let stmt = &body[stmt_info_idx.index() - 1];
-            let mut collector =
-              ConstantConditionCollector { eval_ctx: &eval_ctx, conditions: FxHashMap::default() };
-            collector.visit_statement(stmt);
-            let flags = StmtEvalAnalyzer::new(
-              scope,
-              self.flat_options,
-              self.options,
-              None,
-              Some(&namespace_object_symbol_ids),
-            )
-            .with_constants(&value_type, &collector.conditions)
-            .analyze_stmt(stmt)
-            .tree_shaking_flags();
-            !flags.has_side_effect_for_tree_shaking()
-          })
-          .collect::<Vec<_>>();
-        (!cleared.is_empty()).then_some((module_idx, cleared))
-      })
-      .collect();
-    for (module_idx, stmt_info_idxs) in refined {
-      for stmt_info_idx in stmt_info_idxs {
-        self.stmt_infos[module_idx][stmt_info_idx].eval_flags = StmtEvalFlags::empty();
-      }
-    }
   }
 
   /// Find all modules that have imports resolving to any of the given constant canonical refs.
@@ -276,6 +183,8 @@ impl LinkStage<'_> {
         let constant_map = FxHashMap::default();
         ast.program.with_dependent(|owner, dep| {
           let module_symbol_table = self.symbols.local_db(module_idx);
+          // `0` is preserved for namespace stmt
+          let toplevel_stmt_idx = Cell::new(StmtInfoIdx::from_raw_unchecked(1));
           let eval_ctx = ConstEvalCtx {
             ast: AstBuilder::new(&owner.allocator),
             scope: module_symbol_table.scoping(),
@@ -284,9 +193,20 @@ impl LinkStage<'_> {
               let symbol_id = reference.symbol_id()?;
               let symbol_ref: SymbolRef = (module_idx, symbol_id).into();
               let canonical_ref = self.symbols.canonical_ref_for(symbol_ref);
-              constant_symbol_map
-                .get(&canonical_ref)
-                .map(|meta| oxc_ecmascript::constant_evaluation::ConstantValue::from(&meta.value))
+              let value = constant_symbol_map.get(&canonical_ref).map(|meta| &meta.value)?;
+              // A binding has no value before it is initialized. `ALIAS` in
+              // `export const ALIAS = VALUE; export var VALUE = 1n;` is `undefined`, and an import
+              // from a later module of the same cycle is in its TDZ.
+              let lookup = LinkedConstantLookup {
+                module_idx,
+                stmt_idx: toplevel_stmt_idx.get(),
+                modules: &self.module_table.modules,
+                import_cycles: &self.import_cycles,
+                symbols: &self.symbols,
+                stmt_infos: &self.stmt_infos,
+                constants: constant_symbol_map,
+              };
+              lookup.is_initialized(canonical_ref).then_some(value)
             }),
             constant_map: &constant_map,
           };
@@ -317,6 +237,7 @@ impl LinkStage<'_> {
               module_idx,
               config: &cross_module_inline_const_ctx.config,
               modules: &self.module_table.modules,
+              import_cycles: &self.import_cycles,
               symbols: &self.symbols,
               flat_options: self.flat_options,
               options: self.options,
@@ -324,9 +245,10 @@ impl LinkStage<'_> {
               stmt_idx_to_dynamic_import_expr_node_ids,
               resolved_member_expr_refs: &self.metas[module_idx].resolved_member_expr_refs,
               namespace_object_symbol_ids: &namespace_object_symbol_ids,
+              stmt_infos: &self.stmt_infos,
+              constant_symbol_map,
             },
-            // `0` is preserved for namespace stmt
-            toplevel_stmt_idx: StmtInfoIdx::from_raw_unchecked(1),
+            toplevel_stmt_idx: &toplevel_stmt_idx,
             visit_path: vec![],
             latest_side_effect_free_call_expr_node_id: None,
             unreachable_import_expression_node_ids: FxHashSet::default(),
@@ -365,6 +287,7 @@ impl LinkStage<'_> {
         for (stmt_info_idx, tree_shaking_flags) in mutations {
           self.stmt_infos[module_idx][stmt_info_idx].eval_flags = tree_shaking_flags;
         }
+        self.relaxed_side_effect_modules.insert(module_idx);
       }
 
       if !local_constants.is_empty() {
@@ -380,48 +303,13 @@ impl LinkStage<'_> {
   }
 }
 
-struct ConstantConditionCollector<'a, 'ast> {
-  eval_ctx: &'a ConstEvalCtx<'a, 'ast>,
-  conditions: ConstantConditions,
-}
-
-impl<'ast> ConstantConditionCollector<'_, 'ast> {
-  fn record(&mut self, test: &Expression<'ast>) {
-    if let Some(value) = test.evaluate_value_to_boolean(self.eval_ctx) {
-      self.conditions.insert(condition_key(test), value);
-    }
-  }
-}
-
-impl<'ast> VisitJs<'ast> for ConstantConditionCollector<'_, 'ast> {
-  // Function bodies are not evaluated when the statement runs, so the analyzer never asks about
-  // conditions inside them.
-  fn visit_function(&mut self, _: &oxc::ast::ast::Function<'ast>, _: oxc::semantic::ScopeFlags) {}
-
-  fn visit_arrow_function_expression(&mut self, _: &oxc::ast::ast::ArrowFunctionExpression<'ast>) {}
-
-  fn visit_if_statement(&mut self, stmt: &oxc::ast::ast::IfStatement<'ast>) {
-    self.record(&stmt.test);
-    walk_js::walk_if_statement(self, stmt);
-  }
-
-  fn visit_conditional_expression(&mut self, expr: &oxc::ast::ast::ConditionalExpression<'ast>) {
-    self.record(&expr.test);
-    walk_js::walk_conditional_expression(self, expr);
-  }
-
-  fn visit_logical_expression(&mut self, expr: &oxc::ast::ast::LogicalExpression<'ast>) {
-    self.record(&expr.left);
-    walk_js::walk_logical_expression(self, expr);
-  }
-}
-
 struct CrossModuleOptimizationImmutableCtx<'a, 'ast: 'a> {
   eval_ctx: &'a ConstEvalCtx<'a, 'ast>,
   export_default_symbol: SymbolRef,
   module_idx: ModuleIdx,
   config: &'a CrossModuleOptimizationConfig,
   modules: &'a IndexModules,
+  import_cycles: &'a ImportCycles,
   symbols: &'a SymbolRefDb,
   flat_options: FlatOptions,
   options: &'a SharedNormalizedBundlerOptions,
@@ -433,6 +321,9 @@ struct CrossModuleOptimizationImmutableCtx<'a, 'ast: 'a> {
   /// Local symbols of `import * as ns` bindings, so property reads on them are treated as
   /// side-effect-free when re-detecting side effects of statements.
   namespace_object_symbol_ids: &'a FxHashSet<SymbolId>,
+  stmt_infos: &'a IndexStmtInfos,
+  /// Constants known so far, for the `StmtEvalAnalyzer` re-run. See `LinkedConstantLookup`.
+  constant_symbol_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
 }
 
 struct CrossModuleOptimizationRunnerContext<'a, 'ast: 'a> {
@@ -440,7 +331,8 @@ struct CrossModuleOptimizationRunnerContext<'a, 'ast: 'a> {
   tree_shaking_flags_mutations: FxHashMap<StmtInfoIdx, StmtEvalFlags>,
   side_effect_free_call_expr_node_ids: FxHashSet<NodeId>,
   immutable_ctx: CrossModuleOptimizationImmutableCtx<'a, 'ast>,
-  toplevel_stmt_idx: StmtInfoIdx,
+  /// Shared with the constant lookup of `eval_ctx`.
+  toplevel_stmt_idx: &'a Cell<StmtInfoIdx>,
   visit_path: Vec<AstKind<'ast>>,
   latest_side_effect_free_call_expr_node_id: Option<NodeId>,
   /// Import expressions that are inside lazy paths (e.g., inside a PURE-annotated function)
@@ -506,12 +398,27 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
       self.visit_statement(stmt);
       if pre_node_id_len != self.side_effect_free_call_expr_node_ids.len() {
         let stmt_info_idx = StmtInfoIdx::new(idx + 1);
+        let constants = LinkedConstantLookup {
+          module_idx: self.immutable_ctx.module_idx,
+          stmt_idx: stmt_info_idx,
+          modules: self.immutable_ctx.modules,
+          import_cycles: self.immutable_ctx.import_cycles,
+          symbols: self.immutable_ctx.symbols,
+          stmt_infos: self.immutable_ctx.stmt_infos,
+          constants: self.immutable_ctx.constant_symbol_map,
+        };
         let stmt_eval_facts = StmtEvalAnalyzer::new(
           self.immutable_ctx.ast_scope,
           self.immutable_ctx.flat_options,
           self.immutable_ctx.options,
           Some(&self.side_effect_free_call_expr_node_ids),
           Some(self.immutable_ctx.namespace_object_symbol_ids),
+          Some(&constants),
+        )
+        .with_top_level_return_ends_module(
+          !self.immutable_ctx.modules[self.immutable_ctx.module_idx]
+            .as_normal()
+            .is_some_and(|module| matches!(module.exports_kind, ExportsKind::Esm)),
         )
         .analyze_stmt(stmt);
         // Cross-module optimization only refreshes tree-shaking flags. Module-level
@@ -520,13 +427,13 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
           .tree_shaking_flags_mutations
           .insert(stmt_info_idx, stmt_eval_facts.tree_shaking_flags());
       }
-      self.toplevel_stmt_idx += 1;
+      self.toplevel_stmt_idx.set(self.toplevel_stmt_idx.get() + 1);
     }
   }
 
   fn visit_import_expression(&mut self, it: &oxc::ast::ast::ImportExpression<'ast>) {
     if let Some(node_ids) =
-      self.stmt_idx_to_dynamic_import_expr_node_ids.get(&self.toplevel_stmt_idx)
+      self.stmt_idx_to_dynamic_import_expr_node_ids.get(&self.toplevel_stmt_idx.get())
     {
       if node_ids.contains(&it.node_id()) {
         // search the latest side effect free call expression parent
@@ -594,13 +501,13 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
       var_decl.declarations.iter().for_each(|declarator| {
         if let BindingPattern::BindingIdentifier(ref binding) = declarator.id {
           let symbol_ref: SymbolRef = (self.immutable_ctx.module_idx, binding.symbol_id()).into();
-          let is_not_assigned = self
-            .immutable_ctx
-            .symbols
-            .local_db(self.immutable_ctx.module_idx)
+          let local_db = self.immutable_ctx.symbols.local_db(self.immutable_ctx.module_idx);
+          // `IsNotReassigned` does not see an assignment inside direct `eval`.
+          let is_not_assigned = local_db
             .flags
             .get(&symbol_ref.symbol)
-            .is_some_and(|flag| flag.contains(SymbolRefFlags::IsNotReassigned));
+            .is_some_and(|flag| flag.contains(SymbolRefFlags::IsNotReassigned))
+            && !eval_can_assign(local_db.scoping(), symbol_ref.symbol);
 
           if is_not_assigned
             && let Some(value) = declarator

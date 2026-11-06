@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { n as __esmMin, r as __toESM } from "./rolldown-runtime.js";
 import { r as require_carrier_cjs } from "./s.js";
-//#region h/eagerhaz.js
+// h/eagerhaz.js
 var import_carrier_cjs;
 function init_eagerhaz() {
 	return (init_eagerhaz = __esmMin((() => {
@@ -16,8 +16,7 @@ function init_eagerhaz() {
 		globalThis.__carried = (0, import_carrier_cjs.default)();
 	})))();
 }
-//#endregion
-//#region h/pure.js
+// h/pure.js
 function makePv() {
 	return "PV";
 }
@@ -27,7 +26,6 @@ function init_pure() {
 		pv = /* @__PURE__ */ makePv();
 	})))();
 }
-//#endregion
 export { pv as n, init_eagerhaz as r, init_pure as t };
 
 ```
@@ -38,14 +36,13 @@ export { pv as n, init_eagerhaz as r, init_pure as t };
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { i as init_s_first, n as init_barrel, t as bmark } from "./s.js";
 import { n as pv, r as init_eagerhaz } from "./h.js";
-//#region e-first.js
+// e-first.js
 function init_e_first() {
 	return (init_e_first = __esmMin((() => {
 		(globalThis.__events ??= []).push("e-first");
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_s_first();
@@ -59,7 +56,6 @@ function init_main() {
 		};
 	})))();
 }
-//#endregion
 init_main();
 
 ```
@@ -77,21 +73,19 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 ```js
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
 import { t as init_pure } from "./h.js";
-//#region s/s-first.js
+// s/s-first.js
 function init_s_first() {
 	return (init_s_first = __esmMin((() => {
 		(globalThis.__events ??= []).push("s-first");
 	})))();
 }
-//#endregion
-//#region s/carrier.cjs.js
+// s/carrier.cjs.js
 var require_carrier_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = function carrier() {
 		return "CARRIED";
 	};
 }));
-//#endregion
-//#region s/barrel.js
+// s/barrel.js
 function makeBmark() {
 	return "B";
 }
@@ -102,7 +96,6 @@ function init_barrel() {
 		bmark = /* @__PURE__ */ makeBmark();
 	})))();
 }
-//#endregion
 export { init_s_first as i, init_barrel as n, require_carrier_cjs as r, bmark as t };
 
 ```
@@ -116,7 +109,7 @@ export { init_s_first as i, init_barrel as n, require_carrier_cjs as r, bmark as
 ```js
 import { n as __esmMin, r as __toESM } from "./rolldown-runtime.js";
 import { r as require_carrier_cjs } from "./s.js";
-//#region h/eagerhaz.js
+// h/eagerhaz.js
 var import_carrier_cjs;
 function init_eagerhaz() {
 	return (init_eagerhaz = __esmMin((() => {
@@ -124,8 +117,7 @@ function init_eagerhaz() {
 		globalThis.__carried = (0, import_carrier_cjs.default)();
 	})))();
 }
-//#endregion
-//#region h/pure.js
+// h/pure.js
 function makePv() {
 	return "PV";
 }
@@ -135,7 +127,6 @@ function init_pure() {
 		pv = /* @__PURE__ */ makePv();
 	})))();
 }
-//#endregion
 export { pv as n, init_eagerhaz as r, init_pure as t };
 
 ```
@@ -146,14 +137,13 @@ export { pv as n, init_eagerhaz as r, init_pure as t };
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { i as init_s_first, n as init_barrel, t as bmark } from "./s.js";
 import { n as pv, r as init_eagerhaz } from "./h.js";
-//#region e-first.js
+// e-first.js
 function init_e_first() {
 	return (init_e_first = __esmMin((() => {
 		(globalThis.__events ??= []).push("e-first");
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_s_first();
@@ -167,7 +157,6 @@ function init_main() {
 		};
 	})))();
 }
-//#endregion
 init_main();
 
 ```
@@ -185,21 +174,19 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 ```js
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
 import { t as init_pure } from "./h.js";
-//#region s/s-first.js
+// s/s-first.js
 function init_s_first() {
 	return (init_s_first = __esmMin((() => {
 		(globalThis.__events ??= []).push("s-first");
 	})))();
 }
-//#endregion
-//#region s/carrier.cjs.js
+// s/carrier.cjs.js
 var require_carrier_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = function carrier() {
 		return "CARRIED";
 	};
 }));
-//#endregion
-//#region s/barrel.js
+// s/barrel.js
 function makeBmark() {
 	return "B";
 }
@@ -210,7 +197,6 @@ function init_barrel() {
 		bmark = /* @__PURE__ */ makeBmark();
 	})))();
 }
-//#endregion
 export { init_s_first as i, init_barrel as n, require_carrier_cjs as r, bmark as t };
 
 ```

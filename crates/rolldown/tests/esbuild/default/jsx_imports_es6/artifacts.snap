@@ -6,16 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region custom-react.js
+// custom-react.js
 function elem() {
 	console.log();
 }
 function frag() {
 	console.log();
 }
-//#endregion
-//#region entry.jsx
+// entry.jsx
 console.log(/* @__PURE__ */ elem("div", null), /* @__PURE__ */ elem(frag, null, "fragment"));
-//#endregion
 
 ```

@@ -13,18 +13,15 @@ test
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region a/test.txt
+// a/test.txt
 var require_test$1 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "./assets/test-C4X7hChn.txt";
 }));
-//#endregion
-//#region b/test.txt
+// b/test.txt
 var require_test = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "./assets/test-C4X7hChn.txt";
 }));
-//#endregion
-//#region entry.js
+// entry.js
 console.log(require_test$1(), require_test());
-//#endregion
 
 ```

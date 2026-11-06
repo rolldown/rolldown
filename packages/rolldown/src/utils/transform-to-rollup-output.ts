@@ -7,6 +7,8 @@ import type {
   JsOutputChunk,
 } from '../binding.cjs';
 import type { MinimalPluginContext } from '../plugin/minimal-plugin-context';
+import type { OutputCodeCacheEntry } from '../plugin/plugin-context-data';
+import type { Extends, TypeAssert } from '../types/assert';
 import { OutputAssetImpl } from '../types/output-asset-impl';
 import type { OutputBundle } from '../types/output-bundle';
 import { OutputChunkImpl } from '../types/output-chunk-impl';
@@ -23,12 +25,29 @@ export function transformToRollupSourceMap(map: string): SourceMap {
       return JSON.stringify(obj);
     },
     toUrl() {
-      return `data:application/json;charset=utf-8;base64,${Buffer.from(
-        obj.toString(),
-        'utf-8',
-      ).toString('base64')}`;
+      const json = obj.toString();
+      // Browsers and workerd without Node compatibility have no `Buffer`. Each chunk is encoded
+      // at once (no full-size binary string); a multiple of 3 bytes leaves padding to the last.
+      let base64: string;
+      if (typeof Buffer === 'function') {
+        base64 = Buffer.from(json, 'utf-8').toString('base64');
+      } else {
+        const bytes = new TextEncoder().encode(json);
+        base64 = '';
+        for (let i = 0; i < bytes.length; i += 0x7ffe) {
+          base64 += btoa(String.fromCharCode(...bytes.subarray(i, i + 0x7ffe)));
+        }
+      }
+      return `data:application/json;charset=utf-8;base64,${base64}`;
     },
   };
+  // Preserve Rollup's legacy property for plugins while serializing the standard `ignoreList`.
+  Object.defineProperty(obj, 'x_google_ignoreList', {
+    get: () => obj.ignoreList,
+    set: (value: number[] | undefined) => {
+      obj.ignoreList = value;
+    },
+  });
   return obj;
 }
 
@@ -39,13 +58,21 @@ function transformToRollupOutputChunk(bindingChunk: BindingOutputChunk): OutputC
 function transformToMutableRollupOutputChunk(
   bindingChunk: BindingOutputChunk,
   changed: ChangedOutputs,
+  codeCache?: Map<string, OutputCodeCacheEntry>,
 ): OutputChunk {
+  const fileName = bindingChunk.getFileName();
   const chunk = {
     type: 'chunk',
     get code() {
-      return bindingChunk.getCode();
+      if (!codeCache) return bindingChunk.getCode();
+      const identity = bindingChunk.getCodeIdentity();
+      const hit = codeCache.get(fileName);
+      if (hit && hit.identity === identity) return hit.code;
+      const code = bindingChunk.getCode();
+      codeCache.set(fileName, { identity, holder: bindingChunk, code });
+      return code;
     },
-    fileName: bindingChunk.getFileName(),
+    fileName,
     name: bindingChunk.getName(),
     get modules() {
       return transformChunkModules(bindingChunk.getModules());
@@ -71,6 +98,7 @@ function transformToMutableRollupOutputChunk(
     preliminaryFileName: bindingChunk.getPreliminaryFileName(),
   } as OutputChunk;
   const cache: Record<string | symbol, any> = {};
+  let assigned: Set<string | symbol> | undefined;
   return new Proxy(chunk, {
     get(target, p) {
       if (p in cache) {
@@ -82,7 +110,12 @@ function transformToMutableRollupOutputChunk(
     },
     set(_target, p, newValue): boolean {
       cache[p] = newValue;
-      changed.updated.add(bindingChunk.getFileName());
+      if (!assigned) {
+        const names = new Set<string | symbol>();
+        assigned = names;
+        changed.updated.set(fileName, () => collectChunkChange(bindingChunk, chunk, cache, names));
+      }
+      assigned.add(p);
       return true;
     },
     has(target, p): boolean {
@@ -90,6 +123,93 @@ function transformToMutableRollupOutputChunk(
       return p in target;
     },
   });
+}
+
+/**
+ * Of the chunk properties that `update_output_chunk` in Rust applies, the ones a plugin changed,
+ * or `undefined` when it changed none.
+ *
+ * A property the plugin neither read nor assigned is not in `cache` and still holds Rust's value,
+ * so it is left out. An unread `map` is therefore not serialized in Rust, parsed here, and parsed
+ * again in Rust. A chunk with no change is not sent at all, so Rust keeps the same chunk data and
+ * `outputCodeCache` keeps its code. This matters for Vite's `vite:css-post`: when a build has a
+ * pure CSS chunk, it assigns `chunk.imports` of every chunk, mostly to the same file names.
+ */
+function collectChunkChange(
+  bindingChunk: BindingOutputChunk,
+  original: OutputChunk,
+  cache: Record<string | symbol, any>,
+  assigned: Set<string | symbol>,
+): JsOutputChunk | undefined {
+  // Fails type-check when `JsOutputChunk` gains a field that is not listed here.
+  // List a field only once this function sends it.
+  type _ = TypeAssert<
+    Extends<
+      keyof JsOutputChunk,
+      'filename' | 'isEntry' | 'code' | 'map' | 'imports' | 'dynamicImports'
+    >
+  >;
+  const change: JsOutputChunk = {
+    filename: 'fileName' in cache ? cache.fileName : original.fileName,
+    isEntry: 'isEntry' in cache ? cache.isEntry : original.isEntry,
+  };
+  let isChanged = change.filename !== original.fileName || change.isEntry !== original.isEntry;
+  // A string the plugin read cannot have changed.
+  if (assigned.has('code')) {
+    if (typeof cache.code !== 'string') {
+      throw invalidChunkProperty(original.fileName, 'code', 'a string', cache.code);
+    }
+    change.code = cache.code;
+    isChanged = true;
+  }
+  // A map or an array the plugin read may have been changed in place.
+  if ('map' in cache) {
+    change.map = cache.map == null ? null : bindingifySourcemap(cache.map);
+    isChanged = true;
+  }
+  if ('imports' in cache && !isSameStrings(cache.imports, bindingChunk.getImports())) {
+    if (!Array.isArray(cache.imports)) {
+      throw invalidChunkProperty(original.fileName, 'imports', 'an array', cache.imports);
+    }
+    change.imports = cache.imports;
+    isChanged = true;
+  }
+  if (
+    'dynamicImports' in cache &&
+    !isSameStrings(cache.dynamicImports, bindingChunk.getDynamicImports())
+  ) {
+    if (!Array.isArray(cache.dynamicImports)) {
+      throw invalidChunkProperty(
+        original.fileName,
+        'dynamicImports',
+        'an array',
+        cache.dynamicImports,
+      );
+    }
+    change.dynamicImports = cache.dynamicImports;
+    isChanged = true;
+  }
+  return isChanged ? change : undefined;
+}
+
+// Rust keeps the old value of a field set to `undefined`, so a wrong type is rejected here.
+function invalidChunkProperty(
+  fileName: string,
+  property: string,
+  expected: string,
+  value: unknown,
+): TypeError {
+  return new TypeError(
+    `The \`${property}\` property of chunk "${fileName}" must be ${expected}. Received ${value === null ? 'null' : typeof value}.`,
+  );
+}
+
+function isSameStrings(value: unknown, original: string[]): boolean {
+  if (!Array.isArray(value) || value.length !== original.length) return false;
+  for (let i = 0; i < original.length; i++) {
+    if (value[i] !== original[i]) return false;
+  }
+  return true;
 }
 
 function transformToRollupOutputAsset(bindingAsset: BindingOutputAsset): OutputAsset {
@@ -123,7 +243,7 @@ function transformToMutableRollupOutputAsset(
     },
     set(_target, p, newValue): boolean {
       cache[p] = newValue;
-      changed.updated.add(bindingAsset.getFileName());
+      changed.updated.set(asset.fileName, undefined);
       return true;
     },
   });
@@ -146,11 +266,12 @@ export function transformToRollupOutput(output: BindingOutputs): RolldownOutput 
 function transformToMutableRollupOutput(
   output: BindingOutputs,
   changed: ChangedOutputs,
+  codeCache?: Map<string, OutputCodeCacheEntry>,
 ): RolldownOutput {
   const { chunks, assets } = output;
   return {
     output: [
-      ...chunks.map((chunk) => transformToMutableRollupOutputChunk(chunk, changed)),
+      ...chunks.map((chunk) => transformToMutableRollupOutputChunk(chunk, changed, codeCache)),
       ...assets.map((asset) => transformToMutableRollupOutputAsset(asset, changed)),
     ],
   } as RolldownOutput;
@@ -160,9 +281,13 @@ export function transformToOutputBundle(
   context: MinimalPluginContext,
   output: BindingOutputs,
   changed: ChangedOutputs,
+  codeCache?: Map<string, OutputCodeCacheEntry>,
 ): OutputBundle {
   const bundle = Object.fromEntries(
-    transformToMutableRollupOutput(output, changed).output.map((item) => [item.fileName, item]),
+    transformToMutableRollupOutput(output, changed, codeCache).output.map((item) => [
+      item.fileName,
+      item,
+    ]),
   );
   return new Proxy(bundle, {
     set(_target, _p, _newValue, _receiver) {
@@ -190,11 +315,14 @@ export function transformToOutputBundle(
 }
 
 export interface ChangedOutputs {
-  updated: Set<string>;
+  /**
+   * The file names of the outputs a plugin assigned a property of. For a chunk, the value returns
+   * the properties that changed (see `collectChunkChange`).
+   */
+  updated: Map<string, (() => JsOutputChunk | undefined) | undefined>;
   deleted: Set<string>;
 }
 
-// TODO find a way only transfer the changed part to Rust side.
 export function collectChangedBundle(
   changed: ChangedOutputs,
   bundle: OutputBundle,
@@ -213,23 +341,10 @@ export function collectChangedBundle(
         names: item.names,
       };
     } else {
-      // not all properties modifications are reflected to Rust side
-      changes[key] = {
-        code: item.code,
-        filename: item.fileName,
-        name: item.name,
-        isEntry: item.isEntry,
-        exports: item.exports,
-        modules: {},
-        imports: item.imports,
-        dynamicImports: item.dynamicImports,
-        facadeModuleId: item.facadeModuleId || undefined,
-        isDynamicEntry: item.isDynamicEntry,
-        moduleIds: item.moduleIds,
-        map: bindingifySourcemap(item.map),
-        sourcemapFilename: item.sourcemapFileName || undefined,
-        preliminaryFilename: item.preliminaryFileName,
-      };
+      const change = changed.updated.get(key)?.();
+      if (change) {
+        changes[key] = change;
+      }
     }
   }
   return {

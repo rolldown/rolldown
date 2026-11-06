@@ -8,8 +8,7 @@ use std::{
 
 use arcstr::ArcStr;
 use rolldown_common::{ClientHmrInput, ClientHmrUpdate, HmrUpdate, ScanMode, WatcherChangeKind};
-use rolldown_utils::indexmap::FxIndexMap;
-use rustc_hash::FxHashMap;
+use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexMap};
 use tokio::sync::Mutex;
 
 use rolldown::Bundler;
@@ -34,6 +33,9 @@ pub struct BundlingTask {
   /// when deriving the final stage — see `final_error_stage`.
   rebuild_errored: bool,
   has_rebuild_happen: bool,
+  /// The watch list the HMR stage added its loaded files to, kept when the rebuild that
+  /// followed replaced it. See `rebuild`.
+  hmr_stage_watch_files: Option<Arc<FxDashSet<ArcStr>>>,
 }
 
 impl Deref for BundlingTask {
@@ -65,6 +67,7 @@ impl BundlingTask {
       has_rebuild_happen: false,
       hmr_errored: false,
       rebuild_errored: false,
+      hmr_stage_watch_files: None,
     }
   }
 
@@ -114,6 +117,7 @@ impl BundlingTask {
     self.dev_context.coordinator_tx.send(CoordinatorMsg::BundleCompleted {
       error_stage,
       has_generated_bundle_output,
+      hmr_stage_watch_files: self.hmr_stage_watch_files,
     }).expect(
       "Coordinator channel closed while sending BundleCompleted - coordinator terminated unexpectedly"
     );
@@ -143,17 +147,17 @@ impl BundlingTask {
 
     // A tsconfig edit affects every module the tsconfig governs, which HMR
     // patches and partial scans cannot represent. Clear the caches, tell
-    // clients to fully reload, and fall back to a full rebuild.
-    let changed_tsconfig = {
+    // clients to fully reload, and fall back to a full rebuild. A lost HMR
+    // update (`Bundler::has_lost_hmr_update`) takes the same path in every
+    // task kind: no client ran its edit. This includes the `FullBuild` that
+    // recovers from a failed full build; nothing else reloads the clients then.
+    let reload_reason = {
       let bundler = self.bundler.lock().await;
       let changed_tsconfig = self
         .input
         .changed_files()
         .keys()
         .any(|path| bundler.options().transform_options.is_known_tsconfig(path));
-      if changed_tsconfig {
-        tracing::trace!("[BundlingTask] detects a tsconfig change, upgrading to a full rebuild");
-      }
       // A bare full build carries no changed-file list (startup, restart,
       // failure recovery), so whether a tsconfig changed cannot be answered
       // there. Clear defensively; full builds are rare and the clears are
@@ -164,21 +168,37 @@ impl BundlingTask {
       } else if self.should_clear_resolver_cache() {
         bundler.clear_resolver_cache();
       }
-      changed_tsconfig
+      if changed_tsconfig {
+        tracing::trace!("[BundlingTask] detects a tsconfig change, upgrading to a full rebuild");
+        Some("tsconfig change")
+      } else if bundler.has_lost_hmr_update() {
+        tracing::trace!(
+          "[BundlingTask] an earlier HMR update was lost, upgrading to a full rebuild"
+        );
+        Some("an earlier hot update failed")
+      } else {
+        None
+      }
     };
-    if changed_tsconfig {
+    if let Some(reload_reason) = reload_reason {
       if let Some(on_hmr_updates) = self.dev_context.options.on_hmr_updates.as_ref() {
-        let changed_files = self
+        let mut changed_files = self
           .input
           .changed_files()
           .keys()
           .map(|path| path.to_string_lossy().to_string())
           .collect::<Vec<_>>();
+        // A `FullBuild` carries no changed files, and Vite ignores an update with an empty
+        // `changedFiles`, so the reload would be dropped. `"*"` is not a path, only a
+        // workaround: remove it once Vite delivers a `FullReload` with no changed files.
+        if changed_files.is_empty() {
+          changed_files.push("*".to_owned());
+        }
         let updates = (self.dev_context.clients.lock().await)
           .keys()
           .map(|client_id| ClientHmrUpdate {
             client_id: client_id.clone(),
-            update: HmrUpdate::FullReload { reason: "tsconfig change".to_owned() },
+            update: HmrUpdate::FullReload { reason: reload_reason.to_owned() },
           })
           .collect();
         on_hmr_updates(Ok((updates, changed_files)));
@@ -222,21 +242,27 @@ impl BundlingTask {
       .collect::<FxIndexMap<_, _>>();
 
     // Read-only per-client inputs for this push. No seq here: it is assigned after compute,
-    // only to the patches we actually deliver (see below). Snapshot the ids and ship maps
+    // only to the patches we actually deliver (see below). Snapshot the ids and per-client maps
     // and release the clients lock before the compute await — the compute only reads the
     // snapshot, and a delivery notification landing mid-compute is folded into the next
     // push either way; holding the lock would block connect/disconnect and delivery
     // notifications for the whole rebuild.
-    let client_snapshots: Vec<(String, FxHashMap<ArcStr, u32>)> = {
+    let client_snapshots = {
       let client_sessions = self.dev_context.clients.lock().await;
       client_sessions
         .iter()
-        .map(|(client_key, client)| (client_key.clone(), client.shipped.clone()))
-        .collect()
+        .map(|(client_key, client)| {
+          (client_key.clone(), client.shipped.clone(), Arc::clone(&client.top_level_evaluated))
+        })
+        .collect::<Vec<_>>()
     };
     let client_inputs: Vec<ClientHmrInput> = client_snapshots
       .iter()
-      .map(|(client_id, shipped)| ClientHmrInput { client_id: client_id.as_str(), shipped })
+      .map(|(client_id, shipped, top_level_evaluated)| ClientHmrInput {
+        client_id: client_id.as_str(),
+        shipped,
+        top_level_evaluated,
+      })
       .collect();
 
     // Compute HMR updates for all clients in one call. After an errored task the
@@ -333,6 +359,13 @@ impl BundlingTask {
   async fn rebuild(&mut self) {
     let mut bundler = self.bundler.lock().await;
 
+    // The HMR stage of this task added the files it loaded to the latest build's watch list.
+    // The build below starts a new, empty list and does not load those cached modules again,
+    // so keep the HMR stage's list for the coordinator to register.
+    // See internal-docs/dev-engine/implementation.md §10.
+    let hmr_stage_watch_files =
+      self.input.require_generate_hmr_update().then(|| Arc::clone(bundler.watch_files()));
+
     // TODO: hyf0 `skip_write` in watch mode won't trigger generate stage, need to investigate why.
     let skip_write = self.dev_context.options.skip_write;
 
@@ -352,6 +385,8 @@ impl BundlingTask {
     } else {
       bundler.incremental_write(scan_mode).await
     };
+    self.hmr_stage_watch_files =
+      hmr_stage_watch_files.filter(|list| !Arc::ptr_eq(list, bundler.watch_files()));
 
     if let Err(err) = &build_result {
       tracing::error!("[BundlingTask] rebuild failed: {:?}", err);

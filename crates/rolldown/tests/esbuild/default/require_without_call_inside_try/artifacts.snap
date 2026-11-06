@@ -7,12 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region entry.js
+// entry.js
 try {
 	oldLocale = globalLocale._abbr;
 	__require("./locale/" + name);
 	getSetGlobalLocale(oldLocale);
 } catch (e) {}
-//#endregion
 
 ```

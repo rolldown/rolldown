@@ -100,3 +100,5 @@ commit_parsers = [
   { message = "^revert", group = "<!-- 9 -->◀️ Revert" },
   { message = ".*", group = "<!-- 10 -->💼 Other" },
 ]
+# only rolldown release tags; perf-kit uses `perf-kit@x.y.z`
+tag_pattern = "^v[0-9]"

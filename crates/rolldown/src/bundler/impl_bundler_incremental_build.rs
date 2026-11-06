@@ -18,6 +18,11 @@ impl Bundler {
     bundle_mode: BundleMode,
     with_fn: impl AsyncFnOnce(&mut Bundle) -> BuildResult<T>,
   ) -> BuildResult<T> {
+    // A failed scan never reaches `bundle_write`/`bundle_generate`, which otherwise clear this
+    // cache. Load promises must not outlive the build whose native module infos they refer to.
+    if let Some(invalidate_js_side_cache) = &self.options().invalidate_js_side_cache {
+      invalidate_js_side_cache.call().await?;
+    }
     let cache = mem::take(&mut self.cache);
     let mut bundle = self.bundle_factory.create_bundle(bundle_mode, Some(cache))?;
     // Do NOT `?` the build result here. The cache must be moved back into the
@@ -61,11 +66,12 @@ impl Bundler {
     // `BundleMode` choice applies the `IncrementalFullBuild` reset rules to
     // the plugin driver state.
     let scan_mode = if self.cache.has_snapshot() { scan_mode } else { ScanMode::Full };
+    let is_full_scan = scan_mode.is_full();
     let bundle_mode = match scan_mode {
       ScanMode::Full => BundleMode::IncrementalFullBuild,
       ScanMode::Partial(_) => BundleMode::IncrementalBuild,
     };
-    self
+    let output = self
       .with_cached_bundle(bundle_mode, async |bundle| {
         let middle_output = bundle.scan_modules(scan_mode).await?;
         if is_write {
@@ -74,6 +80,12 @@ impl Bundler {
           bundle.bundle_generate(middle_output).await
         }
       })
-      .await
+      .await;
+    if is_full_scan && output.is_ok() {
+      // The new output has the lost edit, and the task that started this build told every
+      // client to reload; see internal-docs/bundler-data-lifecycle/implementation.md.
+      self.lost_hmr_update = false;
+    }
+    output
   }
 }

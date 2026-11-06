@@ -1,6 +1,6 @@
 use crate::{
-  ImportRecordIdx, Module, ModuleId, ModuleIdx, RawImportRecord, ResolvedId, StmtInfos,
-  SymbolRefDbForModule, dynamic_import_usage::DynamicImportExportsUsage,
+  ImportAttributes, ImportRecordIdx, Module, ModuleId, ModuleIdx, RawImportRecord, ResolvedId,
+  StmtInfos, SymbolRefDbForModule, dynamic_import_usage::DynamicImportExportsUsage,
   side_effects::DeterminedSideEffects, types::lazy_barrel::BarrelInfo,
 };
 use arcstr::ArcStr;
@@ -30,6 +30,7 @@ pub struct ExternalModuleTaskResult {
   pub identifier_name: ArcStr,
   pub side_effects: DeterminedSideEffects,
   pub need_renormalize_render_path: bool,
+  pub attributes: ImportAttributes,
 }
 
 pub struct EcmaRelated {

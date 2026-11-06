@@ -1,4 +1,4 @@
-use rolldown_common::{Module, ModuleIdx, RuntimeHelper, SymbolRef};
+use rolldown_common::{Module, ModuleIdx, RuntimeHelper, StmtInfos, SymbolRef};
 use rolldown_utils::{
   index_vec_ext::IndexVecRefExt, indexmap::FxIndexSet, rayon::ParallelIterator,
 };
@@ -176,18 +176,21 @@ impl LinkStage<'_> {
     //
     let tree_shaking = self.options.treeshake.is_some();
     let strict_execution_order = self.options.is_strict_execution_order_enabled();
+    let codeless_entries = self.codeless_entries();
     for (module_idx, extended_dependencies, runtime_helper) in processed_module_results {
       // Symbol-derived dependencies always force their owner module to be loaded. Import-record
       // targets (what `meta.dependencies` holds at this point) only do so when evaluating them
       // has side effects — the same edge semantics `include_side_effectful_dependencies` uses
       // during tree-shaking and `compute_cross_chunk_links` uses when emitting bare imports.
       //
-      // Record edges into entry modules are kept even when side-effect-free: an entry's chunk
-      // exists regardless, and letting static importers participate in its bit pattern keeps
+      // Record edges into code-less entry modules are kept even when side-effect-free: an entry's
+      // chunk exists regardless, and letting static importers participate in its bit pattern keeps
       // shared code co-located with the entry chunk (Rollup collapses such code-less entry
       // facades onto the chunk holding their exports — e.g. a statically imported re-export
       // barrel that is also a dynamic entry must not push its re-export targets into a separate
-      // chunk, see rollup's `entry-without-code-dynamic`).
+      // chunk, see rollup's `entry-without-code-dynamic`). An entry with code of its own does not
+      // collapse, and following the edge would mark everything that code imports as loaded by
+      // every static importer, even one that only reads a re-exported binding.
       let execution_dependencies = strict_execution_order.then(|| {
         extended_dependencies
           .iter()
@@ -207,7 +210,7 @@ impl LinkStage<'_> {
                 .dependencies
                 .iter()
                 .copied()
-                .filter(|dep_idx| self.entries.contains_key(dep_idx)),
+                .filter(|dep_idx| codeless_entries.contains(dep_idx)),
             )
             .collect()
         } else {
@@ -216,7 +219,7 @@ impl LinkStage<'_> {
             .copied()
             .chain(self.metas[module_idx].dependencies.iter().copied().filter(|dep_idx| {
               !tree_shaking
-                || self.entries.contains_key(dep_idx)
+                || codeless_entries.contains(dep_idx)
                 || self.module_table[*dep_idx].side_effects().has_side_effects()
             }))
             .collect()
@@ -256,5 +259,25 @@ impl LinkStage<'_> {
         }
       }
     }
+  }
+
+  /// Entry modules whose included statements only import or re-export: they declare nothing and
+  /// evaluate nothing of their own.
+  fn codeless_entries(&self) -> FxHashSet<ModuleIdx> {
+    self
+      .entries
+      .keys()
+      .copied()
+      .filter(|&entry_idx| {
+        let meta = &self.metas[entry_idx];
+        self.stmt_infos[entry_idx].iter_enumerated().all(|(stmt_idx, stmt_info)| {
+          stmt_idx == StmtInfos::NAMESPACE_STMT_IDX
+            || !meta.stmt_info_included.has_bit(stmt_idx)
+            || !stmt_info.import_records.is_empty()
+            || (stmt_info.declared_symbols.is_empty()
+              && !stmt_info.eval_flags.has_side_effect_for_tree_shaking())
+        })
+      })
+      .collect()
   }
 }

@@ -38,6 +38,17 @@ reference that section.
 - `merge` is a large multi-field mutation with no mid-loop `?`, but a panic
   mid-`merge` (the two surfaces above) would leave the snapshot present but
   internally inconsistent. Restoring presence does not guarantee consistency.
+- The per-build AST clone (`create_output` / `make_copy`, see "Arena
+  compaction" in [implementation.md](./implementation.md)) is the largest
+  transient of an incremental rebuild. Moving `index_ecma_ast` out of the
+  snapshot for the duration of a build, and cloning per module inside
+  `finalize_modules` right before codegen, would remove it, but it adds a
+  fourth tear/repair window to the cache-integrity contract (the table must
+  come back on every error path), needs `generate_lazy_export`'s in-place
+  AST mutation to work on a clone, and needs the `chunk.insert_map` ordering
+  (an importer's finalize appends to the importee's `mutations`) preserved.
+  Not done yet; the measured gain is ~20% of the rebuild peak and no
+  steady-state change.
 
 ## Related
 

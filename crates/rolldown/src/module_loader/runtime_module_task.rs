@@ -166,7 +166,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
         source,
 
         import_records: IndexVec::default(),
-        sourcemap_chain,
+        sourcemap_chain: Arc::new(sourcemap_chain),
         // The internal runtime module `importers/imported` should be skip.
         importers: FxIndexSet::default(),
         importers_idx: FxIndexSet::default(),

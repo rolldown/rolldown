@@ -83,6 +83,9 @@ pub struct IncludeContext<'a> {
   pub bailout_cjs_tree_shaking_modules: FxHashSet<ModuleIdx>,
   /// Cache for [`external_importer_modes`], keyed by external module.
   pub external_importer_modes: FxHashMap<ModuleIdx, ExternalInteropUse>,
+  /// Cache for whether the module that declares an inlined constant, or one of its dependencies,
+  /// has side effects (see [`handle_include_symbol`]), keyed by that module.
+  pub inlined_constant_owner_side_effects: FxHashMap<ModuleIdx, bool>,
   /// Tracks whether any new module was included during the current convergence iteration.
   /// Used to detect fixpoint without O(N) scanning of `is_module_included_vec`.
   pub module_inclusion_changed: bool,
@@ -151,6 +154,7 @@ impl<'a> IncludeContext<'a> {
       normal_symbol_exports_chain_map,
       bailout_cjs_tree_shaking_modules: FxHashSet::default(),
       external_importer_modes: FxHashMap::default(),
+      inlined_constant_owner_side_effects: FxHashMap::default(),
       module_inclusion_changed: false,
       module_namespace_included_reason,
       json_module_none_self_reference_included_symbol: FxHashMap::default(),
@@ -693,6 +697,23 @@ fn handle_include_symbol(
   let mut canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
 
   if is_bypassed_inlined_constant(ctx, canonical_ref, include_reason) {
+    // Reading the constant still evaluates its module, so the module's side effects and those of
+    // its dependencies stay, as when the constant is not inlined.
+    let owner = canonical_ref.owner;
+    let (modules, metas) = (ctx.modules, ctx.metas);
+    let has_side_effects =
+      *ctx.inlined_constant_owner_side_effects.entry(owner).or_insert_with(|| {
+        modules[owner].side_effects().has_side_effects()
+          || metas[owner].has_side_effectful_dependency(modules)
+      });
+    if has_side_effects {
+      // As for a constant that is not inlined, a module declared side-effect free runs its whole
+      // body, not only the side-effect statements that read no binding, and a wrapped module runs
+      // when the reader calls its `init_*`.
+      drain_body_demand_stmts(ctx, canonical_ref);
+      demand_esm_initialization(ctx, symbol_ref, canonical_ref);
+      ctx.pending.push(WorkItem::Module(owner));
+    }
     return;
   }
 
@@ -765,7 +786,8 @@ fn is_bypassed_inlined_constant(
 /// namespace) makes the module's body observable, so its gated side-effect
 /// statements join now (e.g. `foo.bar = 1` once `foo` is demanded); see
 /// `side_effects_included_on_demand`. Must sit after the inlined-constant
-/// bypass: demand satisfied by inlining doesn't include the module today.
+/// bypass: demand satisfied by inlining demands the module's body only when the
+/// bypass keeps the module, because it or a dependency has side effects.
 /// The `body_demand_swept` bit keeps each module swept at most once.
 fn drain_body_demand_stmts(ctx: &mut IncludeContext, canonical_ref: SymbolRef) {
   let Some(&module_idx) = ctx.body_demand_keys.get(&canonical_ref) else {

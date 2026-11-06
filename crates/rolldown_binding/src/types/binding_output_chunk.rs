@@ -1,12 +1,12 @@
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
+use napi::{Either, bindgen_prelude::Null};
 use napi_derive::napi;
 use rolldown_sourcemap::SourceMap;
-use rustc_hash::FxBuildHasher;
 
 use super::{
-  binding_rendered_chunk::BindingModules, binding_rendered_module::BindingRenderedModule,
-  binding_sourcemap::BindingSourcemap, external_memory_status::ExternalMemoryStatus,
+  binding_rendered_chunk::BindingModules, binding_sourcemap::BindingSourcemap,
+  external_memory_status::ExternalMemoryStatus,
 };
 
 #[napi]
@@ -139,41 +139,50 @@ impl BindingOutputChunk {
   }
 }
 
+/// What a `generateBundle` or `writeBundle` hook changed in an output chunk. A field that is left
+/// out is a property the plugin did not change, so the chunk keeps its value, which is never copied
+/// through JavaScript. See `collectChunkChange` in
+/// `packages/rolldown/src/utils/transform-to-rollup-output.ts`.
 #[napi_derive::napi(object, object_to_js = false)]
 pub struct JsOutputChunk {
-  // PreRenderedChunk
-  pub name: String,
-  pub is_entry: bool,
-  pub is_dynamic_entry: bool,
-  pub facade_module_id: Option<String>,
-  pub module_ids: Vec<String>,
-  pub exports: Vec<String>,
-  // RenderedChunk
   pub filename: String,
-  pub modules: HashMap<String, BindingRenderedModule, FxBuildHasher>,
-  pub imports: Vec<String>,
-  pub dynamic_imports: Vec<String>,
-  // OutputChunk
-  pub code: String,
-  pub map: Option<BindingSourcemap>,
-  pub sourcemap_filename: Option<String>,
-  pub preliminary_filename: String,
+  /// Always sent. Besides its value, it tells a chunk apart from a `JsOutputAsset`, which has no
+  /// `isEntry`, when napi picks a side of `Either<JsOutputChunk, JsOutputAsset>`.
+  pub is_entry: bool,
+  pub code: Option<String>,
+  /// `null` removes the map.
+  pub map: Option<Either<BindingSourcemap, Null>>,
+  pub imports: Option<Vec<String>>,
+  pub dynamic_imports: Option<Vec<String>>,
 }
 
 pub fn update_output_chunk(
   chunk: &mut Arc<rolldown_common::OutputChunk>,
   js_chunk: JsOutputChunk,
 ) -> anyhow::Result<()> {
-  let map = js_chunk.map.map(TryInto::try_into).transpose()?;
-  let imports = js_chunk.imports.into_iter().map(Into::into).collect();
-  let dynamic_imports = js_chunk.dynamic_imports.into_iter().map(Into::into).collect();
+  let map = match js_chunk.map {
+    Some(Either::A(map)) => Some(Some(map.try_into()?)),
+    Some(Either::B(_)) => Some(None),
+    None => None,
+  };
+  let imports = js_chunk.imports.map(|imports| imports.into_iter().map(Into::into).collect());
+  let dynamic_imports =
+    js_chunk.dynamic_imports.map(|imports| imports.into_iter().map(Into::into).collect());
   let filename = js_chunk.filename.into();
 
   if let Some(chunk) = Arc::get_mut(chunk) {
-    chunk.code = js_chunk.code;
-    chunk.map = map;
-    chunk.imports = imports;
-    chunk.dynamic_imports = dynamic_imports;
+    if let Some(code) = js_chunk.code {
+      chunk.code = code;
+    }
+    if let Some(map) = map {
+      chunk.map = map;
+    }
+    if let Some(imports) = imports {
+      chunk.imports = imports;
+    }
+    if let Some(dynamic_imports) = dynamic_imports {
+      chunk.dynamic_imports = dynamic_imports;
+    }
     chunk.is_entry = js_chunk.is_entry; // used by nuxt
     chunk.filename = filename;
   } else {
@@ -187,10 +196,10 @@ pub fn update_output_chunk(
       exports: old_chunk.exports.clone(),
       filename,
       modules: old_chunk.modules.clone(),
-      imports,
-      dynamic_imports,
-      code: js_chunk.code,
-      map,
+      imports: imports.unwrap_or_else(|| old_chunk.imports.clone()),
+      dynamic_imports: dynamic_imports.unwrap_or_else(|| old_chunk.dynamic_imports.clone()),
+      code: js_chunk.code.unwrap_or_else(|| old_chunk.code.clone()),
+      map: map.unwrap_or_else(|| old_chunk.map.clone()),
       sourcemap_filename: old_chunk.sourcemap_filename.clone(),
       preliminary_filename: old_chunk.preliminary_filename.clone(),
     });

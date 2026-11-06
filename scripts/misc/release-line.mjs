@@ -90,19 +90,26 @@ function checkVersionBelongsToLine(line, branch, version) {
   }
 }
 
-function checkVersionAgainstNpmLatest(line, version, npmLatest) {
-  if (line.kind === 'main') {
-    // Equal to npm `latest` when a partly failed release is rerun.
-    if (npmLatest !== undefined && compareVersions(version, npmLatest) < 0) {
-      throw new Error(
-        `v${version} is older than npm latest ${npmLatest}; release older minors from their vX.Y branch`,
-      );
-    }
-    return;
+/**
+ * Picks the branch a version is released from. A version lower than npm
+ * `latest` belongs to its `vX.Y` branch, any other to main.
+ * @param {{ version: string, npmLatest: string | undefined }} options
+ * @returns {string}
+ */
+function resolveTargetBranch({ version, npmLatest }) {
+  const { major, minor } = parseVersion(version);
+  // A rerun of a partly failed release equals npm `latest` and stays on main.
+  if (npmLatest !== undefined && compareVersions(version, npmLatest) < 0) {
+    return `v${major}.${minor}`;
   }
-  if (npmLatest === undefined || compareVersions(version, npmLatest) >= 0) {
+  return 'main';
+}
+
+function checkVersionAgainstNpmLatest(branch, version, npmLatest) {
+  const expected = resolveTargetBranch({ version, npmLatest });
+  if (branch !== expected) {
     throw new Error(
-      `v${version} is not older than npm latest ${npmLatest ?? '(none)'}; release it from main`,
+      `v${version} must be released from ${expected} (npm latest: ${npmLatest ?? 'none'}), not ${branch}`,
     );
   }
 }
@@ -118,7 +125,7 @@ function checkPrepareVersion({ branch, version, currentVersion, npmLatest }) {
   if (compareVersions(version, currentVersion) <= 0) {
     throw new Error(`${version} must be greater than the current version ${currentVersion}`);
   }
-  checkVersionAgainstNpmLatest(line, version, npmLatest);
+  checkVersionAgainstNpmLatest(branch, version, npmLatest);
 }
 
 /**
@@ -148,11 +155,9 @@ function resolvePublish({ branch, subject, version, npmLatest }) {
       `The release commit is for v${subjectVersion}, but packages/rolldown/package.json is ${version}`,
     );
   }
-  // Rejects anything that is not semver.
-  parseVersion(version);
   const line = parseReleaseLine(branch);
   checkVersionBelongsToLine(line, branch, version);
-  checkVersionAgainstNpmLatest(line, version, npmLatest);
+  checkVersionAgainstNpmLatest(branch, version, npmLatest);
 
   if (line.kind === 'main') {
     return { release: true, version, distTag: 'latest', makeLatest: true };
@@ -204,7 +209,11 @@ async function main() {
   const options = parseArgs(rest);
   const cwd = process.cwd();
 
-  if (command === 'prepare') {
+  if (command === 'target') {
+    const version = requireOption(options, 'version');
+    const npmLatest = await fetchNpmLatest('rolldown');
+    console.log(resolveTargetBranch({ version, npmLatest }));
+  } else if (command === 'prepare') {
     const branch = requireOption(options, 'branch');
     const version = requireOption(options, 'version');
     const currentVersion = readRolldownVersion(cwd);
@@ -232,7 +241,7 @@ async function main() {
       ].join('\n'),
     );
   } else {
-    throw new Error(`Unknown command ${command ?? '(none)'}; expected prepare or publish`);
+    throw new Error(`Unknown command ${command ?? '(none)'}; expected target, prepare or publish`);
   }
 }
 

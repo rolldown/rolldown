@@ -24,7 +24,7 @@ export { lazyLoad };
 // static.no-treeshake.js
 console.log("static no-treeshake");
 // static.js
-var static_exports = /* @__PURE__ */ __exportAll({ foo: () => "foo" });
+var static_exports = /* @__PURE__ */ __exportAll({});
 // main.js
 import("./dynamic.js").then(async ({ lazyLoad }) => {
 	await lazyLoad();

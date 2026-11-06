@@ -3,7 +3,7 @@ mod source_joiner;
 
 use std::borrow::Cow;
 
-use oxc_sourcemap::Token;
+use oxc_sourcemap::{SourceMapParts, Token};
 
 pub use oxc_sourcemap::{JSONSourceMap, OwnedSourceMap, SourceMapBuilder, SourcemapVisualizer};
 pub use source_joiner::SourceJoiner;
@@ -67,55 +67,323 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) ->
     // If there's only one sourcemap, return it as is.
     return sourcemap_chain[0].clone().into_owned();
   }
+  let tokens = remap_chain(sourcemap_chain, &mut []);
+  let (sources, source_contents) = copy_sources(sourcemap_chain[0], None);
+  let names = copy_names(sourcemap_chain, None);
+  SourceMap::new(None, names, None, sources, source_contents, tokens, None)
+}
 
-  let last_map = sourcemap_chain.last().expect("sourcemap_chain should not be empty");
+/// Like `collapse_sourcemaps`, but keeps only the sources and names that a traced token
+/// references, as Rollup's `traceMappings()` does. So a map with no mappings (e.g. a transform's
+/// `{ mappings: '' }`) cuts out the code before it. A chain of one map is traced too, but it
+/// keeps its other fields, such as `sourceRoot`, as `getCombinedSourcemap` did before.
+///
+/// The result copies only the strings that it keeps. The token ids change only when an item that
+/// goes comes before an item that stays, or when a token has an id out of range.
+pub fn collapse_sourcemaps_traced(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) -> SourceMap {
+  if let [map] = sourcemap_chain {
+    return trace_single_map(map);
+  }
   let first_map = sourcemap_chain.first().expect("sourcemap_chain should not be empty");
-  let chain_without_last = &sourcemap_chain[..sourcemap_chain.len() - 1];
+  let name_count: usize = sourcemap_chain.iter().map(|map| map.get_names().len()).sum();
+  // The last flag is for the name ids out of range. A chain without names marks no names.
+  let mut name_used = if name_count == 0 { Vec::new() } else { vec![false; name_count + 1] };
+  let mut tokens = remap_chain(sourcemap_chain, &mut name_used);
+  let name_out_of_range = name_used.pop();
+  let (mut stack_flags, mut heap_flags) = ([false; 64], Vec::new());
+  let source_used = source_flags(first_map.get_sources().len(), &mut stack_flags, &mut heap_flags);
+  let scan = scan_sources(tokens.iter().copied(), source_used);
+  let every_name_used = name_used.iter().all(|&used| used);
+  let source_used = (!scan.every_source_used).then_some(&*source_used);
+  if source_used.is_some() || !every_name_used {
+    // A chain without names has no flag for the ids out of range, because each of its name ids
+    // is out of range. This block runs for it only when a source goes, and then the scan read
+    // every token.
+    let name_out_of_range = name_out_of_range.unwrap_or(scan.has_name_id);
+    let new_ids = NewIds::new(source_used, scan.source_out_of_range, &name_used, name_out_of_range);
+    if !new_ids.keeps_ids() {
+      for token in &mut tokens {
+        *token = new_ids.apply(*token);
+      }
+    }
+  }
+  let (sources, source_contents) = copy_sources(first_map, source_used);
+  let names = copy_names(sourcemap_chain, (!every_name_used).then_some(&name_used));
+  SourceMap::new(None, names, None, sources, source_contents, tokens, None)
+}
 
-  // Concatenate each map's names into one pool, in chain order. A token's merged name_id is then
-  // `local_id + offset`, where `offset` is the pool index of that map's first name.
-  let mut merged_names: Vec<Cow<'static, str>> = Vec::new();
-  let mut append_names = |map: &oxc_sourcemap::SourceMap<'_>| {
-    #[expect(clippy::cast_possible_truncation)]
-    let offset = merged_names.len() as u32;
-    merged_names.extend(map.get_names().map(|n| Cow::Owned(n.to_owned())));
-    offset
+/// One map has nothing to remap. When a token references every source and name, the map is copied
+/// as is. Otherwise, the copy keeps the other fields, but not `token_chunks`.
+fn trace_single_map(map: &oxc_sourcemap::SourceMap<'_>) -> SourceMap {
+  let (mut stack_flags, mut heap_flags) = ([false; 64], Vec::new());
+  let source_used = source_flags(map.get_sources().len(), &mut stack_flags, &mut heap_flags);
+  let scan = scan_sources(map.get_tokens(), source_used);
+  let (name_used, name_out_of_range) = if map.get_names().len() == 0 {
+    // Each name id is out of range, so the name scan is not necessary. The result is used only
+    // when a source goes, and then the source scan read every token.
+    (Vec::new(), scan.has_name_id)
+  } else {
+    mark_names(map)
   };
+  let every_name_used = name_used.iter().all(|&used| used);
+  if scan.every_source_used && every_name_used {
+    return map.clone().into_owned();
+  }
+  let source_used = (!scan.every_source_used).then_some(&*source_used);
+  let new_ids = NewIds::new(source_used, scan.source_out_of_range, &name_used, name_out_of_range);
+  let (sources, source_contents) = copy_sources(map, source_used);
+  let ignore_list = map.get_ignore_list().map(|ids| match source_used {
+    Some(used) => {
+      let source_ids = renumber_used(used);
+      ids.iter().filter_map(|&id| new_id(&source_ids, id)).collect()
+    }
+    None => ids.to_vec(),
+  });
+  SourceMap::from_parts(SourceMapParts {
+    file: map.get_file().map(owned),
+    names: copy_names(std::slice::from_ref(&map), (!every_name_used).then_some(&name_used)),
+    source_root: map.get_source_root().map(owned),
+    sources,
+    source_contents,
+    tokens: if new_ids.keeps_ids() {
+      map.get_tokens().collect()
+    } else {
+      map.get_tokens().map(|token| new_ids.apply(token)).collect()
+    },
+    // The VLQ baselines in `token_chunks` describe the old ids.
+    token_chunks: None,
+    ignore_list,
+    debug_id: map.get_debug_id().map(owned),
+  })
+}
 
+/// Returns one flag for each of `count` sources. Most maps have few sources, so the flags usually
+/// fit in `stack`.
+fn source_flags<'a>(
+  count: usize,
+  stack: &'a mut [bool; 64],
+  heap: &'a mut Vec<bool>,
+) -> &'a mut [bool] {
+  if count <= stack.len() {
+    &mut stack[..count]
+  } else {
+    heap.resize(count, false);
+    heap
+  }
+}
+
+/// What `scan_sources` found in the tokens that it read.
+struct SourceScan {
+  /// A token references each source.
+  every_source_used: bool,
+  /// A token has a source id out of range.
+  source_out_of_range: bool,
+  /// A token has a name id.
+  has_name_id: bool,
+}
+
+/// Marks the sources that the tokens reference. The scan stops when every source is marked, so it
+/// reads every token only when a source goes. A module map usually has one source, so the scan
+/// usually stops at its first mapped token.
+fn scan_sources(tokens: impl Iterator<Item = Token>, used: &mut [bool]) -> SourceScan {
+  let mut unmarked = used.len();
+  let mut source_out_of_range = false;
+  let mut has_name_id = false;
+  for token in tokens {
+    if unmarked == 0 {
+      break;
+    }
+    has_name_id |= token.get_name_id().is_some();
+    if let Some(id) = token.get_source_id() {
+      match used.get_mut(id as usize) {
+        Some(flag) => unmarked -= usize::from(!std::mem::replace(flag, true)),
+        None => source_out_of_range = true,
+      }
+    }
+  }
+  SourceScan { every_source_used: unmarked == 0, source_out_of_range, has_name_id }
+}
+
+/// Returns which names the tokens of `map` reference, and `true` when a token has a name id out of
+/// range.
+fn mark_names(map: &oxc_sourcemap::SourceMap<'_>) -> (Vec<bool>, bool) {
+  let name_count = map.get_names().len();
+  // Flag `name_count` is for the ids out of range, and the flag after it is for the tokens
+  // without a name, so the loop needs no branch.
+  let mut used = vec![false; name_count + 2];
+  for token in map.get_tokens() {
+    used[token.get_name_id().map_or(name_count + 1, |id| (id as usize).min(name_count))] = true;
+  }
+  let out_of_range = used[name_count];
+  used.truncate(name_count);
+  (used, out_of_range)
+}
+
+/// Returns `true` when the new ids change a token's id. The kept items keep their ids when they
+/// come before the items that go, and no token has an id out of range.
+fn ids_change(used: &[bool], out_of_range: bool) -> bool {
+  out_of_range || used.iter().skip_while(|&&used| used).any(|&used| used)
+}
+
+/// The new ids of the tokens. A table is `None` when the tokens keep those ids.
+struct NewIds {
+  sources: Option<Vec<Option<u32>>>,
+  names: Option<Vec<Option<u32>>>,
+}
+
+impl NewIds {
+  /// `source_used` is `None` when every source stays.
+  fn new(
+    source_used: Option<&[bool]>,
+    source_out_of_range: bool,
+    name_used: &[bool],
+    name_out_of_range: bool,
+  ) -> Self {
+    Self {
+      sources: source_used.filter(|used| ids_change(used, source_out_of_range)).map(renumber_used),
+      names: ids_change(name_used, name_out_of_range).then(|| renumber_used(name_used)),
+    }
+  }
+
+  fn keeps_ids(&self) -> bool {
+    self.sources.is_none() && self.names.is_none()
+  }
+
+  /// A token loses an id that points to a dropped item or out of range.
+  fn apply(&self, token: Token) -> Token {
+    let renumber = |ids: Option<&[Option<u32>]>, id: Option<u32>| {
+      ids.map_or(id, |ids| id.and_then(|id| new_id(ids, id)))
+    };
+    Token::new(
+      token.get_dst_line(),
+      token.get_dst_col(),
+      token.get_src_line(),
+      token.get_src_col(),
+      renumber(self.sources.as_deref(), token.get_source_id()),
+      renumber(self.names.as_deref(), token.get_name_id()),
+    )
+  }
+}
+
+fn new_id(ids: &[Option<u32>], id: u32) -> Option<u32> {
+  ids.get(id as usize).copied().flatten()
+}
+
+/// Maps each old id to its new id, or to `None` when the item is dropped.
+fn renumber_used(used: &[bool]) -> Vec<Option<u32>> {
+  let mut next_id = 0;
+  used
+    .iter()
+    .map(|&used| {
+      used.then(|| {
+        let id = next_id;
+        next_id += 1;
+        id
+      })
+    })
+    .collect()
+}
+
+fn owned(value: &str) -> Cow<'static, str> {
+  Cow::Owned(value.to_owned())
+}
+
+/// Returns the item when its flag is set.
+fn kept<T>((item, &used): (T, &bool)) -> Option<T> {
+  used.then_some(item)
+}
+
+/// Copies the names of every map in chain order. With `used`, it copies only the marked names.
+fn copy_names(
+  sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>],
+  used: Option<&[bool]>,
+) -> Vec<Cow<'static, str>> {
+  let Some(used) = used else {
+    let mut names =
+      Vec::with_capacity(sourcemap_chain.iter().map(|map| map.get_names().len()).sum());
+    for map in sourcemap_chain {
+      names.extend(map.get_names().map(owned));
+    }
+    return names;
+  };
+  let mut names = Vec::with_capacity(used.iter().filter(|&&used| used).count());
+  let all_names = sourcemap_chain.iter().flat_map(|map| map.get_names());
+  names.extend(all_names.zip(used).filter_map(kept).map(owned));
+  names
+}
+
+/// Copies the sources of `map` and their contents. With `used`, it copies only the marked sources,
+/// and it drops the contents past the last source.
+fn copy_sources(
+  map: &oxc_sourcemap::SourceMap<'_>,
+  used: Option<&[bool]>,
+) -> (Vec<Cow<'static, str>>, Vec<Option<Cow<'static, str>>>) {
+  let Some(used) = used else {
+    return (
+      map.get_sources().map(owned).collect(),
+      map.get_source_contents().map(|content| content.map(owned)).collect(),
+    );
+  };
+  (
+    map.get_sources().zip(used).filter_map(kept).map(owned).collect(),
+    map
+      .get_source_contents()
+      .zip(used)
+      .filter_map(kept)
+      .map(|content| content.map(owned))
+      .collect(),
+  )
+}
+
+/// Remaps the last map's tokens through the earlier maps. A name id in the result points into the
+/// names of every map, in chain order. When `name_used` is not empty, the remap also marks the
+/// names that a traced token references. Its last flag is then for the ids out of range.
+fn remap_chain(
+  sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>],
+  name_used: &mut [bool],
+) -> Box<[Token]> {
+  let (last_map, chain_without_last) =
+    sourcemap_chain.split_last().expect("sourcemap_chain should not be empty");
+
+  // A token's name id in the result is `local_id + offset`, where `offset` counts the names of
+  // the maps before its map.
+  let mut offset = 0;
   // Pre-compute lookup tables paired with their offsets in reverse order so we avoid reversing
   // on every token lookup.
   let mut chain_with_offsets: Vec<_> = chain_without_last
     .iter()
-    .map(|sourcemap| (*sourcemap, sourcemap.generate_lookup_table(), append_names(sourcemap)))
+    .map(|sourcemap| {
+      let map_offset = offset;
+      #[expect(clippy::cast_possible_truncation)]
+      let name_count = sourcemap.get_names().len() as u32;
+      offset += name_count;
+      (*sourcemap, sourcemap.generate_lookup_table(), map_offset)
+    })
     .collect();
   chain_with_offsets.reverse();
-  let last_offset = append_names(last_map);
+  let last_offset = offset;
 
   // `last_offset` counts the names of every map before the last one. When it is 0, no traced
-  // token can carry a name, so the remap loop skips the per-step name tracking.
-  let tokens = if last_offset == 0 {
-    remap_tokens::<false>(last_map, &chain_with_offsets, last_offset)
-  } else {
-    remap_tokens::<true>(last_map, &chain_with_offsets, last_offset)
+  // token can carry a name, so the remap loop skips the per-step name tracking. A chain without
+  // names also skips the marks.
+  let remap = match (last_offset == 0, name_used.is_empty()) {
+    (true, true) => remap_tokens::<false, false>,
+    (true, false) => remap_tokens::<false, true>,
+    (false, true) => remap_tokens::<true, false>,
+    (false, false) => remap_tokens::<true, true>,
   };
-
-  SourceMap::new(
-    None,
-    merged_names,
-    None,
-    first_map.get_sources().map(|s| Cow::Owned(s.to_owned())).collect(),
-    first_map.get_source_contents().map(|x| x.map(|s| Cow::Owned(s.to_owned()))).collect(),
-    tokens,
-    None,
-  )
+  remap(last_map, &chain_with_offsets, last_offset, name_used)
 }
 
 /// Remaps `last_map`'s tokens through `chain`, the earlier maps with the nearest one first.
-/// `TRACK_NAMES` is a const so that a chain without names compiles without the name work.
-fn remap_tokens<const TRACK_NAMES: bool>(
+/// `TRACK_NAMES` and `MARK_NAMES` are consts so that a chain without names, or a collapse that
+/// does not mark names in `name_used`, compiles without that work. With `MARK_NAMES`, `name_used`
+/// has one flag for each name and one more flag for the ids out of range.
+fn remap_tokens<const TRACK_NAMES: bool, const MARK_NAMES: bool>(
   last_map: &oxc_sourcemap::SourceMap<'_>,
   chain: &[(&oxc_sourcemap::SourceMap<'_>, Vec<&[Token]>, u32)],
   last_offset: u32,
+  name_used: &mut [bool],
 ) -> Box<[Token]> {
   let source_view_tokens = last_map.get_source_view_tokens();
   let mut remapped = Vec::with_capacity(source_view_tokens.size_hint().0);
@@ -152,6 +420,15 @@ fn remap_tokens<const TRACK_NAMES: bool>(
         original_token = traced;
       }
 
+      if MARK_NAMES {
+        if let Some(id) = name_id {
+          // An id out of range marks the last flag.
+          let out_of_range = name_used.len() - 1;
+          if let Some(used) = name_used.get_mut((id as usize).min(out_of_range)) {
+            *used = true;
+          }
+        }
+      }
       Some(Token::new(
         token.get_dst_line(),
         token.get_dst_col(),
@@ -546,4 +823,93 @@ fn test_collapse_sourcemaps_prefers_first_map_name() {
   let token =
     collapsed.lookup_source_view_token(&lookup, 0, 6).expect("token at generated position (0:6)");
   assert_eq!(token.get_name().map(AsRef::as_ref), Some("DEBUG_BUILD"));
+}
+
+#[test]
+fn test_collapse_sourcemaps_traced_drops_unreferenced_sources_and_names() {
+  let traced = |json: &str| {
+    let map = oxc_sourcemap::SourceMap::from_json_string(json).unwrap();
+    collapse_sourcemaps_traced(&[&map]).to_json_string()
+  };
+  // `b.js` and the name `x` have no token, so they go. The kept items keep their order.
+  assert_eq!(
+    traced(
+      r#"{"version":3,"names":["x","y"],"sources":["a.js","b.js","c.js"],"sourcesContent":["a","b","c"],"mappings":"AAAA,EEAAC"}"#
+    ),
+    r#"{"version":3,"names":["y"],"sources":["a.js","c.js"],"sourcesContent":["a","c"],"mappings":"AAAA,ECAAA"}"#
+  );
+  // The only source has a token, but the name `x` still goes.
+  assert_eq!(
+    traced(
+      r#"{"version":3,"names":["x","y"],"sources":["a.js"],"sourcesContent":["a"],"mappings":"AAAAC"}"#
+    ),
+    r#"{"version":3,"names":["y"],"sources":["a.js"],"sourcesContent":["a"],"mappings":"AAAAA"}"#
+  );
+  // Everything has a token, so the map stays the same.
+  let kept =
+    r#"{"version":3,"names":["y"],"sources":["a.js"],"sourcesContent":["a"],"mappings":"AAAAA"}"#;
+  assert_eq!(traced(kept), kept);
+}
+
+/// The earlier map's name wins, so the later map's name for the same position goes.
+#[test]
+fn test_collapse_sourcemaps_traced_drops_overridden_names() {
+  use oxc_sourcemap::SourceMapBuilder;
+
+  let mut first_builder = SourceMapBuilder::default();
+  let first_source_id =
+    first_builder.set_source_and_content("source.ts", "const DEBUG_BUILD = true");
+  let debug_build = first_builder.add_name("DEBUG_BUILD");
+  first_builder.add_token(0, 6, 0, 6, Some(first_source_id), Some(debug_build));
+  let first_map = first_builder.into_sourcemap();
+
+  let mut last_builder = SourceMapBuilder::default();
+  let last_source_id =
+    last_builder.set_source_and_content("bundle.js", "const DEBUG_BUILD$1 = true");
+  let intermediate = last_builder.add_name("DEBUG_BUILD$1");
+  last_builder.add_token(0, 6, 0, 6, Some(last_source_id), Some(intermediate));
+  let last_map = last_builder.into_sourcemap();
+
+  let collapsed = collapse_sourcemaps_traced(&[&first_map, &last_map]);
+  assert_eq!(collapsed.get_names().collect::<Vec<_>>(), ["DEBUG_BUILD"]);
+  let token = collapsed.get_tokens().last().unwrap();
+  assert_eq!((token.get_source_id(), token.get_name_id()), (Some(0), Some(0)));
+}
+
+/// Vite's `css-sourcemap` playground reads a Sass map with `"sourceRoot": ""` back through
+/// `getCombinedSourcemap`.
+#[test]
+fn test_collapse_sourcemaps_traced_keeps_single_map_fields() {
+  let parse = |json: &str| oxc_sourcemap::SourceMap::from_json_string(json).unwrap().into_owned();
+  // Every source has a token, so the map stays the same.
+  let kept = parse(
+    r#"{"version":3,"sourceRoot":"","names":[],"sources":["a.sass","b.sass"],"sourcesContent":["a","b"],"mappings":"AAAA,ECAA"}"#,
+  );
+  assert_eq!(collapse_sourcemaps_traced(&[&kept]).to_json_string(), kept.to_json_string());
+  // `b.js` has no token, so it goes. `sourceRoot` stays, and `ignoreList` follows the new ids.
+  let dropped = collapse_sourcemaps_traced(&[&parse(
+    r#"{"version":3,"sourceRoot":"src/","names":[],"sources":["a.js","b.js","c.js"],"sourcesContent":["a","b","c"],"ignoreList":[1,2],"mappings":"AAAA,EEAA"}"#,
+  )]);
+  assert_eq!(dropped.get_source_root(), Some("src/"));
+  assert_eq!(dropped.get_sources().collect::<Vec<_>>(), ["a.js", "c.js"]);
+  assert_eq!(dropped.get_ignore_list(), Some([1].as_slice()));
+  assert_eq!(dropped.get_tokens().last().unwrap().get_source_id(), Some(1));
+}
+
+#[test]
+fn test_collapse_sourcemaps_traced_beyond_stack_flags() {
+  // 70 sources do not fit the 64 stack flags, so the source check takes the heap path.
+  let sources: Vec<String> = (0..70).map(|i| format!("s{i}.js")).collect();
+  let mut builder = oxc_sourcemap::SourceMapBuilder::default();
+  let source_ids: Vec<u32> =
+    sources.iter().map(|source| builder.add_source_and_content(source, "")).collect();
+  builder.add_name("unused");
+  let used = builder.add_name("used");
+  builder.add_token(0, 0, 0, 0, Some(source_ids[69]), Some(used));
+  let map = builder.into_sourcemap();
+  let dropped = collapse_sourcemaps_traced(&[&map]);
+  assert_eq!(dropped.get_sources().collect::<Vec<_>>(), ["s69.js"]);
+  assert_eq!(dropped.get_names().collect::<Vec<_>>(), ["used"]);
+  let token = dropped.get_tokens().next().unwrap();
+  assert_eq!((token.get_source_id(), token.get_name_id()), (Some(0), Some(0)));
 }

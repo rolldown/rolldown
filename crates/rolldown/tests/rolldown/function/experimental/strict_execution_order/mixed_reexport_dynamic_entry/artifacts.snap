@@ -156,7 +156,7 @@ Object.defineProperty(exports,Symbol.toStringTag,{value:`Module`});const e=requi
 ### rolldown-runtime.js
 
 ```js
-var e=Object.defineProperty,t=(e,t,n)=>()=>{if(n)throw n[0];try{return e&&(t=e(e=0)),t}catch(e){throw n=[e],e}},n=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],enumerable:!0});return n||e(r,Symbol.toStringTag,{value:`Module`}),r};Object.defineProperty(exports,"n",{enumerable:!0,get:function(){return n}}),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return t}});
+var e=Object.defineProperty,t=(e,t,n)=>()=>{if(n)throw n[0];try{return e&&(t=e(e=0)),t}catch(e){throw n=[e],e}},n=(t,n)=>{let r=Object.setPrototypeOf({},null);for(var i in t)e(r,i,{get:t[i],enumerable:!0});return n&1||e(r,Symbol.toStringTag,{value:`Module`}),n&2?r:Object.preventExtensions(r)};Object.defineProperty(exports,"n",{enumerable:!0,get:function(){return n}}),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return t}});
 ```
 
 ### shared.js
@@ -219,10 +219,7 @@ const require_rolldown_runtime = require("./rolldown-runtime.js");
 // a.js
 const A = { value: "a" };
 // shared.js
-var shared_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
-	A: () => A,
-	LOCAL: () => LOCAL
-});
+var shared_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ A: () => A });
 const LOCAL = "local";
 Object.defineProperty(exports, "LOCAL", {
 	enumerable: true,

@@ -35,11 +35,17 @@ assert.strictEqual(share_default$1, "shared");
 assert.deepStrictEqual(share_default, {});
 console.log(share_default$1, share_default);
 Promise.resolve().then(() => share_exports$1).then((mod) => {
-	assert.deepEqual(mod, Object.defineProperty({ default: "shared" }, Symbol.toStringTag, { value: "Module" }));
+	assert.deepEqual(mod, Object.defineProperty({
+		__proto__: null,
+		default: "shared"
+	}, Symbol.toStringTag, { value: "Module" }));
 	console.log(mod);
 });
 Promise.resolve().then(() => share_exports).then((mod) => {
-	assert.deepEqual(mod, Object.defineProperty({ default: {} }, Symbol.toStringTag, { value: "Module" }));
+	assert.deepEqual(mod, Object.defineProperty({
+		__proto__: null,
+		default: {}
+	}, Symbol.toStringTag, { value: "Module" }));
 	console.log(mod);
 });
 

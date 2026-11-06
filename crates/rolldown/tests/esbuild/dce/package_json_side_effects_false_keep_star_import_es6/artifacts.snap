@@ -12,6 +12,9 @@ import assert from "node:assert/strict";
 var demo_pkg_exports = /* @__PURE__ */ __exportAll({ foo: () => 123 });
 console.log("hello");
 // src/entry.js
-assert.deepEqual(demo_pkg_exports, Object.defineProperty({ foo: 123 }, Symbol.toStringTag, { value: "Module" }));
+assert.deepEqual(demo_pkg_exports, Object.defineProperty({
+	__proto__: null,
+	foo: 123
+}, Symbol.toStringTag, { value: "Module" }));
 
 ```

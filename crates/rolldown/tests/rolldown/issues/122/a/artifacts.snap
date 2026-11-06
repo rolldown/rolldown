@@ -29,16 +29,16 @@ import "./c.js";
 ## entry2.js
 
 ```js
-import "./c.js";
 import "./b.js";
+import "./c.js";
 
 ```
 
 ## entry3.js
 
 ```js
-import "./c.js";
 import "./b.js";
+import "./c.js";
 // a.js
 console.log("a");
 

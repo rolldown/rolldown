@@ -50,6 +50,9 @@ type RolldownWatcherEvent =
   | { code: 'ERROR'; error: Error; result: RolldownWatchBuild };
 ```
 
+`BUNDLE_END.output` is `output.file` when set, otherwise `output.dir`, joined to `cwd` and resolved like Rollup's `path.resolve`.
+`out_dir` alone is not enough. With `output.file` it holds the file's parent directory.
+
 Event listeners are normally **awaited** before proceeding — blocking semantics matching Rollup.
 The coordinator may stop waiting for an `event`, `change`, or `restart` listener only when a close
 request wins the close-aware dispatch race described below. The JavaScript callback itself keeps
@@ -200,11 +203,13 @@ Changes accumulate in an `invalidatedIds` Map during the delay window — both p
 
 ### Rolldown's Approach
 
-The `WatcherState::Debouncing` state does the same thing with `tokio::select!` and a deadline reset:
+The `WatcherState::Debouncing` state does the same thing with a deadline reset. `wait_for_debounce_input()` uses a biased `tokio::select!` over the mpsc receiver (polled first) and `tokio::time::sleep_until(deadline)`:
 
 - File change → `Idle` becomes `Debouncing { changes, deadline }`
 - More changes → deadline resets, changes accumulate with kind consolidation per path
 - Deadline fires → if changes are non-empty, passed to `run_build_sequence()`; if empty (all cancelled out by kind consolidation), silently return to Idle
+
+One OS notification can reach the coordinator as several `FileChanges` messages, one per change kind of the file. A message already in the channel wins over a deadline that is already due, so all parts of the notification that have arrived join the current build instead of being drained after `END` into a follow-up build.
 
 #### Kind Consolidation
 
@@ -326,9 +331,8 @@ Configured via `WatcherOptions`, fires **immediately** on file change (before de
 
 Each `WatchTask` builds its watcher with `FsWatcher::new(handler, &config)`.
 `FsWatcher` is a concrete type; the notify implementations stay crate-private.
-`WatcherConfig::to_fs_watcher_config()` maps watch options onto `FsWatcherConfig`,
-`WatchTask::new` adds the task's `ignored` and `cwd`, and construction picks the
-backend:
+`WatchTask::new` maps the task's own `watch.watcher`, `exclude` and `cwd` onto
+`FsWatcherConfig`, and construction picks the backend:
 
 | `use_polling` | `use_debounce` | Backend                               |
 | ------------- | -------------- | ------------------------------------- |
@@ -336,6 +340,10 @@ backend:
 | true          | false          | notify `PollWatcher`                  |
 | false         | true           | debounced `RecommendedWatcher`        |
 | true          | true           | debounced `PollWatcher`               |
+
+Rust `WatchOption.watcher` and `DevWatchOptions.watcher` use the shared
+`WatcherFileWatcherOptions` type. Unset fields use each mode's defaults:
+filesystem debouncing is off for build watch and on for dev mode.
 
 Watch mode leaves `enabled` at its default (`true`). The no-op backend is a
 dev-engine concern (`disable_watcher` → `FsWatcherConfig.enabled: false`).
@@ -448,7 +456,11 @@ close() → inner.close()         // sends Close msg, awaits shared future
 
 ### Binding as Thin Wrapper
 
-`BindingWatcher` is intentionally a thin wrapper — it holds a `rolldown_watcher::Watcher` and delegates directly. No state machine, no locking, no logic beyond type conversion. All lifecycle management lives in the Rust core. The constructor takes both `options` and `listener`, creates the `NapiWatcherEventHandler`, and passes it to `Watcher::new()`. Each NAPI method (`run`, `waitForClose`, `close`) is a direct delegation to the inner watcher.
+`BindingWatcher` is intentionally a thin wrapper — it holds a `rolldown_watcher::Watcher` and delegates directly. No state machine, no locking. All lifecycle management lives in the Rust core. The constructor takes both `options` and `listener`, creates the `NapiWatcherEventHandler`, and passes it to `Watcher::new()`. Each NAPI method (`run`, `waitForClose`, `close`) is a direct delegation to the inner watcher. Its only logic beyond type conversion is the `buildDelay` fold below.
+
+### Multi-Config Watcher Options
+
+Each output of each config becomes its own `WatchTask` with its own `FsWatcher`, so each task uses its own `watch.watcher` options, like Rollup's per-task chokidar options. Only the coordinator's debounce window is shared. `BindingWatcher::new()` (`crates/rolldown_binding/src/watcher.rs`) sets it to the largest `buildDelay` across configs, like Rollup.
 
 ### Event Emitter
 

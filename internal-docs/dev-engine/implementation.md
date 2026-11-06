@@ -143,6 +143,18 @@ module it is appended to already has them. The bundled entry is neither. Both
 copies are built from the same file in the same build, so they cannot drift
 apart.
 
+### Watch options
+
+The TypeScript `DevWatchOptions` type selects `skipWrite`, `watcher`, `include`,
+and `exclude` from `WatcherOptions` and adds the dev-only `enabled` flag. Polling
+and filesystem debounce settings are nested under `watcher`, including
+`debounceDelay`. The dev engine defaults `watcher.useDebounce` to `true`.
+Setting `watch.enabled` to `false` disables filesystem watching while allowing
+initial and explicit builds. `skipWrite` independently controls disk output.
+Rust `DevWatchOptions` and `WatchOption` share the nested
+`WatcherFileWatcherOptions` type; only `DevWatchOptions` has an `enabled` flag,
+which also defaults to `true`.
+
 ### Output format: ESM only
 
 Dev mode only supports `output.format: "esm"`. Only the ESM renderer
@@ -163,7 +175,7 @@ bundled dev, and Rust callers. Support for other formats is not planned
 - The `BundleCoordinator` runs in **one** dedicated tokio task
   (`DevEngine::run` does `tokio::spawn(coordinator.run())`,
   `dev_engine.rs:115`). Its `run()` is a single `while let Some(msg) =
-self.rx.recv().await` loop, so all coordinator state mutation is
+  self.rx.recv().await` loop, so all coordinator state mutation is
   serialized — there is no lock on `CoordinatorState`, the message loop
   _is_ the lock.
 - Each `BundlingTask` runs in its **own** spawned task. The coordinator
@@ -707,7 +719,7 @@ without forcing a rebuild.
 3. **HMR generation** — if `require_generate_hmr_update()`, calls
    `generate_hmr_updates`.
 4. **Rebuild** — if `requires_rebuild()`, sets `has_rebuild_happen =
-true` and calls `rebuild()`.
+   true` and calls `rebuild()`.
 
 ### `generate_hmr_updates` (`bundling_task.rs:235-356`)
 
@@ -767,6 +779,8 @@ Per changed file:
    scan, nothing is queued in `pending_rescans`, so the lost edits
    reach the graph only when a later change touches those files
    again — the same contract as `watchChange`.
+   The builtin `import.meta.glob` plugin uses this chain. See
+   [import-meta-glob](../import-meta-glob/implementation.md).
 3. **Delete handling** — a deleted module cannot be re-fetched; the
    update starts from its importers instead.
 
@@ -1117,7 +1131,7 @@ never-settling cycle.
 ### 13d. Full pipeline example — page load after an `Hmr`-only task
 
 1. An `Hmr`-only task completes successfully. `has_rebuild_happen ==
-false` → `has_generated_bundle_output == false` →
+   false` → `has_generated_bundle_output == false` →
    `has_stale_bundle_output == true`, state `Idle`.
 2. A browser loads a page. The dev server middleware (JS/binding glue,
    outside these crates) calls `DevEngine::ensure_latest_bundle_output`.
@@ -1422,15 +1436,17 @@ and return a single result use `BindingResult<T> = Either<BindingErrors, T>`
 on the boundary, and the JS wrapper calls `unwrapBindingResult` to either
 return the success value or throw a `BundleError`.
 
-Used by: `ensureLatestBuildOutput` (`binding_dev_engine.rs:216-219`,
-unwrapped in `packages/rolldown/src/api/dev/dev-engine.ts:168`). The
-other napi methods that can fail (`run`, `ensureCurrentBuildFinish`,
-`getBundleState`, `compileEntry`, `close`) convert their error to a plain
-`napi::Error` with a reason string instead. The thrown error reaches
-whichever audience called the method:
+Used by: `ensureLatestBuildOutput` and `compileEntry`
+(`ensure_latest_build_output` and `compile_entry` in `binding_dev_engine.rs`,
+unwrapped in `packages/rolldown/src/api/dev/dev-engine.ts`). The other napi
+methods that can fail (`run`, `ensureCurrentBuildFinish`, `getBundleState`,
+`close`) convert their error to a plain `napi::Error` with a reason string
+instead. The thrown error reaches whichever audience called the method:
 
 - `ensureLatestBuildOutput` is called by the consumer's dev-server
   middleware before serving a request. The consumer handles or propagates.
+- `compileEntry` is called by the consumer's lazy-compile middleware when a
+  lazy chunk is first requested. The consumer handles or propagates.
 - `close`, `run`, lifecycle-shaped methods are consumer-driven by
   construction.
 

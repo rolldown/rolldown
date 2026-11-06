@@ -12,6 +12,7 @@ use oxc::{
   span::SPAN,
 };
 use rolldown_ecmascript_utils::{BindingPatternExt as _, ExpressionFactoryExt as _};
+use rolldown_utils::xxhash::xxhash_with_base;
 
 use super::ast_visit::BuildImportAnalysisVisitor;
 
@@ -23,6 +24,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
     render_built_url: bool,
     is_relative_base: bool,
     is_modern: bool,
+    preload_marker_module_id: String,
   ) -> Self {
     Self {
       ast_builder,
@@ -33,6 +35,8 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
       scope_stack: vec![],
       need_prepend_helper: false,
       has_inserted_helper: false,
+      preload_marker_module_id,
+      preload_marker_index: 0,
     }
   }
 
@@ -53,7 +57,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
 
   /// transform `(await import('foo')).foo`
   /// to `(await __vitePreload(async () => { let foo; return {foo} = await import('foo'); },...))).foo`
-  pub fn rewrite_member_expr(&self, member_expr: &mut StaticMemberExpression<'a>) -> bool {
+  pub fn rewrite_member_expr(&mut self, member_expr: &mut StaticMemberExpression<'a>) -> bool {
     let mut await_expr = &mut member_expr.object;
     while let Expression::ParenthesizedExpression(member_expr) = await_expr {
       await_expr = &mut member_expr.expression;
@@ -145,7 +149,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
 
   /// transform `import('foo')`
   /// to `__vitePreload(() => import('foo'),...)`
-  pub fn rewrite_import_expr(&self, expr: &mut Expression<'a>) -> bool {
+  pub fn rewrite_import_expr(&mut self, expr: &mut Expression<'a>) -> bool {
     if !Self::is_import_with_static_specifier(expr) {
       return false;
     }
@@ -155,7 +159,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
   }
 
   pub fn construct_vite_preload_call(
-    &self,
+    &mut self,
     object_pat: oxc::allocator::Box<'a, ObjectPattern<'a>>,
     await_expr: Expression<'a>,
   ) -> Expression<'a> {
@@ -197,7 +201,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
     ))
   }
 
-  pub fn vite_preload_call(&self, argument: Argument<'a>) -> Expression<'a> {
+  pub fn vite_preload_call(&mut self, argument: Argument<'a>) -> Expression<'a> {
     Expression::new_call_expression(
       SPAN,
       Expression::new_identifier(SPAN, "__vitePreload", self),
@@ -209,7 +213,16 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
 
         items.push(argument);
         items.push(Argument::from(if self.is_modern {
-          Expression::new_identifier(SPAN, "__VITE_PRELOAD__", self)
+          // Vite replaces markers after minification, so every preload call
+          // needs a distinct identifier so that the markers are not merged by the minifier.
+          let preload_marker_index = self.preload_marker_index;
+          self.preload_marker_index += 1;
+          let preload_marker_seed =
+            format!("{}_{preload_marker_index:08x}", self.preload_marker_module_id);
+          let preload_marker_hash =
+            format!("{:0>32}", xxhash_with_base(preload_marker_seed.as_bytes(), 16));
+          let preload_marker = format!("__VITE_PRELOAD__{preload_marker_hash}");
+          Expression::new_id_ref_expr(SPAN, &preload_marker, self)
         } else {
           Expression::new_void_0(SPAN, self)
         }));

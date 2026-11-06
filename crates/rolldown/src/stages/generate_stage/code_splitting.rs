@@ -514,7 +514,7 @@ impl GenerateStage<'_> {
     chunk_graph: &mut ChunkGraph,
     order_state: &super::order_wrap_state::OrderWrapState,
   ) {
-    let mut chunk_list: IndexVec<ChunkIdx, FxHashMap<(ModuleIdx, usize), Vec<SymbolRef>>> =
+    let mut chunk_list: IndexVec<ChunkIdx, FxHashMap<ModuleIdx, Vec<SymbolRef>>> =
       index_vec![FxHashMap::default(); chunk_graph.chunk_table.len()];
     for (k, info) in &self.link_output.safely_merge_cjs_ns_map {
       for symbol_ref in info
@@ -542,16 +542,10 @@ impl GenerateStage<'_> {
         let owner = symbol_ref.owner;
         let chunk_idx = chunk_graph.module_to_chunk[owner].expect("Module should be in chunk");
 
-        let group_idx = if self.link_output.metas[owner].wrap_kind().is_none() {
-          Some(usize::MAX)
-        } else {
-          chunk_graph.chunk_table[chunk_idx].module_idx_to_group_idx.get(&owner).copied()
-        };
-
-        let Some(group_idx) = group_idx else {
+        if !self.link_output.metas[owner].wrap_kind().is_none() {
           continue;
-        };
-        chunk_list[chunk_idx].entry((*k, group_idx)).or_default().push(*symbol_ref);
+        }
+        chunk_list[chunk_idx].entry(*k).or_default().push(*symbol_ref);
       }
     }
 
@@ -769,9 +763,9 @@ impl GenerateStage<'_> {
     /// preserve-modules chunk names disagree about where the module lives.
     fn common_dir_input<'a>(id: &'a ModuleId, cwd: &Path) -> Option<Cow<'a, str>> {
       if id.is_path() {
-        return Some(Cow::Borrowed(id.as_ref()));
+        return Some(Cow::Borrowed(id.raw_id()));
       }
-      let glued = node_style_absolute(Path::new(id.as_str()), cwd)?;
+      let glued = node_style_absolute(Path::new(id.raw_id()), cwd)?;
       Some(Cow::Owned(glued.into_owned().expect_into_string()))
     }
 
@@ -1072,7 +1066,12 @@ impl GenerateStage<'_> {
       );
     }
 
-    self.try_merge_runtime_chunk(chunk_graph, None, RuntimeMergeCascade::Full);
+    self.try_merge_runtime_chunk(
+      chunk_graph,
+      None,
+      RuntimeMergeCascade::Full,
+      used_symbol_refs_builder,
+    );
 
     Ok(())
   }

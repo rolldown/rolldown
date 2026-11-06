@@ -13,7 +13,6 @@ import { ChunkingContextImpl } from '../types/chunking-context';
 import { transformAssetSource } from './asset-source';
 import { arraify, unimplemented } from './misc';
 import { transformRenderedChunk } from './transform-rendered-chunk';
-import { logger } from '../cli/logger';
 import {
   measureHookCost,
   measureIfFunction,
@@ -21,12 +20,28 @@ import {
   type PluginTimingsRecorder,
 } from './plugin-timings';
 
-export function bindingifyOutputOptions(
+type Warn = (message: string) => void;
+
+// consola is costly to load, so import the CLI logger only when an option that can warn is set.
+async function getWarn(outputOptions: OutputOptions): Promise<Warn> {
+  if (
+    outputOptions.legalComments == null &&
+    outputOptions.inlineDynamicImports == null &&
+    outputOptions.advancedChunks == null &&
+    outputOptions.manualChunks == null
+  ) {
+    return (message) => console.warn(message);
+  }
+  const { logger } = await import('../cli/logger');
+  return (message) => logger.warn(message);
+}
+
+export async function bindingifyOutputOptions(
   outputOptions: OutputOptions,
   pluginContextData: PluginContextData,
   onLog: LogHandler,
   timings: PluginTimingsRecorder | undefined,
-): BindingOutputOptions {
+): Promise<BindingOutputOptions> {
   const {
     dir,
     charset,
@@ -68,8 +83,11 @@ export function bindingifyOutputOptions(
     strictExecutionOrder,
   } = outputOptions;
 
+  // Await before the first warning, so concurrent builds don't interleave their warnings.
+  const warn = await getWarn(outputOptions);
+
   if (legalComments != null) {
-    logger.warn('`legalComments` option is deprecated, please use `comments.legal` instead.');
+    warn('`legalComments` option is deprecated, please use `comments.legal` instead.');
   }
 
   // Handle codeSplitting and inlineDynamicImports
@@ -81,6 +99,7 @@ export function bindingifyOutputOptions(
     pluginContextData,
     onLog,
     timings,
+    warn,
   );
 
   return {
@@ -261,6 +280,7 @@ function bindingifyCodeSplitting(
   pluginContextData: PluginContextData,
   onLog: LogHandler,
   timings: PluginTimingsRecorder | undefined,
+  warn: Warn,
 ): {
   inlineDynamicImports: BindingOutputOptions['inlineDynamicImports'];
   advancedChunks: BindingOutputOptions['manualCodeSplitting'];
@@ -275,9 +295,7 @@ function bindingifyCodeSplitting(
   if (codeSplitting === false) {
     // Warn if inlineDynamicImports is also set
     if (inlineDynamicImportsOption != null) {
-      logger.warn(
-        '`inlineDynamicImports` option is ignored because `codeSplitting: false` is set.',
-      );
+      warn('`inlineDynamicImports` option is ignored because `codeSplitting: false` is set.');
     }
     // Validate that manualChunks is not set with code splitting disabled
     if (manualChunks != null) {
@@ -287,7 +305,7 @@ function bindingifyCodeSplitting(
     }
     // When code splitting is disabled, ignore advancedChunks
     if (advancedChunks != null) {
-      logger.warn('`advancedChunks` option is ignored because `codeSplitting` is set to `false`.');
+      warn('`advancedChunks` option is ignored because `codeSplitting` is set to `false`.');
     }
     // Return early - no advanced chunks when code splitting is disabled
     return {
@@ -297,13 +315,13 @@ function bindingifyCodeSplitting(
   } else if (codeSplitting === true) {
     // Explicit code splitting enabled - ignore deprecated inlineDynamicImports
     if (inlineDynamicImportsOption != null) {
-      logger.warn('`inlineDynamicImports` option is ignored because `codeSplitting: true` is set.');
+      warn('`inlineDynamicImports` option is ignored because `codeSplitting: true` is set.');
     }
   } else if (codeSplitting == null) {
     // Default behavior: no inlining, automatic code splitting
     // Check if deprecated inlineDynamicImports is used
     if (inlineDynamicImportsOption != null) {
-      logger.warn(
+      warn(
         '`inlineDynamicImports` option is deprecated, please use `codeSplitting: false` instead.',
       );
       inlineDynamicImports = inlineDynamicImportsOption;
@@ -314,7 +332,7 @@ function bindingifyCodeSplitting(
     chunksOptionName = 'codeSplitting';
     // Ignore inlineDynamicImports if codeSplitting object is specified
     if (inlineDynamicImportsOption != null) {
-      logger.warn(
+      warn(
         '`inlineDynamicImports` option is ignored because the `codeSplitting` option is specified.',
       );
     }
@@ -330,21 +348,17 @@ function bindingifyCodeSplitting(
   // Handle advancedChunks deprecation (only if codeSplitting is not set to object)
   if (effectiveChunksOption == null) {
     if (advancedChunks != null) {
-      logger.warn('`advancedChunks` option is deprecated, please use `codeSplitting` instead.');
+      warn('`advancedChunks` option is deprecated, please use `codeSplitting` instead.');
       effectiveChunksOption = advancedChunks;
       chunksOptionName = 'advancedChunks';
     }
   } else if (advancedChunks != null) {
-    logger.warn(
-      '`advancedChunks` option is ignored because the `codeSplitting` option is specified.',
-    );
+    warn('`advancedChunks` option is ignored because the `codeSplitting` option is specified.');
   }
 
   // Handle manualChunks migration
   if (manualChunks != null && effectiveChunksOption != null) {
-    logger.warn(
-      '`manualChunks` option is ignored because the `codeSplitting` option is specified.',
-    );
+    warn('`manualChunks` option is ignored because the `codeSplitting` option is specified.');
   } else if (manualChunks != null) {
     chunksOptionName = 'manualChunks';
     migratedManualChunksGroup = {
@@ -365,7 +379,7 @@ function bindingifyCodeSplitting(
   // point. Without this, the grouping would be forwarded and then silently discarded in the Rust
   // binding, ignoring the requested groups without any diagnostic.
   if (inlineDynamicImports === true && effectiveChunksOption != null) {
-    logger.warn(
+    warn(
       '`advancedChunks` option is ignored because `inlineDynamicImports: true` disables code splitting.',
     );
     effectiveChunksOption = undefined;

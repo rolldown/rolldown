@@ -17,6 +17,8 @@ pub use {
     hook_transform_call_end::HookTransformCallEnd,
     hook_transform_call_start::HookTransformCallStart,
     module_graph_ready::{Module, ModuleGraphReady, ModuleImport},
+    module_rendered_ready::{ModuleRendered, ModuleRenderedReady},
+    output_chunk_graph_ready::{OutputChunk, OutputChunkGraphReady},
     package_graph_ready::{PackageGraphReady, PackageInfo},
     session_meta::SessionMeta,
   },

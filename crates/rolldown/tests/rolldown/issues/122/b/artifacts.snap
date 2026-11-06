@@ -32,8 +32,8 @@ console.log("a");
 ## b.js
 
 ```js
-import "./1.js";
 import "./2.js";
+import "./1.js";
 // b.js
 console.log("a");
 

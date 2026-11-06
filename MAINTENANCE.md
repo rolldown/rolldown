@@ -16,7 +16,7 @@ git push origin v1.1.5:refs/heads/v1.1
 Each maintenance branch also needs its own Vite branch for the Vite and dev server tests, because Vite's `rolldown-canary` follows `main` and can fail on an older line. These branches are named after their Vite minor, for example `v1.2` uses `rolldown-canary-8.3`:
 
 1. In vitejs/vite, create `rolldown-canary-A.B`, where `A.B` is the latest Vite minor that ships rolldown `X.Y`. Base it on that Vite release line, plus any test fixes it needs.
-2. On `vX.Y`, set `viteBranch` in `scripts/src/setup-vite/checkout.ts` to that branch. The tests then use it as-is, without rebasing it onto Vite `main`.
+2. On `vX.Y`, set `viteBranch` in `scripts/src/setup-vite/checkout.ts` to that branch and `viteBase` to Vite's `vA.B`. The tests rebase it onto the latest `vA.B`. Until Vite has a `vA.B` branch, they use it as-is.
 3. On `main`, add `vX.Y` and that branch to `maintenanceViteBranches` in `.github/workflows/vite-ecosystem-ci-trigger.yml`.
 
 A maintenance branch can only release stable versions within `X.Y` that are lower than the current npm `latest`. Prepare Release, Publish to NPM and Release Crates all check this with `scripts/misc/release-line.mjs`.

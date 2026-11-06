@@ -25,7 +25,7 @@ oxc = { workspace = true }
 oxc_sourcemap = { workspace = true }
 
 [dev-dependencies]
-criterion2 = { workspace = true, default-features = false }
+criterion = { workspace = true, default-features = false }
 
 [[bench]]
 harness = false

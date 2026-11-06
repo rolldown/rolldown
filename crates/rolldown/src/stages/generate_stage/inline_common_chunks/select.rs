@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, ChunkReasonType, ConcatenateWrappedModuleKind, ImportKind,
-  ImportRecordMeta, ModuleIdx, RuntimeHelper, StmtInfoMeta, SymbolOrMemberExprRef, WrapKind,
+  Chunk, ChunkIdx, ChunkKind, ChunkReasonType, ImportKind, ImportRecordMeta, ModuleIdx,
+  RuntimeHelper, StmtInfoMeta, SymbolOrMemberExprRef, WrapKind,
 };
 use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::FxHashSet;
@@ -329,9 +329,6 @@ impl GenerateStage<'_> {
     }
     if module.meta.has_eval() {
       return Some("member uses direct eval");
-    }
-    if !matches!(meta.concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::None) {
-      return Some("member is a concatenated wrapped module");
     }
     for (stmt_info_idx, stmt_info) in self.link_output.stmt_infos[module_idx].iter_enumerated() {
       if !meta.stmt_info_included.has_bit(stmt_info_idx) {

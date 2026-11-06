@@ -20,6 +20,10 @@ impl BuildEvent for JsonParse {
     crate::types::event_kind::EventKind::JsonParseError
   }
 
+  fn id(&self) -> Option<String> {
+    Some(self.filename.to_string())
+  }
+
   fn message(&self, _opts: &DiagnosticOptions) -> String {
     self.message.to_string()
   }

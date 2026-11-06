@@ -84,7 +84,7 @@ If you are using a platform that a prebuilt binary is not distributed, you have 
 ### Release Channels
 
 - [latest](https://npmx.dev/package/rolldown#versions): currently `1.x.x`.
-- [pkg.pr.new](https://pkg.pr.new/~/rolldown/rolldown): continuously released from the `main` branch. Install with `npm i https://pkg.pr.new/rolldown@sha` where `sha` is a successful build listed on [pkg.pr.new](https://pkg.pr.new/~/rolldown/rolldown).
+- [pkg.pr.new](https://pkg.pr.new/~/rolldown/rolldown): continuously released from the `main` branch. Install with `vp add https://pkg.pr.new/rolldown@sha` or `npm i https://pkg.pr.new/rolldown@sha`, where `sha` is a successful build listed on [pkg.pr.new](https://pkg.pr.new/~/rolldown/rolldown). If the project uses pnpm, which `vp` selects when no package manager is set, first add `blockExoticSubdeps: false` to `pnpm-workspace.yaml`.
 
 ## Using the CLI
 

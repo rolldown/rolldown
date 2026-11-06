@@ -3,9 +3,9 @@ use oxc::semantic::NodeId;
 use oxc_index::IndexVec;
 use oxc_str::CompactStr;
 use rolldown_common::{
-  ConcatenateWrappedModuleKind, EntryPointKind, ImportRecordIdx, ImportRecordMeta,
-  MemberExprRefResolutionMap, ModuleIdx, ModuleNamespaceIncludedReason, ModuleType, NormalModule,
-  OutputFormat, ResolvedExport, RuntimeHelper, StmtInfoIdx, SymbolRef, SymbolRefDb, WrapKind,
+  EntryPointKind, ImportRecordIdx, ImportRecordMeta, MemberExprRefResolutionMap, ModuleIdx,
+  ModuleNamespaceIncludedReason, ModuleType, NormalModule, OutputFormat, ResolvedExport,
+  RuntimeHelper, StmtInfoIdx, SymbolRef, SymbolRefDb, WrapKind,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_utils::IndexBitSet;
@@ -56,7 +56,6 @@ pub struct LinkingMetadata {
   // esbuild add it to `ExportKind`, but the linker shouldn't mutate the module.
   pub has_dynamic_exports: bool,
   pub shimmed_missing_exports: FxHashMap<CompactStr, SymbolRef>,
-  pub required_by_other_module: bool,
 
   // Entry chunks need to generate code that doesn't belong to any module. This is the list of symbols are referenced by the
   // generated code. Tree-shaking will cares about these symbols to make sure they are not removed.
@@ -90,7 +89,6 @@ pub struct LinkingMetadata {
   pub folded_namespace_in_checks: FxHashMap<NodeId, bool>,
   pub star_exports_from_external_modules: Vec<ImportRecordIdx>,
   pub is_tla_or_contains_tla_dependency: bool,
-  pub concatenated_wrapped_module_kind: ConcatenateWrappedModuleKind,
   /// Used to to track a facade binding referenced cjs module
   /// included reexport symbol from commonjs module
   pub named_import_to_cjs_module: FxHashMap<SymbolRef, ModuleIdx>,

@@ -562,6 +562,19 @@ describe('config', () => {
   });
 });
 
+describe('diagnostics', () => {
+  it('should not color diagnostics when NO_COLOR is set', async () => {
+    const cwd = cliFixturesDir('diagnostic-color');
+    try {
+      await $({ cwd, env: { NO_COLOR: '1', FORCE_COLOR: undefined } })`rolldown index.js -d dist`;
+      expect.unreachable();
+    } catch (error: any) {
+      expect(error.stdout).toContain('[UNRESOLVED_IMPORT]');
+      expect(error.stdout).not.toContain('\x1b[');
+    }
+  });
+});
+
 describe('watch cli', () => {
   it('call closeBundle', async () => {
     const cwd = cliFixturesDir('close-bundle');

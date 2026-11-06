@@ -145,6 +145,7 @@ pub enum EventKind {
   DeprecatedImportAssertion = 54,
   /// Whether to emit warnings when the options of a dynamic import are not statically analyzable while `experimental.importAttributes` is on.
   InvalidImportAttribute = 55,
+  LazyBarrelUnloadedBindingError = 56,
 }
 
 impl Display for EventKind {
@@ -156,6 +157,7 @@ impl Display for EventKind {
       EventKind::ShimmedExport => write!(f, "SHIMMED_EXPORT"),
       EventKind::DeprecatedImportAssertion => write!(f, "DEPRECATED_IMPORT_ASSERTION"),
       EventKind::InvalidImportAttribute => write!(f, "INVALID_IMPORT_ATTRIBUTE"),
+      EventKind::LazyBarrelUnloadedBindingError => write!(f, "LAZY_BARREL_UNLOADED_BINDING"),
       EventKind::CircularDependency => write!(f, "CIRCULAR_DEPENDENCY"),
       EventKind::CircularReexportError => write!(f, "CIRCULAR_REEXPORT"),
       EventKind::Eval => write!(f, "EVAL"),

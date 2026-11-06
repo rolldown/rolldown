@@ -1,4 +1,4 @@
-use std::{borrow::Cow, path::Path};
+use std::path::Path;
 
 use cow_utils::CowUtils;
 use oxc::{
@@ -7,7 +7,9 @@ use oxc::{
   span::Span,
 };
 use rolldown_plugin::{LogWithoutPlugin, PluginContext};
-use rolldown_std_utils::relative_path_to_slash;
+use rolldown_plugin_utils::to_string_literal;
+use rolldown_std_utils::relative_path_as_js_specifier;
+use rolldown_utils::ecmascript::{escape_string_for_template_literal, to_usv_str};
 use string_wizard::MagicString;
 
 use super::dynamic_import_to_glob::{
@@ -30,7 +32,7 @@ pub struct AsyncImport {
   pub glob: String,
   pub span: Span,
   pub source_span: Span,
-  pub first_quasi: String,
+  pub first_quasi_len: usize,
 }
 
 pub struct DynamicImportVarsVisit<'a> {
@@ -88,51 +90,55 @@ impl DynamicImportVarsVisit<'_> {
         return false;
       }
 
-      let first_quasi = source.quasis[0].value.raw.as_str();
+      // Oxc turns CRLF into LF in `raw`, so take the length from the span.
+      let first_quasi_len = source.quasis[0].span.size() as usize;
       if glob.as_bytes()[0] != b'.' && glob.as_bytes()[0] != b'/' {
         self.async_imports.push(AsyncImport {
           glob: glob.into_owned(),
           span: import_expr.span,
           source_span: source.span,
-          first_quasi: first_quasi.to_owned(),
+          first_quasi_len,
         });
         return false;
       }
 
-      self.rewrite(import_expr.span, source.span, first_quasi, &glob);
+      let prefix = to_usv_str(source.quasis[0].value.cooked.expect("untagged template literal"));
+      self.rewrite(import_expr.span, source.span, first_quasi_len, &prefix, &glob);
       return false;
     }
     true
   }
 
   /// Rewrites the `import(...)` at `span` into a glob import. `source_span` is the span of its
-  /// template literal and `first_quasi` the raw text of the template's first quasi.
-  pub fn rewrite(&mut self, span: Span, source_span: Span, first_quasi: &str, glob: &str) {
-    let Some(index) = memchr::memchr(b'*', glob.as_bytes()) else {
-      return;
-    };
-
+  /// template literal, `first_quasi_len` is the source byte length of its first quasi, and
+  /// `prefix` is the cooked or resolved static runtime path prefix.
+  pub fn rewrite(
+    &mut self,
+    span: Span,
+    source_span: Span,
+    first_quasi_len: usize,
+    prefix: &str,
+    glob: &str,
+  ) {
     let raw = source_span.shrink(1).source_text(self.source_text);
-    let raw_pattern = if &glob[..index] == first_quasi {
-      Cow::Borrowed(raw)
-    } else {
-      let mut s = String::with_capacity(index + first_quasi.len());
-      s.push_str(&glob[..index]);
-      s.push_str(&raw[first_quasi.len()..]);
-      Cow::Owned(s)
-    };
-
     let base = self.importer.parent().unwrap_or(self.root);
-    let normalized = if raw_pattern.as_bytes()[0] == b'/' {
-      relative_path_to_slash(self.root.join(&raw_pattern[1..]), base)
+    let runtime_prefix = if prefix.is_empty() {
+      String::new()
     } else {
-      relative_path_to_slash(base.join(raw_pattern.as_ref()), base)
-    };
-    let new_raw_pattern = if normalized.starts_with("./") || normalized.starts_with("../") {
+      // The final segment can be a partial filename, such as `..` in `..${name}.js`.
+      // Append a filename character so normalization preserves it, then remove that character.
+      let prefix_with_suffix = format!("{prefix}_");
+      let mut normalized = if let Some(prefix) = prefix_with_suffix.strip_prefix('/') {
+        relative_path_as_js_specifier(self.root.join(prefix), base)
+      } else {
+        relative_path_as_js_specifier(base.join(&prefix_with_suffix), base)
+      };
+      normalized.truncate(normalized.len() - 1);
       normalized
-    } else {
-      rolldown_utils::concat_string!("./", normalized)
     };
+    // Escape the static prefix for a template literal and keep the original expressions as source.
+    let runtime_prefix = escape_string_for_template_literal(runtime_prefix.as_str().into());
+    let runtime_pattern = format!("`{runtime_prefix}{}`", &raw[first_quasi_len..]);
 
     let glob = glob.cow_replace("**", "*");
     let source_text = source_span.source_text(self.source_text);
@@ -159,12 +165,13 @@ impl DynamicImportVarsVisit<'_> {
     // __variableDynamicImportRuntimeHelper((import.meta.glob(pattern, params)), expr, segments)
     let segments = pattern.split('/').count();
     let replacement = format!(
-      "__variableDynamicImportRuntimeHelper(import.meta.glob(\"{pattern}\"{}), `{new_raw_pattern}`, {segments})",
+      "__variableDynamicImportRuntimeHelper(import.meta.glob({}{}), {runtime_pattern}, {segments})",
+      to_string_literal(&pattern),
       glob_params
         .map(|params| {
           format!(
-            ", {{ query: \"{}\"{} }}",
-            params.query,
+            ", {{ query: {}{} }}",
+            to_string_literal(params.query),
             if params.import { ", import: \"*\"" } else { "" }
           )
         })

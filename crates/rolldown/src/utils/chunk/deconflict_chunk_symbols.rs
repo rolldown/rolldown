@@ -197,10 +197,8 @@ pub fn deconflict_chunk_symbols(
     }
   }
 
-  // Import bindings are declared at this chunk's root scope too (`import { x } from "./other-chunk.js"`
-  // and, under esm, `import { x } from "external"`), so they take part in deconfliction. They are named
-  // after the modules' own declarations: a local keeps its name and the import gets the suffix, the
-  // same priority rollup and esbuild use (issue #11035).
+  // Import bindings are top-level bindings too. They are named after the modules' declarations,
+  // as in Rollup: a declaration's name shows in `.name` and .d.ts output; an import alias does not.
   if matches!(format, OutputFormat::Esm) {
     chunk.direct_imports_from_external_modules.iter().for_each(|(module, _)| {
       let db = link_output.symbol_db.local_db(*module);

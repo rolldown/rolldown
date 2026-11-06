@@ -530,7 +530,7 @@ impl GenerateStage<'_> {
         targets.push(served.owner);
       }
     }
-    // A re-export of a wrapped ESM module additionally imports the module's `init_*` wrapper.
+    // An unwrapped entry re-exporting a wrapped ESM module also imports its `init_*` wrapper.
     for init in collect_entry_reexported_wrapper_inits(
       module_idx,
       meta,

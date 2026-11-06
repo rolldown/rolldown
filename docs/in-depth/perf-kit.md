@@ -27,11 +27,19 @@ You need:
 
 perf-kit has no dependencies, so it runs without an install step:
 
-```sh
+::: code-group
+
+```sh [vp]
+$ vp dlx @rolldown/perf-kit help
+```
+
+```sh [npm]
 $ npx @rolldown/perf-kit help
 ```
 
-To add it to the project instead, run `npm i -D @rolldown/perf-kit`. The command is then `npx perf-kit`. perf-kit keeps its state in `.perf-kit/` in the folder you run it from. It writes a `.gitignore` there, so the state stays out of commits.
+:::
+
+To add it to the project instead, run `vp add -D @rolldown/perf-kit` or `npm i -D @rolldown/perf-kit`. The command is then `vp exec perf-kit` or `npx perf-kit`. perf-kit keeps its state in `.perf-kit/` in the folder you run it from. It writes a `.gitignore` there, so the state stays out of commits.
 
 ### Turn on the build report
 
@@ -51,7 +59,7 @@ The browser and server prompts tell the agent to run `help` first. `help` prints
 ::: info Before you use the Cloudflare Worker prompt
 The app must build with Rolldown.
 
-1. Run `npm i -D @rolldown/perf-kit` in the app.
+1. Run `vp add -D @rolldown/perf-kit` or `npm i -D @rolldown/perf-kit` in the app.
 2. Add `dist-attrib/` and `perf-kit.vite.config.ts` to `.gitignore`, so that the agent does not commit them.
 
 Unlike the other two prompts, this prompt lists the commands. We tested this form with coding agents. Keep `<command>`, `<module>` and `<class modules>` as they are, because the agent fills them in. If the app builds more than one Worker, add `--worker <name>` to the first `worker-scan`.
@@ -350,14 +358,25 @@ $ npx @rolldown/perf-kit node-scan --entry dist/server.js --ready port:3000
 
 Run these commands in the app folder:
 
-```sh
+::: code-group
+
+```sh [vp]
+$ vp add -D @rolldown/perf-kit
+$ vp exec perf-kit worker-config --app .
+$ vp exec vite build --config perf-kit.vite.config.ts
+$ vp exec perf-kit worker-scan --app . --request /
+```
+
+```sh [npm]
 $ npm i -D @rolldown/perf-kit
 $ npx perf-kit worker-config --app .
 $ npx vite build --config perf-kit.vite.config.ts
 $ npx perf-kit worker-scan --app . --request /
 ```
 
-`worker-config` writes a Vite config that wraps the config of the app. `--request` adds a route to call after startup. After a kept change, run `npx perf-kit worker-scan --pin`. The numbers come from the local CPU. Use `wrangler check startup`, before and after, for the number that Cloudflare reports.
+:::
+
+`worker-config` writes a Vite config that wraps the config of the app. `--request` adds a route to call after startup. After a kept change, run `worker-scan --pin`. The numbers come from the local CPU. Use `wrangler check startup`, before and after, for the number that Cloudflare reports.
 
 ### A deployed site
 

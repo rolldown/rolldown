@@ -8,6 +8,7 @@ import type {
 } from '../binding.cjs';
 import type { MinimalPluginContext } from '../plugin/minimal-plugin-context';
 import type { OutputCodeCacheEntry } from '../plugin/plugin-context-data';
+import type { Extends, TypeAssert } from '../types/assert';
 import { OutputAssetImpl } from '../types/output-asset-impl';
 import type { OutputBundle } from '../types/output-bundle';
 import { OutputChunkImpl } from '../types/output-chunk-impl';
@@ -140,6 +141,14 @@ function collectChunkChange(
   cache: Record<string | symbol, any>,
   assigned: Set<string | symbol>,
 ): JsOutputChunk | undefined {
+  // Fails type-check when `JsOutputChunk` gains a field that is not listed here.
+  // List a field only once this function sends it.
+  type _ = TypeAssert<
+    Extends<
+      keyof JsOutputChunk,
+      'filename' | 'isEntry' | 'code' | 'map' | 'imports' | 'dynamicImports'
+    >
+  >;
   const change: JsOutputChunk = {
     filename: 'fileName' in cache ? cache.fileName : original.fileName,
     isEntry: 'isEntry' in cache ? cache.isEntry : original.isEntry,

@@ -1,4 +1,14 @@
 
+## [1.2.17] - 2026-11-06
+
+### ⚙️ Miscellaneous Tasks
+
+- pick the Prepare Release target branch from the version (#11528)
+- run every OS on pushes to maintenance branches (#11523)
+- run CI on pushes to maintenance branches (#11519)
+- support patch releases from maintenance branches (#11514)
+
+
 ## [1.2.16] - 2026-10-29
 
 ### 🚀 Features

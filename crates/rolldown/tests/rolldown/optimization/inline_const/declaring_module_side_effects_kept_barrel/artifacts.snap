@@ -1,0 +1,49 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## button.js
+
+```js
+// ui/button.css.js
+globalThis.styleLoaded = true;
+
+```
+
+## direct.js
+
+```js
+import "./button.js";
+// direct.js
+globalThis.size = "md";
+
+```
+
+## namespace.js
+
+```js
+import "./button.js";
+import "./ui.js";
+// namespace.js
+globalThis.size = "md";
+
+```
+
+## through_barrel.js
+
+```js
+import "./button.js";
+import "./ui.js";
+// through_barrel.js
+globalThis.size = "md";
+
+```
+
+## ui.js
+
+```js
+// ui/index.js
+globalThis.barrelLoaded = true;
+
+```

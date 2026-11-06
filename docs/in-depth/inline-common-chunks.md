@@ -219,7 +219,7 @@ Rolldown wraps the whole common chunk in one factory, so its modules can refer t
 A common chunk is not inlined, even below `maxSize`, if:
 
 - It contains top-level await or statically depends on a module that does.
-- It contains `import.meta` that remains after tree shaking.
+- It contains `import.meta` that remains after tree shaking. An `import.meta.ROLLDOWN_FILE_URL_referenceId` reference does not count: Rolldown resolves it for each file that prints the chunk, including the [`resolveFileUrl`](/reference/Interface.Plugin#resolvefileurl) hook.
 - It contains an unresolved dynamic import or imports an external module.
 - Another output chunk re-exports one of its bindings.
 - It contains declaration modules or builtin `asset` or `copy` modules.

@@ -90,6 +90,8 @@ A resolved internal dynamic import can be copied: the finalizer computes its tar
 
 Rolldown preserves native `import.meta` in ESM output. A retained `import.meta.url` therefore refers to the output file, and copying it would make the first loaded carrier choose the value. webpack's default replacement uses the source module URL, which has different behavior. The restriction applies only to included statements; a removed function containing `import.meta` does not keep its chunk alive. Under `experimental.devMode` the finalizer rewrites `import.meta.hot`, so it does not count either (see [Dev mode](#dev-mode)).
 
+`import.meta.ROLLDOWN_FILE_URL_<referenceId>` is not such a use. Rolldown replaces the whole expression, and resolves it, `resolveFileUrl` hook included, once for each file that prints the module, so every copy resolves the asset from its own carrier and all of them name the same file.
+
 ## Registration on entry loading paths
 
 Placement first computes the factories each file needs and removes those its static dependencies outside its import cycle register. It then propagates the registrations guaranteed before each file starts evaluating, using the physical file graph after records have been expanded into their importees:

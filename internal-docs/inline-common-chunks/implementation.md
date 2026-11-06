@@ -54,7 +54,7 @@ pub struct FileInlineNames {
 pub struct InlineReader { pub file: ChunkIdx, pub reader: ChunkIdx }   // whose names, whose bridges
 ```
 
-`ChunkGraph` and `Chunk` carry no record-specific fields; that state lives in `InlineCommonChunksState`. A record's `preliminary_filename` and `pre_rendered_chunk` stay empty; filename generation, in-place finalization, `resolve_file_urls`, `detect_ineffective_dynamic_imports` and `instantiate_chunks` skip records.
+`ChunkGraph` and `Chunk` carry no record-specific fields; that state lives in `InlineCommonChunksState`. A record's `preliminary_filename` and `pre_rendered_chunk` stay empty; filename generation, in-place finalization, `detect_ineffective_dynamic_imports` and `instantiate_chunks` skip records. `resolve_file_urls` resolves a record's file URL references once for each carrier, keyed by the carrier, which is the file the copy's finalization reads them for.
 
 ## Selection (`inline_common_chunks/select.rs`)
 

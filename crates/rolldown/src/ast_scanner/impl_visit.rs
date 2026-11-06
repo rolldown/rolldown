@@ -353,6 +353,9 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
   /// Deliberately not folded into `visit_import_meta`: that method returns early when
   /// `keep_esm_import_export_syntax()` is set, but `ROLLDOWN_FILE_URL_` is rewritten
   /// regardless of that option.
+  ///
+  /// Not a use of `import.meta`: the whole expression is replaced, and the replacement is
+  /// resolved for each file that prints the module, an inline common chunk carrier included.
   fn visit_member_expression(&mut self, it: &ast::MemberExpression<'ast>) {
     if it.object().is_import_meta()
       && let Some(property_name) = it.static_property_name().and_then(JSStr::as_str)
@@ -364,6 +367,7 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
         reference_id: CompactStr::from(file_url.reference_id),
         url_id: file_url.url_id.map(CompactStr::from),
       });
+      return;
     }
     walk_js::walk_member_expression(self, it);
   }

@@ -59,7 +59,8 @@ pub fn to_valid_glob<'a>(glob: &'a str, source: &str) -> anyhow::Result<Cow<'a, 
 pub fn template_literal_to_glob<'a>(node: &TemplateLiteral) -> anyhow::Result<Cow<'a, str>> {
   let mut glob = String::new();
   for (index, quasi) in node.quasis.iter().enumerate() {
-    glob += &sanitize_string(&quasi.value.raw)?;
+    let cooked = quasi.value.cooked.ok_or_else(|| anyhow::anyhow!("Invalid template literal"))?;
+    glob += &sanitize_string(&to_usv_str(cooked))?;
     if let Some(expr) = node.expressions.get(index) {
       glob += &expr_to_glob(expr)?;
     }

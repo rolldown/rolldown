@@ -1,17 +1,14 @@
-use std::collections::VecDeque;
-
 use itertools::Itertools;
 use rolldown_common::{
-  AddonRenderContext, ChunkIdx, ExportsKind, ExternalModule, ImportAttribute, ImportKind,
-  ImportRecordIdx, ImportRecordMeta, ModuleIdx, ModuleTable, RUNTIME_MODULE_KEY, Specifier,
-  SymbolRef,
+  AddonRenderContext, ChunkIdx, ExportsKind, ExternalModule, ModuleIdx, RUNTIME_MODULE_KEY,
+  Specifier, SymbolRef,
 };
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{
   concat_string,
   ecmascript::{escape_non_ascii, to_ecma_string_literal, to_module_import_export_name_with_ascii},
 };
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashSet;
 
 use super::{
   share_factory::render_inline_records,
@@ -71,25 +68,13 @@ pub fn render_esm<'code>(
         let importee = &ctx.link_output.module_table[importee_idx];
         if let Some(m) = importee.as_external() {
           let ext_name = m.get_import_path(ctx.chunk, ctx.resolved_paths);
-          // Preserve the `with { ... }` import attribute from the originating
-          // `export * from "..." with { ... }` record (issue #9160) instead of dropping it.
-          // Follow this entry's export-star chain to the record that resolved to this external and
-          // reuse its attribute. This remains entry-specific when several facades share one
-          // implementation chunk. Notes:
-          // - If no such record carries an attribute, `with_clause` is `None` and we emit the
-          //   plain `export * from` exactly as before (safe degradation, no regression). This is
-          //   also what happens if the originating record is unavailable.
-          // - If several records re-export the same external with *different* attributes (a
-          //   pathological, conflicting input), the first attributed record in the entry's
-          //   breadth-first export-star traversal wins.
-          let with_clause =
-            find_entry_level_external_import_attribute(ctx, entry_module.idx, importee_idx);
-          // An absent attribute is just an empty suffix, so both cases collapse to a
-          // single `append_source` (same shape `create_import_declaration` uses below).
+          // The attributes are part of the external module in both modes, so every import and
+          // re-export of it carries them.
+          let with_clause = m.attributes.to_with_clause(ctx.options.charset.is_ascii());
           source_joiner.append_source(concat_string!(
             "export * from ",
             to_ecma_string_literal(&ext_name, ctx.options.charset.is_ascii()),
-            with_clause.map(|attr| concat_string!(" ", attr.to_string())).unwrap_or_default(),
+            with_clause.map(|attr| concat_string!(" ", attr)).unwrap_or_default(),
             "\n"
           ));
         }
@@ -117,63 +102,6 @@ pub fn render_esm<'code>(
   }
 
   source_joiner
-}
-
-fn find_entry_level_external_import_attribute<'a>(
-  ctx: &'a GenerateContext<'_>,
-  entry_module_idx: ModuleIdx,
-  external_module_idx: ModuleIdx,
-) -> Option<&'a ImportAttribute> {
-  let module_table = &ctx.link_output.module_table;
-  // Order-wrap entry facades render entry-level re-exports while the owning record lives in
-  // another chunk, so strict follows the export-star chain from the entry. Flag-off keeps
-  // main's same-chunk scan so its output stays byte-identical.
-  if !ctx.options.is_strict_execution_order_enabled() {
-    return ctx.chunk.modules.iter().find_map(|module_idx| {
-      let module = module_table[*module_idx].as_normal()?;
-      module.import_records.iter_enumerated().find_map(|(rec_idx, rec)| {
-        (rec.resolved_module == Some(external_module_idx)
-          && rec.meta.contains(ImportRecordMeta::IsExportStar)
-          && rec.meta.contains(ImportRecordMeta::EntryLevelExternal))
-        .then(|| module.import_attribute_map.get(&rec_idx))
-        .flatten()
-      })
-    });
-  }
-
-  let mut queue = VecDeque::from([entry_module_idx]);
-  let mut visited = FxHashSet::default();
-
-  while let Some(module_idx) = queue.pop_front() {
-    if !visited.insert(module_idx) {
-      continue;
-    }
-    let Some(module) = module_table[module_idx].as_normal() else {
-      continue;
-    };
-
-    for (rec_idx, rec) in module.import_records.iter_enumerated() {
-      if !rec.meta.contains(ImportRecordMeta::IsExportStar) {
-        continue;
-      }
-      let Some(importee_idx) = rec.resolved_module else {
-        continue;
-      };
-      if importee_idx == external_module_idx
-        && rec.meta.contains(ImportRecordMeta::EntryLevelExternal)
-      {
-        if let Some(import_attribute) = module.import_attribute_map.get(&rec_idx) {
-          return Some(import_attribute);
-        }
-        continue;
-      }
-      if module_table[importee_idx].is_normal() {
-        queue.push_back(importee_idx);
-      }
-    }
-  }
-
-  None
 }
 
 fn render_chunk_content<'code>(
@@ -208,137 +136,18 @@ fn render_chunk_content<'code>(
     }
   }
 
-  // If there is no concatenate_wrapping_modules, just concate all modules by exec order.
-  if ctx.chunk.module_groups.is_empty() {
-    module_sources.iter().for_each(
-      |RenderedModuleSource { sources: module_render_output, module_idx, .. }| {
-        if let Some(emitted_sources) = module_render_output {
-          for source in emitted_sources.as_ref() {
-            source_joiner.append_source(source);
-          }
-        }
-        if let Some(prelude) = dev_graph_prelude.take_if(|_| is_runtime_module(*module_idx)) {
-          source_joiner.append_source(prelude);
-        }
-      },
-    );
-    return;
-  }
-  let module_idx_to_source_idx = module_sources.iter().enumerate().fold(
-    FxHashMap::default(),
-    |mut acc, (idx, module_source)| {
-      acc.insert(module_source.module_idx, idx);
-      acc
-    },
-  );
-  let profiler_names = ctx.options.profiler_names;
-  let is_pife_for_module_wrappers_enabled =
-    ctx.options.optimization.is_pife_for_module_wrappers_enabled();
-  for group in &ctx.chunk.module_groups {
-    // If the group is not belong to any concatenated module, we just render it as a single module.
-    if group.modules.len() == 1 {
-      let source =
-        module_sources.get(module_idx_to_source_idx[&group.entry]).expect("should have source");
-      if let Some(emitted_sources) = source.sources.as_ref() {
+  module_sources.iter().for_each(
+    |RenderedModuleSource { sources: module_render_output, module_idx, .. }| {
+      if let Some(emitted_sources) = module_render_output {
         for source in emitted_sources.as_ref() {
           source_joiner.append_source(source);
         }
       }
-      if let Some(prelude) = dev_graph_prelude.take_if(|_| is_runtime_module(group.entry)) {
+      if let Some(prelude) = dev_graph_prelude.take_if(|_| is_runtime_module(*module_idx)) {
         source_joiner.append_source(prelude);
       }
-      continue;
-    }
-    // Concatenate hoisted functions and comma-join hoisted vars across the group's modules by
-    // appending each element directly into the accumulators, instead of allocating a temporary
-    // joined `String` per module just to append it.
-    let mut hoisted_fns = String::new();
-    let mut hoisted_vars = String::new();
-    for idx in &group.modules {
-      let Some(render_concatenated_module) =
-        ctx.chunk.module_idx_to_render_concatenated_module.get(idx)
-      else {
-        continue;
-      };
-      for hoisted_fn in &render_concatenated_module.hoisted_functions_or_module_ns_decl {
-        hoisted_fns.push_str(hoisted_fn);
-      }
-      for hoisted_var in &render_concatenated_module.hoisted_vars {
-        if !hoisted_vars.is_empty() {
-          hoisted_vars.push_str(", ");
-        }
-        hoisted_vars.push_str(hoisted_var);
-      }
-    }
-
-    let entry_module_stable_id = ctx.link_output.module_table[group.entry].stable_id();
-    // render var init_entry = __esm("", () => {
-    let rendered_esm_runtime_expr = ctx.chunk.module_idx_to_render_concatenated_module
-      [&group.entry]
-      .rendered_esm_runtime_expr
-      .as_ref()
-      .unwrap()
-      .trim_end_matches([';', '\n']);
-    let wrap_name = ctx.chunk.module_idx_to_render_concatenated_module[&group.entry]
-      .wrap_ref_name
-      .as_ref()
-      .unwrap();
-
-    // The concatenated closure holds the bodies of every module in the group. If the group's
-    // entry is TLA-tainted (has top-level `await`, or awaits a TLA importee's `init` call), those
-    // `await`s land inside this closure, so it must be `async`. This mirrors the flag threaded
-    // into `new_esm_wrapper_stmt` for the non-concatenated wrapper.
-    let is_async = ctx.link_output.metas[group.entry].is_tla_or_contains_tla_dependency;
-
-    if !hoisted_fns.is_empty() {
-      source_joiner.append_source(hoisted_fns);
-    }
-    if !hoisted_vars.is_empty() {
-      source_joiner.append_source(concat_string!("var ", hoisted_vars, ";"));
-    }
-
-    source_joiner.append_source(concat_string!(
-      "var ",
-      wrap_name,
-      " = ",
-      rendered_esm_runtime_expr,
-      "(",
-      if profiler_names {
-        concat_string!("{\"", entry_module_stable_id, "\": ")
-      } else {
-        String::new()
-      },
-      if is_pife_for_module_wrappers_enabled { "(" } else { "" },
-      if is_async { "async () => {" } else { "() => {" }
-    ));
-    // we render each module in the group by exec order.
-    group.modules.iter().for_each(|module_idx| {
-      if let Some(rendered) =
-        module_sources.get(module_idx_to_source_idx[module_idx]).and_then(|m| m.sources.as_ref())
-      {
-        for source in rendered.iter() {
-          source_joiner.append_source(source);
-        }
-      }
-    });
-    let mut postfix = "}".to_string();
-    if is_pife_for_module_wrappers_enabled {
-      postfix += ")";
-    }
-    if profiler_names {
-      postfix += "}";
-    }
-    postfix += ");\n";
-    source_joiner.append_source(postfix);
-    if let Some(prelude) =
-      dev_graph_prelude.take_if(|_| group.modules.iter().copied().any(is_runtime_module))
-    {
-      source_joiner.append_source(prelude);
-    }
-  }
-  if let Some(prelude) = dev_graph_prelude.take() {
-    source_joiner.append_source(prelude);
-  }
+    },
+  );
 }
 
 fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
@@ -385,7 +194,6 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
     specifiers.sort_unstable();
 
     s.push_str(&create_import_declaration(
-      &ctx.link_output.module_table,
       specifiers,
       &default_alias,
       &ctx.chunk.import_path_for(importee_chunk),
@@ -394,77 +202,31 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
     ));
   });
   let mut rendered_external_import_namespace_modules = FxHashSet::default();
-  let bare_import_attributes = bare_import_attributes(ctx);
   // render external imports
   ctx.chunk.direct_imports_from_external_modules.iter().for_each(|(importee_id, named_imports)| {
     let importee = &ctx.link_output.module_table[*importee_id]
       .as_external()
       .expect("Should be external module here");
     let mut has_importee_imported = false;
-    let mut import_attribute = None;
-    // TODO: Warning same import record has different import attributes. https://tinyurl.com/2ddnbbc8
-    named_imports.iter().for_each(|(idx, named_import)| {
-      let module = ctx.link_output.module_table[*idx].as_normal().unwrap();
-      if module.import_attribute_map.contains_key(&named_import.record_idx) {
-        if import_attribute.is_none() {
-          import_attribute = Some((module.idx, named_import.record_idx));
-        }
-      }
-    });
     s += &render_named_imports(
       ctx,
       importee,
       named_imports.iter(),
       &mut has_importee_imported,
       &mut rendered_external_import_namespace_modules,
-      import_attribute,
-      bare_import_attributes.get(importee_id).copied(),
     );
   });
   (!s.is_empty()).then_some(s)
 }
 
-/// The `with` clause that a bare import of each external keeps: the one of the first static record
-/// in this chunk that imports the external with one.
-fn bare_import_attributes(
-  ctx: &GenerateContext<'_>,
-) -> FxHashMap<ModuleIdx, (ModuleIdx, ImportRecordIdx)> {
-  let mut ret = FxHashMap::default();
-  for module_idx in &ctx.chunk.modules {
-    let Some(module) = ctx.link_output.module_table[*module_idx].as_normal() else {
-      continue;
-    };
-    if module.import_attribute_map.is_empty() {
-      continue;
-    }
-    for (rec_idx, rec) in module.import_records.iter_enumerated() {
-      if rec.kind != ImportKind::Import || !module.import_attribute_map.contains_key(&rec_idx) {
-        continue;
-      }
-      if let Some(importee_idx) = rec.resolved_module
-        && ctx.link_output.module_table[importee_idx].is_external()
-      {
-        ret.entry(importee_idx).or_insert((module.idx, rec_idx));
-      }
-    }
-  }
-  ret
-}
-
 fn create_import_declaration(
-  module_table: &ModuleTable,
   mut specifiers: Vec<String>,
   default_alias: &[String],
   path: &str,
-  with_clause: Option<(ModuleIdx, ImportRecordIdx)>,
+  with_clause: Option<String>,
   ascii_only: bool,
 ) -> String {
   let mut ret = String::new();
-  let with_clause_string = with_clause.and_then(|(module_idx, record_idx)| {
-    let module = module_table[module_idx].as_normal()?;
-    let import_attribute = module.import_attribute_map.get(&record_idx)?;
-    Some(import_attribute.to_string())
-  });
   let first_default_alias = match &default_alias {
     [] => None,
     [first] => Some(first),
@@ -493,7 +255,7 @@ fn create_import_declaration(
     ret.push_str(&to_ecma_string_literal(path, ascii_only));
   }
 
-  if let Some(with_clause) = with_clause_string {
+  if let Some(with_clause) = with_clause {
     ret.push(' ');
     ret.push_str(&with_clause);
   }
@@ -507,8 +269,6 @@ fn render_named_imports<'a, I>(
   named_imports: I,
   is_importee_rendered: &mut bool,
   rendered_external_import_namespace_modules: &mut FxHashSet<ModuleIdx>,
-  with_clause: Option<(ModuleIdx, ImportRecordIdx)>,
-  bare_import_with_clause: Option<(ModuleIdx, ImportRecordIdx)>,
 ) -> String
 where
   I: Iterator<Item = &'a (ModuleIdx, rolldown_common::NamedImport)>,
@@ -523,7 +283,9 @@ where
       // (`bind_imports_and_exports`), so its canonical ref stays importer-local; its usage
       // is still answered by `used_symbol_refs` until exports get their own tracking.
       let is_used = if ctx.link_output.module_table[canonical_ref.owner].is_external() {
-        ctx.link_output.used_external_symbols.contains(&canonical_ref)
+        // Every importer of an external module shares one binding, so check the importer's own
+        // import binding: another chunk may still use the shared one.
+        ctx.used_symbol_refs.contains(&named_import.imported_as)
       } else {
         ctx.used_symbol_refs.contains(&canonical_ref)
       };
@@ -549,6 +311,10 @@ where
             &importee.get_import_path(ctx.chunk, ctx.resolved_paths),
             ascii_only,
           ));
+          if let Some(with_clause) = importee.attributes.to_with_clause(ascii_only) {
+            s.push(' ');
+            s.push_str(&with_clause);
+          }
           s.push_str(";\n");
           None
         }
@@ -577,17 +343,11 @@ where
     || (importee.side_effects.has_side_effects() && !*is_importee_rendered)
   {
     *is_importee_rendered = true;
-    let with_clause = if specifiers.is_empty() && default_alias.is_empty() {
-      with_clause.or(bare_import_with_clause)
-    } else {
-      with_clause
-    };
     s.push_str(&create_import_declaration(
-      &ctx.link_output.module_table,
       specifiers,
       &default_alias,
       &importee.get_import_path(ctx.chunk, ctx.resolved_paths),
-      with_clause,
+      importee.attributes.to_with_clause(ascii_only),
       ascii_only,
     ));
   }

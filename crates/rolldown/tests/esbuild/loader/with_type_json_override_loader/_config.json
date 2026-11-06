@@ -5,8 +5,10 @@
         "name": "entry",
         "import": "entry.js"
       }
-    ]
+    ],
+    "experimental": {
+      "importAttributes": true
+    }
   },
-  "expectExecuted": false,
-  "expectError": true
+  "expectExecuted": false
 }

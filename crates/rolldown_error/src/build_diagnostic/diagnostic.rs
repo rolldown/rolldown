@@ -26,6 +26,11 @@ impl From<ArcStr> for DiagnosticFileId {
 #[derive(Debug, Clone)]
 pub struct RolldownLabelSpan(DiagnosticFileId, Range<usize>);
 
+/// Diagnostics reach users through stderr (rolldown CLI and Vite print errors and warnings there).
+pub fn stderr_supports_color() -> bool {
+  supports_color::on_cached(supports_color::Stream::Stderr).is_some()
+}
+
 impl ariadne::Span for RolldownLabelSpan {
   type SourceId = DiagnosticFileId;
 
@@ -75,9 +80,7 @@ impl Diagnostic {
     content: impl Into<ArcStr>,
   ) -> DiagnosticFileId {
     let filename = DiagnosticFileId::from(filename.into());
-    let content = content.into();
-    debug_assert!(!self.files.contains_key(&filename));
-    self.files.insert(filename.clone(), content);
+    self.files.entry(filename.clone()).or_insert_with(|| content.into());
     filename
   }
 
@@ -175,8 +178,9 @@ impl Diagnostic {
     }
   }
 
-  pub fn to_color_string(&self) -> String {
-    self.convert_to_string(true)
+  /// Colored only when stderr supports it, so `NO_COLOR`, `FORCE_COLOR` and piped output are respected.
+  pub fn to_stderr_string(&self) -> String {
+    self.convert_to_string(stderr_supports_color())
   }
 
   /// Get the primary location information from the first label if available
@@ -199,6 +203,14 @@ impl Diagnostic {
 
   pub fn kind(&self) -> String {
     self.kind.clone()
+  }
+
+  /// Code frame of the first label's file, at the `line` and `column` that
+  /// [`Self::get_primary_location`] returns.
+  pub fn frame(&self, line: usize, column: usize) -> Option<String> {
+    let source = self.files.get(self.labels.first()?.span().source())?;
+    let frame = render_code_frame(source, line, column);
+    (!frame.is_empty()).then_some(frame)
   }
 
   /// Render many diagnostics at once, sharing per-source work across all of them.
@@ -256,6 +268,72 @@ impl Diagnostic {
   }
 }
 
+const LINE_TRUNCATE_LENGTH: usize = 120;
+const MIN_CHARACTERS_SHOWN_AFTER_LOCATION: usize = 10;
+const ELLIPSIS: &str = "...";
+
+fn leading_tabs(value: &str) -> usize {
+  value.bytes().take_while(|&byte| byte == b'\t').count()
+}
+
+// Only leading tabs are expanded, each to two spaces.
+fn tabs_to_spaces(value: &str) -> String {
+  let leading_tabs = leading_tabs(value);
+  if leading_tabs == 0 {
+    return value.to_string();
+  }
+  let mut expanded = "  ".repeat(leading_tabs);
+  expanded.push_str(&value[leading_tabs..]);
+  expanded
+}
+
+// Mirrors `getCodeFrame` in packages/rolldown/src/utils/code-frame.ts. The column and all
+// lengths count UTF-16 code units, like JS strings.
+fn render_code_frame(source: &str, line: usize, column: usize) -> String {
+  let frame_start = line.saturating_sub(3);
+  let mut lines: Vec<&str> =
+    source.split('\n').skip(frame_start).take(line + 2 - frame_start).collect();
+  let Some(&error_line) = lines.get(line - 1 - frame_start) else {
+    return String::new();
+  };
+  let location_width = column + leading_tabs(error_line).min(column);
+  let max_line_length = (location_width + MIN_CHARACTERS_SHOWN_AFTER_LOCATION + ELLIPSIS.len())
+    .max(LINE_TRUNCATE_LENGTH);
+
+  while lines.last().is_some_and(|last| last.trim().is_empty()) {
+    lines.pop();
+  }
+
+  let digits = (frame_start + lines.len()).to_string().len();
+  lines
+    .iter()
+    .enumerate()
+    .map(|(index, source_line)| {
+      let line_no = frame_start + index + 1;
+      let mut displayed = tabs_to_spaces(source_line);
+      if simd_utf16_len::utf16_len(&displayed) > max_line_length {
+        let mut len = 0;
+        let end = displayed
+          .char_indices()
+          .find(|(_, ch)| {
+            len += ch.len_utf16();
+            len > max_line_length - ELLIPSIS.len()
+          })
+          .map_or(displayed.len(), |(index, _)| index);
+        displayed.truncate(end);
+        displayed.push_str(ELLIPSIS);
+      }
+      if line_no == line {
+        let indent = digits + 2 + location_width;
+        format!("{line_no:>digits$}: {displayed}\n{:indent$}^", "")
+      } else {
+        format!("{line_no:>digits$}: {displayed}")
+      }
+    })
+    .collect::<Vec<_>>()
+    .join("\n")
+}
+
 /// Primary source location of a diagnostic's first label.
 #[derive(Debug, Clone)]
 pub struct DiagnosticPrimaryLocation {
@@ -281,8 +359,8 @@ impl Display for Diagnostic {
 }
 
 #[cfg(test)]
-mod test_primary_location {
-  use super::{Diagnostic, Severity};
+mod tests {
+  use super::{Diagnostic, Severity, render_code_frame};
 
   /// Char-by-char reference for [`Diagnostic::get_primary_location`]. Returns
   /// `(line, column, utf16_position)`.
@@ -321,5 +399,48 @@ mod test_primary_location {
         );
       }
     }
+  }
+
+  #[test]
+  fn code_frame_points_at_location() {
+    assert_eq!(render_code_frame("a\nbcd\nef", 2, 1), "1: a\n2: bcd\n    ^\n3: ef");
+  }
+
+  #[test]
+  fn code_frame_expands_tabs_and_aligns_caret() {
+    assert_eq!(render_code_frame("\tfoo", 1, 1), "1:   foo\n     ^");
+  }
+
+  #[test]
+  fn code_frame_preserves_non_leading_tabs() {
+    assert_eq!(render_code_frame("ab\tcd", 1, 3), "1: ab\tcd\n      ^");
+  }
+
+  #[test]
+  fn code_frame_truncates_long_lines() {
+    let frame = render_code_frame(&"x".repeat(200), 1, 0);
+    let first_line = frame.lines().next().unwrap();
+    assert_eq!(first_line, format!("1: {}...", "x".repeat(117)));
+  }
+
+  #[test]
+  fn code_frame_drops_trailing_blank_lines() {
+    assert_eq!(render_code_frame("a\nb\n\n \n", 2, 0), "1: a\n2: b\n   ^");
+  }
+
+  #[test]
+  fn frame_returns_none_without_labels() {
+    let diagnostic = Diagnostic::new("X".to_string(), "title".to_string(), Severity::Error);
+    assert_eq!(diagnostic.frame(1, 0), None);
+  }
+
+  #[test]
+  fn frame_caret_counts_utf16_units() {
+    let mut diagnostic = Diagnostic::new("X".to_string(), "title".to_string(), Severity::Error);
+    let file_id = diagnostic.add_file("test.js", "😀x");
+    // Byte offset 4 is `x`, which is UTF-16 column 2.
+    diagnostic.add_label(&file_id, 4..5, String::new());
+    let (_, line, column, _) = diagnostic.get_primary_location().unwrap();
+    assert_eq!(diagnostic.frame(line, column).as_deref(), Some("1: 😀x\n     ^"));
   }
 }

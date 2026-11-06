@@ -449,16 +449,13 @@ test.concurrent(
       }
     });
 
-    const eventFn = vi.fn();
+    // A throwing listener is only logged, so assert outside it.
+    const outputs: (readonly string[])[] = [];
     watcher.on('event', (event) => {
-      if (event.code === 'BUNDLE_END') {
-        eventFn();
-        expect(event.output).toEqual([output]);
-      }
+      if (event.code === 'BUNDLE_END') outputs.push(event.output);
     });
 
-    // test first build event
-    await expect.poll(() => eventFn).toBeCalled();
+    await expect.poll(() => outputs).toEqual([[output]]);
   },
 );
 
@@ -711,11 +708,28 @@ test.concurrent(
   async ({ task, expect, onTestFinished }) => {
     const retryCount = task.result?.retryCount ?? 0;
     const { input, output, dir } = createTestInputAndOutput('watch-buildDelay', retryCount);
+    // The poller only sees a change on its next scan, so two edits can reach the watcher up to
+    // one poll interval (plus the scan itself) apart. `buildDelay` must cover that gap, or
+    // whether the edits share one rebuild is a race between the next scan and the delay.
+    const pollInterval = 50;
+    let invalidations = 0;
+    const invalidationWaiters: Array<() => void> = [];
+    const nextInvalidation = () =>
+      new Promise<void>((resolve) => {
+        invalidationWaiters.push(resolve);
+      });
     const watcher = watch({
       input,
       output: { file: output },
       watch: {
-        buildDelay: 50,
+        buildDelay: pollInterval * 10,
+        // The second edit lands right after the first one is seen, possibly within the same mtime
+        // second, so detect it by content rather than by mtime alone.
+        watcher: { usePolling: true, pollInterval, compareContentsForPolling: true },
+        onInvalidate: () => {
+          invalidations++;
+          invalidationWaiters.shift()?.();
+        },
       },
     });
     onTestFinished(async () => {
@@ -726,19 +740,28 @@ test.concurrent(
     });
     await waitBuildFinished(watcher);
 
-    const restartFn = vi.fn();
-    watcher.on('restart', restartFn);
+    // Records how many edits the watcher had seen when each rebuild started.
+    const invalidationsAtRestart: number[] = [];
+    watcher.on('restart', () => {
+      invalidationsAtRestart.push(invalidations);
+    });
+    const rebuilt = waitBuildFinished(watcher);
 
     // Sleep to ensure mtime crosses second boundary from initial creation
     await sleep(1000);
+    // Make the second edit only after the watcher has seen the first, so the two edits always
+    // arrive as separate changes and the rebuild has to wait out `buildDelay` to batch them.
+    const firstSeen = nextInvalidation();
     fs.writeFileSync(input, 'console.log(4)');
-    await sleep(20);
+    await firstSeen;
+    const secondSeen = nextInvalidation();
     fs.writeFileSync(input, 'console.log(5)');
+    await secondSeen;
 
-    // sleep 200ms to wait the build finished, if the buildDelay is working, the restartFn should be called once
-    await sleep(200);
-    await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(5)');
-    expect(restartFn).toBeCalledTimes(1);
+    await rebuilt;
+    expect(fs.readFileSync(output, 'utf-8')).toContain('console.log(5)');
+    // One rebuild, started after both edits were seen.
+    expect(invalidationsAtRestart).toEqual([2]);
   },
 );
 
@@ -1057,60 +1080,41 @@ test.concurrent(
 );
 
 test.concurrent(
-  'warning for multiply notify options',
+  'each config uses its own watcher options',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
   async ({ task, expect, onTestFinished }) => {
     const retryCount = task.result?.retryCount ?? 0;
-    const { input, output, dir } = createTestInputAndOutput(
-      'watch-multiply-options-warning',
+    const { input, output, outputDir, dir } = createTestInputAndOutput(
+      'watch-own-watcher-options',
       retryCount,
     );
-    const { input: foo, dir: fooDir } = createTestInputAndOutput(
-      'watch-multiply-options-warning-foo',
-      retryCount,
-    );
+    const fastOutputDir = path.join(dir, 'dist-fast');
+    const fastOutput = path.join(fastOutputDir, 'main.js');
     onTestFinished(() => {
       if (!process.env.CI) {
         fs.rmSync(dir, { recursive: true, force: true });
-        fs.rmSync(fooDir, { recursive: true, force: true });
       }
     });
-    const onLogFn = vi.fn();
+    // Both configs watch `input`. The first polls every 10 minutes, the second every 50ms.
     const watcher = watch([
       {
         input,
-        output: { file: output },
-        watch: {
-          watcher: {
-            usePolling: true,
-            pollInterval: 50,
-          },
-        },
+        output: { dir: outputDir },
+        watch: { watcher: { pollInterval: 600_000 } },
       },
       {
-        input: foo,
-        output: { file: output },
-        watch: {
-          watcher: {
-            usePolling: true,
-            pollInterval: 100,
-          },
-        },
-        plugins: [
-          {
-            name: 'test',
-            onLog: (level, log) => {
-              onLogFn();
-              expect(level).toBe('warn');
-              expect(log.code).toBe('MULTIPLE_WATCHER_OPTION');
-            },
-          },
-        ],
+        input,
+        output: { dir: fastOutputDir },
       },
     ]);
     onTestFinished(async () => await watcher.close());
 
-    await expect.poll(() => onLogFn).toBeCalled();
+    await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(1)');
+    await expect.poll(() => fs.readFileSync(fastOutput, 'utf-8')).toContain('console.log(1)');
+    await editFile(input, 'console.log(2)');
+    await expect.poll(() => fs.readFileSync(fastOutput, 'utf-8')).toContain('console.log(2)');
+    await sleep(500);
+    expect(fs.readFileSync(output, 'utf-8')).toContain('console.log(1)');
   },
 );
 

@@ -1,6 +1,7 @@
-use std::path::Path;
+use std::{borrow::Cow, path::Path};
 
 use oxc::ast::CommentKind;
+use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
 use rolldown_common::{NormalizedBundlerOptions, OutputAsset, SourceMapType};
 use rolldown_error::{BuildResult, ResultExt};
 use rolldown_sourcemap::SourceMap;
@@ -9,6 +10,24 @@ use sugar_path::SugarPath;
 use url::Url;
 
 use super::uuid::uuid_v4_string_from_u128;
+
+// URL delimiters must remain filename data.
+const SOURCEMAP_FILENAME_ENCODE_SET: &AsciiSet = &CONTROLS
+  .add(b' ')
+  .add(b'"')
+  .add(b'#')
+  .add(b'%')
+  .add(b':')
+  .add(b'<')
+  .add(b'>')
+  .add(b'?')
+  .add(b'\\')
+  .add(b'`')
+  .add(b'{')
+  .add(b'}');
+
+// `*` before `/` closes a CSS comment.
+const CSS_SOURCEMAP_FILENAME_ENCODE_SET: &AsciiSet = &SOURCEMAP_FILENAME_ENCODE_SET.add(b'*');
 
 #[expect(clippy::too_many_arguments)]
 #[cfg(feature = "experimental")]
@@ -173,21 +192,35 @@ pub fn emit_sourcemap(
             code,
             |source| {
               source.push_str("# sourceMappingURL=");
+              let encode_set = if is_css {
+                CSS_SOURCEMAP_FILENAME_ENCODE_SET
+              } else {
+                SOURCEMAP_FILENAME_ENCODE_SET
+              };
 
               match &options.sourcemap_base_url {
                 Some(url_string) => {
+                  let encoded_filename: Cow<'_, str> =
+                    utf8_percent_encode(map_filename, encode_set).into();
                   let url = Url::parse(url_string)
-                    .and_then(|base| base.join(map_filename))
+                    .and_then(|base| base.join(&encoded_filename))
                     .map_err_to_unhandleable()?;
-                  source.push_str(url.as_str());
+                  let url = url.as_str();
+                  // The base URL may contain `*/`, which would close the CSS comment
+                  if is_css && url.contains('*') {
+                    source.push_str(&url.replace('*', "%2A"));
+                  } else {
+                    source.push_str(url);
+                  }
                 }
                 None => {
-                  source.push_str(
-                    &Path::new(map_filename)
-                      .file_name()
-                      .ok_or(anyhow::anyhow!("should have filename"))?
-                      .to_string_lossy(),
-                  );
+                  let filename = Path::new(map_filename)
+                    .file_name()
+                    .ok_or(anyhow::anyhow!("should have filename"))?
+                    .to_string_lossy();
+                  let encoded_filename: Cow<'_, str> =
+                    utf8_percent_encode(&filename, encode_set).into();
+                  source.push_str(&encoded_filename);
                 }
               }
               Ok(())
@@ -238,4 +271,67 @@ fn process_sourcemap_related_reference(
     }
   }
   Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+  use super::emit_sourcemap;
+  use rolldown_common::{NormalizedBundlerOptions, SourceMapType};
+  use rolldown_sourcemap::SourceMapBuilder;
+
+  #[test]
+  fn sourcemap_filenames_remain_in_comments() {
+    let options =
+      NormalizedBundlerOptions { sourcemap: Some(SourceMapType::File), ..Default::default() };
+    let mut map = SourceMapBuilder::default().into_sourcemap().into_owned();
+    let filename = "test\u{2028}(filename,{}).map";
+    let mut code = String::from("export const value = 42;");
+    let asset = emit_sourcemap(&options, &mut code, &mut map, filename, 0, false).unwrap().unwrap();
+    assert_eq!(asset.filename.as_str(), filename);
+    assert_eq!(
+      code,
+      "export const value = 42;\n\
+       //# sourceMappingURL=test%E2%80%A8(filename,%7B%7D).map"
+    );
+  }
+
+  #[test]
+  fn sourcemap_urls_preserve_filename_data() {
+    for (base_url, js_base, css_base) in [
+      (None, "", ""),
+      (
+        Some("https://example.test/base*/"),
+        "https://example.test/base*/",
+        "https://example.test/base%2A/",
+      ),
+    ] {
+      for (filename, js_filename, css_filename) in [
+        ("space #?%*.map", "space%20%23%3F%25*.map", "space%20%23%3F%25%2A.map"),
+        (
+          "line\n\r\u{2028}\u{2029}.map",
+          "line%0A%0D%E2%80%A8%E2%80%A9.map",
+          "line%0A%0D%E2%80%A8%E2%80%A9.map",
+        ),
+        // spellchecker:ignore-next-line
+        ("café.map", "caf%C3%A9.map", "caf%C3%A9.map"),
+      ] {
+        for is_css in [false, true] {
+          let options = NormalizedBundlerOptions {
+            sourcemap: Some(SourceMapType::File),
+            sourcemap_base_url: base_url.map(String::from),
+            ..Default::default()
+          };
+          let mut map = SourceMapBuilder::default().into_sourcemap().into_owned();
+          let mut code = String::new();
+          emit_sourcemap(&options, &mut code, &mut map, filename, 0, is_css).unwrap();
+          let expected = if is_css {
+            format!("\n/*# sourceMappingURL={css_base}{css_filename}*/")
+          } else {
+            format!("\n//# sourceMappingURL={js_base}{js_filename}")
+          };
+          assert_eq!(code, expected);
+        }
+      }
+    }
+  }
 }

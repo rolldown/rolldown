@@ -206,6 +206,7 @@ function removeBuiltModules(): Plugin {
           id === 'node:url' ||
           id === 'node:fs/promises' ||
           id === 'node:fs' ||
+          id === 'node:events' ||
           id === 'node:util'
         ) {
           // conditional import

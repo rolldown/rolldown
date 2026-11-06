@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 import { n as v, t as init_v } from "./v.js";
-__share("r-5zf2vLDN", (exports) => {
+__share("r-5zf2vLDN", ((exports) => {
 	// r.js
 	function r() {
 		return v();
@@ -22,7 +22,7 @@ __share("r-5zf2vLDN", (exports) => {
 		n: () => r,
 		t: () => init_r
 	});
-});
+}));
 var share_s = __share_require("s-v3kGiqU-");
 var share_r = __share_require("r-5zf2vLDN");
 // a.js
@@ -42,7 +42,7 @@ init_a();
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 import { n as v, t as init_v } from "./v.js";
-__share("r-5zf2vLDN", (exports) => {
+__share("r-5zf2vLDN", ((exports) => {
 	// r.js
 	function r() {
 		return v();
@@ -56,7 +56,7 @@ __share("r-5zf2vLDN", (exports) => {
 		n: () => r,
 		t: () => init_r
 	});
-});
+}));
 var share_r = __share_require("r-5zf2vLDN");
 // b.js
 function init_b() {
@@ -73,7 +73,7 @@ init_b();
 
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
-__share("s-v3kGiqU-", (exports) => {
+__share("s-v3kGiqU-", ((exports) => {
 	// s.js
 	function s() {
 		return ++n;
@@ -89,7 +89,7 @@ __share("s-v3kGiqU-", (exports) => {
 		n: () => s,
 		t: () => init_s
 	});
-});
+}));
 var share_s = __share_require("s-v3kGiqU-");
 // c.js
 function init_c() {
@@ -114,7 +114,7 @@ export { __share_require as i, __share as n, __share_export as r, __esmMin as t 
 
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
-__share("s-v3kGiqU-", (exports) => {
+__share("s-v3kGiqU-", ((exports) => {
 	// s.js
 	function s() {
 		return ++n;
@@ -130,7 +130,7 @@ __share("s-v3kGiqU-", (exports) => {
 		n: () => s,
 		t: () => init_s
 	});
-});
+}));
 var share_s = __share_require("s-v3kGiqU-");
 // v.js
 function v() {

@@ -19,6 +19,7 @@ pub struct ImportChainNote {
 
 #[derive(Debug)]
 pub struct RequireTla {
+  pub importer_id: ArcStr,
   pub importer_stable_id: ArcStr,
   pub importer_source: ArcStr,
   pub require_span: Span,
@@ -37,6 +38,10 @@ impl RequireTla {
 impl BuildEvent for RequireTla {
   fn kind(&self) -> EventKind {
     EventKind::RequireTlaError
+  }
+
+  fn id(&self) -> Option<String> {
+    Some(self.importer_id.to_string())
   }
 
   fn message(&self, opts: &DiagnosticOptions) -> String {

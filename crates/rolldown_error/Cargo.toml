@@ -1,6 +1,6 @@
 [package]
 name = "rolldown_error"
-version = "1.2.15"
+version = "1.3.0"
 publish = true
 description = "rolldown_error"
 readme = "../../README.md"
@@ -32,3 +32,4 @@ oxc_resolver = { workspace = true }
 rustc-hash = { workspace = true }
 simd-utf16-len = { workspace = true }
 sugar_path = { workspace = true }
+supports-color = { workspace = true }

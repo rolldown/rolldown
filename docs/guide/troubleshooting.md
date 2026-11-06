@@ -42,13 +42,29 @@ The benchmark was ran on the following environment:
 
 <!-- Maybe write about macOS as well? -->
 
+#### Containers and CPU emulation
+
+Rolldown's native runtime uses 1.5 times the smaller of the physical CPU count and the parallelism available to the process, rounded down. On Linux, available parallelism accounts for CPU affinity and cgroup CPU quotas. This prevents a container from sizing its runtime from the host's unrestricted physical CPU count.
+
+When building under CPU emulation such as QEMU, reducing concurrency can help diagnose stalls or excessive overhead:
+
+```sh
+ROLLDOWN_WORKER_THREADS=2 RAYON_NUM_THREADS=2 npm run build
+```
+
+Set these variables before starting the process. The native runtime uses the first valid positive integer from `ROLLDOWN_WORKER_THREADS`, then `TOKIO_WORKER_THREADS`, before computing its default. Explicit overrides are not capped by CPU availability. `RAYON_NUM_THREADS` controls Rayon's separate pool and may also affect other Rust-based plugins in the same process. `UV_THREADPOOL_SIZE` controls Node.js's separate libuv pool, not Rolldown's runtime.
+
+Prefer running the build on the builder's native architecture when possible. A successful build with reduced concurrency does not by itself identify the cause of a hang; include the exact dependency versions, container image, emulator version, CPU limits, and reproduction when reporting one.
+
 ### Plugins
 
-Plugins extend Rolldown's functionality, but can also introduce performance overhead.
+Plugins extend Rolldown's functionality, but can also introduce performance overhead. To see plugin timings for `resolveId`, `load`, `transform` and `renderChunk`, turn on the [build report](/in-depth/build-report) and read its `timing.md`.
 
 #### Plugin Hook Filters
 
 Rolldown provides a feature called **Plugin Hook Filters**. This allows you to specify precisely which modules a plugin hook should process, reducing the communication overhead between JavaScript and Rust. For detailed information on how filters work internally, refer to the [Hook Filters](/apis/plugin-api/hook-filters) page.
+
+The `timing.md` file of the [build report](/in-depth/build-report#files) lists the hooks that did no work. Those hooks are the first candidates for a filter.
 
 If you are a plugin user and the plugin you use does not have hook filters specified, you can apply them by using the `withFilter` utility function exported by Rolldown.
 

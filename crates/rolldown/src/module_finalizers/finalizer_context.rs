@@ -1,14 +1,12 @@
 use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ConstExportMeta, ImportRecordIdx, IndexModules, ModuleIdx,
-  ModuleType, NormalModule, PathsOutputOption, RenderedConcatenatedModuleParts,
-  RetainedExportSymbols, RuntimeModuleBrief, SharedFileEmitter, StmtInfos, SymbolRef, SymbolRefDb,
-  UsedSymbolRefs, WrapKind,
+  NormalModule, PathsOutputOption, RetainedExportSymbols, RuntimeModuleBrief, SharedFileEmitter,
+  StmtInfos, SymbolRef, SymbolRefDb, UsedSymbolRefs, WrapKind,
 };
 
 pub type FinalizerMutableFields = (
-  FxIndexMap<ImportRecordIdx, String>, // transferred_import_record
-  RenderedConcatenatedModuleParts,     // rendered_concatenated_wrapped_module_parts
-  Vec<BuildDiagnostic>,                // diagnostics
+  Vec<(ImportRecordIdx, EcmaAst)>, // transferred_import_record
+  Vec<BuildDiagnostic>,            // diagnostics
 );
 
 use oxc::ast::builder::AstBuilder;
@@ -131,17 +129,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
 
       let module_namespace_included = self.linking_info.namespace_included;
 
-      let need_inline_json_prop = matches!(self.module.module_type, ModuleType::Json)
-        && !self.module.exports_kind.is_commonjs()
-        && !module_namespace_included;
-
-      let transferred_import_record = self
-        .chunk
-        .remove_map
-        .get(&self.idx)
-        .cloned()
-        .map(|idxs| idxs.into_iter().map(|idx| (idx, String::new())).collect::<FxIndexMap<_, _>>())
-        .unwrap_or_default();
+      let need_inline_json_prop = self.linking_info.inlines_json_keys(self.module);
 
       let mut finalizer = ScopeHoistingFinalizer {
         ctx: self,
@@ -156,8 +144,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         keep_name_statement_to_insert: vec![],
         needs_hosted_top_level_binding: false,
         module_namespace_included,
-        transferred_import_record,
-        rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts::default(),
+        transferred_import_record: Vec::new(),
         json_module_inlined_prop: need_inline_json_prop.then(|| Box::new(FxHashMap::default())),
         missing_file_reference_ids: FxIndexMap::default(),
         resolve_file_url_errors: Vec::new(),
@@ -208,11 +195,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         }));
       }
 
-      (
-        finalizer.transferred_import_record,
-        finalizer.rendered_concatenated_wrapped_module_parts,
-        diagnostics,
-      )
+      (finalizer.transferred_import_record, diagnostics)
     })
   }
 }

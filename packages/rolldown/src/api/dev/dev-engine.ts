@@ -121,12 +121,7 @@ export class DevEngine {
       watch: devOptions.watch && {
         enabled: devOptions.watch.enabled,
         skipWrite: devOptions.watch.skipWrite,
-        usePolling: devOptions.watch.usePolling,
-        pollInterval: devOptions.watch.pollInterval,
-        useDebounce: devOptions.watch.useDebounce,
-        debounceDuration: devOptions.watch.debounceDuration,
-        compareContentsForPolling: devOptions.watch.compareContentsForPolling,
-        debounceTickRate: devOptions.watch.debounceTickRate,
+        watcher: devOptions.watch.watcher,
         include: normalizedStringOrRegex(devOptions.watch.include),
         exclude: normalizedStringOrRegex(devOptions.watch.exclude),
       },
@@ -219,8 +214,10 @@ export class DevEngine {
    * @param clientId - The client ID requesting this compilation
    * @returns The compiled chunk: its code plus the filename whose delivery the
    * dev server reports via {@link notifyPayloadDelivered}
+   * @throws The plugin's own error, since a lazy compile runs the full pipeline and is
+   * where a user plugin most often throws
    */
   async compileEntry(moduleId: string, clientId: string): Promise<BindingLazyChunkOutput> {
-    return this.#inner.compileEntry(moduleId, clientId);
+    return unwrapBindingResult(await this.#inner.compileEntry(moduleId, clientId));
   }
 }

@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## flags.js
 
 ```js
-//#region flags.js
+// flags.js
 const DEV = false;
 const PROD = true;
 let mutable = false;
@@ -15,7 +15,6 @@ const object = { toString() {
 	console.log("COERCION");
 	return "";
 } };
-//#endregion
 export { DEV, PROD, mutable, object };
 
 ```
@@ -24,12 +23,11 @@ export { DEV, PROD, mutable, object };
 
 ```js
 import { mutable, object } from "./flags.js";
-//#region main.js
+// main.js
 if (console.log("TEST_EFFECT"), false);
 console.log("LIVE_ELSE");
 console.log("LIVE_TRUE");
 if (mutable) console.log("MUTABLE");
 `${object}`;
-//#endregion
 
 ```

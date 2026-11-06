@@ -164,7 +164,9 @@ pub struct EcmaView {
   pub rolldown_file_url_references: Vec<RolldownFileUrlReference>,
   pub this_expr_replace_map: FxHashMap<NodeId, ThisExprReplaceKind>,
   /// The facade symbol for the top-level `this` of a CommonJS module. The scanner makes it for each
-  /// CommonJS module that reads its top-level `this`. If the finalizer prints the module inside a
+  /// CommonJS module that reads its top-level `this`, and `determine_module_exports_kind` makes it
+  /// for a module that reads its top-level `this` when it promotes the module from
+  /// `ExportsKind::None` to `ExportsKind::CommonJs`. If the finalizer prints the module inside a
   /// CJS closure, the renamer gives the symbol a name, and the finalizer prints it as the third
   /// parameter of the closure. The runtime passes the initial exports object of the module to that
   /// parameter. The name is synthesized, so no binding of the module can capture it. An unwrapped

@@ -137,13 +137,9 @@ impl LinkStage<'_> {
     }
   }
 
-  /// Promotes a module with `ExportsKind::None` to `ExportsKind::CommonJs`.
-  ///
-  /// The scanner maps the top-level `this` of a module without module syntax to
-  /// `ThisExprReplaceKind::Context`, because it can't know yet how the module is loaded. Once the
-  /// module turns out to be CommonJS, its top-level `this` is its exports object, as in Node. So
-  /// switch those entries to `ThisExprReplaceKind::Exports` and give the module the `this`
-  /// binding of its CJS closure, the same as the scanner does for a module with CommonJS syntax.
+  /// Promotes a module with `ExportsKind::None` to `ExportsKind::CommonJs` and makes its top-level
+  /// `this` its exports object, as the scanner does for a module with CommonJS syntax. See
+  /// internal-docs/linking/determine-module-exports-kind/implementation.md.
   fn promote_to_commonjs(&mut self, module_idx: ModuleIdx) {
     let Some(m) = self.module_table[module_idx].as_normal_mut() else { return };
     m.exports_kind = ExportsKind::CommonJs;

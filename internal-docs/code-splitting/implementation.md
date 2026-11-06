@@ -554,7 +554,7 @@ Iterative DFS from the chunk's roots. Only follows `ImportKind::Import` edges �
 These maps are stored on each `Chunk` and consumed during module finalization:
 
 - **`remove_map`** — Read in `finalizer_context.rs`. The `ScopeHoistingFinalizer` checks whether any of the current module's import records should have their init calls suppressed (the init call is being moved elsewhere).
-- **`insert_map`** — Read in `finalize_modules.rs`. For each target module, the rendered init call strings from the original locations are prepended to the module's output via `PrependRenderedImport` mutations.
+- **`insert_map`** — Read in `finalize_modules.rs`. For each target module, the finalized init statements captured at the original locations (detached AST fragments) are prepended to the target module's AST, in `insert_map` order, after every module has been finalized. See [ast-mutation](../ast-mutation/implementation.md#transferred-finalized-imports).
 
 ```rust
 // On Chunk (in rolldown_common::chunk)

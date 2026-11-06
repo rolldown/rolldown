@@ -17,7 +17,7 @@ use rolldown_common::{
   ModuleNamespaceIncludedReason, ModuleType, NamespaceAlias, NormalModule, OutputExports,
   OutputFormat, Platform, Specifier, SymbolRef, WrapKind, is_lazy_proxy,
 };
-use rolldown_ecmascript::ToSourceString;
+use rolldown_ecmascript::EcmaAst;
 use rolldown_ecmascript_utils::{
   BindingIdentifierFactoryExt as _, BindingPatternExt, CallExpressionExt,
   CallExpressionFactoryExt as _, ClassElementFactoryExt as _, ExpressionExt,
@@ -95,6 +95,33 @@ pub enum KeepNameId<'a> {
   CompactStr(&'a CompactStr),
 }
 
+/// Detaches the finalized import statement from its module's arena and source space, so it can
+/// be prepended to the recipient module's AST after every finalizer has run.
+/// See internal-docs/ast-mutation/implementation.md ("Transferred Finalized Imports").
+fn transferred_import_ast(stmt: &Statement<'_>) -> EcmaAst {
+  use oxc::ast_visit::VisitJsMut as _;
+
+  // Each fragment holds one initializer; avoid reserving the default 16 KiB chunk for it.
+  let allocator = Allocator::with_capacity(512);
+  EcmaAst::from_allocator_and_source(arcstr::ArcStr::new(), allocator, |allocator| {
+    // Plain `clone_in` clears semantic IDs; the recipient must never query the donor's side
+    // tables with them.
+    let mut stmt = stmt.clone_in(allocator);
+    // Reset every span so donor offsets are never attributed to the recipient's source.
+    SpanRewriter(SPAN).visit_statement(&mut stmt);
+    ast::Program::new(
+      SPAN,
+      oxc::span::SourceType::mjs(),
+      "",
+      [],
+      None,
+      [],
+      [stmt],
+      &AstBuilder::new(allocator),
+    )
+  })
+}
+
 /// Finalizer for emitting output code with scope hoisting.
 pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub ctx: ScopeHoistingFinalizerContext<'me>,
@@ -111,7 +138,9 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub keep_name_statement_to_insert: Vec<(usize, CompactStr, CompactStr)>,
   pub needs_hosted_top_level_binding: bool,
   pub module_namespace_included: bool,
-  pub transferred_import_record: FxIndexMap<ImportRecordIdx, String>,
+  /// Finalized init statements this module donates to another module of its chunk
+  /// (`Chunk::remove_map`), as detached fragments. See `transfer_import_stmt`.
+  pub transferred_import_record: Vec<(ImportRecordIdx, EcmaAst)>,
   pub json_module_inlined_prop: Option<Box<FxHashMap<SymbolId, ast::Expression<'ast>>>>,
   /// Reference ids of `import.meta.ROLLDOWN_FILE_URL_*` accesses that no emitted file matches.
   ///
@@ -372,6 +401,23 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     Some(expr)
   }
 
+  /// Whether `rec_idx`'s finalized init statement moves to another module of the chunk
+  /// (`Chunk::remove_map`) instead of staying here.
+  fn is_transferred_import(&self, rec_idx: ImportRecordIdx) -> bool {
+    self.ctx.chunk.remove_map.get(&self.ctx.idx).is_some_and(|recs| recs.contains(&rec_idx))
+  }
+
+  /// Captures the finalized `stmt` when its record is transferred, and returns whether it should
+  /// be removed here. `finalize_modules` prepends it to the recipient after every finalizer ran.
+  /// See internal-docs/ast-mutation/implementation.md ("Transferred Finalized Imports").
+  fn transfer_import_stmt(&mut self, rec_idx: ImportRecordIdx, stmt: &Statement<'ast>) -> bool {
+    if !self.is_transferred_import(rec_idx) {
+      return false;
+    }
+    self.transferred_import_record.push((rec_idx, transferred_import_ast(stmt)));
+    true
+  }
+
   fn wrapped_esm_init_stmt_for_import_record(
     &mut self,
     rec_idx: ImportRecordIdx,
@@ -528,7 +574,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       WrapKind::Cjs => {
         let carrier_key = OrderCjsCarrierKey { importer: self.ctx.idx, record: rec_idx };
         if self.ctx.order_wrap_state.has_order_cjs_carrier(carrier_key) {
-          debug_assert!(!self.transferred_import_record.contains_key(&rec_idx));
+          debug_assert!(!self.is_transferred_import(rec_idx));
           return true;
         }
         // Check if this CJS module's namespace can be merged with other imports
@@ -595,11 +641,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         let binding_name_for_wrapper_call_ret = self.canonical_name_for(rec.namespace_ref);
         *stmt = Statement::new_var_decl(binding_name_for_wrapper_call_ret, init_expr, self);
 
-        if self.transferred_import_record.contains_key(&rec_idx) {
-          self.transferred_import_record.insert(rec_idx, stmt.to_source_string());
-          return true;
-        }
-        return false;
+        return self.transfer_import_stmt(rec_idx, stmt);
       }
       // Replace the import statement with `init_foo()` if `ImportDeclaration` is not a plain import
       // or the importee have side effects.
@@ -612,11 +654,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         let init_expr = self.wrapped_esm_init_call_expr(importee.idx, stmt.span(), false, true);
         *stmt = ast::Statement::new_expression_statement(SPAN, init_expr, self);
 
-        if self.transferred_import_record.contains_key(&rec_idx) {
-          self.transferred_import_record.insert(rec_idx, stmt.to_source_string());
-          return true;
-        }
-        return false;
+        return self.transfer_import_stmt(rec_idx, stmt);
       }
     }
     true
@@ -1373,7 +1411,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // unparsed, along with the plugin that produced it.
         match parse_injected_expression(self.allocator(), &resolved.code) {
           Ok(mut expr) => {
-            let mut rewriter = ResolveFileUrlHookResultSpanRewriter(original_expr_span);
+            let mut rewriter = SpanRewriter(original_expr_span);
             oxc::ast_visit::VisitJsMut::visit_expression(&mut rewriter, &mut expr);
             return Some(expr);
           }
@@ -2334,9 +2372,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                           };
                         let stmt =
                           ast::Statement::new_expression_statement(SPAN, require_expr, self);
-                        if self.transferred_import_record.contains_key(&rec_idx) {
-                          self.transferred_import_record.insert(rec_idx, stmt.to_source_string());
-                        } else {
+                        if !self.transfer_import_stmt(rec_idx, &stmt) {
                           program.body.push(stmt);
                         }
                       }
@@ -3396,9 +3432,9 @@ impl<'ast> GetAllocator<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   }
 }
 
-struct ResolveFileUrlHookResultSpanRewriter(Span);
+struct SpanRewriter(Span);
 
-impl oxc::ast_visit::VisitJsMut<'_> for ResolveFileUrlHookResultSpanRewriter {
+impl oxc::ast_visit::VisitJsMut<'_> for SpanRewriter {
   fn visit_span(&mut self, span: &mut Span) {
     *span = self.0;
   }

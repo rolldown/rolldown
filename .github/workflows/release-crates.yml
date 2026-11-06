@@ -7,16 +7,40 @@ on:
   push:
     branches:
       - main
+      - 'v[0-9]*'
     paths:
       - crates/rolldown/Cargo.toml
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
+  check:
+    name: Check version
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.version.outputs.release }}
+    steps:
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+
+      # Same check as publish-to-npm.yml, so crates are never published for a
+      # release that npm rejects.
+      - name: Resolve release
+        id: version
+        run: |
+          node scripts/misc/release-line.mjs publish \
+            --branch "$GITHUB_REF_NAME" \
+            --subject "$(git log -1 --format=%s)" >> "$GITHUB_OUTPUT"
+
   release:
-    if: github.repository == 'rolldown/rolldown'
+    needs: check
+    # `!cancelled()` keeps this job when `check` is skipped on workflow_dispatch.
+    if: >-
+      !cancelled() &&
+      github.repository == 'rolldown/rolldown' &&
+      (github.event_name == 'workflow_dispatch' || needs.check.outputs.release == 'true')
     name: Release crates
     runs-on: ubuntu-latest
     environment: crates

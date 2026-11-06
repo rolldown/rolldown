@@ -37,7 +37,7 @@ const capture = (cmd: string, cwd: string): string =>
 // `main`. A `vX.Y` maintenance branch sets this to `rolldown-canary-A.B`,
 // where `A.B` is a Vite minor that ships rolldown X.Y, and uses it as-is.
 // See MAINTENANCE.md.
-const viteBranch: string = 'rolldown-canary';
+const viteBranch: string = 'rolldown-canary-8.3';
 const rebaseOntoMain = viteBranch === 'rolldown-canary';
 
 // Ensure `vite/` has a checkout at the latest `rolldown-canary` rebased onto

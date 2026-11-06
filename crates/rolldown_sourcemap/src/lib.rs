@@ -348,8 +348,8 @@ fn remap_chain(
   // A token's name id in the result is `local_id + offset`, where `offset` counts the names of
   // the maps before its map.
   let mut offset = 0;
-  // Pre-compute lookup tables paired with their offsets in reverse order so we avoid reversing
-  // on every token lookup.
+  // Pair lookup cursors with their offsets in reverse order so we avoid reversing on every
+  // token lookup. Sequential queries do not need a per-line index.
   let mut chain_with_offsets: Vec<_> = chain_without_last
     .iter()
     .map(|sourcemap| {
@@ -357,7 +357,7 @@ fn remap_chain(
       #[expect(clippy::cast_possible_truncation)]
       let name_count = sourcemap.get_names().len() as u32;
       offset += name_count;
-      (TokenLookup::new(sourcemap), map_offset)
+      (TokenLookup::new(sourcemap, sourcemap.get_tokens()), map_offset)
     })
     .collect();
   chain_with_offsets.reverse();
@@ -366,32 +366,86 @@ fn remap_chain(
   // `last_offset` counts the names of every map before the last one. When it is 0, no traced
   // token can carry a name, so the remap loop skips the per-step name tracking. A chain without
   // names also skips the marks.
-  let remap = match (last_offset == 0, name_used.is_empty()) {
-    (true, true) => remap_tokens::<false, false>,
-    (true, false) => remap_tokens::<false, true>,
-    (false, true) => remap_tokens::<true, false>,
-    (false, false) => remap_tokens::<true, true>,
-  };
-  remap(last_map, &mut chain_with_offsets, last_offset, name_used)
+  match (last_offset == 0, name_used.is_empty()) {
+    (true, true) => {
+      remap_tokens::<false, false>(last_map, &mut chain_with_offsets, last_offset, name_used)
+    }
+    (true, false) => {
+      remap_tokens::<false, true>(last_map, &mut chain_with_offsets, last_offset, name_used)
+    }
+    (false, true) => {
+      remap_tokens::<true, false>(last_map, &mut chain_with_offsets, last_offset, name_used)
+    }
+    (false, false) => {
+      remap_tokens::<true, true>(last_map, &mut chain_with_offsets, last_offset, name_used)
+    }
+  }
 }
 
 /// A bounded forward cursor for the mostly sequential lookups made during composition.
-/// Arbitrary jumps and backwards queries still use binary search. Exact matches select the
-/// first duplicate column; positions between columns select the last preceding token.
-struct TokenLookup<'a> {
-  lines: Vec<&'a [Token]>,
+/// Build a line index only when a query precedes the cached range or exceeds the scan budget.
+/// Exact matches select the first duplicate column; positions between columns select the
+/// last preceding token.
+struct TokenLookup<'a, I> {
+  map: &'a oxc_sourcemap::SourceMap<'a>,
+  remaining: I,
+  previous: Option<Token>,
+  next: Option<Token>,
+  lines: Option<Vec<&'a [Token]>>,
   last_line: Option<u32>,
   last_column: u32,
   index: usize,
 }
 
-impl<'a> TokenLookup<'a> {
-  fn new(map: &'a oxc_sourcemap::SourceMap<'_>) -> Self {
-    Self { lines: map.generate_lookup_table(), last_line: None, last_column: 0, index: 0 }
+impl<'a, I: Iterator<Item = Token>> TokenLookup<'a, I> {
+  fn new(map: &'a oxc_sourcemap::SourceMap<'a>, mut remaining: I) -> Self {
+    let next = remaining.next();
+    Self {
+      map,
+      remaining,
+      previous: None,
+      next,
+      lines: None,
+      last_line: None,
+      last_column: 0,
+      index: 0,
+    }
   }
 
   fn lookup(&mut self, line: u32, column: u32) -> Option<Token> {
-    let tokens = *self.lines.get(line as usize)?;
+    if self.lines.is_none() {
+      let position = (line, column);
+      if self
+        .previous
+        .is_none_or(|previous| (previous.get_dst_line(), previous.get_dst_col()) < position)
+      {
+        // Keep `next` at the first token >= the query, so exact queries retain the first
+        // duplicate while a query between columns retains the last preceding token.
+        for _ in 0..8 {
+          match self.next {
+            Some(next) if (next.get_dst_line(), next.get_dst_col()) < position => {
+              self.previous = Some(next);
+              self.next = self.remaining.next();
+            }
+            _ => break,
+          }
+        }
+        if self.next.is_none_or(|next| (next.get_dst_line(), next.get_dst_col()) >= position) {
+          let previous = self.previous.filter(|token| token.get_dst_line() == line);
+          return self
+            .next
+            .filter(|token| {
+              token.get_dst_line() == line && (token.get_dst_col() == column || previous.is_none())
+            })
+            .or(previous);
+        }
+      }
+      // Pay for the existing index once if this map's queries are not local and ordered.
+      self.lines = Some(self.map.generate_lookup_table());
+      self.last_line = None;
+      self.index = 0;
+    }
+    let tokens = *self.lines.as_ref()?.get(line as usize)?;
     tokens.first()?;
     let mut nearby = None;
     if self.last_line == Some(line) && column >= self.last_column {
@@ -433,7 +487,7 @@ impl<'a> TokenLookup<'a> {
 /// has one flag for each name and one more flag for the ids out of range.
 fn remap_tokens<const TRACK_NAMES: bool, const MARK_NAMES: bool>(
   last_map: &oxc_sourcemap::SourceMap<'_>,
-  chain: &mut [(TokenLookup<'_>, u32)],
+  chain: &mut [(TokenLookup<'_, impl Iterator<Item = Token>>, u32)],
   last_offset: u32,
   name_used: &mut [bool],
 ) -> Box<[Token]> {
@@ -536,7 +590,7 @@ fn test_token_lookup_matches_approximate_lookup() {
     None,
   );
   let table = map.generate_lookup_table();
-  let mut lookup = TokenLookup::new(&map);
+  let mut lookup = TokenLookup::new(&map, map.get_tokens());
   let mut check = |line, column| {
     assert_eq!(
       lookup.lookup(line, column),
@@ -559,7 +613,38 @@ fn test_token_lookup_matches_approximate_lookup() {
     check(state % 4, (state >> 8) % 140);
   }
   let empty = empty_sourcemap();
-  assert_eq!(TokenLookup::new(&empty).lookup(0, 0), None);
+  assert_eq!(TokenLookup::new(&empty, empty.get_tokens()).lookup(0, 0), None);
+}
+
+#[test]
+fn test_token_lookup_builds_index_only_for_nonlocal_queries() {
+  let tokens = (0..10)
+    .flat_map(|line| {
+      [(0, 5), (1, 5), (2, 10)]
+        .into_iter()
+        .map(move |(index, column)| Token::new(line * 2, column, index, column, Some(0), None))
+    })
+    .collect();
+  let map = SourceMap::new(None, vec![], None, vec!["source.js".into()], vec![None], tokens, None);
+  let table = map.generate_lookup_table();
+  let mut lookup = TokenLookup::new(&map, map.get_tokens());
+  for line in (0..10).step_by(2) {
+    for column in [0, 5, 6, 10, 11] {
+      assert_eq!(lookup.lookup(line, column), map.lookup_token_approx(&table, line, column));
+    }
+    assert_eq!(lookup.lookup(line + 1, 0), None);
+  }
+  assert!(lookup.lines.is_none(), "ordered local queries should stream without a line index");
+  assert_eq!(lookup.lookup(18, u32::MAX), map.lookup_token_approx(&table, 18, u32::MAX));
+  assert!(lookup.lines.is_some(), "a distant jump should build the index once");
+  assert_eq!(lookup.lookup(0, 5), map.lookup_token_approx(&table, 0, 5));
+
+  let mut lookup = TokenLookup::new(&map, map.get_tokens());
+  assert_eq!(lookup.lookup(0, 5), map.lookup_token_approx(&table, 0, 5));
+  assert!(lookup.lines.is_none());
+  assert_eq!(lookup.lookup(0, 10), map.lookup_token_approx(&table, 0, 10));
+  assert_eq!(lookup.lookup(0, 5), map.lookup_token_approx(&table, 0, 5));
+  assert!(lookup.lines.is_some(), "a backwards query should switch to indexed lookup");
 }
 
 #[test]

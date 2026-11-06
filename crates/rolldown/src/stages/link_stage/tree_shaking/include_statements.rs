@@ -753,8 +753,9 @@ fn handle_include_symbol(
 /// reference sites, so the reference does not retain the declaration, unless the declaring module
 /// or one of its dependencies has side effects. Reading the constant evaluates that module, so such
 /// a read takes the normal include path. A module with side effects of its own already stays
-/// through the import of a module that imports it directly, so a read through that import does not
-/// need to keep it.
+/// through an import of it, so a read through such an import does not need to keep it.
+/// `read_binding` is the binding that the read goes through: the import binding, or `ns` for a
+/// member read such as `ns.SIZE`.
 ///
 /// If the symbol is a constant value and it is not a commonjs module export, we don't need to
 /// include it since it would be always inlined. In smart mode, we only skip if `safe_to_inline`
@@ -762,7 +763,7 @@ fn handle_include_symbol(
 /// since if `inlineConst` is disabled, the test expr will always return `false`.
 fn is_bypassed_inlined_constant(
   ctx: &mut IncludeContext,
-  symbol_ref: SymbolRef,
+  read_binding: SymbolRef,
   canonical_ref: SymbolRef,
   include_reason: SymbolIncludeReason,
 ) -> bool {
@@ -779,8 +780,8 @@ fn is_bypassed_inlined_constant(
   let owner = canonical_ref.owner;
   let (modules, metas) = (ctx.modules, ctx.metas);
   if modules[owner].side_effects().has_side_effects()
-    && modules[symbol_ref.owner].as_normal().is_some_and(|reader| {
-      reader.named_imports.get(&symbol_ref).is_some_and(|named_import| {
+    && modules[read_binding.owner].as_normal().is_some_and(|reader| {
+      reader.named_imports.get(&read_binding).is_some_and(|named_import| {
         reader.import_records[named_import.record_idx].resolved_module == Some(owner)
       })
     })
@@ -1097,7 +1098,16 @@ fn handle_include_statement(
         member_expr_resolution.depended_refs.iter().for_each(|sym_ref| {
           retain_forwarding_declaration(ctx, *sym_ref);
         });
-        ctx.pending.push(WorkItem::Symbol(resolved_ref, include_kind));
+        // `ns.SIZE` reads through the namespace binding `ns`.
+        let canonical_ref = ctx.symbols.canonical_ref_for(resolved_ref);
+        if !is_bypassed_inlined_constant(
+          ctx,
+          *reference_ref.symbol_ref(),
+          canonical_ref,
+          include_kind,
+        ) {
+          ctx.pending.push(WorkItem::Symbol(resolved_ref, include_kind));
+        }
         // When the member expression resolves to a specific CJS export property
         // (e.g., `ns.x`), we skip the bailout check — we know the access is partial
         // and CJS tree-shaking can work. Otherwise, the full namespace may be used

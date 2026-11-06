@@ -1,0 +1,30 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## button.js
+
+```js
+// button.js
+globalThis.styleLoaded = true;
+
+```
+
+## named.js
+
+```js
+import "./button.js";
+// named.js
+globalThis.size = "md";
+
+```
+
+## namespace.js
+
+```js
+import "./button.js";
+// namespace.js
+globalThis.size = "md";
+
+```

@@ -1,0 +1,8 @@
+{
+  "config": {
+    "input": [
+      { "name": "namespace", "import": "./namespace.js" },
+      { "name": "named", "import": "./named.js" }
+    ]
+  }
+}

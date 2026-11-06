@@ -23,9 +23,7 @@ A maintenance branch can only release stable versions within `X.Y` that are lowe
 
 ## Publishing
 
-1. Run the [Prepare Release](https://github.com/rolldown/rolldown/actions/workflows/prepare-release.yml) workflow from `main` with:
-   - `version`: the version to release, e.g. `1.1.6`.
-   - `target_branch`: `main` or a maintenance branch, e.g. `v1.1`.
+1. Run the [Prepare Release](https://github.com/rolldown/rolldown/actions/workflows/prepare-release.yml) workflow from `main` with the version to release, e.g. `1.1.6`. A version lower than npm `latest` is prepared on its `vX.Y` branch, any other on `main`.
 2. Review the generated `release: vX.Y.Z` pull request and squash-merge it without changing the title.
 3. Approve the `release` environment deployment in the [Publish to NPM](https://github.com/rolldown/rolldown/actions/workflows/publish-to-npm.yml) run.
 
@@ -34,7 +32,7 @@ Merging the release pull request triggers:
 - [Publish to NPM](https://github.com/rolldown/rolldown/actions/workflows/publish-to-npm.yml), which publishes the npm packages and creates the `vX.Y.Z` tag and GitHub release.
 - [Release Crates](https://github.com/rolldown/rolldown/actions/workflows/release-crates.yml), which publishes the crates to crates.io.
 
-The changelog covers the commits since the last tag reachable from `target_branch`.
+The changelog covers the commits since the last tag reachable from the target branch.
 
 ## Backporting
 

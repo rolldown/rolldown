@@ -250,3 +250,58 @@ test('changes made in place to a read `imports` or `map` reach Rust with an assi
     await bundle.close();
   }
 });
+
+test.each([
+  ['code', 'a string'],
+  ['imports', 'an array'],
+  ['dynamicImports', 'an array'],
+])('assigning `undefined` to `%s` of a chunk fails the build', async (property, expected) => {
+  const bundle = await rolldown({
+    input: 'entry',
+    plugins: [
+      virtualPlugin(modules),
+      {
+        name: 'writer',
+        generateBundle(_options, bundle) {
+          Reflect.set(bundle['entry.js'], property, undefined);
+        },
+      },
+    ],
+  });
+  try {
+    await expect(bundle.generate()).rejects.toThrow(
+      `The \`${property}\` property of chunk "entry.js" must be ${expected}. Received undefined.`,
+    );
+  } finally {
+    await bundle.close();
+  }
+});
+
+test.each([null, undefined])('assigning `%s` to `map` of a chunk removes the map', async (map) => {
+  let after: Record<string, ChunkView> = {};
+  const bundle = await rolldown({
+    input: 'entry',
+    plugins: [
+      virtualPlugin(modules),
+      {
+        name: 'writer',
+        generateBundle(_options, bundle) {
+          Reflect.set(bundle['entry.js'], 'map', map);
+        },
+      },
+      {
+        name: 'reader-after',
+        generateBundle(_options, bundle) {
+          after = record(bundle);
+        },
+      },
+    ],
+  });
+  try {
+    const { output } = await bundle.generate({ sourcemap: true });
+    expect(after['entry.js'].map).toBeNull();
+    expect((output.find((item) => item.fileName === 'entry.js') as OutputChunk).map).toBeNull();
+  } finally {
+    await bundle.close();
+  }
+});

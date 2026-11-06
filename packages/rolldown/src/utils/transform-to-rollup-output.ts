@@ -147,6 +147,9 @@ function collectChunkChange(
   let isChanged = change.filename !== original.fileName || change.isEntry !== original.isEntry;
   // A string the plugin read cannot have changed.
   if (assigned.has('code')) {
+    if (typeof cache.code !== 'string') {
+      throw invalidChunkProperty(original.fileName, 'code', 'a string', cache.code);
+    }
     change.code = cache.code;
     isChanged = true;
   }
@@ -156,6 +159,9 @@ function collectChunkChange(
     isChanged = true;
   }
   if ('imports' in cache && !isSameStrings(cache.imports, bindingChunk.getImports())) {
+    if (!Array.isArray(cache.imports)) {
+      throw invalidChunkProperty(original.fileName, 'imports', 'an array', cache.imports);
+    }
     change.imports = cache.imports;
     isChanged = true;
   }
@@ -163,10 +169,30 @@ function collectChunkChange(
     'dynamicImports' in cache &&
     !isSameStrings(cache.dynamicImports, bindingChunk.getDynamicImports())
   ) {
+    if (!Array.isArray(cache.dynamicImports)) {
+      throw invalidChunkProperty(
+        original.fileName,
+        'dynamicImports',
+        'an array',
+        cache.dynamicImports,
+      );
+    }
     change.dynamicImports = cache.dynamicImports;
     isChanged = true;
   }
   return isChanged ? change : undefined;
+}
+
+// Rust keeps the old value of a field set to `undefined`, so a wrong type is rejected here.
+function invalidChunkProperty(
+  fileName: string,
+  property: string,
+  expected: string,
+  value: unknown,
+): TypeError {
+  return new TypeError(
+    `The \`${property}\` property of chunk "${fileName}" must be ${expected}. Received ${value === null ? 'null' : typeof value}.`,
+  );
 }
 
 function isSameStrings(value: unknown, original: string[]): boolean {

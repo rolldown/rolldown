@@ -58,4 +58,4 @@ async-scoped = { workspace = true, features = ["use-tokio"] }
 rayon = { workspace = true }
 
 [dev-dependencies]
-criterion2 = { workspace = true }
+criterion = { workspace = true }

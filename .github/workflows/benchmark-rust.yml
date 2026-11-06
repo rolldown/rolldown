@@ -1,4 +1,4 @@
-name: Benchmarks Rust
+name: Benchmarks Rust (temporary walltime validation)
 
 permissions: {}
 
@@ -47,7 +47,7 @@ jobs:
             uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
             with:
               tools: just, cargo-codspeed
-              cache-key: codspeed
+              cache-key: codspeed-walltime-validation
               save-cache: ${{ github.ref_name == 'main' }}
 
       - name: Setup Benchmark Input
@@ -57,18 +57,18 @@ jobs:
 
       - name: Build benchmark
         env:
-          RUSTFLAGS: '-C debuginfo=1 -C strip=none -g -C lto=false -C codegen-units=16 --cfg codspeed'
+          RUSTFLAGS: '-C debuginfo=1 -C strip=none -g -C lto=false -C codegen-units=16'
         run: |
-          cargo build --release -p bench --bench bench --features codspeed
-          mkdir -p target/codspeed/analysis/bench
-          mv target/release/deps/bench-* target/codspeed/analysis/bench
-          rm target/codspeed/analysis/bench/*.d
+          cargo build --release -p bench --bench bench
+          mkdir -p target/codspeed/walltime/bench
+          mv target/release/deps/bench-* target/codspeed/walltime/bench
+          rm target/codspeed/walltime/bench/*.d
 
       - wait: benchmark-input
 
       - name: Run the benchmarks
         uses: CodSpeedHQ/action@373d6868929f444bc08d901fd0eb0ad52a8875ea # v5.2.1
         with:
-          run: cargo codspeed run -p bench
+          run: cargo codspeed run -m walltime -p bench sourcemap -- --sample-size 40 --warm-up-time 1 --measurement-time 3
           token: ${{ secrets.CODSPEED_TOKEN }}
-          mode: simulation
+          mode: walltime

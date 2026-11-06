@@ -385,14 +385,16 @@ fn remap_tokens<const TRACK_NAMES: bool, const MARK_NAMES: bool>(
   last_offset: u32,
   name_used: &mut [bool],
 ) -> Box<[Token]> {
-  let source_view_tokens = last_map.get_source_view_tokens();
-  let mut remapped = Vec::with_capacity(source_view_tokens.size_hint().0);
+  // Remapping only needs numeric token fields, not the source/name strings that
+  // SourceViewToken associates with a map. Keep raw tokens throughout the chain.
+  let tokens = last_map.get_tokens();
+  let mut remapped = Vec::with_capacity(tokens.size_hint().0);
   let mut dst_line = None;
   let mut has_mapping = false;
   let mut is_mapped = false;
   let mut leading_unmapped = None;
 
-  for token in source_view_tokens {
+  for token in tokens {
     if dst_line != Some(token.get_dst_line()) {
       dst_line = Some(token.get_dst_line());
       has_mapping = false;
@@ -407,7 +409,7 @@ fn remap_tokens<const TRACK_NAMES: bool, const MARK_NAMES: bool>(
       let mut original_token = token;
       let mut name_id = token.get_name_id().map(|id| id + last_offset);
       for (sourcemap, lookup_table, offset) in chain {
-        let traced = sourcemap.lookup_source_view_token_approx(
+        let traced = sourcemap.lookup_token_approx(
           lookup_table,
           original_token.get_src_line(),
           original_token.get_src_col(),

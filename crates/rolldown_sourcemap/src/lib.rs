@@ -736,7 +736,7 @@ export function App() {
 
   let generated_loc = get_loc(transformed_code.find("return").unwrap(), transformed_code);
   let original_loc = collapsed
-    .lookup_source_view_token(&collapsed_lookup_table, generated_loc.0, generated_loc.1)
+    .lookup_token(&collapsed_lookup_table, generated_loc.0, generated_loc.1)
     .map(|token| (token.get_src_line(), token.get_src_col()));
   assert_eq!(
     original_loc,

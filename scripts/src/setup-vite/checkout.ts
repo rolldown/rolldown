@@ -33,28 +33,26 @@ export const runNode = (scriptPath: string, args: string[], cwd: string): void =
 const capture = (cmd: string, cwd: string): string =>
   execSync(cmd, { cwd, encoding: 'utf8' }).trim();
 
-// `rolldown-canary` follows Vite `main`, so it is rebased onto the latest
-// `main`. A `vX.Y` maintenance branch sets this to `rolldown-canary-A.B`,
-// where `A.B` is a Vite minor that ships rolldown X.Y, and uses it as-is.
-// See MAINTENANCE.md.
-const viteBranch: string = 'rolldown-canary';
-const rebaseOntoMain = viteBranch === 'rolldown-canary';
+// The Vite branch with the rolldown-side patches, and the Vite branch it is
+// rebased onto. A `vX.Y` maintenance branch sets them to `rolldown-canary-A.B`
+// and `vA.B`, where `A.B` is a Vite minor that ships rolldown X.Y. Until Vite
+// has a `vA.B` branch, `viteBranch` is used as-is. See MAINTENANCE.md.
+const viteBranch = 'rolldown-canary';
+const viteBase = 'main';
 
-// Ensure `vite/` has a checkout at the latest `rolldown-canary` rebased onto
-// the latest `main`, so canary-side fixes take effect right away and the
+// Ensure `vite/` has a checkout at the latest `viteBranch` rebased onto the
+// latest `viteBase`, so canary-side fixes take effect right away and the
 // newest Vite changes surface incompatibilities early.
 //
-//   - Missing (fresh clone / CI): clone `rolldown-canary` and rebase it.
-//   - Clean and on `rolldown-canary`: update to the latest upstream state
+//   - Missing (fresh clone / CI): clone `viteBranch` and rebase it.
+//   - Clean and on `viteBranch`: update to the latest upstream state
 //     (kept as-is when the fetch fails, e.g. offline).
-//   - Dirty or not on `rolldown-canary`: taken over by the developer, used
+//   - Dirty or not on `viteBranch`: taken over by the developer, used
 //     exactly as-is so local experiments are never trampled.
 export function ensureViteCheckout(): void {
   if (!nodeFs.existsSync(nodePath.join(viteDir, 'package.json'))) {
     run(`git clone --branch ${viteBranch} https://github.com/vitejs/vite.git vite`, repoRoot);
-    if (rebaseOntoMain) {
-      run('git rebase origin/main', viteDir);
-    }
+    rebaseOntoViteBase();
   } else {
     updateViteCheckout();
   }
@@ -71,13 +69,21 @@ function updateViteCheckout(): void {
     return;
   }
   try {
-    run(`git fetch origin ${rebaseOntoMain ? 'main ' : ''}${viteBranch}`, viteDir);
+    run('git fetch origin', viteDir);
   } catch {
     console.log('[setup-vite] fetch failed, using the existing checkout as-is');
     return;
   }
   run(`git checkout -B ${viteBranch} origin/${viteBranch}`, viteDir);
-  if (rebaseOntoMain) {
-    run('git rebase origin/main', viteDir);
+  rebaseOntoViteBase();
+}
+
+function rebaseOntoViteBase(): void {
+  try {
+    capture(`git rev-parse --verify --quiet refs/remotes/origin/${viteBase}`, viteDir);
+  } catch {
+    console.log(`[setup-vite] vite has no ${viteBase} branch yet, using ${viteBranch} as-is`);
+    return;
   }
+  run(`git rebase origin/${viteBase}`, viteDir);
 }

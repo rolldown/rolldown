@@ -22,6 +22,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   SharedOptions,
+  stages::link_stage::tree_shaking::determine_side_effects::ScanTimeSideEffects,
   type_alias::{IndexEcmaAst, IndexStmtInfos},
   types::{
     linking_metadata::{LinkingMetadata, LinkingMetadataVec},
@@ -39,6 +40,7 @@ mod determine_module_exports_kind;
 mod generate_lazy_export;
 mod patch_module_dependencies;
 mod reference_needed_symbols;
+mod refine_stmt_side_effects;
 mod sort_modules;
 mod tree_shaking;
 
@@ -123,6 +125,8 @@ pub struct LinkStage<'a> {
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub global_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
+  /// Imports whose binding lazy barrel left uncertain by skipping a record they depend on.
+  pub lazy_barrel_uncertain_bindings: Vec<SymbolRef>,
   pub flat_options: FlatOptions,
   pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
   pub tla_module_count: usize,
@@ -131,6 +135,13 @@ pub struct LinkStage<'a> {
   pub tla_keyword_span_map: FxHashMap<ModuleIdx, Span>,
   /// Computed during `include_statements`, reused when building `LinkStageOutput`.
   pub has_enum_inlining: bool,
+  /// Module side-effect verdicts as the scan stage left them. See
+  /// `recompute_analyzed_side_effects`.
+  pub scan_time_side_effects: IndexVec<ModuleIdx, ScanTimeSideEffects>,
+  /// Modules in which a link pass relaxed statement flags after `determine_side_effects` ran.
+  pub relaxed_side_effect_modules: FxHashSet<ModuleIdx>,
+  /// Lazily computed static-import components for entry-independent constant lookups.
+  import_cycles: refine_stmt_side_effects::ImportCycles,
 }
 
 impl<'a> LinkStage<'a> {
@@ -166,8 +177,21 @@ impl<'a> LinkStage<'a> {
 
     scan_stage_output.entry_points.extend(rest);
 
+    let scan_time_side_effects = scan_stage_output
+      .module_table
+      .modules
+      .iter()
+      .map(|module| ScanTimeSideEffects {
+        side_effects: *module.side_effects(),
+        stmt_info_count: scan_stage_output.stmt_infos[module.idx()].len(),
+      })
+      .collect::<IndexVec<ModuleIdx, _>>();
+
     Self {
       sorted_modules: Vec::new(),
+      scan_time_side_effects,
+      relaxed_side_effect_modules: FxHashSet::default(),
+      import_cycles: refine_stmt_side_effects::ImportCycles::default(),
       global_constant_symbol_map: constant_symbol_map,
       depended_runtime_helper: scan_stage_output
         .module_table
@@ -225,6 +249,7 @@ impl<'a> LinkStage<'a> {
       normal_symbol_exports_chain_map: FxHashMap::default(),
       star_reexport_records_by_imported_symbol: FxHashMap::default(),
       member_read_star_reexport_paths: Vec::new(),
+      lazy_barrel_uncertain_bindings: Vec::new(),
       external_import_namespace_merger: FxHashMap::default(),
       overrode_preserve_entry_signature_map: scan_stage_output
         .overrode_preserve_entry_signature_map,
@@ -248,9 +273,14 @@ impl<'a> LinkStage<'a> {
     self.determine_side_effects();
     self.bind_imports_and_exports();
     self.create_exports_for_ecma_modules();
-    self.reference_needed_symbols();
     let unreachable_import_expression_node_ids = self.cross_module_optimization();
+    self.refine_stmt_side_effects_with_imported_constants();
+    // The passes above only relax statement flags. Module verdicts must follow before
+    // `reference_needed_symbols` derives import flags from them.
+    self.recompute_analyzed_side_effects();
+    self.reference_needed_symbols();
     self.include_statements(&unreachable_import_expression_node_ids);
+    self.check_lazy_barrel_uncertain_bindings();
     self.patch_module_dependencies();
 
     tracing::trace!(

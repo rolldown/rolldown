@@ -14,16 +14,10 @@ use serde::{Deserialize, Deserializer};
   derive(Deserialize, JsonSchema),
   serde(rename_all = "camelCase", deny_unknown_fields)
 )]
-#[expect(clippy::struct_excessive_bools)]
 pub struct WatchOption {
   pub skip_write: bool,
   pub build_delay: Option<u32>,
-  pub use_polling: bool,
-  pub poll_interval: Option<u64>,
-  pub compare_contents_for_polling: bool,
-  pub use_debounce: bool,
-  pub debounce_delay: Option<u64>,
-  pub debounce_tick_rate: Option<u64>,
+  pub watcher: Option<WatcherFileWatcherOptions>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
     serde(default, deserialize_with = "deserialize_string_or_regex"),
@@ -39,6 +33,29 @@ pub struct WatchOption {
   #[debug("Function")]
   #[cfg_attr(feature = "deserialize_bundler_options", serde(skip_serializing, skip_deserializing))]
   pub on_invalidate: Option<OnInvalidate>,
+}
+
+/// Filesystem watcher settings shared by build watch and the dev engine.
+/// See internal-docs/watch-mode/implementation.md#backend-selection.
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(
+  feature = "deserialize_bundler_options",
+  derive(Deserialize, JsonSchema),
+  serde(rename_all = "camelCase", deny_unknown_fields)
+)]
+pub struct WatcherFileWatcherOptions {
+  /// Use polling instead of native filesystem events.
+  pub use_polling: Option<bool>,
+  /// Poll interval in milliseconds, when polling is enabled.
+  pub poll_interval: Option<u64>,
+  /// Compare file contents to detect changes when polling is enabled.
+  pub compare_contents_for_polling: Option<bool>,
+  /// Coalesce filesystem events before delivering them to the build coordinator.
+  pub use_debounce: Option<bool>,
+  /// Debounce delay in milliseconds, when debouncing is enabled.
+  pub debounce_delay: Option<u64>,
+  /// Debouncer tick rate in milliseconds; defaults to one quarter of the debounce delay.
+  pub debounce_tick_rate: Option<u64>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

@@ -1,0 +1,5 @@
+Choose `'ascii'` for robust delivery and execution performance. Escaping non-ASCII characters prevents browsers from misinterpreting them when encoding metadata is missing. It can also [improve parsing performance when the source contains non-ASCII variable names](https://v8.dev/blog/scanner). If this transform makes the output entirely ASCII-only, JavaScript engines may also be able to reduce the memory used to retain the source text by representing each source character with one byte instead of the two bytes typically used for UTF-16 strings.
+
+Choose `'utf8'` for potentially smaller, easier-to-read output because non-ASCII characters do not need escape sequences. To ensure browsers interpret the code correctly, add `<meta charset="utf-8">` to the HTML or serve the code with a header such as `Content-Type: text/javascript; charset=utf-8`.
+
+Escaping non-ASCII characters does not guarantee that the entire output is ASCII-only. For example, non-ASCII characters in comments, or code added by plugins may be preserved.

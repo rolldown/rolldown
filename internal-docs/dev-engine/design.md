@@ -45,33 +45,32 @@ rolldown_dev surfaces build errors to the binding consumer on every
 build via the `on_output` / `on_hmr_updates` callbacks (§16b). It never
 silently retries past an error, never silently swallows one, and never
 caches one across requests — rolldown_dev is stateless across HTTP
-requests. The binding consumer (Vite) is responsible for retaining the
-most recent error and replaying it on each client reconnect, so the
-error overlay appears even after a browser refresh.
+requests. The binding consumer (Vite) keeps the most recent full-build
+error and replays it to each client that connects, so the error overlay
+appears again after a browser refresh.
 
-Vite-side realization (in `fullBundleEnvironment.ts`): a single
-`lastBuildError: Error | null` field caches the most recent error from
-**either** channel — it is set in both `onOutput` (full-build errors)
-and `onHmrUpdates` (HMR errors), and cleared back to `null` on a
-successful build from **either** channel (a successful `onOutput` _or_
-a successful `onHmrUpdates`, since an HMR patch that computes cleanly
-supersedes a previously cached error). It is replayed on the **`vite:client:connect`**
-event for every freshly connected client (including a post-refresh
-reconnect), so the error overlay reappears after a browser refresh.
-The two channels differ only in their _live_
-delivery: an `onOutput` error is additionally logged to the terminal
-(`logger.error`) so a build break is visible without a browser, and is
-broadcast to all clients via `hot.send`; an `onHmrUpdates` error is sent
-to each connected client individually and is not logged to the terminal.
+HMR errors need no replay. A page load after an HMR-stage failure
+triggers a full build (principle 3's consumer-side exception). If that
+build fails, its error arrives through `onOutput` and is stored. A tab
+whose WebSocket drops reloads the page when the server answers again, so
+it takes the same path.
 
-### 3. File changes are the only recovery trigger
+### 3. New input is the only recovery trigger
 
-After a failed build, the engine waits for a file change before
-rebuilding. Both Vite config edits and user-land source edits are
-valid triggers. Inside rolldown_dev nothing else counts as recovery —
-not page refresh, not elapsed time, not manual UI dismissal:
-`ensure_latest_bundle_output` no-ops in every failed state (§13b), so
-access never rebuilds on its own.
+After a failed build, the engine waits for new input before rebuilding.
+Inside rolldown_dev, two things count:
+
+- **A file change.** Both Vite config edits and user-land source edits
+  are valid triggers.
+- **A tab opening a lazy route.** Its lazy compile changes the proxy
+  module's content, and the background `Rebuild` it queues
+  (`ModuleChanged`) runs in failed states too. While a lost HMR update is
+  pending, that rebuild also reloads every tab (see
+  [Lost HMR updates](#lost-hmr-updates)).
+
+Nothing else counts as recovery — not page refresh, not elapsed time,
+not manual UI dismissal: `ensure_latest_bundle_output` no-ops in every
+failed state (§13b), so access never rebuilds on its own.
 
 **One consumer-side exception — page refresh after an HMR-stage
 failure.** When the last failure originated in HMR generation
@@ -82,14 +81,14 @@ path, instead of replaying the cached error. This stays scoped to the
 consumer — rolldown_dev itself does not change behavior; the escalation
 is the consumer's decision, keyed on the `last_error_stage` it reads
 from `BundleState` (§12). A `Rebuild`-stage or full-build failure gets
-no such exception — only a file change recovers those. (Wired up in the
-in-repo reference consumer: `triggerBundleRegenerationIfStale` in
-`packages/test-dev-server/src/environments/full-bundle-dev-environment.ts`.)
+no such exception — only new input recovers those. (Wired up in Vite:
+`triggerBundleRegenerationIfStale` in `bundledDev.ts`.)
 
-Realized in: `handle_file_changes` (§7) is the sole producer of
-post-failure rebuild tasks. `triggerFullBuild` (§13e) is an explicit
-escape hatch for cases the watcher cannot observe (e.g. missing-import
-resolution; see Unresolved Questions).
+Realized in: `handle_file_changes` (§7) and the `ModuleChanged` handler
+(`bundle_coordinator.rs:138`) are the only producers of post-failure
+rebuild tasks. `triggerFullBuild` (§13e) is an explicit escape hatch
+for cases the watcher cannot observe (e.g. missing-import resolution;
+see Unresolved Questions).
 
 Corollary: a file change after a failed build must schedule work that
 can undo the failure. In practice this means tracking where the
@@ -104,6 +103,39 @@ behavior, recoverable by editing source. Rolldown and Vite themselves
 are assumed bug-free in this model. The only state not recoverable
 through a file-change cycle is a panic, which signals an invariant
 violation in rolldown_dev itself (§16g).
+
+## Lost HMR updates
+
+An HMR update can fail after it merged its edit into the module graph,
+for example when a plugin callback throws while the patch renders. No
+client ran the edit, and the next patch will not carry it: the graph
+already has the edit. Example: an edit to `Header.tsx` fails this way.
+A later edit to `Footer.tsx` sends a patch with `Footer` only, and the
+tabs keep the old `Header`.
+
+So the engine records the loss (`Bundler::lost_hmr_update`). Its next
+task reloads every client and runs a full build (§9b).
+
+```mermaid
+flowchart LR
+  F[patch fails after the merge] --> P[lost update pending]
+  P -->|next trigger| U[reload every client<br/>+ full build]
+  U -->|succeeds| D[flag cleared]
+  U -->|fails| P
+```
+
+- **Reload, not resend.** Resending the edit would also need the modules
+  and imports it added, for each client. The failure is rare, so one
+  reload is cheaper.
+- **The server decides.** Only the server knows the failure came after
+  the merge. A syntax error looks the same to the client, but nothing
+  merged, so it recovers with a hot update.
+- **A full build.** A failure in `update_defer_sync_data` can leave the
+  cache half updated. A full scan builds it again from scratch.
+- **Principles 1 and 3 hold.** The upgrade never repeats by itself: a
+  failed full build keeps the flag until the next trigger. No trigger is
+  added, but a lazy route opened in one tab now reloads every tab. This
+  is accepted, because tabs reload only after a successful build.
 
 ## Unresolved Questions
 

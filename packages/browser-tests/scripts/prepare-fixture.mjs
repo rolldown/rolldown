@@ -78,7 +78,7 @@ function packBrowserPackage() {
   browserPacked = true;
 
   if (shouldBuild) {
-    run('pnpm', ['run', '--filter', 'rolldown', 'build-browser-pkg:debug'], repoRoot, 'browser');
+    run('pnpm', ['run', '--filter', 'rolldown', 'build-node'], repoRoot, 'browser');
   }
   pack(
     join(repoRoot, 'packages/browser'),
@@ -90,7 +90,6 @@ function packBrowserPackage() {
 
 function packNodePackages() {
   if (shouldBuild) {
-    run('pnpm', ['run', '--filter', 'rolldown', 'build-binding:wasi'], repoRoot);
     // TARGET is dropped so `dist` keeps the published shape, without the wasm inlined
     run('pnpm', ['run', '--filter', 'rolldown', 'build-node'], repoRoot);
   }
@@ -98,6 +97,7 @@ function packNodePackages() {
   // always regenerated, so the binding package.json cannot keep a version the tarball outgrew
   const npmDir = join(rolldownPackage, 'npm/wasm32-wasi');
   run('pnpm', ['exec', 'napi', 'create-npm-dirs'], rolldownPackage);
+  run('node', [join(repoRoot, 'scripts/misc/pin-wasi-binding-deps.mjs')], repoRoot);
   for (const file of WASI_ARTIFACTS) {
     copyFileSync(join(rolldownPackage, 'src', file), join(npmDir, file));
   }
@@ -116,6 +116,10 @@ function packNodePackages() {
 // from the tarball instead of being linked to packages/browser
 function installBrowserPage() {
   run('pnpm', ['install', '--ignore-workspace', '--no-frozen-lockfile'], browserPage);
+}
+
+if (shouldBuild) {
+  run('pnpm', ['run', '--filter', 'rolldown', 'build-binding:wasi'], repoRoot);
 }
 
 if (suite === 'webcontainer' || suite === 'all') {

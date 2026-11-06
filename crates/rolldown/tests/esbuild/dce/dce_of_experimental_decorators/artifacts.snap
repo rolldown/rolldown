@@ -6,14 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## keep-these.js
 
 ```js
-//#region decorator.ts
+// decorator.ts
 const fn = () => {
 	console.log("side effect");
 };
-//#endregion
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
-//#region keep-these.ts
+// keep-these.ts
 let Class = class Class {};
 Class = __decorate([fn], Class);
 var Field = class {};
@@ -55,6 +54,5 @@ var StaticParameter = class {
 	static foo(bar) {}
 };
 __decorate([__decorateParam(0, fn)], StaticParameter, "foo", null);
-//#endregion
 
 ```

@@ -1,6 +1,6 @@
 use rolldown_common::{
-  ModuleIdx, ModuleNamespaceIncludedReason, RuntimeHelper, StmtInfos, UsedSymbolRefsBuilder,
-  WrapKind,
+  ModuleIdx, ModuleNamespaceIncludedReason, RuntimeHelper, StmtInfos, SymbolRef,
+  UsedSymbolRefsBuilder, WrapKind,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -34,13 +34,29 @@ impl GenerateStage<'_> {
     // Instead, we should include the wrapper_ref (`require_xxx`), which will be handled
     // in the `include_simulated_facade_namespace` call.
     if !matches!(wrap_kind, WrapKind::Cjs) {
+      let dynamically_read_names = self.link_output.metas[entry_module_idx]
+        .dynamically_read_export_names(
+          self.link_output.dynamic_import_exports_usage_map.get(&entry_module_idx),
+        );
+      let dynamically_read = dynamically_read_names.map(|names| {
+        let meta = &self.link_output.metas[entry_module_idx];
+        names
+          .iter()
+          .filter_map(|name| meta.resolved_exports.get(name))
+          .map(|export| self.link_output.symbol_db.canonical_ref_for(export.symbol_ref))
+          .collect::<FxHashSet<SymbolRef>>()
+      });
       // Filter in place to avoid cloning
       self.link_output.stmt_infos[entry_module_idx][StmtInfos::NAMESPACE_STMT_IDX]
         .referenced_symbols
         .retain(|item| match item {
           rolldown_common::SymbolOrMemberExprRef::Symbol(symbol_ref) => {
             // module namespace symbol requires `__exportAll` runtime helper
-            used_symbol_refs_builder.contains(symbol_ref) || symbol_ref.owner == runtime_module_idx
+            symbol_ref.owner == runtime_module_idx
+              || (used_symbol_refs_builder.contains(symbol_ref)
+                && dynamically_read.as_ref().is_none_or(|read| {
+                  read.contains(&self.link_output.symbol_db.canonical_ref_for(*symbol_ref))
+                }))
           }
           rolldown_common::SymbolOrMemberExprRef::MemberExpr(_member_expr_ref) => true,
         });
@@ -84,6 +100,7 @@ impl GenerateStage<'_> {
       normal_symbol_exports_chain_map: &self.link_output.normal_symbol_exports_chain_map,
       bailout_cjs_tree_shaking_modules: FxHashSet::default(),
       external_importer_modes: FxHashMap::default(),
+      inlined_constant_owner_side_effects: FxHashMap::default(),
       module_inclusion_changed: false,
       module_namespace_included_reason: &mut module_namespace_reason_vec,
       inline_const_smart: self.options.optimization.is_inline_const_smart_mode(),
@@ -91,6 +108,7 @@ impl GenerateStage<'_> {
       entry_module_idxs: &self.link_output.user_defined_entry_modules,
       body_demand_keys: &body_demand_keys,
       body_demand_swept: FxHashSet::default(),
+      deferred_forwarding_refs: FxHashMap::default(),
       pending: Vec::new(),
     };
 

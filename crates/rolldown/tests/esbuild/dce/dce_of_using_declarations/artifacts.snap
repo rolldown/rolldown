@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 using null_keep = null;
 await using await_null_keep = null;
 using throw_keep = {};
@@ -19,6 +19,5 @@ await using await_asyncDispose_keep = { [Symbol.asyncDispose]() {
 using undef_keep = void 0;
 await using await_undef_keep = void 0;
 console.log(null_keep, undef_keep);
-//#endregion
 
 ```

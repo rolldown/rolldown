@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## read.js
 
 ```js
-//#region read.js
+// read.js
 console.log([
 	null,
 	null,
@@ -20,14 +20,13 @@ console.log([
 	dot.chain,
 	dot.chain
 ]);
-//#endregion
 
 ```
 
 ## write.js
 
 ```js
-//#region write.js
+// write.js
 console.log([
 	a = 0,
 	b.c = 0,
@@ -41,6 +40,5 @@ console.log([
 	dot.chain = 0,
 	dot.chain = 0
 ]);
-//#endregion
 
 ```

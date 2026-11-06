@@ -1,0 +1,55 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## index.js
+
+```js
+import { Foo } from "ext";
+// b.js
+const ext = "local";
+const make = () => ext;
+// a.js
+console.log(Foo);
+// index.js
+console.log(make());
+
+```
+
+# Variant: [format: Cjs]
+
+## Assets
+
+### index.js
+
+```js
+let ext = require("ext");
+// b.js
+const ext$1 = "local";
+const make = () => ext$1;
+// a.js
+console.log(ext.Foo);
+// index.js
+console.log(make());
+
+```
+
+# Variant: [format: Iife]
+
+## Assets
+
+### index.js
+
+```js
+(function(ext) {
+	// b.js
+	const ext$1 = "local";
+	const make = () => ext$1;
+	// a.js
+	console.log(ext.Foo);
+	// index.js
+	console.log(make());
+})(Ext);
+
+```

@@ -17,23 +17,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 (function() {
 	// HIDDEN [\0rolldown/runtime.js]
-	//#region c.js
+	// c.js
 	var require_c = /* @__PURE__ */ __commonJSMin((() => {}));
-	//#endregion
-	//#region b.js
 	var init_b = __esmMin((() => {}));
-	//#endregion
-	//#region a.js
 	var init_a = __esmMin((() => {}));
-	//#endregion
-	//#region entry.js
+	// entry.js
 	var require_entry = /* @__PURE__ */ __commonJSMin((() => {
 		init_a();
 		init_b();
 		require_c();
 		require_entry();
 	}));
-	//#endregion
 	return require_entry();
 })();
 

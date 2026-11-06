@@ -50,9 +50,8 @@ console.log(
 ```
 ### rolldown
 ```js
-//#region entry.jsx
+// entry.jsx
 console.log(<div x={x} />, <div x={"y"} />, <div x={true} />, <div {...x} />, <div>{x}</div>, <>{x}</>, <div>before{}after</div>, <div>before{}after</div>, <div>before{}after</div>, <>before{}after</>, <>before{}after</>, <>before{}after</>);
-//#endregion
 
 ```
 ### diff
@@ -60,8 +59,8 @@ console.log(<div x={x} />, <div x={"y"} />, <div x={true} />, <div {...x} />, <d
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,46 +1,3 @@
--// entry.jsx
+@@ -1,46 +1,2 @@
+ // entry.jsx
 -console.log(
 -  <div x={
 -    /*before*/
@@ -108,8 +107,6 @@ console.log(<div x={x} />, <div x={"y"} />, <div x={true} />, <div {...x} />, <d
 -  }after</>
 -);
 \ No newline at end of file
-+//#region entry.jsx
 +console.log(<div x={x} />, <div x={"y"} />, <div x={true} />, <div {...x} />, <div>{x}</div>, <>{x}</>, <div>before{}after</div>, <div>before{}after</div>, <div>before{}after</div>, <>before{}after</>, <>before{}after</>, <>before{}after</>);
-+//#endregion
 
 ```

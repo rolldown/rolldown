@@ -100,7 +100,7 @@ This is the only sequential pass in the pipeline. It mirrors Rollup's `generateF
 
 A regression test for this exact case lives in Rollup as `test/chunking-form/samples/hashing/deconflict-hashes`: two byte-identical entries + `entryFileNames: 'entry-[hash].js'` → two distinct file names.
 
-In practice the collision case is rare because `experimental.attachDebugInfo` (defaulting to `Simple`) injects a `//#region <module.debug_id>` marker into rendered chunks, which differentiates content based on module path. Users who disable debug info via `experimental.attachDebugInfo: 'none'` are the ones who can trigger the collision and rely on this loop.
+In practice the collision case is rare because `experimental.attachDebugInfo` (defaulting to `Simple`) injects a `// <module.debug_id>` marker into rendered chunks, which differentiates content based on module path. Users who disable debug info via `experimental.attachDebugInfo: 'none'` are the ones who can trigger the collision and rely on this loop.
 
 ## Sourcemap File Hashes
 

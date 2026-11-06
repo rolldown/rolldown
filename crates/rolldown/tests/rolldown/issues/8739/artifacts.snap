@@ -8,13 +8,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
-//#region dep.js
+// dep.js
 function clashingIdentifier() {
 	return "middle";
 }
 
-//#endregion
-//#region main.js
+// main.js
 function test(head, tail) {
 	let clashingIdentifier$2 = head;
 	let middle = clashingIdentifier();
@@ -23,5 +22,4 @@ function test(head, tail) {
 }
 assert.strictEqual(test("head", "tail"), "headmiddletail");
 
-//#endregion
 ```

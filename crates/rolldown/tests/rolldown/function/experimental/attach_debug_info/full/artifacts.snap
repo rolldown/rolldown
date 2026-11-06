@@ -9,10 +9,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 //! User-defined Entry: [Entry-Module-Id: entry-a.js] [Name: A]
 import "./shared.js";
 import "./Splitted.js";
-//#region entry-a.js
+// entry-a.js
 console.log("entry-a");
 import("./dyn-entry.js").then(console.log);
-//#endregion
 
 ```
 
@@ -22,9 +21,8 @@ import("./dyn-entry.js").then(console.log);
 //! User-defined Entry: [Entry-Module-Id: entry-b.js] [Name: B]
 import "./shared.js";
 import "./Splitted.js";
-//#region entry-b.js
+// entry-b.js
 console.log("entry-b");
-//#endregion
 
 ```
 
@@ -32,9 +30,8 @@ console.log("entry-b");
 
 ```js
 //! ManualCodeSplitting: [Group-Name: Splitted]
-//#region share-splitted.js
+// share-splitted.js
 console.log("share-splitted");
-//#endregion
 
 ```
 
@@ -43,9 +40,8 @@ console.log("share-splitted");
 ```js
 //! Dynamic Entry: [Entry-Module-Id: dyn-entry.js] [Name: <none>]
 import "./shared.js";
-//#region dyn-entry.js
+// dyn-entry.js
 console.log("dyn-entry");
-//#endregion
 
 ```
 
@@ -53,8 +49,7 @@ console.log("dyn-entry");
 
 ```js
 //! Common Chunk: [Shared-By: entry-a.js, entry-b.js]
-//#region shared.js
+// shared.js
 console.log("shared");
-//#endregion
 
 ```

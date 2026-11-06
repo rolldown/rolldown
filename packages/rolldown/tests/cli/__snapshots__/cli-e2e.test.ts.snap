@@ -24,12 +24,14 @@ OPTIONS
   --advancedChunks.minSize <advancedChunks.minSize>Minimum size of the chunk.
   --assetFileNames <name>     Name pattern for asset files.
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
+  --charset <charset>         Character set to use in generated JavaScript.
   --checks.bundlerTimings     Whether to emit warnings when plugins and option callbacks take significant time during the build process.
   --checks.cannotCallNamespace Whether to emit warnings when a namespace is called as a function.
   --checks.circularDependency Whether to emit warnings when detecting circular dependency.
   --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.
   --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
   --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
+  --checks.deprecatedImportAssertion Whether to emit warnings when an import uses the legacy \`assert\` keyword instead of \`with\`.
   --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
   --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.
@@ -37,6 +39,7 @@ OPTIONS
   --checks.importIsUndefined  Whether to emit warnings when an imported variable is not exported.
   --checks.ineffectiveDynamicImport Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
   --checks.invalidAnnotation  Whether to emit warnings when a \`#__PURE__\` / \`@__PURE__\` annotation has no effect due to its position.
+  --checks.invalidImportAttribute Whether to emit warnings when the options of a dynamic import are not statically analyzable while \`experimental.importAttributes\` is on.
   --checks.largeBarrelModules Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000).
   --checks.missingGlobalName  Whether to emit warnings when the \`output.globals\` option is missing when needed.
   --checks.missingNameOptionForIifeExport Whether to emit warnings when the \`output.name\` option is missing when needed.
@@ -45,6 +48,7 @@ OPTIONS
   --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
   --checks.pluginTimings      Deprecated alias for bundlerTimings. Rolldown uses bundlerTimings if both options have values.
   --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
+  --checks.shimmedExport      Whether to emit warnings when a missing export is replaced with an undefined binding.
   --checks.sourcemapBroken    Whether to emit warnings when a plugin transforms code without generating a sourcemap.
   --checks.toleratedTransform Whether to emit warnings when detecting tolerated transform.
   --checks.unresolvedEntry    Whether to emit warnings when an entrypoint cannot be resolved.
@@ -57,7 +61,8 @@ OPTIONS
   --configLoader <loader>     How to load the config file (bundle, native).
   --context <context>         The entity top-level \`this\` represents.
   --cwd <cwd>                 Current working directory.
-  --devtools.sessionId <devtools.sessionId>Used to name the build.
+  --devtools.mode <devtools.mode>'full' (default): write JSON-lines devtools logs. 'report': write a small build report to node_modules/.rolldown/report/ instead.
+  --devtools.sessionId <devtools.sessionId>Name of the 'full' mode log folder, node_modules/.rolldown/<sessionId>/.
   --dynamicImportInCjs        Dynamic import in CJS output.
   --entryFileNames <name>     Name pattern for emitted entry chunks.
   --environment <environment> Pass additional settings to the config file via process.ENV.
@@ -176,12 +181,14 @@ OPTIONS
   --advancedChunks.minSize <advancedChunks.minSize>Minimum size of the chunk.
   --assetFileNames <name>     Name pattern for asset files.
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
+  --charset <charset>         Character set to use in generated JavaScript.
   --checks.bundlerTimings     Whether to emit warnings when plugins and option callbacks take significant time during the build process.
   --checks.cannotCallNamespace Whether to emit warnings when a namespace is called as a function.
   --checks.circularDependency Whether to emit warnings when detecting circular dependency.
   --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.
   --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
   --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
+  --checks.deprecatedImportAssertion Whether to emit warnings when an import uses the legacy \`assert\` keyword instead of \`with\`.
   --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
   --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.
@@ -189,6 +196,7 @@ OPTIONS
   --checks.importIsUndefined  Whether to emit warnings when an imported variable is not exported.
   --checks.ineffectiveDynamicImport Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
   --checks.invalidAnnotation  Whether to emit warnings when a \`#__PURE__\` / \`@__PURE__\` annotation has no effect due to its position.
+  --checks.invalidImportAttribute Whether to emit warnings when the options of a dynamic import are not statically analyzable while \`experimental.importAttributes\` is on.
   --checks.largeBarrelModules Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000).
   --checks.missingGlobalName  Whether to emit warnings when the \`output.globals\` option is missing when needed.
   --checks.missingNameOptionForIifeExport Whether to emit warnings when the \`output.name\` option is missing when needed.
@@ -197,6 +205,7 @@ OPTIONS
   --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
   --checks.pluginTimings      Deprecated alias for bundlerTimings. Rolldown uses bundlerTimings if both options have values.
   --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
+  --checks.shimmedExport      Whether to emit warnings when a missing export is replaced with an undefined binding.
   --checks.sourcemapBroken    Whether to emit warnings when a plugin transforms code without generating a sourcemap.
   --checks.toleratedTransform Whether to emit warnings when detecting tolerated transform.
   --checks.unresolvedEntry    Whether to emit warnings when an entrypoint cannot be resolved.
@@ -209,7 +218,8 @@ OPTIONS
   --configLoader <loader>     How to load the config file (bundle, native).
   --context <context>         The entity top-level \`this\` represents.
   --cwd <cwd>                 Current working directory.
-  --devtools.sessionId <devtools.sessionId>Used to name the build.
+  --devtools.mode <devtools.mode>'full' (default): write JSON-lines devtools logs. 'report': write a small build report to node_modules/.rolldown/report/ instead.
+  --devtools.sessionId <devtools.sessionId>Name of the 'full' mode log folder, node_modules/.rolldown/<sessionId>/.
   --dynamicImportInCjs        Dynamic import in CJS output.
   --entryFileNames <name>     Name pattern for emitted entry chunks.
   --environment <environment> Pass additional settings to the config file via process.ENV.
@@ -328,12 +338,14 @@ OPTIONS
   --advancedChunks.minSize <advancedChunks.minSize>Minimum size of the chunk.
   --assetFileNames <name>     Name pattern for asset files.
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
+  --charset <charset>         Character set to use in generated JavaScript.
   --checks.bundlerTimings     Whether to emit warnings when plugins and option callbacks take significant time during the build process.
   --checks.cannotCallNamespace Whether to emit warnings when a namespace is called as a function.
   --checks.circularDependency Whether to emit warnings when detecting circular dependency.
   --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.
   --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
   --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
+  --checks.deprecatedImportAssertion Whether to emit warnings when an import uses the legacy \`assert\` keyword instead of \`with\`.
   --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
   --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.
@@ -341,6 +353,7 @@ OPTIONS
   --checks.importIsUndefined  Whether to emit warnings when an imported variable is not exported.
   --checks.ineffectiveDynamicImport Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
   --checks.invalidAnnotation  Whether to emit warnings when a \`#__PURE__\` / \`@__PURE__\` annotation has no effect due to its position.
+  --checks.invalidImportAttribute Whether to emit warnings when the options of a dynamic import are not statically analyzable while \`experimental.importAttributes\` is on.
   --checks.largeBarrelModules Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000).
   --checks.missingGlobalName  Whether to emit warnings when the \`output.globals\` option is missing when needed.
   --checks.missingNameOptionForIifeExport Whether to emit warnings when the \`output.name\` option is missing when needed.
@@ -349,6 +362,7 @@ OPTIONS
   --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
   --checks.pluginTimings      Deprecated alias for bundlerTimings. Rolldown uses bundlerTimings if both options have values.
   --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
+  --checks.shimmedExport      Whether to emit warnings when a missing export is replaced with an undefined binding.
   --checks.sourcemapBroken    Whether to emit warnings when a plugin transforms code without generating a sourcemap.
   --checks.toleratedTransform Whether to emit warnings when detecting tolerated transform.
   --checks.unresolvedEntry    Whether to emit warnings when an entrypoint cannot be resolved.
@@ -361,7 +375,8 @@ OPTIONS
   --configLoader <loader>     How to load the config file (bundle, native).
   --context <context>         The entity top-level \`this\` represents.
   --cwd <cwd>                 Current working directory.
-  --devtools.sessionId <devtools.sessionId>Used to name the build.
+  --devtools.mode <devtools.mode>'full' (default): write JSON-lines devtools logs. 'report': write a small build report to node_modules/.rolldown/report/ instead.
+  --devtools.sessionId <devtools.sessionId>Name of the 'full' mode log folder, node_modules/.rolldown/<sessionId>/.
   --dynamicImportInCjs        Dynamic import in CJS output.
   --entryFileNames <name>     Name pattern for emitted entry chunks.
   --environment <environment> Pass additional settings to the config file via process.ENV.
@@ -480,12 +495,14 @@ OPTIONS
   --advancedChunks.minSize <advancedChunks.minSize>Minimum size of the chunk.
   --assetFileNames <name>     Name pattern for asset files.
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
+  --charset <charset>         Character set to use in generated JavaScript.
   --checks.bundlerTimings     Whether to emit warnings when plugins and option callbacks take significant time during the build process.
   --checks.cannotCallNamespace Whether to emit warnings when a namespace is called as a function.
   --checks.circularDependency Whether to emit warnings when detecting circular dependency.
   --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.
   --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
   --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
+  --checks.deprecatedImportAssertion Whether to emit warnings when an import uses the legacy \`assert\` keyword instead of \`with\`.
   --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
   --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.
@@ -493,6 +510,7 @@ OPTIONS
   --checks.importIsUndefined  Whether to emit warnings when an imported variable is not exported.
   --checks.ineffectiveDynamicImport Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
   --checks.invalidAnnotation  Whether to emit warnings when a \`#__PURE__\` / \`@__PURE__\` annotation has no effect due to its position.
+  --checks.invalidImportAttribute Whether to emit warnings when the options of a dynamic import are not statically analyzable while \`experimental.importAttributes\` is on.
   --checks.largeBarrelModules Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000).
   --checks.missingGlobalName  Whether to emit warnings when the \`output.globals\` option is missing when needed.
   --checks.missingNameOptionForIifeExport Whether to emit warnings when the \`output.name\` option is missing when needed.
@@ -501,6 +519,7 @@ OPTIONS
   --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
   --checks.pluginTimings      Deprecated alias for bundlerTimings. Rolldown uses bundlerTimings if both options have values.
   --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
+  --checks.shimmedExport      Whether to emit warnings when a missing export is replaced with an undefined binding.
   --checks.sourcemapBroken    Whether to emit warnings when a plugin transforms code without generating a sourcemap.
   --checks.toleratedTransform Whether to emit warnings when detecting tolerated transform.
   --checks.unresolvedEntry    Whether to emit warnings when an entrypoint cannot be resolved.
@@ -513,7 +532,8 @@ OPTIONS
   --configLoader <loader>     How to load the config file (bundle, native).
   --context <context>         The entity top-level \`this\` represents.
   --cwd <cwd>                 Current working directory.
-  --devtools.sessionId <devtools.sessionId>Used to name the build.
+  --devtools.mode <devtools.mode>'full' (default): write JSON-lines devtools logs. 'report': write a small build report to node_modules/.rolldown/report/ instead.
+  --devtools.sessionId <devtools.sessionId>Name of the 'full' mode log folder, node_modules/.rolldown/<sessionId>/.
   --dynamicImportInCjs        Dynamic import in CJS output.
   --entryFileNames <name>     Name pattern for emitted entry chunks.
   --environment <environment> Pass additional settings to the config file via process.ENV.
@@ -620,55 +640,38 @@ exports[`cli options for bundling > cli default options 1`] = `
   ]
 }
 output cli default options {}
-<DIR>/index.js  chunk │ size: 0.13 kB
+<DIR>/index.js  chunk │ size: 0.11 kB
 
-"
-`;
-
-exports[`cli options for bundling > should handle \`--input\` and positional args as entries 1`] = `
-"
-|→ 1.js:
-
-//#region 1.ts
-console.log("1");
-//#endregion
-
-
-|→ 2.js:
-
-//#region 2.js
-console.log("2");
-//#endregion
 "
 `;
 
 exports[`cli options for bundling > should handle camelCase options (e.g. --moduleTypes) (#8410) 1`] = `
-"<DIR>/index.js  chunk │ size: 0.09 kB
+"<DIR>/index.js  chunk │ size: 0.06 kB
 
 "
 `;
 
 exports[`cli options for bundling > should handle comma-separated object options 1`] = `
-"<DIR>/index.js  chunk │ size: 0.09 kB
+"<DIR>/index.js  chunk │ size: 0.06 kB
 
 "
 `;
 
 exports[`cli options for bundling > should handle comma-separated object options mixed with single object 1`] = `
-"<DIR>/index.js  chunk │ size: 0.09 kB
+"<DIR>/index.js  chunk │ size: 0.06 kB
 
 "
 `;
 
 exports[`cli options for bundling > should handle deprecated key=value syntax with warning 1`] = `
 "Using \`key=value\` syntax for \`--module-types\` is deprecated. Use \`key:value\` instead.
-<DIR>/index.js  chunk │ size: 0.09 kB
+<DIR>/index.js  chunk │ size: 0.06 kB
 
 "
 `;
 
 exports[`cli options for bundling > should handle multiple define arguments with comma-separated syntax 1`] = `
-"<DIR>/index.js  chunk │ size: 0.10 kB
+"<DIR>/index.js  chunk │ size: 0.08 kB
 
 "
 `;
@@ -676,7 +679,6 @@ exports[`cli options for bundling > should handle multiple define arguments with
 exports[`cli options for bundling > should handle negative boolean options 1`] = `
 "(function(exports, node_fs) {
 	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-	//#endregion
 	exports.nonExternal = "nonExternal";
 	exports.read = node_fs.read;
 	exports.readFile = node_fs.readFile;
@@ -688,15 +690,14 @@ exports[`cli options for bundling > should handle negative boolean options 1`] =
 `;
 
 exports[`cli options for bundling > should handle nested options 1`] = `
-"//#region index.js
+"// index.js
 var cli_option_nested_default = defined;
-//#endregion
 export { cli_option_nested_default as default };
 "
 `;
 
 exports[`cli options for bundling > should handle single array options 1`] = `
-"<DIR>/index.js  chunk │ size: 0.14 kB
+"<DIR>/index.js  chunk │ size: 0.12 kB
 
 "
 `;
@@ -714,13 +715,13 @@ exports[`cli options for bundling > should handle single boolean short options 1
 `;
 
 exports[`cli options for bundling > should handle single object options 1`] = `
-"<DIR>/index.js  chunk │ size: 0.09 kB
+"<DIR>/index.js  chunk │ size: 0.06 kB
 
 "
 `;
 
 exports[`cli options for bundling > should handle single string options 1`] = `
-"<DIR>/index.js  chunk │ size: 0.12 kB
+"<DIR>/index.js  chunk │ size: 0.10 kB
 
 "
 `;
@@ -732,44 +733,44 @@ Invalid value for option format: Invalid type: Expected ("es" | "cjs" | "esm" | 
 `;
 
 exports[`config > should allow loading cts config 1`] = `
-"<DIR>/index.js  chunk │ size: 0.11 kB
+"<DIR>/index.js  chunk │ size: 0.09 kB
 
 "
 `;
 
 exports[`config > should allow loading mts config 1`] = `
-"<DIR>/index.js  chunk │ size: 0.11 kB
+"<DIR>/index.js  chunk │ size: 0.09 kB
 
 "
 `;
 
 exports[`config > should allow loading ts config 1`] = `
-"<DIR>/index.js  chunk │ size: 0.11 kB
+"<DIR>/index.js  chunk │ size: 0.09 kB
 
 "
 `;
 
 exports[`config > should allow loading ts config from non-working dir 1`] = `
-"<DIR>/index.js  chunk │ size: 0.11 kB
+"<DIR>/index.js  chunk │ size: 0.09 kB
 
 "
 `;
 
 exports[`config > should allow loading ts config with oxnode 1`] = `
-"<DIR>/index.js  chunk │ size: 0.11 kB
+"<DIR>/index.js  chunk │ size: 0.09 kB
 
 "
 `;
 
 exports[`config > should allow loading ts config with tsx 1`] = `
-"<DIR>/index.js  chunk │ size: 0.11 kB
+"<DIR>/index.js  chunk │ size: 0.09 kB
 
 "
 `;
 
 exports[`config > should allow multiply options 1`] = `
-"<DIR>/esm.js  chunk │ size: 0.14 kB
-<DIR>/cjs.js  chunk │ size: 0.14 kB
+"<DIR>/esm.js  chunk │ size: 0.12 kB
+<DIR>/cjs.js  chunk │ size: 0.12 kB
 
 "
 `;
@@ -778,52 +779,52 @@ exports[`config > should allow multiply output + call options hook once  + call 
 "called options hook
 called output options hook
 called output options hook
-<DIR>/esm.js  chunk │ size: 0.18 kB
-<DIR>/cjs.js  chunk │ size: 0.17 kB
+<DIR>/esm.js  chunk │ size: 0.16 kB
+<DIR>/cjs.js  chunk │ size: 0.15 kB
 
 "
 `;
 
 exports[`config > should allow multiply output 1`] = `
-"<DIR>/esm.js  chunk │ size: 0.14 kB
-<DIR>/cjs.js  chunk │ size: 0.14 kB
+"<DIR>/esm.js  chunk │ size: 0.12 kB
+<DIR>/cjs.js  chunk │ size: 0.12 kB
 
 "
 `;
 
 exports[`config > should bundle in ext-js-syntax-cjs 1`] = `
-"<DIR>/index.js  chunk │ size: 0.13 kB
+"<DIR>/index.js  chunk │ size: 0.11 kB
 
 "
 `;
 
 exports[`config > should load config with --configLoader native (mjs) 1`] = `
-"<DIR>/index.js  chunk │ size: 0.11 kB
+"<DIR>/index.js  chunk │ size: 0.09 kB
 
 "
 `;
 
 exports[`config > should load ts config with --configLoader native 1`] = `
-"<DIR>/index.js  chunk │ size: 0.11 kB
+"<DIR>/index.js  chunk │ size: 0.09 kB
 
 "
 `;
 
 exports[`config > should resolve rolldown.config.cjs 1`] = `
-"<DIR>/index.js  chunk │ size: 0.13 kB
+"<DIR>/index.js  chunk │ size: 0.11 kB
 
 "
 `;
 
 exports[`config > should support custom cli arguments 1`] = `
 "Option \`customArg\` is unrecognized. We will ignore this option.
-<DIR>/index.js  chunk │ size: 0.14 kB
+<DIR>/index.js  chunk │ size: 0.12 kB
 
 "
 `;
 
 exports[`config > should support environment option 1`] = `
-"<DIR>/index.js  chunk │ size: 0.14 kB
+"<DIR>/index.js  chunk │ size: 0.12 kB
 
 "
 `;
@@ -832,8 +833,8 @@ exports[`watch cli > should allow multiply output + call options hook once + cal
 "called options hook
 called output options hook
 called output options hook
-<DIR>/esm.js  chunk │ size: 0.18 kB
-<DIR>/cjs.js  chunk │ size: 0.17 kB
+<DIR>/esm.js  chunk │ size: 0.16 kB
+<DIR>/cjs.js  chunk │ size: 0.15 kB
 
 "
 `;

@@ -7,21 +7,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region images/image.png
+// images/image.png
 var require_image = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "../png/image-RzbKAZGz.png";
 }));
-//#endregion
-//#region uploads/file.txt
+// uploads/file.txt
 var require_file = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "../txt/file-DlqcDX5l.txt";
 }));
-//#endregion
-//#region entries/entry.js
+// entries/entry.js
 var import_image = /* @__PURE__ */ __toESM(require_image());
 var import_file = /* @__PURE__ */ __toESM(require_file());
 console.log(import_image.default, import_file.default);
-//#endregion
 
 ```
 

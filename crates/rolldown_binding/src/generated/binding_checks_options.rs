@@ -31,6 +31,9 @@ pub struct BindingChecksOptions {
   pub large_barrel_modules: Option<bool>,
   pub sourcemap_broken: Option<bool>,
   pub namespace_conflict: Option<bool>,
+  pub shimmed_export: Option<bool>,
+  pub deprecated_import_assertion: Option<bool>,
+  pub invalid_import_attribute: Option<bool>,
 }
 impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
   fn from(value: BindingChecksOptions) -> Self {
@@ -61,6 +64,9 @@ impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
       large_barrel_modules: value.large_barrel_modules,
       sourcemap_broken: value.sourcemap_broken,
       namespace_conflict: value.namespace_conflict,
+      shimmed_export: value.shimmed_export,
+      deprecated_import_assertion: value.deprecated_import_assertion,
+      invalid_import_attribute: value.invalid_import_attribute,
     }
   }
 }

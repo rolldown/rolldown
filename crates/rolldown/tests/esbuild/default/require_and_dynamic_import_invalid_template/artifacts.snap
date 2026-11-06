@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region entry.js
+// entry.js
 __require(tag`./b`);
 __require(`./${b}`);
 try {
@@ -26,6 +26,5 @@ try {
 		await import(`./${b}`);
 	} catch {}
 })();
-//#endregion
 
 ```

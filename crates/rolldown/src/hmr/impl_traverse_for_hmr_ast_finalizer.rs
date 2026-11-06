@@ -1,9 +1,10 @@
 use oxc::{
   allocator::TakeIn,
-  ast::ast::{self, Expression},
+  ast::ast::{self, Expression, NumberBase},
   span::SPAN,
 };
 use oxc_traverse::Traverse;
+use rolldown_common::EcmaModuleAstUsage;
 use rolldown_ecmascript::{
   CJS_EXPORTS_REF_STR, CJS_MODULE_REF_STR, CJS_ROLLDOWN_EXPORTS_REF,
   CJS_ROLLDOWN_EXPORTS_REF_IDENT, CJS_ROLLDOWN_MODULE_REF, CJS_ROLLDOWN_MODULE_REF_IDENT,
@@ -227,13 +228,14 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       None,
       self,
     );
+    let is_async = self.module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait);
     // function () { [user code] }
     let mut user_code_wrapper = ast::Function::boxed(
       SPAN,
       ast::FunctionType::FunctionExpression,
       None,
       false,
-      false,
+      is_async,
       false,
       None,
       None,
@@ -245,10 +247,10 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     // mark the callback as PIFE because the callback is executed when this chunk is loaded
     user_code_wrapper.pife = self.use_pife_for_module_wrappers;
 
-    // __rolldown_runtime__.registerFactory(stable_id, function (__rolldown_module_id__) { [user code] })
+    // __rolldown_runtime__.registerFactory(stable_id, function (__rolldown_module_id__) { [user code] }[, stamp])
     // Every factory is id-addressed and registry-gated at runtime; re-execution policy
     // is runtime data (evictions), never a per-payload flag.
-    let mut register_factory_args = oxc::allocator::Vec::with_capacity_in(2, self);
+    let mut register_factory_args = oxc::allocator::Vec::with_capacity_in(3, self);
     register_factory_args.push(ast::Argument::new_string_literal(
       SPAN,
       oxc::ast::ast::Str::from_str_in(&self.module.stable_id, self),
@@ -257,6 +259,15 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     ));
     register_factory_args
       .push(ast::Argument::from(ast::Expression::FunctionExpression(user_code_wrapper)));
+    if self.stamp != 0 {
+      register_factory_args.push(ast::Argument::new_numeric_literal(
+        SPAN,
+        f64::from(self.stamp),
+        None,
+        ast::NumberBase::Decimal,
+        self,
+      ));
+    }
 
     let register_factory_call = ast::Expression::new_call_expression(
       SPAN,
@@ -276,6 +287,22 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     _ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
   ) {
     self.rewrite_hot_accept_call_deps(node);
+  }
+
+  fn exit_call_expression(
+    &mut self,
+    node: &mut ast::CallExpression<'ast>,
+    ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
+  ) {
+    self.guard_import_binding_callee(&mut node.callee, ctx);
+  }
+
+  fn exit_tagged_template_expression(
+    &mut self,
+    node: &mut ast::TaggedTemplateExpression<'ast>,
+    ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
+  ) {
+    self.guard_import_binding_callee(&mut node.tag, ctx);
   }
 
   fn exit_expression(
@@ -329,5 +356,34 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     } else if ident.name == CJS_MODULE_REF_STR {
       ident.name = CJS_ROLLDOWN_MODULE_REF_IDENT;
     }
+  }
+
+  /// An import binding renamed to `import_foo.bar` or `import_foo["a-b"]` would be called as a
+  /// method, with the exports object as `this`. Wrap it as `(0, import_foo.bar)` so `this` stays
+  /// `undefined`. A namespace import is renamed to `import_foo` alone and is left as it is.
+  fn guard_import_binding_callee(
+    &self,
+    callee: &mut Expression<'ast>,
+    ctx: &oxc_traverse::TraverseCtx<'ast, ()>,
+  ) {
+    let callee = callee.without_parentheses_mut();
+    let Expression::Identifier(ident) = callee else {
+      return;
+    };
+    let Some(reference_id) = ident.reference_id.get() else {
+      return;
+    };
+    let Some(symbol_id) = ctx.scoping().get_reference(reference_id).symbol_id() else {
+      return;
+    };
+    if !self.import_bindings.get(&symbol_id).is_some_and(|name| name.contains(['.', '['])) {
+      return;
+    }
+    let member = callee.take_in(self);
+    *callee = Expression::new_seq_in_parens(
+      Expression::new_numeric_literal(SPAN, 0.0, Some("0".into()), NumberBase::Decimal, self),
+      member,
+      self,
+    );
   }
 }

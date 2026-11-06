@@ -8,23 +8,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
-//#region lib.js
+// lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ constant: () => 1 });
 var init_lib = __esmMin((() => {}));
-//#endregion
-//#region reexport.js
+// reexport.js
 init_lib();
-//#endregion
-//#region log.js
+// log.js
 assert.strictEqual(1, 1);
-//#endregion
-//#region commonjs.cjs
-//#endregion
-//#region main.js
 (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = (init_lib(), __toCommonJS(lib_exports));
 })))();
-//#endregion
 
 ```
 
@@ -37,38 +30,32 @@ assert.strictEqual(1, 1);
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
-//#region lib.js
+// lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ constant: () => 1 });
 var init_lib = __esmMin((() => {}));
-//#endregion
-//#region reexport.js
+// reexport.js
 function init_reexport() {
 	return (init_reexport = __esmMin((() => {
 		init_lib();
 	})))();
 }
-//#endregion
-//#region log.js
+// log.js
 function init_log() {
 	return (init_log = __esmMin((() => {
 		init_reexport();
 		assert.strictEqual(1, 1);
 	})))();
 }
-//#endregion
-//#region commonjs.cjs
+// commonjs.cjs
 var require_commonjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = (init_lib(), __toCommonJS(lib_exports));
 }));
-//#endregion
-//#region main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_log();
 		require_commonjs();
 	})))();
 }
-//#endregion
 init_main();
 
 ```

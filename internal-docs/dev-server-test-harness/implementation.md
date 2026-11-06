@@ -117,7 +117,7 @@ serving. What the harness does own lives in `src/vite-server.ts`:
   `experimental.bundledDev: true`, the playground copy as `root` (its
   `index.html` module script is the entry), fixture plugins passed through
   (Vite 8 runs rolldown natively), `assetsInlineLimit: 0` for asset-request
-  assertions, `treeshake` forwarded. Full bundle mode forces
+  assertions, `treeshake` and `output` forwarded. Full bundle mode forces
   `devMode.lazy: true`, so lazy compilation is always on in browser runs.
 - **`vite` is not a package dependency.** It is dynamic-imported by file URL
   from the checkout's built dist (`loadVite()`), with local structural types
@@ -156,7 +156,11 @@ dist never drift apart. The steps:
 
 1. ensure `vite/` is at the latest `rolldown-canary` rebased onto `main`
    (clone if missing, update otherwise); a checkout taken over by the
-   developer (dirty, or off `rolldown-canary`) is built exactly as-is,
+   developer (dirty, or off `rolldown-canary`) is built exactly as-is.
+   A `vX.Y` maintenance branch sets `viteBranch` and `viteBase` in
+   `checkout.ts` to `rolldown-canary-A.B` and `vA.B` for its Vite minor
+   `A.B`, and uses `viteBranch` as-is until Vite has a `vA.B` branch
+   (see `MAINTENANCE.md`),
 2. `vp install --frozen-lockfile` (vp delegates to the checkout's pinned
    pnpm; this also resets any previous step-3 symlink swap),
 3. link `vite/packages/vite/node_modules/rolldown` to the workspace's

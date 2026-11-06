@@ -6,10 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region log.js
+// log.js
 const log = [];
-//#endregion
-//#region main.js
+// main.js
 {
 	await using _ = { async [Symbol.asyncDispose]() {
 		await Promise.resolve();
@@ -17,7 +16,6 @@ const log = [];
 	} };
 	log.push("body");
 }
-//#endregion
 export { log };
 
 ```
@@ -30,15 +28,14 @@ export { log };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region log.js
+// log.js
 var log;
 function init_log() {
 	return (init_log = __esmMin((() => {
 		log = [];
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((async () => {
 		init_log();
@@ -51,7 +48,6 @@ function init_main() {
 		}
 	})))();
 }
-//#endregion
 await init_main();
 export { log };
 
@@ -64,10 +60,9 @@ export { log };
 ### main.js
 
 ```js
-//#region log.js
+// log.js
 const log = [];
-//#endregion
-//#region main.js
+// main.js
 {
 	await using _ = { async [Symbol.asyncDispose]() {
 		await Promise.resolve();
@@ -75,7 +70,6 @@ const log = [];
 	} };
 	log.push("body");
 }
-//#endregion
 export { log };
 
 ```

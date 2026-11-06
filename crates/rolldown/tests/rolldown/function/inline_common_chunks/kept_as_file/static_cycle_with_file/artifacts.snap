@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as r, t as init_r } from "./r.js";
 import { n as init_g, r as readR } from "./grp.js";
-//#region a.js
+// a.js
 function init_a() {
 	return (init_a = __esmMin((() => {
 		init_g();
@@ -17,7 +17,6 @@ function init_a() {
 		globalThis.events.push("A " + readR() + r);
 	})))();
 }
-//#endregion
 init_a();
 
 ```
@@ -27,14 +26,13 @@ init_a();
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as r, t as init_r } from "./r.js";
-//#region b.js
+// b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
 		init_r();
 		globalThis.events.push("B " + r);
 	})))();
 }
-//#endregion
 init_b();
 
 ```
@@ -44,7 +42,7 @@ init_b();
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as r, t as init_r } from "./r.js";
-//#region g.js
+// g.js
 function readR() {
 	return r;
 }
@@ -55,7 +53,6 @@ function init_g() {
 		g = String(globalThis.__g ?? "g");
 	})))();
 }
-//#endregion
 export { init_g as n, readR as r, g as t };
 
 ```
@@ -65,7 +62,7 @@ export { init_g as n, readR as r, g as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_g, t as g } from "./grp.js";
-//#region r.js
+// r.js
 var r;
 function init_r() {
 	return (init_r = __esmMin((() => {
@@ -73,7 +70,6 @@ function init_r() {
 		r = "r" + g;
 	})))();
 }
-//#endregion
 export { r as n, init_r as t };
 
 ```

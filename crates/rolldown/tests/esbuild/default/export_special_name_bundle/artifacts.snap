@@ -7,12 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region lib.mjs
+// lib.mjs
 var lib_exports = /* @__PURE__ */ __exportAll({ ["__proto__"]: () => 123 });
-//#endregion
-//#region entry.js
+// entry.js
 const lib = (__esmMin((() => {}))(), __toCommonJS(lib_exports));
 console.log(lib.__proto__);
-//#endregion
 
 ```

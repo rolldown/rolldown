@@ -15,7 +15,7 @@ use rolldown_common::{
 };
 use rolldown_error::BuildResult;
 use rolldown_plugin::SharedPluginDriver;
-use rolldown_utils::{BitSet, IndexBitSet, xxhash::xxhash_with_base};
+use rolldown_utils::{BitSet, IndexBitSet, concat_string, xxhash::xxhash_with_base};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::utils::module_id_matcher::match_module_ids;
@@ -855,7 +855,11 @@ fn derive_entries_aware_chunk_name(
         let entry_point = flattened_entries[idx];
         Some(entry_point.name.as_ref().map(ArcStr::to_string).unwrap_or_else(|| {
           let module = &link_output.module_table[entry_point.idx];
-          Path::new(module.stable_id().as_str())
+          let stable_id = module.stable_id().as_str();
+          // Import attributes are not part of the file name.
+          let stable_path =
+            stable_id.strip_suffix(module.id().attributes_suffix()).unwrap_or(stable_id);
+          Path::new(stable_path)
             .file_stem()
             .and_then(|s| s.to_str())
             .map(ToString::to_string)
@@ -870,7 +874,7 @@ fn derive_entries_aware_chunk_name(
   let full_name = if entry_names.is_empty() {
     group_name.to_string()
   } else {
-    format!("{}~{}", group_name, entry_names.join("~"))
+    concat_string!(group_name, "~", entry_names.join("~"))
   };
 
   if full_name.len() > MAX_CHUNK_NAME_LEN {
@@ -880,7 +884,7 @@ fn derive_entries_aware_chunk_name(
       truncate_at -= 1;
     }
     let truncated = &full_name[..truncate_at];
-    ArcStr::from(format!("{truncated}~{}", &hash[..HASH_DISPLAY_LEN]))
+    ArcStr::from(concat_string!(truncated, "~", &hash[..HASH_DISPLAY_LEN]))
   } else {
     ArcStr::from(full_name)
   }

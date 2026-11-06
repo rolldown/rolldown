@@ -109,6 +109,7 @@ jobs:
             return {
               num: context.issue.number,
               commit: pr.head.sha,
+              base: pr.base.ref,
             }
 
       - name: Check Package Existence
@@ -265,6 +266,12 @@ jobs:
             const prData = JSON.parse(process.env.PR_DATA)
 
             const suite = comment.split('\n')[0].replace(/^\/ecosystem-ci run/, '').trim()
+            // The Vite branch for PRs against a vX.Y maintenance branch. See MAINTENANCE.md.
+            const maintenanceViteBranches = new Map([
+              ['v1.0', 'rolldown-canary-8.0'],
+              ['v1.1', 'rolldown-canary-8.1'],
+              ['v1.2', 'rolldown-canary-8.3'],
+            ])
 
             await github.rest.actions.createWorkflowDispatch({
               owner: 'vitejs',
@@ -274,6 +281,7 @@ jobs:
               inputs: {
                 prNumber: '' + prData.num,
                 rolldownRef: prData.commit,
+                viteBranch: maintenanceViteBranches.get(prData.base) ?? 'main',
                 suite: suite === '' ? '-' : suite
               }
             })

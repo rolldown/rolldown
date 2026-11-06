@@ -9,16 +9,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_reader } from "./reader.js";
 export * from "external";
-//#region setup.js
+// setup.js
 globalThis.setupValue = "ready";
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_reader();
 	})))();
 }
-//#endregion
 init_main();
 
 ```
@@ -27,13 +25,12 @@ init_main();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region reader.js
+// reader.js
 function init_reader() {
 	return (init_reader = __esmMin((() => {
 		console.log(globalThis.setupValue);
 	})))();
 }
-//#endregion
 export { init_reader as t };
 
 ```
@@ -56,21 +53,19 @@ export { __esmMin as t };
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_reader } from "./reader.js";
 export * from "external";
-//#region setup.js
+// setup.js
 function init_setup() {
 	return (init_setup = __esmMin((() => {
 		globalThis.setupValue = "ready";
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_setup();
 		init_reader();
 	})))();
 }
-//#endregion
 init_main();
 
 ```
@@ -79,13 +74,12 @@ init_main();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region reader.js
+// reader.js
 function init_reader() {
 	return (init_reader = __esmMin((() => {
 		console.log(globalThis.setupValue);
 	})))();
 }
-//#endregion
 export { init_reader as t };
 
 ```

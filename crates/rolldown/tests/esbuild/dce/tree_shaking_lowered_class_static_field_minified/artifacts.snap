@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 var KeepMe1 = class {
 	static x = "x";
 	static y = sideEffects();
@@ -18,6 +18,5 @@ var KeepMe2 = class {
 	static z = "z";
 };
 new KeepMe2();
-//#endregion
 
 ```

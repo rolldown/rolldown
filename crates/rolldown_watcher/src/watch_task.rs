@@ -7,15 +7,17 @@ use rolldown_error::{
   BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Diagnostic, DiagnosticOptions,
   filter_out_disabled_diagnostics,
 };
-use rolldown_fs_watcher::FsWatcher;
+use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig};
 use rolldown_utils::pattern_filter;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
+use sugar_path::SugarPath;
 use tokio::sync::Mutex as TokioMutex;
 
 use crate::event::{BundleEndEventData, BundleStartEventData, WatchErrorEventData};
+use crate::task_fs_event_handler::TaskFsEventHandler;
 
 oxc_index::define_index_type! {
   pub struct WatchTaskIdx = u32;
@@ -33,7 +35,8 @@ pub struct WatchTask {
 impl WatchTask {
   pub(crate) fn new(
     config: BundlerConfig,
-    fs_watcher: FsWatcher,
+    fs_handler: TaskFsEventHandler,
+    fs_watcher_config: &FsWatcherConfig,
     closed: &Arc<AtomicBool>,
   ) -> BuildResult<Self> {
     // Validation: dev_mode not allowed with watch
@@ -55,6 +58,23 @@ impl WatchTask {
       .build()?;
 
     let options = Arc::clone(bundler.options());
+    let watcher = options.watch.watcher.clone().unwrap_or_default();
+    let fs_watcher = FsWatcher::new(
+      fs_handler,
+      &FsWatcherConfig {
+        use_polling: watcher.use_polling.unwrap_or(fs_watcher_config.use_polling),
+        poll_interval: watcher.poll_interval.unwrap_or(fs_watcher_config.poll_interval),
+        compare_contents_for_polling: watcher
+          .compare_contents_for_polling
+          .unwrap_or(fs_watcher_config.compare_contents_for_polling),
+        use_debounce: watcher.use_debounce.unwrap_or(fs_watcher_config.use_debounce),
+        debounce_delay: watcher.debounce_delay.unwrap_or(fs_watcher_config.debounce_delay),
+        debounce_tick_rate: watcher.debounce_tick_rate.or(fs_watcher_config.debounce_tick_rate),
+        ignored: options.watch.exclude.clone(),
+        cwd: options.cwd.clone(),
+        ..fs_watcher_config.clone()
+      },
+    )?;
     Ok(Self {
       bundler: Arc::new(TokioMutex::new(bundler)),
       options,
@@ -158,7 +178,13 @@ impl WatchTask {
         }
         Ok(BuildOutcome::Success(BundleEndEventData {
           task_index,
-          output: self.options.cwd.join(&self.options.out_dir).to_string_lossy().into_owned(),
+          output: self
+            .options
+            .cwd
+            .join(self.options.file.as_deref().unwrap_or(&self.options.out_dir))
+            .absolutize()
+            .to_string_lossy()
+            .into_owned(),
           duration,
           bundle_handle,
         }))
@@ -198,7 +224,7 @@ impl WatchTask {
     let diagnostic_options = DiagnosticOptions { cwd: options.cwd.clone() };
     let diagnostics: Vec<Diagnostic> =
       warnings.iter().map(|warning| warning.to_diagnostic_with(&diagnostic_options)).collect();
-    let rendered = Diagnostic::render_batch(&diagnostics, true);
+    let rendered = Diagnostic::render_batch(&diagnostics, rolldown_error::stderr_supports_color());
 
     // Dispatch sequentially, awaiting each callback before the next, so a handler
     // that throws to abort the build stops at the first failure without invoking

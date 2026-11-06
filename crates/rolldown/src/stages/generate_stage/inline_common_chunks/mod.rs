@@ -1,7 +1,7 @@
 //! `output.codeSplitting.experimentalInlineCommonChunks`.
 //!
 //! A selected common chunk ("record") is not written as a file. Every file that carries it (a
-//! reader, unless a static dependency outside its import cycle already registers it) prints its
+//! reader, unless every known entry loading path already registers it) prints its
 //! own copy of the record's modules inside a registry factory (`__share(id, (exports) => {
 //! ... })`), finalized and named as part of that file, and every reader obtains the shared
 //! exports object through `__share_require(id)` ("bridge"). The decisions live here, separate from `ChunkGraph`:
@@ -21,7 +21,7 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_str::CompactStr;
 use rolldown_common::{ChunkIdx, ModuleIdx, SymbolRef, SymbolRefDb};
-use rolldown_utils::{base64::to_url_safe_base64, indexmap::FxIndexMap};
+use rolldown_utils::{base64::to_url_safe_base64, concat_string, indexmap::FxIndexMap};
 use rustc_hash::{FxHashMap, FxHashSet};
 use xxhash_rust::xxh3::Xxh3;
 
@@ -42,7 +42,7 @@ pub struct InlineCommonChunksState {
   records: FxIndexMap<ChunkIdx, InlineRecord>,
   /// Who reads and who carries each record, computed at selection.
   placement: InlinePlacement,
-  /// File or record -> the names its deconflict pass chose for the feature's bindings.
+  /// File -> the names its deconflict pass chose for the feature's bindings.
   names: FxHashMap<ChunkIdx, FileInlineNames>,
   runtime_chunk: Option<ChunkIdx>,
 }
@@ -53,8 +53,8 @@ pub struct InlineRecord {
   pub id: ArcStr,
 }
 
-/// The bindings `experimentalInlineCommonChunks` adds to one output file, or to a record's own
-/// rendering, named by that chunk's deconflict pass together with everything else it declares.
+/// The bindings `experimentalInlineCommonChunks` adds to one output file,
+/// named by that file's deconflict pass together with everything else it declares.
 #[derive(Debug)]
 pub struct FileInlineNames {
   /// The parameter every factory printed in the file receives the registry's exports object in.
@@ -99,7 +99,7 @@ pub(super) fn record_id<'a>(
   }
   loop {
     let hash = to_url_safe_base64(hasher.digest128().to_le_bytes());
-    let id = ArcStr::from(format!("{chunk_name}-{}", &hash[..RECORD_ID_HASH_LEN]));
+    let id = ArcStr::from(concat_string!(chunk_name, "-", &hash[..RECORD_ID_HASH_LEN]));
     if taken.insert(id.clone()) {
       return id;
     }

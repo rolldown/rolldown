@@ -1,0 +1,19 @@
+{
+  "config": {
+    "input": [{ "name": "entry", "import": "./entry.js" }],
+    "file": "./dist/bundle.mjs"
+  },
+  "configVariants": [
+    {
+      "_configName": "strict",
+      "strictExecutionOrder": true,
+      "_snapshot": false
+    },
+    {
+      "_configName": "on-demand",
+      "strictExecutionOrder": true,
+      "onDemandWrapping": true,
+      "_snapshot": false
+    }
+  ]
+}

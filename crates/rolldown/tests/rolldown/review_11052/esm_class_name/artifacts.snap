@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## index.js
+
+```js
+import { EventEmitter as EventEmitter$1 } from "node:events";
+// a.js
+const emitter = new EventEmitter$1();
+// b.js
+var EventEmitter = class {};
+const make = () => new EventEmitter();
+export { emitter, make };
+
+```

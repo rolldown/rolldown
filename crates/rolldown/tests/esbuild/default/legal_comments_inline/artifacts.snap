@@ -6,17 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region a.js
+// a.js
 console.log("in a");
 //! Copyright notice 1
-//#endregion
-//#region b.js
+// b.js
 console.log("in b");
 //! Copyright notice 1
-//#endregion
-//#region c.js
+// c.js
 console.log("in c");
 //! Copyright notice 2
-//#endregion
 
 ```

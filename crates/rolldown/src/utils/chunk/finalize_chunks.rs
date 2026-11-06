@@ -13,6 +13,7 @@ use rolldown_error::BuildResult;
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
   base64::to_url_safe_base64,
+  concat_string,
   hash_placeholder::{
     HASH_PLACEHOLDER_LEFT_FINDER, extract_hash_placeholders, replace_placeholder_with_hash,
     visit_with_placeholders_defaulted,
@@ -281,7 +282,7 @@ async fn finalize_sourcemaps(
           let map_filename = ecma_meta
             .sourcemap_filename
             .clone()
-            .unwrap_or_else(|| format!("{}.map", asset.filename));
+            .unwrap_or_else(|| concat_string!(asset.filename, ".map"));
           if let Some(sourcemap_asset) = emit_sourcemap(
             options,
             &mut code,

@@ -4,9 +4,8 @@ use futures::future::try_join_all;
 use oxc_index::{IndexVec, index_vec};
 use oxc_str::CompactStr;
 use rolldown_common::{
-  Asset, ChunkIdx, ConcatenateWrappedModuleKind, EmittedChunkInfo, InstantiationKind,
-  ModuleRenderArgs, ModuleRenderOutput, Output, OutputAsset, OutputChunk, SharedFileEmitter,
-  SymbolRef, UsedSymbolRefs,
+  Asset, ChunkIdx, EmittedChunkInfo, InstantiationKind, ModuleRenderArgs, ModuleRenderOutput,
+  Output, OutputAsset, OutputChunk, SharedFileEmitter, SymbolRef, UsedSymbolRefs,
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BatchedBuildDiagnostic, BuildResult, Diagnostics};
@@ -71,9 +70,18 @@ impl GenerateStage<'_> {
       .await?;
 
     self.trace_action_package_graph_ready(chunk_graph, &instantiated_chunks);
+    self.trace_action_module_rendered(&instantiated_chunks);
 
-    diagnostics
-      .extend(render_chunks(self.plugin_driver, &mut instantiated_chunks, self.options).await?);
+    diagnostics.extend(
+      render_chunks(
+        self.plugin_driver,
+        &mut instantiated_chunks,
+        self.options,
+        &chunk_graph.chunk_table,
+        &self.link_output.module_table,
+      )
+      .await?,
+    );
 
     augment_chunk_hash(self.plugin_driver, &mut instantiated_chunks).await?;
 
@@ -286,15 +294,7 @@ impl GenerateStage<'_> {
             Some(module) => {
               let ast = ast_table[module.idx].as_ref().expect("should have ast");
               #[expect(clippy::bool_to_int_with_if)]
-              let initial_indent = if needs_extra_indent
-                || !matches!(
-                  self.link_output.metas[module_idx].concatenated_wrapped_module_kind,
-                  ConcatenateWrappedModuleKind::None
-                ) {
-                1
-              } else {
-                0
-              };
+              let initial_indent = if needs_extra_indent { 1 } else { 0 };
               Some(module.render(self.options, &ModuleRenderArgs::Ecma { ast }, initial_indent))
             }
             _ => None,

@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry-outer.js
 
 ```js
-//#region inner.js
 function identity1(x) {
 	return x;
 }
@@ -16,17 +15,15 @@ function identity2(x) {
 function identity3(x) {
 	return x;
 }
-//#endregion
-//#region entry-outer.js
+// entry-outer.js
 check(void 0, (args, void 0), ([...args], void 0), identity1(), identity2(args), identity3(...args));
-//#endregion
 
 ```
 
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 function identity1(x) {
 	return x;
 }
@@ -37,6 +34,5 @@ function identity3(x) {
 	return x;
 }
 check(void 0, (args, void 0), ([...args], void 0), identity1(), identity2(args), identity3(...args));
-//#endregion
 
 ```

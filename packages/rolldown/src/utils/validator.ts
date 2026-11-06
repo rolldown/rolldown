@@ -447,6 +447,24 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warnings when multiple star re-exports provide the same name from different modules',
     ),
   ),
+  shimmedExport: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when a missing export is replaced with an undefined binding',
+    ),
+  ),
+  deprecatedImportAssertion: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when an import uses the legacy `assert` keyword instead of `with`',
+    ),
+  ),
+  invalidImportAttribute: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when the options of a dynamic import are not statically analyzable while `experimental.importAttributes` is on',
+    ),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof ChecksOptionsSchema, ChecksOptions>>();
 
@@ -628,6 +646,7 @@ const DevModeSchema = v.union([
     implement: v.optional(v.string()),
     skipCommonRuntimeInjection: v.optional(v.boolean()),
     lazy: v.optional(v.boolean()),
+    hotUpdate: v.optional(v.boolean()),
   }),
 ]);
 isTypeTrue<IsSchemaSubType<typeof DevModeSchema, DevModeOptions>>();
@@ -700,6 +719,7 @@ const InputOptionsSchema = v.strictObject({
         ]),
       ),
       lazyBarrel: v.optional(v.boolean()),
+      importAttributes: v.optional(v.boolean()),
     }),
   ),
   transform: v.optional(TransformOptionsSchema),
@@ -708,7 +728,29 @@ const InputOptionsSchema = v.strictObject({
   devtools: v.pipe(
     v.optional(
       v.object({
-        sessionId: v.pipe(v.optional(v.string()), v.description('Used to name the build.')),
+        sessionId: v.pipe(
+          v.optional(
+            v.pipe(
+              v.string(),
+              // The id names the `node_modules/.rolldown/{sessionId}` directory.
+              v.check(
+                (id) => id !== '' && id !== '.' && id !== '..' && !/[/\\\0]/.test(id),
+                'Expected one path segment: not empty, not "." or "..", and without "/", "\\" or NUL',
+              ),
+              v.check(
+                (id) => id.toLowerCase().toUpperCase() !== 'UNKNOWN-SESSION',
+                '"unknown-session" is reserved for devtools events without a session context',
+              ),
+            ),
+          ),
+          v.description("Name of the 'full' mode log folder, node_modules/.rolldown/<sessionId>/."),
+        ),
+        mode: v.pipe(
+          v.optional(v.union([v.literal('full'), v.literal('report')])),
+          v.description(
+            "'full' (default): write JSON-lines devtools logs. 'report': write a small build report to node_modules/.rolldown/report/ instead.",
+          ),
+        ),
       }),
     ),
     v.description(
@@ -916,6 +958,10 @@ const OutputOptionsSchema = v.strictObject({
     v.description('Output directory, defaults to `dist` if `file` is not set'),
   ),
   file: v.pipe(v.optional(v.string()), v.description('Single output file')),
+  charset: v.pipe(
+    v.optional(v.union([v.literal('ascii'), v.literal('utf8')])),
+    v.description('Character set to use in generated JavaScript'),
+  ),
   exports: v.pipe(
     v.optional(
       v.union([v.literal('auto'), v.literal('named'), v.literal('default'), v.literal('none')]),

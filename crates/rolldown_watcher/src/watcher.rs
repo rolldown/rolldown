@@ -9,7 +9,7 @@ use futures::future::Shared;
 use oxc_index::IndexVec;
 use rolldown::BundlerConfig;
 use rolldown_error::BuildResult;
-use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig};
+use rolldown_fs_watcher::FsWatcherConfig;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -25,38 +25,11 @@ const DEFAULT_DEBOUNCE_MS: u64 = 0;
 pub struct WatcherConfig {
   /// Debounce duration for file changes
   pub debounce: Option<std::time::Duration>,
-  /// Whether to use polling-based file watching instead of native OS events
-  pub use_polling: bool,
-  /// Poll interval in milliseconds (only used when `use_polling` is true)
-  pub poll_interval: Option<u64>,
-  /// Whether to compare file contents for poll-based watchers (only used when `use_polling` is true)
-  pub compare_contents_for_polling: bool,
-  /// Whether to use debounced event delivery at the filesystem level
-  pub use_debounce: bool,
-  /// Debounce delay in milliseconds for fs-level debounced watchers (only used when `use_debounce` is true)
-  pub debounce_delay: Option<u64>,
-  /// Tick rate in milliseconds for the debouncer's internal polling (only used when `use_debounce` is true)
-  pub debounce_tick_rate: Option<u64>,
 }
 
 impl WatcherConfig {
   pub fn debounce_duration(&self) -> std::time::Duration {
     self.debounce.unwrap_or(std::time::Duration::from_millis(DEFAULT_DEBOUNCE_MS))
-  }
-
-  fn to_fs_watcher_config(&self) -> FsWatcherConfig {
-    let mut config = FsWatcherConfig::default();
-    if let Some(poll_interval) = self.poll_interval {
-      config.poll_interval = poll_interval;
-    }
-    config.compare_contents_for_polling = self.compare_contents_for_polling;
-    config.use_polling = self.use_polling;
-    config.use_debounce = self.use_debounce;
-    if let Some(debounce_delay) = self.debounce_delay {
-      config.debounce_delay = debounce_delay;
-    }
-    config.debounce_tick_rate = self.debounce_tick_rate;
-    config
   }
 }
 
@@ -90,7 +63,7 @@ impl Watcher {
     let (tx, rx) = mpsc::unbounded_channel();
     let closed = Arc::new(AtomicBool::new(false));
     let close_notify = Arc::new(Notify::new());
-    let tasks = Self::create_tasks(configs, watcher_config, &tx, &closed)?;
+    let tasks = Self::create_tasks(configs, &tx, &closed)?;
     let coordinator = WatchCoordinator::new(
       rx,
       handler,
@@ -146,17 +119,15 @@ impl Watcher {
 
   fn create_tasks(
     configs: Vec<BundlerConfig>,
-    watcher_config: &WatcherConfig,
     tx: &mpsc::UnboundedSender<WatcherMsg>,
     closed: &Arc<AtomicBool>,
   ) -> BuildResult<IndexVec<WatchTaskIdx, WatchTask>> {
-    let fs_watcher_config = watcher_config.to_fs_watcher_config();
+    let fs_watcher_config = FsWatcherConfig::default();
     let mut tasks = IndexVec::with_capacity(configs.len());
     for (index, config) in configs.into_iter().enumerate() {
       let task_index = WatchTaskIdx::from_usize(index);
       let fs_handler = TaskFsEventHandler { task_index, tx: tx.clone() };
-      let fs_watcher = FsWatcher::new(fs_handler, &fs_watcher_config)?;
-      let task = WatchTask::new(config, fs_watcher, closed)?;
+      let task = WatchTask::new(config, fs_handler, &fs_watcher_config, closed)?;
       tasks.push(task);
     }
     Ok(tasks)
@@ -176,21 +147,7 @@ mod tests {
 
   #[test]
   fn test_watcher_config_custom_debounce() {
-    let config = WatcherConfig { debounce: Some(Duration::from_millis(500)), ..Default::default() };
+    let config = WatcherConfig { debounce: Some(Duration::from_millis(500)) };
     assert_eq!(config.debounce_duration(), Duration::from_millis(500));
-  }
-
-  #[test]
-  fn test_fs_watcher_config_defaults() {
-    let config = WatcherConfig::default();
-    let fs_config = config.to_fs_watcher_config();
-    assert_eq!(fs_config.poll_interval, 100);
-  }
-
-  #[test]
-  fn test_fs_watcher_config_with_poll_interval() {
-    let config = WatcherConfig { poll_interval: Some(250), ..Default::default() };
-    let fs_config = config.to_fs_watcher_config();
-    assert_eq!(fs_config.poll_interval, 250);
   }
 }

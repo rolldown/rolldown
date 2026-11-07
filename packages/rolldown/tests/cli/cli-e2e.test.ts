@@ -2,7 +2,7 @@ import { stripAnsi } from 'consola/utils';
 import { $, execa } from 'execa';
 import fs from 'node:fs';
 import path from 'node:path';
-import { testsDir } from 'rolldown-tests/utils';
+import { isWasiTest, testsDir } from 'rolldown-tests/utils';
 import { describe, expect, it, test, vi } from 'vitest';
 
 function cliFixturesDir(...joined: string[]) {
@@ -469,6 +469,22 @@ describe('config', () => {
     expect(status.exitCode).toBe(0);
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });
+
+  it.skipIf(process.platform !== 'linux' || isWasiTest)(
+    'should apply environment option before loading the binding',
+    async () => {
+      const cwd = cliFixturesDir('cli-environment-option');
+
+      const status = await $({
+        cwd,
+        env: {
+          ROLLDOWN_WORKER_THREADS: undefined,
+          TOKIO_WORKER_THREADS: undefined,
+        },
+      })`rolldown -c rolldown.config.js --environment PRODUCTION,FOO:bar,HOST:http://localhost:4000,ROLLDOWN_WORKER_THREADS:2,ASSERT_ROLLDOWN_WORKER_THREADS:true`;
+      expect(status.exitCode).toBe(0);
+    },
+  );
 
   it('should allow multiply output + call options hook once  + call outputOptions hook', async () => {
     const cwd = cliFixturesDir('config-multiply-output-with-options-hooks');

@@ -1,7 +1,6 @@
 import process from 'node:process';
 import { version } from '../../package.json';
 import { parseCliArguments } from './arguments';
-import { bundleWithCliOptions, bundleWithConfig } from './commands/bundle';
 import { showHelp } from './commands/help';
 import { logger } from './logger';
 import { checkNodeVersion } from './version-check';
@@ -29,6 +28,9 @@ async function main() {
       }
     }
   }
+
+  // Binding-backed modules read runtime environment variables during module initialization.
+  const { bundleWithCliOptions, bundleWithConfig } = await import('./commands/bundle');
 
   if (cliOptions.help) {
     showHelp();

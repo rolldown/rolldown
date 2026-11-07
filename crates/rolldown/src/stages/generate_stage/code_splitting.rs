@@ -188,7 +188,8 @@ impl GenerateStage<'_> {
   /// Assign each live chunk a render `exec_order` from the execution order of its lead module, so
   /// that both `sorted_chunk_idx_vec` and the cross-chunk import sort (`compute_cross_chunk_links`)
   /// reflect real evaluation order. A `Common` chunk keys on `modules[0]` — the lowest-`exec_order`
-  /// module after `sort_chunk_modules`.
+  /// module after `sort_chunk_modules`. An `EntryPoint` chunk keys on the earlier of its entry module
+  /// and its first non-runtime module, so hosting the runtime does not move it.
   ///
   /// This keying is sensitive to chunk *membership*: the runtime module has `exec_order` 0 and
   /// `sort_chunk_modules` always places it first, so any chunk hosting the runtime keys on 0. The
@@ -218,6 +219,16 @@ impl GenerateStage<'_> {
   /// and guarantees entry chunks precede others, static chunks precede dynamic ones, and every chunk
   /// has a stable order at the per-entry-chunk level.
   pub(super) fn assign_chunk_exec_orders(&self, chunk_graph: &mut ChunkGraph) {
+    let runtime_idx = self.link_output.runtime.id();
+    let entry_chunk_exec_order = |entry_module_idx: ModuleIdx, chunk: &Chunk| {
+      let entry_exec_order = self.link_output.module_table[entry_module_idx].exec_order();
+      chunk.modules.iter().find(|&&module_idx| module_idx != runtime_idx).map_or(
+        entry_exec_order,
+        |&first_module_idx| {
+          entry_exec_order.min(self.link_output.module_table[first_module_idx].exec_order())
+        },
+      )
+    };
     chunk_graph
       .chunk_table
       .iter_mut_enumerated()
@@ -233,11 +244,11 @@ impl GenerateStage<'_> {
           (
             ChunkKind::EntryPoint { module: a_module_id, .. },
             ChunkKind::EntryPoint { module: b_module_id, .. },
-          ) => self.link_output.module_table[*a_module_id]
-            .exec_order()
-            .cmp(&self.link_output.module_table[*b_module_id].exec_order()),
+          ) => {
+            entry_chunk_exec_order(*a_module_id, a).cmp(&entry_chunk_exec_order(*b_module_id, b))
+          }
           (ChunkKind::EntryPoint { module: a_module_id, .. }, ChunkKind::Common) => {
-            let a_module_exec_order = self.link_output.module_table[*a_module_id].exec_order();
+            let a_module_exec_order = entry_chunk_exec_order(*a_module_id, a);
             let b_chunk_first_module_exec_order =
               self.link_output.module_table[b.modules[0]].exec_order();
             if a_module_exec_order == b_chunk_first_module_exec_order {
@@ -247,7 +258,7 @@ impl GenerateStage<'_> {
             }
           }
           (ChunkKind::Common, ChunkKind::EntryPoint { module: b_module_id, .. }) => {
-            let b_module_exec_order = self.link_output.module_table[*b_module_id].exec_order();
+            let b_module_exec_order = entry_chunk_exec_order(*b_module_id, b);
             let a_chunk_first_module_exec_order =
               self.link_output.module_table[a.modules[0]].exec_order();
             if a_chunk_first_module_exec_order == b_module_exec_order {

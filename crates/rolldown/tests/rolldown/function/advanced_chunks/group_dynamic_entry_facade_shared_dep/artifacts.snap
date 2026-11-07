@@ -1,0 +1,48 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## layout-group.js
+
+```js
+// header.js
+(globalThis.log ??= []).push("header");
+const header = "header";
+// layout.js
+var layout_default = () => header;
+export { layout_default as default, header as t };
+
+```
+
+## main.js
+
+```js
+import assert from "node:assert";
+// main.js
+import("./page.js").then((page) => {
+	assert.strictEqual(page.default(), "header");
+	assert.deepStrictEqual(globalThis.log, ["header", "page"]);
+	return import("./layout-group.js");
+}).then((layout) => {
+	assert.strictEqual(layout.default(), "header");
+});
+
+```
+
+## page.js
+
+```js
+import { t as header } from "./layout-group.js";
+// page.js
+(globalThis.log ??= []).push("page");
+var page_default = () => header;
+export { page_default as default };
+
+```
+
+# Output Stats
+
+- layout-group.js, is_entry false, is_dynamic_entry true, exports ["default", "t"]
+- main.js, is_entry true, is_dynamic_entry false, exports []
+- page.js, is_entry false, is_dynamic_entry true, exports ["default"]

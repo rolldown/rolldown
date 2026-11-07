@@ -1,5 +1,5 @@
 {
-  "_comment": "A two-argument `import()` of a bundled module is rewritten exactly like a one-argument one: the second argument is dropped and the specifier is redirected at the chunk that actually holds the target. The manual group merges the dynamic entry into `dyn.js`, so the call site collapses to the host chunk's namespace extraction and no `target.js` file is emitted.",
+  "_comment": "A two-argument `import()` of a bundled module is rewritten exactly like a one-argument one: the second argument is dropped and the specifier is redirected at the chunk that actually holds the target. The manual group merges the dynamic entry into `dyn.js`, so the call site collapses to the host chunk's namespace extraction and no `target.js` file is emitted. `target2.js` keeps a second entry in the group, so the group stays a shared host chunk.",
   "config": {
     "input": [
       {
@@ -17,7 +17,7 @@
       "groups": [
         {
           "name": "dyn",
-          "test": "[\\\\/](?:target|observer)\\.js$"
+          "test": "[\\\\/](?:target2?|observer)\\.js$"
         }
       ]
     }

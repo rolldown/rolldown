@@ -10,7 +10,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 // imp.js
 var imp_exports = /* @__PURE__ */ __exportAll({ imp22: () => 22 });
 const imp22 = 22;
-export { imp_exports as n, imp22 as t };
+// imp-other.js
+var imp_other_exports = /* @__PURE__ */ __exportAll({ other: () => other });
+const other = "other";
+export { imp22 as n, imp_exports as r, imp_other_exports as t };
 
 ```
 
@@ -23,8 +26,11 @@ import assert from "node:assert";
 assert.strictEqual(2, 2);
 assert.strictEqual(22, 22);
 const load = async () => {
-	import("./imp.js").then((n) => n.n).then((m) => {
+	import("./imp.js").then((n) => n.r).then((m) => {
 		assert.strictEqual(m.imp22, 22);
+	});
+	import("./imp.js").then((n) => n.t).then((m) => {
+		assert.strictEqual(m.other, "other");
 	});
 };
 load();
@@ -38,9 +44,13 @@ load();
 ### imp.js
 
 ```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
 // imp.js
-var imp_exports = /* @__PURE__ */ require("./rolldown-runtime.js").__exportAll({ imp22: () => 22 });
+var imp_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ imp22: () => 22 });
 const imp22 = 22;
+// imp-other.js
+var imp_other_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ other: () => other });
+const other = "other";
 Object.defineProperty(exports, "imp22", {
 	enumerable: true,
 	get: function() {
@@ -51,6 +61,12 @@ Object.defineProperty(exports, "imp_exports", {
 	enumerable: true,
 	get: function() {
 		return imp_exports;
+	}
+});
+Object.defineProperty(exports, "imp_other_exports", {
+	enumerable: true,
+	get: function() {
+		return imp_other_exports;
 	}
 });
 
@@ -69,6 +85,9 @@ node_assert.default.strictEqual(22, 22);
 const load = async () => {
 	Promise.resolve().then(() => require("./imp.js")).then((n) => n.imp_exports).then((m) => {
 		node_assert.default.strictEqual(m.imp22, 22);
+	});
+	Promise.resolve().then(() => require("./imp.js")).then((n) => n.imp_other_exports).then((m) => {
+		node_assert.default.strictEqual(m.other, "other");
 	});
 };
 load();

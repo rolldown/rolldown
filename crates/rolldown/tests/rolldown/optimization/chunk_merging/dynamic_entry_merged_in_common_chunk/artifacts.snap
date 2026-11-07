@@ -6,12 +6,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## imp.js
 
 ```js
-import { t as __commonJSMin } from "./main.js";
+import { n as __exportAll, t as __commonJSMin } from "./main.js";
+// imp-other.js
+var imp_other_exports = /* @__PURE__ */ __exportAll({ other: () => other });
+const other = "other";
 // imp.js
 var require_imp = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.imp = 1;
 }));
-export { require_imp as t };
+export { imp_other_exports as n, require_imp as t };
 
 ```
 
@@ -25,9 +28,12 @@ const load = async () => {
 	import("./imp.js").then((n) => /* @__PURE__ */ __toESM(n.t())).then((m) => {
 		assert.strictEqual(m.imp, 1);
 	});
+	import("./imp.js").then((n) => n.n).then((m) => {
+		assert.strictEqual(m.other, "other");
+	});
 };
 load();
-export { __commonJSMin as t };
+export { __exportAll as n, __commonJSMin as t };
 
 ```
 
@@ -38,10 +44,20 @@ export { __commonJSMin as t };
 ### imp.js
 
 ```js
+const require_main = require("./main.js");
+// imp-other.js
+var imp_other_exports = /* @__PURE__ */ require_main.__exportAll({ other: () => other });
+const other = "other";
 // imp.js
-var require_imp = /* @__PURE__ */ require("./main.js").__commonJSMin(((exports) => {
+var require_imp = /* @__PURE__ */ require_main.__commonJSMin(((exports) => {
 	exports.imp = 1;
 }));
+Object.defineProperty(exports, "imp_other_exports", {
+	enumerable: true,
+	get: function() {
+		return imp_other_exports;
+	}
+});
 Object.defineProperty(exports, "require_imp", {
 	enumerable: true,
 	get: function() {
@@ -63,8 +79,12 @@ const load = async () => {
 	Promise.resolve().then(() => require("./imp.js")).then((n) => /* @__PURE__ */ __toESM(n.require_imp())).then((m) => {
 		node_assert.default.strictEqual(m.imp, 1);
 	});
+	Promise.resolve().then(() => require("./imp.js")).then((n) => n.imp_other_exports).then((m) => {
+		node_assert.default.strictEqual(m.other, "other");
+	});
 };
 load();
 exports.__commonJSMin = __commonJSMin;
+exports.__exportAll = __exportAll;
 
 ```

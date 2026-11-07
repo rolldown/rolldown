@@ -136,7 +136,10 @@ impl SymbolRefDbForModule {
     let reused =
       if self.linking { self.reusable_link_facades.get_mut(name).and_then(Vec::pop) } else { None };
     let symbol_id = if let Some(symbol_id) = reused {
-      self.ast_scopes.set_symbol_name(symbol_id, name);
+      // `set_symbol_name` copies the name into the scoping arena, so skip it when the name matches.
+      if self.ast_scopes.symbol_name(symbol_id) != name {
+        self.ast_scopes.set_symbol_name(symbol_id, name);
+      }
       symbol_id
     } else {
       let symbol_id = self.ast_scopes.create_facade_root_symbol_ref(name);

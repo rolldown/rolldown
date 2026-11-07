@@ -383,7 +383,8 @@ fn remap_chain(
 struct TokenLookup<'a> {
   map: &'a oxc_sourcemap::SourceMap<'a>,
   remaining: &'a [Token],
-  lines: Option<Vec<&'a [Token]>>,
+  lines: Vec<&'a [Token]>,
+  indexed: bool,
   last_line: Option<u32>,
   last_column: u32,
   index: usize,
@@ -394,7 +395,8 @@ impl<'a> TokenLookup<'a> {
     Self {
       map,
       remaining: map.get_tokens_slice(),
-      lines: None,
+      lines: Vec::new(),
+      indexed: false,
       last_line: None,
       last_column: 0,
       index: 0,
@@ -402,39 +404,11 @@ impl<'a> TokenLookup<'a> {
   }
 
   fn lookup(&mut self, line: u32, column: u32) -> Option<Token> {
-    if self.lines.is_none() {
-      let position = (line, column);
-      if self.last_line.is_none_or(|last_line| position > (last_line, self.last_column)) {
-        // Read positions from borrowed tokens. Only copy the token selected by the query.
-        for _ in 0..8 {
-          match self.remaining.first() {
-            Some(next) if (next.get_dst_line(), next.get_dst_col()) == position => {
-              let token = *next;
-              self.last_line = Some(line);
-              self.last_column = column;
-              self.remaining = &self.remaining[1..];
-              return Some(token);
-            }
-            Some(next) if (next.get_dst_line(), next.get_dst_col()) < position => {
-              self.last_line = Some(next.get_dst_line());
-              self.last_column = next.get_dst_col();
-              self.remaining = &self.remaining[1..];
-            }
-            Some(next) if self.last_line != Some(line) => {
-              // Clamp before a line's first token; gaps between lines stay unmapped.
-              return (next.get_dst_line() == line).then_some(*next);
-            }
-            None if self.last_line.is_none_or(|last_line| last_line < line) => return None,
-            _ => break,
-          }
-        }
-      }
-      // Repeated, backwards, coarse, or distant queries build the original line index once.
-      self.lines = Some(self.map.generate_lookup_table());
-      self.last_line = None;
-      self.index = 0;
-    }
-    let tokens = *self.lines.as_ref()?.get(line as usize)?;
+    // This is also the original indexed cursor's line bounds check. After the one-time
+    // fallback, valid lines need no additional check of the lookup mode.
+    let Some(&tokens) = self.lines.get(line as usize) else {
+      return self.lookup_unindexed(line, column);
+    };
     tokens.first()?;
     let mut nearby = None;
     if self.last_line == Some(line) && column >= self.last_column {
@@ -467,6 +441,44 @@ impl<'a> TokenLookup<'a> {
     self.last_column = column;
     self.index = index;
     Some(tokens[index])
+  }
+
+  fn lookup_unindexed(&mut self, line: u32, column: u32) -> Option<Token> {
+    if !self.indexed {
+      let position = (line, column);
+      if self.last_line.is_none_or(|last_line| position > (last_line, self.last_column)) {
+        // Read positions from borrowed tokens. Only copy the token selected by the query.
+        for _ in 0..8 {
+          match self.remaining.first() {
+            Some(next) if (next.get_dst_line(), next.get_dst_col()) == position => {
+              let token = *next;
+              self.last_line = Some(line);
+              self.last_column = column;
+              self.remaining = &self.remaining[1..];
+              return Some(token);
+            }
+            Some(next) if (next.get_dst_line(), next.get_dst_col()) < position => {
+              self.last_line = Some(next.get_dst_line());
+              self.last_column = next.get_dst_col();
+              self.remaining = &self.remaining[1..];
+            }
+            Some(next) if self.last_line != Some(line) => {
+              // Clamp before a line's first token; gaps between lines stay unmapped.
+              return (next.get_dst_line() == line).then_some(*next);
+            }
+            None if self.last_line.is_none_or(|last_line| last_line < line) => return None,
+            _ => break,
+          }
+        }
+      }
+      // Repeated, backwards, coarse, or distant queries build the original line index once.
+      self.lines = self.map.generate_lookup_table();
+      self.indexed = true;
+      self.last_line = None;
+      self.index = 0;
+      return self.lookup(line, column);
+    }
+    None
   }
 }
 
@@ -623,22 +635,22 @@ fn test_token_lookup_streams_exact_queries_and_indexes_general_queries() {
     }
     assert_eq!(lookup.lookup(line + 1, 0), None);
   }
-  assert!(lookup.lines.is_none(), "ordered exact queries should stream without a line index");
+  assert!(!lookup.indexed, "ordered exact queries should stream without a line index");
   assert_eq!(lookup.lookup(18, u32::MAX), map.lookup_token_approx(&table, 18, u32::MAX));
-  assert!(lookup.lines.is_some(), "a distant jump should build the index once");
+  assert!(lookup.indexed, "a distant jump should build the index once");
   assert_eq!(lookup.lookup(0, 5), map.lookup_token_approx(&table, 0, 5));
 
   let mut lookup = TokenLookup::new(&map);
   assert_eq!(lookup.lookup(0, 5), map.lookup_token_approx(&table, 0, 5));
-  assert!(lookup.lines.is_none());
+  assert!(!lookup.indexed);
   assert_eq!(lookup.lookup(0, 10), map.lookup_token_approx(&table, 0, 10));
   assert_eq!(lookup.lookup(0, 5), map.lookup_token_approx(&table, 0, 5));
-  assert!(lookup.lines.is_some(), "a backwards query should switch to indexed lookup");
+  assert!(lookup.indexed, "a backwards query should switch to indexed lookup");
 
   let mut lookup = TokenLookup::new(&map);
   assert_eq!(lookup.lookup(0, 5), map.lookup_token_approx(&table, 0, 5));
   assert_eq!(lookup.lookup(0, 6), map.lookup_token_approx(&table, 0, 6));
-  assert!(lookup.lines.is_some(), "a coarse mapping should switch to indexed lookup");
+  assert!(lookup.indexed, "a coarse mapping should switch to indexed lookup");
 }
 
 #[test]

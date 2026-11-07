@@ -1,0 +1,41 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { n as require_cjs, t as shared } from "./shared.js";
+// a.js
+var import_cjs = require_cjs();
+const a = () => [import_cjs.foo, shared()];
+export { a };
+
+```
+
+## b.js
+
+```js
+import { n as require_cjs, t as shared } from "./shared.js";
+// b.js
+var import_cjs = require_cjs();
+const b = () => [import_cjs.foo, shared()];
+export { b };
+
+```
+
+## shared.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// cjs.js
+var require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.foo = "cjs-foo";
+}));
+// shared.js
+const foo = "local";
+const shared = () => foo;
+export { require_cjs as n, shared as t };
+
+```

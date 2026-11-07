@@ -1,0 +1,13 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "index",
+        "import": "./index.js"
+      }
+    ],
+    "external": ["ext-schema"],
+    "preserveModules": true
+  },
+  "expectExecuted": false
+}

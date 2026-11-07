@@ -3,9 +3,9 @@ use std::collections::VecDeque;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx,
-  PreserveEntrySignatures, RuntimeHelper, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef,
-  UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
-  dynamic_import_usage::DynamicImportExportsUsage,
+  NormalModule, PreserveEntrySignatures, RuntimeHelper, StmtInfo, StmtInfoIdx, StmtInfoMeta,
+  SymbolOrMemberExprRef, SymbolRef, UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
+  dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
 };
 use rolldown_utils::BitSet;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -14,9 +14,23 @@ use crate::chunk_graph::ChunkGraph;
 use crate::esm_init_obligations::collect_entry_reexported_wrapper_inits;
 
 use super::{
-  GenerateStage, code_splitting::IndexSplittingInfo, reduced_chunk_graph::ReducedChunkGraph,
+  GenerateStage,
+  code_splitting::IndexSplittingInfo,
+  reduced_chunk_graph::{ExecOrderRange, MoveVeto, ReducedChunkGraph, widen_exec_order_range},
   simulated_facade_inclusion::include_simulated_facade_namespace,
 };
+
+/// The execution-order range of the modules among `modules` with a side effect of their own (see
+/// `GenerateStage::own_side_effect_exec_orders`).
+pub(super) fn side_effect_exec_order_range(
+  modules: &[ModuleIdx],
+  own_side_effect_exec_orders: &IndexVec<ModuleIdx, Option<u32>>,
+) -> ExecOrderRange {
+  modules
+    .iter()
+    .map(|&module_idx| own_side_effect_exec_orders[module_idx].map(|order| (order, order)))
+    .fold(None, widen_exec_order_range)
+}
 
 struct ChunkAtom {
   modules: Vec<ModuleIdx>,
@@ -59,6 +73,8 @@ impl GenerateStage<'_> {
     chunk_graph: &mut ChunkGraph,
     entries_len: u32,
     used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
+    own_side_effect_exec_orders: &IndexVec<ModuleIdx, Option<u32>>,
+    predicted_import_targets: &mut IndexVec<ModuleIdx, Vec<ModuleIdx>>,
   ) {
     let mut namespace_extractions = FxHashSet::default();
     let DynamicEntryAnalysis {
@@ -82,6 +98,7 @@ impl GenerateStage<'_> {
       &module_to_atom_idx,
       &flattened_entry_modules,
       used_symbol_refs_builder,
+      predicted_import_targets,
     );
     // Indexed by entry bit, so `ReducedChunkGraph` can pair each facade chunk with its entry
     // module's host atom.
@@ -102,46 +119,76 @@ impl GenerateStage<'_> {
       atoms.len(),
     );
 
+    let atom_side_effect_exec_orders: Vec<ExecOrderRange> = atoms
+      .iter()
+      .map(|atom| side_effect_exec_order_range(&atom.modules, own_side_effect_exec_orders))
+      .collect();
     let mut reduced_chunk_graph = ReducedChunkGraph::new(
       atoms.iter().map(|atom| &atom.dependent_entries),
       &atom_dependencies.cycle,
       &host_atom_by_entry_bit,
     );
+    // Strict execution order keeps the order through its wrappers.
+    if !self.options.is_strict_execution_order_enabled() {
+      reduced_chunk_graph
+        .check_execution_order(&atom_dependencies.reachability, &atom_side_effect_exec_orders);
+    }
     let mut changed = false;
-    for (atom_idx, atom) in atoms.iter_mut().enumerate() {
-      let original_dependent_entries = atom.dependent_entries.clone();
-      let dependent_entries = atom.dependent_entries.index_of_one().collect::<Vec<_>>();
-      let atom_bit: u32 = atom_idx.try_into().expect("Too many atoms, u32 overflowed.");
-      for entry_idx in dependent_entries {
-        if already_loaded_atoms_by_entry[entry_idx as usize].has_bit(atom_bit) {
-          atom.dependent_entries.clear_bit(entry_idx);
+    let mut pending_atoms: Vec<usize> = (0..atoms.len()).collect();
+    loop {
+      let mut folded_this_round = false;
+      let mut deferred_atoms = vec![];
+      for atom_idx in pending_atoms {
+        let atom = &mut atoms[atom_idx];
+        let original_dependent_entries = atom.dependent_entries.clone();
+        let dependent_entries = atom.dependent_entries.index_of_one().collect::<Vec<_>>();
+        let atom_bit: u32 = atom_idx.try_into().expect("Too many atoms, u32 overflowed.");
+        for entry_idx in dependent_entries {
+          if already_loaded_atoms_by_entry[entry_idx as usize].has_bit(atom_bit) {
+            atom.dependent_entries.clear_bit(entry_idx);
+          }
+        }
+        let action = if atom.dependent_entries == original_dependent_entries {
+          ReducedEntriesAction::Avoid
+        } else {
+          self.can_use_reduced_dependent_entries(
+            atom,
+            &original_dependent_entries,
+            &atom.dependent_entries,
+            chunk_graph,
+            &dynamic_entry_modules_by_entry,
+          )
+        };
+        if matches!(action, ReducedEntriesAction::Avoid) {
+          atom.dependent_entries = original_dependent_entries;
+          continue;
+        }
+        match reduced_chunk_graph.try_move(atom_idx, &atom.dependent_entries) {
+          Ok(()) => {
+            changed = true;
+            folded_this_round = true;
+            if let ReducedEntriesAction::ApplyWithNamespaceExtraction {
+              entry_chunk_idx,
+              entry_module_idx,
+            } = action
+            {
+              namespace_extractions.insert((entry_chunk_idx, entry_module_idx));
+            }
+          }
+          Err(veto) => {
+            atom.dependent_entries = original_dependent_entries;
+            // The chunk whose side effect would overtake this atom may fold into the same body
+            // later in the round (`issues/8595`).
+            if veto == MoveVeto::SideEffectOrder {
+              deferred_atoms.push(atom_idx);
+            }
+          }
         }
       }
-      let action = if atom.dependent_entries == original_dependent_entries {
-        ReducedEntriesAction::Avoid
-      } else {
-        self.can_use_reduced_dependent_entries(
-          atom,
-          &original_dependent_entries,
-          &atom.dependent_entries,
-          chunk_graph,
-          &dynamic_entry_modules_by_entry,
-        )
-      };
-      if !matches!(action, ReducedEntriesAction::Avoid)
-        && reduced_chunk_graph.try_move(atom_idx, &atom.dependent_entries)
-      {
-        changed = true;
-        if let ReducedEntriesAction::ApplyWithNamespaceExtraction {
-          entry_chunk_idx,
-          entry_module_idx,
-        } = action
-        {
-          namespace_extractions.insert((entry_chunk_idx, entry_module_idx));
-        }
-      } else {
-        atom.dependent_entries = original_dependent_entries;
+      if deferred_atoms.is_empty() || !folded_this_round {
+        break;
       }
+      pending_atoms = deferred_atoms;
     }
 
     if !changed {
@@ -162,6 +209,60 @@ impl GenerateStage<'_> {
       &namespace_extractions,
       used_symbol_refs_builder,
     );
+    // The extraction narrows each extracted entry's namespace statement, so only those
+    // predictions can lose a target; the replayed inclusion only adds to the others, which keeps
+    // them a safe under-approximation for the merge's exemption.
+    if !predicted_import_targets.is_empty() {
+      for &(_, entry_module_idx) in &namespace_extractions {
+        predicted_import_targets[entry_module_idx] =
+          self.predicted_static_import_targets(entry_module_idx);
+      }
+    }
+  }
+
+  /// The execution order of every module with a side effect of its own, `None` for the others. A
+  /// side effect a module only reaches through an `import` runs at the imported module's position,
+  /// so moving the importer cannot reorder it.
+  pub(super) fn own_side_effect_exec_orders(&self) -> IndexVec<ModuleIdx, Option<u32>> {
+    self
+      .link_output
+      .module_table
+      .modules
+      .iter()
+      .map(|module| self.module_has_own_side_effects(module.idx()).then(|| module.exec_order()))
+      .collect()
+  }
+
+  fn module_has_own_side_effects(&self, module_idx: ModuleIdx) -> bool {
+    let module = &self.link_output.module_table[module_idx];
+    match module.side_effects() {
+      DeterminedSideEffects::UserDefined(user_defined) => *user_defined,
+      DeterminedSideEffects::NoTreeshake => true,
+      DeterminedSideEffects::Analyzed(false) => false,
+      // The analyzed verdict is propagated from dependencies, so read the module's own statements.
+      DeterminedSideEffects::Analyzed(true) => {
+        let Some(normal_module) = module.as_normal() else {
+          return true;
+        };
+        let meta = &self.link_output.metas[module_idx];
+        self.link_output.stmt_infos[module_idx].iter_enumerated().any(|(stmt_idx, stmt_info)| {
+          meta.stmt_info_included.has_bit(stmt_idx)
+            && stmt_info.eval_flags.has_side_effect_for_tree_shaking()
+            && !Self::is_plain_esm_import(stmt_info, normal_module)
+        })
+      }
+    }
+  }
+
+  /// An `import` or `export … from` runs its target at the target's own position. A re-export that
+  /// merges dynamic exports keeps a `__reExport` call of its own, and a `require` runs in place.
+  fn is_plain_esm_import(stmt_info: &StmtInfo, module: &NormalModule) -> bool {
+    !stmt_info.import_records.is_empty()
+      && !stmt_info.meta.contains(StmtInfoMeta::ReExportDynamicExports)
+      && stmt_info
+        .import_records
+        .iter()
+        .all(|&record_idx| module.import_records[record_idx].kind == ImportKind::Import)
   }
 
   fn can_use_reduced_dependent_entries(
@@ -385,6 +486,7 @@ impl GenerateStage<'_> {
     module_to_atom_idx: &IndexVec<ModuleIdx, Option<usize>>,
     flattened_entry_modules: &[ModuleIdx],
     used_symbol_refs_builder: &UsedSymbolRefsBuilder,
+    predicted_import_targets: &IndexVec<ModuleIdx, Vec<ModuleIdx>>,
   ) -> AtomDependencyGraphs {
     let strict_execution_order = self.options.is_strict_execution_order_enabled();
 
@@ -409,7 +511,7 @@ impl GenerateStage<'_> {
           }
           continue;
         }
-        for dep_module_idx in self.predicted_static_import_targets(module_idx) {
+        for &dep_module_idx in &predicted_import_targets[module_idx] {
           add(dep_module_idx, &mut reachability_deps);
           add(dep_module_idx, &mut cycle_deps);
         }
@@ -446,6 +548,23 @@ impl GenerateStage<'_> {
       cycle.push(cycle_deps.into_iter().collect());
     }
     AtomDependencyGraphs { reachability, cycle }
+  }
+
+  /// `predicted_static_import_targets` of every included module, read by both the fold and the
+  /// common-chunk merge.
+  pub(super) fn predicted_static_import_targets_by_module(
+    &self,
+  ) -> IndexVec<ModuleIdx, Vec<ModuleIdx>> {
+    self
+      .link_output
+      .metas
+      .iter_enumerated()
+      .map(
+        |(module_idx, meta)| {
+          if meta.is_included { self.predicted_static_import_targets(module_idx) } else { vec![] }
+        },
+      )
+      .collect()
   }
 
   /// Returns the targets that `compute_cross_chunk_links` will import for this module. Transitive

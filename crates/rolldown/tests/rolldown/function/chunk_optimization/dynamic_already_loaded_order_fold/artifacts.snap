@@ -1,0 +1,108 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] consumer.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## barrel.js
+
+```js
+export { t as service } from "./barrel2.js";
+import "./splash.js";
+
+```
+
+## barrel2.js
+
+```js
+// barrel.js
+const service = "service";
+export { service as t };
+
+```
+
+## consumer.js
+
+```js
+export { t as consumerValue } from "./main.js";
+
+```
+
+## main.js
+
+```js
+import "./setup2.js";
+import "./read2.js";
+import { t as service } from "./barrel2.js";
+// consumer.js
+function consumerValue() {
+	return "consumer";
+}
+// main.js
+const value = service;
+const loadSetup = () => import("./setup.js");
+const loadConsumer = () => import("./consumer.js");
+const loadRead = () => import("./read.js");
+const loadSplash = () => import("./splash.js");
+const loadBarrel = () => import("./barrel.js").then((m) => m.service);
+export { loadBarrel, loadConsumer, loadRead, loadSetup, loadSplash, consumerValue as t, value };
+
+```
+
+## read.js
+
+```js
+export { t as readValue } from "./read2.js";
+
+```
+
+## read2.js
+
+```js
+// read.js
+if (!globalThis.ready) throw new Error("read.js ran before setup.js");
+function readValue() {
+	return "read";
+}
+export { readValue as t };
+
+```
+
+## setup.js
+
+```js
+export { t as setupValue } from "./setup2.js";
+
+```
+
+## setup2.js
+
+```js
+// setup.js
+globalThis.ready = true;
+function setupValue() {
+	return "setup";
+}
+export { setupValue as t };
+
+```
+
+## splash.js
+
+```js
+import { t as service } from "./barrel2.js";
+// slug.js
+const slug = "slug";
+// splash.js
+const splash = service + slug;
+export { splash, slug as t };
+
+```

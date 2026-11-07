@@ -9,30 +9,28 @@ use smallvec::SmallVec;
 /// facade edge (see `facade_edge`).
 ///
 /// Every edge that a move adds starts or ends at the node that receives the atom (see
-/// `reaches_itself`). So while the graph is acyclic, a move closes a cycle exactly when a path
-/// leads from that node back to itself. The check is one search from that node. A move removes
-/// only edges of the node that the atom leaves. So while the graph has a cycle, only a move out of
-/// a node that lies on every cycle can make the graph acyclic. Only such a move gets a full check.
+/// `reaches_itself`), so every cycle a move closes runs through that node, and the check is one
+/// search from it. The cycle graph over-approximates, so it can hold a cycle before any move; a
+/// cycle elsewhere predates the move and does not reject it.
 /// See internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
 pub(super) struct ReducedChunkGraph<'a> {
   atom_dependencies: &'a [Vec<usize>],
   atom_dependents: Vec<Vec<usize>>,
+  /// The under-approximated atom edges: imports the emitted chunks are certain to have. Empty
+  /// unless `check_execution_order` turned the execution-order check on.
+  certain_atom_dependencies: &'a [Vec<usize>],
+  /// Per atom, the execution-order range of its modules with a side effect of their own.
+  atom_side_effect_exec_orders: &'a [ExecOrderRange],
   host_atom_by_entry_bit: &'a [Option<usize>],
   hosted_entry_bits_by_atom: Vec<SmallVec<[usize; 1]>>,
   node_by_bits: FxHashMap<BitSet, usize>,
   node_by_atom: Vec<usize>,
   /// A node without atoms is not a chunk. It has no edges.
-  atom_count_by_node: Vec<usize>,
+  atoms_by_node: Vec<Vec<usize>>,
   /// The entry bit of a node whose bits hold only that bit. Such a node is that entry's chunk.
   facade_entry_bit_by_node: Vec<Option<usize>>,
   facade_node_by_entry_bit: Vec<Option<usize>>,
   edges: NodeEdges,
-  is_acyclic: bool,
-  /// While the graph has a cycle, the nodes of its only strongly connected component with more
-  /// than one node. If the graph has two or more such components, this set is empty. Each cycle
-  /// lies in one such component, and a move removes only edges of the node that the atom leaves.
-  /// So a move out of a node outside this set keeps a cycle.
-  cyclic_component: FxHashSet<usize>,
   /// Per node, the `mark` of the last search that visited it.
   marks: Vec<u32>,
   mark: u32,
@@ -49,16 +47,16 @@ impl<'a> ReducedChunkGraph<'a> {
     let mut graph = Self {
       atom_dependencies,
       atom_dependents: vec![vec![]; atom_count],
+      certain_atom_dependencies: &[],
+      atom_side_effect_exec_orders: &[],
       host_atom_by_entry_bit,
       hosted_entry_bits_by_atom: vec![SmallVec::new(); atom_count],
       node_by_bits: FxHashMap::default(),
       node_by_atom: Vec::with_capacity(atom_count),
-      atom_count_by_node: Vec::with_capacity(atom_count),
+      atoms_by_node: Vec::with_capacity(atom_count),
       facade_entry_bit_by_node: Vec::with_capacity(atom_count),
       facade_node_by_entry_bit: vec![None; host_atom_by_entry_bit.len()],
       edges: NodeEdges::default(),
-      is_acyclic: false,
-      cyclic_component: FxHashSet::default(),
       marks: Vec::with_capacity(atom_count),
       mark: 0,
     };
@@ -67,7 +65,7 @@ impl<'a> ReducedChunkGraph<'a> {
       let node = graph.add_node(bits);
       debug_assert_eq!(node, graph.node_by_atom.len(), "atoms must have different bits");
       graph.node_by_atom.push(node);
-      graph.atom_count_by_node[node] = 1;
+      graph.atoms_by_node[node].push(node);
     }
     debug_assert_eq!(graph.node_by_atom.len(), atom_count);
     for (atom_idx, dependencies) in atom_dependencies.iter().enumerate() {
@@ -84,47 +82,54 @@ impl<'a> ReducedChunkGraph<'a> {
         graph.edges.add(facade, host);
       }
     }
-    graph.is_acyclic = !graph.has_cycle();
-    if !graph.is_acyclic {
-      graph.cyclic_component = graph.only_cyclic_component();
-    }
     graph
   }
 
-  /// Moves the atom to the node of `bits` and returns true if the chunk graph stays acyclic.
-  /// Otherwise, it keeps the atom where it was and returns false.
-  pub(super) fn try_move(&mut self, atom_idx: usize, bits: &BitSet) -> bool {
+  /// Also rejects a move that runs one of the atom's side effects after a side effect that used to
+  /// run later (see `runs_side_effects_late`).
+  pub(super) fn check_execution_order(
+    &mut self,
+    certain_atom_dependencies: &'a [Vec<usize>],
+    atom_side_effect_exec_orders: &'a [ExecOrderRange],
+  ) {
+    self.certain_atom_dependencies = certain_atom_dependencies;
+    self.atom_side_effect_exec_orders = atom_side_effect_exec_orders;
+  }
+
+  /// Moves the atom to the node of `bits`, or keeps it where it was and says why not.
+  pub(super) fn try_move(&mut self, atom_idx: usize, bits: &BitSet) -> Result<(), MoveVeto> {
     let from = self.node_by_atom[atom_idx];
-    if !self.is_acyclic && !self.cyclic_component.contains(&from) {
-      return false;
-    }
     let to = match self.node_by_bits.get(bits) {
       Some(&node) => node,
       None => self.add_node(bits),
     };
     debug_assert_ne!(from, to, "the reduced bits must differ from the current bits");
     self.move_atom(atom_idx, from, to);
-    // While the graph has a cycle, the move can remove every old cycle. It can also close new
-    // cycles through `to`. So only a full check is exact. A rejected move leaves
-    // `cyclic_component` correct.
-    let acyclic = if self.is_acyclic { !self.reaches_itself(to) } else { !self.has_cycle() };
-    if acyclic {
-      self.is_acyclic = true;
+    let veto = if self.reaches_itself(to) {
+      Some(MoveVeto::Cycle)
+    } else if self.runs_side_effects_late(atom_idx, to) {
+      Some(MoveVeto::SideEffectOrder)
     } else {
-      self.move_atom(atom_idx, to, from);
+      None
+    };
+    match veto {
+      Some(veto) => {
+        self.move_atom(atom_idx, to, from);
+        Err(veto)
+      }
+      None => Ok(()),
     }
-    acyclic
   }
 
   fn add_node(&mut self, bits: &BitSet) -> usize {
-    let node = self.atom_count_by_node.len();
+    let node = self.atoms_by_node.len();
     self.node_by_bits.insert(bits.clone(), node);
     let facade_entry_bit =
       if bits.bit_count() == 1 { bits.index_of_one().next().map(|bit| bit as usize) } else { None };
     if let Some(entry_bit) = facade_entry_bit {
       self.facade_node_by_entry_bit[entry_bit] = Some(node);
     }
-    self.atom_count_by_node.push(0);
+    self.atoms_by_node.push(vec![]);
     self.facade_entry_bit_by_node.push(facade_entry_bit);
     self.edges.add_node();
     self.marks.push(0);
@@ -142,7 +147,7 @@ impl<'a> ReducedChunkGraph<'a> {
     // If the facade node has no atoms, the entry chunk holds nothing. A facade without modules
     // declares no symbol, so nothing can depend on it, and the omitted node cannot lie on a cycle.
     let facade = self.facade_node_by_entry_bit[entry_bit]?;
-    if self.atom_count_by_node[facade] == 0 {
+    if self.atoms_by_node[facade].is_empty() {
       return None;
     }
     // A `None` host means that the entry module is external or excluded. In general, to skip an
@@ -161,10 +166,10 @@ impl<'a> ReducedChunkGraph<'a> {
     // of the entry whose chunk is `from` if `from` loses its last atom, and the edge of the entry
     // whose chunk is `to` if `to` gets its first atom.
     let mut entry_bits = self.hosted_entry_bits_by_atom[atom_idx].clone();
-    if self.atom_count_by_node[from] == 1 {
+    if self.atoms_by_node[from].len() == 1 {
       entry_bits.extend(self.facade_entry_bit_by_node[from]);
     }
-    if self.atom_count_by_node[to] == 0 {
+    if self.atoms_by_node[to].is_empty() {
       entry_bits.extend(self.facade_entry_bit_by_node[to]);
     }
     entry_bits.sort_unstable();
@@ -188,8 +193,12 @@ impl<'a> ReducedChunkGraph<'a> {
       }
     }
 
-    self.atom_count_by_node[from] -= 1;
-    self.atom_count_by_node[to] += 1;
+    let position = self.atoms_by_node[from]
+      .iter()
+      .position(|&member| member == atom_idx)
+      .expect("an atom is a member of its node");
+    self.atoms_by_node[from].swap_remove(position);
+    self.atoms_by_node[to].push(atom_idx);
     self.node_by_atom[atom_idx] = to;
 
     for &dependency in &self.atom_dependencies[atom_idx] {
@@ -211,9 +220,8 @@ impl<'a> ReducedChunkGraph<'a> {
     }
   }
 
-  /// Whether a path leads from `node`, which received the moved atom, back to itself. This decides
-  /// the move when the graph was acyclic before the move, because every edge that the move added
-  /// touches `node`:
+  /// Whether a path leads from `node`, which received the moved atom, back to itself. Every edge
+  /// that the move added touches `node`:
   ///
   /// - The edges of the atom now start or end at `node`.
   /// - The facade edges of the entries that the atom hosts now end at `node`, the new host.
@@ -222,11 +230,7 @@ impl<'a> ReducedChunkGraph<'a> {
   ///
   /// A new cycle must use an added edge, so it passes through `node`.
   fn reaches_itself(&mut self, node: usize) -> bool {
-    if self.mark == u32::MAX {
-      self.marks.fill(0);
-      self.mark = 0;
-    }
-    self.mark += 1;
+    self.next_mark();
     let mut stack: Vec<usize> = self.edges.dependencies[node].keys().copied().collect();
     while let Some(next) = stack.pop() {
       if next == node {
@@ -241,98 +245,91 @@ impl<'a> ReducedChunkGraph<'a> {
     false
   }
 
-  /// Whether the graph of the nodes with atoms has a cycle.
-  fn has_cycle(&self) -> bool {
-    const NEW: u8 = 0;
-    const ON_PATH: u8 = 1;
-    const DONE: u8 = 2;
-    let node_count = self.atom_count_by_node.len();
-    let mut state = vec![NEW; node_count];
-    let mut stack = vec![];
-    for root in 0..node_count {
-      if self.atom_count_by_node[root] == 0 || state[root] != NEW {
+  /// Whether the move of `atom_idx` into `node` runs one of the atom's side effects late. The
+  /// atom's modules now run in the body of `node`, after every chunk `node` imports. A chunk in
+  /// that closure with a side effect later than the atom's earliest one ran after the atom before
+  /// the move, unless the atom was certain to import it. The closure reads the over-approximated
+  /// edges so that no real import is missed; the exemption reads the under-approximated ones so
+  /// that an invented import never excuses a chunk.
+  fn runs_side_effects_late(&mut self, atom_idx: usize, node: usize) -> bool {
+    let Some(&Some((earliest_side_effect, _))) = self.atom_side_effect_exec_orders.get(atom_idx)
+    else {
+      return false;
+    };
+    let mut loaded_before = None;
+    self.next_mark();
+    let mut stack: Vec<usize> = self.edges.dependencies[node].keys().copied().collect();
+    while let Some(next) = stack.pop() {
+      if next == node || self.marks[next] == self.mark {
         continue;
       }
-      stack.push((root, false));
-      while let Some((node, exiting)) = stack.pop() {
-        if exiting {
-          state[node] = DONE;
-          continue;
-        }
-        if state[node] != NEW {
-          continue;
-        }
-        state[node] = ON_PATH;
-        stack.push((node, true));
-        for &dependency in self.edges.dependencies[node].keys() {
-          match state[dependency] {
-            NEW => stack.push((dependency, false)),
-            ON_PATH => return true,
-            _ => {}
-          }
-        }
+      self.marks[next] = self.mark;
+      if self.latest_side_effect(next).is_some_and(|latest| latest > earliest_side_effect)
+        && !loaded_before
+          .get_or_insert_with(|| self.certainly_loaded_before(atom_idx, node))
+          .contains(&next)
+      {
+        return true;
       }
+      stack.extend(self.edges.dependencies[next].keys().copied());
     }
     false
   }
 
-  /// See `cyclic_component`. This is Kosaraju's algorithm: a post-order over the dependencies,
-  /// then a search over the dependents from each node in reverse post-order. Each such search
-  /// collects one component.
-  fn only_cyclic_component(&self) -> FxHashSet<usize> {
-    let node_count = self.atom_count_by_node.len();
-    let mut visited = vec![false; node_count];
-    let mut post_order = Vec::with_capacity(node_count);
-    let mut stack = vec![];
-    for root in 0..node_count {
-      if self.atom_count_by_node[root] == 0 || visited[root] {
-        continue;
-      }
-      stack.push((root, false));
-      while let Some((node, exiting)) = stack.pop() {
-        if exiting {
-          post_order.push(node);
-          continue;
-        }
-        if visited[node] {
-          continue;
-        }
-        visited[node] = true;
-        stack.push((node, true));
-        for &dependency in self.edges.dependencies[node].keys() {
-          if !visited[dependency] {
-            stack.push((dependency, false));
-          }
+  /// The nodes, `node` excluded, that the atom's certain imports load before it.
+  fn certainly_loaded_before(&self, atom_idx: usize, node: usize) -> FxHashSet<usize> {
+    let certain_dependency_nodes =
+      |atom: usize| self.certain_atom_dependencies[atom].iter().map(|&dep| self.node_by_atom[dep]);
+    let mut loaded = FxHashSet::default();
+    let mut stack: Vec<usize> = certain_dependency_nodes(atom_idx).collect();
+    while let Some(next) = stack.pop() {
+      if next != node && loaded.insert(next) {
+        for &member in &self.atoms_by_node[next] {
+          stack.extend(certain_dependency_nodes(member));
         }
       }
     }
+    loaded
+  }
 
-    let mut collected = vec![false; node_count];
-    let mut cyclic_component = None;
-    for &root in post_order.iter().rev() {
-      if collected[root] {
-        continue;
-      }
-      collected[root] = true;
-      let mut component = vec![root];
-      let mut idx = 0;
-      while let Some(&node) = component.get(idx) {
-        idx += 1;
-        for &dependent in &self.edges.dependents[node] {
-          if !collected[dependent] {
-            collected[dependent] = true;
-            component.push(dependent);
-          }
-        }
-      }
-      if component.len() > 1 {
-        if cyclic_component.is_some() {
-          return FxHashSet::default();
-        }
-        cyclic_component = Some(component);
-      }
+  fn latest_side_effect(&self, node: usize) -> Option<u32> {
+    self.atoms_by_node[node]
+      .iter()
+      .filter_map(|&atom| self.atom_side_effect_exec_orders[atom].map(|(_, latest)| latest))
+      .max()
+  }
+
+  fn next_mark(&mut self) {
+    if self.mark == u32::MAX {
+      self.marks.fill(0);
+      self.mark = 0;
     }
-    cyclic_component.into_iter().flatten().collect()
+    self.mark += 1;
+  }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub(super) enum MoveVeto {
+  Cycle,
+  /// See `runs_side_effects_late`. Another atom's move may remove the hazard, so the caller may
+  /// try the move again.
+  SideEffectOrder,
+}
+
+/// The execution-order range `(earliest, latest)` of some modules with a side effect of their own,
+/// `None` when they have none.
+pub(super) type ExecOrderRange = Option<(u32, u32)>;
+
+pub(super) fn widen_exec_order_range(
+  range: ExecOrderRange,
+  other: ExecOrderRange,
+) -> ExecOrderRange {
+  match (range, other) {
+    (Some((earliest, latest)), Some((other_earliest, other_latest))) => {
+      Some((earliest.min(other_earliest), latest.max(other_latest)))
+    }
+    (range, None) => range,
+    (None, other) => other,
   }
 }
 
@@ -341,21 +338,15 @@ struct NodeEdges {
   /// Per node, the dependency nodes and the number of atom edges and facade edges behind each one.
   /// The counts let a rejected move take its edges back.
   dependencies: Vec<FxHashMap<usize, u32>>,
-  dependents: Vec<FxHashSet<usize>>,
 }
 
 impl NodeEdges {
   fn add_node(&mut self) {
     self.dependencies.push(FxHashMap::default());
-    self.dependents.push(FxHashSet::default());
   }
 
   fn add(&mut self, from: usize, to: usize) {
-    let count = self.dependencies[from].entry(to).or_insert(0);
-    *count += 1;
-    if *count == 1 {
-      self.dependents[to].insert(from);
-    }
+    *self.dependencies[from].entry(to).or_insert(0) += 1;
   }
 
   fn remove(&mut self, from: usize, to: usize) {
@@ -363,7 +354,6 @@ impl NodeEdges {
     *count -= 1;
     if *count == 0 {
       self.dependencies[from].remove(&to);
-      self.dependents[to].remove(&from);
     }
   }
 }
@@ -373,14 +363,16 @@ mod tests {
   use super::*;
 
   impl ReducedChunkGraph<'_> {
-    /// Recomputes the edges from the atoms and checks the cycle state against them.
+    /// Recomputes the edges from the atoms and checks them against the graph's.
     fn assert_consistent(&self) {
-      let node_count = self.atom_count_by_node.len();
-      let mut atom_count_by_node = vec![0; node_count];
-      for &node in &self.node_by_atom {
-        atom_count_by_node[node] += 1;
+      let node_count = self.atoms_by_node.len();
+      let mut atoms_by_node = vec![vec![]; node_count];
+      for (atom_idx, &node) in self.node_by_atom.iter().enumerate() {
+        atoms_by_node[node].push(atom_idx);
       }
-      assert_eq!(self.atom_count_by_node, atom_count_by_node);
+      let mut sorted_atoms_by_node = self.atoms_by_node.clone();
+      sorted_atoms_by_node.iter_mut().for_each(|atoms| atoms.sort_unstable());
+      assert_eq!(sorted_atoms_by_node, atoms_by_node);
 
       let mut dependencies = vec![FxHashMap::<usize, u32>::default(); node_count];
       for (atom_idx, atom_dependencies) in self.atom_dependencies.iter().enumerate() {
@@ -397,26 +389,16 @@ mod tests {
         }
       }
       assert_eq!(self.edges.dependencies, dependencies);
-      for (from, node_dependencies) in dependencies.iter().enumerate() {
-        for to in node_dependencies.keys() {
-          assert!(self.edges.dependents[*to].contains(&from));
-        }
-      }
-      let dependent_count: usize = self.edges.dependents.iter().map(FxHashSet::len).sum();
-      assert_eq!(dependent_count, dependencies.iter().map(FxHashMap::len).sum::<usize>());
-
-      assert_eq!(self.is_acyclic, !self.has_cycle());
-      if !self.is_acyclic {
-        assert_eq!(self.cyclic_component, self.only_cyclic_component());
-      }
     }
   }
 
-  /// The old global check. It rebuilds the chunk graph from the bits of the atoms and searches it.
-  fn has_cycle(
+  /// Rebuilds the chunk graph from the bits of the atoms, without the module's helpers, and
+  /// reports whether the chunk of `bits` lies on a cycle.
+  fn chunk_on_cycle(
     atom_bits: &[BitSet],
     atom_dependencies: &[Vec<usize>],
     host_atom_by_entry_bit: &[Option<usize>],
+    bits: &BitSet,
   ) -> bool {
     let mut chunk_by_bits = FxHashMap::default();
     let chunk_by_atom: Vec<usize> = atom_bits
@@ -452,27 +434,15 @@ mod tests {
         }
       }
     }
-    // Kahn's algorithm keeps the oracle independent of the two searches and the component shortcut
-    // in the module. The oracle rebuilds every edge, with the facade edges, without the module's
-    // helpers.
-    let mut in_degree = vec![0; dependencies.len()];
-    for targets in &dependencies {
-      for &target in targets {
-        in_degree[target] += 1;
+    let start = chunk_by_bits[bits];
+    let mut reached = FxHashSet::default();
+    let mut queue: Vec<usize> = dependencies[start].iter().copied().collect();
+    while let Some(node) = queue.pop() {
+      if reached.insert(node) {
+        queue.extend(dependencies[node].iter().copied());
       }
     }
-    let mut ready: Vec<_> = (0..dependencies.len()).filter(|&node| in_degree[node] == 0).collect();
-    let mut removed = 0;
-    while let Some(node) = ready.pop() {
-      removed += 1;
-      for &target in &dependencies[node] {
-        in_degree[target] -= 1;
-        if in_degree[target] == 0 {
-          ready.push(target);
-        }
-      }
-    }
-    removed != dependencies.len()
+    reached.contains(&start)
   }
 
   fn bits(entry_count: u32, entry_bits: &[u32]) -> BitSet {
@@ -483,7 +453,7 @@ mod tests {
     bits
   }
 
-  /// Moves each `(atom, reduced bits)` in turn, checking the result against `has_cycle`.
+  /// Moves each `(atom, reduced bits)` in turn, checking the result against `chunk_on_cycle`.
   fn check_moves(
     entry_count: u32,
     atom_bits: &[&[u32]],
@@ -498,8 +468,11 @@ mod tests {
       let reduced = bits(entry_count, reduced);
       let mut next = current.clone();
       next[atom_idx] = reduced.clone();
-      assert_eq!(!has_cycle(&next, atom_dependencies, host_atom_by_entry_bit), expected);
-      assert_eq!(graph.try_move(atom_idx, &reduced), expected);
+      assert_eq!(
+        !chunk_on_cycle(&next, atom_dependencies, host_atom_by_entry_bit, &reduced),
+        expected
+      );
+      assert_eq!(graph.try_move(atom_idx, &reduced).is_ok(), expected);
       graph.assert_consistent();
       if expected {
         current = next;
@@ -549,24 +522,24 @@ mod tests {
   }
 
   #[test]
-  fn a_move_that_breaks_the_only_cycle_is_accepted() {
-    // Atoms 1 and 2 depend on each other, so the graph starts with a cycle. The check rejects a
-    // move that keeps the cycle. A merge of the two atoms removes the cycle, and later moves get
-    // the local check again.
+  fn a_cycle_elsewhere_does_not_reject_a_move() {
+    // Atoms 1 and 2 depend on each other, so the graph starts with a cycle. A move into a chunk
+    // off that cycle is accepted, a move into a chunk on it is rejected, and a merge of the two
+    // atoms removes the cycle.
     check_moves(
       3,
       &[&[0], &[0, 1], &[1], &[1, 2]],
       &[vec![1], vec![2], vec![1], vec![]],
       &[None, None, None],
-      &[(3, &[2], false), (1, &[1], true), (3, &[1], true)],
+      &[(3, &[2], true), (3, &[1], false), (1, &[1], true), (3, &[1], true)],
     );
-    // With two cycles, a move that breaks one of them keeps the other one.
+    // With two cycles, a move that breaks one of them is accepted although the other one stays.
     check_moves(
       3,
       &[&[0, 1], &[1], &[0, 2], &[2]],
       &[vec![1], vec![0], vec![3], vec![2]],
       &[None, None, None],
-      &[(0, &[1], false), (2, &[2], false)],
+      &[(0, &[1], true), (2, &[2], true)],
     );
   }
 
@@ -593,6 +566,24 @@ mod tests {
     );
   }
 
+  #[test]
+  fn a_fold_that_runs_a_side_effect_late_is_rejected() {
+    // Entry 0 (atom 0) imports atoms 1 and 2, and atom 2 has the earlier side effect. A fold of
+    // atom 2 into entry 0 runs it after atom 1, unless atom 2 is certain to import atom 1 itself.
+    let atom_bits = [bits(3, &[0]), bits(3, &[0, 1]), bits(3, &[0, 2])];
+    let side_effect_exec_orders = [None, Some((5, 5)), Some((3, 3))];
+    let hosts = [None; 3];
+    for (atom_2_dependencies, expected) in
+      [(vec![], Err(MoveVeto::SideEffectOrder)), (vec![1], Ok(()))]
+    {
+      let dependencies = vec![vec![1, 2], vec![], atom_2_dependencies];
+      let mut graph = ReducedChunkGraph::new(&atom_bits, &dependencies, &hosts);
+      graph.check_execution_order(&dependencies, &side_effect_exec_orders);
+      assert_eq!(graph.try_move(2, &bits(3, &[0])), expected);
+      graph.assert_consistent();
+    }
+  }
+
   struct Rng(u64);
 
   impl Rng {
@@ -614,8 +605,13 @@ mod tests {
       return;
     }
     let previous = std::mem::replace(&mut current[atom], to.clone());
-    let expected = !has_cycle(current, graph.atom_dependencies, graph.host_atom_by_entry_bit);
-    assert_eq!(graph.try_move(atom, to), expected, "atom {atom}, from {previous:?}, to {to:?}");
+    let expected =
+      !chunk_on_cycle(current, graph.atom_dependencies, graph.host_atom_by_entry_bit, to);
+    assert_eq!(
+      graph.try_move(atom, to).is_ok(),
+      expected,
+      "atom {atom}, from {previous:?}, to {to:?}"
+    );
     if !expected {
       current[atom] = previous;
     }
@@ -744,7 +740,7 @@ mod tests {
       atom_bits.truncate(1 + rng.below(atom_bits.len().min(10)));
       let atom_count = atom_bits.len();
       let edge_chance = 1 + rng.below(4);
-      // Half of the graphs start acyclic, so that their moves get the local check from the start.
+      // Half of the graphs start acyclic, the other half usually start with a cycle.
       let mut rank = (0..atom_count).collect::<Vec<_>>();
       for idx in (1..atom_count).rev() {
         rank.swap(idx, rng.below(idx + 1));
@@ -776,8 +772,8 @@ mod tests {
         }
         let mut next = atom_bits.clone();
         next[atom_idx] = reduced.clone();
-        let expected = !has_cycle(&next, &atom_dependencies, &host_atom_by_entry_bit);
-        assert_eq!(graph.try_move(atom_idx, reduced), expected, "case {case}, step {step}");
+        let expected = !chunk_on_cycle(&next, &atom_dependencies, &host_atom_by_entry_bit, reduced);
+        assert_eq!(graph.try_move(atom_idx, reduced).is_ok(), expected, "case {case}, step {step}");
         graph.assert_consistent();
         if expected {
           atom_bits = next;

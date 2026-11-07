@@ -20,3 +20,21 @@
 a text {
   text-decoration: underline;
 }
+
+/* Prompt blocks: wrap long lines and keep the copy button visible */
+.vp-doc .prompt [class*='language-'] pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.vp-doc .prompt [class*='language-'] code {
+  padding-inline-end: 4.5rem;
+}
+
+.vp-doc .prompt [class*='language-'] > button.copy {
+  opacity: 1;
+}
+
+.vp-doc .prompt [class*='language-'] > span.lang {
+  display: none;
+}

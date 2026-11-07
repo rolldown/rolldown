@@ -22,6 +22,15 @@ const sidebarForGuide: DefaultTheme.SidebarItem[] = [
     ],
   },
   {
+    text: 'Prompts',
+    items: [
+      {
+        text: 'Configure Inline Common Chunks',
+        link: '/prompts/inline-common-chunks.md',
+      },
+    ],
+  },
+  {
     text: 'In-Depth',
     collapsed: true,
     items: [
@@ -299,7 +308,7 @@ const config = defineConfig({
     nav: [
       {
         text: 'Guide',
-        activeMatch: '/(guide|in-depth|glossary)',
+        activeMatch: '/(guide|prompts|in-depth|glossary)',
         link: '/guide/getting-started.md',
       },
       { text: 'Reference', activeMatch: '/reference', link: '/reference' },
@@ -337,10 +346,11 @@ const config = defineConfig({
     ],
 
     sidebar: {
-      // --- Guide (includes In-Depth and Glossary as collapsed sections) ---
+      // --- Guide (includes Prompts, and In-Depth and Glossary as collapsed sections) ---
       '/guide/': sidebarForGuide,
       '/in-depth/': sidebarForGuide,
       '/glossary/': sidebarForGuide,
+      '/prompts/': sidebarForGuide,
       // --- Reference (options + typedoc dictionary) ---
       '/reference/': sidebarForReference,
       // --- Plugins ---

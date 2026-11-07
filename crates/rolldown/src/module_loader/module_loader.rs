@@ -1266,3 +1266,146 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use std::sync::Arc;
+
+  use rolldown_common::{
+    BundleMode, BundlerOptions, FlatOptions, InnerOptions, ModuleId, ModuleLoaderMsg,
+    ModuleSideEffects, ModuleType, ResolvedId, TreeshakeOptions,
+  };
+  use rolldown_fs::OsFileSystem;
+  use tokio::sync::mpsc::UnboundedReceiver;
+
+  use crate::{
+    BundleFactory, BundleFactoryOptions,
+    module_loader::task_context::{TaskContext, TaskContextMeta},
+  };
+
+  use super::{ExternalModuleTask, ModuleTask};
+
+  fn task_context(
+    options: BundlerOptions,
+  ) -> (Arc<TaskContext<OsFileSystem>>, UnboundedReceiver<ModuleLoaderMsg>) {
+    let mut factory = BundleFactory::new(BundleFactoryOptions {
+      bundler_options: options,
+      disable_tracing_setup: true,
+      ..Default::default()
+    })
+    .expect("create bundle factory");
+    let bundle = factory.create_bundle(BundleMode::FullBuild, None).expect("create bundle");
+    let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+    let ctx = Arc::new(TaskContext {
+      options: bundle.options,
+      tx,
+      resolver: bundle.resolver,
+      fs: bundle.fs,
+      plugin_driver: bundle.plugin_driver,
+      meta: TaskContextMeta { replace_global_define_config: None },
+    });
+    (ctx, rx)
+  }
+
+  fn normal_task(
+    ctx: &Arc<TaskContext<OsFileSystem>>,
+    resolved_id: ResolvedId,
+    asserted_module_type: Option<ModuleType>,
+  ) -> ModuleTask<OsFileSystem> {
+    ModuleTask::new(
+      Arc::clone(ctx),
+      0.into(),
+      resolved_id,
+      None,
+      false,
+      asserted_module_type,
+      FlatOptions::from_shared_options(&ctx.options),
+      None,
+    )
+  }
+
+  fn external_task(
+    ctx: &Arc<TaskContext<OsFileSystem>>,
+    resolved_id: ResolvedId,
+  ) -> ExternalModuleTask<OsFileSystem> {
+    ExternalModuleTask::new(Arc::clone(ctx), 0.into(), resolved_id, Arc::new(vec![]))
+  }
+
+  fn empty_module() -> ResolvedId {
+    ResolvedId { id: ModuleId::new_empty("success"), ..Default::default() }
+  }
+
+  fn normal_error() -> ResolvedId {
+    ResolvedId { id: ModuleId::new("\0normal-error"), ..Default::default() }
+  }
+
+  fn external_module() -> ResolvedId {
+    ResolvedId { id: ModuleId::new("external-module"), external: true.into(), ..Default::default() }
+  }
+
+  fn failing_side_effects_options() -> BundlerOptions {
+    BundlerOptions {
+      treeshake: TreeshakeOptions::Option(InnerOptions {
+        module_side_effects: ModuleSideEffects::Function(Arc::new(|_, _| {
+          Box::pin(async { Err(anyhow::anyhow!("moduleSideEffects failed")) })
+        })),
+        ..Default::default()
+      }),
+      ..Default::default()
+    }
+  }
+
+  #[tokio::test]
+  async fn normal_module_success_send_ignores_dropped_receiver() {
+    let (ctx, mut rx) = task_context(BundlerOptions::default());
+    normal_task(&ctx, empty_module(), None).run().await;
+    assert!(matches!(rx.try_recv(), Ok(ModuleLoaderMsg::NormalModuleDone(_))));
+
+    drop(rx);
+    let (ctx, rx) = task_context(BundlerOptions::default());
+    drop(rx);
+    normal_task(&ctx, empty_module(), None).run().await;
+  }
+
+  #[tokio::test]
+  async fn normal_module_error_send_ignores_dropped_receiver() {
+    let (ctx, mut rx) = task_context(BundlerOptions::default());
+    normal_task(&ctx, normal_error(), Some(ModuleType::Asset)).run().await;
+    let Ok(ModuleLoaderMsg::BuildErrors(errors)) = rx.try_recv() else {
+      panic!("normal task must report its diagnostic to a live receiver");
+    };
+    assert!(errors[0].to_string().contains("asset"));
+
+    drop(rx);
+    let (ctx, rx) = task_context(BundlerOptions::default());
+    drop(rx);
+    normal_task(&ctx, normal_error(), Some(ModuleType::Asset)).run().await;
+  }
+
+  #[tokio::test]
+  async fn external_module_success_send_ignores_dropped_receiver() {
+    let (ctx, mut rx) = task_context(BundlerOptions::default());
+    external_task(&ctx, external_module()).run().await;
+    assert!(matches!(rx.try_recv(), Ok(ModuleLoaderMsg::ExternalModuleDone(_))));
+
+    drop(rx);
+    let (ctx, rx) = task_context(BundlerOptions::default());
+    drop(rx);
+    external_task(&ctx, external_module()).run().await;
+  }
+
+  #[tokio::test]
+  async fn external_module_error_send_ignores_dropped_receiver() {
+    let (ctx, mut rx) = task_context(failing_side_effects_options());
+    external_task(&ctx, external_module()).run().await;
+    let Ok(ModuleLoaderMsg::BuildErrors(errors)) = rx.try_recv() else {
+      panic!("external task must report its diagnostic to a live receiver");
+    };
+    assert!(errors[0].to_string().contains("moduleSideEffects failed"));
+
+    drop(rx);
+    let (ctx, rx) = task_context(failing_side_effects_options());
+    drop(rx);
+    external_task(&ctx, external_module()).run().await;
+  }
+}

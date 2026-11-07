@@ -13,7 +13,7 @@
 // browser: the same @rolldown/browser tarball, installed into tests/browser, the app the
 //   real-browser suite loads through Vite.
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, readdirSync, renameSync, rmSync, statSync } from 'node:fs';
+import { copyFileSync, readdirSync, realpathSync, renameSync, rmSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -118,8 +118,41 @@ function installBrowserPage() {
   run('pnpm', ['install', '--ignore-workspace', '--no-frozen-lockfile'], browserPage);
 }
 
+// Cloudflare's bundlers load the package through the `workerd` export condition, which nothing
+// else resolves from the packed tarball. realpathSync throws if the file was not packed.
+function checkWorkerdExports() {
+  const installed = join(browserPage, 'node_modules/@rolldown/browser');
+  for (const [specifier, file] of [
+    ['@rolldown/browser/workerd', 'dist/workerd.browser.mjs'],
+    ['@rolldown/browser/workerd/wasm', 'dist/rolldown-binding.wasm32-wasip1.wasm'],
+  ]) {
+    const script = `console.log(import.meta.resolve(${JSON.stringify(specifier)}))`;
+    const url = execFileSync(
+      process.execPath,
+      ['--conditions=workerd', '--input-type=module', '-e', script],
+      { cwd: browserPage, encoding: 'utf8' },
+    );
+    if (fileURLToPath(url.trim()) !== realpathSync(join(installed, file))) {
+      throw new Error(`${specifier} resolved to ${url.trim()} under workerd, expected ${file}`);
+    }
+    console.log(`[prepare-fixture] workerd condition: ${specifier} -> ${file}`);
+  }
+}
+
+const needsBrowserPackage = suite === 'webcontainer' || suite === 'browser' || suite === 'all';
+const needsNodePackages =
+  suite === 'webcontainer' || suite === 'webcontainer-fallback' || suite === 'all';
+
+// Each wasm flavor is built once, up front; the package builds below only bundle the js glue.
+// @rolldown/browser ships the threadless wasm32-wasip1 flavor, the node packages the threaded
+// wasm32-wasip1-threads one (internal-docs/async-runtime/implementation.md, "WASI artifacts").
 if (shouldBuild) {
-  run('pnpm', ['run', '--filter', 'rolldown', 'build-binding:wasi'], repoRoot);
+  if (needsBrowserPackage) {
+    run('pnpm', ['run', '--filter', 'rolldown', 'build-binding:wasi-single'], repoRoot);
+  }
+  if (needsNodePackages) {
+    run('pnpm', ['run', '--filter', 'rolldown', 'build-binding:wasi'], repoRoot);
+  }
 }
 
 if (suite === 'webcontainer' || suite === 'all') {
@@ -133,4 +166,5 @@ if (suite === 'webcontainer' || suite === 'webcontainer-fallback' || suite === '
 if (suite === 'browser' || suite === 'all') {
   packBrowserPackage();
   installBrowserPage();
+  checkWorkerdExports();
 }

@@ -3,6 +3,16 @@ use rolldown_common::WatcherChangeKind;
 use rolldown_utils::indexmap::FxIndexMap;
 use std::time::{Duration, Instant};
 
+/// The shortest wait from the latest file change to the build it starts.
+///
+/// One OS notification can reach the coordinator as several messages that
+/// arrive one at a time, microseconds apart (one per change kind of the same
+/// file). A build must not start on part of one notification, so even a zero
+/// build delay waits this long, which lets the rest of the notification join
+/// the same build. See "Rolldown's Approach" in
+/// `internal-docs/watch-mode/implementation.md`.
+const MIN_DEBOUNCE: Duration = Duration::from_millis(1);
+
 /// The state machine for the watcher
 ///
 /// State transitions:
@@ -41,14 +51,14 @@ impl WatcherState {
         for entry in entries {
           merge_change_kind(&mut changes, entry.path, entry.kind);
         }
-        let deadline = Instant::now() + debounce_duration;
+        let deadline = next_deadline(debounce_duration);
         WatcherState::Debouncing { changes, deadline }
       }
       WatcherState::Debouncing { mut changes, .. } => {
         for entry in entries {
           merge_change_kind(&mut changes, entry.path, entry.kind);
         }
-        let deadline = Instant::now() + debounce_duration;
+        let deadline = next_deadline(debounce_duration);
         WatcherState::Debouncing { changes, deadline }
       }
       // Ignore changes when closing or closed
@@ -110,13 +120,18 @@ impl WatcherState {
 
   /// Get the debounce deadline if in debouncing state
   #[cfg(test)]
-  #[expect(dead_code)]
   pub fn debounce_deadline(&self) -> Option<Instant> {
     match self {
       WatcherState::Debouncing { deadline, .. } => Some(*deadline),
       _ => None,
     }
   }
+}
+
+/// When a debounce window that starts now ends: after the build delay, but
+/// never sooner than [`MIN_DEBOUNCE`].
+fn next_deadline(debounce_duration: Duration) -> Instant {
+  Instant::now() + debounce_duration.max(MIN_DEBOUNCE)
 }
 
 /// Merge a new change kind into the accumulated changes for a path.
@@ -193,6 +208,40 @@ mod tests {
     assert!(new_state.is_idle());
     assert!(changes.is_some());
     assert_eq!(changes.unwrap().len(), 1);
+  }
+
+  #[test]
+  fn test_zero_build_delay_never_starts_with_a_due_deadline() {
+    // A deadline that is already due when debouncing starts or extends would let a build start
+    // before the rest of the same OS notification arrives.
+    let before = Instant::now();
+    let state = WatcherState::Idle.on_file_changes(
+      vec![FileChangeEvent::new("test.js".into(), WatcherChangeKind::Create)],
+      Duration::ZERO,
+    );
+    let deadline = state.debounce_deadline().expect("Expected Debouncing state");
+    assert!(deadline >= before + MIN_DEBOUNCE);
+
+    let before = Instant::now();
+    let state = state.on_file_changes(
+      vec![FileChangeEvent::new("test.js".into(), WatcherChangeKind::Update)],
+      Duration::ZERO,
+    );
+    let deadline = state.debounce_deadline().expect("Expected Debouncing state");
+    assert!(deadline >= before + MIN_DEBOUNCE);
+  }
+
+  #[test]
+  fn test_build_delay_above_floor_is_kept() {
+    let before = Instant::now();
+    let state = WatcherState::Idle.on_file_changes(
+      vec![FileChangeEvent::new("test.js".into(), WatcherChangeKind::Update)],
+      default_duration(),
+    );
+    let after = Instant::now();
+    let deadline = state.debounce_deadline().expect("Expected Debouncing state");
+    assert!(deadline >= before + default_duration());
+    assert!(deadline <= after + default_duration());
   }
 
   #[test]

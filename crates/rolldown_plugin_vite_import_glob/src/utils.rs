@@ -1,7 +1,7 @@
 use std::borrow::Cow;
+use std::collections::VecDeque;
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 
 use oxc::ast::ast::{
   self, Argument, ArrayExpressionElement, Expression, ObjectPropertyKind, PropertyKey, PropertyKind,
@@ -9,15 +9,9 @@ use oxc::ast::ast::{
 use oxc::ast_visit::{VisitJs, walk_js};
 use rolldown_ecmascript_utils::ExpressionExt;
 use rolldown_plugin::{LogWithoutPlugin, PluginContext};
-use rolldown_plugin_utils::{
-  constants::{ViteImportGlob, ViteImportGlobValue},
-  to_string_literal,
-};
+use rolldown_plugin_utils::to_string_literal;
 use rolldown_std_utils::relative_path_to_slash;
-use rolldown_utils::{
-  ecmascript::{to_module_import_export_name_with_ascii, to_usv_str},
-  indexmap::FxIndexMap,
-};
+use rolldown_utils::ecmascript::{to_module_import_export_name_with_ascii, to_usv_str};
 use string_wizard::MagicString;
 use sugar_path::SugarPath;
 
@@ -28,36 +22,105 @@ pub struct GlobImportVisit<'a> {
   pub id: &'a str,
   pub root: &'a PathBuf,
   pub restore_query_extension: bool,
+  pub current: usize,
   pub code: &'a str,
   pub magic_string: Option<MagicString<'a>>,
   pub import_decls: Vec<String>,
   pub errors: Vec<anyhow::Error>,
+  pub resolved_glob_groups: VecDeque<Vec<(String, Option<String>)>>,
   pub is_dev_mode: bool,
   pub matchers: Vec<GlobMatcher>,
-  pub glob_calls: Vec<GlobCall>,
-  pub resolved_globs: FxIndexMap<String, Option<String>>,
+}
+
+#[derive(Default)]
+pub struct GlobResolveVisit {
+  pub glob_groups: Vec<Vec<String>>,
+}
+
+impl GlobResolveVisit {
+  fn collect(glob: &str, group: &mut Vec<String>) {
+    let glob = glob.strip_prefix('!').unwrap_or(glob);
+    if requires_async_resolution(glob) {
+      group.push(glob.to_string());
+    }
+  }
+
+  fn collect_argument(argument: &Argument<'_>) -> Vec<String> {
+    let mut group = Vec::new();
+    match argument {
+      Argument::StringLiteral(value) => Self::collect(&to_usv_str(value.value), &mut group),
+      Argument::TemplateLiteral(value) => {
+        if let Some(value) = value.single_quasi() {
+          Self::collect(&to_usv_str(value), &mut group);
+        }
+      }
+      Argument::ArrayExpression(array) => {
+        for element in &array.elements {
+          match element {
+            ArrayExpressionElement::StringLiteral(value) => {
+              Self::collect(&to_usv_str(value.value), &mut group);
+            }
+            ArrayExpressionElement::TemplateLiteral(value) => {
+              if let Some(value) = value.single_quasi() {
+                Self::collect(&to_usv_str(value), &mut group);
+              }
+            }
+            _ => {}
+          }
+        }
+      }
+      _ => {}
+    }
+    group
+  }
+}
+
+impl<'ast> VisitJs<'ast> for GlobResolveVisit {
+  fn visit_expression(&mut self, expression: &Expression<'ast>) {
+    if let Some(call) = expression.as_call_expression()
+      && is_import_meta_glob_call(call)
+    {
+      self.glob_groups.push(call.arguments.first().map(Self::collect_argument).unwrap_or_default());
+      return;
+    }
+    walk_js::walk_expression(self, expression);
+  }
+}
+
+fn is_import_meta_glob_call(call: &ast::CallExpression<'_>) -> bool {
+  let Expression::StaticMemberExpression(member) = &call.callee else {
+    return false;
+  };
+  matches!(
+    &member.object,
+    Expression::ImportMeta(_)
+      if member.property.name == "glob"
+  )
+}
+
+fn requires_async_resolution(glob: &str) -> bool {
+  !(glob.starts_with('/')
+    || glob.starts_with("**")
+    || glob.starts_with("./")
+    || glob.starts_with("../"))
 }
 
 impl<'ast> VisitJs<'ast> for GlobImportVisit<'_> {
+  fn visit_program(&mut self, it: &ast::Program<'ast>) {
+    walk_js::walk_program(self, it);
+    if !self.import_decls.is_empty() {
+      self
+        .magic_string
+        .get_or_insert_with(|| MagicString::new(self.code))
+        .prepend(self.import_decls.join("\n"));
+    }
+  }
   fn visit_expression(&mut self, expr: &Expression<'ast>) {
-    if self.collect_glob_call(expr, ImportGlobOmitType::None) {
+    if self.transform_glob_import(expr, ImportGlobOmitType::None) {
       return;
     }
     walk_js::walk_expression(self, expr);
   }
-}
-
-/// An `import.meta.glob` call copied out of the AST.
-///
-/// Its aliased globs (e.g. `$lib/*.js`) are resolved after the AST is dropped, because the AST
-/// is not `Send` and can't be held across the `.await`. Blocking on the resolve instead can
-/// deadlock: a blocked worker hands its core to a thread from the small blocking pool, and once
-/// enough transforms block at once, no core is left to run the resolve.
-pub struct GlobCall {
-  span: oxc::span::Span,
-  omit_type: ImportGlobOmitType,
-  options: ImportGlobOptions,
-  globs: Vec<String>,
 }
 
 #[derive(Debug, Default)]
@@ -179,7 +242,11 @@ enum ImportGlobOmitType {
 }
 
 impl<'ast> GlobImportVisit<'_> {
-  fn collect_glob_call(&mut self, expr: &Expression<'ast>, omit_type: ImportGlobOmitType) -> bool {
+  fn transform_glob_import(
+    &mut self,
+    expr: &Expression<'ast>,
+    omit_type: ImportGlobOmitType,
+  ) -> bool {
     let Some(call_expr) = expr.as_call_expression() else { return false };
     let ast::Expression::StaticMemberExpression(ref mem_expr) = call_expr.callee else {
       return false;
@@ -196,9 +263,14 @@ impl<'ast> GlobImportVisit<'_> {
         };
         let [arg] = call_expr.arguments.as_slice() else { return false };
         let Some(arg_expr) = arg.as_expression() else { return false };
-        self.collect_glob_call(arg_expr, omit_type)
+        self.transform_glob_import(arg_expr, omit_type)
       }
       Expression::ImportMeta(_) if mem_expr.property.name == "glob" => {
+        // Consume the complete group at call entry. If one unresolved glob
+        // aborts this call, later calls still receive their own pre-resolved
+        // results instead of inheriting the unused tail of this array.
+        let resolved_globs = self.resolved_glob_groups.pop_front().unwrap_or_default();
+        let mut files: Vec<ImportGlobFileData> = vec![];
         let mut options = ImportGlobOptions::default();
 
         // import.meta.glob(['./dir/*.js'], { import: 'setup' })
@@ -209,81 +281,24 @@ impl<'ast> GlobImportVisit<'_> {
         // import.meta.glob('./dir/*.js')
         let Some(arg) = call_expr.arguments.first() else { return true };
 
-        self.glob_calls.push(GlobCall {
-          span: call_expr.span,
-          omit_type,
-          options,
-          globs: Self::glob_values(arg),
-        });
+        // {
+        //   './dir/ind.js': __glob__0_0_,
+        //   './dir/foo.js': () => import('./dir/foo.js'),
+        //   './dir/bar.js': () => import('./dir/bar.js?raw').then((m) => m.setup),
+        // }
+        if self.eval_glob_expr(arg, &mut files, &options, &resolved_globs).is_some() {
+          self.generate_glob_object_expression(&files, &options, omit_type, call_expr.span);
+        }
+
+        self.current += 1;
         true
       }
       _ => false,
     }
   }
 
-  pub async fn resolve_globs(&mut self) {
-    for glob in self.glob_calls.iter().flat_map(|call| &call.globs) {
-      let glob = glob.strip_prefix('!').unwrap_or(glob);
-      if !Self::needs_resolve(glob) || self.resolved_globs.contains_key(glob) {
-        continue;
-      }
-      let is_sub_imports_pattern = glob.starts_with('#') && glob.contains('*');
-      let mut custom = rolldown_plugin::CustomField::new();
-      custom.insert(ViteImportGlob, ViteImportGlobValue(is_sub_imports_pattern));
-      let resolved_id = self
-        .ctx
-        .resolve(
-          glob,
-          Some(self.id),
-          Some(rolldown_plugin::PluginContextResolveOptions {
-            custom: Arc::new(custom),
-            ..Default::default()
-          }),
-        )
-        .await
-        .ok()
-        .and_then(Result::ok)
-        .map(|resolved| {
-          path_posix::normalize(&rolldown_utils::pattern_filter::normalize_path(
-            resolved.id.as_str(),
-          ))
-          .into_owned()
-        });
-      self.resolved_globs.insert(glob.to_string(), resolved_id);
-    }
-  }
-
-  pub fn transform(&mut self) {
-    for (call_index, call) in std::mem::take(&mut self.glob_calls).into_iter().enumerate() {
-      let mut files: Vec<ImportGlobFileData> = vec![];
-
-      // {
-      //   './dir/ind.js': __glob__0_0_,
-      //   './dir/foo.js': () => import('./dir/foo.js'),
-      //   './dir/bar.js': () => import('./dir/bar.js?raw').then((m) => m.setup),
-      // }
-      if self.eval_glob_expr(&call.globs, &mut files, &call.options).is_some() {
-        self.generate_glob_object_expression(
-          call_index,
-          &files,
-          &call.options,
-          call.omit_type,
-          call.span,
-        );
-      }
-    }
-
-    if !self.import_decls.is_empty() {
-      self
-        .magic_string
-        .get_or_insert_with(|| MagicString::new(self.code))
-        .prepend(self.import_decls.join("\n"));
-    }
-  }
-
   fn generate_glob_object_expression(
     &mut self,
-    call_index: usize,
     files: &[ImportGlobFileData],
     options: &ImportGlobOptions,
     omit_type: ImportGlobOmitType,
@@ -314,7 +329,7 @@ impl<'ast> GlobImportVisit<'_> {
         // }
         let name = format!(
           "__import_glob__{}_{}_",
-          itoa::Buffer::new().format(call_index),
+          itoa::Buffer::new().format(self.current),
           itoa::Buffer::new().format(index)
         );
 
@@ -386,19 +401,14 @@ impl GlobImportVisit<'_> {
     self.id.starts_with("virtual:") || self.id.starts_with('\0') || !self.id.contains('/')
   }
 
-  fn needs_resolve(glob: &str) -> bool {
-    !(glob.starts_with('/')
-      || glob.starts_with("**")
-      || glob.starts_with("./")
-      || glob.starts_with("../"))
-  }
-
   fn to_absolute_glob<'a>(
     &self,
     glob: &'a str,
     dir: &str,
     root: &str,
     base: Option<&str>,
+    resolved_globs: &[(String, Option<String>)],
+    resolved_glob_index: &mut usize,
   ) -> Option<PathWithGlob<'a>> {
     let dir = if let Some(base) = base {
       if let Some(base) = base.strip_prefix('/') {
@@ -416,8 +426,14 @@ impl GlobImportVisit<'_> {
     } else if glob.starts_with("./") || glob.starts_with("../") {
       path_posix::join(&[&dir, glob])
     } else {
-      let resolved_id = self.resolved_globs.get(glob).and_then(Option::as_ref);
-      if let Some(id) = resolved_id
+      let resolved_id =
+        resolved_globs.get(*resolved_glob_index).and_then(|(candidate, resolved)| {
+          debug_assert_eq!(candidate, glob);
+          resolved.clone()
+        });
+      *resolved_glob_index += 1;
+
+      if let Some(ref id) = resolved_id
         && Path::new(id.as_str()).is_absolute()
       {
         return Some(PathWithGlob::new(id.clone(), glob));
@@ -490,9 +506,10 @@ impl GlobImportVisit<'_> {
 
   fn eval_glob_expr(
     &mut self,
-    values: &[String],
+    arg: &Argument,
     files: &mut Vec<ImportGlobFileData>,
     options: &ImportGlobOptions,
+    resolved_globs: &[(String, Option<String>)],
   ) -> Option<()> {
     let root = Path::new(&self.root);
     let is_virtual_module = self.is_virtual_module();
@@ -509,30 +526,77 @@ impl GlobImportVisit<'_> {
 
     let mut is_relative = true;
     let mut positive_globs = vec![];
-    for value in values.iter().filter(|value| !value.starts_with('!')) {
-      positive_globs.push(self.to_absolute_glob(
-        value,
-        &dir_slash,
-        &root_slash,
-        options.base.as_deref(),
-      )?);
-      if !value.starts_with('.') {
-        is_relative = false;
+    let mut resolved_glob_index = 0;
+
+    let mut values = vec![];
+    match arg {
+      Argument::StringLiteral(str) => values.push(to_usv_str(str.value)),
+      Argument::TemplateLiteral(lit) => {
+        if let Some(str) = lit.single_quasi() {
+          values.push(to_usv_str(str));
+        }
+      }
+      Argument::ArrayExpression(array_expr) => {
+        for expr in &array_expr.elements {
+          match expr {
+            ArrayExpressionElement::StringLiteral(str) => values.push(to_usv_str(str.value)),
+            ArrayExpressionElement::TemplateLiteral(lit) => {
+              if let Some(str) = lit.single_quasi() {
+                values.push(to_usv_str(str));
+              }
+            }
+            _ => {}
+          }
+        }
+      }
+      _ => {}
+    }
+
+    let mut negated_globs = vec![];
+    for value in &values {
+      if let Some(glob) = value.strip_prefix('!') {
+        // Defer negated globstars until the positive globs determine the walk root.
+        let path = if glob.starts_with("**") {
+          None
+        } else {
+          Some(self.to_absolute_glob(
+            glob,
+            &dir_slash,
+            &root_slash,
+            options.base.as_deref(),
+            resolved_globs,
+            &mut resolved_glob_index,
+          )?)
+        };
+        negated_globs.push((glob, path));
+      } else {
+        positive_globs.push(self.to_absolute_glob(
+          value,
+          &dir_slash,
+          &root_slash,
+          options.base.as_deref(),
+          resolved_globs,
+          &mut resolved_glob_index,
+        )?);
+        if !value.starts_with('.') {
+          is_relative = false;
+        }
       }
     }
+    debug_assert_eq!(resolved_glob_index, resolved_globs.len());
 
     let common = self.get_common_base(&positive_globs).into_owned();
 
-    let mut negated_globs = vec![];
-    for glob in values.iter().filter_map(|value| value.strip_prefix('!')) {
-      // Like the `cwd` vite passes to tinyglobby, a negated `**` glob starts where the walk
-      // starts, which can be outside `root`.
-      negated_globs.push(if glob.starts_with("**") {
-        PathWithGlob::new(path_posix::join(&[&common, glob]).into_owned(), glob)
-      } else {
-        self.to_absolute_glob(glob, &dir_slash, &root_slash, options.base.as_deref())?
-      });
-    }
+    // Like the `cwd` vite passes to tinyglobby, a negated `**` glob starts where the walk
+    // starts, which can be outside `root`.
+    let negated_globs = negated_globs
+      .into_iter()
+      .map(|(glob, path)| {
+        path.unwrap_or_else(|| {
+          PathWithGlob::new(path_posix::join(&[&common, glob]).into_owned(), glob)
+        })
+      })
+      .collect::<Vec<_>>();
 
     if negated_globs.is_empty() && positive_globs.is_empty() {
       return Some(());
@@ -782,32 +846,5 @@ impl GlobImportVisit<'_> {
         _ => {}
       }
     }
-  }
-
-  fn glob_values(arg: &Argument) -> Vec<String> {
-    let mut values = vec![];
-    match arg {
-      Argument::StringLiteral(str) => values.push(to_usv_str(str.value)),
-      Argument::TemplateLiteral(lit) => {
-        if let Some(str) = lit.single_quasi() {
-          values.push(to_usv_str(str));
-        }
-      }
-      Argument::ArrayExpression(array_expr) => {
-        for expr in &array_expr.elements {
-          match expr {
-            ArrayExpressionElement::StringLiteral(str) => values.push(to_usv_str(str.value)),
-            ArrayExpressionElement::TemplateLiteral(lit) => {
-              if let Some(str) = lit.single_quasi() {
-                values.push(to_usv_str(str));
-              }
-            }
-            _ => {}
-          }
-        }
-      }
-      _ => {}
-    }
-    values.into_iter().map(Cow::into_owned).collect()
   }
 }

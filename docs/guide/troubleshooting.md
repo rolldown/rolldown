@@ -44,7 +44,7 @@ The benchmark was ran on the following environment:
 
 #### Containers and CPU emulation
 
-Rolldown's native runtime uses 1.5 times the smaller of the physical CPU count and the parallelism available to the process, rounded down. On Linux, available parallelism accounts for CPU affinity and cgroup CPU quotas. This prevents a container from sizing its runtime from the host's unrestricted physical CPU count.
+Rolldown's native runtime uses 1.5 times the smaller of the physical CPU count and the parallelism available to the process, rounded down, and at least 2 workers. On Linux, available parallelism accounts for CPU affinity and cgroup CPU quotas. This prevents a container from sizing its runtime from the host's unrestricted physical CPU count.
 
 When building under CPU emulation such as QEMU, reducing concurrency can help diagnose stalls or excessive overhead:
 
@@ -52,7 +52,7 @@ When building under CPU emulation such as QEMU, reducing concurrency can help di
 ROLLDOWN_WORKER_THREADS=2 RAYON_NUM_THREADS=2 npm run build
 ```
 
-Set these variables before starting the process. The native runtime uses the first valid positive integer from `ROLLDOWN_WORKER_THREADS`, then `TOKIO_WORKER_THREADS`, before computing its default. Explicit overrides are not capped by CPU availability. `RAYON_NUM_THREADS` controls Rayon's separate pool and may also affect other Rust-based plugins in the same process. `UV_THREADPOOL_SIZE` controls Node.js's separate libuv pool, not Rolldown's runtime.
+Set these variables before starting the process; the binding reads them once when it loads. The native runtime uses the first valid positive integer from `ROLLDOWN_WORKER_THREADS`, then `TOKIO_WORKER_THREADS`, before computing its default. Explicit overrides are not capped by CPU availability; they are raised to 2 and capped at 256. Rolldown's async tasks, blocking file reads and parallel stages share these workers. `RAYON_NUM_THREADS` sizes Rayon's global pool, which serves parallel work started outside Rolldown's runtime and may also affect other Rust-based plugins in the same process. `UV_THREADPOOL_SIZE` controls Node.js's separate libuv pool, not Rolldown's runtime.
 
 Prefer running the build on the builder's native architecture when possible. A successful build with reduced concurrency does not by itself identify the cause of a hang; include the exact dependency versions, container image, emulator version, CPU limits, and reproduction when reporting one.
 

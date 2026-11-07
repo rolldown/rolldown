@@ -1,8 +1,8 @@
-use std::path::Path;
+use std::{borrow::Cow, path::Path};
 
 use cow_utils::CowUtils;
 use oxc::{
-  ast::ast::{Expression, Program},
+  ast::{Comment, ast::Expression},
   ast_visit::{VisitJs, walk_js},
   span::Span,
 };
@@ -22,87 +22,125 @@ struct DynamicImportRequest<'a> {
   pub import: bool,
 }
 
-/// A variable dynamic import whose glob needs the resolver, copied out of the AST.
-///
-/// It is rewritten after the AST is dropped, because the AST is not `Send` and can't be held
-/// across the `.await` on the resolver. Blocking on the resolver instead can deadlock: a blocked
-/// worker hands its core to a thread from the small blocking pool, and once enough transforms
-/// block at once, no core is left to run the resolver.
-pub struct AsyncImport {
-  pub glob: String,
-  pub span: Span,
-  pub source_span: Span,
-  pub first_quasi_len: usize,
-}
-
-pub struct DynamicImportVarsVisit<'a> {
-  pub ctx: &'a PluginContext,
-  pub source_text: &'a str,
-  pub root: &'a Path,
-  pub importer: &'a Path,
+pub struct DynamicImportVarsVisit<'ast, 'b> {
+  pub ctx: &'b PluginContext,
+  pub source_text: &'b str,
+  pub root: &'b Path,
+  pub importer: &'b Path,
   pub need_helper: bool,
-  pub vite_ignored_starts: Vec<u32>,
-  pub async_imports: Vec<AsyncImport>,
-  pub magic_string: Option<MagicString<'a>>,
+  pub comments: &'b oxc::allocator::Vec<'ast, Comment>,
+  pub current_comment: usize,
+  pub async_imports: Vec<String>,
+  pub async_imports_addrs: Vec<*const Expression<'ast>>,
+  pub magic_string: Option<MagicString<'b>>,
 }
 
-impl<'ast> VisitJs<'ast> for DynamicImportVarsVisit<'_> {
-  fn visit_program(&mut self, program: &Program<'ast>) {
-    self.vite_ignored_starts = program
-      .comments
-      .iter()
-      .filter(|comment| comment.is_vite())
-      .map(|comment| comment.attached_to)
-      .collect();
-    walk_js::walk_program(self, program);
-  }
+pub struct DynamicImportResolveVisit<'ast, 'a> {
+  pub comments: &'a oxc::allocator::Vec<'ast, Comment>,
+  pub current_comment: usize,
+  pub async_imports: Vec<String>,
+}
 
+impl<'ast> VisitJs<'ast> for DynamicImportResolveVisit<'ast, '_> {
   fn visit_expression(&mut self, expr: &Expression<'ast>) {
-    if self.rewrite_variable_dynamic_import(expr) {
+    if let Expression::ImportExpression(import_expr) = expr
+      && let Expression::TemplateLiteral(source) = &import_expr.source
+    {
+      if self.current_comment < self.comments.len() {
+        for comment in &self.comments[self.current_comment..] {
+          if comment.attached_to > source.span.start {
+            break;
+          }
+          self.current_comment += 1;
+          if comment.attached_to == source.span.start && comment.is_vite() {
+            return;
+          }
+        }
+      }
+      if !source.is_no_substitution_template()
+        && let Ok(glob) = template_literal_to_glob(source)
+        && memchr::memchr(b'*', glob.as_bytes()).is_some()
+        && !should_ignore(&glob)
+        && glob.as_bytes()[0] != b'.'
+        && glob.as_bytes()[0] != b'/'
+      {
+        self.async_imports.push(glob.into_owned());
+      }
+      return;
+    }
+    walk_js::walk_expression(self, expr);
+  }
+}
+
+impl<'ast> VisitJs<'ast> for DynamicImportVarsVisit<'ast, '_> {
+  fn visit_expression(&mut self, expr: &Expression<'ast>) {
+    if self.rewrite_variable_dynamic_import(expr, None) {
       walk_js::walk_expression(self, expr);
     }
   }
 }
 
-impl DynamicImportVarsVisit<'_> {
-  fn rewrite_variable_dynamic_import(&mut self, expr: &Expression<'_>) -> bool {
+impl<'ast> DynamicImportVarsVisit<'ast, '_> {
+  pub fn rewrite_variable_dynamic_import(
+    &mut self,
+    expr: &Expression<'ast>,
+    async_imports: Option<&str>,
+  ) -> bool {
     if let Expression::ImportExpression(import_expr) = expr
       && let Expression::TemplateLiteral(source) = &import_expr.source
     {
       // Respects @vite-ignore comment (e.g., import(/* @vite-ignore */ `..`))
-      if self.vite_ignored_starts.contains(&source.span.start) {
-        return false;
+      if self.current_comment < self.comments.len() {
+        for comment in &self.comments[self.current_comment..] {
+          if comment.attached_to > source.span.start {
+            break;
+          }
+          self.current_comment += 1;
+          if comment.attached_to == source.span.start && comment.is_vite() {
+            return false;
+          }
+        }
       }
+      let glob = match async_imports {
+        Some(glob) => Cow::Borrowed(glob),
+        None => {
+          if source.is_no_substitution_template() {
+            return false;
+          }
 
-      if source.is_no_substitution_template() {
-        return false;
-      }
+          let glob = match template_literal_to_glob(source) {
+            Ok(glob) => glob,
+            Err(error) => {
+              self.ctx.warn(LogWithoutPlugin { message: error.to_string(), ..Default::default() });
+              return false;
+            }
+          };
 
-      let glob = match template_literal_to_glob(source) {
-        Ok(glob) => glob,
-        Err(error) => {
-          self.ctx.warn(LogWithoutPlugin { message: error.to_string(), ..Default::default() });
-          return false;
+          if memchr::memchr(b'*', glob.as_bytes()).is_none() || should_ignore(&glob) {
+            return false;
+          }
+
+          if glob.as_bytes()[0] != b'.' && glob.as_bytes()[0] != b'/' {
+            self.async_imports.push(glob.into_owned());
+            self.async_imports_addrs.push(std::ptr::from_ref(expr));
+            return false;
+          }
+
+          glob
         }
       };
 
-      if memchr::memchr(b'*', glob.as_bytes()).is_none() || should_ignore(&glob) {
+      let Some(index) = memchr::memchr(b'*', glob.as_bytes()) else {
         return false;
-      }
+      };
 
       // Oxc turns CRLF into LF in `raw`, so take the length from the span.
       let first_quasi_len = source.quasis[0].span.size() as usize;
-      if glob.as_bytes()[0] != b'.' && glob.as_bytes()[0] != b'/' {
-        self.async_imports.push(AsyncImport {
-          glob: glob.into_owned(),
-          span: import_expr.span,
-          source_span: source.span,
-          first_quasi_len,
-        });
-        return false;
-      }
-
-      let prefix = to_usv_str(source.quasis[0].value.cooked.expect("untagged template literal"));
+      let prefix = if async_imports.is_some() {
+        Cow::Borrowed(&glob[..index])
+      } else {
+        to_usv_str(source.quasis[0].value.cooked.expect("untagged template literal"))
+      };
       self.rewrite(import_expr.span, source.span, first_quasi_len, &prefix, &glob);
       return false;
     }

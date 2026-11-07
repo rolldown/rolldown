@@ -2,9 +2,11 @@
 //!
 //! A caught payload's destructor is user code and can panic again; dropping it
 //! plainly lets that panic unwind out of the code that caught the first one.
-//! On a close path it skips the remaining cleanup; `BundleHandle::close` marks
-//! itself closed first, so no later call retries that cleanup. See
-//! `internal-docs/rust-bundler/implementation.md`.
+//! Inside a napi callback it escapes the callback. On a close path it skips
+//! the remaining cleanup; `BundleHandle::close` marks itself closed first, so
+//! no later call retries that cleanup. See
+//! `internal-docs/rust-bundler/implementation.md` and
+//! `internal-docs/async-runtime/design.md`, "Caught panic payloads are user code".
 
 use std::{
   any::Any,

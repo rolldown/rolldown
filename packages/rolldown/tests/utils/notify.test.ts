@@ -3,9 +3,10 @@ import { mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { chokidar, FSWatcher, watch, Watcher } from 'rolldown/utils';
+import { isWasiTest } from 'rolldown-tests/utils';
 import { expect, onTestFinished, test, vi } from 'vitest';
 
-test('watch files through the native binding', async () => {
+test.skipIf(isWasiTest)('watch files through the native binding', async () => {
   const root = await realpath(await mkdtemp(path.join(tmpdir(), 'rolldown-notify-')));
   const file = path.join(root, 'entry.js');
   const onEvent = vi.fn();
@@ -33,7 +34,7 @@ test('watch files through the native binding', async () => {
   expect(watcher.isWatched(file)).toBe(false);
 });
 
-test('Chokidar watches files through the native binding', async () => {
+test.skipIf(isWasiTest)('Chokidar watches files through the native binding', async () => {
   const root = await realpath(await mkdtemp(path.join(tmpdir(), 'rolldown-chokidar-')));
   const watcher = chokidar.watch('.', { cwd: root, usePolling: true, pollInterval: 20 });
   const onAdd = vi.fn();

@@ -7,9 +7,9 @@ use std::{
 };
 
 use arcstr::ArcStr;
+use async_lock::Mutex;
 use rolldown_common::{ClientHmrInput, ClientHmrUpdate, HmrUpdate, ScanMode, WatcherChangeKind};
 use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexMap};
-use tokio::sync::Mutex;
 
 use rolldown::Bundler;
 
@@ -114,7 +114,7 @@ impl BundlingTask {
       "[BundlingTask] completed\n - has_generated_bundle_output: {has_generated_bundle_output:?}",
     );
 
-    self.dev_context.coordinator_tx.send(CoordinatorMsg::BundleCompleted {
+    self.dev_context.coordinator_tx.unbounded_send(CoordinatorMsg::BundleCompleted {
       error_stage,
       has_generated_bundle_output,
       hmr_stage_watch_files: self.hmr_stage_watch_files,

@@ -110,6 +110,25 @@ The following features are planned for future releases:
 
 - `generateDecodedMap()` - Generate source map with decoded mappings
 
+### Explicit Release (Experimental)
+
+`RolldownMagicString` exposes an opt-in `dropInner()` method to release its native source text, edits, UTF-16 mapping table, and indentation exclusion ranges without waiting for garbage collection. This is a Rolldown-specific experimental API:
+
+```js
+import { RolldownMagicString } from 'rolldown';
+
+const magicString = new RolldownMagicString('const answer = 42;');
+magicString.append('\nconsole.log(answer);');
+const code = magicString.toString();
+const map = magicString.generateMap({ hires: true });
+magicString.dropInner();
+// The copied code and generated map remain valid.
+```
+
+The first call returns `{ freed: true }`. Further calls are safe and return `{ freed: false, reason: 'Memory has already been freed' }`. After release, reading or editing the contents, cloning, generating maps, or sending the instance throws. A small empty native `MagicString` allocation remains until the wrapper is garbage collected.
+
+Returning a native MagicString from `transform` transfers its contents to the sourcemap worker through `sendMagicString()`, making the instance unusable. That transfer leaves the wrapper's UTF-16 mapping table allocated. Calling `dropInner()` after the transfer releases that remaining table without invalidating the already-sent code or sourcemap. Finish using the instance before sending or releasing it; do not release an instance that you still intend to return from `transform`.
+
 ## Real-World Performance
 
 use [rolldown/benchmarks](https://github.com/rolldown/benchmarks/) as benchmark cases

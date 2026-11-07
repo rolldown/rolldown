@@ -1,4 +1,4 @@
-name: Benchmarks Rust Borrowed Tokens (paired lazy-line walltime validation)
+name: Benchmarks Rust Zero Offset
 
 permissions: {}
 
@@ -64,86 +64,42 @@ jobs:
           BENCH_MODE: ${{ matrix.mode }}
           RUSTFLAGS: '-C debuginfo=1 -C strip=none -g -C lto=false -C codegen-units=16'
         run: |
+          set -euo pipefail
+          cp .github/codspeed-experiments/prepare.py /tmp/prepare-concat.py
+          cp .github/codspeed-experiments/guards.rs /tmp/concat-guards.rs
+          cp .github/codspeed-experiments/zero-offset.patch /tmp/zero-offset.patch
+          git clone --depth 1 --branch v9.0.0 https://github.com/oxc-project/oxc-sourcemap.git /tmp/concat-sourcemap
           if [ "$BENCH_MODE" = simulation ]; then export RUSTFLAGS="$RUSTFLAGS --cfg codspeed"; fi
-          git clone --depth 1 --branch v9.0.0 https://github.com/oxc-project/oxc-sourcemap.git /tmp/borrowed-sourcemap
-          python3 - <<'PY_API'
-          from pathlib import Path
-          p = Path('/tmp/borrowed-sourcemap/src/sourcemap.rs')
-          t = p.read_text()
-          needle = '    /// Get source view tokens.'
-          assert t.count(needle) == 1
-          t = t.replace(needle, '    /// Borrow the raw tokens in generated-position order without copying them.\n    pub fn get_tokens_slice(&self) -> &[Token] {\n        &self.tokens\n    }\n\n' + needle)
-          p.write_text(t)
-          PY_API
-          cat > /tmp/prepare-paired.py <<'PY_PREPARE'
-          from pathlib import Path
-
-          root = Path.cwd()
-          import os
-          if os.environ["BENCH_MODE"] == "walltime":
-              p = root / 'Cargo.toml'
-              p.write_text(p.read_text().replace(
-                  'criterion2 = { version = "3.0.4", default-features = false }',
-                  'criterion = { package = "codspeed-criterion-compat", version = "=6.0.0", default-features = false }',
-              ))
-              for rel in ['crates/bench/Cargo.toml', 'crates/rolldown_sourcemap/Cargo.toml', 'crates/rolldown_utils/Cargo.toml']:
-                  p = root / rel
-                  p.write_text(p.read_text().replace('criterion2', 'criterion').replace('codspeed = ["criterion/codspeed"]', 'codspeed = []'))
-
-          # Label the builds without changing benchmark inputs or measured operations.
-          p = root / 'crates/bench/benches/bench.rs'
-          p.write_text(p.read_text().replace(
-              'let mut group = c.benchmark_group("sourcemap");',
-              'let label = std::env::var("WALLTIME_LABEL").expect("validation label");\n  let mut group = c.benchmark_group(format!("{label}/sourcemap"));',
-          ))
-          p = root / 'crates/bench/src/lib.rs'
-          p.write_text(p.read_text().replace(
-              'let mut group = c.benchmark_group(group_name);',
-              'let label = std::env::var("WALLTIME_LABEL").expect("validation label");\n  let mut group = c.benchmark_group(format!("{label}/{group_name}"));',
-          ))
-          p = root / 'crates/bench/Cargo.toml'
-          p.write_text(p.read_text() + '\noxc_sourcemap = { workspace = true }\n')
-          p = root / 'crates/bench/benches/bench.rs'
-          t = p.read_text()
-          t = t.replace('fn sourcemap_benches(', '// Validation-only ordering variants of the existing real codegen map.\nfn reorder_mapping(map: &SourceMap, shuffled: bool) -> SourceMap {\n  let mut parts = map.clone().into_parts();\n  let original = parts.tokens.clone();\n  let mut order: Vec<_> = (0..original.len()).collect();\n  if shuffled {\n    let mut state = 0x5eed_d1ce_u32;\n    for index in (1..order.len()).rev() {\n      state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);\n      order.swap(index, state as usize % (index + 1));\n    }\n  } else {\n    order.reverse();\n  }\n  for (index, token) in parts.tokens.iter_mut().enumerate() {\n    let source = original[order[index]];\n    *token = oxc_sourcemap::Token::new(\n      token.get_dst_line(), token.get_dst_col(),\n      source.get_src_line(), source.get_src_col(),\n      source.get_source_id(), source.get_name_id(),\n    );\n  }\n  parts.token_chunks = None;\n  SourceMap::from_parts(parts)\n}\n\nfn coarsen_mapping(map: &SourceMap) -> SourceMap {\n  let mut parts = map.clone().into_parts();\n  let mut last_line = None;\n  parts.tokens = parts.tokens.into_vec().into_iter().enumerate().filter_map(|(index, token)| {\n    let first_on_line = last_line != Some(token.get_dst_line());\n    last_line = Some(token.get_dst_line());\n    (first_on_line || index % 4 == 0).then_some(token)\n  }).collect();\n  parts.token_chunks = None;\n  SourceMap::from_parts(parts)\n}\n' + '\nfn sourcemap_benches(')
-          t = t.replace('  group.finish();', '  let reversed_map = reorder_mapping(&repretty_map, false);\n  group.bench_function("collapse_reversed_chain", |b| {\n    b.iter(|| black_box(collapse_sourcemaps(&[&pretty_map, &minified_map, &reversed_map])));\n  });\n  let shuffled_map = reorder_mapping(&repretty_map, true);\n  group.bench_function("collapse_shuffled_chain", |b| {\n    b.iter(|| black_box(collapse_sourcemaps(&[&pretty_map, &minified_map, &shuffled_map])));\n  });\n  let coarse_map = coarsen_mapping(&minified_map);\n  group.bench_function("collapse_coarse_chain", |b| {\n    b.iter(|| black_box(collapse_sourcemaps(&[&pretty_map, &coarse_map, &repretty_map])));\n  });\n' + '  group.finish();')
-          p.write_text(t)
-          PY_PREPARE
-          cat > /tmp/copy-benchmark.py <<'PY_COPY'
-          import json, shutil, sys
-          records = [json.loads(line) for line in open(sys.argv[1]) if line.startswith('{')]
-          paths = [r['executable'] for r in records if r.get('reason') == 'compiler-artifact' and 'bench' in r.get('target', {}).get('kind', []) and r.get('executable')]
-          assert len(paths) == 1, paths
-          shutil.copy2(paths[0], sys.argv[2])
-          PY_COPY
-          git fetch origin 1f1e5ffc9a208c774784f71fb3fcaa35c01a1ca3 60302e29ddbc3eb7dcff5f7b8cf6275e79d29811
           features=()
           if [ "$BENCH_MODE" = simulation ]; then features=(--features codspeed); fi
+          git fetch origin 1f1e5ffc9a208c774784f71fb3fcaa35c01a1ca3
           for variant in base head; do
-            case "$variant" in
-              base) revision=1f1e5ffc9a208c774784f71fb3fcaa35c01a1ca3 ;;
-              head) revision=60302e29ddbc3eb7dcff5f7b8cf6275e79d29811 ;;
-            esac
-            git checkout --detach "$revision"
-            python3 /tmp/prepare-paired.py
-            if [ "$variant" = head ]; then cp /tmp/paired-Cargo.lock Cargo.lock; fi
+            git checkout --detach 1f1e5ffc9a208c774784f71fb3fcaa35c01a1ca3
+            if [ "$variant" = head ]; then git -C /tmp/concat-sourcemap apply /tmp/zero-offset.patch; fi
+            python3 /tmp/prepare-concat.py
+            if [ "$variant" = head ]; then cp /tmp/concat-Cargo.lock Cargo.lock; fi
+            lock=()
+            if [ "$variant" = head ]; then lock=(--locked); fi
+            cargo --config 'patch.crates-io.oxc_sourcemap.path="/tmp/concat-sourcemap"' build "${lock[@]}" --release -p bench --bench bench "${features[@]}" --message-format=json > "/tmp/$variant-build.json"
+            python3 - "$variant" <<'PY_COPY'
+          import json,shutil,sys
+          variant=sys.argv[1]
+          records=[json.loads(line) for line in open(f'/tmp/{variant}-build.json') if line.startswith('{')]
+          paths=[r['executable'] for r in records if r.get('reason')=='compiler-artifact' and 'bench' in r.get('target',{}).get('kind',[]) and r.get('executable')]
+          assert len(paths)==1,paths
+          shutil.copy2(paths[0],f'/tmp/{variant}-bench')
+          PY_COPY
             if [ "$variant" = base ]; then
-              cargo --config 'patch.crates-io.oxc_sourcemap.path="/tmp/borrowed-sourcemap"' build --release -p bench --bench bench "${features[@]}" --message-format=json > /tmp/base-build.json
-              cp Cargo.lock /tmp/paired-Cargo.lock
-            else
-              cargo --config 'patch.crates-io.oxc_sourcemap.path="/tmp/borrowed-sourcemap"' build --locked --release -p bench --bench bench "${features[@]}" --message-format=json > /tmp/head-build.json
-            fi
-            python3 /tmp/copy-benchmark.py "/tmp/$variant-build.json" "/tmp/$variant-bench"
-            if [ "$variant" = base ]; then
+              cp Cargo.lock /tmp/concat-Cargo.lock
               git restore --worktree Cargo.toml Cargo.lock crates/bench/Cargo.toml crates/rolldown_sourcemap/Cargo.toml crates/rolldown_utils/Cargo.toml crates/bench/benches/bench.rs crates/bench/src/lib.rs
             fi
           done
           bucket=walltime
           if [ "$BENCH_MODE" = simulation ]; then bucket=analysis; fi
           mkdir -p "target/codspeed/$bucket/bench"
-          find target/codspeed/$bucket/bench -maxdepth 1 -type f -delete
-          cp /tmp/base-bench target/codspeed/$bucket/bench/base
-          cp /tmp/head-bench target/codspeed/$bucket/bench/head
+          find "target/codspeed/$bucket/bench" -maxdepth 1 -type f -delete
+          cp /tmp/base-bench "target/codspeed/$bucket/bench/base"
+          cp /tmp/head-bench "target/codspeed/$bucket/bench/head"
           sha256sum /tmp/base-bench /tmp/head-bench
           cat > /tmp/run-paired-walltime.sh <<'SH_RUN'
           set -euo pipefail

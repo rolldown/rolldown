@@ -31,7 +31,6 @@ import { createWatcher } from './watcher';
  * watcher.close();
  * ```
  *
- * @experimental
  * @category Programmatic APIs
  */
 export function watch(input: WatchOptions | WatchOptions[]): RolldownWatcher {

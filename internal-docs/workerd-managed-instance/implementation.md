@@ -109,6 +109,10 @@ freezing is shallow, so the release can still clear the cell. The cell and the
 accessor that reads it are TypeScript-private, never `#private`: a getter
 reached through a Proxy or a derived object runs with that object as `this`,
 which fails a `#private` brand check.
+The chunk's change collector must also read its wrapper through the cell.
+Capturing the raw wrapper in the proxy's `set` trap keeps it alive even when
+the plugin never assigns a property. Changes are collected before the hook's
+`finally` materializes the kept items and clears their cells.
 `PluginContextData`'s release runs every item even when one throws, then
 rethrows the first error. On a failed build, `RolldownBuild#build` keeps the build error and
 attaches a release error as its `cause`; a later private-instance disposal

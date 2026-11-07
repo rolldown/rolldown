@@ -134,7 +134,9 @@ function transformToMutableRollupOutputChunk(
       if (!assigned) {
         const names = new Set<string | symbol>();
         assigned = names;
-        changed.updated.set(fileName, () => collectChunkChange(bindingChunk, chunk, cache, names));
+        // The proxy's set trap must not capture the raw wrapper: a kept
+        // chunk would retain its instance even after the cell is cleared.
+        changed.updated.set(fileName, () => collectChunkChange(binding(), chunk, cache, names));
       }
       assigned.add(p);
       return true;

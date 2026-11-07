@@ -952,9 +952,9 @@ describe('workerd build() data a plugin keeps', () => {
 
   // `build()` passes `write: false`, so writeBundle never runs here; it
   // releases its items through the same path as generateBundle.
-  distTest(
-    'kept generateBundle chunks and assets stay readable and let each disposed instance be collected',
-    async () => {
+  distTest.each([false, true])(
+    'kept generateBundle chunks and assets stay readable and let each disposed instance be collected (mutate: %s)',
+    async (mutate) => {
       const kept: (OutputChunk | OutputAsset)[] = [];
       const cycles = 4;
       let retained = 0;
@@ -969,6 +969,12 @@ describe('workerd build() data a plugin keeps', () => {
             },
             generateBundle(_options, bundle) {
               for (const item of Object.values(bundle)) {
+                if (mutate && item.type === 'chunk') {
+                  // Exercise the change collector as well as a proxy whose
+                  // set trap never ran, before optionally freezing the item.
+                  item.code += '\n// kept mutation';
+                  item.imports = [...item.imports];
+                }
                 kept.push(freeze ? Object.freeze(item) : item);
               }
             },
@@ -985,6 +991,7 @@ describe('workerd build() data a plugin keeps', () => {
         if (item.type === 'chunk') {
           expect(item.fileName).toBe('virt_entry.js');
           expect(item.code).toContain('total');
+          expect(item.code.includes('// kept mutation')).toBe(mutate);
           expect(Object.keys(item.modules)).toContain('virt:entry.js');
           expect(item.moduleIds).toContain('virt:entry.js');
           expect(item.imports).toEqual([]);

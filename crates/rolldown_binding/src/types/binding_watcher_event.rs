@@ -4,11 +4,12 @@ use rolldown_watcher::WatchEvent;
 
 use super::binding_outputs::to_binding_error;
 use super::error::BindingError;
+use super::js_callback_release::SharedJsCallbackRelease;
 use crate::binding_watcher_bundler::BindingWatcherBundler;
 
 enum WatcherEventInner {
   /// Bundle event (on_event): START, BUNDLE_START, BUNDLE_END, END, ERROR
-  BundleEvent(WatchEvent),
+  BundleEvent(WatchEvent, SharedJsCallbackRelease),
   /// File change event (on_change)
   Change { path: String, kind: String },
   /// Restart event (on_restart)
@@ -23,8 +24,10 @@ pub struct BindingWatcherEvent {
 }
 
 impl BindingWatcherEvent {
-  pub fn from_watch_event(event: WatchEvent) -> Self {
-    Self { inner: WatcherEventInner::BundleEvent(event) }
+  /// The result of a `BUNDLE_END` or `ERROR` event takes a hold on `option_callbacks` while it
+  /// closes.
+  pub fn from_watch_event(event: WatchEvent, option_callbacks: SharedJsCallbackRelease) -> Self {
+    Self { inner: WatcherEventInner::BundleEvent(event, option_callbacks) }
   }
 
   pub fn from_change(path: String, kind: String) -> Self {
@@ -45,7 +48,7 @@ impl BindingWatcherEvent {
   #[napi]
   pub fn event_kind(&self) -> &str {
     match &self.inner {
-      WatcherEventInner::BundleEvent(_) => "event",
+      WatcherEventInner::BundleEvent(..) => "event",
       WatcherEventInner::Change { .. } => "change",
       WatcherEventInner::Restart => "restart",
       WatcherEventInner::Close => "close",
@@ -55,7 +58,7 @@ impl BindingWatcherEvent {
   #[napi]
   pub fn bundle_event_kind(&self) -> &str {
     match &self.inner {
-      WatcherEventInner::BundleEvent(event) => event.as_str(),
+      WatcherEventInner::BundleEvent(event, _) => event.as_str(),
       _ => unreachable!("Expected BundleEvent"),
     }
   }
@@ -63,11 +66,14 @@ impl BindingWatcherEvent {
   #[napi]
   pub fn bundle_end_data(&self) -> BindingBundleEndEventData {
     match &self.inner {
-      WatcherEventInner::BundleEvent(WatchEvent::BundleEnd(data)) => BindingBundleEndEventData {
-        output: data.output.clone(),
-        duration: data.duration,
-        result: data.bundle_handle.clone(),
-      },
+      WatcherEventInner::BundleEvent(WatchEvent::BundleEnd(data), option_callbacks) => {
+        BindingBundleEndEventData {
+          output: data.output.clone(),
+          duration: data.duration,
+          result: data.bundle_handle.clone(),
+          option_callbacks: option_callbacks.clone(),
+        }
+      }
       _ => unreachable!("Expected BundleEvent::BundleEnd"),
     }
   }
@@ -75,14 +81,17 @@ impl BindingWatcherEvent {
   #[napi]
   pub fn bundle_error_data(&self) -> BindingBundleErrorEventData {
     match &self.inner {
-      WatcherEventInner::BundleEvent(WatchEvent::Error(data)) => BindingBundleErrorEventData {
-        error: data
-          .diagnostics
-          .iter()
-          .map(|diagnostic| to_binding_error(diagnostic, data.cwd.clone()))
-          .collect(),
-        result: data.bundle_handle.clone(),
-      },
+      WatcherEventInner::BundleEvent(WatchEvent::Error(data), option_callbacks) => {
+        BindingBundleErrorEventData {
+          error: data
+            .diagnostics
+            .iter()
+            .map(|diagnostic| to_binding_error(diagnostic, data.cwd.clone()))
+            .collect(),
+          result: data.bundle_handle.clone(),
+          option_callbacks: option_callbacks.clone(),
+        }
+      }
       _ => unreachable!("Expected BundleEvent::Error"),
     }
   }
@@ -109,13 +118,14 @@ pub struct BindingBundleEndEventData {
   pub output: String,
   pub duration: u32,
   result: BundleHandle,
+  option_callbacks: SharedJsCallbackRelease,
 }
 
 #[napi]
 impl BindingBundleEndEventData {
   #[napi(getter)]
   pub fn result(&self) -> BindingWatcherBundler {
-    BindingWatcherBundler::new(self.result.clone())
+    BindingWatcherBundler::new(self.result.clone(), self.option_callbacks.clone())
   }
 }
 
@@ -123,13 +133,14 @@ impl BindingBundleEndEventData {
 pub struct BindingBundleErrorEventData {
   error: Vec<BindingError>,
   result: BundleHandle,
+  option_callbacks: SharedJsCallbackRelease,
 }
 
 #[napi]
 impl BindingBundleErrorEventData {
   #[napi(getter)]
   pub fn result(&self) -> BindingWatcherBundler {
-    BindingWatcherBundler::new(self.result.clone())
+    BindingWatcherBundler::new(self.result.clone(), self.option_callbacks.clone())
   }
 
   #[napi(getter)]

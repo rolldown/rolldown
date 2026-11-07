@@ -675,6 +675,9 @@ describe('watch cli', () => {
       })`rolldown index.ts -d dist -w`;
       const stdoutWaiter = createStreamWaiter(process.stdout);
       await stdoutWaiter.waitFor('Waiting for changes...', { timeout: 5_000 });
+      // "Waiting for changes..." prints before the watches are armed, and inotify
+      // drops writes made before `inotify_add_watch`. Arming precedes "Rebuilt".
+      await stdoutWaiter.waitFor('Rebuilt', { timeout: 5_000 });
 
       fs.writeFileSync(
         path.join(cwd, 'index.ts'),

@@ -116,13 +116,13 @@ jobs:
           assert len(paths) == 1, paths
           shutil.copy2(paths[0], sys.argv[2])
           PY_COPY
-          git fetch origin 1f1e5ffc9a208c774784f71fb3fcaa35c01a1ca3 d293ec097039bc4b79e4e4b6d94abc8392cfb386
+          git fetch origin 1f1e5ffc9a208c774784f71fb3fcaa35c01a1ca3 60302e29ddbc3eb7dcff5f7b8cf6275e79d29811
           features=()
           if [ "$BENCH_MODE" = simulation ]; then features=(--features codspeed); fi
           for variant in base head; do
             case "$variant" in
               base) revision=1f1e5ffc9a208c774784f71fb3fcaa35c01a1ca3 ;;
-              head) revision=d293ec097039bc4b79e4e4b6d94abc8392cfb386 ;;
+              head) revision=60302e29ddbc3eb7dcff5f7b8cf6275e79d29811 ;;
             esac
             git checkout --detach "$revision"
             python3 /tmp/prepare-paired.py

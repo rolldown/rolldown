@@ -15,6 +15,40 @@ import { describe, it } from 'vitest';
  * tests stay in Rust.
  */
 
+describe('dropInner', () => {
+  for (const source of ['', 'hello 🌍']) {
+    it(`releases ${JSON.stringify(source)} and rejects further use`, () => {
+      const s = new MagicString(source, {
+        filename: 'input.js',
+        indentExclusionRanges: [0, source.length],
+      });
+      s.append('!');
+      const clone = s.clone();
+
+      assert.strictEqual(s.dropInner().freed, true);
+      assert.deepStrictEqual(s.dropInner(), {
+        freed: false,
+        reason: 'Memory has already been freed',
+      });
+      const released = /no longer usable.*`dropInner\(\)`/;
+      assert.throws(() => s.original, released);
+      assert.throws(() => s.filename, released);
+      assert.throws(() => s.toString(), released);
+      assert.throws(() => s.length(), released);
+      assert.throws(() => s.hasChanged(), released);
+      assert.throws(() => s.append('x'), released);
+      assert.throws(() => s.overwrite(0, 1, 'x'), released);
+      assert.throws(() => s.clone(), released);
+      assert.throws(() => s.generateMap({}), released);
+      assert.throws(() => s.generateDecodedMap({}), released);
+
+      // Releasing one instance does not affect an independently owned clone.
+      assert.strictEqual(clone.toString(), `${source}!`);
+      assert.strictEqual(clone.dropInner().freed, true);
+    });
+  }
+});
+
 describe('length', () => {
   // `MagicString::len()` sums UTF-8 byte lengths, but JS measures string length in UTF-16
   // code units. The binding used to return the byte count, so every non-ASCII source

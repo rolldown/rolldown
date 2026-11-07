@@ -1,3 +1,4 @@
+import { originalPositionFor, TraceMap } from '@jridgewell/trace-mapping';
 import { defineTest } from 'rolldown-tests';
 import type { RolldownMagicString } from 'rolldown';
 import { expect } from 'vitest';
@@ -11,6 +12,8 @@ let stashed: RolldownMagicString | undefined;
 export default defineTest({
   config: {
     input: ['main.js'],
+    experimental: { nativeMagicString: true },
+    output: { sourcemap: true },
     plugins: [
       {
         name: 'test-magic-string-consumed',
@@ -34,12 +37,31 @@ export default defineTest({
           expect(() => stashed!.generateMap({})).toThrow(consumed);
           expect(() => stashed!.append('x')).toThrow(consumed);
           expect(() => stashed!.overwrite(0, 1, 'x')).toThrow(consumed);
+
+          // Sending leaves the UTF-16 mapper behind; it can still be explicitly released.
+          expect(stashed!.dropInner().freed).toBe(true);
+          expect(stashed!.dropInner()).toEqual({
+            freed: false,
+            reason: 'Memory has already been freed',
+          });
+          expect(() => stashed!.toString()).toThrow(consumed);
+          expect(() => stashed!.append('x')).toThrow(consumed);
         },
       },
     ],
   },
   afterTest: function (output) {
-    // The transform itself still worked; only post-handoff reuse is refused.
-    expect(output.output[0].code).toContain('appended');
+    // Releasing the wrapper must not invalidate the code or map already sent to the worker.
+    const chunk = output.output[0];
+    expect(chunk.code).toContain('hello');
+    expect(chunk.code).toContain('appended');
+    expect(chunk.map).toBeTruthy();
+    expect(chunk.map!.sourcesContent).toEqual(["console.log('hello');\n"]);
+    const lines = chunk.code.split('\n');
+    const line = lines.findIndex((line) => line.includes('hello'));
+    const map = new TraceMap(JSON.parse(chunk.map!.toString()));
+    expect(
+      originalPositionFor(map, { line: line + 1, column: lines[line].indexOf('console') }),
+    ).toMatchObject({ line: 1, column: 0 });
   },
 });

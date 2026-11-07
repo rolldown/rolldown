@@ -1,0 +1,52 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## IMPORT_IS_UNDEFINED
+
+```text
+[IMPORT_IS_UNDEFINED] Import `missing` will always be undefined because there is no matching export in 'foo.js'
+    ╭─[ main.js:13:12 ]
+    │
+ 13 │ const { a, missing } = alias;
+    │            ───┬───  
+    │               ╰───── 
+────╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+function b() {
+	return "b";
+}
+// bar.js
+var bar_exports = /* @__PURE__ */ __exportAll({
+	x: () => "x",
+	y: () => "y"
+});
+// main.js
+function readB() {
+	return b();
+}
+const a = "a";
+const missing = void 0;
+assert.strictEqual(a, "a");
+assert.strictEqual(missing, void 0);
+assert.strictEqual(readB(), "b");
+function shadowed(foo) {
+	return foo.a;
+}
+assert.strictEqual(shadowed({ a: 1 }), 1);
+const { x = "default", ...rest } = bar_exports;
+assert.strictEqual(x, "x");
+assert.deepStrictEqual(rest, { y: "y" });
+assert.strictEqual(bar_exports, bar_exports);
+
+```

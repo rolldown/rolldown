@@ -1,12 +1,19 @@
 use itertools::Itertools;
 use oxc::allocator::GetAllocator;
-use oxc::allocator::{Allocator, ReplaceWith, TakeIn};
-use oxc::ast::ast::{self, BindingPattern, Declaration, Statement};
+use oxc::allocator::{Allocator, Box as ArenaBox, CloneIn, ReplaceWith, TakeIn};
+use oxc::ast::ast::{
+  self, BindingPattern, Declaration, Expression, ImportDeclarationSpecifier, ImportOrExportKind,
+  PropertyKey, Statement, VariableDeclarationKind,
+};
 use oxc::ast::builder::{AstBuilder, GetAstBuilder};
 use oxc::ast_visit::{VisitJsMut, walk_js_mut};
 use oxc::span::{SPAN, Span};
+use oxc_str::{Ident, IdentHashMap, IdentHashSet};
 use rolldown_ecmascript_utils::StatementExt;
 use rustc_hash::FxHashSet;
+
+type NamespaceImportSource<'ast> =
+  (ast::StringLiteral<'ast>, Option<ArenaBox<'ast, ast::WithClause<'ast>>>);
 
 /// Pre-process is a essential step to make rolldown generate correct and efficient code.
 pub struct PreProcessor<'ast, 'a> {
@@ -23,6 +30,12 @@ pub struct PreProcessor<'ast, 'a> {
   /// was lowered to a regular import. Read after `visit_program` to emit the
   /// `UNSUPPORTED_FEATURE` warning.
   defer_spans: Vec<Span>,
+  /// Top-level namespace imports and their `const` aliases. The scanner tree-shakes a namespace
+  /// only through member reads, so destructuring these is rewritten into member reads.
+  namespace_names: IdentHashSet<'ast>,
+  /// Top-level `const alias = ns;` declarations, rewritten into `import * as alias` so the
+  /// scanner sees a namespace import instead of a reference to the whole namespace.
+  namespace_aliases: IdentHashMap<'ast, NamespaceImportSource<'ast>>,
 }
 
 impl<'ast, 'a> PreProcessor<'ast, 'a> {
@@ -37,6 +50,8 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
       keep_names,
       drop_labels: drop_labels.filter(|set| !set.is_empty()),
       defer_spans: vec![],
+      namespace_names: IdentHashSet::default(),
+      namespace_aliases: IdentHashMap::default(),
     }
   }
 
@@ -145,6 +160,170 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
       _ => None,
     }
   }
+
+  fn identifier_alias(
+    declarator: &ast::VariableDeclarator<'ast>,
+  ) -> Option<(Ident<'ast>, Ident<'ast>)> {
+    let BindingPattern::BindingIdentifier(id) = &declarator.id else { return None };
+    let Some(Expression::Identifier(init)) = &declarator.init else { return None };
+
+    Some((id.name, init.name))
+  }
+
+  /// Runs before any statement is walked, since a function declared above an alias can
+  /// destructure it. Only declarations that become a single-declarator `const` after
+  /// `split_multi_declarator` count, matching what `rewrite_namespace_alias` accepts.
+  fn collect_namespace_bindings(&mut self, body: &[Statement<'ast>]) {
+    let mut import_stmt_of: IdentHashMap<'ast, usize> = IdentHashMap::default();
+
+    for (idx, stmt) in body.iter().enumerate() {
+      let Statement::ImportDeclaration(decl) = stmt else { continue };
+
+      for spec in decl.specifiers.iter().flatten() {
+        if let ImportDeclarationSpecifier::ImportNamespaceSpecifier(spec) = spec {
+          import_stmt_of.insert(spec.local.name, idx);
+        }
+      }
+    }
+
+    if import_stmt_of.is_empty() {
+      return;
+    }
+
+    for stmt in body {
+      let Statement::VariableDeclaration(decl) = stmt else { continue };
+
+      if decl.kind != VariableDeclarationKind::Const
+        || decl.declare
+        || !(decl.declarations.len() == 1 || Self::should_split_var_declaration(decl))
+      {
+        continue;
+      }
+
+      for declarator in &decl.declarations {
+        let Some((alias, target)) = Self::identifier_alias(declarator) else { continue };
+        let Some(&idx) = import_stmt_of.get(&target) else { continue };
+        let Statement::ImportDeclaration(import_decl) = &body[idx] else { unreachable!() };
+        let source = import_decl.source.clone_in(self.allocator());
+        let with_clause = import_decl.with_clause.clone_in(self.allocator());
+        self.namespace_aliases.insert(alias, (source, with_clause));
+        import_stmt_of.insert(alias, idx);
+      }
+    }
+
+    self.namespace_names.extend(import_stmt_of.into_keys());
+  }
+
+  /// `const alias = ns;` -> `import * as alias from '<source of ns>';`
+  ///
+  /// Both imports link to the same namespace object, so `alias === ns` still holds, also for
+  /// CommonJS importees. Reading `alias` before its declaration no longer throws (TDZ).
+  fn rewrite_namespace_alias(&mut self, stmt: Statement<'ast>) -> Statement<'ast> {
+    let Statement::VariableDeclaration(decl) = &stmt else { return stmt };
+
+    if decl.kind != VariableDeclarationKind::Const || decl.declare || decl.declarations.len() != 1 {
+      return stmt;
+    }
+
+    let Some((alias, _)) = Self::identifier_alias(&decl.declarations[0]) else { return stmt };
+    let Some((source, with_clause)) = self.namespace_aliases.remove(&alias) else { return stmt };
+
+    let Statement::VariableDeclaration(decl) = stmt else { unreachable!() };
+    let decl = decl.unbox();
+    let Some(declarator) = decl.declarations.into_iter().next() else { unreachable!() };
+    let BindingPattern::BindingIdentifier(local) = declarator.id else { unreachable!() };
+    let specifier =
+      ImportDeclarationSpecifier::new_import_namespace_specifier(local.span, local.unbox(), self);
+
+    Statement::new_import_declaration(
+      decl.span,
+      Some(oxc::allocator::Vec::from_iter_in([specifier], self)),
+      source,
+      None,
+      with_clause,
+      ImportOrExportKind::Value,
+      self,
+    )
+  }
+
+  fn push_top_level_stmt(
+    &mut self,
+    body: &mut oxc::allocator::Vec<'ast, Statement<'ast>>,
+    stmt: Statement<'ast>,
+  ) {
+    let stmt = self.rewrite_namespace_alias(stmt);
+
+    if stmt.is_module_declaration_with_source() {
+      body.push(stmt);
+    } else {
+      self.top_level_stmt_temp_storage.push(stmt);
+    }
+  }
+
+  /// Without scope info, a local that shadows the import is rewritten too. That is safe because
+  /// both forms read the same properties in the same order and throw on the same values. They
+  /// differ only if `ns` changes between reads: a binding named `ns` is rejected, and a getter
+  /// that reassigns a shadowing local is not handled.
+  fn is_namespace_destructuring(&self, declarator: &ast::VariableDeclarator<'ast>) -> bool {
+    let BindingPattern::ObjectPattern(pattern) = &declarator.id else { return false };
+    let Some(Expression::Identifier(ns)) = &declarator.init else { return false };
+
+    self.namespace_names.contains(&ns.name)
+      && pattern.rest.is_none()
+      && !pattern.properties.is_empty()
+      && pattern.properties.iter().all(|prop| {
+        !prop.computed
+          && matches!(prop.key, PropertyKey::StaticIdentifier(_))
+          && matches!(&prop.value, BindingPattern::BindingIdentifier(id) if id.name != ns.name)
+      })
+  }
+
+  /// `const { a, b: c } = ns` -> `const a = ns.a, c = ns.b`
+  fn split_namespace_destructuring(&self, decl: &mut ast::VariableDeclaration<'ast>) {
+    let declarations = decl.declarations.take_in(self);
+    let mut rewritten = oxc::allocator::Vec::with_capacity_in(declarations.len(), self);
+
+    for declarator in declarations {
+      if !self.is_namespace_destructuring(&declarator) {
+        rewritten.push(declarator);
+        continue;
+      }
+
+      let (BindingPattern::ObjectPattern(pattern), Some(Expression::Identifier(ns))) =
+        (declarator.id, declarator.init)
+      else {
+        unreachable!()
+      };
+
+      for prop in pattern.unbox().properties {
+        let (PropertyKey::StaticIdentifier(key), BindingPattern::BindingIdentifier(binding)) =
+          (prop.key, prop.value)
+        else {
+          unreachable!()
+        };
+
+        // The scanner skips unspanned member expressions, so reuse the property span.
+        let init = Expression::new_static_member_expression(
+          prop.span,
+          Expression::new_identifier(ns.span, ns.name, self),
+          key.unbox(),
+          false,
+          self,
+        );
+
+        rewritten.push(ast::VariableDeclarator::new(
+          prop.span,
+          BindingPattern::BindingIdentifier(binding),
+          None,
+          Some(init),
+          false,
+          self,
+        ));
+      }
+    }
+
+    decl.declarations = rewritten;
+  }
 }
 
 impl<'ast> VisitJsMut<'ast> for PreProcessor<'ast, '_> {
@@ -162,6 +341,7 @@ impl<'ast> VisitJsMut<'ast> for PreProcessor<'ast, '_> {
     self.top_level_stmt_temp_storage = Vec::with_capacity(
       original_body.iter().filter(|stmt| !stmt.is_module_declaration_with_source()).count(),
     );
+    self.collect_namespace_bindings(&original_body);
 
     for mut stmt in original_body {
       if self.try_drop_labeled(&mut stmt) {
@@ -170,11 +350,11 @@ impl<'ast> VisitJsMut<'ast> for PreProcessor<'ast, '_> {
       }
       walk_js_mut::walk_statement(self, &mut stmt);
       if let Some(split) = self.split_multi_declarator(&mut stmt, true) {
-        self.top_level_stmt_temp_storage.extend(split);
-      } else if stmt.is_module_declaration_with_source() {
-        program.body.push(stmt);
+        for stmt in split {
+          self.push_top_level_stmt(&mut program.body, stmt);
+        }
       } else {
-        self.top_level_stmt_temp_storage.push(stmt);
+        self.push_top_level_stmt(&mut program.body, stmt);
       }
     }
     program.body.extend(std::mem::take(&mut self.top_level_stmt_temp_storage));
@@ -215,6 +395,19 @@ impl<'ast> VisitJsMut<'ast> for PreProcessor<'ast, '_> {
       } else {
         it.push(stmt);
       }
+    }
+  }
+
+  fn visit_variable_declaration(&mut self, it: &mut ast::VariableDeclaration<'ast>) {
+    walk_js_mut::walk_variable_declaration(self, it);
+
+    if matches!(
+      it.kind,
+      VariableDeclarationKind::Var | VariableDeclarationKind::Let | VariableDeclarationKind::Const
+    ) && !self.namespace_names.is_empty()
+      && it.declarations.iter().any(|declarator| self.is_namespace_destructuring(declarator))
+    {
+      self.split_namespace_destructuring(it);
     }
   }
 

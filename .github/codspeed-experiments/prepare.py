@@ -56,3 +56,29 @@ guards = """  group.bench_function("join_with_named_sourcemap", |b| {
 """
 t = t.replace('  group.finish();', guards + '  group.finish();')
 p.write_text(t)
+p = root / 'crates/bench/benches/bench.rs'
+t = p.read_text()
+start = t.index('fn build_chunk_joiner(')
+end = t.index('\n}\n', start) + 3
+unmapped = t[start:end].replace('fn build_chunk_joiner(', 'fn build_unmapped_chunk_joiner(')
+unmapped = unmapped.replace('    // Production', '''    let mut parts = map.into_parts();
+    parts.names.clear();
+    for token in parts.tokens.iter_mut() {
+      *token = oxc_sourcemap::Token::new(
+        token.get_dst_line(), token.get_dst_col(), token.get_src_line(), token.get_src_col(), None, None,
+      );
+    }
+    parts.token_chunks = None;
+    let map = SourceMap::from_parts(parts);
+    // Production''',1)
+large = unmapped.replace('fn build_unmapped_chunk_joiner(module_count: u32)', 'fn build_unmapped_large_chunk_joiner()').replace('0..module_count','0..1').replace('module_source(index)','program_source(BIG_CHUNK)')
+t=t[:end]+'\n'+unmapped+'\n'+large+t[end:]
+guards='''  group.bench_function("join_fully_unmapped", |b| {
+    b.iter_batched_ref(|| build_unmapped_chunk_joiner(BIG_CHUNK), |chunk| black_box(chunk.join()), BatchSize::SmallInput);
+  });
+  group.bench_function("join_fully_unmapped_large", |b| {
+    b.iter_batched_ref(build_unmapped_large_chunk_joiner, |chunk| black_box(chunk.join()), BatchSize::SmallInput);
+  });
+'''
+t=t.replace('  group.finish();', guards+'  group.finish();')
+p.write_text(t)

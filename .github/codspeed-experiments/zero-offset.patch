@@ -1,199 +1,93 @@
 diff --git a/src/concat_sourcemap_builder.rs b/src/concat_sourcemap_builder.rs
-index 158e96a..f33558b 100644
+index 158e96a..96d6ef7 100644
 --- a/src/concat_sourcemap_builder.rs
 +++ b/src/concat_sourcemap_builder.rs
-@@ -197,19 +197,33 @@ impl<'a> ConcatSourceMapBuilder<'a> {
-             // offsets are non-zero, so all four conditions must hold to skip translation.)
-             self.tokens.extend_from_slice(tokens);
-         } else {
--            self.tokens.reserve(tokens.len());
--            let mut tokens = tokens.iter();
--            // Boundary dedup: only the first token can equal the previous map's last token (every
--            // later token has a distinct generated position), so check it once and drop if equal.
--            if let Some(first) = tokens.next() {
--                let first = first.translated(line_offset, source_offset, name_offset);
--                if self.tokens.last() != Some(&first) {
--                    self.tokens.push(first);
--                }
-+            // Choose once per map: adding zero cannot change an id, even a missing one.
-+            match (source_offset == 0, name_offset == 0) {
-+                (true, true) => self.append_translated::<false, false>(
-+                    tokens,
-+                    line_offset,
-+                    source_offset,
-+                    name_offset,
-+                ),
-+                (true, false) => self.append_translated::<false, true>(
-+                    tokens,
-+                    line_offset,
-+                    source_offset,
-+                    name_offset,
-+                ),
-+                (false, true) => self.append_translated::<true, false>(
-+                    tokens,
-+                    line_offset,
-+                    source_offset,
-+                    name_offset,
-+                ),
-+                (false, false) => self.append_translated::<true, true>(
-+                    tokens,
-+                    line_offset,
-+                    source_offset,
-+                    name_offset,
-+                ),
-             }
--            self.tokens.extend(
--                tokens.map(|token| token.translated(line_offset, source_offset, name_offset)),
--            );
-         }
- 
+@@ -215,16 +215,23 @@ impl<'a> ConcatSourceMapBuilder<'a> {
          // The next chunk's VLQ baseline is the last source/name id committed. Scan back from the
-@@ -246,6 +260,32 @@ impl<'a> ConcatSourceMapBuilder<'a> {
-         self.token_chunks.push(chunk);
-     }
+         // end of what we just appended — the final token almost always carries both, so this is
+         // typically O(1); if this map contributed neither, the previous baseline carries over.
++        // Skip the unmapped tail once, then search only for the id still missing.
++        // A fully unmapped chunk is visited once rather than once for each id.
++        let mut appended = self.tokens[start..].iter().rev();
+         let (mut prev_source_id, mut prev_name_id) = (None, None);
+-        for token in self.tokens[start..].iter().rev() {
+-            prev_source_id = prev_source_id.or_else(|| token.get_source_id());
+-            prev_name_id = prev_name_id.or_else(|| token.get_name_id());
+-            if prev_source_id.is_some() && prev_name_id.is_some() {
++        for token in appended.by_ref() {
++            prev_source_id = token.get_source_id();
++            prev_name_id = token.get_name_id();
++            if prev_source_id.is_some() || prev_name_id.is_some() {
+                 break;
+             }
+         }
+-        self.token_chunk_prev_source_id = prev_source_id.unwrap_or(chunk_prev_source_id);
+-        self.token_chunk_prev_name_id = prev_name_id.unwrap_or(chunk_prev_name_id);
++        self.token_chunk_prev_source_id = prev_source_id
++            .or_else(|| appended.find_map(Token::get_source_id))
++            .unwrap_or(chunk_prev_source_id);
++        self.token_chunk_prev_name_id = prev_name_id
++            .or_else(|| appended.find_map(Token::get_name_id))
++            .unwrap_or(chunk_prev_name_id);
  
-+    fn append_translated<const SHIFT_SOURCE: bool, const SHIFT_NAME: bool>(
-+        &mut self,
-+        tokens: &[Token],
-+        line_offset: u32,
-+        source_offset: u32,
-+        name_offset: u32,
-+    ) {
-+        self.tokens.reserve(tokens.len());
-+        let mut tokens = tokens.iter();
-+        // Boundary dedup: only the first token can equal the previous map's last token (every
-+        // later token has a distinct generated position), so check it once and drop if equal.
-+        if let Some(first) = tokens.next() {
-+            let first = first.translated::<SHIFT_SOURCE, SHIFT_NAME>(
-+                line_offset,
-+                source_offset,
-+                name_offset,
-+            );
-+            if self.tokens.last() != Some(&first) {
-+                self.tokens.push(first);
-+            }
-+        }
-+        self.tokens.extend(tokens.map(|token| {
-+            token.translated::<SHIFT_SOURCE, SHIFT_NAME>(line_offset, source_offset, name_offset)
-+        }));
-+    }
-+
-     /// Finish, moving the accumulated names/sources/contents straight into a [`SourceMap<'a>`]
-     /// (zero copy — the `Cow` vectors are moved, not rebuilt).
-     pub fn into_sourcemap(self) -> SourceMap<'a> {
-@@ -273,6 +313,65 @@ impl<'a> ConcatSourceMapBuilder<'a> {
+         // Record the chunk once boundary dedup has settled the actual end index.
+         let end = self.tokens.len() as u32;
+@@ -273,6 +280,58 @@ impl<'a> ConcatSourceMapBuilder<'a> {
  mod tests {
      use super::*;
  
 +    #[test]
-+    fn zero_offsets_preserve_ids_for_owned_and_borrowed_maps() {
-+        for source_offset in [0, 2] {
-+            for name_offset in [0, 3] {
-+                for line_offset in [0, 7] {
-+                    let prefix = SourceMap::new(
-+                        None,
-+                        vec![Cow::Borrowed("prior_name"); name_offset],
-+                        None,
-+                        vec![Cow::Borrowed("prior.js"); source_offset],
-+                        vec![],
-+                        Box::new([]),
-+                        None,
-+                    );
-+                    let tokens = [
-+                        Token::new(0, 0, 0, 0, Some(0), Some(0)),
-+                        Token::new(1, 0, 1, 0, None, Some(0)),
-+                        Token::new(2, 0, 2, 0, Some(0), None),
-+                        Token::new(3, 0, 3, 0, None, None),
-+                    ];
-+                    let map = SourceMap::new(
-+                        None,
-+                        vec![Cow::Borrowed("name")],
-+                        None,
-+                        vec![Cow::Borrowed("input.js")],
-+                        vec![None],
-+                        tokens.into(),
-+                        None,
-+                    );
-+                    let expected: Vec<_> = tokens
-+                        .iter()
-+                        .map(|token| {
-+                            Token::new(
-+                                token.get_dst_line() + line_offset,
-+                                token.get_dst_col(),
-+                                token.get_src_line(),
-+                                token.get_src_col(),
-+                                token.get_source_id().map(|id| id + source_offset as u32),
-+                                token.get_name_id().map(|id| id + name_offset as u32),
-+                            )
-+                        })
-+                        .collect();
-+                    let mut borrowed = ConcatSourceMapBuilder::default();
-+                    borrowed.add_sourcemap(&prefix, 0);
-+                    borrowed.add_sourcemap(&map, line_offset);
-+                    let borrowed = borrowed.into_sourcemap();
-+                    let owned = ConcatSourceMapBuilder::from_owned_sourcemaps(vec![
-+                        (prefix.clone(), 0),
-+                        (map.clone(), line_offset),
-+                    ])
-+                    .into_sourcemap();
-+                    assert_eq!(borrowed.tokens.as_ref(), expected);
-+                    assert_eq!(owned.tokens.as_ref(), expected);
-+                    assert_eq!(borrowed.to_json_string(), owned.to_json_string());
-+                }
-+            }
++    fn chunk_baselines_find_ids_independently_and_keep_them_across_unmapped_maps() {
++        let mapped = SourceMap::new(
++            None,
++            vec![Cow::Borrowed("name"); 4],
++            None,
++            vec![Cow::Borrowed("input.js"); 3],
++            vec![],
++            vec![
++                Token::new(0, 0, 0, 0, Some(0), Some(0)),
++                Token::new(1, 0, 0, 0, Some(0), Some(3)),
++                Token::new(2, 0, 0, 0, Some(2), None),
++                Token::new(3, 0, 0, 0, None, None),
++            ]
++            .into_boxed_slice(),
++            None,
++        );
++        let unmapped = SourceMap::new(
++            None,
++            vec![],
++            None,
++            vec![],
++            vec![],
++            vec![Token::new(0, 0, 0, 0, None, None)].into_boxed_slice(),
++            None,
++        );
++        let last = SourceMap::new(
++            None,
++            vec![Cow::Borrowed("last")],
++            None,
++            vec![Cow::Borrowed("last.js")],
++            vec![],
++            vec![Token::new(0, 0, 0, 0, Some(0), Some(0))].into_boxed_slice(),
++            None,
++        );
++        let mut builder = ConcatSourceMapBuilder::default();
++        builder.add_sourcemap_owned(mapped, 0);
++        builder.add_sourcemap_owned(unmapped, 10);
++        builder.add_sourcemap_owned(SourceMap::default(), 20);
++        builder.add_sourcemap_owned(last, 30);
++        for chunk in &builder.token_chunks[1..] {
++            assert_eq!(chunk.prev_source_id, 2);
++            assert_eq!(chunk.prev_name_id, 3);
 +        }
++        assert_eq!(builder.token_chunk_prev_source_id, 3);
++        assert_eq!(builder.token_chunk_prev_name_id, 4);
++        let map = builder.into_sourcemap();
++        let json = map.to_json_string();
++        let decoded = SourceMap::from_json_string(&json).unwrap();
++        assert_eq!(decoded.tokens, map.tokens);
 +    }
 +
      fn build_test_inputs() -> [SourceMap<'static>; 3] {
          [
              (vec!["foo", "foo2"], "foo.js", Token::new(1, 1, 1, 1, Some(0), Some(0))),
-diff --git a/src/token.rs b/src/token.rs
-index 4a50ce1..f2a225d 100644
---- a/src/token.rs
-+++ b/src/token.rs
-@@ -37,14 +37,24 @@ impl Token {
-     /// Translate this token for a concatenated source map: shift the generated line by
-     /// `line_offset` and renumber the source/name ids by `source_offset` / `name_offset`,
-     /// preserving the missing-id sentinel. Operates on the raw ids so there is no `Option`
--    /// round-trip in the concat hot loop.
-+    /// round-trip in the concat hot loop. Zero offsets disable their id translation for the
-+    /// entire input map, including the per-token missing-id check.
-     #[inline]
--    pub(crate) fn translated(self, line_offset: u32, source_offset: u32, name_offset: u32) -> Self {
-+    pub(crate) fn translated<const SHIFT_SOURCE: bool, const SHIFT_NAME: bool>(
-+        self,
-+        line_offset: u32,
-+        source_offset: u32,
-+        name_offset: u32,
-+    ) -> Self {
-         let shift = |id: u32, offset: u32| if id == INVALID_ID { INVALID_ID } else { id + offset };
-         Self {
-             dst_line: self.dst_line + line_offset,
--            source_id: shift(self.source_id, source_offset),
--            name_id: shift(self.name_id, name_offset),
-+            source_id: if SHIFT_SOURCE {
-+                shift(self.source_id, source_offset)
-+            } else {
-+                self.source_id
-+            },
-+            name_id: if SHIFT_NAME { shift(self.name_id, name_offset) } else { self.name_id },
-             ..self
-         }
-     }
-@@ -216,11 +226,14 @@ mod tests {
-     #[test]
-     fn token_translated() {
-         let token = Token::new(1, 2, 3, 4, Some(5), Some(6));
--        assert_eq!(token.translated(10, 100, 1000), Token::new(11, 2, 3, 4, Some(105), Some(1006)));
-+        assert_eq!(
-+            token.translated::<true, true>(10, 100, 1000),
-+            Token::new(11, 2, 3, 4, Some(105), Some(1006))
-+        );
- 
-         // The missing-id sentinel survives translation rather than wrapping.
-         let missing = Token::new(0, 0, 0, 0, None, None);
--        let shifted = missing.translated(5, 5, 5);
-+        let shifted = missing.translated::<true, true>(5, 5, 5);
-         assert_eq!(shifted.get_dst_line(), 5);
-         assert_eq!(shifted.get_source_id(), None);
-         assert_eq!(shifted.get_name_id(), None);

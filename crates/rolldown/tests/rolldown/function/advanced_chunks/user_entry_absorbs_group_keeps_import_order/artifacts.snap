@@ -1,0 +1,49 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## group-b.js
+
+```js
+// b.js
+(globalThis.log ??= []).push("b");
+
+```
+
+## group-c.js
+
+```js
+import "./other.js";
+import "./group-b.js";
+// c1.js
+(globalThis.log ??= []).push("c1");
+// c2.js
+(globalThis.log ??= []).push("c2");
+
+```
+
+## main.js
+
+```js
+import "./group-c.js";
+import assert from "node:assert";
+// main.js
+assert.deepStrictEqual(globalThis.log, [
+	"a",
+	"b",
+	"c1",
+	"c2"
+]);
+
+```
+
+## other.js
+
+```js
+// a.js
+(globalThis.log ??= []).push("a");
+// other.js
+console.log("other");
+
+```

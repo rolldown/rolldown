@@ -7,8 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as init_leafhost } from "./group-l.js";
 import { t as init_x } from "./x.js";
+import { t as init_leafhost } from "./group-l.js";
 // y.js
 function init_y() {
 	return (init_y = __esmMin((() => {
@@ -53,8 +53,8 @@ export { init_leafhost as t };
 
 ```js
 import { t as init_main } from "./group-0.js";
-import "./group-l.js";
 import "./x.js";
+import "./group-l.js";
 init_main();
 
 ```
@@ -91,8 +91,8 @@ export { init_x as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as init_leafhost } from "./group-l.js";
 import { t as init_x } from "./x.js";
+import { t as init_leafhost } from "./group-l.js";
 // y.js
 function init_y() {
 	return (init_y = __esmMin((() => {
@@ -137,8 +137,8 @@ export { init_leafhost as t };
 
 ```js
 import { t as init_main } from "./group-0.js";
-import "./group-l.js";
 import "./x.js";
+import "./group-l.js";
 init_main();
 
 ```

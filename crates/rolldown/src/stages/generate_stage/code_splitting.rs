@@ -945,6 +945,9 @@ impl GenerateStage<'_> {
     let allow_avoid_redundant_chunk_loads =
       self.options.experimental.is_avoid_redundant_chunk_loads_enabled()
         && !has_tla_or_tla_dependency;
+    // The pure dynamic entry chunks that a merge gives modules of other entries. See
+    // `find_leaking_dynamic_entry_namespaces`.
+    let mut dynamic_entry_merge_targets = FxHashSet::default();
     // See internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
     if allow_avoid_redundant_chunk_loads {
       let entries_len: u32 = self
@@ -960,6 +963,7 @@ impl GenerateStage<'_> {
         chunk_graph,
         entries_len,
         used_symbol_refs_builder,
+        &mut dynamic_entry_merge_targets,
       );
     }
     self.extract_standalone_runtime_chunk(
@@ -1054,6 +1058,7 @@ impl GenerateStage<'_> {
         bits_to_chunk,
         input_base,
         &mut temp_chunk_graph,
+        &mut dynamic_entry_merge_targets,
       );
 
       self.optimize_facade_entry_chunks(
@@ -1063,6 +1068,7 @@ impl GenerateStage<'_> {
         &mut module_is_assigned,
         &temp_chunk_graph,
         used_symbol_refs_builder,
+        &dynamic_entry_merge_targets,
       );
     }
 

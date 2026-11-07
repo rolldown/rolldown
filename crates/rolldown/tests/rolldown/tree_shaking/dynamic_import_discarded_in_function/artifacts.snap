@@ -1,0 +1,73 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+// a.js
+globalThis.resolveA("a ran");
+
+```
+
+## b.js
+
+```js
+// b.js
+const b1 = "b1";
+const b2 = "b2";
+export { b1, b2 };
+
+```
+
+## c.js
+
+```js
+// c.js
+const c1 = "c1";
+const c2 = "c2";
+export { c1, c2 };
+
+```
+
+## d.js
+
+```js
+// d.js
+const d1 = "d1";
+function then(resolve) {
+	globalThis.resolveD(this.d1);
+	resolve({});
+}
+export { d1, then };
+
+```
+
+## main.js
+
+```js
+// main.js
+globalThis.aLoaded = new Promise((resolve) => {
+	globalThis.resolveA = resolve;
+});
+globalThis.dThen = new Promise((resolve) => {
+	globalThis.resolveD = resolve;
+});
+function loadA() {
+	import("./a.js");
+}
+loadA();
+const loadB = () => import("./b.js");
+function preloadC() {
+	import("./c.js");
+}
+preloadC();
+const loadC = () => import("./c.js");
+function loadD() {
+	import("./d.js");
+}
+loadD();
+export { loadB, loadC };
+
+```

@@ -1,9 +1,10 @@
 use std::collections::VecDeque;
 use std::collections::hash_map::Entry;
+use std::panic::AssertUnwindSafe;
 use std::sync::Arc;
 
 use arcstr::ArcStr;
-use futures::future::join_all;
+use futures::{FutureExt, future::join_all};
 use itertools::Itertools;
 use oxc::semantic::NodeId;
 use oxc::semantic::{ScopeId, Scoping};
@@ -25,6 +26,7 @@ use rolldown_error::{
 };
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
+use rolldown_std_utils::discard_panic_payload;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
@@ -161,6 +163,23 @@ pub struct ModuleLoaderOutput {
   pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
   pub tla_module_count: usize,
   pub tla_keyword_span_map: FxHashMap<ModuleIdx, Span>,
+}
+
+// Each spawned task owes the loader one completion message so `remaining` can reach zero.
+// A panic before the task sends that message must use the same BuildErrors path as other failures.
+async fn supervised_module_task<F>(
+  future: F,
+  tx: tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>,
+) where
+  F: std::future::Future<Output = ()> + Send + 'static,
+{
+  if let Err(payload) = AssertUnwindSafe(future).catch_unwind().await {
+    discard_panic_payload(payload);
+    let diagnostic = BuildDiagnostic::unhandleable_error(anyhow::anyhow!(
+      "module loader task panicked before reporting completion"
+    ));
+    let _ = tx.send(ModuleLoaderMsg::BuildErrors(vec![diagnostic].into_boxed_slice()));
+  }
 }
 
 impl<Fs: FileSystem + Clone> Drop for ModuleLoader<'_, Fs> {
@@ -423,7 +442,10 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     if resolved_id.external.is_external() {
       self.external_module_idxs.insert(idx);
       let task = ExternalModuleTask::new(ctx, idx, resolved_id, Arc::clone(user_defined_entries));
-      tokio::spawn(task.run().instrument(tracing::info_span!("external_module_task")));
+      tokio::spawn(supervised_module_task(
+        task.run().instrument(tracing::info_span!("external_module_task")),
+        self.shared_context.tx.clone(),
+      ));
     } else {
       let task = ModuleTask::new(
         ctx,
@@ -435,7 +457,10 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         self.flat_options,
         self.magic_string_tx.clone(),
       );
-      tokio::spawn(task.run().instrument(tracing::info_span!("normal_module_task")));
+      tokio::spawn(supervised_module_task(
+        task.run().instrument(tracing::info_span!("normal_module_task")),
+        self.shared_context.tx.clone(),
+      ));
     }
     self.remaining += 1;
     idx
@@ -465,7 +490,10 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     if let Entry::Vacant(e) = self.cache.module_id_to_idx.entry(RUNTIME_MODULE_ID) {
       let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
       let task = RuntimeModuleTask::new(idx, Arc::clone(&self.shared_context), self.flat_options);
-      tokio::spawn(task.run().instrument(tracing::info_span!("runtime_module_task")));
+      tokio::spawn(supervised_module_task(
+        task.run().instrument(tracing::info_span!("runtime_module_task")),
+        self.shared_context.tx.clone(),
+      ));
       e.insert(VisitState::Seen(idx));
       self.remaining += 1;
     }
@@ -1264,5 +1292,89 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       barrel_module_state.tracked_records = tracked_records;
       barrel_module_state.remaining_imported_specifiers = remaining_imported_specifiers;
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use rolldown_common::ModuleLoaderMsg;
+  use rolldown_error::{BuildDiagnostic, EventKind};
+
+  use super::supervised_module_task;
+
+  async fn assert_panic_reports_exactly_one_error(
+    future: impl std::future::Future<Output = ()> + Send + 'static,
+  ) {
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+    tokio::spawn(supervised_module_task(future, tx))
+      .await
+      .expect("the supervisor must contain the panic");
+
+    let message = rx.try_recv().expect("a panic must produce a completion error");
+    match message {
+      ModuleLoaderMsg::BuildErrors(errors) => {
+        assert_eq!(errors.len(), 1);
+        assert!(matches!(errors[0].kind(), EventKind::UnhandleableError));
+        assert!(
+          errors[0].to_string().contains("module loader task panicked before reporting completion")
+        );
+      }
+      _ => panic!("module task panic must be converted to BuildErrors"),
+    }
+    assert!(matches!(rx.try_recv(), Err(tokio::sync::mpsc::error::TryRecvError::Disconnected)));
+  }
+
+  #[tokio::test]
+  async fn panicking_module_task_reports_exactly_one_error() {
+    assert_panic_reports_exactly_one_error(async {
+      tokio::task::yield_now().await;
+      panic!("module task probe");
+    })
+    .await;
+  }
+
+  #[tokio::test]
+  async fn panicking_payload_destructor_still_reports_exactly_one_error() {
+    struct PanicOnDrop;
+
+    impl Drop for PanicOnDrop {
+      fn drop(&mut self) {
+        panic!("panic payload destructor probe");
+      }
+    }
+
+    assert_panic_reports_exactly_one_error(async {
+      std::panic::panic_any(PanicOnDrop);
+    })
+    .await;
+  }
+
+  #[tokio::test]
+  async fn completed_module_task_does_not_report_an_error() {
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+    tokio::spawn(supervised_module_task(async {}, tx)).await.unwrap();
+    assert!(matches!(rx.try_recv(), Err(tokio::sync::mpsc::error::TryRecvError::Disconnected)));
+  }
+
+  #[tokio::test]
+  async fn module_task_build_errors_are_not_duplicated() {
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+    let task_tx = tx.clone();
+    tokio::spawn(supervised_module_task(
+      async move {
+        let error = BuildDiagnostic::unhandleable_error(anyhow::anyhow!("task error probe"));
+        task_tx.send(ModuleLoaderMsg::BuildErrors(vec![error].into_boxed_slice())).unwrap();
+      },
+      tx,
+    ))
+    .await
+    .unwrap();
+
+    let ModuleLoaderMsg::BuildErrors(errors) = rx.try_recv().unwrap() else {
+      panic!("the task's build errors must be preserved");
+    };
+    assert_eq!(errors.len(), 1);
+    assert!(errors[0].to_string().contains("task error probe"));
+    assert!(matches!(rx.try_recv(), Err(tokio::sync::mpsc::error::TryRecvError::Disconnected)));
   }
 }

@@ -108,6 +108,13 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     trace_action!(action::BuildStart { action: "BuildStart" });
     let is_full_scan_mode = scan_mode.is_full();
 
+    // Before `buildStart`, which may set module options itself.
+    if is_full_scan_mode
+      && let Some(reset_js_module_options) = &self.options.reset_js_module_options
+    {
+      reset_js_module_options.call().await?;
+    }
+
     let scan_stage_output = match ScanStage::new(
       Arc::clone(&self.options),
       Arc::clone(&self.plugin_driver),

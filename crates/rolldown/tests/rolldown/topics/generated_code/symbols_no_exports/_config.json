@@ -1,0 +1,15 @@
+{
+  "config": {
+    "format": "iife",
+    "name": "lib",
+    "exports": "named",
+    "generatedCode": {
+      "symbols": true
+    }
+  },
+  "configVariants": [
+    {
+      "format": "umd"
+    }
+  ]
+}

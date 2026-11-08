@@ -1,0 +1,49 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## index.js
+
+```js
+import { Foo as Foo$1 } from "ext";
+// b.js
+var Foo = class {};
+const make = () => new Foo();
+// index.js
+console.log(Foo$1, make().constructor.name);
+
+```
+
+# Variant: [format: Cjs]
+
+## Assets
+
+### index.js
+
+```js
+let ext = require("ext");
+// b.js
+var Foo$1 = class {};
+const make = () => new Foo$1();
+// index.js
+console.log(ext.Foo, make().constructor.name);
+
+```
+
+# Variant: [format: Iife]
+
+## Assets
+
+### index.js
+
+```js
+(function(ext) {
+	// b.js
+	var Foo$1 = class {};
+	const make = () => new Foo$1();
+	// index.js
+	console.log(ext.Foo, make().constructor.name);
+})(Ext);
+
+```

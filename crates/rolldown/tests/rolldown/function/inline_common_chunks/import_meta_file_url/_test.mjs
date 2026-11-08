@@ -1,25 +1,32 @@
 import assert from 'node:assert';
+import { execFileSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
+const dist = new URL('./dist/', import.meta.url);
 
 assert.deepStrictEqual(
-  readdirSync(new URL('./dist', import.meta.url), { recursive: true })
+  readdirSync(dist, { recursive: true })
+    .map((file) => file.replaceAll('\\', '/'))
     .filter((file) => file.endsWith('.js'))
     .sort(),
   ['rolldown-runtime.js', 'x/a.js', 'y/z/b.js'],
   'shared.js is inlined into both entries instead of becoming its own chunk',
 );
 
-globalThis.hrefs = [];
-await import('./dist/x/a.js');
-await import('./dist/y/z/b.js');
+const assets = readdirSync(new URL('assets/', dist));
+const assetUrl = (name) =>
+  new URL(`assets/${assets.find((file) => file.startsWith(`${name}-`))}`, dist).href;
 
-assert.strictEqual(globalThis.hrefs.length, 2);
-assert.ok(
-  /\/dist\/assets\/asset-[^/]+\.txt#hook$/.test(globalThis.hrefs[0]),
-  `the resolveFileUrl hook resolves the asset into the output directory: ${globalThis.hrefs[0]}`,
-);
-assert.strictEqual(
-  globalThis.hrefs[1],
-  globalThis.hrefs[0],
-  'both entries resolve the same asset URL from carriers in different directories',
-);
+// A fresh process per entry: in one process, the second entry reuses the copy of `shared.js` that
+// the first one registered, and its own copy never runs.
+for (const entry of ['x/a.js', 'y/z/b.js']) {
+  const output = execFileSync(process.execPath, [fileURLToPath(new URL(entry, dist))], {
+    encoding: 'utf8',
+  });
+  assert.deepStrictEqual(
+    JSON.parse(output),
+    [`${assetUrl('hooked')}#${entry}`, assetUrl('plain')],
+    `${entry} resolves through its own copy`,
+  );
+}

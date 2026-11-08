@@ -1,2 +1,2 @@
-import { href } from './shared.js';
-globalThis.hrefs.push(href);
+import { hooked, plain } from './shared.js';
+console.log(JSON.stringify([hooked, plain]));

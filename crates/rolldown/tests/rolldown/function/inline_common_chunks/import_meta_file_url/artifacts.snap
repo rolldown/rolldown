@@ -3,59 +3,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## assets/asset-jGaNvs6u.txt
+## assets/hooked-CM2jZcYQ.txt
 
 ```txt
-asset
+hooked
+```
+
+## assets/plain-BZXwvuWc.txt
+
+```txt
+plain
 ```
 
 ## rolldown-runtime.js
 
 ```js
-// \0rolldown/runtime.js
-var __create = Object.create;
-var __defProp = Object.defineProperty;
-var __esmMin = (fn, res, err) => () => {
-	if (err) throw err[0];
-	try {
-		return fn && (res = fn(fn = 0)), res;
-	} catch (e) {
-		throw err = [e], e;
-	}
-};
-var __share_factories = /* @__PURE__ */ __create(null);
-var __share_records = /* @__PURE__ */ __create(null);
-var __share = (id, factory) => {
-	if (!(id in __share_factories)) __share_factories[id] = factory;
-};
-var __share_require = (id) => {
-	var record = __share_records[id];
-	if (record) {
-		if (record.failed) throw record.error;
-		return record.exports;
-	}
-	var factory = __share_factories[id];
-	if (!factory) throw new Error("Shared chunk \"" + id + "\" was not registered before it was required.");
-	record = __share_records[id] = {
-		exports: {},
-		failed: false,
-		error: void 0
-	};
-	try {
-		factory(record.exports);
-	} catch (error) {
-		record.failed = true;
-		record.error = error;
-		throw error;
-	}
-	return record.exports;
-};
-var __share_export = (target, all) => {
-	for (var name in all) __defProp(target, name, {
-		get: all[name],
-		enumerable: true
-	});
-};
+// HIDDEN [\0rolldown/runtime.js]
 export { __share_require as i, __share as n, __share_export as r, __esmMin as t };
 
 ```
@@ -66,15 +29,17 @@ export { __share_require as i, __share as n, __share_export as r, __esmMin as t 
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "../rolldown-runtime.js";
 __share("shared-ZmCA4nrZ", ((exports) => {
 	// shared.js
-	var href;
+	var hooked, plain;
 	function init_shared() {
 		return (init_shared = __esmMin((() => {
-			href = new URL("../assets/asset-jGaNvs6u.txt", import.meta.url).href + "#hook";
+			hooked = new URL("../assets/hooked-CM2jZcYQ.txt", import.meta.url).href + "#x/a.js";
+			plain = new URL("../assets/plain-BZXwvuWc.txt", import.meta.url).href;
 		})))();
 	}
 	__share_export(exports, {
 		n: () => init_shared,
-		t: () => href
+		r: () => plain,
+		t: () => hooked
 	});
 }));
 var share_shared = __share_require("shared-ZmCA4nrZ");
@@ -82,7 +47,7 @@ var share_shared = __share_require("shared-ZmCA4nrZ");
 function init_a() {
 	return (init_a = __esmMin((() => {
 		share_shared.n();
-		globalThis.hrefs.push(share_shared.t);
+		console.log(JSON.stringify([share_shared.t, share_shared.r]));
 	})))();
 }
 init_a();
@@ -95,15 +60,17 @@ init_a();
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "../../rolldown-runtime.js";
 __share("shared-ZmCA4nrZ", ((exports) => {
 	// shared.js
-	var href;
+	var hooked, plain;
 	function init_shared() {
 		return (init_shared = __esmMin((() => {
-			href = new URL("../../assets/asset-jGaNvs6u.txt", import.meta.url).href + "#hook";
+			hooked = new URL("../../assets/hooked-CM2jZcYQ.txt", import.meta.url).href + "#y/z/b.js";
+			plain = new URL("../../assets/plain-BZXwvuWc.txt", import.meta.url).href;
 		})))();
 	}
 	__share_export(exports, {
 		n: () => init_shared,
-		t: () => href
+		r: () => plain,
+		t: () => hooked
 	});
 }));
 var share_shared = __share_require("shared-ZmCA4nrZ");
@@ -111,7 +78,7 @@ var share_shared = __share_require("shared-ZmCA4nrZ");
 function init_b() {
 	return (init_b = __esmMin((() => {
 		share_shared.n();
-		globalThis.hrefs.push(share_shared.t);
+		console.log(JSON.stringify([share_shared.t, share_shared.r]));
 	})))();
 }
 init_b();

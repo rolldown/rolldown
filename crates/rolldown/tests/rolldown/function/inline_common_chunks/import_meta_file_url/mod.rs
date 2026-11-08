@@ -11,14 +11,15 @@ use rolldown_plugin::{
 };
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
-/// Emits an asset for `shared.js`, puts its reference id into the `__REF__` placeholder and, like
-/// Vite under a relative `base`, resolves it against the URL of the file that prints it.
+/// Emits two assets for `shared.js` and puts their reference ids into its `__HOOKED__` and
+/// `__PLAIN__` placeholders. `resolveFileUrl` resolves `hooked`, like Vite under a relative `base`,
+/// against the URL of the file that prints it, and leaves `plain` to the default rendering.
 #[derive(Debug)]
-struct EmitAsset;
+struct EmitAssets;
 
-impl Plugin for EmitAsset {
+impl Plugin for EmitAssets {
   fn name(&self) -> Cow<'static, str> {
-    "emit-asset".into()
+    "emit-assets".into()
   }
 
   async fn transform(
@@ -29,20 +30,21 @@ impl Plugin for EmitAsset {
     if !args.id.ends_with("shared.js") {
       return Ok(None);
     }
-    let reference_id = ctx.emit_file(
-      EmittedAsset {
-        name: Some("asset.txt".into()),
-        original_file_name: None,
-        file_name: None,
-        source: "asset".to_string().into(),
-      },
-      None,
-      None,
-    )?;
-    Ok(Some(HookTransformOutput {
-      code: Some(args.code.replace("__REF__", &reference_id)),
-      ..Default::default()
-    }))
+    let mut code = args.code.to_string();
+    for name in ["hooked", "plain"] {
+      let reference_id = ctx.emit_file(
+        EmittedAsset {
+          name: Some(format!("{name}.txt")),
+          original_file_name: None,
+          file_name: None,
+          source: name.to_string().into(),
+        },
+        None,
+        None,
+      )?;
+      code = code.replace(&format!("__{}__", name.to_uppercase()), &reference_id);
+    }
+    Ok(Some(HookTransformOutput { code: Some(code), ..Default::default() }))
   }
 
   async fn resolve_file_url(
@@ -50,8 +52,16 @@ impl Plugin for EmitAsset {
     _ctx: &PluginContext,
     args: &HookResolveFileUrlArgs<'_>,
   ) -> HookResolveFileUrlReturn {
-    // The `#hook` suffix tells this result apart from rolldown's own default rendering.
-    Ok(Some(format!("new URL({:?}, import.meta.url).href + '#hook'", args.relative_path)))
+    if args.file_name.starts_with("assets/plain-") {
+      return Ok(None);
+    }
+    // The `#<chunkId>` suffix tells this result apart from the default rendering and names the
+    // file it was resolved for.
+    Ok(Some(format!(
+      "new URL({:?}, import.meta.url).href + {:?}",
+      args.relative_path,
+      format!("#{}", args.chunk_id)
+    )))
   }
 
   fn register_hook_usage(&self) -> HookUsage {
@@ -60,12 +70,12 @@ impl Plugin for EmitAsset {
 }
 
 /// `shared.js` reads `import.meta.ROLLDOWN_FILE_URL_*`, and its two readers are written to
-/// different directories. The common chunk is still a record: each carrier's copy is resolved by
-/// the `resolveFileUrl` hook against that carrier, so both entries name the same asset.
+/// different directories. The common chunk becomes a record, and each carrier's copy resolves the
+/// references against that carrier, so both entries name the same assets.
 #[tokio::test(flavor = "multi_thread")]
 async fn import_meta_file_url() {
   manual_integration_test!()
-    .build(TestMeta { hidden_runtime_module: false, ..Default::default() })
+    .build(TestMeta::default())
     .run_with_plugins(
       BundlerOptions {
         input: Some(vec![
@@ -82,7 +92,7 @@ async fn import_meta_file_url() {
         })),
         ..Default::default()
       },
-      vec![Plugin::new_shared(EmitAsset)],
+      vec![Plugin::new_shared(EmitAssets)],
     )
     .await;
 }

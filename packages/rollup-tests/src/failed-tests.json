@@ -178,8 +178,6 @@
   "rollup@form@paths-drive-root: does not let \"..\" climb above a drive root when rendering the import path of an external remapped via output.paths",
   "rollup@function@catch-scope-nested-deconflicting: deconflicts nested catch scope parameters correctly",
   "rollup@function@emit-file@no-input: It is not necessary to provide an input if a dynamic entry is emitted",
-  "rollup@function@logging@transform-log-at-position-zero: includes source locations for transform logs at position zero",
-  "rollup@function@plugin-error-transform-pos-zero: includes the current source location for transform errors at position zero",
   "rollup@function@render-error-hook@asynchronous: preserves a renderChunk error when renderError rejects asynchronously",
   "rollup@function@render-error-hook@plain-errors: names both plugins in the combined error when they throw plain errors",
   "rollup@function@render-error-hook@successful-handler: reports the original render error after its handler completes successfully",

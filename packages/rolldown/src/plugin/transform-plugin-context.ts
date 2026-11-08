@@ -76,7 +76,7 @@ export class TransformPluginContextImpl extends PluginContextImpl {
       (handler: LoggingFunctionWithPosition): LoggingFunctionWithPosition =>
       (log, pos) => {
         log = normalizeLog(log);
-        if (pos) augmentCodeLocation(log, pos, moduleSource, moduleId);
+        if (pos != null) augmentCodeLocation(log, pos, moduleSource, moduleId);
         log.id = moduleId;
         log.hook = 'transform';
         handler(log);
@@ -89,7 +89,7 @@ export class TransformPluginContextImpl extends PluginContextImpl {
 
   error(e: RolldownError | string, pos?: number | { column: number; line: number }): never {
     if (typeof e === 'string') e = { message: e };
-    if (pos) augmentCodeLocation(e, pos, this.moduleSource, this.moduleId);
+    if (pos != null) augmentCodeLocation(e, pos, this.moduleSource, this.moduleId);
     e.id = this.moduleId;
     e.hook = 'transform';
     return error(logPluginError(normalizeLog(e), this.pluginName));

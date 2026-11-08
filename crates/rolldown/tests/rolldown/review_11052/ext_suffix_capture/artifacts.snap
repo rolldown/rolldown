@@ -1,0 +1,35 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { join as join$1 } from "node:path";
+// other.js
+function g(join$1$1) {
+	return join$1("a", join$1$1);
+}
+const result = ["local", g("b")];
+export { result };
+
+```
+
+# Variant: [format: Cjs]
+
+## Assets
+
+### main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+let node_path = require("node:path");
+// other.js
+function g(join$1) {
+	return (0, node_path.join)("a", join$1);
+}
+const result = ["local", g("b")];
+exports.result = result;
+
+```

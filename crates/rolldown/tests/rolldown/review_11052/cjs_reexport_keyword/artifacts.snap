@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// entry.js
+var import_dep = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = {
+		for: 1,
+		foo: 2
+	};
+})))();
+var foo = import_dep.foo;
+var for$1 = import_dep.for;
+export { foo, for$1 as for };
+
+```

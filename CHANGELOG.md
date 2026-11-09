@@ -1,17 +1,4 @@
 
-## [1.0.4] - 2026-11-06
-
-### ⚙️ Miscellaneous Tasks
-
-- pin @napi-rs/wasm-runtime in the wasm32-wasi binding (#11536)
-- deps: fix RustSec advisories (#11532)
-- pick the Prepare Release target branch from the version (#11526)
-- run every OS on pushes to maintenance branches (#11521)
-- run CI on pushes to maintenance branches (#11517)
-- support patch releases from maintenance branches (#11512)
-- wait for npm bindings before publishing rolldown (#11510)
-
-
 ## [1.0.3] - 2026-05-27
 
 ### 🚀 Features

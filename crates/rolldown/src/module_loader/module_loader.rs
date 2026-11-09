@@ -3,7 +3,7 @@ use std::collections::hash_map::Entry;
 use std::sync::Arc;
 
 use arcstr::ArcStr;
-use futures::{StreamExt, future::join_all, stream::FuturesUnordered};
+use futures::future::join_all;
 use itertools::Itertools;
 use oxc::semantic::NodeId;
 use oxc::semantic::{ScopeId, Scoping};
@@ -25,12 +25,10 @@ use rolldown_error::{
 };
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
-use rolldown_std_utils::discard_panic_payload;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
-use tokio::task::JoinHandle;
 use tracing::Instrument;
 
 use crate::module_loader::module_task::ModuleTaskOwner;
@@ -111,7 +109,7 @@ impl VisitState {
 pub struct ModuleLoader<'a, Fs: FileSystem + Clone + 'static> {
   pub shared_context: Arc<TaskContext<Fs>>,
   rx: tokio::sync::mpsc::UnboundedReceiver<ModuleLoaderMsg>,
-  tasks: FuturesUnordered<JoinHandle<()>>,
+  remaining: u32,
   intermediate_normal_modules: IntermediateNormalModules,
   symbol_ref_db: SymbolRefDb,
   is_full_scan: bool,
@@ -163,37 +161,6 @@ pub struct ModuleLoaderOutput {
   pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
   pub tla_module_count: usize,
   pub tla_keyword_span_map: FxHashMap<ModuleIdx, Span>,
-}
-
-// Tokio catches panics at the task boundary. Join completion, rather than a message
-// counter, retires each task even when it panics before sending its result.
-// Retaining JoinHandles also preserves detach-on-drop behavior without cancellation.
-async fn next_module_message(
-  rx: &mut tokio::sync::mpsc::UnboundedReceiver<ModuleLoaderMsg>,
-  tasks: &mut FuturesUnordered<JoinHandle<()>>,
-) -> Option<ModuleLoaderMsg> {
-  loop {
-    if tasks.is_empty() {
-      // A task can finish before its last message is consumed.
-      return rx.try_recv().ok();
-    }
-    tokio::select! {
-      biased;
-      // Prefer messages so already-finished tasks need no join waker registration.
-      message = rx.recv() => return message,
-      result = tasks.next() => {
-        if let Some(Err(error)) = result {
-          if let Ok(payload) = error.try_into_panic() {
-            discard_panic_payload(payload);
-          }
-          let diagnostic = BuildDiagnostic::unhandleable_error(anyhow::anyhow!(
-            "module loader task panicked before reporting completion"
-          ));
-          return Some(ModuleLoaderMsg::BuildErrors(vec![diagnostic].into_boxed_slice()));
-        }
-      }
-    }
-  }
 }
 
 impl<Fs: FileSystem + Clone> Drop for ModuleLoader<'_, Fs> {
@@ -248,7 +215,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     Ok(Self {
       rx,
       cache,
-      tasks: FuturesUnordered::new(),
+      remaining: 0,
       is_full_scan,
       shared_context,
       symbol_ref_db,
@@ -456,9 +423,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     if resolved_id.external.is_external() {
       self.external_module_idxs.insert(idx);
       let task = ExternalModuleTask::new(ctx, idx, resolved_id, Arc::clone(user_defined_entries));
-      self
-        .tasks
-        .push(tokio::spawn(task.run().instrument(tracing::info_span!("external_module_task"))));
+      tokio::spawn(task.run().instrument(tracing::info_span!("external_module_task")));
     } else {
       let task = ModuleTask::new(
         ctx,
@@ -470,10 +435,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         self.flat_options,
         self.magic_string_tx.clone(),
       );
-      self
-        .tasks
-        .push(tokio::spawn(task.run().instrument(tracing::info_span!("normal_module_task"))));
+      tokio::spawn(task.run().instrument(tracing::info_span!("normal_module_task")));
     }
+    self.remaining += 1;
     idx
   }
 
@@ -501,10 +465,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     if let Entry::Vacant(e) = self.cache.module_id_to_idx.entry(RUNTIME_MODULE_ID) {
       let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
       let task = RuntimeModuleTask::new(idx, Arc::clone(&self.shared_context), self.flat_options);
-      self
-        .tasks
-        .push(tokio::spawn(task.run().instrument(tracing::info_span!("runtime_module_task"))));
+      tokio::spawn(task.run().instrument(tracing::info_span!("runtime_module_task")));
       e.insert(VisitState::Seen(idx));
+      self.remaining += 1;
     }
 
     let user_defined_entries = Arc::new(match fetch_mode {
@@ -586,7 +549,10 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     let mut runtime_brief = None;
     let mut overrode_preserve_entry_signature_map = FxHashMap::default();
 
-    while let Some(msg) = next_module_message(&mut self.rx, &mut self.tasks).await {
+    while self.remaining > 0 {
+      let Some(msg) = self.rx.recv().await else {
+        break;
+      };
       match msg {
         ModuleLoaderMsg::NormalModuleDone(task_result) => {
           let NormalModuleTaskResult {
@@ -759,6 +725,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
           if preserve_jsx {
             self.symbol_ref_db.set_has_module_preserve_jsx();
           }
+          self.remaining -= 1;
         }
         ModuleLoaderMsg::ExternalModuleDone(task_result) => {
           let ExternalModuleTaskResult {
@@ -788,6 +755,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
           )));
 
           *self.intermediate_normal_modules.modules.get_mut(idx) = Some(external_module);
+          self.remaining -= 1;
         }
         ModuleLoaderMsg::RuntimeNormalModuleDone(task_result) => {
           let RuntimeModuleTaskResult {
@@ -826,6 +794,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
           *self.intermediate_normal_modules.stmt_infos.get_mut(runtime.id()) = Some(stmt_infos);
 
           self.symbol_ref_db.store_local_db(runtime.id(), local_symbol_ref_db);
+          self.remaining -= 1;
 
           self.errors.extend(runtime.validate_symbols(&rolldown_common::RUNTIME_HELPER_NAMES));
           runtime_brief = Some(runtime);
@@ -886,6 +855,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         }
         ModuleLoaderMsg::BuildErrors(e) => {
           self.errors.extend(e);
+          self.remaining -= 1;
         }
       }
     }
@@ -1299,134 +1269,47 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
 
 #[cfg(test)]
 mod tests {
-  use futures::{StreamExt, stream::FuturesUnordered};
-  use rolldown_common::ModuleLoaderMsg;
-  use rolldown_error::{BuildDiagnostic, EventKind};
+  use std::sync::Arc;
 
-  use super::next_module_message;
+  use rolldown_common::{BundleMode, BundlerOptions, FlatOptions, ModuleId, ResolvedId};
+  use rolldown_fs::OsFileSystem;
 
-  async fn assert_panic_reports_exactly_one_error(
-    future: impl std::future::Future<Output = ()> + Send + 'static,
-  ) {
-    let (_tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
-    let mut tasks = FuturesUnordered::new();
-    tasks.push(tokio::spawn(future));
+  use crate::{
+    BundleFactory, BundleFactoryOptions,
+    module_loader::task_context::{TaskContext, TaskContextMeta},
+  };
 
-    let message = next_module_message(&mut rx, &mut tasks)
-      .await
-      .expect("a panic must produce a completion error");
-    match message {
-      ModuleLoaderMsg::BuildErrors(errors) => {
-        assert_eq!(errors.len(), 1);
-        assert!(matches!(errors[0].kind(), EventKind::UnhandleableError));
-        assert!(
-          errors[0].to_string().contains("module loader task panicked before reporting completion")
-        );
-      }
-      _ => panic!("module task panic must be converted to BuildErrors"),
-    }
-    assert!(next_module_message(&mut rx, &mut tasks).await.is_none());
-  }
+  use super::{ExternalModuleTask, ModuleTask};
 
+  /// A module task that finishes after its build was dropped must not panic when it sends.
   #[tokio::test]
-  async fn panicking_module_task_reports_exactly_one_error() {
-    assert_panic_reports_exactly_one_error(async {
-      tokio::task::yield_now().await;
-      panic!("module task probe");
+  async fn module_tasks_ignore_a_dropped_receiver() {
+    let mut factory = BundleFactory::new(BundleFactoryOptions {
+      bundler_options: BundlerOptions::default(),
+      disable_tracing_setup: true,
+      ..Default::default()
     })
-    .await;
-  }
+    .expect("create bundle factory");
+    let bundle = factory.create_bundle(BundleMode::FullBuild, None).expect("create bundle");
+    // Drop the receiver at once, as a dropped build does.
+    let (tx, _) = tokio::sync::mpsc::unbounded_channel();
+    let ctx: Arc<TaskContext<OsFileSystem>> = Arc::new(TaskContext {
+      options: bundle.options,
+      tx,
+      resolver: bundle.resolver,
+      fs: bundle.fs,
+      plugin_driver: bundle.plugin_driver,
+      meta: TaskContextMeta { replace_global_define_config: None },
+    });
 
-  #[tokio::test]
-  async fn panicking_payload_destructor_still_reports_exactly_one_error() {
-    struct PanicOnDrop;
+    let normal = ResolvedId { id: ModuleId::new_empty("empty"), ..Default::default() };
+    let flat_options = FlatOptions::from_shared_options(&ctx.options);
+    ModuleTask::new(Arc::clone(&ctx), 0.into(), normal, None, false, None, flat_options, None)
+      .run()
+      .await;
 
-    impl Drop for PanicOnDrop {
-      fn drop(&mut self) {
-        panic!("panic payload destructor probe");
-      }
-    }
-
-    assert_panic_reports_exactly_one_error(async {
-      std::panic::panic_any(PanicOnDrop);
-    })
-    .await;
-  }
-
-  #[tokio::test]
-  async fn completed_module_task_does_not_report_an_error() {
-    let (_tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
-    let mut tasks = FuturesUnordered::new();
-    tasks.push(tokio::spawn(async {}));
-    assert!(next_module_message(&mut rx, &mut tasks).await.is_none());
-  }
-
-  #[tokio::test]
-  async fn module_task_build_errors_are_not_duplicated() {
-    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
-    let task_tx = tx.clone();
-    let mut tasks = FuturesUnordered::new();
-    tasks.push(tokio::spawn(async move {
-      let error = BuildDiagnostic::unhandleable_error(anyhow::anyhow!("task error probe"));
-      task_tx.send(ModuleLoaderMsg::BuildErrors(vec![error].into_boxed_slice())).unwrap();
-    }));
-
-    let Some(ModuleLoaderMsg::BuildErrors(errors)) = next_module_message(&mut rx, &mut tasks).await
-    else {
-      panic!("the task's build errors must be preserved");
-    };
-    assert_eq!(errors.len(), 1);
-    assert!(errors[0].to_string().contains("task error probe"));
-    assert!(next_module_message(&mut rx, &mut tasks).await.is_none());
-  }
-
-  #[tokio::test]
-  async fn completed_tasks_leave_queued_messages_to_be_processed() {
-    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
-    let mut tasks = FuturesUnordered::new();
-    tasks.push(tokio::spawn(async move {
-      tx.send(ModuleLoaderMsg::FetchModule(Box::new(rolldown_common::ResolvedId::make_dummy())))
-        .unwrap();
-    }));
-    tasks.next().await.unwrap().unwrap();
-
-    assert!(matches!(
-      next_module_message(&mut rx, &mut tasks).await,
-      Some(ModuleLoaderMsg::FetchModule(_))
-    ));
-    assert!(next_module_message(&mut rx, &mut tasks).await.is_none());
-  }
-
-  #[tokio::test]
-  async fn pending_task_does_not_block_messages_or_other_task_panics() {
-    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
-    let (release_tx, release_rx) = tokio::sync::oneshot::channel();
-    let mut tasks = FuturesUnordered::new();
-    let task_tx = tx.clone();
-    tasks.push(tokio::spawn(async move {
-      task_tx
-        .send(ModuleLoaderMsg::FetchModule(Box::new(rolldown_common::ResolvedId::make_dummy())))
-        .unwrap();
-      release_rx.await.unwrap();
-    }));
-    tasks.push(tokio::spawn(async { panic!("later task probe") }));
-
-    tokio::time::timeout(std::time::Duration::from_secs(5), async {
-      let mut messages = 0;
-      let mut errors = 0;
-      for _ in 0..2 {
-        match next_module_message(&mut rx, &mut tasks).await {
-          Some(ModuleLoaderMsg::FetchModule(_)) => messages += 1,
-          Some(ModuleLoaderMsg::BuildErrors(e)) => errors += e.len(),
-          _ => panic!("expected a load request or a panic diagnostic"),
-        }
-      }
-      assert_eq!(messages, 1);
-      assert_eq!(errors, 1);
-      release_tx.send(()).unwrap();
-      assert!(next_module_message(&mut rx, &mut tasks).await.is_none());
-    })
-    .await
-    .expect("supervision must not serialize tasks or block load requests");
+    let external =
+      ResolvedId { id: ModuleId::new("external"), external: true.into(), ..Default::default() };
+    ExternalModuleTask::new(Arc::clone(&ctx), 1.into(), external, Arc::new(vec![])).run().await;
   }
 }

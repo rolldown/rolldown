@@ -5,6 +5,11 @@
   "ignorePaths": ["**/node_modules/**", "**/examples/**", "**/crates/rolldown/tests/**"],
   "packageRules": [
     {
+      "description": "Actions are pinned to a commit, which Renovate counts as a pinned dependency, and Boshen/renovate does not update pinned dependencies (Boshen/renovate#2). Update actions anyway.",
+      "matchManagers": ["github-actions"],
+      "updatePinnedDependencies": true
+    },
+    {
       "groupName": "rolldown-plugin-dts",
       "matchManagers": ["npm"],
       "matchPackageNames": ["rolldown-plugin-dts"],

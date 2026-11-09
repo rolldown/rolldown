@@ -2298,6 +2298,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 if matches!(importee_linking_info.wrap_kind(), WrapKind::Esm)
                   && !consumer_local_route
                 {
+                  // Recorded so the entry prelude does not call it again ahead of this statement.
+                  self.generated_init_esm_importee_ids.insert(importee.idx);
                   let (wrapper_ref, _) = self.finalized_expr_for_symbol_ref(
                     importee_linking_info.wrapper_ref.unwrap(),
                     false,

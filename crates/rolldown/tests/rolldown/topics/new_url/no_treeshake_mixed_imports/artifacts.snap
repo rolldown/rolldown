@@ -1,0 +1,25 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## assets/file-Br93rtKC.txt
+
+## main.js
+
+```js
+import assert from "node:assert/strict";
+// HIDDEN [\0rolldown/runtime.js]
+// file.txt
+var require_file = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = "./assets/file-Br93rtKC.txt";
+}));
+// main.js
+var import_file = /* @__PURE__ */ __toESM(require_file());
+const requiredAsset = require_file();
+const url = new URL("assets/file-Br93rtKC.txt", import.meta.url);
+assert.equal(typeof requiredAsset, "string");
+assert.equal(requiredAsset, import_file.default);
+assert.equal(new URL(import_file.default, import.meta.url).href, url.href);
+
+```

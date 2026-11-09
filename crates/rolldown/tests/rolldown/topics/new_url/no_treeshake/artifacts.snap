@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## assets/file-Br93rtKC.txt
+
+```txt
+asset contents
+
+```
+
+## assets/worker-b4AnFQ0j.js
+
+```js
+throw new Error('The worker asset must not execute in the importing module');
+
+```
+
+## main.js
+
+```js
+// main.js
+const url = new URL("assets/file-Br93rtKC.txt", import.meta.url);
+const workerUrl = new URL("assets/worker-b4AnFQ0j.js", import.meta.url);
+export { url, workerUrl };
+
+```

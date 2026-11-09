@@ -39,7 +39,7 @@ This is optimal for both CJS and ESM consumers. Plugins cannot replicate this �
 
 - CJS `require()`: correct, `__commonJSMin` returns `module.exports` directly (the string)
 - ESM imports: works via `__toESM` interop, adds small wrapping overhead
-- `new URL()` only: **safe even with tree shaking disabled** — `LinkStage::new` excludes `ImportKind::NewUrl` from `LinkingMetadata::dependencies`. A URL reference needs the emitted filename, not the module's execution, so it must not retain the plugin's `module.exports` assignment. The asset is still emitted during loading and the finalizer resolves its path through the `FileEmitter` bridge. If the same asset is also imported or required, those records can retain its module as usual. The load hook's `side_effects: false` separately allows unused ordinary imports to be tree-shaken.
+- `new URL()` only: **safe** — `LinkStage::new` excludes `ImportKind::NewUrl` from `LinkingMetadata::dependencies`, so a URL reference never includes the module or its `module.exports` assignment, with or without tree shaking; the finalizer gets the filename from the `FileEmitter` bridge (above). An `import` or `require` of the same asset includes its module as usual. The load hook's `side_effects: false` separately allows unused imports to be tree-shaken.
 - Chosen: CJS correctness preserved, ESM works with minor overhead, `new URL()` is safe
 
 **Option 3: `has_lazy_export` via plugin API (future)**

@@ -4,7 +4,5 @@
     "experimental": {
       "resolveNewUrlToAsset": true
     }
-  },
-  "configVariants": [{ "treeshake": true, "_snapshot": false }],
-  "snapshotBytes": true
+  }
 }

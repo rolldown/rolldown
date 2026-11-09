@@ -1,0 +1,29 @@
+// \0rolldown_dynamic_import_helper.js
+var _rolldown_dynamic_import_helper_default = (glob, path, segments) => {
+	const query = path.lastIndexOf("?");
+	const v = glob[query === -1 || query < path.lastIndexOf("/") ? path : path.slice(0, query)];
+	if (v) return typeof v === "function" ? v() : Promise.resolve(v);
+	return new Promise((_, reject) => {
+		(typeof queueMicrotask === "function" ? queueMicrotask : setTimeout)(reject.bind(null, /* @__PURE__ */ new Error("Unknown variable dynamic import: " + path + (path.split("/").length !== segments ? ". Note that variables only represent file names one level deep." : ""))));
+	});
+};
+// main.js
+function dynamic(name) {
+	return _rolldown_dynamic_import_helper_default(import.meta.glob("./dir/a\"b.`$[{]literal[}].*.js"), `./dir/a"b.\`\${literal}.${name}.js`, 3);
+}
+function dynamicWithCookedPath(name) {
+	return _rolldown_dynamic_import_helper_default(import.meta.glob("./dir/a\"b.`$[{]literal[}].*.js"), `./dir/a"b.\`\${literal}.${name}.\u006as`, 3);
+}
+function dynamicWithAlias(name) {
+	return _rolldown_dynamic_import_helper_default(import.meta.glob("./dir/a\"b.`$[{]literal[}].*.js"), `./dir/a"b.\`\${literal}.${name}.js`, 3);
+}
+function dynamicWithQuery(name) {
+	return _rolldown_dynamic_import_helper_default(import.meta.glob("./dir/a\"b.`$[{]literal[}].*.js", { query: "?value=\"\n" }), `./dir/a"b.\`\${literal}.${name}.js?value="\n`, 3);
+}
+function dynamicWithEscapedRawQuery(name) {
+	return _rolldown_dynamic_import_helper_default(import.meta.glob("./dir/*.js", {
+		query: "?raw&value=\"quoted\"\\path\n",
+		import: "*"
+	}), `./dir/${name}.js?raw&value="quoted"\\path\n`, 3);
+}
+export { dynamic, dynamicWithAlias, dynamicWithCookedPath, dynamicWithEscapedRawQuery, dynamicWithQuery };

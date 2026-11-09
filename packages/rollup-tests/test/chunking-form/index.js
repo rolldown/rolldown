@@ -32,7 +32,8 @@ runTestSuiteWithSamples('chunking form', resolve(__dirname, '../../../../rollup/
 			const logs = [];
 			after(() => config.logs && compareLogs(logs, config.logs));
 
-			for (const format of FORMATS) {
+			const formats = config.formats?.filter(f => FORMATS.includes(f)) ?? FORMATS
+			for (const format of formats) {
 				it('generates ' + format, async () => {
 					process.chdir(directory);
 					const warnings = [];

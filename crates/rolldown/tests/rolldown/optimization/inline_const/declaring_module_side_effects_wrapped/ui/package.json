@@ -1,0 +1,6 @@
+{
+  "sideEffects": [
+    "./button.js",
+    "./button.css.js"
+  ]
+}

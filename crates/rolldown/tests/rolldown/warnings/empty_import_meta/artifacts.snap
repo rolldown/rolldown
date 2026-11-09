@@ -34,13 +34,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 console.log({}.hello);
 console.log(__dirname);
 console.log(__filename);
 console.log(require("url").pathToFileURL(__filename).href);
 console.log({});
-//#endregion
 
 ```
 
@@ -121,13 +120,12 @@ console.log({});
 
 ```js
 (function() {
-	//#region main.js
+	// main.js
 	console.log({}.hello);
 	console.log({}.dirname);
 	console.log({}.filename);
 	console.log({}.url);
 	console.log({});
-	//#endregion
 })();
 
 ```
@@ -211,13 +209,12 @@ console.log({});
 (function(factory) {
 	typeof define === "function" && define.amd ? define([], factory) : factory();
 })(function() {
-	//#region main.js
+	// main.js
 	console.log({}.hello);
 	console.log({}.dirname);
 	console.log({}.filename);
 	console.log({}.url);
 	console.log({});
-	//#endregion
 });
 
 ```

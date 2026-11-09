@@ -6,6 +6,9 @@ const path = require('node:path')
 const {
 	runTestSuiteWithSamples,
 } = require('../utils.js');
+const {
+	shouldIgnoreTestExceptTreeshaking,
+} = require('../../src/intercept/utils.js');
 
 const ignoredTreeshakingTests = []
 const testDirectory = path.resolve(__dirname, '../../../../rollup/test/form/samples')
@@ -21,10 +24,11 @@ runTestSuiteWithSamples(
         if (content.includes('// removed') || content.includes(`console.log('removed')`) || content.includes('const removed') || included(directory) || included(config.description) || included(content)) {
             const testPath = directory.replace(testDirectory, '').replaceAll('/', '@').replaceAll('\\', '@')
             const isSingleFormatTest = fs.existsSync(directory + '/_expected.js');
-            if (isSingleFormatTest) {
-                ignoredTreeshakingTests.push('rollup@form' + testPath + ': ' + config.description)
-            } else {
-                ignoredTreeshakingTests.push('rollup@form' + testPath + ': ' + config.description + '@generates es')
+            const testId = isSingleFormatTest
+                ? 'rollup@form' + testPath + ': ' + config.description
+                : 'rollup@form' + testPath + ': ' + config.description + '@generates es'
+            if (!shouldIgnoreTestExceptTreeshaking(testId)) {
+                ignoredTreeshakingTests.push(testId)
             }
         }
 	}

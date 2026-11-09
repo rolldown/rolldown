@@ -1,14 +1,16 @@
 use oxc::{
   allocator::TakeIn,
-  ast::ast::{self, Expression},
+  ast::ast::{self, Expression, NumberBase},
   span::SPAN,
 };
 use oxc_traverse::Traverse;
+use rolldown_common::EcmaModuleAstUsage;
 use rolldown_ecmascript::{
   CJS_EXPORTS_REF_STR, CJS_MODULE_REF_STR, CJS_ROLLDOWN_EXPORTS_REF,
   CJS_ROLLDOWN_EXPORTS_REF_IDENT, CJS_ROLLDOWN_MODULE_REF, CJS_ROLLDOWN_MODULE_REF_IDENT,
 };
 use rolldown_ecmascript_utils::ExpressionFactoryExt as _;
+use rustc_hash::FxHashSet;
 
 use crate::hmr::{
   hmr_ast_finalizer::HmrAstFinalizer,
@@ -38,16 +40,77 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     // `initModule("<stable id>")` for EVERY static dep, uniformly registry-gated: a
     // co-carried factory runs, a resident module short-circuits. No payload-membership
     // split exists in the emitted bytes.
-    let dependencies_init_fn_stmts: Vec<_> = self
-      .dependencies
-      .iter()
-      .filter_map(|dep| {
-        let module = &self.modules[*dep];
-        module.as_normal().map(|_| {
-          ast::Statement::new_expression_statement(SPAN, self.make_init_module_call(module), self)
-        })
-      })
-      .collect();
+    // A dep can also carry statements of its own, emitted here before the body: a
+    // `var import_dep = loadExports("dep.js")` binding, and one `__reExport(...)` copy per
+    // `export * from`. Which ones it carries depends on how it was imported. The order is:
+    //
+    //   for each dep in `dependencies` (first-reference order):
+    //     initModule(dep)
+    //     if the dep has a binding: var import_dep = loadExports(dep)
+    //     if any `export *` source is now ready: copy it, in `export *` order,
+    //     stopping at the first one that is not ready yet
+    //
+    // Rule 1: as early as possible, copy a re-export (`export * from './dep.js'`) or make a name
+    // readable (`export { x } from './dep.js'`, `export * as ns from './dep.js'` -
+    // rolldown#10781). Example (the cycle from vitejs/vite#21626):
+    //
+    //   // index.js                     // b.js
+    //   export * from './a.js'          import { valueA } from './index.js'
+    //   export { fn } from './b.js'     export const fn = () => valueA.concat('!')
+    //
+    //   initModule("a.js")
+    //   __reExport(exports, loadExports("a.js"))   // `valueA` is on the namespace now
+    //   initModule("b.js")                         // b.js runs here and reads `valueA`
+    //
+    // b.js runs inside `initModule("b.js")`, before this body. If the copy of a.js came after
+    // all `initModule` calls, b.js would read `valueA` as `undefined`.
+    //
+    // Rule 2: keep `export *` order. `__reExport` skips a name the target already has, so the
+    // first copy owns a name that two sources export. Example:
+    //
+    //   import { helper } from './b.js'   // `dependencies` = [b, c]
+    //   export * from './c.js'            // `re_export_all_dependencies` = [c, b]
+    //   export * from './b.js'            // both c.js and b.js export `foo`
+    //
+    //   initModule("b.js")                           // c.js is not ready, so no copy yet
+    //   initModule("c.js")
+    //   __reExport(exports, loadExports("c.js"))     // `foo` comes from c.js
+    //   __reExport(exports, loadExports("b.js"))     // `foo` already set, skipped
+    //
+    // Copying b.js right after `initModule("b.js")` would give `foo` to b.js, only because an
+    // unrelated import mentioned b.js first.
+    //
+    // An external needs no `initModule`. Its `import * as` binding is hoisted, so it is always
+    // ready to copy.
+    let mut load_exports_stmts = std::mem::take(&mut self.generated_load_exports_stmts);
+    let mut dependencies_init_fn_stmts: Vec<ast::Statement<'ast>> = Vec::new();
+    let mut initialized = FxHashSet::default();
+    let mut next_copy = 0;
+    for dep in &self.dependencies {
+      let module = &self.modules[*dep];
+      if module.as_normal().is_some() {
+        dependencies_init_fn_stmts.push(ast::Statement::new_expression_statement(
+          SPAN,
+          self.make_init_module_call(module),
+          self,
+        ));
+      }
+      if let Some(stmt) = load_exports_stmts.remove(dep) {
+        dependencies_init_fn_stmts.push(stmt);
+      }
+      initialized.insert(*dep);
+      while let Some(source) = self.re_export_all_dependencies.get_index(next_copy) {
+        let source_module = &self.modules[*source];
+        if source_module.as_normal().is_some() && !initialized.contains(source) {
+          break;
+        }
+        dependencies_init_fn_stmts.push(self.create_re_export_call_stmt(source_module));
+        next_copy += 1;
+      }
+    }
+    // Every binding is created next to a `self.dependencies.insert`, so the loop above emits all
+    // of them.
+    debug_assert!(load_exports_stmts.is_empty());
 
     let runtime_module_register = self.generate_runtime_module_register_for_hmr(ctx.scoping());
 
@@ -165,13 +228,14 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       None,
       self,
     );
+    let is_async = self.module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait);
     // function () { [user code] }
     let mut user_code_wrapper = ast::Function::boxed(
       SPAN,
       ast::FunctionType::FunctionExpression,
       None,
       false,
-      false,
+      is_async,
       false,
       None,
       None,
@@ -183,7 +247,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     // mark the callback as PIFE because the callback is executed when this chunk is loaded
     user_code_wrapper.pife = self.use_pife_for_module_wrappers;
 
-    // __rolldown_runtime__.registerFactory(stable_id, kind, function (__rolldown_module_id__) { [user code] })
+    // __rolldown_runtime__.registerFactory(stable_id, function (__rolldown_module_id__) { [user code] }[, stamp])
     // Every factory is id-addressed and registry-gated at runtime; re-execution policy
     // is runtime data (evictions), never a per-payload flag.
     let mut register_factory_args = oxc::allocator::Vec::with_capacity_in(3, self);
@@ -193,17 +257,17 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       None,
       self,
     ));
-    register_factory_args.push(ast::Argument::new_string_literal(
-      SPAN,
-      oxc::ast::ast::Str::from_str_in(
-        if self.module.exports_kind.is_commonjs() { "cjs" } else { "esm" },
-        self,
-      ),
-      None,
-      self,
-    ));
     register_factory_args
       .push(ast::Argument::from(ast::Expression::FunctionExpression(user_code_wrapper)));
+    if self.stamp != 0 {
+      register_factory_args.push(ast::Argument::new_numeric_literal(
+        SPAN,
+        f64::from(self.stamp),
+        None,
+        ast::NumberBase::Decimal,
+        self,
+      ));
+    }
 
     let register_factory_call = ast::Expression::new_call_expression(
       SPAN,
@@ -223,6 +287,22 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     _ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
   ) {
     self.rewrite_hot_accept_call_deps(node);
+  }
+
+  fn exit_call_expression(
+    &mut self,
+    node: &mut ast::CallExpression<'ast>,
+    ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
+  ) {
+    self.guard_import_binding_callee(&mut node.callee, ctx);
+  }
+
+  fn exit_tagged_template_expression(
+    &mut self,
+    node: &mut ast::TaggedTemplateExpression<'ast>,
+    ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
+  ) {
+    self.guard_import_binding_callee(&mut node.tag, ctx);
   }
 
   fn exit_expression(
@@ -276,5 +356,34 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     } else if ident.name == CJS_MODULE_REF_STR {
       ident.name = CJS_ROLLDOWN_MODULE_REF_IDENT;
     }
+  }
+
+  /// An import binding renamed to `import_foo.bar` or `import_foo["a-b"]` would be called as a
+  /// method, with the exports object as `this`. Wrap it as `(0, import_foo.bar)` so `this` stays
+  /// `undefined`. A namespace import is renamed to `import_foo` alone and is left as it is.
+  fn guard_import_binding_callee(
+    &self,
+    callee: &mut Expression<'ast>,
+    ctx: &oxc_traverse::TraverseCtx<'ast, ()>,
+  ) {
+    let callee = callee.without_parentheses_mut();
+    let Expression::Identifier(ident) = callee else {
+      return;
+    };
+    let Some(reference_id) = ident.reference_id.get() else {
+      return;
+    };
+    let Some(symbol_id) = ctx.scoping().get_reference(reference_id).symbol_id() else {
+      return;
+    };
+    if !self.import_bindings.get(&symbol_id).is_some_and(|name| name.contains(['.', '['])) {
+      return;
+    }
+    let member = callee.take_in(self);
+    *callee = Expression::new_seq_in_parens(
+      Expression::new_numeric_literal(SPAN, 0.0, Some("0".into()), NumberBase::Decimal, self),
+      member,
+      self,
+    );
   }
 }

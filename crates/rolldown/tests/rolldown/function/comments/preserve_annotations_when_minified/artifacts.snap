@@ -1,0 +1,42 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+/*! legal comment */
+const e=/*#__PURE__*/ Object.freeze({a:1}),t=e=>e+1;export{e as T,t as f};
+```
+
+# Variant: [comments: { legal: false, annotation: true, jsdoc: true }] [minify: true]
+
+## Assets
+
+### main.js
+
+```js
+const e=/*#__PURE__*/ Object.freeze({a:1}),t=e=>e+1;export{e as T,t as f};
+```
+
+# Variant: [comments: { legal: true, annotation: false, jsdoc: true }] [minify: true]
+
+## Assets
+
+### main.js
+
+```js
+/*! legal comment */
+const e=Object.freeze({a:1}),t=e=>e+1;export{e as T,t as f};
+```
+
+# Variant: [comments: false] [minify: true]
+
+## Assets
+
+### main.js
+
+```js
+const e=Object.freeze({a:1}),t=e=>e+1;export{e as T,t as f};
+```

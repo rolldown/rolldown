@@ -1,4 +1,4 @@
-use std::{borrow::Cow, sync::Arc};
+use std::borrow::Cow;
 
 use rolldown::{BundlerOptions, InputItem};
 use rolldown_error::BatchedBuildDiagnostic;
@@ -41,7 +41,7 @@ async fn should_emit_multi_plugin_diagnostics() {
         }]),
         ..Default::default()
       },
-      vec![Arc::new(PluginErrorTest)],
+      vec![Plugin::new_shared(PluginErrorTest)],
     )
     .await;
 }

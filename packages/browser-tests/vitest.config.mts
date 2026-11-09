@@ -22,9 +22,9 @@ const browser = () => ({
   headless: true,
 });
 
-// Both suites drive a browser, but they test different things from different fixtures, so they stay
-// separate projects: `--project webcontainer` and `--project browser` never pull in the other's
-// globalSetup or its build inputs.
+// Each suite tests a different thing from different fixtures, so they stay separate projects:
+// `--project <name>` never pulls in another suite's globalSetup or its build inputs. The first two
+// drive a browser; `webcontainer-fallback` is plain Node.
 export default defineConfig({
   test: {
     projects: [
@@ -70,6 +70,16 @@ export default defineConfig({
           testTimeout: 120_000,
           hookTimeout: 120_000,
           browser: browser(),
+        },
+      },
+      {
+        test: {
+          name: 'webcontainer-fallback',
+          include: ['tests/webcontainer-fallback/*.test.ts'],
+          provide: provide(),
+          globalSetup: ['./scripts/check-fixture-freshness.mjs'],
+          // two registry installs, then the wasm binding boots in a child process
+          testTimeout: 120_000,
         },
       },
     ],

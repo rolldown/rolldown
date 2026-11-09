@@ -224,6 +224,11 @@ export type DevModeOptions =
        */
       skipCommonRuntimeInjection?: boolean;
       lazy?: boolean;
+      /**
+       * Call the `hotUpdate` plugin hook. The `hotUpdate` option of `dev()` also turns it on.
+       * @default false
+       */
+      hotUpdate?: boolean;
     };
 
 export type OptimizationOptions = {
@@ -517,6 +522,9 @@ export interface InputOptions {
    *
    * See [the In-Depth Guide](https://rolldown.rs/in-depth/module-types) for more details.
    *
+   * With {@linkcode InputOptions.experimental | experimental.importAttributes}, a `type` import
+   * attribute of `json`, `text` or `bytes` wins over this option.
+   *
    * @example
    * ```js
    * import { defineConfig } from 'rolldown'
@@ -590,8 +598,8 @@ export interface InputOptions {
      *
      * Available modes:
      * - `none`: No debug information is attached.
-     * - `simple`: Attach comments indicating which files the bundled code comes from. These comments could be removed by the minifier.
-     * - `full`: Attach detailed debug information to the output bundle. These comments are using legal comment syntax, so they won't be removed by the minifier.
+     * - `simple`: Attach a `// <module id>` comment where the code of each module starts, like esbuild and Bun. These comments could be removed by the minifier.
+     * - `full`: Same as `simple`, and also attach comments that tell why each chunk exists. These chunk comments use legal comment syntax, so they won't be removed by the minifier.
      *
      * @default 'simple'
      *
@@ -601,9 +609,13 @@ export interface InputOptions {
     /**
      * Enables automatic generation of a chunk import map asset during build.
      *
-     * This map only includes chunks with hashed filenames, where keys are derived from the facade module
-     * name or primary chunk name. It produces stable and unique hash-based filenames, effectively preventing
-     * cascading cache invalidation caused by content hashes and maximizing browser cache reuse.
+     * This map includes chunks with hashed filenames. Entry keys use their facade module ID. Common chunks
+     * use their name; later chunks with the same name use the smallest module key among their original members.
+     * Module keys distinguish cwd-relative filesystem paths from verbatim non-path IDs.
+     * Modules copied into a file by `experimentalInlineCommonChunks` remain in `moduleIds` but do not
+     * affect that file's key.
+     * Keeping these keys independent of content hashes reduces cascading cache invalidation when
+     * a dependency changes.
      *
      * The output defaults to `importmap.json` unless overridden via `fileName`. A base URL prefix
      * (default `"/"`) can be applied to all paths. The resulting JSON is a valid import map and can be
@@ -722,6 +734,23 @@ export interface InputOptions {
      * @default false
      */
     lazyBarrel?: boolean;
+    /**
+     * Make import attributes part of module identity, aligned with Rollup 5.
+     *
+     * A module imported with attributes, e.g. `import data from './data.json' with { type: 'json' }`,
+     * gets the id `<rawId>?attributes=<encoded attributes>`, so the same file imported with
+     * different attributes becomes different modules. The `type` attribute also selects a
+     * built-in module type: `json`, `text` or `bytes`.
+     *
+     * Without this option, plugin hooks still have the `rawId` and `attributes` fields, but
+     * `attributes` is always `{}` and the attributes a `resolveId` hook returns are ignored. An
+     * external module keeps the attributes written in the source in both modes.
+     *
+     * @see {@link https://rolldown.rs/in-depth/import-attributes | Import Attributes}
+     * @see {@link https://github.com/rolldown/rolldown/discussions/11217 | RFC}
+     * @default false
+     */
+    importAttributes?: boolean;
   };
   /**
    * Configure how the code is transformed. This process happens after the `transform` hook.
@@ -767,15 +796,34 @@ export interface InputOptions {
   /**
    * Devtools integration options.
    *
-   * When enabled, Rolldown writes JSON-lines devtools output under
+   * In the default `'full'` mode, Rolldown writes JSON-lines devtools output under
    * `node_modules/.rolldown/{session_id}/`, resolved against {@linkcode cwd}.
    * Consumers can parse the output with `@rolldown/debug` after
    * `await bundle.close()` resolves.
+   *
+   * `sessionId` replaces the generated session id. It must be one path segment: not empty, not
+   * `.` or `..`, and without `/`, `\` or NUL. Rolldown does not check that it is unique: give each
+   * bundler that runs at the same time its own `sessionId`, or their devtools output mixes.
+   * The name `unknown-session` is reserved regardless of case.
+   *
+   * In `'report'` mode, Rolldown writes a small build report instead of the multi-GB
+   * `logs.json`: Markdown views, `metrics.json` with a build-over-build `delta`,
+   * `module-graph.json`, `chunk-graph.json` and `history.jsonl`. The report goes to
+   * `node_modules/.rolldown/report/<output dir>`, resolved against {@linkcode cwd}, where
+   * `<output dir>` is the output folder relative to `cwd` (each `..` becomes `__`). Rolldown
+   * writes it when the bundle closes. `watch()` and the dev engine write no report. See the
+   * [Build Report guide](/in-depth/build-report) for the files and how to compare builds.
    *
    * @experimental
    */
   devtools?: {
     sessionId?: string;
+    /**
+     * `'full'` (default): write JSON-lines devtools logs.
+     * `'report'`: write a small build report to `node_modules/.rolldown/report/` instead.
+     * Any other value fails the build.
+     */
+    mode?: 'full' | 'report';
   };
   /**
    * Controls how entry chunk exports are preserved.

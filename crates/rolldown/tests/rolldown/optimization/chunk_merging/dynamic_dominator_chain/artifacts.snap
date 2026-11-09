@@ -6,23 +6,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## app.js
 
 ```js
-//#region shared.js
+// shared.js
 console.log("shared");
-//#endregion
-//#region app.js
+// app.js
 console.log("app");
 import("./sidebar.js");
-//#endregion
 
 ```
 
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 console.log("entry");
 import("./app.js");
-//#endregion
 
 ```
 
@@ -30,8 +27,7 @@ import("./app.js");
 
 ```js
 import "./app.js";
-//#region sidebar.js
+// sidebar.js
 console.log("sidebar");
-//#endregion
 
 ```

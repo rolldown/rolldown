@@ -1,0 +1,29 @@
+{
+  "_comment": "oxc trusts a known operand type further than a coercion: `instanceof` skips the effects of its left operand, a typed array accepts any length, and a BigInt shift or power ignores the result size. An imported constant must not make these statements side-effect free.",
+  "config": {
+    "input": [
+      {
+        "name": "instanceof",
+        "import": "./instanceof.js"
+      },
+      {
+        "name": "typed-array",
+        "import": "./typed-array.js"
+      },
+      {
+        "name": "array-buffer",
+        "import": "./array-buffer.js"
+      },
+      {
+        "name": "bigint-shift",
+        "import": "./bigint-shift.js"
+      },
+      {
+        "name": "bigint-power",
+        "import": "./bigint-power.js"
+      }
+    ],
+    "minify": false
+  },
+  "snapshot": false
+}

@@ -7,26 +7,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region cjs.js
-//#endregion
-//#region a.js
+// a.js
 var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1e4;
 })))());
 function test$1() {
 	return import_cjs.default;
 }
-//#endregion
-//#region b.js
+// b.js
 function test() {
 	console.log(import_cjs.default);
 	return import_cjs.default;
 }
-//#endregion
-//#region main.js
+// main.js
 const aa = test$1();
 const bb = test();
-//#endregion
 export { aa, bb };
 
 ```

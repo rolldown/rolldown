@@ -111,6 +111,10 @@ test-vite: # We don't use `test-node-vite` because it's not expected to run in `
 test-webcontainer:
   vp run --filter browser-tests test:webcontainer
 
+# Install the packed `rolldown` with no binding at all and check that its WebContainer fallback loads the packed WASI binding. Plain Node, no WebContainer.
+test-webcontainer-fallback:
+  vp run --filter browser-tests test:webcontainer-fallback
+
 # Build `@rolldown/browser` and smoke test the packed artifact inside a real browser page.
 test-browser:
   vp run --filter browser-tests test:browser
@@ -213,6 +217,11 @@ build-rolldown-wasi:
 # Build `rolldown` located in `packages/rolldown` itself and its `.node` binding in release mode.
 build-rolldown-release:
   vp run --filter rolldown build-native:release
+
+# Same as `build-rolldown-release`, plus the tracking allocator, so benchmarks can record Rust-side memory usage. Costs ~1-2% build time.
+build-rolldown-release-tracking:
+  vp run --filter rolldown build-binding:release --features tracking_allocator
+  vp run --filter rolldown build-js-glue
 
 # Build `rolldown` located in `packages/rolldown` itself and its `.node` binding in profile mode.
 build-rolldown-profile:

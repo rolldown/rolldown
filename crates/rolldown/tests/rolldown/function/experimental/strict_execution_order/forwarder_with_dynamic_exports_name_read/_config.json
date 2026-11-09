@@ -1,0 +1,15 @@
+{
+  "config": {
+    "strictExecutionOrder": true,
+    "external": ["node:path"],
+    "treeshake": {
+      "moduleSideEffects": false
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "on-demand",
+      "onDemandWrapping": true
+    }
+  ]
+}

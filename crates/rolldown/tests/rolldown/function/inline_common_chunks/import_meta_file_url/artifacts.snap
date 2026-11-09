@@ -1,0 +1,86 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## assets/hooked-CM2jZcYQ.txt
+
+```txt
+hooked
+```
+
+## assets/plain-BZXwvuWc.txt
+
+```txt
+plain
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __share_require as i, __share as n, __share_export as r, __esmMin as t };
+
+```
+
+## x/a.js
+
+```js
+import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "../rolldown-runtime.js";
+__share("shared-ZmCA4nrZ", ((exports) => {
+	// shared.js
+	var hooked, plain;
+	function init_shared() {
+		return (init_shared = __esmMin((() => {
+			hooked = new URL("../assets/hooked-CM2jZcYQ.txt", import.meta.url).href + "#x/a.js";
+			plain = new URL("../assets/plain-BZXwvuWc.txt", import.meta.url).href;
+		})))();
+	}
+	__share_export(exports, {
+		n: () => init_shared,
+		r: () => plain,
+		t: () => hooked
+	});
+}));
+var share_shared = __share_require("shared-ZmCA4nrZ");
+// a.js
+function init_a() {
+	return (init_a = __esmMin((() => {
+		share_shared.n();
+		console.log(JSON.stringify([share_shared.t, share_shared.r]));
+	})))();
+}
+init_a();
+
+```
+
+## y/z/b.js
+
+```js
+import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "../../rolldown-runtime.js";
+__share("shared-ZmCA4nrZ", ((exports) => {
+	// shared.js
+	var hooked, plain;
+	function init_shared() {
+		return (init_shared = __esmMin((() => {
+			hooked = new URL("../../assets/hooked-CM2jZcYQ.txt", import.meta.url).href + "#y/z/b.js";
+			plain = new URL("../../assets/plain-BZXwvuWc.txt", import.meta.url).href;
+		})))();
+	}
+	__share_export(exports, {
+		n: () => init_shared,
+		r: () => plain,
+		t: () => hooked
+	});
+}));
+var share_shared = __share_require("shared-ZmCA4nrZ");
+// b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		share_shared.n();
+		console.log(JSON.stringify([share_shared.t, share_shared.r]));
+	})))();
+}
+init_b();
+
+```

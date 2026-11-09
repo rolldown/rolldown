@@ -11,9 +11,9 @@ __rolldown_runtime__.registerGraph({
 	ids: ["main.ts"],
 	localCount: 1,
 	edges: [[]],
-	dynamicEdges: [[]]
+	entries: [0]
 });
-//#region main.ts
+// main.ts
 var main_exports = /* @__PURE__ */ __exportAll({ Foo: () => Foo });
 __rolldown_runtime__.createModuleHotContext("main.ts");
 __rolldown_runtime__.registerModule("main.ts", { exports: main_exports });
@@ -22,7 +22,6 @@ var Foo = class {
 		this.bar = 1;
 	}
 };
-//#endregion
 export { Foo };
 
 ```
@@ -46,16 +45,15 @@ __rolldown_runtime__.registerGraph({
 	ids: ["main.ts"],
 	localCount: 1,
 	edges: [[]],
-	dynamicEdges: [[]]
+	entries: [0]
 });
-//#region main.ts
+// main.ts
 var main_exports = /* @__PURE__ */ __exportAll({ Foo: () => Foo });
 __rolldown_runtime__.createModuleHotContext("main.ts");
 __rolldown_runtime__.registerModule("main.ts", { exports: main_exports });
 var Foo = class {
 	bar = 1;
 };
-//#endregion
 export { Foo };
 
 ```

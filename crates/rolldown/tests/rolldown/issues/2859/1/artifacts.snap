@@ -6,12 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## lib.js
 
 ```js
-//#region lib.js
+// lib.js
 const foo = "foo";
 let bar = "";
 bar = "bar";
 var lib_default = "default";
-//#endregion
 export { bar, lib_default as default, foo };
 
 ```
@@ -20,13 +19,12 @@ export { bar, lib_default as default, foo };
 
 ```js
 import assert from "assert";
-//#region main.js
+// main.js
 import("./lib.js").then((exports) => assert.deepStrictEqual({ ...exports }, {
 	foo: "foo",
 	bar: "bar",
 	default: "default"
 }));
-//#endregion
 export {};
 
 ```
@@ -38,12 +36,11 @@ export {};
 ### lib.js
 
 ```js
-//#region lib.js
+// lib.js
 const foo = "foo";
 let bar = "";
 bar = "bar";
 var lib_default = "default";
-//#endregion
 Object.defineProperty(exports, "bar", {
 	enumerable: true,
 	get: function() {
@@ -61,12 +58,11 @@ exports.foo = foo;
 // HIDDEN [\0rolldown/runtime.js]
 let assert = require("assert");
 assert = __toESM(assert);
-//#region main.js
+// main.js
 Promise.resolve().then(() => require("./lib.js")).then((exports) => assert.default.deepStrictEqual({ ...exports }, {
 	foo: "foo",
 	bar: "bar",
 	default: "default"
 }));
-//#endregion
 
 ```

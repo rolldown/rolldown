@@ -24,6 +24,7 @@ pub async fn transform_source(
   plugin_driver
     .transform(
       &resolved_id.id,
+      &resolved_id.attributes,
       module_idx,
       source,
       sourcemap_chain,

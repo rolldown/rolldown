@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use num_bigint::BigInt;
 use oxc::{ast::ast::Expression, span::SPAN};
 use oxc_ecmascript::constant_evaluation;
@@ -37,25 +35,12 @@ impl ConstExportMeta {
   }
 }
 
-impl From<constant_evaluation::ConstantValue<'_>> for ConstantValue {
-  fn from(value: constant_evaluation::ConstantValue<'_>) -> Self {
-    match value {
-      constant_evaluation::ConstantValue::Number(n) => ConstantValue::Number(n),
-      constant_evaluation::ConstantValue::BigInt(b) => ConstantValue::BigInt(b),
-      constant_evaluation::ConstantValue::String(s) => ConstantValue::String(s.to_string()),
-      constant_evaluation::ConstantValue::Boolean(b) => ConstantValue::Boolean(b),
-      constant_evaluation::ConstantValue::Undefined => ConstantValue::Undefined,
-      constant_evaluation::ConstantValue::Null => ConstantValue::Null,
-    }
-  }
-}
-
-impl From<&ConstantValue> for constant_evaluation::ConstantValue<'_> {
-  fn from(value: &ConstantValue) -> Self {
+impl<'a> From<&'a ConstantValue> for constant_evaluation::ConstantValue<'a> {
+  fn from(value: &'a ConstantValue) -> Self {
     match value {
       ConstantValue::Number(n) => constant_evaluation::ConstantValue::Number(*n),
       ConstantValue::BigInt(b) => constant_evaluation::ConstantValue::BigInt(b.clone()),
-      ConstantValue::String(s) => constant_evaluation::ConstantValue::String(Cow::Owned(s.clone())),
+      ConstantValue::String(s) => constant_evaluation::ConstantValue::String(s.as_str().into()),
       ConstantValue::Boolean(b) => constant_evaluation::ConstantValue::Boolean(*b),
       ConstantValue::Undefined => constant_evaluation::ConstantValue::Undefined,
       ConstantValue::Null => constant_evaluation::ConstantValue::Null,
@@ -64,6 +49,31 @@ impl From<&ConstantValue> for constant_evaluation::ConstantValue<'_> {
 }
 
 impl ConstantValue {
+  pub fn from_oxc(value: constant_evaluation::ConstantValue<'_>) -> Option<Self> {
+    Some(match value {
+      constant_evaluation::ConstantValue::Number(n) => ConstantValue::Number(n),
+      constant_evaluation::ConstantValue::BigInt(b) => ConstantValue::BigInt(b),
+      constant_evaluation::ConstantValue::String(s) => {
+        ConstantValue::String(s.as_str()?.to_owned())
+      }
+      constant_evaluation::ConstantValue::Boolean(b) => ConstantValue::Boolean(b),
+      constant_evaluation::ConstantValue::Undefined => ConstantValue::Undefined,
+      constant_evaluation::ConstantValue::Null => ConstantValue::Null,
+    })
+  }
+
+  /// Returns the JavaScript type of the value, for oxc's `value_type_for_reference_id` hook.
+  pub fn value_type(&self) -> oxc_ecmascript::ValueType {
+    match self {
+      ConstantValue::Number(_) => oxc_ecmascript::ValueType::Number,
+      ConstantValue::BigInt(_) => oxc_ecmascript::ValueType::BigInt,
+      ConstantValue::String(_) => oxc_ecmascript::ValueType::String,
+      ConstantValue::Boolean(_) => oxc_ecmascript::ValueType::Boolean,
+      ConstantValue::Undefined => oxc_ecmascript::ValueType::Undefined,
+      ConstantValue::Null => oxc_ecmascript::ValueType::Null,
+    }
+  }
+
   pub fn to_expression<'ast>(&self, ast: &oxc::ast::builder::AstBuilder<'ast>) -> Expression<'ast> {
     match self {
       ConstantValue::Number(n) => {

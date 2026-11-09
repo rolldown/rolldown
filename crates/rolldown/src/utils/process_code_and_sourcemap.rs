@@ -1,7 +1,7 @@
-use std::path::Path;
+use std::{borrow::Cow, path::Path};
 
-use futures::future::try_join_all;
 use oxc::ast::CommentKind;
+use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
 use rolldown_common::{NormalizedBundlerOptions, OutputAsset, SourceMapType};
 use rolldown_error::{BuildResult, ResultExt};
 use rolldown_sourcemap::SourceMap;
@@ -10,6 +10,24 @@ use sugar_path::SugarPath;
 use url::Url;
 
 use super::uuid::uuid_v4_string_from_u128;
+
+// URL delimiters must remain filename data.
+const SOURCEMAP_FILENAME_ENCODE_SET: &AsciiSet = &CONTROLS
+  .add(b' ')
+  .add(b'"')
+  .add(b'#')
+  .add(b'%')
+  .add(b':')
+  .add(b'<')
+  .add(b'>')
+  .add(b'?')
+  .add(b'\\')
+  .add(b'`')
+  .add(b'{')
+  .add(b'}');
+
+// `*` before `/` closes a CSS comment.
+const CSS_SOURCEMAP_FILENAME_ENCODE_SET: &AsciiSet = &SOURCEMAP_FILENAME_ENCODE_SET.add(b'*');
 
 #[expect(clippy::too_many_arguments)]
 #[cfg(feature = "experimental")]
@@ -45,50 +63,81 @@ pub async fn prepare_sourcemap(
   let map_path = file_dir.join(&map_filename);
 
   if let Some(source_map_ignore_list) = &options.sourcemap_ignore_list {
-    let mut x_google_ignore_list = vec![];
-    for (index, source) in map.get_sources().enumerate() {
-      let source = source.as_path().relative(file_dir);
-      let should_ignore = match source_map_ignore_list {
-        rolldown_common::SourceMapIgnoreList::Boolean(_)
-        | rolldown_common::SourceMapIgnoreList::StringOrRegex(_) => {
-          // Fast path: no async overhead for static values (boolean/string/regex)
-          source_map_ignore_list.exec_static(source.to_string_lossy().as_ref())
-        }
-        rolldown_common::SourceMapIgnoreList::Fn(_) => {
-          // Slow path: async function call only when needed
-          source_map_ignore_list
-            .exec_dynamic(source.to_string_lossy().as_ref(), map_path.to_string_lossy().as_ref())
-            .await?
-        }
-      };
+    let relative_sources = map
+      .get_sources()
+      .map(|source| source.as_path().relative(file_dir).to_string_lossy().into_owned())
+      .collect::<Vec<_>>();
 
-      if should_ignore {
-        #[expect(clippy::cast_possible_truncation)]
-        x_google_ignore_list.push(index as u32);
+    let ignored = match source_map_ignore_list {
+      rolldown_common::SourceMapIgnoreList::Boolean(_)
+      | rolldown_common::SourceMapIgnoreList::StringOrRegex(_) => {
+        // Fast path: no async overhead for static values (boolean/string/regex)
+        relative_sources
+          .iter()
+          .map(|source| source_map_ignore_list.exec_static(source))
+          .collect::<Vec<_>>()
       }
-    }
-    if !x_google_ignore_list.is_empty() {
-      map.set_x_google_ignore_list(x_google_ignore_list);
+      rolldown_common::SourceMapIgnoreList::Fn(_) => {
+        // Slow path: one call decides every source, so the napi boundary is crossed once per
+        // sourcemap instead of once per source.
+        let source_count = relative_sources.len();
+        let ignored = source_map_ignore_list
+          .exec_dynamic(relative_sources, map_path.to_string_lossy().as_ref())
+          .await?;
+        if ignored.len() != source_count {
+          return Err(
+            anyhow::anyhow!(
+              "`sourcemapIgnoreList` returned {} results for {} sources",
+              ignored.len(),
+              source_count
+            )
+            .into(),
+          );
+        }
+        ignored
+      }
+    };
+
+    #[expect(clippy::cast_possible_truncation)]
+    let ignore_list = ignored
+      .into_iter()
+      .enumerate()
+      .filter_map(|(index, should_ignore)| should_ignore.then_some(index as u32))
+      .collect::<Vec<_>>();
+
+    if !ignore_list.is_empty() {
+      map.set_ignore_list(ignore_list);
     }
   }
 
   if let Some(sourcemap_path_transform) = &options.sourcemap_path_transform {
     let map_path = map_path.to_string_lossy();
-    let sources = try_join_all(map.get_sources().map(async |source| {
-      let source = source.as_path().relative(file_dir);
-      let source =
-        sourcemap_path_transform.call(source.to_string_lossy().as_ref(), map_path.as_ref()).await?;
-      #[cfg(windows)]
-      {
-        // Normalize the windows path.
-        Ok::<_, anyhow::Error>(source.replace(std::path::MAIN_SEPARATOR, "/"))
-      }
-      #[cfg(not(windows))]
-      {
-        Ok::<_, anyhow::Error>(source)
-      }
-    }))
-    .await?;
+    let relative_sources = map
+      .get_sources()
+      .map(|source| source.as_path().relative(file_dir).to_string_lossy().into_owned())
+      .collect::<Vec<_>>();
+    let source_count = relative_sources.len();
+
+    // One call rewrites every source, so the napi boundary is crossed once per sourcemap instead
+    // of once per source.
+    let sources = sourcemap_path_transform.call(relative_sources, map_path.as_ref()).await?;
+    if sources.len() != source_count {
+      return Err(
+        anyhow::anyhow!(
+          "`sourcemapPathTransform` returned {} results for {} sources",
+          sources.len(),
+          source_count
+        )
+        .into(),
+      );
+    }
+
+    #[cfg(windows)]
+    // Normalize the windows path.
+    let sources = sources
+      .into_iter()
+      .map(|source| source.replace(std::path::MAIN_SEPARATOR, "/"))
+      .collect::<Vec<_>>();
 
     map.set_sources(sources);
   } else if cfg!(windows) {
@@ -143,21 +192,35 @@ pub fn emit_sourcemap(
             code,
             |source| {
               source.push_str("# sourceMappingURL=");
+              let encode_set = if is_css {
+                CSS_SOURCEMAP_FILENAME_ENCODE_SET
+              } else {
+                SOURCEMAP_FILENAME_ENCODE_SET
+              };
 
               match &options.sourcemap_base_url {
                 Some(url_string) => {
+                  let encoded_filename: Cow<'_, str> =
+                    utf8_percent_encode(map_filename, encode_set).into();
                   let url = Url::parse(url_string)
-                    .and_then(|base| base.join(map_filename))
+                    .and_then(|base| base.join(&encoded_filename))
                     .map_err_to_unhandleable()?;
-                  source.push_str(url.as_str());
+                  let url = url.as_str();
+                  // The base URL may contain `*/`, which would close the CSS comment
+                  if is_css && url.contains('*') {
+                    source.push_str(&url.replace('*', "%2A"));
+                  } else {
+                    source.push_str(url);
+                  }
                 }
                 None => {
-                  source.push_str(
-                    &Path::new(map_filename)
-                      .file_name()
-                      .ok_or(anyhow::anyhow!("should have filename"))?
-                      .to_string_lossy(),
-                  );
+                  let filename = Path::new(map_filename)
+                    .file_name()
+                    .ok_or(anyhow::anyhow!("should have filename"))?
+                    .to_string_lossy();
+                  let encoded_filename: Cow<'_, str> =
+                    utf8_percent_encode(&filename, encode_set).into();
+                  source.push_str(&encoded_filename);
                 }
               }
               Ok(())
@@ -197,7 +260,7 @@ fn process_sourcemap_related_reference(
 ) -> BuildResult<()> {
   source.push('\n');
   match comment_kind {
-    CommentKind::Line => {
+    CommentKind::Line | CommentKind::HtmlOpen | CommentKind::HtmlClose => {
       source.push_str("//");
       reference_body_processor(source)?;
     }
@@ -208,4 +271,67 @@ fn process_sourcemap_related_reference(
     }
   }
   Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+  use super::emit_sourcemap;
+  use rolldown_common::{NormalizedBundlerOptions, SourceMapType};
+  use rolldown_sourcemap::SourceMapBuilder;
+
+  #[test]
+  fn sourcemap_filenames_remain_in_comments() {
+    let options =
+      NormalizedBundlerOptions { sourcemap: Some(SourceMapType::File), ..Default::default() };
+    let mut map = SourceMapBuilder::default().into_sourcemap().into_owned();
+    let filename = "test\u{2028}(filename,{}).map";
+    let mut code = String::from("export const value = 42;");
+    let asset = emit_sourcemap(&options, &mut code, &mut map, filename, 0, false).unwrap().unwrap();
+    assert_eq!(asset.filename.as_str(), filename);
+    assert_eq!(
+      code,
+      "export const value = 42;\n\
+       //# sourceMappingURL=test%E2%80%A8(filename,%7B%7D).map"
+    );
+  }
+
+  #[test]
+  fn sourcemap_urls_preserve_filename_data() {
+    for (base_url, js_base, css_base) in [
+      (None, "", ""),
+      (
+        Some("https://example.test/base*/"),
+        "https://example.test/base*/",
+        "https://example.test/base%2A/",
+      ),
+    ] {
+      for (filename, js_filename, css_filename) in [
+        ("space #?%*.map", "space%20%23%3F%25*.map", "space%20%23%3F%25%2A.map"),
+        (
+          "line\n\r\u{2028}\u{2029}.map",
+          "line%0A%0D%E2%80%A8%E2%80%A9.map",
+          "line%0A%0D%E2%80%A8%E2%80%A9.map",
+        ),
+        // spellchecker:ignore-next-line
+        ("café.map", "caf%C3%A9.map", "caf%C3%A9.map"),
+      ] {
+        for is_css in [false, true] {
+          let options = NormalizedBundlerOptions {
+            sourcemap: Some(SourceMapType::File),
+            sourcemap_base_url: base_url.map(String::from),
+            ..Default::default()
+          };
+          let mut map = SourceMapBuilder::default().into_sourcemap().into_owned();
+          let mut code = String::new();
+          emit_sourcemap(&options, &mut code, &mut map, filename, 0, is_css).unwrap();
+          let expected = if is_css {
+            format!("\n/*# sourceMappingURL={css_base}{css_filename}*/")
+          } else {
+            format!("\n//# sourceMappingURL={js_base}{js_filename}")
+          };
+          assert_eq!(code, expected);
+        }
+      }
+    }
+  }
 }

@@ -1,7 +1,7 @@
 import path from 'node:path';
 import type { NormalizedInputOptions, NormalizedOutputOptions } from 'rolldown';
 import { defineTest } from 'rolldown-tests';
-import { expect } from 'vitest';
+import { assert, expect } from 'vitest';
 
 const entry = path.join(__dirname, './main.js');
 
@@ -27,6 +27,7 @@ export default defineTest({
       chunkFileNames,
       assetFileNames: 'assets/[name]-[hash][extname]',
       file: 'dist/[name].js',
+      charset: 'ascii',
       format: 'umd',
       exports: 'auto',
       esModule: 'if-default-prop',
@@ -42,6 +43,19 @@ export default defineTest({
       preserveModulesRoot: 'src',
       virtualDirname: 'virtual',
       minifyInternalExports: true,
+      minify: {
+        compress: false,
+        mangle: false,
+        codegen: false,
+        mangleProps: {
+          include: /^_/i,
+          exclude: /^_skip$/s,
+          reserved: ['_reserved'],
+          quoted: true,
+          debug: true,
+          cache: { _shared: 'shared', _keep: false },
+        },
+      },
     },
     plugins: [
       {
@@ -84,6 +98,7 @@ export default defineTest({
       expect(option.assetFileNames).toBe('assets/[name]-[hash][extname]');
       expect(option.file).toBe('dist/[name].js');
       expect(option.dir).toBe(undefined);
+      expect(option.charset).toBe('ascii');
       expect(option.format).toBe('umd');
       expect(option.exports).toBe('auto');
       expect(option.esModule).toBe('if-default-prop');
@@ -105,6 +120,15 @@ export default defineTest({
       expect(option.preserveModulesRoot).toStrictEqual(path.join(__dirname, 'src'));
       expect(option.virtualDirname).toBe('virtual');
       expect(option.minifyInternalExports).toBe(true);
+
+      assert(typeof option.minify === 'object' && option.minify.mangleProps);
+      const normalizedMangleProps = option.minify.mangleProps;
+      expect(normalizedMangleProps.include).toStrictEqual(/^_/i);
+      expect(normalizedMangleProps.exclude).toStrictEqual(/^_skip$/s);
+      expect(normalizedMangleProps.reserved).toStrictEqual(['_reserved']);
+      expect(normalizedMangleProps.quoted).toBe(true);
+      expect(normalizedMangleProps.debug).toBe(true);
+      expect(normalizedMangleProps.cache).toStrictEqual({ _shared: 'shared', _keep: false });
     });
   },
 });

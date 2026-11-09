@@ -7,13 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as compute } from "./shared.js";
-//#region app.js
+// app.js
 const own = compute(3);
 const lazyLoaded = import("./lazy.js").then((m) => m.lazyValue);
 function then(resolve) {
 	resolve(lazyLoaded);
 }
-//#endregion
 export { lazyLoaded, own, then };
 
 ```
@@ -22,9 +21,8 @@ export { lazyLoaded, own, then };
 
 ```js
 import { t as compute } from "./shared.js";
-//#region lazy.js
+// lazy.js
 const lazyValue = compute(7);
-//#endregion
 export { lazyValue };
 
 ```
@@ -32,9 +30,8 @@ export { lazyValue };
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 const result = import("./app.js");
-//#endregion
 export { result };
 
 ```
@@ -42,11 +39,10 @@ export { result };
 ## shared.js
 
 ```js
-//#region shared.js
+// shared.js
 function compute(x) {
 	return x * 2;
 }
-//#endregion
 export { compute as t };
 
 ```

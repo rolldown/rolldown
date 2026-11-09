@@ -1,22 +1,38 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## MODULE_LEVEL_DIRECTIVE
+
+```text
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use wtf" in "hoist-directive.js" may not be preserved when bundling.
+   ╭─[ hoist-directive.js:1:1 ]
+   │
+ 1 │ "use wtf"
+   │ ────┬────  
+   │     ╰────── module level directive may not be preserved
+   │ 
+   │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
+───╯
+
+```
+
 # Assets
 
 ## hoist-directive.js
 
 ```js
 "use wtf";
-//#region hoist-directive.js
+// hoist-directive.js
 using a = b;
-//#endregion
 
 ```
 
 ## hoist-export-class-direct.js
 
 ```js
-//#region hoist-export-class-direct.js
+// hoist-export-class-direct.js
 using a = b;
 var Foo1 = class {
 	ac = [a, c];
@@ -29,7 +45,6 @@ var Bar1 = class Bar1 {
 	];
 };
 using c = d;
-//#endregion
 export { Bar1, Foo1 };
 
 ```
@@ -37,7 +52,7 @@ export { Bar1, Foo1 };
 ## hoist-export-class-indirect.js
 
 ```js
-//#region hoist-export-class-indirect.js
+// hoist-export-class-indirect.js
 using a = b;
 var Foo1 = class {
 	ac = [a, c];
@@ -50,7 +65,6 @@ var Bar1 = class Bar1 {
 	];
 };
 using c = d;
-//#endregion
 export { Bar1, Foo1 };
 
 ```
@@ -58,10 +72,9 @@ export { Bar1, Foo1 };
 ## hoist-export-clause.js
 
 ```js
-//#region hoist-export-clause.js
+// hoist-export-clause.js
 using a = b;
 using c = d;
-//#endregion
 export { a, c as "c!" };
 
 ```
@@ -69,13 +82,12 @@ export { a, c as "c!" };
 ## hoist-export-default-class-anonymous.js
 
 ```js
-//#region hoist-export-default-class-anonymous.js
+// hoist-export-default-class-anonymous.js
 using a = b;
 var hoist_export_default_class_anonymous_default = class {
 	ac = [a, c];
 };
 using c = d;
-//#endregion
 export { hoist_export_default_class_anonymous_default as default };
 
 ```
@@ -83,13 +95,12 @@ export { hoist_export_default_class_anonymous_default as default };
 ## hoist-export-default-class-name-unused.js
 
 ```js
-//#region hoist-export-default-class-name-unused.js
+// hoist-export-default-class-name-unused.js
 using a = b;
 var Foo = class {
 	ac = [a, c];
 };
 using c = d;
-//#endregion
 export { Foo as default };
 
 ```
@@ -97,7 +108,7 @@ export { Foo as default };
 ## hoist-export-default-class-name-used.js
 
 ```js
-//#region hoist-export-default-class-name-used.js
+// hoist-export-default-class-name-used.js
 using a = b;
 var Foo = class Foo {
 	ac = [
@@ -107,7 +118,6 @@ var Foo = class Foo {
 	];
 };
 using c = d;
-//#endregion
 export { Foo as default };
 
 ```
@@ -115,11 +125,10 @@ export { Foo as default };
 ## hoist-export-default-expr.js
 
 ```js
-//#region hoist-export-default-expr.js
+// hoist-export-default-expr.js
 using a = b;
 var hoist_export_default_expr_default = [a, c];
 using c = d;
-//#endregion
 export { hoist_export_default_expr_default as default };
 
 ```
@@ -127,13 +136,12 @@ export { hoist_export_default_expr_default as default };
 ## hoist-export-default-function-anonymous.js
 
 ```js
-//#region hoist-export-default-function-anonymous.js
+// hoist-export-default-function-anonymous.js
 using a = b;
 function hoist_export_default_function_anonymous_default() {
 	return [a, c];
 }
 using c = d;
-//#endregion
 export { hoist_export_default_function_anonymous_default as default };
 
 ```
@@ -141,13 +149,12 @@ export { hoist_export_default_function_anonymous_default as default };
 ## hoist-export-default-function-name-unused.js
 
 ```js
-//#region hoist-export-default-function-name-unused.js
+// hoist-export-default-function-name-unused.js
 using a = b;
 function foo() {
 	return [a, c];
 }
 using c = d;
-//#endregion
 export { foo as default };
 
 ```
@@ -155,7 +162,7 @@ export { foo as default };
 ## hoist-export-default-function-name-used.js
 
 ```js
-//#region hoist-export-default-function-name-used.js
+// hoist-export-default-function-name-used.js
 using a = b;
 function foo() {
 	return [
@@ -165,7 +172,6 @@ function foo() {
 	];
 }
 using c = d;
-//#endregion
 export { foo as default };
 
 ```
@@ -173,19 +179,17 @@ export { foo as default };
 ## hoist-export-from.js
 
 ```js
-import { x, y } from "./foo";
-//#region hoist-export-from.js
+export { x, y } from "./foo";
+// hoist-export-from.js
 using a = b;
 using c = d;
-//#endregion
-export { x, y };
 
 ```
 
 ## hoist-export-function-direct.js
 
 ```js
-//#region hoist-export-function-direct.js
+// hoist-export-function-direct.js
 using a = b;
 function foo1() {
 	return [a, c];
@@ -198,7 +202,6 @@ function bar1() {
 	];
 }
 using c = d;
-//#endregion
 export { bar1, foo1 };
 
 ```
@@ -206,7 +209,7 @@ export { bar1, foo1 };
 ## hoist-export-function-indirect.js
 
 ```js
-//#region hoist-export-function-indirect.js
+// hoist-export-function-indirect.js
 using a = b;
 function foo1() {
 	return [a, c];
@@ -219,7 +222,6 @@ function bar1() {
 	];
 }
 using c = d;
-//#endregion
 export { bar1, foo1 };
 
 ```
@@ -227,7 +229,7 @@ export { bar1, foo1 };
 ## hoist-export-local-direct.js
 
 ```js
-//#region hoist-export-local-direct.js
+// hoist-export-local-direct.js
 using a = b;
 var ac1 = [a, c], { x: [x1] } = foo;
 let a1 = a, { y: [y1] } = foo;
@@ -236,7 +238,6 @@ var { x: [x2] } = foo;
 let { y: [y2] } = foo;
 const { z: [z2] } = foo;
 using c = d;
-//#endregion
 export { a1, ac1, c1, x1, y1, z1 };
 
 ```
@@ -244,7 +245,7 @@ export { a1, ac1, c1, x1, y1, z1 };
 ## hoist-export-local-indirect.js
 
 ```js
-//#region hoist-export-local-indirect.js
+// hoist-export-local-indirect.js
 using a = b;
 var { x: [x1] } = foo;
 let { y: [y1] } = foo;
@@ -253,7 +254,6 @@ var { x: [x2] } = foo;
 let { y: [y2] } = foo;
 const { z: [z2] } = foo;
 using c = d;
-//#endregion
 export { x1, y1, z1 };
 
 ```
@@ -262,10 +262,9 @@ export { x1, y1, z1 };
 
 ```js
 export * from "./foo";
-//#region hoist-export-star.js
+// hoist-export-star.js
 using a = b;
 using c = d;
-//#endregion
 
 ```
 
@@ -273,18 +272,16 @@ using c = d;
 
 ```js
 import "./foo";
-//#region hoist-import.js
+// hoist-import.js
 using a = b;
 using c = d;
-//#endregion
 
 ```
 
 ## hoist-use-strict.js
 
 ```js
-//#region hoist-use-strict.js
+// hoist-use-strict.js
 using a = b;
-//#endregion
 
 ```

@@ -3,22 +3,32 @@ use std::collections::VecDeque;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx,
-  PreserveEntrySignatures, RuntimeHelper, StmtInfoIdx, UsedSymbolRefsBuilder,
+  PreserveEntrySignatures, RuntimeHelper, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef,
+  UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_utils::BitSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::chunk_graph::ChunkGraph;
+use crate::esm_init_obligations::collect_entry_reexported_wrapper_inits;
 
 use super::{
-  GenerateStage, code_splitting::IndexSplittingInfo,
+  GenerateStage, code_splitting::IndexSplittingInfo, reduced_chunk_graph::ReducedChunkGraph,
   simulated_facade_inclusion::include_simulated_facade_namespace,
 };
 
 struct ChunkAtom {
   modules: Vec<ModuleIdx>,
   dependent_entries: BitSet,
+}
+
+/// Atom-level edge graphs for the pass's two consumers. `reachability` under-approximates the
+/// emitted chunk imports (safe to miss an edge, never to invent one); `cycle` over-approximates
+/// them (safe to invent an edge, never to miss one). See `compute_atom_dependencies`.
+struct AtomDependencyGraphs {
+  reachability: Vec<Vec<usize>>,
+  cycle: Vec<Vec<usize>>,
 }
 
 struct DynamicEntryAnalysis {
@@ -48,7 +58,7 @@ impl GenerateStage<'_> {
     index_splitting_info: &mut IndexSplittingInfo,
     chunk_graph: &mut ChunkGraph,
     entries_len: u32,
-    used_symbol_refs: &mut UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
   ) {
     let mut namespace_extractions = FxHashSet::default();
     let DynamicEntryAnalysis {
@@ -66,10 +76,24 @@ impl GenerateStage<'_> {
       return;
     }
     let module_to_atom_idx = self.compute_module_to_atom_idx(&atoms);
-    let atom_dependencies = self.compute_atom_dependencies(&atoms, &module_to_atom_idx);
+    let flattened_entry_modules = self.flattened_entry_modules();
+    let atom_dependencies = self.compute_atom_dependencies(
+      &atoms,
+      &module_to_atom_idx,
+      &flattened_entry_modules,
+      used_symbol_refs_builder,
+    );
+    // Indexed by entry bit, so `ReducedChunkGraph` can pair each facade chunk with its entry
+    // module's host atom.
+    let host_atom_by_entry_bit: Vec<Option<usize>> =
+      flattened_entry_modules.iter().map(|&module_idx| module_to_atom_idx[module_idx]).collect();
 
-    let static_dependency_atoms_by_entry =
-      Self::compute_static_dependency_atoms_by_entry(entries_len as usize, &atoms);
+    let static_dependency_atoms_by_entry = self.compute_static_dependency_atoms_by_entry(
+      entries_len as usize,
+      &atoms,
+      &atom_dependencies.reachability,
+      &module_to_atom_idx,
+    );
     let already_loaded_atoms_by_entry = Self::compute_already_loaded_atoms_by_entry(
       &static_dependency_atoms_by_entry,
       dynamically_dependent_entries_by_dynamic_entry,
@@ -78,29 +102,34 @@ impl GenerateStage<'_> {
       atoms.len(),
     );
 
+    let mut reduced_chunk_graph = ReducedChunkGraph::new(
+      atoms.iter().map(|atom| &atom.dependent_entries),
+      &atom_dependencies.cycle,
+      &host_atom_by_entry_bit,
+    );
     let mut changed = false;
-    for atom_idx in 0..atoms.len() {
-      let original_dependent_entries = atoms[atom_idx].dependent_entries.clone();
-      let dependent_entries = atoms[atom_idx].dependent_entries.index_of_one().collect::<Vec<_>>();
+    for (atom_idx, atom) in atoms.iter_mut().enumerate() {
+      let original_dependent_entries = atom.dependent_entries.clone();
+      let dependent_entries = atom.dependent_entries.index_of_one().collect::<Vec<_>>();
       let atom_bit: u32 = atom_idx.try_into().expect("Too many atoms, u32 overflowed.");
       for entry_idx in dependent_entries {
         if already_loaded_atoms_by_entry[entry_idx as usize].has_bit(atom_bit) {
-          atoms[atom_idx].dependent_entries.clear_bit(entry_idx);
+          atom.dependent_entries.clear_bit(entry_idx);
         }
       }
-      let action = if atoms[atom_idx].dependent_entries == original_dependent_entries {
+      let action = if atom.dependent_entries == original_dependent_entries {
         ReducedEntriesAction::Avoid
       } else {
         self.can_use_reduced_dependent_entries(
-          &atoms[atom_idx],
+          atom,
           &original_dependent_entries,
-          &atoms[atom_idx].dependent_entries,
+          &atom.dependent_entries,
           chunk_graph,
           &dynamic_entry_modules_by_entry,
         )
       };
       if !matches!(action, ReducedEntriesAction::Avoid)
-        && !Self::reduced_atom_graph_has_static_cycle(&atoms, &atom_dependencies)
+        && reduced_chunk_graph.try_move(atom_idx, &atom.dependent_entries)
       {
         changed = true;
         if let ReducedEntriesAction::ApplyWithNamespaceExtraction {
@@ -111,7 +140,7 @@ impl GenerateStage<'_> {
           namespace_extractions.insert((entry_chunk_idx, entry_module_idx));
         }
       } else {
-        atoms[atom_idx].dependent_entries = original_dependent_entries;
+        atom.dependent_entries = original_dependent_entries;
       }
     }
 
@@ -131,7 +160,7 @@ impl GenerateStage<'_> {
     self.apply_dynamic_entry_namespace_extractions(
       chunk_graph,
       &namespace_extractions,
-      used_symbol_refs,
+      used_symbol_refs_builder,
     );
   }
 
@@ -155,6 +184,11 @@ impl GenerateStage<'_> {
     let Some(chunk) = chunk_graph.chunk_table.get(entry_chunk_idx) else {
       return ReducedEntriesAction::Avoid;
     };
+
+    // See internal-docs/inline-common-chunks/design.md#keeping-shared-code-available-for-inlining.
+    if self.prefers_inline_common_chunk(&atom.modules) {
+      return ReducedEntriesAction::Avoid;
+    }
 
     let can_merge_without_changing_entry_signature =
       self.can_merge_without_changing_entry_signature(chunk, &atom.modules);
@@ -244,17 +278,17 @@ impl GenerateStage<'_> {
     &mut self,
     chunk_graph: &mut ChunkGraph,
     namespace_extractions: &FxHashSet<(ChunkIdx, ModuleIdx)>,
-    used_symbol_refs: &mut UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
   ) {
     if namespace_extractions.is_empty() {
       return;
     }
 
     for &(_, entry_module_idx) in namespace_extractions {
-      self.narrow_namespace_stmt_to_used_symbols(entry_module_idx, used_symbol_refs);
+      self.narrow_namespace_stmt_to_used_symbols(entry_module_idx, used_symbol_refs_builder);
     }
 
-    self.replay_link_stage_inclusion(used_symbol_refs, |context| {
+    self.replay_link_stage_inclusion(used_symbol_refs_builder, |context| {
       let mut needs_export_all_helper = false;
       for &(entry_chunk_idx, entry_module_idx) in namespace_extractions {
         chunk_graph
@@ -311,96 +345,237 @@ impl GenerateStage<'_> {
     module_to_atom_idx
   }
 
+  /// The entry module behind each entry bit, in the bit order `determine_reachable_modules_for_entry`
+  /// assigns (`link_output.entries` flattened, one bit per entry point).
+  fn flattened_entry_modules(&self) -> Vec<ModuleIdx> {
+    self
+      .link_output
+      .entries
+      .iter()
+      .flat_map(|(&idx, entries)| std::iter::repeat_n(idx, entries.len()))
+      .collect()
+  }
+
+  // See internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
+  //
+  // The two graphs serve the pass's two consumers, whose safe approximations point in opposite
+  // directions. `reachability` must only contain edges the emitted chunks really have: its
+  // entry-export service edges are liveness-gated and attached only when the entry module is
+  // hosted by its own entry chunk, because emission hangs those imports on the entry (facade)
+  // chunk, not on whichever shared chunk hosts the module. `cycle` must contain every edge the
+  // emitted chunks might have: its service edges are attached to the hosting atom regardless,
+  // with no liveness gate — `used_symbol_refs_builder` still grows after this pass
+  // (namespace-extraction and facade-elimination replays), so an export dead here can be live at
+  // emission.
+  //
+  // Hosting-atom attribution over-approximates rather than misses only because of the facade edges
+  // `ReducedChunkGraph` adds: the facade depends on the host, which is where
+  // these edges land, so anything emission hangs on the facade stays reachable as facade -> host ->
+  // target. Before rolldown#10734 this rested on facades having zero static in-degree, which a
+  // fold moving an atom into a facade broke — re-derive it before attributing them elsewhere.
+  //
+  // The price of the ungated edges is that a dead entry re-export can conservatively veto a fold
+  // that would have been acyclic — a missed optimization, accepted over trusting a liveness
+  // snapshot the replays may outgrow. The liveness-growth immunity is scoped to service edges:
+  // the base prediction's ambiguous branch (`referenced_symbol_owners`) still reads decision-time
+  // statement inclusion, a narrower pre-existing skew the replays can also outgrow.
   fn compute_atom_dependencies(
     &self,
     atoms: &[ChunkAtom],
     module_to_atom_idx: &IndexVec<ModuleIdx, Option<usize>>,
-  ) -> Vec<Vec<usize>> {
-    atoms
-      .iter()
-      .enumerate()
-      .map(|(atom_idx, atom)| {
-        let mut dependencies = FxHashSet::default();
-        for &module_idx in &atom.modules {
+    flattened_entry_modules: &[ModuleIdx],
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
+  ) -> AtomDependencyGraphs {
+    let strict_execution_order = self.options.is_strict_execution_order_enabled();
+
+    let mut reachability = Vec::with_capacity(atoms.len());
+    let mut cycle = Vec::with_capacity(atoms.len());
+    for (atom_idx, atom) in atoms.iter().enumerate() {
+      let mut reachability_deps = FxHashSet::default();
+      let mut cycle_deps = FxHashSet::default();
+      let add = |dep_module_idx: ModuleIdx, dependencies: &mut FxHashSet<usize>| {
+        if let Some(dep_atom_idx) = module_to_atom_idx[dep_module_idx]
+          && dep_atom_idx != atom_idx
+        {
+          dependencies.insert(dep_atom_idx);
+        }
+      };
+      for &module_idx in &atom.modules {
+        if strict_execution_order {
+          // Strict lowering can turn linked import records back into `init_*` imports.
           for &dep_module_idx in &self.link_output.metas[module_idx].dependencies {
-            let Some(dep_atom_idx) = module_to_atom_idx[dep_module_idx] else {
-              continue;
-            };
-            if dep_atom_idx != atom_idx {
-              dependencies.insert(dep_atom_idx);
+            add(dep_module_idx, &mut reachability_deps);
+            add(dep_module_idx, &mut cycle_deps);
+          }
+          continue;
+        }
+        for dep_module_idx in self.predicted_static_import_targets(module_idx) {
+          add(dep_module_idx, &mut reachability_deps);
+          add(dep_module_idx, &mut cycle_deps);
+        }
+
+        let mut service_targets = vec![];
+        self.entry_export_service_targets(
+          module_idx,
+          used_symbol_refs_builder.view(),
+          true,
+          &mut service_targets,
+        );
+        for dep_module_idx in service_targets {
+          add(dep_module_idx, &mut cycle_deps);
+        }
+
+        let entry_hosted_by_own_chunk = atom.dependent_entries.bit_count() == 1
+          && atom.dependent_entries.index_of_one().next().is_some_and(|entry_bit| {
+            flattened_entry_modules.get(entry_bit as usize) == Some(&module_idx)
+          });
+        if entry_hosted_by_own_chunk {
+          let mut service_targets = vec![];
+          self.entry_export_service_targets(
+            module_idx,
+            used_symbol_refs_builder.view(),
+            false,
+            &mut service_targets,
+          );
+          for dep_module_idx in service_targets {
+            add(dep_module_idx, &mut reachability_deps);
+          }
+        }
+      }
+      reachability.push(reachability_deps.into_iter().collect());
+      cycle.push(cycle_deps.into_iter().collect());
+    }
+    AtomDependencyGraphs { reachability, cycle }
+  }
+
+  /// Returns the targets that `compute_cross_chunk_links` will import for this module. Transitive
+  /// side-effect dependencies behind a `sideEffects: false` barrel are retained only when an
+  /// included symbol reference also requires them.
+  pub(super) fn predicted_static_import_targets(&self, module_idx: ModuleIdx) -> Vec<ModuleIdx> {
+    let meta = &self.link_output.metas[module_idx];
+    let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
+      return meta.load_dependencies.iter().copied().collect();
+    };
+
+    // A side-effectful runtime dependency has no import record.
+    let side_effectful_runtime_idx =
+      meta.has_side_effectful_runtime_dep.then(|| self.link_output.runtime.id());
+
+    let direct_record_targets: FxHashSet<ModuleIdx> = module
+      .import_records
+      .iter()
+      .filter(|rec| rec.kind != ImportKind::DynamicImport)
+      .filter_map(|rec| rec.resolved_module)
+      .collect();
+
+    let mut ambiguous = vec![];
+    let mut targets = Vec::with_capacity(meta.load_dependencies.len());
+    for &dep_module_idx in &meta.load_dependencies {
+      if !self.link_output.module_table[dep_module_idx].side_effects().has_side_effects()
+        || side_effectful_runtime_idx == Some(dep_module_idx)
+        || direct_record_targets.contains(&dep_module_idx)
+      {
+        targets.push(dep_module_idx);
+      } else {
+        ambiguous.push(dep_module_idx);
+      }
+    }
+    if !ambiguous.is_empty() {
+      let symbol_owners = self.referenced_symbol_owners(module_idx);
+      targets.extend(ambiguous.into_iter().filter(|dep_idx| symbol_owners.contains(dep_idx)));
+    }
+    targets
+  }
+
+  /// An entry chunk imports the canonical symbol of every live resolved export it serves
+  /// (`register_entry_export_depended_symbols`), even when no included statement of the entry
+  /// references it — a re-export the entry never uses still becomes a real import of the owner's
+  /// chunk. `load_dependencies` only carries the narrowed `referenced_symbols_by_entry_point_chunk`
+  /// set, so these targets are derived separately from the full `resolved_exports`.
+  ///
+  /// With `assume_all_live: false` the liveness gate mirrors emission exactly: a dead export
+  /// produces no import. `assume_all_live: true` skips the gate for consumers that need a stable
+  /// over-approximation — `used_symbol_refs_builder` keeps growing after the fold's decisions, so a
+  /// dead-here export can still emit an import later.
+  pub(super) fn entry_export_service_targets(
+    &self,
+    module_idx: ModuleIdx,
+    used_symbol_refs_view: UsedSymbolRefsView<'_>,
+    assume_all_live: bool,
+    targets: &mut Vec<ModuleIdx>,
+  ) {
+    if !self.link_output.entries.contains_key(&module_idx) {
+      return;
+    }
+    let meta = &self.link_output.metas[module_idx];
+    if matches!(meta.wrap_kind(), WrapKind::Cjs) {
+      // A CJS entry is consumed through its wrapper, not through per-export symbols.
+      return;
+    }
+    let symbol_db = &self.link_output.symbol_db;
+    for resolved_export in meta.resolved_exports.values() {
+      if resolved_export.came_from_commonjs {
+        continue;
+      }
+      let served = symbol_db.canonical_ref_resolving_namespace(resolved_export.symbol_ref);
+      let is_live = assume_all_live
+        || if let Some(owner) = self.link_output.module_table[served.owner].as_normal()
+          && owner.namespace_object_ref == served
+        {
+          self.link_output.metas[served.owner].namespace_included
+        } else {
+          used_symbol_refs_view.contains(&served)
+        };
+      if is_live {
+        targets.push(served.owner);
+      }
+    }
+    // A re-export of a wrapped ESM module additionally imports the module's `init_*` wrapper.
+    for init in collect_entry_reexported_wrapper_inits(
+      module_idx,
+      meta,
+      &self.link_output.metas,
+      &self.link_output.module_table.modules,
+      symbol_db,
+      None,
+    ) {
+      if assume_all_live || used_symbol_refs_view.contains(&init.wrapper_ref) {
+        targets.push(init.wrapper_ref.owner);
+      }
+    }
+  }
+
+  pub(super) fn referenced_symbol_owners(&self, module_idx: ModuleIdx) -> FxHashSet<ModuleIdx> {
+    let meta = &self.link_output.metas[module_idx];
+    let mut owners = FxHashSet::default();
+    let note = |symbol_ref: SymbolRef, owners: &mut FxHashSet<ModuleIdx>| {
+      let canonical_ref = self.link_output.symbol_db.canonical_ref_for(symbol_ref);
+      owners.insert(canonical_ref.owner);
+      if let Some(ns) = &self.link_output.symbol_db.get(canonical_ref).namespace_alias {
+        owners.insert(ns.namespace_ref.owner);
+      }
+    };
+    for (symbol_ref, _) in &meta.referenced_symbols_by_entry_point_chunk {
+      note(*symbol_ref, &mut owners);
+    }
+    for (stmt_idx, stmt_info) in self.link_output.stmt_infos[module_idx].iter_enumerated() {
+      if !meta.stmt_info_included.has_bit(stmt_idx) {
+        continue;
+      }
+      for reference_ref in &stmt_info.referenced_symbols {
+        match reference_ref {
+          SymbolOrMemberExprRef::Symbol(symbol_ref) => note(*symbol_ref, &mut owners),
+          SymbolOrMemberExprRef::MemberExpr(member_expr) => {
+            if let Some(symbol_ref) =
+              member_expr.represent_symbol_ref(&meta.resolved_member_expr_refs)
+            {
+              note(symbol_ref, &mut owners);
             }
           }
         }
-        dependencies.into_iter().collect()
-      })
-      .collect()
-  }
-
-  fn reduced_atom_graph_has_static_cycle(
-    atoms: &[ChunkAtom],
-    atom_dependencies: &[Vec<usize>],
-  ) -> bool {
-    let mut chunk_idx_by_bits = FxHashMap::default();
-    let mut atom_to_chunk = Vec::with_capacity(atoms.len());
-    for atom in atoms {
-      let next_chunk_idx = chunk_idx_by_bits.len();
-      let chunk_idx = match chunk_idx_by_bits.entry(atom.dependent_entries.clone()) {
-        std::collections::hash_map::Entry::Occupied(occupied) => *occupied.get(),
-        std::collections::hash_map::Entry::Vacant(vacant) => {
-          vacant.insert(next_chunk_idx);
-          next_chunk_idx
-        }
-      };
-      atom_to_chunk.push(chunk_idx);
-    }
-
-    let mut chunk_dependencies = vec![FxHashSet::default(); chunk_idx_by_bits.len()];
-    for (atom_idx, dependencies) in atom_dependencies.iter().enumerate() {
-      let from_chunk_idx = atom_to_chunk[atom_idx];
-      for &dep_atom_idx in dependencies {
-        let to_chunk_idx = atom_to_chunk[dep_atom_idx];
-        if from_chunk_idx != to_chunk_idx {
-          chunk_dependencies[from_chunk_idx].insert(to_chunk_idx);
-        }
       }
     }
-
-    Self::chunk_dependency_graph_has_cycle(&chunk_dependencies)
-  }
-
-  fn chunk_dependency_graph_has_cycle(chunk_dependencies: &[FxHashSet<usize>]) -> bool {
-    let mut state = vec![0_u8; chunk_dependencies.len()];
-    for start_chunk_idx in 0..chunk_dependencies.len() {
-      if state[start_chunk_idx] != 0 {
-        continue;
-      }
-
-      let mut stack = vec![(start_chunk_idx, false)];
-      while let Some((chunk_idx, exiting)) = stack.pop() {
-        if exiting {
-          state[chunk_idx] = 2;
-          continue;
-        }
-
-        match state[chunk_idx] {
-          1 => return true,
-          2 => continue,
-          _ => {}
-        }
-
-        state[chunk_idx] = 1;
-        stack.push((chunk_idx, true));
-        for &dep_chunk_idx in &chunk_dependencies[chunk_idx] {
-          match state[dep_chunk_idx] {
-            1 => return true,
-            0 => stack.push((dep_chunk_idx, false)),
-            _ => {}
-          }
-        }
-      }
-    }
-
-    false
+    owners
   }
 
   fn analyze_dynamic_entries(
@@ -459,7 +634,7 @@ impl GenerateStage<'_> {
     }
   }
 
-  fn is_included_dynamic_import_record(
+  pub(super) fn is_included_dynamic_import_record(
     &self,
     importer_idx: ModuleIdx,
     stmt_info_idx: StmtInfoIdx,
@@ -515,15 +690,45 @@ impl GenerateStage<'_> {
   }
 
   fn compute_static_dependency_atoms_by_entry(
+    &self,
     entries_count: usize,
     atoms: &[ChunkAtom],
+    atom_dependencies: &[Vec<usize>],
+    module_to_atom_idx: &IndexVec<ModuleIdx, Option<usize>>,
   ) -> Vec<BitSet> {
     let atom_count: u32 = atoms.len().try_into().expect("Too many atoms, u32 overflowed.");
     let mut static_dependency_atoms_by_entry = vec![BitSet::new(atom_count); entries_count];
-    for (atom_idx, atom) in atoms.iter().enumerate() {
-      let atom_bit: u32 = atom_idx.try_into().expect("Too many atoms, u32 overflowed.");
-      for entry_idx in atom.dependent_entries.index_of_one() {
-        static_dependency_atoms_by_entry[entry_idx as usize].set_bit(atom_bit);
+
+    if self.options.is_strict_execution_order_enabled() {
+      // Conservative strict edges are safe for cycle detection, but cannot prove an atom is loaded.
+      // Keep the `load_dependencies` reachability recorded in the dependent-entry bits.
+      for (atom_idx, atom) in atoms.iter().enumerate() {
+        let atom_bit: u32 = atom_idx.try_into().expect("Too many atoms, u32 overflowed.");
+        for entry_idx in atom.dependent_entries.index_of_one() {
+          static_dependency_atoms_by_entry[entry_idx as usize].set_bit(atom_bit);
+        }
+      }
+      return static_dependency_atoms_by_entry;
+    }
+
+    for (entry_module_idx, loaded_atoms) in self
+      .link_output
+      .entries
+      .iter()
+      .flat_map(|(&idx, entries)| std::iter::repeat_n(idx, entries.len()))
+      .zip(static_dependency_atoms_by_entry.iter_mut())
+    {
+      let Some(entry_atom_idx) = module_to_atom_idx[entry_module_idx] else {
+        continue;
+      };
+      let mut stack = vec![entry_atom_idx];
+      while let Some(atom_idx) = stack.pop() {
+        let atom_bit: u32 = atom_idx.try_into().expect("Too many atoms, u32 overflowed.");
+        if loaded_atoms.has_bit(atom_bit) {
+          continue;
+        }
+        loaded_atoms.set_bit(atom_bit);
+        stack.extend(atom_dependencies[atom_idx].iter().copied());
       }
     }
     static_dependency_atoms_by_entry

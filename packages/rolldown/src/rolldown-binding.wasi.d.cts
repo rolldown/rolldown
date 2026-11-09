@@ -4,6 +4,10 @@ type VoidNullable<T = void> = T | null | undefined | void
 export type BindingStringOrRegex = string | RegExp
 export type BindingResult<T> = { errors: BindingError[], isBindingErrors: boolean } | T
 
+
+/** The WASI flavor this loader instantiates. */
+export declare const __napiBindingTarget: 'wasm32-wasi'
+
 export interface CodegenOptions {
   /**
    * Remove whitespace.
@@ -11,6 +15,24 @@ export interface CodegenOptions {
    * @default true
    */
   removeWhitespace?: boolean
+  /**
+   * Escape non-ASCII characters in string literals, untagged template literals, regular
+   * expression literals and identifier names.
+   *
+   * Uses `\uXXXX` for characters up to U+FFFF and `\u{...}` for higher code points.
+   * Regular expressions use escaped UTF-16 surrogate pairs for higher code points instead;
+   * escaping changes the observable `RegExp.prototype.source` value.
+   *
+   * Code point escapes (`\u{...}`) require ES2015 or later; this option does not provide
+   * ES5-compatible output.
+   *
+   * Non-ASCII characters are left unescaped in tagged template quasis (whose raw text is
+   * observable), JSX names and text, JSX attribute strings, hashbangs and preserved comments.
+   * JavaScript expressions inside tagged templates and JSX are escaped normally.
+   *
+   * @default false
+   */
+  asciiOnly?: boolean
   /**
    * How to handle legal comments (comments containing `@license`, `@preserve`, or starting with `//!`/`/*!`).
    *
@@ -22,7 +44,7 @@ export interface CodegenOptions {
    *
    * @default "none" (when minifying)
    */
-legalComments?: 'none' | 'inline' | 'eof' | 'external' | { linked: string }
+  legalComments?: 'none' | 'inline' | 'eof' | 'external' | { linked: string }
 }
 
 export interface CompressOptions {
@@ -117,14 +139,7 @@ export interface LegalCommentsLinked {
   linked: string
 }
 
-export type LegalCommentsMode = /** Do not preserve any legal comments. */
-'none'|
-/** Preserve all legal comments inline. */
-'inline'|
-/** Move all legal comments to the end of the file. */
-'eof'|
-/** Extract legal comments without linking. */
-'external';
+export type LegalCommentsMode = 'none' | 'inline' | 'eof' | 'external'
 
 export interface MangleOptions {
   /**
@@ -169,6 +184,38 @@ export interface MangleOptionsKeepNames {
   class: boolean
 }
 
+export interface ManglePropertiesOptions {
+  /**
+   * JavaScript `RegExp` selecting property names to mangle. The source and flags are compiled
+   * with Rust's regex engine. Flags `i`, `m`, `s`, and `u` are supported.
+   */
+  include: RegExp
+  /** JavaScript `RegExp` excluding property names selected by `include`. */
+  exclude?: RegExp
+  /** Exact names that are neither mangled nor emitted as automatic output names. */
+  reserved?: Array<string>
+  /**
+   * Mangle quoted property occurrences in addition to unquoted occurrences.
+   *
+   * @default false
+   */
+  quoted?: boolean
+  /**
+   * Generate readable `_$name$_`-style output names.
+   *
+   * @default false
+   */
+  debug?: boolean
+  /**
+   * Stable mappings from original names to output names. `false` reserves an original name.
+   * Entries that do not match `include`, or that match `exclude`, remain inert but are
+   * preserved in the returned `mangleCache`. String targets must be `IdentifierName` values
+   * other than `__proto__`, `constructor`, or `prototype`. The original name `__proto__` is
+   * always reserved and cannot be used as a cache key.
+   */
+  cache?: Record<string, string | false>
+}
+
 /**
  * Minify asynchronously.
  *
@@ -181,6 +228,12 @@ export interface MinifyOptions {
   module?: boolean
   compress?: boolean | CompressOptions
   mangle?: boolean | MangleOptions
+  /**
+   * Mangle matching property names independently of identifier mangling. Properties owned by
+   * unminified code, imported module namespaces, globals, or host APIs must be excluded or
+   * reserved.
+   */
+  mangleProps?: ManglePropertiesOptions
   codegen?: boolean | CodegenOptions
   sourcemap?: boolean
 }
@@ -194,6 +247,11 @@ export interface MinifyResult {
    * Only populated when `codegen.legalComments` is `"linked"` or `"external"`.
    */
   legalComments: Array<string>
+  /**
+   * Updated property-name cache sorted by original name. Present when `mangleProps` ran on a
+   * parse without errors.
+   */
+  mangleCache?: Record<string, string | false>
 }
 
 /** Minify synchronously. */
@@ -250,6 +308,7 @@ export interface TreeShakeOptions {
    */
   invalidImportSideEffects?: boolean
 }
+
 export interface Comment {
   type: 'Line' | 'Block'
   value: string
@@ -271,9 +330,8 @@ export interface OxcError {
   codeframe: string | null
 }
 
-export type Severity =  'Error'|
-'Warning'|
-'Advice';
+export type Severity = 'Error' | 'Warning' | 'Advice'
+
 export declare class ParseResult {
   get program(): import("@oxc-project/types").Program
   get module(): EcmaScriptModule
@@ -313,12 +371,7 @@ export interface ExportExportName {
   end: number | null
 }
 
-export type ExportExportNameKind = /** `export { name } */
-'Name'|
-/** `export default expression` */
-'Default'|
-/** `export * from "mod" */
-'None';
+export type ExportExportNameKind = 'Name' | 'Default' | 'None'
 
 export interface ExportImportName {
   kind: ExportImportNameKind
@@ -327,14 +380,7 @@ export interface ExportImportName {
   end: number | null
 }
 
-export type ExportImportNameKind = /** `export { name } */
-'Name'|
-/** `export * as ns from "mod"` */
-'All'|
-/** `export * from "mod"` */
-'AllButDefault'|
-/** Does not have a specifier. */
-'None';
+export type ExportImportNameKind = 'Name' | 'All' | 'AllButDefault' | 'None'
 
 export interface ExportLocalName {
   kind: ExportLocalNameKind
@@ -343,15 +389,7 @@ export interface ExportLocalName {
   end: number | null
 }
 
-export type ExportLocalNameKind = /** `export { name } */
-'Name'|
-/** `export default expression` */
-'Default'|
-/**
- * If the exported value is not locally accessible from within the module.
- * `export default function () {}`
- */
-'None';
+export type ExportLocalNameKind = 'Name' | 'Default' | 'None'
 
 export interface ImportName {
   kind: ImportNameKind
@@ -360,12 +398,7 @@ export interface ImportName {
   end: number | null
 }
 
-export type ImportNameKind = /** `import { x } from "mod"` */
-'Name'|
-/** `import * as ns from "mod"` */
-'NamespaceObject'|
-/** `import defaultExport from "mod"` */
-'Default';
+export type ImportNameKind = 'Name' | 'NamespaceObject' | 'Default'
 
 /**
  * Parse JS/TS source asynchronously on a separate thread.
@@ -536,6 +569,7 @@ export interface ValueSpan {
   start: number
   end: number
 }
+
 export declare class ResolverFactory {
   constructor(options?: NapiResolveOptions | undefined | null)
   static default(): ResolverFactory
@@ -598,14 +632,10 @@ export interface Builtin {
 export declare enum EnforceExtension {
   Auto = 0,
   Enabled = 1,
-  Disabled = 2
+  Disabled = 2,
 }
 
-export type ModuleType =  'module'|
-'commonjs'|
-'json'|
-'wasm'|
-'addon';
+export type ModuleType = 'module' | 'commonjs' | 'json' | 'wasm' | 'addon'
 
 /**
  * Module Resolution Options
@@ -843,6 +873,40 @@ export interface TsconfigOptions {
    */
   references?: 'auto'
 }
+
+/** See <https://tc39.es/ecma426/#sec-source-map-format>. */
+export interface JSONSourceMap {
+  /** The version field, must be 3. */
+  version: number
+  /** An optional name of the generated code that this source map is associated with. */
+  file?: string
+  /** A string with the encoded mapping data. */
+  mappings: string
+  /**
+   * An optional source root, useful for relocating source files on a server or removing repeated values in the "sources" entry.
+   * This value is prepended to the individual entries in the "source" field.
+   */
+  sourceRoot?: string
+  /** A list of original sources used by the "mappings" entry. */
+  sources: Array<string>
+  /**
+   * An optional list of source content, useful when the "source" can't be hosted.
+   * The contents are listed in the same order as the sources in line 5. "null" may be used if some original sources should be retrieved by name.
+   */
+  sourcesContent?: Array<string | undefined | null>
+  /** A list of symbol names used by the "mappings" entry. */
+  names: Array<string>
+  /** An optional field containing the debugId for this sourcemap. */
+  debugId?: string
+  /**
+   * Identifies third-party sources (such as framework code or bundler-generated code), allowing developers to avoid code that they don't want to see or step through, without having to configure this beforehand.
+   * The `ignoreList` field refers to the `sources` array, and lists the indices of all the known third-party sources in that source map.
+   * When parsing the source map, developer tools can use this to determine sections of the code that the browser loads and runs that could be automatically ignore-listed.
+   * JSON input falls back to the deprecated `x_google_ignoreList` when `ignoreList` is missing or null.
+   */
+  ignoreList?: Array<number>
+}
+
 export interface SourceMap {
   file?: string
   mappings: string
@@ -851,8 +915,9 @@ export interface SourceMap {
   sources: Array<string>
   sourcesContent?: Array<string>
   version: number
-  x_google_ignoreList?: Array<number>
+  ignoreList?: Array<number>
 }
+
 export interface ArrowFunctionsOptions {
   /**
    * This option enables the following:
@@ -954,27 +1019,7 @@ export interface Es2015Options {
   arrowFunction?: ArrowFunctionsOptions
 }
 
-export type HelperMode = /**
- * Runtime mode (default): Helper functions are imported from a runtime package.
- *
- * Example:
- *
- * ```js
- * import helperName from "@oxc-project/runtime/helpers/helperName";
- * helperName(...arguments);
- * ```
- */
-'Runtime'|
-/**
- * External mode: Helper functions are accessed from a global `babelHelpers` object.
- *
- * Example:
- *
- * ```js
- * babelHelpers.helperName(...arguments);
- * ```
- */
-'External';
+export type HelperMode = 'Runtime' | 'External'
 
 export interface Helpers {
   mode?: HelperMode
@@ -1124,8 +1169,8 @@ export interface ModuleRunnerTransformResult {
    * This will be set if {@link TransformOptions#sourcemap} is `true`.
    */
   map?: SourceMap
-  deps: Array<string>
-  dynamicDeps: Array<string>
+  deps: string[]
+  dynamicDeps: string[]
   /**
    * Parse and transformation errors.
    *
@@ -1502,6 +1547,7 @@ export interface TypeScriptOptions {
    */
   rewriteImportExtensions?: 'rewrite' | 'remove' | boolean
 }
+
 export declare class BindingBundleEndEventData {
   output: string
   duration: number
@@ -1570,8 +1616,9 @@ export declare class BindingDevEngine {
    */
   registerClient(clientId: string): Promise<void>
   /**
-   * Delivery notification from the serving middleware: the response for
-   * `filename` completed, so record its modules as shipped to that client.
+   * Delivery notification for the payload `filename`: the client reported that it
+   * ran the payload, so record its modules as shipped to that client. See
+   * `DevEngine::notify_payload_delivered`.
    */
   notifyPayloadDelivered(filename: string): Promise<void>
   removeClient(clientId: string): Promise<void>
@@ -1582,8 +1629,19 @@ export declare class BindingDevEngine {
    * This is called when a dynamically imported module is first requested at runtime.
    * The module was previously stubbed with a proxy, and now we need to compile the
    * actual module and its dependencies.
+   * Failures come back as `BindingErrors`, the same shape the build and HMR callbacks
+   * use, rather than as a napi error carrying a formatted string. A lazy compile runs the
+   * full plugin pipeline, so what fails here is usually a user plugin - and `to_binding_error`
+   * hands its thrown JS error back untouched, keeping the stack and the diagnostic's module
+   * id instead of flattening both into a message.
    */
-  compileEntry(moduleId: string, clientId: string): Promise<BindingLazyChunkOutput>
+  compileEntry(moduleId: string, clientId: string): Promise<BindingResult<BindingLazyChunkOutput>>
+  /**
+   * Same data the plugin-context `getModuleInfo` returns, readable from the engine
+   * handle at any time (no hook context needed).
+   */
+  getModuleInfo(moduleId: string): BindingModuleInfo | null
+  getModuleIds(): Array<string>
 }
 
 export declare class BindingLoadPluginContext {
@@ -1702,6 +1760,7 @@ export declare class BindingNormalizedOptions {
   get assetFilenames(): string | undefined
   get dir(): string | null
   get file(): string | null
+  get charset(): 'ascii' | 'utf8'
   get format(): 'es' | 'cjs' | 'iife' | 'umd'
   get exports(): 'default' | 'named' | 'none' | 'auto'
   get esModule(): boolean | 'if-default-prop'
@@ -1755,6 +1814,12 @@ export declare class BindingOutputChunk {
   getImports(): Array<string>
   getDynamicImports(): Array<string>
   getCode(): string
+  /**
+   * Identity of the shared chunk data behind this object. Two `BindingOutputChunk` objects with the same
+   * identity share the same data, so a JavaScript string made from `getCode()` of one is valid for the other.
+   * The identity is the address of that data. It stays unique while a `BindingOutputChunk` keeps the data alive.
+   */
+  getCodeIdentity(): number
   getMap(): string | null
   getSourcemapFileName(): string | null
   getPreliminaryFileName(): string
@@ -1762,7 +1827,7 @@ export declare class BindingOutputChunk {
 }
 
 export declare class BindingPluginContext {
-  load(specifier: string, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string): Promise<void>
+  load(rawId: string, attributes: Record<string, string>, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null, fnSanitizedFileName?: string | undefined | null): string
   emitChunk(file: BindingEmittedChunk): string
@@ -1792,6 +1857,8 @@ export declare class BindingRenderedChunkMeta {
 
 export declare class BindingRenderedModule {
   get code(): string | null
+  /** `code.length` without materializing `code`. */
+  get renderedLength(): number
   get renderedExports(): Array<string>
 }
 
@@ -1867,8 +1934,8 @@ export declare class TraceSubscriberGuard {
 }
 
 export declare class TsconfigCache {
-  /** Create a new transform cache with auto tsconfig discovery enabled. */
-  constructor(yarnPnp: boolean)
+  /** Create a new transform cache with auto or manual tsconfig discovery enabled. */
+  constructor(yarnPnp: boolean, pathToTsconfig?: string | undefined | null)
   /**
    * Clear the cache.
    *
@@ -1891,7 +1958,7 @@ export interface BindingAssetSource {
 export declare enum BindingAttachDebugInfo {
   None = 0,
   Simple = 1,
-  Full = 2
+  Full = 2,
 }
 
 export interface BindingBuiltinPlugin {
@@ -1899,24 +1966,7 @@ export interface BindingBuiltinPlugin {
   options?: unknown
 }
 
-export type BindingBuiltinPluginName =  'builtin:bundle-analyzer'|
-'builtin:esm-external-require'|
-'builtin:isolated-declaration'|
-'builtin:replace'|
-'builtin:vite-alias'|
-'builtin:vite-build-import-analysis'|
-'builtin:vite-dynamic-import-vars'|
-'builtin:vite-import-glob'|
-'builtin:vite-json'|
-'builtin:vite-load-fallback'|
-'builtin:vite-manifest'|
-'builtin:vite-module-preload-polyfill'|
-'builtin:vite-react-refresh-wrapper'|
-'builtin:vite-reporter'|
-'builtin:vite-resolve'|
-'builtin:vite-transform'|
-'builtin:vite-web-worker-post'|
-'builtin:oxc-runtime';
+export type BindingBuiltinPluginName = 'builtin:bundle-analyzer' | 'builtin:esm-external-require' | 'builtin:isolated-declaration' | 'builtin:replace' | 'builtin:vite-alias' | 'builtin:vite-build-import-analysis' | 'builtin:vite-dynamic-import-vars' | 'builtin:vite-import-glob' | 'builtin:vite-json' | 'builtin:vite-load-fallback' | 'builtin:vite-manifest' | 'builtin:vite-module-preload-polyfill' | 'builtin:vite-react-refresh-wrapper' | 'builtin:vite-reporter' | 'builtin:vite-resolve' | 'builtin:vite-transform' | 'builtin:vite-web-worker-post' | 'builtin:oxc-runtime'
 
 export interface BindingBundleAnalyzerPluginConfig {
   /** Output filename for the bundle analysis data (default: "analyze-data.json") */
@@ -1955,6 +2005,7 @@ export interface BindingChecksOptions {
   unresolvedEntry?: boolean
   unresolvedImport?: boolean
   filenameConflict?: boolean
+  moduleLevelDirective?: boolean
   commonJsVariableInEsm?: boolean
   importIsUndefined?: boolean
   emptyImportMeta?: boolean
@@ -1963,6 +2014,8 @@ export interface BindingChecksOptions {
   configurationFieldConflict?: boolean
   preferBuiltinFeature?: boolean
   couldNotCleanDirectory?: boolean
+  bundlerTimings?: boolean
+  /** Deprecated alias for `bundlerTimings`. Rolldown uses `bundlerTimings` if both options have values. */
   pluginTimings?: boolean
   duplicateShebang?: boolean
   unsupportedTsconfigOption?: boolean
@@ -1970,6 +2023,9 @@ export interface BindingChecksOptions {
   largeBarrelModules?: boolean
   sourcemapBroken?: boolean
   namespaceConflict?: boolean
+  shimmedExport?: boolean
+  deprecatedImportAssertion?: boolean
+  invalidImportAttribute?: boolean
 }
 
 export interface BindingChunkImportMap {
@@ -1979,7 +2035,7 @@ export interface BindingChunkImportMap {
 
 export declare enum BindingChunkModuleOrderBy {
   ModuleId = 0,
-  ExecOrder = 1
+  ExecOrder = 1,
 }
 
 export interface BindingChunkOptimizationOptions {
@@ -2035,21 +2091,23 @@ export interface BindingDevOptions {
   onAdditionalAssets?: undefined | ((output: BindingOutputs) => void | Promise<void>)
   rebuildStrategy?: BindingRebuildStrategy
   watch?: BindingDevWatchOptions
+  hotUpdate?: boolean
 }
 
 export interface BindingDevtoolsOptions {
   sessionId?: string
+  /**
+   * `"full"` (default): write JSON-lines devtools logs. `"report"`: aggregate the same
+   * event stream in-memory and emit an agent-readable report (`metrics.json` + markdown)
+   * under `node_modules/.rolldown/report/<output dir>` instead.
+   */
+  mode?: 'full' | 'report'
 }
 
 export interface BindingDevWatchOptions {
   enabled?: boolean
   skipWrite?: boolean
-  usePolling?: boolean
-  pollInterval?: number
-  useDebounce?: boolean
-  debounceDuration?: number
-  compareContentsForPolling?: boolean
-  debounceTickRate?: number
+  watcher?: BindingWatcherFileWatcherOptions
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
 }
@@ -2149,9 +2207,10 @@ export interface BindingEnhancedTransformOptions {
   /**
    * Configure tsconfig handling.
    * - true: Auto-discover and load the nearest tsconfig.json
+   * - string: Use the tsconfig at the provided path
    * - TsconfigRawOptions: Use the provided inline tsconfig options
    */
-  tsconfig?: boolean | BindingTsconfigRawOptions
+  tsconfig?: boolean | string | BindingTsconfigRawOptions
   /** An input source map to collapse with the output source map. */
   inputMap?: SourceMap
 }
@@ -2208,8 +2267,8 @@ export interface BindingEnhancedTransformResult {
 }
 
 export type BindingError =
-  | { type: 'JsError', field0: Error }
-  | { type: 'NativeError', field0: NativeError }
+  | { type: 'JsError'; field0: Error }
+  | { type: 'NativeError'; field0: NativeError }
 
 export interface BindingErrors {
   errors: Array<BindingError>
@@ -2225,8 +2284,7 @@ export interface BindingErrors {
  * on the next page load (HMR generation may itself be buggy). See
  * `internal-docs/dev-engine/implementation.md` §12.
  */
-export type BindingErrorStage =  'Hmr'|
-'Rebuild';
+export type BindingErrorStage = 'Hmr' | 'Rebuild'
 
 export interface BindingEsmExternalRequirePluginConfig {
   external: Array<BindingStringOrRegex>
@@ -2240,6 +2298,7 @@ export interface BindingExperimentalDevModeOptions {
   /** @deprecated Common runtime injection will be disabled by default in the future. */
   skipCommonRuntimeInjection?: boolean
   lazy?: boolean
+  hotUpdate?: boolean
 }
 
 export interface BindingExperimentalOptions {
@@ -2254,6 +2313,7 @@ export interface BindingExperimentalOptions {
   nativeMagicString?: boolean
   chunkOptimization?: boolean | BindingChunkOptimizationOptions
   lazyBarrel?: boolean
+  importAttributes?: boolean
 }
 
 export interface BindingFilterToken {
@@ -2267,14 +2327,14 @@ export interface BindingGeneratedCodeOptions {
 }
 
 export type BindingHmrUpdate =
-  | { type: 'Patch', code: string, filename: string, sourcemap?: string, sourcemapFilename?: string, /**
-   * Stable ids of the changed modules — the `changedIds` of the push envelope.
-   * The client walks from these on its own graph.
-   */
-  changedIds: Array<string>, /** Per-client envelope sequence number. */
-seq: number }
-| { type: 'FullReload', reason?: string }
-| { type: 'Noop' }
+  | { type: 'Patch'; code: string; filename: string; sourcemap?: string; sourcemapFilename?: string; /**
+     * Stable ids of the changed modules — the `changedIds` of the push envelope.
+     * The client walks from these on its own graph.
+     */
+    changedIds: Array<string>; /** Per-client envelope sequence number. */
+  seq: number }
+  | { type: 'FullReload'; reason?: string }
+  | { type: 'Noop' }
 
 export interface BindingHookFilter {
   value?: Array<Array<BindingFilterToken>>
@@ -2306,6 +2366,16 @@ export interface BindingHookJsResolveIdOutput {
   id: string
   external?: boolean | 'absolute' | 'relative'
   moduleSideEffects?: boolean | 'no-treeshake'
+  /**
+   * @internal The package json path resolved by oxc resolver, so that the caller can hand it
+   * back to rolldown instead of making it infer the module format from the id alone.
+   */
+  packageJsonPath?: string
+}
+
+export interface BindingHookLoadExtraArgs {
+  rawId: string
+  attributes: Record<string, string>
 }
 
 export interface BindingHookLoadOutput {
@@ -2322,6 +2392,19 @@ export interface BindingHookRenderChunkOutput {
    * omitting the field, which mirrors Rollup's "possibly broken" semantics).
    */
   map?: BindingSourcemap | null
+}
+
+/**
+ * The extra arguments of `resolveDynamicImport`. Empty attributes and a raw id equal to the
+ * importer are left out, and `bindingify-build-hooks.ts` fills them in.
+ */
+export interface BindingHookResolveDynamicImportExtraArgs {
+  /** The import attributes of the import being resolved. Omitted when empty. */
+  attributes?: Record<string, string>
+  /** The importer without its import attributes. Omitted when equal to the importer. */
+  importerRawId?: string
+  /** The import attributes of the importer itself. Omitted when empty. */
+  importerAttributes?: Record<string, string>
 }
 
 export interface BindingHookResolveFileUrlArgs {
@@ -2355,6 +2438,12 @@ export interface BindingHookResolveIdExtraArgs {
    * - `hot-accept`: `import.meta.hot.accept('./lib.js', () => {})`
    */
   kind: 'import-statement' | 'dynamic-import' | 'require-call' | 'import-rule' | 'url-token' | 'new-url' | 'hot-accept'
+  /** The import attributes of the import being resolved. Omitted when empty. */
+  attributes?: Record<string, string>
+  /** The importer without its import attributes. Omitted when equal to the importer. */
+  importerRawId?: string
+  /** The import attributes of the importer itself. Omitted when empty. */
+  importerAttributes?: Record<string, string>
 }
 
 export interface BindingHookResolveIdOutput {
@@ -2367,10 +2456,14 @@ export interface BindingHookResolveIdOutput {
    * we could get the related package json object via the path string.
    */
   packageJsonPath?: string | null
+  /**
+   * Replaces the import attributes of the import. `{}` removes them. Ignored without
+   * `experimental.importAttributes`.
+   */
+  attributes?: Record<string, string>
 }
 
-export type BindingHookSideEffects =
-  boolean | string
+export type BindingHookSideEffects = boolean | string
 
 export interface BindingHookTransformOutput {
   code?: string
@@ -2395,8 +2488,7 @@ export interface BindingIndentOptions {
   exclude?: Array<Array<number>> | Array<number>
 }
 
-export type BindingInjectImport =
-  BindingInjectImportNamed | BindingInjectImportNamespace
+export type BindingInjectImport = BindingInjectImportNamed | BindingInjectImportNamespace
 
 export interface BindingInjectImportNamed {
   tagNamed: true
@@ -2409,6 +2501,15 @@ export interface BindingInjectImportNamespace {
   tagNamespace: true
   alias: string
   from: string
+}
+
+/**
+ * `output.codeSplitting.experimentalInlineCommonChunks`. `exclude` entries use the same shape
+ * as `BindingMatchGroup.test`, including the batched function shim.
+ */
+export interface BindingInlineCommonChunksOptions {
+  maxSize?: number
+  exclude?: Array<string | RegExp | ((ids: Array<string>) => Uint8Array)>
 }
 
 export interface BindingInlineConstConfig {
@@ -2466,6 +2567,7 @@ export interface BindingJsonSourcemap {
   sourcesContent?: Array<string | undefined | null>
   names?: Array<string>
   debugId?: string
+  ignoreList?: Array<number>
   x_google_ignoreList?: Array<number>
 }
 
@@ -2494,6 +2596,7 @@ export interface BindingLog {
   id?: string
   code?: string
   exporter?: string
+  binding?: string
   plugin?: string
   /** Location information (line, column, file) */
   loc?: BindingLogLocation
@@ -2507,7 +2610,7 @@ export declare enum BindingLogLevel {
   Silent = 0,
   Warn = 1,
   Info = 2,
-  Debug = 3
+  Debug = 3,
 }
 
 export interface BindingLogLocation {
@@ -2526,7 +2629,7 @@ export interface BindingMagicStringOptions {
 }
 
 export type BindingMakeAbsoluteExternalsRelative =
-  | { type: 'Bool', field0: boolean }
+  | { type: 'Bool'; field0: boolean }
   | { type: 'IfRelativeSource' }
 
 export interface BindingManualCodeSplittingOptions {
@@ -2537,11 +2640,13 @@ export interface BindingManualCodeSplittingOptions {
   maxSize?: number
   minModuleSize?: number
   maxModuleSize?: number
+  experimentalInlineCommonChunks?: BindingInlineCommonChunksOptions
+  internalInvalidateModuleInfoCache?: () => void
 }
 
 export interface BindingMatchGroup {
-  name: string | ((id: string, ctx: BindingChunkingContext) => VoidNullable<string>)
-  test?: string | RegExp | ((id: string) => VoidNullable<boolean>)
+  name: string | ((ids: Array<string>, ctx: BindingChunkingContext) => Array<VoidNullable<string>>)
+  test?: string | RegExp | ((ids: Array<string>) => Uint8Array)
   priority?: number
   minSize?: number
   minShareCount?: number
@@ -2565,6 +2670,22 @@ export interface BindingModuleSideEffectsRule {
   external?: boolean
 }
 
+/**
+ * Counters of the Rust-side tracking allocator. V8 never allocates through
+ * the Rust global allocator, so these numbers exclude the JS heap and GC
+ * noise completely, unlike `process.memoryUsage()`.
+ */
+export interface BindingNativeMemoryStats {
+  /** Bytes currently allocated and not yet freed, since process start. */
+  liveBytes: number
+  /** Highest `live_bytes` seen since process start or the last reset. */
+  peakBytes: number
+  /** Successful `alloc` calls since the last reset. */
+  allocCount: number
+  /** Successful `realloc` calls since the last reset. */
+  reallocCount: number
+}
+
 export interface BindingOptimization {
   inlineConst?: boolean | BindingInlineConstConfig
   pifeForModuleWrappers?: boolean
@@ -2582,6 +2703,7 @@ export interface BindingOutputOptions {
   postFooter?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
   dir?: string
   file?: string
+  charset?: 'ascii' | 'utf8'
   esModule?: boolean | 'if-default-prop'
   exports?: 'default' | 'named' | 'none' | 'auto'
   extend?: boolean
@@ -2599,9 +2721,13 @@ export interface BindingOutputOptions {
   sourcemap?: 'file' | 'inline' | 'hidden'
   sourcemapFileNames?: string | ((chunk: PreRenderedChunk) => string)
   sourcemapBaseUrl?: string
-  sourcemapIgnoreList?: boolean | string | RegExp | ((source: string, sourcemapPath: string) => boolean)
+  sourcemapIgnoreList?: boolean | string | RegExp | ((sources: Array<string>, sourcemapPath: string) => Uint8Array)
   sourcemapDebugIds?: boolean
-  sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
+  /**
+   * Batched like `sourcemapIgnoreList` above. One call rewrites every source of a sourcemap,
+   * and the returned array matches the source array by index.
+   */
+  sourcemapPathTransform?: (sources: Array<string>, sourcemapPath: string) => Array<string>
   sourcemapExcludeSources?: boolean
   strict?: boolean | 'auto'
   minify?: boolean | 'dce-only' | MinifyOptions
@@ -2621,6 +2747,7 @@ export interface BindingOutputOptions {
 export interface BindingOutputs {
   chunks: Array<BindingOutputChunk>
   assets: Array<BindingOutputAsset>
+  mangleCache?: Record<string, string | false>
 }
 
 export interface BindingOverwriteOptions {
@@ -2630,7 +2757,9 @@ export interface BindingOverwriteOptions {
 }
 
 export interface BindingPluginContextResolvedId {
+  /** The resolved id without its import attributes. */
   id: string
+  attributes: Record<string, string>
   packageJsonPath?: string
   external: boolean | 'absolute' | 'relative'
   moduleSideEffects?: boolean | 'no-treeshake'
@@ -2651,6 +2780,7 @@ export interface BindingPluginContextResolveOptions {
   skipSelf?: boolean
   custom?: number
   vitePluginCustom?: BindingVitePluginCustom
+  attributes?: Record<string, string>
 }
 
 export interface BindingPluginHookMeta {
@@ -2665,9 +2795,9 @@ export interface BindingPluginOptions {
   resolveId?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraArgs) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   resolveIdMeta?: BindingPluginHookMeta
   resolveIdFilter?: BindingHookFilter
-  resolveDynamicImport?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
+  resolveDynamicImport?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveDynamicImportExtraArgs) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   resolveDynamicImportMeta?: BindingPluginHookMeta
-  load?: (ctx: BindingLoadPluginContext, id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
+  load?: (ctx: BindingLoadPluginContext, id: string, options: Nullable<BindingHookLoadExtraArgs>) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
   loadMeta?: BindingPluginHookMeta
   loadFilter?: BindingHookFilter
   transform?: (ctx:  BindingTransformPluginContext, id: string, code: string, module_type: BindingTransformHookExtraArgs) => MaybePromise<VoidNullable<BindingHookTransformOutput>>
@@ -2688,9 +2818,9 @@ export interface BindingPluginOptions {
   renderStartMeta?: BindingPluginHookMeta
   renderError?: (ctx: BindingPluginContext, error: BindingError[]) => void
   renderErrorMeta?: BindingPluginHookMeta
-  generateBundle?: (ctx: BindingPluginContext, bundle: BindingErrorsOr<BindingOutputs>, isWrite: boolean, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>
+  generateBundle?: (ctx: BindingPluginContext, bundle: BindingResult<BindingOutputs>, isWrite: boolean, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>
   generateBundleMeta?: BindingPluginHookMeta
-  writeBundle?: (ctx: BindingPluginContext, bundle: BindingErrorsOr<BindingOutputs>, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>
+  writeBundle?: (ctx: BindingPluginContext, bundle: BindingResult<BindingOutputs>, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>
   writeBundleMeta?: BindingPluginHookMeta
   closeBundle?: (ctx: BindingPluginContext, error?: BindingError[]) => MaybePromise<VoidNullable>
   closeBundleMeta?: BindingPluginHookMeta
@@ -2712,7 +2842,7 @@ export interface BindingPluginOptions {
 
 export declare enum BindingPluginOrder {
   Pre = 0,
-  Post = 1
+  Post = 1,
 }
 
 /**
@@ -2756,22 +2886,22 @@ export interface BindingPreRenderedAsset {
 }
 
 export type BindingPreserveEntrySignatures =
-  | { type: 'Bool', field0: boolean }
-  | { type: 'String', field0: string }
+  | { type: 'Bool'; field0: boolean }
+  | { type: 'String'; field0: string }
 
 export declare enum BindingPropertyReadSideEffects {
   Always = 0,
-  False = 1
+  False = 1,
 }
 
 export declare enum BindingPropertyWriteSideEffects {
   Always = 0,
-  False = 1
+  False = 1,
 }
 
 export declare enum BindingRebuildStrategy {
   Always = 0,
-  Never = 1
+  Never = 1,
 }
 
 export interface BindingReplacePluginConfig {
@@ -2782,8 +2912,7 @@ export interface BindingReplacePluginConfig {
   sourcemap?: boolean
 }
 
-export type BindingResolvedExternal =
-  boolean | string
+export type BindingResolvedExternal = boolean | string
 
 export interface BindingResolveOptions {
   alias?: Array<AliasItem>
@@ -2820,6 +2949,8 @@ export interface BindingSourceMapOptions {
 
 export interface BindingTransformHookExtraArgs {
   moduleType: string
+  rawId?: string
+  attributes?: Record<string, string>
 }
 
 export interface BindingTreeshake {
@@ -2934,8 +3065,7 @@ export interface BindingViteJsonPluginConfig {
   stringify?: BindingViteJsonPluginStringify
 }
 
-export type BindingViteJsonPluginStringify =
-  boolean | string
+export type BindingViteJsonPluginStringify = boolean | string
 
 export interface BindingViteManifestPluginConfig {
   root: string
@@ -2973,8 +3103,10 @@ export interface BindingViteReporterPluginConfig {
 
 export interface BindingViteResolvePluginConfig {
   resolveOptions: BindingViteResolvePluginResolveOptions
+  tsconfig?: string
   environmentConsumer: string
   environmentName: string
+  convertExternalRequire?: boolean
   builtins: Array<BindingStringOrRegex>
   external: true | string[]
   noExternal: true | Array<string | RegExp>
@@ -2991,6 +3123,8 @@ export interface BindingViteResolvePluginConfig {
 
 export interface BindingViteResolvePluginResolveOptions {
   isBuild: boolean
+  /** Defaults to `isBuild`. */
+  isBundled?: boolean
   isProduction: boolean
   asSrc: boolean
   preferRelative: boolean
@@ -3009,6 +3143,7 @@ export interface BindingViteResolvePluginResolveOptions {
 
 export interface BindingViteTransformPluginConfig {
   root: string
+  tsconfig?: string
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
   jsxRefreshInclude?: Array<BindingStringOrRegex>
@@ -3019,17 +3154,21 @@ export interface BindingViteTransformPluginConfig {
   yarnPnp?: boolean
 }
 
-export interface BindingWatchOption {
-  skipWrite?: boolean
-  include?: Array<BindingStringOrRegex>
-  exclude?: Array<BindingStringOrRegex>
-  buildDelay?: number
+export interface BindingWatcherFileWatcherOptions {
   usePolling?: boolean
   pollInterval?: number
   compareContentsForPolling?: boolean
   useDebounce?: boolean
   debounceDelay?: number
   debounceTickRate?: number
+}
+
+export interface BindingWatchOption {
+  skipWrite?: boolean
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
+  buildDelay?: number
+  watcher?: BindingWatcherFileWatcherOptions
   onInvalidate?: ((id: string) => void) | undefined
 }
 
@@ -3049,18 +3188,14 @@ export interface ExternalMemoryStatus {
   reason?: string
 }
 
-export type FilterTokenKind =  'Id'|
-'ImporterId'|
-'Code'|
-'ModuleType'|
-'And'|
-'Or'|
-'Not'|
-'Include'|
-'Exclude'|
-'CleanUrl'|
-'QueryKey'|
-'QueryValue';
+export type FilterTokenKind = 'Id' | 'ImporterId' | 'Code' | 'ModuleType' | 'And' | 'Or' | 'Not' | 'Include' | 'Exclude' | 'CleanUrl' | 'QueryKey' | 'QueryValue'
+
+/**
+ * Returns the Rust-side allocator counters, or `None` when this binding was
+ * built without the `tracking_allocator` cargo feature (the default —
+ * tracking costs a few atomic operations per allocation).
+ */
+export declare function getNativeMemoryStats(): BindingNativeMemoryStats | null
 
 export declare function initTraceSubscriber(): TraceSubscriberGuard | null
 
@@ -3076,21 +3211,24 @@ export interface JsOutputAsset {
   source: BindingAssetSource
 }
 
+/**
+ * What a `generateBundle` or `writeBundle` hook changed in an output chunk. A field that is left
+ * out is a property the plugin did not change, so the chunk keeps its value, which is never copied
+ * through JavaScript. See `collectChunkChange` in
+ * `packages/rolldown/src/utils/transform-to-rollup-output.ts`.
+ */
 export interface JsOutputChunk {
-  name: string
-  isEntry: boolean
-  isDynamicEntry: boolean
-  facadeModuleId?: string
-  moduleIds: Array<string>
-  exports: Array<string>
   filename: string
-  modules: Record<string, BindingRenderedModule>
-  imports: Array<string>
-  dynamicImports: Array<string>
-  code: string
-  map?: BindingSourcemap
-  sourcemapFilename?: string
-  preliminaryFilename: string
+  /**
+   * Always sent. Besides its value, it tells a chunk apart from a `JsOutputAsset`, which has no
+   * `isEntry`, when napi picks a side of `Either<JsOutputChunk, JsOutputAsset>`.
+   */
+  isEntry: boolean
+  code?: string
+  /** `null` removes the map. */
+  map?: BindingSourcemap | null
+  imports?: Array<string>
+  dynamicImports?: Array<string>
 }
 
 /** Error emitted from native side, it only contains kind and message, no stack trace. */
@@ -3099,6 +3237,10 @@ export interface NativeError {
   message: string
   /** The id of the file associated with the error */
   id?: string
+  /** The name of the plugin that threw the error */
+  plugin?: string
+  /** Code frame around the error location */
+  frame?: string
   /** The exporter associated with the error (for import/export errors) */
   exporter?: string
   /** Location information (line, column, file) */
@@ -3115,7 +3257,7 @@ export interface PreRenderedChunk {
   /** Whether this chunk is a dynamic entry point. */
   isDynamicEntry: boolean
   /** The id of a module that this chunk corresponds to. */
-  facadeModuleId?: string
+  facadeModuleId: string | null
   /** The list of ids of modules included in this chunk. */
   moduleIds: Array<string>
   /** Exported variable names from this chunk. */
@@ -3123,6 +3265,13 @@ export interface PreRenderedChunk {
 }
 
 export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
+
+/**
+ * Starts a new measuring window: the peak restarts from the current live
+ * bytes and the counts restart from zero. No-op when the binding was built
+ * without the `tracking_allocator` cargo feature.
+ */
+export declare function resetNativeMemoryStats(): void
 
 export declare function resolveTsconfig(filename: string, cache: TsconfigCache | undefined | null, yarnPnp: boolean): BindingTsconfigResult | null
 
@@ -3139,4 +3288,32 @@ export declare function startAsyncRuntime(): void
 
 export interface ViteImportGlobMeta {
   isSubImportsPattern?: boolean
+}
+
+export declare class Watcher {
+  constructor(callback: (arg0: WatcherEvent) => void, options?: WatcherOptions | undefined | null)
+  add(paths: Array<string>): void
+  remove(paths: Array<string>): void
+  isWatched(path: string, isIgnored?: ((arg: string) => boolean) | undefined | null): boolean
+  close(): void
+  ref(): void
+  unref(): void
+}
+
+export interface WatcherEvent {
+  kind: string
+  path?: string
+  isDir?: boolean
+  error?: string
+}
+
+export interface WatcherOptions {
+  usePolling?: boolean
+  pollInterval?: number
+  compareContentsForPolling?: boolean
+  useDebounce?: boolean
+  debounceDelay?: number
+  debounceTickRate?: number
+  followSymlinks?: boolean
+  ignored?: Array<string>
 }

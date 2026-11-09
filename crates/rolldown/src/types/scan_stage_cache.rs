@@ -147,6 +147,7 @@ impl ScanStageCache {
         modules
       }
     };
+    let rescanned_module_idxs = modules.iter().map(|(idx, _)| *idx).collect::<FxHashSet<_>>();
     // merge module_table, index_ast_scope, index_ecma_ast
     for (new_idx, new_module) in modules {
       let idx = self.module_id_to_idx[new_module.id()].idx();
@@ -227,23 +228,24 @@ impl ScanStageCache {
       module.ecma_view.rebuild_importer_sets(&self.importers[*idx]);
     }
 
-    // merge entries
+    // Deleted or retargeted imports have no incoming row, so clean every cached dynamic entry.
+    // See internal-docs/cache/implementation.md (`ScanStageCache::merge` — the write path).
+    cache.entry_points.retain_mut(|entry_point| {
+      if !entry_point.kind.is_dynamic_import() {
+        return true;
+      }
+      entry_point
+        .related_stmt_infos
+        .retain(|(importer_idx, _, _, _)| !rescanned_module_idxs.contains(importer_idx));
+      !entry_point.related_stmt_infos.is_empty()
+    });
+
     for entry_point in scan_stage_output.entry_points {
       if let Some(old_entry_point) = cache
         .entry_points
         .iter_mut()
         .find(|old_entry| old_entry.kind == entry_point.kind && old_entry.idx == entry_point.idx)
       {
-        let removed_module_idxs = entry_point
-          .related_stmt_infos
-          .iter()
-          .map(|(module_idx, _, _, _)| *module_idx)
-          .collect::<FxHashSet<_>>();
-        _ = old_entry_point
-          .related_stmt_infos
-          .extract_if(.., |(module_idx, _stmt_info_idx, _node_id, _)| {
-            removed_module_idxs.contains(module_idx)
-          });
         old_entry_point.related_stmt_infos.extend(entry_point.related_stmt_infos);
       } else {
         cache.entry_points.push(entry_point);

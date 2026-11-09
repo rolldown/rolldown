@@ -1,0 +1,122 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## barrel.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+__esmMin((() => {}));
+
+```
+
+## entry.js
+
+```js
+import { n as __exportAll, r as __toCommonJS, t as __esmMin } from "./rolldown-runtime.js";
+// bar.js
+var bar;
+var init_bar = __esmMin((() => {
+	bar = { name: "bar" };
+}));
+// req.js
+var req_exports = /* @__PURE__ */ __exportAll({ bar: () => bar });
+var init_req = __esmMin((() => {
+	init_bar();
+}));
+// entry.js
+var Foo;
+function init_entry() {
+	return (init_entry = __esmMin((async () => {
+		console.log("bar =", (init_req(), __toCommonJS(req_exports)).bar.name);
+		({Foo} = await import("./lib.js"));
+		console.log("Foo =", Foo);
+	})))();
+}
+await init_entry();
+export { Foo };
+
+```
+
+## lib.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+// foo.js
+var Foo;
+__esmMin((() => {
+	Foo = { name: "Foo" };
+}))();
+export { Foo };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __toCommonJS as r, __esmMin as t };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### barrel.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+__esmMin((() => {}));
+
+```
+
+### entry.js
+
+```js
+import { n as __exportAll, r as __toCommonJS, t as __esmMin } from "./rolldown-runtime.js";
+// bar.js
+var bar;
+var init_bar = __esmMin((() => {
+	bar = { name: "bar" };
+}));
+// req.js
+var req_exports = /* @__PURE__ */ __exportAll({ bar: () => bar });
+var init_req = __esmMin((() => {
+	init_bar();
+}));
+// entry.js
+var Foo;
+function init_entry() {
+	return (init_entry = __esmMin((async () => {
+		console.log("bar =", (init_req(), __toCommonJS(req_exports)).bar.name);
+		({Foo} = await import("./lib.js"));
+		console.log("Foo =", Foo);
+	})))();
+}
+await init_entry();
+export { Foo };
+
+```
+
+### lib.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+// foo.js
+var Foo;
+__esmMin((() => {
+	Foo = { name: "Foo" };
+}))();
+export { Foo };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __toCommonJS as r, __esmMin as t };
+
+```

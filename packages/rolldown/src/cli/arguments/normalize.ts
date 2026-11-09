@@ -2,13 +2,13 @@
  * @description This file is used for normalize the options.
  * In CLI, the input options and output options are mixed together. We need to tell them apart.
  */
-import type { InputOptions } from '../../options/input-options';
-import type { OutputOptions } from '../../options/output-options';
-import { getInputCliKeys, getOutputCliKeys, validateCliOptions } from '../../utils/validator';
-import { logger } from '../logger';
-import type { ConfigLoader } from '../../utils/load-config';
-import type { CliOptions } from './alias';
-import { setNestedProperty } from './utils';
+import type { InputOptions } from '../../options/input-options.ts';
+import type { OutputOptions } from '../../options/output-options.ts';
+import { getInputCliKeys, getOutputCliKeys, validateCliOptions } from '../../utils/validator.ts';
+import { logger } from '../logger.ts';
+import type { ConfigLoader } from '../../utils/load-config.ts';
+import type { CliOptions } from './alias.ts';
+import { setNestedProperty } from './utils.ts';
 
 const reservedKeys = new Set(['help', 'version', 'config', 'watch', 'environment', 'configLoader']);
 
@@ -76,11 +76,14 @@ export function normalizeCliOptions(
   }
 
   if (!result.config && positionals.length > 0) {
-    if (Array.isArray(result.input.input)) {
-      result.input.input.push(...positionals);
-    } else {
-      result.input.input = positionals;
+    // Like Rollup, `--input` and positional entries cannot be used together.
+    // `--help` and `--version` still print and exit 0, as in Rollup.
+    // See internal-docs/cli/implementation.md.
+    if (result.input.input !== undefined && !result.help && !result.version) {
+      logger.error('Either use --input, or pass input path as argument');
+      process.exit(1);
     }
+    result.input.input = positionals;
   }
 
   return result;

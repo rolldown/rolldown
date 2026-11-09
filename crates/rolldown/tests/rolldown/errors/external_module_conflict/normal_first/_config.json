@@ -1,0 +1,6 @@
+{
+  "expectError": true,
+  "config": {
+    "external": ["./lib.js"]
+  }
+}

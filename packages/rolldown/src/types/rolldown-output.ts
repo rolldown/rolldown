@@ -31,6 +31,8 @@ export interface SourceMap {
   sourcesContent: string[];
   version: number;
   debugId?: string;
+  ignoreList?: number[];
+  /** @deprecated Use `ignoreList` instead. */
   x_google_ignoreList?: number[];
   toString(): string;
   toUrl(): string;
@@ -140,4 +142,11 @@ export interface RolldownOutput extends ExternalMemoryHandle {
    * {@linkcode OutputChunk} and/or {@linkcode OutputAsset}s.
    */
   output: [OutputChunk, ...(OutputChunk | OutputAsset)[]];
+  /**
+   * The updated property-name cache. Present when `minify.mangleProps` runs.
+   *
+   * This contains the input cache and any generated mappings. Pass it to a later
+   * `minify.mangleProps.cache` to reuse the same mappings.
+   */
+  mangleCache?: Record<string, string | false>;
 }

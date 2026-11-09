@@ -4,7 +4,7 @@ use std::ops::{BitOr, BitOrAssign};
 use bitflags::bitflags;
 use oxc::ast::ast::{
   self, Argument, AssignmentTarget, BindingPattern, CallExpression, ChainElement, Expression,
-  IdentifierReference, SpreadElement, UnaryOperator, VariableDeclarationKind,
+  IdentifierReference, LogicalOperator, SpreadElement, UnaryOperator, VariableDeclarationKind,
 };
 use oxc::ast::match_member_expression;
 use oxc::ast_visit::{VisitJs, walk_js};
@@ -13,7 +13,7 @@ use oxc::transformer::EngineTargets;
 use oxc_ecmascript::side_effects::{
   MayHaveSideEffects, MayHaveSideEffectsContext, PropertyReadSideEffects,
 };
-use oxc_ecmascript::{DetermineValueType, GlobalContext, ValueType};
+use oxc_ecmascript::{DetermineValueType, GlobalContext, ToBoolean, ValueType};
 use rolldown_common::{
   AstScopes, ConstExportMeta, ConstantValue, FlatOptions, SharedNormalizedBundlerOptions,
   StmtEvalFlags,
@@ -217,6 +217,22 @@ impl<'a> StmtEvalAnalyzer<'a> {
       self.read_constant.set(true);
     }
     value
+  }
+
+  /// The truthiness of a test that reads a constant from `constant_symbols`, as in `if (DEV)` or
+  /// `!DEV && warn()`. The analysis then skips the branch that never runs, like Rollup's
+  /// `IfStatement.hasEffects`.
+  fn known_truthiness(&self, test: &Expression) -> Option<bool> {
+    match test.without_parentheses() {
+      Expression::Identifier(ident) => {
+        let value = self.constant_value_for_reference_id(ident.reference_id.get()?)?;
+        oxc_ecmascript::ConstantValue::from(value).to_boolean(self)
+      }
+      Expression::UnaryExpression(unary) if unary.operator == UnaryOperator::LogicalNot => {
+        self.known_truthiness(&unary.argument).map(|value| !value)
+      }
+      _ => None,
+    }
   }
 
   /// Check if a call expression has been marked pure by cross-module optimization.
@@ -507,10 +523,23 @@ impl<'a> StmtEvalAnalyzer<'a> {
       ),
       Expression::SequenceExpression(s) => self.fold_compound(expr, &s.expressions),
       Expression::TemplateLiteral(t) => self.fold_compound(expr, &t.expressions),
-      Expression::ConditionalExpression(c) => {
-        self.fold_compound(expr, [&c.test, &c.consequent, &c.alternate])
+      Expression::ConditionalExpression(c) => match self.known_truthiness(&c.test) {
+        Some(true) => self.analyze_expr(&c.test) | self.analyze_expr(&c.consequent),
+        Some(false) => self.analyze_expr(&c.test) | self.analyze_expr(&c.alternate),
+        None => self.fold_compound(expr, [&c.test, &c.consequent, &c.alternate]),
+      },
+      Expression::LogicalExpression(e) => {
+        let short_circuits = match e.operator {
+          LogicalOperator::And => self.known_truthiness(&e.left) == Some(false),
+          LogicalOperator::Or => self.known_truthiness(&e.left) == Some(true),
+          LogicalOperator::Coalesce => false,
+        };
+        if short_circuits {
+          self.analyze_expr(&e.left)
+        } else {
+          self.fold_compound(expr, [&e.left, &e.right])
+        }
       }
-      Expression::LogicalExpression(e) => self.fold_compound(expr, [&e.left, &e.right]),
       Expression::BinaryExpression(e) => self.fold_compound(expr, [&e.left, &e.right]),
       Expression::UnaryExpression(e) => self.fold_compound(expr, [&e.argument]),
 
@@ -744,9 +773,15 @@ impl<'a> StmtEvalAnalyzer<'a> {
         self.analyze_expr(&while_stmt.test) | self.analyze_stmt_inner(&while_stmt.body)
       }
       Statement::IfStatement(if_stmt) => {
-        self.analyze_expr(&if_stmt.test)
-          | self.analyze_stmt_inner(&if_stmt.consequent)
-          | if_stmt.alternate.as_ref().map(|s| self.analyze_stmt_inner(s)).unwrap_or_default()
+        let test = self.analyze_expr(&if_stmt.test);
+        let consequent = || self.analyze_stmt_inner(&if_stmt.consequent);
+        let alternate =
+          || if_stmt.alternate.as_ref().map(|s| self.analyze_stmt_inner(s)).unwrap_or_default();
+        match self.known_truthiness(&if_stmt.test) {
+          Some(true) => test | consequent(),
+          Some(false) => test | alternate(),
+          None => test | consequent() | alternate(),
+        }
       }
       // This walk never enters a function body, so every `return` here is a top-level `return`.
       // Dropping one that ends the module would run the statements after it.
@@ -1181,6 +1216,44 @@ impl<'ast> VisitJs<'ast> for ConstantTrustFinder<'_, '_> {
   fn visit_new_expression(&mut self, it: &ast::NewExpression<'ast>) {
     self.found |= self.analyzer.is_global_callee(&it.callee);
     walk_js::walk_new_expression(self, it);
+  }
+
+  // The analysis skips a branch that never runs, so a construct there cannot have been trusted.
+  fn visit_if_statement(&mut self, it: &ast::IfStatement<'ast>) {
+    self.visit_expression(&it.test);
+    let known = self.analyzer.known_truthiness(&it.test);
+    if known != Some(false) {
+      self.visit_statement(&it.consequent);
+    }
+    if let Some(alternate) = &it.alternate
+      && known != Some(true)
+    {
+      self.visit_statement(alternate);
+    }
+  }
+
+  fn visit_conditional_expression(&mut self, it: &ast::ConditionalExpression<'ast>) {
+    self.visit_expression(&it.test);
+    let known = self.analyzer.known_truthiness(&it.test);
+    if known != Some(false) {
+      self.visit_expression(&it.consequent);
+    }
+    if known != Some(true) {
+      self.visit_expression(&it.alternate);
+    }
+  }
+
+  fn visit_logical_expression(&mut self, it: &ast::LogicalExpression<'ast>) {
+    let short_circuits = match it.operator {
+      LogicalOperator::And => self.analyzer.known_truthiness(&it.left) == Some(false),
+      LogicalOperator::Or => self.analyzer.known_truthiness(&it.left) == Some(true),
+      LogicalOperator::Coalesce => false,
+    };
+    if short_circuits {
+      self.visit_expression(&it.left);
+    } else {
+      walk_js::walk_logical_expression(self, it);
+    }
   }
 }
 

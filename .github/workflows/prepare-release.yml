@@ -74,6 +74,19 @@ jobs:
           mkdir -p target
           cargo release-oxc update --release crates --version ${VERSION}
 
+      # `cargo release-oxc update` writes `version = "X"`, which Cargo reads as `^X`. The
+      # rolldown crates do not follow semver, so a crate published from a vX.Y branch would
+      # build against a newer minor of its siblings. Pin them to each other with `=X`.
+      - name: Pin crate versions to each other
+        run: |
+          perl -pi -e 's/^([a-z_]+ = \{ version = ")\Q$ENV{VERSION}\E(", path = "crates\/)/$1=$ENV{VERSION}$2/' Cargo.toml
+          pinned=$(grep -cF "{ version = \"=${VERSION}\", path = \"crates/" Cargo.toml || true)
+          if [ "$pinned" -eq 0 ]; then
+            echo "::error::No crate in Cargo.toml was pinned to =${VERSION}"
+            exit 1
+          fi
+          echo "Pinned ${pinned} crates to =${VERSION}"
+
       - name: Update Cargo.lock after crate bump
         run: cargo check
 

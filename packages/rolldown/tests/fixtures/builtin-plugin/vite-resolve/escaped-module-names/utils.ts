@@ -6,11 +6,10 @@ export const peerDep = `peer${specialCharacters}`;
 export const parentDep = `parent${specialCharacters}`;
 export const peerModuleId = `__vite-optional-peer-dep:${peerDep}:${parentDep}`;
 
-export function createResolver(root: string, isBundled: boolean, isProduction = false) {
+export function createResolver(root: string, isBuild: boolean, isProduction = false) {
   return viteResolvePlugin({
     resolveOptions: {
-      isBuild: isBundled,
-      isBundled,
+      isBuild,
       isProduction,
       asSrc: false,
       preferRelative: false,

@@ -6,6 +6,7 @@ export default defineTest({
   config: {
     input: peerModuleId,
     output: { entryFileNames: 'main.js' },
+    experimental: { attachDebugInfo: 'none' },
     plugins: [
       {
         name: 'resolve-optional-peer-dep-fixture',

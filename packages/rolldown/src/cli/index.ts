@@ -29,9 +29,6 @@ async function main() {
     }
   }
 
-  // Binding-backed modules read runtime environment variables during module initialization.
-  const { bundleWithCliOptions, bundleWithConfig } = await import('./commands/bundle');
-
   if (cliOptions.help) {
     showHelp();
     return;
@@ -41,6 +38,9 @@ async function main() {
     logger.log(`rolldown v${version}`);
     return;
   }
+
+  // Binding-backed modules read runtime environment variables during module initialization.
+  const { bundleWithCliOptions, bundleWithConfig } = await import('./commands/bundle');
 
   if (cliOptions.config || cliOptions.config === '') {
     await bundleWithConfig(cliOptions.config, cliOptions, rawArgs);

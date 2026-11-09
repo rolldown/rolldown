@@ -1,4 +1,11 @@
 
+## [1.1.7] - 2026-11-09
+
+### 🐛 Bug Fixes
+
+- rolldown_plugin_vite_resolve: escape module names in generated error stubs (#11586)
+
+
 ## [1.1.6] - 2026-11-06
 
 ### ⚙️ Miscellaneous Tasks

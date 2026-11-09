@@ -22,6 +22,9 @@ jobs:
     permissions:
       contents: write # for create-pull-request
       pull-requests: write # for create-pull-request
+    env:
+      # No step needs a browser, and Playwright on v1.0 cannot install one on Ubuntu 26.04.
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -73,6 +76,19 @@ jobs:
         run: |
           mkdir -p target
           cargo release-oxc update --release crates --version ${VERSION}
+
+      # `cargo release-oxc update` writes `version = "X"`, which Cargo reads as `^X`. The
+      # rolldown crates do not follow semver, so a crate published from a vX.Y branch would
+      # build against a newer minor of its siblings. Pin them to each other with `=X`.
+      - name: Pin crate versions to each other
+        run: |
+          perl -pi -e 's/^([a-z_]+ = \{ version = ")\Q$ENV{VERSION}\E(", path = "crates\/)/$1=$ENV{VERSION}$2/' Cargo.toml
+          unpinned=$(grep -F 'path = ' Cargo.toml | grep -cF "version = \"${VERSION}\"" || true)
+          if [ "$unpinned" -ne 0 ]; then
+            echo "::error::${unpinned} crate(s) in Cargo.toml still use ^${VERSION}"
+            exit 1
+          fi
+          echo "Pinned $(grep -cF "version = \"=${VERSION}\"" Cargo.toml) crates to =${VERSION}"
 
       - name: Update Cargo.lock after crate bump
         run: cargo check

@@ -1266,3 +1266,50 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use std::sync::Arc;
+
+  use rolldown_common::{BundleMode, BundlerOptions, FlatOptions, ModuleId, ResolvedId};
+  use rolldown_fs::OsFileSystem;
+
+  use crate::{
+    BundleFactory, BundleFactoryOptions,
+    module_loader::task_context::{TaskContext, TaskContextMeta},
+  };
+
+  use super::{ExternalModuleTask, ModuleTask};
+
+  /// A module task that finishes after its build was dropped must not panic when it sends.
+  #[tokio::test]
+  async fn module_tasks_ignore_a_dropped_receiver() {
+    let mut factory = BundleFactory::new(BundleFactoryOptions {
+      bundler_options: BundlerOptions::default(),
+      disable_tracing_setup: true,
+      ..Default::default()
+    })
+    .expect("create bundle factory");
+    let bundle = factory.create_bundle(BundleMode::FullBuild, None).expect("create bundle");
+    // Drop the receiver at once, as a dropped build does.
+    let (tx, _) = tokio::sync::mpsc::unbounded_channel();
+    let ctx: Arc<TaskContext<OsFileSystem>> = Arc::new(TaskContext {
+      options: bundle.options,
+      tx,
+      resolver: bundle.resolver,
+      fs: bundle.fs,
+      plugin_driver: bundle.plugin_driver,
+      meta: TaskContextMeta { replace_global_define_config: None },
+    });
+
+    let normal = ResolvedId { id: ModuleId::new_empty("empty"), ..Default::default() };
+    let flat_options = FlatOptions::from_shared_options(&ctx.options);
+    ModuleTask::new(Arc::clone(&ctx), 0.into(), normal, None, false, None, flat_options, None)
+      .run()
+      .await;
+
+    let external =
+      ResolvedId { id: ModuleId::new("external"), external: true.into(), ..Default::default() };
+    ExternalModuleTask::new(Arc::clone(&ctx), 1.into(), external, Arc::new(vec![])).run().await;
+  }
+}

@@ -111,7 +111,7 @@ function createInput(name: string, onTestFinished: (fn: () => void) => void) {
   return { input, outDir: path.join(dir, 'dist') };
 }
 
-// Fails the test instead of a hang until the test timeout.
+// This function fails the test after 5 s, so that the test does not hang until its timeout.
 function withTimeout<T>(promise: Promise<T>, what: string): Promise<T> {
   return Promise.race([
     promise,

@@ -61,8 +61,9 @@ impl WatcherEventHandler for NapiWatcherEventHandler {
 pub struct BindingWatcher {
   inner: Arc<rolldown_watcher::Watcher>,
   /// The JS functions of the options of each task. `close` requests their release. The close of
-  /// one event result (`BindingWatcherBundler::close`) does not: the next rebuilds still use them.
-  /// But a result close that still runs delays the release until it ends.
+  /// one event result (`BindingWatcherBundler::close`) does not request it, because the next
+  /// rebuilds still use the functions. But an event result close that still runs delays the
+  /// release until it ends.
   /// See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
   option_callbacks: SharedJsCallbackRelease,
 }

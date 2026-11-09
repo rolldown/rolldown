@@ -93,9 +93,9 @@ test('a second close does not run closeBundle again', async () => {
 // `bundle.close()` does not wait for a build that started before it. That build must still be
 // able to call the option functions, so the release waits until the build ends.
 test('a build that runs during close still calls the option functions', async () => {
-  // With the WASI binding, the close of the last open bundle stops the shared async runtime, also
-  // while a build is pending (https://github.com/rolldown/rolldown/issues/10639). This bundle stays
-  // open, so that the pending build can end.
+  // With the WASI binding, the close of the last open bundle stops the shared async runtime. It
+  // does this also while a build is pending (https://github.com/rolldown/rolldown/issues/10639).
+  // This bundle stays open, so that the pending build can end.
   const runtimeKeeper = await rolldown({ input });
   let buildStarted!: () => void;
   const started = new Promise<void>((resolve) => (buildStarted = resolve));

@@ -21,7 +21,8 @@ pub struct BindingWatchOption {
 }
 
 impl BindingWatchOption {
-  /// The close of the owner releases the `onInvalidate` function through `callbacks`.
+  /// The close of the owner of the options releases the `onInvalidate` function through
+  /// `callbacks`.
   pub fn into_watch_option(self, callbacks: &JsCallbackRelease) -> rolldown_common::WatchOption {
     let value = self;
     rolldown_common::WatchOption {
@@ -33,7 +34,8 @@ impl BindingWatchOption {
       on_invalidate: value.on_invalidate.map(|js_callback| {
         let js_callback = callbacks.track(js_callback);
         OnInvalidate::new(Arc::new(move |path| {
-          // After the release, the call does nothing: the callback returns nothing.
+          // After the release, this call does nothing. That is safe, because `onInvalidate`
+          // returns no value.
           js_callback.call_and_forget(
             FnArgs { data: (path.to_string(),) },
             ThreadsafeFunctionCallMode::Blocking,

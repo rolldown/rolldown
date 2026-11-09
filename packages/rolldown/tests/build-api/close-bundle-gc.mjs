@@ -1,9 +1,13 @@
-// Each case builds with a plugin whose `closeBundle` captures a marker, closes the build, and
-// drops every reference to it. After GC, no marker may stay alive. Each case except the control
-// makes JS hold a native object that keeps the options alive (cached or kept options, a kept
-// plugin context, a kept build object). Before the fix, the JS functions of the options were GC
-// roots, so that native object made a cycle that the GC could not free
-// (https://github.com/rolldown/rolldown/issues/11444).
+// Each case does these steps:
+// 1. It builds with a plugin whose `closeBundle` captures a marker.
+// 2. It closes the build.
+// 3. It returns. After that, the script keeps only a `WeakRef` to the marker.
+// After GC, the script checks that no marker is alive.
+//
+// Each case except the control makes JS hold a native object that keeps the options alive
+// (cached or kept options, a kept plugin context, a kept build object). Before the fix, the JS
+// functions of the options were GC roots. So that native object made a cycle that the GC could
+// not free (https://github.com/rolldown/rolldown/issues/11444).
 // See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -16,7 +20,7 @@ import { dev } from 'rolldown/experimental';
 assert(globalThis.gc, 'Run with --expose-gc');
 
 const input = path.join(import.meta.dirname, 'main.js');
-// Under the wasm binding, the dev engine close tears down the shared async runtime.
+// With the WASI binding, the close of the dev engine stops the shared async runtime.
 // See https://github.com/rolldown/rolldown/issues/10639.
 const isWasi = process.env.ROLLDOWN_WASI_TEST === '1';
 
@@ -139,8 +143,9 @@ const cases = {
     await assert.rejects(classic({ plugins: [plugin] }), /closeBundle failed/);
   },
   async 'close while a build still runs'(marker) {
-    // Under the wasm binding, the close of the last open bundle stops the shared async runtime,
-    // also while a build is pending. This bundle stays open, so that the pending build can end.
+    // With the WASI binding, the close of the last open bundle stops the shared async runtime.
+    // It does this also while a build is pending. This bundle stays open, so that the pending
+    // build can end.
     const runtimeKeeper = await rolldown({ input, logLevel: 'silent' });
     let buildStarted;
     const started = new Promise((resolve) => (buildStarted = resolve));
@@ -187,8 +192,8 @@ const cases = {
     await watcher.close();
   },
   async 'watch mode, watcher closes while an event result close runs'(marker) {
-    // Under the wasm binding, `watcher.close()` stops the shared async runtime when no other owner
-    // keeps it, also while an event result close is pending. This bundle keeps it.
+    // With the WASI binding, `watcher.close()` stops the shared async runtime when no other owner
+    // keeps it. It does this also while an event result close is pending. This bundle keeps it.
     const runtimeKeeper = await rolldown({ input, logLevel: 'silent' });
     let hookStarted;
     const started = new Promise((resolve) => (hookStarted = resolve));
@@ -246,8 +251,8 @@ const cases = {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rolldown-close-gc-'));
     try {
       const plugin = keepOptions('buildStart', marker);
-      // A plugin that holds the engine itself keeps the engine and its plugin hooks alive, and the
-      // release does not cover plugin hooks. So the hook reaches the engine only through a WeakRef.
+      // A plugin that holds the engine keeps the engine and its plugin hooks alive. The release
+      // does not cover plugin hooks. So this hook gets the engine only through a WeakRef.
       let engineRef;
       plugin.closeBundle = async () => {
         const running = engineRef.deref();

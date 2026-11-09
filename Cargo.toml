@@ -309,6 +309,11 @@ oxc_resolver = { version = "11.24.3", features = [
 oxc_resolver_napi = { version = "11.24.3", default-features = false, features = ["yarn_pnp"] }
 oxc_sourcemap = { version = "9.0.0" } # https://github.com/oxc-project/oxc-sourcemap
 
+[patch.crates-io]
+# Temporarily use https://github.com/oxc-project/oxc-sourcemap/pull/500.
+# Replace this pin with a released version once the optimization is published.
+oxc_sourcemap = { git = "https://github.com/oxc-project/oxc-sourcemap", rev = "2c4aa460f93ed81b4fe63ed0f206b2961f2bb327" }
+
 [profile.dev]
 # Minimal debug info to speed up local and CI builds.
 debug = "line-tables-only"

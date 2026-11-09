@@ -22,6 +22,9 @@ jobs:
     permissions:
       contents: write # for create-pull-request
       pull-requests: write # for create-pull-request
+    env:
+      # No step needs a browser, and Playwright on v1.0 cannot install one on Ubuntu 26.04.
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

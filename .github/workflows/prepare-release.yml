@@ -85,6 +85,11 @@ jobs:
             echo "::error::No crate in Cargo.toml was pinned to =${VERSION}"
             exit 1
           fi
+          unpinned=$(grep -F 'path = "crates/' Cargo.toml | grep -cF "version = \"${VERSION}\"" || true)
+          if [ "$unpinned" -ne 0 ]; then
+            echo "::error::${unpinned} crate(s) in Cargo.toml still use ^${VERSION}"
+            exit 1
+          fi
           echo "Pinned ${pinned} crates to =${VERSION}"
 
       - name: Update Cargo.lock after crate bump

@@ -1,0 +1,9 @@
+{
+  "config": {
+    "input": [{ "name": "index", "import": "./index.js" }],
+    "external": ["ext"],
+    "globals": { "ext": "Ext" }
+  },
+  "configVariants": [{ "format": "cjs" }, { "format": "iife" }],
+  "expectExecuted": false
+}

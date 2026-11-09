@@ -1,0 +1,9 @@
+{
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "external": ["node:path"],
+    "platform": "node"
+  },
+  "configVariants": [{ "format": "cjs" }],
+  "expectExecuted": false
+}

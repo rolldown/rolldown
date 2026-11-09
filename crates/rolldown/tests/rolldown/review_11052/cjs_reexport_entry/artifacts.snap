@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// b.js
+var import_cjs = (/* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.foo = "cjs-foo";
+})))();
+const foo$1 = "local";
+const bar = () => foo$1;
+// main.js
+var main_default = import_cjs.foo;
+var foo = import_cjs.foo;
+export { bar, main_default as default, foo };
+
+```

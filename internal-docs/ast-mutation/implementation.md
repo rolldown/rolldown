@@ -55,7 +55,7 @@ The main cross-pass side tables keyed by `NodeId` are:
 - `EcmaView::imports` - import declarations, export-from declarations, dynamic `import()` expressions, and recognized `require()` call expressions.
 - `EcmaView::dummy_record_set` - `require` identifier references that need the runtime helper rewrite.
 - `EcmaView::new_url_references` - `new URL('...', import.meta.url)` nodes mapped to asset import records.
-- `EcmaView::rolldown_file_url_references` and the generate stage's `ResolvedFileUrls` - `import.meta.ROLLDOWN_FILE_URL_<referenceId>` member expressions recorded at scan; `resolveFileUrl` hook results are keyed by `(ModuleIdx, NodeId)` for the finalizer's rewrite.
+- `EcmaView::rolldown_file_url_references` and the generate stage's `ResolvedFileUrls` - `import.meta.ROLLDOWN_FILE_URL_<referenceId>` member expressions recorded at scan; `resolveFileUrl` hook results are keyed by `(ChunkIdx, ModuleIdx, NodeId)`, the chunk being the file that prints the module, for the finalizer's rewrite.
 - `EcmaView::this_expr_replace_map` - top-level `this` expressions that should become `exports` or `undefined`.
 - `MemberExprRef::node_id` and `LinkingMetadata::resolved_member_expr_refs` - namespace/member-expression resolution from scan through link to finalization.
 - `EcmaView::namespace_in_checks` and `LinkingMetadata::folded_namespace_in_checks` - `'key' in ns` expressions on namespace imports, and the results the finalizer prints for the ones resolved at link time.

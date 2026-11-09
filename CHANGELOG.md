@@ -1,4 +1,20 @@
 
+## [1.2.18] - 2026-11-09
+
+### 🐛 Bug Fixes
+
+- rolldown_plugin_vite_resolve: escape module names in generated error stubs (#11585)
+- sourcemap: keep only traced sources and names in module sourcemaps (#11270) (#11587)
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update mimalloc-safe to 0.1.70 (#11593)
+- pick the Prepare Release target branch from the version (#11528)
+- run every OS on pushes to maintenance branches (#11523)
+- run CI on pushes to maintenance branches (#11519)
+- support patch releases from maintenance branches (#11514)
+
+
 ## [1.2.17] - 2026-11-06
 
 ### ⚙️ Miscellaneous Tasks

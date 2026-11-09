@@ -55,7 +55,7 @@ impl BindingBundler {
   ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingOutputs>>> {
     let NormalizedBindingOptions { config: normalized, callbacks } =
       Self::normalize_binding_options(options)?;
-    // Held until the build future ends. See `option_callbacks`.
+    // The build future keeps this hold until it ends. See `option_callbacks`.
     let hold = self.option_callbacks.hold_with_group(callbacks);
     if let Some(result) = Self::validate_hmr_not_allowed(&normalized, "generate") {
       return spawn_boxed_future(env, async move { Ok(result) });
@@ -109,7 +109,7 @@ impl BindingBundler {
   ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingOutputs>>> {
     let NormalizedBindingOptions { config: normalized, callbacks } =
       Self::normalize_binding_options(options)?;
-    // Held until the build future ends. See `option_callbacks`.
+    // The build future keeps this hold until it ends. See `option_callbacks`.
     let hold = self.option_callbacks.hold_with_group(callbacks);
     if let Some(result) = Self::validate_hmr_not_allowed(&normalized, "write") {
       return spawn_boxed_future(env, async move { Ok(result) });
@@ -162,7 +162,7 @@ impl BindingBundler {
   ) -> napi::Result<PromiseRaw<'env, BindingResult<()>>> {
     let NormalizedBindingOptions { config: normalized, callbacks } =
       Self::normalize_binding_options(options)?;
-    // Held until the build future ends. See `option_callbacks`.
+    // The build future keeps this hold until it ends. See `option_callbacks`.
     let hold = self.option_callbacks.hold_with_group(callbacks);
     if let Some(result) = Self::validate_hmr_not_allowed(&normalized, "scan") {
       return spawn_boxed_future(env, async move { Ok(result) });
@@ -212,9 +212,9 @@ impl BindingBundler {
     let handles = std::mem::take(&mut self.bundle_handles);
     let option_callbacks = self.option_callbacks.clone();
     spawn_boxed_future(env, async move {
-      // Request the release when this future ends: after `closeBundle` and after the plugin
-      // timings report, also when one of them fails. The release waits for the builds that still
-      // run.
+      // Request the release when this future ends. The end comes after `closeBundle` and after
+      // the plugin timings report. The request also runs when one of them fails. The release
+      // waits for the builds that still run.
       // See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
       let _release = RequestReleaseOnDrop(option_callbacks);
       let res = cleanup_fut.await;

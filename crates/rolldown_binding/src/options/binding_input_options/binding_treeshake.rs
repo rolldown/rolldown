@@ -62,7 +62,8 @@ pub struct BindingModuleSideEffectsRule {
 }
 
 impl BindingTreeshake {
-  /// The close of the bundle releases the `moduleSideEffects` function through `callbacks`.
+  /// The close of the owner of the options releases the `moduleSideEffects` function through
+  /// `callbacks`.
   pub fn into_treeshake_options(
     self,
     callbacks: &JsCallbackRelease,

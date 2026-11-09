@@ -140,7 +140,8 @@ where
 }
 
 /// The body of [`JsCallbackExt::invoke_eager`]. The returned future does not borrow `callback`
-/// (`use<Args, Ret>`), so a caller can drop or move `callback` after the call is queued.
+/// (`use<Args, Ret>`), so a caller can drop or move `callback` after this function queues the
+/// call.
 pub(crate) fn invoke_eager_on<Args, Ret>(
   callback: &JsCallback<Args, Ret>,
   args: Args,
@@ -155,7 +156,7 @@ where
     args,
     ThreadsafeFunctionCallMode::NonBlocking,
     move |ret, _| {
-      // The receiver may be gone; ignore it, as `call_async_catch` does.
+      // If the receiver is dropped, the send fails. Ignore that error, as `call_async_catch` does.
       let _ = sender.send(ret);
       Ok(())
     },

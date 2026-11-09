@@ -1799,8 +1799,9 @@ test.concurrent(
 );
 
 // `watcher.close()` can run while an event result close still runs `closeBundle`. Then the watcher
-// close does not wait for that hook, so it must not release the JS functions of the options before
-// the hook ends. See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
+// close does not wait for that hook. So it must not release the JS functions of the options
+// before the hook ends.
+// See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
 test.concurrent(
   'a pending event result close keeps the option functions until its closeBundle ends',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },

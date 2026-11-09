@@ -249,14 +249,15 @@ impl BindingDevEngine {
   #[napi(ts_return_type = "Promise<void>")]
   pub fn close<'env>(&self, env: &'env Env) -> napi::Result<PromiseRaw<'env, ()>> {
     let inner = Arc::clone(&self.inner);
-    // A repeated `DevEngine::close` returns at once, also from inside a `closeBundle` hook of the
-    // first close. So each call takes a hold before the spawn, and the release waits for the last
-    // hold: it runs when the first close ends. A wait in the repeated close would deadlock when
-    // `closeBundle` awaits `engine.close()`.
+    // A repeated `DevEngine::close` returns at once. This is also true inside a `closeBundle`
+    // hook of the first close. So each call takes a hold before the spawn. The release waits for
+    // the last hold, so it runs when the first close ends. The repeated close does not wait,
+    // because a wait deadlocks when `closeBundle` awaits `engine.close()`.
     let hold = self.option_callbacks.hold();
     let option_callbacks = self.option_callbacks.clone();
     spawn_boxed_future(env, async move {
-      // Locals drop in reverse order: the hold goes first, then the release request runs.
+      // Rust drops locals in reverse order. So the hold drops first, and then the release
+      // request runs.
       let _release = RequestReleaseOnDrop(option_callbacks);
       let _hold = hold;
       inner.close().await.map_err(|_e| napi::Error::from_reason("Failed to close dev engine"))?;

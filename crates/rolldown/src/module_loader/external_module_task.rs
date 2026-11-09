@@ -13,7 +13,7 @@ use rolldown_fs::FileSystem;
 
 use crate::ecmascript::ecma_module_view_factory::normalize_side_effects;
 
-use super::task_context::TaskContext;
+use super::task_context::{TaskContext, TaskMessageGuard};
 
 #[expect(clippy::rc_buffer)]
 pub struct ExternalModuleTask<Fs: FileSystem> {
@@ -37,11 +37,13 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
 
   #[tracing::instrument(name="ExternalModuleTask::run", level = "trace", skip_all, fields(module_id = %self.resolved_id.id))]
   pub async fn run(self) {
+    let guard = TaskMessageGuard::new(&self.ctx, self.resolved_id.id.clone());
     if let Err(errs) = self.run_inner().await {
       // The send fails only when the build was dropped before this task finished.
       // Then nothing reads the result, so ignore the error.
       let _ = self.ctx.tx.send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
     }
+    guard.mark_sent();
   }
 
   async fn run_inner(&self) -> BuildResult<()> {

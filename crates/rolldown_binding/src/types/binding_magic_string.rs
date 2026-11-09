@@ -11,8 +11,6 @@ use rolldown_utils::js_regex::{HybridMatch, HybridRegex};
 use serde::Serialize;
 use string_wizard::{MagicString, MagicStringOptions, SourceMapOptions, UpdateOptions};
 
-use super::external_memory_status::ExternalMemoryStatus;
-
 /// Internal representation preserving the original JS format (flat `[start, end]` vs nested
 /// `[[start, end], ...]`) so the getter returns the same shape the user passed in.
 #[derive(Clone)]
@@ -105,9 +103,7 @@ impl Utf16Mapping {
   }
 }
 
-/// `Default` builds the empty mapper `drop_inner` swaps in; every live mapper
-/// holds at least the end sentinel, so an empty one marks a released instance.
-#[derive(Clone, Default)]
+#[derive(Clone)]
 struct Utf16ToByteMapper {
   /// One entry per UTF-16 code unit, plus a sentinel at the end.
   /// Length = utf16_len + 1. Indexed directly by JS string index.
@@ -413,9 +409,9 @@ pub struct BindingMagicString<'a> {
   pub(crate) offset: i64,
   indent_exclusion_ranges: Option<IndentExclusionRanges>,
   ignore_list: bool,
-  /// Set once `sendMagicString` moved `inner` out or `dropInner` released it. The JS object
-  /// outlives both, so methods that touch `inner` must refuse instead of using the empty
-  /// `MagicString` left behind.
+  /// Set once `sendMagicString` has moved `inner` out to the native sourcemap channel.
+  /// The JS object outlives that move, so every method that touches `inner` has to refuse
+  /// rather than silently operate on the empty `MagicString` left behind.
   consumed: bool,
 }
 
@@ -427,17 +423,20 @@ impl<'a> BindingMagicString<'a> {
   pub(crate) fn take_inner(&mut self) -> napi::Result<MagicString<'a>> {
     self.ensure_live()?;
     self.consumed = true;
+    // Every method that reads the UTF-16 mapping table refuses a consumed instance, so free it
+    // now rather than when the JS wrapper is garbage collected: it holds 8 bytes per byte of the
+    // original source.
+    self.utf16_to_byte_mapper.entries = Vec::new();
     Ok(std::mem::take(&mut self.inner))
   }
 
-  /// Errors if this instance was already consumed by `sendMagicString` or released by
-  /// `dropInner`.
+  /// Errors if this instance was already consumed by `sendMagicString`.
   fn ensure_live(&self) -> napi::Result<()> {
     if self.consumed {
       return Err(napi::Error::from_reason(
-        "This MagicString is no longer usable: it was either already passed to \
-         `sendMagicString()` or released with `dropInner()`. Finish reading and editing it \
-         before sending or releasing it.",
+        "This MagicString was already passed to `sendMagicString()`, which moves its contents \
+         into the native sourcemap channel. Finish reading and editing it before returning it \
+         from the `transform` hook.",
       ));
     }
     Ok(())
@@ -463,28 +462,6 @@ impl BindingMagicString<'_> {
       ignore_list,
       consumed: false,
     }
-  }
-
-  /// Explicitly releases the native contents and UTF-16 mapping table without waiting for GC.
-  /// The instance becomes unusable. Safe to call repeatedly or after `sendMagicString()`;
-  /// already-sent contents remain valid. A small empty native allocation remains until GC.
-  ///
-  /// @experimental
-  #[napi(enumerable = false)]
-  pub fn drop_inner(&mut self) -> ExternalMemoryStatus {
-    // Not `consumed`: `sendMagicString` sets it but leaves the mapping table resident.
-    // Even an empty live source has an end sentinel, so an empty mapper marks an earlier drop.
-    if self.utf16_to_byte_mapper.entries.is_empty() {
-      return ExternalMemoryStatus {
-        freed: false,
-        reason: Some("Memory has already been freed".to_string()),
-      };
-    }
-    self.consumed = true;
-    self.inner = MagicString::default();
-    self.utf16_to_byte_mapper = Utf16ToByteMapper::default();
-    self.indent_exclusion_ranges = None;
-    ExternalMemoryStatus { freed: true, reason: None }
   }
 
   #[napi(getter)]

@@ -218,7 +218,12 @@ impl<'a> LinkStage<'a> {
               // when code splitting is disabled (`codeSplitting: false`).
               //
               // HotAccept is an HMR-only edge that should be filtered out here.
-              ImportKind::DynamicImport | ImportKind::Require | ImportKind::HotAccept => None,
+              // NewUrl references an emitted asset without executing its module, even with
+              // tree shaking disabled. See internal-docs/plugin-asset-module/implementation.md.
+              ImportKind::DynamicImport
+              | ImportKind::Require
+              | ImportKind::HotAccept
+              | ImportKind::NewUrl => None,
               _ => rec.resolved_module,
             })
             .collect();

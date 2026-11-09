@@ -38,7 +38,8 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
   #[tracing::instrument(name="ExternalModuleTask::run", level = "trace", skip_all, fields(module_id = %self.resolved_id.id))]
   pub async fn run(self) {
     if let Err(errs) = self.run_inner().await {
-      // A cancelled loader owner closes the receiver; a failed send is expected.
+      // The send fails only when the build was dropped before this task finished.
+      // Then nothing reads the result, so ignore the error.
       let _ = self.ctx.tx.send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
     }
   }
@@ -95,7 +96,8 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
       need_renormalize_render_path,
       attributes: resolved_id.attributes.clone(),
     }));
-    // A cancelled loader owner closes the receiver; a failed send is expected.
+    // The send fails only when the build was dropped before this task finished.
+    // Then nothing reads the result, so ignore the error.
     let _ = self.ctx.tx.send(msg);
     Ok(())
   }

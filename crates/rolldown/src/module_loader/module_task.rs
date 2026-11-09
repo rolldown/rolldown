@@ -88,7 +88,8 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
   pub async fn run(mut self) {
     if let Err(errs) = self.run_inner().await {
       self.ctx.plugin_driver.mark_context_load_modules_loaded(self.resolved_id.id.clone());
-      // A cancelled loader owner closes the receiver; a failed send is expected.
+      // The send fails only when the build was dropped before this task finished.
+      // Then nothing reads the result, so ignore the error.
       let _ = self.ctx.tx.send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
     }
   }
@@ -241,7 +242,8 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       tla_keyword_span,
     }));
 
-    // A cancelled loader owner closes the receiver; a failed send is expected.
+    // The send fails only when the build was dropped before this task finished.
+    // Then nothing reads the result, so ignore the error.
     let _ = self.ctx.tx.send(result);
 
     Ok(())

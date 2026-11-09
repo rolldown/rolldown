@@ -68,9 +68,9 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   /// Pre-resolved paths for external modules (always a `FxHashMap` variant).
   pub resolved_paths: Option<&'me PathsOutputOption>,
   /// Plugin-supplied replacements for `import.meta.ROLLDOWN_FILE_URL_*`, keyed by
-  /// `(module, NodeId of the member expression)`. Empty when no plugin implements the
+  /// `(file, module, NodeId of the member expression)`. Empty when no plugin implements the
   /// `resolveFileUrl` hook. The code is unparsed; this is the only place it is parsed.
-  pub resolved_file_urls: &'me FxHashMap<(ModuleIdx, NodeId), HookResolveFileUrlOutput>,
+  pub resolved_file_urls: &'me FxHashMap<(ChunkIdx, ModuleIdx, NodeId), HookResolveFileUrlOutput>,
   /// True if any module in the bundle has enum member values to inline.
   /// Allows skipping enum inlining checks in the hot visitor path for enum-free bundles.
   pub has_enum_inlining: bool,

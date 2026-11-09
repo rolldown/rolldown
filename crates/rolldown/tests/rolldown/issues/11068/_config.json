@@ -1,0 +1,9 @@
+{
+  "config": {
+    "experimental": {
+      "chunkOptimization": {
+        "mergeCommonChunks": true
+      }
+    }
+  }
+}

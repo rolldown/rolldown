@@ -1656,6 +1656,14 @@ export declare class BindingLoadPluginContext {
 
 export declare class BindingMagicString {
   constructor(source: string, options?: BindingMagicStringOptions | undefined | null)
+  /**
+   * Explicitly releases the native contents and UTF-16 mapping table without waiting for GC.
+   * The instance becomes unusable. Safe to call repeatedly or after `sendMagicString()`;
+   * already-sent contents remain valid. A small empty native allocation remains until GC.
+   *
+   * @experimental
+   */
+  dropInner(): ExternalMemoryStatus
   get original(): string
   get filename(): string | null
   get indentExclusionRanges(): Array<Array<number>> | Array<number> | null

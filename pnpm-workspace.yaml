@@ -16,16 +16,12 @@ packages:
   - '!examples/yarn-pnp'
 
 allowBuilds:
-  better-sqlite3: true
+  better-sqlite3: false
   esbuild: true
   playwright-chromium: true
   sharp: true
   vue-demi: true
   workerd: true
-
-overrides:
-  # 12.10 dropped the Node 20 prebuilds, which the CI matrix still covers
-  better-sqlite3: 12.9.0
 
 catalog:
   '@babel/core': ^7.29.7

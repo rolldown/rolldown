@@ -11,8 +11,7 @@ use oxc::{
   span::{SPAN, Span},
 };
 use rolldown_common::{
-  EcmaModuleAstUsage, ExportsKind, OutputFormat, Platform, StmtInfoIdx, SymbolRef,
-  ThisExprReplaceKind, WrapKind,
+  EcmaModuleAstUsage, ExportsKind, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind,
 };
 use rolldown_ecmascript_utils::{
   EsmWrapperBodyKind, EsmWrapperCallKind, EsmWrapperDeclKind, EsmWrapperStmtOptions,
@@ -73,24 +72,12 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     program.body.push(Statement::new_expression_statement(SPAN, call, self));
   }
 
+  /// Under ESM output for `platform: 'node'`, the CJS closure of a CommonJS module declares the
+  /// `__dirname` and `__filename` that the module reads. See internal-docs/renaming/design.md
+  /// (principle 7).
   fn should_shim_cjs_ambient_paths(&self) -> bool {
-    matches!(
-      (self.ctx.options.platform, &self.ctx.options.format),
-      (Platform::Node, OutputFormat::Esm)
-    ) && self.ctx.module.exports_kind.is_commonjs()
-  }
-
-  fn cjs_ambient_path_root_var(&self, name: &str) -> Option<oxc::semantic::SymbolId> {
-    let scoping = self.scope.scoping();
-    let symbol_id = scoping.get_binding(scoping.root_scope_id(), name.into())?;
-    let flags = scoping.symbol_flags(symbol_id);
-    (flags.is_function_scoped_declaration() && !flags.is_function() && !flags.is_import())
-      .then_some(symbol_id)
-  }
-
-  fn is_cjs_ambient_path_reference(&self, id_ref: &ast::IdentifierReference<'ast>) -> bool {
-    self.should_shim_cjs_ambient_paths()
-      && CJS_AMBIENT_PATHS.iter().any(|(name, _)| id_ref.name == *name)
+    self.ctx.options.is_esm_format_with_node_platform()
+      && self.ctx.module.exports_kind.is_commonjs()
   }
 
   fn prepend_cjs_ambient_path_bindings(
@@ -102,21 +89,11 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     }
 
     for (name, property) in CJS_AMBIENT_PATHS {
-      let scoping = self.scope.scoping();
-      let binding_name = if let Some(symbol_id) = self.cjs_ambient_path_root_var(name) {
-        // A top-level `var` redeclares Node's wrapper parameter instead of shadowing it.
-        self.canonical_name_for((self.ctx.idx, symbol_id).into())
-      } else if scoping.get_binding(scoping.root_scope_id(), name.into()).is_some() {
-        // A lexical or function declaration shadows Node's wrapper binding.
+      // Only an undeclared read gets the local. The chunk reserves each unresolved name, so this
+      // local captures no other reference.
+      if !self.scope.scoping().root_unresolved_references().contains_key(name) {
         continue;
-      } else if scoping.root_unresolved_references().contains_key(name)
-        || self.ctx.module.meta.has_eval()
-      {
-        // Direct eval can access CommonJS wrapper bindings without a static reference.
-        name
-      } else {
-        continue;
-      };
+      }
 
       let init = ast::Expression::new_static_member_expression(
         SPAN,
@@ -125,7 +102,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
         false,
         self,
       );
-      statements.push(Statement::new_var_decl(binding_name, init, self));
+      statements.push(Statement::new_var_decl(name, init, self));
     }
   }
 
@@ -550,17 +527,6 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   }
 
   fn visit_expression(&mut self, expr: &mut ast::Expression<'ast>) {
-    if let ast::Expression::UnaryExpression(unary_expr) = expr
-      && unary_expr.operator == ast::UnaryOperator::Delete
-      && let ast::Expression::Identifier(id_ref) = unary_expr.argument.without_parentheses()
-      && self.is_cjs_ambient_path_reference(id_ref)
-    {
-      // Sloppy CJS permits deleting a wrapper binding and evaluates it to false. The equivalent
-      // unqualified delete would be an early error in ESM output.
-      *expr = ast::Expression::new_boolean_literal(unary_expr.span, false, self);
-      return;
-    }
-
     // Handle keep_names for named class/function expressions in any expression context
     // (return statements, function args, array elements, etc.)
     if self.ctx.options.keep_names && self.ctx.runtime.id() != self.ctx.idx {

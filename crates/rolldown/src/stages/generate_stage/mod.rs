@@ -265,7 +265,6 @@ impl<'a> GenerateStage<'a> {
             self.link_output,
             &order_state,
             self.options.format,
-            self.options.platform,
             &index_chunk_id_to_name,
             chunk_assignments,
             inline_naming_inputs.get(&chunk_idx),

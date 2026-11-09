@@ -18,7 +18,7 @@ use crate::{
 use arcstr::ArcStr;
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, GetLocalDb, ImportKind, ModuleIdx, NormalModule, OutputFormat,
-  Platform, StmtInfo, SymbolRef, WrapKind,
+  StmtInfo, SymbolRef, WrapKind,
 };
 use rolldown_utils::{concat_string, ecmascript::legitimize_identifier_name};
 use rustc_hash::FxHashMap;
@@ -40,29 +40,6 @@ pub struct InlineNamingInput {
   pub factories: Vec<(ChunkIdx, Vec<(ChunkIdx, ArcStr)>)>,
 }
 
-fn reserve_cjs_eval_ambient_paths(
-  renamer: &mut Renamer<'_>,
-  modules: &[ModuleIdx],
-  link_output: &LinkStageOutput,
-  format: OutputFormat,
-  platform: Platform,
-) {
-  if !matches!((platform, format), (Platform::Node, OutputFormat::Esm))
-    || !modules.iter().copied().any(|idx| {
-      link_output.module_table[idx]
-        .as_normal()
-        .is_some_and(|module| module.exports_kind.is_commonjs() && module.meta.has_eval())
-    })
-  {
-    return;
-  }
-
-  // Eval-only references are invisible to unresolved-reference reservation, but the finalizer
-  // still emits these exact wrapper-local names for CommonJS path bindings.
-  renamer.reserve(CompactStr::new("__dirname"));
-  renamer.reserve(CompactStr::new("__filename"));
-}
-
 /// Give names to the bindings of one chunk. See internal-docs/renaming/implementation.md.
 ///
 /// `inline` is `Some` for a file that reads the records of inline common chunks (see
@@ -75,7 +52,6 @@ pub fn deconflict_chunk_symbols(
   link_output: &LinkStageOutput,
   order_wrap_state: &OrderWrapState,
   format: OutputFormat,
-  platform: Platform,
   index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
   chunk_assignments: ChunkAssignments<'_>,
   inline: Option<&InlineNamingInput>,
@@ -97,7 +73,6 @@ pub fn deconflict_chunk_symbols(
   );
   let mut renamer = Renamer::new(&link_output.symbol_db, format, inner_binding_names);
   reserve_fixed_names(&mut renamer, modules, link_output, format);
-  reserve_cjs_eval_ambient_paths(&mut renamer, modules, link_output, format, platform);
 
   if matches!(format, OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Cjs) {
     // deconflict iife introduce symbols by external

@@ -3,8 +3,8 @@ import assert from 'node:assert';
 // On-demand routing gives the entry direct ownership of `init_definer` and does not leave a
 // duplicate direct-wrapper reference on the forwarder's non-empty retained path. That avoids a
 // phantom A -> B edge and the artificial cycle it would close with B's CJS import from A.
-// Wrap-all keeps the conservative wrapper route and safely defers the carrier read. Both modes
-// must observe initialized values.
+// Wrap-all gives the entry the same direct call and defers the carrier read through
+// `init_eagerhaz`. Both modes must observe initialized values.
 await import('./dist/main.js');
 
 assert.strictEqual(

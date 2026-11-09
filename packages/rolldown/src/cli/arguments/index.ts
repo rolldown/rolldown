@@ -1,9 +1,9 @@
 import cac from 'cac';
-import { getCliSchemaInfo } from '../../utils/validator';
-import { logger } from '../logger';
-import { alias, type CliOptions } from './alias';
-import { normalizeCliOptions, type NormalizedCliOptions } from './normalize';
-import { camelCaseToKebabCase } from './utils';
+import { getCliSchemaInfo } from '../../utils/validator.ts';
+import { logger } from '../logger.ts';
+import { alias, type CliOptions } from './alias.ts';
+import { normalizeCliOptions, type NormalizedCliOptions } from './normalize.ts';
+import { camelCaseToKebabCase } from './utils.ts';
 
 const schemaInfo = getCliSchemaInfo();
 
@@ -158,7 +158,9 @@ export function parseCliArguments(): NormalizedCliOptions & {
   // Post-processing
 
   // CAC collects arguments behind `--` in a separate `--` key.
-  // This is unknown to the bundler.
+  // Preserve them as positionals before removing the parser-specific key.
+  // See internal-docs/cli/implementation.md.
+  parsedInput.push(...parsedOptions['--']);
   delete parsedOptions['--'];
 
   // Remove short-alias keys (cac/mri duplicates them alongside the full name)

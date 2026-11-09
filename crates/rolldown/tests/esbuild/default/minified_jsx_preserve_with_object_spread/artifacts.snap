@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.jsx
+// entry.jsx
 before, key, value, value, after;
 <Foo before {...{ [key]: value }} {...{ key: value }} after />;
 <Bar {...{
@@ -15,6 +15,5 @@ before, key, value, value, after;
 	...d,
 	e
 }} />;
-//#endregion
 
 ```

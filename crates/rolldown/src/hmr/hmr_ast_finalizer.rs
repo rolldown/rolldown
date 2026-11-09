@@ -13,6 +13,7 @@ use oxc::{
 use oxc::ast::builder::{AstBuilder, GetAstBuilder};
 use rolldown_common::{
   ExternalModule, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx, NormalModule,
+  is_lazy_proxy,
 };
 use rolldown_ecmascript::CJS_REQUIRE_REF_STR;
 use rolldown_ecmascript_utils::{
@@ -20,7 +21,7 @@ use rolldown_ecmascript_utils::{
   StatementFactoryExt as _,
 };
 use rolldown_utils::{
-  ecmascript::is_validate_identifier_name,
+  ecmascript::{is_validate_identifier_name, property_access_str},
   indexmap::{FxIndexMap, FxIndexSet},
 };
 use rustc_hash::FxHashMap;
@@ -36,6 +37,7 @@ pub struct HmrAstFinalizer<'me, 'ast> {
 
   // Each module has a unique index, which is used to generate something that needs to be unique.
   pub unique_index: usize,
+  pub stamp: u32,
 
   // --- Internal state
   /// For
@@ -95,7 +97,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
             ast::ImportDeclarationSpecifier::ImportSpecifier(import_specifier) => {
               self.import_bindings.insert(
                 import_specifier.local.symbol_id(),
-                format!("{binding_name}.{}", import_specifier.imported.name()),
+                property_access_str(&binding_name, &import_specifier.imported.name()),
               );
             }
             ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(import_default_specifier) => {
@@ -348,40 +350,12 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
   }
 
   pub fn rewrite_hot_accept_call_deps(&self, call_expr: &mut ast::CallExpression<'ast>) {
-    // Check whether the callee is `import.meta.hot.accept`.
-    if !call_expr.callee.is_import_meta_hot_accept() {
-      return;
-    }
-
-    if call_expr.arguments.is_empty() {
-      // `import.meta.hot.accept()`
-      return;
-    }
-
-    match &mut call_expr.arguments[0] {
-      ast::Argument::StringLiteral(string_literal) => {
-        // `import.meta.hot.accept('./dep.js', ...)`
-        let import_record = &self.module.import_records
-          [self.module.hmr_info.module_request_to_import_record_idx[string_literal.value.as_str()]];
-        let Some(module_idx) = import_record.resolved_module else { return };
-        // Use stable module ID for consistent runtime lookup
-        string_literal.value = Str::from_str_in(self.modules[module_idx].stable_id(), self);
-      }
-      ast::Argument::ArrayExpression(array_expression) => {
-        // `import.meta.hot.accept(['./dep1.js', './dep2.js'], ...)`
-        array_expression.elements.iter_mut().for_each(|element| {
-          if let ast::ArrayExpressionElement::StringLiteral(string_literal) = element {
-            let import_record =
-              &self.module.import_records[self.module.hmr_info.module_request_to_import_record_idx
-                [string_literal.value.as_str()]];
-            let Some(module_idx) = import_record.resolved_module else { return };
-            // Use stable module ID for consistent runtime lookup
-            string_literal.value = Str::from_str_in(self.modules[module_idx].stable_id(), self);
-          }
-        });
-      }
-      _ => {}
-    }
+    crate::hmr::utils::rewrite_hot_accept_deps(
+      call_expr,
+      self.module,
+      self.modules,
+      &self.ast_builder,
+    );
   }
 
   pub fn rewrite_import_meta_hot(&self, expr: &mut ast::Expression<'ast>) {
@@ -545,17 +519,31 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         let name = scoping.symbol_name(named_export.local_binding);
         Expression::new_id_ref_expr(SPAN, name, self)
       };
-      // Use computed property syntax for non-identifier export names (e.g., 'rolldown:exports')
+      // Use computed property syntax for non-identifier export names (e.g., 'a-b')
       let computed = !is_validate_identifier_name(exported.as_str());
       ObjectPropertyKind::new_lazy_export_property(exported, expr, computed, self)
     }));
 
-    // construct `__export(ns_name, { prop_name: () => returned, ... })`
+    // The call is `__exportAll({ prop_name: () => returned, ... })`. For a module with
+    // `export * from`, the call is `__exportAll({ ... }, 2)`. `__exportAll` creates an object
+    // that accepts no new properties. Later, `__reExport` adds the exports of each
+    // `export * from` source to this object. The flag `2` keeps the object open (it accepts new
+    // properties).
+    // See internal-docs/runtime-helpers/implementation.md
+    let obj_arg =
+      ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.ast_builder.allocator()));
+    let args = if self.re_export_all_dependencies.is_empty() {
+      oxc::allocator::Vec::from_iter_in([obj_arg], self)
+    } else {
+      let open_flag =
+        ast::Argument::new_numeric_literal(SPAN, 2.0, None, ast::NumberBase::Decimal, self);
+      oxc::allocator::Vec::from_iter_in([obj_arg, open_flag], self)
+    };
     let export_call_expr = ast::Expression::new_call_expression(
       SPAN,
       Expression::new_identifier(SPAN, "__rolldown_runtime__.__exportAll", self),
       None,
-      [ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.ast_builder.allocator()))],
+      args,
       false,
       self,
     );
@@ -585,14 +573,13 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       return;
     };
 
+    let is_node_mode = self.module.should_consider_node_esm_spec_for_dynamic_import();
+
     // TODO: hyf0 should switch to a more robust way to identify lazy proxy modules
-    if importee.id.contains("?rolldown-lazy=1") {
-      *it = create_request_lazy_call(&importee.id, &importee.stable_id, self);
+    if is_lazy_proxy(&importee.id) {
+      *it = create_request_lazy_call(&importee.id, &importee.stable_id, is_node_mode, self);
       return;
     }
-
-    // FIXME: consider about CommonJS interop
-    let is_importee_cjs = importee.exports_kind == rolldown_common::ExportsKind::CommonJs;
 
     // __rolldown_runtime__.loadExports('./foo.js')
     // Use stable module ID for consistent runtime lookup
@@ -610,28 +597,12 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       self,
     );
 
-    if is_importee_cjs {
-      let is_node_cjs = importee.def_format.is_commonjs();
-
-      let mut args =
-        oxc::allocator::Vec::from_value_in(ast::Argument::from(load_exports_call_expr), self);
-      if is_node_cjs {
-        args.push(ast::Argument::new_numeric_literal(
-          SPAN,
-          1.0,
-          None,
-          ast::NumberBase::Decimal,
-          self,
-        ));
-      }
-
-      // __rolldown_runtime__.__toDynamicImportESM(__rolldown_runtime__.loadExports('./foo.js'), node_mode)
-      load_exports_call_expr = ast::Expression::new_call_expression(
-        SPAN,
-        Expression::new_identifier(SPAN, "__rolldown_runtime__.__toDynamicImportESM", self),
-        None,
-        args,
-        false,
+    if importee.exports_kind.is_commonjs() {
+      // __rolldown_runtime__.__toESM(__rolldown_runtime__.loadExports('./foo.js')[, 1])
+      load_exports_call_expr = Expression::new_to_esm_wrapper(
+        Expression::new_identifier(SPAN, "__rolldown_runtime__.__toESM", self),
+        load_exports_call_expr,
+        is_node_mode,
         self,
       );
     }

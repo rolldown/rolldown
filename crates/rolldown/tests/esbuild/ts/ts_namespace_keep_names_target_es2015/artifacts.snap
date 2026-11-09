@@ -21,7 +21,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.ts
+// entry.ts
 let ns;
 (function(_ns) {
 	_ns.foo = () => {};
@@ -30,6 +30,5 @@ let ns;
 	class Baz {}
 	_ns.Baz = Baz;
 })(ns || (ns = {}));
-//#endregion
 
 ```

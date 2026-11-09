@@ -7,10 +7,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region dep.js
+// dep.js
 var dep_exports = /* @__PURE__ */ __exportAll({ a: () => 1 });
-//#endregion
-//#region main.js
+// main.js
 let called = false;
 function key() {
 	called = true;
@@ -18,6 +17,5 @@ function key() {
 }
 dep_exports[key()];
 if (!called) throw new Error("side effect in the computed namespace key was dropped");
-//#endregion
 
 ```

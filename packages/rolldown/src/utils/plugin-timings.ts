@@ -99,6 +99,8 @@ export interface PluginTimingsRecorder {
    * collision would silently merge two plugins' rows.
    */
   costs: Map<unknown, Map<string, HookCost>>;
+  /** This set prevents duplicate missing-label warnings across outputs. */
+  warnedMissingGroupLabels: Set<unknown>;
   /**
    * Wall time in which at least one measured callback ran: the union of every span, so
    * overlapping calls count once. The value cannot be more than the window the callbacks
@@ -126,6 +128,7 @@ export function pluginTimingsRecorderFor(key: object): PluginTimingsRecorder {
   if (recorder === undefined) {
     recorder = {
       costs: new Map(),
+      warnedMissingGroupLabels: new Set(),
       busyMs: 0,
       inFlight: 0,
       busyStart: 0,
@@ -247,8 +250,9 @@ export function measureHookCost<T extends (...args: never[]) => unknown>(
 }
 
 /**
- * The owner shown for user callbacks the core invokes directly rather than through a
- * plugin. One shared identity: they are all configured on the same options object.
+ * The shared owner for callbacks that users configure directly on the output options.
+ * Code-splitting groups use their group objects as owner keys. Each group then has separate
+ * timing rows.
  */
 export const OUTPUT_OPTIONS_OWNER: TimingOwner = {
   key: Symbol('output options'),

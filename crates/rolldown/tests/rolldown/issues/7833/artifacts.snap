@@ -6,10 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## imp.js
 
 ```js
-//#region imp.js
+// imp.js
 const imp = 1;
 const imp2 = 2;
-//#endregion
 export { imp, imp2 };
 
 ```
@@ -17,12 +16,11 @@ export { imp, imp2 };
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 const load = async () => {
 	const result = await import("./imp.js");
 	console.log(result.imp);
 };
 load();
-//#endregion
 
 ```

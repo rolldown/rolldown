@@ -1,0 +1,16 @@
+{
+  "config": {
+    "strictExecutionOrder": true,
+    "format": "cjs"
+  },
+  "configVariants": [
+    {
+      "_configName": "minified",
+      "minify": true
+    },
+    {
+      "_configName": "on-demand",
+      "onDemandWrapping": true
+    }
+  ]
+}

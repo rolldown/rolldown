@@ -32,7 +32,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 	// HIDDEN [\0rolldown/runtime.js]
 	quill = __toESM(quill);
-	//#region test.js
+	// test.js
 	var Editor = class {
 		constructor(quill$1) {
 			if (typeof quill.default != "undefined") throw new Error("Quill should not be shadowed by local quill");
@@ -40,7 +40,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 		}
 	};
 	new Editor({ default: "quill" });
-	//#endregion
 	exports.Editor = Editor;
 });
 

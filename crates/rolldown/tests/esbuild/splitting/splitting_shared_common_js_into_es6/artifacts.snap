@@ -7,10 +7,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as require_shared } from "./shared.js";
-//#region a.js
+// a.js
 const { foo } = require_shared();
 console.log(foo);
-//#endregion
 
 ```
 
@@ -18,10 +17,9 @@ console.log(foo);
 
 ```js
 import { t as require_shared } from "./shared.js";
-//#region b.js
+// b.js
 const { foo } = require_shared();
 console.log(foo);
-//#endregion
 
 ```
 
@@ -29,11 +27,10 @@ console.log(foo);
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region shared.js
+// shared.js
 var require_shared = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.foo = 123;
 }));
-//#endregion
 export { require_shared as t };
 
 ```

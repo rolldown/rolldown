@@ -172,6 +172,33 @@ If `math.js` is marked as side-effect-free, the output will be:
 console.log('main');
 ```
 
+::: details What about `import()`?
+
+The same applies to `import()`. If the imported module is marked as side-effect-free, the `import()` is at the top level of a module, and the value it resolves to is not used, Rolldown makes the `import()` resolve to an empty object without loading the module. This holds even when the module exports `then`, which resolving the `import()` would otherwise call.
+
+```js
+// lib.js (marked as side-effect-free)
+export function then(resolve) {
+  console.log('then');
+  resolve({});
+}
+
+// main.js
+import('./lib.js');
+console.log('main');
+```
+
+The output will be:
+
+```js
+Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
+console.log('main');
+```
+
+Here `lib.js` is left out of the bundle and the `import()` resolves to an empty object, so `then` never runs. `then` still runs when the value the `import()` resolves to is used, when the `import()` is inside a function, or when the module is not marked as side-effect-free.
+
+:::
+
 :::: warning This is conditional
 
 The statements are only treated as side-effect-free when none of the module's exports are used. If any export is used, side effects are preserved.

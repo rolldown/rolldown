@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// esm.js
+var esm_exports = /* @__PURE__ */ __exportAll({ v: () => 1 });
+var init_esm = __esmMin((() => {}));
+var main_default = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	var __toCommonJS = (mod) => "local";
+	module.exports = {
+		v: (init_esm(), __toCommonJS$1(esm_exports)).v,
+		local: __toCommonJS(1)
+	};
+})))())).default;
+export { main_default as default };
+
+```

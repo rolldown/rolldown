@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region main.js
+// main.js
 Promise.resolve().then(() => /* @__PURE__ */ __toESM(require(moduleName))).then(console.log);
 import(moduleName, { with: { type: "json" } }).then(console.log);
 import(
@@ -15,6 +15,5 @@ import(
 	"./ignored.js",
 	{ with: { type: "json" } }
 ).then(console.log);
-//#endregion
 
 ```

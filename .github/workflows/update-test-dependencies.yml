@@ -106,9 +106,9 @@ jobs:
           save-cache: false
 
       - if: steps.check-update.outputs.update_needed == 'true'
-        uses: voidzero-dev/setup-vp@49c3e4e92c52e7f8392712a9267bbe71c5ab30e5 # v1.19.0
+        uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
         with:
-          version: '0.2.1'
+          version: '1.0.0'
           cache: true
 
       - if: steps.check-update.outputs.update_needed == 'true'
@@ -126,6 +126,8 @@ jobs:
         with:
           client-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
 
       - name: Create Pull Request
         if: steps.check-update.outputs.update_needed == 'true'
@@ -226,9 +228,9 @@ jobs:
           save-cache: false
 
       - if: steps.check-update.outputs.update_needed == 'true'
-        uses: voidzero-dev/setup-vp@49c3e4e92c52e7f8392712a9267bbe71c5ab30e5 # v1.19.0
+        uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
         with:
-          version: '0.2.1'
+          version: '1.0.0'
           cache: true
 
       - name: Run Test
@@ -243,6 +245,8 @@ jobs:
         with:
           client-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
 
       - name: Create Pull Request
         if: steps.check-update.outputs.update_needed == 'true'
@@ -347,9 +351,9 @@ jobs:
           grep "const ESBUILD_VERSION = " scripts/src/esbuild-tests/urls.ts
 
       - if: steps.check-update.outputs.update_needed == 'true'
-        uses: voidzero-dev/setup-vp@49c3e4e92c52e7f8392712a9267bbe71c5ab30e5 # v1.19.0
+        uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
         with:
-          version: '0.2.1'
+          version: '1.0.0'
           cache: true
 
       - name: Generate esbuild tests
@@ -363,6 +367,8 @@ jobs:
         with:
           client-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
 
       - name: Create Pull Request
         if: steps.check-update.outputs.update_needed == 'true'

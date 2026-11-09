@@ -3,12 +3,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## main-BmqLIKka.js
+## main-BIwzFnSG.js
 
 ```js
-//#region main.js
+// main.js
 const foo = "bar";
-//#endregion
 export { foo };
 
 ```

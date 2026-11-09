@@ -21,10 +21,12 @@ pub mod circular_reexport;
 pub mod commonjs_variable_in_esm;
 pub mod configuration_field_conflict;
 pub mod could_not_clean_directory;
+pub mod deprecated_import_assertion;
 pub mod duplicate_shebang;
 pub mod empty_import_meta;
 pub mod eval;
 pub mod external_entry;
+pub mod external_module_conflict;
 pub mod file_not_found;
 pub mod filename_conflict;
 pub mod filename_outside_output_directory;
@@ -35,9 +37,12 @@ pub mod ineffective_dynamic_import;
 pub mod invalid_annotation;
 pub mod invalid_define_config;
 pub mod invalid_export_option;
+pub mod invalid_import_attribute;
 pub mod invalid_option;
+pub mod invalid_tla_format;
 pub mod json_parse;
 pub mod large_barrel_modules;
+pub mod lazy_barrel_unloaded_binding;
 pub mod missing_export;
 pub mod missing_global_name;
 pub mod missing_name_option_for_iife_export;
@@ -51,6 +56,7 @@ pub mod prefer_builtin_feature;
 pub mod require_tla;
 pub mod resolve_error;
 pub mod runtime_module_symbol_not_found;
+pub mod shimmed_export;
 pub mod sourcemap_broken;
 pub mod tsconfig_error;
 pub mod unhandleable_error;
@@ -78,6 +84,10 @@ pub trait BuildEvent: Sync + Send + AsAny + AsAnyMut {
   }
 
   fn exporter(&self) -> Option<String> {
+    None
+  }
+
+  fn binding(&self) -> Option<String> {
     None
   }
 
@@ -120,18 +130,15 @@ impl<T: 'static + BuildEvent> AsAnyMut for T {
   }
 }
 
-/// A Hybrid string type used for diagnostic, e.g.
-/// for `UnresolvedError`, a specifier could be either a slice from raw source, or
-/// created during ast transformation. When the specifier came from raw source, we could
-/// use the `Span` information to give user better DX, otherwise, we could just use the string to
-/// create a fallback message.
-/// ## Panic
-/// they type is only used for store information, user should check the span could be referenced
-/// the raw source, or the user side may panic.
+/// Specifier text for a resolve diagnostic, with an optional source span for the label.
+///
+/// `String` is an import inserted during transformation, so it has no span in the original
+/// source. `Span.text` is the specifier that was resolved. The span only locates the import
+/// and may cover an identifier rather than a quoted literal.
 #[derive(Debug)]
 pub enum DiagnosableArcstr {
   String(ArcStr),
-  Span(Span),
+  Span { span: Span, text: ArcStr },
 }
 
 // --- end

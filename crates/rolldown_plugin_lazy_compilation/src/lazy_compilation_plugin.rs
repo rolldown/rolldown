@@ -1,8 +1,7 @@
-use std::path::PathBuf;
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 
 use arcstr::ArcStr;
-use rolldown_common::{ImportKind, ModuleId};
+use rolldown_common::{ImportKind, LAZY_PROXY_QUERY, is_lazy_proxy, lazy_proxy_target};
 use rolldown_plugin::{HookResolveIdOutput, HookUsage, Plugin, PluginContextResolveOptions};
 use rolldown_utils::dashmap::FxDashSet;
 
@@ -24,14 +23,13 @@ impl LazyCompilationContext {
 pub struct LazyCompilationPlugin {
   lazy_entries: SharedLazyEntries,
   fetched_entries: SharedLazyEntries,
-  cwd: OnceLock<PathBuf>,
 }
 
 impl LazyCompilationPlugin {
   pub fn new() -> Self {
     let lazy_entries: SharedLazyEntries = Arc::new(FxDashSet::default());
     let fetched_entries: SharedLazyEntries = Arc::new(FxDashSet::default());
-    LazyCompilationPlugin { lazy_entries, fetched_entries, cwd: OnceLock::new() }
+    LazyCompilationPlugin { lazy_entries, fetched_entries }
   }
 
   pub fn context(&self) -> LazyCompilationContext {
@@ -48,16 +46,7 @@ impl Plugin for LazyCompilationPlugin {
   }
 
   fn register_hook_usage(&self) -> rolldown_plugin::HookUsage {
-    HookUsage::BuildStart | HookUsage::ResolveId | HookUsage::Load
-  }
-
-  async fn build_start(
-    &self,
-    _ctx: &rolldown_plugin::PluginContext,
-    args: &rolldown_plugin::HookBuildStartArgs<'_>,
-  ) -> rolldown_plugin::HookNoopReturn {
-    let _ = self.cwd.set(args.options.cwd.clone());
-    Ok(())
+    HookUsage::ResolveId | HookUsage::Load
   }
 
   async fn resolve_id(
@@ -67,21 +56,25 @@ impl Plugin for LazyCompilationPlugin {
   ) -> rolldown_plugin::HookResolveIdReturn {
     // Unknown proxy ids must fall through and stay unresolvable — that is what stops an
     // arbitrary id from being bundled (cf. `HmrStage::compile_lazy_entry`).
-    if args.specifier.ends_with("?rolldown-lazy=1") && self.lazy_entries.contains(args.specifier) {
+    if is_lazy_proxy(args.specifier) && self.lazy_entries.contains(args.specifier) {
       return Ok(Some(HookResolveIdOutput {
         id: args.specifier.into(),
         external: None,
         normalize_external_id: None,
         side_effects: None,
         package_json_path: None,
+        attributes: None,
       }));
     }
 
-    if matches!(args.kind, ImportKind::DynamicImport) {
+    // Lazy compilation does not support import attributes yet, so such an import is bundled as
+    // usual. Without `experimental.importAttributes`, hooks see no attributes, and the import is
+    // compiled lazily like any other.
+    if matches!(args.kind, ImportKind::DynamicImport) && args.attributes.is_empty() {
       // Without this the fetched template's `import($MODULE_ID)` would be given the proxy's
       // own id back, so the proxy would import itself and the real module never enter the graph.
       if let Some(importer) = args.importer {
-        if importer.contains("?rolldown-lazy=1") && self.fetched_entries.contains(importer) {
+        if is_lazy_proxy(importer) && self.fetched_entries.contains(importer) {
           return Ok(None);
         }
       }
@@ -95,16 +88,25 @@ impl Plugin for LazyCompilationPlugin {
             is_entry: false,
             skip_self: true,
             custom: std::sync::Arc::<rolldown_plugin::CustomField>::clone(&args.custom),
+            attributes: args.attributes.clone(),
           }),
         )
         .await??;
 
+      // An external has no factory in the dev runtime, so `requestLazy` cannot run it.
+      // Return `None` rather than this result: `HookResolveIdOutput` would drop fields
+      // such as `is_external_without_side_effects`.
+      // See internal-docs/lazy-compilation/implementation.md.
+      if original_id.external.is_external() {
+        return Ok(None);
+      }
+
       // `ctx.resolve` can re-enter this hook, so the id may already carry the marker. Appending
       // it twice would yield an id nothing else in the graph agrees on.
-      let lazy_id: ArcStr = if original_id.id.as_str().ends_with("?rolldown-lazy=1") {
+      let lazy_id: ArcStr = if is_lazy_proxy(original_id.id.as_str()) {
         original_id.id.as_str().into()
       } else {
-        format!("{}?rolldown-lazy=1", original_id.id).into()
+        format!("{}{LAZY_PROXY_QUERY}", original_id.id).into()
       };
       self.lazy_entries.insert(lazy_id.clone());
 
@@ -114,6 +116,7 @@ impl Plugin for LazyCompilationPlugin {
         normalize_external_id: None,
         side_effects: None,
         package_json_path: None,
+        attributes: None,
       }));
     }
 
@@ -125,54 +128,23 @@ impl Plugin for LazyCompilationPlugin {
     _ctx: rolldown_plugin::SharedLoadPluginContext,
     args: &rolldown_plugin::HookLoadArgs<'_>,
   ) -> rolldown_plugin::HookLoadReturn {
-    if args.id.contains("rolldown-lazy=1") {
-      if self.lazy_entries.contains(args.id) {
-        let original_id = args.id.split("?rolldown-lazy=1").next().unwrap_or(args.id);
-        let cwd = self
-          .cwd
-          .get()
-          .ok_or_else(|| anyhow::format_err!("CWD not set in LazyCompilationPlugin"))?;
-
-        let stable_id = ModuleId::new(original_id).stabilize(cwd);
-
-        let template = if self.fetched_entries.contains(args.id) {
-          include_str!("./proxy-module-template-fetched.js")
-        } else {
-          include_str!("./proxy-module-template.js")
-        };
-
-        let proxy_id = args.id;
-
-        let stable_proxy_id = format!("{stable_id}?rolldown-lazy=1");
-
-        let code =
-          render_proxy_template(template, proxy_id, &stable_id, &stable_proxy_id, original_id)?;
-        return Ok(Some(rolldown_plugin::HookLoadOutput {
-          code: ArcStr::from(code),
-          ..Default::default()
-        }));
-      }
+    let Some(module_id) = lazy_proxy_target(args.id) else { return Ok(None) };
+    if !self.lazy_entries.contains(args.id) {
+      return Ok(None);
     }
 
-    Ok(None)
+    let code = if self.fetched_entries.contains(args.id) {
+      render_proxy_template(include_str!("./proxy-module-template-fetched.js"), module_id)?
+    } else {
+      include_str!("./proxy-module-template.js").to_string()
+    };
+    Ok(Some(rolldown_plugin::HookLoadOutput { code: ArcStr::from(code), ..Default::default() }))
   }
 }
 
-// Replace placeholders in order: longer ones first to avoid partial matches
-fn render_proxy_template(
-  template: &str,
-  proxy_id: &str,
-  stable_id: &str,
-  stable_proxy_id: &str,
-  original_id: &str,
-) -> serde_json::Result<String> {
-  Ok(
-    template
-      .replace("$PROXY_MODULE_ID", &serde_json::to_string(proxy_id)?)
-      .replace("$STABLE_MODULE_ID", &serde_json::to_string(stable_id)?)
-      .replace("$STABLE_PROXY_MODULE_ID", &serde_json::to_string(stable_proxy_id)?)
-      .replace("$MODULE_ID", &serde_json::to_string(original_id)?),
-  )
+/// Quotes the id as a JSON string, so Windows backslashes stay escaped (#9102).
+fn render_proxy_template(template: &str, module_id: &str) -> serde_json::Result<String> {
+  Ok(template.replace("$MODULE_ID", &serde_json::to_string(module_id)?))
 }
 
 #[cfg(test)]
@@ -181,32 +153,14 @@ mod tests {
 
   #[test]
   fn windows_path() {
-    let proxy_id = r"D:\Users\foo\bar\baz.js?rolldown-lazy=1";
-    let stable_id = r"src\bar\baz.js";
-    let stable_proxy_id = r"src\bar\baz.js?rolldown-lazy=1";
-    let original_id = r"D:\Users\foo\bar\baz.js";
-
-    let template = "P=$PROXY_MODULE_ID;S=$STABLE_MODULE_ID;M=$MODULE_ID;";
     let rendered =
-      render_proxy_template(template, proxy_id, stable_id, stable_proxy_id, original_id).unwrap();
-
-    assert_eq!(
-      rendered,
-      r#"P="D:\\Users\\foo\\bar\\baz.js?rolldown-lazy=1";S="src\\bar\\baz.js";M="D:\\Users\\foo\\bar\\baz.js";"#
-    );
+      render_proxy_template("import($MODULE_ID);", r"D:\Users\foo\bar\baz.js").unwrap();
+    assert_eq!(rendered, r#"import("D:\\Users\\foo\\bar\\baz.js");"#);
   }
 
   #[test]
   fn unix_path() {
-    let id = "/Users/foo/bar.js?rolldown-lazy=1";
-    let rendered = render_proxy_template(
-      "$PROXY_MODULE_ID",
-      id,
-      "src/bar.js",
-      "src/bar.js?rolldown-lazy=1",
-      "/Users/foo/bar.js",
-    )
-    .unwrap();
-    assert_eq!(rendered, "\"/Users/foo/bar.js?rolldown-lazy=1\"");
+    let rendered = render_proxy_template("import($MODULE_ID);", "/Users/foo/bar.js").unwrap();
+    assert_eq!(rendered, r#"import("/Users/foo/bar.js");"#);
   }
 }

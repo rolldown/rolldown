@@ -6,12 +6,12 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'New version (e.g. 1.0.1)'
+        description: 'New version (e.g. 1.0.1). A version lower than npm latest is prepared on its vX.Y branch.'
         required: true
         type: string
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event.pull_request.number || github.sha }}
+  group: ${{ github.workflow }}-${{ inputs.version }}
   cancel-in-progress: true
 
 jobs:
@@ -25,16 +25,33 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0 # for changelog
+          fetch-depth: 0 # for changelog and the target branch
           persist-credentials: true # for create-pull-request
 
-      - uses: taiki-e/install-action@fa23953489c080190314742a9b907f8e97c6767c # v2.87.10
+      - name: Set version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: echo "VERSION=$INPUT_VERSION" >> "$GITHUB_ENV"
+
+      # Before the toolchain setup, so it uses the target branch's toolchain and lockfile.
+      - name: Switch to target branch
+        id: target
+        run: |
+          branch="$(node scripts/misc/release-line.mjs target --version "$VERSION")"
+          if ! git rev-parse --verify --quiet "refs/remotes/origin/${branch}" > /dev/null; then
+            echo "::error::v${VERSION} is released from ${branch}, which does not exist yet. See MAINTENANCE.md."
+            exit 1
+          fi
+          git switch "$branch"
+          echo "branch=${branch}" >> "$GITHUB_OUTPUT"
+
+      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
         with:
           tool: just
 
-      - uses: voidzero-dev/setup-vp@49c3e4e92c52e7f8392712a9267bbe71c5ab30e5 # v1.19.0
+      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
         with:
-          version: '0.2.1'
+          version: '1.0.0'
           cache: true
 
       - uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
@@ -42,10 +59,15 @@ jobs:
           cache-key: warm
           tools: cargo-release-oxc
 
-      - name: Set version
+      - name: Check version
         env:
-          INPUT_VERSION: ${{ inputs.version }}
-        run: echo "VERSION=$INPUT_VERSION" >> "$GITHUB_ENV"
+          TARGET_BRANCH: ${{ steps.target.outputs.branch }}
+        run: |
+          node scripts/misc/release-line.mjs prepare --branch "$TARGET_BRANCH" --version "$VERSION"
+          if git ls-remote --exit-code --tags "https://github.com/${GITHUB_REPOSITORY}.git" "refs/tags/v${VERSION}" > /dev/null; then
+            echo "::error::Tag v${VERSION} already exists"
+            exit 1
+          fi
 
       - name: Bump crate versions
         run: |
@@ -62,7 +84,7 @@ jobs:
 
       - name: Generate changelog via git cliff
         id: changelog
-        uses: orhun/git-cliff-action@3d96a18cc4ec17e9dc69ddcc424ccafaf1f78ce2 # v4.9.0
+        uses: orhun/git-cliff-action@a9a95522b26fe6403f7bb24031f21fb573d0f5ff # v4.9.1
         env:
           # Used to make request to GitHub without ratelimits.
           # `secrets.GIT_CLIFF_TOKEN` only has read permission.
@@ -70,13 +92,18 @@ jobs:
         with:
           version: v2.9.1 # git cliff version
           config: cliff.toml
-          args: --unreleased --prepend CHANGELOG.md --tag ${{ env.VERSION }}
+          # perf-kit has its own changelog.
+          # Only count tags reachable from the target branch, so a maintenance
+          # release does not end the range of the next release on main.
+          args: --unreleased --use-branch-tags --exclude-path "packages/perf-kit/**" --prepend CHANGELOG.md --tag ${{ env.VERSION }}
 
       - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
         with:
           client-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
 
       - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         if: ${{ steps.changelog.outputs.content }}
@@ -93,6 +120,6 @@ jobs:
           body: ${{ steps.changelog.outputs.content }}
           branch: release-v${{ env.VERSION }}
           branch-suffix: timestamp
-          base: main
+          base: ${{ steps.target.outputs.branch }}
           title: 'release: v${{ env.VERSION }}'
           assignees: Boshen, shulaoda

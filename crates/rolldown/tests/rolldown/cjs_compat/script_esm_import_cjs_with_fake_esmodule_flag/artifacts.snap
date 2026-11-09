@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region fake-esmodule.cjs
+// fake-esmodule.cjs
 var require_fake_esmodule = /* @__PURE__ */ __commonJSMin(((exports) => {
 	Object.defineProperty(exports, "__esModule", { value: true });
 	exports.__extends = function() {
@@ -17,7 +17,6 @@ var require_fake_esmodule = /* @__PURE__ */ __commonJSMin(((exports) => {
 		return "AWAITER";
 	};
 }));
-//#endregion
 export { __toESM as n, require_fake_esmodule as t };
 
 ```
@@ -35,7 +34,7 @@ export default require_fake_esmodule();
 ```js
 import { n as __toESM, t as require_fake_esmodule } from "./fake-esmodule.js";
 import assert from "node:assert";
-//#region main.js
+// main.js
 var import_fake_esmodule = /* @__PURE__ */ __toESM(require_fake_esmodule());
 const { __extends } = import_fake_esmodule.default;
 assert.strictEqual(__extends(), "EXTENDS");
@@ -44,6 +43,5 @@ assert.strictEqual(import_fake_esmodule.default, import_fake_esmodule.default);
 assert.strictEqual(import_fake_esmodule.__extends, __extends);
 const dyn = await import("./fake-esmodule2.js").then((m) => /* @__PURE__ */ __toESM(m.default));
 assert.strictEqual(dyn.default.__extends, __extends);
-//#endregion
 
 ```

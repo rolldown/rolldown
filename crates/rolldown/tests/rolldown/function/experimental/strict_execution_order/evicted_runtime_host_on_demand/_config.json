@@ -1,0 +1,50 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "e0",
+        "import": "./e0.js"
+      },
+      {
+        "name": "e1",
+        "import": "./e1.js"
+      },
+      {
+        "name": "z",
+        "import": "./z.js"
+      }
+    ],
+    "strictExecutionOrder": true,
+    "experimental": {
+      "onDemandWrapping": true
+    },
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "group-b",
+          "test": "[/\\\\](?:p|b)\\.js$",
+          "includeDependenciesRecursively": false
+        },
+        {
+          "name": "group-q",
+          "test": "[/\\\\](?:q|z)\\.js$",
+          "includeDependenciesRecursively": false
+        }
+      ]
+    },
+    "preserveEntrySignatures": "allow-extension"
+  },
+  "hiddenRuntimeModule": false,
+  "configName": "on-demand-esm",
+  "configVariants": [
+    {
+      "_configName": "on-demand-cjs",
+      "format": "cjs"
+    },
+    {
+      "_configName": "on-demand-minified",
+      "minify": true,
+      "_snapshot": false
+    }
+  ]
+}

@@ -1,6 +1,15 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## SHIMMED_EXPORT
+
+```text
+[SHIMMED_EXPORT] Missing export "missing" has been shimmed in module "node_modules/pure-barrel/index.js".
+
+```
+
 # Assets
 
 ## main.js
@@ -16,7 +25,7 @@ export { loadRoute };
 
 ```js
 import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
-//#region node_modules/pure-barrel/cn.js
+// node_modules/pure-barrel/cn.js
 function cn(...values) {
 	return values.filter(Boolean).join(" ");
 }
@@ -25,16 +34,14 @@ function init_cn() {
 		globalThis.__events.push("cn");
 	})))();
 }
-//#endregion
-//#region node_modules/pure-barrel/clone-deep.cjs
+// node_modules/pure-barrel/clone-deep.cjs
 var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("clone-deep");
 	module.exports = function cloneDeep(value) {
 		return JSON.parse(JSON.stringify(value));
 	};
 }));
-//#endregion
-//#region node_modules/pure-barrel/index.js
+// node_modules/pure-barrel/index.js
 var import_clone_deep, missing;
 function init_pure_barrel() {
 	return (init_pure_barrel = __esmMin((() => {
@@ -43,8 +50,7 @@ function init_pure_barrel() {
 		missing = void 0;
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 function loadRoute() {
 	return import("./route.js");
 }
@@ -54,7 +60,6 @@ function init_main() {
 		globalThis.__events.push(`main:${cn("a", "b")}:${missing === void 0}`);
 	})))();
 }
-//#endregion
 export { init_pure_barrel as i, loadRoute as n, import_clone_deep as r, init_main as t };
 
 ```
@@ -70,9 +75,9 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 ## route.js
 
 ```js
-import { i as init_pure_barrel, r as import_clone_deep } from "./main2.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
-//#region route.js
+import { i as init_pure_barrel, r as import_clone_deep } from "./main2.js";
+// route.js
 var value;
 function init_route() {
 	return (init_route = __esmMin((() => {
@@ -81,13 +86,21 @@ function init_route() {
 		value = (0, import_clone_deep.default)({ value: 1 });
 	})))();
 }
-//#endregion
 init_route();
 export { value };
 
 ```
 
 # Variant: on-demand: [on_demand_wrapping: true]
+
+## warnings
+
+### SHIMMED_EXPORT
+
+```text
+[SHIMMED_EXPORT] Missing export "missing" has been shimmed in module "node_modules/pure-barrel/index.js".
+
+```
 
 ## Assets
 
@@ -104,15 +117,12 @@ export { loadRoute };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region node_modules/pure-barrel/cn.js
+// node_modules/pure-barrel/cn.js
 globalThis.__events.push("cn");
 function cn(...values) {
 	return values.filter(Boolean).join(" ");
 }
-//#endregion
-//#region node_modules/pure-barrel/clone-deep.cjs
-//#endregion
-//#region node_modules/pure-barrel/index.js
+// node_modules/pure-barrel/index.js
 var import_clone_deep = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("clone-deep");
 	module.exports = function cloneDeep(value) {
@@ -120,8 +130,7 @@ var import_clone_deep = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin((
 	};
 })))(), 1);
 var missing = void 0;
-//#endregion
-//#region main.js
+// main.js
 function loadRoute() {
 	return import("./route.js");
 }
@@ -130,7 +139,6 @@ function init_main() {
 		globalThis.__events.push(`main:${cn("a", "b")}:${missing === void 0}`);
 	})))();
 }
-//#endregion
 export { loadRoute as n, import_clone_deep as r, init_main as t };
 
 ```
@@ -139,10 +147,9 @@ export { loadRoute as n, import_clone_deep as r, init_main as t };
 
 ```js
 import { r as import_clone_deep } from "./main2.js";
-//#region route.js
+// route.js
 globalThis.__events.push("route");
 const value = (0, import_clone_deep.default)({ value: 1 });
-//#endregion
 export { value };
 
 ```

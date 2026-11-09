@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 var Foo = @x.y() @(new y.x()) class Foo {
 	@x @y mUndef;
 	@x @y mDef = 1;
@@ -19,7 +19,6 @@ var Foo = @x.y() @(new y.x()) class Foo {
 		return new Foo();
 	}
 };
-//#endregion
 export { Foo as default };
 
 ```

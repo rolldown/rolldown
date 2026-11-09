@@ -5,6 +5,7 @@ assert.deepEqual(
   fooNamespace,
   Object.defineProperty(
     {
+      __proto__: null,
       foo: 1,
     },
     Symbol.toStringTag,

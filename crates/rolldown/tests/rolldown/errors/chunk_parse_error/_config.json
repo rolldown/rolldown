@@ -1,0 +1,13 @@
+{
+  "expectError": true,
+  "config": {
+    "entryFilenames": "bundle.js",
+    "banner": "const = ;",
+    "minify": "dceOnly"
+  },
+  "configVariants": [
+    { "_configName": "fatal-minify", "minify": true },
+    { "_configName": "recoverable-dce", "banner": "return 1;" },
+    { "_configName": "recoverable-minify", "banner": "return 1;", "minify": true }
+  ]
+}

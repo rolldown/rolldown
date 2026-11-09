@@ -1,0 +1,9 @@
+{
+  "config": {
+    "input": [
+      { "name": "through_barrel", "import": "./through_barrel.js" },
+      { "name": "namespace", "import": "./namespace.js" },
+      { "name": "direct", "import": "./direct.js" }
+    ]
+  }
+}

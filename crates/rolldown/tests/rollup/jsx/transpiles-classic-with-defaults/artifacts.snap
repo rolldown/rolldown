@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 const Foo = () => {};
 const obj = { key: "2" };
 console.log(/* @__PURE__ */ React.createElement(Foo, null));
@@ -17,6 +17,5 @@ console.log(/* @__PURE__ */ React.createElement(Foo, {
 	...obj,
 	key: "1"
 }));
-//#endregion
 
 ```

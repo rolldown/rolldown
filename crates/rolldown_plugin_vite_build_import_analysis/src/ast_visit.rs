@@ -26,6 +26,8 @@ pub struct BuildImportAnalysisVisitor<'a> {
   pub render_built_url: bool,
   pub is_relative_base: bool,
   pub is_modern: bool,
+  pub preload_marker_module_id: String,
+  pub preload_marker_index: u32,
 }
 
 impl<'a> VisitJsMut<'a> for BuildImportAnalysisVisitor<'a> {
@@ -80,7 +82,7 @@ impl<'a> VisitJsMut<'a> for BuildImportAnalysisVisitor<'a> {
         if let BindingPattern::ObjectPattern(object_pat) = &decl.id
           && matches!(
             &decl.init,
-            Some(Expression::AwaitExpression(expr)) if matches!(expr.argument, Expression::ImportExpression(_))
+            Some(Expression::AwaitExpression(expr)) if Self::is_import_with_static_specifier(&expr.argument)
           )
         {
           decl.init = Some(Expression::new_await_expression(

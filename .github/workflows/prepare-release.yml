@@ -80,17 +80,12 @@ jobs:
       - name: Pin crate versions to each other
         run: |
           perl -pi -e 's/^([a-z_]+ = \{ version = ")\Q$ENV{VERSION}\E(", path = "crates\/)/$1=$ENV{VERSION}$2/' Cargo.toml
-          pinned=$(grep -cF "{ version = \"=${VERSION}\", path = \"crates/" Cargo.toml || true)
-          if [ "$pinned" -eq 0 ]; then
-            echo "::error::No crate in Cargo.toml was pinned to =${VERSION}"
-            exit 1
-          fi
-          unpinned=$(grep -F 'path = "crates/' Cargo.toml | grep -cF "version = \"${VERSION}\"" || true)
+          unpinned=$(grep -F 'path = ' Cargo.toml | grep -cF "version = \"${VERSION}\"" || true)
           if [ "$unpinned" -ne 0 ]; then
             echo "::error::${unpinned} crate(s) in Cargo.toml still use ^${VERSION}"
             exit 1
           fi
-          echo "Pinned ${pinned} crates to =${VERSION}"
+          echo "Pinned $(grep -cF "version = \"=${VERSION}\"" Cargo.toml) crates to =${VERSION}"
 
       - name: Update Cargo.lock after crate bump
         run: cargo check

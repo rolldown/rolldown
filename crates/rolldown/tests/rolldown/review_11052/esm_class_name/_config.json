@@ -1,0 +1,8 @@
+{
+  "_comment": "review of #11052: a local class that shares its name with an external import keeps its name (ESM output)",
+  "config": {
+    "input": [{ "name": "index", "import": "./index.js" }],
+    "external": ["node:events"],
+    "platform": "node"
+  }
+}

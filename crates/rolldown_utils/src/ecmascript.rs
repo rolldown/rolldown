@@ -1,6 +1,6 @@
 use oxc::syntax::{identifier, keyword};
 use oxc_str::CompactStr;
-use std::{borrow::Cow, path::Path};
+use std::{borrow::Cow, fmt::Write, path::Path};
 
 use crate::{concat_string, indexmap::FxIndexMap};
 
@@ -100,6 +100,29 @@ pub fn property_access_str(obj: &str, prop: &str) -> String {
   } else {
     concat_string!(obj, "[", serde_json::to_string(prop).unwrap(), "]")
   }
+}
+
+pub fn escape_non_ascii(value: &str, ascii_only: bool) -> Cow<'_, str> {
+  if !ascii_only || value.is_ascii() {
+    return Cow::Borrowed(value);
+  }
+
+  let mut escaped = String::with_capacity(value.len());
+  for char in value.chars() {
+    if char.is_ascii() {
+      escaped.push(char);
+    } else if u32::from(char) <= 0xffff {
+      write!(escaped, "\\u{:04X}", u32::from(char)).unwrap();
+    } else {
+      write!(escaped, "\\u{{{:X}}}", u32::from(char)).unwrap();
+    }
+  }
+  Cow::Owned(escaped)
+}
+
+pub fn to_ecma_string_literal(value: &str, ascii_only: bool) -> String {
+  let literal = json_escape_simd::escape(value);
+  escape_non_ascii(&literal, ascii_only).into_owned()
 }
 
 pub fn to_module_import_export_name(name: &str) -> String {

@@ -35,6 +35,7 @@ futures = { workspace = true }
 indexmap = { workspace = true, features = ["serde"] }
 infer = { workspace = true }
 itoa = { workspace = true }
+json-escape-simd = { workspace = true }
 memchr = { workspace = true }
 mime = { workspace = true }
 nom = { workspace = true }

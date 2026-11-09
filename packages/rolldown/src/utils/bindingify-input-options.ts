@@ -79,7 +79,7 @@ export function bindingifyInputOptions(
   return {
     input: bindingifyInput(inputOptions.input),
     plugins,
-    cwd: inputOptions.cwd ?? process.cwd(),
+    cwd: inputOptions.cwd ?? (import.meta.browserBuild ? '/' : process.cwd()),
     external: bindingifyExternal(inputOptions.external, timings),
     resolve: bindingifyResolve(inputOptions.resolve),
     platform: inputOptions.platform,

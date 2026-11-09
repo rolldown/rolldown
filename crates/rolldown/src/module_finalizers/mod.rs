@@ -1406,7 +1406,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       // reference out of `ctx` first, so the lookup does not borrow `self` and the
       // error path below can borrow it mutably.
       let resolved_file_urls = self.ctx.resolved_file_urls;
-      if let Some(resolved) = resolved_file_urls.get(&(self.ctx.idx, node_id)) {
+      if let Some(resolved) = resolved_file_urls.get(&(self.ctx.file_idx, self.ctx.idx, node_id)) {
         // The only place this code is parsed. The driver deliberately hands it over
         // unparsed, along with the plugin that produced it.
         match parse_injected_expression(self.allocator(), &resolved.code) {

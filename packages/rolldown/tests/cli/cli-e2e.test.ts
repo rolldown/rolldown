@@ -661,10 +661,6 @@ describe('watch cli', () => {
 
   it.skipIf(process.platform === 'win32')(
     'should close with exit code 0 even when there are errors',
-    {
-      // `stdoutWaiter.waitFor('UNRESOLVED_IMPORT')` is flaky
-      retry: 3,
-    },
     async () => {
       const cwd = cliFixturesDir('watch-error');
       const controller = new AbortController();
@@ -674,9 +670,8 @@ describe('watch cli', () => {
         cancelSignal: controller.signal,
       })`rolldown index.ts -d dist -w`;
       const stdoutWaiter = createStreamWaiter(process.stdout);
-      await stdoutWaiter.waitFor('Waiting for changes...', { timeout: 5_000 });
-      // "Waiting for changes..." prints before the watches are armed, and inotify
-      // drops writes made before `inotify_add_watch`. Arming precedes "Rebuilt".
+      // "Waiting for changes..." is printed before the first build, which watches index.ts only
+      // after reading it, so an edit in between is never reported. "Rebuilt" comes after that.
       await stdoutWaiter.waitFor('Rebuilt', { timeout: 5_000 });
 
       fs.writeFileSync(

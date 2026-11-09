@@ -6,7 +6,7 @@ use crate::{
     binding_bundler_options::BindingBundlerOptions,
     binding_outputs::{BindingOutputs, to_binding_error},
     error::{BindingError, BindingErrors, BindingResult},
-    js_callback_release::{RequestReleaseOnDrop, SharedJsCallbackRelease},
+    js_callback_release::{JsCallbackUser, RequestReleaseOnDrop, SharedJsCallbackRelease},
   },
   utils::{
     handle_result, handle_warnings,
@@ -33,6 +33,9 @@ pub struct BindingBundler {
   /// build that started before it.
   /// See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
   option_callbacks: SharedJsCallbackRelease,
+  /// Lets the GC request the release of `option_callbacks` when the user never calls `close`.
+  /// Each operation future, plugin and plugin context keeps a clone. See [`JsCallbackUser`].
+  callback_user: JsCallbackUser,
 }
 
 #[napi]
@@ -40,11 +43,9 @@ impl BindingBundler {
   #[napi(constructor)]
   pub fn new() -> Self {
     let inner = ClassicBundler::new();
-    Self {
-      inner,
-      bundle_handles: Vec::new(),
-      option_callbacks: SharedJsCallbackRelease::new(Vec::new()),
-    }
+    let option_callbacks = SharedJsCallbackRelease::new(Vec::new());
+    let callback_user = JsCallbackUser::new(option_callbacks.clone());
+    Self { inner, bundle_handles: Vec::new(), option_callbacks, callback_user }
   }
 
   #[napi]
@@ -54,9 +55,10 @@ impl BindingBundler {
     options: BindingBundlerOptions<'env>,
   ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingOutputs>>> {
     let NormalizedBindingOptions { config: normalized, callbacks } =
-      Self::normalize_binding_options(options)?;
+      Self::normalize_binding_options(options, &self.callback_user)?;
     // The build future keeps this hold until it ends. See `option_callbacks`.
     let hold = self.option_callbacks.hold_with_group(callbacks);
+    let callback_user = self.callback_user.clone();
     if let Some(result) = Self::validate_hmr_not_allowed(&normalized, "generate") {
       return spawn_boxed_future(env, async move { Ok(result) });
     }
@@ -69,6 +71,7 @@ impl BindingBundler {
 
     let fut = async move {
       let _hold = hold;
+      let _callback_user = callback_user;
       // TODO: we probably advance error handling here instead of waiting for an async call
       let bundle = maybe_bundle.map_err(|err| {
         napi::Error::new(
@@ -108,9 +111,10 @@ impl BindingBundler {
     options: BindingBundlerOptions<'env>,
   ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingOutputs>>> {
     let NormalizedBindingOptions { config: normalized, callbacks } =
-      Self::normalize_binding_options(options)?;
+      Self::normalize_binding_options(options, &self.callback_user)?;
     // The build future keeps this hold until it ends. See `option_callbacks`.
     let hold = self.option_callbacks.hold_with_group(callbacks);
+    let callback_user = self.callback_user.clone();
     if let Some(result) = Self::validate_hmr_not_allowed(&normalized, "write") {
       return spawn_boxed_future(env, async move { Ok(result) });
     }
@@ -123,6 +127,7 @@ impl BindingBundler {
 
     let fut = async move {
       let _hold = hold;
+      let _callback_user = callback_user;
       let bundle = maybe_bundle.map_err(|err| {
         napi::Error::new(
           napi::Status::GenericFailure,
@@ -161,9 +166,10 @@ impl BindingBundler {
     options: BindingBundlerOptions<'env>,
   ) -> napi::Result<PromiseRaw<'env, BindingResult<()>>> {
     let NormalizedBindingOptions { config: normalized, callbacks } =
-      Self::normalize_binding_options(options)?;
+      Self::normalize_binding_options(options, &self.callback_user)?;
     // The build future keeps this hold until it ends. See `option_callbacks`.
     let hold = self.option_callbacks.hold_with_group(callbacks);
+    let callback_user = self.callback_user.clone();
     if let Some(result) = Self::validate_hmr_not_allowed(&normalized, "scan") {
       return spawn_boxed_future(env, async move { Ok(result) });
     }
@@ -176,6 +182,7 @@ impl BindingBundler {
 
     let fut = async move {
       let _hold = hold;
+      let _callback_user = callback_user;
       let bundle = maybe_bundle.map_err(|err| {
         napi::Error::new(
           napi::Status::GenericFailure,
@@ -211,12 +218,14 @@ impl BindingBundler {
     let cleanup_fut = self.inner.close();
     let handles = std::mem::take(&mut self.bundle_handles);
     let option_callbacks = self.option_callbacks.clone();
+    let callback_user = self.callback_user.clone();
     spawn_boxed_future(env, async move {
       // Request the release when this future ends. The end comes after `closeBundle` and after
       // the plugin timings report. The request also runs when one of them fails. The release
       // waits for the builds that still run.
       // See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
       let _release = RequestReleaseOnDrop(option_callbacks);
+      let _callback_user = callback_user;
       let res = cleanup_fut.await;
       handle_result(res)?;
       // After the cleanup, so `closeBundle` is part of what the other side reports.
@@ -279,6 +288,7 @@ async fn report_plugin_timings(handles: &[BundleHandle]) -> anyhow::Result<()> {
 impl BindingBundler {
   fn normalize_binding_options(
     option: BindingBundlerOptions,
+    callback_user: &JsCallbackUser,
   ) -> napi::Result<NormalizedBindingOptions> {
     let BindingBundlerOptions { input_options, output_options, parallel_plugins_registry } = option;
     // Only the parallel-plugin worker pool reads the registry, and wasm has no
@@ -305,6 +315,7 @@ impl BindingBundler {
     let ret = normalize_binding_options(
       input_options,
       output_options,
+      Some(callback_user.clone()),
       #[cfg(not(target_family = "wasm"))]
       parallel_plugins_map,
       #[cfg(not(target_family = "wasm"))]

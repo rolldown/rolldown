@@ -4,7 +4,8 @@
 //! root. JS can hold native objects (`BindingNormalizedOptions`, `BindingPluginContext`) that keep
 //! the options alive. When a JS function of the options reaches one of those objects, the result
 //! is a cycle that the GC cannot free. So the owner of the options releases all of their JS
-//! functions when it closes.
+//! functions when it closes. A classic build also releases them when the GC frees each native
+//! object that can still call them. See [`JsCallbackUser`].
 //! See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
 
 use std::{
@@ -232,8 +233,9 @@ fn release_groups(groups: Vec<JsCallbackRelease>) {
 /// - each dev engine `close()`.
 ///
 /// The close of the owner requests the release at its end. The release runs when the last hold
-/// drops. Only [`Self::request_release`] starts a release. A drop of the owner or of a holder never
-/// starts it, because a GC can drop them while the owner still runs.
+/// drops. Only [`Self::request_release`] starts a release. The close calls it. For a classic
+/// build, the drop of the last [`JsCallbackUser`] also calls it. A drop of a hold never starts a
+/// release.
 #[derive(Clone)]
 pub struct SharedJsCallbackRelease {
   state: Arc<Mutex<SharedReleaseState>>,
@@ -328,5 +330,47 @@ pub struct RequestReleaseOnDrop(pub SharedJsCallbackRelease);
 impl Drop for RequestReleaseOnDrop {
   fn drop(&mut self) {
     self.0.request_release();
+  }
+}
+
+/// Requests the release when the GC frees the last native object that JS can use to call the JS
+/// functions of a classic build. This lets the GC free a build that the user never closes.
+///
+/// Each of these objects keeps a clone:
+///
+/// - the `BindingBundler`,
+/// - each `generate`, `write`, `scan` and `close` future, until it ends,
+/// - each JS plugin of its builds, which gives a clone to each plugin context of a hook call,
+/// - each plugin context: `BindingPluginContext`, `BindingLoadPluginContext` and
+///   `BindingTransformPluginContext`.
+///
+/// The drop of the last clone requests the release. The napi finalizer drops the clone of a
+/// native object when the GC frees its JS object. A new clone can come only from a live clone, so
+/// after the last drop, no object can get a clone and call a released function. The release still
+/// waits for the holds.
+///
+/// This is not a hold. A hold keeps the JS functions until its operation ends, also after a close.
+/// A clone only delays the release by the GC. The close releases the JS functions also while JS
+/// keeps a plugin context.
+///
+/// `BindingNormalizedOptions` keeps no clone, because its getters never call a JS function. JS
+/// often keeps such an object in the cycle, for example in the cache of `PluginContextData`. So a
+/// clone in it would stop the release.
+/// See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
+#[derive(Clone)]
+pub struct JsCallbackUser {
+  /// Only its drop matters.
+  _release: Arc<RequestReleaseOnDrop>,
+}
+
+impl JsCallbackUser {
+  pub fn new(release: SharedJsCallbackRelease) -> Self {
+    Self { _release: Arc::new(RequestReleaseOnDrop(release)) }
+  }
+}
+
+impl fmt::Debug for JsCallbackUser {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    f.write_str("JsCallbackUser")
   }
 }

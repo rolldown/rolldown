@@ -18,11 +18,27 @@ use super::types::{
   binding_resolved_external::BindingResolvedExternal,
 };
 
-use crate::{types::binding_module_info::BindingModuleInfo, utils::napi_error};
+use crate::{
+  types::{binding_module_info::BindingModuleInfo, js_callback_release::JsCallbackUser},
+  utils::napi_error,
+};
 
 #[napi]
 pub struct BindingPluginContext {
   inner: SharedNativePluginContext,
+  /// While JS keeps this context, the GC does not release the JS functions of the options.
+  /// See [`JsCallbackUser`].
+  _callback_user: Option<JsCallbackUser>,
+}
+
+impl BindingPluginContext {
+  /// `callback_user` is the clone of a classic build, and `None` for other owners.
+  pub fn new(ctx: PluginContext, callback_user: Option<JsCallbackUser>) -> Self {
+    match ctx {
+      PluginContext::Napi(_) => unreachable!("Js plugins don't have PluginContext::Napi"),
+      PluginContext::Native(inner) => Self { inner, _callback_user: callback_user },
+    }
+  }
 }
 
 #[napi]
@@ -147,14 +163,6 @@ impl BindingPluginContext {
   }
 }
 
-impl From<PluginContext> for BindingPluginContext {
-  fn from(ctx: PluginContext) -> Self {
-    match ctx {
-      PluginContext::Napi(_) => unreachable!("Js plugins don't have PluginContext::Napi"),
-      PluginContext::Native(inner) => Self { inner },
-    }
-  }
-}
 #[napi_derive::napi(object, object_from_js = false)]
 pub struct BindingPluginContextResolvedId {
   /// The resolved id without its import attributes.

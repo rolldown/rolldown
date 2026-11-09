@@ -1,13 +1,14 @@
 // Each case does these steps:
 // 1. It builds with a plugin whose `closeBundle` captures a marker.
-// 2. It closes the build.
+// 2. It closes the build. A case whose name starts with "never closed" does not close the build.
 // 3. It returns. After that, the script keeps only a `WeakRef` to the marker.
 // After GC, the script checks that no marker is alive.
 //
-// Each case except the control makes JS hold a native object that keeps the options alive
+// Each case except the controls makes JS hold a native object that keeps the options alive
 // (cached or kept options, a kept plugin context, a kept build object). Before the fix, the JS
 // functions of the options were GC roots. So that native object made a cycle that the GC could
-// not free (https://github.com/rolldown/rolldown/issues/11444).
+// not free (https://github.com/rolldown/rolldown/issues/11444). For a build that stays open, the
+// GC requests the release when it frees each native object that can still call these functions.
 // See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -22,6 +23,8 @@ assert(globalThis.gc, 'Run with --expose-gc');
 const input = path.join(import.meta.dirname, 'main.js');
 // With the WASI binding, the close of the dev engine stops the shared async runtime.
 // See https://github.com/rolldown/rolldown/issues/10639.
+// Also, only the close of the last open build stops that runtime. A build that stays open keeps
+// it running, so the "never closed" cases do not run with that binding.
 const isWasi = process.env.ROLLDOWN_WASI_TEST === '1';
 
 async function collect() {
@@ -50,6 +53,20 @@ function keepOptions(hookName, marker, hooks = {}) {
     plugin.options = options;
   };
   return plugin;
+}
+
+// The build stays open. The case drops its last reference to the build when it returns.
+async function neverClosed(inputOptions, outputOptions = {}, { generateCount = 1 } = {}) {
+  const bundle = await rolldown({ input, logLevel: 'silent', ...inputOptions });
+  for (let i = 0; i < generateCount; i++) {
+    await bundle.generate({ format: 'es', ...outputOptions });
+  }
+}
+
+// Returns the promise of a build that runs, without the build object.
+async function startBuild(inputOptions) {
+  const bundle = await rolldown({ logLevel: 'silent', ...inputOptions });
+  return { pending: bundle.generate({ format: 'es' }) };
 }
 
 async function classic(inputOptions, outputOptions = {}, { generateCount = 1 } = {}) {
@@ -281,6 +298,72 @@ const cases = {
   },
 };
 
+const neverClosedCases = {
+  async 'never closed: control'(marker) {
+    if (isWasi) return;
+    await neverClosed({ plugins: [markerPlugin(marker)] });
+  },
+  async 'never closed: empty buildStart hook'(marker) {
+    if (isWasi) return;
+    await neverClosed({ plugins: [markerPlugin(marker, { buildStart() {} })] });
+  },
+  async 'never closed: empty renderStart hook'(marker) {
+    if (isWasi) return;
+    await neverClosed({ plugins: [markerPlugin(marker, { renderStart() {} })] });
+  },
+  async 'never closed: plugin keeps the input options'(marker) {
+    if (isWasi) return;
+    await neverClosed({ plugins: [keepOptions('buildStart', marker)] });
+  },
+  async 'never closed: external function captures the plugin'(marker) {
+    if (isWasi) return;
+    const plugin = keepOptions('buildStart', marker);
+    await neverClosed({ plugins: [plugin], external: (id) => Boolean(plugin) && id === 'never' });
+  },
+  async 'never closed: two generate calls'(marker) {
+    if (isWasi) return;
+    await neverClosed({ plugins: [keepOptions('buildStart', marker)] }, {}, { generateCount: 2 });
+  },
+  async 'never closed: GC runs while a build runs'(marker) {
+    if (isWasi) return;
+    let buildStarted;
+    const started = new Promise((resolve) => (buildStarted = resolve));
+    let releaseBuild;
+    const paused = new Promise((resolve) => (releaseBuild = resolve));
+    let externalCalls = 0;
+    const plugin = markerPlugin(marker, {
+      async buildStart(options) {
+        plugin.options = options;
+        buildStarted();
+        await paused;
+      },
+      resolveId(id) {
+        return id === 'entry' ? id : null;
+      },
+      load(id) {
+        return id === 'entry' ? "import ext from 'ext'; console.log(ext);" : null;
+      },
+    });
+    // The case keeps only the promise of the build. A running build must keep the JS functions,
+    // so `external` still works after the GC. V8 keeps the build object alive while its
+    // `generate` call waits, so this case guards the rule more than it tests it on V8.
+    const { pending } = await startBuild({
+      input: 'entry',
+      external: (id) => {
+        externalCalls++;
+        return id === 'ext';
+      },
+      plugins: [plugin],
+    });
+    await started;
+    await collect();
+    releaseBuild();
+    const { output } = await pending;
+    assert.match(output[0].code, /from "ext"/);
+    assert(externalCalls > 0, 'The build calls `external` after the GC');
+  },
+};
+
 async function runCase(run) {
   const marker = {};
   await run(marker);
@@ -288,7 +371,7 @@ async function runCase(run) {
 }
 
 const references = [];
-for (const [name, run] of Object.entries(cases)) {
+for (const [name, run] of Object.entries({ ...cases, ...neverClosedCases })) {
   references.push({ name, reference: await runCase(run) });
 }
 await collect();
@@ -296,5 +379,5 @@ const retained = references.filter(({ reference }) => reference.deref() !== unde
 assert.deepEqual(
   retained.map(({ name }) => name),
   [],
-  'The markers of these closed builds stay alive',
+  'The markers of these builds stay alive',
 );

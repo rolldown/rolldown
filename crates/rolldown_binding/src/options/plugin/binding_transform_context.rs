@@ -3,17 +3,19 @@ use napi_derive::napi;
 use rolldown_plugin::SharedTransformPluginContext;
 
 use super::binding_plugin_context::BindingPluginContext;
-use crate::types::binding_magic_string::BindingMagicString;
+use crate::types::{binding_magic_string::BindingMagicString, js_callback_release::JsCallbackUser};
 
 #[napi]
 pub struct BindingTransformPluginContext {
   inner: SharedTransformPluginContext,
+  /// Goes to the context that `inner()` returns. See [`JsCallbackUser`].
+  callback_user: Option<JsCallbackUser>,
 }
 
 #[napi]
 impl BindingTransformPluginContext {
-  pub fn new(inner: SharedTransformPluginContext) -> Self {
-    Self { inner }
+  pub fn new(inner: SharedTransformPluginContext, callback_user: Option<JsCallbackUser>) -> Self {
+    Self { inner, callback_user }
   }
 
   #[napi]
@@ -24,7 +26,7 @@ impl BindingTransformPluginContext {
 
   #[napi]
   pub fn inner(&self) -> BindingPluginContext {
-    self.inner.inner.clone().into()
+    BindingPluginContext::new(self.inner.inner.clone(), self.callback_user.clone())
   }
 
   #[napi]

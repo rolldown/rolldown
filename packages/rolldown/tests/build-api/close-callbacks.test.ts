@@ -4,7 +4,8 @@ import { fileURLToPath } from 'node:url';
 import { rolldown, type NormalizedInputOptions, type NormalizedOutputOptions } from 'rolldown';
 import { expect, test } from 'vitest';
 
-// The close of a build releases the JS functions of its options.
+// The close of a build releases the JS functions of its options. For a build that stays open, the
+// GC requests the release when it frees each native object that can still call them.
 // See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
 
 const input = path.join(import.meta.dirname, 'main.js');
@@ -12,7 +13,7 @@ const input = path.join(import.meta.dirname, 'main.js');
 // https://github.com/rolldown/rolldown/issues/11444
 // The script runs one build for each case, so it gets more time than the default 20 s. The execa
 // limit is lower, so a hung script fails with its own output.
-test('a closed build does not keep its plugins alive', { timeout: 60_000 }, async () => {
+test('a closed or dropped build does not keep its plugins alive', { timeout: 60_000 }, async () => {
   await execa(
     process.execPath,
     ['--expose-gc', fileURLToPath(new URL('./close-bundle-gc.mjs', import.meta.url))],

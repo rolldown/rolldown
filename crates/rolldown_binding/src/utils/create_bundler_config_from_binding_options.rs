@@ -33,6 +33,10 @@ pub fn create_bundler_config_from_binding_options(
   normalize_binding_options(
     input_options,
     output_options,
+    // The watcher and the dev engine release the JS functions only at close. The GC does not
+    // release them. See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback
+    // lifetime").
+    None,
     #[cfg(not(target_family = "wasm"))]
     parallel_plugins_map,
     #[cfg(not(target_family = "wasm"))]

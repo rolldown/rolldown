@@ -16,7 +16,7 @@ use crate::{
   options::binding_inject_import::normalize_binding_inject_import,
   types::{
     js_callback::{JsCallbackExt, JsCallbackResultExt},
-    js_callback_release::{JsCallbackRelease, UntrackedJsCallback},
+    js_callback_release::{JsCallbackRelease, JsCallbackUser, UntrackedJsCallback},
   },
 };
 #[cfg_attr(target_family = "wasm", allow(unused))]
@@ -546,10 +546,13 @@ pub struct NormalizedBindingOptions {
   pub callbacks: JsCallbackRelease,
 }
 
+/// `callback_user` goes to each JS plugin, which gives it to each plugin context of a hook call.
+/// Only a classic build gives it. See [`JsCallbackUser`].
 #[expect(clippy::too_many_lines)]
 pub fn normalize_binding_options(
   input_options: crate::options::BindingInputOptions,
   output_options: crate::options::BindingOutputOptions,
+  callback_user: Option<JsCallbackUser>,
   #[cfg(not(target_family = "wasm"))] mut parallel_plugins_map: Option<
     crate::parallel_js_plugin_registry::PluginValues,
   >,
@@ -925,7 +928,7 @@ pub fn normalize_binding_options(
           ParallelJsPlugin::new_shared(plugins, Arc::clone(worker_manager))
         },
         |plugin| match plugin {
-          Either::A(plugin_options) => JsPlugin::new_shared(plugin_options),
+          Either::A(plugin_options) => JsPlugin::new_shared(plugin_options, callback_user.clone()),
           Either::B(builtin) => {
             // Needs to save the name, since `try_into` will consume the ownership
             let name = format!("{:?}", builtin.__name);
@@ -948,7 +951,7 @@ pub fn normalize_binding_options(
     .chain(output_options.plugins)
     .filter_map(|plugin| {
       plugin.map(|plugin| match plugin {
-        Either::A(plugin_options) => JsPlugin::new_shared(plugin_options),
+        Either::A(plugin_options) => JsPlugin::new_shared(plugin_options, callback_user.clone()),
         Either::B(builtin) => {
           // Needs to save the name, since `try_into` will consume the ownership
           let name = format!("{:?}", builtin.__name);

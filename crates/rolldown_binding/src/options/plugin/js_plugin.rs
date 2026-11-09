@@ -4,7 +4,8 @@ use anyhow::Context;
 use napi::bindgen_prelude::FnArgs;
 use rolldown_common::NormalModule;
 use rolldown_plugin::{
-  __inner::SharedPluginable, HookFilterArgs, HookUsage, Plugin, typedmap::TypedMapKey,
+  __inner::SharedPluginable, HookFilterArgs, HookUsage, Plugin, PluginContext,
+  typedmap::TypedMapKey,
 };
 use rolldown_utils::filter_expression::filter_exprs_interpreter;
 use tracing::{Instrument, debug_span};
@@ -12,6 +13,7 @@ use tracing::{Instrument, debug_span};
 use super::{
   BindingPluginOptions, FilterExprCache,
   binding_load_context::BindingLoadPluginContext,
+  binding_plugin_context::BindingPluginContext,
   binding_transform_context::BindingTransformPluginContext,
   types::{
     binding_hook_load_extra_args::BindingHookLoadExtraArgs,
@@ -31,6 +33,7 @@ use crate::types::{
   binding_outputs::{JsChangedOutputs, to_binding_error},
   binding_rendered_chunk::BindingRenderedChunk,
   js_callback::MaybeAsyncJsCallbackExt,
+  js_callback_release::JsCallbackUser,
 };
 
 #[derive(Hash, Debug, PartialEq, Eq)]
@@ -44,6 +47,9 @@ pub struct JsPlugin {
   pub(crate) inner: BindingPluginOptions,
   /// Since there at most three key in the cache, use vec should always faster than hashmap
   pub(crate) filter_expr_cache: FilterExprCache,
+  /// Goes to each plugin context of a hook call. Only the plugins of a classic build have it.
+  /// See [`JsCallbackUser`].
+  callback_user: Option<JsCallbackUser>,
 }
 
 /// Records whether a per-module hook (resolveId / load / transform) produced a
@@ -72,12 +78,19 @@ impl JsPlugin {
   #[cfg_attr(target_family = "wasm", allow(unused))]
   pub(super) fn new(inner: BindingPluginOptions) -> napi::Result<Self> {
     let filter_expr_cache = inner.pre_compile_filter_expr()?;
-    Ok(Self { inner, filter_expr_cache })
+    Ok(Self { inner, filter_expr_cache, callback_user: None })
   }
 
-  pub(crate) fn new_shared(inner: BindingPluginOptions) -> napi::Result<SharedPluginable> {
+  pub(crate) fn new_shared(
+    inner: BindingPluginOptions,
+    callback_user: Option<JsCallbackUser>,
+  ) -> napi::Result<SharedPluginable> {
     let filter_expr_cache = inner.pre_compile_filter_expr()?;
-    Ok(Plugin::new_shared(Self { inner, filter_expr_cache }))
+    Ok(Plugin::new_shared(Self { inner, filter_expr_cache, callback_user }))
+  }
+
+  fn binding_context(&self, ctx: &PluginContext) -> BindingPluginContext {
+    BindingPluginContext::new(ctx.clone(), self.callback_user.clone())
   }
 }
 
@@ -95,7 +108,7 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.build_start {
       cb.await_call(
-        (ctx.clone().into(), BindingNormalizedOptions::new(Arc::clone(args.options))).into(),
+        (self.binding_context(ctx), BindingNormalizedOptions::new(Arc::clone(args.options))).into(),
       )
       .instrument(debug_span!("build_start_hook", plugin_name = self.name))
       .await
@@ -140,7 +153,7 @@ impl Plugin for JsPlugin {
     let result = cb
       .await_call(
         (
-          ctx.clone().into(),
+          self.binding_context(ctx),
           args.specifier.to_string(),
           args.importer.map(str::to_string),
           extra_args,
@@ -180,7 +193,7 @@ impl Plugin for JsPlugin {
     let result = cb
       .await_call(
         (
-          ctx.clone().into(),
+          self.binding_context(ctx),
           args.specifier.to_string(),
           args.importer.map(str::to_string),
           BindingHookResolveDynamicImportExtraArgs::from(args),
@@ -217,7 +230,7 @@ impl Plugin for JsPlugin {
       return Ok(None);
     }
 
-    let binding_ctx = BindingLoadPluginContext::new(Arc::clone(&ctx));
+    let binding_ctx = BindingLoadPluginContext::new(Arc::clone(&ctx), self.callback_user.clone());
     let span =
       debug_span!("load_hook", plugin_name = self.name, result_kind = tracing::field::Empty);
     let extra_args = to_binding_import_attributes(args.attributes)
@@ -259,7 +272,7 @@ impl Plugin for JsPlugin {
     let result = cb
       .await_call(
         (
-          BindingTransformPluginContext::new(Arc::clone(&ctx)),
+          BindingTransformPluginContext::new(Arc::clone(&ctx), self.callback_user.clone()),
           BindingSharedString::from(args.code.clone()),
           args.id.to_string(),
           extra_args,
@@ -286,12 +299,14 @@ impl Plugin for JsPlugin {
     _normal_module: &NormalModule,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.module_parsed {
-      cb.await_call((ctx.clone().into(), BindingModuleInfo::new(Arc::clone(&module_info))).into())
-        .instrument(debug_span!("module_parsed_hook", plugin_name = self.name))
-        .await
-        .with_context(|| {
-          format!("moduleParsed hook threw an error for id={}", module_info.id.as_ref())
-        })?;
+      cb.await_call(
+        (self.binding_context(ctx), BindingModuleInfo::new(Arc::clone(&module_info))).into(),
+      )
+      .instrument(debug_span!("module_parsed_hook", plugin_name = self.name))
+      .await
+      .with_context(|| {
+        format!("moduleParsed hook threw an error for id={}", module_info.id.as_ref())
+      })?;
     }
     Ok(())
   }
@@ -308,7 +323,7 @@ impl Plugin for JsPlugin {
     if let Some(cb) = &self.build_end {
       cb.await_call(
         (
-          ctx.clone().into(),
+          self.binding_context(ctx),
           args.map(|args| {
             args
               .errors
@@ -339,7 +354,7 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.render_start {
       cb.await_call(
-        (ctx.clone().into(), BindingNormalizedOptions::new(Arc::clone(args.options))).into(),
+        (self.binding_context(ctx), BindingNormalizedOptions::new(Arc::clone(args.options))).into(),
       )
       .instrument(debug_span!("render_start_hook", plugin_name = self.name))
       .await
@@ -360,7 +375,7 @@ impl Plugin for JsPlugin {
     match &self.banner {
       Some(cb) => Ok(
         cb.await_call(
-          (ctx.clone().into(), BindingRenderedChunk::new(Arc::clone(&args.chunk))).into(),
+          (self.binding_context(ctx), BindingRenderedChunk::new(Arc::clone(&args.chunk))).into(),
         )
         .instrument(debug_span!("banner_hook", plugin_name = self.name))
         .await?
@@ -384,7 +399,7 @@ impl Plugin for JsPlugin {
     match &self.intro {
       Some(cb) => Ok(
         cb.await_call(
-          (ctx.clone().into(), BindingRenderedChunk::new(Arc::clone(&args.chunk))).into(),
+          (self.binding_context(ctx), BindingRenderedChunk::new(Arc::clone(&args.chunk))).into(),
         )
         .instrument(debug_span!("intro_hook", plugin_name = self.name))
         .await?
@@ -408,7 +423,7 @@ impl Plugin for JsPlugin {
     match &self.outro {
       Some(cb) => Ok(
         cb.await_call(
-          (ctx.clone().into(), BindingRenderedChunk::new(Arc::clone(&args.chunk))).into(),
+          (self.binding_context(ctx), BindingRenderedChunk::new(Arc::clone(&args.chunk))).into(),
         )
         .instrument(debug_span!("outro_hook", plugin_name = self.name))
         .await?
@@ -432,7 +447,7 @@ impl Plugin for JsPlugin {
     match &self.footer {
       Some(cb) => Ok(
         cb.await_call(
-          (ctx.clone().into(), BindingRenderedChunk::new(Arc::clone(&args.chunk))).into(),
+          (self.binding_context(ctx), BindingRenderedChunk::new(Arc::clone(&args.chunk))).into(),
         )
         .instrument(debug_span!("footer_hook", plugin_name = self.name))
         .await?
@@ -467,7 +482,7 @@ impl Plugin for JsPlugin {
     let result = cb
       .await_call(
         (
-          ctx.clone().into(),
+          self.binding_context(ctx),
           BindingSharedString::from(Arc::clone(&args.code)),
           BindingRenderedChunk::new(Arc::clone(&args.chunk)),
           BindingNormalizedOptions::new(Arc::clone(args.options)),
@@ -497,12 +512,14 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookAugmentChunkHashReturn {
     match &self.augment_chunk_hash {
       Some(cb) => Ok(
-        cb.await_call((ctx.clone().into(), BindingRenderedChunk::new(Arc::clone(&chunk))).into())
-          .instrument(debug_span!("augment_chunk_hash_hook", plugin_name = self.name))
-          .await
-          .with_context(|| {
-            format!("augmentChunkHash hook threw an error for chunkName={}", chunk.name)
-          })?,
+        cb.await_call(
+          (self.binding_context(ctx), BindingRenderedChunk::new(Arc::clone(&chunk))).into(),
+        )
+        .instrument(debug_span!("augment_chunk_hash_hook", plugin_name = self.name))
+        .await
+        .with_context(|| {
+          format!("augmentChunkHash hook threw an error for chunkName={}", chunk.name)
+        })?,
       ),
       _ => Ok(None),
     }
@@ -521,7 +538,7 @@ impl Plugin for JsPlugin {
       Some(cb) => Ok(
         cb.await_call(
           (
-            ctx.clone().into(),
+            self.binding_context(ctx),
             BindingHookResolveFileUrlArgs {
               chunk_id: args.chunk_id.to_string(),
               file_name: args.file_name.to_string(),
@@ -556,7 +573,7 @@ impl Plugin for JsPlugin {
     if let Some(cb) = &self.render_error {
       cb.await_call(
         (
-          ctx.clone().into(),
+          self.binding_context(ctx),
           args
             .errors
             .iter()
@@ -585,7 +602,7 @@ impl Plugin for JsPlugin {
       let mut changed: JsChangedOutputs = cb
         .await_call(
           (
-            ctx.clone().into(),
+            self.binding_context(ctx),
             napi::Either::B(args.bundle.clone().into()),
             args.is_write,
             BindingNormalizedOptions::new(Arc::clone(args.options)),
@@ -613,7 +630,7 @@ impl Plugin for JsPlugin {
       let mut changed: JsChangedOutputs = cb
         .await_call(
           (
-            ctx.clone().into(),
+            self.binding_context(ctx),
             napi::Either::B(args.bundle.clone().into()),
             BindingNormalizedOptions::new(Arc::clone(args.options)),
           )
@@ -639,7 +656,7 @@ impl Plugin for JsPlugin {
     if let Some(cb) = &self.close_bundle {
       cb.await_call(
         (
-          ctx.clone().into(),
+          self.binding_context(ctx),
           args.map(|args| {
             args
               .errors
@@ -668,7 +685,7 @@ impl Plugin for JsPlugin {
     event: rolldown_common::WatcherChangeKind,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.watch_change {
-      cb.await_call((ctx.clone().into(), path.to_string(), event.to_string()).into())
+      cb.await_call((self.binding_context(ctx), path.to_string(), event.to_string()).into())
         .instrument(debug_span!("watch_change_hook", plugin_name = self.name))
         .await
         .with_context(|| {
@@ -694,7 +711,7 @@ impl Plugin for JsPlugin {
       modules: args.modules.iter().map(ToString::to_string).collect(),
     };
     let result = cb
-      .await_call((ctx.clone().into(), binding_args).into())
+      .await_call((self.binding_context(ctx), binding_args).into())
       .instrument(debug_span!("hot_update_hook", plugin_name = self.name))
       .await
       .with_context(|| format!("hotUpdate hook threw an error for file={}", args.file))?;
@@ -710,7 +727,7 @@ impl Plugin for JsPlugin {
     ctx: &rolldown_plugin::PluginContext,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.close_watcher {
-      cb.await_call(FnArgs { data: (ctx.clone().into(),) })
+      cb.await_call(FnArgs { data: (self.binding_context(ctx),) })
         .instrument(debug_span!("close_watcher_hook", plugin_name = self.name))
         .await
         .context("closeWatcher hook threw an error")?;

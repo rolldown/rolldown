@@ -25,6 +25,7 @@ use rolldown_error::{
 };
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
+use rolldown_utils::commondir;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
@@ -422,7 +423,12 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     let ctx = Arc::clone(&self.shared_context);
     if resolved_id.external.is_external() {
       self.external_module_idxs.insert(idx);
-      let task = ExternalModuleTask::new(ctx, idx, resolved_id, Arc::clone(user_defined_entries));
+      let task = ExternalModuleTask::new(
+        ctx,
+        idx,
+        resolved_id,
+        self.cache.user_defined_entry_common_dir.clone(),
+      );
       tokio::spawn(task.run().instrument(tracing::info_span!("external_module_task")));
     } else {
       let task = ModuleTask::new(
@@ -471,7 +477,13 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     }
 
     let user_defined_entries = Arc::new(match fetch_mode {
-      ScanMode::Full => self.resolve_user_defined_entries().await?,
+      ScanMode::Full => {
+        let entries = self.resolve_user_defined_entries().await?;
+        self.cache.user_defined_entry_common_dir =
+          commondir::common_dir(entries.iter().map(|(_, resolved_id)| resolved_id.id.raw_id()))
+            .map(Arc::from);
+        entries
+      }
       ScanMode::Partial(_) => vec![],
     });
 
@@ -1310,6 +1322,6 @@ mod tests {
 
     let external =
       ResolvedId { id: ModuleId::new("external"), external: true.into(), ..Default::default() };
-    ExternalModuleTask::new(Arc::clone(&ctx), 1.into(), external, Arc::new(vec![])).run().await;
+    ExternalModuleTask::new(Arc::clone(&ctx), 1.into(), external, None).run().await;
   }
 }

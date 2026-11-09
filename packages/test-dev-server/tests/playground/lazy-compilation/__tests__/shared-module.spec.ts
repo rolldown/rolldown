@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { editFile, page, serverUrl, waitForBuildStable } from '~utils';
+import { editFile, getBuildSeq, page, serverUrl, waitForBuildStable } from '~utils';
 
 describe('lazy-shared-module', () => {
   // Regression for PR #9132: when a lazily imported module is shared by
@@ -66,6 +66,8 @@ describe('lazy-shared-module', () => {
   // After boot, every lazy route reaches the page as factories, and the runtime runs a module
   // once by its id. A route that was visited before the reload must not come back as built
   // code: that code would run `store.js` a second time and give the route its own `store`.
+  // The visited route is already in the server's graph, so its second compile skips the scan
+  // and the rebuild.
   test('a shared module runs once when a visited route loads after a new one', async () => {
     await page.goto(serverUrl, { waitUntil: 'domcontentloaded' });
     await waitForBuildStable();
@@ -77,10 +79,12 @@ describe('lazy-shared-module', () => {
     await page.click('#shared-module-b-btn');
     await expect.poll(() => page.textContent('#shared-module-stores')).toBe('a:- b:1 same:false');
     await waitForBuildStable();
+    const buildSeq = await getBuildSeq();
     await page.click('#shared-module-a-btn');
     await expect.poll(() => page.textContent('#shared-module-stores')).not.toMatch(/a:-/);
     await waitForBuildStable();
 
+    expect(await getBuildSeq()).toBe(buildSeq);
     expect(await page.textContent('#shared-module-stores')).toBe('a:1 b:1 same:true');
     expect(
       await page.evaluate(

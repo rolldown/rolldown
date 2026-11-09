@@ -145,7 +145,7 @@ impl BundleCoordinator {
             .unwrap_or_default();
           let _ = reply.send(result);
         }
-        CoordinatorMsg::ModuleChanged { module_id, watch_files } => {
+        CoordinatorMsg::ModuleChanged { module_id, watch_files, rebuild } => {
           // Handle programmatic module change (e.g., lazy compilation executed)
 
           // Watch the files the lazy compile loaded, so later edits to them trigger
@@ -154,14 +154,17 @@ impl BundleCoordinator {
           // and no later build loads these cached modules again.
           let _ = self.register_watch_files([&*watch_files]);
 
-          let mut changed_files = FxIndexMap::default();
-          changed_files.insert(PathBuf::from(&module_id), WatcherChangeKind::Update);
+          // A compile that did not scan left the graph as it was, so the output is current.
+          if rebuild {
+            let mut changed_files = FxIndexMap::default();
+            changed_files.insert(PathBuf::from(&module_id), WatcherChangeKind::Update);
 
-          // Queue a rebuild task and mark output as stale
-          self.queued_tasks.push_back(TaskInput::Rebuild { changed_files });
-          self.has_stale_bundle_output = true;
+            // Queue a rebuild task and mark output as stale
+            self.queued_tasks.push_back(TaskInput::Rebuild { changed_files });
+            self.has_stale_bundle_output = true;
 
-          let _ = self.schedule_build_if_stale().await;
+            let _ = self.schedule_build_if_stale().await;
+          }
         }
         CoordinatorMsg::Close => {
           // Wait for any running bundling task to complete before exiting

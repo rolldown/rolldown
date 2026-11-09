@@ -360,6 +360,24 @@ Full-build chunks carry no stamps. They run their code right
 away, so their rows always replace the old ones. An older runtime ignores
 the extra argument and field.
 
+Equal stamps mean equal code only inside one `ScanStageCache` lifetime.
+A full scan reads every file again but writes no stamps, so a module can
+change under the same stamp. The full builds after boot reload every
+client, so no client keeps the old copy.
+
+Even inside one lifetime, the cases below change what a fresh render
+prints, with no new stamp. A client that already holds the module at
+that stamp is not sent the new code, because the walk compares stamps
+only (`holds_current` in `hmr_stage.rs`):
+
+| Case                                                                                         | What changes                            | What that client keeps                                                             |
+| -------------------------------------------------------------------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------- |
+| A sourcemap-only edit (the unchanged-output compare checks code only)                        | AST, `sourcemap_chain`                  | a stale sourcemap                                                                  |
+| An importee's `def_format` flips (it is not one of the interop facts that restamp importers) | the importer's `import()` interop       | the old interop of that `import()`                                                 |
+| A `pending_rescans` retry by a lazy compile or by the `Rebuild` after it                     | AST                                     | old code                                                                           |
+| The second read of the changed files in `HmrRebuild`                                         | AST                                     | old code                                                                           |
+| A lazy-barrel record resolved by another route (`experimental.lazyBarrel: true`)             | `resolved_module` on a barrel's records | a factory with missing exports (see [Unresolved Questions](#unresolved-questions)) |
+
 ## Failure policy
 
 Full reload is the fallback for these delivery and state failures:
@@ -471,6 +489,39 @@ the changed module.
   boundaries from static analysis; when the chosen module never
   registered a live `accept` callback, the update is dropped silently.
   Upgrading that to a reload would align the failure modes with FBM.
+- **Lazy barrels get no new stamp** — with
+  `experimental.lazyBarrel: true`, a barrel's unused re-export record
+  stays unresolved until some importer needs it. When a later lazy
+  compile resolves it, `ScanStageCache::merge` writes the record into
+  the barrel, but nothing stamps the barrel: `HmrStage::compile_lazy_entry` reads the stamp
+  table and does not write it, and the `Bundle` partial rebuild has no
+  stamp table. A client that holds the barrel keeps a factory without
+  the new export. Example:
+
+  ```js
+  // B.js (barrel)
+  export { a } from './a.js';
+  export { b } from './b.js'; // unused at first, so this record stays unresolved
+  // I.js (route Y)
+  import { b } from './B.js';
+  ```
+
+  ```mermaid
+  sequenceDiagram
+    participant C as client
+    participant E as compile_lazy_entry
+    C->>E: route X
+    E-->>C: B.js at stamp S, factory without b
+    C->>E: route Y
+    E->>E: scan resolves B.js's b record, merge writes it, stamp stays S
+    E-->>C: I.js only, because C holds B.js at stamp S
+    C->>C: I.js reads b as undefined
+  ```
+
+  A fix would stamp barrel-patched modules. That needs a writable stamp
+  table in the lazy compile and a stamp table in the `Bundle` partial
+  rebuild. Each step was read in the code; the end-to-end run is not
+  reproduced.
 
 ## Related
 

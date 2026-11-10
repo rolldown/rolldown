@@ -1,0 +1,225 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { t as shared } from "./shared.js";
+// a.js
+const a = shared();
+export { a };
+
+```
+
+## b.js
+
+```js
+import { t as shared } from "./shared.js";
+// b.js
+const b = shared();
+export { b };
+
+```
+
+## main.js
+
+```js
+// main.js
+const load_a = () => import("./a.js");
+const load_b = () => import("./b.js");
+const load_named = () => import("./named.js");
+export { load_a, load_b, load_named };
+
+```
+
+## named.js
+
+```js
+import { t as shared } from "./shared.js";
+// named.js
+const named = shared();
+export { named };
+
+```
+
+## shared.js
+
+```js
+// shared.js
+function shared() {
+	return "shared";
+}
+export { shared as t };
+
+```
+
+# Variant: all: [inline_const: Config(InlineConstConfig { mode: Some(All), pass: 1 })]
+
+## Assets
+
+### a.js
+
+```js
+import { t as shared } from "./shared.js";
+// a.js
+const a = shared();
+export { a };
+
+```
+
+### b.js
+
+```js
+import { t as shared } from "./shared.js";
+// b.js
+const b = shared();
+export { b };
+
+```
+
+### main.js
+
+```js
+// main.js
+const load_a = () => import("./a.js");
+const load_b = () => import("./b.js");
+const load_named = () => import("./named.js");
+export { load_a, load_b, load_named };
+
+```
+
+### named.js
+
+```js
+import { t as shared } from "./shared.js";
+// named.js
+const named = shared();
+export { named };
+
+```
+
+### shared.js
+
+```js
+// shared.js
+function shared() {
+	return "shared";
+}
+export { shared as t };
+
+```
+
+# Variant: multi-pass: [inline_const: Config(InlineConstConfig { mode: Some(Smart), pass: 3 })]
+
+## Assets
+
+### a.js
+
+```js
+import { t as shared } from "./shared.js";
+// a.js
+const a = shared();
+export { a };
+
+```
+
+### b.js
+
+```js
+import { t as shared } from "./shared.js";
+// b.js
+const b = shared();
+export { b };
+
+```
+
+### main.js
+
+```js
+// main.js
+const load_a = () => import("./a.js");
+const load_b = () => import("./b.js");
+const load_named = () => import("./named.js");
+export { load_a, load_b, load_named };
+
+```
+
+### named.js
+
+```js
+import { t as shared } from "./shared.js";
+// named.js
+const named = shared();
+export { named };
+
+```
+
+### shared.js
+
+```js
+// shared.js
+function shared() {
+	return "shared";
+}
+export { shared as t };
+
+```
+
+# Variant: no-treeshake: [treeshake: Boolean(false)]
+
+## Assets
+
+### a.js
+
+```js
+import { t as shared } from "./shared.js";
+const a = shared();
+export { a };
+
+```
+
+### b.js
+
+```js
+import { t as shared } from "./shared.js";
+// b.js
+const b = shared();
+export { b };
+
+```
+
+### main.js
+
+```js
+// main.js
+const load_a = () => import("./a.js");
+const load_b = () => import("./b.js");
+const load_named = () => import("./named.js");
+export { load_a, load_b, load_named };
+
+```
+
+### named.js
+
+```js
+import { t as shared } from "./shared.js";
+const named = shared();
+export { named };
+
+```
+
+### shared.js
+
+```js
+function dead() {
+	console.log("DEAD");
+}
+// shared.js
+function shared() {
+	return "shared";
+}
+export { dead as n, shared as t };
+
+```

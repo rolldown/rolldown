@@ -27,7 +27,7 @@ Paths are relative to `crates/rolldown/src/`.
    - `Renamer::new` reserves the fixed names that the format prints: `require`, `module`, `exports`, `__filename`, `__dirname` and `Symbol` for CJS, and `exports` and `Symbol` for IIFE/UMD. It also reserves `Object`, `Promise`, the JS keywords and the global objects.
    - `reserve_fixed_names` reserves each unresolved reference of the modules of the chunk (for example `console` and `window`). It also reserves the fixed names that the bodies of these modules print, and the fixed parameters of their CJS closures (`cjs_wrapper_fixed_params`).
 2. IIFE/UMD/CJS: external module namespaces (factory parameters, `require()` bindings). Authored.
-3. Entry chunks: the symbols that the entry exports (`referenced_symbols_by_entry_point_chunk`). ESM: the external import bindings that the chunk uses. Authored.
+3. Entry chunks: the symbols that the entry exports (`referenced_symbols_by_entry_point_chunk`). Authored.
 4. The included top-level declarations of each module, entry module first (descending execution order). HMR references and the `this` binding of a CJS-wrapped module (`cjs_this_ref`) are synthesized. All other bindings go through `root_binding_kind`. In a CJS-wrapped module, this step gives names only to two kinds of binding:
    - facades;
    - bindings of an external `import` declaration, because rolldown moves that declaration out of the CJS closure.
@@ -35,9 +35,10 @@ Paths are relative to `crates/rolldown/src/`.
    Each other root binding is a local of the CJS closure, and this step skips it. This includes a binding that an external `require()` initializes.
 
 5. Order-wrap synthetic declarations. Synthesized.
-6. Import bindings from other chunks (`imports_from_other_chunks`), through `root_binding_kind`.
-7. Names with no symbol, through `create_conflictless_name` (synthesized): cross-chunk `require_<chunk>` bindings, external namespaces in node mode, and inline-common-chunk bridges.
-8. `rename_shadowing_symbols_in_nested_scopes`: the inner-binding passes, entry module first.
+6. ESM: the external import bindings that the chunk uses. Authored. They come after the declarations of the modules, so a top-level declaration keeps its source name and the import binding gets the `$N`, as in Rollup (#11035).
+7. Import bindings from other chunks (`imports_from_other_chunks`), through `root_binding_kind`.
+8. Names with no symbol, through `create_conflictless_name` (synthesized): cross-chunk `require_<chunk>` bindings, external namespaces in node mode, and inline-common-chunk bridges.
+9. `rename_shadowing_symbols_in_nested_scopes`: the inner-binding passes, entry module first.
 
 ## Top-level names
 

@@ -1,0 +1,8 @@
+{
+  "config": {},
+  "configVariants": [
+    { "_configName": "all", "inlineConst": { "mode": "all", "pass": 1 } },
+    { "_configName": "multi-pass", "inlineConst": { "mode": "smart", "pass": 3 } },
+    { "_configName": "no-treeshake", "treeshake": false }
+  ]
+}

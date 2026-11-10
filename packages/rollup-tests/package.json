@@ -2,7 +2,7 @@
   "name": "rollup-tests",
   "private": true,
   "scripts": {
-    "test": "ROLLUP_TEST=1 mocha --file ./src/intercept/main.js test/test.js",
+    "test": "mocha test/utils.test.js && ROLLUP_TEST=1 mocha --file ./src/intercept/main.js test/test.js",
     "update-treeshaking-failures": "mocha --file ./src/intercept/setup-node-modules.js ./test/form/found-tree-shaking-not-align.js"
   },
   "keywords": [],

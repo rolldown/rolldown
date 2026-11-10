@@ -28,10 +28,13 @@ fn resolve_tsconfig_from_cache(
   }
 
   match tsconfig_cache.find_tsconfig(Path::new(filename)) {
+    // Assign the cache resolver result to so that `enhanced_transform` does not re-resolve it
     Ok(Some(tsconfig)) => {
       options.tsconfig = Some(TsconfigOption::Config(tsconfig));
     }
-    Ok(None) => {}
+    Ok(None) => {
+      options.tsconfig = Some(TsconfigOption::Disabled);
+    }
     Err(err) => {
       return Err(BuildDiagnostic::tsconfig_error(err));
     }

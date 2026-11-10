@@ -14,8 +14,9 @@ use rolldown_common::{
   EcmaModuleAstUsage, ExportsKind, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind,
 };
 use rolldown_ecmascript_utils::{
-  EsmWrapperBodyKind, EsmWrapperCallKind, EsmWrapperDeclKind, EsmWrapperStmtOptions,
-  ExpressionFactoryExt as _, JsxExt, JsxMemberExpressionObjectExt, StatementFactoryExt as _,
+  BindingPatternExt as _, EsmWrapperBodyKind, EsmWrapperCallKind, EsmWrapperDeclKind,
+  EsmWrapperStmtOptions, ExpressionFactoryExt as _, JsxExt, JsxMemberExpressionObjectExt,
+  StatementFactoryExt as _,
 };
 use rolldown_error::EmptyImportMetaKind;
 
@@ -868,6 +869,22 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         self.top_level_var_bindings.extend(bindings);
         *it = ast::ForStatementInit::from(expr);
       }
+    }
+  }
+
+  fn visit_for_statement_left(&mut self, it: &mut ast::ForStatementLeft<'ast>) {
+    walk_js_mut::walk_for_statement_left(self, it);
+    // transform top level `for (var x of xs)` to `for (x of xs)` and hoist `x`
+    if self.state.contains(TraverseState::TopLevel)
+      && self.needs_hosted_top_level_binding
+      && let ast::ForStatementLeft::VariableDeclaration(decl) = it
+      && decl.kind.is_var()
+      && let Some(declarator) = decl.declarations.pop()
+    {
+      self
+        .top_level_var_bindings
+        .extend(declarator.id.get_binding_identifiers().iter().map(|id| id.name));
+      *it = ast::ForStatementLeft::from(declarator.id.into_assignment_target(self));
     }
   }
 

@@ -230,6 +230,7 @@
  - rollup@function@preserve-modules@mixed-exports: warns for mixed exports in all chunks when preserving modules
  - rollup@function@synthetic-named-exports@preserve-modules: handles a dynamic import with synthetic named exports in preserveModules mode
  - rollup@function@circular-namespace-reexport-preserve-modules: correctly handles namespace reexports with circular dependencies when preserving modules
+ - rollup@function@namespace-member-mutation-synthetic: handles assignments to synthetic namespace members
 
 ### The `output.manualChunks` is not compatible
  - rollup@function@manual-chunks-conflict: Throws for conflicts between manual chunks

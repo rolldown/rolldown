@@ -3,6 +3,7 @@
     "compatibility_date": "2026-02-24"
   },
   "routing": {
+    "alwaysUseHttps": true,
     "redirects": {
       "/about": { "to": "/guide/introduction", "status": 301 },
       "/about/": { "to": "/guide/introduction", "status": 301 },

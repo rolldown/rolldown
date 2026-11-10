@@ -35,6 +35,8 @@
  
 ### The `renderDynamicImport` hook not supported
  - rollup@form@custom-dynamic-import-no-interop: does not add any interop when using a custom dynamic import handler@generates es
+ - rollup@chunking form@render-dynamic-import-extended: supports extended custom rendering for dynamic imports@generates cjs
+ - rollup@chunking form@render-dynamic-import-extended: supports extended custom rendering for dynamic imports@generates es
 
 ### The `PluginContext.parse` does not support `allowReturnOutsideFunction` option
  - rollup@function@parse-return-outside-function: supports parsing return statements outside functions via options
@@ -86,6 +88,12 @@
  - rollup@function@emit-file@invalid-prebuilt-chunk-filename: throws for invalid prebuilt chunks filename
  - rollup@function@emit-file@invalid-prebuit-chunk-code: throws for invalid prebuilt chunks code
 
+### `needsCodeReference` property for `PluginContext.emitFile` is not supported
+ - rollup@chunking form@asset-needs-code-reference: does not emit unreferenced assets if needsCodeReference is true@generates es
+ - rollup@chunking form@asset-needs-code-reference: does not emit unreferenced assets if needsCodeReference is true@generates cjs
+ - rollup@chunking form@emit-file@generate-emission-names: updates asset names when emitting in generate phase@generates cjs
+ - rollup@chunking form@emit-file@generate-emission-names: updates asset names when emitting in generate phase@generates es
+
 ### The `PluginContext.setAssetSource` is not supported
  - rollup@function@emit-file@asset-source-invalid2: throws when setting an empty asset source
  - rollup@function@emit-file@asset-source-invalid3: throws when setting an empty asset source
@@ -96,6 +104,8 @@
  - rollup@function@emit-file@set-asset-source-twice: throws when setting the asset source twice
  - rollup@function@emit-file@invalid-set-asset-source-id: throws for invalid asset ids
  - rollup@hooks@keeps emitted ids stable between runs
+ - rollup@chunking form@emit-file@set-asset-source: supports setting the asset source during generate@generates cjs
+ - rollup@chunking form@emit-file@set-asset-source: supports setting the asset source during generate@generates es
 
 ### `originalFileName` / `originalFileNames` is not supported properly
 - rollup@function@deprecated@emit-file@original-file-name: forwards the original file name to other hooks
@@ -323,6 +333,14 @@
  - rollup@function@resolve-relative-external-id: resolves relative external ids
 
 ### `ModuleInfo.ast` is not supported
+ - rollup@chunking form@implicit-dependencies@implicitly-dependent-emitted-entry2: makes sure emitted entry points are never implicit dependencies@generates cjs
+ - rollup@chunking form@implicit-dependencies@implicitly-dependent-emitted-entry2: makes sure emitted entry points are never implicit dependencies@generates es
+ - rollup@chunking form@implicit-dependencies@implicitly-dependent-emitted-entry: makes sure emitted entry points are never implicit dependencies@generates cjs
+ - rollup@chunking form@implicit-dependencies@implicitly-dependent-emitted-entry: makes sure emitted entry points are never implicit dependencies@generates es
+ - rollup@chunking form@implicit-dependencies@implicitly-dependent-entry: makes sure actual entry points are never implicit dependencies@generates cjs
+ - rollup@chunking form@implicit-dependencies@implicitly-dependent-entry: makes sure actual entry points are never implicit dependencies@generates es
+ - rollup@chunking form@implicit-dependencies@multiple-dependencies: supports emitting the same chunk with different and multiple dependencies@generates cjs
+ - rollup@chunking form@implicit-dependencies@multiple-dependencies: supports emitting the same chunk with different and multiple dependencies@generates es
  - rollup@chunking form@implicit-dependencies@single-dependency: supports implicit dependencies when emitting files@generates cjs
  - rollup@chunking form@implicit-dependencies@single-dependency: supports implicit dependencies when emitting files@generates es
 

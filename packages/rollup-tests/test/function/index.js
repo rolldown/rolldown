@@ -137,6 +137,8 @@ runTestSuiteWithSamples(
 					.rollup({
 						input: path.join(directory, 'main.js'),
 						onLog: (level, log) => {
+							// Rollup does not emit this Rolldown-specific diagnostic.
+							if (log.code === 'INEFFECTIVE_DYNAMIC_IMPORT') return;
 							logs.push({ level, ...log });
 							if (level === 'warn' && !config.expectedWarnings?.includes(log.code)) {
 								warnings.push(log);

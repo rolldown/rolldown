@@ -1,5 +1,5 @@
 {
-  "_comment": "oxc trusts a known operand type further than a coercion: `instanceof` skips the effects of its left operand, a typed array accepts any length, and a BigInt shift or power ignores the result size. An imported constant must not make these statements side-effect free.",
+  "_comment": "oxc trusts a known operand type further than a coercion: a typed array accepts any length, and a BigInt shift or power ignores the result size. The call in the left operand of `instanceof` is a side effect. An imported constant must not make these statements side-effect free.",
   "config": {
     "input": [
       {

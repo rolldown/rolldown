@@ -94,10 +94,95 @@ const nativeReplace = NativeBindingMagicString.prototype.replace;
 // eslint-disable-next-line @typescript-eslint/unbound-method
 const nativeReplaceAll = NativeBindingMagicString.prototype.replaceAll;
 
+// Function replacements cannot be handled by the native binding, which only
+// accepts string replacements. Instead, the match runs in JS — with `String`
+// semantics for flags, capture groups and `lastIndex` — and each result is
+// applied through the positional native APIs. This mirrors magic-string's
+// `_replaceRegexp` / `_replaceString` / `_replaceAllString`, minus the
+// removed-content checks that need chunk internals the binding does not expose.
+export type ReplacementFunction = (substring: string, ...args: any[]) => string;
+
+function getRegexReplacement(
+  match: RegExpMatchArray,
+  original: string,
+  replacement: ReplacementFunction,
+): string {
+  return match.groups === undefined
+    ? replacement(match[0], ...match.slice(1), match.index ?? 0, original)
+    : replacement(match[0], ...match.slice(1), match.index ?? 0, original, match.groups);
+}
+
+function replaceRegexWithFunction(
+  s: NativeBindingMagicString,
+  searchValue: RegExp,
+  replacement: ReplacementFunction,
+): void {
+  const original = s.original;
+  const offset = s.offset;
+  const replaceMatch = (match: RegExpMatchArray) => {
+    // `match.index` is always defined for results of `matchAll` / `match`.
+    const index = match.index;
+    if (index === undefined) return;
+    const content = getRegexReplacement(match, original, replacement);
+    if (content === match[0]) return; // ignore non-changed replacements
+    if (match[0].length === 0) {
+      nativeAppendRight.call(s, index - offset, content);
+    } else {
+      nativeOverwrite.call(s, index - offset, index + match[0].length - offset, content);
+    }
+  };
+  if (searchValue.global) {
+    searchValue.lastIndex = 0;
+    for (const match of original.matchAll(searchValue)) replaceMatch(match);
+  } else {
+    // `String.prototype.match` keeps JS semantics for sticky regexes.
+    const match = original.match(searchValue);
+    if (match) replaceMatch(match);
+  }
+}
+
+function replaceStringWithFunction(
+  s: NativeBindingMagicString,
+  searchValue: string,
+  replacement: ReplacementFunction,
+  replaceAll: boolean,
+): void {
+  const original = s.original;
+  const offset = s.offset;
+  if (searchValue === '') {
+    // An empty pattern matches at every index; magic-string inserts at each.
+    const last = replaceAll ? original.length : 0;
+    for (let index = 0; index <= last; index++) {
+      const content = replacement('', index, original);
+      if (content !== '') nativeAppendRight.call(s, index - offset, content);
+    }
+    return;
+  }
+  for (
+    let index = original.indexOf(searchValue);
+    index !== -1;
+    index = original.indexOf(searchValue, index + searchValue.length)
+  ) {
+    const content = replacement(searchValue, index, original);
+    if (content !== searchValue) {
+      nativeOverwrite.call(s, index - offset, index + searchValue.length - offset, content);
+    }
+    if (!replaceAll) return;
+  }
+}
+
 NativeBindingMagicString.prototype.replace = function (
   searchValue: string | RegExp,
-  replacement: string,
+  replacement: string | ReplacementFunction,
 ): any {
+  if (typeof replacement === 'function') {
+    if (typeof searchValue === 'string') {
+      replaceStringWithFunction(this, searchValue, replacement, false);
+    } else {
+      replaceRegexWithFunction(this, searchValue, replacement);
+    }
+    return this;
+  }
   if (typeof searchValue === 'string') {
     return nativeReplace.call(this, searchValue, replacement);
   }
@@ -121,8 +206,21 @@ NativeBindingMagicString.prototype.replace = function (
 
 NativeBindingMagicString.prototype.replaceAll = function (
   searchValue: string | RegExp,
-  replacement: string,
+  replacement: string | ReplacementFunction,
 ): any {
+  if (typeof replacement === 'function') {
+    if (typeof searchValue === 'string') {
+      replaceStringWithFunction(this, searchValue, replacement, true);
+      return this;
+    }
+    if (!searchValue.global) {
+      throw new TypeError(
+        'MagicString.prototype.replaceAll called with a non-global RegExp argument',
+      );
+    }
+    replaceRegexWithFunction(this, searchValue, replacement);
+    return this;
+  }
   if (typeof searchValue === 'string') {
     return nativeReplaceAll.call(this, searchValue, replacement);
   }
@@ -139,10 +237,17 @@ NativeBindingMagicString.prototype.replaceAll = function (
 
 export interface RolldownMagicString extends NativeBindingMagicString {
   readonly isRolldownMagicString: true;
-  /** Accepts a string or RegExp pattern. RegExp supports `$&`, `$$`, and `$N` substitutions. */
-  replace(from: string | RegExp, to: string): this;
-  /** Accepts a string or RegExp pattern. RegExp must have the global (`g`) flag. */
-  replaceAll(from: string | RegExp, to: string): this;
+  /**
+   * Accepts a string or RegExp pattern with a string replacement (`$&`, `$$`,
+   * and `$N` substitutions are supported), or a replacer function invoked like
+   * `String.prototype.replace`.
+   */
+  replace(from: string | RegExp, to: string | ReplacementFunction): this;
+  /**
+   * Accepts a string or RegExp pattern (RegExp must have the global (`g`)
+   * flag) with a string replacement, or a replacer function.
+   */
+  replaceAll(from: string | RegExp, to: string | ReplacementFunction): this;
 }
 
 type RolldownMagicStringConstructor = Omit<typeof NativeBindingMagicString, 'prototype'> & {

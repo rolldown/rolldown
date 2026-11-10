@@ -1,6 +1,6 @@
 import type { Plugin } from 'rolldown';
 import { rolldown } from 'rolldown';
-import { isWasiTest } from 'rolldown-tests/utils';
+import { isWasiTest, sleep } from 'rolldown-tests/utils';
 import { describe, expect, test, vi } from 'vitest';
 import { aggregateBindingErrorsIntoJsError } from '../../src/utils/error';
 
@@ -33,6 +33,46 @@ test('Plugin renderError hook', async () => {
   });
   expect(error!.message).toContain('renderStart error');
   expect(renderErrorFn).toHaveBeenCalledTimes(1);
+});
+
+test('Plugin renderError hook waits for an async handler', async () => {
+  let finished = false;
+  await buildWithPlugin({
+    name: 'test',
+    renderStart() {
+      throw new Error('renderStart error');
+    },
+    async renderError() {
+      await sleep(50);
+      finished = true;
+    },
+  });
+  expect(finished).toBe(true);
+});
+
+test('Plugin renderError hook reports an async rejection', async () => {
+  const error = await buildWithPlugin({
+    name: 'test',
+    renderStart() {
+      throw new Error('renderStart error');
+    },
+    async renderError() {
+      await Promise.resolve();
+      throw new Error('renderError error');
+    },
+  });
+  expect(error!.message).toContain('renderError error');
+});
+
+test('Plugin renderStart hook reports an async rejection', async () => {
+  const error = await buildWithPlugin({
+    name: 'test',
+    async renderStart() {
+      await Promise.resolve();
+      throw new Error('renderStart error');
+    },
+  });
+  expect(error!.message).toContain('renderStart error');
 });
 
 describe('Plugin buildEnd hook', async () => {

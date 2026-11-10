@@ -1540,6 +1540,35 @@ test.concurrent(
   },
 );
 
+// The `watch` wrapper above forces polling, so this is the only test in this file on the
+// native backend. It checks the output, not the event kind, because macOS FSEvents may
+// report an in-place write as `create`.
+test.concurrent(
+  'native watcher (usePolling: false) rebuilds on file change',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput('watch-native', retryCount);
+    const watcher = _watch({
+      input,
+      output: { file: output },
+      watch: { watcher: { usePolling: false } },
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+    await waitBuildFinished(watcher);
+    expect(fs.readFileSync(output, 'utf-8')).toContain('console.log(1)');
+    await editFile(input, 'console.log(2)');
+    await expect
+      .poll(() => fs.readFileSync(output, 'utf-8'), { timeout: 10_000 })
+      .toContain('console.log(2)');
+  },
+);
+
 function createTestInputAndOutput(testLabel: string, retryCount: number, content?: string) {
   const uniqueId = crypto.randomUUID().slice(0, 8);
   const dirname = `${testLabel}-${uniqueId}-retry${retryCount}`;

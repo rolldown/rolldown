@@ -140,7 +140,7 @@ mod tests {
 
   /// Builds a sourcemap for `source`/`content` with two tokens at columns 0 and 6 of the
   /// first line. The tokens are identity mappings so they line up across maps and survive
-  /// `collapse_sourcemaps`' source-view lookups.
+  /// `collapse_sourcemaps`' lookups.
   fn map(source: &str, content: &str) -> SourceMap {
     let mut builder = SourceMapBuilder::default();
     let source_id = builder.add_source_and_content(source, content);

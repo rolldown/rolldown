@@ -33,7 +33,11 @@ jobs:
 
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            build: vp run ci:build-release-binding --target x86_64-unknown-linux-gnu --use-napi-cross
+            # The runner's gcc builds mimalloc here, and the ubuntu-26.04 runner's
+            # gcc defaults to x86-64-v3. Keep the baseline for older CPUs (#11607).
+            build: |
+              export CFLAGS_x86_64_unknown_linux_gnu="-march=x86-64"
+              vp run ci:build-release-binding --target x86_64-unknown-linux-gnu --use-napi-cross
 
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl

@@ -1171,9 +1171,9 @@ fn chain_root_visiting_eager_children<'a>(
 
 /// Finds a construct for which an oxc rule trusts a known operand type further than a coercion.
 ///
-/// oxc then ignores the effects of the left operand of `instanceof`, the `RangeError` of a global
-/// function or constructor such as `new Uint8Array(-1)`, and the size of a BigInt shift or power
-/// (#10817). The search also enters function bodies, so it can report a construct that never runs.
+/// oxc then ignores the `RangeError` of a global function or constructor such as
+/// `new Uint8Array(-1)`, and the size of a BigInt shift or power (#10817). The search also enters
+/// function bodies, so it can report a construct that never runs.
 struct ConstantTrustFinder<'s, 'a> {
   analyzer: &'s StmtEvalAnalyzer<'a>,
   found: bool,
@@ -1196,7 +1196,6 @@ impl<'ast> VisitJs<'ast> for ConstantTrustFinder<'_, '_> {
 
   fn visit_binary_expression(&mut self, it: &ast::BinaryExpression<'ast>) {
     self.found |= match it.operator {
-      ast::BinaryOperator::Instanceof => true,
       ast::BinaryOperator::ShiftLeft
       | ast::BinaryOperator::ShiftRight
       | ast::BinaryOperator::Exponential => {
@@ -1557,6 +1556,8 @@ mod test {
       "const SECOND = 1000; -SECOND;",
       "const SECOND = 1000; SECOND + 1;",
       "const SECOND = 1000; `${SECOND}ms`;",
+      "const SECOND = 1000; SECOND instanceof Object;",
+      "const SECOND = 1000; const config = { timeout: 60 * SECOND, isError: (e) => e instanceof Error };",
     ] {
       assert_eq!(get_stmt_eval_flags_with_constants(code, &second), [pure, pure], "{code}");
     }
@@ -1589,8 +1590,8 @@ mod test {
       [pure, unknown]
     );
 
-    // oxc trusts a known type further than a coercion: `instanceof` skips the effects of its left
-    // operand, and a typed array accepts any number. The constant must not make these pure.
+    // The call in the left operand of `instanceof` is a side effect, and oxc trusts a typed array to
+    // accept any number. The constant must not make these pure.
     let length = [("LENGTH", ConstantValue::Number(-1.0))];
     assert_eq!(
       get_stmt_eval_flags_with_constants(

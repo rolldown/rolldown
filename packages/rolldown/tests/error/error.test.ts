@@ -17,22 +17,40 @@ async function buildWithPlugin(plugin: Plugin) {
   }
 }
 
-test('Plugin renderError hook', async () => {
-  const renderErrorFn = vi.fn();
-  const renderChunkFn = vi.fn();
-  const error = await buildWithPlugin({
-    name: 'test',
-    renderStart() {
-      renderChunkFn();
-      throw new Error('renderStart error');
-    },
-    renderError: (error) => {
-      renderErrorFn();
-      expect(error!.message).toContain('renderStart error');
-    },
+describe('Plugin renderError hook', () => {
+  test('calls renderError with the rendering error', async () => {
+    const renderErrorFn = vi.fn();
+    const renderChunkFn = vi.fn();
+    const error = await buildWithPlugin({
+      name: 'test',
+      renderStart() {
+        renderChunkFn();
+        throw new Error('renderStart error');
+      },
+      renderError: (error) => {
+        renderErrorFn();
+        expect(error!.message).toContain('renderStart error');
+      },
+    });
+    expect(error!.message).toContain('renderStart error');
+    expect(renderErrorFn).toHaveBeenCalledTimes(1);
   });
-  expect(error!.message).toContain('renderStart error');
-  expect(renderErrorFn).toHaveBeenCalledTimes(1);
+
+  test('preserves rendering and renderError failures', async () => {
+    const error = await buildWithPlugin({
+      name: 'test',
+      renderStart() {
+        this.error({ code: 'PRIMARY_FAILURE', message: 'rendering failed' });
+      },
+      renderError() {
+        throw new Error('cleanup failed');
+      },
+    });
+    expect(error).toMatchObject({
+      message: expect.stringMatching(/rendering failed[\s\S]*cleanup failed/),
+      errors: [{ message: 'rendering failed' }, { message: 'cleanup failed' }],
+    });
+  });
 });
 
 test('Plugin renderError hook waits for an async handler', async () => {

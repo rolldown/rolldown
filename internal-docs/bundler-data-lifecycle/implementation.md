@@ -239,6 +239,22 @@ The factory also owns the `Arc`s for `module_infos` and `transform_dependencies`
 
 This is what fixed the bug where `this.getModuleInfo()` returned nothing on the second HMR rebuild — the old code created entirely new plugin contexts with no connection to the previous build's module info.
 
+## Normalized options objects
+
+**Rule:** the options objects that hooks get (`NormalizedInputOptionsImpl`, `NormalizedOutputOptionsImpl`) hold plain values, not the native `BindingNormalizedOptions`. Their constructors read every `@lazyProp` getter once, then set `inner` to `null`. The key stays, so `Object.keys()` and `{...options}` keep the same keys in the same order.
+
+**Why:** `BindingNormalizedOptions` owns an `Arc<NormalizedBundlerOptions>`, and the options own the JS option functions (`onLog`, `deferSyncScanData`, `invalidateJsSideCache`, and user functions such as `external`). Each of those functions is held by a napi threadsafe function, which is a GC root. Two of them, `deferSyncScanData` and `invalidateJsSideCache`, are always passed and capture `PluginContextData`, which caches the options objects and the plugins. So an options object that keeps the native object closes a loop the GC cannot see:
+
+```
+GC root → option function → PluginContextData → options object → BindingNormalizedOptions → Arc<options> → GC root
+```
+
+That loop kept every plugin of a build alive, even after `close()` (rolldown/rolldown#11444). Without the native object, the loop is gone: once the build object and the per-hook native objects are garbage, the options drop, the threadsafe functions are released, and a later GC frees the plugins. This takes at least two GCs with event loop turns between them, so the GC test loops (`packages/rolldown/tests/build-api/normalized-options-gc.mjs`).
+
+**Covers:** builds that are closed, builds that are dropped without `close()`, a plugin that keeps an options object, and a watch build whose event result and watcher are closed.
+
+**Does not cover:** a plugin that keeps `this`. The plugin context owns the options too (`NativePluginContextImpl.options` in `crates/rolldown_plugin/src/plugin_context/native_plugin_context.rs`), so the same loop stays.
+
 ## Bugs Found by This Separation
 
 1. **Lost `module_infos` across HMR rebuilds** (rolldown/rolldown#6891) — Each build created fully independent plugin contexts. `this.getModuleInfo()` in `transform` returned nothing on the second build because the new context had an empty module info map. Fix: `module_infos` became bundler-level, shared via Arc through `PluginDriverFactory`.

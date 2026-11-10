@@ -128,7 +128,7 @@ export class NormalizedOutputOptionsImpl
     for (const key of getLazyFields(this)) {
       Reflect.get(this, key);
     }
-    // The getters above cached every value, so nothing reads `inner` after this line.
+    // A getter that reads `inner` must be a `@lazyProp`: nothing may read `inner` after this line.
     this.inner = null as unknown as BindingNormalizedOptions;
   }
 

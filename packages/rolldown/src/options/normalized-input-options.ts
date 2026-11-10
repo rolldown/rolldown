@@ -30,15 +30,12 @@ export class NormalizedInputOptionsImpl extends PlainObjectLike implements Norma
   ) {
     super();
     this.inner = inner;
-    // Read every option once, then drop the native object. It owns the bundler options, and their
-    // JS option functions are GC roots that reach this object through `PluginContextData`. If this
-    // object kept it, the plugins of a build would never be freed
-    // (https://github.com/rolldown/rolldown/issues/11444).
+    // Read every option once, then drop the native object, which would keep the plugins alive.
     // See internal-docs/bundler-data-lifecycle/implementation.md ("Normalized options objects").
     for (const key of getLazyFields(this)) {
       Reflect.get(this, key);
     }
-    // The getters above cached every value, so nothing reads `inner` after this line.
+    // A getter that reads `inner` must be a `@lazyProp`: nothing may read `inner` after this line.
     this.inner = null as unknown as BindingNormalizedOptions;
   }
 

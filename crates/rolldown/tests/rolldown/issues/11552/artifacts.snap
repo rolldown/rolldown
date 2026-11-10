@@ -1,0 +1,29 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+// m.js
+var m_exports = /* @__PURE__ */ __exportAll({
+	a: () => a,
+	b: () => b,
+	c: () => c
+});
+var a, b, c;
+var init_m = __esmMin((() => {
+	({x: [a = 1]} = { x: [] });
+	({x: [, b = 2]} = { x: [] });
+	[{x: [c = 3]}] = [{ x: [] }];
+}));
+// main.js
+const m = await Promise.resolve().then(() => (init_m(), m_exports));
+assert.strictEqual(m.a, 1);
+assert.strictEqual(m.b, 2);
+assert.strictEqual(m.c, 3);
+
+```

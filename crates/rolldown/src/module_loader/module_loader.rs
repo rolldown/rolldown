@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
 use std::collections::hash_map::Entry;
+use std::path::Path;
 use std::sync::Arc;
 
 use arcstr::ArcStr;
@@ -30,6 +31,7 @@ use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
+use sugar_path::SugarPath;
 use tracing::Instrument;
 
 use crate::module_loader::module_task::ModuleTaskOwner;
@@ -423,12 +425,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     let ctx = Arc::clone(&self.shared_context);
     if resolved_id.external.is_external() {
       self.external_module_idxs.insert(idx);
-      let task = ExternalModuleTask::new(
-        ctx,
-        idx,
-        resolved_id,
-        self.cache.user_defined_entry_common_dir.clone(),
-      );
+      let task = ExternalModuleTask::new(ctx, idx, resolved_id);
       tokio::spawn(task.run().instrument(tracing::info_span!("external_module_task")));
     } else {
       let task = ModuleTask::new(
@@ -477,13 +474,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     }
 
     let user_defined_entries = Arc::new(match fetch_mode {
-      ScanMode::Full => {
-        let entries = self.resolve_user_defined_entries().await?;
-        self.cache.user_defined_entry_common_dir =
-          commondir::common_dir(entries.iter().map(|(_, resolved_id)| resolved_id.id.raw_id()))
-            .map(Arc::from);
-        entries
-      }
+      ScanMode::Full => self.resolve_user_defined_entries().await?,
       ScanMode::Partial(_) => vec![],
     });
 
@@ -872,6 +863,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       }
     }
 
+    self.render_new_external_paths(&user_defined_entries, &extra_entry_points);
+
     let mut errors = std::mem::take(&mut self.errors);
     if !errors.is_empty() {
       // Enrich UNRESOLVED_IMPORT errors with import chain. Must run before
@@ -1033,6 +1026,39 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       tla_module_count: self.tla_module_count,
       tla_keyword_span_map: std::mem::take(&mut self.tla_keyword_span_map),
     })
+  }
+
+  /// Renders each path external this scan added relative to the common directory of the entries.
+  /// A full scan computes that directory here, after the scan, because emitted chunks join the
+  /// entries during it.
+  fn render_new_external_paths(
+    &mut self,
+    user_defined_entries: &[(Option<ArcStr>, ResolvedId)],
+    extra_entry_points: &[EntryPoint],
+  ) {
+    if self.is_full_scan {
+      let modules = &self.intermediate_normal_modules.modules;
+      let emitted_entry_ids = extra_entry_points.iter().filter_map(|entry| {
+        let id = modules.try_get(entry.idx)?.as_ref()?.id();
+        id.is_path().then(|| id.raw_id())
+      });
+      let common_dir = commondir::common_dir(
+        user_defined_entries
+          .iter()
+          .map(|(_, resolved_id)| resolved_id.id.raw_id())
+          .chain(emitted_entry_ids),
+      );
+      self.cache.user_defined_entry_common_dir = common_dir.map(Arc::from);
+    }
+    let cwd = self.shared_context.options.cwd.as_path();
+    let common_dir = self.cache.user_defined_entry_common_dir.as_deref().unwrap_or(cwd);
+    for &idx in &self.external_module_idxs {
+      if let Some(Module::External(module)) = self.intermediate_normal_modules.modules.get_mut(idx)
+        && module.need_renormalize_render_path
+      {
+        module.name = Path::new(module.id.raw_id()).relative(common_dir).to_slash().into();
+      }
+    }
   }
 
   #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
@@ -1322,6 +1348,6 @@ mod tests {
 
     let external =
       ResolvedId { id: ModuleId::new("external"), external: true.into(), ..Default::default() };
-    ExternalModuleTask::new(Arc::clone(&ctx), 1.into(), external, None).run().await;
+    ExternalModuleTask::new(Arc::clone(&ctx), 1.into(), external).run().await;
   }
 }

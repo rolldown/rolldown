@@ -151,7 +151,10 @@ exports.compareError = function compareError(actual, expected) {
 	expected = normalizeExpectedError(expected);
 	const locExpected = !!expected.loc;
 	if (actual.errors) {
-		const actuals = actual.errors.map(e => normalizeError(e, locExpected));
+		const actuals = actual.errors.map(error => {
+			if (error instanceof assert.AssertionError) throw error;
+			return normalizeError(error, locExpected);
+		});
 		const assertErrors = [];
 		try {
 			assert.ok(actuals.some(actual => {

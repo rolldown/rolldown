@@ -35,8 +35,8 @@ pub struct ScanStageCache {
   /// [`ModuleLoader::revert_partial_scan`](crate::module_loader::module_loader::ModuleLoader).
   pub pending_rescans: Vec<ResolvedId>,
   pub user_defined_entry: FxHashSet<ModuleId>,
-  /// Common directory of the last full scan's user-defined entries. A partial scan has no
-  /// entry list, so its external modules resolve their render paths against this one.
+  /// Common directory of the entries of the last full scan, configured and emitted. A partial scan
+  /// does not see every entry, so the path externals it adds render relative to this directory.
   pub user_defined_entry_common_dir: Option<Arc<Path>>,
   // Usage: Map file path emitted by watcher to corresponding module index
   pub module_idx_by_abs_path: FxHashMap<ArcStr, ModuleIdx>,

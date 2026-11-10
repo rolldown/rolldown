@@ -19,18 +19,12 @@ pub struct ExternalModuleTask<Fs: FileSystem> {
   ctx: Arc<TaskContext<Fs>>,
   module_idx: ModuleIdx,
   resolved_id: ResolvedId,
-  entries_common_dir: Option<Arc<Path>>,
   // The module is asserted to be this specific module type.
 }
 
 impl<Fs: FileSystem> ExternalModuleTask<Fs> {
-  pub fn new(
-    ctx: Arc<TaskContext<Fs>>,
-    idx: ModuleIdx,
-    resolved_id: ResolvedId,
-    entries_common_dir: Option<Arc<Path>>,
-  ) -> Self {
-    Self { ctx, module_idx: idx, resolved_id, entries_common_dir }
+  pub fn new(ctx: Arc<TaskContext<Fs>>, idx: ModuleIdx, resolved_id: ResolvedId) -> Self {
+    Self { ctx, module_idx: idx, resolved_id }
   }
 
   #[tracing::instrument(name="ExternalModuleTask::run", level = "trace", skip_all, fields(module_id = %self.resolved_id.id))]
@@ -69,14 +63,6 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
       !matches!(resolved_id.external, ResolvedExternal::Absolute) && resolved_id.id.is_path();
 
     let raw_id = resolved_id.id.raw_id();
-    let file_name: ArcStr = if need_renormalize_render_path {
-      let entries_common_dir =
-        self.entries_common_dir.as_deref().expect("should have common dir for entries");
-      let relative_path = Path::new(raw_id).relative(entries_common_dir);
-      ArcStr::from(relative_path.to_slash())
-    } else {
-      raw_id.into()
-    };
 
     let identifier_name: ArcStr = if need_renormalize_render_path {
       let relative_path = Path::new(raw_id).relative(&self.ctx.options.cwd);
@@ -88,7 +74,7 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
     let msg = ModuleLoaderMsg::ExternalModuleDone(Box::new(ExternalModuleTaskResult {
       idx: self.module_idx,
       id: resolved_id.id.clone(),
-      name: file_name,
+      name: raw_id.into(),
       identifier_name: legitimized_identifier_name.into(),
       side_effects: external_module_side_effects,
       need_renormalize_render_path,

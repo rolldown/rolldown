@@ -131,7 +131,7 @@ pub struct ScanStageCache {
 | `modules_with_changed_importers` | Modules whose `importers` records were mutated by a partial scan; `merge` drains it to re-derive their materialized importer sets (see below).                                        |
 | `pending_rescans`                | Work queue: files of an aborted partial scan, whose mutations were reverted (`ModuleLoader::revert_partial_scan`); the next partial scan retries them so their errors keep surfacing. |
 | `user_defined_entry`             | The set of configured root entry `ModuleId`s.                                                                                                                                         |
-| `user_defined_entry_common_dir`  | Common directory of the configured root entries, set by each full scan. A partial scan has no entry list, so the path externals it adds render relative to it.                        |
+| `user_defined_entry_common_dir`  | Common directory of the entries of the last full scan, configured and emitted. The path externals a partial scan adds render relative to it.                                          |
 | `module_idx_by_abs_path`         | Absolute-path → `ModuleIdx`, used by the watcher. Paths are slash-normalized.                                                                                                         |
 | `module_idx_by_stable_id`        | `StableModuleId` → `ModuleIdx`, used by HMR.                                                                                                                                          |
 

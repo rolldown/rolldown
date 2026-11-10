@@ -99,7 +99,15 @@ impl TransformPluginContext {
       ))))
       .map(|()| None)
     } else {
-      Ok(Some(magic_string.source_map(string_wizard::SourceMapOptions::default()).to_json_string()))
+      // Same resolution as the sourcemap worker in `ScanStage`.
+      Ok(Some(
+        magic_string
+          .source_map(SourceMapOptions {
+            hires: string_wizard::Hires::Boundary,
+            ..SourceMapOptions::default()
+          })
+          .to_json_string(),
+      ))
     }
   }
 }

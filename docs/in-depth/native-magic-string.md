@@ -104,6 +104,8 @@ The following MagicString methods are currently available in the native implemen
   - `options.includeContent` - Include original source in the map
   - `options.hires` - High-resolution mode: `true`, `false`, or `"boundary"`
 
+When a `transform` or `renderChunk` hook returns the native MagicString without a `map`, Rolldown generates the map for that step with `hires: "boundary"`. The output source map then keeps column positions and names after that map is composed with the others in the chain.
+
 ### Not Yet Implemented
 
 The following features are planned for future releases:

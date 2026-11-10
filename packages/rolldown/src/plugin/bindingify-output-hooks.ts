@@ -33,6 +33,21 @@ export function bindingifyRenderStart(
     },
   }));
 }
+
+// Rolldown composes this map with the chunk's map and with the maps of later steps such as
+// minification. A line-level map (`hires: false`, the default of `generateMap`) would make
+// every token on a line resolve to that line's first mapping, so keep the word boundaries.
+function generateSourcemap(magicString: RolldownMagicString) {
+  const generatedMap = magicString.generateMap({ hires: 'boundary' });
+  return bindingifySourcemap({
+    file: generatedMap.file,
+    mappings: generatedMap.mappings,
+    names: generatedMap.names,
+    sources: generatedMap.sources,
+    sourcesContent: generatedMap.sourcesContent.map((s) => s ?? null),
+  });
+}
+
 export function bindingifyRenderChunk(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['renderChunk'], BindingHookFilter | undefined> {
@@ -84,18 +99,7 @@ export function bindingifyRenderChunk(
 
       // Handle MagicString return value directly
       if (ret instanceof RolldownMagicString) {
-        const normalizedCode = ret.toString();
-        const generatedMap = ret.generateMap();
-        return {
-          code: normalizedCode,
-          map: bindingifySourcemap({
-            file: generatedMap.file,
-            mappings: generatedMap.mappings,
-            names: generatedMap.names,
-            sources: generatedMap.sources,
-            sourcesContent: generatedMap.sourcesContent.map((s) => s ?? null),
-          }),
-        };
+        return { code: ret.toString(), map: generateSourcemap(ret) };
       }
 
       if (typeof ret === 'string') {
@@ -112,17 +116,7 @@ export function bindingifyRenderChunk(
           return { code: normalizedCode, map: null };
         }
         if (ret.map === undefined) {
-          const generatedMap = magicString.generateMap();
-          return {
-            code: normalizedCode,
-            map: bindingifySourcemap({
-              file: generatedMap.file,
-              mappings: generatedMap.mappings,
-              names: generatedMap.names,
-              sources: generatedMap.sources,
-              sourcesContent: generatedMap.sourcesContent.map((s) => s ?? null),
-            }),
-          };
+          return { code: normalizedCode, map: generateSourcemap(magicString) };
         }
         return {
           code: normalizedCode,

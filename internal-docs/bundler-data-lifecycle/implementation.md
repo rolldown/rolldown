@@ -249,11 +249,13 @@ This is what fixed the bug where `this.getModuleInfo()` returned nothing on the 
 GC root → option function → PluginContextData → options object → BindingNormalizedOptions → Arc<options> → GC root
 ```
 
-That loop kept every plugin of a build alive, even after `close()` (rolldown/rolldown#11444). Without the native object, the loop is gone: once the build object and the per-hook native objects are garbage, the options drop, the threadsafe functions are released, and a later GC frees the plugins. This takes at least two GCs with event loop turns between them, so the GC test loops (`packages/rolldown/tests/build-api/normalized-options-gc.mjs`).
+That loop kept every plugin of a build alive, even after `close()` (rolldown/rolldown#11444). Without the native object, the loop is gone: once the build object and the per-hook native objects are garbage, the options drop, the threadsafe functions are released, and a later GC frees the plugins. Freeing the plugins takes at least two GCs with event loop turns between them.
 
-**Covers:** builds that are closed, builds that are dropped without `close()`, a plugin that keeps an options object, and a watch build whose event result and watcher are closed.
+**Test:** "normalized options objects do not keep the native options" in `packages/rolldown/tests/build-api/normalized-options.test.ts` keeps every options object and bundle of several builds, some closed and some not, and counts the reachable `BindingNormalizedOptions` objects with a heap query (`v8.queryObjects`). The count must not grow after the first build. It checks that no native options object stays reachable from the options objects; it does not check that the plugins are freed.
 
-**Does not cover:** a plugin that keeps `this`. The plugin context owns the options too (`NativePluginContextImpl.options` in `crates/rolldown_plugin/src/plugin_context/native_plugin_context.rs`), so the same loop stays.
+**The fix covers:** builds that are closed, builds that are dropped without `close()`, a plugin that keeps an options object, and a watch build whose event result and watcher are closed.
+
+**The fix does not cover:** a plugin that keeps `this`. The plugin context owns the options too (`NativePluginContextImpl.options` in `crates/rolldown_plugin/src/plugin_context/native_plugin_context.rs`), so the same loop stays.
 
 ## Bugs Found by This Separation
 

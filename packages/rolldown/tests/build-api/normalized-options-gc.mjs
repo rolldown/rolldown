@@ -65,20 +65,24 @@ const cases = {
       input,
       logLevel: 'silent',
       plugins: [markerPlugin(marker, { buildStart(_options) {} })],
-      watch: { skipWrite: true },
+      // Polling, as in the watch tests: this case must not depend on the native file watcher.
+      watch: { skipWrite: true, watcher: { usePolling: true, pollInterval: 50 } },
     });
-    await new Promise((resolve, reject) => {
-      watcher.on('event', async (event) => {
-        if (event.code === 'BUNDLE_END') {
-          await event.result.close();
-          resolve();
-        } else if (event.code === 'ERROR') {
-          await event.result.close();
-          reject(event.error);
-        }
+    try {
+      await new Promise((resolve, reject) => {
+        watcher.on('event', async (event) => {
+          if (event.code === 'BUNDLE_END') {
+            await event.result.close();
+            resolve();
+          } else if (event.code === 'ERROR') {
+            await event.result.close();
+            reject(event.error);
+          }
+        });
       });
-    });
-    await watcher.close();
+    } finally {
+      await watcher.close();
+    }
   },
 };
 

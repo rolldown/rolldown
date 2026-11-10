@@ -1,0 +1,16 @@
+{
+  "_comment": "The declarations and the body of the root `r.js` and of the member `m.js` are printed on their own, each with its own sourcemap. The visualizer shows the mappings of both parts of both modules.",
+  "visualizeSourcemap": true,
+  "config": {
+    "minify": false,
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "minified",
+      "minify": true
+    }
+  ]
+}

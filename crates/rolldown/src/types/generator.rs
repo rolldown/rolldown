@@ -31,6 +31,9 @@ pub struct GenerateContext<'a> {
   pub chunk_graph: &'a ChunkGraph,
   pub plugin_driver: &'a SharedPluginDriver,
   pub module_id_to_codegen_ret: Vec<Option<ModuleRenderOutput>>,
+  /// The printed bodies of the roots and the members of the deferred groups of the chunk
+  /// (`NormalModule::render_group_body`). `module_id_to_codegen_ret` has their declarations.
+  pub group_body_codegen_rets: FxHashMap<ModuleIdx, ModuleRenderOutput>,
   /// The key of the map is exported item symbol,
   /// the value of the map is optional alias. e.g.
   /// - chunkB.js

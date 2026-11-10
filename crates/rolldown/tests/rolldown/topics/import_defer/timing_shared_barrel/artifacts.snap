@@ -1,0 +1,58 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// state.js
+var state;
+function init_state() {
+	return (init_state = __esmMin((() => {
+		state = { value: 1 };
+	})))();
+}
+// a.js
+var a;
+// b.js
+var b;
+// barrel.js
+function init_barrel() {
+	return (init_barrel = __esmMin((() => {
+		// a.js
+		a = { value: 1 };
+		// b.js
+		init_state();
+		b = state.value;
+	})))();
+}
+// first.js
+function read$1() {
+	return a.value;
+}
+function init_first() {
+	return (init_first = __esmMin((() => {
+		init_barrel();
+	})))();
+}
+// second.js
+function read() {
+	return b;
+}
+function init_second() {
+	return (init_second = __esmMin((() => {
+		init_barrel();
+	})))();
+}
+// main.js
+init_state();
+function run() {
+	const a = (init_first(), read$1)();
+	state.value = 2;
+	return [a, (init_second(), read)()];
+}
+export { run };
+
+```

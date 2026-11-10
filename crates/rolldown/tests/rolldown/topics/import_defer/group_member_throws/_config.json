@@ -1,0 +1,8 @@
+{
+  "_comment": "`member.js` is a private module of the deferred root `root.js`, so its body runs in the wrapper of `root.js`. Its body throws. Like native ESM, the first and the second deferred access throw the same error, and the body of `member.js` runs one time.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

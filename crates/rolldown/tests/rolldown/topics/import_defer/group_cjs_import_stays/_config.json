@@ -1,0 +1,8 @@
+{
+  "_comment": "In the member `m.js`, no member comes after the import of `c.cjs`, so its statement stays in the body of `m.js`. `x.js` is in the closures of two roots, so it is outside the group: `m.js` calls `init_x()` first, then `require_c()`. The order must stay `x`, then `c`.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

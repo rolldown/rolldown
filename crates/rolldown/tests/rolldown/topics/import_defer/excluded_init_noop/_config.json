@@ -1,0 +1,11 @@
+{
+  "_comment": "`a.js` has a no-op init. The barrel excludes `export { b } from './b.js'`, but it still calls `init_b()`, so the init of the barrel is not a no-op. Native V8 evaluates the whole closure of `first.js` at its first access, so `b` is 1 before `run()` sets 2.",
+  "config": {
+    "treeshake": {
+      "moduleSideEffects": false
+    },
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

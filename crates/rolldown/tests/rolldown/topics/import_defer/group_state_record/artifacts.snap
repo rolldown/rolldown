@@ -1,0 +1,64 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.js
+var log;
+function init_log() {
+	return (init_log = __esmMin((() => {
+		log = [];
+	})))();
+}
+// t.js
+var value$1;
+function init_t() {
+	return (init_t = __esmState((() => {
+		init_log();
+		init_a(init_t);
+		log.push("t");
+		value$1 = "ta";
+	}), () => [init_a]))(arguments[0]);
+}
+// a.js
+function readT() {
+	return __esmDefer(init_t), value$1;
+}
+function init_a() {
+	return (init_a = __esmState((() => {
+		init_log();
+		log.push("a");
+	}), () => [init_t]))(arguments[0]);
+}
+// root.js
+var value;
+function init_root() {
+	return (init_root = __esmMin((() => {
+		init_log();
+		init_a();
+		// helper.js
+		init_log();
+		log.push("helper");
+		// root.js
+		init_log();
+		init_a();
+		log.push("root");
+		value = "a";
+	})))();
+}
+// main.js
+init_log();
+function run() {
+	return [
+		(init_root(), value),
+		(init_root(), readT)(),
+		...log
+	];
+}
+export { run };
+
+```

@@ -468,8 +468,9 @@ impl GenerateStage<'_> {
         //   any probe is built — and a wrapped (or interop `WrapKind::Esm`) importer's non-routed records
         //   are never nested (`record_owns_reexport_init`). Consumer-local records create no overlay,
         //   so for a live importer this combination is
-        //   unreachable. Assert it so the unproven corner (a concatenated-inner importer — a
-        //   dormant feature on this branch) trips loudly instead of silently dropping an edge.
+        //   unreachable. Assert it so the unproven corner (a concatenated-inner importer — only
+        //   the deferred groups of `importDefer` make one, and strict execution order turns them
+        //   off) trips loudly instead of silently dropping an edge.
         debug_assert!(
           !overlay.retained_reexport_path.is_empty()
             || !self.link_output.metas[module.idx].is_included

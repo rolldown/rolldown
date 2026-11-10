@@ -1,0 +1,12 @@
+{
+  "_comment": "The star barrel of the deferred root `route.js` re-exports `empty.js`, which has a state record (it imports `route.js` with `import defer`). Native V8 evaluates `empty.js` with the static closure of `route.js`, so the read of `ns.f` while `route.js` evaluates gives a function. If the barrel lost the init call of `empty.js`, the read would throw a `TypeError`, because `route.js` is still evaluating.",
+  "config": {
+    "codeSplitting": false,
+    "treeshake": {
+      "moduleSideEffects": false
+    },
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

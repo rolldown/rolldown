@@ -1,0 +1,26 @@
+{
+  "_comment": "The chunk cycle of `hoisted_wrapper_chunk_cycle`, with a private module `y.js` of the deferred root `x.js`. Chunk `a` runs first, and its deferred access calls `init_x` before the code of chunk `packed` runs. The body of `y.js` runs in the wrapper of `x.js` and writes the top-level `var` of `y.js` in `packed`. The group `warm` puts the runtime in its own chunk, which `packed` imports first.",
+  "config": {
+    "preserveEntrySignatures": "allow-extension",
+    "codeSplitting": {
+      "includeDependenciesRecursively": false,
+      "groups": [
+        {
+          "name": "warm",
+          "test": "[\\\\/]warm(?:-cjs)?\\.js$"
+        },
+        {
+          "name": "packed",
+          "test": "[\\\\/](?:x|y|b)\\.js$"
+        },
+        {
+          "name": "a",
+          "test": "[\\\\/]a\\.js$"
+        }
+      ]
+    },
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

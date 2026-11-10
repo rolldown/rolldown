@@ -169,7 +169,7 @@ pub use crate::{
   types::chunk_idx::ChunkIdx,
   types::chunk_kind::ChunkKind,
   types::concatenate_wrapped_module::{
-    ConcatenateWrappedModuleKind, RenderedConcatenatedModuleParts,
+    ConcatenateWrappedModuleKind, ConcatenatedGroupEvent, RenderedConcatenatedModuleParts,
   },
   types::constant_value::{ConstExportMeta, ConstantValue},
   types::deconflict::ModuleScopeSymbolIdMap,

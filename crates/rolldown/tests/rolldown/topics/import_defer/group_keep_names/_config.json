@@ -1,0 +1,9 @@
+{
+  "_comment": "With `keepNames`, `export default function () {}` in the root `r.js` gets a `__name()` statement. The finalizer records the place of this statement in the body before the statement `import_c = __toESM(require_c())` moves out of the body, so the move must make the place smaller by one. The function is the last statement: without this change, the place is after the end of the body.",
+  "config": {
+    "keepNames": true,
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

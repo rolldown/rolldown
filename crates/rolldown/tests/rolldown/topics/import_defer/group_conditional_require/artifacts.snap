@@ -1,0 +1,39 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// lazy.js
+var lazy_exports = /* @__PURE__ */ __exportAll({ x: () => 42 });
+function init_lazy() {
+	return (init_lazy = __esmMin((() => {
+		globalThis.__deferPlanEvents.push("lazy");
+	})))();
+}
+// route.js
+function read(flag) {
+	return flag ? (init_lazy(), __toCommonJS(lazy_exports)).x + 0 : 0;
+}
+function init_route() {
+	return (init_route = __esmMin((() => {
+		// helper.js
+		globalThis.__deferPlanEvents.push("helper");
+	})))();
+}
+// main.js
+globalThis.__deferPlanEvents = [];
+function run() {
+	return {
+		a: (init_route(), read)(false),
+		before: [...globalThis.__deferPlanEvents],
+		b: (init_route(), read)(true),
+		after: globalThis.__deferPlanEvents
+	};
+}
+export { run };
+
+```

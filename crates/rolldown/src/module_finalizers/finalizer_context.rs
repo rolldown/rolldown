@@ -156,6 +156,8 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         module_namespace_included,
         transferred_import_record,
         rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts::default(),
+        group_init_stmts: vec![],
+        pending_group_init: None,
         json_module_inlined_prop: need_inline_json_prop.then(|| Box::new(FxHashMap::default())),
         missing_file_reference_ids: FxIndexMap::default(),
         resolve_file_url_errors: Vec::new(),

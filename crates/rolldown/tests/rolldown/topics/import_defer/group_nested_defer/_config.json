@@ -1,0 +1,8 @@
+{
+  "_comment": "`helper.js` is a private module of the deferred root `root.js`. `root.js` also defers `inner.js`, which thus keeps its own wrapper and stays lazy: the first access to `root` runs `helper.js` and `root.js`, but not `inner.js`.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "_comment": "`p.js` and `m.js` are private members of the root `d.js`, and they import each other. `p.js` has `import defer * as dc from './c.cjs'` and re-exports `dc`. `m.js` reads `dc` before the body of `p.js` runs. The statement that assigns the deferred namespace (`c_deferred = __deferNs(...)`) moves before the body of `m.js`.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

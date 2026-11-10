@@ -1,0 +1,143 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// m.js
+function sum(a, b) {
+	return a + b;
+}
+var total, label;
+// r.js
+function read() {
+	return label + total;
+}
+function init_r() {
+	return (init_r = __esmMin((() => {
+// m.js
+total = sum(40, globalThis.__two ?? 2);
+label = "total ";
+// r.js
+globalThis.__log = ["r"];
+})))();
+}
+// main.js
+function run() {
+	return (init_r(), read)();
+}
+
+export { run };
+//# sourceMappingURL=main.js.map
+```
+
+# Sourcemap Visualizer
+
+```
+- ../m.js
+(0:0) "export function " --> (11:0) "function "
+(0:16) "sum(" --> (11:9) "sum("
+(0:20) "a, " --> (11:13) "a, "
+(0:23) "b) " --> (11:16) "b) "
+(0:26) "{\n" --> (11:19) "{\n"
+(1:2) "return " --> (12:1) "return "
+(1:9) "a + " --> (12:8) "a + "
+(1:13) "b;\n" --> (12:12) "b;\n"
+(2:0) "}\n" --> (13:0) "}\n"
+- ../r.js
+(2:0) "export function " --> (16:0) "function "
+(2:16) "read() " --> (16:9) "read() "
+(2:23) "{\n" --> (16:16) "{\n"
+(3:2) "return " --> (17:1) "return "
+(3:9) "label + " --> (17:8) "label + "
+(3:17) "total;\n" --> (17:16) "total;\n"
+(4:0) "}\n" --> (18:0) "}\n"
+- ../m.js
+(3:13) "total = " --> (22:0) "total = "
+(3:21) "sum(" --> (22:8) "sum("
+(3:25) "40, " --> (22:12) "40, "
+(3:29) "globalThis." --> (22:16) "globalThis."
+(3:40) "__two ?? " --> (22:27) "__two ?? "
+(3:49) "2" --> (22:36) "2"
+(3:50) ");\n" --> (22:37) ");\n"
+(4:13) "label = " --> (23:0) "label = "
+(4:21) "'total ';\n" --> (23:8) "\"total \";\n"
+- ../r.js
+(5:0) "globalThis." --> (25:0) "globalThis."
+(5:11) "__log = " --> (25:11) "__log = "
+(5:19) "[" --> (25:19) "["
+(5:20) "'r'" --> (25:20) "\"r\""
+(5:23) "];\n" --> (25:23) "];\n"
+- ../main.js
+(2:0) "export function " --> (29:0) "function "
+(2:16) "run() " --> (29:9) "run() "
+(2:22) "{\n" --> (29:15) "{\n"
+(3:2) "return " --> (30:1) "return (init_r(), "
+(3:9) "r.read(" --> (30:19) "read)("
+(3:16) ");\n" --> (30:25) ");\n"
+(4:0) "}\n" --> (31:0) "}\n"
+```
+
+# Variant: minified: [minify: true]
+
+## Assets
+
+### main.js
+
+```js
+var e=(e,t,n)=>()=>{if(n)throw n[0];try{return e&&(t=e(e=0)),t}catch(e){throw n=[e],e}};function t(e,t){return e+t}var n,r;function i(){return r+n}function a(){return(a=e((()=>{n=t(40,globalThis.__two??2),r=`total `,globalThis.__log=[`r`]})))()}function o(){return(a(),i)()}export{o as run};
+//# sourceMappingURL=main.js.map
+```
+
+## Sourcemap Visualizer
+
+```
+- ../m.js
+(0:0) "export function " --> (0:88) "function "
+(0:16) "sum(" --> (0:97) "t("
+(0:20) "a, " --> (0:99) "e,"
+(0:23) "b) " --> (0:101) "t)"
+(0:26) "{\n" --> (0:103) "{"
+(1:2) "return " --> (0:104) "return "
+(1:9) "a + " --> (0:111) "e+"
+(1:13) "b;\n" --> (0:113) "t"
+(2:0) "}\n" --> (0:114) "}"
+- ../r.js
+(2:0) "export function " --> (0:123) "function "
+(2:16) "read() " --> (0:132) "i()"
+(2:23) "{\n" --> (0:135) "{"
+(3:2) "return " --> (0:136) "return "
+(3:9) "label + " --> (0:143) "r+"
+(3:17) "total;\n" --> (0:145) "n"
+(4:0) "}\n" --> (0:146) "}"
+- ../m.js
+(3:13) "total = " --> (0:177) "n="
+(3:21) "sum(" --> (0:179) "t("
+(3:25) "40, " --> (0:181) "40,"
+(3:29) "globalThis." --> (0:184) "globalThis."
+(3:40) "__two ?? " --> (0:195) "__two??"
+(3:49) "2" --> (0:202) "2"
+(3:50) ");\n" --> (0:203) "),"
+(4:13) "label = " --> (0:205) "r="
+(4:21) "'total ';\n" --> (0:207) "`total `,"
+- ../r.js
+(5:0) "globalThis." --> (0:216) "globalThis."
+(5:11) "__log = " --> (0:227) "__log="
+(5:19) "[" --> (0:233) "["
+(5:20) "'r'" --> (0:234) "`r`"
+(5:23) "];\n" --> (0:237) "]"
+- ../main.js
+(2:0) "export function " --> (0:245) "function "
+(2:16) "run() " --> (0:254) "o()"
+(2:22) "{\n" --> (0:257) "{"
+(3:2) "return " --> (0:258) "return("
+(3:2) "return " --> (0:265) "a("
+(3:2) "return " --> (0:267) "),"
+(3:9) "r.read(" --> (0:269) "i)"
+(3:9) "r.read(" --> (0:271) "("
+(3:16) ");\n" --> (0:272) ")"
+(4:0) "}\n" --> (0:273) "}"
+```

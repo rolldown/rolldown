@@ -12,10 +12,10 @@ use oxc::{
   span::{GetSpan, GetSpanMut, SPAN, Span},
 };
 use rolldown_common::{
-  AstScopes, Chunk, ChunkIdx, ChunkKind, ConcatenateWrappedModuleKind, ExportsKind,
-  ImportAttributes, ImportRecordIdx, ImportRecordMeta, InlineConstMode, MemberExprProp,
-  MemberExprRefResolution, Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleType,
-  NamespaceAlias, NormalModule, OutputExports, OutputFormat, Platform,
+  AstScopes, Chunk, ChunkIdx, ChunkKind, ConcatenateWrappedModuleKind, ConcatenatedGroupEvent,
+  ExportsKind, ImportAttributes, ImportRecordIdx, ImportRecordMeta, InlineConstMode,
+  MemberExprProp, MemberExprRefResolution, Module, ModuleIdx, ModuleNamespaceIncludedReason,
+  ModuleType, NamespaceAlias, NormalModule, OutputExports, OutputFormat, Platform,
   RenderedConcatenatedModuleParts, Specifier, SymbolRef, WrapKind, is_lazy_proxy,
 };
 use rolldown_ecmascript::ToSourceString;
@@ -114,6 +114,12 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub module_namespace_included: bool,
   pub transferred_import_record: FxIndexMap<ImportRecordIdx, String>,
   pub rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts,
+  /// For a root or a member of a deferred group: the index of each `Init` event in
+  /// `group_events`, and the index of its statement in the body (`move_group_init_stmts`).
+  pub group_init_stmts: Vec<(usize, usize)>,
+  /// The `Init` event of the statement that `transform_or_remove_import_export_stmt` made last.
+  /// `remove_unused_top_level_stmt` adds it to `group_init_stmts` when it pushes the statement.
+  pub pending_group_init: Option<usize>,
   pub json_module_inlined_prop: Option<Box<FxHashMap<SymbolId, ast::Expression<'ast>>>>,
   /// Reference ids of `import.meta.ROLLDOWN_FILE_URL_*` accesses that no emitted file matches.
   ///
@@ -191,6 +197,149 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     expr
   }
 
+  /// Whether this module is the root or a member of a deferred group.
+  fn is_in_deferred_group(&self) -> bool {
+    !matches!(
+      self.ctx.linking_info.concatenated_wrapped_module_kind,
+      ConcatenateWrappedModuleKind::None
+    )
+  }
+
+  /// Whether `module_idx` is a member of a deferred group. A member has no `init_*` wrapper.
+  fn is_deferred_group_member(&self, module_idx: ModuleIdx) -> bool {
+    matches!(
+      self.ctx.linking_infos[module_idx].concatenated_wrapped_module_kind,
+      ConcatenateWrappedModuleKind::Inner
+    )
+  }
+
+  /// Records that the body of this module evaluates `member`, a member of the same deferred
+  /// group. The statement of the import has no init call.
+  fn record_group_member(&mut self, member: ModuleIdx) {
+    debug_assert!(
+      self.is_in_deferred_group(),
+      "{} imports a member of a deferred group, but is not in the group",
+      self.ctx.module.stable_id
+    );
+    self
+      .rendered_concatenated_wrapped_module_parts
+      .group_events
+      .push(ConcatenatedGroupEvent::Member(member));
+  }
+
+  /// Records `call`, a call of an init function of a module outside the group, in the body of a
+  /// root or a member of a deferred group. The renderer can copy the call before a member body
+  /// (a pre-call).
+  fn record_group_call(&mut self, call: &ast::Expression<'ast>) {
+    if !self.is_in_deferred_group() {
+      return;
+    }
+    let text =
+      ast::Statement::new_expression_statement(SPAN, call.clone_in(self.allocator()), self)
+        .to_output_source_string(self.ctx.options.charset.is_ascii());
+    self
+      .rendered_concatenated_wrapped_module_parts
+      .group_events
+      .push(ConcatenatedGroupEvent::Call(CompactStr::new(text.trim_end())));
+  }
+
+  /// `record_group_call` for the init of `importee_idx`. A no-op init needs no pre-call.
+  fn record_group_init_call(&mut self, importee_idx: ModuleIdx, call: &ast::Expression<'ast>) {
+    if self.ctx.final_esm_init_metadata.init_is_noop(importee_idx)
+      && self.ctx.linking_infos[importee_idx].import_defer_tracked_deps.is_none()
+    {
+      return;
+    }
+    self.record_group_call(call);
+  }
+
+  /// Records an `Init` event, with no text yet, in a root or a member of a deferred group. The
+  /// statement of the event writes a binding or a namespace object at the place of an import or
+  /// a re-export statement. Returns the index of the event.
+  fn record_group_init(&mut self) -> Option<usize> {
+    if !self.is_in_deferred_group() {
+      return None;
+    }
+    let events = &mut self.rendered_concatenated_wrapped_module_parts.group_events;
+    events.push(ConcatenatedGroupEvent::Init(CompactStr::new("")));
+    Some(events.len() - 1)
+  }
+
+  /// A member body runs before the whole body of its importer (`append_group_member_bodies` in
+  /// `render_esm`). A wrapper runs the statements of the imports in source order: the binding of
+  /// an import is ready before the init call of each later import. Thus the statement of each
+  /// `Init` event with a later `Member` event moves out of the body, and the event gets the text
+  /// of the statement. Each other statement stays in the body, and its event goes away.
+  /// See internal-docs/import-defer/implementation.md ("Deferred groups").
+  fn move_group_init_stmts(
+    &mut self,
+    program: &mut ast::Program<'ast>,
+    last_import_stmt_idx: &mut usize,
+  ) {
+    if self.group_init_stmts.is_empty() {
+      return;
+    }
+    let group_init_stmts = std::mem::take(&mut self.group_init_stmts);
+    let last_member = self
+      .rendered_concatenated_wrapped_module_parts
+      .group_events
+      .iter()
+      .rposition(|event| matches!(event, ConcatenatedGroupEvent::Member(_)));
+    let (moved, kept): (Vec<_>, Vec<_>) = group_init_stmts
+      .into_iter()
+      .partition(|&(event_idx, _)| last_member.is_some_and(|last| event_idx < last));
+    if !moved.is_empty() {
+      let moved_by_body_idx = moved
+        .iter()
+        .map(|&(event_idx, body_idx)| (body_idx, event_idx))
+        .collect::<FxHashMap<_, _>>();
+      for (body_idx, stmt) in program.body.take_in(self).into_iter().enumerate() {
+        let Some(&event_idx) = moved_by_body_idx.get(&body_idx) else {
+          program.body.push(stmt);
+          continue;
+        };
+        let text = self.group_init_text(stmt);
+        self.rendered_concatenated_wrapped_module_parts.group_events[event_idx] =
+          ConcatenatedGroupEvent::Init(text);
+      }
+      // The positions in the body that the caller recorded before the move: the end of the
+      // imports, and the place of the `__name()` statement of `export default function () {}`.
+      let mut moved_body_idxs = moved_by_body_idx.into_keys().collect::<Vec<_>>();
+      moved_body_idxs.sort_unstable();
+      let removed_before = |position: usize| moved_body_idxs.partition_point(|&idx| idx < position);
+      *last_import_stmt_idx -= removed_before(*last_import_stmt_idx);
+      for (position, _, _) in &mut self.keep_name_statement_to_insert {
+        *position -= removed_before(*position);
+      }
+    }
+    if !kept.is_empty() {
+      let kept_events = kept.into_iter().map(|(event_idx, _)| event_idx).collect::<FxHashSet<_>>();
+      let mut event_idx = 0;
+      self.rendered_concatenated_wrapped_module_parts.group_events.retain(|_| {
+        let keep = !kept_events.contains(&event_idx);
+        event_idx += 1;
+        keep
+      });
+    }
+  }
+
+  /// The text of a statement that moves out of the body, in the form that the walk gives to the
+  /// statements of a wrapped body: `var x = e` becomes `x = e`, and `x` goes into the hoisted
+  /// `var` list of the module.
+  fn group_init_text(&mut self, stmt: Statement<'ast>) -> CompactStr {
+    let stmt = match stmt {
+      Statement::VariableDeclaration(mut decl) => {
+        let (expr, bindings) = self
+          .var_declaration_to_expr_seq_and_bindings(&mut decl, TraverseState::TopLevel)
+          .expect("the finalizer makes only top-level `var` declarations for imports");
+        self.top_level_var_bindings.extend(bindings);
+        Statement::new_expression_statement(SPAN, expr, self)
+      }
+      stmt => stmt,
+    };
+    CompactStr::new(stmt.to_output_source_string(self.ctx.options.charset.is_ascii()).trim_end())
+  }
+
   /// Build the `init_x()` call expression for a wrapped (`WrapKind::Esm`) importee.
   ///
   /// - `mark_pure_if_noop`: annotate the call `/* @__PURE__ */` when the importee's init is a
@@ -264,12 +413,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
   /// The init call of an eager import statement (`import './foo'`):
   /// - `init_foo()`, or `await init_foo()` when `foo` is TLA-tainted.
+  /// - `/* @__PURE__ */ init_foo()` when `foo` is in an `import defer` closure and its init is a
+  ///   no-op, so that the minifier can remove the call and then the unused wrapper.
   /// - `init_foo(init_bar)` when this module `bar` and `foo` are both tracked (`import defer`).
   /// - `__esmDepDone(init_foo(init_bar), init_foo, init_bar) || await init_foo(init_bar)` when
   ///   they are both tracked and `foo` is TLA-tainted. The import waits only when `foo` did not
   ///   finish, so that the body of `bar` runs synchronously after a deferred import prepared it.
   fn import_stmt_init_expr(&self, importee_idx: ModuleIdx, span: Span) -> ast::Expression<'ast> {
-    let mut init_call = self.wrapped_esm_init_call_expr(importee_idx, span, false, false);
+    // `wrapped_esm_init_call_expr` never marks the call of a tracked module pure.
+    let mark_pure_if_noop = self.ctx.linking_infos[importee_idx].wrapped_by_import_defer;
+    let mut init_call =
+      self.wrapped_esm_init_call_expr(importee_idx, span, mark_pure_if_noop, false);
     let tracked = self.pass_tracked_caller(&mut init_call, importee_idx);
     let tla_tainted = self
       .ctx
@@ -815,8 +969,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         self.ctx.chunk_graph.module_to_chunk[forwarding_module_idx] == Some(self.ctx.chunk_idx)
       },
     );
+    // A target here is behind a module with no wrapper. In an `import defer` closure, only a JSON
+    // module has no wrapper, and `group_deferred_modules` keeps the wrapper of each module that
+    // eager code reaches. Thus a target is not a member of a deferred group.
     let mut init_exprs = targets.into_iter().filter_map(|target| match target {
       WrappedEsmInitTarget::Module(module_idx) => {
+        debug_assert!(!self.is_deferred_group_member(module_idx));
         if !self.generated_init_esm_importee_ids.insert(module_idx) {
           return None;
         }
@@ -1239,6 +1397,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           self.transferred_import_record.insert(rec_idx, stmt.to_source_string());
           return true;
         }
+        // `var import_foo = ...`, or for a deferred import that keeps its namespace object,
+        // `var import_foo, foo_deferred = __deferNs(...)`. A declaration with no initializer
+        // writes nothing in the body.
+        if matches!(
+          stmt,
+          Statement::VariableDeclaration(decl)
+            if decl.declarations.iter().any(|declarator| declarator.init.is_some())
+        ) {
+          self.pending_group_init = self.record_group_init();
+        }
         return false;
       }
       // Replace the import statement with `init_foo()` if `ImportDeclaration` is not a plain import
@@ -1255,12 +1423,18 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           if matches!(
             importee_linking_info.concatenated_wrapped_module_kind,
             ConcatenateWrappedModuleKind::Inner
-          ) || self.generated_init_esm_importee_ids.contains(&importee.idx)
-          {
+          ) {
+            self.record_group_member(importee.idx);
+            return true;
+          }
+          if self.generated_init_esm_importee_ids.contains(&importee.idx) {
             return true;
           }
           self.generated_init_esm_importee_ids.insert(importee.idx);
           let init_expr = self.import_stmt_init_expr(importee.idx, stmt.span());
+          if !self.transferred_import_record.contains_key(&rec_idx) {
+            self.record_group_init_call(importee.idx, &init_expr);
+          }
           *stmt = ast::Statement::new_expression_statement(SPAN, init_expr, self);
         }
 
@@ -1329,6 +1503,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     preserve_this_semantic_if_needed: bool,
     optimize_namespace_alias_transform: bool,
   ) -> (ast::Expression<'ast>, FinalizedExprProcessHint) {
+    debug_assert!(
+      !(self.is_deferred_group_member(symbol_ref.owner)
+        && self.ctx.linking_infos[symbol_ref.owner].wrapper_ref == Some(symbol_ref)),
+      "{} refers to the init wrapper of {}, a member of a deferred group, which has no wrapper",
+      self.ctx.module.stable_id,
+      self.ctx.modules[symbol_ref.owner].stable_id()
+    );
     if !symbol_ref.is_declared_in_root_scope(self.ctx.symbol_db) {
       // No fancy things on none root scope symbols
       return (
@@ -2828,10 +3009,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   if !self.generated_init_esm_importee_ids.insert(importee_idx) {
                     continue;
                   }
+                  if self.is_deferred_group_member(importee_idx) {
+                    self.record_group_member(importee_idx);
+                    continue;
+                  }
                   // An excluded re-export can forward to a TLA-tainted wrapper. The current
                   // module is then TLA-tainted as well, so its async init body must await the
                   // forwarded promise before later statements observe the importee's bindings.
-                  self.wrapped_esm_init_call_expr(importee_idx, SPAN, true, true)
+                  let init_expr = self.wrapped_esm_init_call_expr(importee_idx, SPAN, true, true);
+                  self.record_group_init_call(importee_idx, &init_expr);
+                  init_expr
                 }
                 WrappedEsmInitTarget::CjsCarrier(key) => {
                   if !self.generated_order_cjs_carriers.insert(key) {
@@ -2946,25 +3133,32 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
                 if matches!(importee_linking_info.wrap_kind(), WrapKind::Esm)
                   && !consumer_local_route
-                // If it is a inner concatenated module, we should not call its wrapper here
-                  && !matches!(
-                    importee_linking_info.concatenated_wrapped_module_kind,
-                    ConcatenateWrappedModuleKind::Inner
-                  )
                 {
-                  let (wrapper_ref, _) = self.finalized_expr_for_symbol_ref(
-                    importee_linking_info.wrapper_ref.unwrap(),
-                    false,
-                    false,
-                  );
-                  let mut init_expr =
-                    ast::Expression::new_call_expression(SPAN, wrapper_ref, None, [], false, self);
-                  if importee_linking_info.is_tla_or_contains_tla_dependency {
-                    init_expr = ast::Expression::new_await_expression(SPAN, init_expr, self);
+                  // The body of a member of a deferred group runs in the wrapper of the root.
+                  if self.is_deferred_group_member(importee.idx) {
+                    self.record_group_member(importee.idx);
+                  } else {
+                    let (wrapper_ref, _) = self.finalized_expr_for_symbol_ref(
+                      importee_linking_info.wrapper_ref.unwrap(),
+                      false,
+                      false,
+                    );
+                    let mut init_expr = ast::Expression::new_call_expression(
+                      SPAN,
+                      wrapper_ref,
+                      None,
+                      [],
+                      false,
+                      self,
+                    );
+                    if importee_linking_info.is_tla_or_contains_tla_dependency {
+                      init_expr = ast::Expression::new_await_expression(SPAN, init_expr, self);
+                    }
+                    self.record_group_init_call(importee.idx, &init_expr);
+                    program
+                      .body
+                      .push(ast::Statement::new_expression_statement(SPAN, init_expr, self));
                   }
-                  program
-                    .body
-                    .push(ast::Statement::new_expression_statement(SPAN, init_expr, self));
                 }
 
                 match importee.exports_kind {
@@ -2994,6 +3188,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                         Expression::CallExpression(call_expr.into_in(self.allocator()));
                       // __reExport(exports, otherExports)
                       let stmt = ast::Statement::new_expression_statement(SPAN, call_expr, self);
+                      if let Some(event_idx) = self.record_group_init() {
+                        self.group_init_stmts.push((event_idx, program.body.len()));
+                      }
                       program.body.push(stmt);
                     }
                   }
@@ -3050,6 +3247,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                       Expression::CallExpression(call_expr.into_in(self.allocator())),
                       self,
                     );
+                    if let Some(event_idx) = self.record_group_init() {
+                      self.group_init_stmts.push((event_idx, program.body.len()));
+                    }
                     program.body.push(stmt);
                   }
                   ExportsKind::None => {}
@@ -3221,13 +3421,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             };
           }
         }
+        if let Some(event_idx) = self.pending_group_init.take() {
+          self.group_init_stmts.push((event_idx, program.body.len()));
+        }
         program.body.push(top_stmt);
         if is_module_decl {
           last_import_stmt_idx = Some(program.body.len());
         }
       },
     );
-    last_import_stmt_idx.unwrap_or(0)
+    debug_assert!(self.pending_group_init.is_none(), "a group statement did not reach the body");
+    let mut last_import_stmt_idx = last_import_stmt_idx.unwrap_or(0);
+    self.move_group_init_stmts(program, &mut last_import_stmt_idx);
+    last_import_stmt_idx
   }
 
   fn process_fn(

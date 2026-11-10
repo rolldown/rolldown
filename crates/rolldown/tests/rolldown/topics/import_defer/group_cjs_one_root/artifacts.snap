@@ -1,0 +1,44 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// route.js
+function read() {
+	return [import_a.default, import_b.default];
+}
+var import_a, import_b;
+function init_route() {
+	return (init_route = __esmMin((() => {
+		// a.cjs
+		var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+			globalThis.__events.push("a");
+			module.exports = "a";
+		}));
+		// b.cjs
+		var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+			globalThis.__events.push("b");
+			module.exports = "b";
+		}));
+		// route.js
+		import_a = /* @__PURE__ */ __toESM(require_a());
+		import_b = /* @__PURE__ */ __toESM(require_b());
+		globalThis.__events.push("route");
+	})))();
+}
+// main.js
+globalThis.__events = [];
+function run() {
+	return {
+		before: [...globalThis.__events],
+		value: (init_route(), read)(),
+		events: globalThis.__events
+	};
+}
+export { run };
+
+```

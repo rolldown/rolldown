@@ -123,6 +123,7 @@ mod chunk_optimizer;
 mod code_splitting;
 mod compute_cross_chunk_links;
 mod compute_wrapped_esm_init_metadata;
+mod deferred_groups;
 mod detect_deferred_externals_evaluated_eagerly;
 mod detect_ineffective_dynamic_imports;
 mod dynamic_already_loaded;
@@ -292,6 +293,7 @@ impl<'a> GenerateStage<'a> {
     }
 
     let resolved_file_urls = self.resolve_file_urls(&chunk_graph).await?;
+    self.group_deferred_modules(&mut chunk_graph, &final_esm_init_metadata);
     self.finalize_modules(
       &mut chunk_graph,
       &mut ast_table,
@@ -558,6 +560,7 @@ impl<'a> GenerateStage<'a> {
           chunk_graph,
           plugin_driver: self.plugin_driver,
           module_id_to_codegen_ret: Vec::new(),
+          group_body_codegen_rets: FxHashMap::default(),
           render_export_items_index_vec: &IndexVec::default(),
           chunk_idx,
           resolved_paths: self.resolved_paths.as_ref(),

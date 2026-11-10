@@ -3,14 +3,18 @@ use std::sync::Arc;
 use crate::{
   stages::link_stage::LinkStageOutput,
   types::generator::{GenerateContext, GenerateOutput, Generator},
-  utils::{chunk::generate_rendered_chunk, render_ecma_module::render_ecma_module},
+  utils::{
+    chunk::generate_rendered_chunk,
+    render_ecma_module::{render_ecma_module, render_grouped_ecma_module},
+  },
 };
 
 use anyhow::Result;
 use oxc_str::CompactStr;
 use rolldown_common::{
-  AddonRenderContext, ChunkIdx, EcmaAssetMeta, InstantiatedChunk, InstantiationKind, ModuleId,
-  ModuleIdx, OutputFormat, RenderedModule, StrictMode,
+  AddonRenderContext, ChunkIdx, ConcatenateWrappedModuleKind, EcmaAssetMeta, InstantiatedChunk,
+  InstantiationKind, ModuleId, ModuleIdx, ModuleRenderOutput, NormalModule, OutputFormat,
+  RenderedModule, StrictMode,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::HookAddonArgs;
@@ -41,6 +45,9 @@ pub struct RenderedModuleSource {
   pub module_id: ModuleId,
   pub exec_order: u32,
   pub sources: Option<Arc<[Box<dyn Source + Send + Sync>]>>,
+  /// For a root or a member of a deferred group: the number of sources of its declarations. The
+  /// sources after them are its body, which goes in the init wrapper of the root (`render_esm`).
+  pub group_split: Option<usize>,
 }
 
 impl RenderedModuleSource {
@@ -50,7 +57,24 @@ impl RenderedModuleSource {
     exec_order: u32,
     sources: Option<Arc<[Box<dyn Source + Send + Sync>]>>,
   ) -> Self {
-    Self { module_idx, module_id, exec_order, sources }
+    Self { module_idx, module_id, exec_order, sources, group_split: None }
+  }
+
+  /// All sources of the module.
+  pub fn all_sources(&self) -> &[Box<dyn Source + Send + Sync>] {
+    self.sources.as_deref().unwrap_or_default()
+  }
+
+  /// The sources of the declarations of a root or a member of a deferred group, or all sources.
+  pub fn sources_of_group_declarations(&self) -> &[Box<dyn Source + Send + Sync>] {
+    let sources = self.sources.as_deref().unwrap_or_default();
+    &sources[..self.group_split.unwrap_or(sources.len()).min(sources.len())]
+  }
+
+  /// The sources of the body of a root or a member of a deferred group, or no sources.
+  pub fn sources_of_group_body(&self) -> &[Box<dyn Source + Send + Sync>] {
+    let sources = self.sources.as_deref().unwrap_or_default();
+    &sources[self.group_split.unwrap_or(sources.len()).min(sources.len())..]
   }
 }
 
@@ -60,25 +84,61 @@ impl Generator for EcmaGenerator {
   #[expect(clippy::too_many_lines)]
   async fn instantiate_chunk(ctx: &mut GenerateContext<'_>) -> Result<BuildResult<GenerateOutput>> {
     let module_id_to_codegen_ret = std::mem::take(&mut ctx.module_id_to_codegen_ret);
-    let rendered_pairs: Vec<(RenderedModuleSource, Vec<BuildDiagnostic>)> = ctx
-      .chunk
-      .modules
-      .par_iter()
-      .copied()
-      .zip(module_id_to_codegen_ret)
-      .filter_map(|(id, codegen_ret)| {
-        ctx.link_output.module_table[id]
-          .as_normal()
-          .map(|m| (m, codegen_ret.expect("should have codegen_ret")))
-      })
-      .map(|(m, codegen_ret)| {
-        let render = render_ecma_module(m, ctx.options, codegen_ret);
-        (
-          RenderedModuleSource::new(m.idx, m.id.clone(), m.exec_order, render.sources),
-          render.warnings,
-        )
-      })
-      .collect::<Vec<_>>();
+    let mut group_body_codegen_rets = std::mem::take(&mut ctx.group_body_codegen_rets);
+    let render_module = |m: &NormalModule,
+                         codegen_ret: Option<ModuleRenderOutput>,
+                         group_body: Option<ModuleRenderOutput>| {
+      let codegen_ret = codegen_ret.expect("should have codegen_ret");
+      if !matches!(
+        ctx.link_output.metas[m.idx].concatenated_wrapped_module_kind,
+        ConcatenateWrappedModuleKind::None
+      ) {
+        let (render, split) = render_grouped_ecma_module(m, ctx.options, codegen_ret, group_body);
+        let mut source =
+          RenderedModuleSource::new(m.idx, m.id.clone(), m.exec_order, render.sources);
+        source.group_split = Some(split);
+        return (source, render.warnings);
+      }
+      let render = render_ecma_module(m, ctx.options, codegen_ret);
+      (
+        RenderedModuleSource::new(m.idx, m.id.clone(), m.exec_order, render.sources),
+        render.warnings,
+      )
+    };
+    // Only a chunk with deferred groups has group bodies (`print_deferred_group_bodies`).
+    let rendered_pairs: Vec<(RenderedModuleSource, Vec<BuildDiagnostic>)> =
+      if group_body_codegen_rets.is_empty() {
+        ctx
+          .chunk
+          .modules
+          .par_iter()
+          .copied()
+          .zip(module_id_to_codegen_ret)
+          .filter_map(|(id, codegen_ret)| {
+            let m = ctx.link_output.module_table[id].as_normal()?;
+            Some(render_module(m, codegen_ret, None))
+          })
+          .collect()
+      } else {
+        let group_bodies = ctx
+          .chunk
+          .modules
+          .iter()
+          .map(|module_idx| group_body_codegen_rets.remove(module_idx))
+          .collect::<Vec<_>>();
+        ctx
+          .chunk
+          .modules
+          .par_iter()
+          .copied()
+          .zip(module_id_to_codegen_ret)
+          .zip(group_bodies)
+          .filter_map(|((id, codegen_ret), group_body)| {
+            let m = ctx.link_output.module_table[id].as_normal()?;
+            Some(render_module(m, codegen_ret, group_body))
+          })
+          .collect()
+      };
 
     let mut sourcemap_broken_warnings: Vec<BuildDiagnostic> = Vec::new();
     let rendered_module_sources: RenderedModuleSources = rendered_pairs
@@ -92,7 +152,7 @@ impl Generator for EcmaGenerator {
     let mut rendered_modules: FxHashMap<ModuleId, RenderedModule> = rendered_module_sources
       .iter()
       .map(|rendered_module_source| {
-        let RenderedModuleSource { module_idx, module_id, exec_order, sources } =
+        let RenderedModuleSource { module_idx, module_id, exec_order, sources, .. } =
           rendered_module_source;
         let rendered_exports = retained_export_names(ctx.link_output, *module_idx);
         (module_id.clone(), RenderedModule::new(sources.clone(), rendered_exports, *exec_order))

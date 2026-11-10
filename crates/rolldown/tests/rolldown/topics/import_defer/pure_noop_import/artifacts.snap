@@ -1,0 +1,27 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// is-object.js
+function isObject(value) {
+	return typeof value === "object" && value !== null;
+}
+// route.js
+function check() {
+	return [isObject({}), isObject(1)];
+}
+function init_route() {
+	return (init_route = __esmMin((() => {})))();
+}
+// main.js
+function run() {
+	return (init_route(), check)();
+}
+export { run };
+
+```

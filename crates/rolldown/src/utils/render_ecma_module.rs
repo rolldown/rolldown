@@ -24,16 +24,65 @@ pub fn render_ecma_module(
     return RenderEcmaModuleOutput { sources: None, warnings: vec![] };
   }
   let mut sources: Vec<Box<dyn rolldown_sourcemap::Source + Send + Sync>> = Vec::with_capacity(6);
+  let mut warnings = vec![];
+  push_module_sources(module, options, render_output, true, &mut sources, &mut warnings);
+  RenderEcmaModuleOutput { sources: Some(Arc::from(sources.into_boxed_slice())), warnings }
+}
+
+/// Renders a root or a member of a deferred group in two parts: its top-level declarations, and
+/// its body, which `NormalModule::render_group_body` printed on its own. Returns the sources of
+/// both parts in one list, and the number of sources of the first part. The chunk renderer puts
+/// the second part in the init wrapper of the root.
+/// See internal-docs/import-defer/implementation.md ("Rendering").
+pub fn render_grouped_ecma_module(
+  module: &NormalModule,
+  options: &NormalizedBundlerOptions,
+  declarations: ModuleRenderOutput,
+  body: Option<ModuleRenderOutput>,
+) -> (RenderEcmaModuleOutput, usize) {
+  let mut sources: Vec<Box<dyn rolldown_sourcemap::Source + Send + Sync>> = Vec::with_capacity(6);
+  let mut warnings = vec![];
+  let declarations = without_end_newline(declarations);
+  if !declarations.code.is_empty() {
+    push_module_sources(module, options, declarations, true, &mut sources, &mut warnings);
+  }
+  let declarations_len = sources.len();
+  if let Some(body) = body.map(without_end_newline)
+    && !body.code.trim().is_empty()
+  {
+    // The chunk renderer adds the debug comment of the body, because only it knows if a member
+    // body comes before it. The two parts have the same sourcemap warnings.
+    let mut body_warnings = vec![];
+    push_module_sources(module, options, body, false, &mut sources, &mut body_warnings);
+    if declarations_len == 0 {
+      warnings = body_warnings;
+    }
+  }
+  let sources = (!sources.is_empty()).then(|| Arc::from(sources.into_boxed_slice()));
+  (RenderEcmaModuleOutput { sources, warnings }, declarations_len)
+}
+
+/// The source joiner adds a newline between two sources.
+fn without_end_newline(mut output: ModuleRenderOutput) -> ModuleRenderOutput {
+  let len = output.code.trim_end_matches('\n').len();
+  output.code.truncate(len);
+  output
+}
+
+fn push_module_sources(
+  module: &NormalModule,
+  options: &NormalizedBundlerOptions,
+  render_output: ModuleRenderOutput,
+  debug_comment: bool,
+  sources: &mut Vec<Box<dyn rolldown_sourcemap::Source + Send + Sync>>,
+  warnings: &mut Vec<BuildDiagnostic>,
+) {
   // Mark only where a module starts, like esbuild and bun.
-  if matches!(
-    options.experimental.attach_debug_info,
-    Some(AttachDebugInfo::Simple | AttachDebugInfo::Full)
-  ) {
-    sources.push(Box::new(concat_string!("// ", module.debug_id)));
+  if debug_comment && let Some(comment) = module_debug_comment(module, options) {
+    sources.push(Box::new(comment));
   }
 
   let enable_sourcemap = options.sourcemap.is_some() && !module.is_virtual();
-  let mut warnings = vec![];
 
   // Because oxc codegen sourcemap is last of sourcemap chain,
   // If here no extra sourcemap need remapping, we using it as final module sourcemap.
@@ -44,7 +93,7 @@ pub fn render_ecma_module(
       &module.sourcemap_chain,
       render_output.map,
       module.id.as_str(),
-      &mut warnings,
+      warnings,
     ) {
       sources.push(Box::new(
         SourceMapSource::new(render_output.code, sourcemap)
@@ -56,8 +105,19 @@ pub fn render_ecma_module(
   } else {
     sources.push(Box::new(render_output.code));
   }
+}
 
-  RenderEcmaModuleOutput { sources: Some(Arc::from(sources.into_boxed_slice())), warnings }
+/// The comment that marks the start of the code of a module (`// <debug id>`), if the
+/// `attachDebugInfo` option asks for it.
+pub fn module_debug_comment(
+  module: &NormalModule,
+  options: &NormalizedBundlerOptions,
+) -> Option<String> {
+  matches!(
+    options.experimental.attach_debug_info,
+    Some(AttachDebugInfo::Simple | AttachDebugInfo::Full)
+  )
+  .then(|| concat_string!("// ", module.debug_id))
 }
 
 /// Collapses a module's `sourcemap_chain` together with the oxc codegen map

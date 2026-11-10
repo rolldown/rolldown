@@ -80,13 +80,18 @@ For each `(importer, stmt_info, rec)` triple this pass dispatches on `rec.kind`,
   //   → init_foo(); use(x);
   ```
 
-- **`Import`, `WrapKind::Esm`, reexport-all** — push `wrapper_ref` (`init_foo`); `side_effect=true` unconditionally (a reexport-all of a wrapped ESM importee always runs, regardless of `importee.side_effects`). Additionally, when the importee has dynamic exports, push `__reExport`, set `ReExportDynamicExports`, and push importer & importee namespace refs.
+- **`Import`, `WrapKind::Esm`, reexport-all** — push `wrapper_ref` (`init_foo`); `side_effect=true` (a reexport-all of a wrapped ESM importee always runs, regardless of `importee.side_effects`). Additionally, when the importee has dynamic exports, push `__reExport`, set `ReExportDynamicExports`, and push importer & importee namespace refs.
 
   ```js
   // foo.js (esm, wrapped, has dynamic exports via re-export of cjs)
   // index.js: export * from './foo';
   //   → init_foo(); __reExport(index_exports, foo_exports);
   ```
+
+  Exception: an importer in an `import defer` closure (`wrapped_by_import_defer`), in a build with one chunk, with an importee that has no dynamic exports. There, the eager rule applies: `side_effect = importee.side_effects.has_side_effects()`. Tree shaking then keeps the statement only for a used binding or a side effect, so an `export *` target that no code uses leaves the output, as in the eager build.
+  - A target that stays in the output still gets its init call from the importer. The finalizer emits the excluded-statement targets (`transitive_init_targets`) in place of the excluded statement. These targets are the wrapped modules that are included and in the chunk of the importer, so the call order is unchanged.
+  - One chunk means: code splitting is off, and at most one module has a user-defined or emitted entry point. Do not count `entries` here: before `include_statements`, it also holds each `import()` target.
+  - Why one chunk only: the excluded-statement targets do not include a module in another chunk. With more chunks, a target in another chunk would lose its init call, and its init would run later than in native ESM.
 
 - **`Require`, `WrapKind::None`** — nothing; a `require` against a flat-ESM importee that wasn't promoted is a no-op at this layer.
 

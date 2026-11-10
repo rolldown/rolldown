@@ -1,0 +1,12 @@
+{
+  "_comment": "The barrel re-exports a named binding of a CommonJS module. The init of the barrel assigns the namespace of `c.cjs` (`__toESM(require_c())`), so the deferred route must call the init of the barrel.",
+  "config": {
+    "codeSplitting": false,
+    "treeshake": {
+      "moduleSideEffects": false
+    },
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

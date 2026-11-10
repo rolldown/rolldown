@@ -1,0 +1,8 @@
+{
+  "_comment": "User code has the text of the old group marker, also on a line of its own in a template literal. The split of a root or a member does not search the text, so the code does not change.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

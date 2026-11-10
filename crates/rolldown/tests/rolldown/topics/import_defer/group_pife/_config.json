@@ -1,0 +1,14 @@
+{
+  "_comment": "The finalizer prints the wrapper of the root `r.js` with an empty closure, and the renderer puts the code of the group in it. The default keeps the PIFE hint of the deferred wrapper, and the variant `pifeForModuleWrappers: false` removes it. No minify, so the snapshot shows the text of the renderer.",
+  "config": {
+    "minify": false,
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "configVariants": [
+    {
+      "pifeForModuleWrappers": false
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "_comment": "Two deferred roots share a named barrel. `b.js` reads mutable state. Native V8 evaluates the whole closure of `first.js` at its first access, so `b` is 1 before `run()` sets 2. A consumer of the barrel must not skip the init of `b.js`, because the init of `b.js` reads outside state.",
+  "config": {
+    "codeSplitting": false,
+    "treeshake": {
+      "moduleSideEffects": false
+    },
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

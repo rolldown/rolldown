@@ -1,0 +1,8 @@
+{
+  "_comment": "`route.js` and `helper.js` form a deferred group: `helper.js` has no init wrapper, and its body runs in the wrapper of `route.js`. `lazy.js` is also in the closure of `route.js`, but only a conditional `require()` evaluates it. Thus it keeps its own wrapper, and the group does not run it: after `read(false)`, `lazy.js` did not run.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

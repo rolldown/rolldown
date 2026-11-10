@@ -88,6 +88,12 @@ impl EcmaCompiler {
   }
 
   pub fn print_with(ast: &EcmaAst, options: PrintOptions) -> CodegenReturn<'_> {
+    Self::print_program_with(ast.program(), options)
+  }
+
+  /// `print_with` for a program that is not the program of an `EcmaAst`, for example a part of
+  /// one.
+  pub fn print_program_with<'a>(program: &Program<'a>, options: PrintOptions) -> CodegenReturn<'a> {
     let legal = if options.comments.legal { LegalComment::Inline } else { LegalComment::None };
     Codegen::new()
       .with_options(CodegenOptions {
@@ -102,7 +108,7 @@ impl EcmaCompiler {
         source_map_path: options.sourcemap.then(|| PathBuf::from(options.filename)),
         ..CodegenOptions::default()
       })
-      .build(ast.program())
+      .build(program)
   }
 
   /// The returned map borrows `source_text` (its `sourcesContent` and token names are slices

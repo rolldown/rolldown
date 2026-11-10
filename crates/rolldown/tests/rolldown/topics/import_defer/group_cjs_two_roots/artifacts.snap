@@ -1,0 +1,60 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// shared.cjs
+var require_shared = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events.push("shared");
+	module.exports = "shared";
+}));
+// first.js
+function read$1() {
+	return [import_a.default, import_shared$1.default];
+}
+var import_a, import_shared$1;
+function init_first() {
+	return (init_first = __esmMin((() => {
+		// first.js
+		import_a = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+			globalThis.__events.push("a");
+			module.exports = "a";
+		})))());
+		import_shared$1 = /* @__PURE__ */ __toESM(require_shared());
+		globalThis.__events.push("first");
+	})))();
+}
+// second.js
+function read() {
+	return [import_b.default, import_shared.default];
+}
+var import_b, import_shared;
+function init_second() {
+	return (init_second = __esmMin((() => {
+		// second.js
+		import_b = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+			globalThis.__events.push("b");
+			module.exports = "b";
+		})))());
+		import_shared = /* @__PURE__ */ __toESM(require_shared());
+		globalThis.__events.push("second");
+	})))();
+}
+// main.js
+globalThis.__events = [];
+function run() {
+	return {
+		before: [...globalThis.__events],
+		first: (init_first(), read$1)(),
+		middle: [...globalThis.__events],
+		second: (init_second(), read)(),
+		events: globalThis.__events
+	};
+}
+export { run };
+
+```

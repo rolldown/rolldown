@@ -27,6 +27,19 @@ impl LinkStage<'_> {
     let mut symbols_inner = old_symbol_db.into_inner();
     let keep_names = self.options.keep_names;
     let commonjs_treeshake = self.options.treeshake.commonjs();
+    // The build has one chunk: code splitting is off, and at most one module is a user-defined or
+    // emitted entry. `self.entries` cannot be counted directly: at this point it also holds each
+    // `import()` target, which only `include_statements` removes when code splitting is off.
+    // Only the modules that `import defer` wraps use it, so a build without `importDefer` does
+    // not count the entries.
+    let single_chunk_build = self.options.experimental.is_import_defer_enabled()
+      && self.options.code_splitting.is_disabled()
+      && self
+        .entries
+        .values()
+        .filter(|entry_points| entry_points.iter().any(|entry| entry.kind.is_user_defined()))
+        .count()
+        <= 1;
 
     let defer_update_info_list = self
       .module_table
@@ -253,8 +266,22 @@ impl LinkStage<'_> {
                       }
                       WrapKind::Esm => {
                         // Turn `import ... from 'bar_esm'` into `init_bar_esm()`
-                        stmt_info.eval_flags =
-                          (is_reexport_all || importee.side_effects.has_side_effects()).into();
+                        //
+                        // An `export *` of a wrapped importee always runs, so that the init of the
+                        // importer calls the init of the importee. In a deferred closure of a build
+                        // with one chunk, the eager rule applies instead: the statement stays only
+                        // when it has side effects or a used binding. The excluded-statement
+                        // metadata still emits the init call of each included target, because each
+                        // target is in the one chunk. With more chunks, a target in another chunk
+                        // would lose that call.
+                        // See internal-docs/linking/reference-needed-symbols/implementation.md.
+                        let reexport_all_always_runs = is_reexport_all
+                          && !(single_chunk_build
+                            && self.metas[importer_idx].wrapped_by_import_defer
+                            && !importee_linking_info.has_dynamic_exports);
+                        stmt_info.eval_flags = (reexport_all_always_runs
+                          || importee.side_effects.has_side_effects())
+                        .into();
                         // Reference to `init_foo`
                         stmt_info
                           .referenced_symbols

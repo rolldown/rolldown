@@ -1,0 +1,71 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## b.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// state.js
+var state;
+function init_state() {
+	return (init_state = __esmMin((() => {
+		state = { value: 1 };
+	})))();
+}
+// b.js
+var b;
+function init_b() {
+	return (init_b = __esmMin((() => {
+		init_state();
+		b = state.value;
+	})))();
+}
+export { __esmMin as a, state as i, init_b as n, init_state as r, b as t };
+
+```
+
+## main.js
+
+```js
+import { a as __esmMin, i as state, n as init_b, r as init_state } from "./b.js";
+// a.js
+function a() {
+	return 1;
+}
+// first.js
+function read() {
+	return a();
+}
+function init_first() {
+	return (init_first = __esmMin((() => {
+		// barrel.js
+		init_b();
+	})))();
+}
+// main.js
+init_state();
+state.value = 3;
+function run() {
+	const a = (init_first(), read)();
+	state.value = 2;
+	return a;
+}
+export { run };
+
+```
+
+## other.js
+
+```js
+import { n as init_b, t as b } from "./b.js";
+// other.js
+init_b();
+globalThis.__events.push("other");
+function other() {
+	return b;
+}
+export { other };
+
+```

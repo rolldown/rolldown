@@ -1,0 +1,8 @@
+{
+  "_comment": "No cycle. The member `m.js` adds a property to the exports of `c.cjs`. `__toESM` copies the keys of the exports when it runs, so the namespace of `c.cjs` in the root `r.js` must be made before the body of `m.js` runs, as without groups and in native ESM.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

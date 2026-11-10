@@ -275,6 +275,19 @@ namespace as opaque would discard those paths and can skip a required leaf initi
 re-export cycle. `cross_chunk_dynamic_importer_uses_call_site_trigger` pins the narrowed simulated
 facade independently of the retained-star fixtures' routing topology.
 
+Modules of an `import defer` closure do not get this parity. The link stage wraps them before tree
+shaking (`wrap_import_defer_closures`), so tree shaking sees `WrapKind::Esm`, and late order
+lowering skips them. Two link-stage rules apply instead:
+
+- An `export *` statement of such a module follows the eager rule only in a build with one chunk
+  (see internal-docs/linking/reference-needed-symbols/implementation.md). Then an `export *` target
+  that no code uses leaves the output.
+- A barrel on the path of a used binding stays, and its init calls its retained leaves. Consumer
+  routing past such a barrel would need the independence proof above for every module whose init
+  the routing moves. On a measured app bundle (graphql, the AWS SDK and zod), the proof accepted 1
+  of the 36 barrels that stay, because their dependency graphs read imported bindings or call
+  functions at the top level. Thus this routing is not implemented.
+
 ## Audit decisions
 
 Two shapes were challenged and deliberately kept:

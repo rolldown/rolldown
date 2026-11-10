@@ -1,0 +1,63 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { n as x, t as init_x } from "./packed.js";
+// a.js
+globalThis.__hoistLog.push("a:" + (init_x(), x));
+
+```
+
+## main.js
+
+```js
+import "./warm.js";
+import "./packed.js";
+import "./a.js";
+
+```
+
+## packed.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+import "./a.js";
+// x.js
+var x;
+function init_x() {
+	return (init_x = __esmMin((() => {
+		// y.js
+		globalThis.__hoistLog.push("y");
+		// x.js
+		x = "xy";
+	})))();
+}
+// b.js
+globalThis.__hoistLog.push("b:1");
+export { x as n, init_x as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __toESM as r, __commonJSMin as t };
+
+```
+
+## warm.js
+
+```js
+import { r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+// warm.js
+var import_warm_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = "warm";
+})))());
+globalThis.__hoistLog.push(import_warm_cjs.default);
+
+```

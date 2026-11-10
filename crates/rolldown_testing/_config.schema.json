@@ -1887,7 +1887,7 @@
           ]
         },
         "pifeForModuleWrappers": {
-          "description": "Use PIFE patterns for module wrappers so that JS engines can compile the functions eagerly.\nThis improves the initial execution performance.\nSee <https://v8.dev/blog/preparser#pife> for more details about the optimization.",
+          "description": "Use PIFE patterns for module wrappers so that JS engines can compile the functions eagerly.\nThis improves the initial execution performance.\nSee <https://v8.dev/blog/preparser#pife> for more details about the optimization.\n\nThe default is `false` for `Platform::Neutral` and `true` for the other platforms. The\nwrappers of the modules that `import defer` evaluates lazily use the pattern also for\n`Platform::Neutral`. Only an explicit `false` turns it off for them.",
           "type": [
             "boolean",
             "null"

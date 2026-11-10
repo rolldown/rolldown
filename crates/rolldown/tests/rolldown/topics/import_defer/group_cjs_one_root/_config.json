@@ -1,0 +1,8 @@
+{
+  "_comment": "`route.js` is the only ESM module that `import defer` wraps, and it imports only the CommonJS modules `a.cjs` and `b.cjs`. Thus it is a root with only CommonJS members: the wrapper declarations of `a.cjs` and `b.cjs` go in the wrapper of `route.js`.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

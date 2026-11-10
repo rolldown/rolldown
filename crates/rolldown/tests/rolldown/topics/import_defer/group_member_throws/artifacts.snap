@@ -1,0 +1,35 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+function init_root() {
+	return (init_root = __esmMin((() => {
+		// member.js
+		globalThis.__memberRuns = (globalThis.__memberRuns ?? 0) + 1;
+		throw new Error("member failed");
+	})))();
+}
+// main.js
+function read() {
+	try {
+		init_root();
+		return;
+	} catch (error) {
+		return error;
+	}
+}
+function run() {
+	return {
+		first: read(),
+		second: read(),
+		runs: globalThis.__memberRuns
+	};
+}
+export { run };
+
+```

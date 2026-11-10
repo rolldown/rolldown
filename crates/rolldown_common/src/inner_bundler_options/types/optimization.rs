@@ -94,6 +94,10 @@ pub struct OptimizationOption {
   /// Use PIFE patterns for module wrappers so that JS engines can compile the functions eagerly.
   /// This improves the initial execution performance.
   /// See <https://v8.dev/blog/preparser#pife> for more details about the optimization.
+  ///
+  /// The default is `false` for `Platform::Neutral` and `true` for the other platforms. The
+  /// wrappers of the modules that `import defer` evaluates lazily use the pattern also for
+  /// `Platform::Neutral`. Only an explicit `false` turns it off for them.
   pub pife_for_module_wrappers: Option<bool>,
 }
 
@@ -123,6 +127,10 @@ pub fn normalize_optimization_option(
     pife_for_module_wrappers: option
       .pife_for_module_wrappers
       .unwrap_or(!matches!(platform, Platform::Neutral)),
+    // The wrapper of a deferred module is inside its hoisted `function init_x()`. The engine
+    // compiles `init_x` only at the first access, and the wrapper runs right after that. Thus
+    // the hint compiles nothing at load time, and it is on also for `Platform::Neutral`.
+    pife_for_deferred_module_wrappers: option.pife_for_module_wrappers.unwrap_or(true),
   }
 }
 
@@ -152,6 +160,10 @@ where
 pub struct NormalizedOptimizationConfig {
   pub inline_const: Option<NormalizedInlineConstConfig>,
   pub pife_for_module_wrappers: bool,
+  /// The PIFE pattern for the wrappers of modules that `import defer` evaluates lazily
+  /// (`LinkingMetadata::wrapped_by_import_defer`). It is `true` unless the user sets
+  /// `pife_for_module_wrappers` to `false`, also for `Platform::Neutral`.
+  pub pife_for_deferred_module_wrappers: bool,
 }
 
 #[derive(Debug, Clone, Default, Copy)]
@@ -179,5 +191,10 @@ impl NormalizedOptimizationConfig {
   #[inline]
   pub fn is_pife_for_module_wrappers_enabled(&self) -> bool {
     self.pife_for_module_wrappers
+  }
+
+  #[inline]
+  pub fn is_pife_for_deferred_module_wrappers_enabled(&self) -> bool {
+    self.pife_for_deferred_module_wrappers
   }
 }

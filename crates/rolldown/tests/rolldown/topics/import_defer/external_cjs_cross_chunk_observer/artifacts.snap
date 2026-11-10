@@ -1,0 +1,61 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+// d.js
+var import_node_https;
+function init_d() {
+	return (init_d = require_rolldown_runtime.__esmMin((() => {
+		import_node_https = /* @__PURE__ */ require_rolldown_runtime.__toESMCached("node:https", require("node:https"));
+	})))();
+}
+// main.js
+const lazyNamespace = () => (init_d(), import_node_https);
+const loadOther = () => Promise.resolve().then(() => require("./other.js"));
+exports.lazyNamespace = lazyNamespace;
+exports.loadOther = loadOther;
+
+```
+
+## other.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+let node_https = require("node:https");
+node_https = require_rolldown_runtime.__toESMCached("node:https", node_https);
+// other.js
+const eagerNamespace = () => node_https;
+exports.eagerNamespace = eagerNamespace;
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__esmMin", {
+	enumerable: true,
+	get: function() {
+		return __esmMin;
+	}
+});
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
+Object.defineProperty(exports, "__toESMCached", {
+	enumerable: true,
+	get: function() {
+		return __toESMCached;
+	}
+});
+
+```

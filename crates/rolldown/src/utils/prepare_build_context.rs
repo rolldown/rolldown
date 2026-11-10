@@ -378,6 +378,9 @@ pub fn prepare_build_context(
     // Dev rebuilds write only the changed chunks, so cleaning the output
     // directory would delete chunks the browser can still ask for.
     clean_dir = false;
+    // Dev mode has no HMR support for `import defer` yet. Each deferred import becomes a normal
+    // import, with a warning (`pre_process_ecma_ast`).
+    experimental.import_defer = Some(false);
   }
 
   if experimental.attach_debug_info.is_none() {
@@ -592,6 +595,7 @@ mod tests {
       clean_dir: Some(true),
       experimental: Some(ExperimentalOptions {
         dev_mode: Some(DevModeOptions::default()),
+        import_defer: Some(true),
         ..Default::default()
       }),
       ..Default::default()
@@ -601,5 +605,6 @@ mod tests {
     assert!(ctx.options.experimental.is_incremental_build_enabled());
     assert!(!ctx.options.experimental.is_lazy_barrel_enabled());
     assert!(ctx.options.treeshake.is_none());
+    assert!(!ctx.options.experimental.is_import_defer_enabled());
   }
 }

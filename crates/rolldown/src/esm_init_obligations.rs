@@ -889,6 +889,12 @@ fn add_wrapped_esm_init_target_for_symbol(
     return;
   }
   let meta = &ctx.metas[canonical_ref.owner];
+  // The deferred namespace object (`x_deferred`) sits outside `init_x`, and a read of it must not
+  // evaluate `x`: an access through the object evaluates it. An import of a re-exported deferred
+  // namespace (`export { ns }`) reaches this symbol.
+  if meta.deferred_namespace_ref == Some(canonical_ref) {
+    return;
+  }
   let transparent_order_wrapper =
     ctx.order_wrap_state.reexport_init_is_transparent(canonical_ref.owner);
   if wrapped_esm_target_is_reachable(

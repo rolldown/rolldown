@@ -1,0 +1,16 @@
+{
+  "_comment": "`c.js` awaits `import.defer('./d.js')` at the top level, before the code of `d.js` in the chunk. The chunk pauses in `c.js`, so a wait for the end of the chunk cannot work. The declarations of `d.js` come first in the chunk.",
+  "config": {
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "all",
+          "test": "[\\\\/](?:c|d|e|log)\\.js$"
+        }
+      ]
+    },
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

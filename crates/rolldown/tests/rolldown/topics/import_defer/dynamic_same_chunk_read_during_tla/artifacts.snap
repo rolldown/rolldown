@@ -1,0 +1,96 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] d.js is dynamically imported by c.js but also statically imported by e.js, dynamic import will not move module into another chunk.
+
+```
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] data.json is dynamically imported by c.js but also statically imported by e.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## all.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// dep.js
+var dep_exports = /* @__PURE__ */ __exportAll({ a: () => 1 });
+function init_dep() {
+	return (init_dep = __esmMin((() => {})))();
+}
+// d.js
+var d_exports = /* @__PURE__ */ __exportAll({ keys: () => keys });
+var d_deferred = /* @__PURE__ */ __deferNs(() => (init_d(), d_exports), d_exports);
+var keys;
+function init_d() {
+	return (init_d = __esmMin((() => {
+		init_dep();
+		keys = Object.keys(dep_exports);
+	})))();
+}
+// data.json
+var data_exports = /* @__PURE__ */ __exportAll({
+	a: () => a,
+	default: () => data_default
+});
+var data_deferred = /* @__PURE__ */ __deferNs(() => data_exports, data_exports);
+var a = 1;
+var data_default = { a };
+// c.js
+const early = [];
+const p = (async () => d_deferred)();
+const pj = (async () => data_deferred)();
+p.then((ns) => early.push(["d", ns.keys]));
+pj.then((ns) => early.push(["data", ns.a]));
+// pause.js
+await new Promise((resolve) => setTimeout(resolve, 10));
+const seenAfterPause = early.length;
+export { init_d as a, early as c, d_deferred as i, p as l, data_default as n, keys as o, data_deferred as r, seenAfterPause as s, a as t, pj as u };
+
+```
+
+## d.js
+
+```js
+import { a as init_d, o as keys } from "./all.js";
+init_d();
+export { keys };
+
+```
+
+## data.js
+
+```js
+export { t as a, n as default } from "./all.js";
+
+```
+
+## main.js
+
+```js
+import { c as early, i as d_deferred, l as p, r as data_deferred, s as seenAfterPause, u as pj } from "./all.js";
+// main.js
+const tag = (value) => Object.prototype.toString.call(value);
+async function run() {
+	const value = await p;
+	const json = await pj;
+	return {
+		same: value === d_deferred,
+		tag: tag(value),
+		jsonSame: json === data_deferred,
+		jsonTag: tag(json)
+	};
+}
+export { early, run, seenAfterPause };
+
+```

@@ -278,6 +278,7 @@ impl<'a> LinkStage<'a> {
     self.recompute_analyzed_side_effects();
     self.reference_needed_symbols();
     self.include_statements(&unreachable_import_expression_node_ids);
+    self.mark_lazy_namespace_externals();
     self.patch_module_dependencies();
 
     tracing::trace!(

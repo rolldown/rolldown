@@ -1,0 +1,26 @@
+{
+  "_comment": "The module graph has no cycle, but the chunk graph has one: chunk `packed` holds `x.js` and `b.js` and imports chunk `a`, and chunk `a` imports `init_x` from `packed`. Chunk `a` runs first, and its deferred access calls `init_x` before the code of `packed` runs. The call works because the wrapper of a deferred module is a hoisted `function init_x()`. With `var init_x = ...`, the call throws `init_x is not a function`. The group `warm` puts the runtime in its own chunk, which `packed` imports first. Without it, the runtime goes into `packed`, and the call throws `__esmMin is not a function`: the runtime helpers are not ready, and the wrapper form is not the cause. The fixture does not set `strictExecutionOrder`, because that mode selects the hoisted form for each wrapped module.",
+  "config": {
+    "preserveEntrySignatures": "allow-extension",
+    "codeSplitting": {
+      "includeDependenciesRecursively": false,
+      "groups": [
+        {
+          "name": "warm",
+          "test": "[\\\\/]warm(?:-cjs)?\\.js$"
+        },
+        {
+          "name": "packed",
+          "test": "[\\\\/](?:x|b)\\.js$"
+        },
+        {
+          "name": "a",
+          "test": "[\\\\/]a\\.js$"
+        }
+      ]
+    },
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

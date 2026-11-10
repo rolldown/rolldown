@@ -19,7 +19,7 @@ function init_d() {
 	return (init_d = __esmMin((() => {
 		require("ext-bare");
 		import_ext_named = require("ext-named");
-		import_ext_ns = /* @__PURE__ */ __toESMCached(require("ext-ns"));
+		import_ext_ns = /* @__PURE__ */ __toESMCached("ext-ns", require("ext-ns"));
 		__reExport(d_exports, require("ext-star"));
 		globalThis.__extLog.push("d");
 		x = import_ext_named.value;
@@ -59,7 +59,7 @@ function init_d() {
 	return (init_d = require_rolldown_runtime.__esmMin((() => {
 		require("ext-bare");
 		import_ext_named = require("ext-named");
-		import_ext_ns = /* @__PURE__ */ require_rolldown_runtime.__toESMCached(require("ext-ns"));
+		import_ext_ns = /* @__PURE__ */ require_rolldown_runtime.__toESMCached("ext-ns", require("ext-ns"));
 		require_rolldown_runtime.__reExport(d_exports, require("ext-star"));
 		globalThis.__extLog.push("d");
 		x = import_ext_named.value;

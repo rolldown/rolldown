@@ -135,6 +135,7 @@ mod minify_chunks;
 mod order_analysis;
 pub mod order_wrap_state;
 mod order_wrapping;
+mod place_dynamic_defer_declarations;
 mod post_banner_footer;
 mod reduced_chunk_graph;
 mod render_chunk_to_assets;
@@ -299,6 +300,7 @@ impl<'a> GenerateStage<'a> {
       &order_state,
       &final_esm_init_metadata,
     )?;
+    self.place_dynamic_defer_declarations(&mut chunk_graph, &order_state);
     self.detect_ineffective_dynamic_imports(&chunk_graph);
     self.detect_deferred_externals_evaluated_eagerly(&chunk_graph);
     self.render_chunk_to_assets(&chunk_graph, ast_table, &used_symbol_refs, &order_state).await

@@ -1,12 +1,61 @@
-use rolldown_common::{Module, ModuleIdx, RuntimeHelper, SymbolRef};
+use rolldown_common::{
+  ImportKind, ImportRecordMeta, Module, ModuleIdx, OutputFormat, RuntimeHelper, SymbolRef,
+};
 use rolldown_utils::{
   index_vec_ext::IndexVecRefExt, indexmap::FxIndexSet, rayon::ParallelIterator,
 };
 use rustc_hash::FxHashSet;
 
+use crate::utils::external_import_interop::{import_record_needs_interop, specifier_needs_interop};
+
 use super::LinkStage;
 
 impl LinkStage<'_> {
+  /// Sets `has_lazy_namespace_load` on each external module that a module of a deferred closure
+  /// loads lazily in CommonJS output: an included import of the external that needs
+  /// `__toESMCached` (`lazy_external_import_stmt`). The flag needs the result of tree shaking,
+  /// because only an included import statement loads the external.
+  ///
+  /// A deferred import of an external (`import defer * as ns from 'ext'`, `import.defer('ext')`)
+  /// also loads it with `__toESMCached`, but it does not set the flag. Native code cannot get the
+  /// module namespace object through a deferred namespace object, so the eager bindings of the
+  /// external do not have to give the same object.
+  #[tracing::instrument(level = "debug", skip_all)]
+  pub(super) fn mark_lazy_namespace_externals(&mut self) {
+    if !self.options.experimental.is_import_defer_enabled()
+      || !matches!(self.options.format, OutputFormat::Cjs)
+    {
+      return;
+    }
+    let mut externals = vec![];
+    for (module_idx, meta) in self.metas.iter_enumerated() {
+      if !meta.is_included || !meta.wrapped_by_import_defer {
+        continue;
+      }
+      let Module::Normal(module) = &self.module_table[module_idx] else { continue };
+      for (stmt_idx, stmt_info) in self.stmt_infos[module_idx].iter_enumerated() {
+        if !meta.stmt_info_included.has_bit(stmt_idx) {
+          continue;
+        }
+        for &rec_idx in &stmt_info.import_records {
+          let rec = &module.import_records[rec_idx];
+          let Some(importee_idx) = rec.resolved_module else { continue };
+          if rec.kind == ImportKind::Import
+            && !rec.is_defer_phase()
+            && !rec.meta.contains(ImportRecordMeta::IsExportStar)
+            && self.module_table[importee_idx].is_external()
+            && import_record_needs_interop(module, rec_idx)
+          {
+            externals.push(importee_idx);
+          }
+        }
+      }
+    }
+    for external_idx in externals {
+      self.metas[external_idx].has_lazy_namespace_load = true;
+    }
+  }
+
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn patch_module_dependencies(&mut self) {
     // Externals with an observer that inclusion could not attribute to a module that will get a
@@ -21,6 +70,12 @@ impl LinkStage<'_> {
       .filter(|(_, observers)| observers.keys().any(|observer| !self.metas[*observer].is_included))
       .map(|(namespace_ref, _)| *namespace_ref)
       .collect();
+    // See `mark_lazy_namespace_externals`. A chunk renders its binding of such an external with
+    // `__toESMCached` (`render_cjs_chunk_imports`), so each module that makes the chunk render
+    // that binding with `__toESM` asks for `__toESMCached` too.
+    let has_lazy_namespace_externals = self.options.experimental.is_import_defer_enabled()
+      && matches!(self.options.format, OutputFormat::Cjs)
+      && self.metas.iter().any(|meta| meta.has_lazy_namespace_load);
 
     let processed_module_results = self
       .metas
@@ -36,10 +91,14 @@ impl LinkStage<'_> {
         // module tree-shaking already dropped, so the edge to the runtime has to be (re)derived
         // from the reference itself. See `chunk_recorded_external_interop` and issue #10069.
         let mut reads_external_as_esm = false;
+        // Set with `reads_external_as_esm` when that external has `has_lazy_namespace_load`.
+        let mut reads_lazy_loaded_external_as_esm = false;
         let mut note_external_interop = |canonical_ref: SymbolRef| {
-          // Runs for every referenced symbol of every module; the flag is monotonic, so once it is
-          // set there is nothing left to learn.
-          if reads_external_as_esm {
+          // Runs for every referenced symbol of every module; the flags are monotonic, so once
+          // they are set there is nothing left to learn.
+          if reads_external_as_esm
+            && (reads_lazy_loaded_external_as_esm || !has_lazy_namespace_externals)
+          {
             return;
           }
           let symbol = self.symbols.get(canonical_ref);
@@ -59,6 +118,9 @@ impl LinkStage<'_> {
             || observers.contains_key(&module_idx)
           {
             reads_external_as_esm = true;
+            // The external module owns its namespace symbol.
+            reads_lazy_loaded_external_as_esm |=
+              self.metas[namespace_ref.owner].has_lazy_namespace_load;
           }
         };
 
@@ -86,7 +148,7 @@ impl LinkStage<'_> {
           },
         );
 
-        let Module::Normal(_) = &self.module_table[module_idx] else {
+        let Module::Normal(module) = &self.module_table[module_idx] else {
           // External modules are not rendered, so they never need a runtime-helper edge.
           return (module_idx, extended_dependencies, RuntimeHelper::default());
         };
@@ -139,11 +201,31 @@ impl LinkStage<'_> {
           let dep_meta = &self.metas[*dep_module_idx];
           dep_meta.depended_runtime_helper.contains(RuntimeHelper::ToEsm)
         });
-        let inherited_runtime = if needs_inherit_to_esm_runtime || reads_external_as_esm {
+        let mut inherited_runtime = if needs_inherit_to_esm_runtime || reads_external_as_esm {
           RuntimeHelper::ToEsm
         } else {
           RuntimeHelper::default()
         };
+        // An eager import with a default or namespace specifier puts the external in the
+        // chunk-level bindings of this module's chunk, with the interop helper. A deferred import,
+        // and each import of a module of a deferred closure, loads the external lazily instead.
+        let imports_lazy_loaded_external = has_lazy_namespace_externals
+          && meta.is_included
+          && !meta.wrapped_by_import_defer
+          && module.named_imports.values().any(|import| {
+            let rec = &module.import_records[import.record_idx];
+            specifier_needs_interop(&import.imported)
+              && !rec.is_defer_phase()
+              && rec.resolved_module.is_some_and(|importee_idx| {
+                self.metas[importee_idx].has_lazy_namespace_load
+                  && self.module_table[importee_idx].as_external().is_some_and(|external| {
+                    self.used_external_symbols.contains(&external.namespace_ref)
+                  })
+              })
+          });
+        if reads_lazy_loaded_external_as_esm || imports_lazy_loaded_external {
+          inherited_runtime |= RuntimeHelper::ToEsmCached;
+        }
         (module_idx, extended_dependencies, inherited_runtime)
       })
       .collect::<Vec<_>>();

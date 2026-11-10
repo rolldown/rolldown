@@ -801,8 +801,14 @@ fn has_optional_member_access(expr: &Expression) -> bool {
 }
 
 impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
-  /// A hoisted `function init_x()` works for a call that runs before the declaration: a call from
-  /// a cyclic importer under strict execution order, or a deferred access from a cyclic importer.
+  /// Returns the hoisted form `function init_x()` for each module with
+  /// `ModuleWrapperMode::ExecutionOrder` and for each module that `import defer` wraps. A call of
+  /// `init_x` can run before the declaration of the module, for example from a member of a module
+  /// cycle that the order puts first, or from a chunk in a chunk cycle. A hoisted function is
+  /// callable at such a call. `var init_x = ...` is not. A proof that `var` is safe needs the chunk
+  /// graph and the code order of each chunk, so this function makes no such check. The cost: the
+  /// module code sees the `arguments` of `init_x`, and direct `eval` code sees its function
+  /// context. See the fixture `topics/import_defer/hoisted_wrapper_chunk_cycle`.
   fn esm_wrapper_decl_kind(&self, wrapper_mode: ModuleWrapperMode) -> EsmWrapperDeclKind {
     if matches!(wrapper_mode, ModuleWrapperMode::ExecutionOrder(_))
       || self.ctx.linking_info.wrapped_by_import_defer
@@ -1101,15 +1107,26 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     self.ctx.linking_info.deferred_access_targets.get(&node_id).copied()
   }
 
-  /// `(<evaluate x>, <access>)`: the access evaluates the deferred module `x` first.
+  /// The access evaluates the deferred module `x` first.
   /// - ESM `x`: `(init_x(), <access>)`.
-  /// - CommonJS `x`: `(import_x || (import_x = __toESM(require_x())), <access>)`. The import
-  ///   statement declares `import_x` with no value. The first access assigns it, so that all
-  ///   accesses read one namespace object.
+  /// - CommonJS `x`: `(import_x || (import_x = __toESM(require_x()))).foo`. The import statement
+  ///   declares `import_x` with no value. The first access assigns it, so that all accesses read
+  ///   one namespace object. The evaluation is the object of the member chain, so a call
+  ///   `ns.fn()` keeps `import_x` as `this`, as the eager form `import_x.fn()` does. An access
+  ///   with no such chain (`'foo' in ns`, an inlined export) uses
+  ///   `(import_x || (import_x = __toESM(require_x())), <access>)`.
   fn wrap_deferred_access(&self, expr: &mut ast::Expression<'ast>, access: DeferredAccess) {
     let evaluate = match access {
       DeferredAccess::Cjs(rec_idx) => {
         let Some(evaluate) = self.cjs_deferred_namespace_expr(rec_idx) else { return };
+        let namespace_name =
+          self.canonical_name_for(self.ctx.module.import_records[rec_idx].namespace_ref);
+        if let Some(root) = member_chain_root(expr)
+          && matches!(root, ast::Expression::Identifier(ident) if ident.name == namespace_name)
+        {
+          *root = ast::Expression::new_parenthesized_expression(SPAN, evaluate, self);
+          return;
+        }
         evaluate
       }
       DeferredAccess::Esm(target) => {
@@ -1135,5 +1152,27 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
       ),
       self,
     );
+  }
+}
+
+/// The root object of a member chain: `a` in `a.b.c`, `a?.b` or `a['b']`. `None` for any other
+/// expression.
+fn member_chain_root<'a, 'ast>(
+  mut cur: &'a mut ast::Expression<'ast>,
+) -> Option<&'a mut ast::Expression<'ast>> {
+  loop {
+    if matches!(cur, ast::Expression::Identifier(_)) {
+      return Some(cur);
+    }
+    cur = match cur {
+      ast::Expression::StaticMemberExpression(member) => &mut member.object,
+      ast::Expression::ComputedMemberExpression(member) => &mut member.object,
+      ast::Expression::ChainExpression(chain) => match &mut chain.expression {
+        ast::ChainElement::StaticMemberExpression(member) => &mut member.object,
+        ast::ChainElement::ComputedMemberExpression(member) => &mut member.object,
+        _ => return None,
+      },
+      _ => return None,
+    };
   }
 }

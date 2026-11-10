@@ -116,6 +116,11 @@ pub struct LinkingMetadata {
   /// module must not evaluate it when the chunk loads, and each `import()` or `import.defer()` of
   /// the module reads `init_x`, `x_exports` and `x_deferred` from that chunk.
   pub dynamic_defer_target: bool,
+  /// Set on each external module that a module of a deferred closure loads lazily in CommonJS
+  /// output, with an included import that needs `__toESMCached` (`lazy_external_import_stmt`).
+  /// Each chunk then renders its own binding of the external with `__toESMCached` too, so that
+  /// all these loads give one namespace object (`render_cjs_chunk_imports`).
+  pub has_lazy_namespace_load: bool,
   /// The deferred namespace object of this module (`x_deferred`), when an `import defer * as ns`
   /// or an `import.defer()` targets this ESM module. Each deferred star import of the module
   /// links to this symbol, so that all of them read one object, also through `export { ns }`.

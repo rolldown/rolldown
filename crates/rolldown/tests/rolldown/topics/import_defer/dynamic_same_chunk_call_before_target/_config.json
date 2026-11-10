@@ -1,0 +1,16 @@
+{
+  "_comment": "`c.js` calls `import.defer('./d.js')` before the code of `d.js` in the chunk (`e.js` defers `d.js` statically, after `c.js`). The same-chunk form reads `d_deferred` in the call, so the chunk puts the declarations of `d.js` first. The promise gives the deferred namespace object of the static import.",
+  "config": {
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "all",
+          "test": "[\\\\/](?:c|d|e|log)\\.js$"
+        }
+      ]
+    },
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

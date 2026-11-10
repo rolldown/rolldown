@@ -1,0 +1,10 @@
+{
+  "_comment": "Dev mode has no HMR support for `import defer` yet. With `experimental.importDefer` on, dev mode still lowers each deferred import to a normal import, and the warning names dev mode. `x.js` evaluates before the code of `main.js`.",
+  "config": {
+    "experimental": {
+      "devMode": {},
+      "importDefer": true
+    }
+  },
+  "expectWarning": true
+}

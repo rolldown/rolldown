@@ -1,0 +1,57 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.cjs
+var require_log = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = [];
+}));
+// t.cjs
+var require_t = /* @__PURE__ */ __commonJSMin(((exports) => {
+	require_log().push("t");
+	exports.self = function() {
+		return this;
+	};
+	exports.tag = function() {
+		return this;
+	};
+	exports.obj = { value: 1 };
+	exports.foo = "foo";
+}));
+// main.js
+var import_log = /* @__PURE__ */ __toESM(require_log());
+var import_t, t_deferred = /* @__PURE__ */ __deferNs(() => import_t || (import_t = /* @__PURE__ */ __toESM(require_t())));
+let setError;
+try {
+	t_deferred.foo = "bar";
+} catch (e) {
+	setError = e;
+}
+const setThrows = setError instanceof TypeError;
+const afterSet = [...import_log.default];
+let deleteError;
+try {
+	delete t_deferred.foo;
+} catch (e) {
+	deleteError = e;
+}
+const deleteThrows = deleteError instanceof TypeError;
+const afterDelete = [...import_log.default];
+t_deferred.obj.value = 2;
+const objValue = (import_t || (import_t = /* @__PURE__ */ __toESM(require_t()))).obj.value;
+const isNamespace = (value) => value !== void 0 && value !== globalThis && "self" in value;
+const calls = [
+	isNamespace((import_t || (import_t = /* @__PURE__ */ __toESM(require_t()))).self()),
+	isNamespace((import_t || (import_t = /* @__PURE__ */ __toESM(require_t()))).self?.()),
+	isNamespace((import_t || (import_t = /* @__PURE__ */ __toESM(require_t())))?.self()),
+	isNamespace((import_t || (import_t = /* @__PURE__ */ __toESM(require_t()))).self()),
+	isNamespace((import_t || (import_t = /* @__PURE__ */ __toESM(require_t()))).tag`x`)
+];
+export { afterDelete, afterSet, calls, deleteThrows, objValue, setThrows };
+
+```

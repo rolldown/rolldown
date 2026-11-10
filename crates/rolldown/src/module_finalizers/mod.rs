@@ -440,6 +440,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   ///
   /// The `import.defer()` forms do not call `.then`: the spec does not call
   /// `Promise.prototype.then` (test262 `promise-prototype-then-not-called.js`).
+  ///
+  /// A JSON module has no wrapper (`unwrap_json_module`): it declares only data. Its
+  /// `import.defer()` forms read `foo_deferred` with no init call. Its `import()` keeps the
+  /// normal lowering.
   fn rewrite_dynamic_import_of_defer_target(
     &self,
     expr: Option<&mut ast::ImportExpression<'ast>>,
@@ -447,12 +451,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     is_defer: bool,
   ) -> Option<Expression<'ast>> {
     let info = &self.ctx.linking_infos[importee_idx];
-    let wrapper_ref = info.wrapper_ref?;
+    let wrapper_ref = info.wrapper_ref;
+    if wrapper_ref.is_none() && !is_defer {
+      return None;
+    }
     let namespace_ref = self.ctx.modules[importee_idx].namespace_object_ref()?;
     // Only `import.defer()` reads the deferred namespace object.
     let deferred_ref = if is_defer { Some(info.deferred_namespace_ref?) } else { None };
     let tla_tainted = info.is_tla_or_contains_tla_dependency;
-    let needs_preparation = tla_tainted && info.import_defer_tracked_deps.is_some();
+    let needs_preparation =
+      tla_tainted && info.import_defer_tracked_deps.is_some() && wrapper_ref.is_some();
     let host = if self.ctx.options.code_splitting.is_disabled() {
       self.ctx.chunk_idx
     } else {
@@ -460,17 +468,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     };
 
     if host == self.ctx.chunk_idx {
-      let init_expr = || self.finalized_expr_for_symbol_ref(wrapper_ref, false, false).0;
       if let Some(deferred_ref) = deferred_ref {
         let deferred = self.finalized_expr_for_symbol_ref(deferred_ref, false, false).0;
-        let body = if needs_preparation {
+        let body = if let Some(wrapper_ref) = wrapper_ref.filter(|_| needs_preparation) {
+          let init_expr = self.finalized_expr_for_symbol_ref(wrapper_ref, false, false).0;
           let mut expressions = oxc::allocator::Vec::with_capacity_in(3, self);
           expressions.push(Expression::new_await_expression(
             SPAN,
             Expression::new_number_0(SPAN, self),
             self,
           ));
-          expressions.push(self.esm_gather_expr(init_expr(), None));
+          expressions.push(self.esm_gather_expr(init_expr, None));
           expressions.push(deferred);
           Expression::new_parenthesized_expression(
             SPAN,
@@ -482,7 +490,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         };
         return Some(self.async_arrow_iife(None, body));
       }
-      let init_call = Expression::new_call_expression(SPAN, init_expr(), None, [], false, self);
+      let init_expr = self.finalized_expr_for_symbol_ref(wrapper_ref?, false, false).0;
+      let init_call = Expression::new_call_expression(SPAN, init_expr, None, [], false, self);
       let namespace = self.finalized_expr_for_symbol_ref(namespace_ref, false, false).0;
       return Some(if tla_tainted {
         Expression::new_callee_then_call(init_call, namespace, self)
@@ -499,7 +508,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let name_of = |symbol_ref: SymbolRef| {
       host_chunk.exports_to_other_chunks.get(&symbol_ref).and_then(|names| names.first())
     };
-    let init_name = name_of(wrapper_ref)?;
+    // `import()` and the preparation call `init_foo`.
+    let init_name = match wrapper_ref {
+      Some(wrapper_ref) if needs_preparation || !is_defer => Some(name_of(wrapper_ref)?),
+      _ => None,
+    };
     let namespace_name = name_of(namespace_ref)?;
     let deferred_name = match deferred_ref {
       Some(deferred_ref) => Some(name_of(deferred_ref)?),
@@ -533,7 +546,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       Expression::ImportExpression(expr.take_in_box(self))
     };
 
-    if !is_defer && !tla_tainted {
+    if !is_defer
+      && !tla_tainted
+      && let Some(init_name) = init_name
+    {
       // `import('./chunk.js').then((n) => (n.init_foo(), n.foo_exports))`
       let load_expr = if matches!(self.ctx.options.format, OutputFormat::Cjs) {
         Expression::new_promise_resolve_then(load_expr, self)
@@ -577,24 +593,26 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       self,
     ));
     if let Some(deferred_name) = deferred_name {
-      if needs_preparation {
+      if let Some(init_name) = init_name.filter(|_| needs_preparation) {
         expressions.push(self.esm_gather_expr(Self::chunk_namespace_member(init_name, self), None));
       }
       expressions.push(Self::chunk_namespace_member(deferred_name, self));
     } else {
       // `await n.init_foo()`
-      expressions.push(Expression::new_await_expression(
-        SPAN,
-        Expression::new_call_expression(
+      if let Some(init_name) = init_name {
+        expressions.push(Expression::new_await_expression(
           SPAN,
-          Self::chunk_namespace_member(init_name, self),
-          None,
-          [],
-          false,
+          Expression::new_call_expression(
+            SPAN,
+            Self::chunk_namespace_member(init_name, self),
+            None,
+            [],
+            false,
+            self,
+          ),
           self,
-        ),
-        self,
-      ));
+        ));
+      }
       expressions.push(Self::chunk_namespace_member(namespace_name, self));
     }
     Some(self.async_arrow_iife(
@@ -935,15 +953,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     ))
   }
 
-  /// `require("ext")`, or `__toESMCached(require("ext"))` when `needs_interop`: the lazy load of
-  /// an external module in CommonJS output, for `import defer` and for a module of a deferred
-  /// closure. `__toESMCached` gives one namespace object for all loads of the external.
+  /// `require("ext")`, or `__toESMCached("ext", require("ext"))` when `needs_interop`: the lazy
+  /// load of an external module in CommonJS output, for `import defer` and for a module of a
+  /// deferred closure. `__toESMCached` gives one namespace object for all loads of the external.
   fn external_require_expr(
     &self,
     external: &rolldown_common::ExternalModule,
     needs_interop: bool,
   ) -> Expression<'ast> {
-    let import_path = external.get_import_path(self.ctx.chunk, self.ctx.resolved_paths);
+    let file_name = external.get_file_name(self.ctx.resolved_paths);
+    let import_path = external.import_path_from_file_name(self.ctx.chunk, file_name.clone());
     let require_call = Expression::new_call_with_arg(
       ast::Expression::new_identifier(SPAN, "require", self),
       Expression::new_string_literal(
@@ -958,10 +977,42 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if !needs_interop {
       return require_call;
     }
-    Expression::new_to_esm_wrapper(
-      self.finalized_expr_for_runtime_symbol("__toESMCached"),
+    self.to_esm_cached_call(
+      &file_name,
       require_call,
       self.ctx.module.should_consider_node_esm_spec_for_static_import(),
+    )
+  }
+
+  /// `__toESMCached("ext", <exports>)`, or `__toESMCached("ext", <exports>, 1)` in Node mode. The
+  /// helper keeps one namespace object for each key and interop mode. The key is the file name of
+  /// the external module (`ExternalModule::get_file_name`), which is the same in all chunks. The
+  /// `require()` path is not: it is relative to the folder of the chunk. The exports object is not
+  /// a correct key either: a primitive cannot be a key, and two externals can export one object.
+  fn to_esm_cached_call(
+    &self,
+    file_name: &str,
+    exports_expr: Expression<'ast>,
+    node_mode: bool,
+  ) -> Expression<'ast> {
+    let mut args = oxc::allocator::Vec::with_capacity_in(3, self);
+    args.push(ast::Argument::new_string_literal(
+      SPAN,
+      oxc::ast::ast::Str::from_str_in(file_name, self),
+      None,
+      self,
+    ));
+    args.push(ast::Argument::from(exports_expr));
+    if node_mode {
+      args.push(ast::Argument::new_numeric_literal(SPAN, 1.0, None, NumberBase::Decimal, self));
+    }
+    ast::Expression::new_call_expression_with_pure(
+      SPAN,
+      self.finalized_expr_for_runtime_symbol("__toESMCached"),
+      None,
+      args,
+      false,
+      true,
       self,
     )
   }
@@ -3845,7 +3896,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         }
         self.rewrite_external_import_options(expr, &rec.attributes, &importee.attributes);
         // The path is rendered like the one of a static import, with or without options.
-        let import_path = importee.get_import_path(self.ctx.chunk, self.ctx.resolved_paths);
+        let file_name = importee.get_file_name(self.ctx.resolved_paths);
+        let import_path = importee.import_path_from_file_name(self.ctx.chunk, file_name.clone());
         if str != import_path.as_str() {
           expr.source = Expression::new_string_literal(
             expr.source.span(),
@@ -3861,13 +3913,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           return false;
         }
         // `import.defer('ext')` in CommonJS output, for each value of `dynamicImportInCjs`:
-        // `(async () => __deferNs(() => __toESMCached(require("ext"))))()`. The first access to
-        // a key loads `ext`, as for the static form. Each call gives a new deferred namespace
-        // object, like the `Promise.resolve().then(() => __toESM(require("ext")))` form of
-        // `import()`. The form does not call `.then` (test262
+        // `(async () => __deferNs(() => __toESMCached("ext", require("ext"))))()`. The first
+        // access to a key loads `ext`, as for the static form. Each call gives a new deferred
+        // namespace object, like the `Promise.resolve().then(() => __toESM(require("ext")))` form
+        // of `import()`. The form does not call `.then` (test262
         // `promise-prototype-then-not-called.js`).
         if rec.is_defer_phase() && matches!(self.ctx.options.format, OutputFormat::Cjs) {
-          let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESMCached");
           let defer_ns_fn_name = self.finalized_expr_for_runtime_symbol("__deferNs");
           let node_mode = self.ctx.module.should_consider_node_esm_spec_for_dynamic_import();
           node.replace_with(|old| {
@@ -3878,8 +3929,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               false,
               self,
             );
-            let namespace =
-              Expression::new_to_esm_wrapper(to_esm_fn_name, require_call, node_mode, self);
+            let namespace = self.to_esm_cached_call(&file_name, require_call, node_mode);
             let mut call = CallExpression::new(SPAN, defer_ns_fn_name, None, [], false, self);
             call.arguments.push(Expression::new_arrow_returning(namespace, self).into());
             self.async_arrow_iife(None, Expression::CallExpression(call.into_in(self.allocator())))

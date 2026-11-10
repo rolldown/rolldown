@@ -1,0 +1,16 @@
+{
+  "_comment": "The promises of `import.defer()` resolve while `pause.js` waits at its top-level await, before the code of `d.js`, `dep.js` and `data.json` in the chunk. A read in a callback evaluates `d.js`, which reads the namespace object of `dep.js`, and reads the data of `data.json`. The chunk puts the declarations of each module of the deferred closures first.",
+  "config": {
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "all",
+          "test": "[\\\\/](?:(?:c|d|dep|e|pause)\\.js|data\\.json)$"
+        }
+      ]
+    },
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

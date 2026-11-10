@@ -203,14 +203,14 @@ export var __deferNs = (init, ns) => {
     set: () => false,
   });
 };
-// `__toESM` with one result for each exports object and interop mode. A module of a deferred
-// closure (`import defer`) loads an external lazily in CommonJS output, and the chunk can also
-// load it eagerly. All these loads must give one namespace object.
+// `__toESM` with one result for each external module and interop mode. In CommonJS output, a
+// module of a deferred closure (`import defer`) loads an external lazily, and each chunk can also
+// load it eagerly. All these loads must give one namespace object. `key` names the external module
+// with the same text in all chunks.
 // See internal-docs/runtime-helpers/implementation.md.
 var __toESMCache = [];
-export var __toESMCached = (mod, isNodeMode, cache, ns) => {
-  if (mod !== Object(mod)) return __toESM(mod, isNodeMode);
-  cache = __toESMCache[isNodeMode ? 1 : 0] || (__toESMCache[isNodeMode ? 1 : 0] = new WeakMap());
-  if (!(ns = cache.get(mod))) cache.set(mod, (ns = __toESM(mod, isNodeMode)));
+export var __toESMCached = (key, mod, isNodeMode, cache, ns) => {
+  cache = __toESMCache[isNodeMode ? 1 : 0] || (__toESMCache[isNodeMode ? 1 : 0] = new Map());
+  if (!(ns = cache.get(key))) cache.set(key, (ns = __toESM(mod, isNodeMode)));
   return ns;
 };

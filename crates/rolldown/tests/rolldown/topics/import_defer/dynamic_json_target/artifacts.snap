@@ -1,0 +1,72 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] data.json is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import { n as __exportAll, t as __deferNs } from "./rolldown-runtime.js";
+// data.json
+var data_exports = /* @__PURE__ */ __exportAll({
+	a: () => a,
+	default: () => data_default
+});
+var data_deferred = /* @__PURE__ */ __deferNs(() => data_exports, data_exports);
+var a = 1;
+var data_default = { a };
+// main.js
+const tag = (value) => Object.prototype.toString.call(value);
+async function run() {
+	const same = await (async () => data_deferred)();
+	const other = await (async (n) => (n = await import("./other.js"), n.t))();
+	const otherAgain = await (async (n) => (n = await import("./other.js"), n.t))();
+	return {
+		sameChunk: {
+			tag: tag(same),
+			identity: same === data_deferred,
+			a: same.a
+		},
+		otherChunk: {
+			tag: tag(other),
+			identity: other === otherAgain,
+			b: other.b
+		}
+	};
+}
+export { run };
+
+```
+
+## other.js
+
+```js
+import { n as __exportAll, t as __deferNs } from "./rolldown-runtime.js";
+// other.json
+var other_exports = /* @__PURE__ */ __exportAll({
+	b: () => b,
+	default: () => other_default
+});
+var other_deferred = /* @__PURE__ */ __deferNs(() => other_exports, other_exports);
+var b = 2;
+var other_default = { b };
+export { b, other_default as default, other_exports as n, other_deferred as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __deferNs as t };
+
+```

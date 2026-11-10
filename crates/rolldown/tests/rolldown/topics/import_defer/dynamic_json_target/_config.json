@@ -1,0 +1,8 @@
+{
+  "_comment": "`import.defer()` of a JSON module, which has no wrapper (`unwrap_json_module`). `data.json` is in the chunk of the importer, and `other.json` is in its own chunk. Both forms give the deferred namespace object with no init call. Without code splitting, `import()` makes a JSON module CommonJS (`determine_module_exports_kind`), and `import.defer()` of a CommonJS module keeps the lowering of `import()`.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

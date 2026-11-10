@@ -26,4 +26,9 @@ assert.strictEqual(dynamic.value, 42);
 assert.strictEqual(escaped.then, undefined);
 assert.deepStrictEqual(globalThis.__extLog, ['main', 'ext-lazy']);
 
+// A call keeps the namespace object as `this`, and a write to a property of an export reads the
+// export first.
+assert.strictEqual(main.callSelf().value, 42);
+assert.strictEqual(main.writeObj(), 2);
+
 delete globalThis.__extLog;

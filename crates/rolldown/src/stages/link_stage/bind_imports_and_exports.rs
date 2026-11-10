@@ -941,7 +941,9 @@ impl LinkStage<'_> {
                 if let Some(deferred_access) = deferred_access {
                   // A write (`ns.foo = v`, `ns.a.b++`, `delete ns.foo`) keeps the deferred
                   // namespace object, whose traps evaluate the module when the spec says so.
-                  if member_expr_ref.is_write && matches!(deferred_access, DeferredAccess::Esm(_)) {
+                  // This holds for a CommonJS module too: a write target cannot hold the load
+                  // of `import_x`, and a write to `import_x` skips the traps.
+                  if member_expr_ref.is_write {
                     return;
                   }
                   // The key `then` of a deferred namespace is always absent, and reading it

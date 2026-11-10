@@ -24,7 +24,7 @@ exports.consumerRead = consumerRead;
 var import_ext_ns;
 function init_d() {
 	return (init_d = __esmMin((() => {
-		import_ext_ns = /* @__PURE__ */ __toESMCached(require("ext-ns"));
+		import_ext_ns = /* @__PURE__ */ __toESMCached("ext-ns", require("ext-ns"));
 	})))();
 }
 Object.defineProperty(exports, "import_ext_ns", {
@@ -83,7 +83,7 @@ exports.consumerRead = consumerRead;
 var import_ext_ns;
 function init_d() {
 	return (init_d = __esmMin((() => {
-		import_ext_ns = /* @__PURE__ */ __toESMCached(require("ext-ns"));
+		import_ext_ns = /* @__PURE__ */ __toESMCached("ext-ns", require("ext-ns"));
 	})))();
 }
 Object.defineProperty(exports, "import_ext_ns", {

@@ -9,19 +9,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
 let ext_ns = require("ext-ns");
-ext_ns = __toESMCached(ext_ns);
+ext_ns = __toESMCached("ext-ns", ext_ns);
 // d.js
 var import_ext_ns$1;
 function init_d() {
 	return (init_d = __esmMin((() => {
-		import_ext_ns$1 = /* @__PURE__ */ __toESMCached(require("ext-ns"));
+		import_ext_ns$1 = /* @__PURE__ */ __toESMCached("ext-ns", require("ext-ns"));
 	})))();
 }
 // d2.js
 var import_ext_ns;
 function init_d2() {
 	return (init_d2 = __esmMin((() => {
-		import_ext_ns = /* @__PURE__ */ __toESMCached(require("ext-ns"));
+		import_ext_ns = /* @__PURE__ */ __toESMCached("ext-ns", require("ext-ns"));
 	})))();
 }
 // main.js

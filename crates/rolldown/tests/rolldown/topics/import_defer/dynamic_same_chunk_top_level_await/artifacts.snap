@@ -1,0 +1,64 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] d.js is dynamically imported by c.js but also statically imported by e.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## all.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.js
+var log;
+function init_log() {
+	return (init_log = __esmMin((() => {
+		log = [];
+	})))();
+}
+// d.js
+var d_exports = /* @__PURE__ */ __exportAll({ x: () => 1 });
+var d_deferred = /* @__PURE__ */ __deferNs(() => (init_d(), d_exports), d_exports);
+var x;
+function init_d() {
+	return (init_d = __esmMin((() => {
+		init_log();
+		log.push("d");
+		x = 1;
+	})))();
+}
+// c.js
+const value = await (async () => d_deferred)();
+export { log as a, init_log as i, init_d as n, value as o, x as r, d_deferred as t };
+
+```
+
+## d.js
+
+```js
+import { n as init_d, r as x } from "./all.js";
+init_d();
+export { x };
+
+```
+
+## main.js
+
+```js
+import { a as log, i as init_log, o as value, t as d_deferred } from "./all.js";
+// main.js
+init_log();
+const same = value === d_deferred;
+const tag = Object.prototype.toString.call(value);
+const before = [...log];
+const x = value.x;
+export { before, log, same, tag, x };
+
+```

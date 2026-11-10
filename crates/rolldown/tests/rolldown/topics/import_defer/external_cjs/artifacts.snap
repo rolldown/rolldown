@@ -9,16 +9,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
 // main.js
-var import_ext_lazy, ext_lazy_deferred = /* @__PURE__ */ __deferNs(() => import_ext_lazy || (import_ext_lazy = /* @__PURE__ */ __toESMCached(require("ext-lazy"))));
+var import_ext_lazy, ext_lazy_deferred = /* @__PURE__ */ __deferNs(() => import_ext_lazy || (import_ext_lazy = /* @__PURE__ */ __toESMCached("ext-lazy", require("ext-lazy"))));
 (globalThis.__extLog ??= []).push("main");
 const escape = () => ext_lazy_deferred;
-const hasValue = () => (import_ext_lazy || (import_ext_lazy = /* @__PURE__ */ __toESMCached(require("ext-lazy"))), "value" in import_ext_lazy);
-const read = () => (import_ext_lazy || (import_ext_lazy = /* @__PURE__ */ __toESMCached(require("ext-lazy"))), import_ext_lazy.value);
-const load = () => (async () => __deferNs(() => /* @__PURE__ */ __toESMCached(require("ext-lazy"))))();
+const hasValue = () => (import_ext_lazy || (import_ext_lazy = /* @__PURE__ */ __toESMCached("ext-lazy", require("ext-lazy"))), "value" in import_ext_lazy);
+const read = () => (import_ext_lazy || (import_ext_lazy = /* @__PURE__ */ __toESMCached("ext-lazy", require("ext-lazy")))).value;
+const load = () => (async () => __deferNs(() => /* @__PURE__ */ __toESMCached("ext-lazy", require("ext-lazy"))))();
+const callSelf = () => (import_ext_lazy || (import_ext_lazy = /* @__PURE__ */ __toESMCached("ext-lazy", require("ext-lazy")))).self();
+const writeObj = () => {
+	ext_lazy_deferred.obj.n = 2;
+	return (import_ext_lazy || (import_ext_lazy = /* @__PURE__ */ __toESMCached("ext-lazy", require("ext-lazy")))).obj.n;
+};
+exports.callSelf = callSelf;
 exports.escape = escape;
 exports.hasValue = hasValue;
 exports.load = load;
 exports.read = read;
+exports.writeObj = writeObj;
 
 ```
 
@@ -32,22 +39,29 @@ exports.read = read;
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 // main.js
-var import_ext_lazy, ext_lazy_deferred, escape, hasValue, read, load;
+var import_ext_lazy, ext_lazy_deferred, escape, hasValue, read, load, callSelf, writeObj;
 function init_main() {
 	return (init_main = require_rolldown_runtime.__esmMin((() => {
-		ext_lazy_deferred = /* @__PURE__ */ require_rolldown_runtime.__deferNs(() => import_ext_lazy || (import_ext_lazy = /* @__PURE__ */ require_rolldown_runtime.__toESMCached(require("ext-lazy"))));
+		ext_lazy_deferred = /* @__PURE__ */ require_rolldown_runtime.__deferNs(() => import_ext_lazy || (import_ext_lazy = /* @__PURE__ */ require_rolldown_runtime.__toESMCached("ext-lazy", require("ext-lazy"))));
 		(globalThis.__extLog ??= []).push("main");
 		escape = () => ext_lazy_deferred;
-		hasValue = () => (import_ext_lazy || (import_ext_lazy = /* @__PURE__ */ require_rolldown_runtime.__toESMCached(require("ext-lazy"))), "value" in import_ext_lazy);
-		read = () => (import_ext_lazy || (import_ext_lazy = /* @__PURE__ */ require_rolldown_runtime.__toESMCached(require("ext-lazy"))), import_ext_lazy.value);
-		load = () => (async () => require_rolldown_runtime.__deferNs(() => /* @__PURE__ */ require_rolldown_runtime.__toESMCached(require("ext-lazy"))))();
+		hasValue = () => (import_ext_lazy || (import_ext_lazy = /* @__PURE__ */ require_rolldown_runtime.__toESMCached("ext-lazy", require("ext-lazy"))), "value" in import_ext_lazy);
+		read = () => (import_ext_lazy || (import_ext_lazy = /* @__PURE__ */ require_rolldown_runtime.__toESMCached("ext-lazy", require("ext-lazy")))).value;
+		load = () => (async () => require_rolldown_runtime.__deferNs(() => /* @__PURE__ */ require_rolldown_runtime.__toESMCached("ext-lazy", require("ext-lazy"))))();
+		callSelf = () => (import_ext_lazy || (import_ext_lazy = /* @__PURE__ */ require_rolldown_runtime.__toESMCached("ext-lazy", require("ext-lazy")))).self();
+		writeObj = () => {
+			ext_lazy_deferred.obj.n = 2;
+			return (import_ext_lazy || (import_ext_lazy = /* @__PURE__ */ require_rolldown_runtime.__toESMCached("ext-lazy", require("ext-lazy")))).obj.n;
+		};
 	})))();
 }
 init_main();
+exports.callSelf = callSelf;
 exports.escape = escape;
 exports.hasValue = hasValue;
 exports.load = load;
 exports.read = read;
+exports.writeObj = writeObj;
 
 ```
 

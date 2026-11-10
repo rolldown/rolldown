@@ -14,7 +14,7 @@ const eagerValue = () => ext_lazy.value;
 // main.js
 var import_ext_lazy;
 (globalThis.__extLog ??= []).push("main");
-const read = () => [(import_ext_lazy || (import_ext_lazy = /* @__PURE__ */ __toESMCached(require("ext-lazy"))), import_ext_lazy.value), eagerValue()];
+const read = () => [(import_ext_lazy || (import_ext_lazy = /* @__PURE__ */ __toESMCached("ext-lazy", require("ext-lazy")))).value, eagerValue()];
 exports.read = read;
 
 ```

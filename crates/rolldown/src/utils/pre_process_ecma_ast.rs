@@ -8,6 +8,7 @@ use oxc::ast_visit::{VisitJs, VisitJsMut, walk_js};
 use oxc::diagnostics::{LabeledSpan, Severity as OxcSeverity};
 use oxc::minifier::{CompressOptions, Compressor, TreeShakeOptions};
 use oxc::semantic::{Scoping, Stats};
+use oxc::span::Span;
 use oxc::syntax::symbol::SymbolFlags;
 use oxc::transformer::Transformer;
 use oxc::transformer_plugins::{
@@ -25,6 +26,28 @@ use crate::types::oxc_parse_type::OxcParseType;
 
 use super::parse_to_ecma_ast::ParseToEcmaAstResult;
 use super::tweak_ast_for_scanning::{DeferPhaseRemoval, PreProcessor};
+
+/// The span and the message of the warning for a deferred import that `PreProcessor` lowers.
+fn import_defer_removal_warning(
+  removal: DeferPhaseRemoval,
+  is_dev_mode: bool,
+) -> (Span, &'static str) {
+  match removal {
+    // `prepare_build_context` turns `experimental.importDefer` off in dev mode.
+    DeferPhaseRemoval::OptionOff(span) if is_dev_mode => (
+      span,
+      "`import defer` is currently lowered to a normal import in dev mode. This changes execution timing because side effects run immediately instead of when the deferred import is first used. Dev mode does not support the deferred evaluation yet, also when `experimental.importDefer` is `true`.",
+    ),
+    DeferPhaseRemoval::OptionOff(span) => (
+      span,
+      "`import defer` is currently lowered to a normal import. This changes execution timing because side effects run immediately instead of when the deferred import is first used. Set `experimental.importDefer` to `true` to keep the deferred evaluation.",
+    ),
+    DeferPhaseRemoval::NonStaticSpecifier(span) => (
+      span,
+      "`import.defer()` with a specifier that is not a static string is lowered to `import()`. The module evaluates when it loads, not at the first access to its namespace.",
+    ),
+  }
+}
 
 #[derive(Default)]
 pub struct PreProcessEcmaAst {
@@ -260,26 +283,15 @@ impl PreProcessEcmaAst {
         (self.recreate_scoping(&mut None, program), defer_spans)
       });
 
+    let is_dev_mode = bundle_options.is_dev_mode_enabled();
     warnings.extend(import_defer_spans.into_iter().map(|removal| {
-      let (span, message) = match removal {
-        DeferPhaseRemoval::OptionOff(span) => (
-          span,
-          "`import defer` is currently lowered to a normal import. This changes execution timing because side effects run immediately instead of when the deferred import is first used. Set `experimental.importDefer` to `true` to keep the deferred evaluation.",
-        ),
-        DeferPhaseRemoval::NonStaticSpecifier(span) => (
-          span,
-          "`import.defer()` with a specifier that is not a static string is lowered to `import()`. The module evaluates when it loads, not at the first access to its namespace.",
-        ),
-      };
+      let (span, message) = import_defer_removal_warning(removal, is_dev_mode);
       BuildDiagnostic::oxc_error(
         source.clone(),
         resolved_id.to_string(),
         String::new(),
         message.to_string(),
-        vec![LabeledSpan::at(
-          span.start..span.end,
-          "The deferred phase is removed here.",
-        )],
+        vec![LabeledSpan::at(span.start..span.end, "The deferred phase is removed here.")],
         EventKind::UnsupportedFeatureError,
       )
       .with_severity_warning()

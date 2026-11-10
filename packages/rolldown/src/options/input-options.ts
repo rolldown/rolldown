@@ -752,6 +752,12 @@ export interface InputOptions {
      * not when its importer evaluates. When this option is off, Rolldown lowers each deferred
      * import to a normal import and emits a warning.
      *
+     * Rolldown evaluates a deferred module, and each module that it imports directly or through
+     * other modules, inside a function. Thus a top-level `arguments` in such a module is the
+     * arguments object of that function, and `typeof arguments` gives `"object"`, not
+     * `"undefined"`. Direct `eval` code in such a module also runs in that function. For example,
+     * `eval("new.target")` gives `undefined` and does not throw a `SyntaxError`.
+     *
      * @see {@link https://github.com/tc39/proposal-defer-import-eval | Proposal}
      * @default false
      */

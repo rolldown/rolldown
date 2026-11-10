@@ -10,7 +10,7 @@ use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::ast_scanner::const_eval::ConstEvalCtx;
+use crate::ast_scanner::const_eval::{ConstEvalCtx, contains_object_literal};
 
 use super::LinkStage;
 
@@ -120,6 +120,9 @@ impl<'ast> VisitJs<'ast> for BranchVisitor<'_, '_, 'ast> {
   fn visit_if_statement(&mut self, it: &ast::IfStatement<'ast>) {
     if !self.in_dead_branch
       && let Some(value) = it.test.evaluate_value_to_boolean(self.eval_ctx)
+      // oxc converts an object literal with the default `toString`, but the program can change
+      // that result. `try_extract_const_literal` uses the same rule.
+      && !contains_object_literal(&it.test)
       // Deleting a branch with hoisted declarations needs additional bookkeeping.
       && !has_hoisted_declarations(if value { it.alternate.as_ref() } else { Some(&it.consequent) })
     {
@@ -148,6 +151,7 @@ impl<'ast> VisitJs<'ast> for BranchVisitor<'_, '_, 'ast> {
   fn visit_conditional_expression(&mut self, it: &ast::ConditionalExpression<'ast>) {
     if !self.in_dead_branch
       && let Some(value) = it.test.evaluate_value_to_boolean(self.eval_ctx)
+      && !contains_object_literal(&it.test)
     {
       self.changed = true;
       self.branches.insert(it.node_id(), value);
@@ -177,7 +181,7 @@ impl<'ast> VisitJs<'ast> for BranchVisitor<'_, '_, 'ast> {
         )
       }),
     };
-    if executes_rhs == Some(false) {
+    if executes_rhs == Some(false) && !contains_object_literal(&it.left) {
       self.changed = true;
       self.branches.insert(it.node_id(), false);
       self.visit_expression(&it.left);

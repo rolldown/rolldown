@@ -31,6 +31,12 @@ Only statements referencing a known constant are revisited. The pass is parallel
 and is disabled when tree shaking or constant inlining is disabled. It does not use CommonJS
 property constants or reassigned bindings. Modules containing direct `eval` are left untouched.
 
+A condition that contains an array, object, or regexp literal is not decided. oxc converts such a
+literal with the default `toString` and keeps the source order of regexp flags, but a program can
+patch a prototype, and the runtime prints regexp flags in a fixed order. With `minify: false`,
+nothing else removes such a branch, so a wrong decision here changes behavior. The pass uses the
+same rule as `try_extract_const_literal` (`contains_object_literal`).
+
 Statements containing import records are skipped: import lowering adds synthetic symbol and
 runtime-helper dependencies, and these cannot be removed by merely revisiting identifier
 references. Namespace helper references in dead branches are pruned by their semantic reference
@@ -49,3 +55,5 @@ are also outside this pass's current scope.
 - `crates/rolldown/src/module_finalizers/impl_visit_mut.rs`
 - `crates/rolldown/tests/rolldown/optimization/inline_const/dead_function_shared_chunk`
 - `crates/rolldown/tests/rolldown/optimization/inline_const/dead_function_branch_safety`
+- `crates/rolldown/tests/rolldown/optimization/inline_const/dead_function_object_coercion` (only
+  `minify: false`: the oxc minifier makes the same `toString` assumption)

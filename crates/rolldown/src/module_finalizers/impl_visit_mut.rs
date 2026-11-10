@@ -167,7 +167,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     self.scope_stack.push(flags);
     self.state.set(
       TraverseState::TopLevel,
-      self.scope_stack.iter().rev().all(|flag| flag.is_block() || flag.is_top()),
+      self.scope_stack.iter().rev().all(|flag| !flag.is_var() || flag.is_top()),
     );
     self
       .state
@@ -178,7 +178,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     self.scope_stack.pop();
     self.state.set(
       TraverseState::TopLevel,
-      self.scope_stack.iter().rev().all(|flag| flag.is_block() || flag.is_top()),
+      self.scope_stack.iter().rev().all(|flag| !flag.is_var() || flag.is_top()),
     );
     self
       .state
@@ -460,7 +460,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       if let Some((expr, bindings)) =
         self.var_declaration_to_expr_seq_and_bindings(decl, self.state)
       {
-        self.top_level_var_bindings.extend(bindings);
+        self.hoist_top_level_var_bindings(bindings);
         *it = ast::Statement::new_expression_statement(SPAN, expr, self);
       }
     }
@@ -866,7 +866,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       if let Some((expr, bindings)) =
         self.var_declaration_to_expr_seq_and_bindings(decl, self.state)
       {
-        self.top_level_var_bindings.extend(bindings);
+        self.hoist_top_level_var_bindings(bindings);
         *it = ast::ForStatementInit::from(expr);
       }
     }
@@ -881,10 +881,27 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       && decl.kind.is_var()
       && let Some(declarator) = decl.declarations.pop()
     {
-      self
-        .top_level_var_bindings
-        .extend(declarator.id.get_binding_identifiers().iter().map(|id| id.name));
+      self.hoist_top_level_var_bindings(
+        declarator.id.get_binding_identifiers().iter().map(|id| id.name),
+      );
       *it = ast::ForStatementLeft::from(declarator.id.into_assignment_target(self));
+    }
+  }
+
+  fn visit_catch_clause(&mut self, it: &mut ast::CatchClause<'ast>) {
+    let param = it
+      .param
+      .as_ref()
+      .and_then(|param| param.pattern.get_binding_identifier())
+      .and_then(|ident| ident.symbol_id.get())
+      .map(|symbol_id| SymbolRef::from((self.ctx.idx, symbol_id)));
+    if let Some(symbol_ref) = param {
+      let is_module_binding = symbol_ref.is_declared_in_root_scope(self.ctx.symbol_db);
+      self.catch_params.push((self.canonical_name_for(symbol_ref), is_module_binding));
+    }
+    walk_js_mut::walk_catch_clause(self, it);
+    if param.is_some() {
+      self.catch_params.pop();
     }
   }
 

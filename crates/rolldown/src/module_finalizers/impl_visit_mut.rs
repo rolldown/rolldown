@@ -27,6 +27,8 @@ use crate::{
 
 use super::ScopeHoistingFinalizer;
 
+const CJS_AMBIENT_PATHS: [(&str, &str); 2] = [("__dirname", "dirname"), ("__filename", "filename")];
+
 impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
   /// Returns the parameters of the CJS closure: `cjs_wrapper_fixed_params`, then the `this`
   /// binding.
@@ -69,6 +71,40 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     );
     let call = Expression::new_call_expression(SPAN, arrow, None, [], false, self);
     program.body.push(Statement::new_expression_statement(SPAN, call, self));
+  }
+
+  /// Under ESM output for `platform: 'node'`, the CJS closure of a CommonJS module declares the
+  /// `__dirname` and `__filename` that the module reads. See internal-docs/renaming/design.md
+  /// (principle 7).
+  fn should_shim_cjs_ambient_paths(&self) -> bool {
+    self.ctx.options.is_esm_format_with_node_platform()
+      && self.ctx.module.exports_kind.is_commonjs()
+  }
+
+  fn prepend_cjs_ambient_path_bindings(
+    &self,
+    statements: &mut allocator::Vec<'ast, Statement<'ast>>,
+  ) {
+    if !self.should_shim_cjs_ambient_paths() {
+      return;
+    }
+
+    for (name, property) in CJS_AMBIENT_PATHS {
+      // Only an undeclared read gets the local. The chunk reserves each unresolved name, so this
+      // local captures no other reference.
+      if !self.scope.scoping().root_unresolved_references().contains_key(name) {
+        continue;
+      }
+
+      let init = ast::Expression::new_static_member_expression(
+        SPAN,
+        ast::Expression::new_import_meta(SPAN, self),
+        ast::IdentifierName::new(SPAN, property, self),
+        false,
+        self,
+      );
+      statements.push(Statement::new_var_decl(name, init, self));
+    }
   }
 
   fn try_finalize_constant_if(&mut self, it: &mut ast::Statement<'ast>) -> bool {
@@ -388,6 +424,8 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         let (commonjs_ref_expr, _) = self.finalized_expr_for_symbol_ref(commonjs_ref, false, false);
 
         let mut stmts_inside_closure = allocator::Vec::new_in(self);
+        // CJS exposes these as mutable wrapper-local bindings, not as aliases to import.meta.
+        self.prepend_cjs_ambient_path_bindings(&mut stmts_inside_closure);
         stmts_inside_closure.append(&mut program.body);
 
         program.body.push(Statement::new_commonjs_wrapper_stmt(

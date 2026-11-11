@@ -654,7 +654,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         }
         self.generated_init_esm_importee_ids.insert(importee.idx);
         // `init_foo()` / `await init_foo()`
-        let init_expr = self.wrapped_esm_init_call_expr(importee.idx, stmt.span(), false, true);
+        let init_expr = self.wrapped_esm_init_call_expr(importee.idx, stmt.span(), true, true);
         *stmt = ast::Statement::new_expression_statement(SPAN, init_expr, self);
 
         return self.transfer_import_stmt(rec_idx, stmt);
@@ -2312,16 +2312,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 if matches!(importee_linking_info.wrap_kind(), WrapKind::Esm)
                   && !consumer_local_route
                 {
-                  let (wrapper_ref, _) = self.finalized_expr_for_symbol_ref(
-                    importee_linking_info.wrapper_ref.unwrap(),
-                    false,
-                    false,
-                  );
-                  let mut init_expr =
-                    ast::Expression::new_call_expression(SPAN, wrapper_ref, None, [], false, self);
-                  if importee_linking_info.is_tla_or_contains_tla_dependency {
-                    init_expr = ast::Expression::new_await_expression(SPAN, init_expr, self);
-                  }
+                  let init_expr = self.wrapped_esm_init_call_expr(importee.idx, SPAN, true, true);
                   program
                     .body
                     .push(ast::Statement::new_expression_statement(SPAN, init_expr, self));

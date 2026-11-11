@@ -17,7 +17,8 @@ exports.__toESM = __toESM;
 
 ```js
 require("./_virtual/_rolldown/runtime.js");
-require("./dep.js");
+// barrel.js
+require("./dep.js").default;
 
 ```
 
@@ -29,7 +30,12 @@ var require_dep = /* @__PURE__ */ require("./_virtual/_rolldown/runtime.js").__c
 	(globalThis.evaluated ??= []).push("dep");
 	module.exports = { x: 1 };
 }));
-module.exports = require_dep();
+Object.defineProperty(exports, "default", {
+	enumerable: true,
+	get: function() {
+		return require_dep();
+	}
+});
 
 ```
 

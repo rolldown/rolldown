@@ -19,7 +19,12 @@ exports.__toESM = __toESM;
 var require_lazy_cjs = /* @__PURE__ */ require("./_virtual/_rolldown/runtime.js").__commonJSMin(((exports, module) => {
 	module.exports = { a: 1 };
 }));
-module.exports = require_lazy_cjs();
+Object.defineProperty(exports, "default", {
+	enumerable: true,
+	get: function() {
+		return require_lazy_cjs();
+	}
+});
 
 ```
 
@@ -46,7 +51,7 @@ const ready = Promise.all([Promise.resolve().then(() => /* @__PURE__ */ Object.f
 })).then((m) => {
 	node_assert.default.strictEqual(m.default, 42);
 	node_assert.default.deepStrictEqual(Object.keys(m), ["default"]);
-}), Promise.resolve().then(() => /* @__PURE__ */ require_runtime.__toESM(require("./lazy-cjs.js"))).then((m) => {
+}), Promise.resolve().then(() => /* @__PURE__ */ require_runtime.__toESM(require("./lazy-cjs.js").default)).then((m) => {
 	node_assert.default.deepStrictEqual(m.default, { a: 1 });
 	node_assert.default.strictEqual(m.a, 1);
 })]);

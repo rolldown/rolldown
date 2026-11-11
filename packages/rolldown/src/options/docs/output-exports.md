@@ -2,6 +2,8 @@ When `'auto'` is used, Rolldown will automatically determine the export mode bas
 
 `'default'` can only be used when the `input` modules have a single default export. `'none'` can only be used when the `input` modules have no exports. Otherwise, Rolldown will throw an error.
 
+With [`output.preserveModules`](/reference/OutputOptions.preserveModules), this applies to every preserved ES module, not only the `input` modules. A CommonJS module that is not an `input` module keeps `'named'` mode.
+
 The difference between `'default'` and `'named'` affects how other people can consume your bundle. If you use `'default'`, a CommonJS user could do this, for example:
 
 ```js

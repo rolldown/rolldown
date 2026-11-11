@@ -1,5 +1,5 @@
 {
-  "_comment": "Test for issue #10231: under preserveModules a preserved chunk that also exposes strict-execution-order wrapper bindings for other modules must keep named exports, otherwise a CommonJS module with a single default export would be rendered as several `module.exports = ...` assignments",
+  "_comment": "Test for issue #10231: with strict execution order and on-demand wrapping, a preserved CommonJS module whose chunk also exposes wrapper bindings keeps named exports and still runs",
   "config": {
     "input": [
       {

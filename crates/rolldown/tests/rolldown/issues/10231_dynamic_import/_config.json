@@ -1,5 +1,5 @@
 {
-  "_comment": "Test for issue #10231: a CJS `import()` of a preserved module must still resolve to a namespace with `default` after the module switches to `module.exports = ...`, for both an ESM default-only module and a CommonJS module",
+  "_comment": "Test for issue #10231: a CJS `import()` of a preserved module resolves to a namespace with `default`, both for a default-only ES module emitted as `module.exports = ...` and for a CommonJS module",
   "config": {
     "input": [
       {

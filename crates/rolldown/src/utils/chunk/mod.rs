@@ -1,9 +1,8 @@
 use self::render_chunk_exports::get_chunk_export_names;
 use arcstr::ArcStr;
-use itertools::Itertools;
 use rolldown_common::{
-  Chunk, ChunkKind, ChunkMeta, ModuleId, ModuleIdx, ModuleTable, PreserveEntrySignatures,
-  RenderedModule, RollupPreRenderedChunk, RollupRenderedChunk, SharedNormalizedBundlerOptions,
+  Chunk, ChunkKind, ChunkMeta, ModuleId, ModuleIdx, PreserveEntrySignatures, RenderedModule,
+  RollupPreRenderedChunk, RollupRenderedChunk, SharedNormalizedBundlerOptions,
 };
 use rustc_hash::FxHashMap;
 
@@ -17,18 +16,17 @@ pub mod namespace_marker;
 pub mod render_chunk_exports;
 pub mod validate_options_for_multi_chunk_output;
 
-fn static_external_imports<'a>(
-  chunk: &'a Chunk,
-  module_table: &'a ModuleTable,
-) -> impl Iterator<Item = ModuleIdx> + 'a {
-  chunk
-    .direct_imports_from_external_modules
-    .iter()
-    .map(|(idx, _)| *idx)
-    .merge_by(chunk.entry_level_external_module_idx.iter().copied(), |a, b| {
-      module_table[*a].exec_order() <= module_table[*b].exec_order()
-    })
-    .dedup()
+/// The external modules that a chunk imports statically, in rendered order: its imports, then the
+/// externals of `export *` that it does not import.
+fn static_external_imports(chunk: &Chunk) -> impl Iterator<Item = ModuleIdx> + '_ {
+  let imported = chunk.direct_imports_from_external_modules.iter().map(|(idx, _)| *idx);
+  imported.clone().chain(
+    chunk
+      .entry_level_external_module_idx
+      .iter()
+      .copied()
+      .filter(move |idx| !imported.clone().any(|imported_idx| imported_idx == *idx)),
+  )
 }
 
 pub fn generate_pre_rendered_chunk(
@@ -89,7 +87,7 @@ pub fn generate_rendered_chunk(
           .expect("should have preliminary_filename")
           .clone()
       })
-      .chain(static_external_imports(chunk, &link_output.module_table).map(|idx| {
+      .chain(static_external_imports(chunk).map(|idx| {
         link_output.module_table[idx]
           .as_external()
           .expect("static external imports should only contain external modules")

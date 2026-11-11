@@ -124,10 +124,13 @@ test.each<Mode>(['wrap-all', 'on-demand'])(
       chunk.moduleIds.some((id) => id.endsWith('e.js')),
     );
     expect(implementation?.isEntry).toBe(false);
-    expect(implementation?.moduleIds.map((id) => id.replace(/^.*[\\/]/, '')).sort()).toEqual([
-      'e.js',
-      'shared.js',
-    ]);
+    // The runtime module can also go into this chunk. The check compares only the user modules.
+    expect(
+      implementation?.moduleIds
+        .filter((id) => id !== '\0rolldown/runtime.js')
+        .map((id) => id.replace(/^.*[\\/]/, ''))
+        .sort(),
+    ).toEqual(['e.js', 'shared.js']);
   },
 );
 

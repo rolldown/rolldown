@@ -65,6 +65,15 @@
         "unused-lib", // fixture dependency in packages/rolldown/tests/behaviors/emit-debug-data
       ],
     },
+    "packages/perf-kit": {
+      // `lib/*.mjs` are toolkit modules: each exports its own primitives (VLQ decode,
+      // coverage painting, threshold constants) so they stay individually readable and
+      // unit-testable, even where only the module itself consumes them today.
+      "ignoreExportsUsedInFile": true,
+      // `lib/replay/cert.mjs` spawns the system `openssl` for the replay's local TLS
+      // certificate; it is not an npm binary.
+      "ignoreBinaries": ["openssl"],
+    },
     "packages/rollup-tests": {
       "entry": ["src/**/*.js", "test/**/*.{js,ts}"],
       "ignoreDependencies": [
@@ -119,6 +128,15 @@
         "*/*.js", // error-scenario sub-folders (hmr-error, rebuild-error), imported by main.js
         "__tests__/*.spec.ts",
       ], // Playwright test with dev config and source files; main.js is a default entry
+    },
+    "packages/test-dev-server/tests/playground/hmr-import-glob": {
+      "entry": [
+        "dev.config.mjs",
+        "*.js",
+        "pages/*.js", // reached only through `import.meta.glob`
+        "nested/**/*.js",
+        "__tests__/*.spec.ts",
+      ],
     },
     "packages/test-dev-server/tests/playground/initial-build-error": {
       "entry": [

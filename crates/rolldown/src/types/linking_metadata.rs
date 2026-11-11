@@ -1,10 +1,11 @@
 use crate::stages::link_stage::{ModuleInclusionVec, ModuleNamespaceReasonVec, StmtInclusionVec};
+use oxc::semantic::NodeId;
 use oxc_index::IndexVec;
 use oxc_str::CompactStr;
 use rolldown_common::{
-  ConcatenateWrappedModuleKind, EntryPointKind, ImportRecordIdx, ImportRecordMeta,
-  MemberExprRefResolutionMap, ModuleIdx, ModuleNamespaceIncludedReason, OutputFormat,
-  ResolvedExport, RuntimeHelper, StmtInfoIdx, SymbolRef, WrapKind,
+  EntryPointKind, ImportRecordIdx, ImportRecordMeta, IndexModules, MemberExprRefResolutionMap,
+  ModuleIdx, ModuleNamespaceIncludedReason, ModuleType, NormalModule, OutputFormat, ResolvedExport,
+  RuntimeHelper, StmtInfoIdx, SymbolRef, SymbolRefDb, WrapKind,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_utils::IndexBitSet;
@@ -55,7 +56,6 @@ pub struct LinkingMetadata {
   // esbuild add it to `ExportKind`, but the linker shouldn't mutate the module.
   pub has_dynamic_exports: bool,
   pub shimmed_missing_exports: FxHashMap<CompactStr, SymbolRef>,
-  pub required_by_other_module: bool,
 
   // Entry chunks need to generate code that doesn't belong to any module. This is the list of symbols are referenced by the
   // generated code. Tree-shaking will cares about these symbols to make sure they are not removed.
@@ -84,9 +84,11 @@ pub struct LinkingMetadata {
   pub execution_dependencies: FxIndexSet<ModuleIdx>,
   // `None` the member expression resolve to a ambiguous export.
   pub resolved_member_expr_refs: MemberExprRefResolutionMap,
+  /// Results of the `'key' in ns` checks (see `EcmaView::namespace_in_checks`) that are known at
+  /// link time.
+  pub folded_namespace_in_checks: FxHashMap<NodeId, bool>,
   pub star_exports_from_external_modules: Vec<ImportRecordIdx>,
   pub is_tla_or_contains_tla_dependency: bool,
-  pub concatenated_wrapped_module_kind: ConcatenateWrappedModuleKind,
   /// Used to to track a facade binding referenced cjs module
   /// included reexport symbol from commonjs module
   pub named_import_to_cjs_module: FxHashMap<SymbolRef, ModuleIdx>,
@@ -108,11 +110,22 @@ pub struct LinkingMetadata {
   /// Tracks which statements in this module are included after tree-shaking.
   /// Each entry corresponds to a statement in the module's `stmt_infos`.
   pub stmt_info_included: IndexBitSet<StmtInfoIdx>,
+  /// Known branch decisions shared by dependency pruning and AST finalization.
+  /// `if`/ternary: whether the consequent executes; logical expression: whether the RHS executes.
+  pub constant_branches: FxHashMap<NodeId, bool>,
   /// Tracks whether the module is included after tree-shaking.
   pub is_included: bool,
 }
 
 impl LinkingMetadata {
+  /// Whether a dependency of the module, including an external one, has side effects.
+  pub fn has_side_effectful_dependency(&self, modules: &IndexModules) -> bool {
+    self
+      .dependencies
+      .iter()
+      .any(|&dependency_idx| modules[dependency_idx].side_effects().has_side_effects())
+  }
+
   pub fn canonical_exports(
     &self,
     needs_commonjs_export: bool,
@@ -126,6 +139,32 @@ impl LinkingMetadata {
 
   pub fn is_canonical_exports_empty(&self) -> bool {
     self.sorted_and_non_ambiguous_resolved_exports.is_empty()
+  }
+
+  /// Whether the finalizer may fold the keys of `module`, the JSON module this metadata belongs
+  /// to, into its default-export object. A namespace object needs every key as a binding.
+  pub fn inlines_json_keys(&self, module: &NormalModule) -> bool {
+    matches!(module.module_type, ModuleType::Json)
+      && !module.exports_kind.is_commonjs()
+      && !self.namespace_included
+  }
+
+  /// Whether `symbol_ref` is a key of JSON `module` that the finalizer folds into the
+  /// default-export object. Such a key has no `var`, so no chunk can import or export it.
+  pub fn is_inlined_json_key(
+    &self,
+    module: &NormalModule,
+    symbols: &SymbolRefDb,
+    symbol_ref: SymbolRef,
+  ) -> bool {
+    self.inlines_json_keys(module)
+      // Only the keys are real bindings. The namespace, the default export, and the wrapper are
+      // facade symbols, and the finalizer keeps them.
+      && !symbols.is_facade_symbol(symbol_ref)
+      && module
+        .json_module_none_self_reference_included_symbol
+        .as_deref()
+        .is_some_and(|kept_keys| !kept_keys.contains(&symbol_ref))
   }
 
   #[inline]

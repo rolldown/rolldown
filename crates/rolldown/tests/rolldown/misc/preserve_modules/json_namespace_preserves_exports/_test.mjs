@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 
 import { namespace, namespaceKeys } from './dist/index.js';
 
-const dataModule = await import('./dist/data.js');
+const dataModule = await import('./dist/data.json.js');
 const expectedDefault = {
   answer: 42,
   nested: {

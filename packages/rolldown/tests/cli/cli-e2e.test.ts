@@ -2,7 +2,7 @@ import { stripAnsi } from 'consola/utils';
 import { $, execa } from 'execa';
 import fs from 'node:fs';
 import path from 'node:path';
-import { testsDir } from 'rolldown-tests/utils';
+import { isWasiTest, testsDir } from 'rolldown-tests/utils';
 import { describe, expect, it, test, vi } from 'vitest';
 
 function cliFixturesDir(...joined: string[]) {
@@ -100,11 +100,51 @@ describe('cli options for bundling', () => {
     expect(status.stderr).not.toContain('Unknown');
   });
 
-  it('should handle `--input` and positional args as entries', async () => {
+  it.each([{ args: ['1.ts', '--input', './2.js'] }, { args: ['--input', '1.ts', '--', '2.js'] }])(
+    'should error when `--input` and positional args are both used: $args',
+    async ({ args }) => {
+      const cwd = cliFixturesDir('cli-multi-entries');
+      const status = await execa('rolldown', args, { cwd, reject: false });
+      expect(status.exitCode).toBe(1);
+      expect(status.stdout).toContain('Either use --input, or pass input path as argument');
+    },
+  );
+
+  it.each([
+    { flag: '--help', output: 'USAGE rolldown' },
+    { flag: '-h', output: 'USAGE rolldown' },
+    { flag: '--version', output: 'rolldown v' },
+    { flag: '-v', output: 'rolldown v' },
+  ])(
+    'should let $flag win over the `--input` and positional args conflict',
+    async ({ flag, output }) => {
+      const cwd = cliFixturesDir('cli-multi-entries');
+      const status = await execa('rolldown', ['1.ts', '--input', './2.js', flag], { cwd });
+      expect(status.exitCode).toBe(0);
+      expect(cleanStdout(status.stdout)).toContain(output);
+      expect(cleanStdout(status.stdout)).not.toContain('Either use --input');
+    },
+  );
+
+  it.each([
+    { args: ['--', '1.ts'], entries: ['1'] },
+    { args: ['--', '1.ts', '2.js'], entries: ['1', '2'] },
+    { args: ['1.ts', '--', '2.js'], entries: ['1', '2'] },
+  ])('bundles positional entries after --: $args', async ({ args, entries }) => {
     const cwd = cliFixturesDir('cli-multi-entries');
-    const status = await $({ cwd })`rolldown 1.ts --input ./2.js`;
+    const status = await execa('rolldown', args, { cwd });
     expect(status.exitCode).toBe(0);
-    expect(cleanStdout(status.stdout)).toMatchSnapshot();
+    for (const entry of entries) {
+      expect(status.stdout).toContain(`console.log("${entry}")`);
+    }
+  });
+
+  it('bundles a filename beginning with - after --', async () => {
+    const cwd = cliFixturesDir('cli-positional-delimiter');
+    const status = await execa('rolldown', ['--', '-entry.js'], { cwd });
+    expect(status.exitCode).toBe(0);
+    expect(status.stdout).toContain('console.log("dash-entry")');
+    expect(status.stdout).not.toContain('unrecognized');
   });
 
   it('should handle single boolean option', async () => {
@@ -430,6 +470,22 @@ describe('config', () => {
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });
 
+  it.skipIf(process.platform !== 'linux' || isWasiTest)(
+    'should apply environment option before loading the binding',
+    async () => {
+      const cwd = cliFixturesDir('cli-environment-option');
+
+      const status = await $({
+        cwd,
+        env: {
+          ROLLDOWN_WORKER_THREADS: undefined,
+          TOKIO_WORKER_THREADS: undefined,
+        },
+      })`rolldown -c rolldown.config.js --environment PRODUCTION,FOO:bar,HOST:http://localhost:4000,ROLLDOWN_WORKER_THREADS:2,ASSERT_ROLLDOWN_WORKER_THREADS:true`;
+      expect(status.exitCode).toBe(0);
+    },
+  );
+
   it('should allow multiply output + call options hook once  + call outputOptions hook', async () => {
     const cwd = cliFixturesDir('config-multiply-output-with-options-hooks');
     const status = await $({
@@ -522,6 +578,19 @@ describe('config', () => {
   });
 });
 
+describe('diagnostics', () => {
+  it('should not color diagnostics when NO_COLOR is set', async () => {
+    const cwd = cliFixturesDir('diagnostic-color');
+    try {
+      await $({ cwd, env: { NO_COLOR: '1', FORCE_COLOR: undefined } })`rolldown index.js -d dist`;
+      expect.unreachable();
+    } catch (error: any) {
+      expect(error.stdout).toContain('[UNRESOLVED_IMPORT]');
+      expect(error.stdout).not.toContain('\x1b[');
+    }
+  });
+});
+
 describe('watch cli', () => {
   it('call closeBundle', async () => {
     const cwd = cliFixturesDir('close-bundle');
@@ -608,10 +677,6 @@ describe('watch cli', () => {
 
   it.skipIf(process.platform === 'win32')(
     'should close with exit code 0 even when there are errors',
-    {
-      // `stdoutWaiter.waitFor('UNRESOLVED_IMPORT')` is flaky
-      retry: 3,
-    },
     async () => {
       const cwd = cliFixturesDir('watch-error');
       const controller = new AbortController();
@@ -621,7 +686,9 @@ describe('watch cli', () => {
         cancelSignal: controller.signal,
       })`rolldown index.ts -d dist -w`;
       const stdoutWaiter = createStreamWaiter(process.stdout);
-      await stdoutWaiter.waitFor('Waiting for changes...', { timeout: 5_000 });
+      // "Waiting for changes..." is printed before the first build, which watches index.ts only
+      // after reading it, so an edit in between is never reported. "Rebuilt" comes after that.
+      await stdoutWaiter.waitFor('Rebuilt', { timeout: 5_000 });
 
       fs.writeFileSync(
         path.join(cwd, 'index.ts'),

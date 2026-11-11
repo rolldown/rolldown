@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// main.js
+var require_main = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.before = "before return";
+	return "foo";
+}));
+export default require_main();
+
+```

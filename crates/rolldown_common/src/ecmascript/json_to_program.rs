@@ -119,7 +119,8 @@ pub fn json_value_to_expression<'a>(
             value_expr,
             false, // method
             false, // shorthand
-            false, // computed
+            // JSON treats this as an own data property, not an object literal's prototype setter.
+            key == "__proto__", // computed
             builder,
           )
         }),
@@ -176,8 +177,8 @@ mod tests {
     let json: Value = serde_json::from_str(r#"{ "pos": 1e400, "neg": -1e400 }"#).unwrap();
     assert_snapshot!(to_code(&json), @r#"
     ({
-    	"pos": Infinity,
-    	"neg": -Infinity
+    	"pos": 1e400,
+    	"neg": -1e400
     });
     "#);
   }

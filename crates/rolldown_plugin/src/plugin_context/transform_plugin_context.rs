@@ -3,7 +3,7 @@ use std::{ops::Deref, sync::Arc};
 use crate::PluginContext;
 use arcstr::ArcStr;
 use rolldown_common::{ModuleIdx, PluginIdx, SourceMapGenMsg, SourcemapChainElement, WatchPath};
-use rolldown_sourcemap::{SourceMap, collapse_sourcemaps, empty_sourcemap};
+use rolldown_sourcemap::{SourceMap, collapse_sourcemaps_traced, empty_sourcemap};
 use rolldown_utils::unique_arc::WeakRef;
 use std::sync::mpsc;
 use string_wizard::{MagicString, SourceMapOptions};
@@ -44,11 +44,15 @@ impl TransformPluginContext {
           SourcemapChainElement::Null { .. } => None,
         })
         .collect();
+      // Like Rollup, keep only the sources and names that a traced token references, but
+      // return a load map that no transform has remapped as is.
       match chain.as_slice() {
         [] => self.create_sourcemap(),
-        [single] => (*single).clone(),
+        [load] if matches!(sourcemap_chain.first(), Some(SourcemapChainElement::Load(_))) => {
+          (*load).clone()
+        }
         // TODO Here could be cache result for pervious sourcemap_chain, only remapping new sourcemap chain
-        _ => collapse_sourcemaps(&chain),
+        _ => collapse_sourcemaps_traced(&chain),
       }
     })
   }
@@ -95,7 +99,15 @@ impl TransformPluginContext {
       ))))
       .map(|()| None)
     } else {
-      Ok(Some(magic_string.source_map(string_wizard::SourceMapOptions::default()).to_json_string()))
+      // Same resolution as the sourcemap worker in `ScanStage`.
+      Ok(Some(
+        magic_string
+          .source_map(SourceMapOptions {
+            hires: string_wizard::Hires::Boundary,
+            ..SourceMapOptions::default()
+          })
+          .to_json_string(),
+      ))
     }
   }
 }

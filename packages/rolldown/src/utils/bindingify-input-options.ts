@@ -79,7 +79,7 @@ export function bindingifyInputOptions(
   return {
     input: bindingifyInput(inputOptions.input),
     plugins,
-    cwd: inputOptions.cwd ?? process.cwd(),
+    cwd: inputOptions.cwd ?? (import.meta.browserBuild ? '/' : process.cwd()),
     external: bindingifyExternal(inputOptions.external, timings),
     resolve: bindingifyResolve(inputOptions.resolve),
     platform: inputOptions.platform,
@@ -211,6 +211,7 @@ function bindingifyExperimental(
     nativeMagicString: experimental?.nativeMagicString,
     chunkOptimization: experimental?.chunkOptimization,
     lazyBarrel: experimental?.lazyBarrel,
+    importAttributes: experimental?.importAttributes,
   };
 }
 
@@ -322,16 +323,10 @@ function bindingifyInput(input: InputOptions['input']): BindingInputOptions['inp
 
 function bindingifyWatch(watch: InputOptions['watch']): BindingInputOptions['watch'] {
   if (watch) {
-    const watcher = watch.watcher ?? {};
     return {
       buildDelay: watch.buildDelay,
       skipWrite: watch.skipWrite,
-      usePolling: watcher.usePolling,
-      pollInterval: watcher.pollInterval,
-      compareContentsForPolling: watcher.compareContentsForPolling,
-      useDebounce: watcher.useDebounce,
-      debounceDelay: watcher.debounceDelay,
-      debounceTickRate: watcher.debounceTickRate,
+      watcher: watch.watcher,
       include: normalizedStringOrRegex(watch.include),
       exclude: normalizedStringOrRegex(watch.exclude),
       onInvalidate: (...args) => watch.onInvalidate?.(...args),

@@ -85,6 +85,7 @@ module.exports = [
     "rollup@form@recursive-literal-values: do not fail for literal values from recursive return values",
     "rollup@form@relative-external-with-global: applies globals to externalised relative imports@generates es",
     "rollup@form@optimization-in-operator: keep foo structure",
+    "rollup@form@namespace-optimization-in-operator: it does static optimization of internal namespaces when checking whether an export exists",
     "rollup@form@protect-cjs-globals: prevent conflicts with cjs module globals@generates es",
     "rollup@form@support-using-keyword: Support `using` keyword",
     "rollup@function@deprecated@sourcemap-true-generatebundle: emits sourcemaps before generateBundle hook",
@@ -94,6 +95,7 @@ module.exports = [
     "rollup@form@comment-before-import: preserves comments before imports@generates es",
     "rollup@form@paths-function: external paths (#754)@generates es",
     "rollup@form@export-globals: Supports reexports of globals with namespace access@generates es",
+    "rollup@form@arbitrary-module-namespace-identifiers-star: renders imports and exports with names that start with \"*\"@generates es",
     // Passed. convert reexport to import and export
     "rollup@form@reexport-external-default-and-name: reexports a an external default as a name and imports another name from that dependency@generates es",
     "rollup@form@reexport-external-default-and-namespace: reexports a default external import as default export (when using named exports)@generates es",

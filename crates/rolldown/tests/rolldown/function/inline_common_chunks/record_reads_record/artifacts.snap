@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
-__share("s3-0a7yBFCx", (exports) => {
+__share("s3-0a7yBFCx", ((exports) => {
 	// s3.js
 	function tag(strings, ...values) {
 		return (this === void 0 ? "U" : "B") + strings.join("|") + values.join(",");
@@ -24,8 +24,8 @@ __share("s3-0a7yBFCx", (exports) => {
 		r: () => tag,
 		t: () => base
 	});
-});
-__share("s1-PNXlmu-8", (exports) => {
+}));
+__share("s1-PNXlmu-8", ((exports) => {
 	var share_s3$1 = __share_require("s3-0a7yBFCx");
 	// s1.js
 	var one, tagged, C;
@@ -48,7 +48,7 @@ __share("s1-PNXlmu-8", (exports) => {
 		r: () => one,
 		t: () => C
 	});
-});
+}));
 var share_s3 = __share_require("s3-0a7yBFCx");
 var share_s1 = __share_require("s1-PNXlmu-8");
 // a.js
@@ -67,7 +67,7 @@ init_a();
 
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
-__share("s3-0a7yBFCx", (exports) => {
+__share("s3-0a7yBFCx", ((exports) => {
 	// s3.js
 	function tag(strings, ...values) {
 		return (this === void 0 ? "U" : "B") + strings.join("|") + values.join(",");
@@ -84,8 +84,8 @@ __share("s3-0a7yBFCx", (exports) => {
 		r: () => tag,
 		t: () => base
 	});
-});
-__share("s1-PNXlmu-8", (exports) => {
+}));
+__share("s1-PNXlmu-8", ((exports) => {
 	var share_s3$1 = __share_require("s3-0a7yBFCx");
 	// s1.js
 	var one, tagged, C;
@@ -108,7 +108,7 @@ __share("s1-PNXlmu-8", (exports) => {
 		r: () => one,
 		t: () => C
 	});
-});
+}));
 var share_s3 = __share_require("s3-0a7yBFCx");
 var share_s1 = __share_require("s1-PNXlmu-8");
 // b.js
@@ -127,7 +127,7 @@ init_b();
 
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
-__share("s3-0a7yBFCx", (exports) => {
+__share("s3-0a7yBFCx", ((exports) => {
 	// s3.js
 	function tag(strings, ...values) {
 		return (this === void 0 ? "U" : "B") + strings.join("|") + values.join(",");
@@ -144,7 +144,7 @@ __share("s3-0a7yBFCx", (exports) => {
 		r: () => tag,
 		t: () => base
 	});
-});
+}));
 var share_s3 = __share_require("s3-0a7yBFCx");
 // c.js
 function init_c() {

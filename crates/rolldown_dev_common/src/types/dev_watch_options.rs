@@ -1,3 +1,4 @@
+use rolldown_common::WatcherFileWatcherOptions;
 use rolldown_utils::pattern_filter::StringOrRegex;
 #[cfg(feature = "deserialize_dev_options")]
 use schemars::JsonSchema;
@@ -11,22 +12,14 @@ use serde::{Deserialize, Deserializer};
   serde(rename_all = "camelCase", deny_unknown_fields)
 )]
 pub struct DevWatchOptions {
-  /// If `true`, watcher will be disabled.
-  pub disable_watcher: Option<bool>,
+  /// Whether to watch for filesystem changes. Defaults to `true`.
+  /// Initial and explicit builds are available when watching is disabled.
+  pub enabled: Option<bool>,
   /// If `true`, files are not written to disk.
-  pub skip_write: Option<bool>,
-  /// If `true`, use polling instead of native file system events for watching
-  pub use_polling: Option<bool>,
-  /// Poll interval in milliseconds (only used when use_polling is true)
-  pub poll_interval: Option<u64>,
-  /// If `true`, use debounced watcher. If `false`, use non-debounced watcher
-  pub use_debounce: Option<bool>,
-  /// Debounce duration in milliseconds (only used when use_debounce is true)
-  pub debounce_duration: Option<u64>,
-  /// Whether to compare file contents for poll-based watchers (only used when use_polling is true)
-  pub compare_contents_for_polling: Option<bool>,
-  /// Tick rate in milliseconds for debounced watchers (only used when use_debounce is true)
-  pub debounce_tick_rate: Option<u64>,
+  #[cfg_attr(feature = "deserialize_dev_options", serde(default))]
+  pub skip_write: bool,
+  /// Filesystem watcher settings. Debounced events are enabled by default in dev mode.
+  pub watcher: Option<WatcherFileWatcherOptions>,
   /// Filter to limit which discovered files are registered with the file watcher.
   /// Strings are treated as glob patterns.
   #[cfg_attr(

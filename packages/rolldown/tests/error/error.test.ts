@@ -1,7 +1,8 @@
 import type { Plugin } from 'rolldown';
 import { rolldown } from 'rolldown';
-import { isWasiTest } from 'rolldown-tests/utils';
+import { isWasiTest, sleep } from 'rolldown-tests/utils';
 import { describe, expect, test, vi } from 'vitest';
+import { aggregateBindingErrorsIntoJsError } from '../../src/utils/error';
 
 async function buildWithPlugin(plugin: Plugin) {
   try {
@@ -16,22 +17,80 @@ async function buildWithPlugin(plugin: Plugin) {
   }
 }
 
-test('Plugin renderError hook', async () => {
-  const renderErrorFn = vi.fn();
-  const renderChunkFn = vi.fn();
+describe('Plugin renderError hook', () => {
+  test('calls renderError with the rendering error', async () => {
+    const renderErrorFn = vi.fn();
+    const renderChunkFn = vi.fn();
+    const error = await buildWithPlugin({
+      name: 'test',
+      renderStart() {
+        renderChunkFn();
+        throw new Error('renderStart error');
+      },
+      renderError: (error) => {
+        renderErrorFn();
+        expect(error!.message).toContain('renderStart error');
+      },
+    });
+    expect(error!.message).toContain('renderStart error');
+    expect(renderErrorFn).toHaveBeenCalledTimes(1);
+  });
+
+  test('preserves rendering and renderError failures', async () => {
+    const error = await buildWithPlugin({
+      name: 'test',
+      renderStart() {
+        this.error({ code: 'PRIMARY_FAILURE', message: 'rendering failed' });
+      },
+      renderError() {
+        throw new Error('cleanup failed');
+      },
+    });
+    expect(error).toMatchObject({
+      message: expect.stringMatching(/rendering failed[\s\S]*cleanup failed/),
+      errors: [{ message: 'rendering failed' }, { message: 'cleanup failed' }],
+    });
+  });
+});
+
+test('Plugin renderError hook waits for an async handler', async () => {
+  let finished = false;
+  await buildWithPlugin({
+    name: 'test',
+    renderStart() {
+      throw new Error('renderStart error');
+    },
+    async renderError() {
+      await sleep(50);
+      finished = true;
+    },
+  });
+  expect(finished).toBe(true);
+});
+
+test('Plugin renderError hook reports an async rejection', async () => {
   const error = await buildWithPlugin({
     name: 'test',
     renderStart() {
-      renderChunkFn();
       throw new Error('renderStart error');
     },
-    renderError: (error) => {
-      renderErrorFn();
-      expect(error!.message).toContain('renderStart error');
+    async renderError() {
+      await Promise.resolve();
+      throw new Error('renderError error');
+    },
+  });
+  expect(error!.message).toContain('renderError error');
+});
+
+test('Plugin renderStart hook reports an async rejection', async () => {
+  const error = await buildWithPlugin({
+    name: 'test',
+    async renderStart() {
+      await Promise.resolve();
+      throw new Error('renderStart error');
     },
   });
   expect(error!.message).toContain('renderStart error');
-  expect(renderErrorFn).toHaveBeenCalledTimes(1);
 });
 
 describe('Plugin buildEnd hook', async () => {
@@ -202,6 +261,49 @@ describe('Error output format', () => {
       await build.write({});
     } catch (error: any) {
       expect(removeAnsiColors(error.message)).toMatchSnapshot();
+    }
+  });
+
+  // Output-option callbacks skip the plugin hook normalizer, so a thrown
+  // `undefined`/`null` reaches the summary formatter verbatim and must not make it throw.
+  test.each([
+    ['undefined', undefined],
+    ['null', null],
+  ])('summarizes a %s thrown by an output-option callback', async (label, thrown) => {
+    // WASI reconstructs callback failures as Errors, so exercise the nullish formatter directly.
+    const formatted = aggregateBindingErrorsIntoJsError([
+      { type: 'JsError', field0: thrown as unknown as Error },
+    ]);
+    expect(formatted.message).toContain(`Error: ${label}`);
+
+    const build = await rolldown({
+      input: './main.js',
+      cwd: import.meta.dirname,
+    });
+    try {
+      const error: any = await build
+        .generate({
+          entryFileNames: () => {
+            throw thrown;
+          },
+        })
+        .then(
+          () => undefined,
+          (e: unknown) => e,
+        );
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).not.toContain('Cannot convert undefined or null to object');
+      expect(error.message).toContain('Build failed with 1 error');
+      expect(error.message).toContain(
+        isWasiTest ? 'Error: entryFileNames option:' : `Error: ${label}`,
+      );
+      expect(error.errors).toHaveLength(1);
+      if (!isWasiTest) {
+        // Native preserves the exact thrown value; WASI reconstructs it as an Error.
+        expect(error.errors[0]).toBe(thrown);
+      }
+    } finally {
+      await build.close();
     }
   });
 });

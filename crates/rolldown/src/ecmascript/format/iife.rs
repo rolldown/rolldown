@@ -134,7 +134,7 @@ pub async fn render_iife<'code>(
     source_joiner.append_source(intro);
   }
 
-  if named_exports && entry_module.exports_kind.is_esm() {
+  if named_exports && has_exports && entry_module.exports_kind.is_esm() {
     // Symbol.toStringTag should only be added to module facades (chunks that represent a specific module)
     if let Some(marker) = render_namespace_markers(
       ctx.options.es_module,
@@ -196,7 +196,7 @@ async fn render_iife_factory_arguments(
   };
   let globals = &ctx.options.globals;
   for external in externals {
-    let global = globals.call(external.id.as_str()).await?;
+    let global = globals.call(external.id.raw_id()).await?;
     let target = match &global {
       Some(global_name) => global_name.clone(),
       None => {

@@ -1,14 +1,12 @@
 use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ConstExportMeta, ImportRecordIdx, IndexModules, ModuleIdx,
-  ModuleType, NormalModule, PathsOutputOption, RenderedConcatenatedModuleParts,
-  RetainedExportSymbols, RuntimeModuleBrief, SharedFileEmitter, StmtInfos, SymbolRef, SymbolRefDb,
-  UsedSymbolRefs, WrapKind,
+  NormalModule, PathsOutputOption, RetainedExportSymbols, RuntimeModuleBrief, SharedFileEmitter,
+  StmtInfos, SymbolRef, SymbolRefDb, UsedSymbolRefs, WrapKind,
 };
 
 pub type FinalizerMutableFields = (
-  FxIndexMap<ImportRecordIdx, String>, // transferred_import_record
-  RenderedConcatenatedModuleParts,     // rendered_concatenated_wrapped_module_parts
-  Vec<BuildDiagnostic>,                // diagnostics
+  Vec<(ImportRecordIdx, EcmaAst)>, // transferred_import_record
+  Vec<BuildDiagnostic>,            // diagnostics
 );
 
 use oxc::ast::builder::AstBuilder;
@@ -70,9 +68,9 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   /// Pre-resolved paths for external modules (always a `FxHashMap` variant).
   pub resolved_paths: Option<&'me PathsOutputOption>,
   /// Plugin-supplied replacements for `import.meta.ROLLDOWN_FILE_URL_*`, keyed by
-  /// `(module, NodeId of the member expression)`. Empty when no plugin implements the
+  /// `(file, module, NodeId of the member expression)`. Empty when no plugin implements the
   /// `resolveFileUrl` hook. The code is unparsed; this is the only place it is parsed.
-  pub resolved_file_urls: &'me FxHashMap<(ModuleIdx, NodeId), HookResolveFileUrlOutput>,
+  pub resolved_file_urls: &'me FxHashMap<(ChunkIdx, ModuleIdx, NodeId), HookResolveFileUrlOutput>,
   /// True if any module in the bundle has enum member values to inline.
   /// Allows skipping enum inlining checks in the hot visitor path for enum-free bundles.
   pub has_enum_inlining: bool,
@@ -131,17 +129,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
 
       let module_namespace_included = self.linking_info.namespace_included;
 
-      let need_inline_json_prop = matches!(self.module.module_type, ModuleType::Json)
-        && !self.module.exports_kind.is_commonjs()
-        && !module_namespace_included;
-
-      let transferred_import_record = self
-        .chunk
-        .remove_map
-        .get(&self.idx)
-        .cloned()
-        .map(|idxs| idxs.into_iter().map(|idx| (idx, String::new())).collect::<FxIndexMap<_, _>>())
-        .unwrap_or_default();
+      let need_inline_json_prop = self.linking_info.inlines_json_keys(self.module);
 
       let mut finalizer = ScopeHoistingFinalizer {
         ctx: self,
@@ -151,13 +139,13 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         generated_order_cjs_carriers: FxHashSet::default(),
         scope_stack: vec![],
         top_level_var_bindings: FxIndexSet::default(),
+        catch_params: vec![],
         state: TraverseState::empty(),
         cur_stmt_index: 0,
         keep_name_statement_to_insert: vec![],
         needs_hosted_top_level_binding: false,
         module_namespace_included,
-        transferred_import_record,
-        rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts::default(),
+        transferred_import_record: Vec::new(),
         json_module_inlined_prop: need_inline_json_prop.then(|| Box::new(FxHashMap::default())),
         missing_file_reference_ids: FxIndexMap::default(),
         resolve_file_url_errors: Vec::new(),
@@ -208,11 +196,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         }));
       }
 
-      (
-        finalizer.transferred_import_record,
-        finalizer.rendered_concatenated_wrapped_module_parts,
-        diagnostics,
-      )
+      (finalizer.transferred_import_record, diagnostics)
     })
   }
 }

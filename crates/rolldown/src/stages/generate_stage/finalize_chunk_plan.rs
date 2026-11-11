@@ -66,7 +66,11 @@ impl GenerateStage<'_> {
       && order_analysis.as_ref().is_some_and(|analysis| analysis.plan.is_empty())
       && !order_state.has_consumer_local_reexport_routes()
     {
-      self.fold_runtime_chunk_after_order_lowering(chunk_graph, &order_state);
+      self.fold_runtime_chunk_after_order_lowering(
+        chunk_graph,
+        &order_state,
+        used_symbol_refs_builder,
+      );
       chunk_graph.sort_chunk_modules(self.link_output, self.options);
       self.renumber_live_chunks(chunk_graph);
     }
@@ -101,6 +105,7 @@ impl GenerateStage<'_> {
           chunk_graph,
           None,
           super::chunk_optimizer::RuntimeMergeCascade::Full,
+          used_symbol_refs_builder,
         );
       }
       chunk_graph.sort_chunk_modules(self.link_output, self.options);

@@ -4,7 +4,7 @@ use std::ops::{BitOr, BitOrAssign};
 use bitflags::bitflags;
 use oxc::ast::ast::{
   self, Argument, AssignmentTarget, BindingPattern, CallExpression, ChainElement, Expression,
-  IdentifierReference, SpreadElement, UnaryOperator, VariableDeclarationKind,
+  IdentifierReference, LogicalOperator, SpreadElement, UnaryOperator, VariableDeclarationKind,
 };
 use oxc::ast::match_member_expression;
 use oxc::ast_visit::{VisitJs, walk_js};
@@ -13,7 +13,7 @@ use oxc::transformer::EngineTargets;
 use oxc_ecmascript::side_effects::{
   MayHaveSideEffects, MayHaveSideEffectsContext, PropertyReadSideEffects,
 };
-use oxc_ecmascript::{DetermineValueType, GlobalContext, ValueType};
+use oxc_ecmascript::{DetermineValueType, GlobalContext, ToBoolean, ValueType};
 use rolldown_common::{
   AstScopes, ConstExportMeta, ConstantValue, FlatOptions, SharedNormalizedBundlerOptions,
   StmtEvalFlags,
@@ -90,6 +90,14 @@ impl StmtEvalFacts {
     self.tree_shaking_flags.has_side_effect_for_tree_shaking()
   }
 
+  /// Whether the statement is kept even when nothing uses it. Tree shaking can drop a statement
+  /// whose only flag is `PureCjs` with an unused CommonJS export, so the analysis stops looking
+  /// for more side effects only at `UnknownSideEffect`.
+  #[inline]
+  fn has_unknown_side_effect(&self) -> bool {
+    self.tree_shaking_flags.contains(StmtEvalFlags::UnknownSideEffect)
+  }
+
   #[inline]
   pub fn is_order_sensitive(&self) -> bool {
     // `UnknownSideEffect` is stored in the tree-shaking channel, but unknown runtime work is
@@ -157,6 +165,9 @@ pub struct StmtEvalAnalyzer<'a> {
   read_constant: Cell<bool>,
   /// `false` while [`Self::analyze_stmt`] analyzes a statement again without constants.
   use_constants: Cell<bool>,
+  /// Whether a top-level `return` ends the module, as it does in CommonJS. `false` for an ES module:
+  /// the parser accepts a top-level `return` there, but an output chunk that keeps one fails to parse.
+  top_level_return_ends_module: bool,
 }
 
 impl<'a> StmtEvalAnalyzer<'a> {
@@ -177,10 +188,20 @@ impl<'a> StmtEvalAnalyzer<'a> {
       constant_symbols,
       read_constant: Cell::new(false),
       use_constants: Cell::new(true),
+      top_level_return_ends_module: true,
     }
   }
 
-  fn constant_value_for_reference_id(&self, reference_id: ReferenceId) -> Option<&ConstantValue> {
+  #[must_use]
+  pub fn with_top_level_return_ends_module(mut self, value: bool) -> Self {
+    self.top_level_return_ends_module = value;
+    self
+  }
+
+  fn constant_value_for_reference_id(
+    &self,
+    reference_id: ReferenceId,
+  ) -> Option<&'a ConstantValue> {
     if !self.use_constants.get() {
       return None;
     }
@@ -196,6 +217,22 @@ impl<'a> StmtEvalAnalyzer<'a> {
       self.read_constant.set(true);
     }
     value
+  }
+
+  /// The truthiness of a test that reads a constant from `constant_symbols`, as in `if (DEV)` or
+  /// `!DEV && warn()`. The analysis then skips the branch that never runs, like Rollup's
+  /// `IfStatement.hasEffects`.
+  fn known_truthiness(&self, test: &Expression) -> Option<bool> {
+    match test.without_parentheses() {
+      Expression::Identifier(ident) => {
+        let value = self.constant_value_for_reference_id(ident.reference_id.get()?)?;
+        oxc_ecmascript::ConstantValue::from(value).to_boolean(self)
+      }
+      Expression::UnaryExpression(unary) if unary.operator == UnaryOperator::LogicalNot => {
+        self.known_truthiness(&unary.argument).map(|value| !value)
+      }
+      _ => None,
+    }
   }
 
   /// Check if a call expression has been marked pure by cross-module optimization.
@@ -486,10 +523,23 @@ impl<'a> StmtEvalAnalyzer<'a> {
       ),
       Expression::SequenceExpression(s) => self.fold_compound(expr, &s.expressions),
       Expression::TemplateLiteral(t) => self.fold_compound(expr, &t.expressions),
-      Expression::ConditionalExpression(c) => {
-        self.fold_compound(expr, [&c.test, &c.consequent, &c.alternate])
+      Expression::ConditionalExpression(c) => match self.known_truthiness(&c.test) {
+        Some(true) => self.analyze_expr(&c.test) | self.analyze_expr(&c.consequent),
+        Some(false) => self.analyze_expr(&c.test) | self.analyze_expr(&c.alternate),
+        None => self.fold_compound(expr, [&c.test, &c.consequent, &c.alternate]),
+      },
+      Expression::LogicalExpression(e) => {
+        let short_circuits = match e.operator {
+          LogicalOperator::And => self.known_truthiness(&e.left) == Some(false),
+          LogicalOperator::Or => self.known_truthiness(&e.left) == Some(true),
+          LogicalOperator::Coalesce => false,
+        };
+        if short_circuits {
+          self.analyze_expr(&e.left)
+        } else {
+          self.fold_compound(expr, [&e.left, &e.right])
+        }
       }
-      Expression::LogicalExpression(e) => self.fold_compound(expr, [&e.left, &e.right]),
       Expression::BinaryExpression(e) => self.fold_compound(expr, [&e.left, &e.right]),
       Expression::UnaryExpression(e) => self.fold_compound(expr, [&e.argument]),
 
@@ -694,7 +744,7 @@ impl<'a> StmtEvalAnalyzer<'a> {
     self.read_constant.set(false);
     let facts = self.analyze_stmt_inner(stmt);
     if !self.read_constant.get()
-      || facts.has_side_effect_for_tree_shaking()
+      || facts.has_unknown_side_effect()
       || !ConstantTrustFinder::find(self, stmt)
     {
       return facts;
@@ -723,12 +773,21 @@ impl<'a> StmtEvalAnalyzer<'a> {
         self.analyze_expr(&while_stmt.test) | self.analyze_stmt_inner(&while_stmt.body)
       }
       Statement::IfStatement(if_stmt) => {
-        self.analyze_expr(&if_stmt.test)
-          | self.analyze_stmt_inner(&if_stmt.consequent)
-          | if_stmt.alternate.as_ref().map(|s| self.analyze_stmt_inner(s)).unwrap_or_default()
+        let test = self.analyze_expr(&if_stmt.test);
+        let consequent = || self.analyze_stmt_inner(&if_stmt.consequent);
+        let alternate =
+          || if_stmt.alternate.as_ref().map(|s| self.analyze_stmt_inner(s)).unwrap_or_default();
+        match self.known_truthiness(&if_stmt.test) {
+          Some(true) => test | consequent(),
+          Some(false) => test | alternate(),
+          None => test | consequent() | alternate(),
+        }
       }
+      // This walk never enters a function body, so every `return` here is a top-level `return`.
+      // Dropping one that ends the module would run the statements after it.
       Statement::ReturnStatement(ret_stmt) => {
         ret_stmt.argument.as_ref().map(|expr| self.analyze_expr(expr)).unwrap_or_default()
+          | StmtEvalFacts::from_tree_shaking_side_effect(self.top_level_return_ends_module)
       }
       Statement::LabeledStatement(labeled_stmt) => self.analyze_stmt_inner(&labeled_stmt.body),
       Statement::TryStatement(try_stmt) => {
@@ -747,14 +806,14 @@ impl<'a> StmtEvalAnalyzer<'a> {
       }
       Statement::SwitchStatement(switch_stmt) => {
         let mut facts = self.analyze_expr(&switch_stmt.discriminant);
-        if facts.has_side_effect_for_tree_shaking() {
+        if facts.has_unknown_side_effect() {
           return facts;
         }
         'outer: for case in &switch_stmt.cases {
           facts |= case.test.as_ref().map(|expr| self.analyze_expr(expr)).unwrap_or_default();
           for stmt in &case.consequent {
             facts |= self.analyze_stmt_inner(stmt);
-            if facts.has_side_effect_for_tree_shaking() {
+            if facts.has_unknown_side_effect() {
               break 'outer;
             }
           }
@@ -771,7 +830,7 @@ impl<'a> StmtEvalAnalyzer<'a> {
     let mut facts = StmtEvalFacts::default();
     for stmt in &block.body {
       facts |= self.analyze_stmt_inner(stmt);
-      if facts.has_side_effect_for_tree_shaking() {
+      if facts.has_unknown_side_effect() {
         break;
       }
     }
@@ -1112,9 +1171,9 @@ fn chain_root_visiting_eager_children<'a>(
 
 /// Finds a construct for which an oxc rule trusts a known operand type further than a coercion.
 ///
-/// oxc then ignores the effects of the left operand of `instanceof`, the `RangeError` of a global
-/// function or constructor such as `new Uint8Array(-1)`, and the size of a BigInt shift or power
-/// (#10817). The search also enters function bodies, so it can report a construct that never runs.
+/// oxc then ignores the `RangeError` of a global function or constructor such as
+/// `new Uint8Array(-1)`, and the size of a BigInt shift or power (#10817). The search also enters
+/// function bodies, so it can report a construct that never runs.
 struct ConstantTrustFinder<'s, 'a> {
   analyzer: &'s StmtEvalAnalyzer<'a>,
   found: bool,
@@ -1137,7 +1196,6 @@ impl<'ast> VisitJs<'ast> for ConstantTrustFinder<'_, '_> {
 
   fn visit_binary_expression(&mut self, it: &ast::BinaryExpression<'ast>) {
     self.found |= match it.operator {
-      ast::BinaryOperator::Instanceof => true,
       ast::BinaryOperator::ShiftLeft
       | ast::BinaryOperator::ShiftRight
       | ast::BinaryOperator::Exponential => {
@@ -1158,6 +1216,44 @@ impl<'ast> VisitJs<'ast> for ConstantTrustFinder<'_, '_> {
     self.found |= self.analyzer.is_global_callee(&it.callee);
     walk_js::walk_new_expression(self, it);
   }
+
+  // The analysis skips a branch that never runs, so a construct there cannot have been trusted.
+  fn visit_if_statement(&mut self, it: &ast::IfStatement<'ast>) {
+    self.visit_expression(&it.test);
+    let known = self.analyzer.known_truthiness(&it.test);
+    if known != Some(false) {
+      self.visit_statement(&it.consequent);
+    }
+    if let Some(alternate) = &it.alternate
+      && known != Some(true)
+    {
+      self.visit_statement(alternate);
+    }
+  }
+
+  fn visit_conditional_expression(&mut self, it: &ast::ConditionalExpression<'ast>) {
+    self.visit_expression(&it.test);
+    let known = self.analyzer.known_truthiness(&it.test);
+    if known != Some(false) {
+      self.visit_expression(&it.consequent);
+    }
+    if known != Some(true) {
+      self.visit_expression(&it.alternate);
+    }
+  }
+
+  fn visit_logical_expression(&mut self, it: &ast::LogicalExpression<'ast>) {
+    let short_circuits = match it.operator {
+      LogicalOperator::And => self.analyzer.known_truthiness(&it.left) == Some(false),
+      LogicalOperator::Or => self.analyzer.known_truthiness(&it.left) == Some(true),
+      LogicalOperator::Coalesce => false,
+    };
+    if short_circuits {
+      self.visit_expression(&it.left);
+    } else {
+      walk_js::walk_logical_expression(self, it);
+    }
+  }
 }
 
 /// The leftmost identifier a member-expression-like chain reads from (`a` in `a.b().c[d]`), or
@@ -1173,7 +1269,7 @@ fn for_each_eager_chain_child<'a>(expr: &'a Expression, visit: impl FnMut(EagerC
   let _ = chain_root_visiting_eager_children(expr, visit);
 }
 
-impl<'ast> GlobalContext<'ast> for StmtEvalAnalyzer<'_> {
+impl<'ast> GlobalContext<'ast> for StmtEvalAnalyzer<'ast> {
   fn is_global_reference(&self, reference: &IdentifierReference<'ast>) -> bool {
     self.is_unresolved_reference(reference)
   }
@@ -1190,7 +1286,7 @@ impl<'ast> GlobalContext<'ast> for StmtEvalAnalyzer<'_> {
   }
 }
 
-impl MayHaveSideEffectsContext<'_> for StmtEvalAnalyzer<'_> {
+impl<'ast> MayHaveSideEffectsContext<'ast> for StmtEvalAnalyzer<'ast> {
   fn engine_targets(&self) -> Option<&EngineTargets> {
     Some(&self.options.transform_options.target)
   }
@@ -1460,6 +1556,8 @@ mod test {
       "const SECOND = 1000; -SECOND;",
       "const SECOND = 1000; SECOND + 1;",
       "const SECOND = 1000; `${SECOND}ms`;",
+      "const SECOND = 1000; SECOND instanceof Object;",
+      "const SECOND = 1000; const config = { timeout: 60 * SECOND, isError: (e) => e instanceof Error };",
     ] {
       assert_eq!(get_stmt_eval_flags_with_constants(code, &second), [pure, pure], "{code}");
     }
@@ -1492,8 +1590,8 @@ mod test {
       [pure, unknown]
     );
 
-    // oxc trusts a known type further than a coercion: `instanceof` skips the effects of its left
-    // operand, and a typed array accepts any number. The constant must not make these pure.
+    // The call in the left operand of `instanceof` is a side effect, and oxc trusts a typed array to
+    // accept any number. The constant must not make these pure.
     let length = [("LENGTH", ConstantValue::Number(-1.0))];
     assert_eq!(
       get_stmt_eval_flags_with_constants(
@@ -1505,6 +1603,13 @@ mod test {
     assert_eq!(
       get_stmt_eval_flags_with_constants("const LENGTH = -1; new Uint8Array(LENGTH);", &length),
       [pure, unknown]
+    );
+    assert_eq!(
+      get_stmt_eval_flags_with_constants(
+        "const LENGTH = -1; { exports.a = 1; new Uint8Array(LENGTH); }",
+        &length
+      ),
+      [pure, unknown | StmtEvalFlags::PureCjs]
     );
     // A number shift cannot throw, so the constant still makes it pure.
     assert_eq!(
@@ -1655,10 +1760,8 @@ mod test {
 
   #[test]
   fn test_return_statement() {
-    assert!(!has_side_effect_for_tree_shaking("return;"));
-    assert!(!has_side_effect_for_tree_shaking("return 1;"));
-    // accessing global variable may have side effect
-    assert!(has_side_effect_for_tree_shaking("return bar;"));
+    assert!(has_side_effect_for_tree_shaking("return;"));
+    assert!(has_side_effect_for_tree_shaking("return 1;"));
   }
 
   #[test]
@@ -2620,6 +2723,14 @@ mod test {
       get_stmt_eval_flags("exports[test()] = true"),
       vec![StmtEvalFlags::UnknownSideEffect]
     );
+
+    for code in ["{ exports.a = 1; foo(); }", "switch (0) { case 0: exports.a = 1; foo(); }"] {
+      assert_eq!(
+        get_stmt_eval_flags(code),
+        vec![StmtEvalFlags::UnknownSideEffect | StmtEvalFlags::PureCjs],
+        "{code}"
+      );
+    }
 
     assert_eq!(
       get_stmt_eval_flags(

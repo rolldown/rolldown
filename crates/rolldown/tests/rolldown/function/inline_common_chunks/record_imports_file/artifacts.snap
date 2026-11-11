@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_c, t as helper$1 } from "./c2.js";
-__share("s1-PNXlmu-8", (exports) => {
+__share("s1-PNXlmu-8", ((exports) => {
 	// s1.js
 	var s1;
 	function init_s1() {
@@ -21,7 +21,7 @@ __share("s1-PNXlmu-8", (exports) => {
 		n: () => s1,
 		t: () => init_s1
 	});
-});
+}));
 var share_s1 = __share_require("s1-PNXlmu-8");
 // a.js
 var helper;
@@ -42,7 +42,7 @@ init_a();
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_c, t as helper } from "./c2.js";
-__share("s1-PNXlmu-8", (exports) => {
+__share("s1-PNXlmu-8", ((exports) => {
 	// s1.js
 	var s1;
 	function init_s1() {
@@ -55,7 +55,7 @@ __share("s1-PNXlmu-8", (exports) => {
 		n: () => s1,
 		t: () => init_s1
 	});
-});
+}));
 var share_s1 = __share_require("s1-PNXlmu-8");
 // b.js
 function init_b() {

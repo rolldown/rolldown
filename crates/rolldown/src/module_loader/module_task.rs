@@ -9,8 +9,8 @@ use rolldown_common::{
   StrOrBytes, try_extract_lazy_barrel_info,
 };
 use rolldown_error::{
-  BuildDiagnostic, BuildResult, DiagnosticOptions, EventKindSwitcher, UnloadableDependencyContext,
-  downcast_napi_error_diagnostics,
+  BuildDiagnostic, BuildResult, DiagnosticOptions, EventKindSwitcher,
+  ExternalModuleConflictImporter, UnloadableDependencyContext, downcast_napi_error_diagnostics,
 };
 use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
 
@@ -22,7 +22,10 @@ use crate::{
   utils::{load_source::load_source, transform_source::transform_source},
 };
 
-use super::{resolve_utils::resolve_dependencies, task_context::TaskContext};
+use super::{
+  resolve_utils::resolve_dependencies,
+  task_context::{TaskContext, TaskMessageGuard},
+};
 
 pub struct ModuleTaskOwner {
   source: ArcStr,
@@ -36,6 +39,14 @@ impl ModuleTaskOwner {
       source: normal_module.source.clone(),
       importer_id: normal_module.stable_id.as_arc_str().clone(),
       importee_span,
+    }
+  }
+
+  pub fn to_external_conflict_importer(&self) -> ExternalModuleConflictImporter {
+    ExternalModuleConflictImporter {
+      source: self.source.clone(),
+      importer_id: self.importer_id.clone(),
+      importee_span: self.importee_span,
     }
   }
 }
@@ -78,14 +89,14 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
 
   #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_id = %self.resolved_id.id))]
   pub async fn run(mut self) {
+    let guard = TaskMessageGuard::new(&self.ctx, self.resolved_id.id.clone());
     if let Err(errs) = self.run_inner().await {
       self.ctx.plugin_driver.mark_context_load_modules_loaded(self.resolved_id.id.clone());
-      self
-        .ctx
-        .tx
-        .send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()))
-        .expect("ModuleLoader: failed to send build errors - main thread terminated while processing module errors");
+      // The send fails only when the build was dropped before this task finished.
+      // Then nothing reads the result, so ignore the error.
+      let _ = self.ctx.tx.send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
     }
+    guard.mark_sent();
   }
 
   async fn run_inner(&mut self) -> BuildResult<()> {
@@ -197,7 +208,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
             .call(
               rolldown_common::LogLevel::Info,
               rolldown_common::Log {
-                message: event.to_color_string(),
+                message: event.to_stderr_string(),
                 id: Some(id.to_string()),
                 code: Some(event.kind()),
                 ..Default::default()
@@ -236,9 +247,9 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       tla_keyword_span,
     }));
 
-    self.ctx.tx.send(result).expect(
-      "ModuleLoader channel closed while sending module completion - main thread terminated unexpectedly"
-    );
+    // The send fails only when the build was dropped before this task finished.
+    // Then nothing reads the result, so ignore the error.
+    let _ = self.ctx.tx.send(result);
 
     Ok(())
   }
@@ -266,14 +277,12 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     if is_read_from_disk {
       // - Only add watch files for files read from disk.
       // - Add watch files as early as possible for we might be able to recover from build errors.
-      self.ctx.plugin_driver.watch_files.insert(self.resolved_id.id.as_arc_str().clone());
+      let raw_id = self.resolved_id.id.raw_id();
+      self.ctx.plugin_driver.watch_files.insert(raw_id.into());
       // The tsconfig governing this module affects its transform and
       // resolution results, so watch it as well (#9598).
-      if let Some(tsconfig_path) = self
-        .ctx
-        .options
-        .transform_options
-        .discover_tsconfig_file(std::path::Path::new(self.resolved_id.id.as_str()))
+      if let Some(tsconfig_path) =
+        self.ctx.options.transform_options.discover_tsconfig_file(std::path::Path::new(raw_id))
       {
         self.ctx.plugin_driver.watch_files.insert(tsconfig_path.to_string_lossy().as_ref().into());
       }

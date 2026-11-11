@@ -1,0 +1,15 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## assets/file-Br93rtKC.txt
+
+## main.js
+
+```js
+// main.js
+const url = new URL("assets/file-Br93rtKC.txt", import.meta.url);
+export { url };
+
+```

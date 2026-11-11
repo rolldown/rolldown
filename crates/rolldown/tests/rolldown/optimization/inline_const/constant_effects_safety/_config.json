@@ -1,0 +1,8 @@
+{
+  "config": {
+    "input": [
+      { "name": "main", "import": "./main.js" },
+      { "name": "flags", "import": "./flags.js" }
+    ]
+  }
+}

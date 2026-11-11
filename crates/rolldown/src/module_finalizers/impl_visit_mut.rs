@@ -8,14 +8,15 @@ use oxc::{
     match_member_expression,
   },
   ast_visit::{VisitJsMut, walk_js_mut},
-  span::{SPAN, Span},
+  span::{GetSpan, SPAN, Span},
 };
 use rolldown_common::{
   EcmaModuleAstUsage, ExportsKind, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind,
 };
 use rolldown_ecmascript_utils::{
-  EsmWrapperBodyKind, EsmWrapperCallKind, EsmWrapperDeclKind, EsmWrapperStmtOptions,
-  ExpressionFactoryExt as _, JsxExt, JsxMemberExpressionObjectExt, StatementFactoryExt as _,
+  BindingPatternExt as _, EsmWrapperBodyKind, EsmWrapperCallKind, EsmWrapperDeclKind,
+  EsmWrapperStmtOptions, ExpressionFactoryExt as _, JsxExt, JsxMemberExpressionObjectExt,
+  StatementFactoryExt as _,
 };
 use rolldown_error::EmptyImportMetaKind;
 
@@ -104,6 +105,89 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
       );
       statements.push(Statement::new_var_decl(name, init, self));
     }
+  }
+
+  fn try_finalize_constant_if(&mut self, it: &mut ast::Statement<'ast>) -> bool {
+    let ast::Statement::IfStatement(if_stmt) = it else { return false };
+    let Some(&consequent_is_live) = self.ctx.linking_info.constant_branches.get(&if_stmt.node_id())
+    else {
+      return false;
+    };
+    // Consume the link-stage decision before walking any children: references in the dead
+    // branch may no longer have declarations or cross-chunk imports.
+    // See internal-docs/constant-branches/implementation.md.
+    let ast::Statement::IfStatement(mut if_stmt) = it.take_in(self) else { unreachable!() };
+    let mut statements = allocator::Vec::new_in(self);
+    let mut test = if_stmt.test.take_in(self);
+    let pre = self.state;
+    self.state.insert(TraverseState::SmartInlineConst);
+    self.visit_expression(&mut test);
+    self.state = pre;
+    // Keep evaluation of the condition, including effects and exceptions, even when its
+    // result is known. Literal conditions are safe to omit after constant substitution.
+    if !test.is_literal() {
+      statements.push(ast::Statement::new_expression_statement(if_stmt.span, test, self));
+    }
+    let live = if consequent_is_live {
+      Some(if_stmt.consequent.take_in(self))
+    } else {
+      if_stmt.alternate.take()
+    };
+    if let Some(mut live) = live {
+      self.visit_statement(&mut live);
+      statements.push(live);
+    }
+    *it = ast::Statement::new_block_statement(if_stmt.span, statements, self);
+    true
+  }
+
+  fn try_finalize_constant_expression(&mut self, expr: &mut ast::Expression<'ast>) -> bool {
+    let branch = match expr {
+      ast::Expression::ConditionalExpression(it) => {
+        self.ctx.linking_info.constant_branches.get(&it.node_id()).copied()
+      }
+      ast::Expression::LogicalExpression(it) => {
+        self.ctx.linking_info.constant_branches.get(&it.node_id()).copied()
+      }
+      _ => None,
+    };
+    let Some(branch) = branch else { return false };
+    let span = expr.span();
+    let mut expressions = allocator::Vec::new_in(self);
+    match expr.take_in(self) {
+      ast::Expression::ConditionalExpression(mut it) => {
+        let mut test = it.test.take_in(self);
+        let pre = self.state;
+        self.state.insert(TraverseState::SmartInlineConst);
+        self.visit_expression(&mut test);
+        self.state = pre;
+        expressions.push(test);
+        let mut live =
+          if branch { it.consequent.take_in(self) } else { it.alternate.take_in(self) };
+        self.visit_expression(&mut live);
+        expressions.push(live);
+      }
+      ast::Expression::LogicalExpression(mut it) => {
+        // A logical expression yields a value, not a reference. Preserve indirect calls,
+        // including `eval` and member callees, when replacing it with its left operand.
+        expressions.push(ast::Expression::new_numeric_literal(
+          SPAN,
+          0.0,
+          None,
+          ast::NumberBase::Decimal,
+          self,
+        ));
+        let mut left = it.left.take_in(self);
+        let pre = self.state;
+        self.state.insert(TraverseState::SmartInlineConst);
+        self.visit_expression(&mut left);
+        self.state = pre;
+        expressions.push(left);
+      }
+      _ => unreachable!(),
+    }
+    *expr = ast::Expression::new_sequence_expression(span, expressions, self);
+    true
   }
 
   fn append_order_cjs_carriers(&self, program: &mut ast::Program<'ast>) {
@@ -484,6 +568,9 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   }
 
   fn visit_statement(&mut self, it: &mut ast::Statement<'ast>) {
+    if self.try_finalize_constant_if(it) {
+      return;
+    }
     _ = self.try_inline_json_module_prop(it);
 
     walk_js_mut::walk_statement(self, it);
@@ -527,6 +614,9 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   }
 
   fn visit_expression(&mut self, expr: &mut ast::Expression<'ast>) {
+    if self.try_finalize_constant_expression(expr) {
+      return;
+    }
     // Handle keep_names for named class/function expressions in any expression context
     // (return statements, function args, array elements, etc.)
     if self.ctx.options.keep_names && self.ctx.runtime.id() != self.ctx.idx {
@@ -906,6 +996,22 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         self.top_level_var_bindings.extend(bindings);
         *it = ast::ForStatementInit::from(expr);
       }
+    }
+  }
+
+  fn visit_for_statement_left(&mut self, it: &mut ast::ForStatementLeft<'ast>) {
+    walk_js_mut::walk_for_statement_left(self, it);
+    // transform top level `for (var x of xs)` to `for (x of xs)` and hoist `x`
+    if self.state.contains(TraverseState::TopLevel)
+      && self.needs_hosted_top_level_binding
+      && let ast::ForStatementLeft::VariableDeclaration(decl) = it
+      && decl.kind.is_var()
+      && let Some(declarator) = decl.declarations.pop()
+    {
+      self
+        .top_level_var_bindings
+        .extend(declarator.id.get_binding_identifiers().iter().map(|id| id.name));
+      *it = ast::ForStatementLeft::from(declarator.id.into_assignment_target(self));
     }
   }
 

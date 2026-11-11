@@ -266,7 +266,7 @@ jobs:
       - parallel:
           - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
             with:
-              version: '1.0.0'
+              version: '1.5.1'
               cache: true
 
           - name: Download Native Rolldown Build
@@ -313,7 +313,7 @@ jobs:
       - parallel:
           - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
             with:
-              version: '1.0.0'
+              version: '1.5.1'
               cache: true
 
           - name: Download Native Rolldown Build
@@ -372,7 +372,7 @@ jobs:
         id: vp-setup
         background: true
         with:
-          version: '1.0.0'
+          version: '1.5.1'
           cache: true
 
       - parallel:
@@ -438,7 +438,7 @@ jobs:
 
           - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
             with:
-              version: '1.0.0'
+              version: '1.5.1'
               cache: true
 
       - name: Lint Filename
@@ -454,6 +454,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
-      - uses: crate-ci/typos@7f9d0819ca1c008ade73f4b41fa9d258d48f605b # v1.51.1
+      - uses: crate-ci/typos@4c8b7f51ca60df14e3c5ca82770dfbbe6c3dae85 # v1.52.0
         with:
           files: .

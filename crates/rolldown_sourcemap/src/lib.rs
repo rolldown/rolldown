@@ -357,7 +357,7 @@ fn remap_chain(
       #[expect(clippy::cast_possible_truncation)]
       let name_count = sourcemap.get_names().len() as u32;
       offset += name_count;
-      (*sourcemap, sourcemap.generate_lookup_table(), map_offset)
+      (TokenLookup::new(sourcemap), map_offset)
     })
     .collect();
   chain_with_offsets.reverse();
@@ -372,7 +372,62 @@ fn remap_chain(
     (false, true) => remap_tokens::<true, false>,
     (false, false) => remap_tokens::<true, true>,
   };
-  remap(last_map, &chain_with_offsets, last_offset, name_used)
+  remap(last_map, &mut chain_with_offsets, last_offset, name_used)
+}
+
+/// Lookups during composition mostly move forward through a line, so `TokenLookup` scans this
+/// many tokens from the previous result before it falls back to binary search.
+const FORWARD_SCAN: usize = 8;
+
+/// Resolves positions like `lookup_token_approx`, starting from the previous result when every
+/// token before it is before the queried column. Exact matches select the first duplicate column;
+/// positions between columns select the last preceding token; positions before a line's first
+/// token clamp to it. Like that lookup, it assumes each line's tokens are sorted by column; maps
+/// with unsorted segments are not supported.
+struct TokenLookup<'a> {
+  lines: Vec<&'a [Token]>,
+  /// The line and token index of the previous result.
+  last: Option<(u32, usize)>,
+}
+
+impl<'a> TokenLookup<'a> {
+  fn new(map: &'a oxc_sourcemap::SourceMap<'_>) -> Self {
+    Self { lines: map.generate_lookup_table(), last: None }
+  }
+
+  fn lookup(&mut self, line: u32, column: u32) -> Option<Token> {
+    let tokens = *self.lines.get(line as usize)?;
+    // Find `next`, the first token at or after `column`. The search may start at the previous
+    // result only when every token before it is before `column`, so a previous result never
+    // changes the answer.
+    let mut next = match self.last {
+      Some((last_line, index))
+        if last_line == line && (index == 0 || tokens[index - 1].get_dst_col() < column) =>
+      {
+        index
+      }
+      _ => 0,
+    };
+    // Bound the scan so distant jumps cannot turn a lookup into a linear search.
+    let end = tokens.len().min(next + FORWARD_SCAN);
+    while next < end && tokens[next].get_dst_col() < column {
+      next += 1;
+    }
+    if next == end {
+      next += tokens[next..].partition_point(|token| token.get_dst_col() < column);
+    }
+    // Like `lookup_token_approx`: the first token at `column`, else the last token before it,
+    // clamped to the line's first token.
+    let index = if tokens.get(next).is_some_and(|token| token.get_dst_col() == column) {
+      next
+    } else {
+      next.saturating_sub(1)
+    };
+    // An empty line has no token.
+    let token = *tokens.get(index)?;
+    self.last = Some((line, index));
+    Some(token)
+  }
 }
 
 /// Remaps `last_map`'s tokens through `chain`, the earlier maps with the nearest one first.
@@ -381,18 +436,20 @@ fn remap_chain(
 /// has one flag for each name and one more flag for the ids out of range.
 fn remap_tokens<const TRACK_NAMES: bool, const MARK_NAMES: bool>(
   last_map: &oxc_sourcemap::SourceMap<'_>,
-  chain: &[(&oxc_sourcemap::SourceMap<'_>, Vec<&[Token]>, u32)],
+  chain: &mut [(TokenLookup<'_>, u32)],
   last_offset: u32,
   name_used: &mut [bool],
 ) -> Box<[Token]> {
-  let source_view_tokens = last_map.get_source_view_tokens();
-  let mut remapped = Vec::with_capacity(source_view_tokens.size_hint().0);
+  // Remapping only needs numeric token fields, not the source/name strings that
+  // SourceViewToken associates with a map. Keep raw tokens throughout the chain.
+  let tokens = last_map.get_tokens();
+  let mut remapped = Vec::with_capacity(tokens.size_hint().0);
   let mut dst_line = None;
   let mut has_mapping = false;
   let mut is_mapped = false;
   let mut leading_unmapped = None;
 
-  for token in source_view_tokens {
+  for token in tokens {
     if dst_line != Some(token.get_dst_line()) {
       dst_line = Some(token.get_dst_line());
       has_mapping = false;
@@ -406,16 +463,12 @@ fn remap_tokens<const TRACK_NAMES: bool, const MARK_NAMES: bool>(
 
       let mut original_token = token;
       let mut name_id = token.get_name_id().map(|id| id + last_offset);
-      for (sourcemap, lookup_table, offset) in chain {
-        let traced = sourcemap.lookup_source_view_token_approx(
-          lookup_table,
-          original_token.get_src_line(),
-          original_token.get_src_col(),
-        )?;
+      for (lookup, offset) in chain.iter_mut() {
+        let traced = lookup.lookup(original_token.get_src_line(), original_token.get_src_col())?;
         traced.get_source_id()?;
         if TRACK_NAMES {
           // Prefer the name from this (earlier) map; otherwise carry forward the downstream one.
-          name_id = traced.get_name_id().map(|id| id + offset).or(name_id);
+          name_id = traced.get_name_id().map(|id| id + *offset).or(name_id);
         }
         original_token = traced;
       }
@@ -464,6 +517,52 @@ fn remap_tokens<const TRACK_NAMES: bool, const MARK_NAMES: bool>(
   }
 
   remapped.into_boxed_slice()
+}
+
+#[test]
+fn test_token_lookup_matches_approximate_lookup() {
+  let mut tokens =
+    vec![Token::new(0, 5, 1, 0, Some(0), None), Token::new(0, 5, 2, 0, Some(0), Some(0))];
+  tokens.extend(
+    (9..120)
+      .step_by(3)
+      .map(|column| Token::new(0, column, 0, column, (column % 2 == 0).then_some(0), None)),
+  );
+  tokens.extend([Token::new(2, 0, 3, 0, Some(0), None), Token::new(2, 4, 3, 4, Some(0), Some(0))]);
+  let map = SourceMap::new(
+    None,
+    vec!["name".into()],
+    None,
+    vec!["source.js".into()],
+    vec![None],
+    tokens.into_boxed_slice(),
+    None,
+  );
+  let table = map.generate_lookup_table();
+  let mut lookup = TokenLookup::new(&map);
+  let mut check = |line, column| {
+    assert_eq!(
+      lookup.lookup(line, column),
+      map.lookup_token_approx(&table, line, column),
+      "query ({line}, {column})"
+    );
+  };
+  // Sequential scans, repeated queries, and backwards movement across duplicate columns.
+  for column in (0..140).chain((0..140).rev()) {
+    check(0, column);
+    check(0, column);
+  }
+  // Empty/missing lines, distant jumps, and a return to a previously cached line.
+  for (line, column) in [(2, 4), (1, 0), (0, 5), (0, u32::MAX), (0, 5), (u32::MAX, 0)] {
+    check(line, column);
+  }
+  let mut state = 1_u32;
+  for _ in 0..512 {
+    state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+    check(state % 4, (state >> 8) % 140);
+  }
+  let empty = empty_sourcemap();
+  assert_eq!(TokenLookup::new(&empty).lookup(0, 0), None);
 }
 
 #[test]
@@ -734,7 +833,7 @@ export function App() {
 
   let generated_loc = get_loc(transformed_code.find("return").unwrap(), transformed_code);
   let original_loc = collapsed
-    .lookup_source_view_token(&collapsed_lookup_table, generated_loc.0, generated_loc.1)
+    .lookup_token(&collapsed_lookup_table, generated_loc.0, generated_loc.1)
     .map(|token| (token.get_src_line(), token.get_src_col()));
   assert_eq!(
     original_loc,

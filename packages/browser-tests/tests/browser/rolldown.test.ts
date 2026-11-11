@@ -61,7 +61,6 @@ test('the packed @rolldown/browser bundles in the browser', async () => {
 
   const bundle = await rolldownBrowser.rolldown({
     input: '/entry.js',
-    cwd: '/',
     plugins: [
       {
         name: 'virtual-files',

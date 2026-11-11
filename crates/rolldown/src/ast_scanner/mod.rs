@@ -174,7 +174,6 @@ pub struct AstScanner<'me, 'ast> {
   /// case, `exports.xxx` writes may no longer target the exported object.
   has_cjs_exports_reassignment: bool,
   /// Whether the current position is at the top level (all parent scopes are block or top-level).
-  /// A cache of [AstScanner::is_valid_tla_scope].
   is_top_level: bool,
   current_comment_idx: usize,
   untranspiled_syntax: UntranspiledSyntax,
@@ -301,7 +300,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   /// }
   /// ```
   pub fn is_valid_tla_scope(&self) -> bool {
-    self.scope_stack.iter().rev().all(|flag| flag.is_top() || flag.is_block())
+    self.scope_stack.iter().rev().all(|flag| !flag.is_var() || flag.is_top())
   }
 
   pub fn is_root_scope(&self) -> bool {

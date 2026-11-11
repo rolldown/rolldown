@@ -533,10 +533,16 @@ impl<'a> GenerateStage<'a> {
     used_symbol_refs: &UsedSymbolRefs,
     order_state: &order_wrap_state::OrderWrapState,
   ) -> BuildResult<()> {
+    let cyclic_modules = if self.options.preserve_modules {
+      order_wrapping::synchronous_cycle_modules(&self.link_output.module_table.modules)
+    } else {
+      FxHashSet::default()
+    };
+
     // Collect all the chunk data we need first
     let mut chunk_export_data = Vec::new();
     for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
-      if let Some(entry_module) = self.export_mode_module(chunk) {
+      if let Some(entry_module) = self.export_mode_module(chunk, &cyclic_modules) {
         let export_names = get_chunk_export_names(chunk, self.link_output);
         chunk_export_data.push((chunk_idx, entry_module, export_names));
       }
@@ -569,7 +575,7 @@ impl<'a> GenerateStage<'a> {
 
     // Set common chunks to Named
     for chunk in chunk_graph.chunk_table.iter_mut() {
-      if self.export_mode_module(chunk).is_none() {
+      if self.export_mode_module(chunk, &cyclic_modules).is_none() {
         chunk.output_exports = OutputExports::Named;
       }
     }
@@ -593,7 +599,14 @@ impl<'a> GenerateStage<'a> {
   ///   chunks reach through it, or `export *` that reaches an external module, directly or
   ///   through other preserved modules, whose names are installed on `exports` at runtime from
   ///   the chunk's entry-level external list.
-  fn export_mode_module(&self, chunk: &Chunk) -> Option<&NormalModule> {
+  /// - A module on a static import or `require()` cycle. A `default`-mode chunk replaces
+  ///   `module.exports`, so an importer that runs while the module is still executing would keep
+  ///   the empty object `require()` returned.
+  fn export_mode_module(
+    &self,
+    chunk: &Chunk,
+    cyclic_modules: &FxHashSet<ModuleIdx>,
+  ) -> Option<&NormalModule> {
     if let Some(module) = chunk.user_defined_entry_module(&self.link_output.module_table) {
       return Some(module);
     }
@@ -601,7 +614,7 @@ impl<'a> GenerateStage<'a> {
       return None;
     }
     let module = chunk.entry_module(&self.link_output.module_table)?;
-    if module.idx == self.link_output.runtime.id() {
+    if module.idx == self.link_output.runtime.id() || cyclic_modules.contains(&module.idx) {
       return None;
     }
     if !chunk.entry_level_external_module_idx.is_empty() {

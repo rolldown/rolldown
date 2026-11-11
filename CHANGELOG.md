@@ -1,4 +1,11 @@
 
+## [1.2.19] - 2026-11-11
+
+### 🐛 Bug Fixes
+
+- update @napi-rs/cli to 3.10.12 so linux-x64-gnu runs on older CPUs (#11617)
+
+
 ## [1.2.18] - 2026-11-09
 
 ### 🐛 Bug Fixes

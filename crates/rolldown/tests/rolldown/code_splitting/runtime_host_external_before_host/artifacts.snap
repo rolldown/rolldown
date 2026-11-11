@@ -1,0 +1,48 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## c.js
+
+```js
+import { n as __require } from "./rolldown-runtime.js";
+import "./x.js";
+import "./h.js";
+// c.js
+function separator() {
+	return __require("node:path").sep;
+}
+console.log("c");
+export { separator };
+
+```
+
+## h.js
+
+```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+// h.js
+console.log("h", Object.keys(/* @__PURE__ */ __exportAll({ q: () => 1 })).join());
+export {};
+
+```
+
+## rolldown-runtime.js
+
+```js
+import { createRequire } from "node:module";
+// HIDDEN [\0rolldown/runtime.js]
+export { __require as n, __exportAll as t };
+
+```
+
+## x.js
+
+```js
+import "ext-call";
+// x.js
+console.log("x");
+export {};
+
+```

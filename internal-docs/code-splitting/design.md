@@ -686,6 +686,7 @@ The rule reads only the baseline: the final links with the runtime in its own ch
 1. No consumer is in a static chunk cycle.
 2. `H` is a static dependency of each other consumer.
 3. No consumer is a static dependency of `H`.
+4. No external module whose code rolldown cannot know runs before `H` completes (see [External modules](#external-modules)).
 
 Why an added import changes nothing:
 
@@ -699,6 +700,21 @@ Conditions 2 and 3 are not sufficient without condition 1. Two failures can occu
 
 - The entry `m.js` imports `c.js` and then `x.js`. `c.js` imports `m.js`, and `x.js` imports `h.js`. The evaluation of `c.js` skips its import of `m.js`, because `m.js` is already running. So the added import runs `h.js` before the body of `c.js`, not after it.
 - The only consumer `c.js` is the host, and `c.js` imports `m.js`. `m.js` imports `c.js` back and calls a function of `c.js` that calls `__require`. `m.js` runs before the body of `c.js`, so `__require` does not exist yet. When the runtime chunk is the first import of `c.js`, the helper exists.
+
+### External modules
+
+Steps 2 and 3 above read the chunk graph. An external module is not in the chunk graph, and rolldown cannot see its code. While it runs, it can import an entry of the bundle. After a fold, the helpers are `var` declarations in the code of `H`, so two failures can occur:
+
+- The external module calls an exported function declaration. A function declaration exists before the code of its module runs, so the call can read a helper before `H` defines it (`code_splitting/runtime_host_external_calls_entry_function`).
+- The external module imports an entry that loads a consumer `C` while `H` runs. The evaluation of `C` skips its import of `H`, because `H` is already running, so the body of `C` runs before the body of `H`. The cycle passes through the external module, so condition 1 does not see it. This failure needs no function declaration (`code_splitting/runtime_host_external_cycle_runs_consumer`).
+
+The runtime chunk prevents both failures: each consumer imports it first, so the helpers exist before each external module of the consumer runs. So condition 4 keeps the runtime chunk when such an external module can run before `H` completes: `H` reaches it, or a consumer loads it before `H` (`code_splitting/runtime_host_external_before_host`). A Node built-in module (a `node:` ID that `output.paths` cannot change) imports no user module, so it passes.
+
+In CJS output, a chunk assigns its exports at its end. So no code outside `H` can call into `H` before `H` completes, and a `require()` of `H` before `H` starts runs all of `H`. Only the second failure remains, when `H` reaches the external module and another consumer exists: the other consumer reads the helpers from the incomplete exports of `H` (`code_splitting/runtime_host_external_cycle_runs_consumer_cjs`).
+
+In ESM output, one exception keeps a fold: `H` is the only consumer, and each module of `H` is a wrapped CommonJS module. Then only code of `H` reads a helper. That code stays inside the wrappers, also the function declarations, and each wrapper is a `var` declaration. So no helper read can run before the body of `H`. The exception does not cover a host that the only consumer reaches: through a cycle, the body of the consumer can run before that host completes.
+
+Rejected: condition 4 only when a consumer has a top-level function declaration that reads a helper. The second failure needs no function declaration. Also, with strict execution order, each ESM wrapper is a function declaration (`function init_x()`) that calls `__esmMin`.
 
 ### The runtime start
 
@@ -732,7 +748,7 @@ The first fact needs the external modules. Rolldown cannot see the code of an ex
 
 - `code_splitting/runtime_host_lazy_cycle_async_external`: `H` is in a chunk cycle with a chunk that imports the external module.
 - `code_splitting/runtime_host_external_imports_entry`: the external module imports `H`, so the cycle passes through it.
-- `code_splitting/runtime_host_external_star_reexport`: `H` imports the external module only through `export *` in a module below the entry level. The namespace object of that module imports the external module inline, and the link tables do not hold that import, so the rule also reads the star exports of each module.
+- `code_splitting/runtime_host_external_star_reexport`: `H` imports the external module only through `export *` in a module below the entry level. The namespace object of that module imports the external module inline, and the link tables do not hold that import, so the rule also reads the star exports of each module. It reads a star export only when the namespace object renders, the same condition as the unused-runtime sweep. An entry facade writes the `export *` of its entry module itself.
 
 A Node built-in module (an id with the `node:` prefix) evaluates synchronously and imports no user module. But `output.paths` can send its import to another module after this step. So the rule uses the `output.paths` check of precondition 6: a map entry for the id, or a `paths` function, removes the proof. `packages/rolldown/tests/behaviors/runtime-host-node-external-paths.test.ts` pins both forms. In CJS output, `require()` loads each external module synchronously, so there the rule reads only top-level await.
 
@@ -776,7 +792,7 @@ The host rule proves that a fold keeps the evaluation order. The policy rejects 
 - In CJS output, `require()` of an entry returns `module.exports`, and the helper exports go on `exports`. A CommonJS entry controls both objects. Without a wrapper, its code can replace either object, for example with `module.exports = {}` or `exports = {}`. A wrapped entry ends with `module.exports = require_x()`, except in the `named` mode. So a CommonJS entry can be a shared host in CJS output only when it is wrapped and `output.exports` is `named`. `code_splitting/runtime_host_cjs_entry_module_exports` and `code_splitting/runtime_host_cjs_entry_exports_reassign` pin the two forms without a wrapper. The rule does not list the forms, because the list stays open: `require.main.exports = {}` also replaces the object.
 - A chunk with a declaration module (`.d.ts`, `.d.mts`, `.d.cts`) never hosts the runtime. Declaration plugins discard the generated statements in `renderChunk`.
 
-When exactly one live chunk exists besides the runtime chunk, the runtime moves into that chunk without the host rule and without precondition 6. Each root loads that chunk, and that chunk imports no other chunk. So the fold gives the layout of the same build without code splitting. This keeps a dev build with one chunk at one file. It also keeps an `output.file` build valid when a plugin changes the runtime.
+When exactly one live chunk exists besides the runtime chunk, the runtime moves into that chunk without the host rule and without precondition 6. Each root loads that chunk, and that chunk imports no other chunk. So the fold gives the layout of the same build without code splitting. This keeps a dev build with one chunk at one file. It also keeps an `output.file` build valid when a plugin changes the runtime. Condition 4 does not apply either. This is a limit: an external module that calls into that chunk runs before the helpers exist. The same build without code splitting has this limit, because one file cannot run its body before its own imports.
 
 ### Trade-offs
 
@@ -784,6 +800,7 @@ When exactly one live chunk exists besides the runtime chunk, the runtime moves 
 - The rule forbids a new load of user code, also when that code has no effect. In `issues/10543`, the earlier placement made the entry `lab` load `w.js` only for the helpers. The module bodies of `w.js` are lazy wrappers, so that load had no visible effect. The rule keeps the runtime chunk there.
 - A chunk that each root of a consumer loads, but that no consumer reaches, is not a host. A fold there is safe only when the chunk has no effects, and that proof needs an effect classifier for user code. The rule reads no effect facts about user chunks.
 - In ESM output, a lazy host that reaches an external module keeps the runtime chunk, also when that module is synchronous. Only the `node:` prefix proves a synchronous module. A bare built-in name such as `fs` counts as an unknown external module, and a `paths` function removes the proof for each `node:` module, also when it returns the same id.
+- Condition 4 keeps the runtime chunk when an unknown external module can run before the host completes, also when that module never imports the bundle. Rolldown cannot know which external modules import the bundle, so the rule assumes that each one can. An ESM library build that keeps its dependencies external often has a host that imports one of them, so such a build often keeps the runtime file. The earlier rule folded these builds, and both failures of [External modules](#external-modules) occurred.
 
 ### Rejected alternatives
 
@@ -795,7 +812,7 @@ When exactly one live chunk exists besides the runtime chunk, the runtime moves 
 
 ### Unresolved questions
 
-- **Built-in capture.** A fourth condition can keep the start time of the runtime: each chunk that runs before `H` in the evaluation of a consumer has no effect. This needs an effect classifier, only for this condition.
+- **Built-in capture.** One more condition can keep the start time of the runtime: each chunk that runs before `H` in the evaluation of a consumer has no effect. This needs an effect classifier, only for this condition.
 - **Dev builds.** A dev build can fold the HMR runtime when nothing with an effect runs before the host starts. This needs an exception in the known-runtime contract for the builtin HMR plugin.
 - **The wider lazy rule.** Accept an `import()` in a chunk that only reaches `H`. The proof holds, but the assertion of `cjs_reexport_barrel_namespace_routing` must change.
 - **Top-level await.** The policy rejects a shared host with top-level await. A later change can prove some of these cases.

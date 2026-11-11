@@ -211,45 +211,56 @@ impl GenerateStage<'_> {
     }
   }
 
-  /// A chunk that can wait during its evaluation: it has a module with top-level await, or, in ESM
-  /// output, it statically imports an external module that can wait. Rolldown cannot see the code
-  /// of an external module. That code can use top-level await, and it can import a user entry, so
-  /// it can also put the chunk in a cycle that the chunk graph does not show. Only a Node built-in
-  /// module evaluates synchronously and imports no user module, and only when the output imports
-  /// it by its own id. In CJS output, `require()` loads each external module synchronously.
+  /// A chunk that can wait during its evaluation: it has a module with top-level await, or in ESM
+  /// output it imports an unknown external module (see `chunk_imports_unknown_external`). That code
+  /// can use top-level await, and it can put the chunk in a cycle that the chunk graph does not
+  /// show. In CJS output, `require()` loads each external module synchronously.
   fn chunk_can_wait(
     &self,
     chunk_graph: &ChunkGraph,
     links: &CrossChunkLinkState,
     chunk_idx: ChunkIdx,
   ) -> bool {
-    let chunk = &chunk_graph.chunk_table[chunk_idx];
-    if chunk
+    chunk_graph.chunk_table[chunk_idx]
       .modules
       .iter()
       .any(|&module_idx| self.link_output.metas[module_idx].is_tla_or_contains_tla_dependency)
-    {
-      return true;
-    }
-    if matches!(self.options.format, OutputFormat::Cjs) {
-      return false;
-    }
+      || (!matches!(self.options.format, OutputFormat::Cjs)
+        && self.chunk_imports_unknown_external(chunk_graph, links, chunk_idx))
+  }
+
+  /// A chunk that statically imports an external module whose code rolldown cannot know. That code
+  /// can import or require a user entry, and in ESM output it can use top-level await. Only a Node
+  /// built-in module imports no user module, and only when the output imports it by its own id.
+  fn chunk_imports_unknown_external(
+    &self,
+    chunk_graph: &ChunkGraph,
+    links: &CrossChunkLinkState,
+    chunk_idx: ChunkIdx,
+  ) -> bool {
+    let chunk = &chunk_graph.chunk_table[chunk_idx];
     let module_table = &self.link_output.module_table;
-    let is_synchronous = |module_idx: ModuleIdx| {
+    let is_known = |module_idx: ModuleIdx| {
       module_table[module_idx].as_external().is_some_and(|module| {
         module.id.as_str().starts_with("node:")
           && !self.external_path_can_change(module.id.as_str())
       })
     };
     // The links hold each static import of an external module, except one: for `export * from
-    // 'ext'` below the entry level, the namespace object of the module imports `ext` inline. An
+    // 'ext'`, the namespace object of the module can import `ext` inline. The finalizer writes
+    // that import only in the namespace declaration, so count the same records as the runtime
+    // sweep (`sweep_unused_runtime_module`). An entry facade writes the `export * from 'ext'` of
+    // its entry module, and `entry_level_external_module_idx` of the facade holds it. An
     // `import()` of an external module adds no wait.
     let star_exports = chunk.modules.iter().flat_map(|&module_idx| {
-      let module = module_table[module_idx].as_normal();
-      self.link_output.metas[module_idx]
-        .star_exports_from_external_modules
-        .iter()
-        .filter_map(move |&rec_idx| module?.import_records[rec_idx].resolved_module)
+      let meta = &self.link_output.metas[module_idx];
+      let module = module_table[module_idx].as_normal().filter(|_| meta.namespace_included);
+      meta.star_exports_from_external_modules.iter().filter_map(move |&rec_idx| {
+        let record = &module?.import_records[rec_idx];
+        meta
+          .ns_star_external_re_export_emitted(record.meta, self.options.format)
+          .then_some(record.resolved_module?)
+      })
     });
     links.index_chunk_direct_imports_from_external_modules[chunk_idx]
       .keys()
@@ -257,7 +268,26 @@ impl GenerateStage<'_> {
       .chain(links.index_chunk_indirect_imports_from_external_modules[chunk_idx].iter().copied())
       .chain(chunk.entry_level_external_module_idx.iter().copied())
       .chain(star_exports)
-      .any(|module_idx| !is_synchronous(module_idx))
+      .any(|module_idx| !is_known(module_idx))
+  }
+
+  /// The exception to condition 4 of the host rule: `host` is the only consumer, and each module
+  /// of `host` is a wrapped CommonJS module. No other chunk imports a helper, so only code of
+  /// `host` can read one. The code of a wrapped CommonJS module stays inside its wrapper, also its
+  /// function declarations, and the wrapper is a `var` that the body of `host` assigns after the
+  /// runtime. So no code that reads a helper can run before the body of `host`, also when an
+  /// external module runs first and loads or calls `host`.
+  fn helpers_stay_in_cjs_code(
+    &self,
+    chunk_graph: &ChunkGraph,
+    host: ChunkIdx,
+    consumers: &FxHashSet<ChunkIdx>,
+  ) -> bool {
+    consumers.iter().all(|&consumer| consumer == host)
+      && chunk_graph.chunk_table[host]
+        .modules
+        .iter()
+        .all(|&module_idx| matches!(self.link_output.metas[module_idx].wrap_kind(), WrapKind::Cjs))
   }
 
   /// Declaration plugins discard generated runtime statements in `renderChunk`, so these chunks
@@ -589,8 +619,19 @@ impl<'a> HostSearch<'a> {
   /// The host rule, the root check and the policy filter on the baseline. A chunk `H` can host
   /// the runtime only if:
   /// 1. no consumer is in a chunk cycle,
-  /// 2. `H` is a static dependency of each other consumer, and
-  /// 3. no consumer is a static dependency of `H`.
+  /// 2. `H` is a static dependency of each other consumer,
+  /// 3. no consumer is a static dependency of `H`, and
+  /// 4. no unknown external module (see `chunk_imports_unknown_external`) runs before `H`
+  ///    completes, unless `H` is the only consumer and holds only wrapped CommonJS modules (see
+  ///    `helpers_stay_in_cjs_code`). Such an external module can import an entry and call one of
+  ///    its exports. It can also import an entry that loads a consumer, in a cycle that the chunk
+  ///    graph does not show. Then code of a consumer runs before the helpers exist. In the runtime
+  ///    chunk, the helpers exist before each external module runs, because each consumer imports
+  ///    the runtime chunk first. In CJS output, a chunk assigns its exports at its end, so no code
+  ///    outside `H` can call into `H` before `H` completes, and a `require()` of `H` before `H`
+  ///    starts runs all of `H`. There, condition 4 only rejects an `H` that reaches an unknown
+  ///    external module while another consumer exists: that module can require the other
+  ///    consumer, which then reads the helpers from the incomplete exports of `H`.
   ///
   /// When no chunk passes, the lazy consumer rule replaces condition 2 (see
   /// `select_with_lazy_consumers`). The choice: the fewest added edges, then the chunk order, then
@@ -610,6 +651,25 @@ impl<'a> HostSearch<'a> {
     // Condition 3: `forbidden` holds each chunk that reaches a consumer through one import or more.
     let forbidden = self
       .walk(consumers.iter().flat_map(|&consumer| self.importers[consumer].iter().copied()), false);
+    // Condition 4 for `H`: each external module that `H` reaches runs before `H` completes.
+    let mut unknown_external = IndexBitSet::new(self.importers.len());
+    for chunk_idx in self.nodes.index_of_one() {
+      if stage.chunk_imports_unknown_external(chunk_graph, links, chunk_idx) {
+        unknown_external.set_bit(chunk_idx);
+      }
+    }
+    let reaches_unknown_external = self.walk(unknown_external.index_of_one(), false);
+    let cjs = matches!(stage.options.format, OutputFormat::Cjs);
+    let passes_condition_4 = |host: ChunkIdx| {
+      if cjs {
+        consumers.iter().all(|&consumer| consumer == host)
+          || !reaches_unknown_external.has_bit(host)
+      } else {
+        stage.helpers_stay_in_cjs_code(chunk_graph, host, consumers)
+          || (!reaches_unknown_external.has_bit(host)
+            && !self.external_runs_before_host(host, consumers, &unknown_external))
+      }
+    };
 
     // The root check: a root that loads no consumer must not load the host. A root is an entry or
     // the target of a dynamic import.
@@ -638,11 +698,12 @@ impl<'a> HostSearch<'a> {
         direct[importee] += 1;
       }
     }
-    // The candidates that pass the root check and the policy, in the order of the choice.
+    // The candidates that pass the root check, condition 4 and the policy, in the order of the
+    // choice.
     let hosts = |candidates: &IndexBitSet<ChunkIdx>| {
       let mut hosts = candidates
         .index_of_one()
-        .filter(|&host| !cold_reach.has_bit(host))
+        .filter(|&host| !cold_reach.has_bit(host) && passes_condition_4(host))
         .filter(|&host| stage.host_policy_allows(chunk_graph, host, consumers))
         .collect::<Vec<_>>();
       hosts.sort_unstable_by_key(|&host| {
@@ -663,6 +724,47 @@ impl<'a> HostSearch<'a> {
       return Some(host);
     }
     self.select_with_lazy_consumers(stage, chunk_graph, links, consumers, &forbidden, hosts)
+  }
+
+  /// Condition 4 for the consumers: an unknown external module runs after a consumer starts and
+  /// before `host` starts. A walk from each consumer follows the import order of the baseline,
+  /// which is the evaluation order. A chunk imports the other chunks first, and then its external
+  /// modules. So the external modules of a chunk run when the walk leaves that chunk. A chunk that
+  /// is open when the walk enters `host` runs its external modules after `host` completes. A
+  /// consumer that does not reach `host` starts after `host` completes (the lazy consumer rule).
+  fn external_runs_before_host(
+    &self,
+    host: ChunkIdx,
+    consumers: &FxHashSet<ChunkIdx>,
+    unknown_external: &IndexBitSet<ChunkIdx>,
+  ) -> bool {
+    if unknown_external.is_empty() {
+      return false;
+    }
+    consumers.iter().filter(|&&consumer| consumer != host).any(|&consumer| {
+      let mut seen = IndexBitSet::new(self.importers.len());
+      seen.set_bit(consumer);
+      let mut external_ran = false;
+      // Each frame has a chunk and the position of its next importee.
+      let mut frames = vec![(consumer, 0)];
+      while let Some(frame) = frames.last_mut() {
+        let chunk_idx = frame.0;
+        if let Some(&importee) = self.baseline.importees(chunk_idx).get(frame.1) {
+          frame.1 += 1;
+          if importee == host {
+            return external_ran;
+          }
+          if self.nodes.has_bit(importee) && !seen.has_bit(importee) {
+            seen.set_bit(importee);
+            frames.push((importee, 0));
+          }
+          continue;
+        }
+        frames.pop();
+        external_ran |= unknown_external.has_bit(chunk_idx);
+      }
+      false
+    })
   }
 
   /// The candidates of condition 2 for `minimal`, the consumers that reach no other consumer: the

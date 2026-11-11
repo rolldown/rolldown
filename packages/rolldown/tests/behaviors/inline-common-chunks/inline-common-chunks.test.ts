@@ -620,7 +620,14 @@ describe('experimentalInlineCommonChunks', () => {
       },
       inline,
     });
-    expect(pair.on.chunks).toHaveLength(pair.off.chunks.length);
+    // The runtime can have its own chunk in one build and share a chunk in the other build. So the
+    // count ignores a chunk that holds only the runtime module.
+    const withoutRuntimeChunk = (built: Built) =>
+      built.chunks.filter(
+        (chunk) =>
+          !(chunk.moduleIds.length === 1 && chunk.moduleIds[0] === '\0rolldown/runtime.js'),
+      );
+    expect(withoutRuntimeChunk(pair.on)).toHaveLength(withoutRuntimeChunk(pair.off).length);
     expect(pair.on.chunks.find((chunk) => chunk.isEntry)!.moduleIds).toEqual([]);
     expect(recordIds(pair.on)).toEqual([]);
   });

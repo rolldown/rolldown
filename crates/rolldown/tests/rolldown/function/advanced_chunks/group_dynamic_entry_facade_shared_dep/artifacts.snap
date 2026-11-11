@@ -6,12 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## layout-group.js
 
 ```js
+// HIDDEN [\0rolldown/runtime.js]
 // header.js
 (globalThis.log ??= []).push("header");
 const header = "header";
 // layout.js
+var layout_exports = /* @__PURE__ */ __exportAll({ default: () => layout_default });
 var layout_default = () => header;
-export { layout_default as default, header as t };
+export { header as n, layout_exports as t };
 
 ```
 
@@ -23,8 +25,9 @@ import assert from "node:assert";
 import("./page.js").then((page) => {
 	assert.strictEqual(page.default(), "header");
 	assert.deepStrictEqual(globalThis.log, ["header", "page"]);
-	return import("./layout-group.js");
+	return import("./layout-group.js").then((n) => n.t);
 }).then((layout) => {
+	assert.deepStrictEqual(Object.keys(layout), ["default"]);
 	assert.strictEqual(layout.default(), "header");
 });
 
@@ -33,7 +36,7 @@ import("./page.js").then((page) => {
 ## page.js
 
 ```js
-import { t as header } from "./layout-group.js";
+import { n as header } from "./layout-group.js";
 // page.js
 (globalThis.log ??= []).push("page");
 var page_default = () => header;
@@ -43,6 +46,6 @@ export { page_default as default };
 
 # Output Stats
 
-- layout-group.js, is_entry false, is_dynamic_entry true, exports ["default", "t"]
+- layout-group.js, is_entry false, is_dynamic_entry false, exports ["n", "t"]
 - main.js, is_entry true, is_dynamic_entry false, exports []
 - page.js, is_entry false, is_dynamic_entry true, exports ["default"]

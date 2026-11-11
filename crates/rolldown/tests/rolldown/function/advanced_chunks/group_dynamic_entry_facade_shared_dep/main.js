@@ -7,5 +7,6 @@ import('./page.js')
     return import('./layout.js');
   })
   .then((layout) => {
+    assert.deepStrictEqual(Object.keys(layout), ['default']);
     assert.strictEqual(layout.default(), 'header');
   });

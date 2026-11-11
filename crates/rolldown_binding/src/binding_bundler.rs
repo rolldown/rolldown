@@ -22,10 +22,15 @@ use std::sync::Arc;
 #[napi]
 pub struct BindingBundler {
   inner: ClassicBundler,
-  /// Every build this bundler has run, in order. A `RolldownBuild` may `generate` more
+  /// The handle of the latest build this bundler ran. A `RolldownBuild` may `generate` more
   /// than once, and the plugin-timing measurement accumulates across all of them, so the
-  /// clocks it is judged against are summed over all of them too.
-  bundle_handles: Vec<BundleHandle>,
+  /// clocks it is judged against are summed over all of them too — but a handle pins its
+  /// build's `PluginDriver`, and with it every module's transformed source and the resolver
+  /// cache, so earlier builds are kept only as their two clocks in `finished_timings`
+  /// (rolldown/rolldown#10984).
+  last_bundle_handle: Option<BundleHandle>,
+  /// `(total_micros, link_stage_micros)` summed over the builds before `last_bundle_handle`.
+  finished_timings: (u64, u64),
 }
 
 #[napi]
@@ -33,7 +38,18 @@ impl BindingBundler {
   #[napi(constructor)]
   pub fn new() -> Self {
     let inner = ClassicBundler::new();
-    Self { inner, bundle_handles: Vec::new() }
+    Self { inner, last_bundle_handle: None, finished_timings: (0, 0) }
+  }
+
+  /// Remembers `handle` as the latest build, folding the previous build's clocks into
+  /// `finished_timings` and dropping its handle. The previous build has finished by now: the
+  /// JavaScript side awaits each `generate`/`write`/`scan` before starting the next.
+  fn track_bundle_handle(&mut self, handle: BundleHandle) {
+    if let Some(previous) = self.last_bundle_handle.replace(handle) {
+      let timings = &previous.plugin_driver().build_timings;
+      self.finished_timings.0 += timings.total_micros();
+      self.finished_timings.1 += timings.link_stage_micros();
+    }
   }
 
   #[napi]
@@ -50,7 +66,7 @@ impl BindingBundler {
     let maybe_bundle = self.inner.create_bundle(normalized.options, normalized.plugins);
     if let Ok(bundle) = &maybe_bundle {
       // Extract bundle handle before consuming the bundle
-      self.bundle_handles.push(bundle.context());
+      self.track_bundle_handle(bundle.context());
     }
 
     let fut = async move {
@@ -100,7 +116,7 @@ impl BindingBundler {
     let maybe_bundle = self.inner.create_bundle(normalized.options, normalized.plugins);
     if let Ok(bundle) = &maybe_bundle {
       // Extract bundle handle before consuming the bundle
-      self.bundle_handles.push(bundle.context());
+      self.track_bundle_handle(bundle.context());
     }
 
     let fut = async move {
@@ -149,7 +165,7 @@ impl BindingBundler {
     let maybe_bundle = self.inner.create_bundle(normalized.options, normalized.plugins);
     if let Ok(bundle) = &maybe_bundle {
       // Extract bundle handle before consuming the bundle
-      self.bundle_handles.push(bundle.context());
+      self.track_bundle_handle(bundle.context());
     }
 
     let fut = async move {
@@ -186,12 +202,13 @@ impl BindingBundler {
   // - This also affects how the code is written in `Bundler::close()/inner.close()`, see the implementation there for more details.
   pub fn close<'env>(&mut self, env: &'env Env) -> napi::Result<PromiseRaw<'env, ()>> {
     let cleanup_fut = self.inner.close();
-    let handles = std::mem::take(&mut self.bundle_handles);
+    let last_handle = self.last_bundle_handle.take();
+    let finished_timings = std::mem::take(&mut self.finished_timings);
     spawn_boxed_future(env, async move {
       let res = cleanup_fut.await;
       handle_result(res)?;
       // After the cleanup, so `closeBundle` is part of what the other side reports.
-      handle_result(report_plugin_timings(&handles).await)?;
+      handle_result(report_plugin_timings(last_handle.as_ref(), finished_timings).await)?;
       Ok(())
     })
   }
@@ -204,8 +221,8 @@ impl BindingBundler {
   #[napi]
   pub fn get_watch_files(&self) -> Vec<String> {
     self
-      .bundle_handles
-      .last()
+      .last_bundle_handle
+      .as_ref()
       .map(|handle| handle.watch_files().iter().map(|s| s.to_string()).collect())
       .unwrap_or_default()
   }
@@ -217,8 +234,13 @@ impl BindingBundler {
 /// visible on this side; what the callbacks actually cost is only visible on the other. The
 /// diagnostic then goes out through the usual path, so `checks.bundlerTimings` filters it
 /// like any other.
-async fn report_plugin_timings(handles: &[BundleHandle]) -> anyhow::Result<()> {
-  let Some(last) = handles.last() else {
+///
+/// `finished_timings` holds the `(total, link stage)` clocks of the builds before `last`.
+async fn report_plugin_timings(
+  last: Option<&BundleHandle>,
+  finished_timings: (u64, u64),
+) -> anyhow::Result<()> {
+  let Some(last) = last else {
     return Ok(());
   };
   let options = last.options();
@@ -229,10 +251,9 @@ async fn report_plugin_timings(handles: &[BundleHandle]) -> anyhow::Result<()> {
   // Summed over every output, because the measurement on the other side is: one
   // `RolldownBuild` may generate more than once, and judging a cumulative measurement
   // against only the last output's clocks would both suppress and inflate reports.
-  let total_micros: u64 =
-    handles.iter().map(|handle| handle.plugin_driver().build_timings.total_micros()).sum();
-  let link_micros: u64 =
-    handles.iter().map(|handle| handle.plugin_driver().build_timings.link_stage_micros()).sum();
+  let last_timings = &last.plugin_driver().build_timings;
+  let total_micros = finished_timings.0 + last_timings.total_micros();
+  let link_micros = finished_timings.1 + last_timings.link_stage_micros();
   if !BuildTimings::is_plugin_bound(total_micros, link_micros) {
     return Ok(());
   }

@@ -101,6 +101,7 @@ impl GenerateStage<'_> {
       bailout_cjs_tree_shaking_modules: FxHashSet::default(),
       external_importer_modes: FxHashMap::default(),
       inlined_constant_owner_side_effects: FxHashMap::default(),
+      kept_inlined_constant_reads: FxHashSet::default(),
       module_inclusion_changed: false,
       module_namespace_included_reason: &mut module_namespace_reason_vec,
       inline_const_smart: self.options.optimization.is_inline_const_smart_mode(),

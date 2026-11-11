@@ -31,8 +31,8 @@ Run the bundled scripts. They use plain Node (`node:zlib`, `node:buffer`, `node:
 **Decode** prints a JSON summary to stdout, and with `--write` drops each file onto disk:
 
 ```bash
-node .claude/skills/rolldown-repl/scripts/decode.mjs '<full-url>'
-node .claude/skills/rolldown-repl/scripts/decode.mjs '<full-url>' --write /tmp/repl-repro
+node .agents/skills/rolldown-repl/scripts/decode.mjs '<full-url>'
+node .agents/skills/rolldown-repl/scripts/decode.mjs '<full-url>' --write /tmp/repl-repro
 ```
 
 Quote the URL — the `#` would otherwise be eaten by the shell.
@@ -40,9 +40,9 @@ Quote the URL — the `#` would otherwise be eaten by the shell.
 **Encode** walks a directory and prints the resulting REPL URL to stdout:
 
 ```bash
-node .claude/skills/rolldown-repl/scripts/encode.mjs <dir>
-node .claude/skills/rolldown-repl/scripts/encode.mjs <dir> --entry entry.js --version 1.0.0-rc.18
-node .claude/skills/rolldown-repl/scripts/encode.mjs <dir> --entry a.js --entry b.js
+node .agents/skills/rolldown-repl/scripts/encode.mjs <dir>
+node .agents/skills/rolldown-repl/scripts/encode.mjs <dir> --entry entry.js --version 1.0.0-rc.18
+node .agents/skills/rolldown-repl/scripts/encode.mjs <dir> --entry a.js --entry b.js
 ```
 
 Options:

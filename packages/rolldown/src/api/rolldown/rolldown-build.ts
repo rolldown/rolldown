@@ -7,6 +7,7 @@ import { RolldownOutputImpl } from '../../types/rolldown-output-impl';
 import { createBundlerOptions } from '../../utils/create-bundler-option';
 import { unwrapBindingResult } from '../../utils/error';
 import { noop } from '../../utils/misc';
+import { trackOutputExternalMemory } from '../../utils/transform-to-rollup-output';
 import { validateOption } from '../../utils/validator';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
 import type { rolldown } from './index';
@@ -159,7 +160,9 @@ export class RolldownBuild {
       } else {
         output = await this.#bundler.generate(option.bundlerOptions);
       }
-      return new RolldownOutputImpl(unwrapBindingResult(output));
+      const bindingOutputs = unwrapBindingResult(output);
+      trackOutputExternalMemory(bindingOutputs);
+      return new RolldownOutputImpl(bindingOutputs);
     } catch (e) {
       await option.stopWorkers?.();
       throw e;

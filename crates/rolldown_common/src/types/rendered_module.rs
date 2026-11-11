@@ -21,6 +21,15 @@ impl RenderedModule {
     Self { inner_code: sources, rendered_exports, exec_order }
   }
 
+  /// Once the chunk is joined, its own map covers these sources and only their code is read.
+  pub fn drop_sourcemaps(&mut self) {
+    if let Some(sources) = self.inner_code.as_mut().and_then(Arc::get_mut) {
+      for source in sources.iter_mut() {
+        drop(source.take_sourcemap());
+      }
+    }
+  }
+
   pub fn code(&self) -> Option<String> {
     self.inner_code.as_ref().map(|sources| {
       let mut joiner = SourceJoiner::default();

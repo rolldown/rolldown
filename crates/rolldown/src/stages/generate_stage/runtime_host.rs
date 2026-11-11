@@ -640,16 +640,6 @@ impl<'a> HostSearch<'a> {
     }
     let reaches_unknown_external = self.walk(unknown_external.index_of_one(), false);
     let cjs = matches!(stage.options.format, OutputFormat::Cjs);
-    let passes_condition_4 = |host: ChunkIdx| {
-      if cjs {
-        consumers.iter().all(|&consumer| consumer == host)
-          || !reaches_unknown_external.has_bit(host)
-      } else {
-        stage.helpers_stay_in_cjs_code(chunk_graph, host, consumers)
-          || (!reaches_unknown_external.has_bit(host)
-            && !self.external_runs_before_host(host, consumers, &unknown_external))
-      }
-    };
 
     // The root check: a root that loads no consumer must not load the host. A root is an entry or
     // the target of a dynamic import.
@@ -684,46 +674,81 @@ impl<'a> HostSearch<'a> {
     // chunks reaches a consumer: then the minimal consumer that reaches it would too.
     let minimal = consumers.iter().copied().filter(|&consumer| !forbidden.has_bit(consumer));
     let candidates = self.common_dependencies(minimal)?;
-    // The choice among the candidates that pass the root check, condition 4 and the policy.
-    candidates
+    // The root check and the policy read only the candidate, so they run first. Condition 4 walks
+    // the chunk graph, so it runs only for the candidates that pass them.
+    let hosts = candidates
       .index_of_one()
-      .filter(|&host| !cold_reach.has_bit(host) && passes_condition_4(host))
+      .filter(|&host| !cold_reach.has_bit(host))
       .filter(|&host| stage.host_policy_allows(chunk_graph, host, consumers))
-      .min_by_key(|&host| {
-        let others = consumers.len() - usize::from(consumers.contains(&host));
-        (others - direct[host], chunk_graph.chunk_table[host].exec_order, host)
-      })
+      .collect::<Vec<_>>();
+    let mut walked = IndexBitSet::new(self.importers.len());
+    if !cjs {
+      walked.extend(hosts.iter().copied().filter(|&host| !reaches_unknown_external.has_bit(host)));
+    }
+    let external_first = self.external_runs_before_hosts(&walked, consumers, &unknown_external);
+    let passes_condition_4 = |host: ChunkIdx| {
+      if cjs {
+        consumers.iter().all(|&consumer| consumer == host)
+          || !reaches_unknown_external.has_bit(host)
+      } else {
+        stage.helpers_stay_in_cjs_code(chunk_graph, host, consumers)
+          || (!reaches_unknown_external.has_bit(host) && !external_first.has_bit(host))
+      }
+    };
+    // The choice among the hosts that pass condition 4.
+    hosts.into_iter().filter(|&host| passes_condition_4(host)).min_by_key(|&host| {
+      let others = consumers.len() - usize::from(consumers.contains(&host));
+      (others - direct[host], chunk_graph.chunk_table[host].exec_order, host)
+    })
   }
 
-  /// Condition 4 for the consumers: an unknown external module runs after a consumer starts and
-  /// before `host` starts. A walk from each consumer follows the import order of the baseline,
-  /// which is the evaluation order. A chunk imports the other chunks first, and then its external
-  /// modules. So the external modules of a chunk run when the walk leaves that chunk. A chunk that
-  /// is open when the walk enters `host` runs its external modules after `host` completes. When the
-  /// walk does not enter `host`, the fold adds the import of `host` last, so each unknown external
-  /// module that the walk saw runs before `host`. Condition 2 excludes this case, but the result
-  /// does not depend on it.
-  fn external_runs_before_host(
+  /// Condition 4 for the consumers: returns each host in `hosts` that an unknown external module
+  /// runs before, after a consumer starts. A walk from each consumer follows the import order of
+  /// the baseline, which is the evaluation order. A chunk imports the other chunks first, and then
+  /// its external modules. So the external modules of a chunk run when the walk leaves that chunk.
+  /// A chunk that is open when the walk first meets a host runs its external modules after that
+  /// host completes. When the walk does not meet a host, the fold adds the import of that host
+  /// last, so each unknown external module that the walk saw runs before it. Condition 2 excludes
+  /// this case, but the result does not depend on it.
+  ///
+  /// One walk from each consumer checks all hosts. A walk for one host enters each other host, so
+  /// until it meets its host, it is the same as a walk that enters each chunk. The walk stops when
+  /// it has met each host, and a host that one consumer rejects needs no walk from the others. So
+  /// the cost is one walk for each consumer, not one for each consumer and host.
+  fn external_runs_before_hosts(
     &self,
-    host: ChunkIdx,
+    hosts: &IndexBitSet<ChunkIdx>,
     consumers: &FxHashSet<ChunkIdx>,
     unknown_external: &IndexBitSet<ChunkIdx>,
-  ) -> bool {
-    if unknown_external.is_empty() {
-      return false;
+  ) -> IndexBitSet<ChunkIdx> {
+    let mut external_first = IndexBitSet::new(self.importers.len());
+    if unknown_external.is_empty() || hosts.is_empty() {
+      return external_first;
     }
-    consumers.iter().filter(|&&consumer| consumer != host).any(|&consumer| {
+    for &consumer in consumers {
+      // The hosts that the walk has not met. A consumer is not a host of its own walk.
+      let mut unmet = IndexBitSet::new(self.importers.len());
+      unmet.extend(
+        hosts.index_of_one().filter(|&host| host != consumer && !external_first.has_bit(host)),
+      );
+      let mut unmet_count = unmet.bit_count();
       let mut seen = IndexBitSet::new(self.importers.len());
       seen.set_bit(consumer);
       let mut external_ran = false;
       // Each frame has a chunk and the position of its next importee.
       let mut frames = vec![(consumer, 0)];
-      while let Some(frame) = frames.last_mut() {
+      while unmet_count > 0
+        && let Some(frame) = frames.last_mut()
+      {
         let chunk_idx = frame.0;
         if let Some(&importee) = self.baseline.importees(chunk_idx).get(frame.1) {
           frame.1 += 1;
-          if importee == host {
-            return external_ran;
+          if unmet.has_bit(importee) {
+            unmet.clear_bit(importee);
+            unmet_count -= 1;
+            if external_ran {
+              external_first.set_bit(importee);
+            }
           }
           if self.nodes.has_bit(importee) && !seen.has_bit(importee) {
             seen.set_bit(importee);
@@ -734,8 +759,11 @@ impl<'a> HostSearch<'a> {
         frames.pop();
         external_ran |= unknown_external.has_bit(chunk_idx);
       }
-      external_ran
-    })
+      if external_ran {
+        external_first.extend(unmet.index_of_one());
+      }
+    }
+    external_first
   }
 
   /// The candidates of condition 2 for `minimal`, the consumers that reach no other consumer: the

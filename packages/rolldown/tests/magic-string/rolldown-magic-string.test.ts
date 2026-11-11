@@ -260,6 +260,56 @@ describe('storeName', () => {
   });
 });
 
+describe('hires option', () => {
+  // JS magic-string has no such constructor option. It sets the resolution of the maps that
+  // are generated from the instance: `generateMap()` without `hires` here, and the map that
+  // Rolldown generates when a hook returns the instance without a `map` (see the
+  // `native-magic-string-hires` fixtures).
+  const source = 'var answer = 42;';
+  const values = [true, false, 'boundary'] as const;
+
+  it('is null when it is not set', () => {
+    assert.strictEqual(new MagicString(source).hires, null);
+  });
+
+  it('is the default of generateMap() and generateDecodedMap()', () => {
+    const plain = new MagicString(source);
+    // The three values give three different maps for this source, so the test can see them.
+    assert.strictEqual(
+      new Set(values.map((hires) => plain.generateMap({ hires }).mappings)).size,
+      3,
+    );
+    for (const hires of values) {
+      const s = new MagicString(source, { hires });
+      assert.strictEqual(s.hires, hires);
+      assert.strictEqual(s.generateMap().mappings, plain.generateMap({ hires }).mappings);
+      assert.deepStrictEqual(
+        s.generateDecodedMap().mappings,
+        plain.generateDecodedMap({ hires }).mappings,
+      );
+    }
+  });
+
+  it('loses to the hires of the generateMap() call', () => {
+    const s = new MagicString(source, { hires: true });
+    const plain = new MagicString(source);
+    assert.strictEqual(s.generateMap({ hires: false }).mappings, plain.generateMap({}).mappings);
+  });
+
+  it('is kept by clone() and snip()', () => {
+    const s = new MagicString(source, { hires: 'boundary' });
+    assert.strictEqual(s.clone().hires, 'boundary');
+    assert.strictEqual(s.snip(4, 10).hires, 'boundary');
+  });
+
+  it('rejects an unknown string', () => {
+    assert.throws(
+      () => new MagicString(source, { hires: 'true' as never }),
+      /Invalid `hires` option "true"/,
+    );
+  });
+});
+
 describe('offset', () => {
   describe('underflow guard — negative (index + offset) must throw, not panic', () => {
     it('remove() throws when offset causes index underflow', () => {

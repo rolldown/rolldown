@@ -18,6 +18,7 @@ on:
 jobs:
   compile-time-and-binary-size:
     name: Compile Time and Binary Size
+    if: github.repository == 'rolldown/rolldown'
     runs-on: namespace-profile-linux-x64-default
     outputs:
       time: ${{ steps.run.outputs.COMPILE_TIME }}

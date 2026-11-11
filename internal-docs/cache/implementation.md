@@ -81,6 +81,15 @@ Related non-`Cache`-named structures in the same file: `ViteMetadata`,
 `Bundler::with_cached_bundle` calls it again before creating the next bundle, because a
 failed scan never reaches the output stage.
 
+The `reset_js_module_options` option is a second `InvalidateJsSideCache`, wired the same way and
+bound to `PluginContextData.resetModuleOptions`. It clears `moduleOptionMap` (the `moduleSideEffects`
+and `meta` that hooks returned or plugins set). `Bundle::scan_modules_impl` calls it at the start
+of every _full_ scan, before `buildStart`, so a watch rebuild starts with fresh module options like
+Rollup does: a hook that stops returning `moduleSideEffects: false` gets the default again. It is
+not part of `PluginContextData.clear`, which also runs before partial scans (HMR/incremental):
+those do not run the hooks again for unchanged modules, whose `meta` must stay. Parallel plugin
+workers each have their own `PluginContextData`, which this callback does not reach.
+
 ### 6. Watch-mode filesystem cache
 
 The `notify` crate's `RecommendedCache` is held inside the debouncer in

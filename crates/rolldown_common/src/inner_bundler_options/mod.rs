@@ -232,6 +232,12 @@ pub struct BundlerOptions {
     schemars(skip)
   )]
   pub invalidate_js_side_cache: Option<InvalidateJsSideCache>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, skip_deserializing),
+    schemars(skip)
+  )]
+  pub reset_js_module_options: Option<InvalidateJsSideCache>,
   pub log_level: Option<LogLevel>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",

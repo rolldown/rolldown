@@ -16,7 +16,7 @@ packages:
   - '!examples/yarn-pnp'
 
 allowBuilds:
-  better-sqlite3: true
+  better-sqlite3: false
   esbuild: true
   playwright-chromium: true
   sharp: true
@@ -24,8 +24,6 @@ allowBuilds:
   workerd: true
 
 overrides:
-  # 12.10 dropped the Node 20 prebuilds, which the CI matrix still covers
-  better-sqlite3: 12.9.0
   # `napi build` links the emnapi v2 C archives into the .wasm and refuses to link when this
   # package's version differs from `@emnapi/core`; pinned exact, in sync with the catalog below.
   emnapi: 2.0.0-beta.2
@@ -47,8 +45,8 @@ catalog:
   '@napi-rs/wasm-runtime': 1.2.6
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0
-  '@oxc-project/runtime': '=0.157.0'
-  '@oxc-project/types': '=0.157.0'
+  '@oxc-project/runtime': '=0.158.0'
+  '@oxc-project/types': '=0.158.0'
   '@pnpm/find-workspace-packages': ^6.0.9
   '@rolldown/pluginutils': ^1.0.0
   '@rollup/plugin-commonjs': ^29.0.0
@@ -84,14 +82,14 @@ catalog:
   lodash-es: ^4.17.21
   micromatch: ^4.0.8
   miniflare: ^4.20260611.0
-  oxc-parser: '=0.157.0'
-  oxc-transform: '=0.157.0'
+  oxc-parser: '=0.158.0'
+  oxc-transform: '=0.158.0'
   pathe: ^2.0.3
   react: ^19.0.0
   react-dom: ^19.0.0
   remark-parse: ^11.0.0
   remeda: ^2.57.0
-  rolldown-plugin-dts: ^0.29.0
+  rolldown-plugin-dts: ^0.30.0
   rollup: ^4.63.0
   semver: ^7.8.0
   serve-static: ^2.0.0
@@ -159,6 +157,7 @@ minimumReleaseAgeExclude:
   - '@napi-rs/wasm-runtime'
   - '@emnapi/*'
   - emnapi
+  - vitepress-plugin-group-icons@1.8.2
 
 # avoid accidentally relying on `NODE_PATH` env var
 extendNodePath: false

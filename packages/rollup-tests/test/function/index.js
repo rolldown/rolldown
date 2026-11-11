@@ -9,7 +9,7 @@ const {
 	compareError,
 	compareLogs,
 	runTestSuiteWithSamples,
-	wrapPluginWithRuntimeFilter
+	adaptPluginForRolldown
 	// verifyAstPlugin
 } = require('../utils.js');
 
@@ -92,8 +92,7 @@ runTestSuiteWithSamples(
 				process.chdir(directory);
 				const logs = [];
 				const warnings = [];
-				// Wrap plugins to filter out rolldown runtime from transform hooks
-				const plugins = wrapPluginWithRuntimeFilter(config.options?.plugins);
+				const plugins = adaptPluginForRolldown(config.options?.plugins);
 					// config.verifyAst === false
 						//? config.options?.plugins
 						// : config.options?.plugins === undefined
@@ -138,6 +137,8 @@ runTestSuiteWithSamples(
 					.rollup({
 						input: path.join(directory, 'main.js'),
 						onLog: (level, log) => {
+							// Rollup does not emit this Rolldown-specific diagnostic.
+							if (log.code === 'INEFFECTIVE_DYNAMIC_IMPORT') return;
 							logs.push({ level, ...log });
 							if (level === 'warn' && !config.expectedWarnings?.includes(log.code)) {
 								warnings.push(log);

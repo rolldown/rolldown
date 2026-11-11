@@ -86,9 +86,10 @@ The machinery: [implementation.md](./implementation.md).
 
 8. **Detached tasks behave like tokio.** Dropping a `JoinHandle` detaches the
    task; runtime shutdown may cancel accepted work by dropping its future. The
-   module loader's execution and supervision are one accepted task, so a panic,
-   a shutdown cancellation or a rejected submission becomes exactly one build
-   diagnostic and completion accounting cannot hang.
+   module loader supervises each task until its first poll, and the task's own
+   guard takes over from there. So a panic, a shutdown cancellation or a
+   rejected submission becomes exactly one build diagnostic and completion
+   accounting cannot hang.
 
 9. **No tokio in any shipped build.** There is no runtime feature to pick.
    `just check-no-tokio` proves the binding (native and both WASI targets) and

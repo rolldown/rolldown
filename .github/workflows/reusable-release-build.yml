@@ -95,7 +95,7 @@ jobs:
         id: vp-setup
         background: true
         with:
-          version: '1.0.0'
+          version: '1.6.0'
           cache: true
 
       - name: Setup Rust
@@ -262,7 +262,7 @@ jobs:
 
       - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
         with:
-          version: '1.0.0'
+          version: '1.6.0'
           cache: true
 
       # Runs before "Determine Version" on purpose: napi bakes the version this step
@@ -311,7 +311,7 @@ jobs:
         id: vp-setup
         background: true
         with:
-          version: '1.0.0'
+          version: '1.6.0'
           cache: true
 
       - name: Setup Rust
@@ -382,7 +382,7 @@ jobs:
 
           - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
             with:
-              version: '1.0.0'
+              version: '1.6.0'
               cache: true
 
       - name: Build `@rolldown/debug`

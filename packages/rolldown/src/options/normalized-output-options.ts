@@ -4,7 +4,6 @@ import { lazyProp } from '../decorators/lazy';
 import type { SourcemapIgnoreListOption, SourcemapPathTransformOption } from '../types/misc';
 import { getLazyFields, PlainObjectLike } from '../types/plain-object-like';
 import type { StringOrRegExp } from '../types/utils';
-import type { BindingCell } from '../utils/threadless-free';
 import type {
   AddonFunction,
   AssetFileNamesFunction,
@@ -114,184 +113,92 @@ export interface NormalizedOutputOptions {
   minifyInternalExports?: boolean;
 }
 
-// Lazy fields whose getter reads the ORIGINAL user `outputOptions` object and
-// nothing from the native box. Reading the user's config can execute user code
-// (accessors, Proxies), so `materializeBoxBackedFields()` must skip these; they
-// survive the box release precisely because they never touch it.
-const USER_BACKED_LAZY_FIELDS: ReadonlySet<string> = new Set([
-  'banner',
-  'footer',
-  'postBanner',
-  'postFooter',
-  'intro',
-  'outro',
-  'paths',
-  'sourcemapIgnoreList',
-  'sourcemapPathTransform',
-]);
-
-// Lazy fields shaped `nativeValue || userValue`: the native side is falsy
-// exactly when the user supplied a function, so the public getter would reach
-// the user object. `materializeBoxBackedFields()` pre-warms only their
-// `boxRead` component and leaves the user fallback lazy.
-const MIXED_LAZY_FIELDS: ReadonlySet<string> = new Set([
-  'entryFileNames',
-  'chunkFileNames',
-  'assetFileNames',
-  'sourcemapFileNames',
-  'globals',
-]);
-
 export class NormalizedOutputOptionsImpl
   extends PlainObjectLike
   implements NormalizedOutputOptions
 {
-  // Caches each mixed getter's native-box component so the getter stays
-  // readable after the box is released without ever re-reading the user's
-  // original object from the release path.
-  private readonly boxReads: Map<string, unknown>;
-
-  // Empty after `releaseBinding()`.
-  private readonly bindingCell: BindingCell<BindingNormalizedOptions>;
-
   constructor(
-    inner: BindingNormalizedOptions,
+    private inner: BindingNormalizedOptions,
     private outputOptions: OutputOptions,
     private normalizedOutputPlugins: RolldownPlugin[],
   ) {
     super();
-    this.bindingCell = { value: inner };
-    this.boxReads = new Map();
-  }
-
-  // Not `#private` members: getters run with a Proxy or derived object as
-  // `this`, which fails a `#private` brand check. `materializeBoxBackedFields()`
-  // caches every value read from the box before the release, so no getter
-  // reaches this then.
-  private binding(): BindingNormalizedOptions {
-    const inner = this.bindingCell.value;
-    if (inner === undefined) {
-      throw new Error('These normalized output options have already released their binding object');
+    // Read every option once, then drop the native object, as `NormalizedInputOptionsImpl` does.
+    // See internal-docs/bundler-data-lifecycle/implementation.md ("Normalized options objects").
+    for (const key of getLazyFields(this)) {
+      Reflect.get(this, key);
     }
-    return inner;
-  }
-
-  private boxRead<T>(key: string, read: () => T): T {
-    const cache = this.boxReads;
-    if (!cache.has(key)) {
-      cache.set(key, read());
-    }
-    return cache.get(key) as T;
-  }
-
-  /**
-   * Evaluate and cache every value read from the native box, and nothing read
-   * from the user's `outputOptions`, so the box can be released without
-   * running user code.
-   */
-  materializeBoxBackedFields(): void {
-    for (const field of getLazyFields(this)) {
-      if (USER_BACKED_LAZY_FIELDS.has(field) || MIXED_LAZY_FIELDS.has(field)) {
-        continue;
-      }
-      // property access is enough to evaluate and cache the lazy field
-      void (this as Record<string, any>)[field];
-    }
-    this.boxRead('entryFilenames', () => this.binding().entryFilenames);
-    this.boxRead('chunkFilenames', () => this.binding().chunkFilenames);
-    this.boxRead('assetFilenames', () => this.binding().assetFilenames);
-    this.boxRead('sourcemapFilenames', () => this.binding().sourcemapFilenames);
-    this.boxRead('globals', () => this.binding().globals);
-  }
-
-  /**
-   * Drop the binding wrapper once its box is released: the wrapper's methods
-   * keep the binding instance that made it alive, so options a plugin keeps
-   * would keep that instance's memory too.
-   */
-  releaseBinding(): void {
-    this.bindingCell.value = undefined;
+    // A getter that reads `inner` must be a `@lazyProp`: nothing may read `inner` after this line.
+    this.inner = null as unknown as BindingNormalizedOptions;
   }
 
   @lazyProp
   get dir(): string | undefined {
-    return this.binding().dir ?? undefined;
+    return this.inner.dir ?? undefined;
   }
 
   @lazyProp
   get charset(): NonNullable<OutputOptions['charset']> {
-    return this.binding().charset;
+    return this.inner.charset;
   }
 
   @lazyProp
   get entryFileNames(): string | ChunkFileNamesFunction {
-    return (
-      this.boxRead('entryFilenames', () => this.binding().entryFilenames) ||
-      this.outputOptions.entryFileNames!
-    );
+    return this.inner.entryFilenames || this.outputOptions.entryFileNames!;
   }
 
   @lazyProp
   get chunkFileNames(): string | ChunkFileNamesFunction {
-    return (
-      this.boxRead('chunkFilenames', () => this.binding().chunkFilenames) ||
-      this.outputOptions.chunkFileNames!
-    );
+    return this.inner.chunkFilenames || this.outputOptions.chunkFileNames!;
   }
 
   @lazyProp
   get assetFileNames(): string | AssetFileNamesFunction {
-    return (
-      this.boxRead('assetFilenames', () => this.binding().assetFilenames) ||
-      this.outputOptions.assetFileNames!
-    );
+    return this.inner.assetFilenames || this.outputOptions.assetFileNames!;
   }
 
   @lazyProp
   get format(): 'es' | 'cjs' | 'iife' | 'umd' {
-    return this.binding().format;
+    return this.inner.format;
   }
 
   @lazyProp
   get exports(): 'default' | 'named' | 'none' | 'auto' {
-    return this.binding().exports;
+    return this.inner.exports;
   }
 
   @lazyProp
   get sourcemap(): boolean | 'inline' | 'hidden' {
-    return this.binding().sourcemap;
+    return this.inner.sourcemap;
   }
 
   @lazyProp
   get sourcemapFileNames(): string | ChunkFileNamesFunction | undefined {
-    return (
-      this.boxRead('sourcemapFilenames', () => this.binding().sourcemapFilenames) ||
-      this.outputOptions.sourcemapFileNames
-    );
+    return this.inner.sourcemapFilenames || this.outputOptions.sourcemapFileNames;
   }
   @lazyProp
   get sourcemapBaseUrl(): string | undefined {
-    return this.binding().sourcemapBaseUrl ?? undefined;
+    return this.inner.sourcemapBaseUrl ?? undefined;
   }
 
   @lazyProp
   get shimMissingExports(): boolean {
-    return this.binding().shimMissingExports;
+    return this.inner.shimMissingExports;
   }
 
   @lazyProp
   get name(): string | undefined {
-    return this.binding().name ?? undefined;
+    return this.inner.name ?? undefined;
   }
 
   @lazyProp
   get file(): string | undefined {
-    return this.binding().file ?? undefined;
+    return this.inner.file ?? undefined;
   }
 
   @lazyProp
   get codeSplitting(): boolean {
-    return this.binding().codeSplitting;
+    return this.inner.codeSplitting;
   }
 
   /**
@@ -299,17 +206,17 @@ export class NormalizedOutputOptionsImpl
    */
   @lazyProp
   get inlineDynamicImports(): boolean {
-    return !this.binding().codeSplitting;
+    return !this.inner.codeSplitting;
   }
 
   @lazyProp
   get dynamicImportInCjs(): boolean {
-    return this.binding().dynamicImportInCjs;
+    return this.inner.dynamicImportInCjs;
   }
 
   @lazyProp
   get externalLiveBindings(): boolean {
-    return this.binding().externalLiveBindings;
+    return this.inner.externalLiveBindings;
   }
 
   @lazyProp
@@ -344,17 +251,17 @@ export class NormalizedOutputOptionsImpl
 
   @lazyProp
   get esModule(): boolean | 'if-default-prop' {
-    return this.binding().esModule;
+    return this.inner.esModule;
   }
 
   @lazyProp
   get extend(): boolean {
-    return this.binding().extend;
+    return this.inner.extend;
   }
 
   @lazyProp
   get globals(): Record<string, string> | GlobalsFunction {
-    return this.boxRead('globals', () => this.binding().globals) || this.outputOptions.globals!;
+    return this.inner.globals || this.outputOptions.globals!;
   }
 
   @lazyProp
@@ -364,17 +271,17 @@ export class NormalizedOutputOptionsImpl
 
   @lazyProp
   get hashCharacters(): 'base64' | 'base36' | 'hex' {
-    return this.binding().hashCharacters;
+    return this.inner.hashCharacters;
   }
 
   @lazyProp
   get sourcemapDebugIds(): boolean {
-    return this.binding().sourcemapDebugIds;
+    return this.inner.sourcemapDebugIds;
   }
 
   @lazyProp
   get sourcemapExcludeSources(): boolean {
-    return this.binding().sourcemapExcludeSources;
+    return this.inner.sourcemapExcludeSources;
   }
 
   @lazyProp
@@ -389,7 +296,7 @@ export class NormalizedOutputOptionsImpl
 
   @lazyProp
   get minify(): false | MinifyOptions | 'dce-only' {
-    let ret = this.binding().minify;
+    let ret = this.inner.minify;
     if (typeof ret === 'object' && ret !== null) {
       // Omit some properties that are not needed in the output
       delete ret['codegen'];
@@ -401,12 +308,12 @@ export class NormalizedOutputOptionsImpl
 
   @lazyProp
   get legalComments(): 'none' | 'inline' {
-    return this.binding().legalComments;
+    return this.inner.legalComments;
   }
 
   @lazyProp
   get comments(): Required<CommentsOptions> {
-    const c = this.binding().comments;
+    const c = this.inner.comments;
     return {
       legal: c.legal ?? true,
       annotation: c.annotation ?? true,
@@ -416,7 +323,7 @@ export class NormalizedOutputOptionsImpl
 
   @lazyProp
   get polyfillRequire(): boolean {
-    return this.binding().polyfillRequire;
+    return this.inner.polyfillRequire;
   }
 
   @lazyProp
@@ -426,27 +333,27 @@ export class NormalizedOutputOptionsImpl
 
   @lazyProp
   get preserveModules(): boolean {
-    return this.binding().preserveModules;
+    return this.inner.preserveModules;
   }
 
   @lazyProp
   get preserveModulesRoot(): string | undefined {
-    return this.binding().preserveModulesRoot;
+    return this.inner.preserveModulesRoot;
   }
 
   @lazyProp
   get virtualDirname(): string {
-    return this.binding().virtualDirname;
+    return this.inner.virtualDirname;
   }
 
   @lazyProp
   get topLevelVar(): boolean {
-    return this.binding().topLevelVar ?? false;
+    return this.inner.topLevelVar ?? false;
   }
 
   @lazyProp
   get minifyInternalExports(): boolean {
-    return this.binding().minifyInternalExports ?? false;
+    return this.inner.minifyInternalExports ?? false;
   }
 }
 

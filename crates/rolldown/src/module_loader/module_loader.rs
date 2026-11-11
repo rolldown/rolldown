@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 use std::collections::hash_map::Entry;
 use std::panic::AssertUnwindSafe;
+use std::path::Path;
 use std::sync::Arc;
 
 use arcstr::ArcStr;
@@ -27,11 +28,13 @@ use rolldown_error::{
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_std_utils::discard_panic_payload;
+use rolldown_utils::commondir;
 use rolldown_utils::futures::try_spawn_detached;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
+use sugar_path::SugarPath;
 use tracing::Instrument;
 
 use crate::module_loader::module_task::ModuleTaskOwner;
@@ -166,19 +169,13 @@ pub struct ModuleLoaderOutput {
   pub tla_keyword_span_map: FxHashMap<ModuleIdx, Span>,
 }
 
+/// Covers a module task until its first poll. From then on the task's own `TaskMessageGuard`
+/// reports a panic or a cancellation, so the two never report the same task twice.
 struct ModuleTaskSupervisor {
   tx: Option<futures::channel::mpsc::UnboundedSender<ModuleLoaderMsg>>,
 }
 
 impl ModuleTaskSupervisor {
-  fn report(&mut self, message: &'static str) {
-    let Some(tx) = self.tx.take() else {
-      return;
-    };
-    let diagnostic = BuildDiagnostic::unhandleable_error(anyhow::anyhow!(message));
-    let _ = tx.unbounded_send(ModuleLoaderMsg::BuildErrors(vec![diagnostic].into_boxed_slice()));
-  }
-
   fn disarm(&mut self) {
     self.tx = None;
   }
@@ -186,7 +183,13 @@ impl ModuleTaskSupervisor {
 
 impl Drop for ModuleTaskSupervisor {
   fn drop(&mut self) {
-    self.report("module loader task was cancelled before reporting completion");
+    let Some(tx) = self.tx.take() else {
+      return;
+    };
+    let diagnostic = BuildDiagnostic::unhandleable_error(anyhow::anyhow!(
+      "module loader task was dropped before it started"
+    ));
+    let _ = tx.unbounded_send(ModuleLoaderMsg::BuildErrors(vec![diagnostic].into_boxed_slice()));
   }
 }
 
@@ -199,12 +202,9 @@ where
 {
   let mut supervisor = ModuleTaskSupervisor { tx: Some(tx) };
   async move {
-    match AssertUnwindSafe(future).catch_unwind().await {
-      Ok(()) => supervisor.disarm(),
-      Err(payload) => {
-        supervisor.report("module loader task panicked before reporting completion");
-        discard_panic_payload(payload);
-      }
+    supervisor.disarm();
+    if let Err(payload) = AssertUnwindSafe(future).catch_unwind().await {
+      discard_panic_payload(payload);
     }
   }
 }
@@ -482,7 +482,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     let tx = self.shared_context.tx.clone();
     if resolved_id.external.is_external() {
       self.external_module_idxs.insert(idx);
-      let task = ExternalModuleTask::new(ctx, idx, resolved_id, Arc::clone(user_defined_entries));
+      let task = ExternalModuleTask::new(ctx, idx, resolved_id);
       spawn_module_task(task.run().instrument(tracing::info_span!("external_module_task")), tx);
     } else {
       let task = ModuleTask::new(
@@ -923,6 +923,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       }
     }
 
+    self.render_new_external_paths(&user_defined_entries, &extra_entry_points);
+
     let mut errors = std::mem::take(&mut self.errors);
     if !errors.is_empty() {
       // Enrich UNRESOLVED_IMPORT errors with import chain. Must run before
@@ -1084,6 +1086,39 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       tla_module_count: self.tla_module_count,
       tla_keyword_span_map: std::mem::take(&mut self.tla_keyword_span_map),
     })
+  }
+
+  /// Renders each path external this scan added relative to the common directory of the entries.
+  /// A full scan computes that directory here, after the scan, because emitted chunks join the
+  /// entries during it.
+  fn render_new_external_paths(
+    &mut self,
+    user_defined_entries: &[(Option<ArcStr>, ResolvedId)],
+    extra_entry_points: &[EntryPoint],
+  ) {
+    if self.is_full_scan {
+      let modules = &self.intermediate_normal_modules.modules;
+      let emitted_entry_ids = extra_entry_points.iter().filter_map(|entry| {
+        let id = modules.try_get(entry.idx)?.as_ref()?.id();
+        id.is_path().then(|| id.raw_id())
+      });
+      let common_dir = commondir::common_dir(
+        user_defined_entries
+          .iter()
+          .map(|(_, resolved_id)| resolved_id.id.raw_id())
+          .chain(emitted_entry_ids),
+      );
+      self.cache.user_defined_entry_common_dir = common_dir.map(Arc::from);
+    }
+    let cwd = self.shared_context.options.cwd.as_path();
+    let common_dir = self.cache.user_defined_entry_common_dir.as_deref().unwrap_or(cwd);
+    for &idx in &self.external_module_idxs {
+      if let Some(Module::External(module)) = self.intermediate_normal_modules.modules.get_mut(idx)
+        && module.need_renormalize_render_path
+      {
+        module.name = Path::new(module.id.raw_id()).relative(common_dir).to_slash().into();
+      }
+    }
   }
 
   #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
@@ -1332,60 +1367,77 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
 
 #[cfg(test)]
 mod tests {
-  use std::{sync::mpsc, time::Duration};
+  use std::sync::Arc;
 
   use futures::StreamExt;
-  use rolldown_common::ModuleLoaderMsg;
+  use rolldown_common::{
+    BundleMode, BundlerOptions, FlatOptions, ModuleId, ModuleLoaderMsg, ResolvedId,
+  };
+  use rolldown_fs::OsFileSystem;
 
-  use super::{spawn_module_task, supervised_module_task};
+  use crate::{
+    BundleFactory, BundleFactoryOptions,
+    module_loader::task_context::{TaskContext, TaskContextMeta},
+  };
 
-  #[test]
-  fn panicking_module_task_reports_completion_error() {
-    let (done_tx, done_rx) = mpsc::sync_channel(1);
-    std::thread::spawn(move || {
-      let (tx, mut rx) = futures::channel::mpsc::unbounded();
-      spawn_module_task(
-        async {
-          panic!("module task probe");
-        },
-        tx,
-      );
+  use super::{ExternalModuleTask, ModuleTask, supervised_module_task};
 
-      let message = rolldown_utils::futures::block_on(async { rx.next().await })
-        .expect("supervisor must report a panicking module task");
-      match message {
-        ModuleLoaderMsg::BuildErrors(errors) => {
-          assert_eq!(errors.len(), 1);
-          assert!(
-            errors[0]
-              .to_string()
-              .contains("module loader task panicked before reporting completion"),
-            "the task must be polled far enough to observe the panic, not merely rejected"
-          );
-        }
-        _ => panic!("module task panic must be converted to BuildErrors"),
-      }
-      assert!(rx.try_recv().is_err(), "a panic must produce exactly one completion error");
-      done_tx.send(()).unwrap();
+  /// A module task that finishes after its build was dropped must not panic when it sends.
+  #[tokio::test]
+  async fn module_tasks_ignore_a_dropped_receiver() {
+    let mut factory = BundleFactory::new(BundleFactoryOptions {
+      bundler_options: BundlerOptions::default(),
+      disable_tracing_setup: true,
+      ..Default::default()
+    })
+    .expect("create bundle factory");
+    let bundle = factory.create_bundle(BundleMode::FullBuild, None).expect("create bundle");
+    // Drop the receiver at once, as a dropped build does.
+    let (tx, _) = futures::channel::mpsc::unbounded();
+    let ctx: Arc<TaskContext<OsFileSystem>> = Arc::new(TaskContext {
+      options: bundle.options,
+      tx,
+      resolver: bundle.resolver,
+      fs: bundle.fs,
+      plugin_driver: bundle.plugin_driver,
+      meta: TaskContextMeta { replace_global_define_config: None },
     });
 
-    done_rx
-      .recv_timeout(Duration::from_secs(5))
-      .expect("panicking module task left the loader completion count unresolved");
+    let normal = ResolvedId { id: ModuleId::new_empty("empty"), ..Default::default() };
+    let flat_options = FlatOptions::from_shared_options(&ctx.options);
+    ModuleTask::new(Arc::clone(&ctx), 0.into(), normal, None, false, None, flat_options, None)
+      .run()
+      .await;
+
+    let external =
+      ResolvedId { id: ModuleId::new("external"), external: true.into(), ..Default::default() };
+    ExternalModuleTask::new(Arc::clone(&ctx), 1.into(), external).run().await;
   }
 
   #[test]
-  fn cancelled_module_task_reports_exactly_one_completion_error() {
+  fn module_task_dropped_before_it_starts_reports_exactly_one_error() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded();
     let future = supervised_module_task(std::future::pending(), tx);
     drop(future);
 
     let message = rolldown_utils::futures::block_on(async { rx.next().await })
-      .expect("dropping an accepted/rejected supervised task must retire loader accounting");
+      .expect("a module task dropped before its first poll must retire loader accounting");
     match message {
       ModuleLoaderMsg::BuildErrors(errors) => assert_eq!(errors.len(), 1),
-      _ => panic!("module task cancellation must be converted to BuildErrors"),
+      _ => panic!("a module task dropped before its first poll must become BuildErrors"),
     }
-    assert!(rx.try_recv().is_err(), "cancellation must produce exactly one completion error");
+    assert!(rx.try_recv().is_err(), "the drop must produce exactly one completion error");
+  }
+
+  #[test]
+  fn started_module_task_leaves_reporting_to_its_own_guard() {
+    let (tx, mut rx) = futures::channel::mpsc::unbounded();
+    rolldown_utils::futures::block_on(supervised_module_task(
+      async {
+        panic!("module task probe");
+      },
+      tx,
+    ));
+    assert!(rx.try_recv().is_err(), "a started task reports through `TaskMessageGuard` only");
   }
 }

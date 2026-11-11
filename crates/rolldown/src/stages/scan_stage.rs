@@ -227,8 +227,12 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
           match msg {
             SourceMapGenMsg::MagicString(v) => {
               let (module_idx, plugin_idx, id, magic_string) = *v;
+              // A line-level map loses every column and name behind it once the chain is
+              // composed, so the default keeps the word boundaries. The `hires` option of the
+              // MagicString overrides it.
               let generated_sourcemap = magic_string.source_map(string_wizard::SourceMapOptions {
                 source: id.as_str().into(),
+                hires: magic_string.hires().unwrap_or(string_wizard::Hires::Boundary),
                 ..Default::default()
               });
               map

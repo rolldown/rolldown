@@ -1,0 +1,47 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+// m.js
+var m_exports = /* @__PURE__ */ __exportAll({
+	a: () => a,
+	b: () => b,
+	d: () => d,
+	k: () => k,
+	nested: () => nested,
+	x: () => x
+});
+var x, k, a, b, d, nested;
+var init_m = __esmMin((() => {
+	for (x of [1]);
+	for (k in { a: 1 });
+	for ({a} of [{ a: 2 }]);
+	for ([b = 3] of [[]]);
+	for ({c: [d = 5]} of [{ c: [] }]);
+	for (nested of [4]);
+}));
+// main.js
+const m = await Promise.resolve().then(() => (init_m(), m_exports));
+assert.deepStrictEqual([
+	m.x,
+	m.k,
+	m.a,
+	m.b,
+	m.d,
+	m.nested
+], [
+	1,
+	"a",
+	2,
+	3,
+	5,
+	4
+]);
+
+```

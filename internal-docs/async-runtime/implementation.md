@@ -44,8 +44,11 @@ point). The timer host is a record-only stub, not upstream's JS relay (see
   ([napi-rs `wasi-heap-sync-design.md`](https://github.com/napi-rs/napi-rs/blob/main/cli/docs/wasi-heap-sync-design.md);
   rolldown side: "Threaded WASI heap sync").
 - The module loader wraps each module future in `supervised_module_task` and
-  submits it with `try_spawn_detached`. `ModuleTaskSupervisor::Drop` turns a
-  panic, cancellation or rejected submission into exactly one diagnostic. The
+  submits it with `try_spawn_detached`. Until the first poll,
+  `ModuleTaskSupervisor::Drop` turns a rejected submission or a cancellation
+  into one diagnostic. From the first poll on, the task's own
+  `TaskMessageGuard` reports a panic or a cancellation. So each task reports
+  exactly once. The
   consumer loop uses an **unbounded** channel: a bounded one could deadlock the
   `block_on`-pinned JS thread.
 - CPU work runs in the Rayon registry of the calling thread. The crate builds
@@ -425,8 +428,8 @@ When napi-rs drops the workaround (its design doc, "When to remove"), delete:
 - Panics are contained at every FFI or drop boundary; caught payloads go
   through `rolldown_std_utils::{panic_payload_message, discard_panic_payload}`
   (design.md, "Caught panic payloads are user code").
-- One module task, one diagnostic: `supervised_module_task` and
-  `ModuleTaskSupervisor::Drop`.
+- One module task, one diagnostic: `ModuleTaskSupervisor::Drop` before the
+  first poll, `TaskMessageGuard::Drop` after it.
 - No JS runtime-ownership protocol: the N-API env lifecycle owns the runtime.
 
 ## Related

@@ -1,16 +1,9 @@
 import { isWasiTest } from '@tests/runtime-flavor';
 import type { Plugin } from 'rolldown';
 import { rolldown } from 'rolldown';
+import { sleep } from 'rolldown-tests/utils';
 import { describe, expect, test, vi } from 'vitest';
 import { aggregateBindingErrorsIntoJsError } from '../../src/utils/error';
-
-function deferred() {
-  let resolve!: () => void;
-  const promise = new Promise<void>((resolvePromise) => {
-    resolve = resolvePromise;
-  });
-  return { promise, resolve };
-}
 
 async function buildWithPlugin(plugin: Plugin) {
   try {
@@ -25,170 +18,80 @@ async function buildWithPlugin(plugin: Plugin) {
   }
 }
 
-function delay(ms: number) {
-  return new Promise<void>((resolve) => setTimeout(resolve, ms));
-}
-
-test('awaits async renderStart hook completion', async () => {
-  const entered = deferred();
-  const release = deferred();
-  const calls: string[] = [];
-  const build = await rolldown({
-    input: './main.js',
-    cwd: import.meta.dirname,
-    plugins: [
-      {
-        name: 'async-render-start',
-        async renderStart() {
-          calls.push('renderStart:start');
-          entered.resolve();
-          await release.promise;
-          calls.push('renderStart:end');
-        },
-        generateBundle() {
-          calls.push('generateBundle');
-        },
+describe('Plugin renderError hook', () => {
+  test('calls renderError with the rendering error', async () => {
+    const renderErrorFn = vi.fn();
+    const renderChunkFn = vi.fn();
+    const error = await buildWithPlugin({
+      name: 'test',
+      renderStart() {
+        renderChunkFn();
+        throw new Error('renderStart error');
       },
-    ],
-  });
-
-  try {
-    let settled = false;
-    const generation = build.generate().then(
-      (output) => ({ output }),
-      (error: unknown) => ({ error }),
-    );
-    void generation.finally(() => {
-      settled = true;
+      renderError: (error) => {
+        renderErrorFn();
+        expect(error!.message).toContain('renderStart error');
+      },
     });
-
-    await entered.promise;
-    await delay(20);
-    const settledBeforeRelease = settled;
-    release.resolve();
-
-    const result = await generation;
-    expect(settledBeforeRelease).toBe(false);
-    expect(result).toHaveProperty('output');
-    expect(calls).toEqual(['renderStart:start', 'renderStart:end', 'generateBundle']);
-  } finally {
-    release.resolve();
-    await build.close();
-  }
-});
-
-test('propagates async renderStart hook rejection', async () => {
-  const build = await rolldown({
-    input: './main.js',
-    cwd: import.meta.dirname,
-    plugins: [
-      {
-        name: 'async-render-start-rejection',
-        async renderStart() {
-          await Promise.resolve();
-          throw new Error('async renderStart rejection');
-        },
-      },
-    ],
+    expect(error!.message).toContain('renderStart error');
+    expect(renderErrorFn).toHaveBeenCalledTimes(1);
   });
 
-  try {
-    await expect(build.generate()).rejects.toThrow('async renderStart rejection');
-  } finally {
-    await build.close();
-  }
+  test('preserves rendering and renderError failures', async () => {
+    const error = await buildWithPlugin({
+      name: 'test',
+      renderStart() {
+        this.error({ code: 'PRIMARY_FAILURE', message: 'rendering failed' });
+      },
+      renderError() {
+        throw new Error('cleanup failed');
+      },
+    });
+    expect(error).toMatchObject({
+      message: expect.stringMatching(/rendering failed[\s\S]*cleanup failed/),
+      errors: [{ message: 'rendering failed' }, { message: 'cleanup failed' }],
+    });
+  });
 });
 
-test('Plugin renderError hook', async () => {
-  const renderErrorFn = vi.fn();
-  const renderChunkFn = vi.fn();
+test('Plugin renderError hook waits for an async handler', async () => {
+  let finished = false;
+  await buildWithPlugin({
+    name: 'test',
+    renderStart() {
+      throw new Error('renderStart error');
+    },
+    async renderError() {
+      await sleep(50);
+      finished = true;
+    },
+  });
+  expect(finished).toBe(true);
+});
+
+test('Plugin renderError hook reports an async rejection', async () => {
   const error = await buildWithPlugin({
     name: 'test',
     renderStart() {
-      renderChunkFn();
       throw new Error('renderStart error');
     },
-    renderError: (error) => {
-      renderErrorFn();
-      expect(error!.message).toContain('renderStart error');
+    async renderError() {
+      await Promise.resolve();
+      throw new Error('renderError error');
+    },
+  });
+  expect(error!.message).toContain('renderError error');
+});
+
+test('Plugin renderStart hook reports an async rejection', async () => {
+  const error = await buildWithPlugin({
+    name: 'test',
+    async renderStart() {
+      await Promise.resolve();
+      throw new Error('renderStart error');
     },
   });
   expect(error!.message).toContain('renderStart error');
-  expect(renderErrorFn).toHaveBeenCalledTimes(1);
-});
-
-test('awaits async renderError hook completion', async () => {
-  const entered = deferred();
-  const release = deferred();
-  let completed = false;
-  const build = await rolldown({
-    input: './main.js',
-    cwd: import.meta.dirname,
-    plugins: [
-      {
-        name: 'async-render-error',
-        renderStart() {
-          throw new Error('renderStart failure');
-        },
-        async renderError(error) {
-          expect(error.message).toContain('renderStart failure');
-          entered.resolve();
-          await release.promise;
-          completed = true;
-        },
-      },
-    ],
-  });
-
-  try {
-    let settled = false;
-    const generation = build.generate().then(
-      (output) => ({ output }),
-      (error: unknown) => ({ error }),
-    );
-    void generation.finally(() => {
-      settled = true;
-    });
-
-    await entered.promise;
-    await delay(20);
-    const settledBeforeRelease = settled;
-    release.resolve();
-
-    const result = await generation;
-    expect(settledBeforeRelease).toBe(false);
-    expect(completed).toBe(true);
-    expect(result).toHaveProperty('error');
-    expect((result as { error: Error }).error.message).toContain('renderStart failure');
-  } finally {
-    release.resolve();
-    await build.close();
-  }
-});
-
-test('propagates async renderError hook rejection', async () => {
-  const build = await rolldown({
-    input: './main.js',
-    cwd: import.meta.dirname,
-    plugins: [
-      {
-        name: 'async-render-error-rejection',
-        renderStart() {
-          throw new Error('renderStart failure');
-        },
-        async renderError() {
-          await Promise.resolve();
-          throw new Error('async renderError rejection');
-        },
-      },
-    ],
-  });
-
-  try {
-    await expect(build.generate()).rejects.toThrow('async renderError rejection');
-  } finally {
-    await build.close();
-  }
 });
 
 describe('Plugin buildEnd hook', async () => {

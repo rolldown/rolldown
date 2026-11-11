@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+// a.js
+const a = "a";
+export { a };
+
+```
+
+## b.js
+
+```js
+// b.js
+const b = "b";
+export { b };
+
+```

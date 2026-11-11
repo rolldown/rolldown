@@ -12,6 +12,7 @@ import { aggregateBindingErrorsIntoJsError } from '../utils/error';
 import { releaseOrDefer, shouldEagerlyFreeOutputs } from '../utils/threadless-free';
 import { snapshotModuleInfo, transformModuleInfo } from '../utils/transform-module-info';
 import {
+  copySourcemapObject,
   isEmptySourcemapFiled,
   normalizeTransformHookSourcemap,
 } from '../utils/transform-sourcemap';
@@ -283,18 +284,23 @@ export function bindingifyTransform(
         } else if (ret.code instanceof RolldownMagicString) {
           let magicString = ret.code as RolldownMagicString;
           normalizedCode = magicString.toString();
-          // Marked BEFORE the send, so a send that throws still releases it.
+          // Marked BEFORE the send, so a skipped or throwing send still releases it.
           sentMagicString = magicString;
-          // If the option is not enable we should just return soucemapJsonString
-          let fallbackSourcemap = ctx.sendMagicString(magicString);
-          if (fallbackSourcemap != undefined) {
-            map = fallbackSourcemap;
-          } else {
-            // `experimental.nativeMagicString`: the map is delivered natively
-            // out-of-band. This must signal `null`, not `undefined` — Rust
-            // reads `undefined` as `Omitted` and its empty sentinel would wipe
-            // out the real map produced by the channel.
-            mapHandledByNativeChannel = true;
+          // Rolldown generates the map from the MagicString only when the hook returns no `map`,
+          // the same as in `renderChunk`. An own `map` or `map: null` is used as it is. A
+          // generated map in addition to an own map would apply the edits of this step two times.
+          if (ret.map === undefined) {
+            // If the option is not enable we should just return soucemapJsonString
+            let fallbackSourcemap = ctx.sendMagicString(magicString);
+            if (fallbackSourcemap != undefined) {
+              map = fallbackSourcemap;
+            } else {
+              // `experimental.nativeMagicString`: the map is delivered natively
+              // out-of-band. This must signal `null`, not `undefined` — Rust
+              // reads `undefined` as `Omitted` and its empty sentinel would wipe
+              // out the real map produced by the channel.
+              mapHandledByNativeChannel = true;
+            }
           }
         }
 
@@ -315,8 +321,8 @@ export function bindingifyTransform(
           // specialized wrapper box `ctx` is sync-only and drops directly.
           releaseOrDefer(innerCtx);
           ctx.dropInner();
-          // `sendMagicString` moves only the string out; the mapping table (the
-          // bulk) stays. `dropInner` is idempotent, so both may be one object.
+          // A returned MagicString is sent only when the hook returns no `map`.
+          // `dropInner` is idempotent, so both may be one object.
           magicStringInstance?.dropInner();
           sentMagicString?.dropInner();
         }
@@ -392,7 +398,11 @@ function preProcessSourceMap(
   if (!ret.map) {
     return;
   }
-  let map = typeof ret.map === 'object' ? ret.map : (JSON.parse(ret.map) as ExistingRawSourceMap);
+  // Work on a copy, so the write to `sources` below does not change the plugin's object.
+  let map =
+    typeof ret.map === 'object'
+      ? copySourcemapObject(ret.map)
+      : (JSON.parse(ret.map) as ExistingRawSourceMap);
   if (!isEmptySourcemapFiled(map.sources)) {
     // normalize original sourcemap sources
     // Port form https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts#L180-L188.

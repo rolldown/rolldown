@@ -3,7 +3,6 @@ import type { BindingNormalizedOptions } from '../binding.cjs';
 import { lazyProp } from '../decorators/lazy';
 import type { LogHandler } from '../log/log-handler';
 import { getLazyFields, PlainObjectLike } from '../types/plain-object-like';
-import type { BindingCell } from '../utils/threadless-free';
 
 /** @category Plugin APIs */
 export interface NormalizedInputOptions {
@@ -22,8 +21,7 @@ export interface NormalizedInputOptions {
 }
 
 export class NormalizedInputOptionsImpl extends PlainObjectLike implements NormalizedInputOptions {
-  // Empty after `releaseBinding()`.
-  private readonly bindingCell: BindingCell<BindingNormalizedOptions>;
+  inner: BindingNormalizedOptions;
 
   constructor(
     inner: BindingNormalizedOptions,
@@ -31,64 +29,39 @@ export class NormalizedInputOptionsImpl extends PlainObjectLike implements Norma
     private inputPlugins: RolldownPlugin[],
   ) {
     super();
-    this.bindingCell = { value: inner };
-  }
-
-  // Not a `#private` method: getters run with a Proxy or derived object as
-  // `this`, which fails a `#private` brand check. `materializeBoxBackedFields()`
-  // caches every field before the release, so no getter reaches this then.
-  private binding(): BindingNormalizedOptions {
-    const inner = this.bindingCell.value;
-    if (inner === undefined) {
-      throw new Error('These normalized input options have already released their binding object');
+    this.inner = inner;
+    // Read every option once, then drop the native object, which would keep the plugins alive.
+    // See internal-docs/bundler-data-lifecycle/implementation.md ("Normalized options objects").
+    for (const key of getLazyFields(this)) {
+      Reflect.get(this, key);
     }
-    return inner;
-  }
-
-  /**
-   * Evaluate and cache every lazy field so the native box can be released
-   * while the wrapper keeps serving reads. Safe from the release path (which
-   * must not run user code) because no lazy field here reads a user object.
-   */
-  materializeBoxBackedFields(): void {
-    for (const field of getLazyFields(this)) {
-      // property access is enough to evaluate and cache the lazy field
-      void (this as Record<string, any>)[field];
-    }
-  }
-
-  /**
-   * Drop the binding wrapper once its box is released: the wrapper's methods
-   * keep the binding instance that made it alive, so options a plugin keeps
-   * would keep that instance's memory too.
-   */
-  releaseBinding(): void {
-    this.bindingCell.value = undefined;
+    // A getter that reads `inner` must be a `@lazyProp`: nothing may read `inner` after this line.
+    this.inner = null as unknown as BindingNormalizedOptions;
   }
 
   @lazyProp
   get shimMissingExports(): boolean {
-    return this.binding().shimMissingExports;
+    return this.inner.shimMissingExports;
   }
 
   @lazyProp
   get input(): string[] | Record<string, string> {
-    return this.binding().input;
+    return this.inner.input;
   }
 
   @lazyProp
   get cwd(): string {
-    return this.binding().cwd;
+    return this.inner.cwd;
   }
 
   @lazyProp
   get platform(): 'browser' | 'node' | 'neutral' {
-    return this.binding().platform;
+    return this.inner.platform;
   }
 
   @lazyProp
   get context(): string {
-    return this.binding().context;
+    return this.inner.context;
   }
 
   get plugins(): RolldownPlugin[] {

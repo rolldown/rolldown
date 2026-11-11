@@ -353,28 +353,15 @@ export class PluginContextData {
     }
   }
 
-  // Copy box-backed values into the cached wrappers, release the boxes, then
-  // detach the wrappers from their binding objects, whose methods keep the
-  // binding instance alive while a plugin keeps the options. Fields backed by
-  // the user's `outputOptions` stay lazy: user accessors must not run, and
-  // maybe throw, from a cleanup path.
+  // The cached wrappers read every value in their constructor and keep no binding object
+  // (see internal-docs/bundler-data-lifecycle/implementation.md, "Normalized options objects"),
+  // so the boxes have no reader left.
   #releaseOptionBoxes(): void {
     if (!shouldEagerlyFreeOutputs() || this.#retainedOptionBoxes.size === 0) {
       return;
     }
-    const wrappers = [this.normalizedInputOptions, this.normalizedOutputOptions];
-    for (const wrapper of wrappers) {
-      if (wrapper == null) continue;
-      try {
-        wrapper.materializeBoxBackedFields();
-      } catch {
-        // Later reads of the affected fields then throw the wrapper's
-        // "already released" error; cleanup must not throw or stop.
-      }
-    }
-    let failure = releaseEach(this.#retainedOptionBoxes, (box) => box.dropInner(), undefined);
+    const failure = releaseEach(this.#retainedOptionBoxes, (box) => box.dropInner(), undefined);
     this.#retainedOptionBoxes.clear();
-    failure = releaseEach(wrappers, (wrapper) => wrapper?.releaseBinding(), failure);
     if (failure) {
       throw failure.error;
     }

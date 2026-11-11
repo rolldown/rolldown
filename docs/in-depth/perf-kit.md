@@ -47,6 +47,16 @@ Set these options and rebuild the app:
 
 ::: code-group
 
+```js [rolldown.config.js]
+import { defineConfig } from 'rolldown';
+
+export default defineConfig({
+  input: 'src/main.js',
+  devtools: { mode: 'report' },
+  output: { sourcemap: true },
+});
+```
+
 ```js [vite.config.js]
 import { defineConfig } from 'vite';
 
@@ -57,16 +67,6 @@ export default defineConfig({
       devtools: { mode: 'report' },
     },
   },
-});
-```
-
-```js [rolldown.config.js]
-import { defineConfig } from 'rolldown';
-
-export default defineConfig({
-  input: 'src/main.js',
-  devtools: { mode: 'report' },
-  output: { sourcemap: true },
 });
 ```
 

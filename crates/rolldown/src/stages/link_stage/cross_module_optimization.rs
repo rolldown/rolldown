@@ -70,7 +70,8 @@ impl LinkStage<'_> {
 
     #[expect(clippy::bool_to_int_with_if)]
     let other_optimization_pass = if has_side_effect_free_functions { 1 } else { 0 };
-    let cross_module_inline_const_pass = self.options.optimization.inline_const_pass() - 1;
+    let cross_module_inline_const_pass =
+      self.options.optimization.inline_const_pass().saturating_sub(1);
     CrossModuleOptimizationConfig {
       pass: cross_module_inline_const_pass.max(other_optimization_pass),
       inline_const_optimization: cross_module_inline_const_pass >= 1,

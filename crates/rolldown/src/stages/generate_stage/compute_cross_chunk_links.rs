@@ -603,7 +603,10 @@ impl GenerateStage<'_> {
     let standalone_key = |chunk_idx: ChunkIdx| {
       let chunk = &chunk_graph.chunk_table[chunk_idx];
       match chunk.kind {
-        ChunkKind::EntryPoint { module, .. } => (self.entry_chunk_exec_order(module, chunk), false),
+        ChunkKind::EntryPoint { module, .. } => (
+          self.entry_chunk_exec_order(&chunk_graph.module_to_chunk, chunk_idx, chunk, module),
+          false,
+        ),
         ChunkKind::Common => {
           let lead = chunk
             .modules

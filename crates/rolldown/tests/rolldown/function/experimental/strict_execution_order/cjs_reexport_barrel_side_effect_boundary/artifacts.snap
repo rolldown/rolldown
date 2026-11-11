@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## inner-effectful-barrel.js
 
 ```js
-import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./main.js";
+import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
 // node_modules/nested-effectful-clone/index.cjs
 var require_nested_effectful_clone = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("nested-effectful-clone");
@@ -29,7 +29,7 @@ export { init_inner_effectful_barrel as n, init_inner_effectful_barrel_cjs_0 as 
 ## main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+import { n as __esmMin } from "./rolldown-runtime.js";
 // node_modules/pure-boundary-barrel/cn.js
 var cn;
 function init_cn() {
@@ -63,15 +63,23 @@ function init_main() {
 	})))();
 }
 init_main();
-export { loadRoute, __esmMin as n, __toESM as r, __commonJSMin as t };
+export { loadRoute };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __toESM as r, __commonJSMin as t };
 
 ```
 
 ## route.js
 
 ```js
+import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
 import { r as init_inner_effectful_barrel_cjs_0, t as import_nested_effectful_clone } from "./inner-effectful-barrel.js";
-import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./main.js";
 // node_modules/effectful-clone/index.cjs
 var require_effectful_clone = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("effectful-clone");
@@ -104,7 +112,7 @@ export { value };
 ### inner-effectful-barrel.js
 
 ```js
-import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./main.js";
+import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
 // node_modules/nested-effectful-clone/index.cjs
 var require_nested_effectful_clone = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("nested-effectful-clone");
@@ -127,7 +135,7 @@ export { init_inner_effectful_barrel as n, init_inner_effectful_barrel_cjs_0 as 
 ### main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+import { n as __esmMin } from "./rolldown-runtime.js";
 // node_modules/pure-boundary-barrel/cn.js
 var cn;
 function init_cn() {
@@ -155,15 +163,23 @@ function init_main() {
 	})))();
 }
 init_main();
-export { loadRoute, __esmMin as n, __toESM as r, __commonJSMin as t };
+export { loadRoute };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __toESM as r, __commonJSMin as t };
 
 ```
 
 ### route.js
 
 ```js
+import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
 import { r as init_inner_effectful_barrel_cjs_0, t as import_nested_effectful_clone } from "./inner-effectful-barrel.js";
-import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./main.js";
 // node_modules/effectful-clone/index.cjs
 var require_effectful_clone = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("effectful-clone");

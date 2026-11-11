@@ -5,11 +5,11 @@
 
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, ChunkMeta, ChunkReasonType, EntryPointKind, ModuleIdx, OutputExports,
-  OutputFormat, PathsOutputOption, PostChunkOptimizationOperation, PreserveEntrySignatures,
-  RuntimeHelper, UsedSymbolRefsView, WrapKind,
+  Chunk, ChunkIdx, ChunkKind, ChunkMeta, ChunkReasonType, ModuleIdx, OutputExports, OutputFormat,
+  PathsOutputOption, PostChunkOptimizationOperation, PreserveEntrySignatures, RuntimeHelper,
+  UsedSymbolRefsView, WrapKind,
 };
-use rolldown_utils::{IndexBitSet, indexmap::FxIndexSet};
+use rolldown_utils::IndexBitSet;
 use rustc_hash::FxHashSet;
 
 use crate::chunk_graph::ChunkGraph;
@@ -209,24 +209,6 @@ impl GenerateStage<'_> {
       Some(PathsOutputOption::FxHashMap(paths)) => paths.contains_key(id),
       Some(PathsOutputOption::Fn(_)) => true,
     }
-  }
-
-  /// A chunk that can wait during its evaluation: it has a module with top-level await, or in ESM
-  /// output it imports an unknown external module (see `chunk_imports_unknown_external`). That code
-  /// can use top-level await, and it can put the chunk in a cycle that the chunk graph does not
-  /// show. In CJS output, `require()` loads each external module synchronously.
-  fn chunk_can_wait(
-    &self,
-    chunk_graph: &ChunkGraph,
-    links: &CrossChunkLinkState,
-    chunk_idx: ChunkIdx,
-  ) -> bool {
-    chunk_graph.chunk_table[chunk_idx]
-      .modules
-      .iter()
-      .any(|&module_idx| self.link_output.metas[module_idx].is_tla_or_contains_tla_dependency)
-      || (!matches!(self.options.format, OutputFormat::Cjs)
-        && self.chunk_imports_unknown_external(chunk_graph, links, chunk_idx))
   }
 
   /// A chunk that statically imports an external module whose code rolldown cannot know. That code
@@ -633,9 +615,7 @@ impl<'a> HostSearch<'a> {
   ///    external module while another consumer exists: that module can require the other
   ///    consumer, which then reads the helpers from the incomplete exports of `H`.
   ///
-  /// When no chunk passes, the lazy consumer rule replaces condition 2 (see
-  /// `select_with_lazy_consumers`). The choice: the fewest added edges, then the chunk order, then
-  /// the chunk index.
+  /// The choice: the fewest added edges, then the chunk order, then the chunk index.
   fn select(
     &self,
     stage: &GenerateStage<'_>,
@@ -698,40 +678,31 @@ impl<'a> HostSearch<'a> {
         direct[importee] += 1;
       }
     }
-    // The candidates that pass the root check, condition 4 and the policy, in the order of the
-    // choice.
-    let hosts = |candidates: &IndexBitSet<ChunkIdx>| {
-      let mut hosts = candidates
-        .index_of_one()
-        .filter(|&host| !cold_reach.has_bit(host) && passes_condition_4(host))
-        .filter(|&host| stage.host_policy_allows(chunk_graph, host, consumers))
-        .collect::<Vec<_>>();
-      hosts.sort_unstable_by_key(|&host| {
-        let others = consumers.len() - usize::from(consumers.contains(&host));
-        (others - direct[host], chunk_graph.chunk_table[host].exec_order, host)
-      });
-      hosts
-    };
-
     // Condition 2. A consumer that reaches no other consumer is a minimal consumer. Each other
     // consumer reaches a minimal one, because no consumer is in a cycle. So a chunk that each
     // minimal consumer reaches is also a static dependency of each other consumer. None of these
     // chunks reaches a consumer: then the minimal consumer that reaches it would too.
     let minimal = consumers.iter().copied().filter(|&consumer| !forbidden.has_bit(consumer));
-    if let Some(host) =
-      self.common_dependencies(minimal).and_then(|candidates| hosts(&candidates).first().copied())
-    {
-      return Some(host);
-    }
-    self.select_with_lazy_consumers(stage, chunk_graph, links, consumers, &forbidden, hosts)
+    let candidates = self.common_dependencies(minimal)?;
+    // The choice among the candidates that pass the root check, condition 4 and the policy.
+    candidates
+      .index_of_one()
+      .filter(|&host| !cold_reach.has_bit(host) && passes_condition_4(host))
+      .filter(|&host| stage.host_policy_allows(chunk_graph, host, consumers))
+      .min_by_key(|&host| {
+        let others = consumers.len() - usize::from(consumers.contains(&host));
+        (others - direct[host], chunk_graph.chunk_table[host].exec_order, host)
+      })
   }
 
   /// Condition 4 for the consumers: an unknown external module runs after a consumer starts and
   /// before `host` starts. A walk from each consumer follows the import order of the baseline,
   /// which is the evaluation order. A chunk imports the other chunks first, and then its external
   /// modules. So the external modules of a chunk run when the walk leaves that chunk. A chunk that
-  /// is open when the walk enters `host` runs its external modules after `host` completes. A
-  /// consumer that does not reach `host` starts after `host` completes (the lazy consumer rule).
+  /// is open when the walk enters `host` runs its external modules after `host` completes. When the
+  /// walk does not enter `host`, the fold adds the import of `host` last, so each unknown external
+  /// module that the walk saw runs before `host`. Condition 2 excludes this case, but the result
+  /// does not depend on it.
   fn external_runs_before_host(
     &self,
     host: ChunkIdx,
@@ -763,7 +734,7 @@ impl<'a> HostSearch<'a> {
         frames.pop();
         external_ran |= unknown_external.has_bit(chunk_idx);
       }
-      false
+      external_ran
     })
   }
 
@@ -786,131 +757,6 @@ impl<'a> HostSearch<'a> {
       candidates = self.reached_candidates(consumer, &candidates)?;
     }
     (!candidates.is_empty()).then_some(candidates)
-  }
-
-  /// The lazy consumer rule. It replaces condition 2 when no chunk passes condition 2. A consumer
-  /// that does not reach `H` can import `H` when each load of the consumer starts after `H`
-  /// completes. Then the added edge loads nothing and runs nothing: `H` already ran.
-  ///
-  /// The chunks that start after `H` completes are the largest set of chunks `X` with these
-  /// properties:
-  /// - `X` is not `H`, not a user entry and not an emitted chunk.
-  /// - Each static importer of `X` is in the set.
-  /// - Each chunk with an `import()` of `X` is `H` or is in the set.
-  ///
-  /// Proof, by induction over the start of each evaluation whose root is in the set: the root is
-  /// not an entry, so an `import()` in a chunk `D` starts the evaluation. If `D` is `H`, the target
-  /// of the `import()` starts in a later job than the code of `H`: a promise job in ESM output,
-  /// `Promise.resolve().then()` in CJS output. If `D` is in the set, `D` started after `H`
-  /// completed. A chunk of the set is part of only these evaluations, because its static importers
-  /// are in the set too.
-  ///
-  /// The proof also holds when `D` only reaches `H`, but the rule does not accept that case. Then
-  /// `H` is not the chunk that loads the consumer, and `cjs_reexport_barrel_namespace_routing`
-  /// asserts that such a lazy route does not import `H`.
-  ///
-  /// The proof needs three more facts:
-  /// - No chunk that `H` reaches can wait (see `chunk_can_wait`). Then each cycle that contains `H`
-  ///   is in the static closure of `H`, and no module in that closure waits. So `H` completes
-  ///   before the end of each job that runs code of `H`, also when `H` is in a chunk cycle. A
-  ///   module that waits can keep a cycle that contains `H` unfinished after the code of `H` ran.
-  ///   ESM then makes each new importer of `H` wait for that cycle, and the cycle can pass through
-  ///   an external module that imports a user entry.
-  /// - No module throws during its evaluation. If `H` throws after an `import()`, the lazy
-  ///   consumer now fails with the error of `H`.
-  /// - The entries and the `import()` edges show each load of a chunk.
-  fn select_with_lazy_consumers(
-    &self,
-    stage: &GenerateStage<'_>,
-    chunk_graph: &ChunkGraph,
-    links: &CrossChunkLinkState,
-    consumers: &FxHashSet<ChunkIdx>,
-    forbidden: &IndexBitSet<ChunkIdx>,
-    hosts: impl Fn(&IndexBitSet<ChunkIdx>) -> Vec<ChunkIdx>,
-  ) -> Option<ChunkIdx> {
-    // Dev mode also loads chunks through the dev runtime. Precondition 6 rejects dev builds too,
-    // because the HMR plugin changes the runtime, but this rule must not depend on that fact.
-    if stage.options.is_dev_mode_enabled() {
-      return None;
-    }
-    // An `import()` of a chunk that is not live hides a load.
-    let dynamic_importees = &links.index_cross_chunk_dynamic_imports;
-    if self.nodes.index_of_one().any(|importer| {
-      dynamic_importees[importer].iter().any(|&importee| !self.nodes.has_bit(importee))
-    }) {
-      return None;
-    }
-    let entries = self.entry_chunks(stage, chunk_graph);
-    // An entry loads each chunk that it reaches, so these chunks are never in the set. `H` must
-    // then be a static dependency of each consumer among them: condition 2 for these consumers.
-    let eager = self.walk(entries.iter().copied(), true);
-    let minimal = consumers
-      .iter()
-      .copied()
-      .filter(|&consumer| eager.has_bit(consumer) && !forbidden.has_bit(consumer));
-    let candidates = self.common_dependencies(minimal)?;
-    let reaches_wait = self.walk(
-      self
-        .nodes
-        .index_of_one()
-        .filter(|&chunk_idx| stage.chunk_can_wait(chunk_graph, links, chunk_idx)),
-      false,
-    );
-    hosts(&candidates).into_iter().filter(|&host| !reaches_wait.has_bit(host)).find(|&host| {
-      let reaches_host = self.walk([host], false);
-      let before_host = self.start_before_host(&entries, host, dynamic_importees);
-      consumers.iter().all(|&consumer| {
-        consumer == host || reaches_host.has_bit(consumer) || !before_host.has_bit(consumer)
-      })
-    })
-  }
-
-  /// The chunks that code outside the bundle can load: the user entries, the emitted chunks, and
-  /// the chunks that hold the module of one of them.
-  fn entry_chunks(&self, stage: &GenerateStage<'_>, chunk_graph: &ChunkGraph) -> Vec<ChunkIdx> {
-    let mut entries = self
-      .nodes
-      .index_of_one()
-      .filter(|chunk_idx| {
-        matches!(
-          chunk_graph.chunk_table[*chunk_idx].kind,
-          ChunkKind::EntryPoint { meta, .. }
-            if meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk)
-        ) || chunk_graph.chunk_idx_to_reference_ids.contains_key(chunk_idx)
-      })
-      .collect::<Vec<_>>();
-    for (&module_idx, entry_points) in &stage.link_output.entries {
-      if entry_points.iter().any(|entry| !matches!(entry.kind, EntryPointKind::DynamicImport)) {
-        entries.extend(chunk_graph.entry_module_to_entry_chunk.get(&module_idx).copied());
-        entries.extend(chunk_graph.module_to_chunk[module_idx]);
-      }
-    }
-    entries.retain(|&chunk_idx| self.nodes.has_bit(chunk_idx));
-    entries
-  }
-
-  /// The chunks that can start before `host` completes: the complement of the set of the lazy
-  /// consumer rule. A walk from the entries and `host` follows the static imports of each chunk,
-  /// and the `import()` targets of each chunk other than `host`.
-  fn start_before_host(
-    &self,
-    entries: &[ChunkIdx],
-    host: ChunkIdx,
-    dynamic_importees: &IndexVec<ChunkIdx, FxIndexSet<ChunkIdx>>,
-  ) -> IndexBitSet<ChunkIdx> {
-    let mut seen = IndexBitSet::new(self.importers.len());
-    let mut stack = entries.iter().copied().chain([host]).collect::<Vec<_>>();
-    while let Some(chunk_idx) = stack.pop() {
-      if seen.has_bit(chunk_idx) {
-        continue;
-      }
-      seen.set_bit(chunk_idx);
-      stack.extend(self.importees(chunk_idx));
-      if chunk_idx != host {
-        stack.extend(dynamic_importees[chunk_idx].iter().copied());
-      }
-    }
-    seen
   }
 
   /// The candidates that a walk from the importees of `consumer` reaches. Returns `None` when it

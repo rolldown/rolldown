@@ -1,0 +1,64 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## d.js
+
+```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+// d.js
+console.log("d", Object.keys(/* @__PURE__ */ __exportAll({ z: () => 1 })).join());
+
+```
+
+## h.js
+
+```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+// h.js
+console.log("h", Object.keys(/* @__PURE__ */ __exportAll({ q: () => 1 })).join());
+globalThis.lazy = import("./d.js").then(() => "loaded", (error) => error.message);
+throw new Error("host failed");
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as t };
+
+```
+
+# Variant: strict-on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### d.js
+
+```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+// d.js
+console.log("d", Object.keys(/* @__PURE__ */ __exportAll({ z: () => 1 })).join());
+
+```
+
+### h.js
+
+```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+// h.js
+console.log("h", Object.keys(/* @__PURE__ */ __exportAll({ q: () => 1 })).join());
+globalThis.lazy = import("./d.js").then(() => "loaded", (error) => error.message);
+throw new Error("host failed");
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as t };
+
+```

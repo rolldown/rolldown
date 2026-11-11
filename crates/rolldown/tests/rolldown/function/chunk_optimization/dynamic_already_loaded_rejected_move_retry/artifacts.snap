@@ -1,0 +1,61 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dynamic-leaf.js
+
+```js
+import { r as leaf } from "./shared.js";
+// dynamic-leaf.js
+const value = leaf();
+export { value };
+
+```
+
+## dynamic-middle.js
+
+```js
+import { n as middle } from "./shared.js";
+// dynamic-middle.js
+const value = middle();
+export { value };
+
+```
+
+## main1.js
+
+```js
+import { t as shared } from "./shared.js";
+// main1.js
+const value = shared();
+const loadMiddle = () => import("./dynamic-middle.js");
+const loadLeaf = () => import("./dynamic-leaf.js");
+export { loadLeaf, loadMiddle, value };
+
+```
+
+## main2.js
+
+```js
+import { t as shared } from "./shared.js";
+// main2.js
+const value = shared();
+const loadMiddle = () => import("./dynamic-middle.js");
+const loadLeaf = () => import("./dynamic-leaf.js");
+export { loadLeaf, loadMiddle, value };
+
+```
+
+## shared.js
+
+```js
+// leaf.js
+const leaf = () => "leaf";
+// middle.js
+const middle = () => `middle ${leaf()}`;
+// shared.js
+const shared = () => `shared ${middle()}`;
+export { middle as n, leaf as r, shared as t };
+
+```

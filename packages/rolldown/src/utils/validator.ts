@@ -1205,6 +1205,10 @@ const CliOptionsSchema = v.strictObject({
     v.optional(v.union([v.literal('bundle'), v.literal('native')])),
     v.description('How to load the config file (bundle, native)'),
   ),
+  silent: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Suppress the final report output when bundling is finished'),
+  ),
   ...InputCliOptionsSchema.entries,
   ...OutputCliOptionsSchema.entries,
 });

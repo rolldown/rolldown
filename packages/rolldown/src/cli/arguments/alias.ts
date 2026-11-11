@@ -9,6 +9,7 @@ export interface CliOptions extends InputCliOptions, OutputCliOptions {
   watch?: boolean;
   environment?: string | string[];
   configLoader?: ConfigLoader;
+  silent?: boolean;
 }
 
 interface OptionConfig {
@@ -89,5 +90,8 @@ export const alias: Partial<Record<keyof CliOptions, OptionConfig>> = {
   },
   moduleTypes: {
     hint: 'types',
+  },
+  silent: {
+    description: 'Suppress the final report output when bundling is finished',
   },
 };

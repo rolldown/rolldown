@@ -1658,6 +1658,8 @@ export declare class BindingMagicString {
   get filename(): string | null
   get indentExclusionRanges(): Array<Array<number>> | Array<number> | null
   get ignoreList(): boolean
+  /** The `hires` option of this instance, or `null` when it is not set. */
+  get hires(): boolean | 'boundary' | null
   get offset(): number
   set offset(offset: number)
   replace(from: string, to: string): this
@@ -2632,6 +2634,13 @@ export interface BindingMagicStringOptions {
   offset?: number
   indentExclusionRanges?: Array<Array<number>> | Array<number>
   ignoreList?: boolean
+  /**
+   * The resolution of the sourcemaps generated from this instance: `true`, `false` or
+   * `"boundary"`. It applies to the map that Rolldown generates when a hook returns this
+   * instance without a `map`, and to `generateMap()` without `hires`. When it is not set,
+   * Rolldown uses `"boundary"` and `generateMap()` uses `false`.
+   */
+  hires?: boolean | 'boundary'
 }
 
 export type BindingMakeAbsoluteExternalsRelative =

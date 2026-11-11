@@ -48,7 +48,7 @@ For each `(importer, importee, rec.kind)`:
 
 | `rec.kind`                 | `importee.exports_kind` | Effect                                                                                |
 | -------------------------- | ----------------------- | ------------------------------------------------------------------------------------- |
-| `Import`                   | `None` (non-lazy)       | Promote to `Esm`.                                                                     |
+| `Import`                   | `None` (non-lazy)       | Promote to `Esm`, unless a `Require` or no-split `DynamicImport` also loads it.       |
 | `Import`                   | `Esm` / `CommonJs`      | No-op. (CJS-imported-by-ESM is wrapping work handled in `wrap_modules`.)              |
 | `Require`                  | `Esm`                   | Mark importee `WrapKind::Esm` (to satisfy `require()` of an ESM module).              |
 | `Require`                  | `CommonJs`              | Mark importee `WrapKind::Cjs`.                                                        |
@@ -59,6 +59,8 @@ For each `(importer, importee, rec.kind)`:
 | `DynamicImport` (no split) | `None`                  | Mark `WrapKind::Cjs` and promote to `CommonJs`.                                       |
 | `AtImport` / `UrlImport`   | —                       | `unreachable!` — see §"Why CSS import kinds are `unreachable!`".                      |
 | `NewUrl` / `HotAccept`     | —                       | No-op (asset reference / HMR metadata, not a module-shape signal).                    |
+
+A module with `ExportsKind::None` that is loaded both by `Import` and by `Require` (or no-split `DynamicImport`) becomes `CommonJs`, as in esbuild. A pre-pass promotes every such module before the walk, so the `Import` arm sees `CommonJs` and does nothing. Without it, the result would depend on which importer the walk visits first. The walk follows module-table order, which follows load completion and differs between builds.
 
 After processing all import records, the importer is itself wrapped as CJS when:
 

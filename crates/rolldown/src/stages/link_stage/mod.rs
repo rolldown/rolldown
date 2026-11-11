@@ -39,6 +39,7 @@ mod cross_module_optimization;
 mod determine_module_exports_kind;
 mod generate_lazy_export;
 mod patch_module_dependencies;
+mod prune_constant_branches;
 mod reference_needed_symbols;
 mod refine_stmt_side_effects;
 mod sort_modules;
@@ -289,6 +290,7 @@ impl<'a> LinkStage<'a> {
     // `reference_needed_symbols` derives import flags from them.
     self.recompute_analyzed_side_effects();
     self.reference_needed_symbols();
+    self.prune_constant_branches();
     self.include_statements(&unreachable_import_expression_node_ids);
     self.check_lazy_barrel_uncertain_bindings();
     self.patch_module_dependencies();

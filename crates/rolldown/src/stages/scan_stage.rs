@@ -216,8 +216,11 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
           match msg {
             SourceMapGenMsg::MagicString(v) => {
               let (module_idx, plugin_idx, id, magic_string) = *v;
+              // A line-level map loses every column and name behind it once the chain is
+              // composed, so generate one that keeps the word boundaries.
               let generated_sourcemap = magic_string.source_map(string_wizard::SourceMapOptions {
                 source: id.as_str().into(),
+                hires: string_wizard::Hires::Boundary,
                 ..Default::default()
               });
               map

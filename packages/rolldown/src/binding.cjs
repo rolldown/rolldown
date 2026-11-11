@@ -328,6 +328,20 @@ function requireNative() {
           loadErrors.push(e)
         }
       }
+    } else if (process.arch === 'ia32') {
+      if (isMusl()) {
+        try {
+          return require('./rolldown-binding.linux-ia32-musl.node')
+        } catch (e) {
+          loadErrors.push(e)
+        }
+      } else {
+        try {
+          return require('./rolldown-binding.linux-ia32-gnu.node')
+        } catch (e) {
+          loadErrors.push(e)
+        }
+      }
     } else if (process.arch === 'arm64') {
       if (isMusl()) {
         try {

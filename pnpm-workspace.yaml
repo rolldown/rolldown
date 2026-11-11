@@ -142,6 +142,7 @@ minimumReleaseAgeExclude:
   - '@napi-rs/wasm-runtime'
   - '@emnapi/*'
   - emnapi
+  - vitepress-plugin-group-icons@1.8.2
 
 # avoid accidentally relying on `NODE_PATH` env var
 extendNodePath: false

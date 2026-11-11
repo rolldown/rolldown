@@ -541,8 +541,8 @@ fn normalize_code_splitting(
 /// The result of [`normalize_binding_options`].
 pub struct NormalizedBindingOptions {
   pub config: BundlerConfig,
-  /// The JS functions of the options. The owner of `config` releases them at the end of its close
-  /// operation. See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
+  /// The JS functions of the options. The owner of `config` releases them at the end of its close.
+  /// See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
   pub callbacks: JsCallbackRelease,
 }
 

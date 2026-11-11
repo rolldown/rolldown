@@ -1,13 +1,15 @@
 // Each case does these steps:
-// 1. It builds with a plugin whose `closeBundle` captures a marker.
+// 1. It runs a build with a plugin whose `closeBundle` captures a marker.
 // 2. It closes the build.
 // 3. It returns. After that, the script keeps only a `WeakRef` to the marker.
 // After GC, the script checks that no marker is alive.
 //
-// Each case except the control makes JS hold a native object that keeps the options alive
-// (cached or kept options, a kept plugin context, a kept build object). Before the fix, the JS
-// functions of the options were GC roots. So that native object made a cycle that the GC could
-// not free (https://github.com/rolldown/rolldown/issues/11444).
+// The JS functions of the options are GC roots until the close releases them. The internal
+// callbacks among them capture `pluginContextData`, which reaches each plugin. So when a plugin
+// keeps a native object that keeps the options alive, for example its plugin context, the result
+// is a cycle (https://github.com/rolldown/rolldown/issues/11444). The case "plugin keeps its plugin
+// context" makes this cycle. The other cases check that nothing else keeps the plugins of a closed
+// build alive.
 // See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -43,7 +45,7 @@ function markerPlugin(marker, hooks = {}) {
   return plugin;
 }
 
-// The plugin keeps the options that a hook gets. Then JS holds a `BindingNormalizedOptions`.
+// The plugin keeps the options object that a hook gets.
 function keepOptions(hookName, marker, hooks = {}) {
   const plugin = markerPlugin(marker, hooks);
   plugin[hookName] = function (options) {
@@ -251,8 +253,9 @@ const cases = {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rolldown-close-gc-'));
     try {
       const plugin = keepOptions('buildStart', marker);
-      // A plugin that holds the engine keeps the engine and its plugin hooks alive. The release
-      // does not cover plugin hooks. So this hook gets the engine only through a WeakRef.
+      // If a plugin keeps a strong reference to the engine, the engine and its plugin hooks stay
+      // alive. The release does not cover plugin hooks. So this hook gets the engine only through
+      // a WeakRef.
       let engineRef;
       plugin.closeBundle = async () => {
         const running = engineRef.deref();

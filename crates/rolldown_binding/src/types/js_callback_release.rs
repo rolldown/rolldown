@@ -1,10 +1,10 @@
 //! JS functions of the bundler options, and their release at close.
 //!
 //! A [`JsCallback`] keeps a strong napi reference to its JS function, and that reference is a GC
-//! root. JS can hold native objects (`BindingNormalizedOptions`, `BindingPluginContext`) that keep
-//! the options alive. When a JS function of the options reaches one of those objects, the result
-//! is a cycle that the GC cannot free. So the owner of the options releases all of their JS
-//! functions when it closes.
+//! root. JS can keep a native object that keeps the options alive, for example the
+//! `BindingPluginContext` of `this` in a hook. When a JS function of the options reaches such an
+//! object, the result is a cycle that the GC cannot free. So the owner of the options releases all
+//! of their JS functions when it closes.
 //! See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
 
 use std::{
@@ -29,10 +29,10 @@ use super::js_callback::{
 /// This type has no call methods. Give it to [`JsCallbackRelease::track`] to get a
 /// [`ReleasableJsCallback`] that you can call. Use this type, not [`JsCallback`], for each function
 /// field of the bundler options (the input and output options of `BindingBundlerOptions`). Then the
-/// compiler stops a call of a function that the close of the owner cannot release.
+/// compiler gives an error for each call of a function that the close of the owner cannot release.
 pub type UntrackedJsCallback<Args = (), Ret = ()> = Untracked<JsCallback<Args, Ret>>;
 
-/// Shortcut for an [`UntrackedJsCallback`] whose JS function can return a `Promise`.
+/// A shortcut for an [`UntrackedJsCallback`] whose JS function can return a `Promise`.
 pub type UntrackedMaybeAsyncJsCallback<Args = (), Ret = ()> =
   UntrackedJsCallback<Args, Either<Promise<Ret>, Ret>>;
 
@@ -76,8 +76,9 @@ impl<T: FromNapiValue> FromNapiValue for Untracked<T> {
 /// See [`ReleasableJsCallback`].
 ///
 /// Each call reads the slot one time, at call time, and keeps its own clone of the callback until
-/// the call ends. So a call that starts before the release ends normally. A call after the release
-/// gives an error. The exception is `call_and_forget`: after the release, it does nothing.
+/// the call ends. So when a call starts before the release, the call ends normally. A call after
+/// the release gives an error. The exception is `call_and_forget`: after the release, it does
+/// nothing.
 pub struct Releasable<T> {
   slot: Arc<RwLock<Option<T>>>,
 }
@@ -185,8 +186,8 @@ impl<T: Send + Sync> ReleaseSlot for RwLock<Option<T>> {
 /// to its [`SharedJsCallbackRelease`], which calls [`Self::release_all`].
 ///
 /// The group keeps only weak references to the slots. So it does not keep a callback alive after
-/// the options that use it are gone, for example when an option error stops a build before it
-/// starts.
+/// the options that use the callback are gone. An example is an option error that stops a build
+/// before the build starts.
 #[derive(Clone, Default)]
 pub struct JsCallbackRelease {
   slots: Arc<Mutex<Vec<Weak<dyn ReleaseSlot>>>>,
@@ -215,7 +216,7 @@ impl JsCallbackRelease {
   }
 }
 
-/// Call it while you hold no lock, because the release drops the JS functions.
+/// Do not call it while you have a lock guard, because the release drops the JS functions.
 fn release_groups(groups: Vec<JsCallbackRelease>) {
   for group in &groups {
     group.release_all();
@@ -225,15 +226,16 @@ fn release_groups(groups: Vec<JsCallbackRelease>) {
 /// The release of all groups of one owner.
 ///
 /// The owner shares it with the operations that its close does not wait for. Each such operation
-/// takes a [`JsCallbackReleaseHold`] while it runs. These operations are:
+/// keeps a [`JsCallbackReleaseHold`] while it runs. These operations are:
 ///
 /// - a build that started before `bundle.close()`,
 /// - the close of a watcher event result,
 /// - each dev engine `close()`.
 ///
 /// The close of the owner requests the release at its end. The release runs when the last hold
-/// drops. Only [`Self::request_release`] starts a release. A drop of the owner or of a holder never
-/// starts it, because a GC can drop them while the owner still runs.
+/// drops. Only [`Self::request_release`] starts a release. The GC can drop the owner, a watcher
+/// event or an event result while Rust still uses the JS functions. So the drop of these objects
+/// never starts a release.
 #[derive(Clone)]
 pub struct SharedJsCallbackRelease {
   state: Arc<Mutex<SharedReleaseState>>,
@@ -274,8 +276,8 @@ impl SharedJsCallbackRelease {
   }
 
   /// Keeps the JS functions until the hold drops. Take the hold in the synchronous part of the
-  /// operation, before it spawns its future, so that a release request that comes later waits for
-  /// it. A hold that you take after the release does nothing.
+  /// operation, before it spawns its future. Then a later release request waits for the hold. A
+  /// hold that you take after the release does nothing.
   pub fn hold(&self) -> JsCallbackReleaseHold {
     self.lock().holds += 1;
     JsCallbackReleaseHold(self.clone())
@@ -322,7 +324,7 @@ impl Drop for JsCallbackReleaseHold {
 }
 
 /// Requests the release of a [`SharedJsCallbackRelease`] when it drops. Keep it as the first local
-/// of the close future of the owner, so that the request runs on each exit path.
+/// of the close future of the owner. Then the request runs on each exit path.
 pub struct RequestReleaseOnDrop(pub SharedJsCallbackRelease);
 
 impl Drop for RequestReleaseOnDrop {

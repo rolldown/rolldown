@@ -205,9 +205,9 @@ test.skipIf(isWasiTest)(
   },
 );
 
-// The dev engine keeps its plugin driver after close, so a kept plugin context can still reach an
-// option function. After `bundle.close()` the same call fails earlier, because that close drops the
-// plugin driver.
+// The dev engine keeps its plugin driver after its close, so a kept plugin context can still reach
+// an option function. After `bundle.close()`, the same call fails earlier, because that close drops
+// the plugin driver.
 test.skipIf(isWasiTest)(
   'a kept plugin context gets a clear error when an option function runs after close',
   { timeout: TEST_TIMEOUT },

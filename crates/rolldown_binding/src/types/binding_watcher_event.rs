@@ -24,8 +24,8 @@ pub struct BindingWatcherEvent {
 }
 
 impl BindingWatcherEvent {
-  /// The result of a `BUNDLE_END` or `ERROR` event takes a hold on `option_callbacks` while it
-  /// closes.
+  /// The result of a `BUNDLE_END` or `ERROR` event keeps a hold on `option_callbacks` while the
+  /// result closes.
   pub fn from_watch_event(event: WatchEvent, option_callbacks: SharedJsCallbackRelease) -> Self {
     Self { inner: WatcherEventInner::BundleEvent(event, option_callbacks) }
   }

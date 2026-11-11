@@ -10,8 +10,8 @@ import { expect, test } from 'vitest';
 const input = path.join(import.meta.dirname, 'main.js');
 
 // https://github.com/rolldown/rolldown/issues/11444
-// The script runs one build for each case, so it gets more time than the default 20 s. The execa
-// limit is lower, so a hung script fails with its own output.
+// The script runs one build for each case, so this test gets more time than the default 20 s.
+// The execa limit is lower, so a hung script fails with its own output.
 test('a closed build does not keep its plugins alive', { timeout: 60_000 }, async () => {
   await execa(
     process.execPath,
@@ -20,7 +20,7 @@ test('a closed build does not keep its plugins alive', { timeout: 60_000 }, asyn
   );
 });
 
-test('option getters read for the first time after close', async () => {
+test('option getters still work after close', async () => {
   let inputOptions: NormalizedInputOptions | undefined;
   let outputOptions: NormalizedOutputOptions | undefined;
   const entryFileNames = () => 'entry.js';

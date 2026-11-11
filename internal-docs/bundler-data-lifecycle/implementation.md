@@ -249,11 +249,11 @@ This is what fixed the bug where `this.getModuleInfo()` returned nothing on the 
 GC root → option function → PluginContextData → options object → BindingNormalizedOptions → Arc<options> → GC root
 ```
 
-That loop would keep every plugin of a build alive, even after `close()` (rolldown/rolldown#11444). With plain values there is no loop: once the build object and the per-hook native objects are garbage, the options drop, the threadsafe functions are released, and a later GC frees the plugins.
+That loop would keep every plugin of a build alive (rolldown/rolldown#11444). The release at `close()` removes the root of the loop (see [JS callback lifetime](#js-callback-lifetime)). But a build that the user never closes would keep its plugins alive forever. With plain values there is no loop: once the build object and the per-hook native objects are garbage, the options drop, the threadsafe functions are released, and a later GC frees the plugins.
 
 **Test:** `packages/rolldown/tests/build-api/normalized-options.test.ts` checks the rule with a heap query.
 
-**Exception:** a plugin that keeps `this` keeps the plugins of its build alive. The plugin context owns the options too (`NativePluginContextImpl.options` in `crates/rolldown_plugin/src/plugin_context/native_plugin_context.rs`), so the same loop runs through it.
+**Exception:** a plugin that keeps `this` keeps the plugins of its build alive until the build closes. The plugin context owns the options too (`NativePluginContextImpl.options` in `crates/rolldown_plugin/src/plugin_context/native_plugin_context.rs`), so the same loop runs through it. The release at `close()` removes the root of this loop too.
 
 ## Bugs Found by This Separation
 
@@ -267,38 +267,37 @@ That loop would keep every plugin of a build alive, even after `close()` (rolldo
 
 ## JS callback lifetime
 
-The JS functions of the bundler options live only while their owner is open. The close of the owner releases them.
+Rust keeps the JS functions of the bundler options only while their owner is open. The close of the owner releases them.
 
 ### The problem
 
-- A JS function of the bundler options reaches Rust as a `JsCallback`. Examples are `external`, `onLog`, the file name functions, and the internal `deferSyncScanData` and `invalidateJsSideCache`. A `JsCallback` holds a strong napi reference to its JS function. V8 treats that reference as a GC root ("Global handles" in a heap snapshot).
-- JS can hold native objects that keep the options alive:
-  - `BindingNormalizedOptions`: the `options` argument of `buildStart` and `renderStart`, and the cache in `PluginContextData`.
-  - `BindingPluginContext`: `this` in a hook. It reaches the options through `NativePluginContextImpl.options` and `FileEmitter.options`.
-- A JS function of the options can reach one of those objects. Then a cycle goes through native code: root → JS function → … → JS wrapper → `Arc<NormalizedBundlerOptions>` → `JsCallback` → root. The GC cannot see the native edge, so it never frees the cycle. The internal callbacks capture `pluginContextData`, so one empty `buildStart` hook was enough to keep every plugin of the build alive (rolldown/rolldown#11444).
+- A JS function of the bundler options reaches Rust as a `JsCallback`. Examples are `external`, `onLog`, the file name functions, and the internal `deferSyncScanData` and `invalidateJsSideCache`. A `JsCallback` keeps a strong napi reference to its JS function. V8 treats that reference as a GC root ("Global handles" in a heap snapshot).
+- JS can keep a native object that keeps the options alive. An example is the `BindingPluginContext` of `this` in a hook. It reaches the options through `NativePluginContextImpl.options` and `FileEmitter.options`. The options objects that hooks get keep no native object (see [Normalized options objects](#normalized-options-objects)).
+- A JS function of the options can reach such a native object. Then a cycle goes through native code: root → JS function → … → JS wrapper → `Arc<NormalizedBundlerOptions>` → `JsCallback` → root. The GC cannot see the native edge, so it never frees the cycle.
+- The internal callbacks capture `pluginContextData`, which reaches every plugin of the build. So without the release, every plugin of the build stays alive when one plugin keeps `this`. Before rolldown/rolldown#11623, one empty `buildStart` hook had the same effect (rolldown/rolldown#11444).
 
 ### The rule
 
 - Each function field of the bundler options uses `UntrackedJsCallback` (`crates/rolldown_binding/src/types/js_callback_release.rs`). That type has no call methods. `normalize_binding_options` creates one group (`JsCallbackRelease`) for each call. It gives each callback to `JsCallbackRelease::track`, which returns a `ReleasableJsCallback`. A `ReleasableJsCallback` keeps the callback in a shared slot, so that the release can take it out.
-- The owner of the options gives each group to its `SharedJsCallbackRelease`. The close of the owner requests the release at its end. Each operation that the close does not wait for takes a hold while it runs. The release runs when the last hold drops. After the release, the options hold no strong reference to a JS function, so the cycle has no root.
+- The owner of the options gives each group to its `SharedJsCallbackRelease`. The close of the owner requests the release at its end. Each operation that the close does not wait for keeps a hold while it runs. The release runs when the last hold drops. After the release, the options keep no strong reference to a JS function, so the cycle has no root.
 
 | Owner                           | Release point                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BindingBundler` (`rolldown()`) | At the end of the `close()` future, after `closeBundle` and `report_plugin_timings()`. The release also runs when one of them fails. It can run later: `close()` does not wait for a `generate()`, `write()` or `scan()` that started before it. Each of them takes a hold until it ends.                                                                                                                                                                  |
+| `BindingBundler` (`rolldown()`) | At the end of the `close()` future, after `closeBundle` and `report_plugin_timings()`. The release also runs when one of them fails. It can run later: `close()` does not wait for a `generate()`, `write()` or `scan()` that started before it. Each of them keeps a hold until it ends.                                                                                                                                                                  |
 | `BindingWatcher` (`watch()`)    | At the end of `close()`, or later when an event result close still runs. Each `Watcher::close` call waits for the watcher to stop. It does not wait for an event result close (`BindingWatcherBundler::close`) that runs `closeBundle`. That close takes a hold on the `SharedJsCallbackRelease` of the watcher. The release waits for the last hold. The event result close does not request the release, because the next rebuilds use the same options. |
 | `BindingDevEngine` (`dev()`)    | At the end of the first `close()`. A repeated `DevEngine::close` returns at once. This is also true inside a `closeBundle` hook of the first close. So each `close()` call takes a hold on the `SharedJsCallbackRelease` of the engine. The release waits for the last hold.                                                                                                                                                                               |
 
 - The group keeps weak references to the slots. So it does not keep a callback alive after its options are gone.
-- A call that starts before the release keeps its own clone and ends normally. `onLog` still queues its call before it returns (rolldown/rolldown#11374).
+- When a call starts before the release, the call keeps its own clone and ends normally. `onLog` still uses `invoke_eager`, which queues the JS call before it returns (rolldown/rolldown#11374).
 - A call after the release gives an error with the message "A JS function of the bundler options was called after the bundle closed." A call of `watch.onInvalidate` after the release does nothing.
   - Example: a plugin keeps `this`, and the options have an `external` function. After a dev engine close, the plugin calls `this.resolve()`. Then `this.resolve()` rejects, and the `cause` of its error has the release message.
   - After `bundle.close()`, the same call fails before it gets to the option function, because that close drops the plugin driver.
-- Option getters still work after close. The native options stay readable. The close releases only the JS functions.
+- Option getters still work after the close, because each options object reads all its values in its constructor (see [Normalized options objects](#normalized-options-objects)).
 - The compiler checks only the fields that use `UntrackedJsCallback`. So a new function option must use it too. Nothing checks a new field that uses `JsCallback` directly, because plugin hooks and the watcher event listener also use `JsCallback`.
 
 ### Limits
 
-- An event result close that starts after the release of its watcher runs `closeBundle` with released functions. This happens only for the result of an earlier build. The watcher close already runs `closeBundle` for the last build.
+- When an event result close starts after the release of its watcher, that close runs `closeBundle` with released functions. This happens only for the result of an earlier build. The watcher close already runs `closeBundle` for the last build.
 - Some close calls return before other work ends:
   - `bundle.close()` during a build that started before it.
   - `watcher.close()` during an event result close.
@@ -306,16 +305,19 @@ The JS functions of the bundler options live only while their owner is open. The
 
   The release does not make them wait, because a wait deadlocks when a `closeBundle` hook awaits that close. Only the release waits for that work.
 
-- Plugin hooks are not in the group. `PluginDriver` holds them, and the plugin context holds the driver only as `Weak`. `ClassicBundler::close()` takes `last_bundle_handle`, so a plugin that keeps the build object does not keep the driver after close. But a plugin that keeps the dev engine object makes a cycle: the JS dev engine holds the native engine, and the native engine holds the plugin driver.
-- A build that the user never closes never releases its callbacks. If JS keeps a native object of its options (for example the `options` argument of `buildStart`), the GC never frees its plugins. Without such an object, the GC frees the callbacks with the build object.
+- Plugin hooks are not in the group. `PluginDriver` keeps them, and the plugin context keeps the driver only as a `Weak` pointer. `ClassicBundler::close()` removes `last_bundle_handle`, so a plugin that keeps the build object does not keep the driver after the close. But a plugin that keeps the dev engine object makes a cycle. The JS dev engine keeps the native engine, and the native engine keeps the plugin driver.
+- A build that the user never closes never releases its callbacks. If JS keeps a native object that keeps its options alive, the GC never frees its plugins. An example of such an object is the `BindingPluginContext` of `this` in a hook. Without such an object, the GC frees the callbacks with the build object.
 - The watcher event listener is not an option callback, so the release does not cover it.
 
 ### Tests
 
-- `packages/rolldown/tests/build-api/close-bundle-gc.mjs`, run by `close-callbacks.test.ts`: GC cases for each kind of owner and callback.
-- `packages/rolldown/tests/build-api/close-callbacks.test.ts`: a build that runs during `bundle.close()`, and option getters after close.
+- `packages/rolldown/tests/build-api/close-bundle-gc.mjs`: GC cases for each kind of owner and callback. `close-callbacks.test.ts` runs this script.
+- `packages/rolldown/tests/build-api/close-callbacks.test.ts`: a build that runs during `bundle.close()`, and option getters after the close.
 - `packages/rolldown/tests/bundler-timings-options.test.ts`: the release order. The close calls `pluginTimings` and the native `onLog` before the release.
-- `packages/rolldown/tests/dev/dev-close.test.ts`: a `closeBundle` hook that awaits `engine.close()`, a second dev engine close while `closeBundle` runs, and the error after the release.
+- `packages/rolldown/tests/dev/dev-close.test.ts`:
+  - a `closeBundle` hook that awaits `engine.close()`,
+  - a second dev engine close while `closeBundle` runs,
+  - the error after the release.
 - `packages/rolldown/tests/watch/watch.test.ts`: a rebuild after an event result close, and a watcher close while an event result close runs `closeBundle`.
 
 ## Unresolved Questions

@@ -23,7 +23,7 @@ use crate::utils::{
 /// Bridges watcher events from Rust to JS via a `ThreadsafeFunction`.
 struct NapiWatcherEventHandler {
   listener: Arc<MaybeAsyncJsCallback<FnArgs<(BindingWatcherEvent,)>>>,
-  /// Event results take a hold on it while they close.
+  /// Each event result keeps a hold on this value while the result closes.
   option_callbacks: SharedJsCallbackRelease,
 }
 
@@ -63,7 +63,7 @@ pub struct BindingWatcher {
   /// The JS functions of the options of each task. `close` requests their release. The close of
   /// one event result (`BindingWatcherBundler::close`) does not request it, because the next
   /// rebuilds still use the functions. But an event result close that still runs delays the
-  /// release until it ends.
+  /// release until that close ends.
   /// See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
   option_callbacks: SharedJsCallbackRelease,
 }

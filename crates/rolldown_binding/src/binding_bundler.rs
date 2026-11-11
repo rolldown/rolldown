@@ -29,8 +29,8 @@ pub struct BindingBundler {
   /// clocks it is judged against are summed over all of them too.
   bundle_handles: Vec<BundleHandle>,
   /// The JS functions of the options of each build. `close` requests their release. Each
-  /// `generate`, `write` and `scan` holds them until it ends, because `close` does not wait for a
-  /// build that started before it.
+  /// `generate`, `write` and `scan` keeps a hold until it ends, because `close` does not wait for
+  /// a build that started before it.
   /// See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
   option_callbacks: SharedJsCallbackRelease,
 }

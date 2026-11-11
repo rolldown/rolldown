@@ -24,9 +24,12 @@ jobs:
   benchmark-node:
     name: Benchmark Node
     if: >
-      github.event_name != 'pull_request' ||
-      (github.event.pull_request.draft != true &&
-      !contains(github.event.pull_request.labels.*.name, 'graphite: merge-when-ready'))
+      github.repository == 'rolldown/rolldown' &&
+      (
+        github.event_name != 'pull_request' ||
+        (github.event.pull_request.draft != true &&
+        !contains(github.event.pull_request.labels.*.name, 'graphite: merge-when-ready'))
+      )
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write

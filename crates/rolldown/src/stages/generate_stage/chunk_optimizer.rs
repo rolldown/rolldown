@@ -1469,11 +1469,11 @@ impl GenerateStage<'_> {
   /// chunk that it imports itself still evaluates after that chunk. The importers come from the
   /// predicted static import edges, which also have the imports that the walk does not reach.
   ///
-  /// An entry chunk keys on its entry module, so it does not move while it stays an entry chunk.
-  /// But `preserve_strict_entry_signatures` can later turn an entry chunk host into a common chunk
-  /// behind an entry facade, and nothing checks that host again. The debug assertion in
-  /// `compute_cross_chunk_links` checks the final layout in the test suite. The strict path models
-  /// the chunk `exec_order` in its order analysis, so it needs no check.
+  /// An entry chunk skips the runtime module in its key, so it does not move while it stays an
+  /// entry chunk. But `preserve_strict_entry_signatures` can later turn an entry chunk host into a
+  /// common chunk behind an entry facade, and nothing checks that host again. The debug assertion
+  /// in `compute_cross_chunk_links` checks the final layout in the test suite. The strict path
+  /// models the chunk `exec_order` in its order analysis, so it needs no check.
   /// See internal-docs/code-splitting/implementation.md#runtime-module-placement.
   fn runtime_host_keeps_evaluation_order(
     &self,

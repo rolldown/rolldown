@@ -1,4 +1,5 @@
 {
+  "_comment": "`group-h` must come before `group-c`, or `group-c` takes `h.cjs` as a dependency of `c1.js`. `h.cjs` needs the runtime, which goes into `group-h.js`, a chunk that `group-c.js` imports next to the merged `other.js` chunk and `group-b.js`. The debug check of the runtime host must sort these imports with the entry chunk key of `assign_chunk_exec_orders`, or it panics here.",
   "config": {
     "input": [
       {
@@ -19,6 +20,10 @@
         {
           "test": "b\\.js",
           "name": "group-b"
+        },
+        {
+          "test": "h\\.cjs",
+          "name": "group-h"
         },
         {
           "test": "c[12]\\.js",

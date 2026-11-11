@@ -107,7 +107,7 @@ let x;
 (function(_x) {
 	_x.y = /* @__PURE__ */ function(y) {
 		return y;
-	}({});
+	}(_x.y || {});
 })(x || (x = {}));
 (function(_x2) {
 	_x2.z = y;

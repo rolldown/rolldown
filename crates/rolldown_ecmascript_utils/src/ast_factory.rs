@@ -112,6 +112,26 @@ pub trait ExpressionFactoryExt<'ast> {
     Expression::CallExpression(call_expr.into_in(builder.allocator()))
   }
 
+  /// `Promise.resolve()`
+  fn new_promise_resolve<B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
+    builder: &B,
+  ) -> Expression<'ast> {
+    Expression::new_call_expression(
+      SPAN,
+      Expression::new_static_member_expression(
+        SPAN,
+        Expression::new_identifier(SPAN, "Promise", builder),
+        IdentifierName::new(SPAN, "resolve", builder),
+        false,
+        builder,
+      ),
+      None,
+      [],
+      false,
+      builder,
+    )
+  }
+
   /// `Promise.resolve().then(() => <expr>)`
   fn new_promise_resolve_then<B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
     expr: Expression<'ast>,
@@ -121,20 +141,7 @@ pub trait ExpressionFactoryExt<'ast> {
       SPAN,
       Expression::new_static_member_expression(
         SPAN,
-        Expression::new_call_expression(
-          SPAN,
-          Expression::new_static_member_expression(
-            SPAN,
-            Expression::new_identifier(SPAN, "Promise", builder),
-            IdentifierName::new(SPAN, "resolve", builder),
-            false,
-            builder,
-          ),
-          None,
-          [],
-          false,
-          builder,
-        ),
+        Expression::new_promise_resolve(builder),
         IdentifierName::new(SPAN, "then", builder),
         false,
         builder,
@@ -481,9 +488,11 @@ pub trait CallExpressionFactoryExt<'ast> {
     CallExpression::new(SPAN, re_export_fn_ref, None, args, false, builder)
   }
 
-  /// `<expr>.then(n => n.<property_name>)`
+  /// `<expr>.then(n => n.<property_name>)`, or with `module`
+  /// `<expr>.then(n => (n = <module>, n.<property_name>))`
   fn new_then_extract_property<B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
     expr: Expression<'ast>,
+    module: Option<Expression<'ast>>,
     property_name: &str,
     builder: &B,
   ) -> allocator::Box<'ast, CallExpression<'ast>> {
@@ -496,12 +505,14 @@ pub trait CallExpressionFactoryExt<'ast> {
       false,
       builder,
     );
-    then_with_arrow_callback(expr, member, builder)
+    then_with_arrow_callback(expr, module, allocator::Vec::from_value_in(member, builder), builder)
   }
 
-  /// `<expr>.then(n => (n.<wrapper_name>()..., n.<namespace_name>))`
+  /// `<expr>.then(n => (n.<wrapper_name>()..., n.<namespace_name>))`, or with `module`
+  /// `<expr>.then(n => (n = <module>, n.<wrapper_name>()..., n.<namespace_name>))`
   fn new_then_call_esm_wrappers_with_namespace<B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
     expr: Expression<'ast>,
+    module: Option<Expression<'ast>>,
     wrapper_names: &[&str],
     namespace_name: &str,
     builder: &B,
@@ -533,21 +544,15 @@ pub trait CallExpressionFactoryExt<'ast> {
       false,
       builder,
     );
-    if expressions.is_empty() {
-      return then_with_arrow_callback(expr, namespace_member, builder);
-    }
     expressions.push(namespace_member);
-    let sequence = Expression::new_parenthesized_expression(
-      SPAN,
-      Expression::new_sequence_expression(SPAN, expressions, builder),
-      builder,
-    );
-    then_with_arrow_callback(expr, sequence, builder)
+    then_with_arrow_callback(expr, module, expressions, builder)
   }
 
-  /// `<expr>.then(n => __toESM(n.<property_name>()))`
+  /// `<expr>.then(n => __toESM(n.<property_name>()))`, or with `module`
+  /// `<expr>.then(n => (n = <module>, __toESM(n.<property_name>())))`
   fn new_then_call_cjs_wrapper_with_to_esm<B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
     expr: Expression<'ast>,
+    module: Option<Expression<'ast>>,
     property_name: &str,
     to_esm_fn_expr: Expression<'ast>,
     node_mode: bool,
@@ -563,7 +568,12 @@ pub trait CallExpressionFactoryExt<'ast> {
     let wrapper_call = Expression::new_call_expression(SPAN, member_expr, None, [], false, builder);
     let to_esm_call =
       Expression::new_to_esm_wrapper(to_esm_fn_expr, wrapper_call, node_mode, builder);
-    then_with_arrow_callback(expr, to_esm_call, builder)
+    then_with_arrow_callback(
+      expr,
+      module,
+      allocator::Vec::from_value_in(to_esm_call, builder),
+      builder,
+    )
   }
 }
 
@@ -923,12 +933,33 @@ pub trait StatementFactoryExt<'ast> {
 
 impl<'ast> StatementFactoryExt<'ast> for Statement<'ast> {}
 
-/// `<expr>.then(n => <return_expr>)`
+/// `<expr>.then(n => (<expressions>))`, or `<expr>.then(n => (n = <module>, <expressions>))`
+/// when the callback must first replace what the promise resolved to.
 fn then_with_arrow_callback<'ast, B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
   expr: Expression<'ast>,
-  return_expr: Expression<'ast>,
+  module: Option<Expression<'ast>>,
+  mut expressions: allocator::Vec<'ast, Expression<'ast>>,
   builder: &B,
 ) -> allocator::Box<'ast, CallExpression<'ast>> {
+  if let Some(module) = module {
+    let assignment = Expression::new_assignment_expression(
+      SPAN,
+      AssignmentOperator::Assign,
+      AssignmentTarget::new_assignment_target_identifier(SPAN, "n", builder),
+      module,
+      builder,
+    );
+    expressions.insert(0, assignment);
+  }
+  let return_expr = if expressions.len() == 1 {
+    expressions.pop().expect("one expression")
+  } else {
+    Expression::new_parenthesized_expression(
+      SPAN,
+      Expression::new_sequence_expression(SPAN, expressions, builder),
+      builder,
+    )
+  };
   let arrow_fn = Argument::new_arrow_function_expression(
     SPAN,
     false,

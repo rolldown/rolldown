@@ -1,0 +1,20 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "x",
+        "import": "./x.js"
+      },
+      {
+        "name": "y",
+        "import": "./y.js"
+      }
+    ],
+    "preserveEntrySignatures": "false",
+    "codeSplitting": {
+      "experimentalInlineCommonChunks": {
+        "maxSize": 4096
+      }
+    }
+  }
+}

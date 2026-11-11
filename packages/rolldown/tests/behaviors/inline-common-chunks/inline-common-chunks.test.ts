@@ -560,6 +560,133 @@ describe('experimentalInlineCommonChunks', () => {
     },
   );
 
+  describe('a module one file imports and another loads with import()', () => {
+    // `x.js` imports `m.js` and `y.js` loads it with `import()`, so the chunk `import()` creates
+    // for `m.js` is merged into the common chunk that holds it.
+    const m = `
+      globalThis.__log('M body');
+      export let count = 0;
+      export const marker = { tag: String(globalThis.__tag ?? 'm') };
+      export function bump() {
+        count += 1;
+        return this === undefined ? 'this:undefined' : 'this:bound';
+      }
+    `;
+    const x = `
+      import { bump, count, marker } from './m.js';
+      globalThis.__log('X', bump(), count, __id(marker));
+    `;
+    const y = `
+      globalThis.__chain = import('./m.js').then((ns) => {
+        globalThis.__log(
+          'Y', ns.bump(), ns.count, __id(ns.marker), Object.getPrototypeOf(ns),
+          ns[Symbol.toStringTag], Object.isExtensible(ns), Object.keys(ns).join(),
+        );
+      });
+    `;
+
+    /** The file `y.js` loads with `import()`. */
+    const loadedFile = (built: Built) => {
+      const fileName = chunkContaining(built, 'y.js')!.dynamicImports[0];
+      return built.chunks.find((chunk) => chunk.fileName === fileName)!;
+    };
+
+    test.each([false, true])(
+      'importers carry it and import() loads a file that only registers it, minify=%s',
+      async (minify) => {
+        const pair = await differential(`dynamic-import-target-${minify}`, {
+          input: { x: './x.js', y: './y.js' },
+          modules: { './m.js': m, './x.js': x, './y.js': y },
+          output: { minify },
+        });
+        for (const roots of [
+          ['x.js', 'y.js'],
+          ['y.js', 'x.js'],
+        ]) {
+          expect(runRoots(pair.on, roots)).toEqual(runRoots(pair.off, roots));
+        }
+        const runtimeFile = runtimeChunk(pair.on)!.fileName;
+        expect(chunkContaining(pair.on, 'x.js')!.imports).toEqual([runtimeFile]);
+        const loaded = loadedFile(pair.on);
+        expect(loaded.moduleIds).toEqual(['./m.js']);
+        expect(loaded.exports).toEqual([]);
+        expect(loaded.imports).toEqual([runtimeFile]);
+        expect(loadedFile(pair.off).fileName).toBe(loaded.fileName);
+        if (!minify) {
+          expect(carriers(pair.on).map((chunk) => chunk.fileName)).toEqual(
+            expect.arrayContaining([chunkContaining(pair.on, 'x.js')!.fileName, loaded.fileName]),
+          );
+          expect(recordIds(pair.on)).toHaveLength(1);
+        }
+      },
+    );
+
+    test('the loaded module reads another record, which the loaded file registers too', async () => {
+      const pair = await differential('dynamic-import-target-reads-record', {
+        input: { x: './x.js', y: './y.js', z: './z.js' },
+        modules: {
+          './dep.js': `globalThis.__log('dep body'); export const label = String(globalThis.__label ?? 'dep');`,
+          './m.js': `import { label } from './dep.js';\n${m}\nexport { label };`,
+          './x.js': x,
+          './y.js': y,
+          './z.js': `import { label } from './dep.js'; globalThis.__log('Z', label);`,
+        },
+      });
+      for (const roots of [
+        ['y.js', 'z.js', 'x.js'],
+        ['z.js', 'y.js', 'x.js'],
+        ['x.js', 'y.js'],
+      ]) {
+        expect(runRoots(pair.on, roots)).toEqual(runRoots(pair.off, roots));
+      }
+      expect(loadedFile(pair.on).moduleIds).toEqual(['./dep.js', './m.js']);
+    });
+
+    test('an import() inside an inlined chunk loads the same file from every carrier', async () => {
+      const pair = await differential('dynamic-import-target-from-record', {
+        input: { a: './a.js', b: './b.js', x: './x.js' },
+        modules: {
+          './m.js': m,
+          './x.js': x,
+          './loader.js': `export function load() { return import('./m.js'); }`,
+          './a.js': `
+            import { load } from './loader.js';
+            globalThis.__chain = load().then((ns) => globalThis.__log('A', ns.bump(), __id(ns.marker)));
+          `,
+          './b.js': `
+            import { load } from './loader.js';
+            globalThis.__chain = load().then((ns) => globalThis.__log('B', ns.bump(), __id(ns.marker)));
+          `,
+        },
+      });
+      for (const roots of [
+        ['a.js', 'x.js', 'b.js'],
+        ['x.js', 'b.js', 'a.js'],
+      ]) {
+        expect(runRoots(pair.on, roots)).toEqual(runRoots(pair.off, roots));
+      }
+      expectInlined(pair, 'loader.js');
+    });
+
+    test('a CommonJS module keeps one module.exports', async () => {
+      const pair = await differential('dynamic-import-target-cjs', {
+        input: { x: './x.js', y: './y.js' },
+        modules: {
+          './counter.cjs': `globalThis.__log('counter body'); exports.count = 0; exports.bump = () => ++exports.count;`,
+          './x.js': `import counter from './counter.cjs'; globalThis.__log('X', counter.bump(), __id(counter));`,
+          './y.js': `globalThis.__chain = import('./counter.cjs').then((ns) => globalThis.__log('Y', ns.default.bump(), __id(ns.default), ns.count));`,
+        },
+      });
+      for (const roots of [
+        ['x.js', 'y.js'],
+        ['y.js', 'x.js'],
+      ]) {
+        expect(runRoots(pair.on, roots)).toEqual(runRoots(pair.off, roots));
+      }
+      expect(loadedFile(pair.on).exports).toEqual([]);
+    });
+  });
+
   test('nested lazy loads inherit a registration through a static dependency', async () => {
     const pair = await differential('nested-async-registration', {
       input: { main: './main.js' },

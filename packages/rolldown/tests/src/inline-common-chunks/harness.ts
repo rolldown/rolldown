@@ -205,10 +205,31 @@ function runtimeLocalNames(built: Built, chunk: OutputChunk): Record<string, str
   return locals;
 }
 
+/**
+ * The files an `import()` loads for a record: its call site reads the record from the registry as
+ * soon as the file has loaded.
+ */
+function recordLoaders(built: Built): Set<string> {
+  const loaders = new Set<string>();
+  for (const chunk of built.chunks) {
+    const require = runtimeLocalNames(built, chunk).__share_require;
+    if (!require) continue;
+    const pattern = new RegExp(
+      `import\\("([^"]+)"\\)\\.then\\(\\(n\\) => \\(n = ${escapeRegExp(require)}\\(`,
+      'g',
+    );
+    for (const match of chunk.code.matchAll(pattern)) {
+      loaders.add(path.posix.join(path.posix.dirname(chunk.fileName), match[1]));
+    }
+  }
+  return loaders;
+}
+
 /** Checks local registration order and the runtime import on unminified output. */
 export function assertRegistrationOrder(built: Built): void {
   const runtime = runtimeChunk(built);
   const allIds = new Set(recordIds(built));
+  const loaders = recordLoaders(built);
   const events = (chunk: OutputChunk): { kind: 'share' | 'require'; id: string }[] => {
     const locals = runtimeLocalNames(built, chunk);
     const share = locals.__share;
@@ -224,13 +245,15 @@ export function assertRegistrationOrder(built: Built): void {
   for (const chunk of built.chunks) {
     if (chunk === runtime) continue;
     const own = events(chunk);
-    if (!own.some((event) => event.kind === 'require')) {
+    // A file that reads no record registers nothing, unless an `import()` loads it for a record.
+    if (!own.some((event) => event.kind === 'require') && !loaders.has(chunk.fileName)) {
       expect(
         registrationIds(built, chunk),
         `${chunk.fileName} registers nothing and reads nothing`,
       ).toEqual([]);
       continue;
     }
+    if (own.length === 0) continue;
     const firstImport = chunk.code.match(/^import [^\n]*?from "([^"]+)";/m);
     expect(firstImport?.[1], `${chunk.fileName} imports the runtime chunk first`).toBe(
       `./${runtime!.fileName}`,

@@ -22,7 +22,7 @@
     "vitepress": "^2.0.0-alpha.21",
     "vitepress-plugin-feedback-tracker": "^0.2.0-alpha.1",
     "vitepress-plugin-graphviz": "^0.1.0",
-    "vitepress-plugin-group-icons": "^1.7.5",
+    "vitepress-plugin-group-icons": "^1.8.2",
     "vitepress-plugin-llms": "^1.14.0",
     "vitepress-plugin-og": "^0.0.5",
     "void": "~1.6.2",

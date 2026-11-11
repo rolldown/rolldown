@@ -1604,8 +1604,11 @@ export declare class BindingDecodedMap {
    * Each line is an array of segments, where each segment is [generatedColumn, sourceIndex, originalLine, originalColumn, nameIndex?].
    */
   get mappings(): Array<Array<Array<number>>>
-  /** The list of source indices that should be excluded from debugging. */
-  get x_google_ignoreList(): Array<number> | null
+  /**
+   * The list of source indices that should be excluded from debugging, or `undefined` when
+   * the map has none. `magic-string` leaves the field out in that case.
+   */
+  get x_google_ignoreList(): Array<number> | undefined
 }
 
 export declare class BindingDevEngine {
@@ -1660,6 +1663,8 @@ export declare class BindingMagicString {
   get filename(): string | null
   get indentExclusionRanges(): Array<Array<number>> | Array<number> | null
   get ignoreList(): boolean
+  /** The `hires` option of this instance, or `null` when it is not set. */
+  get hires(): boolean | 'boundary' | null
   get offset(): number
   set offset(offset: number)
   replace(from: string, to: string): this
@@ -1881,8 +1886,11 @@ export declare class BindingSourceMap {
   get names(): Array<string>
   /** The VLQ-encoded mappings string. */
   get mappings(): string
-  /** The list of source indices that should be excluded from debugging. */
-  get x_google_ignoreList(): Array<number> | null
+  /**
+   * The list of source indices that should be excluded from debugging, or `undefined` when
+   * the map has none. `magic-string` leaves the field out in that case.
+   */
+  get x_google_ignoreList(): Array<number> | undefined
   /** Returns the source map as a JSON string. */
   toString(): string
   /** Returns the source map as a base64-encoded data URL. */
@@ -2631,6 +2639,13 @@ export interface BindingMagicStringOptions {
   offset?: number
   indentExclusionRanges?: Array<Array<number>> | Array<number>
   ignoreList?: boolean
+  /**
+   * The resolution of the sourcemaps generated from this instance: `true`, `false` or
+   * `"boundary"`. It applies to the map that Rolldown generates when a hook returns this
+   * instance without a `map`, and to `generateMap()` without `hires`. When it is not set,
+   * Rolldown uses `"boundary"` and `generateMap()` uses `false`.
+   */
+  hires?: boolean | 'boundary'
 }
 
 export type BindingMakeAbsoluteExternalsRelative =
@@ -2963,7 +2978,7 @@ export interface BindingTransformSourceMap {
   mappings: string
   names: Array<string>
   sourceRoot?: string
-  sources: Array<string | undefined | null>
+  sources: Array<string | null>
   sourcesContent?: Array<string>
   version: number
   ignoreList?: Array<number>

@@ -22,6 +22,7 @@ pub struct BindingTransformSourceMap {
   pub mappings: String,
   pub names: Vec<String>,
   pub source_root: Option<String>,
+  #[napi(ts_type = "Array<string | null>")]
   pub sources: Vec<Option<String>>,
   pub sources_content: Option<Vec<String>>,
   pub version: u8,

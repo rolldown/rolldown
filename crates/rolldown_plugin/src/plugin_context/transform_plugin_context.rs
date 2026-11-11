@@ -103,7 +103,7 @@ impl TransformPluginContext {
       Ok(Some(
         magic_string
           .source_map(SourceMapOptions {
-            hires: string_wizard::Hires::Boundary,
+            hires: magic_string.hires().unwrap_or(string_wizard::Hires::Boundary),
             ..SourceMapOptions::default()
           })
           .to_json_string(),

@@ -774,21 +774,26 @@ impl BindingMagicString<'_> {
   pub fn append_right<'s>(
     &'s mut self,
     this: This<'s>,
-    index: u32,
+    index: i64,
     content: String,
   ) -> napi::Result<This<'s>> {
     self.ensure_live()?;
+    // Indices are offset-adjusted user-space indices and may be negative (a match
+    // before `offset`, or negative-from-the-end like magic-string). Apply offset,
+    // then handle negative indices (matching remove/reset pattern).
+    let index = self.utf16_to_byte_mapper.normalize_index(self.apply_offset_i64(index));
     // Match original magic-string: out-of-bound indices fall through to append_outro
-    let index = self.apply_offset_u32(index)?;
-    self.reject_surrogate_split_of_edited_chunk(index)?;
-    match self.utf16_to_byte_mapper.utf16_to_byte(index) {
-      Some(byte_index) => {
+    if index >= 0 {
+      // indices are non-negative here and files are < 4GB
+      #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+      let index = index as u32;
+      self.reject_surrogate_split_of_edited_chunk(index)?;
+      if let Some(byte_index) = self.utf16_to_byte_mapper.utf16_to_byte(index) {
         self.inner.append_right(byte_index, content).map_err(napi::Error::from_reason)?;
-      }
-      None => {
-        self.inner.append(content);
+        return Ok(this);
       }
     }
+    self.inner.append(content);
     Ok(this)
   }
 
@@ -796,19 +801,27 @@ impl BindingMagicString<'_> {
   pub fn overwrite<'s>(
     &'s mut self,
     this: This<'s>,
-    start: u32,
-    end: u32,
+    start: i64,
+    end: i64,
     content: String,
     options: Option<BindingOverwriteOptions>,
   ) -> napi::Result<This<'s>> {
     self.ensure_live()?;
-    let start_byte = self
-      .utf16_to_byte_mapper
-      .utf16_to_byte(self.apply_offset_u32(start)?)
+    // Indices are offset-adjusted user-space indices and may be negative (a match
+    // before `offset`, or negative-from-the-end like magic-string). Apply offset,
+    // then handle negative indices (matching remove/reset pattern).
+    let start = self.utf16_to_byte_mapper.normalize_index(self.apply_offset_i64(start));
+    let end = self.utf16_to_byte_mapper.normalize_index(self.apply_offset_i64(end));
+    // indices are non-negative after normalize_index and files are < 4GB
+    #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+    let start_byte = (start >= 0)
+      .then(|| self.utf16_to_byte_mapper.utf16_to_byte(start as u32))
+      .flatten()
       .ok_or_else(|| napi::Error::from_reason("Invalid start character index"))?;
-    let end_byte = self
-      .utf16_to_byte_mapper
-      .utf16_to_byte(self.apply_offset_u32(end)?)
+    #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+    let end_byte = (end >= 0)
+      .then(|| self.utf16_to_byte_mapper.utf16_to_byte(end as u32))
+      .flatten()
       .ok_or_else(|| napi::Error::from_reason("Invalid end character index"))?;
     let (content_only, store_name) = options
       .map_or((false, false), |o| (o.content_only.unwrap_or(false), o.store_name.unwrap_or(false)));

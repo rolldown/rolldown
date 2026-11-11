@@ -37,7 +37,8 @@ export function bindingifyRenderStart(
 
 // Rolldown composes this map with the chunk's map and with the maps of later steps such as
 // minification. A line-level map (`hires: false`, the default of `generateMap`) would make
-// every token on a line resolve to that line's first mapping, so keep the word boundaries.
+// every token on a line resolve to that line's first mapping, so the default keeps the word
+// boundaries. The `hires` option of the MagicString overrides it.
 function generateSourcemap(
   magicString: RolldownMagicString,
   outputOptions: NormalizedOutputOptions,
@@ -45,7 +46,7 @@ function generateSourcemap(
   if (!outputOptions.sourcemap) {
     return undefined;
   }
-  const generatedMap = magicString.generateMap({ hires: 'boundary' });
+  const generatedMap = magicString.generateMap({ hires: magicString.hires ?? 'boundary' });
   return bindingifySourcemap({
     file: generatedMap.file,
     mappings: generatedMap.mappings,

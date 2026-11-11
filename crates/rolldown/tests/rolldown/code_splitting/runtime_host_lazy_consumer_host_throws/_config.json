@@ -1,0 +1,12 @@
+{
+  "config": {
+    "input": [{ "name": "h", "import": "h.js" }]
+  },
+  "configVariants": [
+    {
+      "_configName": "strict-on-demand",
+      "strictExecutionOrder": true,
+      "onDemandWrapping": true
+    }
+  ]
+}

@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+import { n as __esmMin } from "./rolldown-runtime.js";
 // node_modules/split-barrel/cn.js
 var cn;
 function init_cn() {
@@ -26,15 +26,23 @@ function init_main() {
 	})))();
 }
 init_main();
-export { loadA, loadB, __esmMin as n, __toESM as r, __commonJSMin as t };
+export { loadA, loadB };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __toESM as r, __commonJSMin as t };
 
 ```
 
 ## route-a.js
 
 ```js
+import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
 import "./split-barrel.js";
-import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./main.js";
 // node_modules/split-barrel/a.cjs
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("cjs-a");
@@ -63,8 +71,8 @@ export { value };
 ## route-b.js
 
 ```js
+import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
 import "./split-barrel.js";
-import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./main.js";
 // node_modules/split-barrel/b.cjs
 var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("cjs-b");
@@ -93,7 +101,7 @@ export { value };
 ## split-barrel.js
 
 ```js
-import { n as __esmMin } from "./main.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
 // node_modules/split-barrel/index.js
 function init_split_barrel() {
 	return (init_split_barrel = __esmMin((() => {})))();
@@ -109,7 +117,7 @@ export { init_split_barrel as t };
 ### main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+import { n as __esmMin } from "./rolldown-runtime.js";
 // node_modules/split-barrel/cn.js
 var cn;
 function init_cn() {
@@ -129,15 +137,23 @@ function init_main() {
 	})))();
 }
 init_main();
-export { loadA, loadB, __esmMin as n, __toESM as r, __commonJSMin as t };
+export { loadA, loadB };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __toESM as r, __commonJSMin as t };
 
 ```
 
 ### route-a.js
 
 ```js
+import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
 import "./split-barrel.js";
-import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./main.js";
 // node_modules/split-barrel/a.cjs
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("cjs-a");
@@ -166,8 +182,8 @@ export { value };
 ### route-b.js
 
 ```js
+import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
 import "./split-barrel.js";
-import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./main.js";
 // node_modules/split-barrel/b.cjs
 var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("cjs-b");
@@ -196,7 +212,7 @@ export { value };
 ### split-barrel.js
 
 ```js
-import { n as __esmMin } from "./main.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
 // node_modules/split-barrel/index.js
 function init_split_barrel() {
 	return (init_split_barrel = __esmMin((() => {})))();

@@ -91,6 +91,7 @@ impl BundleHandle {
       }
     };
     self.plugin_driver.clear();
+    crate::utils::build_activity::notify_memory_released();
     result
   }
 }

@@ -59,6 +59,7 @@ The main cross-pass side tables keyed by `NodeId` are:
 - `EcmaView::this_expr_replace_map` - top-level `this` expressions that should become `exports` or `undefined`.
 - `MemberExprRef::node_id` and `LinkingMetadata::resolved_member_expr_refs` - namespace/member-expression resolution from scan through link to finalization.
 - `EcmaView::namespace_in_checks` and `LinkingMetadata::folded_namespace_in_checks` - `'key' in ns` expressions on namespace imports, and the results the finalizer prints for the ones resolved at link time.
+- `LinkingMetadata::constant_branches` - link-stage branch decisions consumed before finalization visits children, ensuring dependency pruning and emitted code agree even without minification. See [constant branches](../constant-branches/implementation.md).
 - `DynamicImportExprInfo::node_id` records the dynamic `import()` node within its own module; `EntryPoint::related_stmt_infos` then carries `(ModuleIdx, …, NodeId, …)` tuples so a dynamic-import entry can be traced back across the module graph.
 - Cross-module optimization state, which comes in two shapes: a per-module set of side-effect-free call expressions (bare `NodeId`, only consumed within the same module's traversal) and a graph-wide set of unreachable dynamic imports keyed by `(ModuleIdx, NodeId)` because it aggregates records from every module.
 

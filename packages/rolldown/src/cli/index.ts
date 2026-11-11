@@ -1,7 +1,6 @@
 import process from 'node:process';
 import { version } from '../../package.json';
 import { parseCliArguments } from './arguments';
-import { bundleWithCliOptions, bundleWithConfig } from './commands/bundle';
 import { showHelp } from './commands/help';
 import { logger } from './logger';
 import { checkNodeVersion } from './version-check';
@@ -39,6 +38,9 @@ async function main() {
     logger.log(`rolldown v${version}`);
     return;
   }
+
+  // Binding-backed modules read runtime environment variables during module initialization.
+  const { bundleWithCliOptions, bundleWithConfig } = await import('./commands/bundle');
 
   if (cliOptions.config || cliOptions.config === '') {
     await bundleWithConfig(cliOptions.config, cliOptions, rawArgs);

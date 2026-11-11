@@ -19,6 +19,16 @@ pub trait BindingPatternExt<'ast> {
     builder: &B,
   ) -> AssignmentTarget<'ast>;
 
+  /// Converts a pattern in a position that allows a default: an array element, or a property
+  /// value that is not shorthand. The spec calls both positions `BindingElement`.
+  ///
+  /// Use this method, not `into_assignment_target`, for these positions. `AssignmentTarget` cannot
+  /// hold a default, but `AssignmentTargetMaybeDefault` can.
+  fn into_assignment_target_maybe_default<B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
+    self,
+    builder: &B,
+  ) -> AssignmentTargetMaybeDefault<'ast>;
+
   fn into_expression<B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
     self,
     builder: &B,
@@ -49,7 +59,7 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
         obj_pat.properties.take_in(&builder.allocator()).into_iter().for_each(|binding_prop| {
           properties.push(binding_prop.into_assignment_target_property(builder));
         });
-        AssignmentTarget::new_object_assignment_target(SPAN, properties, rest, builder)
+        AssignmentTarget::new_object_assignment_target(obj_pat.span, properties, rest, builder)
       }
       // Turn `var [a, ,c = 1] = ...` to `[a, ,c = 1] = ...`
       BindingPattern::ArrayPattern(mut arr_pat) => {
@@ -62,24 +72,37 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
         });
         let mut elements = oxc::allocator::Vec::with_capacity_in(arr_pat.elements.len(), builder);
         arr_pat.elements.take_in(&builder.allocator()).into_iter().for_each(|binding_pat| {
-          elements.push(binding_pat.map(|binding_pat| match binding_pat {
-            BindingPattern::AssignmentPattern(assign_pat) => {
-              let assign_pat = assign_pat.unbox();
-              AssignmentTargetMaybeDefault::new_assignment_target_with_default(
-                assign_pat.span,
-                assign_pat.left.into_assignment_target(builder),
-                assign_pat.right,
-                builder,
-              )
-            }
-            _ => AssignmentTargetMaybeDefault::from(binding_pat.into_assignment_target(builder)),
-          }));
+          elements.push(binding_pat.map(|pat| pat.into_assignment_target_maybe_default(builder)));
         });
         AssignmentTarget::new_array_assignment_target(arr_pat.span, elements, rest, builder)
       }
+      // `a = 1` in `[a = 1]` or `{ k: a = 1 }`. Only an array element or a property value can
+      // have a default, and `into_assignment_target_maybe_default` converts those. A declarator
+      // id (`[a]` in `var [a] = x`) or a rest argument (`...a`) cannot have a default.
       BindingPattern::AssignmentPattern(_) => {
-        unreachable!("`BindingPattern::AssignmentPattern` should be pre-handled in above")
+        unreachable!(
+          "`AssignmentTarget` cannot hold a default. Convert array elements and property values with `into_assignment_target_maybe_default`"
+        )
       }
+    }
+  }
+
+  fn into_assignment_target_maybe_default<B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
+    self,
+    builder: &B,
+  ) -> AssignmentTargetMaybeDefault<'ast> {
+    match self {
+      // Turn `[a = 1]` or `{ k: a = 1 }` into the same assignment element with its default
+      BindingPattern::AssignmentPattern(assign_pat) => {
+        let assign_pat = assign_pat.unbox();
+        AssignmentTargetMaybeDefault::new_assignment_target_with_default(
+          assign_pat.span,
+          assign_pat.left.into_assignment_target(builder),
+          assign_pat.right,
+          builder,
+        )
+      }
+      pattern => AssignmentTargetMaybeDefault::from(pattern.into_assignment_target(builder)),
     }
   }
 
@@ -144,11 +167,14 @@ mod tests {
   use oxc::{
     allocator::{Allocator, CloneIn},
     ast::{
-      ast::{ArrayExpressionElement, Expression, ObjectPropertyKind, Statement},
+      ast::{
+        ArrayExpressionElement, AssignmentOperator, Expression, ObjectPropertyKind, Statement,
+      },
       builder::AstBuilder,
     },
+    codegen::Codegen,
     parser::Parser,
-    span::SourceType,
+    span::{SPAN, SourceType},
   };
 
   use crate::BindingPatternExt as _;
@@ -202,5 +228,53 @@ mod tests {
       unreachable!("expected a spread element")
     };
     assert!(matches!(spread.argument, Expression::ArrayExpression(_)));
+  }
+
+  /// Changes `const <pattern> = <init>;` into `<pattern> = <init>;` with `into_assignment_target`,
+  /// as the finalizer does for a wrapped module, and prints the result.
+  fn declaration_into_assignment(source: &str) -> String {
+    let allocator = Allocator::default();
+    let builder = AstBuilder::new(&allocator);
+    let mut program = Parser::new(&allocator, source, SourceType::default()).parse().program;
+    let Some(Statement::VariableDeclaration(decl)) = program.body.first() else {
+      unreachable!("expected a variable declaration")
+    };
+    let declarator = &decl.declarations[0];
+    let left = declarator.id.clone_in(&allocator).into_assignment_target(&builder);
+    let right = declarator.init.clone_in(&allocator).expect("expected an initializer");
+    let assignment = Expression::new_assignment_expression(
+      SPAN,
+      AssignmentOperator::Assign,
+      left,
+      right,
+      &builder,
+    );
+    program.body.clear();
+    program.body.push(Statement::new_expression_statement(SPAN, assignment, &builder));
+    Codegen::new().build(&program).code
+  }
+
+  #[test]
+  fn assignment_target_keeps_every_default() {
+    let cases = [
+      // A default on an array element in a property value (#11552)
+      ("const { b: [y = 1] } = x;", "({b: [y = 1]} = x);\n"),
+      ("const { b: [, y = 1] } = x;", "({b: [, y = 1]} = x);\n"),
+      ("const [{ b: [y = 1] }] = x;", "[{b: [y = 1]}] = x;\n"),
+      ("const { [k]: [y = 1] } = x;", "({[k]: [y = 1]} = x);\n"),
+      ("const { b: [y = 1] = [] } = x;", "({b: [y = 1] = []} = x);\n"),
+      // Each position that allows a default, with a default
+      (
+        "const { a = 1, b: c = 2, d: { e = 3 }, f: [g = 4, ...h], ...i } = x;",
+        "({a = 1, b: c = 2, d: {e = 3}, f: [g = 4, ...h], ...i} = x);\n",
+      ),
+      (
+        "const [a = 1, [b = 2], { c = 3 }, ...[d = 4]] = x;",
+        "[a = 1, [b = 2], {c = 3}, ...[d = 4]] = x;\n",
+      ),
+    ];
+    for (source, expected) in cases {
+      assert_eq!(declaration_into_assignment(source), expected, "source: {source}");
+    }
   }
 }

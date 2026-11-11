@@ -1,0 +1,12 @@
+{
+  "config": {
+    "treeshake": false,
+    "moduleTypes": {
+      ".txt": "asset"
+    },
+    "experimental": {
+      "resolveNewUrlToAsset": true
+    }
+  },
+  "configVariants": [{ "treeshake": true, "_snapshot": false }]
+}

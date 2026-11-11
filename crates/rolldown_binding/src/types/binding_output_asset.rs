@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use napi::bindgen_prelude::ObjectFinalize;
 use napi::{
   Env,
   bindgen_prelude::{BufferSlice, JsObjectValue, Object},
@@ -11,15 +12,17 @@ use crate::{
   types::external_memory_status::ExternalMemoryStatus,
 };
 
-#[napi]
+#[napi(custom_finalize)]
 pub struct BindingOutputAsset {
   inner: Option<Arc<rolldown_common::OutputAsset>>,
+  /// What V8 was told this object keeps alive.
+  external_bytes: i64,
 }
 
 #[napi]
 impl BindingOutputAsset {
   pub fn new(inner: Arc<rolldown_common::OutputAsset>) -> Self {
-    Self { inner: Some(inner) }
+    Self { inner: Some(inner), external_bytes: 0 }
   }
 
   fn try_get_inner(&self) -> napi::Result<&Arc<rolldown_common::OutputAsset>> {
@@ -30,8 +33,36 @@ impl BindingOutputAsset {
     })
   }
 
+  /// V8 cannot see this memory, so without this it feels no pressure to collect this object.
+  /// See internal-docs/memory-reclaim/implementation.md
   #[napi(enumerable = false)]
-  pub fn drop_inner(&mut self) -> ExternalMemoryStatus {
+  pub fn track_external_memory(&mut self, env: &Env) -> napi::Result<()> {
+    if self.external_bytes == 0
+      && let Some(inner) = &self.inner
+    {
+      let bytes = i64::try_from(inner.source.as_bytes().len()).unwrap_or(i64::MAX);
+      env.adjust_external_memory(bytes)?;
+      self.external_bytes = bytes;
+    }
+    Ok(())
+  }
+
+  fn untrack_external_memory(&mut self, env: &Env) -> napi::Result<()> {
+    if self.external_bytes != 0 {
+      env.adjust_external_memory(-self.external_bytes)?;
+      self.external_bytes = 0;
+    }
+    Ok(())
+  }
+
+  #[napi(enumerable = false)]
+  pub fn drop_inner(&mut self, env: &Env) -> napi::Result<ExternalMemoryStatus> {
+    self.untrack_external_memory(env)?;
+    crate::memory_reclaim::notify();
+    Ok(self.release_inner())
+  }
+
+  fn release_inner(&mut self) -> ExternalMemoryStatus {
     match self.inner.take() {
       None => ExternalMemoryStatus {
         freed: false,
@@ -114,5 +145,13 @@ impl From<JsOutputAsset> for rolldown_common::OutputAsset {
       filename: asset.filename.into(),
       source: asset.source.into(),
     }
+  }
+}
+
+impl ObjectFinalize for BindingOutputAsset {
+  fn finalize(mut self, env: Env) -> napi::Result<()> {
+    self.untrack_external_memory(&env)?;
+    crate::memory_reclaim::notify();
+    Ok(())
   }
 }

@@ -249,6 +249,15 @@ function transformToMutableRollupOutputAsset(
   });
 }
 
+/**
+ * The native side of an output is only freed when V8 collects its JS wrapper. Telling V8 how much
+ * memory that is keeps it from waiting forever on an almost empty JS heap.
+ */
+export function trackOutputExternalMemory(output: BindingOutputs): void {
+  for (const chunk of output.chunks) chunk.trackExternalMemory();
+  for (const asset of output.assets) asset.trackExternalMemory();
+}
+
 export function transformToRollupOutput(output: BindingOutputs): RolldownOutput {
   const { chunks, assets } = output;
   const transformed = {

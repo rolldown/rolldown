@@ -16,7 +16,10 @@ import { PluginDriver } from '../../plugin/plugin-driver';
 import { createBundlerOptions } from '../../utils/create-bundler-option';
 import { normalizeBindingResult, unwrapBindingResult } from '../../utils/error';
 import { normalizedStringOrRegex } from '../../utils/normalize-string-or-regex';
-import { transformToRollupOutput } from '../../utils/transform-to-rollup-output';
+import {
+  trackOutputExternalMemory,
+  transformToRollupOutput,
+} from '../../utils/transform-to-rollup-output';
 import type { DevOptions } from './dev-options';
 
 /**
@@ -97,6 +100,7 @@ export class DevEngine {
             userOnOutput(result);
             return;
           }
+          trackOutputExternalMemory(result);
           userOnOutput(transformToRollupOutput(result));
         }
       : undefined;
@@ -105,6 +109,7 @@ export class DevEngine {
     const bindingOnAdditionalAssets: BindingDevOptions['onAdditionalAssets'] =
       userOnAdditionalAssets
         ? function (output) {
+            trackOutputExternalMemory(output);
             userOnAdditionalAssets(transformToRollupOutput(output));
           }
         : undefined;

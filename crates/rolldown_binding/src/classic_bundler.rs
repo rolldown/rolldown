@@ -141,6 +141,7 @@ impl ClassicBundler {
           }
         }
       }
+      rolldown::notify_memory_released();
       if let Some(rx) = devtools_flush_rx {
         // Block on the writer-thread ack in a blocking task so we don't stall
         // a tokio worker. Bounded wait so a hung writer thread (e.g. stalled

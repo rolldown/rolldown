@@ -85,6 +85,8 @@ pub struct LinkStageOutput {
   pub star_reexport_records_by_imported_symbol:
     FxHashMap<SymbolRef, Vec<Vec<(ModuleIdx, rolldown_common::ImportRecordIdx)>>>,
   pub member_read_star_reexport_paths: Vec<MemberReadStarReexportPath>,
+  /// See `IncludeContext::kept_inlined_constant_reads`.
+  pub kept_inlined_constant_reads: FxHashSet<SymbolRef>,
   pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
   /// True if any module has enum member values to inline. Computed once to avoid
   /// repeated full module table scans.
@@ -121,6 +123,7 @@ pub struct LinkStage<'a> {
   pub star_reexport_records_by_imported_symbol:
     FxHashMap<SymbolRef, Vec<Vec<(ModuleIdx, rolldown_common::ImportRecordIdx)>>>,
   pub member_read_star_reexport_paths: Vec<MemberReadStarReexportPath>,
+  pub kept_inlined_constant_reads: FxHashSet<SymbolRef>,
   pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
@@ -218,7 +221,12 @@ impl<'a> LinkStage<'a> {
               // when code splitting is disabled (`codeSplitting: false`).
               //
               // HotAccept is an HMR-only edge that should be filtered out here.
-              ImportKind::DynamicImport | ImportKind::Require | ImportKind::HotAccept => None,
+              // NewUrl needs at most the emitted asset's filename; it never executes the target
+              // module. See internal-docs/plugin-asset-module/implementation.md.
+              ImportKind::DynamicImport
+              | ImportKind::Require
+              | ImportKind::HotAccept
+              | ImportKind::NewUrl => None,
               _ => rec.resolved_module,
             })
             .collect();
@@ -250,6 +258,7 @@ impl<'a> LinkStage<'a> {
       normal_symbol_exports_chain_map: FxHashMap::default(),
       star_reexport_records_by_imported_symbol: FxHashMap::default(),
       member_read_star_reexport_paths: Vec::new(),
+      kept_inlined_constant_reads: FxHashSet::default(),
       lazy_barrel_uncertain_bindings: Vec::new(),
       external_import_namespace_merger: FxHashMap::default(),
       overrode_preserve_entry_signature_map: scan_stage_output
@@ -312,6 +321,7 @@ impl<'a> LinkStage<'a> {
         normal_symbol_exports_chain_map: self.normal_symbol_exports_chain_map,
         star_reexport_records_by_imported_symbol: self.star_reexport_records_by_imported_symbol,
         member_read_star_reexport_paths: self.member_read_star_reexport_paths,
+        kept_inlined_constant_reads: self.kept_inlined_constant_reads,
         user_defined_entry_modules: self.user_defined_entry_modules,
         has_enum_inlining: self.has_enum_inlining,
       },

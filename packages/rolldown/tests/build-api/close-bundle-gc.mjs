@@ -7,9 +7,9 @@
 // The JS functions of the options are GC roots until the close releases them. The internal
 // callbacks among them capture `pluginContextData`, which reaches each plugin. So when a plugin
 // keeps a native object that keeps the options alive, for example its plugin context, the result
-// is a cycle (https://github.com/rolldown/rolldown/issues/11444). The case "plugin keeps its plugin
-// context" makes this cycle. The other cases check that nothing else keeps the plugins of a closed
-// build alive.
+// is a cycle (https://github.com/rolldown/rolldown/issues/11444). The cases that keep a plugin
+// context make this cycle for each owner and for input and output option functions. The other cases
+// keep no plugin context.
 // See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -54,6 +54,16 @@ function keepOptions(hookName, marker, hooks = {}) {
   return plugin;
 }
 
+// The plugin keeps `this` of a hook. That plugin context keeps the options alive, so the plugin
+// makes a cycle until the release.
+function keepContext(hookName, marker, hooks = {}) {
+  const plugin = markerPlugin(marker, hooks);
+  plugin[hookName] = function () {
+    plugin.context = this;
+  };
+  return plugin;
+}
+
 async function classic(inputOptions, outputOptions = {}, { generateCount = 1 } = {}) {
   const bundle = await rolldown({ input, logLevel: 'silent', ...inputOptions });
   try {
@@ -79,11 +89,7 @@ const cases = {
     await classic({ plugins: [keepOptions('buildStart', marker)] });
   },
   async 'plugin keeps its plugin context'(marker) {
-    const plugin = markerPlugin(marker);
-    plugin.buildStart = function () {
-      plugin.context = this;
-    };
-    await classic({ plugins: [plugin] });
+    await classic({ plugins: [keepContext('buildStart', marker)] });
   },
   async 'plugin keeps its build object'(marker) {
     const plugin = markerPlugin(marker);
@@ -96,48 +102,48 @@ const cases = {
     }
   },
   async 'external function captures the plugin'(marker) {
-    const plugin = keepOptions('buildStart', marker);
+    const plugin = keepContext('buildStart', marker);
     await classic({ plugins: [plugin], external: (id) => Boolean(plugin) && id === 'never' });
   },
   async 'onLog function captures the plugin'(marker) {
-    const plugin = keepOptions('buildStart', marker);
+    const plugin = keepContext('buildStart', marker);
     await classic({ plugins: [plugin], onLog: () => void plugin });
   },
   async 'banner function captures the plugin'(marker) {
-    const plugin = keepOptions('renderStart', marker);
+    const plugin = keepContext('renderStart', marker);
     await classic({ plugins: [plugin] }, { banner: () => (plugin ? '' : '') });
   },
   async 'entryFileNames function captures the plugin'(marker) {
-    const plugin = keepOptions('renderStart', marker);
+    const plugin = keepContext('renderStart', marker);
     await classic({ plugins: [plugin] }, { entryFileNames: () => (plugin ? '[name].js' : '') });
   },
   async 'code splitting group name function captures the plugin'(marker) {
-    const plugin = keepOptions('renderStart', marker);
+    const plugin = keepContext('renderStart', marker);
     await classic(
       { plugins: [plugin] },
       { codeSplitting: { groups: [{ name: () => (plugin ? 'group' : null) }] } },
     );
   },
   async 'code splitting group test function captures the plugin'(marker) {
-    const plugin = keepOptions('renderStart', marker);
+    const plugin = keepContext('renderStart', marker);
     await classic(
       { plugins: [plugin] },
       { codeSplitting: { groups: [{ name: 'group', test: () => Boolean(plugin) && false }] } },
     );
   },
   async 'two generate calls, one close'(marker) {
-    await classic({ plugins: [keepOptions('buildStart', marker)] }, {}, { generateCount: 2 });
+    await classic({ plugins: [keepContext('buildStart', marker)] }, {}, { generateCount: 2 });
   },
   async 'failed build, then close'(marker) {
     await assert.rejects(
       classic({
         input: path.join(import.meta.dirname, 'missing.js'),
-        plugins: [keepOptions('buildStart', marker)],
+        plugins: [keepContext('buildStart', marker)],
       }),
     );
   },
   async 'throwing closeBundle hook'(marker) {
-    const plugin = keepOptions('buildStart', marker);
+    const plugin = keepContext('buildStart', marker);
     plugin.closeBundle = () => {
       marker.closed = true;
       throw new Error('closeBundle failed');
@@ -154,8 +160,8 @@ const cases = {
     let releaseBuild;
     const paused = new Promise((resolve) => (releaseBuild = resolve));
     const plugin = markerPlugin(marker, {
-      async buildStart(options) {
-        plugin.options = options;
+      async buildStart() {
+        plugin.context = this;
         buildStarted();
         await paused;
       },
@@ -177,7 +183,7 @@ const cases = {
     const watcher = watch({
       input,
       logLevel: 'silent',
-      plugins: [keepOptions('buildStart', marker)],
+      plugins: [keepContext('buildStart', marker)],
       watch: { skipWrite: true },
     });
     await new Promise((resolve, reject) => {
@@ -201,7 +207,7 @@ const cases = {
     const started = new Promise((resolve) => (hookStarted = resolve));
     let releaseHook;
     const paused = new Promise((resolve) => (releaseHook = resolve));
-    const plugin = keepOptions('buildStart', marker);
+    const plugin = keepContext('buildStart', marker);
     plugin.closeBundle = async () => {
       hookStarted();
       await paused;
@@ -236,7 +242,7 @@ const cases = {
           input,
           logLevel: 'silent',
           experimental: { devMode: true },
-          plugins: [keepOptions('buildStart', marker)],
+          plugins: [keepContext('buildStart', marker)],
         },
         { dir },
         { watch: { enabled: false } },
@@ -252,7 +258,7 @@ const cases = {
     if (isWasi) return;
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rolldown-close-gc-'));
     try {
-      const plugin = keepOptions('buildStart', marker);
+      const plugin = keepContext('buildStart', marker);
       // If a plugin keeps a strong reference to the engine, the engine and its plugin hooks stay
       // alive. The release does not cover plugin hooks. So this hook gets the engine only through
       // a WeakRef.

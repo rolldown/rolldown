@@ -11,9 +11,7 @@ export interface ExistingRawSourceMap {
   sourceRoot?: string | undefined;
   version?: number | undefined; // make it optional to compat { mappings: '' }
   ignoreList?: number[] | undefined;
-  // `null` too, because the map object from the native MagicString's `generateMap()` has
-  // `x_google_ignoreList: null`.
-  x_google_ignoreList?: number[] | null | undefined;
+  x_google_ignoreList?: number[] | undefined;
 }
 
 /** @inline @category Plugin APIs */
@@ -41,11 +39,9 @@ export function bindingifySourcemap(
             sources: map.sources?.map((s) => s ?? undefined),
             sourcesContent: map.sourcesContent?.map((s) => s ?? undefined),
             names: map.names,
-            // napi-rs rejects `null` here too, with the same error as above. The map object
-            // from the native MagicString's `generateMap()` has `x_google_ignoreList: null`.
-            ignoreList: map.ignoreList ?? undefined,
-            x_google_ignoreList: map.x_google_ignoreList ?? undefined,
-            debugId: 'debugId' in map ? (map.debugId ?? undefined) : undefined,
+            ignoreList: map.ignoreList,
+            x_google_ignoreList: map.x_google_ignoreList,
+            debugId: 'debugId' in map ? map.debugId : undefined,
           },
   };
 }

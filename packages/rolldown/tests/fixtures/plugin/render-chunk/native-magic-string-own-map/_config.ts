@@ -3,7 +3,7 @@ import { defineTest } from 'rolldown-tests';
 import { getLocation, getOutputChunk } from 'rolldown-tests/utils';
 import { expect } from 'vitest';
 
-// The native MagicString's `generateMap()` returns an object with `x_google_ignoreList: null`.
+// The native MagicString's `generateMap()` returns an object with getters for its fields.
 // A `renderChunk` hook can return that object as its `map`, with the MagicString or with a
 // string as its `code`.
 export default defineTest({

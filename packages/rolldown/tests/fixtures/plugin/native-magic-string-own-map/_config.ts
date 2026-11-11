@@ -9,10 +9,10 @@ import { expect } from 'vitest';
 // Each hook adds this text at the start of line 1, so the code after it moves.
 const inserted = '/* inserted */ ';
 
-// The native MagicString's `generateMap()` returns an object with getters for its fields
-// and `x_google_ignoreList: null`. A `load` or a `transform` hook can return it as its `map`.
-// When a `transform` hook also returns the MagicString as its `code`, Rolldown uses the
-// hook's `map` and does not generate a second map from the MagicString.
+// The native MagicString's `generateMap()` returns an object with getters for its fields.
+// A `load` or a `transform` hook can return it as its `map`. When a `transform` hook also
+// returns the MagicString as its `code`, Rolldown uses the hook's `map` and does not generate
+// a second map from the MagicString.
 export default defineTest({
   config: {
     input: ['main.js'],

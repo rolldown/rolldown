@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+// main.js
+var import_paths = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = [typeof __dirname, typeof __filename];
+})))());
+assert.deepEqual(import_paths.default, ["undefined", "undefined"]);
+
+```

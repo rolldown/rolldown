@@ -86,6 +86,10 @@ pub struct IncludeContext<'a> {
   /// Cache for whether the module that declares an inlined constant, or one of its dependencies,
   /// has side effects (see [`handle_include_symbol`]), keyed by that module.
   pub inlined_constant_owner_side_effects: FxHashMap<ModuleIdx, bool>,
+  /// The reads of inlined constants whose declaring module the bypass keeps, as the binding read
+  /// (an import binding, or the resolved member of `ns.SIZE`) and its canonical symbol. Order
+  /// wrapping reads them in `collect_frozen_reexport_usage`.
+  pub kept_inlined_constant_reads: FxHashSet<SymbolRef>,
   /// Tracks whether any new module was included during the current convergence iteration.
   /// Used to detect fixpoint without O(N) scanning of `is_module_included_vec`.
   pub module_inclusion_changed: bool,
@@ -155,6 +159,7 @@ impl<'a> IncludeContext<'a> {
       bailout_cjs_tree_shaking_modules: FxHashSet::default(),
       external_importer_modes: FxHashMap::default(),
       inlined_constant_owner_side_effects: FxHashMap::default(),
+      kept_inlined_constant_reads: FxHashSet::default(),
       module_inclusion_changed: false,
       module_namespace_included_reason,
       json_module_none_self_reference_included_symbol: FxHashMap::default(),
@@ -396,6 +401,8 @@ impl LinkStage<'_> {
       }
       entries
     };
+
+    self.kept_inlined_constant_reads = std::mem::take(&mut context.kept_inlined_constant_reads);
 
     // Setting the json module none self reference included symbol map
     for (mi, set) in std::mem::take(&mut context.json_module_none_self_reference_included_symbol) {
@@ -707,6 +714,8 @@ fn handle_include_symbol(
           || metas[owner].has_side_effectful_dependency(modules)
       });
     if has_side_effects {
+      ctx.kept_inlined_constant_reads.insert(symbol_ref);
+      ctx.kept_inlined_constant_reads.insert(canonical_ref);
       // As for a constant that is not inlined, a module declared side-effect free runs its whole
       // body, not only the side-effect statements that read no binding, and a wrapped module runs
       // when the reader calls its `init_*`.

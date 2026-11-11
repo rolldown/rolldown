@@ -79,7 +79,7 @@ jobs:
   deploy-void:
     name: Deploy to Void
     needs: [docs-validation]
-    if: github.ref_name == 'main' && needs.docs-validation.outputs.deploy == 'true'
+    if: github.repository == 'rolldown/rolldown' && github.ref_name == 'main' && needs.docs-validation.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     environment: void
     # `void deploy` authenticates via GitHub OIDC: with id-token:write (and no VOID_TOKEN set)

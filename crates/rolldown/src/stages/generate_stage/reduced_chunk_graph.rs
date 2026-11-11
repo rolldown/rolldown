@@ -101,12 +101,12 @@ impl<'a> ReducedChunkGraph<'a> {
   /// Otherwise, it keeps every atom where it was and returns false. Atoms that depend on each other
   /// can close a cycle when they move one by one and stay acyclic when they move together.
   pub(super) fn try_move_atoms(&mut self, atom_idxs: &[usize], bits: &BitSet) -> bool {
-    let froms: SmallVec<[usize; 1]> =
+    let from_nodes: SmallVec<[usize; 1]> =
       atom_idxs.iter().map(|&atom_idx| self.node_by_atom[atom_idx]).collect();
     // Moves out of two nodes can break cycles in two components, so the shortcut needs one node.
     if !self.is_acyclic
-      && froms.iter().all(|&from| from == froms[0])
-      && !self.cyclic_component.contains(&froms[0])
+      && from_nodes.iter().all(|&from| from == from_nodes[0])
+      && !self.cyclic_component.contains(&from_nodes[0])
     {
       return false;
     }
@@ -114,7 +114,7 @@ impl<'a> ReducedChunkGraph<'a> {
       Some(&node) => node,
       None => self.add_node(bits),
     };
-    for (&atom_idx, &from) in atom_idxs.iter().zip(&froms) {
+    for (&atom_idx, &from) in atom_idxs.iter().zip(&from_nodes) {
       debug_assert_ne!(from, to, "the reduced bits must differ from the current bits");
       self.move_atom(atom_idx, from, to);
     }
@@ -126,7 +126,7 @@ impl<'a> ReducedChunkGraph<'a> {
     if acyclic {
       self.is_acyclic = true;
     } else {
-      for (&atom_idx, &from) in atom_idxs.iter().zip(&froms).rev() {
+      for (&atom_idx, &from) in atom_idxs.iter().zip(&from_nodes).rev() {
         self.move_atom(atom_idx, to, from);
       }
     }

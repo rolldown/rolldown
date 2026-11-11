@@ -139,6 +139,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         generated_order_cjs_carriers: FxHashSet::default(),
         scope_stack: vec![],
         top_level_var_bindings: FxIndexSet::default(),
+        catch_params: vec![],
         state: TraverseState::empty(),
         cur_stmt_index: 0,
         keep_name_statement_to_insert: vec![],

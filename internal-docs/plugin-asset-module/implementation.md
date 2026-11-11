@@ -39,7 +39,7 @@ This is optimal for both CJS and ESM consumers. Plugins cannot replicate this �
 
 - CJS `require()`: correct, `__commonJSMin` returns `module.exports` directly (the string)
 - ESM imports: works via `__toESM` interop, adds small wrapping overhead
-- `new URL()` only: **safe** — the load hook returns `side_effects: false`, so when nothing imports from the module (only `new URL()` references), tree-shaking excludes the module's statements entirely. The `module.exports` line never appears in output. Without `side_effects: false`, the CJS wrapper would be tree-shaken (nothing calls `require_asset()`) but the bare `module.exports` assignment would remain as a side-effectful top-level statement, causing `ERR_AMBIGUOUS_MODULE_SYNTAX` in ESM contexts.
+- `new URL()` only: **safe** — `LinkStage::new` excludes `ImportKind::NewUrl` from `LinkingMetadata::dependencies`, so a URL reference never includes the module or its `module.exports` assignment, with or without tree shaking; the finalizer gets the filename from the `FileEmitter` bridge (above). An `import` or `require` of the same asset includes its module as usual. The load hook's `side_effects: false` separately allows unused imports to be tree-shaken.
 - Chosen: CJS correctness preserved, ESM works with minor overhead, `new URL()` is safe
 
 **Option 3: `has_lazy_export` via plugin API (future)**
@@ -51,7 +51,7 @@ This is optimal for both CJS and ESM consumers. Plugins cannot replicate this �
 
 ### Decision
 
-**Use `module.exports = "..."` (Option 2).** This preserves CJS `require()` correctness — the returned value is the string directly, matching the old built-in behavior. ESM `import` works correctly via `__toESM` interop with a small overhead. The `new URL()` only case is safe because the CJS wrapper is tree-shaken when nothing references it.
+**Use `module.exports = "..."` (Option 2).** This preserves CJS `require()` correctness — the returned value is the string directly, matching the old built-in behavior. ESM `import` works correctly via `__toESM` interop with a small overhead. The `new URL()` only case is safe because URL references do not create execution dependencies, independently of tree shaking.
 
 The remaining ESM overhead gap (compared to the old `has_lazy_export` approach) can be addressed in the future through Option 3 — a `LoadOutput::LazyDefaultExportExpr` plugin API that defers the wrapping decision to the linker.
 

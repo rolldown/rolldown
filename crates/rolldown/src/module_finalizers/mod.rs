@@ -134,6 +134,9 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub scope_stack: Vec<ScopeFlags>,
   pub state: TraverseState,
   pub top_level_var_bindings: FxIndexSet<Ident<'ast>>,
+  /// Canonical names of the enclosing `catch` parameters, innermost last, and whether each is a
+  /// module binding. A `var` that redeclares a parameter is bound to the innermost one of that name.
+  pub catch_params: Vec<(&'me str, bool)>,
   pub cur_stmt_index: usize,
   pub keep_name_statement_to_insert: Vec<(usize, CompactStr, CompactStr)>,
   pub needs_hosted_top_level_binding: bool,
@@ -651,7 +654,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         }
         self.generated_init_esm_importee_ids.insert(importee.idx);
         // `init_foo()` / `await init_foo()`
-        let init_expr = self.wrapped_esm_init_call_expr(importee.idx, stmt.span(), false, true);
+        let init_expr = self.wrapped_esm_init_call_expr(importee.idx, stmt.span(), true, true);
         *stmt = ast::Statement::new_expression_statement(SPAN, init_expr, self);
 
         return self.transfer_import_stmt(rec_idx, stmt);
@@ -1043,6 +1046,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let member_map = module.ecma_view.enum_member_value_map.get(symbol_name)?;
     let meta = member_map.get(property_name)?;
     Some(meta.value.to_expression(self.ast_builder.builder()))
+  }
+
+  fn hoist_top_level_var_bindings(&mut self, names: impl IntoIterator<Item = Ident<'ast>>) {
+    let catch_params = &self.catch_params;
+    self.top_level_var_bindings.extend(names.into_iter().filter(|name| {
+      catch_params
+        .iter()
+        .rev()
+        .find(|(param, _)| *param == name.as_str())
+        .is_none_or(|&(_, is_module_binding)| is_module_binding)
+    }));
   }
 
   fn var_declaration_to_expr_seq_and_bindings(
@@ -2298,16 +2312,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 if matches!(importee_linking_info.wrap_kind(), WrapKind::Esm)
                   && !consumer_local_route
                 {
-                  let (wrapper_ref, _) = self.finalized_expr_for_symbol_ref(
-                    importee_linking_info.wrapper_ref.unwrap(),
-                    false,
-                    false,
-                  );
-                  let mut init_expr =
-                    ast::Expression::new_call_expression(SPAN, wrapper_ref, None, [], false, self);
-                  if importee_linking_info.is_tla_or_contains_tla_dependency {
-                    init_expr = ast::Expression::new_await_expression(SPAN, init_expr, self);
-                  }
+                  let init_expr = self.wrapped_esm_init_call_expr(importee.idx, SPAN, true, true);
                   program
                     .body
                     .push(ast::Statement::new_expression_statement(SPAN, init_expr, self));

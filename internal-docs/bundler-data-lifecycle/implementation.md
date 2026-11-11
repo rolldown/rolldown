@@ -239,6 +239,22 @@ The factory also owns the `Arc`s for `module_infos` and `transform_dependencies`
 
 This is what fixed the bug where `this.getModuleInfo()` returned nothing on the second HMR rebuild — the old code created entirely new plugin contexts with no connection to the previous build's module info.
 
+## Normalized options objects
+
+**Rule:** the options objects that hooks get (`NormalizedInputOptionsImpl`, `NormalizedOutputOptionsImpl`) hold plain values, not the native `BindingNormalizedOptions`. Their constructors read every `@lazyProp` getter once, then set `inner` to `null` rather than delete it, so `Object.keys()` and `{...options}` keep the same keys.
+
+**Why:** `BindingNormalizedOptions` owns an `Arc<NormalizedBundlerOptions>`, and the options own the JS option functions (`onLog`, `deferSyncScanData`, `invalidateJsSideCache`, and user functions such as `external`). Each of those functions is held by a napi threadsafe function, which is a GC root. Two of them, `deferSyncScanData` and `invalidateJsSideCache`, are always passed and capture `PluginContextData`, which caches the options objects and the plugins. An options object that kept the native object would close a loop the GC cannot see:
+
+```
+GC root → option function → PluginContextData → options object → BindingNormalizedOptions → Arc<options> → GC root
+```
+
+That loop would keep every plugin of a build alive, even after `close()` (rolldown/rolldown#11444). With plain values there is no loop: once the build object and the per-hook native objects are garbage, the options drop, the threadsafe functions are released, and a later GC frees the plugins.
+
+**Test:** `packages/rolldown/tests/build-api/normalized-options.test.ts` checks the rule with a heap query.
+
+**Exception:** a plugin that keeps `this` keeps the plugins of its build alive. The plugin context owns the options too (`NativePluginContextImpl.options` in `crates/rolldown_plugin/src/plugin_context/native_plugin_context.rs`), so the same loop runs through it.
+
 ## Bugs Found by This Separation
 
 1. **Lost `module_infos` across HMR rebuilds** (rolldown/rolldown#6891) — Each build created fully independent plugin contexts. `this.getModuleInfo()` in `transform` returned nothing on the second build because the new context had an empty module info map. Fix: `module_infos` became bundler-level, shared via Arc through `PluginDriverFactory`.

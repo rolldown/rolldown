@@ -39,7 +39,7 @@ jobs:
 
       - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
         with:
-          version: '1.5.1'
+          version: '1.6.0'
           cache: true
 
       - name: Generate API reference
@@ -79,7 +79,7 @@ jobs:
   deploy-void:
     name: Deploy to Void
     needs: [docs-validation]
-    if: github.ref_name == 'main' && needs.docs-validation.outputs.deploy == 'true'
+    if: github.repository == 'rolldown/rolldown' && github.ref_name == 'main' && needs.docs-validation.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     environment: void
     # `void deploy` authenticates via GitHub OIDC: with id-token:write (and no VOID_TOKEN set)
@@ -94,7 +94,7 @@ jobs:
 
       - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
         with:
-          version: '1.5.1'
+          version: '1.6.0'
           cache: true
 
       - name: Connect to Void

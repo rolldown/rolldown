@@ -14,8 +14,8 @@ __esmMin((() => {
 	do;
 	while (0);
 	for (; x++;);
-	for (var y in "y");
-	for (var y of "y");
+	for (y in "y");
+	for (y of "y");
 }))();
 
 ```

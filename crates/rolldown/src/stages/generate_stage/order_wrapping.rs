@@ -59,6 +59,7 @@ pub(super) struct OrderLoweringInput<'a> {
   pub(super) star_reexport_records_by_imported_symbol:
     &'a FxHashMap<SymbolRef, Vec<Vec<(ModuleIdx, ImportRecordIdx)>>>,
   pub(super) member_read_star_reexport_paths: &'a [MemberReadStarReexportPath],
+  pub(super) kept_inlined_constant_reads: &'a FxHashSet<SymbolRef>,
   pub(super) used_symbol_refs_builder: &'a UsedSymbolRefsBuilder,
   pub(super) cyclic_modules: &'a FxHashSet<ModuleIdx>,
   pub(super) tree_shaking: bool,
@@ -640,6 +641,7 @@ impl GenerateStage<'_> {
         .link_output
         .star_reexport_records_by_imported_symbol,
       member_read_star_reexport_paths: &self.link_output.member_read_star_reexport_paths,
+      kept_inlined_constant_reads: &self.link_output.kept_inlined_constant_reads,
       used_symbol_refs_builder,
       cyclic_modules: &cyclic_modules,
       tree_shaking: self.options.treeshake.is_some(),
@@ -1740,6 +1742,8 @@ pub(super) fn collect_frozen_reexport_usage(
     } else {
       input.used_symbol_refs_builder.contains(&imported_as_ref)
         || consumed_facades.contains(&imported_as_ref)
+        // An inlined constant read keeps no binding, but it still runs its declaring module.
+        || input.kept_inlined_constant_reads.contains(&imported_as_ref)
         || input.linking[root.0]
           .referenced_symbols_by_entry_point_chunk
           .iter()

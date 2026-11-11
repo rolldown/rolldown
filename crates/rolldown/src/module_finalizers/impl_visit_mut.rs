@@ -8,14 +8,15 @@ use oxc::{
     match_member_expression,
   },
   ast_visit::{VisitJsMut, walk_js_mut},
-  span::{SPAN, Span},
+  span::{GetSpan, SPAN, Span},
 };
 use rolldown_common::{
   EcmaModuleAstUsage, ExportsKind, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind,
 };
 use rolldown_ecmascript_utils::{
-  EsmWrapperBodyKind, EsmWrapperCallKind, EsmWrapperDeclKind, EsmWrapperStmtOptions,
-  ExpressionFactoryExt as _, JsxExt, JsxMemberExpressionObjectExt, StatementFactoryExt as _,
+  BindingPatternExt as _, EsmWrapperBodyKind, EsmWrapperCallKind, EsmWrapperDeclKind,
+  EsmWrapperStmtOptions, ExpressionFactoryExt as _, JsxExt, JsxMemberExpressionObjectExt,
+  StatementFactoryExt as _,
 };
 use rolldown_error::EmptyImportMetaKind;
 
@@ -25,6 +26,8 @@ use crate::{
 };
 
 use super::ScopeHoistingFinalizer;
+
+const CJS_AMBIENT_PATHS: [(&str, &str); 2] = [("__dirname", "dirname"), ("__filename", "filename")];
 
 impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
   /// Returns the parameters of the CJS closure: `cjs_wrapper_fixed_params`, then the `this`
@@ -68,6 +71,123 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     );
     let call = Expression::new_call_expression(SPAN, arrow, None, [], false, self);
     program.body.push(Statement::new_expression_statement(SPAN, call, self));
+  }
+
+  /// Under ESM output for `platform: 'node'`, the CJS closure of a CommonJS module declares the
+  /// `__dirname` and `__filename` that the module reads. See internal-docs/renaming/design.md
+  /// (principle 7).
+  fn should_shim_cjs_ambient_paths(&self) -> bool {
+    self.ctx.options.is_esm_format_with_node_platform()
+      && self.ctx.module.exports_kind.is_commonjs()
+  }
+
+  fn prepend_cjs_ambient_path_bindings(
+    &self,
+    statements: &mut allocator::Vec<'ast, Statement<'ast>>,
+  ) {
+    if !self.should_shim_cjs_ambient_paths() {
+      return;
+    }
+
+    for (name, property) in CJS_AMBIENT_PATHS {
+      // Only an undeclared read gets the local. The chunk reserves each unresolved name, so this
+      // local captures no other reference.
+      if !self.scope.scoping().root_unresolved_references().contains_key(name) {
+        continue;
+      }
+
+      let init = ast::Expression::new_static_member_expression(
+        SPAN,
+        ast::Expression::new_import_meta(SPAN, self),
+        ast::IdentifierName::new(SPAN, property, self),
+        false,
+        self,
+      );
+      statements.push(Statement::new_var_decl(name, init, self));
+    }
+  }
+
+  fn try_finalize_constant_if(&mut self, it: &mut ast::Statement<'ast>) -> bool {
+    let ast::Statement::IfStatement(if_stmt) = it else { return false };
+    let Some(&consequent_is_live) = self.ctx.linking_info.constant_branches.get(&if_stmt.node_id())
+    else {
+      return false;
+    };
+    // Consume the link-stage decision before walking any children: references in the dead
+    // branch may no longer have declarations or cross-chunk imports.
+    // See internal-docs/constant-branches/implementation.md.
+    let ast::Statement::IfStatement(mut if_stmt) = it.take_in(self) else { unreachable!() };
+    let mut statements = allocator::Vec::new_in(self);
+    let mut test = if_stmt.test.take_in(self);
+    let pre = self.state;
+    self.state.insert(TraverseState::SmartInlineConst);
+    self.visit_expression(&mut test);
+    self.state = pre;
+    // Keep evaluation of the condition, including effects and exceptions, even when its
+    // result is known. Literal conditions are safe to omit after constant substitution.
+    if !test.is_literal() {
+      statements.push(ast::Statement::new_expression_statement(if_stmt.span, test, self));
+    }
+    let live = if consequent_is_live {
+      Some(if_stmt.consequent.take_in(self))
+    } else {
+      if_stmt.alternate.take()
+    };
+    if let Some(mut live) = live {
+      self.visit_statement(&mut live);
+      statements.push(live);
+    }
+    *it = ast::Statement::new_block_statement(if_stmt.span, statements, self);
+    true
+  }
+
+  fn try_finalize_constant_expression(&mut self, expr: &mut ast::Expression<'ast>) -> bool {
+    let branch = match expr {
+      ast::Expression::ConditionalExpression(it) => {
+        self.ctx.linking_info.constant_branches.get(&it.node_id()).copied()
+      }
+      ast::Expression::LogicalExpression(it) => {
+        self.ctx.linking_info.constant_branches.get(&it.node_id()).copied()
+      }
+      _ => None,
+    };
+    let Some(branch) = branch else { return false };
+    let span = expr.span();
+    let mut expressions = allocator::Vec::new_in(self);
+    match expr.take_in(self) {
+      ast::Expression::ConditionalExpression(mut it) => {
+        let mut test = it.test.take_in(self);
+        let pre = self.state;
+        self.state.insert(TraverseState::SmartInlineConst);
+        self.visit_expression(&mut test);
+        self.state = pre;
+        expressions.push(test);
+        let mut live =
+          if branch { it.consequent.take_in(self) } else { it.alternate.take_in(self) };
+        self.visit_expression(&mut live);
+        expressions.push(live);
+      }
+      ast::Expression::LogicalExpression(mut it) => {
+        // A logical expression yields a value, not a reference. Preserve indirect calls,
+        // including `eval` and member callees, when replacing it with its left operand.
+        expressions.push(ast::Expression::new_numeric_literal(
+          SPAN,
+          0.0,
+          None,
+          ast::NumberBase::Decimal,
+          self,
+        ));
+        let mut left = it.left.take_in(self);
+        let pre = self.state;
+        self.state.insert(TraverseState::SmartInlineConst);
+        self.visit_expression(&mut left);
+        self.state = pre;
+        expressions.push(left);
+      }
+      _ => unreachable!(),
+    }
+    *expr = ast::Expression::new_sequence_expression(span, expressions, self);
+    true
   }
 
   fn append_order_cjs_carriers(&self, program: &mut ast::Program<'ast>) {
@@ -166,7 +286,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     self.scope_stack.push(flags);
     self.state.set(
       TraverseState::TopLevel,
-      self.scope_stack.iter().rev().all(|flag| flag.is_block() || flag.is_top()),
+      self.scope_stack.iter().rev().all(|flag| !flag.is_var() || flag.is_top()),
     );
     self
       .state
@@ -177,7 +297,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     self.scope_stack.pop();
     self.state.set(
       TraverseState::TopLevel,
-      self.scope_stack.iter().rev().all(|flag| flag.is_block() || flag.is_top()),
+      self.scope_stack.iter().rev().all(|flag| !flag.is_var() || flag.is_top()),
     );
     self
       .state
@@ -304,6 +424,8 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         let (commonjs_ref_expr, _) = self.finalized_expr_for_symbol_ref(commonjs_ref, false, false);
 
         let mut stmts_inside_closure = allocator::Vec::new_in(self);
+        // CJS exposes these as mutable wrapper-local bindings, not as aliases to import.meta.
+        self.prepend_cjs_ambient_path_bindings(&mut stmts_inside_closure);
         stmts_inside_closure.append(&mut program.body);
 
         program.body.push(Statement::new_commonjs_wrapper_stmt(
@@ -446,6 +568,9 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   }
 
   fn visit_statement(&mut self, it: &mut ast::Statement<'ast>) {
+    if self.try_finalize_constant_if(it) {
+      return;
+    }
     _ = self.try_inline_json_module_prop(it);
 
     walk_js_mut::walk_statement(self, it);
@@ -459,7 +584,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       if let Some((expr, bindings)) =
         self.var_declaration_to_expr_seq_and_bindings(decl, self.state)
       {
-        self.top_level_var_bindings.extend(bindings);
+        self.hoist_top_level_var_bindings(bindings);
         *it = ast::Statement::new_expression_statement(SPAN, expr, self);
       }
     }
@@ -489,6 +614,9 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   }
 
   fn visit_expression(&mut self, expr: &mut ast::Expression<'ast>) {
+    if self.try_finalize_constant_expression(expr) {
+      return;
+    }
     // Handle keep_names for named class/function expressions in any expression context
     // (return statements, function args, array elements, etc.)
     if self.ctx.options.keep_names && self.ctx.runtime.id() != self.ctx.idx {
@@ -865,9 +993,42 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       if let Some((expr, bindings)) =
         self.var_declaration_to_expr_seq_and_bindings(decl, self.state)
       {
-        self.top_level_var_bindings.extend(bindings);
+        self.hoist_top_level_var_bindings(bindings);
         *it = ast::ForStatementInit::from(expr);
       }
+    }
+  }
+
+  fn visit_for_statement_left(&mut self, it: &mut ast::ForStatementLeft<'ast>) {
+    walk_js_mut::walk_for_statement_left(self, it);
+    // transform top level `for (var x of xs)` to `for (x of xs)` and hoist `x`
+    if self.state.contains(TraverseState::TopLevel)
+      && self.needs_hosted_top_level_binding
+      && let ast::ForStatementLeft::VariableDeclaration(decl) = it
+      && decl.kind.is_var()
+      && let Some(declarator) = decl.declarations.pop()
+    {
+      self.hoist_top_level_var_bindings(
+        declarator.id.get_binding_identifiers().iter().map(|id| id.name),
+      );
+      *it = ast::ForStatementLeft::from(declarator.id.into_assignment_target(self));
+    }
+  }
+
+  fn visit_catch_clause(&mut self, it: &mut ast::CatchClause<'ast>) {
+    let param = it
+      .param
+      .as_ref()
+      .and_then(|param| param.pattern.get_binding_identifier())
+      .and_then(|ident| ident.symbol_id.get())
+      .map(|symbol_id| SymbolRef::from((self.ctx.idx, symbol_id)));
+    if let Some(symbol_ref) = param {
+      let is_module_binding = symbol_ref.is_declared_in_root_scope(self.ctx.symbol_db);
+      self.catch_params.push((self.canonical_name_for(symbol_ref), is_module_binding));
+    }
+    walk_js_mut::walk_catch_clause(self, it);
+    if param.is_some() {
+      self.catch_params.pop();
     }
   }
 

@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## d.js
+
+```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+import "./h.js";
+// d.js
+console.log("d", Object.keys(/* @__PURE__ */ __exportAll({ z: () => 1 })).join());
+
+```
+
+## h.js
+
+```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+import "ext-cycle";
+// h.js
+console.log("h", Object.keys(/* @__PURE__ */ __exportAll({ q: () => 1 })).join());
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as t };
+
+```

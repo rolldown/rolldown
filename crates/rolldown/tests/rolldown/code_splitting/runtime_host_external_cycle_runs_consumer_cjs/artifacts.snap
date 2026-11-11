@@ -1,0 +1,37 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## d.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+require("./h.js");
+// d.js
+console.log("d", Object.keys(/* @__PURE__ */ require_rolldown_runtime.__exportAll({ z: () => 1 })).join());
+
+```
+
+## h.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+require("ext-cycle");
+// h.js
+console.log("h", Object.keys(/* @__PURE__ */ require_rolldown_runtime.__exportAll({ q: () => 1 })).join());
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__exportAll", {
+	enumerable: true,
+	get: function() {
+		return __exportAll;
+	}
+});
+
+```

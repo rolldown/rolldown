@@ -1,0 +1,10 @@
+{
+  "config": {
+    "input": [
+      { "name": "h", "import": "h.js" },
+      { "name": "d", "import": "d.js" }
+    ],
+    "external": ["ext-cycle"],
+    "format": "cjs"
+  }
+}

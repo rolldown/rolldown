@@ -1,0 +1,11 @@
+{
+  "config": {
+    "input": [
+      { "name": "c", "import": "c.js" },
+      { "name": "x", "import": "x.js" },
+      { "name": "h", "import": "h.js" }
+    ],
+    "platform": "neutral",
+    "external": ["ext-call", "node:path"]
+  }
+}

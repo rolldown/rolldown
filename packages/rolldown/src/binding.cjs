@@ -465,36 +465,72 @@ function requireNative() {
         }
       }
     } else if (process.arch === 'ppc64') {
-      try {
-        return require('./rolldown-binding.linux-ppc64-gnu.node')
-      } catch (e) {
-        loadErrors.push(e)
-      }
-      try {
-        const binding = require('@rolldown/binding-linux-ppc64-gnu')
-        const bindingPackageVersion = require('@rolldown/binding-linux-ppc64-gnu/package.json').version
-        if (bindingPackageVersion !== '1.3.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 1.3.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+      if (isMusl()) {
+        try {
+          return require('./rolldown-binding.linux-ppc64-musl.node')
+        } catch (e) {
+          loadErrors.push(e)
         }
-        return binding
-      } catch (e) {
-        loadErrors.push(e)
+        try {
+          const binding = require('@rolldown/binding-linux-ppc64-musl')
+          const bindingPackageVersion = require('@rolldown/binding-linux-ppc64-musl/package.json').version
+          if (bindingPackageVersion !== '1.3.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 1.3.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          }
+          return binding
+        } catch (e) {
+          loadErrors.push(e)
+        }
+      } else {
+        try {
+          return require('./rolldown-binding.linux-ppc64-gnu.node')
+        } catch (e) {
+          loadErrors.push(e)
+        }
+        try {
+          const binding = require('@rolldown/binding-linux-ppc64-gnu')
+          const bindingPackageVersion = require('@rolldown/binding-linux-ppc64-gnu/package.json').version
+          if (bindingPackageVersion !== '1.3.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 1.3.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          }
+          return binding
+        } catch (e) {
+          loadErrors.push(e)
+        }
       }
     } else if (process.arch === 's390x') {
-      try {
-        return require('./rolldown-binding.linux-s390x-gnu.node')
-      } catch (e) {
-        loadErrors.push(e)
-      }
-      try {
-        const binding = require('@rolldown/binding-linux-s390x-gnu')
-        const bindingPackageVersion = require('@rolldown/binding-linux-s390x-gnu/package.json').version
-        if (bindingPackageVersion !== '1.3.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 1.3.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+      if (isMusl()) {
+        try {
+          return require('./rolldown-binding.linux-s390x-musl.node')
+        } catch (e) {
+          loadErrors.push(e)
         }
-        return binding
-      } catch (e) {
-        loadErrors.push(e)
+        try {
+          const binding = require('@rolldown/binding-linux-s390x-musl')
+          const bindingPackageVersion = require('@rolldown/binding-linux-s390x-musl/package.json').version
+          if (bindingPackageVersion !== '1.3.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 1.3.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          }
+          return binding
+        } catch (e) {
+          loadErrors.push(e)
+        }
+      } else {
+        try {
+          return require('./rolldown-binding.linux-s390x-gnu.node')
+        } catch (e) {
+          loadErrors.push(e)
+        }
+        try {
+          const binding = require('@rolldown/binding-linux-s390x-gnu')
+          const bindingPackageVersion = require('@rolldown/binding-linux-s390x-gnu/package.json').version
+          if (bindingPackageVersion !== '1.3.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 1.3.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          }
+          return binding
+        } catch (e) {
+          loadErrors.push(e)
+        }
       }
     } else {
       loadErrors.push(new Error(`Unsupported architecture on Linux: ${process.arch}`))

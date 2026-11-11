@@ -14,12 +14,25 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## group-c.js
 
 ```js
+import { t as require_h } from "./group-h.js";
 import "./other.js";
 import "./group-b.js";
-// c1.js
+require_h();
 (globalThis.log ??= []).push("c1");
 // c2.js
 (globalThis.log ??= []).push("c2");
+
+```
+
+## group-h.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// h.cjs
+var require_h = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = 1;
+}));
+export { require_h as t };
 
 ```
 

@@ -1,7 +1,7 @@
 #![expect(clippy::inherent_to_string)]
 use std::borrow::Cow;
 
-use napi::bindgen_prelude::{Either, This};
+use napi::bindgen_prelude::{Either, This, Undefined};
 use napi::{Env, JsString};
 use napi_derive::napi;
 use oxc_napi::JsRegExp;
@@ -301,10 +301,11 @@ impl BindingSourceMap {
     self.json.mappings.clone()
   }
 
-  /// The list of source indices that should be excluded from debugging.
+  /// The list of source indices that should be excluded from debugging, or `undefined` when
+  /// the map has none. `magic-string` leaves the field out in that case.
   #[napi(getter, js_name = "x_google_ignoreList")]
-  pub fn x_google_ignore_list(&self) -> Option<Vec<u32>> {
-    self.json.ignore_list.clone()
+  pub fn x_google_ignore_list(&self) -> Either<Vec<u32>, Undefined> {
+    self.json.ignore_list.clone().map_or(Either::B(()), Either::A)
   }
 
   /// Returns the source map as a JSON string.
@@ -395,10 +396,11 @@ impl BindingDecodedMap {
     lines
   }
 
-  /// The list of source indices that should be excluded from debugging.
+  /// The list of source indices that should be excluded from debugging, or `undefined` when
+  /// the map has none. `magic-string` leaves the field out in that case.
   #[napi(getter, js_name = "x_google_ignoreList")]
-  pub fn x_google_ignore_list(&self) -> Option<Vec<u32>> {
-    self.json.ignore_list.clone()
+  pub fn x_google_ignore_list(&self) -> Either<Vec<u32>, Undefined> {
+    self.json.ignore_list.clone().map_or(Either::B(()), Either::A)
   }
 }
 

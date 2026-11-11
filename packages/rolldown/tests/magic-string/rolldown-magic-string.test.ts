@@ -578,3 +578,19 @@ describe('string_wizard: replace', () => {
     });
   });
 });
+
+describe('x_google_ignoreList', () => {
+  // `magic-string` leaves the field out when the map has no ignore list. Code that checks
+  // only for `undefined` must work with both maps.
+  it('is undefined when the map has no ignore list', () => {
+    const s = new MagicString('var answer = 42;');
+    assert.strictEqual(s.generateMap().x_google_ignoreList, undefined);
+    assert.strictEqual(s.generateDecodedMap().x_google_ignoreList, undefined);
+  });
+
+  it('lists the source with the ignoreList option', () => {
+    const s = new MagicString('var answer = 42;', { ignoreList: true });
+    assert.deepStrictEqual(s.generateMap().x_google_ignoreList, [0]);
+    assert.deepStrictEqual(s.generateDecodedMap().x_google_ignoreList, [0]);
+  });
+});

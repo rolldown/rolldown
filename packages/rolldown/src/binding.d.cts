@@ -1604,8 +1604,11 @@ export declare class BindingDecodedMap {
    * Each line is an array of segments, where each segment is [generatedColumn, sourceIndex, originalLine, originalColumn, nameIndex?].
    */
   get mappings(): Array<Array<Array<number>>>
-  /** The list of source indices that should be excluded from debugging. */
-  get x_google_ignoreList(): Array<number> | null
+  /**
+   * The list of source indices that should be excluded from debugging, or `undefined` when
+   * the map has none. `magic-string` leaves the field out in that case.
+   */
+  get x_google_ignoreList(): Array<number> | undefined
 }
 
 export declare class BindingDevEngine {
@@ -1881,8 +1884,11 @@ export declare class BindingSourceMap {
   get names(): Array<string>
   /** The VLQ-encoded mappings string. */
   get mappings(): string
-  /** The list of source indices that should be excluded from debugging. */
-  get x_google_ignoreList(): Array<number> | null
+  /**
+   * The list of source indices that should be excluded from debugging, or `undefined` when
+   * the map has none. `magic-string` leaves the field out in that case.
+   */
+  get x_google_ignoreList(): Array<number> | undefined
   /** Returns the source map as a JSON string. */
   toString(): string
   /** Returns the source map as a base64-encoded data URL. */

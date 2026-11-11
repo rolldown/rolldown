@@ -99,12 +99,14 @@ The following MagicString methods are currently available in the native implemen
 
 **Source Map Generation:**
 
-- `generateMap(options?)` - Generates a source map as a JSON string
+- `generateMap(options?)` - Generates a source map object. Its `toString()` returns the map as a JSON string, and its `toUrl()` returns the map as a data URL
   - `options.source` - Source file name
   - `options.includeContent` - Include original source in the map
-  - `options.hires` - High-resolution mode: `true`, `false`, or `"boundary"`
+  - `options.hires` - High-resolution mode: `true`, `false` (the default), or `"boundary"`
 
 When a `transform` or `renderChunk` hook returns the native MagicString without a `map`, Rolldown generates the map for that step with `hires: "boundary"`. The output source map then keeps column positions and names after that map is composed with the others in the chain.
+
+To use a different resolution, return your own map with the MagicString, for example `{ code: magicString, map: magicString.generateMap({ hires: true }) }`. Rolldown then uses your map and does not generate one. `map: null` tells Rolldown that the step did not move code, so Rolldown does not generate a map for it. If the step moved code, the output source map points to wrong positions.
 
 ### Not Yet Implemented
 

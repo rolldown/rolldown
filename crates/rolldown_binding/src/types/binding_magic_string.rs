@@ -423,6 +423,10 @@ impl<'a> BindingMagicString<'a> {
   pub(crate) fn take_inner(&mut self) -> napi::Result<MagicString<'a>> {
     self.ensure_live()?;
     self.consumed = true;
+    // Every method that reads the UTF-16 mapping table refuses a consumed instance, so free it
+    // now rather than when the JS wrapper is garbage collected: it holds 8 bytes per byte of the
+    // original source.
+    self.utf16_to_byte_mapper.entries = Vec::new();
     Ok(std::mem::take(&mut self.inner))
   }
 

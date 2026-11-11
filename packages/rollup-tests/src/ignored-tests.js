@@ -134,6 +134,8 @@ const ignoreTests = [
   "rollup@form@supports-core-js: supports core-js", // relies on @rollup/plugin-commonjs
   "rollup@form@supports-es5-shim: supports es5-shim", // relies on @rollup/plugin-commonjs
   "rollup@form@supports-es6-shim: supports es6-shim", // relies on @rollup/plugin-commonjs
+  "rollup@chunking form@chunk-assigment-in-dynamic: the content of c.js is complete@generates cjs", // relies on @rollup/plugin-commonjs
+  "rollup@chunking form@chunk-assigment-in-dynamic: the content of c.js is complete@generates es", // relies on @rollup/plugin-commonjs
   "rollup@chunking form@option-virtual-dirname: expect the directory name for \"virtual\" files to be rollup_virtual@generates cjs", // relies on @rollup/plugin-commonjs
   "rollup@chunking form@option-virtual-dirname: expect the directory name for \"virtual\" files to be rollup_virtual@generates es", // relies on @rollup/plugin-commonjs
   "rollup@chunking form@preserve-modules-commonjs: Handles output from @rollup/plugin-commonjs@generates cjs", // relies on @rollup/plugin-commonjs

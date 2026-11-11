@@ -63,11 +63,15 @@ function init_first() {
 
 ### Membership: `crates/rolldown/src/stages/generate_stage/deferred_groups.rs`
 
-`GenerateStage::group_deferred_modules` runs after `ensure_lazy_module_initialization_order` and before `finalize_modules`.
+`GenerateStage::group_deferred_modules` runs after `commit_cross_chunk_links` (which writes the chunk exports) and `ensure_lazy_module_initialization_order`, and before `finalize_modules`.
 
 1. Guards. No groups if `importDefer` is off, or with these conditions: a format other than ESM, strict execution order, dev mode, `profilerNames`, inline common chunks. Only `render_esm` renders the groups.
 2. Groupable module: in a chunk, included, `wrapped_by_import_defer`, `WrapKind::Esm`, has a `wrapper_ref`, no top-level await, no state record (`import_defer_tracked_deps`), not a `dynamic_defer_target`, not the runtime.
-3. `modules_that_keep_wrapper`: entries, modules with a deferred namespace (`deferred_namespace_ref`), `DeferredAccess::Esm` targets, the modules that eager code reaches through static records, all modules of an inline common chunk record, and the modules that `ensure_lazy_module_initialization_order` moves an init call to or from (`remove_map`, `insert_map`).
+3. `modules_that_keep_wrapper`: entries, modules with a deferred namespace (`deferred_namespace_ref`), `DeferredAccess::Esm` targets, the modules that eager code reaches through static records, all modules of an inline common chunk record, the modules that `ensure_lazy_module_initialization_order` moves an init call to or from (`remove_map`, `insert_map`), and each module whose wrapper a chunk exports.
+   - Why the last rule: the cross-chunk links add the wrapper of the owner of each symbol that a chunk imports (`add_depended_symbol_with_wrapped_esm_init`), also when the importing chunk does not call it. Without the rule, a member loses its declaration, but its chunk still exports it, and Node does not load the chunk (`SyntaxError: Export 'init_x' is not defined in module`).
+   - The rule reads the keys of `exports_to_other_chunks` and compares canonical refs, because only one branch of `deconflict_exported_names` stores canonical keys. The table also has the entry exports.
+   - The same set goes into `commonjs_modules_of_groups`, so an exported `require_x` stays at the top level.
+   - A module that keeps its wrapper is a root. Thus the rule can split a group: the module keeps its own private members.
 4. Callers. An import record of an included module, or a restored init call (`transitive_init_targets`), is a call. A call is plain if it is a non-defer `ImportKind::Import` record (or a restored call) from a module of the same chunk.
 5. Candidate: a groupable module that does not keep its wrapper and has only plain callers. The other groupable modules are the first roots.
 6. Fixed point (greatest):
@@ -93,7 +97,7 @@ function init_first() {
   - `Init(text)`: a statement that writes a binding or a namespace object at the place of an import or a re-export: `var import_x = __toESM(require_x())`, `var import_x, x_deferred = __deferNs(...)`, `__reExport(p_exports, __toESM(require_x()))` or `__reExport(p_exports, x_exports)`.
 - `move_group_init_stmts` runs at the end of `remove_unused_top_level_stmt`. The statement of each `Init` step with a later `Member` step moves out of the body, and the step gets its text. A `var` declaration becomes an assignment, and its names go into the hoisted `var` list of the module. The other statements stay in the body, and their steps go away. The positions that the loop recorded before the move (the end of the imports, and the place of the `__name()` statement of `export default function () {}` with `keepNames`) become smaller by the number of moved statements before them.
 - Why the move: a member body runs before the whole body of its importer. A wrapper runs the import statements in source order, so the binding of an import is ready before the init call of each later import. Without the move, a member body can read a binding before its statement runs. A cycle is not necessary: in `group_cjs_exports_snapshot`, a member adds a property to the exports of a CommonJS module, and the root must make its namespace before that.
-- Invariant: no code refers to the `wrapper_ref` of a member (a `debug_assert` in `finalized_expr_for_symbol_ref`).
+- Invariant: no code refers to the `wrapper_ref` of a member (a `debug_assert` in `finalized_expr_for_symbol_ref`), and no chunk exports it (`modules_that_keep_wrapper`).
 
 ### Rendering
 
@@ -135,6 +139,7 @@ The fixtures in `crates/rolldown/tests/rolldown/topics/import_defer/` with the p
 - `group_pife`: the root wrapper text with the default PIFE setting and with `pifeForModuleWrappers: false`.
 - `group_sourcemap`: the mappings of the declarations and of the body of a root and a member.
 - `group_comments`: each legal comment prints one time, in the part where a print of the whole module puts it.
+- `group_exported_wrapper`: a chunk exports the wrapper of a module that the other chunk does not call. The module keeps its wrapper. The config sets `format`, so that the extended variant runs with `minifyInternalExports: false`. That branch of `deconflict_exported_names` stores the keys without `canonical_ref_for`.
 
 ## Related
 

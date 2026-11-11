@@ -24,10 +24,12 @@ impl GenerateStage<'_> {
   ///
   /// A module keeps its wrapper, and is a root itself, when a place other than a body in the same
   /// chunk can call its init: a deferred access or a deferred namespace, a dynamic `import()`, a
-  /// `require()`, eager code, another chunk or an entry.
+  /// `require()`, eager code, another chunk or an entry. A module also keeps its wrapper when a
+  /// chunk exports the wrapper, because the export needs the declaration.
   ///
-  /// Call it after `ensure_lazy_module_initialization_order`, because a member must not have a
-  /// moved init call, and before `finalize_modules`, which reads the groups.
+  /// Call it after `commit_cross_chunk_links`, which writes the chunk exports, and after
+  /// `ensure_lazy_module_initialization_order`, because a member must not have a moved init call.
+  /// Call it before `finalize_modules`, which reads the groups.
   /// See internal-docs/import-defer/implementation.md ("Deferred groups").
   pub fn group_deferred_modules(
     &mut self,
@@ -361,16 +363,32 @@ impl GenerateStage<'_> {
     }
   }
 
-  /// The modules that must keep their own `init_*` wrapper, because a place other than a body of
-  /// a module in the same chunk can call it.
+  /// The modules that must keep their own wrapper (`init_*` or `require_*`), because a place
+  /// other than a body of a module in the same chunk can call it, or because a chunk exports it.
   fn modules_that_keep_wrapper(&self, chunk_graph: &ChunkGraph) -> FxHashSet<ModuleIdx> {
     let module_table = &self.link_output.module_table;
     let metas = &self.link_output.metas;
+    let symbols = &self.link_output.symbol_db;
     let mut keeps_wrapper: FxHashSet<ModuleIdx> =
       self.link_output.entries.keys().copied().collect();
+    // A chunk can export a wrapper that the importing chunk does not call: the cross-chunk links
+    // add the wrapper of the owner of each imported symbol
+    // (`add_depended_symbol_with_wrapped_esm_init`). Only one branch of
+    // `deconflict_exported_names` stores canonical keys, so compare canonical refs.
+    let exported_symbols = chunk_graph
+      .chunk_table
+      .iter()
+      .flat_map(|chunk| chunk.exports_to_other_chunks.keys())
+      .map(|&symbol_ref| symbols.canonical_ref_for(symbol_ref))
+      .collect::<FxHashSet<_>>();
     for (idx, meta) in metas.iter_enumerated() {
       // `x_deferred` calls `init_x`.
       if meta.deferred_namespace_ref.is_some() {
+        keeps_wrapper.insert(idx);
+      }
+      if meta.wrapper_ref.is_some_and(|wrapper_ref| {
+        exported_symbols.contains(&symbols.canonical_ref_for(wrapper_ref))
+      }) {
         keeps_wrapper.insert(idx);
       }
       for access in meta.deferred_access_targets.values() {

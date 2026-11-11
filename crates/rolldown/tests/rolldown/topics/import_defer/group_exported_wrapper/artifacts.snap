@@ -1,0 +1,69 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] barrel.js is dynamically imported by bridge.js but also statically imported by d.js, dynamic import will not move module into another chunk.
+
+```
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] d.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## barrel.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// bridge.js
+var bridge_exports = /* @__PURE__ */ __exportAll({ load: () => load });
+function load() {
+	return Promise.resolve().then(() => (init_barrel(), barrel_exports));
+}
+// leaf.js
+function f() {
+	return __toCommonJS(bridge_exports).value;
+}
+function init_leaf() {
+	return (init_leaf = __esmMin((() => {})))();
+}
+// barrel.js
+var barrel_exports = /* @__PURE__ */ __exportAll({ f: () => f });
+function init_barrel() {
+	return (init_barrel = __esmMin((() => {
+		init_leaf();
+	})))();
+}
+export { __exportAll as a, __esmMin as i, f as n, init_leaf as r, init_barrel as t };
+
+```
+
+## main.js
+
+```js
+import { a as __exportAll, i as __esmMin, n as f, t as init_barrel } from "./barrel.js";
+// d.js
+var d_exports = /* @__PURE__ */ __exportAll({ f: () => f });
+function init_d() {
+	return (init_d = __esmMin((() => {
+		init_barrel();
+	})))();
+}
+// main.js
+function run() {
+	return typeof (init_d(), f);
+}
+function dynamic() {
+	return Promise.resolve().then(() => (init_d(), d_exports));
+}
+export { dynamic, run };
+
+```

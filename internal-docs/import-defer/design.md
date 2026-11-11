@@ -34,6 +34,7 @@ The CommonJS wrappers of the groups (11 in this bench) then move into the root w
 - Only plain `import` edges make a member. A `require()` target can run conditionally. `ImportKind::is_static()` also includes `require`, `new URL` and the CSS kinds, so the closure of a deferred import can contain modules that the root must not run.
 - A member has callers only in its own group, and it is in the same chunk as its root. Thus only the wrapper of the root can start its body, and the error and the order rules of one wrapper stay correct: a throw in a member ends the init of the root, and a second call throws the same error again.
 - A module that other code can call keeps its wrapper (see "Membership" in implementation.md). A module that the closures of two roots contain keeps its wrapper, and it can have its own group.
+- A module whose wrapper a chunk exports keeps its wrapper, also when no code calls it. The cross-chunk links add the wrapper of the owner of each imported symbol, before the groups exist. This costs one wrapper for each such module, and only with code splitting.
 - The member bodies run in the depth-first order of the steps, and a pre-call keeps a module outside the group before a member body. The alternative was to keep the init calls of the members as they are, which needs a wrapper for each member.
 - The declarations of the members stay at the top level of the chunk. Code outside the group can read them (namespace getters, `(init_r(), x)` reads, exports to other chunks).
 - A statement that writes a binding of an import (a CommonJS import, a deferred CommonJS namespace, the `__reExport` of an `export *`) moves before the next member body. A member body runs before the whole body of its importer, but without groups this statement runs before the init calls of the later imports. The statement moves one time and as a whole, with its names in the hoisted `var` list. Thus the order of evaluation and the identity of each namespace object are the same as without groups and in native ESM.
@@ -46,6 +47,7 @@ The CommonJS wrappers of the groups (11 in this bench) then move into the root w
 - One lazy function for each root that contains all declarations and bodies of its closure: in a model build, the first use was 1.58 ms slower.
 - No group for a module in a cycle that reads a binding of an import before the statement of the binding runs. A cycle is not necessary for this failure: a member can change the exports of a CommonJS module before the root makes its namespace (fixture `group_cjs_exports_snapshot`). A cycle check thus does not find all cases.
 - A marker statement in the printed code, and a split of the text at the line of the marker. User code can contain the same text, also on a line of its own in a template literal (fixture `group_marker_text`).
+- Remove the export of a member wrapper and its import in the other chunk. This needs proof that no code of the importing chunk calls the wrapper. When the wrapper stays, the output stays valid without that proof (fixture `group_exported_wrapper`).
 
 ### Open questions
 

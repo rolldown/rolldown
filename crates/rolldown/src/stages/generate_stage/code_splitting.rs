@@ -219,6 +219,7 @@ impl GenerateStage<'_> {
   /// and guarantees entry chunks precede others, static chunks precede dynamic ones, and every chunk
   /// has a stable order at the per-entry-chunk level.
   pub(super) fn assign_chunk_exec_orders(&self, chunk_graph: &mut ChunkGraph) {
+    let module_to_chunk = &chunk_graph.module_to_chunk;
     chunk_graph
       .chunk_table
       .iter_mut_enumerated()
@@ -226,7 +227,7 @@ impl GenerateStage<'_> {
         chunk_graph.post_chunk_optimization_operations.get(chunk_idx).copied()
           != Some(PostChunkOptimizationOperation::Removed)
       })
-      .sorted_by(|(_ai, a), (_bi, b)| {
+      .sorted_by(|(ai, a), (bi, b)| {
         let a_should_be_first = Ordering::Less;
         let b_should_be_first = Ordering::Greater;
 
@@ -235,10 +236,11 @@ impl GenerateStage<'_> {
             ChunkKind::EntryPoint { module: a_module_id, .. },
             ChunkKind::EntryPoint { module: b_module_id, .. },
           ) => self
-            .entry_chunk_exec_order(*a_module_id, a)
-            .cmp(&self.entry_chunk_exec_order(*b_module_id, b)),
+            .entry_chunk_exec_order(module_to_chunk, *ai, a, *a_module_id)
+            .cmp(&self.entry_chunk_exec_order(module_to_chunk, *bi, b, *b_module_id)),
           (ChunkKind::EntryPoint { module: a_module_id, .. }, ChunkKind::Common) => {
-            let a_module_exec_order = self.entry_chunk_exec_order(*a_module_id, a);
+            let a_module_exec_order =
+              self.entry_chunk_exec_order(module_to_chunk, *ai, a, *a_module_id);
             let b_chunk_first_module_exec_order =
               self.link_output.module_table[b.modules[0]].exec_order();
             if a_module_exec_order == b_chunk_first_module_exec_order {
@@ -248,7 +250,8 @@ impl GenerateStage<'_> {
             }
           }
           (ChunkKind::Common, ChunkKind::EntryPoint { module: b_module_id, .. }) => {
-            let b_module_exec_order = self.entry_chunk_exec_order(*b_module_id, b);
+            let b_module_exec_order =
+              self.entry_chunk_exec_order(module_to_chunk, *bi, b, *b_module_id);
             let a_chunk_first_module_exec_order =
               self.link_output.module_table[a.modules[0]].exec_order();
             if a_chunk_first_module_exec_order == b_module_exec_order {
@@ -273,11 +276,21 @@ impl GenerateStage<'_> {
   }
 
   /// The key of an `EntryPoint` chunk in `assign_chunk_exec_orders`: the earlier of its entry
-  /// module and its first non-runtime module.
-  pub(super) fn entry_chunk_exec_order(&self, entry_module_idx: ModuleIdx, chunk: &Chunk) -> u32 {
+  /// module and its first non-runtime module. A chunk whose entry module is in another chunk keys
+  /// on its entry module.
+  pub(super) fn entry_chunk_exec_order(
+    &self,
+    module_to_chunk: &IndexVec<ModuleIdx, Option<ChunkIdx>>,
+    chunk_idx: ChunkIdx,
+    chunk: &Chunk,
+    entry_module_idx: ModuleIdx,
+  ) -> u32 {
     let module_table = &self.link_output.module_table;
     let runtime_idx = self.link_output.runtime.id();
     let entry_exec_order = module_table[entry_module_idx].exec_order();
+    if module_to_chunk[entry_module_idx] != Some(chunk_idx) {
+      return entry_exec_order;
+    }
     chunk
       .modules
       .iter()

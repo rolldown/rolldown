@@ -223,7 +223,9 @@ impl NormalModule {
         );
         ModuleRenderOutput {
           code: render_output.code,
-          map: render_output.map.map(oxc_sourcemap::SourceMap::into_owned),
+          map: render_output
+            .map
+            .map(|map| rolldown_sourcemap::from_oxc_sourcemap(map).into_owned()),
         }
       }
     }

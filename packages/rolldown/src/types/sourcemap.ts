@@ -1,4 +1,7 @@
-import type { BindingSourcemap } from '../binding.cjs';
+import type {
+  BindingSourcemap,
+  BindingTransformSourceMap as NativeSourceMap,
+} from '../binding.cjs';
 import type { SourceMap } from './rolldown-output';
 
 /** @category Plugin APIs */
@@ -18,7 +21,7 @@ export interface ExistingRawSourceMap {
 export type SourceMapInput = ExistingRawSourceMap | string | null;
 
 export function bindingifySourcemap(
-  map?: SourceMapInput | SourceMap,
+  map?: SourceMapInput | SourceMap | NativeSourceMap,
 ): undefined | BindingSourcemap {
   if (map == null) return;
   return {
@@ -40,7 +43,7 @@ export function bindingifySourcemap(
             sourcesContent: map.sourcesContent?.map((s) => s ?? undefined),
             names: map.names,
             ignoreList: map.ignoreList,
-            x_google_ignoreList: map.x_google_ignoreList,
+            x_google_ignoreList: 'x_google_ignoreList' in map ? map.x_google_ignoreList : undefined,
             debugId: 'debugId' in map ? map.debugId : undefined,
           },
   };

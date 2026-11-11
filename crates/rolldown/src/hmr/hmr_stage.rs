@@ -1041,7 +1041,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     // Warnings are dropped: a module rendered here was rendered by the full build too,
     // which reports a broken chain for it already.
     let (code, codegen_map) = match codegen.map {
-      Some(map) => (codegen.code, Some(map.into_owned())),
+      Some(map) => (codegen.code, Some(rolldown_sourcemap::from_oxc_sourcemap(map).into_owned())),
       None => (codegen.code, None),
     };
 

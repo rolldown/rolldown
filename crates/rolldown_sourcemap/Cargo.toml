@@ -23,6 +23,7 @@ doctest = false
 memchr = { workspace = true }
 oxc = { workspace = true }
 oxc_sourcemap = { workspace = true }
+oxc_sourcemap_v9 = { workspace = true }
 
 [dev-dependencies]
 criterion2 = { workspace = true, default-features = false }

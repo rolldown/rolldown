@@ -2217,7 +2217,7 @@ export interface BindingEnhancedTransformOptions {
    */
   tsconfig?: boolean | string | BindingTsconfigRawOptions
   /** An input source map to collapse with the output source map. */
-  inputMap?: SourceMap
+  inputMap?: BindingTransformSourceMap
 }
 
 /** Result of the enhanced transform API. */
@@ -2233,7 +2233,7 @@ export interface BindingEnhancedTransformResult {
    *
    * This will be set if {@link BindingEnhancedTransformOptions#sourcemap} is `true`.
    */
-  map?: SourceMap
+  map?: BindingTransformSourceMap
   /**
    * The `.d.ts` declaration file for the transformed code. Declarations are
    * only generated if `declaration` is set to `true` and a TypeScript file
@@ -2250,7 +2250,7 @@ export interface BindingEnhancedTransformResult {
    * {@link TypeScriptOptions#declaration declaration} and
    * {@link BindingEnhancedTransformOptions#sourcemap sourcemap} are set to `true`.
    */
-  declarationMap?: SourceMap
+  declarationMap?: BindingTransformSourceMap
   /**
    * Helpers used.
    *
@@ -2956,6 +2956,17 @@ export interface BindingTransformHookExtraArgs {
   moduleType: string
   rawId?: string
   attributes?: Record<string, string>
+}
+
+export interface BindingTransformSourceMap {
+  file?: string
+  mappings: string
+  names: Array<string>
+  sourceRoot?: string
+  sources: Array<string | undefined | null>
+  sourcesContent?: Array<string>
+  version: number
+  ignoreList?: Array<number>
 }
 
 export interface BindingTreeshake {

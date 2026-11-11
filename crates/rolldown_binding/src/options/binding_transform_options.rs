@@ -4,7 +4,6 @@ use std::sync::Arc;
 use napi::{Either, bindgen_prelude::Either3};
 use napi_derive::napi;
 use oxc_napi::get_source_type;
-use oxc_sourcemap::napi::SourceMap;
 use oxc_transform_napi::{
   CompilerAssumptions, DecoratorOptions, Helpers, JsxOptions, PluginsOptions, TypeScriptOptions,
 };
@@ -15,8 +14,40 @@ use crate::types::binding_outputs::to_binding_error;
 use crate::types::error::BindingError;
 use crate::utils::normalize_binding_transform_options;
 
+// Oxc still exports v9's `SourceMap` NAPI type. Keep the nullable v10 shape separate
+// so the two versions do not generate conflicting TypeScript declarations.
+#[napi(object)]
+pub struct BindingTransformSourceMap {
+  pub file: Option<String>,
+  pub mappings: String,
+  pub names: Vec<String>,
+  pub source_root: Option<String>,
+  pub sources: Vec<Option<String>>,
+  pub sources_content: Option<Vec<String>>,
+  pub version: u8,
+  pub ignore_list: Option<Vec<u32>>,
+}
+
+impl From<rolldown_sourcemap::SourceMap> for BindingTransformSourceMap {
+  fn from(map: rolldown_sourcemap::SourceMap) -> Self {
+    let json = map.to_json();
+    Self {
+      file: json.file,
+      mappings: json.mappings,
+      names: json.names,
+      source_root: json.source_root,
+      sources: json.sources,
+      sources_content: json
+        .sources_content
+        .map(|contents| contents.into_iter().map(Option::unwrap_or_default).collect()),
+      version: 3,
+      ignore_list: json.ignore_list,
+    }
+  }
+}
+
 fn napi_sourcemap_to_sourcemap(
-  map: SourceMap,
+  map: BindingTransformSourceMap,
 ) -> Result<rolldown_sourcemap::SourceMap, anyhow::Error> {
   rolldown_sourcemap::SourceMap::from_json(rolldown_sourcemap::JSONSourceMap {
     version: 3,
@@ -175,7 +206,7 @@ pub struct BindingEnhancedTransformOptions {
   /// - TsconfigRawOptions: Use the provided inline tsconfig options
   pub tsconfig: Option<Either3<bool, String, BindingTsconfigRawOptions>>,
   /// An input source map to collapse with the output source map.
-  pub input_map: Option<SourceMap>,
+  pub input_map: Option<BindingTransformSourceMap>,
 }
 
 impl BindingEnhancedTransformOptions {
@@ -208,7 +239,7 @@ pub struct BindingEnhancedTransformResult {
   /// The source map for the transformed code.
   ///
   /// This will be set if {@link BindingEnhancedTransformOptions#sourcemap} is `true`.
-  pub map: Option<SourceMap>,
+  pub map: Option<BindingTransformSourceMap>,
   /// The `.d.ts` declaration file for the transformed code. Declarations are
   /// only generated if `declaration` is set to `true` and a TypeScript file
   /// is provided.
@@ -221,7 +252,7 @@ pub struct BindingEnhancedTransformResult {
   /// Declaration source map. Only generated if both
   /// {@link TypeScriptOptions#declaration declaration} and
   /// {@link BindingEnhancedTransformOptions#sourcemap sourcemap} are set to `true`.
-  pub declaration_map: Option<SourceMap>,
+  pub declaration_map: Option<BindingTransformSourceMap>,
   /// Helpers used.
   ///
   /// @internal

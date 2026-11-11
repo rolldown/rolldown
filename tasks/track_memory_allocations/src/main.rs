@@ -139,7 +139,11 @@ fn codegen_map(source: &str, path: &str, minify: bool) -> (String, SourceMap) {
       ..CodegenOptions::default()
     })
     .build(&parsed.program);
-  (code, map.expect("codegen should emit a source map").into_owned())
+  (
+    code,
+    rolldown_sourcemap::from_oxc_sourcemap(map.expect("codegen should emit a source map"))
+      .into_owned(),
+  )
 }
 
 /// A `SourceJoiner` for a realistic chunk: a `prepend_source` banner (the

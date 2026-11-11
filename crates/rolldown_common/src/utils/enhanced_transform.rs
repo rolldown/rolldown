@@ -207,7 +207,10 @@ fn generate_declarations(
       ..Default::default()
     })
     .build(&ret.program);
-  (Some(codegen_ret.code), codegen_ret.map.map(oxc_sourcemap::SourceMap::into_owned))
+  (
+    Some(codegen_ret.code),
+    codegen_ret.map.map(|map| rolldown_sourcemap::from_oxc_sourcemap(map).into_owned()),
+  )
 }
 
 fn append_oxc_diagnostics(
@@ -456,7 +459,7 @@ pub fn enhanced_transform(
     })
     .build(&program);
 
-  let output_map = match (input_map, codegen_ret.map) {
+  let output_map = match (input_map, codegen_ret.map.map(rolldown_sourcemap::from_oxc_sourcemap)) {
     // The collapse only keeps strings from `im`, so the borrowed codegen map can be
     // used directly — detaching it first would copy the whole source for nothing.
     (Some(im), Some(om)) => Some(collapse_sourcemaps(&[&im, &om])),

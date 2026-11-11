@@ -30,6 +30,9 @@ jobs:
   docs-validation:
     name: Docs Validation
     runs-on: ubuntu-latest
+    env:
+      VP_REMOTE_CACHE_URL: https://voidzero-remote-cache.voidzero-docs.workers.dev/projects/rolldown
+      VP_REMOTE_CACHE: read
     outputs:
       # Deploy when this content's fingerprint hasn't been deployed before, or on manual dispatch.
       deploy: ${{ steps.deployed.outputs.cache-hit != 'true' || github.event_name == 'workflow_dispatch' }}
@@ -48,6 +51,9 @@ jobs:
       - name: Build Docs
         if: github.ref_name != 'main'
         run: vp run --filter rolldown-docs build
+        env:
+          ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
+          ALGOLIA_API_KEY: ${{ secrets.ALGOLIA_API_KEY }}
 
       # Deterministic fingerprint of the deployable content: git-tracked docs sources plus the
       # generated TypeDoc reference (docs/reference). It is used as a GitHub Actions cache key to
@@ -89,6 +95,8 @@ jobs:
       id-token: write
     env:
       VOID_API_URL: https://api.void.cloud
+      VP_REMOTE_CACHE_URL: https://voidzero-remote-cache.voidzero-docs.workers.dev/projects/rolldown
+      VP_REMOTE_CACHE: ${{ github.event_name == 'push' && 'read-write' || 'read' }}
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
@@ -97,15 +105,19 @@ jobs:
           version: '1.6.0'
           cache: true
 
+      - name: Build docs
+        run: vp run docs:build
+        env:
+          ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
+          ALGOLIA_API_KEY: ${{ secrets.ALGOLIA_API_KEY }}
+
       - name: Connect to Void
         run: vp exec --filter rolldown-docs void connect "$VOID_API_URL" --no-login
 
       - name: Deploy to Void
-        run: vp run docs:void
+        run: vp run --filter rolldown-docs void deploy --dir .vitepress/dist
         env:
           VOID_PROJECT: rolldown
-          ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
-          ALGOLIA_API_KEY: ${{ secrets.ALGOLIA_API_KEY }}
 
       # Mark this fingerprint as deployed so the next identical-content run skips. The marker
       # file's contents are unused (the cache key is the fingerprint); an evicted marker only

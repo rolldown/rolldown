@@ -2008,7 +2008,7 @@ dependencies = [
 [[package]]
 name = "oxc_sourcemap"
 version = "9.0.0"
-source = "git+https://github.com/oxc-project/oxc-sourcemap?rev=2c4aa460f93ed81b4fe63ed0f206b2961f2bb327#2c4aa460f93ed81b4fe63ed0f206b2961f2bb327"
+source = "git+https://github.com/oxc-project/oxc-sourcemap?rev=a802dd1da3d0da47ec86541f147cd0b55af1f864#a802dd1da3d0da47ec86541f147cd0b55af1f864"
 dependencies = [
  "base64-simd",
  "json-escape-simd",

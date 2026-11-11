@@ -1,4 +1,11 @@
 
+## [1.1.8] - 2026-11-11
+
+### 🐛 Bug Fixes
+
+- build linux-x64-gnu binding for baseline x86-64 CPUs (#11618)
+
+
 ## [1.1.7] - 2026-11-09
 
 ### 🐛 Bug Fixes

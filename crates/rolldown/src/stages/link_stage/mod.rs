@@ -285,6 +285,7 @@ impl<'a> LinkStage<'a> {
     self.bind_imports_and_exports();
     self.create_exports_for_ecma_modules();
     let unreachable_import_expression_node_ids = self.cross_module_optimization();
+    self.exclude_jsx_element_names_from_inline_const();
     self.refine_stmt_side_effects_with_imported_constants();
     // The passes above only relax statement flags. Module verdicts must follow before
     // `reference_needed_symbols` derives import flags from them.

@@ -30,7 +30,7 @@ Inlining requires:
 
 - ESM output ([`output.format: 'es'`](/reference/OutputOptions.format)).
 - [`preserveEntrySignatures: false`](/reference/InputOptions.preserveEntrySignatures), which allows unused entry exports to be removed.
-- [`strictExecutionOrder`](/reference/OutputOptions.strictExecutionOrder) enabled. Rolldown enables it automatically when omitted.
+- [`strictExecutionOrder`](/reference/OutputOptions.strictExecutionOrder) enabled. Rolldown enables it automatically when omitted; an explicit `false` selects the restricted mode described under [Without strict execution order](#without-strict-execution-order).
 
 ## How it works
 
@@ -225,6 +225,10 @@ A common chunk is not inlined, even below `maxSize`, if:
 - It contains declaration modules or builtin `asset` or `copy` modules.
 
 Direct `eval` and static cycles involving a chunk that is not inlined can also prevent inlining.
+
+### Without strict execution order
+
+An explicit [`strictExecutionOrder: false`](/reference/OutputOptions.strictExecutionOrder) keeps the option on but narrows which chunks qualify. A factory runs when its first reader starts, after that reader's earlier imports and, unlike the file it replaces, after its later ones too. Without strict order nothing wraps a module's top-level code, so a common chunk is inlined only when each of its modules is either wrapped (CommonJS, or ESM that is required) or has top-level statements that do no more than initialize the bindings it declares or imports, such as `const subject = new Subject()` or a bound import of a wrapped module. Those run once, when the first reader starts, which is the reordering the non-strict chunk graph already allows between independent modules. A statement that binds nothing, such as a bare `import './styles.css'`, a registration call or an `export * from`, runs for its effect alone and keeps the chunk a file. Only a module's own statements count: a dependency outside the chunk still runs before the chunk's reader. Chunks in any static import cycle stay files in this mode.
 
 ### Plugins
 

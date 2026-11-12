@@ -1309,7 +1309,6 @@ describe('preconditions', () => {
 
   test.each<[string, Record<string, unknown>, Record<string, unknown>, RegExp]>([
     ['format cjs', {}, { format: 'cjs' }, /output\.format/],
-    ['strictExecutionOrder false', {}, { strictExecutionOrder: false }, /strictExecutionOrder/],
     [
       'preserveEntrySignatures absent',
       { preserveEntrySignatures: undefined },
@@ -1350,6 +1349,13 @@ describe('preconditions', () => {
   test('an omitted strictExecutionOrder is turned on', async () => {
     const chunks = await attempt({}, { strictExecutionOrder: undefined });
     expect(chunks.map((chunk) => chunk.code).join('\n')).toContain('__share');
+  });
+
+  test('an explicit strictExecutionOrder false keeps a side-effectful chunk a file', async () => {
+    const chunks = await attempt({}, { strictExecutionOrder: false });
+    expect(chunks).toHaveLength(3);
+    expect(chunks.filter((chunk) => chunk.moduleIds.includes('./shared.js'))).toHaveLength(1);
+    expect(chunks.map((chunk) => chunk.code).join('\n')).not.toContain('__share(');
   });
 
   test('`maxSize: 0` skips the preconditions', async () => {

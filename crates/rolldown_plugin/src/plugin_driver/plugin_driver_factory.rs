@@ -88,10 +88,12 @@ impl PluginDriverFactory {
           bundle_span: bundle_span.clone(),
           manual_resolve_span: manual_resolve_span.clone(),
           log_hook_tasks: Arc::clone(&log_hook_tasks),
+          cache_recorder: None,
         })));
       });
 
       crate::plugin_driver::PluginDriver {
+        cacheable_hooks: crate::plugin_driver::CacheableHooks::new(&index_plugins, options),
         hook_orders: PluginHookOrders::new(&index_plugins, &plugin_usage_vec),
         plugins: index_plugins,
         contexts: index_contexts,

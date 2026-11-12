@@ -5,6 +5,7 @@ import type {
   BindingHookLoadOutput,
   BindingHookResolveIdOutput,
   BindingHookTransformOutput,
+  BindingPluginContext,
   BindingPluginOptions,
   BindingTransformPluginContext,
 } from '../binding.cjs';
@@ -27,6 +28,7 @@ import {
 import type { BindingifyPluginArgs } from './bindingify-plugin';
 import { bindingifyHook, type PluginHookWithBindingExt } from './bindingify-plugin-hook-meta';
 import type {
+  CustomPluginOptions,
   LoadResult,
   PluginHooks,
   ResolveIdResult,
@@ -104,9 +106,11 @@ export function bindingifyResolveId(
         importerAttributes: extraOptions.importerAttributes ?? {},
       });
       if (isPromiseLike(ret)) {
-        return Promise.resolve(ret).then((ret) => bindingifyResolveIdResult(args, ret, specifier));
+        return Promise.resolve(ret).then((ret) =>
+          bindingifyResolveIdResult(args, ret, ctx, specifier),
+        );
       }
-      return bindingifyResolveIdResult(args, ret, specifier);
+      return bindingifyResolveIdResult(args, ret, ctx, specifier);
     },
     filter: bindingifyResolveIdFilter(options.filter),
   }));
@@ -115,6 +119,7 @@ export function bindingifyResolveId(
 function bindingifyResolveIdResult(
   args: BindingifyPluginArgs,
   ret: ResolveIdResult,
+  ctx: BindingPluginContext,
   specifier: string,
 ): BindingHookResolveIdOutput | undefined {
   if (ret == null) {
@@ -130,6 +135,8 @@ function bindingifyResolveIdResult(
   if (typeof ret === 'string') {
     return { id: ret, normalizeExternalId: false };
   }
+
+  markNotCacheableIfMeta(args, ctx, 'resolveId', ret.meta);
 
   return {
     id: ret.id,
@@ -155,10 +162,10 @@ export function bindingifyResolveDynamicImport(
       });
       if (isPromiseLike(ret)) {
         return Promise.resolve(ret).then((ret) =>
-          bindingifyResolveDynamicImportResult(args, ret, specifier),
+          bindingifyResolveDynamicImportResult(args, ret, ctx, specifier),
         );
       }
-      return bindingifyResolveDynamicImportResult(args, ret, specifier);
+      return bindingifyResolveDynamicImportResult(args, ret, ctx, specifier);
     },
   }));
 }
@@ -166,6 +173,7 @@ export function bindingifyResolveDynamicImport(
 function bindingifyResolveDynamicImportResult(
   args: BindingifyPluginArgs,
   ret: ResolveIdResult,
+  ctx: BindingPluginContext,
   specifier: string,
 ): BindingHookResolveIdOutput | undefined {
   if (ret == null) {
@@ -182,6 +190,8 @@ function bindingifyResolveDynamicImportResult(
       id: ret,
     };
   }
+
+  markNotCacheableIfMeta(args, ctx, 'resolveDynamicImport', ret.meta);
 
   const result: BindingHookResolveIdOutput = {
     id: ret.id,
@@ -280,6 +290,7 @@ function bindingifyTransformResult(
     return { code: ret };
   }
 
+  markNotCacheableIfMeta(args, ctx.inner(), 'transform', ret.meta);
   args.pluginContextData.updateModuleMeta(id, ret.meta ?? {});
 
   let normalizedCode: string | undefined = undefined;
@@ -336,10 +347,10 @@ export function bindingifyLoad(
 
       if (isPromiseLike(ret)) {
         return Promise.resolve(ret).then((ret) =>
-          bindingifyLoadResult(args, ret, id, extraOptions.rawId),
+          bindingifyLoadResult(args, ret, ctx.inner(), id, extraOptions.rawId),
         );
       }
-      return bindingifyLoadResult(args, ret, id, extraOptions.rawId);
+      return bindingifyLoadResult(args, ret, ctx.inner(), id, extraOptions.rawId);
     },
     filter: bindingifyLoadFilter(options.filter),
   }));
@@ -348,6 +359,7 @@ export function bindingifyLoad(
 function bindingifyLoadResult(
   args: BindingifyPluginArgs,
   ret: LoadResult,
+  ctx: BindingPluginContext,
   id: string,
   rawId: string,
 ): BindingHookLoadOutput | undefined {
@@ -359,6 +371,7 @@ function bindingifyLoadResult(
     return { code: ret };
   }
 
+  markNotCacheableIfMeta(args, ctx, 'load', ret.meta);
   args.pluginContextData.updateModuleMeta(id, ret.meta || {});
 
   let map = preProcessSourceMap(ret, rawId);
@@ -369,6 +382,23 @@ function bindingifyLoadResult(
     moduleType: ret.moduleType,
     moduleSideEffects: ret.moduleSideEffects ?? undefined,
   };
+}
+
+/**
+ * `meta` lives only in `moduleOptionMap` on the JavaScript side, so a skipped hook would lose it.
+ */
+function markNotCacheableIfMeta(
+  args: BindingifyPluginArgs,
+  context: BindingPluginContext,
+  hookName: string,
+  meta: CustomPluginOptions | null | undefined,
+): void {
+  if (meta != null && Object.keys(meta).length > 0) {
+    args.pluginContextData.markNotCacheable(
+      context,
+      () => `hook \`${hookName}\` of plugin \`${args.plugin.name}\` returned \`meta\``,
+    );
+  }
 }
 
 function preProcessSourceMap(

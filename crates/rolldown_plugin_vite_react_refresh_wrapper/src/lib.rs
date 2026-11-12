@@ -114,7 +114,7 @@ impl Plugin for ViteReactRefreshWrapperPlugin {
   }
 
   fn resolve_id_meta(&self) -> Option<PluginHookMeta> {
-    Some(PluginHookMeta { order: Some(PluginOrder::Pre) })
+    Some(PluginHookMeta { order: Some(PluginOrder::Pre), cache: None })
   }
 
   async fn transform(

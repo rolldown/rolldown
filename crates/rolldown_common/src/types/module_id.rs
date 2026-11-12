@@ -68,6 +68,16 @@ impl ModuleId {
     id
   }
 
+  /// The inverse of [`raw_id`](Self::raw_id) and [`attributes_suffix`](Self::attributes_suffix).
+  pub fn from_raw_parts(raw_id: &str, attributes_suffix: &str) -> Self {
+    if attributes_suffix.is_empty() {
+      return Self::new(raw_id);
+    }
+    let mut id = Self::new(format!("{raw_id}{attributes_suffix}"));
+    id.raw_len = u32::try_from(raw_id.len()).expect("module id should be shorter than 4 GiB");
+    id
+  }
+
   /// Construct a `ModuleId` that is known at compile time to be a virtual id
   /// (e.g. the runtime module sentinel). The caller asserts the value is a
   /// virtual id; it is not re-classified, so this can be used in `const` context.

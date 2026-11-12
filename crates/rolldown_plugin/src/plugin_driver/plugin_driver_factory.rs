@@ -93,6 +93,7 @@ impl PluginDriverFactory {
         should_skip_user_plugins_for_lazy_proxy_modules,
         lazy_compilation_plugin_idx,
         file_emitter: Arc::clone(file_emitter),
+        meta,
         watch_files,
         module_infos,
         transform_dependencies,

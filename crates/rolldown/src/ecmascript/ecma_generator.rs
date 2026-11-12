@@ -349,6 +349,7 @@ impl EcmaGenerator {
           .expect("should have preliminary filename"),
         preliminary_sourcemap_filename: ctx.chunk.preliminary_sourcemap_filename.clone(),
         augment_chunk_hash: None,
+        hash_dependencies: None,
         post_banner,
         post_footer,
       },

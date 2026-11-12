@@ -31,7 +31,7 @@ pub fn apply_inner_plugins(
       rolldown_plugin_chunk_import_map::ChunkImportMapPlugin {
         base_url: config.base_url.clone(),
         file_name: config.file_name.clone(),
-        ..Default::default()
+        include: config.include.clone(),
       },
     ));
   }

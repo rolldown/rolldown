@@ -193,13 +193,17 @@ function bindingifyExperimental(
         throw new Error(`Unexpected chunkModulesOrder: ${experimental.chunkModulesOrder}`);
     }
   }
+  const chunkImportMap = experimental?.chunkImportMap;
   return {
     viteMode: experimental?.viteMode,
     resolveNewUrlToAsset: experimental?.resolveNewUrlToAsset,
     devMode: bindingifyDevMode(experimental?.devMode),
     attachDebugInfo: bindingifyAttachDebugInfo(experimental?.attachDebugInfo),
     chunkModulesOrder,
-    chunkImportMap: experimental?.chunkImportMap,
+    chunkImportMap:
+      typeof chunkImportMap === 'object'
+        ? { ...chunkImportMap, include: normalizedStringOrRegex(chunkImportMap.include) }
+        : chunkImportMap,
     onDemandWrapping: experimental?.onDemandWrapping,
     incrementalBuild: experimental?.incrementalBuild,
     nativeMagicString: experimental?.nativeMagicString,

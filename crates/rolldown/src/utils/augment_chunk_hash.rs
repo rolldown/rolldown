@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use futures::future::try_join_all;
+use rolldown_common::ChunkHashDependencies;
 use rolldown_plugin::SharedPluginDriver;
 
 use crate::type_alias::IndexInstantiatedChunks;
@@ -21,6 +22,12 @@ pub async fn augment_chunk_hash(
     Ok::<(), anyhow::Error>(())
   }))
   .await?;
+
+  if let Some(hash_dependencies) = plugin_driver.meta.get::<ChunkHashDependencies>() {
+    for asset in assets.iter_mut() {
+      asset.hash_dependencies = hash_dependencies.0.get(&*asset.preliminary_filename).cloned();
+    }
+  }
 
   Ok(())
 }

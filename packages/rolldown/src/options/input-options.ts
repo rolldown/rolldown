@@ -617,6 +617,15 @@ export interface InputOptions {
      * Keeping these keys independent of content hashes reduces cascading cache invalidation when
      * a dependency changes.
      *
+     * Every chunk with a hashed filename is in the map by default. Set `include` to map only the
+     * chunks whose name matches. A string has to equal the chunk name. A regular expression is
+     * tested against it. Chunks outside the map are imported by their content-hashed filename as
+     * usual.
+     *
+     * A change in a mapped chunk renames only that chunk. Its importers keep their filename. A
+     * chunk outside the map behaves as before, so a change in it renames the chunks that contain
+     * its filename.
+     *
      * The output defaults to `importmap.json` unless overridden via `fileName`. A base URL prefix
      * (default `"/"`) can be applied to all paths. The resulting JSON is a valid import map and can be
      * directly injected into HTML via `<script type="importmap">`.
@@ -658,7 +667,9 @@ export interface InputOptions {
      *
      * @default false
      */
-    chunkImportMap?: boolean | { baseUrl?: string; fileName?: string };
+    chunkImportMap?:
+      | boolean
+      | { baseUrl?: string; fileName?: string; include?: StringOrRegExp | StringOrRegExp[] };
 
     /**
      * Under `output.strictExecutionOrder`, derive a conservative wrapping plan from predicted

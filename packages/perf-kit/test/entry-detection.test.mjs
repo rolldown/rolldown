@@ -1,7 +1,7 @@
-// Entry detection must read the built index.html as the browser does. An
-// attribute value can have double, single or no quotes (HTML minifiers drop the
-// quotes), and a script tag in a comment, in script text, in <noscript> or in a
-// <template> does not load.
+// HTML permits double-quoted, single-quoted and unquoted attribute values.
+// Entry detection must ignore script markup in comments and script text.
+// It must skip template contents. With scripting enabled, it must also skip
+// <noscript> contents.
 
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -49,7 +49,8 @@ for (const src of ['"/a/nav.js"', "'/a/nav.js'", '/a/nav.js']) {
 
 for (const type of ['"module"', "'module'", 'module']) {
   test(`a module script with type=${type} wins over a bigger classic script`, () => {
-    // When no script is a module, the biggest local script wins: legacy.js is bigger.
+    // Neither filename matches the preferred main/index/app pattern. Without a
+    // module script, the detector falls back to the larger legacy.js.
     const html = `<!doctype html><script src="/a/legacy.js"></script><script type=${type} src="/a/nav.js"></script>`;
     const files = { 'index.html': html, 'a/legacy.js': ' '.repeat(4000), 'a/nav.js': NAV };
     assert.equal(detectedEntry(files), 'a/nav.js');

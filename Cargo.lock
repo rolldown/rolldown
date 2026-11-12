@@ -3216,6 +3216,7 @@ name = "rolldown_plugin_vite_reporter"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "arcstr",
  "cow-utils",
  "derive_more",
  "flate2",
@@ -3225,6 +3226,7 @@ dependencies = [
  "rolldown_common",
  "rolldown_plugin",
  "rolldown_std_utils",
+ "rolldown_utils",
  "rustc-hash",
  "sugar_path",
  "supports-color",

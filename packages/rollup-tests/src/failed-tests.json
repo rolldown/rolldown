@@ -138,8 +138,6 @@
   "rollup@chunking form@side-effect-free-dependencies@avoid-side-effect-free-empty-imports: avoids empty imports if they do not have side-effects@generates es",
   "rollup@chunking form@single-file-manual-chunk: chunk aliasing with extensions@generates cjs",
   "rollup@chunking form@single-file-manual-chunk: chunk aliasing with extensions@generates es",
-  "rollup@file hashes@sourcemap-debug-ids: creates different hashes if a debug ID comment is added@generates correct hashes",
-  "rollup@file hashes@sourcemap: creates different hashes if a source map comment is added@generates correct hashes",
   "rollup@form@decorator-identifiers-deconflict: de-conflict identifiers of decorators",
   "rollup@form@decorator: parsing decorators successfully",
   "rollup@form@export-destructuring-with-default: renders exported destructuring declarations as plain bindings and keeps reassigned exports live",

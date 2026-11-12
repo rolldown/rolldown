@@ -6,21 +6,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## another.js
 
 ```js
-//#region another.js
+// another.js
 console.log(false);
-//#endregion
 
 ```
 
 ## index.js
 
 ```js
-//#endregion
-//#region index.js
+// index.js
 function mount(...args) {
 	throw new Error("server");
 }
-//#endregion
 export { mount };
 
 ```

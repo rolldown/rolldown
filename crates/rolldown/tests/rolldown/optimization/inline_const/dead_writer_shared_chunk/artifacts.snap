@@ -1,0 +1,100 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] dynamic-flag.js is dynamically imported by a.js but also statically imported by a.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## a.js
+
+```js
+import { n as entry_export } from "./entry-export-flag.js";
+
+// HIDDEN [\0rolldown/runtime.js]
+// live-flag.js
+let live = false;
+function enable_live() {
+	live = true;
+}
+
+// cross-flag.js
+let cross = false;
+
+// namespace-flag.js
+var namespace_flag_exports = /* @__PURE__ */ __exportAll({
+	enable_namespace: () => enable_namespace,
+	namespace: () => namespace
+});
+let namespace = false;
+function enable_namespace() {
+	namespace = true;
+}
+
+// dynamic-flag.js
+var dynamic_flag_exports = /* @__PURE__ */ __exportAll({
+	dynamic: () => dynamic,
+	enable_dynamic: () => enable_dynamic
+});
+let dynamic = false;
+function enable_dynamic() {
+	dynamic = true;
+}
+
+// top-flag.js
+let top = false;
+top = true;
+
+// var-flag.js
+var legacy = false;
+
+// a.js
+function mount(target) {
+	{}
+	throw new Error("server");
+}
+const read_chained = () => (false, "not chained");
+function read_live() {
+	enable_live();
+	return live;
+}
+const read_cross = () => cross;
+const get_namespace = () => namespace_flag_exports;
+const read_namespace = () => namespace;
+const read_entry_export = () => entry_export;
+const read_dynamic = () => dynamic;
+const load_dynamic = () => Promise.resolve().then(() => dynamic_flag_exports);
+const read_top = () => top;
+const read_legacy = () => legacy;
+
+export { get_namespace, load_dynamic, mount, read_chained, read_cross, read_dynamic, read_entry_export, read_legacy, read_live, read_namespace, read_top };
+```
+
+## b.js
+
+```js
+import { t as enable_entry_export } from "./entry-export-flag.js";
+
+// b.js
+const render_mode = () => (false, "default");
+
+export { enable_entry_export, render_mode };
+```
+
+## entry-export-flag.js
+
+```js
+// entry-export-flag.js
+let entry_export = false;
+function enable_entry_export() {
+	entry_export = true;
+}
+
+export { entry_export as n, enable_entry_export as t };
+```

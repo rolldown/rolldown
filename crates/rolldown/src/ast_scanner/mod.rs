@@ -24,15 +24,15 @@ use oxc::{
     },
   },
   ast_visit::{VisitJs, walk_js},
-  semantic::SymbolId,
+  semantic::{SymbolFlags, SymbolId},
   span::{GetSpan, Span},
 };
 use oxc_index::IndexVec;
 use oxc_str::{CompactStr, JSStr};
 use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicImportUsageInfo};
 use rolldown_common::{
-  ConstExportMeta, ConstantValue, DynamicImportExprInfo, EcmaModuleAstUsage, EcmaViewMeta,
-  ExportsKind, FlatOptions, HmrInfo, ImportAttributes, ImportKind, ImportRecordIdx,
+  ConstExportMeta, ConstantValue, DeferredWriteConstant, DynamicImportExprInfo, EcmaModuleAstUsage,
+  EcmaViewMeta, ExportsKind, FlatOptions, HmrInfo, ImportAttributes, ImportKind, ImportRecordIdx,
   ImportRecordMeta, LocalExport, MemberExprProp, MemberExprRef, ModuleDefFormat, ModuleId,
   ModuleIdx, NamedImport, RawImportRecord, RolldownFileUrlReference, Specifier, StmtEvalFlags,
   StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
@@ -127,12 +127,8 @@ pub struct ScanResult {
   pub hmr_hot_ref: Option<SymbolRef>,
   pub directive_range: Vec<Span>,
   pub constant_export_map: FxHashMap<SymbolId, ConstExportMeta>,
-  /// symbol_id -> top-level `StmtInfoIdx`(es) that WRITE (reassign) it. Used after tree-shaking
-  /// to decide whether a `let`'s only writers were all dead code (issue #9698).
-  pub reassigned_stmt_map: FxHashMap<SymbolId, Vec<StmtInfoIdx>>,
-  /// exported/local literal-init `let`s that were dropped from `constant_export_map` because they
-  /// were syntactically mutated; kept pending a post-tree-shaking dead-writer recheck.
-  pub mutated_constant_candidates: FxHashMap<SymbolId, ConstExportMeta>,
+  /// See `EcmaView::deferred_write_constants`.
+  pub deferred_write_constants: Vec<DeferredWriteConstant>,
   /// Temporary storage for node IDs of `require()` calls in `module.exports = require(...)` patterns.
   /// Resolved to `cjs_reexport_import_record_ids` after scanning completes.
   pub cjs_reexport_require_node_ids: Vec<NodeId>,
@@ -188,6 +184,15 @@ pub struct AstScanner<'me, 'ast> {
   namespace_object_symbol_ids: FxHashSet<SymbolId>,
   /// Root `var` bindings that module-level code reads before their declaration.
   vars_read_before_declaration: FxHashSet<SymbolId>,
+  /// Root `let` bindings that code writes, found only with `inlineConst`. Only these can become
+  /// `deferred_write_constants`. Most modules have none, so most identifier references skip
+  /// `record_root_write` after one check.
+  mutated_root_lets: FxHashSet<SymbolId>,
+  /// Each write to a binding in `mutated_root_lets`: the symbol, the top-level statement, and
+  /// whether the write runs when the module runs (it is not inside a function).
+  root_writes: Vec<(SymbolId, StmtInfoIdx, bool)>,
+  /// Literal bindings that `add_constant_symbol` rejected only because code writes them.
+  mutated_constant_candidates: Vec<(SymbolId, ConstExportMeta)>,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -248,8 +253,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       dummy_record_set: FxHashSet::default(),
       commonjs_exports: FxHashMap::default(),
       constant_export_map: FxHashMap::default(),
-      reassigned_stmt_map: FxHashMap::default(),
-      mutated_constant_candidates: FxHashMap::default(),
+      deferred_write_constants: Vec::new(),
       ecma_view_meta: EcmaViewMeta::default(),
       cjs_reexport_require_node_ids: Vec::new(),
       cjs_reexport_import_record_ids: Vec::new(),
@@ -291,6 +295,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       untranspiled_syntax: UntranspiledSyntax::empty(),
       namespace_object_symbol_ids: FxHashSet::default(),
       vars_read_before_declaration: FxHashSet::default(),
+      mutated_root_lets: FxHashSet::default(),
+      root_writes: Vec::new(),
+      mutated_constant_candidates: Vec::new(),
     }
   }
 
@@ -316,6 +323,20 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 
   pub fn scan(mut self, program: &Program<'ast>) -> BuildResult<ScanResult> {
+    if self.immutable_ctx.flat_options.inline_const_enabled() {
+      let scoping = self.result.symbol_ref_db.scoping();
+      self.mutated_root_lets = scoping
+        .get_bindings(scoping.root_scope_id())
+        .values()
+        .copied()
+        .filter(|symbol_id| {
+          let flags = scoping.symbol_flags(*symbol_id);
+          flags.contains(SymbolFlags::BlockScopedVariable)
+            && !flags.is_const_variable()
+            && scoping.symbol_is_mutated(*symbol_id)
+        })
+        .collect();
+    }
     self.visit_program(program);
     let mut exports_kind = ExportsKind::None;
 
@@ -459,6 +480,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           .get(symbol_id)
           .is_some_and(|flag| flag.contains(SymbolRefFlags::IsNotReassigned))
     });
+    self.collect_deferred_write_constants();
 
     if cfg!(debug_assertions) {
       use rustc_hash::FxHashSet;
@@ -1255,27 +1277,104 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   pub fn add_constant_symbol(&mut self, symbol_id: SymbolId, value: ConstExportMeta) {
     let scoping = self.result.symbol_ref_db.scoping();
+    let is_facade = self.result.symbol_ref_db.is_facade_symbol(symbol_id);
     // A repeated `var` declaration assigns without a write reference.
-    let is_redeclared = !self.result.symbol_ref_db.is_facade_symbol(symbol_id)
-      && !scoping.symbol_redeclarations(symbol_id).is_empty();
+    let is_redeclared = !is_facade && !scoping.symbol_redeclarations(symbol_id).is_empty();
     if is_redeclared || eval_can_assign(scoping, symbol_id) {
       return;
     }
-    let is_mutated = !self.result.symbol_ref_db.is_facade_symbol(symbol_id)
-      && scoping.symbol_is_mutated(symbol_id);
-    if is_mutated {
-      // Keep the candidate around: its writer(s) may all be tree-shaken away, in which case the
-      // link stage can recover it as a constant (see `recover_constants_with_dead_writers`).
-      // Only ESM bindings are sound to recover this way: every write to them is a simple-identifier
-      // reassignment captured in `reassigned_stmt_map`. CommonJS exports are written through member
-      // expressions (`exports.x = ...`) which we do not track there, so never treat them as
-      // candidates.
+    if !is_facade && scoping.symbol_is_mutated(symbol_id) {
+      // The writes can all be in functions that no code calls. See
+      // `collect_deferred_write_constants`.
       if !value.commonjs_export {
-        self.result.mutated_constant_candidates.insert(symbol_id, value);
+        self.mutated_constant_candidates.push((symbol_id, value));
       }
       return;
     }
     self.result.constant_export_map.insert(symbol_id, value);
+  }
+
+  /// Records a write to a binding in `mutated_root_lets` for `collect_deferred_write_constants`.
+  pub fn record_root_write(&mut self, ident_ref: &IdentifierReference) {
+    if self.mutated_root_lets.is_empty() {
+      return;
+    }
+    let Some(reference_id) = ident_ref.reference_id.get() else {
+      return;
+    };
+    let reference = self.result.symbol_ref_db.scoping().get_reference(reference_id);
+    if reference.is_write()
+      && let Some(symbol_id) = reference.symbol_id()
+      && self.mutated_root_lets.contains(&symbol_id)
+    {
+      self.root_writes.push((symbol_id, self.current_stmt_idx, self.is_top_level));
+    }
+  }
+
+  /// Keeps the rejected literal bindings that the link stage can still make constants: an exported
+  /// `let` whose every write is inside a function. The link stage checks that no code can call
+  /// those functions. See internal-docs/constant-branches/implementation.md.
+  ///
+  /// Only `let`: a read before the module runs (in an import cycle) throws for a `let`, which is
+  /// the case that inlining a never-written `let` already accepts. The same read of a `var` gives
+  /// `undefined`.
+  fn collect_deferred_write_constants(&mut self) {
+    if self.mutated_constant_candidates.is_empty() {
+      return;
+    }
+    let candidates = std::mem::take(&mut self.mutated_constant_candidates);
+    let exported_symbols = self
+      .result
+      .named_exports
+      .values()
+      .filter(|local_export| !local_export.came_from_commonjs)
+      .map(|local_export| local_export.referenced.symbol)
+      .collect::<FxHashSet<_>>();
+    let mut writes_by_symbol = candidates
+      .iter()
+      .filter(|(symbol_id, _)| {
+        self.mutated_root_lets.contains(symbol_id) && exported_symbols.contains(symbol_id)
+      })
+      .map(|(symbol_id, _)| (*symbol_id, Some(Vec::new())))
+      .collect::<FxHashMap<SymbolId, Option<Vec<StmtInfoIdx>>>>();
+    if writes_by_symbol.is_empty() {
+      return;
+    }
+    for (symbol_id, stmt_idx, runs_at_module_evaluation) in &self.root_writes {
+      if let Some(writer_stmts) = writes_by_symbol.get_mut(symbol_id) {
+        if *runs_at_module_evaluation {
+          *writer_stmts = None;
+        } else if let Some(writer_stmts) = writer_stmts {
+          writer_stmts.push(*stmt_idx);
+        }
+      }
+    }
+    for (symbol_id, meta) in candidates {
+      let Some(Some(mut writer_stmts)) = writes_by_symbol.remove(&symbol_id) else {
+        continue;
+      };
+      // Each write must be one that the visitor recorded. Otherwise a write is not known.
+      let write_count = self
+        .result
+        .symbol_ref_db
+        .get_resolved_references(symbol_id)
+        .filter(|reference| reference.is_write())
+        .count();
+      let symbol_ref: SymbolRef = (self.immutable_ctx.idx, symbol_id).into();
+      let declared_stmts = self.result.stmt_infos.declared_stmts_by_symbol(&symbol_ref);
+      if write_count != writer_stmts.len()
+        || writer_stmts.iter().any(|stmt_idx| declared_stmts.contains(stmt_idx))
+      {
+        continue;
+      }
+      writer_stmts.sort_unstable();
+      writer_stmts.dedup();
+      self.result.deferred_write_constants.push(DeferredWriteConstant {
+        symbol: symbol_id,
+        meta,
+        writer_stmts,
+      });
+    }
   }
 
   fn is_import_expr_ignored_by_comment(&mut self, expr: &ImportExpression<'ast>) -> bool {

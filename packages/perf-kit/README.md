@@ -2,10 +2,11 @@
 
 ## Install / run
 
-Zero runtime dependencies (raw CDP over Node ≥22's built-in WebSocket + a system
-Chrome/Edge), so it works three ways:
+Raw CDP over Node ≥22's built-in WebSocket + a system Chrome/Edge. The one runtime
+dependency is `parse5`, the HTML parser that reads the built `index.html`. It works
+three ways:
 
-- **In this repo**: `node packages/perf-kit/harness.mjs …` from anywhere.
+- **In this repo**: `node packages/perf-kit/harness.mjs …` from anywhere, after `pnpm install`.
 - **As a dependency**: `npm i -D @rolldown/perf-kit` → `npx perf-kit scan --app .`
   (the `bin` shim replaces any `node node_modules/…` path-typing). When installed,
   state lives in the consumer project at `.perf-kit/` (it writes its own
@@ -24,7 +25,7 @@ deno, and Cloudflare Worker startup in workerd. The harness deliberately does
 **not** run the loop itself — deciding what to try next and whether to keep it is the
 agent's job; every command here is one loop step with machine-readable output.
 
-No dependencies: raw CDP over Node's built-in `WebSocket` (Node >= 22) against a
+Raw CDP over Node's built-in `WebSocket` (Node >= 22) against a
 system Chrome/Edge (`CHROME_PATH` picks the browser). Build your app with its usual
 build command. `graph`, `what-if`, `cut`, `why` and `graph-diff` read the module graph of the
 [build report](https://rolldown.rs/in-depth/build-report), so build the app with

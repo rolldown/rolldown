@@ -360,13 +360,13 @@ function requireEntry(target, opts = {}) {
   return entry;
 }
 
-/** The entry chunk of a built app, read from its index.html module script. */
+/** Detect an entry chunk from script tags or Astro island attributes in index.html. */
 function detectEntry(distDir) {
   const indexFile = path.join(distDir, 'index.html');
   if (!fs.existsSync(indexFile)) return null;
-  // parse5 follows the parsing rules of the HTML spec, as the browser does. A value
-  // can have double, single or no quotes. A tag in a comment, in script text or in
-  // <noscript> is text, and the content of a <template> is not in the document.
+  // parse5 reads quoted and unquoted attribute values using HTML parsing rules.
+  // Its default scriptingEnabled: true makes <noscript> contents text.
+  // htmlElements skips comments, script text and <template> contents.
   const elements = htmlElements(parseHtml(fs.readFileSync(indexFile, 'utf8')));
   const locals = [];
   for (const el of elements) {
@@ -380,8 +380,8 @@ function detectEntry(distDir) {
       module: attrValue(el, 'type') === 'module',
     });
   }
-  // Astro islands have no script tag: each <astro-island> names its chunks in
-  // component-url / renderer-url attributes. They load as modules.
+  // When no local script is found, use component-url / renderer-url attributes
+  // on <astro-island> elements as a fallback.
   if (!locals.length) {
     for (const el of elements) {
       if (el.tagName !== 'astro-island') continue;
@@ -409,8 +409,8 @@ function detectEntry(distDir) {
 }
 
 /**
- * The elements under a parse5 node, in document order. A <template> keeps its
- * content out of `childNodes`, so the walk skips it.
+ * Collect descendant elements in document order. parse5 stores template contents
+ * in `content`, outside `childNodes`, so this walk skips them.
  */
 function htmlElements(node, out = []) {
   for (const child of node.childNodes) {

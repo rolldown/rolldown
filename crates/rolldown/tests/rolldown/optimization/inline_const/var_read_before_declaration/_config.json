@@ -1,3 +1,6 @@
 {
-  "configVariants": [{ "inlineConst": { "mode": "all", "pass": 2 } }]
+  "configVariants": [
+    { "inlineConst": { "mode": "all", "pass": 2 } },
+    { "_configName": "cjs", "format": "cjs" }
+  ]
 }

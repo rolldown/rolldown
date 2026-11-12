@@ -41,10 +41,14 @@ impl SymbolRef {
     db.local_db(self.owner).ast_scopes.scoping().symbol_flags(self.symbol).is_const_variable()
   }
 
-  /// Whether the binding is guaranteed never reassigned. A missing flag means we don't know,
-  /// which is treated conservatively as "possibly reassigned" (`false`).
+  /// Whether every read of the binding sees the value its declaration gives it: it is never
+  /// reassigned, and no code reads it before the declaration assigns it. A missing flag means we
+  /// don't know, which is treated conservatively as "possibly reassigned" (`false`).
   pub fn is_not_reassigned(&self, db: &SymbolRefDb) -> bool {
-    self.flags(db).is_some_and(|flags| flags.contains(SymbolRefFlags::IsNotReassigned))
+    self.flags(db).is_some_and(|flags| {
+      flags.contains(SymbolRefFlags::IsNotReassigned)
+        && !flags.contains(SymbolRefFlags::ReadBeforeAssigned)
+    })
   }
 
   pub fn is_side_effect_free_function(&self, db: &SymbolRefDb, modules: &IndexModules) -> bool {

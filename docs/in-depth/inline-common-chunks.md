@@ -24,7 +24,7 @@ export default defineConfig({
 
 `maxSize` uses transformed source sizes, summed per chunk before rendering, minification and compression. It defaults to `0` (disabled); `Infinity` removes the size limit.
 
-Entries, dynamic import targets and manual chunks are not inlined. Matching any module with [`exclude`](/reference/TypeAlias.ExperimentalInlineCommonChunksOptions#exclude) prevents its entire common chunk from being inlined.
+Entries and manual chunks are not inlined. A common chunk that a dynamic import also loads can be inlined into the chunks that import it statically; the dynamic import then loads a file that only registers it (see [Modules loaded with `import()`](#modules-loaded-with-import)). Matching any module with [`exclude`](/reference/TypeAlias.ExperimentalInlineCommonChunksOptions#exclude) prevents its entire common chunk from being inlined.
 
 Inlining requires:
 
@@ -207,6 +207,39 @@ console.log((0, helper.inc)());
 ```
 
 Rolldown omits a copy only when every known path from a configured or plugin-emitted entry supplies the factory first. An earlier static dependency can supply it too.
+
+### Modules loaded with `import()`
+
+A module can be imported statically by one entry and loaded with `import()` by another:
+
+::: code-group
+
+```js [src/a.js]
+import { inc } from './helper.js';
+
+console.log(inc());
+```
+
+```js [src/d.js]
+button.onclick = () => import('./helper.js').then((helper) => helper.inc());
+```
+
+:::
+
+The helper's code goes into a common chunk that both A and the `import()` load. When that chunk is inlined, A carries a copy of the helper, and the `import()` loads a file that registers the helper and exports nothing. The call site then reads the helper from the shared runtime (names simplified):
+
+```js [d.js]
+import { __share_require } from './rolldown-runtime.js';
+
+button.onclick = () =>
+  import('./helper.js')
+    .then((n) => ((n = __share_require('helper')), n.init_helper(), n.helper_namespace))
+    .then((helper) => helper.inc());
+```
+
+Whichever copy registers first is the one every caller uses, so the helper runs once and its namespace object is shared. A does not request the helper's file; D requests it only when the `import()` runs, even if A has already registered the helper. When every file that calls the `import()` already has the helper registered, Rolldown emits no file for it.
+
+This requires the `import()` target to be merged into the common chunk. A module that is also an entry, or any `import()` target in a build where a module uses top-level await, keeps its own file that re-exports from the common chunk, and that common chunk is not inlined.
 
 ### Keeping modules in the same scope
 

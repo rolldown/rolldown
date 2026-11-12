@@ -212,7 +212,7 @@ impl<'a> GenerateStage<'a> {
     // live chunks throughout, so their own edges are derived like any other chunk's, and the
     // projection afterwards turns the logical edges into the physical file graph.
     // See internal-docs/inline-common-chunks/implementation.md.
-    if self.select_inline_common_chunks(&chunk_graph, &link_state, &mut order_state) {
+    if self.select_inline_common_chunks(&mut chunk_graph, &link_state, &mut order_state) {
       link_state = self.compute_cross_chunk_link_state(
         &chunk_graph,
         used_symbol_refs.view(),
@@ -317,6 +317,7 @@ impl<'a> GenerateStage<'a> {
     let chunk_table = &chunk_graph.chunk_table;
     let index_pre_generated_names_futures = chunk_table.iter_enumerated().map(|(idx, chunk)| {
       let is_record = self.inline_state.is_record(idx);
+      let loaded_record = self.inline_state.loaded_record(idx);
       let sanitize_filename = self.options.sanitize_filename.clone();
       let preserve_modules_root = self.options.preserve_modules_root.clone();
       let input_base = chunk.input_base.clone();
@@ -410,8 +411,11 @@ impl<'a> GenerateStage<'a> {
           ChunkKind::Common => {
             // - rollup use the first entered/last executed module as the `[name]` of common chunks.
             // - esbuild always use 'chunk' as the `[name]`. However we try to make the name more meaningful here.
+            // The file an `import()` loads for an inline common chunk record has no modules of its
+            // own and is named like the record.
+            let named_after = loaded_record.map_or(chunk, |record| &chunk_table[record]);
             if let Some(module_id) =
-              chunk.modules.iter().rev().find(|each| **each != self.link_output.runtime.id())
+              named_after.modules.iter().rev().find(|each| **each != self.link_output.runtime.id())
             {
               let module = &modules[*module_id];
               let name = module.id().representative_name();

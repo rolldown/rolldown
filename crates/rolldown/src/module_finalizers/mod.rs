@@ -2782,6 +2782,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   /// 2. If the importee is in a different chunk:
   ///    Convert `import('./some-module.js')` to `import('./some-module.js').then(n => n.ns)`
   ///
+  /// When the importee's chunk is an inline common chunk record, the loaded file only registers the
+  /// record, so the callback reads the record from the registry first:
+  /// `import('./some-module.js').then(n => (n = __share_require(id), n.ns))`. A record without a
+  /// loader is registered wherever this runs, so nothing is loaded: `Promise.resolve().then(...)`.
+  ///
   /// Returns `Some(Expression)` if the import was rewritten, `None` otherwise.
   fn rewrite_dynamic_import_for_merged_entry(
     &self,
@@ -2894,6 +2899,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         importee_chunk.exports_to_other_chunks.get(&sym).and_then(|names| names.first())
       });
 
+      let record_read = self.inline_record_read(importee_chunk_idx);
+
       // For ESM-init wrapped modules, we also need the namespace symbol
       let namespace_export_name = if init_target.is_some() || consumer_local_targets.is_some() {
         self.ctx.modules[importee_idx].namespace_object_ref().and_then(|ns_ref| {
@@ -2923,6 +2930,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             );
             // Promise.resolve().then(() => require('./some-module.js'))
             Expression::new_promise_resolve_then(require_call_expr, self)
+          } else if self
+            .ctx
+            .inline_state
+            .record(importee_chunk_idx)
+            .is_some_and(|record| record.loader.is_none())
+          {
+            Expression::new_promise_resolve(self)
           } else {
             let import_expr = expr.take_in_box(self);
             Expression::ImportExpression(import_expr)
@@ -2933,6 +2947,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             let finalized_to_esm = self.finalized_expr_for_runtime_symbol("__toESM");
             let call_expr = CallExpression::new_then_call_cjs_wrapper_with_to_esm(
               base_expr,
+              record_read,
               name,
               finalized_to_esm,
               self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
@@ -2967,6 +2982,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             }
             let call_expr = CallExpression::new_then_call_esm_wrappers_with_namespace(
               base_expr,
+              record_read,
               &wrapper_names,
               ns_name,
               self,
@@ -2977,6 +2993,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             if let Some(ns_name) = namespace_export_name {
               let call_expr = CallExpression::new_then_call_esm_wrappers_with_namespace(
                 base_expr,
+                record_read,
                 &[name],
                 ns_name,
                 self,
@@ -2991,7 +3008,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               None
             }
           } else {
-            let call_expr = CallExpression::new_then_extract_property(base_expr, name, self);
+            let call_expr =
+              CallExpression::new_then_extract_property(base_expr, record_read, name, self);
             Some(Expression::CallExpression(call_expr))
           }
         }
@@ -3007,6 +3025,23 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         }
       }
     }
+  }
+
+  /// `__share_require(id)` when `chunk_idx` is an inline common chunk record: its registered copy,
+  /// read by the record chunk's export names. See internal-docs/inline-common-chunks/design.md.
+  fn inline_record_read(&self, chunk_idx: ChunkIdx) -> Option<Expression<'ast>> {
+    let record = self.ctx.inline_state.record(chunk_idx)?;
+    Some(Expression::new_call_with_arg(
+      self.finalized_expr_for_runtime_symbol("__share_require"),
+      Expression::new_string_literal(
+        SPAN,
+        oxc::ast::ast::Str::from_str_in(&record.id, self),
+        None,
+        self,
+      ),
+      false,
+      self,
+    ))
   }
 
   /// `with { type: "json" }`, or `None` without attributes.
@@ -3212,13 +3247,21 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // such a call site does not resolve today anyway, so nothing that worked stops working.
         expr.options = None;
 
-        let import_path = self.ctx.chunk.import_path_for(importee_chunk);
-        expr.source = Expression::new_string_literal(
-          expr.source.span(),
-          oxc::ast::ast::Str::from_str_in(&import_path, self),
-          None,
-          self,
-        );
+        // An inline common chunk record is no file: an `import()` from another chunk loads the
+        // record's loader, if it has one.
+        let loaded_chunk = match self.ctx.inline_state.record(importee_chunk_idx) {
+          Some(record) => record.loader.map(|loader| &self.ctx.chunk_graph.chunk_table[loader]),
+          None => Some(importee_chunk),
+        };
+        if let Some(loaded_chunk) = loaded_chunk {
+          let import_path = self.ctx.chunk.import_path_for(loaded_chunk);
+          expr.source = Expression::new_string_literal(
+            expr.source.span(),
+            oxc::ast::ast::Str::from_str_in(&import_path, self),
+            None,
+            self,
+          );
+        }
 
         if let Some(rewritten_expr) = self.rewrite_dynamic_import_for_merged_entry(
           expr,
@@ -3234,6 +3277,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // Convert `import('./foo.mjs')` to `Promise.resolve().then(function() { return require('foo.mjs') })`
         // when format is CJS
         if matches!(self.ctx.options.format, OutputFormat::Cjs) {
+          let import_path = self.ctx.chunk.import_path_for(importee_chunk);
           // require('foo.mjs')
           let mut require_call_expr = ast::Expression::new_call_expression(
             SPAN,

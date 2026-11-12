@@ -1,12 +1,15 @@
 use itertools::Itertools;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, ChunkReasonType, ImportKind, ImportRecordMeta, ModuleIdx,
-  RuntimeHelper, StmtInfoMeta, SymbolOrMemberExprRef, WrapKind,
+  Chunk, ChunkIdx, ChunkKind, ChunkReasonType, EntryPointKind, ImportKind, ImportRecordMeta,
+  ModuleIdx, RuntimeHelper, StmtInfoMeta, SymbolOrMemberExprRef, WrapKind,
 };
-use rolldown_utils::indexmap::FxIndexSet;
-use rustc_hash::FxHashSet;
+use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
+use rustc_hash::{FxHashMap, FxHashSet};
 
-use super::{LOG_TARGET, place::compute_placement};
+use super::{
+  LOG_TARGET,
+  place::{InlinePlacement, compute_placement},
+};
 use crate::{
   chunk_graph::ChunkGraph,
   stages::generate_stage::{
@@ -20,12 +23,77 @@ struct SelectionFacts<'a> {
   runtime_chunk: ChunkIdx,
   /// Chunks some `import()` resolves to, plus chunks hosting a collapsed dynamic-entry facade.
   dynamic_targets: &'a FxHashSet<ChunkIdx>,
+  /// The dynamic targets that are common chunks only because the chunks of these dynamic entry
+  /// modules were merged into them. They can be records: `import()` then loads a file that only
+  /// registers them.
+  dynamic_entry_hosts: &'a FxHashMap<ChunkIdx, FxHashSet<ModuleIdx>>,
   /// Chunks owning a symbol that another chunk re-exports with `export { x }`: an ESM export
   /// needs a local binding, which a bridge property read cannot provide.
   foreign_exported_owner_chunks: &'a FxHashSet<ChunkIdx>,
   /// Chunks whose symbols a module with direct `eval` references by name.
   eval_read_chunks: &'a FxHashSet<ChunkIdx>,
   max_size: usize,
+}
+
+/// Registers the registry helpers each file uses as runtime demand. The demand goes through the
+/// synthetic-statement channel order wrappers use, so the next link derivation imports and exports
+/// the helpers like any other runtime symbol. `record_importers` are the chunks with an `import()`
+/// of a record, which reads it from the registry.
+fn register_registry_demand(
+  order_state: &mut OrderWrapState,
+  placement: &InlinePlacement,
+  loaders: &FxIndexMap<ChunkIdx, ChunkIdx>,
+  record_importers: impl Iterator<Item = ChunkIdx>,
+) {
+  for file in placement.reading_files.iter().copied() {
+    let mut helpers = RuntimeHelper::ShareRequire;
+    if placement.carried.contains_key(&file) {
+      helpers |= RuntimeHelper::Share | RuntimeHelper::ShareExport;
+    }
+    order_state.insert_runtime_helper_demand(file, helpers);
+  }
+  // A loader only registers factories; it needs `__share_require` when one of them reads another
+  // record.
+  for loader in loaders.values() {
+    if let Some(carried) = placement.carried.get(loader) {
+      let mut helpers = RuntimeHelper::Share | RuntimeHelper::ShareExport;
+      if carried.iter().any(|record| placement.readers.contains_key(record)) {
+        helpers |= RuntimeHelper::ShareRequire;
+      }
+      order_state.insert_runtime_helper_demand(*loader, helpers);
+    }
+  }
+  for chunk_idx in record_importers {
+    order_state.insert_runtime_helper_demand(chunk_idx, RuntimeHelper::ShareRequire);
+  }
+}
+
+/// Creates the loader of each record, with the index selection assigned to it. A loader is a
+/// common chunk without modules, named and ordered like its record. The next link derivation gives
+/// it the runtime imports its demand asks for, and the projection gives it the imports of the
+/// records it carries.
+fn add_loader_chunks(chunk_graph: &mut ChunkGraph, loaders: &FxIndexMap<ChunkIdx, ChunkIdx>) {
+  for (record, loader) in loaders {
+    let record_chunk = &chunk_graph.chunk_table[*record];
+    let mut chunk = Chunk::new(
+      None,
+      None,
+      record_chunk.bits.clone(),
+      vec![],
+      ChunkKind::Common,
+      record_chunk.input_base.clone(),
+      None,
+    );
+    chunk.exec_order = record_chunk.exec_order;
+    let chunk_idx = chunk_graph.add_chunk(chunk);
+    assert_eq!(chunk_idx, *loader, "a loader gets the index selection assigned to it");
+    let position = chunk_graph
+      .sorted_chunk_idx_vec
+      .iter()
+      .position(|chunk_idx| chunk_idx == record)
+      .expect("a record is in sorted_chunk_idx_vec");
+    chunk_graph.sorted_chunk_idx_vec.insert(position + 1, chunk_idx);
+  }
 }
 
 impl GenerateStage<'_> {
@@ -35,7 +103,7 @@ impl GenerateStage<'_> {
   /// again so the registry demand registered here reaches the runtime chunk's imports and exports.
   pub(in crate::stages::generate_stage) fn select_inline_common_chunks(
     &mut self,
-    chunk_graph: &ChunkGraph,
+    chunk_graph: &mut ChunkGraph,
     link_state: &CrossChunkLinkState,
     order_state: &mut OrderWrapState,
   ) -> bool {
@@ -73,12 +141,14 @@ impl GenerateStage<'_> {
       .chain(chunk_graph.common_chunk_exported_facade_chunk_namespace.keys().copied())
       .chain(chunk_graph.entry_module_to_entry_chunk.values().copied())
       .collect::<FxHashSet<_>>();
+    let dynamic_entry_hosts = self.dynamic_entry_hosts(chunk_graph);
     let foreign_exported_owner_chunks = self.foreign_exported_owner_chunks(chunk_graph, link_state);
     let eval_read_chunks = self.eval_read_chunks(chunk_graph);
     let facts = SelectionFacts {
       link_state,
       runtime_chunk,
       dynamic_targets: &dynamic_targets,
+      dynamic_entry_hosts: &dynamic_entry_hosts,
       foreign_exported_owner_chunks: &foreign_exported_owner_chunks,
       eval_read_chunks: &eval_read_chunks,
       max_size,
@@ -140,13 +210,41 @@ impl GenerateStage<'_> {
       }
     }
 
+    // A dynamic entry host that another chunk's `import()` loads gets a loader file, unless every
+    // path that runs such an `import()` has registered the record already. The loaders are created
+    // after selection, with the indices assigned here.
+    let dynamically_imported = link_state
+      .index_cross_chunk_dynamic_imports
+      .iter_enumerated()
+      .filter(|(chunk_idx, _)| is_live(*chunk_idx))
+      .flat_map(|(_, targets)| targets.iter().copied())
+      .collect::<FxHashSet<_>>();
+    let first_loader = chunk_graph.chunk_table.len();
+    let assign_loaders = |records: &FxIndexSet<ChunkIdx>,
+                          registered_where_loaded: &FxHashSet<ChunkIdx>|
+     -> FxIndexMap<ChunkIdx, ChunkIdx> {
+      records
+        .iter()
+        .copied()
+        .filter(|record| {
+          dynamically_imported.contains(record) && !registered_where_loaded.contains(record)
+        })
+        .enumerate()
+        .map(|(index, record)| (record, ChunkIdx::from_usize(first_loader + index)))
+        .collect()
+    };
+
     let mut records = candidates;
     // A carrier names its own modules and its records' in one pass, and a module with direct
     // `eval` reads its bindings by their source names, which the renamer does not protect; a
     // record such a file would print stays a file. Removing a record moves other records'
     // carriers, so the placement is recomputed until every record passes.
     let eval_files = self.eval_files(chunk_graph);
-    let placement = loop {
+    // Records whose loader would carry nothing: every path that loads it has registered the record
+    // and the records it reads. Recomputed after every rejection.
+    let mut registered_where_loaded = FxHashSet::default();
+    let (placement, loaders) = loop {
+      let loaders = assign_loaders(&records, &registered_where_loaded);
       let placement = compute_placement(
         &static_importees,
         &link_state.index_cross_chunk_dynamic_imports,
@@ -157,12 +255,24 @@ impl GenerateStage<'_> {
         },
         |chunk_idx| chunk_graph.chunk_table[chunk_idx].exec_order,
         &records,
+        &loaders,
       );
+      let empty_loaders = loaders
+        .iter()
+        .filter(|(_, loader)| !placement.carried.contains_key(*loader))
+        .map(|(record, _)| *record)
+        .collect_vec();
+      if !empty_loaders.is_empty() {
+        registered_where_loaded.extend(empty_loaders);
+        continue;
+      }
       let rejected = records
         .iter()
         .copied()
         .filter_map(|record| {
-          if !placement.is_carried(record) {
+          // A loader carries its record without reading it: a record only its loader carries is
+          // imported by no file, and inlining it removes no request.
+          if !placement.is_carried(record, loaders.get(&record).copied()) {
             return Some((record, "no file reads it"));
           }
           let eval_carrier = placement
@@ -173,8 +283,9 @@ impl GenerateStage<'_> {
         })
         .collect_vec();
       if rejected.is_empty() {
-        break placement;
+        break (placement, loaders);
       }
+      registered_where_loaded.clear();
       for (record, reason) in rejected {
         records.shift_remove(&record);
         tracing::debug!(
@@ -198,27 +309,28 @@ impl GenerateStage<'_> {
         modules = ?self.module_ids_of(chunk),
         size = self.chunk_size(chunk),
         readers = ?placement.readers.iter().filter(|(_, read)| read.contains(record)).map(|(reader, _)| reader.raw()).sorted_unstable().collect::<Vec<_>>(),
+        loader = ?loaders.get(record).map(|loader| loader.raw()),
         "selected as record"
       );
     }
 
-    // Every file that reads a record imports the registry helpers from the runtime chunk. The
-    // demand goes through the synthetic-statement channel order wrappers use, so the next link
-    // derivation imports and exports the helpers like any other runtime symbol.
-    for file in placement.reading_files.iter().copied() {
-      let mut helpers = RuntimeHelper::ShareRequire;
-      if placement.carried.contains_key(&file) {
-        helpers |= RuntimeHelper::Share | RuntimeHelper::ShareExport;
-      }
-      order_state.insert_runtime_helper_demand(file, helpers);
-    }
+    let record_importers = link_state
+      .index_cross_chunk_dynamic_imports
+      .iter_enumerated()
+      .filter(|(chunk_idx, targets)| {
+        is_live(*chunk_idx) && targets.iter().any(|target| records.contains(target))
+      })
+      .map(|(chunk_idx, _)| chunk_idx);
+    register_registry_demand(order_state, &placement, &loaders, record_importers);
     order_state.compute_runtime_symbol_closure(
       &self.link_output.runtime,
       &self.link_output.stmt_infos[runtime_idx],
       &self.link_output.symbol_db,
     );
 
-    self.inline_state.set_selection(records, placement, runtime_chunk);
+    add_loader_chunks(chunk_graph, &loaders);
+
+    self.inline_state.set_selection(records, &loaders, placement, runtime_chunk);
     true
   }
 
@@ -255,7 +367,9 @@ impl GenerateStage<'_> {
     if chunk_graph.chunk_idx_to_reference_ids.contains_key(&chunk_idx) {
       return Some("emitted chunk");
     }
-    if facts.dynamic_targets.contains(&chunk_idx) {
+    if facts.dynamic_targets.contains(&chunk_idx)
+      && !facts.dynamic_entry_hosts.contains_key(&chunk_idx)
+    {
       return Some("target of a dynamic import");
     }
     if chunk.modules.is_empty() {
@@ -274,8 +388,9 @@ impl GenerateStage<'_> {
     {
       return Some("imports an external module");
     }
+    let dynamic_entries = facts.dynamic_entry_hosts.get(&chunk_idx);
     for module_idx in chunk.modules.iter().copied() {
-      if let Some(reason) = self.inline_common_chunk_module_bailout(module_idx) {
+      if let Some(reason) = self.inline_common_chunk_module_bailout(module_idx, dynamic_entries) {
         return Some(reason);
       }
       let meta = &self.link_output.metas[module_idx];
@@ -305,7 +420,7 @@ impl GenerateStage<'_> {
         continue;
       }
       has_module = true;
-      if self.inline_common_chunk_module_bailout(module_idx).is_some() {
+      if self.inline_common_chunk_module_bailout(module_idx, None).is_some() {
         return false;
       }
       size += self.link_output.module_table[module_idx].size();
@@ -313,11 +428,20 @@ impl GenerateStage<'_> {
     has_module && (options.max_size == usize::MAX || size < options.max_size)
   }
 
-  fn inline_common_chunk_module_bailout(&self, module_idx: ModuleIdx) -> Option<&'static str> {
+  /// `dynamic_entries`: the dynamic entry modules whose chunks were merged into the chunk being
+  /// checked ([`SelectionFacts::dynamic_entry_hosts`]); every other entry module keeps its chunk a
+  /// file.
+  fn inline_common_chunk_module_bailout(
+    &self,
+    module_idx: ModuleIdx,
+    dynamic_entries: Option<&FxHashSet<ModuleIdx>>,
+  ) -> Option<&'static str> {
     let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
       return Some("member is not a normal module");
     };
-    if self.link_output.entries.contains_key(&module_idx) {
+    if self.link_output.entries.contains_key(&module_idx)
+      && !dynamic_entries.is_some_and(|modules| modules.contains(&module_idx))
+    {
       return Some("hosts an entry module");
     }
     if self.inline_state.is_excluded_module(module_idx) {
@@ -381,6 +505,40 @@ impl GenerateStage<'_> {
       return Some("member is an emitted asset");
     }
     None
+  }
+
+  /// Common chunks that dynamic entry modules' chunks were merged into, with those modules: every
+  /// module that names the chunk in `entry_module_to_entry_chunk` is a dynamic entry (and no other
+  /// kind of entry) placed in the chunk, whose namespace the chunk exports for the `import()` call
+  /// sites.
+  fn dynamic_entry_hosts(
+    &self,
+    chunk_graph: &ChunkGraph,
+  ) -> FxHashMap<ChunkIdx, FxHashSet<ModuleIdx>> {
+    let mut hosts: FxHashMap<ChunkIdx, FxHashSet<ModuleIdx>> = FxHashMap::default();
+    let mut rejected = FxHashSet::default();
+    for (&module_idx, &chunk_idx) in &chunk_graph.entry_module_to_entry_chunk {
+      if !matches!(chunk_graph.chunk_table[chunk_idx].kind, ChunkKind::Common) {
+        continue;
+      }
+      let is_dynamic_entry = self.link_output.entries.get(&module_idx).is_some_and(|entries| {
+        entries.iter().all(|entry| matches!(entry.kind, EntryPointKind::DynamicImport))
+      });
+      let namespace_exported = chunk_graph
+        .common_chunk_exported_facade_chunk_namespace
+        .get(&chunk_idx)
+        .is_some_and(|modules| modules.contains(&module_idx));
+      if is_dynamic_entry
+        && namespace_exported
+        && chunk_graph.module_to_chunk[module_idx] == Some(chunk_idx)
+      {
+        hosts.entry(chunk_idx).or_default().insert(module_idx);
+      } else {
+        rejected.insert(chunk_idx);
+      }
+    }
+    hosts.retain(|chunk_idx, _| !rejected.contains(chunk_idx));
+    hosts
   }
 
   fn foreign_exported_owner_chunks(

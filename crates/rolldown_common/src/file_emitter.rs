@@ -9,7 +9,7 @@ use dashmap::{DashMap, DashSet, Entry};
 use rolldown_error::{BuildDiagnostic, InvalidOptionType};
 use rolldown_std_utils::normalize_path_buf_to_slash;
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
-use rolldown_utils::make_unique_name::make_unique_name;
+use rolldown_utils::make_unique_name::{make_unique_name, release_unique_name};
 use rolldown_utils::stabilize_id::stabilize_id;
 use rolldown_utils::xxhash::{xxhash_base64_url, xxhash_with_base};
 use std::ffi::OsStr;
@@ -208,6 +208,12 @@ impl FileEmitter {
                 .as_deref()
                 .is_some_and(|n| output.names.iter().all(|e| (n.len(), n) < (e.len(), e.as_str())))
             {
+              // Release the current filename first: `generate_file_name` deconflicts against
+              // `self.names`, which still reserves it for this very asset. Otherwise a template
+              // without `[name]` (e.g. `assets/[hash][extname]`) renders the same filename and
+              // it collides with itself (`<hash>2.svg`), and with `[name]` the abandoned filename
+              // stays reserved and pushes a later asset to a suffix (rolldown#11395).
+              release_unique_name(&output.filename, &self.names);
               self.generate_file_name(
                 &mut file,
                 &hash,

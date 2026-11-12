@@ -31,6 +31,11 @@ impl Emit {
     Self { file_name: Some(file_name.into()), source: SHARED_SOURCE.into(), ..Default::default() }
   }
 
+  /// An asset whose content differs from the deduplicated ones.
+  fn distinct(name: &str, source: &str) -> Self {
+    Self { name: Some(name.into()), source: source.into(), ..Default::default() }
+  }
+
   fn with_original(mut self, original_file_name: &str) -> Self {
     self.original_file_name = Some(original_file_name.into());
     self
@@ -183,6 +188,13 @@ impl Plugin for CrossPhaseEmitPlugin {
 
 /// Bundles a dummy entry with `plugin` and returns the emitted output assets.
 async fn bundle(plugin: SharedPluginable) -> Vec<Arc<OutputAsset>> {
+  bundle_with_asset_filenames(plugin, "assets/[name]-[hash][extname]").await
+}
+
+async fn bundle_with_asset_filenames(
+  plugin: SharedPluginable,
+  asset_filenames: &str,
+) -> Vec<Arc<OutputAsset>> {
   let mut bundler = Bundler::with_plugins(
     BundlerOptions {
       input: Some(vec![InputItem {
@@ -192,9 +204,7 @@ async fn bundle(plugin: SharedPluginable) -> Vec<Arc<OutputAsset>> {
       cwd: Some(
         concat!(env!("CARGO_MANIFEST_DIR"), "/tests/rolldown/function/asset_dedup_filename").into(),
       ),
-      asset_filenames: Some(AssetFilenamesOutputOption::String(
-        "assets/[name]-[hash][extname]".into(),
-      )),
+      asset_filenames: Some(AssetFilenamesOutputOption::String(asset_filenames.into())),
       ..Default::default()
     },
     vec![plugin],
@@ -367,4 +377,47 @@ async fn build_then_output_phase_duplicate_keeps_build_name() {
   );
   let names: Vec<&str> = assets[0].names.iter().map(String::as_str).collect();
   assert_eq!(names, ["z.txt", "aaaa.txt"], "both names collected on the survivor");
+}
+
+/// rolldown#11395: with a template that has no `[name]`, re-picking the shorter name renders the
+/// same filename. It must not collide with its own reservation and gain a `2` suffix, which made
+/// the filename depend on which `load` hook emitted first.
+#[tokio::test(flavor = "multi_thread")]
+async fn repicked_name_without_name_placeholder_keeps_filename() {
+  let emit = |emits| {
+    bundle_with_asset_filenames(
+      Plugin::new_shared(EmitPlugin { emits, concurrent: false }),
+      "assets/[hash][extname]",
+    )
+  };
+  let longer_first = emit(vec![Emit::dedup("long-name.svg"), Emit::dedup("a.svg")]).await;
+  let shorter_first = emit(vec![Emit::dedup("a.svg"), Emit::dedup("long-name.svg")]).await;
+
+  assert_eq!(longer_first.len(), 1, "identical content deduplicates into one asset");
+  assert_eq!(
+    longer_first[0].filename, shorter_first[0].filename,
+    "filename must not depend on emission order"
+  );
+}
+
+/// rolldown#11395: re-picking a different filename must release the abandoned one, so a later
+/// asset with different content can take it without a suffix.
+#[tokio::test(flavor = "multi_thread")]
+async fn repicked_name_releases_abandoned_filename() {
+  let mut assets = bundle_with_asset_filenames(
+    Plugin::new_shared(EmitPlugin {
+      emits: vec![
+        Emit::dedup("long-name.svg"),
+        Emit::dedup("a.svg"),
+        Emit::distinct("long-name.svg", "other"),
+      ],
+      concurrent: false,
+    }),
+    "assets/[name][extname]",
+  )
+  .await;
+
+  assets.sort_by(|a, b| a.filename.cmp(&b.filename));
+  let filenames: Vec<&str> = assets.iter().map(|asset| asset.filename.as_str()).collect();
+  assert_eq!(filenames, ["assets/a.svg", "assets/long-name.svg"]);
 }

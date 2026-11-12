@@ -40,7 +40,7 @@ impl Plugin for AssetModulePlugin {
 
   fn load_meta(&self) -> Option<PluginHookMeta> {
     // Run after user plugins so they can override asset loading
-    Some(PluginHookMeta { order: Some(PluginOrder::Post) })
+    Some(PluginHookMeta { order: Some(PluginOrder::Post), cache: Some(true) })
   }
 
   fn load(
@@ -53,7 +53,7 @@ impl Plugin for AssetModulePlugin {
 
   fn render_chunk_meta(&self) -> Option<PluginHookMeta> {
     // Run before user plugins so placeholders are resolved first
-    Some(PluginHookMeta { order: Some(PluginOrder::Pre) })
+    Some(PluginHookMeta { order: Some(PluginOrder::Pre), cache: None })
   }
 
   async fn render_chunk(

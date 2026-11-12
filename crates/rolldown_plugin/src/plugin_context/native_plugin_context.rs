@@ -21,6 +21,7 @@ use crate::{
   plugin_context::PluginContextMeta,
   types::{
     hook_resolve_id_skipped::HookResolveIdSkipped,
+    module_cache_recorder::{RecordedAction, SharedModuleCacheRecorder},
     plugin_context_resolve_options::PluginContextResolveOptions,
   },
   utils::resolve_id_check_external::resolve_id_check_external,
@@ -47,6 +48,9 @@ pub struct NativePluginContextImpl {
   // by manual calls of `PluginContext.resolve()`. We use a dedicated span here to distinguish whether the call is
   // - automatic (by rolldown) or manual (by `PluginContext.resolve()`)
   pub(crate) manual_resolve_span: tracing::Span,
+  /// Set on the contexts that the plugin driver forks for the hook calls of a module task
+  /// while the persistent cache records that task.
+  pub(crate) cache_recorder: Option<SharedModuleCacheRecorder>,
 }
 
 impl NativePluginContextImpl {
@@ -57,6 +61,8 @@ impl NativePluginContextImpl {
     side_effects: Option<HookSideEffects>,
     module_def_format: ModuleDefFormat,
   ) -> anyhow::Result<()> {
+    // The loaded module is an input that the persistent cache does not track.
+    self.mark_not_cacheable(|| format!("plugin `{}` called `this.load`", self.plugin_name));
     // Clone out the sender under the lock, then drop the lock before awaiting.
     let sender = {
       let guard = self.tx.lock().ok().context("Failed to acquire PluginDriver tx lock")?.clone();
@@ -152,6 +158,7 @@ impl NativePluginContextImpl {
         &normalized_extra_options.attributes,
         importer_raw_id,
         &importer_attributes,
+        self.cache_recorder.as_ref(),
       )
       .await
     }
@@ -159,15 +166,62 @@ impl NativePluginContextImpl {
     .await
   }
 
+  pub fn mark_not_cacheable(&self, reason: impl FnOnce() -> String) {
+    if let Some(recorder) = &self.cache_recorder {
+      recorder.mark_not_cacheable(reason);
+    }
+  }
+
+  /// Records a log that a JavaScript plugin sent to `onLog` during this hook call.
+  pub fn record_js_log(&self, level: LogLevel, json: String) {
+    self.record(|| RecordedAction::JsLog { level, json });
+  }
+
+  fn record(&self, action: impl FnOnce() -> RecordedAction) {
+    if let Some(recorder) = &self.cache_recorder {
+      recorder.record(action());
+    }
+  }
+
+  /// A copy of `value` when this call is recorded. Emits are recorded only after they succeed:
+  /// a failed emit that the plugin catches must not fail the build when it is replayed.
+  fn copy_for_record<T: Clone>(&self, value: &T) -> Option<T> {
+    self.cache_recorder.as_ref().map(|_| value.clone())
+  }
+
   pub fn emit_chunk(&self, chunk: rolldown_common::EmittedChunk) -> anyhow::Result<ArcStr> {
-    self.file_emitter.emit_chunk(Arc::new(chunk))
+    let copy = self.copy_for_record(&chunk);
+    let reference_id = self.file_emitter.emit_chunk(Arc::new(chunk))?;
+    if let Some(chunk) = copy {
+      self.record(|| RecordedAction::EmitChunk(chunk));
+    }
+    Ok(reference_id)
   }
 
   pub fn emit_prebuilt_chunk(&self, chunk: rolldown_common::EmittedPrebuiltChunk) -> ArcStr {
+    self.record(|| RecordedAction::EmitPrebuiltChunk(chunk.clone()));
     self.file_emitter.emit_prebuilt_chunk(chunk)
   }
 
   pub fn emit_file(
+    &self,
+    file: rolldown_common::EmittedAsset,
+    fn_asset_filename: Option<String>,
+    fn_sanitized_file_name: Option<String>,
+  ) -> anyhow::Result<ArcStr> {
+    let copy = self.copy_for_record(&(
+      file.clone(),
+      fn_asset_filename.clone(),
+      fn_sanitized_file_name.clone(),
+    ));
+    let reference_id = self.emit_file_inner(file, fn_asset_filename, fn_sanitized_file_name)?;
+    if let Some((file, fn_asset_filename, fn_sanitized_file_name)) = copy {
+      self.record(|| RecordedAction::EmitFile { file, fn_asset_filename, fn_sanitized_file_name });
+    }
+    Ok(reference_id)
+  }
+
+  fn emit_file_inner(
     &self,
     file: rolldown_common::EmittedAsset,
     fn_asset_filename: Option<String>,
@@ -191,9 +245,14 @@ impl NativePluginContextImpl {
     &self,
     file: rolldown_common::EmittedAsset,
   ) -> anyhow::Result<ArcStr> {
+    let copy = self.copy_for_record(&file);
     let asset_filename = self.options.asset_filename_with_file(&file).await?;
     let sanitized_file_name = self.options.sanitize_file_name_with_file(&file).await?;
-    self.file_emitter.emit_file(file, asset_filename, sanitized_file_name)
+    let reference_id = self.file_emitter.emit_file(file, asset_filename, sanitized_file_name)?;
+    if let Some(file) = copy {
+      self.record(|| RecordedAction::EmitFileAsync(file));
+    }
+    Ok(reference_id)
   }
 
   pub fn get_file_name(&self, reference_id: &str) -> anyhow::Result<ArcStr> {
@@ -201,6 +260,10 @@ impl NativePluginContextImpl {
   }
 
   pub fn associate_module_with_file_ref(&self, module_id: &str, reference_id: &str) {
+    self.record(|| RecordedAction::AssociateModuleWithFileRef {
+      module_id: module_id.into(),
+      reference_id: reference_id.into(),
+    });
     self.file_emitter.associate_module_with_file_ref(module_id, reference_id);
   }
 
@@ -218,12 +281,15 @@ impl NativePluginContextImpl {
 
   /// The path is resolved against `cwd`, so the watch files are absolute and normalized.
   pub fn add_watch_file(&self, file: &str) {
-    self.watch_files.insert(WatchPath::new(file, &self.options.cwd).to_string().into());
+    let path: ArcStr = WatchPath::new(file, &self.options.cwd).to_string().into();
+    self.record(|| RecordedAction::WatchFile(path.clone()));
+    self.watch_files.insert(path);
   }
 
   fn log(&self, level: LogLevel, log: LogWithoutPlugin) {
     if let Some(on_log) = &self.options.on_log {
       let log = log.into_log(Some(self.plugin_name.to_string()));
+      self.record(|| RecordedAction::Log { level, log: log.clone() });
       // Call now so the log is enqueued before any later work; only its result is awaited.
       let result = on_log.call(level, log);
       rolldown_utils::futures::spawn(async move {

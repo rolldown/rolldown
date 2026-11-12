@@ -1073,6 +1073,16 @@
             "boolean",
             "null"
           ]
+        },
+        "cache": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CacheOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -1181,6 +1191,95 @@
         "avoidRedundantChunkLoads": {
           "type": "boolean",
           "default": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "CacheOptions": {
+      "description": "`experimental.cache`: the persistent scan cache.",
+      "type": "object",
+      "properties": {
+        "dir": {
+          "description": "A relative path is resolved against `cwd`.",
+          "type": "string"
+        },
+        "maxAge": {
+          "description": "Milliseconds. Cache data that was not used for longer is removed. `None` removes nothing.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "cacheKey": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "buildDependencies": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "assumeUnchanged": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "assumeCacheableHooks": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AssumeCacheableHooks"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "watchMode": {
+          "description": "Set by the JavaScript API, not by users: the value that JavaScript plugins read as\n`this.meta.watchMode`. A plugin can give another result in watch mode, so it is an input\nof key 1.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "dir"
+      ]
+    },
+    "AssumeCacheableHooks": {
+      "description": "Treats hooks that do not set `cache` as if they set `cache: true`.\nRolldown cannot check this assumption, so it is meant for tests and measurements.",
+      "type": "object",
+      "properties": {
+        "resolveId": {
+          "description": "Also applies to `resolveDynamicImport`.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "load": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "transform": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

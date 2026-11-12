@@ -751,6 +751,92 @@ export interface InputOptions {
      * @default false
      */
     importAttributes?: boolean;
+    /**
+     * Save the scan results of modules on disk, so that a new build can reuse them, for example
+     * after a restart.
+     *
+     * A module gets a saved result only when every `resolveId`, `resolveDynamicImport`, `load`
+     * and `transform` hook that ran for it has `cache: true`. When Rolldown reuses the result,
+     * it does not call these hooks for the module again.
+     *
+     * `false` and no value both turn the cache off.
+     *
+     * @example
+     * ```js
+     * export default {
+     *   plugins: [
+     *     {
+     *       name: 'my-plugin',
+     *       transform: {
+     *         cache: true,
+     *         handler(code, id) {},
+     *       },
+     *     },
+     *   ],
+     *   experimental: {
+     *     cache: {
+     *       dir: 'node_modules/.cache/rolldown',
+     *       buildDependencies: ['rolldown.config.js'],
+     *     },
+     *   },
+     * }
+     * ```
+     *
+     * @default false
+     * @hidden not ready for public usage yet
+     */
+    cache?:
+      | false
+      | {
+          /**
+           * The directory of the cache. A relative path is resolved against `cwd`.
+           */
+          dir: string;
+          /**
+           * Rolldown removes cache data that no build used for this many milliseconds.
+           *
+           * Without a value, Rolldown removes nothing.
+           */
+          maxAge?: number;
+          /**
+           * A string for inputs that Rolldown cannot see, such as a value that a plugin reads
+           * from `process.env`. When the string changes, no saved result is reused.
+           */
+          cacheKey?: string;
+          /**
+           * Files that the build depends on, such as the config file and the files it imports.
+           * When the content of one of them changes, no saved result is reused.
+           *
+           * Rolldown does not follow the imports of these files, so list every file.
+           */
+          buildDependencies?: string[];
+          /**
+           * Paths of files that Rolldown treats as unchanged, so it does not read them to check
+           * for changes. A string is a glob, and a `RegExp` is tested against the path with
+           * forward slashes.
+           *
+           * Use it only when a change to these files also changes a file in
+           * `buildDependencies`. For example, match the files in `node_modules` and list the
+           * lock file of the package manager. Rolldown ignores this option when
+           * `resolve.symlinks` is `false`.
+           */
+          assumeUnchanged?: (string | RegExp)[];
+          /**
+           * Treat hooks that do not set `cache` as if they had `cache: true`. A hook with
+           * `cache: false` is never cached.
+           *
+           * Rolldown cannot check this, so the build result can be wrong. Use it only for tests
+           * and measurements. The `resolveId` value also applies to `resolveDynamicImport`.
+           */
+          assumeCacheableHooks?: {
+            /** @default false */
+            resolveId?: boolean;
+            /** @default false */
+            load?: boolean;
+            /** @default false */
+            transform?: boolean;
+          };
+        };
   };
   /**
    * Configure how the code is transformed. This process happens after the `transform` hook.

@@ -27,6 +27,20 @@ pub struct BindingPluginContext {
 
 #[napi]
 impl BindingPluginContext {
+  /// The module task of this hook call gets no saved result in the persistent cache. The
+  /// JavaScript side calls it for what Rust cannot see, such as a hook that returns `meta`.
+  #[napi]
+  pub fn mark_not_cacheable(&self, reason: String) {
+    self.inner.mark_not_cacheable(|| reason);
+  }
+
+  /// Records a log that a JavaScript plugin sent to `onLog` during this hook call, so the
+  /// persistent cache can send it again when it reuses the result. `log` is its JSON.
+  #[napi]
+  pub fn record_log(&self, level: String, log: String) {
+    self.inner.record_js_log(rolldown_common::LogLevel::from(level), log);
+  }
+
   #[napi(
     ts_args_type = "rawId: string, attributes: Record<string, string>, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string"
   )]

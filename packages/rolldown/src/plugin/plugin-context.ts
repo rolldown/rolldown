@@ -308,17 +308,22 @@ export interface PluginContext extends MinimalPluginContext {
 export class PluginContextImpl extends MinimalPluginContextImpl {
   fs: RolldownFsModule = fsModule;
   getModuleInfo: GetModuleInfo;
+  private onLog: LogHandler;
   constructor(
     private outputOptions: OutputOptions,
     private context: BindingPluginContext,
     plugin: Plugin,
     private data: PluginContextData,
-    private onLog: LogHandler,
+    onLog: LogHandler,
     logLevel: LogLevelOption,
     watchMode: boolean,
     private currentLoadingModule?: string,
   ) {
+    if (data.persistentCache) {
+      onLog = recordLogs(onLog, context);
+    }
     super(onLog, logLevel, plugin.name!, watchMode);
+    this.onLog = onLog;
     this.getModuleInfo = (id: string) => this.data.getModuleInfo(id, context);
   }
 
@@ -328,6 +333,11 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
       resolveDependencies?: boolean;
     } & Partial<PartialNull<ModuleOptions>>,
   ): Promise<ModuleInfo> {
+    // The loaded module is an input of this hook call that the persistent cache does not track.
+    this.data.markNotCacheable(
+      this.context,
+      () => `plugin \`${this.pluginName}\` called \`this.load\``,
+    );
     const { rawId, attributes } = normalizeUniqueModuleId(options.id);
     const id = this.data.toModuleId(rawId, attributes);
     if (id === this.currentLoadingModule) {
@@ -509,6 +519,25 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
   public parse(input: string, options?: ParserOptions | null): Program {
     return parseAst(input, options);
   }
+}
+
+/**
+ * Also gives each log to the persistent cache, which sends it to `onLog` again when it reuses
+ * the result of this hook call.
+ */
+function recordLogs(onLog: LogHandler, context: BindingPluginContext): LogHandler {
+  return (level, log) => {
+    let json: string | undefined;
+    try {
+      json = JSON.stringify(log);
+    } catch {}
+    if (json === undefined) {
+      context.markNotCacheable(`a log of a plugin cannot be converted to JSON`);
+    } else {
+      context.recordLog(level, json);
+    }
+    onLog(level, log);
+  };
 }
 
 export function createPluginContext(

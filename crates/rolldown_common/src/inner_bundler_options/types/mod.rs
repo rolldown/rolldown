@@ -1,4 +1,5 @@
 pub mod attach_debug_info;
+pub mod cache_options;
 pub mod chunk_import_map;
 pub mod chunk_modules_order;
 pub mod code_splitting_mode;

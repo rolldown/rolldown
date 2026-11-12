@@ -3,11 +3,12 @@ use std::sync::Arc;
 use super::skipped_by_hook_filter;
 use crate::{
   HookBuildEndArgs, HookFilterArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn,
-  HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs, LoadPluginContext, PluginContext,
-  PluginDriver, TransformPluginContext,
+  HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs, LoadPluginContext, PluginDriver,
+  TransformPluginContext,
   pluginable::HookTransformAstReturn,
   types::{
     hook_resolve_id_skipped::HookResolveIdSkipped, hook_transform_ast_args::HookTransformAstArgs,
+    module_cache_recorder::SharedModuleCacheRecorder,
   },
 };
 use anyhow::{Context, Result};
@@ -36,6 +37,27 @@ fn should_skip_plugin_for_lazy_proxy(
 }
 
 impl PluginDriver {
+  /// A module gets a saved result only when every hook it called has the cache on. A call that
+  /// the hook filter blocks does not count, so `filter_matches` runs only for hooks without it.
+  #[inline]
+  fn check_cacheable_call(
+    &self,
+    recorder: &SharedModuleCacheRecorder,
+    cacheable_plugins: &IndexBitSet<PluginIdx>,
+    plugin_idx: PluginIdx,
+    hook_name: &'static str,
+    filter_matches: impl FnOnce() -> bool,
+  ) {
+    if recorder.is_cacheable() && !cacheable_plugins.has_bit(plugin_idx) && filter_matches() {
+      recorder.mark_not_cacheable(|| {
+        format!(
+          "hook `{hook_name}` of plugin `{}` does not have `cache: true`",
+          self.plugins[plugin_idx].call_name()
+        )
+      });
+    }
+  }
+
   #[tracing::instrument(
     level = "trace",
     target = "rolldown_plugin::plugin_driver::build_hooks::total::build_start",
@@ -80,6 +102,7 @@ impl PluginDriver {
     &self,
     args: &HookResolveIdArgs<'_>,
     skipped_resolve_calls: Option<&Vec<Arc<HookResolveIdSkipped>>>,
+    cache_recorder: Option<&SharedModuleCacheRecorder>,
   ) -> HookResolveIdReturn {
     let skipped_plugins = Self::get_resolve_call_skipped_plugins(
       args.specifier,
@@ -102,6 +125,15 @@ impl PluginDriver {
       {
         continue;
       }
+      if let Some(recorder) = cache_recorder {
+        self.check_cacheable_call(
+          recorder,
+          &self.cacheable_hooks.resolve_id,
+          plugin_idx,
+          "resolveId",
+          || plugin.call_hook_filter_matches(ctx, HookFilterArgs::ResolveId(args)),
+        );
+      }
       let ret = async {
         trace_action!(action::HookResolveIdCallStart {
           action: "HookResolveIdCallStart",
@@ -114,15 +146,7 @@ impl PluginDriver {
           call_id: "${call_id}",
         });
         let result = plugin
-          .call_resolve_id(
-            &skipped_resolve_calls.map_or_else(
-              || ctx.clone(),
-              |skipped_resolve_calls| {
-                PluginContext::fork_with_skipped_resolve_calls(ctx, skipped_resolve_calls.clone())
-              },
-            ),
-            args,
-          )
+          .call_resolve_id(&ctx.fork_for_call(skipped_resolve_calls, cache_recorder), args)
           .await;
         if let Some(r) = result? {
           trace_action!(action::HookResolveIdCallEnd {
@@ -172,6 +196,7 @@ impl PluginDriver {
     &self,
     args: &HookResolveIdArgs<'_>,
     skipped_resolve_calls: Option<&Vec<Arc<HookResolveIdSkipped>>>,
+    cache_recorder: Option<&SharedModuleCacheRecorder>,
   ) -> HookResolveIdReturn {
     let skipped_plugins = Self::get_resolve_call_skipped_plugins(
       args.specifier,
@@ -185,14 +210,19 @@ impl PluginDriver {
       if skipped_plugins.has_bit(plugin_idx) {
         continue;
       }
+      // This hook has no filter, so every call counts.
+      if let Some(recorder) = cache_recorder {
+        self.check_cacheable_call(
+          recorder,
+          &self.cacheable_hooks.resolve_dynamic_import,
+          plugin_idx,
+          "resolveDynamicImport",
+          || true,
+        );
+      }
       let result = plugin
         .call_resolve_dynamic_import(
-          &skipped_resolve_calls.map_or_else(
-            || ctx.clone(),
-            |skipped_resolve_calls| {
-              PluginContext::fork_with_skipped_resolve_calls(ctx, skipped_resolve_calls.clone())
-            },
-          ),
+          &ctx.fork_for_call(skipped_resolve_calls, cache_recorder),
           args,
         )
         .await;
@@ -208,7 +238,11 @@ impl PluginDriver {
     target = "rolldown_plugin::plugin_driver::build_hooks::total::load",
     skip_all
   )]
-  pub async fn load(&self, args: &HookLoadArgs<'_>) -> HookLoadReturn {
+  pub async fn load(
+    &self,
+    args: &HookLoadArgs<'_>,
+    cache_recorder: Option<&SharedModuleCacheRecorder>,
+  ) -> HookLoadReturn {
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_load_meta)
     {
@@ -221,6 +255,11 @@ impl PluginDriver {
       {
         continue;
       }
+      if let Some(recorder) = cache_recorder {
+        self.check_cacheable_call(recorder, &self.cacheable_hooks.load, plugin_idx, "load", || {
+          plugin.call_hook_filter_matches(ctx, HookFilterArgs::Load(args))
+        });
+      }
       let ret = async {
         trace_action!(action::HookLoadCallStart {
           action: "HookLoadCallStart",
@@ -229,7 +268,10 @@ impl PluginDriver {
           plugin_id: plugin_idx.raw(),
           call_id: "${call_id}",
         });
-        let load_ctx = Arc::new(LoadPluginContext::new(ctx.clone(), args.module_idx));
+        let load_ctx = Arc::new(LoadPluginContext::new(
+          ctx.fork_for_call(None, cache_recorder),
+          args.module_idx,
+        ));
         let result = plugin.call_load(load_ctx, args).await;
         if let Some(r) = result? {
           trace_action!(action::HookLoadCallEnd {
@@ -259,7 +301,10 @@ impl PluginDriver {
       ))
       .await
       .with_context(|| CausedPlugin::new(plugin.call_name()))?;
-      if ret.is_some() {
+      if let Some(output) = &ret {
+        if let (Some(recorder), Some(value)) = (cache_recorder, output.side_effects) {
+          recorder.record_hook_side_effects(value);
+        }
         return Ok(ret);
       }
     }
@@ -283,6 +328,7 @@ impl PluginDriver {
     module_type: &mut ModuleType,
     magic_string_tx: Option<std::sync::mpsc::Sender<rolldown_common::SourceMapGenMsg>>,
     code_changed_by_plugins: &mut Option<Vec<String>>,
+    cache_recorder: Option<&SharedModuleCacheRecorder>,
   ) -> Result<String> {
     let id = module_id.as_str();
     let mut code = original_code;
@@ -309,6 +355,15 @@ impl PluginDriver {
       {
         continue;
       }
+      if let Some(recorder) = cache_recorder {
+        self.check_cacheable_call(
+          recorder,
+          &self.cacheable_hooks.transform,
+          plugin_idx,
+          "transform",
+          || plugin.call_hook_filter_matches(ctx, HookFilterArgs::Transform(&args)),
+        );
+      }
 
       let call_id = tracing::enabled!(tracing::Level::TRACE).then(rolldown_utils::uuid::uuid_v4);
       trace_action!(action::HookTransformCallStart {
@@ -322,7 +377,7 @@ impl PluginDriver {
       let result = plugin
         .call_transform(
           Arc::new(TransformPluginContext::new(
-            ctx.clone(),
+            ctx.fork_for_call(None, cache_recorder),
             plugin_sourcemap_chain.weak_ref(),
             code_arc_ref.clone(),
             id.into(),
@@ -355,6 +410,9 @@ impl PluginDriver {
         plugin_sourcemap_chain = UniqueArc::new(original_sourcemap_chain);
         if let Some(v) = r.side_effects {
           *side_effects = Some(v);
+          if let Some(recorder) = cache_recorder {
+            recorder.record_hook_side_effects(v);
+          }
         }
         if let Some(v) = r.code {
           if let Some(changed_by) = code_changed_by_plugins {

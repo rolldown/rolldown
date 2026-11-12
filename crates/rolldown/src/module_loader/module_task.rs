@@ -6,11 +6,14 @@ use oxc::span::Span;
 use rolldown_common::{
   ExportsKind, FlatOptions, ImportKind, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleType,
   NormalModule, NormalModuleTaskResult, ResolvedId, SourceMapGenMsg, SourcemapChainElement,
-  StrOrBytes, try_extract_lazy_barrel_info,
+  StrOrBytes, WatchPath, try_extract_lazy_barrel_info,
 };
 use rolldown_error::{
   BuildDiagnostic, BuildResult, DiagnosticOptions, EventKindSwitcher,
   ExternalModuleConflictImporter, UnloadableDependencyContext, downcast_napi_error_diagnostics,
+};
+use rolldown_plugin::{
+  ModuleCacheRecorder, RecordedAction, RecordedEffects, SharedModuleCacheRecorder,
 };
 use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
 
@@ -18,12 +21,16 @@ use rolldown_fs::FileSystem;
 
 use crate::{
   ecmascript::ecma_module_view_factory::{CreateEcmaViewReturn, create_ecma_view},
+  persistent_cache::{
+    ModuleKey, ScanCacheSession,
+    saved_result::{SavedResolve, SavedResult},
+  },
   types::module_factory::{CreateModuleContext, CreateModuleViewArgs},
   utils::{load_source::load_source, transform_source::transform_source},
 };
 
 use super::{
-  resolve_utils::resolve_dependencies,
+  resolve_utils::{DependencyCache, resolve_dependencies, restore_resolved_ids},
   task_context::{TaskContext, TaskMessageGuard},
 };
 
@@ -117,11 +124,62 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       }),
     );
 
+    let cache = self.ctx.persistent_cache.clone();
+    let cache_key = match &cache {
+      Some(cache) => {
+        cache
+          .module_key(&self.ctx.fs, &self.resolved_id.id, self.asserted_module_type.as_ref())
+          .await
+      }
+      None => None,
+    };
+    let (cache_key, preloaded) = match cache_key {
+      Some(ModuleKey { key, contents }) => (Some(key), contents),
+      None => (None, None),
+    };
+    let saved_result = match (&cache, cache_key) {
+      (Some(cache), Some(key)) if cache.reads_saved_results() => {
+        cache.lookup(&self.ctx.fs, key).await.and_then(|mut saved| {
+          // A saved result is reused as a whole or not at all.
+          let resolved =
+            restore_resolved_ids(std::mem::take(&mut saved.resolved), &self.ctx.resolver)?;
+          Some((saved, resolved))
+        })
+      }
+      _ => None,
+    };
+    let cache_recorder = (cache_key.is_some() && saved_result.is_none())
+      .then(|| Arc::new(ModuleCacheRecorder::default()));
+
     let mut sourcemap_chain = vec![];
     let mut hook_side_effects = self.resolved_id.side_effects.take();
-    let (source, module_type) = self
-      .load_source(&mut sourcemap_chain, &mut hook_side_effects, self.magic_string_tx.clone())
-      .await?;
+    let mut saved_resolves = None;
+    let (source, module_type, is_read_from_disk) = if let Some((saved, resolved)) = saved_result {
+      // The saved result replaces `load`, `transform` and `resolveId`.
+      self.ctx.plugin_driver.replay_cache_actions(self.module_idx, saved.actions).await?;
+      if saved.hook_side_effects.is_some() {
+        hook_side_effects = saved.hook_side_effects;
+      }
+      sourcemap_chain = saved.sourcemap_chain;
+      saved_resolves = Some(resolved);
+      self.watch_module_files(saved.is_read_from_disk);
+      (saved.source, saved.module_type, saved.is_read_from_disk)
+    } else {
+      self
+        .load_source(
+          &mut sourcemap_chain,
+          &mut hook_side_effects,
+          self.magic_string_tx.clone(),
+          cache_recorder.as_ref(),
+          preloaded,
+        )
+        .await?
+    };
+
+    // A copy of the state after `transform`, to save once the module task succeeds.
+    let state_to_save = cache_recorder
+      .as_ref()
+      .map(|_| (source.clone(), module_type.clone(), sourcemap_chain.clone(), is_read_from_disk));
 
     let stable_id = id.stabilize(&self.ctx.options.cwd);
 
@@ -154,7 +212,12 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       )
       .await?;
 
-    let resolved_deps = resolve_dependencies(
+    let dependency_cache = match (&saved_resolves, &cache_recorder) {
+      (Some(saved), _) => DependencyCache::Reuse(saved),
+      (None, Some(recorder)) => DependencyCache::Record(recorder),
+      (None, None) => DependencyCache::Off,
+    };
+    let (resolved_deps, resolves_to_save) = resolve_dependencies(
       &self.resolved_id,
       &self.ctx.options,
       &self.ctx.resolver,
@@ -162,8 +225,17 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       &raw_import_records,
       ecma_view.source.clone(),
       &mut warnings,
+      dependency_cache,
     )
     .await?;
+
+    if let (Some(cache), Some(key), Some(recorder), Some(state)) =
+      (&cache, cache_key, &cache_recorder, state_to_save)
+    {
+      if recorder.is_cacheable() {
+        self.save_to_cache(cache, key, recorder, state, resolves_to_save).await;
+      }
+    }
 
     for (record, info) in raw_import_records.iter().zip(&resolved_deps) {
       match record.kind {
@@ -254,13 +326,74 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     Ok(())
   }
 
+  /// Watches the module file when Rolldown read it from disk, and the tsconfig that governs the
+  /// module. The tsconfig is also a transform dependency: it affects `resolveId` and the
+  /// `transform` hooks, which a restart with the persistent cache skips.
+  fn watch_module_files(&self, is_read_from_disk: bool) {
+    let raw_id = self.resolved_id.id.raw_id();
+    if is_read_from_disk {
+      self.ctx.plugin_driver.watch_files.insert(raw_id.into());
+    }
+    if let Some(tsconfig_path) = self.governing_tsconfig() {
+      let tsconfig_path: ArcStr = tsconfig_path.to_string_lossy().as_ref().into();
+      self.ctx.plugin_driver.watch_files.insert(tsconfig_path.clone());
+      self.ctx.plugin_driver.add_transform_dependency(
+        self.module_idx,
+        WatchPath::new(tsconfig_path.as_str(), &self.ctx.options.cwd),
+      );
+    }
+  }
+
+  fn governing_tsconfig(&self) -> Option<std::path::PathBuf> {
+    let path = self.resolved_id.id.as_path()?;
+    self.ctx.options.transform_options.discover_tsconfig_file(path)
+  }
+
+  async fn save_to_cache(
+    &self,
+    cache: &ScanCacheSession,
+    key: u128,
+    recorder: &ModuleCacheRecorder,
+    (source, module_type, sourcemap_chain, is_read_from_disk): (
+      StrOrBytes,
+      ModuleType,
+      Vec<SourcemapChainElement>,
+      bool,
+    ),
+    resolved: Vec<SavedResolve>,
+  ) {
+    let RecordedEffects { actions, hook_side_effects } = recorder.take_effects();
+    let mut dependencies: Vec<String> = actions
+      .iter()
+      .filter_map(|action| match action {
+        RecordedAction::TransformDependency(path) => Some(path.to_string()),
+        _ => None,
+      })
+      .collect();
+    if let Some(tsconfig_path) = self.governing_tsconfig() {
+      dependencies.push(tsconfig_path.to_string_lossy().into_owned());
+    }
+    let saved = SavedResult {
+      source,
+      module_type,
+      hook_side_effects,
+      sourcemap_chain,
+      is_read_from_disk,
+      resolved,
+      actions,
+    };
+    cache.save(&self.ctx.fs, key, dependencies, &saved).await;
+  }
+
   #[tracing::instrument(level = "debug", skip_all)]
   async fn load_source(
     &self,
     sourcemap_chain: &mut Vec<SourcemapChainElement>,
     hook_side_effects: &mut Option<rolldown_common::side_effects::HookSideEffects>,
     magic_string_tx: Option<std::sync::mpsc::Sender<SourceMapGenMsg>>,
-  ) -> BuildResult<(StrOrBytes, ModuleType)> {
+    cache_recorder: Option<&SharedModuleCacheRecorder>,
+    preloaded: Option<Vec<u8>>,
+  ) -> BuildResult<(StrOrBytes, ModuleType, bool)> {
     let mut is_read_from_disk = true;
     let result = load_source(
       &self.ctx.plugin_driver,
@@ -272,21 +405,12 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       self.asserted_module_type.as_ref(),
       &mut is_read_from_disk,
       self.module_idx,
+      cache_recorder,
+      preloaded,
     )
     .await;
-    if is_read_from_disk {
-      // - Only add watch files for files read from disk.
-      // - Add watch files as early as possible for we might be able to recover from build errors.
-      let raw_id = self.resolved_id.id.raw_id();
-      self.ctx.plugin_driver.watch_files.insert(raw_id.into());
-      // The tsconfig governing this module affects its transform and
-      // resolution results, so watch it as well (#9598).
-      if let Some(tsconfig_path) =
-        self.ctx.options.transform_options.discover_tsconfig_file(std::path::Path::new(raw_id))
-      {
-        self.ctx.plugin_driver.watch_files.insert(tsconfig_path.to_string_lossy().as_ref().into());
-      }
-    }
+    // Add watch files as early as possible, so that a rebuild can recover from build errors.
+    self.watch_module_files(is_read_from_disk);
     let (source, mut module_type) = result.map_err(|err| {
       downcast_napi_error_diagnostics(err).unwrap_or_else(|e| {
         BuildDiagnostic::unloadable_dependency(
@@ -313,6 +437,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
           hook_side_effects,
           &mut module_type,
           magic_string_tx,
+          cache_recorder,
         )
         .await?;
         source.into()
@@ -328,6 +453,6 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
         self.resolved_id.id
       ))?;
     }
-    Ok((source, module_type))
+    Ok((source, module_type, is_read_from_disk))
   }
 }

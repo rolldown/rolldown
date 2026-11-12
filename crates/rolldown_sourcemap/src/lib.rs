@@ -12,6 +12,11 @@ pub use source_joiner::SourceJoiner;
 /// lifetime-parameterized `oxc_sourcemap::SourceMap` to its `'static` form.
 pub type SourceMap = oxc_sourcemap::SourceMap<'static>;
 
+/// Parses a sourcemap from its JSON form. `None` if the JSON is not a valid sourcemap.
+pub fn sourcemap_from_json(json: &str) -> Option<SourceMap> {
+  oxc_sourcemap::SourceMap::from_json_string(json).ok().map(oxc_sourcemap::SourceMap::into_owned)
+}
+
 pub use crate::source::{Source, SourceMapSource};
 
 /// Strips the first `lines` destination lines from the sourcemap, decrementing all remaining

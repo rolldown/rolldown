@@ -20,6 +20,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   SharedOptions, SharedResolver,
   module_loader::{ModuleLoader, module_loader::ModuleLoaderOutput},
+  persistent_cache::SharedPersistentScanCache,
   type_alias::{IndexEcmaAst, IndexStmtInfos},
   types::scan_stage_cache::ScanStageCache,
   utils::load_entry_module::load_entry_module,
@@ -35,6 +36,7 @@ pub struct ScanStage<Fs: FileSystem + Clone + 'static> {
   plugin_driver: SharedPluginDriver,
   fs: Fs,
   resolver: SharedResolver<Fs>,
+  persistent_cache: Option<SharedPersistentScanCache>,
 }
 
 #[derive(Debug)]
@@ -151,8 +153,9 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
     plugin_driver: SharedPluginDriver,
     fs: Fs,
     resolver: SharedResolver<Fs>,
+    persistent_cache: Option<SharedPersistentScanCache>,
   ) -> Self {
-    Self { options, plugin_driver, fs, resolver }
+    Self { options, plugin_driver, fs, resolver, persistent_cache }
   }
 
   #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
@@ -169,6 +172,13 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
     };
     let (tx_clone, handler) = self.create_sourcemap_channel();
 
+    let cache_session = match &self.persistent_cache {
+      Some(persistent_cache) => {
+        Some(persistent_cache.start_scan(&self.fs, fetch_mode.is_full(), &self.options).await)
+      }
+      None => None,
+    };
+
     let mut module_loader = ModuleLoader::new(
       self.fs.clone(),
       Arc::clone(&self.options),
@@ -177,6 +187,7 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
       cache,
       fetch_mode.is_full(),
       tx_clone,
+      cache_session,
     )?;
 
     // For `pluginContext.emitFile` with `type: chunk`, support it at buildStart hook.
@@ -192,7 +203,12 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
       .plugin_driver
       .set_context_load_modules_tx(Some(module_loader.shared_context.tx.clone()))?;
 
-    let mut module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
+    let fetch_result = module_loader.fetch_modules(fetch_mode).await;
+    // The results saved by modules that finished are valid also when the scan failed.
+    if let Some(persistent_cache) = &self.persistent_cache {
+      persistent_cache.start_flush();
+    }
+    let mut module_loader_output = fetch_result?;
 
     if let Some(handler) = handler {
       self.process_sourcemap_handler(handler, &mut module_loader_output);

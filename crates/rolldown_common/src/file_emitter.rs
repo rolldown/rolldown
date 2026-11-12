@@ -18,7 +18,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct EmittedAsset {
   pub name: Option<String>,
   pub original_file_name: Option<String>,
@@ -44,7 +44,7 @@ impl EmittedAsset {
   }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct EmittedChunk {
   pub name: Option<ArcStr>,
   pub file_name: Option<ArcStr>,

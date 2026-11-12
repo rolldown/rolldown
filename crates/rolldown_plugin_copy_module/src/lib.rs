@@ -37,13 +37,21 @@ impl Plugin for CopyModulePlugin {
   }
 
   fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::ResolveId | HookUsage::RenderChunk
+    // The persistent cache counts every `resolve_id` call, and this hook is not cacheable. So
+    // register it only when there is something to copy.
+    if self.copy_extensions.is_empty() {
+      HookUsage::RenderChunk
+    } else {
+      HookUsage::ResolveId | HookUsage::RenderChunk
+    }
   }
 
   fn resolve_id_meta(&self) -> Option<PluginHookMeta> {
     // Run before users' resolve_id hooks to ensure:
     // - For matched modules, to handle it correctly without users' interference.
-    Some(PluginHookMeta { order: Some(PluginOrder::Pre) })
+    // Not cacheable: it reads and emits the copied file, which is not an input of the importer's
+    // saved result.
+    Some(PluginHookMeta { order: Some(PluginOrder::Pre), cache: Some(false) })
   }
 
   async fn resolve_id(
@@ -127,7 +135,7 @@ impl Plugin for CopyModulePlugin {
   fn render_chunk_meta(&self) -> Option<PluginHookMeta> {
     // Run before users' render_chunk hooks to ensure:
     // - The placeholder IDs are replaced before any user hooks, so they won't see the placeholder IDs and won't interfere with our processing.
-    Some(PluginHookMeta { order: Some(PluginOrder::Pre) })
+    Some(PluginHookMeta { order: Some(PluginOrder::Pre), cache: None })
   }
 
   async fn render_chunk(

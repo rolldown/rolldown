@@ -45,6 +45,7 @@ smallvec = { workspace = true }
 string_wizard = { workspace = true }
 sugar_path = { workspace = true }
 tokio = { workspace = true }
+xxhash-rust = { workspace = true, features = ["xxh3"] }
 
 num-bigint = { workspace = true }
 

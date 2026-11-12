@@ -1832,6 +1832,16 @@ export declare class BindingOutputChunk {
 }
 
 export declare class BindingPluginContext {
+  /**
+   * The module task of this hook call gets no saved result in the persistent cache. The
+   * JavaScript side calls it for what Rust cannot see, such as a hook that returns `meta`.
+   */
+  markNotCacheable(reason: string): void
+  /**
+   * Records a log that a JavaScript plugin sent to `onLog` during this hook call, so the
+   * persistent cache can send it again when it reuses the result. `log` is its JSON.
+   */
+  recordLog(level: string, log: string): void
   load(rawId: string, attributes: Record<string, string>, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null, fnSanitizedFileName?: string | undefined | null): string
@@ -1961,6 +1971,12 @@ export interface AliasItem {
 
 export interface BindingAssetSource {
   inner: string | Uint8Array
+}
+
+export interface BindingAssumeCacheableHooks {
+  resolveId?: boolean
+  load?: boolean
+  transform?: boolean
 }
 
 export declare enum BindingAttachDebugInfo {
@@ -2299,6 +2315,18 @@ export interface BindingEsmExternalRequirePluginConfig {
   skipDuplicateCheck?: boolean
 }
 
+export interface BindingExperimentalCacheOptions {
+  dir: string
+  /** Milliseconds. */
+  maxAge?: number
+  cacheKey?: string
+  buildDependencies?: Array<string>
+  assumeUnchanged?: Array<string | RegExp>
+  assumeCacheableHooks?: BindingAssumeCacheableHooks
+  /** Not a user option: the JavaScript API sets it to `this.meta.watchMode`. */
+  watchMode?: boolean
+}
+
 export interface BindingExperimentalDevModeOptions {
   host?: string
   port?: number
@@ -2322,6 +2350,7 @@ export interface BindingExperimentalOptions {
   chunkOptimization?: boolean | BindingChunkOptimizationOptions
   lazyBarrel?: boolean
   importAttributes?: boolean
+  cache?: BindingExperimentalCacheOptions
 }
 
 export interface BindingFilterToken {
@@ -2612,6 +2641,11 @@ export interface BindingLog {
   pos?: number
   /** List of module IDs (used for CIRCULAR_DEPENDENCY warnings) */
   ids?: Array<string>
+  /**
+   * A log of a JavaScript plugin that the persistent cache sends again, as JSON. When it is
+   * set, the other fields are empty.
+   */
+  jsLogJson?: string
 }
 
 export declare enum BindingLogLevel {
@@ -2800,6 +2834,7 @@ export interface BindingPluginContextResolveOptions {
 
 export interface BindingPluginHookMeta {
   order?: BindingPluginOrder
+  cache?: boolean
 }
 
 export interface BindingPluginOptions {

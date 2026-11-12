@@ -35,6 +35,7 @@ use crate::{
   SharedOptions, SharedResolver,
   hmr::hmr_ast_finalizer::HmrAstFinalizer,
   module_loader::ModuleLoader,
+  persistent_cache::{ScanCacheSession, SharedPersistentScanCache},
   type_alias::IndexEcmaAst,
   types::scan_stage_cache::ScanStageCache,
   utils::{
@@ -51,6 +52,7 @@ pub struct HmrStageInput<'a, Fs: FileSystem + Clone + 'static> {
   pub cache: &'a mut ScanStageCache,
   pub lost_hmr_update: &'a mut bool,
   pub next_hmr_patch_id: Arc<AtomicU32>,
+  pub persistent_cache: Option<SharedPersistentScanCache>,
 }
 
 impl<Fs: FileSystem + Clone + 'static> HmrStageInput<'_, Fs> {
@@ -65,6 +67,21 @@ impl<Fs: FileSystem + Clone + 'static> HmrStageInput<'_, Fs> {
 
 pub struct HmrStage<'a, Fs: FileSystem + Clone + 'static> {
   pub(crate) input: HmrStageInput<'a, Fs>,
+}
+
+impl<Fs: FileSystem + Clone + 'static> HmrStage<'_, Fs> {
+  async fn start_persistent_cache_scan(&self, read: bool) -> Option<Arc<ScanCacheSession>> {
+    let persistent_cache = self.persistent_cache.as_ref()?;
+    Some(persistent_cache.start_scan(&self.fs, read, &self.options).await)
+  }
+}
+
+/// The update does not wait for the write. The next scan or `Bundler::close` waits for it and
+/// reports a failure.
+fn flush_persistent_cache(persistent_cache: Option<&SharedPersistentScanCache>) {
+  if let Some(persistent_cache) = persistent_cache {
+    persistent_cache.start_flush();
+  }
 }
 
 impl<'a, Fs: FileSystem + Clone + 'static> Deref for HmrStage<'a, Fs> {
@@ -324,6 +341,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
 
       let fetch_mode = ScanMode::Partial(modules_to_be_refetched);
 
+      // HMR is an incremental build: it does not read saved results, it only saves new ones.
+      let cache_session = self.start_persistent_cache_scan(false).await;
+      let persistent_cache = self.persistent_cache.clone();
       let mut module_loader = ModuleLoader::new(
         self.fs.clone(),
         Arc::clone(&self.options),
@@ -332,9 +352,12 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         self.cache,
         fetch_mode.is_full(),
         None,
+        cache_session,
       )?;
 
-      let module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
+      let fetch_result = module_loader.fetch_modules(fetch_mode).await;
+      flush_persistent_cache(persistent_cache.as_ref());
+      let module_loader_output = fetch_result?;
 
       // We manually impl `Drop` for `ModuleLoader` to avoid missing assign `importers` to
       // `self.cache`, but rustc is not smart enough to infer actually we don't touch it in `drop`
@@ -685,6 +708,10 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     // 2. Trigger a partial scan to fetch the module and its dependencies
     let fetch_mode = ScanMode::Partial(vec![resolved_id]);
 
+    // The modules of a lazy entry are not in memory yet, so they read saved results like a full
+    // scan does.
+    let cache_session = self.start_persistent_cache_scan(true).await;
+    let persistent_cache = self.persistent_cache.clone();
     let mut module_loader = ModuleLoader::new(
       self.fs.clone(),
       Arc::clone(&self.options),
@@ -693,9 +720,12 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       self.cache,
       fetch_mode.is_full(),
       None,
+      cache_session,
     )?;
 
-    let module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
+    let fetch_result = module_loader.fetch_modules(fetch_mode).await;
+    flush_persistent_cache(persistent_cache.as_ref());
+    let module_loader_output = fetch_result?;
     drop(module_loader);
 
     let plugin_driver = Arc::clone(&self.plugin_driver);

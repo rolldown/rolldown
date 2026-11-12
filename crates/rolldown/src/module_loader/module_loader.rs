@@ -37,7 +37,7 @@ use tracing::Instrument;
 use crate::module_loader::module_task::ModuleTaskOwner;
 use crate::types::scan_stage_cache::ScanStageCache;
 use crate::utils::load_entry_module::load_entry_module;
-use crate::{SharedOptions, SharedResolver};
+use crate::{SharedOptions, SharedResolver, persistent_cache::ScanCacheSession};
 
 use super::external_module_task::ExternalModuleTask;
 use super::module_task::ModuleTask;
@@ -173,6 +173,7 @@ impl<Fs: FileSystem + Clone> Drop for ModuleLoader<'_, Fs> {
 }
 
 impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
+  #[expect(clippy::too_many_arguments)]
   pub fn new(
     fs: Fs,
     options: SharedOptions,
@@ -181,6 +182,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     cache: &'a mut ScanStageCache,
     is_full_scan: bool,
     magic_string_tx: Option<std::sync::mpsc::Sender<SourceMapGenMsg>>,
+    persistent_cache: Option<Arc<ScanCacheSession>>,
   ) -> BuildResult<Self> {
     if is_full_scan {
       // TODO: drop the cache in another thread
@@ -210,7 +212,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     // the consumer may need the JS thread — pinned by `block_on` — to run
     // plugin hooks first. Keeping the channel unbounded removes that edge.
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
-    let shared_context = Arc::new(TaskContext { options, tx, resolver, fs, plugin_driver, meta });
+    let shared_context =
+      Arc::new(TaskContext { options, tx, resolver, fs, plugin_driver, meta, persistent_cache });
 
     let importers = std::mem::take(&mut cache.importers);
     let intermediate_normal_modules = IntermediateNormalModules::new(is_full_scan, importers);
@@ -1338,6 +1341,7 @@ mod tests {
       fs: bundle.fs,
       plugin_driver: bundle.plugin_driver,
       meta: TaskContextMeta { replace_global_define_config: None },
+      persistent_cache: None,
     });
 
     let normal = ResolvedId { id: ModuleId::new_empty("empty"), ..Default::default() };

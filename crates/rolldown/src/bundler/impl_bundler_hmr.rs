@@ -51,6 +51,7 @@ impl Bundler {
       cache: &mut self.cache,
       lost_hmr_update: &mut self.lost_hmr_update,
       next_hmr_patch_id,
+      persistent_cache: self.bundle_factory.persistent_cache.clone(),
     });
     hmr_stage
       .compute_hmr_update_for_file_changes(
@@ -143,6 +144,7 @@ impl Bundler {
       cache: &mut self.cache,
       lost_hmr_update: &mut self.lost_hmr_update,
       next_hmr_patch_id,
+      persistent_cache: self.bundle_factory.persistent_cache.clone(),
     });
     hmr_stage.compile_lazy_entry(&module_id, client_id, shipped, evaluated, stamp_table).await
   }

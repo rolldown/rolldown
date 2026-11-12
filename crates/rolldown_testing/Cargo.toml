@@ -37,6 +37,20 @@ serde_json = { workspace = true }
 sugar_path = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
 
+[dev-dependencies]
+rolldown_plugin_vite_alias = { workspace = true }
+rolldown_plugin_vite_build_import_analysis = { workspace = true }
+rolldown_plugin_vite_dynamic_import_vars = { workspace = true }
+rolldown_plugin_vite_import_glob = { workspace = true }
+rolldown_plugin_vite_json = { workspace = true }
+rolldown_plugin_vite_load_fallback = { workspace = true }
+rolldown_plugin_vite_module_preload_polyfill = { workspace = true }
+rolldown_plugin_vite_react_refresh_wrapper = { workspace = true }
+rolldown_plugin_vite_reporter = { workspace = true }
+rolldown_plugin_vite_resolve = { workspace = true }
+rolldown_plugin_vite_transform = { workspace = true }
+rolldown_utils = { workspace = true }
+
 [build-dependencies]
 rolldown_testing_config = { workspace = true }
 schemars = { workspace = true }

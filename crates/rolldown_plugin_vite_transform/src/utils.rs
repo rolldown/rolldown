@@ -120,11 +120,7 @@ impl ViteTransformPlugin {
     if source_type.is_typescript() {
       let path = Path::new(cwd).join(id);
       if let Some(tsconfig) = self.resolver.find_tsconfig(path)? {
-        // Tsconfig could be out of root, make sure it is watched
-        let tsconfig_path = tsconfig.path.to_string_lossy();
-        if !tsconfig_path.starts_with(cwd) {
-          ctx.add_watch_file(&tsconfig_path);
-        }
+        ctx.add_watch_file(&tsconfig.path.to_string_lossy());
 
         let (merged_options, warnings) = merge_tsconfig(transform_options, &tsconfig, false);
         for warning in warnings {

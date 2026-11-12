@@ -1,7 +1,8 @@
 use std::borrow::Cow;
 
 use rolldown_plugin::{
-  HookLoadArgs, HookLoadOutput, HookLoadReturn, HookUsage, Plugin, SharedLoadPluginContext,
+  HookLoadArgs, HookLoadOutput, HookLoadReturn, HookUsage, Plugin, PluginHookMeta,
+  SharedLoadPluginContext,
 };
 use rolldown_utils::dataurl::is_data_url;
 
@@ -28,6 +29,10 @@ impl Plugin for ViteLoadFallbackPlugin {
     ctx.add_watch_file(path);
 
     Ok(Some(HookLoadOutput { code: code.into(), ..Default::default() }))
+  }
+
+  fn load_meta(&self) -> Option<PluginHookMeta> {
+    Some(PluginHookMeta { order: None, cache: Some(true) })
   }
 
   fn register_hook_usage(&self) -> HookUsage {

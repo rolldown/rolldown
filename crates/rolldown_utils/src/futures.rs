@@ -60,6 +60,20 @@ where
   }
 }
 
+/// Like [`spawn_blocking`], but hands the function back when no runtime is reachable, so the
+/// caller can run it on the current thread.
+#[inline]
+pub fn try_spawn_blocking<F, R>(f: F) -> Result<JoinHandle<R>, (SpawnError, F)>
+where
+  F: FnOnce() -> R + Send + 'static,
+  R: Send + 'static,
+{
+  match tokio::runtime::Handle::try_current() {
+    Ok(handle) => Ok(handle.spawn_blocking(f)),
+    Err(_) => Err((SpawnError, f)),
+  }
+}
+
 #[inline]
 pub fn spawn_blocking<F, R>(f: F) -> JoinHandle<R>
 where

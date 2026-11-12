@@ -167,6 +167,10 @@ impl TransformOptions {
     Self { inner: TransformOptionsInner::Raw(raw), target, jsx_preset, should_transform_js }
   }
 
+  pub(crate) fn inner(&self) -> &TransformOptionsInner {
+    &self.inner
+  }
+
   #[inline]
   pub fn is_jsx_disabled(&self) -> bool {
     matches!(self.jsx_preset, JsxPreset::Disable)

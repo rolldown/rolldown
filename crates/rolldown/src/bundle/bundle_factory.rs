@@ -15,6 +15,7 @@ use rustc_hash::FxHashMap;
 
 use crate::{
   Bundle, BundleHandle,
+  persistent_cache::{PersistentScanCache, SharedPersistentScanCache},
   types::scan_stage_cache::ScanStageCache,
   utils::{
     apply_inner_plugins::apply_inner_plugins,
@@ -57,6 +58,8 @@ pub struct BundleFactory {
 
   /// Context for lazy compilation, if enabled
   pub lazy_compilation_context: Option<LazyCompilationContext>,
+
+  pub persistent_cache: Option<SharedPersistentScanCache>,
 }
 
 impl BundleFactory {
@@ -66,14 +69,27 @@ impl BundleFactory {
     let maybe_guard =
       if opts.disable_tracing_setup { None } else { rolldown_tracing::try_init_tracing() };
 
-    let PrepareBuildContext { fs, resolver, options, mut warnings } =
-      prepare_build_context(opts.bundler_options)?;
+    let PrepareBuildContext {
+      fs,
+      resolver,
+      options,
+      mut warnings,
+      options_cache_hash,
+      resolve_symlinks,
+    } = prepare_build_context(opts.bundler_options)?;
 
     Self::check_prefer_builtin_feature(opts.plugins.as_slice(), &options, &mut warnings);
 
     let inner_plugins_result = apply_inner_plugins(&options, &mut opts.plugins);
 
     let file_emitter = Arc::new(FileEmitter::new(Arc::clone(&options)));
+
+    let persistent_cache = PersistentScanCache::new(
+      &options,
+      options_cache_hash,
+      resolve_symlinks,
+      opts.plugins.iter().map(|plugin| plugin.call_name()),
+    );
 
     let plugin_driver_factory = PluginDriverFactory::new(opts.plugins, &resolver);
     let module_side_effects_overrides = Arc::new(ModuleSideEffectsOverrides::new(
@@ -95,6 +111,7 @@ impl BundleFactory {
       module_side_effects_overrides_for_incremental_build: module_side_effects_overrides,
       transform_dependencies_for_incremental_build: Arc::default(),
       lazy_compilation_context: inner_plugins_result.lazy_compilation_context,
+      persistent_cache,
     })
   }
 
@@ -202,6 +219,7 @@ impl BundleFactory {
       warnings: std::mem::take(&mut self.warnings),
       bundle_span,
       cache,
+      persistent_cache: self.persistent_cache.clone(),
     };
     self.last_bundle_handle = Some(bundle.context());
     bundle

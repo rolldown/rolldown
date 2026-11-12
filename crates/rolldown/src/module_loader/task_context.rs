@@ -7,7 +7,7 @@ use rolldown_fs::FileSystem;
 use rolldown_plugin::{ContextLoadProgress, SharedPluginDriver};
 use rolldown_utils::dashmap::FxDashSet;
 
-use crate::{SharedOptions, SharedResolver};
+use crate::{SharedOptions, SharedResolver, persistent_cache::ScanCacheSession};
 
 /// Used to store common data shared between all tasks.
 pub struct TaskContext<Fs: FileSystem> {
@@ -19,6 +19,7 @@ pub struct TaskContext<Fs: FileSystem> {
   pub meta: TaskContextMeta,
   /// Entries whose module task started before they were resolved.
   pub late_entries: FxDashSet<ModuleId>,
+  pub persistent_cache: Option<Arc<ScanCacheSession>>,
 }
 
 impl<Fs: FileSystem> TaskContext<Fs> {

@@ -10,7 +10,9 @@ use oxc::transformer::Transformer;
 use rolldown_common::{BundlerTransformOptions, LogWithoutPlugin, ModuleType};
 use rolldown_ecmascript::semantic_builder_for_transform;
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, EventKind, Severity};
-use rolldown_plugin::{HookTransformOutputMap, HookUsage, Plugin, SharedTransformPluginContext};
+use rolldown_plugin::{
+  HookTransformOutputMap, HookUsage, Plugin, PluginHookMeta, SharedTransformPluginContext,
+};
 use rolldown_utils::{concat_string, pattern_filter::StringOrRegex, url::clean_url};
 
 #[derive(Debug, Default)]
@@ -132,5 +134,12 @@ impl Plugin for ViteTransformPlugin {
 
   fn register_hook_usage(&self) -> HookUsage {
     HookUsage::Transform
+  }
+
+  // The result depends on the code, the options and the tsconfig. The tsconfig inside the root
+  // is tracked because Rolldown makes the tsconfig that governs a module a transform dependency
+  // of it. A tsconfig outside the root is registered with `add_watch_file` in `get_modified_transform_options`.
+  fn transform_meta(&self) -> Option<PluginHookMeta> {
+    Some(PluginHookMeta { order: None, cache: Some(true) })
   }
 }

@@ -59,7 +59,7 @@ pub struct WatcherFileWatcherOptions {
 }
 
 #[cfg(feature = "deserialize_bundler_options")]
-fn deserialize_string_or_regex<'de, D>(
+pub fn deserialize_string_or_regex<'de, D>(
   deserializer: D,
 ) -> Result<Option<Vec<StringOrRegex>>, D::Error>
 where

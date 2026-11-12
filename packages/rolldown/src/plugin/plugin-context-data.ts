@@ -99,6 +99,8 @@ export class PluginContextData {
    * pass it to Rust, which calls it only when the value needs it.
    */
   moduleSideEffectsOption: ModuleSideEffectsOptionFn | undefined = undefined;
+  /** `experimental.cache` is set. */
+  persistentCache = false;
 
   constructor(
     private onLog: LogHandler,
@@ -192,6 +194,16 @@ export class PluginContextData {
   warnWriteAfterBuildEnd(moduleId: string, pluginName?: string): void {
     const log = logModuleSideEffectsWriteAfterBuildEnd(moduleId);
     this.onLog(LOG_LEVEL_WARN, pluginName === undefined ? log : { ...log, plugin: pluginName });
+  }
+
+  /**
+   * The persistent cache saves no result for the module task of the hook call that `context`
+   * belongs to. Rust ignores the call when the cache does not record that hook call.
+   */
+  markNotCacheable(context: BindingPluginContext, reason: () => string): void {
+    if (this.persistentCache) {
+      context.markNotCacheable(reason());
+    }
   }
 
   getModuleInfo(

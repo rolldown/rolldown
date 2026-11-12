@@ -276,6 +276,17 @@ Rust keeps the JS functions of the bundler options only while their owner is ope
 - A JS function of the options can reach such a native object. Then a cycle goes through native code: root → JS function → … → JS wrapper → `Arc<NormalizedBundlerOptions>` → `JsCallback` → root. The GC cannot see the native edge, so it never frees the cycle.
 - The internal callbacks capture `pluginContextData`, which reaches every plugin of the build. So without the release, every plugin of the build stays alive when one plugin keeps `this`. Before rolldown/rolldown#11623, one empty `buildStart` hook had the same effect (rolldown/rolldown#11444).
 
+### Synchronous hook returns
+
+The TypeScript hook adapters and the shared error wrapper preserve synchronous
+returns. They normalize values inline and only create Promise chains for actual
+Promises or thenables; an unconditional `async` wrapper would force napi to create
+fulfillment and rejection handlers even for an empty synchronous hook. This is
+decided per invocation, because the same hook can return either kind of result.
+Void hooks discard returned values while still awaiting async completion, and
+the error wrapper annotates both synchronous throws and asynchronous rejections.
+Timing instrumentation must preserve this distinction too.
+
 ### The rule
 
 - Each function field of the bundler options uses `UntrackedJsCallback` (`crates/rolldown_binding/src/types/js_callback_release.rs`). That type has no call methods. `normalize_binding_options` creates one group (`JsCallbackRelease`) for each call. It gives each callback to `JsCallbackRelease::track`, which returns a `ReleasableJsCallback`. A `ReleasableJsCallback` keeps the callback in a shared slot, so that the release can take it out.

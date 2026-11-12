@@ -162,13 +162,7 @@ impl GenerateStage<'_> {
     // Manual code splitting places its modules after this pass, so the cycle graph does not see
     // the chunks of its groups. A retry can then fold a dependency of a group into a chunk that
     // imports the group (`issues/9225`).
-    let has_manual_groups = self
-      .options
-      .manual_code_splitting
-      .as_ref()
-      .and_then(|options| options.groups.as_ref())
-      .is_some_and(|groups| !groups.is_empty());
-    if !has_manual_groups {
+    if !self.options.has_manual_code_splitting_groups() {
       changed |= Self::retry_rejected_moves(
         &mut atoms,
         &mut reduced_chunk_graph,

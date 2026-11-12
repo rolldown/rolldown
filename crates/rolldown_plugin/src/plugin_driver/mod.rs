@@ -25,6 +25,7 @@ use tokio::sync::broadcast;
 use crate::{
   __inner::SharedPluginable,
   HookFilterArgs, PluginContext, Pluginable,
+  plugin_context::PluginContextMeta,
   plugin_driver::hook_orders::PluginHookOrders,
   type_aliases::{IndexPluginContext, IndexPluginable},
   types::build_timings::BuildTimings,
@@ -51,6 +52,7 @@ pub struct PluginDriver {
   pub(crate) should_skip_user_plugins_for_lazy_proxy_modules: bool,
   pub(crate) lazy_compilation_plugin_idx: Option<PluginIdx>,
   pub file_emitter: SharedFileEmitter,
+  pub meta: Arc<PluginContextMeta>,
   pub watch_files: Arc<FxDashSet<ArcStr>>,
   pub module_infos: SharedModuleInfoDashMap,
   /// Module dependencies tracked during load/transform hooks for HMR invalidation

@@ -72,16 +72,7 @@ pub async fn finalize_assets(
   let index_direct_dependencies: IndexVec<InsChunkIdx, Vec<InsChunkIdx>> =
     index_instantiated_chunks
       .par_iter()
-      .map(|asset| {
-        if let StrOrBytes::Str(content) = &asset.content {
-          extract_hash_placeholders(content, &HASH_PLACEHOLDER_LEFT_FINDER)
-            .iter()
-            .filter_map(|placeholder| ins_chunk_idx_by_placeholder.get(placeholder).copied())
-            .collect_vec()
-        } else {
-          vec![]
-        }
-      })
+      .map(|chunk| direct_dependencies(chunk, &ins_chunk_idx_by_placeholder))
       .collect::<Vec<_>>()
       .into();
 
@@ -121,6 +112,9 @@ pub async fn finalize_assets(
       if let Some(augment_chunk_hash) = &chunk.augment_chunk_hash {
         hash.push_str(augment_chunk_hash);
         hash = xxhash_base64_url(hash.as_bytes());
+      }
+      if let Some(hash_dependencies) = &chunk.hash_dependencies {
+        hash = append_hash_dependencies(hash, hash_dependencies, &ins_chunk_idx_by_placeholder);
       }
       Ok(hash)
     })
@@ -267,6 +261,40 @@ pub async fn finalize_assets(
   finalize_sourcemaps(&mut assets, &index_sourcemap_hash_placeholders, options, hash_base)?;
 
   Ok(assets)
+}
+
+/// The chunks whose hash placeholder is in the content of `chunk` or in its `hash_dependencies`.
+fn direct_dependencies(
+  chunk: &InstantiatedChunk,
+  ins_chunk_idx_by_placeholder: &FxHashMap<&str, InsChunkIdx>,
+) -> Vec<InsChunkIdx> {
+  let content = match &chunk.content {
+    StrOrBytes::Str(content) => Some(content.as_str()),
+    StrOrBytes::Bytes(_) => None,
+  };
+  content
+    .into_iter()
+    .chain(chunk.hash_dependencies.as_deref())
+    .flat_map(|text| extract_hash_placeholders(text, &HASH_PLACEHOLDER_LEFT_FINDER))
+    .filter_map(|placeholder| ins_chunk_idx_by_placeholder.get(placeholder).copied())
+    .collect()
+}
+
+/// Adds `hash_dependencies` to a standalone hash, with the placeholders normalized like in the
+/// content.
+fn append_hash_dependencies(
+  hash: String,
+  hash_dependencies: &str,
+  ins_chunk_idx_by_placeholder: &FxHashMap<&str, InsChunkIdx>,
+) -> String {
+  let mut bytes = hash.into_bytes();
+  visit_with_placeholders_defaulted(
+    hash_dependencies,
+    &HASH_PLACEHOLDER_LEFT_FINDER,
+    |placeholder| ins_chunk_idx_by_placeholder.contains_key(placeholder),
+    |part| bytes.extend_from_slice(part),
+  );
+  xxhash_base64_url(&bytes)
 }
 
 fn hash_sourcemap_comment(

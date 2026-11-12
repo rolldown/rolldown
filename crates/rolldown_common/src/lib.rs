@@ -180,7 +180,7 @@ pub use crate::{
   },
   types::importer_record::ImporterRecord,
   types::ins_chunk_idx::InsChunkIdx,
-  types::instantiated_chunk::InstantiatedChunk,
+  types::instantiated_chunk::{ChunkHashDependencies, InstantiatedChunk},
   types::interop::Interop,
   types::lazy_barrel::{
     BarrelInfo, BarrelState, ExportSource, ImportedExports, LazyBarrelInfo,

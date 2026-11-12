@@ -565,6 +565,70 @@ describe('regex replace', () => {
   });
 });
 
+describe('function replacer', () => {
+  it('uses UTF-16 lastIndex for sticky regexes with emoji before the match', () => {
+    const s = new MagicString('\u{1F937}a');
+    const regex = /a/y;
+
+    // JS lastIndex is in UTF-16 code units: the emoji occupies indices 0-2.
+    regex.lastIndex = 2;
+    s.replace(regex, () => 'x');
+
+    assert.strictEqual(s.toString(), '\u{1F937}x');
+    assert.strictEqual(regex.lastIndex, 3);
+  });
+
+  it('writes at user-space indices with a non-zero offset', () => {
+    const s = new MagicString('hello world', { offset: 6 });
+    s.replace(/world/, (matched) => matched.toUpperCase());
+    assert.strictEqual(s.toString(), 'hello WORLD');
+  });
+
+  it('replaces a regex match before the offset', () => {
+    const s = new MagicString('hello world', { offset: 6 });
+    s.replace(/hello/, () => 'bye');
+    assert.strictEqual(s.toString(), 'bye world');
+  });
+
+  it('replaces a string match before the offset', () => {
+    const s = new MagicString('hello world', { offset: 6 });
+    s.replace('hello', () => 'bye');
+    assert.strictEqual(s.toString(), 'bye world');
+  });
+
+  it('inserts for a zero-length regex match before the offset', () => {
+    const s = new MagicString('hello world', { offset: 6 });
+    s.replace(/^/, () => '> ');
+    assert.strictEqual(s.toString(), '> hello world');
+  });
+
+  it('inserts for an empty string pattern before the offset', () => {
+    const s = new MagicString('ab', { offset: 1 });
+    s.replaceAll('', () => '-');
+    assert.strictEqual(s.toString(), '-a-b-');
+  });
+
+  it('does not mark the string as changed when the replacer returns the match', () => {
+    const s = new MagicString('abc');
+    s.replace(/b/, (matched) => matched);
+    assert.strictEqual(s.toString(), 'abc');
+    assert.strictEqual(s.hasChanged(), false);
+  });
+
+  it('inserts for zero-length matches', () => {
+    const s = new MagicString('ab');
+    s.replaceAll(/x*/g, () => '-');
+    assert.strictEqual(s.toString(), '-a-b-');
+  });
+
+  it('throws for non-global regex in replaceAll', () => {
+    assert.throws(() => new MagicString('123').replaceAll(/./, () => ''), {
+      name: 'TypeError',
+      message: 'MagicString.prototype.replaceAll called with a non-global RegExp argument',
+    });
+  });
+});
+
 describe('lastLine', () => {
   it('returns the content after the last newline', () => {
     assert.strictEqual(new MagicString('abc\ndef').lastLine(), 'def');

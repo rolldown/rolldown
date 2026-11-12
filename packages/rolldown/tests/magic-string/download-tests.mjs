@@ -47,7 +47,9 @@
  *   - storeName option in overwrite/update (not exposed in binding)
  *   - Note: overwrite option in update and contentOnly option in overwrite ARE now supported
  *   - x_google_ignoreList / ignoreList in generateMap output is now supported
- *   - replace/replaceAll with regex or function replacer
+ *   - Note: replace/replaceAll with regex and/or function replacer are now
+ *     supported by the JS wrapper in src/binding-magic-string.ts (the native
+ *     binding itself only handles string replacements)
  */
 
 import { execSync } from 'node:child_process';
@@ -129,12 +131,10 @@ const SKIP_TESTS = [
   // Note: 'works with global regex replace' now works
   // Note: 'works with global regex replace $$' now works
   'rejects with non-global regexp', // napi-rs can't throw TypeError (only Error), test expects TypeError
-  // Note: 'global regex result the same as .replace' — has function replacer parts, kept skipped
-  'works with global regex replace function', // function replacer not supported
-  'replace function offset', // function replacer not supported
-  'works with string replace and function replacer', // function replacer not supported
-  'should ignore non-changed replacements', // uses function replacer
-  'global regex result the same as .replace', // uses function replacer in one assertion
+  // Note: function replacer tests ('works with global regex replace function',
+  // 'replace function offset', 'works with string replace and function replacer',
+  // 'should ignore non-changed replacements', 'global regex result the same as
+  // .replace') now work via the JS wrapper in src/binding-magic-string.ts
   // Note: 'should support length' and 'should support isEmpty' now work correctly
   // generateMap-specific skips (features not in string_wizard)
   'should generate a correct sourcemap including correct lines', // uses generateDecodedMap which has different mappings count

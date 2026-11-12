@@ -20,7 +20,7 @@ type RolldownWatchBuild = BindingWatcherBundler;
  * - `END`: finished building all bundles
  * - `ERROR`: encountered an error while bundling
  *   - `error`: the error that was thrown
- *   - `result`: the bundle object
+ *   - `result`: the bundle object, absent if setup failed before a bundle was created
  *
  * @category Programmatic APIs
  */
@@ -42,7 +42,7 @@ export type RolldownWatcherEvent =
   | {
       code: 'ERROR';
       error: Error /* the error is not compilable with rollup */;
-      result: RolldownWatchBuild;
+      result?: RolldownWatchBuild;
     };
 
 /**

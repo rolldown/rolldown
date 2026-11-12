@@ -417,7 +417,7 @@ test.concurrent(
     });
     watcher.on('event', async (event) => {
       if (event.code === 'ERROR') {
-        await event.result.close();
+        await event.result?.close();
       }
     });
     onTestFinished(async () => {
@@ -1780,7 +1780,7 @@ test.concurrent(
         results.push('end');
         onResult?.();
       } else if (event.code === 'ERROR') {
-        await event.result.close();
+        await event.result?.close();
         results.push(`error: ${event.error.message}`);
         onResult?.();
       }
@@ -1847,7 +1847,7 @@ test.concurrent(
 
     watcher.on('event', async (event) => {
       if (event.code === 'BUNDLE_END' || event.code === 'ERROR') {
-        await event.result.close();
+        await event.result?.close();
         resultClosed();
       }
     });

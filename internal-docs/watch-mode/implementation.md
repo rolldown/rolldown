@@ -47,7 +47,7 @@ type RolldownWatcherEvent =
   | { code: 'BUNDLE_START' }
   | { code: 'BUNDLE_END'; duration: number; output: readonly string[]; result: RolldownWatchBuild }
   | { code: 'END' }
-  | { code: 'ERROR'; error: Error; result: RolldownWatchBuild };
+  | { code: 'ERROR'; error: Error; result?: RolldownWatchBuild };
 ```
 
 `BUNDLE_END.output` is `output.file` when set, otherwise `output.dir`, joined to `cwd` and resolved like Rollup's `path.resolve`.
@@ -470,6 +470,8 @@ Each output of each config becomes its own `WatchTask` with its own `FsWatcher`,
 
 Lives in `watcher.ts` (`createEventCallback()` — a standalone function), not in the emitter. The callback is created before the `BindingWatcher` constructor and passed to it alongside options. Maps `BindingWatcherEvent` → Rollup-compatible event objects. Error events carry structured `Vec<BuildDiagnostic>` data from Rust; the binding preserves these diagnostics, and the JS layer converts them via `aggregateBindingErrorsIntoJsError()` before exposing them on Rollup-style event objects.
 
+`watch()` also observes asynchronous setup failures, including `options` / `outputOptions` hook errors and native constructor errors, and emits them as `ERROR` events. Such an event has no `result`: a bundle has not been created yet. Options are prepared in parallel, so setup waits for every preparation to settle and stops any workers from successful preparations before reporting a failure. An error listener may be asynchronous; its rejection is logged like a rejected native event listener instead of becoming an unhandled rejection.
+
 ### End-to-End Flow
 
 ```
@@ -523,7 +525,7 @@ Tracks progress from old watcher → new `rolldown_watcher`. Items link to [#648
 
 ### NAPI + TypeScript Bridge
 
-- [ ] Surface setup errors (e.g. `options` hook) as `ERROR` events, not unhandled rejections ([#6482](https://github.com/rolldown/rolldown/issues/6482))
+- [x] Surface setup errors (e.g. `options` hook) as `ERROR` events, not unhandled rejections ([#6482](https://github.com/rolldown/rolldown/issues/6482))
 
 ### Cleanup
 

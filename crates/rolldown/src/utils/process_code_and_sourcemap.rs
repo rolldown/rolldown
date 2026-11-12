@@ -192,37 +192,7 @@ pub fn emit_sourcemap(
             code,
             |source| {
               source.push_str("# sourceMappingURL=");
-              let encode_set = if is_css {
-                CSS_SOURCEMAP_FILENAME_ENCODE_SET
-              } else {
-                SOURCEMAP_FILENAME_ENCODE_SET
-              };
-
-              match &options.sourcemap_base_url {
-                Some(url_string) => {
-                  let encoded_filename: Cow<'_, str> =
-                    utf8_percent_encode(map_filename, encode_set).into();
-                  let url = Url::parse(url_string)
-                    .and_then(|base| base.join(&encoded_filename))
-                    .map_err_to_unhandleable()?;
-                  let url = url.as_str();
-                  // The base URL may contain `*/`, which would close the CSS comment
-                  if is_css && url.contains('*') {
-                    source.push_str(&url.replace('*', "%2A"));
-                  } else {
-                    source.push_str(url);
-                  }
-                }
-                None => {
-                  let filename = Path::new(map_filename)
-                    .file_name()
-                    .ok_or(anyhow::anyhow!("should have filename"))?
-                    .to_string_lossy();
-                  let encoded_filename: Cow<'_, str> =
-                    utf8_percent_encode(&filename, encode_set).into();
-                  source.push_str(&encoded_filename);
-                }
-              }
+              source.push_str(&sourcemap_file_url(options, map_filename, is_css)?);
               Ok(())
             },
             source_map_link_comment_kind,
@@ -251,6 +221,35 @@ pub fn emit_sourcemap(
   }
 
   Ok(None)
+}
+
+pub fn sourcemap_file_url(
+  options: &NormalizedBundlerOptions,
+  map_filename: &str,
+  is_css: bool,
+) -> BuildResult<String> {
+  let encode_set =
+    if is_css { CSS_SOURCEMAP_FILENAME_ENCODE_SET } else { SOURCEMAP_FILENAME_ENCODE_SET };
+
+  match &options.sourcemap_base_url {
+    Some(url_string) => {
+      let encoded_filename: Cow<'_, str> = utf8_percent_encode(map_filename, encode_set).into();
+      let url = Url::parse(url_string)
+        .and_then(|base| base.join(&encoded_filename))
+        .map_err_to_unhandleable()?;
+      let url = url.as_str();
+      // The base URL may contain `*/`, which would close the CSS comment
+      if is_css && url.contains('*') { Ok(url.replace('*', "%2A")) } else { Ok(url.to_string()) }
+    }
+    None => {
+      let filename = Path::new(map_filename)
+        .file_name()
+        .ok_or(anyhow::anyhow!("should have filename"))?
+        .to_string_lossy();
+      let encoded_filename: Cow<'_, str> = utf8_percent_encode(&filename, encode_set).into();
+      Ok(encoded_filename.into_owned())
+    }
+  }
 }
 
 fn process_sourcemap_related_reference(

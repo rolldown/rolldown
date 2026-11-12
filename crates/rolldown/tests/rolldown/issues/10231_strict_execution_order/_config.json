@@ -1,0 +1,17 @@
+{
+  "_comment": "Test for issue #10231: with strict execution order and on-demand wrapping, a preserved CommonJS module whose chunk also exposes wrapper bindings keeps named exports and still runs",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "format": "cjs",
+    "preserveModules": true,
+    "strictExecutionOrder": true,
+    "experimental": {
+      "onDemandWrapping": true
+    }
+  }
+}

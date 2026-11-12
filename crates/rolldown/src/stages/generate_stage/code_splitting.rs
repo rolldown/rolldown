@@ -934,6 +934,10 @@ impl GenerateStage<'_> {
         pre_chunk_order_state,
       );
     }
+    self.place_unselected_consumer_local_reexport_targets(
+      index_splitting_info,
+      pre_chunk_order_state,
+    );
 
     let mut module_is_assigned: IndexBitSet<ModuleIdx> =
       IndexBitSet::new(self.link_output.module_table.modules.len());
@@ -1330,6 +1334,39 @@ impl GenerateStage<'_> {
       });
       if let Some(dependencies) = init_dependencies {
         q.extend(dependencies[module_idx].iter().copied());
+      }
+    }
+  }
+
+  // See internal-docs/code-splitting/implementation.md#reachability-propagation.
+  fn place_unselected_consumer_local_reexport_targets(
+    &self,
+    index_splitting_info: &mut IndexSplittingInfo,
+    pre_chunk_order_state: &super::order_wrap_state::OrderWrapState,
+  ) {
+    if !pre_chunk_order_state.has_consumer_local_reexport_routes() {
+      return;
+    }
+    for module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal) {
+      if !self.link_output.metas[module.idx].is_included
+        || !index_splitting_info[module.idx].bits.is_empty()
+      {
+        continue;
+      }
+      let mut bits = index_splitting_info[module.idx].bits.clone();
+      let mut is_initial = false;
+      for &importer_idx in &module.importers_idx {
+        if pre_chunk_order_state.is_consumer_local_reexport_route(importer_idx) {
+          let importer = &index_splitting_info[importer_idx];
+          bits.union(&importer.bits);
+          is_initial |= importer.tags_bit_set.has_bit(ModuleTag::INITIAL_BIT);
+        }
+      }
+      let info = &mut index_splitting_info[module.idx];
+      info.share_count = bits.bit_count();
+      info.bits = bits;
+      if is_initial {
+        info.tags_bit_set.set_bit(ModuleTag::INITIAL_BIT);
       }
     }
   }

@@ -114,7 +114,7 @@ impl Plugin for ViteReactRefreshWrapperPlugin {
   }
 
   fn resolve_id_meta(&self) -> Option<PluginHookMeta> {
-    Some(PluginHookMeta { order: Some(PluginOrder::Pre), cache: None })
+    Some(PluginHookMeta { order: Some(PluginOrder::Pre), cache: Some(true) })
   }
 
   async fn transform(
@@ -144,6 +144,10 @@ impl Plugin for ViteReactRefreshWrapperPlugin {
       map: HookTransformOutputMap::Null,
       ..Default::default()
     }))
+  }
+
+  fn transform_meta(&self) -> Option<PluginHookMeta> {
+    Some(PluginHookMeta { order: None, cache: Some(true) })
   }
 
   fn register_hook_usage(&self) -> HookUsage {

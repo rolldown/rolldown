@@ -17,7 +17,7 @@ use sugar_path::SugarPath;
 use rolldown_common::{ImportKind, WatcherChangeKind, side_effects::HookSideEffects};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, HookUsage, Plugin, PluginContext, typedmap::TypedMapKey,
+  HookResolveIdReturn, HookUsage, Plugin, PluginContext, PluginHookMeta, typedmap::TypedMapKey,
 };
 use rolldown_std_utils::PathExt as _;
 use rolldown_utils::{
@@ -207,8 +207,35 @@ impl ViteResolvePlugin {
     }
   }
 
+  // These two callbacks return ids that depend on the state of Vite's dependency optimizer, which
+  // Rolldown cannot see. Vite passes them only to dev without bundling.
+  async fn finalize_bare_specifier(
+    &self,
+    ctx: &PluginContext,
+    resolved_id: &str,
+    raw_id: &str,
+    importer: Option<&str>,
+  ) -> anyhow::Result<Option<String>> {
+    let Some(callback) = &self.finalize_bare_specifier else { return Ok(None) };
+    ctx.mark_not_cacheable(|| format!("`{}` called `finalizeBareSpecifier`", self.name()));
+    callback(resolved_id, raw_id, importer).await
+  }
+
+  async fn finalize_other_specifiers(
+    &self,
+    ctx: &PluginContext,
+    resolved_id: &str,
+    raw_id: &str,
+  ) -> anyhow::Result<Option<String>> {
+    let Some(callback) = &self.finalize_other_specifiers else { return Ok(None) };
+    ctx.mark_not_cacheable(|| format!("`{}` called `finalizeOtherSpecifiers`", self.name()));
+    callback(resolved_id, raw_id).await
+  }
+
   async fn warn(&self, ctx: &PluginContext, message: String) -> anyhow::Result<()> {
     if let Some(on_warn) = &self.on_warn {
+      // A saved result can replay `ctx.warn`, but not this callback.
+      ctx.mark_not_cacheable(|| format!("`{}` sent a warning to `onWarn`", self.name()));
       on_warn(message).await
     } else {
       ctx.warn(rolldown_common::LogWithoutPlugin { message, ..Default::default() });
@@ -217,8 +244,15 @@ impl ViteResolvePlugin {
   }
 
   #[inline]
-  async fn debug_log<T: FnOnce() -> String>(&self, message: T) -> anyhow::Result<()> {
-    if let Some(on_debug) = &self.on_debug { on_debug(message()).await } else { Ok(()) }
+  async fn debug_log<T: FnOnce() -> String>(
+    &self,
+    ctx: &PluginContext,
+    message: T,
+  ) -> anyhow::Result<()> {
+    let Some(on_debug) = &self.on_debug else { return Ok(()) };
+    // As with `warn`: a saved result cannot send this log to the callback again.
+    ctx.mark_not_cacheable(|| format!("`{}` sent a debug log to `onDebug`", self.name()));
+    on_debug(message()).await
   }
 
   fn resolve_builtin_for_server(
@@ -340,12 +374,10 @@ impl Plugin for ViteResolvePlugin {
       // We don't need to resolve these paths since they are already resolved
       // always return here even if res doesn't exist since /@fs/ is explicit
       // if the file doesn't exist it should be a 404.
-      if let Some(finalize_other_specifiers) = &self.finalize_other_specifiers
-        && let Some(finalized) = finalize_other_specifiers(&res, &id).await?
-      {
+      if let Some(finalized) = self.finalize_other_specifiers(ctx, &res, &id).await? {
         res = finalized.into();
       }
-      self.debug_log(|| format!("[@fs] {} -> {}", id.cyan(), res.dimmed())).await?;
+      self.debug_log(ctx, || format!("[@fs] {} -> {}", id.cyan(), res.dimmed())).await?;
       return Ok(Some(HookResolveIdOutput { id: res.into(), ..Default::default() }));
     }
 
@@ -353,9 +385,7 @@ impl Plugin for ViteResolvePlugin {
     if id.starts_with("file://") {
       let (path, postfix) = file_url_str_to_path_and_postfix(&id)?;
       let mut res = normalize_path(&path).into_owned() + &postfix;
-      if let Some(finalize_other_specifiers) = &self.finalize_other_specifiers
-        && let Some(finalized) = finalize_other_specifiers(&res, &id).await?
-      {
+      if let Some(finalized) = self.finalize_other_specifiers(ctx, &res, &id).await? {
         res = finalized;
       }
       let package_json_path = (!self.legacy_inconsistent_cjs_interop)
@@ -412,7 +442,7 @@ impl Plugin for ViteResolvePlugin {
       if !candidates.is_empty() {
         let mapped = candidates.swap_remove(0);
         self
-          .debug_log(|| format!("[glob-tsconfig-paths] {} -> {}", id.cyan(), mapped.dimmed()))
+          .debug_log(ctx, || format!("[glob-tsconfig-paths] {} -> {}", id.cyan(), mapped.dimmed()))
           .await?;
         return Ok(Some(HookResolveIdOutput { id: mapped.into(), ..Default::default() }));
       }
@@ -439,18 +469,15 @@ impl Plugin for ViteResolvePlugin {
           return Ok(Some(self.resolve_builtin_for_server(args, &id)));
         }
 
-        if let Some(finalize_bare_specifier) = &self.finalize_bare_specifier
-          && !scan
+        if !scan
           && result.id.as_path().is_in_node_modules()
+          && let Some(finalized) =
+            self.finalize_bare_specifier(ctx, &result.id, &id, args.importer).await?
         {
-          let finalized = finalize_bare_specifier(&result.id, &id, args.importer)
-            .await?
-            .map(Into::into)
-            .unwrap_or(result.id);
-          result.id = finalized;
+          result.id = finalized.into();
         }
 
-        self.debug_log(|| format!("[bare] {} -> {}", id.cyan(), result.id.dimmed())).await?;
+        self.debug_log(ctx, || format!("[bare] {} -> {}", id.cyan(), result.id.dimmed())).await?;
         return Ok(Some(result));
       }
 
@@ -504,7 +531,7 @@ impl Plugin for ViteResolvePlugin {
 
         if !self.resolve_options.as_src {
           self
-            .debug_log(|| {
+            .debug_log(ctx, || {
               let mut message = format!("externalized node built-in \"{id}\" to empty module.");
               if let Some(importer) = args.importer {
                 message.push_str(&format!(" (imported by: {})", importer.dimmed().white()));
@@ -543,12 +570,11 @@ impl Plugin for ViteResolvePlugin {
     )?;
     if let Some(mut resolved) = resolved {
       if !scan
-        && let Some(finalize_other_specifiers) = &self.finalize_other_specifiers
-        && let Some(finalized) = finalize_other_specifiers(&resolved.id, &id).await?
+        && let Some(finalized) = self.finalize_other_specifiers(ctx, &resolved.id, &id).await?
       {
         resolved.id = finalized.into();
       }
-      self.debug_log(|| format!("[other] {} -> {}", id.cyan(), resolved.id.dimmed())).await?;
+      self.debug_log(ctx, || format!("[other] {} -> {}", id.cyan(), resolved.id.dimmed())).await?;
       return Ok(Some(resolved));
     }
 
@@ -561,8 +587,12 @@ impl Plugin for ViteResolvePlugin {
       }));
     }
 
-    self.debug_log(|| format!("[fallthrough] {}", id.dimmed())).await?;
+    self.debug_log(ctx, || format!("[fallthrough] {}", id.dimmed())).await?;
     Ok(None)
+  }
+
+  fn resolve_id_meta(&self) -> Option<PluginHookMeta> {
+    Some(PluginHookMeta { order: None, cache: Some(true) })
   }
 
   async fn load(
@@ -635,6 +665,10 @@ impl Plugin for ViteResolvePlugin {
     }
 
     Ok(None)
+  }
+
+  fn load_meta(&self) -> Option<PluginHookMeta> {
+    Some(PluginHookMeta { order: None, cache: Some(true) })
   }
 
   async fn watch_change(

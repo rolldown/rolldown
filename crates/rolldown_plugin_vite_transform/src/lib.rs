@@ -136,9 +136,8 @@ impl Plugin for ViteTransformPlugin {
     HookUsage::Transform
   }
 
-  // The result depends on the code, the options and the tsconfig. The tsconfig inside the root
-  // is tracked because Rolldown makes the tsconfig that governs a module a transform dependency
-  // of it. A tsconfig outside the root is registered with `add_watch_file` in `get_modified_transform_options`.
+  // The result depends on the code, the options and the tsconfig. `get_modified_transform_options`
+  // makes the tsconfig a transform dependency with `add_watch_file`.
   fn transform_meta(&self) -> Option<PluginHookMeta> {
     Some(PluginHookMeta { order: None, cache: Some(true) })
   }

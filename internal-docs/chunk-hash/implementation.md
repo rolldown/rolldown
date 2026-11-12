@@ -20,11 +20,12 @@ Hash computation lives in `crates/rolldown/src/utils/chunk/finalize_chunks.rs::f
 [render chunks]
   ↓ chunk.content (string) + chunk.preliminary_filename (with placeholder)
 [finalize_assets]
+  ├─ prepare sourcemaps with preliminary chunk names
   ├─ Phase 1 (parallel):  per-chunk standalone content hash
   ├─ Phase 2 (parallel):  per-chunk final hash = own standalone + transitive deps' standalone
   ├─ Phase 3 (sequential): deconflict file names by rehashing on collision
   ├─ replace placeholders in content + filename with final hashes
-  └─ prepare sourcemaps, hash their final content, then emit them
+  └─ resolve sourcemap chunk names, hash their final content, then emit them
 ```
 
 ## Hash Placeholders
@@ -61,6 +62,10 @@ This is invariant #1 (stability): the chunk's own hash now depends only on its r
 **Streaming, not materializing.** Chunks can be megabytes. Materializing a normalized `String` per chunk would allocate roughly the bundle size's worth of throwaway buffers per build. `visit_with_placeholders_defaulted` is a visitor over `&[u8]` slices; the hasher consumes them directly. Rollup's equivalent (`replacePlaceholdersWithDefaultAndGetContainedPlaceholders`) materializes the string before hashing — rolldown deliberately doesn't.
 
 **augmentChunkHash.** If the user's plugin supplied a hash augmentation, it gets appended to the standalone hash string and the whole thing is re-hashed (`xxhash_base64_url(hash.as_bytes())`). This matches Rollup.
+
+**Sourcemap comments.** `hash_sourcemap_comment` includes the comment emitted after the rendered code. External map filenames are normalized before URL encoding, using the same URL construction as emission. Inline maps contribute their prepared JSON before Base64 encoding. Normalizing after encoding would miss placeholders and make the hash depend on unrelated chunks' indices. Hidden maps contribute nothing unless debug IDs add a comment.
+
+For an external map filename containing `[hash]`, the comment's hash input uses a hash of the prepared map with chunk placeholders normalized. The emitted map's hash still uses its final JSON, including the final chunk name. This breaks the circular dependency (chunk hash → map's `file` → map hash → chunk comment) while making changes to referenced map content invalidate the chunk and its importers. Map content does not affect the chunk hash when the comment uses a fixed map filename.
 
 ## Phase 2: Final Hash
 
@@ -108,12 +113,12 @@ In practice the collision case is rare because `experimental.attachDebugInfo` (d
 
 The sourcemap sequence is:
 
-1. Resolve chunk hashes and final chunk file names.
-2. Prepare each sourcemap by setting `file`, applying `sourcemapExcludeSources`, `sourcemapIgnoreList`, and `sourcemapPathTransform`, and making source paths relative to the final chunk directory.
+1. Prepare each sourcemap using preliminary chunk names: set `file`, apply `sourcemapExcludeSources`, `sourcemapIgnoreList`, and `sourcemapPathTransform`, and make source paths relative to the chunk directory.
+2. Resolve chunk hashes and final chunk file names, then update the map's `file` and substitute chunk placeholders in source paths.
 3. If the sourcemap file-name pattern contains `[hash]`, hash the prepared map's serialized JSON.
 4. Resolve the sourcemap file name, then add debug IDs and emit the inline comment or separate asset.
 
-Preparation and emission are separate so user callbacks run only once while every content-changing map option contributes to `[hash]`. Debug IDs are deliberately added after the sourcemap hash, matching Rollup. The path passed to sourcemap callbacks is the default `<chunk-file>.map` path, which avoids a circular dependency when the custom sourcemap file name itself contains `[hash]`.
+Preparation and emission are separate so user callbacks run only once while every content-changing map option contributes to `[hash]`. Debug IDs are deliberately added after the sourcemap hash, matching Rollup. The path passed to sourcemap callbacks is the default `<preliminary-chunk-file>.map` path (possibly containing hash placeholders), which avoids circular dependencies through either a chunk hash or a custom sourcemap hash. A callback that incorporates this path into a source path has its chunk placeholders resolved before emission.
 
 ## Why Not Hash the Preliminary Filename Directly
 

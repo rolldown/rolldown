@@ -107,7 +107,7 @@ pub fn try_extract_const_literal<'me, 'ast: 'me>(
 ///
 /// oxc converts such a literal with the default `toString`, and keeps the source order of regexp
 /// flags. A program can patch a prototype, and the runtime prints regexp flags in a fixed order.
-fn contains_object_literal(expr: &Expression) -> bool {
+pub fn contains_object_literal(expr: &Expression) -> bool {
   struct Finder(bool);
   impl<'a> VisitJs<'a> for Finder {
     fn visit_expression(&mut self, it: &Expression<'a>) {

@@ -11,6 +11,7 @@ import { bindingifySourcemap, type ExistingRawSourceMap } from '../types/sourcem
 import { aggregateBindingErrorsIntoJsError } from '../utils/error';
 import { transformModuleInfo } from '../utils/transform-module-info';
 import {
+  copySourcemapObject,
   isEmptySourcemapFiled,
   normalizeTransformHookSourcemap,
 } from '../utils/transform-sourcemap';
@@ -248,18 +249,23 @@ export function bindingifyTransform(
       } else if (ret.code instanceof RolldownMagicString) {
         let magicString = ret.code as RolldownMagicString;
         normalizedCode = magicString.toString();
-        // If the option is not enable we should just return soucemapJsonString
-        let fallbackSourcemap = ctx.sendMagicString(magicString);
-        if (fallbackSourcemap != undefined) {
-          map = fallbackSourcemap;
-        } else {
-          // `experimental.nativeMagicString` is enabled: the sourcemap is
-          // generated natively and delivered out-of-band via the magic-string
-          // channel. Signal `null` (an explicit "no map on this output object")
-          // rather than `undefined`, otherwise the Rust side treats this
-          // transform as a missing/broken sourcemap (`Omitted`) and the empty
-          // sentinel wipes out the real map produced by the channel.
-          mapHandledByNativeChannel = true;
+        // Rolldown generates the map from the MagicString only when the hook returns no `map`,
+        // the same as in `renderChunk`. An own `map` or `map: null` is used as it is. A
+        // generated map in addition to an own map would apply the edits of this step two times.
+        if (ret.map === undefined) {
+          // If the option is not enable we should just return soucemapJsonString
+          let fallbackSourcemap = ctx.sendMagicString(magicString);
+          if (fallbackSourcemap != undefined) {
+            map = fallbackSourcemap;
+          } else {
+            // `experimental.nativeMagicString` is enabled: the sourcemap is
+            // generated natively and delivered out-of-band via the magic-string
+            // channel. Signal `null` (an explicit "no map on this output object")
+            // rather than `undefined`, otherwise the Rust side treats this
+            // transform as a missing/broken sourcemap (`Omitted`) and the empty
+            // sentinel wipes out the real map produced by the channel.
+            mapHandledByNativeChannel = true;
+          }
         }
       }
 
@@ -333,7 +339,11 @@ function preProcessSourceMap(
   if (!ret.map) {
     return;
   }
-  let map = typeof ret.map === 'object' ? ret.map : (JSON.parse(ret.map) as ExistingRawSourceMap);
+  // Work on a copy, so the write to `sources` below does not change the plugin's object.
+  let map =
+    typeof ret.map === 'object'
+      ? copySourcemapObject(ret.map)
+      : (JSON.parse(ret.map) as ExistingRawSourceMap);
   if (!isEmptySourcemapFiled(map.sources)) {
     // normalize original sourcemap sources
     // Port form https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts#L180-L188.

@@ -12,12 +12,14 @@ use std::{
   time::{Duration, Instant},
 };
 
+use arcstr::ArcStr;
 use cow_utils::CowUtils;
 use owo_colors::Style;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use rolldown_common::{ModuleInfo, ModuleType, NormalModule, RUNTIME_MODULE_KEY, SourceMapType};
-use rolldown_plugin::{HookFilterArgs, HookUsage, Plugin, PluginContext};
+use rolldown_common::{ModuleInfo, ModuleType, NormalModule, SourceMapType};
+use rolldown_plugin::{HookUsage, Plugin, PluginContext, PluginHookMeta};
 use rolldown_std_utils::relative_path_to_slash;
+use rolldown_utils::dashmap::FxDashSet;
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath as _;
 
@@ -36,6 +38,8 @@ pub struct ViteReporterPlugin {
   pub report_compressed_size: bool,
   pub chunk_count: AtomicU32,
   pub transformed_count: AtomicU32,
+  /// The modules whose `transform` ran in their current module task.
+  pub transformed: FxDashSet<ArcStr>,
   pub latest_checkpoint: Arc<RwLock<Instant>>,
   #[debug(skip)]
   pub log_info: Option<Arc<LogInfoFn>>,
@@ -71,42 +75,41 @@ impl Plugin for ViteReporterPlugin {
     Cow::Borrowed("builtin:vite-reporter")
   }
 
-  // Counting in `module_parsed` keeps the count right when a module reuses a saved result, which
-  // skips `transform`. It leaves out the modules that never run `transform`, as before: Rolldown
-  // reads a file of these module types as bytes, and it does not transform `rolldown:` modules.
+  async fn transform(
+    &self,
+    _ctx: rolldown_plugin::SharedTransformPluginContext,
+    args: &rolldown_plugin::HookTransformArgs<'_>,
+  ) -> rolldown_plugin::HookTransformReturn {
+    self.count_transformed(args.id);
+    self.transformed.insert(ArcStr::from(args.id));
+    Ok(None)
+  }
+
+  // Skipping `transform` loses nothing: `module_parsed` counts a module that reused its saved
+  // result.
+  fn transform_meta(&self) -> Option<PluginHookMeta> {
+    Some(PluginHookMeta { order: None, cache: Some(true) })
+  }
+
+  // A module without a mark did not run `transform` in this task. Either it reused its saved
+  // result, or Rolldown runs no `transform` for it: a module that Rolldown read as bytes, which
+  // has one of these module types, or a `rolldown:` module.
   async fn module_parsed(
     &self,
     _ctx: &PluginContext,
     module_info: Arc<ModuleInfo>,
     normal_module: &NormalModule,
   ) -> rolldown_plugin::HookNoopReturn {
-    let runs_transform = !matches!(
-      normal_module.module_type,
-      ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl
-    ) && !module_info.id.starts_with("rolldown:");
-    if runs_transform {
+    if self.transformed.remove(module_info.id.as_str()).is_none()
+      && !matches!(
+        normal_module.module_type,
+        ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl
+      )
+      && !module_info.id.starts_with("rolldown:")
+    {
       self.count_transformed(&module_info.id);
     }
     Ok(())
-  }
-
-  // The runtime module runs `transform` but not `module_parsed`.
-  async fn transform(
-    &self,
-    _ctx: rolldown_plugin::SharedTransformPluginContext,
-    args: &rolldown_plugin::HookTransformArgs<'_>,
-  ) -> rolldown_plugin::HookTransformReturn {
-    if args.id == RUNTIME_MODULE_KEY {
-      self.count_transformed(args.id);
-    }
-    Ok(None)
-  }
-
-  fn hook_filter_matches(&self, _ctx: &PluginContext, args: HookFilterArgs<'_>) -> bool {
-    match args {
-      HookFilterArgs::Transform(args) => args.id == RUNTIME_MODULE_KEY,
-      _ => true,
-    }
   }
 
   async fn build_start(
@@ -116,6 +119,8 @@ impl Plugin for ViteReporterPlugin {
   ) -> rolldown_plugin::HookNoopReturn {
     self.chunk_count.store(0, Ordering::SeqCst);
     self.transformed_count.store(0, Ordering::SeqCst);
+    // A module task that failed after `transform` leaves its mark.
+    self.transformed.clear();
     Ok(())
   }
 

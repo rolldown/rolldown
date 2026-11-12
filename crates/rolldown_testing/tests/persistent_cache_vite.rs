@@ -15,9 +15,9 @@ use rolldown::{
   BundleOutput, Bundler, BundlerOptions, CacheOptions, ExperimentalOptions, InputItem, LogLevel,
   OnLog,
   plugin::{
-    __inner::SharedPluginable, HookBuildStartArgs, HookFilterArgs, HookLoadArgs, HookLoadReturn,
-    HookNoopReturn, HookTransformArgs, HookTransformReturn, HookUsage, Plugin, PluginContext,
-    PluginHookMeta, SharedLoadPluginContext, SharedTransformPluginContext,
+    __inner::SharedPluginable, HookBuildStartArgs, HookFilterArgs, HookLoadArgs, HookLoadOutput,
+    HookLoadReturn, HookNoopReturn, HookTransformArgs, HookTransformReturn, HookUsage, Plugin,
+    PluginContext, PluginHookMeta, SharedLoadPluginContext, SharedTransformPluginContext,
   },
 };
 use rolldown_common::{
@@ -188,6 +188,7 @@ fn reporter(root: &str) -> Arc<ViteReporterPlugin> {
     report_compressed_size: false,
     chunk_count: AtomicU32::new(0),
     transformed_count: AtomicU32::new(0),
+    transformed: rolldown_utils::dashmap::FxDashSet::default(),
     latest_checkpoint: Arc::new(RwLock::new(Instant::now())),
     log_info: Some(Arc::new(|_| Box::pin(async { Ok(()) }))),
   })
@@ -246,6 +247,8 @@ struct Setup {
   finalize_other_specifiers: Option<Arc<FinalizeOtherSpecifiersCallback>>,
   on_debug: Option<Arc<OnLogCallback>>,
   module_types: Option<FxHashMap<String, ModuleType>>,
+  /// Runs after the recorder and before the Vite plugins.
+  extra_plugins: Vec<SharedPluginable>,
 }
 
 impl Setup {
@@ -257,6 +260,7 @@ impl Setup {
       finalize_other_specifiers: None,
       on_debug: None,
       module_types: None,
+      extra_plugins: vec![],
     }
   }
 
@@ -267,8 +271,10 @@ impl Setup {
     reporter: &Arc<ViteReporterPlugin>,
   ) -> Vec<SharedPluginable> {
     let root = project.root();
-    vec![
-      RecorderPlugin::new_shared(RecorderPlugin(Arc::clone(recorder))),
+    let mut plugins: Vec<SharedPluginable> =
+      vec![RecorderPlugin::new_shared(RecorderPlugin(Arc::clone(recorder)))];
+    plugins.extend(self.extra_plugins.iter().cloned());
+    plugins.extend([
       ViteAliasPlugin::new_shared(ViteAliasPlugin {
         entries: vec![Alias {
           find: StringOrRegex::String("@".into()),
@@ -316,7 +322,8 @@ impl Setup {
       }),
       SharedReporter::new_shared(SharedReporter(Arc::clone(reporter))),
       ViteLoadFallbackPlugin::new_shared(ViteLoadFallbackPlugin),
-    ]
+    ]);
+    plugins
   }
 }
 
@@ -429,6 +436,71 @@ async fn the_reporter_does_not_count_a_module_that_skips_transform() {
   let second = build(&project, &setup).await;
   assert_eq!(second.calls, Vec::<String>::new());
   assert_eq!(second.transformed_count, first.transformed_count);
+}
+
+/// Returns code with the module type `base64` for `*.b64`, so the source is a string and
+/// `transform` runs.
+#[derive(Debug)]
+struct Base64Loader;
+
+impl Plugin for Base64Loader {
+  fn name(&self) -> Cow<'static, str> {
+    "base64-loader".into()
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::Load
+  }
+
+  async fn load(&self, _ctx: SharedLoadPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
+    Ok(args.id.ends_with(".b64").then(|| HookLoadOutput {
+      code: "abc".into(),
+      module_type: Some(ModuleType::Base64),
+      ..Default::default()
+    }))
+  }
+
+  fn load_meta(&self) -> Option<PluginHookMeta> {
+    Some(PluginHookMeta { order: None, cache: Some(true) })
+  }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_reporter_counts_a_module_with_a_bytes_type_whose_code_came_from_load() {
+  let project = Project::new(&[
+    ("main.js", "import data from './data.b64';\nconsole.log(data);\n"),
+    ("data.b64", ""),
+  ]);
+  let mut setup = Setup::client();
+  setup.extra_plugins = vec![Base64Loader::new_shared(Base64Loader)];
+
+  // `main.js`, `data.b64` and the runtime module, as a build without the cache counts them.
+  let first = build(&project, &setup).await;
+  assert_eq!(first.transformed_count, 3);
+
+  // A known gap: on reuse, the reporter cannot tell `data.b64` from a module that Rolldown read
+  // as bytes, so it does not count it.
+  let second = build(&project, &setup).await;
+  assert_eq!(second.calls, Vec::<String>::new());
+  assert_eq!(second.transformed_count, 2);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_reporter_counts_a_module_that_fails_after_transform() {
+  let project =
+    Project::new(&[("main.js", "import './bad.js';\n"), ("bad.js", "export const = ;\n")]);
+  let recorder = Arc::new(Recorder::default());
+  let reporter = reporter(&project.root());
+  let mut bundler = Bundler::with_plugins(
+    project.options(),
+    Setup::client().plugins(&project, &recorder, &reporter),
+  )
+  .unwrap();
+  assert!(bundler.generate().await.is_err(), "`bad.js` has a syntax error");
+  bundler.close().await.unwrap();
+  // `bad.js` ran `transform` before parsing failed. The count holds it, `main.js` and the
+  // runtime module.
+  assert_eq!(reporter.transformed_count.load(Ordering::SeqCst), 3);
 }
 
 #[tokio::test(flavor = "multi_thread")]

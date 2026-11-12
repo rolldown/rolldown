@@ -2531,7 +2531,6 @@ dependencies = [
  "smallvec",
  "string_wizard",
  "sugar_path",
- "tempfile",
  "testing_macros",
  "tokio",
  "tracing",

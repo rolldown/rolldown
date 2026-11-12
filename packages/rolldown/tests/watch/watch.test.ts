@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { ModuleInfo, RolldownWatcher, WatchOptions } from 'rolldown';
+import type { BundleError, ModuleInfo, RolldownWatcher, WatchOptions } from 'rolldown';
 import { rolldown, watch as _watch } from 'rolldown';
 import { sleep } from 'rolldown-tests/utils';
 import { test, vi } from 'vitest';
@@ -1613,6 +1613,132 @@ async function waitBuildFinished(watcher: RolldownWatcher, updateFn?: () => void
     updateFn && updateFn();
   });
 }
+
+test.concurrent(
+  'watchChange errors skip the failing config and recover on the next edit',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, outputDir, dir } = createTestInputAndOutput(
+      'watch-change-error',
+      retryCount,
+    );
+    const otherOutput = path.join(outputDir, 'other.js');
+    let fail = true;
+    const watcher = watch([
+      {
+        input,
+        output: { file: output },
+        plugins: [
+          {
+            name: 'failing-watch-change',
+            watchChange() {
+              if (fail) {
+                fail = false;
+                this.error({ code: 'WATCH_CHANGE_FAILURE', message: 'watchChange failed' });
+              }
+            },
+          },
+        ],
+      },
+      { input, output: { file: otherOutput } },
+    ]);
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) fs.rmSync(dir, { recursive: true, force: true });
+    });
+
+    const errors: BundleError[] = [];
+    watcher.on('event', (event) => {
+      if (event.code === 'ERROR') errors.push(event.error);
+    });
+    await expect.poll(() => fs.existsSync(otherOutput)).toBe(true);
+
+    await editFile(input, 'console.log(2)');
+    await expect.poll(() => errors.length).toBe(1);
+    expect(errors[0].errors?.[0]).toMatchObject({
+      code: 'PLUGIN_ERROR',
+      pluginCode: 'WATCH_CHANGE_FAILURE',
+      plugin: 'failing-watch-change',
+      hook: 'watchChange',
+      message: 'watchChange failed',
+    });
+    await expect.poll(() => fs.readFileSync(otherOutput, 'utf8')).toContain('console.log(2)');
+    expect(fs.readFileSync(output, 'utf8')).toContain('console.log(1)');
+
+    await editFile(input, 'console.log(3)');
+    await expect.poll(() => fs.readFileSync(output, 'utf8')).toContain('console.log(3)');
+    expect(errors).toHaveLength(1);
+  },
+);
+
+test.concurrent(
+  'closeWatcher errors reject close after every config has cleaned up',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, outputDir, dir } = createTestInputAndOutput(
+      'close-watcher-error',
+      retryCount,
+    );
+    const otherOutput = path.join(outputDir, 'other.js');
+    const calls: string[] = [];
+    const watcher = watch([
+      {
+        input,
+        output: { file: output },
+        plugins: [
+          {
+            name: 'failing-close-watcher',
+            closeWatcher() {
+              calls.push('failing');
+              throw new Error('closeWatcher failed');
+            },
+            closeBundle() {
+              calls.push('bundle');
+            },
+          },
+          {
+            name: 'later-close-watcher',
+            closeWatcher() {
+              calls.push('later');
+            },
+          },
+        ],
+      },
+      {
+        input,
+        output: { file: otherOutput },
+        plugins: [
+          {
+            name: 'other-close-watcher',
+            closeWatcher() {
+              calls.push('other');
+            },
+            closeBundle() {
+              calls.push('other-bundle');
+            },
+          },
+        ],
+      },
+    ]);
+    watcher.on('close', () => {
+      calls.push('close');
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) fs.rmSync(dir, { recursive: true, force: true });
+    });
+    await expect.poll(() => fs.existsSync(otherOutput)).toBe(true);
+
+    const closing = watcher.close();
+    await expect(closing).rejects.toThrow('closeWatcher failed');
+    await expect(closing).rejects.toThrow('failing-close-watcher');
+    expect(calls).toEqual(['failing', 'later', 'other', 'bundle', 'other-bundle', 'close']);
+    await watcher.close();
+    expect(calls).toHaveLength(6);
+  },
+);
 
 // https://github.com/rolldown/rolldown/issues/9598
 test.concurrent(

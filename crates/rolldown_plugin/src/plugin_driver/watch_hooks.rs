@@ -62,12 +62,15 @@ impl PluginDriver {
     skip(self)
   )]
   pub async fn close_watcher(&self) -> HookNoopReturn {
+    let mut first_error = None;
     for (_, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_close_watcher_meta)
     {
       let result = plugin.call_close_watcher(ctx).await;
-      result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
+      if let Err(error) = result.with_context(|| CausedPlugin::new(plugin.call_name())) {
+        first_error.get_or_insert(error);
+      }
     }
-    Ok(())
+    first_error.map_or(Ok(()), Err)
   }
 }

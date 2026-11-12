@@ -290,26 +290,34 @@ impl WatchTask {
 
   /// Call watch_change plugin hook
   #[tracing::instrument(level = "debug", skip(self))]
-  pub(crate) async fn call_watch_change(&self, path: &str, kind: WatcherChangeKind) {
+  pub(crate) async fn call_watch_change(
+    &self,
+    task_index: WatchTaskIdx,
+    path: &str,
+    kind: WatcherChangeKind,
+  ) -> Result<(), WatchErrorEventData> {
     let bundler = self.bundler.lock().await;
-    if let Some(plugin_driver) =
-      bundler.last_bundle_handle.as_ref().map(rolldown::BundleHandle::plugin_driver)
-    {
-      let _ = plugin_driver.watch_change(path, kind).await.map_err(|e| {
-        tracing::error!("watch_change plugin hook error: {e:?}");
-      });
+    if let Some(bundle_handle) = &bundler.last_bundle_handle {
+      bundle_handle.plugin_driver().watch_change(path, kind).await.map_err(|error| {
+        WatchErrorEventData {
+          task_index,
+          diagnostics: Arc::from(BatchedBuildDiagnostic::from(error).into_vec()),
+          cwd: self.options.cwd.clone(),
+          bundle_handle: bundle_handle.clone(),
+        }
+      })?;
     }
+    Ok(())
   }
 
   /// Call close_watcher plugin hooks
   #[tracing::instrument(level = "debug", skip_all)]
-  pub(crate) async fn call_hook_close_watcher(&self) {
+  pub(crate) async fn call_hook_close_watcher(&self) -> anyhow::Result<()> {
     let bundler = self.bundler.lock().await;
     if let Some(last_bundle_handle) = &bundler.last_bundle_handle {
-      let _ = last_bundle_handle.plugin_driver().close_watcher().await.map_err(|e| {
-        tracing::error!("close_watcher plugin hook error: {e:?}");
-      });
+      last_bundle_handle.plugin_driver().close_watcher().await?;
     }
+    Ok(())
   }
 
   /// Close the bundler (calls `closeBundle` plugin hook for the last built bundle, if any).

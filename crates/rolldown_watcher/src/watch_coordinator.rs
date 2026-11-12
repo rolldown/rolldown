@@ -10,8 +10,8 @@ use rolldown_common::WatcherChangeKind;
 use rolldown_utils::indexmap::FxIndexMap;
 use std::future::Future;
 use std::mem;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 use tokio::sync::{Notify, mpsc};
 
@@ -43,6 +43,7 @@ pub struct WatchCoordinator<H: WatcherEventHandler> {
   tasks: IndexVec<WatchTaskIdx, WatchTask>,
   closed: Arc<AtomicBool>,
   close_notify: Arc<Notify>,
+  close_error: Arc<OnceLock<String>>,
 }
 
 impl<H: WatcherEventHandler> WatchCoordinator<H> {
@@ -53,6 +54,7 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     config: &WatcherConfig,
     closed: Arc<AtomicBool>,
     close_notify: Arc<Notify>,
+    close_error: Arc<OnceLock<String>>,
   ) -> Self {
     Self {
       rx,
@@ -62,6 +64,7 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
       tasks,
       closed,
       close_notify,
+      close_error,
     }
   }
 
@@ -175,10 +178,24 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
       }
     }
 
-    for task in &self.tasks {
+    for task_index in self.tasks.indices() {
       for (path, kind) in &changes {
-        task.call_watch_change(path.as_str(), *kind).await;
+        if let Err(error) =
+          self.tasks[task_index].call_watch_change(task_index, path.as_str(), *kind).await
+        {
+          // A failed invalidation must not write a successful bundle. Other configs may still
+          // rebuild, and a later change can retry this task with its last graph intact.
+          self.tasks[task_index].needs_rebuild = false;
+          if !self.dispatch_event(WatchEvent::Error(error)).await {
+            return false;
+          }
+          break;
+        }
       }
+    }
+
+    if self.tasks.iter().all(|task| !task.needs_rebuild) {
+      return self.finish_build_sequence().await;
     }
 
     // Step 3: Restart notification
@@ -224,6 +241,10 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
       }
     }
 
+    self.finish_build_sequence().await
+  }
+
+  async fn finish_build_sequence(&mut self) -> bool {
     // Step 6: End event
     if !self.dispatch_event(WatchEvent::End).await {
       return false;
@@ -320,13 +341,17 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     if should_close {
       // Close watcher hooks on all tasks
       for task in &self.tasks {
-        task.call_hook_close_watcher().await;
+        if let Err(error) = task.call_hook_close_watcher().await {
+          // Always finish every cleanup step, but let close() report the first failure.
+          // See internal-docs/watch-mode/implementation.md ("Plugin Hooks").
+          let _ = self.close_error.set(format!("{error:#}"));
+        }
       }
 
       // Close all bundlers
       for task in &self.tasks {
         if let Err(e) = task.close().await {
-          tracing::error!("Error closing bundler: {e:?}");
+          let _ = self.close_error.set(format!("{e:#}"));
         }
       }
 
@@ -453,6 +478,7 @@ mod tests {
       &WatcherConfig { debounce: Some(Duration::ZERO) },
       closed,
       Arc::new(Notify::new()),
+      Arc::new(OnceLock::new()),
     );
     coordinator.run().await;
 

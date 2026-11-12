@@ -307,6 +307,15 @@ All watch-related hooks are **blocking** — the coordinator awaits their comple
 | `watchChange(id, { event })` | After debounce, before rebuild | Let plugins react to file changes (cache invalidation) |
 | `closeWatcher()`             | During watcher close           | Let plugins clean up resources                         |
 
+A `watchChange` error emits `ERROR` with its original plugin diagnostic and the last build's
+`result` handle, then skips that task's rebuild. Other configs continue, and the failed task can
+retry on the next file change. A failed invalidation never reports a successful `BUNDLE_END`.
+
+Closing runs every `closeWatcher` hook and closes every bundler even when a cleanup step fails.
+The first error is retained and rejects `watcher.close()` only after the `close` event completes.
+The completion-only `waitForClose()` promise still resolves, so its event-loop keepalive does not
+produce a second, unhandled rejection. Repeated closes do not run the cleanup hooks again.
+
 Plugin context additions in watch mode:
 
 - `this.meta.watchMode` — `true` when running in watch mode

@@ -12,8 +12,8 @@ use rolldown_error::BuildResult;
 use rolldown_fs_watcher::FsWatcherConfig;
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+use std::sync::{Arc, OnceLock};
 use tokio::sync::{Notify, mpsc};
 
 /// Default debounce duration in milliseconds.
@@ -50,6 +50,7 @@ pub struct Watcher {
   tx: mpsc::UnboundedSender<WatcherMsg>,
   closed: Arc<AtomicBool>,
   close_notify: Arc<Notify>,
+  close_error: Arc<OnceLock<String>>,
 }
 
 impl Watcher {
@@ -63,6 +64,7 @@ impl Watcher {
     let (tx, rx) = mpsc::unbounded_channel();
     let closed = Arc::new(AtomicBool::new(false));
     let close_notify = Arc::new(Notify::new());
+    let close_error = Arc::new(OnceLock::new());
     let tasks = Self::create_tasks(configs, &tx, &closed)?;
     let coordinator = WatchCoordinator::new(
       rx,
@@ -71,6 +73,7 @@ impl Watcher {
       watcher_config,
       Arc::clone(&closed),
       Arc::clone(&close_notify),
+      Arc::clone(&close_error),
     );
     let coordinator_future: Pin<Box<dyn Future<Output = ()> + Send>> = Box::pin(coordinator.run());
 
@@ -82,6 +85,7 @@ impl Watcher {
       tx,
       closed,
       close_notify,
+      close_error,
     })
   }
 
@@ -114,6 +118,9 @@ impl Watcher {
     self.close_notify.notify_one();
     let _ = self.tx.send(WatcherMsg::Close);
     self.wait_for_close().await;
+    if let Some(error) = self.close_error.get() {
+      return Err(anyhow::Error::msg(error.clone()));
+    }
     Ok(())
   }
 

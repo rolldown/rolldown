@@ -1,4 +1,10 @@
-use std::{borrow::Cow, sync::Arc};
+use std::{
+  borrow::Cow,
+  sync::{
+    Arc,
+    atomic::{AtomicUsize, Ordering},
+  },
+};
 
 use arcstr::ArcStr;
 use rolldown::{AssetFilenamesOutputOption, Bundler, BundlerOptions, InputItem};
@@ -84,6 +90,37 @@ impl Plugin for EmitPlugin {
     } else {
       for emit in &self.emits {
         ctx.emit_file(emit.to_emitted(), None, None)?;
+      }
+    }
+    Ok(())
+  }
+}
+
+/// Emits the configured assets from `build_start` and ignores emit errors, like a plugin that
+/// catches the error `this.emitFile` throws. `failed` counts the ignored errors.
+#[derive(Debug)]
+struct EmitIgnoringErrorsPlugin {
+  emits: Vec<Emit>,
+  failed: Arc<AtomicUsize>,
+}
+
+impl Plugin for EmitIgnoringErrorsPlugin {
+  fn name(&self) -> Cow<'static, str> {
+    "emit-ignoring-errors".into()
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::BuildStart
+  }
+
+  async fn build_start(
+    &self,
+    ctx: &PluginContext,
+    _args: &rolldown_plugin::HookBuildStartArgs<'_>,
+  ) -> rolldown_plugin::HookNoopReturn {
+    for emit in &self.emits {
+      if ctx.emit_file(emit.to_emitted(), None, None).is_err() {
+        self.failed.fetch_add(1, Ordering::Relaxed);
       }
     }
     Ok(())
@@ -420,4 +457,29 @@ async fn repicked_name_releases_abandoned_filename() {
   assets.sort_by(|a, b| a.filename.cmp(&b.filename));
   let filenames: Vec<&str> = assets.iter().map(|asset| asset.filename.as_str()).collect();
   assert_eq!(filenames, ["assets/a.svg", "assets/long-name.svg"]);
+}
+
+/// A re-pick whose shorter name fails to render must keep the current filename reserved, so a
+/// later asset with that name and different content still gets a suffix.
+#[tokio::test(flavor = "multi_thread")]
+async fn failed_repick_keeps_current_filename_reserved() {
+  let failed = Arc::new(AtomicUsize::new(0));
+  let mut assets = bundle_with_asset_filenames(
+    Plugin::new_shared(EmitIgnoringErrorsPlugin {
+      failed: Arc::clone(&failed),
+      emits: vec![
+        Emit::dedup("long-name-asset.svg"),
+        // Shorter, but it normalizes to `../a`, which the template rejects.
+        Emit::dedup("x/../../a.svg"),
+        Emit::distinct("long-name-asset.svg", "other"),
+      ],
+    }),
+    "assets/[name][extname]",
+  )
+  .await;
+
+  assert_eq!(failed.load(Ordering::Relaxed), 1, "only the re-pick to `x/../../a.svg` fails");
+  assets.sort_by(|a, b| a.filename.cmp(&b.filename));
+  let filenames: Vec<&str> = assets.iter().map(|asset| asset.filename.as_str()).collect();
+  assert_eq!(filenames, ["assets/long-name-asset.svg", "assets/long-name-asset2.svg"]);
 }

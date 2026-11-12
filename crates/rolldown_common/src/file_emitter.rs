@@ -208,17 +208,17 @@ impl FileEmitter {
                 .as_deref()
                 .is_some_and(|n| output.names.iter().all(|e| (n.len(), n) < (e.len(), e.as_str())))
             {
-              // Release the current filename first: `generate_file_name` deconflicts against
-              // `self.names`, which still reserves it for this very asset. Otherwise a template
-              // without `[name]` (e.g. `assets/[hash][extname]`) renders the same filename and
-              // it collides with itself (`<hash>2.svg`), and with `[name]` the abandoned filename
-              // stays reserved and pushes a later asset to a suffix (rolldown#11395).
-              release_unique_name(&output.filename, &self.names);
+              // Pass the current filename so `generate_file_name` releases it: `self.names` still
+              // reserves it for this very asset. Otherwise a template without `[name]` (e.g.
+              // `assets/[hash][extname]`) renders the same filename and it collides with itself
+              // (`<hash>2.svg`), and with `[name]` the abandoned filename stays reserved and
+              // pushes a later asset to a suffix (rolldown#11395).
               self.generate_file_name(
                 &mut file,
                 &hash,
                 asset_filename_template,
                 sanitized_file_name,
+                Some(&output.filename),
               )?;
               output.filename = file.file_name.clone().unwrap();
             }
@@ -297,6 +297,7 @@ impl FileEmitter {
     hash: &ArcStr,
     filename_template: Option<FilenameTemplate>,
     sanitized_file_name: Option<ArcStr>,
+    replaced_file_name: Option<&ArcStr>,
   ) -> anyhow::Result<()> {
     if file.file_name.is_none() {
       let sanitized_file_name = sanitized_file_name.expect("should has sanitized file name");
@@ -327,6 +328,11 @@ impl FileEmitter {
         )?
         .into();
 
+      // Release the replaced filename only after rendering succeeded, so a render error keeps
+      // it reserved for the asset that still uses it.
+      if let Some(replaced_file_name) = replaced_file_name {
+        release_unique_name(replaced_file_name, &self.names);
+      }
       // deconflict file name
       // TODO(underfin): could be using bundle files key as `make_unique_name`
       filename = make_unique_name(&filename, &self.names);
@@ -344,7 +350,7 @@ impl FileEmitter {
     asset_filename_template: Option<FilenameTemplate>,
     sanitized_file_name: Option<ArcStr>,
   ) -> anyhow::Result<()> {
-    self.generate_file_name(file, hash, asset_filename_template, sanitized_file_name)?;
+    self.generate_file_name(file, hash, asset_filename_template, sanitized_file_name, None)?;
     // The emitter is reused across dev-mode rebuilds. If this asset was already flushed
     // to a bundle but is now re-emitted with different content, mark it dirty so that
     // `add_additional_files` flushes it again instead of dropping the update.

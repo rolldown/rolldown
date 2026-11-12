@@ -1,0 +1,42 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+const require_b = require("./b.js");
+// a.js
+var A = class {
+	make() {
+		return require_b.default();
+	}
+};
+exports.default = A;
+
+```
+
+## b.js
+
+```js
+const require_a = require("./a.js");
+// b.js
+function b() {
+	return new require_a.default();
+}
+exports.default = b;
+
+```
+
+## index.js
+
+```js
+const require_a = require("./a.js");
+// index.js
+function run() {
+	return new require_a.default().make().constructor.name;
+}
+module.exports = run;
+
+```

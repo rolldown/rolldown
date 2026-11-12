@@ -79,7 +79,6 @@ rolldown_common = { workspace = true }
 rolldown_testing = { workspace = true }
 rolldown_workspace = { workspace = true }
 saphyr = { workspace = true }
-tempfile = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 string_wizard = { workspace = true }

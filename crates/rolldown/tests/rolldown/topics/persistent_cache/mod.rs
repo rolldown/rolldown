@@ -22,12 +22,24 @@ use rolldown_common::{EmittedAsset, ImportAttributes, ModuleDefFormat, StrOrByte
 
 /// A project in a temporary directory. The cache lives in `<dir>/.cache`.
 struct Project {
-  dir: tempfile::TempDir,
+  dir: PathBuf,
+}
+
+impl Drop for Project {
+  fn drop(&mut self) {
+    let _ = std::fs::remove_dir_all(&self.dir);
+  }
 }
 
 impl Project {
   fn new(files: &[(&str, &str)]) -> Self {
-    let project = Self { dir: tempfile::tempdir().expect("create temp dir") };
+    static NEXT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+    let n = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let dir =
+      std::env::temp_dir().join(format!("rolldown-persistent-cache-{}-{n}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("create temp dir");
+    let project = Self { dir };
     for (path, content) in files {
       project.write(path, content);
     }
@@ -35,13 +47,13 @@ impl Project {
   }
 
   fn path(&self, relative: &str) -> PathBuf {
-    self.dir.path().join(relative)
+    self.dir.join(relative)
   }
 
   fn id(&self, relative: &str) -> String {
     // The temp dir can be behind a symbolic link (macOS `/var` -> `/private/var`). Module ids
     // are real paths.
-    dunce::canonicalize(self.dir.path()).unwrap().join(relative).to_string_lossy().into_owned()
+    dunce::canonicalize(&self.dir).unwrap().join(relative).to_string_lossy().into_owned()
   }
 
   fn write(&self, relative: &str, content: &str) {
@@ -60,7 +72,7 @@ impl Project {
 
   fn options(&self, cache: Option<CacheOptions>) -> BundlerOptions {
     BundlerOptions {
-      cwd: Some(dunce::canonicalize(self.dir.path()).unwrap()),
+      cwd: Some(dunce::canonicalize(&self.dir).unwrap()),
       input: Some(vec![InputItem { name: Some("main".into()), import: "./main.js".into() }]),
       experimental: Some(ExperimentalOptions { cache, ..Default::default() }),
       ..Default::default()

@@ -270,7 +270,9 @@ impl GenerateStage<'_> {
         .iter()
         .copied()
         .filter_map(|record| {
-          if !placement.is_carried(record) {
+          // A loader carries its record without reading it: a record only its loader carries is
+          // imported by no file, and inlining it removes no request.
+          if !placement.is_carried(record, loaders.get(&record).copied()) {
             return Some((record, "no file reads it"));
           }
           let eval_carrier = placement

@@ -25,8 +25,9 @@ pub struct InlinePlacement {
 }
 
 impl InlinePlacement {
-  pub fn is_carried(&self, record: ChunkIdx) -> bool {
-    self.carried.values().any(|carried| carried.contains(&record))
+  /// Whether a file other than `except` carries `record`.
+  pub fn is_carried(&self, record: ChunkIdx, except: Option<ChunkIdx>) -> bool {
+    self.carried.iter().any(|(file, carried)| Some(*file) != except && carried.contains(&record))
   }
 }
 
@@ -430,8 +431,8 @@ mod tests {
   fn a_record_no_file_reaches_is_not_carried() {
     // record 1 is read only by record 2, which nobody reads.
     let placement = place(&[&[], &[], &[1]], &[1, 2]);
-    assert!(!placement.is_carried(idx(1)));
-    assert!(!placement.is_carried(idx(2)));
+    assert!(!placement.is_carried(idx(1), None));
+    assert!(!placement.is_carried(idx(2), None));
   }
 
   #[test]

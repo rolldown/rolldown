@@ -102,6 +102,19 @@ const nativeReplaceAll = NativeBindingMagicString.prototype.replaceAll;
 // removed-content checks that need chunk internals the binding does not expose.
 export type ReplacementFunction = (substring: string, ...args: any[]) => string;
 
+// Native positional APIs take u32 indices and apply `offset`, so a match
+// before the offset cannot be expressed — write original-string indices with
+// `offset` temporarily zeroed.
+function writeWithZeroOffset(s: NativeBindingMagicString, write: () => void): void {
+  const offset = s.offset;
+  s.offset = 0;
+  try {
+    write();
+  } finally {
+    s.offset = offset;
+  }
+}
+
 function getRegexReplacement(
   match: RegExpMatchArray,
   original: string,
@@ -118,7 +131,6 @@ function replaceRegexWithFunction(
   replacement: ReplacementFunction,
 ): void {
   const original = s.original;
-  const offset = s.offset;
   const replaceMatch = (match: RegExpMatchArray) => {
     // `match.index` is always defined for results of `matchAll` / `match`.
     const index = match.index;
@@ -126,9 +138,11 @@ function replaceRegexWithFunction(
     const content = getRegexReplacement(match, original, replacement);
     if (content === match[0]) return; // ignore non-changed replacements
     if (match[0].length === 0) {
-      nativeAppendRight.call(s, index - offset, content);
+      writeWithZeroOffset(s, () => nativeAppendRight.call(s, index, content));
     } else {
-      nativeOverwrite.call(s, index - offset, index + match[0].length - offset, content);
+      writeWithZeroOffset(s, () =>
+        nativeOverwrite.call(s, index, index + match[0].length, content),
+      );
     }
   };
   if (searchValue.global) {
@@ -148,13 +162,12 @@ function replaceStringWithFunction(
   replaceAll: boolean,
 ): void {
   const original = s.original;
-  const offset = s.offset;
   if (searchValue === '') {
     // An empty pattern matches at every index; magic-string inserts at each.
     const last = replaceAll ? original.length : 0;
     for (let index = 0; index <= last; index++) {
       const content = replacement('', index, original);
-      if (content !== '') nativeAppendRight.call(s, index - offset, content);
+      if (content !== '') writeWithZeroOffset(s, () => nativeAppendRight.call(s, index, content));
     }
     return;
   }
@@ -165,7 +178,9 @@ function replaceStringWithFunction(
   ) {
     const content = replacement(searchValue, index, original);
     if (content !== searchValue) {
-      nativeOverwrite.call(s, index - offset, index + searchValue.length - offset, content);
+      writeWithZeroOffset(s, () =>
+        nativeOverwrite.call(s, index, index + searchValue.length, content),
+      );
     }
     if (!replaceAll) return;
   }

@@ -282,6 +282,11 @@ describe('offset', () => {
       assert.throws(() => s.appendLeft(0, 'x'), /out of bounds/);
     });
 
+    it('appendRight() throws when offset causes index underflow', () => {
+      const s = new MagicString('hello world', { offset: -1 });
+      assert.throws(() => s.appendRight(0, 'x'), /out of bounds/);
+    });
+
     it('update() throws when offset causes index underflow', () => {
       const s = new MagicString('hello world', { offset: -1 });
       assert.throws(() => s.update(0, 1, 'x'), /out of bounds/);
@@ -289,17 +294,7 @@ describe('offset', () => {
 
     it('overwrite() throws when offset causes index underflow', () => {
       const s = new MagicString('hello world', { offset: -1 });
-      assert.throws(() => s.overwrite(0, 1, 'x'), /end must be greater than start/);
-    });
-  });
-
-  describe('negative index resolution matches magic-string', () => {
-    // magic-string resolves a negative (index + offset) from the end of the
-    // original string instead of rejecting it.
-    it('appendRight() resolves an underflowed index from the end', () => {
-      const s = new MagicString('hello world', { offset: -1 });
-      s.appendRight(0, 'x');
-      assert.strictEqual(s.toString(), 'hello worlxd');
+      assert.throws(() => s.overwrite(0, 1, 'x'), /out of bounds/);
     });
   });
 

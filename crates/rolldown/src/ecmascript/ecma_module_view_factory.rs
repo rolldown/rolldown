@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use oxc::span::Span;
 use oxc_index::IndexVec;
 use rolldown_common::{
@@ -122,7 +124,7 @@ pub async fn create_ecma_view(
     exports_kind,
     namespace_object_ref,
     def_format: ctx.resolved_id.module_def_format,
-    sourcemap_chain,
+    sourcemap_chain: Arc::new(sourcemap_chain),
     import_records: IndexVec::default(),
     importers: FxIndexSet::default(),
     importers_idx: FxIndexSet::default(),

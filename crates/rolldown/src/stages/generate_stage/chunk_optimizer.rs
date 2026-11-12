@@ -1,4 +1,7 @@
-use std::collections::{VecDeque, hash_map::Entry};
+use std::{
+  cell::{LazyCell, OnceCell},
+  collections::{VecDeque, hash_map::Entry},
+};
 
 use arcstr::ArcStr;
 use itertools::Itertools;
@@ -1200,6 +1203,17 @@ impl GenerateStage<'_> {
         (host, Some(runtime_chunk.bits.clone()))
       }
       (RuntimeMergeCascade::Full, None) => {
+        let chunk_graph = &*chunk_graph;
+        let every_static_import = LazyCell::new(|| {
+          StaticChunkReachability::new(chunk_graph, |module_idx, targets| {
+            Self::push_static_import_targets(module_table, module_idx, targets);
+          })
+        });
+        let kept_static_imports = LazyCell::new(|| {
+          StaticChunkReachability::new(chunk_graph, |module_idx, targets| {
+            self.push_kept_static_importees(module_idx, targets);
+          })
+        });
         // The two checks below can both need the late entries. `late_entries` keeps them, so the
         // cascade calculates them at most once.
         let mut late_entries = None;
@@ -1218,7 +1232,7 @@ impl GenerateStage<'_> {
             runtime_chunk_idx,
             &runtime_chunk_bits,
             &consumer_chunks,
-            module_table,
+            &every_static_import,
           )
           .or_else(|| {
             self.find_runtime_bitset_host(
@@ -1226,7 +1240,7 @@ impl GenerateStage<'_> {
               runtime_chunk_idx,
               &runtime_chunk_bits,
               &consumer_chunks,
-              module_table,
+              &every_static_import,
             )
           })
           .filter(|&host| {
@@ -1248,8 +1262,15 @@ impl GenerateStage<'_> {
             )
           })
           .or_else(|| {
-            self.find_consumer_dominator(&consumer_chunks, chunk_graph, module_table).filter(
-              |&target_chunk_idx| {
+            self
+              .find_consumer_dominator(
+                &consumer_chunks,
+                chunk_graph,
+                module_table,
+                &kept_static_imports,
+                &every_static_import,
+              )
+              .filter(|&target_chunk_idx| {
                 Self::runtime_merge_target_is_allowed(chunk_graph, target_chunk_idx)
                   && self.runtime_target_is_tla_safe(
                     chunk_graph,
@@ -1264,8 +1285,7 @@ impl GenerateStage<'_> {
                   && !Self::runtime_target_would_create_static_cycle(
                     target_chunk_idx,
                     &consumer_chunks,
-                    chunk_graph,
-                    module_table,
+                    &every_static_import,
                   )
                   && self.runtime_host_keeps_evaluation_order(
                     chunk_graph,
@@ -1274,8 +1294,7 @@ impl GenerateStage<'_> {
                     used_symbol_refs_builder,
                     &mut import_edges,
                   )
-              },
-            )
+              })
           });
         (target_chunk_idx, Some(runtime_chunk_bits))
       }
@@ -1333,7 +1352,7 @@ impl GenerateStage<'_> {
     runtime_chunk_idx: ChunkIdx,
     runtime_chunk_bits: &BitSet,
     consumer_chunks: &FxHashSet<ChunkIdx>,
-    module_table: &ModuleTable,
+    every_static_import: &StaticChunkReachability,
   ) -> Option<ChunkIdx> {
     let mut hosts = chunk_graph.chunk_table.iter_enumerated().filter_map(|(chunk_idx, chunk)| {
       (chunk_idx != runtime_chunk_idx
@@ -1350,8 +1369,7 @@ impl GenerateStage<'_> {
       && !Self::runtime_target_would_create_static_cycle(
         host,
         consumer_chunks,
-        chunk_graph,
-        module_table,
+        every_static_import,
       ))
     .then_some(host)
   }
@@ -1672,7 +1690,7 @@ impl GenerateStage<'_> {
     runtime_chunk_idx: ChunkIdx,
     runtime_chunk_bits: &BitSet,
     consumer_chunks: &FxHashSet<ChunkIdx>,
-    module_table: &ModuleTable,
+    every_static_import: &StaticChunkReachability,
   ) -> Option<ChunkIdx> {
     chunk_graph.chunk_table.iter_enumerated().find_map(|(chunk_idx, chunk)| {
       if chunk_idx == runtime_chunk_idx
@@ -1688,8 +1706,7 @@ impl GenerateStage<'_> {
       (!Self::runtime_target_would_create_static_cycle(
         chunk_idx,
         consumer_chunks,
-        chunk_graph,
-        module_table,
+        every_static_import,
       ) && self.runtime_target_is_tla_safe(chunk_graph, chunk_idx, consumer_chunks))
       .then_some(chunk_idx)
     })
@@ -1769,17 +1786,11 @@ impl GenerateStage<'_> {
   fn runtime_target_would_create_static_cycle(
     target_chunk_idx: ChunkIdx,
     consumer_chunks: &FxHashSet<ChunkIdx>,
-    chunk_graph: &ChunkGraph,
-    module_table: &ModuleTable,
+    every_static_import: &StaticChunkReachability,
   ) -> bool {
     consumer_chunks.iter().any(|&consumer_chunk_idx| {
       consumer_chunk_idx != target_chunk_idx
-        && Self::chunk_reaches_via_static_import(
-          target_chunk_idx,
-          consumer_chunk_idx,
-          chunk_graph,
-          |module_idx, targets| Self::push_static_import_targets(module_table, module_idx, targets),
-        )
+        && every_static_import.reaches(target_chunk_idx, consumer_chunk_idx)
     })
   }
 
@@ -1825,43 +1836,26 @@ impl GenerateStage<'_> {
     consumers: &FxHashSet<ChunkIdx>,
     chunk_graph: &ChunkGraph,
     module_table: &ModuleTable,
+    kept_static_imports: &StaticChunkReachability,
+    every_static_import: &StaticChunkReachability,
   ) -> Option<ChunkIdx> {
     if consumers.len() <= 1 {
       return consumers.iter().copied().next();
     }
-    let dominates =
-      |candidate: ChunkIdx, module_targets: &mut dyn FnMut(ModuleIdx, &mut Vec<ModuleIdx>)| {
-        consumers.iter().all(|&other| {
-          other == candidate
-            || Self::chunk_reaches_via_static_import(
-              other,
-              candidate,
-              chunk_graph,
-              &mut *module_targets,
-            )
-        })
-      };
-    consumers
-      .iter()
-      .copied()
-      .find(|&candidate| {
-        dominates(candidate, &mut |module_idx, targets| {
-          self.push_kept_static_importees(module_idx, targets);
-        })
-      })
-      .or_else(|| {
+    let dominates = |candidate: ChunkIdx, reachability: &StaticChunkReachability| {
+      consumers.iter().all(|&other| other == candidate || reachability.reaches(other, candidate))
+    };
+    consumers.iter().copied().find(|&candidate| dominates(candidate, kept_static_imports)).or_else(
+      || {
         consumers
           .iter()
           .copied()
           .filter(|&candidate| {
             self.runtime_host_load_is_harmless(candidate, chunk_graph, module_table)
           })
-          .find(|&candidate| {
-            dominates(candidate, &mut |module_idx, targets| {
-              Self::push_static_import_targets(module_table, module_idx, targets);
-            })
-          })
-      })
+          .find(|&candidate| dominates(candidate, every_static_import))
+      },
+    )
   }
 
   /// Whether a consumer may import `target_chunk_idx` for helpers although it does not load the
@@ -1937,66 +1931,6 @@ impl GenerateStage<'_> {
     true
   }
 
-  /// BFS from `from` across chunks, following only import records that become
-  /// static chunk-loading edges through still-live target chunks.
-  ///
-  /// `module_targets` pushes the modules that a module of the current chunk imports statically.
-  /// The caller chooses the edges: the dominator search follows only the imports that the output
-  /// keeps, and the cycle check follows every static import record.
-  ///
-  /// Edge filtering rationale:
-  /// - Dynamic imports are not followed. Static imports and `require()` can
-  ///   both become static chunk imports in the generated output, so both can
-  ///   close the helper-import cycle this check is guarding against.
-  /// - Targets present in `post_chunk_optimization_operations` are skipped.
-  ///   Those chunks are already slated for removal/redirection by the
-  ///   surrounding facade-elimination pass, so their edges aren't part of the
-  ///   post-optimization graph.
-  /// - Self-edges (`target_chunk == current`) are skipped — an intra-chunk
-  ///   import can't form an inter-chunk cycle.
-  /// - Besides module import records, an entry-point chunk whose entry module
-  ///   was captured into another chunk (e.g. by a `codeSplitting` group) gets a
-  ///   render-time static import of that module's wrapper/namespace from the
-  ///   capturing chunk, so that facade edge is followed too (#9993).
-  fn chunk_reaches_via_static_import(
-    from: ChunkIdx,
-    to: ChunkIdx,
-    chunk_graph: &ChunkGraph,
-    mut module_targets: impl FnMut(ModuleIdx, &mut Vec<ModuleIdx>),
-  ) -> bool {
-    let mut visited = FxHashSet::default();
-    let mut queue = VecDeque::from([from]);
-    let mut targets = vec![];
-    while let Some(current) = queue.pop_front() {
-      if !visited.insert(current) {
-        continue;
-      }
-      if current == to {
-        return true;
-      }
-      if let ChunkKind::EntryPoint { module: entry_module_idx, .. } =
-        chunk_graph.chunk_table[current].kind
-        && let Some(entry_module_chunk) = chunk_graph.module_to_chunk[entry_module_idx]
-        && entry_module_chunk != current
-        && !chunk_graph.post_chunk_optimization_operations.contains_key(&entry_module_chunk)
-      {
-        queue.push_back(entry_module_chunk);
-      }
-      for &module_idx in &chunk_graph.chunk_table[current].modules {
-        module_targets(module_idx, &mut targets);
-        queue.extend(
-          targets.drain(..).filter_map(|target| chunk_graph.module_to_chunk[target]).filter(
-            |&target_chunk| {
-              target_chunk != current
-                && !chunk_graph.post_chunk_optimization_operations.contains_key(&target_chunk)
-            },
-          ),
-        );
-      }
-    }
-    false
-  }
-
   /// Move modules from common chunks into facade entry chunks, then retarget
   /// all chunk-graph references that still point at the removed common chunk.
   fn apply_common_chunk_merges(
@@ -2054,5 +1988,85 @@ impl GenerateStage<'_> {
         runtime_dependent_chunks.insert(merge.to_chunk_idx);
       }
     }
+  }
+}
+
+/// Reachability over the static chunk-loading edges of the chunk graph, for the runtime-merge
+/// cycle and dominator checks. `module_targets` pushes the modules that a module imports
+/// statically: the dominator search's first step follows only the imports that the output keeps,
+/// the cycle check and its second step every static import record.
+///
+/// Edge filtering rationale:
+/// - Dynamic imports are not followed. Static imports and `require()` can
+///   both become static chunk imports in the generated output, so both can
+///   close the helper-import cycle this check is guarding against.
+/// - Targets present in `post_chunk_optimization_operations` are skipped.
+///   Those chunks are already slated for removal/redirection by the
+///   surrounding facade-elimination pass, so their edges aren't part of the
+///   post-optimization graph.
+/// - Self-edges (`target_chunk == current`) are skipped — an intra-chunk
+///   import can't form an inter-chunk cycle.
+/// - Besides module import records, an entry-point chunk whose entry module
+///   was captured into another chunk (e.g. by a `codeSplitting` group) gets a
+///   render-time static import of that module's wrapper/namespace from the
+///   capturing chunk, so that facade edge is followed too (#9993).
+///
+/// The edges are collected once and each source's reachable set is computed once, because the
+/// dominator search can ask about every pair of runtime consumers.
+struct StaticChunkReachability {
+  edges: IndexVec<ChunkIdx, Vec<ChunkIdx>>,
+  reachable_from: IndexVec<ChunkIdx, OnceCell<IndexBitSet<ChunkIdx>>>,
+}
+
+impl StaticChunkReachability {
+  fn new(
+    chunk_graph: &ChunkGraph,
+    mut module_targets: impl FnMut(ModuleIdx, &mut Vec<ModuleIdx>),
+  ) -> Self {
+    let is_live_target = |current: ChunkIdx, target: ChunkIdx| {
+      target != current && !chunk_graph.post_chunk_optimization_operations.contains_key(&target)
+    };
+    let mut module_imports = vec![];
+    let edges = chunk_graph
+      .chunk_table
+      .iter_enumerated()
+      .map(|(current, chunk)| {
+        let mut targets = FxHashSet::default();
+        if let ChunkKind::EntryPoint { module: entry_module_idx, .. } = chunk.kind
+          && let Some(entry_module_chunk) = chunk_graph.module_to_chunk[entry_module_idx]
+          && is_live_target(current, entry_module_chunk)
+        {
+          targets.insert(entry_module_chunk);
+        }
+        for &module_idx in &chunk.modules {
+          module_targets(module_idx, &mut module_imports);
+          targets.extend(
+            module_imports
+              .drain(..)
+              .filter_map(|target| chunk_graph.module_to_chunk[target])
+              .filter(|&target_chunk| is_live_target(current, target_chunk)),
+          );
+        }
+        targets.into_iter().collect()
+      })
+      .collect::<IndexVec<ChunkIdx, Vec<ChunkIdx>>>();
+    let reachable_from = edges.iter().map(|_| OnceCell::new()).collect();
+    Self { edges, reachable_from }
+  }
+
+  /// Whether `to` is `from` or loaded, transitively, by static imports from `from`.
+  fn reaches(&self, from: ChunkIdx, to: ChunkIdx) -> bool {
+    self.reachable_from[from]
+      .get_or_init(|| {
+        let mut reachable = IndexBitSet::new(self.edges.len());
+        let mut queue = VecDeque::from([from]);
+        while let Some(current) = queue.pop_front() {
+          if reachable.set_bit(current) {
+            queue.extend(self.edges[current].iter().copied());
+          }
+        }
+        reachable
+      })
+      .has_bit(to)
   }
 }

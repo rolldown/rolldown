@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert/strict";
+// data.json
+var pos = 1e400;
+var neg = -1e400;
+// main.js
+const Infinity$1 = Date.now();
+assert.equal(typeof Infinity$1, "number");
+assert.equal(pos, Number.POSITIVE_INFINITY);
+assert.equal(neg, Number.NEGATIVE_INFINITY);
+
+```

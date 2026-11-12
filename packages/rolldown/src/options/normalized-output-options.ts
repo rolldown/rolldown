@@ -2,7 +2,7 @@ import type { RolldownPlugin } from '..';
 import type { BindingNormalizedOptions } from '../binding.cjs';
 import { lazyProp } from '../decorators/lazy';
 import type { SourcemapIgnoreListOption, SourcemapPathTransformOption } from '../types/misc';
-import { PlainObjectLike } from '../types/plain-object-like';
+import { getLazyFields, PlainObjectLike } from '../types/plain-object-like';
 import type { StringOrRegExp } from '../types/utils';
 import type {
   AddonFunction,
@@ -123,6 +123,13 @@ export class NormalizedOutputOptionsImpl
     private normalizedOutputPlugins: RolldownPlugin[],
   ) {
     super();
+    // Read every option once, then drop the native object, as `NormalizedInputOptionsImpl` does.
+    // See internal-docs/bundler-data-lifecycle/implementation.md ("Normalized options objects").
+    for (const key of getLazyFields(this)) {
+      Reflect.get(this, key);
+    }
+    // A getter that reads `inner` must be a `@lazyProp`: nothing may read `inner` after this line.
+    this.inner = null as unknown as BindingNormalizedOptions;
   }
 
   @lazyProp

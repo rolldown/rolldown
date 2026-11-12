@@ -1,0 +1,8 @@
+{
+  "_comment": "A preserved module on an import cycle keeps named exports. In `default` mode, `b.js` would keep the empty object `require('./a.js')` returned while `a.js` was still running.",
+  "config": {
+    "input": [{ "name": "index", "import": "./index.js" }],
+    "format": "cjs",
+    "preserveModules": true
+  }
+}

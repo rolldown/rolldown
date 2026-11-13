@@ -3,7 +3,10 @@ use std::collections::{VecDeque, hash_map::Entry};
 use oxc_index::IndexVec;
 use petgraph::{algo::tarjan_scc, prelude::DiGraphMap};
 use rolldown_common::ChunkIdx;
-use rolldown_utils::{BitSet, indexmap::FxIndexSet};
+use rolldown_utils::{
+  BitSet,
+  indexmap::{FxIndexMap, FxIndexSet},
+};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 /// Who reads and who carries each record, derived from a chunk -> importee edge table.
@@ -22,13 +25,17 @@ pub struct InlinePlacement {
 }
 
 impl InlinePlacement {
-  pub fn is_carried(&self, record: ChunkIdx) -> bool {
-    self.carried.values().any(|carried| carried.contains(&record))
+  /// Whether a file other than `except` carries `record`.
+  pub fn is_carried(&self, record: ChunkIdx, except: Option<ChunkIdx>) -> bool {
+    self.carried.iter().any(|(file, carried)| Some(*file) != except && carried.contains(&record))
   }
 }
 
 /// `static_importees[c]` are the chunks `c` statically imports; `is_live` excludes removed
-/// chunks; `exec_order` orders records the way the chunk graph sorts chunks.
+/// chunks; `exec_order` orders records the way the chunk graph sorts chunks. `loaders` maps a
+/// record to the file an `import()` loads for it: that file carries the record like a file that
+/// imports only the record, without reading it, and a dynamic import of the record loads it. A
+/// loader may not have a row in the edge tables yet; it is never an entry.
 pub(super) fn compute_placement(
   static_importees: &IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>,
   dynamic_importees: &IndexVec<ChunkIdx, FxIndexSet<ChunkIdx>>,
@@ -36,6 +43,7 @@ pub(super) fn compute_placement(
   is_entry: impl Fn(ChunkIdx) -> bool,
   exec_order: impl Fn(ChunkIdx) -> u32,
   records: &FxIndexSet<ChunkIdx>,
+  loaders: &FxIndexMap<ChunkIdx, ChunkIdx>,
 ) -> InlinePlacement {
   let mut readers: FxHashMap<ChunkIdx, Vec<ChunkIdx>> = FxHashMap::default();
   for (chunk_idx, importees) in static_importees.iter_enumerated() {
@@ -67,6 +75,11 @@ pub(super) fn compute_placement(
     }
     needed.insert(*chunk_idx, order);
   }
+  for (record, loader) in loaders {
+    let mut order = Vec::new();
+    visit(*record, &readers, &mut FxHashSet::default(), &mut order);
+    needed.insert(*loader, order);
+  }
 
   // The file graph after projection: a record importee stands for the record's own importees,
   // records among them expanded the same way. `apply_inline_common_chunks_links` writes these
@@ -83,6 +96,11 @@ pub(super) fn compute_placement(
     }
     files.remove(&chunk_idx);
     projected.insert(chunk_idx, files);
+  }
+  for (record, loader) in loaders {
+    let files = projected.entry(*loader).or_default();
+    expand(*record, static_importees, &is_live, records, &mut FxHashSet::default(), files);
+    files.remove(loader);
   }
 
   // Import cycles: inside one, which member runs first depends on the entry, so nothing is
@@ -142,6 +160,7 @@ pub(super) fn compute_placement(
     dynamic_importees,
     &is_entry,
     records,
+    loaders,
     &registered,
     &mut carried,
   );
@@ -158,6 +177,7 @@ fn prune_async_inherited_records(
   dynamic_importees: &IndexVec<ChunkIdx, FxIndexSet<ChunkIdx>>,
   is_entry: &impl Fn(ChunkIdx) -> bool,
   records: &FxIndexSet<ChunkIdx>,
+  loaders: &FxIndexMap<ChunkIdx, ChunkIdx>,
   registered: &FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>>,
   carried: &mut FxHashMap<ChunkIdx, Vec<ChunkIdx>>,
 ) {
@@ -166,23 +186,29 @@ fn prune_async_inherited_records(
   }
   let record_count = u32::try_from(records.len()).expect("Too many inline records");
   let record_bits: FxHashMap<_, _> = records.iter().copied().zip(0..record_count).collect();
+  // A dynamic import of a record loads the record's loader.
+  let loaded = |target: &ChunkIdx| loaders.get(target).copied().unwrap_or(*target);
   // Every possible copy contributes its loader edges. Pruning copies can only remove edges,
   // so this table conservatively includes every parent of the emitted dynamic imports.
   let projected_dynamic: FxHashMap<_, _> = projected
     .keys()
     .map(|file| {
-      let mut targets = dynamic_importees[*file].clone();
+      let mut targets =
+        dynamic_importees.get(*file).into_iter().flatten().map(loaded).collect::<FxIndexSet<_>>();
       for record in carried.get(file).into_iter().flatten() {
-        targets.extend(dynamic_importees[*record].iter().copied());
+        targets.extend(dynamic_importees[*record].iter().map(loaded));
       }
       (*file, targets)
     })
     .collect();
 
+  let loader_files = loaders.values().copied().collect::<FxHashSet<_>>();
   let mut before = FxHashMap::<ChunkIdx, BitSet>::default();
   let mut pending = VecDeque::new();
   let mut queued = FxHashSet::default();
-  for file in projected.keys().copied().filter(|file| is_entry(*file)) {
+  for file in
+    projected.keys().copied().filter(|file| !loader_files.contains(file) && is_entry(*file))
+  {
     before.insert(file, BitSet::new(record_count));
     pending.push_back(file);
     queued.insert(file);
@@ -292,18 +318,34 @@ mod tests {
     entries: &[u32],
     records: &[u32],
   ) -> InlinePlacement {
+    place_with_loaders(edges, dynamic, entries, records, &[])
+  }
+
+  /// `loaders` pairs a record with its loader, which has no row in `edges` or `dynamic`.
+  fn place_with_loaders(
+    edges: &[&[u32]],
+    dynamic: &[&[u32]],
+    entries: &[u32],
+    records: &[u32],
+    loaders: &[(u32, u32)],
+  ) -> InlinePlacement {
     let static_importees: IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> =
       edges.iter().map(|importees| importees.iter().map(|i| idx(*i)).collect()).collect();
     let dynamic_importees =
       dynamic.iter().map(|importees| importees.iter().map(|i| idx(*i)).collect()).collect();
     let records = records.iter().map(|i| idx(*i)).collect();
+    let loaders = loaders.iter().map(|(record, loader)| (idx(*record), idx(*loader))).collect();
     compute_placement(
       &static_importees,
       &dynamic_importees,
       |_| true,
-      |chunk_idx| entries.contains(&chunk_idx.raw()),
+      |chunk_idx| {
+        assert!(chunk_idx.index() < edges.len(), "a loader is never asked whether it is an entry");
+        entries.contains(&chunk_idx.raw())
+      },
       ChunkIdx::raw,
       &records,
+      &loaders,
     )
   }
 
@@ -389,8 +431,8 @@ mod tests {
   fn a_record_no_file_reaches_is_not_carried() {
     // record 1 is read only by record 2, which nobody reads.
     let placement = place(&[&[], &[], &[1]], &[1, 2]);
-    assert!(!placement.is_carried(idx(1)));
-    assert!(!placement.is_carried(idx(2)));
+    assert!(!placement.is_carried(idx(1), None));
+    assert!(!placement.is_carried(idx(2), None));
   }
 
   #[test]
@@ -405,6 +447,7 @@ mod tests {
       |_| true,
       ChunkIdx::raw,
       &records,
+      &FxIndexMap::default(),
     );
     assert_eq!(placement.reading_files, list(&[0]));
   }
@@ -454,6 +497,54 @@ mod tests {
     assert_eq!(placement.carried[&idx(0)], list(&[3]));
     assert!(!placement.carried.contains_key(&idx(1)));
     assert!(!placement.carried.contains_key(&idx(2)));
+  }
+
+  #[test]
+  fn a_loader_carries_its_record_without_reading_it() {
+    // entries 0 and 1; 0 imports record 2, 1 loads it with `import()`, which loads loader 3.
+    let placement =
+      place_with_loaders(&[&[2], &[], &[]], &[&[], &[2], &[]], &[0, 1], &[2], &[(2, 3)]);
+    assert_eq!(placement.carried[&idx(0)], list(&[2]));
+    assert_eq!(placement.carried[&idx(3)], list(&[2]));
+    assert!(!placement.readers.contains_key(&idx(3)));
+    assert_eq!(placement.reading_files, list(&[0]));
+  }
+
+  #[test]
+  fn a_loader_carries_the_closure_of_its_record() {
+    // record 2 reads record 3; entry 0 reads 2, entry 1 loads 2 through loader 4.
+    let placement = place_with_loaders(
+      &[&[2], &[], &[3], &[]],
+      &[&[], &[2], &[], &[]],
+      &[0, 1],
+      &[2, 3],
+      &[(2, 4)],
+    );
+    assert_eq!(placement.carried[&idx(4)], list(&[3, 2]));
+  }
+
+  #[test]
+  fn a_loader_skips_what_every_path_that_loads_it_registers() {
+    // entry 0 carries record 2 and loads it with `import()` through loader 3.
+    let placement = place_with_loaders(&[&[2], &[], &[]], &[&[2], &[], &[]], &[0], &[2], &[(2, 3)]);
+    assert_eq!(placement.carried[&idx(0)], list(&[2]));
+    assert!(!placement.carried.contains_key(&idx(3)));
+  }
+
+  #[test]
+  fn a_loader_is_a_parent_of_its_record_s_dynamic_imports() {
+    // Record 2 reads record 4 and imports file 3 dynamically; file 3 reads 4. Entry 0 carries 2
+    // and 4, entry 1 loads 2 through loader 5, which carries both too, so 3 inherits 4 from every
+    // parent.
+    let placement = place_with_loaders(
+      &[&[2], &[], &[4], &[4], &[]],
+      &[&[], &[2], &[3], &[], &[]],
+      &[0, 1],
+      &[2, 4],
+      &[(2, 5)],
+    );
+    assert_eq!(placement.carried[&idx(5)], list(&[4, 2]));
+    assert!(!placement.carried.contains_key(&idx(3)));
   }
 
   #[test]

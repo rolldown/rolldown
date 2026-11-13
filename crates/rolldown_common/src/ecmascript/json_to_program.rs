@@ -1,11 +1,95 @@
 use arcstr::ArcStr;
 use oxc::{
   allocator::Allocator,
-  ast::builder::AstBuilder,
-  span::{SPAN, SourceType},
+  ast::{ast, builder::AstBuilder},
+  ast_visit::{VisitJsMut, walk_js_mut},
+  span::{SPAN, SourceType, Span},
 };
-use rolldown_ecmascript::EcmaAst;
+use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
+use rustc_hash::FxHashMap;
 use serde_json::Value;
+
+/// Parses a JSON module into its expression statement.
+pub fn parse_json_to_ecma_ast(source: &str) -> Result<EcmaAst, serde_json::Error> {
+  match serde_json::from_str(source) {
+    Ok(value) => Ok(json_value_to_ecma_ast(&value)),
+    Err(error) => parse_json_with_surrogates(source, error),
+  }
+}
+
+#[cold]
+fn parse_json_with_surrogates(
+  source: &str,
+  error: serde_json::Error,
+) -> Result<EcmaAst, serde_json::Error> {
+  // Validate a copy with surrogate escapes replaced by same-length scalar escapes. This keeps
+  // serde_json's grammar and parser limits without requiring its UTF-8 strings to hold surrogates.
+  // The copy is never emitted: the JavaScript parser below reads the original UTF-16 strings.
+  // See internal-docs/json-modules/implementation.md.
+  let mut validation_source = source.as_bytes().to_vec();
+  let mut index = 0;
+  while index + 1 < validation_source.len() {
+    if validation_source[index] != b'\\' {
+      index += 1;
+      continue;
+    }
+    if validation_source[index + 1] == b'u'
+      && index + 5 < validation_source.len()
+      && matches!(validation_source[index + 2], b'd' | b'D')
+      && matches!(validation_source[index + 3], b'8'..=b'9' | b'a'..=b'f' | b'A'..=b'F')
+      && validation_source[index + 4..index + 6].iter().all(u8::is_ascii_hexdigit)
+    {
+      validation_source[index + 2] = b'e';
+    }
+    // Consume the escaped character as well, so \\ud800 remains a literal backslash and text.
+    index += 2;
+  }
+  if serde_json::from_slice::<Value>(&validation_source).is_err() {
+    return Err(error);
+  }
+  let Ok(mut ast) = EcmaCompiler::parse_expr_as_program("", source, SourceType::default()) else {
+    return Err(error);
+  };
+  ast.program.with_mut(|fields| {
+    JsonNormalizer { allocator: fields.allocator }.visit_program(fields.program);
+  });
+  Ok(ast)
+}
+
+struct JsonNormalizer<'a> {
+  allocator: &'a Allocator,
+}
+
+impl<'a> VisitJsMut<'a> for JsonNormalizer<'a> {
+  fn visit_span(&mut self, span: &mut Span) {
+    *span = SPAN;
+  }
+
+  fn visit_object_expression(&mut self, object: &mut ast::ObjectExpression<'a>) {
+    walk_js_mut::walk_object_expression(self, object);
+    let properties =
+      std::mem::replace(&mut object.properties, oxc::allocator::Vec::new_in(&self.allocator));
+    let mut indices = FxHashMap::default();
+    for mut property in properties {
+      let ast::ObjectPropertyKind::ObjectProperty(object_property) = &mut property else {
+        unreachable!("JSON objects only contain properties");
+      };
+      let ast::PropertyKey::StringLiteral(key) = &object_property.key else {
+        unreachable!("JSON property names are strings");
+      };
+      let name = key.value;
+      // JSON.parse creates an own data property, including for escaped __proto__ spellings.
+      object_property.computed = name == "__proto__";
+      if let Some(&index) = indices.get(&name) {
+        // Duplicate keys retain their first insertion position and their last value.
+        object.properties[index] = property;
+      } else {
+        indices.insert(name, object.properties.len());
+        object.properties.push(property);
+      }
+    }
+  }
+}
 
 /// Converts a `serde_json::Value` to an `EcmaAst`.
 ///
@@ -137,6 +221,102 @@ mod tests {
   use oxc::codegen::Codegen;
 
   use super::*;
+
+  #[test]
+  fn test_json_string_code_units() {
+    for (json, expected) in [
+      (r#""\ud800""#, vec![0xd800]),
+      (r#""\uD8aF""#, vec![0xd8af]),
+      (r#""\udfff""#, vec![0xdfff]),
+      (r#""\uDfFf""#, vec![0xdfff]),
+      (r#""\ud800\ud800\udc00""#, vec![0xd800, 0xd800, 0xdc00]),
+      (r#""\ud83d\ude00""#, vec![0xd83d, 0xde00]),
+      (r#""\\ud800""#, "\\ud800".encode_utf16().collect()),
+    ] {
+      let ast = parse_json_to_ecma_ast(json).unwrap();
+      let oxc::ast::ast::Statement::ExpressionStatement(statement) = &ast.program().body[0] else {
+        panic!("JSON must produce an expression statement");
+      };
+      let oxc::ast::ast::Expression::StringLiteral(string) = &statement.expression else {
+        panic!("JSON string must produce a string literal");
+      };
+      assert_eq!(string.value.encode_utf16().collect::<Vec<_>>(), expected, "{json}");
+    }
+  }
+
+  #[test]
+  fn test_json_surrogate_keys_and_duplicate_properties() {
+    let ast = parse_json_to_ecma_ast(
+      r#"{"\ud800":1,"kept":true,"\uD800":2,"\u005f_proto__":0,"__proto__":{"text":"\udfff"}}"#,
+    )
+    .unwrap();
+    let ast::Statement::ExpressionStatement(statement) = &ast.program().body[0] else {
+      panic!("JSON must produce an expression statement");
+    };
+    let ast::Expression::ObjectExpression(object) = &statement.expression else {
+      panic!("JSON object must produce an object expression");
+    };
+    let properties =
+      object.properties.iter().map(|property| property.as_property().unwrap()).collect::<Vec<_>>();
+    assert_eq!(properties.len(), 3);
+    let ast::PropertyKey::StringLiteral(first_key) = &properties[0].key else {
+      panic!("JSON property names must remain strings");
+    };
+    assert_eq!(first_key.value.encode_utf16().collect::<Vec<_>>(), [0xd800]);
+    let ast::Expression::NumericLiteral(number) = &properties[0].value else {
+      panic!("the last duplicate value must survive");
+    };
+    assert_eq!(number.value, 2.0);
+    assert!(properties[1].key.is_specific_static_name("kept"));
+    assert!(properties[2].key.is_specific_static_name("__proto__"));
+    assert!(properties[2].computed);
+  }
+
+  #[test]
+  fn test_json_overwritten_surrogate_values() {
+    for json in [r#"{"value":"\ud800","value":1}"#, r#"{"value":{"nested":["\udfff"]},"value":1}"#]
+    {
+      let ast = parse_json_to_ecma_ast(json).unwrap();
+      assert_eq!(Codegen::new().build(ast.program()).code, "({ \"value\": 1 });\n");
+    }
+  }
+
+  #[test]
+  fn test_json_surrogates_do_not_allow_javascript_syntax() {
+    for json in [
+      r#"{"text":"\ud800",}"#,
+      r#"{"text":"\ud800","value":undefined}"#,
+      r#"{"text":"\ud800","value":NaN}"#,
+      r#"{"text":"\ud800","value":Infinity}"#,
+      r#"{"text":"\ud800","value":+1}"#,
+      r#"{"text":"\ud800","value":01}"#,
+      r#"{"text":"\ud800","value":0x1}"#,
+      r#"{"text":"\ud800","value":'single quotes'}"#,
+      r#"{"text":"\ud800", unquoted:1}"#,
+      r#"{"text":"\ud800", /* comment */ "value":1}"#,
+      r#"{"text":"\ud800","value":()=>1}"#,
+      r#"["\ud800",,1]"#,
+      r#"("\ud800")"#,
+      r#""\ud800"; null"#,
+      r#""\ud800\q""#,
+      r#""\ud800\uZZZZ""#,
+      r#""\ud800\uD8GG""#,
+      "\"\\ud800\n\"",
+    ] {
+      assert!(parse_json_to_ecma_ast(json).is_err(), "must reject {json:?}");
+    }
+  }
+
+  #[test]
+  fn test_json_other_parse_errors_are_preserved() {
+    for value in ["0", r#""\ud800""#] {
+      let json = format!("{}{value}{}", "[".repeat(150), "]".repeat(150));
+      assert_eq!(
+        parse_json_to_ecma_ast(&json).unwrap_err().to_string(),
+        serde_json::from_str::<Value>(&json).unwrap_err().to_string()
+      );
+    }
+  }
 
   fn to_code(value: &Value) -> String {
     let ast = json_value_to_ecma_ast(value);

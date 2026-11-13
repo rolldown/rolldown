@@ -1246,8 +1246,8 @@ impl GenerateStage<'_> {
   }
 
   /// Register what a non-CJS entry's export signature makes the chunk depend on: the canonical
-  /// symbol of every re-exported binding, plus — off-strict — the `init_*` wrapper of every
-  /// ESM-wrapped module backing one. The wrappers come from the same walk entry emission
+  /// symbol of every re-exported binding, plus — off-strict, for unwrapped entries — the `init_*`
+  /// wrapper of every ESM-wrapped module backing one. The wrappers come from the same walk emission
   /// consumes (`collect_entry_reexported_wrapper_inits`), so everything the entry chunk may call
   /// is imported by construction; `None` for the names because registration runs before chunk
   /// names exist — it is what makes a wrapper reachable. The entry's own wrapper is not part of

@@ -9,8 +9,8 @@ use crate::{
 };
 
 impl GenerateStage<'_> {
-  /// What each file that reads a record adds to its own deconflict pass: the modules and
-  /// synthetic statements of the records it carries share the file's namespace, and the file
+  /// What each file that reads or carries a record adds to its own deconflict pass: the modules
+  /// and synthetic statements of the records it carries share the file's namespace, and the file
   /// needs one bridge per record it reads, one per record each carried factory reads, and the
   /// factories' `exports` parameter. See internal-docs/inline-common-chunks/implementation.md
   /// ("Deconflicting").
@@ -35,9 +35,9 @@ impl GenerateStage<'_> {
     };
     self
       .inline_state
-      .reading_files()
-      .iter()
-      .map(|&file| {
+      .inline_files()
+      .into_iter()
+      .map(|file| {
         let carried = self.inline_state.carried_by(file);
         let chunks = std::iter::once(file).chain(carried.iter().copied()).collect_vec();
         // The renamer walks the list in reverse to give later-executing modules naming

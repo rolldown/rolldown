@@ -44,6 +44,7 @@ use crate::{
   SourceMapIgnoreList,
 };
 
+pub mod cache_hash;
 pub mod types;
 
 #[derive(Default, Debug, Clone)]

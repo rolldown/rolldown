@@ -1,5 +1,9 @@
 use napi::bindgen_prelude::Either;
 
+use crate::types::binding_string_or_regex::{
+  BindingStringOrRegex, bindingify_string_or_regex_array,
+};
+
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]
 pub struct BindingExperimentalOptions {
@@ -15,6 +19,50 @@ pub struct BindingExperimentalOptions {
   pub chunk_optimization: Option<Either<bool, BindingChunkOptimizationOptions>>,
   pub lazy_barrel: Option<bool>,
   pub import_attributes: Option<bool>,
+  pub cache: Option<BindingExperimentalCacheOptions>,
+}
+
+#[napi_derive::napi(object, object_to_js = false)]
+#[derive(Debug, Default)]
+pub struct BindingExperimentalCacheOptions {
+  pub dir: String,
+  /// Milliseconds.
+  pub max_age: Option<f64>,
+  pub cache_key: Option<String>,
+  pub build_dependencies: Option<Vec<String>>,
+  #[napi(ts_type = "Array<string | RegExp>")]
+  pub assume_unchanged: Option<Vec<BindingStringOrRegex>>,
+  pub assume_cacheable_hooks: Option<BindingAssumeCacheableHooks>,
+  /// Not a user option: the JavaScript API sets it to `this.meta.watchMode`.
+  pub watch_mode: Option<bool>,
+}
+
+#[napi_derive::napi(object, object_to_js = false)]
+#[derive(Debug, Default)]
+pub struct BindingAssumeCacheableHooks {
+  pub resolve_id: Option<bool>,
+  pub load: Option<bool>,
+  pub transform: Option<bool>,
+}
+
+impl From<BindingExperimentalCacheOptions> for rolldown_common::CacheOptions {
+  fn from(value: BindingExperimentalCacheOptions) -> Self {
+    Self {
+      dir: value.dir,
+      max_age: value.max_age,
+      cache_key: value.cache_key,
+      build_dependencies: value.build_dependencies,
+      assume_unchanged: value.assume_unchanged.map(bindingify_string_or_regex_array),
+      watch_mode: value.watch_mode,
+      assume_cacheable_hooks: value.assume_cacheable_hooks.map(|hooks| {
+        rolldown_common::AssumeCacheableHooks {
+          resolve_id: hooks.resolve_id,
+          load: hooks.load,
+          transform: hooks.transform,
+        }
+      }),
+    }
+  }
 }
 
 impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOptions {
@@ -40,6 +88,7 @@ impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOption
       }),
       lazy_barrel: value.lazy_barrel,
       import_attributes: value.import_attributes,
+      cache: value.cache.map(Into::into),
     })
   }
 }

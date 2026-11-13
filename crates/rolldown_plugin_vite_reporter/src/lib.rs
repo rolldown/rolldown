@@ -12,12 +12,14 @@ use std::{
   time::{Duration, Instant},
 };
 
+use arcstr::ArcStr;
 use cow_utils::CowUtils;
 use owo_colors::Style;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use rolldown_common::SourceMapType;
-use rolldown_plugin::{HookUsage, Plugin, PluginContext};
+use rolldown_common::{ModuleInfo, ModuleType, NormalModule, SourceMapType};
+use rolldown_plugin::{HookUsage, Plugin, PluginContext, PluginHookMeta};
 use rolldown_std_utils::relative_path_to_slash;
+use rolldown_utils::dashmap::FxDashSet;
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath as _;
 
@@ -36,9 +38,36 @@ pub struct ViteReporterPlugin {
   pub report_compressed_size: bool,
   pub chunk_count: AtomicU32,
   pub transformed_count: AtomicU32,
+  /// The modules whose `transform` ran in their current module task.
+  pub transformed: FxDashSet<ArcStr>,
   pub latest_checkpoint: Arc<RwLock<Instant>>,
   #[debug(skip)]
   pub log_info: Option<Arc<LogInfoFn>>,
+}
+
+impl ViteReporterPlugin {
+  fn count_transformed(&self, id: &str) {
+    let transformed_count = self.transformed_count.fetch_add(1, Ordering::SeqCst);
+    if self.is_tty {
+      if id.contains('?') {
+        return;
+      }
+      let now = Instant::now();
+      let duration = now.duration_since(*self.latest_checkpoint.read().unwrap());
+
+      if duration > Duration::from_millis(100) {
+        utils::write_line(&format!(
+          "transforming ({}) {}",
+          itoa::Buffer::new().format(transformed_count + 1),
+          utils::paint(Path::new(id).relative(&self.root).to_string_lossy(), Style::new().dimmed())
+        ));
+
+        *self.latest_checkpoint.write().unwrap() = now;
+      }
+    } else if transformed_count == 0 {
+      utils::log_info("transforming...");
+    }
+  }
 }
 
 impl Plugin for ViteReporterPlugin {
@@ -51,30 +80,36 @@ impl Plugin for ViteReporterPlugin {
     _ctx: rolldown_plugin::SharedTransformPluginContext,
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
-    let transformed_count = self.transformed_count.fetch_add(1, Ordering::SeqCst);
-    if self.is_tty {
-      if args.id.contains('?') {
-        return Ok(None);
-      }
-      let now = Instant::now();
-      let duration = now.duration_since(*self.latest_checkpoint.read().unwrap());
-
-      if duration > Duration::from_millis(100) {
-        utils::write_line(&format!(
-          "transforming ({}) {}",
-          itoa::Buffer::new().format(transformed_count + 1),
-          utils::paint(
-            Path::new(args.id).relative(&self.root).to_string_lossy(),
-            Style::new().dimmed(),
-          )
-        ));
-
-        *self.latest_checkpoint.write().unwrap() = now;
-      }
-    } else if transformed_count == 0 {
-      utils::log_info("transforming...");
-    }
+    self.count_transformed(args.id);
+    self.transformed.insert(ArcStr::from(args.id));
     Ok(None)
+  }
+
+  // Skipping `transform` loses nothing: `module_parsed` counts a module that reused its saved
+  // result.
+  fn transform_meta(&self) -> Option<PluginHookMeta> {
+    Some(PluginHookMeta { order: None, cache: Some(true) })
+  }
+
+  // A module without a mark did not run `transform` in this task. Either it reused its saved
+  // result, or Rolldown runs no `transform` for it: a module that Rolldown read as bytes, which
+  // has one of these module types, or a `rolldown:` module.
+  async fn module_parsed(
+    &self,
+    _ctx: &PluginContext,
+    module_info: Arc<ModuleInfo>,
+    normal_module: &NormalModule,
+  ) -> rolldown_plugin::HookNoopReturn {
+    if self.transformed.remove(module_info.id.as_str()).is_none()
+      && !matches!(
+        normal_module.module_type,
+        ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl
+      )
+      && !module_info.id.starts_with("rolldown:")
+    {
+      self.count_transformed(&module_info.id);
+    }
+    Ok(())
   }
 
   async fn build_start(
@@ -84,6 +119,8 @@ impl Plugin for ViteReporterPlugin {
   ) -> rolldown_plugin::HookNoopReturn {
     self.chunk_count.store(0, Ordering::SeqCst);
     self.transformed_count.store(0, Ordering::SeqCst);
+    // A module task that failed after `transform` leaves its mark.
+    self.transformed.clear();
     Ok(())
   }
 
@@ -347,7 +384,8 @@ impl Plugin for ViteReporterPlugin {
   fn register_hook_usage(&self) -> HookUsage {
     let mut usage = HookUsage::empty();
     if self.log_info.is_some() {
-      usage |= HookUsage::Transform
+      usage |= HookUsage::ModuleParsed
+        | HookUsage::Transform
         | HookUsage::BuildStart
         | HookUsage::BuildEnd
         | HookUsage::RenderChunk

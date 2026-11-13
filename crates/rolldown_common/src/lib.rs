@@ -20,12 +20,14 @@ pub mod bundler_options {
     runtime_helper::{DependedRuntimeHelperMap, RUNTIME_HELPER_NAMES, RuntimeHelper},
   };
 
+  pub use crate::inner_bundler_options::cache_hash::options_cache_hash;
   #[cfg(feature = "deserialize_bundler_options")]
   pub use crate::inner_bundler_options::types::optimization::deserialize_inline_const;
   pub use crate::inner_bundler_options::{
     BundlerOptions,
     types::{
       attach_debug_info::AttachDebugInfo,
+      cache_options::{AssumeCacheableHooks, CacheOptions},
       chunk_import_map::ChunkImportMap,
       chunk_modules_order::ChunkModulesOrderBy,
       code_splitting_mode::CodeSplittingMode,

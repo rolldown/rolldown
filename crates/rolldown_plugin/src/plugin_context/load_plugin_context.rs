@@ -21,9 +21,12 @@ impl LoadPluginContext {
 
     // Also add to this module's transform dependencies for HMR invalidation
     if let crate::PluginContext::Native(ctx) = &self.inner {
+      let dependency = WatchPath::new(file, &ctx.options.cwd);
+      if let Some(recorder) = &ctx.cache_recorder {
+        recorder.record(crate::RecordedAction::TransformDependency(dependency.to_string().into()));
+      }
       if let Some(plugin_driver) = ctx.plugin_driver.upgrade() {
-        plugin_driver
-          .add_transform_dependency(self.module_idx, WatchPath::new(file, &ctx.options.cwd));
+        plugin_driver.add_transform_dependency(self.module_idx, dependency);
       }
     }
   }

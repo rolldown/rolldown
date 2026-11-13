@@ -3,6 +3,7 @@ import path from 'node:path';
 import type {
   BindingHookFilter,
   BindingHookResolveIdOutput,
+  BindingPluginContext,
   BindingPluginOptions,
 } from '../binding.cjs';
 import { RolldownMagicString } from '../binding-magic-string';
@@ -22,7 +23,7 @@ import {
 } from './bindingify-hook-filter';
 import type { BindingifyPluginArgs } from './bindingify-plugin';
 import { bindingifyHook, type PluginHookWithBindingExt } from './bindingify-plugin-hook-meta';
-import type { PluginHooks, SourceDescription } from './index';
+import type { CustomPluginOptions, PluginHooks, SourceDescription } from './index';
 import { LoadPluginContextImpl } from './load-plugin-context';
 import { createPluginContext } from './plugin-context';
 import { TransformPluginContextImpl } from './transform-plugin-context';
@@ -89,6 +90,8 @@ export function bindingifyResolveId(
         return { id: ret, normalizeExternalId: false };
       }
 
+      markNotCacheableIfMeta(args, ctx, 'resolveId', ret.meta);
+
       // Make sure the `moduleSideEffects` is update to date
       let exist = args.pluginContextData.updateModuleOption(
         args.pluginContextData.toModuleId(ret.id, ret.attributes ?? extraOptions.attributes),
@@ -142,6 +145,8 @@ export function bindingifyResolveDynamicImport(
           id: ret,
         };
       }
+
+      markNotCacheableIfMeta(args, ctx, 'resolveDynamicImport', ret.meta);
 
       const result: BindingHookResolveIdOutput = {
         id: ret.id,
@@ -213,9 +218,10 @@ export function bindingifyTransform(
           },
         },
       });
+      const context = ctx.inner();
       const transformCtx = new TransformPluginContextImpl(
         args.outputOptions,
-        ctx.inner(),
+        context,
         args.plugin,
         args.pluginContextData,
         ctx,
@@ -234,6 +240,8 @@ export function bindingifyTransform(
       if (typeof ret === 'string') {
         return { code: ret };
       }
+
+      markNotCacheableIfMeta(args, context, 'transform', ret.meta);
 
       let moduleOption = args.pluginContextData.updateModuleOption(id, {
         meta: ret.meta ?? {},
@@ -289,10 +297,11 @@ export function bindingifyLoad(
   return bindingifyHook(args.plugin.load, ({ handler, options }) => ({
     plugin: async (ctx, id, bindingExtraOptions) => {
       const extraOptions = bindingExtraOptions ?? { rawId: id, attributes: {} };
+      const context = ctx.inner();
       const ret = await handler.call(
         new LoadPluginContextImpl(
           args.outputOptions,
-          ctx.inner(),
+          context,
           args.plugin,
           args.pluginContextData,
           ctx,
@@ -313,6 +322,8 @@ export function bindingifyLoad(
         return { code: ret };
       }
 
+      markNotCacheableIfMeta(args, context, 'load', ret.meta);
+
       let moduleOption = args.pluginContextData.updateModuleOption(id, {
         meta: ret.meta || {},
         moduleSideEffects: ret.moduleSideEffects ?? null,
@@ -330,6 +341,23 @@ export function bindingifyLoad(
     },
     filter: bindingifyLoadFilter(options.filter),
   }));
+}
+
+/**
+ * `meta` lives only in `moduleOptionMap` on the JavaScript side, so a skipped hook would lose it.
+ */
+function markNotCacheableIfMeta(
+  args: BindingifyPluginArgs,
+  context: BindingPluginContext,
+  hookName: string,
+  meta: CustomPluginOptions | null | undefined,
+): void {
+  if (meta != null && Object.keys(meta).length > 0) {
+    args.pluginContextData.markNotCacheable(
+      context,
+      () => `hook \`${hookName}\` of plugin \`${args.plugin.name}\` returned \`meta\``,
+    );
+  }
 }
 
 function preProcessSourceMap(

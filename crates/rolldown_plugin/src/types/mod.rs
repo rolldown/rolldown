@@ -22,5 +22,6 @@ pub mod hook_transform_args;
 pub mod hook_transform_ast_args;
 pub mod hook_transform_output;
 pub mod hook_write_bundle_args;
+pub mod module_cache_recorder;
 pub mod plugin_context_resolve_options;
 pub mod plugin_hook_meta;

@@ -91,7 +91,7 @@ impl Plugin for IsolatedDeclarationPlugin {
 
   // The rolldown strip types at the end of the build process, make sure to run this plugin before that.
   fn transform_ast_meta(&self) -> Option<PluginHookMeta> {
-    Some(PluginHookMeta { order: Some(PluginOrder::Post) })
+    Some(PluginHookMeta { order: Some(PluginOrder::Post), cache: None })
   }
 
   fn register_hook_usage(&self) -> HookUsage {

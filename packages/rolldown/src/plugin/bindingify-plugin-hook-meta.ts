@@ -1,11 +1,12 @@
 import { type BindingPluginHookMeta, BindingPluginOrder } from '../binding.cjs';
-import type { ObjectHook, ObjectHookMeta, PluginOrder } from '.';
+import type { ObjectHook, PluginOrder } from '.';
 import type { AnyFn } from '../types/utils';
-import { normalizeHook } from '../utils/normalize-hook';
+import { type NormalizedHookMeta, normalizeHook } from '../utils/normalize-hook';
 
-function bindingifyPluginHookMeta(options: ObjectHookMeta): BindingPluginHookMeta {
+function bindingifyPluginHookMeta(options: NormalizedHookMeta): BindingPluginHookMeta {
   return {
     order: bindingPluginOrder(options.order),
+    cache: options.cache,
   };
 }
 

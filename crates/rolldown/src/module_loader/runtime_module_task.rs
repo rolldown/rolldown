@@ -27,7 +27,7 @@ use crate::{
 
 use rolldown_fs::FileSystem;
 
-use super::resolve_utils::resolve_dependencies;
+use super::resolve_utils::{DependencyCache, resolve_dependencies};
 use super::task_context::{TaskContext, TaskMessageGuard};
 
 const RUNTIME_BASE_JS: &str = include_str!("../runtime/runtime-base.js");
@@ -96,6 +96,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
         &mut module_type,
         None,
         &mut code_changed_by_plugins,
+        None,
       )
       .await?
       .into();
@@ -143,7 +144,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
     resolved_id.id = RUNTIME_MODULE_ID;
     let module_type = ModuleType::Js;
 
-    let resolved_deps = resolve_dependencies(
+    let (resolved_deps, _) = resolve_dependencies(
       &resolved_id,
       &self.ctx.options,
       &self.ctx.resolver,
@@ -151,6 +152,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
       &raw_import_records,
       source.clone(),
       &mut vec![],
+      DependencyCache::Off,
     )
     .await?;
 

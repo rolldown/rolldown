@@ -11,9 +11,12 @@ pub struct HybridRegex(HybridRegexInner);
 enum HybridRegexInner {
   Optimized(regex::Regex),
   /// `sticky` holds the `y` flag, which `regress` ignores. Only `matches` honors it.
+  /// `regress::Regex` cannot give back its pattern, so `source` and `flags` keep it.
   Ecma {
     regex: regress::Regex,
     sticky: bool,
+    source: Box<str>,
+    flags: Box<str>,
   },
 }
 
@@ -86,7 +89,12 @@ impl HybridRegex {
   #[inline(never)]
   pub fn new_ecma(pattern: &str) -> anyhow::Result<Self> {
     let regex = regress::Regex::new(pattern)?;
-    Ok(Self(HybridRegexInner::Ecma { regex, sticky: false }))
+    Ok(Self(HybridRegexInner::Ecma {
+      regex,
+      sticky: false,
+      source: pattern.into(),
+      flags: "".into(),
+    }))
   }
 
   #[inline(never)]
@@ -96,7 +104,12 @@ impl HybridRegex {
       Ok(reg) => Ok(reg),
       Err(_) => {
         let regex = regress::Regex::with_flags(pattern, flags)?;
-        Ok(Self(HybridRegexInner::Ecma { regex, sticky: flags.contains('y') }))
+        Ok(Self(HybridRegexInner::Ecma {
+          regex,
+          sticky: flags.contains('y'),
+          source: pattern.into(),
+          flags: flags.into(),
+        }))
       }
     }
   }
@@ -129,6 +142,15 @@ impl HybridRegex {
     match &self.0 {
       HybridRegexInner::Optimized(regex) => Some(regex.as_str()),
       HybridRegexInner::Ecma { .. } => None,
+    }
+  }
+
+  /// Returns `(pattern, flags)`. The optimized engine keeps its flags inside the
+  /// pattern (for example `(?Ri)a`), so its flags part is empty.
+  pub fn source_and_flags(&self) -> (&str, &str) {
+    match &self.0 {
+      HybridRegexInner::Optimized(regex) => (regex.as_str(), ""),
+      HybridRegexInner::Ecma { source, flags, .. } => (source, flags),
     }
   }
 
@@ -244,6 +266,19 @@ mod test {
     let reg = HybridRegex::new(r"(\d+)(?=px)").unwrap();
     assert!(reg.uses_ecma());
     assert_eq!(reg.replace_all("10px 20px", "$1rem"), "10rempx 20rempx");
+  }
+
+  #[test]
+  fn source_and_flags_tell_flags_apart() {
+    let plain = HybridRegex::with_flags("a", "").unwrap();
+    let insensitive = HybridRegex::with_flags("a", "i").unwrap();
+    assert_ne!(plain.source_and_flags(), insensitive.source_and_flags());
+
+    let ecma = HybridRegex::with_flags("a(?=b)", "i").unwrap();
+    assert!(ecma.uses_ecma());
+    assert_eq!(ecma.source_and_flags(), ("a(?=b)", "i"));
+    let ecma_global = HybridRegex::with_flags("a(?=b)", "ig").unwrap();
+    assert_ne!(ecma.source_and_flags(), ecma_global.source_and_flags());
   }
 
   #[test]

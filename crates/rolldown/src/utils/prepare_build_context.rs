@@ -8,7 +8,7 @@ use rolldown_common::{
   JsxOptions, JsxPreset, LegalComments, ManualCodeSplittingOptions, MinifyOptions, ModuleType,
   NormalizedBundlerOptions, NormalizedInlineCommonChunksOptions, OutputFormat, Platform,
   PreserveEntrySignatures, RawTransformOptions, TransformOptions, TreeshakeOptions, TsConfig,
-  merge_transform_options_with_tsconfig, normalize_optimization_option,
+  merge_transform_options_with_tsconfig, normalize_optimization_option, options_cache_hash,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, InvalidOptionType};
 use rolldown_fs::{OsFileSystem, OxcResolverFileSystem as _};
@@ -24,6 +24,11 @@ pub struct PrepareBuildContext {
   pub resolver: SharedResolver<OsFileSystem>,
   pub options: Arc<NormalizedBundlerOptions>,
   pub warnings: Vec<BuildDiagnostic>,
+  /// `Some` only when `experimental.cache` is set.
+  pub options_cache_hash: Option<u128>,
+  /// `resolve.symlinks`, which the resolver takes. The cache ignores `assumeUnchanged` when it
+  /// is `false`.
+  pub resolve_symlinks: bool,
 }
 
 fn has_non_recursive_dependency_capture(options: &ManualCodeSplittingOptions) -> bool {
@@ -405,6 +410,9 @@ pub fn prepare_build_context(
   let normalized_cwd = cwd.normalize().into_owned();
 
   let tsconfig = raw_options.tsconfig.map(|tsconfig| tsconfig.with_base(&cwd)).unwrap_or_default();
+  // The resolver takes `raw_resolve` and `tsconfig`, so keep copies for the options hash.
+  let cache_hash_inputs =
+    experimental.cache.is_some().then(|| (raw_resolve.clone(), tsconfig.clone()));
   let yarn_pnp = raw_resolve.yarn_pnp.unwrap_or(false);
   let fs = OsFileSystem::new(yarn_pnp);
   let resolver = Arc::new(Resolver::new(fs.clone(), cwd.clone(), platform, &tsconfig, raw_resolve));
@@ -579,7 +587,19 @@ pub fn prepare_build_context(
 
   normalized.minify = raw_minify.normalize(&normalized);
 
-  Ok(PrepareBuildContext { fs, resolver, options: Arc::new(normalized), warnings })
+  let resolve_symlinks =
+    cache_hash_inputs.as_ref().is_none_or(|(resolve, _)| resolve.symlinks.unwrap_or(true));
+  let options_cache_hash = cache_hash_inputs
+    .map(|(resolve, tsconfig)| options_cache_hash(&normalized, &resolve, &tsconfig));
+
+  Ok(PrepareBuildContext {
+    fs,
+    resolver,
+    options: Arc::new(normalized),
+    warnings,
+    options_cache_hash,
+    resolve_symlinks,
+  })
 }
 
 #[cfg(test)]

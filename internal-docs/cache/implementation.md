@@ -19,7 +19,7 @@ and will drift; treat them as starting points.
 
 ## Cache inventory
 
-Counting types literally named `*Cache`, there are 13. Grouped by purpose:
+Counting types literally named `*Cache`, there are 14. Grouped by purpose:
 
 ### 1. Incremental-build cache
 
@@ -86,6 +86,10 @@ failed scan never reaches the output stage.
 The `notify` crate's `RecommendedCache` is held inside the debouncer in
 `crates/rolldown_fs_watcher/src/` and tracks filesystem metadata for event
 debouncing.
+
+### 7. Persistent scan cache (on disk)
+
+With `experimental.cache`, `PersistentScanCache` (`crates/rolldown/src/persistent_cache/mod.rs`) saves the result of the scan hooks of each module to disk and reuses it after a restart. It is separate from `ScanStageCache`. See [`../persistent-cache/implementation.md`](../persistent-cache/implementation.md).
 
 ---
 

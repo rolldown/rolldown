@@ -27,6 +27,9 @@ pub struct BindingLog {
   pub pos: Option<u32>,
   /// List of module IDs (used for CIRCULAR_DEPENDENCY warnings)
   pub ids: Option<Vec<String>>,
+  /// A log of a JavaScript plugin that the persistent cache sends again, as JSON. When it is
+  /// set, the other fields are empty.
+  pub js_log_json: Option<String>,
 }
 
 impl From<rolldown_common::Log> for BindingLog {
@@ -41,6 +44,7 @@ impl From<rolldown_common::Log> for BindingLog {
       loc: value.loc.map(Into::into),
       pos: value.pos,
       ids: value.ids,
+      js_log_json: value.js_log_json,
     }
   }
 }

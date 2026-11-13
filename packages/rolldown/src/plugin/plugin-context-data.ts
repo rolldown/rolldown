@@ -59,6 +59,8 @@ export class PluginContextData {
   normalizedOutputOptions: NormalizedOutputOptions | null = null;
   /** `experimental.importAttributes` */
   importAttributes = false;
+  /** `experimental.cache` is set. */
+  persistentCache = false;
 
   constructor(
     private onLog: LogHandler,
@@ -120,22 +122,38 @@ export class PluginContextData {
     return option;
   }
 
+  /**
+   * The persistent cache saves no result for the module task of the hook call that `context`
+   * belongs to. Rust ignores the call when the cache does not record that hook call.
+   */
+  markNotCacheable(context: BindingPluginContext, reason: () => string): void {
+    if (this.persistentCache) {
+      context.markNotCacheable(reason());
+    }
+  }
+
   getModuleInfo(id: string, context: BindingPluginContext): ModuleInfo | null {
     const bindingInfo = context.getModuleInfo(id);
     if (bindingInfo) {
       const info = transformModuleInfo(bindingInfo, this.getModuleOption(id));
-      return this.proxyModuleInfo(id, info);
+      return this.proxyModuleInfo(id, info, context);
     }
     return null;
   }
 
-  proxyModuleInfo(id: string, info: ModuleInfo): ModuleInfo {
+  proxyModuleInfo(id: string, info: ModuleInfo, context: BindingPluginContext): ModuleInfo {
     let moduleSideEffects = info.moduleSideEffects;
     Object.defineProperty(info, 'moduleSideEffects', {
       get() {
         return moduleSideEffects;
       },
       set: (v: any) => {
+        // A skipped hook cannot repeat this assignment.
+        this.markNotCacheable(
+          context,
+          () =>
+            `\`moduleSideEffects\` of \`${id}\` was set on the result of \`this.getModuleInfo\``,
+        );
         this.updateModuleOption(id, {
           moduleSideEffects: v,
           meta: info.meta,

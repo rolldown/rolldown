@@ -10,7 +10,7 @@ use rolldown_common::side_effects::HookSideEffects;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
   HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn, HookUsage, Plugin,
-  PluginContext, SharedLoadPluginContext,
+  PluginContext, PluginHookMeta, SharedLoadPluginContext,
 };
 
 use self::ast_visit::BuildImportAnalysisVisitor;
@@ -45,12 +45,20 @@ impl Plugin for ViteBuildImportAnalysisPlugin {
     )
   }
 
+  fn resolve_id_meta(&self) -> Option<PluginHookMeta> {
+    Some(PluginHookMeta { order: None, cache: Some(true) })
+  }
+
   async fn load(&self, _ctx: SharedLoadPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     Ok((args.id == PRELOAD_HELPER_ID).then_some(HookLoadOutput {
       code: self.preload_code.clone(),
       side_effects: Some(HookSideEffects::False),
       ..Default::default()
     }))
+  }
+
+  fn load_meta(&self) -> Option<PluginHookMeta> {
+    Some(PluginHookMeta { order: None, cache: Some(true) })
   }
 
   async fn transform_ast(

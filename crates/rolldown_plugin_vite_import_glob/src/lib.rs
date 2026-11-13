@@ -1,17 +1,20 @@
 mod matcher;
 mod utils;
 
-use std::{borrow::Cow, path::PathBuf};
+use std::{borrow::Cow, path::PathBuf, sync::Arc};
 
 use arcstr::ArcStr;
 use oxc::ast_visit::VisitJs;
-use rolldown_common::WatcherChangeKind;
+use rolldown_common::{ModuleInfo, NormalModule, WatcherChangeKind};
 use rolldown_plugin::{
-  HookHotUpdateArgs, HookHotUpdateReturn, HookTransformOutput, HookTransformOutputMap, HookUsage,
-  Plugin, PluginContext,
+  HookFilterArgs, HookHotUpdateArgs, HookHotUpdateReturn, HookNoopReturn, HookTransformOutput,
+  HookTransformOutputMap, HookUsage, Plugin, PluginContext, PluginHookMeta,
 };
 use rolldown_plugin_utils::parse_program;
-use rolldown_utils::{dashmap::FxDashMap, indexmap::FxIndexMap};
+use rolldown_utils::{
+  dashmap::{FxDashMap, FxDashSet},
+  indexmap::FxIndexMap,
+};
 use sugar_path::SugarPath as _;
 
 use crate::matcher::GlobMatcher;
@@ -22,6 +25,8 @@ pub struct ViteImportGlobPlugin {
   pub sourcemap: bool,
   pub restore_query_extension: bool,
   pub glob_matchers: FxDashMap<ArcStr, Vec<GlobMatcher>>,
+  /// In dev, the modules whose `transform` ran in their current module task.
+  pub transformed: FxDashSet<ArcStr>,
 }
 
 impl Plugin for ViteImportGlobPlugin {
@@ -30,7 +35,32 @@ impl Plugin for ViteImportGlobPlugin {
   }
 
   fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::Transform | HookUsage::HotUpdate
+    HookUsage::BuildStart | HookUsage::Transform | HookUsage::ModuleParsed | HookUsage::HotUpdate
+  }
+
+  // The expanded glob depends on which files exist in a directory, and Rolldown cannot validate
+  // a directory after a restart.
+  fn transform_meta(&self) -> Option<PluginHookMeta> {
+    Some(PluginHookMeta { order: None, cache: Some(false) })
+  }
+
+  // A module without a glob still gets a saved result. When it reuses that result, `transform`
+  // does not run, and `module_parsed` removes its old matchers.
+  fn hook_filter_matches(&self, _ctx: &PluginContext, args: HookFilterArgs<'_>) -> bool {
+    match args {
+      HookFilterArgs::Transform(args) => args.code.contains("import.meta.glob"),
+      _ => true,
+    }
+  }
+
+  async fn build_start(
+    &self,
+    _ctx: &PluginContext,
+    _args: &rolldown_plugin::HookBuildStartArgs<'_>,
+  ) -> HookNoopReturn {
+    // A module task that failed after `transform` leaves its mark.
+    self.transformed.clear();
+    Ok(())
   }
 
   async fn transform(
@@ -84,9 +114,29 @@ impl Plugin for ViteImportGlobPlugin {
       });
     }
     if is_dev_mode {
-      self.set_globs(&args.id.to_slash_lossy(), matchers);
+      let id = args.id.to_slash_lossy();
+      self.set_globs(&id, matchers);
+      self.transformed.insert(ArcStr::from(id.as_ref()));
     }
     Ok(output)
+  }
+
+  // In dev, a full scan in the same process can reuse a saved result. `transform` then does not
+  // run, and the module may still have matchers from a version that had a glob. A saved result
+  // never has a glob, because `transform` has the cache off.
+  async fn module_parsed(
+    &self,
+    ctx: &PluginContext,
+    _module_info: Arc<ModuleInfo>,
+    normal_module: &NormalModule,
+  ) -> HookNoopReturn {
+    if ctx.options().is_dev_mode_enabled() {
+      let id = normal_module.id.as_str().to_slash_lossy();
+      if self.transformed.remove(id.as_ref()).is_none() {
+        self.glob_matchers.remove(id.as_ref());
+      }
+    }
+    Ok(())
   }
 
   async fn hot_update(

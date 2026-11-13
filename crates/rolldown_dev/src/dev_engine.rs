@@ -665,6 +665,112 @@ mod tests {
     assert!(watched.contains(&lazy) && watched.contains(&dep), "{watched:#?}");
   }
 
+  /// The modules of a lazy entry are not in memory before the entry is compiled, so the compile
+  /// reuses their saved results from the persistent cache, as a full scan does.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn lazy_compile_reuses_saved_results_after_a_restart() {
+    use std::{
+      borrow::Cow,
+      sync::{Arc, Mutex},
+    };
+
+    use rolldown::{
+      CacheOptions, DevModeOptions, ExperimentalOptions,
+      plugin::{
+        HookTransformArgs, HookTransformReturn, HookUsage, Plugin, PluginHookMeta,
+        SharedTransformPluginContext,
+      },
+    };
+
+    #[derive(Debug)]
+    struct CountTransforms(Arc<Mutex<Vec<String>>>);
+    impl Plugin for CountTransforms {
+      fn name(&self) -> Cow<'static, str> {
+        "count-transforms".into()
+      }
+      fn register_hook_usage(&self) -> HookUsage {
+        HookUsage::Transform
+      }
+      async fn transform(
+        &self,
+        _ctx: SharedTransformPluginContext,
+        args: &HookTransformArgs<'_>,
+      ) -> HookTransformReturn {
+        if !args.id.starts_with('\0') && !args.id.contains('?') {
+          let file = std::path::Path::new(args.id).file_name().unwrap().to_string_lossy();
+          self.0.lock().unwrap().push(file.into_owned());
+        }
+        Ok(None)
+      }
+      fn transform_meta(&self) -> Option<PluginHookMeta> {
+        Some(PluginHookMeta { order: None, cache: Some(true) })
+      }
+    }
+
+    let dir = std::env::temp_dir().join(format!("rolldown-dev-lazy-cache-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let dir = dunce::canonicalize(&dir).unwrap();
+    std::fs::write(dir.join("main.js"), "import('./lazy.js');\n").unwrap();
+    std::fs::write(dir.join("lazy.js"), "export { dep } from './dep.js';\n").unwrap();
+    std::fs::write(dir.join("dep.js"), "export const dep = 1;\n").unwrap();
+    let lazy = dir.join("lazy.js").to_string_lossy().into_owned();
+    let calls = Arc::new(Mutex::new(vec![]));
+
+    let session = async || {
+      let engine = super::DevEngine::new(
+        BundlerConfig::new(
+          BundlerOptions {
+            input: Some(vec!["./main.js".to_string().into()]),
+            cwd: Some(dir.clone()),
+            experimental: Some(ExperimentalOptions {
+              dev_mode: Some(DevModeOptions { lazy: Some(true), ..Default::default() }),
+              cache: Some(CacheOptions { dir: ".cache".into(), ..Default::default() }),
+              ..Default::default()
+            }),
+            ..Default::default()
+          },
+          vec![CountTransforms::new_shared(CountTransforms(Arc::clone(&calls)))],
+        ),
+        crate::DevOptions {
+          watch: Some(crate::DevWatchOptions {
+            enabled: Some(false),
+            skip_write: true,
+            ..Default::default()
+          }),
+          ..Default::default()
+        },
+      )
+      .unwrap();
+      engine.run().await.unwrap();
+      engine.ensure_latest_bundle_output().await.unwrap();
+      engine
+        .compile_lazy_entry(format!("{lazy}?rolldown-lazy=1"), "client".to_string())
+        .await
+        .unwrap();
+      let after_first_compile = calls.lock().unwrap().len();
+      // A browser reload asks for the same entry again. Its modules are in memory now, so the
+      // compile reuses them and runs no hook, without reading the cache.
+      engine
+        .compile_lazy_entry(format!("{lazy}?rolldown-lazy=1"), "client".to_string())
+        .await
+        .unwrap();
+      assert_eq!(calls.lock().unwrap().len(), after_first_compile);
+      engine.close().await.unwrap();
+      let mut calls = std::mem::take(&mut *calls.lock().unwrap());
+      calls.sort();
+      calls
+    };
+
+    let first = session().await;
+    let second = session().await;
+    std::fs::remove_dir_all(&dir).unwrap();
+    assert_eq!(first, ["dep.js", "lazy.js", "main.js"]);
+    // `main.js` has a dynamic import, which the lazy compilation plugin resolves without the
+    // cache. `lazy.js` and `dep.js` come from the saved results.
+    assert_eq!(second, ["main.js"]);
+  }
+
   /// With `RebuildStrategy::Always` one task runs the HMR stage and then a rebuild. The HMR
   /// stage adds the files it loads to the latest build's watch list. The rebuild starts a
   /// new, empty list and does not load those cached modules again, so the coordinator must

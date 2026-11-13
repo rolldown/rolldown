@@ -8,6 +8,7 @@ mod esm_init_obligations;
 mod hmr;
 mod module_finalizers;
 mod module_loader;
+mod persistent_cache;
 mod stages;
 mod type_alias;
 mod types;

@@ -20,10 +20,11 @@ impl From<BindingPluginOrder> for rolldown_plugin::PluginOrder {
 #[derive(Default)]
 pub struct BindingPluginHookMeta {
   pub order: Option<BindingPluginOrder>,
+  pub cache: Option<bool>,
 }
 
 impl From<&BindingPluginHookMeta> for rolldown_plugin::PluginHookMeta {
   fn from(value: &BindingPluginHookMeta) -> Self {
-    rolldown_plugin::PluginHookMeta { order: value.order.map(Into::into) }
+    rolldown_plugin::PluginHookMeta { order: value.order.map(Into::into), cache: value.cache }
   }
 }

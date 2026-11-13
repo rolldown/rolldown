@@ -5,7 +5,7 @@ use rolldown_common::{
   side_effects::HookSideEffects,
 };
 use rolldown_fs::FileSystem;
-use rolldown_plugin::{HookLoadArgs, PluginDriver};
+use rolldown_plugin::{HookLoadArgs, PluginDriver, SharedModuleCacheRecorder};
 use rustc_hash::FxHashMap;
 
 #[expect(clippy::too_many_arguments)]
@@ -19,19 +19,26 @@ pub async fn load_source<Fs: FileSystem + 'static>(
   asserted_module_type: Option<&ModuleType>,
   is_read_from_disk: &mut bool,
   module_idx: ModuleIdx,
+  cache_recorder: Option<&SharedModuleCacheRecorder>,
+  // The contents of the module file, when the persistent cache already read them for key 1.
+  // Using them makes key 1 match what is loaded, also if the file changes during the build.
+  preloaded: Option<Vec<u8>>,
 ) -> anyhow::Result<(StrOrBytes, ModuleType)> {
   let raw_id = resolved_id.id.raw_id();
   let (maybe_source, mut maybe_module_type) = if resolved_id.id.is_empty_module() {
     (Some(String::new()), Some(ModuleType::Empty))
   } else {
     plugin_driver
-      .load(&HookLoadArgs {
-        id: &resolved_id.id,
-        raw_id,
-        attributes: &resolved_id.attributes,
-        module_idx,
-        asserted_module_type,
-      })
+      .load(
+        &HookLoadArgs {
+          id: &resolved_id.id,
+          raw_id,
+          attributes: &resolved_id.attributes,
+          module_idx,
+          asserted_module_type,
+        },
+        cache_recorder,
+      )
       .await?
       .map(|load_hook_output| {
         sourcemap_chain.extend(load_hook_output.map.map(SourcemapChainElement::Load));
@@ -70,39 +77,13 @@ pub async fn load_source<Fs: FileSystem + 'static>(
           // - Unknown module type,
           // - No loader to load corresponding module
           // - User don't specify moduleTypeMapping, we treated it as JS
-          Ok((
-            StrOrBytes::Str({
-              #[cfg(not(target_family = "wasm"))]
-              {
-                let raw_id = raw_id.to_owned();
-                tokio::runtime::Handle::current()
-                  .spawn_blocking(move || fs.read_to_string(Path::new(&raw_id)))
-                  .await??
-              }
-              #[cfg(target_family = "wasm")]
-              {
-                fs.read_to_string(Path::new(raw_id))?
-              }
-            }),
-            ModuleType::Js,
-          ))
+          Ok((StrOrBytes::Str(read_string(raw_id, fs, preloaded).await?), ModuleType::Js))
         }
         (source, Some(guessed)) => match &guessed {
           ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl => Ok((
-            StrOrBytes::Bytes({
-              match source {
-                Some(s) => s.into_bytes(),
-                None => {
-                  if cfg!(target_family = "wasm") {
-                    fs.read(Path::new(raw_id))?
-                  } else {
-                    let raw_id = raw_id.to_owned();
-                    tokio::runtime::Handle::current()
-                      .spawn_blocking(move || fs.read(Path::new(&raw_id)))
-                      .await??
-                  }
-                }
-              }
+            StrOrBytes::Bytes(match source {
+              Some(s) => s.into_bytes(),
+              None => read_bytes(raw_id, fs, preloaded).await?,
             }),
             guessed,
           )),
@@ -125,22 +106,9 @@ pub async fn load_source<Fs: FileSystem + 'static>(
           | ModuleType::Empty
           | ModuleType::Css
           | ModuleType::Custom(_) => Ok((
-            StrOrBytes::Str({
-              if let Some(s) = source {
-                s
-              } else {
-                #[cfg(not(target_family = "wasm"))]
-                {
-                  let raw_id = raw_id.to_owned();
-                  tokio::runtime::Handle::current()
-                    .spawn_blocking(move || fs.read_to_string(Path::new(&raw_id)))
-                    .await??
-                }
-                #[cfg(target_family = "wasm")]
-                {
-                  fs.read_to_string(Path::new(raw_id))?
-                }
-              }
+            StrOrBytes::Str(match source {
+              Some(s) => s,
+              None => read_string(raw_id, fs, preloaded).await?,
             }),
             guessed,
           )),
@@ -150,7 +118,7 @@ pub async fn load_source<Fs: FileSystem + 'static>(
     }
     (None, Some(ty)) => {
       assert!(asserted_module_type.is_some() || attributes_module_type.is_some(), "Invalid state");
-      Ok((read_file_by_module_type(Path::new(raw_id), &ty, fs).await?, ty))
+      Ok((read_file_by_module_type(Path::new(raw_id), &ty, fs, preloaded).await?, ty))
     }
   }
 }
@@ -169,11 +137,64 @@ fn get_module_loader_from_file_extension<S: AsRef<str>>(
   None
 }
 
+async fn read_string<Fs: FileSystem + 'static>(
+  raw_id: &str,
+  fs: Fs,
+  preloaded: Option<Vec<u8>>,
+) -> anyhow::Result<String> {
+  if let Some(bytes) = preloaded {
+    return String::from_utf8(bytes).map_err(|_| {
+      std::io::Error::new(std::io::ErrorKind::InvalidData, "stream did not contain valid UTF-8")
+        .into()
+    });
+  }
+  #[cfg(not(target_family = "wasm"))]
+  {
+    let raw_id = raw_id.to_owned();
+    Ok(
+      tokio::runtime::Handle::current()
+        .spawn_blocking(move || fs.read_to_string(Path::new(&raw_id)))
+        .await??,
+    )
+  }
+  #[cfg(target_family = "wasm")]
+  {
+    Ok(fs.read_to_string(Path::new(raw_id))?)
+  }
+}
+
+async fn read_bytes<Fs: FileSystem + 'static>(
+  raw_id: &str,
+  fs: Fs,
+  preloaded: Option<Vec<u8>>,
+) -> anyhow::Result<Vec<u8>> {
+  if let Some(bytes) = preloaded {
+    return Ok(bytes);
+  }
+  if cfg!(target_family = "wasm") {
+    Ok(fs.read(Path::new(raw_id))?)
+  } else {
+    let raw_id = raw_id.to_owned();
+    Ok(
+      tokio::runtime::Handle::current()
+        .spawn_blocking(move || fs.read(Path::new(&raw_id)))
+        .await??,
+    )
+  }
+}
+
 async fn read_file_by_module_type<Fs: FileSystem + 'static>(
   path: impl AsRef<Path>,
   ty: &ModuleType,
   fs: Fs,
+  preloaded: Option<Vec<u8>>,
 ) -> anyhow::Result<StrOrBytes> {
+  if let Some(bytes) = preloaded.filter(|_| !matches!(ty, ModuleType::Asset)) {
+    return match ty {
+      ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl => Ok(StrOrBytes::Bytes(bytes)),
+      _ => Ok(StrOrBytes::Str(read_string("", fs, Some(bytes)).await?)),
+    };
+  }
   let path = path.as_ref().to_path_buf();
   match ty {
     ModuleType::Js

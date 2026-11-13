@@ -651,6 +651,30 @@ const DevModeSchema = v.union([
 ]);
 isTypeTrue<IsSchemaSubType<typeof DevModeSchema, DevModeOptions>>();
 
+const ExperimentalCacheSchema = v.union([
+  v.literal(false),
+  v.strictObject({
+    dir: v.string(),
+    maxAge: v.optional(v.number()),
+    cacheKey: v.optional(v.string()),
+    buildDependencies: v.optional(v.array(v.string())),
+    assumeUnchanged: v.optional(v.array(StringOrRegExpSchema)),
+    assumeCacheableHooks: v.optional(
+      v.strictObject({
+        resolveId: v.optional(v.boolean()),
+        load: v.optional(v.boolean()),
+        transform: v.optional(v.boolean()),
+      }),
+    ),
+  }),
+]);
+isTypeTrue<
+  IsSchemaSubType<
+    typeof ExperimentalCacheSchema,
+    Exclude<NonNullable<InputOptions['experimental']>['cache'], undefined>
+  >
+>();
+
 const InputOptionsSchema = v.strictObject({
   input: v.optional(InputOptionSchema),
   plugins: v.optional(v.custom<RolldownPluginOption>(() => true)),
@@ -720,6 +744,7 @@ const InputOptionsSchema = v.strictObject({
       ),
       lazyBarrel: v.optional(v.boolean()),
       importAttributes: v.optional(v.boolean()),
+      cache: v.optional(ExperimentalCacheSchema),
     }),
   ),
   transform: v.optional(TransformOptionsSchema),
@@ -1226,6 +1251,10 @@ const inputHelperMsgRecord: HelperMsgRecord = {
   output: { ignored: true },
   'resolve.tsconfigFilename': {
     issueMsg: 'It is deprecated. Please use the top-level `tsconfig` option instead.',
+  },
+  'experimental.cache': {
+    issueMsg: 'Expected `false` or an object with a `dir` property.',
+    help: 'Rolldown has no default cache directory, so `true` is not supported.',
   },
 };
 const outputHelperMsgRecord: HelperMsgRecord = {};

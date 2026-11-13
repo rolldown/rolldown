@@ -38,7 +38,7 @@ pub struct LogLocation {
   pub file: Option<String>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Log {
   pub message: String,
   pub id: Option<String>,
@@ -49,6 +49,10 @@ pub struct Log {
   pub loc: Option<LogLocation>,
   pub pos: Option<u32>,
   pub ids: Option<Vec<String>>,
+  /// A log of a JavaScript plugin that the persistent cache sends again when it reuses a saved
+  /// result: the JSON of the object that reached `onLog`. The JavaScript side passes the parsed
+  /// object to `onLog`, and ignores the other fields.
+  pub js_log_json: Option<String>,
 }
 
 impl Log {
@@ -80,6 +84,7 @@ impl Log {
       loc,
       pos,
       ids: warning.ids(),
+      js_log_json: None,
     }
   }
 }
@@ -108,6 +113,7 @@ impl LogWithoutPlugin {
       loc: self.loc,
       pos: self.pos,
       ids: self.ids,
+      js_log_json: None,
     }
   }
 }

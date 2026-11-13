@@ -1,6 +1,9 @@
 use crate::{
   PluginDriver,
-  types::{custom_field::CustomField, hook_resolve_id_skipped::HookResolveIdSkipped},
+  types::{
+    custom_field::CustomField, hook_resolve_id_skipped::HookResolveIdSkipped,
+    module_cache_recorder::SharedModuleCacheRecorder,
+  },
 };
 use arcstr::ArcStr;
 use nodejs_built_in_modules::is_nodejs_builtin_module;
@@ -38,6 +41,7 @@ pub async fn resolve_id_check_external<Fs: FileSystem>(
   attributes: &ImportAttributes,
   importer_raw_id: Option<&str>,
   importer_attributes: &ImportAttributes,
+  cache_recorder: Option<&SharedModuleCacheRecorder>,
 ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
   let import_attributes_enabled = bundle_options.experimental.is_import_attributes_enabled();
   let finalize =
@@ -71,6 +75,7 @@ pub async fn resolve_id_check_external<Fs: FileSystem>(
     hook_attributes,
     importer_raw_id,
     hook_importer_attributes,
+    cache_recorder,
   )
   .await?;
 

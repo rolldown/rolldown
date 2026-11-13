@@ -2,7 +2,10 @@ use std::sync::Arc;
 
 use arcstr::ArcStr;
 use rolldown_common::{ImportKind, LAZY_PROXY_QUERY, is_lazy_proxy, lazy_proxy_target};
-use rolldown_plugin::{HookResolveIdOutput, HookUsage, Plugin, PluginContextResolveOptions};
+use rolldown_plugin::{
+  HookFilterArgs, HookResolveIdOutput, HookUsage, Plugin, PluginContext,
+  PluginContextResolveOptions, PluginHookMeta,
+};
 use rolldown_utils::dashmap::FxDashSet;
 
 pub type SharedLazyEntries = Arc<FxDashSet<ArcStr>>;
@@ -47,6 +50,28 @@ impl Plugin for LazyCompilationPlugin {
 
   fn register_hook_usage(&self) -> rolldown_plugin::HookUsage {
     HookUsage::ResolveId | HookUsage::Load
+  }
+
+  // Not cacheable: `load` needs the ids that `resolve_id` stores in `lazy_entries`.
+  fn resolve_id_meta(&self) -> Option<PluginHookMeta> {
+    Some(PluginHookMeta { order: None, cache: Some(false) })
+  }
+
+  // Keeps the imports that `resolve_id` does not handle from counting as calls.
+  fn hook_filter_matches(&self, _ctx: &PluginContext, args: HookFilterArgs<'_>) -> bool {
+    match args {
+      HookFilterArgs::ResolveId(args) => {
+        is_lazy_proxy(args.specifier)
+          || (matches!(args.kind, ImportKind::DynamicImport) && args.attributes.is_empty())
+      }
+      _ => true,
+    }
+  }
+
+  // Only lazy proxy modules use the result, and their ids are never files, so they never get a
+  // saved result.
+  fn load_meta(&self) -> Option<PluginHookMeta> {
+    Some(PluginHookMeta { order: None, cache: Some(true) })
   }
 
   async fn resolve_id(

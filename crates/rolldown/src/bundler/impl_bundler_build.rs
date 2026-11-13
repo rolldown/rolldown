@@ -59,6 +59,11 @@ impl Bundler {
       return Ok(());
     }
     self.closed = true;
+    // Incremental builds and the dev engine do not wait for the cache write of their last
+    // build. Waiting here reports a failed write before the process can exit.
+    if let Some(persistent_cache) = &self.bundle_factory.persistent_cache {
+      persistent_cache.wait_for_flush(&self.bundle_factory.options).await;
+    }
     if let Some(handle) = &self.last_bundle_handle {
       handle.close().await?;
     }

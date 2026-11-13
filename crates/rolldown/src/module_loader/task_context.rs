@@ -6,7 +6,7 @@ use rolldown_error::BuildDiagnostic;
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
 
-use crate::{SharedOptions, SharedResolver};
+use crate::{SharedOptions, SharedResolver, persistent_cache::ScanCacheSession};
 
 /// Used to store common data shared between all tasks.
 pub struct TaskContext<Fs: FileSystem> {
@@ -16,6 +16,7 @@ pub struct TaskContext<Fs: FileSystem> {
   pub fs: Fs,
   pub plugin_driver: SharedPluginDriver,
   pub meta: TaskContextMeta,
+  pub persistent_cache: Option<Arc<ScanCacheSession>>,
 }
 
 pub struct TaskContextMeta {

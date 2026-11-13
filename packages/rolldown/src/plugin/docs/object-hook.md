@@ -52,6 +52,36 @@ export default function jsxAdditionalTransform() {
 }
 ```
 
+### cache
+
+- Type: `boolean`
+
+`true` lets Rolldown skip this hook and reuse the result that it saved in an earlier build. This property is only available for [`resolveId`](/reference/Interface.Plugin#resolveid), [`resolveDynamicImport`](/reference/Interface.Plugin#resolvedynamicimport), [`load`](/reference/Interface.Plugin#load), and [`transform`](/reference/Interface.Plugin#transform) hooks. It has an effect only when the `experimental.cache` option is set.
+
+The cache is off by default: without `cache: true`, the hook runs in every build. The `experimental.cache.assumeCacheableHooks` option can treat a hook without `cache` as if it had `cache: true`, but it never changes a hook with `cache: false`.
+
+A module gets a saved result only when every one of these hooks that ran for it has `cache: true`. A hook that a `filter` skips for the module does not count.
+
+By setting `cache: true`, the plugin promises that skipping the hook loses nothing that another hook needs. For example, a `transform` hook that stores data in a variable for a later `renderChunk` hook must not set `cache: true`, because the variable is empty when the `transform` hook is skipped.
+
+#### Example
+
+```js
+export default function replaceVersion() {
+  return {
+    name: 'replace-version',
+    transform: {
+      cache: true,
+      filter: { id: /\.js$/, code: '__VERSION__' },
+      handler(code) {
+        // The result depends only on `code`, so the saved result is always correct.
+        return code.replaceAll('__VERSION__', '"1.0.0"');
+      },
+    },
+  };
+}
+```
+
 ### ~~sequential~~
 
 - Type: `boolean`

@@ -56,6 +56,9 @@ pub use crate::{
   types::hook_transform_ast_args::HookTransformAstArgs,
   types::hook_transform_output::{HookTransformOutput, HookTransformOutputMap},
   types::hook_write_bundle_args::HookWriteBundleArgs,
+  types::module_cache_recorder::{
+    ModuleCacheRecorder, RecordedAction, RecordedEffects, SharedModuleCacheRecorder,
+  },
   types::plugin_context_resolve_options::PluginContextResolveOptions,
   types::plugin_hook_meta::{PluginHookMeta, PluginOrder},
 };

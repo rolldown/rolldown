@@ -843,6 +843,12 @@ type OutputPluginHooks = DefinedHookNames[
   // | 'resolveImportMeta'
   | 'writeBundle'];
 
+type CacheablePluginHooks = DefinedHookNames[
+  | 'load'
+  | 'resolveDynamicImport'
+  | 'resolveId'
+  | 'transform'];
+
 /** @internal */
 export type ParallelPluginHooks = Exclude<
   keyof FunctionPluginHooks | keyof AddonHooks,
@@ -884,6 +890,17 @@ export type PluginHooks = {
              * hooks always work as `sequential: true`.
              */
             sequential?: boolean;
+          }
+        : {}) &
+      (K extends CacheablePluginHooks
+        ? {
+            /**
+             * `true` lets Rolldown skip this hook and reuse its saved result. It has an effect
+             * only when {@linkcode InputOptions.experimental | experimental.cache} is set.
+             *
+             * @experimental
+             */
+            cache?: boolean;
           }
         : {})
   >;

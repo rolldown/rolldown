@@ -10,8 +10,12 @@ use rolldown_common::{
 };
 
 use crate::{
-  PluginContextResolveOptions, plugin_context::PluginContextMeta,
-  types::hook_resolve_id_skipped::HookResolveIdSkipped,
+  PluginContextResolveOptions,
+  plugin_context::PluginContextMeta,
+  types::{
+    hook_resolve_id_skipped::HookResolveIdSkipped,
+    module_cache_recorder::{RecordedAction, SharedModuleCacheRecorder},
+  },
 };
 
 use super::NativePluginContextImpl;
@@ -42,16 +46,22 @@ impl PluginContext {
     Self::Napi(Arc::new(NapiPluginContextImpl))
   }
 
+  /// A context for one hook call. Returns a clone of `self` when there is nothing to fork.
   #[must_use]
-  pub fn fork_with_skipped_resolve_calls(
+  pub fn fork_for_call(
     &self,
-    skipped_resolve_calls: Vec<Arc<HookResolveIdSkipped>>,
+    skipped_resolve_calls: Option<&Vec<Arc<HookResolveIdSkipped>>>,
+    cache_recorder: Option<&SharedModuleCacheRecorder>,
   ) -> Self {
     match self {
       PluginContext::Napi(_) => self.clone(),
+      PluginContext::Native(_) if skipped_resolve_calls.is_none() && cache_recorder.is_none() => {
+        self.clone()
+      }
       PluginContext::Native(ctx) => Self::Native(Arc::new(NativePluginContextImpl {
         plugin_name: ctx.plugin_name.clone(),
-        skipped_resolve_calls,
+        skipped_resolve_calls: skipped_resolve_calls
+          .map_or_else(|| ctx.skipped_resolve_calls.clone(), Clone::clone),
         plugin_idx: ctx.plugin_idx,
         plugin_driver: Weak::clone(&ctx.plugin_driver),
         meta: Arc::clone(&ctx.meta),
@@ -64,7 +74,31 @@ impl PluginContext {
         session: ctx.session.clone(),
         bundle_span: ctx.bundle_span.clone(),
         manual_resolve_span: ctx.manual_resolve_span.clone(),
+        cache_recorder: cache_recorder.cloned().or_else(|| ctx.cache_recorder.clone()),
       })),
+    }
+  }
+
+  /// The recorder of the module task that this hook call belongs to, if the persistent cache
+  /// records this call.
+  pub fn cache_recorder(&self) -> Option<&SharedModuleCacheRecorder> {
+    match self {
+      PluginContext::Napi(_) => None,
+      PluginContext::Native(ctx) => ctx.cache_recorder.as_ref(),
+    }
+  }
+
+  /// The module task that this hook call belongs to gets no saved result.
+  pub fn mark_not_cacheable(&self, reason: impl FnOnce() -> String) {
+    if let Some(recorder) = self.cache_recorder() {
+      recorder.mark_not_cacheable(reason);
+    }
+  }
+
+  /// Records a log that a JavaScript plugin sent to `onLog` during this hook call.
+  pub fn record_js_log(&self, level: rolldown_common::LogLevel, json: String) {
+    if let Some(recorder) = self.cache_recorder() {
+      recorder.record(RecordedAction::JsLog { level, json });
     }
   }
 

@@ -4,6 +4,7 @@ use std::{borrow::Cow, path::Path};
 use cow_utils::CowUtils;
 use rolldown_plugin::{
   HookResolveIdOutput, HookUsage, Plugin, PluginContext, PluginContextResolveOptions,
+  PluginHookMeta,
 };
 use rolldown_utils::pattern_filter::StringOrRegex;
 
@@ -73,6 +74,10 @@ impl Plugin for ViteAliasPlugin {
         HookResolveIdOutput::from_id(specifier)
       }
     }))
+  }
+
+  fn resolve_id_meta(&self) -> Option<PluginHookMeta> {
+    Some(PluginHookMeta { order: None, cache: Some(true) })
   }
 
   fn register_hook_usage(&self) -> HookUsage {

@@ -21,10 +21,13 @@ use rolldown_plugin::{
   HookBuildEndArgs, HookCloseBundleArgs, HookRenderErrorArgs, SharedPluginDriver,
 };
 use rolldown_utils::dashmap::FxDashSet;
-use rolldown_utils::rayon::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
+use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt as _;
 use rustc_hash::FxHashSet;
-use std::{path::Path, sync::Arc};
+use std::{
+  path::{Path, PathBuf},
+  sync::Arc,
+};
 use sugar_path::SugarPath;
 
 #[expect(
@@ -223,13 +226,16 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       }
     }
 
-    let destinations =
-      output.assets.iter().map(|chunk| dist_dir.join(chunk.filename())).collect::<Vec<_>>();
+    let destinations = output
+      .assets
+      .iter()
+      .map(|chunk| (chunk, dist_dir.join(chunk.filename())))
+      .collect::<Vec<_>>();
 
     // Create each distinct parent directory once, instead of probing it for every file.
     let mut parents = destinations
       .iter()
-      .filter_map(|dest| dest.parent())
+      .filter_map(|(_, dest)| dest.parent())
       .filter(|parent| *parent != dist_dir.as_path())
       .collect::<Vec<_>>();
     parents.sort_unstable();
@@ -247,20 +253,20 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
         .with_context(|| format!("Failed to write file in {}", dest.display()))
     };
     let mut seen = FxHashSet::with_capacity(destinations.len());
-    if destinations.iter().all(|dest| seen.insert(dest.as_path())) {
+    // `foo.js` and `Foo.js` are one file on case-insensitive file systems.
+    if destinations
+      .iter()
+      .all(|(_, dest)| seen.insert(PathBuf::from(dest.to_string_lossy().to_lowercase())))
+    {
       // Large builds emit tens of thousands of files; writing them one at a time leaves the
       // output stage bound by per-file syscall latency. Distinct paths are independent, so write
       // them in parallel and report the first failure in output order to keep errors stable.
-      let results = output
-        .assets
-        .par_iter()
-        .zip(destinations.par_iter())
-        .map(|(chunk, dest)| write(chunk, dest))
-        .collect::<Vec<_>>();
+      let results =
+        destinations.par_iter().map(|(chunk, dest)| write(chunk, dest)).collect::<Vec<_>>();
       results.into_iter().collect::<anyhow::Result<()>>()?;
     } else {
       // Several outputs target the same path: keep sequential last-writer-wins semantics.
-      for (chunk, dest) in output.assets.iter().zip(&destinations) {
+      for (chunk, dest) in &destinations {
         write(chunk, dest)?;
       }
     }

@@ -25,7 +25,6 @@ fn parse_json_with_surrogates(
   // Validate a copy with surrogate escapes replaced by same-length scalar escapes. This keeps
   // serde_json's grammar and parser limits without requiring its UTF-8 strings to hold surrogates.
   // The copy is never emitted: the JavaScript parser below reads the original UTF-16 strings.
-  // Keep the normal Value fast path.
   // See internal-docs/json-modules/implementation.md.
   let mut validation_source = source.as_bytes().to_vec();
   let mut index = 0;
@@ -51,18 +50,14 @@ fn parse_json_with_surrogates(
   let Ok(mut ast) = EcmaCompiler::parse_expr_as_program("", source, SourceType::default()) else {
     return Err(error);
   };
-  let has_lone_surrogate = ast.program.with_mut(|fields| {
-    let mut normalizer = JsonNormalizer { allocator: fields.allocator, has_lone_surrogate: false };
-    normalizer.visit_program(fields.program);
-    normalizer.has_lone_surrogate
+  ast.program.with_mut(|fields| {
+    JsonNormalizer { allocator: fields.allocator }.visit_program(fields.program);
   });
-  // A different serde_json failure (such as its recursion limit) must remain an error.
-  if has_lone_surrogate { Ok(ast) } else { Err(error) }
+  Ok(ast)
 }
 
 struct JsonNormalizer<'a> {
   allocator: &'a Allocator,
-  has_lone_surrogate: bool,
 }
 
 impl<'a> VisitJsMut<'a> for JsonNormalizer<'a> {
@@ -70,14 +65,7 @@ impl<'a> VisitJsMut<'a> for JsonNormalizer<'a> {
     *span = SPAN;
   }
 
-  fn visit_string_literal(&mut self, literal: &mut ast::StringLiteral<'a>) {
-    self.has_lone_surrogate |= literal.value.has_lone_surrogate();
-    walk_js_mut::walk_string_literal(self, literal);
-  }
-
   fn visit_object_expression(&mut self, object: &mut ast::ObjectExpression<'a>) {
-    // Visit every value before dropping duplicates: an overwritten value can be the only
-    // string that made serde_json reject this otherwise valid JSON.
     walk_js_mut::walk_object_expression(self, object);
     let properties =
       std::mem::replace(&mut object.properties, oxc::allocator::Vec::new_in(&self.allocator));

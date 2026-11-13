@@ -12,6 +12,7 @@ import { NormalizedInputOptionsImpl } from '../options/normalized-input-options'
 import { NormalizedOutputOptionsImpl } from '../options/normalized-output-options';
 import type { ModuleInfo } from '../types/module-info';
 import { transformModuleInfo } from '../utils/transform-module-info';
+import { parseModuleId, stringifyModuleId } from '../utils/module-id';
 import type { RenderedChunkMeta } from '.';
 import type { PluginContextResolveOptions } from './plugin-context';
 
@@ -50,10 +51,14 @@ export class PluginContextData {
    */
   outputCodeCache: Map<string, OutputCodeCacheEntry> | null;
   resolveOptionsMap: Map<number, PluginContextResolveOptions> = new Map();
+  /** The next `this.resolve` receipt. See `saveResolveOptions`. */
+  private nextResolveOptionsReceipt = 0;
   loadModulePromiseMap: Map<string, Promise<void>> = new Map();
   renderedChunkMeta: RenderedChunkMeta | null = null;
   normalizedInputOptions: NormalizedInputOptions | null = null;
   normalizedOutputOptions: NormalizedOutputOptions | null = null;
+  /** `experimental.importAttributes` */
+  importAttributes = false;
 
   constructor(
     private onLog: LogHandler,
@@ -65,7 +70,24 @@ export class PluginContextData {
     this.outputCodeCache = cacheOutputCode ? new Map() : null;
   }
 
+  /**
+   * The module id of `rawId` imported with `attributes`, as JS keys it. Without
+   * `experimental.importAttributes`, it is always `rawId`.
+   */
+  toModuleId(rawId: string, attributes: Record<string, string> | undefined): string {
+    return this.importAttributes ? stringifyModuleId(rawId, attributes) : rawId;
+  }
+
+  /**
+   * Without `experimental.importAttributes`, plugins see no attributes, so the module options of
+   * an external are keyed by its raw id, even though its module id has the attributes.
+   */
+  private moduleOptionKey(id: string): string {
+    return this.importAttributes ? id : parseModuleId(id).rawId;
+  }
+
   updateModuleOption(id: string, option: ModuleOptions): ModuleOptions {
+    id = this.moduleOptionKey(id);
     const existing = this.moduleOptionMap.get(id);
     if (existing) {
       if (option.moduleSideEffects != null) {
@@ -85,6 +107,7 @@ export class PluginContextData {
   }
 
   getModuleOption(id: string): ModuleOptions {
+    id = this.moduleOptionKey(id);
     const option = this.moduleOptionMap.get(id);
     if (!option) {
       const raw: ModuleOptions = {
@@ -129,10 +152,23 @@ export class PluginContextData {
     return moduleIds.values();
   }
 
+  /**
+   * Saves the options of one `this.resolve` call and returns its receipt. The receipt goes to Rust
+   * as `BindingPluginContextResolveOptions.custom` (`Option<u32>`), and `bindingifyResolveId`
+   * gets it back and looks the options up when a `resolveId` hook runs. Calls can overlap, so a
+   * receipt must stay unique while its call is in flight. The map size cannot be the receipt: it
+   * shrinks when an earlier call finishes, and the next call would get a live receipt.
+   */
   saveResolveOptions(options: PluginContextResolveOptions): number {
-    const index = this.resolveOptionsMap.size;
-    this.resolveOptionsMap.set(index, options);
-    return index;
+    let receipt = this.nextResolveOptionsReceipt;
+    // The counter wraps at 2^32 so the receipt stays a valid `u32`. After a wrap, skip receipts
+    // that are still in flight.
+    while (this.resolveOptionsMap.has(receipt)) {
+      receipt = (receipt + 1) >>> 0;
+    }
+    this.nextResolveOptionsReceipt = (receipt + 1) >>> 0;
+    this.resolveOptionsMap.set(receipt, options);
+    return receipt;
   }
 
   getSavedResolveOptions(receipt: number): PluginContextResolveOptions | undefined {
@@ -174,5 +210,7 @@ export class PluginContextData {
     this.loadModulePromiseMap.clear();
     // Watch mode reuses this object across rebuilds; entries hold the previous build's chunk data.
     this.outputCodeCache?.clear();
+    // `resolveOptionsMap` and its receipt counter stay as they are: a `this.resolve` call of the
+    // previous build may still be in flight, and its receipt must not be given out again.
   }
 }

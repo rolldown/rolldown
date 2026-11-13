@@ -70,6 +70,9 @@
       // coverage painting, threshold constants) so they stay individually readable and
       // unit-testable, even where only the module itself consumes them today.
       "ignoreExportsUsedInFile": true,
+      // `lib/replay/cert.mjs` spawns the system `openssl` for the replay's local TLS
+      // certificate; it is not an npm binary.
+      "ignoreBinaries": ["openssl"],
     },
     "packages/rollup-tests": {
       "entry": ["src/**/*.js", "test/**/*.{js,ts}"],

@@ -151,7 +151,10 @@ exports.compareError = function compareError(actual, expected) {
 	expected = normalizeExpectedError(expected);
 	const locExpected = !!expected.loc;
 	if (actual.errors) {
-		const actuals = actual.errors.map(e => normalizeError(e, locExpected));
+		const actuals = actual.errors.map(error => {
+			if (error instanceof assert.AssertionError) throw error;
+			return normalizeError(error, locExpected);
+		});
 		const assertErrors = [];
 		try {
 			assert.ok(actuals.some(actual => {
@@ -591,24 +594,24 @@ exports.replaceDirectoryInStringifiedObject = function replaceDirectoryInStringi
 // 		: value;
 
 /**
- * Wraps plugins to exclude \0rolldown/runtime.js from transform hooks.
+ * Adapts plugins to exclude \0rolldown/runtime.js and unwrap render errors for Rollup assertions.
  * This is needed because Rolldown exposes the runtime to transform hooks,
  * but Rollup test plugins don't expect this internal module.
  * @param {Plugin | Plugin[] | Promise<Plugin> | undefined | null} plugin
  * @returns {Plugin | Plugin[] | Promise<Plugin> | undefined | null}
  */
-function wrapPluginWithRuntimeFilter(plugin) {
+function adaptPluginForRolldown(plugin) {
 	// Handle null, undefined, and other falsy values
 	if (plugin == null) return plugin;
 
 	// Handle promises - wrap the resolved value
 	if (plugin instanceof Promise) {
-		return plugin.then(wrapPluginWithRuntimeFilter);
+		return plugin.then(adaptPluginForRolldown);
 	}
 
 	// Handle arrays (which may be nested)
 	if (Array.isArray(plugin)) {
-		return plugin.map(wrapPluginWithRuntimeFilter);
+		return plugin.map(adaptPluginForRolldown);
 	}
 
 	// Handle non-object values
@@ -625,10 +628,28 @@ function wrapPluginWithRuntimeFilter(plugin) {
 		};
 	}
 
+	if (plugin.renderError) {
+		const original = plugin.renderError;
+		wrapped.renderError = {
+			...(typeof original === 'function' ? {} : original),
+			handler(error) {
+				// Rolldown wraps plugin errors and adds their names to the build summary.
+				assert.strictEqual(error.errors.length, 1);
+				const [originalError] = error.errors;
+				const handler = typeof original === 'function' ? original : original.handler;
+				return handler.call(this, Object.assign(new Error(), originalError, {
+					message: originalError.plugin
+						? `[plugin ${originalError.plugin}] ${originalError.message}`
+						: originalError.message
+				}));
+			}
+		};
+	}
+
 	return wrapped;
 }
 
-exports.wrapPluginWithRuntimeFilter = wrapPluginWithRuntimeFilter;
+exports.adaptPluginForRolldown = adaptPluginForRolldown;
 
 // Fake require test runner exports.
 require.cache[join(__dirname, '../../../rollup/test/utils.js')] = { exports };

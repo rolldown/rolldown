@@ -3,7 +3,8 @@
 // form that can be compared between two builds. Test modules log through `globalThis.__log` and
 // name object identities through `globalThis.__id`. Work a root starts without awaiting it (a
 // dynamic import whose `.then` logs) goes on the promise chain `globalThis.__chain`; a root's
-// exports are read once that chain has settled.
+// exports are read once that chain has settled, and the chain also settles before the next root
+// runs when a root throws.
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -50,6 +51,7 @@ for (const file of process.argv.slice(2)) {
     );
   } catch (error) {
     root.error = describeError(error);
+    await Promise.resolve(globalThis.__chain).catch(() => {});
   }
   result.roots.push(root);
   result.exports = root.exports;

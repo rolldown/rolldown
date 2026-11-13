@@ -4,9 +4,8 @@ use futures::future::try_join_all;
 use oxc_index::{IndexVec, index_vec};
 use oxc_str::CompactStr;
 use rolldown_common::{
-  Asset, ChunkIdx, ConcatenateWrappedModuleKind, EmittedChunkInfo, InstantiationKind,
-  ModuleRenderArgs, ModuleRenderOutput, Output, OutputAsset, OutputChunk, SharedFileEmitter,
-  SymbolRef, UsedSymbolRefs,
+  Asset, ChunkIdx, EmittedChunkInfo, InstantiationKind, ModuleRenderArgs, ModuleRenderOutput,
+  Output, OutputAsset, OutputChunk, SharedFileEmitter, SymbolRef, UsedSymbolRefs,
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BatchedBuildDiagnostic, BuildResult, Diagnostics};
@@ -114,7 +113,7 @@ impl GenerateStage<'_> {
           let rendered_chunk = ecma_meta.rendered_chunk;
           output.push(Output::Chunk(Arc::new(OutputChunk {
             name: rendered_chunk.name.clone(),
-            filename: filename.clone(),
+            filename,
             code,
             is_entry: rendered_chunk.is_entry,
             is_dynamic_entry: rendered_chunk.is_dynamic_entry,
@@ -131,7 +130,7 @@ impl GenerateStage<'_> {
         }
         InstantiationKind::Sourcemap(sourcemap_meta) => {
           output.push(Output::Asset(Arc::new(OutputAsset {
-            filename: filename.clone(),
+            filename,
             source: code,
             original_file_names: sourcemap_meta.original_file_names,
             names: sourcemap_meta.names,
@@ -139,7 +138,7 @@ impl GenerateStage<'_> {
         }
         InstantiationKind::None => {
           output.push(Output::Asset(Arc::new(OutputAsset {
-            filename: filename.clone(),
+            filename,
             source: code,
             original_file_names: vec![],
             names: vec![],
@@ -295,15 +294,7 @@ impl GenerateStage<'_> {
             Some(module) => {
               let ast = ast_table[module.idx].as_ref().expect("should have ast");
               #[expect(clippy::bool_to_int_with_if)]
-              let initial_indent = if needs_extra_indent
-                || !matches!(
-                  self.link_output.metas[module_idx].concatenated_wrapped_module_kind,
-                  ConcatenateWrappedModuleKind::None
-                ) {
-                1
-              } else {
-                0
-              };
+              let initial_indent = if needs_extra_indent { 1 } else { 0 };
               Some(module.render(self.options, &ModuleRenderArgs::Ecma { ast }, initial_indent))
             }
             _ => None,

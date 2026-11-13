@@ -2,7 +2,7 @@ import { stripAnsi } from 'consola/utils';
 import { $, execa } from 'execa';
 import fs from 'node:fs';
 import path from 'node:path';
-import { testsDir } from 'rolldown-tests/utils';
+import { isWasiTest, testsDir } from 'rolldown-tests/utils';
 import { describe, expect, it, test, vi } from 'vitest';
 
 function cliFixturesDir(...joined: string[]) {
@@ -470,6 +470,22 @@ describe('config', () => {
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });
 
+  it.skipIf(process.platform !== 'linux' || isWasiTest)(
+    'should apply environment option before loading the binding',
+    async () => {
+      const cwd = cliFixturesDir('cli-environment-option');
+
+      const status = await $({
+        cwd,
+        env: {
+          ROLLDOWN_WORKER_THREADS: undefined,
+          TOKIO_WORKER_THREADS: undefined,
+        },
+      })`rolldown -c rolldown.config.js --environment PRODUCTION,FOO:bar,HOST:http://localhost:4000,ROLLDOWN_WORKER_THREADS:2,ASSERT_ROLLDOWN_WORKER_THREADS:true`;
+      expect(status.exitCode).toBe(0);
+    },
+  );
+
   it('should allow multiply output + call options hook once  + call outputOptions hook', async () => {
     const cwd = cliFixturesDir('config-multiply-output-with-options-hooks');
     const status = await $({
@@ -562,6 +578,19 @@ describe('config', () => {
   });
 });
 
+describe('diagnostics', () => {
+  it('should not color diagnostics when NO_COLOR is set', async () => {
+    const cwd = cliFixturesDir('diagnostic-color');
+    try {
+      await $({ cwd, env: { NO_COLOR: '1', FORCE_COLOR: undefined } })`rolldown index.js -d dist`;
+      expect.unreachable();
+    } catch (error: any) {
+      expect(error.stdout).toContain('[UNRESOLVED_IMPORT]');
+      expect(error.stdout).not.toContain('\x1b[');
+    }
+  });
+});
+
 describe('watch cli', () => {
   it('call closeBundle', async () => {
     const cwd = cliFixturesDir('close-bundle');
@@ -648,10 +677,6 @@ describe('watch cli', () => {
 
   it.skipIf(process.platform === 'win32')(
     'should close with exit code 0 even when there are errors',
-    {
-      // `stdoutWaiter.waitFor('UNRESOLVED_IMPORT')` is flaky
-      retry: 3,
-    },
     async () => {
       const cwd = cliFixturesDir('watch-error');
       const controller = new AbortController();
@@ -661,7 +686,9 @@ describe('watch cli', () => {
         cancelSignal: controller.signal,
       })`rolldown index.ts -d dist -w`;
       const stdoutWaiter = createStreamWaiter(process.stdout);
-      await stdoutWaiter.waitFor('Waiting for changes...', { timeout: 5_000 });
+      // "Waiting for changes..." is printed before the first build, which watches index.ts only
+      // after reading it, so an edit in between is never reported. "Rebuilt" comes after that.
+      await stdoutWaiter.waitFor('Rebuilt', { timeout: 5_000 });
 
       fs.writeFileSync(
         path.join(cwd, 'index.ts'),

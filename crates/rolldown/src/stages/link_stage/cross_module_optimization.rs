@@ -70,7 +70,8 @@ impl LinkStage<'_> {
 
     #[expect(clippy::bool_to_int_with_if)]
     let other_optimization_pass = if has_side_effect_free_functions { 1 } else { 0 };
-    let cross_module_inline_const_pass = self.options.optimization.inline_const_pass() - 1;
+    let cross_module_inline_const_pass =
+      self.options.optimization.inline_const_pass().saturating_sub(1);
     CrossModuleOptimizationConfig {
       pass: cross_module_inline_const_pass.max(other_optimization_pass),
       inline_const_optimization: cross_module_inline_const_pass >= 1,
@@ -134,6 +135,41 @@ impl LinkStage<'_> {
     // Return all unreachable import expression node IDs instead of add it as a field of LinkStage,
     // Because this set is only used include statement stage.
     unreachable_node_ids
+  }
+
+  /// A JSX element name can't be a literal, so a constant used as one is not inlined.
+  pub(super) fn exclude_jsx_element_names_from_inline_const(&mut self) {
+    if !self.symbols.has_module_preserve_jsx() || self.global_constant_symbol_map.is_empty() {
+      return;
+    }
+    self.global_constant_symbol_map.retain(|symbol_ref, _| {
+      symbol_ref.flags(&self.symbols).is_none_or(|flags| {
+        !flags.intersects(
+          SymbolRefFlags::MustStartWithCapitalLetterForJSX
+            | SymbolRefFlags::UsedAsJSXMemberExprRoot,
+        )
+      })
+    });
+    // An import from a CJS module is not linked to the export, so the flag stays on the import.
+    for meta in &self.metas {
+      for (import_ref, cjs_module_idx) in &meta.named_import_to_cjs_module {
+        let is_jsx_element_name = import_ref.flags(&self.symbols).is_some_and(|flags| {
+          flags.intersects(
+            SymbolRefFlags::MustStartWithCapitalLetterForJSX
+              | SymbolRefFlags::UsedAsJSXMemberExprRoot,
+          )
+        });
+        if is_jsx_element_name
+          && let Some(alias) = &self.symbols.get(*import_ref).namespace_alias
+          && let Some(export) =
+            self.metas[*cjs_module_idx].resolved_exports.get(&alias.property_name)
+        {
+          self
+            .global_constant_symbol_map
+            .remove(&self.symbols.canonical_ref_for(export.symbol_ref));
+        }
+      }
+    }
   }
 
   /// Find all modules that have imports resolving to any of the given constant canonical refs.

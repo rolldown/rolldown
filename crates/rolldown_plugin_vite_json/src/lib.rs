@@ -3,9 +3,9 @@ mod utils;
 use std::borrow::Cow;
 
 use json_escape_simd::escape;
-use rolldown_common::ModuleType;
+use rolldown_common::{ModuleType, parse_json_to_ecma_ast};
 use rolldown_plugin::{HookTransformOutput, HookUsage, Plugin};
-use rolldown_plugin_utils::{constants, data_to_esm, is_special_query};
+use rolldown_plugin_utils::{constants, is_special_query, json_to_esm};
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::concat_string;
 use serde_json::Value;
@@ -51,8 +51,15 @@ impl Plugin for ViteJsonPlugin {
     if !is_name_exports && is_stringify {
       let json = if self.minify {
         // TODO(perf): find better way than https://github.com/rolldown/vite/blob/3bf86e3f/packages/vite/src/node/plugins/json.ts#L55-L57
-        let value = serde_json::from_str::<Value>(code)?;
-        Cow::Owned(serde_json::to_string(&value)?)
+        match serde_json::from_str::<Value>(code) {
+          Ok(value) => Cow::Owned(serde_json::to_string(&value)?),
+          Err(_) => {
+            // Validate lone-surrogate JSON without forcing its strings through UTF-8. Keeping
+            // the raw text lets JSON.parse preserve every UTF-16 code unit at runtime.
+            parse_json_to_ecma_ast(code)?;
+            Cow::Borrowed(code)
+          }
+        }
       } else {
         Cow::Borrowed(code)
       };
@@ -66,9 +73,8 @@ impl Plugin for ViteJsonPlugin {
       }));
     }
 
-    let value = serde_json::from_str(code)?;
     Ok(Some(HookTransformOutput {
-      code: Some(data_to_esm(&value, self.named_exports)),
+      code: Some(json_to_esm(code, self.named_exports)?),
       map: SourceMap::default().into(),
       module_type: Some(ModuleType::Js),
       ..Default::default()

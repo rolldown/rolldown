@@ -250,7 +250,7 @@ export type OptimizationOptions = {
    *     4. `test1 && test2` - logical AND expressions
    *     5. `test1 ?? test2` - nullish coalescing expressions
    *  - `mode: 'all'`: Inline all imported constants wherever they are used.
-   *  - `pass`: Number of passes to perform for inlining constants.
+   *  - `pass`: Number of passes to perform for inlining constants. `0` disables constant inlining.
    *
    * @example
    * ```js
@@ -522,6 +522,9 @@ export interface InputOptions {
    *
    * See [the In-Depth Guide](https://rolldown.rs/in-depth/module-types) for more details.
    *
+   * With {@linkcode InputOptions.experimental | experimental.importAttributes}, a `type` import
+   * attribute of `json`, `text` or `bytes` wins over this option.
+   *
    * @example
    * ```js
    * import { defineConfig } from 'rolldown'
@@ -731,6 +734,23 @@ export interface InputOptions {
      * @default false
      */
     lazyBarrel?: boolean;
+    /**
+     * Make import attributes part of module identity, aligned with Rollup 5.
+     *
+     * A module imported with attributes, e.g. `import data from './data.json' with { type: 'json' }`,
+     * gets the id `<rawId>?attributes=<encoded attributes>`, so the same file imported with
+     * different attributes becomes different modules. The `type` attribute also selects a
+     * built-in module type: `json`, `text` or `bytes`.
+     *
+     * Without this option, plugin hooks still have the `rawId` and `attributes` fields, but
+     * `attributes` is always `{}` and the attributes a `resolveId` hook returns are ignored. An
+     * external module keeps the attributes written in the source in both modes.
+     *
+     * @see {@link https://rolldown.rs/in-depth/import-attributes | Import Attributes}
+     * @see {@link https://github.com/rolldown/rolldown/discussions/11217 | RFC}
+     * @default false
+     */
+    importAttributes?: boolean;
   };
   /**
    * Configure how the code is transformed. This process happens after the `transform` hook.
@@ -786,18 +806,13 @@ export interface InputOptions {
    * bundler that runs at the same time its own `sessionId`, or their devtools output mixes.
    * The name `unknown-session` is reserved regardless of case.
    *
-   * In `'report'` mode, Rolldown aggregates the same internal event stream in-memory and
-   * writes a small, agent-readable report instead of the multi-GB `logs.json`: a canonical
-   * `metrics.json` (schema-versioned, with a build-over-build `delta`), `module-graph.json`
-   * (the full module graph with retained sizes), progressive markdown
-   * views (`entry.md` + on-demand detail files), one `history.jsonl` line per build, and an
-   * `AGENTS.md` describing the directory contract.
-   *
-   * The report goes to `node_modules/.rolldown/report/<output dir>`, resolved against
-   * {@linkcode cwd}. `<output dir>` is the output folder (`output.dir`, the folder of
-   * `output.file`, or `dist`) relative to `cwd`, so each build output keeps its own report and
-   * finds its previous one for the delta. Each `..` of an output folder outside `cwd` is written
-   * as `__`. A bundler opens one report, so its first output picks the folder.
+   * In `'report'` mode, Rolldown writes a small build report instead of the multi-GB
+   * `logs.json`: Markdown views, `metrics.json` with a build-over-build `delta`,
+   * `module-graph.json`, `chunk-graph.json` and `history.jsonl`. The report goes to
+   * `node_modules/.rolldown/report/<output dir>`, resolved against {@linkcode cwd}, where
+   * `<output dir>` is the output folder relative to `cwd` (each `..` becomes `__`). Rolldown
+   * writes it when the bundle closes. `watch()` and the dev engine write no report. See the
+   * [Build Report guide](/in-depth/build-report) for the files and how to compare builds.
    *
    * @experimental
    */
@@ -805,8 +820,7 @@ export interface InputOptions {
     sessionId?: string;
     /**
      * `'full'` (default): write JSON-lines devtools logs.
-     * `'report'`: aggregate the same event stream in-memory and emit an agent-readable
-     * report (`metrics.json` + markdown views + `history.jsonl`) instead.
+     * `'report'`: write a small build report to `node_modules/.rolldown/report/` instead.
      * Any other value fails the build.
      */
     mode?: 'full' | 'report';

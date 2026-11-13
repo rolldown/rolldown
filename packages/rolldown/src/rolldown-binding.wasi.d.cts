@@ -1599,8 +1599,11 @@ export declare class BindingDecodedMap {
    * Each line is an array of segments, where each segment is [generatedColumn, sourceIndex, originalLine, originalColumn, nameIndex?].
    */
   get mappings(): Array<Array<Array<number>>>
-  /** The list of source indices that should be excluded from debugging. */
-  get x_google_ignoreList(): Array<number> | null
+  /**
+   * The list of source indices that should be excluded from debugging, or `undefined` when
+   * the map has none. `magic-string` leaves the field out in that case.
+   */
+  get x_google_ignoreList(): Array<number> | undefined
 }
 
 export declare class BindingDevEngine {
@@ -1655,6 +1658,8 @@ export declare class BindingMagicString {
   get filename(): string | null
   get indentExclusionRanges(): Array<Array<number>> | Array<number> | null
   get ignoreList(): boolean
+  /** The `hires` option of this instance, or `null` when it is not set. */
+  get hires(): boolean | 'boundary' | null
   get offset(): number
   set offset(offset: number)
   replace(from: string, to: string): this
@@ -1827,7 +1832,7 @@ export declare class BindingOutputChunk {
 }
 
 export declare class BindingPluginContext {
-  load(specifier: string, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string): Promise<void>
+  load(rawId: string, attributes: Record<string, string>, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null, fnSanitizedFileName?: string | undefined | null): string
   emitChunk(file: BindingEmittedChunk): string
@@ -1876,8 +1881,11 @@ export declare class BindingSourceMap {
   get names(): Array<string>
   /** The VLQ-encoded mappings string. */
   get mappings(): string
-  /** The list of source indices that should be excluded from debugging. */
-  get x_google_ignoreList(): Array<number> | null
+  /**
+   * The list of source indices that should be excluded from debugging, or `undefined` when
+   * the map has none. `magic-string` leaves the field out in that case.
+   */
+  get x_google_ignoreList(): Array<number> | undefined
   /** Returns the source map as a JSON string. */
   toString(): string
   /** Returns the source map as a base64-encoded data URL. */
@@ -2024,6 +2032,8 @@ export interface BindingChecksOptions {
   sourcemapBroken?: boolean
   namespaceConflict?: boolean
   shimmedExport?: boolean
+  deprecatedImportAssertion?: boolean
+  invalidImportAttribute?: boolean
 }
 
 export interface BindingChunkImportMap {
@@ -2311,6 +2321,7 @@ export interface BindingExperimentalOptions {
   nativeMagicString?: boolean
   chunkOptimization?: boolean | BindingChunkOptimizationOptions
   lazyBarrel?: boolean
+  importAttributes?: boolean
 }
 
 export interface BindingFilterToken {
@@ -2370,6 +2381,11 @@ export interface BindingHookJsResolveIdOutput {
   packageJsonPath?: string
 }
 
+export interface BindingHookLoadExtraArgs {
+  rawId: string
+  attributes: Record<string, string>
+}
+
 export interface BindingHookLoadOutput {
   code: string
   moduleSideEffects?: boolean | 'no-treeshake'
@@ -2384,6 +2400,19 @@ export interface BindingHookRenderChunkOutput {
    * omitting the field, which mirrors Rollup's "possibly broken" semantics).
    */
   map?: BindingSourcemap | null
+}
+
+/**
+ * The extra arguments of `resolveDynamicImport`. Empty attributes and a raw id equal to the
+ * importer are left out, and `bindingify-build-hooks.ts` fills them in.
+ */
+export interface BindingHookResolveDynamicImportExtraArgs {
+  /** The import attributes of the import being resolved. Omitted when empty. */
+  attributes?: Record<string, string>
+  /** The importer without its import attributes. Omitted when equal to the importer. */
+  importerRawId?: string
+  /** The import attributes of the importer itself. Omitted when empty. */
+  importerAttributes?: Record<string, string>
 }
 
 export interface BindingHookResolveFileUrlArgs {
@@ -2417,6 +2446,12 @@ export interface BindingHookResolveIdExtraArgs {
    * - `hot-accept`: `import.meta.hot.accept('./lib.js', () => {})`
    */
   kind: 'import-statement' | 'dynamic-import' | 'require-call' | 'import-rule' | 'url-token' | 'new-url' | 'hot-accept'
+  /** The import attributes of the import being resolved. Omitted when empty. */
+  attributes?: Record<string, string>
+  /** The importer without its import attributes. Omitted when equal to the importer. */
+  importerRawId?: string
+  /** The import attributes of the importer itself. Omitted when empty. */
+  importerAttributes?: Record<string, string>
 }
 
 export interface BindingHookResolveIdOutput {
@@ -2429,6 +2464,11 @@ export interface BindingHookResolveIdOutput {
    * we could get the related package json object via the path string.
    */
   packageJsonPath?: string | null
+  /**
+   * Replaces the import attributes of the import. `{}` removes them. Ignored without
+   * `experimental.importAttributes`.
+   */
+  attributes?: Record<string, string>
 }
 
 export type BindingHookSideEffects = boolean | string
@@ -2594,6 +2634,13 @@ export interface BindingMagicStringOptions {
   offset?: number
   indentExclusionRanges?: Array<Array<number>> | Array<number>
   ignoreList?: boolean
+  /**
+   * The resolution of the sourcemaps generated from this instance: `true`, `false` or
+   * `"boundary"`. It applies to the map that Rolldown generates when a hook returns this
+   * instance without a `map`, and to `generateMap()` without `hires`. When it is not set,
+   * Rolldown uses `"boundary"` and `generateMap()` uses `false`.
+   */
+  hires?: boolean | 'boundary'
 }
 
 export type BindingMakeAbsoluteExternalsRelative =
@@ -2725,7 +2772,9 @@ export interface BindingOverwriteOptions {
 }
 
 export interface BindingPluginContextResolvedId {
+  /** The resolved id without its import attributes. */
   id: string
+  attributes: Record<string, string>
   packageJsonPath?: string
   external: boolean | 'absolute' | 'relative'
   moduleSideEffects?: boolean | 'no-treeshake'
@@ -2746,6 +2795,7 @@ export interface BindingPluginContextResolveOptions {
   skipSelf?: boolean
   custom?: number
   vitePluginCustom?: BindingVitePluginCustom
+  attributes?: Record<string, string>
 }
 
 export interface BindingPluginHookMeta {
@@ -2760,9 +2810,9 @@ export interface BindingPluginOptions {
   resolveId?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraArgs) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   resolveIdMeta?: BindingPluginHookMeta
   resolveIdFilter?: BindingHookFilter
-  resolveDynamicImport?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
+  resolveDynamicImport?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveDynamicImportExtraArgs) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   resolveDynamicImportMeta?: BindingPluginHookMeta
-  load?: (ctx: BindingLoadPluginContext, id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
+  load?: (ctx: BindingLoadPluginContext, id: string, options: Nullable<BindingHookLoadExtraArgs>) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
   loadMeta?: BindingPluginHookMeta
   loadFilter?: BindingHookFilter
   transform?: (ctx:  BindingTransformPluginContext, id: string, code: string, module_type: BindingTransformHookExtraArgs) => MaybePromise<VoidNullable<BindingHookTransformOutput>>
@@ -2914,6 +2964,8 @@ export interface BindingSourceMapOptions {
 
 export interface BindingTransformHookExtraArgs {
   moduleType: string
+  rawId?: string
+  attributes?: Record<string, string>
 }
 
 export interface BindingTreeshake {
@@ -3174,21 +3226,24 @@ export interface JsOutputAsset {
   source: BindingAssetSource
 }
 
+/**
+ * What a `generateBundle` or `writeBundle` hook changed in an output chunk. A field that is left
+ * out is a property the plugin did not change, so the chunk keeps its value, which is never copied
+ * through JavaScript. See `collectChunkChange` in
+ * `packages/rolldown/src/utils/transform-to-rollup-output.ts`.
+ */
 export interface JsOutputChunk {
-  name: string
-  isEntry: boolean
-  isDynamicEntry: boolean
-  facadeModuleId?: string
-  moduleIds: Array<string>
-  exports: Array<string>
   filename: string
-  modules: Record<string, BindingRenderedModule>
-  imports: Array<string>
-  dynamicImports: Array<string>
-  code: string
-  map?: BindingSourcemap
-  sourcemapFilename?: string
-  preliminaryFilename: string
+  /**
+   * Always sent. Besides its value, it tells a chunk apart from a `JsOutputAsset`, which has no
+   * `isEntry`, when napi picks a side of `Either<JsOutputChunk, JsOutputAsset>`.
+   */
+  isEntry: boolean
+  code?: string
+  /** `null` removes the map. */
+  map?: BindingSourcemap | null
+  imports?: Array<string>
+  dynamicImports?: Array<string>
 }
 
 /** Error emitted from native side, it only contains kind and message, no stack trace. */
@@ -3197,6 +3252,10 @@ export interface NativeError {
   message: string
   /** The id of the file associated with the error */
   id?: string
+  /** The name of the plugin that threw the error */
+  plugin?: string
+  /** Code frame around the error location */
+  frame?: string
   /** The exporter associated with the error (for import/export errors) */
   exporter?: string
   /** Location information (line, column, file) */
@@ -3266,6 +3325,10 @@ export interface WatcherEvent {
 export interface WatcherOptions {
   usePolling?: boolean
   pollInterval?: number
+  compareContentsForPolling?: boolean
+  useDebounce?: boolean
+  debounceDelay?: number
+  debounceTickRate?: number
   followSymlinks?: boolean
   ignored?: Array<string>
 }

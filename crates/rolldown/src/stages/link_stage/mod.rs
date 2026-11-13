@@ -39,6 +39,7 @@ mod cross_module_optimization;
 mod determine_module_exports_kind;
 mod generate_lazy_export;
 mod patch_module_dependencies;
+mod prune_constant_branches;
 mod reference_needed_symbols;
 mod refine_stmt_side_effects;
 mod sort_modules;
@@ -85,6 +86,8 @@ pub struct LinkStageOutput {
   pub star_reexport_records_by_imported_symbol:
     FxHashMap<SymbolRef, Vec<Vec<(ModuleIdx, rolldown_common::ImportRecordIdx)>>>,
   pub member_read_star_reexport_paths: Vec<MemberReadStarReexportPath>,
+  /// See `IncludeContext::kept_inlined_constant_reads`.
+  pub kept_inlined_constant_reads: FxHashSet<SymbolRef>,
   pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
   /// True if any module has enum member values to inline. Computed once to avoid
   /// repeated full module table scans.
@@ -121,10 +124,13 @@ pub struct LinkStage<'a> {
   pub star_reexport_records_by_imported_symbol:
     FxHashMap<SymbolRef, Vec<Vec<(ModuleIdx, rolldown_common::ImportRecordIdx)>>>,
   pub member_read_star_reexport_paths: Vec<MemberReadStarReexportPath>,
+  pub kept_inlined_constant_reads: FxHashSet<SymbolRef>,
   pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub global_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
+  /// Imports whose binding lazy barrel left uncertain by skipping a record they depend on.
+  pub lazy_barrel_uncertain_bindings: Vec<SymbolRef>,
   pub flat_options: FlatOptions,
   pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
   pub tla_module_count: usize,
@@ -144,6 +150,7 @@ pub struct LinkStage<'a> {
 
 impl<'a> LinkStage<'a> {
   pub fn new(mut scan_stage_output: NormalizedScanStageOutput, options: &'a SharedOptions) -> Self {
+    scan_stage_output.symbol_ref_db.begin_link();
     // since constant export is spared in most of time, aggregate them would make searching more efficient
     let constant_symbol_map = if options.optimization.is_inline_const_enabled() {
       scan_stage_output
@@ -215,7 +222,12 @@ impl<'a> LinkStage<'a> {
               // when code splitting is disabled (`codeSplitting: false`).
               //
               // HotAccept is an HMR-only edge that should be filtered out here.
-              ImportKind::DynamicImport | ImportKind::Require | ImportKind::HotAccept => None,
+              // NewUrl needs at most the emitted asset's filename; it never executes the target
+              // module. See internal-docs/plugin-asset-module/implementation.md.
+              ImportKind::DynamicImport
+              | ImportKind::Require
+              | ImportKind::HotAccept
+              | ImportKind::NewUrl => None,
               _ => rec.resolved_module,
             })
             .collect();
@@ -247,6 +259,8 @@ impl<'a> LinkStage<'a> {
       normal_symbol_exports_chain_map: FxHashMap::default(),
       star_reexport_records_by_imported_symbol: FxHashMap::default(),
       member_read_star_reexport_paths: Vec::new(),
+      kept_inlined_constant_reads: FxHashSet::default(),
+      lazy_barrel_uncertain_bindings: Vec::new(),
       external_import_namespace_merger: FxHashMap::default(),
       overrode_preserve_entry_signature_map: scan_stage_output
         .overrode_preserve_entry_signature_map,
@@ -271,12 +285,15 @@ impl<'a> LinkStage<'a> {
     self.bind_imports_and_exports();
     self.create_exports_for_ecma_modules();
     let unreachable_import_expression_node_ids = self.cross_module_optimization();
+    self.exclude_jsx_element_names_from_inline_const();
     self.refine_stmt_side_effects_with_imported_constants();
     // The passes above only relax statement flags. Module verdicts must follow before
     // `reference_needed_symbols` derives import flags from them.
     self.recompute_analyzed_side_effects();
     self.reference_needed_symbols();
+    self.prune_constant_branches();
     self.include_statements(&unreachable_import_expression_node_ids);
+    self.check_lazy_barrel_uncertain_bindings();
     self.patch_module_dependencies();
 
     tracing::trace!(
@@ -307,6 +324,7 @@ impl<'a> LinkStage<'a> {
         normal_symbol_exports_chain_map: self.normal_symbol_exports_chain_map,
         star_reexport_records_by_imported_symbol: self.star_reexport_records_by_imported_symbol,
         member_read_star_reexport_paths: self.member_read_star_reexport_paths,
+        kept_inlined_constant_reads: self.kept_inlined_constant_reads,
         user_defined_entry_modules: self.user_defined_entry_modules,
         has_enum_inlining: self.has_enum_inlining,
       },

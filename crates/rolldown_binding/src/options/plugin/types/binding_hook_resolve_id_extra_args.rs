@@ -1,5 +1,7 @@
+use super::binding_import_attributes::BindingImportAttributes;
+
 // This struct is used to both pass to JS and receive from JS:
-// - Pass to JS: Created in js_plugin.rs:106 and passed to JS plugin resolve_id hooks
+// - Pass to JS: Created in js_plugin.rs and passed to JS plugin resolve_id hooks
 // - Receive from JS: Received in binding_callable_builtin_plugin.rs as parameter (unused currently)
 #[napi_derive::napi(object)]
 #[derive(Default, Debug)]
@@ -18,4 +20,12 @@ pub struct BindingHookResolveIdExtraArgs {
     ts_type = "'import-statement' | 'dynamic-import' | 'require-call' | 'import-rule' | 'url-token' | 'new-url' | 'hot-accept'"
   )]
   pub kind: String,
+  /// The import attributes of the import being resolved. Omitted when empty.
+  #[napi(ts_type = "Record<string, string>")]
+  pub attributes: Option<BindingImportAttributes>,
+  /// The importer without its import attributes. Omitted when equal to the importer.
+  pub importer_raw_id: Option<String>,
+  /// The import attributes of the importer itself. Omitted when empty.
+  #[napi(ts_type = "Record<string, string>")]
+  pub importer_attributes: Option<BindingImportAttributes>,
 }

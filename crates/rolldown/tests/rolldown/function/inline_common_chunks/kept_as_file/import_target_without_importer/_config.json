@@ -1,0 +1,21 @@
+{
+  "_comment": "`x.js` imports `m.js` without using it, so no file imports the common chunk that holds `m.js`; only `import()` loads it, and the chunk stays a file.",
+  "config": {
+    "input": [
+      {
+        "name": "x",
+        "import": "./x.js"
+      },
+      {
+        "name": "y",
+        "import": "./y.js"
+      }
+    ],
+    "preserveEntrySignatures": "false",
+    "codeSplitting": {
+      "experimentalInlineCommonChunks": {
+        "maxSize": 4096
+      }
+    }
+  }
+}

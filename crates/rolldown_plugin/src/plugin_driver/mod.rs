@@ -18,18 +18,31 @@ use rolldown_common::{
   ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, PluginIdx, SharedFileEmitter,
   SharedModuleInfoDashMap, WatchPath,
 };
+use rolldown_devtools::trace_action_enabled;
 use rolldown_utils::dashmap::FxDashSet;
 use tokio::sync::broadcast;
 
 use crate::{
   __inner::SharedPluginable,
-  PluginContext,
+  HookFilterArgs, PluginContext, Pluginable,
   plugin_driver::hook_orders::PluginHookOrders,
   type_aliases::{IndexPluginContext, IndexPluginable},
   types::build_timings::BuildTimings,
 };
 
 pub type SharedPluginDriver = Arc<PluginDriver>;
+
+/// In devtools mode, the driver skips a call that the plugin's own hook filter rejects before it
+/// logs the call, so the hook log holds only calls that ran. The plugin returns `None` for that
+/// call anyway. See internal-docs/devtools/implementation.md.
+#[inline]
+fn skipped_by_hook_filter(
+  plugin: &Pluginable,
+  ctx: &PluginContext,
+  args: HookFilterArgs<'_>,
+) -> bool {
+  trace_action_enabled!() && !plugin.call_hook_filter_matches(ctx, args)
+}
 
 pub struct PluginDriver {
   plugins: IndexPluginable,

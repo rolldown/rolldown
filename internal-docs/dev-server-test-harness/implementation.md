@@ -156,7 +156,11 @@ dist never drift apart. The steps:
 
 1. ensure `vite/` is at the latest `rolldown-canary` rebased onto `main`
    (clone if missing, update otherwise); a checkout taken over by the
-   developer (dirty, or off `rolldown-canary`) is built exactly as-is,
+   developer (dirty, or off `rolldown-canary`) is built exactly as-is.
+   A `vX.Y` maintenance branch sets `viteBranch` and `viteBase` in
+   `checkout.ts` to `rolldown-canary-A.B` and `vA.B` for its Vite minor
+   `A.B`, and uses `viteBranch` as-is until Vite has a `vA.B` branch
+   (see `MAINTENANCE.md`),
 2. `vp install --frozen-lockfile` (vp delegates to the checkout's pinned
    pnpm; this also resets any previous step-3 symlink swap),
 3. link `vite/packages/vite/node_modules/rolldown` to the workspace's

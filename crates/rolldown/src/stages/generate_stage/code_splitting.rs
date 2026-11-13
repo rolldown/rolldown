@@ -514,7 +514,7 @@ impl GenerateStage<'_> {
     chunk_graph: &mut ChunkGraph,
     order_state: &super::order_wrap_state::OrderWrapState,
   ) {
-    let mut chunk_list: IndexVec<ChunkIdx, FxHashMap<(ModuleIdx, usize), Vec<SymbolRef>>> =
+    let mut chunk_list: IndexVec<ChunkIdx, FxHashMap<ModuleIdx, Vec<SymbolRef>>> =
       index_vec![FxHashMap::default(); chunk_graph.chunk_table.len()];
     for (k, info) in &self.link_output.safely_merge_cjs_ns_map {
       for symbol_ref in info
@@ -542,16 +542,10 @@ impl GenerateStage<'_> {
         let owner = symbol_ref.owner;
         let chunk_idx = chunk_graph.module_to_chunk[owner].expect("Module should be in chunk");
 
-        let group_idx = if self.link_output.metas[owner].wrap_kind().is_none() {
-          Some(usize::MAX)
-        } else {
-          chunk_graph.chunk_table[chunk_idx].module_idx_to_group_idx.get(&owner).copied()
-        };
-
-        let Some(group_idx) = group_idx else {
+        if !self.link_output.metas[owner].wrap_kind().is_none() {
           continue;
-        };
-        chunk_list[chunk_idx].entry((*k, group_idx)).or_default().push(*symbol_ref);
+        }
+        chunk_list[chunk_idx].entry(*k).or_default().push(*symbol_ref);
       }
     }
 
@@ -769,9 +763,9 @@ impl GenerateStage<'_> {
     /// preserve-modules chunk names disagree about where the module lives.
     fn common_dir_input<'a>(id: &'a ModuleId, cwd: &Path) -> Option<Cow<'a, str>> {
       if id.is_path() {
-        return Some(Cow::Borrowed(id.as_ref()));
+        return Some(Cow::Borrowed(id.raw_id()));
       }
-      let glued = node_style_absolute(Path::new(id.as_str()), cwd)?;
+      let glued = node_style_absolute(Path::new(id.raw_id()), cwd)?;
       Some(Cow::Owned(glued.into_owned().expect_into_string()))
     }
 
@@ -940,6 +934,10 @@ impl GenerateStage<'_> {
         pre_chunk_order_state,
       );
     }
+    self.place_unselected_consumer_local_reexport_targets(
+      index_splitting_info,
+      pre_chunk_order_state,
+    );
 
     let mut module_is_assigned: IndexBitSet<ModuleIdx> =
       IndexBitSet::new(self.link_output.module_table.modules.len());
@@ -1336,6 +1334,39 @@ impl GenerateStage<'_> {
       });
       if let Some(dependencies) = init_dependencies {
         q.extend(dependencies[module_idx].iter().copied());
+      }
+    }
+  }
+
+  // See internal-docs/code-splitting/implementation.md#reachability-propagation.
+  fn place_unselected_consumer_local_reexport_targets(
+    &self,
+    index_splitting_info: &mut IndexSplittingInfo,
+    pre_chunk_order_state: &super::order_wrap_state::OrderWrapState,
+  ) {
+    if !pre_chunk_order_state.has_consumer_local_reexport_routes() {
+      return;
+    }
+    for module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal) {
+      if !self.link_output.metas[module.idx].is_included
+        || !index_splitting_info[module.idx].bits.is_empty()
+      {
+        continue;
+      }
+      let mut bits = index_splitting_info[module.idx].bits.clone();
+      let mut is_initial = false;
+      for &importer_idx in &module.importers_idx {
+        if pre_chunk_order_state.is_consumer_local_reexport_route(importer_idx) {
+          let importer = &index_splitting_info[importer_idx];
+          bits.union(&importer.bits);
+          is_initial |= importer.tags_bit_set.has_bit(ModuleTag::INITIAL_BIT);
+        }
+      }
+      let info = &mut index_splitting_info[module.idx];
+      info.share_count = bits.bit_count();
+      info.bits = bits;
+      if is_initial {
+        info.tags_bit_set.set_bit(ModuleTag::INITIAL_BIT);
       }
     }
   }

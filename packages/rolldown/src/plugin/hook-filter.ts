@@ -34,6 +34,10 @@ export interface HookFilter {
    * If the value is a regular expression, it is tested after the `id`'s path separators are normalized to forward slashes (`/`).
    * This keeps the filter portable across operating systems without requiring the regular expression to match both `/` and `\`.
    *
+   * With `experimental.importAttributes`, the `id` of a module imported with attributes ends with
+   * `?attributes=...`, so a pattern anchored to the end of the `id` does not match it. See
+   * [Import Attributes](https://rolldown.rs/in-depth/import-attributes#match-the-extension).
+   *
    * @example
    * Include all `id`s that contain `node_modules` in the path.
    * ```js

@@ -126,7 +126,7 @@ pub use crate::{
       EcmaModuleAstUsage, EcmaView, EcmaViewMeta, ExportOrigin, RolldownFileUrlReference,
       ThisExprReplaceKind, generate_replace_this_expr_map,
     },
-    json_to_program::{json_value_to_ecma_ast, json_value_to_expression},
+    json_to_program::{json_value_to_ecma_ast, json_value_to_expression, parse_json_to_ecma_ast},
     module_idx::ModuleIdx,
   },
   file_emitter::{

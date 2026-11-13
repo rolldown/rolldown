@@ -91,4 +91,5 @@ doctest = false
 
 [package.metadata.cargo-shear]
 # `serde` is used via feature flag.
-ignored = ["serde"]
+# `serde_json` is used by the `trace_action` macro and enables `preserve_order`.
+ignored = ["serde", "serde_json"]

@@ -402,12 +402,14 @@ function preProcessSourceMap(
     typeof ret.map === 'object'
       ? copySourcemapObject(ret.map)
       : (JSON.parse(ret.map) as ExistingRawSourceMap);
-  if (!isEmptySourcemapFiled(map.sources)) {
+  if (!isEmptySourcemapFiled(map.sources) || map.sources?.[0] === null) {
     // normalize original sourcemap sources
     // Port form https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts#L180-L188.
     const directory = path.dirname(id) || '.';
     const sourceRoot = map.sourceRoot || '.';
-    map.sources = map.sources!.map((source) => path.resolve(directory, sourceRoot, source!));
+    map.sources = map.sources!.map((source) =>
+      source === null ? null : path.resolve(directory, sourceRoot, source),
+    );
   }
   return map;
 }

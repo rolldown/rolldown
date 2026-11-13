@@ -65,6 +65,7 @@ pub async fn prepare_sourcemap(
   if let Some(source_map_ignore_list) = &options.sourcemap_ignore_list {
     let relative_sources = map
       .get_sources()
+      .flatten()
       .map(|source| source.as_path().relative(file_dir).to_string_lossy().into_owned())
       .collect::<Vec<_>>();
 
@@ -99,9 +100,11 @@ pub async fn prepare_sourcemap(
     };
 
     #[expect(clippy::cast_possible_truncation)]
-    let ignore_list = ignored
-      .into_iter()
+    let ignore_list = map
+      .get_sources()
       .enumerate()
+      .filter_map(|(index, source)| source.map(|_| index))
+      .zip(ignored)
       .filter_map(|(index, should_ignore)| should_ignore.then_some(index as u32))
       .collect::<Vec<_>>();
 
@@ -114,6 +117,7 @@ pub async fn prepare_sourcemap(
     let map_path = map_path.to_string_lossy();
     let relative_sources = map
       .get_sources()
+      .flatten()
       .map(|source| source.as_path().relative(file_dir).to_string_lossy().into_owned())
       .collect::<Vec<_>>();
     let source_count = relative_sources.len();
@@ -139,17 +143,28 @@ pub async fn prepare_sourcemap(
       .map(|source| source.replace(std::path::MAIN_SEPARATOR, "/"))
       .collect::<Vec<_>>();
 
-    map.set_sources(sources);
+    if map.get_sources().all(|source| source.is_some()) {
+      map.set_sources(sources.into_iter().map(Some));
+    } else {
+      let mut transformed = sources.into_iter();
+      let sources = map
+        .get_sources()
+        .map(|source| source.map(|_| transformed.next().expect("source count was checked")))
+        .collect::<Vec<_>>();
+      map.set_sources(sources);
+    }
   } else if cfg!(windows) {
     // Normalize the windows path at final.
-    let sources =
-      map.get_sources().map(|x| relative_path_to_slash(x.as_path(), file_dir)).collect::<Vec<_>>();
+    let sources = map
+      .get_sources()
+      .map(|x| x.map(|x| relative_path_to_slash(x.as_path(), file_dir)))
+      .collect::<Vec<_>>();
     map.set_sources(sources);
   } else {
     map.set_sources(
       map
         .get_sources()
-        .map(|x| x.as_path().relative(file_dir).to_string_lossy().into_owned())
+        .map(|x| x.map(|x| x.as_path().relative(file_dir).to_string_lossy().into_owned()))
         .collect::<Vec<_>>(),
     );
   }
@@ -278,9 +293,61 @@ fn process_sourcemap_related_reference(
 
 #[cfg(test)]
 mod tests {
-  use super::emit_sourcemap;
-  use rolldown_common::{NormalizedBundlerOptions, SourceMapType};
-  use rolldown_sourcemap::SourceMapBuilder;
+  use super::{emit_sourcemap, prepare_sourcemap};
+  use rolldown_common::{
+    NormalizedBundlerOptions, SourceMapIgnoreList, SourceMapPathTransform, SourceMapType,
+  };
+  use rolldown_sourcemap::{SourceMap, SourceMapBuilder};
+
+  #[tokio::test]
+  async fn null_sources_keep_their_indices_and_skip_path_callbacks() {
+    let options = NormalizedBundlerOptions {
+      sourcemap_ignore_list: Some(SourceMapIgnoreList::new(std::sync::Arc::new(|sources, _| {
+        assert_eq!(sources, ["input.js"]);
+        Box::pin(async { Ok(vec![true]) })
+      }))),
+      sourcemap_path_transform: Some(SourceMapPathTransform::new(std::sync::Arc::new(
+        |sources, _| {
+          assert_eq!(sources, ["input.js"]);
+          Box::pin(async { Ok(vec!["renamed.js".into()]) })
+        },
+      ))),
+      ..Default::default()
+    };
+    let dir = std::env::current_dir().unwrap();
+    let input = dir.join("input.js").to_string_lossy().into_owned();
+    let mut map = SourceMap::new(
+      None,
+      vec![],
+      None,
+      vec![None, Some(input.into())],
+      vec![],
+      Box::new([]),
+      None,
+    );
+    prepare_sourcemap(&options, &mut map, &dir, "out.js").await.unwrap();
+    assert_eq!(map.get_sources().collect::<Vec<_>>(), [None, Some("renamed.js")]);
+    assert_eq!(map.get_ignore_list(), Some(&[1][..]));
+  }
+
+  #[tokio::test]
+  async fn null_sources_survive_relative_path_normalization() {
+    let dir = std::env::current_dir().unwrap();
+    let input = dir.join("input.js").to_string_lossy().into_owned();
+    let mut map = SourceMap::new(
+      None,
+      vec![],
+      None,
+      vec![None, Some(input.into())],
+      vec![],
+      Box::new([]),
+      None,
+    );
+    prepare_sourcemap(&NormalizedBundlerOptions::default(), &mut map, &dir, "out.js")
+      .await
+      .unwrap();
+    assert_eq!(map.get_sources().collect::<Vec<_>>(), [None, Some("input.js")]);
+  }
 
   #[test]
   fn sourcemap_filenames_remain_in_comments() {

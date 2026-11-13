@@ -27,7 +27,7 @@ export interface SourceMap {
   file: string;
   mappings: string;
   names: string[];
-  sources: string[];
+  sources: (string | null)[];
   sourcesContent: string[];
   version: number;
   debugId?: string;

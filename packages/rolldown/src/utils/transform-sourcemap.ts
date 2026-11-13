@@ -49,14 +49,16 @@ export function normalizeTransformHookSourcemap(
     typeof rawMap === 'object'
       ? copySourcemapObject(rawMap)
       : (JSON.parse(rawMap) as ExistingRawSourceMap);
-  if (isEmptySourcemapFiled(map.sourcesContent)) {
-    map.sourcesContent = [originalCode];
-  }
+  const source = map.sources?.[0];
   if (
-    isEmptySourcemapFiled(map.sources) ||
-    (map.sources && map.sources.length === 1 && map.sources[0] !== id) // the transform sourcemaps maybe contain multiple sources
+    source === undefined ||
+    source === '' ||
+    (map.sources?.length === 1 && source !== null && source !== id)
   ) {
     map.sources = [id];
+  }
+  if (map.sources?.[0] !== null && isEmptySourcemapFiled(map.sourcesContent)) {
+    map.sourcesContent = [originalCode];
   }
   return map;
 }

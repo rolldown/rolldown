@@ -120,7 +120,7 @@ impl Plugin for ViteTransformPlugin {
 
     Ok(Some(rolldown_plugin::HookTransformOutput {
       map: if let Some(map) = map {
-        map.into_owned().into()
+        rolldown_sourcemap::from_oxc_sourcemap(map).into_owned().into()
       } else {
         HookTransformOutputMap::Omitted
       },

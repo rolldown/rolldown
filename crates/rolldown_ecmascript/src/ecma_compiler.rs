@@ -151,7 +151,7 @@ impl EcmaCompiler {
       .with_scoping(ret.scoping)
       .with_private_member_mappings(ret.class_private_mappings)
       .build(&program);
-    Ok((ret.code, ret.map, property_mangle_cache))
+    Ok((ret.code, ret.map.map(rolldown_sourcemap::from_oxc_sourcemap), property_mangle_cache))
   }
 }
 

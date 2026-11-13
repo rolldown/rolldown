@@ -76,7 +76,7 @@ dunce = { workspace = true }
 insta = { workspace = true }
 regex = { workspace = true }
 rolldown_common = { workspace = true }
-rolldown_testing = { path = "../rolldown_testing" }
+rolldown_testing = { workspace = true }
 rolldown_workspace = { workspace = true }
 saphyr = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

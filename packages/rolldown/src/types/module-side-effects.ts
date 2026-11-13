@@ -1,8 +1,10 @@
-interface ModuleSideEffectsRule {
+interface ModuleSideEffectsRuleBase {
   test?: RegExp;
   external?: boolean;
   sideEffects: boolean;
 }
+
+type ModuleSideEffectsRule = ModuleSideEffectsRuleBase & ({ test: RegExp } | { external: boolean });
 
 type ModuleSideEffectsOption =
   | boolean
@@ -22,7 +24,7 @@ export type TreeshakingOptions = {
    * - **`false`**: No modules have side effects. This enables aggressive tree-shaking, removing any modules whose exports are not used.
    * - **`string[]`**: Array of module IDs that have side effects. Only modules in this list will be preserved if unused; all others can be tree-shaken when their exports are unused.
    * - **`'no-external'`**: Assumes no external modules have side effects while preserving the default behavior for local modules.
-   * - **`ModuleSideEffectsRule[]`**: Array of rules with `test`, `external`, and `sideEffects` properties for fine-grained control.
+   * - **`ModuleSideEffectsRule[]`**: Array of rules with `test`, `external`, and `sideEffects` properties for fine-grained control. Each rule must set `test` or `external`.
    * - **`function`**: Function that receives `(id, external)` and returns whether the module has side effects.
    *
    * **Important:** Setting this to `false` or using an array/string assumes that your modules and their dependencies have no side effects other than their exports. Only use this if you're certain that removing unused modules won't break your application.

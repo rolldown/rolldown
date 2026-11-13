@@ -1,0 +1,10 @@
+{
+  "config": {
+    "input": [
+      { "name": "consumer", "import": "consumer.cts" },
+      { "name": "lib", "import": "lib.ts" },
+      { "name": "other", "import": "other.ts" }
+    ]
+  },
+  "configVariants": [{ "_configName": "strict", "strictExecutionOrder": true }]
+}

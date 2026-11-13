@@ -5,8 +5,8 @@ use super::{
 };
 use crate::chunk_graph::ChunkGraph;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, ChunkMeta, ExportsKind, OutputFormat, PreserveEntrySignatures,
-  UsedSymbolRefsView,
+  Chunk, ChunkIdx, ChunkKind, ChunkMeta, ExportsKind, ModuleIdx, OutputFormat,
+  PreserveEntrySignatures, UsedSymbolRefsView,
 };
 use rustc_hash::FxHashSet;
 
@@ -31,32 +31,7 @@ impl GenerateStage<'_> {
         {
           return None;
         }
-        let exported_symbols = &state.index_chunk_exported_symbols[chunk_idx];
-        // Predefined names come only from this entry's public exports.
-        if exported_symbols.values().all(|names| !names.is_empty()) {
-          return None;
-        }
-        let entry_meta = &self.link_output.metas[module];
-        let public_symbols: FxHashSet<_> = entry_meta
-          .canonical_exports(false)
-          .map(|(_, export)| self.link_output.symbol_db.canonical_ref_for(export.symbol_ref))
-          .collect();
-        let entry = self.link_output.module_table[module].as_normal().unwrap();
-        let extra = exported_symbols.keys().any(|symbol_ref| {
-          let canonical = self.link_output.symbol_db.canonical_ref_for(*symbol_ref);
-          if public_symbols.contains(&canonical) {
-            return false;
-          }
-          // A CJS entry's own symbols are served by its public module.exports value.
-          if !matches!(self.options.format, OutputFormat::Esm)
-            && !matches!(entry.exports_kind, ExportsKind::Esm)
-            && canonical.owner == module
-          {
-            return false;
-          }
-          self.cross_chunk_symbol_is_live(used, &state.order_live_symbols, canonical)
-        });
-        extra.then_some(chunk_idx)
+        self.chunk_exports_internal_symbols(chunk_idx, module, used, state).then_some(chunk_idx)
       })
       .collect();
     let changed = !candidates.is_empty();
@@ -64,6 +39,44 @@ impl GenerateStage<'_> {
       self.create_entry_facade(chunk_graph, chunk_idx);
     }
     changed
+  }
+
+  /// Whether the entry chunk `chunk_idx` exports a live symbol that is not a canonical public
+  /// export of its entry module `module`. Such a symbol gives the namespace of the chunk file a key
+  /// that the namespace of the entry module does not have. The derived exports include generated
+  /// bindings, namespace objects and import bindings that other chunks read.
+  pub(super) fn chunk_exports_internal_symbols(
+    &self,
+    chunk_idx: ChunkIdx,
+    module: ModuleIdx,
+    used: UsedSymbolRefsView<'_>,
+    state: &CrossChunkLinkState,
+  ) -> bool {
+    let exported_symbols = &state.index_chunk_exported_symbols[chunk_idx];
+    // Predefined names come only from this entry's public exports.
+    if exported_symbols.values().all(|names| !names.is_empty()) {
+      return false;
+    }
+    let entry_meta = &self.link_output.metas[module];
+    let public_symbols: FxHashSet<_> = entry_meta
+      .canonical_exports(false)
+      .map(|(_, export)| self.link_output.symbol_db.canonical_ref_for(export.symbol_ref))
+      .collect();
+    let entry = self.link_output.module_table[module].as_normal().unwrap();
+    exported_symbols.keys().any(|symbol_ref| {
+      let canonical = self.link_output.symbol_db.canonical_ref_for(*symbol_ref);
+      if public_symbols.contains(&canonical) {
+        return false;
+      }
+      // A CJS entry's own symbols are served by its public module.exports value.
+      if !matches!(self.options.format, OutputFormat::Esm)
+        && !matches!(entry.exports_kind, ExportsKind::Esm)
+        && canonical.owner == module
+      {
+        return false;
+      }
+      self.cross_chunk_symbol_is_live(used, &state.order_live_symbols, canonical)
+    })
   }
 
   pub(super) fn create_entry_facade(

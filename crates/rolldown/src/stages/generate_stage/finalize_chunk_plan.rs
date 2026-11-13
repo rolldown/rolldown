@@ -119,6 +119,13 @@ impl GenerateStage<'_> {
         self.compute_final_chunk_links(chunk_graph, used_symbol_refs_builder.view(), &order_state);
     }
 
+    #[cfg(debug_assertions)]
+    self.debug_assert_dynamic_entry_namespaces(
+      chunk_graph,
+      used_symbol_refs_builder.view(),
+      &link_state,
+    );
+
     let rendered_chunk_count = chunk_graph
       .chunk_table
       .len()

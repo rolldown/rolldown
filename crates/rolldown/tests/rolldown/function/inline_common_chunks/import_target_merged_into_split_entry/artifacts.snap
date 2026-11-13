@@ -1,0 +1,70 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { t as init_main } from "./main2.js";
+init_main();
+
+```
+
+## main2.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+// a.js
+var a;
+function init_a() {
+	return (init_a = __esmMin((() => {
+		a = typeof import.meta.url;
+	})))();
+}
+// d.js
+var d_exports = /* @__PURE__ */ __exportAll({ d: () => "d" });
+function init_d() {
+	return (init_d = __esmMin((() => {
+		globalThis.events.push("d");
+	})))();
+}
+// main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_a();
+		init_d();
+		globalThis.events.push("main " + a + "d");
+		globalThis.loadQ = () => import("./q.js");
+	})))();
+}
+export { init_a as a, a as i, d_exports as n, init_d as r, init_main as t };
+
+```
+
+## q.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { a as init_a, i as a } from "./main2.js";
+// q.js
+var q;
+function init_q() {
+	return (init_q = __esmMin((() => {
+		init_a();
+		q = "q" + a;
+		globalThis.loadD = () => import("./main2.js").then((n) => (n.r(), n.n));
+	})))();
+}
+init_q();
+export { q };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```

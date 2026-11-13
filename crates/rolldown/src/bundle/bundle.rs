@@ -253,11 +253,11 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
         .with_context(|| format!("Failed to write file in {}", dest.display()))
     };
     let mut seen = FxHashSet::with_capacity(destinations.len());
-    // `foo.js` and `Foo.js` are one file on case-insensitive file systems.
-    if destinations
-      .iter()
-      .all(|(_, dest)| seen.insert(PathBuf::from(dest.to_string_lossy().to_lowercase())))
-    {
+    // `foo.js` and `Foo.js` are one file on case-insensitive file systems, and `a/../foo.js` is
+    // `foo.js` on any file system.
+    if destinations.iter().all(|(_, dest)| {
+      seen.insert(PathBuf::from(dest.normalize().to_string_lossy().to_lowercase()))
+    }) {
       // Large builds emit tens of thousands of files; writing them one at a time leaves the
       // output stage bound by per-file syscall latency. Distinct paths are independent, so write
       // them in parallel and report the first failure in output order to keep errors stable.

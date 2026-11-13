@@ -75,6 +75,11 @@ impl BindingTreeshake {
       Either4::C(rules) => {
         let mut ret = Vec::with_capacity(rules.len());
         for rule in rules {
+          if rule.test.is_none() && rule.external.is_none() {
+            anyhow::bail!(
+              "Each rule in `treeshake.moduleSideEffects` must set `test` or `external`."
+            );
+          }
           let test = match rule.test {
             Some(test) => Some(HybridRegex::with_flags(&test.source, &test.flags)?),
             None => None,

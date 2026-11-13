@@ -1020,202 +1020,198 @@ impl GenerateStage<'_> {
       index_chunk_dynamic_imports_from_external_modules.iter_mut(),
     ));
 
-    // Each task returns its chunk's declared symbols instead of pushing into a shared
-    // concurrent vector; the table built from them is order-independent.
-    let chunk_id_to_symbols_vec = chunks_iter
-      .par_bridge()
-      .map(
-        |(
-          (chunk_id, chunk),
-          depended_symbols,
-          imports_from_external_modules,
-          cross_chunk_dynamic_imports,
-          dynamic_imports_from_external_modules,
-        )| {
-          let mut symbol_needs_to_assign = vec![];
-          chunk.modules.iter().copied().for_each(|module_id| {
-            let Module::Normal(module) = &self.link_output.module_table[module_id] else {
-              return;
-            };
-            module
-              .import_records
-              .iter()
-              .filter_map(|rec| rec.resolved_module.map(|module_idx| (rec, module_idx)))
-              .for_each(|(rec, module_idx)| match &self.link_output.module_table[module_idx] {
-                Module::Normal(_) => self.collect_dynamic_chunk_import(
-                  chunk_graph,
-                  module.idx,
-                  rec,
-                  module_idx,
-                  cross_chunk_dynamic_imports,
-                ),
-                Module::External(_) => self.collect_external_import(
-                  module.idx,
-                  rec,
-                  module_idx,
-                  imports_from_external_modules,
-                  dynamic_imports_from_external_modules,
-                ),
+    // Chunks arrive in no fixed order; `build_symbol_chunk_table` does not depend on it.
+    let chunk_symbols = chunks_iter.par_bridge().map(
+      |(
+        (chunk_id, chunk),
+        depended_symbols,
+        imports_from_external_modules,
+        cross_chunk_dynamic_imports,
+        dynamic_imports_from_external_modules,
+      )| {
+        let mut symbol_needs_to_assign = vec![];
+        chunk.modules.iter().copied().for_each(|module_id| {
+          let Module::Normal(module) = &self.link_output.module_table[module_id] else {
+            return;
+          };
+          module
+            .import_records
+            .iter()
+            .filter_map(|rec| rec.resolved_module.map(|module_idx| (rec, module_idx)))
+            .for_each(|(rec, module_idx)| match &self.link_output.module_table[module_idx] {
+              Module::Normal(_) => self.collect_dynamic_chunk_import(
+                chunk_graph,
+                module.idx,
+                rec,
+                module_idx,
+                cross_chunk_dynamic_imports,
+              ),
+              Module::External(_) => self.collect_external_import(
+                module.idx,
+                rec,
+                module_idx,
+                imports_from_external_modules,
+                dynamic_imports_from_external_modules,
+              ),
+            });
+
+          module
+            .named_imports
+            .iter()
+            .filter_map(|(_, import)| {
+              module.import_records[import.record_idx]
+                .resolved_module
+                .map(|module_idx| (import, module_idx))
+            })
+            .for_each(|(import, module_idx)| {
+              if let Module::External(importee) = &self.link_output.module_table[module_idx] {
+                imports_from_external_modules
+                  .entry(importee.idx)
+                  .or_default()
+                  .push((module.idx, import.clone()));
+              }
+            });
+          self.link_output.stmt_infos[module.idx].iter_enumerated().for_each(
+            |(stmt_info_idx, stmt_info)| {
+              let is_order_runtime_stmt =
+                order_state.forces_runtime_stmt(&self.link_output.runtime, module.idx, stmt_info);
+              if !self.link_output.metas[module.idx].stmt_info_included.has_bit(stmt_info_idx)
+                && !is_order_runtime_stmt
+              {
+                return;
+              }
+              if stmt_info.import_records.iter().any(|rec_idx| {
+                order_state.has_order_cjs_carrier(super::order_wrap_state::OrderCjsCarrierKey {
+                  importer: module.idx,
+                  record: *rec_idx,
+                }) || (order_state.is_consumer_local_reexport_route(module.idx)
+                  && module.import_records[*rec_idx].kind == ImportKind::Import)
+              }) {
+                return;
+              }
+              stmt_info.declared_symbols.iter().for_each(|declared| {
+                symbol_needs_to_assign.push(*declared);
               });
 
-            module
-              .named_imports
-              .iter()
-              .filter_map(|(_, import)| {
-                module.import_records[import.record_idx]
-                  .resolved_module
-                  .map(|module_idx| (import, module_idx))
-              })
-              .for_each(|(import, module_idx)| {
-                if let Module::External(importee) = &self.link_output.module_table[module_idx] {
-                  imports_from_external_modules
-                    .entry(importee.idx)
-                    .or_default()
-                    .push((module.idx, import.clone()));
-                }
-              });
-            self.link_output.stmt_infos[module.idx].iter_enumerated().for_each(
-              |(stmt_info_idx, stmt_info)| {
-                let is_order_runtime_stmt =
-                  order_state.forces_runtime_stmt(&self.link_output.runtime, module.idx, stmt_info);
-                if !self.link_output.metas[module.idx].stmt_info_included.has_bit(stmt_info_idx)
-                  && !is_order_runtime_stmt
-                {
-                  return;
-                }
-                if stmt_info.import_records.iter().any(|rec_idx| {
-                  order_state.has_order_cjs_carrier(super::order_wrap_state::OrderCjsCarrierKey {
-                    importer: module.idx,
-                    record: *rec_idx,
-                  }) || (order_state.is_consumer_local_reexport_route(module.idx)
-                    && module.import_records[*rec_idx].kind == ImportKind::Import)
-                }) {
-                  return;
-                }
-                stmt_info.declared_symbols.iter().for_each(|declared| {
-                  symbol_needs_to_assign.push(*declared);
-                });
-
-                stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
-                  match reference_ref {
-                    rolldown_common::SymbolOrMemberExprRef::Symbol(referenced) => {
-                      self.add_depended_symbol_with_wrapped_esm_init(
-                        chunk_graph,
-                        order_state,
-                        depended_symbols,
-                        symbols.canonical_ref_resolving_namespace(*referenced),
-                      );
-                    }
-                    rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => {
-                      match member_expr.represent_symbol_ref(
-                        &self.link_output.metas[module.idx].resolved_member_expr_refs,
-                      ) {
-                        Some(sym_ref) => {
-                          self.add_depended_symbol_with_wrapped_esm_init(
-                            chunk_graph,
-                            order_state,
-                            depended_symbols,
-                            symbols.canonical_ref_resolving_namespace(sym_ref),
-                          );
-                        }
-                        _ => {
-                          // `None` means the member expression resolve to a ambiguous export, which means it actually resolve to nothing.
-                          // It would be rewrite to `undefined` in the final code, so we don't need to include anything to make `undefined` work.
-                        }
+              stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
+                match reference_ref {
+                  rolldown_common::SymbolOrMemberExprRef::Symbol(referenced) => {
+                    self.add_depended_symbol_with_wrapped_esm_init(
+                      chunk_graph,
+                      order_state,
+                      depended_symbols,
+                      symbols.canonical_ref_resolving_namespace(*referenced),
+                    );
+                  }
+                  rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => {
+                    match member_expr.represent_symbol_ref(
+                      &self.link_output.metas[module.idx].resolved_member_expr_refs,
+                    ) {
+                      Some(sym_ref) => {
+                        self.add_depended_symbol_with_wrapped_esm_init(
+                          chunk_graph,
+                          order_state,
+                          depended_symbols,
+                          symbols.canonical_ref_resolving_namespace(sym_ref),
+                        );
+                      }
+                      _ => {
+                        // `None` means the member expression resolve to a ambiguous export, which means it actually resolve to nothing.
+                        // It would be rewrite to `undefined` in the final code, so we don't need to include anything to make `undefined` work.
                       }
                     }
                   }
-                });
-              },
-            );
-            self.add_module_esm_init_depended_symbols(
+                }
+              });
+            },
+          );
+          self.add_module_esm_init_depended_symbols(
+            chunk_graph,
+            used_symbol_refs_view,
+            order_state,
+            final_esm_init_metadata,
+            depended_symbols,
+            module.idx,
+          );
+        });
+
+        if let Some(entry_id) = &chunk.entry_module_idx() {
+          let entry = &self.link_output.module_table[*entry_id].as_normal().unwrap();
+          let entry_meta = &self.link_output.metas[entry.idx];
+
+          if !matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
+            self.register_entry_export_depended_symbols(
               chunk_graph,
-              used_symbol_refs_view,
+              order_state,
+              depended_symbols,
+              entry.idx,
+              entry_meta,
+            );
+          }
+
+          if matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
+            depended_symbols
+              .insert(entry_meta.wrapper_ref.expect("CJS entry should have a wrapper"));
+          } else if let Some(targets) = order_state.consumer_local_namespace_targets(entry.idx) {
+            for &target in targets {
+              self.add_wrapped_esm_init_target_depended_symbol(
+                chunk_graph,
+                order_state,
+                depended_symbols,
+                target,
+              );
+            }
+          } else if let Some(target) = order_state.esm_init_target(entry.idx, entry_meta) {
+            depended_symbols.insert(target.wrapper_ref);
+          }
+          if let Some(final_esm_init_metadata) = final_esm_init_metadata.sealed() {
+            self.add_transitive_esm_init_depended_symbols(
+              chunk_graph,
               order_state,
               final_esm_init_metadata,
               depended_symbols,
-              module.idx,
+              entry.idx,
             );
-          });
-
-          if let Some(entry_id) = &chunk.entry_module_idx() {
-            let entry = &self.link_output.module_table[*entry_id].as_normal().unwrap();
-            let entry_meta = &self.link_output.metas[entry.idx];
-
-            if !matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
-              self.register_entry_export_depended_symbols(
-                chunk_graph,
-                order_state,
-                depended_symbols,
-                entry.idx,
-                entry_meta,
-              );
-            }
-
-            if matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
-              depended_symbols
-                .insert(entry_meta.wrapper_ref.expect("CJS entry should have a wrapper"));
-            } else if let Some(targets) = order_state.consumer_local_namespace_targets(entry.idx) {
-              for &target in targets {
-                self.add_wrapped_esm_init_target_depended_symbol(
-                  chunk_graph,
-                  order_state,
-                  depended_symbols,
-                  target,
-                );
-              }
-            } else if let Some(target) = order_state.esm_init_target(entry.idx, entry_meta) {
-              depended_symbols.insert(target.wrapper_ref);
-            }
-            if let Some(final_esm_init_metadata) = final_esm_init_metadata.sealed() {
-              self.add_transitive_esm_init_depended_symbols(
-                chunk_graph,
-                order_state,
-                final_esm_init_metadata,
-                depended_symbols,
-                entry.idx,
-              );
-            }
-
-            if matches!(self.options.format, OutputFormat::Cjs)
-              && matches!(entry.exports_kind, ExportsKind::Esm)
-            {
-              depended_symbols.insert(self.link_output.runtime.resolve_symbol("__toCommonJS"));
-              depended_symbols.insert(entry.namespace_object_ref);
-            }
           }
 
-          self.add_absorbed_entry_init_deps(chunk_graph, order_state, depended_symbols, chunk_id);
-
-          for synthetic in order_state.synthetic_statements_for_chunk(chunk_id) {
-            symbol_needs_to_assign.extend(synthetic.declared_symbols.iter().copied());
-            for referenced in &synthetic.referenced_symbols {
-              self.add_depended_symbol_with_wrapped_esm_init(
-                chunk_graph,
-                order_state,
-                depended_symbols,
-                symbols.canonical_ref_resolving_namespace(*referenced),
-              );
-            }
-            for helper in synthetic.runtime_helpers {
-              let index = helper.bits().trailing_zeros() as usize;
-              depended_symbols
-                .insert(self.link_output.runtime.resolve_symbol(RUNTIME_HELPER_NAMES[index]));
-            }
+          if matches!(self.options.format, OutputFormat::Cjs)
+            && matches!(entry.exports_kind, ExportsKind::Esm)
+          {
+            depended_symbols.insert(self.link_output.runtime.resolve_symbol("__toCommonJS"));
+            depended_symbols.insert(entry.namespace_object_ref);
           }
+        }
 
-          // Depending runtime helpers
-          for helper in chunk.depended_runtime_helper {
+        self.add_absorbed_entry_init_deps(chunk_graph, order_state, depended_symbols, chunk_id);
+
+        for synthetic in order_state.synthetic_statements_for_chunk(chunk_id) {
+          symbol_needs_to_assign.extend(synthetic.declared_symbols.iter().copied());
+          for referenced in &synthetic.referenced_symbols {
+            self.add_depended_symbol_with_wrapped_esm_init(
+              chunk_graph,
+              order_state,
+              depended_symbols,
+              symbols.canonical_ref_resolving_namespace(*referenced),
+            );
+          }
+          for helper in synthetic.runtime_helpers {
             let index = helper.bits().trailing_zeros() as usize;
-            let name = RUNTIME_HELPER_NAMES[index];
-            depended_symbols.insert(self.link_output.runtime.resolve_symbol(name));
+            depended_symbols
+              .insert(self.link_output.runtime.resolve_symbol(RUNTIME_HELPER_NAMES[index]));
           }
+        }
 
-          (chunk_id, symbol_needs_to_assign)
-        },
-      )
-      .collect::<Vec<_>>();
-    self.build_symbol_chunk_table(chunk_id_to_symbols_vec)
+        // Depending runtime helpers
+        for helper in chunk.depended_runtime_helper {
+          let index = helper.bits().trailing_zeros() as usize;
+          let name = RUNTIME_HELPER_NAMES[index];
+          depended_symbols.insert(self.link_output.runtime.resolve_symbol(name));
+        }
+
+        (chunk_id, symbol_needs_to_assign)
+      },
+    );
+    self.build_symbol_chunk_table(chunk_symbols.collect())
   }
 
   /// Record which chunk owns each declared symbol, so [`Self::compute_chunk_imports`] can resolve a

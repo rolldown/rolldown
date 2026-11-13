@@ -7,7 +7,7 @@ use rolldown_common::{
   UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
-use rolldown_utils::BitSet;
+use rolldown_utils::{BitSet, indexmap::FxIndexMap};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::chunk_graph::ChunkGraph;
@@ -50,6 +50,26 @@ impl ReducedEntriesAction {
   fn apply_if(apply: bool) -> Self {
     if apply { ReducedEntriesAction::Apply } else { ReducedEntriesAction::Avoid }
   }
+
+  fn record_namespace_extraction(
+    &self,
+    namespace_extractions: &mut FxHashSet<(ChunkIdx, ModuleIdx)>,
+  ) {
+    if let ReducedEntriesAction::ApplyWithNamespaceExtraction {
+      entry_chunk_idx,
+      entry_module_idx,
+    } = *self
+    {
+      namespace_extractions.insert((entry_chunk_idx, entry_module_idx));
+    }
+  }
+}
+
+/// A reduction that the pass accepted but whose move the cycle check rejected.
+struct RejectedMove {
+  atom_idx: usize,
+  reduced: BitSet,
+  action: ReducedEntriesAction,
 }
 
 impl GenerateStage<'_> {
@@ -108,6 +128,7 @@ impl GenerateStage<'_> {
       &host_atom_by_entry_bit,
     );
     let mut changed = false;
+    let mut rejected_moves = vec![];
     for (atom_idx, atom) in atoms.iter_mut().enumerate() {
       let original_dependent_entries = atom.dependent_entries.clone();
       let dependent_entries = atom.dependent_entries.index_of_one().collect::<Vec<_>>();
@@ -128,20 +149,26 @@ impl GenerateStage<'_> {
           &dynamic_entry_modules_by_entry,
         )
       };
-      if !matches!(action, ReducedEntriesAction::Avoid)
-        && reduced_chunk_graph.try_move(atom_idx, &atom.dependent_entries)
-      {
-        changed = true;
-        if let ReducedEntriesAction::ApplyWithNamespaceExtraction {
-          entry_chunk_idx,
-          entry_module_idx,
-        } = action
-        {
-          namespace_extractions.insert((entry_chunk_idx, entry_module_idx));
-        }
-      } else {
+      if matches!(action, ReducedEntriesAction::Avoid) {
         atom.dependent_entries = original_dependent_entries;
+      } else if reduced_chunk_graph.try_move(atom_idx, &atom.dependent_entries) {
+        changed = true;
+        action.record_namespace_extraction(&mut namespace_extractions);
+      } else {
+        let reduced = std::mem::replace(&mut atom.dependent_entries, original_dependent_entries);
+        rejected_moves.push(RejectedMove { atom_idx, reduced, action });
       }
+    }
+    // Manual code splitting places its modules after this pass, so the cycle graph does not see
+    // the chunks of its groups. A retry can then fold a dependency of a group into a chunk that
+    // imports the group (`issues/9225`).
+    if !self.options.has_manual_code_splitting_groups() {
+      changed |= Self::retry_rejected_moves(
+        &mut atoms,
+        &mut reduced_chunk_graph,
+        rejected_moves,
+        &mut namespace_extractions,
+      );
     }
 
     if !changed {
@@ -162,6 +189,50 @@ impl GenerateStage<'_> {
       &namespace_extractions,
       used_symbol_refs_builder,
     );
+  }
+
+  /// Retries the rejected moves after the first pass. A rejected move can close a cycle only
+  /// through an atom that has not moved yet, so a later move can make it acyclic. Each round first
+  /// moves the rejected atoms with equal reduced bits together, then one by one, until a round
+  /// moves nothing. See internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
+  fn retry_rejected_moves(
+    atoms: &mut [ChunkAtom],
+    reduced_chunk_graph: &mut ReducedChunkGraph<'_>,
+    mut rejected_moves: Vec<RejectedMove>,
+    namespace_extractions: &mut FxHashSet<(ChunkIdx, ModuleIdx)>,
+  ) -> bool {
+    let mut changed = false;
+    while !rejected_moves.is_empty() {
+      let mut groups: FxIndexMap<&BitSet, Vec<usize>> = FxIndexMap::default();
+      for (idx, rejected_move) in rejected_moves.iter().enumerate() {
+        groups.entry(&rejected_move.reduced).or_default().push(idx);
+      }
+      let mut moved = vec![false; rejected_moves.len()];
+      for (bits, idxs) in groups {
+        let atom_idxs = idxs.iter().map(|&idx| rejected_moves[idx].atom_idx).collect::<Vec<_>>();
+        if atom_idxs.len() > 1 && reduced_chunk_graph.try_move_atoms(&atom_idxs, bits) {
+          idxs.iter().for_each(|&idx| moved[idx] = true);
+          continue;
+        }
+        for (&idx, &atom_idx) in idxs.iter().zip(&atom_idxs) {
+          moved[idx] = reduced_chunk_graph.try_move(atom_idx, bits);
+        }
+      }
+      if !moved.contains(&true) {
+        break;
+      }
+      changed = true;
+      let mut moved = moved.into_iter();
+      rejected_moves.retain(|rejected_move| {
+        if !moved.next().unwrap_or_default() {
+          return true;
+        }
+        atoms[rejected_move.atom_idx].dependent_entries = rejected_move.reduced.clone();
+        rejected_move.action.record_namespace_extraction(namespace_extractions);
+        false
+      });
+    }
+    changed
   }
 
   fn can_use_reduced_dependent_entries(

@@ -1,0 +1,69 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## counter.js
+
+```js
+import { i as __share_export, r as __share, t as __commonJSMin } from "./rolldown-runtime.js";
+__share("counter-K9S_p2hO", ((exports$1) => {
+	// counter.cjs
+	var require_counter = /* @__PURE__ */ __commonJSMin(((exports) => {
+		globalThis.events.push("counter body");
+		exports.count = 0;
+		exports.inc = () => ++exports.count;
+	}));
+	__share_export(exports$1, { t: () => require_counter });
+}));
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __share_require as a, __share_export as i, __esmMin as n, __toESM as o, __share as r, __commonJSMin as t };
+
+```
+
+## x.js
+
+```js
+import { a as __share_require, i as __share_export, n as __esmMin, o as __toESM, r as __share, t as __commonJSMin } from "./rolldown-runtime.js";
+__share("counter-K9S_p2hO", ((exports$1) => {
+	// counter.cjs
+	var require_counter = /* @__PURE__ */ __commonJSMin(((exports) => {
+		globalThis.events.push("counter body");
+		exports.count = 0;
+		exports.inc = () => ++exports.count;
+	}));
+	__share_export(exports$1, { t: () => require_counter });
+}));
+var share_counter = __share_require("counter-K9S_p2hO");
+// x.js
+var import_counter;
+function init_x() {
+	return (init_x = __esmMin((() => {
+		import_counter = /* @__PURE__ */ __toESM(share_counter.t());
+		import_counter.inc();
+		globalThis.events.push("X " + import_counter.count);
+	})))();
+}
+init_x();
+
+```
+
+## y.js
+
+```js
+import { a as __share_require, n as __esmMin, o as __toESM } from "./rolldown-runtime.js";
+// y.js
+function init_y() {
+	return (init_y = __esmMin((() => {
+		globalThis.loadCounter = () => import("./counter.js").then((n) => (n = __share_require("counter-K9S_p2hO"), /* @__PURE__ */ __toESM(n.t())));
+	})))();
+}
+init_y();
+
+```

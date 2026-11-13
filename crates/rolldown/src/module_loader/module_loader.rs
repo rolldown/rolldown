@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
 use std::collections::hash_map::Entry;
+use std::path::Path;
 use std::sync::Arc;
 
 use arcstr::ArcStr;
@@ -25,10 +26,12 @@ use rolldown_error::{
 };
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
+use rolldown_utils::commondir;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
+use sugar_path::SugarPath;
 use tracing::Instrument;
 
 use crate::module_loader::module_task::ModuleTaskOwner;
@@ -422,7 +425,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     let ctx = Arc::clone(&self.shared_context);
     if resolved_id.external.is_external() {
       self.external_module_idxs.insert(idx);
-      let task = ExternalModuleTask::new(ctx, idx, resolved_id, Arc::clone(user_defined_entries));
+      let task = ExternalModuleTask::new(ctx, idx, resolved_id);
       tokio::spawn(task.run().instrument(tracing::info_span!("external_module_task")));
     } else {
       let task = ModuleTask::new(
@@ -860,6 +863,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       }
     }
 
+    self.render_new_external_paths(&user_defined_entries, &extra_entry_points);
+
     let mut errors = std::mem::take(&mut self.errors);
     if !errors.is_empty() {
       // Enrich UNRESOLVED_IMPORT errors with import chain. Must run before
@@ -1021,6 +1026,39 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       tla_module_count: self.tla_module_count,
       tla_keyword_span_map: std::mem::take(&mut self.tla_keyword_span_map),
     })
+  }
+
+  /// Renders each path external this scan added relative to the common directory of the entries.
+  /// A full scan computes that directory here, after the scan, because emitted chunks join the
+  /// entries during it.
+  fn render_new_external_paths(
+    &mut self,
+    user_defined_entries: &[(Option<ArcStr>, ResolvedId)],
+    extra_entry_points: &[EntryPoint],
+  ) {
+    if self.is_full_scan {
+      let modules = &self.intermediate_normal_modules.modules;
+      let emitted_entry_ids = extra_entry_points.iter().filter_map(|entry| {
+        let id = modules.try_get(entry.idx)?.as_ref()?.id();
+        id.is_path().then(|| id.raw_id())
+      });
+      let common_dir = commondir::common_dir(
+        user_defined_entries
+          .iter()
+          .map(|(_, resolved_id)| resolved_id.id.raw_id())
+          .chain(emitted_entry_ids),
+      );
+      self.cache.user_defined_entry_common_dir = common_dir.map(Arc::from);
+    }
+    let cwd = self.shared_context.options.cwd.as_path();
+    let common_dir = self.cache.user_defined_entry_common_dir.as_deref().unwrap_or(cwd);
+    for &idx in &self.external_module_idxs {
+      if let Some(Module::External(module)) = self.intermediate_normal_modules.modules.get_mut(idx)
+        && module.need_renormalize_render_path
+      {
+        module.name = Path::new(module.id.raw_id()).relative(common_dir).to_slash().into();
+      }
+    }
   }
 
   #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
@@ -1264,5 +1302,52 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       barrel_module_state.tracked_records = tracked_records;
       barrel_module_state.remaining_imported_specifiers = remaining_imported_specifiers;
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use std::sync::Arc;
+
+  use rolldown_common::{BundleMode, BundlerOptions, FlatOptions, ModuleId, ResolvedId};
+  use rolldown_fs::OsFileSystem;
+
+  use crate::{
+    BundleFactory, BundleFactoryOptions,
+    module_loader::task_context::{TaskContext, TaskContextMeta},
+  };
+
+  use super::{ExternalModuleTask, ModuleTask};
+
+  /// A module task that finishes after its build was dropped must not panic when it sends.
+  #[tokio::test]
+  async fn module_tasks_ignore_a_dropped_receiver() {
+    let mut factory = BundleFactory::new(BundleFactoryOptions {
+      bundler_options: BundlerOptions::default(),
+      disable_tracing_setup: true,
+      ..Default::default()
+    })
+    .expect("create bundle factory");
+    let bundle = factory.create_bundle(BundleMode::FullBuild, None).expect("create bundle");
+    // Drop the receiver at once, as a dropped build does.
+    let (tx, _) = tokio::sync::mpsc::unbounded_channel();
+    let ctx: Arc<TaskContext<OsFileSystem>> = Arc::new(TaskContext {
+      options: bundle.options,
+      tx,
+      resolver: bundle.resolver,
+      fs: bundle.fs,
+      plugin_driver: bundle.plugin_driver,
+      meta: TaskContextMeta { replace_global_define_config: None },
+    });
+
+    let normal = ResolvedId { id: ModuleId::new_empty("empty"), ..Default::default() };
+    let flat_options = FlatOptions::from_shared_options(&ctx.options);
+    ModuleTask::new(Arc::clone(&ctx), 0.into(), normal, None, false, None, flat_options, None)
+      .run()
+      .await;
+
+    let external =
+      ResolvedId { id: ModuleId::new("external"), external: true.into(), ..Default::default() };
+    ExternalModuleTask::new(Arc::clone(&ctx), 1.into(), external).run().await;
   }
 }

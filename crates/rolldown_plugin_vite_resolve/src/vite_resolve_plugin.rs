@@ -20,7 +20,9 @@ use rolldown_plugin::{
   HookResolveIdReturn, HookUsage, Plugin, PluginContext, typedmap::TypedMapKey,
 };
 use rolldown_std_utils::PathExt as _;
-use rolldown_utils::{dataurl::is_data_url, pattern_filter::StringOrRegex};
+use rolldown_utils::{
+  dataurl::is_data_url, ecmascript::to_ecma_string_literal, pattern_filter::StringOrRegex,
+};
 
 use crate::{
   ResolveOptionsExternal,
@@ -657,6 +659,7 @@ impl Plugin for ViteResolvePlugin {
 
 // rolldown uses esbuild interop helper, so copy the proxy module from https://github.com/vitejs/vite/blob/main/packages/vite/src/node/optimizer/esbuildDepPlugin.ts#L259
 fn get_development_build_browser_external_module_code(id_without_prefix: &str) -> ArcStr {
+  let path = to_ecma_string_literal(id_without_prefix, false);
   arcstr::format!(
     "\
 module.exports = Object.create(new Proxy({{}}, {{
@@ -667,7 +670,8 @@ module.exports = Object.create(new Proxy({{}}, {{
       key !== 'constructor' &&
       key !== 'splice'
     ) {{
-      throw new Error(`Module \"{id_without_prefix}\" has been externalized for browser compatibility. Cannot access \"{id_without_prefix}.${{key}}\" in client code.  See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.`)
+      const path = {path};
+      throw new Error(`Module \"${{path}}\" has been externalized for browser compatibility. Cannot access \"${{path}}.${{key}}\" in client code.  See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.`)
     }}
   }}
 }}))\
@@ -675,11 +679,13 @@ module.exports = Object.create(new Proxy({{}}, {{
   )
 }
 fn get_development_dev_browser_external_module_code(id_without_prefix: &str) -> ArcStr {
+  let path = to_ecma_string_literal(id_without_prefix, false);
   arcstr::format!(
     "\
 export default new Proxy({{}}, {{
   get(_, key) {{
-    throw new Error(`Module \"{id_without_prefix}\" has been externalized for browser compatibility. Cannot access \"{id_without_prefix}.${{key}}\" in client code.  See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.`)
+    const path = {path};
+    throw new Error(`Module \"${{path}}\" has been externalized for browser compatibility. Cannot access \"${{path}}.${{key}}\" in client code.  See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.`)
   }}
 }})\
     "
@@ -691,10 +697,14 @@ fn get_optional_peer_dep_module_code(
   is_production: bool,
 ) -> ArcStr {
   let additional_message = if is_production { " Is it installed?" } else { "" };
+  let peer_dep = to_ecma_string_literal(peer_dep, false);
+  let parent_dep = to_ecma_string_literal(parent_dep, false);
   arcstr::format!(
     "\
 export default {{}};
-throw new Error(`Could not resolve \"{peer_dep}\" imported by \"{parent_dep}\".{additional_message}`)\
+const peerDep = {peer_dep};
+const parentDep = {parent_dep};
+throw new Error(`Could not resolve \"${{peerDep}}\" imported by \"${{parentDep}}\".{additional_message}`)\
     "
   )
 }

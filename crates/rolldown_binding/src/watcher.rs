@@ -14,6 +14,7 @@ use rolldown_watcher::{WatchEvent, WatcherConfig, WatcherEventHandler};
 use crate::types::binding_bundler_options::BindingBundlerOptions;
 use crate::types::binding_watcher_event::BindingWatcherEvent;
 use crate::types::js_callback::{MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt};
+use crate::types::js_callback_release::{RequestReleaseOnDrop, SharedJsCallbackRelease};
 use crate::utils::{
   create_bundler_config_from_binding_options::create_bundler_config_from_binding_options,
   spawn_boxed_future,
@@ -22,11 +23,13 @@ use crate::utils::{
 /// Bridges watcher events from Rust to JS via a `ThreadsafeFunction`.
 struct NapiWatcherEventHandler {
   listener: Arc<MaybeAsyncJsCallback<FnArgs<(BindingWatcherEvent,)>>>,
+  /// Each event result keeps a hold on this value while the result closes.
+  option_callbacks: SharedJsCallbackRelease,
 }
 
 impl WatcherEventHandler for NapiWatcherEventHandler {
   async fn on_event(&self, event: WatchEvent) {
-    let binding_event = BindingWatcherEvent::from_watch_event(event);
+    let binding_event = BindingWatcherEvent::from_watch_event(event, self.option_callbacks.clone());
     if let Err(e) = self.listener.await_call(FnArgs { data: (binding_event,) }).await {
       eprintln!("watcher on_event listener error: {e:?}");
     }
@@ -57,6 +60,12 @@ impl WatcherEventHandler for NapiWatcherEventHandler {
 #[napi]
 pub struct BindingWatcher {
   inner: Arc<rolldown_watcher::Watcher>,
+  /// The JS functions of the options of each task. `close` requests their release. The close of
+  /// one event result (`BindingWatcherBundler::close`) does not request it, because the next
+  /// rebuilds still use the functions. But an event result close that still runs delays the
+  /// release until that close ends.
+  /// See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
+  option_callbacks: SharedJsCallbackRelease,
 }
 
 #[napi]
@@ -69,10 +78,13 @@ impl BindingWatcher {
     options: Vec<BindingBundlerOptions>,
     listener: MaybeAsyncJsCallback<FnArgs<(BindingWatcherEvent,)>>,
   ) -> napi::Result<Self> {
-    let configs = options
+    let (configs, option_callbacks): (Vec<_>, Vec<_>) = options
       .into_iter()
       .map(create_bundler_config_from_binding_options)
-      .collect::<Result<Vec<_>, _>>()?;
+      .collect::<Result<Vec<_>, _>>()?
+      .into_iter()
+      .map(|normalized| (normalized.config, normalized.callbacks))
+      .unzip();
 
     // See internal-docs/watch-mode/implementation.md ("Multi-Config Watcher Options").
     let debounce = configs
@@ -82,7 +94,11 @@ impl BindingWatcher {
       .map(|ms| Duration::from_millis(u64::from(ms)));
     let watcher_config = WatcherConfig { debounce };
 
-    let handler = NapiWatcherEventHandler { listener: Arc::new(listener) };
+    let option_callbacks = SharedJsCallbackRelease::new(option_callbacks);
+    let handler = NapiWatcherEventHandler {
+      listener: Arc::new(listener),
+      option_callbacks: option_callbacks.clone(),
+    };
     let inner =
       rolldown_watcher::Watcher::new(configs, handler, &watcher_config).map_err(|errs| {
         napi::Error::new(
@@ -90,7 +106,7 @@ impl BindingWatcher {
           errs.iter().map(|e| e.to_diagnostic().to_string()).collect::<Vec<_>>().join("\n"),
         )
       })?;
-    Ok(Self { inner: Arc::new(inner) })
+    Ok(Self { inner: Arc::new(inner), option_callbacks })
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
@@ -119,7 +135,12 @@ impl BindingWatcher {
   #[napi(ts_return_type = "Promise<void>")]
   pub fn close<'env>(&self, env: &'env Env) -> napi::Result<PromiseRaw<'env, ()>> {
     let inner = Arc::clone(&self.inner);
+    let option_callbacks = self.option_callbacks.clone();
     spawn_boxed_future(env, async move {
+      // Each `Watcher::close` call waits for the watcher to stop. But it does not wait for an
+      // event result close that still runs `closeBundle`, so the release waits for its hold.
+      // A second request does nothing.
+      let _release = RequestReleaseOnDrop(option_callbacks);
       inner.close().await.map_err(|e| napi::Error::new(napi::Status::GenericFailure, e.to_string()))
     })
   }

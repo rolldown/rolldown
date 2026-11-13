@@ -1,0 +1,8 @@
+{
+  "_comment": "A CommonJS module that is not an `input` module is exported through a lazy `default` getter, so a module required only inside a function does not run when its importer loads.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.cjs" }],
+    "format": "cjs",
+    "preserveModules": true
+  }
+}

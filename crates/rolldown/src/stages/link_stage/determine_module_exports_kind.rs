@@ -21,6 +21,28 @@ impl LinkStage<'_> {
       .filter_map(|(idx, m)| matches!(m, Module::Normal(_)).then_some(idx))
       .collect();
 
+    // Make required modules without module syntax CommonJS before the walk, whose order varies
+    // between builds. See internal-docs/linking/determine-module-exports-kind/implementation.md.
+    let code_splitting_disabled = self.options.code_splitting.is_disabled();
+    let promoted_to_commonjs: Vec<ModuleIdx> = self
+      .module_table
+      .modules
+      .iter()
+      .filter_map(Module::as_normal)
+      .flat_map(|m| &m.import_records)
+      .filter(|rec| {
+        rec.kind == ImportKind::Require
+          || (rec.kind == ImportKind::DynamicImport && code_splitting_disabled)
+      })
+      .filter_map(|rec| rec.resolved_module)
+      .filter(|&idx| {
+        self.module_table[idx].as_normal().is_some_and(|m| m.exports_kind == ExportsKind::None)
+      })
+      .collect();
+    for module_idx in promoted_to_commonjs {
+      self.promote_to_commonjs(module_idx);
+    }
+
     for importer_idx in importer_indices {
       let n_records = match &self.module_table[importer_idx] {
         Module::Normal(m) => m.import_records.len(),

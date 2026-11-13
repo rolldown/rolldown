@@ -5,7 +5,7 @@ const path = require('node:path');
 // @ts-expect-error not included in types
 const rollup = require('../../dist/rollup');
 // @ts-expect-error not included in types
-const { compareLogs, runTestSuiteWithSamples, wrapPluginWithRuntimeFilter } = require('../utils.js');
+const { compareLogs, runTestSuiteWithSamples, adaptPluginForRolldown } = require('../utils.js');
 
 // TODO more formats
 // const FORMATS = ['amd', 'cjs', 'system', 'es', 'iife', 'umd'];
@@ -25,13 +25,14 @@ runTestSuiteWithSamples(
 					it('generates ' + format, async () => {
 						process.chdir(directory);
 						const warnings = [];
-						// Wrap plugins to filter out rolldown runtime from transform hooks
-						const plugins = wrapPluginWithRuntimeFilter(config.options?.plugins);
+						const plugins = adaptPluginForRolldown(config.options?.plugins);
 						const inputOptions = {
 							input: directory + '/main.js',
 							// Disable inlineConst for rollup tests, see https://github.com/rolldown/rolldown/issues/8100
 							optimization: { inlineConst: false },
               onLog: (level, log) => {
+                // Rollup does not emit this Rolldown-specific diagnostic.
+                if (log.code === 'INEFFECTIVE_DYNAMIC_IMPORT') return;
                 if (level === 'warn' && !config.expectedWarnings?.includes(log.code)) {
                   warnings.push(log);
                 }

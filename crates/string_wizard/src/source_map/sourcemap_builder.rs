@@ -2,7 +2,7 @@ use crate::chunk::Chunk;
 
 use super::locator::Locator;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum Hires {
   #[default]
   False,

@@ -76,7 +76,7 @@ dunce = { workspace = true }
 insta = { workspace = true }
 regex = { workspace = true }
 rolldown_common = { workspace = true }
-rolldown_testing = { path = "../rolldown_testing" }
+rolldown_testing = { workspace = true }
 rolldown_workspace = { workspace = true }
 saphyr = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
@@ -91,4 +91,5 @@ doctest = false
 
 [package.metadata.cargo-shear]
 # `serde` is used via feature flag.
-ignored = ["serde"]
+# `serde_json` is used by the `trace_action` macro and enables `preserve_order`.
+ignored = ["serde", "serde_json"]

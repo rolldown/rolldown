@@ -62,10 +62,9 @@ jobs:
         env:
           RUSTFLAGS: '-C debuginfo=1 -C strip=none -g -C lto=false -C codegen-units=16 --cfg codspeed'
         run: |
-          cargo build --release -p bench --bench bench --features codspeed
+          bench=$(cargo build --release -p bench --bench bench --features codspeed --message-format=json | jq -r 'select(.reason == "compiler-artifact" and .target.name == "bench" and .executable != null) | .executable')
           mkdir -p target/codspeed/analysis/bench
-          mv target/release/deps/bench-* target/codspeed/analysis/bench
-          rm target/codspeed/analysis/bench/*.d
+          mv "$bench" target/codspeed/analysis/bench/
 
       - wait: benchmark-input
 

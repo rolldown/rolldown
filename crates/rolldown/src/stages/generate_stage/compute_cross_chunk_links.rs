@@ -1011,7 +1011,6 @@ impl GenerateStage<'_> {
     final_esm_init_metadata: FinalEsmInitMetadataAvailability<'_>,
   ) -> SymbolChunkTable {
     let symbols = &self.link_output.symbol_db;
-    let chunk_id_to_symbols_vec = append_only_vec::AppendOnlyVec::new();
 
     let chunks_iter = multizip((
       chunk_graph.chunk_table.iter_enumerated(),
@@ -1021,7 +1020,8 @@ impl GenerateStage<'_> {
       index_chunk_dynamic_imports_from_external_modules.iter_mut(),
     ));
 
-    chunks_iter.par_bridge().for_each(
+    // Chunks arrive in no fixed order; `build_symbol_chunk_table` does not depend on it.
+    let chunk_symbols = chunks_iter.par_bridge().map(
       |(
         (chunk_id, chunk),
         depended_symbols,
@@ -1208,17 +1208,17 @@ impl GenerateStage<'_> {
           depended_symbols.insert(self.link_output.runtime.resolve_symbol(name));
         }
 
-        chunk_id_to_symbols_vec.push((chunk_id, symbol_needs_to_assign));
+        (chunk_id, symbol_needs_to_assign)
       },
     );
-    self.build_symbol_chunk_table(chunk_id_to_symbols_vec)
+    self.build_symbol_chunk_table(chunk_symbols.collect())
   }
 
   /// Record which chunk owns each declared symbol, so [`Self::compute_chunk_imports`] can resolve a
   /// depended symbol to the chunk it must be imported from.
   fn build_symbol_chunk_table(
     &self,
-    chunk_id_to_symbols_vec: append_only_vec::AppendOnlyVec<(ChunkIdx, Vec<TaggedSymbolRef>)>,
+    chunk_id_to_symbols_vec: Vec<(ChunkIdx, Vec<TaggedSymbolRef>)>,
   ) -> SymbolChunkTable {
     let mut map = FxHashMap::default();
     for (chunk_idx, symbol_list) in chunk_id_to_symbols_vec {
@@ -1246,8 +1246,8 @@ impl GenerateStage<'_> {
   }
 
   /// Register what a non-CJS entry's export signature makes the chunk depend on: the canonical
-  /// symbol of every re-exported binding, plus — off-strict — the `init_*` wrapper of every
-  /// ESM-wrapped module backing one. The wrappers come from the same walk entry emission
+  /// symbol of every re-exported binding, plus — off-strict, for unwrapped entries — the `init_*`
+  /// wrapper of every ESM-wrapped module backing one. The wrappers come from the same walk emission
   /// consumes (`collect_entry_reexported_wrapper_inits`), so everything the entry chunk may call
   /// is imported by construction; `None` for the names because registration runs before chunk
   /// names exist — it is what makes a wrapper reachable. The entry's own wrapper is not part of

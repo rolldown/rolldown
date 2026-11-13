@@ -2,6 +2,12 @@ use std::fmt::Write as _;
 
 use json_escape_simd::escape;
 use memchr::memmem;
+use oxc::{
+  ast::{StaticPropertyName, ast, builder::AstBuilder},
+  codegen::Codegen,
+  span::SPAN,
+};
+use rolldown_common::parse_json_to_ecma_ast;
 use rolldown_utils::concat_string;
 use serde_json::Value;
 
@@ -83,6 +89,53 @@ pub fn data_to_esm(data: &Value, named_exports: bool) -> String {
   default_object_code.truncate(default_object_code.len() - 2);
 
   concat_string!(named_export_code, "export default {\n", default_object_code, "\n};")
+}
+
+/// Converts JSON text to ESM, preserving strings that cannot be represented by a Rust `String`.
+pub fn json_to_esm(source: &str, named_exports: bool) -> Result<String, serde_json::Error> {
+  match serde_json::from_str(source) {
+    Ok(value) => Ok(data_to_esm(&value, named_exports)),
+    Err(_) => json_with_surrogates_to_esm(source, named_exports),
+  }
+}
+
+#[cold]
+fn json_with_surrogates_to_esm(
+  source: &str,
+  named_exports: bool,
+) -> Result<String, serde_json::Error> {
+  let mut parsed = parse_json_to_ecma_ast(source)?;
+  Ok(parsed.program.with_mut(|fields| {
+    let builder = AstBuilder::new(fields.allocator);
+    let ast::Statement::ExpressionStatement(statement) = &mut fields.program.body[0] else {
+      unreachable!("JSON produces an expression statement");
+    };
+    let mut code = String::new();
+    if named_exports && let ast::Expression::ObjectExpression(object) = &mut statement.expression {
+      for property in &mut object.properties {
+        let ast::ObjectPropertyKind::ObjectProperty(property) = property else {
+          unreachable!("JSON objects only contain properties");
+        };
+        let Some(key) = property.key.static_name().and_then(StaticPropertyName::into_cow_str)
+        else {
+          continue;
+        };
+        if !rolldown_utils::ecmascript::is_validate_assignee_identifier_name(&key) {
+          continue;
+        }
+        let mut value = Codegen::new();
+        value.print_expression(&property.value);
+        writeln!(code, "export const {key} = {};", value.into_source_text()).unwrap();
+        // Reuse the value on the default export so named and default object values stay aliased.
+        property.value =
+          ast::Expression::new_identifier(SPAN, ast::Str::from_str_in(&key, &builder), &builder);
+      }
+    }
+    let mut value = Codegen::new();
+    value.print_expression(&statement.expression);
+    writeln!(code, "export default {};", value.into_source_text()).unwrap();
+    code
+  }))
 }
 
 #[cfg(test)]

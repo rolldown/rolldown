@@ -488,9 +488,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   /// statement position owns those `init_*()` calls (issue #10543). Only the missing ones are
   /// prepended — a module already initialized at an included statement position keeps that call
   /// (the shared `generated_init_esm_importee_ids` dedup). Facade entry chunks (entry hosted in
-  /// another chunk, so no body renders here) and wrapped entries (their body runs inside the
-  /// wrapper invoked at the chunk tail, after these calls' tail counterparts) take the
-  /// `render_wrapped_entry_chunk` path instead.
+  /// another chunk, so no body renders here) take the `render_wrapped_entry_chunk` path instead.
+  /// Wrapped entries initialize their dependencies through their own wrapper in source order
+  /// and do not need this fallback.
   fn entry_reexported_wrapper_init_prelude(&mut self) -> Vec<Statement<'ast>> {
     if self.ctx.options.is_strict_execution_order_enabled() {
       return vec![];
@@ -2344,6 +2344,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 if matches!(importee_linking_info.wrap_kind(), WrapKind::Esm)
                   && !consumer_local_route
                 {
+                  // Recorded so the entry prelude does not call it again ahead of this statement.
+                  self.generated_init_esm_importee_ids.insert(importee.idx);
                   let init_expr = self.wrapped_esm_init_call_expr(importee.idx, SPAN, true, true);
                   program
                     .body

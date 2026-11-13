@@ -1,5 +1,6 @@
 import type {
   BindingHookFilter,
+  BindingHookRenderChunkOutput,
   BindingOutputs,
   BindingPluginContext,
   BindingPluginOptions,
@@ -9,6 +10,7 @@ import { RolldownMagicString } from '../binding-magic-string';
 import type { NormalizedOutputOptions } from '../options/normalized-output-options';
 import { bindingifySourcemap } from '../types/sourcemap';
 import { aggregateBindingErrorsIntoJsError, unwrapBindingResult } from '../utils/error';
+import { discardResult, isPromiseLike } from '../utils/misc';
 import { transformRenderedChunk } from '../utils/transform-rendered-chunk';
 import {
   type ChangedOutputs,
@@ -18,18 +20,20 @@ import {
 import { bindingifyRenderChunkFilter } from './bindingify-hook-filter';
 import type { BindingifyPluginArgs } from './bindingify-plugin';
 import { bindingifyHook, type PluginHookWithBindingExt } from './bindingify-plugin-hook-meta';
-import type { RenderedChunkMeta } from './index';
+import type { FunctionPluginHooks, RenderedChunkMeta } from './index';
 import { createPluginContext } from './plugin-context';
 
 export function bindingifyRenderStart(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['renderStart']> {
   return bindingifyHook(args.plugin.renderStart, ({ handler }) => ({
-    plugin: async (ctx, opts) => {
-      await handler.call(
-        createPluginContext(args, ctx),
-        args.pluginContextData.getOutputOptions(opts),
-        args.pluginContextData.getInputOptions(opts),
+    plugin: (ctx, opts) => {
+      return discardResult(
+        handler.call(
+          createPluginContext(args, ctx),
+          args.pluginContextData.getOutputOptions(opts),
+          args.pluginContextData.getInputOptions(opts),
+        ),
       );
     },
   }));
@@ -60,7 +64,7 @@ export function bindingifyRenderChunk(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['renderChunk'], BindingHookFilter | undefined> {
   return bindingifyHook(args.plugin.renderChunk, ({ handler, options }) => ({
-    plugin: async (ctx, code, chunk, opts, meta) => {
+    plugin: (ctx, code, chunk, opts, meta) => {
       // cache the chunks binding to deduplicated avoid clone chunks
       if (args.pluginContextData.getRenderChunkMeta() == null) {
         args.pluginContextData.setRenderChunkMeta({
@@ -94,7 +98,7 @@ export function bindingifyRenderChunk(
       }
 
       const outputOptions = args.pluginContextData.getOutputOptions(opts);
-      const ret = await handler.call(
+      const ret = handler.call(
         createPluginContext(args, ctx),
         code,
         transformRenderedChunk(chunk),
@@ -102,55 +106,65 @@ export function bindingifyRenderChunk(
         renderChunkMeta,
       );
 
-      if (ret == null) {
-        return;
+      if (isPromiseLike(ret)) {
+        return Promise.resolve(ret).then((ret) => bindingifyRenderChunkResult(ret, outputOptions));
       }
-
-      // Handle MagicString return value directly
-      if (ret instanceof RolldownMagicString) {
-        return { code: ret.toString(), map: generateSourcemap(ret, outputOptions) };
-      }
-
-      if (typeof ret === 'string') {
-        return { code: ret };
-      }
-
-      // Handle object return with code as MagicString
-      if (ret.code instanceof RolldownMagicString) {
-        const magicString = ret.code as RolldownMagicString;
-        const normalizedCode = magicString.toString();
-        // If map is explicitly null, don't generate sourcemap (opt-out)
-        // If map is undefined, auto-generate from MagicString
-        if (ret.map === null) {
-          return { code: normalizedCode, map: null };
-        }
-        if (ret.map === undefined) {
-          return { code: normalizedCode, map: generateSourcemap(magicString, outputOptions) };
-        }
-        return {
-          code: normalizedCode,
-          map: bindingifySourcemap(ret.map),
-        };
-      }
-
-      if (ret.map === null) {
-        return { code: ret.code, map: null };
-      }
-
-      return {
-        code: ret.code,
-        map: bindingifySourcemap(ret.map),
-      };
+      return bindingifyRenderChunkResult(ret, outputOptions);
     },
     filter: bindingifyRenderChunkFilter(options.filter),
   }));
+}
+
+function bindingifyRenderChunkResult(
+  ret: Awaited<ReturnType<FunctionPluginHooks['renderChunk']>>,
+  outputOptions: NormalizedOutputOptions,
+): BindingHookRenderChunkOutput | undefined {
+  if (ret == null) {
+    return;
+  }
+
+  // Handle MagicString return value directly
+  if (ret instanceof RolldownMagicString) {
+    return { code: ret.toString(), map: generateSourcemap(ret, outputOptions) };
+  }
+
+  if (typeof ret === 'string') {
+    return { code: ret };
+  }
+
+  // Handle object return with code as MagicString
+  if (ret.code instanceof RolldownMagicString) {
+    const magicString = ret.code as RolldownMagicString;
+    const normalizedCode = magicString.toString();
+    // If map is explicitly null, don't generate sourcemap (opt-out)
+    // If map is undefined, auto-generate from MagicString
+    if (ret.map === null) {
+      return { code: normalizedCode, map: null };
+    }
+    if (ret.map === undefined) {
+      return { code: normalizedCode, map: generateSourcemap(magicString, outputOptions) };
+    }
+    return {
+      code: normalizedCode,
+      map: bindingifySourcemap(ret.map),
+    };
+  }
+
+  if (ret.map === null) {
+    return { code: ret.code, map: null };
+  }
+
+  return {
+    code: ret.code,
+    map: bindingifySourcemap(ret.map),
+  };
 }
 
 export function bindingifyAugmentChunkHash(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['augmentChunkHash']> {
   return bindingifyHook(args.plugin.augmentChunkHash, ({ handler }) => ({
-    plugin: async (ctx, chunk) => {
+    plugin: (ctx, chunk) => {
       return handler.call(createPluginContext(args, ctx), transformRenderedChunk(chunk));
     },
   }));
@@ -160,7 +174,7 @@ export function bindingifyResolveFileUrl(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['resolveFileUrl']> {
   return bindingifyHook(args.plugin.resolveFileUrl, ({ handler }) => ({
-    plugin: async (ctx, resolveFileUrlArgs) => {
+    plugin: (ctx, resolveFileUrlArgs) => {
       return handler.call(createPluginContext(args, ctx), resolveFileUrlArgs);
     },
   }));
@@ -170,8 +184,10 @@ export function bindingifyRenderError(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['renderError']> {
   return bindingifyHook(args.plugin.renderError, ({ handler }) => ({
-    plugin: async (ctx, err) => {
-      await handler.call(createPluginContext(args, ctx), aggregateBindingErrorsIntoJsError(err));
+    plugin: (ctx, err) => {
+      return discardResult(
+        handler.call(createPluginContext(args, ctx), aggregateBindingErrorsIntoJsError(err)),
+      );
     },
   }));
 }
@@ -199,9 +215,17 @@ export function bindingifyGenerateBundle(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['generateBundle']> {
   return bindingifyHook(args.plugin.generateBundle, ({ handler }) => ({
-    plugin: async (ctx, bundle, isWrite, opts) => {
+    plugin: (ctx, bundle, isWrite, opts) => {
       const { changed, context, output } = createOutputBundle(args, ctx, bundle);
-      await handler.call(context, args.pluginContextData.getOutputOptions(opts), output, isWrite);
+      const result = handler.call(
+        context,
+        args.pluginContextData.getOutputOptions(opts),
+        output,
+        isWrite,
+      );
+      if (isPromiseLike(result)) {
+        return Promise.resolve(result).then(() => collectChangedBundle(changed, output));
+      }
       return collectChangedBundle(changed, output);
     },
   }));
@@ -211,9 +235,12 @@ export function bindingifyWriteBundle(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['writeBundle']> {
   return bindingifyHook(args.plugin.writeBundle, ({ handler }) => ({
-    plugin: async (ctx, bundle, opts) => {
+    plugin: (ctx, bundle, opts) => {
       const { changed, context, output } = createOutputBundle(args, ctx, bundle);
-      await handler.call(context, args.pluginContextData.getOutputOptions(opts), output);
+      const result = handler.call(context, args.pluginContextData.getOutputOptions(opts), output);
+      if (isPromiseLike(result)) {
+        return Promise.resolve(result).then(() => collectChangedBundle(changed, output));
+      }
       return collectChangedBundle(changed, output);
     },
   }));
@@ -223,10 +250,12 @@ export function bindingifyCloseBundle(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['closeBundle']> {
   return bindingifyHook(args.plugin.closeBundle, ({ handler }) => ({
-    plugin: async (ctx, err) => {
-      await handler.call(
-        createPluginContext(args, ctx),
-        err ? aggregateBindingErrorsIntoJsError(err) : undefined,
+    plugin: (ctx, err) => {
+      return discardResult(
+        handler.call(
+          createPluginContext(args, ctx),
+          err ? aggregateBindingErrorsIntoJsError(err) : undefined,
+        ),
       );
     },
   }));
@@ -237,7 +266,7 @@ export function bindingifyAddonHook<K extends 'banner' | 'footer' | 'intro' | 'o
   name: K,
 ): PluginHookWithBindingExt<BindingPluginOptions[K]> {
   return bindingifyHook(args.plugin[name], ({ handler }) => ({
-    plugin: async (ctx, chunk) => {
+    plugin: (ctx, chunk) => {
       if (typeof handler === 'string') {
         return handler;
       }

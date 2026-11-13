@@ -13,8 +13,7 @@
     "test": "echo \"Use just test-node\"",
     "ci:build-release-binding": "pnpm --filter rolldown run build-binding:release",
     "docs": "pnpm --filter rolldown-docs run dev",
-    "docs:build": "pnpm --filter rolldown-docs run generate && pnpm --filter rolldown-docs run build",
-    "docs:void": "pnpm --filter rolldown-docs run generate && pnpm --filter rolldown-docs run void deploy",
+    "docs:build": "vp run --filter rolldown-docs generate && vp run --filter rolldown-docs build",
     "docs:preview": "pnpm --filter rolldown-docs run preview"
   },
   "devDependencies": {

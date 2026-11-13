@@ -21,6 +21,7 @@
         ".vitepress/theme/components/ApiIndex.vue", // Used by api.index.md (with path relative to reference/index.md)
         "data-loading/*.data.{js,ts}",
         ".vitepress/theme/components/*.data.{js,ts}", // VitePress data loaders in components
+        ".vitepress/scripts/generate-reference.ts", // run by the `generate` task in vite.config.ts
       ],
       "ignore": [
         ".vitepress/scripts/extract-options-plugin.ts", // used as a string path in TypeDoc plugin config

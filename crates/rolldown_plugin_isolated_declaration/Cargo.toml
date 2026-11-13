@@ -28,5 +28,5 @@ rolldown_utils = { workspace = true }
 sugar_path = { workspace = true }
 
 [dev-dependencies]
-rolldown_testing = { path = '../rolldown_testing' }
+rolldown_testing = { workspace = true }
 testing_macros = { workspace = true }

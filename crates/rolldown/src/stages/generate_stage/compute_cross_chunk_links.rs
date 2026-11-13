@@ -200,7 +200,9 @@ impl GenerateStage<'_> {
         // Only a chunk with two or more importees of a kind has an order to choose.
         let ranks_chunks = !is_strict_execution_order
           && index_cross_chunk_imports[chunk_idx].len() + chunk.imports_from_other_chunks.len() > 1;
-        let ranks_externals = index_chunk_direct_imports_from_external_modules[chunk_idx].len() > 1;
+        let ranks_externals = index_chunk_direct_imports_from_external_modules[chunk_idx].len()
+          + chunk.entry_level_external_module_idx.len()
+          > 1;
         if !ranks_chunks && !ranks_externals {
           return (None, None);
         }
@@ -260,31 +262,45 @@ impl GenerateStage<'_> {
       })
       .collect::<Vec<_>>();
 
-    let index_sorted_imports_from_external_modules =
-      index_chunk_direct_imports_from_external_modules
-        .into_iter_enumerated()
-        .map(|(chunk_idx, mut imports_from_external_modules)| {
-          let mut importees = imports_from_external_modules.keys().copied().collect_vec();
-          sort_chunk_importees_by(
-            &mut importees,
-            |module_idx| self.link_output.module_table[module_idx].exec_order(),
-            index_external_import_ranks[chunk_idx.index()].as_ref(),
-          );
-          importees
-            .into_iter()
-            .map(|importee| {
-              let named_imports =
-                imports_from_external_modules.remove(&importee).expect("every key is in the map");
-              (importee, named_imports)
-            })
-            .collect_vec()
-        })
-        .collect::<Vec<_>>();
+    let (index_sorted_imports_from_external_modules, index_static_external_imports): (
+      Vec<_>,
+      Vec<_>,
+    ) = index_chunk_direct_imports_from_external_modules
+      .into_iter_enumerated()
+      .map(|(chunk_idx, mut imports_from_external_modules)| {
+        let entry_level = &chunk_graph.chunk_table[chunk_idx].entry_level_external_module_idx;
+        let mut static_imports = imports_from_external_modules
+          .keys()
+          .copied()
+          .chain(
+            entry_level
+              .iter()
+              .copied()
+              .filter(|module_idx| !imports_from_external_modules.contains_key(module_idx)),
+          )
+          .collect_vec();
+        sort_chunk_importees_by(
+          &mut static_imports,
+          |module_idx| self.link_output.module_table[module_idx].exec_order(),
+          index_external_import_ranks[chunk_idx.index()].as_ref(),
+        );
+        let sorted_imports = static_imports
+          .iter()
+          .filter_map(|importee| {
+            imports_from_external_modules
+              .remove(importee)
+              .map(|named_imports| (*importee, named_imports))
+          })
+          .collect_vec();
+        (sorted_imports, static_imports)
+      })
+      .unzip();
 
     multizip((
       chunk_graph.chunk_table.iter_mut(),
       index_sorted_imports_from_other_chunks,
       index_sorted_imports_from_external_modules,
+      index_static_external_imports,
       index_sorted_cross_chunk_imports,
       index_cross_chunk_dynamic_imports,
       index_chunk_dynamic_imports_from_external_modules,
@@ -296,6 +312,7 @@ impl GenerateStage<'_> {
         chunk,
         sorted_imports_from_other_chunks,
         imports_from_external_modules,
+        static_external_imports,
         cross_chunk_imports,
         cross_chunk_dynamic_imports,
         dynamic_imports_from_external_modules,
@@ -307,6 +324,7 @@ impl GenerateStage<'_> {
         }
         chunk.imports_from_other_chunks = sorted_imports_from_other_chunks;
         chunk.direct_imports_from_external_modules = imports_from_external_modules;
+        chunk.static_external_imports = static_external_imports;
         chunk.cross_chunk_imports = cross_chunk_imports;
         chunk.cross_chunk_dynamic_imports =
           cross_chunk_dynamic_imports.into_iter().collect::<Vec<_>>();

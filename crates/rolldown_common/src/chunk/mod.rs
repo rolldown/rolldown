@@ -104,6 +104,9 @@ pub struct Chunk {
   pub depended_runtime_helper: RuntimeHelper,
   /// related to [`crate::types::import_record::ImportRecordMeta::EntryLevelExternal`]
   pub entry_level_external_module_idx: Vec<ModuleIdx>,
+  /// The external modules of `direct_imports_from_external_modules` and
+  /// `entry_level_external_module_idx`, in the order of `chunk.imports`.
+  pub static_external_imports: Vec<ModuleIdx>,
   pub insert_map: FxHashMap<ModuleIdx, Vec<(ModuleIdx, ImportRecordIdx)>>,
   pub remove_map: FxHashMap<ModuleIdx, Vec<ImportRecordIdx>>,
   /// Pre-computed export mode for the chunk

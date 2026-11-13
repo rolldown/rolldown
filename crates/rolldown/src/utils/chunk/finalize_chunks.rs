@@ -241,7 +241,7 @@ pub async fn finalize_assets(
         .iter()
         .flat_map(|importee_idx| &index_chunk_to_instances[*importee_idx])
         .map(|importee_asset_idx| index_ins_chunk_to_filename[*importee_asset_idx].clone())
-        .chain(super::static_external_imports(chunk).map(|idx| {
+        .chain(chunk.static_external_imports.iter().map(|&idx| {
           link_output.module_table[idx]
             .as_external()
             .expect("static external imports should only contain external modules")

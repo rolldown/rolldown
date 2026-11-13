@@ -16,19 +16,6 @@ pub mod namespace_marker;
 pub mod render_chunk_exports;
 pub mod validate_options_for_multi_chunk_output;
 
-/// The external modules that a chunk imports statically, in rendered order: its imports, then the
-/// externals of `export *` that it does not import.
-fn static_external_imports(chunk: &Chunk) -> impl Iterator<Item = ModuleIdx> + '_ {
-  let imported = chunk.direct_imports_from_external_modules.iter().map(|(idx, _)| *idx);
-  imported.clone().chain(
-    chunk
-      .entry_level_external_module_idx
-      .iter()
-      .copied()
-      .filter(move |idx| !imported.clone().any(|imported_idx| imported_idx == *idx)),
-  )
-}
-
 pub fn generate_pre_rendered_chunk(
   chunk: &Chunk,
   chunk_name: &ArcStr,
@@ -87,7 +74,7 @@ pub fn generate_rendered_chunk(
           .expect("should have preliminary_filename")
           .clone()
       })
-      .chain(static_external_imports(chunk).map(|idx| {
+      .chain(chunk.static_external_imports.iter().map(|&idx| {
         link_output.module_table[idx]
           .as_external()
           .expect("static external imports should only contain external modules")

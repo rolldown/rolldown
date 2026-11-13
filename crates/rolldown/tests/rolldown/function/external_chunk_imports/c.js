@@ -1,2 +1,2 @@
-import 'side-b';
-export * from 'side-a';
+export * from 'side-b';
+import 'side-a';

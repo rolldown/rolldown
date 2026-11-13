@@ -22,8 +22,8 @@ Hash computation lives in `crates/rolldown/src/utils/chunk/finalize_chunks.rs::f
 [finalize_assets]
   ├─ prepare sourcemaps with preliminary chunk names
   ├─ Phase 1 (parallel):  per-chunk standalone content hash
-  ├─ Phase 2 (parallel):  per-chunk final hash = own standalone + transitive deps' standalone
-  ├─ Phase 3 (sequential): deconflict file names by rehashing on collision
+  ├─ Phase 2 (parallel):  per-chunk base hash = own standalone + transitive deps' standalone
+  ├─ Phase 3 (sequential): final hashes, dependencies first: fold in renamed deps, rehash on collision
   ├─ replace placeholders in content + filename with final hashes
   └─ resolve sourcemap chunk names, hash their final content, then emit them
 ```
@@ -67,7 +67,7 @@ This is invariant #1 (stability): the chunk's own hash now depends only on its r
 
 For an external map filename containing `[hash]`, the comment's hash input uses a hash of the prepared map with chunk placeholders normalized. The emitted map's hash still uses its final JSON, including the final chunk name. This breaks the circular dependency (chunk hash → map's `file` → map hash → chunk comment) while making changes to referenced map content invalidate the chunk and its importers. Map content does not affect the chunk hash when the comment uses a fixed map filename.
 
-## Phase 2: Final Hash
+## Phase 2: Base Hash
 
 ```rust
 let mut hasher = Xxh3::default();
@@ -75,7 +75,7 @@ standalone_content_hashes[chunk_idx].hash(&mut hasher);
 for dep_idx in transitive_dependencies[chunk_idx] {
   standalone_content_hashes[dep_idx].hash(&mut hasher);
 }
-let final_hash = encode_hash_with_base(hasher.digest128().to_le_bytes(), hash_base);
+let base_hash = encode_hash_with_base(hasher.digest128().to_le_bytes(), hash_base);
 ```
 
 `transitive_dependencies` is computed by extracting the placeholders from each chunk's content (placeholders point to other chunks), then taking the transitive closure. Hashing every transitive dep's _standalone_ hash means:
@@ -85,27 +85,25 @@ let final_hash = encode_hash_with_base(hasher.digest128().to_le_bytes(), hash_ba
 
 The chunk's `preliminary_filename` is **deliberately not mixed into this hash**. An earlier design did (`#1141`) to guarantee uniqueness within a build, but the placeholder index inside the preliminary filename is exactly the unstable input we want to keep out. Uniqueness is enforced separately in Phase 3.
 
-## Phase 3: Deconflict File Names
+## Phase 3: Final Hashes
 
-After Phase 2, two chunks with byte-identical content and identical transitive deps produce the same final hash. If their preliminary filename templates also resolve to the same string (e.g. both `entry-!~{XXX}~.js` with no `[name]` token), they would collide on disk.
+After Phase 2, two chunks with byte-identical content and identical transitive deps produce the same base hash. If their preliminary filename templates also resolve to the same string (e.g. both `entry-!~{XXX}~.js` with no `[name]` token), they would collide on disk. Rehashing one of them renames it, and every chunk that imports it now quotes a name its base hash never saw, so their names must change too ([#11694](https://github.com/rolldown/rolldown/issues/11694)).
 
-`deconflict_filenames` walks chunks in deterministic order, resolves each candidate file name, and on collision **rehashes the colliding chunk** (`Xxh3(prev_hash_string)`) and tries again. Comparison is case-insensitive (HFS+/NTFS).
+`assign_final_hashes` settles both at once:
 
-```rust
-for chunk in chunks_in_order {
-  loop {
-    let candidate = resolve_filename(chunk.preliminary_filename, chunk_hash);
-    if taken.insert(candidate.to_lowercase()) { break; }
-    chunk_hash = rehash(chunk_hash);  // hash-of-hash
-  }
-}
-```
+1. File names without a hash are claimed first; they cannot move out of the way.
+2. Chunks are grouped into import cycles (strongly connected components, via petgraph's iterative `kosaraju_scc`; `tarjan_scc` recurses and overflows on deep chains). Components are processed dependencies first (Kahn's algorithm); among ready components the one with the lowest chunk index goes first.
+3. For each component:
+   - If any chunk it imports from outside was renamed (final hash ≠ base hash), each member's hash becomes `Xxh3(base hash, final hashes of its transitive deps outside the component)`. Otherwise the final hash is the base hash, so builds without collisions keep exactly the Phase 2 hashes.
+   - Resolve every member's file name. On a collision (case-insensitive, HFS+/NTFS), **rehash every member** of the component (`Xxh3(prev_hash_string)`, plus the member's rank in a multi-chunk component) and try again. Members of a cycle quote each other's names, so renaming one renames them all; the rank keeps byte-identical members of one cycle from colliding forever.
 
-This is the only sequential pass in the pipeline. It mirrors Rollup's `generateFinalHashes` (in `src/utils/renderChunks.ts`) almost line-for-line, including the case-insensitive collision set.
+Why the result is sound: a member's final hash commits to the contents of its whole component, the final hashes of everything it imports outside it, and the number of rehash rounds. Those determine every name its content quotes, so one final name always means one set of emitted bytes.
 
-A regression test for this exact case lives in Rollup as `test/chunking-form/samples/hashing/deconflict-hashes`: two byte-identical entries + `entryFileNames: 'entry-[hash].js'` → two distinct file names.
+For a single chunk with no renamed dependency this is the same rehash-on-collision loop as Rollup's `generateFinalHashes` (in `src/utils/renderChunks.ts`), and the lowest index still wins among unrelated colliding chunks. Propagating renames into importers is a deliberate divergence: Rollup accumulates the pre-deconflict hash, so an importer can keep its name while its content changes.
 
-In practice the collision case is rare because `experimental.attachDebugInfo` (defaulting to `Simple`) injects a `// <module.debug_id>` marker into rendered chunks, which differentiates content based on module path. Users who disable debug info via `experimental.attachDebugInfo: 'none'` are the ones who can trigger the collision and rely on this loop.
+A regression test for the plain collision case lives in Rollup as `test/chunking-form/samples/hashing/deconflict-hashes`: two byte-identical entries + `entryFileNames: 'entry-[hash].js'` → two distinct file names. The propagation case is covered by `packages/rolldown/tests/behaviors/hash-stability.test.ts` and the unit tests in `finalize_chunks.rs`.
+
+In practice the collision case is rare because `experimental.attachDebugInfo` (defaulting to `Simple`) injects a `// <module.debug_id>` marker into rendered chunks, which differentiates content based on module path. Collisions need that marker gone, e.g. `experimental.attachDebugInfo: 'none'` or `minify: true`.
 
 ## Sourcemap File Hashes
 
@@ -128,15 +126,11 @@ It almost works, but fails the `deconflict-hashes` case: when two chunks have th
 
 ## debug_id
 
-`ecma_meta.debug_id` (used to emit `//# debugId=...` in source maps for Sentry/etc.) is set to the same `u128` digest produced in Phase 2. This means debug IDs share the hash's stability properties — same content → same debug ID across builds, useful for sourcemap correlation. Collision-rehashed chunks naturally get a distinct debug ID too.
-
-## Known Limitations
-
-**Phase 3 rehashes are not propagated back into importers.** Phase 2 accumulates each transitive dep's _standalone_ hash (pre-deconflict) into an importer's final hash. If Phase 3 rehashes a dep `B` to avoid a file-name collision, an importer `A` of `B` will end up emitting `B`'s post-rehash file name in its import specifier — but `A`'s own final hash was computed against `B`'s pre-rehash standalone hash, so `A`'s `[hash]` does not reflect the change. Same input + same config produces the same deconflict ordering and therefore the same emitted bytes (deterministic within a config), but two builds that differ only in something which shifts `InsChunkIdx` ordering of byte-identical chunks (e.g. user reorders entries in `input`) can produce different emitted bytes for `A` while keeping `A`'s `[hash]` unchanged. Rollup's `generateFinalHashes` exhibits the same behavior (its `contentToHash` accumulates the pre-deconflict `contentHash`, not the deconflicted final hash), so fixing this would require diverging from the reference implementation and processing chunks in topological order with importers depending on importees' post-deconflict hashes. Triggering it requires byte-identical chunks importable by something (rare) with a `[hash]`-only template (also rare).
+`ecma_meta.debug_id` (used to emit `//# debugId=...` in source maps for Sentry/etc.) is set to the same `u128` digest as the final hash from Phase 3. This means debug IDs share the hash's stability properties — same content → same debug ID across builds, useful for sourcemap correlation. Rehashed chunks and their importers naturally get a distinct debug ID too.
 
 ## Files
 
-- `crates/rolldown/src/utils/chunk/finalize_chunks.rs` — `finalize_assets`, `deconflict_filenames`, `resolve_filename`, `rehash`
+- `crates/rolldown/src/utils/chunk/finalize_chunks.rs` — `finalize_assets`, `assign_final_hashes`, `resolve_filename`, `rehash`
 - `crates/rolldown_utils/src/hash_placeholder.rs` — `HashPlaceholderGenerator`, `find_hash_placeholders`, `visit_with_placeholders_defaulted`, `replace_placeholder_with_hash`
 - `crates/rolldown_common/src/chunk/types/preliminary_filename.rs` — `PreliminaryFilename` (string + owned placeholder list)
 - `crates/rolldown_utils/src/xxhash.rs` — `encode_hash_with_base`, `xxhash_base64_url`
@@ -145,3 +139,4 @@ It almost works, but fails the `deconflict-hashes` case: when two chunks have th
 
 - Rollup reference implementation: [`src/utils/renderChunks.ts`](https://github.com/rollup/rollup/blob/master/src/utils/renderChunks.ts) (`transformChunksAndGenerateContentHashes`, `generateFinalHashes`)
 - Issue [#9339](https://github.com/rolldown/rolldown/issues/9339) — the bug that motivated normalizing placeholders out of the standalone content hash
+- Issue [#11694](https://github.com/rolldown/rolldown/issues/11694) — a chunk renamed by collision handling left its importers' names unchanged

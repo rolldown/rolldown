@@ -47,6 +47,63 @@ test('hash is stable when an unrelated isolated entry is added', async () => {
   }
 });
 
+// https://github.com/rolldown/rolldown/issues/11694
+test('importer is renamed when a byte-identical chunk takes its dependency name', async () => {
+  const modules: Record<string, string> = {
+    'identity.js': 'export function identity(value) { return value }',
+    'queryOptions.js': 'export function queryOptions(options) { return options }',
+    'user.js':
+      'import { identity } from "./identity.js"; export const double = (value) => identity(value) * 2;',
+    'entry-a.js': 'import { double } from "./user.js"; console.log(double(1));',
+    'entry-b.js': 'import { identity } from "./identity.js"; console.log(identity(2));',
+    'entry-c.js': 'import { queryOptions } from "./queryOptions.js"; console.log(queryOptions(3));',
+  };
+  const virtualPlugin: Plugin = {
+    name: 'virtual',
+    resolveId(id) {
+      const file = id.replace('./', '');
+      if (file in modules) return file;
+    },
+    load(id) {
+      return modules[id];
+    },
+  };
+
+  async function build(input: Record<string, string>) {
+    const bundle = await rolldown({ input, plugins: [virtualPlugin] });
+    const out = await bundle.generate({
+      // `identity.js` and `queryOptions.js` minify to the same bytes.
+      minify: true,
+      entryFileNames: '[name].js',
+      chunkFileNames: '[hash].js',
+      codeSplitting: {
+        groups: [
+          { name: 'queryOptions', test: /queryOptions\.js$/ },
+          { name: 'identity', test: /identity\.js$/ },
+          { name: 'user', test: /user\.js$/ },
+        ],
+      },
+    });
+    await bundle.close();
+    return out.output.filter((c): c is OutputChunk => c.type === 'chunk' && !c.isEntry);
+  }
+
+  const two = await build({ a: 'entry-a.js', b: 'entry-b.js' });
+  const three = await build({ a: 'entry-a.js', b: 'entry-b.js', c: 'entry-c.js' });
+
+  const userInTwo = two.find((c) => c.moduleIds.includes('user.js'))!;
+  const userInThree = three.find((c) => c.moduleIds.includes('user.js'))!;
+  expect(userInThree.code).not.toBe(userInTwo.code);
+  expect(userInThree.fileName).not.toBe(userInTwo.fileName);
+  // A `[hash]` file name must only be reused for the same content.
+  for (const chunk of three) {
+    const previous = two.find((c) => c.fileName === chunk.fileName);
+    if (previous) {
+      expect(chunk.code).toBe(previous.code);
+    }
+  }
+});
+
 // https://github.com/rolldown/rolldown/issues/5269
 // `first` sets which entry finishes loading first. When it is `b.js`, its padding imports take
 // module indices before `server.js`. The graph and its execution order stay the same.

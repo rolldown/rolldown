@@ -1,12 +1,16 @@
-use std::{borrow::Cow, hash::Hash, mem, path::Path};
+use std::{borrow::Cow, cmp::Reverse, collections::BinaryHeap, hash::Hash, mem, path::Path};
 
 use arcstr::ArcStr;
 use futures::future::try_join_all;
 use itertools::Itertools;
 use oxc_index::IndexVec;
+use petgraph::{
+  algo::kosaraju_scc,
+  graph::{DiGraph, NodeIndex},
+};
 use rolldown_common::{
   Asset, HashCharacters, InsChunkIdx, InstantiatedChunk, InstantiationKind,
-  NormalizedBundlerOptions, PathsOutputOption, SourceMapType, StrOrBytes,
+  NormalizedBundlerOptions, PathsOutputOption, PreliminaryFilename, SourceMapType, StrOrBytes,
 };
 use rolldown_error::BuildResult;
 #[cfg(not(target_family = "wasm"))]
@@ -146,7 +150,12 @@ pub async fn finalize_assets(
     .collect::<Vec<_>>()
     .into();
 
-  deconflict_filenames(&index_instantiated_chunks, &mut index_final_hashes, hash_base);
+  assign_final_hashes(
+    |idx| &index_instantiated_chunks[idx].preliminary_filename,
+    &index_direct_dependencies,
+    &mut index_final_hashes,
+    hash_base,
+  );
 
   let chunk_hashes_by_placeholder = index_final_hashes
     .iter_enumerated()
@@ -506,30 +515,145 @@ fn visit_transitive_dependencies(
   });
 }
 
-/// Walks chunks in a deterministic order and rehashes any chunk whose resolved file name would
-/// collide with a previously assigned one. Comparison is case-insensitive so the output is safe
-/// to write on case-insensitive filesystems (macOS HFS+, Windows NTFS).
+/// Turns each chunk's base hash (its content plus its transitive dependencies' contents) into its
+/// final hash, so that no two resolved file names collide and a chunk's name changes whenever a
+/// chunk it imports is renamed. Comparison is case-insensitive so the output is safe to write on
+/// case-insensitive filesystems (macOS HFS+, Windows NTFS).
 ///
-/// Mirrors Rollup's `generateFinalHashes` rehash loop.
-fn deconflict_filenames(
-  index_instantiated_chunks: &IndexInstantiatedChunks,
-  index_final_hashes: &mut IndexVec<InsChunkIdx, (String, u128)>,
+/// Chunks are settled one import cycle (strongly connected component) at a time, dependencies
+/// first, so a chunk's dependencies have their final names before the chunk itself is named. Among
+/// cycles that are ready, the one with the lowest chunk index goes first, so the lowest index keeps
+/// its hash when unrelated chunks collide, as in Rollup's `generateFinalHashes`.
+///
+/// See internal-docs/chunk-hash/implementation.md.
+fn assign_final_hashes<'a>(
+  preliminary_filename: impl Fn(InsChunkIdx) -> &'a PreliminaryFilename,
+  index_direct_dependencies: &IndexVec<InsChunkIdx, Vec<InsChunkIdx>>,
+  index_hashes: &mut IndexVec<InsChunkIdx, (String, u128)>,
   hash_base: u8,
 ) {
-  let mut taken: FxHashSet<String> = FxHashSet::with_capacity(index_instantiated_chunks.len());
-  for (asset_idx, chunk) in index_instantiated_chunks.iter_enumerated() {
-    let preliminary_filename = chunk.preliminary_filename.as_str();
-    let Some(placeholders) = chunk.preliminary_filename.hash_placeholder() else {
-      taken.insert(preliminary_filename.to_lowercase());
-      continue;
-    };
-    loop {
-      let candidate =
-        resolve_filename(preliminary_filename, placeholders, &index_final_hashes[asset_idx].0);
-      if taken.insert(candidate.to_lowercase()) {
-        break;
+  let chunk_count = index_direct_dependencies.len();
+  let mut taken: FxHashSet<String> = FxHashSet::with_capacity(chunk_count);
+  // File names without a hash cannot move out of the way, so claim them before any hashed name.
+  for idx in index_direct_dependencies.indices() {
+    let filename = preliminary_filename(idx);
+    if filename.hash_placeholder().is_none() {
+      taken.insert(filename.to_lowercase());
+    }
+  }
+
+  let edge_count = index_direct_dependencies.iter().map(Vec::len).sum();
+  let mut graph = DiGraph::<(), ()>::with_capacity(chunk_count, edge_count);
+  for _ in 0..chunk_count {
+    graph.add_node(());
+  }
+  for (importer, dependencies) in index_direct_dependencies.iter_enumerated() {
+    for dependency in dependencies {
+      graph.add_edge(NodeIndex::new(importer.index()), NodeIndex::new(dependency.index()), ());
+    }
+  }
+  // `kosaraju_scc` is iterative; `tarjan_scc` recurses and overflows on deep import chains.
+  let mut components: Vec<Vec<InsChunkIdx>> = kosaraju_scc(&graph)
+    .into_iter()
+    .map(|component| {
+      let mut members =
+        component.into_iter().map(|node| InsChunkIdx::from(node.index())).collect_vec();
+      members.sort_unstable();
+      members
+    })
+    .collect();
+  drop(graph);
+  let mut component_of: IndexVec<InsChunkIdx, usize> = IndexVec::from_vec(vec![0; chunk_count]);
+  for (component_idx, members) in components.iter().enumerate() {
+    for &member in members {
+      component_of[member] = component_idx;
+    }
+  }
+
+  // Kahn's algorithm over the components: a component is ready once every component it imports
+  // has been settled.
+  let mut pending_dependencies = vec![0usize; components.len()];
+  let mut dependents: Vec<Vec<usize>> = vec![vec![]; components.len()];
+  for (importer, dependencies) in index_direct_dependencies.iter_enumerated() {
+    for &dependency in dependencies {
+      let (from, to) = (component_of[importer], component_of[dependency]);
+      if from != to {
+        pending_dependencies[from] += 1;
+        dependents[to].push(from);
       }
-      index_final_hashes[asset_idx] = rehash(&index_final_hashes[asset_idx].0, hash_base);
+    }
+  }
+  let mut ready: BinaryHeap<Reverse<(InsChunkIdx, usize)>> = pending_dependencies
+    .iter()
+    .enumerate()
+    .filter(|(_, pending)| **pending == 0)
+    .map(|(component_idx, _)| Reverse((components[component_idx][0], component_idx)))
+    .collect();
+
+  // Whether a chunk's final hash differs from its base hash, i.e. its importers' content refers to
+  // a name that their base hashes did not account for.
+  let mut renamed: IndexVec<InsChunkIdx, bool> = IndexVec::from_vec(vec![false; chunk_count]);
+  while let Some(Reverse((_, component_idx))) = ready.pop() {
+    let members = mem::take(&mut components[component_idx]);
+    let is_outside = |idx: InsChunkIdx| component_of[idx] != component_idx;
+
+    let imports_renamed_chunk = members.iter().any(|&member| {
+      index_direct_dependencies[member].iter().any(|&dep| is_outside(dep) && renamed[dep])
+    });
+    if imports_renamed_chunk {
+      // Every member reaches every dependency of the component, so all of them are affected.
+      for &member in &members {
+        let mut hasher = Xxh3::default();
+        index_hashes[member].0.hash(&mut hasher);
+        visit_transitive_dependencies(member, index_direct_dependencies, |dep| {
+          if is_outside(dep) {
+            index_hashes[dep].0.hash(&mut hasher);
+          }
+        });
+        let digest = hasher.digest128();
+        index_hashes[member] = (encode_hash_with_base(&digest.to_le_bytes(), hash_base), digest);
+      }
+    }
+
+    let resolve = |member: InsChunkIdx, index_hashes: &IndexVec<InsChunkIdx, (String, u128)>| {
+      let filename = preliminary_filename(member);
+      filename.hash_placeholder().map(|placeholders| {
+        resolve_filename(filename, placeholders, &index_hashes[member].0).to_lowercase()
+      })
+    };
+    let mut rehashed = false;
+    loop {
+      let collision = members.iter().position(|&member| {
+        resolve(member, index_hashes).is_some_and(|candidate| !taken.insert(candidate))
+      });
+      let Some(collision) = collision else { break };
+      // Release the names this attempt claimed before the collision.
+      for &member in &members[..collision] {
+        if let Some(candidate) = resolve(member, index_hashes) {
+          taken.remove(&candidate);
+        }
+      }
+      // Members of a cycle quote each other's names, so renaming one renames them all. The rank
+      // separates byte-identical members, whose hashes would otherwise stay equal forever.
+      let is_cycle = members.len() > 1;
+      for (rank, &member) in members.iter().enumerate() {
+        let rank = (rank as u64).to_le_bytes();
+        let salt: &[u8] = if is_cycle { &rank } else { &[] };
+        index_hashes[member] = rehash(&index_hashes[member].0, salt, hash_base);
+      }
+      rehashed = true;
+    }
+
+    if imports_renamed_chunk || rehashed {
+      for &member in &members {
+        renamed[member] = preliminary_filename(member).hash_placeholder().is_some();
+      }
+    }
+    for &dependent in &dependents[component_idx] {
+      pending_dependencies[dependent] -= 1;
+      if pending_dependencies[dependent] == 0 {
+        ready.push(Reverse((components[dependent][0], dependent)));
+      }
     }
   }
 }
@@ -542,9 +666,10 @@ fn resolve_filename(preliminary_filename: &str, placeholders: &[String], hash_st
   result
 }
 
-fn rehash(prev_hash_str: &str, hash_base: u8) -> (String, u128) {
+fn rehash(prev_hash_str: &str, salt: &[u8], hash_base: u8) -> (String, u128) {
   let mut hasher = Xxh3::default();
   hasher.update(prev_hash_str.as_bytes());
+  hasher.update(salt);
   let digest = hasher.digest128();
   (encode_hash_with_base(&digest.to_le_bytes(), hash_base), digest)
 }
@@ -620,5 +745,104 @@ mod tests {
       .join()
       .unwrap();
     assert_eq!(count, n - 1);
+  }
+
+  /// Runs `assign_final_hashes` on chunks given as `(file name template, direct dependencies,
+  /// base hash input)` and returns their resolved file names.
+  fn assign(chunks: &[(&str, &[usize], &str)]) -> Vec<String> {
+    let filenames: IndexVec<InsChunkIdx, PreliminaryFilename> = chunks
+      .iter()
+      .enumerate()
+      .map(|(idx, (template, _, _))| {
+        if template.contains("[hash]") {
+          let placeholder = format!("!~{{{idx:03}}}~");
+          PreliminaryFilename::new(
+            template.replace("[hash]", &placeholder).into(),
+            Some(vec![placeholder]),
+          )
+        } else {
+          PreliminaryFilename::new((*template).into(), None)
+        }
+      })
+      .collect();
+    let deps = graph(&chunks.iter().map(|(_, deps, _)| *deps).collect_vec());
+    let mut hashes: IndexVec<InsChunkIdx, (String, u128)> = chunks
+      .iter()
+      .map(|(_, _, content)| {
+        let digest = xxhash_rust::xxh3::xxh3_128(content.as_bytes());
+        (encode_hash_with_base(&digest.to_le_bytes(), 64), digest)
+      })
+      .collect();
+    assign_final_hashes(|idx| &filenames[idx], &deps, &mut hashes, 64);
+    filenames
+      .iter_enumerated()
+      .map(|(idx, filename)| match filename.hash_placeholder() {
+        Some(placeholders) => resolve_filename(filename, placeholders, &hashes[idx].0),
+        None => filename.to_string(),
+      })
+      .collect()
+  }
+
+  // https://github.com/rolldown/rolldown/issues/11694
+  #[test]
+  fn renaming_a_dependency_renames_its_importers() {
+    // `identity` and its importer `user`.
+    let before = assign(&[("[hash].js", &[], "identity"), ("[hash].js", &[0], "user")]);
+    // A byte-identical chunk with a lower index takes `identity`'s name.
+    let after = assign(&[
+      ("[hash].js", &[], "identity"),
+      ("[hash].js", &[], "identity"),
+      ("[hash].js", &[1], "user"),
+      ("[hash].js", &[2], "app"),
+    ]);
+    assert_eq!(after[0], before[0]);
+    assert_ne!(after[1], before[0]);
+    // `user` now imports a different file name, so its own name must change as well.
+    assert_ne!(after[2], before[1]);
+    assert_eq!(after.iter().unique().count(), after.len());
+    // And so must the name of every chunk that transitively imports it.
+    let app_before = assign(&[
+      ("[hash].js", &[], "identity"),
+      ("[hash].js", &[0], "user"),
+      ("[hash].js", &[1], "app"),
+    ]);
+    assert_ne!(after[3], app_before[2]);
+  }
+
+  #[test]
+  fn byte_identical_members_of_an_import_cycle_get_distinct_names() {
+    let names = assign(&[
+      ("[hash].js", &[1], "cycle"),
+      ("[hash].js", &[0], "cycle"),
+      ("[hash].js", &[0], "importer"),
+    ]);
+    assert_eq!(names.iter().unique().count(), names.len());
+  }
+
+  #[test]
+  fn hashed_names_avoid_fixed_names_regardless_of_order() {
+    let [hashed] = <[String; 1]>::try_from(assign(&[("[hash].js", &[], "a")])).unwrap();
+    let names = assign(&[("[hash].js", &[], "a"), (hashed.to_uppercase().as_str(), &[], "b")]);
+    assert_ne!(names[0].to_lowercase(), hashed.to_lowercase());
+    assert_eq!(names[1], hashed.to_uppercase());
+  }
+
+  #[test]
+  fn final_hashes_handle_deep_chain_on_small_stack() {
+    let n = 200_000;
+    let contents = (0..n).map(|i| i.to_string()).collect_vec();
+    let deps = (0..n).map(|i| if i + 1 < n { vec![i + 1] } else { vec![] }).collect_vec();
+    // A recursive component search overflows this stack long before the end of the chain.
+    let names = std::thread::Builder::new()
+      .stack_size(256 * 1024)
+      .spawn(move || {
+        let chunks =
+          (0..n).map(|i| ("[hash].js", deps[i].as_slice(), contents[i].as_str())).collect_vec();
+        assign(&chunks)
+      })
+      .unwrap()
+      .join()
+      .unwrap();
+    assert_eq!(names.len(), n);
   }
 }

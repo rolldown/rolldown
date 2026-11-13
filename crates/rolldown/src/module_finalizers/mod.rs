@@ -10,6 +10,7 @@ use oxc::{
     VariableDeclarationKind,
   },
   span::{GetSpan, GetSpanMut, SPAN, Span},
+  transformer::ESFeature,
 };
 use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ChunkKind, ExportsKind, ImportAttributes, ImportRecordIdx,
@@ -2609,7 +2610,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
               class.span = default_decl_span;
               if let Some(canonical_name_for_default_export_ref) = keep_name_call {
-                // No class static blocks in the target: `var default = __name(class {}, "default")`
+                // Neither class static blocks nor class fields in the target:
+                // `var default = __name(class {}, "default")`
                 let name_ref = self.canonical_ref_for_runtime("__name");
                 let (finalized_callee, _) =
                   self.finalized_expr_for_symbol_ref(name_ref, false, false);
@@ -2710,7 +2712,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         if let Some(element) = self.keep_name_helper_for_class(keep_name_id, &class_expression.body)
         {
           class_expression.body.body.insert(0, element);
-        } else {
+        } else if !self.can_keep_class_name_in_class_body() {
           self.wrap_class_expr_with_keep_name(keep_name_id, expr);
         }
       }
@@ -2744,15 +2746,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
-  /// Whether the output target supports class static blocks, which the `__name` helper
-  /// for classes is injected as. Otherwise the call has to live outside the class body.
-  fn can_keep_class_name_in_static_block(&self) -> bool {
-    !self
-      .ctx
-      .options
-      .transform_options
-      .target
-      .has_feature(oxc::transformer::ESFeature::ES2022ClassStaticBlock)
+  /// Whether the output target lets the `__name` helper for classes live in the class body,
+  /// in a static block or else in a private static field. Otherwise the call has to live
+  /// outside the class body.
+  fn can_keep_class_name_in_class_body(&self) -> bool {
+    let target = &self.ctx.options.transform_options.target;
+    !target.has_feature(ESFeature::ES2022ClassStaticBlock)
+      || !target.has_feature(ESFeature::ES2022ClassProperties)
   }
 
   /// The original name a class has to keep, or `None` when it needs no `__name` call.
@@ -2784,24 +2784,57 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     id: Option<KeepNameId>,
     class_body: &ast::ClassBody<'ast>,
   ) -> Option<ClassElement<'ast>> {
-    if !self.can_keep_class_name_in_static_block() {
+    if !self.can_keep_class_name_in_class_body() {
       return None;
     }
     let original_name = self.keep_name_for_class(id, class_body)?;
     let name_ref = self.canonical_ref_for_runtime("__name");
     let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);
-    Some(ClassElement::new_static_block_keep_name(&original_name, finalized_callee, self))
+    if !self.ctx.options.transform_options.target.has_feature(ESFeature::ES2022ClassStaticBlock) {
+      return Some(ClassElement::new_static_block_keep_name(
+        &original_name,
+        finalized_callee,
+        self,
+      ));
+    }
+    // Static elements run in order, so a first private static field sets the name before
+    // the class's own static fields read it, as the static block does.
+    let key = Self::unused_private_name(class_body);
+    Some(ClassElement::new_private_static_field_keep_name(
+      &key,
+      &original_name,
+      finalized_callee,
+      self,
+    ))
   }
 
-  /// `__name(<class expr>, "<name>")` for targets without class static blocks.
+  /// A private name that `body` neither declares nor references, nested classes included,
+  /// so that a field added under it captures no other `#name`: `_`, then `_2`, `_3`, ...
+  fn unused_private_name(body: &ast::ClassBody<'ast>) -> String {
+    struct PrivateNames<'a>(FxHashSet<&'a str>);
+    impl<'a> oxc::ast_visit::VisitJs<'a> for PrivateNames<'a> {
+      fn visit_private_identifier(&mut self, it: &ast::PrivateIdentifier<'a>) {
+        self.0.insert(it.name.as_str());
+      }
+    }
+    let mut names = PrivateNames(FxHashSet::default());
+    oxc::ast_visit::VisitJs::visit_class_body(&mut names, body);
+    let mut name = String::from("_");
+    let mut i = 2;
+    while names.0.contains(name.as_str()) {
+      name = format!("_{i}");
+      i += 1;
+    }
+    name
+  }
+
+  /// `__name(<class expr>, "<name>")` for targets with neither class static blocks
+  /// nor class fields.
   fn wrap_class_expr_with_keep_name(
     &self,
     id: Option<KeepNameId>,
     expr: &mut ast::Expression<'ast>,
   ) {
-    if self.can_keep_class_name_in_static_block() {
-      return;
-    }
     let ast::Expression::ClassExpression(class_expression) = expr.without_parentheses() else {
       return;
     };

@@ -276,19 +276,6 @@ Rust keeps the JS functions of the bundler options only while their owner is ope
 - A JS function of the options can reach such a native object. Then a cycle goes through native code: root → JS function → … → JS wrapper → `Arc<NormalizedBundlerOptions>` → `JsCallback` → root. The GC cannot see the native edge, so it never frees the cycle.
 - The internal callbacks capture `pluginContextData`, which reaches every plugin of the build. So without the release, every plugin of the build stays alive when one plugin keeps `this`. Before rolldown/rolldown#11623, one empty `buildStart` hook had the same effect (rolldown/rolldown#11444).
 
-### Synchronous hook returns
-
-The TypeScript hook adapters and the shared error wrapper preserve synchronous
-returns. They normalize values inline and only create Promise chains for actual
-Promises or thenables; an unconditional `async` wrapper would force napi to create
-fulfillment and rejection handlers even for an empty synchronous hook. This is
-decided per invocation, because the same hook can return either kind of result.
-Void hooks discard returned values while still awaiting async completion, and
-the error wrapper annotates both synchronous throws and asynchronous rejections.
-Timing instrumentation must preserve this distinction too.
-
-The binding keeps plain returns free of Promises too. Each hook is a `MaybeAsyncJsCallback`, whose return value is a `MaybePromise` (`crates/rolldown_binding/src/types/js_callback.rs`). `MaybePromise` checks for a Promise with `napi_is_promise` only and converts a plain value directly. napi's `Either<Promise<T>, T>` validates a plain value as a Promise first, and that validation creates and rejects a Promise for every plain value, which makes a synchronous hook slower than an `async` one. `Either` also drops the conversion error of a malformed result, such as `{ code: Buffer }` from `load`. `MaybePromise` returns the error that a Promise resolving to the same value gives, including an exception that the conversion throws.
-
 ### The rule
 
 - Each function field of the bundler options uses `UntrackedJsCallback` (`crates/rolldown_binding/src/types/js_callback_release.rs`). That type has no call methods. `normalize_binding_options` creates one group (`JsCallbackRelease`) for each call. It gives each callback to `JsCallbackRelease::track`, which returns a `ReleasableJsCallback`. A `ReleasableJsCallback` keeps the callback in a shared slot, so that the release can take it out.
@@ -332,6 +319,12 @@ The binding keeps plain returns free of Promises too. Each hook is a `MaybeAsync
   - a second dev engine close while `closeBundle` runs,
   - the error after the release.
 - `packages/rolldown/tests/watch/watch.test.ts`: a rebuild after an event result close, and a watcher close while an event result close runs `closeBundle`.
+
+## Synchronous hook returns
+
+The TypeScript hook adapters and the shared error wrapper preserve synchronous returns. They normalize values inline and only create Promise chains for actual Promises or thenables; an unconditional `async` wrapper would force napi to create fulfillment and rejection handlers even for an empty synchronous hook. This is decided per invocation, because the same hook can return either kind of result. Void hooks discard returned values while still awaiting async completion, and the error wrapper annotates both synchronous throws and asynchronous rejections. Timing instrumentation must preserve this distinction too.
+
+The binding keeps plain returns free of Promises too. Each hook is a `MaybeAsyncJsCallback`, whose return value is a `MaybePromise` (`crates/rolldown_binding/src/types/js_callback.rs`). `MaybePromise` checks for a Promise with `napi_is_promise` only and converts a plain value directly. napi's `Either<Promise<T>, T>` validates a plain value as a Promise first, and that validation creates and rejects a Promise for every plain value, which makes a synchronous hook slower than an `async` one. `Either` also drops the conversion error of a malformed result, such as `{ code: Buffer }` from `load`. `MaybePromise` returns the error that a Promise resolving to the same value gives, including an exception that the conversion throws.
 
 ## Unresolved Questions
 

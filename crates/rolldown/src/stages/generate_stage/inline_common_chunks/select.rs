@@ -410,6 +410,35 @@ impl GenerateStage<'_> {
     &self,
     modules: &[ModuleIdx],
   ) -> bool {
+    self.passes_inline_preference(modules, None)
+  }
+
+  /// The placement preference with the modules that only `import()` makes entries accepted. See
+  /// internal-docs/inline-common-chunks/design.md#chunks-an-import-loads.
+  pub(in crate::stages::generate_stage) fn prefers_inline_with_dynamic_entries(
+    &self,
+    modules: &[ModuleIdx],
+  ) -> bool {
+    if self.options.inline_common_chunks.is_none() {
+      return false;
+    }
+    let dynamic_entries = modules
+      .iter()
+      .copied()
+      .filter(|module_idx| {
+        self.link_output.entries.get(module_idx).is_some_and(|entry_points| {
+          entry_points.iter().all(|entry_point| entry_point.kind.is_dynamic_import())
+        })
+      })
+      .collect::<FxHashSet<_>>();
+    self.passes_inline_preference(modules, Some(&dynamic_entries))
+  }
+
+  fn passes_inline_preference(
+    &self,
+    modules: &[ModuleIdx],
+    dynamic_entries: Option<&FxHashSet<ModuleIdx>>,
+  ) -> bool {
     let Some(options) = &self.options.inline_common_chunks else {
       return false;
     };
@@ -420,7 +449,7 @@ impl GenerateStage<'_> {
         continue;
       }
       has_module = true;
-      if self.inline_common_chunk_module_bailout(module_idx, None).is_some() {
+      if self.inline_common_chunk_module_bailout(module_idx, dynamic_entries).is_some() {
         return false;
       }
       size += self.link_output.module_table[module_idx].size();
@@ -428,9 +457,9 @@ impl GenerateStage<'_> {
     has_module && (options.max_size == usize::MAX || size < options.max_size)
   }
 
-  /// `dynamic_entries`: the dynamic entry modules whose chunks were merged into the chunk being
-  /// checked ([`SelectionFacts::dynamic_entry_hosts`]); every other entry module keeps its chunk a
-  /// file.
+  /// `dynamic_entries`: the dynamic entry modules the chunk being checked may hold (in final
+  /// selection, the ones whose chunks were merged into it, [`SelectionFacts::dynamic_entry_hosts`]);
+  /// every other entry module keeps its chunk a file.
   fn inline_common_chunk_module_bailout(
     &self,
     module_idx: ModuleIdx,

@@ -112,7 +112,14 @@ Promise.resolve().then((n) => ((n = __share_require('m-JUauIEEf')), n.r(), n.i))
 
 Placement computes which registrations every path that loads the loader has made. A record is registered together with the records it reads, so a loader that carries anything carries its record.
 
-Dynamic entry modules stay out of the [placement preference](#keeping-shared-code-available-for-inlining): when every importer of a dynamic entry already has it loaded, merging it into that importer's entry needs no file at all.
+Dynamic already-loaded analysis does not keep an atom shared just because the [placement preference](#keeping-shared-code-available-for-inlining) would accept its dynamic entry modules: when every importer of a dynamic entry already has it loaded, merging it into that importer's entry can need no file at all.
+
+Under `strictExecutionOrder`, such a merge adds a facade file in two cases:
+
+- The entry chunk belongs to another dynamic entry. Each dynamic entry merged into it then needs a facade for its own `import()`.
+- The merge makes another chunk import the entry chunk where none did before, statically or with an `import()` of a module other than the entry module itself. The entry chunk is then split into a facade and a chunk holding its modules.
+
+Dynamic already-loaded analysis (see [Dynamic Already-Loaded Analysis](../code-splitting/implementation.md#dynamic-already-loaded-analysis)) therefore decides such a merge after its other moves when the preference would accept the atom if its `import()`-only entry modules counted as ordinary modules. It keeps the atom shared, so final selection can make its chunk a record, when the merge falls under one of the two cases. Only imports that tree shaking keeps count. An importer counts as outside the entry chunk unless it is there already or merges into it, so keeping one atom shared can put another atom's importer outside, and the check repeats until it keeps nothing more back. If another chunk still imports the entry chunk then, the entry chunk is a facade anyway, and the merges into it go ahead. Common-chunk merging leaves a group that the preference accepts in this way where it is.
 
 ## Registration on entry loading paths
 

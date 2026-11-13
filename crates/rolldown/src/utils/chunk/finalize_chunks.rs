@@ -602,4 +602,23 @@ mod tests {
       }
     }
   }
+
+  #[test]
+  fn transitive_dependencies_handle_deep_chain_on_small_stack() {
+    let n = 200_000;
+    let deps: IndexVec<InsChunkIdx, Vec<InsChunkIdx>> =
+      (0..n).map(|i| if i + 1 < n { vec![InsChunkIdx::from(i + 1)] } else { vec![] }).collect();
+    // A recursive traversal overflows this stack long before the end of the chain.
+    let count = std::thread::Builder::new()
+      .stack_size(256 * 1024)
+      .spawn(move || {
+        let mut count = 0;
+        visit_transitive_dependencies(InsChunkIdx::from(0), &deps, |_| count += 1);
+        count
+      })
+      .unwrap()
+      .join()
+      .unwrap();
+    assert_eq!(count, n - 1);
+  }
 }

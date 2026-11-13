@@ -64,7 +64,9 @@ impl Plugin for LoadInvalidatedExternal {
       }
     } else if args.id == self.lib_id {
       // Keep the normal task pending while the entry calls `this.load` for the same id.
-      tokio::time::sleep(Duration::from_millis(50)).await;
+      // Module tasks use Rolldown's runtime, so their delay must use its timer.
+      rolldown_utils::time::sleep_until(std::time::Instant::now() + Duration::from_millis(50))
+        .await;
       "export const value = 42;"
     } else {
       return Ok(None);

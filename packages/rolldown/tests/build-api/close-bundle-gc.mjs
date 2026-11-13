@@ -180,6 +180,8 @@ const cases = {
     await runtimeKeeper.close();
   },
   async 'watch mode'(marker) {
+    // The WASI builds do not support watch mode.
+    if (isWasi) return;
     const watcher = watch({
       input,
       logLevel: 'silent',
@@ -200,6 +202,7 @@ const cases = {
     await watcher.close();
   },
   async 'watch mode, watcher closes while an event result close runs'(marker) {
+    if (isWasi) return;
     // With the WASI binding, `watcher.close()` stops the shared async runtime when no other owner
     // keeps it. It does this also while an event result close is pending. This bundle keeps it.
     const runtimeKeeper = await rolldown({ input, logLevel: 'silent' });

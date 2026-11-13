@@ -1,10 +1,11 @@
 use std::collections::VecDeque;
 use std::collections::hash_map::Entry;
+use std::panic::AssertUnwindSafe;
 use std::path::Path;
 use std::sync::Arc;
 
 use arcstr::ArcStr;
-use futures::future::join_all;
+use futures::{FutureExt, StreamExt, future::join_all};
 use itertools::Itertools;
 use oxc::semantic::NodeId;
 use oxc::semantic::{ScopeId, Scoping};
@@ -26,7 +27,9 @@ use rolldown_error::{
 };
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
+use rolldown_std_utils::discard_panic_payload;
 use rolldown_utils::commondir;
+use rolldown_utils::futures::try_spawn_detached;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
@@ -111,7 +114,7 @@ impl VisitState {
 
 pub struct ModuleLoader<'a, Fs: FileSystem + Clone + 'static> {
   pub shared_context: Arc<TaskContext<Fs>>,
-  rx: tokio::sync::mpsc::UnboundedReceiver<ModuleLoaderMsg>,
+  rx: futures::channel::mpsc::UnboundedReceiver<ModuleLoaderMsg>,
   remaining: u32,
   intermediate_normal_modules: IntermediateNormalModules,
   symbol_ref_db: SymbolRefDb,
@@ -166,6 +169,59 @@ pub struct ModuleLoaderOutput {
   pub tla_keyword_span_map: FxHashMap<ModuleIdx, Span>,
 }
 
+/// Covers a module task until its first poll. From then on the task's own `TaskMessageGuard`
+/// reports a panic or a cancellation, so the two never report the same task twice.
+struct ModuleTaskSupervisor {
+  tx: Option<futures::channel::mpsc::UnboundedSender<ModuleLoaderMsg>>,
+}
+
+impl ModuleTaskSupervisor {
+  fn disarm(&mut self) {
+    self.tx = None;
+  }
+}
+
+impl Drop for ModuleTaskSupervisor {
+  fn drop(&mut self) {
+    let Some(tx) = self.tx.take() else {
+      return;
+    };
+    let diagnostic = BuildDiagnostic::unhandleable_error(anyhow::anyhow!(
+      "module loader task was dropped before it started"
+    ));
+    let _ = tx.unbounded_send(ModuleLoaderMsg::BuildErrors(vec![diagnostic].into_boxed_slice()));
+  }
+}
+
+fn supervised_module_task<F>(
+  future: F,
+  tx: futures::channel::mpsc::UnboundedSender<ModuleLoaderMsg>,
+) -> impl std::future::Future<Output = ()> + Send + 'static
+where
+  F: std::future::Future<Output = ()> + Send + 'static,
+{
+  let mut supervisor = ModuleTaskSupervisor { tx: Some(tx) };
+  async move {
+    supervisor.disarm();
+    if let Err(payload) = AssertUnwindSafe(future).catch_unwind().await {
+      discard_panic_payload(payload);
+    }
+  }
+}
+
+fn spawn_module_task<F>(future: F, tx: futures::channel::mpsc::UnboundedSender<ModuleLoaderMsg>)
+where
+  F: std::future::Future<Output = ()> + Send + 'static,
+{
+  // Module task state machines are tens of KB. Box once here so each hop of
+  // the spawn chain moves a pointer instead of copying the state machine.
+  let future: std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> = Box::pin(future);
+  let future = supervised_module_task(future, tx);
+  if let Err(future) = try_spawn_detached(future) {
+    drop(future);
+  }
+}
+
 impl<Fs: FileSystem + Clone> Drop for ModuleLoader<'_, Fs> {
   fn drop(&mut self) {
     self.cache.importers = std::mem::take(&mut self.intermediate_normal_modules.importers);
@@ -209,7 +265,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     // send future would wait on capacity that only the consumer can free, but
     // the consumer may need the JS thread — pinned by `block_on` — to run
     // plugin hooks first. Keeping the channel unbounded removes that edge.
-    let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+    let (tx, rx) = futures::channel::mpsc::unbounded();
     let shared_context = Arc::new(TaskContext { options, tx, resolver, fs, plugin_driver, meta });
 
     let importers = std::mem::take(&mut cache.importers);
@@ -423,10 +479,11 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       self.request_all_exports_for_entry(idx, user_defined_entries);
     }
     let ctx = Arc::clone(&self.shared_context);
+    let tx = self.shared_context.tx.clone();
     if resolved_id.external.is_external() {
       self.external_module_idxs.insert(idx);
       let task = ExternalModuleTask::new(ctx, idx, resolved_id);
-      tokio::spawn(task.run().instrument(tracing::info_span!("external_module_task")));
+      spawn_module_task(task.run().instrument(tracing::info_span!("external_module_task")), tx);
     } else {
       let task = ModuleTask::new(
         ctx,
@@ -438,7 +495,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         self.flat_options,
         self.magic_string_tx.clone(),
       );
-      tokio::spawn(task.run().instrument(tracing::info_span!("normal_module_task")));
+      spawn_module_task(task.run().instrument(tracing::info_span!("normal_module_task")), tx);
     }
     self.remaining += 1;
     idx
@@ -468,7 +525,10 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     if let Entry::Vacant(e) = self.cache.module_id_to_idx.entry(RUNTIME_MODULE_ID) {
       let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
       let task = RuntimeModuleTask::new(idx, Arc::clone(&self.shared_context), self.flat_options);
-      tokio::spawn(task.run().instrument(tracing::info_span!("runtime_module_task")));
+      spawn_module_task(
+        task.run().instrument(tracing::info_span!("runtime_module_task")),
+        self.shared_context.tx.clone(),
+      );
       e.insert(VisitState::Seen(idx));
       self.remaining += 1;
     }
@@ -553,7 +613,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     let mut overrode_preserve_entry_signature_map = FxHashMap::default();
 
     while self.remaining > 0 {
-      let Some(msg) = self.rx.recv().await else {
+      let Some(msg) = self.rx.next().await else {
         break;
       };
       match msg {
@@ -1309,7 +1369,10 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
 mod tests {
   use std::sync::Arc;
 
-  use rolldown_common::{BundleMode, BundlerOptions, FlatOptions, ModuleId, ResolvedId};
+  use futures::StreamExt;
+  use rolldown_common::{
+    BundleMode, BundlerOptions, FlatOptions, ModuleId, ModuleLoaderMsg, ResolvedId,
+  };
   use rolldown_fs::OsFileSystem;
 
   use crate::{
@@ -1317,7 +1380,7 @@ mod tests {
     module_loader::task_context::{TaskContext, TaskContextMeta},
   };
 
-  use super::{ExternalModuleTask, ModuleTask};
+  use super::{ExternalModuleTask, ModuleTask, supervised_module_task};
 
   /// A module task that finishes after its build was dropped must not panic when it sends.
   #[tokio::test]
@@ -1330,7 +1393,7 @@ mod tests {
     .expect("create bundle factory");
     let bundle = factory.create_bundle(BundleMode::FullBuild, None).expect("create bundle");
     // Drop the receiver at once, as a dropped build does.
-    let (tx, _) = tokio::sync::mpsc::unbounded_channel();
+    let (tx, _) = futures::channel::mpsc::unbounded();
     let ctx: Arc<TaskContext<OsFileSystem>> = Arc::new(TaskContext {
       options: bundle.options,
       tx,
@@ -1349,5 +1412,32 @@ mod tests {
     let external =
       ResolvedId { id: ModuleId::new("external"), external: true.into(), ..Default::default() };
     ExternalModuleTask::new(Arc::clone(&ctx), 1.into(), external).run().await;
+  }
+
+  #[test]
+  fn module_task_dropped_before_it_starts_reports_exactly_one_error() {
+    let (tx, mut rx) = futures::channel::mpsc::unbounded();
+    let future = supervised_module_task(std::future::pending(), tx);
+    drop(future);
+
+    let message = rolldown_utils::futures::block_on(async { rx.next().await })
+      .expect("a module task dropped before its first poll must retire loader accounting");
+    match message {
+      ModuleLoaderMsg::BuildErrors(errors) => assert_eq!(errors.len(), 1),
+      _ => panic!("a module task dropped before its first poll must become BuildErrors"),
+    }
+    assert!(rx.try_recv().is_err(), "the drop must produce exactly one completion error");
+  }
+
+  #[test]
+  fn started_module_task_leaves_reporting_to_its_own_guard() {
+    let (tx, mut rx) = futures::channel::mpsc::unbounded();
+    rolldown_utils::futures::block_on(supervised_module_task(
+      async {
+        panic!("module task probe");
+      },
+      tx,
+    ));
+    assert!(rx.try_recv().is_err(), "a started task reports through `TaskMessageGuard` only");
   }
 }

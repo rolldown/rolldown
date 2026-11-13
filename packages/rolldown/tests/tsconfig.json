@@ -16,6 +16,12 @@
     "rootDir": "../",
     "allowJs": true,
     "isolatedDeclarations": false,
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
+    // Mirrors the `@tests` alias in vitest.config.mts so type checking (and
+    // knip's import resolution) can follow `@tests/*` imports.
+    "paths": {
+      "@src/*": ["../src/*"],
+      "@tests/*": ["./src/*"]
+    }
   }
 }

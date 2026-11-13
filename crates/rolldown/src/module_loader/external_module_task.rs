@@ -33,7 +33,10 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
     if let Err(errs) = self.run_inner().await {
       // The send fails only when the build was dropped before this task finished.
       // Then nothing reads the result, so ignore the error.
-      let _ = self.ctx.tx.send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
+      let _ = self
+        .ctx
+        .tx
+        .unbounded_send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
     }
     guard.mark_sent();
   }
@@ -82,7 +85,7 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
     }));
     // The send fails only when the build was dropped before this task finished.
     // Then nothing reads the result, so ignore the error.
-    let _ = self.ctx.tx.send(msg);
+    let _ = self.ctx.tx.unbounded_send(msg);
     Ok(())
   }
 }

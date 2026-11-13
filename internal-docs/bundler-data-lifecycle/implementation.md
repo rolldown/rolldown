@@ -287,6 +287,8 @@ Void hooks discard returned values while still awaiting async completion, and
 the error wrapper annotates both synchronous throws and asynchronous rejections.
 Timing instrumentation must preserve this distinction too.
 
+The binding keeps plain returns free of Promises too. Each hook is a `MaybeAsyncJsCallback`, whose return value is a `MaybePromise` (`crates/rolldown_binding/src/types/js_callback.rs`). `MaybePromise` checks for a Promise with `napi_is_promise` only and converts a plain value directly. napi's `Either<Promise<T>, T>` validates a plain value as a Promise first, and that validation creates and rejects a Promise for every plain value, which makes a synchronous hook slower than an `async` one. `Either` also drops the conversion error of a malformed result, such as `{ code: Buffer }` from `load`. `MaybePromise` returns the error that a Promise resolving to the same value gives, including an exception that the conversion throws.
+
 ### The rule
 
 - Each function field of the bundler options uses `UntrackedJsCallback` (`crates/rolldown_binding/src/types/js_callback_release.rs`). That type has no call methods. `normalize_binding_options` creates one group (`JsCallbackRelease`) for each call. It gives each callback to `JsCallbackRelease::track`, which returns a `ReleasableJsCallback`. A `ReleasableJsCallback` keeps the callback in a shared slot, so that the release can take it out.
@@ -304,7 +306,7 @@ Timing instrumentation must preserve this distinction too.
   - Example: a plugin keeps `this`, and the options have an `external` function. After a dev engine close, the plugin calls `this.resolve()`. Then `this.resolve()` rejects, and the `cause` of its error has the release message.
   - After `bundle.close()`, the same call fails before it gets to the option function, because that close drops the plugin driver.
 - Option getters still work after the close, because each options object reads all its values in its constructor (see [Normalized options objects](#normalized-options-objects)).
-- The compiler checks only the fields that use `UntrackedJsCallback`. So a new function option must use it too. Nothing checks a new field that uses `JsCallback` directly, because plugin hooks and the watcher event listener also use `JsCallback`.
+- The compiler checks only the fields that use `UntrackedJsCallback`. So a new function option must use it too. Nothing checks a new field that uses `JsCallback` or `MaybeAsyncJsCallback` directly, because plugin hooks and the watcher event listener also use them.
 
 ### Limits
 

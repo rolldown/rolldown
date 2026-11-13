@@ -28,7 +28,7 @@ use crate::{
 use rolldown_fs::FileSystem;
 
 use super::resolve_utils::resolve_dependencies;
-use super::task_context::TaskContext;
+use super::task_context::{TaskContext, TaskMessageGuard};
 
 const RUNTIME_BASE_JS: &str = include_str!("../runtime/runtime-base.js");
 const RUNTIME_TAIL_JS: &str = include_str!("../runtime/runtime-tail.js");
@@ -60,10 +60,12 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
 
   #[tracing::instrument(name = "RuntimeNormalModuleTaskResult::run", level = "debug", skip_all)]
   pub async fn run(self) {
+    let guard = TaskMessageGuard::new(&self.ctx, RUNTIME_MODULE_ID);
     if let Err(errs) = self.run_inner().await {
       // If the main thread is dead, nothing we can do to handle these send failures.
       let _ = self.ctx.tx.send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
     }
+    guard.mark_sent();
   }
 
   async fn run_inner(&self) -> BuildResult<()> {
@@ -166,7 +168,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
         source,
 
         import_records: IndexVec::default(),
-        sourcemap_chain,
+        sourcemap_chain: Arc::new(sourcemap_chain),
         // The internal runtime module `importers/imported` should be skip.
         importers: FxIndexSet::default(),
         importers_idx: FxIndexSet::default(),
@@ -186,7 +188,6 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
         self_referenced_class_decl_symbol_ids: FxHashSet::default(),
         hashbang_range: None,
         meta: ecma_view_meta,
-        mutations: vec![],
         new_url_references,
         namespace_in_checks: FxHashMap::default(),
         rolldown_file_url_references,

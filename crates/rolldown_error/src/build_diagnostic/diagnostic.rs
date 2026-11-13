@@ -26,6 +26,11 @@ impl From<ArcStr> for DiagnosticFileId {
 #[derive(Debug, Clone)]
 pub struct RolldownLabelSpan(DiagnosticFileId, Range<usize>);
 
+/// Diagnostics reach users through stderr (rolldown CLI and Vite print errors and warnings there).
+pub fn stderr_supports_color() -> bool {
+  supports_color::on_cached(supports_color::Stream::Stderr).is_some()
+}
+
 impl ariadne::Span for RolldownLabelSpan {
   type SourceId = DiagnosticFileId;
 
@@ -173,8 +178,9 @@ impl Diagnostic {
     }
   }
 
-  pub fn to_color_string(&self) -> String {
-    self.convert_to_string(true)
+  /// Colored only when stderr supports it, so `NO_COLOR`, `FORCE_COLOR` and piped output are respected.
+  pub fn to_stderr_string(&self) -> String {
+    self.convert_to_string(stderr_supports_color())
   }
 
   /// Get the primary location information from the first label if available

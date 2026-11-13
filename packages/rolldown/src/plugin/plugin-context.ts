@@ -1,6 +1,7 @@
 import type { Program } from '@oxc-project/types';
 import type {
   BindingPluginContext,
+  BindingPluginContextResolvedId,
   BindingPluginContextResolveOptions,
   BindingVitePluginCustom,
   ParserOptions,
@@ -386,16 +387,20 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
       },
       undefined as BindingVitePluginCustom | undefined,
     );
-    const res = await this.context.resolve(source, importer, {
-      importKind: options?.kind,
-      custom: receipt,
-      isEntry: options?.isEntry,
-      skipSelf: options?.skipSelf,
-      vitePluginCustom,
-      attributes: options?.attributes,
-    } satisfies Record<keyof BindingPluginContextResolveOptions, unknown>);
-    if (receipt != null) {
-      this.data.removeSavedResolveOptions(receipt);
+    let res: BindingPluginContextResolvedId | null;
+    try {
+      res = await this.context.resolve(source, importer, {
+        importKind: options?.kind,
+        custom: receipt,
+        isEntry: options?.isEntry,
+        skipSelf: options?.skipSelf,
+        vitePluginCustom,
+        attributes: options?.attributes,
+      } satisfies Record<keyof BindingPluginContextResolveOptions, unknown>);
+    } finally {
+      if (receipt != null) {
+        this.data.removeSavedResolveOptions(receipt);
+      }
     }
 
     if (res == null) return null;

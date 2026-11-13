@@ -98,7 +98,7 @@ pub async fn render_umd<'code>(
     source_joiner.append_source(intro);
   }
 
-  if named_exports && entry_module.exports_kind.is_esm() {
+  if named_exports && has_exports && entry_module.exports_kind.is_esm() {
     // Symbol.toStringTag should only be added to module facades (chunks that represent a specific module)
     if let Some(marker) = render_namespace_markers(
       ctx.options.es_module,

@@ -94,24 +94,41 @@ impl<'a> ReducedChunkGraph<'a> {
   /// Moves the atom to the node of `bits` and returns true if the chunk graph stays acyclic.
   /// Otherwise, it keeps the atom where it was and returns false.
   pub(super) fn try_move(&mut self, atom_idx: usize, bits: &BitSet) -> bool {
-    let from = self.node_by_atom[atom_idx];
-    if !self.is_acyclic && !self.cyclic_component.contains(&from) {
+    self.try_move_atoms(&[atom_idx], bits)
+  }
+
+  /// Moves all the atoms to the node of `bits` and returns true if the chunk graph stays acyclic.
+  /// Otherwise, it keeps every atom where it was and returns false. Atoms that depend on each other
+  /// can close a cycle when they move one by one and stay acyclic when they move together.
+  pub(super) fn try_move_atoms(&mut self, atom_idxs: &[usize], bits: &BitSet) -> bool {
+    let from_nodes: SmallVec<[usize; 1]> =
+      atom_idxs.iter().map(|&atom_idx| self.node_by_atom[atom_idx]).collect();
+    // Moves out of two nodes can break cycles in two components, so the shortcut needs one node.
+    if !self.is_acyclic
+      && from_nodes.iter().all(|&from| from == from_nodes[0])
+      && !self.cyclic_component.contains(&from_nodes[0])
+    {
       return false;
     }
     let to = match self.node_by_bits.get(bits) {
       Some(&node) => node,
       None => self.add_node(bits),
     };
-    debug_assert_ne!(from, to, "the reduced bits must differ from the current bits");
-    self.move_atom(atom_idx, from, to);
-    // While the graph has a cycle, the move can remove every old cycle. It can also close new
+    for (&atom_idx, &from) in atom_idxs.iter().zip(&from_nodes) {
+      debug_assert_ne!(from, to, "the reduced bits must differ from the current bits");
+      self.move_atom(atom_idx, from, to);
+    }
+    // All the atoms go to `to`, so every edge that the moves add still starts or ends at `to`.
+    // While the graph has a cycle, the moves can remove every old cycle. They can also close new
     // cycles through `to`. So only a full check is exact. A rejected move leaves
     // `cyclic_component` correct.
     let acyclic = if self.is_acyclic { !self.reaches_itself(to) } else { !self.has_cycle() };
     if acyclic {
       self.is_acyclic = true;
     } else {
-      self.move_atom(atom_idx, to, from);
+      for (&atom_idx, &from) in atom_idxs.iter().zip(&from_nodes).rev() {
+        self.move_atom(atom_idx, to, from);
+      }
     }
     acyclic
   }
@@ -593,6 +610,33 @@ mod tests {
     );
   }
 
+  #[test]
+  fn atoms_that_cannot_move_one_by_one_move_together() {
+    let check = |atom_bits: &[&[u32]],
+                 atom_dependencies: &[Vec<usize>],
+                 rejected: &[usize],
+                 group: &[usize]| {
+      let current: Vec<BitSet> = atom_bits.iter().map(|set| bits(4, set)).collect();
+      let target = bits(4, &[0, 1]);
+      let mut next = current.clone();
+      group.iter().for_each(|&atom_idx| next[atom_idx] = target.clone());
+      assert!(!has_cycle(&next, atom_dependencies, &[None; 4]));
+      let mut graph = ReducedChunkGraph::new(&current, atom_dependencies, &[None; 4]);
+      for &atom_idx in rejected {
+        assert!(!graph.try_move(atom_idx, &target));
+        graph.assert_consistent();
+      }
+      assert!(graph.try_move_atoms(group, &target));
+      graph.assert_consistent();
+    };
+    // Atom 0 depends on atom 1, and atom 1 depends on atom 2. Atom 2 cannot join the chunk of
+    // atom 0 before atom 1 does.
+    check(&[&[0, 1], &[0, 1, 2], &[0, 1, 2, 3]], &[vec![1], vec![2], vec![]], &[2], &[2, 1]);
+    // Atoms 1 and 2 depend on each other, so the graph starts with a cycle. Neither atom can leave
+    // it alone.
+    check(&[&[0, 1], &[0, 1, 2], &[0, 1, 3]], &[vec![1], vec![2], vec![1]], &[1, 2], &[1, 2]);
+  }
+
   struct Rng(u64);
 
   impl Rng {
@@ -769,15 +813,23 @@ mod tests {
         ReducedChunkGraph::new(&atom_bits, &atom_dependencies, &host_atom_by_entry_bit);
       graph.assert_consistent();
       for step in 0..16 {
-        let atom_idx = rng.below(atom_count);
+        // Odd steps move two atoms together.
+        let mut moved_atoms = vec![rng.below(atom_count)];
+        if step % 2 == 1 && atom_count > 1 {
+          moved_atoms.push((moved_atoms[0] + 1 + rng.below(atom_count - 1)) % atom_count);
+        }
         let reduced = &all_bits[rng.below(all_bits.len())];
-        if *reduced == atom_bits[atom_idx] {
+        if moved_atoms.iter().any(|&atom_idx| *reduced == atom_bits[atom_idx]) {
           continue;
         }
         let mut next = atom_bits.clone();
-        next[atom_idx] = reduced.clone();
+        moved_atoms.iter().for_each(|&atom_idx| next[atom_idx] = reduced.clone());
         let expected = !has_cycle(&next, &atom_dependencies, &host_atom_by_entry_bit);
-        assert_eq!(graph.try_move(atom_idx, reduced), expected, "case {case}, step {step}");
+        assert_eq!(
+          graph.try_move_atoms(&moved_atoms, reduced),
+          expected,
+          "case {case}, step {step}"
+        );
         graph.assert_consistent();
         if expected {
           atom_bits = next;

@@ -12,11 +12,12 @@ import type { Modules } from './harness';
  * `export { default as x }` and whose properties are assigned to, route modules that only
  * re-export a CommonJS default and are loaded by dynamic import, external modules that log when
  * they evaluate (imported for their side effects or star re-exported), dynamic imports of shared
- * modules, side-effect logs, `this` checks through plain, optional, parenthesized-optional,
- * computed, `call`, `Reflect.apply` and tagged-template calls (the callee sometimes carrying the
- * `__NO_SIDE_EFFECTS__` annotation), globals read by shared modules, and local names, at the top
- * level and in nested scopes, that collide with each other and with the names the feature and the
- * bundler print (`share_<name>`, `exports`, `init_<name>`, `<name>_exports`, runtime helpers).
+ * modules by entries that import them statically and by entries that do not, side-effect logs,
+ * `this` checks through plain, optional, parenthesized-optional, computed, `call`, `Reflect.apply`
+ * and tagged-template calls (the callee sometimes carrying the `__NO_SIDE_EFFECTS__` annotation),
+ * globals read by shared modules, and local names, at the top level and in nested scopes, that
+ * collide with each other and with the names the feature and the bundler print (`share_<name>`,
+ * `exports`, `init_<name>`, `<name>_exports`, runtime helpers).
  * The option set varies internal export minification, tree shaking, `keepNames`, module order,
  * debug info, minification and a manual code-splitting group.
  */
@@ -105,7 +106,7 @@ export function generateGraph(seed: number): GeneratedGraph {
   for (const e of entries) {
     if (entryImports.get(e)!.size === 0) entryImports.get(e)!.add(pick(shared));
   }
-  const dynamicTargets = new Set(shared.filter(() => chance(0.15)));
+  const dynamicTargets = new Set(shared.filter(() => chance(0.35)));
   // Route modules: each only re-exports a CommonJS module's default and is reached by a dynamic
   // import, so it is a dynamic entry whose exported binding is declared in the CommonJS chunk.
   const routes = [...cjs].filter(() => chance(0.5));
@@ -339,6 +340,13 @@ export function generateGraph(seed: number): GeneratedGraph {
       if (routes.includes(s) && chance(0.6)) {
         dynamic.push(
           `import('./route_${s}.js').then((ns) => globalThis.__log('${e} route ${s}', typeof ns.default, ns.via, __id(ns.default)))`,
+        );
+      }
+    }
+    for (const s of dynamicTargets) {
+      if (!imports.includes(s) && chance(0.7)) {
+        dynamic.push(
+          `import('./${s}.js').then((ns) => globalThis.__log('${e} lazy ${s}', ns.n, __id(ns.o)))`,
         );
       }
     }

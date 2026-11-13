@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{ConstExportMeta, SourcemapChainElement};
 use arcstr::ArcStr;
 use bitflags::bitflags;
@@ -12,8 +14,8 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   ExportsKind, HmrInfo, ImportRecordIdx, ImporterRecord, LocalExport, ModuleDefFormat, ModuleId,
-  ModuleIdx, NamedImport, ResolvedImportRecord, SourceMutation, StmtInfoIdx, SymbolRef,
-  side_effects::DeterminedSideEffects, types::source_mutation::ArcSourceMutation,
+  ModuleIdx, NamedImport, ResolvedImportRecord, StmtInfoIdx, SymbolRef,
+  side_effects::DeterminedSideEffects,
 };
 
 bitflags! {
@@ -135,7 +137,14 @@ pub struct EcmaView {
   pub imports: FxHashMap<NodeId, ImportRecordIdx>,
   pub exports_kind: ExportsKind,
   pub default_export_ref: SymbolRef,
-  pub sourcemap_chain: Vec<SourcemapChainElement>,
+  /// Built once by the scan and only read after it. Shared so that cloning the
+  /// module table for every incremental build does not deep-copy each module's
+  /// source maps.
+  #[expect(
+    clippy::rc_buffer,
+    reason = "the scan extends and reorders a fresh chain in place through `Arc::make_mut`, which `Arc<[T]>` cannot do"
+  )]
+  pub sourcemap_chain: Arc<Vec<SourcemapChainElement>>,
   // the ids of all modules that statically import this module
   pub importers: FxIndexSet<ModuleId>,
   pub importers_idx: FxIndexSet<ModuleIdx>,
@@ -154,7 +163,6 @@ pub struct EcmaView {
   pub hashbang_range: Option<Span>,
   pub directive_range: Vec<Span>,
   pub meta: EcmaViewMeta,
-  pub mutations: Vec<ArcSourceMutation>,
   /// `NodeId` of `new URL('path', import.meta.url)` -> `ImportRecordIdx`
   pub new_url_references: FxHashMap<NodeId, ImportRecordIdx>,
   /// `NodeId` of `'key' in ns`, where `ns` is a namespace import -> `key`.
@@ -165,7 +173,9 @@ pub struct EcmaView {
   pub rolldown_file_url_references: Vec<RolldownFileUrlReference>,
   pub this_expr_replace_map: FxHashMap<NodeId, ThisExprReplaceKind>,
   /// The facade symbol for the top-level `this` of a CommonJS module. The scanner makes it for each
-  /// CommonJS module that reads its top-level `this`. If the finalizer prints the module inside a
+  /// CommonJS module that reads its top-level `this`, and `determine_module_exports_kind` makes it
+  /// for a module that reads its top-level `this` when it promotes the module from
+  /// `ExportsKind::None` to `ExportsKind::CommonJs`. If the finalizer prints the module inside a
   /// CJS closure, the renamer gives the symbol a name, and the finalizer prints it as the third
   /// parameter of the closure. The runtime passes the initial exports object of the module to that
   /// parameter. The name is synthesized, so no binding of the module can capture it. An unwrapped
@@ -230,15 +240,4 @@ bitflags! {
         const HmrAcceptExports = 1 << 9;
         const ModuleOrExports = Self::ModuleRef.bits() | Self::ExportsRef.bits();
     }
-}
-
-#[derive(Debug, Default)]
-pub struct PrependRenderedImport {
-  pub intro: String,
-}
-
-impl SourceMutation for PrependRenderedImport {
-  fn apply(&self, magic_string: &mut string_wizard::MagicString<'_>) {
-    magic_string.append_intro(self.intro.clone());
-  }
 }

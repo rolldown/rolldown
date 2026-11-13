@@ -743,12 +743,12 @@ const InputOptionsSchema = v.strictObject({
               ),
             ),
           ),
-          v.description('Used to name the build.'),
+          v.description("Name of the 'full' mode log folder, node_modules/.rolldown/<sessionId>/."),
         ),
         mode: v.pipe(
           v.optional(v.union([v.literal('full'), v.literal('report')])),
           v.description(
-            "'full' (default): write JSON-lines devtools logs. 'report': aggregate the same event stream in-memory and emit an agent-readable report (metrics.json + markdown views) instead.",
+            "'full' (default): write JSON-lines devtools logs. 'report': write a small build report to node_modules/.rolldown/report/ instead.",
           ),
         ),
       }),

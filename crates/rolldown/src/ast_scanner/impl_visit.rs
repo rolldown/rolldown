@@ -353,6 +353,9 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
   /// Deliberately not folded into `visit_import_meta`: that method returns early when
   /// `keep_esm_import_export_syntax()` is set, but `ROLLDOWN_FILE_URL_` is rewritten
   /// regardless of that option.
+  ///
+  /// Returning keeps the inner `import.meta` from setting `ImportMeta`, so inline common chunks can
+  /// copy the module: each copy gets its own replacement, resolved for the file that prints it.
   fn visit_member_expression(&mut self, it: &ast::MemberExpression<'ast>) {
     if it.object().is_import_meta()
       && let Some(property_name) = it.static_property_name().and_then(JSStr::as_str)
@@ -364,6 +367,7 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
         reference_id: CompactStr::from(file_url.reference_id),
         url_id: file_url.url_id.map(CompactStr::from),
       });
+      return;
     }
     walk_js::walk_member_expression(self, it);
   }
@@ -616,7 +620,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           }
           "require" => {
             let is_dummy_record = match self.visit_path.last() {
-              Some(AstKind::CallExpression(call_expr)) => {
+              Some(AstKind::CallExpression(call_expr))
+                if call_expr.callee.node_id() == ident_ref.node_id() =>
+              {
                 !self.process_global_require_call(call_expr)
               }
               Some(_) => true,

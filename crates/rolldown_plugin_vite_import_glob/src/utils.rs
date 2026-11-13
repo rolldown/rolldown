@@ -508,28 +508,30 @@ impl GlobImportVisit<'_> {
     let root_slash = root.to_slash_lossy();
 
     let mut is_relative = true;
-    let mut negated_globs = vec![];
     let mut positive_globs = vec![];
-
-    for value in values {
-      if let Some(glob) = value.strip_prefix('!') {
-        negated_globs.push(self.to_absolute_glob(
-          glob,
-          &dir_slash,
-          &root_slash,
-          options.base.as_deref(),
-        )?);
-      } else {
-        positive_globs.push(self.to_absolute_glob(
-          value,
-          &dir_slash,
-          &root_slash,
-          options.base.as_deref(),
-        )?);
-        if !value.starts_with('.') {
-          is_relative = false;
-        }
+    for value in values.iter().filter(|value| !value.starts_with('!')) {
+      positive_globs.push(self.to_absolute_glob(
+        value,
+        &dir_slash,
+        &root_slash,
+        options.base.as_deref(),
+      )?);
+      if !value.starts_with('.') {
+        is_relative = false;
       }
+    }
+
+    let common = self.get_common_base(&positive_globs).into_owned();
+
+    let mut negated_globs = vec![];
+    for glob in values.iter().filter_map(|value| value.strip_prefix('!')) {
+      // Like the `cwd` vite passes to tinyglobby, a negated `**` glob starts where the walk
+      // starts, which can be outside `root`.
+      negated_globs.push(if glob.starts_with("**") {
+        PathWithGlob::new(path_posix::join(&[&common, glob]).into_owned(), glob)
+      } else {
+        self.to_absolute_glob(glob, &dir_slash, &root_slash, options.base.as_deref())?
+      });
     }
 
     if negated_globs.is_empty() && positive_globs.is_empty() {
@@ -561,7 +563,6 @@ impl GlobImportVisit<'_> {
       return Some(());
     }
 
-    let common = self.get_common_base(&positive_globs).into_owned();
     let common_path = Path::new(&common);
 
     if self.is_dev_mode {

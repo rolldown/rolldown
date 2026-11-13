@@ -149,7 +149,7 @@ classes, and reads of already initialized local bindings. Function bodies and in
 initializers are deferred; imported/global eager reads, calls, spreads, destructuring, computed
 keys, class definition-time work and possible local TDZ reads reject the proof. A reverse
 static-import worklist rejects every module depending on an unproven module, an external, a
-synchronous cycle, TLA, a missing-export shim, a concatenated wrapper or an explicit effectful
+synchronous cycle, TLA, a missing-export shim or an explicit effectful
 module contract. Ordinary tree-shaking analysis remains separate: generated star-re-export glue
 can mark a module effectful even when this source-level proof succeeds.
 
@@ -188,15 +188,16 @@ including facades retained through an export chain. Namespace holders — both `
 named import whose value is a namespace — inspect only included statements: statically resolved
 member reads route that member, while opaque uses expand the non-ambiguous namespace. A resolved
 member that the constant-inlining pass will replace is skipped using the same constant metadata and
-inline mode as tree shaking. Module-global leaf or namespace liveness is deliberately insufficient,
-because another importer can make the same canonical symbol live without retaining it for this
-consumer.
+inline mode as tree shaking, unless its declaring module or a dependency of that module has side
+effects: tree shaking keeps that module, so the read still routes it. Module-global leaf or
+namespace liveness is deliberately insufficient, because another importer can make the same
+canonical symbol live without retaining it for this consumer.
 
 The CJS-carrier optimization is restricted to modules whose retained body consists entirely of
 direct re-exports. Tree shaking must be enabled, and the module must not be in a
 synchronous `import`/`require` SCC, be the target of an opaque CommonJS `require()`, carry top-level await or a
-TLA dependency, expose dynamic exports, require a missing-export shim, or be a concatenated
-wrapper. CJS `export *` is also excluded because its namespace is dynamic. These shapes keep the
+TLA dependency, expose dynamic exports, or require a missing-export shim. CJS `export *` is also
+excluded because its namespace is dynamic. These shapes keep the
 existing monolithic initialization path. Rejecting a synchronous SCC is the first-line cycle
 safety rule: it preserves one module's evaluating guard across dependency traversal and local body
 instead of flattening a cycle into separately ordered leaf calls. A direct `require()` target also
@@ -237,7 +238,7 @@ or binding dependency closure, apart from the inert runtime helpers. Side-effect
 insufficient: a pure initializer can snapshot an imported mutable value, and postponing that read changes the exported value. The
 closure includes excluded forwarding modules and conservatively includes unused static records.
 Interop wrappers, synchronous cycles, require targets, TLA, dynamic exports, missing-export shims,
-concatenated modules, and no-treeshake contracts retain their current initialization. Namespace-valued
+and no-treeshake contracts retain their current initialization. Namespace-valued
 re-exports and mixed modules with an opaque namespace consumer also retain the monolithic path;
 namespace getters have their own static loading dependencies. A statically resolved namespace member
 read can still select an ordinary forwarded binding.
@@ -490,6 +491,7 @@ pub struct OrderLoweringInput<'a> {
   pub star_reexport_records_by_imported_symbol:
     &'a FxHashMap<SymbolRef, Vec<Vec<(ModuleIdx, ImportRecordIdx)>>>,
   pub member_read_star_reexport_paths: &'a [MemberReadStarReexportPath],
+  pub kept_inlined_constant_reads: &'a FxHashSet<SymbolRef>,
   pub used_symbol_refs_builder: &'a UsedSymbolRefsBuilder,
   pub cyclic_modules: &'a FxHashSet<ModuleIdx>,
   pub tree_shaking: bool,

@@ -1,0 +1,144 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## m.js
+
+```js
+import { i as __share_export, n as __exportAll, r as __share, t as __esmMin } from "./rolldown-runtime.js";
+__share("m-JUauIEEf", ((exports) => {
+	// m.js
+	var m_exports = /* @__PURE__ */ __exportAll({
+		count: () => count,
+		inc: () => inc
+	});
+	function inc() {
+		return ++count;
+	}
+	var count;
+	function init_m() {
+		return (init_m = __esmMin((() => {
+			globalThis.events.push("M body");
+			count = 0;
+		})))();
+	}
+	__share_export(exports, {
+		i: () => m_exports,
+		n: () => inc,
+		r: () => init_m,
+		t: () => count
+	});
+}));
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __share_require as a, __share_export as i, __exportAll as n, __share as r, __esmMin as t };
+
+```
+
+## x.js
+
+```js
+import { a as __share_require, i as __share_export, n as __exportAll, r as __share, t as __esmMin } from "./rolldown-runtime.js";
+__share("m-JUauIEEf", ((exports) => {
+	// m.js
+	var m_exports = /* @__PURE__ */ __exportAll({
+		count: () => count,
+		inc: () => inc
+	});
+	function inc() {
+		return ++count;
+	}
+	var count;
+	function init_m() {
+		return (init_m = __esmMin((() => {
+			globalThis.events.push("M body");
+			count = 0;
+		})))();
+	}
+	__share_export(exports, {
+		i: () => m_exports,
+		n: () => inc,
+		r: () => init_m,
+		t: () => count
+	});
+}));
+var share_m = __share_require("m-JUauIEEf");
+// x.js
+function init_x() {
+	return (init_x = __esmMin((() => {
+		share_m.r();
+		(0, share_m.n)();
+		globalThis.events.push("X " + share_m.t);
+	})))();
+}
+init_x();
+
+```
+
+## y.js
+
+```js
+import { a as __share_require, t as __esmMin } from "./rolldown-runtime.js";
+// y.js
+function init_y() {
+	return (init_y = __esmMin((() => {
+		globalThis.loadM = () => import("./m.js").then((n) => (n = __share_require("m-JUauIEEf"), n.r(), n.i)).then((m) => {
+			m.inc();
+			globalThis.events.push("Y " + m.count);
+			return m;
+		});
+	})))();
+}
+init_y();
+
+```
+
+# Variant: off: [code_splitting: enabled]
+
+## Assets
+
+### m.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// m.js
+var m_exports = /* @__PURE__ */ __exportAll({
+	count: () => count,
+	inc: () => inc
+});
+globalThis.events.push("M body");
+let count = 0;
+function inc() {
+	return ++count;
+}
+export { inc as n, m_exports as r, count as t };
+
+```
+
+### x.js
+
+```js
+import { n as inc, t as count } from "./m.js";
+// x.js
+inc();
+globalThis.events.push("X " + count);
+
+```
+
+### y.js
+
+```js
+// y.js
+globalThis.loadM = () => import("./m.js").then((n) => n.r).then((m) => {
+	m.inc();
+	globalThis.events.push("Y " + m.count);
+	return m;
+});
+
+```

@@ -23,6 +23,7 @@ doctest = false
 memchr = { workspace = true }
 oxc = { workspace = true }
 oxc_sourcemap = { workspace = true }
+sugar_path = { workspace = true }
 
 [dev-dependencies]
 criterion2 = { workspace = true, default-features = false }

@@ -22,6 +22,7 @@ use rolldown_utils::index_vec_ext::IndexVecRefExt as _;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
+use std::hash::Hash;
 
 type IndexChunkDependedSymbols = IndexVec<ChunkIdx, FxIndexSet<SymbolRef>>;
 type IndexChunkImportsFromExternalModules =
@@ -33,6 +34,12 @@ type IndexCrossChunkDynamicImports = IndexVec<ChunkIdx, FxIndexSet<ChunkIdx>>;
 type IndexChunkDynamicImportsFromExternalModules = IndexVec<ChunkIdx, FxIndexSet<ModuleIdx>>;
 type IndexImportsFromOtherChunks =
   IndexVec<ChunkIdx, FxHashMap<ChunkIdx, Vec<CrossChunkImportItem>>>;
+
+#[derive(Default)]
+struct ChunkImportRanks {
+  chunks: FxHashMap<ChunkIdx, u32>,
+  externals: FxHashMap<ModuleIdx, u32>,
+}
 
 /// A chunk is loaded through `import('./chunk.js')`, whose promise resolves with the chunk's
 /// namespace object. Promise resolution assimilates any value with a callable `then` as a
@@ -182,21 +189,29 @@ impl GenerateStage<'_> {
       &order_live_symbols,
     );
 
-    // The strict path keeps the `exec_order` sort: its order analysis models chunk evaluation with
-    // that order, and the plan's wrappers fix the module order.
-    let index_importee_ranks = if self.options.is_strict_execution_order_enabled() {
-      vec![None; chunk_graph.chunk_table.len()]
-    } else {
-      chunk_graph
-        .chunk_table
-        .par_iter_enumerated()
-        .map(|(chunk_idx, chunk)| {
-          // Only a chunk with two or more importees has an order to choose.
-          (index_cross_chunk_imports[chunk_idx].len() + chunk.imports_from_other_chunks.len() > 1)
-            .then(|| self.chunk_importee_ranks(chunk_graph, chunk_idx))
-        })
-        .collect::<Vec<_>>()
-    };
+    // The strict path keeps the `exec_order` sort of chunk importees: its order analysis models
+    // chunk evaluation with that order, and the plan's wrappers fix the module order. The analysis
+    // does not model external imports, so they get ranks on both paths.
+    let is_strict_execution_order = self.options.is_strict_execution_order_enabled();
+    let (index_importee_ranks, index_external_import_ranks): (Vec<_>, Vec<_>) = chunk_graph
+      .chunk_table
+      .par_iter_enumerated()
+      .map(|(chunk_idx, chunk)| {
+        // Only a chunk with two or more importees of a kind has an order to choose.
+        let ranks_chunks = !is_strict_execution_order
+          && index_cross_chunk_imports[chunk_idx].len() + chunk.imports_from_other_chunks.len() > 1;
+        let ranks_externals = index_chunk_direct_imports_from_external_modules[chunk_idx].len()
+          + chunk.entry_level_external_module_idx.len()
+          > 1;
+        if !ranks_chunks && !ranks_externals {
+          return (None, None);
+        }
+        let ranks = self.chunk_import_ranks(chunk_graph, chunk_idx);
+        (ranks_chunks.then_some(ranks.chunks), ranks_externals.then_some(ranks.externals))
+      })
+      .collect::<Vec<_>>()
+      .into_iter()
+      .unzip();
 
     let index_sorted_cross_chunk_imports = index_cross_chunk_imports
       .par_iter_enumerated()
@@ -247,23 +262,45 @@ impl GenerateStage<'_> {
       })
       .collect::<Vec<_>>();
 
-    let index_sorted_imports_from_external_modules =
-      index_chunk_direct_imports_from_external_modules
-        .into_iter()
-        .map(|imports_from_external_modules| {
-          imports_from_external_modules
-            .into_iter()
-            .sorted_unstable_by_key(|(external_module_id, _)| {
-              self.link_output.module_table[*external_module_id].exec_order()
-            })
-            .collect_vec()
-        })
-        .collect::<Vec<_>>();
+    let (index_sorted_imports_from_external_modules, index_static_external_imports): (
+      Vec<_>,
+      Vec<_>,
+    ) = index_chunk_direct_imports_from_external_modules
+      .into_iter_enumerated()
+      .map(|(chunk_idx, mut imports_from_external_modules)| {
+        let entry_level = &chunk_graph.chunk_table[chunk_idx].entry_level_external_module_idx;
+        let mut static_imports = imports_from_external_modules
+          .keys()
+          .copied()
+          .chain(
+            entry_level
+              .iter()
+              .copied()
+              .filter(|module_idx| !imports_from_external_modules.contains_key(module_idx)),
+          )
+          .collect_vec();
+        sort_chunk_importees_by(
+          &mut static_imports,
+          |module_idx| self.link_output.module_table[module_idx].exec_order(),
+          index_external_import_ranks[chunk_idx.index()].as_ref(),
+        );
+        let sorted_imports = static_imports
+          .iter()
+          .filter_map(|importee| {
+            imports_from_external_modules
+              .remove(importee)
+              .map(|named_imports| (*importee, named_imports))
+          })
+          .collect_vec();
+        (sorted_imports, static_imports)
+      })
+      .unzip();
 
     multizip((
       chunk_graph.chunk_table.iter_mut(),
       index_sorted_imports_from_other_chunks,
       index_sorted_imports_from_external_modules,
+      index_static_external_imports,
       index_sorted_cross_chunk_imports,
       index_cross_chunk_dynamic_imports,
       index_chunk_dynamic_imports_from_external_modules,
@@ -275,6 +312,7 @@ impl GenerateStage<'_> {
         chunk,
         sorted_imports_from_other_chunks,
         imports_from_external_modules,
+        static_external_imports,
         cross_chunk_imports,
         cross_chunk_dynamic_imports,
         dynamic_imports_from_external_modules,
@@ -286,6 +324,7 @@ impl GenerateStage<'_> {
         }
         chunk.imports_from_other_chunks = sorted_imports_from_other_chunks;
         chunk.direct_imports_from_external_modules = imports_from_external_modules;
+        chunk.static_external_imports = static_external_imports;
         chunk.cross_chunk_imports = cross_chunk_imports;
         chunk.cross_chunk_dynamic_imports =
           cross_chunk_dynamic_imports.into_iter().collect::<Vec<_>>();
@@ -368,10 +407,19 @@ impl GenerateStage<'_> {
     chunk_graph: &ChunkGraph,
     chunk_idx: ChunkIdx,
   ) -> FxHashMap<ChunkIdx, u32> {
+    self.chunk_import_ranks(chunk_graph, chunk_idx).chunks
+  }
+
+  /// The ranks of `chunk_importee_ranks`, plus ranks for the external modules that the walk
+  /// reaches. External modules are ranked separately, as the renderer writes them as their own
+  /// group.
+  /// See internal-docs/code-splitting/implementation.md#chunk-import-order.
+  fn chunk_import_ranks(&self, chunk_graph: &ChunkGraph, chunk_idx: ChunkIdx) -> ChunkImportRanks {
     let chunk = &chunk_graph.chunk_table[chunk_idx];
     let module_table = &self.link_output.module_table;
     let runtime_idx = self.link_output.runtime.id();
     let mut ranks = FxHashMap::default();
+    let mut external_ranks = FxHashMap::default();
     // The stack pops the lead module first.
     let mut stack = match chunk.kind {
       ChunkKind::EntryPoint { module, .. } => {
@@ -386,7 +434,7 @@ impl GenerateStage<'_> {
           .filter(|&module_idx| module_idx != runtime_idx)
           .max_by_key(|&module_idx| module_table[module_idx].exec_order())
         else {
-          return ranks;
+          return ChunkImportRanks::default();
         };
         vec![lead_module]
       }
@@ -405,21 +453,30 @@ impl GenerateStage<'_> {
         }
         Some(_) => {
           walked += 1;
-          self.push_kept_static_importees(module_idx, &mut importees);
-          stack.extend(importees.drain(..).rev());
+          // The runtime only imports helper externals such as `node:module`, which keep their
+          // `exec_order` position.
+          if module_idx != runtime_idx {
+            self.push_kept_static_importees(module_idx, &mut importees);
+            stack.extend(importees.drain(..).rev());
+          }
         }
-        // An external module.
-        None => {}
+        None => {
+          if module_table[module_idx].is_external() {
+            let rank =
+              u32::try_from(external_ranks.len()).expect("Too many modules, u32 overflowed.");
+            external_ranks.insert(module_idx, rank);
+          }
+        }
       }
     }
     if matches!(chunk.kind, ChunkKind::Common) {
       let module_count =
         chunk.modules.iter().filter(|&&module_idx| module_idx != runtime_idx).count();
       if walked < module_count {
-        return FxHashMap::default();
+        return ChunkImportRanks::default();
       }
     }
-    ranks
+    ChunkImportRanks { chunks: ranks, externals: external_ranks }
   }
 
   /// Whether the code of a chunk imports another chunk: a module of the chunk has a static import
@@ -2243,25 +2300,25 @@ fn sort_chunk_importees(
 
 /// The sort of `sort_chunk_importees` with any order key in the place of `exec_order`. The runtime
 /// host check `runtime_host_keeps_evaluation_order` sorts with the key that a host would get.
-pub(super) fn sort_chunk_importees_by<K: Ord>(
-  importees: &mut [ChunkIdx],
-  key: impl Fn(ChunkIdx) -> K,
-  ranks: Option<&FxHashMap<ChunkIdx, u32>>,
+pub(super) fn sort_chunk_importees_by<T: Copy + Eq + Hash, K: Ord>(
+  importees: &mut [T],
+  key: impl Fn(T) -> K,
+  ranks: Option<&FxHashMap<T, u32>>,
 ) {
-  importees.sort_unstable_by_key(|chunk_idx| key(*chunk_idx));
+  importees.sort_unstable_by_key(|importee| key(*importee));
   let Some(ranks) = ranks else {
     return;
   };
   let mut ranked =
-    importees.iter().copied().filter(|chunk_idx| ranks.contains_key(chunk_idx)).collect::<Vec<_>>();
+    importees.iter().copied().filter(|importee| ranks.contains_key(importee)).collect::<Vec<_>>();
   if ranked.len() < 2 {
     return;
   }
-  ranked.sort_unstable_by_key(|chunk_idx| ranks[chunk_idx]);
-  for (slot, chunk_idx) in
-    importees.iter_mut().filter(|chunk_idx| ranks.contains_key(*chunk_idx)).zip(ranked)
+  ranked.sort_unstable_by_key(|importee| ranks[importee]);
+  for (slot, importee) in
+    importees.iter_mut().filter(|importee| ranks.contains_key(*importee)).zip(ranked)
   {
-    *slot = chunk_idx;
+    *slot = importee;
   }
 }
 

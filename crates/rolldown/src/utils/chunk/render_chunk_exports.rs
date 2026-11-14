@@ -4,7 +4,7 @@ use std::fmt::Write as _;
 use oxc_str::CompactStr;
 use rolldown_common::{
   Chunk, ChunkKind, ExportsKind, IndexModules, ModuleIdx, NormalizedBundlerOptions, OutputExports,
-  OutputFormat, Platform, SymbolRef, SymbolRefDb, WrapKind,
+  OutputFormat, Platform, SymbolRef, SymbolRefDb, SymbolRefFlags, WrapKind,
 };
 use rolldown_utils::{
   concat_string,
@@ -542,8 +542,12 @@ fn must_keep_live_binding(
     return false;
   }
 
-  if canonical_ref.is_not_reassigned(symbol_db) {
-    // For unknown case, we consider it as reassigned.
+  // A read before the declaration assigns the binding does not change the value it ends up with,
+  // so only a reassignment needs a live binding. For unknown case, we consider it as reassigned.
+  if canonical_ref
+    .flags(symbol_db)
+    .is_some_and(|flags| flags.contains(SymbolRefFlags::IsNotReassigned))
+  {
     return false;
   }
 

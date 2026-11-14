@@ -24,7 +24,7 @@ pub struct SymbolRefDataClassic {
 
 bitflags::bitflags! {
   #[derive(Debug, Default, Clone, Copy)]
-  pub struct SymbolRefFlags: u8 {
+  pub struct SymbolRefFlags: u16 {
     const IsNotReassigned = 1;
     /// The function is side-effect-free solely because of a `@__NO_SIDE_EFFECTS__` annotation,
     /// NOT because its body is empty. Such functions may still use their arguments, so
@@ -61,6 +61,9 @@ bitflags::bitflags! {
     /// A binding that always holds a top-level function that never reads `this`, so calling it as
     /// a namespace member cannot observe the namespace.
     const NeverReadsThis = 1 << 7;
+    /// A root `var` that code may read before its declarator assigns it, when it is `undefined`.
+    /// Its value is not inlined. See `internal-docs/inline-const/design.md`.
+    const ReadBeforeAssigned = 1 << 8;
   }
 }
 

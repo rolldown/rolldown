@@ -88,7 +88,12 @@ impl GenerateStage<'_> {
         .len()
         .try_into()
         .expect("Entry length exceeds u32::MAX");
-      for (idx, module) in self.link_output.module_table.modules.iter_enumerated() {
+      // Module indices follow the order in which modules finished loading, so the chunks are created
+      // in execution order instead. Their order decides which of two identical chunks keeps the
+      // hashed file name.
+      let mut modules = self.link_output.module_table.modules.iter_enumerated().collect::<Vec<_>>();
+      modules.sort_by_key(|(_, module)| module.exec_order());
+      for (idx, module) in modules {
         let Module::Normal(module) = module else {
           continue;
         };

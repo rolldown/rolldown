@@ -53,6 +53,13 @@ impl ParallelJsPlugin {
   }
 }
 
+/// A hook of a parallel plugin never has the persistent cache on. Each worker has its own copy
+/// of the module meta, and the logs and the meta of a hook call in a worker are not recorded.
+/// `cache: false` also wins over `experimental.cache.assumeCacheableHooks`.
+fn never_cached(meta: Option<rolldown_plugin::PluginHookMeta>) -> rolldown_plugin::PluginHookMeta {
+  rolldown_plugin::PluginHookMeta { cache: Some(false), ..meta.unwrap_or_default() }
+}
+
 impl Plugin for ParallelJsPlugin {
   fn name(&self) -> Cow<'static, str> {
     Plugin::name(self.first_plugin())
@@ -88,7 +95,7 @@ impl Plugin for ParallelJsPlugin {
   }
 
   fn resolve_id_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
-    Plugin::resolve_id_meta(self.first_plugin())
+    Some(never_cached(Plugin::resolve_id_meta(self.first_plugin())))
   }
 
   #[expect(deprecated)]
@@ -105,7 +112,7 @@ impl Plugin for ParallelJsPlugin {
   }
 
   fn resolve_dynamic_import_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
-    Plugin::resolve_dynamic_import_meta(self.first_plugin())
+    Some(never_cached(Plugin::resolve_dynamic_import_meta(self.first_plugin())))
   }
 
   async fn load(
@@ -121,7 +128,7 @@ impl Plugin for ParallelJsPlugin {
   }
 
   fn load_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
-    Plugin::load_meta(self.first_plugin())
+    Some(never_cached(Plugin::load_meta(self.first_plugin())))
   }
 
   async fn transform(
@@ -137,7 +144,7 @@ impl Plugin for ParallelJsPlugin {
   }
 
   fn transform_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
-    Plugin::transform_meta(self.first_plugin())
+    Some(never_cached(Plugin::transform_meta(self.first_plugin())))
   }
 
   async fn module_parsed(
@@ -396,5 +403,22 @@ impl Plugin for ParallelJsPlugin {
     // driver then never skips a call that the selected worker would run. That worker checks its
     // own filter again. See internal-docs/devtools/implementation.md.
     self.plugins.iter().any(|plugin| Plugin::hook_filter_matches(plugin, ctx, args))
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use rolldown_plugin::{PluginHookMeta, PluginOrder};
+
+  use super::never_cached;
+
+  #[test]
+  fn a_hook_of_a_parallel_plugin_never_has_the_cache_on() {
+    assert_eq!(never_cached(None).cache, Some(false));
+
+    let meta =
+      never_cached(Some(PluginHookMeta { order: Some(PluginOrder::Pre), cache: Some(true) }));
+    assert_eq!(meta.cache, Some(false));
+    assert_eq!(meta.order, Some(PluginOrder::Pre));
   }
 }

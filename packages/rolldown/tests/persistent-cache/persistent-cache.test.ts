@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { type InputOptions, type Plugin, type RolldownLog, rolldown, watch } from 'rolldown';
+import { defineParallelPlugin } from 'rolldown/experimental';
+import { isWasiTest } from 'rolldown-tests/utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 type CacheOption = NonNullable<InputOptions['experimental']>['cache'];
@@ -392,6 +394,78 @@ describe('persistent cache', () => {
       'recording.resolveId:a.js:./c.js',
       'recording.transform:a.js',
     ]);
+  });
+
+  describe('hooks that are not cached', () => {
+    describe.skipIf(isWasiTest)('parallel plugin', () => {
+      const parallelCachedPlugin = defineParallelPlugin<{
+        src: string;
+        log: string;
+        cache?: boolean;
+        only?: string;
+      }>(path.join(import.meta.dirname, 'parallel-cached-plugin-impl.js'));
+
+      /** Builds two times. Returns the modules that the hook of the parallel plugin ran for. */
+      async function buildTwice(
+        cache: CacheOption,
+        pluginOptions: { cache?: boolean; only?: string },
+      ) {
+        const log = path.join(root, 'parallel.log');
+        const run = async () => {
+          fs.writeFileSync(log, '');
+          const calls: string[] = [];
+          const output = await build({
+            plugins: [
+              recordingPlugin(calls, true),
+              parallelCachedPlugin({ src, log, ...pluginOptions }) as unknown as Plugin,
+            ],
+            cache,
+          });
+          const parallel = fs.readFileSync(log, 'utf8').split('\n').filter(Boolean).map(rel);
+          return { output, calls: calls.sort(), parallel: parallel.sort() };
+        };
+        return { first: await run(), second: await run() };
+      }
+
+      test('a hook with `cache: true` runs again for every module', async () => {
+        writeFiles(BASIC_FILES);
+        const { first, second } = await buildTwice({ dir: cacheDir }, { cache: true });
+        expect(first.parallel).toEqual(['a.js', 'b.js', 'c.js', 'main.js']);
+        expect(second.parallel).toEqual(first.parallel);
+        // No module has a saved result, so the cached hooks of the other plugin run again too.
+        expect(second.calls).toEqual(first.calls);
+        expect(second.output).toEqual(first.output);
+      });
+
+      test('`assumeCacheableHooks` does not turn the cache on for its hooks', async () => {
+        writeFiles(BASIC_FILES);
+        const { first, second } = await buildTwice(
+          {
+            dir: cacheDir,
+            assumeCacheableHooks: { resolveId: true, load: true, transform: true },
+          },
+          {},
+        );
+        expect(second.parallel).toEqual(['a.js', 'b.js', 'c.js', 'main.js']);
+        expect(second.calls).toEqual(first.calls);
+      });
+
+      test('a module that its hook filter blocks still gets a saved result', async () => {
+        writeFiles(BASIC_FILES);
+        const { first, second } = await buildTwice(
+          { dir: cacheDir },
+          { cache: true, only: '[\\\\/]a\\.js$' },
+        );
+        expect(first.parallel).toEqual(['a.js']);
+        expect(second.parallel).toEqual(['a.js']);
+        expect(second.calls).toEqual([
+          'recording.load:a.js',
+          'recording.resolveId:a.js:./c.js',
+          'recording.transform:a.js',
+        ]);
+        expect(second.output).toEqual(first.output);
+      });
+    });
   });
 
   test('`this.warn` in a cached `transform` reaches `onLog` again', async () => {

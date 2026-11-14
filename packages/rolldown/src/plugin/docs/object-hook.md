@@ -64,6 +64,8 @@ A module gets a saved result only when every one of these hooks that ran for it 
 
 By setting `cache: true`, the plugin promises that skipping the hook loses nothing that another hook needs. For example, a `transform` hook that stores data in a variable for a later `renderChunk` hook must not set `cache: true`, because the variable is empty when the `transform` hook is skipped.
 
+A hook of a parallel plugin (`defineParallelPlugin`) is never cached, also with `cache: true`.
+
 #### Example
 
 ```js

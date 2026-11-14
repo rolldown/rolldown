@@ -176,14 +176,16 @@ async function bundleInner(
     }
   }
 
-  result.forEach(printBundleOutputPretty);
-  logger.log(``);
+  if (!cliOptions.silent) {
+    result.forEach(printBundleOutputPretty);
+    logger.log(``);
 
-  const endTime = performance.now();
-  const duration = endTime - startTime;
-  // If the build time is more than 1s, we should display it in seconds.
+    const endTime = performance.now();
+    const duration = endTime - startTime;
+    // If the build time is more than 1s, we should display it in seconds.
 
-  logger.success(`rolldown v${version} Finished in ${styleText('green', ms(duration))}`);
+    logger.success(`rolldown v${version} Finished in ${styleText('green', ms(duration))}`);
+  }
 }
 
 function printBundleOutputPretty(output: RolldownOutput) {

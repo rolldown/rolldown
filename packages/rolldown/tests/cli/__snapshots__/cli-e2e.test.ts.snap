@@ -97,6 +97,7 @@ OPTIONS
   --preserveModulesRoot <preserveModulesRoot>Put preserved modules under this path at root level.
   --sanitizeFileName          Sanitize file name.
   --shimMissingExports        Create shim variables for missing exports.
+  --silent                    Suppress the final report output when bundling is finished.
   --sourcemapBaseUrl <sourcemapBaseUrl>Base URL used to prefix sourcemap paths.
   --sourcemapDebugIds         Inject sourcemap debug IDs.
   --sourcemapExcludeSources   Exclude source content from sourcemaps.
@@ -254,6 +255,7 @@ OPTIONS
   --preserveModulesRoot <preserveModulesRoot>Put preserved modules under this path at root level.
   --sanitizeFileName          Sanitize file name.
   --shimMissingExports        Create shim variables for missing exports.
+  --silent                    Suppress the final report output when bundling is finished.
   --sourcemapBaseUrl <sourcemapBaseUrl>Base URL used to prefix sourcemap paths.
   --sourcemapDebugIds         Inject sourcemap debug IDs.
   --sourcemapExcludeSources   Exclude source content from sourcemaps.
@@ -411,6 +413,7 @@ OPTIONS
   --preserveModulesRoot <preserveModulesRoot>Put preserved modules under this path at root level.
   --sanitizeFileName          Sanitize file name.
   --shimMissingExports        Create shim variables for missing exports.
+  --silent                    Suppress the final report output when bundling is finished.
   --sourcemapBaseUrl <sourcemapBaseUrl>Base URL used to prefix sourcemap paths.
   --sourcemapDebugIds         Inject sourcemap debug IDs.
   --sourcemapExcludeSources   Exclude source content from sourcemaps.
@@ -568,6 +571,7 @@ OPTIONS
   --preserveModulesRoot <preserveModulesRoot>Put preserved modules under this path at root level.
   --sanitizeFileName          Sanitize file name.
   --shimMissingExports        Create shim variables for missing exports.
+  --silent                    Suppress the final report output when bundling is finished.
   --sourcemapBaseUrl <sourcemapBaseUrl>Base URL used to prefix sourcemap paths.
   --sourcemapDebugIds         Inject sourcemap debug IDs.
   --sourcemapExcludeSources   Exclude source content from sourcemaps.

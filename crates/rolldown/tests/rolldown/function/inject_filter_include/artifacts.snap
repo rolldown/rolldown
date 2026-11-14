@@ -1,0 +1,27 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// node_modules/dep/index.js
+function hasUseKey() {
+	return typeof useKey !== "undefined";
+}
+// node_modules/composable/index.js
+function useKey$1() {
+	return "composable";
+}
+// src/app.js
+function appKey() {
+	return useKey$1();
+}
+// main.js
+assert.strictEqual(appKey(), "composable");
+assert.strictEqual(hasUseKey(), false);
+assert.strictEqual(typeof useKey, "undefined");
+
+```

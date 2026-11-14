@@ -1,0 +1,146 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: ["main.js"],
+	localCount: 1,
+	edges: [[]],
+	entries: [0]
+});
+// main.js
+var main_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
+const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+const value = 1;
+main_hot.accept();
+export { value };
+
+```
+
+# HMR Step 0
+
+## Code
+
+```js
+__rolldown_runtime__.registerGraph({ids:["foo.js","main.js","tag.js","view.jsx"],localCount:4,edges:[[],[3],[],[2,0]],stamps:{0:1,1:1,2:1,3:1},entries:[1]});
+//#region foo.js
+__rolldown_runtime__.registerFactory("foo.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ foo: () => foo });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_foo = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		function foo() {}
+	} finally {}
+}), 1);
+
+//#endregion
+//#region main.js
+__rolldown_runtime__.registerFactory("main.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ a: () => import_view_10.a });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("view.jsx");
+		var import_view_10 = __rolldown_runtime__.loadExports("view.jsx");
+		const hot_main = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		hot_main.accept();
+	} finally {}
+}), 1);
+
+//#endregion
+//#region tag.js
+__rolldown_runtime__.registerFactory("tag.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ Tag: () => Tag });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_tag = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const Tag = "div";
+	} finally {}
+}), 1);
+
+//#endregion
+//#region view.jsx
+__rolldown_runtime__.registerFactory("view.jsx", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			a: () => a,
+			b: () => b
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("tag.js");
+		var import_tag_30 = __rolldown_runtime__.loadExports("tag.js");
+		__rolldown_runtime__.initModule("foo.js");
+		var import_foo_31 = __rolldown_runtime__.loadExports("foo.js");
+		const hot_view = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const a = <import_tag_30.Tag />;
+		const b = <import_foo_31.foo />;
+	} finally {}
+}), 1);
+
+//#endregion
+```
+
+## Meta
+
+- update type: patch
+
+### Changed Ids
+
+- main.js
+
+## Build Output
+
+### Assets
+
+#### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"tag.js",
+		"foo.js",
+		"view.jsx",
+		"main.js"
+	],
+	localCount: 4,
+	edges: [
+		[],
+		[],
+		[0, 1],
+		[2]
+	],
+	entries: [3]
+});
+// tag.js
+var tag_exports = /* @__PURE__ */ __exportAll({ Tag: () => Tag });
+__rolldown_runtime__.createModuleHotContext("tag.js");
+__rolldown_runtime__.registerModule("tag.js", { exports: tag_exports });
+const Tag = "div";
+// foo.js
+var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => Foo });
+__rolldown_runtime__.createModuleHotContext("foo.js");
+__rolldown_runtime__.registerModule("foo.js", { exports: foo_exports });
+function Foo() {}
+// view.jsx
+var view_exports = /* @__PURE__ */ __exportAll({
+	a: () => a,
+	b: () => b
+});
+__rolldown_runtime__.createModuleHotContext("view.jsx");
+__rolldown_runtime__.registerModule("view.jsx", { exports: view_exports });
+const a = <Tag />;
+const b = <Foo />;
+// main.js
+var main_exports = /* @__PURE__ */ __exportAll({ a: () => a });
+const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+main_hot.accept();
+export { a };
+
+```

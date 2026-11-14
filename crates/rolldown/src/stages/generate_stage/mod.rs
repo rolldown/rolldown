@@ -131,7 +131,7 @@ mod finalize_chunk_plan;
 mod finalize_modules;
 mod inline_common_chunks;
 mod manual_code_splitting;
-mod minify_chunks;
+pub mod minify_chunks;
 mod order_analysis;
 pub mod order_wrap_state;
 mod order_wrapping;

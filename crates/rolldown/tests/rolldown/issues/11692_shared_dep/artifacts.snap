@@ -1,0 +1,43 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// exclusive.js
+const EXCLUSIVE = "exclusive";
+// shared.js
+var SHARED;
+var init_shared = __esm({ "shared.js": (() => {
+	SHARED = "shared";
+}) });
+// cjs-dep.cjs
+var require_cjs_dep = /* @__PURE__ */ __commonJS({ "cjs-dep.cjs": ((exports, module) => {
+	module.exports = { tag: "cjs" };
+}) });
+// heavy.js
+init_shared();
+var import_cjs_dep = /* @__PURE__ */ __toESM(require_cjs_dep());
+function Heavy() {
+	return `${EXCLUSIVE}+${SHARED}+${import_cjs_dep.default.tag}`;
+}
+// live-lazy.js
+var live_lazy_exports = /* @__PURE__ */ __exportAll({ runLive: () => runLive });
+function runLive() {
+	return `live:${SHARED}`;
+}
+var init_live_lazy = __esm({ "live-lazy.js": (() => {
+	init_shared();
+}) });
+// index.js
+const LiveLazy = () => Promise.resolve().then(() => (init_live_lazy(), live_lazy_exports));
+// main.js
+globalThis.__ready = LiveLazy().then((mod) => ({
+	heavy: Heavy(),
+	live: mod.runLive()
+}));
+
+```

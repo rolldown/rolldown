@@ -22,24 +22,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import dep_a from "node:https";
-// HIDDEN [\0rolldown/runtime.js]
-// lib/dep-a.js
-var init_dep_a = __esmMin((() => {}));
 // lib/handler-a.js
-var HandlerA;
-var init_handler_a = __esmMin((() => {
-	init_dep_a();
-	HandlerA = class {
-		constants = dep_a.constants;
-	};
-}));
-// lib/handler-b.js
-var init_handler_b = __esmMin((() => {}));
+var HandlerA = class {
+	constants = dep_a.constants;
+};
 // main.js
-__esmMin((() => {
-	init_handler_a();
-	init_handler_b();
-}))();
 Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
 console.log(HandlerA);
 

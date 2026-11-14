@@ -271,6 +271,59 @@ impl LinkStage<'_> {
     &mut self,
     unreachable_import_expression_node_ids: &FxHashSet<(ModuleIdx, NodeId)>,
   ) {
+    let initial_entry_module_idxs: Vec<ModuleIdx> = self.entries.keys().copied().collect();
+    let (user_defined_entries, dynamic_entries): (Vec<_>, Vec<_>) =
+      std::mem::take(&mut self.entries)
+        .into_values()
+        .flatten()
+        .partition(|item| item.kind.is_user_defined());
+
+    let mut retained_dynamic_entries = self.include_statements_once(
+      &user_defined_entries,
+      dynamic_entries,
+      unreachable_import_expression_node_ids,
+    );
+
+    if self.options.code_splitting.is_disabled() && !self.options.is_dev_mode_enabled() {
+      let mut did_unwrap_any = false;
+      while self.unwrap_unused_esm_modules() {
+        did_unwrap_any = true;
+        self.reset_and_determine_side_effects();
+        for module in self.module_table.modules.iter_mut().filter_map(Module::as_normal_mut) {
+          module.ecma_view.json_module_none_self_reference_included_symbol = None;
+        }
+        retained_dynamic_entries = self.include_statements_once(
+          &user_defined_entries,
+          retained_dynamic_entries,
+          unreachable_import_expression_node_ids,
+        );
+      }
+      if did_unwrap_any {
+        let live_entry_idxs: FxHashSet<ModuleIdx> = user_defined_entries
+          .iter()
+          .chain(retained_dynamic_entries.iter())
+          .map(|entry| entry.idx)
+          .collect();
+        for &entry_idx in &initial_entry_module_idxs {
+          if !live_entry_idxs.contains(&entry_idx) {
+            self.metas[entry_idx].referenced_symbols_by_entry_point_chunk.clear();
+          }
+        }
+        self.resort_modules_after_unwrapping(
+          &initial_entry_module_idxs,
+          &user_defined_entries,
+          &retained_dynamic_entries,
+        );
+      }
+    }
+  }
+
+  fn include_statements_once(
+    &mut self,
+    user_defined_entries: &[rolldown_common::EntryPoint],
+    mut dynamic_entries: Vec<rolldown_common::EntryPoint>,
+    unreachable_import_expression_node_ids: &FxHashSet<(ModuleIdx, NodeId)>,
+  ) -> Vec<rolldown_common::EntryPoint> {
     let mut is_stmt_info_included_vec: StmtInclusionVec = self
       .module_table
       .modules
@@ -317,11 +370,6 @@ impl LinkStage<'_> {
       &body_demand_keys,
     );
 
-    let (user_defined_entries, mut dynamic_entries): (Vec<_>, Vec<_>) =
-      std::mem::take(&mut self.entries)
-        .into_values()
-        .flatten()
-        .partition(|item| item.kind.is_user_defined());
     user_defined_entries.iter().for_each(|entry| {
       let module = match &self.module_table[entry.idx] {
         Module::Normal(module) => module,
@@ -391,10 +439,10 @@ impl LinkStage<'_> {
     self.entries = {
       let mut entries = FxIndexMap::default();
       for entry in
-        user_defined_entries.into_iter().chain(if self.options.code_splitting.is_disabled() {
+        user_defined_entries.iter().cloned().chain(if self.options.code_splitting.is_disabled() {
           itertools::Either::Left(std::iter::empty())
         } else {
-          itertools::Either::Right(dynamic_entries.into_iter())
+          itertools::Either::Right(dynamic_entries.iter().cloned())
         })
       {
         entries.entry(entry.idx).or_insert_with(Vec::new).push(entry);
@@ -498,6 +546,8 @@ impl LinkStage<'_> {
         self.metas.iter().map(|meta| meta.stmt_info_included.bit_count()).sum::<u32>(),
       "tree shaking inclusion ready"
     );
+
+    dynamic_entries
   }
 }
 

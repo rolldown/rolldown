@@ -1,0 +1,13 @@
+{
+  "config": {
+    "codeSplitting": false
+  },
+  "configVariants": [
+    {
+      "format": "cjs"
+    },
+    {
+      "format": "iife"
+    }
+  ]
+}

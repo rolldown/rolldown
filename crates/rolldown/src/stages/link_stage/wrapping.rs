@@ -1,9 +1,10 @@
 use rolldown_common::{
-  ExportsKind, IndexModules, Module, ModuleIdx, NormalModule, NormalizedBundlerOptions,
-  RuntimeModuleBrief, StmtInfo, StmtInfoMeta, StmtInfos, SymbolRefDb, TaggedSymbolRef, WrapKind,
+  ExportsKind, ImportKind, ImportRecordMeta, IndexModules, Module, ModuleIdx, NormalModule,
+  NormalizedBundlerOptions, RuntimeModuleBrief, StmtInfo, StmtInfoMeta, StmtInfos,
+  SymbolOrMemberExprRef, SymbolRefDb, TaggedSymbolRef, WrapKind,
 };
 use rolldown_utils::IndexBitSet;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::smallvec;
 
 use crate::types::linking_metadata::{LinkingMetadata, LinkingMetadataVec};
@@ -171,6 +172,134 @@ impl LinkStage<'_> {
         self.options,
       );
     }
+  }
+
+  /// Under `codeSplitting: false`, `determine_module_exports_kind` and `wrap_modules` wrap every
+  /// dynamically imported ESM module and its transitive dependencies before tree-shaking runs.
+  /// Once `include_statements` eliminates unused dynamic imports, any `WrapKind::Esm` module that
+  /// is no longer reachable from a live CJS module, `require()`, or live `import()` can be
+  /// unwrapped back to `WrapKind::None` (issue #11692).
+  pub(in crate::stages::link_stage) fn unwrap_unused_esm_modules(&mut self) -> bool {
+    if !self.metas.iter().any(|meta| matches!(meta.wrap_kind(), WrapKind::Esm)) {
+      return false;
+    }
+
+    let runtime_idx = self.runtime.id();
+    let mut must_stay_wrapped = IndexBitSet::new(self.module_table.modules.len());
+    let mut queue = Vec::new();
+    let enqueue = |idx: ModuleIdx,
+                   must_stay_wrapped: &mut IndexBitSet<ModuleIdx>,
+                   queue: &mut Vec<ModuleIdx>,
+                   modules: &IndexModules| {
+      if idx != runtime_idx && modules[idx].is_normal() && must_stay_wrapped.set_bit(idx) {
+        queue.push(idx);
+      }
+    };
+
+    for importer in self.module_table.modules.iter().filter_map(Module::as_normal) {
+      let meta = &self.metas[importer.idx];
+      if !meta.is_included {
+        continue;
+      }
+      if matches!(meta.wrap_kind(), WrapKind::Cjs) {
+        enqueue(importer.idx, &mut must_stay_wrapped, &mut queue, &self.module_table.modules);
+      }
+      for (stmt_idx, stmt_info) in self.stmt_infos[importer.idx].iter_enumerated() {
+        if !meta.stmt_info_included.has_bit(stmt_idx) {
+          continue;
+        }
+        for &rec_idx in &stmt_info.import_records {
+          let rec = &importer.import_records[rec_idx];
+          let Some(target_idx) = rec.resolved_module else { continue };
+          match rec.kind {
+            ImportKind::Require => {
+              enqueue(target_idx, &mut must_stay_wrapped, &mut queue, &self.module_table.modules);
+            }
+            ImportKind::DynamicImport
+              if !rec.meta.contains(ImportRecordMeta::DeadDynamicImport) =>
+            {
+              enqueue(target_idx, &mut must_stay_wrapped, &mut queue, &self.module_table.modules);
+            }
+            _ => {}
+          }
+        }
+      }
+    }
+
+    while let Some(idx) = queue.pop() {
+      let Module::Normal(module) = &self.module_table[idx] else { continue };
+      for rec in &module.import_records {
+        if rec.kind == ImportKind::Import
+          && let Some(dep_idx) = rec.resolved_module
+        {
+          enqueue(dep_idx, &mut must_stay_wrapped, &mut queue, &self.module_table.modules);
+        }
+      }
+    }
+
+    let mut unwrapped_modules = IndexBitSet::new(self.module_table.modules.len());
+    let mut unwrapped_wrapper_refs = FxHashSet::default();
+    for module in self.module_table.modules.iter().filter_map(Module::as_normal) {
+      let idx = module.idx;
+      if !matches!(self.metas[idx].wrap_kind(), WrapKind::Esm) || must_stay_wrapped.has_bit(idx) {
+        continue;
+      }
+      unwrapped_modules.set_bit(idx);
+      if let Some(wrapper_ref) = self.metas[idx].wrapper_ref.take() {
+        unwrapped_wrapper_refs.insert(wrapper_ref);
+      }
+      if let Some(wrapper_stmt_idx) = self.metas[idx].wrapper_stmt_info.take() {
+        *self.stmt_infos[idx].get_mut(wrapper_stmt_idx) = StmtInfo::default();
+      }
+      self.metas[idx].set_wrap_kind(WrapKind::None);
+    }
+
+    if unwrapped_wrapper_refs.is_empty() {
+      return false;
+    }
+
+    for meta in &mut self.metas {
+      meta
+        .referenced_symbols_by_entry_point_chunk
+        .retain(|(sym_ref, _)| !unwrapped_wrapper_refs.contains(sym_ref));
+    }
+
+    for importer in self.module_table.modules.iter().filter_map(Module::as_normal) {
+      for stmt_info in &mut self.stmt_infos[importer.idx].infos {
+        stmt_info.referenced_symbols.retain(|reference| match reference {
+          SymbolOrMemberExprRef::Symbol(sym_ref) => !unwrapped_wrapper_refs.contains(sym_ref),
+          SymbolOrMemberExprRef::MemberExpr(_) => true,
+        });
+        for &rec_idx in &stmt_info.import_records {
+          let rec = &importer.import_records[rec_idx];
+          let Some(importee_idx) = rec.resolved_module else { continue };
+          if !unwrapped_modules.has_bit(importee_idx) {
+            continue;
+          }
+          match rec.kind {
+            ImportKind::Import => {
+              let is_reexport_all = rec.meta.contains(ImportRecordMeta::IsExportStar);
+              stmt_info.eval_flags =
+                (is_reexport_all && self.metas[importee_idx].has_dynamic_exports).into();
+            }
+            ImportKind::DynamicImport
+              if rec.meta.contains(ImportRecordMeta::DeadDynamicImport) =>
+            {
+              if let Module::Normal(importee) = &self.module_table[importee_idx]
+                && let Some(pos) = stmt_info.referenced_symbols.iter().position(|r| {
+                  matches!(r, SymbolOrMemberExprRef::Symbol(s) if *s == importee.namespace_object_ref)
+                })
+              {
+                stmt_info.referenced_symbols.swap_remove(pos);
+              }
+            }
+            _ => {}
+          }
+        }
+      }
+    }
+
+    true
   }
 }
 

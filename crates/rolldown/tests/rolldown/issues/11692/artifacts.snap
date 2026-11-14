@@ -1,0 +1,80 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// early.js
+(globalThis.__execOrder ??= []).push("early");
+// names.js
+(globalThis.__execOrder ??= []).push("names");
+const NAMES = ["a", "b"];
+// label.js
+function formatLabel(index) {
+	return `item_${index + 1}`;
+}
+// heavy.js
+(globalThis.__execOrder ??= []).push("heavy");
+function Heavy() {
+	return NAMES.map((n, i) => `${formatLabel(i)}:${n}`).join(",");
+}
+// main.js
+globalThis.__result = Heavy();
+
+```
+
+# Variant: [format: Cjs]
+
+## Assets
+
+### main.js
+
+```js
+// early.js
+(globalThis.__execOrder ??= []).push("early");
+// names.js
+(globalThis.__execOrder ??= []).push("names");
+const NAMES = ["a", "b"];
+// label.js
+function formatLabel(index) {
+	return `item_${index + 1}`;
+}
+// heavy.js
+(globalThis.__execOrder ??= []).push("heavy");
+function Heavy() {
+	return NAMES.map((n, i) => `${formatLabel(i)}:${n}`).join(",");
+}
+// main.js
+globalThis.__result = Heavy();
+
+```
+
+# Variant: [format: Iife]
+
+## Assets
+
+### main.js
+
+```js
+(function() {
+	// early.js
+	(globalThis.__execOrder ??= []).push("early");
+	// names.js
+	(globalThis.__execOrder ??= []).push("names");
+	const NAMES = ["a", "b"];
+	// label.js
+	function formatLabel(index) {
+		return `item_${index + 1}`;
+	}
+	// heavy.js
+	(globalThis.__execOrder ??= []).push("heavy");
+	function Heavy() {
+		return NAMES.map((n, i) => `${formatLabel(i)}:${n}`).join(",");
+	}
+	// main.js
+	globalThis.__result = Heavy();
+})();
+
+```

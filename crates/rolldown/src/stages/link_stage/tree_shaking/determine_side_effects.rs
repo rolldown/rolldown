@@ -90,6 +90,10 @@ impl LinkStage<'_> {
     if self.relaxed_side_effect_modules.is_empty() {
       return;
     }
+    self.reset_and_determine_side_effects();
+  }
+
+  pub(in crate::stages::link_stage) fn reset_and_determine_side_effects(&mut self) {
     for module in self.module_table.modules.iter_mut().filter_map(Module::as_normal_mut) {
       let scan_time = self.scan_time_side_effects[module.idx];
       module.side_effects = match scan_time.side_effects {

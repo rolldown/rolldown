@@ -1,8 +1,10 @@
 use std::iter;
 
-use rolldown_common::{Module, ModuleIdx};
+use rolldown_common::{
+  EntryPoint, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx,
+};
 use rolldown_error::{BuildDiagnostic, EventKindSwitcher};
-use rolldown_utils::rustc_hash::FxHashSetExt;
+use rolldown_utils::{indexmap::FxIndexSet, rustc_hash::FxHashSetExt};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::LinkStage;
@@ -31,10 +33,68 @@ impl LinkStage<'_> {
   /// - We only ensure execution order is relative correct, which means imported/required modules are executed before the module that imports/require them.
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn sort_modules(&mut self) {
+    let entry_roots: Vec<ModuleIdx> = self.entries.keys().copied().collect();
+    self.sort_modules_with_filter(&entry_roots, None, true);
+  }
+
+  /// Recomputes `exec_order` and `sorted_modules` after tree-shaking unwraps ESM modules whose
+  /// only dynamic importers were eliminated under `codeSplitting: false`, ignoring dead or
+  /// unincluded dynamic import edges so unwrapped static dependencies execute in static import
+  /// order.
+  pub(in crate::stages::link_stage) fn resort_modules_after_unwrapping(
+    &mut self,
+    initial_entry_module_idxs: &[ModuleIdx],
+    user_defined_entries: &[EntryPoint],
+    retained_dynamic_entries: &[EntryPoint],
+  ) {
+    let mut live_dynamic_records = FxHashSet::default();
+    for module in self.module_table.modules.iter().filter_map(Module::as_normal) {
+      let meta = &self.metas[module.idx];
+      if !meta.is_included {
+        continue;
+      }
+      for (stmt_idx, stmt_info) in self.stmt_infos[module.idx].iter_enumerated() {
+        if !meta.stmt_info_included.has_bit(stmt_idx) {
+          continue;
+        }
+        for &rec_idx in &stmt_info.import_records {
+          let rec = &module.import_records[rec_idx];
+          if rec.kind == ImportKind::DynamicImport
+            && !rec.meta.contains(ImportRecordMeta::DeadDynamicImport)
+          {
+            live_dynamic_records.insert((module.idx, rec_idx));
+          }
+        }
+      }
+    }
+
+    let ordered_roots: FxIndexSet<ModuleIdx> = user_defined_entries
+      .iter()
+      .map(|entry| entry.idx)
+      .chain(retained_dynamic_entries.iter().map(|entry| entry.idx))
+      .chain(initial_entry_module_idxs.iter().copied())
+      .collect();
+    let entry_roots: Vec<ModuleIdx> = ordered_roots.into_iter().collect();
+
+    for module in &mut self.module_table.modules {
+      match module {
+        Module::Normal(m) => m.exec_order = u32::MAX,
+        Module::External(m) => m.exec_order = u32::MAX,
+      }
+    }
+
+    self.sort_modules_with_filter(&entry_roots, Some(&live_dynamic_records), false);
+  }
+
+  fn sort_modules_with_filter(
+    &mut self,
+    entry_roots: &[ModuleIdx],
+    live_dynamic_records: Option<&FxHashSet<(ModuleIdx, ImportRecordIdx)>>,
+    emit_circular_warnings: bool,
+  ) {
     // The runtime module should always be the first module to be executed
-    let mut execution_stack = self
-      .entries
-      .keys()
+    let mut execution_stack = entry_roots
+      .iter()
       .rev()
       .map(|&module_idx| Status::ToBeExecuted(module_idx))
       .chain(iter::once(Status::ToBeExecuted(self.runtime.id())))
@@ -52,7 +112,9 @@ impl LinkStage<'_> {
       match status {
         Status::ToBeExecuted(id) => {
           if executed_ids.contains(&id) {
-            if self.options.checks.contains(EventKindSwitcher::CircularDependency) {
+            if emit_circular_warnings
+              && self.options.checks.contains(EventKindSwitcher::CircularDependency)
+            {
               // Try to check if there is a circular dependency
               if let Some(index) = stack_indexes_of_executing_id.get(&id).copied() {
                 // Executing
@@ -82,11 +144,16 @@ impl LinkStage<'_> {
               self.module_table[id]
                 .import_records()
                 .iter()
-                .filter(|rec| {
+                .enumerate()
+                .filter(|(rec_idx, rec)| {
                   rec.kind.is_static()
-                    || (self.options.code_splitting.is_disabled() && rec.kind.is_dynamic())
+                    || (self.options.code_splitting.is_disabled()
+                      && rec.kind.is_dynamic()
+                      && live_dynamic_records.is_none_or(|live| {
+                        live.contains(&(id, ImportRecordIdx::from_usize(*rec_idx)))
+                      }))
                 })
-                .filter_map(|rec| rec.resolved_module)
+                .filter_map(|(_, rec)| rec.resolved_module)
                 .rev()
                 .map(Status::ToBeExecuted),
             );

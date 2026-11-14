@@ -255,3 +255,151 @@ describe('chunkImportMap', () => {
     },
   );
 });
+
+describe('chunkImportMap.include', () => {
+  type Include = string | RegExp | (string | RegExp)[];
+
+  // main -> import(editor) -> common -> vendor, and main -> utils
+  function modules({ vendor = 'V', common = 'C', commonImportsUtils = false } = {}) {
+    return {
+      './main.js': `import { utils } from './utils.js'; globalThis.open = () => import('./editor.js'); globalThis.utils = utils;`,
+      './editor.js': `import { common } from './common.js'; export const editor = () => common() + globalThis.editor;`,
+      './common.js': `
+        import { vendor } from './vendor.js';
+        ${commonImportsUtils ? `import { utils } from './utils.js';` : `const utils = () => '';`}
+        export const common = () => vendor() + utils() + globalThis.common + '${common}';
+      `,
+      './vendor.js': `export const vendor = () => globalThis.vendor + '${vendor}';`,
+      './utils.js': `export const utils = () => String(globalThis.utils);`,
+      './first.js': `globalThis.first = true;`,
+    };
+  }
+
+  async function build(
+    files: Record<string, string>,
+    include: Include | false | undefined,
+    plugins: Plugin[] = [],
+    input: Record<string, string> = { main: './main.js' },
+  ) {
+    const bundle = await rolldown({
+      input,
+      preserveEntrySignatures: false,
+      experimental: { chunkImportMap: include === false ? false : { include } },
+      plugins: [virtualPlugin(files), ...plugins],
+    });
+    onTestFinished(() => bundle.close());
+    return bundle.generate({
+      entryFileNames: '[name]-[hash].js',
+      chunkFileNames: '[name]-[hash].js',
+      codeSplitting: {
+        includeDependenciesRecursively: false,
+        groups: ['common', 'vendor', 'utils'].map((name) => ({ name, test: new RegExp(name) })),
+      },
+    });
+  }
+
+  const chunk = (output: RolldownOutput, name: string) =>
+    getOutputChunk(output).find((chunk) => chunk.name === name)!;
+
+  const renamed = (a: RolldownOutput, b: RolldownOutput) =>
+    getOutputChunk(a)
+      .filter(
+        (chunk) =>
+          chunk.fileName !== getOutputChunk(b).find((c) => c.name === chunk.name)!.fileName,
+      )
+      .map((chunk) => chunk.name)
+      .sort();
+
+  test.each<[string, Include]>([
+    ['a string', 'common'],
+    ['a regex', /^comm/],
+    ['an array', ['missing', /^common$/]],
+  ])('maps only the chunks matched by %s', async (_, include) => {
+    const output = await build(modules(), include);
+    const [[key, target], ...rest] = Object.entries(importMap(output));
+    expect(rest).toEqual([]);
+    expect(target).toBe(`/${chunk(output, 'common').fileName}`);
+    expect(chunk(output, 'editor').code).toContain(`"./${key.slice(1)}"`);
+    expect(chunk(output, 'common').code).toContain(`"./${chunk(output, 'vendor').fileName}"`);
+    expect(chunk(output, 'main').code).toContain(`"./${chunk(output, 'editor').fileName}"`);
+  });
+
+  test('a chunk is renamed only when a filename in it can change', async () => {
+    const base = await build(modules(), 'common');
+    expect(renamed(base, await build(modules({ common: 'C2' }), 'common'))).toEqual(['common']);
+    // `main` imports `editor` dynamically, which loads `vendor` through the mapped `common`.
+    // `editor` only holds the stable name of `common`.
+    expect(renamed(base, await build(modules({ vendor: 'V2' }), 'common'))).toEqual([
+      'common',
+      'main',
+      'vendor',
+    ]);
+    // An unrelated chunk shifts the hash placeholders.
+    const input = { first: './first.js', main: './main.js' };
+    expect(renamed(base, await build(modules(), 'common', [], input))).toEqual([]);
+
+    const full = await build(modules(), undefined);
+    expect(renamed(full, await build(modules({ vendor: 'V2' }), undefined))).toEqual(['vendor']);
+  });
+
+  // Vite writes the files a dynamic import loads into its importer in `generateBundle`, after
+  // hashing. `main` reaches `vendor` only through the mapped `common`.
+  test('a filename written after hashing is covered by the hash', async () => {
+    const preload: Plugin = {
+      name: 'preload',
+      generateBundle(_options, bundle) {
+        const importMap = bundle['importmap.json'];
+        const keys = Object.fromEntries(
+          Object.entries<string>(
+            importMap.type === 'asset' ? JSON.parse(String(importMap.source)).imports : {},
+          ).map(([key, file]) => [file.slice(1), key.slice(1)]),
+        );
+        const closure = (file: string, files = new Set<string>()) => {
+          const dep = bundle[file];
+          if (dep?.type === 'chunk' && !files.has(file)) {
+            files.add(file);
+            dep.imports.forEach((file) => closure(file, files));
+          }
+          return [...files];
+        };
+        for (const chunk of Object.values(bundle)) {
+          if (chunk.type !== 'chunk' || !chunk.dynamicImports.length) continue;
+          const lists = chunk.dynamicImports.map((target) =>
+            closure(target).map((file) => keys[file] ?? file),
+          );
+          chunk.code += `\n// preload ${JSON.stringify(lists)}`;
+        }
+      },
+    };
+    const base = await build(modules(), 'common', [preload]);
+    expect(chunk(base, 'main').code).toContain(chunk(base, 'vendor').fileName);
+    for (const edit of [{ vendor: 'V2' }, { commonImportsUtils: true }]) {
+      const edited = await build(modules(edit), 'common', [preload]);
+      expect(renamed(base, edited), JSON.stringify(edit)).toContain('main');
+      const codes = new Map(getOutputChunk(base).map((chunk) => [chunk.fileName, chunk.code]));
+      for (const chunk of getOutputChunk(edited)) {
+        if (codes.has(chunk.fileName)) expect(chunk.code).toBe(codes.get(chunk.fileName));
+      }
+    }
+  });
+
+  test.each([
+    ['no import map', false as const],
+    ['a full import map', undefined],
+    ['a partial import map', 'common'],
+  ])('with %s `augmentChunkHash` is hashed as is', async (_, include) => {
+    const declare: Plugin = {
+      name: 'declare',
+      augmentChunkHash: (chunk) => (chunk.name === 'first' ? chunk.fileName : undefined),
+    };
+    const input = { first: './first.js', main: './main.js' };
+    const [plain, declared, shifted] = await Promise.all([
+      build(modules(), include, [], input),
+      build(modules(), include, [declare], input),
+      build(modules(), include, [declare], { main: './main.js', first: './first.js' }),
+    ]);
+    expect(chunk(declared, 'first').fileName).not.toBe(chunk(plain, 'first').fileName);
+    // The raw placeholder is part of the hash, so its index matters. This matches Rollup.
+    expect(chunk(shifted, 'first').fileName).not.toBe(chunk(declared, 'first').fileName);
+  });
+});

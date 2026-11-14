@@ -120,6 +120,44 @@ The sourcemap sequence is:
 
 Preparation and emission are separate so user callbacks run only once while every content-changing map option contributes to `[hash]`. Debug IDs are deliberately added after the sourcemap hash, matching Rollup. The path passed to sourcemap callbacks is the default `<preliminary-chunk-file>.map` path (possibly containing hash placeholders), which avoids circular dependencies through either a chunk hash or a custom sourcemap hash. A callback that incorporates this path into a source path has its chunk placeholders resolved before emission.
 
+## Hash Dependencies Outside the Code
+
+A chunk can depend on the final file name of another chunk without having that name in its code. This happens when a plugin writes file names into the chunk in `generateBundle`, after hashing. `ChunkHashDependencies` (`rolldown_common`) is how the chunk import map plugin tells chunk hashing about it. The plugin puts the map into the plugin context meta. It holds, for a chunk, the preliminary file names of the chunks it depends on. `augment_chunk_hash` copies the entry to `InstantiatedChunk::hash_dependencies` before `finalize_assets` runs.
+
+`finalize_assets` handles the placeholders in these names like the ones in the content. `direct_dependencies` makes each named chunk a direct dependency, so the chunk is renamed whenever a named chunk is renamed. `append_hash_dependencies` adds the names to the standalone hash with the placeholders normalized, so the hash does not depend on placeholder indices.
+
+This is internal. It is not a hook and not an option, and JavaScript plugins do not see it. The `augmentChunkHash` hook is not involved, its result is hashed as plain text in every build. When no plugin stores `ChunkHashDependencies`, nothing changes.
+
+It cannot be done inside a plugin alone. A plugin reaches the hash only through the chunk code or through `augmentChunkHash`. Code added in `renderChunk` still goes through minification, which drops comments. The augmentation is plain text, so it cannot say "the final hash of that chunk".
+
+## Chunk Import Map
+
+`experimental.chunkImportMap` gives a chunk a **stable name**. It is the preliminary file name with the hash placeholder filled by a hash of the chunk's identity (facade module id or chunk name), not its content. `builtin:chunk-import-map` (`crates/rolldown_plugin_chunk_import_map`) computes the stable names once per build in its `renderChunk` hook, which is pinned last, and writes them over the placeholders of mapped chunks in every chunk's code. After that a reference to a mapped chunk is plain bytes, so it is not a hash dependency and a content change in the mapped chunk does not rename its importers. The emitted import map points each stable name at the final file name.
+
+`chunkImportMap.include` limits the mapped chunks by chunk name. It is exact. A chunk outside the map keeps its placeholder, so it stays a normal hash dependency.
+
+### What a dynamic import loads
+
+Rolldown's own output needs nothing more than the filter. When a chunk outside the map changes, a mapped chunk that imports it gets new bytes and a new final file name, the import map follows, and the importers of the mapped chunk are untouched. That is the point of the map.
+
+One thing is left. A tool can write chunk file names into a chunk in `generateBundle`, after hashing. Vite does this for its preload lists. For each dynamic import, the importing chunk gets the file names of everything the import loads, which is the static import closure of the target. A mapped chunk in the list is written by its stable name. A chunk outside the map is written by its final file name, so the hash of the importing chunk has to cover it. Without a map it does, through the placeholders on the path. A mapped chunk on the path cuts that chain.
+
+So the plugin declares these names. For each chunk, it collects the preliminary file names of the chunks outside the map in the static import closure of each of its dynamic import targets (`collect_hash_dependencies`) and stores them as `ChunkHashDependencies`, see the section above.
+
+With this, the hash of a chunk covers every hashed file that its dynamic imports load, with or without a map and for any `include`. A chunk gets a new file name only when its bytes change. A chunk that imports a mapped chunk statically and has no dynamic import declares nothing, because no file name behind the mapped chunk is written into it.
+
+The declared names are bytes in the standalone hash of the chunk that declares them. That matters for Phase 2. If the dependency were only an edge, a mapped chunk that gains a static import could rename one chunk, while an importer whose closure already contained the new dependency keeps its hash and its name.
+
+When every chunk is mapped, there is nothing to declare and the plugin stores nothing.
+
+Rejected alternatives:
+
+- Let every importer of a mapped chunk depend on the hashed chunks behind it, also for static imports. It covers a tool that would write such names into a static importer, but no known tool does, and it renames many chunks whose bytes did not change.
+- Return the names from the plugin's `augmentChunkHash` hook and read chunk placeholders in every `augmentChunkHash` result. It needs less code, but it changes what a public hook means.
+- Map the static imports of a matched chunk too, or leave a matched chunk out when they are not matched. Neither needs a hash rule, but `include` then does not map exactly what it names.
+- Let the tool declare the names it writes. The tool has to know which chunks are mapped before the map exists. Vite would have to match `include` in JavaScript, and a JavaScript regex does not always agree with `HybridRegex`. For the chunk name `页面`, `/^\w+$/` matches in rolldown and not in JavaScript. It also leaves a partial map unsafe with a Vite version that does not declare.
+- Let chunk hashing read the plugin's state to find the mapped chunks. It ties chunk hashing to the plugin.
+
 ## Why Not Hash the Preliminary Filename Directly
 
 Tempting alternative: mix the preliminary filename into the final hash _after normalizing its placeholder_ — this would satisfy uniqueness for chunks with different chunk names without any rehash loop.
@@ -140,6 +178,7 @@ It almost works, but fails the `deconflict-hashes` case: when two chunks have th
 - `crates/rolldown_utils/src/hash_placeholder.rs` — `HashPlaceholderGenerator`, `find_hash_placeholders`, `visit_with_placeholders_defaulted`, `replace_placeholder_with_hash`
 - `crates/rolldown_common/src/chunk/types/preliminary_filename.rs` — `PreliminaryFilename` (string + owned placeholder list)
 - `crates/rolldown_utils/src/xxhash.rs` — `encode_hash_with_base`, `xxhash_base64_url`
+- `crates/rolldown_plugin_chunk_import_map/src/lib.rs` (stable names, `include`)
 
 ## Related
 

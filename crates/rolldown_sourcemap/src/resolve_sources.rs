@@ -50,15 +50,13 @@ pub fn resolve_sources_against_module(map: &SourceMap, module_id: &str) -> Optio
 
 fn is_url(source: &str) -> bool {
   source.contains("://")
-    || source
-      .split_once(':')
-      .is_some_and(|(scheme, _)| {
-        scheme.len() > 1
-          && scheme.as_bytes()[0].is_ascii_alphabetic()
-          && scheme.as_bytes()[1..]
-            .iter()
-            .all(|byte| byte.is_ascii_alphanumeric() || matches!(*byte, b'+' | b'.' | b'-'))
-      })
+    || source.split_once(':').is_some_and(|(scheme, _)| {
+      scheme.len() > 1
+        && scheme.as_bytes()[0].is_ascii_alphabetic()
+        && scheme.as_bytes()[1..]
+          .iter()
+          .all(|byte| byte.is_ascii_alphanumeric() || matches!(*byte, b'+' | b'.' | b'-'))
+    })
 }
 
 fn is_relative_path(source: &str) -> bool {
@@ -145,11 +143,7 @@ mod tests {
     .unwrap();
     assert_eq!(
       sources(&resolved),
-      vec![
-        "/pkg/source.ts",
-        "node:internal/modules/cjs/loader",
-        "virtual:module"
-      ]
+      vec!["/pkg/source.ts", "node:internal/modules/cjs/loader", "virtual:module"]
     );
   }
 

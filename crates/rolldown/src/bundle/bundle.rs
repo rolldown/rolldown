@@ -55,7 +55,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     }
     .await;
     self.plugin_driver.build_timings.record_total(start);
-    self.merge_log_hook_errors(result).await
+    result
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
@@ -76,18 +76,21 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     }
     .await;
     self.plugin_driver.build_timings.record_total(start);
-    self.merge_log_hook_errors(result).await
+    result
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn scan(mut self) -> BuildResult<()> {
-    let result = self.scan_modules(ScanMode::Full).await.map(|_| ());
-    self.merge_log_hook_errors(result).await
+    self.scan_modules(ScanMode::Full).await?;
+
+    Ok(())
   }
 
-  /// Await the `onLog` callback tasks spawned during the build and fold any error
-  /// they produced into the result, so a throwing `onLog` fails the build
+  /// Await the `onLog` callback tasks spawned so far and fold any error they produced into the
+  /// result, so a throwing `onLog` fails the build. The watcher and incremental builds call
+  /// `scan_modules`, `bundle_write` and `bundle_generate` directly, so the drain lives in those
+  /// rather than in `write()` and `generate()`.
   async fn merge_log_hook_errors<T>(&self, result: BuildResult<T>) -> BuildResult<T> {
     let errors = self.plugin_driver.await_log_hook_tasks().await;
     if errors.is_empty() {
@@ -158,6 +161,20 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     }
 
     Self::trace_action_module_graph_ready(&scan_stage_output);
+
+    // Drain before `buildEnd` so the hook receives an error thrown by `onLog` during the scan.
+    if let Err(errs) = self.merge_log_hook_errors(Ok(())).await {
+      self
+        .plugin_driver
+        .build_end(Some(&HookBuildEndArgs { errors: &errs, cwd: &self.options.cwd }))
+        .await?;
+      self
+        .plugin_driver
+        .close_bundle(Some(&HookCloseBundleArgs { errors: &errs, cwd: &self.options.cwd }))
+        .await?;
+      return Err(errs);
+    }
+
     self.plugin_driver.build_end(None).await?;
     trace_action!(action::BuildEnd { action: "BuildEnd" });
     Ok(scan_stage_output)
@@ -186,6 +203,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     scan_stage_output: NormalizedScanStageOutput,
   ) -> BuildResult<BundleOutput> {
     let result = self.bundle_write_impl(scan_stage_output).await;
+    let result = self.merge_log_hook_errors(result).await;
     self.invalidate_js_side_cache(result).await
   }
 
@@ -263,6 +281,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     scan_stage_output: NormalizedScanStageOutput,
   ) -> BuildResult<BundleOutput> {
     let result = self.bundle_up(scan_stage_output, false).await;
+    let result = self.merge_log_hook_errors(result).await;
     self.invalidate_js_side_cache(result).await
   }
 

@@ -77,6 +77,8 @@ impl PluginDriver {
     // by BundleFactory which manages its lifecycle (reset on full builds only)
     self.context_load_completion_manager.clear();
     self.file_emitter.clear();
+    // A task left over from the previous build must not fail the next one.
+    self.log_hook_tasks.lock().unwrap_or_else(std::sync::PoisonError::into_inner).clear();
   }
 
   /// Await all pending `onLog` callback tasks and return the errors they produced.

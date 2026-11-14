@@ -49,7 +49,16 @@ pub fn resolve_sources_against_module(map: &SourceMap, module_id: &str) -> Optio
 }
 
 fn is_url(source: &str) -> bool {
-  source.contains("://") || source.starts_with("data:")
+  source.contains("://")
+    || source
+      .split_once(':')
+      .is_some_and(|(scheme, _)| {
+        scheme.len() > 1
+          && scheme.as_bytes()[0].is_ascii_alphabetic()
+          && scheme.as_bytes()[1..]
+            .iter()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(*byte, b'+' | b'.' | b'-'))
+      })
 }
 
 fn is_relative_path(source: &str) -> bool {
@@ -124,5 +133,39 @@ mod tests {
     );
     // No source is relative.
     assert!(resolve_sources_against_module(&map(&["/pkg/x.js"], None), "/pkg/x.js").is_none());
+  }
+
+  #[cfg(not(windows))]
+  #[test]
+  fn leaves_scheme_based_sources_unresolved() {
+    let resolved = resolve_sources_against_module(
+      &map(&["./source.ts", "node:internal/modules/cjs/loader", "virtual:module"], None),
+      "/pkg/x.js",
+    )
+    .unwrap();
+    assert_eq!(
+      sources(&resolved),
+      vec![
+        "/pkg/source.ts",
+        "node:internal/modules/cjs/loader",
+        "virtual:module"
+      ]
+    );
+  }
+
+  #[cfg(not(windows))]
+  #[test]
+  fn leaves_scheme_based_source_root_unresolved() {
+    assert!(
+      resolve_sources_against_module(&map(&["source.ts"], Some("webpack:package/")), "/pkg/x.js")
+        .is_none()
+    );
+  }
+
+  #[test]
+  fn recognizes_uri_schemes_without_treating_drive_letters_as_schemes() {
+    assert!(is_url("node:internal/modules/cjs/loader"));
+    assert!(is_url("custom+scheme:module.ts"));
+    assert!(!is_url("C:relative\\path.ts"));
   }
 }

@@ -272,6 +272,7 @@ impl LinkStage<'_> {
     unreachable_import_expression_node_ids: &FxHashSet<(ModuleIdx, NodeId)>,
   ) {
     let initial_entry_module_idxs: Vec<ModuleIdx> = self.entries.keys().copied().collect();
+    let entry_module_idxs = self.user_defined_entry_module_idxs();
     let (user_defined_entries, dynamic_entries): (Vec<_>, Vec<_>) =
       std::mem::take(&mut self.entries)
         .into_values()
@@ -280,6 +281,7 @@ impl LinkStage<'_> {
 
     let mut retained_dynamic_entries = self.include_statements_once(
       &user_defined_entries,
+      &entry_module_idxs,
       dynamic_entries,
       unreachable_import_expression_node_ids,
     );
@@ -294,6 +296,7 @@ impl LinkStage<'_> {
         }
         retained_dynamic_entries = self.include_statements_once(
           &user_defined_entries,
+          &entry_module_idxs,
           retained_dynamic_entries,
           unreachable_import_expression_node_ids,
         );
@@ -321,6 +324,7 @@ impl LinkStage<'_> {
   fn include_statements_once(
     &mut self,
     user_defined_entries: &[rolldown_common::EntryPoint],
+    entry_module_idxs: &FxHashSet<ModuleIdx>,
     mut dynamic_entries: Vec<rolldown_common::EntryPoint>,
     unreachable_import_expression_node_ids: &FxHashSet<(ModuleIdx, NodeId)>,
   ) -> Vec<rolldown_common::EntryPoint> {
@@ -344,13 +348,12 @@ impl LinkStage<'_> {
       .modules
       .iter()
       .any(|m| m.as_normal().is_some_and(|n| !n.ecma_view.enum_member_value_map.is_empty()));
-    let entry_module_idxs = self.user_defined_entry_module_idxs();
     let body_demand_keys = compute_body_demand_keys(
       &self.module_table.modules,
       &self.stmt_infos,
       &self.symbols,
       self.options.treeshake.is_some(),
-      &entry_module_idxs,
+      entry_module_idxs,
     );
     let context = &mut IncludeContext::new(
       &self.module_table.modules,
@@ -366,7 +369,7 @@ impl LinkStage<'_> {
       self.options,
       &self.normal_symbol_exports_chain_map,
       &mut module_namespace_included_reason,
-      &entry_module_idxs,
+      entry_module_idxs,
       &body_demand_keys,
     );
 
@@ -524,7 +527,7 @@ impl LinkStage<'_> {
       self.options,
       &self.normal_symbol_exports_chain_map,
       &mut module_namespace_included_reason,
-      &entry_module_idxs,
+      entry_module_idxs,
       &body_demand_keys,
     );
     include_runtime_symbol(context, &self.runtime, depended_runtime_helper);

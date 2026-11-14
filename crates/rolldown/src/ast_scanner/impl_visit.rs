@@ -225,6 +225,7 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
     self.try_diagnostic_forbid_const_assign(ident);
     self.update_dynamic_import_binding_usage_info(ident);
     self.record_var_read_before_declaration(ident);
+    self.record_root_write(ident);
   }
 
   fn visit_statement(&mut self, stmt: &ast::Statement<'ast>) {

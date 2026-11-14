@@ -1,0 +1,45 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// dep.cjs
+var require_dep = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.value = 1;
+}));
+
+// flag.js
+var flag_exports = /* @__PURE__ */ __exportAll({
+	enable: () => enable,
+	flag: () => flag
+}, 2);
+__reExport(flag_exports, /* @__PURE__ */ __toESM(require_dep()));
+let flag = false;
+function enable() {
+	flag = true;
+}
+
+// middle.js
+var middle_exports = /* @__PURE__ */ __exportAll({}, 2);
+__reExport(middle_exports, /* @__PURE__ */ __toESM(require_dep()));
+
+// chain-flag.js
+var chain_flag_exports = /* @__PURE__ */ __exportAll({
+	chained: () => chained,
+	enable_chained: () => enable_chained
+}, 2);
+__reExport(chain_flag_exports, middle_exports);
+let chained = false;
+function enable_chained() {
+	chained = true;
+}
+
+// main.js
+const read = () => [flag, chained];
+
+export { read };
+```

@@ -49,8 +49,28 @@ impl BitSet {
   }
 
   pub fn union(&mut self, other: &Self) {
-    for (i, &e) in other.entries.iter().enumerate() {
-      self.entries[i] |= e;
+    // One bounds check (panicking, as before, when `other` is longer) instead of one per byte,
+    // which also lets the loop vectorize.
+    let head = &mut self.entries[..other.entries.len()];
+    for (left, right) in head.iter_mut().zip(&other.entries) {
+      *left |= right;
+    }
+  }
+
+  /// `self &= a | b` without materializing `a | b`. A byte missing from both `a` and `b` is 0.
+  pub fn intersect_with_union(&mut self, a: &Self, b: &Self) {
+    let common = a.entries.len().min(b.entries.len()).min(self.entries.len());
+    let (head, tail) = self.entries.split_at_mut(common);
+    for ((left, x), y) in head.iter_mut().zip(&a.entries).zip(&b.entries) {
+      *left &= x | y;
+    }
+    let longer = if a.entries.len() > b.entries.len() { &a.entries } else { &b.entries };
+    let rest = longer.get(common..).unwrap_or_default();
+    for (left, right) in tail.iter_mut().zip(rest) {
+      *left &= right;
+    }
+    if tail.len() > rest.len() {
+      tail[rest.len()..].fill(0);
     }
   }
 
@@ -80,8 +100,19 @@ impl BitSet {
   // It is safe to convert `usize` to `u32` here because we ensure that the bitset is created with a maximum bit count that fits within `u32`.
   #[expect(clippy::cast_possible_truncation)]
   pub fn index_of_one(&self) -> impl Iterator<Item = u32> + '_ {
-    self.entries.iter().enumerate().flat_map(|(i, &e)| {
-      (0..8u32).filter(move |&j| e & (1 << j) != 0).map(move |j| (i as u32) * 8 + j)
+    // Visits only the set bits: zero bytes are skipped and each set bit is found with
+    // `trailing_zeros`, instead of testing all eight bits of every byte.
+    self.entries.iter().enumerate().filter(|(_, e)| **e != 0).flat_map(|(i, &e)| {
+      let base = (i as u32) * 8;
+      let mut rest = e;
+      std::iter::from_fn(move || {
+        if rest == 0 {
+          return None;
+        }
+        let bit = rest.trailing_zeros();
+        rest &= rest - 1;
+        Some(base + bit)
+      })
     })
   }
 }
@@ -140,6 +171,34 @@ impl Debug for BitSet {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn index_of_one_lists_set_bits_in_order() {
+    let bits = [0, 3, 7, 8, 15, 16, 31, 63, 64, 69];
+    let set = bits.iter().copied().collect::<BitSet>();
+    assert_eq!(set.index_of_one().collect::<Vec<_>>(), bits);
+    assert_eq!(BitSet::all(13).index_of_one().collect::<Vec<_>>(), (0..13).collect::<Vec<_>>());
+    assert_eq!(BitSet::new(40).index_of_one().count(), 0);
+  }
+
+  #[test]
+  fn intersect_with_union_matches_clone_union_intersect() {
+    let a = [1, 5, 9, 20].into_iter().collect::<BitSet>();
+    let mut b = BitSet::new(21);
+    b.extend([2, 5, 17]);
+    for start in [BitSet::all(21), BitSet::all(40), [5, 9, 17, 18].into_iter().collect()] {
+      let mut expected = start.clone();
+      let mut either = b.clone();
+      either.union(&a);
+      expected.intersect(&either);
+      let mut actual = start.clone();
+      actual.intersect_with_union(&a, &b);
+      assert_eq!(actual, expected);
+      let mut actual = start;
+      actual.intersect_with_union(&b, &a);
+      assert_eq!(actual, expected);
+    }
+  }
 
   #[test]
   fn basic() {

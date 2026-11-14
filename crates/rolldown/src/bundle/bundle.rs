@@ -21,7 +21,13 @@ use rolldown_plugin::{
   HookBuildEndArgs, HookCloseBundleArgs, HookRenderErrorArgs, SharedPluginDriver,
 };
 use rolldown_utils::dashmap::FxDashSet;
-use std::{path::Path, sync::Arc};
+use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
+use rolldown_utils::rustc_hash::FxHashSetExt as _;
+use rustc_hash::FxHashSet;
+use std::{
+  path::{Path, PathBuf},
+  sync::Arc,
+};
 use sugar_path::SugarPath;
 
 #[expect(
@@ -197,9 +203,10 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       format!("Could not create directory for output chunks: {}", dist_dir.display())
     })?;
 
+    // Validate every filename before writing anything, so an invalid name does not leave a
+    // partially written output directory behind.
     for chunk in &output.assets {
-      let filename = chunk.filename();
-      if filename.contains('\0') {
+      if chunk.filename().contains('\0') {
         let pattern_name = match chunk {
           rolldown_common::Output::Chunk(c) => {
             if c.is_entry {
@@ -217,18 +224,51 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
           .into(),
         );
       }
-      let dest = dist_dir.join(filename);
-      if let Some(p) = dest.parent() {
-        if !self.fs.exists(p) {
-          self.fs.create_dir_all(p).with_context(|| {
-            format!("Could not create directory for output chunks: {}", p.display())
-          })?;
-        }
-      }
+    }
+
+    let destinations = output
+      .assets
+      .iter()
+      .map(|chunk| (chunk, dist_dir.join(chunk.filename())))
+      .collect::<Vec<_>>();
+
+    // Create each distinct parent directory once, instead of probing it for every file.
+    let mut parents = destinations
+      .iter()
+      .filter_map(|(_, dest)| dest.parent())
+      .filter(|parent| *parent != dist_dir.as_path())
+      .collect::<Vec<_>>();
+    parents.sort_unstable();
+    parents.dedup();
+    for parent in parents {
+      self.fs.create_dir_all(parent).with_context(|| {
+        format!("Could not create directory for output chunks: {}", parent.display())
+      })?;
+    }
+
+    let write = |chunk: &Output, dest: &Path| {
       self
         .fs
-        .write(&dest, chunk.content_as_bytes())
-        .with_context(|| format!("Failed to write file in {}", dest.display()))?;
+        .write(dest, chunk.content_as_bytes())
+        .with_context(|| format!("Failed to write file in {}", dest.display()))
+    };
+    let mut seen = FxHashSet::with_capacity(destinations.len());
+    // `foo.js` and `Foo.js` are one file on case-insensitive file systems.
+    if destinations
+      .iter()
+      .all(|(_, dest)| seen.insert(PathBuf::from(dest.to_string_lossy().to_lowercase())))
+    {
+      // Large builds emit tens of thousands of files; writing them one at a time leaves the
+      // output stage bound by per-file syscall latency. Distinct paths are independent, so write
+      // them in parallel and report the first failure in output order to keep errors stable.
+      let results =
+        destinations.par_iter().map(|(chunk, dest)| write(chunk, dest)).collect::<Vec<_>>();
+      results.into_iter().collect::<anyhow::Result<()>>()?;
+    } else {
+      // Several outputs target the same path: keep sequential last-writer-wins semantics.
+      for (chunk, dest) in &destinations {
+        write(chunk, dest)?;
+      }
     }
 
     self

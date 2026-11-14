@@ -25,7 +25,7 @@ export { value };
 // ring-b.js
 function init_ring_b() {
 	return (init_ring_b = __esmMin((async () => {
-		await init_ring_a();
+		init_ring_a();
 		globalThis.__ringB = "b";
 	})))();
 }
@@ -33,7 +33,7 @@ function init_ring_b() {
 var a;
 function init_ring_a() {
 	return (init_ring_a = __esmMin((async () => {
-		await init_ring_b();
+		init_ring_b();
 		a = await Promise.resolve("a");
 	})))();
 }

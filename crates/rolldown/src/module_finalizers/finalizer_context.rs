@@ -76,6 +76,9 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub has_enum_inlining: bool,
   /// `experimentalInlineCommonChunks`: records and the bridges this chunk reads them through.
   pub inline_state: &'me InlineCommonChunksState,
+  /// Static-import strong-component id per module. Two modules share an id exactly when they sit
+  /// on a common import cycle, so an init call between them must not `await` (#11702).
+  pub import_component_ids: &'me FxHashMap<ModuleIdx, usize>,
 }
 
 #[derive(Clone, Copy, Debug)]

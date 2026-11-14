@@ -1,0 +1,14 @@
+{
+  "_comment": "Test for issue #11702: with strictExecutionOrder, an import cycle whose members are TLA-tainted must not emit mutually-awaiting async init wrappers. Without a fix the emitted graph never settles at runtime (unsettled top-level await).",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "format": "esm",
+    "strictExecutionOrder": true,
+    "dir": "dist"
+  }
+}

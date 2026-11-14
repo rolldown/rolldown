@@ -72,6 +72,9 @@ impl GenerateStage<'_> {
     }
     let has_enum_inlining = self.link_output.has_enum_inlining;
     let wrapper_refs = self.wrapper_refs(order_state);
+    let import_component_ids = super::super::order_wrapping::static_import_component_ids(
+      &self.link_output.module_table.modules,
+    );
 
     let render = |record: ChunkIdx, chunk: &Chunk, file: ChunkIdx| {
       let mut diagnostics = vec![];
@@ -118,6 +121,7 @@ impl GenerateStage<'_> {
             resolved_file_urls,
             has_enum_inlining,
             inline_state: &self.inline_state,
+            import_component_ids: &import_component_ids,
           };
           let (_, module_diagnostics) = ctx.finalize_normal_module(&mut ast, ast_scope);
           diagnostics.extend(module_diagnostics);

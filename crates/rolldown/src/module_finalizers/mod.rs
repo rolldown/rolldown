@@ -253,12 +253,28 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       mark_pure_if_noop && self.ctx.final_esm_init_metadata.init_is_noop(importee_idx),
       self,
     );
-    if await_if_tla && target.tla_tainted {
+    if await_if_tla && target.tla_tainted && !self.in_same_import_cycle(importee_idx) {
       // `await init_foo()`
       ast::Expression::new_await_expression(SPAN, init_call, self)
     } else {
       init_call
     }
+  }
+
+  /// A wrapped-ESM init call that crosses a cycle back-edge must stay synchronous. `__esmMin`
+  /// only settles once the awaited init returns, so awaiting inside a cycle makes both
+  /// initializers wait on each other and the module graph never settles (#11702).
+  ///
+  /// The guarded call is still emitted; it just no longer blocks its caller, which is what the
+  /// synchronous-cycle path already relies on for un-tainted cycles.
+  fn in_same_import_cycle(&self, importee_idx: ModuleIdx) -> bool {
+    let Some(&self_id) = self.ctx.import_component_ids.get(&self.ctx.idx) else {
+      return false;
+    };
+    let Some(&importee_id) = self.ctx.import_component_ids.get(&importee_idx) else {
+      return false;
+    };
+    self_id == importee_id
   }
 
   fn order_cjs_carrier_init_call_expr(

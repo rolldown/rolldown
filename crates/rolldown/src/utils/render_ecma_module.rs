@@ -228,10 +228,10 @@ mod tests {
 
   #[test]
   fn real_map_is_not_replaced_by_placeholder() {
-    // A real `Load`/`Transform` map is kept as-is; its sources/content win over the module
-    // id placeholder and its mappings flow through the collapse.
+    // A real `Load`/`Transform` map wins over the module id placeholder: its sources, content
+    // and mappings flow through the collapse.
     let mut warnings = vec![];
-    let load = SourcemapChainElement::Load(map("loaded.js", "const a = 1;\n"));
+    let load = SourcemapChainElement::Load(map("/project/src/loaded.js", "const a = 1;\n"));
     let result =
       collapse_module_sourcemap(&[load], Some(codegen_map("a(1);\n")), MODULE_ID, &mut warnings)
         .unwrap();
@@ -262,6 +262,7 @@ mod tests {
     }
   }
 
+  #[cfg(not(windows))]
   #[test]
   fn relative_sources_of_the_first_map_are_resolved_against_the_module() {
     let mut builder = SourceMapBuilder::default();

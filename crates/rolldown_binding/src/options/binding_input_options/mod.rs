@@ -27,6 +27,7 @@ pub use binding_watch_option::BindingWatcherFileWatcherOptions;
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
 use crate::generated::binding_checks_options;
 use crate::types::binding_plugin_timings::BindingPluginTimingsMeasurement;
+use crate::types::binding_saved_module_options::BindingSavedSideEffects;
 use crate::types::binding_string_or_regex::BindingStringOrRegex;
 use crate::types::defer_sync_scan_data::BindingDeferSyncScanData;
 use crate::types::preserve_entry_signatures::BindingPreserveEntrySignatures;
@@ -34,6 +35,9 @@ use crate::types::{
   binding_log::BindingLog, binding_log_level::BindingLogLevel,
   js_callback_release::UntrackedJsCallback,
 };
+
+pub type BindingDeferSyncScanDataCallback =
+  UntrackedJsCallback<FnArgs<(Vec<BindingSavedSideEffects>,)>, Vec<BindingDeferSyncScanData>>;
 
 pub type BindingOnLog = Option<UntrackedJsCallback<FnArgs<(String, BindingLog)>, ()>>;
 
@@ -101,8 +105,10 @@ pub struct BindingInputOptions<'env> {
   pub keep_names: Option<bool>,
   pub checks: Option<binding_checks_options::BindingChecksOptions>,
   #[debug(skip)]
-  #[napi(ts_type = "undefined | (() => BindingDeferSyncScanData[])")]
-  pub defer_sync_scan_data: Option<UntrackedJsCallback<(), Vec<BindingDeferSyncScanData>>>,
+  #[napi(
+    ts_type = "undefined | ((savedSideEffects: BindingSavedSideEffects[]) => BindingDeferSyncScanData[])"
+  )]
+  pub defer_sync_scan_data: Option<BindingDeferSyncScanDataCallback>,
   /// Asked for while the build is closing, so what it returns includes `closeBundle`.
   #[debug(skip)]
   #[napi(ts_type = "undefined | (() => BindingPluginTimingsMeasurement)")]

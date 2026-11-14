@@ -31,6 +31,7 @@ import {
 import type { BindingifyPluginArgs } from './bindingify-plugin';
 import { fsModule, type RolldownFsModule } from './fs';
 import type { CustomPluginOptions, ModuleOptions, Plugin, ResolvedId } from './index';
+import type { ModuleInfoAccess } from './module-info-access';
 import type { PluginContextData } from './plugin-context-data';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
 import type { InputOptions } from '../options/input-options';
@@ -251,6 +252,40 @@ export interface PluginContext extends MinimalPluginContext {
     id: string,
   ): void;
   /**
+   * Tells the persistent cache
+   * ({@linkcode InputOptions.experimental | experimental.cache}) to save no result for the
+   * module of the current hook call. The hooks of that module then run again in the next
+   * build. The other modules still get saved results.
+   *
+   * Use it in a `resolveId`, `resolveDynamicImport`, `load` or `transform` hook that has
+   * `cache: true`, when one call does something that Rolldown cannot do again without running
+   * the hook. An example is a call that changes a variable of the plugin.
+   *
+   * It does nothing when the cache is off, and in a hook call that the cache does not record.
+   *
+   * @example
+   * ```js
+   * transform: {
+   *   cache: true,
+   *   handler(code, id) {
+   *     if (code.includes('__BUILD_TIME__')) {
+   *       // The result is different in every build.
+   *       this.markNotCacheable('uses the build time');
+   *       return code.replaceAll('__BUILD_TIME__', String(Date.now()));
+   *     }
+   *   },
+   * }
+   * ```
+   *
+   * @experimental
+   */
+  markNotCacheable(
+    /**
+     * A short text that says why. Rolldown keeps it for debugging.
+     */
+    reason?: string,
+  ): void;
+  /**
    * Loads and parses the module corresponding to the given id, attaching additional
    * meta information to the module if provided. This will trigger the same
    * {@linkcode Plugin.load | load}, {@linkcode Plugin.transform | transform} and
@@ -318,13 +353,15 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     logLevel: LogLevelOption,
     watchMode: boolean,
     private currentLoadingModule?: string,
+    /** Set in a hook call whose result the persistent cache can save. */
+    private moduleInfoAccess?: ModuleInfoAccess | undefined,
   ) {
     if (data.persistentCache) {
       onLog = recordLogs(onLog, context);
     }
     super(onLog, logLevel, plugin.name!, watchMode);
     this.onLog = onLog;
-    this.getModuleInfo = (id: string) => this.data.getModuleInfo(id, context);
+    this.getModuleInfo = (id: string) => this.data.getModuleInfo(id, context, moduleInfoAccess);
   }
 
   public async load(
@@ -353,6 +390,8 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
       moduleSideEffects: options.moduleSideEffects || null,
       invalidate: false,
     };
+    // Rust may not know the module yet, so `getModuleInfo` above did not do this.
+    this.data.syncSavedModuleOptions(id, this.context);
     this.data.updateModuleOption(id, rawOptions);
 
     let loadPromise = this.data.loadModulePromiseMap.get(id);
@@ -414,11 +453,14 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     }
 
     if (res == null) return null;
-    const info =
-      this.data.getModuleOption(this.data.toModuleId(res.id, res.attributes)) ||
-      ({} as ModuleOptions);
-    return {
-      ...res,
+    const { savedModuleOptionsStamp, ...resolved } = res;
+    const resolvedModuleId = this.data.toModuleId(res.id, res.attributes);
+    if (savedModuleOptionsStamp != null) {
+      this.data.syncSavedModuleOptions(resolvedModuleId, this.context, savedModuleOptionsStamp);
+    }
+    const info = this.data.getModuleOption(resolvedModuleId) || ({} as ModuleOptions);
+    const result = {
+      ...resolved,
       external:
         res.external === 'relative'
           ? unreachable(`The PluginContext resolve result external couldn't be 'relative'`)
@@ -427,6 +469,16 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
       moduleSideEffects: info.moduleSideEffects ?? res.moduleSideEffects ?? null,
       packageJsonPath: res.packageJsonPath,
     };
+    // `result.meta` is the `meta` object of the resolved module. A hook can read or change it.
+    this.data.trackResolvedMeta(result, resolvedModuleId, this.context, this.moduleInfoAccess);
+    this.data.trackResolvedSideEffects(
+      result,
+      resolvedModuleId,
+      this.context,
+      this.moduleInfoAccess,
+      info.moduleSideEffects != null,
+    );
+    return result;
   }
 
   public emitFile: PluginContext['emitFile'] = (file): string => {
@@ -516,6 +568,14 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     this.context.addWatchFile(id);
   }
 
+  public markNotCacheable(reason?: string): void {
+    this.data.markNotCacheable(this.context, () =>
+      typeof reason === 'string'
+        ? reason
+        : `plugin \`${this.pluginName}\` called \`this.markNotCacheable\``,
+    );
+  }
+
   public parse(input: string, options?: ParserOptions | null): Program {
     return parseAst(input, options);
   }
@@ -543,6 +603,7 @@ function recordLogs(onLog: LogHandler, context: BindingPluginContext): LogHandle
 export function createPluginContext(
   args: BindingifyPluginArgs,
   ctx: BindingPluginContext,
+  moduleInfoAccess?: ModuleInfoAccess,
 ): PluginContextImpl {
   return new PluginContextImpl(
     args.outputOptions,
@@ -552,6 +613,8 @@ export function createPluginContext(
     args.onLog,
     args.logLevel,
     args.watchMode,
+    undefined,
+    moduleInfoAccess,
   );
 }
 

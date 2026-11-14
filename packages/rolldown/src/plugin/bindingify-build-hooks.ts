@@ -23,9 +23,11 @@ import {
 } from './bindingify-hook-filter';
 import type { BindingifyPluginArgs } from './bindingify-plugin';
 import { bindingifyHook, type PluginHookWithBindingExt } from './bindingify-plugin-hook-meta';
-import type { CustomPluginOptions, PluginHooks, SourceDescription } from './index';
+import { callCacheableHook } from './cacheable-hook-call';
+import type { ModuleOptions, PluginHooks, SourceDescription } from './index';
 import { LoadPluginContextImpl } from './load-plugin-context';
 import { createPluginContext } from './plugin-context';
+import type { RecordedHookCall } from './plugin-context-data';
 import { TransformPluginContextImpl } from './transform-plugin-context';
 
 export function bindingifyBuildStart(
@@ -64,17 +66,21 @@ export function bindingifyResolveId(
           ? args.pluginContextData.getSavedResolveOptions(extraOptions.custom)
           : undefined;
 
-      const ret = await handler.call(
-        createPluginContext(args, ctx),
-        specifier,
-        importer ?? undefined,
-        {
-          ...extraOptions,
-          custom: contextResolveOptions?.custom,
-          attributes: extraOptions.attributes ?? {},
-          importerRawId: extraOptions.importerRawId ?? importer ?? undefined,
-          importerAttributes: extraOptions.importerAttributes ?? {},
-        },
+      const data = args.pluginContextData;
+      const access = data.startModuleInfoAccess();
+      const ret = await callCacheableHook(
+        data,
+        ctx,
+        access,
+        { pluginName: args.plugin.name!, hookName: 'resolveId' },
+        () =>
+          handler.call(createPluginContext(args, ctx, access), specifier, importer ?? undefined, {
+            ...extraOptions,
+            custom: contextResolveOptions?.custom,
+            attributes: extraOptions.attributes ?? {},
+            importerRawId: extraOptions.importerRawId ?? importer ?? undefined,
+            importerAttributes: extraOptions.importerAttributes ?? {},
+          }),
       );
       if (ret == null) {
         return;
@@ -90,17 +96,35 @@ export function bindingifyResolveId(
         return { id: ret, normalizeExternalId: false };
       }
 
-      markNotCacheableIfMeta(args, ctx, 'resolveId', ret.meta);
+      const resolvedModuleId = data.toModuleId(ret.id, ret.attributes ?? extraOptions.attributes);
+      const hookCall: RecordedHookCall = {
+        pluginName: args.plugin.name!,
+        hookName: 'resolveId',
+      };
+      if (data.isResolvedSideEffectsFromMap(ret)) {
+        data.markSideEffectsPassedOn(ctx, hookCall, 'returned', resolvedModuleId);
+      }
+      const moduleOption = {
+        meta: ret.meta || {},
+        moduleSideEffects: ret.moduleSideEffects ?? null,
+        invalidate: false,
+      };
+      data.syncSavedModuleOptions(resolvedModuleId, ctx);
+      data.recordModuleOptions(
+        ctx,
+        hookCall,
+        resolvedModuleId,
+        moduleOption.meta,
+        moduleOption.moduleSideEffects,
+      );
 
       // Make sure the `moduleSideEffects` is update to date
-      let exist = args.pluginContextData.updateModuleOption(
-        args.pluginContextData.toModuleId(ret.id, ret.attributes ?? extraOptions.attributes),
-        {
-          meta: ret.meta || {},
-          moduleSideEffects: ret.moduleSideEffects ?? null,
-          invalidate: false,
-        },
-      );
+      let exist = data.updateModuleOption(resolvedModuleId, moduleOption);
+      if (ret.moduleSideEffects == null && exist.moduleSideEffects != null) {
+        // The value below comes from another hook call, for example a hook of the resolved
+        // module. A saved resolve result would keep it when that hook returns another value.
+        data.markSideEffectsPassedOn(ctx, hookCall, 'passedOn', resolvedModuleId);
+      }
 
       return {
         id: ret.id,
@@ -121,15 +145,22 @@ export function bindingifyResolveDynamicImport(
   return bindingifyHook(args.plugin.resolveDynamicImport, ({ handler }) => ({
     plugin: async (ctx, specifier, importer, extraOptions) => {
       const attributes = extraOptions.attributes ?? {};
-      const ret = await handler.call(
-        createPluginContext(args, ctx),
-        specifier,
-        importer ?? undefined,
+      const data = args.pluginContextData;
+      const access = data.startModuleInfoAccess();
+      const ret = await callCacheableHook(
+        data,
+        ctx,
+        access,
         {
-          attributes,
-          importerRawId: extraOptions.importerRawId ?? importer ?? undefined,
-          importerAttributes: extraOptions.importerAttributes ?? {},
+          pluginName: args.plugin.name!,
+          hookName: 'resolveDynamicImport',
         },
+        () =>
+          handler.call(createPluginContext(args, ctx, access), specifier, importer ?? undefined, {
+            attributes,
+            importerRawId: extraOptions.importerRawId ?? importer ?? undefined,
+            importerAttributes: extraOptions.importerAttributes ?? {},
+          }),
       );
       if (ret == null) {
         return;
@@ -146,8 +177,6 @@ export function bindingifyResolveDynamicImport(
         };
       }
 
-      markNotCacheableIfMeta(args, ctx, 'resolveDynamicImport', ret.meta);
-
       const result: BindingHookResolveIdOutput = {
         id: ret.id,
         external: ret.external,
@@ -159,14 +188,28 @@ export function bindingifyResolveDynamicImport(
         result.moduleSideEffects = ret.moduleSideEffects;
       }
 
-      args.pluginContextData.updateModuleOption(
-        args.pluginContextData.toModuleId(ret.id, ret.attributes ?? attributes),
-        {
-          meta: ret.meta || {},
-          moduleSideEffects: ret.moduleSideEffects || null,
-          invalidate: false,
-        },
+      const resolvedModuleId = data.toModuleId(ret.id, ret.attributes ?? attributes);
+      const hookCall: RecordedHookCall = {
+        pluginName: args.plugin.name!,
+        hookName: 'resolveDynamicImport',
+      };
+      if (data.isResolvedSideEffectsFromMap(ret)) {
+        data.markSideEffectsPassedOn(ctx, hookCall, 'returned', resolvedModuleId);
+      }
+      const moduleOption = {
+        meta: ret.meta || {},
+        moduleSideEffects: ret.moduleSideEffects || null,
+        invalidate: false,
+      };
+      data.syncSavedModuleOptions(resolvedModuleId, ctx);
+      data.recordModuleOptions(
+        ctx,
+        hookCall,
+        resolvedModuleId,
+        moduleOption.meta,
+        moduleOption.moduleSideEffects,
       );
+      data.updateModuleOption(resolvedModuleId, moduleOption);
 
       return result;
     },
@@ -219,6 +262,7 @@ export function bindingifyTransform(
         },
       });
       const context = ctx.inner();
+      const access = args.pluginContextData.startModuleInfoAccess();
       const transformCtx = new TransformPluginContextImpl(
         args.outputOptions,
         context,
@@ -230,8 +274,15 @@ export function bindingifyTransform(
         args.onLog,
         args.logLevel,
         args.watchMode,
+        access,
       );
-      const ret = await handler.call(transformCtx, code, id, meta);
+      const ret = await callCacheableHook(
+        args.pluginContextData,
+        context,
+        access,
+        { pluginName: args.plugin.name!, hookName: 'transform' },
+        () => handler.call(transformCtx, code, id, meta),
+      );
 
       if (ret == null) {
         return undefined;
@@ -241,9 +292,7 @@ export function bindingifyTransform(
         return { code: ret };
       }
 
-      markNotCacheableIfMeta(args, context, 'transform', ret.meta);
-
-      let moduleOption = args.pluginContextData.updateModuleOption(id, {
+      let moduleOption = updateModuleOptionFromHook(args, context, 'transform', id, {
         meta: ret.meta ?? {},
         moduleSideEffects: ret.moduleSideEffects ?? null,
         invalidate: false,
@@ -298,20 +347,29 @@ export function bindingifyLoad(
     plugin: async (ctx, id, bindingExtraOptions) => {
       const extraOptions = bindingExtraOptions ?? { rawId: id, attributes: {} };
       const context = ctx.inner();
-      const ret = await handler.call(
-        new LoadPluginContextImpl(
-          args.outputOptions,
-          context,
-          args.plugin,
-          args.pluginContextData,
-          ctx,
-          id,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
-        id,
-        extraOptions,
+      const access = args.pluginContextData.startModuleInfoAccess();
+      const ret = await callCacheableHook(
+        args.pluginContextData,
+        context,
+        access,
+        { pluginName: args.plugin.name!, hookName: 'load' },
+        () =>
+          handler.call(
+            new LoadPluginContextImpl(
+              args.outputOptions,
+              context,
+              args.plugin,
+              args.pluginContextData,
+              ctx,
+              id,
+              args.onLog,
+              args.logLevel,
+              args.watchMode,
+              access,
+            ),
+            id,
+            extraOptions,
+          ),
       );
 
       if (ret == null) {
@@ -322,9 +380,7 @@ export function bindingifyLoad(
         return { code: ret };
       }
 
-      markNotCacheableIfMeta(args, context, 'load', ret.meta);
-
-      let moduleOption = args.pluginContextData.updateModuleOption(id, {
+      let moduleOption = updateModuleOptionFromHook(args, context, 'load', id, {
         meta: ret.meta || {},
         moduleSideEffects: ret.moduleSideEffects ?? null,
         invalidate: false,
@@ -344,20 +400,26 @@ export function bindingifyLoad(
 }
 
 /**
- * `meta` lives only in `moduleOptionMap` on the JavaScript side, so a skipped hook would lose it.
+ * Writes the `meta` and the `moduleSideEffects` that a `load` or `transform` hook returned for
+ * its module `id` into `moduleOptionMap`. With the persistent cache, it also gives them to the
+ * cache, which gives them back when the hook is skipped.
  */
-function markNotCacheableIfMeta(
+function updateModuleOptionFromHook(
   args: BindingifyPluginArgs,
   context: BindingPluginContext,
-  hookName: string,
-  meta: CustomPluginOptions | null | undefined,
-): void {
-  if (meta != null && Object.keys(meta).length > 0) {
-    args.pluginContextData.markNotCacheable(
-      context,
-      () => `hook \`${hookName}\` of plugin \`${args.plugin.name}\` returned \`meta\``,
-    );
+  hookName: 'load' | 'transform',
+  id: string,
+  option: ModuleOptions,
+): ModuleOptions {
+  const data = args.pluginContextData;
+  const hookCall: RecordedHookCall = { pluginName: args.plugin.name!, hookName };
+  data.syncSavedModuleOptions(id, context);
+  data.recordModuleOptions(context, hookCall, id, option.meta, option.moduleSideEffects);
+  const moduleOption = data.updateModuleOption(id, option, true);
+  if (option.moduleSideEffects == null && moduleOption.moduleSideEffects != null) {
+    data.passOnModuleSideEffects(context, hookCall, id);
   }
+  return moduleOption;
 }
 
 function preProcessSourceMap(
@@ -387,10 +449,10 @@ export function bindingifyModuleParsed(
 ): PluginHookWithBindingExt<BindingPluginOptions['moduleParsed']> {
   return bindingifyHook(args.plugin.moduleParsed, ({ handler }) => ({
     plugin: async (ctx, moduleInfo) => {
-      await handler.call(
-        createPluginContext(args, ctx),
-        transformModuleInfo(moduleInfo, args.pluginContextData.getModuleOption(moduleInfo.id)),
-      );
+      const id = moduleInfo.id;
+      args.pluginContextData.syncSavedModuleOptionsFromInfo(id, moduleInfo);
+      const option = args.pluginContextData.getModuleOption(id);
+      await handler.call(createPluginContext(args, ctx), transformModuleInfo(moduleInfo, option));
     },
   }));
 }

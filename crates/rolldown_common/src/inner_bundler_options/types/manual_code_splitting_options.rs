@@ -7,7 +7,9 @@ use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
 use serde::{Deserialize, Deserializer};
 
-use crate::{InvalidateJsSideCache, ModuleInfo, ModuleTag, SharedModuleInfoDashMap};
+use crate::{
+  InvalidateJsSideCache, ModuleInfo, ModuleTag, SharedModuleInfoDashMap, SharedSavedJsModuleOptions,
+};
 
 use super::inline_common_chunks_options::InlineCommonChunksOptions;
 
@@ -175,8 +177,11 @@ where
 pub struct ChunkingContext(Arc<ChunkingContextImpl>);
 
 impl ChunkingContext {
-  pub fn new(module_infos: SharedModuleInfoDashMap) -> Self {
-    Self(Arc::new(ChunkingContextImpl { module_infos }))
+  pub fn new(
+    module_infos: SharedModuleInfoDashMap,
+    saved_js_module_options: Option<SharedSavedJsModuleOptions>,
+  ) -> Self {
+    Self(Arc::new(ChunkingContextImpl { module_infos, saved_js_module_options }))
   }
 }
 
@@ -191,10 +196,16 @@ impl Deref for ChunkingContext {
 #[derive(Debug)]
 pub struct ChunkingContextImpl {
   module_infos: SharedModuleInfoDashMap,
+  saved_js_module_options: Option<SharedSavedJsModuleOptions>,
 }
 
 impl ChunkingContextImpl {
   pub fn get_module_info(&self, module_id: &str) -> Option<Arc<ModuleInfo>> {
     self.module_infos.get(module_id).map(|v| Arc::<ModuleInfo>::clone(v.value()))
+  }
+
+  /// See `NativePluginContextImpl::saved_js_module_options` in `rolldown_plugin`.
+  pub fn saved_js_module_options(&self) -> Option<&SharedSavedJsModuleOptions> {
+    self.saved_js_module_options.as_ref().filter(|saved| !saved.is_empty())
   }
 }

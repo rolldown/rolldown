@@ -1750,6 +1750,11 @@ export declare class BindingModuleInfo {
   exports: Array<string>
   isEntry: boolean
   inputFormat: 'es' | 'cjs' | 'unknown'
+  /**
+   * The values that hooks set for this module on the JavaScript side, from saved results that
+   * the persistent cache reused. Only the values that are newer than the stamp `after`.
+   */
+  savedModuleOptions(after: number): BindingSavedModuleOptions | null
   get code(): string | null
 }
 
@@ -1834,7 +1839,8 @@ export declare class BindingOutputChunk {
 export declare class BindingPluginContext {
   /**
    * The module task of this hook call gets no saved result in the persistent cache. The
-   * JavaScript side calls it for what Rust cannot see, such as a hook that returns `meta`.
+   * JavaScript side calls it for what Rust cannot see, such as a `meta` value that cannot be
+   * saved.
    */
   markNotCacheable(reason: string): void
   /**
@@ -1842,6 +1848,33 @@ export declare class BindingPluginContext {
    * persistent cache can send it again when it reuses the result. `log` is its JSON.
    */
   recordLog(level: string, log: string): void
+  /**
+   * Whether the persistent cache records this hook call, and its module task can still get a
+   * saved result.
+   */
+  isCacheRecording(): boolean
+  /**
+   * The module of the task that this hook call belongs to, or `null` when the persistent cache
+   * does not record the call. In a nested `this.resolve` call, it can differ from the importer.
+   */
+  cacheModuleId(): string | null
+  /**
+   * Records the `meta` keys and the `moduleSideEffects` that a hook returned for a module
+   * during this hook call. The persistent cache gives them back to the JavaScript side when it
+   * reuses the result. `module_key` is the key of that module in `moduleOptionMap`.
+   */
+  recordModuleOptions(moduleKey: string, meta: Array<BindingModuleMetaEntry>, moduleSideEffects?: boolean | 'no-treeshake'): void
+  /**
+   * The `moduleSideEffects` that this `load` or `transform` call returns to Rust is not a
+   * result of the hook. An earlier hook of the module task returned it. See
+   * `ModuleCacheRecorder::ignore_next_hook_side_effects`.
+   */
+  ignoreNextHookSideEffects(): void
+  /**
+   * Like `BindingModuleInfo::saved_module_options`, for a module that the JavaScript side has
+   * no module info for. `module_key` is the key of the module in `moduleOptionMap`.
+   */
+  getSavedModuleOptions(moduleKey: string, after: number): BindingSavedModuleOptions | null
   load(rawId: string, attributes: Record<string, string>, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null, fnSanitizedFileName?: string | undefined | null): string
@@ -2580,7 +2613,7 @@ export interface BindingInputOptions {
   watch?: BindingWatchOption
   keepNames?: boolean
   checks?: BindingChecksOptions
-  deferSyncScanData?: undefined | (() => BindingDeferSyncScanData[])
+  deferSyncScanData?: undefined | ((savedSideEffects: BindingSavedSideEffects[]) => BindingDeferSyncScanData[])
   /** Asked for while the build is closing, so what it returns includes `closeBundle`. */
   pluginTimings?: undefined | (() => BindingPluginTimingsMeasurement)
   makeAbsoluteExternalsRelative?: BindingMakeAbsoluteExternalsRelative
@@ -2708,6 +2741,13 @@ export interface BindingMatchGroup {
   includeDependenciesRecursively?: boolean
 }
 
+/** One top-level key of the `meta` of a module. */
+export interface BindingModuleMetaEntry {
+  key: string
+  /** The JSON text of the value. Not set when the value is `undefined`, which has no JSON text. */
+  json?: string
+}
+
 export interface BindingModules {
   values: Array<BindingRenderedModule>
   keys: Array<string>
@@ -2812,6 +2852,13 @@ export interface BindingPluginContextResolvedId {
   packageJsonPath?: string
   external: boolean | 'absolute' | 'relative'
   moduleSideEffects?: boolean | 'no-treeshake'
+  /**
+   * Set when the persistent cache holds values for the resolved module that the JavaScript
+   * side may not have yet. It is the stamp of the newest one. The JavaScript side then takes
+   * the values with `getSavedModuleOptions`. The values themselves are not copied here: a
+   * `meta` value can be large, and a plugin can resolve the same module many times.
+   */
+  savedModuleOptionsStamp?: number
 }
 
 export interface BindingPluginContextResolveOptions {
@@ -2976,6 +3023,33 @@ export interface BindingResolveOptions {
   modules?: Array<string>
   symlinks?: boolean
   yarnPnp?: boolean
+}
+
+/**
+ * The values that hooks set for a module on the JavaScript side, from saved results that the
+ * persistent cache reused. The JavaScript side writes them into its `moduleOptionMap`.
+ */
+export interface BindingSavedModuleOptions {
+  /** The JavaScript side passes it as `after` the next time, to get only newer values. */
+  stamp: number
+  meta: Array<BindingModuleMetaEntry>
+  moduleSideEffects?: boolean | 'no-treeshake'
+}
+
+/**
+ * The newest `moduleSideEffects` value of a module from the saved results that the persistent
+ * cache reused. The `deferSyncScanData` callback gets all of them, because the JavaScript side
+ * may not have taken them yet.
+ */
+export interface BindingSavedSideEffects {
+  /** The key of the module in `moduleOptionMap`. */
+  id: string
+  /**
+   * The JavaScript side has the value when the stamp that it applied for the module is not
+   * smaller.
+   */
+  stamp: number
+  sideEffects: boolean | 'no-treeshake'
 }
 
 export interface BindingSourcemap {

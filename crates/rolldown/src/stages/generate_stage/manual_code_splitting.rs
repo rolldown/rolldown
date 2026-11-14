@@ -191,7 +191,10 @@ impl ManualSplitter<'_> {
     // resolves the overlap later, in `emit_chunk_from_group`. If this loop dropped matched
     // modules, a module would go to the first group in the list, not to the group with the
     // highest priority.
-    let ctx = ChunkingContext::new(Arc::clone(&self.plugin_driver.module_infos));
+    let ctx = ChunkingContext::new(
+      Arc::clone(&self.plugin_driver.module_infos),
+      self.plugin_driver.saved_js_module_options.clone(),
+    );
 
     for (match_group_index, match_group) in self.match_groups.iter().copied().enumerate() {
       let matched = match &match_group.test {

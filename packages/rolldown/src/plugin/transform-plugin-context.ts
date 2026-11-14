@@ -11,6 +11,7 @@ import type { OutputOptions } from '../options/output-options';
 import type { Extends, TypeAssert } from '../types/assert';
 import type { SourceMap } from '../types/rolldown-output';
 import type { Plugin } from './index';
+import type { ModuleInfoAccess } from './module-info-access';
 import { type PluginContext, PluginContextImpl } from './plugin-context';
 import type { PluginContextData } from './plugin-context-data';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
@@ -70,8 +71,19 @@ export class TransformPluginContextImpl extends PluginContextImpl {
     onLog: LogHandler,
     LogLevelOption: LogLevelOption,
     watchMode: boolean,
+    moduleInfoAccess?: ModuleInfoAccess,
   ) {
-    super(outputOptions, context, plugin, data, onLog, LogLevelOption, watchMode, moduleId);
+    super(
+      outputOptions,
+      context,
+      plugin,
+      data,
+      onLog,
+      LogLevelOption,
+      watchMode,
+      moduleId,
+      moduleInfoAccess,
+    );
     const getLogHandler =
       (handler: LoggingFunctionWithPosition): LoggingFunctionWithPosition =>
       (log, pos) => {

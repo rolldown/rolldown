@@ -48,6 +48,7 @@ pub mod retained_export_symbols;
 pub mod rollup_pre_rendered_asset;
 pub mod rollup_pre_rendered_chunk;
 pub mod rollup_rendered_chunk;
+pub mod saved_js_module_options;
 pub mod scan_mode;
 pub mod side_effects;
 pub mod sourcemap_chain_element;

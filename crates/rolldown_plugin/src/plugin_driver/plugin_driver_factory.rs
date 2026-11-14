@@ -4,7 +4,7 @@ use dashmap::DashMap;
 use oxc_index::IndexVec;
 use rolldown_common::{
   ModuleIdx, PluginIdx, SharedFileEmitter, SharedModuleInfoDashMap, SharedNormalizedBundlerOptions,
-  WatchPath,
+  SharedSavedJsModuleOptions, WatchPath,
 };
 use rolldown_resolver::Resolver;
 use rolldown_utils::dashmap::FxDashSet;
@@ -15,7 +15,7 @@ use crate::{
   plugin_context::{NativePluginContextImpl, PluginContextMeta},
   plugin_driver::{ContextLoadCompletionManager, hook_orders::PluginHookOrders},
   type_aliases::{IndexPluginContext, IndexPluginable},
-  types::build_timings::BuildTimings,
+  types::{build_timings::BuildTimings, module_meta_store::SharedModuleMetaStore},
 };
 
 pub struct PluginDriverFactory {
@@ -28,6 +28,7 @@ impl PluginDriverFactory {
     Self { plugins, resolver: Arc::clone(resolver) }
   }
 
+  #[expect(clippy::too_many_arguments)]
   pub fn create_plugin_driver(
     &self,
     file_emitter: &SharedFileEmitter,
@@ -36,7 +37,10 @@ impl PluginDriverFactory {
     initial_bundle_span: &tracing::Span,
     module_infos: SharedModuleInfoDashMap,
     transform_dependencies: Arc<DashMap<ModuleIdx, Arc<FxDashSet<WatchPath>>>>,
+    saved_js_module_options: Option<SharedSavedJsModuleOptions>,
+    module_meta: SharedModuleMetaStore,
   ) -> Arc<crate::plugin_driver::PluginDriver> {
+    let module_meta_build = module_meta.start_build();
     let watch_files = Arc::new(FxDashSet::default());
     let meta = Arc::new(PluginContextMeta::default());
     let tx = Arc::new(std::sync::Mutex::new(None));
@@ -84,6 +88,9 @@ impl PluginDriverFactory {
           bundle_span: bundle_span.clone(),
           manual_resolve_span: manual_resolve_span.clone(),
           cache_recorder: None,
+          saved_js_module_options: saved_js_module_options.clone(),
+          module_meta: Arc::clone(&module_meta),
+          module_meta_build,
         })));
       });
 
@@ -103,6 +110,9 @@ impl PluginDriverFactory {
         // The JavaScript side registers this callback only when it is measuring, so its
         // presence is what says a report is coming and the clocks are worth keeping.
         build_timings: BuildTimings::new(options.plugin_timings.is_some()),
+        saved_js_module_options,
+        module_meta,
+        module_meta_build,
       }
     })
   }

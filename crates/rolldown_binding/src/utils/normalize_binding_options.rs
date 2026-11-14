@@ -1,4 +1,5 @@
 use super::normalize_binding_transform_options;
+use crate::options::BindingDeferSyncScanDataCallback;
 use crate::options::BindingGeneratedCodeOptions;
 use crate::options::binding_manual_code_splitting_options::{
   BindingChunkingContext, BindingManualCodeSplittingOptions, BindingMatchGroupTest,
@@ -11,7 +12,6 @@ use crate::types::binding_plugin_timings::BindingPluginTimingsMeasurement;
 use crate::types::binding_string_or_regex::{
   BindingStringOrRegex, bindingify_string_or_regex_array,
 };
-use crate::types::defer_sync_scan_data::BindingDeferSyncScanData;
 use crate::{
   options::binding_inject_import::normalize_binding_inject_import,
   types::{
@@ -298,16 +298,17 @@ fn normalize_plugin_timings_option(
 }
 
 fn normalize_defer_sync_scan_data_option(
-  defer_sync_scan_data: Option<UntrackedJsCallback<(), Vec<BindingDeferSyncScanData>>>,
+  defer_sync_scan_data: Option<BindingDeferSyncScanDataCallback>,
   callbacks: &JsCallbackRelease,
 ) -> Option<DeferSyncScanDataOption> {
   defer_sync_scan_data.map(|ts_fn| {
     let ts_fn = callbacks.track(ts_fn);
-    DeferSyncScanDataOption::new(move || {
+    DeferSyncScanDataOption::new(move |saved_side_effects| {
       let ts_fn = ts_fn.clone();
       Box::pin(async move {
+        let saved_side_effects: Vec<_> = saved_side_effects.into_iter().map(Into::into).collect();
         ts_fn
-          .invoke_async(())
+          .invoke_async((saved_side_effects,).into())
           .await
           .context("deferSyncScanData option")
           .and_then(|ret| {

@@ -296,8 +296,13 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       // invalidate `output`. Commit it rather than fall back to the stale prior
       // snapshot.
       // See internal-docs/bundler-data-lifecycle/implementation.md ("Cache integrity on a failed build").
-      let result =
-        defer_sync_scan_data(&self.options, &self.cache.module_id_to_idx, &mut output).await;
+      let result = defer_sync_scan_data(
+        &self.options,
+        self.plugin_driver.saved_js_module_options.as_deref(),
+        &self.cache.module_id_to_idx,
+        &mut output,
+      )
+      .await;
       if is_incremental {
         self.cache.set_snapshot(output.make_copy());
       }
@@ -306,7 +311,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     }
 
     self.cache.merge(output, &self.plugin_driver)?;
-    self.cache.update_defer_sync_data(&self.options).await?;
+    self.cache.update_defer_sync_data(&self.options, &self.plugin_driver).await?;
     Ok(self.cache.create_output())
   }
 

@@ -5,6 +5,7 @@ use std::{
 };
 
 use rolldown_plugin_vite_reporter::{LogInfoFn, ViteReporterPlugin};
+use rolldown_utils::dashmap::FxDashSet;
 use sugar_path::SugarPath as _;
 
 use crate::types::js_callback::{JsCallback, JsCallbackExt as _, JsCallbackResultExt as _};
@@ -36,7 +37,7 @@ impl From<BindingViteReporterPluginConfig> for ViteReporterPlugin {
       report_compressed_size: config.report_compressed_size,
       chunk_count: AtomicU32::new(0),
       transformed_count: AtomicU32::new(0),
-      transformed: rolldown_utils::dashmap::FxDashSet::default(),
+      reported_in_transform: FxDashSet::default(),
       latest_checkpoint: Arc::new(RwLock::new(Instant::now())),
       log_info: config.log_info.map(|log_info| -> Arc<LogInfoFn> {
         Arc::new(move |msg: String| {

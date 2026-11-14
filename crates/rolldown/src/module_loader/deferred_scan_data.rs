@@ -1,5 +1,5 @@
-use rolldown_common::ModuleId;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
+use rolldown_common::{ModuleId, SavedJsModuleOptions};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rustc_hash::FxHashMap;
 
@@ -7,8 +7,10 @@ use crate::ecmascript::ecma_module_view_factory::normalize_side_effects;
 use crate::module_loader::module_loader::VisitState;
 use crate::{SharedOptions, stages::scan_stage::NormalizedScanStageOutput};
 
+/// `saved_js_module_options` is `None` without the persistent cache.
 pub async fn defer_sync_scan_data(
   options: &SharedOptions,
+  saved_js_module_options: Option<&SavedJsModuleOptions>,
   module_id_to_idx: &FxHashMap<ModuleId, VisitState>,
   scan_stage_output: &mut NormalizedScanStageOutput,
 ) -> BuildResult<()> {
@@ -16,7 +18,12 @@ pub async fn defer_sync_scan_data(
     return Ok(());
   };
 
-  let result = func.exec().await?;
+  // A hook that the persistent cache skipped cannot return `moduleSideEffects` again. The
+  // JavaScript side takes saved values only when it reads a module, so it may not know these.
+  // It needs them to tell which assignments in its `moduleOptionMap` are older.
+  let saved_side_effects =
+    saved_js_module_options.map(SavedJsModuleOptions::side_effects).unwrap_or_default();
+  let result = func.exec(saved_side_effects).await?;
 
   let mut errors: Vec<BuildDiagnostic> = vec![];
   for data in result {

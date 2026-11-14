@@ -75,6 +75,9 @@ impl PluginContext {
         bundle_span: ctx.bundle_span.clone(),
         manual_resolve_span: ctx.manual_resolve_span.clone(),
         cache_recorder: cache_recorder.cloned().or_else(|| ctx.cache_recorder.clone()),
+        saved_js_module_options: ctx.saved_js_module_options.clone(),
+        module_meta: Arc::clone(&ctx.module_meta),
+        module_meta_build: ctx.module_meta_build,
       })),
     }
   }
@@ -155,6 +158,61 @@ impl PluginContext {
 
   pub fn get_module_ids(&self) -> Vec<ArcStr> {
     call_native_only!(self, "get_module_ids", ctx => ctx.get_module_ids())
+  }
+
+  /// Sets the value under `key` in the meta that Rust plugins keep for the module `module_id`.
+  /// The module can be the module of this hook call or another one. By convention, `key` is
+  /// the name of the plugin. A new value replaces the value under the same key of that module.
+  ///
+  /// With the persistent cache, a call in a `resolve_id`, `resolve_dynamic_import`, `load` or
+  /// `transform` hook is saved with the module whose task ran the hook, and is done again when
+  /// that module reuses its saved result. A call in another hook is not saved.
+  ///
+  /// A context without a bundler has no module meta: the call does nothing.
+  pub fn set_module_meta(&self, module_id: &str, key: &str, value: impl Into<Arc<[u8]>>) {
+    match self {
+      PluginContext::Napi(_) => {}
+      PluginContext::Native(ctx) => ctx.set_module_meta(module_id, key, value.into()),
+    }
+  }
+
+  /// The value that a Rust plugin set under `key` for the module `module_id`.
+  ///
+  /// The meta is not cleared between the builds of one bundler, so the value can come from an
+  /// earlier build.
+  pub fn get_module_meta(&self, module_id: &str, key: &str) -> Option<Arc<[u8]>> {
+    match self {
+      PluginContext::Napi(_) => None,
+      PluginContext::Native(ctx) => ctx.get_module_meta(module_id, key),
+    }
+  }
+
+  /// Whether the value under `key` for the module `module_id` was set in this build. A hook
+  /// set it, or Rolldown set it again from a saved result. A value of an earlier build gives
+  /// `false`.
+  pub fn has_module_meta_in_this_build(&self, module_id: &str, key: &str) -> bool {
+    match self {
+      PluginContext::Napi(_) => false,
+      PluginContext::Native(ctx) => ctx.has_module_meta_in_this_build(module_id, key),
+    }
+  }
+
+  /// The modules whose value under `key` was set in this build, in no fixed order. A hook set
+  /// it, or Rolldown set it again from a saved result. A module of an earlier build that this
+  /// build did not set again is left out.
+  pub fn module_ids_with_meta(&self, key: &str) -> Vec<ArcStr> {
+    match self {
+      PluginContext::Napi(_) => Vec::new(),
+      PluginContext::Native(ctx) => ctx.module_ids_with_meta(key),
+    }
+  }
+
+  /// The length of `module_ids_with_meta`, without a copy of the ids.
+  pub fn count_modules_with_meta(&self, key: &str) -> usize {
+    match self {
+      PluginContext::Napi(_) => 0,
+      PluginContext::Native(ctx) => ctx.count_modules_with_meta(key),
+    }
   }
 
   pub fn cwd(&self) -> &PathBuf {

@@ -1,13 +1,15 @@
 use std::sync::Arc;
 
 use napi_derive::napi;
-use rolldown_common::ExportsKind;
+use rolldown_common::{ExportsKind, SharedSavedJsModuleOptions};
 
+use super::binding_saved_module_options::{BindingSavedModuleOptions, stamp_from_js};
 use crate::options::plugin::types::binding_shared_string::BindingSharedString;
 
 #[napi]
 pub struct BindingModuleInfo {
   inner: Arc<rolldown_common::ModuleInfo>,
+  saved_js_module_options: Option<SharedSavedJsModuleOptions>,
   #[napi(ts_type = "string")]
   pub id: BindingSharedString,
   #[napi(ts_type = "Array<string>")]
@@ -27,6 +29,15 @@ pub struct BindingModuleInfo {
 #[napi]
 impl BindingModuleInfo {
   pub fn new(inner: Arc<rolldown_common::ModuleInfo>) -> Self {
+    Self::with_saved_js_module_options(inner, None)
+  }
+
+  /// `saved_js_module_options` lets the JavaScript side take the values of this module that
+  /// came from a saved result of the persistent cache. See `saved_module_options`.
+  pub fn with_saved_js_module_options(
+    inner: Arc<rolldown_common::ModuleInfo>,
+    saved_js_module_options: Option<&SharedSavedJsModuleOptions>,
+  ) -> Self {
     let input_format = match inner.input_format {
       ExportsKind::Esm => "es",
       ExportsKind::CommonJs => "cjs",
@@ -58,7 +69,16 @@ impl BindingModuleInfo {
       exports: inner.exports.iter().map(ToString::to_string).collect(),
       input_format: input_format.to_string(),
       inner,
+      saved_js_module_options: saved_js_module_options.cloned(),
     }
+  }
+
+  /// The values that hooks set for this module on the JavaScript side, from saved results that
+  /// the persistent cache reused. Only the values that are newer than the stamp `after`.
+  #[napi]
+  pub fn saved_module_options(&self, after: f64) -> Option<BindingSavedModuleOptions> {
+    let saved = self.saved_js_module_options.as_ref()?;
+    saved.newer_than(saved.key_of(self.inner.id.as_str()), stamp_from_js(after)).map(Into::into)
   }
 
   #[napi(getter)]

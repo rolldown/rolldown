@@ -88,6 +88,8 @@ impl BindingChunkingContext {
 impl BindingChunkingContext {
   #[napi]
   pub fn get_module_info(&self, module_id: String) -> Option<BindingModuleInfo> {
-    self.inner.get_module_info(&module_id).map(BindingModuleInfo::new)
+    self.inner.get_module_info(&module_id).map(|info| {
+      BindingModuleInfo::with_saved_js_module_options(info, self.inner.saved_js_module_options())
+    })
   }
 }

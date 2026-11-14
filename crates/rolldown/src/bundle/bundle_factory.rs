@@ -2,12 +2,13 @@ use std::{any::Any, sync::Arc};
 
 use dashmap::DashMap;
 use rolldown_common::{
-  BundleMode, BundlerOptions, FileEmitter, ModuleIdx, NormalizedBundlerOptions, SharedFileEmitter,
-  SharedModuleInfoDashMap, WatchPath,
+  BundleMode, BundlerOptions, FileEmitter, ModuleIdx, NormalizedBundlerOptions,
+  SavedJsModuleOptions, SharedFileEmitter, SharedModuleInfoDashMap, SharedSavedJsModuleOptions,
+  WatchPath,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, EventKindSwitcher};
 use rolldown_fs::{FileSystem, OsFileSystem};
-use rolldown_plugin::{__inner::SharedPluginable, PluginDriverFactory};
+use rolldown_plugin::{__inner::SharedPluginable, PluginDriverFactory, SharedModuleMetaStore};
 use rolldown_plugin_lazy_compilation::LazyCompilationContext;
 use rolldown_utils::dashmap::FxDashSet;
 use rustc_hash::FxHashMap;
@@ -58,6 +59,14 @@ pub struct BundleFactory {
   pub lazy_compilation_context: Option<LazyCompilationContext>,
 
   pub persistent_cache: Option<SharedPersistentScanCache>,
+
+  /// Lives as long as the factory, also across full builds: a later build can read a module
+  /// whose values the JavaScript side has not taken yet. `None` without the persistent cache.
+  saved_js_module_options: Option<SharedSavedJsModuleOptions>,
+
+  /// The meta of Rust plugins. It lives as long as the factory, also across full builds, and
+  /// also without the persistent cache.
+  module_meta: SharedModuleMetaStore,
 }
 
 impl BundleFactory {
@@ -89,6 +98,10 @@ impl BundleFactory {
       opts.plugins.iter().map(|plugin| plugin.call_name()),
     );
 
+    let saved_js_module_options = persistent_cache.as_ref().map(|_| {
+      Arc::new(SavedJsModuleOptions::new(options.experimental.is_import_attributes_enabled()))
+    });
+
     let plugin_driver_factory = PluginDriverFactory::new(opts.plugins, &resolver);
 
     Ok(Self {
@@ -106,6 +119,8 @@ impl BundleFactory {
       transform_dependencies_for_incremental_build: Arc::default(),
       lazy_compilation_context: inner_plugins_result.lazy_compilation_context,
       persistent_cache,
+      saved_js_module_options,
+      module_meta: Arc::default(),
     })
   }
 
@@ -192,6 +207,8 @@ impl BundleFactory {
       &bundle_span,
       module_infos,
       transform_dependencies,
+      self.saved_js_module_options.clone(),
+      Arc::clone(&self.module_meta),
     );
     let bundle = Bundle {
       fs,

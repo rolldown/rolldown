@@ -59,6 +59,7 @@ pub use crate::{
   types::module_cache_recorder::{
     ModuleCacheRecorder, RecordedAction, RecordedEffects, SharedModuleCacheRecorder,
   },
+  types::module_meta_store::{ModuleMetaStore, SharedModuleMetaStore},
   types::plugin_context_resolve_options::PluginContextResolveOptions,
   types::plugin_hook_meta::{PluginHookMeta, PluginOrder},
 };

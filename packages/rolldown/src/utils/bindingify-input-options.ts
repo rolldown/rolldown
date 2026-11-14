@@ -6,7 +6,6 @@ import {
   BindingPropertyWriteSideEffects,
 } from '../binding.cjs';
 import type {
-  BindingDeferSyncScanData,
   BindingExperimentalOptions,
   BindingInjectImportNamed,
   BindingInjectImportNamespace,
@@ -109,18 +108,7 @@ export function bindingifyInputOptions(
     // Pulled by the core while the build closes, so what it returns includes `closeBundle`.
     // Only registered when measuring; its absence is how Rust knows to stay quiet.
     pluginTimings: timings ? () => summarizePluginTimings(inputOptions) : undefined,
-    deferSyncScanData: () => {
-      let ret: BindingDeferSyncScanData[] = [];
-      pluginContextData.moduleOptionMap.forEach((value, key) => {
-        if (value.invalidate) {
-          ret.push({
-            id: key,
-            sideEffects: value.moduleSideEffects ?? undefined,
-          });
-        }
-      });
-      return ret;
-    },
+    deferSyncScanData: (savedSideEffects) => pluginContextData.deferSyncScanData(savedSideEffects),
     makeAbsoluteExternalsRelative: bindingifyMakeAbsoluteExternalsRelative(
       inputOptions.makeAbsoluteExternalsRelative,
     ),

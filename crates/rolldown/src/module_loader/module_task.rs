@@ -58,6 +58,18 @@ impl ModuleTaskOwner {
   }
 }
 
+/// A copy of the state of a module after `transform`. The persistent cache saves it once the
+/// module task succeeds.
+struct StateAfterTransform {
+  source: StrOrBytes,
+  module_type: ModuleType,
+  sourcemap_chain: Vec<SourcemapChainElement>,
+  is_read_from_disk: bool,
+  /// The number of actions that `load` and `transform` recorded. The actions after this number
+  /// come from the resolve hooks.
+  action_count: usize,
+}
+
 pub struct ModuleTask<Fs: FileSystem + Clone + 'static> {
   ctx: Arc<TaskContext<Fs>>,
   module_idx: ModuleIdx,
@@ -149,14 +161,16 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       _ => None,
     };
     let cache_recorder = (cache_key.is_some() && saved_result.is_none())
-      .then(|| Arc::new(ModuleCacheRecorder::default()));
+      .then(|| Arc::new(ModuleCacheRecorder::new(self.resolved_id.id.as_arc_str().clone())));
 
     let mut sourcemap_chain = vec![];
     let mut hook_side_effects = self.resolved_id.side_effects.take();
     let mut saved_resolves = None;
+    let mut saved_resolve_actions = None;
     let (source, module_type, is_read_from_disk) = if let Some((saved, resolved)) = saved_result {
       // The saved result replaces `load`, `transform` and `resolveId`.
       self.ctx.plugin_driver.replay_cache_actions(self.module_idx, saved.actions).await?;
+      saved_resolve_actions = Some(saved.resolve_actions);
       if saved.hook_side_effects.is_some() {
         hook_side_effects = saved.hook_side_effects;
       }
@@ -176,10 +190,13 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
         .await?
     };
 
-    // A copy of the state after `transform`, to save once the module task succeeds.
-    let state_to_save = cache_recorder
-      .as_ref()
-      .map(|_| (source.clone(), module_type.clone(), sourcemap_chain.clone(), is_read_from_disk));
+    let state_to_save = cache_recorder.as_ref().map(|recorder| StateAfterTransform {
+      source: source.clone(),
+      module_type: module_type.clone(),
+      sourcemap_chain: sourcemap_chain.clone(),
+      is_read_from_disk,
+      action_count: recorder.action_count(),
+    });
 
     let stable_id = id.stabilize(&self.ctx.options.cwd);
 
@@ -228,6 +245,12 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       dependency_cache,
     )
     .await?;
+
+    if let Some(actions) = saved_resolve_actions {
+      // A `transform_ast` hook must not see what a resolve hook did: without the cache, the
+      // resolve hooks run after it.
+      self.ctx.plugin_driver.replay_cache_actions(self.module_idx, actions).await?;
+    }
 
     if let (Some(cache), Some(key), Some(recorder), Some(state)) =
       (&cache, cache_key, &cache_recorder, state_to_save)
@@ -354,17 +377,21 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     cache: &ScanCacheSession,
     key: u128,
     recorder: &ModuleCacheRecorder,
-    (source, module_type, sourcemap_chain, is_read_from_disk): (
-      StrOrBytes,
-      ModuleType,
-      Vec<SourcemapChainElement>,
-      bool,
-    ),
+    state: StateAfterTransform,
     resolved: Vec<SavedResolve>,
   ) {
-    let RecordedEffects { actions, hook_side_effects } = recorder.take_effects();
+    let StateAfterTransform {
+      source,
+      module_type,
+      sourcemap_chain,
+      is_read_from_disk,
+      action_count,
+    } = state;
+    let RecordedEffects { mut actions, hook_side_effects } = recorder.take_effects();
+    let resolve_actions = actions.split_off(action_count.min(actions.len()));
     let mut dependencies: Vec<String> = actions
       .iter()
+      .chain(&resolve_actions)
       .filter_map(|action| match action {
         RecordedAction::TransformDependency(path) => Some(path.to_string()),
         _ => None,
@@ -381,6 +408,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       is_read_from_disk,
       resolved,
       actions,
+      resolve_actions,
     };
     cache.save(&self.ctx.fs, key, dependencies, &saved).await;
   }

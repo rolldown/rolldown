@@ -64,6 +64,23 @@ A module gets a saved result only when every one of these hooks that ran for it 
 
 By setting `cache: true`, the plugin promises that skipping the hook loses nothing that another hook needs. For example, a `transform` hook that stores data in a variable for a later `renderChunk` hook must not set `cache: true`, because the variable is empty when the `transform` hook is skipped.
 
+Such a hook can return the data as `meta` instead. Rolldown saves the `meta` and the `moduleSideEffects` that a hook returns, and gives them back when it skips the hook. A later hook reads them with `this.getModuleInfo(id)`, as in a build without the cache.
+
+In a hook with `cache: true`, set `meta` and `moduleSideEffects` only through the return value of the hook.
+
+Do not read or change them through `this.getModuleInfo(id)` or through the result of `this.resolve`, for any `id`. For example, do not write `this.getModuleInfo(id).meta.icons = ['search']`. A spread of a `this.resolve` result, such as `{ ...resolved }`, also reads both values. Such a use gives the module of the hook call no saved result. Rolldown then prints the warning `PERSISTENT_CACHE_MODULE_INFO`, once for each hook of each plugin.
+
+A module also gets no saved result when Rolldown passes on a `moduleSideEffects` value that a hook set while it worked on another module, such as the `resolveId` hook of an importer. This happens in two cases:
+
+- A `resolveId`, `load` or `transform` hook returns an object without `moduleSideEffects`. A value that an earlier `load` or `transform` hook of the same module returned does not count.
+- A `resolveId` or `resolveDynamicImport` hook returns a `this.resolve` result that holds such a value.
+
+Rolldown prints no warning in these cases. The hook is written in the usual way, and the plugin cannot know which value to return instead.
+
+Rolldown saves `meta` as JSON. `meta` must be a plain object, and a value in it must be a string, a finite number, a boolean, `null`, an array or a plain object. An object must not be used two times in one `meta`. Inside a value, a property with the value `undefined` is left out. When a hook returns another value, such as a `Set` or a function, Rolldown saves no result for that module and prints the warning `PERSISTENT_CACHE_UNSAVABLE_META`.
+
+A hook can call [`this.markNotCacheable()`](/reference/Interface.PluginContext#marknotcacheable) to give the module of the current hook call no saved result.
+
 A hook of a parallel plugin (`defineParallelPlugin`) is never cached, also with `cache: true`.
 
 #### Example

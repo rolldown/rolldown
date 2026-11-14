@@ -12,13 +12,16 @@ use rolldown::{
   BundleOutput, Bundler, BundlerOptions, CacheOptions, ExperimentalOptions, InputItem, LogLevel,
   ModuleType, OnLog,
   plugin::{
-    __inner::SharedPluginable, HookFilterArgs, HookLoadArgs, HookLoadOutput, HookLoadReturn,
-    HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, HookTransformArgs,
-    HookTransformOutput, HookTransformReturn, HookUsage, LogWithoutPlugin, Plugin, PluginContext,
-    PluginHookMeta, SharedLoadPluginContext, SharedTransformPluginContext,
+    __inner::SharedPluginable, HookBuildEndArgs, HookFilterArgs, HookLoadArgs, HookLoadOutput,
+    HookLoadReturn, HookNoopReturn, HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn,
+    HookTransformArgs, HookTransformAstArgs, HookTransformAstReturn, HookTransformOutput,
+    HookTransformReturn, HookUsage, LogWithoutPlugin, Plugin, PluginContext, PluginHookMeta,
+    SharedLoadPluginContext, SharedTransformPluginContext,
   },
 };
-use rolldown_common::{EmittedAsset, ImportAttributes, ModuleDefFormat, StrOrBytes};
+use rolldown_common::{
+  EmittedAsset, ImportAttributes, ModuleDefFormat, ModuleInfo, NormalModule, StrOrBytes,
+};
 
 /// A project in a temporary directory. The cache lives in `<dir>/.cache`.
 struct Project {
@@ -919,4 +922,252 @@ async fn watch_mode_is_an_input_of_key_1() {
   assert_eq!(calls.take().len(), 8, "results saved in watch mode are not reused outside it");
   build(project.options(Some(in_watch_mode)), plugins(&[&plugin])).await;
   assert_eq!(calls.take(), Vec::<String>::new());
+}
+
+/// A Rust plugin that keeps module meta. `resolve_id` sets a value for the module that `./b.js`
+/// resolves to. `transform` sets a value for its own module. `build_end` reads the values of
+/// the modules of the build into `seen`. `transform_ast` and `module_parsed` of `a.js` read into
+/// `reads` what the task of `a.js` set.
+#[derive(Debug, Clone, Default)]
+struct MetaPlugin {
+  calls: Arc<Calls>,
+  seen: Arc<Mutex<Vec<String>>>,
+  reads: Arc<Calls>,
+  /// Module ids that `build_end` also reads directly, in the build or not.
+  probes: Vec<String>,
+}
+
+impl MetaPlugin {
+  const RESOLVED_BY: &'static str = "meta-plugin:resolved-by";
+  const TRANSFORMED: &'static str = "meta-plugin:transformed";
+
+  fn shared(&self) -> Vec<SharedPluginable> {
+    vec![<Self as Plugin>::new_shared(self.clone())]
+  }
+
+  fn seen(&self) -> Vec<String> {
+    self.seen.lock().unwrap().clone()
+  }
+
+  /// Only for `a.js`: the reads of another module task depend on the order of the tasks.
+  fn read_in_task_of_a(&self, ctx: &PluginContext, hook: &str, id: &str) {
+    if Recorder::file_name(id) != "a.js" {
+      return;
+    }
+    let b = Path::new(id).with_file_name("b.js");
+    self.reads.push(format!(
+      "{hook}: resolved-by of b.js {:?}, transformed of a.js {:?}",
+      ctx.get_module_meta(&b.to_string_lossy(), Self::RESOLVED_BY).as_deref(),
+      ctx.get_module_meta(id, Self::TRANSFORMED).as_deref(),
+    ));
+  }
+}
+
+impl Plugin for MetaPlugin {
+  fn name(&self) -> Cow<'static, str> {
+    "meta-plugin".into()
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::ResolveId
+      | HookUsage::Transform
+      | HookUsage::TransformAst
+      | HookUsage::ModuleParsed
+      | HookUsage::BuildEnd
+  }
+
+  async fn resolve_id(
+    &self,
+    ctx: &PluginContext,
+    args: &HookResolveIdArgs<'_>,
+  ) -> HookResolveIdReturn {
+    if let (Some(importer), "./b.js") = (args.importer, args.specifier) {
+      self.calls.push(format!("resolveId {}", args.specifier));
+      let resolved = Path::new(importer).with_file_name("b.js");
+      ctx.set_module_meta(
+        &resolved.to_string_lossy(),
+        Self::RESOLVED_BY,
+        Recorder::file_name(importer).as_bytes(),
+      );
+    }
+    Ok(None)
+  }
+
+  fn resolve_id_meta(&self) -> Option<PluginHookMeta> {
+    Some(PluginHookMeta { order: None, cache: Some(true) })
+  }
+
+  async fn transform(
+    &self,
+    ctx: SharedTransformPluginContext,
+    args: &HookTransformArgs<'_>,
+  ) -> HookTransformReturn {
+    if args.id.starts_with('\0') {
+      return Ok(None);
+    }
+    self.calls.push(format!("transform {}", Recorder::file_name(args.id)));
+    // Not text: a value is bytes.
+    let length = u8::try_from(args.code.len()).unwrap_or(u8::MAX);
+    ctx.set_module_meta(args.id, Self::TRANSFORMED, vec![0, 255, length]);
+    Ok(None)
+  }
+
+  fn transform_meta(&self) -> Option<PluginHookMeta> {
+    Some(PluginHookMeta { order: None, cache: Some(true) })
+  }
+
+  async fn transform_ast(
+    &self,
+    ctx: &PluginContext,
+    args: HookTransformAstArgs<'_>,
+  ) -> HookTransformAstReturn {
+    self.read_in_task_of_a(ctx, "transform_ast", args.id);
+    Ok(args.ast)
+  }
+
+  async fn module_parsed(
+    &self,
+    ctx: &PluginContext,
+    module_info: Arc<ModuleInfo>,
+    _normal_module: &NormalModule,
+  ) -> HookNoopReturn {
+    self.read_in_task_of_a(ctx, "module_parsed", &module_info.id);
+    Ok(())
+  }
+
+  async fn build_end(
+    &self,
+    ctx: &PluginContext,
+    _args: Option<&HookBuildEndArgs<'_>>,
+  ) -> HookNoopReturn {
+    let mut seen = vec![];
+    for key in [Self::RESOLVED_BY, Self::TRANSFORMED] {
+      let mut ids = ctx.module_ids_with_meta(key);
+      assert_eq!(ids.len(), ctx.count_modules_with_meta(key));
+      ids.sort();
+      for id in ids {
+        let value = ctx.get_module_meta(&id, key).expect("a listed module has the key");
+        seen.push(format!("{key} {} {:?}", Recorder::file_name(&id), &*value));
+      }
+    }
+    for id in &self.probes {
+      let value = ctx.get_module_meta(id, Self::TRANSFORMED);
+      seen.push(format!("probe {} {:?}", Recorder::file_name(id), value.as_deref()));
+    }
+    *self.seen.lock().unwrap() = seen;
+    Ok(())
+  }
+}
+
+fn meta_project() -> Project {
+  Project::new(&[
+    ("main.js", "import './a.js';\n"),
+    ("a.js", "import './b.js';\nconsole.log('a');\n"),
+    ("b.js", "console.log('b');\n"),
+  ])
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_meta_of_a_rust_plugin_is_set_again_on_reuse() {
+  let project = meta_project();
+  let plugin = MetaPlugin::default();
+  let options = || project.options(Some(project.cache()));
+
+  build(options(), plugin.shared()).await;
+  assert_eq!(
+    plugin.calls.take(),
+    ["resolveId ./b.js", "transform a.js", "transform b.js", "transform main.js"]
+  );
+  let first = plugin.seen();
+  assert_eq!(
+    first,
+    [
+      "meta-plugin:resolved-by b.js [97, 46, 106, 115]",
+      "meta-plugin:transformed a.js [0, 255, 35]",
+      "meta-plugin:transformed b.js [0, 255, 18]",
+      "meta-plugin:transformed main.js [0, 255, 17]",
+    ]
+  );
+
+  // Each build has a new bundler, so every value of this build comes from a saved result. The
+  // value that the `resolve_id` call of `a.js` set for `b.js` is in the saved result of `a.js`.
+  build(options(), plugin.shared()).await;
+  assert_eq!(plugin.calls.take(), Vec::<String>::new());
+  assert_eq!(plugin.seen(), first);
+
+  // `a.js` no longer imports `b.js`: its saved result is not found, so nothing sets a value
+  // for `b.js`.
+  project.write("a.js", "console.log('a');\n");
+  build(options(), plugin.shared()).await;
+  assert_eq!(plugin.calls.take(), ["transform a.js"]);
+  let edited = plugin.seen();
+  assert_eq!(
+    edited,
+    ["meta-plugin:transformed a.js [0, 255, 18]", "meta-plugin:transformed main.js [0, 255, 17]"]
+  );
+
+  build(project.options(None), plugin.shared()).await;
+  assert_eq!(plugin.seen(), edited, "the same as a build without the cache");
+}
+
+/// Without the cache, the resolve hooks of a module run after its `transform_ast` hook and
+/// before its `module_parsed` hook. So `transform_ast` of `a.js` does not see the value that
+/// `resolve_id` sets for `b.js`.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_value_from_resolve_id_is_set_again_after_transform_ast() {
+  let project = meta_project();
+  let plugin = MetaPlugin::default();
+  let expected = [
+    "module_parsed: resolved-by of b.js Some([97, 46, 106, 115]), transformed of a.js Some([0, 255, 35])",
+    "transform_ast: resolved-by of b.js None, transformed of a.js Some([0, 255, 35])",
+  ];
+
+  build(project.options(None), plugin.shared()).await;
+  assert_eq!(plugin.reads.take(), expected, "without the cache");
+  plugin.calls.take();
+
+  build(project.options(Some(project.cache())), plugin.shared()).await;
+  assert_eq!(plugin.reads.take(), expected, "the hooks ran");
+  assert_eq!(plugin.calls.take().len(), 4);
+
+  build(project.options(Some(project.cache())), plugin.shared()).await;
+  assert_eq!(plugin.reads.take(), expected, "reuse");
+  assert_eq!(plugin.calls.take(), Vec::<String>::new());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_meta_of_a_rust_plugin_stays_between_the_builds_of_one_bundler() {
+  for cache in [false, true] {
+    let project = meta_project();
+    let plugin = MetaPlugin { probes: vec![project.id("b.js")], ..Default::default() };
+    let options = project.options(cache.then(|| project.cache()));
+    let mut bundler = Bundler::with_plugins(options, plugin.shared()).unwrap();
+
+    bundler.generate().await.unwrap();
+    assert_eq!(
+      plugin.seen(),
+      [
+        "meta-plugin:resolved-by b.js [97, 46, 106, 115]",
+        "meta-plugin:transformed a.js [0, 255, 35]",
+        "meta-plugin:transformed b.js [0, 255, 18]",
+        "meta-plugin:transformed main.js [0, 255, 17]",
+        "probe b.js Some([0, 255, 18])",
+      ]
+    );
+
+    project.write("a.js", "console.log('edited');\n");
+    bundler.generate().await.unwrap();
+    assert_eq!(
+      plugin.seen(),
+      [
+        // The new value replaced the old one.
+        "meta-plugin:transformed a.js [0, 255, 23]",
+        "meta-plugin:transformed main.js [0, 255, 17]",
+        // `b.js` is not a module of this build. Its value is still there.
+        "probe b.js Some([0, 255, 18])",
+      ],
+      "cache: {cache}"
+    );
+    bundler.close().await.unwrap();
+  }
 }

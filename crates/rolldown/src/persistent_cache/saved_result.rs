@@ -14,7 +14,7 @@ use rolldown_utils::url::clean_url;
 use super::codec::{Decoder, Encoder};
 
 /// Bumped on every change to the encoding below. A saved result in another format is not found.
-pub const SAVED_RESULT_FORMAT: u32 = 1;
+pub const SAVED_RESULT_FORMAT: u32 = 9;
 
 /// What the persistent cache saves for a module: the state after `transform`, the resolve result
 /// of each import, and the actions of the skipped hooks that Rolldown does again on reuse.
@@ -28,7 +28,11 @@ pub struct SavedResult {
   pub sourcemap_chain: Vec<SourcemapChainElement>,
   pub is_read_from_disk: bool,
   pub resolved: Vec<SavedResolve>,
+  /// The actions of the `load` and `transform` hooks. Done again before the module is parsed.
   pub actions: Vec<RecordedAction>,
+  /// The actions of the resolve hooks for the imports of the module. Done again after the
+  /// imports are resolved, because a `transform_ast` hook runs between the two groups.
+  pub resolve_actions: Vec<RecordedAction>,
 }
 
 /// Imports with the same specifier, kind and attributes share one resolve result, as in
@@ -125,6 +129,7 @@ impl SavedResult {
       e.opt(saved.resolved.as_ref(), write_saved_resolved_id);
     });
     e.seq(self.actions.iter(), write_action);
+    e.seq(self.resolve_actions.iter(), write_action);
     e.finish()
   }
 
@@ -148,6 +153,7 @@ impl SavedResult {
         })
       })?,
       actions: d.seq(read_action)?,
+      resolve_actions: d.seq(read_action)?,
     };
     d.is_empty().then_some(result)
   }
@@ -527,6 +533,23 @@ fn write_action(e: &mut Encoder, action: &RecordedAction) {
       write_log_level(e, *level);
       e.str(json);
     }
+    RecordedAction::JsModuleMeta { module_id, key, json } => {
+      e.u8(9);
+      e.str(module_id);
+      e.str(key);
+      e.opt_str(json.as_deref());
+    }
+    RecordedAction::JsModuleSideEffects { module_id, value } => {
+      e.u8(10);
+      e.str(module_id);
+      write_hook_side_effects(e, *value);
+    }
+    RecordedAction::RustModuleMeta { module_id, key, value } => {
+      e.u8(13);
+      e.str(module_id);
+      e.str(key);
+      e.bytes(value);
+    }
   }
 }
 
@@ -564,6 +587,86 @@ fn read_action(d: &mut Decoder) -> Option<RecordedAction> {
     },
     7 => RecordedAction::Log { level: read_log_level(d)?, log: read_log(d)? },
     8 => RecordedAction::JsLog { level: read_log_level(d)?, json: d.string()? },
+    9 => RecordedAction::JsModuleMeta {
+      module_id: d.str()?.into(),
+      key: d.string()?,
+      json: d.opt_string()?,
+    },
+    10 => RecordedAction::JsModuleSideEffects {
+      module_id: d.str()?.into(),
+      value: read_hook_side_effects(d)?,
+    },
+    13 => RecordedAction::RustModuleMeta {
+      module_id: d.str()?.into(),
+      key: d.str()?.into(),
+      value: d.bytes()?.into(),
+    },
     _ => return None,
   })
+}
+
+#[cfg(test)]
+mod tests {
+  use rolldown_common::{ModuleType, StrOrBytes, side_effects::HookSideEffects};
+  use rolldown_plugin::RecordedAction;
+
+  use super::SavedResult;
+
+  #[test]
+  fn js_module_options_are_the_same_after_encode_and_decode() {
+    let saved = SavedResult {
+      source: StrOrBytes::Str("export {}".to_string()),
+      module_type: ModuleType::Js,
+      hook_side_effects: Some(HookSideEffects::False),
+      sourcemap_chain: vec![],
+      is_read_from_disk: true,
+      resolved: vec![],
+      actions: vec![
+        RecordedAction::JsModuleMeta {
+          module_id: "/src/b.js".into(),
+          key: "icons".to_string(),
+          json: Some(r#"["home",{"n":1}]"#.to_string()),
+        },
+        RecordedAction::JsModuleMeta {
+          module_id: "/src/b.js".into(),
+          key: "cleared".to_string(),
+          json: None,
+        },
+        RecordedAction::JsModuleSideEffects {
+          module_id: "/src/a.js".into(),
+          value: HookSideEffects::NoTreeshake,
+        },
+      ],
+      resolve_actions: vec![],
+    };
+    let decoded = SavedResult::decode(&saved.encode()).expect("should decode");
+    assert_eq!(format!("{:?}", decoded.actions), format!("{:?}", saved.actions));
+    assert_eq!(decoded.hook_side_effects, Some(HookSideEffects::False));
+  }
+
+  #[test]
+  fn rust_module_meta_is_the_same_after_encode_and_decode() {
+    let saved = SavedResult {
+      source: StrOrBytes::Str("export {}".to_string()),
+      module_type: ModuleType::Js,
+      hook_side_effects: None,
+      sourcemap_chain: vec![],
+      is_read_from_disk: true,
+      resolved: vec![],
+      actions: vec![RecordedAction::RustModuleMeta {
+        module_id: "/src/b.js".into(),
+        key: "my-plugin".into(),
+        // Not valid UTF-8: a value is bytes, not text.
+        value: [0, 255, 1].as_slice().into(),
+      }],
+      resolve_actions: vec![RecordedAction::RustModuleMeta {
+        module_id: "/src/a.js".into(),
+        key: "empty".into(),
+        value: [].as_slice().into(),
+      }],
+    };
+    let decoded = SavedResult::decode(&saved.encode()).expect("should decode");
+    assert_eq!(format!("{:?}", decoded.actions), format!("{:?}", saved.actions));
+    assert_eq!(format!("{:?}", decoded.resolve_actions), format!("{:?}", saved.resolve_actions));
+  }
 }

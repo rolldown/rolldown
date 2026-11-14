@@ -18,7 +18,6 @@ workspace = true
 
 [dependencies]
 anyhow = { workspace = true }
-arcstr = { workspace = true }
 cow-utils = { workspace = true }
 derive_more = { workspace = true }
 flate2 = { workspace = true }

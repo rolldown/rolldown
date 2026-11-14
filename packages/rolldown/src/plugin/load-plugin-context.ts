@@ -3,6 +3,7 @@ import type { LogHandler } from '../log/log-handler';
 import type { LogLevelOption } from '../log/logging';
 import type { OutputOptions } from '../options/output-options';
 import type { Plugin } from './index';
+import type { ModuleInfoAccess } from './module-info-access';
 import { PluginContextImpl } from './plugin-context';
 import type { PluginContextData } from './plugin-context-data';
 
@@ -17,8 +18,19 @@ export class LoadPluginContextImpl extends PluginContextImpl {
     onLog: LogHandler,
     logLevelOption: LogLevelOption,
     watchMode: boolean,
+    moduleInfoAccess?: ModuleInfoAccess,
   ) {
-    super(outputOptions, context, plugin, data, onLog, logLevelOption, watchMode, moduleId);
+    super(
+      outputOptions,
+      context,
+      plugin,
+      data,
+      onLog,
+      logLevelOption,
+      watchMode,
+      moduleId,
+      moduleInfoAccess,
+    );
   }
 
   public addWatchFile(id: string): void {

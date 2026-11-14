@@ -12,11 +12,10 @@ use std::{
   time::{Duration, Instant},
 };
 
-use arcstr::ArcStr;
 use cow_utils::CowUtils;
 use owo_colors::Style;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use rolldown_common::{ModuleInfo, ModuleType, NormalModule, SourceMapType};
+use rolldown_common::{ModuleInfo, NormalModule, SourceMapType};
 use rolldown_plugin::{HookUsage, Plugin, PluginContext, PluginHookMeta};
 use rolldown_std_utils::relative_path_to_slash;
 use rolldown_utils::dashmap::FxDashSet;
@@ -25,6 +24,10 @@ use sugar_path::SugarPath as _;
 
 pub type LogInfoFn =
   dyn Fn(String) -> Pin<Box<dyn Future<Output = anyhow::Result<()>> + Send>> + Send + Sync;
+
+/// The key of the mark that `transform` sets in the module meta. The key is the name of the
+/// plugin.
+const TRANSFORMED_MARK: &str = "builtin:vite-reporter";
 
 #[derive(derive_more::Debug)]
 #[expect(clippy::struct_excessive_bools)]
@@ -37,16 +40,26 @@ pub struct ViteReporterPlugin {
   pub chunk_limit: usize,
   pub report_compressed_size: bool,
   pub chunk_count: AtomicU32,
+  /// The modules that the progress line has counted in this build. The number that `build_end`
+  /// prints does not come from here: see `transformed_module_count`.
   pub transformed_count: AtomicU32,
-  /// The modules whose `transform` ran in their current module task.
-  pub transformed: FxDashSet<ArcStr>,
+  /// The modules that `transform` reported in this build.
+  pub reported_in_transform: FxDashSet<String>,
   pub latest_checkpoint: Arc<RwLock<Instant>>,
   #[debug(skip)]
   pub log_info: Option<Arc<LogInfoFn>>,
 }
 
 impl ViteReporterPlugin {
-  fn count_transformed(&self, id: &str) {
+  /// The number of modules of this build that have the mark of `transform`.
+  ///
+  /// It does not count the `transform` calls: a module that reuses its saved result from the
+  /// persistent cache runs no `transform`, but Rolldown sets its mark again.
+  pub fn transformed_module_count(ctx: &PluginContext) -> usize {
+    ctx.count_modules_with_meta(TRANSFORMED_MARK)
+  }
+
+  fn report_progress(&self, id: &str) {
     let transformed_count = self.transformed_count.fetch_add(1, Ordering::SeqCst);
     if self.is_tty {
       if id.contains('?') {
@@ -77,37 +90,35 @@ impl Plugin for ViteReporterPlugin {
 
   async fn transform(
     &self,
-    _ctx: rolldown_plugin::SharedTransformPluginContext,
+    ctx: rolldown_plugin::SharedTransformPluginContext,
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
-    self.count_transformed(args.id);
-    self.transformed.insert(ArcStr::from(args.id));
+    ctx.set_module_meta(args.id, TRANSFORMED_MARK, [1u8]);
+    self.reported_in_transform.insert(args.id.to_string());
+    self.report_progress(args.id);
     Ok(None)
   }
 
-  // Skipping `transform` loses nothing: `module_parsed` counts a module that reused its saved
-  // result.
+  // Skipping `transform` loses nothing: the mark is module meta, so Rolldown saves it and sets
+  // it again for a module that reuses its saved result.
   fn transform_meta(&self) -> Option<PluginHookMeta> {
     Some(PluginHookMeta { order: None, cache: Some(true) })
   }
 
-  // A module without a mark did not run `transform` in this task. Either it reused its saved
-  // result, or Rolldown runs no `transform` for it: a module that Rolldown read as bytes, which
-  // has one of these module types, or a `rolldown:` module.
+  // `transform` reports progress, because Rolldown runs no `module_parsed` for the runtime
+  // module. This hook reports only a module that reused its saved result, since such a module
+  // runs no `transform`. The bundler keeps the meta of earlier builds, so a mark from an earlier
+  // build must not count.
   async fn module_parsed(
     &self,
-    _ctx: &PluginContext,
+    ctx: &PluginContext,
     module_info: Arc<ModuleInfo>,
-    normal_module: &NormalModule,
+    _normal_module: &NormalModule,
   ) -> rolldown_plugin::HookNoopReturn {
-    if self.transformed.remove(module_info.id.as_str()).is_none()
-      && !matches!(
-        normal_module.module_type,
-        ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl
-      )
-      && !module_info.id.starts_with("rolldown:")
+    if ctx.has_module_meta_in_this_build(&module_info.id, TRANSFORMED_MARK)
+      && !self.reported_in_transform.contains(module_info.id.as_str())
     {
-      self.count_transformed(&module_info.id);
+      self.report_progress(&module_info.id);
     }
     Ok(())
   }
@@ -119,14 +130,13 @@ impl Plugin for ViteReporterPlugin {
   ) -> rolldown_plugin::HookNoopReturn {
     self.chunk_count.store(0, Ordering::SeqCst);
     self.transformed_count.store(0, Ordering::SeqCst);
-    // A module task that failed after `transform` leaves its mark.
-    self.transformed.clear();
+    self.reported_in_transform.clear();
     Ok(())
   }
 
   async fn build_end(
     &self,
-    _ctx: &PluginContext,
+    ctx: &PluginContext,
     _args: Option<&rolldown_plugin::HookBuildEndArgs<'_>>,
   ) -> rolldown_plugin::HookNoopReturn {
     if self.is_tty {
@@ -136,7 +146,7 @@ impl Plugin for ViteReporterPlugin {
     utils::log_info(&format!(
       "{} {} modules transformed.",
       utils::paint("✓", Style::new().green()),
-      self.transformed_count.load(Ordering::SeqCst)
+      Self::transformed_module_count(ctx)
     ));
 
     Ok(())

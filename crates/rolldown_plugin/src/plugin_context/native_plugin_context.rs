@@ -10,7 +10,8 @@ use derive_more::Debug;
 use rolldown_common::{
   FilenameTemplate, ImportAttributes, LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleLoaderMsg,
   PackageJson, PluginIdx, ResolvedId, SharedFileEmitter, SharedModuleInfoDashMap,
-  SharedNormalizedBundlerOptions, WatchPath, side_effects::HookSideEffects,
+  SharedNormalizedBundlerOptions, SharedSavedJsModuleOptions, WatchPath,
+  side_effects::HookSideEffects,
 };
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dashmap::FxDashSet;
@@ -22,6 +23,7 @@ use crate::{
   types::{
     hook_resolve_id_skipped::HookResolveIdSkipped,
     module_cache_recorder::{RecordedAction, SharedModuleCacheRecorder},
+    module_meta_store::SharedModuleMetaStore,
     plugin_context_resolve_options::PluginContextResolveOptions,
   },
   utils::resolve_id_check_external::resolve_id_check_external,
@@ -51,6 +53,11 @@ pub struct NativePluginContextImpl {
   /// Set on the contexts that the plugin driver forks for the hook calls of a module task
   /// while the persistent cache records that task.
   pub(crate) cache_recorder: Option<SharedModuleCacheRecorder>,
+  /// `None` without the persistent cache.
+  pub(crate) saved_js_module_options: Option<SharedSavedJsModuleOptions>,
+  pub(crate) module_meta: SharedModuleMetaStore,
+  /// The number of this build in `module_meta`.
+  pub(crate) module_meta_build: u64,
 }
 
 impl NativePluginContextImpl {
@@ -175,6 +182,68 @@ impl NativePluginContextImpl {
   /// Records a log that a JavaScript plugin sent to `onLog` during this hook call.
   pub fn record_js_log(&self, level: LogLevel, json: String) {
     self.record(|| RecordedAction::JsLog { level, json });
+  }
+
+  /// Whether the persistent cache records this hook call, and the module task can still get a
+  /// saved result.
+  pub fn is_cache_recording(&self) -> bool {
+    self.cache_recorder.as_ref().is_some_and(|recorder| recorder.is_cacheable())
+  }
+
+  /// The module of the task that this hook call belongs to, when the persistent cache records
+  /// the call. In a nested `this.resolve` call, it is not the importer of the call.
+  pub fn cache_module_id(&self) -> Option<&ArcStr> {
+    self.cache_recorder.as_ref().map(|recorder| recorder.module_id())
+  }
+
+  /// Records one top-level key of the `meta` that a JavaScript hook returned for the module
+  /// `module_id` during this hook call. `json` is `None` for the value `undefined`.
+  pub fn record_js_module_meta(&self, module_id: ArcStr, key: String, json: Option<String>) {
+    self.record(|| RecordedAction::JsModuleMeta { module_id, key, json });
+  }
+
+  /// Records the `moduleSideEffects` that a JavaScript hook returned for the module `module_id`
+  /// during this hook call.
+  pub fn record_js_module_side_effects(&self, module_id: ArcStr, value: HookSideEffects) {
+    self.record(|| RecordedAction::JsModuleSideEffects { module_id, value });
+  }
+
+  /// See `ModuleCacheRecorder::ignore_next_hook_side_effects`.
+  pub fn ignore_next_hook_side_effects(&self) {
+    if let Some(recorder) = &self.cache_recorder {
+      recorder.ignore_next_hook_side_effects();
+    }
+  }
+
+  /// The JavaScript-side values of the modules whose saved result the persistent cache reused,
+  /// or `None` when there are none.
+  pub fn saved_js_module_options(&self) -> Option<&SharedSavedJsModuleOptions> {
+    self.saved_js_module_options.as_ref().filter(|saved| !saved.is_empty())
+  }
+
+  pub fn set_module_meta(&self, module_id: &str, key: &str, value: Arc<[u8]>) {
+    self.record(|| RecordedAction::RustModuleMeta {
+      module_id: module_id.into(),
+      key: key.into(),
+      value: Arc::clone(&value),
+    });
+    self.module_meta.set(module_id, key, value, self.module_meta_build);
+  }
+
+  pub fn get_module_meta(&self, module_id: &str, key: &str) -> Option<Arc<[u8]>> {
+    self.module_meta.get(module_id, key)
+  }
+
+  pub fn has_module_meta_in_this_build(&self, module_id: &str, key: &str) -> bool {
+    self.module_meta.has_key_in_build(module_id, key, self.module_meta_build)
+  }
+
+  pub fn module_ids_with_meta(&self, key: &str) -> Vec<ArcStr> {
+    self.module_meta.module_ids_with_key(key, self.module_meta_build)
+  }
+
+  pub fn count_modules_with_meta(&self, key: &str) -> usize {
+    self.module_meta.count_modules_with_key(key, self.module_meta_build)
   }
 
   fn record(&self, action: impl FnOnce() -> RecordedAction) {

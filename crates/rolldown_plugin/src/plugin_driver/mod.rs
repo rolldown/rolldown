@@ -15,8 +15,8 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use dashmap::DashMap;
 use rolldown_common::{
-  ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, NormalizedBundlerOptions, PluginIdx,
-  SharedFileEmitter, SharedModuleInfoDashMap, WatchPath,
+  JsModuleOption, ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, NormalizedBundlerOptions,
+  PluginIdx, SharedFileEmitter, SharedModuleInfoDashMap, SharedSavedJsModuleOptions, WatchPath,
 };
 use rolldown_devtools::trace_action_enabled;
 use rolldown_utils::{IndexBitSet, dashmap::FxDashSet};
@@ -27,7 +27,10 @@ use crate::{
   HookFilterArgs, PluginContext, PluginHookMeta, Pluginable,
   plugin_driver::hook_orders::PluginHookOrders,
   type_aliases::{IndexPluginContext, IndexPluginable},
-  types::{build_timings::BuildTimings, module_cache_recorder::RecordedAction},
+  types::{
+    build_timings::BuildTimings, module_cache_recorder::RecordedAction,
+    module_meta_store::SharedModuleMetaStore,
+  },
 };
 
 pub type SharedPluginDriver = Arc<PluginDriver>;
@@ -61,6 +64,12 @@ pub struct PluginDriver {
   /// once the build has finished.
   pub build_timings: BuildTimings,
   pub(crate) cacheable_hooks: CacheableHooks,
+  /// `None` without the persistent cache.
+  pub saved_js_module_options: Option<SharedSavedJsModuleOptions>,
+  /// The meta of Rust plugins. `BundleFactory` owns it, so it lives across builds.
+  pub(crate) module_meta: SharedModuleMetaStore,
+  /// The number of this build in `module_meta`.
+  pub(crate) module_meta_build: u64,
 }
 
 /// For each hook, the plugins whose result the persistent cache may reuse.
@@ -109,6 +118,7 @@ impl PluginDriver {
     self.module_infos.clear();
     // Note: transform_dependencies is NOT cleared here - it's preserved across incremental builds
     // by BundleFactory which manages its lifecycle (reset on full builds only)
+    // `module_meta` is not cleared either: it lives as long as the bundler.
     self.context_load_completion_manager.clear();
     self.file_emitter.clear();
   }
@@ -212,6 +222,20 @@ impl PluginDriver {
               .call(level, rolldown_common::Log { js_log_json: Some(json), ..Default::default() })
               .await?;
           }
+        }
+        // The JavaScript side takes these values when it reads the module.
+        RecordedAction::JsModuleMeta { module_id, key, json } => {
+          if let Some(saved) = &self.saved_js_module_options {
+            saved.set(module_id, JsModuleOption::Meta { key, json });
+          }
+        }
+        RecordedAction::JsModuleSideEffects { module_id, value } => {
+          if let Some(saved) = &self.saved_js_module_options {
+            saved.set(module_id, JsModuleOption::SideEffects(value));
+          }
+        }
+        RecordedAction::RustModuleMeta { module_id, key, value } => {
+          self.module_meta.set(&module_id, &key, value, self.module_meta_build);
         }
       }
     }

@@ -214,6 +214,10 @@ pub use crate::{
   types::rollup_pre_rendered_asset::RollupPreRenderedAsset,
   types::rollup_pre_rendered_chunk::RollupPreRenderedChunk,
   types::rollup_rendered_chunk::RollupRenderedChunk,
+  types::saved_js_module_options::{
+    JsModuleOption, NewerJsModuleOptions, SavedJsModuleOptions, SavedSideEffects,
+    SharedSavedJsModuleOptions,
+  },
   types::scan_mode::ScanMode,
   types::side_effects,
   types::sourcemap_chain_element::SourcemapChainElement,

@@ -159,12 +159,6 @@ impl Plugin for JsPlugin {
         )
       });
     record_hook_result(&span, &result);
-    mark_side_effects_not_cacheable(
-      ctx,
-      &self.name,
-      "resolveId",
-      result_side_effects(&result, |r: &rolldown_plugin::HookResolveIdOutput| r.side_effects),
-    );
     result
   }
 
@@ -205,12 +199,6 @@ impl Plugin for JsPlugin {
         )
       });
     record_hook_result(&span, &result);
-    mark_side_effects_not_cacheable(
-      ctx,
-      &self.name,
-      "resolveDynamicImport",
-      result_side_effects(&result, |r: &rolldown_plugin::HookResolveIdOutput| r.side_effects),
-    );
     result
   }
 
@@ -242,12 +230,6 @@ impl Plugin for JsPlugin {
       .transpose()
       .with_context(|| format!("load hook threw an error for id={}", args.id));
     record_hook_result(&span, &result);
-    mark_side_effects_not_cacheable(
-      &ctx,
-      &self.name,
-      "load",
-      result_side_effects(&result, |r: &rolldown_plugin::HookLoadOutput| r.side_effects),
-    );
     result
   }
 
@@ -290,12 +272,6 @@ impl Plugin for JsPlugin {
       .transpose()
       .with_context(|| format!("transform hook threw an error for id={}", args.id));
     record_hook_result(&span, &result);
-    mark_side_effects_not_cacheable(
-      &ctx,
-      &self.name,
-      "transform",
-      result_side_effects(&result, |r: &rolldown_plugin::HookTransformOutput| r.side_effects),
-    );
     result
   }
 
@@ -310,7 +286,15 @@ impl Plugin for JsPlugin {
     _normal_module: &NormalModule,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.module_parsed {
-      cb.await_call((ctx.clone().into(), BindingModuleInfo::new(Arc::clone(&module_info))).into())
+      let saved_js_module_options = match ctx {
+        rolldown_plugin::PluginContext::Native(ctx) => ctx.saved_js_module_options(),
+        rolldown_plugin::PluginContext::Napi(_) => None,
+      };
+      let binding_module_info = BindingModuleInfo::with_saved_js_module_options(
+        Arc::clone(&module_info),
+        saved_js_module_options,
+      );
+      cb.await_call((ctx.clone().into(), binding_module_info).into())
         .instrument(debug_span!("module_parsed_hook", plugin_name = self.name))
         .await
         .with_context(|| {
@@ -780,28 +764,5 @@ impl Plugin for JsPlugin {
       importer,
       ctx.cwd().to_string_lossy().as_ref(),
     )
-  }
-}
-
-fn result_side_effects<T>(
-  result: &anyhow::Result<Option<T>>,
-  side_effects: impl FnOnce(&T) -> Option<rolldown_common::side_effects::HookSideEffects>,
-) -> bool {
-  matches!(result, Ok(Some(output)) if side_effects(output).is_some())
-}
-
-/// The JavaScript side keeps `moduleSideEffects` also in `moduleOptionMap`, where
-/// `this.getModuleInfo` reads it. Rust cannot write that copy when the persistent cache skips the
-/// hook, so the module gets no saved result.
-fn mark_side_effects_not_cacheable(
-  ctx: &rolldown_plugin::PluginContext,
-  plugin_name: &str,
-  hook_name: &str,
-  has_side_effects: bool,
-) {
-  if has_side_effects {
-    ctx.mark_not_cacheable(|| {
-      format!("hook `{hook_name}` of plugin `{plugin_name}` returned `moduleSideEffects`")
-    });
   }
 }

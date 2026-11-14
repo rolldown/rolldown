@@ -6,7 +6,7 @@ use std::{
   path::{Path, PathBuf},
   sync::{
     Arc, Mutex, RwLock,
-    atomic::{AtomicU32, Ordering},
+    atomic::{AtomicBool, AtomicU32, AtomicUsize, Ordering},
   },
   time::Instant,
 };
@@ -15,9 +15,10 @@ use rolldown::{
   BundleOutput, Bundler, BundlerOptions, CacheOptions, ExperimentalOptions, InputItem, LogLevel,
   OnLog,
   plugin::{
-    __inner::SharedPluginable, HookBuildStartArgs, HookFilterArgs, HookLoadArgs, HookLoadOutput,
-    HookLoadReturn, HookNoopReturn, HookTransformArgs, HookTransformReturn, HookUsage, Plugin,
-    PluginContext, PluginHookMeta, SharedLoadPluginContext, SharedTransformPluginContext,
+    __inner::SharedPluginable, HookBuildEndArgs, HookBuildStartArgs, HookFilterArgs, HookLoadArgs,
+    HookLoadOutput, HookLoadReturn, HookNoopReturn, HookTransformArgs, HookTransformReturn,
+    HookUsage, Plugin, PluginContext, PluginHookMeta, SharedLoadPluginContext,
+    SharedTransformPluginContext,
   },
 };
 use rolldown_common::{
@@ -39,7 +40,7 @@ use rolldown_plugin_vite_resolve::{
   ViteResolveOptions, ViteResolvePlugin, ViteResolveResolveOptions,
 };
 use rolldown_plugin_vite_transform::ViteTransformPlugin;
-use rolldown_utils::pattern_filter::StringOrRegex;
+use rolldown_utils::{dashmap::FxDashSet, pattern_filter::StringOrRegex};
 use rustc_hash::FxHashMap;
 
 /// A project in a temporary directory. The cache lives in `<dir>/.cache`.
@@ -129,22 +130,33 @@ impl Plugin for RecorderPlugin {
   }
 }
 
-/// Passes the hooks to a reporter that the test can still read after the build.
+/// The number that the reporter prints in "N modules transformed" at the end of a build.
+type TransformedCount = Arc<AtomicUsize>;
+
+/// Passes the hooks to a reporter, and keeps the number that the reporter prints in `build_end`
+/// and the number that its progress line has counted.
 #[derive(Debug)]
-struct SharedReporter(Arc<ViteReporterPlugin>);
+struct SharedReporter {
+  reporter: ViteReporterPlugin,
+  transformed_count: TransformedCount,
+  progress_count: TransformedCount,
+}
 
 impl Plugin for SharedReporter {
   fn name(&self) -> Cow<'static, str> {
-    self.0.name()
+    self.reporter.name()
   }
 
   fn register_hook_usage(&self) -> HookUsage {
-    self.0.register_hook_usage()
-      & (HookUsage::ModuleParsed | HookUsage::Transform | HookUsage::BuildStart)
+    self.reporter.register_hook_usage()
+      & (HookUsage::ModuleParsed
+        | HookUsage::Transform
+        | HookUsage::BuildStart
+        | HookUsage::BuildEnd)
   }
 
   fn hook_filter_matches(&self, ctx: &PluginContext, args: HookFilterArgs<'_>) -> bool {
-    self.0.hook_filter_matches(ctx, args)
+    self.reporter.hook_filter_matches(ctx, args)
   }
 
   async fn build_start(
@@ -152,7 +164,21 @@ impl Plugin for SharedReporter {
     ctx: &PluginContext,
     args: &HookBuildStartArgs<'_>,
   ) -> HookNoopReturn {
-    self.0.build_start(ctx, args).await
+    self.reporter.build_start(ctx, args).await
+  }
+
+  async fn build_end(
+    &self,
+    ctx: &PluginContext,
+    args: Option<&HookBuildEndArgs<'_>>,
+  ) -> HookNoopReturn {
+    self
+      .transformed_count
+      .store(ViteReporterPlugin::transformed_module_count(ctx), Ordering::SeqCst);
+    self
+      .progress_count
+      .store(self.reporter.transformed_count.load(Ordering::SeqCst) as usize, Ordering::SeqCst);
+    self.reporter.build_end(ctx, args).await
   }
 
   async fn module_parsed(
@@ -161,7 +187,7 @@ impl Plugin for SharedReporter {
     module_info: Arc<ModuleInfo>,
     normal_module: &NormalModule,
   ) -> HookNoopReturn {
-    self.0.module_parsed(ctx, module_info, normal_module).await
+    self.reporter.module_parsed(ctx, module_info, normal_module).await
   }
 
   async fn transform(
@@ -169,29 +195,37 @@ impl Plugin for SharedReporter {
     ctx: SharedTransformPluginContext,
     args: &HookTransformArgs<'_>,
   ) -> HookTransformReturn {
-    self.0.transform(ctx, args).await
+    self.reporter.transform(ctx, args).await
   }
 
   fn transform_meta(&self) -> Option<PluginHookMeta> {
-    self.0.transform_meta()
+    self.reporter.transform_meta()
   }
 }
 
-fn reporter(root: &str) -> Arc<ViteReporterPlugin> {
-  Arc::new(ViteReporterPlugin {
-    root: root.into(),
-    assets_dir: "assets".into(),
-    is_lib: false,
-    is_tty: false,
-    warn_large_chunks: false,
-    chunk_limit: 500,
-    report_compressed_size: false,
-    chunk_count: AtomicU32::new(0),
-    transformed_count: AtomicU32::new(0),
-    transformed: rolldown_utils::dashmap::FxDashSet::default(),
-    latest_checkpoint: Arc::new(RwLock::new(Instant::now())),
-    log_info: Some(Arc::new(|_| Box::pin(async { Ok(()) }))),
-  })
+fn reporter(
+  root: &str,
+  transformed_count: &TransformedCount,
+  progress_count: &TransformedCount,
+) -> SharedReporter {
+  SharedReporter {
+    reporter: ViteReporterPlugin {
+      root: root.into(),
+      assets_dir: "assets".into(),
+      is_lib: false,
+      is_tty: false,
+      warn_large_chunks: false,
+      chunk_limit: 500,
+      report_compressed_size: false,
+      chunk_count: AtomicU32::new(0),
+      transformed_count: AtomicU32::new(0),
+      reported_in_transform: FxDashSet::default(),
+      latest_checkpoint: Arc::new(RwLock::new(Instant::now())),
+      log_info: Some(Arc::new(|_| Box::pin(async { Ok(()) }))),
+    },
+    transformed_count: Arc::clone(transformed_count),
+    progress_count: Arc::clone(progress_count),
+  }
 }
 
 fn resolve_plugin(
@@ -249,6 +283,10 @@ struct Setup {
   module_types: Option<FxHashMap<String, ModuleType>>,
   /// Runs after the recorder and before the Vite plugins.
   extra_plugins: Vec<SharedPluginable>,
+  /// The number that the progress line of the reporter has counted at the end of the last build.
+  progress_count: TransformedCount,
+  /// Builds without the persistent cache.
+  no_cache: bool,
 }
 
 impl Setup {
@@ -261,6 +299,8 @@ impl Setup {
       on_debug: None,
       module_types: None,
       extra_plugins: vec![],
+      progress_count: TransformedCount::default(),
+      no_cache: false,
     }
   }
 
@@ -268,7 +308,7 @@ impl Setup {
     &self,
     project: &Project,
     recorder: &Arc<Recorder>,
-    reporter: &Arc<ViteReporterPlugin>,
+    transformed_count: &TransformedCount,
   ) -> Vec<SharedPluginable> {
     let root = project.root();
     let mut plugins: Vec<SharedPluginable> =
@@ -320,7 +360,7 @@ impl Setup {
         render_built_url: false,
         is_relative_base: false,
       }),
-      SharedReporter::new_shared(SharedReporter(Arc::clone(reporter))),
+      SharedReporter::new_shared(reporter(&root, transformed_count, &self.progress_count)),
       ViteLoadFallbackPlugin::new_shared(ViteLoadFallbackPlugin),
     ]);
     plugins
@@ -332,12 +372,13 @@ struct BuildResult {
   /// Logs without the cache's own logs.
   logs: Vec<String>,
   calls: Vec<String>,
-  transformed_count: u32,
+  transformed_count: usize,
+  progress_count: usize,
 }
 
 async fn build(project: &Project, setup: &Setup) -> BuildResult {
   let recorder = Arc::new(Recorder::default());
-  let reporter = reporter(&project.root());
+  let transformed_count = TransformedCount::default();
   let logs = Arc::new(Mutex::new(vec![]));
   let options = BundlerOptions {
     on_log: Some(OnLog::new(Arc::new({
@@ -350,8 +391,10 @@ async fn build(project: &Project, setup: &Setup) -> BuildResult {
     module_types: setup.module_types.clone(),
     ..project.options()
   };
+  let options =
+    if setup.no_cache { BundlerOptions { experimental: None, ..options } } else { options };
   let mut bundler =
-    Bundler::with_plugins(options, setup.plugins(project, &recorder, &reporter)).unwrap();
+    Bundler::with_plugins(options, setup.plugins(project, &recorder, &transformed_count)).unwrap();
   let BundleOutput { assets, .. } = bundler.generate().await.expect("build should succeed");
   bundler.close().await.expect("close");
   let mut files: Vec<(String, String)> = assets
@@ -370,7 +413,8 @@ async fn build(project: &Project, setup: &Setup) -> BuildResult {
     files,
     logs,
     calls: recorder.take(),
-    transformed_count: reporter.transformed_count.load(Ordering::SeqCst),
+    transformed_count: transformed_count.load(Ordering::SeqCst),
+    progress_count: setup.progress_count.load(Ordering::SeqCst),
   }
 }
 
@@ -417,6 +461,26 @@ async fn the_reporter_counts_the_same_modules_on_reuse() {
   let second = build(&project, &setup).await;
   assert_eq!(second.calls, Vec::<String>::new());
   assert_eq!(second.transformed_count, first.transformed_count);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_progress_line_counts_the_same_modules_as_the_final_count() {
+  let project = vite_project();
+  let mut setup = Setup::client();
+  setup.no_cache = true;
+  let without_cache = build(&project, &setup).await;
+  assert_eq!(without_cache.transformed_count, 7);
+  assert_eq!(without_cache.progress_count, without_cache.transformed_count);
+
+  setup.no_cache = false;
+  let first = build(&project, &setup).await;
+  assert_eq!(first.progress_count, first.transformed_count);
+
+  // A new bundler, as after a restart. Every module reuses its saved result.
+  let second = build(&project, &setup).await;
+  assert_eq!(second.calls, Vec::<String>::new());
+  assert_eq!(second.transformed_count, 7);
+  assert_eq!(second.progress_count, second.transformed_count);
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -478,11 +542,10 @@ async fn the_reporter_counts_a_module_with_a_bytes_type_whose_code_came_from_loa
   let first = build(&project, &setup).await;
   assert_eq!(first.transformed_count, 3);
 
-  // A known gap: on reuse, the reporter cannot tell `data.b64` from a module that Rolldown read
-  // as bytes, so it does not count it.
+  // On reuse, the mark of `data.b64` comes from its saved result.
   let second = build(&project, &setup).await;
   assert_eq!(second.calls, Vec::<String>::new());
-  assert_eq!(second.transformed_count, 2);
+  assert_eq!(second.transformed_count, first.transformed_count);
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -490,17 +553,106 @@ async fn the_reporter_counts_a_module_that_fails_after_transform() {
   let project =
     Project::new(&[("main.js", "import './bad.js';\n"), ("bad.js", "export const = ;\n")]);
   let recorder = Arc::new(Recorder::default());
-  let reporter = reporter(&project.root());
+  let transformed_count = TransformedCount::default();
   let mut bundler = Bundler::with_plugins(
     project.options(),
-    Setup::client().plugins(&project, &recorder, &reporter),
+    Setup::client().plugins(&project, &recorder, &transformed_count),
   )
   .unwrap();
   assert!(bundler.generate().await.is_err(), "`bad.js` has a syntax error");
   bundler.close().await.unwrap();
   // `bad.js` ran `transform` before parsing failed. The count holds it, `main.js` and the
   // runtime module.
-  assert_eq!(reporter.transformed_count.load(Ordering::SeqCst), 3);
+  assert_eq!(transformed_count.load(Ordering::SeqCst), 3);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_reporter_does_not_count_a_module_that_left_the_graph_in_the_same_process() {
+  let project = Project::new(&[
+    ("main.js", "import './a.js';\nimport './b.js';\n"),
+    ("a.js", "console.log('a');\n"),
+    ("b.js", "console.log('b');\n"),
+  ]);
+  let cache_on = project.options();
+  let cache_off = BundlerOptions { experimental: None, ..project.options() };
+  for options in [cache_off, cache_on] {
+    std::fs::write(project.dir.join("main.js"), "import './a.js';\nimport './b.js';\n").unwrap();
+    let recorder = Arc::new(Recorder::default());
+    let transformed_count = TransformedCount::default();
+    let mut bundler = Bundler::with_plugins(
+      options,
+      Setup::client().plugins(&project, &recorder, &transformed_count),
+    )
+    .unwrap();
+    bundler.generate().await.unwrap();
+    // The three files and the runtime module.
+    assert_eq!(transformed_count.load(Ordering::SeqCst), 4);
+
+    // The second build runs in the same bundler, which keeps the mark of `b.js`.
+    std::fs::write(project.dir.join("main.js"), "import './a.js';\n").unwrap();
+    bundler.generate().await.unwrap();
+    assert_eq!(transformed_count.load(Ordering::SeqCst), 3);
+    bundler.close().await.unwrap();
+  }
+}
+
+/// Returns JavaScript for `*.bin` while `enabled` is true, so `transform` runs for it. Otherwise
+/// Rolldown reads the file as bytes and runs no `transform`.
+#[derive(Debug)]
+struct SwitchableBinLoader {
+  enabled: Arc<AtomicBool>,
+}
+
+impl Plugin for SwitchableBinLoader {
+  fn name(&self) -> Cow<'static, str> {
+    "switchable-bin-loader".into()
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::Load
+  }
+
+  async fn load(&self, _ctx: SharedLoadPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
+    Ok((self.enabled.load(Ordering::SeqCst) && args.id.ends_with(".bin")).then(|| HookLoadOutput {
+      code: "export default 1;\n".into(),
+      module_type: Some(ModuleType::Js),
+      ..Default::default()
+    }))
+  }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_progress_line_does_not_count_a_mark_of_an_earlier_build_in_the_same_process() {
+  let project = Project::new(&[
+    ("main.js", "import data from './data.bin';\nconsole.log(data);\n"),
+    ("data.bin", "\u{0}\u{1}\u{2}"),
+  ]);
+  let module_types = Some(FxHashMap::from_iter([(".bin".to_string(), ModuleType::Binary)]));
+  let cache_on = BundlerOptions { module_types: module_types.clone(), ..project.options() };
+  let cache_off = BundlerOptions { experimental: None, module_types, ..project.options() };
+  for options in [cache_off, cache_on] {
+    let enabled = Arc::new(AtomicBool::new(true));
+    let mut setup = Setup::client();
+    setup.extra_plugins =
+      vec![SwitchableBinLoader::new_shared(SwitchableBinLoader { enabled: Arc::clone(&enabled) })];
+    let recorder = Arc::new(Recorder::default());
+    let transformed_count = TransformedCount::default();
+    let mut bundler =
+      Bundler::with_plugins(options, setup.plugins(&project, &recorder, &transformed_count))
+        .unwrap();
+    bundler.generate().await.unwrap();
+    // The count at the end holds `main.js`, `data.bin` and the runtime module.
+    assert_eq!(transformed_count.load(Ordering::SeqCst), 3);
+    assert_eq!(setup.progress_count.load(Ordering::SeqCst), 3);
+
+    // In the second build `data.bin` runs no `transform`. The bundler still keeps its mark of
+    // the first build.
+    enabled.store(false, Ordering::SeqCst);
+    bundler.generate().await.unwrap();
+    assert_eq!(transformed_count.load(Ordering::SeqCst), 2);
+    assert_eq!(setup.progress_count.load(Ordering::SeqCst), 2);
+    bundler.close().await.unwrap();
+  }
 }
 
 #[tokio::test(flavor = "multi_thread")]

@@ -22,6 +22,7 @@ export class ChunkingContextImpl {
     }
     const bindingInfo = this.context.getModuleInfo(moduleId);
     if (bindingInfo) {
+      this.pluginContextData.syncSavedModuleOptionsFromInfo(moduleId, bindingInfo);
       const option = this.pluginContextData.getModuleOption(moduleId);
       const info = transformModuleInfo(bindingInfo, option);
       Object.defineProperty(info, 'moduleSideEffects', {

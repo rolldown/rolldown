@@ -33,8 +33,8 @@ export { init_m2 as n, init_m1 as t };
 ## main.js
 
 ```js
-import "./group-1.js";
 import { t as init_main } from "./main2.js";
+import "./group-1.js";
 init_main();
 
 ```
@@ -102,8 +102,8 @@ export { init_m2 as n, init_m1 as t };
 ### main.js
 
 ```js
-import "./group-1.js";
 import { t as init_main } from "./main2.js";
+import "./group-1.js";
 init_main();
 
 ```

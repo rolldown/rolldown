@@ -993,20 +993,21 @@ impl GenerateStage<'_> {
 
     while let Some(dynamic_entry_idx) = queue.pop_front() {
       queued[dynamic_entry_idx] = false;
-      let known_loaded_atoms = already_loaded_atoms_by_entry[dynamic_entry_idx].clone();
-      let mut updated_loaded_atoms = known_loaded_atoms.clone();
+      // One copy per visit: the atoms loaded by each importer (its static dependencies plus
+      // what was already loaded before it) are intersected in place, not cloned and unioned.
+      let mut updated_loaded_atoms = already_loaded_atoms_by_entry[dynamic_entry_idx].clone();
 
       for importer_entry_idx in
         dynamically_dependent_entries_by_dynamic_entry[dynamic_entry_idx].index_of_one()
       {
         let importer_entry_idx = importer_entry_idx as usize;
-        let mut importer_loaded_atoms =
-          static_dependency_atoms_by_entry[importer_entry_idx].clone();
-        importer_loaded_atoms.union(&already_loaded_atoms_by_entry[importer_entry_idx]);
-        updated_loaded_atoms.intersect(&importer_loaded_atoms);
+        updated_loaded_atoms.intersect_with_union(
+          &static_dependency_atoms_by_entry[importer_entry_idx],
+          &already_loaded_atoms_by_entry[importer_entry_idx],
+        );
       }
 
-      if updated_loaded_atoms == known_loaded_atoms {
+      if updated_loaded_atoms == already_loaded_atoms_by_entry[dynamic_entry_idx] {
         continue;
       }
 

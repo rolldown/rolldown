@@ -54,6 +54,23 @@ impl BitSet {
     }
   }
 
+  /// `self &= a | b` without materializing `a | b`. A byte missing from both `a` and `b` is 0.
+  pub fn intersect_with_union(&mut self, a: &Self, b: &Self) {
+    let common = a.entries.len().min(b.entries.len()).min(self.entries.len());
+    let (head, tail) = self.entries.split_at_mut(common);
+    for ((left, x), y) in head.iter_mut().zip(&a.entries).zip(&b.entries) {
+      *left &= x | y;
+    }
+    let longer = if a.entries.len() > b.entries.len() { &a.entries } else { &b.entries };
+    let rest = longer.get(common..).unwrap_or_default();
+    for (left, right) in tail.iter_mut().zip(rest) {
+      *left &= right;
+    }
+    if tail.len() > rest.len() {
+      tail[rest.len()..].fill(0);
+    }
+  }
+
   pub fn intersect(&mut self, other: &Self) {
     for (left, right) in self.entries.iter_mut().zip(&other.entries) {
       *left &= right;
@@ -360,5 +377,24 @@ mod tests {
 
     let bs = BitSet::new(1);
     assert!(!bs.has_bit(100));
+  }
+
+  #[test]
+  fn intersect_with_union_matches_clone_union_intersect() {
+    let a = [1, 5, 9, 20].into_iter().collect::<BitSet>();
+    let mut b = BitSet::new(21);
+    b.extend([2, 5, 17]);
+    for start in [BitSet::all(21), BitSet::all(40), [5, 9, 17, 18].into_iter().collect()] {
+      let mut expected = start.clone();
+      let mut either = b.clone();
+      either.union(&a);
+      expected.intersect(&either);
+      let mut actual = start.clone();
+      actual.intersect_with_union(&a, &b);
+      assert_eq!(actual, expected);
+      let mut actual = start;
+      actual.intersect_with_union(&b, &a);
+      assert_eq!(actual, expected);
+    }
   }
 }

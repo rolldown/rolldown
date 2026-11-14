@@ -13,7 +13,9 @@ use super::super::{
 };
 use anyhow::Context;
 use arcstr::ArcStr;
-use rolldown_common::{GetLocalDbMut, Module, Output, ScanMode, SharedFileEmitter, SymbolRefDb};
+use rolldown_common::{
+  GetLocalDbMut, Module, Output, ResolvedId, ScanMode, SharedFileEmitter, SymbolRefDb,
+};
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Severity};
 use rolldown_fs::{FileSystem, OsFileSystem};
@@ -108,6 +110,15 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     trace_action!(action::BuildStart { action: "BuildStart" });
     let is_full_scan_mode = scan_mode.is_full();
 
+    if !is_full_scan_mode {
+      // See `ScanStageCache::pending_build_rescans`.
+      for resolved_id in &self.cache.pending_build_rescans {
+        if self.cache.pending_rescans.iter().all(|queued| queued.id != resolved_id.id) {
+          self.cache.pending_rescans.push(resolved_id.clone());
+        }
+      }
+    }
+
     let scan_stage_output = match ScanStage::new(
       Arc::clone(&self.options),
       Arc::clone(&self.plugin_driver),
@@ -131,20 +142,81 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
         return Err(errs);
       }
     };
+    self.cache.pending_build_rescans.clear();
 
-    let scan_stage_output = self
+    // The files this scan fetched; `repair_cache_after_failed_build` queues them again if the
+    // build fails.
+    let fetched_resolved_ids = if is_full_scan_mode {
+      vec![]
+    } else {
+      scan_stage_output
+        .module_table
+        .iter()
+        .filter_map(Module::as_normal)
+        .map(|module| module.originative_resolved_id.clone())
+        .collect()
+    };
+
+    let scan_stage_output = match self
       .normalize_scan_stage_output_and_update_cache(scan_stage_output, is_full_scan_mode)
-      .await?;
+      .await
+    {
+      Ok(output) => output,
+      Err(errors) => {
+        self.repair_cache_after_failed_build(is_full_scan_mode, fetched_resolved_ids, None);
+        return Err(errors);
+      }
+    };
 
     // Make sure the cache is reset if incremental build is not enabled.
     if !self.options.experimental.is_incremental_build_enabled() {
       std::mem::take(&mut self.cache);
     }
 
-    Self::trace_action_module_graph_ready(&scan_stage_output);
+    if let Err(errors) = self.end_build_phase(&scan_stage_output).await {
+      self.repair_cache_after_failed_build(
+        is_full_scan_mode,
+        fetched_resolved_ids,
+        Some(scan_stage_output.symbol_ref_db),
+      );
+      return Err(errors);
+    }
+    Ok(scan_stage_output)
+  }
+
+  async fn end_build_phase(
+    &self,
+    scan_stage_output: &NormalizedScanStageOutput,
+  ) -> BuildResult<()> {
+    Self::trace_action_module_graph_ready(scan_stage_output);
     self.plugin_driver.build_end(None).await?;
     trace_action!(action::BuildEnd { action: "BuildEnd" });
-    Ok(scan_stage_output)
+    Ok(())
+  }
+
+  /// Leaves the cache whole after a build failed between updating it and `bundle_up`, and queues
+  /// this build's files in [`ScanStageCache::pending_build_rescans`].
+  /// See internal-docs/bundler-data-lifecycle/implementation.md ("Cache integrity on a failed build").
+  ///
+  /// `symbol_ref_db` is the symbol table of the scan output, if
+  /// `normalize_scan_stage_output_and_update_cache` returned one.
+  fn repair_cache_after_failed_build(
+    &mut self,
+    is_full_scan_mode: bool,
+    fetched_resolved_ids: Vec<ResolvedId>,
+    symbol_ref_db: Option<SymbolRefDb>,
+  ) {
+    if is_full_scan_mode {
+      // No graph to build on: empty the cache, so the next build is a full one.
+      std::mem::take(&mut self.cache);
+      return;
+    }
+    if let Some(symbol_ref_db) = symbol_ref_db {
+      // `create_output` moved the table, scoping included, out of the cache.
+      self.cache.get_snapshot_mut().symbol_ref_db = symbol_ref_db;
+    }
+    self.cache.pending_build_rescans =
+      self.cache.still_needed(&self.cache.importers, fetched_resolved_ids);
   }
 
   #[inline]
@@ -278,17 +350,13 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     if is_full_scan_mode {
       let mut output: NormalizedScanStageOutput =
         output.try_into().expect("Should be able to convert to NormalizedScanStageOutput");
-      // The scan produced a complete `output`; `defer_sync_scan_data` only
-      // mutates per-module `side_effects` best-effort, so its error doesn't
-      // invalidate `output`. Commit it rather than fall back to the stale prior
-      // snapshot.
+      // A full scan started from an empty cache, and the build fails on this error, so commit
+      // nothing: the next build is a full one, as after a failed full scan.
       // See internal-docs/bundler-data-lifecycle/implementation.md ("Cache integrity on a failed build").
-      let result =
-        defer_sync_scan_data(&self.options, &self.cache.module_id_to_idx, &mut output).await;
+      defer_sync_scan_data(&self.options, &self.cache.module_id_to_idx, &mut output).await?;
       if is_incremental {
         self.cache.set_snapshot(output.make_copy());
       }
-      result?;
       return Ok(output);
     }
 

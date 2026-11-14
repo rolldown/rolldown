@@ -44,11 +44,23 @@ impl Plugin for ViteManifestPlugin {
     let mut manifest = BTreeMap::default();
     let mut css_entries = None;
 
+    // Manifest name of each chunk by file name, computed once. Resolving `imports` and
+    // `dynamicImports` used to search the whole bundle for every import, O(chunks * imports).
+    // The first chunk with a given file name wins, as with the search it replaces.
+    let mut chunk_names: FxHashMap<&str, String> = FxHashMap::default();
+    for file in args.bundle.iter() {
+      if let Output::Chunk(chunk) = file {
+        chunk_names
+          .entry(chunk.filename.as_str())
+          .or_insert_with(|| self.get_chunk_name(chunk, is_legacy));
+      }
+    }
+
     for file in args.bundle.iter() {
       match file {
         Output::Chunk(chunk) => {
-          let name = self.get_chunk_name(chunk, is_legacy);
-          let chunk_manifest = Arc::new(self.create_chunk(args.bundle, chunk, &name, is_legacy));
+          let name = chunk_names[chunk.filename.as_str()].clone();
+          let chunk_manifest = Arc::new(Self::create_chunk(&chunk_names, chunk, &name));
           manifest.insert(name, chunk_manifest);
         }
         Output::Asset(asset) => {

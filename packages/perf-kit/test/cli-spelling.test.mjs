@@ -16,6 +16,8 @@ function usageLineInstalledAs(manifest) {
   for (const part of ['harness.mjs', 'lib']) {
     fs.cpSync(path.join(KIT, part), path.join(dir, part), { recursive: true });
   }
+  // The copy imports its dependencies: link them from the checkout.
+  fs.symlinkSync(path.join(KIT, 'node_modules'), path.join(dir, 'node_modules'), 'junction');
   fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify(manifest));
   const run = spawnSync(process.execPath, [path.join(dir, 'harness.mjs'), 'why'], {
     cwd: root,

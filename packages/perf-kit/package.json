@@ -28,6 +28,9 @@
   "scripts": {
     "test": "node --test \"test/*.test.mjs\""
   },
+  "dependencies": {
+    "parse5": "^8.1.1"
+  },
   "engines": {
     "node": ">=22"
   }

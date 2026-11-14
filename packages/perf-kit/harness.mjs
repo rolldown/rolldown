@@ -19,6 +19,8 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { spawnSync } from 'node:child_process';
 
+import { parse as parseHtml } from 'parse5';
+
 import { launchBrowser } from './lib/cdp.mjs';
 import { startServer } from './lib/serve.mjs';
 import { buildApp } from './lib/build.mjs';
@@ -358,28 +360,35 @@ function requireEntry(target, opts = {}) {
   return entry;
 }
 
-/** The entry chunk of a built app, read from its index.html module script. */
+/** Detect an entry chunk from script tags or Astro island attributes in index.html. */
 function detectEntry(distDir) {
   const indexFile = path.join(distDir, 'index.html');
   if (!fs.existsSync(indexFile)) return null;
-  const html = fs.readFileSync(indexFile, 'utf8');
+  // parse5 reads quoted and unquoted attribute values using HTML parsing rules.
+  // Its default scriptingEnabled: true makes <noscript> contents text.
+  // htmlElements skips comments, script text and <template> contents.
+  const elements = htmlElements(parseHtml(fs.readFileSync(indexFile, 'utf8')));
   const locals = [];
-  for (const tag of html.match(/<script\b[^>]*>/g) ?? []) {
-    const src = tag.match(/\bsrc="([^"]+)"/)?.[1];
+  for (const el of elements) {
+    if (el.tagName !== 'script') continue;
+    const src = attrValue(el, 'src');
     if (!src || src.startsWith('http')) continue;
     // webpack emits cache-busting queries (main.bundle.js?abc123) - strip them
     // or every existsSync/readFile on the entry fails.
     locals.push({
       src: src.split('?')[0].replace(/^\.?\//, ''),
-      module: tag.includes('type="module"'),
+      module: attrValue(el, 'type') === 'module',
     });
   }
-  // Astro islands have no script tag: each <astro-island> names its chunks in
-  // component-url / renderer-url attributes. They load as modules.
+  // When no local script is found, use component-url / renderer-url attributes
+  // on <astro-island> elements as a fallback.
   if (!locals.length) {
-    for (const [, src] of html.matchAll(/\b(?:component|renderer)-url="([^"]+)"/g)) {
-      if (!src.startsWith('http')) {
-        locals.push({ src: src.split('?')[0].replace(/^\.?\//, ''), module: false });
+    for (const el of elements) {
+      if (el.tagName !== 'astro-island') continue;
+      for (const src of [attrValue(el, 'component-url'), attrValue(el, 'renderer-url')]) {
+        if (src && !src.startsWith('http')) {
+          locals.push({ src: src.split('?')[0].replace(/^\.?\//, ''), module: false });
+        }
       }
     }
   }
@@ -397,6 +406,23 @@ function detectEntry(distDir) {
     if (size >= 0 && (!best || size > best.size)) best = { ...s, size };
   }
   return best?.src ?? locals[0]?.src ?? null;
+}
+
+/**
+ * Collect descendant elements in document order. parse5 stores template contents
+ * in `content`, outside `childNodes`, so this walk skips them.
+ */
+function htmlElements(node, out = []) {
+  for (const child of node.childNodes) {
+    if (!child.tagName) continue;
+    out.push(child);
+    htmlElements(child, out);
+  }
+  return out;
+}
+
+function attrValue(element, name) {
+  return element.attrs.find((a) => a.name === name)?.value;
 }
 
 /**

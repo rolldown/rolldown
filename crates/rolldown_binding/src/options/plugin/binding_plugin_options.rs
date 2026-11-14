@@ -19,11 +19,15 @@ use super::{
   binding_transform_context::BindingTransformPluginContext,
   types::{
     binding_filter_expression::normalized_tokens, binding_hook_filter::BindingHookFilter,
+    binding_hook_load_extra_args::BindingHookLoadExtraArgs,
     binding_hook_load_output::BindingHookLoadOutput,
     binding_hook_render_chunk_output::BindingHookRenderChunkOutput,
+    binding_hook_resolve_dynamic_import_extra_args::BindingHookResolveDynamicImportExtraArgs,
+    binding_hook_resolve_file_url_args::BindingHookResolveFileUrlArgs,
     binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
     binding_hook_resolve_id_output::BindingHookResolveIdOutput,
     binding_hook_transform_output::BindingHookTransformOutput,
+    binding_hot_update_args::BindingHotUpdateArgs,
     binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
     binding_render_chunk_meta_chunks::BindingRenderedChunkMeta,
     binding_shared_string::BindingSharedString,
@@ -59,21 +63,29 @@ pub struct BindingPluginOptions {
   pub resolve_id_filter: Option<BindingHookFilter>,
 
   #[napi(
-    ts_type = "(ctx: BindingPluginContext, specifier: string, importer: Nullable<string>) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>"
+    ts_type = "(ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveDynamicImportExtraArgs) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>"
   )]
   pub resolve_dynamic_import: Option<
     MaybeAsyncJsCallback<
-      FnArgs<(BindingPluginContext, String, Option<String>)>,
+      FnArgs<(
+        BindingPluginContext,
+        String,
+        Option<String>,
+        BindingHookResolveDynamicImportExtraArgs,
+      )>,
       Option<BindingHookResolveIdOutput>,
     >,
   >,
   pub resolve_dynamic_import_meta: Option<BindingPluginHookMeta>,
 
   #[napi(
-    ts_type = "(ctx: BindingLoadPluginContext, id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>"
+    ts_type = "(ctx: BindingLoadPluginContext, id: string, options: Nullable<BindingHookLoadExtraArgs>) => MaybePromise<VoidNullable<BindingHookLoadOutput>>"
   )]
   pub load: Option<
-    MaybeAsyncJsCallback<FnArgs<(BindingLoadPluginContext, String)>, Option<BindingHookLoadOutput>>,
+    MaybeAsyncJsCallback<
+      FnArgs<(BindingLoadPluginContext, String, Option<BindingHookLoadExtraArgs>)>,
+      Option<BindingHookLoadOutput>,
+    >,
   >,
   pub load_meta: Option<BindingPluginHookMeta>,
   pub load_filter: Option<BindingHookFilter>,
@@ -135,6 +147,17 @@ pub struct BindingPluginOptions {
   >,
   pub augment_chunk_hash_meta: Option<BindingPluginHookMeta>,
 
+  #[napi(
+    ts_type = "(ctx: BindingPluginContext, args: BindingHookResolveFileUrlArgs) => MaybePromise<void | string | null>"
+  )]
+  pub resolve_file_url: Option<
+    MaybeAsyncJsCallback<
+      FnArgs<(BindingPluginContext, BindingHookResolveFileUrlArgs)>,
+      Option<String>,
+    >,
+  >,
+  pub resolve_file_url_meta: Option<BindingPluginHookMeta>,
+
   #[napi(ts_type = "(ctx: BindingPluginContext, opts: BindingNormalizedOptions) => void")]
   pub render_start:
     Option<MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, BindingNormalizedOptions)>>>,
@@ -145,7 +168,7 @@ pub struct BindingPluginOptions {
   pub render_error_meta: Option<BindingPluginHookMeta>,
 
   #[napi(
-    ts_type = "(ctx: BindingPluginContext, bundle: BindingErrorsOr<BindingOutputs>, isWrite: boolean, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>"
+    ts_type = "(ctx: BindingPluginContext, bundle: BindingResult<BindingOutputs>, isWrite: boolean, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>"
   )]
   pub generate_bundle: Option<
     MaybeAsyncJsCallback<
@@ -156,7 +179,7 @@ pub struct BindingPluginOptions {
   pub generate_bundle_meta: Option<BindingPluginHookMeta>,
 
   #[napi(
-    ts_type = "(ctx: BindingPluginContext, bundle: BindingErrorsOr<BindingOutputs>, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>"
+    ts_type = "(ctx: BindingPluginContext, bundle: BindingResult<BindingOutputs>, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>"
   )]
   pub write_bundle: Option<
     MaybeAsyncJsCallback<
@@ -178,6 +201,14 @@ pub struct BindingPluginOptions {
   )]
   pub watch_change: Option<MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, String, String)>>>,
   pub watch_change_meta: Option<BindingPluginHookMeta>,
+
+  #[napi(
+    ts_type = "(ctx: BindingPluginContext, args: BindingHotUpdateArgs) => MaybePromise<VoidNullable<Array<string>>>"
+  )]
+  pub hot_update: Option<
+    MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, BindingHotUpdateArgs)>, Option<Vec<String>>>,
+  >,
+  pub hot_update_meta: Option<BindingPluginHookMeta>,
 
   #[napi(ts_type = "(ctx: BindingPluginContext) => MaybePromise<VoidNullable>")]
   pub close_watcher: Option<MaybeAsyncJsCallback<FnArgs<(BindingPluginContext,)>>>,
@@ -235,8 +266,8 @@ impl BindingPluginOptions {
         .iter()
         .cloned()
         .map(|tokens| {
-          let normalized = normalized_tokens(tokens).map_err(&make_err)?;
-          filter_expression::parse(normalized).map_err(&make_err)
+          let normalized = normalized_tokens(tokens).map_err(make_err)?;
+          filter_expression::parse(normalized).map_err(make_err)
         })
         .collect()
     };

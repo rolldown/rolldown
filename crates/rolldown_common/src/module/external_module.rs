@@ -3,12 +3,13 @@ use std::path::Path;
 use crate::inner_bundler_options::types::output_option::PathsOutputOption;
 use crate::side_effects::DeterminedSideEffects;
 use crate::{
-  Chunk, ImportRecordIdx, ModuleId, ModuleIdx, ResolvedImportRecord, StableModuleId, SymbolRef,
+  Chunk, ImportAttributes, ImportRecordIdx, ModuleId, ModuleIdx, ResolvedImportRecord,
+  StableModuleId, SymbolRef,
 };
 use arcstr::ArcStr;
 use oxc_index::IndexVec;
+use rolldown_std_utils::relative_path_as_js_specifier;
 use rolldown_utils::concat_string;
-use sugar_path::SugarPath;
 
 #[derive(Debug, Clone)]
 pub struct ExternalModule {
@@ -21,6 +22,7 @@ pub struct ExternalModule {
   // The resolved id of the external module. It could be an absolute path or a relative path.
   // If resolved id `external` is `true`, the absolute ids will be converted to relative ids based on the `makeAbsoluteExternalsRelative` option
   pub id: ModuleId,
+  pub attributes: ImportAttributes,
   pub stable_id: StableModuleId,
   // Similar to the rollup `ExternalChunk#get_file_name`, It could be an absolute path or a normalized relative path.
   pub name: ArcStr,
@@ -31,6 +33,7 @@ pub struct ExternalModule {
 }
 
 impl ExternalModule {
+  #[expect(clippy::too_many_arguments)]
   pub fn new(
     idx: ModuleIdx,
     id: ModuleId,
@@ -39,12 +42,14 @@ impl ExternalModule {
     side_effects: DeterminedSideEffects,
     namespace_ref: SymbolRef,
     need_renormalize_render_path: bool,
+    attributes: ImportAttributes,
   ) -> Self {
     Self {
       idx,
       // External modules' id is already stable, so we can directly use it here.
       stable_id: StableModuleId::from_module_id(id.clone()),
       id,
+      attributes,
       exec_order: u32::MAX,
       namespace_ref,
       name,
@@ -58,7 +63,7 @@ impl ExternalModule {
   pub fn get_file_name(&self, paths: Option<&PathsOutputOption>) -> ArcStr {
     // Try to apply paths mapping first
     if let Some(paths_option) = paths {
-      if let Some(mapped_path) = paths_option.call(self.id.as_str()) {
+      if let Some(mapped_path) = paths_option.call(self.id.raw_id()) {
         return mapped_path.into();
       }
     }
@@ -80,18 +85,12 @@ impl ExternalModule {
       target = &target[3..];
       importer = concat_string!("_/", importer);
     }
-    let relative_path = Path::new(target).relative(
-      importer
-        .as_path()
+    relative_path_as_js_specifier(
+      target,
+      Path::new(&importer)
         .parent()
         .expect("the importer chunk preliminary filename should have a parent directory"),
-    );
-    if relative_path.starts_with("..") {
-      relative_path.to_slash_lossy().into()
-    } else if relative_path.as_os_str().is_empty() {
-      ".".into()
-    } else {
-      concat_string!("./", relative_path.to_slash_lossy()).into()
-    }
+    )
+    .into()
   }
 }

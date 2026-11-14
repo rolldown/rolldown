@@ -24,9 +24,13 @@ Bundler (long-lived)
   │     ├── snapshot (NormalizedScanStageOutput)
   │     ├── module_id_to_idx
   │     ├── importers
+  │     ├── modules_with_changed_importers
+  │     ├── pending_rescans
   │     ├── barrel_state
   │     ├── module_idx_by_abs_path
   │     └── module_idx_by_stable_id
+  │
+  ├── lost_hmr_update
   │
   └── Session (devtools tracing)
 
@@ -76,14 +80,41 @@ Data created fresh for each build and discarded (or consumed) when the build com
 Bundler.cache (ScanStageCache) ──(move)──> Bundle.cache (temporary holder) ──(build)──> Bundle.cache ──(move)──> Bundler.cache
 ```
 
-| `ScanStageCache` field    | Purpose                                             |
-| ------------------------- | --------------------------------------------------- |
-| `snapshot`                | Full module graph (modules, ASTs, symbols, entries) |
-| `module_id_to_idx`        | Module ID to index lookup                           |
-| `importers`               | Reverse dependency graph                            |
-| `barrel_state`            | Barrel export optimization state                    |
-| `module_idx_by_abs_path`  | Path-based lookup for watcher                       |
-| `module_idx_by_stable_id` | Stable ID lookup for HMR                            |
+| `ScanStageCache` field           | Purpose                                                                                       |
+| -------------------------------- | --------------------------------------------------------------------------------------------- |
+| `snapshot`                       | Full module graph (modules, ASTs, symbols, entries)                                           |
+| `module_id_to_idx`               | Module ID to index lookup                                                                     |
+| `importers`                      | Reverse dependency graph                                                                      |
+| `modules_with_changed_importers` | Modules whose `importers` records a partial scan mutated; drained by `merge`                  |
+| `pending_rescans`                | Work queue: files of an aborted (and reverted) partial scan; retried by the next partial scan |
+| `barrel_state`                   | Barrel export optimization state                                                              |
+| `module_idx_by_abs_path`         | Path-based lookup for watcher                                                                 |
+| `module_idx_by_stable_id`        | Stable ID lookup for HMR                                                                      |
+
+`Bundler::lost_hmr_update` lives next to the cache, not in it. An HMR update
+sets it before it merges its rescan into the graph, and clears it when it
+returns its patches. If the update fails in between, no client ran an edit
+that the graph already has, and the next patch would not re-run it. The
+dev engine then reloads every client and runs a full build instead of the
+next task, whatever its kind (`BundlingTask::run_inner`). It lives outside
+the cache because a full scan drops the whole `ScanStageCache`
+(`ModuleLoader::new`), even when the scan fails.
+
+A successful full build clears it (`Bundler::incremental_bundle`). The task
+that started that build has already sent every client a `FullReload`, and
+Vite holds that reload until the build output arrives. So the tabs reload
+onto the new output, which has the lost edit. If the full build fails, Vite
+drops the pending reload, but the flag stays set, so the next task sends
+the reload again.
+
+The check covers `FullBuild` tasks too. After a failed full build, a file
+change queues a `FullBuild` (`FullBuildFailed` in `BundleCoordinator`). Vite
+does not reload after that build unless a reload is pending, so without the
+engine's `FullReload` the tabs would keep the code from before the lost
+edit. A `FullBuild` has no changed files, and Vite ignores an update whose
+`changedFiles` is empty, so the engine sends `["*"]` instead. `"*"` is not a
+path. It is a workaround until Vite delivers a `FullReload` with no changed
+files.
 
 ### Cache integrity on a failed build
 
@@ -110,8 +141,53 @@ Each repair therefore runs **unconditionally**:
   `invalidate_js_side_cache` steps.
 - `update_defer_sync_data` restores the snapshot before propagating an error.
 
-A build that fails _before_ touching the cache (e.g. a scan-stage parse error)
-needs no repair — `scan_modules` returns early and the cache is untouched.
+A failed scan must also not leave the cache _out of sync_. Task results are
+applied as they arrive, so an aborted partial scan has already flipped
+re-scanned modules to `Seen` in `module_id_to_idx`, and may have mutated the
+`importers` edge list for completed tasks and allocated indices for newly
+discovered modules, while the snapshot never receives any of it (`merge` does
+not run on the error path). Splicing the next partial scan onto that state
+would serve stale module code silently and shift new module indices away from
+their snapshot positions.
+
+`ModuleLoader::revert_partial_scan` therefore restores the pre-scan state on
+every abort. The snapshot is never touched by a scan, so it acts as the clean
+master copy everything else is recovered from:
+
+- existing `module_id_to_idx` entries end the scan at their pre-scan values
+  (`Seen` -> `Invalidate` -> `Seen`); only the keys inserted for newly
+  discovered modules are removed;
+- the `importers` edge list is re-derived from the snapshot
+  (`ScanStageCache::derive_importers_from_snapshot`), since every edge is a
+  resolved import record of some module;
+- `modules_with_changed_importers` is cleared, `barrel_state` is restored
+  from an upfront clone (taken only when lazy barrel is enabled);
+- `transform_dependencies` entries of the newly allocated (and now freed)
+  module indices are dropped, so a later module reusing an index does not
+  inherit them;
+- the scanned files go into `ScanStageCache::pending_rescans`, a work queue
+  the next partial scan drains, so their errors keep surfacing until the
+  files are fixed. Only files the graph still needs are queued — entries, or
+  files something still imports on the freshest edge state. A broken file
+  whose last import was removed by this very scan is dropped, otherwise its
+  retry would fail every later build that a fresh build of the same tree
+  would pass.
+
+Two consumers depend on that queue's contents:
+
+- `HmrStage::compute_hmr_update` folds the pending files into its stale and
+  changed sets before computing client boundaries, so an edit that was rolled
+  back by a failed scan reaches the clients' patches once the retry succeeds
+  (not only the server-side graph);
+- error enrichment (`trace_import_chain_from_modules`) runs **before** the
+  revert, while the failed scan's modules still exist in `module_id_to_idx`
+  and the live edge list.
+
+The invariant this buys: **between builds the cache is either empty
+(`snapshot` is `None`: fresh bundler, or a failed full scan reset it) or a
+valid graph any partial scan can build on.** `Bundler::incremental_bundle`
+picks the scan mode from that property alone (`has_snapshot`), and no other
+consumer needs to reason about failed builds.
 
 **Why keep a cache from a failed build at all?** Committing a _torn_ cache is
 worse than dropping it: an empty snapshot panics the next `get_snapshot()`, and
@@ -163,6 +239,22 @@ The factory also owns the `Arc`s for `module_infos` and `transform_dependencies`
 
 This is what fixed the bug where `this.getModuleInfo()` returned nothing on the second HMR rebuild — the old code created entirely new plugin contexts with no connection to the previous build's module info.
 
+## Normalized options objects
+
+**Rule:** the options objects that hooks get (`NormalizedInputOptionsImpl`, `NormalizedOutputOptionsImpl`) hold plain values, not the native `BindingNormalizedOptions`. Their constructors read every `@lazyProp` getter once, then set `inner` to `null` rather than delete it, so `Object.keys()` and `{...options}` keep the same keys.
+
+**Why:** `BindingNormalizedOptions` owns an `Arc<NormalizedBundlerOptions>`, and the options own the JS option functions (`onLog`, `deferSyncScanData`, `invalidateJsSideCache`, and user functions such as `external`). Each of those functions is held by a napi threadsafe function, which is a GC root. Two of them, `deferSyncScanData` and `invalidateJsSideCache`, are always passed and capture `PluginContextData`, which caches the options objects and the plugins. An options object that kept the native object would close a loop the GC cannot see:
+
+```
+GC root → option function → PluginContextData → options object → BindingNormalizedOptions → Arc<options> → GC root
+```
+
+That loop would keep every plugin of a build alive (rolldown/rolldown#11444). The release at `close()` removes the root of the loop (see [JS callback lifetime](#js-callback-lifetime)). But a build that the user never closes would keep its plugins alive forever. With plain values there is no loop: once the build object and the per-hook native objects are garbage, the options drop, the threadsafe functions are released, and a later GC frees the plugins.
+
+**Test:** `packages/rolldown/tests/build-api/normalized-options.test.ts` checks the rule with a heap query.
+
+**Exception:** a plugin that keeps `this` keeps the plugins of its build alive until the build closes. The plugin context owns the options too (`NativePluginContextImpl.options` in `crates/rolldown_plugin/src/plugin_context/native_plugin_context.rs`), so the same loop runs through it. The release at `close()` removes the root of this loop too.
+
 ## Bugs Found by This Separation
 
 1. **Lost `module_infos` across HMR rebuilds** (rolldown/rolldown#6891) — Each build created fully independent plugin contexts. `this.getModuleInfo()` in `transform` returned nothing on the second build because the new context had an empty module info map. Fix: `module_infos` became bundler-level, shared via Arc through `PluginDriverFactory`.
@@ -172,6 +264,67 @@ This is what fixed the bug where `this.getModuleInfo()` returned nothing on the 
 3. **Mixed module infos between IncrementalFullBuild calls** (rolldown/rolldown#6894) — If too many files changed, dev mode triggers a second `IncrementalFullBuild`, but the code only cleared `module_infos` in `create_bundle()` (for `FullBuild`), not in the incremental bundle creation path. Two builds' metadata got mixed. Fix: single `create_bundle(BundleMode, Option<ScanStageCache>)` method that handles all modes.
 
 4. **Unnecessary `ScanStageCache` materialization in non-incremental watch mode** (rolldown/rolldown#6894) — Earlier versions materialized scan-stage state even when watch mode ran with `incremental: false`, making the separation problem visible. `BundleMode` made this explicit. Current code resets `ScanStageCache` when incremental build is disabled (see `Bundle::scan_modules()`), so it is no longer retained across non-incremental builds.
+
+## JS callback lifetime
+
+Rust keeps the JS functions of the bundler options only while their owner is open. The close of the owner releases them.
+
+### The problem
+
+- A JS function of the bundler options reaches Rust as a `JsCallback`. Examples are `external`, `onLog`, the file name functions, and the internal `deferSyncScanData` and `invalidateJsSideCache`. A `JsCallback` keeps a strong napi reference to its JS function. V8 treats that reference as a GC root ("Global handles" in a heap snapshot).
+- JS can keep a native object that keeps the options alive. An example is the `BindingPluginContext` of `this` in a hook. It reaches the options through `NativePluginContextImpl.options` and `FileEmitter.options`. The options objects that hooks get keep no native object (see [Normalized options objects](#normalized-options-objects)).
+- A JS function of the options can reach such a native object. Then a cycle goes through native code: root → JS function → … → JS wrapper → `Arc<NormalizedBundlerOptions>` → `JsCallback` → root. The GC cannot see the native edge, so it never frees the cycle.
+- The internal callbacks capture `pluginContextData`, which reaches every plugin of the build. So without the release, every plugin of the build stays alive when one plugin keeps `this`. Before rolldown/rolldown#11623, one empty `buildStart` hook had the same effect (rolldown/rolldown#11444).
+
+### The rule
+
+- Each function field of the bundler options uses `UntrackedJsCallback` (`crates/rolldown_binding/src/types/js_callback_release.rs`). That type has no call methods. `normalize_binding_options` creates one group (`JsCallbackRelease`) for each call. It gives each callback to `JsCallbackRelease::track`, which returns a `ReleasableJsCallback`. A `ReleasableJsCallback` keeps the callback in a shared slot, so that the release can take it out.
+- The owner of the options gives each group to its `SharedJsCallbackRelease`. The close of the owner requests the release at its end. Each operation that the close does not wait for keeps a hold while it runs. The release runs when the last hold drops. After the release, the options keep no strong reference to a JS function, so the cycle has no root.
+
+| Owner                           | Release point                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BindingBundler` (`rolldown()`) | At the end of the `close()` future, after `closeBundle` and `report_plugin_timings()`. The release also runs when one of them fails. It can run later: `close()` does not wait for a `generate()`, `write()` or `scan()` that started before it. Each of them keeps a hold until it ends.                                                                                                                                                                  |
+| `BindingWatcher` (`watch()`)    | At the end of `close()`, or later when an event result close still runs. Each `Watcher::close` call waits for the watcher to stop. It does not wait for an event result close (`BindingWatcherBundler::close`) that runs `closeBundle`. That close takes a hold on the `SharedJsCallbackRelease` of the watcher. The release waits for the last hold. The event result close does not request the release, because the next rebuilds use the same options. |
+| `BindingDevEngine` (`dev()`)    | At the end of the first `close()`. A repeated `DevEngine::close` returns at once. This is also true inside a `closeBundle` hook of the first close. So each `close()` call takes a hold on the `SharedJsCallbackRelease` of the engine. The release waits for the last hold.                                                                                                                                                                               |
+
+- The group keeps weak references to the slots. So it does not keep a callback alive after its options are gone.
+- When a call starts before the release, the call keeps its own clone and ends normally. `onLog` still uses `invoke_eager`, which queues the JS call before it returns (rolldown/rolldown#11374).
+- A call after the release gives an error with the message "A JS function of the bundler options was called after the bundle closed." A call of `watch.onInvalidate` after the release does nothing.
+  - Example: a plugin keeps `this`, and the options have an `external` function. After a dev engine close, the plugin calls `this.resolve()`. Then `this.resolve()` rejects, and the `cause` of its error has the release message.
+  - After `bundle.close()`, the same call fails before it gets to the option function, because that close drops the plugin driver.
+- Option getters still work after the close, because each options object reads all its values in its constructor (see [Normalized options objects](#normalized-options-objects)).
+- The compiler checks only the fields that use `UntrackedJsCallback`. So a new function option must use it too. Nothing checks a new field that uses `JsCallback` or `MaybeAsyncJsCallback` directly, because plugin hooks and the watcher event listener also use them.
+
+### Limits
+
+- When an event result close starts after the release of its watcher, that close runs `closeBundle` with released functions. This happens only for the result of an earlier build. The watcher close already runs `closeBundle` for the last build.
+- Some close calls return before other work ends:
+  - `bundle.close()` during a build that started before it.
+  - `watcher.close()` during an event result close.
+  - A repeated dev engine `close()`.
+
+  The release does not make them wait, because a wait deadlocks when a `closeBundle` hook awaits that close. Only the release waits for that work.
+
+- Plugin hooks are not in the group. `PluginDriver` keeps them, and the plugin context keeps the driver only as a `Weak` pointer. `ClassicBundler::close()` removes `last_bundle_handle`, so a plugin that keeps the build object does not keep the driver after the close. But a plugin that keeps the dev engine object makes a cycle. The JS dev engine keeps the native engine, and the native engine keeps the plugin driver.
+- A build that the user never closes never releases its callbacks. If JS keeps a native object that keeps its options alive, the GC never frees its plugins. An example of such an object is the `BindingPluginContext` of `this` in a hook. Without such an object, the GC frees the callbacks with the build object.
+- The watcher event listener is not an option callback, so the release does not cover it.
+
+### Tests
+
+- `packages/rolldown/tests/build-api/close-bundle-gc.mjs`: GC cases for each kind of owner and callback. `close-callbacks.test.ts` runs this script.
+- `packages/rolldown/tests/build-api/close-callbacks.test.ts`: a build that runs during `bundle.close()`, and option getters after the close.
+- `packages/rolldown/tests/bundler-timings-options.test.ts`: the release order. The close calls `pluginTimings` and the native `onLog` before the release.
+- `packages/rolldown/tests/dev/dev-close.test.ts`:
+  - a `closeBundle` hook that awaits `engine.close()`,
+  - a second dev engine close while `closeBundle` runs,
+  - the error after the release.
+- `packages/rolldown/tests/watch/watch.test.ts`: a rebuild after an event result close, and a watcher close while an event result close runs `closeBundle`.
+
+## Synchronous hook returns
+
+The TypeScript hook adapters and the shared error wrapper preserve synchronous returns. They normalize values inline and only create Promise chains for actual Promises or thenables; an unconditional `async` wrapper would force napi to create fulfillment and rejection handlers even for an empty synchronous hook. This is decided per invocation, because the same hook can return either kind of result. Void hooks discard returned values while still awaiting async completion, and the error wrapper annotates both synchronous throws and asynchronous rejections. Timing instrumentation must preserve this distinction too.
+
+The binding keeps plain returns free of Promises too. Each hook is a `MaybeAsyncJsCallback`, whose return value is a `MaybePromise` (`crates/rolldown_binding/src/types/js_callback.rs`). `MaybePromise` checks for a Promise with `napi_is_promise` only and converts a plain value directly. napi's `Either<Promise<T>, T>` validates a plain value as a Promise first, and that validation creates and rejects a Promise for every plain value, which makes a synchronous hook slower than an `async` one. `Either` also drops the conversion error of a malformed result, such as `{ code: Buffer }` from `load`. `MaybePromise` returns the error that a Promise resolving to the same value gives, including an exception that the conversion throws.
 
 ## Unresolved Questions
 

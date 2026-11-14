@@ -1,6 +1,6 @@
 #![expect(clippy::print_stderr)]
 
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 use anyhow::Result;
 use globset::{Glob, GlobMatcher, GlobSetBuilder};
@@ -20,8 +20,8 @@ enum Case {
 #[derive(Deserialize, Debug)]
 struct LsLintConfig {
   ignore: Vec<String>,
-  file: HashMap<String, Case>,
-  directory: HashMap<String, Case>,
+  file: FxHashMap<String, Case>,
+  directory: FxHashMap<String, Case>,
 }
 
 fn main() -> anyhow::Result<()> {

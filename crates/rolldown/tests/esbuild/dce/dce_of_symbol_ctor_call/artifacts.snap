@@ -6,11 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 Symbol(() => 0);
 Symbol(x);
 new Symbol("abc");
-Symbol((() => Math.random() < .5)() ? "x" : "y");
-//#endregion
 
 ```

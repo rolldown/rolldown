@@ -1,0 +1,12 @@
+{
+  "name": "rolldown-node-starter",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "RD_LOG=error rolldown -c ./rolldown.config.mjs"
+  },
+  "dependencies": {
+    "@rolldown/binding-wasm32-wasi": "file:./rolldown-binding-wasm32-wasi.tgz",
+    "rolldown": "file:./rolldown.tgz"
+  }
+}

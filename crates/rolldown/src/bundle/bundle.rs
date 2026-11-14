@@ -13,7 +13,7 @@ use super::super::{
 };
 use anyhow::Context;
 use arcstr::ArcStr;
-use rolldown_common::{GetLocalDbMut, Module, ScanMode, SharedFileEmitter, SymbolRefDb};
+use rolldown_common::{GetLocalDbMut, Module, Output, ScanMode, SharedFileEmitter, SymbolRefDb};
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Severity};
 use rolldown_fs::{FileSystem, OsFileSystem};
@@ -43,7 +43,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
   #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn write(mut self) -> BuildResult<BundleOutput> {
-    let start = self.plugin_driver.start_timing();
+    let start = self.plugin_driver.build_timings.start();
     let result = async {
       self.trace_action_session_meta();
       trace_action!(action::BuildStart { action: "BuildStart" });
@@ -54,15 +54,14 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       ret
     }
     .await;
-    self.plugin_driver.set_total_build_time(start);
-    let result = self.append_plugin_timings_warning(result);
+    self.plugin_driver.build_timings.record_total(start);
     self.merge_log_hook_errors(result).await
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn generate(mut self) -> BuildResult<BundleOutput> {
-    let start = self.plugin_driver.start_timing();
+    let start = self.plugin_driver.build_timings.start();
     let result = async {
       self.trace_action_session_meta();
       trace_action!(action::BuildStart { action: "BuildStart" });
@@ -76,8 +75,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       ret
     }
     .await;
-    self.plugin_driver.set_total_build_time(start);
-    let result = self.append_plugin_timings_warning(result);
+    self.plugin_driver.build_timings.record_total(start);
     self.merge_log_hook_errors(result).await
   }
 
@@ -107,6 +105,19 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   pub async fn scan_modules(
+    &mut self,
+    scan_mode: ScanMode<ArcStr>,
+  ) -> BuildResult<NormalizedScanStageOutput> {
+    // The whole scan (buildStart through buildEnd) is the build phase. Resetting on every exit
+    // means a failed scan cannot leave the emitter stuck in the build phase, where a later emit
+    // (e.g. an HMR patch after a failed rebuild) could still change an already-emitted filename.
+    self.plugin_driver.file_emitter.enter_build_phase();
+    let result = self.scan_modules_impl(scan_mode).await;
+    self.plugin_driver.file_emitter.enter_output_phase();
+    result
+  }
+
+  async fn scan_modules_impl(
     &mut self,
     scan_mode: ScanMode<ArcStr>,
   ) -> BuildResult<NormalizedScanStageOutput> {
@@ -174,6 +185,14 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,
   ) -> BuildResult<BundleOutput> {
+    let result = self.bundle_write_impl(scan_stage_output).await;
+    self.invalidate_js_side_cache(result).await
+  }
+
+  async fn bundle_write_impl(
+    &mut self,
+    scan_stage_output: NormalizedScanStageOutput,
+  ) -> BuildResult<BundleOutput> {
     let dist_dir = self.options.cwd.join(&self.options.out_dir);
 
     if self.options.clean_dir && self.options.file.is_none() {
@@ -200,12 +219,12 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
         let pattern_name = match chunk {
           rolldown_common::Output::Chunk(c) => {
             if c.is_entry {
-              "entryFileNames"
+              "output.entryFileNames"
             } else {
-              "chunkFileNames"
+              "output.chunkFileNames"
             }
           }
-          rolldown_common::Output::Asset(_) => "assetFileNames",
+          rolldown_common::Output::Asset(_) => "output.assetFileNames",
         };
         return Err(
           BuildDiagnostic::invalid_option(rolldown_error::InvalidOptionType::NulByteInFilename {
@@ -243,7 +262,25 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,
   ) -> BuildResult<BundleOutput> {
-    self.bundle_up(scan_stage_output, false).await
+    let result = self.bundle_up(scan_stage_output, false).await;
+    self.invalidate_js_side_cache(result).await
+  }
+
+  /// A plugin may read `chunk.code` in `generateBundle` or `writeBundle` before a later hook fails, so the
+  /// JS side must drop its per-build caches on every exit of the output stage, not only on success.
+  async fn invalidate_js_side_cache(
+    &self,
+    result: BuildResult<BundleOutput>,
+  ) -> BuildResult<BundleOutput> {
+    let Some(invalidate_js_side_cache) = &self.options.invalidate_js_side_cache else {
+      return result;
+    };
+    match (result, invalidate_js_side_cache.call().await) {
+      (Ok(output), Ok(())) => Ok(output),
+      // The build error is the one to report.
+      (Err(errors), _) => Err(errors),
+      (Ok(_), Err(err)) => Err(err.into()),
+    }
   }
 
   #[tracing::instrument(level = "debug", skip(self, output))]
@@ -271,7 +308,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       return Ok(output);
     }
 
-    self.cache.merge(output)?;
+    self.cache.merge(output, &self.plugin_driver)?;
     self.cache.update_defer_sync_data(&self.options).await?;
     Ok(self.cache.create_output())
   }
@@ -281,14 +318,16 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     scan_stage_output: NormalizedScanStageOutput,
     is_write: bool,
   ) -> BuildResult<BundleOutput> {
-    let start = self.plugin_driver.start_timing();
-    let (mut link_stage_output, ast_table) =
+    // The one stretch of a build with no plugin in it, which is what makes it a usable
+    // baseline for "was this build plugin-bound?" — see `BuildTimings`.
+    let link_start = self.plugin_driver.build_timings.start();
+    let (mut link_stage_output, ast_table, used_symbol_refs_builder) =
       LinkStage::new(scan_stage_output, &self.options).link();
-    self.plugin_driver.set_link_stage_time(start);
+    self.plugin_driver.build_timings.record_link_stage(link_start);
 
     let bundle_output =
       GenerateStage::new(&mut link_stage_output, ast_table, &self.options, &self.plugin_driver)
-        .generate()
+        .generate(used_symbol_refs_builder)
         .await; // Notice we don't use `?` to break the control flow here.
 
     // `create_output`/`make_copy` strip symbol-table scoping from the cache for
@@ -298,20 +337,14 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     self.merge_immutable_fields_for_cache(std::mem::take(&mut link_stage_output.symbol_db));
 
     // `link_stage_output` is dead from here on (its `symbol_db` was just taken
-    // for the cache merge); ship the remaining heavy fields (module_table,
-    // metas, stmt_infos, ...) to a rayon worker so their free() happens off
-    // the critical path.
+    // for the cache merge); free the remaining heavy fields (module_table, metas,
+    // stmt_infos, ...) off the critical path.
     crate::utils::defer_drop::spawn_drop(link_stage_output);
 
-    if let Err(errors) = &bundle_output {
-      debug_assert!(errors.iter().all(|e| e.severity() == Severity::Error));
-      self
-        .plugin_driver
-        .render_error(&HookRenderErrorArgs { errors, cwd: &self.options.cwd })
-        .await?;
-    }
-
-    let mut output = bundle_output?;
+    let mut output = match bundle_output {
+      Ok(output) => output,
+      Err(errors) => return Err(self.handle_render_error(errors).await),
+    };
 
     // Add additional files from build plugins.
     self.file_emitter.add_additional_files(&mut output.assets, &mut output.warnings);
@@ -320,6 +353,12 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       .plugin_driver
       .generate_bundle(&mut output.assets, is_write, &self.options, &mut output.warnings)
       .await?;
+
+    if let Err(errors) =
+      GenerateStage::validate_mangle_properties_output(&self.options, &output.assets)
+    {
+      return Err(self.handle_render_error(errors).await);
+    }
 
     for asset in &output.assets {
       if is_filename_outside_output_dir(asset.filename()) {
@@ -330,11 +369,47 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       }
     }
 
-    if let Some(invalidate_js_side_cache) = &self.options.invalidate_js_side_cache {
-      invalidate_js_side_cache.call().await?;
-    }
-
+    Self::trace_action_output_chunk_graph_ready(&output.assets);
     Ok(output)
+  }
+
+  async fn handle_render_error(
+    &self,
+    mut errors: BatchedBuildDiagnostic,
+  ) -> BatchedBuildDiagnostic {
+    debug_assert!(errors.iter().all(|e| e.severity() == Severity::Error));
+    if let Err(error) = self
+      .plugin_driver
+      .render_error(&HookRenderErrorArgs { errors: &errors, cwd: &self.options.cwd })
+      .await
+    {
+      // Report the handler failure alongside the original rendering diagnostics.
+      errors.extend(BatchedBuildDiagnostic::from(error).into_vec());
+    }
+    errors
+  }
+
+  fn trace_action_output_chunk_graph_ready(output: &[Output]) {
+    if trace_action_enabled!() {
+      // See internal-docs/devtools/implementation.md. Plugins can rename, delete,
+      // or change imports in generateBundle, so the output is the graph source.
+      let chunks = output
+        .iter()
+        .filter_map(|asset| match asset {
+          Output::Chunk(chunk) => Some(action::OutputChunk {
+            file_name: chunk.filename.to_string(),
+            name: chunk.name.to_string(),
+            bytes: chunk.code.len() as u64,
+            is_entry: chunk.is_entry || chunk.is_dynamic_entry,
+            facade_module_id: chunk.facade_module_id.as_ref().map(ToString::to_string),
+            imports: chunk.imports.iter().map(ToString::to_string).collect(),
+            dynamic_imports: chunk.dynamic_imports.iter().map(ToString::to_string).collect(),
+          }),
+          Output::Asset(_) => None,
+        })
+        .collect();
+      trace_action!(action::OutputChunkGraphReady { action: "OutputChunkGraphReady", chunks });
+    }
   }
 
   fn merge_immutable_fields_for_cache(&mut self, symbol_db: SymbolRefDb) {
@@ -416,35 +491,90 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       });
     }
   }
-
-  /// Append plugin timings warning to result if applicable.
-  fn append_plugin_timings_warning(
-    &self,
-    result: BuildResult<BundleOutput>,
-  ) -> BuildResult<BundleOutput> {
-    result.map(|mut output| {
-      if let Some(plugins) = self.plugin_driver.get_plugin_timings_info() {
-        output.warnings.push(BuildDiagnostic::plugin_timings(plugins).with_severity_warning());
-      }
-      output
-    })
-  }
 }
 
 /// Check if a filename would escape the output directory.
 ///
-/// Rejects absolute paths and paths that normalize to a location outside the
-/// output directory (e.g. via `..` traversal).
+/// Rejects paths rooted in POSIX or Windows syntax and relative paths that
+/// normalize outside the output directory or to the directory itself.
 fn is_filename_outside_output_dir(filename: &str) -> bool {
-  if Path::new(filename).is_absolute() {
+  let bytes = filename.as_bytes();
+  let starts_with_path_root = bytes.first().is_some_and(|byte| matches!(*byte, b'/' | b'\\'));
+  let has_windows_drive_prefix =
+    bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':';
+  // Drive-relative paths can escape only on Windows; absolute drive paths are
+  // rejected on every host for cross-platform consistency.
+  let has_disallowed_windows_drive_prefix = has_windows_drive_prefix
+    && (cfg!(windows) || bytes.get(2).is_some_and(|byte| matches!(*byte, b'/' | b'\\')));
+  if starts_with_path_root || has_disallowed_windows_drive_prefix {
     return true;
   }
 
   let normalized = filename.normalize();
-  let normalized = normalized.to_string_lossy();
 
-  normalized == "."
-    || normalized == ".."
-    || normalized.starts_with("../")
-    || normalized.starts_with("..\\")
+  normalized == Path::new(".")
+    || normalized.starts_with(Path::new(".."))
+    // Preserve the existing cross-platform guard for a leading Windows parent.
+    || normalized.to_string_lossy().starts_with("..\\")
+}
+
+#[cfg(test)]
+mod tests {
+  use super::is_filename_outside_output_dir;
+
+  #[test]
+  fn output_filename_cannot_resolve_to_or_escape_output_directory() {
+    for filename in [
+      "",
+      ".",
+      "./",
+      "foo/..",
+      "foo/../",
+      "foo/bar/../..",
+      "..",
+      "../file",
+      "..\\file",
+      "a/../../file",
+      "/file",
+      "\\file",
+      "C:/file",
+      "C:\\file",
+      "c:\\file",
+      "\\\\server\\share\\file",
+      "\\\\?\\C:\\file",
+    ] {
+      assert!(is_filename_outside_output_dir(filename), "expected {filename:?} to be rejected");
+    }
+
+    for filename in [
+      "file.js",
+      "dir/file.js",
+      "dir\\file.js",
+      "./asset.txt",
+      ".\\asset.txt",
+      "foo/",
+      "foo\\",
+      "..file.js",
+      ".hidden",
+      "foo/bar/../baz.js",
+    ] {
+      assert!(!is_filename_outside_output_dir(filename), "expected {filename:?} to be accepted");
+    }
+  }
+
+  #[cfg(windows)]
+  #[test]
+  fn windows_output_filename_cannot_use_drive_relative_or_backslash_traversal() {
+    for filename in [".\\", "C:", "C:file", "c:file", "foo\\..", "a\\..\\..\\file"] {
+      assert!(is_filename_outside_output_dir(filename), "expected {filename:?} to be rejected");
+    }
+  }
+
+  #[cfg(not(windows))]
+  #[test]
+  fn unix_output_filename_keeps_host_native_backslash_and_colon_semantics() {
+    for filename in [".\\", "C:", "C:file", "c:file", "foo\\..", "a\\..\\..\\file"] {
+      assert!(!is_filename_outside_output_dir(filename), "expected {filename:?} to be accepted");
+    }
+  }
 }

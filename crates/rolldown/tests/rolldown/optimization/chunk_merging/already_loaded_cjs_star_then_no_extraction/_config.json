@@ -1,0 +1,11 @@
+{
+  "_comment": "`app.js` does `export * from './thenable.cjs'` where `thenable.cjs` is a bundled CommonJS module with dynamic exports. We cannot inline multiple modules in the dynamic entry because we don't know if it has a .then export.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ]
+  }
+}

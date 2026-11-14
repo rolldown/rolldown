@@ -10,17 +10,16 @@ extend-exclude = [
   "/CHANGELOG-*.md",
   "/CHANGELOG.md",
   "/packages/rollup-tests/test",
-  "/crates/rolldown/tests/esbuild/splitting/ignore-test.md",
   "/packages/rolldown/tests/magic-string/**.test.ts",
   "/packages/rollup-tests/src/ignored-by-unsupported-features.md",
   "/packages/rollup-tests/src/ignored-passed-snapshot-different-tests.js",
   "/packages/rollup-tests/src/ignored-tests.js",
+  "/vite",
   "/packages/vite-tests/repo",
   "/rollup",
   "/test262",
   "crates/rolldown/tests/esbuild/**/*",
   "packages/rolldown/src/binding.cjs",
-  "packages/rolldown/src/binding.js",
   "packages/rolldown/tests/fixtures/",
   "packages/rolldown/tests/stability/",
   "scripts/src/esbuild-tests/snap-diff/**/*.{txt,md}",
@@ -35,8 +34,12 @@ extend-ignore-re = [
 ]
 
 [default.extend-words]
+# Chrome's effective-connection-type rating (`--force-effective-connection-type`, perf-kit `--ect`).
+ect = "ect"
 splitted = "splitted"
 styl = "styl"
+# the PNG scanline filter (after Alan W. Paeth), decoded by packages/perf-kit
+paeth = "paeth"
 
 [default.extend-identifiers]
 IIFEs = "IIFEs"

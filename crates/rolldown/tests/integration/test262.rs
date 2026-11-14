@@ -1,6 +1,5 @@
 #![expect(clippy::print_stderr)]
 
-use std::collections::HashMap;
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -13,7 +12,8 @@ use rolldown::BundlerOptions;
 use rolldown_error::{BuildDiagnostic, DiagnosticOptions, EventKind};
 use rolldown_testing::integration_test::IntegrationTest;
 use rolldown_testing::test_config::TestMeta;
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
+use saphyr::{LoadableYamlNode, Yaml};
 use serde::{Deserialize, Serialize};
 use sugar_path::SugarPath;
 use walkdir::WalkDir;
@@ -22,20 +22,16 @@ use walkdir::WalkDir;
 static TEST262_PATH_RE: LazyLock<Regex> =
   LazyLock::new(|| Regex::new(r"[^\s]+[/\\]test262[/\\]").unwrap());
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone)]
 struct Test262Negative {
   phase: String,
-  #[serde(rename = "type")]
   error_type: String,
 }
 
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default)]
 struct Test262Frontmatter {
-  description: Option<String>,
   negative: Option<Test262Negative>,
-  #[serde(default)]
   flags: FxHashSet<String>,
-  #[serde(default)]
   includes: FxHashSet<String>,
 }
 
@@ -52,8 +48,50 @@ impl FromStr for Test262Frontmatter {
     let start = content.find("/*---").ok_or_else(|| anyhow!("Missing frontmatter start"))?;
     let end = content[start..].find("---*/").ok_or_else(|| anyhow!("Missing frontmatter end"))?;
     let yaml_content = &content[start + 5..start + end];
-    Ok(serde_yaml::from_str(yaml_content)?)
+    let documents = Yaml::load_from_str(yaml_content)?;
+    let [yaml] = documents.as_slice() else {
+      return Err(anyhow!("Expected exactly one YAML document in frontmatter"));
+    };
+    if !yaml.is_mapping() {
+      return Err(anyhow!("Frontmatter is not a YAML mapping"));
+    }
+    let negative = match yaml.as_mapping_get("negative") {
+      Some(negative) if !negative.is_null() => Some(Test262Negative {
+        phase: yaml_str(negative, "phase")?,
+        error_type: yaml_str(negative, "type")?,
+      }),
+      _ => None,
+    };
+    Ok(Self {
+      negative,
+      flags: yaml_str_set(yaml, "flags")?,
+      includes: yaml_str_set(yaml, "includes")?,
+    })
   }
+}
+
+fn yaml_str(yaml: &Yaml, key: &str) -> anyhow::Result<String> {
+  yaml
+    .as_mapping_get(key)
+    .and_then(Yaml::as_str)
+    .map(ToString::to_string)
+    .ok_or_else(|| anyhow!("Expected `{key}` to be a string"))
+}
+
+fn yaml_str_set(yaml: &Yaml, key: &str) -> anyhow::Result<FxHashSet<String>> {
+  let Some(value) = yaml.as_mapping_get(key).filter(|value| !value.is_null()) else {
+    return Ok(FxHashSet::default());
+  };
+  let items = value.as_vec().ok_or_else(|| anyhow!("Expected `{key}` to be a sequence"))?;
+  items
+    .iter()
+    .map(|item| {
+      item
+        .as_str()
+        .map(ToString::to_string)
+        .ok_or_else(|| anyhow!("Expected `{key}` items to be strings"))
+    })
+    .collect()
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -63,7 +101,7 @@ struct Test262FailureMetadata {
   issue: Option<String>,
 }
 
-static KNOWN_FAILURES: LazyLock<HashMap<String, Test262FailureMetadata>> = LazyLock::new(|| {
+static KNOWN_FAILURES: LazyLock<FxHashMap<String, Test262FailureMetadata>> = LazyLock::new(|| {
   let json_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/test262_failures.json");
   let json_content =
     std::fs::read_to_string(json_path).expect("Failed to read test262_failures.json");
@@ -135,7 +173,7 @@ impl TestResult {
     actual: TestOutcome,
     cwd: &Path,
   ) -> Self {
-    let relative_path = path.relative(cwd);
+    let relative_path = path.relative(cwd).into_owned();
     let display_path = relative_path.to_slash_lossy();
     let clean_path = Self::clean_path(&display_path);
 
@@ -539,8 +577,7 @@ fn validate_no_stale_pass_metadata(results: &[TestResult]) {
 
 /// Validates that all KNOWN_FAILURES entries correspond to actual test files
 fn validate_known_failures(results: &[TestResult]) {
-  let all_test_paths: std::collections::HashSet<String> =
-    results.iter().map(TestResult::get_clean_path).collect();
+  let all_test_paths: FxHashSet<String> = results.iter().map(TestResult::get_clean_path).collect();
 
   let unknown_failures: Vec<String> =
     KNOWN_FAILURES.keys().filter(|key| !all_test_paths.contains(key.as_str())).cloned().collect();

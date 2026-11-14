@@ -1,0 +1,32 @@
+{
+  "configName": "wrap-all",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "strictExecutionOrder": true,
+    "preserveEntrySignatures": "allow-extension"
+  },
+  "configVariants": [
+    {
+      "_configName": "on-demand",
+      "onDemandWrapping": true
+    },
+    {
+      "_configName": "on-demand-preserve-modules",
+      "onDemandWrapping": true,
+      "preserveModules": true
+    },
+    {
+      "_configName": "cjs-output",
+      "format": "cjs"
+    },
+    {
+      "_configName": "no-treeshake",
+      "treeshake": false
+    }
+  ]
+}

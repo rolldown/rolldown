@@ -3,9 +3,11 @@ use std::{ptr, sync::Arc};
 use futures::Future;
 use napi::{
   Either, Status, ValueType,
-  bindgen_prelude::{FromNapiValue, JsValuesTupleIntoVec, Promise, TypeName, ValidateNapiValue},
-  sys,
-  threadsafe_function::ThreadsafeFunction,
+  bindgen_prelude::{
+    FromNapiValue, JsValuesTupleIntoVec, Promise, TypeName, Unknown, ValidateNapiValue,
+  },
+  check_status, sys,
+  threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode},
 };
 
 /// Used as the fallback branch in `Either<Ret, InvalidReturnValue>` to catch
@@ -86,29 +88,82 @@ impl FromNapiValue for InvalidReturnValue {
 /// ### MaybeAsync
 ///
 /// Sometimes we want to accept functions that could be sync or async, as we just said above, it's actually just a sync function
-/// that returns `Promise<T> | T`. This pattern is very common in NAPI-RS, so we introduce `MaybeAsyncJsCallback` to simplify it.
+/// that returns `Promise<T> | T`. This pattern is very common in NAPI-RS, so we introduce `MaybeAsyncJsCallback` for it. Rust
+/// gets its return value as a [`MaybePromise<T>`].
 ///
-/// Notice the order matters for rust types `Either<Promise<T>, T>` and `Either<T, Promise<T>>`. Always use `Either<Promise<T>, T>`.
-///
-/// - Rust: `JsCallback<FnArgs<(String, i32), Either<Promise<i32>>, i32>>`
-/// - Rust(Simplified): `MaybeAsyncJsCallback<FnArgs<(String, i32)>, i32>`
+/// - Rust: `MaybeAsyncJsCallback<FnArgs<(String, i32)>, i32>`
 /// - Js: `(a: string, b: number) => Promise<number> | number`
 /// - Js(Simplified): `(a: string, b: number) => MaybePromise<number>`
 ///
 /// ---
 ///
-/// - Rust: `JsCallback<FnArgs<(Option<String>, i32), Either<Promise<Option<i32>>>, Option<i32>>`
-/// - Rust(Simplified): `MaybeAsyncJsCallback<FnArgs<(Option<String>, i32)>, Option<i32>>`
+/// - Rust: `MaybeAsyncJsCallback<FnArgs<(Option<String>, i32)>, Option<i32>>`
 /// - Js: `(a: string | null | undefined, b: number) => Promise<number | null | undefined | void> | number | null | undefined | void`
 /// - Js(Simplified): `(a: Nullable<string>, b: number) => MaybePromise<VoidNullable<number>>`
 pub type JsCallback<Args = (), Ret = ()> =
   Arc<ThreadsafeFunction<Args, Either<Ret, InvalidReturnValue>, Args, Status, false, true>>;
 
-/// Shortcut for `JsCallback<FnArgs<..., Either<Promise<Ret>, Ret>>`, which could be simplified to `MaybeAsyncJsCallback<...>, Ret>`.
-pub type MaybeAsyncJsCallback<Args = (), Ret = ()> = JsCallback<Args, Either<Promise<Ret>, Ret>>;
+/// A JS function that can return a `Promise`. See "MaybeAsync" in [`JsCallback`].
+///
+/// It has no `InvalidReturnValue` fallback: `await_call` uses `call_async_catch`, which returns a
+/// failed conversion as an `Err`, and a fallback branch would replace that error.
+pub type MaybeAsyncJsCallback<Args = (), Ret = ()> =
+  Arc<ThreadsafeFunction<Args, MaybePromise<Ret>, Args, Status, false, true>>;
+
+/// The return value of a [`MaybeAsyncJsCallback`]: a `Promise` or a plain value.
+///
+/// `MaybePromise` checks for a `Promise` with `napi_is_promise` only, as `Promise<T>` does, so a
+/// thenable that is not a `Promise` is a plain value. It converts a plain value with
+/// `T::from_napi_value` and returns its error, the same error as for a `Promise` that resolves to
+/// that value. See internal-docs/bundler-data-lifecycle/implementation.md ("Synchronous hook returns").
+pub enum MaybePromise<T: 'static + FromNapiValue> {
+  Promise(Promise<T>),
+  Value(T),
+}
+
+impl<T: 'static + FromNapiValue> FromNapiValue for MaybePromise<T> {
+  unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> napi::Result<Self> {
+    let mut is_promise = false;
+    check_status!(
+      unsafe { sys::napi_is_promise(env, napi_val, &raw mut is_promise) },
+      "Failed to check if the return value is a Promise"
+    )?;
+    let result = if is_promise {
+      unsafe { Promise::from_napi_value(env, napi_val) }.map(Self::Promise)
+    } else {
+      unsafe { T::from_napi_value(env, napi_val) }.map(Self::Value)
+    };
+    // The conversion can run JS, such as a getter that throws. If that exception stays pending
+    // after this call of the threadsafe function, Node reports it as uncaught. So take it out and
+    // return it, as `Promise<T>` does when the conversion of its resolved value throws.
+    result.map_err(|err| unsafe { take_pending_exception(env) }.unwrap_or(err))
+  }
+}
+
+unsafe fn take_pending_exception(env: sys::napi_env) -> Option<napi::Error> {
+  let mut is_pending = false;
+  let status = unsafe { sys::napi_is_exception_pending(env, &raw mut is_pending) };
+  if status != sys::Status::napi_ok || !is_pending {
+    return None;
+  }
+  let mut exception = ptr::null_mut();
+  let status = unsafe { sys::napi_get_and_clear_last_exception(env, &raw mut exception) };
+  if status != sys::Status::napi_ok {
+    return None;
+  }
+  let exception = unsafe { Unknown::from_raw_unchecked(env, exception) };
+  Some(napi::Error::from_unknown_without_coercion(exception))
+}
 
 pub trait JsCallbackExt<Args, Ret> {
   fn invoke_async(&self, args: Args) -> impl Future<Output = Result<Ret, napi::Error>> + Send;
+
+  /// Like `invoke_async`, but the call is enqueued on the JS thread before this returns;
+  /// the future only waits for the result.
+  fn invoke_eager(
+    &self,
+    args: Args,
+  ) -> impl Future<Output = Result<Ret, napi::Error>> + Send + 'static;
 }
 
 impl<Args, Ret> JsCallbackExt<Args, Ret> for JsCallback<Args, Ret>
@@ -119,6 +174,52 @@ where
 {
   async fn invoke_async(&self, args: Args) -> Result<Ret, napi::Error> {
     match self.call_async_catch(args).await? {
+      Either::A(ret) => Ok(ret),
+      Either::B(invalid) => Err(create_invalid_return_error(invalid.value_type, Ret::value_type())),
+    }
+  }
+
+  fn invoke_eager(
+    &self,
+    args: Args,
+  ) -> impl Future<Output = Result<Ret, napi::Error>> + Send + 'static {
+    invoke_eager_on(self, args)
+  }
+}
+
+/// The body of [`JsCallbackExt::invoke_eager`]. The returned future does not borrow `callback`
+/// (`use<Args, Ret>`), so a caller can drop or move `callback` after this function queues the
+/// call.
+pub(crate) fn invoke_eager_on<Args, Ret>(
+  callback: &JsCallback<Args, Ret>,
+  args: Args,
+) -> impl Future<Output = Result<Ret, napi::Error>> + Send + 'static + use<Args, Ret>
+where
+  Args: 'static + Send + JsValuesTupleIntoVec,
+  Ret: 'static + Send + FromNapiValue + TypeName,
+  napi::Either<Ret, InvalidReturnValue>: FromNapiValue,
+{
+  let (sender, receiver) = futures::channel::oneshot::channel();
+  let status = callback.call_with_return_value(
+    args,
+    ThreadsafeFunctionCallMode::NonBlocking,
+    move |ret, _| {
+      // If the receiver is dropped, the send fails. Ignore that error, as `call_async_catch` does.
+      let _ = sender.send(ret);
+      Ok(())
+    },
+  );
+  async move {
+    if status != Status::Ok {
+      return Err(napi::Error::from_status(status));
+    }
+    let ret = receiver.await.map_err(|_| {
+      napi::Error::new(
+        Status::GenericFailure,
+        "Receive value from threadsafe function sender failed",
+      )
+    })??;
+    match ret {
       Either::A(ret) => Ok(ret),
       Either::B(invalid) => Err(create_invalid_return_error(invalid.value_type, Ret::value_type())),
     }
@@ -153,6 +254,7 @@ fn js_type_name(value_type: ValueType) -> &'static str {
     ValueType::Null => "null",
     ValueType::Boolean => "boolean",
     ValueType::Number => "number",
+    ValueType::BigInt => "bigint",
     ValueType::String => "string",
     ValueType::Symbol => "symbol",
     ValueType::Object => "object",
@@ -178,17 +280,15 @@ pub trait MaybeAsyncJsCallbackExt<Args, Ret> {
   fn await_call(&self, args: Args) -> impl Future<Output = Result<Ret, napi::Error>> + Send;
 }
 
-impl<Args, Ret> MaybeAsyncJsCallbackExt<Args, Ret> for JsCallback<Args, Either<Promise<Ret>, Ret>>
+impl<Args, Ret> MaybeAsyncJsCallbackExt<Args, Ret> for MaybeAsyncJsCallback<Args, Ret>
 where
   Args: 'static + Send + JsValuesTupleIntoVec,
-  Ret: 'static + Send + FromNapiValue + TypeName,
-  napi::Either<napi::Either<Promise<Ret>, Ret>, InvalidReturnValue>: FromNapiValue,
+  Ret: 'static + Send + FromNapiValue,
 {
   async fn await_call(&self, args: Args) -> Result<Ret, napi::Error> {
     match self.call_async_catch(args).await? {
-      Either::A(Either::A(promise)) => promise.await,
-      Either::A(Either::B(ret)) => Ok(ret),
-      Either::B(invalid) => Err(create_invalid_return_error(invalid.value_type, Ret::value_type())),
+      MaybePromise::Promise(promise) => promise.await,
+      MaybePromise::Value(ret) => Ok(ret),
     }
   }
 }

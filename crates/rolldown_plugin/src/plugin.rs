@@ -2,17 +2,20 @@ use std::{any::Any, borrow::Cow, fmt::Debug, sync::Arc};
 
 use super::plugin_context::PluginContext;
 use crate::{
-  HookAddonArgs, HookBuildEndArgs, HookCloseBundleArgs, HookGenerateBundleArgs, HookLoadArgs,
-  HookLoadOutput, HookRenderChunkArgs, HookRenderChunkOutput, HookResolveIdArgs,
+  __inner::{Pluginable, SharedPluginable},
+  HookAddonArgs, HookBuildEndArgs, HookCloseBundleArgs, HookFilterArgs, HookGenerateBundleArgs,
+  HookLoadArgs, HookLoadOutput, HookRenderChunkArgs, HookRenderChunkOutput, HookResolveIdArgs,
   HookResolveIdOutput, HookTransformArgs, HookUsage, HookWriteBundleArgs, PluginHookMeta,
   SharedLoadPluginContext, SharedTransformPluginContext,
   types::{
-    hook_build_start_args::HookBuildStartArgs, hook_render_error::HookRenderErrorArgs,
-    hook_render_start_args::HookRenderStartArgs, hook_transform_ast_args::HookTransformAstArgs,
-    hook_transform_output::HookTransformOutput,
+    hook_build_start_args::HookBuildStartArgs, hook_hot_update_args::HookHotUpdateArgs,
+    hook_render_error::HookRenderErrorArgs, hook_render_start_args::HookRenderStartArgs,
+    hook_resolve_file_url_args::HookResolveFileUrlArgs,
+    hook_transform_ast_args::HookTransformAstArgs, hook_transform_output::HookTransformOutput,
   },
 };
 use anyhow::Result;
+use arcstr::ArcStr;
 use rolldown_common::{ModuleInfo, NormalModule, RollupRenderedChunk, WatcherChangeKind};
 use rolldown_ecmascript::EcmaAst;
 
@@ -23,9 +26,18 @@ pub type HookLoadReturn = Result<Option<HookLoadOutput>>;
 pub type HookNoopReturn = Result<()>;
 pub type HookRenderChunkReturn = Result<Option<HookRenderChunkOutput>>;
 pub type HookAugmentChunkHashReturn = Result<Option<String>>;
+pub type HookResolveFileUrlReturn = Result<Option<String>>;
 pub type HookInjectionOutputReturn = Result<Option<String>>;
+pub type HookHotUpdateReturn = Result<Option<Vec<ArcStr>>>;
 
 pub trait Plugin: Any + Debug + Send + Sync + 'static {
+  fn new_shared(plugin: Self) -> SharedPluginable
+  where
+    Self: Sized,
+  {
+    Pluginable::new_shared(plugin)
+  }
+
   fn name(&self) -> Cow<'static, str>;
 
   // The `option` hook consider call at node side.
@@ -206,6 +218,18 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     None
   }
 
+  fn resolve_file_url(
+    &self,
+    _ctx: &PluginContext,
+    _args: &HookResolveFileUrlArgs<'_>,
+  ) -> impl std::future::Future<Output = HookResolveFileUrlReturn> + Send {
+    async { Ok(None) }
+  }
+
+  fn resolve_file_url_meta(&self) -> Option<PluginHookMeta> {
+    None
+  }
+
   fn render_error(
     &self,
     _ctx: &PluginContext,
@@ -269,6 +293,18 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     None
   }
 
+  fn hot_update(
+    &self,
+    _ctx: &PluginContext,
+    _args: &HookHotUpdateArgs,
+  ) -> impl std::future::Future<Output = HookHotUpdateReturn> + Send {
+    async { Ok(None) }
+  }
+
+  fn hot_update_meta(&self) -> Option<PluginHookMeta> {
+    None
+  }
+
   fn close_watcher(
     &self,
     _ctx: &PluginContext,
@@ -294,4 +330,10 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   }
 
   fn register_hook_usage(&self) -> HookUsage;
+
+  /// Returns `false` when the plugin's own hook filter skips this call, so the hook returns
+  /// `None` without running. Devtools asks before it logs a call, to log only calls that ran.
+  fn hook_filter_matches(&self, _ctx: &PluginContext, _args: HookFilterArgs<'_>) -> bool {
+    true
+  }
 }

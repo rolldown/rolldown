@@ -72,6 +72,7 @@ The following properties are supported by each hook:
 - `resolveId` hook: `id`
 - `load` hook: `id`
 - `transform` hook: `id`, `moduleType`, `code`
+- `renderChunk` hook: `code`
 
 See [`HookFilter`](/reference/Interface.HookFilter) as well.
 
@@ -80,9 +81,12 @@ See [`HookFilter`](/reference/Interface.HookFilter) as well.
 > In the `resolve` hook, `id` must be a `RegExp`. `string`s are not allowed.
 > This is because the `id` value in `resolveId` is the exact text written in the import statement and usually not an absolute path, while glob patterns are designed to match absolute paths.
 
+> [!NOTE]
+> With [`experimental.importAttributes`](/in-depth/import-attributes), a module imported with attributes has an id such as `/src/a.json?attributes=...`. The `id` filter of `load` and `transform` tests this full id, so `/\.json$/` does not match it. Allow a query suffix, as in `/\.json(?:\?.*)?$/`. See [Match the extension](/in-depth/import-attributes#match-the-extension).
+
 ## Composable Filters
 
-For more complex filtering logic, Rolldown provides composable filter expressions via the [`@rolldown/pluginutils`](https://github.com/rolldown/rolldown/tree/main/packages/pluginutils) package. These allow you to build filters using logical operators like `and`, `or`, and `not`.
+For more complex filtering logic, Rolldown provides composable filter expressions via the [`@rolldown/pluginutils`](https://github.com/rolldown/plugins/tree/main/packages/pluginutils) package. These allow you to build filters using logical operators like `and`, `or`, and `not`.
 
 > [!WARNING]
 > Composable filters are not yet supported in Vite or unplugin. They can be used in Rolldown plugins only.
@@ -117,7 +121,7 @@ export default function myPlugin() {
 - `include(expr)` / `exclude(expr)` — Top-level include/exclude wrappers.
 - `queries(obj)` — Compose multiple query filters.
 
-See the [`@rolldown/pluginutils` README](https://github.com/rolldown/rolldown/tree/main/packages/pluginutils#readme) for the full API reference.
+See the [`@rolldown/pluginutils` README](https://github.com/rolldown/plugins/tree/main/packages/pluginutils#readme) for the full API reference.
 
 ## Interoperability
 

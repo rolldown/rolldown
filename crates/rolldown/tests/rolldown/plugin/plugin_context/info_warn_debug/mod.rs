@@ -69,7 +69,7 @@ async fn allow_pass_custom_arg() {
         on_log: Some(on_log),
         ..Default::default()
       },
-      vec![Arc::new(TestPlugin)],
+      vec![Plugin::new_shared(TestPlugin)],
     )
     .await;
 
@@ -102,7 +102,7 @@ async fn on_log_error_fails_build() {
       on_log: Some(on_log),
       ..Default::default()
     },
-    vec![Arc::new(TestPlugin)],
+    vec![Plugin::new_shared(TestPlugin)],
   )
   .expect("failed to create bundler");
 

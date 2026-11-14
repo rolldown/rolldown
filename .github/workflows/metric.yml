@@ -18,6 +18,7 @@ on:
 jobs:
   compile-time-and-binary-size:
     name: Compile Time and Binary Size
+    if: github.repository == 'rolldown/rolldown'
     runs-on: namespace-profile-linux-x64-default
     outputs:
       time: ${{ steps.run.outputs.COMPILE_TIME }}
@@ -48,30 +49,39 @@ jobs:
     needs: [compile-time-and-binary-size]
     runs-on: namespace-profile-linux-x64-default
     steps:
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          # the token defaults to the current repository, so `rolldown/metric` has to be requested explicitly
+          owner: rolldown
+          repositories: metric
+          permission-contents: write # all this job needs: clone `rolldown/metric` and push `metric.json`
+
       - name: Checkout rolldown metric repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: 'rolldown/metric'
           ref: 'main'
-          token: ${{ secrets.METRIC_SECRET_KEY }}
+          token: ${{ steps.app-token.outputs.token }}
           persist-credentials: true # required by `git push` below
 
-      - uses: voidzero-dev/setup-vp@2dec1e33f4ab2c6d5bce1b0c4607961bb1a3f7a1 # v1.12.0
+      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
         with:
-          version: '0.2.1'
+          version: '1.6.0'
           cache: true
 
       - name: Install dependencies and push metric
         run: |
           node ./scripts/compile-time-and-binary-size.mjs
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git config --global user.name 'rolldown-guard[bot]'
+          git config --global user.email '278280044+rolldown-guard[bot]@users.noreply.github.com'
           git add metric.json
           git commit -m "Update benchmark results"
           git push
 
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COMPILE_TIME: ${{ needs.compile-time-and-binary-size.outputs.time }}
           COMMIT_HASH: ${{ github.sha }}
           GIT_REPOSITORY_URL: ${{ github.repository }}

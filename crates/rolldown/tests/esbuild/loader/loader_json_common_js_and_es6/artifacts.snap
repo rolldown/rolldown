@@ -7,21 +7,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region y.json
+// y.json
 var y_default = {
 	y1: true,
 	y2: false
 };
-//#endregion
-//#region z.json
+// z.json
 var small = "some small text";
 var _if = "test keyword imports";
-//#endregion
-//#region entry.js
+// entry.js
 const x_json = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { "x": true };
 })))();
 console.log(x_json, y_default, small, _if);
-//#endregion
 
 ```

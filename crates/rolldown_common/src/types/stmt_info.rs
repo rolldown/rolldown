@@ -93,7 +93,7 @@ impl StmtInfos {
 
   pub fn iter_enumerated_without_namespace_stmt(
     &self,
-  ) -> impl Iterator<Item = (StmtInfoIdx, &StmtInfo)> {
+  ) -> impl ExactSizeIterator<Item = (StmtInfoIdx, &StmtInfo)> {
     self.infos.iter_enumerated().skip(1)
   }
 
@@ -132,6 +132,9 @@ bitflags! {
         const ReExportDynamicExports = 1 << 2;
         /// Statement contains non-static dynamic import like `import(foo)` or `import('a' + 'b')`
         const NonStaticDynamicImport = 1 << 3;
+        /// Statement contains `import.meta` that stays native in the output. In dev mode the
+        /// finalizer rewrites `import.meta.hot` to the module's own hot context, so it does not count.
+        const ImportMeta = 1 << 4;
     }
 }
 

@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { RolldownWatcher, WatchOptions } from 'rolldown';
+import type { ModuleInfo, RolldownWatcher, WatchOptions } from 'rolldown';
 import { rolldown, watch as _watch } from 'rolldown';
 import { sleep } from 'rolldown-tests/utils';
 import { test, vi } from 'vitest';
@@ -449,16 +449,13 @@ test.concurrent(
       }
     });
 
-    const eventFn = vi.fn();
+    // A throwing listener is only logged, so assert outside it.
+    const outputs: (readonly string[])[] = [];
     watcher.on('event', (event) => {
-      if (event.code === 'BUNDLE_END') {
-        eventFn();
-        expect(event.output).toEqual([output]);
-      }
+      if (event.code === 'BUNDLE_END') outputs.push(event.output);
     });
 
-    // test first build event
-    await expect.poll(() => eventFn).toBeCalled();
+    await expect.poll(() => outputs).toEqual([[output]]);
   },
 );
 
@@ -614,6 +611,59 @@ console.log(a + 1000)
 );
 
 test.concurrent(
+  'chunking module-info cache refreshes incoming edges in incremental builds',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const { dir: cwd } = createTestWithMultiFiles(
+      'chunking-module-info-cache',
+      task.result?.retryCount ?? 0,
+      {
+        'main.js': `import './dep.js'; console.log('main')`,
+        'dep.js': `console.log('dep')`,
+      },
+    );
+    const main = path.join(cwd, 'main.js');
+    const dep = path.join(cwd, 'dep.js');
+    let latestInfo: ModuleInfo | undefined;
+    const watcher = watch({
+      cwd,
+      input: 'main.js',
+      experimental: { incrementalBuild: true },
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              name(_id, context) {
+                latestInfo = context.getModuleInfo(dep)!;
+                expect(context.getModuleInfo(dep)).toBe(latestInfo);
+                return null;
+              },
+            },
+          ],
+        },
+      },
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(cwd, { recursive: true, force: true });
+      }
+    });
+    await waitBuildFinished(watcher);
+    const firstInfo = latestInfo!;
+    expect(firstInfo.importers).toEqual([main]);
+    expect(firstInfo.dynamicImporters).toEqual([]);
+
+    watcher.clear('event');
+    await editFile(main, `import('./dep.js'); console.log('main')`);
+    await waitBuildFinished(watcher);
+    expect(latestInfo === firstInfo).toBe(false);
+    expect(latestInfo!.importers).toEqual([]);
+    expect(latestInfo!.dynamicImporters).toEqual([main]);
+  },
+);
+
+test.concurrent(
   'watch sync ast of newly added ast',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
   async ({ task, onTestFinished }) => {
@@ -658,11 +708,28 @@ test.concurrent(
   async ({ task, expect, onTestFinished }) => {
     const retryCount = task.result?.retryCount ?? 0;
     const { input, output, dir } = createTestInputAndOutput('watch-buildDelay', retryCount);
+    // The poller only sees a change on its next scan, so two edits can reach the watcher up to
+    // one poll interval (plus the scan itself) apart. `buildDelay` must cover that gap, or
+    // whether the edits share one rebuild is a race between the next scan and the delay.
+    const pollInterval = 50;
+    let invalidations = 0;
+    const invalidationWaiters: Array<() => void> = [];
+    const nextInvalidation = () =>
+      new Promise<void>((resolve) => {
+        invalidationWaiters.push(resolve);
+      });
     const watcher = watch({
       input,
       output: { file: output },
       watch: {
-        buildDelay: 50,
+        buildDelay: pollInterval * 10,
+        // The second edit lands right after the first one is seen, possibly within the same mtime
+        // second, so detect it by content rather than by mtime alone.
+        watcher: { usePolling: true, pollInterval, compareContentsForPolling: true },
+        onInvalidate: () => {
+          invalidations++;
+          invalidationWaiters.shift()?.();
+        },
       },
     });
     onTestFinished(async () => {
@@ -673,19 +740,28 @@ test.concurrent(
     });
     await waitBuildFinished(watcher);
 
-    const restartFn = vi.fn();
-    watcher.on('restart', restartFn);
+    // Records how many edits the watcher had seen when each rebuild started.
+    const invalidationsAtRestart: number[] = [];
+    watcher.on('restart', () => {
+      invalidationsAtRestart.push(invalidations);
+    });
+    const rebuilt = waitBuildFinished(watcher);
 
     // Sleep to ensure mtime crosses second boundary from initial creation
     await sleep(1000);
+    // Make the second edit only after the watcher has seen the first, so the two edits always
+    // arrive as separate changes and the rebuild has to wait out `buildDelay` to batch them.
+    const firstSeen = nextInvalidation();
     fs.writeFileSync(input, 'console.log(4)');
-    await sleep(20);
+    await firstSeen;
+    const secondSeen = nextInvalidation();
     fs.writeFileSync(input, 'console.log(5)');
+    await secondSeen;
 
-    // sleep 200ms to wait the build finished, if the buildDelay is working, the restartFn should be called once
-    await sleep(200);
-    await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(5)');
-    expect(restartFn).toBeCalledTimes(1);
+    await rebuilt;
+    expect(fs.readFileSync(output, 'utf-8')).toContain('console.log(5)');
+    // One rebuild, started after both edits were seen.
+    expect(invalidationsAtRestart).toEqual([2]);
   },
 );
 
@@ -731,6 +807,68 @@ test.concurrent(
     // edit file
     await editFile(foo, 'console.log(2)\n');
     await expect.poll(() => changeFn).toBeCalled();
+  },
+);
+
+test.concurrent(
+  'PluginContext addWatchFile with a directory',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir: cwd } = createTestWithMultiFiles('addWatchFile-dir', retryCount, {
+      'main.js': `console.log(1)`,
+    });
+    const watchedDir = path.join(cwd, 'content');
+    const nestedFile = path.join(watchedDir, 'nested', 'data.txt');
+    fs.mkdirSync(path.dirname(nestedFile), { recursive: true });
+    fs.writeFileSync(nestedFile, '1');
+
+    const watcher = watch({
+      cwd,
+      input: 'main.js',
+      output: { dir: path.join(cwd, 'dist') },
+      plugins: [
+        {
+          name: 'test',
+          buildStart() {
+            this.addWatchFile(watchedDir);
+          },
+        },
+      ],
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(cwd, { recursive: true, force: true });
+      }
+    });
+    await waitBuildFinished(watcher);
+
+    const changedIds: string[] = [];
+    watcher.on('change', (id) => {
+      changedIds.push(id);
+    });
+    let rebuilds = 0;
+    watcher.on('event', (event) => {
+      if (event.code === 'BUNDLE_END') rebuilds++;
+    });
+
+    await editFile(nestedFile, '2');
+    await expect.poll(() => changedIds, { timeout: 10_000 }).toContain(nestedFile);
+    await expect.poll(() => rebuilds, { timeout: 10_000 }).toBeGreaterThan(0);
+
+    // the backends report a moved-in directory, not its files; the files are still the change
+    const outsideTree = path.join(cwd, 'outside-tree');
+    const movedFile = path.join(watchedDir, 'tree', 'deep', 'data.txt');
+    fs.mkdirSync(path.join(outsideTree, 'deep'), { recursive: true });
+    fs.writeFileSync(path.join(outsideTree, 'deep', 'data.txt'), '1');
+    fs.renameSync(outsideTree, path.join(watchedDir, 'tree'));
+    await expect.poll(() => changedIds, { timeout: 10_000 }).toContain(movedFile);
+
+    const createdFile = path.join(watchedDir, 'created', 'data.txt');
+    fs.mkdirSync(path.dirname(createdFile));
+    await editFile(createdFile, '1');
+    await expect.poll(() => changedIds, { timeout: 10_000 }).toContain(createdFile);
   },
 );
 
@@ -942,60 +1080,41 @@ test.concurrent(
 );
 
 test.concurrent(
-  'warning for multiply notify options',
+  'each config uses its own watcher options',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
   async ({ task, expect, onTestFinished }) => {
     const retryCount = task.result?.retryCount ?? 0;
-    const { input, output, dir } = createTestInputAndOutput(
-      'watch-multiply-options-warning',
+    const { input, output, outputDir, dir } = createTestInputAndOutput(
+      'watch-own-watcher-options',
       retryCount,
     );
-    const { input: foo, dir: fooDir } = createTestInputAndOutput(
-      'watch-multiply-options-warning-foo',
-      retryCount,
-    );
+    const fastOutputDir = path.join(dir, 'dist-fast');
+    const fastOutput = path.join(fastOutputDir, 'main.js');
     onTestFinished(() => {
       if (!process.env.CI) {
         fs.rmSync(dir, { recursive: true, force: true });
-        fs.rmSync(fooDir, { recursive: true, force: true });
       }
     });
-    const onLogFn = vi.fn();
+    // Both configs watch `input`. The first polls every 10 minutes, the second every 50ms.
     const watcher = watch([
       {
         input,
-        output: { file: output },
-        watch: {
-          watcher: {
-            usePolling: true,
-            pollInterval: 50,
-          },
-        },
+        output: { dir: outputDir },
+        watch: { watcher: { pollInterval: 600_000 } },
       },
       {
-        input: foo,
-        output: { file: output },
-        watch: {
-          watcher: {
-            usePolling: true,
-            pollInterval: 100,
-          },
-        },
-        plugins: [
-          {
-            name: 'test',
-            onLog: (level, log) => {
-              onLogFn();
-              expect(level).toBe('warn');
-              expect(log.code).toBe('MULTIPLE_WATCHER_OPTION');
-            },
-          },
-        ],
+        input,
+        output: { dir: fastOutputDir },
       },
     ]);
     onTestFinished(async () => await watcher.close());
 
-    await expect.poll(() => onLogFn).toBeCalled();
+    await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(1)');
+    await expect.poll(() => fs.readFileSync(fastOutput, 'utf-8')).toContain('console.log(1)');
+    await editFile(input, 'console.log(2)');
+    await expect.poll(() => fs.readFileSync(fastOutput, 'utf-8')).toContain('console.log(2)');
+    await sleep(500);
+    expect(fs.readFileSync(output, 'utf-8')).toContain('console.log(1)');
   },
 );
 
@@ -1294,6 +1413,46 @@ test.concurrent(
 );
 
 test.concurrent(
+  'watch should preserve plugin attribution in sourcemap warnings',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir } = createTestWithMultiFiles('watch-sourcemap-warning-plugin', retryCount, {
+      'main.js': `console.log('main')`,
+    });
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const pluginName = 'test-sourcemap-plugin';
+    const onLogFn = vi.fn();
+    const watcher = watch({
+      input: path.join(dir, 'main.js'),
+      output: { dir: path.join(dir, 'dist'), sourcemap: true },
+      plugins: [
+        {
+          name: pluginName,
+          transform(code) {
+            return { code: code + '\n// touched\n' };
+          },
+        },
+      ],
+      onLog(_level, log) {
+        if (log.code === 'SOURCEMAP_BROKEN') {
+          onLogFn(log.plugin);
+        }
+      },
+    });
+    onTestFinished(async () => await watcher.close());
+
+    await waitBuildFinished(watcher);
+    expect(onLogFn).toHaveBeenCalledWith(pluginName);
+  },
+);
+
+test.concurrent(
   'watch should fail when onLog rejects a warning',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
   async ({ task, expect, onTestFinished }) => {
@@ -1381,6 +1540,35 @@ test.concurrent(
   },
 );
 
+// The `watch` wrapper above forces polling, so this is the only test in this file on the
+// native backend. It checks the output, not the event kind, because macOS FSEvents may
+// report an in-place write as `create`.
+test.concurrent(
+  'native watcher (usePolling: false) rebuilds on file change',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput('watch-native', retryCount);
+    const watcher = _watch({
+      input,
+      output: { file: output },
+      watch: { watcher: { usePolling: false } },
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+    await waitBuildFinished(watcher);
+    expect(fs.readFileSync(output, 'utf-8')).toContain('console.log(1)');
+    await editFile(input, 'console.log(2)');
+    await expect
+      .poll(() => fs.readFileSync(output, 'utf-8'), { timeout: 10_000 })
+      .toContain('console.log(2)');
+  },
+);
+
 function createTestInputAndOutput(testLabel: string, retryCount: number, content?: string) {
   const uniqueId = crypto.randomUUID().slice(0, 8);
   const dirname = `${testLabel}-${uniqueId}-retry${retryCount}`;
@@ -1426,6 +1614,97 @@ async function waitBuildFinished(watcher: RolldownWatcher, updateFn?: () => void
   });
 }
 
+// https://github.com/rolldown/rolldown/issues/9598
+test.concurrent(
+  'rebuild when tsconfig changes (auto-discovery)',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir } = createTestWithMultiFiles('watch-tsconfig-auto', retryCount, {
+      'main.ts': 'export class Foo { bar = 1 }',
+      'tsconfig.json': JSON.stringify({
+        compilerOptions: { target: 'ESNext', useDefineForClassFields: false },
+      }),
+    });
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+    const output = path.join(dir, 'dist', 'main.js');
+
+    const watcher = watch({
+      input: path.join(dir, 'main.ts'),
+      cwd: dir,
+      tsconfig: true,
+      output: { file: output },
+    });
+
+    try {
+      await waitBuildFinished(watcher);
+      // useDefineForClassFields: false compiles the field to a constructor assignment
+      expect(fs.readFileSync(output, 'utf-8')).toContain('this.bar = 1');
+
+      // Changing only the tsconfig must trigger a rebuild that uses the new options
+      await editFile(
+        path.join(dir, 'tsconfig.json'),
+        JSON.stringify({
+          compilerOptions: { target: 'ESNext', useDefineForClassFields: true },
+        }),
+      );
+      // useDefineForClassFields: true keeps the field declaration in the class body
+      await expect.poll(() => fs.readFileSync(output, 'utf-8')).not.toContain('this.bar = 1');
+      expect(fs.readFileSync(output, 'utf-8')).toContain('bar = 1');
+    } finally {
+      await watcher.close();
+    }
+  },
+);
+
+// https://github.com/rolldown/rolldown/issues/9598
+test.concurrent(
+  'rebuild when tsconfig changes (manual path)',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir } = createTestWithMultiFiles('watch-tsconfig-manual', retryCount, {
+      'main.ts': 'export class Foo { bar = 1 }',
+      'tsconfig.build.json': JSON.stringify({
+        compilerOptions: { target: 'ESNext', useDefineForClassFields: false },
+      }),
+    });
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+    const output = path.join(dir, 'dist', 'main.js');
+
+    const watcher = watch({
+      input: path.join(dir, 'main.ts'),
+      cwd: dir,
+      tsconfig: './tsconfig.build.json',
+      output: { file: output },
+    });
+
+    try {
+      await waitBuildFinished(watcher);
+      expect(fs.readFileSync(output, 'utf-8')).toContain('this.bar = 1');
+
+      await editFile(
+        path.join(dir, 'tsconfig.build.json'),
+        JSON.stringify({
+          compilerOptions: { target: 'ESNext', useDefineForClassFields: true },
+        }),
+      );
+      await expect.poll(() => fs.readFileSync(output, 'utf-8')).not.toContain('this.bar = 1');
+      expect(fs.readFileSync(output, 'utf-8')).toContain('bar = 1');
+    } finally {
+      await watcher.close();
+    }
+  },
+);
+
 // https://github.com/rolldown/rolldown/issues/8937
 test.concurrent(
   'watcher.close() should cancel an in-progress build',
@@ -1469,5 +1748,114 @@ test.concurrent(
     expect(events).not.toContain('END');
 
     expect(fs.existsSync(output)).toBe(false);
+  },
+);
+
+// The close of one event result runs `closeBundle` for that build only. The watcher keeps the
+// options for the next rebuilds, so that close must not release their JS functions.
+// See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
+test.concurrent(
+  'a rebuild after an event result close still calls the option functions',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, outputDir, dir } = createTestInputAndOutput(
+      'watch-result-close-option-functions',
+      retryCount,
+    );
+    const entryFileNames = vi.fn(() => '[name].js');
+    const watcher = watch({ input, output: { dir: outputDir, entryFileNames } });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const results: string[] = [];
+    let onResult: (() => void) | undefined;
+    watcher.on('event', async (event) => {
+      if (event.code === 'BUNDLE_END') {
+        await event.result.close();
+        results.push('end');
+        onResult?.();
+      } else if (event.code === 'ERROR') {
+        await event.result.close();
+        results.push(`error: ${event.error.message}`);
+        onResult?.();
+      }
+    });
+
+    await new Promise<void>((resolve) => (onResult = resolve));
+    expect(entryFileNames).toHaveBeenCalled();
+    entryFileNames.mockClear();
+
+    const rebuilt = new Promise<void>((resolve) => (onResult = resolve));
+    await editFile(input, 'console.log(2)');
+    await rebuilt;
+    expect(results).toEqual(['end', 'end']);
+    expect(entryFileNames).toHaveBeenCalled();
+  },
+);
+
+// `watcher.close()` can run while an event result close still runs `closeBundle`. Then the watcher
+// close does not wait for that hook. So it must not release the JS functions of the options
+// before the hook ends.
+// See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
+test.concurrent(
+  'a pending event result close keeps the option functions until its closeBundle ends',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, outputDir, dir } = createTestInputAndOutput(
+      'watch-pending-result-close-option-functions',
+      retryCount,
+    );
+    let hookStarted!: () => void;
+    const started = new Promise<void>((resolve) => (hookStarted = resolve));
+    let releaseHook!: () => void;
+    const paused = new Promise<void>((resolve) => (releaseHook = resolve));
+    let resultClosed!: () => void;
+    const closed = new Promise<void>((resolve) => (resultClosed = resolve));
+    let resolved: unknown;
+
+    const watcher = watch({
+      input,
+      output: { dir: outputDir },
+      external: (id) => id === 'ext',
+      plugins: [
+        {
+          name: 'paused-close-bundle',
+          async closeBundle() {
+            hookStarted();
+            await paused;
+            resolved = await this.resolve('ext').then(
+              (result) => result?.external,
+              (error: Error) => (error.cause as Error | undefined)?.message ?? error.message,
+            );
+          },
+        },
+      ],
+    });
+    onTestFinished(async () => {
+      // A second close does nothing. This one stops the watcher if the test fails early.
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    watcher.on('event', async (event) => {
+      if (event.code === 'BUNDLE_END' || event.code === 'ERROR') {
+        await event.result.close();
+        resultClosed();
+      }
+    });
+
+    await started;
+    await watcher.close();
+    releaseHook();
+    await closed;
+    expect(resolved).toBe(true);
   },
 );

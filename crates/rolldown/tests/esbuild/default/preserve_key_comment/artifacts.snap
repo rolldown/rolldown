@@ -6,10 +6,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 x("notKey", `notKey`);
-x("key", `key`);
-x("alsoKey", `alsoKey`);
-//#endregion
+x(
+	/* @__KEY__ */
+	"key",
+	/* @__KEY__ */
+	`key`
+);
+x(
+	/* #__KEY__ */
+	"alsoKey",
+	/* #__KEY__ */
+	`alsoKey`
+);
 
 ```

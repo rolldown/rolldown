@@ -6,10 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## assets/main.js
 
 ```js
-//#region main.js
+// main.js
 console.log(1);
-//#endregion
 
-//# debugId=3cad8a52-95c7-4b1f-8e1d-207c2c380239
+//# debugId=7a2528d7-15fa-4fbc-8ab7-42647dc7b1ae
 //# sourceMappingURL=main.js.map
 ```

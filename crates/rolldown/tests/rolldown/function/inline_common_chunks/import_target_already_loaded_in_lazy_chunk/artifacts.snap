@@ -1,0 +1,61 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+// main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		globalThis.loadX = () => import("./x.js");
+	})))();
+}
+init_main();
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __share_require as a, __share_export as i, __exportAll as n, __share as r, __esmMin as t };
+
+```
+
+## x.js
+
+```js
+import { a as __share_require, i as __share_export, n as __exportAll, r as __share, t as __esmMin } from "./rolldown-runtime.js";
+__share("d-XGHdFQ5-", ((exports) => {
+	// d.js
+	var d_exports = /* @__PURE__ */ __exportAll({ d: () => "d" });
+	var d;
+	function init_d() {
+		return (init_d = __esmMin((() => {
+			globalThis.events.push("d");
+			d = "d";
+		})))();
+	}
+	__share_export(exports, {
+		n: () => d_exports,
+		r: () => init_d,
+		t: () => d
+	});
+}));
+var share_d = __share_require("d-XGHdFQ5-");
+// x.js
+var x;
+function init_x() {
+	return (init_x = __esmMin((() => {
+		share_d.r();
+		x = "xd";
+		globalThis.loadD = () => Promise.resolve().then((n) => (n = __share_require("d-XGHdFQ5-"), n.r(), n.n));
+	})))();
+}
+init_x();
+export { x };
+
+```

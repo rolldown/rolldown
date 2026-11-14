@@ -30,39 +30,46 @@ jobs:
   codspeed-benchmark:
     name: Codspeed Benchmark
     if: >
-      github.event_name != 'pull_request' ||
-      (github.event.pull_request.draft != true &&
-      !contains(github.event.pull_request.labels.*.name, 'graphite: merge-when-ready'))
+      github.repository == 'rolldown/rolldown' &&
+      (
+        github.event_name != 'pull_request' ||
+        (github.event.pull_request.draft != true &&
+        !contains(github.event.pull_request.labels.*.name, 'graphite: merge-when-ready'))
+      )
     runs-on: ubuntu-latest
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - uses: voidzero-dev/setup-vp@2dec1e33f4ab2c6d5bce1b0c4607961bb1a3f7a1 # v1.12.0
-        with:
-          version: '0.2.1'
-          cache: true
+      - parallel:
+          - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
+            with:
+              version: '1.6.0'
+              cache: true
 
-      - name: Setup Rust
-        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
-        with:
-          tools: just, cargo-codspeed
-          cache-key: codspeed
-          save-cache: ${{ github.ref_name == 'main' }}
+          - name: Setup Rust
+            uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+            with:
+              tools: just, cargo-codspeed
+              cache-key: codspeed
+              save-cache: ${{ github.ref_name == 'main' }}
 
       - name: Setup Benchmark Input
+        id: benchmark-input
+        background: true
         run: just setup-bench
 
       - name: Build benchmark
         env:
           RUSTFLAGS: '-C debuginfo=1 -C strip=none -g -C lto=false -C codegen-units=16 --cfg codspeed'
         run: |
-          cargo build --release -p bench --bench bench --features codspeed
+          bench=$(cargo build --release -p bench --bench bench --features codspeed --message-format=json | jq -r 'select(.reason == "compiler-artifact" and .target.name == "bench" and .executable != null) | .executable')
           mkdir -p target/codspeed/analysis/bench
-          mv target/release/deps/bench-* target/codspeed/analysis/bench
-          rm target/codspeed/analysis/bench/*.d
+          mv "$bench" target/codspeed/analysis/bench/
+
+      - wait: benchmark-input
 
       - name: Run the benchmarks
-        uses: CodSpeedHQ/action@a4a36bb07c0638b0b4ca52bf1f3dad1b4289e52f # v4.18.1
+        uses: CodSpeedHQ/action@af75f77f17a054769abefaa42fe8dc2975469b5f # v5.6.3
         with:
           run: cargo codspeed run -p bench
           token: ${{ secrets.CODSPEED_TOKEN }}

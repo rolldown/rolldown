@@ -1,0 +1,31 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+// lib/thing.js
+var require_thing = /* @__PURE__ */ __commonJSMin(((exports, module, this$2) => {
+	(function(global) {
+		global.Thing = function Thing() {};
+	})(this$2);
+}));
+// lib/direct.js
+var require_direct = /* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
+	this$1.direct = "direct";
+}));
+// main.js
+var import_lib = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = {
+		Thing: require_thing().Thing,
+		direct: require_direct().direct
+	};
+})))();
+assert.strictEqual(typeof import_lib.Thing, "function");
+assert.strictEqual(import_lib.direct, "direct");
+
+```

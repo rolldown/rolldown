@@ -1,65 +1,46 @@
 import type { BindingPluginOptions } from '../binding.cjs';
-import { normalizeHook } from '../utils/normalize-hook';
+import { discardResult, isPromiseLike } from '../utils/misc';
 import type { BindingifyPluginArgs } from './bindingify-plugin';
-import {
-  bindingifyPluginHookMeta,
-  type PluginHookWithBindingExt,
-} from './bindingify-plugin-hook-meta';
+import { bindingifyHook, type PluginHookWithBindingExt } from './bindingify-plugin-hook-meta';
 import type { ChangeEvent } from './index';
-import { PluginContextImpl } from './plugin-context';
+import { createPluginContext } from './plugin-context';
+
+export function bindingifyHotUpdate(
+  args: BindingifyPluginArgs,
+): PluginHookWithBindingExt<BindingPluginOptions['hotUpdate']> {
+  return bindingifyHook(args.plugin.hotUpdate, ({ handler }) => ({
+    plugin: (ctx, hookArgs) => {
+      const result = handler.call(createPluginContext(args, ctx), {
+        type: hookArgs.kind as ChangeEvent,
+        file: hookArgs.file,
+        modules: hookArgs.modules,
+      });
+      if (isPromiseLike(result)) {
+        return Promise.resolve(result).then((result) => result ?? undefined);
+      }
+      return result ?? undefined;
+    },
+  }));
+}
 
 export function bindingifyWatchChange(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['watchChange']> {
-  const hook = args.plugin.watchChange;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta } = normalizeHook(hook);
-
-  return {
-    plugin: async (ctx, id, event) => {
-      await handler.call(
-        new PluginContextImpl(
-          args.outputOptions,
-          ctx,
-          args.plugin,
-          args.pluginContextData,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
-        id,
-        { event: event as ChangeEvent },
+  return bindingifyHook(args.plugin.watchChange, ({ handler }) => ({
+    plugin: (ctx, id, event) => {
+      return discardResult(
+        handler.call(createPluginContext(args, ctx), id, { event: event as ChangeEvent }),
       );
     },
-    meta: bindingifyPluginHookMeta(meta),
-  };
+  }));
 }
 
 export function bindingifyCloseWatcher(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['closeWatcher']> {
-  const hook = args.plugin.closeWatcher;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta } = normalizeHook(hook);
-
-  return {
-    plugin: async (ctx) => {
-      await handler.call(
-        new PluginContextImpl(
-          args.outputOptions,
-          ctx,
-          args.plugin,
-          args.pluginContextData,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
-      );
+  return bindingifyHook(args.plugin.closeWatcher, ({ handler }) => ({
+    plugin: (ctx) => {
+      return discardResult(handler.call(createPluginContext(args, ctx)));
     },
-    meta: bindingifyPluginHookMeta(meta),
-  };
+  }));
 }

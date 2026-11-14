@@ -1,4 +1,5 @@
 import path from 'node:path';
+import fs from 'node:fs';
 import { resolveTsconfig } from 'rolldown/experimental';
 import { TsconfigCache } from 'rolldown/utils';
 import { expect, describe, it } from 'vitest';
@@ -35,6 +36,42 @@ describe('resolveTsconfig', () => {
     expect(result1!.tsconfig.compilerOptions.useDefineForClassFields).toBe(
       result2!.tsconfig.compilerOptions.useDefineForClassFields,
     );
+  });
+
+  it('should use an explicit tsconfig with TsconfigCache', () => {
+    const explicitTsconfig = path.join(fixtures, 'extends', 'tsconfig.json');
+    const cache = new TsconfigCache(explicitTsconfig);
+    const result = resolveTsconfig(path.join(fixtures, 'test1.ts'), cache);
+
+    expect(result).not.toBeNull();
+    expect(result!.tsconfig.compilerOptions.experimentalDecorators).toBe(true);
+    expect(result!.tsconfigFilePaths[0]).toBe(explicitTsconfig);
+  });
+
+  it('should reload a tsconfig after clearing the cache', () => {
+    const fixture = path.join(fixtures, 'cache-clear');
+    const tsconfig = path.join(fixture, 'tsconfig.json');
+    const source = path.join(fixture, 'source.ts');
+    const originalTsconfig = fs.readFileSync(tsconfig, 'utf8');
+
+    try {
+      const cache = new TsconfigCache(tsconfig);
+      expect(resolveTsconfig(source, cache)!.tsconfig.compilerOptions.useDefineForClassFields).toBe(
+        false,
+      );
+
+      fs.writeFileSync(
+        tsconfig,
+        JSON.stringify({ compilerOptions: { useDefineForClassFields: true } }),
+      );
+      cache.clear();
+
+      expect(resolveTsconfig(source, cache)!.tsconfig.compilerOptions.useDefineForClassFields).toBe(
+        true,
+      );
+    } finally {
+      fs.writeFileSync(tsconfig, originalTsconfig);
+    }
   });
 
   it('should resolve extended tsconfig options', () => {

@@ -7,6 +7,8 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use std::fmt::Write;
 
+use crate::test_meta::ExpectedExecutionFailure;
+
 #[derive(Deserialize, JsonSchema, Default)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ConfigVariant {
@@ -37,12 +39,17 @@ pub struct ConfigVariant {
   pub outro: Option<String>,
   pub comments: Option<CommentsOptions>,
   pub chunk_optimization: Option<ChunkOptimizationOption>,
+  pub import_attributes: Option<bool>,
   // --- non-bundler options are start with `_`
   /// Whether to include the output in the snapshot for this config variant.
   #[serde(rename = "_snapshot")]
   pub snapshot: Option<bool>,
   #[serde(rename = "_configName")]
   pub config_name: Option<String>,
+  /// If set, this configuration must fail while executing its generated output. This is not
+  /// inherited from the base configuration so each variant's known failure stays explicit.
+  #[serde(rename = "_expectExecutionFailure")]
+  pub expect_execution_failure: Option<ExpectedExecutionFailure>,
 }
 
 impl ConfigVariant {
@@ -137,6 +144,12 @@ impl ConfigVariant {
         ..config.experimental.unwrap_or_default()
       });
     }
+    if let Some(import_attributes) = &self.import_attributes {
+      config.experimental = Some(ExperimentalOptions {
+        import_attributes: Some(*import_attributes),
+        ..config.experimental.unwrap_or_default()
+      });
+    }
     config
   }
 
@@ -201,6 +214,9 @@ impl ConfigVariant {
     }
     if let Some(chunk_optimization) = &self.chunk_optimization {
       fields.push(format!("chunk_optimization: {chunk_optimization:?}"));
+    }
+    if let Some(import_attributes) = &self.import_attributes {
+      fields.push(format!("import_attributes: {import_attributes:?}"));
     }
     let mut result = String::new();
     self.config_name.as_ref().inspect(|config_name| {

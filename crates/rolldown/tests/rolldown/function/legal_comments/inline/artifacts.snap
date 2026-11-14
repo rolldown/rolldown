@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 /**
 * @license Foo v1.0.0
 * MIT License
@@ -20,7 +20,6 @@ function hello() {}
 const bar = "bar";
 /*! Bundle license information: */
 console.log("hello");
-//#endregion
 export { bar, hello };
 
 ```

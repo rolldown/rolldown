@@ -180,12 +180,12 @@ fn collect_rows() -> Vec<Row> {
 
   // `SourceJoiner::join` WITH sourcemaps — per-chunk assembly + merge (the
   // `ConcatSourceMapBuilder` path).
-  let app_chunk = build_chunk_joiner(BIG_CHUNK);
+  let mut app_chunk = build_chunk_joiner(BIG_CHUNK);
   measure(&mut rows, "sourcemap/join_with_sourcemap", || app_chunk.join());
 
   // `join` WITHOUT sourcemaps — the `enable_sourcemap == false` fast path that
   // skips the builder (the most common production build, `output.sourcemap` unset).
-  let plain_chunk = build_plain_joiner(BIG_CHUNK);
+  let mut plain_chunk = build_plain_joiner(BIG_CHUNK);
   measure(&mut rows, "sourcemap/join_no_sourcemap", || plain_chunk.join());
 
   // `collapse_sourcemaps`: real oxc chain, fine-grained, 3 links over a big

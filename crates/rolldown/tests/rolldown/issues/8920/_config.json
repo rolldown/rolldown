@@ -1,0 +1,12 @@
+{
+  "_comment": "Regression test for https://github.com/rolldown/rolldown/issues/8920 - two entries import different bindings from a side-effect-free barrel. `light` resolves through the barrel to `light.js`, so the light entry must not be considered to load the barrel (or `heavy.js`) at all: expect 2 chunks like Rollup ({entry-light, light} and {entry-heavy, barrel, heavy}) instead of a third shared chunk that makes the light entry load heavy code.",
+  "config": {
+    "input": [
+      { "name": "entry-light", "import": "./entry-light.js" },
+      { "name": "entry-heavy", "import": "./entry-heavy.js" }
+    ],
+    "treeshake": {
+      "moduleSideEffects": false
+    }
+  }
+}

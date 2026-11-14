@@ -1,0 +1,52 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## AMBIGUOUS_EXTERNAL_NAMESPACES
+
+```text
+[AMBIGUOUS_EXTERNAL_NAMESPACES] Found ambiguous export.
+   ╭─[ main.js:1:10 ]
+   │
+ 1 │ import { T } from './barrel.js';
+   │          ┬  
+   │          ╰── "barrel.js" re-exports "T"
+   │
+   ├─[ a.js:1:10 ]
+   │
+ 1 │ export { A as T } from 'ext';
+   │          ┬  
+   │          ╰── One matching export is here.
+   │
+   ├─[ b.js:1:10 ]
+   │
+ 1 │ export { B as T } from 'ext';
+   │          ┬  
+   │          ╰── One matching export is here.
+───╯
+
+```
+
+# Variant: [format: Cjs]
+
+## Errors
+
+### AMBIGUOUS_EXTERNAL_NAMESPACES
+
+```text
+[AMBIGUOUS_EXTERNAL_NAMESPACES] Found ambiguous export.
+   ╭─[ main.js:1:10 ]
+   │
+ 1 │ import { T } from './barrel.js';
+   │          ┬  
+   │          ╰── "barrel.js" re-exports "T"
+   │
+   ├─[ a.js:1:10 ]
+   │
+ 1 │ export { A as T } from 'ext';
+   │          ┬  
+   │          ╰── One matching export is here.
+───╯
+
+```

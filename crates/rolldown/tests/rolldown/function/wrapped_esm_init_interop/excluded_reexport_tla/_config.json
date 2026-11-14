@@ -1,0 +1,8 @@
+{
+  "config": {
+    "codeSplitting": false,
+    "treeshake": {
+      "moduleSideEffects": false
+    }
+  }
+}

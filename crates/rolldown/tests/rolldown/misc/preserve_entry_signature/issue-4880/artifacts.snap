@@ -6,24 +6,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## dynamic.js
 
 ```js
-//! User-defined Entry: [Entry-Module-Id: dynamic.js] [Name: Some("dynamic")]
+//! User-defined Entry: [Entry-Module-Id: dynamic.js] [Name: dynamic]
 import assert from "node:assert";
-//#region dynamic.js
+// dynamic.js
 (async () => {
 	const mod = await import("./foo.js");
 	assert.strictEqual(mod.default, "foo");
 })();
-//#endregion
 
 ```
 
 ## foo.js
 
 ```js
-//! User-defined Entry: [Entry-Module-Id: foo.js] [Name: Some("foo")]
-//#region foo.js
+//! User-defined Entry: [Entry-Module-Id: foo.js] [Name: foo]
+// foo.js
 var foo_default = "foo";
-//#endregion
 export { foo_default as default };
 
 ```
@@ -31,10 +29,9 @@ export { foo_default as default };
 ## foo2.js
 
 ```js
-//! User-defined Entry: [Entry-Module-Id: foo2.js] [Name: Some("foo2")]
-//#region foo2.js
+//! User-defined Entry: [Entry-Module-Id: foo2.js] [Name: foo2]
+// foo2.js
 var foo2_default = "foo2";
-//#endregion
 export { foo2_default as default };
 
 ```
@@ -42,12 +39,11 @@ export { foo2_default as default };
 ## main.js
 
 ```js
-//! User-defined Entry: [Entry-Module-Id: main.js] [Name: Some("main")]
+//! User-defined Entry: [Entry-Module-Id: main.js] [Name: main]
 import foo2_default from "./foo2.js";
 import assert from "node:assert";
-//#region main.js
+// main.js
 assert.strictEqual(foo2_default, "foo2");
-//#endregion
 
 ```
 
@@ -58,24 +54,22 @@ assert.strictEqual(foo2_default, "foo2");
 ### dynamic.js
 
 ```js
-//! User-defined Entry: [Entry-Module-Id: dynamic.js] [Name: Some("dynamic")]
+//! User-defined Entry: [Entry-Module-Id: dynamic.js] [Name: dynamic]
 import assert from "node:assert";
-//#region dynamic.js
+// dynamic.js
 (async () => {
 	const mod = await import("./foo.js");
 	assert.strictEqual(mod.default, "foo");
 })();
-//#endregion
 
 ```
 
 ### foo.js
 
 ```js
-//! User-defined Entry: [Entry-Module-Id: foo.js] [Name: Some("foo")]
-//#region foo.js
+//! User-defined Entry: [Entry-Module-Id: foo.js] [Name: foo]
+// foo.js
 var foo_default = "foo";
-//#endregion
 export { foo_default as default };
 
 ```
@@ -83,10 +77,9 @@ export { foo_default as default };
 ### foo2.js
 
 ```js
-//! User-defined Entry: [Entry-Module-Id: foo2.js] [Name: Some("foo2")]
-//#region foo2.js
+//! User-defined Entry: [Entry-Module-Id: foo2.js] [Name: foo2]
+// foo2.js
 var foo2_default = "foo2";
-//#endregion
 export { foo2_default as default };
 
 ```
@@ -94,11 +87,10 @@ export { foo2_default as default };
 ### main.js
 
 ```js
-//! User-defined Entry: [Entry-Module-Id: main.js] [Name: Some("main")]
+//! User-defined Entry: [Entry-Module-Id: main.js] [Name: main]
 import foo2_default from "./foo2.js";
 import assert from "node:assert";
-//#region main.js
+// main.js
 assert.strictEqual(foo2_default, "foo2");
-//#endregion
 
 ```

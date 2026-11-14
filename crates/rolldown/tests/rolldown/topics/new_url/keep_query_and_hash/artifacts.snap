@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## assets/sprite-BZcw_Can.svg
+
+## main.js
+
+```js
+// main.js
+const query = new URL("assets/sprite-BZcw_Can.svg?v=1", import.meta.url).href;
+const hash = new URL("assets/sprite-BZcw_Can.svg#icon", import.meta.url).href;
+const both = new URL("assets/sprite-BZcw_Can.svg?v=1#icon", import.meta.url).href;
+const plain = new URL("assets/sprite-BZcw_Can.svg", import.meta.url).href;
+export { both, hash, plain, query };
+
+```

@@ -43,6 +43,23 @@ const ignoreTests = [
   "rollup@form@jsx@transpiles-react-jsx: transpiles JSX for react",
   "rollup@form@jsx@transpiles-react-jsx-expression-semicolon: Adds semicolons at the correct positions in transpiled JSX",
   "rollup@function@jsx@missing-jsx-export: throws when the JSX factory is not exported",
+  "rollup@function@jsx@automatic-string-attribute-values: uses the decoded value of JSX string attributes and keys in automatic mode",
+  "rollup@function@jsx@classic-string-attribute-values: uses the decoded value of JSX string attributes in classic mode",
+
+  // ## Rollup 5 changed these tests, so their Rollup 5 versions are ported to
+  // ## packages/rolldown/tests/fixtures/topics/import-attributes/rollup-5
+  "rollup@form@import-attributes@escapes-attribute-values: serializes quotes, backslashes and line terminators in import attribute values",
+  "rollup@form@import-attributes@keeps-static-assertions: keeps any import assertions on input@generates es",
+  "rollup@form@import-attributes@keeps-static-attributes: keeps any import attributes on input@generates es",
+  "rollup@form@import-attributes@plugin-attributes-resolveid: allows plugins to read and write import attributes in resolveId",
+  "rollup@function@import-assertions@plugin-assertions-this-resolve: allows plugins to provide attributes for this.resolve",
+  // Replaced by `does-not-warn-assertion-conflicts`
+  "rollup@function@import-assertions@warn-assertion-conflicts: warns for conflicting import attributes",
+  // Rollup 5 turned these into copies of `keeps-static-attributes`
+  "rollup@form@import-attributes@keeps-static-attributes-key-default: keeps any import attributes on input using import attributes with \"with\" key@generates es",
+  "rollup@form@import-attributes@keeps-static-attributes-key-with: keeps any import attributes on input using import attributes with \"with\" key@generates es",
+  // Needs `experimental.importAttributes`
+  "rollup@function@import-assertions@warn-unresolvable-assertions: warns for dynamic import attributes that cannot be resolved",
 
   // --------------------------------------------------------------------------------------
   // # Test infraructure related ignores
@@ -107,6 +124,9 @@ const ignoreTests = [
   "rollup@function@warning-const-reassign: Cannot reassign a variable declared with `const`",
   "rollup@function@namespace-reassign-import-fails: warns for reassignments to namespace exports",
   "rollup@function@namespace-update-import-fails: disallows updates to namespace exports",
+  // ### Rolldown does not support `UNUSED_EXTERNAL_IMPORT` warning
+  "rollup@function@unused-import: warns on unused imports ([#595])",
+  "rollup@function@unused-import-2: warns on unused imports ([#595])",
 
   // ## tests relying on plugins
   "rollup@function@no-treeshake-react: passes when bundling React without tree-shaking", // relies on @rollup/plugin-node-resolve
@@ -114,6 +134,14 @@ const ignoreTests = [
   "rollup@form@supports-core-js: supports core-js", // relies on @rollup/plugin-commonjs
   "rollup@form@supports-es5-shim: supports es5-shim", // relies on @rollup/plugin-commonjs
   "rollup@form@supports-es6-shim: supports es6-shim", // relies on @rollup/plugin-commonjs
+  "rollup@chunking form@chunk-assigment-in-dynamic: the content of c.js is complete@generates cjs", // relies on @rollup/plugin-commonjs
+  "rollup@chunking form@chunk-assigment-in-dynamic: the content of c.js is complete@generates es", // relies on @rollup/plugin-commonjs
+  "rollup@chunking form@option-virtual-dirname: expect the directory name for \"virtual\" files to be rollup_virtual@generates cjs", // relies on @rollup/plugin-commonjs
+  "rollup@chunking form@option-virtual-dirname: expect the directory name for \"virtual\" files to be rollup_virtual@generates es", // relies on @rollup/plugin-commonjs
+  "rollup@chunking form@preserve-modules-commonjs: Handles output from @rollup/plugin-commonjs@generates cjs", // relies on @rollup/plugin-commonjs
+  "rollup@chunking form@preserve-modules-commonjs: Handles output from @rollup/plugin-commonjs@generates es", // relies on @rollup/plugin-commonjs
+  "rollup@chunking form@preserve-modules-root: confirm preserveModulesRoot restructures src appropriately@generates cjs", // relies on @rollup/plugin-commonjs
+  "rollup@chunking form@preserve-modules-root: confirm preserveModulesRoot restructures src appropriately@generates es", // relies on @rollup/plugin-commonjs
 
   // ## Order not guaranteed due to parallelism
   "rollup@hooks@assigns chunk IDs before creating outputBundle chunks", // The `renderChunk` is called at parallel, collect chunk info to array is unstable.  https://github.com/rolldown/rolldown/issues/2364
@@ -124,6 +152,10 @@ const ignoreTests = [
   "rollup@function@external-namespace-and-default-reexport-compat3: reexports both a namespace and the default export when using compat interop",
   "rollup@function@external-namespace-and-default-reexport-compat: reexports both a namespace and the default export when using compat interop",
 
+  // ## uses `import` in CJS files
+  "rollup@chunking form@preserve-modules-filename-pattern: entryFileNames pattern supported in combination with preserveModules@generates cjs",
+  "rollup@chunking form@preserve-modules-filename-pattern: entryFileNames pattern supported in combination with preserveModules@generates es",
+
   // ## Others
   'rollup@hooks@Throws when not specifying "file" or "dir"', // Rolldown defaults `output.dir` to `dist`
   'rollup@function@bundle-facade-order: respects the order of entry points when there are additional facades for chunks', // https://github.com/rolldown/rolldown/issues/1842#issuecomment-2296345255
@@ -133,7 +165,8 @@ const ignoreTests = [
   "rollup@function@jsx@unnecessary-import-source: throws when preserving JSX syntax with an unnecessary import source", // `jsx.importSource` cannot be set with `jsx: 'preserve'`
   "rollup@function@catch-rust-panic: Catch Rust panics and then throw them in Node", // specific to Rollup's implementation
   "rollup@function@exports-are-not-defined: Throw descriptive error message for used export is not defined", // the input code triggers a different error in rolldown
-  "rollup@function@dynamic-import-call-method-with-this-await: includes the correct \"this\" context when calling a method on a dynamically imported module via \"await\"" // Rolldown does not necessarily keep the `this` value for exported functions
+  "rollup@function@dynamic-import-call-method-with-this-await: includes the correct \"this\" context when calling a method on a dynamically imported module via \"await\"", // Rolldown does not necessarily keep the `this` value for exported functions
+  "rollup@sourcemaps@names-transformed-render-chunk: names are recovered if transforms are used@generates es", // the assertion expects spaces not to be injected, but the default `minify: 'dce-only'` injects it
 ]
 
 module.exports = {

@@ -80,6 +80,7 @@ pub struct ExperimentalOptions {
   pub native_magic_string: Option<bool>,
   pub chunk_optimization: Option<ChunkOptimizationOption>,
   pub lazy_barrel: Option<bool>,
+  pub import_attributes: Option<bool>,
 }
 
 impl ExperimentalOptions {
@@ -94,10 +95,6 @@ impl ExperimentalOptions {
   #[inline]
   pub fn is_incremental_build_enabled(&self) -> bool {
     self.incremental_build.unwrap_or(false)
-  }
-
-  pub fn is_attach_debug_info_enabled(&self) -> bool {
-    self.attach_debug_info.is_some_and(|info| info.is_enabled())
   }
 
   pub fn is_attach_debug_info_full(&self) -> bool {
@@ -124,5 +121,9 @@ impl ExperimentalOptions {
 
   pub fn is_lazy_barrel_enabled(&self) -> bool {
     self.lazy_barrel.unwrap_or(false)
+  }
+
+  pub fn is_import_attributes_enabled(&self) -> bool {
+    self.import_attributes.unwrap_or(false)
   }
 }

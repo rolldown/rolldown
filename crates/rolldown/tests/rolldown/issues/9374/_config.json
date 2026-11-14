@@ -1,0 +1,29 @@
+{
+  "_comment": "Regression test for https://github.com/rolldown/rolldown/issues/9374 - a star re-export chain that ends at an external module (`entry_a` -> `entry_b` -> `external`) is representable as chunk-level `export * from 'external'` statements, so no runtime helper is needed. The runtime module used to be included anyway (tree-shaking ran before the entry-level-external walk-back), shipping a dead rolldown-runtime chunk imported by both entries. The strict-on-demand variant also has an empty order-wrap plan and must remain byte-identical, proving the post-order runtime sweep still runs when strict mode adds no synthetic runtime demand. The output must contain no runtime chunk and no runtime imports.",
+  "config": {
+    "input": [
+      {
+        "name": "entry_a",
+        "import": "./entry_a.js"
+      },
+      {
+        "name": "entry_b",
+        "import": "./entry_b.js"
+      }
+    ],
+    "external": ["external"],
+    "minify": false
+  },
+  "configVariants": [
+    {
+      "_configName": "strict-on-demand",
+      "strictExecutionOrder": true,
+      "onDemandWrapping": true
+    },
+    {
+      "_configName": "wrap-all",
+      "strictExecutionOrder": true
+    }
+  ],
+  "expectExecuted": false
+}

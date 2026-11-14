@@ -1,0 +1,7 @@
+{
+  "snapshot": false,
+  "expectExecutionFailure": {
+    "reason": " ",
+    "outputContains": ["known failure"]
+  }
+}

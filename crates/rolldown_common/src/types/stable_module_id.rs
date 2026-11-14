@@ -1,8 +1,10 @@
 use std::{borrow::Borrow, path::Path};
 
 use arcstr::ArcStr;
+use rolldown_std_utils::relative_path_to_slash;
+
+#[cfg(test)]
 use rolldown_std_utils::PathExt as _;
-use sugar_path::SugarPath as _;
 
 use crate::{ModuleId, ModuleIdKind};
 
@@ -27,8 +29,15 @@ impl StableModuleId {
     // Classification already happened once when the `ModuleId` was built; branch on it
     // instead of re-detecting absolute/virtual here.
     let inner: ArcStr = match id.kind() {
-      // Absolute path → relative to cwd, slashed (stable across machines/OSes).
-      ModuleIdKind::Path => id.as_str().relative(cwd).as_path().expect_to_slash().into(),
+      // Absolute path → relative to cwd, slashed (stable across machines/OSes). Import
+      // attributes stay part of the identity.
+      ModuleIdKind::Path => {
+        let relative = relative_path_to_slash(id.raw_id(), cwd);
+        match id.attributes_suffix() {
+          "" => relative.into(),
+          suffix => rolldown_utils::concat_string!(relative, suffix).into(),
+        }
+      }
       // Virtual module → escape the `\0` prefix.
       ModuleIdKind::Virtual => id.as_str().replace('\0', "\\0").into(),
       // Bare specifier / URL / … → as-is (cheap `Arc` clone).

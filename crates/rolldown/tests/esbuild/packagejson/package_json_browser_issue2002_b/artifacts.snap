@@ -22,10 +22,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region src/entry.js
+// src/entry.js
 (/* @__PURE__ */ __commonJSMin((() => {
 	__require("sub");
 })))();
-//#endregion
 
 ```

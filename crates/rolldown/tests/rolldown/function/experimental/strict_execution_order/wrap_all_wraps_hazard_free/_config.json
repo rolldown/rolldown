@@ -1,0 +1,18 @@
+{
+  "configName": "wrap-all",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "strictExecutionOrder": true
+  },
+  "configVariants": [
+    {
+      "_configName": "on-demand",
+      "onDemandWrapping": true
+    }
+  ]
+}

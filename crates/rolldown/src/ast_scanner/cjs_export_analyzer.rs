@@ -3,7 +3,7 @@ use oxc::ast::{
   ast::{self, AssignmentExpression, Expression, IdentifierReference, PropertyKey},
 };
 use oxc::semantic::NodeId;
-use oxc_str::CompactStr;
+use oxc_str::{CompactStr, JSStr};
 use rolldown_common::{AstScopes, EcmaModuleAstUsage};
 use rolldown_ecmascript_utils::ExpressionExt;
 
@@ -142,10 +142,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       return Some(CommonJsAstType::ExportsRead);
     }
 
-    let Some(static_property_name) = static_property_name else {
+    // Rolldown stores export names as UTF-8, so a name with a lone surrogate is treated like a
+    // computed one.
+    let Some(static_property_name) = static_property_name.and_then(JSStr::as_str) else {
       return Some(CommonJsAstType::ExportsPropWrite(CompactStr::from("*")));
     };
-    if static_property_name.as_str() != "__esModule" {
+    if static_property_name != "__esModule" {
       return Some(CommonJsAstType::ExportsPropWrite(CompactStr::from(static_property_name)));
     }
 
@@ -203,9 +205,20 @@ pub fn is_object_define_property_es_module(
   if !scope.is_unresolved(callee_object.reference_id()) {
     return None;
   }
-  let first = call_expr.arguments.first()?.as_expression()?.as_identifier()?;
+  let first = call_expr.arguments.first()?.as_expression()?;
+  let is_cjs_exports_ref = match first {
+    Expression::Identifier(first) => {
+      first.name == "exports" && scope.is_unresolved(first.reference_id())
+    }
+    Expression::StaticMemberExpression(member) => {
+      member.property.name == "exports"
+        && matches!(&member.object, Expression::Identifier(module_id)
+          if module_id.name == "module" && scope.is_unresolved(module_id.reference_id()))
+    }
+    _ => false,
+  };
 
-  if first.name != "exports" || !scope.is_unresolved(first.reference_id()) {
+  if !is_cjs_exports_ref {
     return None;
   }
 
@@ -214,7 +227,10 @@ pub fn is_object_define_property_es_module(
     return Some(CommonJsAstType::ExportsPropWrite("*".into()));
   };
   if string_lit.value != "__esModule" {
-    return Some(CommonJsAstType::ExportsPropWrite(string_lit.value.as_str().into()));
+    let Some(name) = string_lit.value.as_str() else {
+      return Some(CommonJsAstType::ExportsPropWrite("*".into()));
+    };
+    return Some(CommonJsAstType::ExportsPropWrite(name.into()));
   }
   let third = call_expr.arguments.get(2)?;
   let ret = third
@@ -273,6 +289,18 @@ mod tests {
   #[test]
   fn test_is_object_define_property_es_module_valid() {
     let source = r#"Object.defineProperty(exports, "__esModule", { value: true });"#;
+    let allocator = Allocator::default();
+    let (ast_scopes, program) = create_ast_scopes_and_program_from_source(source, &allocator);
+
+    if let Some(call_expr) = extract_call_expr(&program) {
+      let result = is_object_define_property_es_module(&ast_scopes, call_expr);
+      assert_eq!(result, Some(CommonJsAstType::EsModuleFlag));
+    }
+  }
+
+  #[test]
+  fn test_is_object_define_property_es_module_valid_for_module_exports() {
+    let source = r#"Object.defineProperty(module.exports, "__esModule", { value: true });"#;
     let allocator = Allocator::default();
     let (ast_scopes, program) = create_ast_scopes_and_program_from_source(source, &allocator);
 

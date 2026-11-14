@@ -41,7 +41,7 @@ We use Rust's built-in test framework for writing and running tests. Test cases 
 
 A data-driven test case is a folder that contains a `_config.json` file. The test runner will read the configuration from `_config.json`, bundle the input files, and execute the output files to verify the behavior.
 
-`_config.json` contains the configuration for the test suite. If everything works right, you should be able to have auto-completion while editing `_config.json` due to the [config](https://github.com/rolldown/rolldown/blob/main/.vscode/settings.json#L36-L40).
+`_config.json` contains the configuration for the test suite. If everything works right, you should be able to have auto-completion while editing `_config.json` due to the [config](https://github.com/rolldown/rolldown/blob/main/.vscode/settings.json#L40-L43).
 
 For all available options, you could refer to
 
@@ -198,14 +198,14 @@ To run the `tests/fixtures/resolve/alias` test, you could use `just test-node-ro
 
 ## Dev server tests
 
-[`@rolldown/test-dev-server`](https://github.com/rolldown/rolldown/tree/main/packages/test-dev-server) is a small Vite-style dev server used to exercise rolldown's **dev engine** — HMR, lazy compilation, and error recovery. Its tests live in `packages/test-dev-server/tests` and come in two suites:
+[`@rolldown/test-dev-server`](https://github.com/rolldown/rolldown/tree/main/packages/test-dev-server) is the test harness for rolldown's **dev engine** — HMR, lazy compilation, and error recovery. Its tests live in `packages/test-dev-server/tests` and come in two suites:
 
-| Suite        | Platform  | What it drives                                                                              |
-| ------------ | --------- | ------------------------------------------------------------------------------------------- |
-| **browser**  | `browser` | A real Chromium page against an **in-process** dev server. Most dev-engine tests live here. |
-| **fixtures** | `node`    | The dev server building to **disk**, with the built artifact run as a `node` child process. |
+| Suite        | Platform  | What it drives                                                                                                    |
+| ------------ | --------- | ----------------------------------------------------------------------------------------------------------------- |
+| **browser**  | `browser` | A real Chromium page against an **in-process Vite full-bundle-mode dev server**. Most dev-engine tests live here. |
+| **fixtures** | `node`    | A custom dev server building to **disk**, with the built artifact run as a `node` child process.                  |
 
-The architecture and the reasoning behind the harness are captured in the [Dev Server Test Harness design doc](https://github.com/rolldown/rolldown/blob/main/internal-docs/dev-server-test-harness/implementation.md) — read it before changing the harness itself.
+The browser suite runs on Vite itself (`experimental.bundledDev`), served from the Vite checkout at `vite/` (repo root, a gitignored clone of vitejs/vite `rolldown-canary` rebased onto `main`) with its `rolldown` dependency linked to the workspace's `packages/rolldown`, so the tests exercise the local rolldown binding through the real Vite integration. The architecture and the reasoning behind the harness are captured in the [Dev Server Test Harness design doc](https://github.com/rolldown/rolldown/blob/main/internal-docs/dev-server-test-harness/implementation.md). Read it before changing the harness itself.
 
 ### Browser playgrounds
 
@@ -219,11 +219,13 @@ Each playground normally contains:
 
 ```text
 dev.config.mjs            # rolldown dev config (browser platform, no dev.port)
-index.html                # served at /
-main.js                   # entry; relative input paths resolve from this dir
+index.html                # served at /; its module script tag is the build entry
+main.js                   # entry, referenced from index.html
 package.json              # workspace member (copy an existing one)
 __tests__/<name>.spec.ts  # the spec (stays in source, never copied)
 ```
+
+Vite discovers the entry from `index.html`'s `<script type="module">` tag (the `input` field in `dev.config.mjs` applies to the node platform only), and lazy compilation is always on in browser runs — full bundle mode forces `devMode.lazy: true`.
 
 The harness discovers the playground from the spec's path, copies it to `playground-temp/<name>/`, starts an in-process dev server on an OS-assigned port, opens a Chromium page, and navigates to it — so **adding a test is a folder plus a spec, with no central registry to edit**.
 
@@ -245,6 +247,14 @@ describe('<name>', () => {
 Poll the DOM with `expect.poll`, `await waitForBuildStable()` before a follow-up edit, or wait on a browser log with `untilBrowserLogAfter`. A fixed `sleep` is both flaky and slow.
 :::
 
+#### Asserting on Vite's signals
+
+The server and client are Vite's, so specs assert on Vite's own signals:
+
+- **Error overlay**: Vite's `<vite-error-overlay>` custom element renders in a **shadow root**, so `locator(...).textContent()` on the host returns nothing — use the `errorOverlay()` and `errorOverlayText()` helpers from `~utils`.
+- **Server logs** (collected into `serverLogs`): `✘ Build error: …`, `hmr update …`, `hmr invalidate …`, `page reload`.
+- **Browser logs** (collected into `browserLogs`): `[vite] connected.`, `[vite] hot updated: …`.
+
 #### Building and running
 
 Rebuild once after changing Rust or the dev-server `src/` — the tests import the compiled `dist/`, not the TypeScript source:
@@ -252,6 +262,12 @@ Rebuild once after changing Rust or the dev-server `src/` — the tests import t
 ```sh
 just build-rolldown
 pnpm --filter @rolldown/test-dev-server build
+```
+
+The browser suite also needs the Vite checkout set up (clone or update vitejs/vite `rolldown-canary` rebased onto `main`, then install + build + link the workspace rolldown into it). A checkout you took over (dirty, or switched to another branch) is built as-is. Re-run the setup after running an install inside the checkout (an install resets the rolldown link):
+
+```sh
+just setup-vite
 ```
 
 Then, from `packages/test-dev-server/tests/`:
@@ -317,6 +333,7 @@ This will run only tests whose names match "function". For more filtering option
 Our Rust test infra is powerful enough to cover most of the case of JavaScript (plugin, passing function inside config).
 But since JavaScript side user is still our first class user, try to put tests in JavaScript side if possible.
 Here are some experience about what test technique you should use.
+
 :::tip TLDR
 Add test in JavaScript side if you don't want to wasting time on deciding which way to use.
 :::

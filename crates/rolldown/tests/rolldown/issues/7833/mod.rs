@@ -1,4 +1,4 @@
-use std::{borrow::Cow, sync::Arc};
+use std::borrow::Cow;
 
 use rolldown::{BundlerOptions, InputItem, PreserveEntrySignatures};
 use rolldown_common::EmittedChunk;
@@ -50,7 +50,7 @@ async fn deduplicate_emit_file_and_dynamic_import() {
         input: Some(vec![InputItem { name: Some("main".into()), import: "./main.js".into() }]),
         ..Default::default()
       },
-      vec![Arc::new(Test)],
+      vec![Plugin::new_shared(Test)],
     )
     .await;
 }

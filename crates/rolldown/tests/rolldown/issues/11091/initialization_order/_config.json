@@ -1,0 +1,27 @@
+{
+  "config": {
+    "input": [{ "name": "entry", "import": "./entry.js" }],
+    "strictExecutionOrder": true
+  },
+  "configVariants": [
+    {
+      "_configName": "on-demand",
+      "onDemandWrapping": true,
+      "_snapshot": false
+    },
+    {
+      "_configName": "manual-leaf",
+      "preserveEntrySignatures": "allow-extension",
+      "codeSplitting": {
+        "includeDependenciesRecursively": false,
+        "groups": [{ "name": "leaf", "test": "foo\\.js$" }]
+      },
+      "_snapshot": false
+    },
+    {
+      "_configName": "loose",
+      "strictExecutionOrder": false,
+      "_snapshot": false
+    }
+  ]
+}

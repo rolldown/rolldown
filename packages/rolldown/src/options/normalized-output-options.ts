@@ -2,7 +2,7 @@ import type { RolldownPlugin } from '..';
 import type { BindingNormalizedOptions } from '../binding.cjs';
 import { lazyProp } from '../decorators/lazy';
 import type { SourcemapIgnoreListOption, SourcemapPathTransformOption } from '../types/misc';
-import { PlainObjectLike } from '../types/plain-object-like';
+import { getLazyFields, PlainObjectLike } from '../types/plain-object-like';
 import type { StringOrRegExp } from '../types/utils';
 import type {
   AddonFunction,
@@ -32,8 +32,12 @@ export interface NormalizedOutputOptions {
   file: string | undefined;
   /** @see {@linkcode OutputOptions.dir | dir} */
   dir: string | undefined;
+  /** @see {@linkcode OutputOptions.charset | charset} */
+  charset: NonNullable<OutputOptions['charset']>;
   /** @see {@linkcode OutputOptions.entryFileNames | entryFileNames} */
   entryFileNames: string | ChunkFileNamesFunction;
+  /** @see {@linkcode OutputOptions.sourcemapFileNames | sourcemapFileNames} */
+  sourcemapFileNames: string | ChunkFileNamesFunction | undefined;
   /** @see {@linkcode OutputOptions.chunkFileNames | chunkFileNames} */
   chunkFileNames: string | ChunkFileNamesFunction;
   /** @see {@linkcode OutputOptions.assetFileNames | assetFileNames} */
@@ -119,11 +123,23 @@ export class NormalizedOutputOptionsImpl
     private normalizedOutputPlugins: RolldownPlugin[],
   ) {
     super();
+    // Read every option once, then drop the native object, as `NormalizedInputOptionsImpl` does.
+    // See internal-docs/bundler-data-lifecycle/implementation.md ("Normalized options objects").
+    for (const key of getLazyFields(this)) {
+      Reflect.get(this, key);
+    }
+    // A getter that reads `inner` must be a `@lazyProp`: nothing may read `inner` after this line.
+    this.inner = null as unknown as BindingNormalizedOptions;
   }
 
   @lazyProp
   get dir(): string | undefined {
     return this.inner.dir ?? undefined;
+  }
+
+  @lazyProp
+  get charset(): NonNullable<OutputOptions['charset']> {
+    return this.inner.charset;
   }
 
   @lazyProp
@@ -156,6 +172,10 @@ export class NormalizedOutputOptionsImpl
     return this.inner.sourcemap;
   }
 
+  @lazyProp
+  get sourcemapFileNames(): string | ChunkFileNamesFunction | undefined {
+    return this.inner.sourcemapFilenames || this.outputOptions.sourcemapFileNames;
+  }
   @lazyProp
   get sourcemapBaseUrl(): string | undefined {
     return this.inner.sourcemapBaseUrl ?? undefined;

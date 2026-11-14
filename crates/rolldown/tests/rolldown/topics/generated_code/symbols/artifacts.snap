@@ -7,9 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-//#region main.js
+// main.js
 const a = 1;
-//#endregion
 exports.a = a;
 
 ```
@@ -21,9 +20,8 @@ exports.a = a;
 ### main.js
 
 ```js
-//#region main.js
+// main.js
 const a = 1;
-//#endregion
 export { a };
 
 ```
@@ -46,7 +44,6 @@ export { a };
 ```js
 (function(exports) {
 	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-	//#endregion
 	exports.a = 1;
 	return exports;
 })({});

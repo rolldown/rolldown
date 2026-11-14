@@ -1,0 +1,38 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+// a.js
+const targetPromise = import("./dyn.js").then((n) => n.target_exports);
+export { targetPromise };
+
+```
+
+## b.js
+
+```js
+import { then$1 as then } from "./dyn.js";
+// b.js
+globalThis.hostThen = then;
+
+```
+
+## dyn.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// observer.js
+globalThis.observed = true;
+// then-export.js
+function then(resolve) {
+	resolve("not the host namespace");
+}
+// target.js
+var target_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
+export { target_exports, then as then$1 };
+
+```

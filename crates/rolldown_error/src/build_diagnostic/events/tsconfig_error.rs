@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use oxc_resolver::ResolveError;
 
 use crate::{
@@ -9,15 +11,7 @@ use super::BuildEvent;
 
 #[derive(Debug)]
 pub struct TsConfigError {
-  pub file_paths: Vec<String>,
   pub reason: ResolveError,
-}
-
-impl TsConfigError {
-  /// Merge file paths from another TsConfigError into this one
-  pub fn merge(&mut self, file_paths: Vec<String>) {
-    self.file_paths.extend(file_paths);
-  }
 }
 
 impl BuildEvent for TsConfigError {
@@ -26,16 +20,23 @@ impl BuildEvent for TsConfigError {
   }
 
   fn message(&self, opts: &DiagnosticOptions) -> String {
-    let mut stabilized_paths =
-      self.file_paths.iter().map(|p| opts.stabilize_path(p)).collect::<Vec<_>>();
-    stabilized_paths.sort_unstable();
-    let file_list =
-      stabilized_paths.into_iter().map(|p| format!("'{p}'")).collect::<Vec<_>>().join(", ");
-    format!(
-      "Failed to load tsconfig for {}: {}",
-      file_list,
-      resolve_error_to_message(&self.reason, opts)
-    )
+    let tsconfig_path = match &self.reason {
+      ResolveError::TsconfigNotFound(path)
+      | ResolveError::TsconfigSelfReference(path)
+      | ResolveError::TsconfigLoadFailed { path, .. } => Some(path.as_path()),
+      ResolveError::TsconfigCircularExtend(paths) => paths.paths().first().map(PathBuf::as_path),
+      _ => None,
+    };
+    let reason = match &self.reason {
+      ResolveError::TsconfigLoadFailed { source, .. } => match source.as_ref() {
+        ResolveError::Json(json_error) => json_error.message.clone(),
+        source => resolve_error_to_message(source, opts),
+      },
+      reason => resolve_error_to_message(reason, opts),
+    };
+    let tsconfig =
+      tsconfig_path.map_or_else(String::new, |path| format!(" '{}'", opts.stabilize_path(path)));
+    format!("Failed to load tsconfig{tsconfig}: {reason}")
   }
 
   fn on_diagnostic(&self, diagnostic: &mut Diagnostic, opts: &DiagnosticOptions) {

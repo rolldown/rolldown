@@ -7,26 +7,29 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region dep-a.js
+// dep-a.js
 var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const sideEffect = {};
 	globalThis.sideEffect = {};
 	module.exports = sideEffect;
 }));
-//#endregion
-//#region dep-b.js
-var init_dep_b = __esmMin((() => {
-	sideEffect.touched = true;
-}));
-//#endregion
-__esmMin((() => {
-	require_dep_a();
-	init_dep_b();
-}))();
+// dep-b.js
+function init_dep_b() {
+	return (init_dep_b = __esmMin((() => {
+		sideEffect.touched = true;
+	})))();
+}
+function init_main() {
+	return (init_main = __esmMin((() => {
+		require_dep_a();
+		init_dep_b();
+	})))();
+}
+init_main();
 
 ```
 
-# Variant: [on_demand_wrapping: true]
+# Variant: wrap-all: [on_demand_wrapping: false]
 
 ## Assets
 
@@ -34,19 +37,24 @@ __esmMin((() => {
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region dep-a.js
+// dep-a.js
 var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const sideEffect = {};
 	globalThis.sideEffect = {};
 	module.exports = sideEffect;
 }));
-__esmMin((() => {
-	//#region dep-b.js
-	sideEffect.touched = true;
-	//#endregion
-	//#region main.js
-	require_dep_a();
-	//#endregion
-}))();
+// dep-b.js
+function init_dep_b() {
+	return (init_dep_b = __esmMin((() => {
+		sideEffect.touched = true;
+	})))();
+}
+function init_main() {
+	return (init_main = __esmMin((() => {
+		require_dep_a();
+		init_dep_b();
+	})))();
+}
+init_main();
 
 ```

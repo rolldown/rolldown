@@ -6,7 +6,7 @@ pub trait StatementExt<'me, 'ast> {
     &'me mut self,
   ) -> Option<&'me mut ast::ExportDefaultDeclaration<'ast>>;
   fn as_export_all_declaration(&self) -> Option<&ast::ExportAllDeclaration<'ast>>;
-  fn as_export_named_declaration_mut(&mut self) -> Option<&mut ast::ExportNamedDeclaration<'ast>>;
+  fn as_export_from_declaration_mut(&mut self) -> Option<&mut ast::ExportFromDeclaration<'ast>>;
 
   fn is_module_declaration_with_source(&self) -> bool;
 }
@@ -35,9 +35,9 @@ impl<'ast> StatementExt<'_, 'ast> for ast::Statement<'ast> {
     None
   }
 
-  fn as_export_named_declaration_mut(&mut self) -> Option<&mut ast::ExportNamedDeclaration<'ast>> {
-    if let ast::Statement::ExportNamedDeclaration(export_named_decl) = self {
-      return Some(&mut **export_named_decl);
+  fn as_export_from_declaration_mut(&mut self) -> Option<&mut ast::ExportFromDeclaration<'ast>> {
+    if let ast::Statement::ExportFromDeclaration(export_from_decl) = self {
+      return Some(&mut **export_from_decl);
     }
     None
   }

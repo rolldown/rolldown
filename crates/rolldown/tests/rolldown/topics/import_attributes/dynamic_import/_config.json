@@ -1,0 +1,8 @@
+{
+  "_comment": "Static `{ with: ... }` options of a dynamic import select the module like the `with` clause of a static import.",
+  "config": {
+    "experimental": {
+      "importAttributes": true
+    }
+  }
+}

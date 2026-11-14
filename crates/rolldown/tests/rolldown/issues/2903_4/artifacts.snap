@@ -9,7 +9,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 (/* @__PURE__ */ require("./rolldown-runtime.js").__commonJSMin(((exports, module) => {
 	module.exports = console.log("cjs-dep");
 })))();
-//#endregion
 
 ```
 
@@ -19,7 +18,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 (/* @__PURE__ */ require("./rolldown-runtime.js").__commonJSMin(((exports, module) => {
 	module.exports = console.log("cjs-dep2");
 })))();
-//#endregion
 
 ```
 

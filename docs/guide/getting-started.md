@@ -54,6 +54,7 @@ Prebuilt binaries are distributed for the following platforms (grouped by [Node.
 - Other
   - Linux arm64 musl (`aarch64-unknown-linux-musl`)
   - Android arm64 (`aarch64-linux-android`)
+  - Android armv7 (`armv7-linux-androideabi`)
   - Wasm + Wasi (`wasm32-wasip1-threads`)
 
 If you are using a platform that a prebuilt binary is not distributed, you have the following options:
@@ -83,7 +84,7 @@ If you are using a platform that a prebuilt binary is not distributed, you have 
 ### Release Channels
 
 - [latest](https://npmx.dev/package/rolldown#versions): currently `1.x.x`.
-- [pkg.pr.new](https://pkg.pr.new/~/rolldown/rolldown): continuously released from the `main` branch. Install with `npm i https://pkg.pr.new/rolldown@sha` where `sha` is a successful build listed on [pkg.pr.new](https://pkg.pr.new/~/rolldown/rolldown).
+- [pkg.pr.new](https://pkg.pr.new/~/rolldown/rolldown): continuously released from the `main` branch. Install with `vp add https://pkg.pr.new/rolldown@sha` or `npm i https://pkg.pr.new/rolldown@sha`, where `sha` is a successful build listed on [pkg.pr.new](https://pkg.pr.new/~/rolldown/rolldown). If the project uses pnpm, which `vp` selects when no package manager is set, first add `blockExoticSubdeps: false` to `pnpm-workspace.yaml`.
 
 ## Using the CLI
 
@@ -208,7 +209,7 @@ Next, in the npm script, we can instruct Rolldown to use the config file with th
 
 ### Multiple builds in the same config
 
-You can also specify multiple configurations as an array, and Rolldown will bundle them in parallel.
+You can also specify multiple configurations as an array. The CLI bundles them one after another, in the order they are listed. The `build()` API bundles an array of configurations concurrently.
 
 ```js [rolldown.config.js]
 import { defineConfig } from 'rolldown';
@@ -287,9 +288,7 @@ The rolldown watcher api is compatible with rollup [watch](https://rollupjs.org/
 ```js
 import { watch } from 'rolldown';
 
-const watcher = watch({
-  /* option */
-}); // or watch([/* multiple option */] )
+const watcher = watch({/* option */}); // or watch([/* multiple option */] )
 
 watcher.on('event', () => {});
 

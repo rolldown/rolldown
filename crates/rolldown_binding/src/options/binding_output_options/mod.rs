@@ -6,7 +6,7 @@ mod binding_pre_rendered_chunk;
 use binding_pre_rendered_asset::BindingPreRenderedAsset;
 use derive_more::Debug;
 use napi::Either;
-use napi::bindgen_prelude::{Either3, FnArgs};
+use napi::bindgen_prelude::{Either3, FnArgs, Uint8Array};
 use rustc_hash::FxHashMap;
 
 pub use binding_comments_options::BindingCommentsOptions;
@@ -18,22 +18,28 @@ use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
 use crate::types::{
   binding_rendered_chunk::BindingRenderedChunk,
   binding_string_or_regex::BindingStringOrRegex,
-  js_callback::{JsCallback, MaybeAsyncJsCallback},
+  js_callback_release::{UntrackedJsCallback, UntrackedMaybeAsyncJsCallback},
 };
 
 pub type AddonOutputOption =
-  Either<String, MaybeAsyncJsCallback<FnArgs<(BindingRenderedChunk,)>, Option<String>>>;
+  Either<String, UntrackedMaybeAsyncJsCallback<FnArgs<(BindingRenderedChunk,)>, Option<String>>>;
 pub type ChunkFileNamesOutputOption =
-  Either<String, JsCallback<FnArgs<(PreRenderedChunk,)>, String>>;
+  Either<String, UntrackedJsCallback<FnArgs<(PreRenderedChunk,)>, String>>;
 pub type AssetFileNamesOutputOption =
-  Either<String, JsCallback<FnArgs<(BindingPreRenderedAsset,)>, String>>;
+  Either<String, UntrackedJsCallback<FnArgs<(BindingPreRenderedAsset,)>, String>>;
 pub type GlobalsOutputOption =
-  Either<FxHashMap<String, String>, JsCallback<FnArgs<(String,)>, String>>;
+  Either<FxHashMap<String, String>, UntrackedJsCallback<FnArgs<(String,)>, String>>;
 pub type PathsOutputOption =
-  Either<FxHashMap<String, String>, JsCallback<FnArgs<(String,)>, String>>;
-pub type SanitizeFileName = Either<bool, JsCallback<FnArgs<(String,)>, String>>;
-pub type SourcemapIgnoreListOutputOption =
-  Either3<bool, BindingStringOrRegex, JsCallback<FnArgs<(String, String)>, bool>>;
+  Either<FxHashMap<String, String>, UntrackedJsCallback<FnArgs<(String,)>, String>>;
+pub type SanitizeFileName = Either<bool, UntrackedJsCallback<FnArgs<(String,)>, String>>;
+/// The JS side wraps the user's per-source function in one shim. The result holds one byte per
+/// source, and a nonzero byte ignores that source. See
+/// `packages/rolldown/src/utils/bindingify-output-options.ts`.
+pub type SourcemapIgnoreListOutputOption = Either3<
+  bool,
+  BindingStringOrRegex,
+  UntrackedJsCallback<FnArgs<(Vec<String>, String)>, Uint8Array>,
+>;
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug)]
@@ -79,6 +85,8 @@ pub struct BindingOutputOptions<'env> {
   // compact: boolean;
   pub dir: Option<String>,
   pub file: Option<String>,
+  #[napi(ts_type = "'ascii' | 'utf8'")]
+  pub charset: Option<String>,
   #[napi(ts_type = "boolean | 'if-default-prop'")]
   pub es_module: Option<Either<bool, String>>,
   #[napi(ts_type = "'default' | 'named' | 'none' | 'auto'")]
@@ -121,16 +129,22 @@ pub struct BindingOutputOptions<'env> {
   // preferConst: boolean;
   #[napi(ts_type = "'file' | 'inline' | 'hidden'")]
   pub sourcemap: Option<String>,
+  #[debug(skip)]
+  #[napi(ts_type = "string | ((chunk: PreRenderedChunk) => string)")]
+  pub sourcemap_file_names: Option<ChunkFileNamesOutputOption>,
   pub sourcemap_base_url: Option<String>,
   #[debug(skip)]
   #[napi(
-    ts_type = "boolean | string | RegExp | ((source: string, sourcemapPath: string) => boolean)"
+    ts_type = "boolean | string | RegExp | ((sources: Array<string>, sourcemapPath: string) => Uint8Array)"
   )]
   pub sourcemap_ignore_list: Option<SourcemapIgnoreListOutputOption>,
   pub sourcemap_debug_ids: Option<bool>,
   #[debug(skip)]
-  #[napi(ts_type = "(source: string, sourcemapPath: string) => string")]
-  pub sourcemap_path_transform: Option<JsCallback<FnArgs<(String, String)>, String>>,
+  /// Batched like `sourcemapIgnoreList` above. One call rewrites every source of a sourcemap,
+  /// and the returned array matches the source array by index.
+  #[napi(ts_type = "(sources: Array<string>, sourcemapPath: string) => Array<string>")]
+  pub sourcemap_path_transform:
+    Option<UntrackedJsCallback<FnArgs<(Vec<String>, String)>, Vec<String>>>,
   pub sourcemap_exclude_sources: Option<bool>,
   // sourcemapFile: string | undefined;
   #[napi(ts_type = "boolean | 'auto'")]

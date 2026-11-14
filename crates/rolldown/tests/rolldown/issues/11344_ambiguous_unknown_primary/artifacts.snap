@@ -1,0 +1,29 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## AMBIGUOUS_EXTERNAL_NAMESPACES
+
+```text
+[AMBIGUOUS_EXTERNAL_NAMESPACES] Found ambiguous export.
+   ╭─[ lib/M.js:1:10 ]
+   │
+ 1 │ export { n as Z, own } from './B.js';
+   │          ┬  
+   │          ╰── "lib/B.js" re-exports "n"
+   │
+   ├─[ lib/a.js:1:14 ]
+   │
+ 1 │ export const n = 'a.n';
+   │              ┬  
+   │              ╰── One matching export is here.
+   │
+   ├─[ lib/a2.js:1:14 ]
+   │
+ 1 │ export const n = 'a2.n';
+   │              ┬  
+   │              ╰── One matching export is here.
+───╯
+
+```

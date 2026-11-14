@@ -5,10 +5,57 @@
   "ignorePaths": ["**/node_modules/**", "**/examples/**", "**/crates/rolldown/tests/**"],
   "packageRules": [
     {
+      "description": "Actions are pinned to a commit, which Renovate counts as a pinned dependency, and Boshen/renovate does not update pinned dependencies (Boshen/renovate#2). Update actions anyway.",
+      "matchManagers": ["github-actions"],
+      "updatePinnedDependencies": true
+    },
+    {
       "groupName": "rolldown-plugin-dts",
       "matchManagers": ["npm"],
       "matchPackageNames": ["rolldown-plugin-dts"],
       "schedule": ["at any time"]
+    },
+    {
+      "description": "idna_adapter is pinned to 1.0.0 to keep the lighter unicode-rs backend (see #9811)",
+      "matchManagers": ["cargo"],
+      "matchPackageNames": ["idna_adapter"],
+      "enabled": false
+    },
+    {
+      "description": "Lockstep oxc packages are always upgraded manually via the `upgrade-oxc` skill, so the Renovate `oxc` group PR is always superseded (e.g. #10809 superseded #10811). Independently released oxc packages (oxc_resolver, oxc_sourcemap, oxc_index, ...) remain auto-updated.",
+      "matchDatasources": ["crate", "npm"],
+      "matchPackageNames": [
+        "oxc",
+        "oxc_*",
+        "@oxc-project/*",
+        "oxc-parser",
+        "oxc-transform",
+        "oxc-minify"
+      ],
+      "excludePackageNames": [
+        "oxc_index",
+        "oxc_sourcemap",
+        "oxc_resolver",
+        "oxc_resolver_napi",
+        "oxc-miette",
+        "oxc-browserslist",
+        "oxc-resolver"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "napi-rs, emnapi and wasm-runtime bumps are what breaks inside a real WebContainer, so their PRs opt into the WebContainer smoke test (see #10938)",
+      "matchDatasources": ["crate", "npm"],
+      "matchPackageNames": [
+        "napi",
+        "napi-build",
+        "napi-derive",
+        "@napi-rs/cli",
+        "@napi-rs/wasm-runtime",
+        "@emnapi/*",
+        "emnapi"
+      ],
+      "addLabels": ["ci: webcontainer"]
     }
   ]
 }

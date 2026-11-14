@@ -47,6 +47,13 @@ function normalizeBindingWarning(warning: BindingEnhancedTransformResult['warnin
   } satisfies RolldownLog;
 }
 
+// Default `cwd` to `process.cwd()` as the bundler does. Node caches it, so it keeps working after
+// the working directory is deleted, where the binding's own `getcwd` lookup would fail.
+function withDefaultCwd(options: TransformOptions | null | undefined) {
+  if (options?.cwd != null || typeof process !== 'object') return options;
+  return { ...options, cwd: process.cwd() };
+}
+
 /**
  * Transpile a JavaScript or TypeScript into a target ECMAScript version, asynchronously.
  *
@@ -57,7 +64,8 @@ function normalizeBindingWarning(warning: BindingEnhancedTransformResult['warnin
  * @param sourceText The source code to transform.
  * @param options The transform options including tsconfig and inputMap. See {@linkcode TransformOptions} for more information.
  * @param cache Optional tsconfig cache for reusing resolved tsconfig across multiple transforms.
- * Only used when `options.tsconfig` is `true`.
+ * Used when `options.tsconfig` is `true` or a path. For a path, construct the
+ * cache with the same path.
  *
  * @returns a promise that resolves to an object containing the transformed code,
  * source maps, and any errors that occurred during parsing or transformation.
@@ -71,7 +79,13 @@ export async function transform(
   options?: TransformOptions | null,
   cache?: TsconfigCache | null,
 ): Promise<TransformResult> {
-  const result = await originalTransform(filename, sourceText, options, cache, yarnPnp);
+  const result = await originalTransform(
+    filename,
+    sourceText,
+    withDefaultCwd(options),
+    cache,
+    yarnPnp,
+  );
   return {
     ...result,
     errors: result.errors.map(normalizeBindingError),
@@ -87,7 +101,8 @@ export async function transform(
  * @param sourceText The source code to transform.
  * @param options The transform options including tsconfig and inputMap. See {@linkcode TransformOptions} for more information.
  * @param cache Optional tsconfig cache for reusing resolved tsconfig across multiple transforms.
- * Only used when `options.tsconfig` is `true`.
+ * Used when `options.tsconfig` is `true` or a path. For a path, construct the
+ * cache with the same path.
  *
  * @returns an object containing the transformed code, source maps, and any errors
  * that occurred during parsing or transformation.
@@ -101,7 +116,13 @@ export function transformSync(
   options?: TransformOptions | null,
   cache?: TsconfigCache | null,
 ): TransformResult {
-  const result = originalTransformSync(filename, sourceText, options, cache, yarnPnp);
+  const result = originalTransformSync(
+    filename,
+    sourceText,
+    withDefaultCwd(options),
+    cache,
+    yarnPnp,
+  );
   return {
     ...result,
     errors: result.errors.map(normalizeBindingError),

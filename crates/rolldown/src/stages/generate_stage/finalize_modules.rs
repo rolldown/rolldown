@@ -1,6 +1,6 @@
-use std::sync::Arc;
-
-use rolldown_common::{ConcatenateWrappedModuleKind, PrependRenderedImport};
+use oxc::allocator::CloneIn as _;
+use rolldown_common::{ChunkIdx, UsedSymbolRefs};
+use rolldown_error::{BuildResult, Severity};
 use rolldown_utils::{index_vec_ext::IndexVecExt as _, rayon::ParallelIterator as _};
 use rustc_hash::FxHashMap;
 use tracing::debug_span;
@@ -10,24 +10,61 @@ use crate::{
   type_alias::IndexEcmaAst,
 };
 
-use super::GenerateStage;
+use super::{
+  FinalEsmInitMetadata, GenerateStage, Sealed,
+  inline_common_chunks::{BridgeCallees, bare_bridge_callee},
+  resolve_file_urls::ResolvedFileUrls,
+};
 
 impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn finalize_modules(
     &mut self,
-    chunk_graph: &mut ChunkGraph,
+    chunk_graph: &ChunkGraph,
     ast_table: &mut IndexEcmaAst,
-  ) {
+    resolved_file_urls: &ResolvedFileUrls,
+    used_symbol_refs: &UsedSymbolRefs,
+    order_state: &super::order_wrap_state::OrderWrapState,
+    final_esm_init_metadata: &Sealed<FinalEsmInitMetadata>,
+  ) -> BuildResult<()> {
     let has_enum_inlining = self.link_output.has_enum_inlining;
+    let has_required_order_runtime = !order_state.required_runtime_helpers().is_empty();
+    let bridge_callees: FxHashMap<ChunkIdx, BridgeCallees> =
+      if self.inline_state.reading_files().is_empty() {
+        FxHashMap::default()
+      } else {
+        let wrapper_refs = self.wrapper_refs(order_state);
+        self
+          .inline_state
+          .reading_files()
+          .iter()
+          .map(|&file| {
+            let callees = self.inline_state.bridge_callees(
+              file,
+              chunk_graph,
+              &wrapper_refs,
+              &self.link_output.symbol_db,
+            );
+            (file, callees)
+          })
+          .collect()
+      };
+    // Off-strict, lowering never mutates the chunk graph, so the liveness guard cannot fire.
+    let strict = self.options.is_strict_execution_order_enabled();
 
-    let transfer_parts_rendered_maps = debug_span!("finalize_modules").in_scope(|| {
+    let finalized = debug_span!("finalize_modules").in_scope(|| {
       ast_table
         .par_iter_mut_enumerated()
         .filter(|(idx, _ast)| {
-          self.link_output.module_table[*idx]
-            .as_normal()
-            .is_some_and(|m| self.link_output.metas[m.idx].is_included)
+          self.link_output.module_table[*idx].as_normal().is_some_and(|m| {
+            let is_required_order_runtime =
+              m.idx == self.link_output.runtime.id() && has_required_order_runtime;
+            (self.link_output.metas[m.idx].is_included || is_required_order_runtime)
+              && (!strict || chunk_graph.module_is_in_live_chunk(*idx))
+              // A record's modules are finalized per carrier, on clones, by
+              // `finalize_inline_copies` below.
+              && !chunk_graph.module_to_chunk[*idx].is_some_and(|c| self.inline_state.is_record(c))
+          })
         })
         .filter_map(|(idx, ast)| {
           let ast = ast.as_mut()?;
@@ -40,13 +77,19 @@ impl GenerateStage<'_> {
             idx,
             chunk,
             chunk_idx,
+            file_idx: chunk_idx,
             chunk_graph,
             symbol_db: &self.link_output.symbol_db,
             linking_info,
             module,
             stmt_infos: &self.link_output.stmt_infos[idx],
+            index_stmt_infos: &self.link_output.stmt_infos,
             modules: &self.link_output.module_table.modules,
             linking_infos: &self.link_output.metas,
+            dynamic_import_usage: self.link_output.dynamic_import_exports_usage_map.get(&idx),
+            order_wrap_state: order_state,
+            final_esm_init_metadata,
+            used_symbol_refs,
             runtime: &self.link_output.runtime,
             options: self.options,
             file_emitter: &self.plugin_driver.file_emitter,
@@ -54,53 +97,81 @@ impl GenerateStage<'_> {
             safely_merge_cjs_ns_map: &self.link_output.safely_merge_cjs_ns_map,
             retained_export_symbols: &self.link_output.retained_export_symbols,
             resolved_paths: self.resolved_paths.as_ref(),
+            resolved_file_urls,
             has_enum_inlining,
+            inline_state: &self.inline_state,
           };
 
-          let concatenated_wrapped_module_kind = ctx.linking_info.concatenated_wrapped_module_kind;
-          let (transferred_import_record, rendered_concatenated_wrapped_module_parts) =
+          let (transferred_import_record, mut module_diagnostics) =
             ctx.finalize_normal_module(ast, ast_scope);
+          if let Some(callees) = bridge_callees.get(&chunk_idx) {
+            module_diagnostics.extend(bare_bridge_callee(
+              ast.program(),
+              callees,
+              &module.stable_id,
+            ));
+          }
 
-          (!transferred_import_record.is_empty()
-            || !matches!(concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::None))
-          .then_some((idx, transferred_import_record, rendered_concatenated_wrapped_module_parts))
+          let payload =
+            (!transferred_import_record.is_empty()).then_some((idx, transferred_import_record));
+          Some((payload, module_diagnostics))
         })
         .collect::<Vec<_>>()
     });
 
-    let mut normalized_transfer_parts_rendered_maps = FxHashMap::default();
-    for (idx, transferred_import_record, rendered_concatenated_module_parts) in
-      transfer_parts_rendered_maps
-    {
-      for (rec_idx, rendered_string) in transferred_import_record {
-        normalized_transfer_parts_rendered_maps.insert((idx, rec_idx), rendered_string);
-      }
-      let chunk_idx = chunk_graph.module_to_chunk[idx].expect("should have chunk idx");
-      let chunk = &mut chunk_graph.chunk_table[chunk_idx];
-      chunk
-        .module_idx_to_render_concatenated_module
-        .insert(idx, rendered_concatenated_module_parts);
+    let mut transferred_imports = FxHashMap::default();
+    let mut diagnostics = vec![];
+    for (payload, module_diagnostics) in finalized {
+      diagnostics.extend(module_diagnostics);
+      let Some((idx, transferred_import_record)) = payload else {
+        continue;
+      };
+      transferred_imports.extend(
+        transferred_import_record.into_iter().map(|(rec_idx, fragment)| ((idx, rec_idx), fragment)),
+      );
     }
 
-    if normalized_transfer_parts_rendered_maps.is_empty() {
-      return;
+    let has_error = diagnostics.iter().any(|diagnostic| diagnostic.severity() == Severity::Error);
+    self.link_output.diagnostics.extend(diagnostics);
+    if has_error {
+      let errors = self.link_output.diagnostics.extract_errors();
+      Err(errors)?;
     }
-    for chunk in chunk_graph.chunk_table.iter_mut() {
+
+    self.finalize_inline_copies(
+      chunk_graph,
+      ast_table,
+      resolved_file_urls,
+      used_symbol_refs,
+      order_state,
+      final_esm_init_metadata,
+    )?;
+
+    if transferred_imports.is_empty() {
+      return Ok(());
+    }
+    // Runs after every finalizer (including `finalize_inline_copies` above): the fragments
+    // already carry canonical names, so the recipients are never re-finalized, and donor IDs
+    // never meet recipient side tables. See internal-docs/ast-mutation/implementation.md.
+    for chunk in chunk_graph.chunk_table.iter() {
       for (module_idx, recs) in &chunk.insert_map {
-        let Some(module) = self.link_output.module_table[*module_idx].as_normal_mut() else {
+        let Some(ast) = ast_table[*module_idx].as_mut() else {
           continue;
         };
-        for (importer_idx, rec_idx) in recs {
-          if let Some(rendered_string) =
-            normalized_transfer_parts_rendered_maps.get(&(*importer_idx, *rec_idx))
-          {
-            module
-              .ecma_view
-              .mutations
-              .push(Arc::new(PrependRenderedImport { intro: rendered_string.clone() }));
-          }
-        }
+        // Prepend in `insert_map` order.
+        ast.program.with_mut(|fields| {
+          fields.program.body.splice(
+            0..0,
+            recs
+              .iter()
+              .filter_map(|key| transferred_imports.get(key))
+              .flat_map(|fragment| fragment.program().body.iter())
+              .map(|stmt| stmt.clone_in(fields.allocator)),
+          );
+        });
       }
     }
+
+    Ok(())
   }
 }

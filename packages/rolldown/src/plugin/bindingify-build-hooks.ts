@@ -2,17 +2,20 @@ import type { Program } from '@oxc-project/types';
 import path from 'node:path';
 import type {
   BindingHookFilter,
+  BindingHookLoadOutput,
   BindingHookResolveIdOutput,
-  BindingPluginContext,
+  BindingHookTransformOutput,
   BindingPluginOptions,
+  BindingTransformPluginContext,
 } from '../binding.cjs';
 import { RolldownMagicString } from '../binding-magic-string';
 import { parseAst } from '../parse-ast-index';
 import { bindingifySourcemap, type ExistingRawSourceMap } from '../types/sourcemap';
 import { aggregateBindingErrorsIntoJsError } from '../utils/error';
-import { normalizeHook } from '../utils/normalize-hook';
+import { discardResult, isPromiseLike } from '../utils/misc';
 import { transformModuleInfo } from '../utils/transform-module-info';
 import {
+  copySourcemapObject,
   isEmptySourcemapFiled,
   normalizeTransformHookSourcemap,
 } from '../utils/transform-sourcemap';
@@ -22,193 +25,189 @@ import {
   bindingifyTransformFilter,
 } from './bindingify-hook-filter';
 import type { BindingifyPluginArgs } from './bindingify-plugin';
-import {
-  bindingifyPluginHookMeta,
-  type PluginHookWithBindingExt,
-} from './bindingify-plugin-hook-meta';
-import type { PluginHooks, SourceDescription } from './index';
+import { bindingifyHook, type PluginHookWithBindingExt } from './bindingify-plugin-hook-meta';
+import type {
+  LoadResult,
+  PluginHooks,
+  ResolveIdResult,
+  SourceDescription,
+  TransformResult,
+} from './index';
 import { LoadPluginContextImpl } from './load-plugin-context';
-import { PluginContextImpl } from './plugin-context';
+import { createPluginContext } from './plugin-context';
 import { TransformPluginContextImpl } from './transform-plugin-context';
-
-function createPluginContext(
-  args: BindingifyPluginArgs,
-  ctx: BindingPluginContext,
-): PluginContextImpl {
-  return new PluginContextImpl(
-    args.outputOptions,
-    ctx,
-    args.plugin,
-    args.pluginContextData,
-    args.onLog,
-    args.logLevel,
-    args.watchMode,
-  );
-}
 
 export function bindingifyBuildStart(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['buildStart']> {
-  const hook = args.plugin.buildStart;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta } = normalizeHook(hook);
-
-  return {
-    plugin: async (ctx, opts) => {
-      await handler.call(
-        createPluginContext(args, ctx),
-        args.pluginContextData.getInputOptions(opts),
+  return bindingifyHook(args.plugin.buildStart, ({ handler }) => ({
+    plugin: (ctx, opts) => {
+      return discardResult(
+        handler.call(createPluginContext(args, ctx), args.pluginContextData.getInputOptions(opts)),
       );
     },
-    meta: bindingifyPluginHookMeta(meta),
-  };
+  }));
 }
 export function bindingifyBuildEnd(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['buildEnd']> {
-  const hook = args.plugin.buildEnd;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta } = normalizeHook(hook);
-
-  return {
-    plugin: async (ctx, err) => {
-      await handler.call(
-        createPluginContext(args, ctx),
-        err ? aggregateBindingErrorsIntoJsError(err) : undefined,
+  return bindingifyHook(args.plugin.buildEnd, ({ handler }) => ({
+    plugin: (ctx, err) => {
+      return discardResult(
+        handler.call(
+          createPluginContext(args, ctx),
+          err ? aggregateBindingErrorsIntoJsError(err) : undefined,
+        ),
       );
     },
-    meta: bindingifyPluginHookMeta(meta),
-  };
+  }));
 }
 
 export function bindingifyResolveId(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['resolveId'], BindingHookFilter | undefined> {
   const hook = args.plugin.resolveId as unknown as PluginHooks['resolveId'];
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta, options } = normalizeHook(hook);
-
-  return {
-    plugin: async (ctx, specifier, importer, extraOptions) => {
+  return bindingifyHook(hook, ({ handler, options }) => ({
+    plugin: (ctx, specifier, importer, extraOptions) => {
       const contextResolveOptions =
         extraOptions.custom != null
           ? args.pluginContextData.getSavedResolveOptions(extraOptions.custom)
           : undefined;
 
-      const ret = await handler.call(
-        createPluginContext(args, ctx),
-        specifier,
-        importer ?? undefined,
-        {
-          ...extraOptions,
-          custom: contextResolveOptions?.custom,
-        },
-      );
-      if (ret == null) {
-        return;
-      }
-      if (ret === false) {
-        return {
-          id: specifier,
-          external: true,
-          normalizeExternalId: true,
-        };
-      }
-      if (typeof ret === 'string') {
-        return { id: ret, normalizeExternalId: false };
-      }
-
-      // Make sure the `moduleSideEffects` is update to date
-      let exist = args.pluginContextData.updateModuleOption(ret.id, {
-        meta: ret.meta || {},
-        moduleSideEffects: ret.moduleSideEffects ?? null,
-        invalidate: false,
+      const ret = handler.call(createPluginContext(args, ctx), specifier, importer ?? undefined, {
+        ...extraOptions,
+        custom: contextResolveOptions?.custom,
+        attributes: extraOptions.attributes ?? {},
+        importerRawId: extraOptions.importerRawId ?? importer ?? undefined,
+        importerAttributes: extraOptions.importerAttributes ?? {},
       });
-
-      return {
-        id: ret.id,
-        external: ret.external,
-        normalizeExternalId: false,
-        moduleSideEffects: exist.moduleSideEffects ?? undefined,
-        packageJsonPath: ret.packageJsonPath,
-      };
+      if (isPromiseLike(ret)) {
+        return Promise.resolve(ret).then((ret) =>
+          bindingifyResolveIdResult(args, ret, specifier, extraOptions.attributes),
+        );
+      }
+      return bindingifyResolveIdResult(args, ret, specifier, extraOptions.attributes);
     },
-    meta: bindingifyPluginHookMeta(meta),
     filter: bindingifyResolveIdFilter(options.filter),
+  }));
+}
+
+function bindingifyResolveIdResult(
+  args: BindingifyPluginArgs,
+  ret: ResolveIdResult,
+  specifier: string,
+  attributes: Record<string, string> | undefined,
+): BindingHookResolveIdOutput | undefined {
+  if (ret == null) {
+    return;
+  }
+  if (ret === false) {
+    return {
+      id: specifier,
+      external: true,
+      normalizeExternalId: true,
+    };
+  }
+  if (typeof ret === 'string') {
+    return { id: ret, normalizeExternalId: false };
+  }
+
+  // Make sure the `moduleSideEffects` is update to date
+  let exist = args.pluginContextData.updateModuleOption(
+    args.pluginContextData.toModuleId(ret.id, ret.attributes ?? attributes),
+    {
+      meta: ret.meta || {},
+      moduleSideEffects: ret.moduleSideEffects ?? null,
+      invalidate: false,
+    },
+  );
+
+  return {
+    id: ret.id,
+    external: ret.external,
+    normalizeExternalId: false,
+    moduleSideEffects: exist.moduleSideEffects ?? undefined,
+    packageJsonPath: ret.packageJsonPath,
+    attributes: ret.attributes,
   };
 }
 
 export function bindingifyResolveDynamicImport(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['resolveDynamicImport']> {
-  const hook = args.plugin.resolveDynamicImport;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta } = normalizeHook(hook);
-
-  return {
-    plugin: async (ctx, specifier, importer) => {
-      const ret = await handler.call(
-        createPluginContext(args, ctx),
-        specifier,
-        importer ?? undefined,
-      );
-      if (ret == null) {
-        return;
-      }
-      if (ret === false) {
-        return {
-          id: specifier,
-          external: true,
-        };
-      }
-      if (typeof ret === 'string') {
-        return {
-          id: ret,
-        };
-      }
-
-      const result: BindingHookResolveIdOutput = {
-        id: ret.id,
-        external: ret.external,
-        packageJsonPath: ret.packageJsonPath,
-      };
-
-      if (ret.moduleSideEffects !== null) {
-        result.moduleSideEffects = ret.moduleSideEffects;
-      }
-
-      args.pluginContextData.updateModuleOption(ret.id, {
-        meta: ret.meta || {},
-        moduleSideEffects: ret.moduleSideEffects || null,
-        invalidate: false,
+  return bindingifyHook(args.plugin.resolveDynamicImport, ({ handler }) => ({
+    plugin: (ctx, specifier, importer, extraOptions) => {
+      const attributes = extraOptions.attributes ?? {};
+      const ret = handler.call(createPluginContext(args, ctx), specifier, importer ?? undefined, {
+        attributes,
+        importerRawId: extraOptions.importerRawId ?? importer ?? undefined,
+        importerAttributes: extraOptions.importerAttributes ?? {},
       });
-
-      return result;
+      if (isPromiseLike(ret)) {
+        return Promise.resolve(ret).then((ret) =>
+          bindingifyResolveDynamicImportResult(args, ret, specifier, attributes),
+        );
+      }
+      return bindingifyResolveDynamicImportResult(args, ret, specifier, attributes);
     },
-    meta: bindingifyPluginHookMeta(meta),
+  }));
+}
+
+function bindingifyResolveDynamicImportResult(
+  args: BindingifyPluginArgs,
+  ret: ResolveIdResult,
+  specifier: string,
+  attributes: Record<string, string>,
+): BindingHookResolveIdOutput | undefined {
+  if (ret == null) {
+    return;
+  }
+  if (ret === false) {
+    return {
+      id: specifier,
+      external: true,
+    };
+  }
+  if (typeof ret === 'string') {
+    return {
+      id: ret,
+    };
+  }
+
+  const result: BindingHookResolveIdOutput = {
+    id: ret.id,
+    external: ret.external,
+    packageJsonPath: ret.packageJsonPath,
+    attributes: ret.attributes,
   };
+
+  if (ret.moduleSideEffects !== null) {
+    result.moduleSideEffects = ret.moduleSideEffects;
+  }
+
+  args.pluginContextData.updateModuleOption(
+    args.pluginContextData.toModuleId(ret.id, ret.attributes ?? attributes),
+    {
+      meta: ret.meta || {},
+      moduleSideEffects: ret.moduleSideEffects || null,
+      invalidate: false,
+    },
+  );
+
+  return result;
 }
 
 export function bindingifyTransform(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['transform'], BindingHookFilter | undefined> {
-  const hook = args.plugin.transform;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta, options } = normalizeHook(hook);
-
-  return {
-    plugin: async (ctx, code, id, meta) => {
+  return bindingifyHook(args.plugin.transform, ({ handler, options }) => ({
+    plugin: (ctx, code, id, bindingMeta) => {
       let magicStringInstance: RolldownMagicString, astInstance: Program;
+      const meta = {
+        ...bindingMeta,
+        rawId: bindingMeta.rawId ?? id,
+        attributes: bindingMeta.attributes ?? {},
+      };
       Object.defineProperties(meta, {
         magicString: {
           get() {
@@ -255,72 +254,86 @@ export function bindingifyTransform(
         args.logLevel,
         args.watchMode,
       );
-      const ret = await handler.call(transformCtx, code, id, meta);
+      const ret = handler.call(transformCtx, code, id, meta);
 
-      if (ret == null) {
-        return undefined;
+      if (isPromiseLike(ret)) {
+        return Promise.resolve(ret).then((ret) =>
+          bindingifyTransformResult(args, ret, ctx, code, id),
+        );
       }
-
-      if (typeof ret === 'string') {
-        return { code: ret };
-      }
-
-      let moduleOption = args.pluginContextData.updateModuleOption(id, {
-        meta: ret.meta ?? {},
-        moduleSideEffects: ret.moduleSideEffects ?? null,
-        invalidate: false,
-      });
-
-      let normalizedCode: string | undefined = undefined;
-      let map = ret.map;
-      let mapHandledByNativeChannel = false;
-      if (typeof ret.code === 'string') {
-        normalizedCode = ret.code;
-      } else if (ret.code instanceof RolldownMagicString) {
-        let magicString = ret.code as RolldownMagicString;
-        normalizedCode = magicString.toString();
-        // If the option is not enable we should just return soucemapJsonString
-        let fallbackSourcemap = ctx.sendMagicString(magicString);
-        if (fallbackSourcemap != undefined) {
-          map = fallbackSourcemap;
-        } else {
-          // `experimental.nativeMagicString` is enabled: the sourcemap is
-          // generated natively and delivered out-of-band via the magic-string
-          // channel. Signal `null` (an explicit "no map on this output object")
-          // rather than `undefined`, otherwise the Rust side treats this
-          // transform as a missing/broken sourcemap (`Omitted`) and the empty
-          // sentinel wipes out the real map produced by the channel.
-          mapHandledByNativeChannel = true;
-        }
-      }
-
-      return {
-        code: normalizedCode,
-        // Preserve the `map: null` (intentional opt-out) vs `map: undefined`
-        map:
-          bindingifySourcemap(normalizeTransformHookSourcemap(id, code, map)) ??
-          (mapHandledByNativeChannel || ret.map === null ? null : undefined),
-        moduleSideEffects: moduleOption.moduleSideEffects ?? undefined,
-        moduleType: ret.moduleType,
-      };
+      return bindingifyTransformResult(args, ret, ctx, code, id);
     },
-    meta: bindingifyPluginHookMeta(meta),
     filter: bindingifyTransformFilter(options.filter),
+  }));
+}
+
+function bindingifyTransformResult(
+  args: BindingifyPluginArgs,
+  ret: TransformResult,
+  ctx: BindingTransformPluginContext,
+  code: string,
+  id: string,
+): BindingHookTransformOutput | undefined {
+  if (ret == null) {
+    return undefined;
+  }
+
+  if (typeof ret === 'string') {
+    return { code: ret };
+  }
+
+  let moduleOption = args.pluginContextData.updateModuleOption(id, {
+    meta: ret.meta ?? {},
+    moduleSideEffects: ret.moduleSideEffects ?? null,
+    invalidate: false,
+  });
+
+  let normalizedCode: string | undefined = undefined;
+  let map = ret.map;
+  let mapHandledByNativeChannel = false;
+  if (typeof ret.code === 'string') {
+    normalizedCode = ret.code;
+  } else if (ret.code instanceof RolldownMagicString) {
+    let magicString = ret.code as RolldownMagicString;
+    normalizedCode = magicString.toString();
+    // Rolldown generates the map from the MagicString only when the hook returns no `map`,
+    // the same as in `renderChunk`. An own `map` or `map: null` is used as it is. A
+    // generated map in addition to an own map would apply the edits of this step two times.
+    if (ret.map === undefined) {
+      // If the option is not enable we should just return soucemapJsonString
+      let fallbackSourcemap = ctx.sendMagicString(magicString);
+      if (fallbackSourcemap != undefined) {
+        map = fallbackSourcemap;
+      } else {
+        // `experimental.nativeMagicString` is enabled: the sourcemap is
+        // generated natively and delivered out-of-band via the magic-string
+        // channel. Signal `null` (an explicit "no map on this output object")
+        // rather than `undefined`, otherwise the Rust side treats this
+        // transform as a missing/broken sourcemap (`Omitted`) and the empty
+        // sentinel wipes out the real map produced by the channel.
+        mapHandledByNativeChannel = true;
+      }
+    }
+  }
+
+  return {
+    code: normalizedCode,
+    // Preserve the `map: null` (intentional opt-out) vs `map: undefined`
+    map:
+      bindingifySourcemap(normalizeTransformHookSourcemap(id, code, map)) ??
+      (mapHandledByNativeChannel || ret.map === null ? null : undefined),
+    moduleSideEffects: moduleOption.moduleSideEffects ?? undefined,
+    moduleType: ret.moduleType,
   };
 }
 
 export function bindingifyLoad(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['load'], BindingHookFilter | undefined> {
-  const hook = args.plugin.load;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta, options } = normalizeHook(hook);
-
-  return {
-    plugin: async (ctx, id) => {
-      const ret = await handler.call(
+  return bindingifyHook(args.plugin.load, ({ handler, options }) => ({
+    plugin: (ctx, id, bindingExtraOptions) => {
+      const extraOptions = bindingExtraOptions ?? { rawId: id, attributes: {} };
+      const ret = handler.call(
         new LoadPluginContextImpl(
           args.outputOptions,
           ctx.inner(),
@@ -333,33 +346,47 @@ export function bindingifyLoad(
           args.watchMode,
         ),
         id,
+        extraOptions,
       );
 
-      if (ret == null) {
-        return;
+      if (isPromiseLike(ret)) {
+        return Promise.resolve(ret).then((ret) =>
+          bindingifyLoadResult(args, ret, id, extraOptions.rawId),
+        );
       }
-
-      if (typeof ret === 'string') {
-        return { code: ret };
-      }
-
-      let moduleOption = args.pluginContextData.updateModuleOption(id, {
-        meta: ret.meta || {},
-        moduleSideEffects: ret.moduleSideEffects ?? null,
-        invalidate: false,
-      });
-
-      let map = preProcessSourceMap(ret, id);
-
-      return {
-        code: ret.code,
-        map: bindingifySourcemap(map),
-        moduleType: ret.moduleType,
-        moduleSideEffects: moduleOption.moduleSideEffects ?? undefined,
-      };
+      return bindingifyLoadResult(args, ret, id, extraOptions.rawId);
     },
-    meta: bindingifyPluginHookMeta(meta),
     filter: bindingifyLoadFilter(options.filter),
+  }));
+}
+
+function bindingifyLoadResult(
+  args: BindingifyPluginArgs,
+  ret: LoadResult,
+  id: string,
+  rawId: string,
+): BindingHookLoadOutput | undefined {
+  if (ret == null) {
+    return;
+  }
+
+  if (typeof ret === 'string') {
+    return { code: ret };
+  }
+
+  let moduleOption = args.pluginContextData.updateModuleOption(id, {
+    meta: ret.meta || {},
+    moduleSideEffects: ret.moduleSideEffects ?? null,
+    invalidate: false,
+  });
+
+  let map = preProcessSourceMap(ret, rawId);
+
+  return {
+    code: ret.code,
+    map: bindingifySourcemap(map),
+    moduleType: ret.moduleType,
+    moduleSideEffects: moduleOption.moduleSideEffects ?? undefined,
   };
 }
 
@@ -370,7 +397,11 @@ function preProcessSourceMap(
   if (!ret.map) {
     return;
   }
-  let map = typeof ret.map === 'object' ? ret.map : (JSON.parse(ret.map) as ExistingRawSourceMap);
+  // Work on a copy, so the write to `sources` below does not change the plugin's object.
+  let map =
+    typeof ret.map === 'object'
+      ? copySourcemapObject(ret.map)
+      : (JSON.parse(ret.map) as ExistingRawSourceMap);
   if (!isEmptySourcemapFiled(map.sources)) {
     // normalize original sourcemap sources
     // Port form https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts#L180-L188.
@@ -384,19 +415,14 @@ function preProcessSourceMap(
 export function bindingifyModuleParsed(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['moduleParsed']> {
-  const hook = args.plugin.moduleParsed;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta } = normalizeHook(hook);
-
-  return {
-    plugin: async (ctx, moduleInfo) => {
-      await handler.call(
-        createPluginContext(args, ctx),
-        transformModuleInfo(moduleInfo, args.pluginContextData.getModuleOption(moduleInfo.id)),
+  return bindingifyHook(args.plugin.moduleParsed, ({ handler }) => ({
+    plugin: (ctx, moduleInfo) => {
+      return discardResult(
+        handler.call(
+          createPluginContext(args, ctx),
+          transformModuleInfo(moduleInfo, args.pluginContextData.getModuleOption(moduleInfo.id)),
+        ),
       );
     },
-    meta: bindingifyPluginHookMeta(meta),
-  };
+  }));
 }

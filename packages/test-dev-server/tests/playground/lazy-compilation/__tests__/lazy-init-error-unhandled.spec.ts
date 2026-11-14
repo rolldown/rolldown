@@ -25,6 +25,7 @@ async function clickAndExpectUnhandled() {
 describe('lazy-compilation: lazy-init-error (no handler)', () => {
   test('init error surfaces as an unhandled rejection on first compile and after a refresh', async () => {
     await page.goto(serverUrl, { waitUntil: 'domcontentloaded' });
+    await waitForBuildStable();
 
     // 1. Cold: first compile.
     await clickAndExpectUnhandled();

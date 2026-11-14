@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 var main_default = 41;
-//#endregion
 export { main_default as default };
 
 ```

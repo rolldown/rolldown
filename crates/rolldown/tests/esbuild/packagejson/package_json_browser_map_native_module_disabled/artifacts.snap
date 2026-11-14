@@ -7,10 +7,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region (ignored) node_modules/demo-pkg
+// (ignored) node_modules/demo-pkg
 var require_demo_pkg$1 = /* @__PURE__ */ __commonJSMin((() => {}));
-//#endregion
-//#region src/entry.js
+// src/entry.js
 var import_demo_pkg = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const fs = require_demo_pkg$1();
 	module.exports = function() {
@@ -18,6 +17,5 @@ var import_demo_pkg = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((e
 	};
 })))());
 console.log((0, import_demo_pkg.default)());
-//#endregion
 
 ```

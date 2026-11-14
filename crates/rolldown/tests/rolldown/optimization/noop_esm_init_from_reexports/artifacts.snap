@@ -1,0 +1,37 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+// star.js
+function star$1() {
+	return "star ";
+}
+// named.js
+function named$1() {
+	return "named ";
+}
+// imported.js
+function imported() {
+	return "imported";
+}
+// lazy.js
+var lazy_exports = /* @__PURE__ */ __exportAll({
+	named: () => named$1,
+	star: () => star$1,
+	value: () => value$1
+});
+var value$1;
+var init_lazy = __esmMin((() => {
+	value$1 = imported();
+}));
+// main.js
+const { star, named, value } = await Promise.resolve().then(() => (init_lazy(), lazy_exports));
+assert.strictEqual(star() + named() + value, "star named imported");
+
+```

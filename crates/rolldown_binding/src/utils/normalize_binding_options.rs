@@ -1,20 +1,22 @@
 use super::normalize_binding_transform_options;
 use crate::options::BindingGeneratedCodeOptions;
 use crate::options::binding_manual_code_splitting_options::{
-  BindingChunkingContext, BindingManualCodeSplittingOptions,
+  BindingChunkingContext, BindingManualCodeSplittingOptions, BindingMatchGroupTest,
 };
 use crate::options::{
   AssetFileNamesOutputOption, BindingOnLog, ChunkFileNamesOutputOption, SanitizeFileName,
   SourcemapIgnoreListOutputOption,
 };
+use crate::types::binding_plugin_timings::BindingPluginTimingsMeasurement;
 use crate::types::binding_string_or_regex::{
   BindingStringOrRegex, bindingify_string_or_regex_array,
 };
 use crate::types::defer_sync_scan_data::BindingDeferSyncScanData;
 use crate::{
   options::binding_inject_import::normalize_binding_inject_import,
-  types::js_callback::{
-    JsCallbackResultExt, {JsCallback, JsCallbackExt},
+  types::{
+    js_callback::{JsCallbackExt, JsCallbackResultExt},
+    js_callback_release::{JsCallbackRelease, UntrackedJsCallback},
   },
 };
 #[cfg_attr(target_family = "wasm", allow(unused))]
@@ -27,9 +29,11 @@ use oxc::transformer::EngineTargets;
 use rolldown::{
   AddonOutputOption, AssetFilenamesOutputOption, BundlerConfig, BundlerOptions,
   ChunkFilenamesOutputOption, CodeSplittingMode, DeferSyncScanDataOption, HashCharacters,
-  IsExternal, ManualCodeSplittingOptions, MatchGroup, MatchGroupName, ModuleType,
-  OptimizationOption, OutputExports, OutputFormat, Platform, RawCompressOptions, RawMangleOptions,
-  RawMinifyOptions, RawMinifyOptionsDetailed, SanitizeFilename, StrictMode, TsConfig,
+  InlineCommonChunksOptions, IsExternal, ManglePropertiesPattern, ManglePropertiesPatterns,
+  ManualCodeSplittingOptions, MatchGroup, MatchGroupName, ModuleType, OptimizationOption,
+  OutputCharset, OutputExports, OutputFormat, Platform, PluginTimingsOption, RawCompressOptions,
+  RawMangleOptions, RawManglePropertiesOptions, RawMinifyOptions, RawMinifyOptionsDetailed,
+  SanitizeFilename, StrictMode, TsConfig,
 };
 use rolldown_common::DeferSyncScanData;
 use rolldown_common::GeneratedCodeOptions;
@@ -65,115 +69,143 @@ fn normalize_generated_code_option(
 fn normalize_addon_option(
   addon_option: Option<crate::options::AddonOutputOption>,
   name: &'static str,
+  callbacks: &JsCallbackRelease,
 ) -> Option<AddonOutputOption> {
   addon_option.map(move |value| match value {
     // Static string - no JS function call needed
     Either::A(string) => AddonOutputOption::String(Some(string)),
     // Dynamic function
-    Either::B(fn_js) => AddonOutputOption::Fn(Arc::new(move |chunk| {
-      let fn_js = Arc::clone(&fn_js);
-      Box::pin(async move {
-        fn_js
-          .await_call(FnArgs { data: (BindingRenderedChunk::new(chunk),) })
-          .await
-          .context(name)
-          .map_err(anyhow::Error::from)
-      })
-    })),
+    Either::B(fn_js) => {
+      let fn_js = callbacks.track(fn_js);
+      AddonOutputOption::Fn(Arc::new(move |chunk| {
+        let fn_js = fn_js.clone();
+        Box::pin(async move {
+          fn_js
+            .await_call(FnArgs { data: (BindingRenderedChunk::new(chunk),) })
+            .await
+            .context(name)
+            .map_err(anyhow::Error::from)
+        })
+      }))
+    }
   })
 }
 
 fn normalize_chunk_file_names_option(
   option: Option<ChunkFileNamesOutputOption>,
   name: &'static str,
+  callbacks: &JsCallbackRelease,
 ) -> napi::Result<Option<ChunkFilenamesOutputOption>> {
   option
     .map(move |value| match value {
       Either::A(str) => Ok(ChunkFilenamesOutputOption::String(str)),
-      Either::B(func) => Ok(ChunkFilenamesOutputOption::Fn(Arc::new(move |chunk| {
-        let func = Arc::clone(&func);
-        let chunk = (chunk.clone().into(),);
-        Box::pin(async move {
-          func.invoke_async(FnArgs { data: chunk }).await.context(name).map_err(anyhow::Error::from)
-        })
-      }))),
+      Either::B(func) => {
+        let func = callbacks.track(func);
+        Ok(ChunkFilenamesOutputOption::Fn(Arc::new(move |chunk| {
+          let func = func.clone();
+          let chunk = (chunk.clone().into(),);
+          Box::pin(async move {
+            func
+              .invoke_async(FnArgs { data: chunk })
+              .await
+              .context(name)
+              .map_err(anyhow::Error::from)
+          })
+        })))
+      }
     })
     .transpose()
 }
 
 fn normalize_sanitize_filename(
   option: Option<SanitizeFileName>,
+  callbacks: &JsCallbackRelease,
 ) -> napi::Result<Option<SanitizeFilename>> {
   option
     .map(move |value| match value {
       Either::A(value) => Ok(SanitizeFilename::Boolean(value)),
-      Either::B(func) => Ok(SanitizeFilename::Fn(Arc::new(move |name| {
-        let func = Arc::clone(&func);
-        let name = name.to_string();
-        Box::pin(async move {
-          func
-            .invoke_async(FnArgs { data: (name,) })
-            .await
-            .context("sanitizeFileName option")
-            .map_err(anyhow::Error::from)
-        })
-      }))),
+      Either::B(func) => {
+        let func = callbacks.track(func);
+        Ok(SanitizeFilename::Fn(Arc::new(move |name| {
+          let func = func.clone();
+          let name = name.to_string();
+          Box::pin(async move {
+            func
+              .invoke_async(FnArgs { data: (name,) })
+              .await
+              .context("sanitizeFileName option")
+              .map_err(anyhow::Error::from)
+          })
+        })))
+      }
     })
     .transpose()
 }
 
 fn normalize_asset_file_names_option(
   option: Option<AssetFileNamesOutputOption>,
+  callbacks: &JsCallbackRelease,
 ) -> napi::Result<Option<AssetFilenamesOutputOption>> {
   option
     .map(move |value| match value {
       Either::A(str) => Ok(AssetFilenamesOutputOption::String(str)),
-      Either::B(func) => Ok(AssetFilenamesOutputOption::Fn(Arc::new(move |asset| {
-        let func = Arc::clone(&func);
-        let asset = (asset.clone().into(),);
-        Box::pin(async move {
-          func
-            .invoke_async(FnArgs { data: asset })
-            .await
-            .context("assetFileNames option")
-            .map_err(anyhow::Error::from)
-        })
-      }))),
+      Either::B(func) => {
+        let func = callbacks.track(func);
+        Ok(AssetFilenamesOutputOption::Fn(Arc::new(move |asset| {
+          let func = func.clone();
+          let asset = (asset.clone().into(),);
+          Box::pin(async move {
+            func
+              .invoke_async(FnArgs { data: asset })
+              .await
+              .context("assetFileNames option")
+              .map_err(anyhow::Error::from)
+          })
+        })))
+      }
     })
     .transpose()
 }
 
 fn normalize_globals_option(
   option: Option<crate::options::GlobalsOutputOption>,
+  callbacks: &JsCallbackRelease,
 ) -> Option<rolldown_common::GlobalsOutputOption> {
   option.map(move |value| match value {
     Either::A(hash_map) => rolldown_common::GlobalsOutputOption::FxHashMap(hash_map),
-    Either::B(func) => rolldown_common::GlobalsOutputOption::Fn(Arc::new(move |name| {
-      let func = Arc::clone(&func);
-      let name = name.to_string();
-      Box::pin(async move {
-        func
-          .invoke_async((name,).into())
-          .await
-          .context("globals option")
-          .map_err(anyhow::Error::from)
-      })
-    })),
+    Either::B(func) => {
+      let func = callbacks.track(func);
+      rolldown_common::GlobalsOutputOption::Fn(Arc::new(move |name| {
+        let func = func.clone();
+        let name = name.to_string();
+        Box::pin(async move {
+          func
+            .invoke_async((name,).into())
+            .await
+            .context("globals option")
+            .map_err(anyhow::Error::from)
+        })
+      }))
+    }
   })
 }
 
 fn normalize_paths_option(
   option: Option<crate::options::PathsOutputOption>,
+  callbacks: &JsCallbackRelease,
 ) -> Option<rolldown_common::PathsOutputOption> {
   option.map(move |value| match value {
     Either::A(hash_map) => rolldown_common::PathsOutputOption::FxHashMap(hash_map),
-    Either::B(func) => rolldown_common::PathsOutputOption::Fn(Arc::new(move |id| {
-      let func = Arc::clone(&func);
-      let id = id.to_string();
-      Box::pin(async move {
-        func.invoke_async((id,).into()).await.context("paths option").map_err(anyhow::Error::from)
-      })
-    })),
+    Either::B(func) => {
+      let func = callbacks.track(func);
+      rolldown_common::PathsOutputOption::Fn(Arc::new(move |id| {
+        let func = func.clone();
+        let id = id.to_string();
+        Box::pin(async move {
+          func.invoke_async((id,).into()).await.context("paths option").map_err(anyhow::Error::from)
+        })
+      }))
+    }
   })
 }
 
@@ -218,16 +250,21 @@ fn napi_compress_options_to_raw_compress_options(
 
 fn normalize_external_option(
   external: Option<
-    Either<Vec<BindingStringOrRegex>, JsCallback<FnArgs<(String, Option<String>, bool)>, bool>>,
+    Either<
+      Vec<BindingStringOrRegex>,
+      UntrackedJsCallback<FnArgs<(String, Option<String>, bool)>, bool>,
+    >,
   >,
+  callbacks: &JsCallbackRelease,
 ) -> Option<IsExternal> {
   external.map(|external| match external {
     Either::A(patterns) => IsExternal::StringOrRegex(bindingify_string_or_regex_array(patterns)),
     Either::B(is_external) => {
+      let is_external = callbacks.track(is_external);
       IsExternal::Fn(Some(Arc::new(move |source, importer, is_resolved| {
         let source = source.to_string();
         let importer = importer.map(ToString::to_string);
-        let is_external = Arc::clone(&is_external);
+        let is_external = is_external.clone();
         Box::pin(async move {
           is_external
             .invoke_async((source.clone(), importer, is_resolved).into())
@@ -240,12 +277,34 @@ fn normalize_external_option(
   })
 }
 
+fn normalize_plugin_timings_option(
+  plugin_timings: Option<UntrackedJsCallback<(), BindingPluginTimingsMeasurement>>,
+  callbacks: &JsCallbackRelease,
+) -> Option<PluginTimingsOption> {
+  plugin_timings.map(|ts_fn| {
+    let ts_fn = callbacks.track(ts_fn);
+    PluginTimingsOption::new(move || {
+      let ts_fn = ts_fn.clone();
+      Box::pin(async move {
+        ts_fn
+          .invoke_async(())
+          .await
+          .context("pluginTimings option")
+          .map(Into::into)
+          .map_err(anyhow::Error::from)
+      })
+    })
+  })
+}
+
 fn normalize_defer_sync_scan_data_option(
-  defer_sync_scan_data: Option<JsCallback<(), Vec<BindingDeferSyncScanData>>>,
+  defer_sync_scan_data: Option<UntrackedJsCallback<(), Vec<BindingDeferSyncScanData>>>,
+  callbacks: &JsCallbackRelease,
 ) -> Option<DeferSyncScanDataOption> {
   defer_sync_scan_data.map(|ts_fn| {
+    let ts_fn = callbacks.track(ts_fn);
     DeferSyncScanDataOption::new(move || {
-      let ts_fn = Arc::clone(&ts_fn);
+      let ts_fn = ts_fn.clone();
       Box::pin(async move {
         ts_fn
           .invoke_async(())
@@ -262,6 +321,7 @@ fn normalize_defer_sync_scan_data_option(
 
 fn normalize_sourcemap_ignore_list_option(
   sourcemap_ignore_list: Option<SourcemapIgnoreListOutputOption>,
+  callbacks: &JsCallbackRelease,
 ) -> Option<rolldown::SourceMapIgnoreList> {
   sourcemap_ignore_list.map(|option| match option {
     Either3::A(bool_val) => rolldown::SourceMapIgnoreList::from_bool(bool_val),
@@ -269,16 +329,17 @@ fn normalize_sourcemap_ignore_list_option(
       rolldown::SourceMapIgnoreList::from_string_or_regex(string_or_regex.inner())
     }
     Either3::C(ts_fn) => {
-      rolldown::SourceMapIgnoreList::new(Arc::new(move |source, sourcemap_path| {
-        let ts_fn = Arc::clone(&ts_fn);
-        let source = source.to_string();
+      let ts_fn = callbacks.track(ts_fn);
+      rolldown::SourceMapIgnoreList::new(Arc::new(move |sources, sourcemap_path| {
+        let ts_fn = ts_fn.clone();
         let sourcemap_path = sourcemap_path.to_string();
         Box::pin(async move {
           ts_fn
-            .invoke_async((source, sourcemap_path).into())
+            .invoke_async((sources, sourcemap_path).into())
             .await
             .context("sourcemapIgnoreList option")
             .map_err(anyhow::Error::from)
+            .map(|flags| flags.iter().map(|flag| *flag != 0).collect())
         })
       }))
     }
@@ -286,16 +347,17 @@ fn normalize_sourcemap_ignore_list_option(
 }
 
 fn normalize_sourcemap_path_transform_option(
-  sourcemap_path_transform: Option<JsCallback<FnArgs<(String, String)>, String>>,
+  sourcemap_path_transform: Option<UntrackedJsCallback<FnArgs<(Vec<String>, String)>, Vec<String>>>,
+  callbacks: &JsCallbackRelease,
 ) -> Option<rolldown::SourceMapPathTransform> {
   sourcemap_path_transform.map(|ts_fn| {
-    rolldown::SourceMapPathTransform::new(Arc::new(move |source, sourcemap_path| {
-      let ts_fn = Arc::clone(&ts_fn);
-      let source = source.to_string();
+    let ts_fn = callbacks.track(ts_fn);
+    rolldown::SourceMapPathTransform::new(Arc::new(move |sources, sourcemap_path| {
+      let ts_fn = ts_fn.clone();
       let sourcemap_path = sourcemap_path.to_string();
       Box::pin(async move {
         ts_fn
-          .invoke_async((source, sourcemap_path).into())
+          .invoke_async((sources, sourcemap_path).into())
           .await
           .context("sourcemapPathTransform option")
           .map_err(anyhow::Error::from)
@@ -305,40 +367,68 @@ fn normalize_sourcemap_path_transform_option(
 }
 
 fn normalize_invalidate_js_side_cache_option(
-  invalidate_js_side_cache: Option<JsCallback>,
+  invalidate_js_side_cache: Option<UntrackedJsCallback>,
+  error_context: &'static str,
+  callbacks: &JsCallbackRelease,
 ) -> Option<rolldown::InvalidateJsSideCache> {
   invalidate_js_side_cache.map(|ts_fn| {
+    let ts_fn = callbacks.track(ts_fn);
     rolldown::InvalidateJsSideCache::new(Arc::new(move || {
-      let ts_fn = Arc::clone(&ts_fn);
+      let ts_fn = ts_fn.clone();
       Box::pin(async move {
-        ts_fn
-          .invoke_async(())
-          .await
-          .context("invalidateJsSideCache option")
-          .map_err(anyhow::Error::from)
+        ts_fn.invoke_async(()).await.context(error_context).map_err(anyhow::Error::from)
       })
     }))
   })
 }
 
-fn normalize_on_log_option(on_log: BindingOnLog) -> Option<rolldown::OnLog> {
+fn normalize_on_log_option(
+  on_log: BindingOnLog,
+  callbacks: &JsCallbackRelease,
+) -> Option<rolldown::OnLog> {
   on_log.map(|ts_fn| {
+    let ts_fn = callbacks.track(ts_fn);
     rolldown::OnLog::new(Arc::new(move |level, log| {
-      let ts_fn = Arc::clone(&ts_fn);
-      Box::pin(async move {
-        ts_fn
-          .invoke_async((level.to_string(), log.into()).into())
-          .await
-          .context("onLog option")
-          .map_err(anyhow::Error::from)
-      })
+      // Enqueue the JS callback at call time; the returned future only waits for its result.
+      let result = ts_fn.invoke_eager((level.to_string(), log.into()).into());
+      Box::pin(async move { result.await.context("onLog option").map_err(anyhow::Error::from) })
     }))
   })
+}
+
+/// One `test`-shaped matcher: a string or `RegExp` becomes a regex; a function is the batched
+/// shim the JS side wrapped around the user's per-id predicate.
+fn normalize_match_group_test(
+  test: BindingMatchGroupTest,
+  regex_label: &str,
+  callback_context: &'static str,
+  callbacks: &JsCallbackRelease,
+) -> napi::Result<rolldown::MatchGroupTest> {
+  match test {
+    Either::A(reg) => Ok(rolldown::MatchGroupTest::Regex(reg.try_into().map_err(|err| {
+      napi::Error::from_reason(format!("Invalid regex in {regex_label}: {err}"))
+    })?)),
+    Either::B(func) => {
+      let func = callbacks.track(func);
+      Ok(rolldown::MatchGroupTest::Function(Arc::new(move |module_ids: Vec<String>| {
+        let func = func.clone();
+        Box::pin(async move {
+          func
+            .invoke_async((module_ids,).into())
+            .await
+            .context(callback_context)
+            .map_err(anyhow::Error::from)
+            .map(|flags| flags.iter().map(|flag| *flag != 0).collect())
+        })
+      })))
+    }
+  }
 }
 
 fn normalize_code_splitting(
   manual_code_splitting: Option<BindingManualCodeSplittingOptions>,
   inline_dynamic_imports: Option<bool>,
+  callbacks: &JsCallbackRelease,
 ) -> napi::Result<Option<CodeSplittingMode>> {
   // Reconcile the two still-separate binding inputs — `inlineDynamicImports` and the
   // grouping config (`manualCodeSplitting`, fed from JS `advancedChunks` / `manualChunks`)
@@ -347,6 +437,11 @@ fn normalize_code_splitting(
   let manual_code_splitting = manual_code_splitting
     .map(|inner| -> napi::Result<ManualCodeSplittingOptions> {
       Ok(ManualCodeSplittingOptions {
+        internal_invalidate_module_info_cache: normalize_invalidate_js_side_cache_option(
+          inner.internal_invalidate_module_info_cache,
+          "internalInvalidateModuleInfoCache callback",
+          callbacks,
+        ),
         min_size: inner.min_size,
         min_share_count: inner.min_share_count,
         min_module_size: inner.min_module_size,
@@ -362,15 +457,14 @@ fn normalize_code_splitting(
                   name: match item.name {
                     Either::A(name) => MatchGroupName::Static(name),
                     Either::B(func) => {
-                      let func = Arc::clone(&func);
-                      MatchGroupName::Dynamic(Arc::new(move |module_id, ctx| {
-                        let module_id = module_id.to_string();
-                        let func = Arc::clone(&func);
+                      let func = callbacks.track(func);
+                      MatchGroupName::Dynamic(Arc::new(move |module_ids, ctx| {
+                        let func = func.clone();
                         let owned_ctx = ctx.clone();
                         Box::pin(async move {
                           func
                             .invoke_async(
-                              (module_id, BindingChunkingContext::new(owned_ctx)).into(),
+                              (module_ids, BindingChunkingContext::new(owned_ctx)).into(),
                             )
                             .await
                             .context("advancedChunks group name option")
@@ -381,29 +475,13 @@ fn normalize_code_splitting(
                   },
                   test: item
                     .test
-                    .map(|inner| -> napi::Result<rolldown::MatchGroupTest> {
-                      match inner {
-                        Either::A(reg) => {
-                          Ok(rolldown::MatchGroupTest::Regex(reg.try_into().map_err(|err| {
-                            napi::Error::from_reason(format!(
-                              "Invalid regex in `manualCodeSplitting` group `test`: {err}"
-                            ))
-                          })?))
-                        }
-                        Either::B(func) => {
-                          Ok(rolldown::MatchGroupTest::Function(Arc::new(move |id: &str| {
-                            let id = id.to_string();
-                            let func = Arc::clone(&func);
-                            Box::pin(async move {
-                              func
-                                .invoke_async((id,).into())
-                                .await
-                                .context("advancedChunks group test option")
-                                .map_err(anyhow::Error::from)
-                            })
-                          })))
-                        }
-                      }
+                    .map(|inner| {
+                      normalize_match_group_test(
+                        inner,
+                        "`manualCodeSplitting` group `test`",
+                        "advancedChunks group test option",
+                        callbacks,
+                      )
                     })
                     .transpose()?,
                   priority: item.priority,
@@ -422,6 +500,30 @@ fn normalize_code_splitting(
           })
           .transpose()?,
         include_dependencies_recursively: inner.include_dependencies_recursively,
+        experimental_inline_common_chunks: inner
+          .experimental_inline_common_chunks
+          .map(|inner| -> napi::Result<InlineCommonChunksOptions> {
+            Ok(InlineCommonChunksOptions {
+              max_size: inner.max_size,
+              exclude: inner
+                .exclude
+                .map(|exclude| {
+                  exclude
+                    .into_iter()
+                    .map(|test| {
+                      normalize_match_group_test(
+                        test,
+                        "`codeSplitting.experimentalInlineCommonChunks.exclude`",
+                        "codeSplitting.experimentalInlineCommonChunks.exclude option",
+                        callbacks,
+                      )
+                    })
+                    .collect::<napi::Result<Vec<_>>>()
+                })
+                .transpose()?,
+            })
+          })
+          .transpose()?,
       })
     })
     .transpose()?;
@@ -436,6 +538,14 @@ fn normalize_code_splitting(
   })
 }
 
+/// The result of [`normalize_binding_options`].
+pub struct NormalizedBindingOptions {
+  pub config: BundlerConfig,
+  /// The JS functions of the options. The owner of `config` releases them at the end of its close.
+  /// See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
+  pub callbacks: JsCallbackRelease,
+}
+
 #[expect(clippy::too_many_lines)]
 pub fn normalize_binding_options(
   input_options: crate::options::BindingInputOptions,
@@ -444,19 +554,26 @@ pub fn normalize_binding_options(
     crate::parallel_js_plugin_registry::PluginValues,
   >,
   #[cfg(not(target_family = "wasm"))] worker_manager: Option<WorkerManager>,
-) -> napi::Result<BundlerConfig> {
+) -> napi::Result<NormalizedBindingOptions> {
   let cwd = PathBuf::from(input_options.cwd);
+  // Each JS function of the options goes through `callbacks.track`.
+  let callbacks = JsCallbackRelease::default();
 
-  let external = normalize_external_option(input_options.external);
+  let external = normalize_external_option(input_options.external, &callbacks);
   let get_defer_sync_scan_data =
-    normalize_defer_sync_scan_data_option(input_options.defer_sync_scan_data);
+    normalize_defer_sync_scan_data_option(input_options.defer_sync_scan_data, &callbacks);
+  let get_plugin_timings =
+    normalize_plugin_timings_option(input_options.plugin_timings, &callbacks);
   let sourcemap_ignore_list =
-    normalize_sourcemap_ignore_list_option(output_options.sourcemap_ignore_list);
+    normalize_sourcemap_ignore_list_option(output_options.sourcemap_ignore_list, &callbacks);
   let sourcemap_path_transform =
-    normalize_sourcemap_path_transform_option(output_options.sourcemap_path_transform);
-  let invalidate_js_side_cache =
-    normalize_invalidate_js_side_cache_option(input_options.invalidate_js_side_cache);
-  let on_log = normalize_on_log_option(input_options.on_log);
+    normalize_sourcemap_path_transform_option(output_options.sourcemap_path_transform, &callbacks);
+  let invalidate_js_side_cache = normalize_invalidate_js_side_cache_option(
+    input_options.invalidate_js_side_cache,
+    "invalidateJsSideCache option",
+    &callbacks,
+  );
+  let on_log = normalize_on_log_option(input_options.on_log, &callbacks);
 
   let mut module_types = None;
   if let Some(raw) = input_options.module_types {
@@ -478,7 +595,9 @@ pub fn normalize_binding_options(
     cwd: cwd.into(),
     external,
     treeshake: match input_options.treeshake {
-      Some(v) => v.try_into().map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))?,
+      Some(v) => v
+        .into_treeshake_options(&callbacks)
+        .map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))?,
       None => rolldown::TreeshakeOptions::Boolean(false),
     },
     resolve: input_options.resolve.map(Into::into),
@@ -490,29 +609,62 @@ pub fn normalize_binding_options(
       .map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))?,
     shim_missing_exports: input_options.shim_missing_exports,
     name: output_options.name,
-    asset_filenames: normalize_asset_file_names_option(output_options.asset_file_names)?,
+    asset_filenames: normalize_asset_file_names_option(
+      output_options.asset_file_names,
+      &callbacks,
+    )?,
     entry_filenames: normalize_chunk_file_names_option(
       output_options.entry_file_names,
       "entryFileNames option",
+      &callbacks,
     )?,
     chunk_filenames: normalize_chunk_file_names_option(
       output_options.chunk_file_names,
       "chunkFileNames option",
+      &callbacks,
     )?,
-    sanitize_filename: normalize_sanitize_filename(output_options.sanitize_file_name)?,
+    sanitize_filename: normalize_sanitize_filename(output_options.sanitize_file_name, &callbacks)?,
     dir: output_options.dir,
     file: output_options.file,
+    charset: output_options
+      .charset
+      .map(|charset| {
+        Ok(match charset.as_str() {
+          "ascii" => OutputCharset::Ascii,
+          "utf8" => OutputCharset::Utf8,
+          _ => {
+            return Err(napi::Error::new(
+              napi::Status::InvalidArg,
+              format!("Invalid value \"{charset}\" for option \"output.charset\" - valid values are \"ascii\" and \"utf8\"."),
+            ));
+          }
+        })
+      })
+      .transpose()?,
     sourcemap: output_options.sourcemap.map(Into::into),
     es_module: output_options.es_module.map(|es_module| match es_module {
       Either::A(es_module_bool) => es_module_bool.into(),
       Either::B(es_module_string) => es_module_string.into(),
     }),
-    banner: normalize_addon_option(output_options.banner, "banner option"),
-    footer: normalize_addon_option(output_options.footer, "footer option"),
-    post_banner: normalize_addon_option(output_options.post_banner, "post_banner option"),
-    post_footer: normalize_addon_option(output_options.post_footer, "post_footer option"),
-    intro: normalize_addon_option(output_options.intro, "intro option"),
-    outro: normalize_addon_option(output_options.outro, "outro option"),
+    banner: normalize_addon_option(output_options.banner, "banner option", &callbacks),
+    footer: normalize_addon_option(output_options.footer, "footer option", &callbacks),
+    post_banner: normalize_addon_option(
+      output_options.post_banner,
+      "post_banner option",
+      &callbacks,
+    ),
+    post_footer: normalize_addon_option(
+      output_options.post_footer,
+      "post_footer option",
+      &callbacks,
+    ),
+    intro: normalize_addon_option(output_options.intro, "intro option", &callbacks),
+    outro: normalize_addon_option(output_options.outro, "outro option", &callbacks),
+    sourcemap_filenames: normalize_chunk_file_names_option(
+      output_options.sourcemap_file_names,
+      "sourcemapFileNames option",
+      &callbacks,
+    )?,
     sourcemap_base_url: output_options
       .sourcemap_base_url
       .map(|maybe_url| {
@@ -587,8 +739,8 @@ pub fn normalize_binding_options(
         })
       })
       .transpose()?,
-    globals: normalize_globals_option(output_options.globals),
-    paths: normalize_paths_option(output_options.paths),
+    globals: normalize_globals_option(output_options.globals, &callbacks),
+    paths: normalize_paths_option(output_options.paths, &callbacks),
     generated_code: output_options
       .generated_code
       .map(normalize_generated_code_option)
@@ -610,8 +762,27 @@ pub fn normalize_binding_options(
             Err(napi::Error::new(napi::Status::InvalidArg, "Invalid minify option"))
           }
         }
-        napi::bindgen_prelude::Either3::C(opts) => {
+        napi::bindgen_prelude::Either3::C(mut opts) => {
           {
+            let mangle_properties = opts
+              .mangle_props
+              .take()
+              .map(|options| -> Result<RawManglePropertiesOptions, String> {
+                let compiled = oxc::minifier::ManglePropertiesOptions::try_from(&options)?;
+                let patterns = ManglePropertiesPatterns {
+                  include: ManglePropertiesPattern {
+                    source: options.include.source,
+                    flags: options.include.flags,
+                  },
+                  exclude: options.exclude.map(|exclude| ManglePropertiesPattern {
+                    source: exclude.source,
+                    flags: exclude.flags,
+                  }),
+                };
+                Ok(RawManglePropertiesOptions { options: compiled, patterns })
+              })
+              .transpose()
+              .map_err(|err| napi::Error::new(napi::Status::InvalidArg, err))?;
             let mangle = match &opts.mangle {
               Some(Either::A(false)) => None,
               None | Some(Either::A(true)) => Some(RawMangleOptions::default()),
@@ -625,6 +796,10 @@ pub fn normalize_binding_options(
                       class: o.class,
                     },
                 }),
+                reserved: o
+                  .reserved
+                  .as_ref()
+                  .map(|names| names.iter().map(|name| name.as_str().into()).collect()),
               }),
             };
             let compress = match &opts.compress {
@@ -634,11 +809,16 @@ pub fn normalize_binding_options(
             };
             Ok(RawMinifyOptions::Object(RawMinifyOptionsDetailed {
               mangle,
+              mangle_properties: mangle_properties.map(Box::new),
               compress,
               remove_whitespace: match &opts.codegen {
                 None => true,
                 Some(Either::A(bool)) => *bool,
                 Some(Either::B(codegen_opts)) => codegen_opts.remove_whitespace.unwrap_or(true),
+              },
+              ascii_only: match &opts.codegen {
+                Some(Either::B(codegen_opts)) => codegen_opts.ascii_only.unwrap_or(false),
+                None | Some(Either::A(_)) => false,
               },
             }))
           }
@@ -654,11 +834,12 @@ pub fn normalize_binding_options(
     code_splitting: normalize_code_splitting(
       output_options.manual_code_splitting,
       output_options.inline_dynamic_imports,
+      &callbacks,
     )?,
     dynamic_import_in_cjs: output_options.dynamic_import_in_cjs,
     checks: input_options.checks.map(Into::into),
     profiler_names: input_options.profiler_names,
-    watch: input_options.watch.map(TryInto::try_into).transpose()?,
+    watch: input_options.watch.map(|watch| watch.into_watch_option(&callbacks)),
     legal_comments: output_options
       .legal_comments
       .map(|inner| match inner.as_str() {
@@ -682,11 +863,15 @@ pub fn normalize_binding_options(
     keep_names: input_options.keep_names,
     polyfill_require: output_options.polyfill_require,
     defer_sync_scan_data: get_defer_sync_scan_data,
+    plugin_timings: get_plugin_timings,
     transform: transform_options,
     make_absolute_externals_relative: input_options
       .make_absolute_externals_relative
       .map(Into::into),
-    devtools: input_options.devtools.map(|inner| rolldown::DevtoolsOptions { session_id: inner.session_id }),
+    devtools: input_options.devtools.map(|inner| rolldown::DevtoolsOptions {
+      session_id: inner.session_id,
+      mode: inner.mode,
+    }),
     invalidate_js_side_cache,
     log_level: Some(input_options.log_level.into()),
     on_log,
@@ -778,5 +963,5 @@ pub fn normalize_binding_options(
     })
     .collect::<Result<Vec<_>, _>>()?;
 
-  Ok(BundlerConfig::new(bundler_options, plugins))
+  Ok(NormalizedBindingOptions { config: BundlerConfig::new(bundler_options, plugins), callbacks })
 }

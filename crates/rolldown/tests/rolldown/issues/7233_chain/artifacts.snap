@@ -3,23 +3,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## _virtual/_rolldown/runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-exports.__exportAll = __exportAll;
-exports.__reExport = __reExport;
-
-```
-
 ## index.js
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-require("./_virtual/_rolldown/runtime.js");
 require("./middle.js");
 let zod = require("zod");
-//#endregion
 Object.defineProperty(exports, "object", {
 	enumerable: true,
 	get: function() {
@@ -46,7 +35,6 @@ Object.keys(zod).forEach(function(k) {
 ## middle.js
 
 ```js
-require("./_virtual/_rolldown/runtime.js");
 require("./server.js");
 let zod = require("zod");
 Object.defineProperty(exports, "object", {

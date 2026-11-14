@@ -1,7 +1,0 @@
-{
-  "config": {
-    "file": "out.js"
-  },
-  "expectExecuted": false,
-  "expectError": true
-}

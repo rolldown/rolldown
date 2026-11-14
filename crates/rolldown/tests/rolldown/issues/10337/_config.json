@@ -1,0 +1,17 @@
+{
+  "_comment": "Regression test for https://github.com/rolldown/rolldown/issues/10337 - a codeSplitting group pulls a dynamically imported side-effect-free package into a common chunk, so the dynamic entry's facade chunk is empty and gets eliminated. The elimination replay simulates the entry's namespace; that include must not body-demand the entry, otherwise it resurrects the deferred `shaderIntersectFunction` statement and newly includes the glsl leaf AFTER chunk assignment already finished, leaving the leaf chunk-less and panicking in `compute_cross_chunk_links` with `Symbol \"common_functions\" should belong to a chunk`.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "treeshake": {
+      "moduleSideEffects": false
+    },
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "three-mesh-bvh",
+          "test": "three-mesh-bvh"
+        }
+      ]
+    }
+  }
+}

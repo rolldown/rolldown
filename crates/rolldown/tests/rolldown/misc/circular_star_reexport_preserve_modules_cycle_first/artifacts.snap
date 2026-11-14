@@ -1,0 +1,47 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import "./b.js";
+export { foo } from "./e.js";
+import "./d.js";
+
+```
+
+## b.js
+
+```js
+import "./e.js";
+import "./a.js";
+
+```
+
+## d.js
+
+```js
+export { foo } from "./e.js";
+
+```
+
+## e.js
+
+```js
+// e.js
+let foo = globalThis.SEED;
+export { foo };
+
+```
+
+## index.js
+
+```js
+import { foo } from "./e.js";
+import "./a.js";
+// index.js
+console.log(foo);
+
+```

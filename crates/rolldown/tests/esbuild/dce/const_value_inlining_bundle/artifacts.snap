@@ -6,60 +6,53 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## circular-import-entry.js
 
 ```js
-//#region circular-import-cycle.js
+// circular-import-cycle.js
 console.log(bar());
 function bar() {
 	return 123;
 }
-//#endregion
 
 ```
 
 ## circular-re-export-entry.js
 
 ```js
-//#region circular-re-export-cycle.js
+// circular-re-export-cycle.js
 console.log(bar());
 function bar() {
 	return 123;
 }
-//#endregion
-//#region circular-re-export-entry.js
+// circular-re-export-entry.js
 console.log(0);
-//#endregion
 
 ```
 
 ## circular-re-export-star-entry.js
 
 ```js
-//#region circular-re-export-star-cycle.js
+// circular-re-export-star-cycle.js
 console.log(bar());
 function bar() {
 	return 123;
 }
-//#endregion
 
 ```
 
 ## cross-module-entry.js
 
 ```js
-//#endregion
-//#region cross-module-entry.js
+// cross-module-entry.js
 console.log(1, 1);
-//#endregion
 
 ```
 
 ## exported-entry.js
 
 ```js
-//#region exported-entry.js
+// exported-entry.js
 const x_REMOVE = 1;
 const y_keep = 2;
 console.log(x_REMOVE, 2);
-//#endregion
 export { y_keep };
 
 ```
@@ -70,32 +63,27 @@ export { y_keep };
 function bar() {
 	return 123;
 }
-//#endregion
-//#region non-circular-export-entry.js
+// non-circular-export-entry.js
 console.log(123, bar());
-//#endregion
 
 ```
 
 ## print-shorthand-entry.js
 
 ```js
-//#endregion
-//#region print-shorthand-entry.js
+// print-shorthand-entry.js
 console.log({
 	foo: 123,
 	_bar: -321
 });
-//#endregion
 
 ```
 
 ## re-exported-2-entry.js
 
 ```js
-//#region re-exported-2-constants.js
+// re-exported-2-constants.js
 const y_keep = 2;
-//#endregion
 export { y_keep };
 
 ```
@@ -103,12 +91,10 @@ export { y_keep };
 ## re-exported-entry.js
 
 ```js
-//#region re-exported-constants.js
+// re-exported-constants.js
 const y_keep = 2;
-//#endregion
-//#region re-exported-entry.js
+// re-exported-entry.js
 console.log(1, 2);
-//#endregion
 export { y_keep };
 
 ```
@@ -116,10 +102,9 @@ export { y_keep };
 ## re-exported-star-entry.js
 
 ```js
-//#region re-exported-star-constants.js
+// re-exported-star-constants.js
 const x_keep = 1;
 const y_keep = 2;
-//#endregion
 export { x_keep, y_keep };
 
 ```

@@ -1,6 +1,6 @@
 [package]
 name = "rolldown"
-version = "1.1.4"
+version = "1.3.2"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
@@ -36,6 +36,7 @@ oxc_ecmascript = { workspace = true }
 oxc_index = { workspace = true }
 oxc_str = { workspace = true }
 oxc_traverse = { workspace = true }
+percent-encoding = { workspace = true }
 petgraph = { workspace = true }
 rayon = { workspace = true }
 rolldown_common = { workspace = true }
@@ -75,11 +76,11 @@ dunce = { workspace = true }
 insta = { workspace = true }
 regex = { workspace = true }
 rolldown_common = { workspace = true }
-rolldown_testing = { path = "../rolldown_testing" }
+rolldown_testing = { workspace = true }
 rolldown_workspace = { workspace = true }
+saphyr = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
-serde_yaml = { workspace = true }
 sugar_path = { workspace = true }
 testing_macros = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
@@ -90,4 +91,5 @@ doctest = false
 
 [package.metadata.cargo-shear]
 # `serde` is used via feature flag.
-ignored = ["serde"]
+# `serde_json` is used by the `trace_action` macro and enables `preserve_order`.
+ignored = ["serde", "serde_json"]

@@ -6,6 +6,7 @@ import type { RolldownOutput } from '../../types/rolldown-output';
 import { RolldownOutputImpl } from '../../types/rolldown-output-impl';
 import { createBundlerOptions } from '../../utils/create-bundler-option';
 import { unwrapBindingResult } from '../../utils/error';
+import { noop } from '../../utils/misc';
 import { validateOption } from '../../utils/validator';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
 import type { rolldown } from './index';
@@ -24,14 +25,13 @@ export class RolldownBuild {
   #inputOptions: InputOptions;
   #bundler: BindingBundler;
   #stopWorkers?: () => Promise<void>;
-
-  /** @internal */
-  static asyncRuntimeShutdown = false;
+  #closing?: Promise<void>;
 
   /** @hidden should not be used directly */
   constructor(inputOptions: InputOptions) {
     this.#inputOptions = inputOptions;
     this.#bundler = new BindingBundler();
+    startAsyncRuntime();
   }
 
   /**
@@ -91,11 +91,38 @@ export class RolldownBuild {
    * ```
    */
   async close(): Promise<void> {
-    await this.#stopWorkers?.();
-    await this.#bundler.close();
-    shutdownAsyncRuntime();
-    RolldownBuild.asyncRuntimeShutdown = true;
-    this.#stopWorkers = void 0;
+    // Every cleanup step (stop workers, `BindingBundler.close`, release the async runtime) runs
+    // exactly once, even when an earlier step fails, and a repeated `close` never re-runs any of
+    // them: a second native close runs `closeBundle` again, and on wasm it spawns onto the async
+    // runtime the first one released, which traps. The first caller gets any error; a repeat only
+    // waits.
+    // See internal-docs/rust-classic-bundler/implementation.md ("Close Mechanism").
+    if (this.#closing) {
+      await this.#closing.catch(noop);
+      return;
+    }
+    this.#closing = this.#close();
+    await this.#closing;
+  }
+
+  async #close(): Promise<void> {
+    let stopWorkersError: { error: unknown } | undefined;
+    try {
+      try {
+        await this.#stopWorkers?.();
+      } catch (error) {
+        stopWorkersError = { error };
+      }
+      this.#stopWorkers = void 0;
+      // `BindingBundler.close` spawns onto the runtime, so release only after it settles.
+      // If it throws too, its error wins over the worker one.
+      await this.#bundler.close();
+    } finally {
+      shutdownAsyncRuntime();
+    }
+    if (stopWorkersError) {
+      throw stopWorkersError.error;
+    }
   }
 
   /** @hidden documented in close method */
@@ -117,11 +144,12 @@ export class RolldownBuild {
   async #build(isWrite: boolean, outputOptions: OutputOptions): Promise<RolldownOutput> {
     validateOption('output', outputOptions);
     await this.#stopWorkers?.();
-    const option = await createBundlerOptions(this.#inputOptions, outputOptions, false);
-
-    if (RolldownBuild.asyncRuntimeShutdown) {
-      startAsyncRuntime();
-    }
+    const option = await createBundlerOptions(
+      this.#inputOptions,
+      outputOptions,
+      /* watchMode */ false,
+      /* measureTimings */ true,
+    );
 
     try {
       this.#stopWorkers = option.stopWorkers;

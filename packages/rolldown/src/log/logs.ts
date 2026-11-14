@@ -6,9 +6,10 @@ const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
   PLUGIN_ERROR = 'PLUGIN_ERROR',
   INPUT_HOOK_IN_OUTPUT_PLUGIN = 'INPUT_HOOK_IN_OUTPUT_PLUGIN',
   CYCLE_LOADING = 'CYCLE_LOADING',
-  MULTIPLE_WATCHER_OPTION = 'MULTIPLE_WATCHER_OPTION',
+  MISSING_CODE_SPLITTING_GROUP_DEBUG_NAME = 'MISSING_CODE_SPLITTING_GROUP_DEBUG_NAME',
   PARSE_ERROR = 'PARSE_ERROR',
-  NO_FS_IN_BROWSER = 'NO_FS_IN_BROWSER';
+  NO_FS_IN_BROWSER = 'NO_FS_IN_BROWSER',
+  VALIDATION_ERROR = 'VALIDATION_ERROR';
 
 export function logParseError(message: string, id: string | undefined, pos?: number): RolldownLog {
   return {
@@ -16,6 +17,13 @@ export function logParseError(message: string, id: string | undefined, pos?: num
     id,
     message,
     pos,
+  };
+}
+
+export function logFailedValidation(message: string): RolldownLog {
+  return {
+    code: VALIDATION_ERROR,
+    message,
   };
 }
 
@@ -40,10 +48,10 @@ export function logCycleLoading(pluginName: string, moduleId: string): RolldownL
   };
 }
 
-export function logMultipleWatcherOption(): RolldownLog {
+export function logMissingCodeSplittingGroupDebugName(groupPath: string): RolldownLog {
   return {
-    code: MULTIPLE_WATCHER_OPTION,
-    message: `Found multiple watcher options at watch options, using first one to start watcher.`,
+    code: MISSING_CODE_SPLITTING_GROUP_DEBUG_NAME,
+    message: `\`${groupPath}.name\` is a function. Set \`${groupPath}.debugName\` so the bundler timing report can identify this group.`,
   };
 }
 

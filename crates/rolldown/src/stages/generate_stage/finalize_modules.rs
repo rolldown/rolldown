@@ -52,6 +52,10 @@ impl GenerateStage<'_> {
     // Off-strict, lowering never mutates the chunk graph, so the liveness guard cannot fire.
     let strict = self.options.is_strict_execution_order_enabled();
 
+    // Static-import SCC ids, used to keep init calls across a cycle back-edge synchronous.
+    let import_component_ids =
+      super::order_wrapping::static_import_component_ids(&self.link_output.module_table.modules);
+
     let finalized = debug_span!("finalize_modules").in_scope(|| {
       ast_table
         .par_iter_mut_enumerated()
@@ -100,6 +104,7 @@ impl GenerateStage<'_> {
             resolved_file_urls,
             has_enum_inlining,
             inline_state: &self.inline_state,
+            import_component_ids: &import_component_ids,
           };
 
           let (transferred_import_record, mut module_diagnostics) =

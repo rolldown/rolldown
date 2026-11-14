@@ -138,6 +138,35 @@ fn statement_is_direct_reexport(stmt: &Statement) -> bool {
 }
 
 pub(super) fn synchronous_cycle_modules(modules: &IndexModules) -> FxHashSet<ModuleIdx> {
+  let graph = static_import_graph(modules);
+  let mut cyclic = FxHashSet::default();
+  for component in petgraph::algo::tarjan_scc(&graph) {
+    if component.len() > 1 || graph.contains_edge(component[0], component[0]) {
+      cyclic.extend(component);
+    }
+  }
+  cyclic
+}
+
+/// Strongly connected component id per module, or `None` for modules without a static import
+/// edge. Two modules share an id exactly when they can reach each other through static
+/// imports, i.e. when they sit on a common cycle.
+///
+/// Wrapped-ESM init calls between two modules of the same component must stay synchronous:
+/// `__esmMin` settles only after the awaited init returns, so awaiting across a cycle back-edge
+/// makes both initializers wait on each other and the whole graph never settles (#11702).
+pub(super) fn static_import_component_ids(modules: &IndexModules) -> FxHashMap<ModuleIdx, usize> {
+  let graph = static_import_graph(modules);
+  let mut ids = FxHashMap::default();
+  for (id, component) in petgraph::algo::tarjan_scc(&graph).into_iter().enumerate() {
+    for module_idx in component {
+      ids.insert(module_idx, id);
+    }
+  }
+  ids
+}
+
+fn static_import_graph(modules: &IndexModules) -> petgraph::prelude::DiGraphMap<ModuleIdx, ()> {
   let mut graph = petgraph::prelude::DiGraphMap::<ModuleIdx, ()>::new();
   for module in modules.iter().filter_map(|module| module.as_normal()) {
     graph.add_node(module.idx);
@@ -150,14 +179,7 @@ pub(super) fn synchronous_cycle_modules(modules: &IndexModules) -> FxHashSet<Mod
       }
     }
   }
-
-  let mut cyclic = FxHashSet::default();
-  for component in petgraph::algo::tarjan_scc(&graph) {
-    if component.len() > 1 || graph.contains_edge(component[0], component[0]) {
-      cyclic.extend(component);
-    }
-  }
-  cyclic
+  graph
 }
 
 /// Eligibility here must stay independent of the order-wrap plan: pre-chunk placement, the

@@ -6,16 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## data.js
 
 ```js
-export { t as default } from "./data2.js";
-
-```
-
-## data2.js
-
-```js
 // data.json
 var data_default = { k: 1 };
-export { data_default as t };
+export { data_default as default };
 
 ```
 
@@ -36,15 +29,6 @@ assert.strictEqual(ns.default.k, 1);
 ### data.js
 
 ```js
-import { n as init_data, t as data_default } from "./data2.js";
-init_data();
-export { data_default as default };
-
-```
-
-### data2.js
-
-```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 // data.json
 var data_default;
@@ -53,7 +37,8 @@ function init_data() {
 		data_default = { k: 1 };
 	})))();
 }
-export { init_data as n, data_default as t };
+init_data();
+export { data_default as default };
 
 ```
 

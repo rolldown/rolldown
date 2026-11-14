@@ -1,0 +1,60 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+// other.js
+var Foo$1 = class {};
+__name(Foo$1, "Foo");
+const Bar$1 = /* @__PURE__ */ __name(class {}, "Bar");
+const Baz$1 = class Baz {};
+var other_default = /* @__PURE__ */ __name(class {}, "default");
+var SelfRef$1 = class SelfRef$1 {
+	static self() {
+		return SelfRef$1;
+	}
+};
+__name(SelfRef$1, "SelfRef");
+const Named$1 = class Named {
+	static self() {
+		return Named;
+	}
+};
+// other2.js
+var other2_default = /* @__PURE__ */ __name(class {}, "default");
+// other3.js
+var other3_default = /* @__PURE__ */ __name(class {}, "default");
+// main.js
+var Foo = class {};
+const Bar = class {};
+const Baz = class Baz {};
+var SelfRef = class {};
+var Named = class {};
+function nested() {
+	class Foo {}
+	return Foo;
+}
+assert.strictEqual(Foo.name, "Foo");
+assert.strictEqual(Foo$1.name, "Foo");
+assert.strictEqual(Bar.name, "Bar");
+assert.strictEqual(Bar$1.name, "Bar");
+assert.strictEqual(Baz.name, "Baz");
+assert.strictEqual(Baz$1.name, "Baz");
+assert.strictEqual(nested().name, "Foo");
+assert.strictEqual(other_default.name, "default");
+assert.strictEqual(other2_default.name, "default");
+assert.strictEqual(other3_default.name, "default");
+assert.strictEqual(SelfRef.name, "SelfRef");
+assert.strictEqual(SelfRef$1.name, "SelfRef");
+assert.strictEqual(SelfRef$1.self(), SelfRef$1);
+assert.strictEqual(Named.name, "Named");
+assert.strictEqual(Named$1.name, "Named");
+assert.strictEqual(Named$1.self(), Named$1);
+export { Bar, Baz, Foo };
+
+```

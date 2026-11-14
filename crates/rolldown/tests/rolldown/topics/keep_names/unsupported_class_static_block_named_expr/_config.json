@@ -1,0 +1,8 @@
+{
+  "config": {
+    "keepNames": true,
+    "transform": {
+      "target": "es2018"
+    }
+  }
+}

@@ -116,6 +116,7 @@ pub use crate::{
       chunk_reason_type::ChunkReasonType,
       cross_chunk_import_item::CrossChunkImportItem,
       preliminary_filename::PreliminaryFilename,
+      static_import::StaticImport,
     },
   },
   ecmascript::{

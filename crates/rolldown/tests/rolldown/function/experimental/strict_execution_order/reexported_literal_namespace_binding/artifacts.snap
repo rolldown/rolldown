@@ -17,8 +17,8 @@ export { setOpacity as t };
 ## first.js
 
 ```js
-import { t as setOpacity } from "./css.js";
 import assert from "node:assert";
+import { t as setOpacity } from "./css.js";
 // theme.js
 const theme = setOpacity("red", .5);
 // first.js
@@ -38,8 +38,8 @@ await import("./second.js");
 ## second.js
 
 ```js
-import { t as setOpacity } from "./css.js";
 import assert from "node:assert";
+import { t as setOpacity } from "./css.js";
 // second.js
 assert.strictEqual(setOpacity("blue", .2), "blue:0.2");
 
@@ -75,8 +75,8 @@ export { init_color as n, setOpacity as r, init_css as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { r as setOpacity, t as init_css } from "./css.js";
 import assert from "node:assert";
+import { r as setOpacity, t as init_css } from "./css.js";
 // theme.js
 var theme;
 function init_theme() {
@@ -123,8 +123,8 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { r as setOpacity, t as init_css } from "./css.js";
 import assert from "node:assert";
+import { r as setOpacity, t as init_css } from "./css.js";
 // second.js
 function init_second() {
 	return (init_second = __esmMin((() => {

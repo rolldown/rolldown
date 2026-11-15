@@ -2,7 +2,7 @@ use self::render_chunk_exports::get_chunk_export_names;
 use arcstr::ArcStr;
 use rolldown_common::{
   Chunk, ChunkKind, ChunkMeta, ModuleId, ModuleIdx, PreserveEntrySignatures, RenderedModule,
-  RollupPreRenderedChunk, RollupRenderedChunk, SharedNormalizedBundlerOptions,
+  RollupPreRenderedChunk, RollupRenderedChunk, SharedNormalizedBundlerOptions, StaticImport,
 };
 use rustc_hash::FxHashMap;
 
@@ -65,21 +65,19 @@ pub fn generate_rendered_chunk(
       .clone(),
     modules: render_modules.into(),
     imports: chunk
-      .cross_chunk_imports
+      .static_imports
       .iter()
-      .map(|id| {
-        chunk_graph.chunk_table[*id]
+      .map(|static_import| match *static_import {
+        StaticImport::Chunk(chunk_idx) => chunk_graph.chunk_table[chunk_idx]
           .preliminary_filename
           .as_deref()
           .expect("should have preliminary_filename")
-          .clone()
-      })
-      .chain(chunk.static_external_imports.iter().map(|&idx| {
-        link_output.module_table[idx]
+          .clone(),
+        StaticImport::External(module_idx) => link_output.module_table[module_idx]
           .as_external()
-          .expect("static external imports should only contain external modules")
-          .get_file_name(*resolved_paths)
-      }))
+          .expect("a static import that is not a chunk should be an external module")
+          .get_file_name(*resolved_paths),
+      })
       .collect(),
     dynamic_imports: chunk
       .cross_chunk_dynamic_imports

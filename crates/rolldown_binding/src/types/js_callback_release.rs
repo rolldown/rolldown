@@ -15,13 +15,14 @@ use std::{
 use futures::Future;
 use napi::{
   Either, Status, ValueType,
-  bindgen_prelude::{FromNapiValue, JsValuesTupleIntoVec, Promise, TypeName, ValidateNapiValue},
+  bindgen_prelude::{FromNapiValue, JsValuesTupleIntoVec, TypeName, ValidateNapiValue},
   sys,
   threadsafe_function::ThreadsafeFunctionCallMode,
 };
 
 use super::js_callback::{
-  InvalidReturnValue, JsCallback, JsCallbackExt, MaybeAsyncJsCallbackExt, invoke_eager_on,
+  InvalidReturnValue, JsCallback, JsCallbackExt, MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt,
+  invoke_eager_on,
 };
 
 /// A JS function of the bundler options, as napi gives it to Rust.
@@ -32,9 +33,9 @@ use super::js_callback::{
 /// compiler gives an error for each call of a function that the close of the owner cannot release.
 pub type UntrackedJsCallback<Args = (), Ret = ()> = Untracked<JsCallback<Args, Ret>>;
 
-/// A shortcut for an [`UntrackedJsCallback`] whose JS function can return a `Promise`.
+/// The [`Untracked`] form of a [`MaybeAsyncJsCallback`], whose JS function can return a `Promise`.
 pub type UntrackedMaybeAsyncJsCallback<Args = (), Ret = ()> =
-  UntrackedJsCallback<Args, Either<Promise<Ret>, Ret>>;
+  Untracked<MaybeAsyncJsCallback<Args, Ret>>;
 
 /// A JS function of the bundler options that [`JsCallbackRelease::release_all`] can release.
 pub type ReleasableJsCallback<Args = (), Ret = ()> = Releasable<JsCallback<Args, Ret>>;
@@ -155,12 +156,10 @@ where
   }
 }
 
-impl<Args, Ret> MaybeAsyncJsCallbackExt<Args, Ret>
-  for ReleasableJsCallback<Args, Either<Promise<Ret>, Ret>>
+impl<Args, Ret> MaybeAsyncJsCallbackExt<Args, Ret> for Releasable<MaybeAsyncJsCallback<Args, Ret>>
 where
   Args: 'static + Send + JsValuesTupleIntoVec,
-  Ret: 'static + Send + FromNapiValue + TypeName,
-  Either<Either<Promise<Ret>, Ret>, InvalidReturnValue>: FromNapiValue,
+  Ret: 'static + Send + FromNapiValue,
 {
   async fn await_call(&self, args: Args) -> Result<Ret, napi::Error> {
     let callback = self.get_or_err()?;

@@ -182,3 +182,21 @@ test('rejects the reserved devtools.sessionId', async () => {
     }
   }
 });
+
+test('rejects a treeshake.moduleSideEffects rule without test and external', async () => {
+  const bundle = await rolldown({
+    input: './build-api/main.js',
+    cwd: import.meta.dirname,
+    treeshake: {
+      // @ts-expect-error a rule must set `test` or `external`
+      moduleSideEffects: [{ sideEffects: false }],
+    },
+  });
+  try {
+    await expect(bundle.generate()).rejects.toThrow(
+      'Each rule in `treeshake.moduleSideEffects` must set `test` or `external`.',
+    );
+  } finally {
+    await bundle.close();
+  }
+});

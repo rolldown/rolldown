@@ -1,0 +1,40 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+// b.js
+var Baz = class {};
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// a.js
+var _Foo;
+var _Baz;
+var Foo$1 = class {};
+__name(Foo$1, "Foo");
+_Foo = Foo$1;
+_defineProperty(Foo$1, "tag", _Foo.name);
+_defineProperty(Foo$1, "tag2", _Foo.name);
+const Named = (_Baz = /* @__PURE__ */ __name(class Baz$1 {
+	static base() {
+		return Baz;
+	}
+}, "Baz"), _defineProperty(_Baz, "tag", _Baz.name), _Baz);
+// main.js
+var Foo = class {};
+assert.strictEqual(Foo$1.name, "Foo");
+assert.strictEqual(Foo$1.tag, "Foo");
+assert.strictEqual(Foo$1.tag2, "Foo");
+assert.strictEqual(Named.name, "Baz");
+assert.strictEqual(Named.tag, "Baz");
+assert.strictEqual(Named.base(), Baz);
+export { Foo };
+
+```

@@ -1,0 +1,9 @@
+{
+  "config": {
+    "keepNames": true,
+    "transform": {
+      "target": "safari16"
+    }
+  },
+  "_comment": "Class fields but no class static blocks: the name is set by a first private static field"
+}

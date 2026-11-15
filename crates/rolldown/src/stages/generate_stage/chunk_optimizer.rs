@@ -419,7 +419,7 @@ impl GenerateStage<'_> {
             temp_chunk,
             temp_chunk_graph,
           )
-          .filter(|_| !self.prefers_inline_common_chunk(&temp_chunk.modules));
+          .filter(|_| !self.prefers_inline_with_dynamic_entries(&temp_chunk.modules));
 
         Some((bits.clone(), *temp_chunk_idx, chunk_idxs, merge_target))
       })

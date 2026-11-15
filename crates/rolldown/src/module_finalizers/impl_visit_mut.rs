@@ -622,12 +622,23 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     if self.ctx.options.keep_names && self.ctx.runtime.id() != self.ctx.idx {
       match expr {
         ast::Expression::ClassExpression(class_expression) => {
-          if let Some(id) = class_expression.id.as_ref() {
-            if let Some(element) = self.keep_name_helper_for_class(
-              id.symbol_id.get().map(KeepNameId::SymbolId),
-              &class_expression.body,
-            ) {
-              class_expression.body.body.insert(0, element);
+          let class = &mut **class_expression;
+          if let Some(id) = class.id.as_mut()
+            && let Some(symbol_id) = id.symbol_id.get()
+          {
+            let keep_name_id = Some(KeepNameId::SymbolId(symbol_id));
+            if let Some(element) = self.keep_name_helper_for_class(keep_name_id, &class.body) {
+              class.body.body.insert(0, element);
+            } else if !self.can_keep_class_name_in_class_body()
+              && self.keep_name_for_class(keep_name_id, &class.body).is_some()
+            {
+              // Neither class static blocks nor class fields in the target: wrap the class
+              // like the function expression below, `__name(class Foo$1 {}, "Foo")`.
+              let canonical_name = self.canonical_name_for((self.ctx.idx, symbol_id).into());
+              id.name = oxc::ast::ast::Str::from_str_in(canonical_name, self).into();
+              // Clear symbol_id so that the walk neither wraps nor renames this class again.
+              id.symbol_id.get_mut().take();
+              self.wrap_class_expr_with_keep_name(keep_name_id, expr);
             }
           }
         }
@@ -1056,11 +1067,15 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       ast::Declaration::ClassDeclaration(decl) => {
         // need to insert `keep_names` helper, because `get_transformed_class_decl`
         // will remove id in `class.id`
-        if let Some(element) = self.keep_name_helper_for_class(
-          decl.id.as_ref().and_then(|id| id.symbol_id.get().map(KeepNameId::SymbolId)),
-          &decl.body,
-        ) {
+        let keep_name_id =
+          decl.id.as_ref().and_then(|id| id.symbol_id.get().map(KeepNameId::SymbolId));
+        if let Some(element) = self.keep_name_helper_for_class(keep_name_id, &decl.body) {
           decl.body.body.insert(0, element);
+        } else if !self.can_keep_class_name_in_class_body()
+          && self.keep_name_for_class(keep_name_id, &decl.body).is_some()
+          && let Some(insert) = self.process_fn(keep_name_id, keep_name_id)
+        {
+          self.keep_name_statement_to_insert.push(insert);
         }
         it.replace_with(|old| {
           let ast::Declaration::ClassDeclaration(class_box) = old else { unreachable!() };
@@ -1070,7 +1085,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           }
         });
         // Clear symbol_id on class expression's id to prevent visit_expression
-        // from inserting a duplicate __name static block during walk
+        // from inserting a duplicate __name call during walk
         // (`it` is only a `VariableDeclaration` when the class was transformed above).
         if let ast::Declaration::VariableDeclaration(var_decl) = it {
           if let Some(declarator) = var_decl.declarations.first_mut() {

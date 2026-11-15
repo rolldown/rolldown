@@ -334,7 +334,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         None,
       )?;
 
-      let module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
+      let module_loader_output =
+        module_loader.fetch_modules(fetch_mode, std::future::ready(Ok(()))).await?;
 
       // We manually impl `Drop` for `ModuleLoader` to avoid missing assign `importers` to
       // `self.cache`, but rustc is not smart enough to infer actually we don't touch it in `drop`
@@ -695,7 +696,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       None,
     )?;
 
-    let module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
+    let module_loader_output =
+      module_loader.fetch_modules(fetch_mode, std::future::ready(Ok(()))).await?;
     drop(module_loader);
 
     let plugin_driver = Arc::clone(&self.plugin_driver);

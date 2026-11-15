@@ -354,10 +354,10 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
           options.moduleSideEffects ?? undefined,
           options.packageJsonPath ?? undefined,
         )
-        .catch(() => {
+        .catch((error) => {
           // avoid reusing the promise if it's an error
-          // because the error may happen only in non-supported hooks (e.g. `buildStart` hook)
           this.data.loadModulePromiseMap.delete(id);
+          throw error;
         });
       this.data.loadModulePromiseMap.set(id, loadPromise);
     }

@@ -60,7 +60,7 @@ impl NativePluginContextImpl {
     // Clone out the sender under the lock, then drop the lock before awaiting.
     let sender = {
       let guard = self.tx.lock().ok().context("Failed to acquire PluginDriver tx lock")?.clone();
-      guard.context("The `PluginContext.load` only work at `resolveId/load/transform/moduleParsed` hooks. If you using it at resolveId hook, please make sure it could not load the entry module.")?
+      guard.context("The `PluginContext.load` only work at `buildStart/resolveId/load/transform/moduleParsed` hooks. If you using it at resolveId hook, please make sure it could not load the entry module.")?
     };
     let resolved_id = ResolvedId {
       id: raw_id.into(),
@@ -78,7 +78,7 @@ impl NativePluginContextImpl {
       .plugin_driver
       .upgrade()
       .ok_or_else(|| anyhow::anyhow!("Plugin driver is already dropped."))?;
-    plugin_driver.wait_for_module_load_completion(&id).await;
+    plugin_driver.wait_for_module_load_completion(&id).await?;
     Ok(())
   }
 

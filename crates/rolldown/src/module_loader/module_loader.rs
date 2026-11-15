@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
 use std::collections::hash_map::Entry;
+use std::future::Future;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -29,7 +30,6 @@ use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::commondir;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
-use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
 use tracing::Instrument;
@@ -456,6 +456,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
   pub async fn fetch_modules(
     &mut self,
     fetch_mode: ScanMode<ResolvedId>,
+    build_start: impl Future<Output = anyhow::Result<()>>,
   ) -> BuildResult<ModuleLoaderOutput> {
     let mut all_warnings = vec![];
 
@@ -464,80 +465,21 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     let barrel_state_backup = (!self.is_full_scan && self.flat_options.is_lazy_barrel_enabled())
       .then(|| self.cache.barrel_state.clone());
 
-    // Initialize runtime module task if not yet started
-    if let Entry::Vacant(e) = self.cache.module_id_to_idx.entry(RUNTIME_MODULE_ID) {
-      let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
-      let task = RuntimeModuleTask::new(idx, Arc::clone(&self.shared_context), self.flat_options);
-      tokio::spawn(task.run().instrument(tracing::info_span!("runtime_module_task")));
-      e.insert(VisitState::Seen(idx));
-      self.remaining += 1;
-    }
+    let mut runtime_task =
+      if let Entry::Vacant(e) = self.cache.module_id_to_idx.entry(RUNTIME_MODULE_ID) {
+        let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
+        let task = RuntimeModuleTask::new(idx, Arc::clone(&self.shared_context), self.flat_options);
+        e.insert(VisitState::Seen(idx));
+        Some(task)
+      } else {
+        None
+      };
 
-    let user_defined_entries = Arc::new(match fetch_mode {
-      ScanMode::Full => self.resolve_user_defined_entries().await?,
-      ScanMode::Partial(_) => vec![],
-    });
-
-    let entries_count = user_defined_entries.len() + /* runtime */ 1;
-    self.intermediate_normal_modules.modules.reserve(entries_count);
-    self.intermediate_normal_modules.index_ecma_ast.reserve(entries_count);
-
+    let mut user_defined_entries = Arc::new(vec![]);
     // Store the already consider as entry module
     let mut entry_points = FxIndexSet::default();
-    let mut user_defined_entry_ids = FxHashSet::with_capacity(user_defined_entries.len());
-    for (name, resolved_id) in user_defined_entries.iter().cloned() {
-      let idx = self.try_spawn_new_task(resolved_id, None, true, None, &user_defined_entries);
-      user_defined_entry_ids.insert(idx);
-      entry_points.insert(EntryPoint {
-        idx,
-        name,
-        kind: EntryPointKind::UserDefined,
-        file_name: None,
-        related_stmt_infos: vec![],
-      });
-    }
-
-    if self.is_full_scan && self.shared_context.options.experimental.is_incremental_build_enabled()
-    {
-      self
-        .cache
-        .user_defined_entry
-        .extend(user_defined_entries.iter().map(|(_, resolved_id)| resolved_id.id.clone()));
-    }
-
-    // If it is in partial scan mode, we need to invalidate the changed modules
-    // and re-fetch them, do nothing in full scan mode. Files re-queued by a
-    // previous aborted scan (`pending_rescans`) are retried alongside.
+    let mut user_defined_entry_ids = FxHashSet::default();
     let mut changed_resolved_ids = Vec::new();
-    let mut seen_changed_ids = FxHashSet::default();
-    for resolved_id in
-      fetch_mode.iter().cloned().chain(std::mem::take(&mut self.cache.pending_rescans))
-    {
-      if seen_changed_ids.insert(resolved_id.id.clone()) {
-        changed_resolved_ids.push(resolved_id);
-      }
-    }
-    for resolved_id in changed_resolved_ids.iter().cloned() {
-      self.shared_context.plugin_driver.invalidate_context_load_module(&resolved_id.id);
-      if let Entry::Occupied(mut occ) = self.cache.module_id_to_idx.entry(resolved_id.id.clone()) {
-        let idx = occ.get().idx();
-        occ.insert(VisitState::Invalidate(idx));
-        self.cache.barrel_state.barrel_infos.remove(&idx);
-      }
-      // User may update the entry module in incremental mode, so we need to make sure
-      // if it is a user defined entry to avoid generate wrong asset file
-      let is_user_defined_entry = self.cache.user_defined_entry.contains(&resolved_id.id);
-      // Setting `Owner` to `None` is safe here since `Owner` is only used to emit
-      // `Unloadable` diagnostics, and we know this module exists in the filesystem.
-      // TODO: copy assert_module_type
-      self.try_spawn_new_task(
-        resolved_id,
-        None,
-        is_user_defined_entry,
-        None,
-        &user_defined_entries,
-      );
-    }
 
     let mut work_queue: VecDeque<(ModuleIdx, ImportedExports)> = VecDeque::new();
     let mut dynamic_import_entry_ids: FxHashMap<
@@ -552,10 +494,98 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     let mut runtime_brief = None;
     let mut overrode_preserve_entry_signature_map = FxHashMap::default();
 
-    while self.remaining > 0 {
-      let Some(msg) = self.rx.recv().await else {
+    let mut build_start = Box::pin(build_start);
+    let mut build_start_pending = true;
+    let mut deferred_entries = VecDeque::new();
+    while build_start_pending || self.remaining > 0 || !deferred_entries.is_empty() {
+      let msg = if build_start_pending {
+        tokio::select! {
+          result = &mut build_start => {
+            result?;
+            build_start_pending = false;
+
+            if let Some(task) = runtime_task.take() {
+              tokio::spawn(task.run().instrument(tracing::info_span!("runtime_module_task")));
+              self.remaining += 1;
+            }
+
+            user_defined_entries = Arc::new(match fetch_mode {
+              ScanMode::Full => self.resolve_user_defined_entries().await?,
+              ScanMode::Partial(_) => vec![],
+            });
+
+            let entries_count = user_defined_entries.len() + /* runtime */ 1;
+            self.intermediate_normal_modules.modules.reserve(entries_count);
+            self.intermediate_normal_modules.index_ecma_ast.reserve(entries_count);
+            user_defined_entry_ids.reserve(user_defined_entries.len());
+            for (name, resolved_id) in user_defined_entries.iter().cloned() {
+              let idx = self.try_spawn_new_task(resolved_id, None, true, None, &user_defined_entries);
+              user_defined_entry_ids.insert(idx);
+              entry_points.insert(EntryPoint {
+                idx,
+                name,
+                kind: EntryPointKind::UserDefined,
+                file_name: None,
+                related_stmt_infos: vec![],
+              });
+            }
+
+            if self.is_full_scan
+              && self.shared_context.options.experimental.is_incremental_build_enabled()
+            {
+              self.cache.user_defined_entry.extend(
+                user_defined_entries.iter().map(|(_, resolved_id)| resolved_id.id.clone()),
+              );
+            }
+
+            // If it is in partial scan mode, we need to invalidate the changed modules
+            // and re-fetch them, do nothing in full scan mode. Files re-queued by a
+            // previous aborted scan (`pending_rescans`) are retried alongside.
+            let mut seen_changed_ids = FxHashSet::default();
+            for resolved_id in
+              fetch_mode.iter().cloned().chain(std::mem::take(&mut self.cache.pending_rescans))
+            {
+              if seen_changed_ids.insert(resolved_id.id.clone()) {
+                changed_resolved_ids.push(resolved_id);
+              }
+            }
+            for resolved_id in changed_resolved_ids.iter().cloned() {
+              self.shared_context.plugin_driver.invalidate_context_load_module(&resolved_id.id);
+              if let Entry::Occupied(mut occ) = self.cache.module_id_to_idx.entry(resolved_id.id.clone()) {
+                let idx = occ.get().idx();
+                occ.insert(VisitState::Invalidate(idx));
+                self.cache.barrel_state.barrel_infos.remove(&idx);
+              }
+              // User may update the entry module in incremental mode, so we need to make sure
+              // if it is a user defined entry to avoid generate wrong asset file
+              let is_user_defined_entry = self.cache.user_defined_entry.contains(&resolved_id.id);
+              // Setting `Owner` to `None` is safe here since `Owner` is only used to emit
+              // `Unloadable` diagnostics, and we know this module exists in the filesystem.
+              // TODO: copy assert_module_type
+              self.try_spawn_new_task(
+                resolved_id,
+                None,
+                is_user_defined_entry,
+                None,
+                &user_defined_entries,
+              );
+            }
+            continue;
+          }
+          msg = self.rx.recv() => msg,
+        }
+      } else if let Some(msg) = deferred_entries.pop_front() {
+        Some(msg)
+      } else {
+        self.rx.recv().await
+      };
+      let Some(msg) = msg else {
         break;
       };
+      if build_start_pending && matches!(msg, ModuleLoaderMsg::AddEntryModule(_)) {
+        deferred_entries.push_back(msg);
+        continue;
+      }
       match msg {
         ModuleLoaderMsg::NormalModuleDone(task_result) => {
           let NormalModuleTaskResult {
@@ -949,10 +979,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       HybridIndexVec::Map(map)
     };
 
-    // Some module was not treated as an entry, but was emitted by `this.emitFile` during
-    // processing, those module info also need to be updated
-    // see https://github.com/rolldown/rolldown/issues/5030 as an example
-    idx_of_module_info_need_update.extend(extra_entry_points.iter().map(|item| item.idx));
+    // Preloaded modules can become entries after their moduleParsed hook has run.
+    idx_of_module_info_need_update.extend(user_defined_entry_ids.iter().copied());
     idx_of_module_info_need_update.into_par_iter().for_each(|idx| {
       // A partial scan only holds re-scanned modules. A chunk emitted for an
       // unchanged module (e.g. by `buildStart` on the rebuild after a lazy
@@ -970,14 +998,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       );
     });
 
-    // Collect module indices from emitted entries to filter dynamic imports
-    // When a module is both dynamically imported AND emitted via this.emitFile,
-    // the emitted entry takes priority (it has user-specified name, fileName, preserveSignature)
-    let emitted_entry_indices: FxHashSet<ModuleIdx> =
-      extra_entry_points.iter().map(|e| e.idx).collect();
-
     for (idx, related_stmt_infos) in dynamic_import_entry_ids {
-      if !emitted_entry_indices.contains(&idx) {
+      if !user_defined_entry_ids.contains(&idx) {
         entry_points.insert(EntryPoint {
           name: None,
           idx,

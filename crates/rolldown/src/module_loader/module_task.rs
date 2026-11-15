@@ -91,7 +91,10 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
   pub async fn run(mut self) {
     let guard = TaskMessageGuard::new(&self.ctx, self.resolved_id.id.clone());
     if let Err(errs) = self.run_inner().await {
-      self.ctx.plugin_driver.mark_context_load_modules_loaded(self.resolved_id.id.clone());
+      self.ctx.plugin_driver.mark_context_load_modules_loaded(
+        self.resolved_id.id.clone(),
+        Err(errs.to_string().into()),
+      );
       // The send fails only when the build was dropped before this task finished.
       // Then nothing reads the result, so ignore the error.
       let _ = self.ctx.tx.send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
@@ -235,7 +238,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       Arc::new(module.to_module_info(Some(&raw_import_records), self.is_user_defined_entry));
     self.ctx.plugin_driver.set_module_info(&module.id, Arc::clone(&module_info));
     self.ctx.plugin_driver.module_parsed(Arc::clone(&module_info), &module).await?;
-    self.ctx.plugin_driver.mark_context_load_modules_loaded(module.id.clone());
+    self.ctx.plugin_driver.mark_context_load_modules_loaded(module.id.clone(), Ok(()));
 
     let result = ModuleLoaderMsg::NormalModuleDone(Box::new(NormalModuleTaskResult {
       module: module.into(),

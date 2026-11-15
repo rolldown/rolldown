@@ -84,8 +84,12 @@ impl PluginDriver {
     Ok(())
   }
 
-  pub fn mark_context_load_modules_loaded(&self, module_id: ModuleId) {
-    self.context_load_completion_manager.mark_completion(module_id);
+  pub fn mark_context_load_modules_loaded(
+    &self,
+    module_id: ModuleId,
+    result: Result<(), Arc<str>>,
+  ) {
+    self.context_load_completion_manager.mark_completion(module_id, result);
   }
 
   /// This function ends the `this.load` wait for a module that does not send a load signal.
@@ -100,8 +104,8 @@ impl PluginDriver {
     self.context_load_completion_manager.invalidate(module_id);
   }
 
-  pub async fn wait_for_module_load_completion(&self, specifier: &str) {
-    self.context_load_completion_manager.wait_for_completion(specifier.into()).await;
+  pub async fn wait_for_module_load_completion(&self, specifier: &str) -> anyhow::Result<()> {
+    self.context_load_completion_manager.wait_for_completion(specifier.into()).await
   }
 
   pub fn iter_plugin_with_context_by_order<'me>(
@@ -142,12 +146,12 @@ struct ContextLoadCompletionManager {
 }
 
 enum ContextLoadCompletionState {
-  Pending(broadcast::Sender<()>),
-  Completed,
+  Pending(broadcast::Sender<Result<(), Arc<str>>>),
+  Completed(Result<(), Arc<str>>),
 }
 
 impl ContextLoadCompletionManager {
-  pub async fn wait_for_completion(&self, module_id: ModuleId) {
+  pub async fn wait_for_completion(&self, module_id: ModuleId) -> anyhow::Result<()> {
     let mut rx = match self.notifiers.entry(module_id) {
       dashmap::Entry::Vacant(guard) => {
         let (tx, rx) = broadcast::channel(1);
@@ -156,36 +160,40 @@ impl ContextLoadCompletionManager {
       }
       dashmap::Entry::Occupied(mut guard) => match guard.get_mut() {
         ContextLoadCompletionState::Pending(sender) => sender.subscribe(),
-        ContextLoadCompletionState::Completed => {
+        ContextLoadCompletionState::Completed(result) => {
           /* no need to wait */
-          return;
+          return result.clone().map_err(anyhow::Error::msg);
         }
       },
     };
 
-    if let Err(err) = rx.recv().await {
-      // This happens when `.invalidate` is called before `.mark_completion` is called, which is not expected
-      debug_assert!(
-        false,
-        "The sender was dropped while waiting for module load completion: {err}"
-      );
-      tracing::warn!("The sender was dropped while waiting for module load completion");
+    match rx.recv().await {
+      Ok(result) => result.map_err(anyhow::Error::msg),
+      Err(err) => {
+        // This happens when `.invalidate` is called before `.mark_completion` is called, which is not expected
+        debug_assert!(
+          false,
+          "The sender was dropped while waiting for module load completion: {err}"
+        );
+        tracing::warn!("The sender was dropped while waiting for module load completion");
+        Ok(())
+      }
     }
   }
 
-  pub fn mark_completion(&self, module_id: ModuleId) {
+  pub fn mark_completion(&self, module_id: ModuleId, result: Result<(), Arc<str>>) {
     match self.notifiers.entry(module_id) {
       dashmap::Entry::Vacant(guard) => {
-        guard.insert(ContextLoadCompletionState::Completed);
+        guard.insert(ContextLoadCompletionState::Completed(result));
       }
       dashmap::Entry::Occupied(mut guard) => match guard.get_mut() {
         ContextLoadCompletionState::Pending(sender) => {
-          sender.send(()).expect(
+          sender.send(result.clone()).expect(
             "PluginDriver: failed to send completion notification - receiver was dropped before wait_for_completion was called, indicating a race condition in module loading"
           );
-          *guard.get_mut() = ContextLoadCompletionState::Completed;
+          *guard.get_mut() = ContextLoadCompletionState::Completed(result);
         }
-        ContextLoadCompletionState::Completed => {
+        ContextLoadCompletionState::Completed(_) => {
           // This happens if `.mark_completion` is called multiple times, which is not expected
           debug_assert!(false, "mark_completion was called even though it was already completed");
           tracing::warn!("mark_completion was called even though it was already completed");
@@ -203,14 +211,14 @@ impl ContextLoadCompletionManager {
   pub fn ensure_completion(&self, module_id: ModuleId) {
     match self.notifiers.entry(module_id) {
       dashmap::Entry::Vacant(guard) => {
-        guard.insert(ContextLoadCompletionState::Completed);
+        guard.insert(ContextLoadCompletionState::Completed(Ok(())));
       }
       dashmap::Entry::Occupied(mut guard) => {
         if let ContextLoadCompletionState::Pending(sender) = guard.get_mut() {
           // The send fails only when the hook that waits is gone. Then nothing waits for the
           // signal, so ignore the error.
-          let _ = sender.send(());
-          *guard.get_mut() = ContextLoadCompletionState::Completed;
+          let _ = sender.send(Ok(()));
+          *guard.get_mut() = ContextLoadCompletionState::Completed(Ok(()));
         }
       }
     }

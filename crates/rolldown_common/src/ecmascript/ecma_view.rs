@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{ConstExportMeta, SourcemapChainElement};
+use crate::{ConstExportMeta, DeferredWriteConstant, SourcemapChainElement};
 use arcstr::ArcStr;
 use bitflags::bitflags;
 use oxc::{
@@ -185,6 +185,9 @@ pub struct EcmaView {
   pub hmr_hot_ref: Option<SymbolRef>,
   pub hmr_info: HmrInfo,
   pub constant_export_map: FxHashMap<SymbolId, ConstExportMeta>,
+  /// Exported `let`s that become constants when no code can call their writers.
+  /// See internal-docs/constant-branches/implementation.md.
+  pub deferred_write_constants: Vec<DeferredWriteConstant>,
   /// Enum member constant values, keyed by enum name → member name → value.
   /// Used by the finalizer to inline `Direction.Up` style accesses across modules.
   /// Contains both const and regular enums.

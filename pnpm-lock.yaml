@@ -315,7 +315,7 @@ catalogs:
       specifier: ^11.0.0
       version: 11.0.0
     remeda:
-      specifier: ^2.57.0
+      specifier: ^2.60.0
       version: 2.60.0
     rolldown-plugin-dts:
       specifier: ^0.30.0
@@ -441,7 +441,7 @@ importers:
         specifier: ^2.3.0
         version: 2.3.0
       knip:
-        specifier: ^6.44.0
+        specifier: ^6.45.0
         version: 6.45.1
       playwright-chromium:
         specifier: ^1.63.0
@@ -508,7 +508,7 @@ importers:
         specifier: ^1.8.2
         version: 1.8.2(vite@8.3.8(@types/node@24.10.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
       vitepress-plugin-llms:
-        specifier: ^1.14.0
+        specifier: ^1.15.0
         version: 1.15.0(supports-color@10.2.2)
       vitepress-plugin-og:
         specifier: ^0.0.5
@@ -517,7 +517,7 @@ importers:
         specifier: ~1.8.0
         version: 1.8.0(@types/node@24.10.3)(arktype@2.2.0)(kysely@0.29.5)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(valibot@1.5.0(typescript@6.0.3))(vite@8.3.8(@types/node@24.10.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(vitest@4.1.11)(vue@3.5.45(typescript@6.0.3))(workerd@1.20261110.1)(zod@4.6.7)
       wrangler:
-        specifier: ^4.156.0
+        specifier: ^4.161.0
         version: 4.161.0(@cloudflare/workers-types@5.20261114.1)(@types/node@24.10.3)
 
   examples/basic-typescript:
@@ -650,7 +650,7 @@ importers:
         specifier: 'catalog:'
         version: 3.5.45(typescript@6.0.3)
       vue-router:
-        specifier: ^5.3.0
+        specifier: ^5.5.0
         version: 5.5.0(@vue/compiler-sfc@3.5.43)(esbuild@0.28.2)(rolldown@packages+rolldown)(rollup@4.68.2)(vite@8.3.2(@types/node@24.10.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(vue@3.5.45(typescript@6.0.3))
     devDependencies:
       '@babel/core':

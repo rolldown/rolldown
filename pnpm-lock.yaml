@@ -366,7 +366,7 @@ catalogs:
       specifier: ^0.27.0
       version: 0.27.2
     ws:
-      specifier: ^8.22.0
+      specifier: ^8.23.0
       version: 8.23.0
     yaml:
       specifier: ^2.9.1

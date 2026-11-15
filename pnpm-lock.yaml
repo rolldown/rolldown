@@ -367,7 +367,7 @@ catalogs:
       version: 0.27.2
     ws:
       specifier: ^8.22.0
-      version: 8.22.2
+      version: 8.23.0
     yaml:
       specifier: ^2.9.1
       version: 2.9.1
@@ -958,7 +958,7 @@ importers:
         version: 2.2.1(supports-color@10.2.2)
       ws:
         specifier: 'catalog:'
-        version: 8.22.2
+        version: 8.23.0
     devDependencies:
       '@types/connect':
         specifier: 'catalog:'
@@ -989,7 +989,7 @@ importers:
         version: 4.1.12(@types/node@24.10.3)(@vitest/browser-playwright@4.1.12)(@vitest/browser-preview@5.1.0)(@vitest/ui@5.1.0)(vite@8.3.8(@types/node@24.10.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
       ws:
         specifier: 'catalog:'
-        version: 8.22.2
+        version: 8.23.0
     devDependencies:
       playwright:
         specifier: ^1.63.0
@@ -9360,8 +9360,8 @@ packages:
       utf-8-validate:
         optional: true
 
-  ws@8.22.2:
-    resolution: {integrity: sha512-/rEZ2ejown2N5gxVTHUu9bVVC7ttu0/Tgzf5hbTOixR3Fs7mbbXgn2DbdbcKgJOmpQMtrIUWivtYuVMnp/W/yA==}
+  ws@8.23.0:
+    resolution: {integrity: sha512-wCkmX8QMOrKjgO8HW2WyDbTSGeqkocxgDzS9iR79rEAexty6/2qzilx3Ag8Tqf9ykop3irLKle0MtVn5qjVnoQ==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -12862,7 +12862,7 @@ snapshots:
       sirv: 3.0.2
       tinyrainbow: 3.2.0
       vitest: 4.1.11(@types/node@24.10.3)(@vitest/browser-playwright@4.1.11)(@vitest/browser-preview@4.1.11)(@vitest/ui@5.1.0)(vite@8.3.8(@types/node@24.10.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
-      ws: 8.22.2
+      ws: 8.23.0
     transitivePeerDependencies:
       - bufferutil
       - msw
@@ -12880,7 +12880,7 @@ snapshots:
       sirv: 3.0.2
       tinyrainbow: 3.2.0
       vitest: 4.1.12(@types/node@24.10.3)(@vitest/browser-playwright@4.1.12)(@vitest/browser-preview@5.1.0)(@vitest/ui@5.1.0)(vite@8.3.8(@types/node@24.10.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
-      ws: 8.22.2
+      ws: 8.23.0
     transitivePeerDependencies:
       - bufferutil
       - msw
@@ -12898,7 +12898,7 @@ snapshots:
       sirv: 3.0.2
       tinyrainbow: 3.2.0
       vitest: 5.1.0(@types/node@24.10.3)(@vitest/browser-preview@5.1.0)(@vitest/ui@5.1.0)(@voidzero-dev/vite-plus-core@1.6.0(@types/node@24.10.3)(esbuild@0.28.2)(jiti@2.7.0)(publint@0.3.25)(terser@5.51.2)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1))
-      ws: 8.22.2
+      ws: 8.23.0
     transitivePeerDependencies:
       - bufferutil
       - msw
@@ -16796,7 +16796,7 @@ snapshots:
 
   ws@8.21.0: {}
 
-  ws@8.22.2: {}
+  ws@8.23.0: {}
 
   xtend@4.0.2: {}
 

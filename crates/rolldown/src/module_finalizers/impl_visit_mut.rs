@@ -832,6 +832,13 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     walk_js_mut::walk_expression(self, expr);
   }
 
+  fn visit_jsx_closing_element(&mut self, it: &mut ast::JSXClosingElement<'ast>) {
+    // The opening element already reports an element name that can't be rewritten.
+    let reported = self.unsupported_jsx_element_names.len();
+    walk_js_mut::walk_jsx_closing_element(self, it);
+    self.unsupported_jsx_element_names.truncate(reported);
+  }
+
   fn visit_jsx_element_name(&mut self, it: &mut ast::JSXElementName<'ast>) {
     match it {
       ast::JSXElementName::Identifier(ident) => {
@@ -854,9 +861,12 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             Expression::ThisExpression(this_expr) => {
               *it = ast::JSXElementName::ThisExpression(this_expr);
             }
+            Expression::ComputedMemberExpression(_) => {
+              self.unsupported_jsx_element_names.push(identifier_reference.span);
+            }
             _ => {
               unreachable!(
-                "Should always rewrite to Identifier, StaticMemberExpression, or ThisExpression for JsxElementName::IdentifierReference"
+                "Should always rewrite to Identifier, StaticMemberExpression, ComputedMemberExpression, or ThisExpression for JsxElementName::IdentifierReference"
               )
             }
           }
@@ -887,6 +897,9 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
               }
               Expression::ThisExpression(this_expr) => {
                 *it = ast::JSXElementName::ThisExpression(this_expr);
+              }
+              Expression::ComputedMemberExpression(_) => {
+                self.unsupported_jsx_element_names.push(ident.span);
               }
               _ => {
                 unreachable!(

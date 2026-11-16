@@ -30,7 +30,7 @@ use xxhash_rust::xxh3::Xxh3;
 use crate::{
   chunk_graph::ChunkGraph,
   stages::link_stage::LinkStageOutput,
-  type_alias::{AssetVec, IndexChunkToInstances, IndexInstantiatedChunks},
+  type_alias::{AssetVec, IndexChunkToInstance, IndexInstantiatedChunks},
   utils::process_code_and_sourcemap::{emit_sourcemap, prepare_sourcemap, sourcemap_file_url},
 };
 
@@ -39,7 +39,7 @@ pub async fn finalize_assets(
   chunk_graph: &ChunkGraph,
   link_output: &LinkStageOutput,
   mut index_instantiated_chunks: IndexInstantiatedChunks,
-  index_chunk_to_instances: &IndexChunkToInstances,
+  index_chunk_to_instance: &IndexChunkToInstance,
   hash_characters: HashCharacters,
   options: &NormalizedBundlerOptions,
   resolved_paths: Option<&PathsOutputOption>,
@@ -47,7 +47,8 @@ pub async fn finalize_assets(
   // Prepare maps once, before hashing comments that contain map data or a map content hash.
   // Final chunk names are substituted below. See internal-docs/chunk-hash/implementation.md.
   try_join_all(index_instantiated_chunks.iter_mut().map(async |chunk| {
-    if let (InstantiationKind::Ecma(ecma_meta), Some(map)) = (&mut chunk.kind, &mut chunk.map) {
+    if let Some(map) = &mut chunk.map {
+      let ecma_meta = &mut chunk.ecma_meta;
       let filename = chunk.preliminary_filename.as_str();
       let file_path = options.cwd.join(&options.out_dir).join(filename);
       ecma_meta.file_dir =
@@ -179,37 +180,36 @@ pub async fn finalize_assets(
         None
       };
 
-      if let InstantiationKind::Ecma(ecma_meta) = &mut instantiated_chunk.kind {
-        let (_, debug_id) = index_final_hashes[asset_idx];
-        ecma_meta.debug_id = debug_id;
-        ecma_meta.sourcemap_filename = preliminary_filename_str.map(|str| {
-          replace_placeholder_with_hash(
-            str,
-            &chunk_hashes_by_placeholder,
-            &HASH_PLACEHOLDER_LEFT_FINDER,
-          )
-          .into()
-        });
-        if let Some(map) = &mut instantiated_chunk.map {
-          let file_path = options.cwd.join(&options.out_dir).join(filename.as_str());
-          ecma_meta.file_dir =
-            file_path.parent().expect("chunk file name should have a parent").to_path_buf();
-          map.set_file(Path::new(filename.as_str()).file_name().unwrap().to_str().unwrap());
-          // A callback may have included the preliminary map path in a source path.
-          if map.get_sources().any(|source| source.contains("!~{")) {
-            let sources = map
-              .get_sources()
-              .map(|source| {
-                replace_placeholder_with_hash(
-                  source,
-                  &chunk_hashes_by_placeholder,
-                  &HASH_PLACEHOLDER_LEFT_FINDER,
-                )
-                .into_owned()
-              })
-              .collect_vec();
-            map.set_sources(sources);
-          }
+      let ecma_meta = &mut instantiated_chunk.ecma_meta;
+      let (_, debug_id) = index_final_hashes[asset_idx];
+      ecma_meta.debug_id = debug_id;
+      ecma_meta.sourcemap_filename = preliminary_filename_str.map(|str| {
+        replace_placeholder_with_hash(
+          str,
+          &chunk_hashes_by_placeholder,
+          &HASH_PLACEHOLDER_LEFT_FINDER,
+        )
+        .into()
+      });
+      if let Some(map) = &mut instantiated_chunk.map {
+        let file_path = options.cwd.join(&options.out_dir).join(filename.as_str());
+        ecma_meta.file_dir =
+          file_path.parent().expect("chunk file name should have a parent").to_path_buf();
+        map.set_file(Path::new(filename.as_str()).file_name().unwrap().to_str().unwrap());
+        // A callback may have included the preliminary map path in a source path.
+        if map.get_sources().any(|source| source.contains("!~{")) {
+          let sources = map
+            .get_sources()
+            .map(|source| {
+              replace_placeholder_with_hash(
+                source,
+                &chunk_hashes_by_placeholder,
+                &HASH_PLACEHOLDER_LEFT_FINDER,
+              )
+              .into_owned()
+            })
+            .collect_vec();
+          map.set_sources(sources);
         }
       }
       if let StrOrBytes::Str(content) = &mut instantiated_chunk.content {
@@ -239,7 +239,7 @@ pub async fn finalize_assets(
         .iter()
         .flat_map(|static_import| match *static_import {
           StaticImport::Chunk(importee_idx) => Either::Left(
-            index_chunk_to_instances[importee_idx]
+            index_chunk_to_instance[importee_idx]
               .iter()
               .map(|importee_asset_idx| index_ins_chunk_to_filename[*importee_asset_idx].clone()),
           ),
@@ -255,7 +255,7 @@ pub async fn finalize_assets(
       ecma_meta.dynamic_imports = chunk
         .cross_chunk_dynamic_imports
         .iter()
-        .flat_map(|importee_idx| &index_chunk_to_instances[*importee_idx])
+        .flat_map(|importee_idx| &index_chunk_to_instance[*importee_idx])
         .map(|importee_asset_idx| index_ins_chunk_to_filename[*importee_asset_idx].clone())
         .chain(chunk.dynamic_imports_from_external_modules.iter().map(|idx| {
           link_output.module_table[*idx]
@@ -278,9 +278,7 @@ fn hash_sourcemap_comment(
   chunks_by_placeholder: &FxHashMap<&str, InsChunkIdx>,
   options: &NormalizedBundlerOptions,
 ) -> BuildResult<()> {
-  let (InstantiationKind::Ecma(_), Some(map), Some(sourcemap)) =
-    (&chunk.kind, &chunk.map, options.sourcemap)
-  else {
+  let (Some(map), Some(sourcemap)) = (&chunk.map, options.sourcemap) else {
     return Ok(());
   };
   if options.sourcemap_debug_ids {

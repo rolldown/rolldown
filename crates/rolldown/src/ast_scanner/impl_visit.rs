@@ -515,6 +515,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       ));
     }
     self.result.ast_usage.insert(EcmaModuleAstUsage::TopLevelAwait);
+    self.current_stmt_info.meta.insert(StmtInfoMeta::TopLevelAwait);
     if self.result.tla_keyword_span.is_none() {
       self.result.tla_keyword_span = Some(span);
     }

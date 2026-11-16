@@ -280,7 +280,6 @@ impl<'a> LinkStage<'a> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn link(mut self) -> (LinkStageOutput, IndexEcmaAst, UsedSymbolRefsBuilder) {
     self.sort_modules();
-    self.compute_tla();
     self.determine_module_exports_kind();
     self.determine_safely_merge_cjs_ns();
     self.wrap_modules();
@@ -298,6 +297,7 @@ impl<'a> LinkStage<'a> {
     self.reference_needed_symbols();
     self.prune_constant_branches();
     self.include_statements(&unreachable_import_expression_node_ids);
+    self.compute_tla();
     self.assert_promoted_writers_excluded();
     self.check_lazy_barrel_uncertain_bindings();
     self.patch_module_dependencies();

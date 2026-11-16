@@ -1,6 +1,8 @@
 //! Finds root `var` bindings that code reads before their declarator assigns them. See
 //! `internal-docs/inline-const/design.md`.
 
+use std::collections::hash_map::Entry;
+
 use oxc::semantic::{Scoping, SymbolId};
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -64,30 +66,36 @@ impl EarlyVarReads {
 
   /// Returns the root `var`s that code reads before they get their value.
   pub fn finish(self, scoping: &Scoping) -> FxHashSet<SymbolId> {
-    // The earliest module-level position at which each root function body can run.
-    let mut first_run: FxHashMap<SymbolId, u32> = FxHashMap::default();
+    // Module-level references to root functions, and the root functions each body references.
+    let mut seeds: Vec<(u32, SymbolId)> = Vec::new();
     let mut callees: FxHashMap<SymbolId, Vec<SymbolId>> = FxHashMap::default();
     for &(symbol_id, runs_at) in &self.refs {
       if !self.bodies.contains(&symbol_id) {
         continue;
       }
       match runs_at {
-        RunsAt::Position(position) => {
-          first_run
-            .entry(symbol_id)
-            .and_modify(|first| *first = (*first).min(position))
-            .or_insert(position);
-        }
+        RunsAt::Position(position) => seeds.push((position, symbol_id)),
         RunsAt::Body(caller) => callees.entry(caller).or_default().push(symbol_id),
       }
     }
-    let mut stack: Vec<SymbolId> = first_run.keys().copied().collect();
-    while let Some(caller) = stack.pop() {
-      let position = first_run[&caller];
-      for &callee in callees.get(&caller).into_iter().flatten() {
-        if first_run.get(&callee).is_none_or(|&first| position < first) {
-          first_run.insert(callee, position);
-          stack.push(callee);
+    // The earliest module-level position at which each root function body can run. Walking from
+    // the earliest reference first gives each body its earliest position the first time a walk
+    // reaches it, so each body is visited once.
+    seeds.sort_unstable_by_key(|&(position, _)| position);
+    let mut first_run: FxHashMap<SymbolId, u32> = FxHashMap::default();
+    let mut stack: Vec<SymbolId> = Vec::new();
+    for (position, seed) in seeds {
+      if first_run.contains_key(&seed) {
+        continue;
+      }
+      first_run.insert(seed, position);
+      stack.push(seed);
+      while let Some(caller) = stack.pop() {
+        for &callee in callees.get(&caller).into_iter().flatten() {
+          if let Entry::Vacant(entry) = first_run.entry(callee) {
+            entry.insert(position);
+            stack.push(callee);
+          }
         }
       }
     }

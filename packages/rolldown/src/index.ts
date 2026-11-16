@@ -4,6 +4,7 @@ import { rolldown } from './api/rolldown';
 import type { RolldownBuild } from './api/rolldown/rolldown-build';
 import { watch } from './api/watch';
 import { RolldownMagicString } from './binding-magic-string';
+import type { ReplacementFunction } from './binding-magic-string';
 import type {
   RolldownWatcher,
   RolldownWatcherEvent,
@@ -204,6 +205,7 @@ export type {
   PreRenderedChunk,
   RenderedChunk,
   RenderedModule,
+  ReplacementFunction,
   ResolvedId,
   ResolveFileUrlArgs,
   ResolveIdExtraOptions,

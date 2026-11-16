@@ -250,7 +250,7 @@ export type OptimizationOptions = {
    *     4. `test1 && test2` - logical AND expressions
    *     5. `test1 ?? test2` - nullish coalescing expressions
    *  - `mode: 'all'`: Inline all imported constants wherever they are used.
-   *  - `pass`: Number of passes to perform for inlining constants.
+   *  - `pass`: Number of passes to perform for inlining constants. `0` disables constant inlining.
    *
    * @example
    * ```js

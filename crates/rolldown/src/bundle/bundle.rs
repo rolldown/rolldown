@@ -15,7 +15,7 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use rolldown_common::{GetLocalDbMut, Module, Output, ScanMode, SharedFileEmitter, SymbolRefDb};
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
-use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
+use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Severity};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
   HookBuildEndArgs, HookCloseBundleArgs, HookRenderErrorArgs, SharedPluginDriver,
@@ -325,15 +325,10 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     // stmt_infos, ...) off the critical path.
     crate::utils::defer_drop::spawn_drop(link_stage_output);
 
-    if let Err(errors) = &bundle_output {
-      debug_assert!(errors.iter().all(|e| e.severity() == Severity::Error));
-      self
-        .plugin_driver
-        .render_error(&HookRenderErrorArgs { errors, cwd: &self.options.cwd })
-        .await?;
-    }
-
-    let mut output = bundle_output?;
+    let mut output = match bundle_output {
+      Ok(output) => output,
+      Err(errors) => return Err(self.handle_render_error(errors).await),
+    };
 
     // Add additional files from build plugins.
     self.file_emitter.add_additional_files(&mut output.assets, &mut output.warnings);
@@ -346,11 +341,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     if let Err(errors) =
       GenerateStage::validate_mangle_properties_output(&self.options, &output.assets)
     {
-      self
-        .plugin_driver
-        .render_error(&HookRenderErrorArgs { errors: &errors, cwd: &self.options.cwd })
-        .await?;
-      return Err(errors);
+      return Err(self.handle_render_error(errors).await);
     }
 
     for asset in &output.assets {
@@ -364,6 +355,22 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
 
     Self::trace_action_output_chunk_graph_ready(&output.assets);
     Ok(output)
+  }
+
+  async fn handle_render_error(
+    &self,
+    mut errors: BatchedBuildDiagnostic,
+  ) -> BatchedBuildDiagnostic {
+    debug_assert!(errors.iter().all(|e| e.severity() == Severity::Error));
+    if let Err(error) = self
+      .plugin_driver
+      .render_error(&HookRenderErrorArgs { errors: &errors, cwd: &self.options.cwd })
+      .await
+    {
+      // Report the handler failure alongside the original rendering diagnostics.
+      errors.extend(BatchedBuildDiagnostic::from(error).into_vec());
+    }
+    errors
   }
 
   fn trace_action_output_chunk_graph_ready(output: &[Output]) {

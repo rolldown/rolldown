@@ -1,13 +1,13 @@
-use rolldown::BundlerConfig;
-
 use crate::{
   types::binding_bundler_options::BindingBundlerOptions,
-  utils::normalize_binding_options::normalize_binding_options,
+  utils::normalize_binding_options::{NormalizedBindingOptions, normalize_binding_options},
 };
 
+/// The caller owns the `callbacks` field of the result. The caller must release these JS functions
+/// at the end of its close.
 pub fn create_bundler_config_from_binding_options(
   option: BindingBundlerOptions,
-) -> napi::Result<BundlerConfig> {
+) -> napi::Result<NormalizedBindingOptions> {
   let BindingBundlerOptions { input_options, output_options, parallel_plugins_registry } = option;
   // Only the parallel-plugin worker pool reads the registry, and wasm has no
   // threads for that pool. Borrow it so the binding counts as used. Do not

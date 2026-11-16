@@ -80,6 +80,8 @@ A binding that a `require()` call initializes stays a local of the CJS closure, 
 
    One function, `cjs_wrapper_fixed_params`, gives the fixed parameters of the CJS closure: `exports` and `module`. The printer and the top-level reservation both use this function, so no top-level binding has the name of a fixed parameter. After the fixed parameters, the finalizer (`cjs_wrapper_params`) adds the `this` binding, which is synthesized, so invariant S keeps all bindings of the chunk off its name. Thus a parameter cannot capture a reference to a top-level binding.
 
+   Under ESM output for `platform: 'node'`, the CJS closure also declares `__dirname` and `__filename` when the module reads them without a declaration: `var __dirname = import.meta.dirname`. Such a read is an unresolved reference, and the chunk reserves each unresolved reference at its top level. Thus this local cannot capture a reference to a top-level binding either.
+
 ## Rejected alternatives
 
 - **One shadowing pass for each kind of generated reference.** The previous design used this method. `collect_chunk_scope_captured_names` listed the names that CJS closures captured: wrapper bindings, IIFE factory parameters, order-wrap symbols and cross-chunk wrapper bindings. `rename_cjs_locals_shadowing_referenced_chunk_bindings` renamed the locals of CJS closures, one channel at a time: named imports, star imports and `require()`. Each new kind of generated reference needed one more case. The passes used five different methods to decide if a name is free. When a case was missing, the output ran but read the wrong binding, frequently with no error.

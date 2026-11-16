@@ -31,10 +31,11 @@ use crate::types::binding_string_or_regex::BindingStringOrRegex;
 use crate::types::defer_sync_scan_data::BindingDeferSyncScanData;
 use crate::types::preserve_entry_signatures::BindingPreserveEntrySignatures;
 use crate::types::{
-  binding_log::BindingLog, binding_log_level::BindingLogLevel, js_callback::JsCallback,
+  binding_log::BindingLog, binding_log_level::BindingLogLevel,
+  js_callback_release::UntrackedJsCallback,
 };
 
-pub type BindingOnLog = Option<JsCallback<FnArgs<(String, BindingLog)>, ()>>;
+pub type BindingOnLog = Option<UntrackedJsCallback<FnArgs<(String, BindingLog)>, ()>>;
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Default, Debug)]
@@ -53,7 +54,10 @@ pub struct BindingInputOptions<'env> {
     ts_type = "Array<string | RegExp> | ((source: string, importer: string | undefined, isResolved: boolean) => boolean)"
   )]
   pub external: Option<
-    Either<Vec<BindingStringOrRegex>, JsCallback<FnArgs<(String, Option<String>, bool)>, bool>>,
+    Either<
+      Vec<BindingStringOrRegex>,
+      UntrackedJsCallback<FnArgs<(String, Option<String>, bool)>, bool>,
+    >,
   >,
   pub input: Vec<BindingInputItem>,
   // makeAbsoluteExternalsRelative?: boolean | 'ifRelativeSource';
@@ -98,16 +102,16 @@ pub struct BindingInputOptions<'env> {
   pub checks: Option<binding_checks_options::BindingChecksOptions>,
   #[debug(skip)]
   #[napi(ts_type = "undefined | (() => BindingDeferSyncScanData[])")]
-  pub defer_sync_scan_data: Option<JsCallback<(), Vec<BindingDeferSyncScanData>>>,
+  pub defer_sync_scan_data: Option<UntrackedJsCallback<(), Vec<BindingDeferSyncScanData>>>,
   /// Asked for while the build is closing, so what it returns includes `closeBundle`.
   #[debug(skip)]
   #[napi(ts_type = "undefined | (() => BindingPluginTimingsMeasurement)")]
-  pub plugin_timings: Option<JsCallback<(), BindingPluginTimingsMeasurement>>,
+  pub plugin_timings: Option<UntrackedJsCallback<(), BindingPluginTimingsMeasurement>>,
   pub make_absolute_externals_relative: Option<BindingMakeAbsoluteExternalsRelative>,
   pub devtools: Option<BindingDevtoolsOptions>,
   #[debug(skip)]
   #[napi(ts_type = "() => void")]
-  pub invalidate_js_side_cache: Option<JsCallback>,
+  pub invalidate_js_side_cache: Option<UntrackedJsCallback>,
   pub preserve_entry_signatures: Option<BindingPreserveEntrySignatures>,
   pub optimization: Option<BindingOptimization>,
   pub context: Option<String>,

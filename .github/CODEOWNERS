@@ -97,7 +97,6 @@
 # ----------------------------------------------------------------------------
 # Meta files
 # (unanchored so they match agent-instruction files at any depth -- e.g. the
-#  root AGENTS.md, .claude/CLAUDE.md, rollup/AGENTS.md. Kept last so they win.)
+#  root AGENTS.md, rollup/AGENTS.md. Kept last so they win.)
 # ----------------------------------------------------------------------------
 AGENTS.md                                               @hyfdev @IWANABETHATGUY @shulaoda @h-a-n-a @sapphi-red
-CLAUDE.md                                               @hyfdev @IWANABETHATGUY @shulaoda @h-a-n-a @sapphi-red

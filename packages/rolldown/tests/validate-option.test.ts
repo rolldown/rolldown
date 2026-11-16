@@ -182,3 +182,36 @@ test('rejects the reserved devtools.sessionId', async () => {
     }
   }
 });
+
+test('rejects a treeshake.moduleSideEffects rule without test and external', async () => {
+  const bundle = await rolldown({
+    input: './build-api/main.js',
+    cwd: import.meta.dirname,
+    treeshake: {
+      // @ts-expect-error a rule must set `test` or `external`
+      moduleSideEffects: [{ sideEffects: false }],
+    },
+  });
+  try {
+    await expect(bundle.generate()).rejects.toThrow(
+      'Each rule in `treeshake.moduleSideEffects` must set `test` or `external`.',
+    );
+  } finally {
+    await bundle.close();
+  }
+});
+
+test('rejects an unknown output.esModule string', async () => {
+  const bundle = await rolldown({
+    input: './build-api/main.js',
+    cwd: import.meta.dirname,
+  });
+  try {
+    await expect(
+      // @ts-expect-error `esModule` only accepts a boolean or 'if-default-prop'
+      bundle.generate({ esModule: 'always' }),
+    ).rejects.toThrow('Unknown es module flag: always');
+  } finally {
+    await bundle.close();
+  }
+});

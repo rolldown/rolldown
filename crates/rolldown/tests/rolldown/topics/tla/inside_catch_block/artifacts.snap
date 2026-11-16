@@ -1,0 +1,146 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dyn.js
+
+```js
+import { t as s } from "./shared.js";
+// dyn.js
+const d = s.value + 1;
+export { d };
+
+```
+
+## main.js
+
+```js
+import { t as s } from "./shared.js";
+import assert from "node:assert";
+// main.js
+let m;
+try {
+	throw 0;
+} catch {
+	m = await import("./dyn.js");
+}
+assert.deepStrictEqual([s.value, m.d], [1, 2]);
+
+```
+
+## shared.js
+
+```js
+// shared.js
+const s = { value: 1 };
+export { s as t };
+
+```
+
+# Variant: wrap-all: [strict_execution_order: true]
+
+## Assets
+
+### dyn.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as s, t as init_shared } from "./shared.js";
+// dyn.js
+var d;
+function init_dyn() {
+	return (init_dyn = __esmMin((() => {
+		init_shared();
+		d = s.value + 1;
+	})))();
+}
+init_dyn();
+export { d };
+
+```
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as s, t as init_shared } from "./shared.js";
+import assert from "node:assert";
+// main.js
+var m;
+function init_main() {
+	return (init_main = __esmMin((async () => {
+		init_shared();
+		try {
+			throw 0;
+		} catch {
+			m = await import("./dyn.js");
+		}
+		assert.deepStrictEqual([s.value, m.d], [1, 2]);
+	})))();
+}
+await init_main();
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+### shared.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+// shared.js
+var s;
+function init_shared() {
+	return (init_shared = __esmMin((() => {
+		s = { value: 1 };
+	})))();
+}
+export { s as n, init_shared as t };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### dyn.js
+
+```js
+import { t as s } from "./shared.js";
+// dyn.js
+const d = s.value + 1;
+export { d };
+
+```
+
+### main.js
+
+```js
+import { t as s } from "./shared.js";
+import assert from "node:assert";
+// main.js
+let m;
+try {
+	throw 0;
+} catch {
+	m = await import("./dyn.js");
+}
+assert.deepStrictEqual([s.value, m.d], [1, 2]);
+
+```
+
+### shared.js
+
+```js
+// shared.js
+const s = { value: 1 };
+export { s as t };
+
+```

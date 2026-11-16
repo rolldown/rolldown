@@ -15,6 +15,10 @@ You could install `just` quickly by running the following command or by followin
 
 ::: code-group
 
+```sh [vp]
+vp add -g just-install
+```
+
 ```sh [Npm]
 npm install --global just-install
 ```

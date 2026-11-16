@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use derive_more::derive::Debug;
 use oxc_str::CompactStr;
-use rolldown_sourcemap::{Source, SourceJoiner};
+use rolldown_sourcemap::Source;
 
 #[derive(Clone, Default, Debug)]
 #[debug("RenderedModule")]
@@ -23,13 +23,16 @@ impl RenderedModule {
 
   pub fn code(&self) -> Option<String> {
     self.inner_code.as_ref().map(|sources| {
-      let mut joiner = SourceJoiner::default();
+      let mut code = String::with_capacity(self.rendered_byte_length());
 
-      for source in sources.iter() {
-        joiner.append_source(source);
+      for (index, source) in sources.iter().enumerate() {
+        if index > 0 {
+          code.push('\n');
+        }
+        code.push_str(source.content());
       }
 
-      joiner.join().0
+      code
     })
   }
 

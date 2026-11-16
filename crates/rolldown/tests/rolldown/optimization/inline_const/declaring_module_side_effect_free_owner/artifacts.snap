@@ -1,0 +1,85 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// ui/button.css.js
+(globalThis.log ??= []).push("css");
+// ui/button.js
+const state = globalThis.state ??= {};
+state.ready = true;
+if (!globalThis.state.ready) throw new Error("button.js ran only in part");
+// main.js
+(globalThis.log ??= []).push("main:md");
+
+```
+
+# Variant: [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// ui/button.css.js
+function init_button_css() {
+	return (init_button_css = __esmMin((() => {
+		(globalThis.log ??= []).push("css");
+	})))();
+}
+// ui/button.js
+var state;
+function init_button() {
+	return (init_button = __esmMin((() => {
+		init_button_css();
+		state = globalThis.state ??= {};
+		state.ready = true;
+		if (!globalThis.state.ready) throw new Error("button.js ran only in part");
+	})))();
+}
+// main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_button();
+		(globalThis.log ??= []).push("main:md");
+	})))();
+}
+init_main();
+
+```
+
+# Variant: [preserve_modules: true]
+
+## Assets
+
+### main.js
+
+```js
+import "./ui/button.js";
+// main.js
+(globalThis.log ??= []).push("main:md");
+
+```
+
+### ui/button.css.js
+
+```js
+// ui/button.css.js
+(globalThis.log ??= []).push("css");
+
+```
+
+### ui/button.js
+
+```js
+import "./button.css.js";
+// ui/button.js
+const state = globalThis.state ??= {};
+state.ready = true;
+if (!globalThis.state.ready) throw new Error("button.js ran only in part");
+
+```

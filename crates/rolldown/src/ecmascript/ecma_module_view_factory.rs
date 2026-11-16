@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use oxc::span::Span;
 use oxc_index::IndexVec;
 use rolldown_common::{
@@ -92,6 +94,7 @@ pub async fn create_ecma_view(
     directive_range,
     dummy_record_set,
     constant_export_map,
+    deferred_write_constants,
     cjs_reexport_require_node_ids: _,
     cjs_reexport_import_record_ids,
   } = scan_result;
@@ -122,7 +125,7 @@ pub async fn create_ecma_view(
     exports_kind,
     namespace_object_ref,
     def_format: ctx.resolved_id.module_def_format,
-    sourcemap_chain,
+    sourcemap_chain: Arc::new(sourcemap_chain),
     import_records: IndexVec::default(),
     importers: FxIndexSet::default(),
     importers_idx: FxIndexSet::default(),
@@ -144,7 +147,6 @@ pub async fn create_ecma_view(
     ast_usage,
     self_referenced_class_decl_symbol_ids,
     hashbang_range,
-    mutations: vec![],
     new_url_references: new_url_imports,
     namespace_in_checks,
     rolldown_file_url_references,
@@ -155,6 +157,7 @@ pub async fn create_ecma_view(
     directive_range,
     dummy_record_set,
     constant_export_map,
+    deferred_write_constants,
     enum_member_value_map,
     json_module_none_self_reference_included_symbol: None,
     cjs_reexport_import_record_ids,

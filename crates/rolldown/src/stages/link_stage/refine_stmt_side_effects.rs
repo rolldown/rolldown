@@ -58,8 +58,8 @@ impl ImportCycles {
 /// Link-time [`ConstantSymbolLookup`] for one module, for analyzer runs after the link stage binds
 /// the imports.
 ///
-/// A binding resolves only when its canonical declaration is a `const` that ran before the analyzed
-/// statement: a local binding when every declaring statement precedes `stmt_idx`, an import when
+/// A binding resolves only when its canonical declaration is a `const` or an
+/// `export default <expression>` that ran before the analyzed statement: a local binding when every declaring statement precedes `stmt_idx`, an import when
 /// the exporter runs before this module and is outside its import cycle. DFS ordering within a
 /// cycle depends on the entry path, so it cannot rule out TDZ failures.
 /// See `internal-docs/linking/module-execution-order/implementation.md`.
@@ -74,17 +74,24 @@ pub(super) struct LinkedConstantLookup<'a> {
 }
 
 impl LinkedConstantLookup<'_> {
-  /// Returns the canonical `const` declaration behind `symbol_ref` and its value.
+  /// Returns the canonical declaration behind `symbol_ref` and its value when it is a `const` or an
+  /// `export default <expression>`.
   fn canonical_constant(&self, symbol_ref: SymbolRef) -> Option<(SymbolRef, &ConstantValue)> {
     let canonical_ref = self.symbols.canonical_ref_for(symbol_ref);
     let meta = self.constants.get(&canonical_ref)?;
-    let is_const = self
-      .symbols
-      .local_db(canonical_ref.owner)
-      .ast_scopes
-      .scoping()
-      .symbol_flags(canonical_ref.symbol)
-      .is_const_variable();
+    // `export default <expression>` binds a name that no code can assign.
+    let is_default_export_expression = self.modules[canonical_ref.owner]
+      .as_normal()
+      .is_some_and(|module| module.ecma_view.default_export_ref == canonical_ref)
+      && self.symbols.is_facade_symbol(canonical_ref);
+    let is_const = is_default_export_expression
+      || self
+        .symbols
+        .local_db(canonical_ref.owner)
+        .ast_scopes
+        .scoping()
+        .symbol_flags(canonical_ref.symbol)
+        .is_const_variable();
     is_const.then_some((canonical_ref, &meta.value))
   }
 
@@ -122,8 +129,9 @@ impl ConstantSymbolLookup for LinkedConstantLookup<'_> {
 }
 
 impl LinkStage<'_> {
-  /// Re-analyze the statements that the scanner flagged `UnknownSideEffect` because they coerce an
-  /// imported binding. `global_constant_symbol_map` knows those constants now (#10817). This pass
+  /// Re-analyze the statements that the scanner flagged `UnknownSideEffect` and that read an imported
+  /// constant, such as a coercion of it (#10817) or an `if` whose test it decides.
+  /// `global_constant_symbol_map` knows those constants now. This pass
   /// only relaxes flags. It records the relaxed modules, so `recompute_analyzed_side_effects`
   /// rebuilds their verdicts before `reference_needed_symbols` runs.
   #[tracing::instrument(level = "debug", skip_all)]

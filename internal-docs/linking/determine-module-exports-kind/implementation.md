@@ -108,7 +108,7 @@ That refactor was previously merged and then reverted (#9237) after a hard-to-re
 
 ## Why CSS import kinds are `unreachable!`
 
-`Module::as_normal` filters out `Module::External`, `Module::CssModule`, and any non-JS module variant before this pass sees them. CSS dependencies are reached only via `ImportKind::AtImport` / `UrlImport`, which originate from CSS modules — not from JS. Therefore those kinds cannot appear in a JS module's `import_records`, and the panic is a guard against a misclassification upstream. `NewUrl` and `HotAccept` _do_ appear on JS modules but carry no exports/wrap implication, so they're explicit no-ops.
+Import records only come from the AST scanner, and the scanner never creates `ImportKind::AtImport` / `UrlImport`. Those kinds only reach the resolver through `this.resolve(.., { kind })`. Therefore they cannot appear in a module's `import_records`, and the panic is a guard against a misclassification upstream. `NewUrl` and `HotAccept` _do_ appear on JS modules but carry no exports/wrap implication, so they're explicit no-ops.
 
 ## Editing checklist
 

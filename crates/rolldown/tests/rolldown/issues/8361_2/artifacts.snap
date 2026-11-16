@@ -35,13 +35,6 @@ var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 42;
 }));
 require_cjs();
-var b_exports = /* @__PURE__ */ __exportAll({ foo2: () => foo2 });
-function foo2() {
-	Promise.resolve().then(() => a_exports);
-	Promise.resolve().then(() => b_exports);
-}
 Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_cjs()));
-// a.js
-var a_exports = /* @__PURE__ */ __exportAll({});
 
 ```

@@ -136,14 +136,6 @@ impl GenerateStage<'_> {
             names: sourcemap_meta.names,
           })));
         }
-        InstantiationKind::None => {
-          output.push(Output::Asset(Arc::new(OutputAsset {
-            filename,
-            source: code,
-            original_file_names: vec![],
-            names: vec![],
-          })));
-        }
       }
     }
 

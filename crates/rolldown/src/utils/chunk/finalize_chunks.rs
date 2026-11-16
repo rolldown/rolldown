@@ -415,7 +415,7 @@ fn finalize_sourcemaps(
         }
         asset.content = code.into();
       }
-      InstantiationKind::None | InstantiationKind::Sourcemap(_) => {}
+      InstantiationKind::Sourcemap(_) => {}
     }
   }
 

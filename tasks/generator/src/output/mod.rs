@@ -30,6 +30,7 @@ pub fn add_header(code: &str, generator_path: &str, comment_start: &str) -> Stri
 ///
 /// Can be Rust, JavaScript, or other formats.
 pub enum Output {
+  Binary { path: String, content: Vec<u8> },
   Rust { path: String, tokens: TokenStream },
   RustString { path: String, code: String },
   EcmaString { path: String, code: String },
@@ -44,26 +45,27 @@ impl Output {
     let generator_path = generator_path.cow_replace('\\', "/");
 
     let (path, code) = match self {
+      Self::Binary { path, content } => (path, content),
       Self::Rust { path, tokens } => {
         let code = print_rust(tokens, &generator_path);
-        (path, code)
+        (path, code.into_bytes())
       }
       Self::RustString { path, code } => {
         let code = rust_fmt(&code);
-        (path, code)
+        (path, code.into_bytes())
       }
       Self::EcmaString { path, code } => {
         let code = ecma_fmt(&code, &path);
-        (path, code)
+        (path, code.into_bytes())
       }
       Self::EcmaStringInline { path, code, span } => {
         let original = fs::read_to_string(&path).unwrap();
         let code = replace_range_string(&original, span, &code);
         let code = ecma_fmt(&code, &path);
-        (path, code)
+        (path, code.into_bytes())
       }
     };
-    RawOutput { path, content: code.into_bytes() }
+    RawOutput { path, content: code }
   }
 }
 

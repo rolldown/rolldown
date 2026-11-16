@@ -126,21 +126,16 @@ pub fn render_wrapped_entry_chunk(
   }
 }
 
-/// Off-strict, an entry can re-export bindings owned by an ESM-wrapped module hosted in another
-/// chunk while every statement that could call that module's `init_*` was tree-shaken (a pure
-/// re-export barrel chain resolves bindings symbol-to-symbol, keeping the barrels' forwarding
-/// statements excluded). Cross-chunk registration still imports each such wrapper — the non-strict
-/// arm of `add_depended_symbol_with_wrapped_esm_init` pairs every depended binding with its
-/// wrapper — but nothing ever calls it, so the wrapped module never evaluates and its bindings
-/// read as `undefined` at runtime (issue #10543).
+/// Off-strict, an unwrapped entry can re-export bindings owned by an ESM-wrapped module while
+/// every statement that could call its `init_*` was tree-shaken. The re-export chain resolves
+/// bindings symbol-to-symbol, but without an init call those bindings read as `undefined` at
+/// runtime (issue #10543).
 ///
-/// The entry chunk owns these calls: it already imports every such wrapper (no new chunk-graph
-/// edges, hence no new cyclic-evaluation hazards for eager top-level init calls in shared
-/// chunks). ESM evaluates dependencies before the importer's body, so an entry hosting its own
-/// body gets the calls as a body prelude from the finalizer
-/// (`entry_reexported_wrapper_init_prelude`); this chunk-tail path serves the remaining shapes,
-/// where the tail still precedes the entry body: a facade chunk hosts no body at all, and a
-/// wrapped entry's body only runs inside the wrapper invoked right after these calls.
+/// `register_entry_export_depended_symbols` imports the wrappers from the same collector used
+/// here. An entry hosting its own body gets the calls as a body prelude from the finalizer
+/// (`entry_reexported_wrapper_init_prelude`); this chunk-tail path serves facade chunks that host
+/// no entry body. Wrapped entries initialize their re-export sources through their own wrapper
+/// instead, preserving source order even when the sources are hosted in another chunk.
 fn render_entry_reexported_wrapper_init_calls(
   ctx: &GenerateContext<'_>,
   entry_id: ModuleIdx,
@@ -151,9 +146,7 @@ fn render_entry_reexported_wrapper_init_calls(
     // (consumer-local targets and entry facades) instead.
     return None;
   }
-  let entry_hosted_here = ctx.chunk_graph.module_to_chunk[entry_id] == Some(ctx.chunk_idx);
-  let entry_is_wrapped = ctx.esm_init_target(entry_id).is_some();
-  if entry_hosted_here && !entry_is_wrapped {
+  if ctx.chunk_graph.module_to_chunk[entry_id] == Some(ctx.chunk_idx) {
     return None;
   }
   let inits = collect_entry_reexported_wrapper_inits(
@@ -166,14 +159,6 @@ fn render_entry_reexported_wrapper_init_calls(
   );
   let mut rendered = String::new();
   for init in inits {
-    // An in-chunk wrapped entry was wrapped together with its whole static graph (wrap
-    // propagation), so a same-chunk owner's init is already covered inside the chunk — by a
-    // statement-position call or the excluded-statement metadata's same-chunk arm — and calling
-    // it again here would be a pure duplicate. A facade chunk gets no such guarantee for the
-    // modules it hosts, so only the in-chunk wrapped entry filters.
-    if entry_hosted_here && ctx.chunk_graph.module_to_chunk[init.owner] == Some(ctx.chunk_idx) {
-      continue;
-    }
     let wrapper_name = ctx.finalized_string_pattern_for_symbol_ref(
       init.wrapper_ref,
       ctx.chunk_idx,

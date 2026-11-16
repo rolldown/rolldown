@@ -224,24 +224,23 @@ export function measureHookCost<T extends (...args: never[]) => unknown>(
     let result: unknown;
     try {
       result = handler.apply(this, args);
+
+      // Only a thenable defers completion; a plain return value is already done.
+      if (typeof (result as { then?: unknown } | undefined)?.then === 'function') {
+        return Promise.resolve(result).then(
+          (value) => {
+            settle(recorder, cost, started);
+            return value;
+          },
+          (error: unknown) => {
+            settle(recorder, cost, started);
+            throw error;
+          },
+        );
+      }
     } catch (error) {
       settle(recorder, cost, started);
       throw error;
-    }
-
-    // Only a thenable defers completion; a plain return value is already done, and treating
-    // it as pending would leave `inFlight` permanently raised.
-    if (typeof (result as { then?: unknown } | undefined)?.then === 'function') {
-      return (result as Promise<unknown>).then(
-        (value) => {
-          settle(recorder, cost, started);
-          return value;
-        },
-        (error: unknown) => {
-          settle(recorder, cost, started);
-          throw error;
-        },
-      );
     }
 
     settle(recorder, cost, started);

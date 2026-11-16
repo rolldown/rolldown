@@ -150,6 +150,10 @@ impl ScanStageCache {
         modules
       }
     };
+    // A rebuild can add the first module that preserves JSX.
+    if scan_stage_output.symbol_ref_db.has_module_preserve_jsx() {
+      cache.symbol_ref_db.set_has_module_preserve_jsx();
+    }
     let rescanned_module_idxs = modules.iter().map(|(idx, _)| *idx).collect::<FxHashSet<_>>();
     // merge module_table, index_ast_scope, index_ecma_ast
     for (new_idx, new_module) in modules {

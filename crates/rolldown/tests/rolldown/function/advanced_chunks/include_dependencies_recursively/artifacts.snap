@@ -6,8 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { t as foo } from "./vendor.js";
 import nodeAssert from "node:assert";
+import { t as foo } from "./vendor.js";
 // main.js
 nodeAssert.strictEqual(foo, "foo bar");
 
@@ -30,8 +30,8 @@ export { foo as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_foo, t as foo } from "./vendor.js";
 import nodeAssert from "node:assert";
+import { n as init_foo, t as foo } from "./vendor.js";
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {

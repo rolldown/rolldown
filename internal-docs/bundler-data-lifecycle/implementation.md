@@ -293,7 +293,7 @@ Rust keeps the JS functions of the bundler options only while their owner is ope
   - Example: a plugin keeps `this`, and the options have an `external` function. After a dev engine close, the plugin calls `this.resolve()`. Then `this.resolve()` rejects, and the `cause` of its error has the release message.
   - After `bundle.close()`, the same call fails before it gets to the option function, because that close drops the plugin driver.
 - Option getters still work after the close, because each options object reads all its values in its constructor (see [Normalized options objects](#normalized-options-objects)).
-- The compiler checks only the fields that use `UntrackedJsCallback`. So a new function option must use it too. Nothing checks a new field that uses `JsCallback` directly, because plugin hooks and the watcher event listener also use `JsCallback`.
+- The compiler checks only the fields that use `UntrackedJsCallback`. So a new function option must use it too. Nothing checks a new field that uses `JsCallback` or `MaybeAsyncJsCallback` directly, because plugin hooks and the watcher event listener also use them.
 
 ### Limits
 
@@ -319,6 +319,12 @@ Rust keeps the JS functions of the bundler options only while their owner is ope
   - a second dev engine close while `closeBundle` runs,
   - the error after the release.
 - `packages/rolldown/tests/watch/watch.test.ts`: a rebuild after an event result close, and a watcher close while an event result close runs `closeBundle`.
+
+## Synchronous hook returns
+
+The TypeScript hook adapters and the shared error wrapper preserve synchronous returns. They normalize values inline and only create Promise chains for actual Promises or thenables; an unconditional `async` wrapper would force napi to create fulfillment and rejection handlers even for an empty synchronous hook. This is decided per invocation, because the same hook can return either kind of result. Void hooks discard returned values while still awaiting async completion, and the error wrapper annotates both synchronous throws and asynchronous rejections. Timing instrumentation must preserve this distinction too.
+
+The binding keeps plain returns free of Promises too. Each hook is a `MaybeAsyncJsCallback`, whose return value is a `MaybePromise` (`crates/rolldown_binding/src/types/js_callback.rs`). `MaybePromise` checks for a Promise with `napi_is_promise` only and converts a plain value directly. napi's `Either<Promise<T>, T>` validates a plain value as a Promise first, and that validation creates and rejects a Promise for every plain value, which makes a synchronous hook slower than an `async` one. `Either` also drops the conversion error of a malformed result, such as `{ code: Buffer }` from `load`. `MaybePromise` returns the error that a Promise resolving to the same value gives, including an exception that the conversion throws.
 
 ## Unresolved Questions
 

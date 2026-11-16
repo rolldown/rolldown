@@ -190,11 +190,10 @@ pub struct EntryReexportedWrapperInit {
 /// about the code rather than two enumerations kept in sync by hand.
 ///
 /// Same-chunk owners are deliberately kept: an unwrapped barrel gets no excluded-statement init
-/// metadata at all, so a fully tree-shaken same-chunk chain has no other call site. The one shape
-/// where same-chunk owners are always covered — an entry wrapped by propagation, whose whole
-/// static graph is wrapped with it — is filtered at its call site instead.
+/// metadata at all, so a fully tree-shaken same-chunk chain has no other call site. Wrapped entries
+/// initialize their static graph through their own wrapper in source order, across chunks too.
 ///
-/// Results are in module execution order (dependencies before dependents). Both emission callers
+/// Results follow the link-time module execution order. Both emission callers
 /// gate on `!is_strict_execution_order_enabled()`: strict execution order routes entry
 /// initialization through order-wrap lowering instead.
 pub fn collect_entry_reexported_wrapper_inits(
@@ -205,6 +204,13 @@ pub fn collect_entry_reexported_wrapper_inits(
   symbol_db: &SymbolRefDb,
   canonical_names: Option<&FxHashMap<SymbolRef, CompactStr>>,
 ) -> Vec<EntryReexportedWrapperInit> {
+  // Running export owners before the entry's own wrapper can enter a dependency cycle through
+  // the wrong module and observe an uninitialized binding (issue #11231). Wrap propagation and
+  // the wrapper's import calls already initialize those owners in the entry's source order.
+  // See internal-docs/linking/module-execution-order/implementation.md.
+  if matches!(entry_meta.wrap_kind(), WrapKind::Esm) {
+    return vec![];
+  }
   // Filter before sorting: entries whose exports resolve to no wrapped module at all — the
   // overwhelmingly common case — should not pay for sorting their whole export map (a dep
   // optimizer barrel entry can have thousands of exports).

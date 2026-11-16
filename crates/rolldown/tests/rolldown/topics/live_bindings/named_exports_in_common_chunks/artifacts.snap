@@ -6,8 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## async-entry.js
 
 ```js
-import { count, inc, reset } from "./main.js";
 import assert from "node:assert";
+import { count, inc, reset } from "./main.js";
 // async-entry.js
 reset();
 assert.strictEqual(count, 0);

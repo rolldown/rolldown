@@ -74,7 +74,7 @@ catalog:
   react: ^19.0.0
   react-dom: ^19.0.0
   remark-parse: ^11.0.0
-  remeda: ^2.57.0
+  remeda: ^2.60.0
   rolldown-plugin-dts: ^0.30.0
   rollup: ^4.63.0
   semver: ^7.8.0
@@ -91,7 +91,7 @@ catalog:
   vitest: ^4.1.6
   vue: ^3.5.35
   web-tree-sitter: ^0.27.0
-  ws: ^8.22.0
+  ws: ^8.23.0
   yaml: ^2.9.1
   zx: ^8.1.2
 
@@ -137,12 +137,10 @@ minimumReleaseAgeExclude:
   - oxc-transform
   - '@voidzero-dev/*'
   - vite-plus
-  - vitepress-plugin-feedback-tracker@0.2.0-alpha.1
   - void
   - '@napi-rs/wasm-runtime'
   - '@emnapi/*'
   - emnapi
-  - vitepress-plugin-group-icons@1.8.2
 
 # avoid accidentally relying on `NODE_PATH` env var
 extendNodePath: false

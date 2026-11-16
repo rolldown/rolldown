@@ -26,8 +26,8 @@ export default require_file();
 ## main.js
 
 ```js
-import { n as __toESM, t as require_file } from "./file.js";
 import assert from "node:assert";
+import { n as __toESM, t as require_file } from "./file.js";
 // main.js
 const required = require_file();
 const dynamicRes = await import("./file2.js").then((m) => /* @__PURE__ */ __toESM(m.default));

@@ -32,8 +32,8 @@ export default require_fake_esmodule();
 ## main.js
 
 ```js
-import { n as __toESM, t as require_fake_esmodule } from "./fake-esmodule.js";
 import assert from "node:assert";
+import { n as __toESM, t as require_fake_esmodule } from "./fake-esmodule.js";
 // main.js
 var import_fake_esmodule = /* @__PURE__ */ __toESM(require_fake_esmodule());
 const { __extends } = import_fake_esmodule.default;

@@ -203,11 +203,7 @@ impl<'name> Renamer<'name> {
   ) -> bool {
     // Renamed candidates must not conflict with any binding of the own module
     // (original names are allowed to shadow - that's intentional)
-    if !is_original_name && has_binding(symbol_db, symbol_ref.owner, candidate_name) {
-      return false;
-    }
-
-    true
+    is_original_name || !has_binding(symbol_db, symbol_ref.owner, candidate_name)
   }
 
   /// Assign a canonical name to a symbol that the finalizer prints at the top level of the chunk.

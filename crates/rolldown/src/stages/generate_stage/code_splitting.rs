@@ -1108,6 +1108,35 @@ impl GenerateStage<'_> {
         used_symbol_refs_builder,
         &dynamic_entry_merge_targets,
       );
+    } else {
+      // The already-loaded analysis above can also make a plain merge into a pure dynamic entry
+      // chunk, but `optimize_facade_entry_chunks` does not run without the merge of common chunks.
+      // So the namespace check and the extraction run here, at the same step: after module
+      // assignment and before runtime placement (`issues/11397_merge_common_chunks_off`). See
+      // internal-docs/code-splitting/implementation.md#dynamic-entry-namespaces.
+      let namespace_extractions: FxHashSet<_> = self
+        .find_leaking_dynamic_entry_namespaces(
+          chunk_graph,
+          &dynamic_entry_merge_targets,
+          used_symbol_refs_builder,
+        )
+        .into_iter()
+        .collect();
+      if !namespace_extractions.is_empty() {
+        self.apply_dynamic_entry_namespace_extractions(
+          chunk_graph,
+          &namespace_extractions,
+          used_symbol_refs_builder,
+        );
+        // The extraction can include `__exportAll`. Then the runtime module can need its own
+        // chunk, as after the replay in `optimize_facade_entry_chunks`.
+        self.extract_standalone_runtime_chunk(
+          index_splitting_info,
+          &mut module_is_assigned,
+          chunk_graph,
+          input_base,
+        );
+      }
     }
 
     self.try_merge_runtime_chunk(

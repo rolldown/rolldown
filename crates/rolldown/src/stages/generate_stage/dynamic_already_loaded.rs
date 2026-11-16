@@ -403,7 +403,7 @@ impl GenerateStage<'_> {
   /// Generates a definition for a fake module namespace for the inlined module, which is then
   /// exported. Dynamic importers of this atom from this chunk can then do `.then((n) => n.<ns>)`
   /// to get that namespace.
-  fn apply_dynamic_entry_namespace_extractions(
+  pub(super) fn apply_dynamic_entry_namespace_extractions(
     &mut self,
     chunk_graph: &mut ChunkGraph,
     namespace_extractions: &FxHashSet<(ChunkIdx, ModuleIdx)>,

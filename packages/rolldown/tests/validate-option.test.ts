@@ -97,7 +97,7 @@ test('requires a string for codeSplitting group debugName', async () => {
       },
     });
     expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining('For the "codeSplitting.groups,0,debugName"'),
+      expect.stringContaining('For the "codeSplitting.groups.0.debugName"'),
     );
     expect(consoleSpy).toHaveBeenCalledWith(
       expect.stringContaining('Invalid type: Expected string but received 1'),

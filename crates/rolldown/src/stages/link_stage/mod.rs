@@ -7,7 +7,7 @@ use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
   ConstExportMeta, DependedRuntimeHelperMap, EntryPoint, EntryPointKind, FlatOptions, ImportKind,
   ModuleIdx, ModuleTable, PreserveEntrySignatures, RetainedExportSymbols, RuntimeModuleBrief,
-  SymbolRef, SymbolRefDb, UsedExternalSymbols, UsedSymbolRefsBuilder,
+  StmtInfoIdx, SymbolRef, SymbolRefDb, UsedExternalSymbols, UsedSymbolRefsBuilder,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::Diagnostics;
@@ -39,6 +39,7 @@ mod cross_module_optimization;
 mod determine_module_exports_kind;
 mod generate_lazy_export;
 mod patch_module_dependencies;
+mod promote_deferred_write_constants;
 mod prune_constant_branches;
 mod reference_needed_symbols;
 mod refine_stmt_side_effects;
@@ -139,6 +140,8 @@ pub struct LinkStage<'a> {
   pub tla_keyword_span_map: FxHashMap<ModuleIdx, Span>,
   /// Computed during `include_statements`, reused when building `LinkStageOutput`.
   pub has_enum_inlining: bool,
+  /// The writer statements of each constant that `promote_deferred_write_constants` added.
+  promoted_constant_writers: Vec<(ModuleIdx, Vec<StmtInfoIdx>)>,
   /// Module side-effect verdicts as the scan stage left them. See
   /// `recompute_analyzed_side_effects`.
   pub scan_time_side_effects: IndexVec<ModuleIdx, ScanTimeSideEffects>,
@@ -270,6 +273,7 @@ impl<'a> LinkStage<'a> {
       tla_module_count: scan_stage_output.tla_module_count,
       tla_keyword_span_map: scan_stage_output.tla_keyword_span_map,
       has_enum_inlining: false,
+      promoted_constant_writers: Vec::new(),
     }
   }
 
@@ -284,6 +288,7 @@ impl<'a> LinkStage<'a> {
     self.determine_side_effects();
     self.bind_imports_and_exports();
     self.create_exports_for_ecma_modules();
+    self.promote_deferred_write_constants();
     let unreachable_import_expression_node_ids = self.cross_module_optimization();
     self.exclude_jsx_element_names_from_inline_const();
     self.refine_stmt_side_effects_with_imported_constants();
@@ -293,6 +298,7 @@ impl<'a> LinkStage<'a> {
     self.reference_needed_symbols();
     self.prune_constant_branches();
     self.include_statements(&unreachable_import_expression_node_ids);
+    self.assert_promoted_writers_excluded();
     self.check_lazy_barrel_uncertain_bindings();
     self.patch_module_dependencies();
 

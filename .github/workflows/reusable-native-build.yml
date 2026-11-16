@@ -33,14 +33,14 @@ jobs:
 
       - parallel:
           - name: Setup Rust
-            uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+            uses: oxc-project/setup-rust@12a52e3caf7bac9d8b9ca550a82c425ed6343aee # v1.0.18
             with:
               tools: just
               cache-key: native-build
               save-cache: ${{ github.ref_name == 'main' }}
               target-dir: ${{ runner.os == 'Windows' && format('{0}/target', env.DEV_DRIVE) || '' }}
 
-          - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
+          - uses: voidzero-dev/setup-vp@cab1ab9eaff52d4857875f4f2c016e36af8f2c76 # v1.22.0
             with:
               version: '1.6.0'
               cache: true
@@ -52,7 +52,7 @@ jobs:
         run: git diff --exit-code
 
       - name: Upload Rolldown Native
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: rolldown-native-${{ inputs.os }}
           path: packages/rolldown/dist

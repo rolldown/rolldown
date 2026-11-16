@@ -86,7 +86,7 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
+      - uses: voidzero-dev/setup-vp@cab1ab9eaff52d4857875f4f2c016e36af8f2c76 # v1.22.0
         id: vp-setup
         background: true
         with:
@@ -94,7 +94,7 @@ jobs:
           cache: true
 
       - name: Setup Rust
-        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+        uses: oxc-project/setup-rust@12a52e3caf7bac9d8b9ca550a82c425ed6343aee # v1.0.18
         with:
           # No caching to avoid cache poisoning in release artifacts
           restore-cache: false
@@ -113,7 +113,7 @@ jobs:
             if: ${{ contains(matrix.target, 'ohos') }}
             uses: Boshen/setup-ohos-sdk@edb865a89a712f1f15dbad932dfa9cfce849d95c # v1.0.0
 
-          - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
+          - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
             if: ${{ contains(matrix.target, 'musl') }}
             env:
               GITHUB_TOKEN: ${{ github.token }}
@@ -152,7 +152,7 @@ jobs:
 
       - parallel:
           - name: Upload Binding Artifact
-            uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+            uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
             with:
               if-no-files-found: error
               name: bindings-${{ matrix.target }}
@@ -162,7 +162,7 @@ jobs:
 
           - name: Upload Debug Info Artifact
             if: ${{ matrix.debuginfo }}
-            uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+            uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
             with:
               if-no-files-found: error
               name: debuginfo-${{ matrix.target }}
@@ -186,13 +186,13 @@ jobs:
 
       - parallel:
           - name: Download Binding Artifact
-            uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+            uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
             with:
               name: bindings-${{ matrix.target }}
               path: packages/rolldown/src
 
           - name: Download Debug Info Artifact
-            uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+            uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
             with:
               name: debuginfo-${{ matrix.target }}
               path: target/debuginfo
@@ -207,7 +207,7 @@ jobs:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
       - name: Build
         id: build
-        uses: cross-platform-actions/action@e0b9770014ba65d5e0815f15b74031c3a635f641 # v1.6.0
+        uses: cross-platform-actions/action@82668f1fbd89d9c99487604f822cbf6716f124d3 # v1.7.0
         env:
           DEBUG: napi:*
           RUSTUP_IO_THREADS: 1
@@ -239,7 +239,7 @@ jobs:
             rm -rf node_modules
             rm -rf target
       - name: Upload artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: bindings-x86_64-unknown-freebsd
           path: ./packages/rolldown/src/rolldown-binding.*.node
@@ -255,7 +255,7 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
+      - uses: voidzero-dev/setup-vp@cab1ab9eaff52d4857875f4f2c016e36af8f2c76 # v1.22.0
         with:
           version: '1.6.0'
           cache: true
@@ -276,7 +276,7 @@ jobs:
 
       - parallel:
           - name: Upload Node Artifact
-            uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+            uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
             with:
               if-no-files-found: error
               name: node-artifact
@@ -284,7 +284,7 @@ jobs:
                 packages/rolldown/dist/**
 
           - name: Upload `rolldown-version.txt`
-            uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+            uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
             with:
               if-no-files-found: warn
               name: rolldown-version
@@ -299,7 +299,7 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
+      - uses: voidzero-dev/setup-vp@cab1ab9eaff52d4857875f4f2c016e36af8f2c76 # v1.22.0
         id: vp-setup
         background: true
         with:
@@ -307,7 +307,7 @@ jobs:
           cache: true
 
       - name: Setup Rust
-        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+        uses: oxc-project/setup-rust@12a52e3caf7bac9d8b9ca550a82c425ed6343aee # v1.0.18
         with:
           # No caching to avoid cache poisoning in release artifacts
           restore-cache: false
@@ -333,7 +333,7 @@ jobs:
         run: vp run --filter "@rolldown/browser" build:release
 
       - name: Upload `@rolldown/browser` Artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           if-no-files-found: error
           name: browser-artifact
@@ -350,13 +350,13 @@ jobs:
 
       - parallel:
           - name: Setup Rust
-            uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+            uses: oxc-project/setup-rust@12a52e3caf7bac9d8b9ca550a82c425ed6343aee # v1.0.18
             with:
               # No caching to avoid cache poisoning in release artifacts
               restore-cache: false
               save-cache: false
 
-          - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
+          - uses: voidzero-dev/setup-vp@cab1ab9eaff52d4857875f4f2c016e36af8f2c76 # v1.22.0
             with:
               version: '1.6.0'
               cache: true
@@ -366,7 +366,7 @@ jobs:
         run: vp run --filter "@rolldown/debug" build
 
       - name: Upload `@rolldown/debug` Artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           if-no-files-found: error
           name: debug-artifact

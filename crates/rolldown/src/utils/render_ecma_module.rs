@@ -106,6 +106,14 @@ pub fn collapse_module_sourcemap(
       }
     }
   }
+  // The collapsed map takes its sources from the first map.
+  // The chain is not changed, because `this.getCombinedSourcemap()` reads it.
+  let resolved_first = owned_chain
+    .first()
+    .and_then(|first| rolldown_sourcemap::resolve_sources_against_module(first, module_id));
+  if let Some(resolved_first) = resolved_first.as_ref() {
+    owned_chain[0] = resolved_first;
+  }
   if owned_chain.is_empty() {
     // Only `map: null` transforms touched this module: keep the codegen
     // map's positions but swap in the pre-transform source content so the
@@ -220,14 +228,14 @@ mod tests {
 
   #[test]
   fn real_map_is_not_replaced_by_placeholder() {
-    // A real `Load`/`Transform` map is kept as-is; its sources/content win over the module
-    // id placeholder and its mappings flow through the collapse.
+    // A real `Load`/`Transform` map wins over the module id placeholder: its sources, content
+    // and mappings flow through the collapse.
     let mut warnings = vec![];
-    let load = SourcemapChainElement::Load(map("loaded.js", "const a = 1;\n"));
+    let load = SourcemapChainElement::Load(map("/project/src/loaded.js", "const a = 1;\n"));
     let result =
       collapse_module_sourcemap(&[load], Some(codegen_map("a(1);\n")), MODULE_ID, &mut warnings)
         .unwrap();
-    assert_snapshot!(result.to_json_string(), @r#"{"version":3,"names":[],"sources":["loaded.js"],"sourcesContent":["const a = 1;\n"],"mappings":"AAAA,MAAM"}"#);
+    assert_snapshot!(result.to_json_string(), @r#"{"version":3,"names":[],"sources":["/project/src/loaded.js"],"sourcesContent":["const a = 1;\n"],"mappings":"AAAA,MAAM"}"#);
     assert!(warnings.is_empty());
   }
 
@@ -252,5 +260,32 @@ mod tests {
       .unwrap();
       assert_eq!(result.to_json_string(), r#"{"version":3,"names":[],"sources":[],"mappings":""}"#);
     }
+  }
+
+  #[cfg(not(windows))]
+  #[test]
+  fn relative_sources_of_the_first_map_are_resolved_against_the_module() {
+    let mut builder = SourceMapBuilder::default();
+    let a = builder.add_source_and_content("../lib/a.ts", "const a = 1;\n");
+    let b = builder.add_source_and_content("../lib/b.ts", "const b = 2;\n");
+    builder.add_token(0, 0, 0, 0, Some(a), None);
+    builder.add_token(0, 6, 0, 6, Some(b), None);
+    let transform = builder.into_sourcemap().into_owned();
+    let chain = [SourcemapChainElement::Transform((plugin_idx(), transform))];
+
+    let mut warnings = vec![];
+    let result = collapse_module_sourcemap(
+      &chain,
+      Some(codegen_map("const a = 1;\n")),
+      MODULE_ID,
+      &mut warnings,
+    )
+    .unwrap();
+    assert_eq!(
+      result.get_sources().collect::<Vec<_>>(),
+      ["/project/lib/a.ts", "/project/lib/b.ts"]
+    );
+    let SourcemapChainElement::Transform((_, transform)) = &chain[0] else { unreachable!() };
+    assert_eq!(transform.get_source(0), Some("../lib/a.ts"));
   }
 }

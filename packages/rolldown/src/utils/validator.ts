@@ -1254,7 +1254,7 @@ export function validateOption<T>(key: 'input' | 'output', options: T): void {
           );
           if (subIssue) {
             if (subIssue.path) {
-              issuePaths.push(subIssue.path.map((path) => path.key));
+              issuePaths.push(...subIssue.path.map((path) => path.key));
             }
             issueMsg = subIssue.message;
           }

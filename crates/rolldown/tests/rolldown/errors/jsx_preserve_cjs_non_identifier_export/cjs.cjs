@@ -1,0 +1,1 @@
+exports['my-tag'] = function () {};

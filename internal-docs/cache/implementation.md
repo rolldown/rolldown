@@ -116,6 +116,7 @@ pub struct ScanStageCache {
   pub modules_with_changed_importers: FxHashSet<ModuleIdx>,
   pub pending_rescans: Vec<ResolvedId>,
   pub user_defined_entry: FxHashSet<ModuleId>,
+  pub user_defined_entry_common_dir: Option<Arc<Path>>,
   pub module_idx_by_abs_path: FxHashMap<ArcStr, ModuleIdx>,
   pub module_idx_by_stable_id: FxHashMap<StableModuleId, ModuleIdx>,
 }
@@ -130,6 +131,7 @@ pub struct ScanStageCache {
 | `modules_with_changed_importers` | Modules whose `importers` records were mutated by a partial scan; `merge` drains it to re-derive their materialized importer sets (see below).                                        |
 | `pending_rescans`                | Work queue: files of an aborted partial scan, whose mutations were reverted (`ModuleLoader::revert_partial_scan`); the next partial scan retries them so their errors keep surfacing. |
 | `user_defined_entry`             | The set of configured root entry `ModuleId`s.                                                                                                                                         |
+| `user_defined_entry_common_dir`  | Common directory of the entries of the last full scan, configured and emitted. The path externals a partial scan adds render relative to it.                                          |
 | `module_idx_by_abs_path`         | Absolute-path → `ModuleIdx`, used by the watcher. Paths are slash-normalized.                                                                                                         |
 | `module_idx_by_stable_id`        | `StableModuleId` → `ModuleIdx`, used by HMR.                                                                                                                                          |
 
@@ -397,7 +399,7 @@ as the `module_id_to_idx` lookup and is infallible.
 | Writer                                                   | Location                                                                                | What it writes                                                                                                                                                                                                                                         |
 | -------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `ScanStage::scan(scan_mode, &mut self.cache)`            | called at `bundle.rs:104`                                                               | Non-snapshot fields via the loader.                                                                                                                                                                                                                    |
-| `ModuleLoader` (`cache: &'a mut ScanStageCache`)         | `module_loader.rs:117` and methods                                                      | `module_id_to_idx`, `barrel_state` (e.g. removes `barrel_infos` on invalidate), `importers`, `modules_with_changed_importers`, `user_defined_entry` (full incremental scan).                                                                           |
+| `ModuleLoader` (`cache: &'a mut ScanStageCache`)         | `module_loader.rs:117` and methods                                                      | `module_id_to_idx`, `barrel_state` (e.g. removes `barrel_infos` on invalidate), `importers`, `modules_with_changed_importers`, `user_defined_entry` (full incremental scan), `user_defined_entry_common_dir` (every full scan).                        |
 | `ScanStageCache::merge`                                  | `scan_stage_cache.rs:80`; called at `bundle.rs:256`, `hmr_stage.rs:299/410`             | `snapshot`, `module_idx_by_abs_path`, `module_idx_by_stable_id`, `barrel_state.resolved_barrel_modules` (drained), `modules_with_changed_importers` (drained), `tla_*` fields in the snapshot; refreshes plugin `module_infos` for re-derived modules. |
 | `ModuleLoader::revert_partial_scan`                      | `module_loader.rs` scan error exit                                                      | Restores `module_id_to_idx` / `importers` / `barrel_state` / importer marks to their pre-scan state and fills `pending_rescans`.                                                                                                                       |
 | `ScanStageCache::set_snapshot`                           | `scan_stage_cache.rs:44`; called at `bundle.rs:250` and inside `update_defer_sync_data` | `snapshot` + rebuilds `module_idx_by_abs_path` / `module_idx_by_stable_id`.                                                                                                                                                                            |
@@ -408,12 +410,12 @@ as the `module_id_to_idx` lookup and is infallible.
 
 ### Readers of `ScanStageCache`
 
-| Reader                 | Location                              | What it reads                                                                                                                                                        |
-| ---------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `HmrStage`             | `hmr_stage.rs:48`, `:52`              | `get_snapshot().module_table`, `get_snapshot().index_ecma_ast`; also uses the module index maps. HMR is also a writer (it calls `merge` / `update_defer_sync_data`). |
-| `ModuleLoader`         | `module_loader.rs:410`, `:983`        | `get_snapshot()` (e.g. `module_table.modules.get(..)`). Also reads `module_id_to_idx` (`:229`, `:869`), `barrel_state`, `user_defined_entry`.                        |
-| `defer_sync_scan_data` | `module_loader/deferred_scan_data.rs` | Reads `module_id_to_idx` (passed as `&FxHashMap<ModuleId, VisitState>`); mutates the snapshot's per-module side effects.                                             |
-| `merge`                | `scan_stage_cache.rs:80`              | Reads `module_id_to_idx`, `user_defined_entry`, and `importers` (re-derives importer sets).                                                                          |
+| Reader                 | Location                              | What it reads                                                                                                                                                                  |
+| ---------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `HmrStage`             | `hmr_stage.rs:48`, `:52`              | `get_snapshot().module_table`, `get_snapshot().index_ecma_ast`; also uses the module index maps. HMR is also a writer (it calls `merge` / `update_defer_sync_data`).           |
+| `ModuleLoader`         | `module_loader.rs:410`, `:983`        | `get_snapshot()` (e.g. `module_table.modules.get(..)`). Also reads `module_id_to_idx` (`:229`, `:869`), `barrel_state`, `user_defined_entry`, `user_defined_entry_common_dir`. |
+| `defer_sync_scan_data` | `module_loader/deferred_scan_data.rs` | Reads `module_id_to_idx` (passed as `&FxHashMap<ModuleId, VisitState>`); mutates the snapshot's per-module side effects.                                                       |
+| `merge`                | `scan_stage_cache.rs:80`              | Reads `module_id_to_idx`, `user_defined_entry`, and `importers` (re-derives importer sets).                                                                                    |
 
 ---
 

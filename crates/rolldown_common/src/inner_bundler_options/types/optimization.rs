@@ -109,6 +109,7 @@ pub fn normalize_optimization_option(
       Some(NormalizedInlineConstConfig { mode: InlineConstMode::All, pass: 1 })
     }
     Some(InlineConstOption::Bool(false)) => None,
+    Some(InlineConstOption::Config(config)) if config.pass == 0 => None,
     Some(InlineConstOption::Config(config)) => {
       // When `mode` is unspecified, default to `Smart` to match the omitted-option
       // default. See https://github.com/rolldown/rolldown/issues/9244.

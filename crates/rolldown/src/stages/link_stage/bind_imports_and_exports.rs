@@ -1261,8 +1261,8 @@ impl LinkStage<'_> {
                 if cursor > 0 || target_commonjs_exported_symbol.is_some() {
                   // Record the consumed steps with the reading statement and the final canonical
                   // ref: `collect_frozen_reexport_usage` retains them only while that statement
-                  // is included and the symbol is used (an inlined constant never is, and needs
-                  // no init).
+                  // is included and the symbol is used (an inlined constant counts only when tree
+                  // shaking keeps its declaring module).
                   if !star_reexport_steps.is_empty() {
                     star_reexport_consumptions.push((
                       stmt_info_idx,

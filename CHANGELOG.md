@@ -1,4 +1,149 @@
 
+## [1.3.2] - 2026-11-11
+
+### 🚀 Features
+
+- magic-string: add a `hires` constructor option (#11643) by @IWANABETHATGUY
+- cjs: provide `__dirname` and `__filename` to CommonJS modules in Node ESM output (#10680) by @irvinebroque
+
+### 🐛 Bug Fixes
+
+- strict-execution-order: place re-export targets that no consumer selects (#11634) by @hyfdev
+- sourcemap: use the `map` a hook returns with the native MagicString (#11642) by @IWANABETHATGUY
+- drop no-op init calls from re-exports and imports (#11632) by @hyfdev
+- detect `__esModule` set with `Object.defineProperty(module.exports, ...)` (#11622) by @agarwalla-chirag
+- hoist `var` in top-level catch blocks of wrapped modules (#11626) by @hyfdev
+- detect top-level `await` in top-level `catch` blocks (#11640) by @hyfdev
+- sourcemap: keep columns when a hook returns the native MagicString (#11628) by @anonrig
+- make a module without module syntax CommonJS when it is both imported and required (#11633) by @hyfdev
+- drop references in dead branches inside live functions before chunk linking (#11059) by @elliott-with-the-longest-name-on-github
+- make cross-chunk export names independent of module load order (#10882) by @danieljvdm
+- don't treat new URL() references as execution dependencies (#11605) by @shuvroroy
+- stop the options passed to hooks from keeping a build's plugins alive (#11623) by @Brooooooklyn
+- strict-execution-order: run the declaring module of an inlined constant read through a kept barrel (#11546) by @hyfdev
+- hoist `var` in top-level for-in and for-of heads of wrapped modules (#11620) by @hyfdev
+- rollup-tests: fail the test case on assertion error in `renderError` (#11621) by @sapphi-red
+- preserve rendering errors when `renderError` fails (#11614) by @sapphi-red
+- count emitted chunks when rendering relative-path externals (#11611) by @hyfdev
+- avoid panic on `{ b: [y = 1] }` destructuring in a wrapped module (#11563) by @IWANABETHATGUY
+- treeshaking: tree-shake statements with `instanceof` that a constant makes pure (#11610) by @hyfdev
+- dev: don't panic when a partial rebuild adds a relative-path external (#11604) by @hyfdev
+- rolldown: fail the build instead of hanging when a module task panics (#11562) by @Brooooooklyn
+- rolldown: don't panic in module tasks after the build is dropped (#11557) by @Brooooooklyn
+- browser: default `cwd` to `/` (#11554) by @Brooooooklyn
+
+### 🚜 Refactor
+
+- use `.agents/skills` for skill files (#11627) by @camc314
+
+### 📚 Documentation
+
+- perf-kit: show the build config on the page (#11646) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- trace sequential sourcemap tokens with a bounded cursor (#11545) by @Dunqing
+- use raw tokens when collapsing sourcemaps (#11524) by @Dunqing
+- magic-string: free the index table of a MagicString returned from transform (#11558) by @Brooooooklyn
+
+### 🧪 Testing
+
+- dev: add exports assignment test (#5654) by @sapphi-red
+- rollup-tests: normalize Rollup Error for renderError (#11613) by @sapphi-red
+- rolldown: cover async render hooks (#11560) by @Brooooooklyn
+- watch: cover the native backend and fix the watch-error CLI test race (#11559) by @Brooooooklyn
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update dependency vitepress-plugin-group-icons to v1.8.2 (#11647) by @jong-kyung
+- deps: update dependency vite-plus to v1.6.0 (#11641) by @renovate[bot]
+- skip upstream-only workflows on forks (#11644) by @jong-kyung
+- deps: update napi to v3.16.2 (#11639) by @renovate[bot]
+- deps: update rollup submodule for tests to v4.68.2 (#11608) by @rolldown-guard[bot]
+- rollup-tests: retriage failed tests (#11615) by @sapphi-red
+- deps: update test262 submodule for tests (#11609) by @rolldown-guard[bot]
+- deps: update npm packages (#11572) by @renovate[bot]
+- docs: always use https (#11606) by @TheAlexLichter
+- deps: update dependency vite-plus to v1.5.1 (#11591) by @renovate[bot]
+- stop building `better-sqlite3` on install (#11602) by @hyfdev
+- deps: upgrade oxc to 0.158.0 (#11601) by @camc314
+- deps: update dependency rolldown-plugin-dts to ^0.30.0 (#11588) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.52.0 (#11590) by @renovate[bot]
+
+### ❤️ New Contributors
+
+* @jong-kyung made their first contribution in [#11647](https://github.com/rolldown/rolldown/pull/11647)
+* @irvinebroque made their first contribution in [#10680](https://github.com/rolldown/rolldown/pull/10680)
+* @agarwalla-chirag made their first contribution in [#11622](https://github.com/rolldown/rolldown/pull/11622)
+* @danieljvdm made their first contribution in [#10882](https://github.com/rolldown/rolldown/pull/10882)
+
+
+## [1.3.1] - 2026-11-09
+
+### 🚀 Features
+
+- inline-common-chunks: inline chunks using `import.meta.ROLLDOWN_FILE_URL_*` (#11543) by @mattlewis92
+
+### 🐛 Bug Fixes
+
+- cli: apply --environment before loading the binding (#11553) by @Brooooooklyn
+- rolldown_plugin_vite_resolve: escape module names in generated error stubs (#11584) by @sapphi-red
+- add the code location to transform logs and errors at position 0 (#11568) by @chinmayajha
+- match sticky regexes only at the start of the string (#11569) by @chinmayajha
+- iife/umd: skip namespace markers when the entry has no exports (#11567) by @lazerg
+- keep a declaration's name when it clashes with an external import (#11052) by @Nic-Polumeyv
+- drop top-level statements made dead by imported constants before chunk linking (#11053) by @elliott-with-the-longest-name-on-github
+- keep `this.resolve` custom options apart for overlapping calls (#11505) by @wan9chi
+- transform: reuse TsconfigCache's answer when no tsconfig owns the file (#11265) by @sarankumar1325
+- treat top-level `this` of a required module without module syntax as its exports (#11271) by @sarankumar1325
+- keep side effects of a module whose exported constant is inlined (#11440) by @hyfdev
+- leave same-chunk dynamic imports out of `dynamicImports` (#11156) by @kkkhs
+
+### 🚜 Refactor
+
+- prepend transferred imports as AST fragments (#11464) by @Dunqing
+
+### 📚 Documentation
+
+- show `vp` first in setup commands (#11503) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- incremental: reuse link-time facade symbols across rebuilds (#11542) by @mattlewis92
+- incremental: share module sourcemap chains across cache clones (#11540) by @mattlewis92
+- chunk_optimizer: answer runtime-merge reachability from one chunk-level graph (#11541) by @mattlewis92
+- send only changed chunk properties back to Rust from output hooks (#11488) by @anonrig
+
+### 🧪 Testing
+
+- remove review fixtures committed by mistake in #11052 (#11574) by @hyfdev
+- wasi: cover raw context destruction (#11561) by @Brooooooklyn
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update rust crates (#11573) by @renovate[bot]
+- deps: update mimalloc-safe to 0.1.70 (#11589) by @shulaoda
+- renovate: update GitHub Actions that are pinned to a commit (#11583) by @hyfdev
+- skip Playwright browser downloads in Prepare Release (#11579) by @shulaoda
+- pin the rolldown crates to exact versions of each other on release (#11577) by @shulaoda
+- update `CodSpeedHQ/action` to v5.6.3 for Ubuntu 26.04 (#11575) by @hyfdev
+- remove stale entries from `.typos.toml` (#11571) by @iiio2
+- pick the Prepare Release target branch from the version (#11525) by @shulaoda
+- run every OS on pushes to maintenance branches (#11520) by @shulaoda
+- rebase maintenance Vite branches onto their Vite minor (#11515) by @shulaoda
+- run CI on pushes to maintenance branches (#11516) by @shulaoda
+- support patch releases from maintenance branches (#11393) by @shulaoda
+
+### ❤️ New Contributors
+
+* @chinmayajha made their first contribution in [#11568](https://github.com/rolldown/rolldown/pull/11568)
+* @lazerg made their first contribution in [#11567](https://github.com/rolldown/rolldown/pull/11567)
+* @elliott-with-the-longest-name-on-github made their first contribution in [#11053](https://github.com/rolldown/rolldown/pull/11053)
+* @sarankumar1325 made their first contribution in [#11265](https://github.com/rolldown/rolldown/pull/11265)
+* @anonrig made their first contribution in [#11488](https://github.com/rolldown/rolldown/pull/11488)
+* @kkkhs made their first contribution in [#11156](https://github.com/rolldown/rolldown/pull/11156)
+
+
 ## [1.3.0] - 2026-11-05
 
 ### 💥 BREAKING CHANGES

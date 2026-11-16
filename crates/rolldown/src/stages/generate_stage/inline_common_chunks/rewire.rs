@@ -31,8 +31,9 @@ impl GenerateStage<'_> {
   /// Projects the logical edges `commit_cross_chunk_links` just wrote onto the physical files.
   ///
   /// A record keeps its own imports (minus other records: records reach each other through
-  /// bridges) so a carrier can print them. A file that reads records drops its imports of them,
-  /// takes over the imports of every record it carries, and imports the runtime chunk first.
+  /// bridges) so a carrier can print them. A file that reads or carries records drops its imports
+  /// of them, takes over the imports of every record it carries, and imports the runtime chunk
+  /// first.
   pub(in crate::stages::generate_stage) fn apply_inline_common_chunks_links(
     &self,
     chunk_graph: &mut ChunkGraph,
@@ -41,6 +42,16 @@ impl GenerateStage<'_> {
       return;
     }
     let records = self.inline_state.record_indices().collect::<FxIndexSet<_>>();
+    // A dynamic import of a record loads the record's loader, or nothing when it has none.
+    let loaders = self.inline_state.loaders();
+    for chunk in chunk_graph.chunk_table.iter_mut() {
+      chunk.cross_chunk_dynamic_imports.retain_mut(|target| {
+        if !records.contains(target) {
+          return true;
+        }
+        loaders.get(target).map(|loader| *target = *loader).is_some()
+      });
+    }
     let static_importees: IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> = chunk_graph
       .chunk_table
       .iter()
@@ -61,6 +72,7 @@ impl GenerateStage<'_> {
       },
       |chunk_idx| chunk_graph.chunk_table[chunk_idx].exec_order,
       &records,
+      &loaders,
     );
     // The `__share` and `__share_require` demands were registered from the selection-time
     // placement, so the final one must be the same table; it leaves no record without a carrier.
@@ -83,7 +95,7 @@ impl GenerateStage<'_> {
       chunk.cross_chunk_imports.retain(|importee| !records.contains(importee));
     }
 
-    for file in placement.reading_files.iter().copied() {
+    for file in self.inline_state.inline_files() {
       let carried = placement.carried.get(&file).map_or(&[][..], Vec::as_slice);
       let file_chunk = &chunk_graph.chunk_table[file];
       let cross_chunk_dynamic_imports = file_chunk

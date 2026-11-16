@@ -190,11 +190,10 @@ pub struct EntryReexportedWrapperInit {
 /// about the code rather than two enumerations kept in sync by hand.
 ///
 /// Same-chunk owners are deliberately kept: an unwrapped barrel gets no excluded-statement init
-/// metadata at all, so a fully tree-shaken same-chunk chain has no other call site. The one shape
-/// where same-chunk owners are always covered — an entry wrapped by propagation, whose whole
-/// static graph is wrapped with it — is filtered at its call site instead.
+/// metadata at all, so a fully tree-shaken same-chunk chain has no other call site. Wrapped entries
+/// initialize their static graph through their own wrapper in source order, across chunks too.
 ///
-/// Results are in module execution order (dependencies before dependents). Both emission callers
+/// Results follow the link-time module execution order. Both emission callers
 /// gate on `!is_strict_execution_order_enabled()`: strict execution order routes entry
 /// initialization through order-wrap lowering instead.
 pub fn collect_entry_reexported_wrapper_inits(
@@ -205,6 +204,13 @@ pub fn collect_entry_reexported_wrapper_inits(
   symbol_db: &SymbolRefDb,
   canonical_names: Option<&FxHashMap<SymbolRef, CompactStr>>,
 ) -> Vec<EntryReexportedWrapperInit> {
+  // Running export owners before the entry's own wrapper can enter a dependency cycle through
+  // the wrong module and observe an uninitialized binding (issue #11231). Wrap propagation and
+  // the wrapper's import calls already initialize those owners in the entry's source order.
+  // See internal-docs/linking/module-execution-order/implementation.md.
+  if matches!(entry_meta.wrap_kind(), WrapKind::Esm) {
+    return vec![];
+  }
   // Filter before sorting: entries whose exports resolve to no wrapped module at all — the
   // overwhelmingly common case — should not pay for sorting their whole export map (a dep
   // optimizer barrel entry can have thousands of exports).
@@ -809,7 +815,8 @@ fn add_wrapped_esm_init_targets_for_static_member_reads(
           match member_expr.resolution(&ctx.importer_meta.resolved_member_expr_refs) {
             Some(resolution) => {
               if let Some(symbol_ref) = resolution.resolved
-                && !symbol_is_always_inlined(ctx, symbol_ref)
+                && (!symbol_is_always_inlined(ctx, symbol_ref)
+                  || declaring_module_has_side_effects(ctx, symbol_ref))
               {
                 add_wrapped_esm_init_target_for_symbol(
                   ctx,
@@ -841,6 +848,17 @@ fn symbol_is_always_inlined(ctx: &WrappedEsmInitTargetContext<'_>, symbol_ref: S
   ctx.constant_value_map.get(&canonical_ref).is_some_and(|meta| {
     !meta.commonjs_export && (mode != InlineConstMode::Smart || meta.safe_to_inline)
   })
+}
+
+/// Whether the module that declares the symbol, or one of its dependencies, has side effects. The
+/// inclusion pass keeps such a module when its constant is inlined, so the read still initializes it.
+fn declaring_module_has_side_effects(
+  ctx: &WrappedEsmInitTargetContext<'_>,
+  symbol_ref: SymbolRef,
+) -> bool {
+  let owner = ctx.symbol_db.canonical_ref_for(symbol_ref).owner;
+  ctx.modules[owner].side_effects().has_side_effects()
+    || ctx.metas[owner].has_side_effectful_dependency(ctx.modules)
 }
 
 /// Whether this record has a statically resolvable binding consumer. A side-effect-only import has

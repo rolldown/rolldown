@@ -25,20 +25,59 @@ You need:
 - For a page: Chrome or Edge on the machine. `CHROME_PATH` selects the browser.
 - For a Worker: `@cloudflare/vite-plugin` and `wrangler` as dev dependencies of the app. Coverage needs Wrangler 4.108.0 or later.
 
-perf-kit has no dependencies, so it runs without an install step:
+You can run perf-kit without adding it as a project dependency:
 
-```sh
+::: code-group
+
+```sh [vp]
+$ vp dlx @rolldown/perf-kit help
+```
+
+```sh [npm]
 $ npx @rolldown/perf-kit help
 ```
 
-To add it to the project instead, run `npm i -D @rolldown/perf-kit`. The command is then `npx perf-kit`. perf-kit keeps its state in `.perf-kit/` in the folder you run it from. It writes a `.gitignore` there, so the state stays out of commits.
+:::
 
-### Turn on the build report
+To add it to the project instead, run `vp add -D @rolldown/perf-kit` or `npm i -D @rolldown/perf-kit`. The command is then `vp exec perf-kit` or `npx perf-kit`. perf-kit keeps its state in `.perf-kit/` in the folder you run it from. It writes a `.gitignore` there, so the state stays out of commits.
 
-This step is optional. If the app builds with Rolldown, turn on the [build report](/in-depth/build-report#usage) and rebuild the app. perf-kit then reads 2 of its files:
+### Configure the build
 
-- `module-graph.json`, for the commands that [find code that can load later](#find-code-that-can-load-later).
-- `chunk-graph.json`, for the check that finds chunks that start late. Available since Rolldown 1.3.0. A Vite manifest (`build.manifest: true`) also works.
+Set these options and rebuild the app:
+
+::: code-group
+
+```js [rolldown.config.js]
+import { defineConfig } from 'rolldown';
+
+export default defineConfig({
+  input: 'src/main.js',
+  devtools: { mode: 'report' },
+  output: { sourcemap: true },
+});
+```
+
+```js [vite.config.js]
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  build: {
+    sourcemap: true,
+    rolldownOptions: {
+      devtools: { mode: 'report' },
+    },
+  },
+});
+```
+
+:::
+
+- `sourcemap: true`: `scan` and `coverage` stop with an error when the entry chunk of a page has no sourcemap. Turn on sourcemaps with any bundler.
+- `devtools: { mode: 'report' }` writes the [build report](/in-depth/build-report). It needs Rolldown, and Vite 8 uses Rolldown. perf-kit reads 2 of its files:
+  - `module-graph.json`, for the commands that [find code that can load later](#find-code-that-can-load-later).
+  - `chunk-graph.json`, for the check that finds chunks that start late. A Vite manifest (`build.manifest: true`) also works.
+
+For a Worker, skip this step. The `worker-config` build sets both options.
 
 ## Use it with a coding agent
 
@@ -51,7 +90,7 @@ The browser and server prompts tell the agent to run `help` first. `help` prints
 ::: info Before you use the Cloudflare Worker prompt
 The app must build with Rolldown.
 
-1. Run `npm i -D @rolldown/perf-kit` in the app.
+1. Run `vp add -D @rolldown/perf-kit` or `npm i -D @rolldown/perf-kit` in the app.
 2. Add `dist-attrib/` and `perf-kit.vite.config.ts` to `.gitignore`, so that the agent does not commit them.
 
 Unlike the other two prompts, this prompt lists the commands. We tested this form with coding agents. Keep `<command>`, `<module>` and `<class modules>` as they are, because the agent fills them in. If the app builds more than one Worker, add `--worker <name>` to the first `worker-scan`.
@@ -350,14 +389,25 @@ $ npx @rolldown/perf-kit node-scan --entry dist/server.js --ready port:3000
 
 Run these commands in the app folder:
 
-```sh
+::: code-group
+
+```sh [vp]
+$ vp add -D @rolldown/perf-kit
+$ vp exec perf-kit worker-config --app .
+$ vp exec vite build --config perf-kit.vite.config.ts
+$ vp exec perf-kit worker-scan --app . --request /
+```
+
+```sh [npm]
 $ npm i -D @rolldown/perf-kit
 $ npx perf-kit worker-config --app .
 $ npx vite build --config perf-kit.vite.config.ts
 $ npx perf-kit worker-scan --app . --request /
 ```
 
-`worker-config` writes a Vite config that wraps the config of the app. `--request` adds a route to call after startup. After a kept change, run `npx perf-kit worker-scan --pin`. The numbers come from the local CPU. Use `wrangler check startup`, before and after, for the number that Cloudflare reports.
+:::
+
+`worker-config` writes a Vite config that wraps the config of the app. `--request` adds a route to call after startup. After a kept change, run `worker-scan --pin`. The numbers come from the local CPU. Use `wrangler check startup`, before and after, for the number that Cloudflare reports.
 
 ### A deployed site
 
@@ -376,7 +426,7 @@ Before you compare builds, check the recording with `--calibrate`. The [README](
 
 ### Find code that can load later
 
-Run each command as `npx @rolldown/perf-kit <command>`. These commands need the [build report](#turn-on-the-build-report), and they do not need a browser run. Their numbers are leads, not measurements, so check each change with `scan`.
+Run each command as `npx @rolldown/perf-kit <command>`. These commands need the [build report](#configure-the-build), and they do not need a browser run. Their numbers are leads, not measurements, so check each change with `scan`.
 
 | Command               | What it answers                                                                                                                |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------ |

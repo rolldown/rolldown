@@ -1,0 +1,51 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+// ui/a.js
+(globalThis.log ??= []).push("a");
+
+```
+
+## b.js
+
+```js
+// ui/b.js
+(globalThis.log ??= []).push("b");
+
+```
+
+## x.js
+
+```js
+import "./a.js";
+// x.js
+const x = "a";
+export { x };
+
+```
+
+## y.js
+
+```js
+import "./b.js";
+// y.js
+const y = "b";
+export { y };
+
+```
+
+## z.js
+
+```js
+import "./a.js";
+import "./b.js";
+// z.js
+const z = ["b", "a"];
+export { z };
+
+```

@@ -95,6 +95,7 @@ module.exports = [
     "rollup@form@comment-before-import: preserves comments before imports@generates es",
     "rollup@form@paths-function: external paths (#754)@generates es",
     "rollup@form@export-globals: Supports reexports of globals with namespace access@generates es",
+    "rollup@form@arbitrary-module-namespace-identifiers-star: renders imports and exports with names that start with \"*\"@generates es",
     // Passed. convert reexport to import and export
     "rollup@form@reexport-external-default-and-name: reexports a an external default as a name and imports another name from that dependency@generates es",
     "rollup@form@reexport-external-default-and-namespace: reexports a default external import as default export (when using named exports)@generates es",

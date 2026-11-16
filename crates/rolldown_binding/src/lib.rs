@@ -109,6 +109,14 @@ pub fn start_async_runtime() {
 
 #[napi_derive::module_init]
 fn init() {
+  #[cfg(all(
+    not(target_family = "wasm"),
+    not(feature = "default_global_allocator"),
+    not(target_env = "ohos")
+  ))]
+  // SAFETY: `mi_collect` only walks the calling thread's own mimalloc heap.
+  rolldown_utils::allocator::set_collect_hook(|| unsafe { libmimalloc_sys2::mi_collect(true) });
+
   #[cfg(not(target_family = "wasm"))]
   {
     use napi::{bindgen_prelude::create_custom_tokio_runtime, tokio};

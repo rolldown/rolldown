@@ -322,8 +322,8 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
 
     // `link_stage_output` is dead from here on (its `symbol_db` was just taken
     // for the cache merge); free the remaining heavy fields (module_table, metas,
-    // stmt_infos, ...) off the critical path.
-    crate::utils::defer_drop::spawn_drop(link_stage_output);
+    // stmt_infos, ...) off the critical path, then return the freed pages.
+    crate::utils::defer_drop::spawn_drop_and_collect(link_stage_output);
 
     let mut output = match bundle_output {
       Ok(output) => output,

@@ -115,6 +115,23 @@ pub fn spawn_drop<T: Send + 'static>(value: T) {
   }
 }
 
+/// Like [`spawn_drop`], then asks the allocator to return the freed memory to the OS on every
+/// rayon worker. See `rolldown_utils::allocator`.
+pub fn spawn_drop_and_collect<T: Send + 'static>(value: T) {
+  spawn_drop(CollectAfterDrop(Some(value)));
+}
+
+/// Drops its value, then runs the allocator collect hook (on the deferred-drop worker when it
+/// is queued through [`spawn_drop`]).
+struct CollectAfterDrop<T>(Option<T>);
+
+impl<T> Drop for CollectAfterDrop<T> {
+  fn drop(&mut self) {
+    drop(self.0.take());
+    rolldown_utils::allocator::collect_after_bulk_free();
+  }
+}
+
 /// Block until every pending deferred drop has finished. A no-op in steady
 /// state; see the module docs for where it must be called.
 pub fn drain() {

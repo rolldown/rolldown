@@ -1,5 +1,5 @@
 use arcstr::ArcStr;
-use rolldown_sourcemap::SourceMap;
+use rolldown_sourcemap::PackedSourceMap;
 
 use crate::{ChunkIdx, InstantiationKind, StrOrBytes};
 
@@ -15,7 +15,8 @@ pub struct Asset {
   /// In this case, `originate_from` is `None`.
   pub originate_from: Option<ChunkIdx>,
   pub content: StrOrBytes,
-  pub map: Option<SourceMap>,
+  /// Held packed: about 3 bytes for each token. Unpack it to read its tokens.
+  pub map: Option<PackedSourceMap>,
   pub meta: InstantiationKind,
   pub filename: ArcStr,
 }

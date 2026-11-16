@@ -191,7 +191,7 @@ impl BuildArtifactsSnapshot {
         Output::Chunk(chunk) => chunk
           .map
           .as_ref()
-          .map(|sourcemap| SourcemapVisualizer::new(&chunk.code, sourcemap).get_text()),
+          .map(|sourcemap| SourcemapVisualizer::new(&chunk.code, &sourcemap.unpack()).get_text()),
         Output::Asset(_) => None,
       })
       .collect::<Vec<_>>()

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use arcstr::ArcStr;
 use oxc_str::CompactStr;
-use rolldown_sourcemap::SourceMap;
+use rolldown_sourcemap::PackedSourceMap;
 use rustc_hash::FxHashMap;
 
 use crate::ModuleId;
@@ -25,7 +25,8 @@ pub struct OutputChunk {
   pub dynamic_imports: Vec<ArcStr>,
   // OutputChunk
   pub code: String,
-  pub map: Option<SourceMap>,
+  /// Held packed: about 3 bytes for each token. Unpack it to read its tokens.
+  pub map: Option<PackedSourceMap>,
   pub sourcemap_filename: Option<String>,
   pub preliminary_filename: String,
 }

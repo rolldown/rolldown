@@ -615,6 +615,7 @@ fn test_collapse_sourcemaps() {
   source_joiner.append_source(SourceMapSource::new(code, map.unwrap().into_owned()));
 
   let (source_text, source_map) = source_joiner.join();
+  let source_map = source_map.map(PackedSourceMap::into_sourcemap);
 
   let mut sourcemap_chain = vec![];
 

@@ -263,7 +263,7 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
         };
         // A freshly scanned module is the chain's only owner, so this does not copy it.
         let sourcemap_chain = Arc::make_mut(&mut module.sourcemap_chain);
-        sourcemap_chain.extend(sourcemaps.into_iter().map(PackedSourcemapChainElement::from));
+        sourcemap_chain.extend(PackedSourcemapChainElement::pack_chain(sourcemaps, &self.options));
         // Partition sourcemap chain into Load and Transform elements (O(n) instead of O(n log n) sort)
         // Load elements come first, then Transform elements sorted by plugin order
         let chain_len = sourcemap_chain.len();

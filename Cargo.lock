@@ -1990,7 +1990,7 @@ dependencies = [
 [[package]]
 name = "oxc_sourcemap"
 version = "10.0.0"
-source = "git+https://github.com/oxc-project/oxc-sourcemap?branch=feat%2Fpacked-mappings#b5262f88204ea86e65f67756cbb7d2113e169b9f"
+source = "git+https://github.com/oxc-project/oxc-sourcemap?branch=feat%2Fpacked-mappings#94dda92b2559f0b58413df5ff42dca4e7c4ce83b"
 dependencies = [
  "base64-simd",
  "json-escape-simd",

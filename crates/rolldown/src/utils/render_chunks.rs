@@ -67,10 +67,13 @@ pub async fn render_chunks(
     asset.content = code.into();
     if !sourcemaps.is_empty() {
       if let Some(asset_map) = &asset.map {
+        // The chunk map is held packed. Decode it for the lookups of the collapse.
+        let asset_map = asset_map.unpack();
         let mut sourcemap_chain = Vec::with_capacity(sourcemaps.len() + 1);
-        sourcemap_chain.push(asset_map);
+        sourcemap_chain.push(&asset_map);
         sourcemap_chain.extend(sourcemaps.iter());
-        asset.map = Some(collapse_sourcemaps(&sourcemap_chain));
+        let collapsed = collapse_sourcemaps(&sourcemap_chain).into_packed();
+        asset.map = Some(collapsed);
       }
     }
     warnings.extend(chunk_warnings);

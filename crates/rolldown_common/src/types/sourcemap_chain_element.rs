@@ -1,7 +1,7 @@
 use arcstr::ArcStr;
 use rolldown_sourcemap::{PackedSourceMap, SourceMap};
 
-use crate::PluginIdx;
+use crate::{NormalizedBundlerOptions, PluginIdx};
 
 #[derive(Debug, Clone)]
 pub enum SourcemapChainElement {
@@ -26,6 +26,34 @@ pub enum PackedSourcemapChainElement {
   Load(PackedSourceMap),
   Omitted { plugin_idx: PluginIdx, plugin_name: ArcStr },
   Null { plugin_idx: PluginIdx, original_content: ArcStr },
+}
+
+impl PackedSourcemapChainElement {
+  /// Pack the elements of a chain that is complete, for a module to hold.
+  ///
+  /// Nothing reads the chain when the output has no sourcemap, so nothing is kept. And
+  /// with `sourcemapExcludeSources`, the output drops the contents of the sources, so they are
+  /// dropped here instead of held and copied through every collapse.
+  pub fn pack_chain(
+    chain: impl IntoIterator<Item = SourcemapChainElement>,
+    options: &NormalizedBundlerOptions,
+  ) -> Vec<Self> {
+    if !options.is_sourcemap_enabled() {
+      return Vec::new();
+    }
+    chain
+      .into_iter()
+      .map(|mut element| {
+        if options.sourcemap_exclude_sources
+          && let SourcemapChainElement::Transform((_, map)) | SourcemapChainElement::Load(map) =
+            &mut element
+        {
+          map.set_source_contents(vec![]);
+        }
+        Self::from(element)
+      })
+      .collect()
+  }
 }
 
 impl From<SourcemapChainElement> for PackedSourcemapChainElement {

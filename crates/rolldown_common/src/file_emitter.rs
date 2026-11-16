@@ -65,7 +65,7 @@ pub struct EmittedPrebuiltChunk {
   pub name: Option<ArcStr>,
   pub code: String,
   pub exports: Vec<String>,
-  pub map: Option<rolldown_sourcemap::SourceMap>,
+  pub map: Option<rolldown_sourcemap::PackedSourceMap>,
   pub sourcemap_filename: Option<String>,
   pub facade_module_id: Option<ArcStr>,
   pub is_entry: bool,

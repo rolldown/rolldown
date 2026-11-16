@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use napi::{Either, bindgen_prelude::Null};
 use napi_derive::napi;
-use rolldown_sourcemap::SourceMap;
+use rolldown_sourcemap::PackedSourceMap;
 
 use super::{
   binding_rendered_chunk::BindingModules, binding_sourcemap::BindingSourcemap,
@@ -120,7 +120,7 @@ impl BindingOutputChunk {
   #[napi]
   // TODO: claude code - Cannot change to Option<&str>: performs JSON serialization via to_json_string()
   pub fn get_map(&self) -> napi::Result<Option<String>> {
-    Ok(self.try_get_inner()?.map.as_ref().map(SourceMap::to_json_string))
+    Ok(self.try_get_inner()?.map.as_ref().map(PackedSourceMap::to_json_string))
   }
 
   #[napi]

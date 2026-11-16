@@ -223,7 +223,14 @@ impl NormalModule {
         );
         ModuleRenderOutput {
           code: render_output.code,
-          map: render_output.map.map(oxc_sourcemap::SourceMap::into_owned),
+          map: render_output.map.map(|mut map| {
+            // The output drops the contents of the sources: do not copy them out of the
+            // source text that the codegen map borrows.
+            if options.sourcemap_exclude_sources {
+              map.set_source_contents(vec![]);
+            }
+            map.into_owned()
+          }),
         }
       }
     }

@@ -23,6 +23,21 @@ impl TryFrom<BindingSourcemap> for rolldown_sourcemap::SourceMap {
   }
 }
 
+/// Straight into the packed form: a map from JS is held, not read.
+impl TryFrom<BindingSourcemap> for rolldown_sourcemap::PackedSourceMap {
+  type Error = anyhow::Error;
+
+  fn try_from(value: BindingSourcemap) -> Result<Self, Self::Error> {
+    match value.inner {
+      Either::A(s) => oxc_sourcemap::PackedSourceMap::from_json_string(&s)
+        .map(oxc_sourcemap::PackedSourceMap::into_owned)
+        .context("Failed to convert string sourcemap to struct"),
+      Either::B(v) => oxc_sourcemap::PackedSourceMap::from_json(v.into_json())
+        .context("Failed to convert json sourcemap to struct"),
+    }
+  }
+}
+
 // This struct is used to both pass to JS and receive from JS:
 // - Part of BindingSourcemap Either type, used in both directions
 // - Pass to JS: Created in From<JSONSourceMap> impl (line 64)
@@ -43,11 +58,10 @@ pub struct BindingJsonSourcemap {
   pub x_google_ignore_list: Option<Vec<u32>>,
 }
 
-impl TryFrom<BindingJsonSourcemap> for rolldown_sourcemap::SourceMap {
-  type Error = anyhow::Error;
-
-  fn try_from(value: BindingJsonSourcemap) -> Result<Self, Self::Error> {
-    rolldown_sourcemap::SourceMap::from_json(rolldown_sourcemap::JSONSourceMap {
+impl BindingJsonSourcemap {
+  fn into_json(self) -> rolldown_sourcemap::JSONSourceMap {
+    let value = self;
+    rolldown_sourcemap::JSONSourceMap {
       version: 3,
       file: value.file,
       mappings: value.mappings.unwrap_or_default(),
@@ -62,8 +76,16 @@ impl TryFrom<BindingJsonSourcemap> for rolldown_sourcemap::SourceMap {
       names: value.names.unwrap_or_default(),
       debug_id: value.debug_id,
       ignore_list: value.ignore_list.or(value.x_google_ignore_list),
-    })
-    .context("Failed to convert json sourcemap to struct")
+    }
+  }
+}
+
+impl TryFrom<BindingJsonSourcemap> for rolldown_sourcemap::SourceMap {
+  type Error = anyhow::Error;
+
+  fn try_from(value: BindingJsonSourcemap) -> Result<Self, Self::Error> {
+    rolldown_sourcemap::SourceMap::from_json(value.into_json())
+      .context("Failed to convert json sourcemap to struct")
   }
 }
 

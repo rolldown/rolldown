@@ -169,7 +169,10 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
 
         import_records: IndexVec::default(),
         // The chain is complete: hold it packed until the module is rendered.
-        sourcemap_chain: Arc::new(sourcemap_chain.into_iter().map(Into::into).collect()),
+        sourcemap_chain: Arc::new(rolldown_common::PackedSourcemapChainElement::pack_chain(
+          sourcemap_chain,
+          &self.ctx.options,
+        )),
         // The internal runtime module `importers/imported` should be skip.
         importers: FxIndexSet::default(),
         importers_idx: FxIndexSet::default(),

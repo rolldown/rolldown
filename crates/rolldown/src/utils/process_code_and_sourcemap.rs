@@ -4,7 +4,7 @@ use oxc::ast::CommentKind;
 use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
 use rolldown_common::{NormalizedBundlerOptions, OutputAsset, SourceMapType};
 use rolldown_error::{BuildResult, ResultExt};
-use rolldown_sourcemap::SourceMap;
+use rolldown_sourcemap::PackedSourceMap;
 use rolldown_std_utils::relative_path_to_slash;
 use sugar_path::SugarPath;
 use url::Url;
@@ -34,7 +34,7 @@ const CSS_SOURCEMAP_FILENAME_ENCODE_SET: &AsciiSet = &SOURCEMAP_FILENAME_ENCODE_
 pub async fn process_code_and_sourcemap(
   options: &NormalizedBundlerOptions,
   code: &mut String,
-  map: &mut SourceMap,
+  map: &mut PackedSourceMap,
   file_dir: &Path,
   filename: &str,
   debug_id: u128,
@@ -48,7 +48,7 @@ pub async fn process_code_and_sourcemap(
 
 pub async fn prepare_sourcemap(
   options: &NormalizedBundlerOptions,
-  map: &mut SourceMap,
+  map: &mut PackedSourceMap,
   file_dir: &Path,
   filename: &str,
 ) -> BuildResult<()> {
@@ -168,7 +168,7 @@ pub async fn prepare_sourcemap(
 pub fn emit_sourcemap(
   options: &NormalizedBundlerOptions,
   code: &mut String,
-  map: &mut SourceMap,
+  map: &mut PackedSourceMap,
   map_filename: &str,
   debug_id: u128,
   is_css: bool,
@@ -294,7 +294,7 @@ mod tests {
   fn sourcemap_filenames_remain_in_comments() {
     let options =
       NormalizedBundlerOptions { sourcemap: Some(SourceMapType::File), ..Default::default() };
-    let mut map = SourceMapBuilder::default().into_sourcemap().into_owned();
+    let mut map = SourceMapBuilder::default().into_sourcemap().into_owned().into_packed();
     let filename = "test\u{2028}(filename,{}).map";
     let mut code = String::from("export const value = 42;");
     let asset = emit_sourcemap(&options, &mut code, &mut map, filename, 0, false).unwrap().unwrap();
@@ -332,7 +332,7 @@ mod tests {
             sourcemap_base_url: base_url.map(String::from),
             ..Default::default()
           };
-          let mut map = SourceMapBuilder::default().into_sourcemap().into_owned();
+          let mut map = SourceMapBuilder::default().into_sourcemap().into_owned().into_packed();
           let mut code = String::new();
           emit_sourcemap(&options, &mut code, &mut map, filename, 0, is_css).unwrap();
           let expected = if is_css {

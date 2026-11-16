@@ -1,5 +1,5 @@
 use arcstr::ArcStr;
-use rolldown_sourcemap::SourceMap;
+use rolldown_sourcemap::PackedSourceMap;
 
 use crate::{Asset, ChunkIdx, InstantiationKind, PreliminaryFilename, StrOrBytes};
 
@@ -9,7 +9,8 @@ use crate::{Asset, ChunkIdx, InstantiationKind, PreliminaryFilename, StrOrBytes}
 pub struct InstantiatedChunk {
   pub originate_from: ChunkIdx,
   pub content: StrOrBytes,
-  pub map: Option<SourceMap>,
+  /// Held packed: about 3 bytes for each token. Unpack it to read its tokens.
+  pub map: Option<PackedSourceMap>,
   pub kind: InstantiationKind,
   pub augment_chunk_hash: Option<String>,
   pub preliminary_filename: PreliminaryFilename,

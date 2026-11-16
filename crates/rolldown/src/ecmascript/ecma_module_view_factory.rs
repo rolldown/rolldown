@@ -125,7 +125,10 @@ pub async fn create_ecma_view(
     namespace_object_ref,
     def_format: ctx.resolved_id.module_def_format,
     // The chain is complete: hold it packed until the module is rendered.
-    sourcemap_chain: Arc::new(sourcemap_chain.into_iter().map(Into::into).collect()),
+    sourcemap_chain: Arc::new(rolldown_common::PackedSourcemapChainElement::pack_chain(
+      sourcemap_chain,
+      ctx.options,
+    )),
     import_records: IndexVec::default(),
     importers: FxIndexSet::default(),
     importers_idx: FxIndexSet::default(),

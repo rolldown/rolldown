@@ -82,7 +82,11 @@ impl GenerateStage<'_> {
             .expect("property mangling is limited to one JavaScript chunk");
         }
         let collapsed_map = match (&chunk.map, &new_map) {
-          (Some(origin_map), Some(new_map)) => Some(collapse_sourcemaps(&[origin_map, new_map])),
+          (Some(origin_map), Some(new_map)) => {
+            // The chunk map is held packed. Decode it for the lookups of the collapse.
+            let origin_map = origin_map.unpack();
+            Some(collapse_sourcemaps(&[&origin_map, new_map]).into_packed())
+          }
           _ => {
             // TODO: Map is dirty. Should we reset the `chunk.map` to `None`?
             None

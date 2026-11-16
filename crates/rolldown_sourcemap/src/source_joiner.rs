@@ -1,7 +1,7 @@
 use oxc_sourcemap::PackedConcatSourceMapBuilder;
 
+use crate::PackedSourceMap;
 use crate::source::Source;
-use crate::{PackedSourceMap, SourceMap};
 
 #[derive(Default)]
 pub struct SourceJoiner<'source> {
@@ -35,7 +35,8 @@ impl<'source> SourceJoiner<'source> {
     self.prepend_source.push(Box::new(source));
   }
 
-  pub fn join(&mut self) -> (String, Option<SourceMap>) {
+  /// Join the sources. The maps are joined as bytes, and the result stays packed.
+  pub fn join(&mut self) -> (String, Option<PackedSourceMap>) {
     let sources_len = self.prepend_source.len() + self.inner.len();
 
     let size_hint_of_ret_source = self
@@ -85,11 +86,7 @@ impl<'source> SourceJoiner<'source> {
         }
       }
     }
-    // The maps were joined as bytes. Decode the result once: what follows reads its tokens.
-    (
-      ret_source,
-      sourcemap_builder.map(|builder| builder.into_sourcemap().into_owned().into_sourcemap()),
-    )
+    (ret_source, sourcemap_builder.map(|builder| builder.into_sourcemap().into_owned()))
   }
 
   fn accumulate_sourcemap_data_size(&mut self, hint: &PackedSourceMap) {
@@ -132,6 +129,7 @@ fn test_concat_sourcemaps() {
   source_joiner.append_source(SourceMapSource::new(code, map.unwrap().into_owned()));
 
   let (content, map) = source_joiner.join();
+  let map = map.map(PackedSourceMap::into_sourcemap);
 
   assert_eq!(
     &content,
@@ -187,6 +185,7 @@ fn test_concat_mixed_owned_and_borrowed_sourcemaps() {
     .append_source(SourceMapSource::new("owned();".to_string(), map("owned.js", "owned source")));
 
   let (content, map) = joiner.join();
+  let map = map.map(PackedSourceMap::into_sourcemap);
   let map = map.expect("both input sourcemaps should be preserved");
 
   assert_eq!(content, "borrowed();\nowned();");

@@ -1097,6 +1097,10 @@ impl GenerateStage<'_> {
   /// (e.g., a common chunk, manual code splitting group, or user-defined entry chunk).
   /// Instead of keeping an empty facade chunk, we rewrite references to point directly to the target chunk
   /// and ensure proper symbol inclusion.
+  ///
+  /// The same inclusion replay also extracts `namespace_extractions`, the dynamic entry namespaces
+  /// that `find_leaking_dynamic_entry_namespaces` returns. See
+  /// internal-docs/code-splitting/implementation.md#dynamic-entry-namespaces.
   #[expect(clippy::too_many_arguments)]
   pub(super) fn optimize_facade_entry_chunks(
     &mut self,
@@ -1106,19 +1110,11 @@ impl GenerateStage<'_> {
     module_is_assigned: &mut IndexBitSet<ModuleIdx>,
     temp_chunk_opt_graph: &ChunkOptimizationGraph,
     used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
-    dynamic_entry_merge_targets: &FxHashSet<ChunkIdx>,
+    namespace_extractions: &[(ChunkIdx, ModuleIdx)],
   ) {
     // Find empty dynamic entry chunks that should be merged with their target common chunks
     let (mut facade_eliminations, common_chunk_merges, emitted_chunk_groups) =
       self.find_facade_chunk_merge_ops(chunk_graph, temp_chunk_opt_graph);
-    // The pure dynamic entry chunks whose merged modules add keys to the namespace of `import()`.
-    // Each one also exports the namespace of its entry module, and the importers read that
-    // namespace. See internal-docs/code-splitting/implementation.md#dynamic-entry-namespaces.
-    let namespace_extractions = self.find_leaking_dynamic_entry_namespaces(
-      chunk_graph,
-      dynamic_entry_merge_targets,
-      used_symbol_refs_builder,
-    );
 
     if facade_eliminations.is_empty()
       && common_chunk_merges.is_empty()
@@ -1140,7 +1136,7 @@ impl GenerateStage<'_> {
         used_symbol_refs_builder,
       );
     }
-    for &(_, entry_module_idx) in &namespace_extractions {
+    for &(_, entry_module_idx) in namespace_extractions {
       self.narrow_namespace_stmt_to_used_symbols(entry_module_idx, used_symbol_refs_builder);
     }
 
@@ -1222,22 +1218,12 @@ impl GenerateStage<'_> {
           needs_export_all_helper = true;
         }
       }
-      // The same extraction as `apply_dynamic_entry_namespace_extractions`: the target is the
-      // entry chunk itself.
-      for &(entry_chunk_idx, entry_module_idx) in &namespace_extractions {
-        chunk_graph
-          .common_chunk_exported_facade_chunk_namespace
-          .entry(entry_chunk_idx)
-          .or_default()
-          .insert(entry_module_idx);
-        if include_simulated_facade_namespace(context, entry_module_idx) {
-          chunk_graph.chunk_table[entry_chunk_idx]
-            .depended_runtime_helper
-            .insert(RuntimeHelper::ExportAll);
-          runtime_dependent_chunks.insert(entry_chunk_idx);
-          needs_export_all_helper = true;
-        }
-      }
+      // Do not use `||` here. It skips the extractions when a facade needs `__exportAll`.
+      needs_export_all_helper |= Self::include_dynamic_entry_namespace_extractions(
+        context,
+        chunk_graph,
+        namespace_extractions,
+      );
       needs_export_all_helper
     });
 

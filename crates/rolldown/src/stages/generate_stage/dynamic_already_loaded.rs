@@ -12,6 +12,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::chunk_graph::ChunkGraph;
 use crate::esm_init_obligations::collect_entry_reexported_wrapper_inits;
+use crate::stages::link_stage::IncludeContext;
 
 use super::{
   GenerateStage, code_splitting::IndexSplittingInfo,
@@ -403,13 +404,13 @@ impl GenerateStage<'_> {
   /// Generates a definition for a fake module namespace for the inlined module, which is then
   /// exported. Dynamic importers of this atom from this chunk can then do `.then((n) => n.<ns>)`
   /// to get that namespace.
-  pub(super) fn apply_dynamic_entry_namespace_extractions(
+  pub(super) fn apply_dynamic_entry_namespace_extractions<'a>(
     &mut self,
     chunk_graph: &mut ChunkGraph,
-    namespace_extractions: &FxHashSet<(ChunkIdx, ModuleIdx)>,
+    namespace_extractions: impl IntoIterator<Item = &'a (ChunkIdx, ModuleIdx)> + Copy,
     used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
   ) {
-    if namespace_extractions.is_empty() {
+    if namespace_extractions.into_iter().next().is_none() {
       return;
     }
 
@@ -418,23 +419,39 @@ impl GenerateStage<'_> {
     }
 
     self.replay_link_stage_inclusion(used_symbol_refs_builder, |context| {
-      let mut needs_export_all_helper = false;
-      for &(entry_chunk_idx, entry_module_idx) in namespace_extractions {
-        chunk_graph
-          .common_chunk_exported_facade_chunk_namespace
-          .entry(entry_chunk_idx)
-          .or_default()
-          .insert(entry_module_idx);
-
-        if include_simulated_facade_namespace(context, entry_module_idx) {
-          chunk_graph.chunk_table[entry_chunk_idx]
-            .depended_runtime_helper
-            .insert(RuntimeHelper::ExportAll);
-          needs_export_all_helper = true;
-        }
-      }
-      needs_export_all_helper
+      Self::include_dynamic_entry_namespace_extractions(context, chunk_graph, namespace_extractions)
     });
+  }
+
+  /// Makes each entry chunk export the namespace of its entry module, in the closure of
+  /// `replay_link_stage_inclusion`. The closure returns the result: whether a namespace needs
+  /// `__exportAll`. Call `narrow_namespace_stmt_to_used_symbols` for each entry module before the
+  /// replay. `optimize_facade_entry_chunks` calls this function in the replay of its facade
+  /// changes, so that one replay does both changes.
+  ///
+  /// When a namespace needs `__exportAll`, the chunk gets the helper flag. The flag makes the chunk
+  /// a runtime consumer, so runtime placement needs no other record of the chunk.
+  pub(super) fn include_dynamic_entry_namespace_extractions<'a>(
+    context: &mut IncludeContext<'_>,
+    chunk_graph: &mut ChunkGraph,
+    namespace_extractions: impl IntoIterator<Item = &'a (ChunkIdx, ModuleIdx)>,
+  ) -> bool {
+    let mut needs_export_all_helper = false;
+    for &(entry_chunk_idx, entry_module_idx) in namespace_extractions {
+      chunk_graph
+        .common_chunk_exported_facade_chunk_namespace
+        .entry(entry_chunk_idx)
+        .or_default()
+        .insert(entry_module_idx);
+
+      if include_simulated_facade_namespace(context, entry_module_idx) {
+        chunk_graph.chunk_table[entry_chunk_idx]
+          .depended_runtime_helper
+          .insert(RuntimeHelper::ExportAll);
+        needs_export_all_helper = true;
+      }
+    }
+    needs_export_all_helper
   }
 
   /// Drops the rejected moves that would merge an atom holding a dynamic entry module into an entry

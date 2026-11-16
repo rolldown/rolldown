@@ -3,8 +3,8 @@ use std::fmt::Write as _;
 
 use oxc_str::CompactStr;
 use rolldown_common::{
-  Chunk, ChunkKind, ExportsKind, IndexModules, ModuleIdx, NormalizedBundlerOptions, OutputExports,
-  OutputFormat, Platform, SymbolRef, SymbolRefDb, WrapKind,
+  Chunk, ChunkKind, ExportsKind, GetLocalDb, IndexModules, ModuleIdx, NormalizedBundlerOptions,
+  OutputExports, OutputFormat, Platform, SymbolRef, SymbolRefDb, SymbolRefFlags, WrapKind,
 };
 use rolldown_utils::{
   concat_string,
@@ -16,6 +16,7 @@ use rolldown_utils::{
 };
 use rustc_hash::FxHashSet;
 
+use crate::ast_scanner::const_eval::eval_can_assign;
 use crate::esm_init_obligations::{WrappedEsmInitTarget, collect_entry_reexported_wrapper_inits};
 use crate::{stages::link_stage::LinkStageOutput, types::generator::GenerateContext};
 
@@ -542,8 +543,14 @@ fn must_keep_live_binding(
     return false;
   }
 
-  if canonical_ref.is_not_reassigned(symbol_db) {
-    // For unknown case, we consider it as reassigned.
+  // Unlike `is_not_reassigned`, this ignores `ReadBeforeAssigned`: a read before the declaration
+  // assigns the binding does not change the value the export ends up with. `IsNotReassigned` does
+  // not see an assignment inside direct `eval`. For unknown case, we consider it as reassigned.
+  if canonical_ref
+    .flags(symbol_db)
+    .is_some_and(|flags| flags.contains(SymbolRefFlags::IsNotReassigned))
+    && !eval_can_assign(symbol_db.local_db(canonical_ref.owner).scoping(), canonical_ref.symbol)
+  {
     return false;
   }
 

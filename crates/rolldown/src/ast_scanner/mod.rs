@@ -1,6 +1,7 @@
 mod cjs_export_analyzer;
 pub mod const_eval;
 pub mod dynamic_import;
+mod early_var_reads;
 mod hmr;
 pub mod impl_visit;
 mod import_analyzer;
@@ -52,6 +53,7 @@ use bitflags::bitflags;
 
 use crate::SharedOptions;
 use crate::ast_scanner::cjs_export_analyzer::CommonjsExportSymbolUsage;
+use crate::ast_scanner::early_var_reads::{EarlyVarReads, RunsAt};
 
 bitflags! {
   #[derive(Debug, Clone, Copy, Default)]
@@ -182,8 +184,11 @@ pub struct AstScanner<'me, 'ast> {
   /// Symbol IDs of namespace imports (`import * as ns from '...'`).
   /// Used to treat property reads on namespace objects as side-effect-free.
   namespace_object_symbol_ids: FxHashSet<SymbolId>,
-  /// Root `var` bindings that module-level code reads before their declaration.
-  vars_read_before_declaration: FxHashSet<SymbolId>,
+  /// Tracks reads of root `var` bindings before their declarator runs. `None` when the module
+  /// declares no root `var`.
+  early_var_reads: Option<EarlyVarReads>,
+  /// Start of the module-level statement being visited.
+  current_stmt_start: u32,
   /// Root `let` bindings that code writes, found only with `inlineConst`. Only these can become
   /// `deferred_write_constants`. Most modules have none, so most identifier references skip
   /// `record_root_write` after one check.
@@ -294,7 +299,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       current_comment_idx: 0,
       untranspiled_syntax: UntranspiledSyntax::empty(),
       namespace_object_symbol_ids: FxHashSet::default(),
-      vars_read_before_declaration: FxHashSet::default(),
+      early_var_reads: None,
+      current_stmt_start: 0,
       mutated_root_lets: FxHashSet::default(),
       root_writes: Vec::new(),
       mutated_constant_candidates: Vec::new(),
@@ -464,21 +470,26 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
     }
 
-    // A `var` read before its declaration holds `undefined` there and its initializer later.
-    for symbol_id in &self.vars_read_before_declaration {
-      if let Some(flags) = self.result.symbol_ref_db.flags.get_mut(symbol_id) {
-        flags.remove(SymbolRefFlags::IsNotReassigned);
+    // A `var` read before its declarator runs holds `undefined` there and its initializer later.
+    if let Some(early_var_reads) = self.early_var_reads.take() {
+      let read_early = early_var_reads.finish(self.result.symbol_ref_db.scoping());
+      for symbol_id in read_early {
+        self
+          .result
+          .symbol_ref_db
+          .flags
+          .entry(symbol_id)
+          .or_default()
+          .insert(SymbolRefFlags::ReadBeforeAssigned);
       }
     }
 
     self.result.constant_export_map.retain(|symbol_id, constant_meta| {
       (constant_meta.commonjs_export && !bailout_inlined_cjs_exports_symbol_ids.contains(symbol_id))
-        || self
-          .result
-          .symbol_ref_db
-          .flags
-          .get(symbol_id)
-          .is_some_and(|flag| flag.contains(SymbolRefFlags::IsNotReassigned))
+        || self.result.symbol_ref_db.flags.get(symbol_id).is_some_and(|flag| {
+          flag.contains(SymbolRefFlags::IsNotReassigned)
+            && !flag.contains(SymbolRefFlags::ReadBeforeAssigned)
+        })
     });
     self.collect_deferred_write_constants();
 
@@ -1137,6 +1148,31 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     })
   }
 
+  /// Where the code inside `kind`, a function or class that no other function or class encloses,
+  /// runs. `kind` is the last entry of `visit_path`.
+  fn outermost_runs_at(&self, kind: AstKind<'ast>) -> RunsAt {
+    let statement_start = RunsAt::Position(self.current_stmt_start);
+    match kind {
+      AstKind::Function(function) if function.is_declaration() => match &function.id {
+        Some(id) if self.is_root_symbol(id.symbol_id()) => RunsAt::Body(id.symbol_id()),
+        _ => statement_start,
+      },
+      AstKind::Function(_) | AstKind::ArrowFunctionExpression(_) => {
+        match self.visit_path.iter().rev().nth(1) {
+          // `const f = () => {}`: the body runs when `f` is called.
+          Some(AstKind::VariableDeclarator(declarator)) => match &declarator.id {
+            BindingPattern::BindingIdentifier(id) if self.is_root_symbol(id.symbol_id()) => {
+              RunsAt::Body(id.symbol_id())
+            }
+            _ => statement_start,
+          },
+          _ => statement_start,
+        }
+      }
+      _ => statement_start,
+    }
+  }
+
   fn is_root_symbol(&self, symbol_id: SymbolId) -> bool {
     self.result.symbol_ref_db.scoping().root_scope_id()
       == self.result.symbol_ref_db.symbol_scope_id(symbol_id)
@@ -1275,6 +1311,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     expr.and_then(|expr| try_extract_const_literal(&self.create_constant_eval_ctx(), expr))
   }
 
+  /// See internal-docs/inline-const/design.md.
   pub fn add_constant_symbol(&mut self, symbol_id: SymbolId, value: ConstExportMeta) {
     let scoping = self.result.symbol_ref_db.scoping();
     let is_facade = self.result.symbol_ref_db.is_facade_symbol(symbol_id);

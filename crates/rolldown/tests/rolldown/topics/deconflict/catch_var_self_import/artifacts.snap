@@ -1,0 +1,237 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert/strict";
+// self.js
+var direct;
+var onlyCatch;
+var direct = 1;
+direct++;
+const results = [];
+try {
+	throw 0;
+} catch (direct$1) {
+	var direct$1 = 3;
+	results.push(direct, direct$1);
+}
+try {
+	throw 0;
+} catch (onlyCatch$1) {
+	for (var onlyCatch$1 of [4]) results.push(onlyCatch, onlyCatch$1);
+}
+results.push(onlyCatch);
+// cycle.js
+var cycle;
+var cycle = 10;
+cycle++;
+let result;
+try {
+	throw 0;
+} catch (cycle$1) {
+	result = cycle;
+}
+// main.js
+assert.deepStrictEqual(results, [
+	2,
+	3,
+	void 0,
+	4,
+	void 0
+]);
+assert.strictEqual(direct, 2);
+assert.strictEqual(onlyCatch, void 0);
+assert.strictEqual(result, 11);
+assert.strictEqual(cycle, 11);
+
+```
+
+# Variant: cjs: [format: Cjs]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+let node_assert_strict = require("node:assert/strict");
+node_assert_strict = __toESM(node_assert_strict);
+// self.js
+var direct;
+var onlyCatch;
+var direct = 1;
+direct++;
+const results = [];
+try {
+	throw 0;
+} catch (direct$1) {
+	var direct$1 = 3;
+	results.push(direct, direct$1);
+}
+try {
+	throw 0;
+} catch (onlyCatch$1) {
+	for (var onlyCatch$1 of [4]) results.push(onlyCatch, onlyCatch$1);
+}
+results.push(onlyCatch);
+// cycle.js
+var cycle;
+var cycle = 10;
+cycle++;
+let result;
+try {
+	throw 0;
+} catch (cycle$1) {
+	result = cycle;
+}
+// main.js
+node_assert_strict.default.deepStrictEqual(results, [
+	2,
+	3,
+	void 0,
+	4,
+	void 0
+]);
+node_assert_strict.default.strictEqual(direct, 2);
+node_assert_strict.default.strictEqual(onlyCatch, void 0);
+node_assert_strict.default.strictEqual(result, 11);
+node_assert_strict.default.strictEqual(cycle, 11);
+
+```
+
+# Variant: minified: [minify: true]
+
+## Assets
+
+### main.js
+
+```js
+import e from"node:assert/strict";var t,n,t=1;t++;const r=[];try{throw 0}catch(direct$1){var direct$1=3;r.push(t,direct$1)}try{throw 0}catch(onlyCatch$1){for(var onlyCatch$1 of[4])r.push(n,onlyCatch$1)}r.push(n);var i,i=10;i++;let a;try{throw 0}catch(e){a=i}e.deepStrictEqual(r,[2,3,void 0,4,void 0]),e.strictEqual(t,2),e.strictEqual(n,void 0),e.strictEqual(a,11),e.strictEqual(i,11);
+```
+
+# Variant: wrapped: [on_demand_wrapping: false] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+import assert from "node:assert/strict";
+// HIDDEN [\0rolldown/runtime.js]
+function init_self() {
+	return (init_self = __esmMin((() => {
+		init_self();
+		direct = 1;
+		direct++;
+		results = [];
+		try {
+			throw 0;
+		} catch (direct$1) {
+			direct$1 = 3;
+			results.push(direct, direct$1);
+		}
+		try {
+			throw 0;
+		} catch (onlyCatch$1) {
+			for (onlyCatch$1 of [4]) results.push(onlyCatch, onlyCatch$1);
+		}
+		results.push(onlyCatch);
+	})))();
+}
+// barrel.js
+function init_barrel() {
+	return (init_barrel = __esmMin((() => {
+		init_cycle();
+	})))();
+}
+// cycle.js
+var cycle, result;
+function init_cycle() {
+	return (init_cycle = __esmMin((() => {
+		init_barrel();
+		cycle = 10;
+		cycle++;
+		try {
+			throw 0;
+		} catch (cycle$1) {
+			cycle$1 = 20;
+			result = cycle;
+		}
+	})))();
+}
+// main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_self();
+		init_cycle();
+		assert.deepStrictEqual(results, [
+			2,
+			3,
+			void 0,
+			4,
+			void 0
+		]);
+		assert.strictEqual(direct, 2);
+		assert.strictEqual(onlyCatch, void 0);
+		assert.strictEqual(result, 11);
+		assert.strictEqual(cycle, 11);
+	})))();
+}
+init_main();
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+import assert from "node:assert/strict";
+// self.js
+var direct;
+var onlyCatch;
+var direct = 1;
+direct++;
+const results = [];
+try {
+	throw 0;
+} catch (direct$1) {
+	var direct$1 = 3;
+	results.push(direct, direct$1);
+}
+try {
+	throw 0;
+} catch (onlyCatch$1) {
+	for (var onlyCatch$1 of [4]) results.push(onlyCatch, onlyCatch$1);
+}
+results.push(onlyCatch);
+// cycle.js
+var cycle;
+var cycle = 10;
+cycle++;
+let result;
+try {
+	throw 0;
+} catch (cycle$1) {
+	result = cycle;
+}
+// main.js
+assert.deepStrictEqual(results, [
+	2,
+	3,
+	void 0,
+	4,
+	void 0
+]);
+assert.strictEqual(direct, 2);
+assert.strictEqual(onlyCatch, void 0);
+assert.strictEqual(result, 11);
+assert.strictEqual(cycle, 11);
+
+```

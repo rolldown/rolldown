@@ -88,6 +88,7 @@ pub struct Renamer<'name> {
   canonical_names: FxHashMap<SymbolRef, CompactStr>,
   symbol_db: &'name SymbolRefDb,
   inner_binding_names: InnerBindingNames<'name>,
+  catch_var_name_groups: FxHashMap<SymbolRef, SymbolRef>,
 }
 
 impl<'name> Renamer<'name> {
@@ -124,6 +125,30 @@ impl<'name> Renamer<'name> {
           .map(|s| CompactStr::new(s)),
       ),
       inner_binding_names,
+      catch_var_name_groups: FxHashMap::default(),
+    }
+  }
+
+  /// Coordinate catch/var names without linking their values. Same-named Annex B block
+  /// functions must follow too. See internal-docs/renaming/implementation.md.
+  pub fn add_catch_var_name_groups(&mut self, module_idx: ModuleIdx, scoping: &Scoping) {
+    let groups = scoping
+      .catch_var_bindings()
+      .map(|(_, var)| ((scoping.symbol_scope_id(var), scoping.symbol_ident(var)), var))
+      .collect::<FxHashMap<_, _>>();
+    if groups.is_empty() {
+      return;
+    }
+    for (scope_id, bindings) in scoping.iter_bindings() {
+      let var_scope = scoping
+        .scope_ancestors(scope_id)
+        .find(|&scope| scoping.scope_flags(scope).is_var())
+        .expect("every binding has an enclosing var scope");
+      for (&name, &symbol) in bindings {
+        if let Some(&var) = groups.get(&(var_scope, name)) {
+          self.catch_var_name_groups.insert((module_idx, symbol).into(), (module_idx, var).into());
+        }
+      }
     }
   }
 
@@ -136,6 +161,7 @@ impl<'name> Renamer<'name> {
   /// cases identically and fall back to `symbol_db` to determine the effective name
   /// during code generation.
   pub fn get_canonical_name(&self, symbol_ref: SymbolRef) -> Option<&CompactStr> {
+    let symbol_ref = self.catch_var_name_groups.get(&symbol_ref).copied().unwrap_or(symbol_ref);
     let canonical_ref = self.symbol_db.canonical_ref_for(symbol_ref);
     self.canonical_names.get(&canonical_ref)
   }
@@ -253,7 +279,28 @@ impl<'name> Renamer<'name> {
   /// binding, for example a `child$1` from the Gleam convention for variable shadowing, or a root
   /// local of a CJS-wrapped module that kept its original name. Thus this function needs no more
   /// checks, and the rename never causes a second rename.
-  pub fn rename_inner_binding(&mut self, symbol_ref: SymbolRef, original_name: &str) {
+  pub fn rename_inner_binding(
+    &mut self,
+    mut symbol_ref: SymbolRef,
+    original_name: &str,
+    root_scope_is_inner: bool,
+  ) {
+    if let Some(&var_ref) = self.catch_var_name_groups.get(&symbol_ref) {
+      let scoping = self.symbol_db[var_ref.owner].as_ref().unwrap().ast_scopes.scoping();
+      if symbol_ref != var_ref
+        && !root_scope_is_inner
+        && scoping.symbol_scope_id(var_ref.symbol) == scoping.root_scope_id()
+        && self.canonical_names.contains_key(&var_ref)
+      {
+        for (&member, group) in &mut self.catch_var_name_groups {
+          if *group == var_ref && member != var_ref {
+            *group = symbol_ref;
+          }
+        }
+      } else {
+        symbol_ref = var_ref;
+      }
+    }
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
     // A binding linked to a symbol elsewhere (an import binding) is printed under that symbol's
     // name, not its own: renaming it would rename the other symbol.
@@ -281,7 +328,13 @@ impl<'name> Renamer<'name> {
   }
 
   #[inline]
-  pub fn into_canonical_names(self) -> FxHashMap<SymbolRef, CompactStr> {
+  pub fn into_canonical_names(mut self) -> FxHashMap<SymbolRef, CompactStr> {
+    for (symbol, var) in self.catch_var_name_groups {
+      let canonical_var = self.symbol_db.canonical_ref_for(var);
+      if let Some(name) = self.canonical_names.get(&canonical_var).cloned() {
+        self.canonical_names.insert(symbol, name);
+      }
+    }
     self.canonical_names
   }
 }
@@ -387,9 +440,11 @@ impl NestedScopeRenamer<'_, '_> {
       if let Some(binding) = scoping.get_binding(scope_id, name)
         && binding != target
       {
-        self
-          .renamer
-          .rename_inner_binding((self.module_idx, binding).into(), scoping.symbol_name(binding));
+        self.renamer.rename_inner_binding(
+          (self.module_idx, binding).into(),
+          scoping.symbol_name(binding),
+          root_scope_is_inner,
+        );
       }
     }
   }
@@ -539,7 +594,7 @@ impl NestedScopeRenamer<'_, '_> {
           continue;
         }
         let symbol_ref = (self.module_idx, *symbol_id).into();
-        self.renamer.rename_inner_binding(symbol_ref, name.as_str());
+        self.renamer.rename_inner_binding(symbol_ref, name.as_str(), root_scope_is_inner);
       }
     }
   }

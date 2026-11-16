@@ -30,6 +30,39 @@ use super::ScopeHoistingFinalizer;
 const CJS_AMBIENT_PATHS: [(&str, &str); 2] = [("__dirname", "dirname"), ("__filename", "filename")];
 
 impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
+  /// Preserve the enclosing declaration when a catch/var name group is split to avoid an import.
+  /// See internal-docs/renaming/implementation.md.
+  fn preserve_renamed_catch_vars(&mut self, program: &mut ast::Program<'ast>) {
+    let scoping = self.scope.scoping();
+    let mut names = scoping
+      .catch_var_bindings()
+      .filter_map(|(catch, var)| {
+        if scoping.symbol_scope_id(var) != scoping.root_scope_id() {
+          return None;
+        }
+        let var_ref = (self.ctx.idx, var).into();
+        let name = self.canonical_name_for(var_ref);
+        (name != self.canonical_name_for((self.ctx.idx, catch).into())
+          && self
+            .ctx
+            .stmt_infos
+            .declared_stmts_by_symbol(&var_ref)
+            .iter()
+            .any(|&idx| self.ctx.linking_info.stmt_info_included.has_bit(idx)))
+        .then_some(name)
+      })
+      .collect::<Vec<_>>();
+    names.sort_unstable();
+    names.dedup();
+    for name in names.into_iter().rev() {
+      if self.needs_hosted_top_level_binding {
+        self.top_level_var_bindings.insert(ast::Str::from_str_in(name, self).into());
+      } else {
+        program.body.insert(0, Statement::new_var_decl_no_init(name, self));
+      }
+    }
+  }
+
   /// Returns the parameters of the CJS closure: `cjs_wrapper_fixed_params`, then the `this`
   /// binding.
   fn cjs_wrapper_params(&self) -> Vec<&str> {
@@ -407,6 +440,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     });
 
     walk_js_mut::walk_program(self, program);
+    self.preserve_renamed_catch_vars(program);
 
     // Insert keep_name statements for top-level declarations
     self.insert_keep_name_statements(&mut program.body);
@@ -584,7 +618,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       if let Some((expr, bindings)) =
         self.var_declaration_to_expr_seq_and_bindings(decl, self.state)
       {
-        self.hoist_top_level_var_bindings(bindings);
+        self.top_level_var_bindings.extend(bindings);
         *it = ast::Statement::new_expression_statement(SPAN, expr, self);
       }
     }
@@ -1017,7 +1051,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       if let Some((expr, bindings)) =
         self.var_declaration_to_expr_seq_and_bindings(decl, self.state)
       {
-        self.hoist_top_level_var_bindings(bindings);
+        self.top_level_var_bindings.extend(bindings);
         *it = ast::ForStatementInit::from(expr);
       }
     }
@@ -1032,27 +1066,10 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       && decl.kind.is_var()
       && let Some(declarator) = decl.declarations.pop()
     {
-      self.hoist_top_level_var_bindings(
-        declarator.id.get_binding_identifiers().iter().map(|id| id.name),
-      );
+      self
+        .top_level_var_bindings
+        .extend(declarator.id.get_binding_identifiers().iter().map(|id| id.name));
       *it = ast::ForStatementLeft::from(declarator.id.into_assignment_target(self));
-    }
-  }
-
-  fn visit_catch_clause(&mut self, it: &mut ast::CatchClause<'ast>) {
-    let param = it
-      .param
-      .as_ref()
-      .and_then(|param| param.pattern.get_binding_identifier())
-      .and_then(|ident| ident.symbol_id.get())
-      .map(|symbol_id| SymbolRef::from((self.ctx.idx, symbol_id)));
-    if let Some(symbol_ref) = param {
-      let is_module_binding = symbol_ref.is_declared_in_root_scope(self.ctx.symbol_db);
-      self.catch_params.push((self.canonical_name_for(symbol_ref), is_module_binding));
-    }
-    walk_js_mut::walk_catch_clause(self, it);
-    if param.is_some() {
-      self.catch_params.pop();
     }
   }
 

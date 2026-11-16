@@ -12,16 +12,16 @@ import assert from "node:assert";
 var m_exports = /* @__PURE__ */ __exportAll({
 	e: () => e$1,
 	f: () => f$1,
-	g: () => g
+	g: () => g$1
 });
-var e$1, f$1, g;
+var e$1, f$1, g$1;
 var init_m = __esmMin((() => {
 	e$1 = 0;
 	try {
 		throw 1;
-	} catch (e) {
-		e = 2;
-		globalThis.caught = e;
+	} catch (e$1) {
+		e$1 = 2;
+		globalThis.caught = e$1;
 	}
 	e$1 += 10;
 	try {
@@ -31,26 +31,29 @@ var init_m = __esmMin((() => {
 	}
 	try {
 		throw 5;
-	} catch (g) {
+	} catch (g$1) {
 		try {
 			throw 6;
-		} catch (g) {
-			g = 7;
+		} catch (g$1) {
+			g$1 = 7;
 		}
 	}
 }));
 // main.js
 const e = "main";
 const f = "main";
+const g = "main";
 const m = await Promise.resolve().then(() => (init_m(), m_exports));
 assert.deepStrictEqual([
 	e,
 	f,
+	g,
 	m.e,
 	m.f,
 	m.g,
 	globalThis.caught
 ], [
+	"main",
 	"main",
 	"main",
 	10,

@@ -37,8 +37,8 @@ import "./group-b.js";
 ## main.js
 
 ```js
-import "./group-c.js";
 import assert from "node:assert";
+import "./group-c.js";
 // main.js
 assert.deepStrictEqual(globalThis.log, [
 	"a",

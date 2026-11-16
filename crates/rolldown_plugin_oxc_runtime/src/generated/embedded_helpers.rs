@@ -2,7 +2,7 @@
 // To edit this generated file you have to edit `tasks/generator/src/generators/oxc_runtime_helper.rs`
 
 // This file contains embedded @oxc-project/runtime helpers (both ESM and CJS variants).
-// @oxc-project/runtime version: 0.158.0
+// @oxc-project/runtime version: 0.159.0
 
 use std::{io::Read as _, sync::LazyLock};
 
@@ -10,7 +10,7 @@ use arcstr::ArcStr;
 use flate2::read::DeflateDecoder;
 use phf::{Map, phf_map};
 
-pub const RUNTIME_HELPER_PREFIX: &str = "@oxc-project+runtime@0.158.0/helpers/";
+pub const RUNTIME_HELPER_PREFIX: &str = "@oxc-project+runtime@0.159.0/helpers/";
 pub const RUNTIME_HELPER_UNVERSIONED_PREFIX: &str = "@oxc-project/runtime/helpers/";
 
 const UNCOMPRESSED_HELPERS_LEN: usize = 205624;

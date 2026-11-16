@@ -76,7 +76,7 @@ struct SerializableSourceMap<'a> {
   version: u32,
   #[serde(skip_serializing_if = "Option::is_none")]
   file: Option<&'a String>,
-  sources: &'a Vec<String>,
+  sources: Vec<&'a str>,
   #[serde(skip_serializing_if = "Option::is_none")]
   sources_content: Option<&'a Vec<Option<String>>>,
   names: &'a Vec<String>,
@@ -286,7 +286,7 @@ impl BindingSourceMap {
   /// The list of original source files.
   #[napi(getter)]
   pub fn sources(&self) -> Vec<String> {
-    self.json.sources.clone()
+    self.json.sources.iter().map(|source| source.clone().unwrap_or_default()).collect()
   }
 
   /// The original source contents (if `includeContent` was true).
@@ -320,7 +320,12 @@ impl BindingSourceMap {
     let serializable = SerializableSourceMap {
       version: 3,
       file: self.json.file.as_ref(),
-      sources: &self.json.sources,
+      sources: self
+        .json
+        .sources
+        .iter()
+        .map(|source| source.as_deref().unwrap_or_default())
+        .collect(),
       sources_content: self.json.sources_content.as_ref(),
       names: &self.json.names,
       mappings: &self.json.mappings,
@@ -355,7 +360,7 @@ impl BindingDecodedMap {
   /// The list of original source files.
   #[napi(getter)]
   pub fn sources(&self) -> Vec<String> {
-    self.json.sources.clone()
+    self.json.sources.iter().map(|source| source.clone().unwrap_or_default()).collect()
   }
 
   /// The original source contents (if `includeContent` was true).
@@ -1296,7 +1301,10 @@ impl BindingMagicString<'_> {
         Some(Cow::Owned(file)),
         source_map.get_names().map(|n| Cow::Owned(n.to_owned())).collect(),
         None,
-        source_map.get_sources().map(|s| Cow::Owned(s.to_owned())).collect(),
+        source_map
+          .get_sources()
+          .map(|s| Some(Cow::Owned(s.unwrap_or_default().to_owned())))
+          .collect(),
         source_map.get_source_contents().map(|x| x.map(|s| Cow::Owned(s.to_owned()))).collect(),
         source_map.get_tokens().collect::<Vec<_>>().into_boxed_slice(),
         None,
@@ -1334,7 +1342,10 @@ impl BindingMagicString<'_> {
         Some(Cow::Owned(file)),
         source_map.get_names().map(|n| Cow::Owned(n.to_owned())).collect(),
         None,
-        source_map.get_sources().map(|s| Cow::Owned(s.to_owned())).collect(),
+        source_map
+          .get_sources()
+          .map(|s| Some(Cow::Owned(s.unwrap_or_default().to_owned())))
+          .collect(),
         source_map.get_source_contents().map(|x| x.map(|s| Cow::Owned(s.to_owned()))).collect(),
         source_map.get_tokens().collect::<Vec<_>>().into_boxed_slice(),
         None,

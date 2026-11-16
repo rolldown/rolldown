@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{ConstExportMeta, SourcemapChainElement};
+use crate::{ConstExportMeta, PackedSourcemapChainElement};
 use arcstr::ArcStr;
 use bitflags::bitflags;
 use oxc::{
@@ -144,7 +144,7 @@ pub struct EcmaView {
     clippy::rc_buffer,
     reason = "the scan extends and reorders a fresh chain in place through `Arc::make_mut`, which `Arc<[T]>` cannot do"
   )]
-  pub sourcemap_chain: Arc<Vec<SourcemapChainElement>>,
+  pub sourcemap_chain: Arc<Vec<PackedSourcemapChainElement>>,
   // the ids of all modules that statically import this module
   pub importers: FxIndexSet<ModuleId>,
   pub importers_idx: FxIndexSet<ModuleIdx>,

@@ -65,7 +65,9 @@ pub async fn prepare_sourcemap(
   if let Some(source_map_ignore_list) = &options.sourcemap_ignore_list {
     let relative_sources = map
       .get_sources()
-      .map(|source| source.as_path().relative(file_dir).to_string_lossy().into_owned())
+      .map(|source| {
+        source.unwrap_or_default().as_path().relative(file_dir).to_string_lossy().into_owned()
+      })
       .collect::<Vec<_>>();
 
     let ignored = match source_map_ignore_list {
@@ -114,7 +116,9 @@ pub async fn prepare_sourcemap(
     let map_path = map_path.to_string_lossy();
     let relative_sources = map
       .get_sources()
-      .map(|source| source.as_path().relative(file_dir).to_string_lossy().into_owned())
+      .map(|source| {
+        source.unwrap_or_default().as_path().relative(file_dir).to_string_lossy().into_owned()
+      })
       .collect::<Vec<_>>();
     let source_count = relative_sources.len();
 
@@ -139,17 +143,21 @@ pub async fn prepare_sourcemap(
       .map(|source| source.replace(std::path::MAIN_SEPARATOR, "/"))
       .collect::<Vec<_>>();
 
-    map.set_sources(sources);
+    map.set_sources(sources.into_iter().map(Some));
   } else if cfg!(windows) {
     // Normalize the windows path at final.
-    let sources =
-      map.get_sources().map(|x| relative_path_to_slash(x.as_path(), file_dir)).collect::<Vec<_>>();
-    map.set_sources(sources);
+    let sources = map
+      .get_sources()
+      .map(|x| relative_path_to_slash(x.unwrap_or_default().as_path(), file_dir))
+      .collect::<Vec<_>>();
+    map.set_sources(sources.into_iter().map(Some));
   } else {
     map.set_sources(
       map
         .get_sources()
-        .map(|x| x.as_path().relative(file_dir).to_string_lossy().into_owned())
+        .map(|x| {
+          Some(x.unwrap_or_default().as_path().relative(file_dir).to_string_lossy().into_owned())
+        })
         .collect::<Vec<_>>(),
     );
   }

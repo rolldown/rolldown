@@ -12,6 +12,11 @@ pub use source_joiner::SourceJoiner;
 /// lifetime-parameterized `oxc_sourcemap::SourceMap` to its `'static` form.
 pub type SourceMap = oxc_sourcemap::SourceMap<'static>;
 
+/// A [`SourceMap`] that holds its mappings in about 3 bytes for each token instead of 24.
+/// Rolldown holds a map in this form while it waits: the maps of a module's transforms until
+/// the module is rendered, and the map of a rendered module until its chunk is joined.
+pub type PackedSourceMap = oxc_sourcemap::PackedSourceMap<'static>;
+
 pub use crate::source::{Source, SourceMapSource};
 
 /// Strips the first `lines` destination lines from the sourcemap, decrementing all remaining
@@ -312,20 +317,25 @@ fn copy_names(
   names
 }
 
+/// Sources or their contents: `None` where the source map has `null`.
+type OptionalStrings = Vec<Option<Cow<'static, str>>>;
+
 /// Copies the sources of `map` and their contents. With `used`, it copies only the marked sources,
 /// and it drops the contents past the last source.
 fn copy_sources(
   map: &oxc_sourcemap::SourceMap<'_>,
   used: Option<&[bool]>,
-) -> (Vec<Cow<'static, str>>, Vec<Option<Cow<'static, str>>>) {
+) -> (OptionalStrings, OptionalStrings) {
+  // oxc_sourcemap v10: source names are nullable. A null source is kept as an empty string.
+  let owned_source = |source: Option<&str>| Some(owned(source.unwrap_or_default()));
   let Some(used) = used else {
     return (
-      map.get_sources().map(owned).collect(),
+      map.get_sources().map(owned_source).collect(),
       map.get_source_contents().map(|content| content.map(owned)).collect(),
     );
   };
   (
-    map.get_sources().zip(used).filter_map(kept).map(owned).collect(),
+    map.get_sources().zip(used).filter_map(kept).map(owned_source).collect(),
     map
       .get_source_contents()
       .zip(used)
@@ -533,7 +543,7 @@ fn test_token_lookup_matches_approximate_lookup() {
     None,
     vec!["name".into()],
     None,
-    vec!["source.js".into()],
+    vec![Some("source.js".into())],
     vec![None],
     tokens.into_boxed_slice(),
     None,
@@ -666,7 +676,7 @@ fn test_collapse_sourcemaps_clamps_before_first_token_on_a_line() {
   assert_eq!((tokens[0].get_dst_line(), tokens[0].get_dst_col()), (0, 0));
   assert_eq!((tokens[0].get_src_line(), tokens[0].get_src_col()), (0, 2));
   assert_eq!(tokens[0].get_source_id(), Some(0));
-  assert_eq!(collapsed.get_sources().collect::<Vec<_>>(), ["original.js"]);
+  assert_eq!(collapsed.get_sources().collect::<Vec<_>>(), [Some("original.js")]);
 }
 
 #[test]
@@ -990,7 +1000,7 @@ fn test_collapse_sourcemaps_traced_keeps_single_map_fields() {
     r#"{"version":3,"sourceRoot":"src/","names":[],"sources":["a.js","b.js","c.js"],"sourcesContent":["a","b","c"],"ignoreList":[1,2],"mappings":"AAAA,EEAA"}"#,
   )]);
   assert_eq!(dropped.get_source_root(), Some("src/"));
-  assert_eq!(dropped.get_sources().collect::<Vec<_>>(), ["a.js", "c.js"]);
+  assert_eq!(dropped.get_sources().collect::<Vec<_>>(), [Some("a.js"), Some("c.js")]);
   assert_eq!(dropped.get_ignore_list(), Some([1].as_slice()));
   assert_eq!(dropped.get_tokens().last().unwrap().get_source_id(), Some(1));
 }
@@ -1007,7 +1017,7 @@ fn test_collapse_sourcemaps_traced_beyond_stack_flags() {
   builder.add_token(0, 0, 0, 0, Some(source_ids[69]), Some(used));
   let map = builder.into_sourcemap();
   let dropped = collapse_sourcemaps_traced(&[&map]);
-  assert_eq!(dropped.get_sources().collect::<Vec<_>>(), ["s69.js"]);
+  assert_eq!(dropped.get_sources().collect::<Vec<_>>(), [Some("s69.js")]);
   assert_eq!(dropped.get_names().collect::<Vec<_>>(), ["used"]);
   let token = dropped.get_tokens().next().unwrap();
   assert_eq!((token.get_source_id(), token.get_name_id()), (Some(0), Some(0)));

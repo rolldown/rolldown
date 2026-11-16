@@ -196,19 +196,19 @@ pub async fn finalize_assets(
             file_path.parent().expect("chunk file name should have a parent").to_path_buf();
           map.set_file(Path::new(filename.as_str()).file_name().unwrap().to_str().unwrap());
           // A callback may have included the preliminary map path in a source path.
-          if map.get_sources().any(|source| source.contains("!~{")) {
+          if map.get_sources().any(|source| source.is_some_and(|source| source.contains("!~{"))) {
             let sources = map
               .get_sources()
               .map(|source| {
                 replace_placeholder_with_hash(
-                  source,
+                  source.unwrap_or_default(),
                   &chunk_hashes_by_placeholder,
                   &HASH_PLACEHOLDER_LEFT_FINDER,
                 )
                 .into_owned()
               })
               .collect_vec();
-            map.set_sources(sources);
+            map.set_sources(sources.into_iter().map(Some));
           }
         }
       }

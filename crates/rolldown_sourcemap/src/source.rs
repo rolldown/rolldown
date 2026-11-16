@@ -1,14 +1,16 @@
 use std::fmt::Debug;
 
-use crate::SourceMap;
+use crate::{PackedSourceMap, SourceMap};
 
 pub trait Source {
-  fn sourcemap(&self) -> Option<&SourceMap>;
+  /// The sourcemap of this source. It is held packed: sources wait for their chunk to be
+  /// joined, and `SourceJoiner` joins packed maps without decoding them.
+  fn sourcemap(&self) -> Option<&PackedSourceMap>;
   /// Move this source's sourcemap out when it is exclusively owned.
   ///
   /// Borrowed sources keep the default `None`; `SourceJoiner` then falls back
   /// to `sourcemap` and copies only those borrowed entries into its owned result.
-  fn take_sourcemap(&mut self) -> Option<SourceMap> {
+  fn take_sourcemap(&mut self) -> Option<PackedSourceMap> {
     None
   }
   fn content(&self) -> &str;
@@ -18,7 +20,7 @@ pub trait Source {
 }
 
 impl Source for &str {
-  fn sourcemap(&self) -> Option<&SourceMap> {
+  fn sourcemap(&self) -> Option<&PackedSourceMap> {
     None
   }
 
@@ -28,7 +30,7 @@ impl Source for &str {
 }
 
 impl Source for String {
-  fn sourcemap(&self) -> Option<&SourceMap> {
+  fn sourcemap(&self) -> Option<&PackedSourceMap> {
     None
   }
 
@@ -40,12 +42,16 @@ impl Source for String {
 #[derive(Debug)]
 pub struct SourceMapSource {
   content: String,
-  sourcemap: Option<SourceMap>,
+  sourcemap: Option<PackedSourceMap>,
   pre_computed_lines_count: Option<u32>,
 }
 
 impl SourceMapSource {
   pub fn new(content: String, sourcemap: SourceMap) -> Self {
+    Self::from_packed(content, sourcemap.into_packed())
+  }
+
+  pub fn from_packed(content: String, sourcemap: PackedSourceMap) -> Self {
     Self { content, sourcemap: Some(sourcemap), pre_computed_lines_count: None }
   }
 
@@ -59,7 +65,7 @@ impl SourceMapSource {
 }
 
 impl Source for SourceMapSource {
-  fn sourcemap(&self) -> Option<&SourceMap> {
+  fn sourcemap(&self) -> Option<&PackedSourceMap> {
     self.sourcemap.as_ref()
   }
 
@@ -71,13 +77,13 @@ impl Source for SourceMapSource {
     self.pre_computed_lines_count.unwrap_or_else(|| lines_count(&self.content))
   }
 
-  fn take_sourcemap(&mut self) -> Option<SourceMap> {
+  fn take_sourcemap(&mut self) -> Option<PackedSourceMap> {
     self.sourcemap.take()
   }
 }
 
 impl Source for &Box<dyn Source + Send + Sync> {
-  fn sourcemap(&self) -> Option<&SourceMap> {
+  fn sourcemap(&self) -> Option<&PackedSourceMap> {
     self.as_ref().sourcemap()
   }
 

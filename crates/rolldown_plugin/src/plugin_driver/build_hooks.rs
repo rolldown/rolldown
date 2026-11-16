@@ -396,7 +396,7 @@ impl PluginDriver {
     if source.is_none_or(str::is_empty)
       || (map.get_sources().count() == 1 && (source.map(AsRef::as_ref) != Some(id)))
     {
-      map.set_sources(vec![id]);
+      map.set_sources([Some(id)]);
     }
     // If sourcemap hasn't `sourcesContent`, using original code to fill it.
     if map.get_source_content(0).is_none_or(str::is_empty) {

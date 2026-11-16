@@ -56,7 +56,7 @@ impl TryFrom<BindingJsonSourcemap> for rolldown_sourcemap::SourceMap {
         .sources
         .unwrap_or_default()
         .into_iter()
-        .map(Option::unwrap_or_default)
+        .map(|source| Some(source.unwrap_or_default()))
         .collect(),
       sources_content: value.sources_content,
       names: value.names.unwrap_or_default(),
@@ -73,7 +73,9 @@ impl From<rolldown_sourcemap::JSONSourceMap> for BindingJsonSourcemap {
       file: value.file,
       mappings: Some(value.mappings),
       source_root: value.source_root,
-      sources: Some(value.sources.into_iter().map(Some).collect()),
+      sources: Some(
+        value.sources.into_iter().map(|source| Some(source.unwrap_or_default())).collect(),
+      ),
       sources_content: value.sources_content,
       names: Some(value.names),
       debug_id: value.debug_id,

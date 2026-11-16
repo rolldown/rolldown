@@ -7,9 +7,9 @@ use oxc_index::IndexVec;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rolldown_common::SourceMapGenMsg;
 use rolldown_common::{
-  EntryPoint, FlatOptions, HybridIndexVec, Module, ModuleIdx, ModuleTable, PreserveEntrySignatures,
-  ResolvedId, RuntimeModuleBrief, ScanMode, SourcemapChainElement, StmtInfos, SymbolRefDb,
-  dynamic_import_usage::DynamicImportExportsUsage,
+  EntryPoint, FlatOptions, HybridIndexVec, Module, ModuleIdx, ModuleTable,
+  PackedSourcemapChainElement, PreserveEntrySignatures, ResolvedId, RuntimeModuleBrief, ScanMode,
+  SourcemapChainElement, StmtInfos, SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -263,7 +263,7 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
         };
         // A freshly scanned module is the chain's only owner, so this does not copy it.
         let sourcemap_chain = Arc::make_mut(&mut module.sourcemap_chain);
-        sourcemap_chain.extend(sourcemaps);
+        sourcemap_chain.extend(sourcemaps.into_iter().map(PackedSourcemapChainElement::from));
         // Partition sourcemap chain into Load and Transform elements (O(n) instead of O(n log n) sort)
         // Load elements come first, then Transform elements sorted by plugin order
         let chain_len = sourcemap_chain.len();
@@ -272,10 +272,10 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
 
         for element in sourcemap_chain.drain(..) {
           match element {
-            SourcemapChainElement::Load(_) => load_elements.push(element),
-            SourcemapChainElement::Transform(_)
-            | SourcemapChainElement::Omitted { .. }
-            | SourcemapChainElement::Null { .. } => {
+            PackedSourcemapChainElement::Load(_) => load_elements.push(element),
+            PackedSourcemapChainElement::Transform(_)
+            | PackedSourcemapChainElement::Omitted { .. }
+            | PackedSourcemapChainElement::Null { .. } => {
               transform_elements.push(element);
             }
           }
@@ -283,11 +283,11 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
 
         // Sort only Transform elements by plugin order
         transform_elements.sort_by(|a, b| {
-          let plugin_idx_of = |el: &SourcemapChainElement| match el {
-            SourcemapChainElement::Transform((plugin_idx, _))
-            | SourcemapChainElement::Omitted { plugin_idx, .. }
-            | SourcemapChainElement::Null { plugin_idx, .. } => Some(*plugin_idx),
-            SourcemapChainElement::Load(_) => None,
+          let plugin_idx_of = |el: &PackedSourcemapChainElement| match el {
+            PackedSourcemapChainElement::Transform((plugin_idx, _))
+            | PackedSourcemapChainElement::Omitted { plugin_idx, .. }
+            | PackedSourcemapChainElement::Null { plugin_idx, .. } => Some(*plugin_idx),
+            PackedSourcemapChainElement::Load(_) => None,
           };
           if let (Some(a_plugin_idx), Some(b_plugin_idx)) = (plugin_idx_of(a), plugin_idx_of(b)) {
             let a_order =

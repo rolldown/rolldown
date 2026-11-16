@@ -1,7 +1,7 @@
-use oxc_sourcemap::ConcatSourceMapBuilder;
+use oxc_sourcemap::PackedConcatSourceMapBuilder;
 
-use crate::SourceMap;
 use crate::source::Source;
+use crate::{PackedSourceMap, SourceMap};
 
 #[derive(Default)]
 pub struct SourceJoiner<'source> {
@@ -10,8 +10,7 @@ pub struct SourceJoiner<'source> {
   pub enable_sourcemap: bool,
   names_len: usize,
   sources_len: usize,
-  tokens_len: usize,
-  token_chunks_len: usize,
+  mappings_byte_len: usize,
 }
 
 impl<'source> SourceJoiner<'source> {
@@ -49,11 +48,10 @@ impl<'source> SourceJoiner<'source> {
     let mut ret_source = String::with_capacity(size_hint_of_ret_source);
 
     let mut sourcemap_builder = self.enable_sourcemap.then(|| {
-      ConcatSourceMapBuilder::with_capacity(
+      PackedConcatSourceMapBuilder::with_capacity(
         self.names_len,
         self.sources_len,
-        self.tokens_len,
-        self.token_chunks_len,
+        self.mappings_byte_len,
       )
     });
     if let Some(sourcemap_builder) = &mut sourcemap_builder {
@@ -87,15 +85,19 @@ impl<'source> SourceJoiner<'source> {
         }
       }
     }
-    (ret_source, sourcemap_builder.map(|builder| builder.into_owned_sourcemap().into_inner()))
+    // The maps were joined as bytes. Decode the result once: what follows reads its tokens.
+    (
+      ret_source,
+      sourcemap_builder.map(|builder| builder.into_sourcemap().into_owned().into_sourcemap()),
+    )
   }
 
-  fn accumulate_sourcemap_data_size(&mut self, hint: &SourceMap) {
+  fn accumulate_sourcemap_data_size(&mut self, hint: &PackedSourceMap) {
     self.enable_sourcemap = true;
-    self.names_len += hint.get_names().count();
-    self.sources_len += hint.get_sources().count();
-    self.tokens_len += hint.get_tokens().count();
-    self.token_chunks_len += 1;
+    self.names_len += hint.strings().get_names().count();
+    self.sources_len += hint.strings().get_sources().count();
+    // A token at the start of each map may be written again, a few bytes longer.
+    self.mappings_byte_len += hint.mappings().byte_len() + 16;
   }
 }
 
@@ -166,7 +168,7 @@ fn test_concat_mixed_owned_and_borrowed_sourcemaps() {
       None,
       vec![],
       None,
-      vec![Cow::Owned(filename.to_string())],
+      vec![Some(Cow::Owned(filename.to_string()))],
       vec![Some(Cow::Owned(source_content.to_string()))],
       vec![Token::new(0, 0, 0, 0, Some(0), None)].into_boxed_slice(),
       None,
@@ -188,7 +190,7 @@ fn test_concat_mixed_owned_and_borrowed_sourcemaps() {
   let map = map.expect("both input sourcemaps should be preserved");
 
   assert_eq!(content, "borrowed();\nowned();");
-  assert_eq!(map.get_sources().collect::<Vec<_>>(), ["borrowed.js", "owned.js"]);
+  assert_eq!(map.get_sources().collect::<Vec<_>>(), [Some("borrowed.js"), Some("owned.js")]);
   assert_eq!(map.get_source_content(0), Some("borrowed source"));
   assert_eq!(map.get_source_content(1), Some("owned source"));
   assert_eq!(map.get_token(0).and_then(|token| token.get_source_id()), Some(0));

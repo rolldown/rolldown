@@ -2876,6 +2876,8 @@ export interface BindingPluginTiming {
   hook: string
   calls: number
   ms: number
+  /** The longest single call. */
+  maxMs: number
   maxInFlight: number
   /** How much of `ms` is double counted because calls overlapped. */
   overlapMs: number

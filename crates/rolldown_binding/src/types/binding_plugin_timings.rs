@@ -12,6 +12,8 @@ pub struct BindingPluginTiming {
   pub hook: String,
   pub calls: u32,
   pub ms: f64,
+  /// The longest single call.
+  pub max_ms: f64,
   pub max_in_flight: u32,
   /// How much of `ms` is double counted because calls overlapped.
   pub overlap_ms: f64,
@@ -42,6 +44,7 @@ impl From<BindingPluginTiming> for PluginTiming {
       hook: row.hook,
       calls: row.calls,
       ms: row.ms,
+      max_ms: row.max_ms,
       max_in_flight: row.max_in_flight,
       overlap_ms: row.overlap_ms,
       rankable: row.rankable,

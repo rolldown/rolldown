@@ -1,7 +1,6 @@
-// Minimal PNG codec for screenshot comparison. perf-kit has no dependencies, and the
-// only PNG files it ever reads are its own CDP screenshots (8-bit, non-interlaced),
-// so a full decoder is ~100 lines of zlib + scanline unfiltering. Everything decodes
-// to RGBA so the comparison loop never branches on color type.
+// Minimal PNG codec for screenshot comparison. It supports 8-bit, non-interlaced
+// PNG files from CDP screenshots. It decodes every image to RGBA so the comparison
+// loop does not branch on color type.
 
 import zlib from 'node:zlib';
 

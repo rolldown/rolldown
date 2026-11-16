@@ -168,6 +168,10 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   /// as the member expression (which knows the property) and once as the bare `import.meta`
   /// object it walks into. The first insert wins, so the property-aware one is kept.
   pub surviving_import_meta_spans: FxIndexMap<Span, EmptyImportMetaKind>,
+  /// Spans of JSX element names that would be rewritten to a computed member expression, which a
+  /// JSX element name can't hold: an import whose name is not a valid identifier, read as a
+  /// bracketed property.
+  pub unsupported_jsx_element_names: Vec<Span>,
 }
 
 impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {

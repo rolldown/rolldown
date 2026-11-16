@@ -2,11 +2,11 @@ use std::{borrow::Cow, hash::Hash, mem, path::Path};
 
 use arcstr::ArcStr;
 use futures::future::try_join_all;
-use itertools::Itertools;
+use itertools::{Either, Itertools};
 use oxc_index::IndexVec;
 use rolldown_common::{
   Asset, HashCharacters, InsChunkIdx, InstantiatedChunk, InstantiationKind,
-  NormalizedBundlerOptions, PathsOutputOption, SourceMapType, StrOrBytes,
+  NormalizedBundlerOptions, PathsOutputOption, SourceMapType, StaticImport, StrOrBytes,
 };
 use rolldown_error::BuildResult;
 #[cfg(not(target_family = "wasm"))]
@@ -235,16 +235,21 @@ pub async fn finalize_assets(
     {
       let chunk = &chunk_graph.chunk_table[originate_from];
       ecma_meta.imports = chunk
-        .cross_chunk_imports
+        .static_imports
         .iter()
-        .flat_map(|importee_idx| &index_chunk_to_instances[*importee_idx])
-        .map(|importee_asset_idx| index_ins_chunk_to_filename[*importee_asset_idx].clone())
-        .chain(super::static_external_imports(chunk, &link_output.module_table).map(|idx| {
-          link_output.module_table[idx]
-            .as_external()
-            .expect("static external imports should only contain external modules")
-            .get_file_name(resolved_paths)
-        }))
+        .flat_map(|static_import| match *static_import {
+          StaticImport::Chunk(importee_idx) => Either::Left(
+            index_chunk_to_instances[importee_idx]
+              .iter()
+              .map(|importee_asset_idx| index_ins_chunk_to_filename[*importee_asset_idx].clone()),
+          ),
+          StaticImport::External(module_idx) => Either::Right(std::iter::once(
+            link_output.module_table[module_idx]
+              .as_external()
+              .expect("a static import that is not a chunk should be an external module")
+              .get_file_name(resolved_paths),
+          )),
+        })
         .collect();
 
       ecma_meta.dynamic_imports = chunk

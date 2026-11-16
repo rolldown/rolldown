@@ -9,8 +9,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
 let foo = require("foo");
-foo = __toESM(foo);
 let bar = require("bar");
+foo = __toESM(foo);
 bar = __toESM(bar);
 Object.defineProperty(exports, "bar", {
 	enumerable: true,

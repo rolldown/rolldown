@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import "side-a";
+import "side-b";
+
+```
+
+## b.js
+
+```js
+import "./group-b.js";
+import "side-b";
+import "side-a";
+
+```
+
+## group-b.js
+
+```js
+import "./b.js";
+
+```

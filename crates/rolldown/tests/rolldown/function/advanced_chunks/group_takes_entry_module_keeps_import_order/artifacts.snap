@@ -26,9 +26,9 @@ import "./e.js";
 ## main.js
 
 ```js
+import assert from "node:assert";
 import "./g.js";
 import "./e.js";
-import assert from "node:assert";
 // main.js
 assert.deepStrictEqual(globalThis.log, [
 	"p",

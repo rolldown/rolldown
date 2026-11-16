@@ -200,3 +200,18 @@ test('rejects a treeshake.moduleSideEffects rule without test and external', asy
     await bundle.close();
   }
 });
+
+test('rejects an unknown output.esModule string', async () => {
+  const bundle = await rolldown({
+    input: './build-api/main.js',
+    cwd: import.meta.dirname,
+  });
+  try {
+    await expect(
+      // @ts-expect-error `esModule` only accepts a boolean or 'if-default-prop'
+      bundle.generate({ esModule: 'always' }),
+    ).rejects.toThrow('Unknown es module flag: always');
+  } finally {
+    await bundle.close();
+  }
+});

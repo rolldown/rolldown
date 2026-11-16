@@ -276,7 +276,7 @@ napi-build = { version = "2" }
 napi-derive = { version = "3", default-features = false, features = ["type-def", "tracing"] }
 
 # oxc crates with the same version
-oxc = { version = "0.158.0", features = [
+oxc = { git = "https://github.com/oxc-project/oxc", rev = "ff9db72ba8a5b984e1019ded29c0a5e6e3254cef", features = [
   "ast_visit",
   "transformer",
   "minifier",
@@ -287,14 +287,16 @@ oxc = { version = "0.158.0", features = [
   "isolated_declarations",
   "regular_expression",
 ] }
-oxc_allocator = { version = "0.158.0", features = ["pool"] }
-oxc_ecmascript = { version = "0.158.0" }
-oxc_napi = { version = "0.158.0" }
-oxc_str = { version = "0.158.0" }
-oxc_minify_napi = { version = "0.158.0" }
-oxc_parser_napi = { version = "0.158.0" }
-oxc_transform_napi = { version = "0.158.0" }
-oxc_traverse = { version = "0.158.0" }
+oxc_allocator = { git = "https://github.com/oxc-project/oxc", rev = "ff9db72ba8a5b984e1019ded29c0a5e6e3254cef", features = [
+  "pool",
+] }
+oxc_ecmascript = { git = "https://github.com/oxc-project/oxc", rev = "ff9db72ba8a5b984e1019ded29c0a5e6e3254cef" }
+oxc_napi = { git = "https://github.com/oxc-project/oxc", rev = "ff9db72ba8a5b984e1019ded29c0a5e6e3254cef" }
+oxc_str = { git = "https://github.com/oxc-project/oxc", rev = "ff9db72ba8a5b984e1019ded29c0a5e6e3254cef" }
+oxc_minify_napi = { git = "https://github.com/oxc-project/oxc", rev = "ff9db72ba8a5b984e1019ded29c0a5e6e3254cef" }
+oxc_parser_napi = { git = "https://github.com/oxc-project/oxc", rev = "ff9db72ba8a5b984e1019ded29c0a5e6e3254cef" }
+oxc_transform_napi = { git = "https://github.com/oxc-project/oxc", rev = "ff9db72ba8a5b984e1019ded29c0a5e6e3254cef" }
+oxc_traverse = { git = "https://github.com/oxc-project/oxc", rev = "ff9db72ba8a5b984e1019ded29c0a5e6e3254cef" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.
@@ -307,7 +309,7 @@ oxc_resolver = { version = "11.24.3", features = [
   "yarn_pnp",
 ] } # https://github.com/oxc-project/oxc-resolver
 oxc_resolver_napi = { version = "11.24.3", default-features = false, features = ["yarn_pnp"] }
-oxc_sourcemap = { version = "9.0.0" } # https://github.com/oxc-project/oxc-sourcemap
+oxc_sourcemap = { version = "10.0.0" } # https://github.com/oxc-project/oxc-sourcemap
 
 [profile.dev]
 # Minimal debug info to speed up local and CI builds.
